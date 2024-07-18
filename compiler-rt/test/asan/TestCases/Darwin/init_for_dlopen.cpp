@@ -1,7 +1,7 @@
 // RUN: %clangxx -g -O0 %s -o %t
 
 // Check that trying to dlopen() the ASan dylib fails.
-// We explictly set `abort_on_error=0` because
+// We explicitly set `abort_on_error=0` because
 // - By default the lit config sets this but we don't want this
 //   test to implicitly depend on this.
 // - It avoids requiring `--crash` to be passed to `not`.

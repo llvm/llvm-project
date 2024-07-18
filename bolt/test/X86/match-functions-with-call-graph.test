@@ -6,7 +6,7 @@
 # RUN: llvm-bolt %t.exe -o %t.out --data %t/yaml --profile-ignore-hash -v=1 \
 # RUN:   --dyno-stats --print-cfg --infer-stale-profile=1 --match-with-call-graph 2>&1 | FileCheck %s
 
-# CHECK: BOLT-INFO: matched 4 functions with call graph
+# CHECK: BOLT-INFO: matched 1 functions with call graph
 
 #--- main.cpp
 void foo() {}
@@ -85,7 +85,7 @@ functions:
         succ:            [ { bid: 3, cnt: 1} ]
         calls:           [ { off : 0, fid : 1, cnt : 0},
                            { off : 0, fid : 2, cnt : 0} ]
-  - name:            _Z4fredv
+  - name:            _Z4bazv
     fid:             4
     hash:            0x0000000000000005
     exec:            1

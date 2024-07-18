@@ -93,6 +93,11 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
 
     // Set up lambda capture to closure record field mapping.
     if (isLambdaCallOperator(MD)) {
+      // The parent record needs to be complete, we need to know about all
+      // the lambda captures.
+      if (!MD->getParent()->isCompleteDefinition())
+        return nullptr;
+
       const Record *R = P.getOrCreateRecord(MD->getParent());
       llvm::DenseMap<const ValueDecl *, FieldDecl *> LC;
       FieldDecl *LTC;
@@ -147,7 +152,8 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   assert(Func);
   // For not-yet-defined functions, we only create a Function instance and
   // compile their body later.
-  if (!FuncDecl->isDefined()) {
+  if (!FuncDecl->isDefined() ||
+      (FuncDecl->willHaveBody() && !FuncDecl->hasBody())) {
     Func->setDefined(false);
     return Func;
   }

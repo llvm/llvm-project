@@ -105,15 +105,9 @@ public:
     return reinterpret_cast<const std::byte *>(this) + sizeof(Block);
   }
 
-  /// Returns a view over the data.
-  template <typename T>
-  T &deref() { return *reinterpret_cast<T *>(data()); }
-  template <typename T> const T &deref() const {
-    return *reinterpret_cast<const T *>(data());
-  }
-
   /// Invokes the constructor.
   void invokeCtor() {
+    assert(!IsInitialized);
     std::memset(rawData(), 0, Desc->getAllocSize());
     if (Desc->CtorFn)
       Desc->CtorFn(this, data(), Desc->IsConst, Desc->IsMutable,
@@ -123,6 +117,7 @@ public:
 
   /// Invokes the Destructor.
   void invokeDtor() {
+    assert(IsInitialized);
     if (Desc->DtorFn)
       Desc->DtorFn(this, data(), Desc);
     IsInitialized = false;

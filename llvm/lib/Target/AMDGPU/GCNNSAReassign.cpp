@@ -56,13 +56,13 @@ public:
   }
 
 private:
-  typedef enum {
+  using NSA_Status = enum {
     NOT_NSA,        // Not an NSA instruction
     FIXED,          // NSA which we cannot modify
     NON_CONTIGUOUS, // NSA with non-sequential address which we can try
                     // to optimize.
     CONTIGUOUS      // NSA with all sequential address registers
-  } NSA_Status;
+  };
 
   const GCNSubtarget *ST;
 

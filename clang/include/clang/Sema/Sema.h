@@ -560,13 +560,14 @@ class Sema final : public SemaBase {
   // 23. Statement Attribute Handling (SemaStmtAttr.cpp)
   // 24. C++ Templates (SemaTemplate.cpp)
   // 25. C++ Template Argument Deduction (SemaTemplateDeduction.cpp)
-  // 26. C++ Template Instantiation (SemaTemplateInstantiate.cpp)
-  // 27. C++ Template Declaration Instantiation
+  // 26. C++ Template Deduction Guide (SemaTemplateDeductionGuide.cpp)
+  // 27. C++ Template Instantiation (SemaTemplateInstantiate.cpp)
+  // 28. C++ Template Declaration Instantiation
   //     (SemaTemplateInstantiateDecl.cpp)
-  // 28. C++ Variadic Templates (SemaTemplateVariadic.cpp)
-  // 29. Constraints and Concepts (SemaConcept.cpp)
-  // 30. Types (SemaType.cpp)
-  // 31. FixIt Helpers (SemaFixItUtils.cpp)
+  // 29. C++ Variadic Templates (SemaTemplateVariadic.cpp)
+  // 30. Constraints and Concepts (SemaConcept.cpp)
+  // 31. Types (SemaType.cpp)
+  // 32. FixIt Helpers (SemaFixItUtils.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -2802,8 +2803,7 @@ public:
   /// (e.g., Base::), perform name lookup for that identifier as a
   /// nested-name-specifier within the given scope, and return the result of
   /// that name lookup.
-  bool LookupFirstQualifierInScope(Scope *S, NestedNameSpecifier *NNS,
-                                   UnresolvedSetImpl &R);
+  NamedDecl *FindFirstQualifierInScope(Scope *S, NestedNameSpecifier *NNS);
 
   /// Keeps information about an identifier in a nested-name-spec.
   ///
@@ -2843,6 +2843,9 @@ public:
   /// \param EnteringContext If true, enter the context specified by the
   ///        nested-name-specifier.
   /// \param SS Optional nested name specifier preceding the identifier.
+  /// \param ScopeLookupResult Provides the result of name lookup within the
+  ///        scope of the nested-name-specifier that was computed at template
+  ///        definition time.
   /// \param ErrorRecoveryLookup Specifies if the method is called to improve
   ///        error recovery and what kind of recovery is performed.
   /// \param IsCorrectedToColon If not null, suggestion of replace '::' -> ':'
@@ -2850,6 +2853,11 @@ public:
   ///       'true' if the identifier is treated as if it was followed by ':',
   ///        not '::'.
   /// \param OnlyNamespace If true, only considers namespaces in lookup.
+  ///
+  /// This routine differs only slightly from ActOnCXXNestedNameSpecifier, in
+  /// that it contains an extra parameter \p ScopeLookupResult, which provides
+  /// the result of name lookup within the scope of the nested-name-specifier
+  /// that was computed at template definition time.
   ///
   /// If ErrorRecoveryLookup is true, then this call is used to improve error
   /// recovery.  This means that it should not emit diagnostics, it should
@@ -2859,6 +2867,7 @@ public:
   /// specifier.
   bool BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
                                    bool EnteringContext, CXXScopeSpec &SS,
+                                   NamedDecl *ScopeLookupResult,
                                    bool ErrorRecoveryLookup,
                                    bool *IsCorrectedToColon = nullptr,
                                    bool OnlyNamespace = false);
@@ -8558,12 +8567,11 @@ public:
                           const TemplateArgumentListInfo *TemplateArgs,
                           bool IsDefiniteInstance, const Scope *S);
 
-  ExprResult
-  ActOnDependentMemberExpr(Expr *Base, QualType BaseType, bool IsArrow,
-                           SourceLocation OpLoc, const CXXScopeSpec &SS,
-                           SourceLocation TemplateKWLoc,
-                           const DeclarationNameInfo &NameInfo,
-                           const TemplateArgumentListInfo *TemplateArgs);
+  ExprResult ActOnDependentMemberExpr(
+      Expr *Base, QualType BaseType, bool IsArrow, SourceLocation OpLoc,
+      const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
+      NamedDecl *FirstQualifierInScope, const DeclarationNameInfo &NameInfo,
+      const TemplateArgumentListInfo *TemplateArgs);
 
   /// The main callback when the parser finds something like
   ///   expression . [nested-name-specifier] identifier
@@ -8619,14 +8627,15 @@ public:
   ExprResult BuildMemberReferenceExpr(
       Expr *Base, QualType BaseType, SourceLocation OpLoc, bool IsArrow,
       CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
-      const DeclarationNameInfo &NameInfo,
+      NamedDecl *FirstQualifierInScope, const DeclarationNameInfo &NameInfo,
       const TemplateArgumentListInfo *TemplateArgs, const Scope *S,
       ActOnMemberAccessExtraArgs *ExtraArgs = nullptr);
 
   ExprResult
   BuildMemberReferenceExpr(Expr *Base, QualType BaseType, SourceLocation OpLoc,
                            bool IsArrow, const CXXScopeSpec &SS,
-                           SourceLocation TemplateKWLoc, LookupResult &R,
+                           SourceLocation TemplateKWLoc,
+                           NamedDecl *FirstQualifierInScope, LookupResult &R,
                            const TemplateArgumentListInfo *TemplateArgs,
                            const Scope *S, bool SuppressQualifierCheck = false,
                            ActOnMemberAccessExtraArgs *ExtraArgs = nullptr);
@@ -11114,14 +11123,15 @@ public:
                      QualType ObjectType, bool EnteringContext,
                      RequiredTemplateKind RequiredTemplate = SourceLocation(),
                      AssumedTemplateKind *ATK = nullptr,
-                     bool AllowTypoCorrection = true, bool MayBeNNS = false);
+                     bool AllowTypoCorrection = true);
 
-  TemplateNameKind
-  isTemplateName(Scope *S, CXXScopeSpec &SS, bool hasTemplateKeyword,
-                 const UnqualifiedId &Name, ParsedType ObjectType,
-                 bool EnteringContext, TemplateTy &Template,
-                 bool &MemberOfUnknownSpecialization,
-                 bool Disambiguation = false, bool MayBeNNS = false);
+  TemplateNameKind isTemplateName(Scope *S, CXXScopeSpec &SS,
+                                  bool hasTemplateKeyword,
+                                  const UnqualifiedId &Name,
+                                  ParsedType ObjectType, bool EnteringContext,
+                                  TemplateTy &Template,
+                                  bool &MemberOfUnknownSpecialization,
+                                  bool Disambiguation = false);
 
   /// Try to resolve an undeclared template name as a type template.
   ///
@@ -11347,6 +11357,10 @@ public:
       bool &IsMemberSpecialization, bool &Invalid,
       bool SuppressDiagnostic = false);
 
+  /// Returns the template parameter list with all default template argument
+  /// information.
+  TemplateParameterList *GetTemplateParameterList(TemplateDecl *TD);
+
   DeclResult CheckClassTemplate(
       Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
       CXXScopeSpec &SS, IdentifierInfo *Name, SourceLocation NameLoc,
@@ -11450,11 +11464,12 @@ public:
   /// For example, given "x.MetaFun::template apply", the scope specifier
   /// \p SS will be "MetaFun::", \p TemplateKWLoc contains the location
   /// of the "template" keyword, and "apply" is the \p Name.
-  TemplateNameKind
-  ActOnTemplateName(Scope *S, CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
-                    const UnqualifiedId &Name, ParsedType ObjectType,
-                    bool EnteringContext, TemplateTy &Template,
-                    bool AllowInjectedClassName = false, bool MayBeNNS = false);
+  TemplateNameKind ActOnTemplateName(Scope *S, CXXScopeSpec &SS,
+                                     SourceLocation TemplateKWLoc,
+                                     const UnqualifiedId &Name,
+                                     ParsedType ObjectType,
+                                     bool EnteringContext, TemplateTy &Template,
+                                     bool AllowInjectedClassName = false);
 
   DeclResult ActOnClassTemplateSpecialization(
       Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
@@ -12009,15 +12024,6 @@ public:
                                                  unsigned TemplateDepth,
                                                  const Expr *Constraint);
 
-  /// Declare implicit deduction guides for a class template if we've
-  /// not already done so.
-  void DeclareImplicitDeductionGuides(TemplateDecl *Template,
-                                      SourceLocation Loc);
-
-  FunctionTemplateDecl *DeclareAggregateDeductionGuideFromInitList(
-      TemplateDecl *Template, MutableArrayRef<QualType> ParamTypes,
-      SourceLocation Loc);
-
   /// Find the failed Boolean condition within a given Boolean
   /// constant expression, and describe it with a string.
   std::pair<Expr *, std::string> findFailedBooleanCondition(Expr *Cond);
@@ -12561,6 +12567,27 @@ public:
   /// more constrained, returns NULL.
   FunctionDecl *getMoreConstrainedFunction(FunctionDecl *FD1,
                                            FunctionDecl *FD2);
+
+  ///@}
+
+  //
+  //
+  // -------------------------------------------------------------------------
+  //
+  //
+
+  /// \name C++ Template Deduction Guide
+  /// Implementations are in SemaTemplateDeductionGuide.cpp
+  ///@{
+
+  /// Declare implicit deduction guides for a class template if we've
+  /// not already done so.
+  void DeclareImplicitDeductionGuides(TemplateDecl *Template,
+                                      SourceLocation Loc);
+
+  FunctionTemplateDecl *DeclareAggregateDeductionGuideFromInitList(
+      TemplateDecl *Template, MutableArrayRef<QualType> ParamTypes,
+      SourceLocation Loc);
 
   ///@}
 
@@ -14050,6 +14077,11 @@ public:
   void collectUnexpandedParameterPacks(
       const DeclarationNameInfo &NameInfo,
       SmallVectorImpl<UnexpandedParameterPack> &Unexpanded);
+
+  /// Collect the set of unexpanded parameter packs within the given
+  /// expression.
+  static void collectUnexpandedParameterPacks(
+      Expr *E, SmallVectorImpl<UnexpandedParameterPack> &Unexpanded);
 
   /// Invoked when parsing a template argument followed by an
   /// ellipsis, which creates a pack expansion.

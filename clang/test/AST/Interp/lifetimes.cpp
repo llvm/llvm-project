@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
 // RUN: %clang_cc1 -verify=ref,both %s
 
+/// FIXME: Slight difference in diagnostic output here.
+
 struct Foo {
   int a;
 };
@@ -20,3 +22,14 @@ static_assert(dead1() == 1, ""); // both-error {{not an integral constant expres
                                  // both-note {{in call to}}
 
 
+struct S {
+  int &&r; // both-note {{reference member declared here}}
+  int t;
+  constexpr S() : r(0), t(r) {} // both-error {{reference member 'r' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}} \
+                                // ref-note {{read of object outside its lifetime is not allowed in a constant expression}} \
+                                // expected-note {{temporary created here}} \
+                                // expected-note {{read of temporary whose lifetime has ended}}
+};
+constexpr int k1 = S().t; // both-error {{must be initialized by a constant expression}} \
+                          // ref-note {{in call to}} \
+                          // expected-note {{in call to}}
