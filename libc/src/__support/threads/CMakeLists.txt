@@ -44,12 +44,6 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.mutex)
   )
 endif()
 
-if (LIBC_CONF_ENABLE_TID_CACHE)
-  set(libc_copt_enable_tid_cache 1)
-else()
-  set(libc_copt_enable_tid_cache 0)
-endif()
-
 add_header_library(
   thread_common
   HDRS
@@ -60,9 +54,6 @@ add_header_library(
     libc.src.__support.CPP.optional
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.stringstream
-    libc.hdr.types.pid_t
-  COMPILE_OPTIONS
-    -DLIBC_COPT_ENABLE_TID_CACHE=${libc_copt_enable_tid_cache}
 )
 
 if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.thread)
@@ -98,21 +89,3 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.CndVar)
     .${LIBC_TARGET_OS}.CndVar
   )
 endif()
-
-set(tid_dep)
-if (LLVM_LIBC_FULL_BUILD)
-  list(APPEND tid_dep libc.src.__support.thread)
-else()
-  list(APPEND tid_dep libc.src.__support.OSUtil.osutil)
-  list(APPEND tid_dep libc.include.sys_syscall)
-endif()
-
-add_header_library(
-  tid
-  HDRS
-    tid.h
-  DEPENDS
-    libc.src.__support.common
-    libc.hdr.types.pid_t
-    ${tid_dep}
-)
