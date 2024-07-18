@@ -1038,11 +1038,13 @@ GCNTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(GCNTTIImpl(this, F));
 }
 
-Error GCNTargetMachine::buildCodeGenPipeline(
-    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opts,
-    PassInstrumentationCallbacks *PIC) {
-  AMDGPUCodeGenPassBuilder CGPB(*this, Opts, PIC);
+Error GCNTargetMachine::buildCodeGenPipeline(ModulePassManager &MPM,
+                                             raw_pwrite_stream &Out,
+                                             raw_pwrite_stream *DwoOut,
+                                             CodeGenFileType FileType,
+                                             const CGPassBuilderOption &Opt,
+                                             MCContext &Ctx, PassBuilder &PB) {
+  AMDGPUCodeGenPassBuilder CGPB(*this, Opts, PB);
   return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
 }
 

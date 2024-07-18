@@ -31,6 +31,7 @@
 
 namespace llvm {
 class StringRef;
+class AsmPrinter;
 class AAManager;
 class TargetMachine;
 class ModuleSummaryIndex;
@@ -605,6 +606,12 @@ public:
     RegClassFilterParsingCallbacks.push_back(C);
   }
 
+  void registerAsmPrinterCreationCallback(
+      const std::function<
+          IntrusiveRefCntPtr<AsmPrinter>(std::unique_ptr<MCStreamer>)> &C) {
+    AsmPrinterCreationCallback = C;
+  }
+
   /// Register a callback for a top-level pipeline entry.
   ///
   /// If the PassManager type is not given at the top level of the pipeline
@@ -712,6 +719,11 @@ public:
   static Expected<bool> parseSinglePassOption(StringRef Params,
                                               StringRef OptionName,
                                               StringRef PassName);
+
+  // Create target asm printer directly, this can bypass
+  // LLVMInitializeXXXAsmPrinter.
+  IntrusiveRefCntPtr<AsmPrinter>
+  getAsmPrinter(std::unique_ptr<MCStreamer> Streamer);
 
 private:
   // O1 pass pipeline
@@ -837,6 +849,9 @@ private:
   // Callbacks to parse `filter` parameter in register allocation passes
   SmallVector<std::function<RegAllocFilterFunc(StringRef)>, 2>
       RegClassFilterParsingCallbacks;
+  // Callback to create `AsmPrinterPass`.
+  std::function<IntrusiveRefCntPtr<AsmPrinter>(std::unique_ptr<MCStreamer>)>
+      AsmPrinterCreationCallback;
 };
 
 /// This utility template takes care of adding require<> and invalidate<>

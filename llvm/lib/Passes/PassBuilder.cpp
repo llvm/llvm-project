@@ -77,6 +77,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
@@ -150,6 +151,7 @@
 #include "llvm/IR/SafepointIRVerifier.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -2397,6 +2399,11 @@ PassBuilder::parseRegAllocFilter(StringRef FilterName) {
     if (auto F = C(FilterName))
       return F;
   return std::nullopt;
+}
+
+IntrusiveRefCntPtr<AsmPrinter>
+PassBuilder::getAsmPrinter(std::unique_ptr<MCStreamer> Streamer) {
+  return AsmPrinterCreationCallback(std::move(Streamer));
 }
 
 static void printPassName(StringRef PassName, raw_ostream &OS) {
