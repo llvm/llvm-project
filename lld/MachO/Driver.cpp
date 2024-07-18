@@ -347,14 +347,13 @@ static InputFile *addFile(StringRef path, LoadType loadType,
               reason = "-all_load";
               break;
           }
-            if (Error e = file->fetch(c, reason)) {
-              if (config->warnThinArchiveMissingMembers)
-                warn(toString(file) + ": " + reason +
-                     " failed to load archive member: " +
-                     toString(std::move(e)));
-              else
-                llvm::consumeError(std::move(e));
-            }
+          if (Error e = file->fetch(c, reason)) {
+            if (config->warnThinArchiveMissingMembers)
+              warn(toString(file) + ": " + reason +
+                   " failed to load archive member: " + toString(std::move(e)));
+            else
+              llvm::consumeError(std::move(e));
+          }
         }
         if (e)
           error(toString(file) +
