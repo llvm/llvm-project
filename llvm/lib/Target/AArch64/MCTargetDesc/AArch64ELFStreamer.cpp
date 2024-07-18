@@ -184,11 +184,17 @@ public:
         MappingSymbolCounter(0), LastEMS(EMS_None) {}
 
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override {
-    // We have to keep track of the mapping symbol state of any sections we
-    // use. Each one should start off as EMS_None, which is provided as the
-    // default constructor by DenseMap::lookup.
+    // We have to keep track of the mapping symbol state of any sections we use.
+    // Text sections start as EMS_None because the ABI requires that a section
+    // that contains instructions must have a mapping symbol defined at the
+    // beginning. Non-text sections can start as EMS_Data, since they can only
+    // contain instructions in erroneous cases.
     LastMappingSymbols[getPreviousSection().first] = LastEMS;
-    LastEMS = LastMappingSymbols.lookup(Section);
+    auto It = LastMappingSymbols.find(Section);
+    if (It != LastMappingSymbols.end())
+      LastEMS = It->second;
+    else
+      LastEMS = Section->isText() ? EMS_None : EMS_Data;
 
     MCELFStreamer::changeSection(Section, Subsection);
   }
