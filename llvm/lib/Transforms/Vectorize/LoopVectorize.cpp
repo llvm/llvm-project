@@ -7332,8 +7332,9 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
     Cost += CostCtx.getLegacyCost(CondI, VF);
     for (Value *Op : CondI->operands()) {
       auto *OpI = dyn_cast<Instruction>(Op);
-      if (!OpI || any_of(OpI->users(), [&ExitInstrs](User *U) {
-            return !ExitInstrs.contains(cast<Instruction>(U));
+      if (!OpI || any_of(OpI->users(), [&ExitInstrs, this](User *U) {
+            return OrigLoop->contains(cast<Instruction>(U)->getParent()) &&
+                   !ExitInstrs.contains(cast<Instruction>(U));
           }))
         continue;
       ExitInstrs.insert(OpI);
