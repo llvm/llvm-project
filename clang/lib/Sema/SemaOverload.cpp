@@ -11468,8 +11468,8 @@ static void DiagnoseArityMismatch(Sema &S, NamedDecl *Found, Decl *D,
 /// Arity mismatch diagnosis specific to a function overload candidate.
 static void DiagnoseArityMismatch(Sema &S, OverloadCandidate *Cand,
                                   unsigned NumFormalArgs) {
-    assert(Cand->Function && "Candidate must be a function");
-    FunctionDecl *Fn = Cand->Function;
+  assert(Cand->Function && "Candidate must be a function");
+  FunctionDecl *Fn = Cand->Function;
   if (!CheckArityMismatch(S, Cand, NumFormalArgs, Cand->TookAddressOfOverload))
     DiagnoseArityMismatch(S, Cand->FoundDecl, Fn, NumFormalArgs,
                           Cand->TookAddressOfOverload);
@@ -11771,8 +11771,8 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
 static void DiagnoseBadDeduction(Sema &S, OverloadCandidate *Cand,
                                  unsigned NumArgs,
                                  bool TakingCandidateAddress) {
-    assert(Cand->Function && "Candidate must be a function");
-    FunctionDecl *Fn = Cand->Function;
+  assert(Cand->Function && "Candidate must be a function");
+  FunctionDecl *Fn = Cand->Function;
   TemplateDeductionResult TDK = Cand->DeductionFailure.getResult();
   if (TDK == TemplateDeductionResult::TooFewArguments ||
       TDK == TemplateDeductionResult::TooManyArguments) {
