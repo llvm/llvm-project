@@ -55,7 +55,6 @@ protected:
   SDValue LowerFCEIL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFTRUNC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFRINT(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerLRINT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFNEARBYINT(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerFROUNDEVEN(SDValue Op, SelectionDAG &DAG) const;
