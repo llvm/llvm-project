@@ -3550,7 +3550,8 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // that need to be moved to the dominating block.
   SmallPtrSet<Instruction *, 4> AggressiveInsts;
   InstructionCost Cost = 0;
-  InstructionCost Budget = TwoEntryPHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic;
+  InstructionCost Budget =
+      TwoEntryPHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic;
   if (IsUnpredictable)
     Budget += TTI.getBranchMispredictPenalty();
 
