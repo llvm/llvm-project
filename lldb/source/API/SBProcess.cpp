@@ -1229,8 +1229,10 @@ lldb::SBError SBProcess::SaveCore(const char *file_name,
   LLDB_INSTRUMENT_VA(this, file_name, flavor, core_style);
   SBSaveCoreOptions options;
   options.SetOutputFile(SBFileSpec(file_name));
-  options.SetPluginName(flavor);
   options.SetStyle(core_style);
+  SBError error = options.SetPluginName(flavor);
+  if (error.Fail())
+    return error;
   return SaveCore(options);
 }
 

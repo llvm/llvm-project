@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBSaveCoreOPTIONS_H
-#define LLDB_API_SBSaveCoreOPTIONS_H
+#ifndef LLDB_API_SBSAVECOREOPTIONS_H
+#define LLDB_API_SBSAVECOREOPTIONS_H
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/Symbol/SaveCoreOptions.h"
@@ -66,4 +66,4 @@ private:
 }; // SBSaveCoreOptions
 } // namespace lldb
 
-#endif // LLDB_API_SBSaveCoreOPTIONS_H
+#endif // LLDB_API_SBSAVECOREOPTIONS_H
