@@ -103,6 +103,7 @@ def EnumConversion : DiagGroup<"enum-conversion",
                                 EnumFloatConversion,
                                 EnumCompareConditional]>;
 def DeprecatedNoRelaxedTemplateTemplateArgs : DiagGroup<"deprecated-no-relaxed-template-template-args">;
+def DeprecatedOFast : DiagGroup<"deprecated-ofast">;
 def ObjCSignedCharBoolImplicitIntConversion :
   DiagGroup<"objc-signed-char-bool-implicit-int-conversion">;
 def Shorten64To32 : DiagGroup<"shorten-64-to-32">;
@@ -228,6 +229,7 @@ def Deprecated : DiagGroup<"deprecated", [DeprecatedAnonEnumEnumConversion,
                                           DeprecatedPragma,
                                           DeprecatedRegister,
                                           DeprecatedNoRelaxedTemplateTemplateArgs,
+                                          DeprecatedOFast,
                                           DeprecatedThisCapture,
                                           DeprecatedType,
                                           DeprecatedVolatile,
