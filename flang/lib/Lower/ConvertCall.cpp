@@ -2005,6 +2005,8 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
   // returns a null pointer variable that should not be transformed into a value
   // (what matters is the memory address).
   if (resultEntity.isVariable() && intrinsicName != "null") {
+    assert(!fir::isa_trivial(fir::unwrapRefType(resultEntity.getType())) &&
+           "expect intrinsic scalar results to not be in memory");
     hlfir::AsExprOp asExpr;
     // Character/Derived MERGE lowering returns one of its argument address
     // (this is the only intrinsic implemented in that way so far). The
