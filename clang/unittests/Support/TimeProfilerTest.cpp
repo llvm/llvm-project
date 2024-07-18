@@ -102,7 +102,6 @@ std::string buildTraceGraph(StringRef Json) {
   Expected<json::Value> Root = json::parse(Json);
   if (!Root)
     return "";
-  std::stack<json::Object *> SourceEvents;
   for (json::Value &TraceEventValue :
        *Root->getAsObject()->getArray("traceEvents")) {
     json::Object *TraceEventObj = TraceEventValue.getAsObject();
@@ -114,16 +113,6 @@ std::string buildTraceGraph(StringRef Json) {
     std::string Metadata = GetMetadata(TraceEventObj);
 
     if (Name == "Source") {
-      if (TraceEventObj->getString("ph").value_or("") == "b") {
-        SourceEvents.push(TraceEventObj);
-      } else {
-        json::Object *SourceBegin = SourceEvents.top();
-        SourceEvents.pop();
-        Events.emplace_back(
-            EventRecord{SourceBegin->getInteger("ts").value_or(0),
-                        /*TimestampEnd=*/TimestampBegin, "Source",
-                        GetMetadata(SourceBegin)});
-      }
       continue;
     }
 
@@ -145,10 +134,8 @@ std::string buildTraceGraph(StringRef Json) {
   std::reverse(Events.begin(), Events.end());
   std::stable_sort(
       Events.begin(), Events.end(), [](const auto &lhs, const auto &rhs) {
-        return std::make_tuple(lhs.TimestampBegin, -lhs.TimestampEnd,
-                               lhs.Name != "Source") <
-               std::make_tuple(rhs.TimestampBegin, -rhs.TimestampEnd,
-                               rhs.Name != "Source");
+        return std::make_pair(lhs.TimestampBegin, -lhs.TimestampEnd) <
+               std::make_pair(rhs.TimestampBegin, -rhs.TimestampEnd);
       });
 
   std::stringstream Stream;
@@ -250,8 +237,8 @@ Frontend
 
 TEST(TimeProfilerTest, TemplateInstantiations) {
   constexpr StringRef B_H = R"(
-    template <typename T> 
-    T fooB(T t) { 
+    template <typename T>
+    T fooB(T t) {
       return T();
     }
 
@@ -277,10 +264,8 @@ TEST(TimeProfilerTest, TemplateInstantiations) {
   std::string Json = teardownProfiler();
   ASSERT_EQ(R"(
 Frontend
-| Source (./a.h)
-| | Source (./b.h)
-| | ParseFunctionDefinition (fooB)
-| | ParseFunctionDefinition (fooMTA)
+| ParseFunctionDefinition (fooB)
+| ParseFunctionDefinition (fooMTA)
 | ParseFunctionDefinition (fooA)
 | ParseDeclarationOrFunctionDefinition (test.cc:3:5)
 | | ParseFunctionDefinition (user)
