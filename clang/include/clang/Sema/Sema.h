@@ -12079,25 +12079,31 @@ public:
     }
   };
 
+  class DisableTypoCorrectionRAII {
+    Sema &SemaRef;
+    bool PrevDisableTypoCorrection;
+
+  public:
+    explicit DisableTypoCorrectionRAII(Sema &SemaRef)
+        : SemaRef(SemaRef), PrevDisableTypoCorrection(std::exchange(
+                                SemaRef.DisableTypoCorrection, true)) {}
+
+    ~DisableTypoCorrectionRAII() {
+      SemaRef.DisableTypoCorrection = PrevDisableTypoCorrection;
+    }
+  };
+
   /// RAII class used to indicate that we are performing provisional
   /// semantic analysis to determine the validity of a construct, so
   /// typo-correction and diagnostics in the immediate context (not within
   /// implicitly-instantiated templates) should be suppressed.
-  class TentativeAnalysisScope {
-    Sema &SemaRef;
+  class TentativeAnalysisScope : public DisableTypoCorrectionRAII {
     // FIXME: Using a SFINAETrap for this is a hack.
     SFINAETrap Trap;
-    bool PrevDisableTypoCorrection;
 
   public:
     explicit TentativeAnalysisScope(Sema &SemaRef)
-        : SemaRef(SemaRef), Trap(SemaRef, true),
-          PrevDisableTypoCorrection(SemaRef.DisableTypoCorrection) {
-      SemaRef.DisableTypoCorrection = true;
-    }
-    ~TentativeAnalysisScope() {
-      SemaRef.DisableTypoCorrection = PrevDisableTypoCorrection;
-    }
+        : DisableTypoCorrectionRAII(SemaRef), Trap(SemaRef, true) {}
   };
 
   /// For each declaration that involved template argument deduction, the
