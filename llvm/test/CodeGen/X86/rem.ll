@@ -40,10 +40,9 @@ define i32 @test3(i32 %X) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl $-2139062143, %edx # imm = 0x80808081
+; CHECK-NEXT:    movl $16843009, %edx # imm = 0x1010101
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    mull %edx
-; CHECK-NEXT:    shrl $7, %edx
 ; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    shll $8, %eax
 ; CHECK-NEXT:    subl %eax, %edx

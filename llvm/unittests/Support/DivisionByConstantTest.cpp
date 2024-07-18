@@ -96,8 +96,7 @@ APInt MULHU(APInt X, APInt Y) {
 }
 
 APInt UnsignedDivideUsingMagic(const APInt &Numerator, const APInt &Divisor,
-                               bool LZOptimization,
-                               bool AllowEvenDivisorOptimization, bool ForceNPQ,
+                               bool LZOptimization, bool ForceNPQ,
                                UnsignedDivisionByConstantInfo Magics) {
   assert(!Divisor.isOne() && "Division by 1 is not supported using Magic.");
 
@@ -108,8 +107,7 @@ APInt UnsignedDivideUsingMagic(const APInt &Numerator, const APInt &Divisor,
     // Clip to the number of leading zeros in the divisor.
     LeadingZeros = std::min(LeadingZeros, Divisor.countl_zero());
     if (LeadingZeros > 0) {
-      Magics = UnsignedDivisionByConstantInfo::get(
-          Divisor, LeadingZeros, AllowEvenDivisorOptimization);
+      Magics = UnsignedDivisionByConstantInfo::get(Divisor, LeadingZeros);
       assert(!Magics.IsAdd && "Should use cheap fixup now");
     }
   }
@@ -166,19 +164,14 @@ TEST(UnsignedDivisionByConstantTest, Test) {
       EnumerateAPInts(Bits, [Divisor, Magics, Bits](const APInt &Numerator) {
         APInt NativeResult = Numerator.udiv(Divisor);
         for (bool LZOptimization : {true, false}) {
-          for (bool AllowEvenDivisorOptimization : {true, false}) {
-            for (bool ForceNPQ : {false, true}) {
-              APInt MagicResult = UnsignedDivideUsingMagic(
-                  Numerator, Divisor, LZOptimization,
-                  AllowEvenDivisorOptimization, ForceNPQ, Magics);
-              ASSERT_EQ(MagicResult, NativeResult)
-                    << " ... given the operation:  urem i" << Bits << " "
-                    << Numerator << ", " << Divisor
-                    << " (allow LZ optimization = "
-                    << LZOptimization << ", allow even divisior optimization = "
-                    << AllowEvenDivisorOptimization << ", force NPQ = "
-                    << ForceNPQ << ")";
-            }
+          for (bool ForceNPQ : {false, true}) {
+            APInt MagicResult = UnsignedDivideUsingMagic(
+                Numerator, Divisor, LZOptimization, ForceNPQ, Magics);
+            ASSERT_EQ(MagicResult, NativeResult)
+                << " ... given the operation:  urem i" << Bits << " "
+                << Numerator << ", " << Divisor
+                << " (allow LZ optimization = " << LZOptimization
+                << ", force NPQ = " << ForceNPQ << ")";
           }
         }
       });

@@ -50,11 +50,11 @@ define <4 x i32> @div32xi4(<4 x i32> %x) {
 define <16 x i8> @udiv16xi8(<16 x i8> %x) {
 ; CHECK-LABEL: udiv16xi8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.16b, #121
+; CHECK-NEXT:    movi v1.16b, #15
 ; CHECK-NEXT:    umull2 v2.8h, v0.16b, v1.16b
 ; CHECK-NEXT:    umull v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    uzp2 v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    ushr v0.16b, v0.16b, #5
+; CHECK-NEXT:    ushr v0.16b, v0.16b, #2
 ; CHECK-NEXT:    ret
   %div = udiv <16 x i8> %x, <i8 68, i8 68, i8 68, i8 68, i8 68, i8 68, i8 68, i8 68, i8 68, i8 68, i8 68, i8 68, i8 68, i8 68, i8 68, i8 68>
   ret <16 x i8> %div
@@ -63,14 +63,12 @@ define <16 x i8> @udiv16xi8(<16 x i8> %x) {
 define <8 x i16> @udiv8xi16(<8 x i16> %x) {
 ; CHECK-LABEL: udiv8xi16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #16593 // =0x40d1
+; CHECK-NEXT:    mov w8, #41063 // =0xa067
 ; CHECK-NEXT:    dup v1.8h, w8
 ; CHECK-NEXT:    umull2 v2.4s, v0.8h, v1.8h
-; CHECK-NEXT:    umull v1.4s, v0.4h, v1.4h
-; CHECK-NEXT:    uzp2 v1.8h, v1.8h, v2.8h
-; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    usra v1.8h, v0.8h, #1
-; CHECK-NEXT:    ushr v0.8h, v1.8h, #12
+; CHECK-NEXT:    umull v0.4s, v0.4h, v1.4h
+; CHECK-NEXT:    uzp2 v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    ushr v0.8h, v0.8h, #12
 ; CHECK-NEXT:    ret
   %div = udiv <8 x i16> %x, <i16 6537, i16 6537, i16 6537, i16 6537, i16 6537, i16 6537, i16 6537, i16 6537>
   ret <8 x i16> %div
@@ -79,13 +77,13 @@ define <8 x i16> @udiv8xi16(<8 x i16> %x) {
 define <4 x i32> @udiv32xi4(<4 x i32> %x) {
 ; CHECK-LABEL: udiv32xi4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #16747 // =0x416b
-; CHECK-NEXT:    movk w8, #31439, lsl #16
+; CHECK-NEXT:    mov w8, #41141 // =0xa0b5
+; CHECK-NEXT:    movk w8, #15719, lsl #16
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    umull2 v2.2d, v0.4s, v1.4s
 ; CHECK-NEXT:    umull v0.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #22
+; CHECK-NEXT:    ushr v0.4s, v0.4s, #21
 ; CHECK-NEXT:    ret
   %div = udiv <4 x i32> %x, <i32 8743143, i32 8743143, i32 8743143, i32 8743143>
   ret <4 x i32> %div

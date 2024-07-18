@@ -81,11 +81,11 @@ define i64 @f4(i64 %dummy, i64 %a, i64 %b) {
 define i64 @f5(i64 %dummy, i64 %a) {
 ; CHECK-LABEL: f5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    llihf %r0, 1782028570
-; CHECK-NEXT:    oilf %r0, 598650223
+; CHECK-NEXT:    llihf %r0, 891014285
+; CHECK-NEXT:    oilf %r0, 299325111
 ; CHECK-NEXT:    # kill: def $r3d killed $r3d def $r2q
 ; CHECK-NEXT:    mlgr %r2, %r0
-; CHECK-NEXT:    srlg %r2, %r2, 9
+; CHECK-NEXT:    srlg %r2, %r2, 8
 ; CHECK-NEXT:    br %r14
   %res = udiv i64 %a, 1234
   ret i64 %res

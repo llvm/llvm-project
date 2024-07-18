@@ -6,13 +6,9 @@ define i32 @fold_urem_positive_odd(i32 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    imulq $1491936009, %rcx, %rcx # imm = 0x58ED2309
-; CHECK-NEXT:    shrq $32, %rcx
-; CHECK-NEXT:    movl %edi, %edx
-; CHECK-NEXT:    subl %ecx, %edx
-; CHECK-NEXT:    shrl %edx
-; CHECK-NEXT:    addl %ecx, %edx
-; CHECK-NEXT:    shrl $6, %edx
+; CHECK-NEXT:    movl $2893451651, %edx # imm = 0xAC769183
+; CHECK-NEXT:    imulq %rcx, %rdx
+; CHECK-NEXT:    shrq $38, %rdx
 ; CHECK-NEXT:    imull $95, %edx, %ecx
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    retq
@@ -26,7 +22,7 @@ define i32 @fold_urem_positive_even(i32 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    movl $4149100483, %edx # imm = 0xF74E3FC3
+; CHECK-NEXT:    movl $4149100481, %edx # imm = 0xF74E3FC1
 ; CHECK-NEXT:    imulq %rcx, %rdx
 ; CHECK-NEXT:    shrq $42, %rdx
 ; CHECK-NEXT:    imull $1060, %edx, %ecx # imm = 0x424
@@ -41,17 +37,14 @@ define i32 @fold_urem_positive_even(i32 %x) {
 define i32 @combine_urem_udiv(i32 %x) {
 ; CHECK-LABEL: combine_urem_udiv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    imulq $1491936009, %rax, %rcx # imm = 0x58ED2309
-; CHECK-NEXT:    shrq $32, %rcx
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    subl %ecx, %eax
-; CHECK-NEXT:    shrl %eax
-; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:    shrl $6, %eax
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    movl $2893451651, %eax # imm = 0xAC769183
+; CHECK-NEXT:    imulq %rcx, %rax
+; CHECK-NEXT:    shrq $38, %rax
 ; CHECK-NEXT:    imull $95, %eax, %ecx
 ; CHECK-NEXT:    subl %ecx, %edi
 ; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
   %1 = urem i32 %x, 95
   %2 = udiv i32 %x, 95
@@ -95,9 +88,9 @@ define i64 @dont_fold_urem_i64(i64 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    shrq %rax
-; CHECK-NEXT:    movabsq $6023426636313322977, %rcx # imm = 0x5397829CBC14E5E1
+; CHECK-NEXT:    movabsq $-6399890801082905663, %rcx # imm = 0xA72F05397829CBC1
 ; CHECK-NEXT:    mulq %rcx
-; CHECK-NEXT:    shrq $4, %rdx
+; CHECK-NEXT:    shrq $5, %rdx
 ; CHECK-NEXT:    imulq $98, %rdx, %rax
 ; CHECK-NEXT:    subq %rax, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax

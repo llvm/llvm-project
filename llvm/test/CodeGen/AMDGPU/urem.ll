@@ -19,7 +19,7 @@ define amdgpu_kernel void @test_urem_i32(ptr addrspace(1) %out, ptr addrspace(1)
 }
 
 ; FUNC-LABEL: {{^}}test_urem_i32_7:
-; SI: s_mov_b32 [[MAGIC:s[0-9]+]], 0x24924925
+; SI: s_mov_b32 [[MAGIC:s[0-9]+]], 0x92492491
 ; SI: v_mul_hi_u32 {{v[0-9]+}}, {{v[0-9]+}}, [[MAGIC]]
 ; SI: v_sub_{{[iu]}}32
 ; SI: v_mul_lo_u32

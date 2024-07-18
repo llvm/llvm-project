@@ -227,11 +227,8 @@ define i32 @v_udiv_i32_oddk_denom(i32 %num) {
 ; CHECK-LABEL: v_udiv_i32_oddk_denom:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0xb2a50881
-; CHECK-NEXT:    v_mul_hi_u32 v1, v0, v1
-; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v0, v1
-; CHECK-NEXT:    v_lshrrev_b32_e32 v0, 1, v0
-; CHECK-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0xd952843f
+; CHECK-NEXT:    v_mul_hi_u32 v0, v0, v1
 ; CHECK-NEXT:    v_lshrrev_b32_e32 v0, 20, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %result = udiv i32 %num, 1235195
@@ -242,15 +239,9 @@ define <2 x i32> @v_udiv_v2i32_oddk_denom(<2 x i32> %num) {
 ; CHECK-LABEL: v_udiv_v2i32_oddk_denom:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0xb2a50881
-; CHECK-NEXT:    v_mul_hi_u32 v3, v0, v2
-; CHECK-NEXT:    v_mul_hi_u32 v2, v1, v2
-; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v0, v3
-; CHECK-NEXT:    v_sub_i32_e32 v1, vcc, v1, v2
-; CHECK-NEXT:    v_lshrrev_b32_e32 v0, 1, v0
-; CHECK-NEXT:    v_lshrrev_b32_e32 v1, 1, v1
-; CHECK-NEXT:    v_add_i32_e32 v0, vcc, v0, v3
-; CHECK-NEXT:    v_add_i32_e32 v1, vcc, v1, v2
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0xd952843f
+; CHECK-NEXT:    v_mul_hi_u32 v0, v0, v2
+; CHECK-NEXT:    v_mul_hi_u32 v1, v1, v2
 ; CHECK-NEXT:    v_lshrrev_b32_e32 v0, 20, v0
 ; CHECK-NEXT:    v_lshrrev_b32_e32 v1, 20, v1
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]

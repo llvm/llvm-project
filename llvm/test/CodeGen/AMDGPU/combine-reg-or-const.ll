@@ -13,9 +13,9 @@ define protected amdgpu_kernel void @_Z11test_kernelPii(ptr addrspace(1) nocaptu
 ; CHECK-NEXT:    s_load_dwordx2 s[2:3], s[6:7], 0x0
 ; CHECK-NEXT:    s_and_b32 s4, s0, 0xffff
 ; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    s_mul_i32 s6, s4, 0xaaab
+; CHECK-NEXT:    s_mul_i32 s6, s4, 0x5555
 ; CHECK-NEXT:    s_lshl_b64 s[4:5], s[0:1], 2
-; CHECK-NEXT:    s_lshr_b32 s1, s6, 19
+; CHECK-NEXT:    s_lshr_b32 s1, s6, 18
 ; CHECK-NEXT:    s_mul_i32 s1, s1, 12
 ; CHECK-NEXT:    s_sub_i32 s6, s0, s1
 ; CHECK-NEXT:    s_and_b32 s7, s6, 0xffff

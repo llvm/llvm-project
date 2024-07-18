@@ -50,10 +50,8 @@ define i32 @ror_extract_mul(i32 %i) nounwind {
 define i64 @ror_extract_udiv(i64 %i) nounwind {
 ; CHECK-LABEL: ror_extract_udiv:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-6148914691236517206 // =0xaaaaaaaaaaaaaaaa
-; CHECK-NEXT:    movk x8, #43691
+; CHECK-NEXT:    mov x8, #6148914691236517205 // =0x5555555555555555
 ; CHECK-NEXT:    umulh x8, x0, x8
-; CHECK-NEXT:    lsr x8, x8, #1
 ; CHECK-NEXT:    ror x0, x8, #4
 ; CHECK-NEXT:    ret
   %lhs_div = udiv i64 %i, 3
@@ -127,15 +125,17 @@ define i64 @no_extract_mul(i64 %i) nounwind {
 define i32 @no_extract_udiv(i32 %i) nounwind {
 ; CHECK-LABEL: no_extract_udiv:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #43691 // =0xaaab
-; CHECK-NEXT:    mov w9, #33437 // =0x829d
-; CHECK-NEXT:    movk w8, #43690, lsl #16
-; CHECK-NEXT:    movk w9, #21399, lsl #16
-; CHECK-NEXT:    umull x8, w0, w8
+; CHECK-NEXT:    mov w8, #57511 // =0xe0a7
+; CHECK-NEXT:    mov w9, #1431655765 // =0x55555555
+; CHECK-NEXT:    movk w8, #5349, lsl #16
 ; CHECK-NEXT:    umull x9, w0, w9
-; CHECK-NEXT:    lsr x8, x8, #33
+; CHECK-NEXT:    umull x8, w0, w8
 ; CHECK-NEXT:    lsr x9, x9, #32
-; CHECK-NEXT:    extr w0, w8, w9, #4
+; CHECK-NEXT:    lsr x8, x8, #32
+; CHECK-NEXT:    lsl w9, w9, #28
+; CHECK-NEXT:    sub w10, w0, w8
+; CHECK-NEXT:    add w8, w8, w10, lsr #1
+; CHECK-NEXT:    orr w0, w9, w8, lsr #2
 ; CHECK-NEXT:    ret
   %lhs_div = udiv i32 %i, 3
   %rhs_div = udiv i32 %i, 49

@@ -26,19 +26,6 @@ define <4 x i8> @sdiv_v4i8(<4 x i8> %op1, <4 x i8> %op2) {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
-; NEON-NOSVE-LABEL: sdiv_v4i8:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    shl v0.4h, v0.4h, #8
-; NEON-NOSVE-NEXT:    shl v1.4h, v1.4h, #8
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
-; NEON-NOSVE-NEXT:    sshr v0.4h, v0.4h, #8
-; NEON-NOSVE-NEXT:    sshr v1.4h, v1.4h, #8
-; NEON-NOSVE-NEXT:    sshll v1.4s, v1.4h, #0
-; NEON-NOSVE-NEXT:    sshll v0.4s, v0.4h, #0
-; NEON-NOSVE-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
-; NEON-NOSVE-NEXT:    xtn v0.4h, v0.4s
-; NEON-NOSVE-NEXT:    ret
-;
 ; NONEON-NOSVE-LABEL: sdiv_v4i8:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #32
@@ -63,6 +50,18 @@ define <4 x i8> @sdiv_v4i8(<4 x i8> %op1, <4 x i8> %op2) {
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #32
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: sdiv_v4i8:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    shl v0.4h, v0.4h, #8
+; NEON-NOSVE-NEXT:    shl v1.4h, v1.4h, #8
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
+; NEON-NOSVE-NEXT:    sshr v0.4h, v0.4h, #8
+; NEON-NOSVE-NEXT:    sshr v1.4h, v1.4h, #8
+; NEON-NOSVE-NEXT:    sshll v1.4s, v1.4h, #0
+; NEON-NOSVE-NEXT:    sshll v0.4s, v0.4h, #0
+; NEON-NOSVE-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
+; NEON-NOSVE-NEXT:    xtn v0.4h, v0.4s
+; NEON-NOSVE-NEXT:    ret
   %res = sdiv <4 x i8> %op1, %op2
   ret <4 x i8> %res
 }
@@ -90,21 +89,6 @@ define <8 x i8> @sdiv_v8i8(<8 x i8> %op1, <8 x i8> %op2) {
 ; CHECK-NEXT:    uzp1 z0.b, z1.b, z1.b
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
-;
-; NEON-NOSVE-LABEL: sdiv_v8i8:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    sshll v1.8h, v1.8b, #0
-; NEON-NOSVE-NEXT:    sshll v0.8h, v0.8b, #0
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
-; NEON-NOSVE-NEXT:    sshll2 v2.4s, v1.8h, #0
-; NEON-NOSVE-NEXT:    sshll2 v3.4s, v0.8h, #0
-; NEON-NOSVE-NEXT:    sshll v1.4s, v1.4h, #0
-; NEON-NOSVE-NEXT:    sshll v0.4s, v0.4h, #0
-; NEON-NOSVE-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
-; NEON-NOSVE-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
-; NEON-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
-; NEON-NOSVE-NEXT:    xtn v0.8b, v0.8h
-; NEON-NOSVE-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: sdiv_v8i8:
 ; NONEON-NOSVE:       // %bb.0:
@@ -146,6 +130,20 @@ define <8 x i8> @sdiv_v8i8(<8 x i8> %op1, <8 x i8> %op2) {
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #32
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: sdiv_v8i8:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    sshll v1.8h, v1.8b, #0
+; NEON-NOSVE-NEXT:    sshll v0.8h, v0.8b, #0
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
+; NEON-NOSVE-NEXT:    sshll2 v2.4s, v1.8h, #0
+; NEON-NOSVE-NEXT:    sshll2 v3.4s, v0.8h, #0
+; NEON-NOSVE-NEXT:    sshll v1.4s, v1.4h, #0
+; NEON-NOSVE-NEXT:    sshll v0.4s, v0.4h, #0
+; NEON-NOSVE-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
+; NEON-NOSVE-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
+; NEON-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
+; NEON-NOSVE-NEXT:    xtn v0.8b, v0.8h
+; NEON-NOSVE-NEXT:    ret
   %res = sdiv <8 x i8> %op1, %op2
   ret <8 x i8> %res
 }
@@ -191,30 +189,6 @@ define <16 x i8> @sdiv_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 ; CHECK-NEXT:    splice z0.b, p0, z0.b, z1.b
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
-;
-; NEON-NOSVE-LABEL: sdiv_v16i8:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    sshll2 v2.8h, v1.16b, #0
-; NEON-NOSVE-NEXT:    sshll2 v3.8h, v0.16b, #0
-; NEON-NOSVE-NEXT:    sshll v1.8h, v1.8b, #0
-; NEON-NOSVE-NEXT:    sshll v0.8h, v0.8b, #0
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
-; NEON-NOSVE-NEXT:    sshll2 v4.4s, v2.8h, #0
-; NEON-NOSVE-NEXT:    sshll2 v5.4s, v3.8h, #0
-; NEON-NOSVE-NEXT:    sshll v2.4s, v2.4h, #0
-; NEON-NOSVE-NEXT:    sshll v3.4s, v3.4h, #0
-; NEON-NOSVE-NEXT:    sdivr z4.s, p0/m, z4.s, z5.s
-; NEON-NOSVE-NEXT:    sshll2 v5.4s, v0.8h, #0
-; NEON-NOSVE-NEXT:    sshll v0.4s, v0.4h, #0
-; NEON-NOSVE-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
-; NEON-NOSVE-NEXT:    sshll2 v3.4s, v1.8h, #0
-; NEON-NOSVE-NEXT:    sshll v1.4s, v1.4h, #0
-; NEON-NOSVE-NEXT:    sdivr z3.s, p0/m, z3.s, z5.s
-; NEON-NOSVE-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
-; NEON-NOSVE-NEXT:    uzp1 v1.8h, v2.8h, v4.8h
-; NEON-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v3.8h
-; NEON-NOSVE-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
-; NEON-NOSVE-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: sdiv_v16i8:
 ; NONEON-NOSVE:       // %bb.0:
@@ -287,6 +261,29 @@ define <16 x i8> @sdiv_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #48
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: sdiv_v16i8:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    sshll2 v2.8h, v1.16b, #0
+; NEON-NOSVE-NEXT:    sshll2 v3.8h, v0.16b, #0
+; NEON-NOSVE-NEXT:    sshll v1.8h, v1.8b, #0
+; NEON-NOSVE-NEXT:    sshll v0.8h, v0.8b, #0
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
+; NEON-NOSVE-NEXT:    sshll2 v4.4s, v2.8h, #0
+; NEON-NOSVE-NEXT:    sshll2 v5.4s, v3.8h, #0
+; NEON-NOSVE-NEXT:    sshll v2.4s, v2.4h, #0
+; NEON-NOSVE-NEXT:    sshll v3.4s, v3.4h, #0
+; NEON-NOSVE-NEXT:    sdivr z4.s, p0/m, z4.s, z5.s
+; NEON-NOSVE-NEXT:    sshll2 v5.4s, v0.8h, #0
+; NEON-NOSVE-NEXT:    sshll v0.4s, v0.4h, #0
+; NEON-NOSVE-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
+; NEON-NOSVE-NEXT:    sshll2 v3.4s, v1.8h, #0
+; NEON-NOSVE-NEXT:    sshll v1.4s, v1.4h, #0
+; NEON-NOSVE-NEXT:    sdivr z3.s, p0/m, z3.s, z5.s
+; NEON-NOSVE-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
+; NEON-NOSVE-NEXT:    uzp1 v1.8h, v2.8h, v4.8h
+; NEON-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v3.8h
+; NEON-NOSVE-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
+; NEON-NOSVE-NEXT:    ret
   %res = sdiv <16 x i8> %op1, %op2
   ret <16 x i8> %res
 }
@@ -364,53 +361,6 @@ define void @sdiv_v32i8(ptr %a, ptr %b) {
 ; CHECK-NEXT:    splice z0.b, p0, z0.b, z2.b
 ; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
-;
-; NEON-NOSVE-LABEL: sdiv_v32i8:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    ldp q6, q3, [x1]
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
-; NEON-NOSVE-NEXT:    ldr q2, [x0, #16]
-; NEON-NOSVE-NEXT:    sshll2 v1.8h, v3.16b, #0
-; NEON-NOSVE-NEXT:    sshll2 v4.8h, v2.16b, #0
-; NEON-NOSVE-NEXT:    sshll v3.8h, v3.8b, #0
-; NEON-NOSVE-NEXT:    sshll v2.8h, v2.8b, #0
-; NEON-NOSVE-NEXT:    sshll2 v7.8h, v6.16b, #0
-; NEON-NOSVE-NEXT:    sshll v6.8h, v6.8b, #0
-; NEON-NOSVE-NEXT:    sshll2 v0.4s, v1.8h, #0
-; NEON-NOSVE-NEXT:    sshll2 v5.4s, v4.8h, #0
-; NEON-NOSVE-NEXT:    sshll v1.4s, v1.4h, #0
-; NEON-NOSVE-NEXT:    sshll v4.4s, v4.4h, #0
-; NEON-NOSVE-NEXT:    sshll2 v17.4s, v7.8h, #0
-; NEON-NOSVE-NEXT:    sshll v7.4s, v7.4h, #0
-; NEON-NOSVE-NEXT:    sdivr z0.s, p0/m, z0.s, z5.s
-; NEON-NOSVE-NEXT:    sshll2 v5.4s, v2.8h, #0
-; NEON-NOSVE-NEXT:    sshll v2.4s, v2.4h, #0
-; NEON-NOSVE-NEXT:    sdivr z1.s, p0/m, z1.s, z4.s
-; NEON-NOSVE-NEXT:    sshll2 v4.4s, v3.8h, #0
-; NEON-NOSVE-NEXT:    sshll v3.4s, v3.4h, #0
-; NEON-NOSVE-NEXT:    sdivr z4.s, p0/m, z4.s, z5.s
-; NEON-NOSVE-NEXT:    ldr q5, [x0]
-; NEON-NOSVE-NEXT:    sshll2 v16.8h, v5.16b, #0
-; NEON-NOSVE-NEXT:    sshll v5.8h, v5.8b, #0
-; NEON-NOSVE-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
-; NEON-NOSVE-NEXT:    sshll2 v18.4s, v16.8h, #0
-; NEON-NOSVE-NEXT:    sshll v16.4s, v16.4h, #0
-; NEON-NOSVE-NEXT:    sdivr z17.s, p0/m, z17.s, z18.s
-; NEON-NOSVE-NEXT:    sshll2 v18.4s, v5.8h, #0
-; NEON-NOSVE-NEXT:    sshll v5.4s, v5.4h, #0
-; NEON-NOSVE-NEXT:    sdivr z7.s, p0/m, z7.s, z16.s
-; NEON-NOSVE-NEXT:    sshll2 v16.4s, v6.8h, #0
-; NEON-NOSVE-NEXT:    sshll v6.4s, v6.4h, #0
-; NEON-NOSVE-NEXT:    sdivr z16.s, p0/m, z16.s, z18.s
-; NEON-NOSVE-NEXT:    sdiv z5.s, p0/m, z5.s, z6.s
-; NEON-NOSVE-NEXT:    sdiv z2.s, p0/m, z2.s, z3.s
-; NEON-NOSVE-NEXT:    uzp1 v3.8h, v7.8h, v17.8h
-; NEON-NOSVE-NEXT:    uzp1 v5.8h, v5.8h, v16.8h
-; NEON-NOSVE-NEXT:    uzp1 v1.8h, v2.8h, v4.8h
-; NEON-NOSVE-NEXT:    uzp1 v2.16b, v5.16b, v3.16b
-; NEON-NOSVE-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
-; NEON-NOSVE-NEXT:    stp q2, q0, [x0]
-; NEON-NOSVE-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: sdiv_v32i8:
 ; NONEON-NOSVE:       // %bb.0:
@@ -552,6 +502,52 @@ define void @sdiv_v32i8(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x0]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #96
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: sdiv_v32i8:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    ldp q6, q3, [x1]
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
+; NEON-NOSVE-NEXT:    ldr q2, [x0, #16]
+; NEON-NOSVE-NEXT:    sshll2 v1.8h, v3.16b, #0
+; NEON-NOSVE-NEXT:    sshll2 v4.8h, v2.16b, #0
+; NEON-NOSVE-NEXT:    sshll v3.8h, v3.8b, #0
+; NEON-NOSVE-NEXT:    sshll v2.8h, v2.8b, #0
+; NEON-NOSVE-NEXT:    sshll2 v7.8h, v6.16b, #0
+; NEON-NOSVE-NEXT:    sshll v6.8h, v6.8b, #0
+; NEON-NOSVE-NEXT:    sshll2 v0.4s, v1.8h, #0
+; NEON-NOSVE-NEXT:    sshll2 v5.4s, v4.8h, #0
+; NEON-NOSVE-NEXT:    sshll v1.4s, v1.4h, #0
+; NEON-NOSVE-NEXT:    sshll v4.4s, v4.4h, #0
+; NEON-NOSVE-NEXT:    sshll2 v17.4s, v7.8h, #0
+; NEON-NOSVE-NEXT:    sshll v7.4s, v7.4h, #0
+; NEON-NOSVE-NEXT:    sdivr z0.s, p0/m, z0.s, z5.s
+; NEON-NOSVE-NEXT:    sshll2 v5.4s, v2.8h, #0
+; NEON-NOSVE-NEXT:    sshll v2.4s, v2.4h, #0
+; NEON-NOSVE-NEXT:    sdivr z1.s, p0/m, z1.s, z4.s
+; NEON-NOSVE-NEXT:    sshll2 v4.4s, v3.8h, #0
+; NEON-NOSVE-NEXT:    sshll v3.4s, v3.4h, #0
+; NEON-NOSVE-NEXT:    sdivr z4.s, p0/m, z4.s, z5.s
+; NEON-NOSVE-NEXT:    ldr q5, [x0]
+; NEON-NOSVE-NEXT:    sshll2 v16.8h, v5.16b, #0
+; NEON-NOSVE-NEXT:    sshll v5.8h, v5.8b, #0
+; NEON-NOSVE-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
+; NEON-NOSVE-NEXT:    sshll2 v18.4s, v16.8h, #0
+; NEON-NOSVE-NEXT:    sshll v16.4s, v16.4h, #0
+; NEON-NOSVE-NEXT:    sdivr z17.s, p0/m, z17.s, z18.s
+; NEON-NOSVE-NEXT:    sshll2 v18.4s, v5.8h, #0
+; NEON-NOSVE-NEXT:    sshll v5.4s, v5.4h, #0
+; NEON-NOSVE-NEXT:    sdivr z7.s, p0/m, z7.s, z16.s
+; NEON-NOSVE-NEXT:    sshll2 v16.4s, v6.8h, #0
+; NEON-NOSVE-NEXT:    sshll v6.4s, v6.4h, #0
+; NEON-NOSVE-NEXT:    sdivr z16.s, p0/m, z16.s, z18.s
+; NEON-NOSVE-NEXT:    sdiv z5.s, p0/m, z5.s, z6.s
+; NEON-NOSVE-NEXT:    sdiv z2.s, p0/m, z2.s, z3.s
+; NEON-NOSVE-NEXT:    uzp1 v3.8h, v7.8h, v17.8h
+; NEON-NOSVE-NEXT:    uzp1 v5.8h, v5.8h, v16.8h
+; NEON-NOSVE-NEXT:    uzp1 v1.8h, v2.8h, v4.8h
+; NEON-NOSVE-NEXT:    uzp1 v2.16b, v5.16b, v3.16b
+; NEON-NOSVE-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
+; NEON-NOSVE-NEXT:    stp q2, q0, [x0]
+; NEON-NOSVE-NEXT:    ret
   %op1 = load <32 x i8>, ptr %a
   %op2 = load <32 x i8>, ptr %b
   %res = sdiv <32 x i8> %op1, %op2
@@ -571,17 +567,6 @@ define <2 x i16> @sdiv_v2i16(<2 x i16> %op1, <2 x i16> %op2) {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
-; NEON-NOSVE-LABEL: sdiv_v2i16:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    shl v1.2s, v1.2s, #16
-; NEON-NOSVE-NEXT:    shl v0.2s, v0.2s, #16
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl2
-; NEON-NOSVE-NEXT:    sshr v1.2s, v1.2s, #16
-; NEON-NOSVE-NEXT:    sshr v0.2s, v0.2s, #16
-; NEON-NOSVE-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
-; NEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; NEON-NOSVE-NEXT:    ret
-;
 ; NONEON-NOSVE-LABEL: sdiv_v2i16:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #32
@@ -597,6 +582,16 @@ define <2 x i16> @sdiv_v2i16(<2 x i16> %op1, <2 x i16> %op2) {
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #32
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: sdiv_v2i16:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    shl v1.2s, v1.2s, #16
+; NEON-NOSVE-NEXT:    shl v0.2s, v0.2s, #16
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl2
+; NEON-NOSVE-NEXT:    sshr v1.2s, v1.2s, #16
+; NEON-NOSVE-NEXT:    sshr v0.2s, v0.2s, #16
+; NEON-NOSVE-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
+; NEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; NEON-NOSVE-NEXT:    ret
   %res = sdiv <2 x i16> %op1, %op2
   ret <2 x i16> %res
 }
@@ -613,15 +608,6 @@ define <4 x i16> @sdiv_v4i16(<4 x i16> %op1, <4 x i16> %op2) {
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
-;
-; NEON-NOSVE-LABEL: sdiv_v4i16:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    sshll v1.4s, v1.4h, #0
-; NEON-NOSVE-NEXT:    sshll v0.4s, v0.4h, #0
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
-; NEON-NOSVE-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
-; NEON-NOSVE-NEXT:    xtn v0.4h, v0.4s
-; NEON-NOSVE-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: sdiv_v4i16:
 ; NONEON-NOSVE:       // %bb.0:
@@ -647,6 +633,14 @@ define <4 x i16> @sdiv_v4i16(<4 x i16> %op1, <4 x i16> %op2) {
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #32
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: sdiv_v4i16:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    sshll v1.4s, v1.4h, #0
+; NEON-NOSVE-NEXT:    sshll v0.4s, v0.4h, #0
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
+; NEON-NOSVE-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
+; NEON-NOSVE-NEXT:    xtn v0.4h, v0.4s
+; NEON-NOSVE-NEXT:    ret
   %res = sdiv <4 x i16> %op1, %op2
   ret <4 x i16> %res
 }
@@ -671,18 +665,6 @@ define <8 x i16> @sdiv_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 ; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
-;
-; NEON-NOSVE-LABEL: sdiv_v8i16:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    sshll2 v2.4s, v1.8h, #0
-; NEON-NOSVE-NEXT:    sshll2 v3.4s, v0.8h, #0
-; NEON-NOSVE-NEXT:    sshll v1.4s, v1.4h, #0
-; NEON-NOSVE-NEXT:    sshll v0.4s, v0.4h, #0
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
-; NEON-NOSVE-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
-; NEON-NOSVE-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
-; NEON-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
-; NEON-NOSVE-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: sdiv_v8i16:
 ; NONEON-NOSVE:       // %bb.0:
@@ -723,6 +705,17 @@ define <8 x i16> @sdiv_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #48
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: sdiv_v8i16:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    sshll2 v2.4s, v1.8h, #0
+; NEON-NOSVE-NEXT:    sshll2 v3.4s, v0.8h, #0
+; NEON-NOSVE-NEXT:    sshll v1.4s, v1.4h, #0
+; NEON-NOSVE-NEXT:    sshll v0.4s, v0.4h, #0
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
+; NEON-NOSVE-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
+; NEON-NOSVE-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
+; NEON-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
+; NEON-NOSVE-NEXT:    ret
   %res = sdiv <8 x i16> %op1, %op2
   ret <8 x i16> %res
 }
@@ -759,29 +752,6 @@ define void @sdiv_v16i16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    splice z2.h, p0, z2.h, z0.h
 ; CHECK-NEXT:    stp q1, q2, [x0]
 ; CHECK-NEXT:    ret
-;
-; NEON-NOSVE-LABEL: sdiv_v16i16:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    ldp q4, q1, [x1]
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
-; NEON-NOSVE-NEXT:    ldr q0, [x0, #16]
-; NEON-NOSVE-NEXT:    sshll2 v2.4s, v1.8h, #0
-; NEON-NOSVE-NEXT:    sshll2 v3.4s, v0.8h, #0
-; NEON-NOSVE-NEXT:    sshll2 v5.4s, v4.8h, #0
-; NEON-NOSVE-NEXT:    sshll v4.4s, v4.4h, #0
-; NEON-NOSVE-NEXT:    sshll v1.4s, v1.4h, #0
-; NEON-NOSVE-NEXT:    sshll v0.4s, v0.4h, #0
-; NEON-NOSVE-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
-; NEON-NOSVE-NEXT:    ldr q3, [x0]
-; NEON-NOSVE-NEXT:    sshll2 v6.4s, v3.8h, #0
-; NEON-NOSVE-NEXT:    sshll v3.4s, v3.4h, #0
-; NEON-NOSVE-NEXT:    sdivr z5.s, p0/m, z5.s, z6.s
-; NEON-NOSVE-NEXT:    sdiv z3.s, p0/m, z3.s, z4.s
-; NEON-NOSVE-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
-; NEON-NOSVE-NEXT:    uzp1 v1.8h, v3.8h, v5.8h
-; NEON-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
-; NEON-NOSVE-NEXT:    stp q1, q0, [x0]
-; NEON-NOSVE-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: sdiv_v16i16:
 ; NONEON-NOSVE:       // %bb.0:
@@ -859,6 +829,28 @@ define void @sdiv_v16i16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x0]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #96
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: sdiv_v16i16:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    ldp q4, q1, [x1]
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
+; NEON-NOSVE-NEXT:    ldr q0, [x0, #16]
+; NEON-NOSVE-NEXT:    sshll2 v2.4s, v1.8h, #0
+; NEON-NOSVE-NEXT:    sshll2 v3.4s, v0.8h, #0
+; NEON-NOSVE-NEXT:    sshll2 v5.4s, v4.8h, #0
+; NEON-NOSVE-NEXT:    sshll v4.4s, v4.4h, #0
+; NEON-NOSVE-NEXT:    sshll v1.4s, v1.4h, #0
+; NEON-NOSVE-NEXT:    sshll v0.4s, v0.4h, #0
+; NEON-NOSVE-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
+; NEON-NOSVE-NEXT:    ldr q3, [x0]
+; NEON-NOSVE-NEXT:    sshll2 v6.4s, v3.8h, #0
+; NEON-NOSVE-NEXT:    sshll v3.4s, v3.4h, #0
+; NEON-NOSVE-NEXT:    sdivr z5.s, p0/m, z5.s, z6.s
+; NEON-NOSVE-NEXT:    sdiv z3.s, p0/m, z3.s, z4.s
+; NEON-NOSVE-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
+; NEON-NOSVE-NEXT:    uzp1 v1.8h, v3.8h, v5.8h
+; NEON-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
+; NEON-NOSVE-NEXT:    stp q1, q0, [x0]
+; NEON-NOSVE-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
   %op2 = load <16 x i16>, ptr %b
   %res = sdiv <16 x i16> %op1, %op2
@@ -876,15 +868,6 @@ define <2 x i32> @sdiv_v2i32(<2 x i32> %op1, <2 x i32> %op2) {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
-; NEON-NOSVE-LABEL: sdiv_v2i32:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl2
-; NEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 def $z0
-; NEON-NOSVE-NEXT:    // kill: def $d1 killed $d1 def $z1
-; NEON-NOSVE-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
-; NEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; NEON-NOSVE-NEXT:    ret
-;
 ; NONEON-NOSVE-LABEL: sdiv_v2i32:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #32
@@ -899,6 +882,14 @@ define <2 x i32> @sdiv_v2i32(<2 x i32> %op1, <2 x i32> %op2) {
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #32
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: sdiv_v2i32:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl2
+; NEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; NEON-NOSVE-NEXT:    // kill: def $d1 killed $d1 def $z1
+; NEON-NOSVE-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
+; NEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; NEON-NOSVE-NEXT:    ret
   %res = sdiv <2 x i32> %op1, %op2
   ret <2 x i32> %res
 }
@@ -912,15 +903,6 @@ define <4 x i32> @sdiv_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 ; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
-;
-; NEON-NOSVE-LABEL: sdiv_v4i32:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
-; NEON-NOSVE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; NEON-NOSVE-NEXT:    // kill: def $q1 killed $q1 def $z1
-; NEON-NOSVE-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
-; NEON-NOSVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; NEON-NOSVE-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: sdiv_v4i32:
 ; NONEON-NOSVE:       // %bb.0:
@@ -941,6 +923,14 @@ define <4 x i32> @sdiv_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #48
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: sdiv_v4i32:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
+; NEON-NOSVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; NEON-NOSVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; NEON-NOSVE-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
+; NEON-NOSVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; NEON-NOSVE-NEXT:    ret
   %res = sdiv <4 x i32> %op1, %op2
   ret <4 x i32> %res
 }
@@ -956,17 +946,6 @@ define void @sdiv_v8i32(ptr %a, ptr %b)  {
 ; CHECK-NEXT:    sdiv z1.s, p0/m, z1.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-;
-; NEON-NOSVE-LABEL: sdiv_v8i32:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    ldp q0, q3, [x1]
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
-; NEON-NOSVE-NEXT:    ldp q1, q2, [x0]
-; NEON-NOSVE-NEXT:    sdivr z0.s, p0/m, z0.s, z1.s
-; NEON-NOSVE-NEXT:    movprfx z1, z2
-; NEON-NOSVE-NEXT:    sdiv z1.s, p0/m, z1.s, z3.s
-; NEON-NOSVE-NEXT:    stp q0, q1, [x0]
-; NEON-NOSVE-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: sdiv_v8i32:
 ; NONEON-NOSVE:       // %bb.0:
@@ -1004,6 +983,16 @@ define void @sdiv_v8i32(ptr %a, ptr %b)  {
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x0]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #96
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: sdiv_v8i32:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    ldp q0, q3, [x1]
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
+; NEON-NOSVE-NEXT:    ldp q1, q2, [x0]
+; NEON-NOSVE-NEXT:    sdivr z0.s, p0/m, z0.s, z1.s
+; NEON-NOSVE-NEXT:    movprfx z1, z2
+; NEON-NOSVE-NEXT:    sdiv z1.s, p0/m, z1.s, z3.s
+; NEON-NOSVE-NEXT:    stp q0, q1, [x0]
+; NEON-NOSVE-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
   %op2 = load <8 x i32>, ptr %b
   %res = sdiv <8 x i32> %op1, %op2
@@ -1021,15 +1010,6 @@ define <1 x i64> @sdiv_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
-; NEON-NOSVE-LABEL: sdiv_v1i64:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    ptrue p0.d, vl1
-; NEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 def $z0
-; NEON-NOSVE-NEXT:    // kill: def $d1 killed $d1 def $z1
-; NEON-NOSVE-NEXT:    sdiv z0.d, p0/m, z0.d, z1.d
-; NEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; NEON-NOSVE-NEXT:    ret
-;
 ; NONEON-NOSVE-LABEL: sdiv_v1i64:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #16
@@ -1041,6 +1021,14 @@ define <1 x i64> @sdiv_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: sdiv_v1i64:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    ptrue p0.d, vl1
+; NEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; NEON-NOSVE-NEXT:    // kill: def $d1 killed $d1 def $z1
+; NEON-NOSVE-NEXT:    sdiv z0.d, p0/m, z0.d, z1.d
+; NEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; NEON-NOSVE-NEXT:    ret
   %res = sdiv <1 x i64> %op1, %op2
   ret <1 x i64> %res
 }
@@ -1055,15 +1043,6 @@ define <2 x i64> @sdiv_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
-; NEON-NOSVE-LABEL: sdiv_v2i64:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    ptrue p0.d, vl2
-; NEON-NOSVE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; NEON-NOSVE-NEXT:    // kill: def $q1 killed $q1 def $z1
-; NEON-NOSVE-NEXT:    sdiv z0.d, p0/m, z0.d, z1.d
-; NEON-NOSVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; NEON-NOSVE-NEXT:    ret
-;
 ; NONEON-NOSVE-LABEL: sdiv_v2i64:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [sp, #-48]!
@@ -1077,6 +1056,14 @@ define <2 x i64> @sdiv_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #48
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: sdiv_v2i64:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    ptrue p0.d, vl2
+; NEON-NOSVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; NEON-NOSVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; NEON-NOSVE-NEXT:    sdiv z0.d, p0/m, z0.d, z1.d
+; NEON-NOSVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; NEON-NOSVE-NEXT:    ret
   %res = sdiv <2 x i64> %op1, %op2
   ret <2 x i64> %res
 }
@@ -1092,17 +1079,6 @@ define void @sdiv_v4i64(ptr %a, ptr %b)  {
 ; CHECK-NEXT:    sdiv z1.d, p0/m, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-;
-; NEON-NOSVE-LABEL: sdiv_v4i64:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    ldp q0, q3, [x1]
-; NEON-NOSVE-NEXT:    ptrue p0.d, vl2
-; NEON-NOSVE-NEXT:    ldp q1, q2, [x0]
-; NEON-NOSVE-NEXT:    sdivr z0.d, p0/m, z0.d, z1.d
-; NEON-NOSVE-NEXT:    movprfx z1, z2
-; NEON-NOSVE-NEXT:    sdiv z1.d, p0/m, z1.d, z3.d
-; NEON-NOSVE-NEXT:    stp q0, q1, [x0]
-; NEON-NOSVE-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: sdiv_v4i64:
 ; NONEON-NOSVE:       // %bb.0:
@@ -1128,6 +1104,16 @@ define void @sdiv_v4i64(ptr %a, ptr %b)  {
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x0]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #96
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: sdiv_v4i64:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    ldp q0, q3, [x1]
+; NEON-NOSVE-NEXT:    ptrue p0.d, vl2
+; NEON-NOSVE-NEXT:    ldp q1, q2, [x0]
+; NEON-NOSVE-NEXT:    sdivr z0.d, p0/m, z0.d, z1.d
+; NEON-NOSVE-NEXT:    movprfx z1, z2
+; NEON-NOSVE-NEXT:    sdiv z1.d, p0/m, z1.d, z3.d
+; NEON-NOSVE-NEXT:    stp q0, q1, [x0]
+; NEON-NOSVE-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
   %op2 = load <4 x i64>, ptr %b
   %res = sdiv <4 x i64> %op1, %op2
@@ -1154,17 +1140,6 @@ define <4 x i8> @udiv_v4i8(<4 x i8> %op1, <4 x i8> %op2) {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
-; NEON-NOSVE-LABEL: udiv_v4i8:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    bic v0.4h, #255, lsl #8
-; NEON-NOSVE-NEXT:    bic v1.4h, #255, lsl #8
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
-; NEON-NOSVE-NEXT:    ushll v1.4s, v1.4h, #0
-; NEON-NOSVE-NEXT:    ushll v0.4s, v0.4h, #0
-; NEON-NOSVE-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
-; NEON-NOSVE-NEXT:    xtn v0.4h, v0.4s
-; NEON-NOSVE-NEXT:    ret
-;
 ; NONEON-NOSVE-LABEL: udiv_v4i8:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #32
@@ -1189,6 +1164,16 @@ define <4 x i8> @udiv_v4i8(<4 x i8> %op1, <4 x i8> %op2) {
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #32
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: udiv_v4i8:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    bic v0.4h, #255, lsl #8
+; NEON-NOSVE-NEXT:    bic v1.4h, #255, lsl #8
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
+; NEON-NOSVE-NEXT:    ushll v1.4s, v1.4h, #0
+; NEON-NOSVE-NEXT:    ushll v0.4s, v0.4h, #0
+; NEON-NOSVE-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
+; NEON-NOSVE-NEXT:    xtn v0.4h, v0.4s
+; NEON-NOSVE-NEXT:    ret
   %res = udiv <4 x i8> %op1, %op2
   ret <4 x i8> %res
 }
@@ -1216,21 +1201,6 @@ define <8 x i8> @udiv_v8i8(<8 x i8> %op1, <8 x i8> %op2) {
 ; CHECK-NEXT:    uzp1 z0.b, z1.b, z1.b
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
-;
-; NEON-NOSVE-LABEL: udiv_v8i8:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    ushll v1.8h, v1.8b, #0
-; NEON-NOSVE-NEXT:    ushll v0.8h, v0.8b, #0
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
-; NEON-NOSVE-NEXT:    ushll2 v2.4s, v1.8h, #0
-; NEON-NOSVE-NEXT:    ushll2 v3.4s, v0.8h, #0
-; NEON-NOSVE-NEXT:    ushll v1.4s, v1.4h, #0
-; NEON-NOSVE-NEXT:    ushll v0.4s, v0.4h, #0
-; NEON-NOSVE-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
-; NEON-NOSVE-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
-; NEON-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
-; NEON-NOSVE-NEXT:    xtn v0.8b, v0.8h
-; NEON-NOSVE-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: udiv_v8i8:
 ; NONEON-NOSVE:       // %bb.0:
@@ -1272,6 +1242,20 @@ define <8 x i8> @udiv_v8i8(<8 x i8> %op1, <8 x i8> %op2) {
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #32
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: udiv_v8i8:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    ushll v1.8h, v1.8b, #0
+; NEON-NOSVE-NEXT:    ushll v0.8h, v0.8b, #0
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
+; NEON-NOSVE-NEXT:    ushll2 v2.4s, v1.8h, #0
+; NEON-NOSVE-NEXT:    ushll2 v3.4s, v0.8h, #0
+; NEON-NOSVE-NEXT:    ushll v1.4s, v1.4h, #0
+; NEON-NOSVE-NEXT:    ushll v0.4s, v0.4h, #0
+; NEON-NOSVE-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
+; NEON-NOSVE-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
+; NEON-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
+; NEON-NOSVE-NEXT:    xtn v0.8b, v0.8h
+; NEON-NOSVE-NEXT:    ret
   %res = udiv <8 x i8> %op1, %op2
   ret <8 x i8> %res
 }
@@ -1317,30 +1301,6 @@ define <16 x i8> @udiv_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 ; CHECK-NEXT:    splice z0.b, p0, z0.b, z1.b
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
-;
-; NEON-NOSVE-LABEL: udiv_v16i8:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    ushll2 v2.8h, v1.16b, #0
-; NEON-NOSVE-NEXT:    ushll2 v3.8h, v0.16b, #0
-; NEON-NOSVE-NEXT:    ushll v1.8h, v1.8b, #0
-; NEON-NOSVE-NEXT:    ushll v0.8h, v0.8b, #0
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
-; NEON-NOSVE-NEXT:    ushll2 v4.4s, v2.8h, #0
-; NEON-NOSVE-NEXT:    ushll2 v5.4s, v3.8h, #0
-; NEON-NOSVE-NEXT:    ushll v2.4s, v2.4h, #0
-; NEON-NOSVE-NEXT:    ushll v3.4s, v3.4h, #0
-; NEON-NOSVE-NEXT:    udivr z4.s, p0/m, z4.s, z5.s
-; NEON-NOSVE-NEXT:    ushll2 v5.4s, v0.8h, #0
-; NEON-NOSVE-NEXT:    ushll v0.4s, v0.4h, #0
-; NEON-NOSVE-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
-; NEON-NOSVE-NEXT:    ushll2 v3.4s, v1.8h, #0
-; NEON-NOSVE-NEXT:    ushll v1.4s, v1.4h, #0
-; NEON-NOSVE-NEXT:    udivr z3.s, p0/m, z3.s, z5.s
-; NEON-NOSVE-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
-; NEON-NOSVE-NEXT:    uzp1 v1.8h, v2.8h, v4.8h
-; NEON-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v3.8h
-; NEON-NOSVE-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
-; NEON-NOSVE-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: udiv_v16i8:
 ; NONEON-NOSVE:       // %bb.0:
@@ -1413,6 +1373,29 @@ define <16 x i8> @udiv_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #48
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: udiv_v16i8:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    ushll2 v2.8h, v1.16b, #0
+; NEON-NOSVE-NEXT:    ushll2 v3.8h, v0.16b, #0
+; NEON-NOSVE-NEXT:    ushll v1.8h, v1.8b, #0
+; NEON-NOSVE-NEXT:    ushll v0.8h, v0.8b, #0
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
+; NEON-NOSVE-NEXT:    ushll2 v4.4s, v2.8h, #0
+; NEON-NOSVE-NEXT:    ushll2 v5.4s, v3.8h, #0
+; NEON-NOSVE-NEXT:    ushll v2.4s, v2.4h, #0
+; NEON-NOSVE-NEXT:    ushll v3.4s, v3.4h, #0
+; NEON-NOSVE-NEXT:    udivr z4.s, p0/m, z4.s, z5.s
+; NEON-NOSVE-NEXT:    ushll2 v5.4s, v0.8h, #0
+; NEON-NOSVE-NEXT:    ushll v0.4s, v0.4h, #0
+; NEON-NOSVE-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
+; NEON-NOSVE-NEXT:    ushll2 v3.4s, v1.8h, #0
+; NEON-NOSVE-NEXT:    ushll v1.4s, v1.4h, #0
+; NEON-NOSVE-NEXT:    udivr z3.s, p0/m, z3.s, z5.s
+; NEON-NOSVE-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
+; NEON-NOSVE-NEXT:    uzp1 v1.8h, v2.8h, v4.8h
+; NEON-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v3.8h
+; NEON-NOSVE-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
+; NEON-NOSVE-NEXT:    ret
   %res = udiv <16 x i8> %op1, %op2
   ret <16 x i8> %res
 }
@@ -1490,53 +1473,6 @@ define void @udiv_v32i8(ptr %a, ptr %b) {
 ; CHECK-NEXT:    splice z0.b, p0, z0.b, z2.b
 ; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
-;
-; NEON-NOSVE-LABEL: udiv_v32i8:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    ldp q6, q3, [x1]
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
-; NEON-NOSVE-NEXT:    ldr q2, [x0, #16]
-; NEON-NOSVE-NEXT:    ushll2 v1.8h, v3.16b, #0
-; NEON-NOSVE-NEXT:    ushll2 v4.8h, v2.16b, #0
-; NEON-NOSVE-NEXT:    ushll v3.8h, v3.8b, #0
-; NEON-NOSVE-NEXT:    ushll v2.8h, v2.8b, #0
-; NEON-NOSVE-NEXT:    ushll2 v7.8h, v6.16b, #0
-; NEON-NOSVE-NEXT:    ushll v6.8h, v6.8b, #0
-; NEON-NOSVE-NEXT:    ushll2 v0.4s, v1.8h, #0
-; NEON-NOSVE-NEXT:    ushll2 v5.4s, v4.8h, #0
-; NEON-NOSVE-NEXT:    ushll v1.4s, v1.4h, #0
-; NEON-NOSVE-NEXT:    ushll v4.4s, v4.4h, #0
-; NEON-NOSVE-NEXT:    ushll2 v17.4s, v7.8h, #0
-; NEON-NOSVE-NEXT:    ushll v7.4s, v7.4h, #0
-; NEON-NOSVE-NEXT:    udivr z0.s, p0/m, z0.s, z5.s
-; NEON-NOSVE-NEXT:    ushll2 v5.4s, v2.8h, #0
-; NEON-NOSVE-NEXT:    ushll v2.4s, v2.4h, #0
-; NEON-NOSVE-NEXT:    udivr z1.s, p0/m, z1.s, z4.s
-; NEON-NOSVE-NEXT:    ushll2 v4.4s, v3.8h, #0
-; NEON-NOSVE-NEXT:    ushll v3.4s, v3.4h, #0
-; NEON-NOSVE-NEXT:    udivr z4.s, p0/m, z4.s, z5.s
-; NEON-NOSVE-NEXT:    ldr q5, [x0]
-; NEON-NOSVE-NEXT:    ushll2 v16.8h, v5.16b, #0
-; NEON-NOSVE-NEXT:    ushll v5.8h, v5.8b, #0
-; NEON-NOSVE-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
-; NEON-NOSVE-NEXT:    ushll2 v18.4s, v16.8h, #0
-; NEON-NOSVE-NEXT:    ushll v16.4s, v16.4h, #0
-; NEON-NOSVE-NEXT:    udivr z17.s, p0/m, z17.s, z18.s
-; NEON-NOSVE-NEXT:    ushll2 v18.4s, v5.8h, #0
-; NEON-NOSVE-NEXT:    ushll v5.4s, v5.4h, #0
-; NEON-NOSVE-NEXT:    udivr z7.s, p0/m, z7.s, z16.s
-; NEON-NOSVE-NEXT:    ushll2 v16.4s, v6.8h, #0
-; NEON-NOSVE-NEXT:    ushll v6.4s, v6.4h, #0
-; NEON-NOSVE-NEXT:    udivr z16.s, p0/m, z16.s, z18.s
-; NEON-NOSVE-NEXT:    udiv z5.s, p0/m, z5.s, z6.s
-; NEON-NOSVE-NEXT:    udiv z2.s, p0/m, z2.s, z3.s
-; NEON-NOSVE-NEXT:    uzp1 v3.8h, v7.8h, v17.8h
-; NEON-NOSVE-NEXT:    uzp1 v5.8h, v5.8h, v16.8h
-; NEON-NOSVE-NEXT:    uzp1 v1.8h, v2.8h, v4.8h
-; NEON-NOSVE-NEXT:    uzp1 v2.16b, v5.16b, v3.16b
-; NEON-NOSVE-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
-; NEON-NOSVE-NEXT:    stp q2, q0, [x0]
-; NEON-NOSVE-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: udiv_v32i8:
 ; NONEON-NOSVE:       // %bb.0:
@@ -1678,6 +1614,52 @@ define void @udiv_v32i8(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x0]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #96
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: udiv_v32i8:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    ldp q6, q3, [x1]
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
+; NEON-NOSVE-NEXT:    ldr q2, [x0, #16]
+; NEON-NOSVE-NEXT:    ushll2 v1.8h, v3.16b, #0
+; NEON-NOSVE-NEXT:    ushll2 v4.8h, v2.16b, #0
+; NEON-NOSVE-NEXT:    ushll v3.8h, v3.8b, #0
+; NEON-NOSVE-NEXT:    ushll v2.8h, v2.8b, #0
+; NEON-NOSVE-NEXT:    ushll2 v7.8h, v6.16b, #0
+; NEON-NOSVE-NEXT:    ushll v6.8h, v6.8b, #0
+; NEON-NOSVE-NEXT:    ushll2 v0.4s, v1.8h, #0
+; NEON-NOSVE-NEXT:    ushll2 v5.4s, v4.8h, #0
+; NEON-NOSVE-NEXT:    ushll v1.4s, v1.4h, #0
+; NEON-NOSVE-NEXT:    ushll v4.4s, v4.4h, #0
+; NEON-NOSVE-NEXT:    ushll2 v17.4s, v7.8h, #0
+; NEON-NOSVE-NEXT:    ushll v7.4s, v7.4h, #0
+; NEON-NOSVE-NEXT:    udivr z0.s, p0/m, z0.s, z5.s
+; NEON-NOSVE-NEXT:    ushll2 v5.4s, v2.8h, #0
+; NEON-NOSVE-NEXT:    ushll v2.4s, v2.4h, #0
+; NEON-NOSVE-NEXT:    udivr z1.s, p0/m, z1.s, z4.s
+; NEON-NOSVE-NEXT:    ushll2 v4.4s, v3.8h, #0
+; NEON-NOSVE-NEXT:    ushll v3.4s, v3.4h, #0
+; NEON-NOSVE-NEXT:    udivr z4.s, p0/m, z4.s, z5.s
+; NEON-NOSVE-NEXT:    ldr q5, [x0]
+; NEON-NOSVE-NEXT:    ushll2 v16.8h, v5.16b, #0
+; NEON-NOSVE-NEXT:    ushll v5.8h, v5.8b, #0
+; NEON-NOSVE-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
+; NEON-NOSVE-NEXT:    ushll2 v18.4s, v16.8h, #0
+; NEON-NOSVE-NEXT:    ushll v16.4s, v16.4h, #0
+; NEON-NOSVE-NEXT:    udivr z17.s, p0/m, z17.s, z18.s
+; NEON-NOSVE-NEXT:    ushll2 v18.4s, v5.8h, #0
+; NEON-NOSVE-NEXT:    ushll v5.4s, v5.4h, #0
+; NEON-NOSVE-NEXT:    udivr z7.s, p0/m, z7.s, z16.s
+; NEON-NOSVE-NEXT:    ushll2 v16.4s, v6.8h, #0
+; NEON-NOSVE-NEXT:    ushll v6.4s, v6.4h, #0
+; NEON-NOSVE-NEXT:    udivr z16.s, p0/m, z16.s, z18.s
+; NEON-NOSVE-NEXT:    udiv z5.s, p0/m, z5.s, z6.s
+; NEON-NOSVE-NEXT:    udiv z2.s, p0/m, z2.s, z3.s
+; NEON-NOSVE-NEXT:    uzp1 v3.8h, v7.8h, v17.8h
+; NEON-NOSVE-NEXT:    uzp1 v5.8h, v5.8h, v16.8h
+; NEON-NOSVE-NEXT:    uzp1 v1.8h, v2.8h, v4.8h
+; NEON-NOSVE-NEXT:    uzp1 v2.16b, v5.16b, v3.16b
+; NEON-NOSVE-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
+; NEON-NOSVE-NEXT:    stp q2, q0, [x0]
+; NEON-NOSVE-NEXT:    ret
   %op1 = load <32 x i8>, ptr %a
   %op2 = load <32 x i8>, ptr %b
   %res = udiv <32 x i8> %op1, %op2
@@ -1697,16 +1679,6 @@ define <2 x i16> @udiv_v2i16(<2 x i16> %op1, <2 x i16> %op2) {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
-; NEON-NOSVE-LABEL: udiv_v2i16:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    movi d2, #0x00ffff0000ffff
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl2
-; NEON-NOSVE-NEXT:    and v1.8b, v1.8b, v2.8b
-; NEON-NOSVE-NEXT:    and v0.8b, v0.8b, v2.8b
-; NEON-NOSVE-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
-; NEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; NEON-NOSVE-NEXT:    ret
-;
 ; NONEON-NOSVE-LABEL: udiv_v2i16:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #32
@@ -1722,6 +1694,15 @@ define <2 x i16> @udiv_v2i16(<2 x i16> %op1, <2 x i16> %op2) {
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #32
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: udiv_v2i16:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    movi d2, #0x00ffff0000ffff
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl2
+; NEON-NOSVE-NEXT:    and v1.8b, v1.8b, v2.8b
+; NEON-NOSVE-NEXT:    and v0.8b, v0.8b, v2.8b
+; NEON-NOSVE-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
+; NEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; NEON-NOSVE-NEXT:    ret
   %res = udiv <2 x i16> %op1, %op2
   ret <2 x i16> %res
 }
@@ -1738,15 +1719,6 @@ define <4 x i16> @udiv_v4i16(<4 x i16> %op1, <4 x i16> %op2) {
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
-;
-; NEON-NOSVE-LABEL: udiv_v4i16:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    ushll v1.4s, v1.4h, #0
-; NEON-NOSVE-NEXT:    ushll v0.4s, v0.4h, #0
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
-; NEON-NOSVE-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
-; NEON-NOSVE-NEXT:    xtn v0.4h, v0.4s
-; NEON-NOSVE-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: udiv_v4i16:
 ; NONEON-NOSVE:       // %bb.0:
@@ -1772,6 +1744,14 @@ define <4 x i16> @udiv_v4i16(<4 x i16> %op1, <4 x i16> %op2) {
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #32
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: udiv_v4i16:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    ushll v1.4s, v1.4h, #0
+; NEON-NOSVE-NEXT:    ushll v0.4s, v0.4h, #0
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
+; NEON-NOSVE-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
+; NEON-NOSVE-NEXT:    xtn v0.4h, v0.4s
+; NEON-NOSVE-NEXT:    ret
   %res = udiv <4 x i16> %op1, %op2
   ret <4 x i16> %res
 }
@@ -1796,18 +1776,6 @@ define <8 x i16> @udiv_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 ; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
-;
-; NEON-NOSVE-LABEL: udiv_v8i16:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    ushll2 v2.4s, v1.8h, #0
-; NEON-NOSVE-NEXT:    ushll2 v3.4s, v0.8h, #0
-; NEON-NOSVE-NEXT:    ushll v1.4s, v1.4h, #0
-; NEON-NOSVE-NEXT:    ushll v0.4s, v0.4h, #0
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
-; NEON-NOSVE-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
-; NEON-NOSVE-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
-; NEON-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
-; NEON-NOSVE-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: udiv_v8i16:
 ; NONEON-NOSVE:       // %bb.0:
@@ -1848,6 +1816,17 @@ define <8 x i16> @udiv_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #48
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: udiv_v8i16:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    ushll2 v2.4s, v1.8h, #0
+; NEON-NOSVE-NEXT:    ushll2 v3.4s, v0.8h, #0
+; NEON-NOSVE-NEXT:    ushll v1.4s, v1.4h, #0
+; NEON-NOSVE-NEXT:    ushll v0.4s, v0.4h, #0
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
+; NEON-NOSVE-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
+; NEON-NOSVE-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
+; NEON-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
+; NEON-NOSVE-NEXT:    ret
   %res = udiv <8 x i16> %op1, %op2
   ret <8 x i16> %res
 }
@@ -1884,29 +1863,6 @@ define void @udiv_v16i16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    splice z2.h, p0, z2.h, z0.h
 ; CHECK-NEXT:    stp q1, q2, [x0]
 ; CHECK-NEXT:    ret
-;
-; NEON-NOSVE-LABEL: udiv_v16i16:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    ldp q4, q1, [x1]
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
-; NEON-NOSVE-NEXT:    ldr q0, [x0, #16]
-; NEON-NOSVE-NEXT:    ushll2 v2.4s, v1.8h, #0
-; NEON-NOSVE-NEXT:    ushll2 v3.4s, v0.8h, #0
-; NEON-NOSVE-NEXT:    ushll2 v5.4s, v4.8h, #0
-; NEON-NOSVE-NEXT:    ushll v4.4s, v4.4h, #0
-; NEON-NOSVE-NEXT:    ushll v1.4s, v1.4h, #0
-; NEON-NOSVE-NEXT:    ushll v0.4s, v0.4h, #0
-; NEON-NOSVE-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
-; NEON-NOSVE-NEXT:    ldr q3, [x0]
-; NEON-NOSVE-NEXT:    ushll2 v6.4s, v3.8h, #0
-; NEON-NOSVE-NEXT:    ushll v3.4s, v3.4h, #0
-; NEON-NOSVE-NEXT:    udivr z5.s, p0/m, z5.s, z6.s
-; NEON-NOSVE-NEXT:    udiv z3.s, p0/m, z3.s, z4.s
-; NEON-NOSVE-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
-; NEON-NOSVE-NEXT:    uzp1 v1.8h, v3.8h, v5.8h
-; NEON-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
-; NEON-NOSVE-NEXT:    stp q1, q0, [x0]
-; NEON-NOSVE-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: udiv_v16i16:
 ; NONEON-NOSVE:       // %bb.0:
@@ -1984,6 +1940,28 @@ define void @udiv_v16i16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x0]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #96
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: udiv_v16i16:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    ldp q4, q1, [x1]
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
+; NEON-NOSVE-NEXT:    ldr q0, [x0, #16]
+; NEON-NOSVE-NEXT:    ushll2 v2.4s, v1.8h, #0
+; NEON-NOSVE-NEXT:    ushll2 v3.4s, v0.8h, #0
+; NEON-NOSVE-NEXT:    ushll2 v5.4s, v4.8h, #0
+; NEON-NOSVE-NEXT:    ushll v4.4s, v4.4h, #0
+; NEON-NOSVE-NEXT:    ushll v1.4s, v1.4h, #0
+; NEON-NOSVE-NEXT:    ushll v0.4s, v0.4h, #0
+; NEON-NOSVE-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
+; NEON-NOSVE-NEXT:    ldr q3, [x0]
+; NEON-NOSVE-NEXT:    ushll2 v6.4s, v3.8h, #0
+; NEON-NOSVE-NEXT:    ushll v3.4s, v3.4h, #0
+; NEON-NOSVE-NEXT:    udivr z5.s, p0/m, z5.s, z6.s
+; NEON-NOSVE-NEXT:    udiv z3.s, p0/m, z3.s, z4.s
+; NEON-NOSVE-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
+; NEON-NOSVE-NEXT:    uzp1 v1.8h, v3.8h, v5.8h
+; NEON-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
+; NEON-NOSVE-NEXT:    stp q1, q0, [x0]
+; NEON-NOSVE-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
   %op2 = load <16 x i16>, ptr %b
   %res = udiv <16 x i16> %op1, %op2
@@ -2001,15 +1979,6 @@ define <2 x i32> @udiv_v2i32(<2 x i32> %op1, <2 x i32> %op2) {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
-; NEON-NOSVE-LABEL: udiv_v2i32:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl2
-; NEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 def $z0
-; NEON-NOSVE-NEXT:    // kill: def $d1 killed $d1 def $z1
-; NEON-NOSVE-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
-; NEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; NEON-NOSVE-NEXT:    ret
-;
 ; NONEON-NOSVE-LABEL: udiv_v2i32:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #32
@@ -2024,6 +1993,14 @@ define <2 x i32> @udiv_v2i32(<2 x i32> %op1, <2 x i32> %op2) {
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #32
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: udiv_v2i32:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl2
+; NEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; NEON-NOSVE-NEXT:    // kill: def $d1 killed $d1 def $z1
+; NEON-NOSVE-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
+; NEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; NEON-NOSVE-NEXT:    ret
   %res = udiv <2 x i32> %op1, %op2
   ret <2 x i32> %res
 }
@@ -2037,15 +2014,6 @@ define <4 x i32> @udiv_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 ; CHECK-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
-;
-; NEON-NOSVE-LABEL: udiv_v4i32:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
-; NEON-NOSVE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; NEON-NOSVE-NEXT:    // kill: def $q1 killed $q1 def $z1
-; NEON-NOSVE-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
-; NEON-NOSVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; NEON-NOSVE-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: udiv_v4i32:
 ; NONEON-NOSVE:       // %bb.0:
@@ -2066,6 +2034,14 @@ define <4 x i32> @udiv_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #48
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: udiv_v4i32:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
+; NEON-NOSVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; NEON-NOSVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; NEON-NOSVE-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
+; NEON-NOSVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; NEON-NOSVE-NEXT:    ret
   %res = udiv <4 x i32> %op1, %op2
   ret <4 x i32> %res
 }
@@ -2081,17 +2057,6 @@ define void @udiv_v8i32(ptr %a, ptr %b)  {
 ; CHECK-NEXT:    udiv z1.s, p0/m, z1.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-;
-; NEON-NOSVE-LABEL: udiv_v8i32:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    ldp q0, q3, [x1]
-; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
-; NEON-NOSVE-NEXT:    ldp q1, q2, [x0]
-; NEON-NOSVE-NEXT:    udivr z0.s, p0/m, z0.s, z1.s
-; NEON-NOSVE-NEXT:    movprfx z1, z2
-; NEON-NOSVE-NEXT:    udiv z1.s, p0/m, z1.s, z3.s
-; NEON-NOSVE-NEXT:    stp q0, q1, [x0]
-; NEON-NOSVE-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: udiv_v8i32:
 ; NONEON-NOSVE:       // %bb.0:
@@ -2129,6 +2094,16 @@ define void @udiv_v8i32(ptr %a, ptr %b)  {
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x0]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #96
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: udiv_v8i32:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    ldp q0, q3, [x1]
+; NEON-NOSVE-NEXT:    ptrue p0.s, vl4
+; NEON-NOSVE-NEXT:    ldp q1, q2, [x0]
+; NEON-NOSVE-NEXT:    udivr z0.s, p0/m, z0.s, z1.s
+; NEON-NOSVE-NEXT:    movprfx z1, z2
+; NEON-NOSVE-NEXT:    udiv z1.s, p0/m, z1.s, z3.s
+; NEON-NOSVE-NEXT:    stp q0, q1, [x0]
+; NEON-NOSVE-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
   %op2 = load <8 x i32>, ptr %b
   %res = udiv <8 x i32> %op1, %op2
@@ -2146,15 +2121,6 @@ define <1 x i64> @udiv_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
-; NEON-NOSVE-LABEL: udiv_v1i64:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    ptrue p0.d, vl1
-; NEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 def $z0
-; NEON-NOSVE-NEXT:    // kill: def $d1 killed $d1 def $z1
-; NEON-NOSVE-NEXT:    udiv z0.d, p0/m, z0.d, z1.d
-; NEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; NEON-NOSVE-NEXT:    ret
-;
 ; NONEON-NOSVE-LABEL: udiv_v1i64:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #16
@@ -2166,6 +2132,14 @@ define <1 x i64> @udiv_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: udiv_v1i64:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    ptrue p0.d, vl1
+; NEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; NEON-NOSVE-NEXT:    // kill: def $d1 killed $d1 def $z1
+; NEON-NOSVE-NEXT:    udiv z0.d, p0/m, z0.d, z1.d
+; NEON-NOSVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; NEON-NOSVE-NEXT:    ret
   %res = udiv <1 x i64> %op1, %op2
   ret <1 x i64> %res
 }
@@ -2180,15 +2154,6 @@ define <2 x i64> @udiv_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
-; NEON-NOSVE-LABEL: udiv_v2i64:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    ptrue p0.d, vl2
-; NEON-NOSVE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; NEON-NOSVE-NEXT:    // kill: def $q1 killed $q1 def $z1
-; NEON-NOSVE-NEXT:    udiv z0.d, p0/m, z0.d, z1.d
-; NEON-NOSVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; NEON-NOSVE-NEXT:    ret
-;
 ; NONEON-NOSVE-LABEL: udiv_v2i64:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [sp, #-48]!
@@ -2202,6 +2167,14 @@ define <2 x i64> @udiv_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #48
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: udiv_v2i64:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    ptrue p0.d, vl2
+; NEON-NOSVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; NEON-NOSVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; NEON-NOSVE-NEXT:    udiv z0.d, p0/m, z0.d, z1.d
+; NEON-NOSVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; NEON-NOSVE-NEXT:    ret
   %res = udiv <2 x i64> %op1, %op2
   ret <2 x i64> %res
 }
@@ -2217,17 +2190,6 @@ define void @udiv_v4i64(ptr %a, ptr %b)  {
 ; CHECK-NEXT:    udiv z1.d, p0/m, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-;
-; NEON-NOSVE-LABEL: udiv_v4i64:
-; NEON-NOSVE:       // %bb.0:
-; NEON-NOSVE-NEXT:    ldp q0, q3, [x1]
-; NEON-NOSVE-NEXT:    ptrue p0.d, vl2
-; NEON-NOSVE-NEXT:    ldp q1, q2, [x0]
-; NEON-NOSVE-NEXT:    udivr z0.d, p0/m, z0.d, z1.d
-; NEON-NOSVE-NEXT:    movprfx z1, z2
-; NEON-NOSVE-NEXT:    udiv z1.d, p0/m, z1.d, z3.d
-; NEON-NOSVE-NEXT:    stp q0, q1, [x0]
-; NEON-NOSVE-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: udiv_v4i64:
 ; NONEON-NOSVE:       // %bb.0:
@@ -2253,6 +2215,16 @@ define void @udiv_v4i64(ptr %a, ptr %b)  {
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x0]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #96
 ; NONEON-NOSVE-NEXT:    ret
+; NEON-NOSVE-LABEL: udiv_v4i64:
+; NEON-NOSVE:       // %bb.0:
+; NEON-NOSVE-NEXT:    ldp q0, q3, [x1]
+; NEON-NOSVE-NEXT:    ptrue p0.d, vl2
+; NEON-NOSVE-NEXT:    ldp q1, q2, [x0]
+; NEON-NOSVE-NEXT:    udivr z0.d, p0/m, z0.d, z1.d
+; NEON-NOSVE-NEXT:    movprfx z1, z2
+; NEON-NOSVE-NEXT:    udiv z1.d, p0/m, z1.d, z3.d
+; NEON-NOSVE-NEXT:    stp q0, q1, [x0]
+; NEON-NOSVE-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
   %op2 = load <4 x i64>, ptr %b
   %res = udiv <4 x i64> %op1, %op2
@@ -2263,20 +2235,13 @@ define void @udiv_v4i64(ptr %a, ptr %b)  {
 define void @udiv_constantsplat_v8i32(ptr %a)  {
 ; SVE-LABEL: udiv_constantsplat_v8i32:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    mov w8, #8969 // =0x2309
+; SVE-NEXT:    mov w8, #37251 // =0x9183
 ; SVE-NEXT:    ldp q1, q2, [x0]
-; SVE-NEXT:    movk w8, #22765, lsl #16
+; SVE-NEXT:    movk w8, #44150, lsl #16
 ; SVE-NEXT:    ptrue p0.s, vl4
 ; SVE-NEXT:    mov z0.s, w8
-; SVE-NEXT:    movprfx z3, z1
-; SVE-NEXT:    umulh z3.s, p0/m, z3.s, z0.s
+; SVE-NEXT:    umulh z1.s, p0/m, z1.s, z0.s
 ; SVE-NEXT:    umulh z0.s, p0/m, z0.s, z2.s
-; SVE-NEXT:    sub z1.s, z1.s, z3.s
-; SVE-NEXT:    sub z2.s, z2.s, z0.s
-; SVE-NEXT:    lsr z1.s, z1.s, #1
-; SVE-NEXT:    lsr z2.s, z2.s, #1
-; SVE-NEXT:    add z1.s, z1.s, z3.s
-; SVE-NEXT:    add z0.s, z2.s, z0.s
 ; SVE-NEXT:    lsr z1.s, z1.s, #6
 ; SVE-NEXT:    lsr z0.s, z0.s, #6
 ; SVE-NEXT:    stp q1, q0, [x0]
@@ -2284,21 +2249,58 @@ define void @udiv_constantsplat_v8i32(ptr %a)  {
 ;
 ; SVE2-LABEL: udiv_constantsplat_v8i32:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    mov w8, #8969 // =0x2309
+; SVE2-NEXT:    mov w8, #37251 // =0x9183
 ; SVE2-NEXT:    ldp q1, q2, [x0]
-; SVE2-NEXT:    movk w8, #22765, lsl #16
+; SVE2-NEXT:    movk w8, #44150, lsl #16
 ; SVE2-NEXT:    mov z0.s, w8
-; SVE2-NEXT:    umulh z3.s, z1.s, z0.s
+; SVE2-NEXT:    umulh z1.s, z1.s, z0.s
 ; SVE2-NEXT:    umulh z0.s, z2.s, z0.s
-; SVE2-NEXT:    sub z1.s, z1.s, z3.s
-; SVE2-NEXT:    sub z2.s, z2.s, z0.s
-; SVE2-NEXT:    usra z3.s, z1.s, #1
-; SVE2-NEXT:    usra z0.s, z2.s, #1
-; SVE2-NEXT:    lsr z1.s, z3.s, #6
+; SVE2-NEXT:    lsr z1.s, z1.s, #6
 ; SVE2-NEXT:    lsr z0.s, z0.s, #6
 ; SVE2-NEXT:    stp q1, q0, [x0]
 ; SVE2-NEXT:    ret
 ;
+; NONEON-NOSVE-LABEL: udiv_constantsplat_v8i32:
+; NONEON-NOSVE:       // %bb.0:
+; NONEON-NOSVE-NEXT:    ldp q1, q0, [x0]
+; NONEON-NOSVE-NEXT:    mov w8, #37251 // =0x9183
+; NONEON-NOSVE-NEXT:    movk w8, #44150, lsl #16
+; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #-64]!
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
+; NONEON-NOSVE-NEXT:    ldr w9, [sp, #28]
+; NONEON-NOSVE-NEXT:    umull x9, w9, w8
+; NONEON-NOSVE-NEXT:    lsr x10, x9, #38
+; NONEON-NOSVE-NEXT:    ldr w9, [sp, #24]
+; NONEON-NOSVE-NEXT:    umull x9, w9, w8
+; NONEON-NOSVE-NEXT:    lsr x9, x9, #38
+; NONEON-NOSVE-NEXT:    stp w9, w10, [sp, #56]
+; NONEON-NOSVE-NEXT:    ldr w9, [sp, #20]
+; NONEON-NOSVE-NEXT:    umull x9, w9, w8
+; NONEON-NOSVE-NEXT:    lsr x11, x9, #38
+; NONEON-NOSVE-NEXT:    ldr w9, [sp, #16]
+; NONEON-NOSVE-NEXT:    umull x9, w9, w8
+; NONEON-NOSVE-NEXT:    lsr x9, x9, #38
+; NONEON-NOSVE-NEXT:    stp w9, w11, [sp, #48]
+; NONEON-NOSVE-NEXT:    ldr w9, [sp, #12]
+; NONEON-NOSVE-NEXT:    umull x9, w9, w8
+; NONEON-NOSVE-NEXT:    lsr x9, x9, #38
+; NONEON-NOSVE-NEXT:    str w9, [sp, #44]
+; NONEON-NOSVE-NEXT:    ldr w9, [sp, #8]
+; NONEON-NOSVE-NEXT:    umull x9, w9, w8
+; NONEON-NOSVE-NEXT:    lsr x9, x9, #38
+; NONEON-NOSVE-NEXT:    str w9, [sp, #40]
+; NONEON-NOSVE-NEXT:    ldr w9, [sp, #4]
+; NONEON-NOSVE-NEXT:    umull x9, w9, w8
+; NONEON-NOSVE-NEXT:    lsr x9, x9, #38
+; NONEON-NOSVE-NEXT:    str w9, [sp, #36]
+; NONEON-NOSVE-NEXT:    ldr w9, [sp]
+; NONEON-NOSVE-NEXT:    umull x8, w9, w8
+; NONEON-NOSVE-NEXT:    lsr x8, x8, #38
+; NONEON-NOSVE-NEXT:    str w8, [sp, #32]
+; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #32]
+; NONEON-NOSVE-NEXT:    stp q0, q1, [x0]
+; NONEON-NOSVE-NEXT:    add sp, sp, #64
+; NONEON-NOSVE-NEXT:    ret
 ; NEON-NOSVE-LABEL: udiv_constantsplat_v8i32:
 ; NEON-NOSVE:       // %bb.0:
 ; NEON-NOSVE-NEXT:    mov w8, #8969 // =0x2309
@@ -2319,70 +2321,6 @@ define void @udiv_constantsplat_v8i32(ptr %a)  {
 ; NEON-NOSVE-NEXT:    ushr v0.4s, v0.4s, #6
 ; NEON-NOSVE-NEXT:    stp q1, q0, [x0]
 ; NEON-NOSVE-NEXT:    ret
-;
-; NONEON-NOSVE-LABEL: udiv_constantsplat_v8i32:
-; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    ldp q1, q0, [x0]
-; NONEON-NOSVE-NEXT:    mov w8, #8969 // =0x2309
-; NONEON-NOSVE-NEXT:    movk w8, #22765, lsl #16
-; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #-64]!
-; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
-; NONEON-NOSVE-NEXT:    ldr w9, [sp, #28]
-; NONEON-NOSVE-NEXT:    umull x10, w9, w8
-; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
-; NONEON-NOSVE-NEXT:    sub w9, w9, w10
-; NONEON-NOSVE-NEXT:    add w9, w10, w9, lsr #1
-; NONEON-NOSVE-NEXT:    lsr w11, w9, #6
-; NONEON-NOSVE-NEXT:    ldr w9, [sp, #24]
-; NONEON-NOSVE-NEXT:    umull x10, w9, w8
-; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
-; NONEON-NOSVE-NEXT:    sub w9, w9, w10
-; NONEON-NOSVE-NEXT:    add w9, w10, w9, lsr #1
-; NONEON-NOSVE-NEXT:    lsr w9, w9, #6
-; NONEON-NOSVE-NEXT:    stp w9, w11, [sp, #56]
-; NONEON-NOSVE-NEXT:    ldr w9, [sp, #20]
-; NONEON-NOSVE-NEXT:    umull x10, w9, w8
-; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
-; NONEON-NOSVE-NEXT:    sub w9, w9, w10
-; NONEON-NOSVE-NEXT:    add w9, w10, w9, lsr #1
-; NONEON-NOSVE-NEXT:    lsr w11, w9, #6
-; NONEON-NOSVE-NEXT:    ldr w9, [sp, #16]
-; NONEON-NOSVE-NEXT:    umull x10, w9, w8
-; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
-; NONEON-NOSVE-NEXT:    sub w9, w9, w10
-; NONEON-NOSVE-NEXT:    add w9, w10, w9, lsr #1
-; NONEON-NOSVE-NEXT:    lsr w9, w9, #6
-; NONEON-NOSVE-NEXT:    stp w9, w11, [sp, #48]
-; NONEON-NOSVE-NEXT:    ldr w9, [sp, #12]
-; NONEON-NOSVE-NEXT:    umull x10, w9, w8
-; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
-; NONEON-NOSVE-NEXT:    sub w9, w9, w10
-; NONEON-NOSVE-NEXT:    add w9, w10, w9, lsr #1
-; NONEON-NOSVE-NEXT:    lsr w11, w9, #6
-; NONEON-NOSVE-NEXT:    ldr w9, [sp, #8]
-; NONEON-NOSVE-NEXT:    umull x10, w9, w8
-; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
-; NONEON-NOSVE-NEXT:    sub w9, w9, w10
-; NONEON-NOSVE-NEXT:    add w9, w10, w9, lsr #1
-; NONEON-NOSVE-NEXT:    lsr w9, w9, #6
-; NONEON-NOSVE-NEXT:    stp w9, w11, [sp, #40]
-; NONEON-NOSVE-NEXT:    ldr w9, [sp, #4]
-; NONEON-NOSVE-NEXT:    umull x10, w9, w8
-; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
-; NONEON-NOSVE-NEXT:    sub w9, w9, w10
-; NONEON-NOSVE-NEXT:    add w9, w10, w9, lsr #1
-; NONEON-NOSVE-NEXT:    lsr w11, w9, #6
-; NONEON-NOSVE-NEXT:    ldr w9, [sp]
-; NONEON-NOSVE-NEXT:    umull x8, w9, w8
-; NONEON-NOSVE-NEXT:    lsr x8, x8, #32
-; NONEON-NOSVE-NEXT:    sub w9, w9, w8
-; NONEON-NOSVE-NEXT:    add w8, w8, w9, lsr #1
-; NONEON-NOSVE-NEXT:    lsr w8, w8, #6
-; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #32]
-; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #32]
-; NONEON-NOSVE-NEXT:    stp q0, q1, [x0]
-; NONEON-NOSVE-NEXT:    add sp, sp, #64
-; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
   %res = udiv <8 x i32> %op1, <i32 95, i32 95, i32 95, i32 95, i32 95, i32 95, i32 95, i32 95>
   store <8 x i32> %res, ptr %a

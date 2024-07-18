@@ -6,14 +6,12 @@
 define <8 x i16> @combine_vec_udiv_uniform(<8 x i16> %x) {
 ; SDAG-LABEL: combine_vec_udiv_uniform:
 ; SDAG:       // %bb.0:
-; SDAG-NEXT:    mov w8, #25645 // =0x642d
+; SDAG-NEXT:    mov w8, #45589 // =0xb215
 ; SDAG-NEXT:    dup v1.8h, w8
 ; SDAG-NEXT:    umull2 v2.4s, v0.8h, v1.8h
-; SDAG-NEXT:    umull v1.4s, v0.4h, v1.4h
-; SDAG-NEXT:    uzp2 v1.8h, v1.8h, v2.8h
-; SDAG-NEXT:    sub v0.8h, v0.8h, v1.8h
-; SDAG-NEXT:    usra v1.8h, v0.8h, #1
-; SDAG-NEXT:    ushr v0.8h, v1.8h, #4
+; SDAG-NEXT:    umull v0.4s, v0.4h, v1.4h
+; SDAG-NEXT:    uzp2 v0.8h, v0.8h, v2.8h
+; SDAG-NEXT:    ushr v0.8h, v0.8h, #4
 ; SDAG-NEXT:    ret
 ;
 ; GISEL-LABEL: combine_vec_udiv_uniform:
@@ -21,11 +19,9 @@ define <8 x i16> @combine_vec_udiv_uniform(<8 x i16> %x) {
 ; GISEL-NEXT:    adrp x8, .LCPI0_0
 ; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
 ; GISEL-NEXT:    umull2 v2.4s, v0.8h, v1.8h
-; GISEL-NEXT:    umull v1.4s, v0.4h, v1.4h
-; GISEL-NEXT:    uzp2 v1.8h, v1.8h, v2.8h
-; GISEL-NEXT:    sub v0.8h, v0.8h, v1.8h
-; GISEL-NEXT:    usra v1.8h, v0.8h, #1
-; GISEL-NEXT:    ushr v0.8h, v1.8h, #4
+; GISEL-NEXT:    umull v0.4s, v0.4h, v1.4h
+; GISEL-NEXT:    uzp2 v0.8h, v0.8h, v2.8h
+; GISEL-NEXT:    ushr v0.8h, v0.8h, #4
 ; GISEL-NEXT:    ret
   %1 = udiv <8 x i16> %x, <i16 23, i16 23, i16 23, i16 23, i16 23, i16 23, i16 23, i16 23>
   ret <8 x i16> %1
@@ -37,44 +33,30 @@ define <8 x i16> @combine_vec_udiv_nonuniform(<8 x i16> %x) {
 ; SDAG-NEXT:    adrp x8, .LCPI1_0
 ; SDAG-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
 ; SDAG-NEXT:    adrp x8, .LCPI1_1
-; SDAG-NEXT:    ldr q2, [x8, :lo12:.LCPI1_1]
+; SDAG-NEXT:    ushl v0.8h, v0.8h, v1.8h
+; SDAG-NEXT:    ldr q1, [x8, :lo12:.LCPI1_1]
 ; SDAG-NEXT:    adrp x8, .LCPI1_2
-; SDAG-NEXT:    ushl v1.8h, v0.8h, v1.8h
-; SDAG-NEXT:    umull2 v3.4s, v1.8h, v2.8h
-; SDAG-NEXT:    umull v1.4s, v1.4h, v2.4h
-; SDAG-NEXT:    ldr q2, [x8, :lo12:.LCPI1_2]
-; SDAG-NEXT:    adrp x8, .LCPI1_3
-; SDAG-NEXT:    uzp2 v1.8h, v1.8h, v3.8h
-; SDAG-NEXT:    sub v0.8h, v0.8h, v1.8h
-; SDAG-NEXT:    umull2 v3.4s, v0.8h, v2.8h
-; SDAG-NEXT:    umull v0.4s, v0.4h, v2.4h
-; SDAG-NEXT:    uzp2 v0.8h, v0.8h, v3.8h
-; SDAG-NEXT:    add v0.8h, v0.8h, v1.8h
-; SDAG-NEXT:    ldr q1, [x8, :lo12:.LCPI1_3]
+; SDAG-NEXT:    umull2 v2.4s, v0.8h, v1.8h
+; SDAG-NEXT:    umull v0.4s, v0.4h, v1.4h
+; SDAG-NEXT:    ldr q1, [x8, :lo12:.LCPI1_2]
+; SDAG-NEXT:    uzp2 v0.8h, v0.8h, v2.8h
 ; SDAG-NEXT:    ushl v0.8h, v0.8h, v1.8h
 ; SDAG-NEXT:    ret
 ;
 ; GISEL-LABEL: combine_vec_udiv_nonuniform:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    adrp x8, .LCPI1_3
-; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI1_3]
 ; GISEL-NEXT:    adrp x8, .LCPI1_2
-; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI1_2]
+; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI1_2]
 ; GISEL-NEXT:    adrp x8, .LCPI1_1
 ; GISEL-NEXT:    neg v1.8h, v1.8h
-; GISEL-NEXT:    ushl v1.8h, v0.8h, v1.8h
-; GISEL-NEXT:    umull2 v3.4s, v1.8h, v2.8h
-; GISEL-NEXT:    umull v1.4s, v1.4h, v2.4h
-; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI1_1]
+; GISEL-NEXT:    ushl v0.8h, v0.8h, v1.8h
+; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI1_1]
 ; GISEL-NEXT:    adrp x8, .LCPI1_0
-; GISEL-NEXT:    uzp2 v1.8h, v1.8h, v3.8h
-; GISEL-NEXT:    sub v0.8h, v0.8h, v1.8h
-; GISEL-NEXT:    umull2 v3.4s, v0.8h, v2.8h
-; GISEL-NEXT:    umull v0.4s, v0.4h, v2.4h
-; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI1_0]
-; GISEL-NEXT:    uzp2 v0.8h, v0.8h, v3.8h
-; GISEL-NEXT:    add v0.8h, v0.8h, v1.8h
-; GISEL-NEXT:    neg v1.8h, v2.8h
+; GISEL-NEXT:    umull2 v2.4s, v0.8h, v1.8h
+; GISEL-NEXT:    umull v0.4s, v0.4h, v1.4h
+; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
+; GISEL-NEXT:    neg v1.8h, v1.8h
+; GISEL-NEXT:    uzp2 v0.8h, v0.8h, v2.8h
 ; GISEL-NEXT:    ushl v0.8h, v0.8h, v1.8h
 ; GISEL-NEXT:    ret
   %1 = udiv <8 x i16> %x, <i16 23, i16 34, i16 -23, i16 56, i16 128, i16 -1, i16 -256, i16 -32768>
@@ -126,25 +108,35 @@ define <8 x i16> @combine_vec_udiv_nonuniform3(<8 x i16> %x) {
 ; SDAG-NEXT:    umull2 v2.4s, v0.8h, v1.8h
 ; SDAG-NEXT:    umull v1.4s, v0.4h, v1.4h
 ; SDAG-NEXT:    uzp2 v1.8h, v1.8h, v2.8h
+; SDAG-NEXT:    ldr q2, [x8, :lo12:.LCPI3_1]
+; SDAG-NEXT:    adrp x8, .LCPI3_2
 ; SDAG-NEXT:    sub v0.8h, v0.8h, v1.8h
-; SDAG-NEXT:    usra v1.8h, v0.8h, #1
-; SDAG-NEXT:    ldr q0, [x8, :lo12:.LCPI3_1]
-; SDAG-NEXT:    ushl v0.8h, v1.8h, v0.8h
+; SDAG-NEXT:    umull2 v3.4s, v0.8h, v2.8h
+; SDAG-NEXT:    umull v0.4s, v0.4h, v2.4h
+; SDAG-NEXT:    uzp2 v0.8h, v0.8h, v3.8h
+; SDAG-NEXT:    add v0.8h, v0.8h, v1.8h
+; SDAG-NEXT:    ldr q1, [x8, :lo12:.LCPI3_2]
+; SDAG-NEXT:    ushl v0.8h, v0.8h, v1.8h
 ; SDAG-NEXT:    ret
 ;
 ; GISEL-LABEL: combine_vec_udiv_nonuniform3:
 ; GISEL:       // %bb.0:
+; GISEL-NEXT:    adrp x8, .LCPI3_2
+; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI3_2]
 ; GISEL-NEXT:    adrp x8, .LCPI3_1
-; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI3_1]
-; GISEL-NEXT:    adrp x8, .LCPI3_0
 ; GISEL-NEXT:    umull2 v2.4s, v0.8h, v1.8h
 ; GISEL-NEXT:    umull v1.4s, v0.4h, v1.4h
 ; GISEL-NEXT:    uzp2 v1.8h, v1.8h, v2.8h
-; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI3_0]
+; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI3_1]
+; GISEL-NEXT:    adrp x8, .LCPI3_0
 ; GISEL-NEXT:    sub v0.8h, v0.8h, v1.8h
-; GISEL-NEXT:    usra v1.8h, v0.8h, #1
-; GISEL-NEXT:    neg v0.8h, v2.8h
-; GISEL-NEXT:    ushl v0.8h, v1.8h, v0.8h
+; GISEL-NEXT:    umull2 v3.4s, v0.8h, v2.8h
+; GISEL-NEXT:    umull v0.4s, v0.4h, v2.4h
+; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI3_0]
+; GISEL-NEXT:    uzp2 v0.8h, v0.8h, v3.8h
+; GISEL-NEXT:    add v0.8h, v0.8h, v1.8h
+; GISEL-NEXT:    neg v1.8h, v2.8h
+; GISEL-NEXT:    ushl v0.8h, v0.8h, v1.8h
 ; GISEL-NEXT:    ret
   %1 = udiv <8 x i16> %x, <i16 7, i16 23, i16 25, i16 27, i16 31, i16 47, i16 63, i16 127>
   ret <8 x i16> %1
@@ -153,7 +145,7 @@ define <8 x i16> @combine_vec_udiv_nonuniform3(<8 x i16> %x) {
 define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 ; SDAG-LABEL: combine_vec_udiv_nonuniform4:
 ; SDAG:       // %bb.0:
-; SDAG-NEXT:    movi v1.16b, #171
+; SDAG-NEXT:    movi v1.16b, #85
 ; SDAG-NEXT:    adrp x8, .LCPI4_0
 ; SDAG-NEXT:    adrp x9, .LCPI4_1
 ; SDAG-NEXT:    ldr q3, [x9, :lo12:.LCPI4_1]
@@ -162,7 +154,7 @@ define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 ; SDAG-NEXT:    and v0.16b, v0.16b, v3.16b
 ; SDAG-NEXT:    uzp2 v1.16b, v1.16b, v2.16b
 ; SDAG-NEXT:    ldr q2, [x8, :lo12:.LCPI4_0]
-; SDAG-NEXT:    ushr v1.16b, v1.16b, #7
+; SDAG-NEXT:    ushr v1.16b, v1.16b, #6
 ; SDAG-NEXT:    and v1.16b, v1.16b, v2.16b
 ; SDAG-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; SDAG-NEXT:    ret

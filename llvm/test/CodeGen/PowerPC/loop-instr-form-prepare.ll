@@ -621,9 +621,9 @@ define i64 @test_ds_cross_basic_blocks(ptr %arg, i32 signext %arg1) {
 ; CHECK-NEXT:  .LBB6_4: # %bb5
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lbzu r30, 1(r5)
-; CHECK-NEXT:    mulli r29, r30, 171
-; CHECK-NEXT:    rlwinm r28, r29, 24, 8, 30
-; CHECK-NEXT:    srwi r29, r29, 9
+; CHECK-NEXT:    mulli r29, r30, 85
+; CHECK-NEXT:    rlwinm r28, r29, 25, 7, 30
+; CHECK-NEXT:    srwi r29, r29, 8
 ; CHECK-NEXT:    add r29, r29, r28
 ; CHECK-NEXT:    sub r30, r30, r29
 ; CHECK-NEXT:    clrlwi r30, r30, 24

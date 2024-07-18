@@ -124,16 +124,19 @@ define <4 x i32> @udiv_constant_rhs(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a3
 ; CHECK-NEXT:    vmulhu.vv v9, v8, v9
 ; CHECK-NEXT:    vsub.vv v10, v8, v9
-; CHECK-NEXT:    vmv.v.i v11, 0
 ; CHECK-NEXT:    lui a0, 524288
-; CHECK-NEXT:    vslide1down.vx v11, v11, a0
+; CHECK-NEXT:    vmv.s.x v11, a0
+; CHECK-NEXT:    vmv.v.i v12, 0
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; CHECK-NEXT:    vslideup.vi v12, v11, 1
 ; CHECK-NEXT:    lui a0, %hi(.LCPI4_1)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI4_1)
-; CHECK-NEXT:    vle32.v v12, (a0)
-; CHECK-NEXT:    vmulhu.vv v10, v10, v11
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vle32.v v11, (a0)
+; CHECK-NEXT:    vmulhu.vv v10, v10, v12
 ; CHECK-NEXT:    vadd.vv v9, v10, v9
 ; CHECK-NEXT:    vmv.v.i v0, 4
-; CHECK-NEXT:    vsrl.vv v9, v9, v12
+; CHECK-NEXT:    vsrl.vv v9, v9, v11
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; CHECK-NEXT:    ret
   %e0 = udiv i32 %a, 23

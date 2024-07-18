@@ -10,13 +10,13 @@ define dso_local void @_Z12d2s_bufferedmPc(i64 %arg, ptr nocapture %arg1) {
 ; CHECK-NEXT:    jb .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %bb2.preheader
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    movabsq $3777893186295716171, %r8 # imm = 0x346DC5D63886594B
+; CHECK-NEXT:    movabsq $-3335171328526686933, %r8 # imm = 0xD1B71758E219652B
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_2: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    mulq %r8
-; CHECK-NEXT:    shrq $11, %rdx
+; CHECK-NEXT:    shrq $13, %rdx
 ; CHECK-NEXT:    imulq $10000, %rdx, %rax # imm = 0x2710
 ; CHECK-NEXT:    movq %rdi, %r9
 ; CHECK-NEXT:    subq %rax, %r9

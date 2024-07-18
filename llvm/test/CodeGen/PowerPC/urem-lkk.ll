@@ -5,12 +5,9 @@
 define i32 @fold_urem_positive_odd(i32 %x) {
 ; CHECK-LABEL: fold_urem_positive_odd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lis 4, 22765
-; CHECK-NEXT:    ori 4, 4, 8969
+; CHECK-NEXT:    lis 4, -21386
+; CHECK-NEXT:    ori 4, 4, 37251
 ; CHECK-NEXT:    mulhwu 4, 3, 4
-; CHECK-NEXT:    sub 5, 3, 4
-; CHECK-NEXT:    srwi 5, 5, 1
-; CHECK-NEXT:    add 4, 5, 4
 ; CHECK-NEXT:    srwi 4, 4, 6
 ; CHECK-NEXT:    mulli 4, 4, 95
 ; CHECK-NEXT:    sub 3, 3, 4
@@ -24,7 +21,7 @@ define i32 @fold_urem_positive_even(i32 %x) {
 ; CHECK-LABEL: fold_urem_positive_even:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lis 4, -2226
-; CHECK-NEXT:    ori 4, 4, 16323
+; CHECK-NEXT:    ori 4, 4, 16321
 ; CHECK-NEXT:    mulhwu 4, 3, 4
 ; CHECK-NEXT:    srwi 4, 4, 10
 ; CHECK-NEXT:    mulli 4, 4, 1060
@@ -39,12 +36,9 @@ define i32 @fold_urem_positive_even(i32 %x) {
 define i32 @combine_urem_udiv(i32 %x) {
 ; CHECK-LABEL: combine_urem_udiv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lis 4, 22765
-; CHECK-NEXT:    ori 4, 4, 8969
+; CHECK-NEXT:    lis 4, -21386
+; CHECK-NEXT:    ori 4, 4, 37251
 ; CHECK-NEXT:    mulhwu 4, 3, 4
-; CHECK-NEXT:    sub 5, 3, 4
-; CHECK-NEXT:    srwi 5, 5, 1
-; CHECK-NEXT:    add 4, 5, 4
 ; CHECK-NEXT:    srwi 4, 4, 6
 ; CHECK-NEXT:    mulli 5, 4, 95
 ; CHECK-NEXT:    sub 3, 3, 5

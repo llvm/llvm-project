@@ -980,7 +980,7 @@ define i64 @v_udiv_i64_oddk_denom(i64 %num) {
 ; CHECK-LABEL: v_udiv_i64_oddk_denom:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0x1fb03c31
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0x1fb03c2f
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0xd9528440
 ; CHECK-NEXT:    v_mul_lo_u32 v4, v1, v2
 ; CHECK-NEXT:    v_mul_lo_u32 v5, v0, v3
@@ -1013,7 +1013,7 @@ define <2 x i64> @v_udiv_v2i64_oddk_denom(<2 x i64> %num) {
 ; CHECK-LABEL: v_udiv_v2i64_oddk_denom:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v4, 0x1fb03c31
+; CHECK-NEXT:    v_mov_b32_e32 v4, 0x1fb03c2f
 ; CHECK-NEXT:    v_mov_b32_e32 v5, 0xd9528440
 ; CHECK-NEXT:    v_mul_lo_u32 v6, v1, v4
 ; CHECK-NEXT:    v_mul_lo_u32 v7, v0, v5

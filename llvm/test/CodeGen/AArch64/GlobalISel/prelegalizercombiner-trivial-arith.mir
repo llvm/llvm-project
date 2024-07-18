@@ -26,8 +26,6 @@ tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
-    ; Fold (x + 0) -> x
-    ;
     ; CHECK-LABEL: name: right_ident_add
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -47,8 +45,6 @@ tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
-    ; Fold (x * 0) -> 0
-    ;
     ; CHECK-LABEL: name: mul_0
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -69,8 +65,6 @@ tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
-    ; Fold (x * 0) -> 0
-    ;
     ; CHECK-LABEL: name: mul_0_cant_replace
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -93,8 +87,6 @@ tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
-    ; Fold (0 / x) -> 0
-    ;
     ; CHECK-LABEL: name: sdiv_0
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -114,8 +106,6 @@ tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
-    ; Fold (0 / x) -> 0
-    ;
     ; CHECK-LABEL: name: udiv_0
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -135,8 +125,6 @@ tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
-    ; Fold (0 % x) -> 0
-    ;
     ; CHECK-LABEL: name: srem_0
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -156,8 +144,6 @@ tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
-    ; Fold (0 % x) -> 0
-    ;
     ; CHECK-LABEL: name: urem_0
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -178,8 +164,6 @@ tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
-    ; Fold (x || 0) -> x
-    ;
     ; CHECK-LABEL: name: right_ident_or
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -199,8 +183,6 @@ tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
-    ; Fold (x | 0) -> x
-    ;
     ; CHECK-LABEL: name: right_ident_xor
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -220,8 +202,6 @@ tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
-    ; Fold (x << 0) -> x
-    ;
     ; CHECK-LABEL: name: right_ident_shl
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -241,8 +221,6 @@ tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
-    ; Fold (x ashr 0) -> x
-    ;
     ; CHECK-LABEL: name: right_ident_ashr
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -262,8 +240,6 @@ tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
-    ; Fold (x lshr 0) -> x
-    ;
     ; CHECK-LABEL: name: right_ident_lshr
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -283,8 +259,6 @@ tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
-    ; Not an identity, no folding.
-    ;
     ; CHECK-LABEL: name: dont_fold_sub
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -325,8 +299,6 @@ tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $x0
-    ; Fold (x + 0) -> x
-    ;
     ; CHECK-LABEL: name: right_ident_ptr_add
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
@@ -476,8 +448,10 @@ body:             |
     ; CHECK-LABEL: name: udiv_of_sext
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: $w0 = COPY [[C]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s2) = G_CONSTANT i2 1
+    ; CHECK-NEXT: [[UMULH:%[0-9]+]]:_(s2) = G_UMULH [[C]], [[C]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UMULH]](s2)
+    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %2:_(s1) = G_CONSTANT i1 true
     %4:_(s2) = G_CONSTANT i2 1

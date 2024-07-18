@@ -8,21 +8,19 @@
 define <8 x i8> @vshli_target_constant(<8 x i16> %arg, <8 x i32> %arg1) {
 ; CHECK-LABEL: vshli_target_constant:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [2863311531,2863311531,2863311531,2863311531]
+; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [1431655765,1431655765,1431655765,1431655765]
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
 ; CHECK-NEXT:    pmuludq %xmm0, %xmm1
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
 ; CHECK-NEXT:    pmuludq %xmm0, %xmm3
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,3,2,3]
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
-; CHECK-NEXT:    psrld $1, %xmm1
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
 ; CHECK-NEXT:    pmuludq %xmm0, %xmm2
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
 ; CHECK-NEXT:    pmuludq %xmm0, %xmm3
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[1,3,2,3]
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; CHECK-NEXT:    psrld $1, %xmm2
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm3 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
 ; CHECK-NEXT:    pand %xmm3, %xmm2
 ; CHECK-NEXT:    pand %xmm3, %xmm1

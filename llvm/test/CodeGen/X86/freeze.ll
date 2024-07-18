@@ -127,11 +127,10 @@ define i32 @freeze_zext(i64 %a) nounwind {
 ; X86ASM:       # %bb.0: # %entry
 ; X86ASM-NEXT:    movq %rdi, %rax
 ; X86ASM-NEXT:    movl %eax, %ecx
-; X86ASM-NEXT:    movl $3435973837, %edx # imm = 0xCCCCCCCD
-; X86ASM-NEXT:    imulq %rcx, %rdx
-; X86ASM-NEXT:    shrq $35, %rdx
-; X86ASM-NEXT:    addl %edx, %edx
-; X86ASM-NEXT:    leal (%rdx,%rdx,4), %ecx
+; X86ASM-NEXT:    imulq $858993459, %rcx, %rcx # imm = 0x33333333
+; X86ASM-NEXT:    shrq $33, %rcx
+; X86ASM-NEXT:    addl %ecx, %ecx
+; X86ASM-NEXT:    leal (%rcx,%rcx,4), %ecx
 ; X86ASM-NEXT:    subl %ecx, %eax
 ; X86ASM-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X86ASM-NEXT:    retq

@@ -695,9 +695,8 @@ define i64 @load_fold_udiv1(ptr %p) {
 ; CHECK-O3-LABEL: load_fold_udiv1:
 ; CHECK-O3:       # %bb.0:
 ; CHECK-O3-NEXT:    movq (%rdi), %rdx
-; CHECK-O3-NEXT:    movabsq $-8608480567731124087, %rax # imm = 0x8888888888888889
+; CHECK-O3-NEXT:    movabsq $1229782938247303441, %rax # imm = 0x1111111111111111
 ; CHECK-O3-NEXT:    mulxq %rax, %rax, %rax
-; CHECK-O3-NEXT:    shrq $3, %rax
 ; CHECK-O3-NEXT:    retq
   %v = load atomic i64, ptr %p unordered, align 8
   %ret = udiv i64 %v, 15
@@ -882,10 +881,9 @@ define i64 @load_fold_urem1(ptr %p) {
 ; CHECK-O3-LABEL: load_fold_urem1:
 ; CHECK-O3:       # %bb.0:
 ; CHECK-O3-NEXT:    movq (%rdi), %rax
-; CHECK-O3-NEXT:    movabsq $-8608480567731124087, %rcx # imm = 0x8888888888888889
+; CHECK-O3-NEXT:    movabsq $1229782938247303441, %rcx # imm = 0x1111111111111111
 ; CHECK-O3-NEXT:    movq %rax, %rdx
 ; CHECK-O3-NEXT:    mulxq %rcx, %rcx, %rcx
-; CHECK-O3-NEXT:    shrq $3, %rcx
 ; CHECK-O3-NEXT:    leaq (%rcx,%rcx,4), %rcx
 ; CHECK-O3-NEXT:    leaq (%rcx,%rcx,2), %rcx
 ; CHECK-O3-NEXT:    subq %rcx, %rax
@@ -1493,9 +1491,8 @@ define void @rmw_fold_udiv1(ptr %p, i64 %v) {
 ; CHECK-LABEL: rmw_fold_udiv1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq (%rdi), %rdx
-; CHECK-NEXT:    movabsq $-8608480567731124087, %rax # imm = 0x8888888888888889
+; CHECK-NEXT:    movabsq $1229782938247303441, %rax # imm = 0x1111111111111111
 ; CHECK-NEXT:    mulxq %rax, %rax, %rax
-; CHECK-NEXT:    shrq $3, %rax
 ; CHECK-NEXT:    movq %rax, (%rdi)
 ; CHECK-NEXT:    retq
   %prev = load atomic i64, ptr %p unordered, align 8
@@ -1623,10 +1620,9 @@ define void @rmw_fold_urem1(ptr %p, i64 %v) {
 ; CHECK-O0-LABEL: rmw_fold_urem1:
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
-; CHECK-O0-NEXT:    movabsq $-8608480567731124087, %rcx # imm = 0x8888888888888889
+; CHECK-O0-NEXT:    movabsq $1229782938247303441, %rcx # imm = 0x1111111111111111
 ; CHECK-O0-NEXT:    movq %rax, %rdx
 ; CHECK-O0-NEXT:    mulxq %rcx, %rcx, %rcx
-; CHECK-O0-NEXT:    shrq $3, %rcx
 ; CHECK-O0-NEXT:    leaq (%rcx,%rcx,4), %rcx
 ; CHECK-O0-NEXT:    leaq (%rcx,%rcx,2), %rcx
 ; CHECK-O0-NEXT:    subq %rcx, %rax
@@ -1636,9 +1632,8 @@ define void @rmw_fold_urem1(ptr %p, i64 %v) {
 ; CHECK-O3-LABEL: rmw_fold_urem1:
 ; CHECK-O3:       # %bb.0:
 ; CHECK-O3-NEXT:    movq (%rdi), %rdx
-; CHECK-O3-NEXT:    movabsq $-8608480567731124087, %rax # imm = 0x8888888888888889
+; CHECK-O3-NEXT:    movabsq $1229782938247303441, %rax # imm = 0x1111111111111111
 ; CHECK-O3-NEXT:    mulxq %rax, %rax, %rax
-; CHECK-O3-NEXT:    shrq $3, %rax
 ; CHECK-O3-NEXT:    leaq (%rax,%rax,4), %rax
 ; CHECK-O3-NEXT:    leaq (%rax,%rax,2), %rax
 ; CHECK-O3-NEXT:    subq %rax, %rdx

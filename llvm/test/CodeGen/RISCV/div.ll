@@ -47,10 +47,9 @@ define i32 @udiv_constant(i32 %a) nounwind {
 ;
 ; RV32IM-LABEL: udiv_constant:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    lui a1, 838861
-; RV32IM-NEXT:    addi a1, a1, -819
+; RV32IM-NEXT:    lui a1, 209715
+; RV32IM-NEXT:    addi a1, a1, 819
 ; RV32IM-NEXT:    mulhu a0, a0, a1
-; RV32IM-NEXT:    srli a0, a0, 2
 ; RV32IM-NEXT:    ret
 ;
 ; RV64I-LABEL: udiv_constant:
@@ -68,11 +67,11 @@ define i32 @udiv_constant(i32 %a) nounwind {
 ; RV64IM-LABEL: udiv_constant:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    slli a0, a0, 32
-; RV64IM-NEXT:    lui a1, 838861
-; RV64IM-NEXT:    addi a1, a1, -819
+; RV64IM-NEXT:    lui a1, 209715
+; RV64IM-NEXT:    addi a1, a1, 819
 ; RV64IM-NEXT:    slli a1, a1, 32
 ; RV64IM-NEXT:    mulhu a0, a0, a1
-; RV64IM-NEXT:    srli a0, a0, 34
+; RV64IM-NEXT:    srli a0, a0, 32
 ; RV64IM-NEXT:    ret
   %1 = udiv i32 %a, 5
   ret i32 %1
@@ -184,23 +183,24 @@ define i64 @udiv64_constant(i64 %a) nounwind {
 ; RV32IM-NEXT:    add a2, a0, a1
 ; RV32IM-NEXT:    sltu a3, a2, a0
 ; RV32IM-NEXT:    add a2, a2, a3
-; RV32IM-NEXT:    lui a3, 838861
-; RV32IM-NEXT:    addi a4, a3, -819
-; RV32IM-NEXT:    mulhu a5, a2, a4
-; RV32IM-NEXT:    srli a6, a5, 2
-; RV32IM-NEXT:    andi a5, a5, -4
-; RV32IM-NEXT:    add a5, a5, a6
-; RV32IM-NEXT:    sub a2, a2, a5
-; RV32IM-NEXT:    sub a5, a0, a2
-; RV32IM-NEXT:    addi a3, a3, -820
-; RV32IM-NEXT:    mul a3, a5, a3
-; RV32IM-NEXT:    mulhu a6, a5, a4
-; RV32IM-NEXT:    add a3, a6, a3
+; RV32IM-NEXT:    lui a3, 209715
+; RV32IM-NEXT:    addi a3, a3, 819
+; RV32IM-NEXT:    mulhu a3, a2, a3
+; RV32IM-NEXT:    slli a4, a3, 2
+; RV32IM-NEXT:    add a3, a4, a3
+; RV32IM-NEXT:    sub a2, a2, a3
+; RV32IM-NEXT:    sub a3, a0, a2
+; RV32IM-NEXT:    lui a4, 838861
+; RV32IM-NEXT:    addi a5, a4, -820
+; RV32IM-NEXT:    mul a5, a3, a5
+; RV32IM-NEXT:    addi a4, a4, -819
+; RV32IM-NEXT:    mulhu a6, a3, a4
+; RV32IM-NEXT:    add a5, a6, a5
 ; RV32IM-NEXT:    sltu a0, a0, a2
 ; RV32IM-NEXT:    sub a1, a1, a0
 ; RV32IM-NEXT:    mul a1, a1, a4
-; RV32IM-NEXT:    add a1, a3, a1
-; RV32IM-NEXT:    mul a0, a5, a4
+; RV32IM-NEXT:    add a1, a5, a1
+; RV32IM-NEXT:    mul a0, a3, a4
 ; RV32IM-NEXT:    ret
 ;
 ; RV64I-LABEL: udiv64_constant:
@@ -210,12 +210,11 @@ define i64 @udiv64_constant(i64 %a) nounwind {
 ;
 ; RV64IM-LABEL: udiv64_constant:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    lui a1, 838861
-; RV64IM-NEXT:    addiw a1, a1, -819
+; RV64IM-NEXT:    lui a1, 209715
+; RV64IM-NEXT:    addiw a1, a1, 819
 ; RV64IM-NEXT:    slli a2, a1, 32
 ; RV64IM-NEXT:    add a1, a1, a2
 ; RV64IM-NEXT:    mulhu a0, a0, a1
-; RV64IM-NEXT:    srli a0, a0, 2
 ; RV64IM-NEXT:    ret
   %1 = udiv i64 %a, 5
   ret i64 %1
@@ -318,9 +317,9 @@ define i8 @udiv8_constant(i8 %a) nounwind {
 ; RV32IM-LABEL: udiv8_constant:
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    andi a0, a0, 255
-; RV32IM-NEXT:    li a1, 205
+; RV32IM-NEXT:    li a1, 51
 ; RV32IM-NEXT:    mul a0, a0, a1
-; RV32IM-NEXT:    srli a0, a0, 10
+; RV32IM-NEXT:    srli a0, a0, 8
 ; RV32IM-NEXT:    ret
 ;
 ; RV64I-LABEL: udiv8_constant:
@@ -337,9 +336,9 @@ define i8 @udiv8_constant(i8 %a) nounwind {
 ; RV64IM-LABEL: udiv8_constant:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    andi a0, a0, 255
-; RV64IM-NEXT:    li a1, 205
+; RV64IM-NEXT:    li a1, 51
 ; RV64IM-NEXT:    mul a0, a0, a1
-; RV64IM-NEXT:    srli a0, a0, 10
+; RV64IM-NEXT:    srli a0, a0, 8
 ; RV64IM-NEXT:    ret
   %1 = udiv i8 %a, 5
   ret i8 %1
@@ -477,9 +476,9 @@ define i16 @udiv16_constant(i16 %a) nounwind {
 ; RV32IM-LABEL: udiv16_constant:
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    slli a0, a0, 16
-; RV32IM-NEXT:    lui a1, 838864
+; RV32IM-NEXT:    lui a1, 209712
 ; RV32IM-NEXT:    mulhu a0, a0, a1
-; RV32IM-NEXT:    srli a0, a0, 18
+; RV32IM-NEXT:    srli a0, a0, 16
 ; RV32IM-NEXT:    ret
 ;
 ; RV64I-LABEL: udiv16_constant:
@@ -496,11 +495,10 @@ define i16 @udiv16_constant(i16 %a) nounwind {
 ;
 ; RV64IM-LABEL: udiv16_constant:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    lui a1, 52429
-; RV64IM-NEXT:    slli a1, a1, 4
 ; RV64IM-NEXT:    slli a0, a0, 48
+; RV64IM-NEXT:    lui a1, 209712
 ; RV64IM-NEXT:    mulhu a0, a0, a1
-; RV64IM-NEXT:    srli a0, a0, 18
+; RV64IM-NEXT:    srli a0, a0, 16
 ; RV64IM-NEXT:    ret
   %1 = udiv i16 %a, 5
   ret i16 %1
