@@ -306,9 +306,29 @@ void AddDebugInfoPass::runOnOperation() {
           subprogramFlags | mlir::LLVM::DISubprogramFlags::Definition;
     }
     unsigned line = getLineFromLoc(l);
-    if (!result.second.modules.empty())
+    if (fir::isInternalProcedure(funcOp)) {
+      // For contained functions, the scope is the parent subroutine.
+      mlir::SymbolRefAttr sym = mlir::cast<mlir::SymbolRefAttr>(
+          funcOp->getAttr(fir::getHostSymbolAttrName()));
+      if (sym) {
+        if (auto func = symbolTable.lookup<mlir::func::FuncOp>(
+                sym.getLeafReference())) {
+          // FIXME: Can there be situation where we process contained function
+          // before the parent?
+          if (debugInfoIsAlreadySet(func.getLoc())) {
+            if (auto fusedLoc = mlir::cast<mlir::FusedLoc>(func.getLoc())) {
+              if (auto spAttr =
+                      mlir::dyn_cast_if_present<mlir::LLVM::DISubprogramAttr>(
+                          fusedLoc.getMetadata()))
+                Scope = spAttr;
+            }
+          }
+        }
+      }
+    } else if (!result.second.modules.empty()) {
       Scope = getOrCreateModuleAttr(result.second.modules[0], fileAttr, cuAttr,
                                     line - 1, false);
+    }
 
     auto spAttr = mlir::LLVM::DISubprogramAttr::get(
         context, id, compilationUnit, Scope, funcName, fullName, funcFileAttr,
