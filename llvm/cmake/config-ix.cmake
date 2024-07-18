@@ -262,6 +262,7 @@ endif()
 
 check_cxx_symbol_exists(logf128 cmath HAS_LOGF128)
 if(HAS_LOGF128)
+    set(LLVM_HAS_LOGF128 On)
     add_compile_definitions(HAS_LOGF128)
 endif()
 
