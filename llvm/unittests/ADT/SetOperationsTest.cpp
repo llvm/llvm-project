@@ -8,6 +8,8 @@
 
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -197,6 +199,42 @@ TEST(SetOperationsTest, SetSubtract) {
   set_subtract(Set1, Set2);
   EXPECT_EQ(ExpectedSet1, Set1);
   EXPECT_EQ(ExpectedSet2, Set2);
+}
+
+TEST(SetOperationsTest, SetSubtractSmallPtrSet) {
+  int A[4];
+
+  // Set1.size() < Set2.size()
+  llvm::SmallPtrSet<int *, 4> Set1 = {&A[0], &A[1]};
+  llvm::SmallPtrSet<int *, 4> Set2 = {&A[1], &A[2], &A[3]};
+  llvm::SmallPtrSet<int *, 4> ExpectedSet1 = {&A[0]};
+  set_subtract(Set1, Set2);
+  EXPECT_EQ(ExpectedSet1, Set1);
+
+  // Set1.size() > Set2.size()
+  Set1 = {&A[0], &A[1], &A[2]};
+  Set2 = {&A[0], &A[2]};
+  ExpectedSet1 = {&A[1]};
+  set_subtract(Set1, Set2);
+  EXPECT_EQ(ExpectedSet1, Set1);
+}
+
+TEST(SetOperationsTest, SetSubtractSmallVector) {
+  int A[4];
+
+  // Set1.size() < Set2.size()
+  llvm::SmallPtrSet<int *, 4> Set1 = {&A[0], &A[1]};
+  llvm::SmallVector<int *> Set2 = {&A[1], &A[2], &A[3]};
+  llvm::SmallPtrSet<int *, 4> ExpectedSet1 = {&A[0]};
+  set_subtract(Set1, Set2);
+  EXPECT_EQ(ExpectedSet1, Set1);
+
+  // Set1.size() > Set2.size()
+  Set1 = {&A[0], &A[1], &A[2]};
+  Set2 = {&A[0], &A[2]};
+  ExpectedSet1 = {&A[1]};
+  set_subtract(Set1, Set2);
+  EXPECT_EQ(ExpectedSet1, Set1);
 }
 
 TEST(SetOperationsTest, SetSubtractRemovedRemaining) {
