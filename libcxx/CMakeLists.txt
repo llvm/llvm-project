@@ -159,20 +159,6 @@ set(LIBCXX_BENCHMARK_TEST_ARGS_DEFAULT --benchmark_min_time=0.01)
 set(LIBCXX_BENCHMARK_TEST_ARGS "${LIBCXX_BENCHMARK_TEST_ARGS_DEFAULT}" CACHE STRING
     "Arguments to pass when running the benchmarks using check-cxx-benchmarks")
 
-set(LIBCXX_BENCHMARK_NATIVE_STDLIB "" CACHE STRING
-        "Build the benchmarks against the specified native STL.
-         The value must be one of libc++/libstdc++")
-set(LIBCXX_BENCHMARK_NATIVE_GCC_TOOLCHAIN "" CACHE STRING
-    "Use alternate GCC toolchain when building the native benchmarks")
-
-if (LIBCXX_BENCHMARK_NATIVE_STDLIB)
-  if (NOT (LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libc++"
-        OR LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libstdc++"))
-    message(FATAL_ERROR "Invalid value for LIBCXX_BENCHMARK_NATIVE_STDLIB: "
-            "'${LIBCXX_BENCHMARK_NATIVE_STDLIB}'")
-  endif()
-endif()
-
 option(LIBCXX_INCLUDE_DOCS "Build the libc++ documentation." ${LLVM_INCLUDE_DOCS})
 set(LIBCXX_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
     "Define suffix of library directory name (32/64)")

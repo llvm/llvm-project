@@ -1202,6 +1202,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarize(1)
       .lower();
 
+  // TODO: Update this to correct handling when adding AArch64/SVE support.
+  getActionDefinitionsBuilder(G_VECTOR_COMPRESS).lower();
+
   getActionDefinitionsBuilder({G_FSHL, G_FSHR})
       .customFor({{s32, s32}, {s32, s64}, {s64, s64}})
       .lower();

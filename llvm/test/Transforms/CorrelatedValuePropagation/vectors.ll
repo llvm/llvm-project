@@ -241,8 +241,6 @@ define <2 x i16> @and_with_poison(<2 x i8> %a) {
   ret <2 x i16> %res
 }
 
-
-
 define <4 x i64> @issue_97674_getConstantOnEdge(i1 %cond) {
 ; CHECK-LABEL: define <4 x i64> @issue_97674_getConstantOnEdge(
 ; CHECK-SAME: i1 [[COND:%.*]]) {
@@ -276,4 +274,56 @@ define <4 x i64> @issue_97674_getConstant() {
 entry:
   %folds = add <4 x i64> zeroinitializer, zeroinitializer
   ret <4 x i64> %folds
+}
+
+define <2 x i16> @phi_merge1(i1 %c, <2 x i8> %a) {
+; CHECK-LABEL: define <2 x i16> @phi_merge1(
+; CHECK-SAME: i1 [[C:%.*]], <2 x i8> [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
+; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[JOIN:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi <2 x i16> [ [[ZEXT]], %[[ENTRY]] ], [ <i16 1, i16 2>, %[[IF]] ]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <2 x i16> [[PHI]], <i16 2, i16 3>
+; CHECK-NEXT:    ret <2 x i16> [[ADD]]
+;
+entry:
+  %zext = zext <2 x i8> %a to <2 x i16>
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi <2 x i16> [ %zext, %entry ], [ <i16 1, i16 2>, %if ]
+  %add = add <2 x i16> %phi, <i16 2, i16 3>
+  ret <2 x i16> %add
+}
+
+define <2 x i16> @phi_merge2(i1 %c, <2 x i8> %a) {
+; CHECK-LABEL: define <2 x i16> @phi_merge2(
+; CHECK-SAME: i1 [[C:%.*]], <2 x i8> [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
+; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[JOIN:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi <2 x i16> [ <i16 1, i16 2>, %[[ENTRY]] ], [ [[ZEXT]], %[[IF]] ]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <2 x i16> [[PHI]], <i16 2, i16 3>
+; CHECK-NEXT:    ret <2 x i16> [[ADD]]
+;
+entry:
+  %zext = zext <2 x i8> %a to <2 x i16>
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi <2 x i16> [ <i16 1, i16 2>, %entry ], [ %zext, %if ]
+  %add = add <2 x i16> %phi, <i16 2, i16 3>
+  ret <2 x i16> %add
 }
