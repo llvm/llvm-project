@@ -1814,6 +1814,38 @@ bool Parser::checkPotentialAngleBracketDelimiter(
     return true;
   }
 
+  if (OpToken.is(tok::greater) && Tok.is(tok::coloncolon)) {
+    SourceLocation StartLoc = Tok.getLocation();
+    CXXScopeSpec SS;
+    ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
+                                   /*ObjectHasErrors=*/false,
+                                   /*EnteringContext=*/false);
+    ExprResult Result =
+        tryParseCXXIdExpression(SS, /*isAddressOfOperand=*/false);
+    bool Invalid = !Result.isUsable() || Result.get()->containsErrors();
+    Result = Actions.CorrectDelayedTyposInExpr(Result);
+
+    if (PP.isBacktrackEnabled())
+      PP.RevertCachedTokens(1);
+    else
+      PP.EnterToken(Tok, /*IsReinject=*/true);
+
+    SourceLocation EndLoc = Tok.getLocation();
+    Tok.setLocation(StartLoc);
+    Tok.setKind(tok::annot_primary_expr);
+    setExprAnnotation(Tok, Result);
+    Tok.setAnnotationEndLoc(EndLoc);
+    PP.AnnotateCachedTokens(Tok);
+
+    if (Invalid) {
+      Actions.diagnoseExprIntendedAsTemplateName(
+          getCurScope(), LAngle.TemplateName, LAngle.LessLoc,
+          OpToken.getLocation());
+      AngleBrackets.clear(*this);
+      return true;
+    }
+  }
+
   // After a '>' (etc), we're no longer potentially in a construct that's
   // intended to be treated as a template-id.
   if (OpToken.is(tok::greater) ||

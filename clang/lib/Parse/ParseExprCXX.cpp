@@ -603,7 +603,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
 
 ExprResult Parser::tryParseCXXIdExpression(CXXScopeSpec &SS,
                                            bool isAddressOfOperand,
-                                           Token &Replacement) {
+                                           Token *Replacement) {
   ExprResult E;
 
   // We may have already annotated this id-expression.
@@ -657,7 +657,7 @@ ExprResult Parser::tryParseCXXIdExpression(CXXScopeSpec &SS,
     E = Actions.ActOnIdExpression(
         getCurScope(), SS, TemplateKWLoc, Name, Tok.is(tok::l_paren),
         isAddressOfOperand, /*CCC=*/nullptr, /*IsInlineAsmIdentifier=*/false,
-        &Replacement);
+        Replacement);
     break;
   }
 
@@ -747,12 +747,12 @@ ExprResult Parser::ParseCXXIdExpression(bool isAddressOfOperand) {
 
   Token Replacement;
   ExprResult Result =
-      tryParseCXXIdExpression(SS, isAddressOfOperand, Replacement);
+      tryParseCXXIdExpression(SS, isAddressOfOperand, &Replacement);
   if (Result.isUnset()) {
     // If the ExprResult is valid but null, then typo correction suggested a
     // keyword replacement that needs to be reparsed.
     UnconsumeToken(Replacement);
-    Result = tryParseCXXIdExpression(SS, isAddressOfOperand, Replacement);
+    Result = tryParseCXXIdExpression(SS, isAddressOfOperand);
   }
   assert(!Result.isUnset() && "Typo correction suggested a keyword replacement "
                               "for a previous keyword suggestion");
