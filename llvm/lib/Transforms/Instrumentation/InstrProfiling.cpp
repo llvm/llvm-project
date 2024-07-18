@@ -721,6 +721,8 @@ void InstrLowerer::doSampling(Instruction *I) {
   }
   bool UseShort = (SampledPeriod <= USHRT_MAX);
   bool IsSimpleSampling = (SampledBurstDuration == 1);
+  // If (SampledBurstDuration == 1 && SampledPeriod == 65535), generate
+  // the simple sampling style code.
   bool IsFastSampling = (!IsSimpleSampling && SampledPeriod == 65535);
 
   auto GetConstant = [UseShort](IRBuilder<> &Builder, uint32_t C) {
@@ -793,6 +795,9 @@ bool InstrLowerer::lowerIntrinsics(Function *F) {
   PromotionCandidates.clear();
   SmallVector<InstrProfInstBase *, 8> InstrProfInsts;
 
+  // To ensure compatibility with sampling, we save the intrinsics into
+  // a buffer to prevent potential breakage of the iterator (as the
+  // intrinsics will be moved to a different BB).
   for (BasicBlock &BB : *F) {
     for (Instruction &Instr : llvm::make_early_inc_range(BB)) {
       if (auto *IP = dyn_cast<InstrProfInstBase>(&Instr))
