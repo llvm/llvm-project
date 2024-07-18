@@ -6797,15 +6797,12 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
   case Instruction::URem: {
     // x / y is undefined if y == 0.
     const APInt *V;
-    if (UseOperandInfo && match(Inst->getOperand(1), m_APInt(V)))
+    if (match(Inst->getOperand(1), m_APInt(V)))
       return *V != 0;
     return false;
   }
   case Instruction::SDiv:
   case Instruction::SRem: {
-    if (!UseOperandInfo)
-      return false;
-
     // x / y is undefined if y == 0 or x == INT_MIN and y == -1
     const APInt *Numerator, *Denominator;
     if (!match(Inst->getOperand(1), m_APInt(Denominator)))
@@ -6845,9 +6842,7 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
 
     // The called function could have undefined behavior or side-effects, even
     // if marked readnone nounwind.
-    // NOTE: Intrinsic cannot be replaced.
-    return Callee && Callee->isSpeculatable() &&
-           (UseOperandInfo || Callee->isIntrinsic());
+    return Callee && Callee->isSpeculatable();
   }
   case Instruction::VAArg:
   case Instruction::Alloca:

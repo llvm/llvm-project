@@ -835,8 +835,8 @@ inline bool isSafeToSpeculativelyExecute(const Instruction *I,
   return isSafeToSpeculativelyExecute(I, &*CtxI, AC, DT, TLI, UseOperandInfo);
 }
 
-/// Don't use information from its operands. This helper is used when its
-/// operands are going to be replaced.
+/// Don't use information from its non-constant operands. This helper is used
+/// when its operands are going to be replaced.
 inline bool
 isSafeToSpeculativelyExecuteWithOperandsReplaced(const Instruction *I) {
   return isSafeToSpeculativelyExecute(I, nullptr, nullptr, nullptr, nullptr,

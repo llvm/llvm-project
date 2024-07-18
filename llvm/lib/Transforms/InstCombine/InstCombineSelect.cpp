@@ -1247,6 +1247,8 @@ bool InstCombinerImpl::replaceInInstruction(Value *V, Value *Old, Value *New,
   if (Depth == 2)
     return false;
 
+  assert(!isa<Constant>(Old) && "Only replace non-constant values");
+
   auto *I = dyn_cast<Instruction>(V);
   if (!I || !I->hasOneUse() ||
       !isSafeToSpeculativelyExecuteWithOperandsReplaced(I))
@@ -1332,7 +1334,7 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     // profitability is not clear for other cases.
     // FIXME: Support vectors.
     if (OldOp == CmpLHS && match(NewOp, m_ImmConstant()) &&
-        !match(OldOp, m_ImmConstant()) && !Cmp.getType()->isVectorTy() &&
+        !match(OldOp, m_Constant()) && !Cmp.getType()->isVectorTy() &&
         isGuaranteedNotToBeUndef(NewOp, SQ.AC, &Sel, &DT))
       if (replaceInInstruction(TrueVal, OldOp, NewOp))
         return &Sel;
