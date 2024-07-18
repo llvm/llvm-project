@@ -8,8 +8,9 @@
 
 #include "src/stdlib/exit_handler.h"
 #include "src/__support/CPP/mutex.h" // lock_guard
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 constinit ExitCallbackList at_quick_exit_callbacks;
 constinit ExitCallbackList atexit_callbacks;
@@ -39,4 +40,4 @@ int add_atexit_unit(ExitCallbackList &callbacks, const AtExitUnit &unit) {
   return -1;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
