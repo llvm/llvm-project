@@ -9,9 +9,8 @@
 #include "src/stdlib/ldiv.h"
 #include "src/__support/common.h"
 #include "src/__support/integer_operations.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(ldiv_t, ldiv, (long x, long y)) {
   ldiv_t res;
@@ -19,4 +18,4 @@ LLVM_LIBC_FUNCTION(ldiv_t, ldiv, (long x, long y)) {
   return res;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

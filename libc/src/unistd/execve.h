@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_EXECVE_H
 #define LLVM_LIBC_SRC_UNISTD_EXECVE_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int execve(const char *path, char *const argv[], char *const envp[]);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_UNISTD_EXECVE_H

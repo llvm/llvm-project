@@ -12,9 +12,8 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 // PI and PI / 2
 constexpr double M_MATH_PI = 0x1.921fb54442d18p+1;
@@ -57,6 +56,6 @@ LIBC_INLINE double asin_eval(double xsq) {
   return fputil::multiply_add(xsq, r2, r1);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_INV_TRIGF_UTILS_H

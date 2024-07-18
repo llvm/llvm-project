@@ -7,14 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/termios/cfsetospeed.h"
-#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
 #include "src/__support/common.h"
 
 #include <termios.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, cfsetospeed, (struct termios * t, speed_t speed)) {
   constexpr speed_t NOT_SPEED_MASK = ~speed_t(CBAUD);
@@ -29,4 +28,4 @@ LLVM_LIBC_FUNCTION(int, cfsetospeed, (struct termios * t, speed_t speed)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

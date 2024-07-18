@@ -23,7 +23,6 @@
 #include "src/__support/FPUtil/triple_double.h"
 #include "src/__support/common.h"
 #include "src/__support/integer_literals.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #if ((LIBC_MATH & LIBC_MATH_SKIP_ACCURATE_PASS) != 0)
@@ -37,7 +36,7 @@
 #include <iostream>
 #endif
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 using fputil::DoubleDouble;
 using fputil::TripleDouble;
@@ -508,4 +507,4 @@ LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
 #endif // LIBC_MATH_EXPM1_SKIP_ACCURATE_PASS
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
