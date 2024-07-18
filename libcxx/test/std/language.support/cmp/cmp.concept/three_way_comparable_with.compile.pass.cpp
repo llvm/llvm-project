@@ -15,6 +15,7 @@
 #include <cstddef>
 
 #include "compare_types.h"
+#include "test_macros.h"
 
 template <class T, class U = T, typename Cat = std::partial_ordering>
 constexpr bool check_three_way_comparable_with() {
@@ -224,4 +225,31 @@ struct SpaceshipNonConstArgument {
 };
 
 static_assert(!check_three_way_comparable_with<SpaceshipNonConstArgument>());
+
+struct MoveOnlyIntComparable {
+  MoveOnlyIntComparable(int) {}
+
+  MoveOnlyIntComparable(MoveOnlyIntComparable&&)            = default;
+  MoveOnlyIntComparable& operator=(MoveOnlyIntComparable&&) = default;
+
+  friend auto operator<=>(MoveOnlyIntComparable const&, MoveOnlyIntComparable const&) = default;
+};
+
+#if TEST_STD_VER >= 23
+static_assert(check_three_way_comparable_with<MoveOnlyIntComparable, int>());
+#else
+static_assert(!check_three_way_comparable_with<MoveOnlyIntComparable, int>());
+#endif // TEST_STD_VER >= 23
+
+struct ImmobileIntComparable {
+  ImmobileIntComparable(int) {}
+
+  ImmobileIntComparable(ImmobileIntComparable&&)            = delete;
+  ImmobileIntComparable& operator=(ImmobileIntComparable&&) = delete;
+
+  friend auto operator<=>(ImmobileIntComparable const&, ImmobileIntComparable const&) = default;
+};
+
+static_assert(!check_three_way_comparable_with<ImmobileIntComparable, int>());
+
 } // namespace user_defined
