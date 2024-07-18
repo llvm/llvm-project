@@ -17,6 +17,7 @@
 #include "ABIInfo.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/Types.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 
 #include <memory>
 
@@ -68,13 +69,13 @@ public:
 
   /// Perform address space cast of an expression of pointer type.
   /// \param V is the value to be casted to another address space.
-  /// \param SrcAddr is the language address space of \p V.
-  /// \param DestAddr is the targeted language address space.
+  /// \param SrcAddr is the CIR address space of \p V.
+  /// \param DestAddr is the targeted CIR address space.
   /// \param DestTy is the destination pointer type.
   /// \param IsNonNull is the flag indicating \p V is known to be non null.
   virtual mlir::Value performAddrSpaceCast(CIRGenFunction &CGF, mlir::Value V,
-                                           clang::LangAS SrcAddr,
-                                           clang::LangAS DestAddr,
+                                           mlir::cir::AddressSpaceAttr SrcAddr,
+                                           mlir::cir::AddressSpaceAttr DestAddr,
                                            mlir::Type DestTy,
                                            bool IsNonNull = false) const;
 

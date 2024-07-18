@@ -530,8 +530,9 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
 }
 
 mlir::Value TargetCIRGenInfo::performAddrSpaceCast(
-    CIRGenFunction &CGF, mlir::Value Src, clang::LangAS SrcAddr,
-    clang::LangAS DestAddr, mlir::Type DestTy, bool IsNonNull) const {
+    CIRGenFunction &CGF, mlir::Value Src, mlir::cir::AddressSpaceAttr SrcAddr,
+    mlir::cir::AddressSpaceAttr DestAddr, mlir::Type DestTy,
+    bool IsNonNull) const {
   // Since target may map different address spaces in AST to the same address
   // space, an address space conversion may end up as a bitcast.
   if (auto globalOp = Src.getDefiningOp<mlir::cir::GlobalOp>())
