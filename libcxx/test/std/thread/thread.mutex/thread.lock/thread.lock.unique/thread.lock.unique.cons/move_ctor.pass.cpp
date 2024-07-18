@@ -5,8 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: no-threads, c++03
 
 // <mutex>
 
@@ -14,16 +12,16 @@
 
 // unique_lock(unique_lock&& u);
 
-#include <mutex>
 #include <cassert>
-#include "nasty_containers.h"
+#include <mutex>
 
+#include "nasty_containers.h"
+#include "../types.h"
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    {
-    typedef std::mutex M;
+int main(int, char**) {
+  {
+    typedef MyMutex M;
     M m;
     std::unique_lock<M> lk0(m);
     std::unique_lock<M> lk = std::move(lk0);
@@ -31,8 +29,8 @@ int main(int, char**)
     assert(lk.owns_lock() == true);
     assert(lk0.mutex() == nullptr);
     assert(lk0.owns_lock() == false);
-    }
-    {
+  }
+  {
     typedef nasty_mutex M;
     M m;
     std::unique_lock<M> lk0(m);
@@ -41,7 +39,7 @@ int main(int, char**)
     assert(lk.owns_lock() == true);
     assert(lk0.mutex() == nullptr);
     assert(lk0.owns_lock() == false);
-    }
+  }
 
   return 0;
 }

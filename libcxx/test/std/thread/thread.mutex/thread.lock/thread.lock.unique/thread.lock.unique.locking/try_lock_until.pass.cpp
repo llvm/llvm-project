@@ -21,57 +21,36 @@
 #include <system_error>
 
 #include "test_macros.h"
+#include "../types.h"
 
-bool try_lock_until_called = false;
+MyTimedMutex m;
 
-struct mutex
-{
-    template <class Clock, class Duration>
-        bool try_lock_until(const std::chrono::time_point<Clock, Duration>& abs_time)
-    {
-        typedef std::chrono::milliseconds ms;
-        assert(Clock::now() - abs_time < ms(5));
-        try_lock_until_called = !try_lock_until_called;
-        return try_lock_until_called;
-    }
-    void unlock() {}
-};
-
-mutex m;
-
-int main(int, char**)
-{
-    typedef std::chrono::steady_clock Clock;
-    std::unique_lock<mutex> lk(m, std::defer_lock);
-    assert(lk.try_lock_until(Clock::now()) == true);
-    assert(try_lock_until_called == true);
-    assert(lk.owns_lock() == true);
+int main(int, char**) {
+  typedef std::chrono::steady_clock Clock;
+  std::unique_lock<MyTimedMutex> lk(m, std::defer_lock);
+  assert(lk.try_lock_until(Clock::now()) == true);
+  assert(m.try_lock_until_called == true);
+  assert(lk.owns_lock() == true);
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    try
-    {
-        TEST_IGNORE_NODISCARD lk.try_lock_until(Clock::now());
-        assert(false);
-    }
-    catch (std::system_error& e)
-    {
-        assert(e.code().value() == EDEADLK);
-    }
+  try {
+    TEST_IGNORE_NODISCARD lk.try_lock_until(Clock::now());
+    assert(false);
+  } catch (std::system_error& e) {
+    assert(e.code().value() == EDEADLK);
+  }
 #endif
-    lk.unlock();
-    assert(lk.try_lock_until(Clock::now()) == false);
-    assert(try_lock_until_called == false);
-    assert(lk.owns_lock() == false);
-    lk.release();
+  lk.unlock();
+  assert(lk.try_lock_until(Clock::now()) == false);
+  assert(m.try_lock_until_called == false);
+  assert(lk.owns_lock() == false);
+  lk.release();
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    try
-    {
-        TEST_IGNORE_NODISCARD lk.try_lock_until(Clock::now());
-        assert(false);
-    }
-    catch (std::system_error& e)
-    {
-        assert(e.code().value() == EPERM);
-    }
+  try {
+    TEST_IGNORE_NODISCARD lk.try_lock_until(Clock::now());
+    assert(false);
+  } catch (std::system_error& e) {
+    assert(e.code().value() == EPERM);
+  }
 #endif
 
   return 0;
