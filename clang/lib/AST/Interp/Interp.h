@@ -302,15 +302,16 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
     auto Loc = E->getExprLoc();
     S.report(Loc, diag::warn_integer_constant_overflow)
         << Trunc << Type << E->getSourceRange();
-    return true;
-  } else {
-    S.CCEDiag(E, diag::note_constexpr_overflow) << Value << Type;
-    if (!S.noteUndefinedBehavior()) {
-      S.Stk.pop<T>();
-      return false;
-    }
-    return true;
   }
+
+  S.CCEDiag(E, diag::note_constexpr_overflow) << Value << Type;
+
+  if (!S.noteUndefinedBehavior()) {
+    S.Stk.pop<T>();
+    return false;
+  }
+
+  return true;
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
