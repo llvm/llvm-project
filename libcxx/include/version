@@ -231,7 +231,8 @@ __cpp_lib_stdatomic_h                                   202011L <stdatomic.h>
 __cpp_lib_string_contains                               202011L <string> <string_view>
 __cpp_lib_string_resize_and_overwrite                   202110L <string>
 __cpp_lib_string_udls                                   201304L <string>
-__cpp_lib_string_view                                   201803L <string> <string_view>
+__cpp_lib_string_view                                   202403L <string> <string_view>
+                                                        201803L // C++20
                                                         201606L // C++17
 __cpp_lib_submdspan                                     202306L <mdspan>
 __cpp_lib_syncbuf                                       201803L <syncstream>
@@ -547,6 +548,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_span_at                              202311L
 # define __cpp_lib_span_initializer_list                202311L
 # define __cpp_lib_sstream_from_string_view             202306L
+# undef  __cpp_lib_string_view
+# define __cpp_lib_string_view                          202403L
 // # define __cpp_lib_submdspan                            202306L
 // # define __cpp_lib_text_encoding                        202306L
 # undef  __cpp_lib_to_chars

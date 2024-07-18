@@ -362,6 +362,7 @@ clang/lib/Basic/Targets/BPF.cpp
 clang/lib/Basic/Targets/BPF.h
 clang/lib/Basic/Targets/Hexagon.h
 clang/lib/Basic/Targets/Lanai.h
+clang/lib/Basic/Targets/Le64.h
 clang/lib/Basic/Targets/M68k.h
 clang/lib/Basic/Targets/MSP430.h
 clang/lib/Basic/Targets/NVPTX.cpp
