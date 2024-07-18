@@ -619,7 +619,6 @@ void allocateTilesToLiveRanges(
         // Remove the live range from the active/inactive sets.
         if (!activeRanges.remove(rangeToSpill)) {
           bool removed = inactiveRanges.remove(rangeToSpill);
-          (void)removed;
           assert(removed && "expected a range to be removed!");
           (void)removed;
         }
