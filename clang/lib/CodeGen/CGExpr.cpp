@@ -1071,7 +1071,8 @@ using RecIndicesTy =
     SmallVector<std::pair<const RecordDecl *, llvm::Value *>, 8>;
 
 static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
-                                 const FieldDecl *Field, RecIndicesTy &Indices) {
+                                 const FieldDecl *Field,
+                                 RecIndicesTy &Indices) {
   const CGRecordLayout &Layout = CGF.CGM.getTypes().getCGRecordLayout(RD);
   int64_t FieldNo = -1;
   for (const FieldDecl *FD : RD->fields()) {
