@@ -43,7 +43,7 @@ std::string teardownProfiler() {
 // Returns true if code compiles successfully.
 // We only parse AST here. This is enough for constexpr evaluation.
 bool compileFromString(StringRef Code, StringRef Standard, StringRef File,
-                       llvm::StringMap<StringRef> Headers = {}) {
+                       llvm::StringMap<std::string> Headers = {}) {
   CompilerInstance Compiler;
   Compiler.createDiagnostics();
 
@@ -175,7 +175,7 @@ std::string buildTraceGraph(StringRef Json) {
 } // namespace
 
 TEST(TimeProfilerTest, ConstantEvaluationCxx20) {
-  constexpr StringRef Code = R"(
+  std::string Code = R"(
 void print(double value);
 
 namespace slow_namespace {
@@ -236,7 +236,7 @@ Frontend
 }
 
 TEST(TimeProfilerTest, TemplateInstantiations) {
-  constexpr StringRef B_H = R"(
+  std::string B_H = R"(
     template <typename T>
     T fooB(T t) {
       return T();
@@ -245,7 +245,7 @@ TEST(TimeProfilerTest, TemplateInstantiations) {
     #define MacroTemp(x) template <typename T> void foo##x(T) { T(); }
   )";
 
-  constexpr StringRef A_H = R"(
+  std::string A_H = R"(
     #include "b.h"
 
     MacroTemp(MTA)
@@ -253,7 +253,7 @@ TEST(TimeProfilerTest, TemplateInstantiations) {
     template <typename T>
     void fooA(T t) { fooB(t); fooMTA(t); }
   )";
-  constexpr StringRef Code = R"(
+  std::string Code = R"(
     #include "a.h"
     void user() { fooA(0); }
   )";
@@ -278,7 +278,7 @@ Frontend
 }
 
 TEST(TimeProfilerTest, ConstantEvaluationC99) {
-  constexpr StringRef Code = R"(
+  std::string Code = R"(
 struct {
   short quantval[4]; // 3rd line
 } value;
