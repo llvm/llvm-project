@@ -1791,6 +1791,36 @@ void Parser::checkPotentialAngleBracket(ExprResult &PotentialTemplateName) {
                     Priority);
 }
 
+bool Parser::isMissingTemplateKeywordBeforeScope() {
+  assert(Tok.is(tok::coloncolon));
+  Sema::DisableTypoCorrectionRAII DTC(Actions);
+  ColonProtectionRAIIObject ColonProtection(*this);
+
+  SourceLocation StartLoc = Tok.getLocation();
+  if (TryAnnotateTypeOrScopeToken())
+    return true;
+  if (Tok.isSimpleTypeSpecifier(getLangOpts()))
+    return false;
+  CXXScopeSpec SS;
+  ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
+                                 /*ObjectHasErrors=*/false,
+                                 /*EnteringContext=*/false);
+  ExprResult Result = tryParseCXXIdExpression(SS, /*isAddressOfOperand=*/false);
+
+  if (PP.isBacktrackEnabled())
+    PP.RevertCachedTokens(1);
+  else
+    PP.EnterToken(Tok, /*IsReinject=*/true);
+
+  SourceLocation EndLoc = Tok.getLocation();
+  Tok.setLocation(StartLoc);
+  Tok.setKind(tok::annot_primary_expr);
+  setExprAnnotation(Tok, Result);
+  Tok.setAnnotationEndLoc(EndLoc);
+  PP.AnnotateCachedTokens(Tok);
+  return Result.isInvalid();
+}
+
 bool Parser::checkPotentialAngleBracketDelimiter(
     const AngleBracketTracker::Loc &LAngle, const Token &OpToken) {
   // If a comma in an expression context is followed by a type that can be a
@@ -1814,36 +1844,14 @@ bool Parser::checkPotentialAngleBracketDelimiter(
     return true;
   }
 
-  if (OpToken.is(tok::greater) && Tok.is(tok::coloncolon)) {
-    Sema::DisableTypoCorrectionRAII DTC(Actions);
-
-    SourceLocation StartLoc = Tok.getLocation();
-    CXXScopeSpec SS;
-    ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                   /*ObjectHasErrors=*/false,
-                                   /*EnteringContext=*/false);
-    ExprResult Result =
-        tryParseCXXIdExpression(SS, /*isAddressOfOperand=*/false);
-
-    if (PP.isBacktrackEnabled())
-      PP.RevertCachedTokens(1);
-    else
-      PP.EnterToken(Tok, /*IsReinject=*/true);
-
-    SourceLocation EndLoc = Tok.getLocation();
-    Tok.setLocation(StartLoc);
-    Tok.setKind(tok::annot_primary_expr);
-    setExprAnnotation(Tok, Result);
-    Tok.setAnnotationEndLoc(EndLoc);
-    PP.AnnotateCachedTokens(Tok);
-
-    if (Result.isInvalid()) {
-      Actions.diagnoseExprIntendedAsTemplateName(
-          getCurScope(), LAngle.TemplateName, LAngle.LessLoc,
-          OpToken.getLocation());
-      AngleBrackets.clear(*this);
-      return true;
-    }
+  if (OpToken.is(tok::greater) && Tok.is(tok::coloncolon) &&
+      !NextToken().isOneOf(tok::kw_new, tok::kw_delete) &&
+      isMissingTemplateKeywordBeforeScope()) {
+    Actions.diagnoseExprIntendedAsTemplateName(
+        getCurScope(), LAngle.TemplateName, LAngle.LessLoc,
+        OpToken.getLocation());
+    AngleBrackets.clear(*this);
+    return true;
   }
 
   // After a '>' (etc), we're no longer potentially in a construct that's
