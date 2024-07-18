@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <stack>
@@ -79,9 +80,11 @@ std::string GetMetadata(json::Object *Event) {
   llvm::raw_string_ostream OS(Metadata);
   if (json::Object *Args = Event->getObject("args")) {
     if (auto Detail = Args->getString("detail"))
-      OS << Detail->str();
+      OS << Detail;
     if (auto File = Args->getString("file"))
-      OS << ", " << File->str();
+      OS << ", "
+         << llvm::sys::path::filename(File->str(),
+                                      llvm::sys::path::Style::posix);
     if (auto Line = Args->getInteger("line"))
       OS << ":" << *Line;
   }
@@ -271,9 +274,9 @@ Frontend
 | ParseDeclarationOrFunctionDefinition (test.cc:3:5)
 | | ParseFunctionDefinition (user)
 | PerformPendingInstantiations
-| | InstantiateFunction (fooA<int>, ./a.h:7)
-| | | InstantiateFunction (fooB<int>, ./b.h:3)
-| | | InstantiateFunction (fooMTA<int>, ./a.h:4)
+| | InstantiateFunction (fooA<int>, a.h:7)
+| | | InstantiateFunction (fooB<int>, b.h:3)
+| | | InstantiateFunction (fooMTA<int>, a.h:4)
 )",
             buildTraceGraph(Json));
 }
