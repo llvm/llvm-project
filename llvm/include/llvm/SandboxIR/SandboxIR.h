@@ -61,6 +61,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/SandboxIR/Tracker.h"
 #include "llvm/SandboxIR/Use.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iterator>
@@ -76,7 +77,8 @@ class Instruction;
 class User;
 class Value;
 
-/// Returns the operand edge when dereferenced.
+/// Iterator for the `Use` edges of a User's operands.
+/// \Returns the operand `Use` when dereferenced.
 class OperandUseIterator {
   sandboxir::Use Use;
   /// Don't let the user create a non-empty OperandUseIterator.
@@ -103,7 +105,8 @@ public:
   }
 };
 
-/// Returns user edge when dereferenced.
+/// Iterator for the `Use` edges of a Value's users.
+/// \Returns a `Use` when dereferenced.
 class UserUseIterator {
   sandboxir::Use Use;
   /// Don't let the user create a non-empty UserUseIterator.
@@ -162,11 +165,14 @@ protected:
   unsigned UID;
 #endif
   /// The LLVM Value that corresponds to this SandboxIR Value.
-  /// NOTE: Some SBInstructions, like Packs, may include more than one value.
+  /// NOTE: Some sandboxir Instructions, like Packs, may include more than one
+  /// value and in these cases `Val` points to the last instruction in program
+  /// order.
   llvm::Value *Val = nullptr;
 
   friend class Context; // For getting `Val`.
   friend class User;    // For getting `Val`.
+  friend class Use;     // For getting `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -300,6 +306,7 @@ public:
 #endif
 };
 
+/// A sandboxir::User has operands.
 class User : public Value {
 protected:
   User(ClassID ID, llvm::Value *V, Context &Ctx) : Value(ID, V, Ctx) {}
@@ -309,6 +316,9 @@ protected:
   /// match the underlying LLVM instruction. All others should use a different
   /// implementation.
   Use getOperandUseDefault(unsigned OpIdx, bool Verify) const;
+  /// \Returns the Use for the \p OpIdx'th operand. This is virtual to allow
+  /// instructions to deviate from the LLVM IR operands, which is a requirement
+  /// for sandboxir Instructions that consist of more than one LLVM Instruction.
   virtual Use getOperandUseInternal(unsigned OpIdx, bool Verify) const = 0;
   friend class OperandUseIterator; // for getOperandUseInternal()
 
@@ -414,7 +424,8 @@ public:
 #endif
 };
 
-/// The BasicBlock::iterator.
+/// Iterator for `Instruction`s in a `BasicBlock.
+/// \Returns an sandboxir::Instruction & when derereferenced.
 class BBIterator {
 public:
   using difference_type = std::ptrdiff_t;
@@ -456,7 +467,8 @@ public:
   pointer get() const { return getInstr(It); }
 };
 
-/// A sandboxir::User with operands and opcode.
+/// A sandboxir::User with operands, opcode and linked with previous/next
+/// instructions in an instruction list.
 class Instruction : public sandboxir::User {
 public:
   enum class Opcode {
@@ -481,6 +493,7 @@ protected:
   /// \Returns the LLVM IR Instructions that this SandboxIR maps to in program
   /// order.
   virtual SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const = 0;
+  friend class EraseFromParent; // For getLLVMInstrs().
 
 public:
   static const char *getOpcodeName(Opcode Opc);
@@ -577,6 +590,7 @@ public:
 #endif
 };
 
+/// Contains a list of sandboxir::Instruction's.
 class BasicBlock : public Value {
   /// Builds a graph that contains all values in \p BB in their original form
   /// i.e., no vectorization is taking place here.
@@ -630,6 +644,8 @@ public:
 class Context {
 protected:
   LLVMContext &LLVMCtx;
+  Tracker IRTracker;
+
   /// Maps LLVM Value to the corresponding sandboxir::Value. Owns all
   /// SandboxIR objects.
   DenseMap<llvm::Value *, std::unique_ptr<sandboxir::Value>>
@@ -643,9 +659,11 @@ protected:
   friend void Instruction::eraseFromParent(); // For detach().
   /// Take ownership of VPtr and store it in `LLVMValueToValueMap`.
   Value *registerValue(std::unique_ptr<Value> &&VPtr);
-
+  friend class EraseFromParent; // For registerValue().
+  /// This is the actual function that creates sandboxir values for \p V,
+  /// and among others handles all instruction types.
   Value *getOrCreateValueInternal(llvm::Value *V, llvm::User *U = nullptr);
-
+  /// Get or create a sandboxir::Argument for an existing LLVM IR \p LLVMArg.
   Argument *getOrCreateArgument(llvm::Argument *LLVMArg) {
     auto Pair = LLVMValueToValueMap.insert({LLVMArg, nullptr});
     auto It = Pair.first;
@@ -655,23 +673,34 @@ protected:
     }
     return cast<Argument>(It->second.get());
   }
-
+  /// Get or create a sandboxir::Value for an existing LLVM IR \p LLVMV.
   Value *getOrCreateValue(llvm::Value *LLVMV) {
     return getOrCreateValueInternal(LLVMV, 0);
   }
-
+  /// Create a sandboxir::BasicBlock for an existing LLVM IR \p BB. This will
+  /// also create all contents of the block.
   BasicBlock *createBasicBlock(llvm::BasicBlock *BB);
 
   friend class BasicBlock; // For getOrCreateValue().
 
 public:
-  Context(LLVMContext &LLVMCtx) : LLVMCtx(LLVMCtx) {}
+  Context(LLVMContext &LLVMCtx) : LLVMCtx(LLVMCtx), IRTracker(*this) {}
+
+  Tracker &getTracker() { return IRTracker; }
+  /// Convenience function for `getTracker().save()`
+  void save() { IRTracker.save(); }
+  /// Convenience function for `getTracker().revert()`
+  void revert() { IRTracker.revert(); }
+  /// Convenience function for `getTracker().accept()`
+  void accept() { IRTracker.accept(); }
 
   sandboxir::Value *getValue(llvm::Value *V) const;
   const sandboxir::Value *getValue(const llvm::Value *V) const {
     return getValue(const_cast<llvm::Value *>(V));
   }
-
+  /// Create a sandboxir::Function for an existing LLVM IR \p F, including all
+  /// blocks and instructions.
+  /// This is the main API function for creating Sandbox IR.
   Function *createFunction(llvm::Function *F);
 
   /// \Returns the number of values registered with Context.

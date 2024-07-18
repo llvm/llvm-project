@@ -248,7 +248,7 @@ class BinaryContext {
   std::shared_ptr<DWARFContext> DWPContext;
 
   /// Decoded pseudo probes.
-  std::unique_ptr<MCPseudoProbeDecoder> PseudoProbeDecoder;
+  std::shared_ptr<MCPseudoProbeDecoder> PseudoProbeDecoder;
 
   /// A map of DWO Ids to CUs.
   using DWOIdToCUMapType = std::unordered_map<uint64_t, DWARFUnit *>;
@@ -385,11 +385,9 @@ public:
     return PseudoProbeDecoder.get();
   }
 
-  MCPseudoProbeDecoder &
-  setPseudoProbeDecoder(std::unique_ptr<MCPseudoProbeDecoder> Decoder) {
+  void setPseudoProbeDecoder(std::shared_ptr<MCPseudoProbeDecoder> Decoder) {
     assert(!PseudoProbeDecoder && "Cannot set pseudo probe decoder twice.");
-    PseudoProbeDecoder = std::move(Decoder);
-    return *PseudoProbeDecoder.get();
+    PseudoProbeDecoder = Decoder;
   }
 
   /// Return BinaryFunction containing a given \p Address or nullptr if

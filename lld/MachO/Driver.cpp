@@ -270,6 +270,20 @@ struct ArchiveFileInfo {
 
 static DenseMap<StringRef, ArchiveFileInfo> loadedArchives;
 
+static void saveThinArchiveToRepro(ArchiveFile const *file) {
+  assert(tar && file->getArchive().isThin());
+
+  Error e = Error::success();
+  for (const object::Archive::Child &c : file->getArchive().children(e)) {
+    MemoryBufferRef mb = CHECK(c.getMemoryBufferRef(),
+                               toString(file) + ": failed to get buffer");
+    tar->append(relativeToRoot(CHECK(c.getFullName(), file)), mb.getBuffer());
+  }
+  if (e)
+    error(toString(file) +
+          ": Archive::children failed: " + toString(std::move(e)));
+}
+
 static InputFile *addFile(StringRef path, LoadType loadType,
                           bool isLazy = false, bool isExplicit = true,
                           bool isBundleLoader = false,
@@ -301,6 +315,9 @@ static InputFile *addFile(StringRef path, LoadType loadType,
       if (!archive->isEmpty() && !archive->hasSymbolTable())
         error(path + ": archive has no index; run ranlib to add one");
       file = make<ArchiveFile>(std::move(archive), isForceHidden);
+
+      if (tar && file->getArchive().isThin())
+        saveThinArchiveToRepro(file);
     } else {
       file = entry->second.file;
       // Command-line loads take precedence. If file is previously loaded via
@@ -330,9 +347,13 @@ static InputFile *addFile(StringRef path, LoadType loadType,
               reason = "-all_load";
               break;
           }
-          if (Error e = file->fetch(c, reason))
-            error(toString(file) + ": " + reason +
-                  " failed to load archive member: " + toString(std::move(e)));
+          if (Error e = file->fetch(c, reason)) {
+            if (config->warnThinArchiveMissingMembers)
+              warn(toString(file) + ": " + reason +
+                   " failed to load archive member: " + toString(std::move(e)));
+            else
+              llvm::consumeError(std::move(e));
+          }
         }
         if (e)
           error(toString(file) +
@@ -349,7 +370,18 @@ static InputFile *addFile(StringRef path, LoadType loadType,
         Error e = Error::success();
         for (const object::Archive::Child &c : file->getArchive().children(e)) {
           Expected<MemoryBufferRef> mb = c.getMemoryBufferRef();
-          if (!mb || !hasObjCSection(*mb))
+          if (!mb) {
+            // We used to create broken repro tarballs that only included those
+            // object files from thin archives that ended up being used.
+            if (config->warnThinArchiveMissingMembers)
+              warn(toString(file) + ": -ObjC failed to open archive member: " +
+                   toString(mb.takeError()));
+            else
+              llvm::consumeError(mb.takeError());
+            continue;
+          }
+
+          if (!hasObjCSection(*mb))
             continue;
           if (Error e = file->fetch(c, "-ObjC"))
             error(toString(file) + ": -ObjC failed to load archive member: " +
@@ -1402,6 +1434,19 @@ static void eraseInitializerSymbols() {
       sym->used = false;
 }
 
+static SmallVector<StringRef, 0> getRuntimePaths(opt::InputArgList &args) {
+  SmallVector<StringRef, 0> vals;
+  DenseSet<StringRef> seen;
+  for (const Arg *arg : args.filtered(OPT_rpath)) {
+    StringRef val = arg->getValue();
+    if (seen.insert(val).second)
+      vals.push_back(val);
+    else if (config->warnDuplicateRpath)
+      warn("duplicate -rpath '" + val + "' ignored [--warn-duplicate-rpath]");
+  }
+  return vals;
+}
+
 namespace lld {
 namespace macho {
 bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
@@ -1642,7 +1687,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     error("--thinlto-prefix-replace=old_dir;new_dir;obj_dir must be used with "
           "--thinlto-index-only=");
   }
-  config->runtimePaths = args::getStrings(args, OPT_rpath);
+  config->warnDuplicateRpath =
+      args.hasFlag(OPT_warn_duplicate_rpath, OPT_no_warn_duplicate_rpath, true);
+  config->runtimePaths = getRuntimePaths(args);
   config->allLoad = args.hasFlag(OPT_all_load, OPT_noall_load, false);
   config->archMultiple = args.hasArg(OPT_arch_multiple);
   config->applicationExtension = args.hasFlag(
@@ -1684,6 +1731,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->csProfilePath = args.getLastArgValue(OPT_cs_profile_path);
   config->pgoWarnMismatch =
       args.hasFlag(OPT_pgo_warn_mismatch, OPT_no_pgo_warn_mismatch, true);
+  config->warnThinArchiveMissingMembers =
+      args.hasFlag(OPT_warn_thin_archive_missing_members,
+                   OPT_no_warn_thin_archive_missing_members, true);
   config->generateUuid = !args.hasArg(OPT_no_uuid);
 
   for (const Arg *arg : args.filtered(OPT_alias)) {

@@ -473,6 +473,13 @@ New Compiler Flags
 Deprecated Compiler Flags
 -------------------------
 
+- The ``-Ofast`` command-line option has been deprecated. This option both
+  enables the ``-O3`` optimization-level, as well as enabling non-standard
+  ``-ffast-math`` behaviors. As such, it is somewhat misleading as an
+  "optimization level". Users are advised to switch to ``-O3 -ffast-math`` if
+  the use of non-standard math behavior is intended, and ``-O3`` otherwise.
+  See `RFC <https://discourse.llvm.org/t/rfc-deprecate-ofast/78687>`_ for details.
+
 Modified Compiler Flags
 -----------------------
 - Added a new diagnostic flag ``-Wreturn-mismatch`` which is grouped under
@@ -719,6 +726,9 @@ Improvements to Clang's diagnostics
 - For the ARM target, calling an interrupt handler from another function is now an error. #GH95359.
 
 - Clang now diagnoses integer constant expressions that are folded to a constant value as an extension in more circumstances. Fixes #GH59863
+
+- Clang now diagnoses dangling assignments for pointer-like objects (annotated with `[[gsl::Pointer]]`) under `-Wdangling-assignment-gsl` (off by default)
+  Fixes #GH63310.
 
 Improvements to Clang's time-trace
 ----------------------------------
