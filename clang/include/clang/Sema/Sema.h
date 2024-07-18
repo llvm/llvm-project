@@ -5997,7 +5997,8 @@ public:
                       StringLiteral *Message = nullptr);
   void SetDeclDefaulted(Scope *S, Decl *dcl, SourceLocation DefaultLoc);
 
-  void SetFunctionBodyKind(Scope *S, Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
+  void SetFunctionBodyKind(Scope *S, Decl *D, SourceLocation Loc,
+                           FnBodyKind BodyKind,
                            StringLiteral *DeletedMessage = nullptr);
   void ActOnStartTrailingRequiresClause(Scope *S, Declarator &D);
   ExprResult ActOnFinishTrailingRequiresClause(ExprResult ConstraintExpr);

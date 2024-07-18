@@ -18050,7 +18050,8 @@ void Sema::DiagnoseReturnInConstructorExceptionHandler(CXXTryStmt *TryBlock) {
   }
 }
 
-void Sema::SetFunctionBodyKind(Scope *S, Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
+void Sema::SetFunctionBodyKind(Scope *S, Decl *D, SourceLocation Loc,
+                               FnBodyKind BodyKind,
                                StringLiteral *DeletedMessage) {
   switch (BodyKind) {
   case FnBodyKind::Delete:
