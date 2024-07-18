@@ -6760,15 +6760,16 @@ bool llvm::isSafeToSpeculativelyExecute(const Instruction *Inst,
                                         const Instruction *CtxI,
                                         AssumptionCache *AC,
                                         const DominatorTree *DT,
-                                        const TargetLibraryInfo *TLI) {
+                                        const TargetLibraryInfo *TLI,
+                                        bool UseOperandInfo) {
   return isSafeToSpeculativelyExecuteWithOpcode(Inst->getOpcode(), Inst, CtxI,
-                                                AC, DT, TLI);
+                                                AC, DT, TLI, UseOperandInfo);
 }
 
 bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     unsigned Opcode, const Instruction *Inst, const Instruction *CtxI,
-    AssumptionCache *AC, const DominatorTree *DT,
-    const TargetLibraryInfo *TLI) {
+    AssumptionCache *AC, const DominatorTree *DT, const TargetLibraryInfo *TLI,
+    bool UseOperandInfo) {
 #ifndef NDEBUG
   if (Inst->getOpcode() != Opcode) {
     // Check that the operands are actually compatible with the Opcode override.
@@ -6796,12 +6797,15 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
   case Instruction::URem: {
     // x / y is undefined if y == 0.
     const APInt *V;
-    if (match(Inst->getOperand(1), m_APInt(V)))
+    if (UseOperandInfo && match(Inst->getOperand(1), m_APInt(V)))
       return *V != 0;
     return false;
   }
   case Instruction::SDiv:
   case Instruction::SRem: {
+    if (!UseOperandInfo)
+      return false;
+
     // x / y is undefined if y == 0 or x == INT_MIN and y == -1
     const APInt *Numerator, *Denominator;
     if (!match(Inst->getOperand(1), m_APInt(Denominator)))
@@ -6820,6 +6824,9 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     return false;
   }
   case Instruction::Load: {
+    if (!UseOperandInfo)
+      return false;
+
     const LoadInst *LI = dyn_cast<LoadInst>(Inst);
     if (!LI)
       return false;
@@ -6838,7 +6845,9 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
 
     // The called function could have undefined behavior or side-effects, even
     // if marked readnone nounwind.
-    return Callee && Callee->isSpeculatable();
+    // NOTE: Intrinsic cannot be replaced.
+    return Callee && Callee->isSpeculatable() &&
+           (UseOperandInfo || Callee->isIntrinsic());
   }
   case Instruction::VAArg:
   case Instruction::Alloca:

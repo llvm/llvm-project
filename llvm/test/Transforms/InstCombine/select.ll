@@ -4720,7 +4720,7 @@ define i8 @select_knownbits_simplify_missing_noundef(i8 %x)  {
 define i32 @pr99436(ptr align 4 dereferenceable(4) %ptr) {
 ; CHECK-LABEL: @pr99436(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[PTR:%.*]], @g_ext
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr @g_ext, align 4
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 [[VAL]], i32 0
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;

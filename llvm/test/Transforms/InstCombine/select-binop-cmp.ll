@@ -1305,7 +1305,7 @@ define <2 x i32> @select_replace_undef(<2 x i32> %x, <2 x i32> %y) {
 define i32 @select_replace_call_speculatable(i32 %x, i32 %y) {
 ; CHECK-LABEL: @select_replace_call_speculatable(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @call_speculatable(i32 0, i32 0)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @call_speculatable(i32 [[X]], i32 [[X]])
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[CALL]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[S]]
 ;

@@ -1248,7 +1248,8 @@ bool InstCombinerImpl::replaceInInstruction(Value *V, Value *Old, Value *New,
     return false;
 
   auto *I = dyn_cast<Instruction>(V);
-  if (!I || !I->hasOneUse() || !isSafeToSpeculativelyExecute(I))
+  if (!I || !I->hasOneUse() ||
+      !isSafeToSpeculativelyExecuteWithOperandsReplaced(I))
     return false;
 
   bool Changed = false;
