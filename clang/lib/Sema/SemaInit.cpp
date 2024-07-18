@@ -5621,7 +5621,7 @@ static void TryOrBuildParenListInitialization(
           << SE->getSourceRange();
       return;
     } else {
-      assert(isa<IncompleteArrayType>(Entity.getType()));
+      assert(Entity.getType()->isIncompleteArrayType());
       ArrayLength = Args.size();
     }
     EntityIndexToProcess = ArrayLength;

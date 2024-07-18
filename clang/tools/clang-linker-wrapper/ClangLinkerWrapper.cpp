@@ -669,17 +669,16 @@ std::unique_ptr<lto::LTO> createLTO(
     ModuleHook Hook = [](size_t, const Module &) { return true; }) {
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
 
-  StringRef TargetID = Args.getLastArgValue(OPT_arch_EQ);
   // We need to remove AMD's target-id from the processor if present.
-  StringRef GPUArch = clang::getProcessorFromTargetID(Triple, TargetID);
-
+  StringRef TargetID = Args.getLastArgValue(OPT_arch_EQ);
+  StringRef Arch = clang::getProcessorFromTargetID(Triple, TargetID);
   lto::Config Conf;
   lto::ThinBackend Backend;
   // TODO: Handle index-only thin-LTO
   Backend =
       lto::createInProcessThinBackend(llvm::heavyweight_hardware_concurrency());
 
-  Conf.CPU = GPUArch.str();
+  Conf.CPU = Arch.str();
   Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple);
 
   Conf.RemarksFilename = RemarksFilename;
@@ -715,8 +714,8 @@ std::unique_ptr<lto::LTO> createLTO(
   Conf.PTO.SLPVectorization = Conf.OptLevel > 1;
 
   if (SaveTemps) {
-    std::string TempName = (sys::path::filename(ExecutableName) + "-device-" +
-                            Triple.getTriple() + "-" + TargetID)
+    std::string TempName = (sys::path::filename(ExecutableName) + "." +
+                            Triple.getTriple() + "." + TargetID)
                                .str();
     Conf.PostInternalizeModuleHook = [=](size_t Task, const Module &M) {
       std::string File =
