@@ -7,7 +7,7 @@
       // CHECK:%[[base:[0-9]+]] = llvm.extractvalue
       // CHECK:%[[ptr:[0-9]+]] = llvm.getelementptr %[[base]]
       // CHECK:llvm.store %[[val]], %[[ptr]]
-      vector.transfer_write %arg3, %arg1[%c0, %c0] {in_bounds = [true]} : vector<1xf32>, memref<1024x1024xf32>
+      vector.transfer_write %arg3, %arg1[%c0, %c0] {in_bounds = array<i1: true>} : vector<1xf32>, memref<1024x1024xf32>
     }
     return
   }

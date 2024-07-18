@@ -4,16 +4,16 @@
 func.func @masked_matmul(%module: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
 
   //      CHECK: %[[MLHS:.*]] = vector.create_mask {{.*}} : vector<8x8xi1>
-  //      CHECK: %[[LHS:.*]] = vector.transfer_read %{{.*}}, %[[MLHS]] {in_bounds = [true, true]} : memref<?x?xf32, strided<[?, 1], offset: ?>>, vector<8x8xf32>
+  //      CHECK: %[[LHS:.*]] = vector.transfer_read %{{.*}}, %[[MLHS]] {in_bounds = array<i1: true, true>} : memref<?x?xf32, strided<[?, 1], offset: ?>>, vector<8x8xf32>
   //      CHECK: %[[MRHS:.*]] = vector.create_mask {{.*}} : vector<8x8xi1>
-  //      CHECK: %[[RHS:.*]] = vector.transfer_read %{{.*}}, %[[MRHS]] {in_bounds = [true, true]} : memref<?x?xf32, strided<[?, 1], offset: ?>>, vector<8x8xf32>
+  //      CHECK: %[[RHS:.*]] = vector.transfer_read %{{.*}}, %[[MRHS]] {in_bounds = array<i1: true, true>} : memref<?x?xf32, strided<[?, 1], offset: ?>>, vector<8x8xf32>
   //      CHECK: %[[MACC:.*]] = vector.create_mask {{.*}} : vector<8x8xi1>
-  //      CHECK: %[[ACC:.*]] = vector.transfer_read {{.*}}, %[[MACC]] {in_bounds = [true, true]} : memref<?x?xf32, strided<[?, 1], offset: ?>>, vector<8x8xf32>
+  //      CHECK: %[[ACC:.*]] = vector.transfer_read {{.*}}, %[[MACC]] {in_bounds = array<i1: true, true>} : memref<?x?xf32, strided<[?, 1], offset: ?>>, vector<8x8xf32>
   //      CHECK: %[[MRES:.*]] = vector.create_mask {{.*}} : vector<8x8x8xi1>
   //      CHECK: %[[RES:.*]] = vector.mask %[[MRES]] { vector.contract
   // CHECK-SAME:   : vector<8x8xf32>, vector<8x8xf32> into vector<8x8xf32>
   // CHECK-SAME:   : vector<8x8x8xi1> -> vector<8x8xf32>
-  //      CHECK: vector.transfer_write %[[RES]], %{{.*}}, %[[MACC]] {in_bounds = [true, true]} : vector<8x8xf32>, memref<?x?xf32, strided<[?, 1], offset: ?>>
+  //      CHECK: vector.transfer_write %[[RES]], %{{.*}}, %[[MACC]] {in_bounds = array<i1: true, true>} : vector<8x8xf32>, memref<?x?xf32, strided<[?, 1], offset: ?>>
   linalg.matmul ins(%module, %arg1 : memref<?x?xf32>, memref<?x?xf32>) outs(%arg2 : memref<?x?xf32>)
   return
 }

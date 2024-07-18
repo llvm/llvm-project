@@ -17,20 +17,20 @@ func.func @fuse_1st_for_into_2nd(%A: tensor<128xf32>, %B: tensor<128xf32>) -> (t
   // CHECK-DAG:   [[SLICE0:%.*]] = vector.transfer_read [[IA]][[[IV]]], [[ZERO]]
   // CHECK:       [[OUT1:%.*]] = arith.addf [[SLICE0]], [[ASLICE]]
   // CHECK-NEXT:  [[WRT0:%.*]] = vector.transfer_write [[OUT1]], [[IA]][[[IV]]]
-    %2 = vector.transfer_read %A[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
-    %3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
+    %2 = vector.transfer_read %A[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
+    %3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
     %5 = arith.addf %3, %2 : vector<16xf32>
-    %6 = vector.transfer_write %5, %arg4[%arg3] {in_bounds = [true]} : vector<16xf32>, tensor<128xf32>
+    %6 = vector.transfer_write %5, %arg4[%arg3] {in_bounds = array<i1: true>} : vector<16xf32>, tensor<128xf32>
     scf.yield %6 : tensor<128xf32>
   }
   %dup1 = scf.for %arg3 = %c0 to %c128 step %c16 iter_args(%arg4 = %B) -> (tensor<128xf32>) {
   // CHECK-DAG:   [[SLICE1:%.*]] = vector.transfer_read [[IB]][[[IV]]], [[ZERO]]
   // CHECK:       [[OUT2:%.*]] = arith.addf [[SLICE1]], [[ASLICE]]
   // CHECK-NEXT:  [[WRT1:%.*]] = vector.transfer_write [[OUT2]], [[IB]][[[IV]]]
-    %dup2 = vector.transfer_read %A[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
-    %dup3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
+    %dup2 = vector.transfer_read %A[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
+    %dup3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
     %dup5 = arith.addf %dup3, %dup2 : vector<16xf32>
-    %dup6 = vector.transfer_write %dup5, %arg4[%arg3] {in_bounds = [true]} : vector<16xf32>, tensor<128xf32>
+    %dup6 = vector.transfer_write %dup5, %arg4[%arg3] {in_bounds = array<i1: true>} : vector<16xf32>, tensor<128xf32>
   // CHECK: scf.yield [[WRT0]], [[WRT1]] : {{.*}}
     scf.yield %dup6 : tensor<128xf32>
   }
@@ -63,23 +63,23 @@ func.func @fuse_2nd_for_into_1st(%A: tensor<128xf32>, %B: tensor<128xf32>) -> (t
   // CHECK-DAG:   [[SLICE0:%.*]] = vector.transfer_read [[IB]][[[IV]]], [[ZERO]]
   // CHECK:       [[OUT1:%.*]] = arith.addf [[SLICE0]], [[ASLICE]]
   // CHECK-NEXT:  [[WRT0:%.*]] = vector.transfer_write [[OUT1]], [[IB]][[[IV]]]
-    %2 = vector.transfer_read %A[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
-    %3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
+    %2 = vector.transfer_read %A[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
+    %3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
     %5 = arith.addf %3, %2 : vector<16xf32>
-    %6 = vector.transfer_write %5, %arg4[%arg3] {in_bounds = [true]} : vector<16xf32>, tensor<128xf32>
+    %6 = vector.transfer_write %5, %arg4[%arg3] {in_bounds = array<i1: true>} : vector<16xf32>, tensor<128xf32>
     scf.yield %6 : tensor<128xf32>
   }
   %dup1 = scf.for %arg3 = %c0 to %c128 step %c16 iter_args(%arg4 = %B) -> (tensor<128xf32>) {
   // CHECK-DAG:   [[SLICE1:%.*]] = vector.transfer_read [[IA]][[[IV]]], [[ZERO]]
   // CHECK:       [[OUT2:%.*]] = arith.addf [[SLICE1]], [[ASLICE]]
   // CHECK-NEXT:  [[WRT1:%.*]] = vector.transfer_write [[OUT2]], [[IA]][[[IV]]]
-    %dup2 = vector.transfer_read %A[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
+    %dup2 = vector.transfer_read %A[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
   // NB: the dominance check used to fail on the following line,
   // however the defining op for the value of %arg3 occurs above the source loop and hence is safe
   // and %arg4 is a block argument of the scope of the loops and hence is safe
-    %dup3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
+    %dup3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
     %dup5 = arith.addf %dup3, %dup2 : vector<16xf32>
-    %dup6 = vector.transfer_write %dup5, %arg4[%arg3] {in_bounds = [true]} : vector<16xf32>, tensor<128xf32>
+    %dup6 = vector.transfer_write %dup5, %arg4[%arg3] {in_bounds = array<i1: true>} : vector<16xf32>, tensor<128xf32>
   // CHECK: scf.yield [[WRT0]], [[WRT1]] : {{.*}}
     scf.yield %dup6 : tensor<128xf32>
   }
@@ -189,12 +189,12 @@ func.func @fuse_no_iter_args(%A: tensor<128xf32>, %B: tensor<128xf32>) {
   // CHECK-NOCLEANUP: scf.for [[IV:%.*]] = [[C0]] to [[C128]] step [[C16]] {{.*}}
   scf.for %arg0 = %c0 to %c128 step %c16 {
   // CHECK-NOCLEANUP:   [[ASLICE:%.*]] = vector.transfer_read [[A]][[[IV]]], [[ZERO]]
-    %2 = vector.transfer_read %A[%arg0], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
+    %2 = vector.transfer_read %A[%arg0], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
     scf.yield
   }
   scf.for %arg0 = %c0 to %c128 step %c16 {
   // CHECK-NOCLEANUP:   [[BSLICE:%.*]] = vector.transfer_read [[B]][[[IV]]], [[ZERO]]
-    %dup2 = vector.transfer_read %B[%arg0], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
+    %dup2 = vector.transfer_read %B[%arg0], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
     scf.yield
   }
   return
@@ -217,17 +217,17 @@ func.func @source_for_uses_result_of_target_for_err(%A: tensor<128xf32>, %B: ten
   %cst = arith.constant 0.000000e+00 : f32
   // expected-error @below {{user of results of target should be properly dominated by source}}
   %1 = scf.for %arg3 = %c0 to %c128 step %c16 iter_args(%arg4 = %A) -> (tensor<128xf32>) {
-    %2 = vector.transfer_read %A[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
-    %3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
+    %2 = vector.transfer_read %A[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
+    %3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
     %5 = arith.addf %3, %2 : vector<16xf32>
-    %6 = vector.transfer_write %5, %arg4[%arg3] {in_bounds = [true]} : vector<16xf32>, tensor<128xf32>
+    %6 = vector.transfer_write %5, %arg4[%arg3] {in_bounds = array<i1: true>} : vector<16xf32>, tensor<128xf32>
     scf.yield %6 : tensor<128xf32>
   }
   %dup1 = scf.for %arg3 = %c0 to %c128 step %c16 iter_args(%arg4 = %1) -> (tensor<128xf32>) {
-    %dup2 = vector.transfer_read %A[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
-    %dup3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
+    %dup2 = vector.transfer_read %A[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
+    %dup3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
     %dup5 = arith.addf %dup3, %dup2 : vector<16xf32>
-    %dup6 = vector.transfer_write %dup5, %arg4[%arg3] {in_bounds = [true]} : vector<16xf32>, tensor<128xf32>
+    %dup6 = vector.transfer_write %dup5, %arg4[%arg3] {in_bounds = array<i1: true>} : vector<16xf32>, tensor<128xf32>
     scf.yield %dup6 : tensor<128xf32>
   }
   return %1, %dup1 : tensor<128xf32>, tensor<128xf32>
@@ -276,18 +276,18 @@ func.func @target_for_region_uses_result_of_source_for_err(%A: tensor<128xf32>, 
   %c128 = arith.constant 128 : index
   %cst = arith.constant 0.000000e+00 : f32
   %1 = scf.for %arg3 = %c0 to %c128 step %c16 iter_args(%arg4 = %A) -> (tensor<128xf32>) {
-    %2 = vector.transfer_read %A[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
-    %3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
+    %2 = vector.transfer_read %A[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
+    %3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
     %5 = arith.addf %3, %2 : vector<16xf32>
-    %6 = vector.transfer_write %5, %arg4[%arg3] {in_bounds = [true]} : vector<16xf32>, tensor<128xf32>
+    %6 = vector.transfer_write %5, %arg4[%arg3] {in_bounds = array<i1: true>} : vector<16xf32>, tensor<128xf32>
     scf.yield %6 : tensor<128xf32>
   }
   %dup1 = scf.for %arg3 = %c0 to %c128 step %c16 iter_args(%arg4 = %B) -> (tensor<128xf32>) {
   // expected-error @below {{values used inside regions of target should be properly dominated by source}}
-    %dup2 = vector.transfer_read %1[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
-    %dup3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
+    %dup2 = vector.transfer_read %1[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
+    %dup3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
     %dup5 = arith.addf %dup3, %dup2 : vector<16xf32>
-    %dup6 = vector.transfer_write %dup5, %arg4[%arg3] {in_bounds = [true]} : vector<16xf32>, tensor<128xf32>
+    %dup6 = vector.transfer_write %dup5, %arg4[%arg3] {in_bounds = array<i1: true>} : vector<16xf32>, tensor<128xf32>
     scf.yield %dup6 : tensor<128xf32>
   }
   return %1, %dup1 : tensor<128xf32>, tensor<128xf32>
@@ -347,20 +347,20 @@ func.func @foreach_loop_pair_fuse(%arg1: tensor<128xf32>, %arg2: tensor<128xf32>
   // CHECK-DAG:   [[SLICE0:%.*]] = vector.transfer_read [[IB0]][[[IV]]], [[ZERO]]
   // CHECK:       [[OUT1:%.*]] = arith.addf [[SLICE0]], [[ASLICE]]
   // CHECK-NEXT:  [[WRT0:%.*]] = vector.transfer_write [[OUT1]], [[IB0]][[[IV]]]
-    %2 = vector.transfer_read %arg1[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
-    %3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
+    %2 = vector.transfer_read %arg1[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
+    %3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
     %5 = arith.addf %3, %2 : vector<16xf32>
-    %6 = vector.transfer_write %5, %arg4[%arg3] {in_bounds = [true]} : vector<16xf32>, tensor<128xf32>
+    %6 = vector.transfer_write %5, %arg4[%arg3] {in_bounds = array<i1: true>} : vector<16xf32>, tensor<128xf32>
     scf.yield %6 : tensor<128xf32>
   } {target_loops}
   %dup1 = scf.for %arg3 = %c0 to %c128 step %c16 iter_args(%arg4 = %arg2) -> (tensor<128xf32>) {
   // CHECK-DAG:   [[SLICE1:%.*]] = vector.transfer_read [[IB1]][[[IV]]], [[ZERO]]
   // CHECK:       [[OUT2:%.*]] = arith.addf [[SLICE1]], [[ASLICE]]
   // CHECK-NEXT:  [[WRT1:%.*]] = vector.transfer_write [[OUT2]], [[IB1]][[[IV]]]
-    %dup2 = vector.transfer_read %arg1[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
-    %dup3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
+    %dup2 = vector.transfer_read %arg1[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
+    %dup3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<16xf32>
     %dup5 = arith.addf %dup3, %dup2 : vector<16xf32>
-    %dup6 = vector.transfer_write %dup5, %arg4[%arg3] {in_bounds = [true]} : vector<16xf32>, tensor<128xf32>
+    %dup6 = vector.transfer_write %dup5, %arg4[%arg3] {in_bounds = array<i1: true>} : vector<16xf32>, tensor<128xf32>
   // CHECK: scf.yield [[WRT0]], [[WRT1]] : {{.*}}
     scf.yield %dup6 : tensor<128xf32>
   } {source_loops}
@@ -369,20 +369,20 @@ func.func @foreach_loop_pair_fuse(%arg1: tensor<128xf32>, %arg2: tensor<128xf32>
   // CHECK-DAG:   [[SLICE0:%.*]] = vector.transfer_read [[IB0]][[[IV]]], [[ZERO]]
   // CHECK:       [[OUT1:%.*]] = arith.addf [[SLICE0]], [[ASLICE]]
   // CHECK-NEXT:  [[WRT0:%.*]] = vector.transfer_write [[OUT1]], [[IB0]][[[IV]]]
-    %2 = vector.transfer_read %arg1[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<32xf32>
-    %3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<32xf32>
+    %2 = vector.transfer_read %arg1[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<32xf32>
+    %3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<32xf32>
     %5 = arith.addf %3, %2 : vector<32xf32>
-    %6 = vector.transfer_write %5, %arg4[%arg3] {in_bounds = [true]} : vector<32xf32>, tensor<128xf32>
+    %6 = vector.transfer_write %5, %arg4[%arg3] {in_bounds = array<i1: true>} : vector<32xf32>, tensor<128xf32>
     scf.yield %6 : tensor<128xf32>
   } {target_loops}
   %dup2 = scf.for %arg3 = %c0 to %c128 step %c32 iter_args(%arg4 = %arg2) -> (tensor<128xf32>) {
   // CHECK-DAG:   [[SLICE1:%.*]] = vector.transfer_read [[IB1]][[[IV]]], [[ZERO]]
   // CHECK:       [[OUT2:%.*]] = arith.addf [[SLICE1]], [[ASLICE]]
   // CHECK-NEXT:  [[WRT1:%.*]] = vector.transfer_write [[OUT2]], [[IB1]][[[IV]]]
-    %dup2 = vector.transfer_read %arg1[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<32xf32>
-    %dup3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<32xf32>
+    %dup2 = vector.transfer_read %arg1[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<32xf32>
+    %dup3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = array<i1: true>} : tensor<128xf32>, vector<32xf32>
     %dup5 = arith.addf %dup3, %dup2 : vector<32xf32>
-    %dup6 = vector.transfer_write %dup5, %arg4[%arg3] {in_bounds = [true]} : vector<32xf32>, tensor<128xf32>
+    %dup6 = vector.transfer_write %dup5, %arg4[%arg3] {in_bounds = array<i1: true>} : vector<32xf32>, tensor<128xf32>
   // CHECK: scf.yield [[WRT0]], [[WRT1]] : {{.*}}
     scf.yield %dup6 : tensor<128xf32>
   } {source_loops}

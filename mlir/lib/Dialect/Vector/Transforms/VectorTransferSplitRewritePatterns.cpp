@@ -523,7 +523,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
     return failure();
 
   SmallVector<bool, 4> bools(xferOp.getTransferRank(), true);
-  auto inBoundsAttr = b.getBoolArrayAttr(bools);
+  auto inBoundsAttr = b.getDenseBoolArrayAttr(bools);
   if (options.vectorTransferSplit == VectorTransferSplit::ForceInBounds) {
     b.modifyOpInPlace(xferOp, [&]() {
       xferOp->setAttr(xferOp.getInBoundsAttrName(), inBoundsAttr);

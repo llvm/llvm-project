@@ -98,7 +98,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
         dimension whether it is in-bounds or not. (Broadcast dimensions are
         always in-bounds).
       }],
-      /*retTy=*/"::mlir::ArrayAttr",
+      /*retTy=*/"::mlir::ArrayRef<bool>",
       /*methodName=*/"getInBounds",
       /*args=*/(ins)
     >,
@@ -169,15 +169,6 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
   ];
 
   let extraSharedClassDeclaration = [{
-    /// Return a vector of all in_bounds values as booleans (one per vector
-    /// transfer dimension).
-    ::llvm::SmallVector<bool> getInBoundsValues() {
-      ::llvm::SmallVector<bool> inBounds;
-      for (int64_t i = 0, e = $_op.getTransferRank(); i < e; ++i)
-        inBounds.push_back($_op.isDimInBounds(i));
-      return inBounds;
-    }
-
     /// Return the number of leading shaped dimensions (of the "source" operand)
     /// that do not participate in the permutation map.
     unsigned getLeadingShapedRank() {
@@ -241,7 +232,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       if ($_op.isBroadcastDim(dim))
         return true;
       auto inBounds = $_op.getInBounds();
-      return ::llvm::cast<::mlir::BoolAttr>(inBounds[dim]).getValue();
+      return inBounds[dim];
     }
 
     /// Helper function to account for the fact that `permutationMap` results

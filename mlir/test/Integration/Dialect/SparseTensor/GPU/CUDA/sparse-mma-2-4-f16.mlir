@@ -129,18 +129,18 @@ module attributes {gpu.container_module} {
       %quad_col = affine.apply affine_map<()[s0]->(s0 * 2)>()[%col_8x4] // account for 2xf16/col
 
       // Load quad (0, 0)
-      %A_quad00 = vector.transfer_read %argA[%quad_row, %quad_col], %f0 {in_bounds = [true]} : memref<16x16xf16>, vector<2xf16>
+      %A_quad00 = vector.transfer_read %argA[%quad_row, %quad_col], %f0 {in_bounds = array<i1: true>} : memref<16x16xf16>, vector<2xf16>
 
       // Load quad (1, 0). Just shift row down 8.
       %quad_row_plus_8 = affine.apply affine_map<(d0)[]->(d0+8)>(%quad_row)[]
-      %A_quad10 = vector.transfer_read %argA[%quad_row_plus_8, %quad_col], %f0 {in_bounds = [true]} : memref<16x16xf16>, vector<2xf16>
+      %A_quad10 = vector.transfer_read %argA[%quad_row_plus_8, %quad_col], %f0 {in_bounds = array<i1: true>} : memref<16x16xf16>, vector<2xf16>
 
       // Load quad (0, 1). Just shift col right 8 (4 2xf16 values)
       %quad_col_plus_8 = affine.apply affine_map<(d0)[]->(d0+8)>(%quad_col)[]
-      %A_quad01 = vector.transfer_read %argA[%quad_row, %quad_col_plus_8], %f0 {in_bounds = [true]} : memref<16x16xf16>, vector<2xf16>
+      %A_quad01 = vector.transfer_read %argA[%quad_row, %quad_col_plus_8], %f0 {in_bounds = array<i1: true>} : memref<16x16xf16>, vector<2xf16>
 
       // Load quad (1, 1)
-      %A_quad11 = vector.transfer_read %argA[%quad_row_plus_8, %quad_col_plus_8], %f0 {in_bounds = [true]} : memref<16x16xf16>, vector<2xf16>
+      %A_quad11 = vector.transfer_read %argA[%quad_row_plus_8, %quad_col_plus_8], %f0 {in_bounds = array<i1: true>} : memref<16x16xf16>, vector<2xf16>
 
       // Assemble the elements into a vector
       %A_init0 = arith.constant dense<0.0> : vector<4x2xf16>
@@ -165,18 +165,18 @@ module attributes {gpu.container_module} {
       // (t) -> (t/4, t % 4). So we can re-use some of the calculation from A.
 
       // Load quad (0, 0)
-      %B_quad0 = vector.transfer_read %argB[%quad_row, %quad_col],  %f0 {in_bounds = [true]} : memref<8x32xf16>, vector<2xf16>
+      %B_quad0 = vector.transfer_read %argB[%quad_row, %quad_col],  %f0 {in_bounds = array<i1: true>} : memref<8x32xf16>, vector<2xf16>
 
       // Load quad (0, 1)
-      %B_quad1 = vector.transfer_read %argB[%quad_row, %quad_col_plus_8],  %f0 {in_bounds = [true]} : memref<8x32xf16>, vector<2xf16>
+      %B_quad1 = vector.transfer_read %argB[%quad_row, %quad_col_plus_8],  %f0 {in_bounds = array<i1: true>} : memref<8x32xf16>, vector<2xf16>
 
       // Load quad (0, 2)
       %quad_col_plus_16 = affine.apply affine_map<()[s0]->(s0 + 16)>()[%quad_col]
-      %B_quad2 = vector.transfer_read %argB[%quad_row, %quad_col_plus_16], %f0 {in_bounds = [true]} : memref<8x32xf16>, vector<2xf16>
+      %B_quad2 = vector.transfer_read %argB[%quad_row, %quad_col_plus_16], %f0 {in_bounds = array<i1: true>} : memref<8x32xf16>, vector<2xf16>
 
       // Load quad (0, 3)
       %quad_col_plus_24 = affine.apply affine_map<()[s0]->(s0 + 24)>()[%quad_col]
-      %B_quad3 = vector.transfer_read %argB[%quad_row, %quad_col_plus_24], %f0 {in_bounds = [true]} : memref<8x32xf16>, vector<2xf16>
+      %B_quad3 = vector.transfer_read %argB[%quad_row, %quad_col_plus_24], %f0 {in_bounds = array<i1: true>} : memref<8x32xf16>, vector<2xf16>
 
       // Assemble into vector
       %B_init0 = arith.constant dense<0.0> : vector<4x2xf16>
@@ -207,8 +207,8 @@ module attributes {gpu.container_module} {
       // vector1: (tid) -> (tid / 4 + 8,  tid %4)
       %C_0 = vector.extract %d[0] : vector<2xf16> from vector<2x2xf16>
       %C_1 = vector.extract %d[1] : vector<2xf16> from vector<2x2xf16>
-      vector.transfer_write %C_0, %argC[%quad_row,        %quad_col] {in_bounds = [true]} : vector<2xf16>, memref<16x8xf16>
-      vector.transfer_write %C_1, %argC[%quad_row_plus_8, %quad_col] {in_bounds = [true]} : vector<2xf16>, memref<16x8xf16>
+      vector.transfer_write %C_0, %argC[%quad_row,        %quad_col] {in_bounds = array<i1: true>} : vector<2xf16>, memref<16x8xf16>
+      vector.transfer_write %C_1, %argC[%quad_row_plus_8, %quad_col] {in_bounds = array<i1: true>} : vector<2xf16>, memref<16x8xf16>
 
       gpu.return
     }

@@ -23,11 +23,11 @@ func.func @eliminate_redundant_masks_through_insert_and_extracts(%tensor: tensor
     %mask = vector.create_mask %dim_1 : vector<[4]xi1>
 
     // 3. Read the slice and do some computation.
-    %vec = vector.transfer_read %extracted_slice_1[%c0], %c0_f32, %mask {in_bounds = [true]} : tensor<?xf32>, vector<[4]xf32>
+    %vec = vector.transfer_read %extracted_slice_1[%c0], %c0_f32, %mask {in_bounds = array<i1: true>} : tensor<?xf32>, vector<[4]xf32>
     %new_vec = "test.some_computation"(%vec) : (vector<[4]xf32>) -> (vector<[4]xf32>)
 
     // 4. Write the new value.
-    %write = vector.transfer_write %new_vec, %extracted_slice_1[%c0], %mask {in_bounds = [true]} : vector<[4]xf32>, tensor<?xf32>
+    %write = vector.transfer_write %new_vec, %extracted_slice_1[%c0], %mask {in_bounds = array<i1: true>} : vector<[4]xf32>, tensor<?xf32>
 
     // 5. Insert and yield the new tensor value.
     %result = tensor.insert_slice %write into %arg[0, %i] [1, %c4_vscale] [1, 1] : tensor<?xf32> into tensor<1x?xf32>

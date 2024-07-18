@@ -8,7 +8,7 @@ func.func @fold_vector_transfer_read_with_rank_reduced_extract_slice(
   %0 = tensor.extract_slice %arg0[0, %arg1, %arg2] [1, %arg3, %arg4] [1, 1, 1]
       : tensor<?x?x?xf32> to
         tensor<?x?xf32>
-  %1 = vector.transfer_read %0[%arg5, %arg6], %cst {in_bounds = [true]}
+  %1 = vector.transfer_read %0[%arg5, %arg6], %cst {in_bounds = array<i1: true>}
       : tensor<?x?xf32>, vector<4xf32>
   return %1 : vector<4xf32>
 }
@@ -40,7 +40,7 @@ func.func @transfer_read_from_rank_reducing_extract_slice_failure(
   // Can't fold this atm since we don' emit the proper vector.extract_strided_slice.
 //   CHECK: tensor.extract_slice
   %0 = tensor.extract_slice %src[0, %i1, %i2, %i3] [1, 4, 1, 4] [2, 3, 4, 5] : tensor<1x8x8x8xf32> to tensor<1x4x4xf32>
-  %1 = vector.transfer_read %0[%c1, %i4, %c2], %f0 {in_bounds = [true]} : tensor<1x4x4xf32>, vector<4xf32>
+  %1 = vector.transfer_read %0[%c1, %i4, %c2], %f0 {in_bounds = array<i1: true>} : tensor<1x4x4xf32>, vector<4xf32>
   return %1 : vector<4xf32>
 }
 
@@ -52,14 +52,14 @@ func.func @transfer_read_from_rank_reducing_extract_slice_failure(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x?xf32>, %[[s1:.*]]: index, %[[s2:.*]]: index
 //   CHECK-DAG:   %[[c8:.*]] = arith.constant 8 : index
 //       CHECK:   %[[add:.*]] = affine.apply #[[$ADD_4]]()[%[[s1]]]
-//       CHECK:   %[[r:.*]] = vector.transfer_read %[[t]][%[[c8]], %[[add]]], %{{.*}} {in_bounds = [true, true]} : tensor<?x?xf32>, vector<5x6xf32>
+//       CHECK:   %[[r:.*]] = vector.transfer_read %[[t]][%[[c8]], %[[add]]], %{{.*}} {in_bounds = array<i1: true, true>} : tensor<?x?xf32>, vector<5x6xf32>
 //       CHECK:   return %[[r]]
 func.func @transfer_read_of_extract_slice(%t : tensor<?x?xf32>, %s1 : index, %s2 : index) -> vector<5x6xf32> {
   %c3 = arith.constant 3 : index
   %c4 = arith.constant 4 : index
   %cst = arith.constant 0.0 : f32
   %0 = tensor.extract_slice %t[5, %s1] [10, %s2] [1, 1] : tensor<?x?xf32> to tensor<10x?xf32>
-  %1 = vector.transfer_read %0[%c3, %c4], %cst {in_bounds = [true, true]} : tensor<10x?xf32>, vector<5x6xf32>
+  %1 = vector.transfer_read %0[%c3, %c4], %cst {in_bounds = array<i1: true, true>} : tensor<10x?xf32>, vector<5x6xf32>
   return %1 : vector<5x6xf32>
 }
 // -----
@@ -87,14 +87,14 @@ func.func @fold_extract_slice_with_transfer_read_0d(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x?xf32>, %[[s1:.*]]: index, %[[s2:.*]]: index
 //   CHECK-DAG:   %[[c8:.*]] = arith.constant 8 : index
 //       CHECK:   %[[add:.*]] = affine.apply #[[$ADD_4]]()[%[[s1]]]
-//       CHECK:   %[[r:.*]] = vector.transfer_read %[[t]][%[[c8]], %[[add]]], %{{.*}} {in_bounds = [true]} : tensor<?x?xf32>, vector<6xf32>
+//       CHECK:   %[[r:.*]] = vector.transfer_read %[[t]][%[[c8]], %[[add]]], %{{.*}} {in_bounds = array<i1: true>} : tensor<?x?xf32>, vector<6xf32>
 //       CHECK:   return %[[r]]
 func.func @transfer_read_of_extract_slice(%t : tensor<?x?xf32>, %s1 : index, %s2 : index) -> vector<6xf32> {
   %c3 = arith.constant 3 : index
   %c4 = arith.constant 4 : index
   %cst = arith.constant 0.0 : f32
   %0 = tensor.extract_slice %t[5, %s1] [10, %s2] [1, 1] : tensor<?x?xf32> to tensor<10x?xf32>
-  %1 = vector.transfer_read %0[%c3, %c4], %cst {in_bounds = [true]} : tensor<10x?xf32>, vector<6xf32>
+  %1 = vector.transfer_read %0[%c3, %c4], %cst {in_bounds = array<i1: true>} : tensor<10x?xf32>, vector<6xf32>
   return %1 : vector<6xf32>
 }
 
@@ -107,14 +107,14 @@ func.func @transfer_read_of_extract_slice(%t : tensor<?x?xf32>, %s1 : index, %s2
 //   CHECK-DAG:   %[[c5:.*]] = arith.constant 5 : index
 //   CHECK-DAG:   %[[c10:.*]] = arith.constant 10 : index
 //       CHECK:   %[[add:.*]] = affine.apply #[[$ADD_3]]()[%[[s1]]]
-//       CHECK:   %[[r:.*]] = vector.transfer_read %[[t]][%[[c5]], %[[add]], %[[c10]]], %{{.*}} {in_bounds = [true, true]} : tensor<?x?x?xf32>, vector<5x6xf32>
+//       CHECK:   %[[r:.*]] = vector.transfer_read %[[t]][%[[c5]], %[[add]], %[[c10]]], %{{.*}} {in_bounds = array<i1: true, true>} : tensor<?x?x?xf32>, vector<5x6xf32>
 //       CHECK:   return %[[r]]
 func.func @transfer_read_of_extract_slice_rank_reducing(%t : tensor<?x?x?xf32>, %s1 : index, %s2 : index) -> vector<5x6xf32> {
   %c3 = arith.constant 3 : index
   %c4 = arith.constant 4 : index
   %cst = arith.constant 0.0 : f32
   %0 = tensor.extract_slice %t[5, %s1, 6] [1, %s2, 12] [1, 1, 1] : tensor<?x?x?xf32> to tensor<?x12xf32>
-  %1 = vector.transfer_read %0[%c3, %c4], %cst {in_bounds = [true, true]} : tensor<?x12xf32>, vector<5x6xf32>
+  %1 = vector.transfer_read %0[%c3, %c4], %cst {in_bounds = array<i1: true, true>} : tensor<?x12xf32>, vector<5x6xf32>
   return %1 : vector<5x6xf32>
 }
 
@@ -137,7 +137,7 @@ func.func @transfer_read_of_extract_slice_swappy_rank_reducing(%t : tensor<?x?x?
 //  CHECK-SAME:     permutation_map = #[[$d0d2]]
 //  CHECK-SAME:     tensor<?x?x?xf32>, vector<5x6xf32>
   %0 = tensor.extract_slice %t[5, %s1, %s2] [%s2, 1, 12] [1, 1, 1] : tensor<?x?x?xf32> to tensor<?x12xf32>
-  %1 = vector.transfer_read %0[%c3, %c4], %cst {in_bounds = [true, true]} : tensor<?x12xf32>, vector<5x6xf32>
+  %1 = vector.transfer_read %0[%c3, %c4], %cst {in_bounds = array<i1: true, true>} : tensor<?x12xf32>, vector<5x6xf32>
 
   return %1 : vector<5x6xf32>
 }
@@ -166,8 +166,8 @@ func.func @fold_vector_transfer_write_with_rank_reduced_insert_slice(
 //   CHECK-DAG:    %[[C0:.+]] = arith.constant 0 : index
 //   CHECK-DAG:    %[[IDX0:.+]] = affine.apply #[[MAP1]]()[%[[ARG2]], %[[ARG6]]]
 //   CHECK-DAG:    %[[IDX1:.+]] = affine.apply #[[MAP1]]()[%[[ARG3]], %[[ARG7]]]
-//   CHECK-DAG:    vector.transfer_write %[[ARG1]], %[[ARG0]][%[[C0]], %[[IDX0]], %[[IDX1]]] {in_bounds = [true]} : vector<4xf32>, tensor<?x?x?xf32
-  %0 = vector.transfer_write %arg1, %st[%arg6, %arg7] {in_bounds = [true]}
+//   CHECK-DAG:    vector.transfer_write %[[ARG1]], %[[ARG0]][%[[C0]], %[[IDX0]], %[[IDX1]]] {in_bounds = array<i1: true>} : vector<4xf32>, tensor<?x?x?xf32
+  %0 = vector.transfer_write %arg1, %st[%arg6, %arg7] {in_bounds = array<i1: true>}
       : vector<4xf32>, tensor<?x?xf32>
   %1 = tensor.insert_slice %0 into %arg0[0, %arg2, %arg3] [1, %arg4, %arg5] [1, 1, 1]
       : tensor<?x?xf32> into tensor<?x?x?xf32>
@@ -200,8 +200,8 @@ func.func @fold_vector_transfer_write_with_inner_rank_reduced_insert_slice(
   //   CHECK-DAG:  %[[IDX0:.+]] = affine.apply #[[MAP1]]()[%[[ARG2]], %[[ARG6]]]
   //   CHECK-DAG:  %[[IDX1:.+]] = affine.apply #[[MAP1]]()[%[[ARG3]], %[[ARG7]]]
   //   CHECK-DAG:  vector.transfer_write %[[ARG1]], %[[ARG0]][%[[IDX0]], %[[IDX1]], %[[C0]]]
-  //  CHECK-SAME:    {in_bounds = [true], permutation_map = #[[MAP2]]} : vector<4xf32>, tensor<?x?x?xf32
-  %0 = vector.transfer_write %arg1, %st[%arg6, %arg7] {in_bounds = [true]}
+  //  CHECK-SAME:    {in_bounds = array<i1: true>, permutation_map = #[[MAP2]]} : vector<4xf32>, tensor<?x?x?xf32
+  %0 = vector.transfer_write %arg1, %st[%arg6, %arg7] {in_bounds = array<i1: true>}
       : vector<4xf32>, tensor<?x?xf32>
   %1 = tensor.insert_slice %0 into %arg0[%arg2, %arg3, 0] [%arg4, %arg5, 1] [1, 1, 1]
       : tensor<?x?xf32> into tensor<?x?x?xf32>
@@ -217,9 +217,9 @@ func.func @insert_slice_of_transfer_write(%t1 : tensor<?x12xf32>, %v : vector<5x
 
   //   CHECK-NOT: insert_slice
 //       CHECK:   %[[c3:.*]] = arith.constant 3 : index
-//       CHECK:   %[[r:.*]] = vector.transfer_write %[[v]], %[[t1]][%[[c3]], %[[s]]] {in_bounds = [true, true]} : vector<5x6xf32>, tensor<?x12xf32>
+//       CHECK:   %[[r:.*]] = vector.transfer_write %[[v]], %[[t1]][%[[c3]], %[[s]]] {in_bounds = array<i1: true, true>} : vector<5x6xf32>, tensor<?x12xf32>
 //       CHECK:   return %[[r]]
-  %0 = vector.transfer_write %v, %t2[%c0, %c0] {in_bounds = [true, true]} : vector<5x6xf32>, tensor<5x6xf32>
+  %0 = vector.transfer_write %v, %t2[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<5x6xf32>, tensor<5x6xf32>
   %1 = tensor.insert_slice %0 into %t1[3, %s] [5, 6] [1, 1] : tensor<5x6xf32> into tensor<?x12xf32>
   return %1 : tensor<?x12xf32>
 }
@@ -239,9 +239,9 @@ func.func @insert_slice_of_transfer_write_swappy_rank_extending(
 //   CHECK-DAG:   %[[c3:.*]] = arith.constant 3 : index
 //   CHECK-DAG:   %[[c4:.*]] = arith.constant 4 : index
 //       CHECK:   %[[r:.*]] = vector.transfer_write %[[v]], %[[t1]][%[[c4]], %[[c3]], %[[s]]]
-//  CHECK-SAME:    {in_bounds = [true, true], permutation_map = #[[$d0d2]]} : vector<5x6xf32>, tensor<?x?x12xf32>
+//  CHECK-SAME:    {in_bounds = array<i1: true, true>, permutation_map = #[[$d0d2]]} : vector<5x6xf32>, tensor<?x?x12xf32>
 //       CHECK:   return %[[r]]
-  %0 = vector.transfer_write %v, %t2[%c0, %c0] {in_bounds = [true, true]} : vector<5x6xf32>, tensor<5x6xf32>
+  %0 = vector.transfer_write %v, %t2[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<5x6xf32>, tensor<5x6xf32>
   %1 = tensor.insert_slice %0 into %t1[4, 3, %s] [5, 1, 6] [1, 1, 1] : tensor<5x6xf32> into tensor<?x?x12xf32>
   return %1 : tensor<?x?x12xf32>
 }
@@ -252,11 +252,11 @@ func.func @insert_slice_of_transfer_write_swappy_rank_extending(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?x?x12xf32>, %[[v:.*]]: vector<5x6xf32>, %[[s:.*]]: index
 //   CHECK-DAG:   %[[c3:.*]] = arith.constant 3 : index
 //   CHECK-DAG:   %[[c4:.*]] = arith.constant 4 : index
-//       CHECK:   %[[r:.*]] = vector.transfer_write %[[v]], %[[t1]][%[[c4]], %[[c3]], %[[s]]] {in_bounds = [true, true]} : vector<5x6xf32>, tensor<?x?x12xf32>
+//       CHECK:   %[[r:.*]] = vector.transfer_write %[[v]], %[[t1]][%[[c4]], %[[c3]], %[[s]]] {in_bounds = array<i1: true, true>} : vector<5x6xf32>, tensor<?x?x12xf32>
 //       CHECK:   return %[[r]]
 func.func @insert_slice_of_transfer_write_rank_extending(%t1 : tensor<?x?x12xf32>, %v : vector<5x6xf32>, %s : index, %t2 : tensor<5x6xf32>) -> tensor<?x?x12xf32> {
   %c0 = arith.constant 0 : index
-  %0 = vector.transfer_write %v, %t2[%c0, %c0] {in_bounds = [true, true]} : vector<5x6xf32>, tensor<5x6xf32>
+  %0 = vector.transfer_write %v, %t2[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<5x6xf32>, tensor<5x6xf32>
   %1 = tensor.insert_slice %0 into %t1[4, 3, %s] [1, 5, 6] [1, 1, 1] : tensor<5x6xf32> into tensor<?x?x12xf32>
   return %1 : tensor<?x?x12xf32>
 }

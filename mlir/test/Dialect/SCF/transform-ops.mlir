@@ -541,7 +541,7 @@ func.func @loop_pipeline(%arg0: memref<4x16xf32>, %arg1: vector<16xf32>) -> vect
   // CHECK: arith.addf
   // CHECK: arith.addf
   %0 = scf.for %arg2 = %c0 to %c3 step %c1 iter_args(%arg3 = %arg1) -> (vector<16xf32>) {
-    %1 = vector.transfer_read %arg0[%arg2, %c0], %cst {in_bounds = [true]} : memref<4x16xf32>, vector<16xf32>
+    %1 = vector.transfer_read %arg0[%arg2, %c0], %cst {in_bounds = array<i1: true>} : memref<4x16xf32>, vector<16xf32>
     %2 = arith.addf %1, %arg3 : vector<16xf32>
     scf.yield %2 : vector<16xf32>
   }
@@ -568,7 +568,7 @@ func.func @loop_pipeline_lb_gt_0(%arg0: memref<4x16xf32>, %arg1: vector<16xf32>)
   // CHECK: arith.addf
   // CHECK: arith.addf
   %0 = scf.for %arg2 = %c1 to %c3 step %c1 iter_args(%arg3 = %arg1) -> (vector<16xf32>) {
-    %1 = vector.transfer_read %arg0[%arg2, %c1], %cst {in_bounds = [true]} : memref<4x16xf32>, vector<16xf32>
+    %1 = vector.transfer_read %arg0[%arg2, %c1], %cst {in_bounds = array<i1: true>} : memref<4x16xf32>, vector<16xf32>
     %2 = arith.addf %1, %arg3 : vector<16xf32>
     scf.yield %2 : vector<16xf32>
   }

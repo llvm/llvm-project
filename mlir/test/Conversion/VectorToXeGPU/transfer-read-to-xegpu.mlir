@@ -3,7 +3,7 @@
 func.func @load_1D_vector(%source: memref<8x16x32xf32>, %offset: index) -> vector<8xf32> {
   %c0 = arith.constant 0.0 : f32
   %0 = vector.transfer_read %source[%offset, %offset, %offset], %c0
-    {in_bounds = [true]} : memref<8x16x32xf32>, vector<8xf32>
+    {in_bounds = array<i1: true>} : memref<8x16x32xf32>, vector<8xf32>
   return %0 : vector<8xf32>
 }
 
@@ -23,7 +23,7 @@ func.func @load_2D_vector(%source: memref<8x16x32xf32>,
     %offset: index) -> vector<8x16xf32> {
   %c0 = arith.constant 0.0 : f32
   %0 = vector.transfer_read %source[%offset, %offset, %offset], %c0
-    {in_bounds = [true, true]} : memref<8x16x32xf32>, vector<8x16xf32>
+    {in_bounds = array<i1: true, true>} : memref<8x16x32xf32>, vector<8x16xf32>
   return %0 : vector<8x16xf32>
 }
 
@@ -43,7 +43,7 @@ func.func @load_zero_pad_out_of_bounds(%source: memref<32x64xf32>,
     %offset: index) -> vector<8x16xf32> {
   %c0 = arith.constant 0.0 : f32
   %0 = vector.transfer_read %source[%offset, %offset], %c0
-    {in_bounds = [false, true]} : memref<32x64xf32>, vector<8x16xf32>
+    {in_bounds = array<i1: false, true>} : memref<32x64xf32>, vector<8x16xf32>
   return %0 : vector<8x16xf32>
 }
 
@@ -63,7 +63,7 @@ func.func @load_transposed(%source: memref<32x64xf32>,
   %c0 = arith.constant 0.0 : f32
   %0 = vector.transfer_read %source[%offset, %offset], %c0
     {permutation_map = affine_map<(d0, d1) -> (d1, d0)>,
-    in_bounds = [true, true]} : memref<32x64xf32>, vector<8x16xf32>
+    in_bounds = array<i1: true, true>} : memref<32x64xf32>, vector<8x16xf32>
   return %0 : vector<8x16xf32>
 }
 
@@ -82,7 +82,7 @@ func.func @load_dynamic_source(%source: memref<?x?x?xf32>,
     %offset: index) -> vector<8x16xf32> {
   %c0 = arith.constant 0.0 : f32
   %0 = vector.transfer_read %source[%offset, %offset, %offset], %c0
-    {in_bounds = [true, true]} : memref<?x?x?xf32>, vector<8x16xf32>
+    {in_bounds = array<i1: true, true>} : memref<?x?x?xf32>, vector<8x16xf32>
   return %0 : vector<8x16xf32>
 }
 
@@ -108,9 +108,9 @@ func.func @no_load_out_of_bounds_non_zero_pad(%source: memref<32x64xf32>,
     %offset: index, %arg2: index, %pad: f32) -> (vector<8x16xf32>, vector<8x16xf32>) {
   %c1 = arith.constant 1.0 : f32
   %0 = vector.transfer_read %source[%offset, %arg2], %c1
-    {in_bounds = [true, false]} : memref<32x64xf32>, vector<8x16xf32>
+    {in_bounds = array<i1: true, false>} : memref<32x64xf32>, vector<8x16xf32>
   %1 = vector.transfer_read %source[%arg2, %offset], %pad
-    {in_bounds = [false, true]} : memref<32x64xf32>, vector<8x16xf32>
+    {in_bounds = array<i1: false, true>} : memref<32x64xf32>, vector<8x16xf32>
   return %0, %1 : vector<8x16xf32>, vector<8x16xf32>
 }
 
@@ -124,7 +124,7 @@ func.func @no_load_masked(%source : memref<4xf32>,
   %c0 = arith.constant 0.0 : f32
   %mask = arith.constant dense<[0, 1, 0, 1]> : vector<4xi1>
   %0 = vector.transfer_read %source[%offset], %c0, %mask
-    {in_bounds = [true]} : memref<4xf32>, vector<4xf32>
+    {in_bounds = array<i1: true>} : memref<4xf32>, vector<4xf32>
   return %0 : vector<4xf32>
 }
 
@@ -137,7 +137,7 @@ func.func @no_load_tensor(%source: tensor<32x64xf32>,
     %offset: index, %arg2: index) -> vector<8x16xf32> {
   %c0 = arith.constant 0.0 : f32
   %0 = vector.transfer_read %source[%offset, %arg2], %c0
-    {in_bounds = [true, true]} : tensor<32x64xf32>, vector<8x16xf32>
+    {in_bounds = array<i1: true, true>} : tensor<32x64xf32>, vector<8x16xf32>
   return %0 : vector<8x16xf32>
 }
 
@@ -150,7 +150,7 @@ func.func @no_load_high_dim_vector(%source: memref<16x32x64xf32>,
     %offset: index, %arg2: index) -> vector<8x16x32xf32> {
   %c0 = arith.constant 0.0 : f32
   %0 = vector.transfer_read %source[%offset, %arg2, %offset], %c0
-    {in_bounds = [true, true, true]} : memref<16x32x64xf32>, vector<8x16x32xf32>
+    {in_bounds = array<i1: true, true, true>} : memref<16x32x64xf32>, vector<8x16x32xf32>
   return %0 : vector<8x16x32xf32>
 }
 
@@ -163,7 +163,7 @@ func.func @no_load_non_unit_inner_stride(
     %source: memref<32xf32, strided<[?], offset: ?>>,
     %offset: index) -> vector<8xf32> {
   %c0 = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %source[%offset], %c0 {in_bounds = [true]}
+  %0 = vector.transfer_read %source[%offset], %c0 {in_bounds = array<i1: true>}
     : memref<32xf32, strided<[?], offset: ?>>, vector<8xf32>
   return %0 : vector<8xf32>
 }
@@ -178,7 +178,7 @@ func.func @no_load_unsupported_map(%source: memref<16x32x64xf32>,
   %c0 = arith.constant 0.0 : f32
   %0 = vector.transfer_read %source[%offset, %offset, %offset], %c0
     {permutation_map = affine_map<(d0, d1, d2) -> (d0, d2)>,
-    in_bounds = [true, true]} : memref<16x32x64xf32>, vector<8x16xf32>
+    in_bounds = array<i1: true, true>} : memref<16x32x64xf32>, vector<8x16xf32>
   return %0 : vector<8x16xf32>
 }
 
@@ -192,7 +192,7 @@ func.func @no_load_transpose_unsupported_data_type(%source: memref<32x64xf16>,
   %c0 = arith.constant 0.0 : f16
   %0 = vector.transfer_read %source[%offset, %offset], %c0
     {permutation_map = affine_map<(d0, d1) -> (d1, d0)>,
-    in_bounds = [true, true]} : memref<32x64xf16>, vector<8x16xf16>
+    in_bounds = array<i1: true, true>} : memref<32x64xf16>, vector<8x16xf16>
   return %0 : vector<8x16xf16>
 }
 

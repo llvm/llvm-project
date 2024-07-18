@@ -19,7 +19,7 @@ func.func @transfer_read_inbounds(%A : memref<?x?x?xf32>) -> (vector<2x3x4xf32>)
   // CHECK-NEXT: vector.insert {{.*}} [1, 2] : vector<4xf32> into vector<2x3x4xf32>
   // CHECK-NOT: scf.if
   // CHECK-NOT: scf.for
-  %vec = vector.transfer_read %A[%c0, %c0, %c0], %f0 {in_bounds = [true, true, true]} : memref<?x?x?xf32>, vector<2x3x4xf32>
+  %vec = vector.transfer_read %A[%c0, %c0, %c0], %f0 {in_bounds = array<i1: true, true, true>} : memref<?x?x?xf32>, vector<2x3x4xf32>
   return %vec : vector<2x3x4xf32>
 }
 
@@ -81,6 +81,6 @@ func.func @transfer_read_mask(%A : memref<?x?x?xf32>, %mask : vector<2x3x4xi1>) 
   // CHECK-NEXT: vector.insert {{.*}} [1, 2] : vector<4xf32> into vector<2x3x4xf32>
   // CHECK-NOT: scf.if
   // CHECK-NOT: scf.for
-  %vec = vector.transfer_read %A[%c0, %c0, %c0], %f0, %mask {in_bounds = [true, true, true]}: memref<?x?x?xf32>, vector<2x3x4xf32>
+  %vec = vector.transfer_read %A[%c0, %c0, %c0], %f0, %mask {in_bounds = array<i1: true, true, true>}: memref<?x?x?xf32>, vector<2x3x4xf32>
   return %vec : vector<2x3x4xf32>
 }

@@ -3,7 +3,7 @@
 func.func @store_1D_vector(%vec: vector<8xf32>,
     %source: memref<8x16x32xf32>, %offset: index) {
   vector.transfer_write %vec, %source[%offset, %offset, %offset]
-    {in_bounds = [true]}
+    {in_bounds = array<i1: true>}
     : vector<8xf32>, memref<8x16x32xf32>
   return
 }
@@ -23,7 +23,7 @@ func.func @store_1D_vector(%vec: vector<8xf32>,
 func.func @store_2D_vector(%vec: vector<8x16xf32>,
     %source: memref<8x16x32xf32>, %offset: index) {
   vector.transfer_write %vec, %source[%offset, %offset, %offset]
-    {in_bounds = [true, true]}
+    {in_bounds = array<i1: true, true>}
     : vector<8x16xf32>, memref<8x16x32xf32>
   return
 }
@@ -43,7 +43,7 @@ func.func @store_2D_vector(%vec: vector<8x16xf32>,
 func.func @store_dynamic_source(%vec: vector<8x16xf32>,
     %source: memref<?x?x?xf32>, %offset: index) {
   vector.transfer_write %vec, %source[%offset, %offset, %offset]
-    {in_bounds = [true, true]}
+    {in_bounds = array<i1: true, true>}
     : vector<8x16xf32>, memref<?x?x?xf32>
   return
 }
@@ -70,7 +70,7 @@ func.func @no_store_transposed(%vec: vector<8x16xf32>,
     %source: memref<32x64xf32>, %offset: index) {
   vector.transfer_write %vec, %source[%offset, %offset]
     {permutation_map = affine_map<(d0, d1) -> (d1, d0)>,
-    in_bounds = [true, true]}
+    in_bounds = array<i1: true, true>}
     : vector<8x16xf32>, memref<32x64xf32>
   return
 }
@@ -83,7 +83,7 @@ func.func @no_store_transposed(%vec: vector<8x16xf32>,
 func.func @no_store_out_of_bounds(%vec: vector<8x16xf32>,
     %source: memref<32x64xf32>, %offset: index) {
   vector.transfer_write %vec, %source[%offset, %offset]
-    {in_bounds = [false, true]}
+    {in_bounds = array<i1: false, true>}
     : vector<8x16xf32>, memref<32x64xf32>
   return
 }
@@ -97,7 +97,7 @@ func.func @no_store_masked(%vec: vector<4xf32>,
     %source: memref<4xf32>, %offset: index) {
   %mask = arith.constant dense<[0, 1, 0, 1]> : vector<4xi1>
   vector.transfer_write %vec, %source[%offset], %mask
-    {in_bounds = [true]}
+    {in_bounds = array<i1: true>}
     : vector<4xf32>, memref<4xf32>
   return
 }
@@ -110,7 +110,7 @@ func.func @no_store_masked(%vec: vector<4xf32>,
 func.func @no_store_tensor(%vec: vector<8x16xf32>,
     %source: tensor<32x64xf32>, %offset: index) -> tensor<32x64xf32> {
   %0 = vector.transfer_write %vec, %source[%offset, %offset]
-    {in_bounds = [true, true]}
+    {in_bounds = array<i1: true, true>}
     : vector<8x16xf32>, tensor<32x64xf32>
   return %0 : tensor<32x64xf32>
 }
@@ -123,7 +123,7 @@ func.func @no_store_tensor(%vec: vector<8x16xf32>,
 func.func @no_store_high_dim_vector(%vec: vector<8x16x32xf32>,
     %source: memref<16x32x64xf32>, %offset: index) {
   vector.transfer_write %vec, %source[%offset, %offset, %offset]
-    {in_bounds = [true, true, true]}
+    {in_bounds = array<i1: true, true, true>}
     : vector<8x16x32xf32>, memref<16x32x64xf32>
   return
 }
@@ -136,7 +136,7 @@ func.func @no_store_high_dim_vector(%vec: vector<8x16x32xf32>,
 func.func @no_store_non_unit_inner_stride(%vec: vector<8xf32>,
     %source: memref<32xf32, strided<[?], offset: ?>>, %offset: index) {
   vector.transfer_write %vec, %source[%offset]
-    {in_bounds = [true]}
+    {in_bounds = array<i1: true>}
     : vector<8xf32>, memref<32xf32, strided<[?], offset: ?>>
   return
 }
@@ -150,7 +150,7 @@ func.func @no_store_unsupported_map(%vec: vector<8x16xf32>,
     %source: memref<16x32x64xf32>, %offset: index) {
   vector.transfer_write %vec, %source[%offset, %offset, %offset]
     {permutation_map = affine_map<(d0, d1, d2) -> (d0, d2)>,
-    in_bounds = [true, true]}
+    in_bounds = array<i1: true, true>}
     : vector<8x16xf32>, memref<16x32x64xf32>
   return
 }

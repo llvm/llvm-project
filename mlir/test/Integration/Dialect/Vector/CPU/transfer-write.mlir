@@ -7,7 +7,7 @@ func.func @transfer_write16_inbounds_1d(%A : memref<?xf32>, %base: index) {
   %f = arith.constant 16.0 : f32
   %v = vector.splat %f : vector<16xf32>
   vector.transfer_write %v, %A[%base]
-    {permutation_map = affine_map<(d0) -> (d0)>, in_bounds = [true]}
+    {permutation_map = affine_map<(d0) -> (d0)>, in_bounds = array<i1: true>}
     : vector<16xf32>, memref<?xf32>
   return
 }
@@ -62,7 +62,7 @@ func.func @transfer_write_inbounds_3d(%A : memref<4x4x4xf32>) {
   %v8 = vector.insert %f8, %v7[1, 2, 3] : f32 into vector<2x3x4xf32>
   vector.transfer_write %v8, %A[%c0, %c0, %c0]
     {permutation_map = affine_map<(d0, d1, d2) -> (d2, d0, d1)>,
-    in_bounds = [true, true, true]}
+    in_bounds = array<i1: true, true, true>}
     : vector<2x3x4xf32>, memref<4x4x4xf32>
   return
 }

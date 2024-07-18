@@ -85,7 +85,7 @@ func.func @vector_load_i4_dynamic(%arg0 : index, %arg1 : index, %arg2 : index, %
 func.func @vector_transfer_read_i4(%arg1: index, %arg2: index) -> vector<8xi4> {
     %c0 = arith.constant 0 : i4
     %0 = memref.alloc() : memref<3x8xi4>
-    %1 = vector.transfer_read %0[%arg1, %arg2], %c0 {in_bounds = [true]} :
+    %1 = vector.transfer_read %0[%arg1, %arg2], %c0 {in_bounds = array<i1: true>} :
       memref<3x8xi4>, vector<8xi4>
     return %1 : vector<8xi4>
 }

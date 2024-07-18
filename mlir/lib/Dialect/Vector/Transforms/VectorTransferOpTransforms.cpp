@@ -411,7 +411,7 @@ class TransferReadDropUnitDimsPattern
     auto newTransferReadOp = rewriter.create<vector::TransferReadOp>(
         loc, reducedVectorType, reducedShapeSource, zeros, identityMap,
         transferReadOp.getPadding(), maskOp,
-        rewriter.getBoolArrayAttr(inBounds));
+        rewriter.getDenseBoolArrayAttr(inBounds));
     auto shapeCast = rewriter.createOrFold<vector::ShapeCastOp>(
         loc, vectorType, newTransferReadOp);
     rewriter.replaceOp(transferReadOp, shapeCast);
@@ -480,7 +480,7 @@ class TransferWriteDropUnitDimsPattern
         loc, reducedVectorType, vector);
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
         transferWriteOp, Type(), shapeCast, reducedShapeSource, zeros,
-        identityMap, maskOp, rewriter.getBoolArrayAttr(inBounds));
+        identityMap, maskOp, rewriter.getDenseBoolArrayAttr(inBounds));
 
     return success();
   }
@@ -640,7 +640,8 @@ public:
                                                 vectorType.getElementType());
     vector::TransferReadOp flatRead = rewriter.create<vector::TransferReadOp>(
         loc, flatVectorType, collapsedSource, collapsedIndices, collapsedMap);
-    flatRead.setInBoundsAttr(rewriter.getBoolArrayAttr({true}));
+    SmallVector<bool> inBounds(1, true);
+    flatRead.setInBoundsAttr(rewriter.getDenseBoolArrayAttr(inBounds));
 
     // 4. Replace the old transfer_read with the new one reading from the
     // collapsed shape
@@ -735,7 +736,8 @@ public:
     vector::TransferWriteOp flatWrite =
         rewriter.create<vector::TransferWriteOp>(
             loc, flatVector, collapsedSource, collapsedIndices, collapsedMap);
-    flatWrite.setInBoundsAttr(rewriter.getBoolArrayAttr({true}));
+    SmallVector<bool> inBounds(1, true);
+    flatWrite.setInBoundsAttr(rewriter.getDenseBoolArrayAttr(inBounds));
 
     // 4. Replace the old transfer_write with the new one writing the
     // collapsed shape

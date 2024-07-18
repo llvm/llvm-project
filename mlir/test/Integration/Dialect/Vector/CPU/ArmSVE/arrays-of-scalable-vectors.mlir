@@ -14,7 +14,7 @@ func.func @read_and_print_2d_vector(%memref: memref<3x?xf32>)  {
   %c2 = arith.constant 2 : index
   %dim = memref.dim %memref, %c1 : memref<3x?xf32>
   %mask = vector.create_mask %c2, %dim : vector<3x[8]xi1>
-  %vector = vector.transfer_read %memref[%c0,%c0], %cst, %mask {in_bounds = [true, true]} : memref<3x?xf32>, vector<3x[8]xf32>
+  %vector = vector.transfer_read %memref[%c0,%c0], %cst, %mask {in_bounds = array<i1: true, true>} : memref<3x?xf32>, vector<3x[8]xf32>
 
   /// TODO: Support vector.print for arrays of scalable vectors.
   %row0 = vector.extract %vector[0] : vector<[8]xf32> from vector<3x[8]xf32>
@@ -63,14 +63,14 @@ func.func @add_arrays_of_scalable_vectors(%a: memref<1x2x?xf32>, %b: memref<1x2x
   // CHECK-NEXT: ( 5, 5, 5, 5
   // CHECK-NEXT: ( 5, 5, 5, 5
   vector.print str "\nVector A\n"
-  %vector_a = vector.transfer_read %a[%c0, %c0, %c0], %cst, %mask_a {in_bounds = [true, true, true]} : memref<1x2x?xf32>, vector<1x2x[4]xf32>
+  %vector_a = vector.transfer_read %a[%c0, %c0, %c0], %cst, %mask_a {in_bounds = array<i1: true, true, true>} : memref<1x2x?xf32>, vector<1x2x[4]xf32>
   func.call @print_1x2xVSCALExf32(%vector_a) : (vector<1x2x[4]xf32>) -> ()
 
   // CHECK-LABEL: Vector B
   // CHECK-NEXT: ( 4, 4, 4, 4
   // CHECK-NEXT: ( 4, 4, 4, 4
   vector.print str "\nVector B\n"
-  %vector_b = vector.transfer_read %b[%c0, %c0, %c0], %cst, %mask_b {in_bounds = [true, true, true]} : memref<1x2x?xf32>, vector<1x2x[4]xf32>
+  %vector_b = vector.transfer_read %b[%c0, %c0, %c0], %cst, %mask_b {in_bounds = array<i1: true, true, true>} : memref<1x2x?xf32>, vector<1x2x[4]xf32>
   func.call @print_1x2xVSCALExf32(%vector_b) : (vector<1x2x[4]xf32>) -> ()
 
   // CHECK-LABEL: Sum

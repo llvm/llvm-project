@@ -88,7 +88,7 @@ func.func @entry() -> i32 {
   //     ...
   //
   %cst_0 = arith.constant dense<0> : vector<[16]x[16]xi8>
-  vector.transfer_write %cst_0, %za_b[%c0, %c0] {in_bounds = [true, true]} : vector<[16]x[16]xi8>, memref<?x?xi8>
+  vector.transfer_write %cst_0, %za_b[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<[16]x[16]xi8>, memref<?x?xi8>
 
   // Verify memory is zeroed by doing an add reduction with initial value of
   // zero.

@@ -88,7 +88,7 @@ func.func @transfer_read_dims_mismatch_contiguous(
 // CHECK:           %[[VAL_1:.*]] = arith.constant 0 : i8
 // CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_3:.*]] = memref.collapse_shape %[[MEM]] {{\[\[}}0, 1, 2, 3]] : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>> into memref<120xi8, strided<[1], offset: ?>>
-// CHECK:           %[[VAL_4:.*]] = vector.transfer_read %[[VAL_3]]{{\[}}%[[VAL_2]]], %[[VAL_1]] {in_bounds = [true]} : memref<120xi8, strided<[1], offset: ?>>, vector<4xi8>
+// CHECK:           %[[VAL_4:.*]] = vector.transfer_read %[[VAL_3]]{{\[}}%[[VAL_2]]], %[[VAL_1]] {in_bounds = array<i1: true>} : memref<120xi8, strided<[1], offset: ?>>, vector<4xi8>
 // CHECK:           %[[VAL_5:.*]] = vector.shape_cast %[[VAL_4]] : vector<4xi8> to vector<1x1x2x2xi8>
 // CHECK:           return %[[VAL_5]] : vector<1x1x2x2xi8>
 
@@ -105,7 +105,7 @@ func.func @transfer_read_dims_mismatch_non_zero_indices(
   %c0 = arith.constant 0 : index
   %c0_i32 = arith.constant 0 : i32
   %res = vector.transfer_read %mem[%c0, %idx_1, %idx_2, %c0], %c0_i32 {
-    in_bounds = [true, true, true]
+    in_bounds = array<i1: true, true, true>
   } : memref<1x43x4x6xi32>, vector<1x2x6xi32>
   return %res : vector<1x2x6xi32>
 }
@@ -119,7 +119,7 @@ func.func @transfer_read_dims_mismatch_non_zero_indices(
 // CHECK:           %[[C_0_IDX:.*]] = arith.constant 0 : index
 // CHECK:           %[[COLLAPSED_IN:.*]] = memref.collapse_shape %[[MEM]] {{\[}}[0], [1, 2, 3]] : memref<1x43x4x6xi32> into memref<1x1032xi32>
 // CHECK:           %[[COLLAPSED_IDX:.*]] = affine.apply #[[$ATTR_0]]()[%[[IDX_1]], %[[IDX_2]]]
-// CHECK:           %[[READ:.*]] = vector.transfer_read %[[COLLAPSED_IN]][%[[C_0_IDX]], %[[COLLAPSED_IDX]]], %[[C_0]] {in_bounds = [true]} : memref<1x1032xi32>, vector<12xi32>
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[COLLAPSED_IN]][%[[C_0_IDX]], %[[COLLAPSED_IDX]]], %[[C_0]] {in_bounds = array<i1: true>} : memref<1x1032xi32>, vector<12xi32>
 
 // CHECK-128B-LABEL: func @transfer_read_dims_mismatch_non_zero_indices(
 //   CHECK-128B-NOT:   memref.collapse_shape
@@ -137,7 +137,7 @@ func.func @transfer_read_dims_mismatch_non_contiguous_non_zero_indices(
   %c0 = arith.constant 0 : index
   %cst_1 = arith.constant 0.000000e+00 : f32
   %res = vector.transfer_read %mem[%c0, %idx_1, %idx_2, %c0], %cst_1 {
-    in_bounds = [true, true]
+    in_bounds = array<i1: true, true>
   } : memref<1x3x3x2xf32, strided<[40, 10, 2, 1], offset: ?>>, vector<2x2xf32>
   return %res : vector<2x2xf32>
 }
@@ -165,7 +165,7 @@ func.func @transfer_read_leading_dynamic_dims(
   %c0_i8 = arith.constant 0 : i8
   %c0 = arith.constant 0 : index
   %res = vector.transfer_read %mem[%idx_1, %idx_2, %c0, %c0], %c0_i8 {
-    in_bounds = [true, true]
+    in_bounds = array<i1: true, true>
   } : memref<?x?x8x4xi8, strided<[?, 32, 4, 1], offset: ?>>, vector<8x4xi8>
   return %res : vector<8x4xi8>
 }
@@ -178,7 +178,7 @@ func.func @transfer_read_leading_dynamic_dims(
 // CHECK-SAME:      : memref<?x?x8x4xi8, {{.+}}> into memref<?x?x32xi8, {{.+}}>
 // CHECK:         %[[VEC1D:.+]] = vector.transfer_read %[[COLLAPSED]]
 // CHECK-SAME:    [%[[IDX_1]], %[[IDX_2]], %[[C0]]], %[[C0_I8]]
-// CHECK-SAME:    {in_bounds = [true]}
+// CHECK-SAME:    {in_bounds = array<i1: true>}
 // CHECK-SAME:      : memref<?x?x32xi8, {{.+}}>, vector<32xi8>
 // CHECK:         %[[RES:.+]] = vector.shape_cast %[[VEC1D]] : vector<32xi8> to vector<8x4xi8>
 // CHECK:         return %[[RES]] : vector<8x4xi8>
@@ -198,7 +198,7 @@ func.func @negative_transfer_read_dynamic_dim_to_flatten(
   %c0 = arith.constant 0 : index
   %c0_i32 = arith.constant 0 : i32
   %res = vector.transfer_read %mem[%c0, %idx_1, %idx_2, %c0], %c0_i32 {
-    in_bounds = [true, true, true]
+    in_bounds = array<i1: true, true, true>
   } : memref<1x?x4x6xi32>, vector<1x2x6xi32>
   return %res : vector<1x2x6xi32>
 }
@@ -357,7 +357,7 @@ func.func @transfer_write_dims_mismatch_contiguous(
 // CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_3:.*]] = memref.collapse_shape %[[MEM]] {{\[\[}}0, 1, 2, 3]] : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>> into memref<120xi8, strided<[1], offset: ?>>
 // CHECK:           %[[VAL_4:.*]] = vector.shape_cast %[[VEC]] : vector<1x1x2x2xi8> to vector<4xi8>
-// CHECK:           vector.transfer_write %[[VAL_4]], %[[VAL_3]]{{\[}}%[[VAL_2]]] {in_bounds = [true]} : vector<4xi8>, memref<120xi8, strided<[1], offset: ?>>
+// CHECK:           vector.transfer_write %[[VAL_4]], %[[VAL_3]]{{\[}}%[[VAL_2]]] {in_bounds = array<i1: true>} : vector<4xi8>, memref<120xi8, strided<[1], offset: ?>>
 
 // CHECK-128B-LABEL: func @transfer_write_dims_mismatch_contiguous(
 //       CHECK-128B:   memref.collapse_shape
@@ -372,7 +372,7 @@ func.func @transfer_write_dims_mismatch_non_zero_indices(
 
   %c0 = arith.constant 0 : index
   %c0_i32 = arith.constant 0 : i32
-  vector.transfer_write %vec, %mem[%c0, %idx_1, %idx_2, %c0] {in_bounds = [true, true, true]} :
+  vector.transfer_write %vec, %mem[%c0, %idx_1, %idx_2, %c0] {in_bounds = array<i1: true, true, true>} :
     vector<1x2x6xi32>, memref<1x43x4x6xi32>
   return
 }
@@ -387,7 +387,7 @@ func.func @transfer_write_dims_mismatch_non_zero_indices(
 // CHECK-DAG:       %[[IDX:.*]] = affine.apply #[[$ATTR_0]](){{\[}}%[[IDX_1]], %[[IDX_2]]]
 // CHECK-DAG:       %[[CS:.*]] = memref.collapse_shape %[[MEM]] {{\[\[}}0], [1, 2, 3]] : memref<1x43x4x6xi32> into memref<1x1032xi32>
 // CHECK:           %[[SC:.*]] = vector.shape_cast %[[VEC]] : vector<1x2x6xi32> to vector<12xi32>
-// CHECK:           vector.transfer_write %[[SC]], %[[CS]]{{\[}}%[[C0]], %[[IDX]]] {in_bounds = [true]} : vector<12xi32>, memref<1x1032xi32>
+// CHECK:           vector.transfer_write %[[SC]], %[[CS]]{{\[}}%[[C0]], %[[IDX]]] {in_bounds = array<i1: true>} : vector<12xi32>, memref<1x1032xi32>
 
 // CHECK-128B-LABEL: func @transfer_write_dims_mismatch_non_zero_indices(
 //   CHECK-128B-NOT:   memref.collapse_shape
@@ -405,7 +405,7 @@ func.func @transfer_write_dims_mismatch_non_contiguous_non_zero_indices(
     %idx_2 : index) {
 
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vec, %mem[%c0, %idx_1, %idx_2, %c0] {in_bounds = [true, true]} : vector<2x2xf32>, memref<1x3x3x2xf32, strided<[40, 10, 2, 1], offset: ?>>
+  vector.transfer_write %vec, %mem[%c0, %idx_1, %idx_2, %c0] {in_bounds = array<i1: true, true>} : vector<2x2xf32>, memref<1x3x3x2xf32, strided<[40, 10, 2, 1], offset: ?>>
   return
 }
 
@@ -430,7 +430,7 @@ func.func @transfer_write_leading_dynamic_dims(
     %idx_2 : index) {
 
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vec, %mem[%idx_1, %idx_2, %c0, %c0] {in_bounds = [true, true]} :
+  vector.transfer_write %vec, %mem[%idx_1, %idx_2, %c0, %c0] {in_bounds = array<i1: true, true>} :
     vector<8x4xi8>, memref<?x?x8x4xi8, strided<[?, 32, 4, 1], offset: ?>>
   return
 }
@@ -443,7 +443,7 @@ func.func @transfer_write_leading_dynamic_dims(
 // CHECK:         %[[VEC1D:.+]] = vector.shape_cast %[[VEC]] : vector<8x4xi8> to vector<32xi8>
 // CHECK:         vector.transfer_write %[[VEC1D]], %[[COLLAPSED]]
 // CHECK-SAME:      [%[[ARG2]], %[[ARG3]], %[[C0]]]
-// CHECK-SAME:      {in_bounds = [true]}
+// CHECK-SAME:      {in_bounds = array<i1: true>}
 // CHECK-SAME:      : vector<32xi8>, memref<?x?x32xi8, {{.+}}>
 
 // CHECK-128B-LABEL: func @transfer_write_leading_dynamic_dims
@@ -461,7 +461,7 @@ func.func @negative_transfer_write_dynamic_to_flatten(
 
   %c0 = arith.constant 0 : index
   %c0_i32 = arith.constant 0 : i32
-  vector.transfer_write %vec, %mem[%c0, %idx_1, %idx_2, %c0] {in_bounds = [true, true, true]} :
+  vector.transfer_write %vec, %mem[%c0, %idx_1, %idx_2, %c0] {in_bounds = array<i1: true, true, true>} :
     vector<1x2x6xi32>, memref<1x?x4x6xi32>
   return
 }
@@ -542,7 +542,7 @@ func.func @negative_out_of_bound_transfer_read(
     %mem : memref<?x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>) -> vector<5x4x3x2xi8> {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0 : i8
-  %res = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst {in_bounds = [false, true, true, true]} :
+  %res = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst {in_bounds = array<i1: false, true, true, true>} :
     memref<?x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>, vector<5x4x3x2xi8>
   return %res : vector<5x4x3x2xi8>
 }
@@ -554,7 +554,7 @@ func.func @negative_out_of_bound_transfer_read(
 func.func @negative_out_of_bound_transfer_write(
     %mem : memref<?x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>, %vec : vector<1x1x3x2xi8>) {
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vec, %mem [%c0, %c0, %c0, %c0] {in_bounds = [false, true, true, true]} :
+  vector.transfer_write %vec, %mem [%c0, %c0, %c0, %c0] {in_bounds = array<i1: false, true, true, true>} :
     vector<1x1x3x2xi8>, memref<?x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>
   return
 }

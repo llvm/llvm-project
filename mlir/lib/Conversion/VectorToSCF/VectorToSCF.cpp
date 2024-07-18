@@ -263,13 +263,6 @@ static void generateInBoundsCheck(
       });
 }
 
-/// Given an ArrayAttr, return a copy where the first element is dropped.
-static ArrayAttr dropFirstElem(OpBuilder &b, ArrayAttr attr) {
-  if (!attr)
-    return attr;
-  return ArrayAttr::get(b.getContext(), attr.getValue().drop_front());
-}
-
 /// Add the pass label to a vector transfer op if its rank is not the target
 /// rank.
 template <typename OpTy>
@@ -424,11 +417,11 @@ struct Strategy<TransferReadOp> {
     Location loc = xferOp.getLoc();
     auto bufferType = dyn_cast<ShapedType>(buffer.getType());
     auto vecType = dyn_cast<VectorType>(bufferType.getElementType());
-    auto inBoundsAttr = dropFirstElem(b, xferOp.getInBoundsAttr());
     auto newXferOp = b.create<vector::TransferReadOp>(
         loc, vecType, xferOp.getSource(), xferIndices,
         AffineMapAttr::get(unpackedPermutationMap(b, xferOp)),
-        xferOp.getPadding(), Value(), inBoundsAttr);
+        xferOp.getPadding(), Value(),
+        b.getDenseBoolArrayAttr(xferOp.getInBounds().drop_front()));
 
     maybeApplyPassLabel(b, newXferOp, options.targetRank);
 
@@ -511,13 +504,12 @@ struct Strategy<TransferWriteOp> {
 
     Location loc = xferOp.getLoc();
     auto vec = b.create<memref::LoadOp>(loc, buffer, loadIndices);
-    auto inBoundsAttr = dropFirstElem(b, xferOp.getInBoundsAttr());
     auto source = loopState.empty() ? xferOp.getSource() : loopState[0];
     Type type = isTensorOp(xferOp) ? xferOp.getShapedType() : Type();
     auto newXferOp = b.create<vector::TransferWriteOp>(
         loc, type, vec, source, xferIndices,
         AffineMapAttr::get(unpackedPermutationMap(b, xferOp)), Value(),
-        inBoundsAttr);
+        b.getDenseBoolArrayAttr(xferOp.getInBounds().drop_front()));
 
     maybeApplyPassLabel(b, newXferOp, options.targetRank);
 
@@ -1160,7 +1152,7 @@ struct ScalableTransposeTransferWriteConversion
               loopIterArgs.empty() ? writeOp.getSource() : loopIterArgs.front();
           auto newWriteOp = b.create<vector::TransferWriteOp>(
               loc, sliceVec, dest, xferIndices,
-              ArrayRef<bool>(writeOp.getInBoundsValues()).drop_front());
+              writeOp.getInBounds().drop_front());
           if (sliceMask)
             newWriteOp.getMaskMutable().assign(sliceMask);
 
@@ -1332,11 +1324,11 @@ struct UnrollTransferReadConversion
             getInsertionIndices(xferOp, insertionIndices);
             insertionIndices.push_back(rewriter.getIndexAttr(i));
 
-            auto inBoundsAttr = dropFirstElem(b, xferOp.getInBoundsAttr());
             auto newXferOp = b.create<vector::TransferReadOp>(
                 loc, newXferVecType, xferOp.getSource(), xferIndices,
                 AffineMapAttr::get(unpackedPermutationMap(b, xferOp)),
-                xferOp.getPadding(), Value(), inBoundsAttr);
+                xferOp.getPadding(), Value(),
+                b.getDenseBoolArrayAttr(xferOp.getInBounds().drop_front()));
             maybeAssignMask(b, xferOp, newXferOp, i);
             return b.create<vector::InsertOp>(loc, newXferOp, vec,
                                               insertionIndices);
@@ -1467,7 +1459,6 @@ struct UnrollTransferWriteConversion
 
             auto extracted =
                 b.create<vector::ExtractOp>(loc, vec, extractionIndices);
-            auto inBoundsAttr = dropFirstElem(b, xferOp.getInBoundsAttr());
             Value xferVec;
             if (inputVectorTy.getRank() == 1) {
               // When target-rank=0, unrolling would causes the vector input
@@ -1481,7 +1472,7 @@ struct UnrollTransferWriteConversion
             auto newXferOp = b.create<vector::TransferWriteOp>(
                 loc, sourceType, xferVec, source, xferIndices,
                 AffineMapAttr::get(unpackedPermutationMap(b, xferOp)), Value(),
-                inBoundsAttr);
+                b.getDenseBoolArrayAttr(xferOp.getInBounds().drop_front()));
 
             maybeAssignMask(b, xferOp, newXferOp, i);
 
