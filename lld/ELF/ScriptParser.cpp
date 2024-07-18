@@ -87,6 +87,7 @@ private:
   void readTarget();
   void readVersion();
   void readVersionScriptCommand();
+  void readNoCrossRefs(bool to);
 
   SymbolAssignment *readSymbolAssignment(StringRef name);
   ByteCommand *readByteCommand(StringRef tok);
@@ -280,6 +281,10 @@ void ScriptParser::readLinkerScript() {
       readTarget();
     } else if (tok == "VERSION") {
       readVersion();
+    } else if (tok == "NOCROSSREFS") {
+      readNoCrossRefs(/*to=*/false);
+    } else if (tok == "NOCROSSREFS_TO") {
+      readNoCrossRefs(/*to=*/true);
     } else if (SymbolAssignment *cmd = readAssignment(tok)) {
       script->sectionCommands.push_back(cmd);
     } else {
@@ -297,6 +302,17 @@ void ScriptParser::readDefsym(StringRef name) {
   auto *cmd = make<SymbolAssignment>(
       name, e, 0, getCurrentMB().getBufferIdentifier().str());
   script->sectionCommands.push_back(cmd);
+}
+
+void ScriptParser::readNoCrossRefs(bool to) {
+  expect("(");
+  NoCrossRefCommand cmd{{}, to};
+  while (!errorCount() && !consume(")"))
+    cmd.outputSections.push_back(unquote(next()));
+  if (cmd.outputSections.size() < 2)
+    warn(getCurrentLocation() + ": ignored with fewer than 2 output sections");
+  else
+    script->noCrossRefs.push_back(std::move(cmd));
 }
 
 void ScriptParser::addFile(StringRef s) {
@@ -452,6 +468,7 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
       .Case("elf32-loongarch", {ELF32LEKind, EM_LOONGARCH})
       .Case("elf64-loongarch", {ELF64LEKind, EM_LOONGARCH})
       .Case("elf64-s390", {ELF64BEKind, EM_S390})
+      .Cases("elf32-hexagon", "elf32-littlehexagon", {ELF32LEKind, EM_HEXAGON})
       .Default({ELFNoneKind, EM_NONE});
 }
 
@@ -461,20 +478,28 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
 void ScriptParser::readOutputFormat() {
   expect("(");
 
-  StringRef s;
-  config->bfdname = unquote(next());
+  StringRef s = unquote(next());
   if (!consume(")")) {
     expect(",");
-    s = unquote(next());
+    StringRef tmp = unquote(next());
     if (config->optEB)
-      config->bfdname = s;
+      s = tmp;
     expect(",");
-    s = unquote(next());
+    tmp = unquote(next());
     if (config->optEL)
-      config->bfdname = s;
+      s = tmp;
     consume(")");
   }
-  s = config->bfdname;
+  // If more than one OUTPUT_FORMAT is specified, only the first is checked.
+  if (!config->bfdname.empty())
+    return;
+  config->bfdname = s;
+
+  if (s == "binary") {
+    config->oFormatBinary = true;
+    return;
+  }
+
   if (s.consume_back("-freebsd"))
     config->osabi = ELFOSABI_FREEBSD;
 

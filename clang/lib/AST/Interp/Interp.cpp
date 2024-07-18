@@ -717,6 +717,58 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
   return true;
 }
 
+bool CheckDynamicMemoryAllocation(InterpState &S, CodePtr OpPC) {
+  if (S.getLangOpts().CPlusPlus20)
+    return true;
+
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  S.FFDiag(E, diag::note_constexpr_new);
+  return false;
+}
+
+bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC, bool NewWasArray,
+                         bool DeleteIsArray, const Descriptor *D,
+                         const Expr *NewExpr) {
+  if (NewWasArray == DeleteIsArray)
+    return true;
+
+  QualType TypeToDiagnose;
+  // We need to shuffle things around a bit here to get a better diagnostic,
+  // because the expression we allocated the block for was of type int*,
+  // but we want to get the array size right.
+  if (D->isArray()) {
+    QualType ElemQT = D->getType()->getPointeeType();
+    TypeToDiagnose = S.getCtx().getConstantArrayType(
+        ElemQT, APInt(64, static_cast<uint64_t>(D->getNumElems()), false),
+        nullptr, ArraySizeModifier::Normal, 0);
+  } else
+    TypeToDiagnose = D->getType()->getPointeeType();
+
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  S.FFDiag(E, diag::note_constexpr_new_delete_mismatch)
+      << DeleteIsArray << 0 << TypeToDiagnose;
+  S.Note(NewExpr->getExprLoc(), diag::note_constexpr_dynamic_alloc_here)
+      << NewExpr->getSourceRange();
+  return false;
+}
+
+bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
+                       const Pointer &Ptr) {
+  if (Source && isa<CXXNewExpr>(Source))
+    return true;
+
+  // Whatever this is, we didn't heap allocate it.
+  const SourceInfo &Loc = S.Current->getSource(OpPC);
+  S.FFDiag(Loc, diag::note_constexpr_delete_not_heap_alloc)
+      << Ptr.toDiagnosticString(S.getCtx());
+
+  if (Ptr.isTemporary())
+    S.Note(Ptr.getDeclLoc(), diag::note_constexpr_temporary_here);
+  else
+    S.Note(Ptr.getDeclLoc(), diag::note_declared_at);
+  return false;
+}
+
 /// We aleady know the given DeclRefExpr is invalid for some reason,
 /// now figure out why and print appropriate diagnostics.
 bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR) {
@@ -765,6 +817,81 @@ bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
     ++Index;
   }
   return true;
+}
+
+// FIXME: This is similar to code we already have in Compiler.cpp.
+// I think it makes sense to instead add the field and base destruction stuff
+// to the destructor Function itself. Then destroying a record would really
+// _just_ be calling its destructor. That would also help with the diagnostic
+// difference when the destructor or a field/base fails.
+static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
+                                const Pointer &BasePtr,
+                                const Descriptor *Desc) {
+  assert(Desc->isRecord());
+  const Record *R = Desc->ElemRecord;
+  assert(R);
+
+  // Fields.
+  for (const Record::Field &Field : llvm::reverse(R->fields())) {
+    const Descriptor *D = Field.Desc;
+    if (D->isRecord()) {
+      if (!runRecordDestructor(S, OpPC, BasePtr.atField(Field.Offset), D))
+        return false;
+    } else if (D->isCompositeArray()) {
+      const Descriptor *ElemDesc = Desc->ElemDesc;
+      assert(ElemDesc->isRecord());
+      for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
+        if (!runRecordDestructor(S, OpPC, BasePtr.atIndex(I).narrow(),
+                                 ElemDesc))
+          return false;
+      }
+    }
+  }
+
+  // Destructor of this record.
+  if (const CXXDestructorDecl *Dtor = R->getDestructor();
+      Dtor && !Dtor->isTrivial()) {
+    const Function *DtorFunc = S.getContext().getOrCreateFunction(Dtor);
+    if (!DtorFunc)
+      return false;
+
+    S.Stk.push<Pointer>(BasePtr);
+    if (!Call(S, OpPC, DtorFunc, 0))
+      return false;
+  }
+
+  // Bases.
+  for (const Record::Base &Base : llvm::reverse(R->bases())) {
+    if (!runRecordDestructor(S, OpPC, BasePtr.atField(Base.Offset), Base.Desc))
+      return false;
+  }
+
+  return true;
+}
+
+bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B) {
+  assert(B);
+  const Descriptor *Desc = B->getDescriptor();
+
+  if (Desc->isPrimitive() || Desc->isPrimitiveArray())
+    return true;
+
+  assert(Desc->isRecord() || Desc->isCompositeArray());
+
+  if (Desc->isCompositeArray()) {
+    const Descriptor *ElemDesc = Desc->ElemDesc;
+    assert(ElemDesc->isRecord());
+
+    Pointer RP(const_cast<Block *>(B));
+    for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
+      if (!runRecordDestructor(S, OpPC, RP.atIndex(I).narrow(), ElemDesc))
+        return false;
+    }
+    return true;
+  }
+
+  assert(Desc->isRecord());
+  return runRecordDestructor(S, OpPC, Pointer(const_cast<Block *>(B)), Desc);
 }
 
 bool Interpret(InterpState &S, APValue &Result) {

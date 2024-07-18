@@ -1461,6 +1461,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<StrAttr>:$fp_contract,
     OptionalAttr<UnitAttr>:$no_inline,
     OptionalAttr<UnitAttr>:$always_inline,
+    OptionalAttr<UnitAttr>:$no_unwind,
+    OptionalAttr<UnitAttr>:$will_return,
     OptionalAttr<UnitAttr>:$optimize_none
   );
 
