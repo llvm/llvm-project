@@ -302,7 +302,7 @@ collectMacroReferences(ParsedAST &AST) {
   std::vector<include_cleaner::SymbolReference> Macros;
   for (const auto &[_, Refs] : AST.getMacros().MacroRefs) {
     for (const auto &Ref : Refs) {
-      auto Loc = SM.getComposedLoc(SM.getMainFileID(), Ref.StartOffset);
+      auto Loc = SM.getComposedLoc(Ref.FID, Ref.StartOffset);
       const auto *Tok = AST.getTokens().spelledTokenContaining(Loc);
       if (!Tok)
         continue;
