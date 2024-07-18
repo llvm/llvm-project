@@ -110,6 +110,9 @@ DeadBlock::DeadBlock(DeadBlock *&Root, Block *Blk)
 }
 
 void DeadBlock::free() {
+  if (B.IsInitialized)
+    B.invokeDtor();
+
   if (Prev)
     Prev->Next = Next;
   if (Next)
