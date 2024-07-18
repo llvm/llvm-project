@@ -10402,10 +10402,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         if (!MainILV.areSafetyChecksAdded())
           DisableRuntimeUnroll = true;
       } else {
-        InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width,
-                               VF.MinProfitableTripCount, IC, &LVL, &CM, BFI,
-                               PSI, Checks);
-
         VPlan &BestPlan = LVP.getBestPlan();
         assert(size(BestPlan.vectorFactors()) == 1 &&
                "Plan should have a single VF");
@@ -10414,6 +10410,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                           << "\n");
         assert(VF.Width == Width &&
                "VPlan cost model and legacy cost model disagreed");
+        InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, Width,
+                               VF.MinProfitableTripCount, IC, &LVL, &CM, BFI,
+                               PSI, Checks);
         LVP.executePlan(Width, IC, BestPlan, LB, DT, false);
         ++LoopsVectorized;
 
