@@ -281,7 +281,8 @@ define i64 @smull_ldrsw_shift(ptr %x0, i64 %x1) {
 ; CHECK-LABEL: smull_ldrsw_shift:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrsw x8, [x0]
-; CHECK-NEXT:    smull x0, w8, w1
+; CHECK-NEXT:    sxtw x9, w1
+; CHECK-NEXT:    smull x0, w8, w9
 ; CHECK-NEXT:    ret
 entry:
   %ext64 = load i32, ptr %x0
@@ -489,7 +490,8 @@ define i64 @smaddl_ldrsw_shift(ptr %x0, i64 %x1, i64 %x2) {
 ; CHECK-LABEL: smaddl_ldrsw_shift:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrsw x8, [x0]
-; CHECK-NEXT:    smaddl x0, w8, w1, x2
+; CHECK-NEXT:    sxtw x9, w1
+; CHECK-NEXT:    smaddl x0, w8, w9, x2
 ; CHECK-NEXT:    ret
 entry:
   %ext64 = load i32, ptr %x0
@@ -652,7 +654,8 @@ define i64 @smnegl_ldrsw_shift(ptr %x0, i64 %x1) {
 ; CHECK-LABEL: smnegl_ldrsw_shift:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrsw x8, [x0]
-; CHECK-NEXT:    smnegl x0, w8, w1
+; CHECK-NEXT:    sxtw x9, w1
+; CHECK-NEXT:    smnegl x0, w8, w9
 ; CHECK-NEXT:    ret
 entry:
   %ext64 = load i32, ptr %x0
@@ -815,7 +818,8 @@ define i64 @smsubl_ldrsw_shift(ptr %x0, i64 %x1, i64 %x2) {
 ; CHECK-LABEL: smsubl_ldrsw_shift:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrsw x8, [x0]
-; CHECK-NEXT:    smsubl x0, w8, w1, x2
+; CHECK-NEXT:    sxtw x9, w1
+; CHECK-NEXT:    smsubl x0, w8, w9, x2
 ; CHECK-NEXT:    ret
 entry:
   %ext64 = load i32, ptr %x0

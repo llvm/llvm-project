@@ -39,18 +39,31 @@ namespace {
 /// A pass to perform the SPIR-V conversion.
 struct ConvertToSPIRVPass final
     : impl::ConvertToSPIRVPassBase<ConvertToSPIRVPass> {
+  using ConvertToSPIRVPassBase::ConvertToSPIRVPassBase;
 
   void runOnOperation() override {
     MLIRContext *context = &getContext();
     Operation *op = getOperation();
 
-    spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnvOrDefault(op);
-    SPIRVTypeConverter typeConverter(targetAttr);
+    if (runSignatureConversion) {
+      // Unroll vectors in function signatures to native vector size.
+      RewritePatternSet patterns(context);
+      populateFuncOpVectorRewritePatterns(patterns);
+      populateReturnOpVectorRewritePatterns(patterns);
+      GreedyRewriteConfig config;
+      config.strictMode = GreedyRewriteStrictness::ExistingOps;
+      if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
+        return signalPassFailure();
+    }
 
+    spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnvOrDefault(op);
+    std::unique_ptr<ConversionTarget> target =
+        SPIRVConversionTarget::get(targetAttr);
+    SPIRVTypeConverter typeConverter(targetAttr);
     RewritePatternSet patterns(context);
     ScfToSPIRVContext scfToSPIRVContext;
 
-    // Populate patterns.
+    // Populate patterns for each dialect.
     arith::populateCeilFloorDivExpandOpsPatterns(patterns);
     arith::populateArithToSPIRVPatterns(typeConverter, patterns);
     populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
@@ -59,9 +72,6 @@ struct ConvertToSPIRVPass final
     populateVectorToSPIRVPatterns(typeConverter, patterns);
     populateSCFToSPIRVPatterns(typeConverter, scfToSPIRVContext, patterns);
     ub::populateUBToSPIRVConversionPatterns(typeConverter, patterns);
-
-    std::unique_ptr<ConversionTarget> target =
-        SPIRVConversionTarget::get(targetAttr);
 
     if (failed(applyPartialConversion(op, *target, std::move(patterns))))
       return signalPassFailure();
