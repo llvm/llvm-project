@@ -118,10 +118,10 @@ struct AllocationFamily {
   AllocationFamilyKind Kind;
   std::optional<StringRef> CustomName;
 
-  explicit AllocationFamily(AllocationFamilyKind Kind,
+  explicit AllocationFamily(AllocationFamilyKind AKind,
                             std::optional<StringRef> Name = std::nullopt)
-      : Kind(Kind), CustomName(Name) {
-    assert((Kind != AF_Custom || Name.has_value()) &&
+      : Kind(AKind), CustomName(Name) {
+    assert((Kind != AF_Custom || CustomName.has_value()) &&
            "Custom family must specify also the name");
 
     // Preseve previous behavior when "malloc" class means AF_Malloc
@@ -1925,25 +1925,22 @@ static bool didPreviousFreeFail(ProgramStateRef State,
 
 static void printOwnershipTakesList(raw_ostream &os, CheckerContext &C,
                                     const Expr *E) {
-  if (const CallExpr *CE = dyn_cast<CallExpr>(E)) {
-    const FunctionDecl *FD = CE->getDirectCallee();
-    if (!FD)
-      return;
+  const CallExpr *CE = dyn_cast<CallExpr>(E);
 
-    if (!FD->hasAttrs())
-      return;
+  if (!CE)
+    return;
 
-    // Only one ownership_takes attribute is allowed
-    for (const auto *I : FD->specific_attrs<OwnershipAttr>()) {
-      OwnershipAttr::OwnershipKind OwnKind = I->getOwnKind();
+  const FunctionDecl *FD = CE->getDirectCallee();
+  if (!FD)
+    return;
 
-      if (OwnKind != OwnershipAttr::Takes)
-        continue;
+  // Only one ownership_takes attribute is allowed.
+  for (const auto *I : FD->specific_attrs<OwnershipAttr>()) {
+    if (I->getOwnKind() != OwnershipAttr::Takes)
+      continue;
 
-      os << ", which takes ownership of " << '\'' << I->getModule()->getName()
-         << '\'';
-      break;
-    }
+    os << ", which takes ownership of '" << I->getModule()->getName() << '\'';
+    break;
   }
 }
 
