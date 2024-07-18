@@ -2947,7 +2947,7 @@ void RewriteInstance::selectFunctionsToProcess() {
         NumFunctionsToProcess >= opts::MaxFunctions)
       return true;
     for (std::string &Name : opts::SkipFunctionNames)
-      if (Function.hasNameRegex(Name))
+      if (Function.hasNameRegex(Name) || Function.hasRestoredNameRegex(Name))
         return true;
 
     return false;
