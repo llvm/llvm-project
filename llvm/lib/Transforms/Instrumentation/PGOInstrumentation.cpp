@@ -603,7 +603,10 @@ public:
       NumOfPGOMemIntrinsics += ValueSites[IPVK_MemOPSize].size();
       NumOfPGOBB += MST.bbInfoSize();
       ValueSites[IPVK_IndirectCallTarget] = VPC.get(IPVK_IndirectCallTarget);
-      if (EnableVTableValueProfiling)
+      // Collect value sites for 'pgo-instr-use' pass if `icp-max-num-vtables`
+      // is not zero.
+      if (EnableVTableValueProfiling ||
+          (!CreateGlobalVar && MaxNumVTableAnnotations != 0))
         ValueSites[IPVK_VTableTarget] = VPC.get(IPVK_VTableTarget);
     } else {
       NumOfCSPGOSelectInsts += SIVisitor.getNumOfSelectInsts();
@@ -1096,7 +1099,7 @@ public:
       : F(Func), M(Modu), BFI(BFIin), PSI(PSI),
         FuncInfo(Func, TLI, ComdatMembers, false, BPI, BFIin, IsCS,
                  InstrumentFuncEntry, HasSingleByteCoverage),
-        FreqAttr(FFA_Normal), IsCS(IsCS), VPC(Func, TLI) {}
+        FreqAttr(FFA_Normal), IsCS(IsCS) {}
 
   void handleInstrProfError(Error Err, uint64_t MismatchedFuncSum);
 
@@ -1177,8 +1180,6 @@ private:
 
   // Is to use the context sensitive profile.
   bool IsCS;
-
-  ValueProfileCollector VPC;
 
   // Find the Instrumented BB and set the value. Return false on error.
   bool setInstrumentedCounts(const std::vector<uint64_t> &CountFromProfile);
@@ -1757,18 +1758,8 @@ void PGOUseFunc::annotateValueSites() {
 void PGOUseFunc::annotateValueSites(uint32_t Kind) {
   assert(Kind <= IPVK_Last);
   unsigned ValueSiteIndex = 0;
-  unsigned NumValueSites = ProfileRecord.getNumValueSites(Kind);
-  // FuncPGOInstrumentation ctor finds value sites for each kind. It runs on the
-  // common path of pgo-instr-gen and pgo-instr-use, and vtable kind path
-  // is gated by `-enable-vtable-value-profiling`. If vtable profiles are
-  // present, not explicitly discarded and vtable sites remain empty, try to
-  // find the sites again.
-  if (NumValueSites > 0 && Kind == IPVK_VTableTarget &&
-      FuncInfo.ValueSites[Kind].empty() &&
-      !(EnableVTableProfileUse.getNumOccurrences() &&
-        EnableVTableProfileUse == false))
-    FuncInfo.ValueSites[IPVK_VTableTarget] = VPC.get(IPVK_VTableTarget);
   auto &ValueSites = FuncInfo.ValueSites[Kind];
+  unsigned NumValueSites = ProfileRecord.getNumValueSites(Kind);
   if (NumValueSites != ValueSites.size()) {
     auto &Ctx = M->getContext();
     Ctx.diagnose(DiagnosticInfoPGOProfile(
