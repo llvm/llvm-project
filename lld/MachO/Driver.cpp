@@ -347,9 +347,14 @@ static InputFile *addFile(StringRef path, LoadType loadType,
               reason = "-all_load";
               break;
           }
-          if (Error e = file->fetch(c, reason))
-            error(toString(file) + ": " + reason +
-                  " failed to load archive member: " + toString(std::move(e)));
+            if (Error e = file->fetch(c, reason)) {
+              if (config->warnThinArchiveMissingMembers)
+                warn(toString(file) + ": " + reason +
+                     " failed to load archive member: " +
+                     toString(std::move(e)));
+              else
+                llvm::consumeError(std::move(e));
+            }
         }
         if (e)
           error(toString(file) +
@@ -367,8 +372,8 @@ static InputFile *addFile(StringRef path, LoadType loadType,
         for (const object::Archive::Child &c : file->getArchive().children(e)) {
           Expected<MemoryBufferRef> mb = c.getMemoryBufferRef();
           if (!mb) {
-            // For a long time, only referenced object files were included in
-            // from thin archives in repro tarballs.
+            // We used to create broken repro tarballs that only included those
+            // object files from thin archives that ended up being used.
             if (config->warnThinArchiveMissingMembers)
               warn(toString(file) + ": -ObjC failed to open archive member: " +
                    toString(mb.takeError()));
