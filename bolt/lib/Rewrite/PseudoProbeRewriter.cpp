@@ -72,17 +72,25 @@ class PseudoProbeRewriter final : public MetadataRewriter {
   void parsePseudoProbe();
 
   /// PseudoProbe decoder
-  MCPseudoProbeDecoder ProbeDecoder;
+  MCPseudoProbeDecoder &ProbeDecoder;
 
 public:
   PseudoProbeRewriter(BinaryContext &BC)
-      : MetadataRewriter("pseudo-probe-rewriter", BC) {}
+      : MetadataRewriter("pseudo-probe-rewriter", BC),
+        ProbeDecoder(BC.setPseudoProbeDecoder(
+            std::make_unique<MCPseudoProbeDecoder>())) {}
 
+  Error preCFGInitializer() override;
   Error postEmitFinalizer() override;
 };
 
-Error PseudoProbeRewriter::postEmitFinalizer() {
+Error PseudoProbeRewriter::preCFGInitializer() {
   parsePseudoProbe();
+
+  return Error::success();
+}
+
+Error PseudoProbeRewriter::postEmitFinalizer() {
   updatePseudoProbes();
 
   return Error::success();
@@ -137,6 +145,14 @@ void PseudoProbeRewriter::parsePseudoProbe() {
     outs() << "Report of decoding input pseudo probe binaries \n";
     ProbeDecoder.printGUID2FuncDescMap(outs());
     ProbeDecoder.printProbesForAllAddresses(outs());
+  }
+
+  for (const auto &[GUID, FuncDesc] : ProbeDecoder.getGUID2FuncDescMap()) {
+    if (!FuncStartAddrs.contains(GUID))
+      continue;
+    BinaryFunction *BF = BC.getBinaryFunctionAtAddress(FuncStartAddrs[GUID]);
+    assert(BF);
+    BF->setPseudoProbeGUID(GUID);
   }
 }
 
