@@ -27472,14 +27472,14 @@ SDValue AArch64TargetLowering::LowerReductionToSVE(unsigned Opcode,
   // Lower VECREDUCE_ADD of nxv2i1-nxv16i1 to CNTP rather than UADDV.
   if (ScalarOp.getOpcode() == ISD::VECREDUCE_ADD &&
       VecOp.getOpcode() == ISD::ZERO_EXTEND) {
-    SDValue Vec = VecOp.getOperand(0);
-    EVT VecVT = Vec.getValueType();
+    SDValue BoolVec = VecOp.getOperand(0);
+    EVT VecVT = BoolVec.getValueType();
     if (VecVT.getVectorElementType() == MVT::i1) {
-      // CNTP(Vec & Vec) <=> CNTP(Vec & PTRUE)
+      // CNTP(BoolVec & BoolVec) <=> CNTP(BoolVec & PTRUE)
       SDValue CntpOp = DAG.getNode(
           ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
-          DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64), Vec,
-          Vec);
+          DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64), BoolVec,
+          BoolVec);
       return DAG.getAnyExtOrTrunc(CntpOp, DL, ScalarOp.getValueType());
     }
   }
