@@ -9995,9 +9995,9 @@ Sema::AddArgumentDependentLookupCandidates(DeclarationName Name,
                                    CandEnd = CandidateSet.end();
        Cand != CandEnd; ++Cand)
     if (Cand->Function) {
-      FunctionDecl *CandFunc = Cand->Function;
-      Fns.erase(CandFunc);
-      if (FunctionTemplateDecl *FunTmpl = CandFunc->getPrimaryTemplate())
+      FunctionDecl *Fn = Cand->Function;
+      Fns.erase(Fn);
+      if (FunctionTemplateDecl *FunTmpl = Fn->getPrimaryTemplate())
         Fns.erase(FunTmpl);
     }
 
@@ -11855,12 +11855,12 @@ static void DiagnoseFailedEnableIfAttr(Sema &S, OverloadCandidate *Cand) {
 
 static void DiagnoseFailedExplicitSpec(Sema &S, OverloadCandidate *Cand) {
   assert(Cand->Function && "Candidate must be a function");
-  Function *CandFunc = Cand->Function;
-  ExplicitSpecifier ES = ExplicitSpecifier::getFromDecl(CandFunc);
+  Function *Fn = Cand->Function;
+  ExplicitSpecifier ES = ExplicitSpecifier::getFromDecl(Fn);
   assert(ES.isExplicit() && "not an explicit candidate");
 
   unsigned Kind;
-  switch (CandFunc->getDeclKind()) {
+  switch (Fn->getDeclKind()) {
   case Decl::Kind::CXXConstructor:
     Kind = 0;
     break;
@@ -11868,7 +11868,7 @@ static void DiagnoseFailedExplicitSpec(Sema &S, OverloadCandidate *Cand) {
     Kind = 1;
     break;
   case Decl::Kind::CXXDeductionGuide:
-    Kind = CandFunc->isImplicit() ? 0 : 2;
+    Kind = Fn->isImplicit() ? 0 : 2;
     break;
   default:
     llvm_unreachable("invalid Decl");
@@ -11878,7 +11878,7 @@ static void DiagnoseFailedExplicitSpec(Sema &S, OverloadCandidate *Cand) {
   // (particularly an out-of-class definition) will typically lack the
   // 'explicit' specifier.
   // FIXME: This is probably a good thing to do for all 'candidate' notes.
-  FunctionDecl *First = CandFunc->getFirstDecl();
+  FunctionDecl *First = Fn->getFirstDecl();
   if (FunctionDecl *Pattern = First->getTemplateInstantiationPattern())
     First = Pattern->getFirstDecl();
 
