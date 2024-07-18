@@ -1844,6 +1844,15 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
   else
     Result = WideIndex - WideOffset;
 
+  // When the pointer is one-past-end, going back to index 0 is the only
+  // useful thing we can do. Any other index has been diagnosed before and
+  // we don't get here.
+  if (Result == 0 && Ptr.isOnePastEnd()) {
+    S.Stk.push<Pointer>(Ptr.asBlockPointer().Pointee,
+                        Ptr.asBlockPointer().Base);
+    return true;
+  }
+
   S.Stk.push<Pointer>(Ptr.atIndex(static_cast<uint64_t>(Result)));
   return true;
 }
