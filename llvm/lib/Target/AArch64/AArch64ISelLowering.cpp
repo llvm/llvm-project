@@ -1849,7 +1849,7 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setOperationAction(ISD::SHL, VT, Custom);
   setOperationAction(ISD::OR, VT, Custom);
   setOperationAction(ISD::SETCC, VT, Custom);
-  setOperationAction(ISD::CONCAT_VECTORS, VT, Legal);
+  setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
 
   setOperationAction(ISD::SELECT, VT, Expand);
   setOperationAction(ISD::SELECT_CC, VT, Expand);
@@ -14198,9 +14198,43 @@ SDValue AArch64TargetLowering::LowerCONCAT_VECTORS(SDValue Op,
                                    !Subtarget->isNeonAvailable()))
     return LowerFixedLengthConcatVectorsToSVE(Op, DAG);
 
-  assert(Op.getValueType().isScalableVector() &&
-         isTypeLegal(Op.getValueType()) &&
-         "Expected legal scalable vector type!");
+  if (!Op.getValueType().isScalableVector()) {
+    const SDValue Trunc1 = Op.getOperand(0);
+    const SDValue Trunc2 = Op.getOperand(1);
+
+    if (Trunc1->getOpcode() == ISD::TRUNCATE &&
+        Trunc2->getOpcode() == ISD::TRUNCATE) {
+      const SDValue Shift1 = Trunc1->getOperand(0);
+      const SDValue Shift2 = Trunc2->getOperand(0);
+
+      // check for VLSHR with the same shift amount
+      if (Shift1->getOpcode() == AArch64ISD::VLSHR &&
+          Shift2->getOpcode() == AArch64ISD::VLSHR &&
+          Shift1->getOperand(1) == Shift2->getOperand(1)) {
+
+        const SDValue Vector1 = Shift1->getOperand(0);
+        const SDValue Vector2 = Shift2->getOperand(0);
+
+        const uint64_t ShiftConstant = Shift1->getConstantOperandVal(1);
+        const uint64_t PostUzpsize = Op.getScalarValueSizeInBits();
+
+        // Check if the shift constant is greater than the scalar value size
+        if (ShiftConstant > PostUzpsize) {
+          const EVT VT = Op.getValueType();
+          const SDLoc DL(Op);
+
+          const SDValue Uzp =
+              DAG.getNode(AArch64ISD::UZP2, DL, VT, Vector1, Vector2);
+          const SDValue NewShiftConstant =
+              DAG.getConstant(ShiftConstant - PostUzpsize, DL, MVT::i32);
+
+          return DAG.getNode(AArch64ISD::VLSHR, DL, VT, Uzp, NewShiftConstant);
+        }
+      }
+    }
+
+    return Op;
+  }
 
   if (isTypeLegal(Op.getOperand(0).getValueType())) {
     unsigned NumOperands = Op->getNumOperands();
