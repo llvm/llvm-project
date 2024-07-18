@@ -9,35 +9,35 @@
 
 # CHECK: -- Testing: 16 tests{{.*}}
 
-# CHECK: PASS: shtest-env :: env-args-last-is-assign.txt ({{[^)]*}})
+# CHECK: FAIL: shtest-env :: env-args-last-is-assign.txt ({{[^)]*}})
 # CHECK: env FOO=1
 # CHECK: # executed command: env FOO=1
-# CHECK-NOT: {{^[^#]}} 
-# CHECK: --
+# CHECK: # | Error: 'env' requires a subcommand
+# CHECK: # error: command failed with exit status: {{.*}}
 
-# CHECK: PASS: shtest-env :: env-args-last-is-u-arg.txt ({{[^)]*}})
+# CHECK: FAIL: shtest-env :: env-args-last-is-u-arg.txt ({{[^)]*}})
 # CHECK: env -u FOO
 # CHECK: # executed command: env -u FOO
-# CHECK-NOT: {{^[^#]}} 
-# CHECK: --
+# CHECK: # | Error: 'env' requires a subcommand
+# CHECK: # error: command failed with exit status: {{.*}}
 
-# CHECK: PASS: shtest-env :: env-args-last-is-u.txt ({{[^)]*}})
+# CHECK: FAIL: shtest-env :: env-args-last-is-u.txt ({{[^)]*}})
 # CHECK: env -u
 # CHECK: # executed command: env -u
-# CHECK-NOT: {{^[^#]}}
-# CHECK: --
+# CHECK: # | Error: 'env' requires a subcommand
+# CHECK: # error: command failed with exit status: {{.*}}
 
-# CHECK: PASS: shtest-env :: env-args-nested-none.txt ({{[^)]*}})
+# CHECK: FAIL: shtest-env :: env-args-nested-none.txt ({{[^)]*}})
 # CHECK: env env env
 # CHECK: # executed command: env env env
-# CHECK-NOT: {{^[^#]}}
-# CHECK: --
+# CHECK: # | Error: 'env' requires a subcommand
+# CHECK: # error: command failed with exit status: {{.*}}
 
-# CHECK: PASS: shtest-env :: env-args-none.txt ({{[^)]*}})
+# CHECK: FAIL: shtest-env :: env-args-none.txt ({{[^)]*}})
 # CHECK: env
 # CHECK: # executed command: env
-# CHECK-NOT: {{^[^#]}}
-# CHECK: --
+# CHECK: # | Error: 'env' requires a subcommand
+# CHECK: # error: command failed with exit status: {{.*}}
 
 # CHECK: FAIL: shtest-env :: env-calls-cd.txt ({{[^)]*}})
 # CHECK: env -u FOO BAR=3 cd foobar
@@ -121,6 +121,6 @@
 # CHECK: --
 
 # CHECK: Total Discovered Tests: 16
-# CHECK: Passed:  9 {{\([0-9]*\.[0-9]*%\)}}
-# CHECK: Failed: 7 {{\([0-9]*\.[0-9]*%\)}}
+# CHECK: Passed:  4 {{\([0-9]*\.[0-9]*%\)}}
+# CHECK: Failed: 12 {{\([0-9]*\.[0-9]*%\)}}
 # CHECK-NOT: {{.}}
