@@ -112,7 +112,11 @@ def run_graphql_query(
         )
 
 
-def check_manual_requests(start_date, token) -> bool:
+def check_manual_requests(start_date: datetime.datetime, token: str) -> list[str]:
+    """
+    Return a list of users who have been asked since ``start_date`` if they
+    want to keep their commit access.
+    """
     query = """
         query ($query: String!) {
           search(query: $query, type: ISSUE, first: 100) {
@@ -144,7 +148,10 @@ def check_manual_requests(start_date, token) -> bool:
     return users
 
 
-def get_num_commits(user, start_date, token) -> bool:
+def get_num_commits(user: str, start_date: datetime.datetime, token: str) -> int:
+    """
+    Get number of commits that ``user`` has been made since ``start_date`.
+    """
     variables = {
         "owner": "llvm",
         "user": user,
@@ -194,41 +201,11 @@ def get_num_commits(user, start_date, token) -> bool:
     return count
 
 
-def is_new_committer_query_user(user, start_date, token):
-    user_query = """
-        query {
-          organization(login: "llvm") {
-            id
-          }
-        }
+def is_new_committer_query_repo(user: str, start_date: datetime.datetime, token: str) -> bool:
     """
-
-    data = run_graphql_query(user_query, {}, token)
-    variables = {
-        # We can only check one year of date at a time, so check for contribution between 3 and 4 years ago.
-        "start_date": (start_date - datetime.timedelta(weeks=2 * 52)).strftime(
-            "%Y-%m-%dT%H:%M:%S"
-        ),
-        "org": data["organization"]["id"],
-        "user": user,
-    }
-    query = """
-        query ($user: String!, $start_date: DateTime!, $org:ID!){
-          user(login: $user) {
-            contributionsCollection(from:$start_date, organizationID:$org) {
-                totalCommitContributions
-            }
-          }
-        }
+    Determine if ``user`` is a new committer.  A new committer can keep their
+    commit access even if they don't meet the criteria.
     """
-
-    data = run_graphql_query(query, variables, token)
-    if int(data["user"]["contributionsCollection"]["totalCommitContributions"]) > 0:
-        return False
-    return True
-
-
-def is_new_committer_query_repo(user, start_date, token):
     variables = {
         "user": user,
     }
@@ -277,27 +254,10 @@ def is_new_committer_query_repo(user, start_date, token):
     return True
 
 
-def is_new_committer_pr_author(user, start_date, token):
-    query = """
-        query ($query: String!) {
-          search(query: $query, type: ISSUE, first: 5) {
-            issueCount
-          }
-        }
-        """
-    formatted_start_date = start_date.strftime("%Y-%m-%dT%H:%M:%S")
-    variables = {
-        "owner": "llvm",
-        "repo": "llvm-project",
-        "user": user,
-        "query": f"type:pr author:{user} created:>{formatted_start_date} org:llvm",
-    }
-
-    data = run_graphql_query(query, variables, token)
-    return int(data["search"]["issueCount"]) > 0
-
-
-def is_new_committer(user, start_date, token):
+def is_new_committer(user: str, start_date: datetime.datetime, token: str) -> bool:
+    """
+    Wrapper around is_new_commiter_query_repo to handle exceptions.
+    """
     try:
         return is_new_committer_query_repo(user, start_date, token)
     except:
@@ -305,7 +265,10 @@ def is_new_committer(user, start_date, token):
     return True
 
 
-def get_review_count(user, start_date, token):
+def get_review_count(user: str, start_date: datetime.datetime, token: str) -> int:
+    """
+    Return the number of reviews that ``user`` has done since ``start_date``. 
+    """
     query = """
         query ($query: String!) {
           search(query: $query, type: ISSUE, first: 5) {
@@ -325,7 +288,12 @@ def get_review_count(user, start_date, token):
     return int(data["search"]["issueCount"])
 
 
-def count_prs(triage_list, start_date, token):
+def count_prs(triage_list: dict, start_date: datetime.datetime, token: str):
+    """
+    Fetch all the merged PRs for the project since ``start_date`` and update
+    ``triage_list`` with the number of PRs merged for each user.
+    """
+
     query = """
         query ($query: String!, $after: String) {
           search(query: $query, type: ISSUE, first: 100, after: $after) {
