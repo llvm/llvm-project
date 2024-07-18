@@ -4252,7 +4252,7 @@ public:
     m_option_group.Append(&m_current_stack_option, LLDB_OPT_SET_2,
                           LLDB_OPT_SET_2);
     m_option_group.Finalize();
-    AddSimpleArgumentList(eArgTypeShlibName);
+    AddSimpleArgumentList(eArgTypeFilename);
   }
 
   ~CommandObjectTargetSymbolsAdd() override = default;
