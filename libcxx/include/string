@@ -1830,7 +1830,7 @@ private:
   template <class _Iterator, class _Sentinel>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __assign_with_sentinel(_Iterator __first, _Sentinel __last);
 
-  // Copy [__first, __last) into [__dest, __dest + (__last - __first)). Assumes that the range don't overlap.
+  // Copy [__first, __last) into [__dest, __dest + (__last - __first)). Assumes that the ranges don't overlap.
   template <class _ForwardIter, class _Sent>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static value_type*
   __copy_non_overlapping_range(_ForwardIter __first, _Sent __last, value_type* __dest) {
