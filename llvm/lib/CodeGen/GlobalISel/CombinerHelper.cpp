@@ -5180,7 +5180,9 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
   LLT ScalarShiftAmtTy = ShiftAmtTy.getScalarType();
 
   unsigned KnownLeadingZeros =
-      KB ? KB->getKnownBits(LHS).countMinLeadingZeros() : 0;
+      (!MI.getFlag(MachineInstr::MIFlag::IsExact) && KB)
+          ? KB->getKnownBits(LHS).countMinLeadingZeros()
+          : 0;
   auto &MIB = Builder;
 
   bool UseSRL = false;
