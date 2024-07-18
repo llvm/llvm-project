@@ -8,7 +8,7 @@ struct NoAttr {
   void foo() {}
 };
 
-// expected-note@+2 5{{'UsingWithAttr' has been explicitly marked deprecated here}}
+// expected-note@+2 7{{'UsingWithAttr' has been explicitly marked deprecated here}}
 template <typename T>
 using UsingWithAttr __attribute__((deprecated)) = NoAttr<T>;
 
@@ -49,6 +49,17 @@ void bar() {
   // expected-warning@+2 {{'UsingWithAttr' is deprecated}}
   // expected-note@+1 {{in instantiation of template type alias 'UsingWithAttr' requested here}}
   UsingWithAttr<int> objUsingWA;
+
+  // expected-warning@+2 {{'UsingWithAttr' is deprecated}}
+  // expected-note@+1 {{in instantiation of template type alias 'UsingWithAttr' requested here}}
+  NoAttr<UsingWithAttr<int>> s;
+
+  // expected-note@+1 {{'DepInt' has been explicitly marked deprecated here}}
+  using DepInt [[deprecated]] = int;
+  // expected-warning@+3 {{'UsingWithAttr' is deprecated}}
+  // expected-warning@+2 {{'DepInt' is deprecated}}
+  // expected-note@+1 {{in instantiation of template type alias 'UsingWithAttr' requested here}}
+  using X = UsingWithAttr<DepInt>;
 
   // expected-warning@+2 {{'UsingWithAttr' is deprecated}}
   // expected-note@+1 {{in instantiation of template type alias 'UsingWithAttr' requested here}}
