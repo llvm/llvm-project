@@ -2020,6 +2020,7 @@ libc_math_function(name = "hypot")
 libc_math_function(
     name = "hypotf",
     additional_deps = [
+        ":__support_fputil_double_double",
         ":__support_fputil_sqrt",
     ],
 )
