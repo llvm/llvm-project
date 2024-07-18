@@ -8,12 +8,11 @@
 
 #include "src/stdio/fopen.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/macros/config.h"
 #include "src/stdio/gpu/file.h"
 
 #include "hdr/types/FILE.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(::FILE *, fopen,
                    (const char *__restrict path, const char *__restrict mode)) {
@@ -30,4 +29,4 @@ LLVM_LIBC_FUNCTION(::FILE *, fopen,
   return reinterpret_cast<FILE *>(file);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

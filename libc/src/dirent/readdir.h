@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_DIRENT_READDIR_H
 #define LLVM_LIBC_SRC_DIRENT_READDIR_H
 
-#include "src/__support/macros/config.h"
 #include <dirent.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 struct ::dirent *readdir(DIR *dir);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_DIRENT_READDIR_H
