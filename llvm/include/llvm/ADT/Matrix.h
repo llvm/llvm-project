@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 template <typename T, size_t M, size_t NStorageInline> class JaggedArrayView;
@@ -20,14 +21,21 @@ template <typename T, size_t M, size_t NStorageInline> class JaggedArrayView;
 /// members.
 template <typename T, size_t N>
 struct MatrixStorageBase : public SmallVectorImpl<T>, SmallVectorStorage<T, N> {
-  MatrixStorageBase() : SmallVectorImpl<T>(N) {}
-  MatrixStorageBase(size_t Size) : SmallVectorImpl<T>(N) { resize(Size); }
-  ~MatrixStorageBase() { destroy_range(this->begin(), this->end()); }
-  MatrixStorageBase(const MatrixStorageBase &RHS) : SmallVectorImpl<T>(N) {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE MatrixStorageBase() : SmallVectorImpl<T>(N) {}
+  LLVM_ATTRIBUTE_ALWAYS_INLINE MatrixStorageBase(size_t Size)
+      : SmallVectorImpl<T>(N) {
+    resize(Size);
+  }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE ~MatrixStorageBase() {
+    destroy_range(this->begin(), this->end());
+  }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE MatrixStorageBase(const MatrixStorageBase &RHS)
+      : SmallVectorImpl<T>(N) {
     if (!RHS.empty())
       SmallVectorImpl<T>::operator=(RHS);
   }
-  MatrixStorageBase(MatrixStorageBase &&RHS) : SmallVectorImpl<T>(N) {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE MatrixStorageBase(MatrixStorageBase &&RHS)
+      : SmallVectorImpl<T>(N) {
     if (!RHS.empty())
       SmallVectorImpl<T>::operator=(::std::move(RHS));
   }
@@ -36,9 +44,14 @@ struct MatrixStorageBase : public SmallVectorImpl<T>, SmallVectorStorage<T, N> {
   using SmallVectorImpl<T>::append;
   using SmallVectorImpl<T>::erase;
   using SmallVectorImpl<T>::destroy_range;
+  using SmallVectorImpl<T>::isSafeToReferenceAfterResize;
 
-  T *begin() const { return const_cast<T *>(SmallVectorImpl<T>::begin()); }
-  T *end() const { return const_cast<T *>(SmallVectorImpl<T>::end()); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE T *begin() const {
+    return const_cast<T *>(SmallVectorImpl<T>::begin());
+  }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE T *end() const {
+    return const_cast<T *>(SmallVectorImpl<T>::end());
+  }
 };
 
 /// A two-dimensional container storage, whose upper bound on the number of
@@ -53,30 +66,36 @@ public:
       : Base(NRows * NCols), NCols(NCols) {}
   MatrixStorage(size_t NCols) : Base(), NCols(NCols) {}
 
-  size_t size() const { return Base.size(); }
-  bool empty() const { return !size(); }
-  size_t getNumRows() const {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE size_t size() const { return Base.size(); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE bool empty() const { return !size(); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE size_t getNumRows() const {
     assert(size() % NCols == 0 && "Internal error");
     return size() / NCols;
   }
-  size_t getNumCols() const { return NCols; }
-  void setNumCols(size_t NCols) {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE size_t getNumCols() const { return NCols; }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void setNumCols(size_t NCols) {
     assert(empty() && "Column-resizing a non-empty MatrixStorage");
     this->NCols = NCols;
   }
-  void resize(size_t NRows) { Base.resize(NCols * NRows); }
-  void reserve(size_t NRows) { Base.reserve(NCols * NRows); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void resize(size_t NRows) {
+    Base.resize(NCols * NRows);
+  }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void reserve(size_t NRows) {
+    Base.reserve(NCols * NRows);
+  }
 
 protected:
   template <typename U, size_t M, size_t NStorageInline>
   friend class JaggedArrayView;
 
-  T *begin() const { return Base.begin(); }
-  T *rowFromIdx(size_t RowIdx, size_t Offset = 0) const {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE T *begin() const { return Base.begin(); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE T *rowFromIdx(size_t RowIdx,
+                                             size_t Offset = 0) const {
     assert(Offset < NCols && "Internal error");
     return begin() + RowIdx * NCols + Offset;
   }
-  std::pair<size_t, size_t> idxFromRow(T *Ptr) const {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE std::pair<size_t, size_t>
+  idxFromRow(T *Ptr) const {
     assert(Ptr >= begin() && "Internal error");
     size_t Offset = (Ptr - begin()) % NCols;
     return {(Ptr - begin()) / NCols, Offset};
@@ -84,7 +103,7 @@ protected:
 
   // If Arg.size() < NCols, the number of columns won't be changed, and the
   // difference is default-constructed.
-  void addRow(const SmallVectorImpl<T> &Arg) {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void addRow(const SmallVectorImpl<T> &Arg) {
     assert(Arg.size() <= NCols &&
            "MatrixStorage has insufficient number of columns");
     size_t Diff = NCols - Arg.size();
@@ -92,9 +111,13 @@ protected:
     Base.append(Diff, T());
   }
 
-  void eraseLastRow() {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void eraseLastRow() {
     assert(getNumRows() > 0 && "Non-empty MatrixStorage expected");
     Base.pop_back_n(NCols);
+  }
+
+  LLVM_ATTRIBUTE_ALWAYS_INLINE bool willReallocateOnAddRow() const {
+    return Base.capacity() < Base.size() + NCols;
   }
 
 private:
@@ -125,59 +148,72 @@ struct [[nodiscard]] MutableRowView : public MutableArrayRef<T> {
   using MutableArrayRef<T>::begin;
   using MutableArrayRef<T>::end;
 
-  T &back() const { return MutableArrayRef<T>::back(); }
-  T &front() const { return MutableArrayRef<T>::front(); }
-  MutableRowView<T> drop_back(size_t N = 1) const { // NOLINT
+  LLVM_ATTRIBUTE_ALWAYS_INLINE T &back() const {
+    return MutableArrayRef<T>::back();
+  }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE T &front() const {
+    return MutableArrayRef<T>::front();
+  }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE MutableRowView<T>
+  drop_back(size_t N = 1) const { // NOLINT
     return MutableArrayRef<T>::drop_back(N);
   }
-  MutableRowView<T> drop_front(size_t N = 1) const { // NOLINT
+  LLVM_ATTRIBUTE_ALWAYS_INLINE MutableRowView<T>
+  drop_front(size_t N = 1) const { // NOLINT
     return MutableArrayRef<T>::drop_front(N);
   }
   // This slice is different from the MutableArrayRef slice, and specifies a
   // Begin and End index, instead of a Begin and Length.
-  MutableRowView<T> slice(size_t Begin, size_t End) {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE MutableRowView<T> slice(size_t Begin,
+                                                       size_t End) {
     return MutableArrayRef<T>::slice(Begin, End - Begin);
   }
-  void pop_back(size_t N = 1) { // NOLINT
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void pop_back(size_t N = 1) { // NOLINT
     this->Length -= N;
   }
-  void pop_front(size_t N = 1) { // NOLINT
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void pop_front(size_t N = 1) { // NOLINT
     this->Data += N;
     this->Length -= N;
   }
 
-  MutableRowView &operator=(const SmallVectorImpl<T> &Vec) {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE MutableRowView &
+  operator=(const SmallVectorImpl<T> &Vec) {
     copy_assign(Vec.begin(), Vec.end());
     return *this;
   }
-  MutableRowView &operator=(std::initializer_list<T> IL) {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE MutableRowView &
+  operator=(std::initializer_list<T> IL) {
     copy_assign(IL.begin(), IL.end());
     return *this;
   }
 
-  void swap(MutableRowView<T> &Other) {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void swap(MutableRowView<T> &Other) {
     std::swap(this->Data, Other.Data);
     std::swap(this->Length, Other.Length);
   }
 
   // For better cache behavior.
-  void copy_assign(const MutableRowView<T> &Other) { // NOLINT
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void
+  copy_assign(const MutableRowView<T> &Other) { // NOLINT
     copy_assign(Other.begin(), Other.end());
   }
 
   // For better cache behavior.
-  void copy_swap(MutableRowView<T> &Other) { // NOLINT
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void
+  copy_swap(MutableRowView<T> &Other) { // NOLINT
     SmallVector<T> Buf{Other};
     Other.copy_assign(begin(), end());
     copy_assign(Buf.begin(), Buf.end());
   }
 
 protected:
-  void copy_assign(iterator Begin, iterator End) { // NOLINT
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void copy_assign(iterator Begin,
+                                                iterator End) { // NOLINT
     std::uninitialized_copy(Begin, End, data());
     this->Length = End - Begin;
   }
-  void copy_assign(const_iterator Begin, const_iterator End) { // NOLINT
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void copy_assign(const_iterator Begin,
+                                                const_iterator End) { // NOLINT
     std::uninitialized_copy(Begin, End, data());
     this->Length = End - Begin;
   }
@@ -197,8 +233,8 @@ public:
   using iterator = typename container_type::iterator;
   using const_iterator = typename container_type::const_iterator;
 
-  constexpr JaggedArrayView(MatrixStorage<T, NStorageInline> &Mat,
-                            size_t RowSpan, size_t ColSpan)
+  LLVM_ATTRIBUTE_ALWAYS_INLINE constexpr JaggedArrayView(
+      MatrixStorage<T, NStorageInline> &Mat, size_t RowSpan, size_t ColSpan)
       : Mat(Mat) {
     RowView.reserve(RowSpan);
     for (size_t RowIdx = 0; RowIdx < RowSpan; ++RowIdx) {
@@ -210,7 +246,8 @@ public:
   // Constructor with a full View of the underlying MatrixStorage, if
   // MatrixStorage has a non-zero number of Columns. Otherwise, creates an empty
   // view.
-  constexpr JaggedArrayView(MatrixStorage<T, NStorageInline> &Mat)
+  LLVM_ATTRIBUTE_ALWAYS_INLINE constexpr JaggedArrayView(
+      MatrixStorage<T, NStorageInline> &Mat)
       : JaggedArrayView(Mat, Mat.getNumRows(), Mat.getNumCols()) {}
 
   // Obvious copy-construator is deleted, since the underlying storage could
@@ -219,7 +256,8 @@ public:
 
   // Copy-assignment operator should not be used when the underlying storage
   // changes.
-  constexpr JaggedArrayView &operator=(const JaggedArrayView &Other) {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE constexpr JaggedArrayView &
+  operator=(const JaggedArrayView &Other) {
     assert(Mat.begin() == Other.Mat.begin() &&
            "Underlying storage has changed: use custom copy-constructor");
     RowView = Other.RowView;
@@ -244,6 +282,13 @@ public:
   }
 
   void addRow(const SmallVectorImpl<T> &Row) {
+    // Optimization when we know that the underying storage won't be resized.
+    if (LLVM_LIKELY(!Mat.willReallocateOnAddRow())) {
+      Mat.addRow(Row);
+      RowView.emplace_back(Mat.rowFromIdx(Mat.getNumRows() - 1), Row.size());
+      return;
+    }
+
     // The underlying storage may be resized, performing reallocations. The
     // pointers in RowView will no longer be valid, so save and restore the
     // data. Construct RestoreData by performing pointer-arithmetic on the
@@ -268,23 +313,29 @@ public:
   }
 
   // To support addRow(View[Idx]).
-  void addRow(const row_type &Row) { addRow(SmallVector<T>{Row}); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void addRow(const row_type &Row) {
+    addRow(SmallVector<T>{Row});
+  }
 
-  void addRow(std::initializer_list<T> Row) { addRow(SmallVector<T>{Row}); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void addRow(std::initializer_list<T> Row) {
+    addRow(SmallVector<T>{Row});
+  }
 
-  constexpr row_type &operator[](size_t RowIdx) {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE constexpr row_type &operator[](size_t RowIdx) {
     assert(RowIdx < RowView.size() && "Indexing out of bounds");
     return RowView[RowIdx];
   }
 
-  constexpr T *data() const {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE constexpr T *data() const {
     assert(!empty() && "Non-empty view expected");
     return RowView.front().data();
   }
   size_t size() const { return getRowSpan() * getMaxColSpan(); }
-  bool empty() const { return RowView.empty(); }
-  size_t getRowSpan() const { return RowView.size(); }
-  size_t getColSpan(size_t RowIdx) const {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE bool empty() const { return RowView.empty(); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE size_t getRowSpan() const {
+    return RowView.size();
+  }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE size_t getColSpan(size_t RowIdx) const {
     assert(RowIdx < RowView.size() && "Indexing out of bounds");
     return RowView[RowIdx].size();
   }
@@ -296,10 +347,14 @@ public:
         ->size();
   }
 
-  iterator begin() { return RowView.begin(); }
-  iterator end() { return RowView.end(); }
-  const_iterator begin() const { return RowView.begin(); }
-  const_iterator end() const { return RowView.end(); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE iterator begin() { return RowView.begin(); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE iterator end() { return RowView.end(); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE const_iterator begin() const {
+    return RowView.begin();
+  }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE const_iterator end() const {
+    return RowView.end();
+  }
 
   constexpr JaggedArrayView<T, N, NStorageInline> rowSlice(size_t Begin,
                                                            size_t End) {
@@ -328,21 +383,21 @@ public:
     return {Mat, std::move(NewRowView)};
   }
 
-  row_type &lastRow() {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE row_type &lastRow() {
     assert(!empty() && "Non-empty view expected");
     return RowView.back();
   }
-  const row_type &lastRow() const {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE const row_type &lastRow() const {
     assert(!empty() && "Non-empty view expected");
     return RowView.back();
   }
-  void dropLastRow() {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void dropLastRow() {
     assert(!empty() && "Non-empty view expected");
     RowView.pop_back();
   }
 
   // For better cache behavior. To be used with copy_assign or copy_swap.
-  void eraseLastRow() {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void eraseLastRow() {
     assert(Mat.idxFromRow(lastRow().data()).first == Mat.getNumRows() - 1 &&
            "Last row does not correspond to last row in storage");
     dropLastRow();
@@ -351,8 +406,9 @@ public:
 
 protected:
   // Helper constructor.
-  constexpr JaggedArrayView(MatrixStorage<T, NStorageInline> &Mat,
-                            SmallVectorImpl<row_type> &&RowView)
+  LLVM_ATTRIBUTE_ALWAYS_INLINE constexpr JaggedArrayView(
+      MatrixStorage<T, NStorageInline> &Mat,
+      SmallVectorImpl<row_type> &&RowView)
       : Mat(Mat), RowView(std::move(RowView)) {}
 
 private:
