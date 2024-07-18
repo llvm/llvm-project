@@ -2419,14 +2419,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
           for (const auto &[OutputAddress, Probes] : FragmentProbes) {
             const uint32_t InputOffset = BAT->translate(
                 FuncAddr, OutputAddress - FuncAddr, /*IsBranchSrc=*/true);
-            if (!BlockMap.isInputBlock(InputOffset)) {
-              if (opts::Verbosity >= 1)
-                errs() << "BOLT-WARNING: Couldn't map pseudo probe at 0x"
-                       << Twine::utohexstr(InputOffset) << " to a block in "
-                       << F->getPrintName() << '\n';
-              continue;
-            }
-            const unsigned BlockIndex = BlockMap.getBBIndex(InputOffset);
+            const unsigned BlockIndex = getBlock(InputOffset).second;
             for (const MCDecodedPseudoProbe &Probe : Probes)
               YamlBF.Blocks[BlockIndex].PseudoProbes.emplace_back(
                   yaml::bolt::PseudoProbeInfo{Probe.getGuid(), Probe.getIndex(),
