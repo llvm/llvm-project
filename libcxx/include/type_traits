@@ -514,10 +514,6 @@ namespace std
 #  include <__type_traits/unwrap_ref.h>
 #endif
 
-#if _LIBCPP_STD_VER >= 23
-#  include <__type_traits/is_scoped_enum.h>
-#endif
-
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
