@@ -20,7 +20,6 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include <cstdint>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <unordered_map>
 #include <vector>
@@ -51,8 +50,6 @@ public:
 
 private:
   BinaryContext &BC;
-
-  std::mutex DWARFRewriterMutex;
 
   /// Stores and serializes information that will be put into the
   /// .debug_ranges DWARF section.
@@ -92,8 +89,6 @@ private:
   /// Stores address writer for each CU.
   std::unordered_map<uint64_t, std::unique_ptr<DebugAddrWriter>>
       AddressWritersByCU;
-
-  std::mutex LocListDebugInfoPatchesMutex;
 
   /// Dwo id specific its RangesBase.
   std::unordered_map<uint64_t, uint64_t> DwoRangesBase;

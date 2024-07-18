@@ -24,7 +24,6 @@
 #include <cstdint>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -234,8 +233,6 @@ protected:
 
   std::unique_ptr<raw_svector_ostream> RangesStream;
 
-  std::mutex WriterMutex;
-
   /// Offset of an empty address ranges list.
   static constexpr uint64_t EmptyRangesOffset{0};
 
@@ -325,8 +322,6 @@ private:
   /// to that compile unit. Each interval is a pair
   /// (first address, interval size).
   CUAddressRangesType CUAddressRanges;
-
-  std::mutex CUAddressRangesMutex;
 };
 
 using IndexAddressPair = std::pair<uint32_t, uint64_t>;
@@ -425,8 +420,6 @@ protected:
   /// Address for the DWO CU associated with the address writer.
   AddressForDWOCU Map;
   uint8_t AddressByteSize;
-  /// Mutex used for parallel processing of debug info.
-  std::mutex WriterMutex;
   std::unique_ptr<AddressSectionBuffer> Buffer;
   std::unique_ptr<raw_svector_ostream> AddressStream;
   /// Used to track sections that were not modified so that they can be re-used.
@@ -535,8 +528,6 @@ public:
   void initialize();
 
 private:
-  /// Mutex used for parallel processing of debug info.
-  std::mutex WriterMutex;
   /// Creates internal data structures.
   void create();
   std::unique_ptr<DebugStrBufferVector> StrBuffer;
