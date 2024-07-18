@@ -160,6 +160,7 @@ function(add_gen_header2 target_name)
     ${fq_target_name}
     PROPERTIES
       HEADER_FILE_PATH ${out_file}
+      DECLS_FILE_PATH "${decl_out_file}"
       DEPS "${fq_deps_list}"
   )
 
