@@ -561,6 +561,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .widenScalarOrEltToNextPow2(1)
       .clampScalar(0, s32, s32)
       .minScalarOrElt(1, MinFPScalar)
+      .scalarizeIf(scalarOrEltWiderThan(1, 64), 1)
       .minScalarEltSameAsIf(
           [=](const LegalityQuery &Query) {
             const LLT &Ty = Query.Types[0];
