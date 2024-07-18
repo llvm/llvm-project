@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_BASIC_CUDA_H
 #define LLVM_CLANG_BASIC_CUDA_H
 
+#include "llvm/ADT/StringRef.h"
 namespace llvm {
 class StringRef;
 class Twine;
@@ -52,6 +53,42 @@ const char *CudaVersionToString(CudaVersion V);
 // Input is "Major.Minor"
 CudaVersion CudaStringToVersion(const llvm::Twine &S);
 
+enum class PTXVersion {
+  PTX_UNKNOWN = 0,
+  PTX_32 = 32,
+  PTX_40 = 40,
+  PTX_41,
+  PTX_42,
+  PTX_43,
+  PTX_50 = 50,
+  PTX_60 = 60,
+  PTX_61,
+  PTX_62,
+  PTX_63,
+  PTX_64,
+  PTX_65,
+  PTX_70 = 70,
+  PTX_71,
+  PTX_72,
+  PTX_73,
+  PTX_74,
+  PTX_75,
+  PTX_76,
+  PTX_77,
+  PTX_78,
+  PTX_80 = 80,
+  PTX_81,
+  PTX_82,
+  PTX_83,
+  PTX_84,
+  PTX_85,
+  PTX_LAST = PTX_85,
+  PTX_custom = 9999, // placeholder for an unknown future version.
+};
+
+const std::string PTXVersionToFeature(PTXVersion V);
+PTXVersion GetRequiredPTXVersion(CudaVersion V);
+
 enum class OffloadArch {
   UNUSED,
   UNKNOWN,
@@ -78,6 +115,7 @@ enum class OffloadArch {
   SM_89,
   SM_90,
   SM_90a,
+  SM_custom,
   GFX600,
   GFX601,
   GFX602,
@@ -159,6 +197,12 @@ const char *OffloadArchToVirtualArchString(OffloadArch A);
 
 // The input should have the form "sm_20".
 OffloadArch StringToOffloadArch(llvm::StringRef S);
+
+// Converts custom SM name to its numeric value to be used in __CUDA_ARCH__
+// Custom SM name format: `sm_[ID][suffix]`.
+// The function returns `ID`*10 or zero on error.
+// `suffix` is expected to be empty or `a` and is ignored otherwise.
+unsigned CUDACustomSMToArchID(llvm::StringRef S);
 
 /// Get the earliest CudaVersion that supports the given OffloadArch.
 CudaVersion MinVersionForOffloadArch(OffloadArch A);

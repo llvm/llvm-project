@@ -3,6 +3,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/VersionTuple.h"
 
 namespace clang {
@@ -11,40 +12,43 @@ struct CudaVersionMapEntry {
   const char *Name;
   CudaVersion Version;
   llvm::VersionTuple TVersion;
+  PTXVersion PTX;
 };
-#define CUDA_ENTRY(major, minor)                                               \
+#define CUDA_ENTRY(major, minor, ptx)                                          \
   {                                                                            \
     #major "." #minor, CudaVersion::CUDA_##major##minor,                       \
-        llvm::VersionTuple(major, minor)                                       \
+        llvm::VersionTuple(major, minor), PTXVersion::ptx                      \
   }
 
 static const CudaVersionMapEntry CudaNameVersionMap[] = {
-    CUDA_ENTRY(7, 0),
-    CUDA_ENTRY(7, 5),
-    CUDA_ENTRY(8, 0),
-    CUDA_ENTRY(9, 0),
-    CUDA_ENTRY(9, 1),
-    CUDA_ENTRY(9, 2),
-    CUDA_ENTRY(10, 0),
-    CUDA_ENTRY(10, 1),
-    CUDA_ENTRY(10, 2),
-    CUDA_ENTRY(11, 0),
-    CUDA_ENTRY(11, 1),
-    CUDA_ENTRY(11, 2),
-    CUDA_ENTRY(11, 3),
-    CUDA_ENTRY(11, 4),
-    CUDA_ENTRY(11, 5),
-    CUDA_ENTRY(11, 6),
-    CUDA_ENTRY(11, 7),
-    CUDA_ENTRY(11, 8),
-    CUDA_ENTRY(12, 0),
-    CUDA_ENTRY(12, 1),
-    CUDA_ENTRY(12, 2),
-    CUDA_ENTRY(12, 3),
-    CUDA_ENTRY(12, 4),
-    CUDA_ENTRY(12, 5),
-    {"", CudaVersion::NEW, llvm::VersionTuple(std::numeric_limits<int>::max())},
-    {"unknown", CudaVersion::UNKNOWN, {}} // End of list tombstone.
+    CUDA_ENTRY(7, 0, PTX_42),
+    CUDA_ENTRY(7, 5, PTX_43),
+    CUDA_ENTRY(8, 0, PTX_50),
+    CUDA_ENTRY(9, 0, PTX_60),
+    CUDA_ENTRY(9, 1, PTX_61),
+    CUDA_ENTRY(9, 2, PTX_62),
+    CUDA_ENTRY(10, 0, PTX_63),
+    CUDA_ENTRY(10, 1, PTX_64),
+    CUDA_ENTRY(10, 2, PTX_65),
+    CUDA_ENTRY(11, 0, PTX_70),
+    CUDA_ENTRY(11, 1, PTX_71),
+    CUDA_ENTRY(11, 2, PTX_72),
+    CUDA_ENTRY(11, 3, PTX_73),
+    CUDA_ENTRY(11, 4, PTX_74),
+    CUDA_ENTRY(11, 5, PTX_75),
+    CUDA_ENTRY(11, 6, PTX_76),
+    CUDA_ENTRY(11, 7, PTX_77),
+    CUDA_ENTRY(11, 8, PTX_78),
+    CUDA_ENTRY(12, 0, PTX_80),
+    CUDA_ENTRY(12, 1, PTX_81),
+    CUDA_ENTRY(12, 2, PTX_82),
+    CUDA_ENTRY(12, 3, PTX_83),
+    CUDA_ENTRY(12, 4, PTX_84),
+    CUDA_ENTRY(12, 5, PTX_85),
+    {"", CudaVersion::NEW, llvm::VersionTuple(std::numeric_limits<int>::max()),
+     PTXVersion::PTX_LAST},
+    // End of list tombstone
+    {"unknown", CudaVersion::UNKNOWN, {}, PTXVersion::PTX_42}
 };
 #undef CUDA_ENTRY
 
@@ -71,6 +75,20 @@ CudaVersion ToCudaVersion(llvm::VersionTuple Version) {
   return CudaVersion::UNKNOWN;
 }
 
+const std::string PTXVersionToFeature(PTXVersion V) {
+  if (V > PTXVersion::PTX_UNKNOWN && V <= PTXVersion::PTX_LAST)
+    return llvm::formatv("+ptx{0}", static_cast<unsigned>(V));
+  return {};
+}
+
+PTXVersion GetRequiredPTXVersion(CudaVersion V) {
+  for (auto &I : CudaNameVersionMap)
+    if (V == I.Version)
+      return I.PTX;
+
+  return PTXVersion::PTX_UNKNOWN;
+}
+
 namespace {
 struct OffloadArchToStringMap {
   OffloadArch arch;
@@ -79,9 +97,11 @@ struct OffloadArchToStringMap {
 };
 } // namespace
 
-#define SM2(sm, ca) {OffloadArch::SM_##sm, "sm_" #sm, ca}
+#define SM2(sm, ca)                                                            \
+  { OffloadArch::SM_##sm, "sm_" #sm, ca }
 #define SM(sm) SM2(sm, "compute_" #sm)
-#define GFX(gpu) {OffloadArch::GFX##gpu, "gfx" #gpu, "compute_amdgcn"}
+#define GFX(gpu)                                                               \
+  { OffloadArch::GFX##gpu, "gfx" #gpu, "compute_amdgcn" }
 static const OffloadArchToStringMap arch_names[] = {
     // clang-format off
     {OffloadArch::UNUSED, "", ""},
@@ -96,6 +116,7 @@ static const OffloadArchToStringMap arch_names[] = {
     SM(89),                          // Ada Lovelace
     SM(90),                          // Hopper
     SM(90a),                         // Hopper
+    SM(custom),                        // Placeholder for a new arch.
     GFX(600),  // gfx600
     GFX(601),  // gfx601
     GFX(602),  // gfx602
@@ -181,6 +202,18 @@ OffloadArch StringToOffloadArch(llvm::StringRef S) {
   return result->arch;
 }
 
+unsigned CUDACustomSMToArchID(llvm::StringRef S) {
+  if (!S.starts_with("sm_"))
+    return 0;
+  S = S.drop_front(3); // skip `sm_`
+  if (S.ends_with("a"))
+    S = S.drop_back(1);
+  unsigned ID;
+  if (S.getAsInteger(10, ID))
+    return 0; // We've failed to parse the SM name
+  return ID * 10;
+}
+
 CudaVersion MinVersionForOffloadArch(OffloadArch A) {
   if (A == OffloadArch::UNKNOWN)
     return CudaVersion::UNKNOWN;
@@ -221,6 +254,8 @@ CudaVersion MinVersionForOffloadArch(OffloadArch A) {
     return CudaVersion::CUDA_118;
   case OffloadArch::SM_90a:
     return CudaVersion::CUDA_120;
+  case clang::OffloadArch::SM_custom:
+    return CudaVersion::UNKNOWN;
   default:
     llvm_unreachable("invalid enum");
   }

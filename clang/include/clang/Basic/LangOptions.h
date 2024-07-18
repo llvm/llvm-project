@@ -579,6 +579,10 @@ public:
   // WebAssembly target.
   bool NoWasmOpt = false;
 
+  // Overrides for the custom SM/PTX variants for CUDA's sm_custom target.
+  std::string CUDACustomSM;
+  unsigned CUDACustomPTX = 0;
+
   LangOptions();
 
   /// Set language defaults for the given input language and

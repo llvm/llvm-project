@@ -677,6 +677,13 @@ public:
   virtual void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                                      llvm::opt::ArgStringList &CC1Args,
                                      Action::OffloadKind DeviceOffloadKind) const;
+  /// [optional] Some toolchains may need more info and need to pass JobAction.
+  /// This is only intended to augment the function above.
+  virtual void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                                     llvm::opt::ArgStringList &CC1Args,
+                                     const JobAction &JC) const {
+    addClangTargetOptions(DriverArgs, CC1Args, JC.getOffloadingDeviceKind());
+  }
 
   /// Add options that need to be passed to cc1as for this target.
   virtual void

@@ -116,6 +116,13 @@ CudaVersion parseCudaHFile(llvm::StringRef Input) {
   }
   return CudaVersion::UNKNOWN;
 }
+
+std::string getCustomSM(const llvm::opt::ArgList &DriverArgs) {
+  return DriverArgs
+      .getLastArgValue(options::OPT_cuda_custom_sm_EQ,
+                       StringRef(OffloadArchToString(OffloadArch::CudaDefault)))
+      .str();
+}
 } // namespace
 
 void CudaInstallationDetector::WarnIfUnsupportedVersion() {
@@ -457,7 +464,9 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-v");
 
   CmdArgs.push_back("--gpu-name");
-  CmdArgs.push_back(Args.MakeArgString(OffloadArchToString(gpu_arch)));
+  CmdArgs.push_back(Args.MakeArgString(gpu_arch == OffloadArch::SM_custom
+                                           ? getCustomSM(Args)
+                                           : OffloadArchToString(gpu_arch)));
   CmdArgs.push_back("--output-file");
   std::string OutputFileName = TC.getInputFilename(Output);
 
@@ -553,9 +562,22 @@ void NVPTX::FatBinary::ConstructJob(Compilation &C, const JobAction &JA,
       continue;
     // We need to pass an Arch of the form "sm_XX" for cubin files and
     // "compute_XX" for ptx.
-    const char *Arch = (II.getType() == types::TY_PP_Asm)
-                           ? OffloadArchToVirtualArchString(gpu_arch)
-                           : gpu_arch_str;
+    std::string Arch = [&]() -> std::string {
+      bool IsAsm = II.getType() == types::TY_PP_Asm;
+      if (gpu_arch != OffloadArch::SM_custom)
+        return IsAsm ? OffloadArchToVirtualArchString(gpu_arch) : gpu_arch_str;
+      std::string CustomSM = getCustomSM(Args);
+      if (IsAsm) {
+        StringRef SMID = CustomSM;
+        if (SMID.starts_with("sm_")) // Should always be true
+          SMID = SMID.drop_front(3);
+        else
+          C.getDriver().Diag(diag::err_drv_invalid_value_with_suggestion)
+              << "--cuda-custom-sm" << CustomSM << "sm_*";
+        return formatv("compute_{0}", SMID);
+      }
+      return CustomSM;
+    }();
     CmdArgs.push_back(
         Args.MakeArgString(llvm::Twine("--image=profile=") + Arch +
                            ",file=" + getToolChain().getInputFilename(II)));
@@ -664,38 +686,9 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   // New CUDA versions often introduce new instructions that are only supported
   // by new PTX version, so we need to raise PTX level to enable them in NVPTX
   // back-end.
-  const char *PtxFeature = nullptr;
-  switch (CudaInstallation.version()) {
-#define CASE_CUDA_VERSION(CUDA_VER, PTX_VER)                                   \
-  case CudaVersion::CUDA_##CUDA_VER:                                           \
-    PtxFeature = "+ptx" #PTX_VER;                                              \
-    break;
-    CASE_CUDA_VERSION(125, 85);
-    CASE_CUDA_VERSION(124, 84);
-    CASE_CUDA_VERSION(123, 83);
-    CASE_CUDA_VERSION(122, 82);
-    CASE_CUDA_VERSION(121, 81);
-    CASE_CUDA_VERSION(120, 80);
-    CASE_CUDA_VERSION(118, 78);
-    CASE_CUDA_VERSION(117, 77);
-    CASE_CUDA_VERSION(116, 76);
-    CASE_CUDA_VERSION(115, 75);
-    CASE_CUDA_VERSION(114, 74);
-    CASE_CUDA_VERSION(113, 73);
-    CASE_CUDA_VERSION(112, 72);
-    CASE_CUDA_VERSION(111, 71);
-    CASE_CUDA_VERSION(110, 70);
-    CASE_CUDA_VERSION(102, 65);
-    CASE_CUDA_VERSION(101, 64);
-    CASE_CUDA_VERSION(100, 63);
-    CASE_CUDA_VERSION(92, 61);
-    CASE_CUDA_VERSION(91, 61);
-    CASE_CUDA_VERSION(90, 60);
-#undef CASE_CUDA_VERSION
-  default:
-    PtxFeature = "+ptx42";
-  }
-  Features.push_back(PtxFeature);
+  std::string PtxFeature =
+      PTXVersionToFeature(GetRequiredPTXVersion(CudaInstallation.version()));
+  Features.push_back(Args.MakeArgString(PtxFeature));
 }
 
 /// NVPTX toolchain. Our assembler is ptxas, and our linker is nvlink. This
@@ -849,21 +842,9 @@ void CudaToolChain::addClangTargetOptions(
   if (CudaInstallation.version() >= CudaVersion::CUDA_90)
     CC1Args.push_back("-fcuda-allow-variadic-functions");
 
-  if (DriverArgs.hasArg(options::OPT_nogpulib))
-    return;
-
   if (DeviceOffloadingKind == Action::OFK_OpenMP &&
       DriverArgs.hasArg(options::OPT_S))
     return;
-
-  std::string LibDeviceFile = CudaInstallation.getLibDeviceFile(GpuArch);
-  if (LibDeviceFile.empty()) {
-    getDriver().Diag(diag::err_drv_no_cuda_libdevice) << GpuArch;
-    return;
-  }
-
-  CC1Args.push_back("-mlink-builtin-bitcode");
-  CC1Args.push_back(DriverArgs.MakeArgString(LibDeviceFile));
 
   // For now, we don't use any Offload/OpenMP device runtime when we offload
   // CUDA via LLVM/Offload. We should split the Offload/OpenMP device runtime
@@ -874,29 +855,65 @@ void CudaToolChain::addClangTargetOptions(
 
   clang::CudaVersion CudaInstallationVersion = CudaInstallation.version();
 
+  if (!DriverArgs.hasArg(options::OPT_nogpulib)) {
+    std::string LibDeviceFile = CudaInstallation.getLibDeviceFile(GpuArch);
+    if (LibDeviceFile.empty()) {
+      getDriver().Diag(diag::err_drv_no_cuda_libdevice) << GpuArch;
+      return;
+    }
+
+    CC1Args.push_back("-mlink-builtin-bitcode");
+    CC1Args.push_back(DriverArgs.MakeArgString(LibDeviceFile));
+
+    if (DeviceOffloadingKind == Action::OFK_OpenMP) {
+      if (CudaInstallationVersion < CudaVersion::CUDA_92) {
+        getDriver().Diag(
+            diag::err_drv_omp_offload_target_cuda_version_not_support)
+            << CudaVersionToString(CudaInstallationVersion);
+        return;
+      }
+
+      // Link the bitcode library late if we're using device LTO.
+      if (getDriver().isUsingOffloadLTO())
+        return;
+
+      addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, GpuArch.str(),
+                         getTriple(), HostTC);
+    }
+  }
+
   if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
                          options::OPT_fno_cuda_short_ptr, false))
     CC1Args.append({"-mllvm", "--nvptx-short-ptr"});
 
-  if (CudaInstallationVersion >= CudaVersion::UNKNOWN)
+  if (CudaInstallation.isValid() &&
+      CudaInstallationVersion > CudaVersion::UNKNOWN)
     CC1Args.push_back(
         DriverArgs.MakeArgString(Twine("-target-sdk-version=") +
                                  CudaVersionToString(CudaInstallationVersion)));
+}
 
-  if (DeviceOffloadingKind == Action::OFK_OpenMP) {
-    if (CudaInstallationVersion < CudaVersion::CUDA_92) {
-      getDriver().Diag(
-          diag::err_drv_omp_offload_target_cuda_version_not_support)
-          << CudaVersionToString(CudaInstallationVersion);
-      return;
+void CudaToolChain::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                                          llvm::opt::ArgStringList &CC1Args,
+                                          const JobAction &JA) const {
+  addClangTargetOptions(DriverArgs, CC1Args, JA.getOffloadingDeviceKind());
+
+  if (StringRef(JA.getOffloadingArch()) == "sm_custom") {
+
+    std::string CustomSM = getCustomSM(DriverArgs);
+    StringRef CustomPTX =
+        DriverArgs.getLastArgValue(options::OPT_cuda_custom_ptx_EQ);
+    if (CustomSM.empty() || CustomPTX.empty()) {
+      JA.getOffloadingToolChain()->getDriver().Diag(
+          diag::err_drv_sm_custom_args);
     }
-
-    // Link the bitcode library late if we're using device LTO.
-    if (getDriver().isUsingOffloadLTO())
-      return;
-
-    addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, GpuArch.str(),
-                       getTriple(), HostTC);
+    CC1Args.append(
+        {// Needed by preprocessor for __CUDA_ARCH__
+         DriverArgs.MakeArgStringRef("--cuda-custom-sm=" + CustomSM),
+         // Overrides target SM in LLVM
+         "-mllvm", DriverArgs.MakeArgString(("--nvptx-custom-sm=" + CustomSM)),
+         "-mllvm",
+         DriverArgs.MakeArgString(("--nvptx-custom-ptx=" + CustomPTX))});
   }
 }
 

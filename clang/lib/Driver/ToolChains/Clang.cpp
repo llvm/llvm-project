@@ -1670,7 +1670,8 @@ void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
   AddUnalignedAccessWarning(CmdArgs);
 }
 
-void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
+void Clang::RenderTargetOptions(const JobAction &JA,
+                                const llvm::Triple &EffectiveTriple,
                                 const ArgList &Args, bool KernelOrKext,
                                 ArgStringList &CmdArgs) const {
   const ToolChain &TC = getToolChain();
@@ -5378,7 +5379,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-disable-llvm-passes");
 
     // Render target options.
-    TC.addClangTargetOptions(Args, CmdArgs, JA.getOffloadingDeviceKind());
+    TC.addClangTargetOptions(Args, CmdArgs, JA);
 
     // reject options that shouldn't be supported in bitcode
     // also reject kernel/kext
@@ -6069,7 +6070,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                       /*ForAS*/ false, /*IsAux*/ true);
   }
 
-  TC.addClangTargetOptions(Args, CmdArgs, JA.getOffloadingDeviceKind());
+  TC.addClangTargetOptions(Args, CmdArgs, JA);
 
   addMCModel(D, Args, Triple, RelocationModel, CmdArgs);
 
@@ -6096,7 +6097,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(CPU));
   }
 
-  RenderTargetOptions(Triple, Args, KernelOrKext, CmdArgs);
+  RenderTargetOptions(JA, Triple, Args, KernelOrKext, CmdArgs);
 
   // Add clang-cl arguments.
   types::ID InputType = Input.getType();

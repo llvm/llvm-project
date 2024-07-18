@@ -743,6 +743,8 @@ def err_drv_invalid_or_unsupported_offload_target : Error<
   "invalid or unsupported offload target: '%0'">;
 def err_drv_cuda_offload_only_emit_bc : Error<
   "CUDA offload target is supported only along with --emit-llvm">;
+def err_drv_sm_custom_args : Error<
+  "offload target sm_custom requires both --cuda-custom_sm and --cuda_custom_ptx to be specified">;
 
 def warn_drv_jmc_requires_debuginfo : Warning<
   "%0 requires debug info. Use %1 or debug options that enable debugger's "

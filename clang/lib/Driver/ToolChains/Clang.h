@@ -45,7 +45,8 @@ private:
                                const InputInfo &Output,
                                const InputInfoList &Inputs) const;
 
-  void RenderTargetOptions(const llvm::Triple &EffectiveTriple,
+  void RenderTargetOptions(const JobAction &JA,
+                           const llvm::Triple &EffectiveTriple,
                            const llvm::opt::ArgList &Args, bool KernelOrKext,
                            llvm::opt::ArgStringList &CmdArgs) const;
 
@@ -61,6 +62,8 @@ private:
                               llvm::opt::ArgStringList &CmdArgs) const;
   void AddMIPSTargetArgs(const llvm::opt::ArgList &Args,
                          llvm::opt::ArgStringList &CmdArgs) const;
+  void AddNVPTXTargetArgs(const JobAction &JA, const llvm::opt::ArgList &Args,
+                          llvm::opt::ArgStringList &CmdArgs) const;
   void AddPPCTargetArgs(const llvm::opt::ArgList &Args,
                         llvm::opt::ArgStringList &CmdArgs) const;
   void AddR600TargetArgs(const llvm::opt::ArgList &Args,
@@ -94,8 +97,8 @@ private:
 
   mutable std::unique_ptr<llvm::raw_fd_ostream> CompilationDatabase = nullptr;
   void DumpCompilationDatabase(Compilation &C, StringRef Filename,
-                               StringRef Target,
-                               const InputInfo &Output, const InputInfo &Input,
+                               StringRef Target, const InputInfo &Output,
+                               const InputInfo &Input,
                                const llvm::opt::ArgList &Args) const;
 
   void DumpCompilationDatabaseFragmentToDir(
