@@ -111,6 +111,11 @@ static cl::opt<bool> EnablePPCGenScalarMASSEntries(
              "(scalar) entries"),
     cl::Hidden);
 
+static cl::opt<bool> PPCDisableTrapOnUnreachable(
+  "ppc-disable-trap-on-unreachable", cl::init(false),
+  cl::desc("Disable lowering of unreachable IR intruction to a trap instuction"),
+           cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   // Register the targets
   RegisterTargetMachine<PPCTargetMachine> A(getThePPC32Target());
@@ -354,6 +359,12 @@ PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
       TLOF(createTLOF(getTargetTriple())),
       TargetABI(computeTargetABI(TT, Options)),
       Endianness(isLittleEndianTriple(TT) ? Endian::LITTLE : Endian::BIG) {
+
+  if (!PPCDisableTrapOnUnreachable) {
+    this->Options.TrapUnreachable = true;
+    this->Options.NoTrapAfterNoreturn = true;
+  }
+
   initAsmInfo();
 }
 

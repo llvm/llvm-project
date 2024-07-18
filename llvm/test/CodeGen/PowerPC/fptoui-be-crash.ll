@@ -62,9 +62,11 @@ define dso_local void @calc_buffer() local_unnamed_addr #0 {
 ; CHECK-NEXT:    rldic r4, r4, 63, 0
 ; CHECK-NEXT:    xor r3, r3, r4
 ; CHECK-NEXT:    std r3, 0(r3)
+; CHECK-NEXT:    trap
 ; CHECK-NEXT:  .LBB0_10:
 ; CHECK-NEXT:    ld r3, -16(r1)
 ; CHECK-NEXT:    std r3, 0(r3)
+; CHECK-NEXT:    trap
   %load_initial = load i64, ptr poison, align 8
   %conv39 = uitofp i64 %load_initial to float
   %add48 = fadd float 0.000000e+00, %conv39
