@@ -5213,6 +5213,9 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
     return true;
   };
 
+  bool hasAOne = false;
+  bool hasOnlyOne = true;
+
   auto BuildUDIVPattern = [&](const Constant *C) {
     auto *CI = cast<ConstantInt>(C);
     const APInt &Divisor = CI->getValue();
@@ -5224,8 +5227,10 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
     // Magic algorithm doesn't work for division by 1. We need to emit a select
     // at the end.
     // TODO: Use undef values for divisor of 1.
-    if (!Divisor.isOne()) {
-
+    if (Divisor.isOne()) {
+      hasAOne = true;
+    } else {
+      hasOnlyOne = false;
       // UnsignedDivisionByConstantInfo doesn't work correctly if leading zeros
       // in the dividend exceeds the leading zeros for the divisor.
       UnsignedDivisionByConstantInfo magics =
@@ -5285,6 +5290,8 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
   bool Matched = matchUnaryPredicate(MRI, RHS, BuildUDIVPattern);
   (void)Matched;
   assert(Matched && "Expected unary predicate match to succeed");
+  assert(!(hasAOne && hasOnlyOne) &&
+         "Divisor of 1 should have been eliminated");
 
   Register PreShift, PostShift, MagicFactor, NPQFactor;
   auto *RHSDef = getOpcodeDef<GBuildVector>(RHS, MRI);
@@ -5320,12 +5327,16 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
     Q = MIB.buildAdd(Ty, NPQ, Q).getReg(0);
   }
 
-  Q = MIB.buildLShr(Ty, Q, PostShift).getReg(0);
-  auto One = MIB.buildConstant(Ty, 1);
-  auto IsOne = MIB.buildICmp(
-      CmpInst::Predicate::ICMP_EQ,
-      Ty.isScalar() ? LLT::scalar(1) : Ty.changeElementSize(1), RHS, One);
-  return MIB.buildSelect(Ty, IsOne, LHS, Q);
+  if (hasAOne) {
+    Q = MIB.buildLShr(Ty, Q, PostShift).getReg(0);
+    auto One = MIB.buildConstant(Ty, 1);
+    auto IsOne = MIB.buildICmp(
+        CmpInst::Predicate::ICMP_EQ,
+        Ty.isScalar() ? LLT::scalar(1) : Ty.changeElementSize(1), RHS, One);
+    return MIB.buildSelect(Ty, IsOne, LHS, Q);
+  }
+
+  return MIB.buildLShr(Ty, Q, PostShift);
 }
 
 bool CombinerHelper::matchUDivByConst(MachineInstr &MI) {

@@ -6487,7 +6487,8 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
 
   bool UseNPQ = false, UsePreShift = false, UsePostShift = false;
   SmallVector<SDValue, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
-
+  bool hasAOne = false;
+  bool hasOnlyOne = true;
   auto BuildUDIVPattern = [&](ConstantSDNode *C) {
     if (C->isZero())
       return false;
@@ -6500,7 +6501,9 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     if (Divisor.isOne()) {
       PreShift = PostShift = DAG.getUNDEF(ShSVT);
       MagicFactor = NPQFactor = DAG.getUNDEF(SVT);
+      hasAOne = true;
     } else {
+      hasOnlyOne = false;
       UnsignedDivisionByConstantInfo magics =
           UnsignedDivisionByConstantInfo::get(
               Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()));
@@ -6534,6 +6537,9 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   // Collect the shifts/magic values from each element.
   if (!ISD::matchUnaryPredicate(N1, BuildUDIVPattern))
     return SDValue();
+
+  if (hasAOne && hasOnlyOne)
+    return N0;
 
   SDValue PreShift, PostShift, MagicFactor, NPQFactor;
   if (N1.getOpcode() == ISD::BUILD_VECTOR) {
@@ -6628,11 +6634,14 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     Created.push_back(Q.getNode());
   }
 
-  EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
-
-  SDValue One = DAG.getConstant(1, dl, VT);
-  SDValue IsOne = DAG.getSetCC(dl, SetCCVT, N1, One, ISD::SETEQ);
-  return DAG.getSelect(dl, VT, IsOne, N0, Q);
+  if (hasAOne) {
+    EVT SetCCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+    SDValue One = DAG.getConstant(1, dl, VT);
+    SDValue IsOne = DAG.getSetCC(dl, SetCCVT, N1, One, ISD::SETEQ);
+    return DAG.getSelect(dl, VT, IsOne, N0, Q);
+  }
+  return Q;
 }
 
 /// If all values in Values that *don't* match the predicate are same 'splat'
