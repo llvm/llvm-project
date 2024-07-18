@@ -2413,9 +2413,15 @@ libc_function(
 
 libc_support_library(
     name = "qsort_util",
-    hdrs = ["src/stdlib/qsort_util.h"],
+    hdrs = [
+        "src/stdlib/heap_sort.h",
+        "src/stdlib/qsort_data.h",
+        "src/stdlib/qsort_util.h",
+        "src/stdlib/quick_sort.h",
+    ],
     deps = [
         ":__support_common",
+        ":__support_cpp_cstddef",
         ":__support_macros_attributes",
     ],
 )
