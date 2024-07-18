@@ -718,6 +718,47 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   switch (BuiltinIDIfNoAsmLabel) {
   default:
     break;
+
+  case Builtin::BI__builtin_complex: {
+    mlir::Value Real = buildScalarExpr(E->getArg(0));
+    mlir::Value Imag = buildScalarExpr(E->getArg(1));
+    mlir::Value Complex =
+        builder.createComplexCreate(getLoc(E->getExprLoc()), Real, Imag);
+    return RValue::getComplex(Complex);
+  }
+
+  case Builtin::BI__builtin_creal:
+  case Builtin::BI__builtin_crealf:
+  case Builtin::BI__builtin_creall:
+  case Builtin::BIcreal:
+  case Builtin::BIcrealf:
+  case Builtin::BIcreall: {
+    mlir::Value ComplexVal = buildComplexExpr(E->getArg(0));
+    mlir::Value Real =
+        builder.createComplexReal(getLoc(E->getExprLoc()), ComplexVal);
+    return RValue::get(Real);
+  }
+
+  case Builtin::BI__builtin_cimag:
+  case Builtin::BI__builtin_cimagf:
+  case Builtin::BI__builtin_cimagl:
+  case Builtin::BIcimag:
+  case Builtin::BIcimagf:
+  case Builtin::BIcimagl: {
+    mlir::Value ComplexVal = buildComplexExpr(E->getArg(0));
+    mlir::Value Real =
+        builder.createComplexImag(getLoc(E->getExprLoc()), ComplexVal);
+    return RValue::get(Real);
+  }
+
+  case Builtin::BI__builtin_conj:
+  case Builtin::BI__builtin_conjf:
+  case Builtin::BI__builtin_conjl:
+  case Builtin::BIconj:
+  case Builtin::BIconjf:
+  case Builtin::BIconjl:
+    llvm_unreachable("NYI");
+
   case Builtin::BI__builtin___CFStringMakeConstantString:
   case Builtin::BI__builtin___NSStringMakeConstantString:
     llvm_unreachable("NYI");
