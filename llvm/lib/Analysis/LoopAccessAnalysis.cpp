@@ -1458,12 +1458,11 @@ static bool isNoWrapAddRec(Value *Ptr, const SCEVAddRecExpr *AR,
   return false;
 }
 
-/// Check whether the access through \p Ptr has a constant stride.
-std::optional<int64_t> llvm::getPtrStride(PredicatedScalarEvolution &PSE,
-                                          Type *AccessTy, Value *Ptr,
-                                          const Loop *Lp,
-                                          const DenseMap<Value *, const SCEV *> &StridesMap,
-                                          bool Assume, bool ShouldCheckWrap) {
+static std::optional<const SCEV *>
+getPtrStrideSCEV(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
+                 const Loop *Lp,
+                 const DenseMap<Value *, const SCEV *> &StridesMap, bool Assume,
+                 bool ShouldCheckWrap) {
   Type *Ty = Ptr->getType();
   assert(Ty->isPointerTy() && "Unexpected non-ptr");
 
@@ -1520,13 +1519,14 @@ std::optional<int64_t> llvm::getPtrStride(PredicatedScalarEvolution &PSE,
   if (Rem)
     return std::nullopt;
 
+  const SCEV *StrideSCEV = PSE.getSE()->getConstant(C->getType(), Stride);
   if (!ShouldCheckWrap)
-    return Stride;
+    return StrideSCEV;
 
   // The address calculation must not wrap. Otherwise, a dependence could be
   // inverted.
   if (isNoWrapAddRec(Ptr, AR, PSE, Lp))
-    return Stride;
+    return StrideSCEV;
 
   // An inbounds getelementptr that is a AddRec with a unit stride
   // cannot wrap per definition.  If it did, the result would be poison
@@ -1534,7 +1534,7 @@ std::optional<int64_t> llvm::getPtrStride(PredicatedScalarEvolution &PSE,
   // when executed.
   if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
       GEP && GEP->isInBounds() && (Stride == 1 || Stride == -1))
-    return Stride;
+    return StrideSCEV;
 
   // If the null pointer is undefined, then a access sequence which would
   // otherwise access it can be assumed not to unsigned wrap.  Note that this
@@ -1542,7 +1542,7 @@ std::optional<int64_t> llvm::getPtrStride(PredicatedScalarEvolution &PSE,
   unsigned AddrSpace = Ty->getPointerAddressSpace();
   if (!NullPointerIsDefined(Lp->getHeader()->getParent(), AddrSpace) &&
       (Stride == 1 || Stride == -1))
-    return Stride;
+    return StrideSCEV;
 
   if (Assume) {
     PSE.setNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
@@ -1550,11 +1550,24 @@ std::optional<int64_t> llvm::getPtrStride(PredicatedScalarEvolution &PSE,
                       << "LAA:   Pointer: " << *Ptr << "\n"
                       << "LAA:   SCEV: " << *AR << "\n"
                       << "LAA:   Added an overflow assumption\n");
-    return Stride;
+    return StrideSCEV;
   }
   LLVM_DEBUG(
       dbgs() << "LAA: Bad stride - Pointer may wrap in the address space "
              << *Ptr << " SCEV: " << *AR << "\n");
+  return std::nullopt;
+}
+
+/// Check whether the access through \p Ptr has a constant stride.
+std::optional<int64_t>
+llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
+                   const Loop *Lp,
+                   const DenseMap<Value *, const SCEV *> &StridesMap,
+                   bool Assume, bool ShouldCheckWrap) {
+  std::optional<const SCEV *> StrideSCEV = getPtrStrideSCEV(
+      PSE, AccessTy, Ptr, Lp, StridesMap, Assume, ShouldCheckWrap);
+  if (StrideSCEV && isa<SCEVConstant>(*StrideSCEV))
+    return cast<SCEVConstant>(*StrideSCEV)->getAPInt().getSExtValue();
   return std::nullopt;
 }
 
