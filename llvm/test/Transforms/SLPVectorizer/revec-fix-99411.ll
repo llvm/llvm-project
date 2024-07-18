@@ -2,6 +2,11 @@
 ; RUN: opt -mtriple x86_64-unknown-linux-gnu -passes=slp-vectorizer -S %s | FileCheck %s
 
 define void @e() {
+; CHECK-LABEL: @e(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr null, align 8
+; CHECK-NEXT:    ret void
+;
 entry:
   %0 = extractelement <1 x i64> zeroinitializer, i64 0
   %bf.value = and i64 %0, 0

@@ -11850,8 +11850,7 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
   Value *castToScalarTyElem(Value *V,
                             std::optional<bool> IsSigned = std::nullopt) {
     auto *VecTy = cast<VectorType>(V->getType());
-    assert(getNumElements(ScalarTy) < getNumElements(VecTy) &&
-           (getNumElements(VecTy) % getNumElements(ScalarTy) == 0));
+    assert(getNumElements(VecTy) % getNumElements(ScalarTy) == 0);
     if (VecTy->getElementType() == ScalarTy->getScalarType())
       return V;
     return Builder.CreateIntCast(
