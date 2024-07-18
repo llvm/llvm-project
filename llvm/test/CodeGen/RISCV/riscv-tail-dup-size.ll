@@ -2,8 +2,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m -O2 < %s | FileCheck %s --check-prefix=CHECK-O2
 ; RUN: llc -mtriple=riscv64 -mattr=+m -O3 < %s | FileCheck %s --check-prefix=CHECK-O3
 
-; RUN: llc -mtriple=riscv64 -mattr=+m -tail-dup-size=4 < %s | FileCheck %s --check-prefix=CHECK-O2
-; RUN: llc -mtriple=riscv64 -mattr=+m -tail-dup-placement-threshold=4 < %s | FileCheck %s --check-prefix=CHECK-O2
+; RUN: llc -mtriple=riscv64 -mattr=+m -tail-dup-size=2 < %s | FileCheck %s --check-prefix=CHECK-O2
+; RUN: llc -mtriple=riscv64 -mattr=+m -tail-dup-placement-threshold=2 < %s | FileCheck %s --check-prefix=CHECK-O2
 ; RUN: llc -mtriple=riscv64 -mattr=+m -tail-dup-placement-threshold=6 < %s | FileCheck %s --check-prefix=CHECK-O3
 
 @a = external global i32
