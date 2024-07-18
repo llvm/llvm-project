@@ -2032,7 +2032,8 @@ bool ModuleAddressSanitizer::shouldInstrumentGlobal(GlobalVariable *G) const {
   if (G->isThreadLocal()) return false;
   // For now, just ignore this Global if the alignment is large.
   if (G->getAlign() && *G->getAlign() > getMinRedzoneSizeForGlobal()) return false;
-  if (G->getName() == "NoopCoro.Frame.Const") return false;
+  if (G->getName() == "NoopCoro.Frame.Const")
+    return false;
 
   // For non-COFF targets, only instrument globals known to be defined by this
   // TU.
@@ -2948,7 +2949,8 @@ bool AddressSanitizer::instrumentFunction(Function &F,
   if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage) return false;
   if (!ClDebugFunc.empty() && ClDebugFunc == F.getName()) return false;
   if (F.getName().starts_with("__asan_")) return false;
-  if (F.isPresplitCoroutine()) return false;
+  if (F.isPresplitCoroutine())
+    return false;
 
   bool FunctionModified = false;
 
