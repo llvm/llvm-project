@@ -497,7 +497,6 @@ class NsanMemOpFn {
 public:
   NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized, StringRef Fallback,
               size_t NumArgs);
-  // Number of parameters can be extracted from FunctionCallee
   FunctionCallee getFunctionFor(uint64_t MemOpSize) const;
   FunctionCallee getFallback() const;
 

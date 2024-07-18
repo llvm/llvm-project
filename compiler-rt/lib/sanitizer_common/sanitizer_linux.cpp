@@ -2118,7 +2118,6 @@ bool SignalContext::IsTrueFaultingAddress() const {
   return si->si_signo == SIGSEGV && si->si_code != 128;
 }
 
-<<<<<<< HEAD
 UNUSED
 static const char *RegNumToRegName(int reg) {
   switch (reg) {
@@ -2280,10 +2279,6 @@ void SignalContext::DumpAllRegisters(void *context) {
 #    endif
 #  endif
   // FIXME: Implement this for other OSes and architectures.
-=======
-void SignalContext::DumpAllRegisters(void *context) {
-  // FIXME: Implement this.
->>>>>>> 16320d24a812 ([nsan] Calculate function type once)
 }
 
 static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
