@@ -728,7 +728,7 @@ public:
   void beginInstruction(const MachineInstr *MI) override;
 
   /// Process beginning of code alignment.
-  void beginCodeAlignment(const MachineBasicBlock& MBB) override;
+  void beginCodeAlignment(const MachineBasicBlock &MBB) override;
 
   /// Perform an MD5 checksum of \p Identifier and return the lower 64 bits.
   static uint64_t makeTypeSignature(StringRef Identifier);
