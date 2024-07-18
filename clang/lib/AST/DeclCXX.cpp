@@ -3327,7 +3327,6 @@ VarDecl *BindingDecl::getHoldingVar() const {
     return nullptr;
 
   auto *VD = cast<VarDecl>(DRE->getDecl());
-  assert(VD->isImplicit() && "holding var for binding decl not implicit");
   return VD;
 }
 

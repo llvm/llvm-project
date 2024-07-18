@@ -3163,6 +3163,63 @@ void foo()
         matchesConditionally(Code, traverse(TK_IgnoreUnlessSpelledInSource, M),
                              true, {"-std=c++17"}));
   }
+
+  Code = R"cpp(
+struct Pair
+{
+    int x, y;
+};
+
+// Note: these utilities are required to force binding to tuple like structure
+namespace std
+{
+    template <typename E>
+    struct tuple_size
+    {
+    };
+
+    template <>
+    struct tuple_size<Pair>
+    {
+        static constexpr unsigned value = 2;
+    };
+
+    template <unsigned I, class T>
+    struct tuple_element
+    {
+        using type = int;
+    };
+
+};
+
+template <unsigned I>
+int &&get(Pair &&p);
+
+void decompTuple()
+{
+    Pair p{1, 2};
+    auto [a, b] = p;
+
+    a = 3;
+}
+  )cpp";
+
+  {
+    auto M = bindingDecl(hasName("a"));
+    EXPECT_TRUE(
+        matchesConditionally(Code, traverse(TK_AsIs, M), true, {"-std=c++17"}));
+    EXPECT_TRUE(
+        matchesConditionally(Code, traverse(TK_IgnoreUnlessSpelledInSource, M),
+                             true, {"-std=c++17"}));
+  }
+  {
+    auto M = varDecl(hasName("a"));
+    EXPECT_TRUE(
+        matchesConditionally(Code, traverse(TK_AsIs, M), true, {"-std=c++17"}));
+    EXPECT_TRUE(
+        matchesConditionally(Code, traverse(TK_IgnoreUnlessSpelledInSource, M),
+                             true, {"-std=c++17"}));
+  }
 }
 
 TEST(Traversal, traverseNoImplicit) {
