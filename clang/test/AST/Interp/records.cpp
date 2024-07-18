@@ -1500,3 +1500,15 @@ namespace LocalWithThisPtrInit {
   }
   static_assert(foo() == 2, "");
 }
+
+namespace OnePastEndAndBack {
+  struct Base {
+    constexpr Base() {}
+    int n = 0;
+  };
+
+  constexpr Base a;
+  constexpr const Base *c = &a + 1;
+  constexpr const Base *d = c - 1;
+  static_assert(d == &a, "");
+}
