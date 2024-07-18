@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-to-spirv -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -convert-to-spirv="run-signature-conversion=false" -split-input-file %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // arithmetic ops
