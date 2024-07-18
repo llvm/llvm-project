@@ -71,9 +71,9 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   YamlBF.NumBasicBlocks = BF.size();
   YamlBF.ExecCount = BF.getKnownExecutionCount();
   if (PseudoProbeDecoder) {
-    if (uint64_t GUID = BF.getPseudoProbeGUID()) {
+    if ((YamlBF.GUID = BF.getPseudoProbeGUID())) {
       const MCPseudoProbeFuncDesc *FuncDesc =
-          PseudoProbeDecoder->getFuncDescForGUID(GUID);
+          PseudoProbeDecoder->getFuncDescForGUID(YamlBF.GUID);
       YamlBF.PseudoProbeDescHash = FuncDesc->FuncHash;
     }
   }

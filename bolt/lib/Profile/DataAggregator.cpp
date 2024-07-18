@@ -2347,13 +2347,6 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       YamlBF.Hash = BAT->getBFHash(FuncAddress);
       YamlBF.ExecCount = BF->getKnownExecutionCount();
       YamlBF.NumBasicBlocks = BAT->getNumBasicBlocks(FuncAddress);
-      if (PseudoProbeDecoder) {
-        if (uint64_t GUID = BF->getPseudoProbeGUID()) {
-          const MCPseudoProbeFuncDesc *FuncDesc =
-              PseudoProbeDecoder->getFuncDescForGUID(GUID);
-          YamlBF.PseudoProbeDescHash = FuncDesc->FuncHash;
-        }
-      }
       const BoltAddressTranslation::BBHashMapTy &BlockMap =
           BAT->getBBHashMap(FuncAddress);
       YamlBF.Blocks.resize(YamlBF.NumBasicBlocks);
@@ -2406,6 +2399,13 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         }
         const unsigned BlockIndex = BlockMap.getBBIndex(BI.To.Offset);
         YamlBF.Blocks[BlockIndex].ExecCount += BI.Branches;
+      }
+      if (PseudoProbeDecoder) {
+        if ((YamlBF.GUID = BF->getPseudoProbeGUID())) {
+          const MCPseudoProbeFuncDesc *FuncDesc =
+              PseudoProbeDecoder->getFuncDescForGUID(YamlBF.GUID);
+          YamlBF.PseudoProbeDescHash = FuncDesc->FuncHash;
+        }
       }
       // Drop blocks without a hash, won't be useful for stale matching.
       llvm::erase_if(YamlBF.Blocks,
