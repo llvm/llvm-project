@@ -228,9 +228,8 @@ option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 
 # C Library options -----------------------------------------------------------
 
-set(LIBCXX_DEFAULT_C_LIBRARY system)
 set(LIBCXX_SUPPORTED_C_LIBRARIES system llvm-libc)
-set(LIBCXX_LIBC "${LIBCXX_DEFAULT_C_LIBRARY}" CACHE STRING "Specify C library to use. Supported values are ${LIBCXX_SUPPORTED_C_LIBRARIES}.")
+set(LIBCXX_LIBC "system" CACHE STRING "Specify C library to use. Supported values are ${LIBCXX_SUPPORTED_C_LIBRARIES}.")
 if (NOT "${LIBCXX_LIBC}" IN_LIST LIBCXX_SUPPORTED_C_LIBRARIES)
   message(FATAL_ERROR "Unsupported C library: '${LIBCXX_CXX_ABI}'. Supported values are ${LIBCXX_SUPPORTED_C_LIBRARIES}.")
 endif()
@@ -793,10 +792,6 @@ config_define_if_not(LIBCXX_ENABLE_UNICODE _LIBCPP_HAS_NO_UNICODE)
 config_define_if_not(LIBCXX_ENABLE_WIDE_CHARACTERS _LIBCPP_HAS_NO_WIDE_CHARACTERS)
 config_define_if_not(LIBCXX_ENABLE_TIME_ZONE_DATABASE _LIBCPP_HAS_NO_TIME_ZONE_DATABASE)
 config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
-
-if (LIBCXX_LIBC STREQUAL "llvm-libc")
-  config_define(ON _LIBCPP_HAS_LLVM_LIBC)
-endif()
 
 if (LIBCXX_ENABLE_ASSERTIONS)
   message(DEPRECATION "LIBCXX_ENABLE_ASSERTIONS is deprecated and will be removed in LLVM 20. Please use LIBCXX_HARDENING_MODE instead.")
