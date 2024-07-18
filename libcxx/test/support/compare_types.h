@@ -529,4 +529,27 @@ struct ForwardingTestObject {
   constexpr bool operator>=(const ForwardingTestObject&) const& { return false; }
 };
 
+struct move_only_equality_with_int {
+  move_only_equality_with_int(int);
+
+  move_only_equality_with_int(move_only_equality_with_int&&)            = default;
+  move_only_equality_with_int& operator=(move_only_equality_with_int&&) = default;
+
+  move_only_equality_with_int(move_only_equality_with_int const&)            = delete;
+  move_only_equality_with_int& operator=(move_only_equality_with_int const&) = delete;
+
+  friend bool operator==(move_only_equality_with_int const&, move_only_equality_with_int const&) = default;
+  friend bool operator==(move_only_equality_with_int const&, int);
+};
+
+struct immobile_comparable_with_int {
+  immobile_comparable_with_int(int);
+
+  immobile_comparable_with_int(immobile_comparable_with_int&&)            = delete;
+  immobile_comparable_with_int& operator=(immobile_comparable_with_int&&) = delete;
+
+  friend bool operator==(immobile_comparable_with_int const&, immobile_comparable_with_int const&) = default;
+  friend bool operator==(immobile_comparable_with_int const&, int);
+};
+
 #endif // TEST_SUPPORT_COMPARE_TYPES_H
