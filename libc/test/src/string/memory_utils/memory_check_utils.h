@@ -11,13 +11,14 @@
 
 #include "src/__support/CPP/span.h"
 #include "src/__support/libc_assert.h" // LIBC_ASSERT
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/sanitizer.h"
 #include "src/string/memory_utils/utils.h"
 #include <stddef.h> // size_t
 #include <stdint.h> // uintxx_t
 #include <stdlib.h> // malloc/free
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Simple structure to allocate a buffer of a particular size.
 // When ASAN is present it also poisons the whole memory.
@@ -198,6 +199,6 @@ inline bool CheckMemmove(cpp::span<char> buffer, size_t size, int overlap) {
   return true;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_TEST_SRC_STRING_MEMORY_UTILS_MEMORY_CHECK_UTILS_H
