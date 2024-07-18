@@ -3924,6 +3924,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     ShadowI->insertAfter(&I);
 
     if (MS.TrackOrigins) {
+      // TODO: if we modelled the vst* instruction more precisely, we could
+      // more accurately track the origins (e.g., if both inputs are
+      // uninitialized for vst2, we currently blame the second input, even
+      // though part of the output depends only on the first input).
       OriginCombiner OC(this, IRB);
       for (int i = 0; i < numArgOperands - 1; i++)
         OC.Add(I.getArgOperand(i));
