@@ -6609,8 +6609,7 @@ void llvm::getUnderlyingObjects(const Value *V,
   } while (!Worklist.empty());
 }
 
-const Value *llvm::getUnderlyingObjectAggressive(const Value *V,
-                                                 unsigned MaxLookup) {
+const Value *llvm::getUnderlyingObjectAggressive(const Value *V) {
   const unsigned MaxVisited = 8;
 
   SmallPtrSet<const Value *, 8> Visited;
@@ -6619,7 +6618,7 @@ const Value *llvm::getUnderlyingObjectAggressive(const Value *V,
   const Value *Object = nullptr, *FirstObject = nullptr;
   do {
     const Value *P = Worklist.pop_back_val();
-    P = getUnderlyingObject(P, MaxLookup);
+    P = getUnderlyingObject(P);
 
     if (!FirstObject)
       FirstObject = P;
