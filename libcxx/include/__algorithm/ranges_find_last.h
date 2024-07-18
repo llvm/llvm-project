@@ -35,62 +35,134 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __find_last {
-struct __fn {
-  template <class _Iter, class _Sent, class _Type, class _Proj>
-  _LIBCPP_HIDE_FROM_ABI constexpr static subrange<_Iter>
-  __find_last_impl(_Iter __first, _Sent __last, const _Type& __value, _Proj& __proj) {
-    if (__first == __last) {
+
+template <class _Iter, class _Sent, class _Pred, class _Proj>
+_LIBCPP_HIDE_FROM_ABI constexpr static subrange<_Iter>
+__find_last_impl(_Iter __first, _Sent __last, _Pred __pred, _Proj& __proj) {
+  if (__first == __last) {
+    return subrange<_Iter>(__first, __first);
+  }
+
+  if constexpr (bidirectional_iterator<_Iter>) {
+    auto __last_it = ranges::next(__first, __last);
+    for (auto __it = ranges::prev(__last_it); __it != __first; --__it) {
+      if (__pred(std::invoke(__proj, *__it))) {
+        return subrange<_Iter>(std::move(__it), std::move(__last_it));
+      }
+    }
+    if (__pred(std::invoke(__proj, *__first))) {
+      return subrange<_Iter>(std::move(__first), std::move(__last_it));
+    }
+    return subrange<_Iter>(__last_it, __last_it);
+  } else {
+    bool __found = false;
+    _Iter __found_it;
+    for (; __first != __last; ++__first) {
+      if (__pred(std::invoke(__proj, *__first))) {
+        __found    = true;
+        __found_it = __first;
+      }
+    }
+
+    if (__found) {
+      return subrange<_Iter>(std::move(__found_it), std::move(__first));
+    } else {
       return subrange<_Iter>(__first, __first);
     }
-
-    if constexpr (bidirectional_iterator<_Iter>) {
-      auto __last_it = ranges::next(__first, __last);
-      for (auto __it = ranges::prev(__last_it); __it != __first; --__it) {
-        if (std::invoke(__proj, *__it) == __value) {
-          return subrange<_Iter>(std::move(__it), std::move(__last_it));
-        }
-      }
-      if (std::invoke(__proj, *__first) == __value) {
-        return subrange<_Iter>(std::move(__first), std::move(__last_it));
-      }
-      return subrange<_Iter>(__last_it, __last_it);
-    } else {
-      bool __found = false;
-      _Iter __found_it;
-      for (; __first != __last; ++__first) {
-        if (std::invoke(__proj, *__first) == __value) {
-          __found    = true;
-          __found_it = __first;
-        }
-      }
-
-      if (__found) {
-        return subrange<_Iter>(std::move(__found_it), std::move(__first));
-      } else {
-        return subrange<_Iter>(__first, __first);
-      }
-    }
   }
+}
+
+namespace __find_last {
+struct __fn {
+  template <class _Type>
+  struct __op {
+    const _Type& __value;
+    template <class _Elem>
+    constexpr decltype(auto) operator()(_Elem&& __elem) const {
+      return std::forward<_Elem>(__elem) == __value;
+    }
+  };
 
   template <forward_iterator _Iter, sentinel_for<_Iter> _Sent, class _Type, class _Proj = identity>
     requires indirect_binary_predicate<ranges::equal_to, projected<_Iter, _Proj>, const _Type*>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static subrange<_Iter>
   operator()(_Iter __first, _Sent __last, const _Type& __value, _Proj __proj = {}) {
-    return __find_last_impl(std::move(__first), std::move(__last), __value, __proj);
+    return ranges::__find_last_impl(std::move(__first), std::move(__last), __op<_Type>{__value}, __proj);
   }
 
   template <forward_range _Range, class _Type, class _Proj = identity>
     requires indirect_binary_predicate<ranges::equal_to, projected<iterator_t<_Range>, _Proj>, const _Type*>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static borrowed_subrange_t<_Range>
   operator()(_Range&& __range, const _Type& __value, _Proj __proj = {}) {
-    return __find_last_impl(ranges::begin(__range), ranges::end(__range), __value, __proj);
+    return ranges::__find_last_impl(ranges::begin(__range), ranges::end(__range), __op<_Type>{__value}, __proj);
   }
 };
 } // namespace __find_last
 
+namespace __find_last_if {
+struct __fn {
+  template <class _Pred>
+  struct __op {
+    _Pred& __pred;
+    template <class _Elem>
+    constexpr decltype(auto) operator()(_Elem&& __elem) const {
+      return std::invoke(__pred, std::forward<_Elem>(__elem));
+    }
+  };
+
+  template <forward_iterator _Iter,
+            sentinel_for<_Iter> _Sent,
+            class _Proj = identity,
+            indirect_unary_predicate<projected<_Iter, _Proj>> _Pred>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static subrange<_Iter>
+  operator()(_Iter __first, _Sent __last, _Pred __pred, _Proj __proj = {}) {
+    return ranges::__find_last_impl(std::move(__first), std::move(__last), __op<_Pred>{__pred}, __proj);
+  }
+
+  template <forward_range _Range,
+            class _Proj = identity,
+            indirect_unary_predicate<projected<iterator_t<_Range>, _Proj>> _Pred>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static borrowed_subrange_t<_Range>
+  operator()(_Range&& __range, _Pred __pred, _Proj __proj = {}) {
+    return ranges::__find_last_impl(ranges::begin(__range), ranges::end(__range), __op<_Pred>{__pred}, __proj);
+  }
+};
+} // namespace __find_last_if
+
+namespace __find_last_if_not {
+struct __fn {
+  template <class _Pred>
+  struct __op {
+    _Pred& __pred;
+    template <class _Elem>
+    constexpr decltype(auto) operator()(_Elem&& __elem) const {
+      return !std::invoke(__pred, std::forward<_Elem>(__elem));
+    }
+  };
+
+  template <forward_iterator _Iter,
+            sentinel_for<_Iter> _Sent,
+            class _Proj = identity,
+            indirect_unary_predicate<projected<_Iter, _Proj>> _Pred>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static subrange<_Iter>
+  operator()(_Iter __first, _Sent __last, _Pred __pred, _Proj __proj = {}) {
+    return ranges::__find_last_impl(std::move(__first), std::move(__last), __op<_Pred>{__pred}, __proj);
+  }
+
+  template <forward_range _Range,
+            class _Proj = identity,
+            indirect_unary_predicate<projected<iterator_t<_Range>, _Proj>> _Pred>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static borrowed_subrange_t<_Range>
+  operator()(_Range&& __range, _Pred __pred, _Proj __proj = {}) {
+    return ranges::__find_last_impl(ranges::begin(__range), ranges::end(__range), __op<_Pred>{__pred}, __proj);
+  }
+};
+} // namespace __find_last_if_not
+
 inline namespace __cpo {
-inline constexpr auto find_last = __find_last::__fn{};
+inline constexpr auto find_last        = __find_last::__fn{};
+inline constexpr auto find_last_if     = __find_last_if::__fn{};
+inline constexpr auto find_last_if_not = __find_last_if_not::__fn{};
 } // namespace __cpo
 } // namespace ranges
 

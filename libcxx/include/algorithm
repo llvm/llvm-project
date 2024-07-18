@@ -2010,8 +2010,6 @@ template <class BidirectionalIterator, class Compare>
 #  include <__algorithm/ranges_contains_subrange.h>
 #  include <__algorithm/ranges_ends_with.h>
 #  include <__algorithm/ranges_find_last.h>
-#  include <__algorithm/ranges_find_last_if.h>
-#  include <__algorithm/ranges_find_last_if_not.h>
 #  include <__algorithm/ranges_starts_with.h>
 #endif // _LIBCPP_STD_VER >= 23
 

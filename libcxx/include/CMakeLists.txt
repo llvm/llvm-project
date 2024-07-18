@@ -98,8 +98,6 @@ set(files
   __algorithm/ranges_find_if.h
   __algorithm/ranges_find_if_not.h
   __algorithm/ranges_find_last.h
-  __algorithm/ranges_find_last_if.h
-  __algorithm/ranges_find_last_if_not.h
   __algorithm/ranges_for_each.h
   __algorithm/ranges_for_each_n.h
   __algorithm/ranges_generate.h

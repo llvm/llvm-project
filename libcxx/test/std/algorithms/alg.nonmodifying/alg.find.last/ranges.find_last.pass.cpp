@@ -58,8 +58,6 @@ static_assert(!HasFindLastR<ForwardRangeNotIncrementable, int>);
 static_assert(!HasFindLastR<ForwardRangeNotSentinelSemiregular, int>);
 static_assert(!HasFindLastR<ForwardRangeNotSentinelEqualityComparableWith, int>);
 
-static std::vector<int> comparable_data;
-
 template <class It, class Sent = It>
 constexpr void test_iterators() {
   using ValueT = std::iter_value_t<It>;
@@ -111,9 +109,43 @@ constexpr void test_iterators() {
       assert(ret == a + 3);
     }
   }
+}
 
-  if (!std::is_constant_evaluated())
-    comparable_data.clear();
+template <template <class> class IteratorT>
+constexpr void test_iterator_classes() {
+  { // check that the last element is returned
+    struct S {
+      int comp;
+      int other;
+    };
+    using it = IteratorT<S*>;
+    S a[]    = {{0, 0}, {0, 2}, {0, 1}};
+
+    auto ret = std::ranges::find_last(it(std::begin(a)), it(std::end(a)), 0, &S::comp).begin();
+    assert(ret == it(a + 2));
+    assert((*ret).comp == 0);
+    assert((*ret).other == 1);
+  }
+
+  {
+    // count invocations of the projection
+    using it = IteratorT<int*>;
+
+    int a[]              = {1, 2, 3, 4};
+    int projection_count = 0;
+
+    auto ret = std::ranges::find_last(it(std::begin(a)), it(std::end(a)), 2, [&](int i) {
+                 ++projection_count;
+                 return i;
+               }).begin();
+    assert(ret == it(a + 1));
+    assert(*ret == 2);
+    if (std::bidirectional_iterator<it>) {
+      assert(projection_count == 3);
+    } else {
+      assert(projection_count == 4); // must go through entire list
+    }
+  }
 }
 
 template <class ElementT>
@@ -129,166 +161,45 @@ constexpr bool test() {
   types::for_each(types::type_list<char, wchar_t, int, long, TriviallyComparable<char>, TriviallyComparable<wchar_t>>{},
                   []<class T> {
                     types::for_each(types::forward_iterator_list<T*>{}, []<class Iter> {
-                      if constexpr (std::forward_iterator<Iter>)
-                        test_iterators<Iter>();
+                      test_iterators<Iter>();
                       test_iterators<Iter, sentinel_wrapper<Iter>>();
                       test_iterators<Iter, sized_sentinel<Iter>>();
                     });
                   });
 
+  test_iterator_classes<forward_iterator>();
+  test_iterator_classes<bidirectional_iterator>();
+  test_iterator_classes<random_access_iterator>();
+  test_iterator_classes<std::type_identity_t>();
+
   {
     std::vector<std::vector<int>> vec = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
-    auto view                         = vec | std::views::join;
+
+    auto view = vec | std::views::join;
     assert(std::ranges::find_last(view.begin(), view.end(), 4).begin() == std::next(view.begin(), 3));
     assert(std::ranges::find_last(view, 4).begin() == std::next(view.begin(), 3));
   }
 
-  { // check that the last element is returned
-    {
-      struct S {
-        int comp;
-        int other;
-      };
-      S a[]    = {{0, 0}, {0, 2}, {0, 1}};
-      auto ret = std::ranges::find_last(a, 0, &S::comp).begin();
-      assert(ret == a + 2);
-      assert(ret->comp == 0);
-      assert(ret->other == 1);
-    }
-    {
-      struct S {
-        int comp;
-        int other;
-      };
-      S a[]    = {{0, 0}, {0, 2}, {0, 1}};
-      auto ret = std::ranges::find_last(a, a + 3, 0, &S::comp).begin();
-      assert(ret == a + 2);
-      assert(ret->comp == 0);
-      assert(ret->other == 1);
-    }
-  }
-
   {
     // check that an iterator is returned with a borrowing range
-    int a[]                                            = {1, 2, 3, 4};
+    int a[] = {1, 2, 3, 4};
+
     std::same_as<std::ranges::subrange<int*>> auto ret = std::ranges::find_last(std::views::all(a), 1);
     assert(ret.begin() == a);
     assert(*ret.begin() == 1);
   }
 
   {
-    // count invocations of the projection
-    {
-      int a[]              = {1, 2, 3, 4};
-      int projection_count = 0;
-      auto ret             = std::ranges::find_last(a, a + 4, 2, [&](int i) {
-                   ++projection_count;
-                   return i;
-                 }).begin();
-      assert(ret == a + 1);
-      assert(*ret == 2);
-      assert(projection_count == 3);
-    }
-    {
-      int a[]              = {1, 2, 3, 4};
-      int projection_count = 0;
-      auto ret             = std::ranges::find_last(a, 2, [&](int i) {
-                   ++projection_count;
-                   return i;
-                 }).begin();
-      assert(ret == a + 1);
-      assert(*ret == 2);
-      assert(projection_count == 3);
-    }
+    // check that dangling ranges are dangling
+    std::same_as<std::ranges::dangling> auto ret = std::ranges::find_last(std::vector<int>(), 0);
+    (void)ret;
   }
 
   return true;
 }
 
-template <class IndexT>
-class Comparable {
-  IndexT index_;
-
-public:
-  Comparable(IndexT i)
-      : index_([&]() {
-          IndexT size = static_cast<IndexT>(comparable_data.size());
-          comparable_data.push_back(i);
-          return size;
-        }()) {}
-
-  bool operator==(const Comparable& other) const { return comparable_data[other.index_] == comparable_data[index_]; }
-
-  friend bool operator==(const Comparable& lhs, long long rhs) { return comparable_data[lhs.index_] == rhs; }
-};
-
-void test_deque() {
-  { // empty deque
-    std::deque<int> data;
-    assert(std::ranges::find_last(data, 4).begin() == data.end());
-    assert(std::ranges::find_last(data.begin(), data.end(), 4).begin() == data.end());
-  }
-
-  { // single element - match
-    std::deque<int> data = {4};
-    assert(std::ranges::find_last(data, 4).begin() == data.begin());
-    assert(std::ranges::find_last(data.begin(), data.end(), 4).begin() == data.begin());
-  }
-
-  { // single element - no match
-    std::deque<int> data = {3};
-    assert(std::ranges::find_last(data, 4).begin() == data.end());
-    assert(std::ranges::find_last(data.begin(), data.end(), 4).begin() == data.end());
-  }
-
-  // many elements
-  for (auto size : {2, 3, 1023, 1024, 1025, 2047, 2048, 2049}) {
-    { // last element match
-      std::deque<int> data;
-      data.resize(size);
-      std::fill(data.begin(), data.end(), 3);
-      data[size - 1] = 4;
-      assert(std::ranges::find_last(data, 4).begin() == data.end() - 1);
-      assert(std::ranges::find_last(data.begin(), data.end(), 4).begin() == data.end() - 1);
-    }
-
-    { // second-last element match
-      std::deque<int> data;
-      data.resize(size);
-      std::fill(data.begin(), data.end(), 3);
-      data[size - 2] = 4;
-      assert(std::ranges::find_last(data, 4).begin() == data.end() - 2);
-      assert(std::ranges::find_last(data.begin(), data.end(), 4).begin() == data.end() - 2);
-    }
-
-    { // no match
-      std::deque<int> data;
-      data.resize(size);
-      std::fill(data.begin(), data.end(), 3);
-      assert(std::ranges::find_last(data, 4).begin() == data.end());
-      assert(std::ranges::find_last(data.begin(), data.end(), 4).begin() == data.end());
-    }
-  }
-}
-
 int main(int, char**) {
-  test_deque();
   test();
   static_assert(test());
-
-  types::for_each(types::forward_iterator_list<Comparable<char>*>{}, []<class Iter> {
-    if constexpr (std::forward_iterator<Iter>)
-      test_iterators<Iter>();
-    test_iterators<Iter, sentinel_wrapper<Iter>>();
-    test_iterators<Iter, sized_sentinel<Iter>>();
-  });
-
-  types::for_each(types::forward_iterator_list<Comparable<wchar_t>*>{}, []<class Iter> {
-    if constexpr (std::forward_iterator<Iter>)
-      test_iterators<Iter>();
-    test_iterators<Iter, sentinel_wrapper<Iter>>();
-    test_iterators<Iter, sized_sentinel<Iter>>();
-  });
-
   return 0;
 }
