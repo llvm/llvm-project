@@ -89,11 +89,11 @@ struct NoComparator {};
 // !indirect_strict_weak_order<Comp, projected<I1, Proj1>, projected<I2, Proj2>>
 static_assert(!HasPartialSortCopyIter<NoComparator*, NoComparator*, NoComparator*, NoComparator*>);
 
-#if TEST_STD_VER >= 23
-static_assert(HasPartialSortCopyIter<int*, int*, MoveOnly*, MoveOnly*>);
-#else
+#if TEST_STD_VER < 23
 static_assert(!HasPartialSortCopyIter<int*, int*, MoveOnly*, MoveOnly*>);
-#endif // TEST_STD_VER >= 23
+#else
+static_assert(HasPartialSortCopyIter<int*, int*, MoveOnly*, MoveOnly*>);
+#endif // TEST_STD_VER < 23
 
 // Test constraints of the (range) overload.
 // ======================================================
@@ -128,11 +128,11 @@ static_assert(!HasPartialSortCopyRange<R<int*>, R<const int*>>);
 // !indirect_strict_weak_order<Comp, projected<iterator_t<R1>, Proj1>, projected<iterator_t<R2>, Proj2>>
 static_assert(!HasPartialSortCopyRange<R<NoComparator*>, R<NoComparator*>>);
 
-#if TEST_STD_VER >= 23
-static_assert(HasPartialSortCopyRange<R<int*>, R<MoveOnly*>>);
-#else
+#if TEST_STD_VER < 23
 static_assert(!HasPartialSortCopyRange<R<int*>, R<MoveOnly*>>);
-#endif // TEST_STD_VER >= 23
+#else
+static_assert(HasPartialSortCopyRange<R<int*>, R<MoveOnly*>>);
+#endif // TEST_STD_VER < 23
 
 static_assert(std::is_same_v<std::ranges::partial_sort_copy_result<int, int>, std::ranges::in_out_result<int, int>>);
 
