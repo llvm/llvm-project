@@ -4230,9 +4230,13 @@ private:
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::HostDevice);
       if (!rhs.isVariable()) {
+        mlir::Value base = rhs;
+        if (auto convertOp =
+                mlir::dyn_cast<fir::ConvertOp>(rhs.getDefiningOp()))
+          base = convertOp.getValue();
         // Special case if the rhs is a constant.
-        if (matchPattern(rhs.getDefiningOp(), mlir::m_Constant())) {
-          builder.create<cuf::DataTransferOp>(loc, rhs, lhsVal,
+        if (matchPattern(base.getDefiningOp(), mlir::m_Constant())) {
+          builder.create<cuf::DataTransferOp>(loc, base, lhsVal,
                                               transferKindAttr);
         } else {
           auto associate = hlfir::genAssociateExpr(

@@ -1911,7 +1911,6 @@ libc_math_function(name = "fdimf128")
 libc_math_function(
     name = "ceil",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -1919,7 +1918,6 @@ libc_math_function(
 libc_math_function(
     name = "ceilf",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -1936,7 +1934,6 @@ libc_math_function(name = "ceilf128")
 libc_math_function(
     name = "floor",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -1944,7 +1941,6 @@ libc_math_function(
 libc_math_function(
     name = "floorf",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -1964,7 +1960,6 @@ libc_math_function(name = "ldexpf128")
 libc_math_function(
     name = "trunc",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -1972,7 +1967,6 @@ libc_math_function(
 libc_math_function(
     name = "truncf",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -1984,7 +1978,6 @@ libc_math_function(name = "truncf128")
 libc_math_function(
     name = "round",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -1992,7 +1985,6 @@ libc_math_function(
 libc_math_function(
     name = "roundf",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )

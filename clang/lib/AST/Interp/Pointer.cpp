@@ -152,8 +152,9 @@ APValue Pointer::toAPValue() const {
   Pointer Ptr = *this;
   while (Ptr.isField() || Ptr.isArrayElement()) {
     if (Ptr.isArrayRoot()) {
-        Path.push_back(APValue::LValuePathEntry::ArrayIndex(0));
-        Ptr = Ptr.getBase();
+      Path.push_back(APValue::LValuePathEntry(
+          {Ptr.getFieldDesc()->asDecl(), /*IsVirtual=*/false}));
+      Ptr = Ptr.getBase();
     } else if (Ptr.isArrayElement()) {
       if (Ptr.isOnePastEnd())
         Path.push_back(APValue::LValuePathEntry::ArrayIndex(Ptr.getArray().getNumElems()));
