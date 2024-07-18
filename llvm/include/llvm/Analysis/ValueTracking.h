@@ -863,7 +863,7 @@ isSafeToSpeculativelyExecuteWithOperandsReplaced(const Instruction *I) {
 bool isSafeToSpeculativelyExecuteWithOpcode(
     unsigned Opcode, const Instruction *Inst, const Instruction *CtxI = nullptr,
     AssumptionCache *AC = nullptr, const DominatorTree *DT = nullptr,
-    const TargetLibraryInfo *TLI = nullptr, bool UseInstrInfo = true);
+    const TargetLibraryInfo *TLI = nullptr, bool UseOperandInfo = true);
 
 /// Returns true if the result or effects of the given instructions \p I
 /// depend values not reachable through the def use graph.
