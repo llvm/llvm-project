@@ -13,7 +13,7 @@ class SBSaveCoreOptionsAPICase(TestBase):
         self.assertTrue(error.Success())
         self.assertEqual(options.GetPluginName(), None)
         error = options.SetPluginName("Not a real plugin")
-        self.assertTrue(error.Success())
+        self.assertTrue(error.Fail())
         self.assertEqual(options.GetPluginName(), None)
         error = options.SetPluginName("minidump")
         self.assertTrue(error.Success())
