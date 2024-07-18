@@ -2999,15 +2999,14 @@ WinogradInputTransformOp::getTiledImplementation(OpBuilder &builder,
   tiledOperands.emplace_back(builder.create<tensor::ExtractSliceOp>(
       loc, getInput(), sliceOffsets, sliceSizes, inputStrides));
 
-  sliceOffsets.clear();
-  sliceSizes.clear();
-  if (failed(getResultTilePosition(builder, 1, offsets, sizes, sliceOffsets,
-                                   sliceSizes)))
+  SmallVector<OpFoldResult> resultOffsets, resultSizes;
+  if (failed(getResultTilePosition(builder, 1, offsets, sizes, resultOffsets,
+                                   resultSizes)))
     return failure();
 
   SmallVector<OpFoldResult> outputStrides(6, oneAttr);
   tiledOperands.emplace_back(builder.create<tensor::ExtractSliceOp>(
-      loc, getOutput(), sliceOffsets, sliceSizes, outputStrides));
+      loc, getOutput(), resultOffsets, resultSizes, outputStrides));
 
   SmallVector<Type> resultTypes;
   resultTypes.push_back(tiledOperands[1].getType());
@@ -3128,15 +3127,14 @@ FailureOr<TilingResult> WinogradOutputTransformOp::getTiledImplementation(
   tiledOperands.emplace_back(builder.create<tensor::ExtractSliceOp>(
       loc, getValue(), sliceOffsets, sliceSizes, sliceStrides));
 
-  sliceOffsets.clear();
-  sliceSizes.clear();
-  if (failed(getResultTilePosition(builder, 1, offsets, sizes, sliceOffsets,
-                                   sliceSizes)))
+  SmallVector<OpFoldResult> resultOffsets, resultSizes;
+  if (failed(getResultTilePosition(builder, 1, offsets, sizes, resultOffsets,
+                                   resultSizes)))
     return failure();
 
   SmallVector<OpFoldResult> strides(4, oneAttr);
   tiledOperands.emplace_back(builder.create<tensor::ExtractSliceOp>(
-      loc, getOutput(), sliceOffsets, sliceSizes, strides));
+      loc, getOutput(), resultOffsets, resultSizes, strides));
 
   SmallVector<Type> resultTypes;
   resultTypes.push_back(tiledOperands[1].getType());
