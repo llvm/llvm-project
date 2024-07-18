@@ -8024,7 +8024,7 @@ def source_date_epoch : Separate<["-"], "source-date-epoch">,
 // CUDA Options
 //===----------------------------------------------------------------------===//
 
-let Visibility = [CC1Option, FC1Option] in {
+let Visibility = [CC1Option] in {
 
 def fcuda_is_device : Flag<["-"], "fcuda-is-device">,
   HelpText<"Generate code for CUDA device">,
@@ -8039,7 +8039,7 @@ def fno_cuda_host_device_constexpr : Flag<["-"], "fno-cuda-host-device-constexpr
   HelpText<"Don't treat unattributed constexpr functions as __host__ __device__.">,
   MarshallingInfoNegativeFlag<LangOpts<"CUDAHostDeviceConstexpr">>;
 
-} // let Visibility = [CC1Option, FC1Option]
+} // let Visibility = [CC1Option]
 
 //===----------------------------------------------------------------------===//
 // OpenMP Options
