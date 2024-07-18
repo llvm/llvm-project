@@ -124,7 +124,7 @@ class SIFixSGPRCopies : public MachineFunctionPass {
   SmallVector<MachineInstr*, 4> RegSequences;
   SmallVector<MachineInstr*, 4> PHINodes;
   SmallVector<MachineInstr*, 4> S2VCopies;
-  unsigned NextVGPRToSGPRCopyID;
+  unsigned NextVGPRToSGPRCopyID = 0;
   MapVector<unsigned, V2SCopyInfo> V2SCopies;
   DenseMap<MachineInstr *, SetVector<unsigned>> SiblingPenalty;
 
@@ -135,7 +135,7 @@ public:
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
 
-  SIFixSGPRCopies() : MachineFunctionPass(ID), NextVGPRToSGPRCopyID(0) {}
+  SIFixSGPRCopies() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   void fixSCCCopies(MachineFunction &MF);

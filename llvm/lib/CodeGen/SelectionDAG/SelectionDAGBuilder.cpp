@@ -44,7 +44,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -9453,6 +9453,14 @@ void SelectionDAGBuilder::LowerCallSiteWithPtrAuthBundle(
   assert(Key->getType()->isIntegerTy(32) && "Invalid ptrauth key");
   assert(Discriminator->getType()->isIntegerTy(64) &&
          "Invalid ptrauth discriminator");
+
+  // Look through ptrauth constants to find the raw callee.
+  // Do a direct unauthenticated call if we found it and everything matches.
+  if (const auto *CalleeCPA = dyn_cast<ConstantPtrAuth>(CalleeV))
+    if (CalleeCPA->isKnownCompatibleWith(Key, Discriminator,
+                                         DAG.getDataLayout()))
+      return LowerCallTo(CB, getValue(CalleeCPA->getPointer()), CB.isTailCall(),
+                         CB.isMustTailCall(), EHPadBB);
 
   // Functions should never be ptrauth-called directly.
   assert(!isa<Function>(CalleeV) && "invalid direct ptrauth call");

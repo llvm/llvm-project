@@ -667,7 +667,7 @@ class SizeClassAllocator64 {
     u64 last_released_bytes;
   };
 
-  struct ALIGNED(SANITIZER_CACHE_LINE_SIZE) RegionInfo {
+  struct alignas(SANITIZER_CACHE_LINE_SIZE) RegionInfo {
     Mutex mutex;
     uptr num_freed_chunks;  // Number of elements in the freearray.
     uptr mapped_free_array;  // Bytes mapped for freearray.

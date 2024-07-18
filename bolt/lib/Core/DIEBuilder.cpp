@@ -556,7 +556,17 @@ DWARFDie DIEBuilder::resolveDIEReference(
     const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
     DWARFUnit *&RefCU, DWARFDebugInfoEntry &DwarfDebugInfoEntry) {
   assert(RefValue.isFormClass(DWARFFormValue::FC_Reference));
-  uint64_t RefOffset = *RefValue.getAsReference();
+  uint64_t RefOffset;
+  if (std::optional<uint64_t> Off = RefValue.getAsRelativeReference()) {
+    RefOffset = RefValue.getUnit()->getOffset() + *Off;
+  } else if (Off = RefValue.getAsDebugInfoReference(); Off) {
+    RefOffset = *Off;
+  } else {
+    BC.errs()
+        << "BOLT-WARNING: [internal-dwarf-error]: unsupported reference type: "
+        << FormEncodingString(RefValue.getForm()) << ".\n";
+    return DWARFDie();
+  }
   return resolveDIEReference(AttrSpec, RefOffset, RefCU, DwarfDebugInfoEntry);
 }
 
@@ -607,7 +617,13 @@ void DIEBuilder::cloneDieReferenceAttribute(
     DIE &Die, const DWARFUnit &U, const DWARFDie &InputDIE,
     const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
     const DWARFFormValue &Val) {
-  const uint64_t Ref = *Val.getAsReference();
+  uint64_t Ref;
+  if (std::optional<uint64_t> Off = Val.getAsRelativeReference())
+    Ref = Val.getUnit()->getOffset() + *Off;
+  else if (Off = Val.getAsDebugInfoReference(); Off)
+    Ref = *Off;
+  else
+    return;
 
   DIE *NewRefDie = nullptr;
   DWARFUnit *RefUnit = nullptr;

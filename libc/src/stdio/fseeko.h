@@ -11,11 +11,12 @@
 
 #include "hdr/types/FILE.h"
 #include "hdr/types/off_t.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int fseeko(::FILE *stream, off_t offset, int whence);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_FSEEKO_H

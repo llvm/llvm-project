@@ -60,6 +60,8 @@ public:
     UndefinedTableKind,
     UndefinedTagKind,
     LazyKind,
+    SharedFunctionKind,
+    SharedDataKind,
   };
 
   Kind kind() const { return symbolKind; }
@@ -74,6 +76,9 @@ public:
   }
 
   bool isLazy() const { return symbolKind == LazyKind; }
+  bool isShared() const {
+    return symbolKind == SharedFunctionKind || symbolKind == SharedDataKind;
+  }
 
   bool isLocal() const;
   bool isWeak() const;
@@ -190,6 +195,7 @@ class FunctionSymbol : public Symbol {
 public:
   static bool classof(const Symbol *s) {
     return s->kind() == DefinedFunctionKind ||
+           s->kind() == SharedFunctionKind ||
            s->kind() == UndefinedFunctionKind;
   }
 
@@ -285,7 +291,8 @@ public:
 class DataSymbol : public Symbol {
 public:
   static bool classof(const Symbol *s) {
-    return s->kind() == DefinedDataKind || s->kind() == UndefinedDataKind;
+    return s->kind() == DefinedDataKind || s->kind() == UndefinedDataKind ||
+           s->kind() == SharedDataKind;
   }
 
 protected:
@@ -321,6 +328,12 @@ public:
 
 protected:
   uint64_t size = 0;
+};
+
+class SharedData : public DataSymbol {
+public:
+  SharedData(StringRef name, uint32_t flags, InputFile *f)
+      : DataSymbol(name, SharedDataKind, flags, f) {}
 };
 
 class UndefinedData : public DataSymbol {
@@ -486,6 +499,16 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == UndefinedTagKind; }
 };
 
+class SharedFunctionSymbol : public FunctionSymbol {
+public:
+  SharedFunctionSymbol(StringRef name, uint32_t flags, InputFile *file,
+                       const WasmSignature *sig)
+      : FunctionSymbol(name, SharedFunctionKind, flags, file, sig) {}
+  static bool classof(const Symbol *s) {
+    return s->kind() == SharedFunctionKind;
+  }
+};
+
 // LazySymbol symbols represent symbols in object files between --start-lib and
 // --end-lib options. LLD also handles traditional archives as if all the files
 // in the archive are surrounded by --start-lib and --end-lib.
@@ -630,6 +653,7 @@ union SymbolUnion {
   alignas(UndefinedGlobal) char i[sizeof(UndefinedGlobal)];
   alignas(UndefinedTable) char j[sizeof(UndefinedTable)];
   alignas(SectionSymbol) char k[sizeof(SectionSymbol)];
+  alignas(SharedFunctionSymbol) char l[sizeof(SharedFunctionSymbol)];
 };
 
 // It is important to keep the size of SymbolUnion small for performance and

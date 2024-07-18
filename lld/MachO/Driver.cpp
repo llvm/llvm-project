@@ -1247,6 +1247,9 @@ static void gatherInputSections() {
       // contrast, EH frames are handled like regular ConcatInputSections.)
       if (section->name == section_names::compactUnwind)
         continue;
+      // Addrsig sections contain metadata only needed at link time.
+      if (section->name == section_names::addrSig)
+        continue;
       for (const Subsection &subsection : section->subsections)
         addInputSection(subsection.isec);
     }

@@ -1688,6 +1688,7 @@ static constexpr std::array kExplicitAttributes{
     StringLiteral("noinline"),
     StringLiteral("optnone"),
     StringLiteral("target-features"),
+    StringLiteral("tune-cpu"),
     StringLiteral("unsafe-fp-math"),
     StringLiteral("vscale_range"),
 };
@@ -1803,6 +1804,10 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   if (llvm::Attribute attr = func->getFnAttribute("target-cpu");
       attr.isStringAttribute())
     funcOp.setTargetCpuAttr(StringAttr::get(context, attr.getValueAsString()));
+
+  if (llvm::Attribute attr = func->getFnAttribute("tune-cpu");
+      attr.isStringAttribute())
+    funcOp.setTuneCpuAttr(StringAttr::get(context, attr.getValueAsString()));
 
   if (llvm::Attribute attr = func->getFnAttribute("target-features");
       attr.isStringAttribute())

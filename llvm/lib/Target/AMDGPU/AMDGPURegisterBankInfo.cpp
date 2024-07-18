@@ -111,7 +111,7 @@ public:
     B.setChangeObserver(*this);
   }
 
-  ~ApplyRegBankMapping() {
+  ~ApplyRegBankMapping() override {
     for (MachineInstr *MI : NewInsts)
       applyBank(*MI);
 
@@ -199,7 +199,7 @@ public:
   }
 };
 
-}
+} // anonymous namespace
 
 AMDGPURegisterBankInfo::AMDGPURegisterBankInfo(const GCNSubtarget &ST)
     : Subtarget(ST), TRI(Subtarget.getRegisterInfo()),

@@ -65,9 +65,10 @@ static const Function *getCalleeFunction(const MachineOperand &Op) {
     assert(Op.getImm() == 0);
     return nullptr;
   }
-  if (auto *GA = dyn_cast<GlobalAlias>(Op.getGlobal()))
-    return cast<Function>(GA->getOperand(0));
-  return cast<Function>(Op.getGlobal());
+  const GlobalValue *GV = Op.getGlobal();
+  while (auto *GA = dyn_cast<GlobalAlias>(GV))
+    GV = cast<GlobalValue>(GA->getOperand(0));
+  return cast<Function>(GV);
 }
 
 static bool hasAnyNonFlatUseOfReg(const MachineRegisterInfo &MRI,
@@ -290,13 +291,11 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
         case AMDGPU::SRC_PRIVATE_BASE:
         case AMDGPU::SRC_PRIVATE_LIMIT_LO:
         case AMDGPU::SRC_PRIVATE_LIMIT:
+        case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
         case AMDGPU::SGPR_NULL:
         case AMDGPU::SGPR_NULL64:
         case AMDGPU::MODE:
           continue;
-
-        case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
-          llvm_unreachable("src_pops_exiting_wave_id should not be used");
 
         case AMDGPU::NoRegister:
           assert(MI.isDebugInstr() &&

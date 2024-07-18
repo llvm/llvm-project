@@ -1643,12 +1643,12 @@
 // CHECK-ZFBFMIN-EXT: __riscv_zfbfmin 1000000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
-// RUN:   -march=rv32i_zicfilp0p4 -E -dM %s \
+// RUN:   -march=rv32i_zicfilp1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZICFILP-EXT %s
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
-// RUN:   -march=rv64i_zicfilp0p4 -E -dM %s \
+// RUN:   -march=rv64i_zicfilp1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZICFILP-EXT %s
-// CHECK-ZICFILP-EXT: __riscv_zicfilp 4000{{$}}
+// CHECK-ZICFILP-EXT: __riscv_zicfilp 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32iztso1p0 -E -dM %s \
@@ -1675,12 +1675,12 @@
 // CHECK-ZVFBFWMA-EXT: __riscv_zvfbfwma 1000000{{$}}
 
 // RUN: %clang -target riscv32 -menable-experimental-extensions \
-// RUN:   -march=rv32izicfiss0p4 -E -dM %s \
+// RUN:   -march=rv32izicfiss1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZICFISS-EXT %s
 // RUN: %clang -target riscv64 -menable-experimental-extensions \
-// RUN:   -march=rv64izicfiss0p4 -E -dM %s \
+// RUN:   -march=rv64izicfiss1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZICFISS-EXT %s
-// CHECK-ZICFISS-EXT: __riscv_zicfiss 4000{{$}}
+// CHECK-ZICFISS-EXT: __riscv_zicfiss 1000000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
 // RUN:   -march=rv32i_ssnpm1p0 -E -dM %s \

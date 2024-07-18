@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ABIInfoImpl.h"
 #include "CGCUDARuntime.h"
 #include "CGCXXABI.h"
 #include "CGCall.h"
@@ -1986,6 +1987,9 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
     return EmitAtomicLoad(AtomicLValue, Loc).getScalarVal();
   }
 
+  Addr =
+      Addr.withElementType(convertTypeForLoadStore(Ty, Addr.getElementType()));
+
   llvm::LoadInst *Load = Builder.CreateLoad(Addr, Volatile);
   if (isNontemporal) {
     llvm::MDNode *Node = llvm::MDNode::get(
@@ -2008,27 +2012,33 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
   return EmitFromMemory(Load, Ty);
 }
 
+/// Converts a scalar value from its primary IR type (as returned
+/// by ConvertType) to its load/store type (as returned by
+/// convertTypeForLoadStore).
 llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
-  // Bool has a different representation in memory than in registers.
-  if (hasBooleanRepresentation(Ty)) {
-    // This should really always be an i1, but sometimes it's already
-    // an i8, and it's awkward to track those cases down.
-    if (Value->getType()->isIntegerTy(1))
-      return Builder.CreateZExt(Value, ConvertTypeForMem(Ty), "frombool");
-    assert(Value->getType()->isIntegerTy(getContext().getTypeSize(Ty)) &&
-           "wrong value rep of bool");
+  if (hasBooleanRepresentation(Ty) || Ty->isBitIntType()) {
+    llvm::Type *StoreTy = convertTypeForLoadStore(Ty, Value->getType());
+    bool Signed = Ty->isSignedIntegerOrEnumerationType();
+    return Builder.CreateIntCast(Value, StoreTy, Signed, "storedv");
+  }
+
+  if (Ty->isExtVectorBoolType()) {
+    llvm::Type *StoreTy = convertTypeForLoadStore(Ty, Value->getType());
+    // Expand to the memory bit width.
+    unsigned MemNumElems = StoreTy->getPrimitiveSizeInBits();
+    // <N x i1> --> <P x i1>.
+    Value = emitBoolVecConversion(Value, MemNumElems, "insertvec");
+    // <P x i1> --> iP.
+    Value = Builder.CreateBitCast(Value, StoreTy);
   }
 
   return Value;
 }
 
+/// Converts a scalar value from its load/store type (as returned
+/// by convertTypeForLoadStore) to its primary IR type (as returned
+/// by ConvertType).
 llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
-  // Bool has a different representation in memory than in registers.
-  if (hasBooleanRepresentation(Ty)) {
-    assert(Value->getType()->isIntegerTy(getContext().getTypeSize(Ty)) &&
-           "wrong value rep of bool");
-    return Builder.CreateTrunc(Value, Builder.getInt1Ty(), "tobool");
-  }
   if (Ty->isExtVectorBoolType()) {
     const auto *RawIntTy = Value->getType();
     // Bitcast iP --> <P x i1>.
@@ -2039,6 +2049,11 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
     llvm::Type *ValTy = ConvertType(Ty);
     unsigned ValNumElems = cast<llvm::FixedVectorType>(ValTy)->getNumElements();
     return emitBoolVecConversion(V, ValNumElems, "extractvec");
+  }
+
+  if (hasBooleanRepresentation(Ty) || Ty->isBitIntType()) {
+    llvm::Type *ResTy = ConvertType(Ty);
+    return Builder.CreateTrunc(Value, ResTy, "loadedv");
   }
 
   return Value;
@@ -2093,17 +2108,10 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
   llvm::Type *SrcTy = Value->getType();
   if (const auto *ClangVecTy = Ty->getAs<VectorType>()) {
     auto *VecTy = dyn_cast<llvm::FixedVectorType>(SrcTy);
-    if (VecTy && ClangVecTy->isExtVectorBoolType()) {
-      auto *MemIntTy = cast<llvm::IntegerType>(Addr.getElementType());
-      // Expand to the memory bit width.
-      unsigned MemNumElems = MemIntTy->getPrimitiveSizeInBits();
-      // <N x i1> --> <P x i1>.
-      Value = emitBoolVecConversion(Value, MemNumElems, "insertvec");
-      // <P x i1> --> iP.
-      Value = Builder.CreateBitCast(Value, MemIntTy);
-    } else if (!CGM.getCodeGenOpts().PreserveVec3Type) {
+    if (!CGM.getCodeGenOpts().PreserveVec3Type) {
       // Handle vec3 special.
-      if (VecTy && cast<llvm::FixedVectorType>(VecTy)->getNumElements() == 3) {
+      if (VecTy && !ClangVecTy->isExtVectorBoolType() &&
+          cast<llvm::FixedVectorType>(VecTy)->getNumElements() == 3) {
         // Our source is a vec3, do a shuffle vector to make it a vec4.
         Value = Builder.CreateShuffleVector(Value, ArrayRef<int>{0, 1, 2, -1},
                                             "extractVec");
@@ -2477,7 +2485,7 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
 void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
                                                      llvm::Value **Result) {
   const CGBitFieldInfo &Info = Dst.getBitFieldInfo();
-  llvm::Type *ResLTy = ConvertTypeForMem(Dst.getType());
+  llvm::Type *ResLTy = convertTypeForLoadStore(Dst.getType());
   Address Ptr = Dst.getBitFieldAddress();
 
   // Get the source value, truncated to the width of the bit-field.
@@ -3842,9 +3850,10 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
     llvm::CallInst *TrapCall = Builder.CreateCall(
         CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
-        llvm::ConstantInt::get(CGM.Int8Ty, ClSanitizeDebugDeoptimization
-                                               ? TrapBB->getParent()->size()
-                                               : CheckHandlerID));
+        llvm::ConstantInt::get(CGM.Int8Ty,
+                               ClSanitizeDebugDeoptimization
+                                   ? TrapBB->getParent()->size()
+                                   : static_cast<uint64_t>(CheckHandlerID)));
 
     if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
       auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",
@@ -4749,7 +4758,7 @@ static Address emitAddrOfZeroSizeField(CodeGenFunction &CGF, Address Base,
 /// The resulting address doesn't necessarily have the right type.
 static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
                                       const FieldDecl *field) {
-  if (field->isZeroSize(CGF.getContext()))
+  if (isEmptyFieldForLayout(CGF.getContext(), field))
     return emitAddrOfZeroSizeField(CGF, base, field);
 
   const RecordDecl *rec = field->getParent();
