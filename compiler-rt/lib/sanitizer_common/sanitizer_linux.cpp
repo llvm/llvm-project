@@ -2121,59 +2121,59 @@ bool SignalContext::IsTrueFaultingAddress() const {
 UNUSED
 static const char *RegNumToRegName(int reg) {
   switch (reg) {
-#if defined(__x86_64__)
-  case REG_RAX:
-    return "rax";
-  case REG_RBX:
-    return "rbx";
-  case REG_RCX:
-    return "rcx";
-  case REG_RDX:
-    return "rdx";
-  case REG_RDI:
-    return "rdi";
-  case REG_RSI:
-    return "rsi";
-  case REG_RBP:
-    return "rbp";
-  case REG_RSP:
-    return "rsp";
-  case REG_R8:
-    return "r8";
-  case REG_R9:
-    return "r9";
-  case REG_R10:
-    return "r10";
-  case REG_R11:
-    return "r11";
-  case REG_R12:
-    return "r12";
-  case REG_R13:
-    return "r13";
-  case REG_R14:
-    return "r14";
-  case REG_R15:
-    return "r15";
-#elif defined(__i386__)
-  case REG_EAX:
-    return "eax";
-  case REG_EBX:
-    return "ebx";
-  case REG_ECX:
-    return "ecx";
-  case REG_EDX:
-    return "edx";
-  case REG_EDI:
-    return "edi";
-  case REG_ESI:
-    return "esi";
-  case REG_EBP:
-    return "ebp";
-  case REG_ESP:
-    return "esp";
-#endif
-  default:
-    return NULL;
+#  if defined(__x86_64__)
+    case REG_RAX:
+      return "rax";
+    case REG_RBX:
+      return "rbx";
+    case REG_RCX:
+      return "rcx";
+    case REG_RDX:
+      return "rdx";
+    case REG_RDI:
+      return "rdi";
+    case REG_RSI:
+      return "rsi";
+    case REG_RBP:
+      return "rbp";
+    case REG_RSP:
+      return "rsp";
+    case REG_R8:
+      return "r8";
+    case REG_R9:
+      return "r9";
+    case REG_R10:
+      return "r10";
+    case REG_R11:
+      return "r11";
+    case REG_R12:
+      return "r12";
+    case REG_R13:
+      return "r13";
+    case REG_R14:
+      return "r14";
+    case REG_R15:
+      return "r15";
+#  elif defined(__i386__)
+    case REG_EAX:
+      return "eax";
+    case REG_EBX:
+      return "ebx";
+    case REG_ECX:
+      return "ecx";
+    case REG_EDX:
+      return "edx";
+    case REG_EDI:
+      return "edi";
+    case REG_ESI:
+      return "esi";
+    case REG_EBP:
+      return "ebp";
+    case REG_ESP:
+      return "esp";
+#  endif
+    default:
+      return NULL;
   }
   return NULL;
 }
@@ -2181,18 +2181,18 @@ static const char *RegNumToRegName(int reg) {
 UNUSED
 static ALWAYS_INLINE void DumpSingleReg(ucontext_t *ctx, int RegNum) {
   const char *RegName = RegNumToRegName(RegNum);
-#if defined(__x86_64__)
+#  if defined(__x86_64__)
   Printf("%s%s = 0x%016llx  ", internal_strlen(RegName) == 2 ? " " : "",
          RegName, ctx->uc_mcontext.gregs[RegNum]);
-#elif defined(__i386__)
+#  elif defined(__i386__)
   Printf("%s = 0x%08x  ", RegName, ctx->uc_mcontext.gregs[RegNum]);
-#endif
+#  endif
 }
 
 void SignalContext::DumpAllRegisters(void *context) {
 #  if SANITIZER_LINUX
   ucontext_t *ucontext = (ucontext_t *)context;
-#if defined(__x86_64__)
+#    if defined(__x86_64__)
   Report("Register values:\n");
   DumpSingleReg(ucontext, REG_RAX);
   DumpSingleReg(ucontext, REG_RBX);
@@ -2214,7 +2214,7 @@ void SignalContext::DumpAllRegisters(void *context) {
   DumpSingleReg(ucontext, REG_R14);
   DumpSingleReg(ucontext, REG_R15);
   Printf("\n");
-#elif defined(__i386__)
+#    elif defined(__i386__)
   // Duplication of this report print is caused by partial support
   // of register values dumping. In case of unsupported yet architecture let's
   // avoid printing 'Register values:' without actual values in the following
