@@ -15522,24 +15522,8 @@ void BoUpSLP::computeMinimumValueSizes() {
   auto ComputeMaxBitWidth = [&](const TreeEntry &E, bool IsTopRoot,
                                 bool IsProfitableToDemoteRoot, unsigned Opcode,
                                 unsigned Limit, bool IsTruncRoot,
-                                bool IsSignedCmp) -> unsigned {
+                                bool IsSignedCmp) {
     ToDemote.clear();
-    // Check if the root is trunc and the next node is gather/buildvector, then
-    // keep trunc in scalars, which is free in most cases.
-    if (E.isGather() && IsTruncRoot && E.UserTreeIndices.size() == 1 &&
-        E.Idx > (IsStoreOrInsertElt ? 2 : 1)) {
-      ToDemote.push_back(E.Idx);
-      const TreeEntry *UserTE = E.UserTreeIndices.back().UserTE;
-      auto It = MinBWs.find(UserTE);
-      if (It != MinBWs.end())
-        return It->second.first;
-      unsigned MaxBitWidth =
-          bit_ceil(DL->getTypeSizeInBits(UserTE->Scalars.front()->getType()));
-      if (MaxBitWidth < 8 && MaxBitWidth > 1)
-        MaxBitWidth = 8;
-      return MaxBitWidth;
-    }
-
     unsigned VF = E.getVectorFactor();
     auto *TreeRootIT = dyn_cast<IntegerType>(E.Scalars.front()->getType());
     if (!TreeRootIT || !Opcode)
