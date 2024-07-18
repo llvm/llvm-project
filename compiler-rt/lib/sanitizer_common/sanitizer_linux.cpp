@@ -2179,7 +2179,7 @@ static const char *RegNumToRegName(int reg) {
 }
 
 UNUSED
-static ALWAYS_INLINE void DumpSingleReg(ucontext_t *ctx, int RegNum) {
+static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
   const char *RegName = RegNumToRegName(RegNum);
 #  if defined(__x86_64__)
   Printf("%s%s = 0x%016llx  ", internal_strlen(RegName) == 2 ? " " : "",
