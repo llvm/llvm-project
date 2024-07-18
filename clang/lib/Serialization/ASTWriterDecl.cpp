@@ -527,16 +527,12 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
   BitsPacker EnumDeclBits;
   EnumDeclBits.addBits(D->getNumPositiveBits(), /*BitWidth=*/8);
   EnumDeclBits.addBits(D->getNumNegativeBits(), /*BitWidth=*/8);
-  bool ShouldSkipCheckingODR = shouldSkipCheckingODR(D);
-  EnumDeclBits.addBit(ShouldSkipCheckingODR);
   EnumDeclBits.addBit(D->isScoped());
   EnumDeclBits.addBit(D->isScopedUsingClassTag());
   EnumDeclBits.addBit(D->isFixed());
   Record.push_back(EnumDeclBits);
 
-  // We only perform ODR checks for decls not in GMF.
-  if (!ShouldSkipCheckingODR)
-    Record.push_back(D->getODRHash());
+  Record.push_back(D->getODRHash());
 
   if (MemberSpecializationInfo *MemberInfo = D->getMemberSpecializationInfo()) {
     Record.AddDeclRef(MemberInfo->getInstantiatedFrom());
@@ -553,7 +549,7 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
       !D->isTopLevelDeclInObjCContainer() &&
       !CXXRecordDecl::classofKind(D->getKind()) &&
       !D->getIntegerTypeSourceInfo() && !D->getMemberSpecializationInfo() &&
-      !needsAnonymousDeclarationNumber(D) && !shouldSkipCheckingODR(D) &&
+      !needsAnonymousDeclarationNumber(D) &&
       D->getDeclName().getNameKind() == DeclarationName::Identifier)
     AbbrevToUse = Writer.getDeclEnumAbbrev();
 
@@ -719,8 +715,6 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   // FIXME: stable encoding
   FunctionDeclBits.addBits(llvm::to_underlying(D->getLinkageInternal()), 3);
   FunctionDeclBits.addBits((uint32_t)D->getStorageClass(), /*BitWidth=*/3);
-  bool ShouldSkipCheckingODR = shouldSkipCheckingODR(D);
-  FunctionDeclBits.addBit(ShouldSkipCheckingODR);
   FunctionDeclBits.addBit(D->isInlineSpecified());
   FunctionDeclBits.addBit(D->isInlined());
   FunctionDeclBits.addBit(D->hasSkippedBody());
@@ -746,9 +740,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   if (D->isExplicitlyDefaulted())
     Record.AddSourceLocation(D->getDefaultLoc());
 
-  // We only perform ODR checks for decls not in GMF.
-  if (!ShouldSkipCheckingODR)
-    Record.push_back(D->getODRHash());
+  Record.push_back(D->getODRHash());
 
   if (D->isDefaulted() || D->isDeletedAsWritten()) {
     if (auto *FDI = D->getDefalutedOrDeletedInfo()) {
@@ -1560,8 +1552,7 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
       D->getFirstDecl() == D->getMostRecentDecl() && !D->isInvalidDecl() &&
       !D->hasAttrs() && !D->isTopLevelDeclInObjCContainer() &&
       D->getDeclName().getNameKind() == DeclarationName::Identifier &&
-      !shouldSkipCheckingODR(D) && !D->hasExtInfo() &&
-      !D->isExplicitlyDefaulted()) {
+      !D->hasExtInfo() && !D->isExplicitlyDefaulted()) {
     if (D->getTemplatedKind() == FunctionDecl::TK_NonTemplate ||
         D->getTemplatedKind() == FunctionDecl::TK_FunctionTemplate ||
         D->getTemplatedKind() == FunctionDecl::TK_MemberSpecialization ||

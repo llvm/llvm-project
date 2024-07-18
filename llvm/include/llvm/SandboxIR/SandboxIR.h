@@ -61,6 +61,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/SandboxIR/Tracker.h"
 #include "llvm/SandboxIR/Use.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iterator>
@@ -171,6 +172,7 @@ protected:
 
   friend class Context; // For getting `Val`.
   friend class User;    // For getting `Val`.
+  friend class Use;     // For getting `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -641,6 +643,8 @@ public:
 class Context {
 protected:
   LLVMContext &LLVMCtx;
+  Tracker IRTracker;
+
   /// Maps LLVM Value to the corresponding sandboxir::Value. Owns all
   /// SandboxIR objects.
   DenseMap<llvm::Value *, std::unique_ptr<sandboxir::Value>>
@@ -679,6 +683,14 @@ protected:
 
 public:
   Context(LLVMContext &LLVMCtx) : LLVMCtx(LLVMCtx) {}
+
+  Tracker &getTracker() { return IRTracker; }
+  /// Convenience function for `getTracker().save()`
+  void save() { IRTracker.save(); }
+  /// Convenience function for `getTracker().revert()`
+  void revert() { IRTracker.revert(); }
+  /// Convenience function for `getTracker().accept()`
+  void accept() { IRTracker.accept(); }
 
   sandboxir::Value *getValue(llvm::Value *V) const;
   const sandboxir::Value *getValue(const llvm::Value *V) const {

@@ -1463,7 +1463,8 @@ bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     AMDGPUInstPrinter::printRegOperand(MO.getReg(), O,
                                        *MF->getSubtarget().getRegisterInfo());
     return false;
-  } else if (MO.isImm()) {
+  }
+  if (MO.isImm()) {
     int64_t Val = MO.getImm();
     if (AMDGPU::isInlinableIntLiteral(Val)) {
       O << Val;
