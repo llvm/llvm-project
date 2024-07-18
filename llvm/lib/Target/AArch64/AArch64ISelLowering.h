@@ -907,6 +907,8 @@ public:
 
   bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
 
+  bool shouldExpandCmpUsingSelects() const override { return true; }
+
   bool isComplexDeinterleavingSupported() const override;
   bool isComplexDeinterleavingOperationSupported(
       ComplexDeinterleavingOperation Operation, Type *Ty) const override;

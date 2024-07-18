@@ -936,6 +936,11 @@ public:
 
   bool shouldExpandReduction(const IntrinsicInst *II) const { return true; }
 
+  TTI::ReductionShuffle
+  getPreferredExpandedReductionShuffle(const IntrinsicInst *II) const {
+    return TTI::ReductionShuffle::SplitHalf;
+  }
+
   unsigned getGISelRematGlobalCost() const { return 1; }
 
   unsigned getMinTripCountTailFoldingThreshold() const { return 0; }

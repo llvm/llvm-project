@@ -177,7 +177,7 @@ static VGPRRegisterRegAlloc greedyRegAllocVGPR(
 
 static VGPRRegisterRegAlloc fastRegAllocVGPR(
   "fast", "fast register allocator", createFastVGPRRegisterAllocator);
-}
+} // anonymous namespace
 
 static cl::opt<bool>
 EnableEarlyIfConversion("amdgpu-early-ifcvt", cl::Hidden,

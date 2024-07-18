@@ -9,6 +9,11 @@
 // RUN: ld.lld %t-a.o %t-b.o -o %t
 // RUN: %lldb %t -o "target variable --ptr-depth 1 --show-types both_a both_b" -o exit | FileCheck %s
 
+// RUN: %clang --target=x86_64-pc-linux -c %s -o %t-a.o -g -fdebug-types-section -DFILE_A
+// RUN: %clang --target=x86_64-pc-linux -c %s -o %t-b.o -g -fdebug-types-section -DFILE_B
+// RUN: ld.lld %t-a.o %t-b.o -o %t
+// RUN: %lldb %t -o "target variable --ptr-depth 1 --show-types both_a both_b" -o exit | FileCheck %s
+
 // CHECK: (lldb) target variable
 // CHECK-NEXT: (ReferencesBoth<'A'>) both_a = {
 // CHECK-NEXT:   (Outer<'A'>::Inner *) a = 0x{{[0-9A-Fa-f]*}} {}
@@ -19,13 +24,11 @@
 // CHECK-NEXT:   (Outer<'B'>::Inner *) b = 0x{{[0-9A-Fa-f]*}} {}
 // CHECK-NEXT: }
 
-template<char C>
-struct Outer {
+template <char C> struct Outer {
   struct Inner {};
 };
 
-template<char C>
-struct ReferencesBoth {
+template <char C> struct ReferencesBoth {
   Outer<'A'>::Inner *a;
   Outer<'B'>::Inner *b;
 };

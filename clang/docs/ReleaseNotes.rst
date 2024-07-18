@@ -40,8 +40,6 @@ code bases.
 - Setting the deprecated CMake variable ``GCC_INSTALL_PREFIX`` (which sets the
   default ``--gcc-toolchain=``) now leads to a fatal error.
 
-- The ``le32`` and ``le64`` targets have been removed.
-
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
@@ -282,6 +280,9 @@ C++2c Feature Support
 - Implemented `P2809R3: Trivial infinite loops are not Undefined Behavior <https://wg21.link/P2809R3>`_.
 
 - Implemented `P3144R2 Deleting a Pointer to an Incomplete Type Should be Ill-formed <https://wg21.link/P3144R2>`_.
+
+- Implemented `P2963R3 Ordering of constraints involving fold expressions <https://wg21.link/P2963R3>`_.
+
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1084,6 +1085,25 @@ X86 Support
 ^^^^^^^^^^^
 
 - Remove knl/knm specific ISA supports: AVX512PF, AVX512ER, PREFETCHWT1
+- Support has been removed for the AMD "3DNow!" instruction-set.
+  Neither modern AMD CPUs, nor any Intel CPUs implement these
+  instructions, and they were never widely used.
+
+  * The options ``-m3dnow`` and ``-m3dnowa`` are no longer honored, and will emit a warning if used.
+  * The macros ``__3dNOW__`` and ``__3dNOW_A__`` are no longer ever set by the compiler.
+  * The header ``<mm3dnow.h>`` is deprecated, and emits a warning if included.
+  * The 3dNow intrinsic functions have been removed: ``_m_femms``,
+    ``_m_pavgusb``, ``_m_pf2id``, ``_m_pfacc``, ``_m_pfadd``,
+    ``_m_pfcmpeq``, ``_m_pfcmpge``, ``_m_pfcmpgt``, ``_m_pfmax``,
+    ``_m_pfmin``, ``_m_pfmul``, ``_m_pfrcp``, ``_m_pfrcpit1``,
+    ``_m_pfrcpit2``, ``_m_pfrsqrt``, ``_m_pfrsqrtit1``, ``_m_pfsub``,
+    ``_m_pfsubr``, ``_m_pi2fd``, ``_m_pmulhrw``, ``_m_pf2iw``,
+    ``_m_pfnacc``, ``_m_pfpnacc``, ``_m_pi2fw``, ``_m_pswapdsf``,
+    ``_m_pswapdsi``.
+  * The compiler builtins corresponding to each of the above
+    intrinsics have also been removed  (``__builtin_ia32_femms``, and so on).
+  * "3DNow!" instructions remain supported in assembly code, including
+    inside inline-assembly.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^

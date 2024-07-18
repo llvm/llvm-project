@@ -5546,6 +5546,7 @@ def module_file_info : Flag<["-"], "module-file-info">, Flags<[]>,
   HelpText<"Provide information about a particular module file">;
 def mthumb : Flag<["-"], "mthumb">, Group<m_Group>;
 def mtune_EQ : Joined<["-"], "mtune=">, Group<m_Group>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Only supported on AArch64, PowerPC, RISC-V, SPARC, SystemZ, and X86">;
 def multi__module : Flag<["-"], "multi_module">;
 def multiply__defined__unused : Separate<["-"], "multiply_defined_unused">;
@@ -6231,10 +6232,6 @@ def mno_80387 : Flag<["-"], "mno-80387">, Alias<mno_x87>;
 def mno_fp_ret_in_387 : Flag<["-"], "mno-fp-ret-in-387">, Alias<mno_x87>;
 def mmmx : Flag<["-"], "mmmx">, Group<m_x86_Features_Group>;
 def mno_mmx : Flag<["-"], "mno-mmx">, Group<m_x86_Features_Group>;
-def m3dnow : Flag<["-"], "m3dnow">, Group<m_x86_Features_Group>;
-def mno_3dnow : Flag<["-"], "mno-3dnow">, Group<m_x86_Features_Group>;
-def m3dnowa : Flag<["-"], "m3dnowa">, Group<m_x86_Features_Group>;
-def mno_3dnowa : Flag<["-"], "mno-3dnowa">, Group<m_x86_Features_Group>;
 def mamx_bf16 : Flag<["-"], "mamx-bf16">, Group<m_x86_Features_Group>;
 def mno_amx_bf16 : Flag<["-"], "mno-amx-bf16">, Group<m_x86_Features_Group>;
 def mamx_complex : Flag<["-"], "mamx-complex">, Group<m_x86_Features_Group>;
@@ -6467,6 +6464,12 @@ def mvevpu : Flag<["-"], "mvevpu">, Group<m_ve_Features_Group>,
   HelpText<"Emit VPU instructions for VE">;
 def mno_vevpu : Flag<["-"], "mno-vevpu">, Group<m_ve_Features_Group>;
 } // let Flags = [TargetSpecific]
+
+// Unsupported X86 feature flags (triggers a warning)
+def m3dnow : Flag<["-"], "m3dnow">;
+def mno_3dnow : Flag<["-"], "mno-3dnow">;
+def m3dnowa : Flag<["-"], "m3dnowa">;
+def mno_3dnowa : Flag<["-"], "mno-3dnowa">;
 
 // These are legacy user-facing driver-level option spellings. They are always
 // aliases for options that are spelled using the more common Unix / GNU flag
@@ -6896,9 +6899,6 @@ def emit_hlfir : Flag<["-"], "emit-hlfir">, Group<Action_Group>,
 
 let Visibility = [CC1Option, CC1AsOption] in {
 
-def tune_cpu : Separate<["-"], "tune-cpu">,
-  HelpText<"Tune for a specific cpu type">,
-  MarshallingInfoString<TargetOpts<"TuneCPU">>;
 def target_abi : Separate<["-"], "target-abi">,
   HelpText<"Target a particular ABI type">,
   MarshallingInfoString<TargetOpts<"ABI">>;
@@ -6925,6 +6925,9 @@ def darwin_target_variant_triple : Separate<["-"], "darwin-target-variant-triple
 
 let Visibility = [CC1Option, CC1AsOption, FC1Option] in {
 
+def tune_cpu : Separate<["-"], "tune-cpu">,
+  HelpText<"Tune for a specific cpu type">,
+  MarshallingInfoString<TargetOpts<"TuneCPU">>;
 def target_cpu : Separate<["-"], "target-cpu">,
   HelpText<"Target a specific cpu type">,
   MarshallingInfoString<TargetOpts<"CPU">>;
