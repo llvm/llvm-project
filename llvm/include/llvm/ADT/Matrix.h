@@ -55,13 +55,17 @@ public:
 
   size_t size() const { return Base.size(); }
   bool empty() const { return !size(); }
-  size_t getNumRows() const { return size() / NCols; }
+  size_t getNumRows() const {
+    assert(size() % NCols == 0 && "Internal error");
+    return size() / NCols;
+  }
   size_t getNumCols() const { return NCols; }
   void setNumCols(size_t NCols) {
     assert(empty() && "Column-resizing a non-empty MatrixStorage");
     this->NCols = NCols;
   }
   void resize(size_t NRows) { Base.resize(NCols * NRows); }
+  void reserve(size_t NRows) { Base.reserve(NCols * NRows); }
 
 protected:
   template <typename U, size_t M, size_t NStorageInline>
@@ -69,6 +73,7 @@ protected:
 
   T *begin() const { return Base.begin(); }
   T *rowFromIdx(size_t RowIdx, size_t Offset = 0) const {
+    assert(Offset < NCols && "Internal error");
     return begin() + RowIdx * NCols + Offset;
   }
   std::pair<size_t, size_t> idxFromRow(T *Ptr) const {
@@ -85,6 +90,11 @@ protected:
     size_t Diff = NCols - Arg.size();
     Base.append(Arg.begin(), Arg.end());
     Base.append(Diff, T());
+  }
+
+  void eraseLastRow() {
+    assert(getNumRows() > 0 && "Non-empty MatrixStorage expected");
+    Base.pop_back_n(NCols);
   }
 
 private:
@@ -108,10 +118,12 @@ struct [[nodiscard]] MutableRowView : public MutableArrayRef<T> {
       : MutableArrayRef<T>(Begin, End) {}
   MutableRowView(MutableArrayRef<T> Other)
       : MutableArrayRef<T>(Other.data(), Other.size()) {}
-  MutableRowView(const SmallVectorImpl<T> &Vec) : MutableArrayRef<T>(Vec) {}
+  MutableRowView(SmallVectorImpl<T> &Vec) : MutableArrayRef<T>(Vec) {}
 
   using MutableArrayRef<T>::size;
   using MutableArrayRef<T>::data;
+  using MutableArrayRef<T>::begin;
+  using MutableArrayRef<T>::end;
 
   T &back() const { return MutableArrayRef<T>::back(); }
   T &front() const { return MutableArrayRef<T>::front(); }
@@ -146,6 +158,13 @@ struct [[nodiscard]] MutableRowView : public MutableArrayRef<T> {
   void swap(MutableRowView<T> &Other) {
     std::swap(this->Data, Other.Data);
     std::swap(this->Length, Other.Length);
+  }
+
+  // For better cache behavior.
+  void writing_swap(MutableRowView<T> &Other) { // NOLINT
+    SmallVector<T> Buf{Other};
+    Other.copy_assign(begin(), end());
+    copy_assign(Buf.begin(), Buf.end());
   }
 
 protected:
@@ -317,6 +336,14 @@ public:
     RowView.pop_back();
   }
 
+  // For better cache behavior. To be used with writing_swap.
+  void eraseLastRow() {
+    assert(Mat.idxFromRow(lastRow().data()).first == Mat.getNumRows() - 1 &&
+           "Last row does not correspond to last row in storage");
+    dropLastRow();
+    Mat.eraseLastRow();
+  }
+
 protected:
   // Helper constructor.
   constexpr JaggedArrayView(MatrixStorage<T, NStorageInline> &Mat,
@@ -328,12 +355,5 @@ private:
   container_type RowView;
 };
 } // namespace llvm
-
-namespace std {
-template <typename T>
-inline void swap(llvm::MutableRowView<T> &LHS, llvm::MutableRowView<T> &RHS) {
-  LHS.swap(RHS);
-}
-} // end namespace std
 
 #endif

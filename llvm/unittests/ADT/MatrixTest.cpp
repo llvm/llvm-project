@@ -161,31 +161,12 @@ TYPED_TEST(MatrixTest, RowColSlice) {
   EXPECT_EQ(W[1][1], 0);
 }
 
-TYPED_TEST(MatrixTest, LastRowOps) {
+TYPED_TEST(MatrixTest, NonWritingSwap) {
   auto &M = this->SmallMatrix;
   JaggedArrayView<TypeParam> V{M};
   V[0] = {TypeParam(3), TypeParam(7)};
   V[1] = {TypeParam(4), TypeParam(5)};
-  V.dropLastRow();
-  ASSERT_EQ(M.size(), 4u);
-  ASSERT_EQ(V.size(), 2u);
-  auto W = V.lastRow();
-  ASSERT_EQ(W.size(), 2u);
-  EXPECT_EQ(W[0], 3);
-  EXPECT_EQ(W[1], 7);
-  V.lastRow() = {TypeParam(1), TypeParam(2)};
-  EXPECT_EQ(V.lastRow()[0], 1);
-  EXPECT_EQ(V.lastRow()[1], 2);
-  V.dropLastRow();
-  EXPECT_TRUE(V.empty());
-}
-
-TYPED_TEST(MatrixTest, Swap) {
-  auto &M = this->SmallMatrix;
-  JaggedArrayView<TypeParam> V{M};
-  V[0] = {TypeParam(3), TypeParam(7)};
-  V[1] = {TypeParam(4), TypeParam(5)};
-  std::swap(V[0], V[1]);
+  V[0].swap(V[1]);
   EXPECT_EQ(V.lastRow()[0], 3);
   EXPECT_EQ(V.lastRow()[1], 7);
   EXPECT_EQ(V[0][0], 4);
@@ -239,6 +220,41 @@ TYPED_TEST(MatrixTest, DropLastRow) {
   EXPECT_EQ(V.lastRow()[0], 21);
   EXPECT_EQ(V.lastRow()[1], 22);
   EXPECT_EQ(V.lastRow()[2], 23);
+}
+
+TYPED_TEST(MatrixTest, EraseLastRow) {
+  auto &M = this->SmallMatrix;
+  JaggedArrayView<TypeParam> V{M};
+  V[0] = {TypeParam(3), TypeParam(7)};
+  V[1] = {TypeParam(4), TypeParam(5)};
+  V.eraseLastRow();
+  ASSERT_EQ(M.size(), 2u);
+  ASSERT_EQ(V.getRowSpan(), 1u);
+  auto W = V.lastRow();
+  ASSERT_EQ(W.size(), 2u);
+  EXPECT_EQ(W[0], 3);
+  EXPECT_EQ(W[1], 7);
+  V.addRow({TypeParam(1), TypeParam(2)});
+  ASSERT_EQ(V.getRowSpan(), 2u);
+  V[0].writing_swap(V[1]);
+  EXPECT_EQ(V[0][0], 1);
+  EXPECT_EQ(V[0][1], 2);
+  EXPECT_EQ(V.lastRow()[0], 3);
+  EXPECT_EQ(V.lastRow()[1], 7);
+  V.eraseLastRow();
+  V.addRow({TypeParam(3), TypeParam(7)});
+  ASSERT_EQ(V.getRowSpan(), 2u);
+  EXPECT_EQ(V[0][0], 1);
+  EXPECT_EQ(V[0][1], 2);
+  EXPECT_EQ(V[1][0], 3);
+  EXPECT_EQ(V[1][1], 7);
+  V.eraseLastRow();
+  ASSERT_EQ(V.getRowSpan(), 1u);
+  EXPECT_EQ(V[0][0], 1);
+  EXPECT_EQ(V[0][1], 2);
+  V.eraseLastRow();
+  EXPECT_TRUE(V.empty());
+  EXPECT_TRUE(M.empty());
 }
 
 TYPED_TEST(MatrixTest, Iteration) {
