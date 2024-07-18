@@ -218,7 +218,7 @@ The SSE3 dot product can be easily fixed by either building the translation unit
       return GenericPopCnt(v);
   }
 
-The above ``PopCnt`` example must be changed to work with clang. If we mark the function with `__target__("popcnt")` then the compiler is free to emit popcnt at will which we do not want. While this isn't a concern in our small example it is a concern in larger functions with surrounding code around the intrinsics. Similar goes for compiling the translation unit with `-mpopcnt`.
+The above ``PopCnt`` example must be changed to work with clang. If we mark the function with `__target__("popcnt")` then the compiler is free to emit popcnt at will which we do not want. While this isn't a concern in our small example it is a concern in larger functions with surrounding code around the intrinsics. Similar reasoning for compiling the translation unit with `-mpopcnt`.
 We must split each branch into its own function that can be called indirectly instead of using the intrinsic directly.
 
 .. code-block:: c++
