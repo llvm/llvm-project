@@ -129,7 +129,7 @@ public:
     return buildCast(E->getCastKind(), E->getSubExpr(), E->getType());
   }
   mlir::Value VisitCastExpr(CastExpr *E) { llvm_unreachable("NYI"); }
-  mlir::Value VisitCallExpr(const CallExpr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitCallExpr(const CallExpr *E);
   mlir::Value VisitStmtExpr(const StmtExpr *E) { llvm_unreachable("NYI"); }
 
   // Operators.
@@ -499,6 +499,13 @@ mlir::Value ComplexExprEmitter::buildCast(CastKind CK, Expr *Op,
   }
 
   llvm_unreachable("unknown cast resulting in complex value");
+}
+
+mlir::Value ComplexExprEmitter::VisitCallExpr(const CallExpr *E) {
+  if (E->getCallReturnType(CGF.getContext())->isReferenceType())
+    return buildLoadOfLValue(E);
+
+  return CGF.buildCallExpr(E).getComplexVal();
 }
 
 ComplexExprEmitter::BinOpInfo

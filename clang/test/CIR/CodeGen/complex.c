@@ -48,6 +48,21 @@ void list_init_2(double r, double i) {
 // LLVM-NEXT:   store { double, double } %[[#B]], ptr %5, align 8
 //      LLVM: }
 
+void builtin_init(double r, double i) {
+  double _Complex c = __builtin_complex(r, i);
+}
+
+//     C: cir.func @builtin_init
+//   CPP: cir.func @_Z12builtin_initdd
+// CHECK:   %{{.+}} = cir.complex.create %{{.+}}, %{{.+}} : !cir.double -> !cir.complex<!cir.double>
+// CHECK: }
+
+//      LLVM: define void @builtin_init
+//      LLVM:   %[[#A:]] = insertvalue { double, double } undef, double %{{.+}}, 0
+// LLVM-NEXT:   %[[#B:]] = insertvalue { double, double } %[[#A]], double %{{.+}}, 1
+// LLVM-NEXT:   store { double, double } %[[#B]], ptr %{{.+}}, align 8
+//      LLVM: }
+
 void imag_literal() {
   c = 3.0i;
   ci = 3i;
@@ -114,6 +129,38 @@ void load_store_volatile() {
 // LLVM-NEXT:   store volatile { double, double } %[[#A]], ptr @vc, align 8
 // LLVM-NEXT:   %[[#B:]] = load volatile { i32, i32 }, ptr @vci2, align 4
 // LLVM-NEXT:   store volatile { i32, i32 } %[[#B]], ptr @vci, align 4
+//      LLVM: }
+
+void real() {
+  double r = __builtin_creal(c);
+}
+
+//          C: cir.func no_proto @real()
+//        CPP: cir.func @_Z4realv()
+//      CHECK:   %[[#A:]] = cir.get_global @c : !cir.ptr<!cir.complex<!cir.double>>
+// CHECK-NEXT:   %[[#B:]] = cir.load %[[#A]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
+// CHECK-NEXT:   %{{.+}} = cir.complex.real %[[#B]] : !cir.complex<!cir.double> -> !cir.double
+//      CHECK: }
+
+//      LLVM: define void @real()
+//      LLVM:   %[[#A:]] = extractvalue { double, double } %{{.+}}, 0
+// LLVM-NEXT:   store double %[[#A]], ptr %{{.+}}, align 8
+//      LLVM: }
+
+void imag() {
+  double i = __builtin_cimag(c);
+}
+
+//          C: cir.func no_proto @imag()
+//        CPP: cir.func @_Z4imagv()
+//      CHECK:   %[[#A:]] = cir.get_global @c : !cir.ptr<!cir.complex<!cir.double>>
+// CHECK-NEXT:   %[[#B:]] = cir.load %[[#A]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
+// CHECK-NEXT:   %{{.+}} = cir.complex.imag %[[#B]] : !cir.complex<!cir.double> -> !cir.double
+//      CHECK: }
+
+//      LLVM: define void @imag()
+//      LLVM:   %[[#A:]] = extractvalue { double, double } %{{.+}}, 1
+// LLVM-NEXT:   store double %[[#A]], ptr %{{.+}}, align 8
 //      LLVM: }
 
 void real_ptr() {
