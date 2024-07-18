@@ -108,13 +108,11 @@ public:
     int64_t getModifiersOperand() const {
       assert(!(hasFPModifiers() && hasIntModifiers())
            && "fp and int modifiers should not be used simultaneously");
-      if (hasFPModifiers()) {
+      if (hasFPModifiers())
         return getFPModifiersOperand();
-      } else if (hasIntModifiers()) {
+      if (hasIntModifiers())
         return getIntModifiersOperand();
-      } else {
-        return 0;
-      }
+      return 0;
     }
 
     friend raw_ostream &operator <<(raw_ostream &OS, AMDGPUOperand::Modifiers Mods);
@@ -2280,10 +2278,9 @@ template <bool IsFake16> bool AMDGPUOperand::isT16VRegWithInputMods() const {
 bool AMDGPUOperand::isSDWAOperand(MVT type) const {
   if (AsmParser->isVI())
     return isVReg32();
-  else if (AsmParser->isGFX9Plus())
+  if (AsmParser->isGFX9Plus())
     return isRegClass(AMDGPU::VS_32RegClassID) || isInlinableImm(type);
-  else
-    return false;
+  return false;
 }
 
 bool AMDGPUOperand::isSDWAFP16Operand() const {
@@ -3893,20 +3890,18 @@ static OperandIndices getSrcOperandIndices(unsigned Opcode,
 
 bool AMDGPUAsmParser::usesConstantBus(const MCInst &Inst, unsigned OpIdx) {
   const MCOperand &MO = Inst.getOperand(OpIdx);
-  if (MO.isImm()) {
+  if (MO.isImm())
     return !isInlineConstant(Inst, OpIdx);
-  } else if (MO.isReg()) {
+  if (MO.isReg()) {
     auto Reg = MO.getReg();
-    if (!Reg) {
+    if (!Reg)
       // TODO-GFX12: why is this needed only for a few GFX12 instructions?
       return false;
-    }
     const MCRegisterInfo *TRI = getContext().getRegisterInfo();
     auto PReg = mc2PseudoReg(Reg);
     return isSGPR(PReg, TRI) && PReg != SGPR_NULL;
-  } else {
-    return true;
   }
+  return true;
 }
 
 // Based on the comment for `AMDGPUInstructionSelector::selectWritelane`:
@@ -6781,16 +6776,20 @@ StringRef AMDGPUAsmParser::parseMnemonicSuffix(StringRef Name) {
     setForcedDPP(true);
     setForcedEncodingSize(64);
     return Name.substr(0, Name.size() - 8);
-  } else if (Name.ends_with("_e64")) {
+  }
+  if (Name.ends_with("_e64")) {
     setForcedEncodingSize(64);
     return Name.substr(0, Name.size() - 4);
-  } else if (Name.ends_with("_e32")) {
+  }
+  if (Name.ends_with("_e32")) {
     setForcedEncodingSize(32);
     return Name.substr(0, Name.size() - 4);
-  } else if (Name.ends_with("_dpp")) {
+  }
+  if (Name.ends_with("_dpp")) {
     setForcedDPP(true);
     return Name.substr(0, Name.size() - 4);
-  } else if (Name.ends_with("_sdwa")) {
+  }
+  if (Name.ends_with("_sdwa")) {
     setForcedSDWA(true);
     return Name.substr(0, Name.size() - 5);
   }
@@ -8307,10 +8306,9 @@ AMDGPUAsmParser::parseString(StringRef &Val, const StringRef ErrMsg) {
     Val = getToken().getStringContents();
     lex();
     return true;
-  } else {
-    Error(getLoc(), ErrMsg);
-    return false;
   }
+  Error(getLoc(), ErrMsg);
+  return false;
 }
 
 bool
@@ -8319,11 +8317,10 @@ AMDGPUAsmParser::parseId(StringRef &Val, const StringRef ErrMsg) {
     Val = getTokenStr();
     lex();
     return true;
-  } else {
-    if (!ErrMsg.empty())
-      Error(getLoc(), ErrMsg);
-    return false;
   }
+  if (!ErrMsg.empty())
+    Error(getLoc(), ErrMsg);
+  return false;
 }
 
 AsmToken
@@ -10105,8 +10102,8 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
            (SkipSrcVcc && Inst.getNumOperands() == 5))) {
         SkippedVcc = true;
         continue;
-      } else if (BasicInstType == SIInstrFlags::VOPC &&
-                 Inst.getNumOperands() == 0) {
+      }
+      if (BasicInstType == SIInstrFlags::VOPC && Inst.getNumOperands() == 0) {
         SkippedVcc = true;
         continue;
       }

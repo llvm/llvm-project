@@ -432,6 +432,8 @@ struct DPMACCInstructionInfo {
 #define GET_WMMAOpcode2AddrMappingTable_IMPL
 #define GET_WMMAOpcode3AddrMappingTable_DECL
 #define GET_WMMAOpcode3AddrMappingTable_IMPL
+#define GET_getMFMA_F8F6F4_WithSize_DECL
+#define GET_getMFMA_F8F6F4_WithSize_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMTBUFBaseOpcode(unsigned Opc) {
@@ -543,6 +545,30 @@ bool getMAIIsGFX940XDL(unsigned Opc) {
 bool getWMMAIsXDL(unsigned Opc) {
   const WMMAInstInfo *Info = getWMMAInstInfoHelper(Opc);
   return Info ? Info->is_wmma_xdl : false;
+}
+
+static uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal) {
+  switch (EncodingVal) {
+  case MFMAScaleFormats::FP6_E2M3:
+  case MFMAScaleFormats::FP6_E3M2:
+    return 6;
+  case MFMAScaleFormats::FP4_E2M1:
+    return 4;
+  case MFMAScaleFormats::FP8_E4M3:
+  case MFMAScaleFormats::FP8_E5M2:
+  default:
+    return 8;
+  }
+
+  llvm_unreachable("covered switch over mfma scale formats");
+}
+
+const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
+                                                      unsigned BLGP,
+                                                      unsigned F8F8Opcode) {
+  uint8_t SrcANumRegs = mfmaScaleF8F6F4FormatToNumRegs(CBSZ);
+  uint8_t SrcBNumRegs = mfmaScaleF8F6F4FormatToNumRegs(BLGP);
+  return getMFMA_F8F6F4_InstWithNumRegs(SrcANumRegs, SrcBNumRegs, F8F8Opcode);
 }
 
 unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
@@ -1737,11 +1763,10 @@ static unsigned getCombinedCountBitMask(const IsaVersion &Version,
     unsigned Storecnt = getBitMask(getLoadcntStorecntBitShift(Version.Major),
                                    getStorecntBitWidth(Version.Major));
     return Dscnt | Storecnt;
-  } else {
-    unsigned Loadcnt = getBitMask(getLoadcntStorecntBitShift(Version.Major),
-                                  getLoadcntBitWidth(Version.Major));
-    return Dscnt | Loadcnt;
   }
+  unsigned Loadcnt = getBitMask(getLoadcntStorecntBitShift(Version.Major),
+                                getLoadcntBitWidth(Version.Major));
+  return Dscnt | Loadcnt;
 }
 
 Waitcnt decodeLoadcntDscnt(const IsaVersion &Version, unsigned LoadcntDscnt) {
@@ -3228,6 +3253,7 @@ const AlwaysUniform *lookupAlwaysUniform(unsigned Intr);
 #define GET_Gfx9BufferFormat_IMPL
 #define GET_Gfx10BufferFormat_IMPL
 #define GET_Gfx11PlusBufferFormat_IMPL
+
 #include "AMDGPUGenSearchableTables.inc"
 
 } // end anonymous namespace
