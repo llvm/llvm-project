@@ -136,7 +136,7 @@ protected:
   }
 
 public:
-  AMDGPULibCalls() {}
+  AMDGPULibCalls() = default;
 
   bool fold(CallInst *CI);
 
