@@ -11855,7 +11855,7 @@ static void DiagnoseFailedEnableIfAttr(Sema &S, OverloadCandidate *Cand) {
 
 static void DiagnoseFailedExplicitSpec(Sema &S, OverloadCandidate *Cand) {
   assert(Cand->Function && "Candidate must be a function");
-  Function *Fn = Cand->Function;
+  FunctionDecl *Fn = Cand->Function;
   ExplicitSpecifier ES = ExplicitSpecifier::getFromDecl(Fn);
   assert(ES.isExplicit() && "not an explicit candidate");
 
