@@ -146,3 +146,55 @@ define void @foo(ptr %ptr) {
   Ctx.accept();
   EXPECT_EQ(St0->getOperand(0), Ld1);
 }
+
+// TODO: Test multi-instruction patterns.
+TEST_F(TrackerTest, EraseFromParent) {
+  parseIR(C, R"IR(
+define void @foo(i32 %v1) {
+  %add0 = add i32 %v1, %v1
+  %add1 = add i32 %add0, %v1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  sandboxir::Instruction *Add0 = &*It++;
+  sandboxir::Instruction *Add1 = &*It++;
+  sandboxir::Instruction *Ret = &*It++;
+
+  Ctx.save();
+  // Check erase.
+  Add1->eraseFromParent();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+  EXPECT_EQ(Add0->getNumUses(), 0u);
+
+  // Check revert().
+  Ctx.revert();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Add1);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+  EXPECT_EQ(Add1->getOperand(0), Add0);
+
+  // Same for the last instruction in the block.
+  Ctx.save();
+  Ret->eraseFromParent();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Add1);
+  EXPECT_EQ(It, BB->end());
+  Ctx.revert();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Add1);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+}

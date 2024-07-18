@@ -286,7 +286,7 @@ define <2 x i16> @phi_merge1(i1 %c, <2 x i8> %a) {
 ; CHECK-NEXT:    br label %[[JOIN]]
 ; CHECK:       [[JOIN]]:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi <2 x i16> [ [[ZEXT]], %[[ENTRY]] ], [ <i16 1, i16 2>, %[[IF]] ]
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i16> [[PHI]], <i16 2, i16 3>
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <2 x i16> [[PHI]], <i16 2, i16 3>
 ; CHECK-NEXT:    ret <2 x i16> [[ADD]]
 ;
 entry:
@@ -312,7 +312,7 @@ define <2 x i16> @phi_merge2(i1 %c, <2 x i8> %a) {
 ; CHECK-NEXT:    br label %[[JOIN]]
 ; CHECK:       [[JOIN]]:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi <2 x i16> [ <i16 1, i16 2>, %[[ENTRY]] ], [ [[ZEXT]], %[[IF]] ]
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i16> [[PHI]], <i16 2, i16 3>
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <2 x i16> [[PHI]], <i16 2, i16 3>
 ; CHECK-NEXT:    ret <2 x i16> [[ADD]]
 ;
 entry:

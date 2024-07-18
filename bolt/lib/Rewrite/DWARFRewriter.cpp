@@ -719,7 +719,6 @@ void DWARFRewriter::updateDebugInfo() {
       } else {
         TempRangesSectionWriter = LegacyRangesWritersByCU[*DWOId].get();
         RangesBase = RangesSectionWriter->getSectionOffset();
-        setDwoRangesBase(*DWOId, *RangesBase);
       }
 
       updateUnitDebugInfo(*(*SplitCU), DWODIEBuilder, DebugLocDWoWriter,
