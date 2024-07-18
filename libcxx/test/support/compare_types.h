@@ -548,6 +548,9 @@ struct nonmovable_equality_with_int {
   nonmovable_equality_with_int(nonmovable_equality_with_int&&)            = delete;
   nonmovable_equality_with_int& operator=(nonmovable_equality_with_int&&) = delete;
 
+  nonmovable_equality_with_int(nonmovable_equality_with_int const&)            = delete;
+  nonmovable_equality_with_int& operator=(nonmovable_equality_with_int const&) = delete;
+
   friend bool operator==(nonmovable_equality_with_int const&, nonmovable_equality_with_int const&) = default;
   friend bool operator==(nonmovable_equality_with_int const&, int);
 };
