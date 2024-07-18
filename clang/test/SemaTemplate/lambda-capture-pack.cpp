@@ -103,11 +103,11 @@ template <class = void> void f() {
   // boils down to the lambda's instantiation at #2. To that end, we have to
   // instantiate the body of it, which turns out to be #3. #3 is a CXXFoldExpr,
   // and we immediately have to hold off on the expansion because we don't have
-  // corresponding template arguments for it. Therefore, we want to rebuild a
-  // CXXFoldExpr, which requires another pattern transformation of the lambda
-  // inside #3. Then we need to find an unexpanded form of such a Decl of x at
-  // the time of transforming the capture, which is impossible because the
-  // instantiated form has been expanded at #1!
+  // corresponding template arguments (arguments at #4 are not transformed yet) for it.
+  // Therefore, we want to rebuild a CXXFoldExpr, which requires another pattern
+  // transformation of the lambda inside #3. Then we need to find an unexpanded form
+  // of such a Decl of x at the time of transforming the capture, which is impossible
+  // because the instantiated form has been expanded at #1!
 
   [](auto ...x) {  // #outer
     ([&](auto ...y) { // #inner
