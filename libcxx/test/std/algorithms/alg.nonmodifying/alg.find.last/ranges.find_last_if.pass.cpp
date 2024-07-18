@@ -184,13 +184,7 @@ struct NonConstComparable {
 };
 
 template <class T>
-struct add_const_to_ptr;
-template <class T>
-struct add_const_to_ptr<T*> {
-  using type = const T*;
-};
-template <class T>
-using add_const_to_ptr_t = add_const_to_ptr<T>::type;
+using add_const_to_ptr_t = std::add_pointer_t<std::add_const_t<std::remove_pointer_t<T>>>;
 
 constexpr bool test() {
   test_iterator_classes<std::type_identity_t, std::type_identity_t>();

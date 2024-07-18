@@ -37,7 +37,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 
 template <class _Iter, class _Sent, class _Pred, class _Proj>
-_LIBCPP_HIDE_FROM_ABI constexpr static subrange<_Iter>
+_LIBCPP_HIDE_FROM_ABI constexpr subrange<_Iter>
 __find_last_impl(_Iter __first, _Sent __last, _Pred __pred, _Proj& __proj) {
   if (__first == __last) {
     return subrange<_Iter>(__first, __first);
@@ -78,7 +78,7 @@ struct __fn {
   struct __op {
     const _Type& __value;
     template <class _Elem>
-    constexpr decltype(auto) operator()(_Elem&& __elem) const {
+    _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator()(_Elem&& __elem) const {
       return std::forward<_Elem>(__elem) == __value;
     }
   };
@@ -105,7 +105,7 @@ struct __fn {
   struct __op {
     _Pred& __pred;
     template <class _Elem>
-    constexpr decltype(auto) operator()(_Elem&& __elem) const {
+    _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator()(_Elem&& __elem) const {
       return std::invoke(__pred, std::forward<_Elem>(__elem));
     }
   };
@@ -135,7 +135,7 @@ struct __fn {
   struct __op {
     _Pred& __pred;
     template <class _Elem>
-    constexpr decltype(auto) operator()(_Elem&& __elem) const {
+    _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator()(_Elem&& __elem) const {
       return !std::invoke(__pred, std::forward<_Elem>(__elem));
     }
   };

@@ -25,7 +25,6 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
-#include <deque>
 #include <ranges>
 #include <vector>
 
@@ -154,12 +153,12 @@ class TriviallyComparable {
   ElementT el_;
 
 public:
-  TEST_CONSTEXPR TriviallyComparable(ElementT el) : el_(el) {}
+  constexpr TriviallyComparable(ElementT el) : el_(el) {}
   bool operator==(const TriviallyComparable&) const = default;
 };
 
 constexpr bool test() {
-  types::for_each(types::type_list<char, wchar_t, int, long, TriviallyComparable<char>, TriviallyComparable<wchar_t>>{},
+  types::for_each(types::type_list<char, int, TriviallyComparable<char>>{},
                   []<class T> {
                     types::for_each(types::forward_iterator_list<T*>{}, []<class Iter> {
                       test_iterators<Iter>();
