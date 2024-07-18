@@ -357,6 +357,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cosf
     libc.src.math.coshf
     libc.src.math.cospif
+    libc.src.math.dmull
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.exp10
@@ -411,6 +412,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmodf
     libc.src.math.fmodl
     libc.src.math.fmul
+    libc.src.math.fmull
     libc.src.math.frexp
     libc.src.math.frexpf
     libc.src.math.frexpl
@@ -531,6 +533,8 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.f16div
     libc.src.math.f16divf
     libc.src.math.f16fmaf
+    libc.src.math.f16mul
+    libc.src.math.f16mulf
     libc.src.math.f16sqrt
     libc.src.math.f16sqrtf
     libc.src.math.f16sub

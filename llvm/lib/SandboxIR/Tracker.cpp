@@ -41,6 +41,89 @@ Tracker::~Tracker() {
   assert(Changes.empty() && "You must accept or revert changes!");
 }
 
+EraseFromParent::EraseFromParent(std::unique_ptr<sandboxir::Value> &&ErasedIPtr,
+                                 Tracker &Tracker)
+    : IRChangeBase(Tracker), ErasedIPtr(std::move(ErasedIPtr)) {
+  auto *I = cast<Instruction>(this->ErasedIPtr.get());
+  auto LLVMInstrs = I->getLLVMInstrs();
+  // Iterate in reverse program order.
+  for (auto *LLVMI : reverse(LLVMInstrs)) {
+    SmallVector<llvm::Value *> Operands;
+    Operands.reserve(LLVMI->getNumOperands());
+    for (auto [OpNum, Use] : enumerate(LLVMI->operands()))
+      Operands.push_back(Use.get());
+    InstrData.push_back({Operands, LLVMI});
+  }
+  assert(is_sorted(InstrData,
+                   [](const auto &D0, const auto &D1) {
+                     return D0.LLVMI->comesBefore(D1.LLVMI);
+                   }) &&
+         "Expected reverse program order!");
+  auto *BotLLVMI = cast<llvm::Instruction>(I->Val);
+  if (BotLLVMI->getNextNode() != nullptr)
+    NextLLVMIOrBB = BotLLVMI->getNextNode();
+  else
+    NextLLVMIOrBB = BotLLVMI->getParent();
+}
+
+void EraseFromParent::accept() {
+  for (const auto &IData : InstrData)
+    IData.LLVMI->deleteValue();
+}
+
+void EraseFromParent::revert() {
+  // Place the bottom-most instruction first.
+  auto [Operands, BotLLVMI] = InstrData[0];
+  if (auto *NextLLVMI = NextLLVMIOrBB.dyn_cast<llvm::Instruction *>()) {
+    BotLLVMI->insertBefore(NextLLVMI);
+  } else {
+    auto *LLVMBB = NextLLVMIOrBB.get<llvm::BasicBlock *>();
+    BotLLVMI->insertInto(LLVMBB, LLVMBB->end());
+  }
+  for (auto [OpNum, Op] : enumerate(Operands))
+    BotLLVMI->setOperand(OpNum, Op);
+
+  // Go over the rest of the instructions and stack them on top.
+  for (auto [Operands, LLVMI] : drop_begin(InstrData)) {
+    LLVMI->insertBefore(BotLLVMI);
+    for (auto [OpNum, Op] : enumerate(Operands))
+      LLVMI->setOperand(OpNum, Op);
+    BotLLVMI = LLVMI;
+  }
+  Parent.getContext().registerValue(std::move(ErasedIPtr));
+}
+
+#ifndef NDEBUG
+void EraseFromParent::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
+RemoveFromParent::RemoveFromParent(Instruction *RemovedI, Tracker &Tracker)
+    : IRChangeBase(Tracker), RemovedI(RemovedI) {
+  if (auto *NextI = RemovedI->getNextNode())
+    NextInstrOrBB = NextI;
+  else
+    NextInstrOrBB = RemovedI->getParent();
+}
+
+void RemoveFromParent::revert() {
+  if (auto *NextI = NextInstrOrBB.dyn_cast<Instruction *>()) {
+    RemovedI->insertBefore(NextI);
+  } else {
+    auto *BB = NextInstrOrBB.get<BasicBlock *>();
+    RemovedI->insertInto(BB, BB->end());
+  }
+}
+
+#ifndef NDEBUG
+void RemoveFromParent::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
 void Tracker::track(std::unique_ptr<IRChangeBase> &&Change) {
   assert(State == TrackerState::Record && "The tracker should be tracking!");
   Changes.push_back(std::move(Change));
