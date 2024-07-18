@@ -102,7 +102,7 @@ if (NOT CMAKE_CROSSCOMPILING)
     # If a module has been compiled into an object file, add the file to
     # the link line for the FortranRuntime library.
     if(include_in_link)
-      list(APPEND module_objects ${module_})
+      list(APPEND module_objects ${object_output})
     endif()
   endforeach()
 
