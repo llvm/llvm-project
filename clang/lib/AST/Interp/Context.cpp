@@ -31,6 +31,9 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   if (!Func || !Func->hasBody())
     Func = Compiler<ByteCodeEmitter>(*this, *P).compileFunc(FD);
 
+  if (!Func)
+    return false;
+
   APValue DummyResult;
   if (!Run(Parent, Func, DummyResult))
     return false;
