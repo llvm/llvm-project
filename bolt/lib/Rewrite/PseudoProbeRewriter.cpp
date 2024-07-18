@@ -157,7 +157,7 @@ void PseudoProbeRewriter::parsePseudoProbe() {
       continue;
     BinaryFunction *BF = BC.getBinaryFunctionAtAddress(FuncStartAddrs[GUID]);
     assert(BF);
-    BF->setPseudoProbeGUID(GUID);
+    BF->setGUID(GUID);
   }
 }
 
