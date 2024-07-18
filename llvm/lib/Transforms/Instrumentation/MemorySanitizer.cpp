@@ -2500,7 +2500,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       }
     }
 
-    /// Store the current combined values at the specified origin
+    /// Store the current combined value at the specified origin
     /// location.
     void DoneAndStoreOrigin(TypeSize TS, Value *OriginPtr) {
       if (MSV->MS.TrackOrigins) {
@@ -3883,8 +3883,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void handleNEONVectorStoreIntrinsic(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
 
-    I.dump();
-
     // Don't use getNumOperands() because it includes the callee
     int numArgOperands = I.arg_size();
     assert(numArgOperands >= 1);
@@ -3892,11 +3890,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // The last arg operand is the output
     Value *Addr = I.getArgOperand(numArgOperands - 1);
     assert(Addr->getType()->isPointerTy());
-    assert(isa<GetElementPtrInst>(Addr));
 
     if (ClCheckAccessAddress)
       insertShadowCheck(Addr, &I);
 
+    // Every arg operand, other than the last one, is an input vector
     IntrinsicInst *ShadowI = cast<IntrinsicInst>(I.clone());
     for (int i = 0; i < numArgOperands - 1; i++) {
       assert(isa<FixedVectorType>(I.getArgOperand(i)->getType()));
@@ -3906,7 +3904,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // MSan's GetShadowTy assumes the LHS is the type we want the shadow for
     // e.g., for:
     //     [[TMP5:%.*]] = bitcast <16 x i8> [[TMP2]] to i128
-    // we know the type of the output (and shadow) is <16 x i8>.
+    // we know the type of the output (and its shadow) is <16 x i8>.
     //
     // Arm NEON VST is unusual because the last argument is the output address:
     //     define void @st2_16b(<16 x i8> %A, <16 x i8> %B, ptr %P) {
@@ -3914,69 +3912,23 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //                   (<16 x i8> [[A]], <16 x i8> [[B]], ptr [[P]])
     // and we have no type information about P's operand. We must manually
     // compute the type (<16 x i8> x 2).
-    errs() << "###############\n";
-    Value *X = (cast<GetElementPtrInst>(Addr))->getPointerOperand();
-    X->dump();
-    errs() << "###############\n";
-
-    const DataLayout &DL = F.getDataLayout();
-    uint16_t Width0 =
-         cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements();
-    uint16_t ElemSize0 = cast<FixedVectorType>(I.getArgOperand(0)->getType())
-                            ->getElementType()
-                            ->getPrimitiveSizeInBits();
-    errs() << "Width0: " << Width0 << ", ElemSize0: " << ElemSize0 << " x " << (numArgOperands - 1) << "\n";
-    FixedVectorType* OutputVectorTy
-        = FixedVectorType::get(cast<FixedVectorType>(I.getArgOperand(0)->getType())
-                            ->getElementType(),
-                               cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements() * (numArgOperands - 1));
-    OutputVectorTy->dump();
-
+    FixedVectorType *OutputVectorTy = FixedVectorType::get(
+        cast<FixedVectorType>(I.getArgOperand(0)->getType())->getElementType(),
+        cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements() *
+            (numArgOperands - 1));
     Type *ShadowTy = getShadowTy(OutputVectorTy);
-    errs() << "*** Shadow type is " << DL.getTypeSizeInBits(ShadowTy) << " bits\n";
     Value *ShadowPtr, *OriginPtr;
     std::tie(ShadowPtr, OriginPtr) = getShadowOriginPtr(
         Addr, IRB, ShadowTy, Align(1), /*isStore*/ true);
     ShadowI->setArgOperand(numArgOperands - 1, ShadowPtr);
     ShadowI->insertAfter(&I);
-//    setShadow(&I, ShadowI);
-
-    ShadowPtr->dump();
-    errs() << "Shadowptr: " << DL.getTypeSizeInBits(getShadowTy(ShadowPtr)) << " bits\n";
-    OriginPtr->dump();
-    errs() << "Originptr: " << DL.getTypeSizeInBits(getShadowTy(OriginPtr)) << " bits\n";
 
     if (MS.TrackOrigins) {
       OriginCombiner OC(this, IRB);
       for (int i = 0; i < numArgOperands - 1; i++)
         OC.Add(I.getArgOperand(i));
-      // Set origin for the destination, which is the last arg operand
 
-      for (int i = 0; i < numArgOperands; i++) {
-        errs() << "Arg operand " << i << "\n";
-        I.getArgOperand(i)->dump();
-
-        if (isa<FixedVectorType>(I.getArgOperand(i)->getType())) {
-          uint16_t Width =
-              cast<FixedVectorType>(I.getArgOperand(i)->getType())->getNumElements();
-          uint16_t ElemSize = cast<FixedVectorType>(I.getArgOperand(i)->getType())
-                                  ->getElementType()
-                                  ->getPrimitiveSizeInBits();
-          errs () << "Width: " << Width << " elements; ElemSize: " << ElemSize << " bits each\n";
-        }
-
-        errs() << "Type for i: " << DL.getTypeStoreSize(I.getArgOperand(i)->getType()) << "\n";
-        if (I.getArgOperand(i)->getType()->isPointerTy()) {
-          errs() << "    It's a pointer!\n";
-          if (isa<GetElementPtrInst>(I.getArgOperand(i))) {
-            errs() << "It's a GetElementPtrInst!\n";
-          errs() << "    Pointer operand: " << DL.getTypeSizeInBits ((cast<GetElementPtrInst>(I.getArgOperand(i)))->getOperand(0)->getType()) << " bits\n";
-          }
-        }
-        errs() << "Type for shadow of i: " << DL.getTypeStoreSize(ShadowTy) << " BYTES\n";
-        errs() << "\n";
-      }
-
+      const DataLayout &DL = F.getDataLayout();
       OC.DoneAndStoreOrigin(DL.getTypeStoreSize(OutputVectorTy), OriginPtr);
     }
   }
