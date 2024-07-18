@@ -1481,6 +1481,17 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     break;
   }
 
+  // Allow only pointers to be return type for functions with ownership_takes
+  // attribute. This matches with current OwnershipAttr::Takes semantics
+  if (K == OwnershipAttr::Returns) {
+    QualType RetType = getFunctionOrMethodResultType(D);
+
+    if (!RetType->isPointerType()) {
+      S.Diag(AL.getLoc(), diag::err_ownership_takes_return_type) << AL;
+      return;
+    }
+  }
+
   IdentifierInfo *Module = AL.getArgAsIdent(0)->Ident;
 
   StringRef ModuleName = Module->getName();
