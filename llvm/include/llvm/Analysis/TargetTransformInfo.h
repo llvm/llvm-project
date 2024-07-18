@@ -1679,6 +1679,11 @@ public:
         false; ///< If op is an fp min/max, whether NaNs may be present.
   };
 
+  /// \returns True if the targets prefers fixed width vectorization if the
+  /// loop vectorizer's cost-model assigns an equal cost to the fixed and
+  /// scalable version of the vectorized loop.
+  bool preferFixedOverScalableIfEqualCost() const;
+
   /// \returns True if the target prefers reductions in loop.
   bool preferInLoopReduction(unsigned Opcode, Type *Ty,
                              ReductionFlags Flags) const;
@@ -2156,6 +2161,7 @@ public:
   virtual unsigned getStoreVectorFactor(unsigned VF, unsigned StoreSize,
                                         unsigned ChainSizeInBytes,
                                         VectorType *VecTy) const = 0;
+  virtual bool preferFixedOverScalableIfEqualCost() const = 0;
   virtual bool preferInLoopReduction(unsigned Opcode, Type *Ty,
                                      ReductionFlags) const = 0;
   virtual bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
@@ -2890,6 +2896,9 @@ public:
                                 unsigned ChainSizeInBytes,
                                 VectorType *VecTy) const override {
     return Impl.getStoreVectorFactor(VF, StoreSize, ChainSizeInBytes, VecTy);
+  }
+  bool preferFixedOverScalableIfEqualCost() const override {
+    return Impl.preferFixedOverScalableIfEqualCost();
   }
   bool preferInLoopReduction(unsigned Opcode, Type *Ty,
                              ReductionFlags Flags) const override {
