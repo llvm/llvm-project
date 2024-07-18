@@ -31,6 +31,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
@@ -40,6 +41,9 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/FPEnv.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
@@ -1410,6 +1414,35 @@ QualType CodeGenFunction::BuildFunctionArgList(GlobalDecl GD,
   return ResTy;
 }
 
+void InsertCallBeforeInstruction(llvm::Function *Fn,
+                                 llvm::Instruction &Instruction,
+                                 const char *FunctionName) {
+  llvm::LLVMContext &context = Fn->getContext();
+  llvm::FunctionType *FuncType =
+      llvm::FunctionType::get(llvm::Type::getVoidTy(context), false);
+  llvm::FunctionCallee Func =
+      Fn->getParent()->getOrInsertFunction(FunctionName, FuncType);
+  llvm::IRBuilder<> builder{&Instruction};
+  builder.CreateCall(Func, {});
+}
+
+void InsertCallAtFunctionEntryPoint(llvm::Function *Fn,
+                                    const char *InsertFnName) {
+
+  InsertCallBeforeInstruction(Fn, Fn->front().front(), InsertFnName);
+}
+
+void InsertCallAtAllFunctionExitPoints(llvm::Function *Fn,
+                                       const char *InsertFnName) {
+  for (auto &BB : *Fn) {
+    for (auto &I : BB) {
+      if (auto *RI = dyn_cast<llvm::ReturnInst>(&I)) {
+        InsertCallBeforeInstruction(Fn, I, InsertFnName);
+      }
+    }
+  }
+}
+
 void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
                                    const CGFunctionInfo &FnInfo) {
   assert(Fn && "generating code for null Function");
@@ -1578,8 +1611,26 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     }
   }
 
+  if (SanOpts.has(SanitizerKind::Realtime)) {
+    for (const FunctionEffectWithCondition &Fe : FD->getFunctionEffects()) {
+      if (Fe.Effect.kind() == FunctionEffect::Kind::NonBlocking) {
+        InsertCallAtFunctionEntryPoint(Fn, "__rtsan_realtime_enter");
+        break;
+      }
+    }
+  }
+
   // Emit the standard function epilogue.
   FinishFunction(BodyRange.getEnd());
+
+  if (SanOpts.has(SanitizerKind::Realtime)) {
+    for (const FunctionEffectWithCondition &Fe : FD->getFunctionEffects()) {
+      if (Fe.Effect.kind() == FunctionEffect::Kind::NonBlocking) {
+        InsertCallAtAllFunctionExitPoints(Fn, "__rtsan_realtime_exit");
+        break;
+      }
+    }
+  }
 
   // If we haven't marked the function nothrow through other means, do
   // a quick pass now to see if we can.
