@@ -38,3 +38,23 @@ entry:
   store <4 x i32> %add.i65, ptr %arrayidx42, align 4
   ret void
 }
+
+define void @test2(ptr %in, ptr %out) {
+; CHECK-LABEL: @test2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i16>, ptr [[IN:%.*]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.sadd.sat.v16i16(<16 x i16> [[TMP0]], <16 x i16> [[TMP0]])
+; CHECK-NEXT:    store <16 x i16> [[TMP1]], ptr [[OUT:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = getelementptr i16, ptr %in, i64 8
+  %1 = load <8 x i16>, ptr %in, align 2
+  %2 = load <8 x i16>, ptr %0, align 2
+  %3 = call <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16> %1, <8 x i16> %1)
+  %4 = call <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16> %2, <8 x i16> %2)
+  %5 = getelementptr i16, ptr %out, i64 8
+  store <8 x i16> %3, ptr %out, align 2
+  store <8 x i16> %4, ptr %5, align 2
+  ret void
+}

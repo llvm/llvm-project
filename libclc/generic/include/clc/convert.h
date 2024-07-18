@@ -62,6 +62,7 @@
 #define _CLC_VECTOR_CONVERT_TO(SUFFIX)                                         \
   _CLC_VECTOR_CONVERT_TO1(SUFFIX)                                              \
   _CLC_VECTOR_CONVERT_FROM(half, SUFFIX)
+#else
 #define _CLC_VECTOR_CONVERT_TO(SUFFIX) \
   _CLC_VECTOR_CONVERT_TO1(SUFFIX)
 #endif
