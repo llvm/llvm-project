@@ -579,57 +579,62 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     return false;
   }
 
-  if (!F->isConstexpr() || !F->hasBody()) {
-    const SourceLocation &Loc = S.Current->getLocation(OpPC);
-    if (S.getLangOpts().CPlusPlus11) {
-      const FunctionDecl *DiagDecl = F->getDecl();
+  if (F->isConstexpr() && F->hasBody() &&
+      (F->getDecl()->isConstexpr() || F->getDecl()->hasAttr<MSConstexprAttr>()))
+    return true;
 
-      // Invalid decls have been diagnosed before.
-      if (DiagDecl->isInvalidDecl())
+  // Implicitly constexpr.
+  if (F->isLambdaStaticInvoker())
+    return true;
+
+  const SourceLocation &Loc = S.Current->getLocation(OpPC);
+  if (S.getLangOpts().CPlusPlus11) {
+    const FunctionDecl *DiagDecl = F->getDecl();
+
+    // Invalid decls have been diagnosed before.
+    if (DiagDecl->isInvalidDecl())
+      return false;
+
+    // If this function is not constexpr because it is an inherited
+    // non-constexpr constructor, diagnose that directly.
+    const auto *CD = dyn_cast<CXXConstructorDecl>(DiagDecl);
+    if (CD && CD->isInheritingConstructor()) {
+      const auto *Inherited = CD->getInheritedConstructor().getConstructor();
+      if (!Inherited->isConstexpr())
+        DiagDecl = CD = Inherited;
+    }
+
+    // FIXME: If DiagDecl is an implicitly-declared special member function
+    // or an inheriting constructor, we should be much more explicit about why
+    // it's not constexpr.
+    if (CD && CD->isInheritingConstructor()) {
+      S.FFDiag(Loc, diag::note_constexpr_invalid_inhctor, 1)
+          << CD->getInheritedConstructor().getConstructor()->getParent();
+      S.Note(DiagDecl->getLocation(), diag::note_declared_at);
+    } else {
+      // Don't emit anything if the function isn't defined and we're checking
+      // for a constant expression. It might be defined at the point we're
+      // actually calling it.
+      bool IsExtern = DiagDecl->getStorageClass() == SC_Extern;
+      if (!DiagDecl->isDefined() && !IsExtern && DiagDecl->isConstexpr() &&
+          S.checkingPotentialConstantExpression())
         return false;
 
-      // If this function is not constexpr because it is an inherited
-      // non-constexpr constructor, diagnose that directly.
-      const auto *CD = dyn_cast<CXXConstructorDecl>(DiagDecl);
-      if (CD && CD->isInheritingConstructor()) {
-        const auto *Inherited = CD->getInheritedConstructor().getConstructor();
-        if (!Inherited->isConstexpr())
-          DiagDecl = CD = Inherited;
-      }
+      // If the declaration is defined, declared 'constexpr' _and_ has a body,
+      // the below diagnostic doesn't add anything useful.
+      if (DiagDecl->isDefined() && DiagDecl->isConstexpr() &&
+          DiagDecl->hasBody())
+        return false;
 
-      // FIXME: If DiagDecl is an implicitly-declared special member function
-      // or an inheriting constructor, we should be much more explicit about why
-      // it's not constexpr.
-      if (CD && CD->isInheritingConstructor()) {
-        S.FFDiag(Loc, diag::note_constexpr_invalid_inhctor, 1)
-          << CD->getInheritedConstructor().getConstructor()->getParent();
-        S.Note(DiagDecl->getLocation(), diag::note_declared_at);
-      } else {
-        // Don't emit anything if the function isn't defined and we're checking
-        // for a constant expression. It might be defined at the point we're
-        // actually calling it.
-        bool IsExtern = DiagDecl->getStorageClass() == SC_Extern;
-        if (!DiagDecl->isDefined() && !IsExtern &&
-            S.checkingPotentialConstantExpression())
-          return false;
-
-        // If the declaration is defined, declared 'constexpr' _and_ has a body,
-        // the below diagnostic doesn't add anything useful.
-        if (DiagDecl->isDefined() && DiagDecl->isConstexpr() &&
-            DiagDecl->hasBody())
-          return false;
-
-        S.FFDiag(Loc, diag::note_constexpr_invalid_function, 1)
+      S.FFDiag(Loc, diag::note_constexpr_invalid_function, 1)
           << DiagDecl->isConstexpr() << (bool)CD << DiagDecl;
-        S.Note(DiagDecl->getLocation(), diag::note_declared_at);
-      }
-    } else {
-      S.FFDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
+      S.Note(DiagDecl->getLocation(), diag::note_declared_at);
     }
-    return false;
+  } else {
+    S.FFDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
   }
 
-  return true;
+  return false;
 }
 
 bool CheckCallDepth(InterpState &S, CodePtr OpPC) {
