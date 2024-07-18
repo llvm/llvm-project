@@ -241,15 +241,15 @@ static_assert(check_three_way_comparable_with<MoveOnlyIntComparable, int>());
 static_assert(!check_three_way_comparable_with<MoveOnlyIntComparable, int>());
 #endif // TEST_STD_VER >= 23
 
-struct ImmobileIntComparable {
-  ImmobileIntComparable(int) {}
+struct NonMovableIntComparable {
+  NonMovableIntComparable(int) {}
 
-  ImmobileIntComparable(ImmobileIntComparable&&)            = delete;
-  ImmobileIntComparable& operator=(ImmobileIntComparable&&) = delete;
+  NonMovableIntComparable(NonMovableIntComparable&&)            = delete;
+  NonMovableIntComparable& operator=(NonMovableIntComparable&&) = delete;
 
-  friend auto operator<=>(ImmobileIntComparable const&, ImmobileIntComparable const&) = default;
+  friend auto operator<=>(NonMovableIntComparable const&, NonMovableIntComparable const&) = default;
 };
 
-static_assert(!check_three_way_comparable_with<ImmobileIntComparable, int>());
+static_assert(!check_three_way_comparable_with<NonMovableIntComparable, int>());
 
 } // namespace user_defined
