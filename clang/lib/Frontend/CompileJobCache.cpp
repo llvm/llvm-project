@@ -468,7 +468,7 @@ bool CompileJobCache::CachingOutputs::prepareOutputCollectionCommon(
   auto FilterBackend = llvm::vfs::makeFilteringOutputBackend(
       CacheOutputs,
       [&](StringRef Path, std::optional<llvm::vfs::OutputConfig> Config) {
-        return !(UseCASBackend && Path.equals(OutputFile)) &&
+        return !(UseCASBackend && (Path.str() == OutputFile)) &&
                Path != DependenciesFile;
       });
 
