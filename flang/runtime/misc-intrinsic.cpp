@@ -84,7 +84,7 @@ void RTDEF(Rename)(const Descriptor &path1, const Descriptor &path2,
   if (pathDst != path2.OffsetElement()) {
     FreeMemory(pathDst);
   }
-#else  // !defined(RT_DEVICE_COMPILATION)
+#else // !defined(RT_DEVICE_COMPILATION)
   terminator.Crash("RENAME intrinsic is only supported on host devices");
 #endif // !defined(RT_DEVICE_COMPILATION)
 }
