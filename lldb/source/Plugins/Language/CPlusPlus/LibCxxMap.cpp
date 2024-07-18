@@ -263,8 +263,6 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
   if (!node_sp)
     return 0;
 
-  // TODO: or should this just be: assert
-  // (!isOldCompressedPairLayout(*node_sp));
   if (!isOldCompressedPairLayout(*node_sp))
     return llvm::createStringError("Unexpected std::map layout: expected "
                                    "old __compressed_pair layout.");
