@@ -2505,7 +2505,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     void DoneAndStoreOrigin(TypeSize TS, Value *OriginPtr) {
       if (MSV->MS.TrackOrigins) {
         assert(Origin);
-        MSV->paintOrigin(IRB, Origin, OriginPtr, TS, Align(1));
+        MSV->paintOrigin(IRB, Origin, OriginPtr, TS, kMinOriginAlignment);
       }
     }
   };
