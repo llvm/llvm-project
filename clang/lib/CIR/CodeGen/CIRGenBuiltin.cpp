@@ -1055,8 +1055,9 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // the AST level this is handled within CreateTempAlloca et al., but for the
     // builtin / dynamic alloca we have to handle it here.
     assert(!MissingFeatures::addressSpace());
-    LangAS AAS = getASTAllocaAddressSpace();
-    LangAS EAS = E->getType()->getPointeeType().getAddressSpace();
+    auto AAS = builder.getAddrSpaceAttr(getASTAllocaAddressSpace());
+    auto EAS = builder.getAddrSpaceAttr(
+        E->getType()->getPointeeType().getAddressSpace());
     if (EAS != AAS) {
       assert(false && "Non-default address space for alloca NYI");
     }

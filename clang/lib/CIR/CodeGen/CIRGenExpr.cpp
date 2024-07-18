@@ -1999,9 +1999,11 @@ LValue CIRGenFunction::buildCastLValue(const CastExpr *E) {
   case CK_AddressSpaceConversion: {
     LValue LV = buildLValue(E->getSubExpr());
     QualType DestTy = getContext().getPointerType(E->getType());
+    auto SrcAS = builder.getAddrSpaceAttr(
+        E->getSubExpr()->getType().getAddressSpace());
+    auto DestAS = builder.getAddrSpaceAttr(E->getType().getAddressSpace());
     mlir::Value V = getTargetHooks().performAddrSpaceCast(
-        *this, LV.getPointer(), E->getSubExpr()->getType().getAddressSpace(),
-        E->getType().getAddressSpace(), ConvertType(DestTy));
+        *this, LV.getPointer(), SrcAS, DestAS, ConvertType(DestTy));
     assert(!MissingFeatures::tbaa());
     return makeAddrLValue(Address(V, getTypes().convertTypeForMem(E->getType()),
                                   LV.getAddress().getAlignment()),
