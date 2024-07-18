@@ -736,10 +736,10 @@ inline Value *getUnderlyingObject(Value *V, unsigned MaxLookup = 6) {
   return const_cast<Value *>(getUnderlyingObject(VConst, MaxLookup));
 }
 
-/// Like getUnderlyingObject(), but will also look through phi/select nodes
-/// to establish a single underlying object.
-const Value *getUnderlyingObjectThroughPhisAndSelects(const Value *V,
-                                                      unsigned MaxLookup = 6);
+/// Like getUnderlyingObject(), but will try harder to find a single underlying
+/// object. In particular, this function also looks through selects and phis.
+const Value *getUnderlyingObjectAggressive(const Value *V,
+                                           unsigned MaxLookup = 6);
 
 /// This method is similar to getUnderlyingObject except that it can
 /// look through phi and select instructions and return multiple objects.

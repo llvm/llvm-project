@@ -6609,9 +6609,8 @@ void llvm::getUnderlyingObjects(const Value *V,
   } while (!Worklist.empty());
 }
 
-const Value *
-llvm::getUnderlyingObjectThroughPhisAndSelects(const Value *V,
-                                               unsigned MaxLookup) {
+const Value *llvm::getUnderlyingObjectAggressive(const Value *V,
+                                                 unsigned MaxLookup) {
   const unsigned MaxVisited = 8;
 
   SmallPtrSet<const Value *, 8> Visited;
