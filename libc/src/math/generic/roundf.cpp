@@ -13,6 +13,12 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float, roundf, (float x)) { return fputil::round(x); }
+LLVM_LIBC_FUNCTION(float, roundf, (float x)) {
+#ifdef __LIBC_USE_BUILTIN_ROUND
+  return __builtin_roundf(x);
+#else
+  return fputil::round(x);
+#endif
+}
 
 } // namespace LIBC_NAMESPACE_DECL
