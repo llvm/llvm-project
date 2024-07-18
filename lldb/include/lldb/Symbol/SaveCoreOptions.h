@@ -1,4 +1,4 @@
-//===-- CoreDumpOptions.h ---------------------------------------*- C++ -*-===//
+//===-- SaveCoreOptions.h ---------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_COREDUMPOPTIONS_H
-#define LLDB_SOURCE_PLUGINS_OBJECTFILE_COREDUMPOPTIONS_H
+#ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_SaveCoreOPTIONS_H
+#define LLDB_SOURCE_PLUGINS_OBJECTFILE_SaveCoreOPTIONS_H
 
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-forward.h"
@@ -18,10 +18,10 @@
 
 namespace lldb_private {
 
-class CoreDumpOptions {
+class SaveCoreOptions {
 public:
-  CoreDumpOptions(){};
-  ~CoreDumpOptions() = default;
+  SaveCoreOptions(){};
+  ~SaveCoreOptions() = default;
 
   lldb_private::Status SetPluginName(const char *name);
   std::optional<std::string> GetPluginName() const;
@@ -41,4 +41,4 @@ private:
 };
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_COREDUMPOPTIONS_H
+#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_SaveCoreOPTIONS_H

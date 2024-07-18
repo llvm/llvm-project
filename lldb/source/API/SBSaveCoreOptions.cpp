@@ -1,4 +1,4 @@
-//===-- SBCoreDumpOptions.cpp -----------------------------------*- C++ -*-===//
+//===-- SBSaveCoreOptions.cpp -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,31 +6,31 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/API/SBCoreDumpOptions.h"
+#include "lldb/API/SBSaveCoreOptions.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/Host/FileSystem.h"
-#include "lldb/Symbol/CoreDumpOptions.h"
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Utility/Instrumentation.h"
 
 #include "Utils.h"
 
 using namespace lldb;
 
-SBCoreDumpOptions::SBCoreDumpOptions() {
+SBSaveCoreOptions::SBSaveCoreOptions() {
   LLDB_INSTRUMENT_VA(this)
 
-  m_opaque_up = std::make_unique<lldb_private::CoreDumpOptions>();
+  m_opaque_up = std::make_unique<lldb_private::SaveCoreOptions>();
 }
 
-SBCoreDumpOptions::SBCoreDumpOptions(const SBCoreDumpOptions &rhs) {
+SBSaveCoreOptions::SBSaveCoreOptions(const SBSaveCoreOptions &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
-const SBCoreDumpOptions &
-SBCoreDumpOptions::operator=(const SBCoreDumpOptions &rhs) {
+const SBSaveCoreOptions &
+SBSaveCoreOptions::operator=(const SBSaveCoreOptions &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)
@@ -38,23 +38,23 @@ SBCoreDumpOptions::operator=(const SBCoreDumpOptions &rhs) {
   return *this;
 }
 
-SBError SBCoreDumpOptions::SetPluginName(const char *name) {
+SBError SBSaveCoreOptions::SetPluginName(const char *name) {
   LLDB_INSTRUMENT_VA(this, name);
   lldb_private::Status error = m_opaque_up->SetPluginName(name);
   return SBError(error);
 }
 
-void SBCoreDumpOptions::SetStyle(lldb::SaveCoreStyle style) {
+void SBSaveCoreOptions::SetStyle(lldb::SaveCoreStyle style) {
   LLDB_INSTRUMENT_VA(this, style);
   m_opaque_up->SetStyle(style);
 }
 
-void SBCoreDumpOptions::SetOutputFile(lldb::SBFileSpec file_spec) {
+void SBSaveCoreOptions::SetOutputFile(lldb::SBFileSpec file_spec) {
   LLDB_INSTRUMENT_VA(this, file_spec);
   m_opaque_up->SetOutputFile(file_spec.ref());
 }
 
-const char *SBCoreDumpOptions::GetPluginName() const {
+const char *SBSaveCoreOptions::GetPluginName() const {
   LLDB_INSTRUMENT_VA(this);
   const auto name = m_opaque_up->GetPluginName();
   if (!name)
@@ -62,7 +62,7 @@ const char *SBCoreDumpOptions::GetPluginName() const {
   return lldb_private::ConstString(name.value()).GetCString();
 }
 
-SBFileSpec SBCoreDumpOptions::GetOutputFile() const {
+SBFileSpec SBSaveCoreOptions::GetOutputFile() const {
   LLDB_INSTRUMENT_VA(this);
   const auto file_spec = m_opaque_up->GetOutputFile();
   if (file_spec)
@@ -70,16 +70,16 @@ SBFileSpec SBCoreDumpOptions::GetOutputFile() const {
   return SBFileSpec();
 }
 
-lldb::SaveCoreStyle SBCoreDumpOptions::GetStyle() const {
+lldb::SaveCoreStyle SBSaveCoreOptions::GetStyle() const {
   LLDB_INSTRUMENT_VA(this);
   return m_opaque_up->GetStyle();
 }
 
-void SBCoreDumpOptions::Clear() {
+void SBSaveCoreOptions::Clear() {
   LLDB_INSTRUMENT_VA(this);
   m_opaque_up->Clear();
 }
 
-lldb_private::CoreDumpOptions &SBCoreDumpOptions::ref() const {
+lldb_private::SaveCoreOptions &SBSaveCoreOptions::ref() const {
   return *m_opaque_up.get();
 }

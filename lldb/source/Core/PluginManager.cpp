@@ -12,7 +12,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
-#include "lldb/Symbol/CoreDumpOptions.h"
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
@@ -702,7 +702,7 @@ PluginManager::GetObjectFileCreateMemoryCallbackForPluginName(
 }
 
 Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
-                               const lldb_private::CoreDumpOptions &options) {
+                               const lldb_private::SaveCoreOptions &options) {
   Status error;
   if (!options.GetOutputFile()) {
     error.SetErrorString("No output file specified");

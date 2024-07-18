@@ -21,7 +21,7 @@
 namespace lldb_private {
 
 bool SaveMiniDump(const lldb::ProcessSP &process_sp,
-                  const CoreDumpOptions &core_options,
+                  const SaveCoreOptions &core_options,
                   lldb_private::Status &error) {
   if (!process_sp)
     return false;

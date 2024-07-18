@@ -1291,7 +1291,7 @@ public:
     }
 
     // Instance variables to hold the values for command options.
-    CoreDumpOptions m_core_dump_options;
+    SaveCoreOptions m_core_dump_options;
   };
 
 protected:

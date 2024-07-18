@@ -1,4 +1,4 @@
-//===-- SBCoreDumpOptions.h -------------------------------------*- C++ -*-===//
+//===-- SBSaveCoreOptions.h -------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,21 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBCOREDUMPOPTIONS_H
-#define LLDB_API_SBCOREDUMPOPTIONS_H
+#ifndef LLDB_API_SBSaveCoreOPTIONS_H
+#define LLDB_API_SBSaveCoreOPTIONS_H
 
 #include "lldb/API/SBDefines.h"
-#include "lldb/Symbol/CoreDumpOptions.h"
+#include "lldb/Symbol/SaveCoreOptions.h"
 
 namespace lldb {
 
-class LLDB_API SBCoreDumpOptions {
+class LLDB_API SBSaveCoreOptions {
 public:
-  SBCoreDumpOptions();
-  SBCoreDumpOptions(const lldb::SBCoreDumpOptions &rhs);
-  ~SBCoreDumpOptions() = default;
+  SBSaveCoreOptions();
+  SBSaveCoreOptions(const lldb::SBSaveCoreOptions &rhs);
+  ~SBSaveCoreOptions() = default;
 
-  const SBCoreDumpOptions &operator=(const lldb::SBCoreDumpOptions &rhs);
+  const SBSaveCoreOptions &operator=(const lldb::SBSaveCoreOptions &rhs);
 
   /// Set the plugin name. Supplying null or empty string will reset
   /// the option.
@@ -59,11 +59,11 @@ public:
 
 protected:
   friend class SBProcess;
-  lldb_private::CoreDumpOptions &ref() const;
+  lldb_private::SaveCoreOptions &ref() const;
 
 private:
-  std::unique_ptr<lldb_private::CoreDumpOptions> m_opaque_up;
-}; // SBCoreDumpOptions
+  std::unique_ptr<lldb_private::SaveCoreOptions> m_opaque_up;
+}; // SBSaveCoreOptions
 } // namespace lldb
 
-#endif // LLDB_API_SBCOREDUMPOPTIONS_H
+#endif // LLDB_API_SBSaveCoreOPTIONS_H

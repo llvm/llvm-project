@@ -132,7 +132,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 stacks_to_sp_map,
             )
 
-            options = lldb.SBCoreDumpOptions()
+            options = lldb.SBSaveCoreOptions()
             core_sb_stack_spec = lldb.SBFileSpec(core_sb_stack)
             options.SetOutputFile(core_sb_stack_spec)
             options.SetPluginName("minidump")
@@ -149,7 +149,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 stacks_to_sp_map,
             )
 
-            options = lldb.SBCoreDumpOptions()
+            options = lldb.SBSaveCoreOptions()
             core_sb_dirty_spec = lldb.SBFileSpec(core_sb_dirty)
             options.SetOutputFile(core_sb_dirty_spec)
             options.SetPluginName("minidump")
@@ -167,7 +167,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
 
             # Minidump can now save full core files, but they will be huge and
             # they might cause this test to timeout.
-            options = lldb.SBCoreDumpOptions()
+            options = lldb.SBSaveCoreOptions()
             core_sb_full_spec = lldb.SBFileSpec(core_sb_full)
             options.SetOutputFile(core_sb_full_spec)
             options.SetPluginName("minidump")

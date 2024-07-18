@@ -1,14 +1,14 @@
-"""Test the SBCoreDumpOptions APIs."""
+"""Test the SBSaveCoreOptions APIs."""
 
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
-class SBCoreDumpOptionsAPICase(TestBase):
+class SBSaveCoreOptionsAPICase(TestBase):
     def test_plugin_name_assignment(self):
         """Test assignment ensuring valid plugin names only."""
-        options = lldb.SBCoreDumpOptions()
+        options = lldb.SBSaveCoreOptions()
         error = options.SetPluginName(None)
         self.assertTrue(error.Success())
         self.assertEqual(options.GetPluginName(), None)
@@ -24,5 +24,5 @@ class SBCoreDumpOptionsAPICase(TestBase):
 
     def test_default_corestyle_behavior(self):
         """Test that the default core style is unspecified."""
-        options = lldb.SBCoreDumpOptions()
+        options = lldb.SBSaveCoreOptions()
         self.assertEqual(options.GetStyle(), lldb.eSaveCoreUnspecified)

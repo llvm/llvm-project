@@ -6519,7 +6519,7 @@ struct page_object {
 };
 
 bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
-                               const lldb_private::CoreDumpOptions &options,
+                               const lldb_private::SaveCoreOptions &options,
                                Status &error) {
   auto core_style = options.GetStyle();
   if (core_style == SaveCoreStyle::eSaveCoreUnspecified)

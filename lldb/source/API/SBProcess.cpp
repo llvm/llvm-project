@@ -34,13 +34,13 @@
 
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandReturnObject.h"
-#include "lldb/API/SBCoreDumpOptions.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBFile.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBMemoryRegionInfoList.h"
+#include "lldb/API/SBSaveCoreOptions.h"
 #include "lldb/API/SBScriptObject.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
@@ -1217,7 +1217,7 @@ bool SBProcess::IsInstrumentationRuntimePresent(
 
 lldb::SBError SBProcess::SaveCore(const char *file_name) {
   LLDB_INSTRUMENT_VA(this, file_name);
-  SBCoreDumpOptions options;
+  SBSaveCoreOptions options;
   options.SetOutputFile(SBFileSpec(file_name));
   options.SetStyle(SaveCoreStyle::eSaveCoreFull);
   return SaveCore(options);
@@ -1227,14 +1227,14 @@ lldb::SBError SBProcess::SaveCore(const char *file_name,
                                   const char *flavor,
                                   SaveCoreStyle core_style) {
   LLDB_INSTRUMENT_VA(this, file_name, flavor, core_style);
-  SBCoreDumpOptions options;
+  SBSaveCoreOptions options;
   options.SetOutputFile(SBFileSpec(file_name));
   options.SetPluginName(flavor);
   options.SetStyle(core_style);
   return SaveCore(options);
 }
 
-lldb::SBError SBProcess::SaveCore(SBCoreDumpOptions &options) {
+lldb::SBError SBProcess::SaveCore(SBSaveCoreOptions &options) {
 
   LLDB_INSTRUMENT_VA(this, options);
 

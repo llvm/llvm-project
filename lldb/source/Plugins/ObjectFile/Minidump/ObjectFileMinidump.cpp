@@ -56,7 +56,7 @@ size_t ObjectFileMinidump::GetModuleSpecifications(
 }
 
 bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
-                                  const lldb_private::CoreDumpOptions &options,
+                                  const lldb_private::SaveCoreOptions &options,
                                   lldb_private::Status &error) {
   // Output file and process_sp are both checked in PluginManager::SaveCore.
   assert(options.GetOutputFile().has_value());

@@ -382,7 +382,7 @@ public:
   /// as defined in the options object.
   ///
   /// \param[in] options - The options to use when saving the core file.
-  lldb::SBError SaveCore(SBCoreDumpOptions &options);
+  lldb::SBError SaveCore(SBSaveCoreOptions &options);
 
   /// Query the address load_addr and store the details of the memory
   /// region that contains it in the supplied SBMemoryRegionInfo object.

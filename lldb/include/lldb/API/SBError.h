@@ -77,7 +77,7 @@ protected:
   friend class SBBreakpointName;
   friend class SBCommandReturnObject;
   friend class SBCommunication;
-  friend class SBCoreDumpOptions;
+  friend class SBSaveCoreOptions;
   friend class SBData;
   friend class SBDebugger;
   friend class SBFile;
