@@ -246,7 +246,7 @@ SIMD vector types
 =================
 
 Clang's simd vector types are builtin types and not user defined types as in MSVC. This does have some observable behavior changes.
-We will look at the x86 `__m128` type for the examples below but the statements apply to all vector types imcluding ARM's `float32x4_t`.
+We will look at the x86 `__m128` type for the examples below but the statements apply to all vector types including ARM's `float32x4_t`.
 
 There are no members that can be accessed on the vector types. Vector types are not structs in clang.
 You cannot use ``__m128.m128_f32[0]`` to access the first element of the `__m128`.
