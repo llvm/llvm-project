@@ -493,6 +493,7 @@ protected:
   /// \Returns the LLVM IR Instructions that this SandboxIR maps to in program
   /// order.
   virtual SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const = 0;
+  friend class EraseFromParent; // For getLLVMInstrs().
 
 public:
   static const char *getOpcodeName(Opcode Opc);
@@ -658,6 +659,7 @@ protected:
   friend void Instruction::eraseFromParent(); // For detach().
   /// Take ownership of VPtr and store it in `LLVMValueToValueMap`.
   Value *registerValue(std::unique_ptr<Value> &&VPtr);
+  friend class EraseFromParent; // For registerValue().
   /// This is the actual function that creates sandboxir values for \p V,
   /// and among others handles all instruction types.
   Value *getOrCreateValueInternal(llvm::Value *V, llvm::User *U = nullptr);
@@ -682,7 +684,7 @@ protected:
   friend class BasicBlock; // For getOrCreateValue().
 
 public:
-  Context(LLVMContext &LLVMCtx) : LLVMCtx(LLVMCtx) {}
+  Context(LLVMContext &LLVMCtx) : LLVMCtx(LLVMCtx), IRTracker(*this) {}
 
   Tracker &getTracker() { return IRTracker; }
   /// Convenience function for `getTracker().save()`
