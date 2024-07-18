@@ -2445,6 +2445,10 @@ void ASTStmtReader::VisitOMPUnrollDirective(OMPUnrollDirective *D) {
   VisitOMPLoopTransformationDirective(D);
 }
 
+void ASTStmtReader::VisitOMPReverseDirective(OMPReverseDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+}
+
 void ASTStmtReader::VisitOMPForDirective(OMPForDirective *D) {
   VisitOMPLoopDirective(D);
   D->setHasCancel(Record.readBool());
@@ -3461,6 +3465,15 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       assert(Record[ASTStmtReader::NumStmtFields] == 1 && "Unroll directive accepts only a single loop");
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
       S = OMPUnrollDirective::CreateEmpty(Context, NumClauses);
+      break;
+    }
+
+    case STMT_OMP_REVERSE_DIRECTIVE: {
+      assert(Record[ASTStmtReader::NumStmtFields] == 1 &&
+             "Reverse directive accepts only a single loop");
+      assert(Record[ASTStmtReader::NumStmtFields + 1] == 0 &&
+             "Reverse directive has no clauses");
+      S = OMPReverseDirective::CreateEmpty(Context);
       break;
     }
 
