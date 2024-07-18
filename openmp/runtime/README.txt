@@ -53,7 +53,8 @@ Architectures Supported
 * IBM(R) Power architecture (big endian)
 * IBM(R) Power architecture (little endian)
 * MIPS and MIPS64 architecture
-* RISCV64 architecture
+* RISC-V 32 bits architecture
+* RISC-V 64 bits architecture
 * LoongArch64 architecture
 
 Supported RTL Build Configurations
