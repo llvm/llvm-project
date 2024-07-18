@@ -2032,8 +2032,6 @@ bool ModuleAddressSanitizer::shouldInstrumentGlobal(GlobalVariable *G) const {
   if (G->isThreadLocal()) return false;
   // For now, just ignore this Global if the alignment is large.
   if (G->getAlign() && *G->getAlign() > getMinRedzoneSizeForGlobal()) return false;
-  if (G->getName() == "NoopCoro.Frame.Const")
-    return false;
 
   // For non-COFF targets, only instrument globals known to be defined by this
   // TU.
