@@ -539,10 +539,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         // anyway. C++20 requires this, and in prior language modes it improves
         // error recovery. But before we commit to this, check that we actually
         // have something that looks like a template-argument-list next.
-        if (!IsTypename &&
-            (TNK == TNK_Undeclared_template ||
-             (!HasScopeSpecifier && ObjectType)) &&
-            isTemplateArgumentList(1) == TPResult::False)
+        if (!IsTypename && (ObjectType || TNK == TNK_Undeclared_template) &&
+          isTemplateArgumentList(1) == TPResult::False)
           break;
 
         // We have found a template name, so annotate this token
