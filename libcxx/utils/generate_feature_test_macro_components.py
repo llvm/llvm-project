@@ -993,7 +993,8 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges",
             "values": {
                 "c++20": 202207,
-                # "c++26": 202406, # P2997R1 Removing the common reference requirement from the indirectly invocable concepts
+                # "c++23": 202302,  # Relaxing Ranges Just A Smidge
+                # "c++26": 202406,  # P2997R1 Removing the common reference requirement from the indirectly invocable concepts (already implemented as a DR)
             },
             "headers": ["algorithm", "functional", "iterator", "memory", "ranges"],
         },
@@ -1267,7 +1268,7 @@ feature_test_macros = [
             "values": {
                 "c++17": 201606,
                 "c++20": 201803,
-                # "c++26": 202403, # P2591R5: Concatenation of strings and string views
+                "c++26": 202403,  # P2591R5: Concatenation of strings and string views
             },
             "headers": ["string", "string_view"],
         },

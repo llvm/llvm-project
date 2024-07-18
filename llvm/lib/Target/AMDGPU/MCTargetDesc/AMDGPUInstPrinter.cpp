@@ -1090,7 +1090,8 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
   if (!AMDGPU::isLegalDPALU_DPPControl(Imm) && AMDGPU::isDPALU_DPP(Desc)) {
     O << " /* DP ALU dpp only supports row_newbcast */";
     return;
-  } else if (Imm <= DppCtrl::QUAD_PERM_LAST) {
+  }
+  if (Imm <= DppCtrl::QUAD_PERM_LAST) {
     O << "quad_perm:[";
     O << formatDec(Imm & 0x3)         << ',';
     O << formatDec((Imm & 0xc)  >> 2) << ',';

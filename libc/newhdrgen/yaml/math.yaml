@@ -7,6 +7,12 @@ types:
 enums: []
 objects: []
 functions:
+  - name: cbrt
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: double
   - name: cbrtf
     standards:
       - stdc
