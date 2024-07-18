@@ -73,9 +73,11 @@ find_library(Z3_LIBRARIES NAMES z3 libz3
 # Searching for the version of the Z3 library is a best-effort task
 unset(Z3_VERSION_STRING)
 
+include(DetectCrossCompiling)
+
 # First, try to check it dynamically, by compiling a small program that
 # prints Z3's version
-if(Z3_INCLUDE_DIR AND Z3_LIBRARIES AND NOT CMAKE_CROSSCOMPILING)
+if(Z3_INCLUDE_DIR AND Z3_LIBRARIES AND NOT LLVM_CROSSCOMPILING)
   # We do not have the Z3 binary to query for a version. Try to use
   # a small C++ program to detect it via the Z3_get_version() API call.
   check_z3_version(${Z3_INCLUDE_DIR} ${Z3_LIBRARIES})
@@ -83,7 +85,7 @@ endif()
 
 # If the dynamic check fails, we might be cross compiling: if that's the case,
 # check the version in the headers, otherwise, fail with a message
-if(NOT Z3_VERSION_STRING AND (CMAKE_CROSSCOMPILING AND
+if(NOT Z3_VERSION_STRING AND (LLVM_CROSSCOMPILING AND
                               Z3_INCLUDE_DIR AND
                               EXISTS "${Z3_INCLUDE_DIR}/z3_version.h"))
   # TODO: print message warning that we couldn't find a compatible lib?
