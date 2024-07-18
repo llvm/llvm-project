@@ -14951,9 +14951,8 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
     // Iteration variable for the permuted loop. Reuse the one from
     // checkOpenMPLoop which will also be used to update the original loop
     // variable.
-    std::string PermutedCntName =
-        (Twine(".permuted_") + llvm::utostr(TargetIdx) + ".iv." + OrigVarName)
-            .str();
+    SmallString<64> PermutedCntName(".permuted_");
+    PermutedCntName.append({llvm::utostr(TargetIdx), ".iv.", OrigVarName});
     auto *PermutedCntDecl = cast<VarDecl>(IterVarRef->getDecl());
     PermutedCntDecl->setDeclName(
         &SemaRef.PP.getIdentifierTable().get(PermutedCntName));
@@ -14963,7 +14962,7 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
     };
 
     // For init-statement:
-    // \code{c}
+    // \code
     //   auto .permuted_{target}.iv = 0
     // \endcode
     ExprResult Zero = SemaRef.ActOnIntegerConstant(OrigVarLoc, 0);
@@ -14978,8 +14977,8 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
       return StmtError();
 
     // For cond-expression:
-    // \code{c}
-    //   .permuted_{target}.iv < NumIterations
+    // \code
+    //   .permuted_{target}.iv < MakeNumIterations()
     // \endcode
     ExprResult CondExpr =
         SemaRef.BuildBinOp(CurScope, SourceHelper.Cond->getExprLoc(), BO_LT,
@@ -14988,7 +14987,7 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
       return StmtError();
 
     // For incr-statement:
-    // \code{c}
+    // \code
     //   ++.tile.iv
     // \endcode
     ExprResult IncrStmt = SemaRef.BuildUnaryOp(
