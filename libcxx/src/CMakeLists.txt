@@ -200,8 +200,8 @@ if (LIBCXX_ENABLE_SHARED)
   add_library(cxx_shared SHARED ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
   target_include_directories(cxx_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   target_link_libraries(cxx_shared PUBLIC cxx-headers
-                                   PRIVATE ${LIBCXX_LIBRARIES}
-                                   PRIVATE libcxx-libc-shared)
+                                   PUBLIC libcxx-libc-shared
+                                   PRIVATE ${LIBCXX_LIBRARIES})
   set_target_properties(cxx_shared
     PROPERTIES
       COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
@@ -294,8 +294,9 @@ if (LIBCXX_ENABLE_STATIC)
   add_library(cxx_static STATIC ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
   target_include_directories(cxx_static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   target_link_libraries(cxx_static PUBLIC cxx-headers
+                                   PUBLIC libcxx-libc-static
                                    PRIVATE ${LIBCXX_LIBRARIES}
-                                   PRIVATE libcxx-libc-static libcxx-abi-static)
+                                   PRIVATE libcxx-abi-static)
   set_target_properties(cxx_static
     PROPERTIES
       COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
