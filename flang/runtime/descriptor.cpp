@@ -8,6 +8,7 @@
 
 #include "flang/Runtime/descriptor.h"
 #include "ISO_Fortran_util.h"
+#include "allocator-registry.h"
 #include "derived.h"
 #include "memory.h"
 #include "stat.h"
@@ -50,7 +51,9 @@ RT_API_ATTRS void Descriptor::Establish(TypeCode t, std::size_t elementBytes,
       GetDimension(j).SetByteStride(0);
     }
   }
-  raw_.f18Addendum = addendum;
+  if (addendum) {
+    raw_.extra = raw_.extra | 1;
+  }
   DescriptorAddendum *a{Addendum()};
   RUNTIME_CHECK(terminator, addendum == (a != nullptr));
   if (a) {
@@ -162,7 +165,9 @@ RT_API_ATTRS int Descriptor::Allocate() {
   // Zero size allocation is possible in Fortran and the resulting
   // descriptor must be allocated/associated. Since std::malloc(0)
   // result is implementation defined, always allocate at least one byte.
-  void *p{byteSize ? std::malloc(byteSize) : std::malloc(1)};
+
+  AllocFct alloc{allocatorRegistry.GetAllocator(raw_.GetAllocIdx())};
+  void *p{alloc(byteSize ? byteSize : 1)};
   if (!p) {
     return CFI_ERROR_MEM_ALLOCATION;
   }
@@ -204,7 +209,8 @@ RT_API_ATTRS int Descriptor::Deallocate() {
   if (!descriptor.base_addr) {
     return CFI_ERROR_BASE_ADDR_NULL;
   } else {
-    std::free(descriptor.base_addr);
+    FreeFct free{allocatorRegistry.GetDeallocator(descriptor.GetAllocIdx())};
+    free(descriptor.base_addr);
     descriptor.base_addr = nullptr;
     return CFI_SUCCESS;
   }
@@ -290,7 +296,7 @@ void Descriptor::Dump(FILE *f) const {
   std::fprintf(f, "  rank      %d\n", static_cast<int>(raw_.rank));
   std::fprintf(f, "  type      %d\n", static_cast<int>(raw_.type));
   std::fprintf(f, "  attribute %d\n", static_cast<int>(raw_.attribute));
-  std::fprintf(f, "  addendum  %d\n", static_cast<int>(raw_.f18Addendum));
+  std::fprintf(f, "  extra     %d\n", static_cast<int>(raw_.extra));
   for (int j{0}; j < raw_.rank; ++j) {
     std::fprintf(f, "  dim[%d] lower_bound %jd\n", j,
         static_cast<std::intmax_t>(raw_.dim[j].lower_bound));

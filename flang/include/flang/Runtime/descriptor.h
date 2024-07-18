@@ -92,8 +92,8 @@ private:
 // The storage for this object follows the last used dim[] entry in a
 // Descriptor (CFI_cdesc_t) generic descriptor.  Space matters here, since
 // descriptors serve as POINTER and ALLOCATABLE components of derived type
-// instances.  The presence of this structure is implied by the flag
-// CFI_cdesc_t.f18Addendum, and the number of elements in the len_[]
+// instances.  The presence of this structure is implied by the lsb of
+// CFI_cdesc_t.extra set to 1, and the number of elements in the len_[]
 // array is determined by derivedType_->LenParameters().
 class DescriptorAddendum {
 public:
@@ -339,14 +339,14 @@ public:
       const SubscriptValue *, const int *permutation = nullptr) const;
 
   RT_API_ATTRS DescriptorAddendum *Addendum() {
-    if (raw_.f18Addendum != 0) {
+    if (raw_.HasAddendum()) {
       return reinterpret_cast<DescriptorAddendum *>(&GetDimension(rank()));
     } else {
       return nullptr;
     }
   }
   RT_API_ATTRS const DescriptorAddendum *Addendum() const {
-    if (raw_.f18Addendum != 0) {
+    if (raw_.HasAddendum()) {
       return reinterpret_cast<const DescriptorAddendum *>(
           &GetDimension(rank()));
     } else {

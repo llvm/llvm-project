@@ -113,6 +113,7 @@ static void check_CFI_establish(CFI_cdesc_t *dv, void *base_addr,
         }
       }
     }
+    MATCH(0, res->raw().extra);
     if (type == CFI_type_struct || type == CFI_type_char ||
         type == CFI_type_char16_t || type == CFI_type_char32_t ||
         type == CFI_type_other) {
