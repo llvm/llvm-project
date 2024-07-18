@@ -1863,7 +1863,7 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
     // we need to not alter FromFn, or else even an innocuous cast
     // like dropping effects will fail. In C++ however we do want to
     // alter FromFn (because of the way PerformImplicitConversion works).
-    if (getLangOpts().CPlusPlus) {
+    if (Context.hasAnyFunctionEffects() && getLangOpts().CPlusPlus) {
       FromFPT = cast<FunctionProtoType>(FromFn); // in case FromFn changed above
 
       // Transparently add/drop effects; here we are concerned with
