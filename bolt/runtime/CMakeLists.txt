@@ -23,6 +23,13 @@ add_library(bolt_rt_hugify STATIC
   )
 set_target_properties(bolt_rt_hugify PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_INSTALL_LIBDIR}${LLVM_LIBDIR_SUFFIX}")
 
+if(NOT BOLT_BUILT_STANDALONE)
+  add_custom_command(TARGET bolt_rt_instr POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/lib/libbolt_rt_instr.a" "${LLVM_LIBRARY_DIR}")
+  add_custom_command(TARGET bolt_rt_hugify POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/lib/libbolt_rt_hugify.a" "${LLVM_LIBRARY_DIR}")
+endif()
+
 set(BOLT_RT_FLAGS
   -ffreestanding
   -fno-exceptions
@@ -60,4 +67,9 @@ if (CMAKE_CXX_COMPILER_ID MATCHES ".*Clang.*" AND CMAKE_SYSTEM_NAME STREQUAL "Da
     -target x86_64-apple-darwin19.6.0
     ${BOLT_RT_FLAGS})
   install(TARGETS bolt_rt_instr_osx DESTINATION "${CMAKE_INSTALL_LIBDIR}${LLVM_LIBDIR_SUFFIX}")
+
+  if(NOT BOLT_BUILT_STANDALONE)
+    add_custom_command(TARGET bolt_rt_instr_osx POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/lib/libbolt_rt_instr_osx.a" "${LLVM_LIBRARY_DIR}")
+  endif()
 endif()
