@@ -133,9 +133,17 @@ bool EvalEmitter::fallthrough(const LabelTy &Label) {
   return true;
 }
 
+static bool checkReturnState(InterpState &S) {
+  return S.maybeDiagnoseDanglingAllocations();
+}
+
 template <PrimType OpType> bool EvalEmitter::emitRet(const SourceInfo &Info) {
   if (!isActive())
     return true;
+
+  if (!checkReturnState(S))
+    return false;
+
   using T = typename PrimConv<OpType>::T;
   EvalResult.setValue(S.Stk.pop<T>().toAPValue());
   return true;
@@ -147,11 +155,18 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
 
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
+  if (!EvalResult.checkReturnValue(S, Ctx, Ptr, Info))
+    return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
+    return false;
+
+  if (!checkReturnState(S))
     return false;
 
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
+    if (!Ptr.isZero() && !Ptr.isDereferencable())
+      return false;
     // Never allow reading from a non-const pointer, unless the memory
     // has been created in this evaluation.
     if (!Ptr.isConst() && Ptr.block()->getEvalID() != Ctx.getEvalID())
@@ -172,12 +187,17 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
 template <> bool EvalEmitter::emitRet<PT_FnPtr>(const SourceInfo &Info) {
   if (!isActive())
     return true;
+
+  if (!checkReturnState(S))
+    return false;
   // Function pointers cannot be converted to rvalues.
   EvalResult.setFunctionPointer(S.Stk.pop<FunctionPointer>());
   return true;
 }
 
 bool EvalEmitter::emitRetVoid(const SourceInfo &Info) {
+  if (!checkReturnState(S))
+    return false;
   EvalResult.setValid();
   return true;
 }
@@ -185,7 +205,12 @@ bool EvalEmitter::emitRetVoid(const SourceInfo &Info) {
 bool EvalEmitter::emitRetValue(const SourceInfo &Info) {
   const auto &Ptr = S.Stk.pop<Pointer>();
 
+  if (!EvalResult.checkReturnValue(S, Ctx, Ptr, Info))
+    return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
+    return false;
+
+  if (!checkReturnState(S))
     return false;
 
   if (std::optional<APValue> APV =

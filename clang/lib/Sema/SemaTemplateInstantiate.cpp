@@ -1515,11 +1515,12 @@ namespace {
                                    NestedNameSpecifierLoc QualifierLoc,
                                    QualType T);
 
-    TemplateName TransformTemplateName(CXXScopeSpec &SS, TemplateName Name,
-                                       SourceLocation NameLoc,
-                                       QualType ObjectType = QualType(),
-                                       bool AllowInjectedClassName = false,
-                                       bool MayBeNNS = false);
+    TemplateName
+    TransformTemplateName(CXXScopeSpec &SS, TemplateName Name,
+                          SourceLocation NameLoc,
+                          QualType ObjectType = QualType(),
+                          NamedDecl *FirstQualifierInScope = nullptr,
+                          bool AllowInjectedClassName = false);
 
     const CXXAssumeAttr *TransformCXXAssumeAttr(const CXXAssumeAttr *AA);
     const LoopHintAttr *TransformLoopHintAttr(const LoopHintAttr *LH);
@@ -1951,7 +1952,8 @@ TemplateInstantiator::RebuildElaboratedType(SourceLocation KeywordLoc,
 
 TemplateName TemplateInstantiator::TransformTemplateName(
     CXXScopeSpec &SS, TemplateName Name, SourceLocation NameLoc,
-    QualType ObjectType, bool AllowInjectedClassName, bool MayBeNNS) {
+    QualType ObjectType, NamedDecl *FirstQualifierInScope,
+    bool AllowInjectedClassName) {
   if (TemplateTemplateParmDecl *TTP
        = dyn_cast_or_null<TemplateTemplateParmDecl>(Name.getAsTemplateDecl())) {
     if (TTP->getDepth() < TemplateArgs.getNumLevels()) {
@@ -2023,7 +2025,8 @@ TemplateName TemplateInstantiator::TransformTemplateName(
   }
 
   return inherited::TransformTemplateName(SS, Name, NameLoc, ObjectType,
-                                          AllowInjectedClassName, MayBeNNS);
+                                          FirstQualifierInScope,
+                                          AllowInjectedClassName);
 }
 
 ExprResult
@@ -3423,11 +3426,16 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
     return true;
 
   llvm::TimeTraceScope TimeScope("InstantiateClass", [&]() {
-    std::string Name;
-    llvm::raw_string_ostream OS(Name);
+    llvm::TimeTraceMetadata M;
+    llvm::raw_string_ostream OS(M.Detail);
     Instantiation->getNameForDiagnostic(OS, getPrintingPolicy(),
                                         /*Qualified=*/true);
-    return Name;
+    if (llvm::isTimeTraceVerbose()) {
+      auto Loc = SourceMgr.getExpansionLoc(Instantiation->getLocation());
+      M.File = SourceMgr.getFilename(Loc);
+      M.Line = SourceMgr.getExpansionLineNumber(Loc);
+    }
+    return M;
   });
 
   Pattern = PatternDef;

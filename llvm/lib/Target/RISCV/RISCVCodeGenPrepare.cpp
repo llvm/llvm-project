@@ -120,14 +120,16 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
 //
 // loop:
 // %phi = phi <float> [ ..., %entry ], [ %acc, %loop ]
-// %acc = call float @llvm.vector.reduce.fadd.nxv4f32(float %phi, <vscale x 2 x float> %vec)
+// %acc = call float @llvm.vector.reduce.fadd.nxv2f32(float %phi,
+//                                                    <vscale x 2 x float> %vec)
 //
 // ->
 //
 // loop:
 // %phi = phi <vscale x 2 x float> [ ..., %entry ], [ %acc.vec, %loop ]
 // %phi.scalar = extractelement <vscale x 2 x float> %phi, i64 0
-// %acc = call float @llvm.vector.reduce.fadd.nxv4f32(float %x, <vscale x 2 x float> %vec)
+// %acc = call float @llvm.vector.reduce.fadd.nxv2f32(float %x,
+//                                                    <vscale x 2 x float> %vec)
 // %acc.vec = insertelement <vscale x 2 x float> poison, float %acc.next, i64 0
 //
 // Which eliminates the scalar -> vector -> scalar crossing during instruction
@@ -163,15 +165,20 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
   return true;
 }
 
+// Always expand zero strided loads so we match more .vx splat patterns, even if
+// we have +optimized-zero-stride-loads. RISCVDAGToDAGISel::Select will convert
+// it back to a strided load if it's optimized.
 bool RISCVCodeGenPrepare::expandVPStrideLoad(IntrinsicInst &II) {
-  if (ST->hasOptimizedZeroStrideLoad())
-    return false;
-
   Value *BasePtr, *VL;
 
   using namespace PatternMatch;
   if (!match(&II, m_Intrinsic<Intrinsic::experimental_vp_strided_load>(
                       m_Value(BasePtr), m_Zero(), m_AllOnes(), m_Value(VL))))
+    return false;
+
+  // If SEW>XLEN then a splat will get lowered as a zero strided load anyway, so
+  // avoid expanding here.
+  if (II.getType()->getScalarSizeInBits() > ST->getXLen())
     return false;
 
   if (!isKnownNonZero(VL, {*DL, DT, nullptr, &II}))

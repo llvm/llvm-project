@@ -822,3 +822,23 @@ define <vscale x 1 x half> @zero_strided_unmasked_vpload_nxv1f16(ptr %ptr) {
   %load = call <vscale x 1 x half> @llvm.experimental.vp.strided.load.nxv1f16.p0.i32(ptr %ptr, i32 0, <vscale x 1 x i1> splat (i1 true), i32 4)
   ret <vscale x 1 x half> %load
 }
+
+define <vscale x 1 x i64> @zero_strided_vadd.vx(<vscale x 1 x i64> %v, ptr %ptr) {
+; CHECK-RV32-LABEL: zero_strided_vadd.vx:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; CHECK-RV32-NEXT:    vlse64.v v9, (a0), zero
+; CHECK-RV32-NEXT:    vadd.vv v8, v8, v9
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: zero_strided_vadd.vx:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    ld a0, 0(a0)
+; CHECK-RV64-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; CHECK-RV64-NEXT:    vadd.vx v8, v8, a0
+; CHECK-RV64-NEXT:    ret
+  %vscale = call i32 @llvm.vscale()
+  %load = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i32(ptr %ptr, i32 0, <vscale x 1 x i1> splat (i1 true), i32 %vscale)
+  %w = add <vscale x 1 x i64> %v, %load
+  ret <vscale x 1 x i64> %w
+}

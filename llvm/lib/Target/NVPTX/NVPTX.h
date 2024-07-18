@@ -107,6 +107,14 @@ enum LoadStore {
 };
 
 namespace PTXLdStInstCode {
+enum MemorySemantic {
+  NotAtomic = 0, // PTX calls these: "Weak"
+  Volatile = 1,
+  Relaxed = 2,
+  Acquire = 3,
+  Release = 4,
+  RelaxedMMIO = 5
+};
 enum AddressSpace {
   GENERIC = 0,
   GLOBAL = 1,

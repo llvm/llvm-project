@@ -147,6 +147,7 @@
     __cpp_lib_math_constants                                201907L [C++20]
     __cpp_lib_math_special_functions                        201603L [C++17]
     __cpp_lib_mdspan                                        202207L [C++23]
+                                                            202406L [C++26]
     __cpp_lib_memory_resource                               201603L [C++17]
     __cpp_lib_modules                                       202207L [C++23]
     __cpp_lib_move_iterator_concept                         202207L [C++20]
@@ -215,6 +216,7 @@
     __cpp_lib_string_udls                                   201304L [C++14]
     __cpp_lib_string_view                                   201606L [C++17]
                                                             201803L [C++20]
+                                                            202403L [C++26]
     __cpp_lib_submdspan                                     202306L [C++26]
     __cpp_lib_syncbuf                                       201803L [C++20]
     __cpp_lib_text_encoding                                 202306L [C++26]
@@ -7289,8 +7291,8 @@
 # ifndef __cpp_lib_mdspan
 #   error "__cpp_lib_mdspan should be defined in c++26"
 # endif
-# if __cpp_lib_mdspan != 202207L
-#   error "__cpp_lib_mdspan should have the value 202207L in c++26"
+# if __cpp_lib_mdspan != 202406L
+#   error "__cpp_lib_mdspan should have the value 202406L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
@@ -7893,8 +7895,8 @@
 # ifndef __cpp_lib_string_view
 #   error "__cpp_lib_string_view should be defined in c++26"
 # endif
-# if __cpp_lib_string_view != 201803L
-#   error "__cpp_lib_string_view should have the value 201803L in c++26"
+# if __cpp_lib_string_view != 202403L
+#   error "__cpp_lib_string_view should have the value 202403L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

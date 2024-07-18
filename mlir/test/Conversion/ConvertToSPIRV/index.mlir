@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-to-spirv | FileCheck %s
+// RUN: mlir-opt %s -convert-to-spirv="run-signature-conversion=false" | FileCheck %s
 
 // CHECK-LABEL: @basic
 func.func @basic(%a: index, %b: index) {

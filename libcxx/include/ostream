@@ -173,8 +173,13 @@ void vprint_nonunicode(ostream& os, string_view fmt, format_args args);         
 */
 
 #include <__config>
+
 #include <__ostream/basic_ostream.h>
-#include <__ostream/print.h>
+
+#if _LIBCPP_STD_VER >= 23
+#  include <__ostream/print.h>
+#endif
+
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -186,8 +191,10 @@ void vprint_nonunicode(ostream& os, string_view fmt, format_args args);         
 #  include <concepts>
 #  include <cstdio>
 #  include <cstdlib>
+#  include <format>
 #  include <iosfwd>
 #  include <iterator>
+#  include <print>
 #  include <stdexcept>
 #  include <type_traits>
 #endif
