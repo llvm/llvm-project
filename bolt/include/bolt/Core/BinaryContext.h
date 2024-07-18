@@ -32,6 +32,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
@@ -246,6 +247,9 @@ class BinaryContext {
   /// DWP Context.
   std::shared_ptr<DWARFContext> DWPContext;
 
+  /// Decoded pseudo probes.
+  std::unique_ptr<MCPseudoProbeDecoder> PseudoProbeDecoder;
+
   /// A map of DWO Ids to CUs.
   using DWOIdToCUMapType = std::unordered_map<uint64_t, DWARFUnit *>;
   DWOIdToCUMapType DWOCUs;
@@ -375,6 +379,17 @@ public:
   void setRuntimeLibrary(std::unique_ptr<RuntimeLibrary> Lib) {
     assert(!RtLibrary && "Cannot set runtime library twice.");
     RtLibrary = std::move(Lib);
+  }
+
+  const MCPseudoProbeDecoder *getPseudoProbeDecoder() const {
+    return PseudoProbeDecoder.get();
+  }
+
+  MCPseudoProbeDecoder &
+  setPseudoProbeDecoder(std::unique_ptr<MCPseudoProbeDecoder> Decoder) {
+    assert(!PseudoProbeDecoder && "Cannot set pseudo probe decoder twice.");
+    PseudoProbeDecoder = std::move(Decoder);
+    return *PseudoProbeDecoder.get();
   }
 
   /// Return BinaryFunction containing a given \p Address or nullptr if

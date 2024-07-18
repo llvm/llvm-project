@@ -416,9 +416,9 @@ private:
   /// different parameters by every pass.
   mutable uint64_t Hash{0};
 
-  /// Function hash assigned by the compiler and stored in pseudo probe
-  /// description of the source function.
-  uint64_t PseudoProbeDescHash{0};
+  /// Function GUID assigned by the compiler to the source function.
+  /// If non-null, is a valid GUID in pseudo probe section.
+  uint64_t PseudoProbeGUID{0};
 
   /// For PLT functions it contains a symbol associated with a function
   /// reference. It is nullptr for non-PLT functions.
@@ -2260,10 +2260,10 @@ public:
   /// Returns the last computed hash value of the function.
   size_t getHash() const { return Hash; }
 
-  /// Returns the function hash from pseudo-probe description of the function.
-  uint64_t getPseudoProbeDescHash() const { return PseudoProbeDescHash; }
+  /// Returns the function GUID from pseudo-probe description of the function.
+  uint64_t getPseudoProbeGUID() const { return PseudoProbeGUID; }
 
-  void setPseudoProbeDescHash(uint64_t Hash) { PseudoProbeDescHash = Hash; }
+  void setPseudoProbeGUID(uint64_t GUID) { PseudoProbeGUID = GUID; }
 
   using OperandHashFuncTy =
       function_ref<typename std::string(const MCOperand &)>;

@@ -2298,6 +2298,8 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
 
   yaml::bolt::BinaryProfile BP;
 
+  const MCPseudoProbeDecoder *PseudoProbeDecoder = BC.getPseudoProbeDecoder();
+
   // Fill out the header info.
   BP.Header.Version = 1;
   BP.Header.FileName = std::string(BC.getFilename());
@@ -2345,7 +2347,13 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       YamlBF.Hash = BAT->getBFHash(FuncAddress);
       YamlBF.ExecCount = BF->getKnownExecutionCount();
       YamlBF.NumBasicBlocks = BAT->getNumBasicBlocks(FuncAddress);
-      YamlBF.PseudoProbeDescHash = BF->getPseudoProbeDescHash();
+      if (PseudoProbeDecoder) {
+        if (uint64_t GUID = BF->getPseudoProbeGUID()) {
+          const MCPseudoProbeFuncDesc *FuncDesc =
+              PseudoProbeDecoder->getFuncDescForGUID(GUID);
+          YamlBF.PseudoProbeDescHash = FuncDesc->FuncHash;
+        }
+      }
       const BoltAddressTranslation::BBHashMapTy &BlockMap =
           BAT->getBBHashMap(FuncAddress);
       YamlBF.Blocks.resize(YamlBF.NumBasicBlocks);
