@@ -493,8 +493,9 @@ private:
   DenseMap<Value *, Value *> Map;
 };
 
-// Template parameter is the number of functions
-template <size_t N> class NsanMemOpFn {
+// First parameter is the number of functions
+// Second parameter is the number of fallback function arguments
+class NsanMemOpFn {
 public:
   NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized, StringRef Fallback,
               size_t NumArgs);
@@ -503,48 +504,57 @@ public:
   FunctionCallee getFallback() const;
 
 private:
-  std::array<FunctionCallee, N> Funcs;
+  SmallVector<FunctionCallee> Funcs;
+  size_t NumSizedFuncs;
 };
 
-template <size_t N>
-NsanMemOpFn<N>::NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized,
-                            StringRef Fallback, size_t NumArgs) {
+NsanMemOpFn::NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized,
+                         StringRef Fallback, size_t NumArgs) {
   LLVMContext &Ctx = M.getContext();
   AttributeList Attr;
   Attr = Attr.addFnAttribute(Ctx, Attribute::NoUnwind);
   Type *PtrTy = PointerType::getUnqual(Ctx);
   Type *VoidTy = Type::getVoidTy(Ctx);
   IntegerType *IntptrTy = M.getDataLayout().getIntPtrType(Ctx);
-  FunctionType *SizedFnTy;
+  FunctionType *SizedFnTy = nullptr;
 
-  if (NumArgs == 3)
-    SizedFnTy = FunctionType::get(VoidTy, {PtrTy, PtrTy}, false);
-  else
-    SizedFnTy = FunctionType::get(VoidTy, {PtrTy}, false);
+  NumSizedFuncs = Sized.size();
 
-  for (size_t i = 0; i < N - 1; ++i)
-    Funcs[i] = M.getOrInsertFunction(Sized[i], SizedFnTy, Attr);
+  // Reserve space for sized funcs and for fallback
+  Funcs.reserve(NumSizedFuncs + 1);
 
-  if (NumArgs == 3)
-    Funcs[N - 1] =
+  if (NumArgs == 3) {
+    Funcs[NumSizedFuncs] =
         M.getOrInsertFunction(Fallback, Attr, VoidTy, PtrTy, PtrTy, IntptrTy);
-  else
-    Funcs[N - 1] =
+    SizedFnTy = FunctionType::get(VoidTy, {PtrTy, PtrTy}, false);
+  } else if (NumArgs == 2) {
+    Funcs[NumSizedFuncs] =
         M.getOrInsertFunction(Fallback, Attr, VoidTy, PtrTy, IntptrTy);
+    SizedFnTy = FunctionType::get(VoidTy, {PtrTy}, false);
+  } else {
+    assert(!"Unexpected value of sized functions arguments");
+  }
+
+  for (size_t i = 0; i < NumSizedFuncs; ++i)
+    Funcs[i] = M.getOrInsertFunction(Sized[i], SizedFnTy, Attr);
 }
 
-template <size_t N>
-FunctionCallee NsanMemOpFn<N>::getFunctionFor(uint64_t MemOpSize) const {
-  size_t Idx =
-      MemOpSize == 4 ? 0 : (MemOpSize == 8 ? 1 : (MemOpSize == 16 ? 2 : 3));
+FunctionCallee NsanMemOpFn::getFunctionFor(uint64_t MemOpSize) const {
+  // We have NumSizedFuncs + 1 elements in `Funcs`
+  size_t MaxIdx = NumSizedFuncs;
 
-  assert(Idx <= N - 1 && "Functions array is too small");
+  // Now `getFunctionFor` operates on `Funcs` of size 4 (at least) and the
+  // following code assumes that the number of functions in `Func` is sufficient
+  assert(MaxIdx >= 3 && "Unexpected MaxIdx value");
+
+  size_t Idx = MemOpSize == 4
+                   ? 0
+                   : (MemOpSize == 8 ? 1 : (MemOpSize == 16 ? 2 : MaxIdx));
+
   return Funcs[Idx];
 }
 
-template <size_t N> FunctionCallee NsanMemOpFn<N>::getFallback() const {
-  return Funcs.back();
-}
+FunctionCallee NsanMemOpFn::getFallback() const { return Funcs[NumSizedFuncs]; }
 
 /// Instantiating NumericalStabilitySanitizer inserts the nsan runtime library
 /// API function declarations into the module if they don't exist already.
@@ -610,8 +620,8 @@ private:
   FunctionCallee NsanCheckValue[FTValueType::kNumValueTypes] = {};
   FunctionCallee NsanFCmpFail[FTValueType::kNumValueTypes] = {};
 
-  NsanMemOpFn<4> NsanCopyFns;
-  NsanMemOpFn<4> NsanSetUnknownFns;
+  NsanMemOpFn NsanCopyFns;
+  NsanMemOpFn NsanSetUnknownFns;
 
   FunctionCallee NsanGetRawShadowTypePtr;
   FunctionCallee NsanGetRawShadowPtr;
@@ -657,12 +667,12 @@ static GlobalValue *createThreadLocalGV(const char *Name, Module &M, Type *Ty) {
 NumericalStabilitySanitizer::NumericalStabilitySanitizer(Module &M)
     : DL(M.getDataLayout()), Context(M.getContext()), Config(Context),
       NsanCopyFns(M, {"__nsan_copy_4", "__nsan_copy_8", "__nsan_copy_16"},
-                  "__nsan_copy_values", 3),
+                  "__nsan_copy_values", /*NumArgs=*/3),
       NsanSetUnknownFns(M,
                         {"__nsan_set_value_unknown_4",
                          "__nsan_set_value_unknown_8",
                          "__nsan_set_value_unknown_16"},
-                        "__nsan_set_value_unknown", 2) {
+                        "__nsan_set_value_unknown", /*NumArgs=*/2) {
   IntptrTy = DL.getIntPtrType(Context);
   Type *PtrTy = PointerType::getUnqual(Context);
   Type *Int32Ty = Type::getInt32Ty(Context);
