@@ -195,34 +195,46 @@ CodeGenFunction::CGFPOptionsRAII::~CGFPOptionsRAII() {
   CGF.Builder.setDefaultConstrainedRounding(OldRounding);
 }
 
-static LValue MakeNaturalAlignAddrLValue(llvm::Value *V, QualType T,
-                                         bool ForPointeeType,
-                                         CodeGenFunction &CGF) {
+static LValue
+makeNaturalAlignAddrLValue(llvm::Value *V, QualType T, bool ForPointeeType,
+                           bool MightBeSigned, CodeGenFunction &CGF,
+                           KnownNonNull_t IsKnownNonNull = NotKnownNonNull) {
   LValueBaseInfo BaseInfo;
   TBAAAccessInfo TBAAInfo;
   CharUnits Alignment =
       CGF.CGM.getNaturalTypeAlignment(T, &BaseInfo, &TBAAInfo, ForPointeeType);
-  Address Addr = Address(V, CGF.ConvertTypeForMem(T), Alignment);
+  Address Addr =
+      MightBeSigned
+          ? CGF.makeNaturalAddressForPointer(V, T, Alignment, false, nullptr,
+                                             nullptr, IsKnownNonNull)
+          : Address(V, CGF.ConvertTypeForMem(T), Alignment, IsKnownNonNull);
   return CGF.MakeAddrLValue(Addr, T, BaseInfo, TBAAInfo);
 }
 
-LValue CodeGenFunction::MakeNaturalAlignAddrLValue(llvm::Value *V, QualType T) {
-  return ::MakeNaturalAlignAddrLValue(V, T, /*ForPointeeType*/ false, *this);
+LValue
+CodeGenFunction::MakeNaturalAlignAddrLValue(llvm::Value *V, QualType T,
+                                            KnownNonNull_t IsKnownNonNull) {
+  return ::makeNaturalAlignAddrLValue(V, T, /*ForPointeeType*/ false,
+                                      /*MightBeSigned*/ true, *this,
+                                      IsKnownNonNull);
 }
 
 LValue
 CodeGenFunction::MakeNaturalAlignPointeeAddrLValue(llvm::Value *V, QualType T) {
-  return ::MakeNaturalAlignAddrLValue(V, T, /*ForPointeeType*/ true, *this);
+  return ::makeNaturalAlignAddrLValue(V, T, /*ForPointeeType*/ true,
+                                      /*MightBeSigned*/ true, *this);
 }
 
 LValue CodeGenFunction::MakeNaturalAlignRawAddrLValue(llvm::Value *V,
                                                       QualType T) {
-  return ::MakeNaturalAlignAddrLValue(V, T, /*ForPointeeType*/ false, *this);
+  return ::makeNaturalAlignAddrLValue(V, T, /*ForPointeeType*/ false,
+                                      /*MightBeSigned*/ false, *this);
 }
 
 LValue CodeGenFunction::MakeNaturalAlignPointeeRawAddrLValue(llvm::Value *V,
                                                              QualType T) {
-  return ::MakeNaturalAlignAddrLValue(V, T, /*ForPointeeType*/ true, *this);
+  return ::makeNaturalAlignAddrLValue(V, T, /*ForPointeeType*/ true,
+                                      /*MightBeSigned*/ false, *this);
 }
 
 llvm::Type *CodeGenFunction::ConvertTypeForMem(QualType T) {
