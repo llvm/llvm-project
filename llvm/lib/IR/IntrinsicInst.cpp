@@ -600,6 +600,9 @@ Intrinsic::ID VPIntrinsic::getForOpcode(unsigned IROPC) {
 }
 
 Intrinsic::ID VPIntrinsic::getForIntrinsic(Intrinsic::ID Id) {
+  if (isVPIntrinsic(Id))
+    return Id;
+
   switch (Id) {
   default:
     break;
