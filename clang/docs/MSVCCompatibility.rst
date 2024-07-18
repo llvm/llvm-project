@@ -163,11 +163,8 @@ Inlining is always attempted regardless of optimization level.
 
 This differs from MSVC where ``__forceinline`` is only respected once inline expansion is enabled
 which allows any function marked implicitly or explicitly ``inline`` or ``__forceinline`` to be expanded.
-
 Therefore functions marked ``__forceinline`` will be expanded when the optimization level is ``/Od`` unlike
-MSVC where that is not the case.
-If this is an issue that cannot be easily worked around in your codebase by wrapping ``__forceinline`` behind
-a macro please file a bug report.
+MSVC where ``__forceinline`` will not be expanded under ``/Od``.
 
 SIMD and instruction set intrinsic behavior
 ===========================================
@@ -221,7 +218,7 @@ The SSE3 dot product can be easily fixed by either building the translation unit
       return GenericPopCnt(v);
   }
 
-The above must be changed to work with clang. If we mark the function with `__target__("popcnt")` then the compiler is free to emit popcnt at will which we do not want. While this isn't a concern in our small example it is a concern in larger functions with surrounding code around the intrinsics. Similar goes for compiling the translation unit with `-mpopcnt`.
+The above ``PopCnt`` example must be changed to work with clang. If we mark the function with `__target__("popcnt")` then the compiler is free to emit popcnt at will which we do not want. While this isn't a concern in our small example it is a concern in larger functions with surrounding code around the intrinsics. Similar goes for compiling the translation unit with `-mpopcnt`.
 We must split each branch into its own function that can be called indirectly instead of using the intrinsic directly.
 
 .. code-block:: c++
@@ -239,7 +236,7 @@ We must split each branch into its own function that can be called indirectly in
       return GenericPopCnt(v);
   }
 
-In the above example `hwPopCnt` will not be inlined into `PopCnt` since `PopCnt` doesn't have the popcnt target feature.
+In the above example ``hwPopCnt`` will not be inlined into ``PopCnt`` since ``PopCnt`` doesn't have the popcnt target feature.
 With a larger function that does real work the function call overhead is negligible. However in our popcnt example there is the function call
 overhead. There is no analog for this specific MSVC behavior in clang.
 
