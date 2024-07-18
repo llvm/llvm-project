@@ -374,7 +374,8 @@ private:
       Contexts.back().IsExpression = true;
     } else if (Line.InPPDirective &&
                (!OpeningParen.Previous ||
-                OpeningParen.Previous->isNot(tok::identifier))) {
+                OpeningParen.Previous->isNot(tok::identifier) ||
+                !OpeningParen.Previous->Previous)) {
       Contexts.back().IsExpression = true;
     } else if (Contexts[Contexts.size() - 2].CaretFound) {
       // This is the parameter list of an ObjC block.

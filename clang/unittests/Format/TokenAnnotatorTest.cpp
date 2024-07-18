@@ -75,6 +75,10 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_TypeDeclarationParen);
   EXPECT_TOKEN(Tokens[11], tok::star, TT_PointerOrReference);
 
+  Tokens = annotate("#define FOO bar(a * b)");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::star, TT_BinaryOperator);
+
   Tokens = annotate("void f() {\n"
                     "  while (p < a && *p == 'a')\n"
                     "    p++;\n"
