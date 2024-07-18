@@ -29102,8 +29102,12 @@ SDValue getGFNICtrlMask(unsigned Opcode, SelectionDAG &DAG, const SDLoc &DL, MVT
   assert(VT.getVectorElementType() == MVT::i8 &&
          (VT.getSizeInBits() % 64) == 0 && "Illegal GFNI control type");
   uint64_t Imm = getGFNICtrlImm(Opcode, Amt);
-  MVT MaskVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
-  return DAG.getBitcast(VT, DAG.getConstant(Imm, DL, MaskVT));
+  SmallVector<SDValue> MaskBits;
+  for (unsigned I = 0, E = VT.getSizeInBits(); I != E; I += 8) {
+    uint64_t Bits = (Imm >> (I % 64)) & 255;
+    MaskBits.push_back(DAG.getConstant(Bits, DL, MVT::i8));
+  }
+  return DAG.getBuildVector(VT, DL, MaskBits);
 }
 
 // Return true if the required (according to Opcode) shift-imm form is natively
