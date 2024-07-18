@@ -87,6 +87,7 @@ def getStdFlag(cfg, std):
         return "-std=" + fallbacks[std]
     return None
 
+
 def getDefaultStdValue(cfg):
     viable = [s for s in reversed(_allStandards) if getStdFlag(cfg, s)]
 
@@ -96,6 +97,7 @@ def getDefaultStdValue(cfg):
         )
 
     return viable[0]
+
 
 def getSpeedOptimizationFlag(cfg):
     if _isClang(cfg) or _isAppleClang(cfg) or _isGCC(cfg):
