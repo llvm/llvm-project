@@ -112,9 +112,10 @@ std::string buildTraceGraph(StringRef Json) {
     std::string Name = TraceEventObj->getString("name").value_or("").str();
     std::string Metadata = GetMetadata(TraceEventObj);
 
-    if (Name == "Source") {
+    // Skip source events as they are asynchronous events and may not perfectly
+    // nest the synchronous events.
+    if (Name == "Source")
       continue;
-    }
 
     // This is a "summary" event, like "Total PerformPendingInstantiations",
     // skip it
