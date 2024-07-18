@@ -1597,6 +1597,8 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
   }
   if (IndirectBranches)
     CmdArgs.push_back("-mbranch-target-enforce");
+  // GCS is currently untested with PAuthABI, but enabling this could be allowed
+  // in future after testing with a suitable system.
   if (GuardedControlStack) {
     if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
       D.Diag(diag::err_drv_unsupported_opt_for_target)
