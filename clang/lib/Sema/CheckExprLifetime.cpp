@@ -191,7 +191,8 @@ struct IndirectLocalPathEntry {
     TemporaryCopy,
     LambdaCaptureInit,
     GslReferenceInit,
-    GslPointerInit
+    GslPointerInit,
+    GslPointerAssignment,
   } Kind;
   Expr *E;
   union {
@@ -337,7 +338,8 @@ static void handleGslAnnotatedTypes(IndirectLocalPath &Path, Expr *Call,
       for (const IndirectLocalPathEntry &PE : llvm::reverse(Path)) {
         if (PE.Kind == IndirectLocalPathEntry::GslReferenceInit)
           continue;
-        if (PE.Kind == IndirectLocalPathEntry::GslPointerInit)
+        if (PE.Kind == IndirectLocalPathEntry::GslPointerInit ||
+            PE.Kind == IndirectLocalPathEntry::GslPointerAssignment)
           return;
         break;
       }
@@ -937,6 +939,7 @@ static SourceRange nextPathEntryRange(const IndirectLocalPath &Path, unsigned I,
     case IndirectLocalPathEntry::TemporaryCopy:
     case IndirectLocalPathEntry::GslReferenceInit:
     case IndirectLocalPathEntry::GslPointerInit:
+    case IndirectLocalPathEntry::GslPointerAssignment:
       // These exist primarily to mark the path as not permitting or
       // supporting lifetime extension.
       break;
@@ -957,16 +960,20 @@ static SourceRange nextPathEntryRange(const IndirectLocalPath &Path, unsigned I,
   return E->getSourceRange();
 }
 
-static bool pathOnlyInitializesGslPointer(IndirectLocalPath &Path) {
+static bool pathOnlyHandlesGslPointer(IndirectLocalPath &Path) {
   for (const auto &It : llvm::reverse(Path)) {
-    if (It.Kind == IndirectLocalPathEntry::VarInit)
+    switch (It.Kind) {
+    case IndirectLocalPathEntry::VarInit:
+    case IndirectLocalPathEntry::AddressOf:
+    case IndirectLocalPathEntry::LifetimeBoundCall:
       continue;
-    if (It.Kind == IndirectLocalPathEntry::AddressOf)
-      continue;
-    if (It.Kind == IndirectLocalPathEntry::LifetimeBoundCall)
-      continue;
-    return It.Kind == IndirectLocalPathEntry::GslPointerInit ||
-           It.Kind == IndirectLocalPathEntry::GslReferenceInit;
+    case IndirectLocalPathEntry::GslPointerInit:
+    case IndirectLocalPathEntry::GslReferenceInit:
+    case IndirectLocalPathEntry::GslPointerAssignment:
+      return true;
+    default:
+      return false;
+    }
   }
   return false;
 }
@@ -975,7 +982,8 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
                                   const InitializedEntity *InitEntity,
                                   const InitializedEntity *ExtendingEntity,
                                   LifetimeKind LK,
-                                  const AssignedEntity *AEntity, Expr *Init) {
+                                  const AssignedEntity *AEntity, Expr *Init,
+                                  bool EnableLifetimeWarnings) {
   assert((AEntity && LK == LK_Assignment) ||
          (InitEntity && LK != LK_Assignment));
   // If this entity doesn't have an interesting lifetime, don't bother looking
@@ -992,9 +1000,9 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
 
     auto *MTE = dyn_cast<MaterializeTemporaryExpr>(L);
 
-    bool IsGslPtrInitWithGslTempOwner = false;
+    bool IsGslPtrValueFromGslTempOwner = false;
     bool IsLocalGslOwner = false;
-    if (pathOnlyInitializesGslPointer(Path)) {
+    if (pathOnlyHandlesGslPointer(Path)) {
       if (isa<DeclRefExpr>(L)) {
         // We do not want to follow the references when returning a pointer
         // originating from a local owner to avoid the following false positive:
@@ -1005,13 +1013,13 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
         if (pathContainsInit(Path) || !IsLocalGslOwner)
           return false;
       } else {
-        IsGslPtrInitWithGslTempOwner =
+        IsGslPtrValueFromGslTempOwner =
             MTE && !MTE->getExtendingDecl() &&
             isRecordWithAttr<OwnerAttr>(MTE->getType());
         // Skipping a chain of initializing gsl::Pointer annotated objects.
         // We are looking only for the final source to find out if it was
         // a local or temporary owner or the address of a local variable/param.
-        if (!IsGslPtrInitWithGslTempOwner)
+        if (!IsGslPtrValueFromGslTempOwner)
           return true;
       }
     }
@@ -1030,7 +1038,7 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
         return false;
       }
 
-      if (IsGslPtrInitWithGslTempOwner && DiagLoc.isValid()) {
+      if (IsGslPtrValueFromGslTempOwner && DiagLoc.isValid()) {
         SemaRef.Diag(DiagLoc, diag::warn_dangling_lifetime_pointer)
             << DiagRange;
         return false;
@@ -1073,14 +1081,16 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
     }
 
     case LK_Assignment: {
-      if (!MTE)
+      if (!MTE || pathContainsInit(Path))
         return false;
       assert(shouldLifetimeExtendThroughPath(Path) ==
                  PathLifetimeKind::NoExtend &&
              "No lifetime extension for assignments");
-      if (!pathContainsInit(Path))
-        SemaRef.Diag(DiagLoc, diag::warn_dangling_pointer_assignment)
-            << AEntity->LHS << DiagRange;
+      SemaRef.Diag(DiagLoc,
+                   IsGslPtrValueFromGslTempOwner
+                       ? diag::warn_dangling_lifetime_pointer_assignment
+                       : diag::warn_dangling_pointer_assignment)
+          << AEntity->LHS << DiagRange;
       return false;
     }
     case LK_MemInitializer: {
@@ -1090,7 +1100,7 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
         // temporary, the program is ill-formed.
         if (auto *ExtendingDecl =
                 ExtendingEntity ? ExtendingEntity->getDecl() : nullptr) {
-          if (IsGslPtrInitWithGslTempOwner) {
+          if (IsGslPtrValueFromGslTempOwner) {
             SemaRef.Diag(DiagLoc, diag::warn_dangling_lifetime_pointer_member)
                 << ExtendingDecl << DiagRange;
             SemaRef.Diag(ExtendingDecl->getLocation(),
@@ -1131,7 +1141,7 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
 
         // Suppress false positives for code like the one below:
         //   Ctor(unique_ptr<T> up) : member(*up), member2(move(up)) {}
-        if (IsLocalGslOwner && pathOnlyInitializesGslPointer(Path))
+        if (IsLocalGslOwner && pathOnlyHandlesGslPointer(Path))
           return false;
 
         auto *DRE = dyn_cast<DeclRefExpr>(L);
@@ -1159,7 +1169,7 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
 
     case LK_New:
       if (isa<MaterializeTemporaryExpr>(L)) {
-        if (IsGslPtrInitWithGslTempOwner)
+        if (IsGslPtrValueFromGslTempOwner)
           SemaRef.Diag(DiagLoc, diag::warn_dangling_lifetime_pointer)
               << DiagRange;
         else
@@ -1226,6 +1236,7 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
       case IndirectLocalPathEntry::TemporaryCopy:
       case IndirectLocalPathEntry::GslPointerInit:
       case IndirectLocalPathEntry::GslReferenceInit:
+      case IndirectLocalPathEntry::GslPointerAssignment:
         // FIXME: Consider adding a note for these.
         break;
 
@@ -1265,9 +1276,11 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
     return false;
   };
 
-  bool EnableLifetimeWarnings = !SemaRef.getDiagnostics().isIgnored(
-      diag::warn_dangling_lifetime_pointer, SourceLocation());
   llvm::SmallVector<IndirectLocalPathEntry, 8> Path;
+  if (EnableLifetimeWarnings && LK == LK_Assignment &&
+      isRecordWithAttr<PointerAttr>(AEntity->LHS->getType()))
+    Path.push_back({IndirectLocalPathEntry::GslPointerAssignment, Init});
+
   if (Init->isGLValue())
     visitLocalsRetainedByReferenceBinding(Path, Init, RK_ReferenceBinding,
                                           TemporaryVisitor,
@@ -1284,16 +1297,26 @@ void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
   auto LTResult = getEntityLifetime(&Entity);
   LifetimeKind LK = LTResult.getInt();
   const InitializedEntity *ExtendingEntity = LTResult.getPointer();
-  checkExprLifetimeImpl(SemaRef, &Entity, ExtendingEntity, LK, nullptr, Init);
+  bool EnableLifetimeWarnings = !SemaRef.getDiagnostics().isIgnored(
+      diag::warn_dangling_lifetime_pointer, SourceLocation());
+  checkExprLifetimeImpl(SemaRef, &Entity, ExtendingEntity, LK,
+                        /*AEntity*/ nullptr, Init, EnableLifetimeWarnings);
 }
 
 void checkExprLifetime(Sema &SemaRef, const AssignedEntity &Entity,
                        Expr *Init) {
-  if (!Entity.LHS->getType()->isPointerType()) // builtin pointer type
+  bool EnableLifetimeWarnings = !SemaRef.getDiagnostics().isIgnored(
+      diag::warn_dangling_lifetime_pointer, SourceLocation());
+  bool RunAnalysis = Entity.LHS->getType()->isPointerType() ||
+                     (EnableLifetimeWarnings &&
+                      isRecordWithAttr<PointerAttr>(Entity.LHS->getType()));
+
+  if (!RunAnalysis)
     return;
+
   checkExprLifetimeImpl(SemaRef, /*InitEntity=*/nullptr,
                         /*ExtendingEntity=*/nullptr, LK_Assignment, &Entity,
-                        Init);
+                        Init, EnableLifetimeWarnings);
 }
 
 } // namespace clang::sema
