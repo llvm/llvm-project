@@ -114,11 +114,15 @@ TYPED_TEST(MatrixTest, ResizeAssign) {
   ASSERT_EQ(M.getNumRows(), 3u);
   JaggedArrayView<TypeParam> V{M};
   V[0] = this->getDummyRow(2);
-  V[1] = this->getDummyRow(2);
-  V[2] = this->getDummyRow(2);
+  V[1].copy_assign(V[0]);
+  V[2].copy_assign(V[1]);
   ASSERT_EQ(M.getNumRows(), 3u);
-  EXPECT_EQ(V[0][0], V[1][0]);
-  EXPECT_EQ(V[2][1], V[1][1]);
+  ASSERT_EQ(V.getRowSpan(), 3u);
+  EXPECT_EQ(V[0], V[1]);
+  EXPECT_EQ(V[2], V[1]);
+  V = JaggedArrayView<TypeParam>{M};
+  EXPECT_EQ(V[0], V[1]);
+  EXPECT_EQ(V[2], V[1]);
 }
 
 TYPED_TEST(MatrixTest, ColSlice) {
@@ -236,7 +240,7 @@ TYPED_TEST(MatrixTest, EraseLastRow) {
   EXPECT_EQ(W[1], 7);
   V.addRow({TypeParam(1), TypeParam(2)});
   ASSERT_EQ(V.getRowSpan(), 2u);
-  V[0].writing_swap(V[1]);
+  V[0].copy_swap(V[1]);
   EXPECT_EQ(V[0][0], 1);
   EXPECT_EQ(V[0][1], 2);
   EXPECT_EQ(V.lastRow()[0], 3);

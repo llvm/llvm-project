@@ -161,7 +161,12 @@ struct [[nodiscard]] MutableRowView : public MutableArrayRef<T> {
   }
 
   // For better cache behavior.
-  void writing_swap(MutableRowView<T> &Other) { // NOLINT
+  void copy_assign(const MutableRowView<T> &Other) { // NOLINT
+    copy_assign(Other.begin(), Other.end());
+  }
+
+  // For better cache behavior.
+  void copy_swap(MutableRowView<T> &Other) { // NOLINT
     SmallVector<T> Buf{Other};
     Other.copy_assign(begin(), end());
     copy_assign(Buf.begin(), Buf.end());
@@ -336,7 +341,7 @@ public:
     RowView.pop_back();
   }
 
-  // For better cache behavior. To be used with writing_swap.
+  // For better cache behavior. To be used with copy_assign or copy_swap.
   void eraseLastRow() {
     assert(Mat.idxFromRow(lastRow().data()).first == Mat.getNumRows() - 1 &&
            "Last row does not correspond to last row in storage");
