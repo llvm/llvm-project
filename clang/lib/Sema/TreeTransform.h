@@ -14443,9 +14443,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
         }
         NewVDs.push_back(NewVD);
         getSema().addInitCapture(LSI, NewVD, C->getCaptureKind() == LCK_ByRef);
-        // If the lambda is written within a fold expression, the initializer
-        // may be expanded later. Preserve the ContainsUnexpandedParameterPack
-        // flag because CXXFoldExpr uses it for the pattern.
+        // The Init expression might be expanded by an outer fold expression.
         LSI->ContainsUnexpandedParameterPack |=
             Init.get()->containsUnexpandedParameterPack();
       }
@@ -14515,10 +14513,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       continue;
     }
 
-    // If the lambda is written within a fold expression, the captured
-    // variable may be expanded later. Preserve the
-    // ContainsUnexpandedParameterPack flag because CXXFoldExpr uses it for the
-    // pattern.
+    // The captured pack might be expanded by an outer fold expression.
     if (auto *VD = dyn_cast<VarDecl>(CapturedVar); VD && !C->isPackExpansion())
       LSI->ContainsUnexpandedParameterPack |= VD->isParameterPack();
 
@@ -14574,6 +14569,8 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
 
     if (NewCallOpType.isNull())
       return ExprError();
+    LSI->ContainsUnexpandedParameterPack |=
+        NewCallOpType->containsUnexpandedParameterPack();
     NewCallOpTSI =
         NewCallOpTLBuilder.getTypeSourceInfo(getSema().Context, NewCallOpType);
   }
@@ -14648,18 +14645,18 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
                                     /*IsInstantiation*/ true);
   SavedContext.pop();
 
-  // The lambda function might contain a pack that would be expanded by a fold
-  // expression outside. For example,
+  // Parts other than the capture e.g. the lambda body might still contain a
+  // pattern that an outer fold expression would expand.
   //
-  // []<class... Is>() { ([](auto P = Is()) {}, ...); }
-  //
-  // forgetting the flag will result in getPattern() of CXXFoldExpr returning
-  // null in terms of the inner lambda.
+  // We don't have a way to propagate up the ContainsUnexpandedParameterPack
+  // flag from a Stmt, so we have to revisit the lambda.
   if (!LSICopy.ContainsUnexpandedParameterPack) {
     llvm::SmallVector<UnexpandedParameterPack> UnexpandedPacks;
     getSema().collectUnexpandedParameterPacksFromLambda(NewCallOperator,
                                                         UnexpandedPacks);
-    // FIXME: Should we call DiagnoseUnexpandedParameterPacks() instead?
+    // FIXME: Should we call Sema::DiagnoseUnexpandedParameterPacks() instead?
+    // Unfortunately, that requires the LambdaScopeInfo to exist, which has been
+    // removed by ActOnFinishFunctionBody().
     LSICopy.ContainsUnexpandedParameterPack = !UnexpandedPacks.empty();
   }
   // Recompute the dependency of the lambda so that we can defer the lambda call

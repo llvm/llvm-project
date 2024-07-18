@@ -6113,14 +6113,6 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
           return cast<NamedDecl>(FD);
 
         int PackIdx = ArgumentPackSubstitutionIndex;
-        // FIXME: Move it elsewhere e.g. TreeTransform::TransformDecl.
-        // This is for #18873.
-        if (PackIdx == -1) {
-          LocalInstantiationScope LIS(*this, /*CombineWithOuterScope=*/false);
-          MultiLevelTemplateArgumentList FakeArgs;
-          FakeArgs.addOuterRetainedLevels(D->getTemplateDepth() + 1);
-          return cast_if_present<NamedDecl>(SubstDecl(D, CurContext, FakeArgs));
-        }
         assert(PackIdx != -1 &&
                "found declaration pack but not pack expanding");
         typedef LocalInstantiationScope::DeclArgumentPack DeclArgumentPack;
