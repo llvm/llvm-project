@@ -291,30 +291,30 @@
 // RUN: %clang -target aarch64 -mtune=CYCLONE -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MTUNE-CYCLONE %s
 // CHECK-MTUNE-CYCLONE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "+zcm" "-target-feature" "+zcz" "-target-feature" "+v8a"
 
-// RUN: %clang -target aarch64 -mcpu=apple-a7 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-APPLE-A7 %s
-// RUN: %clang -target aarch64 -mcpu=apple-a8 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-APPLE-A7 %s
-// RUN: %clang -target aarch64 -mcpu=apple-a9 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-APPLE-A7 %s
-// RUN: %clang -target aarch64 -mcpu=apple-a10 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-APPLE-A10 %s
-// RUN: %clang -target aarch64 -mcpu=apple-a11 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-APPLE-A11 %s
-// RUN: %clang -target aarch64 -mcpu=apple-a12 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-APPLE-A12 %s
-// RUN: %clang -target aarch64 -mcpu=apple-a13 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-APPLE-A13 %s
-// RUN: %clang -target aarch64 -mcpu=apple-s4 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-APPLE-A12 %s
-// RUN: %clang -target aarch64 -mcpu=apple-s5 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-APPLE-A12 %s
-// RUN: %clang -target aarch64 -mcpu=cyclone -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-APPLE-A7 %s
-// RUN: %clang -target aarch64 -mcpu=cortex-a34 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-A34 %s
-// RUN: %clang -target aarch64 -mcpu=cortex-a35 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-A35 %s
-// RUN: %clang -target aarch64 -mcpu=cortex-a53 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-A53 %s
-// RUN: %clang -target aarch64 -mcpu=cortex-a57 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-A57 %s
-// RUN: %clang -target aarch64 -mcpu=cortex-a72 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-A72 %s
-// RUN: %clang -target aarch64 -mcpu=cortex-a73 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-CORTEX-A73 %s
-// RUN: %clang -target aarch64 -mcpu=cortex-r82 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-CORTEX-R82 %s
-// RUN: %clang -target aarch64 -mcpu=exynos-m3 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-M3 %s
-// RUN: %clang -target aarch64 -mcpu=exynos-m4 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-M4 %s
-// RUN: %clang -target aarch64 -mcpu=exynos-m5 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-M4 %s
-// RUN: %clang -target aarch64 -mcpu=kryo -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-KRYO %s
-// RUN: %clang -target aarch64 -mcpu=thunderx2t99 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-THUNDERX2T99 %s
-// RUN: %clang -target aarch64 -mcpu=a64fx -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-A64FX %s
-// RUN: %clang -target aarch64 -mcpu=carmel -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck -check-prefix=CHECK-MCPU-CARMEL %s
+// RUN: %clang -target aarch64 -mcpu=apple-a7 -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-APPLE-A7 %s
+// RUN: %clang -target aarch64 -mcpu=apple-a8 -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-APPLE-A7 %s
+// RUN: %clang -target aarch64 -mcpu=apple-a9 -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-APPLE-A7 %s
+// RUN: %clang -target aarch64 -mcpu=apple-a10 -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-APPLE-A10 %s
+// RUN: %clang -target aarch64 -mcpu=apple-a11 -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-APPLE-A11 %s
+// RUN: %clang -target aarch64 -mcpu=apple-a12 -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-APPLE-A12 %s
+// RUN: %clang -target aarch64 -mcpu=apple-a13 -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-APPLE-A13 %s
+// RUN: %clang -target aarch64 -mcpu=apple-s4 -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-APPLE-A12 %s
+// RUN: %clang -target aarch64 -mcpu=apple-s5 -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-APPLE-A12 %s
+// RUN: %clang -target aarch64 -mcpu=cyclone -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-APPLE-A7 %s
+// RUN: %clang -target aarch64 -mcpu=cortex-a34 -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-A34 %s
+// RUN: %clang -target aarch64 -mcpu=cortex-a35 -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-A35 %s
+// RUN: %clang -target aarch64 -mcpu=cortex-a53 -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-A53 %s
+// RUN: %clang -target aarch64 -mcpu=cortex-a57 -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-A57 %s
+// RUN: %clang -target aarch64 -mcpu=cortex-a72 -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-A72 %s
+// RUN: %clang -target aarch64 -mcpu=cortex-a73 -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-CORTEX-A73 %s
+// RUN: %clang -target aarch64 -mcpu=cortex-r82 -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-CORTEX-R82 %s
+// RUN: %clang -target aarch64 -mcpu=exynos-m3 -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-M3 %s
+// RUN: %clang -target aarch64 -mcpu=exynos-m4 -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-M4 %s
+// RUN: %clang -target aarch64 -mcpu=exynos-m5 -### -c %s 2>&1 || sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-M4 %s
+// RUN: %clang -target aarch64 -mcpu=kryo -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-KRYO %s
+// RUN: %clang -target aarch64 -mcpu=thunderx2t99 -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-THUNDERX2T99 %s
+// RUN: %clang -target aarch64 -mcpu=a64fx -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-A64FX %s
+// RUN: %clang -target aarch64 -mcpu=carmel -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck -check-prefix=CHECK-MCPU-CARMEL %s
 // CHECK-MCPU-APPLE-A7-LABEL: "-target-cpu" "apple-a7"
 // CHECK-MCPU-APPLE-A7-NEXT: "-target-feature" "+zcm"
 // CHECK-MCPU-APPLE-A7-NEXT: "-target-feature" "+zcz"
@@ -543,7 +543,7 @@
 // CHECK-MCPU-CARMEL-NEXT: "-target-abi"
 
 
-// RUN: %clang -target x86_64-apple-macosx -arch arm64 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck --check-prefix=CHECK-ARCH-ARM64 %s
+// RUN: %clang -target x86_64-apple-macosx -arch arm64 -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck --check-prefix=CHECK-ARCH-ARM64 %s
 // CHECK-ARCH-ARM64-LABEL: "-target-cpu" "apple-m1"
 // CHECK-ARCH-ARM64-NEXT: "-target-feature" "+zcm"
 // CHECK-ARCH-ARM64-NEXT: "-target-feature" "+zcz"
@@ -574,7 +574,7 @@
 // CHECK-ARCH-ARM64-NEXT: "-target-feature" "+ssbs"
 // CHECK-ARCH-ARM64-NEXT: "-target-abi"
 
-// RUN: %clang -target x86_64-apple-macosx -arch arm64_32 -### -c %s 2>&1 | sed -e 's/"-/\n"-/g' | FileCheck --check-prefix=CHECK-ARCH-ARM64_32 %s
+// RUN: %clang -target x86_64-apple-macosx -arch arm64_32 -### -c %s 2>&1 | sed -e 's/"-/~"-/g' | tr '~' '\n' | FileCheck --check-prefix=CHECK-ARCH-ARM64_32 %s
 // CHECK-ARCH-ARM64_32-LABEL: "-target-cpu" "apple-s4"
 // CHECK-ARCH-ARM64_32-NEXT: "-target-feature" "+zcm"
 // CHECK-ARCH-ARM64_32-NEXT: "-target-feature" "+zcz"
