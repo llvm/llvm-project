@@ -14859,6 +14859,13 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
   return OMPReverseDirective::Create(Context, StartLoc, EndLoc, AStmt,
                                      ReversedFor,
                                      buildPreInits(Context, PreInits));
+}
+
+StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
+    ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+    SourceLocation EndLoc) {
+  ASTContext &Context = getASTContext();
+  DeclContext *CurContext = SemaRef.CurContext;
   Scope *CurScope = SemaRef.getCurScope();
 
   // Empty statement should only be possible if there already was an error.

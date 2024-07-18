@@ -1779,10 +1779,6 @@ def OMP_ParallelWorkshare : Directive<"parallel workshare"> {
   let leafConstructs = [OMP_Parallel, OMP_Workshare];
   let category = CA_Executable;
 }
-def OMP_Reverse : Directive<"reverse"> {
-  let association = AS_Loop;
-  let category = CA_Executable;
-}
 def OMP_TargetParallel : Directive<"target parallel"> {
   let allowedClauses = [
     VersionedClause<OMPC_Allocate>,
