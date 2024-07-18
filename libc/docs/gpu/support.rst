@@ -229,6 +229,14 @@ fputc          |check|    |check|
 fwrite         |check|    |check|
 remove         |check|    |check|
 putc           |check|    |check|
+printf         |check|    |check|
+vprintf        |check|    |check|
+fprintf        |check|    |check|
+vfprintf       |check|    |check|
+sprintf        |check|    |check|
+snprintf       |check|    |check|
+vsprintf       |check|    |check|
+vsnprintf      |check|    |check|
 putchar        |check|    |check|
 fclose         |check|    |check|
 fopen          |check|    |check|
@@ -242,6 +250,7 @@ time.h
 Function Name  Available  RPC Required
 =============  =========  ============
 clock          |check|
+clock_gettime  |check|
 nanosleep      |check|
 =============  =========  ============
 

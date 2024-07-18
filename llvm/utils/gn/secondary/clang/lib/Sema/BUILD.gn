@@ -106,6 +106,7 @@ static_library("Sema") {
     "SemaSystemZ.cpp",
     "SemaTemplate.cpp",
     "SemaTemplateDeduction.cpp",
+    "SemaTemplateDeductionGuide.cpp",
     "SemaTemplateInstantiate.cpp",
     "SemaTemplateInstantiateDecl.cpp",
     "SemaTemplateVariadic.cpp",

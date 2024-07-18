@@ -190,6 +190,8 @@ public:
   bool VisitObjCBoxedExpr(const ObjCBoxedExpr *E);
   bool VisitCXXStdInitializerListExpr(const CXXStdInitializerListExpr *E);
   bool VisitStmtExpr(const StmtExpr *E);
+  bool VisitCXXNewExpr(const CXXNewExpr *E);
+  bool VisitCXXDeleteExpr(const CXXDeleteExpr *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);
@@ -277,45 +279,6 @@ protected:
 
   /// Visits an expression and converts it to a boolean.
   bool visitBool(const Expr *E);
-
-  /// Visits an initializer for a local.
-  bool visitLocalInitializer(const Expr *Init, unsigned I) {
-    if (!this->emitGetPtrLocal(I, Init))
-      return false;
-
-    if (!visitInitializer(Init))
-      return false;
-
-    if (!this->emitFinishInit(Init))
-      return false;
-
-    return this->emitPopPtr(Init);
-  }
-
-  /// Visits an initializer for a global.
-  bool visitGlobalInitializer(const Expr *Init, unsigned I) {
-    if (!this->emitGetPtrGlobal(I, Init))
-      return false;
-
-    if (!visitInitializer(Init))
-      return false;
-
-    if (!this->emitFinishInit(Init))
-      return false;
-
-    return this->emitPopPtr(Init);
-  }
-
-  /// Visits a delegated initializer.
-  bool visitThisInitializer(const Expr *I) {
-    if (!this->emitThis(I))
-      return false;
-
-    if (!visitInitializer(I))
-      return false;
-
-    return this->emitFinishInitPop(I);
-  }
 
   bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *ArrayFiller,
                      const Expr *E);

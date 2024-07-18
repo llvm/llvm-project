@@ -1275,6 +1275,9 @@ static void gatherInputSections() {
       // contrast, EH frames are handled like regular ConcatInputSections.)
       if (section->name == section_names::compactUnwind)
         continue;
+      // Addrsig sections contain metadata only needed at link time.
+      if (section->name == section_names::addrSig)
+        continue;
       for (const Subsection &subsection : section->subsections)
         addInputSection(subsection.isec);
     }
@@ -1425,6 +1428,19 @@ static void eraseInitializerSymbols() {
   for (ConcatInputSection *isec : in.initOffsets->inputs())
     for (Defined *sym : isec->symbols)
       sym->used = false;
+}
+
+static SmallVector<StringRef, 0> getRuntimePaths(opt::InputArgList &args) {
+  SmallVector<StringRef, 0> vals;
+  DenseSet<StringRef> seen;
+  for (const Arg *arg : args.filtered(OPT_rpath)) {
+    StringRef val = arg->getValue();
+    if (seen.insert(val).second)
+      vals.push_back(val);
+    else if (config->warnDuplicateRpath)
+      warn("duplicate -rpath '" + val + "' ignored [--warn-duplicate-rpath]");
+  }
+  return vals;
 }
 
 namespace lld {
@@ -1667,7 +1683,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     error("--thinlto-prefix-replace=old_dir;new_dir;obj_dir must be used with "
           "--thinlto-index-only=");
   }
-  config->runtimePaths = args::getStrings(args, OPT_rpath);
+  config->warnDuplicateRpath =
+      args.hasFlag(OPT_warn_duplicate_rpath, OPT_no_warn_duplicate_rpath, true);
+  config->runtimePaths = getRuntimePaths(args);
   config->allLoad = args.hasFlag(OPT_all_load, OPT_noall_load, false);
   config->archMultiple = args.hasArg(OPT_arch_multiple);
   config->applicationExtension = args.hasFlag(

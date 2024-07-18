@@ -13,6 +13,7 @@ from clang.cindex import CursorKind
 from clang.cindex import TemplateArgumentKind
 from clang.cindex import TranslationUnit
 from clang.cindex import TypeKind
+from clang.cindex import BinaryOperator
 from .util import get_cursor
 from .util import get_cursors
 from .util import get_tu
@@ -53,6 +54,64 @@ kTemplateArgTest = """\
         template<>
         void foo<-7, float, true>();
     """
+
+kBinops = """\
+struct C {
+   int m;
+ };
+
+ void func(void){
+   int a, b;
+   int C::* p = &C::
+
+   C c;
+   c.*p;
+
+   C* pc;
+   pc->*p;
+
+   a * b;
+   a / b;
+   a % b;
+   a + b;
+   a - b;
+
+   a << b;
+   a >> b;
+
+   a < b;
+   a > b;
+
+   a <= b;
+   a >= b;
+   a == b;
+   a != b;
+
+   a & b;
+   a ^ b;
+   a | b;
+
+   a && b;
+   a || b;
+
+   a = b;
+
+   a *= b;
+   a /= b;
+   a %= b;
+   a += b;
+   a -= b;
+
+   a <<= b;
+   a >>= b;
+
+   a &= b;
+   a ^= b;
+   a |= b;
+   a , b;
+
+ }
+ """
 
 
 class TestCursor(unittest.TestCase):
@@ -695,3 +754,48 @@ class TestCursor(unittest.TestCase):
         self.assertIn(
             foo.mangled_name, ("_Z3fooii", "__Z3fooii", "?foo@@YAHHH", "?foo@@YAHHH@Z")
         )
+
+    def test_binop(self):
+        tu = get_tu(kBinops, lang="cpp")
+
+        operators = {
+            # not exposed yet
+            # ".*" : BinaryOperator.PtrMemD,
+            "->*": BinaryOperator.PtrMemI,
+            "*": BinaryOperator.Mul,
+            "/": BinaryOperator.Div,
+            "%": BinaryOperator.Rem,
+            "+": BinaryOperator.Add,
+            "-": BinaryOperator.Sub,
+            "<<": BinaryOperator.Shl,
+            ">>": BinaryOperator.Shr,
+            # tests do not run in C++2a mode so this operator is not available
+            # "<=>" : BinaryOperator.Cmp,
+            "<": BinaryOperator.LT,
+            ">": BinaryOperator.GT,
+            "<=": BinaryOperator.LE,
+            ">=": BinaryOperator.GE,
+            "==": BinaryOperator.EQ,
+            "!=": BinaryOperator.NE,
+            "&": BinaryOperator.And,
+            "^": BinaryOperator.Xor,
+            "|": BinaryOperator.Or,
+            "&&": BinaryOperator.LAnd,
+            "||": BinaryOperator.LOr,
+            "=": BinaryOperator.Assign,
+            "*=": BinaryOperator.MulAssign,
+            "/=": BinaryOperator.DivAssign,
+            "%=": BinaryOperator.RemAssign,
+            "+=": BinaryOperator.AddAssign,
+            "-=": BinaryOperator.SubAssign,
+            "<<=": BinaryOperator.ShlAssign,
+            ">>=": BinaryOperator.ShrAssign,
+            "&=": BinaryOperator.AndAssign,
+            "^=": BinaryOperator.XorAssign,
+            "|=": BinaryOperator.OrAssign,
+            ",": BinaryOperator.Comma,
+        }
+
+        for op, typ in operators.items():
+            c = get_cursor(tu, op)
+            assert c.binary_operator == typ
