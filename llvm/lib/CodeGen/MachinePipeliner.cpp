@@ -528,8 +528,12 @@ bool MachinePipeliner::useSwingModuloScheduler() {
 }
 
 bool MachinePipeliner::useWindowScheduler(bool Changed) {
-  // WindowScheduler does not work when it is off or when SwingModuloScheduler
-  // is successfully scheduled.
+  // WindowScheduler does not work for following cases:
+  // 1. when it is off.
+  // 2. when SwingModuloScheduler is successfully scheduled.
+  // 3. when pragma II is enabled.
+  if (II_setByPragma)
+    return false;
   return WindowSchedulingOption == WindowSchedulingFlag::WS_Force ||
          (WindowSchedulingOption == WindowSchedulingFlag::WS_On && !Changed);
 }
