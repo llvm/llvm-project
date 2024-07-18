@@ -1071,21 +1071,20 @@ using RecIndicesTy =
     SmallVector<std::pair<const RecordDecl *, llvm::Value *>, 8>;
 
 static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
-                                 const FieldDecl *FD, RecIndicesTy &Indices) {
+                                 const FieldDecl *Field,
+                                 RecIndicesTy &Indices) {
   const CGRecordLayout &Layout = CGF.CGM.getTypes().getCGRecordLayout(RD);
   int64_t FieldNo = -1;
-  for (const Decl *D : RD->decls()) {
-    if (const auto *Field = dyn_cast<FieldDecl>(D)) {
-      FieldNo = Layout.getLLVMFieldNo(Field);
-      if (FD == Field) {
-        Indices.emplace_back(std::make_pair(RD, CGF.Builder.getInt32(FieldNo)));
-        return true;
-      }
+  for (const FieldDecl *FD : RD->fields()) {
+    FieldNo = Layout.getLLVMFieldNo(FD);
+    if (FD == Field) {
+      Indices.emplace_back(std::make_pair(RD, CGF.Builder.getInt32(FieldNo)));
+      return true;
     }
 
-    if (const auto *Record = dyn_cast<RecordDecl>(D)) {
-      ++FieldNo;
-      if (getGEPIndicesToField(CGF, Record, FD, Indices)) {
+    QualType Ty = FD->getType();
+    if (Ty->isRecordType()) {
+      if (getGEPIndicesToField(CGF, Ty->getAsRecordDecl(), Field, Indices)) {
         if (RD->isUnion())
           FieldNo = 0;
         Indices.emplace_back(std::make_pair(RD, CGF.Builder.getInt32(FieldNo)));
