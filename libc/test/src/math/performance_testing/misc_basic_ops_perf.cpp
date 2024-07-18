@@ -13,10 +13,6 @@
 #include "src/math/copysignf16.h"
 #include "src/math/fabsf.h"
 #include "src/math/fabsf16.h"
-#include "src/math/fmaximum_numf.h"
-#include "src/math/fmaximum_numf16.h"
-#include "src/math/fminimum_numf.h"
-#include "src/math/fminimum_numf16.h"
 #include "src/math/frexpf16.h"
 #include "test/src/math/performance_testing/Timer.h"
 
@@ -129,12 +125,6 @@ int main() {
   BINARY_OP_SINGLE_OUTPUT_PERF_EX(float16, LIBC_NAMESPACE::copysignf16,
                                   placeholder_binaryf16, FLOAT16_ROUNDS,
                                   "copysignf16_perf.log")
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float16, LIBC_NAMESPACE::fmaximum_numf16,
-                                  placeholder_binaryf16, FLOAT16_ROUNDS,
-                                  "fmaximum_numf16_perf.log")
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float16, LIBC_NAMESPACE::fminimum_numf16,
-                                  placeholder_binaryf16, FLOAT16_ROUNDS,
-                                  "fminimum_numf16_perf.log")
   FREXP_PERF(float16, LIBC_NAMESPACE::frexpf16, placeholder_frexpf16,
              FLOAT16_ROUNDS, "frexpf16_perf.log")
 
@@ -142,12 +132,6 @@ int main() {
                                      FLOAT_ROUNDS, "fabsf_perf.log")
   BINARY_OP_SINGLE_OUTPUT_PERF_EX(float, LIBC_NAMESPACE::copysignf, copysignf,
                                   FLOAT_ROUNDS, "copysignf_perf.log")
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float, LIBC_NAMESPACE::fmaximum_numf,
-                                  placeholder_binaryf, FLOAT_ROUNDS,
-                                  "fmaximum_numf_perf.log")
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float, LIBC_NAMESPACE::fminimum_numf,
-                                  placeholder_binaryf, FLOAT_ROUNDS,
-                                  "fminimum_numf_perf.log")
 
   return 0;
 }

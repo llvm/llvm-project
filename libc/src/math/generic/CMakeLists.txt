@@ -2214,8 +2214,6 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O2
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -2228,8 +2226,6 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O2
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -2255,8 +2251,6 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O3
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -2468,8 +2462,6 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O2
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -2482,8 +2474,6 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O2
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -2509,8 +2499,6 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O3
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
