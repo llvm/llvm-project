@@ -1340,6 +1340,9 @@ module std_private_functional_compose                    [system] {
 }
 module std_private_functional_default_searcher           [system] { header "__functional/default_searcher.h" }
 module std_private_functional_function                   [system] { header "__functional/function.h" }
+module std_private_functional_function_ref               [system] { header "__functional/function_ref.h" }
+module std_private_functional_function_ref_common        [system] { textual header "__functional/function_ref_common.h" }
+module std_private_functional_function_ref_impl          [system] { textual header "__functional/function_ref_impl.h" }
 module std_private_functional_hash                       [system] {
   header "__functional/hash.h"
   export std_cstdint
@@ -2091,6 +2094,7 @@ module std_private_utility_move                   [system] {
   export std_private_type_traits_remove_reference
 }
 module std_private_utility_no_destroy             [system] { header "__utility/no_destroy.h" }
+module std_private_utility_nontype                [system] { header "__utility/nontype.h" }
 module std_private_utility_pair                   [system] {
   header "__utility/pair.h"
   export std_private_ranges_subrange_fwd

@@ -483,6 +483,11 @@ template <class  R, class ... ArgTypes>
 template <class  R, class ... ArgTypes>
   void swap(function<R(ArgTypes...)>&, function<R(ArgTypes...)>&) noexcept;
 
+// [func.wrap.ref], non-owning wrapper
+template<class... S> class function_ref;                              // freestanding, not defined, since C++26
+template<class R, class... ArgTypes>
+  class function_ref<R(ArgTypes...) cv noexcept(noex)>;               // freestanding, since C++26
+
 template <class T> struct hash;
 
 template <> struct hash<bool>;
@@ -541,6 +546,7 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #include <__functional/compose.h>
 #include <__functional/default_searcher.h>
 #include <__functional/function.h>
+#include <__functional/function_ref.h>
 #include <__functional/hash.h>
 #include <__functional/identity.h>
 #include <__functional/invoke.h>

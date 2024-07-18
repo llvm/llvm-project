@@ -394,6 +394,9 @@ set(files
   __functional/compose.h
   __functional/default_searcher.h
   __functional/function.h
+  __functional/function_ref.h
+  __functional/function_ref_common.h
+  __functional/function_ref_impl.h
   __functional/hash.h
   __functional/identity.h
   __functional/invoke.h
@@ -858,6 +861,7 @@ set(files
   __utility/is_valid_range.h
   __utility/move.h
   __utility/no_destroy.h
+  __utility/nontype.h
   __utility/pair.h
   __utility/piecewise_construct.h
   __utility/priority_tag.h
