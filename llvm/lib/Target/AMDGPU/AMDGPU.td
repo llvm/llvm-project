@@ -1949,6 +1949,10 @@ def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
     [FeatureRequiresCOV6])>;
 
+def FeatureISAVersion12_1_Generic: FeatureSet<
+  !listconcat(FeatureISAVersion12_10.Features,
+    [FeatureRequiresCOV6])>;
+
 //===----------------------------------------------------------------------===//
 
 def AMDGPUInstrInfo : InstrInfo {

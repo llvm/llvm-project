@@ -149,6 +149,7 @@ static const OffloadArchToStringMap arch_names[] = {
     GFX(1201), // gfx1201
     GFX(1210), // gfx1210
     GFX(1211), // gfx1211
+    {OffloadArch::GFX12_1_GENERIC, "gfx12-1-generic", "compute_amdgcn"},
     {OffloadArch::AMDGCNSPIRV, "amdgcnspirv", "compute_amdgcn"},
     {OffloadArch::Generic, "generic", ""},
     // clang-format on

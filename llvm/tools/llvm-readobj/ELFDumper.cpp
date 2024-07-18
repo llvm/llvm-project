@@ -1646,7 +1646,8 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10-1-generic"),          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, "gfx10-3-generic"),          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, "gfx11-generic"),              \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC, "gfx12-generic")
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC, "gfx12-generic"),              \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX12_1_GENERIC, "gfx12-1-generic")
 // clang-format on
 
 const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion3[] = {
