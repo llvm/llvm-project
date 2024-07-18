@@ -57,6 +57,7 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
                            const BoltAddressTranslation *BAT) {
   yaml::bolt::BinaryFunctionProfile YamlBF;
   const BinaryContext &BC = BF.getBinaryContext();
+  const MCPseudoProbeDecoder *PseudoProbeDecoder = BC.getPseudoProbeDecoder();
 
   const uint16_t LBRProfile = BF.getProfileFlags() & BinaryFunction::PF_LBR;
 
@@ -69,6 +70,13 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   YamlBF.Hash = BF.getHash();
   YamlBF.NumBasicBlocks = BF.size();
   YamlBF.ExecCount = BF.getKnownExecutionCount();
+  if (PseudoProbeDecoder) {
+    if ((YamlBF.GUID = BF.getPseudoProbeGUID())) {
+      const MCPseudoProbeFuncDesc *FuncDesc =
+          PseudoProbeDecoder->getFuncDescForGUID(YamlBF.GUID);
+      YamlBF.PseudoProbeDescHash = FuncDesc->FuncHash;
+    }
+  }
 
   BinaryFunction::BasicBlockOrderType Order;
   llvm::copy(UseDFS ? BF.dfs() : BF.getLayout().blocks(),
