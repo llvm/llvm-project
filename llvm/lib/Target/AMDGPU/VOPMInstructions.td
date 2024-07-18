@@ -219,13 +219,20 @@ class VOP6Me <bits<8> op, VOPMProfile pfl> : Enc128 {
 def PixelShape {
   int 8X4X8 = 0;
   int 4X4X8 = 1;
-  int 4X4X16 = 2; // only CVT_TO_TENSOR
+  int 4X4X16 = 2;
   int 4X2X16 = 3;
 }
 
 def FilterType {
   int 1X1 = 0;
   int 3X3 = 1;
+}
+
+def IterationCnt {
+  int IT_1 = 0;
+  int IT_2 = 1;
+  int IT_3 = 2;
+  int IT_4 = 3;
 }
 
 class VOP2M_Profile<list<ValueType> ArgTy, bit _HasAux = 0> : VOPMProfile<ArgTy, _HasAux, 0, 0, 0> {
@@ -254,30 +261,39 @@ class VOP3M_Permute_Profile<list<ValueType> ArgTy> : VOPMProfile<ArgTy, 1, 0, 0,
 
 def VOPM_PERMUTE_I32_I32_I32_I32 : VOP3M_Permute_Profile<[i32, i32, i32, i32]>;
 
-class Conv_Profile<list<ValueType> ArgTy, int Shape, int Filter> : VOPMProfile<ArgTy, 1, 1, 0, 1> {
+class Conv_Profile<list<ValueType> ArgTy, int Shape, int Filter, int Iterations> : VOPMProfile<ArgTy, 1, 1, 0, 1> {
   let Outs64 = (outs DstRC64:$vdst);
   let Ins64 = !if(!eq(Filter,FilterType.3X3), (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, Src2RC64:$src3, Src2RC64:$src4, AuxData:$aux_data, Clamp0:$clamp),
                                               (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, Src2RC64:$src3, Src2RC64:$src4, Src2RC64:$src5, AuxData:$aux_data, Clamp0:$clamp));
 
-  dag ConvInPat = !if(!eq(Filter,FilterType.3X3), (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, Src2VT:$src3, Src2VT:$src4, timm:$aux_data, i1:$clamp),
-                                                  (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, Src2VT:$src3, Src2VT:$src4, Src2VT:$src5, timm:$aux_data, i1:$clamp));
-  dag ConvOutPat = !if(!eq(Filter,FilterType.3X3), (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, Src2VT:$src3, Src2VT:$src4, timm:$aux_data, i1:$clamp),
-                                                   (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, Src2VT:$src3, Src2VT:$src4, Src2VT:$src5, timm:$aux_data, i1:$clamp));
+  dag ConvPat = !if(!eq(Filter,FilterType.3X3), (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, Src2VT:$src3, Src2VT:$src4, timm:$aux_data, i1:$clamp),
+                                                (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, Src2VT:$src3, Src2VT:$src4, Src2VT:$src5, timm:$aux_data, i1:$clamp));
+
+  dag ConvFrag = !if(!eq(Filter,FilterType.3X3), (ops node:$src0, node:$src1, node:$src2, node:$src3, node:$src4, node:$aux_data, node:$clamp),
+                                                  (ops node:$src0, node:$src1, node:$src2, node:$src3, node:$src4, node:$src5, node:$aux_data, node:$clamp));
 
   let Asm64 = !if(!eq(Filter,FilterType.3X3), "$vdst, $src0, $src1, $src2, $src3, $src4$aux_data$clamp",
-                                              "$vdst, $src0, $src1, $src2, $src3, $src4, $src5$aux_data$clamp");
+                                              !cond(!eq(Iterations, IterationCnt.IT_1) : "$vdst, $src0, $src1, $src2$aux_data$clamp",
+                                                    !eq(Iterations, IterationCnt.IT_2) : "$vdst, $src0, $src1, $src2, $src3$aux_data$clamp",
+                                                    !eq(Iterations, IterationCnt.IT_3) : "$vdst, $src0, $src1, $src2, $src3, $src4$aux_data$clamp",
+                                                    !eq(Iterations, IterationCnt.IT_4) : "$vdst, $src0, $src1, $src2, $src3, $src4, $src5$aux_data$clamp"));
 
   int PrimTy = Shape;
   int FilterTy = Filter;
+  int IterCnt = Iterations;
 }
 
-multiclass Conv_Profile_Reg<int AccReg, int WeightsReg, int TensorReg, string OutputBaseTy, string AccInBaseTy, string WeightsTensorBaseTy, int Shape, int Filter> {
+multiclass Conv_Profile_Reg<int AccReg, int WeightsReg, int TensorReg, string OutputBaseTy, string AccInBaseTy, string WeightsTensorBaseTy, int Shape, int Filter, int Iterations = 0> {
 
   defvar AMult = !if(!eq(!find(AccInBaseTy, "16"), -1), 1, 2);
   defvar WTMult = !if(!eq(!find(WeightsTensorBaseTy, "16"), -1), 1, 2);
 
   defvar AccElCount = !mul(AMult, AccReg);
-  defvar WeightsElCount = !mul(WTMult, WeightsReg);
+
+  defvar TmpWeightsElCount = !mul(WTMult, WeightsReg);
+  // TODO-GFX13: v12f16/v12bf16 is not supported in the backend yet, use v16 for now.
+  defvar WeightsElCount = !if(!eq(TmpWeightsElCount, 12), 16, TmpWeightsElCount);
+
   defvar TensorElCount = !mul(WTMult, TensorReg);
 
   defvar AccElPrefix = !if(!eq(AccElCount, 1), "", "v" # AccElCount);
@@ -289,7 +305,18 @@ multiclass Conv_Profile_Reg<int AccReg, int WeightsReg, int TensorReg, string Ou
   defvar WeightsFullTy = !cast<ValueType>(WeightsElPrefix # WeightsTensorBaseTy);
   defvar TensorFullTy = !cast<ValueType>(TensorElPrefix # WeightsTensorBaseTy);
 
-  def NAME : Conv_Profile<[OutputFullTy, AccInFullTy, WeightsFullTy, TensorFullTy], Shape, Filter>;
+  def NAME : Conv_Profile<[OutputFullTy, AccInFullTy, WeightsFullTy, TensorFullTy], Shape, Filter, Iterations>;
+}
+
+class getWeightsRegPerIter<int Per4Iter, int Iter> {
+  int ret = !div(!add(!mul(Per4Iter, Iter), 3), 4);
+}
+
+multiclass Conv_Profile_1x1_Multi_Iter<int AccReg, int WeightsRegPer4Iter, int TensorReg, string OutputBaseTy, string AccInBaseTy, string WeightsTensorBaseTy, int Shape, int Filter> {
+  defm _ITER_1 : Conv_Profile_Reg<AccReg, getWeightsRegPerIter<WeightsRegPer4Iter, 1>.ret, TensorReg, OutputBaseTy, AccInBaseTy, WeightsTensorBaseTy, Shape, Filter, IterationCnt.IT_1>;
+  defm _ITER_2 : Conv_Profile_Reg<AccReg, getWeightsRegPerIter<WeightsRegPer4Iter, 2>.ret, TensorReg, OutputBaseTy, AccInBaseTy, WeightsTensorBaseTy, Shape, Filter, IterationCnt.IT_2>;
+  defm _ITER_3 : Conv_Profile_Reg<AccReg, getWeightsRegPerIter<WeightsRegPer4Iter, 3>.ret, TensorReg, OutputBaseTy, AccInBaseTy, WeightsTensorBaseTy, Shape, Filter, IterationCnt.IT_3>;
+  defm _ITER_4 : Conv_Profile_Reg<AccReg, getWeightsRegPerIter<WeightsRegPer4Iter, 4>.ret, TensorReg, OutputBaseTy, AccInBaseTy, WeightsTensorBaseTy, Shape, Filter, IterationCnt.IT_4>;
 }
 
 multiclass Conv_Profile_Multi<string OutputBaseTy, string WeightsTensorBaseTy, string AccInBaseTy = OutputBaseTy>{
@@ -298,12 +325,12 @@ multiclass Conv_Profile_Multi<string OutputBaseTy, string WeightsTensorBaseTy, s
   defvar Acc_Reg_4x2 = !if(!eq(!find(AccInBaseTy, "16"), -1), 4, 2);
 
   defm _3x3_8x4 : Conv_Profile_Reg<4, 5, 4, OutputBaseTy, AccInBaseTy, WeightsTensorBaseTy, PixelShape.8X4X8, FilterType.3X3>;
-  defm _3x3_4x4 : Conv_Profile_Reg<4, 9, 3, OutputBaseTy, AccInBaseTy, WeightsTensorBaseTy, PixelShape.4X4X8, FilterType.3X3>;
+  defm _3x3_4x4 : Conv_Profile_Reg<4, 9, 3, OutputBaseTy, AccInBaseTy, WeightsTensorBaseTy, PixelShape.4X4X16, FilterType.3X3>;
   defm _3x3_4x2 : Conv_Profile_Reg<Acc_Reg_4x2, 18, 3, OutputBaseTy, AccInBaseTy, WeightsTensorBaseTy, PixelShape.4X2X16, FilterType.3X3>;
 
-  defm _1x1_8x4 : Conv_Profile_Reg<4, 1, 2, OutputBaseTy, AccInBaseTy, WeightsTensorBaseTy, PixelShape.8X4X8, FilterType.1X1>;
-  defm _1x1_4x4 : Conv_Profile_Reg<4, 1, 1, OutputBaseTy, AccInBaseTy, WeightsTensorBaseTy, PixelShape.4X4X8, FilterType.1X1>;
-  defm _1x1_4x2 : Conv_Profile_Reg<Acc_Reg_4x2, 2, 1, OutputBaseTy, AccInBaseTy, WeightsTensorBaseTy, PixelShape.4X2X16, FilterType.1X1>;
+  defm _1x1_8x4 : Conv_Profile_1x1_Multi_Iter<4, 2, 2, OutputBaseTy, AccInBaseTy, WeightsTensorBaseTy, PixelShape.8X4X8, FilterType.1X1>;
+  defm _1x1_4x4 : Conv_Profile_1x1_Multi_Iter<4, 4, 1, OutputBaseTy, AccInBaseTy, WeightsTensorBaseTy, PixelShape.4X4X16, FilterType.1X1>;
+  defm _1x1_4x2 : Conv_Profile_1x1_Multi_Iter<Acc_Reg_4x2, 8, 1, OutputBaseTy, AccInBaseTy, WeightsTensorBaseTy, PixelShape.4X2X16, FilterType.1X1>;
 }
 
 //                                             dest    weights/tensor
@@ -558,10 +585,17 @@ let SchedRW = [Write32Bit, Write32Bit] in {
                                                          [(set i32:$vdst, i32:$src2, (int_amdgcn_permute_pack_tensor_2src_b64 i32:$src0, i32:$src1, timm:$aux_data))]>;
 }
 
+multiclass VOPM_Conv_MultiPseudos_1x1_Iter<string ProfilePrefix> {
+  def _ITER_1 : VOPM_Pseudo<!cast<Conv_Profile>(ProfilePrefix #"_ITER_1")>;
+  def _ITER_2 : VOPM_Pseudo<!cast<Conv_Profile>(ProfilePrefix #"_ITER_2")>;
+  def _ITER_3 : VOPM_Pseudo<!cast<Conv_Profile>(ProfilePrefix #"_ITER_3")>;
+  def _ITER_4 : VOPM_Pseudo<!cast<Conv_Profile>(ProfilePrefix #"_ITER_4")>;
+}
+
 multiclass VOPM_Conv_MultiPseudos<string ProfilePrefix> {
-  def _1x1_8x4 : VOPM_Pseudo<!cast<Conv_Profile>(ProfilePrefix #"_1x1_8x4")>;
-  def _1x1_4x4 : VOPM_Pseudo<!cast<Conv_Profile>(ProfilePrefix #"_1x1_4x4")>;
-  def _1x1_4x2 : VOPM_Pseudo<!cast<Conv_Profile>(ProfilePrefix #"_1x1_4x2")>;
+  defm _1x1_8x4 : VOPM_Conv_MultiPseudos_1x1_Iter<ProfilePrefix #"_1x1_8x4">;
+  defm _1x1_4x4 : VOPM_Conv_MultiPseudos_1x1_Iter<ProfilePrefix #"_1x1_4x4">;
+  defm _1x1_4x2 : VOPM_Conv_MultiPseudos_1x1_Iter<ProfilePrefix #"_1x1_4x2">;
 
   def _3x3_8x4 : VOPM_Pseudo<!cast<Conv_Profile>(ProfilePrefix #"_3x3_8x4")>;
   def _3x3_4x4 : VOPM_Pseudo<!cast<Conv_Profile>(ProfilePrefix #"_3x3_4x4")>;
@@ -824,9 +858,6 @@ multiclass Fma_From_Tensor_Profile_Multi<string OutAccBaseTy, string ResidualBas
   defm _regular_4x4 : Fma_From_Tensor_Profile_Reg<OutAcc_Reg_Nx4, 1, 1, OutAccBaseTy, ResidualBaseTy, FmaFromTensorLayout.CONV_4X4>;
   defm _regular_4x2 : Fma_From_Tensor_Profile_Reg<OutAcc_Reg_4x2, 1, 1, OutAccBaseTy, ResidualBaseTy, FmaFromTensorLayout.CONV_4X2>;
 
-  //TODO remove
-  //defm _dequant_8x4 : Fma_From_Tensor_Profile_Reg<             1, 1, 1, OutAccBaseTy, ResidualBaseTy, FmaFromTensorLayout.DEQUANT_4X4>;
-
   defm _dequant_4x4 : Fma_From_Tensor_Profile_Reg<             1, 1, 1, OutAccBaseTy, ResidualBaseTy, FmaFromTensorLayout.DEQUANT_4X4>;
   defm _dequant_4x2 : Fma_From_Tensor_Profile_Reg<             1, 1, 1, OutAccBaseTy, ResidualBaseTy, FmaFromTensorLayout.DEQUANT_4X2>;
 }
@@ -1043,13 +1074,22 @@ multiclass VOP6M_Conv_Real_Base<GFXGen Gen, bits<8> op,
       let Inst{59-58} = PrimTy;
       defvar FilterTy = !cast<Conv_Profile>(ps.Pfl).FilterTy;
       let Inst{61} = FilterTy;
+      defvar IterCnt = !cast<Conv_Profile>(ps.Pfl).IterCnt;
+      let Inst{83-82} = IterCnt;
   }
 }
 
+multiclass VOP6M_Conv_Real_Base_1x1_Iter_gfx13<bits<8> op, string psName, string mnemo> {
+  defm _ITER_1: VOP6M_Conv_Real_Base<GFX13Gen, op, psName#"_ITER_1", mnemo>;
+  defm _ITER_2: VOP6M_Conv_Real_Base<GFX13Gen, op, psName#"_ITER_2", mnemo>;
+  defm _ITER_3: VOP6M_Conv_Real_Base<GFX13Gen, op, psName#"_ITER_3", mnemo>;
+  defm _ITER_4: VOP6M_Conv_Real_Base<GFX13Gen, op, psName#"_ITER_4", mnemo>;
+}
+
 multiclass VOP6M_Conv_Real_gfx13<bits<8> op, string psName> {
-  defm _8x4 : VOP6M_Conv_Real_Base<GFX13Gen, op, psName#"_1x1_8x4", !tolower(psName)>;
-  defm _4x4 : VOP6M_Conv_Real_Base<GFX13Gen, op, psName#"_1x1_4x4", !tolower(psName)>;
-  defm _4x2 : VOP6M_Conv_Real_Base<GFX13Gen, op, psName#"_1x1_4x2", !tolower(psName)>;
+  defm _8x4 : VOP6M_Conv_Real_Base_1x1_Iter_gfx13<op, psName#"_1x1_8x4", !tolower(psName)>;
+  defm _4x4 : VOP6M_Conv_Real_Base_1x1_Iter_gfx13<op, psName#"_1x1_4x4", !tolower(psName)>;
+  defm _4x2 : VOP6M_Conv_Real_Base_1x1_Iter_gfx13<op, psName#"_1x1_4x2", !tolower(psName)>;
 }
 
 multiclass Conv_Real_gfx13<bits<8> op> {
@@ -1326,22 +1366,53 @@ defm V_FMA_FROM_TENSOR_BF16_BF16 : FMA_Tensor_Real <0x67>;
 // VOPM Patterns
 //===----------------------------------------------------------------------===//
 
+
+class 1X1_IT_1<SDPatternOperator node, Conv_Profile P> : PatFrag<P.ConvFrag, !setdagop(P.ConvFrag, node), [{ return (((cast<ConstantSDNode>(N->getOperand(N->getNumOperands()-2)))->getZExtValue() >> 12)&3) == 0; }] >;
+class 1X1_IT_2<SDPatternOperator node, Conv_Profile P> : PatFrag<P.ConvFrag, !setdagop(P.ConvFrag, node), [{ return (((cast<ConstantSDNode>(N->getOperand(N->getNumOperands()-2)))->getZExtValue() >> 12)&3) == 1; }] >;
+class 1X1_IT_3<SDPatternOperator node, Conv_Profile P> : PatFrag<P.ConvFrag, !setdagop(P.ConvFrag, node), [{ return (((cast<ConstantSDNode>(N->getOperand(N->getNumOperands()-2)))->getZExtValue() >> 12)&3) == 2; }] >;
+class 1X1_IT_4<SDPatternOperator node, Conv_Profile P> : PatFrag<P.ConvFrag, !setdagop(P.ConvFrag, node), [{ return (((cast<ConstantSDNode>(N->getOperand(N->getNumOperands()-2)))->getZExtValue() >> 12)&3) == 3; }] >;
+
 multiclass ConvPat_VOPM<string Inst, SDPatternOperator node, string ProfileName> {
   defvar P = !cast<Conv_Profile>(ProfileName);
 
-  def : GCNPat <(P.DstVT !setdagop(P.ConvInPat, node)),
-                (P.DstVT !setdagop(P.ConvOutPat, !cast<Instruction>(Inst)))>;
+  def : GCNPat <(P.DstVT !setdagop(P.ConvPat, node)),
+                (P.DstVT !setdagop(P.ConvPat, !cast<Instruction>(Inst)))>;
 }
 
-multiclass ConvPatMulti_VOPM<string Inst, SDPatternOperator node, string ProfilePrefix> {
+multiclass ConvPat1x1Iter_VOPM<string Inst, SDPatternOperator node, string ProfilePrefix> {
+
+  defvar P1 = !cast<Conv_Profile>(ProfilePrefix # "_ITER_1");
+  def : GCNPat <(P1.DstVT !setdagop(P1.ConvPat, 1X1_IT_1<node, P1>)),
+                (P1.DstVT !setdagop(P1.ConvPat, !cast<Instruction>(Inst # "_ITER_1")))>;
+
+  defvar P2 = !cast<Conv_Profile>(ProfilePrefix # "_ITER_2");
+  def : GCNPat <(P2.DstVT !setdagop(P2.ConvPat, 1X1_IT_2<node, P2>)),
+                (P2.DstVT !setdagop(P2.ConvPat, !cast<Instruction>(Inst # "_ITER_2")))>;
+
+  defvar P3 = !cast<Conv_Profile>(ProfilePrefix # "_ITER_3");
+  def : GCNPat <(P3.DstVT !setdagop(P3.ConvPat, 1X1_IT_3<node, P3>)),
+                (P3.DstVT !setdagop(P3.ConvPat, !cast<Instruction>(Inst # "_ITER_3")))>;
+
+  defvar P4 = !cast<Conv_Profile>(ProfilePrefix # "_ITER_4");
+  def : GCNPat <(P4.DstVT !setdagop(P4.ConvPat, 1X1_IT_4<node, P4>)),
+                (P4.DstVT !setdagop(P4.ConvPat, !cast<Instruction>(Inst # "_ITER_4")))>;
+}
+
+multiclass ConvPatMulti1x1_VOPM<string Inst, SDPatternOperator node, string ProfilePrefix> {
+  defm : ConvPat1x1Iter_VOPM<Inst # "_8x4", node, ProfilePrefix # "_8x4">;
+  defm : ConvPat1x1Iter_VOPM<Inst # "_4x4", node, ProfilePrefix # "_4x4">;
+  defm : ConvPat1x1Iter_VOPM<Inst # "_4x2", node, ProfilePrefix # "_4x2">;
+}
+
+multiclass ConvPatMulti3x3_VOPM<string Inst, SDPatternOperator node, string ProfilePrefix> {
   defm : ConvPat_VOPM<Inst # "_8x4", node, ProfilePrefix # "_8x4">;
   defm : ConvPat_VOPM<Inst # "_4x4", node, ProfilePrefix # "_4x4">;
   defm : ConvPat_VOPM<Inst # "_4x2", node, ProfilePrefix # "_4x2">;
 }
 
 multiclass ConvPatMultiFilters_VOPM<string TypeNames, string NodePrefix> {
-  defm _1x1 : ConvPatMulti_VOPM<"V_CONVOLVE_" # TypeNames # "_1x1", !cast<SDPatternOperator>(NodePrefix # "_1x1"), "VOPM_CONV_" # TypeNames # "_1x1">;
-  defm _3x3 : ConvPatMulti_VOPM<"V_CONVOLVE_" # TypeNames # "_3x3", !cast<SDPatternOperator>(NodePrefix # "_3x3"), "VOPM_CONV_" # TypeNames # "_3x3">;
+  defm _1x1 : ConvPatMulti1x1_VOPM<"V_CONVOLVE_" # TypeNames # "_1x1", !cast<SDPatternOperator>(NodePrefix # "_1x1"), "VOPM_CONV_" # TypeNames # "_1x1">;
+  defm _3x3 : ConvPatMulti3x3_VOPM<"V_CONVOLVE_" # TypeNames # "_3x3", !cast<SDPatternOperator>(NodePrefix # "_3x3"), "VOPM_CONV_" # TypeNames # "_3x3">;
 }
 
 defm : ConvPatMultiFilters_VOPM<"F16_F16", "int_amdgcn_convolve_f16_f16">;

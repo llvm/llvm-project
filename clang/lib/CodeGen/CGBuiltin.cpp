@@ -19645,7 +19645,24 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
         *E->getArg(ClampArg)->getIntegerConstantExpr(getContext());
 
     SmallVector<Value *> Args;
-    for (int i = 0, e = AuxDataArg; i != e; ++i)
+    // Accumulator
+    Args.push_back(EmitScalarExpr(E->getArg(0)));
+
+    // Weights
+    // TODO-GFX13: v12f16/v12bf16 is not supported in the llvm backend yet, use
+    // v16 for now.
+    auto Weights = EmitScalarExpr(E->getArg(1));
+    auto WTy = Weights->getType();
+    if (WTy->isVectorTy() &&
+        cast<FixedVectorType>(WTy)->getNumElements() == 12 &&
+        WTy->getScalarSizeInBits() == 16)
+      Weights = Builder.CreateShuffleVector(
+          Weights, llvm::UndefValue::get(WTy),
+          ArrayRef<int>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15});
+    Args.push_back(Weights);
+
+    // Tensors
+    for (int i = 2, e = AuxDataArg; i != e; ++i)
       Args.push_back(EmitScalarExpr(E->getArg(i)));
 
     bool Filter1x1 = ((AuxData.getZExtValue() >> 3) & 1) == 0;
