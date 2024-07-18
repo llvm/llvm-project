@@ -9,10 +9,12 @@
 #ifndef _LIBCPP___CONCEPTS_COMPARISON_COMMON_TYPE_H
 #define _LIBCPP___CONCEPTS_COMPARISON_COMMON_TYPE_H
 
+#include "__concepts/common_reference_with.h"
 #include "__concepts/convertible_to.h"
 #include "__concepts/same_as.h"
 #include "__config"
 #include "__type_traits/common_reference.h"
+#include "__type_traits/make_const_lvalue_ref.h"
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -20,7 +22,15 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 23
+#if _LIBCPP_STD_VER >= 20
+
+#  if _LIBCPP_STD_VER < 23
+
+template <class _Tp, class _Up>
+concept __comparison_common_type_with =
+    common_reference_with<__make_const_lvalue_ref<_Tp>, __make_const_lvalue_ref<_Up>>;
+
+#  else
 
 template <class _Tp, class _Up, class _CommonRef = common_reference_t<const _Tp&, const _Up&>>
 concept __comparison_common_type_with_impl =
@@ -32,7 +42,9 @@ concept __comparison_common_type_with_impl =
 template <class _Tp, class _Up>
 concept __comparison_common_type_with = __comparison_common_type_with_impl<remove_cvref_t<_Tp>, remove_cvref_t<_Up>>;
 
-#endif // _LIBCPP_STD_VER >= 23
+#  endif // _LIBCPP_STD_VER < 23
+
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

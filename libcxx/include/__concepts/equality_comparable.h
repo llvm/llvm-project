@@ -38,8 +38,6 @@ concept __weakly_equality_comparable_with =
 template <class _Tp>
 concept equality_comparable = __weakly_equality_comparable_with<_Tp, _Tp>;
 
-#  if _LIBCPP_STD_VER >= 23
-
 // clang-format off
 template <class _Tp, class _Up>
 concept equality_comparable_with =
@@ -51,22 +49,6 @@ concept equality_comparable_with =
             __make_const_lvalue_ref<_Up>>> &&
     __weakly_equality_comparable_with<_Tp, _Up>;
 // clang-format on
-
-#  else
-
-// clang-format off
-template <class _Tp, class _Up>
-concept equality_comparable_with =
-    equality_comparable<_Tp> && equality_comparable<_Up> &&
-    common_reference_with<__make_const_lvalue_ref<_Tp>, __make_const_lvalue_ref<_Up>> &&
-    equality_comparable<
-        common_reference_t<
-            __make_const_lvalue_ref<_Tp>,
-            __make_const_lvalue_ref<_Up>>> &&
-    __weakly_equality_comparable_with<_Tp, _Up>;
-// clang-format on
-
-#  endif // _LIBCPP_STD_VER >= 23
 
 #endif // _LIBCPP_STD_VER >= 20
 
