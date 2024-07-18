@@ -3575,8 +3575,8 @@ static Value *foldBitFieldArithmetic(BinaryOperator &I,
   // If operand of bitfield operation is a constant, sum of the constants is
   // computed and returned. if operand is not a constant, operand is
   // returned. if this operation is not a bitfield operation, null is returned.
-  auto AccumulateY = [&](Value *LoY, Value *UpY, APInt LoMask,
-                         APInt UpMask) -> Value * {
+  auto AccumulateY = [&](Value *LoY, Value *UpY, const APInt LoMask,
+                         const APInt UpMask) -> Value * {
     Value *Y = nullptr;
     auto *CLoY = dyn_cast_or_null<Constant>(LoY);
     auto *CUpY = dyn_cast_or_null<Constant>(UpY);
