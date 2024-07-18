@@ -6,6 +6,7 @@
 #include <sanitizer/common_interface_defs.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 volatile int *null = 0;
 
@@ -14,13 +15,14 @@ int main(int argc, char **argv) {
   sprintf(buff, "%s.report_path/report", argv[0]);
   __sanitizer_set_report_path(buff);
   assert(strncmp(buff, __sanitizer_get_report_path(), strlen(buff)) == 0);
-  printf("Path %s\n", __sanitizer_get_report_path());
-  fflush(stdout);
+  sprintf(buff, "Path %s\n", __sanitizer_get_report_path());
+  write(STDERR_FILENO, buff, strlen(buff));
 
   // Try setting again with an invalid/inaccessible directory.
   sprintf(buff, "%s/report", argv[0]);
   __sanitizer_set_report_path(buff);
-  printf("Path %s\n", __sanitizer_get_report_path());
+  sprintf(buff, "Path %s\n", __sanitizer_get_report_path());
+  write(STDERR_FILENO, buff, strlen(buff));
 }
 
 // CHECK: Path {{.*}}Posix/Output/sanitizer_set_report_path_test.cpp.tmp.report_path/report.
