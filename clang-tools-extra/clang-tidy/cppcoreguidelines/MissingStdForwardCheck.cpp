@@ -129,6 +129,9 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
       unless(anyOf(hasAncestor(typeLoc()),
                    hasAncestor(expr(hasUnevaluatedContext())))));
 
+  auto StaticCast = cxxStaticCastExpr(
+      hasSourceExpression(declRefExpr(to(equalsBoundNode("param")))));
+
   Finder->addMatcher(
       parmVarDecl(
           parmVarDecl().bind("param"), hasIdentifier(),
@@ -136,8 +139,9 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
           hasAncestor(functionDecl().bind("func")),
           hasAncestor(functionDecl(
               isDefinition(), equalsBoundNode("func"), ToParam,
-              unless(anyOf(isDeleted(),
-                           hasDescendant(std::move(ForwardCallMatcher))))))),
+              unless(anyOf(isDeleted(), hasDescendant(expr(
+                                            anyOf(std::move(ForwardCallMatcher),
+                                                  std::move(StaticCast))))))))),
       this);
 }
 

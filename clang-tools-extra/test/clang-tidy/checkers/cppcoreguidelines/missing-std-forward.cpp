@@ -211,3 +211,20 @@ template<typename F>
 void unused_argument3(F&& _) {}
 
 } // namespace unused_arguments
+
+namespace escape_hatch {
+
+template<typename T>
+void used_as_lvalue_on_purpose(T&& t) {
+  static_cast<T&>(t);
+  static_cast<const T&>(t);
+}
+
+template<typename T>
+void used_as_rvalue_on_purpose(T&& t) {
+  static_cast<const T&&>(t);
+  // Typically used as another spelling for `std::forward`.
+  static_cast<T&&>(t);
+}
+
+}

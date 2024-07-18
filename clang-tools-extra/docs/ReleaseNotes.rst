@@ -121,6 +121,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/redundant-smartptr-get>` check to
   remove `->`, when redundant `get()` is removed.
 
+- Improved :doc:`cppcoreguidelines-missing-std-forward
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check to allow
+  using ``static_cast<T&>`` to explicitly convey the intention of using a
+  forwarding reference as an lvalue reference.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
