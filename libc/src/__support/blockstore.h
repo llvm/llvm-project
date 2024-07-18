@@ -9,9 +9,11 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_BLOCKSTORE_H
 #define LLVM_LIBC_SRC___SUPPORT_BLOCKSTORE_H
 
+#include "src/__support/CPP/array.h"
+#include "src/__support/CPP/new.h"
+#include "src/__support/CPP/type_traits.h"
+#include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
-#include <src/__support/CPP/new.h>
-#include <src/__support/libc_assert.h>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -98,6 +100,16 @@ public:
       return *reinterpret_cast<T *>(block->data + sizeof(T) * true_index);
     }
 
+    LIBC_INLINE Iterator operator+(int i) {
+      LIBC_ASSERT(i >= 0 &&
+                  "BlockStore iterators only support incrementation.");
+      auto other = *this;
+      for (int j = 0; j < i; ++j)
+        ++other;
+
+      return other;
+    }
+
     LIBC_INLINE bool operator==(const Iterator &rhs) const {
       return block == rhs.block && index == rhs.index;
     }
@@ -175,6 +187,47 @@ public:
       return Iterator(&first, 0);
     else
       return Iterator(current, fill_count);
+  }
+
+  // Removes the element at pos, then moves all the objects after back by one to
+  // fill the hole. It's assumed that pos is a valid iterator to somewhere in
+  // this block_store.
+  LIBC_INLINE void erase(Iterator pos) {
+    const Iterator last_item = Iterator(current, fill_count);
+    if (pos == last_item) {
+      pop_back();
+      return;
+    }
+
+    if constexpr (REVERSE_ORDER) {
+      // REVERSE: Iterate from begin to pos
+      const Iterator range_end = pos;
+      Iterator cur = begin();
+      T prev_val = *cur;
+      ++cur;
+      T cur_val = *cur;
+
+      for (; cur != range_end; ++cur) {
+        cur_val = *cur;
+        *cur = prev_val;
+        prev_val = cur_val;
+      }
+      // As long as this isn't the end we will always need to move at least one
+      // item (since we know that pos isn't the last item due to the check
+      // above).
+      if (range_end != end())
+        *cur = prev_val;
+    } else {
+      // FORWARD: Iterate from pos to end
+      const Iterator range_end = end();
+      Iterator cur = pos;
+      Iterator prev = cur;
+      ++cur;
+
+      for (; cur != range_end; prev = cur, ++cur)
+        *prev = *cur;
+    }
+    pop_back();
   }
 };
 
