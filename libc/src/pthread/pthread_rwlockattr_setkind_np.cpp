@@ -9,11 +9,12 @@
 #include "pthread_rwlockattr_setkind_np.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <errno.h>
 #include <pthread.h> // pthread_rwlockattr_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_rwlockattr_setkind_np,
                    (pthread_rwlockattr_t * attr, int pref)) {
@@ -27,4 +28,4 @@ LLVM_LIBC_FUNCTION(int, pthread_rwlockattr_setkind_np,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
