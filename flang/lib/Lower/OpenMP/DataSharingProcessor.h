@@ -147,9 +147,7 @@ public:
   void processStep1(mlir::omp::PrivateClauseOps *clauseOps = nullptr);
   void processStep2(mlir::Operation *op, bool isLoop);
 
-  void pushLoopIV(mlir::Value iv) {
-    loopIVs.push_back(iv);
-  }
+  void pushLoopIV(mlir::Value iv) { loopIVs.push_back(iv); }
 
   const llvm::SetVector<const semantics::Symbol *> &
   getAllSymbolsToPrivatize() const {

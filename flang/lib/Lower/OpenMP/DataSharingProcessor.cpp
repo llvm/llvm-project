@@ -219,7 +219,6 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
       mlir::Operation *lastOper = loopOp.getRegion().back().getTerminator();
       firOpBuilder.setInsertionPoint(lastOper);
 
-
       mlir::Value cmpOp;
       llvm::SmallVector<mlir::Value> vs;
       vs.reserve(loopOp.getIVs().size());
@@ -241,7 +240,7 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
             loc, negativeStep, vLT, vGT);
 
         if (cmpOp) {
-          cmpOp  = firOpBuilder.create<mlir::arith::AndIOp>(loc, cmpOp, icmpOp);
+          cmpOp = firOpBuilder.create<mlir::arith::AndIOp>(loc, cmpOp, icmpOp);
         } else {
           cmpOp = icmpOp;
         }
@@ -249,7 +248,7 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
 
       auto ifOp = firOpBuilder.create<fir::IfOp>(loc, cmpOp, /*else*/ false);
       firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      for (auto [v,loopIV] : llvm::zip_equal(vs, loopIVs)) {
+      for (auto [v, loopIV] : llvm::zip_equal(vs, loopIVs)) {
         assert(loopIV && "loopIV was not set");
         firOpBuilder.createStoreWithConvert(loc, v, loopIV);
       }
