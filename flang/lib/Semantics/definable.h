@@ -30,7 +30,9 @@ ENUM_CLASS(DefinabilityFlag,
     DuplicatesAreOk, // vector subscript may have duplicates
     PointerDefinition, // a pointer is being defined, not its target
     AcceptAllocatable, // treat allocatable as if it were a pointer
-    PolymorphicOkInPure) // don't check for polymorphic type in pure subprogram
+    SourcedAllocation, // ALLOCATE(a,SOURCE=)
+    PolymorphicOkInPure, // don't check for polymorphic type in pure subprogram
+    DoNotNoteDefinition) // context does not imply definition
 
 using DefinabilityFlags =
     common::EnumSet<DefinabilityFlag, DefinabilityFlag_enumSize>;
