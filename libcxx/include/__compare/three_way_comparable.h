@@ -40,14 +40,14 @@ concept three_way_comparable =
 
 #  if _LIBCPP_STD_VER >= 23
 
-template <class _Tp, class _Up, class _cat = partial_ordering>
+template <class _Tp, class _Up, class _Cat = partial_ordering>
 concept three_way_comparable_with =
-    three_way_comparable<_Tp, _cat> && three_way_comparable<_Up, _cat> && __comparison_common_type_with<_Tp, _Up> &&
-    three_way_comparable<common_reference_t<__make_const_lvalue_ref<_Tp>, __make_const_lvalue_ref<_Up>>, _cat> &&
+    three_way_comparable<_Tp, _Cat> && three_way_comparable<_Up, _Cat> && __comparison_common_type_with<_Tp, _Up> &&
+    three_way_comparable<common_reference_t<__make_const_lvalue_ref<_Tp>, __make_const_lvalue_ref<_Up>>, _Cat> &&
     __weakly_equality_comparable_with<_Tp, _Up> && __partially_ordered_with<_Tp, _Up> &&
     requires(__make_const_lvalue_ref<_Tp> __t, __make_const_lvalue_ref<_Up> __u) {
-      { __t <=> __u } -> __compares_as<_cat>;
-      { __u <=> __t } -> __compares_as<_cat>;
+      { __t <=> __u } -> __compares_as<_Cat>;
+      { __u <=> __t } -> __compares_as<_Cat>;
     };
 
 #  else
