@@ -512,12 +512,10 @@ define i1 @isKnownNeverNaN_nofpclass_callsite() {
 
 declare nofpclass(sub norm zero inf) double @only_nans()
 
-; TODO: Could simplify to false
 define i1 @isKnownNeverNaN_only_nans() {
 ; CHECK-LABEL: @isKnownNeverNaN_only_nans(
 ; CHECK-NEXT:    [[CALL:%.*]] = call double @only_nans()
-; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[CALL]], [[CALL]]
-; CHECK-NEXT:    ret i1 [[TMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %call = call double @only_nans()
   %tmp = fcmp ord double %call, %call

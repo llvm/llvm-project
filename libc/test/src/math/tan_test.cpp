@@ -22,14 +22,15 @@ TEST_F(LlvmLibcTanTest, TrickyInputs) {
   constexpr double INPUTS[] = {
       0x1.d130383d17321p-27,   0x1.8000000000009p-23,  0x1.8000000000024p-22,
       0x1.800000000009p-21,    0x1.20000000000f3p-20,  0x1.800000000024p-20,
-      0x1.e0000000001c2p-20,   0x1.0da8cc189b47dp-10,  0x1.00a33764a0a83p-7,
-      0x1.911a18779813fp-7,    0x1.940c877fb7dacp-7,   0x1.f42fb19b5b9b2p-6,
-      0x1.0285070f9f1bcp-5,    0x1.6ca9ef729af76p-1,   0x1.23f40dccdef72p+0,
-      0x1.43cf16358c9d7p+0,    0x1.addf3b9722265p+0,   0x1.ae78d360afa15p+0,
-      0x1.fe81868fc47fep+1,    0x1.e31b55306f22cp+2,   0x1.e639103a05997p+2,
-      0x1.f7898d5a756ddp+2,    0x1.1685973506319p+3,   0x1.5f09cad750ab1p+3,
-      0x1.aaf85537ea4c7p+3,    0x1.4f2b874135d27p+4,   0x1.13114266f9764p+4,
-      0x1.a211877de55dbp+4,    0x1.a5eece87e8606p+4,   0x1.a65d441ea6dcep+4,
+      0x1.e0000000001c2p-20,   0x1.00452f0e0134dp-13,  0x1.0da8cc189b47dp-10,
+      0x1.00a33764a0a83p-7,    0x1.911a18779813fp-7,   0x1.940c877fb7dacp-7,
+      0x1.f42fb19b5b9b2p-6,    0x1.0285070f9f1bcp-5,   0x1.89f0f5241255bp-2,
+      0x1.6ca9ef729af76p-1,    0x1.23f40dccdef72p+0,   0x1.43cf16358c9d7p+0,
+      0x1.addf3b9722265p+0,    0x1.ae78d360afa15p+0,   0x1.fe81868fc47fep+1,
+      0x1.e31b55306f22cp+2,    0x1.e639103a05997p+2,   0x1.f7898d5a756ddp+2,
+      0x1.1685973506319p+3,    0x1.5f09cad750ab1p+3,   0x1.aaf85537ea4c7p+3,
+      0x1.4f2b874135d27p+4,    0x1.13114266f9764p+4,   0x1.a211877de55dbp+4,
+      0x1.a5eece87e8606p+4,    0x1.a65d441ea6dcep+4,   0x1.045457ae3994p+5,
       0x1.1ffb509f3db15p+5,    0x1.2345d1e090529p+5,   0x1.c96e28eb679f8p+5,
       0x1.da1838053b866p+5,    0x1.be886d9c2324dp+6,   0x1.ab514bfc61c76p+7,
       0x1.14823229799c2p+7,    0x1.48ff1782ca91dp+8,   0x1.dcbfda0c7559ep+8,
@@ -42,6 +43,7 @@ TEST_F(LlvmLibcTanTest, TrickyInputs) {
       0x1.6ac5b262ca1ffp+843,  0x1.8bb5847d49973p+845, 0x1.6ac5b262ca1ffp+849,
       0x1.f08b14e1c4d0fp+890,  0x1.2b5fe88a9d8d5p+903, 0x1.a880417b7b119p+1023,
       0x1.f6d7518808571p+1023,
+
   };
   constexpr int N = sizeof(INPUTS) / sizeof(INPUTS[0]);
 

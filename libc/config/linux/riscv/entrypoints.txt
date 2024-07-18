@@ -289,6 +289,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.dup3
     libc.src.unistd.execve
     libc.src.unistd.fchdir
+    libc.src.unistd.fpathconf
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
     libc.src.unistd.getcwd
@@ -300,6 +301,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.link
     libc.src.unistd.linkat
     libc.src.unistd.lseek
+    libc.src.unistd.pathconf
     libc.src.unistd.pread
     libc.src.unistd.pwrite
     libc.src.unistd.read
@@ -345,6 +347,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atan2f
     libc.src.math.atanf
     libc.src.math.atanhf
+    libc.src.math.cbrt
+    libc.src.math.cbrtf
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.ceill
@@ -354,6 +358,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cos
     libc.src.math.cosf
     libc.src.math.coshf
+    libc.src.math.cospif
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.exp10
@@ -422,6 +427,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ilogb
     libc.src.math.ilogbf
     libc.src.math.ilogbl
+    libc.src.math.isnan
+    libc.src.math.isnanf
+    libc.src.math.isnanl
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpl

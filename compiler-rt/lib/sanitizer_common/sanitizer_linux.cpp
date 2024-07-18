@@ -155,6 +155,7 @@ void SetSigProcMask(__sanitizer_sigset_t *set, __sanitizer_sigset_t *oldset) {
   CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, set, oldset));
 }
 
+// Block asynchronous signals
 void BlockSignals(__sanitizer_sigset_t *oldset) {
   __sanitizer_sigset_t set;
   internal_sigfillset(&set);
@@ -169,7 +170,17 @@ void BlockSignals(__sanitizer_sigset_t *oldset) {
   // If this signal is blocked, such calls cannot be handled and the process may
   // hang.
   internal_sigdelset(&set, 31);
+
+  // Don't block synchronous signals
+  internal_sigdelset(&set, SIGSEGV);
+  internal_sigdelset(&set, SIGBUS);
+  internal_sigdelset(&set, SIGILL);
+  internal_sigdelset(&set, SIGTRAP);
+  internal_sigdelset(&set, SIGABRT);
+  internal_sigdelset(&set, SIGFPE);
+  internal_sigdelset(&set, SIGPIPE);
 #  endif
+
   SetSigProcMask(&set, oldset);
 }
 
@@ -563,7 +574,9 @@ int TgKill(pid_t pid, tid_t tid, int sig) {
   return internal_syscall(SYSCALL(thr_kill2), pid, tid, sig);
 #    elif SANITIZER_SOLARIS
   (void)pid;
-  return thr_kill(tid, sig);
+  errno = thr_kill(tid, sig);
+  // TgKill is expected to return -1 on error, not an errno.
+  return errno != 0 ? -1 : 0;
 #    endif
 }
 #  endif
@@ -1096,7 +1109,8 @@ uptr GetMaxVirtualAddress() {
 #  if SANITIZER_NETBSD && defined(__x86_64__)
   return 0x7f7ffffff000ULL;  // (0x00007f8000000000 - PAGE_SIZE)
 #  elif SANITIZER_WORDSIZE == 64
-#    if defined(__powerpc64__) || defined(__aarch64__) || defined(__loongarch__)
+#    if defined(__powerpc64__) || defined(__aarch64__) || \
+        defined(__loongarch__) || SANITIZER_RISCV64
   // On PowerPC64 we have two different address space layouts: 44- and 46-bit.
   // We somehow need to figure out which one we are using now and choose
   // one of 0x00000fffffffffffUL and 0x00003fffffffffffUL.
@@ -1105,9 +1119,8 @@ uptr GetMaxVirtualAddress() {
   // This should (does) work for both PowerPC64 Endian modes.
   // Similarly, aarch64 has multiple address space layouts: 39, 42 and 47-bit.
   // loongarch64 also has multiple address space layouts: default is 47-bit.
+  // RISC-V 64 also has multiple address space layouts: 39, 48 and 57-bit.
   return (1ULL << (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1)) - 1;
-#    elif SANITIZER_RISCV64
-  return (1ULL << 38) - 1;
 #    elif SANITIZER_MIPS64
   return (1ULL << 40) - 1;  // 0x000000ffffffffffUL;
 #    elif defined(__s390x__)

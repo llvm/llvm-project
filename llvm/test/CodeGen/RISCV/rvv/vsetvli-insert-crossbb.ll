@@ -124,12 +124,12 @@ define <vscale x 1 x double> @test4(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:    beqz a1, .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    lui a1, %hi(.LCPI3_0)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI3_0)
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vlse64.v v10, (a1), zero
+; CHECK-NEXT:    fld fa5, %lo(.LCPI3_0)(a1)
 ; CHECK-NEXT:    lui a1, %hi(.LCPI3_1)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI3_1)
-; CHECK-NEXT:    vlse64.v v11, (a1), zero
+; CHECK-NEXT:    fld fa4, %lo(.LCPI3_1)(a1)
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vfmv.v.f v10, fa5
+; CHECK-NEXT:    vfmv.v.f v11, fa4
 ; CHECK-NEXT:    vfadd.vv v10, v10, v11
 ; CHECK-NEXT:    lui a1, %hi(scratch)
 ; CHECK-NEXT:    addi a1, a1, %lo(scratch)
@@ -243,11 +243,11 @@ define <vscale x 1 x double> @test6(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:    beqz a1, .LBB5_4
 ; CHECK-NEXT:  .LBB5_2: # %if.then4
 ; CHECK-NEXT:    lui a1, %hi(.LCPI5_0)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI5_0)
-; CHECK-NEXT:    vlse64.v v9, (a1), zero
+; CHECK-NEXT:    fld fa5, %lo(.LCPI5_0)(a1)
 ; CHECK-NEXT:    lui a1, %hi(.LCPI5_1)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI5_1)
-; CHECK-NEXT:    vlse64.v v10, (a1), zero
+; CHECK-NEXT:    fld fa4, %lo(.LCPI5_1)(a1)
+; CHECK-NEXT:    vfmv.v.f v9, fa5
+; CHECK-NEXT:    vfmv.v.f v10, fa4
 ; CHECK-NEXT:    vfadd.vv v9, v9, v10
 ; CHECK-NEXT:    lui a1, %hi(scratch)
 ; CHECK-NEXT:    addi a1, a1, %lo(scratch)
@@ -1126,12 +1126,13 @@ exit:
   ret void
 }
 
-; Check that we don't forward an AVL if we wouldn't be able to extend its
-; LiveInterval without clobbering other val nos.
-define <vscale x 4 x i32> @unforwardable_avl(i64 %n, <vscale x 4 x i32> %v, i1 %cmp) {
-; CHECK-LABEL: unforwardable_avl:
+; Check that if we forward an AVL whose value is clobbered in its LiveInterval
+; we emit a copy instead.
+define <vscale x 4 x i32> @clobbered_forwarded_avl(i64 %n, <vscale x 4 x i32> %v, i1 %cmp) {
+; CHECK-LABEL: clobbered_forwarded_avl:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, a0, e32, m2, ta, ma
+; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:  .LBB27_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1

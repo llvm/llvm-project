@@ -342,16 +342,16 @@ endif()
 
 if (LIBCXX_ENABLE_LOCALIZATION AND LIBCXX_ENABLE_FILESYSTEM AND LIBCXX_ENABLE_TIME_ZONE_DATABASE)
   list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
-    include/tzdb/time_zone_private.h
-    include/tzdb/types_private.h
-    include/tzdb/tzdb_list_private.h
-    include/tzdb/tzdb_private.h
+    experimental/include/tzdb/time_zone_private.h
+    experimental/include/tzdb/types_private.h
+    experimental/include/tzdb/tzdb_list_private.h
+    experimental/include/tzdb/tzdb_private.h
     # TODO TZDB The exception could be moved in chrono once the TZDB library
     # is no longer experimental.
-    chrono_exception.cpp
-    time_zone.cpp
-    tzdb.cpp
-    tzdb_list.cpp
+    experimental/chrono_exception.cpp
+    experimental/time_zone.cpp
+    experimental/tzdb.cpp
+    experimental/tzdb_list.cpp
     )
 endif()
 

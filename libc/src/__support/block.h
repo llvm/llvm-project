@@ -17,10 +17,11 @@
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/macros/config.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace internal {
 // Types of corrupted blocks, and functions to crash with an error message
@@ -442,8 +443,7 @@ Block<OffsetType, kAlign>::allocate(Block *block, size_t alignment,
 
   if (!info.block->is_usable_space_aligned(alignment)) {
     size_t adjustment = info.block->padding_for_alignment(alignment);
-    size_t new_inner_size = adjustment - BLOCK_OVERHEAD;
-    LIBC_ASSERT(new_inner_size % ALIGNMENT == 0 &&
+    LIBC_ASSERT((adjustment - BLOCK_OVERHEAD) % ALIGNMENT == 0 &&
                 "The adjustment calculation should always return a new size "
                 "that's a multiple of ALIGNMENT");
 
@@ -600,6 +600,6 @@ internal::BlockStatus Block<OffsetType, kAlign>::check_status() const {
   return internal::BlockStatus::VALID;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_BLOCK_H

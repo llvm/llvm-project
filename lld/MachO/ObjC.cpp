@@ -449,7 +449,6 @@ private:
   mergeCategoriesIntoSingleCategory(std::vector<InfoInputCategory> &categories);
 
   void eraseISec(ConcatInputSection *isec);
-  void removeRefsToErasedIsecs();
   void eraseMergedCategories();
 
   void generateCatListForNonErasedCategories(
@@ -496,6 +495,7 @@ private:
   Defined *tryGetDefinedAtIsecOffset(const ConcatInputSection *isec,
                                      uint32_t offset);
   Defined *getClassRo(const Defined *classSym, bool getMetaRo);
+  SourceLanguage getClassSymSourceLang(const Defined *classSym);
   void mergeCategoriesIntoBaseClass(const Defined *baseClass,
                                     std::vector<InfoInputCategory> &categories);
   void eraseSymbolAtIsecOffset(ConcatInputSection *isec, uint32_t offset);
@@ -518,8 +518,6 @@ private:
   std::vector<ConcatInputSection *> &allInputSections;
   // Map of base class Symbol to list of InfoInputCategory's for it
   MapVector<const Symbol *, std::vector<InfoInputCategory>> categoryMap;
-  // Set for tracking InputSection erased via eraseISec
-  DenseSet<InputSection *> erasedIsecs;
 
   // Normally, the binary data comes from the input files, but since we're
   // generating binary data ourselves, we use the below array to store it in.
@@ -1271,8 +1269,6 @@ void ObjcCategoryMerger::generateCatListForNonErasedCategories(
 }
 
 void ObjcCategoryMerger::eraseISec(ConcatInputSection *isec) {
-  erasedIsecs.insert(isec);
-
   isec->live = false;
   for (auto &sym : isec->symbols)
     sym->used = false;
@@ -1325,33 +1321,6 @@ void ObjcCategoryMerger::eraseMergedCategories() {
                                   catLayout.instancePropsOffset);
     }
   }
-
-  removeRefsToErasedIsecs();
-}
-
-// The compiler may generate references to categories inside the addrsig
-// section. This function will erase these references.
-void ObjcCategoryMerger::removeRefsToErasedIsecs() {
-  for (InputSection *isec : inputSections) {
-    if (isec->getName() != section_names::addrSig)
-      continue;
-
-    auto removeRelocs = [this](Reloc &r) {
-      auto *isec = dyn_cast_or_null<ConcatInputSection>(
-          r.referent.dyn_cast<InputSection *>());
-      if (!isec) {
-        Defined *sym =
-            dyn_cast_or_null<Defined>(r.referent.dyn_cast<Symbol *>());
-        if (sym)
-          isec = dyn_cast<ConcatInputSection>(sym->isec());
-      }
-      if (!isec)
-        return false;
-      return erasedIsecs.count(isec) > 0;
-    };
-
-    llvm::erase_if(isec->relocs, removeRelocs);
-  }
 }
 
 void ObjcCategoryMerger::doMerge() {
@@ -1400,6 +1369,29 @@ void objc::mergeCategories() {
 
 void objc::doCleanup() { ObjcCategoryMerger::doCleanup(); }
 
+ObjcCategoryMerger::SourceLanguage
+ObjcCategoryMerger::getClassSymSourceLang(const Defined *classSym) {
+  if (classSym->getName().starts_with(objc::symbol_names::swift_objc_klass))
+    return SourceLanguage::Swift;
+
+  // If the symbol name matches the ObjC prefix, we don't necessarely know this
+  // comes from ObjC, since Swift creates ObjC-like alias symbols for some Swift
+  // classes. Ex:
+  //  .globl	_OBJC_CLASS_$__TtC11MyTestClass11MyTestClass
+  //  .private_extern _OBJC_CLASS_$__TtC11MyTestClass11MyTestClass
+  //  .set _OBJC_CLASS_$__TtC11MyTestClass11MyTestClass, _$s11MyTestClassAACN
+  //
+  // So we scan for symbols with the same address and check for the Swift class
+  if (classSym->getName().starts_with(objc::symbol_names::klass)) {
+    for (auto &sym : classSym->originalIsec->symbols)
+      if (sym->value == classSym->value)
+        if (sym->getName().starts_with(objc::symbol_names::swift_objc_klass))
+          return SourceLanguage::Swift;
+    return SourceLanguage::ObjC;
+  }
+
+  llvm_unreachable("Unexpected class symbol name during category merging");
+}
 void ObjcCategoryMerger::mergeCategoriesIntoBaseClass(
     const Defined *baseClass, std::vector<InfoInputCategory> &categories) {
   assert(categories.size() >= 1 && "Expected at least one category to merge");
@@ -1407,14 +1399,7 @@ void ObjcCategoryMerger::mergeCategoriesIntoBaseClass(
   // Collect all the info from the categories
   ClassExtensionInfo extInfo(catLayout);
   extInfo.baseClass = baseClass;
-
-  if (baseClass->getName().starts_with(objc::symbol_names::klass))
-    extInfo.baseClassSourceLanguage = SourceLanguage::ObjC;
-  else if (baseClass->getName().starts_with(
-               objc::symbol_names::swift_objc_klass))
-    extInfo.baseClassSourceLanguage = SourceLanguage::Swift;
-  else
-    llvm_unreachable("Unexpected base class symbol name");
+  extInfo.baseClassSourceLanguage = getClassSymSourceLang(baseClass);
 
   for (auto &catInfo : categories) {
     parseCatInfoToExtInfo(catInfo, extInfo);

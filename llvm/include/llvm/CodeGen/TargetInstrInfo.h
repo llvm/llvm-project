@@ -2214,7 +2214,7 @@ public:
   /// Return MIR formatter to format/parse MIR operands.  Target can override
   /// this virtual function and return target specific MIR formatter.
   virtual const MIRFormatter *getMIRFormatter() const {
-    if (!Formatter.get())
+    if (!Formatter)
       Formatter = std::make_unique<MIRFormatter>();
     return Formatter.get();
   }

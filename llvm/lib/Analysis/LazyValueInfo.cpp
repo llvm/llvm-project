@@ -836,19 +836,6 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
   }
 }
 
-static ConstantRange toConstantRange(const ValueLatticeElement &Val,
-                                     Type *Ty, bool UndefAllowed = false) {
-  assert(Ty->isIntOrIntVectorTy() && "Must be integer type");
-  if (Val.isConstantRange(UndefAllowed))
-    return Val.getConstantRange();
-  unsigned BW = Ty->getScalarSizeInBits();
-  if (Val.isUnknown())
-    return ConstantRange::getEmpty(BW);
-  if (Val.isConstant() && Ty->isVectorTy())
-    return getVectorConstantRange(Val.getConstant());
-  return ConstantRange::getFull(BW);
-}
-
 std::optional<ValueLatticeElement>
 LazyValueInfoImpl::solveBlockValueSelect(SelectInst *SI, BasicBlock *BB) {
   // Recurse on our inputs if needed
@@ -865,8 +852,8 @@ LazyValueInfoImpl::solveBlockValueSelect(SelectInst *SI, BasicBlock *BB) {
   ValueLatticeElement &FalseVal = *OptFalseVal;
 
   if (TrueVal.isConstantRange() || FalseVal.isConstantRange()) {
-    const ConstantRange &TrueCR = toConstantRange(TrueVal, SI->getType());
-    const ConstantRange &FalseCR = toConstantRange(FalseVal, SI->getType());
+    const ConstantRange &TrueCR = TrueVal.asConstantRange(SI->getType());
+    const ConstantRange &FalseCR = FalseVal.asConstantRange(SI->getType());
     Value *LHS = nullptr;
     Value *RHS = nullptr;
     SelectPatternResult SPR = matchSelectPattern(SI, LHS, RHS);
@@ -941,7 +928,7 @@ LazyValueInfoImpl::getRangeFor(Value *V, Instruction *CxtI, BasicBlock *BB) {
   std::optional<ValueLatticeElement> OptVal = getBlockValue(V, BB, CxtI);
   if (!OptVal)
     return std::nullopt;
-  return toConstantRange(*OptVal, V->getType());
+  return OptVal->asConstantRange(V->getType());
 }
 
 std::optional<ValueLatticeElement>
@@ -1119,7 +1106,7 @@ LazyValueInfoImpl::getValueFromSimpleICmpCondition(CmpInst::Predicate Pred,
         getBlockValue(RHS, CxtI->getParent(), CxtI);
     if (!R)
       return std::nullopt;
-    RHSRange = toConstantRange(*R, RHS->getType());
+    RHSRange = R->asConstantRange(RHS->getType());
   }
 
   ConstantRange TrueValues =
@@ -1734,7 +1721,7 @@ ConstantRange LazyValueInfo::getConstantRange(Value *V, Instruction *CxtI,
   BasicBlock *BB = CxtI->getParent();
   ValueLatticeElement Result =
       getOrCreateImpl(BB->getModule()).getValueInBlock(V, BB, CxtI);
-  return toConstantRange(Result, V->getType(), UndefAllowed);
+  return Result.asConstantRange(V->getType(), UndefAllowed);
 }
 
 ConstantRange LazyValueInfo::getConstantRangeAtUse(const Use &U,
@@ -1742,7 +1729,7 @@ ConstantRange LazyValueInfo::getConstantRangeAtUse(const Use &U,
   auto *Inst = cast<Instruction>(U.getUser());
   ValueLatticeElement Result =
       getOrCreateImpl(Inst->getModule()).getValueAtUse(U);
-  return toConstantRange(Result, U->getType(), UndefAllowed);
+  return Result.asConstantRange(U->getType(), UndefAllowed);
 }
 
 /// Determine whether the specified value is known to be a
@@ -1772,7 +1759,7 @@ ConstantRange LazyValueInfo::getConstantRangeOnEdge(Value *V,
   ValueLatticeElement Result =
       getOrCreateImpl(M).getValueOnEdge(V, FromBB, ToBB, CxtI);
   // TODO: Should undef be allowed here?
-  return toConstantRange(Result, V->getType(), /*UndefAllowed*/ true);
+  return Result.asConstantRange(V->getType(), /*UndefAllowed*/ true);
 }
 
 static Constant *getPredicateResult(CmpInst::Predicate Pred, Constant *C,
@@ -1784,12 +1771,8 @@ static Constant *getPredicateResult(CmpInst::Predicate Pred, Constant *C,
 
   Type *ResTy = CmpInst::makeCmpResultType(C->getType());
   if (Val.isConstantRange()) {
-    ConstantInt *CI = dyn_cast<ConstantInt>(C);
-    if (!CI)
-      return nullptr;
-
     const ConstantRange &CR = Val.getConstantRange();
-    ConstantRange RHS(CI->getValue());
+    ConstantRange RHS = C->toConstantRange();
     if (CR.icmp(Pred, RHS))
       return ConstantInt::getTrue(ResTy);
     if (CR.icmp(CmpInst::getInversePredicate(Pred), RHS))

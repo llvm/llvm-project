@@ -359,9 +359,6 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   /// Whether the current function has a DISubprogram attached to it.
   bool HasDebugInfo = false;
 
-  /// The current source language.
-  dwarf::SourceLanguage CurrentSourceLang = dwarf::DW_LANG_lo_user;
-
   /// Stores the count of how many objects were passed to llvm.localescape for a
   /// given function and the largest index passed to llvm.localrecover.
   DenseMap<Function *, std::pair<unsigned, unsigned>> FrameEscapeInfo;
@@ -1156,10 +1153,6 @@ void Verifier::visitDIScope(const DIScope &N) {
 
 void Verifier::visitDISubrange(const DISubrange &N) {
   CheckDI(N.getTag() == dwarf::DW_TAG_subrange_type, "invalid tag", &N);
-  bool HasAssumedSizedArraySupport = dwarf::isFortran(CurrentSourceLang);
-  CheckDI(HasAssumedSizedArraySupport || N.getRawCountNode() ||
-              N.getRawUpperBound(),
-          "Subrange must contain count or upperBound", &N);
   CheckDI(!N.getRawCountNode() || !N.getRawUpperBound(),
           "Subrange can have any one of count or upperBound", &N);
   auto *CBound = N.getRawCountNode();
@@ -1188,8 +1181,6 @@ void Verifier::visitDISubrange(const DISubrange &N) {
 
 void Verifier::visitDIGenericSubrange(const DIGenericSubrange &N) {
   CheckDI(N.getTag() == dwarf::DW_TAG_generic_subrange, "invalid tag", &N);
-  CheckDI(N.getRawCountNode() || N.getRawUpperBound(),
-          "GenericSubrange must contain count or upperBound", &N);
   CheckDI(!N.getRawCountNode() || !N.getRawUpperBound(),
           "GenericSubrange can have any one of count or upperBound", &N);
   auto *CBound = N.getRawCountNode();
@@ -1412,8 +1403,6 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
           N.getRawFile());
   CheckDI(!N.getFile()->getFilename().empty(), "invalid filename", &N,
           N.getFile());
-
-  CurrentSourceLang = (dwarf::SourceLanguage)N.getSourceLanguage();
 
   CheckDI((N.getEmissionKind() <= DICompileUnit::LastEmissionKind),
           "invalid emission kind", &N);
@@ -2359,13 +2348,31 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     if (S != "a_key" && S != "b_key")
       CheckFailed("invalid value for 'sign-return-address-key' attribute: " + S,
                   V);
+    if (auto AA = Attrs.getFnAttr("sign-return-address"); !AA.isValid()) {
+      CheckFailed(
+          "'sign-return-address-key' present without `sign-return-address`");
+    }
   }
 
   if (auto A = Attrs.getFnAttr("branch-target-enforcement"); A.isValid()) {
     StringRef S = A.getValueAsString();
-    if (S != "true" && S != "false")
+    if (S != "" && S != "true" && S != "false")
       CheckFailed(
           "invalid value for 'branch-target-enforcement' attribute: " + S, V);
+  }
+
+  if (auto A = Attrs.getFnAttr("branch-protection-pauth-lr"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    if (S != "" && S != "true" && S != "false")
+      CheckFailed(
+          "invalid value for 'branch-protection-pauth-lr' attribute: " + S, V);
+  }
+
+  if (auto A = Attrs.getFnAttr("guarded-control-stack"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    if (S != "" && S != "true" && S != "false")
+      CheckFailed("invalid value for 'guarded-control-stack' attribute: " + S,
+                  V);
   }
 
   if (auto A = Attrs.getFnAttr("vector-function-abi-variant"); A.isValid()) {
@@ -4934,10 +4941,14 @@ void Verifier::visitMemProfMetadata(Instruction &I, MDNode *MD) {
     MDNode *StackMD = dyn_cast<MDNode>(MIB->getOperand(0));
     visitCallStackMetadata(StackMD);
 
-    // Check that remaining operands are MDString.
-    Check(llvm::all_of(llvm::drop_begin(MIB->operands()),
+    // Check that remaining operands, except possibly the last, are MDString.
+    Check(llvm::all_of(MIB->operands().drop_front().drop_back(),
                        [](const MDOperand &Op) { return isa<MDString>(Op); }),
-          "Not all !memprof MemInfoBlock operands 1 to N are MDString", MIB);
+          "Not all !memprof MemInfoBlock operands 1 to N-1 are MDString", MIB);
+    // The last operand might be the total profiled size so can be an integer.
+    auto &LastOperand = MIB->operands().back();
+    Check(isa<MDString>(LastOperand) || mdconst::hasa<ConstantInt>(LastOperand),
+          "Last !memprof MemInfoBlock operand not MDString or int", MIB);
   }
 }
 
