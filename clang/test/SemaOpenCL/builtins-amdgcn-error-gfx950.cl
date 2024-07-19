@@ -50,8 +50,8 @@ void test(__global float4* out0, half8 a0, half8 b0, float4 c0,
   *out13 = __builtin_amdgcn_smfmac_f32_32x32x64_bf8_fp8(a13, b13, c13, 0, 0, 0); // expected-error{{'__builtin_amdgcn_smfmac_f32_32x32x64_bf8_fp8' needs target feature gfx950-insts}}
   *out13 = __builtin_amdgcn_smfmac_f32_32x32x64_fp8_bf8(a13, b13, c13, 0, 0, 0); // expected-error{{'__builtin_amdgcn_smfmac_f32_32x32x64_fp8_bf8' needs target feature gfx950-insts}}
   *out13 = __builtin_amdgcn_smfmac_f32_32x32x64_fp8_fp8(a13, b13, c13, 0, 0, 0); // expected-error{{'__builtin_amdgcn_smfmac_f32_32x32x64_fp8_fp8' needs target feature gfx950-insts}}
-  *out14 = __builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4(a14, b14, c14, 0, 0, 0, 0, d14, 0, e14); // expected-error{{'__builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4' needs target feature gfx950-insts}}
-  *out15 = __builtin_amdgcn_mfma_scale_f32_32x32x64_f8f6f4(a15, b15, c15, 0, 0, 0, 0, d15, 0, e15); // expected-error{{'__builtin_amdgcn_mfma_scale_f32_32x32x64_f8f6f4' needs target feature gfx950-insts}}
+  *out14 = __builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4(a14, b14, c14, 0, 0, 0, d14, 0, e14); // expected-error{{'__builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4' needs target feature gfx950-insts}}
+  *out15 = __builtin_amdgcn_mfma_scale_f32_32x32x64_f8f6f4(a15, b15, c15, 0, 0, 0, d15, 0, e15); // expected-error{{'__builtin_amdgcn_mfma_scale_f32_32x32x64_f8f6f4' needs target feature gfx950-insts}}
   *out16 = __builtin_amdgcn_permlane16_swap(a16, b16, false, false); // expected-error{{'__builtin_amdgcn_permlane16_swap' needs target feature permlane16-swap}}
   *out16 = __builtin_amdgcn_permlane32_swap(a16, b16, false, false); // expected-error{{'__builtin_amdgcn_permlane32_swap' needs target feature permlane32-swap}}
   *out17 = __builtin_amdgcn_cvt_scalef32_sr_bf8_bf16(*out17, a17, b17, c17, 0); // expected-error{{'__builtin_amdgcn_cvt_scalef32_sr_bf8_bf16' needs target feature bf8-cvt-scale-insts}}

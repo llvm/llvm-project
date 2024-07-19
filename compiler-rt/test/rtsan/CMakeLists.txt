@@ -34,20 +34,18 @@ foreach(arch ${RTSAN_TEST_ARCH})
   list(APPEND RTSAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
 endforeach()
 
-if(COMPILER_RT_INCLUDE_TESTS)
+configure_lit_site_cfg(
+  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py)
+if(COMPILER_RT_RTSAN_HAS_STATIC_RUNTIME)
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
-    ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py)
-  if(COMPILER_RT_RTSAN_HAS_STATIC_RUNTIME)
-    configure_lit_site_cfg(
-      ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
-      ${CMAKE_CURRENT_BINARY_DIR}/Unit/dynamic/lit.site.cfg.py)
-  endif()
-  list(APPEND RTSAN_TEST_DEPS RtsanUnitTests)
-  list(APPEND RTSAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit)
-  if(COMPILER_RT_RTSAN_HAS_STATIC_RUNTIME)
-    list(APPEND RTSAN_DYNAMIC_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit/dynamic)
-  endif()
+    ${CMAKE_CURRENT_BINARY_DIR}/Unit/dynamic/lit.site.cfg.py)
+endif()
+list(APPEND RTSAN_TEST_DEPS RtsanUnitTests)
+list(APPEND RTSAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit)
+if(COMPILER_RT_RTSAN_HAS_STATIC_RUNTIME)
+  list(APPEND RTSAN_DYNAMIC_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit/dynamic)
 endif()
 
 add_lit_testsuite(check-rtsan "Running the Rtsan tests"

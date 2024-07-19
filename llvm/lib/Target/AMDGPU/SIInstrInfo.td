@@ -342,8 +342,8 @@ def SIfptrunc_round_downward : SDNode<"AMDGPUISD::FPTRUNC_ROUND_DOWNWARD",
 // scales are known 0.
 class UnscaledMFMAOptimizationPat<SDPatternOperator intrin> : PatFrag<
   (ops node:$srca, node:$srcb, node:$srcc,
-       node:$cbsz, node:$abid, node:$blgp),
-  (intrin $srca, $srcb, $srcc, $cbsz, $abid, $blgp,
+       node:$cbsz, node:$blgp),
+  (intrin $srca, $srcb, $srcc, $cbsz, $blgp,
           srcvalue, 0, srcvalue, 0)
 >;
 
@@ -1757,6 +1757,18 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
         1                  : VSrc_b32);
 }
 
+// VGPR only VOP3 src with 9 bit encoding
+class getVOP3VRegSrcForVT<ValueType VT> {
+  RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VRegSrc_1024,
+                              !eq(VT.Size, 512)  : VRegSrc_512,
+                              !eq(VT.Size, 256)  : VRegSrc_256,
+                              !eq(VT.Size, 192)  : VRegSrc_192,
+                              !eq(VT.Size, 128)  : VRegSrc_128,
+                              !eq(VT.Size, 96)   : VRegSrc_96,
+                              !eq(VT.Size, 64)   : VRegSrc_64,
+                              1 : VRegSrc_32);
+}
+
 // VGPR only src, such as VOP3DPP src0.
 class getVGPRSrcForVT<ValueType VT> {
   RegisterOperand ret = !cond(!eq(VT.Size, 96) : VGPRSrc_96,
@@ -2687,6 +2699,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field string AsmVOPD3Y = getAsmVOPDPart<NumSrcArgs, "Y", HasVOPD3Src2, HasModifiers>.ret;
   field string TieRegDPP = "$old";
   field bit IsSMFMAC = false;
+  field bit HasAbid = !and(IsMAI, HasSrc1);
 }
 
   class VOP_NO_EXT <VOPProfile p> : VOPProfile <p.ArgVT> {
@@ -2861,6 +2874,7 @@ def VOP_V2I16_F32_F32_F32 : VOPProfile<[v2i16, f32, f32, f32]>;
 def VOP_V2I16_V2F16_F32 : VOPProfile<[v2i16, v2f16, f32, untyped]>;
 def VOP_V2I16_V2BF16_F32 : VOPProfile<[v2i16, v2bf16, f32, untyped]>;
 def VOP_I32_F32_F32_F32 : VOPProfile<[i32, f32, f32, f32]>;
+def VOP_I32_V2F32_I32_F32 : VOPProfile<[i32, v2f32, i32, f32]>;
 def VOP_I32_V2F16_F32_F32 : VOPProfile<[i32, v2f16, f32, f32]>;
 def VOP_I32_V2BF16_F32_F32: VOPProfile<[i32, v2bf16, f32, f32]>;
 def VOP_BF16_F32_I32 : VOPProfile<[bf16, f32, i32, untyped]>;
@@ -3236,6 +3250,15 @@ def getMFMA_F8F6F4_WithSize : GenericTable {
   let Fields = [ "Opcode", "F8F8Opcode", "NumRegsSrcA", "NumRegsSrcB" ];
   let PrimaryKey = [ "NumRegsSrcA", "NumRegsSrcB", "F8F8Opcode" ];
   let PrimaryKeyName = "getMFMA_F8F6F4_InstWithNumRegs" ;
+}
+
+def isMFMA_F8F6F4Table : GenericTable {
+  let FilterClass = "MFMA_F8F6F4_WithSizeTable";
+  let CppTypeName = "MFMA_F8F6F4_Info";
+//  let Fields = [ "Opcode" ];
+  let Fields = [ "Opcode", "F8F8Opcode", "NumRegsSrcA", "NumRegsSrcB" ];
+  let PrimaryKey = [ "Opcode" ];
+  let PrimaryKeyName = "isMFMA_F8F6F4" ;
 }
 
 def VOPDComponentTable : GenericTable {
