@@ -190,6 +190,8 @@ public:
   bool VisitObjCBoxedExpr(const ObjCBoxedExpr *E);
   bool VisitCXXStdInitializerListExpr(const CXXStdInitializerListExpr *E);
   bool VisitStmtExpr(const StmtExpr *E);
+  bool VisitCXXNewExpr(const CXXNewExpr *E);
+  bool VisitCXXDeleteExpr(const CXXDeleteExpr *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);

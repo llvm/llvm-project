@@ -41,6 +41,8 @@ void InterpState::cleanup() {
       P->PointeeStorage.BS.Pointee = nullptr;
     }
   }
+
+  Alloc.cleanup();
 }
 
 Frame *InterpState::getCurrentFrame() {
@@ -80,4 +82,19 @@ void InterpState::deallocate(Block *B) {
   } else {
     B->invokeDtor();
   }
+}
+
+bool InterpState::maybeDiagnoseDanglingAllocations() {
+  bool NoAllocationsLeft = (Alloc.getNumAllocations() == 0);
+
+  if (!checkingPotentialConstantExpression()) {
+    for (const auto &It : Alloc.AllocationSites) {
+      assert(It.second.size() > 0);
+
+      const Expr *Source = It.first;
+      CCEDiag(Source->getExprLoc(), diag::note_constexpr_memory_leak)
+          << (It.second.size() - 1) << Source->getSourceRange();
+    }
+  }
+  return NoAllocationsLeft;
 }
