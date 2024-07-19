@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98-14,cxx98-20,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-20,cxx11-17,cxx11-14,cxx98-14,cxx98-20,since-cxx11,cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx11-20,cxx11-17,cxx11-14,since-cxx14,cxx98-14,cxx98-20,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx11-20,cxx11-17,cxx98-20,since-cxx14,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,cxx11-20,cxx98-20,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98-14,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-20,cxx11-17,cxx11-14,cxx98-14,since-cxx11,cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx11-20,cxx11-17,cxx11-14,since-cxx14,cxx98-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx11-20,cxx11-17,since-cxx14,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify=expected,cxx11-20,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
@@ -136,7 +136,6 @@ namespace cwg1310 { // cwg1310: 5
     // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a template name in this context, despite preceding 'template' keyword}}
   }
   template<typename W>
-  // cxx98-20-note@-1 2{{declared as a non-template here}}
   void wt_test_good() {
     typename W::W::X w2ax;
     typename W::template W<int>::X w4x;
@@ -147,9 +146,7 @@ namespace cwg1310 { // cwg1310: 5
     (void)w.W::W::n;
     (void)w.W::template W<int>::n;
     (void)w.template W<int>::W::n;
-    // cxx98-20-error@-1 {{'W' following the 'template' keyword does not refer to a template}}
     (void)w.template W<int>::template W<int>::n;
-    // cxx98-20-error@-1 {{'W' following the 'template' keyword does not refer to a template}}
   }
   template void wt_test<W<int> >(); // #cwg1310-W-int
   template void wt_test_good<W<int> >();

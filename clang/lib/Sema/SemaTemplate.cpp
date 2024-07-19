@@ -406,6 +406,8 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
   LookupParsedName(Found, S, &SS, ObjectType,
                    /*AllowBuiltinCreation=*/false, EnteringContext);
 
+  bool IsDependent = Found.wasNotFoundInCurrentInstantiation();
+
   bool ObjectTypeSearchedInScope = false;
 
   // C++ [basic.lookup.qual.general]p2:
@@ -424,8 +426,7 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
   // we perform the unqualified lookup in the template definition context
   // and store the results so we can replicate the lookup during instantiation.
   if (MayBeNNS && Found.empty() && !ObjectType.isNull() &&
-      (!getLangOpts().CPlusPlus23 ||
-       !Found.wasNotFoundInCurrentInstantiation())) {
+      (!getLangOpts().CPlusPlus23 || !IsDependent)) {
     if (S) {
       LookupName(Found, S);
     } else if (!SS.getUnqualifiedLookups().empty()) {
@@ -499,7 +500,7 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
     }
   }
 
-  if (Found.empty() && AllowTypoCorrection) {
+  if (Found.empty() && AllowTypoCorrection && !IsDependent) {
     // If we did not find any names, and this is not a disambiguation, attempt
     // to correct any typos.
     DeclarationName Name = Found.getLookupName();
@@ -540,14 +541,14 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
 
   NamedDecl *ExampleLookupResult =
       Found.empty() ? nullptr : Found.getRepresentativeDecl();
-  FilterAcceptableTemplateNames(
-      Found,
-      /*AllowFunctionTemplates=*/getLangOpts().CPlusPlus23 ||
-          !ObjectTypeSearchedInScope);
+  FilterAcceptableTemplateNames(Found, getLangOpts().CPlusPlus23 ||
+                                           !ObjectTypeSearchedInScope);
   if (Found.empty()) {
-    // If a 'template' keyword was used, a lookup that finds only non-template
-    // names is an error.
-    if (ExampleLookupResult && RequiredTemplate) {
+    if (IsDependent) {
+      Found.setNotFoundInCurrentInstantiation();
+    } else if (ExampleLookupResult && RequiredTemplate) {
+      // If a 'template' keyword was used, a lookup that finds only non-template
+      // names is an error.
       Diag(Found.getNameLoc(), diag::err_template_kw_refers_to_non_template)
           << Found.getLookupName() << SS.getRange()
           << RequiredTemplate.hasTemplateKeyword()
