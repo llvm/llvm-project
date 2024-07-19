@@ -560,3 +560,34 @@ define void @foo(i8 %v1) {
   EXPECT_EQ(I0->getNumUses(), 0u);
   EXPECT_EQ(I0->getNextNode(), Ret);
 }
+
+TEST_F(SandboxIRTest, LoadInst) {
+  parseIR(C, R"IR(
+define void @foo(ptr %arg0, ptr %arg1) {
+  %ld = load i8, ptr %arg0, align 64
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *Arg0 = F->getArg(0);
+  auto *Arg1 = F->getArg(1);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Ld = cast<sandboxir::LoadInst>(&*It++);
+  auto *Ret = &*It++;
+
+  // Check getPointerOperand()
+  EXPECT_EQ(Ld->getPointerOperand(), Arg0);
+  // Check getAlign()
+  EXPECT_EQ(Ld->getAlign(), 64);
+  // Check create(InsertBefore)
+  sandboxir::LoadInst *NewLd =
+      sandboxir::LoadInst::create(Ld->getType(), Arg1, Align(8),
+                                  /*InsertBefore=*/Ret, Ctx, "NewLd");
+  EXPECT_EQ(NewLd->getType(), Ld->getType());
+  EXPECT_EQ(NewLd->getPointerOperand(), Arg1);
+  EXPECT_EQ(NewLd->getAlign(), 8);
+  EXPECT_EQ(NewLd->getName(), "NewLd");
+}
