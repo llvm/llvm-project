@@ -67,6 +67,7 @@ class SOP1_Real<bits<8> op, SOP1_Pseudo ps, string real_name = ps.Mnemonic> :
   let isBarrier          = ps.isBarrier;
   let Uses               = ps.Uses;
   let Defs               = ps.Defs;
+  let isConvergent       = ps.isConvergent;
 
   // encoding
   bits<7> sdst;
@@ -579,6 +580,7 @@ class SOP2_Real<SOP_Pseudo ps, string name = ps.Mnemonic> :
   let DisableEncoding      = ps.DisableEncoding;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
+  let isConvergent         = ps.isConvergent;
 
   // encoding
   bits<7> sdst;
@@ -996,6 +998,7 @@ class SOPK_Real<SOPK_Pseudo ps, string name = ps.Mnemonic> :
   let isBarrier          = ps.isBarrier;
   let Uses               = ps.Uses;
   let Defs               = ps.Defs;
+  let isConvergent       = ps.isConvergent;
 
   // encoding
   bits<7>  sdst;
@@ -1262,6 +1265,7 @@ class SOPC_Real<bits<7> op, SOPC_Pseudo ps> :
   let mayStore             = ps.mayStore;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
+  let isConvergent         = ps.isConvergent;
 
   // encoding
   bits<8> src0;
@@ -1459,6 +1463,7 @@ class SOPP_Real<SOPP_Pseudo ps, string name = ps.Mnemonic> :
   let isBarrier            = ps.isBarrier;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
+  let isConvergent         = ps.isConvergent;
   bits <16> simm16;
 }
 
