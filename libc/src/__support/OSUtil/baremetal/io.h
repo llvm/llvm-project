@@ -18,6 +18,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 ssize_t read_from_stdin(char *buf, size_t size);
 void write_to_stderr(cpp::string_view msg);
+void write_to_stdout(cpp::string_view msg);
 
 } // namespace LIBC_NAMESPACE_DECL
 
