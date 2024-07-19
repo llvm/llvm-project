@@ -65,6 +65,7 @@ add_math_entrypoint_object(canonicalizel)
 add_math_entrypoint_object(canonicalizef16)
 add_math_entrypoint_object(canonicalizef128)
 
+add_math_entrypoint_object(cbrt)
 add_math_entrypoint_object(cbrtf)
 
 add_math_entrypoint_object(ceil)
@@ -84,6 +85,9 @@ add_math_entrypoint_object(cosf)
 add_math_entrypoint_object(cosh)
 add_math_entrypoint_object(coshf)
 add_math_entrypoint_object(cospif)
+
+add_math_entrypoint_object(dmull)
+add_math_entrypoint_object(dmulf128)
 
 add_math_entrypoint_object(erf)
 add_math_entrypoint_object(erff)
@@ -116,6 +120,11 @@ add_math_entrypoint_object(f16fma)
 add_math_entrypoint_object(f16fmaf)
 add_math_entrypoint_object(f16fmal)
 add_math_entrypoint_object(f16fmaf128)
+
+add_math_entrypoint_object(f16mul)
+add_math_entrypoint_object(f16mulf)
+add_math_entrypoint_object(f16mull)
+add_math_entrypoint_object(f16mulf128)
 
 add_math_entrypoint_object(f16sqrt)
 add_math_entrypoint_object(f16sqrtf)
@@ -209,6 +218,8 @@ add_math_entrypoint_object(fminimum_mag_numf16)
 add_math_entrypoint_object(fminimum_mag_numf128)
 
 add_math_entrypoint_object(fmul)
+add_math_entrypoint_object(fmull)
+add_math_entrypoint_object(fmulf128)
 
 add_math_entrypoint_object(fmod)
 add_math_entrypoint_object(fmodf)

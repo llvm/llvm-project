@@ -216,6 +216,7 @@
     __cpp_lib_string_udls                                   201304L [C++14]
     __cpp_lib_string_view                                   201606L [C++17]
                                                             201803L [C++20]
+                                                            202403L [C++26]
     __cpp_lib_submdspan                                     202306L [C++26]
     __cpp_lib_syncbuf                                       201803L [C++20]
     __cpp_lib_text_encoding                                 202306L [C++26]
@@ -5541,17 +5542,11 @@
 #   error "__cpp_lib_optional_range_support should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_out_ptr
-#     error "__cpp_lib_out_ptr should be defined in c++23"
-#   endif
-#   if __cpp_lib_out_ptr != 202106L
-#     error "__cpp_lib_out_ptr should have the value 202106L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_out_ptr
-#     error "__cpp_lib_out_ptr should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_out_ptr
+#   error "__cpp_lib_out_ptr should be defined in c++23"
+# endif
+# if __cpp_lib_out_ptr != 202106L
+#   error "__cpp_lib_out_ptr should have the value 202106L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -7382,17 +7377,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_out_ptr
-#     error "__cpp_lib_out_ptr should be defined in c++26"
-#   endif
-#   if __cpp_lib_out_ptr != 202311L
-#     error "__cpp_lib_out_ptr should have the value 202311L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_out_ptr
-#     error "__cpp_lib_out_ptr should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_out_ptr
+#   error "__cpp_lib_out_ptr should be defined in c++26"
+# endif
+# if __cpp_lib_out_ptr != 202311L
+#   error "__cpp_lib_out_ptr should have the value 202311L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -7894,8 +7883,8 @@
 # ifndef __cpp_lib_string_view
 #   error "__cpp_lib_string_view should be defined in c++26"
 # endif
-# if __cpp_lib_string_view != 201803L
-#   error "__cpp_lib_string_view should have the value 201803L in c++26"
+# if __cpp_lib_string_view != 202403L
+#   error "__cpp_lib_string_view should have the value 202403L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

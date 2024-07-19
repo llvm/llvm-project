@@ -33,6 +33,7 @@ template <class Emitter> class DestructorScope;
 template <class Emitter> class VariableScope;
 template <class Emitter> class DeclScope;
 template <class Emitter> class InitLinkScope;
+template <class Emitter> class InitStackScope;
 template <class Emitter> class OptionScope;
 template <class Emitter> class ArrayIndexScope;
 template <class Emitter> class SourceLocScope;
@@ -190,6 +191,8 @@ public:
   bool VisitObjCBoxedExpr(const ObjCBoxedExpr *E);
   bool VisitCXXStdInitializerListExpr(const CXXStdInitializerListExpr *E);
   bool VisitStmtExpr(const StmtExpr *E);
+  bool VisitCXXNewExpr(const CXXNewExpr *E);
+  bool VisitCXXDeleteExpr(const CXXDeleteExpr *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);
@@ -296,6 +299,7 @@ private:
   friend class DestructorScope<Emitter>;
   friend class DeclScope<Emitter>;
   friend class InitLinkScope<Emitter>;
+  friend class InitStackScope<Emitter>;
   friend class OptionScope<Emitter>;
   friend class ArrayIndexScope<Emitter>;
   friend class SourceLocScope<Emitter>;
@@ -608,6 +612,20 @@ public:
 
 private:
   Compiler<Emitter> *Ctx;
+};
+
+template <class Emitter> class InitStackScope final {
+public:
+  InitStackScope(Compiler<Emitter> *Ctx, bool Active)
+      : Ctx(Ctx), OldValue(Ctx->InitStackActive) {
+    Ctx->InitStackActive = Active;
+  }
+
+  ~InitStackScope() { this->Ctx->InitStackActive = OldValue; }
+
+private:
+  Compiler<Emitter> *Ctx;
+  bool OldValue;
 };
 
 } // namespace interp

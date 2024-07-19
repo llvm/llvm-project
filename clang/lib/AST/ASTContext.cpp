@@ -1384,7 +1384,8 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #include "clang/Basic/OpenCLExtensionTypes.def"
   }
 
-  if (Target.hasAArch64SVETypes()) {
+  if (Target.hasAArch64SVETypes() ||
+      (AuxTarget && AuxTarget->hasAArch64SVETypes())) {
 #define SVE_TYPE(Name, Id, SingletonId) \
     InitBuiltinType(SingletonId, BuiltinType::Id);
 #include "clang/Basic/AArch64SVEACLETypes.def"
@@ -2831,6 +2832,10 @@ bool ASTContext::hasUniqueObjectRepresentations(
     return hasUniqueObjectRepresentations(getBaseElementType(Ty),
                                           CheckIfTriviallyCopyable);
 
+  assert((Ty->isVoidType() || !Ty->isIncompleteType()) &&
+         "hasUniqueObjectRepresentations should not be called with an "
+         "incomplete type");
+
   // (9.1) - T is trivially copyable...
   if (CheckIfTriviallyCopyable && !Ty.isTriviallyCopyableType(*this))
     return false;
@@ -3218,14 +3223,16 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     OS << "<objc_object>";
     return;
 
-  case Type::Enum:
+  case Type::Enum: {
     // C11 6.7.2.2p4:
     //   Each enumerated type shall be compatible with char, a signed integer
     //   type, or an unsigned integer type.
     //
     // So we have to treat enum types as integers.
+    QualType UnderlyingType = cast<EnumType>(T)->getDecl()->getIntegerType();
     return encodeTypeForFunctionPointerAuth(
-        Ctx, OS, cast<EnumType>(T)->getDecl()->getIntegerType());
+        Ctx, OS, UnderlyingType.isNull() ? Ctx.IntTy : UnderlyingType);
+  }
 
   case Type::FunctionNoProto:
   case Type::FunctionProto: {
@@ -4892,14 +4899,14 @@ QualType ASTContext::getFunctionTypeInternal(
   size_t Size = FunctionProtoType::totalSizeToAlloc<
       QualType, SourceLocation, FunctionType::FunctionTypeExtraBitfields,
       FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
-      Expr *, FunctionDecl *, FunctionProtoType::ExtParameterInfo,
-      FunctionEffect, EffectConditionExpr, Qualifiers>(
+      Expr *, FunctionDecl *, FunctionProtoType::ExtParameterInfo, Qualifiers,
+      FunctionEffect, EffectConditionExpr>(
       NumArgs, EPI.Variadic, EPI.requiresFunctionProtoTypeExtraBitfields(),
       EPI.requiresFunctionProtoTypeArmAttributes(), ESH.NumExceptionType,
       ESH.NumExprPtr, ESH.NumFunctionDeclPtr,
-      EPI.ExtParameterInfos ? NumArgs : 0, EPI.FunctionEffects.size(),
-      EPI.FunctionEffects.conditions().size(),
-      EPI.TypeQuals.hasNonFastQualifiers() ? 1 : 0);
+      EPI.ExtParameterInfos ? NumArgs : 0,
+      EPI.TypeQuals.hasNonFastQualifiers() ? 1 : 0, EPI.FunctionEffects.size(),
+      EPI.FunctionEffects.conditions().size());
 
   auto *FTP = (FunctionProtoType *)Allocate(Size, alignof(FunctionProtoType));
   FunctionProtoType::ExtProtoInfo newEPI = EPI;
@@ -4907,6 +4914,8 @@ QualType ASTContext::getFunctionTypeInternal(
   Types.push_back(FTP);
   if (!Unique)
     FunctionProtoTypes.InsertNode(FTP, InsertPos);
+  if (!EPI.FunctionEffects.empty())
+    AnyFunctionEffects = true;
   return QualType(FTP, 0);
 }
 
@@ -6016,19 +6025,19 @@ QualType ASTContext::getTypeOfExprType(Expr *tofExpr, TypeOfKind Kind) const {
     if (Canon) {
       // We already have a "canonical" version of an identical, dependent
       // typeof(expr) type. Use that as our canonical type.
-      toe = new (*this, alignof(TypeOfExprType))
-          TypeOfExprType(tofExpr, Kind, QualType((TypeOfExprType *)Canon, 0));
+      toe = new (*this, alignof(TypeOfExprType)) TypeOfExprType(
+          *this, tofExpr, Kind, QualType((TypeOfExprType *)Canon, 0));
     } else {
       // Build a new, canonical typeof(expr) type.
       Canon = new (*this, alignof(DependentTypeOfExprType))
-          DependentTypeOfExprType(tofExpr, Kind);
+          DependentTypeOfExprType(*this, tofExpr, Kind);
       DependentTypeOfExprTypes.InsertNode(Canon, InsertPos);
       toe = Canon;
     }
   } else {
     QualType Canonical = getCanonicalType(tofExpr->getType());
     toe = new (*this, alignof(TypeOfExprType))
-        TypeOfExprType(tofExpr, Kind, Canonical);
+        TypeOfExprType(*this, tofExpr, Kind, Canonical);
   }
   Types.push_back(toe);
   return QualType(toe, 0);
@@ -6041,8 +6050,8 @@ QualType ASTContext::getTypeOfExprType(Expr *tofExpr, TypeOfKind Kind) const {
 /// on canonical types (which are always unique).
 QualType ASTContext::getTypeOfType(QualType tofType, TypeOfKind Kind) const {
   QualType Canonical = getCanonicalType(tofType);
-  auto *tot =
-      new (*this, alignof(TypeOfType)) TypeOfType(tofType, Canonical, Kind);
+  auto *tot = new (*this, alignof(TypeOfType))
+      TypeOfType(*this, tofType, Canonical, Kind);
   Types.push_back(tot);
   return QualType(tot, 0);
 }
