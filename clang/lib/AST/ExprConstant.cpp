@@ -2839,6 +2839,8 @@ static bool handleIntIntBinOp(EvalInfo &Info, const BinaryOperator *E,
       // During constant-folding, a negative shift is an opposite shift. Such
       // a shift is not a constant expression.
       Info.CCEDiag(E, diag::note_constexpr_negative_shift) << RHS;
+      if (!Info.noteUndefinedBehavior())
+        return false;
       RHS = -RHS;
       goto shift_right;
     }
