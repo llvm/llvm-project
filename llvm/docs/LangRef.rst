@@ -15080,7 +15080,7 @@ Arguments:
 """"""""""
 
 The first argument is a pointer to the destination, the second is a
-pointer to the source. The third argument is an integer argument
+pointer to the source. The third argument is a constant integer argument
 specifying the number of bytes to copy, and the fourth is a
 boolean indicating a volatile access.
 
