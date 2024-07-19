@@ -764,6 +764,7 @@ module std_private_algorithm_ranges_find_end                             [system
 module std_private_algorithm_ranges_find_first_of                        [system] { header "__algorithm/ranges_find_first_of.h" }
 module std_private_algorithm_ranges_find_if                              [system] { header "__algorithm/ranges_find_if.h" }
 module std_private_algorithm_ranges_find_if_not                          [system] { header "__algorithm/ranges_find_if_not.h" }
+module std_private_algorithm_ranges_find_last                            [system] { header "__algorithm/ranges_find_last.h" }
 module std_private_algorithm_ranges_for_each                             [system] {
   header "__algorithm/ranges_for_each.h"
   export std_private_algorithm_in_fun_result
@@ -1521,6 +1522,8 @@ module std_private_memory_concepts                        [system] {
 module std_private_memory_construct_at                    [system] { header "__memory/construct_at.h" }
 module std_private_memory_destruct_n                      [system] { header "__memory/destruct_n.h" }
 module std_private_memory_fwd                             [system] { header "__fwd/memory.h" }
+module std_private_memory_inout_ptr                       [system] { header "__memory/inout_ptr.h" }
+module std_private_memory_out_ptr                         [system] { header "__memory/out_ptr.h" }
 module std_private_memory_pointer_traits                  [system] { header "__memory/pointer_traits.h" }
 module std_private_memory_ranges_construct_at             [system] { header "__memory/ranges_construct_at.h" }
 module std_private_memory_ranges_uninitialized_algorithms [system] {

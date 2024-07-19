@@ -268,6 +268,7 @@ void ExternalFileUnit::FinishReadingRecord(IoErrorHandler &handler) {
     recordOffsetInFrame_ = 0;
   }
   BeginRecord();
+  leftTabLimit.reset();
 }
 
 bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {

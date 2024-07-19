@@ -38,6 +38,7 @@ What's New in Libc++ 19.0.0?
 Implemented Papers
 ------------------
 
+- P1132R8 - ``out_ptr`` - a scalable output pointer abstraction
 - P2637R3 - Member ``visit``
 - P2652R2 - Disallow User Specialization of ``allocator_traits``
 - P2819R2 - Add ``tuple`` protocol to ``complex``
@@ -57,6 +58,7 @@ Implemented Papers
 - P2231R1 - Missing ``constexpr`` in ``std::optional`` and ``std::variant``
 - P0019R8 - ``std::atomic_ref``
 - P2389R2 - Alias template ``dims`` for the ``extents`` of ``mdspan``
+- P1223R5 - ``ranges::find_last()``, ``ranges::find_last_if()``, and ``ranges::find_last_if_not()``
 
 Improvements and New Features
 -----------------------------
