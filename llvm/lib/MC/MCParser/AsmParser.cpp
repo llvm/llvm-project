@@ -5102,12 +5102,9 @@ bool AsmParser::parseDirectiveAbort(SMLoc DirectiveLoc) {
 
   if (Str.empty())
     return Error(DirectiveLoc, ".abort detected. Assembly stopping.");
-  else
-    return Error(DirectiveLoc,
-                 ".abort '" + Str + "' detected. Assembly stopping.");
-  // FIXME: Actually abort assembly here.
 
-  return false;
+  return Error(DirectiveLoc,
+               ".abort '" + Str + "' detected. Assembly stopping.");
 }
 
 /// parseDirectiveInclude
