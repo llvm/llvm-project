@@ -6915,17 +6915,10 @@ SDValue DAGTypeLegalizer::WidenVecOp_MSTORE(SDNode *N, unsigned OpNo) {
   SDLoc dl(N);
 
   if (OpNo == 1) {
-    EVT WideVT;
-    if (VT.isScalableVector() && VT.getVectorMinNumElements() == 1 &&
-        VT.isInteger() && VT.getVectorElementType().isByteSized()) {
-      WideVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
-      StVal = ModifyToType(StVal, WideVT);
-    } else {
-      // Widen the value.
-      StVal = GetWidenedVector(StVal);
-      // The mask should be widened as well
-      WideVT = StVal.getValueType();
-    }
+    // Widen the value.
+    StVal = GetWidenedVector(StVal);
+    // The mask should be widened as well
+    EVT WideVT = StVal.getValueType();
     EVT WideMaskVT =
         EVT::getVectorVT(*DAG.getContext(), MaskVT.getVectorElementType(),
                          WideVT.getVectorElementCount());
