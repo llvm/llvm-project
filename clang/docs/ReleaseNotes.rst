@@ -165,6 +165,7 @@ Clang Python Bindings Potentially Breaking Changes
   of variant 271.
 - Renamed ``TypeKind`` variant 162 from ``OBJCCLASS`` to ``OBJCTYPEPARAM``.
   The previous name was incorrect, it was a duplicate of variant 28.
+- Refactored enum implementation, switching to the standard library `Enum` type.
 
 What's New in Clang |release|?
 ==============================
