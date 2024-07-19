@@ -15,7 +15,7 @@
 #include <cassert>
 
 namespace {
-constexpr unsigned timeout_ms = 10000;
+constexpr unsigned TIMEOUT_MS = 10000;
 } // Anonymous namespace
 
 namespace LIBC_NAMESPACE_DECL {
@@ -25,7 +25,7 @@ bool Test::testProcessKilled(testutils::FunctionCaller *Func, int Signal,
                              const char *LHSStr, const char *RHSStr,
                              internal::Location Loc) {
   testutils::ProcessStatus Result =
-      testutils::invoke_in_subprocess(Func, timeout_ms);
+      testutils::invoke_in_subprocess(Func, TIMEOUT_MS);
 
   if (const char *error = Result.get_error()) {
     Ctx->markFail();
@@ -37,7 +37,7 @@ bool Test::testProcessKilled(testutils::FunctionCaller *Func, int Signal,
   if (Result.timed_out()) {
     Ctx->markFail();
     tlog << Loc;
-    tlog << "Process timed out after " << timeout_ms << " milliseconds.\n";
+    tlog << "Process timed out after " << TIMEOUT_MS << " milliseconds.\n";
     return false;
   }
 
@@ -69,7 +69,7 @@ bool Test::testProcessExits(testutils::FunctionCaller *Func, int ExitCode,
                             const char *LHSStr, const char *RHSStr,
                             internal::Location Loc) {
   testutils::ProcessStatus Result =
-      testutils::invoke_in_subprocess(Func, timeout_ms);
+      testutils::invoke_in_subprocess(Func, TIMEOUT_MS);
 
   if (const char *error = Result.get_error()) {
     Ctx->markFail();
@@ -81,7 +81,7 @@ bool Test::testProcessExits(testutils::FunctionCaller *Func, int ExitCode,
   if (Result.timed_out()) {
     Ctx->markFail();
     tlog << Loc;
-    tlog << "Process timed out after " << timeout_ms << " milliseconds.\n";
+    tlog << "Process timed out after " << TIMEOUT_MS << " milliseconds.\n";
     return false;
   }
 
