@@ -378,7 +378,7 @@ public:
 
   virtual void SetQueueLibdispatchQueueAddress(lldb::addr_t dispatch_queue_t) {}
 
-  /// When a thread stops at an enabled BreakpointSite that has not exectued,
+  /// When a thread stops at an enabled BreakpointSite that has not executed,
   /// the Process plugin should call SetThreadStoppedAtUnexecutedBP(pc).
   /// If that BreakpointSite was actually triggered (the instruction was
   /// executed, for a software breakpoint), regardless of whether the

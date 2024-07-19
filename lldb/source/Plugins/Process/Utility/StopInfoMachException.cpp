@@ -579,11 +579,15 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
   RegisterContextSP reg_ctx_sp(thread.GetRegisterContext());
   // Caveat: with x86 KDP if we've hit a breakpoint, the pc we
   // receive is past the breakpoint instruction.
-  // If we have a breakpoint at 0x100 (on a 1-byte original instruction)
-  // and at 0x101, we hit the 0x100 breakpoint and the pc is
-  // reported at 0x101.  We will initially mark this as being at
-  // an unexecuted breakpoint at 0x101, but that will be refined
-  // later in this method after we've correctly decremented pc.
+  // If we have a breakpoints at 0x100 and 0x101, we hit the
+  // 0x100 breakpoint and the pc is reported at 0x101.
+  // We will initially mark this thread as being stopped at an
+  // unexecuted breakpoint at 0x101. Later when we see that
+  // we stopped for a Breakpoint reason, we will decrement the
+  // pc, and update the thread to record that we hit the
+  // breakpoint at 0x100.
+  // The fact that the pc may be off by one at this point
+  // (for an x86 KDP breakpoint hit) is not a problem.
   addr_t pc = reg_ctx_sp->GetPC();
   BreakpointSiteSP bp_site_sp =
       process_sp->GetBreakpointSiteList().FindByAddress(pc);
