@@ -4591,7 +4591,7 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     // ones.
     for (int I = RUs.size() - 1; I >= 0; --I) {
       const auto &MLU = RUs[I].MaxLocalUsers;
-      if (llvm::all_of(MLU, [&](decltype(MLU.front()) &LU) {
+      if (all_of(MLU, [&](decltype(MLU.front()) &LU) {
             return LU.second <= TTI.getNumberOfRegisters(LU.first);
           })) {
         MaxVF = VFs[I];
