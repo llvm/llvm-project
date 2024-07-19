@@ -2406,6 +2406,26 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
               PseudoProbeDecoder->getFuncDescForGUID(YamlBF.GUID);
           YamlBF.PseudoProbeDescHash = FuncDesc->FuncHash;
         }
+        // Fetch probes belonging to all fragments
+        const AddressProbesMap &ProbeMap =
+            PseudoProbeDecoder->getAddress2ProbesMap();
+        BinaryFunction::FragmentsSetTy Fragments(BF->Fragments);
+        Fragments.insert(BF);
+        for (const BinaryFunction *F : Fragments) {
+          const uint64_t FuncAddr = F->getAddress();
+          const auto &FragmentProbes =
+              llvm::make_range(ProbeMap.lower_bound(FuncAddr),
+                               ProbeMap.lower_bound(FuncAddr + F->getSize()));
+          for (const auto &[OutputAddress, Probes] : FragmentProbes) {
+            const uint32_t InputOffset = BAT->translate(
+                FuncAddr, OutputAddress - FuncAddr, /*IsBranchSrc=*/true);
+            const unsigned BlockIndex = getBlock(InputOffset).second;
+            for (const MCDecodedPseudoProbe &Probe : Probes)
+              YamlBF.Blocks[BlockIndex].PseudoProbes.emplace_back(
+                  yaml::bolt::PseudoProbeInfo{Probe.getGuid(), Probe.getIndex(),
+                                              Probe.getType()});
+          }
+        }
       }
       // Drop blocks without a hash, won't be useful for stale matching.
       llvm::erase_if(YamlBF.Blocks,
