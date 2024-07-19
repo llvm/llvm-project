@@ -189,7 +189,7 @@ public:
     // that contains instructions must have a mapping symbol defined at the
     // beginning. Non-text sections can start as EMS_Data, since they can only
     // contain instructions in erroneous cases.
-    LastMappingSymbols[getPreviousSection().first] = LastEMS;
+    LastMappingSymbols[getCurrentSection().first] = LastEMS;
     auto It = LastMappingSymbols.find(Section);
     if (It != LastMappingSymbols.end())
       LastEMS = It->second;

@@ -6483,15 +6483,7 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
 
   // Try to use leading zeros of the dividend to reduce the multiplier and
   // avoid expensive fixups.
-  // TODO: Support vectors.
-  unsigned LeadingZeros = 0;
-  if (!VT.isVector() && isa<ConstantSDNode>(N1)) {
-    assert(!isOneConstant(N1) && "Unexpected divisor");
-    LeadingZeros = DAG.computeKnownBits(N0).countMinLeadingZeros();
-    // UnsignedDivisionByConstantInfo doesn't work correctly if leading zeros in
-    // the dividend exceeds the leading zeros for the divisor.
-    LeadingZeros = std::min(LeadingZeros, N1->getAsAPIntVal().countl_zero());
-  }
+  unsigned KnownLeadingZeros = DAG.computeKnownBits(N0).countMinLeadingZeros();
 
   bool UseNPQ = false, UsePreShift = false, UsePostShift = false;
   SmallVector<SDValue, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
@@ -6510,7 +6502,8 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
       MagicFactor = NPQFactor = DAG.getUNDEF(SVT);
     } else {
       UnsignedDivisionByConstantInfo magics =
-          UnsignedDivisionByConstantInfo::get(Divisor, LeadingZeros);
+          UnsignedDivisionByConstantInfo::get(
+              Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()));
 
       MagicFactor = DAG.getConstant(magics.Magic, dl, SVT);
 
