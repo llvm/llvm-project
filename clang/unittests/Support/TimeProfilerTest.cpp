@@ -81,10 +81,9 @@ std::string GetMetadata(json::Object *Event) {
   if (json::Object *Args = Event->getObject("args")) {
     if (auto Detail = Args->getString("detail"))
       OS << Detail;
+    // Use only filename to not include os-specific path separators.
     if (auto File = Args->getString("file"))
-      OS << ", "
-         << llvm::sys::path::filename(File->str(),
-                                      llvm::sys::path::Style::posix);
+      OS << ", " << llvm::sys::path::filename(*File);
     if (auto Line = Args->getInteger("line"))
       OS << ":" << *Line;
   }
