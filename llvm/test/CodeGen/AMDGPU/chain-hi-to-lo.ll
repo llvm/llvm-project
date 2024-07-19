@@ -425,9 +425,9 @@ bb:
 define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %in, ptr addrspace(1) nocapture %out) #0 {
 ; GFX900-LABEL: vload2_private:
 ; GFX900:       ; %bb.0: ; %entry
-; GFX900-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x0
+; GFX900-NEXT:    s_load_dwordx4 s[4:7], s[6:7], 0x0
 ; GFX900-NEXT:    v_mov_b32_e32 v2, 0
-; GFX900-NEXT:    s_add_u32 s0, s0, s9
+; GFX900-NEXT:    s_add_u32 s0, s0, s15
 ; GFX900-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX900-NEXT:    global_load_ushort v0, v2, s[4:5]
@@ -456,10 +456,10 @@ define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %i
 ;
 ; FLATSCR-LABEL: vload2_private:
 ; FLATSCR:       ; %bb.0: ; %entry
-; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s2, s5
-; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s3, 0
-; FLATSCR-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
+; FLATSCR-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, 0
+; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s6, s11
+; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
 ; FLATSCR-NEXT:    s_mov_b32 s4, 0
 ; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLATSCR-NEXT:    global_load_ushort v0, v2, s[0:1]
@@ -483,9 +483,9 @@ define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %i
 ;
 ; GFX10_DEFAULT-LABEL: vload2_private:
 ; GFX10_DEFAULT:       ; %bb.0: ; %entry
-; GFX10_DEFAULT-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x0
+; GFX10_DEFAULT-NEXT:    s_load_dwordx4 s[4:7], s[6:7], 0x0
 ; GFX10_DEFAULT-NEXT:    v_mov_b32_e32 v2, 0
-; GFX10_DEFAULT-NEXT:    s_add_u32 s0, s0, s9
+; GFX10_DEFAULT-NEXT:    s_add_u32 s0, s0, s15
 ; GFX10_DEFAULT-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10_DEFAULT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10_DEFAULT-NEXT:    global_load_ushort v0, v2, s[4:5]
@@ -514,11 +514,11 @@ define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %i
 ;
 ; FLATSCR_GFX10-LABEL: vload2_private:
 ; FLATSCR_GFX10:       ; %bb.0: ; %entry
-; FLATSCR_GFX10-NEXT:    s_add_u32 s2, s2, s5
-; FLATSCR_GFX10-NEXT:    s_addc_u32 s3, s3, 0
-; FLATSCR_GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; FLATSCR_GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
-; FLATSCR_GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
+; FLATSCR_GFX10-NEXT:    s_add_u32 s6, s6, s11
+; FLATSCR_GFX10-NEXT:    s_addc_u32 s7, s7, 0
+; FLATSCR_GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s6
+; FLATSCR_GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s7
+; FLATSCR_GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x0
 ; FLATSCR_GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; FLATSCR_GFX10-NEXT:    s_mov_b32 s4, 0
 ; FLATSCR_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -545,7 +545,7 @@ define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %i
 ;
 ; GFX11-LABEL: vload2_private:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_load_u16 v0, v2, s[0:1]

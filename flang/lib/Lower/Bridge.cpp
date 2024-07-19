@@ -4230,9 +4230,13 @@ private:
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::HostDevice);
       if (!rhs.isVariable()) {
+        mlir::Value base = rhs;
+        if (auto convertOp =
+                mlir::dyn_cast<fir::ConvertOp>(rhs.getDefiningOp()))
+          base = convertOp.getValue();
         // Special case if the rhs is a constant.
-        if (matchPattern(rhs.getDefiningOp(), mlir::m_Constant())) {
-          builder.create<cuf::DataTransferOp>(loc, rhs, lhsVal,
+        if (matchPattern(base.getDefiningOp(), mlir::m_Constant())) {
+          builder.create<cuf::DataTransferOp>(loc, base, lhsVal,
                                               transferKindAttr);
         } else {
           auto associate = hlfir::genAssociateExpr(
@@ -4296,8 +4300,13 @@ private:
           auto [temp, cleanup] =
               hlfir::createTempFromMold(loc, builder, entity);
           auto needCleanup = fir::getIntIfConstant(cleanup);
-          if (needCleanup && *needCleanup)
-            temps.push_back(temp);
+          if (needCleanup && *needCleanup) {
+            if (auto declareOp =
+                    mlir::dyn_cast<hlfir::DeclareOp>(temp.getDefiningOp()))
+              temps.push_back(declareOp.getMemref());
+            else
+              temps.push_back(temp);
+          }
           addSymbol(sym,
                     hlfir::translateToExtendedValue(loc, builder, temp).first,
                     /*forced=*/true);
@@ -6020,7 +6029,7 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     const Fortran::lower::LoweringOptions &loweringOptions,
     const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
     const Fortran::common::LanguageFeatureControl &languageFeatures,
-    const llvm::TargetMachine &targetMachine)
+    const llvm::TargetMachine &targetMachine, const llvm::StringRef tuneCPU)
     : semanticsContext{semanticsContext}, defaultKinds{defaultKinds},
       intrinsics{intrinsics}, targetCharacteristics{targetCharacteristics},
       cooked{&cooked}, context{context}, kindMap{kindMap},
@@ -6077,6 +6086,7 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setTargetTriple(*module.get(), triple);
   fir::setKindMapping(*module.get(), kindMap);
   fir::setTargetCPU(*module.get(), targetMachine.getTargetCPU());
+  fir::setTuneCPU(*module.get(), tuneCPU);
   fir::setTargetFeatures(*module.get(), targetMachine.getTargetFeatureString());
   fir::support::setMLIRDataLayout(*module.get(),
                                   targetMachine.createDataLayout());

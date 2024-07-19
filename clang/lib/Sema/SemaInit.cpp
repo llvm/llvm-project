@@ -1993,9 +1993,18 @@ static bool checkDestructorReference(QualType ElementType, SourceLocation Loc,
   return SemaRef.DiagnoseUseOfDecl(Destructor, Loc);
 }
 
-static bool canInitializeArrayWithEmbedDataString(ArrayRef<Expr *> ExprList,
-                                                  QualType InitType,
-                                                  ASTContext &Context) {
+static bool
+canInitializeArrayWithEmbedDataString(ArrayRef<Expr *> ExprList,
+                                      const InitializedEntity &Entity,
+                                      ASTContext &Context) {
+  QualType InitType = Entity.getType();
+  const InitializedEntity *Parent = &Entity;
+
+  while (Parent) {
+    InitType = Parent->getType();
+    Parent = Parent->getParent();
+  }
+
   // Only one initializer, it's an embed and the types match;
   EmbedExpr *EE =
       ExprList.size() == 1
@@ -2007,7 +2016,7 @@ static bool canInitializeArrayWithEmbedDataString(ArrayRef<Expr *> ExprList,
   if (InitType->isArrayType()) {
     const ArrayType *InitArrayType = InitType->getAsArrayTypeUnsafe();
     QualType InitElementTy = InitArrayType->getElementType();
-    QualType EmbedExprElementTy = EE->getType();
+    QualType EmbedExprElementTy = EE->getDataStringLiteral()->getType();
     const bool TypesMatch =
         Context.typesAreCompatible(InitElementTy, EmbedExprElementTy) ||
         (InitElementTy->isCharType() && EmbedExprElementTy->isCharType());
@@ -2034,7 +2043,7 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
     }
   }
 
-  if (canInitializeArrayWithEmbedDataString(IList->inits(), DeclType,
+  if (canInitializeArrayWithEmbedDataString(IList->inits(), Entity,
                                             SemaRef.Context)) {
     EmbedExpr *Embed = cast<EmbedExpr>(IList->inits()[0]);
     IList->setInit(0, Embed->getDataStringLiteral());
@@ -5612,7 +5621,7 @@ static void TryOrBuildParenListInitialization(
           << SE->getSourceRange();
       return;
     } else {
-      assert(isa<IncompleteArrayType>(Entity.getType()));
+      assert(Entity.getType()->isIncompleteArrayType());
       ArrayLength = Args.size();
     }
     EntityIndexToProcess = ArrayLength;

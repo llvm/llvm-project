@@ -4188,17 +4188,24 @@ bool AArch64InstrInfo::hasBTISemantics(const MachineInstr &MI) {
   }
 }
 
+bool AArch64InstrInfo::isFpOrNEON(Register Reg) {
+  if (Reg == 0)
+    return false;
+  assert(Reg.isPhysical() && "Expected physical register in isFpOrNEON");
+  return AArch64::FPR128RegClass.contains(Reg) ||
+         AArch64::FPR64RegClass.contains(Reg) ||
+         AArch64::FPR32RegClass.contains(Reg) ||
+         AArch64::FPR16RegClass.contains(Reg) ||
+         AArch64::FPR8RegClass.contains(Reg);
+}
+
 bool AArch64InstrInfo::isFpOrNEON(const MachineInstr &MI) {
   auto IsFPR = [&](const MachineOperand &Op) {
     if (!Op.isReg())
       return false;
     auto Reg = Op.getReg();
     if (Reg.isPhysical())
-      return AArch64::FPR128RegClass.contains(Reg) ||
-             AArch64::FPR64RegClass.contains(Reg) ||
-             AArch64::FPR32RegClass.contains(Reg) ||
-             AArch64::FPR16RegClass.contains(Reg) ||
-             AArch64::FPR8RegClass.contains(Reg);
+      return isFpOrNEON(Reg);
 
     const TargetRegisterClass *TRC = ::getRegClass(MI, Reg);
     return TRC == &AArch64::FPR128RegClass ||

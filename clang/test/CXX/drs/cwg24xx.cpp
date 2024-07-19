@@ -82,6 +82,15 @@ auto h() -> C auto {
   C auto foo = T();
   // expected-warning@-1 {{'C' is deprecated}}
   //   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+  C auto *bar = T();
+  // expected-warning@-1 {{'C' is deprecated}}
+  //   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+  C auto &baz = T();
+  // expected-warning@-1 {{'C' is deprecated}}
+  //   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+  C auto &&quux = T();
+  // expected-warning@-1 {{'C' is deprecated}}
+  //   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
   return foo;
 }
 #endif

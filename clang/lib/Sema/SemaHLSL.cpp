@@ -437,6 +437,28 @@ void SemaHLSL::handleShaderAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
+void SemaHLSL::handleResourceClassAttr(Decl *D, const ParsedAttr &AL) {
+  if (!AL.isArgIdent(0)) {
+    Diag(AL.getLoc(), diag::err_attribute_argument_type)
+        << AL << AANT_ArgumentIdentifier;
+    return;
+  }
+
+  IdentifierLoc *Loc = AL.getArgAsIdent(0);
+  StringRef Identifier = Loc->Ident->getName();
+  SourceLocation ArgLoc = Loc->Loc;
+
+  // Validate.
+  llvm::dxil::ResourceClass RC;
+  if (!HLSLResourceClassAttr::ConvertStrToResourceClass(Identifier, RC)) {
+    Diag(ArgLoc, diag::warn_attribute_type_not_supported)
+        << "ResourceClass" << Identifier;
+    return;
+  }
+
+  D->addAttr(HLSLResourceClassAttr::Create(getASTContext(), RC, ArgLoc));
+}
+
 void SemaHLSL::handleResourceBindingAttr(Decl *D, const ParsedAttr &AL) {
   StringRef Space = "space0";
   StringRef Slot = "";
