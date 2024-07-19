@@ -890,8 +890,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // actions
   computeRegisterProperties(STI.getRegisterInfo());
 
-  bool Allow16BitCAS = STI.getSmVersion() >= 70 && STI.getPTXVersion() >= 63;
-  setMinCmpXchgSizeInBits(Allow16BitCAS ? 16 : 32);
+  setMinCmpXchgSizeInBits(STI.hasAtomCas16() ? 16 : 32);
   setMaxAtomicSizeInBitsSupported(64);
   setMaxDivRemBitWidthSupported(64);
 }
