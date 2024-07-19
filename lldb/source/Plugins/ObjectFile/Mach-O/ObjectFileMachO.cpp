@@ -6519,14 +6519,15 @@ struct page_object {
 };
 
 bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
-                               const FileSpec &outfile,
-                               lldb::SaveCoreStyle &core_style, Status &error) {
-  if (!process_sp)
-    return false;
-
-  // Default on macOS is to create a dirty-memory-only corefile.
+                               const lldb_private::SaveCoreOptions &options,
+                               Status &error) {
+  auto core_style = options.GetStyle();
   if (core_style == SaveCoreStyle::eSaveCoreUnspecified)
     core_style = SaveCoreStyle::eSaveCoreDirtyOnly;
+  // The FileSpec and Process are already checked in PluginManager::SaveCore.
+  assert(options.GetOutputFile().has_value());
+  assert(process_sp);
+  const FileSpec outfile = options.GetOutputFile().value();
 
   Target &target = process_sp->GetTarget();
   const ArchSpec target_arch = target.GetArchitecture();
