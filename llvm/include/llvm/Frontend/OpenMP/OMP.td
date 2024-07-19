@@ -747,6 +747,10 @@ def OMP_Interchange : Directive<"interchange"> {
   let association = AS_Loop;
   let category = CA_Executable;
 }
+def OMP_Interchange : Directive<"interchange"> {
+  let association = AS_Loop;
+  let category = CA_Executable;
+}
 def OMP_interop : Directive<"interop"> {
   let allowedClauses = [
     VersionedClause<OMPC_Depend>,
