@@ -142,6 +142,12 @@ public:
   static lldb::StopInfoSP
   CreateStopReasonProcessorTrace(Thread &thread, const char *description);
 
+  // This creates a StopInfo indicating that execution stopped because
+  // it was replaying some recorded execution history, and execution reached
+  // the end of that recorded history.
+  static lldb::StopInfoSP
+  CreateStopReasonHistoryBoundary(Thread &thread, const char *description);
+
   static lldb::StopInfoSP CreateStopReasonFork(Thread &thread,
                                                lldb::pid_t child_pid,
                                                lldb::tid_t child_tid);

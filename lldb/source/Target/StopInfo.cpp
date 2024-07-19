@@ -1212,6 +1212,30 @@ public:
   }
 };
 
+// StopInfoHistoryBoundary
+
+class StopInfoHistoryBoundary : public StopInfo {
+public:
+  StopInfoHistoryBoundary(Thread &thread, const char *description)
+      : StopInfo(thread, LLDB_INVALID_UID) {
+    if (description)
+      SetDescription(description);
+  }
+
+  ~StopInfoHistoryBoundary() override = default;
+
+  StopReason GetStopReason() const override {
+    return eStopReasonHistoryBoundary;
+  }
+
+  const char *GetDescription() override {
+    if (m_description.empty())
+      return "history boundary";
+    else
+      return m_description.c_str();
+  }
+};
+
 // StopInfoThreadPlan
 
 class StopInfoThreadPlan : public StopInfo {
@@ -1437,6 +1461,11 @@ StopInfoSP StopInfo::CreateStopReasonWithException(Thread &thread,
 StopInfoSP StopInfo::CreateStopReasonProcessorTrace(Thread &thread,
                                                     const char *description) {
   return StopInfoSP(new StopInfoProcessorTrace(thread, description));
+}
+
+StopInfoSP StopInfo::CreateStopReasonHistoryBoundary(Thread &thread,
+                                                     const char *description) {
+  return StopInfoSP(new StopInfoHistoryBoundary(thread, description));
 }
 
 StopInfoSP StopInfo::CreateStopReasonWithExec(Thread &thread) {
