@@ -38,6 +38,9 @@ Namespaces:
         Tags:
           - Name: char_box
             SwiftName: NestedCharBox
+            Methods:
+              - Name: methodInNestedNamespace
+                SwiftName: swiftMethodInNestedNamespace()
         Namespaces:
           - Name: Namespace1
             Tags:
