@@ -8208,7 +8208,8 @@ void Sema::CheckInfNaNFunction(const CallExpr *Call,
         << 1 << 0 << Call->getSourceRange();
   else if ((IsStdFunction(FDecl, "isinf") ||
             (IsStdFunction(FDecl, "isfinite") ||
-             (FDecl->getIdentifier() && FDecl->getName() == "infinity"))) &&
+             (FDecl->getIdentifier() && FDecl->getName() == "infinity") ||
+             (Call->getBuiltinCallee() == Builtin::BI__builtin_inff))) &&
            FPO.getNoHonorInfs())
     Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
         << 0 << 0 << Call->getSourceRange();
