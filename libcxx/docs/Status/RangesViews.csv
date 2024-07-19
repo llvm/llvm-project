@@ -36,3 +36,7 @@ C++23,`as_const <https://wg21.link/P2278R4>`_,Unassigned,No patch yet,Not starte
 C++23,`as_rvalue <https://wg21.link/P2446R2>`_,Nikolas Klauser,`D137637 <https://llvm.org/D137637>`_,✅
 C++23,`stride <https://wg21.link/P1899R3>`_,Hristo Hristov and Will Hawkins,`D156924 <https://llvm.org/D156924>`_,In Progress
 C++23,`enumerate <https://wg21.link/P2164R9>`_,Hristo Hristov,`D157193 <https://reviews.llvm.org/D157193>`_,In Progress
+,,,,
+,,,,
+,,,,
+C++26,`concat <https://wg21.link/P2542R7>`_,Unassigned,No patch yet,Not started
