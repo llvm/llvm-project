@@ -333,6 +333,10 @@ Instruction *Instruction::getPrevNode() const {
 }
 
 void Instruction::removeFromParent() {
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<RemoveFromParent>(this, Tracker));
+
   // Detach all the LLVM IR instructions from their parent BB.
   for (llvm::Instruction *I : getLLVMInstrs())
     I->removeFromParent();
@@ -367,6 +371,11 @@ void Instruction::moveBefore(BasicBlock &BB, const BBIterator &WhereIt) {
   if (std::next(getIterator()) == WhereIt)
     // Destination is same as origin, nothing to do.
     return;
+
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<MoveInstr>(this, Tracker));
+
   auto *LLVMBB = cast<llvm::BasicBlock>(BB.Val);
   llvm::BasicBlock::iterator It;
   if (WhereIt == BB.end()) {
