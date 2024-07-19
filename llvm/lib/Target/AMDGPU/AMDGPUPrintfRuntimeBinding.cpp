@@ -50,7 +50,7 @@ private:
 
 class AMDGPUPrintfRuntimeBindingImpl {
 public:
-  AMDGPUPrintfRuntimeBindingImpl() {}
+  AMDGPUPrintfRuntimeBindingImpl() = default;
   bool run(Module &M);
 
 private:
