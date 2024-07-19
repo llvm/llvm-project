@@ -294,6 +294,12 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode &N) {
     return;
   }
 
+  if (LeafRec->isSubClassOf("Operand")) {
+    assert(LeafRec->getValueAsDef("Type")->isSubClassOf("ValueType"));
+    // Operand matches as its ValueType.
+    return;
+  }
+
   errs() << "Unknown leaf kind: " << N << "\n";
   abort();
 }
