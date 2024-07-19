@@ -21,23 +21,14 @@
 using namespace llvm;
 using namespace lld::macho;
 
-// TODO: Move to StringRef.h
-static bool isNumber(StringRef S) {
-  return !S.empty() && S.find_first_not_of("0123456789") == StringRef::npos;
-}
-
 /// Symbols can be appended with "(.__uniq.xxxx)?.llvm.yyyy" where "xxxx" and
 /// "yyyy" are numbers that could change between builds. We need to use the root
 /// symbol name before this suffix so these symbols can be matched with profiles
 /// which may have different suffixes.
 static StringRef getRootSymbol(StringRef Name) {
   auto [P0, S0] = Name.rsplit(".llvm.");
-  if (isNumber(S0))
-    Name = P0;
-  auto [P1, S1] = Name.rsplit(".__uniq.");
-  if (isNumber(S1))
-    return P1;
-  return Name;
+  auto [P1, S1] = P0.rsplit(".__uniq.");
+  return P1;
 }
 
 static uint64_t getRelocHash(StringRef kind, uint64_t sectionIdx,
