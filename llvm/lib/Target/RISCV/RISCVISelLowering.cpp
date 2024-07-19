@@ -7434,7 +7434,7 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
   // Create an MCCodeEmitter to encode instructions.
   TargetLoweringObjectFile *TLO = getTargetMachine().getObjFileLowering();
   assert(TLO);
-  MCContext& MCCtx = TLO->getContext();
+  MCContext &MCCtx = TLO->getContext();
 
   std::unique_ptr<MCCodeEmitter> CodeEmitter(
       createRISCVMCCodeEmitter(*getTargetMachine().getMCInstrInfo(), MCCtx));
@@ -7492,8 +7492,7 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
   Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
                      DAG.getConstant(4, dl, MVT::i64));
   OutChains[1] = DAG.getTruncStore(
-      Root, dl,
-      DAG.getConstant(LD_X5_TargetFunctionOffset, dl, MVT::i64), Addr,
+      Root, dl, DAG.getConstant(LD_X5_TargetFunctionOffset, dl, MVT::i64), Addr,
       MachinePointerInfo(TrmpAddr, 4), MVT::i32);
 
   // ld t2, 16(t2)
@@ -7504,8 +7503,8 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
   Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
                      DAG.getConstant(8, dl, MVT::i64));
   OutChains[2] = DAG.getTruncStore(
-      Root, dl, DAG.getConstant(LD_X7_StaticChainOffset, dl, MVT::i64),
-      Addr, MachinePointerInfo(TrmpAddr, 8), MVT::i32);
+      Root, dl, DAG.getConstant(LD_X7_StaticChainOffset, dl, MVT::i64), Addr,
+      MachinePointerInfo(TrmpAddr, 8), MVT::i32);
 
   // jalr t0
   // Jump to the function.
