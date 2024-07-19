@@ -44,6 +44,7 @@ class Use {
 public:
   operator Value *() const { return get(); }
   Value *get() const;
+  void set(Value *V);
   class User *getUser() const { return Usr; }
   unsigned getOperandNo() const;
   Context *getContext() const { return Ctx; }
