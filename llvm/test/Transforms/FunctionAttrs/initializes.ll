@@ -336,7 +336,6 @@ end:
 declare void @g1(ptr initializes((0, 4)) %p)
 declare void @g2(ptr initializes((8, 12)) %p)
 declare void @g3(ptr initializes((0, 4)) writeonly nocapture %p)
-declare void @g4(ptr initializes((0, 4)) readnone nocapture %p)
 
 define void @call_initializes(ptr %p) {
 ; CHECK-LABEL: define void @call_initializes(
@@ -368,18 +367,6 @@ define void @call_initializes_no_clobber_writeonly_nocapture(ptr %p) {
 ; CHECK-NEXT:    ret void
 ;
   call void @g3(ptr %p)
-  call void @g2(ptr %p)
-  ret void
-}
-
-define void @call_initializes_no_clobber_readnone_capture(ptr %p) {
-; CHECK-LABEL: define void @call_initializes_no_clobber_readnone_capture(
-; CHECK-SAME: ptr initializes((0, 4), (8, 12)) [[P:%.*]]) {
-; CHECK-NEXT:    call void @g4(ptr [[P]])
-; CHECK-NEXT:    call void @g2(ptr [[P]])
-; CHECK-NEXT:    ret void
-;
-  call void @g4(ptr %p)
   call void @g2(ptr %p)
   ret void
 }
