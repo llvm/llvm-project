@@ -6,20 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: no-threads
-
 // <mutex>
 
 // template <class Mutex> class lock_guard;
 
-// explicit lock_guard(mutex_type& m);
+// lock_guard(lock_guard const&) = delete;
 
 #include <mutex>
 
-int main(int, char**)
-{
-    std::mutex m;
-    std::lock_guard<std::mutex> lg = m; // expected-error{{no viable conversion}}
+#include "types.h"
 
-  return 0;
-}
+static_assert(!std::is_copy_constructible<std::lock_guard<MyMutex> >::value, "");

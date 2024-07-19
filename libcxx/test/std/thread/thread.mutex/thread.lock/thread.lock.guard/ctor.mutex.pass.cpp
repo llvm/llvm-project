@@ -5,39 +5,26 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: no-threads
-// UNSUPPORTED: c++03
 
 // <mutex>
 
 // template <class Mutex> class lock_guard;
 
-// lock_guard(mutex_type& m, adopt_lock_t);
+// explicit lock_guard(mutex_type& m);
 
-#include <mutex>
-#include <cstdlib>
 #include <cassert>
+#include <mutex>
+#include <type_traits>
 
-#include "make_test_thread.h"
-#include "test_macros.h"
-
-std::mutex m;
-
-void do_try_lock() {
-  assert(m.try_lock() == false);
-}
+#include "types.h"
 
 int main(int, char**) {
-  {
-    m.lock();
-    std::lock_guard<std::mutex> lg(m, std::adopt_lock);
-    std::thread t = support::make_test_thread(do_try_lock);
-    t.join();
-  }
+  MyMutex m;
+  assert(!m.locked);
+  std::lock_guard<MyMutex> lg(m);
+  assert(m.locked);
 
-  m.lock();
-  m.unlock();
+  static_assert(!std::is_convertible<MyMutex, std::lock_guard<MyMutex> >::value, "constructor must be explicit");
 
   return 0;
 }
