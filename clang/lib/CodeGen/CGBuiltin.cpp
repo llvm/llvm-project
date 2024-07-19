@@ -14289,8 +14289,7 @@ Value *CodeGenFunction::EmitRISCVCpuSupports(const CallExpr *E) {
   // Note: We are making an unchecked assumption that the size of the
   // feature array is >= 1.  This holds for any version of compiler-rt
   // which defines this interface.
-  llvm::ArrayType *ArrayOfInt64Ty =
-      llvm::ArrayType::get(Int64Ty, 1);
+  llvm::ArrayType *ArrayOfInt64Ty = llvm::ArrayType::get(Int64Ty, 1);
   llvm::Type *StructTy = llvm::StructType::get(Int32Ty, ArrayOfInt64Ty);
   llvm::Constant *RISCVFeaturesBits =
       CGM.CreateRuntimeVariable(StructTy, "__riscv_feature_bits");
