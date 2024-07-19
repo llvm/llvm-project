@@ -1722,6 +1722,13 @@ vectorizeAsTensorPadOp(RewriterBase &rewriter, tensor::PadOp padOp,
           .reifyResultShapes(rewriter, reifiedReturnShapes);
   (void)status; // prevent unused variable warning on non-assert builds
   assert(succeeded(status) && "failed to reify result shapes");
+
+  // If the input vector sizes are not provided, then the vector sizes are
+  // determined by the result tensor shape.
+  if (inputVectorSizes.empty()) {
+    inputVectorSizes =
+        mlir::dyn_cast<RankedTensorType>(padOp->getResultTypes()[0]).getShape();
+  }
   auto maskedRead = vector::createReadOrMaskedRead(
       rewriter, loc, padOp.getSource(), inputVectorSizes, padValue,
       /*useInBoundsInsteadOfMasking=*/false);
@@ -1929,9 +1936,16 @@ vectorizePadOpPrecondition(tensor::PadOp padOp,
     return failure();
   }
 
+  bool satisfyEmptyCond = true;
+  if (inputVectorSizes.empty()) {
+    if (!mlir::dyn_cast<RankedTensorType>(padOp->getResultTypes()[0])
+             .hasStaticShape() ||
+        !padOp.getSourceType().hasStaticShape())
+      satisfyEmptyCond = false;
+  }
   ArrayRef<int64_t> resultTensorShape = padOp.getResultType().getShape();
-  if (failed(vector::isValidMaskedInputVector(resultTensorShape,
-                                              inputVectorSizes)))
+  if (!satisfyEmptyCond && failed(vector::isValidMaskedInputVector(
+                               resultTensorShape, inputVectorSizes)))
     return failure();
 
   if (llvm::any_of(padOp.getLow(), [](Value v) {

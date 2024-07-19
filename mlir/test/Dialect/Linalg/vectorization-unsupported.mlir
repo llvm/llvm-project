@@ -126,3 +126,23 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+  // -----
+
+func.func @test_pad_no_vectorize_dynamic_shape(%arg0: tensor<?x?xf32>, %arg1: tensor<4x16xf32>) -> tensor<4x16xf32> {
+  %f0 = arith.constant 0.0 : f32
+  // expected-error @+1 {{Attempted to vectorize, but failed}}
+ %pad = tensor.pad %arg0 low[0, 0] high[1,1] {
+  ^bb0(%arg3: index, %arg4: index):
+    tensor.yield %f0 : f32
+  } : tensor<?x?xf32> to tensor<4x16xf32>
+  return %pad : tensor<4x16xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.pad"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+}
