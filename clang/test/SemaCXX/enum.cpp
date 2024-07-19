@@ -104,7 +104,7 @@ void PR8089() {
 // expressions with UB to be non-constant.
 enum { overflow = 123456 * 234567 };
 #if __cplusplus >= 201103L
-// expected-warning@-2 {{expression is not an integral constant expression; folding it to a constant is a GNU extension}}
+// expected-error@-2 {{expression is not an integral constant expression}}
 // expected-note@-3 {{value 28958703552 is outside the range of representable values of type 'int'}}
 #else
 // expected-error@-5 {{expression is not an integral constant expression}}

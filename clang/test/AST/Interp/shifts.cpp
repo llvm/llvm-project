@@ -200,7 +200,14 @@ namespace LongInt {
 };
 
 enum shiftof {
-    X = (1<<-29),
-    X2 = (-1<<29),
-    X3 = (1<<32),
+    X = (1<<-29), // all-error {{expression is not an integral constant expression}} \
+                  // all-note {{negative shift count -29}}
+
+    X2 = (-1<<29), // cxx17-error {{expression is not an integral constant expression}} \
+                   // cxx17-note {{left shift of negative value -1}} \
+                   // ref-cxx17-error {{expression is not an integral constant expression}} \
+                   // ref-cxx17-note {{left shift of negative value -1}}
+
+    X3 = (1<<32) // all-error {{expression is not an integral constant expression}} \
+                 // all-note {{shift count 32 >= width of type 'int'}}
 };
