@@ -693,7 +693,7 @@ static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
 
   // Check the supported intrinsic.
   if (unsigned BuiltinID = FD->getBuiltinID()) {
-    auto IntrinsicID = [&]() -> unsigned {
+    auto IsErrnoIntrinsic = [&]() -> unsigned {
       switch (BuiltinID) {
       case Builtin::BIexpf:
       case Builtin::BI__builtin_expf:
@@ -705,7 +705,7 @@ static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
     }();
 
     // Restrict to target with errno, for example, MacOS doesn't set errno.
-    if (IntrinsicID && CGF.CGM.getLangOpts().MathErrno &&
+    if (IsErrnoIntrinsic && CGF.CGM.getLangOpts().MathErrno &&
         !CGF.Builder.getIsFPConstrained()) {
       ASTContext &Context = CGF.getContext();
       // Emit "int" TBAA metadata on FP math libcalls.
