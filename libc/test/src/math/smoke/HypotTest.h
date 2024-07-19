@@ -9,12 +9,8 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_HYPOTTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_HYPOTTEST_H
 
-#include "src/__support/FPUtil/FPBits.h"
-#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include "hdr/math_macros.h"
 
 template <typename T>
 class HypotTestTemplate : public LIBC_NAMESPACE::testing::Test {
