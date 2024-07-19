@@ -12965,7 +12965,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
         // Otherwise, check if the type's alignment against Size.
         if (auto *ICE = dyn_cast<ImplicitCastExpr>(PtrArg)) {
-          // Drop the potential implicit-cast to 'const volatile void*', getting the underlying type.
+          // Drop the potential implicit-cast to 'const volatile void*', getting
+          // the underlying type.
           if (ICE->getCastKind() == CK_BitCast)
             PtrArg = ICE->getSubExpr();
         }
