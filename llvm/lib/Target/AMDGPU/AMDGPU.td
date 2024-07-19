@@ -1164,6 +1164,12 @@ def FeatureExclusiveScanInsts : SubtargetFeature<"exclusive-scan-insts",
   "Has exclusive scan instructions"
 >;
 
+def FeatureVNBREncoding : SubtargetFeature<"vnbr-encoding",
+  "HasVNBREncoding",
+  "true",
+  "Neighbour data sharing instructions"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -2050,6 +2056,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureFmaMixBF16Insts,
+   FeatureVNBREncoding,
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -2836,6 +2843,9 @@ def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,
 
 def HasExclusiveScanInsts : Predicate<"Subtarget->hasExclusiveScanInsts()">,
   AssemblerPredicate<(all_of FeatureExclusiveScanInsts)>;
+
+def HasVNBREncoding : Predicate<"Subtarget->hasVNBREncoding()">,
+  AssemblerPredicate<(all_of FeatureVNBREncoding)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"

@@ -1251,6 +1251,15 @@ def OperandSemantics {
 }
 
 //===----------------------------------------------------------------------===//
+//  GVGPR Operands
+//===----------------------------------------------------------------------===//
+
+def GVGPR : RegisterOperand<VGPR_32_STAGING> {
+  let EncoderMethod = "encodeGVGPR";
+  let DecoderMethod = "DecodeVGPR_32RegisterClass";
+}
+
+//===----------------------------------------------------------------------===//
 //  SSrc_* Operands with an SGPR, a 32-bit immediate, or 64-bit immediate
 //  if supported by target.
 //===----------------------------------------------------------------------===//

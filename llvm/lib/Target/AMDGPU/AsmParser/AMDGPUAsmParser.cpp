@@ -135,6 +135,10 @@ public:
     ImmTyD16,
     ImmTyClamp,
     ImmTyOModSI,
+    ImmTySemaId,
+    ImmTySemaIdRefl,
+    ImmTySemaWaveId,
+    ImmTySemaWaveIdRefl,
     ImmTySDWADstSel,
     ImmTySDWASrc0Sel,
     ImmTySDWASrc1Sel,
@@ -1154,6 +1158,18 @@ public:
     case ImmTyDppBankMask: OS << "DppBankMask"; break;
     case ImmTyDppBoundCtrl: OS << "DppBoundCtrl"; break;
     case ImmTyDppFI: OS << "DppFI"; break;
+    case ImmTySemaId:
+      OS << "SemaId";
+      break;
+    case ImmTySemaIdRefl:
+      OS << "SemaIdRefl";
+      break;
+    case ImmTySemaWaveId:
+      OS << "SemaWaveId";
+      break;
+    case ImmTySemaWaveIdRefl:
+      OS << "SemaWaveIdRefl";
+      break;
     case ImmTySDWADstSel: OS << "SDWADstSel"; break;
     case ImmTySDWASrc0Sel: OS << "SDWASrc0Sel"; break;
     case ImmTySDWASrc1Sel: OS << "SDWASrc1Sel"; break;

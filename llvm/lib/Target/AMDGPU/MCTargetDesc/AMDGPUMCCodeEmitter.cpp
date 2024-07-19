@@ -79,6 +79,10 @@ public:
                             SmallVectorImpl<MCFixup> &Fixups,
                             const MCSubtargetInfo &STI) const;
 
+  void encodeGVGPR(const MCInst &MI, unsigned OpNo, APInt &Op,
+                   SmallVectorImpl<MCFixup> &Fixups,
+                   const MCSubtargetInfo &STI) const;
+
 private:
   uint64_t getImplicitOpSelHiEncoding(int Opcode) const;
   void getMachineOpValueCommon(const MCInst &MI, const MCOperand &MO,
@@ -721,6 +725,14 @@ void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
   }
 
   llvm_unreachable("Encoding of this operand type is not supported yet.");
+}
+
+void AMDGPUMCCodeEmitter::encodeGVGPR(const MCInst &MI, unsigned OpNo,
+                                      APInt &Op,
+                                      SmallVectorImpl<MCFixup> &Fixups,
+                                      const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  Op = MRI.getEncodingValue(MO.getReg()) & AMDGPU::HWEncoding::REG_IDX_MASK;
 }
 
 #include "AMDGPUGenMCCodeEmitter.inc"

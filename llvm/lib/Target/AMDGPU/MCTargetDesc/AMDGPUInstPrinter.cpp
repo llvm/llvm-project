@@ -2072,4 +2072,12 @@ void AMDGPUInstPrinter::printByteSel(const MCInst *MI, unsigned OpNo,
   O << " byte_sel:" << formatDec(Imm);
 }
 
+void AMDGPUInstPrinter::printSema(const MCInst *MI, unsigned OpNo,
+                                  raw_ostream &O, StringRef Prefix,
+                                  bool AlwaysPrint) {
+  int64_t V = MI->getOperand(OpNo).getImm();
+  if (AlwaysPrint || V != 0)
+    O << ' ' << Prefix << ':' << formatDec(V & 7);
+}
+
 #include "AMDGPUGenAsmWriter.inc"

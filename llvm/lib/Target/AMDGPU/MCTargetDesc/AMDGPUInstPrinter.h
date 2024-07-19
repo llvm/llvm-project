@@ -216,6 +216,9 @@ private:
   void printAuxData(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
 
+  void printSema(const MCInst *MI, unsigned OpNo, raw_ostream &O,
+                 StringRef Prefix, bool AlwaysPrint);
+
 public:
   static void printIfSet(const MCInst *MI, unsigned OpNo, raw_ostream &O,
                          StringRef Asm, StringRef Default = "");
