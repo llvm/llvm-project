@@ -2401,7 +2401,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         YamlBF.Blocks[BlockIndex].ExecCount += BI.Branches;
       }
       if (PseudoProbeDecoder) {
-        if ((YamlBF.GUID = BF->getPseudoProbeGUID())) {
+        if ((YamlBF.GUID = BF->getGUID())) {
           const MCPseudoProbeFuncDesc *FuncDesc =
               PseudoProbeDecoder->getFuncDescForGUID(YamlBF.GUID);
           YamlBF.PseudoProbeDescHash = FuncDesc->FuncHash;
