@@ -476,6 +476,22 @@ bb:
   ret void
 }
 
+; CHECK: DIVERGENT: %tmp0 = call <8 x half> @llvm.amdgcn.global.load.tr.b128.v8f16(ptr addrspace(1) %addr)
+define amdgpu_kernel void @global_load_tr_b128_v8f16(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
+bb:
+  %tmp0 = call <8 x half> @llvm.amdgcn.global.load.tr.b128.v8f16(ptr addrspace(1) %addr)
+  store <8 x half> %tmp0, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+; CHECK: DIVERGENT: %tmp0 = call <8 x bfloat> @llvm.amdgcn.global.load.tr.b128.v8bf16(ptr addrspace(1) %addr)
+define amdgpu_kernel void @global_load_tr_b128_v8bf16(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
+bb:
+  %tmp0 = call <8 x bfloat> @llvm.amdgcn.global.load.tr.b128.v8bf16(ptr addrspace(1) %addr)
+  store <8 x bfloat> %tmp0, ptr addrspace(1) %out, align 16
+  ret void
+}
+
 ; CHECK: DIVERGENT: %tmp0 = call i32 @llvm.amdgcn.global.load.tr.b64.i32(ptr addrspace(1) %addr)
 define amdgpu_kernel void @global_load_tr_b64_i32(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
 bb:
@@ -489,6 +505,22 @@ define amdgpu_kernel void @global_load_tr_b128_v4i16_(ptr addrspace(1) %addr, pt
 bb:
   %tmp0 = call <4 x i16> @llvm.amdgcn.global.load.tr.b128.v4i16(ptr addrspace(1) %addr)
   store <4 x i16> %tmp0, ptr addrspace(1) %out, align 8
+  ret void
+}
+
+; CHECK: DIVERGENT: %tmp0 = call <4 x half> @llvm.amdgcn.global.load.tr.b128.v4f16(ptr addrspace(1) %addr)
+define amdgpu_kernel void @global_load_tr_b128_v4f16(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
+bb:
+  %tmp0 = call <4 x half> @llvm.amdgcn.global.load.tr.b128.v4f16(ptr addrspace(1) %addr)
+  store <4 x half> %tmp0, ptr addrspace(1) %out, align 8
+  ret void
+}
+
+; CHECK: DIVERGENT: %tmp0 = call <4 x bfloat> @llvm.amdgcn.global.load.tr.b128.v4bf16(ptr addrspace(1) %addr)
+define amdgpu_kernel void @global_load_tr_b128_v4bf16(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
+bb:
+  %tmp0 = call <4 x bfloat> @llvm.amdgcn.global.load.tr.b128.v4bf16(ptr addrspace(1) %addr)
+  store <4 x bfloat> %tmp0, ptr addrspace(1) %out, align 8
   ret void
 }
 
@@ -614,22 +646,22 @@ define amdgpu_kernel void @mfma_f32_32x32x16_bf16(<8 x bfloat> %arg0, <8 x bfloa
   ret void
 }
 
-declare <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32>, <8 x i32>, <4 x float>, i32 immarg, i32 immarg, i32 immarg,
+declare <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32>, <8 x i32>, <4 x float>, i32 immarg, i32 immarg,
                                                                               i32 immarg, i32, i32 immarg, i32)
 
-; CHECK: DIVERGENT:   %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 immarg 0, i32 immarg 0, i32 immarg 0, i32 immarg 0, i32 %arg3, i32 immarg 0, i32 %arg4)
+; CHECK: DIVERGENT:   %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 immarg 0, i32 immarg 0, i32 immarg 0, i32 %arg3, i32 immarg 0, i32 %arg4)
 define amdgpu_kernel void @mfma_scale_f32_16x16x128_f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3, i32 %arg4, ptr addrspace(1) %out) {
-  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 immarg 0, i32 immarg 0, i32 immarg 0, i32 immarg 0, i32 %arg3, i32 immarg 0, i32 %arg4)
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 immarg 0, i32 immarg 0, i32 immarg 0, i32 %arg3, i32 immarg 0, i32 %arg4)
   store <4 x float> %result, ptr addrspace(1) %out
   ret void
 }
 
-declare <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4(<8 x i32>, <8 x i32>, <16 x float>, i32 immarg, i32 immarg, i32 immarg,
+declare <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4(<8 x i32>, <8 x i32>, <16 x float>, i32 immarg, i32 immarg,
                                                                 i32 immarg, i32, i32 immarg, i32)
 
-; CHECK: DIVERGENT: %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 immarg 0, i32 immarg 0, i32 immarg 0, i32 immarg 0, i32 %arg3, i32 immarg 0, i32 %arg4)
+; CHECK: DIVERGENT: %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 immarg 0, i32 immarg 0, i32 immarg 0, i32 %arg3, i32 immarg 0, i32 %arg4)
 define amdgpu_kernel void @mfma_f32_scale_32x32x64_f8f6f4(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3, i32 %arg4, ptr addrspace(1) %out) {
-  %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 immarg 0, i32 immarg 0, i32 immarg 0, i32 immarg 0, i32 %arg3, i32 immarg 0, i32 %arg4)
+  %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 immarg 0, i32 immarg 0, i32 immarg 0, i32 %arg3, i32 immarg 0, i32 %arg4)
   store <16 x float> %result, ptr addrspace(1) %out
   ret void
 }
@@ -886,8 +918,12 @@ declare <8 x i32> @llvm.amdgcn.swmmac.i32.16x16x256.iu4.v8i32.v8i32.v16i32.i16(i
 
 declare <2 x i32> @llvm.amdgcn.global.load.tr.b64.v2i32(ptr addrspace(1))
 declare <8 x i16> @llvm.amdgcn.global.load.tr.b128.v8i16(ptr addrspace(1))
+declare <8 x half> @llvm.amdgcn.global.load.tr.b128.v8f16(ptr addrspace(1))
+declare <8 x bfloat> @llvm.amdgcn.global.load.tr.b128.v8bf16(ptr addrspace(1))
 declare i32 @llvm.amdgcn.global.load.tr.b64.i32(ptr addrspace(1))
 declare <4 x i16> @llvm.amdgcn.global.load.tr.b128.v4i16(ptr addrspace(1))
+declare <4 x half> @llvm.amdgcn.global.load.tr.b128.v4f16(ptr addrspace(1))
+declare <4 x bfloat> @llvm.amdgcn.global.load.tr.b128.v4bf16(ptr addrspace(1))
 declare <2 x i32> @llvm.amdgcn.global.load.tr4.b64.v2i32(ptr addrspace(1))
 declare <3 x i32> @llvm.amdgcn.global.load.tr6.b96.v3i32(ptr addrspace(1))
 declare <2 x i32> @llvm.amdgcn.ds.load.tr8.b64.v2i32(ptr addrspace(3))

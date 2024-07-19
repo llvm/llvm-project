@@ -9,12 +9,11 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4___v8i32_fp8__v8i32_fp6(
 ; CHECK-LABEL: define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4___v8i32_fp8__v8i32_fp6(
 ; CHECK-SAME: <8 x i32> [[ARG0:%.*]], <8 x i32> [[ARG1:%.*]], <4 x float> [[ARG2:%.*]], i32 [[SCALE0:%.*]], i32 [[SCALE1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[ARG1]], <8 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v6i32(<8 x i32> [[ARG0]], <6 x i32> [[TMP1]], <4 x float> [[ARG2]], i32 0, i32 0, i32 2, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v6i32(<8 x i32> [[ARG0]], <6 x i32> [[TMP1]], <4 x float> [[ARG2]], i32 0, i32 2, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
 ; CHECK-NEXT:    ret <4 x float> [[RESULT]]
 ;
   %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 0, ; cbsz
-  i32 0, ; abid
   i32 2, ; blgp
   i32 0, i32 %scale0, i32 0, i32 %scale1)
   ret <4 x float> %result
@@ -24,12 +23,11 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4___v8i32_fp6__v8i32_fp8(
 ; CHECK-LABEL: define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4___v8i32_fp6__v8i32_fp8(
 ; CHECK-SAME: <8 x i32> [[ARG0:%.*]], <8 x i32> [[ARG1:%.*]], <4 x float> [[ARG2:%.*]], i32 [[SCALE0:%.*]], i32 [[SCALE1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[ARG0]], <8 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v6i32.v8i32(<6 x i32> [[TMP1]], <8 x i32> [[ARG1]], <4 x float> [[ARG2]], i32 2, i32 0, i32 0, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v6i32.v8i32(<6 x i32> [[TMP1]], <8 x i32> [[ARG1]], <4 x float> [[ARG2]], i32 2, i32 0, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
 ; CHECK-NEXT:    ret <4 x float> [[RESULT]]
 ;
   %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 2, ; cbsz
-  i32 0, ; abid
   i32 0, ; blgp
   i32 0, i32 %scale0, i32 0, i32 %scale1)
   ret <4 x float> %result
@@ -40,12 +38,11 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4___v8i32_fp6__v8i32_fp6(
 ; CHECK-SAME: <8 x i32> [[ARG0:%.*]], <8 x i32> [[ARG1:%.*]], <4 x float> [[ARG2:%.*]], i32 [[SCALE0:%.*]], i32 [[SCALE1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[ARG0]], <8 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[ARG1]], <8 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v6i32.v6i32(<6 x i32> [[TMP1]], <6 x i32> [[TMP2]], <4 x float> [[ARG2]], i32 2, i32 0, i32 2, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v6i32.v6i32(<6 x i32> [[TMP1]], <6 x i32> [[TMP2]], <4 x float> [[ARG2]], i32 2, i32 2, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
 ; CHECK-NEXT:    ret <4 x float> [[RESULT]]
 ;
   %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 2, ; cbsz
-  i32 0, ; abid
   i32 2, ; blgp
   i32 0, i32 %scale0, i32 0, i32 %scale1)
   ret <4 x float> %result
@@ -56,12 +53,11 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4___v8i32_fp6__v8i32_fp6_
 ; CHECK-SAME: <8 x i32> [[ARG0:%.*]], <8 x i32> [[ARG1:%.*]], <4 x float> [[ARG2:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[ARG0]], <8 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[ARG1]], <8 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v6i32.v6i32(<6 x i32> [[TMP1]], <6 x i32> [[TMP2]], <4 x float> [[ARG2]], i32 2, i32 0, i32 2, i32 0, i32 0, i32 0, i32 0)
+; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v6i32.v6i32(<6 x i32> [[TMP1]], <6 x i32> [[TMP2]], <4 x float> [[ARG2]], i32 2, i32 2, i32 0, i32 0, i32 0, i32 0)
 ; CHECK-NEXT:    ret <4 x float> [[RESULT]]
 ;
   %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 2, ; cbsz
-  i32 0, ; abid
   i32 2, ; blgp
   i32 0, i32 0, i32 0, i32 0)
   ret <4 x float> %result
@@ -71,12 +67,11 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4___v8i32_fp8__v8i32_fp4(
 ; CHECK-LABEL: define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4___v8i32_fp8__v8i32_fp4(
 ; CHECK-SAME: <8 x i32> [[ARG0:%.*]], <8 x i32> [[ARG1:%.*]], <4 x float> [[ARG2:%.*]], i32 [[SCALE0:%.*]], i32 [[SCALE1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[ARG1]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v4i32(<8 x i32> [[ARG0]], <4 x i32> [[TMP1]], <4 x float> [[ARG2]], i32 0, i32 0, i32 4, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v4i32(<8 x i32> [[ARG0]], <4 x i32> [[TMP1]], <4 x float> [[ARG2]], i32 0, i32 4, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
 ; CHECK-NEXT:    ret <4 x float> [[RESULT]]
 ;
   %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 0, ; cbsz
-  i32 0, ; abid
   i32 4, ; blgp
   i32 0, i32 %scale0, i32 0, i32 %scale1)
   ret <4 x float> %result
@@ -86,12 +81,11 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4___v8i32_fp4__v8i32_fp8(
 ; CHECK-LABEL: define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4___v8i32_fp4__v8i32_fp8(
 ; CHECK-SAME: <8 x i32> [[ARG0:%.*]], <8 x i32> [[ARG1:%.*]], <4 x float> [[ARG2:%.*]], i32 [[SCALE0:%.*]], i32 [[SCALE1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[ARG0]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v4i32.v8i32(<4 x i32> [[TMP1]], <8 x i32> [[ARG1]], <4 x float> [[ARG2]], i32 4, i32 0, i32 0, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v4i32.v8i32(<4 x i32> [[TMP1]], <8 x i32> [[ARG1]], <4 x float> [[ARG2]], i32 4, i32 0, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
 ; CHECK-NEXT:    ret <4 x float> [[RESULT]]
 ;
   %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 4, ; cbsz
-  i32 0, ; abid
   i32 0, ; blgp
   i32 0, i32 %scale0, i32 0, i32 %scale1)
   ret <4 x float> %result
@@ -101,12 +95,11 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4___v8i32_fp8__v6i32_fp4(
 ; CHECK-LABEL: define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4___v8i32_fp8__v6i32_fp4(
 ; CHECK-SAME: <8 x i32> [[ARG0:%.*]], <6 x i32> [[ARG1:%.*]], <4 x float> [[ARG2:%.*]], i32 [[SCALE0:%.*]], i32 [[SCALE1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <6 x i32> [[ARG1]], <6 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v4i32(<8 x i32> [[ARG0]], <4 x i32> [[TMP1]], <4 x float> [[ARG2]], i32 0, i32 0, i32 4, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v4i32(<8 x i32> [[ARG0]], <4 x i32> [[TMP1]], <4 x float> [[ARG2]], i32 0, i32 4, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
 ; CHECK-NEXT:    ret <4 x float> [[RESULT]]
 ;
   %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v6i32(<8 x i32> %arg0, <6 x i32> %arg1, <4 x float> %arg2,
   i32 0, ; cbsz
-  i32 0, ; abid
   i32 4, ; blgp
   i32 0, i32 %scale0, i32 0, i32 %scale1)
   ret <4 x float> %result
@@ -116,12 +109,11 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4___v6i32_fp4__v8i32_fp8(
 ; CHECK-LABEL: define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4___v6i32_fp4__v8i32_fp8(
 ; CHECK-SAME: <6 x i32> [[ARG0:%.*]], <8 x i32> [[ARG1:%.*]], <4 x float> [[ARG2:%.*]], i32 [[SCALE0:%.*]], i32 [[SCALE1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <6 x i32> [[ARG0]], <6 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v4i32.v8i32(<4 x i32> [[TMP1]], <8 x i32> [[ARG1]], <4 x float> [[ARG2]], i32 4, i32 0, i32 0, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v4i32.v8i32(<4 x i32> [[TMP1]], <8 x i32> [[ARG1]], <4 x float> [[ARG2]], i32 4, i32 0, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
 ; CHECK-NEXT:    ret <4 x float> [[RESULT]]
 ;
   %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v6i32.v8i32(<6 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 4, ; cbsz
-  i32 0, ; abid
   i32 0, ; blgp
   i32 0, i32 %scale0, i32 0, i32 %scale1)
   ret <4 x float> %result
@@ -132,12 +124,11 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4___v8i32_fp4__v8i32_fp4(
 ; CHECK-SAME: <8 x i32> [[ARG0:%.*]], <8 x i32> [[ARG1:%.*]], <4 x float> [[ARG2:%.*]], i32 [[SCALE0:%.*]], i32 [[SCALE1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[ARG0]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[ARG1]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v4i32.v4i32(<4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x float> [[ARG2]], i32 4, i32 0, i32 4, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v4i32.v4i32(<4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x float> [[ARG2]], i32 4, i32 4, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
 ; CHECK-NEXT:    ret <4 x float> [[RESULT]]
 ;
   %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 4, ; cbsz
-  i32 0, ; abid
   i32 4, ; blgp
   i32 0, i32 %scale0, i32 0, i32 %scale1)
   ret <4 x float> %result
@@ -148,12 +139,11 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4___v8i32_fp4__v8i32_fp4_
 ; CHECK-SAME: <8 x i32> [[ARG0:%.*]], <8 x i32> [[ARG1:%.*]], <4 x float> [[ARG2:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[ARG0]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[ARG1]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v4i32.v4i32(<4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x float> [[ARG2]], i32 4, i32 0, i32 4, i32 0, i32 0, i32 0, i32 0)
+; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v4i32.v4i32(<4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x float> [[ARG2]], i32 4, i32 4, i32 0, i32 0, i32 0, i32 0)
 ; CHECK-NEXT:    ret <4 x float> [[RESULT]]
 ;
   %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 4, ; cbsz
-  i32 0, ; abid
   i32 4, ; blgp
   i32 0, i32 0, i32 0, i32 0)
   ret <4 x float> %result
@@ -163,12 +153,11 @@ define <4 x float> @test_flags_shrink_src0(<8 x i32> %arg0, <8 x i32> %arg1, <4 
 ; CHECK-LABEL: define <4 x float> @test_flags_shrink_src0(
 ; CHECK-SAME: <8 x i32> [[ARG0:%.*]], <8 x i32> [[ARG1:%.*]], <4 x float> [[ARG2:%.*]], i32 [[SCALE0:%.*]], i32 [[SCALE1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[ARG1]], <8 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v6i32(<8 x i32> [[ARG0]], <6 x i32> [[TMP1]], <4 x float> [[ARG2]], i32 0, i32 0, i32 2, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v6i32(<8 x i32> [[ARG0]], <6 x i32> [[TMP1]], <4 x float> [[ARG2]], i32 0, i32 2, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
 ; CHECK-NEXT:    ret <4 x float> [[RESULT]]
 ;
   %result = call nnan nsz <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2,
   i32 0, ; cbsz
-  i32 0, ; abid
   i32 2, ; blgp
   i32 0, i32 %scale0, i32 0, i32 %scale1)
   ret <4 x float> %result
@@ -182,12 +171,11 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp8__v8i32_fp6(
 ; CHECK-LABEL: define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp8__v8i32_fp6(
 ; CHECK-SAME: <8 x i32> [[ARG0:%.*]], <8 x i32> [[ARG1:%.*]], <16 x float> [[ARG2:%.*]], i32 [[SCALE0:%.*]], i32 [[SCALE1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[ARG1]], <8 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v6i32(<8 x i32> [[ARG0]], <6 x i32> [[TMP1]], <16 x float> [[ARG2]], i32 0, i32 0, i32 2, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v6i32(<8 x i32> [[ARG0]], <6 x i32> [[TMP1]], <16 x float> [[ARG2]], i32 0, i32 2, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
 ; CHECK-NEXT:    ret <16 x float> [[RESULT]]
 ;
   %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2,
   i32 0, ; cbsz
-  i32 0, ; abid
   i32 2, ; blgp
   i32 0, i32 %scale0, i32 0, i32 %scale1)
   ret <16 x float> %result
@@ -197,12 +185,11 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp6__v8i32_fp8(
 ; CHECK-LABEL: define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp6__v8i32_fp8(
 ; CHECK-SAME: <8 x i32> [[ARG0:%.*]], <8 x i32> [[ARG1:%.*]], <16 x float> [[ARG2:%.*]], i32 [[SCALE0:%.*]], i32 [[SCALE1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[ARG0]], <8 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v6i32.v8i32(<6 x i32> [[TMP1]], <8 x i32> [[ARG1]], <16 x float> [[ARG2]], i32 2, i32 0, i32 0, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v6i32.v8i32(<6 x i32> [[TMP1]], <8 x i32> [[ARG1]], <16 x float> [[ARG2]], i32 2, i32 0, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
 ; CHECK-NEXT:    ret <16 x float> [[RESULT]]
 ;
   %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2,
   i32 2, ; cbsz
-  i32 0, ; abid
   i32 0, ; blgp
   i32 0, i32 %scale0, i32 0, i32 %scale1)
   ret <16 x float> %result
@@ -213,12 +200,11 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp6__v8i32_fp6(
 ; CHECK-SAME: <8 x i32> [[ARG0:%.*]], <8 x i32> [[ARG1:%.*]], <16 x float> [[ARG2:%.*]], i32 [[SCALE0:%.*]], i32 [[SCALE1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[ARG0]], <8 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[ARG1]], <8 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v6i32.v6i32(<6 x i32> [[TMP1]], <6 x i32> [[TMP2]], <16 x float> [[ARG2]], i32 2, i32 0, i32 2, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v6i32.v6i32(<6 x i32> [[TMP1]], <6 x i32> [[TMP2]], <16 x float> [[ARG2]], i32 2, i32 2, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
 ; CHECK-NEXT:    ret <16 x float> [[RESULT]]
 ;
   %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2,
   i32 2, ; cbsz
-  i32 0, ; abid
   i32 2, ; blgp
   i32 0, i32 %scale0, i32 0, i32 %scale1)
   ret <16 x float> %result
@@ -229,12 +215,11 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp6__v8i32_fp6_
 ; CHECK-SAME: <8 x i32> [[ARG0:%.*]], <8 x i32> [[ARG1:%.*]], <16 x float> [[ARG2:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[ARG0]], <8 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[ARG1]], <8 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v6i32.v6i32(<6 x i32> [[TMP1]], <6 x i32> [[TMP2]], <16 x float> [[ARG2]], i32 2, i32 0, i32 2, i32 0, i32 0, i32 0, i32 0)
+; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v6i32.v6i32(<6 x i32> [[TMP1]], <6 x i32> [[TMP2]], <16 x float> [[ARG2]], i32 2, i32 2, i32 0, i32 0, i32 0, i32 0)
 ; CHECK-NEXT:    ret <16 x float> [[RESULT]]
 ;
   %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2,
   i32 2, ; cbsz
-  i32 0, ; abid
   i32 2, ; blgp
   i32 0, i32 0, i32 0, i32 0)
   ret <16 x float> %result
@@ -244,12 +229,11 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp8__v8i32_fp4(
 ; CHECK-LABEL: define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp8__v8i32_fp4(
 ; CHECK-SAME: <8 x i32> [[ARG0:%.*]], <8 x i32> [[ARG1:%.*]], <16 x float> [[ARG2:%.*]], i32 [[SCALE0:%.*]], i32 [[SCALE1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[ARG1]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v4i32(<8 x i32> [[ARG0]], <4 x i32> [[TMP1]], <16 x float> [[ARG2]], i32 0, i32 0, i32 4, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v4i32(<8 x i32> [[ARG0]], <4 x i32> [[TMP1]], <16 x float> [[ARG2]], i32 0, i32 4, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
 ; CHECK-NEXT:    ret <16 x float> [[RESULT]]
 ;
   %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2,
   i32 0, ; cbsz
-  i32 0, ; abid
   i32 4, ; blgp
   i32 0, i32 %scale0, i32 0, i32 %scale1)
   ret <16 x float> %result
@@ -259,12 +243,11 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp4__v8i32_fp8(
 ; CHECK-LABEL: define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp4__v8i32_fp8(
 ; CHECK-SAME: <8 x i32> [[ARG0:%.*]], <8 x i32> [[ARG1:%.*]], <16 x float> [[ARG2:%.*]], i32 [[SCALE0:%.*]], i32 [[SCALE1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[ARG0]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v4i32.v8i32(<4 x i32> [[TMP1]], <8 x i32> [[ARG1]], <16 x float> [[ARG2]], i32 4, i32 0, i32 0, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v4i32.v8i32(<4 x i32> [[TMP1]], <8 x i32> [[ARG1]], <16 x float> [[ARG2]], i32 4, i32 0, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
 ; CHECK-NEXT:    ret <16 x float> [[RESULT]]
 ;
   %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2,
   i32 4, ; cbsz
-  i32 0, ; abid
   i32 0, ; blgp
   i32 0, i32 %scale0, i32 0, i32 %scale1)
   ret <16 x float> %result
@@ -274,12 +257,11 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp8__v6i32_fp4(
 ; CHECK-LABEL: define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp8__v6i32_fp4(
 ; CHECK-SAME: <8 x i32> [[ARG0:%.*]], <6 x i32> [[ARG1:%.*]], <16 x float> [[ARG2:%.*]], i32 [[SCALE0:%.*]], i32 [[SCALE1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <6 x i32> [[ARG1]], <6 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v4i32(<8 x i32> [[ARG0]], <4 x i32> [[TMP1]], <16 x float> [[ARG2]], i32 0, i32 0, i32 4, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v4i32(<8 x i32> [[ARG0]], <4 x i32> [[TMP1]], <16 x float> [[ARG2]], i32 0, i32 4, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
 ; CHECK-NEXT:    ret <16 x float> [[RESULT]]
 ;
   %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v6i32(<8 x i32> %arg0, <6 x i32> %arg1, <16 x float> %arg2,
   i32 0, ; cbsz
-  i32 0, ; abid
   i32 4, ; blgp
   i32 0, i32 %scale0, i32 0, i32 %scale1)
   ret <16 x float> %result
@@ -289,12 +271,11 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v6i32_fp4__v8i32_fp8(
 ; CHECK-LABEL: define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v6i32_fp4__v8i32_fp8(
 ; CHECK-SAME: <6 x i32> [[ARG0:%.*]], <8 x i32> [[ARG1:%.*]], <16 x float> [[ARG2:%.*]], i32 [[SCALE0:%.*]], i32 [[SCALE1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <6 x i32> [[ARG0]], <6 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v4i32.v8i32(<4 x i32> [[TMP1]], <8 x i32> [[ARG1]], <16 x float> [[ARG2]], i32 4, i32 0, i32 0, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v4i32.v8i32(<4 x i32> [[TMP1]], <8 x i32> [[ARG1]], <16 x float> [[ARG2]], i32 4, i32 0, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
 ; CHECK-NEXT:    ret <16 x float> [[RESULT]]
 ;
   %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v6i32.v8i32(<6 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2,
   i32 4, ; cbsz
-  i32 0, ; abid
   i32 0, ; blgp
   i32 0, i32 %scale0, i32 0, i32 %scale1)
   ret <16 x float> %result
@@ -305,12 +286,11 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp4__v8i32_fp4(
 ; CHECK-SAME: <8 x i32> [[ARG0:%.*]], <8 x i32> [[ARG1:%.*]], <16 x float> [[ARG2:%.*]], i32 [[SCALE0:%.*]], i32 [[SCALE1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[ARG0]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[ARG1]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v4i32.v4i32(<4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <16 x float> [[ARG2]], i32 4, i32 0, i32 4, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v4i32.v4i32(<4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <16 x float> [[ARG2]], i32 4, i32 4, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]])
 ; CHECK-NEXT:    ret <16 x float> [[RESULT]]
 ;
   %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2,
   i32 4, ; cbsz
-  i32 0, ; abid
   i32 4, ; blgp
   i32 0, i32 %scale0, i32 0, i32 %scale1)
   ret <16 x float> %result
@@ -321,12 +301,11 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp4__v8i32_fp4_
 ; CHECK-SAME: <8 x i32> [[ARG0:%.*]], <8 x i32> [[ARG1:%.*]], <16 x float> [[ARG2:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[ARG0]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[ARG1]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v4i32.v4i32(<4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <16 x float> [[ARG2]], i32 4, i32 0, i32 4, i32 0, i32 0, i32 0, i32 0)
+; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v4i32.v4i32(<4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <16 x float> [[ARG2]], i32 4, i32 4, i32 0, i32 0, i32 0, i32 0)
 ; CHECK-NEXT:    ret <16 x float> [[RESULT]]
 ;
   %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2,
   i32 4, ; cbsz
-  i32 0, ; abid
   i32 4, ; blgp
   i32 0, i32 0, i32 0, i32 0)
   ret <16 x float> %result

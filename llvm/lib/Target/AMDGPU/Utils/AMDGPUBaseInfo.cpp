@@ -434,6 +434,7 @@ struct DPMACCInstructionInfo {
 #define GET_WMMAOpcode3AddrMappingTable_IMPL
 #define GET_getMFMA_F8F6F4_WithSize_DECL
 #define GET_getMFMA_F8F6F4_WithSize_IMPL
+#define GET_isMFMA_F8F6F4Table_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMTBUFBaseOpcode(unsigned Opc) {
@@ -547,7 +548,7 @@ bool getWMMAIsXDL(unsigned Opc) {
   return Info ? Info->is_wmma_xdl : false;
 }
 
-static uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal) {
+uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal) {
   switch (EncodingVal) {
   case MFMAScaleFormats::FP6_E2M3:
   case MFMAScaleFormats::FP6_E3M2:

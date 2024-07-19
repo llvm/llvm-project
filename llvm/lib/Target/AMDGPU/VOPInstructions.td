@@ -492,7 +492,7 @@ class VOP3Pe_MAI <bits<7> op, VOPProfile P, bit acc_cd = 0> : Enc64, VOP3Pe_MAI_
   let Inst{7-0} = vdst;
 
   let Inst{10-8}  = !if(P.HasSrc1, cbsz, 0);
-  let Inst{14-11} = !if(P.HasSrc1, abid, 0);
+  let Inst{14-11} = !if(P.HasAbid, abid, 0);
 
   let Inst{15} = acc_cd;
 
@@ -552,6 +552,7 @@ class VOP3PXe <bits<7> op, VOPProfile MFMAPfl, bit acc_cd = 0> : Enc128, VOP3Pe_
   let Inst{12} = scale_src1_opsel{0};
   // Inst{13} = unused op_sel
   // Inst{14} = unused op_sel_hi2
+
   let Inst{31-16} = 0b1101001110101100;
   let Inst{40-32} = scale_src0;
   let Inst{49-41} = scale_src1;
@@ -572,7 +573,9 @@ class VOP3PXe <bits<7> op, VOPProfile MFMAPfl, bit acc_cd = 0> : Enc128, VOP3Pe_
 
   let Inst{71-64} = vdst;
   let Inst{74-72} = !if(MFMAPfl.HasSrc1, cbsz, 0);
-  let Inst{78-75} = !if(MFMAPfl.HasSrc1, abid, 0);
+
+  // abid must be 1 to use a scale.
+  let Inst{78-75} = 0b0001; // abid
 
   let Inst{79} = acc_cd;
 
@@ -1358,10 +1361,15 @@ class getVOP3ClampPat<VOPProfile P, SDPatternOperator node> {
 }
 
 class getVOP3MAIPat<VOPProfile P, SDPatternOperator node> {
+  list<dag> mfma_with_abid = [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2,
+                                   timm:$cbsz, timm:$abid, timm:$blgp))];
+  list<dag> mfma_no_abid = [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2,
+                            timm:$cbsz, timm:$blgp))];
+
   list<dag> ret = !if(!not(P.IsSMFMAC),
                       // mfma
-                      [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2,
-                                            timm:$cbsz, timm:$abid, timm:$blgp))],
+                      !if(P.HasAbid, mfma_with_abid, mfma_no_abid),
+
                       // smfmac
                       [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2, i32:$idx,
                                             timm:$cbsz, timm:$abid))]);
@@ -1371,7 +1379,7 @@ class getVOP3MAIScaledPat<VOPProfile P, SDPatternOperator node> {
   list<dag> ret = !if(!not(P.IsSMFMAC),
                       // mfma
                       [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2,
-                                            timm:$cbsz, timm:$abid, timm:$blgp,
+                                            timm:$cbsz, timm:$blgp,
                                             MFMALdScaleModifierOp:$scale_src0_opsel,
                                             i32:$scale_src0,
                                             MFMALdScaleModifierOp:$scale_src1_opsel,

@@ -3238,7 +3238,6 @@ class AMDGPUMfmaScaleIntrinsic<LLVMType DestTy> :
   DefaultAttrsIntrinsic<[DestTy],
             [llvm_anyvector_ty, llvm_anyvector_ty, DestTy,
              llvm_i32_ty, // cbsz
-             llvm_i32_ty, // abid
              llvm_i32_ty, // blgp
              // llvm_i1_ty, // TODO: neg_src2
              // llvm_i1_ty, // TODO: abs_src2
@@ -3249,8 +3248,8 @@ class AMDGPUMfmaScaleIntrinsic<LLVMType DestTy> :
              llvm_i32_ty  // v_mfma_ld_scale_b32 src1 (B matrix scale)
             ],
             [IntrConvergent, IntrNoMem,
-             ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>,
-             ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<8>>
+             ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>,
+             ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<7>>
              ]>;
 
 defset list<Intrinsic> AMDGPUMFMAIntrinsics908 = {
