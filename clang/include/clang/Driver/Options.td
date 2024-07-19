@@ -932,7 +932,7 @@ def O_flag : Flag<["-"], "O">, Visibility<[ClangOption, CC1Option, FC1Option]>,
   Alias<O>, AliasArgs<["1"]>;
 def Ofast : Joined<["-"], "Ofast">, Group<O_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption]>,
-  HelpText<"Deprecated; use '-O3 -ffast math' for the same behavior,"
+  HelpText<"Deprecated; use '-O3 -ffast-math' for the same behavior,"
   " or '-O3' to enable only conforming optimizations">;
 def P : Flag<["-"], "P">,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
@@ -1910,6 +1910,14 @@ def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<version>">,
   HelpText<"Specify the Swift version to use when filtering API notes">;
+
+defm bounds_safety : BoolFOption<
+  "experimental-bounds-safety",
+  LangOpts<"BoundsSafety">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [CC1Option], "Disable">,
+  BothFlags<[], [CC1Option],
+          " experimental bounds safety extension for C">>;
 
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,
@@ -3381,6 +3389,7 @@ def fstruct_path_tbaa : Flag<["-"], "fstruct-path-tbaa">, Group<f_Group>;
 def fno_struct_path_tbaa : Flag<["-"], "fno-struct-path-tbaa">, Group<f_Group>;
 def fno_strict_enums : Flag<["-"], "fno-strict-enums">, Group<f_Group>;
 def fno_strict_overflow : Flag<["-"], "fno-strict-overflow">, Group<f_Group>;
+def fno_pointer_tbaa : Flag<["-"], "fno-pointer-tbaa">, Group<f_Group>;
 def fno_temp_file : Flag<["-"], "fno-temp-file">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>, HelpText<
   "Directly create compilation output files. This may lead to incorrect incremental builds if the compiler crashes">,
@@ -3885,6 +3894,7 @@ defm strict_vtable_pointers : BoolFOption<"strict-vtable-pointers",
             " overwriting polymorphic C++ objects">,
   NegFlag<SetFalse>>;
 def fstrict_overflow : Flag<["-"], "fstrict-overflow">, Group<f_Group>;
+def fpointer_tbaa : Flag<["-"], "fpointer-tbaa">, Group<f_Group>;
 def fdriver_only : Flag<["-"], "fdriver-only">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
   Group<Action_Group>, HelpText<"Only run the driver.">;
@@ -7165,6 +7175,9 @@ def fuse_register_sized_bitfield_access: Flag<["-"], "fuse-register-sized-bitfie
 def relaxed_aliasing : Flag<["-"], "relaxed-aliasing">,
   HelpText<"Turn off Type Based Alias Analysis">,
   MarshallingInfoFlag<CodeGenOpts<"RelaxedAliasing">>;
+def pointer_tbaa: Flag<["-"], "pointer-tbaa">,
+  HelpText<"Turn on Type Based Alias Analysis for pointer accesses">,
+  MarshallingInfoFlag<CodeGenOpts<"PointerTBAA">>;
 def no_struct_path_tbaa : Flag<["-"], "no-struct-path-tbaa">,
   HelpText<"Turn off struct-path aware Type Based Alias Analysis">,
   MarshallingInfoNegativeFlag<CodeGenOpts<"StructPathTBAA">>;
