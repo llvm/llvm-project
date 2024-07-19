@@ -468,7 +468,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
     // Possibly diagnose casts to enum types if the target type does not
     // have a fixed size.
-    if (CE->getType()->isEnumeralType()) {
+    if (Ctx.getLangOpts().CPlusPlus && CE->getType()->isEnumeralType()) {
       if (const auto *ET = CE->getType().getCanonicalType()->getAs<EnumType>();
           ET && !ET->getDecl()->isFixed()) {
         if (!this->emitCheckEnumValue(*FromT, ET->getDecl(), CE))
@@ -1334,6 +1334,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 
     auto initPrimitiveField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init, PrimType T) -> bool {
+      InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(Init));
       if (!this->visit(Init))
         return false;
 
@@ -1344,6 +1345,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 
     auto initCompositeField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init) -> bool {
+      InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(Init));
       InitLinkScope<Emitter> ILS(this, InitLink::Field(FieldToInit->Offset));
       // Non-primitive case. Get a pointer to the field-to-initialize
       // on the stack and recurse into visitInitializer().
@@ -4088,12 +4090,7 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E) {
   SourceLocScope<Emitter> SLS(this, E);
 
-  bool Old = InitStackActive;
-  InitStackActive =
-      !(E->getUsedContext()->getDeclKind() == Decl::CXXConstructor);
-  bool Result = this->delegate(E->getExpr());
-  InitStackActive = Old;
-  return Result;
+  return this->delegate(E->getExpr());
 }
 
 template <class Emitter>
@@ -4151,6 +4148,9 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   // instance pointer of the current function frame, but e.g. to the declaration
   // currently being initialized. Here we emit the necessary instruction(s) for
   // this scenario.
+  if (!InitStackActive || !E->isImplicit())
+    return this->emitThis(E);
+
   if (InitStackActive && !InitStack.empty()) {
     unsigned StartIndex = 0;
     for (StartIndex = InitStack.size() - 1; StartIndex > 0; --StartIndex) {
