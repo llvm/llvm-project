@@ -29096,6 +29096,16 @@ uint64_t getGFNICtrlImm(unsigned Opcode, unsigned Amt = 0) {
   llvm_unreachable("Unsupported GFNI opcode");
 }
 
+// Generate a GFNI gf2p8affine bitmask for vXi8 bitreverse/shift/rotate.
+SDValue getGFNICtrlMask(unsigned Opcode, SelectionDAG &DAG, const SDLoc &DL, MVT VT,
+                        unsigned Amt = 0) {
+  assert(VT.getVectorElementType() == MVT::i8 &&
+         (VT.getSizeInBits() % 64) == 0 && "Illegal GFNI control type");
+  uint64_t Imm = getGFNICtrlImm(Opcode, Amt);
+  MVT MaskVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
+  return DAG.getBitcast(VT, DAG.getConstant(Imm, DL, MaskVT));
+}
+
 // Return true if the required (according to Opcode) shift-imm form is natively
 // supported by the Subtarget
 static bool supportedVectorShiftWithImm(EVT VT, const X86Subtarget &Subtarget,
@@ -29284,9 +29294,7 @@ static SDValue LowerShiftByScalarImmediate(SDValue Op, SelectionDAG &DAG,
       return SDValue();
 
     if (Subtarget.hasGFNI()) {
-      uint64_t ShiftMask = getGFNICtrlImm(Op.getOpcode(), ShiftAmt);
-      MVT MaskVT = MVT::getVectorVT(MVT::i64, NumElts / 8);
-      SDValue Mask = DAG.getBitcast(VT, DAG.getConstant(ShiftMask, dl, MaskVT));
+      SDValue Mask = getGFNICtrlMask(Op.getOpcode(), DAG, dl, VT, ShiftAmt);
       return DAG.getNode(X86ISD::GF2P8AFFINEQB, dl, VT, R, Mask,
                          DAG.getTargetConstant(0, dl, MVT::i8));
     }
@@ -30191,9 +30199,7 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   if (IsCstSplat && Subtarget.hasGFNI() && VT.getScalarType() == MVT::i8 &&
       DAG.getTargetLoweringInfo().isTypeLegal(VT)) {
     uint64_t RotAmt = CstSplatValue.urem(EltSizeInBits);
-    uint64_t RotMask = getGFNICtrlImm(Opcode, RotAmt);
-    MVT MaskVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
-    SDValue Mask = DAG.getBitcast(VT, DAG.getConstant(RotMask, DL, MaskVT));
+    SDValue Mask = getGFNICtrlMask(Opcode, DAG, DL, VT, RotAmt);
     return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, R, Mask,
                        DAG.getTargetConstant(0, DL, MVT::i8));
   }
@@ -31528,10 +31534,7 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
 
   // If we have GFNI, we can use GF2P8AFFINEQB to reverse the bits.
   if (Subtarget.hasGFNI()) {
-    MVT MatrixVT = MVT::getVectorVT(MVT::i64, NumElts / 8);
-    SDValue Matrix =
-        DAG.getConstant(getGFNICtrlImm(ISD::BITREVERSE), DL, MatrixVT);
-    Matrix = DAG.getBitcast(VT, Matrix);
+    SDValue Matrix = getGFNICtrlMask(ISD::BITREVERSE, DAG, DL, VT);
     return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, In, Matrix,
                        DAG.getTargetConstant(0, DL, MVT::i8));
   }
