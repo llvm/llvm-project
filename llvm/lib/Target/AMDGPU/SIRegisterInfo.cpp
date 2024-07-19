@@ -2532,11 +2532,11 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
             // We may have 1 free scratch SGPR even though a carry out is
             // unavailable. Only one additional mov is needed.
-            Register TmpScaledReg =
-                IsCopy && IsSALU
-                    ? ResultReg
-                    : RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
-                                                    MI, false, 0, /*AllowSpill=*/false);
+            Register TmpScaledReg = IsCopy && IsSALU
+                                        ? ResultReg
+                                        : RS->scavengeRegisterBackwards(
+                                              AMDGPU::SReg_32_XM0RegClass, MI,
+                                              false, 0, /*AllowSpill=*/false);
             Register ScaledReg =
                 TmpScaledReg.isValid() ? TmpScaledReg : FrameReg;
             Register TmpResultReg = ScaledReg;
@@ -2558,10 +2558,10 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
               auto Add = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ADD_U32_e32),
                                  TmpResultReg);
               Add.addImm(Offset).addReg(TmpResultReg, RegState::Kill);
-              Register NewDest =
-                  IsCopy ? ResultReg
-                         : RS->scavengeRegisterBackwards(
-                               AMDGPU::SReg_32RegClass, Add, false, 0, /*AllowSpill=*/true);
+              Register NewDest = IsCopy ? ResultReg
+                                        : RS->scavengeRegisterBackwards(
+                                              AMDGPU::SReg_32RegClass, Add,
+                                              false, 0, /*AllowSpill=*/true);
               BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
                       NewDest)
                   .addReg(TmpResultReg);
