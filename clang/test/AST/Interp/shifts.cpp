@@ -203,3 +203,10 @@ enum shiftof {
     X = (1<<-29) // all-error {{expression is not an integral constant expression}} \
                  // all-note {{negative shift count -29}}
 };
+
+enum shiftof2 {
+    X2 = (-1<<29) // cxx17-error {{expression is not an integral constant expression}} \
+                  // cxx17-note {{left shift of negative value -1}} \
+                  // ref-cxx17-error {{expression is not an integral constant expression}} \
+                  // ref-cxx17-note {{left shift of negative value -1}}
+};
