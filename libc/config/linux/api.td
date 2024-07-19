@@ -9,42 +9,6 @@ include "spec/stdc_ext.td"
 include "spec/llvm_libc_ext.td"
 include "spec/llvm_libc_stdfix_ext.td"
 
-def AssertMacro : MacroDef<"assert"> {
-  let Defn = [{
-    #undef assert
-
-    #ifdef NDEBUG
-    #define assert(e) (void)0
-    #else
-
-    #ifdef __cplusplus
-    extern "C"
-    #endif
-    _Noreturn void __assert_fail(const char *, const char *, unsigned, const char *) __NOEXCEPT;
-
-    #define assert(e)  \
-      ((e) ? (void)0 : __assert_fail(#e, __FILE__, __LINE__, __PRETTY_FUNCTION__))
-
-    #endif
-  }];
-}
-
-def StaticAssertMacro : MacroDef<"static_assert"> {
-  let Defn = [{
-    #ifndef __cplusplus
-    #undef static_assert
-    #define static_assert _Static_assert
-    #endif
-  }];
-}
-
-def AssertAPI : PublicAPI<"assert.h"> {
-  let Macros = [
-    AssertMacro,
-    StaticAssertMacro,
-  ];
-}
-
 def CTypeAPI : PublicAPI<"ctype.h"> {
 }
 
@@ -303,5 +267,5 @@ def SearchAPI : PublicAPI<"search.h"> {
 }
 
 def SysStatvfsAPI : PublicAPI<"sys/statvfs.h"> {
-  let Types = ["fsblkcnt_t", "fsfilcnt_t", "struct statvfs"];
+  let Types = ["struct statvfs"];
 }

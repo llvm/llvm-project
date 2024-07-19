@@ -48,7 +48,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
@@ -3870,10 +3870,15 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   //    cmp     w13, w12
   // can be turned into:
   //    cmp     w12, w11, lsl #1
-  if (!isa<ConstantSDNode>(RHS) || !isLegalArithImmed(RHS->getAsZExtVal())) {
-    SDValue TheLHS = isCMN(LHS, CC) ? LHS.getOperand(1) : LHS;
+  if (!isa<ConstantSDNode>(RHS) ||
+      !isLegalArithImmed(RHS->getAsAPIntVal().abs().getZExtValue())) {
+    bool LHSIsCMN = isCMN(LHS, CC);
+    bool RHSIsCMN = isCMN(RHS, CC);
+    SDValue TheLHS = LHSIsCMN ? LHS.getOperand(1) : LHS;
+    SDValue TheRHS = RHSIsCMN ? RHS.getOperand(1) : RHS;
 
-    if (getCmpOperandFoldingProfit(TheLHS) > getCmpOperandFoldingProfit(RHS)) {
+    if (getCmpOperandFoldingProfit(TheLHS) + (LHSIsCMN ? 1 : 0) >
+        getCmpOperandFoldingProfit(TheRHS) + (RHSIsCMN ? 1 : 0)) {
       std::swap(LHS, RHS);
       CC = ISD::getSetCCSwappedOperands(CC);
     }
@@ -8573,7 +8578,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
             Chain, DL, DstAddr, Arg, SizeNode,
             Outs[i].Flags.getNonZeroByValAlign(),
             /*isVol = */ false, /*AlwaysInline = */ false,
-            /*isTailCall = */ false, DstInfo, MachinePointerInfo());
+            /*CI=*/nullptr, std::nullopt, DstInfo, MachinePointerInfo());
 
         MemOpChains.push_back(Cpy);
       } else {
@@ -10873,8 +10878,9 @@ SDValue AArch64TargetLowering::LowerVACOPY(SDValue Op,
 
   return DAG.getMemcpy(Op.getOperand(0), DL, Op.getOperand(1), Op.getOperand(2),
                        DAG.getConstant(VaListSize, DL, MVT::i32),
-                       Align(PtrSize), false, false, false,
-                       MachinePointerInfo(DestSV), MachinePointerInfo(SrcSV));
+                       Align(PtrSize), false, false, /*CI=*/nullptr,
+                       std::nullopt, MachinePointerInfo(DestSV),
+                       MachinePointerInfo(SrcSV));
 }
 
 SDValue AArch64TargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
@@ -17515,6 +17521,71 @@ static SDValue performVecReduceAddCombineWithUADDLP(SDNode *N,
 
   // Fourth, create the node of VECREDUCE_ADD.
   return DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i32, UADDLP);
+}
+
+// Turn [sign|zero]_extend(vecreduce_add()) into SVE's  SADDV|UADDV
+// instructions.
+static SDValue
+performVecReduceAddExtCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                              const AArch64TargetLowering &TLI) {
+  if (N->getOperand(0).getOpcode() != ISD::ZERO_EXTEND &&
+      N->getOperand(0).getOpcode() != ISD::SIGN_EXTEND)
+    return SDValue();
+  bool IsSigned = N->getOperand(0).getOpcode() == ISD::SIGN_EXTEND;
+
+  SelectionDAG &DAG = DCI.DAG;
+  auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
+  SDValue VecOp = N->getOperand(0).getOperand(0);
+  EVT VecOpVT = VecOp.getValueType();
+  SDLoc DL(N);
+
+  // Split the input vectors if not legal, e.g.
+  // i32 (vecreduce_add (zext nxv32i8 %op to nxv32i32))
+  // ->
+  // i32 (add
+  //   (i32 vecreduce_add (zext nxv16i8 %op.lo to nxv16i32)),
+  //   (i32 vecreduce_add (zext nxv16i8 %op.hi to nxv16i32)))
+  if (TLI.getTypeAction(*DAG.getContext(), VecOpVT) ==
+      TargetLowering::TypeSplitVector) {
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) = DAG.SplitVector(VecOp, DL);
+    unsigned ExtOpc = IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+    EVT HalfVT = N->getOperand(0).getValueType().getHalfNumVectorElementsVT(
+        *DAG.getContext());
+    Lo = DAG.getNode(ISD::VECREDUCE_ADD, DL, N->getValueType(0),
+                     DAG.getNode(ExtOpc, DL, HalfVT, Lo));
+    Hi = DAG.getNode(ISD::VECREDUCE_ADD, DL, N->getValueType(0),
+                     DAG.getNode(ExtOpc, DL, HalfVT, Hi));
+    return DAG.getNode(ISD::ADD, DL, N->getValueType(0), Lo, Hi);
+  }
+
+  if (!TLI.isTypeLegal(VecOpVT))
+    return SDValue();
+
+  if (VecOpVT.isFixedLengthVector() &&
+      !TLI.useSVEForFixedLengthVectorVT(VecOpVT, !Subtarget.isNeonAvailable()))
+    return SDValue();
+
+  // The input type is legal so map VECREDUCE_ADD to UADDV/SADDV, e.g.
+  // i32 (vecreduce_add (zext nxv16i8 %op to nxv16i32))
+  // ->
+  // i32 (UADDV nxv16i8:%op)
+  EVT ElemType = N->getValueType(0);
+  SDValue Pg = getPredicateForVector(DAG, DL, VecOpVT);
+  if (VecOpVT.isFixedLengthVector()) {
+    EVT ContainerVT = getContainerForFixedLengthVector(DAG, VecOpVT);
+    VecOp = convertToScalableVector(DAG, ContainerVT, VecOp);
+  }
+  SDValue Res =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+                  DAG.getConstant(IsSigned ? Intrinsic::aarch64_sve_saddv
+                                           : Intrinsic::aarch64_sve_uaddv,
+                                  DL, MVT::i64),
+                  Pg, VecOp);
+  if (ElemType != MVT::i64)
+    Res = DAG.getAnyExtOrTrunc(Res, DL, ElemType);
+
+  return Res;
 }
 
 // Turn a v8i8/v16i8 extended vecreduce into a udot/sdot and vecreduce
@@ -25202,8 +25273,11 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performInsertVectorEltCombine(N, DCI);
   case ISD::EXTRACT_VECTOR_ELT:
     return performExtractVectorEltCombine(N, DCI, Subtarget);
-  case ISD::VECREDUCE_ADD:
-    return performVecReduceAddCombine(N, DCI.DAG, Subtarget);
+  case ISD::VECREDUCE_ADD: {
+    if (SDValue Val = performVecReduceAddCombine(N, DCI.DAG, Subtarget))
+      return Val;
+    return performVecReduceAddExtCombine(N, DCI, *this);
+  }
   case AArch64ISD::UADDV:
     return performUADDVCombine(N, DAG);
   case AArch64ISD::SMULL:

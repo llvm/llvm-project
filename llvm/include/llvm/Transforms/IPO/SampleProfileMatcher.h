@@ -26,6 +26,7 @@ using AnchorMap = std::map<LineLocation, FunctionId>;
 class SampleProfileMatcher {
   Module &M;
   SampleProfileReader &Reader;
+  LazyCallGraph &CG;
   const PseudoProbeManager *ProbeManager;
   const ThinOrFullLTOPhase LTOPhase;
   SampleProfileMap FlattenedProfiles;
@@ -58,6 +59,40 @@ class SampleProfileMatcher {
   StringMap<std::unordered_map<LineLocation, MatchState, LineLocationHash>>
       FuncCallsiteMatchStates;
 
+  struct FuncToProfileNameMapHash {
+    uint64_t
+    operator()(const std::pair<const Function *, FunctionId> &P) const {
+      return hash_combine(P.first, P.second);
+    }
+  };
+  // A map from a pair of function and profile name to a boolean value
+  // indicating whether they are matched. This is used as a cache for the
+  // matching result.
+  std::unordered_map<std::pair<const Function *, FunctionId>, bool,
+                     FuncToProfileNameMapHash>
+      FuncProfileMatchCache;
+  // The new functions found by the call graph matching. The map's key is the
+  // the new(renamed) function pointer and the value is old(unused) profile
+  // name.
+  std::unordered_map<Function *, FunctionId> FuncToProfileNameMap;
+
+  // A map pointer to the FuncNameToProfNameMap in SampleProfileLoader,
+  // which maps the function name to the matched profile name. This is used
+  // for sample loader to look up profile using the new name.
+  HashKeyMap<std::unordered_map, FunctionId, FunctionId> *FuncNameToProfNameMap;
+
+  // A map pointer to the SymbolMap in SampleProfileLoader, which stores all
+  // the original matched symbols before the matching. this is to determine if
+  // the profile is unused(to be matched) or not.
+  HashKeyMap<std::unordered_map, FunctionId, Function *> *SymbolMap;
+
+  // The new functions from IR.
+  HashKeyMap<std::unordered_map, FunctionId, Function *>
+      FunctionsWithoutProfile;
+
+  // Pointer to the Profile Symbol List in the reader.
+  std::shared_ptr<ProfileSymbolList> PSL;
+
   // Profile mismatch statstics:
   uint64_t TotalProfiledFunc = 0;
   // Num of checksum-mismatched function.
@@ -72,34 +107,61 @@ class SampleProfileMatcher {
   uint64_t MismatchedCallsiteSamples = 0;
   uint64_t RecoveredCallsiteSamples = 0;
 
+  // Profile call-graph matching statstics:
+  uint64_t NumCallGraphRecoveredProfiledFunc = 0;
+  uint64_t NumCallGraphRecoveredFuncSamples = 0;
+
   // A dummy name for unknown indirect callee, used to differentiate from a
   // non-call instruction that also has an empty callee name.
   static constexpr const char *UnknownIndirectCallee =
       "unknown.indirect.callee";
 
 public:
-  SampleProfileMatcher(Module &M, SampleProfileReader &Reader,
-                       const PseudoProbeManager *ProbeManager,
-                       ThinOrFullLTOPhase LTOPhase)
-      : M(M), Reader(Reader), ProbeManager(ProbeManager), LTOPhase(LTOPhase){};
+  SampleProfileMatcher(
+      Module &M, SampleProfileReader &Reader, LazyCallGraph &CG,
+      const PseudoProbeManager *ProbeManager, ThinOrFullLTOPhase LTOPhase,
+      HashKeyMap<std::unordered_map, FunctionId, Function *> &SymMap,
+      std::shared_ptr<ProfileSymbolList> PSL,
+      HashKeyMap<std::unordered_map, FunctionId, FunctionId>
+          &FuncNameToProfNameMap)
+      : M(M), Reader(Reader), CG(CG), ProbeManager(ProbeManager),
+        LTOPhase(LTOPhase), FuncNameToProfNameMap(&FuncNameToProfNameMap),
+        SymbolMap(&SymMap), PSL(PSL) {};
   void runOnModule();
   void clearMatchingData() {
     // Do not clear FuncMappings, it stores IRLoc to ProfLoc remappings which
     // will be used for sample loader.
-    FuncCallsiteMatchStates.clear();
+    // Do not clear FlattenedProfiles as it contains function names referenced
+    // by FuncNameToProfNameMap. Clearing this memory could lead to a
+    // use-after-free error.
+    freeContainer(FuncCallsiteMatchStates);
+    freeContainer(FunctionsWithoutProfile);
+    freeContainer(FuncToProfileNameMap);
   }
 
 private:
-  FunctionSamples *getFlattenedSamplesFor(const Function &F) {
-    StringRef CanonFName = FunctionSamples::getCanonicalFnName(F);
-    auto It = FlattenedProfiles.find(FunctionId(CanonFName));
+  FunctionSamples *getFlattenedSamplesFor(const FunctionId &Fname) {
+    auto It = FlattenedProfiles.find(Fname);
     if (It != FlattenedProfiles.end())
       return &It->second;
     return nullptr;
   }
+  FunctionSamples *getFlattenedSamplesFor(const Function &F) {
+    StringRef CanonFName = FunctionSamples::getCanonicalFnName(F);
+    return getFlattenedSamplesFor(FunctionId(CanonFName));
+  }
+  template <typename T> inline void freeContainer(T &C) {
+    T Empty;
+    std::swap(C, Empty);
+  }
+  void getFilteredAnchorList(const AnchorMap &IRAnchors,
+                             const AnchorMap &ProfileAnchors,
+                             AnchorList &FilteredIRAnchorsList,
+                             AnchorList &FilteredProfileAnchorList);
   void runOnFunction(Function &F);
-  void findIRAnchors(const Function &F, AnchorMap &IRAnchors);
-  void findProfileAnchors(const FunctionSamples &FS, AnchorMap &ProfileAnchors);
+  void findIRAnchors(const Function &F, AnchorMap &IRAnchors) const;
+  void findProfileAnchors(const FunctionSamples &FS,
+                          AnchorMap &ProfileAnchors) const;
   // Record the callsite match states for profile staleness report, the result
   // is saved in FuncCallsiteMatchStates.
   void recordCallsiteMatchStates(const Function &F, const AnchorMap &IRAnchors,
@@ -124,6 +186,9 @@ private:
            State == MatchState::RemovedMatch;
   };
 
+  void countCallGraphRecoveredSamples(
+      const FunctionSamples &FS,
+      std::unordered_set<FunctionId> &MatchedUnusedProfile);
   // Count the samples of checksum mismatched function for the top-level
   // function and all inlinees.
   void countMismatchedFuncSamples(const FunctionSamples &FS, bool IsTopLevel);
@@ -151,15 +216,37 @@ private:
   // parts from the resulting SES are used to remap the IR locations to the
   // profile locations. As the number of function callsite is usually not big,
   // we currently just implements the basic greedy version(page 6 of the paper).
-  LocToLocMap
-  longestCommonSequence(const AnchorList &IRCallsiteAnchors,
-                        const AnchorList &ProfileCallsiteAnchors) const;
+  LocToLocMap longestCommonSequence(const AnchorList &IRCallsiteAnchors,
+                                    const AnchorList &ProfileCallsiteAnchors,
+                                    bool MatchUnusedFunction);
   void matchNonCallsiteLocs(const LocToLocMap &AnchorMatchings,
                             const AnchorMap &IRAnchors,
                             LocToLocMap &IRToProfileLocationMap);
   void runStaleProfileMatching(const Function &F, const AnchorMap &IRAnchors,
                                const AnchorMap &ProfileAnchors,
-                               LocToLocMap &IRToProfileLocationMap);
+                               LocToLocMap &IRToProfileLocationMap,
+                               bool RunCFGMatching, bool RunCGMatching);
+  // If the function doesn't have profile, return the pointer to the function.
+  bool functionHasProfile(const FunctionId &IRFuncName,
+                          Function *&FuncWithoutProfile);
+  bool isProfileUnused(const FunctionId &ProfileFuncName);
+  bool functionMatchesProfileHelper(const Function &IRFunc,
+                                    const FunctionId &ProfFunc);
+  // Determine if the function matches profile. If FindMatchedProfileOnly is
+  // set, only search the existing matched function. Otherwise, try matching the
+  // two functions.
+  bool functionMatchesProfile(const FunctionId &IRFuncName,
+                              const FunctionId &ProfileFuncName,
+                              bool FindMatchedProfileOnly);
+  // Determine if the function matches profile by computing a similarity ratio
+  // between two sequences of callsite anchors extracted from function and
+  // profile. If it's above the threshold, the function matches the profile.
+  bool functionMatchesProfile(Function &IRFunc, const FunctionId &ProfFunc,
+                              bool FindMatchedProfileOnly);
+  // Find functions that don't show in the profile or profile symbol list,
+  // which are supposed to be new functions. We use them as the targets for
+  // call graph matching.
+  void findFunctionsWithoutProfile();
   void reportOrPersistProfileStats();
 };
 } // end namespace llvm

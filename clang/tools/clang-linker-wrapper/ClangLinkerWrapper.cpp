@@ -14,6 +14,7 @@
 //
 //===---------------------------------------------------------------------===//
 
+#include "clang/Basic/TargetID.h"
 #include "clang/Basic/Version.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/BinaryFormat/Magic.h"
@@ -668,7 +669,8 @@ std::unique_ptr<lto::LTO> createLTO(
     ModuleHook Hook = [](size_t, const Module &) { return true; }) {
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
   // We need to remove AMD's target-id from the processor if present.
-  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ).split(":").first;
+  StringRef TargetID = Args.getLastArgValue(OPT_arch_EQ);
+  StringRef Arch = clang::getProcessorFromTargetID(Triple, TargetID);
   lto::Config Conf;
   lto::ThinBackend Backend;
   // TODO: Handle index-only thin-LTO
@@ -712,7 +714,7 @@ std::unique_ptr<lto::LTO> createLTO(
 
   if (SaveTemps) {
     std::string TempName = (sys::path::filename(ExecutableName) + "." +
-                            Triple.getTriple() + "." + Arch)
+                            Triple.getTriple() + "." + TargetID)
                                .str();
     Conf.PostInternalizeModuleHook = [=](size_t Task, const Module &M) {
       std::string File =

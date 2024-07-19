@@ -48,6 +48,10 @@ Major New Features
 Improvements to clangd
 ----------------------
 
+- Introduced exmperimental support for C++20 Modules. The experimental support can
+  be enabled by `-experimental-modules-support` option. It is in an early development
+  stage and may not perform efficiently in real-world scenarios.
+
 Inlay hints
 ^^^^^^^^^^^
 
@@ -245,6 +249,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/forwarding-reference-overload>`
   check to ignore deleted constructors which won't hide other overloads.
 
+- Improved :doc:`bugprone-implicit-widening-of-multiplication-result
+  <clang-tidy/checks/bugprone/implicit-widening-of-multiplication-result>` check
+  by adding an option to ignore constant expressions of signed integer types
+  that fit in the source expression type.
+
 - Improved :doc:`bugprone-inc-dec-in-conditions
   <clang-tidy/checks/bugprone/inc-dec-in-conditions>` check to ignore code
   within unevaluated contexts, such as ``decltype``.
@@ -436,6 +445,13 @@ Changes in existing checks
   `const auto e = (*vector_ptr)[i]` and `const auto e = vector_ptr->at(i);`.
   Calls to mutable function where there exists a `const` overload are also
   handled. Fix crash in the case of a non-member operator call.
+
+- Improved :doc:`performance-unnecessary-value-param
+  <clang-tidy/checks/performance/unnecessary-value-param>` check
+  detecting more cases for template functions including lambdas with ``auto``.
+  E.g., ``std::sort(a.begin(), a.end(), [](auto x, auto y) { return a > b; });``
+  will be detected for expensive to copy types. Fixed false positives for
+  dependent call expressions.
 
 - Improved :doc:`readability-avoid-return-with-void-value
   <clang-tidy/checks/readability/avoid-return-with-void-value>` check by adding

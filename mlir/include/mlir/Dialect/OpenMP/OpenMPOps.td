@@ -133,8 +133,12 @@ def ParallelOp : OpenMP_Op<"parallel", traits = [
     RecursiveMemoryEffects
   ], clauses = [
     // TODO: Sort clauses alphabetically.
-    OpenMP_IfClause, OpenMP_NumThreadsClause, OpenMP_AllocateClause,
-    OpenMP_ReductionClause, OpenMP_ProcBindClause, OpenMP_PrivateClause
+    OpenMP_IfClauseSkip<assemblyFormat = true>,
+    OpenMP_NumThreadsClauseSkip<assemblyFormat = true>,
+    OpenMP_AllocateClauseSkip<assemblyFormat = true>,
+    OpenMP_ReductionClauseSkip<assemblyFormat = true>,
+    OpenMP_ProcBindClauseSkip<assemblyFormat = true>,
+    OpenMP_PrivateClauseSkip<assemblyFormat = true>
   ], singleRegion = true> {
   let summary = "parallel construct";
   let description = [{
@@ -154,7 +158,8 @@ def ParallelOp : OpenMP_Op<"parallel", traits = [
 
   // TODO: Use default assembly format inherited from OpenMP_Op once printing
   // and parsing of the parallel region is not intermingled with printing and
-  // parsing of reduction and private clauses.
+  // parsing of reduction and private clauses. `assemblyFormat` should also be
+  // no longer skipped for clauses added to this operation at that time.
   let assemblyFormat = [{
     oilist(
           `if` `(` $if_expr `)`
@@ -363,8 +368,12 @@ def WsloopOp : OpenMP_Op<"wsloop", traits = [
   ], clauses = [
     // TODO: Complete clause list (allocate, private).
     // TODO: Sort clauses alphabetically.
-    OpenMP_LinearClause, OpenMP_ReductionClause, OpenMP_ScheduleClause,
-    OpenMP_NowaitClause, OpenMP_OrderedClause, OpenMP_OrderClause
+    OpenMP_LinearClauseSkip<assemblyFormat = true>,
+    OpenMP_ReductionClauseSkip<assemblyFormat = true>,
+    OpenMP_ScheduleClauseSkip<assemblyFormat = true>,
+    OpenMP_NowaitClauseSkip<assemblyFormat = true>,
+    OpenMP_OrderedClauseSkip<assemblyFormat = true>,
+    OpenMP_OrderClauseSkip<assemblyFormat = true>
   ], singleRegion = true> {
   let summary = "worksharing-loop construct";
   let description = [{
@@ -398,7 +407,8 @@ def WsloopOp : OpenMP_Op<"wsloop", traits = [
 
   // TODO: Use default assembly format inherited from OpenMP_Op once printing
   // and parsing of the workshare loop region is not intermingled with printing
-  // and parsing of reduction clauses.
+  // and parsing of reduction clauses. `assemblyFormat` should also be no longer
+  // skipped for clauses added to this operation at that time.
   let assemblyFormat = [{
     oilist(`linear` `(`
               custom<LinearClause>($linear_vars, type($linear_vars),

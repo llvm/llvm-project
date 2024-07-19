@@ -429,15 +429,13 @@ public:
 
 /// Used to deserialize the on-disk global variable table.
 class GlobalVariableTableInfo
-    : public VersionedTableInfo<GlobalVariableTableInfo, ContextTableKey,
+    : public VersionedTableInfo<GlobalVariableTableInfo, SingleDeclTableKey,
                                 GlobalVariableInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
     auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
-    auto ContextKind =
-        endian::readNext<uint8_t, llvm::endianness::little>(Data);
     auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
-    return {CtxID, ContextKind, NameID};
+    return {CtxID, NameID};
   }
 
   hash_value_type ComputeHash(internal_key_type Key) {
@@ -454,15 +452,13 @@ public:
 
 /// Used to deserialize the on-disk global function table.
 class GlobalFunctionTableInfo
-    : public VersionedTableInfo<GlobalFunctionTableInfo, ContextTableKey,
+    : public VersionedTableInfo<GlobalFunctionTableInfo, SingleDeclTableKey,
                                 GlobalFunctionInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
     auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
-    auto ContextKind =
-        endian::readNext<uint8_t, llvm::endianness::little>(Data);
     auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
-    return {CtxID, ContextKind, NameID};
+    return {CtxID, NameID};
   }
 
   hash_value_type ComputeHash(internal_key_type Key) {
@@ -501,15 +497,13 @@ public:
 
 /// Used to deserialize the on-disk tag table.
 class TagTableInfo
-    : public VersionedTableInfo<TagTableInfo, ContextTableKey, TagInfo> {
+    : public VersionedTableInfo<TagTableInfo, SingleDeclTableKey, TagInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
     auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
-    auto ContextKind =
-        endian::readNext<uint8_t, llvm::endianness::little>(Data);
     auto NameID =
         endian::readNext<IdentifierID, llvm::endianness::little>(Data);
-    return {CtxID, ContextKind, NameID};
+    return {CtxID, NameID};
   }
 
   hash_value_type ComputeHash(internal_key_type Key) {
@@ -563,16 +557,14 @@ public:
 
 /// Used to deserialize the on-disk typedef table.
 class TypedefTableInfo
-    : public VersionedTableInfo<TypedefTableInfo, ContextTableKey,
+    : public VersionedTableInfo<TypedefTableInfo, SingleDeclTableKey,
                                 TypedefInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
     auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
-    auto ContextKind =
-        endian::readNext<uint8_t, llvm::endianness::little>(Data);
     auto nameID =
         endian::readNext<IdentifierID, llvm::endianness::little>(Data);
-    return {CtxID, ContextKind, nameID};
+    return {CtxID, nameID};
   }
 
   hash_value_type ComputeHash(internal_key_type Key) {
@@ -1929,7 +1921,7 @@ auto APINotesReader::lookupGlobalVariable(llvm::StringRef Name,
   if (!NameID)
     return std::nullopt;
 
-  ContextTableKey Key(Ctx, *NameID);
+  SingleDeclTableKey Key(Ctx, *NameID);
 
   auto Known = Implementation->GlobalVariableTable->find(Key);
   if (Known == Implementation->GlobalVariableTable->end())
@@ -1948,7 +1940,7 @@ auto APINotesReader::lookupGlobalFunction(llvm::StringRef Name,
   if (!NameID)
     return std::nullopt;
 
-  ContextTableKey Key(Ctx, *NameID);
+  SingleDeclTableKey Key(Ctx, *NameID);
 
   auto Known = Implementation->GlobalFunctionTable->find(Key);
   if (Known == Implementation->GlobalFunctionTable->end())
@@ -1982,7 +1974,7 @@ auto APINotesReader::lookupTag(llvm::StringRef Name, std::optional<Context> Ctx)
   if (!NameID)
     return std::nullopt;
 
-  ContextTableKey Key(Ctx, *NameID);
+  SingleDeclTableKey Key(Ctx, *NameID);
 
   auto Known = Implementation->TagTable->find(Key);
   if (Known == Implementation->TagTable->end())
@@ -2001,7 +1993,7 @@ auto APINotesReader::lookupTypedef(llvm::StringRef Name,
   if (!NameID)
     return std::nullopt;
 
-  ContextTableKey Key(Ctx, *NameID);
+  SingleDeclTableKey Key(Ctx, *NameID);
 
   auto Known = Implementation->TypedefTable->find(Key);
   if (Known == Implementation->TypedefTable->end())

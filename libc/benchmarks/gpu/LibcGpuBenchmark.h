@@ -74,20 +74,24 @@ struct BenchmarkResult {
   clock_t total_time = 0;
 };
 
+enum BenchmarkFlags { SINGLE_THREADED = 0x1, SINGLE_WAVE = 0x2 };
+
 BenchmarkResult benchmark(const BenchmarkOptions &options,
                           cpp::function<uint64_t(void)> wrapper_func);
 
 class Benchmark {
   const cpp::function<uint64_t(void)> func;
   const cpp::string_view name;
+  const uint8_t flags;
 
 public:
-  Benchmark(cpp::function<uint64_t(void)> func, char const *name)
-      : func(func), name(name) {
+  Benchmark(cpp::function<uint64_t(void)> func, char const *name, uint8_t flags)
+      : func(func), name(name), flags(flags) {
     add_benchmark(this);
   }
 
   static void run_benchmarks();
+  const cpp::string_view get_name() const { return name; }
 
 protected:
   static void add_benchmark(Benchmark *benchmark);
@@ -97,13 +101,22 @@ private:
     BenchmarkOptions options;
     return benchmark(options, func);
   }
-  const cpp::string_view get_name() const { return name; }
 };
 } // namespace benchmarks
 } // namespace LIBC_NAMESPACE_DECL
 
 #define BENCHMARK(SuiteName, TestName, Func)                                   \
   LIBC_NAMESPACE::benchmarks::Benchmark SuiteName##_##TestName##_Instance(     \
-      Func, #SuiteName "." #TestName);
+      Func, #SuiteName "." #TestName, 0)
+
+#define SINGLE_THREADED_BENCHMARK(SuiteName, TestName, Func)                   \
+  LIBC_NAMESPACE::benchmarks::Benchmark SuiteName##_##TestName##_Instance(     \
+      Func, #SuiteName "." #TestName,                                          \
+      LIBC_NAMESPACE::benchmarks::BenchmarkFlags::SINGLE_THREADED)
+
+#define SINGLE_WAVE_BENCHMARK(SuiteName, TestName, Func)                       \
+  LIBC_NAMESPACE::benchmarks::Benchmark SuiteName##_##TestName##_Instance(     \
+      Func, #SuiteName "." #TestName,                                          \
+      LIBC_NAMESPACE::benchmarks::BenchmarkFlags::SINGLE_WAVE)
 
 #endif
