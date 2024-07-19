@@ -4072,6 +4072,30 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
   }
 }
 
+bool AArch64TTIImpl::hasVectorMatch(VectorType *VT, unsigned SearchSize) const {
+  // Check that (i) the target has SVE2 and SVE is available, (ii) `VT' is a
+  // legal type for MATCH, and (iii) the search vector can be broadcast
+  // efficently to a legal type.
+  //
+  // Currently, we require the length of the search vector to match the minimum
+  // number of elements of `VT'. In practice this means we only support the
+  // cases (nxv16i8, 16), (v16i8, 16), (nxv8i16, 8), and (v8i16, 8), where the
+  // first element of the tuples corresponds to the type of the first argument
+  // and the second the length of the search vector.
+  //
+  // In the future we can support more cases. For example, (nxv16i8, 4) could
+  // be efficiently supported by using a DUP.S to broadcast the search
+  // elements, and more exotic cases like (nxv16i8, 5) could be supported by a
+  // sequence of SEL(DUP).
+  if (ST->hasSVE2() && ST->isSVEAvailable() &&
+      VT->getPrimitiveSizeInBits().getKnownMinValue() == 128 &&
+      (VT->getElementCount().getKnownMinValue() == 8 ||
+       VT->getElementCount().getKnownMinValue() == 16) &&
+      VT->getElementCount().getKnownMinValue() == SearchSize)
+    return true;
+  return false;
+}
+
 InstructionCost
 AArch64TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
                                        FastMathFlags FMF,

@@ -8156,6 +8156,42 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
              DAG.getNode(ISD::EXTRACT_SUBVECTOR, sdl, ResultVT, Vec, Index));
     return;
   }
+  case Intrinsic::experimental_vector_match: {
+    SDValue Op1 = getValue(I.getOperand(0));
+    SDValue Op2 = getValue(I.getOperand(1));
+    SDValue Mask = getValue(I.getOperand(2));
+    EVT Op1VT = Op1.getValueType();
+    EVT Op2VT = Op2.getValueType();
+    EVT ResVT = Mask.getValueType();
+    unsigned SearchSize = Op2VT.getVectorNumElements();
+
+    LLVMContext &Ctx = *DAG.getContext();
+    const auto &TTI =
+        TLI.getTargetMachine().getTargetTransformInfo(*I.getFunction());
+
+    // If the target has native support for this vector match operation, lower
+    // the intrinsic directly; otherwise, lower it below.
+    if (TTI.hasVectorMatch(cast<VectorType>(Op1VT.getTypeForEVT(Ctx)),
+                           SearchSize)) {
+      visitTargetIntrinsic(I, Intrinsic);
+      return;
+    }
+
+    SDValue Ret = DAG.getNode(ISD::SPLAT_VECTOR, sdl, ResVT,
+                              DAG.getConstant(0, sdl, MVT::i1));
+
+    for (unsigned i = 0; i < SearchSize; ++i) {
+      SDValue Op2Elem = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, sdl,
+                                    Op2VT.getVectorElementType(), Op2,
+                                    DAG.getVectorIdxConstant(i, sdl));
+      SDValue Splat = DAG.getNode(ISD::SPLAT_VECTOR, sdl, Op1VT, Op2Elem);
+      SDValue Cmp = DAG.getSetCC(sdl, ResVT, Op1, Splat, ISD::SETEQ);
+      Ret = DAG.getNode(ISD::OR, sdl, ResVT, Ret, Cmp);
+    }
+
+    setValue(&I, DAG.getNode(ISD::AND, sdl, ResVT, Ret, Mask));
+    return;
+  }
   case Intrinsic::vector_reverse:
     visitVectorReverse(I);
     return;

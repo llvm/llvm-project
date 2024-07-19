@@ -1383,6 +1383,11 @@ bool TargetTransformInfo::isVectorShiftByScalarCheap(Type *Ty) const {
   return TTIImpl->isVectorShiftByScalarCheap(Ty);
 }
 
+bool TargetTransformInfo::hasVectorMatch(VectorType *VT,
+                                         unsigned SearchSize) const {
+  return TTIImpl->hasVectorMatch(VT, SearchSize);
+}
+
 TargetTransformInfo::Concept::~Concept() = default;
 
 TargetIRAnalysis::TargetIRAnalysis() : TTICallback(&getDefaultTTI) {}
