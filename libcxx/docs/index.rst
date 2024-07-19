@@ -53,7 +53,6 @@ Getting Started with libc++
    Status/PSTL
    Status/Ranges
    Status/Spaceship
-   Status/SpecialMath
    Status/Zip
 
 
