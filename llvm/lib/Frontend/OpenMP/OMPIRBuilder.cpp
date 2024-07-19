@@ -359,21 +359,21 @@ BasicBlock *llvm::splitBBWithSuffix(IRBuilderBase &Builder, bool CreateBranch,
 // extra arguments to the outlined functions.
 Value *createFakeIntVal(IRBuilderBase &Builder,
                         OpenMPIRBuilder::InsertPointTy OuterAllocaIP,
-                        std::stack<Instruction *> &ToBeDeleted,
+                        llvm::SmallVectorImpl<Instruction *> &ToBeDeleted,
                         OpenMPIRBuilder::InsertPointTy InnerAllocaIP,
                         const Twine &Name = "", bool AsPtr = true) {
   Builder.restoreIP(OuterAllocaIP);
   Instruction *FakeVal;
   AllocaInst *FakeValAddr =
       Builder.CreateAlloca(Builder.getInt32Ty(), nullptr, Name + ".addr");
-  ToBeDeleted.push(FakeValAddr);
+  ToBeDeleted.push_back(FakeValAddr);
 
   if (AsPtr) {
     FakeVal = FakeValAddr;
   } else {
     FakeVal =
         Builder.CreateLoad(Builder.getInt32Ty(), FakeValAddr, Name + ".val");
-    ToBeDeleted.push(FakeVal);
+    ToBeDeleted.push_back(FakeVal);
   }
 
   // Generate a fake use of this value
@@ -386,7 +386,7 @@ Value *createFakeIntVal(IRBuilderBase &Builder,
     UseFakeVal =
         cast<BinaryOperator>(Builder.CreateAdd(FakeVal, Builder.getInt32(10)));
   }
-  ToBeDeleted.push(UseFakeVal);
+  ToBeDeleted.push_back(UseFakeVal);
   return FakeVal;
 }
 
@@ -1810,7 +1810,7 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
   OI.ExitBB = TaskExitBB;
 
   // Add the thread ID argument.
-  std::stack<Instruction *> ToBeDeleted;
+  SmallVector<Instruction *, 4> ToBeDeleted;
   OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
       Builder, AllocaIP, ToBeDeleted, TaskAllocaIP, "global.tid", false));
 
@@ -2007,10 +2007,8 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
           Shareds, [Shareds](Use &U) { return U.getUser() != Shareds; });
     }
 
-    while (!ToBeDeleted.empty()) {
-      ToBeDeleted.top()->eraseFromParent();
-      ToBeDeleted.pop();
-    }
+    llvm::for_each(llvm::reverse(ToBeDeleted),
+                   [](Instruction *I) { I->eraseFromParent(); });
   };
 
   addOutlineInfo(std::move(OI));
@@ -5490,7 +5488,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetTask(
   OI.OuterAllocaBB = AllocaIP.getBlock();
 
   // Add the thread ID argument.
-  std::stack<Instruction *> ToBeDeleted;
+  SmallVector<Instruction *, 4> ToBeDeleted;
   OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
       Builder, AllocaIP, ToBeDeleted, TargetTaskAllocaIP, "global.tid", false));
 
@@ -5638,10 +5636,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetTask(
     }
 
     StaleCI->eraseFromParent();
-    while (!ToBeDeleted.empty()) {
-      ToBeDeleted.top()->eraseFromParent();
-      ToBeDeleted.pop();
-    }
+    llvm::for_each(llvm::reverse(ToBeDeleted),
+                   [](Instruction *I) { I->eraseFromParent(); });
   };
   addOutlineInfo(std::move(OI));
 
@@ -6862,7 +6858,7 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
   OI.OuterAllocaBB = &OuterAllocaBB;
 
   // Insert fake values for global tid and bound tid.
-  std::stack<Instruction *> ToBeDeleted;
+  SmallVector<Instruction *, 8> ToBeDeleted;
   InsertPointTy OuterAllocaIP(&OuterAllocaBB, OuterAllocaBB.begin());
   OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
       Builder, OuterAllocaIP, ToBeDeleted, AllocaIP, "gid", true));
@@ -6877,7 +6873,7 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
     assert(OutlinedFn.getNumUses() == 1 &&
            "there must be a single user for the outlined function");
     CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
-    ToBeDeleted.push(StaleCI);
+    ToBeDeleted.push_back(StaleCI);
 
     assert((OutlinedFn.arg_size() == 2 || OutlinedFn.arg_size() == 3) &&
            "Outlined function must have two or three arguments only");
@@ -6901,10 +6897,9 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
                            omp::RuntimeFunction::OMPRTL___kmpc_fork_teams),
                        Args);
 
-    while (!ToBeDeleted.empty()) {
-      ToBeDeleted.top()->eraseFromParent();
-      ToBeDeleted.pop();
-    }
+    llvm::for_each(llvm::reverse(ToBeDeleted),
+                   [](Instruction *I) { I->eraseFromParent(); });
+
   };
 
   if (!Config.isTargetDevice())
