@@ -74,12 +74,9 @@ define i16 @ashr_can_be_lshr(i32 %a) {
 ; optimizations.
 define i32 @ashr_can_be_lshr_2(i32 %a) {
 ; CHECK-LABEL: @ashr_can_be_lshr_2(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[A:%.*]], 1056964608
-; CHECK-NEXT:    [[OR:%.*]] = zext i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[OR]], 34
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr exact i64 [[SHL]], 32
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nsw i64 [[ASHR]] to i32
-; CHECK-NEXT:    ret i32 [[TRUNC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[A:%.*]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], -67108864
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %ext = zext i32 %a to i64
   %or = or i64 %ext, 4278190080
