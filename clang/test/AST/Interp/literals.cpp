@@ -1290,3 +1290,13 @@ namespace NTTP {
     return size(Chars);
   }
 }
+
+#if __cplusplus >= 201402L
+namespace UnaryOpError {
+  constexpr int foo() {
+    int f = 0;
+    ++g; // both-error {{use of undeclared identifier 'g'}}
+    return f;
+  }
+}
+#endif
