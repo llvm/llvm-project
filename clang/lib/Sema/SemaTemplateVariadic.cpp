@@ -566,10 +566,6 @@ void Sema::collectUnexpandedParameterPacks(
     .TraverseDeclarationNameInfo(NameInfo);
 }
 
-void Sema::collectUnexpandedParameterPacks(
-    Expr *E, SmallVectorImpl<UnexpandedParameterPack> &Unexpanded) {
-  CollectUnexpandedParameterPacksVisitor(Unexpanded).TraverseStmt(E);
-}
 
 ParsedTemplateArgument
 Sema::ActOnPackExpansion(const ParsedTemplateArgument &Arg,
