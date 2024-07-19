@@ -8,15 +8,15 @@
 #include <arm_neon.h>
 
 // CHECK-C-LABEL: define dso_local <16 x i8> @test_ret_mfloat8x16_t(
-// CHECK-C-SAME: <16 x i8> noundef [[V:%.*]]) #[[ATTR0]] {
+// CHECK-C-SAME: <16 x i8> [[V:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-C-NEXT:  [[ENTRY:.*:]]
 // CHECK-C-NEXT:    [[V_ADDR:%.*]] = alloca <16 x i8>, align 16
 // CHECK-C-NEXT:    store <16 x i8> [[V]], ptr [[V_ADDR]], align 16
 // CHECK-C-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[V_ADDR]], align 16
 // CHECK-C-NEXT:    ret <16 x i8> [[TMP0]]
 //
-// CHECK-CXX-LABEL: define dso_local noundef <16 x i8> @_Z21test_ret_mfloat8x16_t16__MFloat8_tx16_t(
-// CHECK-CXX-SAME: <16 x i8> noundef [[V:%.*]]) #[[ATTR0]] {
+// CHECK-CXX-LABEL: define dso_local <16 x i8> @_Z21test_ret_mfloat8x16_tu14__MFloat8x16_t(
+// CHECK-CXX-SAME: <16 x i8> [[V:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    [[V_ADDR:%.*]] = alloca <16 x i8>, align 16
 // CHECK-CXX-NEXT:    store <16 x i8> [[V]], ptr [[V_ADDR]], align 16
@@ -28,15 +28,15 @@ mfloat8x16_t test_ret_mfloat8x16_t(mfloat8x16_t v) {
 }
 
 // CHECK-C-LABEL: define dso_local <8 x i8> @test_ret_mfloat8x8_t(
-// CHECK-C-SAME: <8 x i8> noundef [[V:%.*]]) #[[ATTR0]] {
+// CHECK-C-SAME: <8 x i8> [[V:%.*]]) #[[ATTR0]] {
 // CHECK-C-NEXT:  [[ENTRY:.*:]]
 // CHECK-C-NEXT:    [[V_ADDR:%.*]] = alloca <8 x i8>, align 8
 // CHECK-C-NEXT:    store <8 x i8> [[V]], ptr [[V_ADDR]], align 8
 // CHECK-C-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[V_ADDR]], align 8
 // CHECK-C-NEXT:    ret <8 x i8> [[TMP0]]
 //
-// CHECK-CXX-LABEL: define dso_local noundef <8 x i8> @_Z20test_ret_mfloat8x8_t15__MFloat8_tx8_t(
-// CHECK-CXX-SAME: <8 x i8> noundef [[V:%.*]]) #[[ATTR0]] {
+// CHECK-CXX-LABEL: define dso_local <8 x i8> @_Z20test_ret_mfloat8x8_tu13__MFloat8x8_t(
+// CHECK-CXX-SAME: <8 x i8> [[V:%.*]]) #[[ATTR0]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    [[V_ADDR:%.*]] = alloca <8 x i8>, align 8
 // CHECK-CXX-NEXT:    store <8 x i8> [[V]], ptr [[V_ADDR]], align 8

@@ -102,7 +102,7 @@ enum EltType {
   Float32,
   Float64,
   BFloat16,
-  MFloat8
+  MFloat8,
 };
 
 } // end namespace NeonTypeFlags
@@ -2607,12 +2607,13 @@ void NeonEmitter::runMFloat8(raw_ostream &OS) {
         " *===-----------------------------------------------------------------"
         "------===\n"
         " */\n\n";
+  OS << "#if defined(__aarch64__)\n";
   OS << "#ifndef __ARM_MFP8_H\n";
   OS << "#define __ARM_MFP8_H\n\n";
-  OS << "typedef __mfp8 mfloat8_t;\n";
-
-  emitNeonTypeDefs("mQm", OS);
+  OS << "typedef __MFloat8x8_t mfloat8x8_t;\n";
+  OS << "typedef __MFloat8x16_t mfloat8x16_t;\n";
   OS << "#endif // __ARM_MFP8_H\n";
+  OS << "#endif //__aarch64__\n";
 }
 
 void NeonEmitter::runVectorTypes(raw_ostream &OS) {
@@ -2740,7 +2741,7 @@ void clang::EmitNeonSema(const RecordKeeper &Records, raw_ostream &OS) {
   NeonEmitter(Records).runHeader(OS);
 }
 
-void clang::EmitMFloat8(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitMFloat8(const RecordKeeper &Records, raw_ostream &OS) {
   NeonEmitter(Records).runMFloat8(OS);
 }
 

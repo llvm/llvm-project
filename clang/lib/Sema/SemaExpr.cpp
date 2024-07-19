@@ -8454,12 +8454,6 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
     return QualType();
   }
 
-  if (LHSTy->isArmMFloat8Type() || RHSTy->isArmMFloat8Type()) {
-    Diag(QuestionLoc, diag::err_typecheck_cond_incompatible_operands)
-        << LHSTy << RHSTy << LHS.get()->getSourceRange()
-        << RHS.get()->getSourceRange();
-  }
-
   // Diagnose attempts to convert between __ibm128, __float128 and long double
   // where such conversions currently can't be handled.
   if (unsupportedTypeConversion(*this, LHSTy, RHSTy)) {

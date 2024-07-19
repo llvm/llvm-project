@@ -118,7 +118,7 @@ void EmitClangSyntaxNodeClasses(const llvm::RecordKeeper &Records,
 void EmitNeon(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitFP16(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitBF16(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitMFloat8(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitMFloat8(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitNeonSema(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitVectorTypes(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitNeonTest(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);

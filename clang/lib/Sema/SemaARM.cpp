@@ -323,6 +323,8 @@ static QualType getNeonEltType(NeonTypeFlags Flags, ASTContext &Context,
   switch (Flags.getEltType()) {
   case NeonTypeFlags::Int8:
     return Flags.isUnsigned() ? Context.UnsignedCharTy : Context.SignedCharTy;
+  case NeonTypeFlags::MFloat8:
+    return Context.UnsignedCharTy;
   case NeonTypeFlags::Int16:
     return Flags.isUnsigned() ? Context.UnsignedShortTy : Context.ShortTy;
   case NeonTypeFlags::Int32:
@@ -352,8 +354,6 @@ static QualType getNeonEltType(NeonTypeFlags Flags, ASTContext &Context,
     return Context.DoubleTy;
   case NeonTypeFlags::BFloat16:
     return Context.BFloat16Ty;
-  case NeonTypeFlags::ArmMFloat8:
-    return Context.ArmMFloat8Ty;
   }
   llvm_unreachable("Invalid NeonTypeFlag!");
 }

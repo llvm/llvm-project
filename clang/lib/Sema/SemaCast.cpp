@@ -2991,14 +2991,6 @@ void CastOperation::CheckCStyleCast() {
     return;
   }
 
-  if ((DestType->isArmMFloat8Type() && !SrcType->isArmMFloat8Type()) ||
-      (!DestType->isArmMFloat8Type() && SrcType->isArmMFloat8Type())) {
-    Self.Diag(SrcExpr.get()->getExprLoc(), diag::err_bad_mfloat8_cast)
-        << SrcType << DestType << SrcExpr.get()->getSourceRange();
-    SrcExpr = ExprError();
-    return;
-  }
-
   // Allow casting a sizeless built-in type to itself.
   if (DestType->isSizelessBuiltinType() &&
       Self.Context.hasSameUnqualifiedType(DestType, SrcType)) {
@@ -3210,13 +3202,6 @@ void CastOperation::CheckCStyleCast() {
     }
   }
 
-  if ((DestType->isArmMFloat8Type() && !SrcType->isArmMFloat8Type()) ||
-      (!DestType->isArmMFloat8Type() && SrcType->isArmMFloat8Type())) {
-    Self.Diag(SrcExpr.get()->getExprLoc(), diag::err_bad_mfloat8_cast)
-        << SrcType << DestType << SrcExpr.get()->getSourceRange();
-    SrcExpr = ExprError();
-    return;
-  }
   // ARC imposes extra restrictions on casts.
   if (Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers()) {
     checkObjCConversion(CheckedConversionKind::CStyleCast);

@@ -700,9 +700,6 @@ public:
     return HasBFloat16 || HasFullBFloat16;
   }
 
-  /// Determine whether the _mfp8 type is supported on this target.
-  virtual bool hasArmMFloat8Type() const { return HasMFloat8; }
-
   /// Determine whether the BFloat type is fully supported on this target, i.e
   /// arithemtic operations.
   virtual bool hasFullBFloat16Type() const { return HasFullBFloat16; }

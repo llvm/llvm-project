@@ -176,8 +176,6 @@ public:
 
   bool hasBFloat16Type() const override;
 
-  bool hasArmMFloat8Type() const override;
-
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 

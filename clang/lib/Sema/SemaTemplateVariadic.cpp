@@ -972,7 +972,6 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
 #include "clang/Basic/OpenCLImageTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case TST_##Name:
 #include "clang/Basic/HLSLIntangibleTypes.def"
-  case TST_ArmMFloat8_t: // AARCH64_OPAQUE_TYPE
   case TST_unknown_anytype:
   case TST_error:
     break;

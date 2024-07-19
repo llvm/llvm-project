@@ -353,7 +353,6 @@ CodeGenModule::CodeGenModule(ASTContext &C,
   Int16Ty = llvm::Type::getInt16Ty(LLVMContext);
   Int32Ty = llvm::Type::getInt32Ty(LLVMContext);
   Int64Ty = llvm::Type::getInt64Ty(LLVMContext);
-  ArmMFloat8Ty = llvm::Type::getInt8Ty(LLVMContext);
   HalfTy = llvm::Type::getHalfTy(LLVMContext);
   BFloatTy = llvm::Type::getBFloatTy(LLVMContext);
   FloatTy = llvm::Type::getFloatTy(LLVMContext);

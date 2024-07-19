@@ -200,8 +200,6 @@ public:
 
   bool hasBFloat16Type() const override;
 
-  bool hasArmMFloat8Type() const override;
-
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
 
   bool isCLZForZeroUndef() const override;

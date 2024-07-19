@@ -1412,8 +1412,7 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   }
 
   if (Target.hasAArch64SVETypes() ||
-      (AuxTarget && AuxTarget->hasAArch64SVETypes()) ||
-      Target.hasArmMFloat8Type()) {
+      (AuxTarget && AuxTarget->hasAArch64SVETypes())) {
 #define SVE_TYPE(Name, Id, SingletonId) \
     InitBuiltinType(SingletonId, BuiltinType::Id);
 #include "clang/Basic/AArch64SVEACLETypes.def"
@@ -2240,12 +2239,12 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Width = 0;                                                                 \
     Align = 16;                                                                \
     break;
-#define AARCH64_OPAQUE_TYPE(Name, MangledName, Id, SingletonId, NumEls,        \
-                            ElBits, NF)
-    case BuiltinType::ArmMFloat8:
-      Width = Target->getCharWidth();
-      Align = Target->getCharAlign();
-      break;
+#define AARCH64_VECTOR_TYPE_MFLOAT(Name, MangledName, Id, SingletonId, NumEls, \
+                                   ElBits, NF)                                 \
+  case BuiltinType::Id:                                                        \
+    Width = 0;                                                                 \
+    Align = NumEls * ElBits;                                                   \
+    break;
 #include "clang/Basic/AArch64SVEACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size)                                        \
   case BuiltinType::Id:                                                        \
@@ -4368,6 +4367,11 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
 #define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \
   case BuiltinType::Id:                                                        \
     return {BoolTy, llvm::ElementCount::getScalable(NumEls), NF};
+#define AARCH64_VECTOR_TYPE_MFLOAT(Name, MangledName, Id, SingletonId, NumEls, \
+                                   ElBits, NF)                                 \
+  case BuiltinType::Id:                                                        \
+    return {getIntTypeForBitwidth(ElBits, false),                              \
+            llvm::ElementCount::getFixed(NumEls), NF};
 #define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
 #define AARCH64_OPAQUE_TYPE(Name, MangledName, Id, SingletonId, NumEls,        \
                             ElBits, NF)
@@ -4436,8 +4440,7 @@ QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
   if (EltTy->isBooleanType() && NumElts == (NumEls * NF) && NumFields == 1)    \
     return SingletonId;
 #define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
-#define AARCH64_OPAQUE_TYPE(Name, MangledName, Id, SingletonId, NumEls,        \
-                            ElBits, NF)
+#define AARCH64_VECTOR_TYPE(Name, MangledName, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
   } else if (Target->hasRISCVVTypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);

@@ -507,6 +507,8 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
 #define AARCH64_OPAQUE_TYPE(Name, MangledName, Id, SingletonId, NumEls,        \
                             ElBits, NF)
 #define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
+#define AARCH64_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                \
+  case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
       {
         ASTContext::BuiltinVectorTypeInfo Info =
@@ -528,9 +530,6 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       }
     case BuiltinType::SveCount:
       return llvm::TargetExtType::get(getLLVMContext(), "aarch64.svcount");
-    case BuiltinType::ArmMFloat8:
-      ResultType = llvm::Type::getInt8Ty(getLLVMContext());
-      break;
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
     case BuiltinType::Id: \
       ResultType = \
