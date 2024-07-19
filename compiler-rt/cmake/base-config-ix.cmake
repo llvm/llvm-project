@@ -218,6 +218,8 @@ macro(test_targets)
       test_target_arch(amdgcn "" "--target=amdgcn-amd-amdhsa" "-nogpulib"
                        "-flto" "-fconvergent-functions"
                        "-Xclang -mcode-object-version=none")
+    elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "hexagon")
+      test_target_arch(hexagon "" "")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "loongarch64")
       test_target_arch(loongarch64 "" "")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "powerpc64le|ppc64le")
