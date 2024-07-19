@@ -452,8 +452,7 @@ void M68kFrameLowering::emitPrologueCalleeSavedFrameMoves(
     const DebugLoc &DL) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  MachineModuleInfo &MMI = MF.getMMI();
-  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
 
   // Add callee saved registers to move list.
   const auto &CSI = MFI.getCalleeSavedInfo();

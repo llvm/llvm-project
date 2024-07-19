@@ -25446,9 +25446,8 @@ static SDValue recoverFramePointer(SelectionDAG &DAG, const Function *Fn,
 
   // Get an MCSymbol that will ultimately resolve to the frame offset of the EH
   // registration, or the .set_setframe offset.
-  MCSymbol *OffsetSym =
-      MF.getMMI().getContext().getOrCreateParentFrameOffsetSymbol(
-          GlobalValue::dropLLVMManglingEscape(Fn->getName()));
+  MCSymbol *OffsetSym = MF.getContext().getOrCreateParentFrameOffsetSymbol(
+      GlobalValue::dropLLVMManglingEscape(Fn->getName()));
   SDValue OffsetSymVal = DAG.getMCSymbol(OffsetSym, PtrVT);
   SDValue ParentFrameOffset =
       DAG.getNode(ISD::LOCAL_RECOVER, dl, PtrVT, OffsetSymVal);
@@ -26340,7 +26339,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     MachineFunction &MF = DAG.getMachineFunction();
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
-    auto &Context = MF.getMMI().getContext();
+    auto &Context = MF.getContext();
     MCSymbol *S = Context.getOrCreateSymbol(Twine("GCC_except_table") +
                                             Twine(MF.getFunctionNumber()));
     return DAG.getNode(getGlobalWrapperKind(nullptr, /*OpFlags=*/0), dl, VT,
@@ -26352,7 +26351,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     MachineFunction &MF = DAG.getMachineFunction();
     SDValue Op1 = Op.getOperand(1);
     auto *Fn = cast<Function>(cast<GlobalAddressSDNode>(Op1)->getGlobal());
-    MCSymbol *LSDASym = MF.getMMI().getContext().getOrCreateLSDASymbol(
+    MCSymbol *LSDASym = MF.getContext().getOrCreateLSDASymbol(
         GlobalValue::dropLLVMManglingEscape(Fn->getName()));
 
     // Generate a simple absolute symbol reference. This intrinsic is only
