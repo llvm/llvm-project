@@ -20544,8 +20544,8 @@ bool DAGCombiner::checkMergeStoreCandidatesForDependencies(
     //   * (Op 3) -> Represents the pre or post-indexing offset (or undef for
     //               non-indexed stores). Not constant on all targets (e.g. ARM)
     //               and so can participate in a cycle.
-    for (unsigned j = 0; j < N->getNumOperands(); ++j)
-      Worklist.push_back(N->getOperand(j).getNode());
+    for (const SDValue &Op : N->op_values())
+      Worklist.push_back(Op.getNode());
   }
   // Search through DAG. We can stop early if we find a store node.
   for (unsigned i = 0; i < NumStores; ++i)
