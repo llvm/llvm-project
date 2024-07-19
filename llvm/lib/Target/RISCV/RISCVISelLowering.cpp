@@ -7477,7 +7477,6 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
   // Loads the current PC into t2.
   MCInst AUIPC_X7_0_Inst =
       MCInstBuilder(RISCV::AUIPC).addReg(RISCV::X7).addImm(0);
-
   uint32_t AUIPC_X7_0 = GetEncoding(AUIPC_X7_0_Inst);
   OutChains[0] =
       DAG.getTruncStore(Root, dl, DAG.getConstant(AUIPC_X7_0, dl, MVT::i64),
