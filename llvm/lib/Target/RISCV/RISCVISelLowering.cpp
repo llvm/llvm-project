@@ -37,6 +37,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -7429,6 +7431,14 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
   if (!Subtarget.is64Bit())
     llvm::report_fatal_error("Trampolines only implemented for RV64");
 
+  // Create an MCCodeEmitter to encode instructions.
+  TargetLoweringObjectFile *TLO = getTargetMachine().getObjFileLowering();
+  assert(TLO);
+  MCContext& MCCtx = TLO->getContext();
+
+  std::unique_ptr<MCCodeEmitter> CodeEmitter(
+      createRISCVMCCodeEmitter(*getTargetMachine().getMCInstrInfo(), MCCtx));
+
   SDValue Root = Op.getOperand(0);
   SDValue Trmp = Op.getOperand(1); // trampoline
   SDLoc dl(Op);
@@ -7445,26 +7455,30 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
   //     24: <FunctionAddressOffset>
   //     32:
 
-  // Constants shamelessly taken from GCC.
-  constexpr unsigned Opcode_AUIPC = 0x17;
-  constexpr unsigned Opcode_LD = 0x3003;
-  constexpr unsigned Opcode_JALR = 0x67;
-  constexpr unsigned ShiftField_RD = 7;
-  constexpr unsigned ShiftField_RS1 = 15;
-  constexpr unsigned ShiftField_IMM = 20;
-  constexpr unsigned Reg_X5 = 0x5; // x5/t0 (holds the address to the function)
-  constexpr unsigned Reg_X7 = 0x7; // x7/t2 (holds the static chain)
-
   constexpr unsigned StaticChainOffset = 16;
   constexpr unsigned FunctionAddressOffset = 24;
+
+  auto GetEncoding = [&](const MCInst &MC) {
+    SmallVector<char, 4> CB;
+    SmallVector<MCFixup> Fixups;
+    const MCSubtargetInfo *STI = getTargetMachine().getMCSubtargetInfo();
+    assert(STI);
+    CodeEmitter->encodeInstruction(MC, CB, Fixups, *STI);
+    assert(CB.size() == 4);
+    assert(Fixups.empty());
+    uint32_t Encoding = support::endian::read32le(CB.data());
+    return Encoding;
+  };
 
   SDValue OutChains[6];
   SDValue Addr = Trmp;
 
   // auipc t2, 0
   // Loads the current PC into t2.
-  constexpr uint32_t AUIPC_X7_0 =
-      Opcode_AUIPC | (Reg_X7 << ShiftField_RD);
+  MCInst AUIPC_X7_0_Inst =
+      MCInstBuilder(RISCV::AUIPC).addReg(RISCV::X7).addImm(0);
+
+  uint32_t AUIPC_X7_0 = GetEncoding(AUIPC_X7_0_Inst);
   OutChains[0] =
       DAG.getTruncStore(Root, dl, DAG.getConstant(AUIPC_X7_0, dl, MVT::i64),
                         Addr, MachinePointerInfo(TrmpAddr), MVT::i32);
@@ -7472,9 +7486,10 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
   // ld t0, 24(t2)
   // Loads the function address into t0. Note that we are using offsets
   // pc-relative to the first instruction of the trampoline.
-  const uint32_t LD_X5_TargetFunctionOffset =
-      Opcode_LD | (Reg_X5 << ShiftField_RD) |
-      (Reg_X7 << ShiftField_RS1) | (FunctionAddressOffset << ShiftField_IMM);
+  MCInst LD_X5_TargetFunctionOffset_Inst =
+      MCInstBuilder(RISCV::LD).addReg(RISCV::X5).addReg(RISCV::X7).addImm(24);
+  uint32_t LD_X5_TargetFunctionOffset =
+      GetEncoding(LD_X5_TargetFunctionOffset_Inst);
   Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
                      DAG.getConstant(4, dl, MVT::i64));
   OutChains[1] = DAG.getTruncStore(
@@ -7484,9 +7499,9 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
 
   // ld t2, 16(t2)
   // Load the value of the static chain.
-  const uint32_t LD_X7_StaticChainOffset =
-      Opcode_LD | (Reg_X7 << ShiftField_RD) |
-      (Reg_X7 << ShiftField_RS1) | (StaticChainOffset << ShiftField_IMM);
+  MCInst LD_X7_StaticChainOffset_Inst =
+      MCInstBuilder(RISCV::LD).addReg(RISCV::X7).addReg(RISCV::X7).addImm(16);
+  uint32_t LD_X7_StaticChainOffset = GetEncoding(LD_X7_StaticChainOffset_Inst);
   Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
                      DAG.getConstant(8, dl, MVT::i64));
   OutChains[2] = DAG.getTruncStore(
@@ -7495,8 +7510,9 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
 
   // jalr t0
   // Jump to the function.
-  const uint32_t JALR_X5 =
-      Opcode_JALR | (Reg_X5 << ShiftField_RS1);
+  MCInst JALR_X5_Inst =
+      MCInstBuilder(RISCV::JALR).addReg(RISCV::X0).addReg(RISCV::X5).addImm(0);
+  uint32_t JALR_X5 = GetEncoding(JALR_X5_Inst);
   Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
                      DAG.getConstant(12, dl, MVT::i64));
   OutChains[3] =
