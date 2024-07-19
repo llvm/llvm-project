@@ -1816,7 +1816,7 @@ inline const char *Registers_ppc64::getRegisterName(int regNum) {
 class _LIBUNWIND_HIDDEN Registers_arm64;
 extern "C" void __libunwind_Registers_arm64_jumpto(Registers_arm64 *);
 
-#if defined(_LIBUNWIND_USE_CET)
+#if defined(_LIBUNWIND_USE_GCS)
 extern "C" void *__libunwind_cet_get_jump_target() {
   return reinterpret_cast<void *>(&__libunwind_Registers_arm64_jumpto);
 }

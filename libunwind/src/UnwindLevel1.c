@@ -44,7 +44,7 @@
 // _LIBUNWIND_POP_CET_SSP is used to adjust CET shadow stack pointer and we
 // directly jump to __libunwind_Registers_x86/x86_64_jumpto instead of using
 // a regular function call to avoid pushing to CET shadow stack again.
-#if !defined(_LIBUNWIND_USE_CET)
+#if !defined(_LIBUNWIND_USE_CET) && !defined(_LIBUNWIND_USE_GCS)
 #define __unw_phase2_resume(cursor, fn)                                        \
   do {                                                                         \
     (void)fn;                                                                  \
@@ -183,7 +183,7 @@ unwind_phase1(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
 }
 extern int __unw_step_stage2(unw_cursor_t *);
 
-#if defined(_LIBUNWIND_USE_CET) && defined(_LIBUNWIND_TARGET_AARCH64)
+#if defined(_LIBUNWIND_USE_GCS)
 // Enable the GCS target feature to permit GCS instructions to be used.
 __attribute__((target("gcs")))
 #endif
@@ -197,15 +197,13 @@ unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
   // uc is initialized by __unw_getcontext in the parent frame. The first stack
   // frame walked is unwind_phase2.
   unsigned framesWalked = 1;
-#ifdef _LIBUNWIND_USE_CET
-#if defined(_LIBUNWIND_TARGET_I386) || defined(_LIBUNWIND_TARGET_X86_64)
+#if defined(_LIBUNWIND_USE_CET)
   unsigned long shadowStackTop = _get_ssp();
-#elif defined(_LIBUNWIND_TARGET_AARCH64)
+#elif defined(_LIBUNWIND_USE_GCS)
   unsigned long shadowStackTop = 0;
   if (__chkfeat(_CHKFEAT_GCS)) {
     shadowStackTop = (unsigned long)__gcspr();
   }
-#endif
 #endif
   // Walk each frame until we reach where search phase said to stop.
   while (true) {
@@ -262,7 +260,7 @@ unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
 // against return address stored in CET shadow stack, if the 2 addresses don't
 // match, it means return address in normal stack has been corrupted, we return
 // _URC_FATAL_PHASE2_ERROR.
-#ifdef _LIBUNWIND_USE_CET
+#if defined(_LIBUNWIND_USE_CET) || defined(_LIBUNWIND_USE_GCS)
     if (shadowStackTop != 0) {
       unw_word_t retInNormalStack;
       __unw_get_reg(cursor, UNW_REG_IP, &retInNormalStack);
@@ -330,7 +328,7 @@ unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
   return _URC_FATAL_PHASE2_ERROR;
 }
 
-#if defined(_LIBUNWIND_USE_CET) && defined(_LIBUNWIND_TARGET_AARCH64)
+#if defined(_LIBUNWIND_USE_GCS)
 // Enable the GCS target feature to permit GCS instructions to be used.
 __attribute__((target("gcs")))
 #endif

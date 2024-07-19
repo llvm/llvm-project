@@ -35,11 +35,11 @@
   } while (0)
 #endif
 
-// On AArch64 we use _LIBUNWIND_USE_CET to indicate that GCS is supported. We
+// On AArch64 we use _LIBUNWIND_USE_GCS to indicate that GCS is supported. We
 // need to guard any use of GCS instructions with __chkfeat though, as GCS may
 // not be enabled.
 #if defined(_LIBUNWIND_TARGET_AARCH64) && defined(__ARM_FEATURE_GCS_DEFAULT)
-#define _LIBUNWIND_USE_CET 1
+#define _LIBUNWIND_USE_GCS 1
 #include <arm_acle.h>
 
 #define _LIBUNWIND_POP_CET_SSP(x)                                              \
