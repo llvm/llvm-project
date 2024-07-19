@@ -2767,18 +2767,17 @@ InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
 Value *InnerLoopVectorizer::createBitOrPointerCast(Value *V, VectorType *DstVTy,
                                                    const DataLayout &DL) {
   // Verify that V is a vector type with same number of elements as DstVTy.
-  auto *DstFVTy = cast<VectorType>(DstVTy);
-  auto VF = DstFVTy->getElementCount();
+  auto VF = DstVTy->getElementCount();
   auto *SrcVecTy = cast<VectorType>(V->getType());
   assert(VF == SrcVecTy->getElementCount() && "Vector dimensions do not match");
   Type *SrcElemTy = SrcVecTy->getElementType();
-  Type *DstElemTy = DstFVTy->getElementType();
+  Type *DstElemTy = DstVTy->getElementType();
   assert((DL.getTypeSizeInBits(SrcElemTy) == DL.getTypeSizeInBits(DstElemTy)) &&
          "Vector elements must have same size");
 
   // Do a direct cast if element types are castable.
   if (CastInst::isBitOrNoopPointerCastable(SrcElemTy, DstElemTy, DL)) {
-    return Builder.CreateBitOrPointerCast(V, DstFVTy);
+    return Builder.CreateBitOrPointerCast(V, DstVTy);
   }
   // V cannot be directly casted to desired vector type.
   // May happen when V is a floating point vector but DstVTy is a vector of
@@ -2792,7 +2791,7 @@ Value *InnerLoopVectorizer::createBitOrPointerCast(Value *V, VectorType *DstVTy,
       IntegerType::getIntNTy(V->getContext(), DL.getTypeSizeInBits(SrcElemTy));
   auto *VecIntTy = VectorType::get(IntTy, VF);
   Value *CastVal = Builder.CreateBitOrPointerCast(V, VecIntTy);
-  return Builder.CreateBitOrPointerCast(CastVal, DstFVTy);
+  return Builder.CreateBitOrPointerCast(CastVal, DstVTy);
 }
 
 void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
@@ -4197,14 +4196,11 @@ bool LoopVectorizationCostModel::isScalableVectorizationAllowed() {
     return false;
   }
 
-  if (!Legal->isSafeForAnyVectorWidth()) {
-    std::optional<unsigned> MaxVScale = getMaxVScale(*TheFunction, TTI);
-    if (!MaxVScale) {
-      reportVectorizationInfo(
-          "The target does not provide maximum vscale value.",
-          "ScalableVFUnfeasible", ORE, TheLoop);
-      return false;
-    }
+  if (!Legal->isSafeForAnyVectorWidth() && !getMaxVScale(*TheFunction, TTI)) {
+    reportVectorizationInfo("The target does not provide maximum vscale value "
+                            "for safe distance analysis.",
+                            "ScalableVFUnfeasible", ORE, TheLoop);
+    return false;
   }
 
   IsScalableVectorizationAllowed = true;
@@ -8581,6 +8577,12 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(Instruction *I,
     BlockInMask = getBlockInMask(I->getParent());
   }
 
+  // Note that there is some custom logic to mark some intrinsics as uniform
+  // manually above for scalable vectors, which this assert needs to account for
+  // as well.
+  assert((Range.Start.isScalar() || !IsUniform || !IsPredicated ||
+          (Range.Start.isScalable() && isa<IntrinsicInst>(I))) &&
+         "Should not predicate a uniform recipe");
   auto *Recipe = new VPReplicateRecipe(I, mapToVPValues(I->operands()),
                                        IsUniform, BlockInMask);
   return Recipe;

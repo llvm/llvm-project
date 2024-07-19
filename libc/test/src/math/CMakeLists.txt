@@ -1847,10 +1847,28 @@ add_fp_unittest(
   SRCS
     fmul_test.cpp
   HDRS
-    FMulTest.h
+    MulTest.h
   DEPENDS
     libc.src.math.fmul
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
 )
+
+add_fp_unittest(
+  fmull_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    fmull_test.cpp
+  HDRS
+    MulTest.h
+  DEPENDS
+    libc.src.math.fmull
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+)
+
 add_fp_unittest(
   asinhf_test
   NEED_MPFR
@@ -2235,6 +2253,66 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.cbrt
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  dmull_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    dmull_test.cpp
+  HDRS
+    MulTest.h
+  DEPENDS
+    libc.src.math.dmull
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+)
+
+add_fp_unittest(
+  f16mul_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    f16mul_test.cpp
+  HDRS
+    MulTest.h
+  DEPENDS
+    libc.src.math.f16mul
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+)
+
+add_fp_unittest(
+  f16mulf_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    f16mulf_test.cpp
+  HDRS
+    MulTest.h
+  DEPENDS
+    libc.src.math.f16mulf
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+)
+
+add_fp_unittest(
+  f16mull_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    f16mull_test.cpp
+  HDRS
+    MulTest.h
+  DEPENDS
+    libc.src.math.f16mull
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
 )
 
 add_subdirectory(generic)
