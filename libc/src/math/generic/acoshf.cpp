@@ -12,11 +12,12 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/math/generic/common_constants.h"
 #include "src/math/generic/explogxf.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, acoshf, (float x)) {
   using FPBits_t = typename fputil::FPBits<float>;
@@ -70,4 +71,4 @@ LLVM_LIBC_FUNCTION(float, acoshf, (float x)) {
       x_d + fputil::sqrt<double>(fputil::multiply_add(x_d, x_d, -1.0))));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -9,12 +9,13 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/big_int.h"
 #include "src/__support/integer_literals.h"        // parse_unsigned_bigint
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
 #include "hdr/math_macros.h" // HUGE_VALF, HUGE_VALF
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 enum Value { ZERO, ONE, TWO, MIN, MAX };
 
@@ -921,4 +922,4 @@ TEST(LlvmLibcUIntClassTest, OtherWordTypeTests) {
   ASSERT_EQ(static_cast<int>(a >> 64), 1);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
