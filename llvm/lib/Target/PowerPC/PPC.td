@@ -685,8 +685,7 @@ def : ProcessorModel<"pwr7", P7Model, ProcessorFeatures.P7Features>;
 def : ProcessorModel<"pwr8", P8Model, ProcessorFeatures.P8Features>;
 def : ProcessorModel<"pwr9", P9Model, ProcessorFeatures.P9Features>;
 def : ProcessorModel<"pwr10", P10Model, ProcessorFeatures.P10Features>;
-// No scheduler model yet.
-def : ProcessorModel<"pwr11", NoSchedModel, ProcessorFeatures.P11Features>;
+def : ProcessorModel<"pwr11", P10Model, ProcessorFeatures.P11Features>;
 // No scheduler model for future CPU.
 def : ProcessorModel<"future", NoSchedModel,
                   ProcessorFeatures.FutureFeatures>;

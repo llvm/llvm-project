@@ -1550,6 +1550,12 @@ StringRef sys::getHostCPUName() {
   case 0x40000:
 #endif
     return "pwr10";
+#ifdef POWER_11
+  case POWER_11:
+#else
+  case 0x80000:
+#endif
+    return "pwr11";
   default:
     return "generic";
   }

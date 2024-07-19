@@ -3485,7 +3485,8 @@ unsigned PPCInstrInfo::getSpillTarget() const {
   // With P10, we may need to spill paired vector registers or accumulator
   // registers. MMA implies paired vectors, so we can just check that.
   bool IsP10Variant = Subtarget.isISA3_1() || Subtarget.pairedVectorMemops();
-  return Subtarget.isISAFuture() ? 3 : IsP10Variant ?
+  // P11 uses the P10 target.
+  return Subtarget.isISAFuture() ? 4 : IsP10Variant ?
                                    2 : Subtarget.hasP9Vector() ?
                                    1 : 0;
 }
