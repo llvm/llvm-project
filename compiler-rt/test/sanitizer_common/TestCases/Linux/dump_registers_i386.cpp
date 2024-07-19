@@ -1,7 +1,7 @@
 // Check that sanitizer prints registers dump_registers on dump_registers=1
 // RUN: %clangxx  %s -o %t
-// RUN: %env_tool_opts=dump_registers=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-NODUMP
-// RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-DUMP
+// RUN: %env_tool_opts=dump_registers=0 not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-NODUMP --strict-whitespace
+// RUN: not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-DUMP --strict-whitespace
 //
 // REQUIRES: i386-target-arch
 

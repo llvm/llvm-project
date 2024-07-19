@@ -456,6 +456,19 @@ def bare_symbol : Operand<GRLenVT> {
   let ParserMatchClass = BareSymbol;
 }
 
+def TPRelAddSymbol : AsmOperandClass {
+  let Name = "TPRelAddSymbol";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidTPRelAddSymbol";
+  let ParserMethod = "parseOperandWithModifier";
+}
+
+// A bare symbol with the %le_add_r variant.
+def tprel_add_symbol : Operand<GRLenVT> {
+  let ParserMatchClass = TPRelAddSymbol;
+}
+
+
 // Standalone (codegen-only) immleaf patterns.
 
 // A 12-bit signed immediate plus one where the imm range will be [-2047, 2048].
@@ -1569,6 +1582,21 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3],
 def PseudoTAIL36 : Pseudo<(outs), (ins GPR:$tmp, bare_symbol:$dst), [],
                           "tail36", "$tmp, $dst">,
                    Requires<[IsLA64]>;
+
+// This is a special case of the ADD_W/D instruction used to facilitate the use
+// of a fourth operand to emit a relocation on a symbol relating to this
+// instruction. The relocation does not affect any bits of the instruction itself
+// but is used as a hint to the linker.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0 in {
+def PseudoAddTPRel_W : Pseudo<(outs GPR:$rd),
+                              (ins GPR:$rj, GPR:$rk, tprel_add_symbol:$sym), [],
+                              "add.w", "$rd, $rj, $rk, $sym">,
+                              Requires<[IsLA32]>;
+def PseudoAddTPRel_D : Pseudo<(outs GPR:$rd),
+                              (ins GPR:$rj, GPR:$rk, tprel_add_symbol:$sym), [],
+                              "add.d", "$rd, $rj, $rk, $sym">,
+                              Requires<[IsLA64]>;
+}
 
 /// Load address (la*) macro instructions.
 
