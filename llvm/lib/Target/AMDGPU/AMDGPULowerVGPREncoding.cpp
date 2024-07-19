@@ -197,6 +197,16 @@ bool AMDGPULowerVGPREncoding::lowerIDX(ModeTy &NewMode, MachineInstr &MI) {
   // register, but for now IsLoad is enough.
   assert(MI.getOperand(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::idx))
              .getReg() == AMDGPU::IDX1);
+  // The RC in MachineInstrDesc for V_LOAD/STORE_IDX can contain many
+  // possible register sizes, we need to use the register info instead.
+  const auto *TRI = ST->getRegisterInfo();
+  auto Reg =
+      MI.getOperand(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data_op))
+          .getReg();
+  const auto *RC = TRI->getPhysRegBaseClass(Reg);
+  auto Size = TRI->getRegSizeInBits(*RC);
+  assert(Size == 32 &&
+         "TODO-GFX13 Support lowering non-32-bit sizes for V_LOAD/STORE_IDX");
   bool IsLoad = Opc == AMDGPU::V_LOAD_IDX;
   // src0, src1, src2, dst
   ModeTy UsedIdxRegs;

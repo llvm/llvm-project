@@ -1210,14 +1210,14 @@ def SI_WATERFALL_LAST_USE_V8_V : SI_WATERFALL_LAST_USE<VReg_256>;
 // is_laneshared == 0 if the access is to a dynamically accessed private array.
 // That case and laneshared have different fence semantics.
 def V_LOAD_IDX : VPseudoInstSI <
-  (outs VGPRSrc_32:$data_op),
+  (outs VGPR_IDX_DATA_OP:$data_op),
   (ins IDX_REG_32:$idx, SSrc_b32:$offset, i32imm:$is_laneshared)> {
     let mayLoad = 1;
     let UseNamedOperandTable = 1;
 }
 def V_STORE_IDX : VPseudoInstSI <
   (outs),
-  (ins VGPRSrc_32:$data_op, IDX_REG_32:$idx, SSrc_b32:$offset, i32imm:$is_laneshared)> {
+  (ins VGPR_IDX_DATA_OP:$data_op, IDX_REG_32:$idx, SSrc_b32:$offset, i32imm:$is_laneshared)> {
     let mayStore = 1;
     let UseNamedOperandTable = 1;
 }
