@@ -109,7 +109,6 @@ struct MFMA_F8F6F4_Info {
 #define GET_MIMGMIPMapping_DECL
 #define GET_MIMGBiASMapping_DECL
 #define GET_MAIInstInfoTable_DECL
-#define GET_MAIInstInfoTable_DECL
 #define GET_isMFMA_F8F6F4Table_DECL
 #include "AMDGPUGenSearchableTables.inc"
 
