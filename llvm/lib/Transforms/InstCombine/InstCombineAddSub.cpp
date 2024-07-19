@@ -1483,6 +1483,47 @@ static Instruction *foldBoxMultiply(BinaryOperator &I) {
   return nullptr;
 }
 
+// Relating to the i128::midpoint in rust nightly 
+// we're finding this expression: ((Y ^ X) >> 1 + (Y & X))
+// with the i128 data type and reducing the amount of asm instructions
+// generated.
+static Instruction *foldMidpointExpression(BinaryOperator &I) {
+  Value *X, *Y;
+
+  if (!I.getType()->isIntegerTy(128))
+    return nullptr;
+
+  if (!match(&I, m_Add(m_LShr(m_Xor(m_Value(X), m_Value(Y)), m_ConstantInt()),
+                      m_And(m_Value(X), m_Value(Y)))))
+    return nullptr;
+
+  IRBuilder<> Builder(&I); 
+  Module *Mod = I.getModule();
+
+  // Create the call llvm.uadd.with.overflow.i128
+  Function *UAddWithOverflow = Intrinsic::getDeclaration(Mod, Intrinsic::uadd_with_overflow, 
+      Type::getInt128Ty(Mod->getContext()));
+  CallInst *UAddCall = Builder.CreateCall(UAddWithOverflow, {Y, X});
+  UAddCall->setTailCall();  // Mark the call as a tail call
+  
+  // Extract the sum and the 
+  Value *Sum = Builder.CreateExtractValue(UAddCall, 0);
+  Value *Overflow = Builder.CreateExtractValue(UAddCall, 1);
+
+  // Create the right shift for the sum element of
+  // overflow
+  Value *LShrVal = Builder.CreateLShr(Sum, ConstantInt::get(Type::getInt128Ty(I.getContext()), 1));
+
+  // Create the select instruction
+  Value *SelectVal = Builder.CreateSelect(Overflow,
+      ConstantInt::get(Type::getInt128Ty(I.getContext()), APInt(128, 1).shl(127)), 
+      ConstantInt::get(Type::getInt128Ty(I.getContext()), 0));
+
+  Instruction *OrVal = BinaryOperator::CreateOr(LShrVal, SelectVal);
+
+  return OrVal;
+}
+
 Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Value *V = simplifyAddInst(I.getOperand(0), I.getOperand(1),
                                  I.hasNoSignedWrap(), I.hasNoUnsignedWrap(),
@@ -1505,6 +1546,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *R = foldBoxMultiply(I))
     return R;
 
+  if (Instruction *R = foldMidpointExpression(I))
+    return R;
+  
   if (Instruction *R = factorizeMathWithShlOps(I, Builder))
     return R;
 

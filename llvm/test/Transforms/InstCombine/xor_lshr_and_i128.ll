@@ -14,10 +14,12 @@ define noundef i128 @xor_lshr_and(i128 noundef %x, i128 noundef %y) unnamed_addr
 ; CHECK-LABEL: define noundef i128 @xor_lshr_and(
 ; CHECK-SAME: i128 noundef [[X:%.*]], i128 noundef [[Y:%.*]]) unnamed_addr {
 ; CHECK-NEXT:  [[START:.*:]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i128 [[Y]], [[X]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call { i128, i1 } @llvm.uadd.with.overflow.i128(i128 [[X]], i128 [[Y]])
+; CHECK-NEXT:    [[XOR:%.*]] = extractvalue { i128, i1 } [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i128, i1 } [[TMP0]], 1
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i128 [[XOR]], 1
-; CHECK-NEXT:    [[AND:%.*]] = and i128 [[Y]], [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i128 [[LSHR]], [[AND]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i128 -170141183460469231731687303715884105728, i128 0
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i128 [[LSHR]], [[TMP4]]
 ; CHECK-NEXT:    ret i128 [[ADD]]
 ;
 start:
@@ -32,10 +34,12 @@ define noundef i128 @xor_lshr_and_commuted1(i128 noundef %x, i128 noundef %y) un
 ; CHECK-LABEL: define noundef i128 @xor_lshr_and_commuted1(
 ; CHECK-SAME: i128 noundef [[X:%.*]], i128 noundef [[Y:%.*]]) unnamed_addr {
 ; CHECK-NEXT:  [[START:.*:]]
-; CHECK-NEXT:    [[AND:%.*]] = and i128 [[Y]], [[X]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i128 [[Y]], [[X]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call { i128, i1 } @llvm.uadd.with.overflow.i128(i128 [[X]], i128 [[Y]])
+; CHECK-NEXT:    [[XOR:%.*]] = extractvalue { i128, i1 } [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i128, i1 } [[TMP0]], 1
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i128 [[XOR]], 1
-; CHECK-NEXT:    [[ADD:%.*]] = add i128 [[LSHR]], [[AND]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i128 -170141183460469231731687303715884105728, i128 0
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i128 [[LSHR]], [[TMP4]]
 ; CHECK-NEXT:    ret i128 [[ADD]]
 ;
 start:
@@ -50,10 +54,12 @@ define noundef i128 @xor_lshr_and_commuted2(i128 noundef %x, i128 noundef %y) un
 ; CHECK-LABEL: define noundef i128 @xor_lshr_and_commuted2(
 ; CHECK-SAME: i128 noundef [[X:%.*]], i128 noundef [[Y:%.*]]) unnamed_addr {
 ; CHECK-NEXT:  [[START:.*:]]
-; CHECK-NEXT:    [[AND:%.*]] = and i128 [[Y]], [[X]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i128 [[Y]], [[X]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call { i128, i1 } @llvm.uadd.with.overflow.i128(i128 [[X]], i128 [[Y]])
+; CHECK-NEXT:    [[XOR:%.*]] = extractvalue { i128, i1 } [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i128, i1 } [[TMP0]], 1
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i128 [[XOR]], 1
-; CHECK-NEXT:    [[ADD:%.*]] = add i128 [[LSHR]], [[AND]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i128 -170141183460469231731687303715884105728, i128 0
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i128 [[LSHR]], [[TMP4]]
 ; CHECK-NEXT:    ret i128 [[ADD]]
 ;
 start:
@@ -74,8 +80,12 @@ define noundef i128 @xor_lshr_and_multi_use(i128 noundef %x, i128 noundef %y) un
 ; CHECK-NEXT:    call void @use(i128 [[XOR]])
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i128 [[XOR]], 1
 ; CHECK-NEXT:    call void @use(i128 [[LSHR]])
-; CHECK-NEXT:    [[AND:%.*]] = and i128 [[Y]], [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i128 [[LSHR]], [[AND]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call { i128, i1 } @llvm.uadd.with.overflow.i128(i128 [[X]], i128 [[Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i128, i1 } [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i128, i1 } [[TMP0]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i128 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i128 -170141183460469231731687303715884105728, i128 0
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i128 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    ret i128 [[ADD]]
 ;
 start:
