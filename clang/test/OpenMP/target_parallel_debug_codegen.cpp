@@ -206,12 +206,12 @@ int main() {
 // CHECK1-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds [10 x i32], ptr [[ARRAYIDX21]], i64 0, i64 [[IDXPROM22]], !dbg [[DBG108]]
 // CHECK1-NEXT:    [[TMP14:%.*]] = load i32, ptr [[ARRAYIDX23]], align 4, !dbg [[DBG108]]
 // CHECK1-NEXT:    [[TMP15:%.*]] = load i8, ptr [[TMP7]], align 1, !dbg [[DBG110:![0-9]+]]
-// CHECK1-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP15]] to i1, !dbg [[DBG110]]
-// CHECK1-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL]] to i32, !dbg [[DBG110]]
+// CHECK1-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP15]] to i1, !dbg [[DBG110]]
+// CHECK1-NEXT:    [[CONV:%.*]] = zext i1 [[LOADEDV]] to i32, !dbg [[DBG110]]
 // CHECK1-NEXT:    [[OR:%.*]] = or i32 [[CONV]], [[TMP14]], !dbg [[DBG110]]
-// CHECK1-NEXT:    [[TOBOOL24:%.*]] = icmp ne i32 [[OR]], 0, !dbg [[DBG110]]
-// CHECK1-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL24]] to i8, !dbg [[DBG110]]
-// CHECK1-NEXT:    store i8 [[FROMBOOL]], ptr [[TMP7]], align 1, !dbg [[DBG110]]
+// CHECK1-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[OR]], 0, !dbg [[DBG110]]
+// CHECK1-NEXT:    [[STOREDV:%.*]] = zext i1 [[TOBOOL]] to i8, !dbg [[DBG110]]
+// CHECK1-NEXT:    store i8 [[STOREDV]], ptr [[TMP7]], align 1, !dbg [[DBG110]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG111:![0-9]+]]
 //
 //
@@ -419,8 +419,8 @@ int main() {
 // CHECK1-NEXT:    [[ARRAYIDX19:%.*]] = getelementptr inbounds [10 x i32], ptr [[ARRAYIDX17]], i64 0, i64 [[IDXPROM18]], !dbg [[DBG193]]
 // CHECK1-NEXT:    store i32 [[TMP12]], ptr [[ARRAYIDX19]], align 4, !dbg [[DBG195:![0-9]+]]
 // CHECK1-NEXT:    [[TMP14:%.*]] = load i8, ptr [[TMP8]], align 1, !dbg [[DBG196:![0-9]+]]
-// CHECK1-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP14]] to i1, !dbg [[DBG196]]
-// CHECK1-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL]] to i32, !dbg [[DBG196]]
+// CHECK1-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP14]] to i1, !dbg [[DBG196]]
+// CHECK1-NEXT:    [[CONV:%.*]] = zext i1 [[LOADEDV]] to i32, !dbg [[DBG196]]
 // CHECK1-NEXT:    store i32 [[CONV]], ptr [[D]], align 4, !dbg [[DBG197:![0-9]+]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG198:![0-9]+]]
 //
@@ -641,8 +641,8 @@ int main() {
 // CHECK1-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds [10 x i32], ptr [[ARRAYIDX21]], i64 0, i64 [[IDXPROM22]], !dbg [[DBG275]]
 // CHECK1-NEXT:    [[TMP18:%.*]] = load i32, ptr [[ARRAYIDX23]], align 4, !dbg [[DBG275]]
 // CHECK1-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP18]], 0, !dbg [[DBG275]]
-// CHECK1-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL]] to i8, !dbg [[DBG277:![0-9]+]]
-// CHECK1-NEXT:    store i8 [[FROMBOOL]], ptr [[TMP11]], align 1, !dbg [[DBG277]]
+// CHECK1-NEXT:    [[STOREDV:%.*]] = zext i1 [[TOBOOL]] to i8, !dbg [[DBG277:![0-9]+]]
+// CHECK1-NEXT:    store i8 [[STOREDV]], ptr [[TMP11]], align 1, !dbg [[DBG277]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG278:![0-9]+]]
 //
 //

@@ -78,8 +78,8 @@ int main() {
 // CHECK1-NEXT:      #dbg_declare(ptr [[B_ADDR]], [[META46:![0-9]+]], !DIExpression(), [[META47:![0-9]+]])
 // CHECK1-NEXT:    store ptr addrspace(1) [[BB]], ptr [[BB_ADDR]], align 8
 // CHECK1-NEXT:      #dbg_declare(ptr [[BB_ADDR]], [[META48:![0-9]+]], !DIExpression(), [[META49:![0-9]+]])
-// CHECK1-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[DOTCAPTURE_EXPR_]] to i8
-// CHECK1-NEXT:    store i8 [[FROMBOOL]], ptr [[DOTCAPTURE_EXPR__ADDR]], align 1
+// CHECK1-NEXT:    [[STOREDV:%.*]] = zext i1 [[DOTCAPTURE_EXPR_]] to i8
+// CHECK1-NEXT:    store i8 [[STOREDV]], ptr [[DOTCAPTURE_EXPR__ADDR]], align 1
 // CHECK1-NEXT:      #dbg_declare(ptr [[DOTCAPTURE_EXPR__ADDR]], [[META50:![0-9]+]], !DIExpression(), [[META51:![0-9]+]])
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[C_ADDR]], align 8, !dbg [[DBG52:![0-9]+]]
 // CHECK1-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(1) [[TMP0]] to ptr, !dbg [[DBG52]]
@@ -110,8 +110,8 @@ int main() {
 // CHECK1-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [4 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 3, !dbg [[DBG55]]
 // CHECK1-NEXT:    store ptr [[TMP7]], ptr [[TMP16]], align 8, !dbg [[DBG55]]
 // CHECK1-NEXT:    [[TMP17:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR__ADDR]], align 1, !dbg [[DBG56:![0-9]+]]
-// CHECK1-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP17]] to i1, !dbg [[DBG56]]
-// CHECK1-NEXT:    [[TMP18:%.*]] = zext i1 [[TOBOOL]] to i32, !dbg [[DBG55]]
+// CHECK1-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP17]] to i1, !dbg [[DBG56]]
+// CHECK1-NEXT:    [[TMP18:%.*]] = zext i1 [[LOADEDV]] to i32, !dbg [[DBG55]]
 // CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB6]], i32 [[TMP9]], i32 [[TMP18]], i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l13_debug___omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 4), !dbg [[DBG55]]
 // CHECK1-NEXT:    call void @__kmpc_target_deinit(), !dbg [[DBG57:![0-9]+]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG58:![0-9]+]]
@@ -254,31 +254,31 @@ int main() {
 // CHECK1-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [10 x i32], ptr [[ARRAYIDX24]], i64 0, i64 [[IDXPROM25]], !dbg [[DBG112]]
 // CHECK1-NEXT:    [[TMP24:%.*]] = load i32, ptr [[ARRAYIDX26]], align 4, !dbg [[DBG112]]
 // CHECK1-NEXT:    [[TMP25:%.*]] = load i8, ptr [[TMP7]], align 1, !dbg [[DBG114:![0-9]+]]
-// CHECK1-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP25]] to i1, !dbg [[DBG114]]
-// CHECK1-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL]] to i32, !dbg [[DBG114]]
+// CHECK1-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP25]] to i1, !dbg [[DBG114]]
+// CHECK1-NEXT:    [[CONV:%.*]] = zext i1 [[LOADEDV]] to i32, !dbg [[DBG114]]
 // CHECK1-NEXT:    [[OR:%.*]] = or i32 [[CONV]], [[TMP24]], !dbg [[DBG114]]
-// CHECK1-NEXT:    [[TOBOOL27:%.*]] = icmp ne i32 [[OR]], 0, !dbg [[DBG114]]
-// CHECK1-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL27]] to i8, !dbg [[DBG114]]
-// CHECK1-NEXT:    store i8 [[FROMBOOL]], ptr [[TMP7]], align 1, !dbg [[DBG114]]
+// CHECK1-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[OR]], 0, !dbg [[DBG114]]
+// CHECK1-NEXT:    [[STOREDV:%.*]] = zext i1 [[TOBOOL]] to i8, !dbg [[DBG114]]
+// CHECK1-NEXT:    store i8 [[STOREDV]], ptr [[TMP7]], align 1, !dbg [[DBG114]]
 // CHECK1-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]], !dbg [[DBG115:![0-9]+]]
 // CHECK1:       omp.body.continue:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]], !dbg [[DBG86]]
 // CHECK1:       omp.inner.for.inc:
 // CHECK1-NEXT:    [[TMP26:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !dbg [[DBG80]]
-// CHECK1-NEXT:    [[ADD28:%.*]] = add nsw i32 [[TMP26]], 1, !dbg [[DBG77]]
-// CHECK1-NEXT:    store i32 [[ADD28]], ptr [[DOTOMP_IV]], align 4, !dbg [[DBG77]]
+// CHECK1-NEXT:    [[ADD27:%.*]] = add nsw i32 [[TMP26]], 1, !dbg [[DBG77]]
+// CHECK1-NEXT:    store i32 [[ADD27]], ptr [[DOTOMP_IV]], align 4, !dbg [[DBG77]]
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND]], !dbg [[DBG86]], !llvm.loop [[LOOP116:![0-9]+]]
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_DISPATCH_INC:%.*]], !dbg [[DBG86]]
 // CHECK1:       omp.dispatch.inc:
 // CHECK1-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4, !dbg [[DBG80]]
 // CHECK1-NEXT:    [[TMP28:%.*]] = load i32, ptr [[DOTOMP_STRIDE]], align 4, !dbg [[DBG80]]
-// CHECK1-NEXT:    [[ADD29:%.*]] = add nsw i32 [[TMP27]], [[TMP28]], !dbg [[DBG77]]
-// CHECK1-NEXT:    store i32 [[ADD29]], ptr [[DOTOMP_LB]], align 4, !dbg [[DBG77]]
+// CHECK1-NEXT:    [[ADD28:%.*]] = add nsw i32 [[TMP27]], [[TMP28]], !dbg [[DBG77]]
+// CHECK1-NEXT:    store i32 [[ADD28]], ptr [[DOTOMP_LB]], align 4, !dbg [[DBG77]]
 // CHECK1-NEXT:    [[TMP29:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4, !dbg [[DBG80]]
 // CHECK1-NEXT:    [[TMP30:%.*]] = load i32, ptr [[DOTOMP_STRIDE]], align 4, !dbg [[DBG80]]
-// CHECK1-NEXT:    [[ADD30:%.*]] = add nsw i32 [[TMP29]], [[TMP30]], !dbg [[DBG77]]
-// CHECK1-NEXT:    store i32 [[ADD30]], ptr [[DOTOMP_UB]], align 4, !dbg [[DBG77]]
+// CHECK1-NEXT:    [[ADD29:%.*]] = add nsw i32 [[TMP29]], [[TMP30]], !dbg [[DBG77]]
+// CHECK1-NEXT:    store i32 [[ADD29]], ptr [[DOTOMP_UB]], align 4, !dbg [[DBG77]]
 // CHECK1-NEXT:    br label [[OMP_DISPATCH_COND]], !dbg [[DBG86]], !llvm.loop [[LOOP118:![0-9]+]]
 // CHECK1:       omp.dispatch.end:
 // CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB5:[0-9]+]], i32 [[TMP9]]), !dbg [[DBG117:![0-9]+]]
@@ -351,10 +351,10 @@ int main() {
 // CHECK1-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !dbg [[DBG145]]
 // CHECK1-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[BB_ADDR]], align 8, !dbg [[DBG145]]
 // CHECK1-NEXT:    [[TMP8:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR__ADDR]], align 1, !dbg [[DBG145]]
-// CHECK1-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP8]] to i1, !dbg [[DBG145]]
+// CHECK1-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP8]] to i1, !dbg [[DBG145]]
 // CHECK1-NEXT:    [[TMP9:%.*]] = addrspacecast ptr [[TMP4]] to ptr addrspace(1), !dbg [[DBG145]]
 // CHECK1-NEXT:    [[TMP10:%.*]] = addrspacecast ptr [[TMP7]] to ptr addrspace(1), !dbg [[DBG145]]
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l13_debug__(ptr [[TMP3]], ptr addrspace(1) [[TMP9]], i32 [[TMP5]], ptr [[TMP6]], ptr addrspace(1) [[TMP10]], i1 [[TOBOOL]]) #[[ATTR3]], !dbg [[DBG145]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l13_debug__(ptr [[TMP3]], ptr addrspace(1) [[TMP9]], i32 [[TMP5]], ptr [[TMP6]], ptr addrspace(1) [[TMP10]], i1 [[LOADEDV]]) #[[ATTR3]], !dbg [[DBG145]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG145]]
 //
 //
@@ -545,8 +545,8 @@ int main() {
 // CHECK1-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr inbounds [10 x i32], ptr [[ARRAYIDX20]], i64 0, i64 [[IDXPROM21]], !dbg [[DBG211]]
 // CHECK1-NEXT:    store i32 [[TMP22]], ptr [[ARRAYIDX22]], align 4, !dbg [[DBG213:![0-9]+]]
 // CHECK1-NEXT:    [[TMP24:%.*]] = load i8, ptr [[TMP8]], align 1, !dbg [[DBG214:![0-9]+]]
-// CHECK1-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP24]] to i1, !dbg [[DBG214]]
-// CHECK1-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL]] to i32, !dbg [[DBG214]]
+// CHECK1-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP24]] to i1, !dbg [[DBG214]]
+// CHECK1-NEXT:    [[CONV:%.*]] = zext i1 [[LOADEDV]] to i32, !dbg [[DBG214]]
 // CHECK1-NEXT:    store i32 [[CONV]], ptr [[D]], align 4, !dbg [[DBG215:![0-9]+]]
 // CHECK1-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]], !dbg [[DBG216:![0-9]+]]
 // CHECK1:       omp.body.continue:
@@ -840,8 +840,8 @@ int main() {
 // CHECK1-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [10 x i32], ptr [[ARRAYIDX24]], i64 0, i64 [[IDXPROM25]], !dbg [[DBG308]]
 // CHECK1-NEXT:    [[TMP28:%.*]] = load i32, ptr [[ARRAYIDX26]], align 4, !dbg [[DBG308]]
 // CHECK1-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP28]], 0, !dbg [[DBG308]]
-// CHECK1-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL]] to i8, !dbg [[DBG310:![0-9]+]]
-// CHECK1-NEXT:    store i8 [[FROMBOOL]], ptr [[TMP11]], align 1, !dbg [[DBG310]]
+// CHECK1-NEXT:    [[STOREDV:%.*]] = zext i1 [[TOBOOL]] to i8, !dbg [[DBG310:![0-9]+]]
+// CHECK1-NEXT:    store i8 [[STOREDV]], ptr [[TMP11]], align 1, !dbg [[DBG310]]
 // CHECK1-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]], !dbg [[DBG311:![0-9]+]]
 // CHECK1:       omp.body.continue:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]], !dbg [[DBG283]]
