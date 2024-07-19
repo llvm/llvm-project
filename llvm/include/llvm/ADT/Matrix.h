@@ -69,7 +69,7 @@ public:
   LLVM_ATTRIBUTE_ALWAYS_INLINE size_t size() const { return Base.size(); }
   LLVM_ATTRIBUTE_ALWAYS_INLINE bool empty() const { return !size(); }
   LLVM_ATTRIBUTE_ALWAYS_INLINE size_t getNumRows() const {
-    assert(size() % NCols == 0 && "Internal error");
+    assert(size() % NCols == 0);
     return size() / NCols;
   }
   LLVM_ATTRIBUTE_ALWAYS_INLINE size_t getNumCols() const { return NCols; }
@@ -91,12 +91,12 @@ protected:
   LLVM_ATTRIBUTE_ALWAYS_INLINE T *begin() const { return Base.begin(); }
   LLVM_ATTRIBUTE_ALWAYS_INLINE T *rowFromIdx(size_t RowIdx,
                                              size_t Offset = 0) const {
-    assert(Offset < NCols && "Internal error");
+    assert(Offset < NCols);
     return begin() + RowIdx * NCols + Offset;
   }
   LLVM_ATTRIBUTE_ALWAYS_INLINE std::pair<size_t, size_t>
   idxFromRow(T *Ptr) const {
-    assert(Ptr >= begin() && "Internal error");
+    assert(Ptr >= begin());
     size_t Offset = (Ptr - begin()) % NCols;
     return {(Ptr - begin()) / NCols, Offset};
   }
