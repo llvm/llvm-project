@@ -1481,7 +1481,7 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     break;
   }
 
-  // Allow only pointers to be return type for functions with ownership_takes
+  // Allow only pointers to be return type for functions with ownership_returns
   // attribute. This matches with current OwnershipAttr::Takes semantics
   if (K == OwnershipAttr::Returns) {
     QualType RetType = getFunctionOrMethodResultType(D);
