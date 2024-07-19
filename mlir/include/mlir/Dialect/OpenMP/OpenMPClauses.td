@@ -306,6 +306,34 @@ class OpenMP_DoacrossClauseSkip<
 def OpenMP_DoacrossClause : OpenMP_DoacrossClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// V5.2: [10.5.1] `filter` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_FilterClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
+                    description, extraClassDeclaration> {
+  let arguments = (ins
+    Optional<IntLikeType>:$filtered_thread_id
+  );
+
+  let assemblyFormat = [{
+    `filter` `(` $filtered_thread_id `:` type($filtered_thread_id) `)`
+  }];
+
+  let description = [{
+    If `filter` is specified, the masked construct masks the execution of
+    the region to only the thread id filtered. Other threads executing the
+    parallel region are not expected to execute the region specified within
+    the `masked` directive. If `filter` is not specified, master thread is
+    expected to execute the region enclosed within `masked` directive.
+  }];
+}
+
+def OpenMP_FilterClause : OpenMP_FilterClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [12.3] `final` clause
 //===----------------------------------------------------------------------===//
 
@@ -1203,33 +1231,5 @@ class OpenMP_UseDevicePtrClauseSkip<
 }
 
 def OpenMP_UseDevicePtrClause : OpenMP_UseDevicePtrClauseSkip<>;
-
-//===----------------------------------------------------------------------===//
-// V5.2: [10.5.1] `filter` clause
-//===----------------------------------------------------------------------===//
-
-class OpenMP_FilterClauseSkip<
-    bit traits = false, bit arguments = false, bit assemblyFormat = false,
-    bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
-  let arguments = (ins
-    Optional<IntLikeType>:$filtered_thread_id
-  );
-
-  let assemblyFormat = [{
-    `filter` `(` $filtered_thread_id `:` type($filtered_thread_id) `)`
-  }];
-
-  let description = [{
-    If `filter` is specified, the masked construct masks the execution of
-    the region to only the thread id filtered. Other threads executing the
-    parallel region are not expected to execute the region specified within
-    the `masked` directive. If `filter` is not specified, master thread is
-    expected to execute the region enclosed within `masked` directive.
-  }];
-}
-
-def OpenMP_FilterClause : OpenMP_FilterClauseSkip<>;
 
 #endif // OPENMP_CLAUSES
