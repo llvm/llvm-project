@@ -1589,13 +1589,13 @@ def PseudoTAIL36 : Pseudo<(outs), (ins GPR:$tmp, bare_symbol:$dst), [],
 // but is used as a hint to the linker.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0 in {
 def PseudoAddTPRel_W : Pseudo<(outs GPR:$rd),
-                             (ins GPR:$rj, GPR:$rk, tprel_add_symbol:$sym), [],
-                             "add.w", "$rd, $rj, $rk, $sym">,
-                             Requires<[IsLA32]>;
-def PseudoAddTPRel_D :  Pseudo<(outs GPR:$rd),
-                             (ins GPR:$rj, GPR:$rk, tprel_add_symbol:$sym), [],
-                             "add.d", "$rd, $rj, $rk, $sym">,
-                             Requires<[IsLA64]>;
+                              (ins GPR:$rj, GPR:$rk, tprel_add_symbol:$sym), [],
+                              "add.w", "$rd, $rj, $rk, $sym">,
+                              Requires<[IsLA32]>;
+def PseudoAddTPRel_D : Pseudo<(outs GPR:$rd),
+                              (ins GPR:$rj, GPR:$rk, tprel_add_symbol:$sym), [],
+                              "add.d", "$rd, $rj, $rk, $sym">,
+                              Requires<[IsLA64]>;
 }
 
 /// Load address (la*) macro instructions.
