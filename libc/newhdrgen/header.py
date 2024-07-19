@@ -17,7 +17,6 @@ class HeaderFile:
         self.enumerations = []
         self.objects = []
         self.functions = []
-        self.includes = []
 
     def add_macro(self, macro):
         self.macros.append(macro)
@@ -34,14 +33,8 @@ class HeaderFile:
     def add_function(self, function):
         self.functions.append(function)
 
-    def add_include(self, include):
-        self.includes.append(include)
-
     def __str__(self):
         content = [""]
-
-        for include in self.includes:
-            content.append(str(include))
 
         for macro in self.macros:
             content.append(f"{macro}\n")
