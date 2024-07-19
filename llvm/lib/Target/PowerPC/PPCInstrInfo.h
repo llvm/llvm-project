@@ -125,12 +125,23 @@ enum PPCMachineCombinerPattern : unsigned {
   }
 
 #define Pwr11LoadOpcodes                                                       \
-  {                                                                            \
-    PPC::LWZ, PPC::LD, PPC::LFD, PPC::LFS, PPC::RESTORE_CR,                    \
-        PPC::RESTORE_CRBIT, PPC::LVX, PPC::LXV, PPC::DFLOADf64,                \
-        PPC::DFLOADf32, PPC::SPILLTOVSR_LD, PPC::LXVP, PPC::RESTORE_ACC,       \
-        PPC::RESTORE_UACC, NoInstr, NoInstr, PPC::RESTORE_QUADWORD             \
-  }
+  {PPC::LWZ,                                                                   \
+   PPC::LD,                                                                    \
+   PPC::LFD,                                                                   \
+   PPC::LFS,                                                                   \
+   PPC::RESTORE_CR,                                                            \
+   PPC::RESTORE_CRBIT,                                                         \
+   PPC::LVX,                                                                   \
+   PPC::LXV,                                                                   \
+   PPC::DFLOADf64,                                                             \
+   PPC::DFLOADf32,                                                             \
+   PPC::SPILLTOVSR_LD,                                                         \
+   PPC::LXVP,                                                                  \
+   PPC::RESTORE_ACC,                                                           \
+   PPC::RESTORE_UACC,                                                          \
+   NoInstr,                                                                    \
+   NoInstr,                                                                    \
+   PPC::RESTORE_QUADWORD}
 
 #define FutureLoadOpcodes                                                      \
   {                                                                            \
@@ -165,12 +176,12 @@ enum PPCMachineCombinerPattern : unsigned {
   }
 
 #define Pwr11StoreOpcodes                                                      \
-  {                                                                            \
-    PPC::STW, PPC::STD, PPC::STFD, PPC::STFS, PPC::SPILL_CR, PPC::SPILL_CRBIT, \
-        PPC::STVX, PPC::STXV, PPC::DFSTOREf64, PPC::DFSTOREf32,                \
-        PPC::SPILLTOVSR_ST, PPC::STXVP, PPC::SPILL_ACC, PPC::SPILL_UACC,       \
-        NoInstr, NoInstr, PPC::SPILL_QUADWORD                                  \
-  }
+  {PPC::STW,        PPC::STD,           PPC::STFD,                             \
+   PPC::STFS,       PPC::SPILL_CR,      PPC::SPILL_CRBIT,                      \
+   PPC::STVX,       PPC::STXV,          PPC::DFSTOREf64,                       \
+   PPC::DFSTOREf32, PPC::SPILLTOVSR_ST, PPC::STXVP,                            \
+   PPC::SPILL_ACC,  PPC::SPILL_UACC,    NoInstr,                               \
+   NoInstr,         PPC::SPILL_QUADWORD}
 
 #define FutureStoreOpcodes                                                     \
   {                                                                            \
