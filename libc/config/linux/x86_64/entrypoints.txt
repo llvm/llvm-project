@@ -17,6 +17,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.tolower
     libc.src.ctype.toupper
 
+    # dlfcn.h entrypoints
+    libc.src.dlfcn.dlclose
+    libc.src.dlfcn.dlerror
+    libc.src.dlfcn.dlopen
+    libc.src.dlfcn.dlsym
+
     # errno.h entrypoints
     libc.src.errno.errno
 
@@ -302,6 +308,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.dup3
     libc.src.unistd.execve
     libc.src.unistd.fchdir
+    libc.src.unistd.fpathconf
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
     libc.src.unistd.getcwd
@@ -313,6 +320,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.link
     libc.src.unistd.linkat
     libc.src.unistd.lseek
+    libc.src.unistd.pathconf
     libc.src.unistd.pipe
     libc.src.unistd.pread
     libc.src.unistd.pwrite
@@ -362,6 +370,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.canonicalize
     libc.src.math.canonicalizef
     libc.src.math.canonicalizel
+    libc.src.math.cbrt
+    libc.src.math.cbrtf
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.ceill
@@ -371,6 +381,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cos
     libc.src.math.cosf
     libc.src.math.coshf
+    libc.src.math.cospif
+    libc.src.math.dmull
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.exp10
@@ -426,6 +438,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmodf
     libc.src.math.fmodl
     libc.src.math.fmul
+    libc.src.math.fmull
     libc.src.math.frexp
     libc.src.math.frexpf
     libc.src.math.frexpl
@@ -440,6 +453,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ilogb
     libc.src.math.ilogbf
     libc.src.math.ilogbl
+    libc.src.math.isnan
+    libc.src.math.isnanf
+    libc.src.math.isnanl
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpl
@@ -547,6 +563,9 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.f16fma
     libc.src.math.f16fmaf
     libc.src.math.f16fmal
+    libc.src.math.f16mul
+    libc.src.math.f16mulf
+    libc.src.math.f16mull
     libc.src.math.f16sqrt
     libc.src.math.f16sqrtf
     libc.src.math.f16sqrtl
@@ -608,6 +627,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
       libc.src.math.f16addf128
       libc.src.math.f16divf128
       libc.src.math.f16fmaf128
+      libc.src.math.f16mulf128
       libc.src.math.f16sqrtf128
       libc.src.math.f16subf128
     )
@@ -620,6 +640,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.canonicalizef128
     libc.src.math.ceilf128
     libc.src.math.copysignf128
+    libc.src.math.dmulf128
     libc.src.math.fabsf128
     libc.src.math.fdimf128
     libc.src.math.floorf128
@@ -634,6 +655,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.fminimum_numf128
     libc.src.math.fminimumf128
     libc.src.math.fmodf128
+    libc.src.math.fmulf128
     libc.src.math.frexpf128
     libc.src.math.fromfpf128
     libc.src.math.fromfpxf128

@@ -8412,7 +8412,7 @@ void ScalarEvolution::visitAndClearUsers(
     SmallVectorImpl<const SCEV *> &ToForget) {
   while (!Worklist.empty()) {
     Instruction *I = Worklist.pop_back_val();
-    if (!isSCEVable(I->getType()))
+    if (!isSCEVable(I->getType()) && !isa<WithOverflowInst>(I))
       continue;
 
     ValueExprMapType::iterator It =

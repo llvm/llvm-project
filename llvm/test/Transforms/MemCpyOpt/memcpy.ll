@@ -129,16 +129,47 @@ define void @test5_memcpy(ptr noalias %P, ptr noalias %Q) nounwind  {
 define void @test6_memcpy(ptr %src, ptr %dest) nounwind {
 ; CHECK-LABEL: @test6_memcpy(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca [16 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 [[TMP]], ptr align 1 [[DEST:%.*]], i32 16, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 [[DEST]], ptr align 1 [[TMP]], i32 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 [[TMP]], ptr align 1 [[SRC:%.*]], i32 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 [[DEST:%.*]], ptr align 1 [[TMP]], i32 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %tmp = alloca [16 x i8], align 1
-  call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 %tmp, ptr align 1 %dest, i32 16, i1 false)
+  call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 %tmp, ptr align 1 %src, i32 16, i1 false)
   call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 %dest, ptr align 1 %tmp, i32 16, i1 false)
   ret void
 }
 
+; When forwarding to memcpy(arg+1, arg+1), we don't need to create this memcpy.
+define void @test6_memcpy_forward_back(ptr %arg) nounwind {
+; CHECK-LABEL: @test6_memcpy_forward_back(
+; CHECK-NEXT:    [[DEST:%.*]] = getelementptr inbounds i8, ptr [[ARG:%.*]], i64 1
+; CHECK-NEXT:    ret void
+;
+  %tmp = alloca [16 x i8], align 1
+  %src = getelementptr inbounds i8, ptr %arg, i64 1
+  %dest = getelementptr inbounds i8, ptr %arg, i64 1
+  call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 %tmp, ptr align 1 %src, i32 16, i1 false)
+  call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 %dest, ptr align 1 %tmp, i32 16, i1 false)
+  ret void
+}
+
+; We have to retain this `memcpy(arg+2, arg+1)` forwarding.
+define void @test6_memcpy_forward_not_back(ptr %arg) nounwind {
+; CHECK-LABEL: @test6_memcpy_forward_not_back(
+; CHECK-NEXT:    [[TMP:%.*]] = alloca [16 x i8], align 1
+; CHECK-NEXT:    [[SRC:%.*]] = getelementptr inbounds i8, ptr [[ARG:%.*]], i64 1
+; CHECK-NEXT:    [[DEST:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 2
+; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 [[TMP]], ptr align 1 [[SRC]], i32 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 [[DEST]], ptr align 1 [[TMP]], i32 16, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %tmp = alloca [16 x i8], align 1
+  %src = getelementptr inbounds i8, ptr %arg, i64 1
+  %dest = getelementptr inbounds i8, ptr %arg, i64 2
+  call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 %tmp, ptr align 1 %src, i32 16, i1 false)
+  call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 %dest, ptr align 1 %tmp, i32 16, i1 false)
+  ret void
+}
 
 @x = external global %0
 
@@ -699,7 +730,7 @@ define void @immut_valid_align_branched(i1 %c, ptr noalias align 4 %val) {
 ; Merge/drop noalias metadata when replacing parameter.
 define void @immut_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
 ; CHECK-LABEL: @immut_param_noalias_metadata(
-; CHECK-NEXT:    store i32 1, ptr [[PTR:%.*]], align 4, !noalias !0
+; CHECK-NEXT:    store i32 1, ptr [[PTR:%.*]], align 4, !noalias [[META0:![0-9]+]]
 ; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly [[PTR]])
 ; CHECK-NEXT:    ret void
 ;
@@ -712,7 +743,7 @@ define void @immut_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
 
 define void @byval_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
 ; CHECK-LABEL: @byval_param_noalias_metadata(
-; CHECK-NEXT:    store i32 1, ptr [[PTR:%.*]], align 4, !noalias !0
+; CHECK-NEXT:    store i32 1, ptr [[PTR:%.*]], align 4, !noalias [[META0]]
 ; CHECK-NEXT:    call void @f_byval(ptr byval(i32) align 4 [[PTR]])
 ; CHECK-NEXT:    ret void
 ;

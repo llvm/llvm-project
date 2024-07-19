@@ -150,22 +150,23 @@ body:             |
     %1(s8) = G_TRUNC %0(s32)
 
     ; Check that the operation is performed for 32 bits
-    ; CLZ: [[COUNT:%[0-9]+]]:_(s32) = G_CTLZ
-    ; CLZ-NOT: G_CTLZ_ZERO_UNDEF
+    ; CHECK: [[BITDIFF:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK: [[R32:%[0-9]+]]:_(s32) = G_SHL [[X32]], [[BITDIFF]]
     ; LIBCALLS-NOT: G_CTLZ
     ; LIBCALLS: ADJCALLSTACKDOWN
-    ; LIBCALLS: $r0 = COPY [[X32]]
+    ; LIBCALLS: $r0 = COPY [[R32]]
     ; LIBCALLS: BL &__clzsi2, {{.*}}, implicit $r0, implicit-def $r0
     ; LIBCALLS: [[COUNT:%[0-9]+]]:_(s32) = COPY $r0
     ; LIBCALLS: ADJCALLSTACKUP
     ; LIBCALLS-NOT: G_CTLZ
-    ; CHECK: [[BITDIFF:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-    ; CHECK: [[R32:%[0-9]+]]:_(s32) = G_SUB [[COUNT]], [[BITDIFF]]
+    ; CLZ: [[COUNT:%[0-9]+]]:_(s32) = G_CTLZ [[R32]]
+    ; CLZ-NOT: G_CTLZ_ZERO_UNDEF
     %2(s8) = G_CTLZ_ZERO_UNDEF %1
 
-    ; CHECK: [[SHIFTEDR:%[0-9]+]]:_(s32) = G_SHL [[R32]], [[BITDIFF]]
-    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDR]], [[BITDIFF]]
-    ; CHECK: $r0 = COPY [[R]]
+    ; LIBCALLS: [[SHIFTEDR:%[0-9]+]]:_(s32) = G_SHL [[COUNT]], [[BITDIFF]]
+    ; LIBCALLS: [[R:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDR]], [[BITDIFF]]
+    ; CLZ: $r0 = COPY [[COUNT]]
+    ; LIBCALLS: $r0 = COPY [[R]]
     %3(s32) = G_SEXT %2(s8)
     $r0 = COPY %3(s32)
     BX_RET 14, $noreg, implicit $r0

@@ -333,7 +333,7 @@ def CC_AArch64_Win64_CFGuard_Check : CallingConv<[
 
 let Entry = 1 in
 def CC_AArch64_Arm64EC_CFGuard_Check : CallingConv<[
-  CCIfType<[i64], CCAssignToReg<[X11, X10]>>
+  CCIfType<[i64], CCAssignToReg<[X11, X10, X9]>>
 ]>;
 
 let Entry = 1 in

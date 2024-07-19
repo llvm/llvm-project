@@ -1007,8 +1007,9 @@ public:
   Stmt *getPreInits() const;
 
   static bool classof(const Stmt *T) {
-    return T->getStmtClass() == OMPTileDirectiveClass ||
-           T->getStmtClass() == OMPUnrollDirectiveClass;
+    Stmt::StmtClass C = T->getStmtClass();
+    return C == OMPTileDirectiveClass || C == OMPUnrollDirectiveClass ||
+           C == OMPReverseDirectiveClass || C == OMPInterchangeDirectiveClass;
   }
 };
 
@@ -5708,6 +5709,144 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPUnrollDirectiveClass;
+  }
+};
+
+/// Represents the '#pragma omp reverse' loop transformation directive.
+///
+/// \code
+/// #pragma omp reverse
+/// for (int i = 0; i < n; ++i)
+///   ...
+/// \endcode
+class OMPReverseDirective final : public OMPLoopTransformationDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+
+  /// Offsets of child members.
+  enum {
+    PreInitsOffset = 0,
+    TransformedStmtOffset,
+  };
+
+  explicit OMPReverseDirective(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPLoopTransformationDirective(OMPReverseDirectiveClass,
+                                       llvm::omp::OMPD_reverse, StartLoc,
+                                       EndLoc, 1) {}
+
+  void setPreInits(Stmt *PreInits) {
+    Data->getChildren()[PreInitsOffset] = PreInits;
+  }
+
+  void setTransformedStmt(Stmt *S) {
+    Data->getChildren()[TransformedStmtOffset] = S;
+  }
+
+public:
+  /// Create a new AST node representation for '#pragma omp reverse'.
+  ///
+  /// \param C         Context of the AST.
+  /// \param StartLoc  Location of the introducer (e.g. the 'omp' token).
+  /// \param EndLoc    Location of the directive's end (e.g. the tok::eod).
+  /// \param AssociatedStmt  The outermost associated loop.
+  /// \param TransformedStmt The loop nest after tiling, or nullptr in
+  ///                        dependent contexts.
+  /// \param PreInits   Helper preinits statements for the loop nest.
+  static OMPReverseDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         Stmt *AssociatedStmt, Stmt *TransformedStmt, Stmt *PreInits);
+
+  /// Build an empty '#pragma omp reverse' AST node for deserialization.
+  ///
+  /// \param C          Context of the AST.
+  /// \param NumClauses Number of clauses to allocate.
+  static OMPReverseDirective *CreateEmpty(const ASTContext &C);
+
+  /// Gets/sets the associated loops after the transformation, i.e. after
+  /// de-sugaring.
+  Stmt *getTransformedStmt() const {
+    return Data->getChildren()[TransformedStmtOffset];
+  }
+
+  /// Return preinits statement.
+  Stmt *getPreInits() const { return Data->getChildren()[PreInitsOffset]; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPReverseDirectiveClass;
+  }
+};
+
+/// Represents the '#pragma omp interchange' loop transformation directive.
+///
+/// \code{c}
+///   #pragma omp interchange
+///   for (int i = 0; i < m; ++i)
+///     for (int j = 0; j < n; ++j)
+///       ..
+/// \endcode
+class OMPInterchangeDirective final : public OMPLoopTransformationDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+
+  /// Offsets of child members.
+  enum {
+    PreInitsOffset = 0,
+    TransformedStmtOffset,
+  };
+
+  explicit OMPInterchangeDirective(SourceLocation StartLoc,
+                                   SourceLocation EndLoc, unsigned NumLoops)
+      : OMPLoopTransformationDirective(OMPInterchangeDirectiveClass,
+                                       llvm::omp::OMPD_interchange, StartLoc,
+                                       EndLoc, NumLoops) {
+    setNumGeneratedLoops(3 * NumLoops);
+  }
+
+  void setPreInits(Stmt *PreInits) {
+    Data->getChildren()[PreInitsOffset] = PreInits;
+  }
+
+  void setTransformedStmt(Stmt *S) {
+    Data->getChildren()[TransformedStmtOffset] = S;
+  }
+
+public:
+  /// Create a new AST node representation for '#pragma omp interchange'.
+  ///
+  /// \param C         Context of the AST.
+  /// \param StartLoc  Location of the introducer (e.g. the 'omp' token).
+  /// \param EndLoc    Location of the directive's end (e.g. the tok::eod).
+  /// \param Clauses   The directive's clauses.
+  /// \param NumLoops  Number of affected loops
+  ///                  (number of items in the 'permutation' clause if present).
+  /// \param AssociatedStmt  The outermost associated loop.
+  /// \param TransformedStmt The loop nest after tiling, or nullptr in
+  ///                        dependent contexts.
+  /// \param PreInits  Helper preinits statements for the loop nest.
+  static OMPInterchangeDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         ArrayRef<OMPClause *> Clauses, unsigned NumLoops, Stmt *AssociatedStmt,
+         Stmt *TransformedStmt, Stmt *PreInits);
+
+  /// Build an empty '#pragma omp interchange' AST node for deserialization.
+  ///
+  /// \param C          Context of the AST.
+  /// \param NumClauses Number of clauses to allocate.
+  /// \param NumLoops   Number of associated loops to allocate.
+  static OMPInterchangeDirective *
+  CreateEmpty(const ASTContext &C, unsigned NumClauses, unsigned NumLoops);
+
+  /// Gets the associated loops after the transformation. This is the de-sugared
+  /// replacement or nullptr in dependent contexts.
+  Stmt *getTransformedStmt() const {
+    return Data->getChildren()[TransformedStmtOffset];
+  }
+
+  /// Return preinits statement.
+  Stmt *getPreInits() const { return Data->getChildren()[PreInitsOffset]; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPInterchangeDirectiveClass;
   }
 };
 

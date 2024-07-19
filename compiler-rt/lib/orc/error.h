@@ -1,4 +1,4 @@
-//===-------- Error.h - Enforced error checking for ORC RT ------*- C++ -*-===//
+//===-------- error.h - Enforced error checking for ORC RT ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

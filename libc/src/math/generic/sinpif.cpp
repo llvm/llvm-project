@@ -13,9 +13,10 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -26,13 +27,13 @@ LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
   double xd = static_cast<double>(x);
 
   // Range reduction:
-  // For |x| > pi/32, we perform range reduction as follows:
+  // For |x| > 1/32, we perform range reduction as follows:
   // Find k and y such that:
   //   x = (k + y) * 1/32
   //   k is an integer
   //   |y| < 0.5
-  // For small range (|x| < 2^45 when FMA instructions are available, 2^22
-  // otherwise), this is done by performing:
+  //
+  // This is done by performing:
   //   k = round(x * 32)
   //   y = x * 32 - k
   //
@@ -108,4 +109,4 @@ LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
       sin_y, cos_k, fputil::multiply_add(cosm1_y, sin_k, sin_k)));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

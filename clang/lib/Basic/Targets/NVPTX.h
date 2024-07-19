@@ -75,6 +75,8 @@ public:
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
+  bool useFP16ConversionIntrinsics() const override { return false; }
+
   bool
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                  StringRef CPU,
@@ -117,8 +119,7 @@ public:
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
-    // FIXME: implement
-    return TargetInfo::CharPtrBuiltinVaList;
+    return TargetInfo::VoidPtrBuiltinVaList;
   }
 
   bool isValidCPUName(StringRef Name) const override {

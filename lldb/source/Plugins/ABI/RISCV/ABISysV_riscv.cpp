@@ -13,6 +13,7 @@
 
 #include "llvm/IR/DerivedTypes.h"
 
+#include "Utility/RISCV_DWARF_Registers.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObjectConstResult.h"
@@ -643,9 +644,9 @@ bool ABISysV_riscv::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
   unwind_plan.Clear();
   unwind_plan.SetRegisterKind(eRegisterKindDWARF);
 
-  uint32_t pc_reg_num = LLDB_REGNUM_GENERIC_PC;
-  uint32_t sp_reg_num = LLDB_REGNUM_GENERIC_SP;
-  uint32_t ra_reg_num = LLDB_REGNUM_GENERIC_RA;
+  uint32_t pc_reg_num = riscv_dwarf::dwarf_gpr_pc;
+  uint32_t sp_reg_num = riscv_dwarf::dwarf_gpr_sp;
+  uint32_t ra_reg_num = riscv_dwarf::dwarf_gpr_ra;
 
   UnwindPlan::RowSP row(new UnwindPlan::Row);
 

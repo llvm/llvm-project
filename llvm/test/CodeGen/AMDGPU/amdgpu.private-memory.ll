@@ -37,9 +37,9 @@
 ; by 4 bytes.
 ; HSA-ALLOCA: .amdhsa_private_segment_fixed_size 24
 
-; HSA-ALLOCA: s_add_i32 s6, s6, s9
-; HSA-ALLOCA: s_mov_b32 flat_scratch_lo, s7
-; HSA-ALLOCA: s_lshr_b32 flat_scratch_hi, s6, 8
+; HSA-ALLOCA: s_add_i32 s12, s12, s17
+; HSA-ALLOCA-DAG: s_mov_b32 flat_scratch_lo, s13
+; HSA-ALLOCA-DAG: s_lshr_b32 flat_scratch_hi, s12, 8
 
 ; SI-ALLOCA: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen ; encoding: [0x00,0x10,0x70,0xe0
 ; SI-ALLOCA: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen ; encoding: [0x00,0x10,0x70,0xe0

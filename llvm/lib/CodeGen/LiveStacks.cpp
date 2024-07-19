@@ -23,7 +23,7 @@ using namespace llvm;
 char LiveStacks::ID = 0;
 INITIALIZE_PASS_BEGIN(LiveStacks, DEBUG_TYPE,
                 "Live Stack Slot Analysis", false, false)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_END(LiveStacks, DEBUG_TYPE,
                 "Live Stack Slot Analysis", false, false)
 
@@ -31,8 +31,8 @@ char &llvm::LiveStacksID = LiveStacks::ID;
 
 void LiveStacks::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addPreserved<SlotIndexes>();
-  AU.addRequiredTransitive<SlotIndexes>();
+  AU.addPreserved<SlotIndexesWrapperPass>();
+  AU.addRequiredTransitive<SlotIndexesWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
