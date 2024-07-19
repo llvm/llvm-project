@@ -390,7 +390,7 @@ ifeq (1,$(USE_LIBCPP))
 		ifneq "$(LIBCPP_INCLUDE_TARGET_DIR)" ""
 				CXXFLAGS += -cxx-isystem $(LIBCPP_INCLUDE_TARGET_DIR)
 		endif
-		LDFLAGS += -L$(LIBCPP_LIBRARY_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++
+		LDFLAGS += -L$(LIBCPP_LIBRARY_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++ -lc++abi
 	else
 		ifeq "$(OS)" "Android"
 				# Nothing to do, this is already handled in
@@ -413,7 +413,7 @@ ifeq (1, $(USE_SYSTEM_STDLIB))
              $(error "SDKROOT must be set on Darwin to use the system libcxx")
         endif
         CXXFLAGS += -nostdlib++ -nostdinc++ -cxx-isystem $(SDKROOT)/usr/include/c++/v1
-        LDFLAGS += -L$(SDKROOT)/usr/lib -Wl,-rpath,$(SDKROOT)/usr/lib -lc++
+        LDFLAGS += -L$(SDKROOT)/usr/lib -Wl,-rpath,$(SDKROOT)/usr/lib -lc++ -lc++abi
     endif
 endif
 
@@ -425,7 +425,7 @@ ifeq ($(or $(USE_LIBSTDCPP), $(USE_LIBCPP), $(USE_SYSTEM_STDLIB)),)
 		ifneq "$(LIBCPP_INCLUDE_TARGET_DIR)" ""
 				CXXFLAGS += -cxx-isystem $(LIBCPP_INCLUDE_TARGET_DIR)
 		endif
-		LDFLAGS += -L$(LIBCPP_LIBRARY_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++
+		LDFLAGS += -L$(LIBCPP_LIBRARY_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++ -lc++abi
 	endif
 endif
 
