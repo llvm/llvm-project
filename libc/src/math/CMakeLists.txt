@@ -86,6 +86,7 @@ add_math_entrypoint_object(cosh)
 add_math_entrypoint_object(coshf)
 add_math_entrypoint_object(cospif)
 
+add_math_entrypoint_object(dadd)
 add_math_entrypoint_object(dmull)
 add_math_entrypoint_object(dmulf128)
 

@@ -383,6 +383,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cospif
     libc.src.math.dmull
     libc.src.math.dsqrtl
+    libc.src.math.dadd
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.exp10
