@@ -697,6 +697,7 @@ cc_library(
         ":TargetHeaders",
         ":TargetProperties",
         ":Utility",
+        "//clang:codegen",
         "//lldb/source/Plugins:PluginProcessUtility",
         "//llvm:BinaryFormat",
         "//llvm:MC",
