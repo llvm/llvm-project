@@ -23,7 +23,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 extern "C" cpp::byte _end;
-extern "C" cpp::byte __libc_heap_limit;
+extern "C" cpp::byte __llvm_libc_heap_limit;
 
 using cpp::optional;
 using cpp::span;
@@ -50,7 +50,7 @@ public:
     size_t total_free_calls;
   };
 
-  constexpr FreeListHeap() : begin_(&_end), end_(&__libc_heap_limit) {}
+  constexpr FreeListHeap() : begin_(&_end), end_(&__llvm_libc_heap_limit) {}
 
   constexpr FreeListHeap(span<cpp::byte> region)
       : begin_(region.begin()), end_(region.end()) {
