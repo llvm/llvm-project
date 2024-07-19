@@ -6940,11 +6940,8 @@ SDValue DAGTypeLegalizer::WidenVecOp_MSTORE(SDNode *N, unsigned OpNo) {
     StVal = ModifyToType(StVal, WideVT);
   }
 
-  assert((VT.isScalableVector() ? Mask.getValueType().getVectorMinNumElements()
-                                : Mask.getValueType().getVectorNumElements()) ==
-             (VT.isScalableVector()
-                  ? StVal.getValueType().getVectorMinNumElements()
-                  : StVal.getValueType().getVectorNumElements()) &&
+  assert(Mask.getValueType().getVectorMinNumElements() ==
+          StVal.getValueType().getVectorMinNumElements() &&
          "Mask and data vectors should have the same number of elements");
   return DAG.getMaskedStore(MST->getChain(), dl, StVal, MST->getBasePtr(),
                             MST->getOffset(), Mask, MST->getMemoryVT(),
