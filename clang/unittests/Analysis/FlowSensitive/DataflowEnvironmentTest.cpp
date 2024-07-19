@@ -442,6 +442,46 @@ TEST_F(EnvironmentTest, CXXDefaultInitExprResultObjIsWrappedExprResultObj) {
             &Env.getResultObjectLocation(*DefaultInit->getExpr()));
 }
 
+TEST_F(EnvironmentTest, ResultObjectLocationForInheritedCtorInitExpr) {
+  using namespace ast_matchers;
+
+  std::string Code = R"(
+    struct Base {
+      Base(int b) {}
+    };
+    struct Derived : Base {
+      using Base::Base;
+    };
+
+    Derived d = Derived(0);
+  )";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++20"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto Results =
+      match(cxxConstructorDecl(
+                hasAnyConstructorInitializer(cxxCtorInitializer(
+                    withInitializer(expr().bind("inherited_ctor_init_expr")))))
+                .bind("ctor"),
+            Context);
+  const auto *Constructor = selectFirst<CXXConstructorDecl>("ctor", Results);
+  const auto *InheritedCtorInit =
+      selectFirst<CXXInheritedCtorInitExpr>("inherited_ctor_init_expr", Results);
+
+  // Verify that `inherited_ctor_init_expr` has no children.
+  ASSERT_EQ(InheritedCtorInit->child_begin(), InheritedCtorInit->child_end());
+
+  Environment Env(DAContext, *Constructor);
+  Env.initialize();
+
+  RecordStorageLocation &Loc = Env.getResultObjectLocation(*InheritedCtorInit);
+  ASSERT_NE(&Loc, nullptr);
+}
+
 TEST_F(EnvironmentTest, Stmt) {
   using namespace ast_matchers;
 
