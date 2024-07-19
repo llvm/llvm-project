@@ -309,6 +309,9 @@ __device__ void nvvm_atom(float *fp, float f, double *dfp, double df, int *ip,
   // CHECK: atomicrmw umin ptr {{.*}} seq_cst, align 8
   __nvvm_atom_min_gen_ull((unsigned long long *)&sll, ll);
 
+  // CHECK: cmpxchg ptr {{.*}} seq_cst seq_cst, align 2
+  // CHECK-NEXT: extractvalue { i16, i1 } {{%[0-9]+}}, 0
+  __nvvm_atom_cas_gen_us(ip, 0, i);
   // CHECK: cmpxchg ptr {{.*}} seq_cst seq_cst, align 4
   // CHECK-NEXT: extractvalue { i32, i1 } {{%[0-9]+}}, 0
   __nvvm_atom_cas_gen_i(ip, 0, i);
