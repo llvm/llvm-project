@@ -160,7 +160,8 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
       S.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
       if (!S.noteUndefinedBehavior())
         return false;
-    } else if (LHS.toUnsigned().countLeadingZeros() < static_cast<unsigned>(RHS)) {
+    } else if (LHS.toUnsigned().countLeadingZeros() <
+               static_cast<unsigned>(RHS)) {
       S.CCEDiag(E, diag::note_constexpr_lshift_discards);
       if (!S.noteUndefinedBehavior())
         return false;
