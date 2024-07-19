@@ -466,6 +466,16 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->visit(SubExpr))
       return false;
 
+    // Possibly diagnose casts to enum types if the target type does not
+    // have a fixed size.
+    if (CE->getType()->isEnumeralType()) {
+      if (const auto *ET = CE->getType().getCanonicalType()->getAs<EnumType>();
+          ET && !ET->getDecl()->isFixed()) {
+        if (!this->emitCheckEnumValue(*FromT, ET->getDecl(), CE))
+          return false;
+      }
+    }
+
     if (ToT == PT_IntAP)
       return this->emitCastAP(*FromT, Ctx.getBitWidth(CE->getType()), CE);
     if (ToT == PT_IntAPS)
