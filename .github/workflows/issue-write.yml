@@ -32,11 +32,6 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           artifact-name: workflow-args
 
-      - name: Unpack Artifact
-        if: steps.download-artifact.outputs.artifact-id != ''
-        run: |
-          unzip ${{ steps.download-artifact.outputs.filename }}
-
       - name: 'Comment on PR'
         if: steps.download-artifact.outputs.artifact-id != ''
         uses: actions/github-script@v3

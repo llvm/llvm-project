@@ -1,8 +1,12 @@
 name: Unprivileged Download Artifact
-description: Download artifacts from another workflow run without using an access token.
+description: >-
+  Download artifacts from another workflow run without using an access token.
 inputs:
   run-id:
-    description: The run-id for the workflow run that you want to download the artifact from.  If ommited it will download the most recently created artifact from the repo with the artifact-name.
+    description: >-
+      The run-id for the workflow run that you want to download the artifact
+      from.  If ommitted it will download the most recently created artifact
+      from the repo with the artifact-name.
     required: false
   artifact-name:
     desciption: The name of the artifact to download.
@@ -11,7 +15,9 @@ inputs:
 
 outputs:
   filename:
-    description: "The filename of the downloaded artifact or the empty string if the artifact was not found."
+    description: >-
+      The filename of the downloaded artifact or the empty string if the
+      artifact was not found.
     value: ${{ steps.download-artifact.outputs.filename }}
   artifact-id:
     description: "The id of the artifact being downloaded."
@@ -68,3 +74,8 @@ runs:
       run: |
         curl -L -o ${{ inputs.artifact-name }}.zip "${{ steps.artifact-url.outputs.url }}"
         echo "filename=${{ inputs.artifact-name }}.zip" >> $GITHUB_OUTPUT
+
+    - shell: bash
+      if: steps.download-artifact.outputs.filename != ''
+      run: |
+        unzip ${{ steps.download-artifact.outputs.filename }}
