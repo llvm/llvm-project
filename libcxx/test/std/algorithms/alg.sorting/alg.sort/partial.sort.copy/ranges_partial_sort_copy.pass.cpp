@@ -92,6 +92,7 @@ static_assert(!HasPartialSortCopyIter<NoComparator*, NoComparator*, NoComparator
 #if TEST_STD_VER < 23
 static_assert(!HasPartialSortCopyIter<int*, int*, MoveOnly*, MoveOnly*>);
 #else
+// P2404
 static_assert(HasPartialSortCopyIter<int*, int*, MoveOnly*, MoveOnly*>);
 #endif // TEST_STD_VER < 23
 
@@ -131,6 +132,7 @@ static_assert(!HasPartialSortCopyRange<R<NoComparator*>, R<NoComparator*>>);
 #if TEST_STD_VER < 23
 static_assert(!HasPartialSortCopyRange<R<int*>, R<MoveOnly*>>);
 #else
+// P2404
 static_assert(HasPartialSortCopyRange<R<int*>, R<MoveOnly*>>);
 #endif // TEST_STD_VER < 23
 

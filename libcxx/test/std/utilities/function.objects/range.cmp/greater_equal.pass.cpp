@@ -32,6 +32,7 @@ static_assert(std::is_invocable_v<std::ranges::greater_equal, explicit_operators
 #if TEST_STD_VER < 23
 static_assert(!std::is_invocable_v<std::ranges::greater_equal, int, MoveOnly>);
 #else
+// P2404
 static_assert(std::is_invocable_v<std::ranges::greater_equal, int, MoveOnly>);
 #endif // TEST_STD_VER < 23
 
