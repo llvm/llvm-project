@@ -900,26 +900,26 @@ multiclass SMRD_Pattern <string Instr, ValueType vt, bit immci = true> {
     if immci then def : GCNPat <
       (smrd_load (SMRDImm32 i64:$sbase, i32:$offset)),
       (vt (!cast<InstSI>(Instr#"_IMM_ci") $sbase, $offset, 0))> {
-      let OtherPredicates = [isGFX7Only];
+      let SubtargetPredicate = isGFX7Only;
     }
 
     // 3. SGPR offset
     def : GCNPat <
       (aligned_smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
       (vt (!cast<SM_Pseudo>(Instr#"_SGPR") $sbase, $soffset, 0))> {
-      let OtherPredicates = [isNotGFX9Plus];
+      let SubtargetPredicate = isNotGFX9Plus;
     }
     def : GCNPat <
       (aligned_smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
       (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, 0, 0))> {
-      let OtherPredicates = [isGFX9Plus];
+      let SubtargetPredicate = isGFX9Plus;
     }
 
     // 4. SGPR+IMM offset
     def : GCNPat <
       (aligned_smrd_load (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
       (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, $offset, 0))> {
-      let OtherPredicates = [isGFX9Plus];
+      let SubtargetPredicate = isGFX9Plus;
     }
 
     // 5. No offset
@@ -940,19 +940,19 @@ multiclass SMRD_Pattern <string Instr, ValueType vt, bit immci = true> {
       def : GCNPat <
         (smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
         (vt (!cast<SM_Pseudo>(Instr#"_SGPR_ec") $sbase, $soffset, 0))> {
-        let OtherPredicates = [isNotGFX9Plus];
+        let SubtargetPredicate = isNotGFX9Plus;
       }
       def : GCNPat <
         (smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
         (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM_ec") $sbase, $soffset, 0, 0))> {
-        let OtherPredicates = [isGFX9Plus];
+        let SubtargetPredicate = isGFX9Plus;
       }
 
       // 3. SGPR+IMM offset
       def : GCNPat <
         (smrd_load (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
         (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM_ec") $sbase, $soffset, $offset, 0))> {
-        let OtherPredicates = [isGFX9Plus];
+        let SubtargetPredicate = isGFX9Plus;
       }
 
       // 4. No offset
