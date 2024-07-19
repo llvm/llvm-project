@@ -44,7 +44,7 @@ enum {
 
 
 // Initialized in HwasanAllocatorInit, an never changed.
-static ALIGNED(16) u8 tail_magic[kShadowAlignment - 1];
+alignas(16) static u8 tail_magic[kShadowAlignment - 1];
 static uptr max_malloc_size;
 
 bool HwasanChunkView::IsAllocated() const {
