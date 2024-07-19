@@ -521,6 +521,8 @@ constexpr FeatureBitset ImpliedFeaturesWBNOINVD = {};
 constexpr FeatureBitset ImpliedFeaturesVZEROUPPER = {};
 constexpr FeatureBitset ImpliedFeaturesX87 = {};
 constexpr FeatureBitset ImpliedFeaturesXSAVE = {};
+constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE1 = {};
+constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE2 = {};
 
 // Not really CPU features, but need to be in the table because clang uses
 // target features to communicate them to the backend.
