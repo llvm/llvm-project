@@ -1928,8 +1928,8 @@ let OtherPredicates = [isGFX12Plus] in {
 
 let WaveSizePredicate = isWave64, OtherPredicates = [isGFX12PlusNot12_10] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w64,  int_amdgcn_global_load_tr_b64, i32>;
-    foreach vt = [v4i16, v4f16, v4bf16] in
-      defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w64, int_amdgcn_global_load_tr_b128, vt>;
+  foreach vt = [v4i16, v4f16, v4bf16] in
+    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w64, int_amdgcn_global_load_tr_b128, vt>;
 }
 
 let WaveSizePredicate = isWave32,  OtherPredicates = [isGFX1210Plus] in {

@@ -49,6 +49,25 @@ v8s test_amdgcn_global_load_tr16_b128_v8i16(global v8s* inptr)
   return __builtin_amdgcn_global_load_tr16_b128_v8i16(inptr);
 }
 
+// CHECK-GFX1210-LABEL: @test_amdgcn_global_load_tr16_b128_v8f16(
+// CHECK-GFX1210-NEXT:  entry:
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.global.load.tr.b128.v8f16(ptr addrspace(1) [[INPTR:%.*]])
+// CHECK-GFX1210-NEXT:    ret <8 x half> [[TMP0]]
+//
+v8h test_amdgcn_global_load_tr16_b128_v8f16(global v8h* inptr)
+{
+  return __builtin_amdgcn_global_load_tr16_b128_v8f16(inptr);
+}
+
+// CHECK-GFX1210-LABEL: @test_amdgcn_global_load_tr16_b128_v8bf16(
+// CHECK-GFX1210-NEXT:  entry:
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.global.load.tr.b128.v8bf16(ptr addrspace(1) [[INPTR:%.*]])
+// CHECK-GFX1210-NEXT:    ret <8 x bfloat> [[TMP0]]
+//
+v8y test_amdgcn_global_load_tr16_b128_v8bf16(global v8y* inptr)
+{
+  return __builtin_amdgcn_global_load_tr16_b128_v8bf16(inptr);
+}
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_ds_load_tr4_b64_v2i32(
 // CHECK-GFX1210-NEXT:  entry:
