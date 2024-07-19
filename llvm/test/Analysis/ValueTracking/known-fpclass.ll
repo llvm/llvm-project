@@ -3,10 +3,7 @@
 
 define <4 x i1> @vector_reverse_fpclass(<4 x double> nofpclass(nzero nan) %x) {
 ; CHECK-LABEL: @vector_reverse_fpclass(
-; CHECK-NEXT:    [[X_ABS:%.*]] = call <4 x double> @llvm.fabs.v4f64(<4 x double> [[X:%.*]])
-; CHECK-NEXT:    [[OP:%.*]] = call <4 x double> @llvm.vector.reverse.v4f64(<4 x double> [[X_ABS]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge <4 x double> [[OP]], zeroinitializer
-; CHECK-NEXT:    ret <4 x i1> [[CMP]]
+; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 true, i1 true, i1 true>
 ;
   %x.abs = call <4 x double> @llvm.fabs.v4f64(<4 x double> %x)
   %op = call <4 x double> @llvm.vector.reverse(<4 x double> %x.abs)
