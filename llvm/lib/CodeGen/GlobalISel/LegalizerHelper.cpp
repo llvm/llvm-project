@@ -4747,6 +4747,12 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_FCOS:
   case G_FSIN:
   case G_FTAN:
+  case G_FACOS:
+  case G_FASIN:
+  case G_FATAN:
+  case G_FCOSH:
+  case G_FSINH:
+  case G_FTANH:
   case G_FSQRT:
   case G_BSWAP:
   case G_BITREVERSE:
