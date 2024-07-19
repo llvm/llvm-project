@@ -3798,9 +3798,18 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   }
 
   epi.ExtInfo.Profile(ID);
-  ID.AddInteger((epi.AArch64SMEAttributes << 1) | epi.HasTrailingReturn);
 
-  epi.FunctionEffects.Profile(ID);
+  unsigned EffectCount = epi.FunctionEffects.size();
+  bool HasConds = !epi.FunctionEffects.Conditions.empty();
+
+  ID.AddInteger((EffectCount << 3) | (HasConds << 2) |
+                (epi.AArch64SMEAttributes << 1) | epi.HasTrailingReturn);
+
+  for (unsigned Idx = 0; Idx != EffectCount; ++Idx) {
+    ID.AddInteger(epi.FunctionEffects.Effects[Idx].toOpaqueInt32());
+    if (HasConds)
+      ID.AddPointer(epi.FunctionEffects.Conditions[Idx].getCondition());
+  }
 }
 
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID,
@@ -5181,17 +5190,6 @@ bool FunctionEffect::shouldDiagnoseFunctionCall(
 
 // =====
 
-void FunctionEffectsRef::Profile(llvm::FoldingSetNodeID &ID) const {
-  bool HasConds = !Conditions.empty();
-
-  ID.AddInteger(size() | (HasConds << 31u));
-  for (unsigned Idx = 0, Count = Effects.size(); Idx != Count; ++Idx) {
-    ID.AddInteger(Effects[Idx].toOpaqueInt32());
-    if (HasConds)
-      ID.AddPointer(Conditions[Idx].getCondition());
-  }
-}
-
 bool FunctionEffectSet::insert(const FunctionEffectWithCondition &NewEC,
                                Conflicts &Errs) {
   FunctionEffect::Kind NewOppositeKind = NewEC.Effect.oppositeKind();
@@ -5311,18 +5309,6 @@ LLVM_DUMP_METHOD void FunctionEffectsRef::dump(llvm::raw_ostream &OS) const {
 
 LLVM_DUMP_METHOD void FunctionEffectSet::dump(llvm::raw_ostream &OS) const {
   FunctionEffectsRef(*this).dump(OS);
-}
-
-FunctionEffectsRef FunctionEffectsRef::get(QualType QT) {
-  while (true) {
-    QualType Pointee = QT->getPointeeType();
-    if (Pointee.isNull())
-      break;
-    QT = Pointee;
-  }
-  if (const auto *FPT = QT->getAs<FunctionProtoType>())
-    return FPT->getFunctionEffects();
-  return {};
 }
 
 FunctionEffectsRef

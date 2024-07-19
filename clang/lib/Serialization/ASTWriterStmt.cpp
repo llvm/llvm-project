@@ -2437,6 +2437,16 @@ void ASTStmtWriter::VisitOMPUnrollDirective(OMPUnrollDirective *D) {
   Code = serialization::STMT_OMP_UNROLL_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPReverseDirective(OMPReverseDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+  Code = serialization::STMT_OMP_REVERSE_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+  Code = serialization::STMT_OMP_INTERCHANGE_DIRECTIVE;
+}
+
 void ASTStmtWriter::VisitOMPForDirective(OMPForDirective *D) {
   VisitOMPLoopDirective(D);
   Record.writeBool(D->hasCancel());
