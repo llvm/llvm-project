@@ -2551,7 +2551,6 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             } else {
               TmpResultReg = RS->scavengeRegisterBackwards(
                   AMDGPU::VGPR_32RegClass, MI, false, 0);
-
               BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_LSHR_B32_e64),
                       TmpResultReg)
                   .addImm(ST.getWavefrontSizeLog2())
