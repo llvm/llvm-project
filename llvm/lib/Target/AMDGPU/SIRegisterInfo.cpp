@@ -2536,7 +2536,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                 IsCopy && IsSALU
                     ? ResultReg
                     : RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
-                                                    MI, false, 0, false);
+                                                    MI, false, 0, /*AllowSpill=*/false);
             Register ScaledReg =
                 TmpScaledReg.isValid() ? TmpScaledReg : FrameReg;
             Register TmpResultReg = ScaledReg;
@@ -2550,7 +2550,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                   .addImm(Offset);
             } else {
               TmpResultReg = RS->scavengeRegisterBackwards(
-                  AMDGPU::VGPR_32RegClass, MI, false, 0);
+                  AMDGPU::VGPR_32RegClass, MI, false, 0, /*AllowSpill=*/true);
               BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_LSHR_B32_e64),
                       TmpResultReg)
                   .addImm(ST.getWavefrontSizeLog2())
@@ -2561,7 +2561,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
               Register NewDest =
                   IsCopy ? ResultReg
                          : RS->scavengeRegisterBackwards(
-                               AMDGPU::SReg_32RegClass, Add, false, 0);
+                               AMDGPU::SReg_32RegClass, Add, false, 0, /*AllowSpill=*/true);
               BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
                       NewDest)
                   .addReg(TmpResultReg);
