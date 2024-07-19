@@ -450,7 +450,8 @@ Changes in existing checks
   <clang-tidy/checks/performance/unnecessary-value-param>` check
   detecting more cases for template functions including lambdas with ``auto``.
   E.g., ``std::sort(a.begin(), a.end(), [](auto x, auto y) { return a > b; });``
-  will be detected for expensive to copy types.
+  will be detected for expensive to copy types. Fixed false positives for
+  dependent call expressions.
 
 - Improved :doc:`readability-avoid-return-with-void-value
   <clang-tidy/checks/readability/avoid-return-with-void-value>` check by adding

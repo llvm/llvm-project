@@ -169,6 +169,7 @@ set(sources
   unit-map.cpp
   unit.cpp
   utf.cpp
+  ${FORTRAN_MODULE_OBJECTS}
 )
 
 include(AddFlangOffloadRuntime)
