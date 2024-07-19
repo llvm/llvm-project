@@ -4,7 +4,7 @@ function(_get_compile_options_from_flags output_var)
   if(LIBC_TARGET_ARCHITECTURE_IS_RISCV64 OR(LIBC_CPU_FEATURES MATCHES "FMA"))
     check_flag(ADD_FMA_FLAG ${FMA_OPT_FLAG} ${ARGN})
   endif()
-  check_flag(ADD_SSE4_2_FLAG ${ROUND_OPT_FLAG} ${ARGN})
+  check_flag(ADD_ROUND_OPT_FLAG ${ROUND_OPT_FLAG} ${ARGN})
   check_flag(ADD_EXPLICIT_SIMD_OPT_FLAG ${EXPLICIT_SIMD_OPT_FLAG} ${ARGN})
 
   if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
@@ -16,8 +16,23 @@ function(_get_compile_options_from_flags output_var)
         list(APPEND compile_options "-D__LIBC_RISCV_USE_FMA")
       endif()
     endif()
-    if(ADD_SSE4_2_FLAG)
-      list(APPEND compile_options "-msse4.2")
+    if(ADD_ROUND_OPT_FLAG)
+      if(LIBC_TARGET_ARCHITECTURE_IS_X86)
+        # ROUND_OPT_FLAG is only enabled if SSE4.2 is detected, not just SSE4.1,
+        # because there was code to check for SSE4.2 already, and few CPUs only
+        # have SSE4.1.
+        list(APPEND compile_options "-msse4.2")
+      endif()
+      if(LIBC_COMPILER_HAS_BUILTIN_CEIL_FLOOR_RINT_TRUNC)
+        list(APPEND compile_options
+             "-D__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC")
+      endif()
+      if(LIBC_COMPILER_HAS_BUILTIN_ROUND)
+        list(APPEND compile_options "-D__LIBC_USE_BUILTIN_ROUND")
+      endif()
+      if(LIBC_COMPILER_HAS_BUILTIN_ROUNDEVEN)
+        list(APPEND compile_options "-D__LIBC_USE_BUILTIN_ROUNDEVEN")
+      endif()
     endif()
     if(ADD_EXPLICIT_SIMD_OPT_FLAG)
       list(APPEND compile_options "-D__LIBC_EXPLICIT_SIMD_OPT")
@@ -34,25 +49,70 @@ function(_get_compile_options_from_flags output_var)
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction(_get_compile_options_from_flags)
 
+function(_get_compile_options_from_config output_var)
+  set(config_options "")
+
+  if(LIBC_CONF_QSORT_IMPL)
+    list(APPEND config_options "-DLIBC_QSORT_IMPL=${LIBC_CONF_QSORT_IMPL}")
+  endif()
+
+  set(${output_var} ${config_options} PARENT_SCOPE)
+endfunction(_get_compile_options_from_config)
+
 function(_get_common_compile_options output_var flags)
   _get_compile_options_from_flags(compile_flags ${flags})
+  _get_compile_options_from_config(config_flags)
 
-  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags})
+  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags} ${config_flags})
 
   if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
 
     if(LLVM_LIBC_FULL_BUILD)
+      # Only add -ffreestanding flag in non-GPU full build mode.
+      if(NOT LIBC_TARGET_OS_IS_GPU)
+        list(APPEND compile_options "-ffreestanding")
+      endif()
       list(APPEND compile_options "-DLIBC_FULL_BUILD")
-      # Only add -ffreestanding flag in full build mode.
-      list(APPEND compile_options "-ffreestanding")
+      # Manually disable standard include paths to prevent system headers from
+      # being included.
+      if(LIBC_CC_SUPPORTS_NOSTDLIBINC)
+        list(APPEND compile_options "-nostdlibinc")
+      elseif(COMPILER_RESOURCE_DIR)
+        # TODO: We should require COMPILER_RESOURCE_DIR to be set.
+        list(APPEND compile_options "-isystem${COMPILER_RESOURCE_DIR}/include")
+        list(APPEND compile_options "-nostdinc")
+      endif()
+      # TODO: We should set this unconditionally on Linux.
+      if(LIBC_TARGET_OS_IS_LINUX AND
+         (LIBC_CC_SUPPORTS_NOSTDLIBINC OR COMPILER_RESOURCE_DIR))
+        # We use -idirafter to avoid preempting libc's own headers in case the
+        # directory (e.g. /usr/include) contains other headers.
+        if(CMAKE_CROSSCOMPILING)
+          list(APPEND compile_options "-idirafter=${LIBC_KERNEL_HEADERS}")
+        else()
+          list(APPEND compile_options "-idirafter${LIBC_KERNEL_HEADERS}")
+        endif()
+      endif()
     endif()
 
     if(LIBC_COMPILER_HAS_FIXED_POINT)
       list(APPEND compile_options "-ffixed-point")
     endif()
 
-    list(APPEND compile_options "-fno-builtin")
+    # Builtin recognition causes issues when trying to implement the builtin
+    # functions themselves. The GPU backends do not use libcalls so we disable
+    # the known problematic ones. This allows inlining during LTO linking.
+    if(LIBC_TARGET_OS_IS_GPU)
+      set(libc_builtins bcmp strlen memmem bzero memcmp memcpy memmem memmove
+                        memset strcmp strstr)
+      foreach(builtin ${libc_builtins})
+        list(APPEND compile_options "-fno-builtin-${builtin}")
+      endforeach()
+    else()
+      list(APPEND compile_options "-fno-builtin")
+    endif()
+
     list(APPEND compile_options "-fno-exceptions")
     list(APPEND compile_options "-fno-lax-vector-conversions")
     list(APPEND compile_options "-fno-unwind-tables")
@@ -88,6 +148,9 @@ function(_get_common_compile_options output_var flags)
       list(APPEND compile_options "-Wthread-safety")
       list(APPEND compile_options "-Wglobal-constructors")
     endif()
+    if(LIBC_CONF_MATH_OPTIMIZATIONS)
+      list(APPEND compile_options "-DLIBC_MATH=${LIBC_CONF_MATH_OPTIMIZATIONS}")
+    endif()
   elseif(MSVC)
     list(APPEND compile_options "/EHs-c-")
     list(APPEND compile_options "/GR-")
@@ -108,11 +171,6 @@ function(_get_common_compile_options output_var flags)
     elseif(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
       list(APPEND compile_options "SHELL:-Xclang -mcode-object-version=none")
     endif()
-
-    # Manually disable all standard include paths and include the resource
-    # directory to prevent system headers from being included.
-    list(APPEND compile_options "-isystem${COMPILER_RESOURCE_DIR}/include")
-    list(APPEND compile_options "-nostdinc")
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()

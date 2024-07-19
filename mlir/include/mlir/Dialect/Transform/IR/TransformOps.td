@@ -624,7 +624,10 @@ def ForeachOp : TransformDialectOp<"foreach",
     Each iteration gets executed by co-indexing the payloads of the arguments
     and mapping the body's arguments to these tuples, as though iterating over
     the zipped together `targets`. As such, in each iteration, the size of the
-    payload of each of the body's block arguments is exactly one.
+    payload of each of the body's block arguments is exactly one. The attribute
+    `zip_shortest` can be used if the targets vary in their number of payloads;
+    this will limit the iterations to only the number of payloads found in the
+    shortest target.
 
     This op always reads the target handles. Furthermore, it consumes a handle
     if there is a transform op in the body that consumes the corresponding
@@ -645,11 +648,13 @@ def ForeachOp : TransformDialectOp<"foreach",
     rollback capabilities.
   }];
 
-  let arguments = (ins Variadic<Transform_AnyHandleOrParamType>:$targets);
+  let arguments = (ins Variadic<Transform_AnyHandleOrParamType>:$targets,
+                       UnitAttr:$with_zip_shortest);
   let results = (outs Variadic<Transform_AnyHandleOrParamType>:$results);
   let regions = (region SizedRegion<1>:$body);
   let assemblyFormat =
-    "$targets `:` type($targets) (`->` type($results)^)? $body attr-dict";
+    "$targets oilist(`with_zip_shortest` $with_zip_shortest) `:` "
+    "type($targets) (`->` type($results)^)? $body attr-dict";
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{

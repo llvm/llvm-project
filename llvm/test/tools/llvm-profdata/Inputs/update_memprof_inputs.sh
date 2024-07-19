@@ -31,7 +31,7 @@ read -r -d '' INLINE << EOF
 
 __attribute__((always_inline))
 void qux(int x) {
-  char *ptr = malloc(x);
+  char *ptr = (char*) malloc(x);
   memset(ptr, 0, x);
   free(ptr);
 }
@@ -64,6 +64,190 @@ int main(int argc, char **argv) {
 }
 EOF
 
+read -r -d '' BASIC_HISTOGRAM << EOF
+struct A {
+  long int a;
+  long int b;
+  long int c;
+  long int d;
+  long int e;
+  long int f;
+  long int g;
+  long int h;
+  A() {};
+};
+
+void foo() {
+  long int acc = 0;
+  A *a = new A();
+  acc += a->a;
+  acc += a->b;
+  acc += a->c;
+  acc += a->d;
+  acc += a->e;
+  acc += a->f;
+  acc += a->g;
+  acc += a->h;
+  delete a;
+}
+void bar() {
+  long int acc = 0;
+  A *a = new A();
+  acc += a->a;
+  acc += a->a;
+  acc += a->a;
+  acc += a->a;
+  acc += a->a;
+  acc += a->a;
+  acc += a->a;
+  acc += a->a;
+  acc += a->b;
+  acc += a->b;
+  acc += a->b;
+  acc += a->b;
+  acc += a->b;
+  acc += a->b;
+  acc += a->b;
+  acc += a->c;
+  acc += a->c;
+  acc += a->c;
+  acc += a->c;
+  acc += a->c;
+  acc += a->c;
+  acc += a->d;
+  acc += a->d;
+  acc += a->d;
+  acc += a->d;
+  acc += a->d;
+  acc += a->e;
+  acc += a->e;
+  acc += a->e;
+  acc += a->e;
+  acc += a->f;
+  acc += a->f;
+  acc += a->f;
+  acc += a->g;
+  acc += a->g;
+  acc += a->h;
+
+  delete a;
+}
+
+int main(int argc, char **argv) {
+  long int acc = 0;
+  A *a = new A();
+  acc += a->a;
+  acc += a->b;
+  acc += a->c;
+  acc += a->d;
+  acc += a->e;
+  acc += a->f;
+  acc += a->g;
+  acc += a->h;
+
+  delete a;
+
+  A *b = new A();
+  acc += b->a;
+  acc += b->a;
+  acc += b->a;
+  acc += b->a;
+  acc += b->a;
+  acc += b->a;
+  acc += b->a;
+  acc += b->a;
+  acc += b->b;
+  acc += b->b;
+  acc += b->b;
+  acc += b->b;
+  acc += b->b;
+  acc += b->b;
+  acc += b->b;
+  acc += b->c;
+  acc += b->c;
+  acc += b->c;
+  acc += b->c;
+  acc += b->c;
+  acc += b->c;
+  acc += b->d;
+  acc += b->d;
+  acc += b->d;
+  acc += b->d;
+  acc += b->d;
+  acc += b->e;
+  acc += b->e;
+  acc += b->e;
+  acc += b->e;
+  acc += b->f;
+  acc += b->f;
+  acc += b->f;
+  acc += b->g;
+  acc += b->g;
+  acc += b->h;
+
+  delete b;
+
+  A *c = new A();
+  acc += c->a;
+
+  for (int i = 0; i < 21; ++i) {
+
+    foo();
+  }
+
+  for (int i = 0; i < 21; ++i) {
+
+    bar();
+  }
+
+  return 0;
+}
+EOF
+
+read -r -d '' PADDING_HISTOGRAM << EOF
+struct A {
+  char a;
+  char b;
+  long int c;
+  char d;
+  int e;
+  A() {};
+};
+
+struct B {
+  double x;
+  double y;
+  B() {};
+};
+
+struct C {
+  A a;
+  char z;
+  B b;
+  C() {};
+};
+
+int main(int argc, char **argv) {
+  long int acc = 0;
+
+  A *a = new A();
+  acc += a->a;
+  acc += a->b;
+  acc += a->c;
+  acc += a->d;
+  acc += a->e;
+
+  C *c = new C();
+  acc += c->a.a;
+  acc += c->a.a;
+  acc += c->b.x;
+  acc += c->b.y;
+
+  return 0;
+}
+EOF
+
+
 DEFAULT_MEMPROF_FLAGS="-fuse-ld=lld -Wl,--no-rosegment -gmlt -fdebug-info-for-profiling -fmemory-profile -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -m64 -Wl,-build-id -no-pie"
 
 # Map each test to their source and any additional flags separated by ; 
@@ -78,6 +262,23 @@ for name in "${!INPUTS[@]}"; do
   IFS=";" read -r src flags <<< "${INPUTS[$name]}"
   echo "${!src}" > ${OUTDIR}/${name}.c
   ${CLANG} ${DEFAULT_MEMPROF_FLAGS} ${flags} ${OUTDIR}/${name}.c -o ${OUTDIR}/${name}.memprofexe
+  env MEMPROF_OPTIONS=log_path=stdout ${OUTDIR}/${name}.memprofexe > ${OUTDIR}/${name}.memprofraw
+  rm ${OUTDIR}/${name}.c
+done
+
+
+DEFAULT_HIST_FLAGS="${DEFAULT_MEMPROF_FLAGS} -mllvm -memprof-use-callbacks=true -mllvm -memprof-histogram"
+
+
+# Map each test to their source and any additional flags separated by ; 
+declare -A HISTOGRAM_INPUTS
+HISTOGRAM_INPUTS["basic-histogram"]="BASIC_HISTOGRAM"
+HISTOGRAM_INPUTS["padding-histogram"]="PADDING_HISTOGRAM"
+
+for name in "${!HISTOGRAM_INPUTS[@]}"; do
+  IFS=";" read -r src flags <<< "${HISTOGRAM_INPUTS[$name]}"
+  echo "${!src}" > ${OUTDIR}/${name}.c
+  ${CLANG} ${DEFAULT_HIST_FLAGS} ${flags} ${OUTDIR}/${name}.c -o ${OUTDIR}/${name}.memprofexe
   env MEMPROF_OPTIONS=log_path=stdout ${OUTDIR}/${name}.memprofexe > ${OUTDIR}/${name}.memprofraw
   rm ${OUTDIR}/${name}.c
 done

@@ -40,6 +40,7 @@ extern llvm::cl::opt<unsigned> ExecutionCountThreshold;
 extern llvm::cl::opt<unsigned> HeatmapBlock;
 extern llvm::cl::opt<unsigned long long> HeatmapMaxAddress;
 extern llvm::cl::opt<unsigned long long> HeatmapMinAddress;
+extern llvm::cl::opt<bool> HeatmapPrintMappings;
 extern llvm::cl::opt<bool> HotData;
 extern llvm::cl::opt<bool> HotFunctionsAtEnd;
 extern llvm::cl::opt<bool> HotText;

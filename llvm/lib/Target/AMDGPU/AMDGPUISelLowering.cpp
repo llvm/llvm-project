@@ -67,6 +67,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   MaxStoresPerMemcpy = MaxStoresPerMemcpyOptSize = ~0U;
   MaxStoresPerMemmove = MaxStoresPerMemmoveOptSize = ~0U;
 
+  // Enable ganging up loads and stores in the memcpy DAG lowering.
+  MaxGluedStoresPerMemcpy = 16;
+
   // Lower floating point store/load to integer store/load to reduce the number
   // of patterns in tablegen.
   setOperationAction(ISD::LOAD, MVT::f32, Promote);
@@ -570,12 +573,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::SELECT, MVT::v12f32, Promote);
   AddPromotedToType(ISD::SELECT, MVT::v12f32, MVT::v12i32);
-
-  // Disable most libcalls.
-  for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I) {
-    if (I < RTLIB::ATOMIC_LOAD || I > RTLIB::ATOMIC_FETCH_NAND_16)
-      setLibcallName(static_cast<RTLIB::Libcall>(I), nullptr);
-  }
 
   setSchedulingPreference(Sched::RegPressure);
   setJumpIsExpensive(true);
@@ -1158,7 +1155,7 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
 
   Align MaxAlign = Align(1);
   uint64_t ExplicitArgOffset = 0;
-  const DataLayout &DL = Fn.getParent()->getDataLayout();
+  const DataLayout &DL = Fn.getDataLayout();
 
   unsigned InIndex = 0;
 
@@ -1345,8 +1342,8 @@ SDValue AMDGPUTargetLowering::lowerUnhandledCall(CallLoweringInfo &CLI,
   DAG.getContext()->diagnose(NoCalls);
 
   if (!CLI.IsTailCall) {
-    for (unsigned I = 0, E = CLI.Ins.size(); I != E; ++I)
-      InVals.push_back(DAG.getUNDEF(CLI.Ins[I].VT));
+    for (ISD::InputArg &Arg : CLI.Ins)
+      InVals.push_back(DAG.getUNDEF(Arg.VT));
   }
 
   return DAG.getEntryNode();
@@ -5842,7 +5839,7 @@ unsigned AMDGPUTargetLowering::ComputeNumSignBitsForTargetNode(
     if (Tmp0 == 1)
       return 1; // Early out.
 
-    return std::min(Tmp0, std::min(Tmp1, Tmp2));
+    return std::min({Tmp0, Tmp1, Tmp2});
   }
   default:
     return 1;
@@ -5879,7 +5876,7 @@ unsigned AMDGPUTargetLowering::computeNumSignBitsForTargetInstr(
     unsigned Tmp0 = Analysis.computeNumSignBits(Src0, DemandedElts, Depth + 1);
     if (Tmp0 == 1)
       return 1;
-    return std::min(Tmp0, std::min(Tmp1, Tmp2));
+    return std::min({Tmp0, Tmp1, Tmp2});
   }
   default:
     return 1;
@@ -6015,7 +6012,7 @@ AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   case AtomicRMWInst::FMin:
     return AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::Xchg: {
-    const DataLayout &DL = RMW->getFunction()->getParent()->getDataLayout();
+    const DataLayout &DL = RMW->getFunction()->getDataLayout();
     unsigned ValSize = DL.getTypeSizeInBits(RMW->getType());
     if (ValSize == 32 || ValSize == 64)
       return AtomicExpansionKind::None;

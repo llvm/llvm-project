@@ -1,4 +1,4 @@
-! RUN: %flang -fc1 -fdebug-unparse -fopenmp %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fdebug-unparse -fopenmp %s 2>&1 | FileCheck %s
 
 #define DIR_START !dir$
 #define DIR_CONT !dir$&
@@ -11,7 +11,7 @@
 
 module m
  contains
-  subroutine s(x1, x2, x3, x4, x5, x6, x7)
+  subroutine s1(x1, x2, x3, x4, x5, x6, x7)
 
 !dir$ ignore_tkr x1
 
@@ -51,11 +51,18 @@ OMP_CONT reduction(+:x)
     do j3 = 1, n
     end do
   end
-end
+
+COMMENT &
+  subroutine s2
+  end subroutine
+COMMENT&
+  subroutine s3
+  end subroutine
+end module
 
 !CHECK: MODULE m
 !CHECK: CONTAINS
-!CHECK:  SUBROUTINE s (x1, x2, x3, x4, x5, x6, x7)
+!CHECK:  SUBROUTINE s1 (x1, x2, x3, x4, x5, x6, x7)
 !CHECK:   !DIR$ IGNORE_TKR x1
 !CHECK:   !DIR$ IGNORE_TKR x2
 !CHECK:   !DIR$ IGNORE_TKR x3
@@ -72,5 +79,9 @@ end
 !CHECK: !$OMP PARALLEL DO  REDUCTION(+:x)
 !CHECK:   DO j3=1_4,n
 !CHECK:   END DO
+!CHECK:  END SUBROUTINE
+!CHECK:  SUBROUTINE s2
+!CHECK:  END SUBROUTINE
+!CHECK:  SUBROUTINE s3
 !CHECK:  END SUBROUTINE
 !CHECK: END MODULE

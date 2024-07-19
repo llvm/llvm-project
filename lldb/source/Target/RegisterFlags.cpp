@@ -47,7 +47,7 @@ RegisterFlags::Field::Field(std::string name, unsigned start, unsigned end,
   }
 }
 
-void RegisterFlags::Field::log(Log *log) const {
+void RegisterFlags::Field::DumpToLog(Log *log) const {
   LLDB_LOG(log, "  Name: \"{0}\" Start: {1} End: {2}", m_name.c_str(), m_start,
            m_end);
 }
@@ -108,10 +108,6 @@ uint64_t RegisterFlags::Field::GetMask() const {
 }
 
 void RegisterFlags::SetFields(const std::vector<Field> &fields) {
-  // We expect that the XML processor will discard anything describing flags but
-  // with no fields.
-  assert(fields.size() && "Some fields must be provided.");
-
   // We expect that these are unsorted but do not overlap.
   // They could fill the register but may have gaps.
   std::vector<Field> provided_fields = fields;
@@ -156,10 +152,10 @@ RegisterFlags::RegisterFlags(std::string id, unsigned size,
   SetFields(fields);
 }
 
-void RegisterFlags::log(Log *log) const {
+void RegisterFlags::DumpToLog(Log *log) const {
   LLDB_LOG(log, "ID: \"{0}\" Size: {1}", m_id.c_str(), m_size);
   for (const Field &field : m_fields)
-    field.log(log);
+    field.DumpToLog(log);
 }
 
 static StreamString FormatCell(const StreamString &content,
@@ -368,6 +364,16 @@ void FieldEnum::Enumerator::ToXML(Stream &strm) const {
   llvm::printHTMLEscaped(m_name, escape_strm);
   strm.Printf("<evalue name=\"%s\" value=\"%" PRIu64 "\"/>",
               escaped_name.c_str(), m_value);
+}
+
+void FieldEnum::Enumerator::DumpToLog(Log *log) const {
+  LLDB_LOG(log, "  Name: \"{0}\" Value: {1}", m_name.c_str(), m_value);
+}
+
+void FieldEnum::DumpToLog(Log *log) const {
+  LLDB_LOG(log, "ID: \"{0}\"", m_id.c_str());
+  for (const auto &enumerator : GetEnumerators())
+    enumerator.DumpToLog(log);
 }
 
 void RegisterFlags::ToXML(Stream &strm) const {

@@ -182,7 +182,10 @@ module __fortran_builtins
     __builtin_c_ptr_ne = x%__address /= y%__address
   end function
 
-  function __builtin_c_funloc(x)
+  ! Semantics has some special-case code that allows c_funloc()
+  ! to appear in a specification expression and exempts it
+  ! from the requirement that "x" be a pure dummy procedure.
+  pure function __builtin_c_funloc(x)
     type(__builtin_c_funptr) :: __builtin_c_funloc
     external :: x
     __builtin_c_funloc = __builtin_c_funptr(loc(x))

@@ -111,7 +111,7 @@ public:
     B.setChangeObserver(*this);
   }
 
-  ~ApplyRegBankMapping() {
+  ~ApplyRegBankMapping() override {
     for (MachineInstr *MI : NewInsts)
       applyBank(*MI);
 
@@ -199,7 +199,7 @@ public:
   }
 };
 
-}
+} // anonymous namespace
 
 AMDGPURegisterBankInfo::AMDGPURegisterBankInfo(const GCNSubtarget &ST)
     : Subtarget(ST), TRI(Subtarget.getRegisterInfo()),
@@ -1116,15 +1116,14 @@ bool AMDGPURegisterBankInfo::applyMappingLoad(
             LegalizerHelper::Legalized)
           return false;
         return true;
+      }
+      LLT WiderTy = widen96To128(LoadTy);
+      auto WideLoad = B.buildLoadFromOffset(WiderTy, PtrReg, *MMO, 0);
+      if (WiderTy.isScalar()) {
+        B.buildTrunc(MI.getOperand(0), WideLoad);
       } else {
-        LLT WiderTy = widen96To128(LoadTy);
-        auto WideLoad = B.buildLoadFromOffset(WiderTy, PtrReg, *MMO, 0);
-        if (WiderTy.isScalar())
-          B.buildTrunc(MI.getOperand(0), WideLoad);
-        else {
-          B.buildDeleteTrailingVectorElements(MI.getOperand(0).getReg(),
-                                              WideLoad);
-        }
+        B.buildDeleteTrailingVectorElements(MI.getOperand(0).getReg(),
+                                            WideLoad);
       }
     }
 
@@ -4905,8 +4904,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_global_load_tr_b128:
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_ds_ordered_add:
-    case Intrinsic::amdgcn_ds_ordered_swap:
-    case Intrinsic::amdgcn_ds_fadd_v2bf16: {
+    case Intrinsic::amdgcn_ds_ordered_swap: {
       unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, DstSize);
       unsigned M0Bank = getRegBankID(MI.getOperand(2).getReg(), MRI,

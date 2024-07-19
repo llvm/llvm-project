@@ -210,6 +210,7 @@ namespace std {
 #include <__config>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
+#include <__fwd/ostream.h>
 #include <__fwd/string_view.h>
 #include <__iterator/bounded_iter.h>
 #include <__iterator/concepts.h>
@@ -902,32 +903,31 @@ struct hash<basic_string_view<wchar_t, char_traits<wchar_t> > > : __string_view_
 #if _LIBCPP_STD_VER >= 14
 inline namespace literals {
 inline namespace string_view_literals {
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR basic_string_view<char>
-operator""sv(const char* __str, size_t __len) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<char> operator""sv(const char* __str, size_t __len) noexcept {
   return basic_string_view<char>(__str, __len);
 }
 
 #  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR basic_string_view<wchar_t>
-operator""sv(const wchar_t* __str, size_t __len) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<wchar_t>
+operator""sv(const wchar_t* __str, size_t __len) noexcept {
   return basic_string_view<wchar_t>(__str, __len);
 }
 #  endif
 
 #  ifndef _LIBCPP_HAS_NO_CHAR8_T
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR basic_string_view<char8_t>
-operator""sv(const char8_t* __str, size_t __len) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<char8_t>
+operator""sv(const char8_t* __str, size_t __len) noexcept {
   return basic_string_view<char8_t>(__str, __len);
 }
 #  endif
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR basic_string_view<char16_t>
-operator""sv(const char16_t* __str, size_t __len) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<char16_t>
+operator""sv(const char16_t* __str, size_t __len) noexcept {
   return basic_string_view<char16_t>(__str, __len);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR basic_string_view<char32_t>
-operator""sv(const char32_t* __str, size_t __len) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<char32_t>
+operator""sv(const char32_t* __str, size_t __len) noexcept {
   return basic_string_view<char32_t>(__str, __len);
 }
 } // namespace string_view_literals

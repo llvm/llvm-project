@@ -95,7 +95,7 @@ TEST(MemProf, Basic) {
   // sizeof(MemInfoBlock) contains stack id + MeminfoBlock.
   EXPECT_EQ(StackOffset - MIBOffset, 8 + 2 * (8 + sizeof(MemInfoBlock)));
 
-  EXPECT_EQ(StackOffset, 408ULL);
+  EXPECT_EQ(StackOffset, 432ULL);
   // We expect 2 stack entries, with 5 frames - 8b for total count,
   // 2 * (8b for id, 8b for frame count and 5*8b for fake frames).
   // Since this is the last section, there may be additional padding at the end

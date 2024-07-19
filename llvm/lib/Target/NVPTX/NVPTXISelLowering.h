@@ -640,6 +640,14 @@ private:
   SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerCopyToReg_128(SDValue Op, SelectionDAG &DAG) const;
+  unsigned getNumRegisters(LLVMContext &Context, EVT VT,
+                           std::optional<MVT> RegisterVT) const override;
+  bool
+  splitValueIntoRegisterParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,
+                              SDValue *Parts, unsigned NumParts, MVT PartVT,
+                              std::optional<CallingConv::ID> CC) const override;
+
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;

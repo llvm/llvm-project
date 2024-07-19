@@ -210,10 +210,9 @@ COMPILER_RT_VISIBILITY extern intptr_t INSTR_PROF_PROFILE_COUNTER_BIAS_VAR;
 #define WIN_SYM_PREFIX
 #endif
 #pragma comment(                                                               \
-        linker,                                                                \
-            "/alternatename:" WIN_SYM_PREFIX INSTR_PROF_QUOTE(                 \
-                    INSTR_PROF_PROFILE_COUNTER_BIAS_VAR) "=" WIN_SYM_PREFIX    \
-            INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_COUNTER_BIAS_DEFAULT_VAR))
+    linker, "/alternatename:" WIN_SYM_PREFIX INSTR_PROF_QUOTE(                 \
+                INSTR_PROF_PROFILE_COUNTER_BIAS_VAR) "=" WIN_SYM_PREFIX        \
+                INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_COUNTER_BIAS_DEFAULT_VAR))
 #else
 COMPILER_RT_VISIBILITY extern intptr_t INSTR_PROF_PROFILE_COUNTER_BIAS_VAR
     __attribute__((weak, alias(INSTR_PROF_QUOTE(

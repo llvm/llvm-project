@@ -13,13 +13,11 @@
 # CHECK-NEXT: 0000000000001001    0 NOTYPE GLOBAL DEFAULT   1 x2
 # CHECK-NEXT: 0000000000001000    0 NOTYPE GLOBAL DEFAULT   1 x3
 
-## TODO Fix duplicate errors
 # RUN: not ld.lld a.o -T absent.lds 2>&1 | FileCheck %s --check-prefix=ABSENT --implicit-check-not=error:
-# ABSENT-COUNT-2: error: absent.lds:3: undefined section .aaa
+# ABSENT: error: absent.lds:3: undefined section .aaa
 
-## TODO Fix duplicate errors
 # RUN: not ld.lld a.o -T absolute.lds 2>&1 | FileCheck %s --check-prefix=ABSOLUTE --implicit-check-not=error:
-# ABSOLUTE-COUNT-4: error: absolute.lds:2: at least one side of the expression must be absolute
+# ABSOLUTE: error: absolute.lds:2: at least one side of the expression must be absolute
 
 #--- a.s
 .globl _start

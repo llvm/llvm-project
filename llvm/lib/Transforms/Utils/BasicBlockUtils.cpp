@@ -1734,7 +1734,7 @@ llvm::SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore) {
   BasicBlock *LoopExit = SplitBlock(SplitBefore->getParent(), SplitBefore);
 
   auto *Ty = End->getType();
-  auto &DL = SplitBefore->getModule()->getDataLayout();
+  auto &DL = SplitBefore->getDataLayout();
   const unsigned Bitwidth = DL.getTypeSizeInBits(Ty);
 
   IRBuilder<> Builder(LoopBody->getTerminator());

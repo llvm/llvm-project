@@ -354,6 +354,9 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
 
   UseLocSection = !TT.isNVPTX();
 
+  // Always emit .debug_aranges for SCE tuning.
+  UseARangesSection = GenerateARangeSection || tuneForSCE();
+
   HasAppleExtensionAttributes = tuneForLLDB();
 
   // Handle split DWARF.
@@ -1450,7 +1453,7 @@ void DwarfDebug::endModule() {
   emitDebugInfo();
 
   // Emit info into a debug aranges section.
-  if (GenerateARangeSection)
+  if (UseARangesSection)
     emitDebugARanges();
 
   // Emit info into a debug ranges section.
@@ -1713,7 +1716,7 @@ bool DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
     const MCSymbol *EndLabel;
     if (std::next(EI) == Entries.end()) {
       const MachineBasicBlock &EndMBB = Asm->MF->back();
-      EndLabel = Asm->MBBSectionRanges[EndMBB.getSectionIDNum()].EndLabel;
+      EndLabel = Asm->MBBSectionRanges[EndMBB.getSectionID()].EndLabel;
       if (EI->isClobber())
         EndMI = EI->getInstr();
     }
@@ -2064,7 +2067,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
 
   bool PrevInstInSameSection =
       (!PrevInstBB ||
-       PrevInstBB->getSectionIDNum() == MI->getParent()->getSectionIDNum());
+       PrevInstBB->getSectionID() == MI->getParent()->getSectionID());
   if (DL == PrevInstLoc && PrevInstInSameSection) {
     // If we have an ongoing unspecified location, nothing to do here.
     if (!DL)
@@ -3027,20 +3030,6 @@ void DwarfDebug::emitDebugARanges() {
       }
       continue;
     }
-
-    // Sort the symbols by offset within the section.
-    llvm::stable_sort(List, [&](const SymbolCU &A, const SymbolCU &B) {
-      unsigned IA = A.Sym ? Asm->OutStreamer->getSymbolOrder(A.Sym) : 0;
-      unsigned IB = B.Sym ? Asm->OutStreamer->getSymbolOrder(B.Sym) : 0;
-
-      // Symbols with no order assigned should be placed at the end.
-      // (e.g. section end labels)
-      if (IA == 0)
-        return false;
-      if (IB == 0)
-        return true;
-      return IA < IB;
-    });
 
     // Insert a final terminator.
     List.push_back(SymbolCU(nullptr, Asm->OutStreamer->endSection(Section)));

@@ -1056,8 +1056,8 @@ bool DeadCodeElimination::runOnNode(MachineDomTreeNode *N) {
       continue;
 
     B->erase(MI);
-    for (unsigned i = 0, n = Regs.size(); i != n; ++i)
-      MRI.markUsesInDebugValueAsUndef(Regs[i]);
+    for (unsigned Reg : Regs)
+      MRI.markUsesInDebugValueAsUndef(Reg);
     Changed = true;
   }
 

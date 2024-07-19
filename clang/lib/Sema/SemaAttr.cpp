@@ -117,7 +117,7 @@ void Sema::inferGslPointerAttribute(NamedDecl *ND,
   if (!Parent)
     return;
 
-  static llvm::StringSet<> Containers{
+  static const llvm::StringSet<> Containers{
       "array",
       "basic_string",
       "deque",
@@ -137,9 +137,9 @@ void Sema::inferGslPointerAttribute(NamedDecl *ND,
       "unordered_multimap",
   };
 
-  static llvm::StringSet<> Iterators{"iterator", "const_iterator",
-                                     "reverse_iterator",
-                                     "const_reverse_iterator"};
+  static const llvm::StringSet<> Iterators{"iterator", "const_iterator",
+                                           "reverse_iterator",
+                                           "const_reverse_iterator"};
 
   if (Parent->isInStdNamespace() && Iterators.count(ND->getName()) &&
       Containers.count(Parent->getName()))
@@ -165,7 +165,7 @@ void Sema::inferGslPointerAttribute(TypedefNameDecl *TD) {
 }
 
 void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
-  static llvm::StringSet<> StdOwners{
+  static const llvm::StringSet<> StdOwners{
       "any",
       "array",
       "basic_regex",
@@ -189,10 +189,11 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
       "unordered_multimap",
       "variant",
   };
-  static llvm::StringSet<> StdPointers{
+  static const llvm::StringSet<> StdPointers{
       "basic_string_view",
       "reference_wrapper",
       "regex_iterator",
+      "span",
   };
 
   if (!Record->getIdentifier())
@@ -216,7 +217,7 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
 }
 
 void Sema::inferNullableClassAttribute(CXXRecordDecl *CRD) {
-  static llvm::StringSet<> Nullable{
+  static const llvm::StringSet<> Nullable{
       "auto_ptr",         "shared_ptr", "unique_ptr",         "exception_ptr",
       "coroutine_handle", "function",   "move_only_function",
   };
@@ -1231,7 +1232,6 @@ void Sema::AddPushedVisibilityAttribute(Decl *D) {
   D->addAttr(VisibilityAttr::CreateImplicit(Context, type, loc));
 }
 
-/// FreeVisContext - Deallocate and null out VisContext.
 void Sema::FreeVisContext() {
   delete static_cast<VisStack*>(VisContext);
   VisContext = nullptr;

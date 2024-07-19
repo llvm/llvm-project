@@ -1954,8 +1954,8 @@ void PPCInstrInfo::storeRegToStackSlotNoUpd(
 
   StoreRegToStackSlot(MF, SrcReg, isKill, FrameIdx, RC, NewMIs);
 
-  for (unsigned i = 0, e = NewMIs.size(); i != e; ++i)
-    MBB.insert(MI, NewMIs[i]);
+  for (MachineInstr *NewMI : NewMIs)
+    MBB.insert(MI, NewMI);
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
@@ -2001,8 +2001,8 @@ void PPCInstrInfo::loadRegFromStackSlotNoUpd(
 
   LoadRegFromStackSlot(MF, DL, DestReg, FrameIdx, RC, NewMIs);
 
-  for (unsigned i = 0, e = NewMIs.size(); i != e; ++i)
-    MBB.insert(MI, NewMIs[i]);
+  for (MachineInstr *NewMI : NewMIs)
+    MBB.insert(MI, NewMI);
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
@@ -3124,7 +3124,7 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(PPC::LWZ));
     uint64_t FAType = MI.getOperand(1).getImm();
 #undef PPC_LNX_FEATURE
-#undef PPC_LNX_CPU
+#undef PPC_CPU
 #define PPC_LNX_DEFINE_OFFSETS
 #include "llvm/TargetParser/PPCTargetParser.def"
     bool IsLE = Subtarget.isLittleEndian();
@@ -4519,7 +4519,7 @@ bool PPCInstrInfo::isImmElgibleForForwarding(const MachineOperand &ImmMO,
     // load. A DForm load cannot be represented if it is a multiple of say 2.
     // XForm loads do not have this restriction.
     if (ImmMO.isGlobal()) {
-      const DataLayout &DL = ImmMO.getGlobal()->getParent()->getDataLayout();
+      const DataLayout &DL = ImmMO.getGlobal()->getDataLayout();
       if (ImmMO.getGlobal()->getPointerAlignment(DL) < III.ImmMustBeMultipleOf)
         return false;
     }

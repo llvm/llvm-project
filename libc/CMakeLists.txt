@@ -39,6 +39,8 @@ set(LIBC_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 set(LIBC_ENABLE_USE_BY_CLANG OFF CACHE BOOL "Whether or not to place libc in a build directory findable by a just built clang")
 
+set(LIBC_KERNEL_HEADERS "/usr/include" CACHE STRING "Path to Linux kernel headers")
+
 # Defining a global namespace to enclose all libc functions.
 set(default_namespace "__llvm_libc")
 if(LLVM_VERSION_MAJOR)
@@ -47,6 +49,10 @@ endif()
 set(LIBC_NAMESPACE ${default_namespace}
   CACHE STRING "The namespace to use to enclose internal implementations. Must start with '__llvm_libc'."
 )
+
+
+add_subdirectory(newhdrgen)
+
 
 if(LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD)
   if(NOT LIBC_HDRGEN_EXE)
@@ -66,6 +72,8 @@ option(LIBC_BUILD_GPU_LOADER "Always build the GPU loader utilities" OFF)
 if(LIBC_BUILD_GPU_LOADER OR (LLVM_LIBC_GPU_BUILD AND NOT LLVM_RUNTIMES_BUILD))
   add_subdirectory(utils/gpu)
 endif()
+
+option(LIBC_USE_NEW_HEADER_GEN "Generate header files using new headergen instead of the old one" OFF)
 
 set(NEED_LIBC_HDRGEN FALSE)
 if(NOT LLVM_RUNTIMES_BUILD)
@@ -401,9 +409,7 @@ if(LLVM_INCLUDE_TESTS)
   add_subdirectory(fuzzing)
 endif()
 
-if(LIBC_INCLUDE_BENCHMARKS)
-  add_subdirectory(benchmarks)
-endif()
+add_subdirectory(benchmarks)
 
 if (LIBC_INCLUDE_DOCS)
   add_subdirectory(docs)

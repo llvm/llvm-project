@@ -173,10 +173,10 @@ public:
   }
 
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI stack(stack&& __q) _NOEXCEPT_(is_nothrow_move_constructible<container_type>::value)
+  _LIBCPP_HIDE_FROM_ABI stack(stack&& __q) noexcept(is_nothrow_move_constructible<container_type>::value)
       : c(std::move(__q.c)) {}
 
-  _LIBCPP_HIDE_FROM_ABI stack& operator=(stack&& __q) _NOEXCEPT_(is_nothrow_move_assignable<container_type>::value) {
+  _LIBCPP_HIDE_FROM_ABI stack& operator=(stack&& __q) noexcept(is_nothrow_move_assignable<container_type>::value) {
     c = std::move(__q.c);
     return *this;
   }

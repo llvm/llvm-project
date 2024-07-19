@@ -801,8 +801,9 @@ Error LLJITBuilderState::prepareForConstruction() {
       break;
     }
     if (UseJITLink) {
+      if (!JTMB->getCodeModel())
+        JTMB->setCodeModel(CodeModel::Small);
       JTMB->setRelocationModel(Reloc::PIC_);
-      JTMB->setCodeModel(CodeModel::Small);
       CreateObjectLinkingLayer =
           [](ExecutionSession &ES,
              const Triple &) -> Expected<std::unique_ptr<ObjectLayer>> {

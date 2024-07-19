@@ -31,6 +31,7 @@ exports_files([
     "include/llvm/IR/Intrinsics.td",
     "include/llvm/Option/OptParser.td",
     "utils/lit/lit.py",
+    "utils/lldbDataFormatters.py",
 ])
 
 # It may be tempting to add compiler flags here, but that should be avoided.
@@ -943,7 +944,17 @@ cc_library(
     srcs = glob([
         "lib/IR/*.cpp",
         "lib/IR/*.h",
-    ]),
+    ]) + [
+        # To avoid a dependency cycle.
+        "include/llvm/Analysis/IVDescriptors.h",
+        "include/llvm/CodeGen/GenVT.inc",
+    ] + glob(
+        # To avoid a dependency cycle.
+        [
+            "include/llvm/CodeGen/**/*.h",
+            "include/llvm/CodeGenTypes/**/*.h",
+        ],
+    ),
     hdrs = glob(
         [
             "include/llvm/*.h",
@@ -1296,8 +1307,9 @@ cc_library(
     copts = llvm_copts,
     includes = ["include"],
     textual_hdrs = [
-        "include/llvm/TargetParser/ARMTargetParserDef.inc",
+        "include/llvm/TargetParser/AArch64CPUFeatures.inc",
         "include/llvm/TargetParser/AArch64TargetParserDef.inc",
+        "include/llvm/TargetParser/ARMTargetParserDef.inc",
         "include/llvm/TargetParser/RISCVTargetParserDef.inc",
     ] + glob([
         "include/llvm/TargetParser/*.def",
@@ -2651,6 +2663,7 @@ cc_library(
         ":CodeGen",
         ":Core",
         ":Coroutines",
+        ":Demangle",
         ":HipStdPar",
         ":IPO",
         ":IRPrinter",

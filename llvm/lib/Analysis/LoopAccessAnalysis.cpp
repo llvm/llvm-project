@@ -203,10 +203,18 @@ RuntimeCheckingPtrGroup::RuntimeCheckingPtrGroup(
 ///
 /// There is no conflict when the intervals are disjoint:
 /// NoConflict = (P2.Start >= P1.End) || (P1.Start >= P2.End)
-static std::pair<const SCEV *, const SCEV *>
-getStartAndEndForAccess(const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy,
-                        PredicatedScalarEvolution &PSE) {
+static std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
+    const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy,
+    PredicatedScalarEvolution &PSE,
+    DenseMap<std::pair<const SCEV *, Type *>,
+             std::pair<const SCEV *, const SCEV *>> &PointerBounds) {
   ScalarEvolution *SE = PSE.getSE();
+
+  auto [Iter, Ins] = PointerBounds.insert(
+      {{PtrExpr, AccessTy},
+       {SE->getCouldNotCompute(), SE->getCouldNotCompute()}});
+  if (!Ins)
+    return Iter->second;
 
   const SCEV *ScStart;
   const SCEV *ScEnd;
@@ -239,12 +247,13 @@ getStartAndEndForAccess(const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy,
   assert(SE->isLoopInvariant(ScEnd, Lp)&& "ScEnd needs to be invariant");
 
   // Add the size of the pointed element to ScEnd.
-  auto &DL = Lp->getHeader()->getModule()->getDataLayout();
+  auto &DL = Lp->getHeader()->getDataLayout();
   Type *IdxTy = DL.getIndexType(PtrExpr->getType());
   const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(IdxTy, AccessTy);
   ScEnd = SE->getAddExpr(ScEnd, EltSizeSCEV);
 
-  return {ScStart, ScEnd};
+  Iter->second = {ScStart, ScEnd};
+  return Iter->second;
 }
 
 /// Calculate Start and End points of memory access using
@@ -254,8 +263,8 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
                                     unsigned DepSetId, unsigned ASId,
                                     PredicatedScalarEvolution &PSE,
                                     bool NeedsFreeze) {
-  const auto &[ScStart, ScEnd] =
-      getStartAndEndForAccess(Lp, PtrExpr, AccessTy, PSE);
+  const auto &[ScStart, ScEnd] = getStartAndEndForAccess(
+      Lp, PtrExpr, AccessTy, PSE, DC.getPointerBounds());
   assert(!isa<SCEVCouldNotCompute>(ScStart) &&
          !isa<SCEVCouldNotCompute>(ScEnd) &&
          "must be able to compute both start and end expressions");
@@ -309,7 +318,7 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
     return false;
 
   const DataLayout &DL =
-      SinkAR->getLoop()->getHeader()->getModule()->getDataLayout();
+      SinkAR->getLoop()->getHeader()->getDataLayout();
   unsigned AllocSize =
       std::max(DL.getTypeAllocSize(SrcTy), DL.getTypeAllocSize(DstTy));
 
@@ -612,12 +621,12 @@ void RuntimePointerChecking::printChecks(
     OS.indent(Depth) << "Check " << N++ << ":\n";
 
     OS.indent(Depth + 2) << "Comparing group (" << Check1 << "):\n";
-    for (unsigned K = 0; K < First.size(); ++K)
-      OS.indent(Depth + 2) << *Pointers[First[K]].PointerValue << "\n";
+    for (unsigned K : First)
+      OS.indent(Depth + 2) << *Pointers[K].PointerValue << "\n";
 
     OS.indent(Depth + 2) << "Against group (" << Check2 << "):\n";
-    for (unsigned K = 0; K < Second.size(); ++K)
-      OS.indent(Depth + 2) << *Pointers[Second[K]].PointerValue << "\n";
+    for (unsigned K : Second)
+      OS.indent(Depth + 2) << *Pointers[K].PointerValue << "\n";
   }
 }
 
@@ -627,15 +636,12 @@ void RuntimePointerChecking::print(raw_ostream &OS, unsigned Depth) const {
   printChecks(OS, Checks, Depth);
 
   OS.indent(Depth) << "Grouped accesses:\n";
-  for (unsigned I = 0; I < CheckingGroups.size(); ++I) {
-    const auto &CG = CheckingGroups[I];
-
+  for (const auto &CG : CheckingGroups) {
     OS.indent(Depth + 2) << "Group " << &CG << ":\n";
     OS.indent(Depth + 4) << "(Low: " << *CG.Low << " High: " << *CG.High
                          << ")\n";
-    for (unsigned J = 0; J < CG.Members.size(); ++J) {
-      OS.indent(Depth + 6) << "Member: " << *Pointers[CG.Members[J]].Expr
-                           << "\n";
+    for (unsigned Member : CG.Members) {
+      OS.indent(Depth + 6) << "Member: " << *Pointers[Member].Expr << "\n";
     }
   }
 }
@@ -1497,7 +1503,7 @@ std::optional<int64_t> llvm::getPtrStride(PredicatedScalarEvolution &PSE,
     return std::nullopt;
   }
 
-  auto &DL = Lp->getHeader()->getModule()->getDataLayout();
+  auto &DL = Lp->getHeader()->getDataLayout();
   TypeSize AllocSize = DL.getTypeAllocSize(AccessTy);
   int64_t Size = AllocSize.getFixedValue();
   const APInt &APStepVal = C->getAPInt();
@@ -1724,7 +1730,7 @@ bool MemoryDepChecker::Dependence::isBackward() const {
 }
 
 bool MemoryDepChecker::Dependence::isPossiblyBackward() const {
-  return isBackward() || Type == Unknown;
+  return isBackward() || Type == Unknown || Type == IndirectUnsafe;
 }
 
 bool MemoryDepChecker::Dependence::isForward() const {
@@ -1910,7 +1916,7 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
     const AccessAnalysis::MemAccessInfo &B, Instruction *BInst,
     const DenseMap<Value *, SmallVector<const Value *, 16>>
         &UnderlyingObjects) {
-  auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
+  auto &DL = InnermostLoop->getHeader()->getDataLayout();
   auto &SE = *PSE.getSE();
   auto [APtr, AIsWrite] = A;
   auto [BPtr, BIsWrite] = B;
@@ -1967,10 +1973,9 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   if (SE.isLoopInvariant(Src, InnermostLoop) ||
       SE.isLoopInvariant(Sink, InnermostLoop)) {
     const auto &[SrcStart, SrcEnd] =
-        getStartAndEndForAccess(InnermostLoop, Src, ATy, PSE);
+        getStartAndEndForAccess(InnermostLoop, Src, ATy, PSE, PointerBounds);
     const auto &[SinkStart, SinkEnd] =
-        getStartAndEndForAccess(InnermostLoop, Sink, BTy, PSE);
-
+        getStartAndEndForAccess(InnermostLoop, Sink, BTy, PSE, PointerBounds);
     if (!isa<SCEVCouldNotCompute>(SrcStart) &&
         !isa<SCEVCouldNotCompute>(SrcEnd) &&
         !isa<SCEVCouldNotCompute>(SinkStart) &&
@@ -2030,7 +2035,7 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   }
 
   ScalarEvolution &SE = *PSE.getSE();
-  auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
+  auto &DL = InnermostLoop->getHeader()->getDataLayout();
   uint64_t MaxStride = std::max(StrideA, StrideB);
 
   // If the distance between the acecsses is larger than their maximum absolute
@@ -2355,9 +2360,9 @@ void MemoryDepChecker::Dependence::print(
 
 bool LoopAccessInfo::canAnalyzeLoop() {
   // We need to have a loop header.
-  LLVM_DEBUG(dbgs() << "LAA: Found a loop in "
-                    << TheLoop->getHeader()->getParent()->getName() << ": "
-                    << TheLoop->getHeader()->getName() << '\n');
+  LLVM_DEBUG(dbgs() << "\nLAA: Checking a loop in '"
+                    << TheLoop->getHeader()->getParent()->getName() << "' from "
+                    << TheLoop->getLocStr() << "\n");
 
   // We can only analyze innermost loops.
   if (!TheLoop->isInnermost()) {
@@ -2386,6 +2391,8 @@ bool LoopAccessInfo::canAnalyzeLoop() {
     return false;
   }
 
+  LLVM_DEBUG(dbgs() << "LAA: Found an analyzable loop: "
+                    << TheLoop->getHeader()->getName() << "\n");
   return true;
 }
 
@@ -2806,7 +2813,7 @@ bool LoopAccessInfo::isInvariant(Value *V) const {
 /// stores. This ignores trailing indices that have no effect on the final
 /// pointer.
 static unsigned getGEPInductionOperand(const GetElementPtrInst *Gep) {
-  const DataLayout &DL = Gep->getModule()->getDataLayout();
+  const DataLayout &DL = Gep->getDataLayout();
   unsigned LastOperand = Gep->getNumOperands() - 1;
   TypeSize GEPAllocSize = DL.getTypeAllocSize(Gep->getResultElementType());
 
@@ -2846,21 +2853,6 @@ static Value *stripGetElementPtr(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
         !SE->isLoopInvariant(SE->getSCEV(GEP->getOperand(I)), Lp))
       return Ptr;
   return GEP->getOperand(InductionOperand);
-}
-
-/// If a value has only one user that is a CastInst, return it.
-static Value *getUniqueCastUse(Value *Ptr, Loop *Lp, Type *Ty) {
-  Value *UniqueCast = nullptr;
-  for (User *U : Ptr->users()) {
-    CastInst *CI = dyn_cast<CastInst>(U);
-    if (CI && CI->getType() == Ty) {
-      if (!UniqueCast)
-        UniqueCast = CI;
-      else
-        return nullptr;
-    }
-  }
-  return UniqueCast;
 }
 
 /// Get the stride of a pointer access in a loop. Looks for symbolic
@@ -2925,21 +2917,14 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
     return nullptr;
 
   // Look for the loop invariant symbolic value.
-  const SCEVUnknown *U = dyn_cast<SCEVUnknown>(V);
-  if (!U) {
-    const auto *C = dyn_cast<SCEVIntegralCastExpr>(V);
-    if (!C)
-      return nullptr;
-    U = dyn_cast<SCEVUnknown>(C->getOperand());
-    if (!U)
-      return nullptr;
+  if (isa<SCEVUnknown>(V))
+    return V;
 
-    // Match legacy behavior - this is not needed for correctness
-    if (!getUniqueCastUse(U->getValue(), Lp, V->getType()))
-      return nullptr;
-  }
+  if (const auto *C = dyn_cast<SCEVIntegralCastExpr>(V))
+    if (isa<SCEVUnknown>(C->getOperand()))
+      return V;
 
-  return V;
+  return nullptr;
 }
 
 void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
@@ -2984,7 +2969,7 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   // Match the types so we can compare the stride and the MaxBTC.
   // The Stride can be positive/negative, so we sign extend Stride;
   // The backedgeTakenCount is non-negative, so we zero extend MaxBTC.
-  const DataLayout &DL = TheLoop->getHeader()->getModule()->getDataLayout();
+  const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
   uint64_t StrideTypeSizeBits = DL.getTypeSizeInBits(StrideExpr->getType());
   uint64_t BETypeSizeBits = DL.getTypeSizeInBits(MaxBTC->getType());
   const SCEV *CastedStride = StrideExpr;
@@ -3099,6 +3084,22 @@ const LoopAccessInfo &LoopAccessInfoManager::getInfo(Loop &L) {
         std::make_unique<LoopAccessInfo>(&L, &SE, TTI, TLI, &AA, &DT, &LI);
 
   return *It->second;
+}
+void LoopAccessInfoManager::clear() {
+  SmallVector<Loop *> ToRemove;
+  // Collect LoopAccessInfo entries that may keep references to IR outside the
+  // analyzed loop or SCEVs that may have been modified or invalidated. At the
+  // moment, that is loops requiring memory or SCEV runtime checks, as those cache
+  // SCEVs, e.g. for pointer expressions.
+  for (const auto &[L, LAI] : LoopAccessInfoMap) {
+    if (LAI->getRuntimePointerChecking()->getChecks().empty() &&
+        LAI->getPSE().getPredicate().isAlwaysTrue())
+      continue;
+    ToRemove.push_back(L);
+  }
+
+  for (Loop *L : ToRemove)
+    LoopAccessInfoMap.erase(L);
 }
 
 bool LoopAccessInfoManager::invalidate(

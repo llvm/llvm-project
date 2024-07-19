@@ -11,6 +11,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/LEB128.h"
 
 using namespace llvm;
@@ -407,7 +408,9 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_TLS_TPREL32:
   case R_LARCH_TLS_TPREL64:
   case R_LARCH_TLS_LE_HI20:
+  case R_LARCH_TLS_LE_HI20_R:
   case R_LARCH_TLS_LE_LO12:
+  case R_LARCH_TLS_LE_LO12_R:
   case R_LARCH_TLS_LE64_LO20:
   case R_LARCH_TLS_LE64_HI12:
     return R_TPREL;
@@ -490,6 +493,7 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
     return R_TLSLD_GOT;
   case R_LARCH_TLS_GD_HI20:
     return R_TLSGD_GOT;
+  case R_LARCH_TLS_LE_ADD_R:
   case R_LARCH_RELAX:
     return config->relax ? R_RELAX_HINT : R_NONE;
   case R_LARCH_ALIGN:
@@ -617,6 +621,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_TLS_LE_LO12:
   case R_LARCH_TLS_IE_PC_LO12:
   case R_LARCH_TLS_IE_LO12:
+  case R_LARCH_TLS_LE_LO12_R:
   case R_LARCH_TLS_DESC_PC_LO12:
   case R_LARCH_TLS_DESC_LO12:
     write32le(loc, setK12(read32le(loc), extractBits(val, 11, 0)));
@@ -637,6 +642,9 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_TLS_DESC_PC_HI20:
   case R_LARCH_TLS_DESC_HI20:
     write32le(loc, setJ20(read32le(loc), extractBits(val, 31, 12)));
+    return;
+  case R_LARCH_TLS_LE_HI20_R:
+    write32le(loc, setJ20(read32le(loc), extractBits(val + 0x800, 31, 12)));
     return;
 
   // Relocs intended for `lu32i.d`.
@@ -707,6 +715,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     // no-op
     return;
 
+  case R_LARCH_TLS_LE_ADD_R:
   case R_LARCH_RELAX:
     return; // Ignored (for now)
 

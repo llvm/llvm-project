@@ -384,7 +384,10 @@ bool PPCFrameLowering::needsFP(const MachineFunction &MF) const {
 }
 
 void PPCFrameLowering::replaceFPWithRealFP(MachineFunction &MF) const {
-  bool is31 = needsFP(MF);
+  // When there is dynamic alloca in this function, we can not use the frame
+  // pointer X31/R31 for the frameaddress lowering. In this case, only X1/R1
+  // always points to the backchain.
+  bool is31 = needsFP(MF) && !MF.getFrameInfo().hasVarSizedObjects();
   unsigned FPReg  = is31 ? PPC::R31 : PPC::R1;
   unsigned FP8Reg = is31 ? PPC::X31 : PPC::X1;
 
@@ -610,8 +613,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   const PPCRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   const PPCTargetLowering &TLI = *Subtarget.getTargetLowering();
 
-  MachineModuleInfo &MMI = MF.getMMI();
-  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
   DebugLoc dl;
   // AIX assembler does not support cfi directives.
   const bool needsCFI = MF.needsFrameMoves() && !Subtarget.isAIXABI();
@@ -1236,8 +1238,7 @@ void PPCFrameLowering::inlineStackProbe(MachineFunction &MF,
   const PPCTargetLowering &TLI = *Subtarget.getTargetLowering();
   const PPCInstrInfo &TII = *Subtarget.getInstrInfo();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  MachineModuleInfo &MMI = MF.getMMI();
-  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
   // AIX assembler does not support cfi directives.
   const bool needsCFI = MF.needsFrameMoves() && !Subtarget.isAIXABI();
   auto StackAllocMIPos = llvm::find_if(PrologMBB, [](MachineInstr &MI) {

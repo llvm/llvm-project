@@ -1551,7 +1551,7 @@ ASTNodeImporter::VisitCountAttributedType(const CountAttributedType *T) {
   Expr *CountExpr = importChecked(Err, T->getCountExpr());
 
   SmallVector<TypeCoupledDeclRefInfo, 1> CoupledDecls;
-  for (auto TI : T->dependent_decls()) {
+  for (const TypeCoupledDeclRefInfo &TI : T->dependent_decls()) {
     Expected<ValueDecl *> ToDeclOrErr = import(TI.getDecl());
     if (!ToDeclOrErr)
       return ToDeclOrErr.takeError();
@@ -6565,6 +6565,11 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
       return D2;
   }
 
+  // Update InsertPos, because preceding import calls may have invalidated
+  // it by adding new specializations.
+  if (!VarTemplate->findSpecialization(TemplateArgs, InsertPos))
+    VarTemplate->AddSpecialization(D2, InsertPos);
+
   QualType T;
   if (Error Err = importInto(T, D->getType()))
     return std::move(Err);
@@ -6602,8 +6607,6 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
 
   if (FoundSpecialization)
     D2->setPreviousDecl(FoundSpecialization->getMostRecentDecl());
-
-  VarTemplate->AddSpecialization(D2, InsertPos);
 
   addDeclToContexts(D, D2);
 

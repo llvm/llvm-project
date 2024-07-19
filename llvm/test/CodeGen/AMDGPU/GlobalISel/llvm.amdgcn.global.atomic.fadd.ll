@@ -61,8 +61,8 @@ define void @global_atomic_fadd_f32_off_neg2047(ptr addrspace(1) %ptr, float %da
 define amdgpu_kernel void @global_atomic_fadd_f32_off_ss(ptr addrspace(1) %ptr, float %data) {
 ; GFX908-LABEL: global_atomic_fadd_f32_off_ss:
 ; GFX908:       ; %bb.0:
-; GFX908-NEXT:    s_load_dword s2, s[4:5], 0x8
-; GFX908-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX908-NEXT:    s_load_dword s2, s[6:7], 0x8
+; GFX908-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; GFX908-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    v_mov_b32_e32 v0, s2
@@ -71,8 +71,8 @@ define amdgpu_kernel void @global_atomic_fadd_f32_off_ss(ptr addrspace(1) %ptr, 
 ;
 ; GFX90A-LABEL: global_atomic_fadd_f32_off_ss:
 ; GFX90A:       ; %bb.0:
-; GFX90A-NEXT:    s_load_dword s2, s[4:5], 0x8
-; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX90A-NEXT:    s_load_dword s2, s[6:7], 0x8
+; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, s2

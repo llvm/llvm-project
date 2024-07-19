@@ -16,7 +16,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DWP/DWP.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include <cstdint>
@@ -67,10 +66,6 @@ private:
   /// .debug_aranges DWARF section.
   std::unique_ptr<DebugARangesSectionWriter> ARangesSectionWriter;
 
-  /// Stores and serializes information that will be put into the
-  /// .debug_addr DWARF section.
-  std::unique_ptr<DebugAddrWriter> AddrWriter;
-
   /// Stores and serializes information that will be put in to the
   /// .debug_addr DWARF section.
   /// Does not do de-duplication.
@@ -90,10 +85,15 @@ private:
   /// Store Rangelists writer for each DWO CU.
   RangeListsDWOWriers RangeListsWritersByCU;
 
-  std::mutex LocListDebugInfoPatchesMutex;
+  /// Stores ranges writer for each DWO CU.
+  std::unordered_map<uint64_t, std::unique_ptr<DebugRangesSectionWriter>>
+      LegacyRangesWritersByCU;
 
-  /// Dwo id specific its RangesBase.
-  std::unordered_map<uint64_t, uint64_t> DwoRangesBase;
+  /// Stores address writer for each CU.
+  std::unordered_map<uint64_t, std::unique_ptr<DebugAddrWriter>>
+      AddressWritersByCU;
+
+  std::mutex LocListDebugInfoPatchesMutex;
 
   std::unordered_map<DWARFUnit *, uint64_t> LineTablePatchMap;
   std::unordered_map<const DWARFUnit *, uint64_t> TypeUnitRelocMap;
@@ -112,6 +112,7 @@ private:
   void updateUnitDebugInfo(DWARFUnit &Unit, DIEBuilder &DIEBldr,
                            DebugLocWriter &DebugLocWriter,
                            DebugRangesSectionWriter &RangesSectionWriter,
+                           DebugAddrWriter &AddressWriter,
                            std::optional<uint64_t> RangesBase = std::nullopt);
 
   /// Patches the binary for an object's address ranges to be updated.
@@ -138,13 +139,15 @@ private:
   /// Process and write out CUs that are passsed in.
   void finalizeCompileUnits(DIEBuilder &DIEBlder, DIEStreamer &Streamer,
                             CUOffsetMap &CUMap,
-                            const std::list<DWARFUnit *> &CUs);
+                            const std::list<DWARFUnit *> &CUs,
+                            DebugAddrWriter &FinalAddrWriter);
 
   /// Finalize debug sections in the main binary.
   void finalizeDebugSections(DIEBuilder &DIEBlder,
                              DWARF5AcceleratorTable &DebugNamesTable,
                              DIEStreamer &Streamer, raw_svector_ostream &ObjOS,
-                             CUOffsetMap &CUMap);
+                             CUOffsetMap &CUMap,
+                             DebugAddrWriter &FinalAddrWriter);
 
   /// Patches the binary for DWARF address ranges (e.g. in functions and lexical
   /// blocks) to be updated.
@@ -183,13 +186,7 @@ public:
   void updateDebugInfo();
 
   /// Update stmt_list for CUs based on the new .debug_line \p Layout.
-  void updateLineTableOffsets(const MCAsmLayout &Layout);
-
-  uint64_t getDwoRangesBase(uint64_t DWOId) { return DwoRangesBase[DWOId]; }
-
-  void setDwoRangesBase(uint64_t DWOId, uint64_t RangesBase) {
-    DwoRangesBase[DWOId] = RangesBase;
-  }
+  void updateLineTableOffsets(const MCAssembler &Asm);
 
   using OverriddenSectionsMap = std::unordered_map<DWARFSectionKind, StringRef>;
   /// Output .dwo files.

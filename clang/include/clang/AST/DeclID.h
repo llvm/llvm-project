@@ -197,6 +197,8 @@ public:
 
   static LocalDeclID get(ASTReader &Reader, serialization::ModuleFile &MF,
                          DeclID ID);
+  static LocalDeclID get(ASTReader &Reader, serialization::ModuleFile &MF,
+                         unsigned ModuleFileIndex, unsigned LocalDeclID);
 
   LocalDeclID &operator++() {
     ++ID;
@@ -259,11 +261,7 @@ template <> struct DenseMapInfo<clang::GlobalDeclID> {
   }
 
   static unsigned getHashValue(const GlobalDeclID &Key) {
-    // Our default hash algorithm for 64 bits integer may not be very good.
-    // In GlobalDeclID's case, it is pretty common that the lower 32 bits can
-    // be same.
-    // FIXME: Remove this when we fix the underlying issue.
-    return llvm::hash_value(Key.getRawValue());
+    return DenseMapInfo<DeclID>::getHashValue(Key.getRawValue());
   }
 
   static bool isEqual(const GlobalDeclID &L, const GlobalDeclID &R) {

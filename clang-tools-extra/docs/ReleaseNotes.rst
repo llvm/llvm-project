@@ -48,6 +48,10 @@ Major New Features
 Improvements to clangd
 ----------------------
 
+- Introduced exmperimental support for C++20 Modules. The experimental support can
+  be enabled by `-experimental-modules-support` option. It is in an early development
+  stage and may not perform efficiently in real-world scenarios.
+
 Inlay hints
 ^^^^^^^^^^^
 
@@ -125,14 +129,28 @@ Improvements to clang-tidy
 - Added argument `--exclude-header-filter` and config option `ExcludeHeaderFilterRegex`
   to exclude headers from analysis via a RegEx.
 
+- Added argument `--allow-no-checks` to suppress "no checks enabled" error
+  when disabling all of the checks by `--checks='-*'`.
+
 New checks
 ^^^^^^^^^^
+
+- New :doc:`boost-use-ranges
+  <clang-tidy/checks/boost/use-ranges>` check.
+
+  Detects calls to standard library iterator algorithms that could be replaced
+  with a Boost ranges version instead.
 
 - New :doc:`bugprone-crtp-constructor-accessibility
   <clang-tidy/checks/bugprone/crtp-constructor-accessibility>` check.
 
   Detects error-prone Curiously Recurring Template Pattern usage, when the CRTP
   can be constructed outside itself and the derived class.
+
+- New :doc:`bugprone-pointer-arithmetic-on-polymorphic-object
+  <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` check.
+
+  Finds pointer arithmetic performed on classes that contain a virtual function.
 
 - New :doc:`bugprone-return-const-ref-from-parameter
   <clang-tidy/checks/bugprone/return-const-ref-from-parameter>` check.
@@ -166,6 +184,12 @@ New checks
   Finds initializer lists for aggregate types that could be
   written as designated initializers instead.
 
+- New :doc:`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` check.
+
+  Detects calls to standard library iterator algorithms that could be replaced
+  with a ranges version instead.
+
 - New :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check.
 
@@ -196,6 +220,11 @@ New checks
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
+- New alias :doc:`cert-ctr56-cpp <clang-tidy/checks/cert/ctr56-cpp>` to
+  :doc:`bugprone-pointer-arithmetic-on-polymorphic-object
+  <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>`
+  was added.
+
 - New alias :doc:`cert-int09-c <clang-tidy/checks/cert/int09-c>` to
   :doc:`readability-enum-initial-value <clang-tidy/checks/readability/enum-initial-value>`
   was added.
@@ -207,6 +236,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/assert-side-effect>` check by detecting side
   effect from calling a method with non-const reference parameters.
 
+- Improved :doc:`bugprone-assignment-in-if-condition
+  <clang-tidy/checks/bugprone/assignment-in-if-condition>` check by ignoring
+  assignments in the C++20 ``requires`` clause.
+
 - Improved :doc:`bugprone-casting-through-void
   <clang-tidy/checks/bugprone/casting-through-void>` check by ignoring casts
   where source is already a ``void``` pointer, making middle ``void`` pointer
@@ -215,6 +248,11 @@ Changes in existing checks
 - Improved :doc:`bugprone-forwarding-reference-overload
   <clang-tidy/checks/bugprone/forwarding-reference-overload>`
   check to ignore deleted constructors which won't hide other overloads.
+
+- Improved :doc:`bugprone-implicit-widening-of-multiplication-result
+  <clang-tidy/checks/bugprone/implicit-widening-of-multiplication-result>` check
+  by adding an option to ignore constant expressions of signed integer types
+  that fit in the source expression type.
 
 - Improved :doc:`bugprone-inc-dec-in-conditions
   <clang-tidy/checks/bugprone/inc-dec-in-conditions>` check to ignore code
@@ -238,10 +276,10 @@ Changes in existing checks
   false positives resulting from use of optionals in unevaluated context.
 
 - Improved :doc:`bugprone-sizeof-expression
-  <clang-tidy/checks/bugprone/sizeof-expression>` check by eliminating some
-  false positives and adding a new (off-by-default) option
-  `WarnOnSizeOfPointer` that reports all ``sizeof(pointer)`` expressions
-  (except for a few that are idiomatic).
+  <clang-tidy/checks/bugprone/sizeof-expression>` check by clarifying the
+  diagnostics, eliminating some false positives and adding a new
+  (off-by-default) option `WarnOnSizeOfPointer` that reports all
+  ``sizeof(pointer)`` expressions (except for a few that are idiomatic).
 
 - Improved :doc:`bugprone-suspicious-include
   <clang-tidy/checks/bugprone/suspicious-include>` check by replacing the local
@@ -264,7 +302,15 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` check to also handle
-  calls to ``std::forward``.
+  calls to ``std::forward``. Fixed sequencing of designated initializers. Fixed
+  sequencing of callees: In C++17 and later, the callee of a function is guaranteed
+  to be sequenced before the arguments, so don't warn if the use happens in the
+  callee and the move happens in one of the arguments.
+
+- Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
+  <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
+  with a new option `AllowInternalLinkage` to disable the warning for variables
+  with internal linkage.
 
 - Improved :doc:`cppcoreguidelines-macro-usage
   <clang-tidy/checks/cppcoreguidelines/macro-usage>` check by ignoring macro with
@@ -398,7 +444,14 @@ Changes in existing checks
   analyzed, so the check now handles the common patterns
   `const auto e = (*vector_ptr)[i]` and `const auto e = vector_ptr->at(i);`.
   Calls to mutable function where there exists a `const` overload are also
-  handled.
+  handled. Fix crash in the case of a non-member operator call.
+
+- Improved :doc:`performance-unnecessary-value-param
+  <clang-tidy/checks/performance/unnecessary-value-param>` check
+  detecting more cases for template functions including lambdas with ``auto``.
+  E.g., ``std::sort(a.begin(), a.end(), [](auto x, auto y) { return a > b; });``
+  will be detected for expensive to copy types. Fixed false positives for
+  dependent call expressions.
 
 - Improved :doc:`readability-avoid-return-with-void-value
   <clang-tidy/checks/readability/avoid-return-with-void-value>` check by adding
@@ -452,7 +505,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` check to avoid to emit
-  warning for macro when IgnoreMacro option is enabled.
+  warning for macro when IgnoreMacro option is enabled and improve messages
+  when auto-fix does not work.
 
 - Improved :doc:`readability-static-definition-in-anonymous-namespace
   <clang-tidy/checks/readability/static-definition-in-anonymous-namespace>`

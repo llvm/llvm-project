@@ -38,7 +38,7 @@ class CharacterConvertConversion
 public:
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::CharConvertOp conv,
                   mlir::PatternRewriter &rewriter) const override {
     auto kindMap = fir::getKindMapping(conv->getParentOfType<mlir::ModuleOp>());

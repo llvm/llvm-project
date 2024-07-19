@@ -232,6 +232,10 @@ DWARFDebugInfo::GetUnitContainingDIEOffset(DIERef::Section section,
   return result;
 }
 
+const std::shared_ptr<SymbolFileDWARFDwo> &DWARFDebugInfo::GetDwpSymbolFile() {
+  return m_dwarf.GetDwpSymbolFile();
+}
+
 DWARFTypeUnit *DWARFDebugInfo::GetTypeUnitForHash(uint64_t hash) {
   auto pos = llvm::lower_bound(m_type_hash_to_unit_index,
                                std::make_pair(hash, 0u), llvm::less_first());

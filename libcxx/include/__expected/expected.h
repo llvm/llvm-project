@@ -507,7 +507,9 @@ private:
       _And< is_constructible<_Tp, _UfQual>,
             is_constructible<_Err, _OtherErrQual>,
             _If<_Not<is_same<remove_cv_t<_Tp>, bool>>::value,
-                _And< _Not<is_constructible<_Tp, expected<_Up, _OtherErr>&>>,
+                _And< 
+                      _Not<_And<is_same<_Tp, _Up>, is_same<_Err, _OtherErr>>>, // use the copy constructor instead, see #92676
+                      _Not<is_constructible<_Tp, expected<_Up, _OtherErr>&>>,
                       _Not<is_constructible<_Tp, expected<_Up, _OtherErr>>>,
                       _Not<is_constructible<_Tp, const expected<_Up, _OtherErr>&>>,
                       _Not<is_constructible<_Tp, const expected<_Up, _OtherErr>>>,

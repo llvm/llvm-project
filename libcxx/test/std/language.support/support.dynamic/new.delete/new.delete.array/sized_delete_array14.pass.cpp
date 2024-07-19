@@ -8,11 +8,15 @@
 
 // test sized operator delete[] replacement.
 
-// TODO(mordante) fix this test after updating clang in Docker
-// UNSUPPORTED: clang-15, clang-16, clang-17, clang-18, clang-19
+// These compiler versions don't enable sized deallocation by default.
+// UNSUPPORTED: clang-17, clang-18
+
 // UNSUPPORTED: sanitizer-new-delete, c++03, c++11
 // XFAIL: apple-clang
 // XFAIL: using-built-library-before-llvm-11
+
+// AIX, z/OS, and MinGW default to -fno-sized-deallocation.
+// XFAIL: target={{.+}}-aix{{.*}}, target={{.+}}-zos{{.*}}, target={{.+}}-windows-gnu
 
 #include <new>
 #include <cstddef>

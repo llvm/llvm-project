@@ -384,7 +384,7 @@ public:
     bool isRValue() const { return Kind >= CL_XValue; }
     bool isModifiable() const { return getModifiable() == CM_Modifiable; }
 
-    /// Create a simple, modifiably lvalue
+    /// Create a simple, modifiable lvalue
     static Classification makeSimpleLValue() {
       return Classification(CL_LValue, CM_Modifiable);
     }
@@ -786,6 +786,11 @@ public:
                                  const Expr *SizeExpression,
                                  const Expr *PtrExpression, ASTContext &Ctx,
                                  EvalResult &Status) const;
+
+  /// If the current Expr can be evaluated to a pointer to a null-terminated
+  /// constant string, return the constant string (without the terminating
+  /// null).
+  std::optional<std::string> tryEvaluateString(ASTContext &Ctx) const;
 
   /// Enumeration used to describe the kind of Null pointer constant
   /// returned from \c isNullPointerConstant().
@@ -1287,7 +1292,7 @@ class DeclRefExpr final
 
   DeclRefExpr(const ASTContext &Ctx, NestedNameSpecifierLoc QualifierLoc,
               SourceLocation TemplateKWLoc, ValueDecl *D,
-              bool RefersToEnlosingVariableOrCapture,
+              bool RefersToEnclosingVariableOrCapture,
               const DeclarationNameInfo &NameInfo, NamedDecl *FoundD,
               const TemplateArgumentListInfo *TemplateArgs, QualType T,
               ExprValueKind VK, NonOdrUseReason NOUR);
@@ -1653,14 +1658,14 @@ public:
   }
 
   /// Get a raw enumeration value representing the floating-point semantics of
-  /// this literal (32-bit IEEE, x87, ...), suitable for serialisation.
+  /// this literal (32-bit IEEE, x87, ...), suitable for serialization.
   llvm::APFloatBase::Semantics getRawSemantics() const {
     return static_cast<llvm::APFloatBase::Semantics>(
         FloatingLiteralBits.Semantics);
   }
 
   /// Set the raw enumeration value representing the floating-point semantics of
-  /// this literal (32-bit IEEE, x87, ...), suitable for serialisation.
+  /// this literal (32-bit IEEE, x87, ...), suitable for serialization.
   void setRawSemantics(llvm::APFloatBase::Semantics Sem) {
     FloatingLiteralBits.Semantics = Sem;
   }
@@ -2125,7 +2130,7 @@ public:
   static std::string ComputeName(ASTContext &Context, QualType Ty);
 };
 
-/// ParenExpr - This represents a parethesized expression, e.g. "(1)".  This
+/// ParenExpr - This represents a parenthesized expression, e.g. "(1)".  This
 /// AST node is only formed if full location information is requested.
 class ParenExpr : public Expr {
   SourceLocation L, R;
@@ -2241,7 +2246,7 @@ public:
   bool canOverflow() const { return UnaryOperatorBits.CanOverflow; }
   void setCanOverflow(bool C) { UnaryOperatorBits.CanOverflow = C; }
 
-  /// Get the FP contractability status of this operator. Only meaningful for
+  /// Get the FP contractibility status of this operator. Only meaningful for
   /// operations on floating point types.
   bool isFPContractableWithinStatement(const LangOptions &LO) const {
     return getFPFeaturesInEffect(LO).allowFPContractWithinStatement();
@@ -2326,6 +2331,11 @@ public:
   /// Get FPFeatures from trailing storage.
   FPOptionsOverride getStoredFPFeatures() const {
     return getTrailingFPFeatures();
+  }
+
+  /// Get the store FPOptionsOverride or default if not stored.
+  FPOptionsOverride getStoredFPFeaturesOrDefault() const {
+    return hasStoredFPFeatures() ? getStoredFPFeatures() : FPOptionsOverride();
   }
 
 protected:
@@ -3091,6 +3101,11 @@ public:
     *getTrailingFPFeatures() = F;
   }
 
+  /// Get the store FPOptionsOverride or default if not stored.
+  FPOptionsOverride getStoredFPFeaturesOrDefault() const {
+    return hasStoredFPFeatures() ? getStoredFPFeatures() : FPOptionsOverride();
+  }
+
   /// Get the FP features status of this operator. Only meaningful for
   /// operations on floating point types.
   FPOptions getFPFeaturesInEffect(const LangOptions &LO) const {
@@ -3587,6 +3602,11 @@ public:
     return *getTrailingFPFeatures();
   }
 
+  /// Get the store FPOptionsOverride or default if not stored.
+  FPOptionsOverride getStoredFPFeaturesOrDefault() const {
+    return hasStoredFPFeatures() ? getStoredFPFeatures() : FPOptionsOverride();
+  }
+
   /// Get the FP features status of this operation. Only meaningful for
   /// operations on floating point types.
   FPOptions getFPFeaturesInEffect(const LangOptions &LO) const {
@@ -4033,6 +4053,10 @@ public:
     assert(BinaryOperatorBits.HasFPFeatures);
     *getTrailingFPFeatures() = F;
   }
+  /// Get the store FPOptionsOverride or default if not stored.
+  FPOptionsOverride getStoredFPFeaturesOrDefault() const {
+    return hasStoredFPFeatures() ? getStoredFPFeatures() : FPOptionsOverride();
+  }
 
   /// Get the FP features status of this operator. Only meaningful for
   /// operations on floating point types.
@@ -4049,7 +4073,7 @@ public:
     return FPOptionsOverride();
   }
 
-  /// Get the FP contractability status of this operator. Only meaningful for
+  /// Get the FP contractibility status of this operator. Only meaningful for
   /// operations on floating point types.
   bool isFPContractableWithinStatement(const LangOptions &LO) const {
     return getFPFeaturesInEffect(LO).allowFPContractWithinStatement();
@@ -4290,7 +4314,7 @@ public:
   }
 
   /// getFalseExpr - Return the subexpression which will be
-  ///   evaluated if the condnition evaluates to false; this is
+  ///   evaluated if the condition evaluates to false; this is
   ///   defined in terms of the opaque value.
   Expr *getFalseExpr() const {
     return cast<Expr>(SubExprs[RHS]);
@@ -5998,7 +6022,7 @@ class GenericSelectionExpr final
     //    if *It1 and *It2 are bound to the same objects.
     // An alternative design approach was discussed during review;
     // store an Association object inside the iterator, and return a reference
-    // to it when dereferenced. This idea was discarded beacuse of nasty
+    // to it when dereferenced. This idea was discarded because of nasty
     // lifetime issues:
     //    AssociationIterator It = ...;
     //    const Association &Assoc = *It++; // Oops, Assoc is dangling.

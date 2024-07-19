@@ -40,6 +40,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -3552,84 +3553,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     Width = TypeSize::getFixed(0);
     MinOffset = MaxOffset = 0;
     return false;
-  case AArch64::STRWpost:
-  case AArch64::LDRWpost:
-    Width = TypeSize::getFixed(32);
-    Scale = TypeSize::getFixed(4);
-    MinOffset = -256;
-    MaxOffset = 255;
-    break;
-  case AArch64::LDURQi:
-  case AArch64::STURQi:
-    Width = TypeSize::getFixed(16);
-    Scale = TypeSize::getFixed(1);
-    MinOffset = -256;
-    MaxOffset = 255;
-    break;
-  case AArch64::PRFUMi:
-  case AArch64::LDURXi:
-  case AArch64::LDURDi:
-  case AArch64::LDAPURXi:
-  case AArch64::STURXi:
-  case AArch64::STURDi:
-  case AArch64::STLURXi:
-    Width = TypeSize::getFixed(8);
-    Scale = TypeSize::getFixed(1);
-    MinOffset = -256;
-    MaxOffset = 255;
-    break;
-  case AArch64::LDURWi:
-  case AArch64::LDURSi:
-  case AArch64::LDURSWi:
-  case AArch64::LDAPURi:
-  case AArch64::LDAPURSWi:
-  case AArch64::STURWi:
-  case AArch64::STURSi:
-  case AArch64::STLURWi:
-    Width = TypeSize::getFixed(4);
-    Scale = TypeSize::getFixed(1);
-    MinOffset = -256;
-    MaxOffset = 255;
-    break;
-  case AArch64::LDURHi:
-  case AArch64::LDURHHi:
-  case AArch64::LDURSHXi:
-  case AArch64::LDURSHWi:
-  case AArch64::LDAPURHi:
-  case AArch64::LDAPURSHWi:
-  case AArch64::LDAPURSHXi:
-  case AArch64::STURHi:
-  case AArch64::STURHHi:
-  case AArch64::STLURHi:
-    Width = TypeSize::getFixed(2);
-    Scale = TypeSize::getFixed(1);
-    MinOffset = -256;
-    MaxOffset = 255;
-    break;
-  case AArch64::LDURBi:
-  case AArch64::LDURBBi:
-  case AArch64::LDURSBXi:
-  case AArch64::LDURSBWi:
-  case AArch64::LDAPURBi:
-  case AArch64::LDAPURSBWi:
-  case AArch64::LDAPURSBXi:
-  case AArch64::STURBi:
-  case AArch64::STURBBi:
-  case AArch64::STLURBi:
-    Width = TypeSize::getFixed(1);
-    Scale = TypeSize::getFixed(1);
-    MinOffset = -256;
-    MaxOffset = 255;
-    break;
-  case AArch64::LDPQi:
-  case AArch64::LDNPQi:
-  case AArch64::STPQi:
-  case AArch64::STNPQi:
-    Scale = TypeSize::getFixed(16);
-    Width = TypeSize::getFixed(32);
-    MinOffset = -64;
-    MaxOffset = 63;
-    break;
+  // LDR / STR
   case AArch64::LDRQui:
   case AArch64::STRQui:
     Scale = TypeSize::getFixed(16);
@@ -3637,48 +3561,15 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     MinOffset = 0;
     MaxOffset = 4095;
     break;
-  case AArch64::LDPXi:
-  case AArch64::LDPDi:
-  case AArch64::LDNPXi:
-  case AArch64::LDNPDi:
-  case AArch64::STPXi:
-  case AArch64::STPDi:
-  case AArch64::STNPXi:
-  case AArch64::STNPDi:
-    Scale = TypeSize::getFixed(8);
-    Width = TypeSize::getFixed(16);
-    MinOffset = -64;
-    MaxOffset = 63;
-    break;
-  case AArch64::PRFMui:
   case AArch64::LDRXui:
   case AArch64::LDRDui:
   case AArch64::STRXui:
   case AArch64::STRDui:
+  case AArch64::PRFMui:
     Scale = TypeSize::getFixed(8);
     Width = TypeSize::getFixed(8);
     MinOffset = 0;
     MaxOffset = 4095;
-    break;
-  case AArch64::StoreSwiftAsyncContext:
-    // Store is an STRXui, but there might be an ADDXri in the expansion too.
-    Scale = TypeSize::getFixed(1);
-    Width = TypeSize::getFixed(8);
-    MinOffset = 0;
-    MaxOffset = 4095;
-    break;
-  case AArch64::LDPWi:
-  case AArch64::LDPSi:
-  case AArch64::LDNPWi:
-  case AArch64::LDNPSi:
-  case AArch64::STPWi:
-  case AArch64::STPSi:
-  case AArch64::STNPWi:
-  case AArch64::STNPSi:
-    Scale = TypeSize::getFixed(4);
-    Width = TypeSize::getFixed(8);
-    MinOffset = -64;
-    MaxOffset = 63;
     break;
   case AArch64::LDRWui:
   case AArch64::LDRSui:
@@ -3712,21 +3603,13 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     MinOffset = 0;
     MaxOffset = 4095;
     break;
-  case AArch64::STPXpre:
-  case AArch64::LDPXpost:
-  case AArch64::STPDpre:
-  case AArch64::LDPDpost:
-    Scale = TypeSize::getFixed(8);
-    Width = TypeSize::getFixed(8);
-    MinOffset = -512;
-    MaxOffset = 504;
-    break;
-  case AArch64::STPQpre:
-  case AArch64::LDPQpost:
-    Scale = TypeSize::getFixed(16);
+  // post/pre inc
+  case AArch64::STRQpre:
+  case AArch64::LDRQpost:
+    Scale = TypeSize::getFixed(1);
     Width = TypeSize::getFixed(16);
-    MinOffset = -1024;
-    MaxOffset = 1008;
+    MinOffset = -256;
+    MaxOffset = 255;
     break;
   case AArch64::STRXpre:
   case AArch64::STRDpre:
@@ -3737,12 +3620,135 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     MinOffset = -256;
     MaxOffset = 255;
     break;
-  case AArch64::STRQpre:
-  case AArch64::LDRQpost:
+  case AArch64::STRWpost:
+  case AArch64::LDRWpost:
+    Scale = TypeSize::getFixed(4);
+    Width = TypeSize::getFixed(32);
+    MinOffset = -256;
+    MaxOffset = 255;
+    break;
+  // Unscaled
+  case AArch64::LDURQi:
+  case AArch64::STURQi:
     Scale = TypeSize::getFixed(1);
     Width = TypeSize::getFixed(16);
     MinOffset = -256;
     MaxOffset = 255;
+    break;
+  case AArch64::LDURXi:
+  case AArch64::LDURDi:
+  case AArch64::LDAPURXi:
+  case AArch64::STURXi:
+  case AArch64::STURDi:
+  case AArch64::STLURXi:
+  case AArch64::PRFUMi:
+    Scale = TypeSize::getFixed(1);
+    Width = TypeSize::getFixed(8);
+    MinOffset = -256;
+    MaxOffset = 255;
+    break;
+  case AArch64::LDURWi:
+  case AArch64::LDURSi:
+  case AArch64::LDURSWi:
+  case AArch64::LDAPURi:
+  case AArch64::LDAPURSWi:
+  case AArch64::STURWi:
+  case AArch64::STURSi:
+  case AArch64::STLURWi:
+    Scale = TypeSize::getFixed(1);
+    Width = TypeSize::getFixed(4);
+    MinOffset = -256;
+    MaxOffset = 255;
+    break;
+  case AArch64::LDURHi:
+  case AArch64::LDURHHi:
+  case AArch64::LDURSHXi:
+  case AArch64::LDURSHWi:
+  case AArch64::LDAPURHi:
+  case AArch64::LDAPURSHWi:
+  case AArch64::LDAPURSHXi:
+  case AArch64::STURHi:
+  case AArch64::STURHHi:
+  case AArch64::STLURHi:
+    Scale = TypeSize::getFixed(1);
+    Width = TypeSize::getFixed(2);
+    MinOffset = -256;
+    MaxOffset = 255;
+    break;
+  case AArch64::LDURBi:
+  case AArch64::LDURBBi:
+  case AArch64::LDURSBXi:
+  case AArch64::LDURSBWi:
+  case AArch64::LDAPURBi:
+  case AArch64::LDAPURSBWi:
+  case AArch64::LDAPURSBXi:
+  case AArch64::STURBi:
+  case AArch64::STURBBi:
+  case AArch64::STLURBi:
+    Scale = TypeSize::getFixed(1);
+    Width = TypeSize::getFixed(1);
+    MinOffset = -256;
+    MaxOffset = 255;
+    break;
+  // LDP / STP
+  case AArch64::LDPQi:
+  case AArch64::LDNPQi:
+  case AArch64::STPQi:
+  case AArch64::STNPQi:
+    Scale = TypeSize::getFixed(16);
+    Width = TypeSize::getFixed(32);
+    MinOffset = -64;
+    MaxOffset = 63;
+    break;
+  case AArch64::LDPXi:
+  case AArch64::LDPDi:
+  case AArch64::LDNPXi:
+  case AArch64::LDNPDi:
+  case AArch64::STPXi:
+  case AArch64::STPDi:
+  case AArch64::STNPXi:
+  case AArch64::STNPDi:
+    Scale = TypeSize::getFixed(8);
+    Width = TypeSize::getFixed(16);
+    MinOffset = -64;
+    MaxOffset = 63;
+    break;
+  case AArch64::LDPWi:
+  case AArch64::LDPSi:
+  case AArch64::LDNPWi:
+  case AArch64::LDNPSi:
+  case AArch64::STPWi:
+  case AArch64::STPSi:
+  case AArch64::STNPWi:
+  case AArch64::STNPSi:
+    Scale = TypeSize::getFixed(4);
+    Width = TypeSize::getFixed(8);
+    MinOffset = -64;
+    MaxOffset = 63;
+    break;
+  // pre/post inc
+  case AArch64::STPQpre:
+  case AArch64::LDPQpost:
+    Scale = TypeSize::getFixed(16);
+    Width = TypeSize::getFixed(16);
+    MinOffset = -1024;
+    MaxOffset = 1008;
+    break;
+  case AArch64::STPXpre:
+  case AArch64::LDPXpost:
+  case AArch64::STPDpre:
+  case AArch64::LDPDpost:
+    Scale = TypeSize::getFixed(8);
+    Width = TypeSize::getFixed(8);
+    MinOffset = -512;
+    MaxOffset = 504;
+    break;
+  case AArch64::StoreSwiftAsyncContext:
+    // Store is an STRXui, but there might be an ADDXri in the expansion too.
+    Scale = TypeSize::getFixed(1);
+    Width = TypeSize::getFixed(8);
+    MinOffset = 0;
+    MaxOffset = 4095;
     break;
   case AArch64::ADDG:
     Scale = TypeSize::getFixed(16);
@@ -3766,6 +3772,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     MinOffset = -256;
     MaxOffset = 255;
     break;
+  // SVE
   case AArch64::STR_ZZZZXI:
   case AArch64::LDR_ZZZZXI:
     Scale = TypeSize::getScalable(16);
@@ -4181,17 +4188,24 @@ bool AArch64InstrInfo::hasBTISemantics(const MachineInstr &MI) {
   }
 }
 
+bool AArch64InstrInfo::isFpOrNEON(Register Reg) {
+  if (Reg == 0)
+    return false;
+  assert(Reg.isPhysical() && "Expected physical register in isFpOrNEON");
+  return AArch64::FPR128RegClass.contains(Reg) ||
+         AArch64::FPR64RegClass.contains(Reg) ||
+         AArch64::FPR32RegClass.contains(Reg) ||
+         AArch64::FPR16RegClass.contains(Reg) ||
+         AArch64::FPR8RegClass.contains(Reg);
+}
+
 bool AArch64InstrInfo::isFpOrNEON(const MachineInstr &MI) {
   auto IsFPR = [&](const MachineOperand &Op) {
     if (!Op.isReg())
       return false;
     auto Reg = Op.getReg();
     if (Reg.isPhysical())
-      return AArch64::FPR128RegClass.contains(Reg) ||
-             AArch64::FPR64RegClass.contains(Reg) ||
-             AArch64::FPR32RegClass.contains(Reg) ||
-             AArch64::FPR16RegClass.contains(Reg) ||
-             AArch64::FPR8RegClass.contains(Reg);
+      return isFpOrNEON(Reg);
 
     const TargetRegisterClass *TRC = ::getRegClass(MI, Reg);
     return TRC == &AArch64::FPR128RegClass ||
@@ -4497,7 +4511,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Copy a Predicate register by ORRing with itself.
   if (AArch64::PPRRegClass.contains(DestReg) &&
       AArch64::PPRRegClass.contains(SrcReg)) {
-    assert(Subtarget.hasSVEorSME() && "Unexpected SVE register.");
+    assert(Subtarget.isSVEorStreamingSVEAvailable() &&
+           "Unexpected SVE register.");
     BuildMI(MBB, I, DL, get(AArch64::ORR_PPzPP), DestReg)
       .addReg(SrcReg) // Pg
       .addReg(SrcReg)
@@ -4510,8 +4525,6 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   bool DestIsPNR = AArch64::PNRRegClass.contains(DestReg);
   bool SrcIsPNR = AArch64::PNRRegClass.contains(SrcReg);
   if (DestIsPNR || SrcIsPNR) {
-    assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
-           "Unexpected predicate-as-counter register.");
     auto ToPPR = [](MCRegister R) -> MCRegister {
       return (R - AArch64::PN0) + AArch64::P0;
     };
@@ -4532,7 +4545,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Copy a Z register by ORRing with itself.
   if (AArch64::ZPRRegClass.contains(DestReg) &&
       AArch64::ZPRRegClass.contains(SrcReg)) {
-    assert(Subtarget.hasSVEorSME() && "Unexpected SVE register.");
+    assert(Subtarget.isSVEorStreamingSVEAvailable() &&
+           "Unexpected SVE register.");
     BuildMI(MBB, I, DL, get(AArch64::ORR_ZZZ), DestReg)
       .addReg(SrcReg)
       .addReg(SrcReg, getKillRegState(KillSrc));
@@ -4544,7 +4558,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
        AArch64::ZPR2StridedOrContiguousRegClass.contains(DestReg)) &&
       (AArch64::ZPR2RegClass.contains(SrcReg) ||
        AArch64::ZPR2StridedOrContiguousRegClass.contains(SrcReg))) {
-    assert(Subtarget.hasSVEorSME() && "Unexpected SVE register.");
+    assert(Subtarget.isSVEorStreamingSVEAvailable() &&
+           "Unexpected SVE register.");
     static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1};
     copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORR_ZZZ,
                      Indices);
@@ -4554,7 +4569,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Copy a Z register triple by copying the individual sub-registers.
   if (AArch64::ZPR3RegClass.contains(DestReg) &&
       AArch64::ZPR3RegClass.contains(SrcReg)) {
-    assert(Subtarget.hasSVEorSME() && "Unexpected SVE register.");
+    assert(Subtarget.isSVEorStreamingSVEAvailable() &&
+           "Unexpected SVE register.");
     static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1,
                                        AArch64::zsub2};
     copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORR_ZZZ,
@@ -4567,7 +4583,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
        AArch64::ZPR4StridedOrContiguousRegClass.contains(DestReg)) &&
       (AArch64::ZPR4RegClass.contains(SrcReg) ||
        AArch64::ZPR4StridedOrContiguousRegClass.contains(SrcReg))) {
-    assert(Subtarget.hasSVEorSME() && "Unexpected SVE register.");
+    assert(Subtarget.isSVEorStreamingSVEAvailable() &&
+           "Unexpected SVE register.");
     static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1,
                                        AArch64::zsub2, AArch64::zsub3};
     copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORR_ZZZ,
@@ -4672,7 +4689,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (AArch64::FPR128RegClass.contains(DestReg) &&
       AArch64::FPR128RegClass.contains(SrcReg)) {
-    if (Subtarget.hasSVEorSME() && !Subtarget.isNeonAvailable())
+    if (Subtarget.isSVEorStreamingSVEAvailable() &&
+        !Subtarget.isNeonAvailable())
       BuildMI(MBB, I, DL, get(AArch64::ORR_ZZZ))
           .addReg(AArch64::Z0 + (DestReg - AArch64::Q0), RegState::Define)
           .addReg(AArch64::Z0 + (SrcReg - AArch64::Q0))
@@ -4830,14 +4848,12 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       Opc = AArch64::STRBui;
     break;
   case 2: {
-    bool IsPNR = AArch64::PNRRegClass.hasSubClassEq(RC);
     if (AArch64::FPR16RegClass.hasSubClassEq(RC))
       Opc = AArch64::STRHui;
-    else if (IsPNR || AArch64::PPRRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
+    else if (AArch64::PNRRegClass.hasSubClassEq(RC) ||
+             AArch64::PPRRegClass.hasSubClassEq(RC)) {
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register store without SVE store instructions");
-      assert((!IsPNR || Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
-             "Unexpected register store without SVE2p1 or SME2");
       Opc = AArch64::STR_PXI;
       StackID = TargetStackID::ScalableVector;
     }
@@ -4886,7 +4902,7 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                               AArch64::sube64, AArch64::subo64, FI, MMO);
       return;
     } else if (AArch64::ZPRRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register store without SVE store instructions");
       Opc = AArch64::STR_ZXI;
       StackID = TargetStackID::ScalableVector;
@@ -4910,7 +4926,7 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       Offset = false;
     } else if (AArch64::ZPR2RegClass.hasSubClassEq(RC) ||
                AArch64::ZPR2StridedOrContiguousRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register store without SVE store instructions");
       Opc = AArch64::STR_ZZXI;
       StackID = TargetStackID::ScalableVector;
@@ -4922,7 +4938,7 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       Opc = AArch64::ST1Threev2d;
       Offset = false;
     } else if (AArch64::ZPR3RegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register store without SVE store instructions");
       Opc = AArch64::STR_ZZZXI;
       StackID = TargetStackID::ScalableVector;
@@ -4935,7 +4951,7 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       Offset = false;
     } else if (AArch64::ZPR4RegClass.hasSubClassEq(RC) ||
                AArch64::ZPR4StridedOrContiguousRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register store without SVE store instructions");
       Opc = AArch64::STR_ZZZZXI;
       StackID = TargetStackID::ScalableVector;
@@ -5008,10 +5024,8 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     if (AArch64::FPR16RegClass.hasSubClassEq(RC))
       Opc = AArch64::LDRHui;
     else if (IsPNR || AArch64::PPRRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register load without SVE load instructions");
-      assert((!IsPNR || Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
-             "Unexpected register load without SVE2p1 or SME2");
       if (IsPNR)
         PNRReg = DestReg;
       Opc = AArch64::LDR_PXI;
@@ -5062,7 +5076,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                AArch64::subo64, FI, MMO);
       return;
     } else if (AArch64::ZPRRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register load without SVE load instructions");
       Opc = AArch64::LDR_ZXI;
       StackID = TargetStackID::ScalableVector;
@@ -5086,7 +5100,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       Offset = false;
     } else if (AArch64::ZPR2RegClass.hasSubClassEq(RC) ||
                AArch64::ZPR2StridedOrContiguousRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register load without SVE load instructions");
       Opc = AArch64::LDR_ZZXI;
       StackID = TargetStackID::ScalableVector;
@@ -5098,7 +5112,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       Opc = AArch64::LD1Threev2d;
       Offset = false;
     } else if (AArch64::ZPR3RegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register load without SVE load instructions");
       Opc = AArch64::LDR_ZZZXI;
       StackID = TargetStackID::ScalableVector;
@@ -5111,7 +5125,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       Offset = false;
     } else if (AArch64::ZPR4RegClass.hasSubClassEq(RC) ||
                AArch64::ZPR4StridedOrContiguousRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register load without SVE load instructions");
       Opc = AArch64::LDR_ZZZZXI;
       StackID = TargetStackID::ScalableVector;

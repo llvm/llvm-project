@@ -390,24 +390,23 @@ __nsan_dump_shadow_mem(const u8 *addr, size_t size_bytes, size_t bytes_per_line,
   }
 }
 
-SANITIZER_INTERFACE_ATTRIBUTE
-alignas(16) thread_local uptr __nsan_shadow_ret_tag = 0;
+alignas(16) SANITIZER_INTERFACE_ATTRIBUTE
+    thread_local uptr __nsan_shadow_ret_tag = 0;
 
-SANITIZER_INTERFACE_ATTRIBUTE
-alignas(16) thread_local char __nsan_shadow_ret_ptr[kMaxVectorWidth *
-                                                    sizeof(__float128)];
+alignas(16) SANITIZER_INTERFACE_ATTRIBUTE
+    thread_local char __nsan_shadow_ret_ptr[kMaxVectorWidth *
+                                            sizeof(__float128)];
 
-SANITIZER_INTERFACE_ATTRIBUTE
-alignas(16) thread_local uptr __nsan_shadow_args_tag = 0;
+alignas(16) SANITIZER_INTERFACE_ATTRIBUTE
+    thread_local uptr __nsan_shadow_args_tag = 0;
 
 // Maximum number of args. This should be enough for anyone (tm). An alternate
 // scheme is to have the generated code create an alloca and make
 // __nsan_shadow_args_ptr point ot the alloca.
 constexpr const int kMaxNumArgs = 128;
-SANITIZER_INTERFACE_ATTRIBUTE
-alignas(
-    16) thread_local char __nsan_shadow_args_ptr[kMaxVectorWidth * kMaxNumArgs *
-                                                 sizeof(__float128)];
+alignas(16) SANITIZER_INTERFACE_ATTRIBUTE
+    thread_local char __nsan_shadow_args_ptr[kMaxVectorWidth * kMaxNumArgs *
+                                             sizeof(__float128)];
 
 enum ContinuationType { // Keep in sync with instrumentation pass.
   kContinueWithShadow = 0,
@@ -513,6 +512,8 @@ int32_t checkFT(const FT value, ShadowFT Shadow, CheckTypeT CheckType,
     }
     using ValuePrinter = FTPrinter<FT>;
     using ShadowPrinter = FTPrinter<ShadowFT>;
+    Printf("%s", D.Default());
+
     Printf("\n"
            "%-12s precision  (native): dec: %s  hex: %s\n"
            "%-12s precision  (shadow): dec: %s  hex: %s\n"
@@ -535,7 +536,10 @@ int32_t checkFT(const FT value, ShadowFT Shadow, CheckTypeT CheckType,
   }
 
   if (flags().halt_on_error) {
-    Printf("Exiting\n");
+    if (common_flags()->abort_on_error)
+      Printf("ABORTING\n");
+    else
+      Printf("Exiting\n");
     Die();
   }
   return flags().resume_after_warning ? kResumeFromValue : kContinueWithShadow;
@@ -638,8 +642,9 @@ void fCmpFailFT(const FT Lhs, const FT Rhs, ShadowFT LhsShadow,
   const char *const PredicateName = GetPredicateName(Predicate);
   Printf("%s", D.Warning());
   Printf("WARNING: NumericalStabilitySanitizer: floating-point comparison "
-         "results depend on precision\n"
-         "%-12s precision dec (native): %s %s %s (%s)\n"
+         "results depend on precision\n");
+  Printf("%s", D.Default());
+  Printf("%-12s precision dec (native): %s %s %s (%s)\n"
          "%-12s precision dec (shadow): %s %s %s (%s)\n"
          "%-12s precision hex (native): %s %s %s (%s)\n"
          "%-12s precision hex (shadow): %s %s %s (%s)\n"
@@ -658,7 +663,6 @@ void fCmpFailFT(const FT Lhs, const FT Rhs, ShadowFT LhsShadow,
          FTInfo<ShadowFT>::kCppTypeName, ShadowPrinter::hex(LhsShadow).Buffer,
          PredicateName, ShadowPrinter::hex(RhsShadow).Buffer,
          GetTruthValueName(ShadowResult), D.End());
-  Printf("%s", D.Default());
   stack.Print();
   if (flags().halt_on_error) {
     Printf("Exiting\n");
@@ -789,6 +793,8 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_init() {
   InitializeSuppressions();
   InitializePlatformEarly();
 
+  DisableCoreDumperIfNecessary();
+
   if (!MmapFixedNoReserve(TypesAddr(), UnusedAddr() - TypesAddr()))
     Die();
 
@@ -801,8 +807,3 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_init() {
   nsan_init_is_running = false;
   nsan_initialized = true;
 }
-
-#if SANITIZER_CAN_USE_PREINIT_ARRAY
-__attribute__((section(".preinit_array"),
-               used)) static void (*nsan_init_ptr)() = __nsan_init;
-#endif

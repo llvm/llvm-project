@@ -286,6 +286,7 @@ typedef enum {
   LLVMInstructionValueKind,
   LLVMPoisonValueValueKind,
   LLVMConstantTargetNoneValueKind,
+  LLVMConstantPtrAuthValueKind,
 } LLVMValueKind;
 
 typedef enum {
@@ -509,6 +510,20 @@ enum {
  * See https://llvm.org/docs/LangRef.html#fast-math-flags
  */
 typedef unsigned LLVMFastMathFlags;
+
+enum {
+  LLVMGEPFlagInBounds = (1 << 0),
+  LLVMGEPFlagNUSW = (1 << 1),
+  LLVMGEPFlagNUW = (1 << 2),
+};
+
+/**
+ * Flags that constrain the allowed wrap semantics of a getelementptr
+ * instruction.
+ *
+ * See https://llvm.org/docs/LangRef.html#getelementptr-instruction
+ */
+typedef unsigned LLVMGEPNoWrapFlags;
 
 /**
  * @}
@@ -1653,6 +1668,35 @@ LLVMTypeRef LLVMScalableVectorType(LLVMTypeRef ElementType,
 unsigned LLVMGetVectorSize(LLVMTypeRef VectorTy);
 
 /**
+ * Get the pointer value for the associated ConstantPtrAuth constant.
+ *
+ * @see llvm::ConstantPtrAuth::getPointer
+ */
+LLVMValueRef LLVMGetConstantPtrAuthPointer(LLVMValueRef PtrAuth);
+
+/**
+ * Get the key value for the associated ConstantPtrAuth constant.
+ *
+ * @see llvm::ConstantPtrAuth::getKey
+ */
+LLVMValueRef LLVMGetConstantPtrAuthKey(LLVMValueRef PtrAuth);
+
+/**
+ * Get the discriminator value for the associated ConstantPtrAuth constant.
+ *
+ * @see llvm::ConstantPtrAuth::getDiscriminator
+ */
+LLVMValueRef LLVMGetConstantPtrAuthDiscriminator(LLVMValueRef PtrAuth);
+
+/**
+ * Get the address discriminator value for the associated ConstantPtrAuth
+ * constant.
+ *
+ * @see llvm::ConstantPtrAuth::getAddrDiscriminator
+ */
+LLVMValueRef LLVMGetConstantPtrAuthAddrDiscriminator(LLVMValueRef PtrAuth);
+
+/**
  * @}
  */
 
@@ -1711,6 +1755,42 @@ LLVMTypeRef LLVMTargetExtTypeInContext(LLVMContextRef C, const char *Name,
                                        unsigned IntParamCount);
 
 /**
+ * Obtain the name for this target extension type.
+ *
+ * @see llvm::TargetExtType::getName()
+ */
+const char *LLVMGetTargetExtTypeName(LLVMTypeRef TargetExtTy);
+
+/**
+ * Obtain the number of type parameters for this target extension type.
+ *
+ * @see llvm::TargetExtType::getNumTypeParameters()
+ */
+unsigned LLVMGetTargetExtTypeNumTypeParams(LLVMTypeRef TargetExtTy);
+
+/**
+ * Get the type parameter at the given index for the target extension type.
+ *
+ * @see llvm::TargetExtType::getTypeParameter()
+ */
+LLVMTypeRef LLVMGetTargetExtTypeTypeParam(LLVMTypeRef TargetExtTy,
+                                          unsigned Idx);
+
+/**
+ * Obtain the number of int parameters for this target extension type.
+ *
+ * @see llvm::TargetExtType::getNumIntParameters()
+ */
+unsigned LLVMGetTargetExtTypeNumIntParams(LLVMTypeRef TargetExtTy);
+
+/**
+ * Get the int parameter at the given index for the target extension type.
+ *
+ * @see llvm::TargetExtType::getIntParameter()
+ */
+unsigned LLVMGetTargetExtTypeIntParam(LLVMTypeRef TargetExtTy, unsigned Idx);
+
+/**
  * @}
  */
 
@@ -1739,6 +1819,10 @@ LLVMTypeRef LLVMTargetExtTypeInContext(LLVMContextRef C, const char *Name,
  * @{
  */
 
+// Currently, clang-format tries to format the LLVM_FOR_EACH_VALUE_SUBCLASS
+// macro in a progressively-indented fashion, which is not desired
+// clang-format off
+
 #define LLVM_FOR_EACH_VALUE_SUBCLASS(macro) \
   macro(Argument)                           \
   macro(BasicBlock)                         \
@@ -1758,6 +1842,7 @@ LLVMTypeRef LLVMTargetExtTypeInContext(LLVMContextRef C, const char *Name,
       macro(ConstantStruct)                 \
       macro(ConstantTokenNone)              \
       macro(ConstantVector)                 \
+      macro(ConstantPtrAuth)                \
       macro(GlobalValue)                    \
         macro(GlobalAlias)                  \
         macro(GlobalObject)                 \
@@ -1828,6 +1913,8 @@ LLVMTypeRef LLVMTargetExtTypeInContext(LLVMContextRef C, const char *Name,
       macro(AtomicCmpXchgInst)              \
       macro(AtomicRMWInst)                  \
       macro(FenceInst)
+
+// clang-format on
 
 /**
  * @defgroup LLVMCCoreValueGeneral General APIs
@@ -2323,6 +2410,14 @@ LLVM_ATTRIBUTE_C_DEPRECATED(
 LLVMValueRef LLVMConstVector(LLVMValueRef *ScalarConstantVals, unsigned Size);
 
 /**
+ * Create a ConstantPtrAuth constant with the given values.
+ *
+ * @see llvm::ConstantPtrAuth::get()
+ */
+LLVMValueRef LLVMConstantPtrAuth(LLVMValueRef Ptr, LLVMValueRef Key,
+                                 LLVMValueRef Disc, LLVMValueRef AddrDisc);
+
+/**
  * @}
  */
 
@@ -2359,6 +2454,17 @@ LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
 LLVMValueRef LLVMConstInBoundsGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
                                    LLVMValueRef *ConstantIndices,
                                    unsigned NumIndices);
+/**
+ * Creates a constant GetElementPtr expression. Similar to LLVMConstGEP2, but
+ * allows specifying the no-wrap flags.
+ *
+ * @see llvm::ConstantExpr::getGetElementPtr()
+ */
+LLVMValueRef LLVMConstGEPWithNoWrapFlags(LLVMTypeRef Ty,
+                                         LLVMValueRef ConstantVal,
+                                         LLVMValueRef *ConstantIndices,
+                                         unsigned NumIndices,
+                                         LLVMGEPNoWrapFlags NoWrapFlags);
 LLVMValueRef LLVMConstTrunc(LLVMValueRef ConstantVal, LLVMTypeRef ToType);
 LLVMValueRef LLVMConstPtrToInt(LLVMValueRef ConstantVal, LLVMTypeRef ToType);
 LLVMValueRef LLVMConstIntToPtr(LLVMValueRef ConstantVal, LLVMTypeRef ToType);
@@ -3869,6 +3975,20 @@ void LLVMSetIsInBounds(LLVMValueRef GEP, LLVMBool InBounds);
 LLVMTypeRef LLVMGetGEPSourceElementType(LLVMValueRef GEP);
 
 /**
+ * Get the no-wrap related flags for the given GEP instruction.
+ *
+ * @see llvm::GetElementPtrInst::getNoWrapFlags
+ */
+LLVMGEPNoWrapFlags LLVMGEPGetNoWrapFlags(LLVMValueRef GEP);
+
+/**
+ * Set the no-wrap related flags for the given GEP instruction.
+ *
+ * @see llvm::GetElementPtrInst::setNoWrapFlags
+ */
+void LLVMGEPSetNoWrapFlags(LLVMValueRef GEP, LLVMGEPNoWrapFlags NoWrapFlags);
+
+/**
  * @}
  */
 
@@ -4327,6 +4447,17 @@ LLVMValueRef LLVMBuildGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
 LLVMValueRef LLVMBuildInBoundsGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
                                    LLVMValueRef Pointer, LLVMValueRef *Indices,
                                    unsigned NumIndices, const char *Name);
+/**
+ * Creates a GetElementPtr instruction. Similar to LLVMBuildGEP2, but allows
+ * specifying the no-wrap flags.
+ *
+ * @see llvm::IRBuilder::CreateGEP()
+ */
+LLVMValueRef LLVMBuildGEPWithNoWrapFlags(LLVMBuilderRef B, LLVMTypeRef Ty,
+                                         LLVMValueRef Pointer,
+                                         LLVMValueRef *Indices,
+                                         unsigned NumIndices, const char *Name,
+                                         LLVMGEPNoWrapFlags NoWrapFlags);
 LLVMValueRef LLVMBuildStructGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
                                  LLVMValueRef Pointer, unsigned Idx,
                                  const char *Name);

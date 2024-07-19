@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 using namespace llvm;

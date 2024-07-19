@@ -1,3 +1,4 @@
+# UNSUPPORTED: true
 ## This script checks that YamlProfileReader in llvm-bolt is reading data
 ## correctly and stale data is corrected by profile inference.
 

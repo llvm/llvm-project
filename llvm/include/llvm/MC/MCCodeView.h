@@ -22,7 +22,7 @@
 #include <vector>
 
 namespace llvm {
-class MCAsmLayout;
+class MCAssembler;
 class MCCVDefRangeFragment;
 class MCCVInlineLineTableFragment;
 class MCDataFragment;
@@ -199,7 +199,7 @@ public:
                                       const MCSymbol *FnEndSym);
 
   /// Encodes the binary annotations once we have a layout.
-  void encodeInlineLineTable(MCAsmLayout &Layout,
+  void encodeInlineLineTable(const MCAssembler &Asm,
                              MCCVInlineLineTableFragment &F);
 
   MCFragment *
@@ -207,7 +207,7 @@ public:
                ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
                StringRef FixedSizePortion);
 
-  void encodeDefRange(MCAsmLayout &Layout, MCCVDefRangeFragment &F);
+  void encodeDefRange(const MCAssembler &Asm, MCCVDefRangeFragment &F);
 
   /// Emits the string table substream.
   void emitStringTable(MCObjectStreamer &OS);

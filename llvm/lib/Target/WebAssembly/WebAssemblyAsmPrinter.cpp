@@ -39,6 +39,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
@@ -195,7 +196,7 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
       // can actually calculate the legal VTs.
       const WebAssemblyTargetLowering &TLI = *Subtarget->getTargetLowering();
       computeLegalValueVTs(TLI, GV->getParent()->getContext(),
-                           GV->getParent()->getDataLayout(), GlobalVT, VTs);
+                           GV->getDataLayout(), GlobalVT, VTs);
     }
     WebAssembly::wasmSymbolSetType(Sym, GlobalVT, VTs);
   }

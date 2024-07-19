@@ -352,6 +352,7 @@ TargetDeviceSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
              << "dlti.target_device_spec does not allow type as a key: "
              << type;
     } else {
+      // Check that keys in a target device spec are unique.
       auto id = entry.getKey().get<StringAttr>();
       if (!ids.insert(id).second)
         return emitError() << "repeated layout entry key: " << id.getValue();

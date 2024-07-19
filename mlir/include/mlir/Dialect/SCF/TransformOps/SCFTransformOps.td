@@ -38,6 +38,17 @@ def ApplySCFStructuralConversionPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplySCFToControlFlowPatternsOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.scf.scf_to_control_flow",
+    [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns that lower structured control flow ops to unstructured
+    control flow.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def Transform_ScfForOp : Transform_ConcreteOpType<"scf.for">;
 
 def ForallToForOp : Op<Transform_Dialect, "loop.forall_to_for",
@@ -269,7 +280,41 @@ def LoopUnrollOp : Op<Transform_Dialect, "loop.unroll",
     This operation ignores non-`scf.for`, non-`affine.for` ops and drops them
     in the return. If all the operations referred to by the `target` operand
     unroll properly, the transform succeeds. Otherwise the transform produces a
-    silencebale failure.
+    silenceable failure.
+
+    Does not return handles as the operation may result in the loop being
+    removed after a full unrolling.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       ConfinedAttr<I64Attr, [IntPositive]>:$factor);
+
+  let assemblyFormat = "$target attr-dict `:` type($target)";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
+def LoopUnrollAndJamOp : Op<Transform_Dialect, "loop.unroll_and_jam",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     TransformOpInterface, TransformEachOpTrait]> {
+  let summary = "Unrolls and jam the given loop with the given unroll factor";
+  let description = [{
+    Unrolls & jams each loop associated with the given handle to have up to the given
+    number of loop body copies per iteration. If the unroll factor is larger
+    than the loop trip count, the latter is used as the unroll factor instead.
+
+    #### Return modes
+
+    This operation ignores non-`scf.for`, non-`affine.for` ops and drops them
+    in the return. If all the operations referred to by the `target` operand
+    unroll properly, the transform succeeds. Otherwise the transform produces a
+    silenceable failure.
 
     Does not return handles as the operation may result in the loop being
     removed after a full unrolling.

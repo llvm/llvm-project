@@ -230,6 +230,21 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
 
       break;
     }
+    case Intrinsic::memcpy_inline: {
+      // Only expand llvm.memcpy.inline with non-constant length in this
+      // codepath, leaving the current SelectionDAG expansion for constant
+      // length memcpy intrinsics undisturbed.
+      auto *Memcpy = cast<MemCpyInlineInst>(Inst);
+      if (isa<ConstantInt>(Memcpy->getLength()))
+        break;
+
+      Function *ParentFunc = Memcpy->getFunction();
+      const TargetTransformInfo &TTI = LookupTTI(*ParentFunc);
+      expandMemCpyAsLoop(Memcpy, TTI);
+      Changed = true;
+      Memcpy->eraseFromParent();
+      break;
+    }
     case Intrinsic::memmove: {
       auto *Memmove = cast<MemMoveInst>(Inst);
       Function *ParentFunc = Memmove->getFunction();
@@ -263,6 +278,19 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
 
       break;
     }
+    case Intrinsic::memset_inline: {
+      // Only expand llvm.memset.inline with non-constant length in this
+      // codepath, leaving the current SelectionDAG expansion for constant
+      // length memset intrinsics undisturbed.
+      auto *Memset = cast<MemSetInlineInst>(Inst);
+      if (isa<ConstantInt>(Memset->getLength()))
+        break;
+
+      expandMemSetAsLoop(Memset);
+      Changed = true;
+      Memset->eraseFromParent();
+      break;
+    }
     default:
       llvm_unreachable("unhandled intrinsic");
     }
@@ -278,8 +306,10 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     default:
       break;
     case Intrinsic::memcpy:
+    case Intrinsic::memcpy_inline:
     case Intrinsic::memmove:
     case Intrinsic::memset:
+    case Intrinsic::memset_inline:
       Changed |= expandMemIntrinsicUses(F);
       break;
     case Intrinsic::load_relative:

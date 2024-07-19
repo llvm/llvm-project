@@ -72,6 +72,7 @@
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/ConvergenceVerifier.h"
 #include "llvm/IR/DataLayout.h"
@@ -323,13 +324,6 @@ namespace {
 
 class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   friend class InstVisitor<Verifier>;
-
-  // ISD::ArgFlagsTy::MemAlign only have 4 bits for alignment, so
-  // the alignment size should not exceed 2^15. Since encode(Align)
-  // would plus the shift value by 1, the alignment size should
-  // not exceed 2^14, otherwise it can NOT be properly lowered
-  // in backend.
-  static constexpr unsigned ParamMaxAlignment = 1 << 14;
   DominatorTree DT;
 
   /// When verifying a basic block, keep track of all of the
@@ -357,9 +351,6 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
 
   /// Whether the current function has a DISubprogram attached to it.
   bool HasDebugInfo = false;
-
-  /// The current source language.
-  dwarf::SourceLanguage CurrentSourceLang = dwarf::DW_LANG_lo_user;
 
   /// Stores the count of how many objects were passed to llvm.localescape for a
   /// given function and the largest index passed to llvm.localrecover.
@@ -1155,10 +1146,6 @@ void Verifier::visitDIScope(const DIScope &N) {
 
 void Verifier::visitDISubrange(const DISubrange &N) {
   CheckDI(N.getTag() == dwarf::DW_TAG_subrange_type, "invalid tag", &N);
-  bool HasAssumedSizedArraySupport = dwarf::isFortran(CurrentSourceLang);
-  CheckDI(HasAssumedSizedArraySupport || N.getRawCountNode() ||
-              N.getRawUpperBound(),
-          "Subrange must contain count or upperBound", &N);
   CheckDI(!N.getRawCountNode() || !N.getRawUpperBound(),
           "Subrange can have any one of count or upperBound", &N);
   auto *CBound = N.getRawCountNode();
@@ -1187,8 +1174,6 @@ void Verifier::visitDISubrange(const DISubrange &N) {
 
 void Verifier::visitDIGenericSubrange(const DIGenericSubrange &N) {
   CheckDI(N.getTag() == dwarf::DW_TAG_generic_subrange, "invalid tag", &N);
-  CheckDI(N.getRawCountNode() || N.getRawUpperBound(),
-          "GenericSubrange must contain count or upperBound", &N);
   CheckDI(!N.getRawCountNode() || !N.getRawUpperBound(),
           "GenericSubrange can have any one of count or upperBound", &N);
   auto *CBound = N.getRawCountNode();
@@ -1411,8 +1396,6 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
           N.getRawFile());
   CheckDI(!N.getFile()->getFilename().empty(), "invalid filename", &N,
           N.getFile());
-
-  CurrentSourceLang = (dwarf::SourceLanguage)N.getSourceLanguage();
 
   CheckDI((N.getEmissionKind() <= DICompileUnit::LastEmissionKind),
           "invalid emission kind", &N);
@@ -2031,32 +2014,52 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
   }
 
   if (isa<PointerType>(Ty)) {
+    if (Attrs.hasAttribute(Attribute::Alignment)) {
+      Align AttrAlign = Attrs.getAlignment().valueOrOne();
+      Check(AttrAlign.value() <= Value::MaximumAlignment,
+            "huge alignment values are unsupported", V);
+    }
     if (Attrs.hasAttribute(Attribute::ByVal)) {
-      if (Attrs.hasAttribute(Attribute::Alignment)) {
-        Align AttrAlign = Attrs.getAlignment().valueOrOne();
-        Align MaxAlign(ParamMaxAlignment);
-        Check(AttrAlign <= MaxAlign,
-              "Attribute 'align' exceed the max size 2^14", V);
-      }
       SmallPtrSet<Type *, 4> Visited;
       Check(Attrs.getByValType()->isSized(&Visited),
             "Attribute 'byval' does not support unsized types!", V);
+      Check(DL.getTypeAllocSize(Attrs.getByValType()).getKnownMinValue() <
+                (1ULL << 32),
+            "huge 'byval' arguments are unsupported", V);
     }
     if (Attrs.hasAttribute(Attribute::ByRef)) {
       SmallPtrSet<Type *, 4> Visited;
       Check(Attrs.getByRefType()->isSized(&Visited),
             "Attribute 'byref' does not support unsized types!", V);
+      Check(DL.getTypeAllocSize(Attrs.getByRefType()).getKnownMinValue() <
+                (1ULL << 32),
+            "huge 'byref' arguments are unsupported", V);
     }
     if (Attrs.hasAttribute(Attribute::InAlloca)) {
       SmallPtrSet<Type *, 4> Visited;
       Check(Attrs.getInAllocaType()->isSized(&Visited),
             "Attribute 'inalloca' does not support unsized types!", V);
+      Check(DL.getTypeAllocSize(Attrs.getInAllocaType()).getKnownMinValue() <
+                (1ULL << 32),
+            "huge 'inalloca' arguments are unsupported", V);
     }
     if (Attrs.hasAttribute(Attribute::Preallocated)) {
       SmallPtrSet<Type *, 4> Visited;
       Check(Attrs.getPreallocatedType()->isSized(&Visited),
             "Attribute 'preallocated' does not support unsized types!", V);
+      Check(
+          DL.getTypeAllocSize(Attrs.getPreallocatedType()).getKnownMinValue() <
+              (1ULL << 32),
+          "huge 'preallocated' arguments are unsupported", V);
     }
+  }
+
+  if (Attrs.hasAttribute(Attribute::Initializes)) {
+    auto Inits = Attrs.getAttribute(Attribute::Initializes).getInitializes();
+    Check(!Inits.empty(), "Attribute 'initializes' does not support empty list",
+          V);
+    Check(ConstantRangeList::isOrderedRanges(Inits),
+          "Attribute 'initializes' does not support unordered ranges", V);
   }
 
   if (Attrs.hasAttribute(Attribute::NoFPClass)) {
@@ -2350,13 +2353,31 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     if (S != "a_key" && S != "b_key")
       CheckFailed("invalid value for 'sign-return-address-key' attribute: " + S,
                   V);
+    if (auto AA = Attrs.getFnAttr("sign-return-address"); !AA.isValid()) {
+      CheckFailed(
+          "'sign-return-address-key' present without `sign-return-address`");
+    }
   }
 
   if (auto A = Attrs.getFnAttr("branch-target-enforcement"); A.isValid()) {
     StringRef S = A.getValueAsString();
-    if (S != "true" && S != "false")
+    if (S != "" && S != "true" && S != "false")
       CheckFailed(
           "invalid value for 'branch-target-enforcement' attribute: " + S, V);
+  }
+
+  if (auto A = Attrs.getFnAttr("branch-protection-pauth-lr"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    if (S != "" && S != "true" && S != "false")
+      CheckFailed(
+          "invalid value for 'branch-protection-pauth-lr' attribute: " + S, V);
+  }
+
+  if (auto A = Attrs.getFnAttr("guarded-control-stack"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    if (S != "" && S != "true" && S != "false")
+      CheckFailed("invalid value for 'guarded-control-stack' attribute: " + S,
+                  V);
   }
 
   if (auto A = Attrs.getFnAttr("vector-function-abi-variant"); A.isValid()) {
@@ -3495,12 +3516,15 @@ void Verifier::visitCallBase(CallBase &Call) {
         "not allowed. Please use the @llvm.amdgpu.cs.chain intrinsic instead.",
         Call);
 
+  // Disallow passing/returning values with alignment higher than we can
+  // represent.
+  // FIXME: Consider making DataLayout cap the alignment, so this isn't
+  // necessary.
   auto VerifyTypeAlign = [&](Type *Ty, const Twine &Message) {
     if (!Ty->isSized())
       return;
     Align ABIAlign = DL.getABITypeAlign(Ty);
-    Align MaxAlign(ParamMaxAlignment);
-    Check(ABIAlign <= MaxAlign,
+    Check(ABIAlign.value() <= Value::MaximumAlignment,
           "Incorrect alignment of " + Message + " to called function!", Call);
   };
 
@@ -4809,10 +4833,9 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
 
   // Check consistency of !prof branch_weights metadata.
   if (ProfName == "branch_weights") {
-    unsigned int Offset = getBranchWeightOffset(MD);
+    unsigned NumBranchWeights = getNumBranchWeights(*MD);
     if (isa<InvokeInst>(&I)) {
-      Check(MD->getNumOperands() == (1 + Offset) ||
-                MD->getNumOperands() == (2 + Offset),
+      Check(NumBranchWeights == 1 || NumBranchWeights == 2,
             "Wrong number of InvokeInst branch_weights operands", MD);
     } else {
       unsigned ExpectedNumOperands = 0;
@@ -4832,10 +4855,11 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
         CheckFailed("!prof branch_weights are not allowed for this instruction",
                     MD);
 
-      Check(MD->getNumOperands() == Offset + ExpectedNumOperands,
-            "Wrong number of operands", MD);
+      Check(NumBranchWeights == ExpectedNumOperands, "Wrong number of operands",
+            MD);
     }
-    for (unsigned i = Offset; i < MD->getNumOperands(); ++i) {
+    for (unsigned i = getBranchWeightOffset(MD); i < MD->getNumOperands();
+         ++i) {
       auto &MDO = MD->getOperand(i);
       Check(MDO, "second operand should not be null", MD);
       Check(mdconst::dyn_extract<ConstantInt>(MDO),
@@ -4925,10 +4949,14 @@ void Verifier::visitMemProfMetadata(Instruction &I, MDNode *MD) {
     MDNode *StackMD = dyn_cast<MDNode>(MIB->getOperand(0));
     visitCallStackMetadata(StackMD);
 
-    // Check that remaining operands are MDString.
-    Check(llvm::all_of(llvm::drop_begin(MIB->operands()),
+    // Check that remaining operands, except possibly the last, are MDString.
+    Check(llvm::all_of(MIB->operands().drop_front().drop_back(),
                        [](const MDOperand &Op) { return isa<MDString>(Op); }),
-          "Not all !memprof MemInfoBlock operands 1 to N are MDString", MIB);
+          "Not all !memprof MemInfoBlock operands 1 to N-1 are MDString", MIB);
+    // The last operand might be the total profiled size so can be an integer.
+    auto &LastOperand = MIB->operands().back();
+    Check(isa<MDString>(LastOperand) || mdconst::hasa<ConstantInt>(LastOperand),
+          "Last !memprof MemInfoBlock operand not MDString or int", MIB);
   }
 }
 
@@ -6132,6 +6160,20 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
                 IdxN + ResultEC.getKnownMinValue() <= VecEC.getKnownMinValue(),
             "vector_extract would overrun.");
     }
+    break;
+  }
+  case Intrinsic::experimental_vector_partial_reduce_add: {
+    VectorType *AccTy = cast<VectorType>(Call.getArgOperand(0)->getType());
+    VectorType *VecTy = cast<VectorType>(Call.getArgOperand(1)->getType());
+
+    unsigned VecWidth = VecTy->getElementCount().getKnownMinValue();
+    unsigned AccWidth = AccTy->getElementCount().getKnownMinValue();
+
+    Check((VecWidth % AccWidth) == 0,
+          "Invalid vector widths for partial "
+          "reduction. The width of the input vector "
+          "must be a positive integer multiple of "
+          "the width of the accumulator vector.");
     break;
   }
   case Intrinsic::experimental_noalias_scope_decl: {

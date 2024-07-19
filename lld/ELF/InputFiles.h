@@ -299,8 +299,7 @@ private:
   void initializeSymbols(const llvm::object::ELFFile<ELFT> &obj);
   void initializeJustSymbols();
 
-  InputSectionBase *getRelocTarget(uint32_t idx, const Elf_Shdr &sec,
-                                   uint32_t info);
+  InputSectionBase *getRelocTarget(uint32_t idx, uint32_t info);
   InputSectionBase *createInputSection(uint32_t idx, const Elf_Shdr &sec,
                                        StringRef name);
 

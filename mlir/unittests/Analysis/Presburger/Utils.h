@@ -16,12 +16,7 @@
 #include "mlir/Analysis/Presburger/GeneratingFunction.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
-#include "mlir/Analysis/Presburger/PWMAFunction.h"
-#include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "mlir/Analysis/Presburger/QuasiPolynomial.h"
-#include "mlir/Analysis/Presburger/Simplex.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/Support/LLVM.h"
 
 #include <gtest/gtest.h>
 #include <optional>

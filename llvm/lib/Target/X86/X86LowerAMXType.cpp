@@ -103,8 +103,7 @@ static bool containsAMXCode(Function &F) {
 static AllocaInst *createAllocaInstAtEntry(IRBuilder<> &Builder, BasicBlock *BB,
                                            Type *Ty) {
   Function &F = *BB->getParent();
-  Module *M = BB->getModule();
-  const DataLayout &DL = M->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   LLVMContext &Ctx = Builder.getContext();
   auto AllocaAlignment = DL.getPrefTypeAlign(Type::getX86_AMXTy(Ctx));
@@ -454,10 +453,9 @@ bool X86LowerAMXType::visit() {
 } // anonymous namespace
 
 static Value *getAllocaPos(BasicBlock *BB) {
-  Module *M = BB->getModule();
   Function *F = BB->getParent();
   IRBuilder<> Builder(&F->getEntryBlock().front());
-  const DataLayout &DL = M->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   unsigned AllocaAS = DL.getAllocaAddrSpace();
   Type *V256I32Ty = VectorType::get(Builder.getInt32Ty(), 256, false);
   AllocaInst *AllocaRes =

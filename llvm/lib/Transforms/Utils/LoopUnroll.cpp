@@ -374,7 +374,7 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 
   // At this point, the code is well formed.  Perform constprop, instsimplify,
   // and dce.
-  const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
+  const DataLayout &DL = L->getHeader()->getDataLayout();
   SmallVector<WeakTrackingVH, 16> DeadInsts;
   for (BasicBlock *BB : L->getBlocks()) {
     // Remove repeated debug instructions after loop unrolling.

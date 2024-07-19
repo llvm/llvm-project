@@ -43,6 +43,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
@@ -133,6 +134,13 @@ public:
   unsigned emitPtrauthDiscriminator(uint16_t Disc, unsigned AddrDisc,
                                     unsigned &InstsEmitted);
 
+  // Emit the sequence for LOADauthptrstatic
+  void LowerLOADauthptrstatic(const MachineInstr &MI);
+
+  // Emit the sequence for LOADgotPAC/MOVaddrPAC (either GOT adrp-ldr or
+  // adrp-add followed by PAC sign)
+  void LowerMOVaddrPAC(const MachineInstr &MI);
+
   /// tblgen'erated driver function for lowering simple MI->MC
   /// pseudo instructions.
   bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
@@ -193,6 +201,7 @@ private:
   void PrintDebugValueComment(const MachineInstr *MI, raw_ostream &OS);
 
   void emitFunctionBodyEnd() override;
+  void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
 
   MCSymbol *GetCPISymbol(unsigned CPID) const override;
   void emitEndOfAsmFile(Module &M) override;
@@ -264,17 +273,17 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   unsigned Flags = 0;
   if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("branch-target-enforcement")))
-    if (BTE->getZExtValue())
+    if (!BTE->isZero())
       Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
 
   if (const auto *GCS = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("guarded-control-stack")))
-    if (GCS->getZExtValue())
+    if (!GCS->isZero())
       Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
 
   if (const auto *Sign = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("sign-return-address")))
-    if (Sign->getZExtValue())
+    if (!Sign->isZero())
       Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
 
   uint64_t PAuthABIPlatform = -1;
@@ -840,17 +849,62 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
   }
 }
 
+static void emitAuthenticatedPointer(MCStreamer &OutStreamer,
+                                     MCSymbol *StubLabel,
+                                     const MCExpr *StubAuthPtrRef) {
+  // sym$auth_ptr$key$disc:
+  OutStreamer.emitLabel(StubLabel);
+  OutStreamer.emitValue(StubAuthPtrRef, /*size=*/8);
+}
+
 void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
   emitHwasanMemaccessSymbols(M);
 
   const Triple &TT = TM.getTargetTriple();
   if (TT.isOSBinFormatMachO()) {
+    // Output authenticated pointers as indirect symbols, if we have any.
+    MachineModuleInfoMachO &MMIMacho =
+        MMI->getObjFileInfo<MachineModuleInfoMachO>();
+
+    auto Stubs = MMIMacho.getAuthGVStubList();
+
+    if (!Stubs.empty()) {
+      // Switch to the "__auth_ptr" section.
+      OutStreamer->switchSection(
+          OutContext.getMachOSection("__DATA", "__auth_ptr", MachO::S_REGULAR,
+                                     SectionKind::getMetadata()));
+      emitAlignment(Align(8));
+
+      for (const auto &Stub : Stubs)
+        emitAuthenticatedPointer(*OutStreamer, Stub.first, Stub.second);
+
+      OutStreamer->addBlankLine();
+    }
+
     // Funny Darwin hack: This flag tells the linker that no global symbols
     // contain code that falls through to other global symbols (e.g. the obvious
     // implementation of multiple entry points).  If this doesn't occur, the
     // linker can safely perform dead code stripping.  Since LLVM never
     // generates code that does this, it is always safe to set.
     OutStreamer->emitAssemblerFlag(MCAF_SubsectionsViaSymbols);
+  }
+
+  if (TT.isOSBinFormatELF()) {
+    // Output authenticated pointers as indirect symbols, if we have any.
+    MachineModuleInfoELF &MMIELF = MMI->getObjFileInfo<MachineModuleInfoELF>();
+
+    auto Stubs = MMIELF.getAuthGVStubList();
+
+    if (!Stubs.empty()) {
+      const TargetLoweringObjectFile &TLOF = getObjFileLowering();
+      OutStreamer->switchSection(TLOF.getDataSection());
+      emitAlignment(Align(8));
+
+      for (const auto &Stub : Stubs)
+        emitAuthenticatedPointer(*OutStreamer, Stub.first, Stub.second);
+
+      OutStreamer->addBlankLine();
+    }
   }
 
   // Emit stack and fault map information.
@@ -1208,6 +1262,32 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
       }
     }
   }
+}
+
+void AArch64AsmPrinter::emitGlobalAlias(const Module &M,
+                                        const GlobalAlias &GA) {
+  if (auto F = dyn_cast_or_null<Function>(GA.getAliasee())) {
+    // Global aliases must point to a definition, but unmangled patchable
+    // symbols are special and need to point to an undefined symbol with "EXP+"
+    // prefix. Such undefined symbol is resolved by the linker by creating
+    // x86 thunk that jumps back to the actual EC target.
+    if (MDNode *Node = F->getMetadata("arm64ec_exp_name")) {
+      StringRef ExpStr = cast<MDString>(Node->getOperand(0))->getString();
+      MCSymbol *ExpSym = MMI->getContext().getOrCreateSymbol(ExpStr);
+      MCSymbol *Sym = MMI->getContext().getOrCreateSymbol(GA.getName());
+      OutStreamer->beginCOFFSymbolDef(Sym);
+      OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_EXTERNAL);
+      OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_FUNCTION
+                                      << COFF::SCT_COMPLEX_TYPE_SHIFT);
+      OutStreamer->endCOFFSymbolDef();
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_Weak);
+      OutStreamer->emitAssignment(
+          Sym, MCSymbolRefExpr::create(ExpSym, MCSymbolRefExpr::VK_None,
+                                       MMI->getContext()));
+      return;
+    }
+  }
+  AsmPrinter::emitGlobalAlias(M, GA);
 }
 
 /// Small jump tables contain an unsigned byte or half, representing the offset
@@ -1623,6 +1703,226 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
                                    CPA.hasAddressDiscriminator(), Ctx);
 }
 
+void AArch64AsmPrinter::LowerLOADauthptrstatic(const MachineInstr &MI) {
+  unsigned DstReg = MI.getOperand(0).getReg();
+  const MachineOperand &GAOp = MI.getOperand(1);
+  const uint64_t KeyC = MI.getOperand(2).getImm();
+  assert(KeyC <= AArch64PACKey::LAST &&
+         "key is out of range [0, AArch64PACKey::LAST]");
+  const auto Key = (AArch64PACKey::ID)KeyC;
+  const uint64_t Disc = MI.getOperand(3).getImm();
+  assert(isUInt<16>(Disc) &&
+         "constant discriminator is out of range [0, 0xffff]");
+
+  // Emit instruction sequence like the following:
+  //   ADRP x16, symbol$auth_ptr$key$disc
+  //   LDR x16, [x16, :lo12:symbol$auth_ptr$key$disc]
+  //
+  // Where the $auth_ptr$ symbol is the stub slot containing the signed pointer
+  // to symbol.
+  MCSymbol *AuthPtrStubSym;
+  if (TM.getTargetTriple().isOSBinFormatELF()) {
+    const auto &TLOF =
+        static_cast<const AArch64_ELFTargetObjectFile &>(getObjFileLowering());
+
+    assert(GAOp.getOffset() == 0 &&
+           "non-zero offset for $auth_ptr$ stub slots is not supported");
+    const MCSymbol *GASym = TM.getSymbol(GAOp.getGlobal());
+    AuthPtrStubSym =
+        TLOF.getAuthPtrSlotSymbol(TM, &MF->getMMI(), GASym, Key, Disc);
+  } else {
+    assert(TM.getTargetTriple().isOSBinFormatMachO() &&
+           "LOADauthptrstatic is implemented only for MachO/ELF");
+
+    const auto &TLOF = static_cast<const AArch64_MachoTargetObjectFile &>(
+        getObjFileLowering());
+
+    assert(GAOp.getOffset() == 0 &&
+           "non-zero offset for $auth_ptr$ stub slots is not supported");
+    const MCSymbol *GASym = TM.getSymbol(GAOp.getGlobal());
+    AuthPtrStubSym =
+        TLOF.getAuthPtrSlotSymbol(TM, &MF->getMMI(), GASym, Key, Disc);
+  }
+
+  MachineOperand StubMOHi =
+      MachineOperand::CreateMCSymbol(AuthPtrStubSym, AArch64II::MO_PAGE);
+  MachineOperand StubMOLo = MachineOperand::CreateMCSymbol(
+      AuthPtrStubSym, AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+  MCOperand StubMCHi, StubMCLo;
+
+  MCInstLowering.lowerOperand(StubMOHi, StubMCHi);
+  MCInstLowering.lowerOperand(StubMOLo, StubMCLo);
+
+  EmitToStreamer(
+      *OutStreamer,
+      MCInstBuilder(AArch64::ADRP).addReg(DstReg).addOperand(StubMCHi));
+
+  EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::LDRXui)
+                                   .addReg(DstReg)
+                                   .addReg(DstReg)
+                                   .addOperand(StubMCLo));
+}
+
+void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
+  unsigned InstsEmitted = 0;
+  auto EmitAndIncrement = [this, &InstsEmitted](const MCInst &Inst) {
+    EmitToStreamer(*OutStreamer, Inst);
+    ++InstsEmitted;
+  };
+
+  const bool IsGOTLoad = MI.getOpcode() == AArch64::LOADgotPAC;
+  MachineOperand GAOp = MI.getOperand(0);
+  const uint64_t KeyC = MI.getOperand(1).getImm();
+  assert(KeyC <= AArch64PACKey::LAST &&
+         "key is out of range [0, AArch64PACKey::LAST]");
+  const auto Key = (AArch64PACKey::ID)KeyC;
+  const unsigned AddrDisc = MI.getOperand(2).getReg();
+  const uint64_t Disc = MI.getOperand(3).getImm();
+  assert(isUInt<16>(Disc) &&
+         "constant discriminator is out of range [0, 0xffff]");
+
+  const int64_t Offset = GAOp.getOffset();
+  GAOp.setOffset(0);
+
+  // Emit:
+  // target materialization:
+  // - via GOT:
+  //     adrp x16, :got:target
+  //     ldr x16, [x16, :got_lo12:target]
+  //     add offset to x16 if offset != 0
+  //
+  // - direct:
+  //     adrp x16, target
+  //     add x16, x16, :lo12:target
+  //     add offset to x16 if offset != 0
+  //
+  // add offset to x16:
+  // - abs(offset) fits 24 bits:
+  //     add/sub x16, x16, #<offset>[, #lsl 12] (up to 2 instructions)
+  // - abs(offset) does not fit 24 bits:
+  //   - offset < 0:
+  //       movn+movk sequence filling x17 register with the offset (up to 4
+  //       instructions)
+  //       add x16, x16, x17
+  //   - offset > 0:
+  //       movz+movk sequence filling x17 register with the offset (up to 4
+  //       instructions)
+  //       add x16, x16, x17
+  //
+  // signing:
+  // - 0 discriminator:
+  //     paciza x16
+  // - Non-0 discriminator, no address discriminator:
+  //     mov x17, #Disc
+  //     pacia x16, x17
+  // - address discriminator (with potentially folded immediate discriminator):
+  //     pacia x16, xAddrDisc
+
+  MachineOperand GAMOHi(GAOp), GAMOLo(GAOp);
+  MCOperand GAMCHi, GAMCLo;
+
+  GAMOHi.setTargetFlags(AArch64II::MO_PAGE);
+  GAMOLo.setTargetFlags(AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+  if (IsGOTLoad) {
+    GAMOHi.addTargetFlag(AArch64II::MO_GOT);
+    GAMOLo.addTargetFlag(AArch64II::MO_GOT);
+  }
+
+  MCInstLowering.lowerOperand(GAMOHi, GAMCHi);
+  MCInstLowering.lowerOperand(GAMOLo, GAMCLo);
+
+  EmitAndIncrement(
+      MCInstBuilder(AArch64::ADRP).addReg(AArch64::X16).addOperand(GAMCHi));
+
+  if (IsGOTLoad) {
+    EmitAndIncrement(MCInstBuilder(AArch64::LDRXui)
+                         .addReg(AArch64::X16)
+                         .addReg(AArch64::X16)
+                         .addOperand(GAMCLo));
+  } else {
+    EmitAndIncrement(MCInstBuilder(AArch64::ADDXri)
+                         .addReg(AArch64::X16)
+                         .addReg(AArch64::X16)
+                         .addOperand(GAMCLo)
+                         .addImm(0));
+  }
+
+  if (Offset != 0) {
+    const uint64_t AbsOffset = (Offset > 0 ? Offset : -((uint64_t)Offset));
+    const bool IsNeg = Offset < 0;
+    if (isUInt<24>(AbsOffset)) {
+      for (int BitPos = 0; BitPos != 24 && (AbsOffset >> BitPos);
+           BitPos += 12) {
+        EmitAndIncrement(
+            MCInstBuilder(IsNeg ? AArch64::SUBXri : AArch64::ADDXri)
+                .addReg(AArch64::X16)
+                .addReg(AArch64::X16)
+                .addImm((AbsOffset >> BitPos) & 0xfff)
+                .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, BitPos)));
+      }
+    } else {
+      const uint64_t UOffset = Offset;
+      EmitAndIncrement(MCInstBuilder(IsNeg ? AArch64::MOVNXi : AArch64::MOVZXi)
+                           .addReg(AArch64::X17)
+                           .addImm((IsNeg ? ~UOffset : UOffset) & 0xffff)
+                           .addImm(/*shift=*/0));
+      auto NeedMovk = [IsNeg, UOffset](int BitPos) -> bool {
+        assert(BitPos == 16 || BitPos == 32 || BitPos == 48);
+        uint64_t Shifted = UOffset >> BitPos;
+        if (!IsNeg)
+          return Shifted != 0;
+        for (int I = 0; I != 64 - BitPos; I += 16)
+          if (((Shifted >> I) & 0xffff) != 0xffff)
+            return true;
+        return false;
+      };
+      for (int BitPos = 16; BitPos != 64 && NeedMovk(BitPos); BitPos += 16) {
+        EmitAndIncrement(MCInstBuilder(AArch64::MOVKXi)
+                             .addReg(AArch64::X17)
+                             .addReg(AArch64::X17)
+                             .addImm((UOffset >> BitPos) & 0xffff)
+                             .addImm(/*shift=*/BitPos));
+      }
+      EmitAndIncrement(MCInstBuilder(AArch64::ADDXrs)
+                           .addReg(AArch64::X16)
+                           .addReg(AArch64::X16)
+                           .addReg(AArch64::X17)
+                           .addImm(/*shift=*/0));
+    }
+  }
+
+  unsigned DiscReg = AddrDisc;
+  if (Disc != 0) {
+    if (AddrDisc != AArch64::XZR) {
+      EmitAndIncrement(MCInstBuilder(AArch64::ORRXrs)
+                           .addReg(AArch64::X17)
+                           .addReg(AArch64::XZR)
+                           .addReg(AddrDisc)
+                           .addImm(0));
+      EmitAndIncrement(MCInstBuilder(AArch64::MOVKXi)
+                           .addReg(AArch64::X17)
+                           .addReg(AArch64::X17)
+                           .addImm(Disc)
+                           .addImm(/*shift=*/48));
+    } else {
+      EmitAndIncrement(MCInstBuilder(AArch64::MOVZXi)
+                           .addReg(AArch64::X17)
+                           .addImm(Disc)
+                           .addImm(/*shift=*/0));
+    }
+    DiscReg = AArch64::X17;
+  }
+
+  auto MIB = MCInstBuilder(getPACOpcodeForKey(Key, DiscReg == AArch64::XZR))
+                 .addReg(AArch64::X16)
+                 .addReg(AArch64::X16);
+  if (DiscReg != AArch64::XZR)
+    MIB.addReg(DiscReg);
+  EmitAndIncrement(MIB);
+
+  assert(STI->getInstrInfo()->getInstSizeInBytes(MI) >= InstsEmitted * 4);
+}
+
 // Simple pseudo-instructions have their lowering (with expansion to real
 // instructions) auto-generated.
 #include "AArch64GenMCPseudoLowering.inc"
@@ -1757,6 +2057,15 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
       OutStreamer->emitCFIMTETaggedFrame();
     return;
   }
+
+  case AArch64::LOADauthptrstatic:
+    LowerLOADauthptrstatic(*MI);
+    return;
+
+  case AArch64::LOADgotPAC:
+  case AArch64::MOVaddrPAC:
+    LowerMOVaddrPAC(*MI);
+    return;
 
   case AArch64::BLRA:
     emitPtrauthBranch(MI);
