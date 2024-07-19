@@ -32,6 +32,8 @@ LLVM_LIBC_FUNCTION(float, hypotf, (float x, float y)) {
   uint32_t a_u = a_bits.uintval();
   uint32_t b_u = b_bits.uintval();
 
+  // Note: replacing `a_u >= FPBits::EXP_MASK` with `a_bits.is_inf_or_nan()`
+  // generates extra exponent bit masking instructions on x86-64.
   if (LIBC_UNLIKELY(a_u >= FPBits::EXP_MASK)) {
     // x or y is inf or nan
     if (a_bits.is_signaling_nan() || b_bits.is_signaling_nan()) {
