@@ -1117,41 +1117,41 @@ void test_fmin()
 }
 
 struct TestHypot3 {
-    template <class Real>
-    void operator()() const {
-        const auto check = [](Real elem, Real abs_tol) {
-            assert(std::isfinite(std::hypot(elem, Real(0), Real(0))));
-            assert(fptest_close(std::hypot(elem, Real(0), Real(0)), elem, abs_tol));
-            assert(std::isfinite(std::hypot(elem, elem, Real(0))));
-            assert(fptest_close(std::hypot(elem, elem, Real(0)), std::sqrt(Real(2)) * elem, abs_tol));
-            assert(std::isfinite(std::hypot(elem, elem, elem)));
-            assert(fptest_close(std::hypot(elem, elem, elem), std::sqrt(Real(3)) * elem, abs_tol));
-        };
+  template <class Real>
+  void operator()() const {
+    const auto check = [](Real elem, Real abs_tol) {
+      assert(std::isfinite(std::hypot(elem, Real(0), Real(0))));
+      assert(fptest_close(std::hypot(elem, Real(0), Real(0)), elem, abs_tol));
+      assert(std::isfinite(std::hypot(elem, elem, Real(0))));
+      assert(fptest_close(std::hypot(elem, elem, Real(0)), std::sqrt(Real(2)) * elem, abs_tol));
+      assert(std::isfinite(std::hypot(elem, elem, elem)));
+      assert(fptest_close(std::hypot(elem, elem, elem), std::sqrt(Real(3)) * elem, abs_tol));
+    };
 
-        { // check for overflow
-            const auto [elem, abs_tol] = []() -> std::array<Real, 2> {
-                if constexpr (std::is_same_v<Real, float>)
-                    return {1e20f, 1e16f};
-                else if constexpr (std::is_same_v<Real, double>)
-                    return {1e300, 1e287};
-                else // long double
-                    return {1e4000l, 1e3985l};
-            }();
-            check(elem, abs_tol);
-        }
-
-        { // check for underflow
-            const auto [elem, abs_tol] = []() -> std::array<Real, 2> {
-                if constexpr (std::is_same_v<Real, float>)
-                    return {1e-20f, 1e-24f};
-                else if constexpr (std::is_same_v<Real, double>)
-                    return {1e-287, 1e-300};
-                else // long double
-                    return {1e-3985l, 1e-4000l};
-            }();
-            check(elem, abs_tol);
-        }
+    { // check for overflow
+      const auto [elem, abs_tol] = []() -> std::array<Real, 2> {
+        if constexpr (std::is_same_v<Real, float>)
+          return {1e20f, 1e16f};
+        else if constexpr (std::is_same_v<Real, double>)
+          return {1e300, 1e287};
+        else // long double
+          return {1e4000l, 1e3985l};
+      }();
+      check(elem, abs_tol);
     }
+
+    { // check for underflow
+      const auto [elem, abs_tol] = []() -> std::array<Real, 2> {
+        if constexpr (std::is_same_v<Real, float>)
+          return {1e-20f, 1e-24f};
+        else if constexpr (std::is_same_v<Real, double>)
+          return {1e-287, 1e-300};
+        else // long double
+          return {1e-3985l, 1e-4000l};
+      }();
+      check(elem, abs_tol);
+    }
+  }
 };
 
 void test_hypot()
