@@ -158,7 +158,9 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
   // diagnose them. The 'in call to' diagnostics for them add no value to the
   // user _and_ it doesn't generally work since the argument types don't always
   // match the function prototype. Just ignore them.
-  if (const auto *F = getFunction(); F && F->isBuiltin())
+  // Similarly, for lambda static invokers, we would just print __invoke().
+  if (const auto *F = getFunction();
+      F && (F->isBuiltin() || F->isLambdaStaticInvoker()))
     return;
 
   const FunctionDecl *F = getCallee();
