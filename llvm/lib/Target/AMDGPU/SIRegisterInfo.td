@@ -1219,7 +1219,6 @@ def VGPR_IDX_DATA_OP_RC
                                    Reg64Types.types, Reg128Types.types,
                                    Reg256Types.types),
                       16,
-                      //(add VGPR_32,
                       (add VGPR_16, VGPR_32, VGPR_64, VGPR_128, VGPR_256,
                        STAGING_REG)> {
   let isAllocatable = 0;
@@ -1421,9 +1420,7 @@ def VGPRSrc_16 : RegisterOperand<VGPR_16_STAGING> {
 }
 
 // For V_LOAD/STORE_IDX only
-def VGPR_IDX_DATA_OP : RegisterOperand<VGPR_IDX_DATA_OP_RC> {
-  let DecoderMethod = "";
-}
+def VGPR_IDX_DATA_OP : RegisterOperand<VGPR_IDX_DATA_OP_RC>;
 
 //===----------------------------------------------------------------------===//
 //  ASrc_* Operands with an AccVGPR
