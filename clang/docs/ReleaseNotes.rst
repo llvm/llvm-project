@@ -315,6 +315,7 @@ Resolutions to C++ Defect Reports
 
 - Clang now correctly implements lookup for the terminal name of a member-qualified nested-name-specifier.
   (`CWG1835: Dependent member lookup before < <https://cplusplus.github.io/CWG/issues/1835.html>`_).
+  The warning can be disabled via `-Wno-missing-dependent-template-keyword`.
 
 C Language Changes
 ------------------
