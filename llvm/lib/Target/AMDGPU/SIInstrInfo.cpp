@@ -6686,7 +6686,9 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
       MI.getOpcode() == AMDGPU::S_QUADMASK_B32 ||
       MI.getOpcode() == AMDGPU::S_QUADMASK_B64 ||
       MI.getOpcode() == AMDGPU::S_WQM_B32 ||
-      MI.getOpcode() == AMDGPU::S_WQM_B64) {
+      MI.getOpcode() == AMDGPU::S_WQM_B64 ||
+      MI.getOpcode() == AMDGPU::S_INVERSE_BALLOT_U32 ||
+      MI.getOpcode() == AMDGPU::S_INVERSE_BALLOT_U64) {
     MachineOperand &Src = MI.getOperand(1);
     if (Src.isReg() && RI.hasVectorRegisters(MRI.getRegClass(Src.getReg())))
       Src.setReg(readlaneVGPRToSGPR(Src.getReg(), MI, MRI));

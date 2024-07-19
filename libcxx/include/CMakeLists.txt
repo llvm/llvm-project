@@ -97,6 +97,7 @@ set(files
   __algorithm/ranges_find_first_of.h
   __algorithm/ranges_find_if.h
   __algorithm/ranges_find_if_not.h
+  __algorithm/ranges_find_last.h
   __algorithm/ranges_for_each.h
   __algorithm/ranges_for_each_n.h
   __algorithm/ranges_generate.h
@@ -533,6 +534,8 @@ set(files
   __memory/concepts.h
   __memory/construct_at.h
   __memory/destruct_n.h
+  __memory/inout_ptr.h
+  __memory/out_ptr.h
   __memory/pointer_traits.h
   __memory/ranges_construct_at.h
   __memory/ranges_uninitialized_algorithms.h
@@ -793,7 +796,6 @@ set(files
   __type_traits/is_referenceable.h
   __type_traits/is_same.h
   __type_traits/is_scalar.h
-  __type_traits/is_scoped_enum.h
   __type_traits/is_signed.h
   __type_traits/is_signed_integer.h
   __type_traits/is_specialization.h
@@ -1042,7 +1044,7 @@ list(APPEND _all_includes "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp")
 add_custom_target(generate-cxx-headers ALL DEPENDS ${_all_includes})
 
 add_library(cxx-headers INTERFACE)
-target_link_libraries(cxx-headers INTERFACE libcxx-abi-headers)
+target_link_libraries(cxx-headers INTERFACE libcxx-libc-headers libcxx-abi-headers)
 add_dependencies(cxx-headers generate-cxx-headers)
 # It's important that the arch directory be included first so that its header files
 # which interpose on the default include dir be included instead of the default ones.

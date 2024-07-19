@@ -453,6 +453,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fadd
+  SRCS
+    fadd.cpp
+  HDRS
+    ../fadd.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   trunc
   SRCS
     trunc.cpp
@@ -2633,11 +2645,32 @@ add_entrypoint_object(
   HDRS
     ../fmul.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.uint128
-    libc.src.__support.CPP.bit
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.FPUtil.generic.mul
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fmull
+  SRCS
+    fmull.cpp
+  HDRS
+    ../fmull.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.mul
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fmulf128
+  SRCS
+    fmulf128.cpp
+  HDRS
+    ../fmulf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.mul
   COMPILE_OPTIONS
     -O3
 )
@@ -2809,9 +2842,12 @@ add_entrypoint_object(
   HDRS
     ../hypotf.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
   COMPILE_OPTIONS
     -O3
 )
@@ -4199,4 +4235,81 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.optimization
     libc.src.__support.integer_literals
+)
+
+add_entrypoint_object(
+  dmull
+  SRCS
+    dmull.cpp
+  HDRS
+    ../dmull.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.mul
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  dmulf128
+  SRCS
+    dmulf128.cpp
+  HDRS
+    ../dmulf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.mul
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16mul
+  SRCS
+    f16mul.cpp
+  HDRS
+    ../f16mul.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.mul
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16mulf
+  SRCS
+    f16mulf.cpp
+  HDRS
+    ../f16mulf.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.mul
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16mull
+  SRCS
+    f16mull.cpp
+  HDRS
+    ../f16mull.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.mul
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16mulf128
+  SRCS
+    f16mulf128.cpp
+  HDRS
+    ../f16mulf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.mul
+  COMPILE_OPTIONS
+    -O3
 )

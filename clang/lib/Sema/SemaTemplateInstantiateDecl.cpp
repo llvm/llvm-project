@@ -4966,11 +4966,16 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   }
 
   llvm::TimeTraceScope TimeScope("InstantiateFunction", [&]() {
-    std::string Name;
-    llvm::raw_string_ostream OS(Name);
+    llvm::TimeTraceMetadata M;
+    llvm::raw_string_ostream OS(M.Detail);
     Function->getNameForDiagnostic(OS, getPrintingPolicy(),
                                    /*Qualified=*/true);
-    return Name;
+    if (llvm::isTimeTraceVerbose()) {
+      auto Loc = SourceMgr.getExpansionLoc(Function->getLocation());
+      M.File = SourceMgr.getFilename(Loc);
+      M.Line = SourceMgr.getExpansionLineNumber(Loc);
+    }
+    return M;
   });
 
   // If we're performing recursive template instantiation, create our own
@@ -6229,7 +6234,12 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
                   getTrivialTemplateArgumentLoc(UnpackedArg, QualType(), Loc));
           }
           QualType T = CheckTemplateIdType(TemplateName(TD), Loc, Args);
-          if (T.isNull())
+          // We may get a non-null type with errors, in which case
+          // `getAsCXXRecordDecl` will return `nullptr`. For instance, this
+          // happens when one of the template arguments is an invalid
+          // expression. We return early to avoid triggering the assertion
+          // about the `CodeSynthesisContext`.
+          if (T.isNull() || T->containsErrors())
             return nullptr;
           CXXRecordDecl *SubstRecord = T->getAsCXXRecordDecl();
 

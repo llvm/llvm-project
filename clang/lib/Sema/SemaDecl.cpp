@@ -4518,16 +4518,18 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
   }
 
   mergeDeclAttributes(New, Old);
-  // Warn if an already-declared variable is made a weak_import in a subsequent
+  // Warn if an already-defined variable is made a weak_import in a subsequent
   // declaration
-  if (New->hasAttr<WeakImportAttr>() &&
-      Old->getStorageClass() == SC_None &&
-      !Old->hasAttr<WeakImportAttr>()) {
-    Diag(New->getLocation(), diag::warn_weak_import) << New->getDeclName();
-    Diag(Old->getLocation(), diag::note_previous_declaration);
-    // Remove weak_import attribute on new declaration.
-    New->dropAttr<WeakImportAttr>();
-  }
+  if (New->hasAttr<WeakImportAttr>())
+    for (auto *D = Old; D; D = D->getPreviousDecl()) {
+      if (D->isThisDeclarationADefinition() != VarDecl::DeclarationOnly) {
+        Diag(New->getLocation(), diag::warn_weak_import) << New->getDeclName();
+        Diag(D->getLocation(), diag::note_previous_definition);
+        // Remove weak_import attribute on new declaration.
+        New->dropAttr<WeakImportAttr>();
+        break;
+      }
+    }
 
   if (const auto *ILA = New->getAttr<InternalLinkageAttr>())
     if (!Old->hasAttr<InternalLinkageAttr>()) {
@@ -7434,10 +7436,10 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     tryToFixVariablyModifiedVarType(TInfo, R, D.getIdentifierLoc(),
                                     /*DiagID=*/0);
 
-  if (const AutoType *AutoT = R->getAs<AutoType>())
-    CheckConstrainedAuto(
-        AutoT,
-        TInfo->getTypeLoc().getContainedAutoTypeLoc().getConceptNameLoc());
+  if (AutoTypeLoc TL = TInfo->getTypeLoc().getContainedAutoTypeLoc()) {
+    const AutoType *AT = TL.getTypePtr();
+    CheckConstrainedAuto(AT, TL.getConceptNameLoc());
+  }
 
   bool IsMemberSpecialization = false;
   bool IsVariableTemplateSpecialization = false;
