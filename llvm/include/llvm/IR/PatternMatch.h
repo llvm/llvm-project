@@ -1550,27 +1550,23 @@ template <typename T> inline Exact_match<T> m_Exact(const T &SubPattern) {
 template <typename LHS_t, typename RHS_t, typename Class, typename PredicateTy,
           bool Commutable = false>
 struct CmpClass_match {
-  PredicateTy *Predicate;
+  PredicateTy &Predicate;
   LHS_t L;
   RHS_t R;
 
   // The evaluation order is always stable, regardless of Commutability.
   // The LHS is always matched first.
   CmpClass_match(PredicateTy &Pred, const LHS_t &LHS, const RHS_t &RHS)
-      : Predicate(&Pred), L(LHS), R(RHS) {}
-  CmpClass_match(const LHS_t &LHS, const RHS_t &RHS)
-      : Predicate(nullptr), L(LHS), R(RHS) {}
+      : Predicate(Pred), L(LHS), R(RHS) {}
 
   template <typename OpTy> bool match(OpTy *V) {
     if (auto *I = dyn_cast<Class>(V)) {
       if (L.match(I->getOperand(0)) && R.match(I->getOperand(1))) {
-        if (Predicate)
-          *Predicate = I->getPredicate();
+        Predicate = I->getPredicate();
         return true;
       } else if (Commutable && L.match(I->getOperand(1)) &&
                  R.match(I->getOperand(0))) {
-        if (Predicate)
-          *Predicate = I->getSwappedPredicate();
+        Predicate = I->getSwappedPredicate();
         return true;
       }
     }
@@ -1599,19 +1595,22 @@ m_FCmp(FCmpInst::Predicate &Pred, const LHS &L, const RHS &R) {
 template <typename LHS, typename RHS>
 inline CmpClass_match<LHS, RHS, CmpInst, CmpInst::Predicate>
 m_Cmp(const LHS &L, const RHS &R) {
-  return CmpClass_match<LHS, RHS, CmpInst, CmpInst::Predicate>(L, R);
+  CmpInst::Predicate Unused;
+  return CmpClass_match<LHS, RHS, CmpInst, CmpInst::Predicate>(Unused, L, R);
 }
 
 template <typename LHS, typename RHS>
 inline CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate>
 m_ICmp(const LHS &L, const RHS &R) {
-  return CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate>(L, R);
+  ICmpInst::Predicate Unused;
+  return CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate>(Unused, L, R);
 }
 
 template <typename LHS, typename RHS>
 inline CmpClass_match<LHS, RHS, FCmpInst, FCmpInst::Predicate>
 m_FCmp(const LHS &L, const RHS &R) {
-  return CmpClass_match<LHS, RHS, FCmpInst, FCmpInst::Predicate>(L, R);
+  FCmpInst::Predicate Unused;
+  return CmpClass_match<LHS, RHS, FCmpInst, FCmpInst::Predicate>(Unused, L, R);
 }
 
 // Same as CmpClass, but instead of saving Pred as out output variable, match a
