@@ -721,7 +721,10 @@ cc_library(
 cc_library(
     name = "Utility",
     srcs = glob(["source/Utility/**/*.cpp"]),
-    hdrs = glob(["include/lldb/Utility/**/*.h"]),
+    hdrs = glob(
+        ["include/lldb/Utility/**/*.h"],
+        ["source/Utility/*.h"],
+    ),
     strip_include_prefix = "include",
     deps = [
         ":Headers",
