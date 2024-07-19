@@ -1746,6 +1746,9 @@ void populateBlockPackMatmulPatterns(RewritePatternSet &patterns,
 void populateWinogradConv2DPatterns(RewritePatternSet &patterns, int64_t m,
                                     int64_t r);
 
+/// Patterns to decompose Winograd operators.
+void populateDecomposeWinogradOpsPatterns(RewritePatternSet &patterns);
+
 /// Adds patterns that reduce the rank of named contraction ops that have
 /// unit dimensions in the operand(s) by converting to a sequence of `collapse_shape`,
 /// `<corresponding linalg named op>`, `expand_shape` (if on tensors).  For example a
