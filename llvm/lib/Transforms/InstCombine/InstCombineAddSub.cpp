@@ -1494,7 +1494,7 @@ static Instruction *foldMidpointExpression(BinaryOperator &I) {
     return nullptr;
 
   if (!match(&I, m_Add(m_LShr(m_Xor(m_Value(X), m_Value(Y)), m_ConstantInt()),
-                      m_And(m_Value(X), m_Value(Y)))))
+                      m_c_And(m_Deferred(X), m_Deferred(Y)))))
     return nullptr;
 
   IRBuilder<> Builder(&I); 
@@ -1548,7 +1548,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 
   if (Instruction *R = foldMidpointExpression(I))
     return R;
-  
+
   if (Instruction *R = factorizeMathWithShlOps(I, Builder))
     return R;
 
