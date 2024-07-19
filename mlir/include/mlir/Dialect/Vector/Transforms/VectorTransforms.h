@@ -116,7 +116,7 @@ castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
                                  MaskingOpInterface maskingOp,
                                  RewriterBase &rewriter);
 
-/// Structure to hold the range [vscaleMin, vscaleMax] `vector.vscale` can take.
+// Structure to hold the range of `vector.vscale`.
 struct VscaleRange {
   unsigned vscaleMin;
   unsigned vscaleMax;

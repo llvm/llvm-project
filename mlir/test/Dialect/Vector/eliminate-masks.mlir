@@ -16,7 +16,7 @@ func.func @eliminate_redundant_masks_through_insert_and_extracts(%tensor: tensor
   %extracted_slice_0 = tensor.extract_slice %tensor[0, 0] [1, %c4_vscale] [1, 1] : tensor<1x1000xf32> to tensor<1x?xf32>
   %output_tensor = scf.for %i = %c0 to %c1000 step %c4_vscale iter_args(%arg = %extracted_slice_0) -> tensor<1x?xf32> {
     // 1. Extract a slice.
-    %extracted_slice_1 = tensor.extract_slice %arg[0, 0] [1, %c4_vscale] [1, 1] : tensor<1x?xf32> to tensor<?xf32>
+    %extracted_slice_1 = tensor.extract_slice %arg[0, %i] [1, %c4_vscale] [1, 1] : tensor<1x?xf32> to tensor<?xf32>
 
     // 2. Create a mask for the slice.
     %dim_1 = tensor.dim %extracted_slice_1, %c0 : tensor<?xf32>
@@ -30,7 +30,7 @@ func.func @eliminate_redundant_masks_through_insert_and_extracts(%tensor: tensor
     %write = vector.transfer_write %new_vec, %extracted_slice_1[%c0], %mask {in_bounds = [true]} : vector<[4]xf32>, tensor<?xf32>
 
     // 5. Insert and yield the new tensor value.
-    %result = tensor.insert_slice %write into %arg[0, 0] [1, %c4_vscale] [1, 1] : tensor<?xf32> into tensor<1x?xf32>
+    %result = tensor.insert_slice %write into %arg[0, %i] [1, %c4_vscale] [1, 1] : tensor<?xf32> into tensor<1x?xf32>
     scf.yield %result : tensor<1x?xf32>
   }
   "test.some_use"(%output_tensor) : (tensor<1x?xf32>) -> ()
@@ -57,8 +57,8 @@ func.func @negative_extract_slice_size_shrink(%tensor: tensor<1000xf32>) {
     %mask = vector.create_mask %dim : vector<[4]xi1>
     "test.some_use"(%mask) : (vector<[4]xi1>) -> ()
     // !!! Here the size of the mask could shrink in the next iteration.
-    %next_num_els = affine.min  affine_map<(d0)[s0] -> (-d0 + 1000, s0)>(%i)[%c4_vscale]
-    %new_extracted_slice = tensor.extract_slice %tensor[%c4_vscale] [%next_num_els] [1] : tensor<1000xf32> to tensor<?xf32>
+    %next_num_elts = affine.min  affine_map<(d0)[s0] -> (-d0 + 1000, s0)>(%i)[%c4_vscale]
+    %new_extracted_slice = tensor.extract_slice %tensor[%c4_vscale] [%next_num_elts] [1] : tensor<1000xf32> to tensor<?xf32>
     scf.yield %new_extracted_slice : tensor<?xf32>
   }
   "test.some_use"(%slice) : (tensor<?xf32>) -> ()
@@ -110,8 +110,8 @@ func.func @negative_value_bounds_fixed_dim_not_all_true(%tensor: tensor<2x?xf32>
   %c4 = arith.constant 4 : index
   %vscale = vector.vscale
   %c4_vscale = arith.muli %vscale, %c4 : index
-  // This is _very_ simple but since addi is not a constant value bounds will
-  // be used to resolve it.
+  // This is _very_ simple but since tensor.dim is not a constant value bounds
+  // will be used to resolve it.
   %dim = tensor.dim %tensor, %c0 : tensor<2x?xf32>
   %mask = vector.create_mask %dim, %c4_vscale : vector<3x[4]xi1>
   "test.some_use"(%mask) : (vector<3x[4]xi1>) -> ()

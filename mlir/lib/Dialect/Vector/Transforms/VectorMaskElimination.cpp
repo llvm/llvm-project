@@ -1,3 +1,11 @@
+//===- VectorMaskElimination.cpp - Eliminate Vector Masks -----------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/ScalableValueBoundsConstraintSet.h"
@@ -105,10 +113,14 @@ void eliminateVectorMasks(IRRewriter &rewriter, FunctionOpInterface function,
     return;
 
   OpBuilder::InsertionGuard g(rewriter);
+
+  // Build worklist so we can safely insert new ops in
+  // `resolveAllTrueCreateMaskOp()`.
   SmallVector<vector::CreateMaskOp> worklist;
   function.walk([&](vector::CreateMaskOp createMaskOp) {
     worklist.push_back(createMaskOp);
   });
+
   rewriter.setInsertionPointToStart(&function.front());
   for (auto mask : worklist)
     (void)resolveAllTrueCreateMaskOp(rewriter, mask, *vscaleRange);

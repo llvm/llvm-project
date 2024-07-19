@@ -884,15 +884,10 @@ struct TestEliminateVectorMasks
       : PassWrapper(pass) {}
 
   Option<unsigned> vscaleMin{
-      *this, "vscale-min",
-      llvm::cl::desc(
-          "Minimum value `vector.vscale` can possibly be at runtime."),
+      *this, "vscale-min", llvm::cl::desc("Minimum possible value of vscale."),
       llvm::cl::init(1)};
-
   Option<unsigned> vscaleMax{
-      *this, "vscale-max",
-      llvm::cl::desc(
-          "Maximum value `vector.vscale` can possibly be at runtime."),
+      *this, "vscale-max", llvm::cl::desc("Maximum possible value of vscale."),
       llvm::cl::init(16)};
 
   StringRef getArgument() const final { return "test-eliminate-vector-masks"; }
