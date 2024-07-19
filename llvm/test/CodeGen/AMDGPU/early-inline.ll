@@ -25,7 +25,6 @@ entry:
 
 ; CHECK-LABEL: @alias_caller(
 ; CHECK-NOT: call
-; CHECK: {{^[}]}}
 define amdgpu_kernel void @alias_caller(i32 %x) {
 entry:
   %res = call i32 @c_alias(i32 %x)
