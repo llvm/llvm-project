@@ -243,8 +243,9 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
   }
 
   std::string Path = std::string(Args.getLastArgValue(OPT_l));
-  if (!Path.empty() && writeImportLibrary(OutputFile, Path, Exports, Machine,
-                                          /*MinGW=*/true, NativeExports))
+  if (!Path.empty() &&
+      writeImportLibrary(OutputFile, Path, Exports, Machine,
+                         /*MinGW=*/true, NativeExports, AddUnderscores))
     return 1;
   return 0;
 }
