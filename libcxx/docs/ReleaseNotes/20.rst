@@ -38,7 +38,7 @@ What's New in Libc++ 20.0.0?
 Implemented Papers
 ------------------
 
-- TODO
+- P2164R9 - ``views::enumerate``
 
 
 Improvements and New Features
