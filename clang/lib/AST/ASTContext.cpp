@@ -3223,14 +3223,16 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     OS << "<objc_object>";
     return;
 
-  case Type::Enum:
+  case Type::Enum: {
     // C11 6.7.2.2p4:
     //   Each enumerated type shall be compatible with char, a signed integer
     //   type, or an unsigned integer type.
     //
     // So we have to treat enum types as integers.
+    QualType UnderlyingType = cast<EnumType>(T)->getDecl()->getIntegerType();
     return encodeTypeForFunctionPointerAuth(
-        Ctx, OS, cast<EnumType>(T)->getDecl()->getIntegerType());
+        Ctx, OS, UnderlyingType.isNull() ? Ctx.IntTy : UnderlyingType);
+  }
 
   case Type::FunctionNoProto:
   case Type::FunctionProto: {
