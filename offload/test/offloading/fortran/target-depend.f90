@@ -28,7 +28,7 @@ program main
     subroutine foo(N, r)
       integer, intent(in) :: N
       integer, intent(out) :: r
-      integer :: z, i, j, k, accumulator
+      integer :: z, i, accumulator
       z = 1
       accumulator = 0
       ! Spawn 3 threads
@@ -43,16 +43,12 @@ program main
       ! This is the easiest way of creating two sibling tasks.
       !$omp single
       !$omp task depend(out: z) shared(z)
-      do k=1, 32766
-         do j=1, 32766
-            do i = 1, 32766
-               ! dumb loop nest to slow down the update of 'z'.
-               ! Adding a function call slows down the producer to the point
-               ! that removing the depend clause from the target construct below
-               ! frequently results in the wrong answer.
-               accumulator = accumulator + omp_get_device_num()
-            end do
-         end do
+      do i=1, 32766
+         ! dumb loop nest to slow down the update of 'z'.
+         ! Adding a function call slows down the producer to the point
+         ! that removing the depend clause from the target construct below
+         ! frequently results in the wrong answer.
+         accumulator = accumulator + omp_get_device_num()
       end do
       z = N
       !$omp end task
