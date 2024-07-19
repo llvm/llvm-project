@@ -158,14 +158,13 @@ public:
 };
 
 constexpr bool test() {
-  types::for_each(types::type_list<char, int, TriviallyComparable<char>>{},
-                  []<class T> {
-                    types::for_each(types::forward_iterator_list<T*>{}, []<class Iter> {
-                      test_iterators<Iter>();
-                      test_iterators<Iter, sentinel_wrapper<Iter>>();
-                      test_iterators<Iter, sized_sentinel<Iter>>();
-                    });
-                  });
+  types::for_each(types::type_list<char, int, TriviallyComparable<char>>{}, []<class T> {
+    types::for_each(types::forward_iterator_list<T*>{}, []<class Iter> {
+      test_iterators<Iter>();
+      test_iterators<Iter, sentinel_wrapper<Iter>>();
+      test_iterators<Iter, sized_sentinel<Iter>>();
+    });
+  });
 
   test_iterator_classes<forward_iterator>();
   test_iterator_classes<bidirectional_iterator>();
