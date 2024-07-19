@@ -819,6 +819,81 @@ bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
   return true;
 }
 
+// FIXME: This is similar to code we already have in Compiler.cpp.
+// I think it makes sense to instead add the field and base destruction stuff
+// to the destructor Function itself. Then destroying a record would really
+// _just_ be calling its destructor. That would also help with the diagnostic
+// difference when the destructor or a field/base fails.
+static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
+                                const Pointer &BasePtr,
+                                const Descriptor *Desc) {
+  assert(Desc->isRecord());
+  const Record *R = Desc->ElemRecord;
+  assert(R);
+
+  // Fields.
+  for (const Record::Field &Field : llvm::reverse(R->fields())) {
+    const Descriptor *D = Field.Desc;
+    if (D->isRecord()) {
+      if (!runRecordDestructor(S, OpPC, BasePtr.atField(Field.Offset), D))
+        return false;
+    } else if (D->isCompositeArray()) {
+      const Descriptor *ElemDesc = Desc->ElemDesc;
+      assert(ElemDesc->isRecord());
+      for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
+        if (!runRecordDestructor(S, OpPC, BasePtr.atIndex(I).narrow(),
+                                 ElemDesc))
+          return false;
+      }
+    }
+  }
+
+  // Destructor of this record.
+  if (const CXXDestructorDecl *Dtor = R->getDestructor();
+      Dtor && !Dtor->isTrivial()) {
+    const Function *DtorFunc = S.getContext().getOrCreateFunction(Dtor);
+    if (!DtorFunc)
+      return false;
+
+    S.Stk.push<Pointer>(BasePtr);
+    if (!Call(S, OpPC, DtorFunc, 0))
+      return false;
+  }
+
+  // Bases.
+  for (const Record::Base &Base : llvm::reverse(R->bases())) {
+    if (!runRecordDestructor(S, OpPC, BasePtr.atField(Base.Offset), Base.Desc))
+      return false;
+  }
+
+  return true;
+}
+
+bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B) {
+  assert(B);
+  const Descriptor *Desc = B->getDescriptor();
+
+  if (Desc->isPrimitive() || Desc->isPrimitiveArray())
+    return true;
+
+  assert(Desc->isRecord() || Desc->isCompositeArray());
+
+  if (Desc->isCompositeArray()) {
+    const Descriptor *ElemDesc = Desc->ElemDesc;
+    assert(ElemDesc->isRecord());
+
+    Pointer RP(const_cast<Block *>(B));
+    for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
+      if (!runRecordDestructor(S, OpPC, RP.atIndex(I).narrow(), ElemDesc))
+        return false;
+    }
+    return true;
+  }
+
+  assert(Desc->isRecord());
+  return runRecordDestructor(S, OpPC, Pointer(const_cast<Block *>(B)), Desc);
+}
+
 bool Interpret(InterpState &S, APValue &Result) {
   // The current stack frame when we started Interpret().
   // This is being used by the ops to determine wheter
