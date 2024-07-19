@@ -1,5 +1,6 @@
 .. title:: clang-tidy - bugprone-tagged-union-member-count
 
+==================================
 bugprone-tagged-union-member-count
 ==================================
 
@@ -11,190 +12,190 @@ exactly one union data member and exactly one enum data member and
 any number of other data members that are neither unions or enums.
 
 Example
--------
+=======
 
 .. code-block:: c++
 
-  enum tags {
-    tag1,
-    tag2,
+  enum Tags {
+    Tag1,
+    Tag2,
   };
 
-  struct taggedUnion { // warning: Tagged union has more data members (3) than tags (2)! [bugprone-tagged-union-member-count]
-    enum tags kind;
+  struct TaggedUnion { // warning: Tagged union has more data members (3) than tags (2)
+    enum Tags Kind;
     union {
-      int i;
-      float f;
-      char *str;
-    } data;
+      int I;
+      float F;
+      char *Str;
+    } Data;
   };
 
 Counting enum constant heuristic
---------------------------------
+================================
 
 Some programmers use enums in such a way, where the value of the last enum 
 constant is used to keep track of how many enum constants have been declared.
 
 .. code-block:: c++
 
-  enum tags_with_counter {
-    tag1, // is 0
-    tag2, // is 1
-    tag3, // is 2
-    tags_count, // is 3
+  enum TagWithCounter {
+    Tag1, // is 0
+    Tag2, // is 1
+    Tag3, // is 2
+    TagCount, // is 3
   };
 
-The check detects this usage pattern heuristically and does not include
+This usage pattern is detected heuristically and the check does not include
 the counter enum constant in the final tag count, since the counter is not
-meant to indicate the valid variant member.
+meant to indicate the valid union data member.
+
+When the check finds multiple possible counting enums, then it does not change the enum count.
+
+This heuristic can be disabled entirely (:option:`CountingEnumHeuristicIsEnabled`) or
+configured to follow your naming convention (:option:`CountingEnumPrefixes/Suffixes`).
+String matching is done case insensitively.
 
 Options
--------
+=======
 
-.. option:: EnumCounterHeuristicIsEnabled
+.. option:: CountingEnumHeuristicIsEnabled
 
-    This option enables or disables the counting enum heuristic.
-    To find possible counting enum constants this option uses the value of
-    the string :option:`EnumCounterSuffix`.
+This option enables or disables the counting enum heuristic.
+To find possible counting enum constants this option uses the prefixes
+and suffixes specified 
+the string :option:`CountingEnumSuffixes`.
 
-    This option is enabled by default.
+This option is enabled by default.
 
-Example of :option:`EnumCounterHeuristicIsEnabled`:
-
-When :option:`EnumCounterHeuristicIsEnabled` is false:
+When :option:`CountingEnumHeuristicIsEnabled` is false:
 
 .. code-block:: c++
 
-  enum tags_with_counter {
-    tag1,
-    tag2,
-    tag3,
-    tags_count,
+  enum TagWithCounter {
+    Tag1,
+    Tag2,
+    Tag3,
+    TagCount,
   };
 
-  struct taggedUnion {
-    tags_with_counter tag;
-    union data {
-      int a;
-      int b;
-      char *str;
-      float f;
+  struct TaggedUnion {
+    TagWithCounter Kind;
+    union Data {
+      int A;
+      long B;
+      char *Str;
+      float F;
     };
   };
  
-When :option:`EnumCounterHeuristicIsEnabled` is true:
+When :option:`CountingEnumHeuristicIsEnabled` is true:
 
 .. code-block:: c++
 
-  enum tags_with_counter {
-    tag1,
-    tag2,
-    tag3,
-    tags_count,
+  enum TagWithCounter {
+    Tag1,
+    Tag2,
+    Tag3,
+    TagCount,
   };
 
-  struct taggedUnion { // warning: Tagged union has more data members (4) than tags (3)! [bugprone-tagged-union-member-count]
-    tags_with_counter tag;
-    union data {
-      int a;
-      int b;
-      char *str;
-      float f;
+  struct TaggedUnion { // warning: Tagged union has more data members (4) than tags (3)
+    TagWithCounter Kind;
+    union Data {
+      int A;
+      long B;
+      char *Str;
+      float F;
     };
   };
 
-.. option:: EnumCounterSuffix
+.. option:: CountingEnumPrefixes/Suffixes
 
-    When defined, the check will use the given string to search for counting
-    enum constants. This option does not alter the check's behavior when
-    :option:`EnumCounterHeuristicIsEnabled` is disabled.
+When defined, the check will use the list of the semicolon separated strings
+in CountingEnumPrefixes or CountingEnumSuffixes for the identification of possible counting enum constants.
+These options do not alter the check's behavior when :option:`CountingEnumHeuristicIsEnabled` is set to false.
 
-    The default value is "count".
+The default value for CountingEnumSuffixes is "count" and for CountingEnumPrefixes is "" (empty string).
 
-Example of :option:`EnumCounterSuffix`:
-
-When :option:`EnumCounterHeuristicIsEnabled` is true and
-:option:`EnumCounterSuffix` is "size":
+When :option:`CountingEnumHeuristicIsEnabled` is true and CountingEnumSuffixes is "count;size":
 
 .. code-block:: c++
 
-  enum tags_with_counter_count {
-    tag1,
-    tag2,
-    tag3,
-    tags_count,
+  enum TagWithCounterCount {
+    Tag1,
+    Tag2,
+    Tag3,
+    TagCount,
   };
 
-  enum tags_with_counter_size {
-    tag4,
-    tag5,
-    tag6,
-    tags_size,
-  };
-
-  struct taggedUnion1 {
-    tags_with_counter_count tag;
-    union data {
-      int a;
-      int b;
-      char *str;
-      float f;
+  struct TaggedUnionCount { // warning: Tagged union has more data members (4) than tags (3)
+    TagWithCounterCount Kind;
+    union Data {
+      int A;
+      long B;
+      char *Str;
+      float F;
     };
   };
 
-  struct taggedUnion2 { // warning: Tagged union has more data members (4) than tags (3)! [bugprone-tagged-union-member-count]
-    tags_with_counter_size tag;
-    union data {
-      int a;
-      int b;
-      char *str;
-      float f;
+  enum TagWithCounterSize {
+    Tag11,
+    Tag22,
+    Tag33,
+    TagSize,
+  };
+
+  struct TaggedUnionSize { // warning: Tagged union has more data members (4) than tags (3)
+    TagWithCounterSize Kind;
+    union Data {
+      int A;
+      long B;
+      char *Str;
+      float F;
     };
   };
- 
-When :option:`EnumCounterSuffix` is true:
+
+When :option:`CountingEnumHeuristicIsEnabled` is true and CountingEnumPrefixes is "maxsize;last_"
 
 .. code-block:: c++
 
-  enum tags_with_counter {
-    tag1,
-    tag2,
-    tag3,
-    tags_count,
+  enum TagWithCounter {
+    Tag1,
+    Tag2,
+    Tag3,
+    TagCount,
   };
 
-  struct taggedUnion { // warning: Tagged union has more data members (4) than tags (3)! [bugprone-tagged-union-member-count]
-    tags_with_counter tag;
-    union data {
-      int a;
-      int b;
-      char *str;
-      float f;
+  struct TaggedUnion { // warning: Tagged union has more data members (4) than tags (3)
+    TagWithCounter tag;
+    union Data {
+      int I;
+      short S;
+      char *C;
+      float F;
     };
   };
 
 .. option:: StrictMode
 
-    When enabled, the check will also give a warning, when the number of tags
-    is greater than the number of union data members.
+When enabled, the check will also give a warning, when the number of tags
+is greater than the number of union data members.
 
-    This option is not enabled by default.
-
-Example of :option:`StrictMode`:
+This option is disabled by default.
 
 When :option:`StrictMode` is false:
 
 .. code-block:: c++
 
-    struct taggedUnion {
+    struct TaggedUnion {
       enum {
-        tags1,
-        tags2,
-        tags3,
-      } tags;
+        Tag1,
+        Tag2,
+        Tag3,
+      } Tags;
       union {
-        int i;
-        float f;
+        int I;
+        float F;
       };
     };
 
@@ -202,15 +203,15 @@ When :option:`StrictMode` is true:
 
 .. code-block:: c++
 
-    struct taggedunion1 { // warning: Tagged union has fewer data members (2) than tags (3)! [bugprone-tagged-union-member-count]
+    struct TaggedUnion { // warning: Tagged union has fewer data members (2) than tags (3)
       enum {
-        tags1,
-        tags2,
-        tags3,
-      } tags;
+        Tag1,
+        Tag2,
+        Tag3,
+      } Tags;
       union {
-        int i;
-        float f;
+        int I;
+        float F;
       };
     };
 

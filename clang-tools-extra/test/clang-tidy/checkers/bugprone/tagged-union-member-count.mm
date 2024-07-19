@@ -1,5 +1,4 @@
-// RUN: %check_clang_tidy -std=c++98-or-later %s bugprone-tagged-union-member-count %t
-// Test check with C++ features
+// RUN: %check_clang_tidy %s bugprone-tagged-union-member-count %t
 
 typedef enum Tags3 {
   tags3_1,
