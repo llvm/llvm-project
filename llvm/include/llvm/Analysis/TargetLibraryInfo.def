@@ -1953,6 +1953,21 @@ TLI_DEFINE_ENUM_INTERNAL(remainderl)
 TLI_DEFINE_STRING_INTERNAL("remainderl")
 TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl, LDbl)
 
+/// double remquo(double x, double y, int *quo);
+TLI_DEFINE_ENUM_INTERNAL(remquo)
+TLI_DEFINE_STRING_INTERNAL("remquo")
+TLI_DEFINE_SIG_INTERNAL(Dbl, Dbl, Dbl, Ptr)
+
+/// float remquof(float x, float y, int *quo);
+TLI_DEFINE_ENUM_INTERNAL(remquof)
+TLI_DEFINE_STRING_INTERNAL("remquof")
+TLI_DEFINE_SIG_INTERNAL(Flt, Flt, Flt, Ptr)
+
+/// long double remquol(long double x, long double y, int *quo);
+TLI_DEFINE_ENUM_INTERNAL(remquol)
+TLI_DEFINE_STRING_INTERNAL("remquol")
+TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl, LDbl, Ptr)
+
 /// int remove(const char *path);
 TLI_DEFINE_ENUM_INTERNAL(remove)
 TLI_DEFINE_STRING_INTERNAL("remove")
