@@ -64,6 +64,8 @@ public:
   // Use CREL relocation format for ELF.
   bool Crel = false;
 
+  bool OptimizeMappingSymbols = false;
+
   // If true, prefer R_X86_64_[REX_]GOTPCRELX to R_X86_64_GOTPCREL on x86-64
   // ELF.
   bool X86RelaxRelocations = true;
