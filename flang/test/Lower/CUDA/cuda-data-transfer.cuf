@@ -109,7 +109,7 @@ end
 ! CHECK: cuf.data_transfer %[[ADEV]]#1 to %[[DECL_TEMP]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>
 ! CHECK: %[[ELEMENTAL:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<10xi32>
 ! CHECK: hlfir.assign %[[ELEMENTAL]] to %[[BHOST]]#0 : !hlfir.expr<10xi32>, !fir.ref<!fir.array<10xi32>>
-! CHECK: fir.freemem %[[DECL_TEMP]]#0 : !fir.heap<!fir.array<10xi32>>
+! CHECK: fir.freemem %[[TEMP]] : !fir.heap<!fir.array<10xi32>>
 
 subroutine sub3()
   use mod1
@@ -251,3 +251,26 @@ end subroutine
 ! CHECK: %{{.*}} = fir.call @_QMmod1Pdev1
 ! CHECK: hlfir.assign
 ! CHECK-NOT: cuf.data_transfer
+
+subroutine sub13(a, b, n)
+  integer :: n
+  integer :: a(n)
+  integer, allocatable, device :: b(:)
+  integer :: res(10)
+
+  res = a + b
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub13
+! CHECK: %[[TEMP:.*]] = fir.allocmem !fir.array<?xi32>, %14#1 {bindc_name = ".tmp", uniq_name = ""}
+! CHECK: cuf.data_transfer
+! CHECK: fir.freemem %[[TEMP]] : !fir.heap<!fir.array<?xi32>>
+
+subroutine sub14()
+  logical(4), device :: log(10)
+  log = .true.
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub14()
+! CHECK: %[[TRUE:.*]] = arith.constant true
+! CHECK: cuf.data_transfer %[[TRUE]] to %{{.*}}#0 {transfer_kind = #cuf.cuda_transfer<host_device>} : i1, !fir.ref<!fir.array<10x!fir.logical<4>>>

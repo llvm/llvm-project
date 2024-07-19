@@ -133,7 +133,7 @@ public:
       }
     }
     auto *Fn = cast<llvm::Function>(GV);
-    BPI.setFnAttributes(*Fn);
+    setBranchProtectionFnAttributes(BPI, *Fn);
   }
 
   bool isScalarizableAsmOperand(CodeGen::CodeGenFunction &CGF,

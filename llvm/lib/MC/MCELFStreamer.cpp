@@ -699,17 +699,16 @@ void MCELFStreamer::setAttributeItems(unsigned Attribute, unsigned IntValue,
 
 MCELFStreamer::AttributeItem *
 MCELFStreamer::getAttributeItem(unsigned Attribute) {
-  for (size_t I = 0; I < Contents.size(); ++I)
-    if (Contents[I].Tag == Attribute)
-      return &Contents[I];
+  for (AttributeItem &Item : Contents)
+    if (Item.Tag == Attribute)
+      return &Item;
   return nullptr;
 }
 
 size_t
 MCELFStreamer::calculateContentSize(SmallVector<AttributeItem, 64> &AttrsVec) {
   size_t Result = 0;
-  for (size_t I = 0; I < AttrsVec.size(); ++I) {
-    AttributeItem Item = AttrsVec[I];
+  for (const AttributeItem &Item : AttrsVec) {
     switch (Item.Type) {
     case AttributeItem::HiddenAttribute:
       break;
@@ -770,8 +769,7 @@ void MCELFStreamer::createAttributesSection(
 
   // Size should have been accounted for already, now
   // emit each field as its type (ULEB or String)
-  for (size_t I = 0; I < AttrsVec.size(); ++I) {
-    AttributeItem Item = AttrsVec[I];
+  for (const AttributeItem &Item : AttrsVec) {
     emitULEB128IntValue(Item.Tag);
     switch (Item.Type) {
     default:

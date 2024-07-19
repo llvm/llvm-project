@@ -69,7 +69,7 @@ char MIRProfileLoaderPass::ID = 0;
 INITIALIZE_PASS_BEGIN(MIRProfileLoaderPass, DEBUG_TYPE,
                       "Load MIR Sample Profile",
                       /* cfg = */ false, /* is_analysis = */ false)
-INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
@@ -363,7 +363,7 @@ bool MIRProfileLoaderPass::runOnMachineFunction(MachineFunction &MF) {
 
   LLVM_DEBUG(dbgs() << "MIRProfileLoader pass working on Func: "
                     << MF.getFunction().getName() << "\n");
-  MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   MIRSampleLoader->setInitVals(
       &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree(),
       &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree(),
@@ -401,7 +401,7 @@ bool MIRProfileLoaderPass::doInitialization(Module &M) {
 
 void MIRProfileLoaderPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<MachineBlockFrequencyInfo>();
+  AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachinePostDominatorTreeWrapperPass>();
   AU.addRequiredTransitive<MachineLoopInfoWrapperPass>();

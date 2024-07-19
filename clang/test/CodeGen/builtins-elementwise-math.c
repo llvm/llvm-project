@@ -44,8 +44,9 @@ void test_builtin_elementwise_abs(float f1, float f2, double d1, double d2,
   const si8 cvi2 = vi2;
   vi2 = __builtin_elementwise_abs(cvi2);
 
-  // CHECK:      [[BI1:%.+]] = load i31, ptr %bi1.addr, align 4
-  // CHECK-NEXT: call i31 @llvm.abs.i31(i31 [[BI1]], i1 false)
+  // CHECK:      [[BI1:%.+]] = load i32, ptr %bi1.addr, align 4
+  // CHECK-NEXT: [[LOADEDV:%.+]] = trunc i32 [[BI1]] to i31
+  // CHECK-NEXT: call i31 @llvm.abs.i31(i31 [[LOADEDV]], i1 false)
   bi2 = __builtin_elementwise_abs(bi1);
 
   // CHECK:      [[IA1:%.+]] = load i32, ptr addrspace(1) @int_as_one, align 4
@@ -92,14 +93,18 @@ void test_builtin_elementwise_add_sat(float f1, float f2, double d1, double d2,
   // CHECK-NEXT: call <4 x i32> @llvm.uadd.sat.v4i32(<4 x i32> [[VU1]], <4 x i32> [[VU2]])
   vu1 = __builtin_elementwise_add_sat(vu1, vu2);
 
-  // CHECK:      [[BI1:%.+]] = load i31, ptr %bi1.addr, align 4
-  // CHECK-NEXT: [[BI2:%.+]] = load i31, ptr %bi2.addr, align 4
-  // CHECK-NEXT: call i31 @llvm.sadd.sat.i31(i31 [[BI1]], i31 [[BI2]])
+  // CHECK:      [[BI1:%.+]] = load i32, ptr %bi1.addr, align 4
+  // CHECK-NEXT: [[LOADEDV:%.+]] = trunc i32 [[BI1]] to i31
+  // CHECK-NEXT: [[BI2:%.+]] = load i32, ptr %bi2.addr, align 4
+  // CHECK-NEXT: [[LOADEDV1:%.+]] = trunc i32 [[BI2]] to i31
+  // CHECK-NEXT: call i31 @llvm.sadd.sat.i31(i31 [[LOADEDV]], i31 [[LOADEDV1]])
   bi1 = __builtin_elementwise_add_sat(bi1, bi2);
 
-  // CHECK:      [[BU1:%.+]] = load i55, ptr %bu1.addr, align 8
-  // CHECK-NEXT: [[BU2:%.+]] = load i55, ptr %bu2.addr, align 8
-  // CHECK-NEXT: call i55 @llvm.uadd.sat.i55(i55 [[BU1]], i55 [[BU2]])
+  // CHECK:      [[BU1:%.+]] = load i64, ptr %bu1.addr, align 8
+  // CHECK-NEXT: [[LOADEDV2:%.+]] = trunc i64 [[BU1]] to i55
+  // CHECK-NEXT: [[BU2:%.+]] = load i64, ptr %bu2.addr, align 8
+  // CHECK-NEXT: [[LOADEDV3:%.+]] = trunc i64 [[BU2]] to i55
+  // CHECK-NEXT: call i55 @llvm.uadd.sat.i55(i55 [[LOADEDV2]], i55 [[LOADEDV3]])
   bu1 = __builtin_elementwise_add_sat(bu1, bu2);
 
   // CHECK:      [[IAS1:%.+]] = load i32, ptr addrspace(1) @int_as_one, align 4
@@ -141,14 +146,18 @@ void test_builtin_elementwise_sub_sat(float f1, float f2, double d1, double d2,
   // CHECK-NEXT: call <4 x i32> @llvm.usub.sat.v4i32(<4 x i32> [[VU1]], <4 x i32> [[VU2]])
   vu1 = __builtin_elementwise_sub_sat(vu1, vu2);
 
-  // CHECK:      [[BI1:%.+]] = load i31, ptr %bi1.addr, align 4
-  // CHECK-NEXT: [[BI2:%.+]] = load i31, ptr %bi2.addr, align 4
-  // CHECK-NEXT: call i31 @llvm.ssub.sat.i31(i31 [[BI1]], i31 [[BI2]])
+  // CHECK:      [[BI1:%.+]] = load i32, ptr %bi1.addr, align 4
+  // CHECK-NEXT: [[LOADEDV:%.+]] = trunc i32 [[BI1]] to i31
+  // CHECK-NEXT: [[BI2:%.+]] = load i32, ptr %bi2.addr, align 4
+  // CHECK-NEXT: [[LOADEDV1:%.+]] = trunc i32 [[BI2]] to i31
+  // CHECK-NEXT: call i31 @llvm.ssub.sat.i31(i31 [[LOADEDV]], i31 [[LOADEDV1]])
   bi1 = __builtin_elementwise_sub_sat(bi1, bi2);
 
-  // CHECK:      [[BU1:%.+]] = load i55, ptr %bu1.addr, align 8
-  // CHECK-NEXT: [[BU2:%.+]] = load i55, ptr %bu2.addr, align 8
-  // CHECK-NEXT: call i55 @llvm.usub.sat.i55(i55 [[BU1]], i55 [[BU2]])
+  // CHECK:      [[BU1:%.+]] = load i64, ptr %bu1.addr, align 8
+  // CHECK-NEXT: [[LOADEDV2:%.+]] = trunc i64 [[BU1]] to i55
+  // CHECK-NEXT: [[BU2:%.+]] = load i64, ptr %bu2.addr, align 8
+  // CHECK-NEXT: [[LOADEDV3:%.+]] = trunc i64 [[BU2]] to i55
+  // CHECK-NEXT: call i55 @llvm.usub.sat.i55(i55 [[LOADEDV2]], i55 [[LOADEDV3]])
   bu1 = __builtin_elementwise_sub_sat(bu1, bu2);
 
   // CHECK:      [[IAS1:%.+]] = load i32, ptr addrspace(1) @int_as_one, align 4
@@ -169,7 +178,7 @@ void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
   // CHECK-LABEL: define void @test_builtin_elementwise_max(
   // CHECK:      [[F1:%.+]] = load float, ptr %f1.addr, align 4
   // CHECK-NEXT: [[F2:%.+]] = load float, ptr %f2.addr, align 4
-  // CHECK-NEXT:  call float @llvm.maxnum.f32(float %0, float %1)
+  // CHECK-NEXT:  call float @llvm.maxnum.f32(float [[F1]], float [[F2]])
   f1 = __builtin_elementwise_max(f1, f2);
 
   // CHECK:      [[D1:%.+]] = load double, ptr %d1.addr, align 8
@@ -210,14 +219,18 @@ void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
   // CHECK-NEXT: call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[VU1]], <4 x i32> [[VU2]])
   vu1 = __builtin_elementwise_max(vu1, vu2);
 
-  // CHECK:      [[BI1:%.+]] = load i31, ptr %bi1.addr, align 4
-  // CHECK-NEXT: [[BI2:%.+]] = load i31, ptr %bi2.addr, align 4
-  // CHECK-NEXT: call i31 @llvm.smax.i31(i31 [[BI1]], i31 [[BI2]])
+  // CHECK:      [[BI1:%.+]] = load i32, ptr %bi1.addr, align 4
+  // CHECK-NEXT: [[LOADEDV:%.+]] = trunc i32 [[BI1]] to i31
+  // CHECK-NEXT: [[BI2:%.+]] = load i32, ptr %bi2.addr, align 4
+  // CHECK-NEXT: [[LOADEDV1:%.+]] = trunc i32 [[BI2]] to i31
+  // CHECK-NEXT: call i31 @llvm.smax.i31(i31 [[LOADEDV]], i31 [[LOADEDV1]])
   bi1 = __builtin_elementwise_max(bi1, bi2);
 
-  // CHECK:      [[BU1:%.+]] = load i55, ptr %bu1.addr, align 8
-  // CHECK-NEXT: [[BU2:%.+]] = load i55, ptr %bu2.addr, align 8
-  // CHECK-NEXT: call i55 @llvm.umax.i55(i55 [[BU1]], i55 [[BU2]])
+  // CHECK:      [[BU1:%.+]] = load i64, ptr %bu1.addr, align 8
+  // CHECK-NEXT: [[LOADEDV2:%.+]] = trunc i64 [[BU1]] to i55
+  // CHECK-NEXT: [[BU2:%.+]] = load i64, ptr %bu2.addr, align 8
+  // CHECK-NEXT: [[LOADEDV3:%.+]] = trunc i64 [[BU2]] to i55
+  // CHECK-NEXT: call i55 @llvm.umax.i55(i55 [[LOADEDV2]], i55 [[LOADEDV3]])
   bu1 = __builtin_elementwise_max(bu1, bu2);
 
   // CHECK:      [[CVF1:%.+]] = load <4 x float>, ptr %cvf1, align 16
@@ -249,7 +262,7 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
   // CHECK-LABEL: define void @test_builtin_elementwise_min(
   // CHECK:      [[F1:%.+]] = load float, ptr %f1.addr, align 4
   // CHECK-NEXT: [[F2:%.+]] = load float, ptr %f2.addr, align 4
-  // CHECK-NEXT:  call float @llvm.minnum.f32(float %0, float %1)
+  // CHECK-NEXT:  call float @llvm.minnum.f32(float [[F1]], float [[F2]])
   f1 = __builtin_elementwise_min(f1, f2);
 
   // CHECK:      [[D1:%.+]] = load double, ptr %d1.addr, align 8
@@ -296,14 +309,18 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
   // CHECK-NEXT: call <4 x i32> @llvm.umin.v4i32(<4 x i32> [[VU1]], <4 x i32> [[VU2]])
   vu1 = __builtin_elementwise_min(vu1, vu2);
 
-  // CHECK:      [[BI1:%.+]] = load i31, ptr %bi1.addr, align 4
-  // CHECK-NEXT: [[BI2:%.+]] = load i31, ptr %bi2.addr, align 4
-  // CHECK-NEXT: call i31 @llvm.smin.i31(i31 [[BI1]], i31 [[BI2]])
+  // CHECK:      [[BI1:%.+]] = load i32, ptr %bi1.addr, align 4
+  // CHECK-NEXT: [[LOADEDV:%.+]] = trunc i32 [[BI1]] to i31
+  // CHECK-NEXT: [[BI2:%.+]] = load i32, ptr %bi2.addr, align 4
+  // CHECK-NEXT: [[LOADEDV1:%.+]] = trunc i32 [[BI2]] to i31
+  // CHECK-NEXT: call i31 @llvm.smin.i31(i31 [[LOADEDV]], i31 [[LOADEDV1]])
   bi1 = __builtin_elementwise_min(bi1, bi2);
 
-  // CHECK:      [[BU1:%.+]] = load i55, ptr %bu1.addr, align 8
-  // CHECK-NEXT: [[BU2:%.+]] = load i55, ptr %bu2.addr, align 8
-  // CHECK-NEXT: call i55 @llvm.umin.i55(i55 [[BU1]], i55 [[BU2]])
+  // CHECK:      [[BU1:%.+]] = load i64, ptr %bu1.addr, align 8
+  // CHECK-NEXT: [[LOADEDV2:%.+]] = trunc i64 [[BU1]] to i55
+  // CHECK-NEXT: [[BU2:%.+]] = load i64, ptr %bu2.addr, align 8
+  // CHECK-NEXT: [[LOADEDV3:%.+]] = trunc i64 [[BU2]] to i55
+  // CHECK-NEXT: call i55 @llvm.umin.i55(i55 [[LOADEDV2]], i55 [[LOADEDV3]])
   bu1 = __builtin_elementwise_min(bu1, bu2);
 
   // CHECK:      [[CVF1:%.+]] = load <4 x float>, ptr %cvf1, align 16
@@ -341,8 +358,9 @@ void test_builtin_elementwise_bitreverse(si8 vi1, si8 vi2,
   const si8 cvi2 = vi2;
   vi2 = __builtin_elementwise_bitreverse(cvi2);
 
-  // CHECK:      [[BI1:%.+]] = load i31, ptr %bi1.addr, align 4
-  // CHECK-NEXT: call i31 @llvm.bitreverse.i31(i31 [[BI1]])
+  // CHECK:      [[BI1:%.+]] = load i32, ptr %bi1.addr, align 4
+  // CHECK-NEXT: [[LOADEDV:%.+]] = trunc i32 [[BI1]] to i31
+  // CHECK-NEXT: call i31 @llvm.bitreverse.i31(i31 [[LOADEDV]])
   bi2 = __builtin_elementwise_bitreverse(bi1);
 
   // CHECK:      [[IA1:%.+]] = load i32, ptr addrspace(1) @int_as_one, align 4
