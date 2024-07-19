@@ -187,7 +187,7 @@ public:
     // We have to keep track of the mapping symbol state of any sections we
     // use. Each one should start off as EMS_None, which is provided as the
     // default constructor by DenseMap::lookup.
-    LastMappingSymbols[getPreviousSection().first] = LastEMS;
+    LastMappingSymbols[getCurrentSection().first] = LastEMS;
     LastEMS = LastMappingSymbols.lookup(Section);
 
     MCELFStreamer::changeSection(Section, Subsection);

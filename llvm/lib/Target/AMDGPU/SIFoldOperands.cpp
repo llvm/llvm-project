@@ -1367,7 +1367,9 @@ bool SIFoldOperands::tryFoldZeroHighBits(MachineInstr &MI) const {
     return false;
 
   Register Dst = MI.getOperand(0).getReg();
-  MRI->replaceRegWith(Dst, SrcDef->getOperand(0).getReg());
+  MRI->replaceRegWith(Dst, Src1);
+  if (!MI.getOperand(2).isKill())
+    MRI->clearKillFlags(Src1);
   MI.eraseFromParent();
   return true;
 }
