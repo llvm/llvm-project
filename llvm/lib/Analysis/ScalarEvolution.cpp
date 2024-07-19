@@ -2615,16 +2615,16 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
     bool Ok = true;
     // Check all the operands to see if they can be represented in the
     // source type of the truncate.
-    for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
-      if (const SCEVTruncateExpr *T = dyn_cast<SCEVTruncateExpr>(Ops[i])) {
+    for (const SCEV *Op : Ops) {
+      if (const SCEVTruncateExpr *T = dyn_cast<SCEVTruncateExpr>(Op)) {
         if (T->getOperand()->getType() != SrcType) {
           Ok = false;
           break;
         }
         LargeOps.push_back(T->getOperand());
-      } else if (const SCEVConstant *C = dyn_cast<SCEVConstant>(Ops[i])) {
+      } else if (const SCEVConstant *C = dyn_cast<SCEVConstant>(Op)) {
         LargeOps.push_back(getAnyExtendExpr(C, SrcType));
-      } else if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(Ops[i])) {
+      } else if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(Op)) {
         SmallVector<const SCEV *, 8> LargeMulOps;
         for (unsigned j = 0, f = M->getNumOperands(); j != f && Ok; ++j) {
           if (const SCEVTruncateExpr *T =
@@ -3668,13 +3668,13 @@ ScalarEvolution::getAddRecExpr(SmallVectorImpl<const SCEV *> &Operands,
   if (Operands.size() == 1) return Operands[0];
 #ifndef NDEBUG
   Type *ETy = getEffectiveSCEVType(Operands[0]->getType());
-  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
-    assert(getEffectiveSCEVType(Operands[i]->getType()) == ETy &&
+  for (const SCEV *Op : llvm::drop_begin(Operands)) {
+    assert(getEffectiveSCEVType(Op->getType()) == ETy &&
            "SCEVAddRecExpr operand types don't match!");
-    assert(!Operands[i]->getType()->isPointerTy() && "Step must be integer");
+    assert(!Op->getType()->isPointerTy() && "Step must be integer");
   }
-  for (unsigned i = 0, e = Operands.size(); i != e; ++i)
-    assert(isAvailableAtLoopEntry(Operands[i], L) &&
+  for (const SCEV *Op : Operands)
+    assert(isAvailableAtLoopEntry(Op, L) &&
            "SCEVAddRecExpr operand is not available at loop entry!");
 #endif
 
@@ -3746,21 +3746,23 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
   // getSCEV(Base)->getType() has the same address space as Base->getType()
   // because SCEV::getType() preserves the address space.
   Type *IntIdxTy = getEffectiveSCEVType(BaseExpr->getType());
-  const bool AssumeInBoundsFlags = [&]() {
-    if (!GEP->isInBounds())
-      return false;
-
+  GEPNoWrapFlags NW = GEP->getNoWrapFlags();
+  if (NW != GEPNoWrapFlags::none()) {
     // We'd like to propagate flags from the IR to the corresponding SCEV nodes,
     // but to do that, we have to ensure that said flag is valid in the entire
     // defined scope of the SCEV.
-    auto *GEPI = dyn_cast<Instruction>(GEP);
     // TODO: non-instructions have global scope.  We might be able to prove
     // some global scope cases
-    return GEPI && isSCEVExprNeverPoison(GEPI);
-  }();
+    auto *GEPI = dyn_cast<Instruction>(GEP);
+    if (!GEPI || !isSCEVExprNeverPoison(GEPI))
+      NW = GEPNoWrapFlags::none();
+  }
 
-  SCEV::NoWrapFlags OffsetWrap =
-    AssumeInBoundsFlags ? SCEV::FlagNSW : SCEV::FlagAnyWrap;
+  SCEV::NoWrapFlags OffsetWrap = SCEV::FlagAnyWrap;
+  if (NW.hasNoUnsignedSignedWrap())
+    OffsetWrap = setFlags(OffsetWrap, SCEV::FlagNSW);
+  if (NW.hasNoUnsignedWrap())
+    OffsetWrap = setFlags(OffsetWrap, SCEV::FlagNUW);
 
   Type *CurTy = GEP->getType();
   bool FirstIter = true;
@@ -3806,8 +3808,9 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
   // Add the base address and the offset. We cannot use the nsw flag, as the
   // base address is unsigned. However, if we know that the offset is
   // non-negative, we can use nuw.
-  SCEV::NoWrapFlags BaseWrap = AssumeInBoundsFlags && isKnownNonNegative(Offset)
-                                   ? SCEV::FlagNUW : SCEV::FlagAnyWrap;
+  bool NUW = NW.hasNoUnsignedWrap() ||
+             (NW.hasNoUnsignedSignedWrap() && isKnownNonNegative(Offset));
+  SCEV::NoWrapFlags BaseWrap = NUW ? SCEV::FlagNUW : SCEV::FlagAnyWrap;
   auto *GEPExpr = getAddExpr(BaseExpr, Offset, BaseWrap);
   assert(BaseExpr->getType() == GEPExpr->getType() &&
          "GEP should not change type mid-flight.");
@@ -3955,8 +3958,8 @@ const SCEV *ScalarEvolution::getMinMaxExpr(SCEVTypes Kind,
   // already have one, otherwise create a new one.
   FoldingSetNodeID ID;
   ID.AddInteger(Kind);
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i)
-    ID.AddPointer(Ops[i]);
+  for (const SCEV *Op : Ops)
+    ID.AddPointer(Op);
   void *IP = nullptr;
   const SCEV *ExistingSCEV = UniqueSCEVs.FindNodeOrInsertPos(ID, IP);
   if (ExistingSCEV)
@@ -4342,8 +4345,8 @@ ScalarEvolution::getSequentialMinMaxExpr(SCEVTypes Kind,
   // already have one, otherwise create a new one.
   FoldingSetNodeID ID;
   ID.AddInteger(Kind);
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i)
-    ID.AddPointer(Ops[i]);
+  for (const SCEV *Op : Ops)
+    ID.AddPointer(Op);
   void *IP = nullptr;
   const SCEV *ExistingSCEV = UniqueSCEVs.FindNodeOrInsertPos(ID, IP);
   if (ExistingSCEV)
@@ -5879,15 +5882,17 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
               Flags = setFlags(Flags, SCEV::FlagNSW);
           }
         } else if (GEPOperator *GEP = dyn_cast<GEPOperator>(BEValueV)) {
-          // If the increment is an inbounds GEP, then we know the address
-          // space cannot be wrapped around. We cannot make any guarantee
-          // about signed or unsigned overflow because pointers are
-          // unsigned but we may have a negative index from the base
-          // pointer. We can guarantee that no unsigned wrap occurs if the
-          // indices form a positive value.
-          if (GEP->isInBounds() && GEP->getOperand(0) == PN) {
-            Flags = setFlags(Flags, SCEV::FlagNW);
-            if (isKnownPositive(Accum))
+          if (GEP->getOperand(0) == PN) {
+            GEPNoWrapFlags NW = GEP->getNoWrapFlags();
+            // If the increment has any nowrap flags, then we know the address
+            // space cannot be wrapped around.
+            if (NW != GEPNoWrapFlags::none())
+              Flags = setFlags(Flags, SCEV::FlagNW);
+            // If the GEP is nuw or nusw with non-negative offset, we know that
+            // no unsigned wrap occurs. We cannot set the nsw flag as only the
+            // offset is treated as signed, while the base is unsigned.
+            if (NW.hasNoUnsignedWrap() ||
+                (NW.hasNoUnsignedSignedWrap() && isKnownNonNegative(Accum)))
               Flags = setFlags(Flags, SCEV::FlagNUW);
           }
 
@@ -8407,7 +8412,7 @@ void ScalarEvolution::visitAndClearUsers(
     SmallVectorImpl<const SCEV *> &ToForget) {
   while (!Worklist.empty()) {
     Instruction *I = Worklist.pop_back_val();
-    if (!isSCEVable(I->getType()))
+    if (!isSCEVable(I->getType()) && !isa<WithOverflowInst>(I))
       continue;
 
     ValueExprMapType::iterator It =
@@ -8775,13 +8780,12 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
   const SCEV *MustExitMaxBECount = nullptr;
   const SCEV *MayExitMaxBECount = nullptr;
   bool MustExitMaxOrZero = false;
+  bool IsOnlyExit = ExitingBlocks.size() == 1;
 
   // Compute the ExitLimit for each loop exit. Use this to populate ExitCounts
   // and compute maxBECount.
   // Do a union of all the predicates here.
-  for (unsigned i = 0, e = ExitingBlocks.size(); i != e; ++i) {
-    BasicBlock *ExitBB = ExitingBlocks[i];
-
+  for (BasicBlock *ExitBB : ExitingBlocks) {
     // We canonicalize untaken exits to br (constant), ignore them so that
     // proving an exit untaken doesn't negatively impact our ability to reason
     // about the loop as whole.
@@ -8792,7 +8796,7 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
           continue;
       }
 
-    ExitLimit EL = computeExitLimit(L, ExitBB, AllowPredicates);
+    ExitLimit EL = computeExitLimit(L, ExitBB, IsOnlyExit, AllowPredicates);
 
     assert((AllowPredicates || EL.Predicates.empty()) &&
            "Predicated exit limit when predicates are not allowed!");
@@ -8867,7 +8871,7 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
 
 ScalarEvolution::ExitLimit
 ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
-                                      bool AllowPredicates) {
+                                  bool IsOnlyExit, bool AllowPredicates) {
   assert(L->contains(ExitingBlock) && "Exit count for non-loop block?");
   // If our exiting block does not dominate the latch, then its connection with
   // loop's exit limit may be far from trivial.
@@ -8875,7 +8879,6 @@ ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
   if (!Latch || !DT.dominates(ExitingBlock, Latch))
     return getCouldNotCompute();
 
-  bool IsOnlyExit = (L->getExitingBlock() != nullptr);
   Instruction *Term = ExitingBlock->getTerminator();
   if (BranchInst *BI = dyn_cast<BranchInst>(Term)) {
     assert(BI->isConditional() && "If unconditional, it can't be in loop!");
@@ -8899,8 +8902,7 @@ ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
       }
     assert(Exit && "Exiting block must have at least one exit");
     return computeExitLimitFromSingleExitSwitch(
-        L, SI, Exit,
-        /*ControlsOnlyExit=*/IsOnlyExit);
+        L, SI, Exit, /*ControlsOnlyExit=*/IsOnlyExit);
   }
 
   return getCouldNotCompute();
@@ -10485,16 +10487,20 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
   const SCEV *Step = getSCEVAtScope(AddRec->getOperand(1), L->getParentLoop());
   const SCEVConstant *StepC = dyn_cast<SCEVConstant>(Step);
 
-  if (!isLoopInvariant(Step, L) || !isKnownNonZero(Step))
+  if (!isLoopInvariant(Step, L))
     return getCouldNotCompute();
+
+  LoopGuards Guards = LoopGuards::collect(L, *this);
+  // Specialize step for this loop so we get context sensitive facts below.
+  const SCEV *StepWLG = applyLoopGuards(Step, Guards);
 
   // For positive steps (counting up until unsigned overflow):
   //   N = -Start/Step (as unsigned)
   // For negative steps (counting down to zero):
   //   N = Start/-Step
   // First compute the unsigned distance from zero in the direction of Step.
-  bool CountDown = isKnownNegative(Step);
-  if (!CountDown && !isKnownNonNegative(Step))
+  bool CountDown = isKnownNegative(StepWLG);
+  if (!CountDown && !isKnownNonNegative(StepWLG))
     return getCouldNotCompute();
 
   const SCEV *Distance = CountDown ? Start : getNegativeSCEV(Start);
@@ -10503,7 +10509,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
   //   N = Distance (as unsigned)
   if (StepC &&
       (StepC->getValue()->isOne() || StepC->getValue()->isMinusOne())) {
-    APInt MaxBECount = getUnsignedRangeMax(applyLoopGuards(Distance, L));
+    APInt MaxBECount = getUnsignedRangeMax(applyLoopGuards(Distance, Guards));
     MaxBECount = APIntOps::umin(MaxBECount, getUnsignedRangeMax(Distance));
 
     // When a loop like "for (int i = 0; i != n; ++i) { /* body */ }" is rotated,
@@ -10533,11 +10539,18 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
   // will have undefined behavior due to wrapping.
   if (ControlsOnlyExit && AddRec->hasNoSelfWrap() &&
       loopHasNoAbnormalExits(AddRec->getLoop())) {
+
+    // If the stride is zero, the loop must be infinite.  In C++, most loops
+    // are finite by assumption, in which case the step being zero implies
+    // UB must execute if the loop is entered.
+    if (!loopIsFiniteByAssumption(L) && !isKnownNonZero(StepWLG))
+      return getCouldNotCompute();
+
     const SCEV *Exact =
         getUDivExpr(Distance, CountDown ? getNegativeSCEV(Step) : Step);
     const SCEV *ConstantMax = getCouldNotCompute();
     if (Exact != getCouldNotCompute()) {
-      APInt MaxInt = getUnsignedRangeMax(applyLoopGuards(Exact, L));
+      APInt MaxInt = getUnsignedRangeMax(applyLoopGuards(Exact, Guards));
       ConstantMax =
           getConstant(APIntOps::umin(MaxInt, getUnsignedRangeMax(Exact)));
     }
@@ -10547,14 +10560,14 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
   }
 
   // Solve the general equation.
-  if (!StepC)
+  if (!StepC || StepC->getValue()->isZero())
     return getCouldNotCompute();
   const SCEV *E = SolveLinEquationWithOverflow(StepC->getAPInt(),
                                                getNegativeSCEV(Start), *this);
 
   const SCEV *M = E;
   if (E != getCouldNotCompute()) {
-    APInt MaxWithGuards = getUnsignedRangeMax(applyLoopGuards(E, L));
+    APInt MaxWithGuards = getUnsignedRangeMax(applyLoopGuards(E, Guards));
     M = getConstant(APIntOps::umin(MaxWithGuards, getUnsignedRangeMax(E)));
   }
   auto *S = isa<SCEVCouldNotCompute>(E) ? M : E;
@@ -12988,179 +13001,227 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       return RHS;
   }
 
-  // When the RHS is not invariant, we do not know the end bound of the loop and
-  // cannot calculate the ExactBECount needed by ExitLimit. However, we can
-  // calculate the MaxBECount, given the start, stride and max value for the end
-  // bound of the loop (RHS), and the fact that IV does not overflow (which is
-  // checked above).
+  const SCEV *End = nullptr, *BECount = nullptr,
+             *BECountIfBackedgeTaken = nullptr;
   if (!isLoopInvariant(RHS, L)) {
-    const SCEV *MaxBECount = computeMaxBECountForLT(
-        Start, Stride, RHS, getTypeSizeInBits(LHS->getType()), IsSigned);
-    return ExitLimit(getCouldNotCompute() /* ExactNotTaken */, MaxBECount,
-                     MaxBECount, false /*MaxOrZero*/, Predicates);
-  }
-
-  // We use the expression (max(End,Start)-Start)/Stride to describe the
-  // backedge count, as if the backedge is taken at least once max(End,Start)
-  // is End and so the result is as above, and if not max(End,Start) is Start
-  // so we get a backedge count of zero.
-  const SCEV *BECount = nullptr;
-  auto *OrigStartMinusStride = getMinusSCEV(OrigStart, Stride);
-  assert(isAvailableAtLoopEntry(OrigStartMinusStride, L) && "Must be!");
-  assert(isAvailableAtLoopEntry(OrigStart, L) && "Must be!");
-  assert(isAvailableAtLoopEntry(OrigRHS, L) && "Must be!");
-  // Can we prove (max(RHS,Start) > Start - Stride?
-  if (isLoopEntryGuardedByCond(L, Cond, OrigStartMinusStride, OrigStart) &&
-      isLoopEntryGuardedByCond(L, Cond, OrigStartMinusStride, OrigRHS)) {
-    // In this case, we can use a refined formula for computing backedge taken
-    // count.  The general formula remains:
-    //   "End-Start /uceiling Stride" where "End = max(RHS,Start)"
-    // We want to use the alternate formula:
-    //   "((End - 1) - (Start - Stride)) /u Stride"
-    // Let's do a quick case analysis to show these are equivalent under
-    // our precondition that max(RHS,Start) > Start - Stride.
-    // * For RHS <= Start, the backedge-taken count must be zero.
-    //   "((End - 1) - (Start - Stride)) /u Stride" reduces to
-    //   "((Start - 1) - (Start - Stride)) /u Stride" which simplies to
-    //   "Stride - 1 /u Stride" which is indeed zero for all non-zero values
-    //     of Stride.  For 0 stride, we've use umin(1,Stride) above, reducing
-    //     this to the stride of 1 case.
-    // * For RHS >= Start, the backedge count must be "RHS-Start /uceil Stride".
-    //   "((End - 1) - (Start - Stride)) /u Stride" reduces to
-    //   "((RHS - 1) - (Start - Stride)) /u Stride" reassociates to
-    //   "((RHS - (Start - Stride) - 1) /u Stride".
-    //   Our preconditions trivially imply no overflow in that form.
-    const SCEV *MinusOne = getMinusOne(Stride->getType());
-    const SCEV *Numerator =
-        getMinusSCEV(getAddExpr(RHS, MinusOne), getMinusSCEV(Start, Stride));
-    BECount = getUDivExpr(Numerator, Stride);
-  }
-
-  const SCEV *BECountIfBackedgeTaken = nullptr;
-  if (!BECount) {
-    auto canProveRHSGreaterThanEqualStart = [&]() {
-      auto CondGE = IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
-      const SCEV *GuardedRHS = applyLoopGuards(OrigRHS, L);
-      const SCEV *GuardedStart = applyLoopGuards(OrigStart, L);
-
-      if (isLoopEntryGuardedByCond(L, CondGE, OrigRHS, OrigStart) ||
-          isKnownPredicate(CondGE, GuardedRHS, GuardedStart))
-        return true;
-
-      // (RHS > Start - 1) implies RHS >= Start.
-      // * "RHS >= Start" is trivially equivalent to "RHS > Start - 1" if
-      //   "Start - 1" doesn't overflow.
-      // * For signed comparison, if Start - 1 does overflow, it's equal
-      //   to INT_MAX, and "RHS >s INT_MAX" is trivially false.
-      // * For unsigned comparison, if Start - 1 does overflow, it's equal
-      //   to UINT_MAX, and "RHS >u UINT_MAX" is trivially false.
+    const auto *RHSAddRec = dyn_cast<SCEVAddRecExpr>(RHS);
+    if (PositiveStride && RHSAddRec != nullptr && RHSAddRec->getLoop() == L &&
+        RHSAddRec->getNoWrapFlags()) {
+      // The structure of loop we are trying to calculate backedge count of:
       //
-      // FIXME: Should isLoopEntryGuardedByCond do this for us?
-      auto CondGT = IsSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
-      auto *StartMinusOne = getAddExpr(OrigStart,
-                                       getMinusOne(OrigStart->getType()));
-      return isLoopEntryGuardedByCond(L, CondGT, OrigRHS, StartMinusOne);
-    };
-
-    // If we know that RHS >= Start in the context of loop, then we know that
-    // max(RHS, Start) = RHS at this point.
-    const SCEV *End;
-    if (canProveRHSGreaterThanEqualStart()) {
-      End = RHS;
-    } else {
-      // If RHS < Start, the backedge will be taken zero times.  So in
-      // general, we can write the backedge-taken count as:
+      //  left = left_start
+      //  right = right_start
       //
-      //     RHS >= Start ? ceil(RHS - Start) / Stride : 0
+      //  while(left < right){
+      //    ... do something here ...
+      //    left += s1; // stride of left is s1 (s1 > 0)
+      //    right += s2; // stride of right is s2 (s2 < 0)
+      //  }
       //
-      // We convert it to the following to make it more convenient for SCEV:
-      //
-      //     ceil(max(RHS, Start) - Start) / Stride
-      End = IsSigned ? getSMaxExpr(RHS, Start) : getUMaxExpr(RHS, Start);
 
-      // See what would happen if we assume the backedge is taken. This is
-      // used to compute MaxBECount.
-      BECountIfBackedgeTaken = getUDivCeilSCEV(getMinusSCEV(RHS, Start), Stride);
-    }
+      const SCEV *RHSStart = RHSAddRec->getStart();
+      const SCEV *RHSStride = RHSAddRec->getStepRecurrence(*this);
 
-    // At this point, we know:
-    //
-    // 1. If IsSigned, Start <=s End; otherwise, Start <=u End
-    // 2. The index variable doesn't overflow.
-    //
-    // Therefore, we know N exists such that
-    // (Start + Stride * N) >= End, and computing "(Start + Stride * N)"
-    // doesn't overflow.
-    //
-    // Using this information, try to prove whether the addition in
-    // "(Start - End) + (Stride - 1)" has unsigned overflow.
-    const SCEV *One = getOne(Stride->getType());
-    bool MayAddOverflow = [&] {
-      if (auto *StrideC = dyn_cast<SCEVConstant>(Stride)) {
-        if (StrideC->getAPInt().isPowerOf2()) {
-          // Suppose Stride is a power of two, and Start/End are unsigned
-          // integers.  Let UMAX be the largest representable unsigned
-          // integer.
-          //
-          // By the preconditions of this function, we know
-          // "(Start + Stride * N) >= End", and this doesn't overflow.
-          // As a formula:
-          //
-          //   End <= (Start + Stride * N) <= UMAX
-          //
-          // Subtracting Start from all the terms:
-          //
-          //   End - Start <= Stride * N <= UMAX - Start
-          //
-          // Since Start is unsigned, UMAX - Start <= UMAX.  Therefore:
-          //
-          //   End - Start <= Stride * N <= UMAX
-          //
-          // Stride * N is a multiple of Stride. Therefore,
-          //
-          //   End - Start <= Stride * N <= UMAX - (UMAX mod Stride)
-          //
-          // Since Stride is a power of two, UMAX + 1 is divisible by Stride.
-          // Therefore, UMAX mod Stride == Stride - 1.  So we can write:
-          //
-          //   End - Start <= Stride * N <= UMAX - Stride - 1
-          //
-          // Dropping the middle term:
-          //
-          //   End - Start <= UMAX - Stride - 1
-          //
-          // Adding Stride - 1 to both sides:
-          //
-          //   (End - Start) + (Stride - 1) <= UMAX
-          //
-          // In other words, the addition doesn't have unsigned overflow.
-          //
-          // A similar proof works if we treat Start/End as signed values.
-          // Just rewrite steps before "End - Start <= Stride * N <= UMAX" to
-          // use signed max instead of unsigned max. Note that we're trying
-          // to prove a lack of unsigned overflow in either case.
-          return false;
+      // If Stride - RHSStride is positive and does not overflow, we can write
+      // backedge count as ->
+      //    ceil((End - Start) /u (Stride - RHSStride))
+      //    Where, End = max(RHSStart, Start)
+
+      // Check if RHSStride < 0 and Stride - RHSStride will not overflow.
+      if (isKnownNegative(RHSStride) &&
+          willNotOverflow(Instruction::Sub, /*Signed=*/true, Stride,
+                          RHSStride)) {
+
+        const SCEV *Denominator = getMinusSCEV(Stride, RHSStride);
+        if (isKnownPositive(Denominator)) {
+          End = IsSigned ? getSMaxExpr(RHSStart, Start)
+                         : getUMaxExpr(RHSStart, Start);
+
+          // We can do this because End >= Start, as End = max(RHSStart, Start)
+          const SCEV *Delta = getMinusSCEV(End, Start);
+
+          BECount = getUDivCeilSCEV(Delta, Denominator);
+          BECountIfBackedgeTaken =
+              getUDivCeilSCEV(getMinusSCEV(RHSStart, Start), Denominator);
         }
       }
-      if (Start == Stride || Start == getMinusSCEV(Stride, One)) {
-        // If Start is equal to Stride, (End - Start) + (Stride - 1) == End - 1.
-        // If !IsSigned, 0 <u Stride == Start <=u End; so 0 <u End - 1 <u End.
-        // If IsSigned, 0 <s Stride == Start <=s End; so 0 <s End - 1 <s End.
-        //
-        // If Start is equal to Stride - 1, (End - Start) + Stride - 1 == End.
-        return false;
-      }
-      return true;
-    }();
+    }
+    if (BECount == nullptr) {
+      // If we cannot calculate ExactBECount, we can calculate the MaxBECount,
+      // given the start, stride and max value for the end bound of the
+      // loop (RHS), and the fact that IV does not overflow (which is
+      // checked above).
+      const SCEV *MaxBECount = computeMaxBECountForLT(
+          Start, Stride, RHS, getTypeSizeInBits(LHS->getType()), IsSigned);
+      return ExitLimit(getCouldNotCompute() /* ExactNotTaken */, MaxBECount,
+                       MaxBECount, false /*MaxOrZero*/, Predicates);
+    }
+  } else {
+    // We use the expression (max(End,Start)-Start)/Stride to describe the
+    // backedge count, as if the backedge is taken at least once
+    // max(End,Start) is End and so the result is as above, and if not
+    // max(End,Start) is Start so we get a backedge count of zero.
+    auto *OrigStartMinusStride = getMinusSCEV(OrigStart, Stride);
+    assert(isAvailableAtLoopEntry(OrigStartMinusStride, L) && "Must be!");
+    assert(isAvailableAtLoopEntry(OrigStart, L) && "Must be!");
+    assert(isAvailableAtLoopEntry(OrigRHS, L) && "Must be!");
+    // Can we prove (max(RHS,Start) > Start - Stride?
+    if (isLoopEntryGuardedByCond(L, Cond, OrigStartMinusStride, OrigStart) &&
+        isLoopEntryGuardedByCond(L, Cond, OrigStartMinusStride, OrigRHS)) {
+      // In this case, we can use a refined formula for computing backedge
+      // taken count.  The general formula remains:
+      //   "End-Start /uceiling Stride" where "End = max(RHS,Start)"
+      // We want to use the alternate formula:
+      //   "((End - 1) - (Start - Stride)) /u Stride"
+      // Let's do a quick case analysis to show these are equivalent under
+      // our precondition that max(RHS,Start) > Start - Stride.
+      // * For RHS <= Start, the backedge-taken count must be zero.
+      //   "((End - 1) - (Start - Stride)) /u Stride" reduces to
+      //   "((Start - 1) - (Start - Stride)) /u Stride" which simplies to
+      //   "Stride - 1 /u Stride" which is indeed zero for all non-zero values
+      //     of Stride.  For 0 stride, we've use umin(1,Stride) above,
+      //     reducing this to the stride of 1 case.
+      // * For RHS >= Start, the backedge count must be "RHS-Start /uceil
+      // Stride".
+      //   "((End - 1) - (Start - Stride)) /u Stride" reduces to
+      //   "((RHS - 1) - (Start - Stride)) /u Stride" reassociates to
+      //   "((RHS - (Start - Stride) - 1) /u Stride".
+      //   Our preconditions trivially imply no overflow in that form.
+      const SCEV *MinusOne = getMinusOne(Stride->getType());
+      const SCEV *Numerator =
+          getMinusSCEV(getAddExpr(RHS, MinusOne), getMinusSCEV(Start, Stride));
+      BECount = getUDivExpr(Numerator, Stride);
+    }
 
-    const SCEV *Delta = getMinusSCEV(End, Start);
-    if (!MayAddOverflow) {
-      // floor((D + (S - 1)) / S)
-      // We prefer this formulation if it's legal because it's fewer operations.
-      BECount =
-          getUDivExpr(getAddExpr(Delta, getMinusSCEV(Stride, One)), Stride);
-    } else {
-      BECount = getUDivCeilSCEV(Delta, Stride);
+    if (!BECount) {
+      auto canProveRHSGreaterThanEqualStart = [&]() {
+        auto CondGE = IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
+        const SCEV *GuardedRHS = applyLoopGuards(OrigRHS, L);
+        const SCEV *GuardedStart = applyLoopGuards(OrigStart, L);
+
+        if (isLoopEntryGuardedByCond(L, CondGE, OrigRHS, OrigStart) ||
+            isKnownPredicate(CondGE, GuardedRHS, GuardedStart))
+          return true;
+
+        // (RHS > Start - 1) implies RHS >= Start.
+        // * "RHS >= Start" is trivially equivalent to "RHS > Start - 1" if
+        //   "Start - 1" doesn't overflow.
+        // * For signed comparison, if Start - 1 does overflow, it's equal
+        //   to INT_MAX, and "RHS >s INT_MAX" is trivially false.
+        // * For unsigned comparison, if Start - 1 does overflow, it's equal
+        //   to UINT_MAX, and "RHS >u UINT_MAX" is trivially false.
+        //
+        // FIXME: Should isLoopEntryGuardedByCond do this for us?
+        auto CondGT = IsSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
+        auto *StartMinusOne =
+            getAddExpr(OrigStart, getMinusOne(OrigStart->getType()));
+        return isLoopEntryGuardedByCond(L, CondGT, OrigRHS, StartMinusOne);
+      };
+
+      // If we know that RHS >= Start in the context of loop, then we know
+      // that max(RHS, Start) = RHS at this point.
+      if (canProveRHSGreaterThanEqualStart()) {
+        End = RHS;
+      } else {
+        // If RHS < Start, the backedge will be taken zero times.  So in
+        // general, we can write the backedge-taken count as:
+        //
+        //     RHS >= Start ? ceil(RHS - Start) / Stride : 0
+        //
+        // We convert it to the following to make it more convenient for SCEV:
+        //
+        //     ceil(max(RHS, Start) - Start) / Stride
+        End = IsSigned ? getSMaxExpr(RHS, Start) : getUMaxExpr(RHS, Start);
+
+        // See what would happen if we assume the backedge is taken. This is
+        // used to compute MaxBECount.
+        BECountIfBackedgeTaken =
+            getUDivCeilSCEV(getMinusSCEV(RHS, Start), Stride);
+      }
+
+      // At this point, we know:
+      //
+      // 1. If IsSigned, Start <=s End; otherwise, Start <=u End
+      // 2. The index variable doesn't overflow.
+      //
+      // Therefore, we know N exists such that
+      // (Start + Stride * N) >= End, and computing "(Start + Stride * N)"
+      // doesn't overflow.
+      //
+      // Using this information, try to prove whether the addition in
+      // "(Start - End) + (Stride - 1)" has unsigned overflow.
+      const SCEV *One = getOne(Stride->getType());
+      bool MayAddOverflow = [&] {
+        if (auto *StrideC = dyn_cast<SCEVConstant>(Stride)) {
+          if (StrideC->getAPInt().isPowerOf2()) {
+            // Suppose Stride is a power of two, and Start/End are unsigned
+            // integers.  Let UMAX be the largest representable unsigned
+            // integer.
+            //
+            // By the preconditions of this function, we know
+            // "(Start + Stride * N) >= End", and this doesn't overflow.
+            // As a formula:
+            //
+            //   End <= (Start + Stride * N) <= UMAX
+            //
+            // Subtracting Start from all the terms:
+            //
+            //   End - Start <= Stride * N <= UMAX - Start
+            //
+            // Since Start is unsigned, UMAX - Start <= UMAX.  Therefore:
+            //
+            //   End - Start <= Stride * N <= UMAX
+            //
+            // Stride * N is a multiple of Stride. Therefore,
+            //
+            //   End - Start <= Stride * N <= UMAX - (UMAX mod Stride)
+            //
+            // Since Stride is a power of two, UMAX + 1 is divisible by
+            // Stride. Therefore, UMAX mod Stride == Stride - 1.  So we can
+            // write:
+            //
+            //   End - Start <= Stride * N <= UMAX - Stride - 1
+            //
+            // Dropping the middle term:
+            //
+            //   End - Start <= UMAX - Stride - 1
+            //
+            // Adding Stride - 1 to both sides:
+            //
+            //   (End - Start) + (Stride - 1) <= UMAX
+            //
+            // In other words, the addition doesn't have unsigned overflow.
+            //
+            // A similar proof works if we treat Start/End as signed values.
+            // Just rewrite steps before "End - Start <= Stride * N <= UMAX"
+            // to use signed max instead of unsigned max. Note that we're
+            // trying to prove a lack of unsigned overflow in either case.
+            return false;
+          }
+        }
+        if (Start == Stride || Start == getMinusSCEV(Stride, One)) {
+          // If Start is equal to Stride, (End - Start) + (Stride - 1) == End
+          // - 1. If !IsSigned, 0 <u Stride == Start <=u End; so 0 <u End - 1
+          // <u End. If IsSigned, 0 <s Stride == Start <=s End; so 0 <s End -
+          // 1 <s End.
+          //
+          // If Start is equal to Stride - 1, (End - Start) + Stride - 1 ==
+          // End.
+          return false;
+        }
+        return true;
+      }();
+
+      const SCEV *Delta = getMinusSCEV(End, Start);
+      if (!MayAddOverflow) {
+        // floor((D + (S - 1)) / S)
+        // We prefer this formulation if it's legal because it's fewer
+        // operations.
+        BECount =
+            getUDivExpr(getAddExpr(Delta, getMinusSCEV(Stride, One)), Stride);
+      } else {
+        BECount = getUDivCeilSCEV(Delta, Stride);
+      }
     }
   }
 
@@ -13449,7 +13510,7 @@ ScalarEvolution::SCEVCallbackVH::SCEVCallbackVH(Value *V, ScalarEvolution *se)
 ScalarEvolution::ScalarEvolution(Function &F, TargetLibraryInfo &TLI,
                                  AssumptionCache &AC, DominatorTree &DT,
                                  LoopInfo &LI)
-    : F(F), TLI(TLI), AC(AC), DT(DT), LI(LI),
+    : F(F), DL(F.getDataLayout()), TLI(TLI), AC(AC), DT(DT), LI(LI),
       CouldNotCompute(new SCEVCouldNotCompute()), ValuesAtScopes(64),
       LoopDispositions(64), BlockDispositions(64) {
   // To use guards for proving predicates, we need to scan every instruction in
@@ -13468,8 +13529,8 @@ ScalarEvolution::ScalarEvolution(Function &F, TargetLibraryInfo &TLI,
 }
 
 ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
-    : F(Arg.F), HasGuards(Arg.HasGuards), TLI(Arg.TLI), AC(Arg.AC), DT(Arg.DT),
-      LI(Arg.LI), CouldNotCompute(std::move(Arg.CouldNotCompute)),
+    : F(Arg.F), DL(Arg.DL), HasGuards(Arg.HasGuards), TLI(Arg.TLI), AC(Arg.AC),
+      DT(Arg.DT), LI(Arg.LI), CouldNotCompute(std::move(Arg.CouldNotCompute)),
       ValueExprMap(std::move(Arg.ValueExprMap)),
       PendingLoopPredicates(std::move(Arg.PendingLoopPredicates)),
       PendingPhiRanges(std::move(Arg.PendingPhiRanges)),
@@ -13675,7 +13736,7 @@ raw_ostream &operator<<(raw_ostream &OS, ScalarEvolution::BlockDisposition BD) {
   }
   return OS;
 }
-}
+} // namespace llvm
 
 void ScalarEvolution::print(raw_ostream &OS) const {
   // ScalarEvolution's implementation of the print method is to print
@@ -14972,6 +15033,9 @@ void PredicatedScalarEvolution::print(raw_ostream &OS, unsigned Depth) const {
 // 4, A / B becomes X / 8).
 bool ScalarEvolution::matchURem(const SCEV *Expr, const SCEV *&LHS,
                                 const SCEV *&RHS) {
+  if (Expr->getType()->isPointerTy())
+    return false;
+
   // Try to match 'zext (trunc A to iB) to iY', which is used
   // for URem with constant power-of-2 second operands. Make sure the size of
   // the operand A matches the size of the whole expressions.
@@ -15023,112 +15087,9 @@ bool ScalarEvolution::matchURem(const SCEV *Expr, const SCEV *&LHS,
   return false;
 }
 
-/// A rewriter to replace SCEV expressions in Map with the corresponding entry
-/// in the map. It skips AddRecExpr because we cannot guarantee that the
-/// replacement is loop invariant in the loop of the AddRec.
-class SCEVLoopGuardRewriter : public SCEVRewriteVisitor<SCEVLoopGuardRewriter> {
-  const DenseMap<const SCEV *, const SCEV *> &Map;
-
-  SCEV::NoWrapFlags FlagMask = SCEV::FlagAnyWrap;
-
-public:
-  SCEVLoopGuardRewriter(ScalarEvolution &SE,
-                        DenseMap<const SCEV *, const SCEV *> &M,
-                        bool PreserveNUW, bool PreserveNSW)
-      : SCEVRewriteVisitor(SE), Map(M) {
-    if (PreserveNUW)
-      FlagMask = ScalarEvolution::setFlags(FlagMask, SCEV::FlagNUW);
-    if (PreserveNSW)
-      FlagMask = ScalarEvolution::setFlags(FlagMask, SCEV::FlagNSW);
-  }
-
-  const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) { return Expr; }
-
-  const SCEV *visitUnknown(const SCEVUnknown *Expr) {
-    auto I = Map.find(Expr);
-    if (I == Map.end())
-      return Expr;
-    return I->second;
-  }
-
-  const SCEV *visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
-    auto I = Map.find(Expr);
-    if (I == Map.end()) {
-      // If we didn't find the extact ZExt expr in the map, check if there's an
-      // entry for a smaller ZExt we can use instead.
-      Type *Ty = Expr->getType();
-      const SCEV *Op = Expr->getOperand(0);
-      unsigned Bitwidth = Ty->getScalarSizeInBits() / 2;
-      while (Bitwidth % 8 == 0 && Bitwidth >= 8 &&
-             Bitwidth > Op->getType()->getScalarSizeInBits()) {
-        Type *NarrowTy = IntegerType::get(SE.getContext(), Bitwidth);
-        auto *NarrowExt = SE.getZeroExtendExpr(Op, NarrowTy);
-        auto I = Map.find(NarrowExt);
-        if (I != Map.end())
-          return SE.getZeroExtendExpr(I->second, Ty);
-        Bitwidth = Bitwidth / 2;
-      }
-
-      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitZeroExtendExpr(
-          Expr);
-    }
-    return I->second;
-  }
-
-  const SCEV *visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
-    auto I = Map.find(Expr);
-    if (I == Map.end())
-      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitSignExtendExpr(
-          Expr);
-    return I->second;
-  }
-
-  const SCEV *visitUMinExpr(const SCEVUMinExpr *Expr) {
-    auto I = Map.find(Expr);
-    if (I == Map.end())
-      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitUMinExpr(Expr);
-    return I->second;
-  }
-
-  const SCEV *visitSMinExpr(const SCEVSMinExpr *Expr) {
-    auto I = Map.find(Expr);
-    if (I == Map.end())
-      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitSMinExpr(Expr);
-    return I->second;
-  }
-
-  const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
-    SmallVector<const SCEV *, 2> Operands;
-    bool Changed = false;
-    for (const auto *Op : Expr->operands()) {
-      Operands.push_back(SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visit(Op));
-      Changed |= Op != Operands.back();
-    }
-    // We are only replacing operands with equivalent values, so transfer the
-    // flags from the original expression.
-    return !Changed
-               ? Expr
-               : SE.getAddExpr(Operands, ScalarEvolution::maskFlags(
-                                             Expr->getNoWrapFlags(), FlagMask));
-  }
-
-  const SCEV *visitMulExpr(const SCEVMulExpr *Expr) {
-    SmallVector<const SCEV *, 2> Operands;
-    bool Changed = false;
-    for (const auto *Op : Expr->operands()) {
-      Operands.push_back(SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visit(Op));
-      Changed |= Op != Operands.back();
-    }
-    // We are only replacing operands with equivalent values, so transfer the
-    // flags from the original expression.
-    return !Changed
-               ? Expr
-               : SE.getMulExpr(Operands, ScalarEvolution::maskFlags(
-                                             Expr->getNoWrapFlags(), FlagMask));
-  }
-};
-
-const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
+ScalarEvolution::LoopGuards
+ScalarEvolution::LoopGuards::collect(const Loop *L, ScalarEvolution &SE) {
+  LoopGuards Guards(SE);
   SmallVector<const SCEV *> ExprsToRewrite;
   auto CollectCondition = [&](ICmpInst::Predicate Predicate, const SCEV *LHS,
                               const SCEV *RHS,
@@ -15148,7 +15109,7 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
     // Check for a condition of the form (-C1 + X < C2).  InstCombine will
     // create this form when combining two checks of the form (X u< C2 + C1) and
     // (X >=u C1).
-    auto MatchRangeCheckIdiom = [this, Predicate, LHS, RHS, &RewriteMap,
+    auto MatchRangeCheckIdiom = [&SE, Predicate, LHS, RHS, &RewriteMap,
                                  &ExprsToRewrite]() {
       auto *AddExpr = dyn_cast<SCEVAddExpr>(LHS);
       if (!AddExpr || AddExpr->getNumOperands() != 2)
@@ -15169,9 +15130,10 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
         return false;
       auto I = RewriteMap.find(LHSUnknown);
       const SCEV *RewrittenLHS = I != RewriteMap.end() ? I->second : LHSUnknown;
-      RewriteMap[LHSUnknown] = getUMaxExpr(
-          getConstant(ExactRegion.getUnsignedMin()),
-          getUMinExpr(RewrittenLHS, getConstant(ExactRegion.getUnsignedMax())));
+      RewriteMap[LHSUnknown] = SE.getUMaxExpr(
+          SE.getConstant(ExactRegion.getUnsignedMin()),
+          SE.getUMinExpr(RewrittenLHS,
+                         SE.getConstant(ExactRegion.getUnsignedMax())));
       ExprsToRewrite.push_back(LHSUnknown);
       return true;
     };
@@ -15224,7 +15186,7 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       APInt Rem = ExprVal.urem(DivisorVal);
       if (!Rem.isZero())
         // return the SCEV: Expr + Divisor - Expr % Divisor
-        return getConstant(ExprVal + DivisorVal - Rem);
+        return SE.getConstant(ExprVal + DivisorVal - Rem);
       return Expr;
     };
 
@@ -15239,7 +15201,7 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
         return Expr;
       APInt Rem = ExprVal.urem(DivisorVal);
       // return the SCEV: Expr - Expr % Divisor
-      return getConstant(ExprVal - Rem);
+      return SE.getConstant(ExprVal - Rem);
     };
 
     // Apply divisibilty by \p Divisor on MinMaxExpr with constant values,
@@ -15255,14 +15217,14 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
             return MinMaxExpr;
           auto IsMin =
               isa<SCEVSMinExpr>(MinMaxExpr) || isa<SCEVUMinExpr>(MinMaxExpr);
-          assert(isKnownNonNegative(MinMaxLHS) &&
+          assert(SE.isKnownNonNegative(MinMaxLHS) &&
                  "Expected non-negative operand!");
           auto *DivisibleExpr =
               IsMin ? GetPreviousSCEVDividesByDivisor(MinMaxLHS, Divisor)
                     : GetNextSCEVDividesByDivisor(MinMaxLHS, Divisor);
           SmallVector<const SCEV *> Ops = {
               ApplyDivisibiltyOnMinMaxExpr(MinMaxRHS, Divisor), DivisibleExpr};
-          return getMinMaxExpr(SCTy, Ops);
+          return SE.getMinMaxExpr(SCTy, Ops);
         };
 
     // If we have LHS == 0, check if LHS is computing a property of some unknown
@@ -15274,14 +15236,14 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       // explicitly express that.
       const SCEV *URemLHS = nullptr;
       const SCEV *URemRHS = nullptr;
-      if (matchURem(LHS, URemLHS, URemRHS)) {
+      if (SE.matchURem(LHS, URemLHS, URemRHS)) {
         if (const SCEVUnknown *LHSUnknown = dyn_cast<SCEVUnknown>(URemLHS)) {
           auto I = RewriteMap.find(LHSUnknown);
           const SCEV *RewrittenLHS =
               I != RewriteMap.end() ? I->second : LHSUnknown;
           RewrittenLHS = ApplyDivisibiltyOnMinMaxExpr(RewrittenLHS, URemRHS);
           const auto *Multiple =
-              getMulExpr(getUDivExpr(RewrittenLHS, URemRHS), URemRHS);
+              SE.getMulExpr(SE.getUDivExpr(RewrittenLHS, URemRHS), URemRHS);
           RewriteMap[LHSUnknown] = Multiple;
           ExprsToRewrite.push_back(LHSUnknown);
           return;
@@ -15290,7 +15252,7 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
     }
 
     // Do not apply information for constants or if RHS contains an AddRec.
-    if (isa<SCEVConstant>(LHS) || containsAddRecurrence(RHS))
+    if (isa<SCEVConstant>(LHS) || SE.containsAddRecurrence(RHS))
       return;
 
     // If RHS is SCEVUnknown, make sure the information is applied to it.
@@ -15349,7 +15311,7 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
     // Return true if Expr known to divide by \p DividesBy.
     std::function<bool(const SCEV *, const SCEV *&)> IsKnownToDivideBy =
         [&](const SCEV *Expr, const SCEV *DividesBy) {
-          if (getURemExpr(Expr, DividesBy)->isZero())
+          if (SE.getURemExpr(Expr, DividesBy)->isZero())
             return true;
           if (auto *MinMax = dyn_cast<SCEVMinMaxExpr>(Expr))
             return IsKnownToDivideBy(MinMax->getOperand(0), DividesBy) &&
@@ -15375,21 +15337,21 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
     // We cannot express strict predicates in SCEV, so instead we replace them
     // with non-strict ones against plus or minus one of RHS depending on the
     // predicate.
-    const SCEV *One = getOne(RHS->getType());
+    const SCEV *One = SE.getOne(RHS->getType());
     switch (Predicate) {
       case CmpInst::ICMP_ULT:
         if (RHS->getType()->isPointerTy())
           return;
-        RHS = getUMaxExpr(RHS, One);
+        RHS = SE.getUMaxExpr(RHS, One);
         [[fallthrough]];
       case CmpInst::ICMP_SLT: {
-        RHS = getMinusSCEV(RHS, One);
+        RHS = SE.getMinusSCEV(RHS, One);
         RHS = DividesBy ? GetPreviousSCEVDividesByDivisor(RHS, DividesBy) : RHS;
         break;
       }
       case CmpInst::ICMP_UGT:
       case CmpInst::ICMP_SGT:
-        RHS = getAddExpr(RHS, One);
+        RHS = SE.getAddExpr(RHS, One);
         RHS = DividesBy ? GetNextSCEVDividesByDivisor(RHS, DividesBy) : RHS;
         break;
       case CmpInst::ICMP_ULE:
@@ -15423,25 +15385,25 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       switch (Predicate) {
       case CmpInst::ICMP_ULT:
       case CmpInst::ICMP_ULE:
-        To = getUMinExpr(FromRewritten, RHS);
+        To = SE.getUMinExpr(FromRewritten, RHS);
         if (auto *UMax = dyn_cast<SCEVUMaxExpr>(FromRewritten))
           EnqueueOperands(UMax);
         break;
       case CmpInst::ICMP_SLT:
       case CmpInst::ICMP_SLE:
-        To = getSMinExpr(FromRewritten, RHS);
+        To = SE.getSMinExpr(FromRewritten, RHS);
         if (auto *SMax = dyn_cast<SCEVSMaxExpr>(FromRewritten))
           EnqueueOperands(SMax);
         break;
       case CmpInst::ICMP_UGT:
       case CmpInst::ICMP_UGE:
-        To = getUMaxExpr(FromRewritten, RHS);
+        To = SE.getUMaxExpr(FromRewritten, RHS);
         if (auto *UMin = dyn_cast<SCEVUMinExpr>(FromRewritten))
           EnqueueOperands(UMin);
         break;
       case CmpInst::ICMP_SGT:
       case CmpInst::ICMP_SGE:
-        To = getSMaxExpr(FromRewritten, RHS);
+        To = SE.getSMaxExpr(FromRewritten, RHS);
         if (auto *SMin = dyn_cast<SCEVSMinExpr>(FromRewritten))
           EnqueueOperands(SMin);
         break;
@@ -15454,7 +15416,7 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
             cast<SCEVConstant>(RHS)->getValue()->isNullValue()) {
           const SCEV *OneAlignedUp =
               DividesBy ? GetNextSCEVDividesByDivisor(One, DividesBy) : One;
-          To = getUMaxExpr(FromRewritten, OneAlignedUp);
+          To = SE.getUMaxExpr(FromRewritten, OneAlignedUp);
         }
         break;
       default:
@@ -15469,22 +15431,23 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
   BasicBlock *Header = L->getHeader();
   SmallVector<PointerIntPair<Value *, 1, bool>> Terms;
   // First, collect information from assumptions dominating the loop.
-  for (auto &AssumeVH : AC.assumptions()) {
+  for (auto &AssumeVH : SE.AC.assumptions()) {
     if (!AssumeVH)
       continue;
     auto *AssumeI = cast<CallInst>(AssumeVH);
-    if (!DT.dominates(AssumeI, Header))
+    if (!SE.DT.dominates(AssumeI, Header))
       continue;
     Terms.emplace_back(AssumeI->getOperand(0), true);
   }
 
   // Second, collect information from llvm.experimental.guards dominating the loop.
-  auto *GuardDecl = F.getParent()->getFunction(
+  auto *GuardDecl = SE.F.getParent()->getFunction(
       Intrinsic::getName(Intrinsic::experimental_guard));
   if (GuardDecl)
     for (const auto *GU : GuardDecl->users())
       if (const auto *Guard = dyn_cast<IntrinsicInst>(GU))
-        if (Guard->getFunction() == Header->getParent() && DT.dominates(Guard, Header))
+        if (Guard->getFunction() == Header->getParent() &&
+            SE.DT.dominates(Guard, Header))
           Terms.emplace_back(Guard->getArgOperand(0), true);
 
   // Third, collect conditions from dominating branches. Starting at the loop
@@ -15494,7 +15457,8 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
   // TODO: share this logic with isLoopEntryGuardedByCond.
   for (std::pair<const BasicBlock *, const BasicBlock *> Pair(
            L->getLoopPredecessor(), Header);
-       Pair.first; Pair = getPredecessorWithUniqueSuccessorForBB(Pair.first)) {
+       Pair.first;
+       Pair = SE.getPredecessorWithUniqueSuccessorForBB(Pair.first)) {
 
     const BranchInst *LoopEntryPredicate =
         dyn_cast<BranchInst>(Pair.first->getTerminator());
@@ -15505,11 +15469,10 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
                        LoopEntryPredicate->getSuccessor(0) == Pair.second);
   }
 
-  // Now apply the information from the collected conditions to RewriteMap.
-  // Conditions are processed in reverse order, so the earliest conditions is
-  // processed first. This ensures the SCEVs with the shortest dependency chains
-  // are constructed first.
-  DenseMap<const SCEV *, const SCEV *> RewriteMap;
+  // Now apply the information from the collected conditions to
+  // Guards.RewriteMap. Conditions are processed in reverse order, so the
+  // earliest conditions is processed first. This ensures the SCEVs with the
+  // shortest dependency chains are constructed first.
   for (auto [Term, EnterIfTrue] : reverse(Terms)) {
     SmallVector<Value *, 8> Worklist;
     SmallPtrSet<Value *, 8> Visited;
@@ -15522,9 +15485,9 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       if (auto *Cmp = dyn_cast<ICmpInst>(Cond)) {
         auto Predicate =
             EnterIfTrue ? Cmp->getPredicate() : Cmp->getInversePredicate();
-        const auto *LHS = getSCEV(Cmp->getOperand(0));
-        const auto *RHS = getSCEV(Cmp->getOperand(1));
-        CollectCondition(Predicate, LHS, RHS, RewriteMap);
+        const auto *LHS = SE.getSCEV(Cmp->getOperand(0));
+        const auto *RHS = SE.getSCEV(Cmp->getOperand(1));
+        CollectCondition(Predicate, LHS, RHS, Guards.RewriteMap);
         continue;
       }
 
@@ -15537,18 +15500,17 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
     }
   }
 
-  if (RewriteMap.empty())
-    return Expr;
-
   // Let the rewriter preserve NUW/NSW flags if the unsigned/signed ranges of
   // the replacement expressions are contained in the ranges of the replaced
   // expressions.
-  bool PreserveNUW = true;
-  bool PreserveNSW = true;
+  Guards.PreserveNUW = true;
+  Guards.PreserveNSW = true;
   for (const SCEV *Expr : ExprsToRewrite) {
-    const SCEV *RewriteTo = RewriteMap[Expr];
-    PreserveNUW &= getUnsignedRange(Expr).contains(getUnsignedRange(RewriteTo));
-    PreserveNSW &= getSignedRange(Expr).contains(getSignedRange(RewriteTo));
+    const SCEV *RewriteTo = Guards.RewriteMap[Expr];
+    Guards.PreserveNUW &=
+        SE.getUnsignedRange(Expr).contains(SE.getUnsignedRange(RewriteTo));
+    Guards.PreserveNSW &=
+        SE.getSignedRange(Expr).contains(SE.getSignedRange(RewriteTo));
   }
 
   // Now that all rewrite information is collect, rewrite the collected
@@ -15556,13 +15518,134 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
   // sub-expressions.
   if (ExprsToRewrite.size() > 1) {
     for (const SCEV *Expr : ExprsToRewrite) {
-      const SCEV *RewriteTo = RewriteMap[Expr];
-      RewriteMap.erase(Expr);
-      SCEVLoopGuardRewriter Rewriter(*this, RewriteMap, PreserveNUW,
-                                     PreserveNSW);
-      RewriteMap.insert({Expr, Rewriter.visit(RewriteTo)});
+      const SCEV *RewriteTo = Guards.RewriteMap[Expr];
+      Guards.RewriteMap.erase(Expr);
+      Guards.RewriteMap.insert({Expr, Guards.rewrite(RewriteTo)});
     }
   }
-  SCEVLoopGuardRewriter Rewriter(*this, RewriteMap, PreserveNUW, PreserveNSW);
+  return Guards;
+}
+
+const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
+  /// A rewriter to replace SCEV expressions in Map with the corresponding entry
+  /// in the map. It skips AddRecExpr because we cannot guarantee that the
+  /// replacement is loop invariant in the loop of the AddRec.
+  class SCEVLoopGuardRewriter
+      : public SCEVRewriteVisitor<SCEVLoopGuardRewriter> {
+    const DenseMap<const SCEV *, const SCEV *> &Map;
+
+    SCEV::NoWrapFlags FlagMask = SCEV::FlagAnyWrap;
+
+  public:
+    SCEVLoopGuardRewriter(ScalarEvolution &SE,
+                          const ScalarEvolution::LoopGuards &Guards)
+        : SCEVRewriteVisitor(SE), Map(Guards.RewriteMap) {
+      if (Guards.PreserveNUW)
+        FlagMask = ScalarEvolution::setFlags(FlagMask, SCEV::FlagNUW);
+      if (Guards.PreserveNSW)
+        FlagMask = ScalarEvolution::setFlags(FlagMask, SCEV::FlagNSW);
+    }
+
+    const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) { return Expr; }
+
+    const SCEV *visitUnknown(const SCEVUnknown *Expr) {
+      auto I = Map.find(Expr);
+      if (I == Map.end())
+        return Expr;
+      return I->second;
+    }
+
+    const SCEV *visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
+      auto I = Map.find(Expr);
+      if (I == Map.end()) {
+        // If we didn't find the extact ZExt expr in the map, check if there's
+        // an entry for a smaller ZExt we can use instead.
+        Type *Ty = Expr->getType();
+        const SCEV *Op = Expr->getOperand(0);
+        unsigned Bitwidth = Ty->getScalarSizeInBits() / 2;
+        while (Bitwidth % 8 == 0 && Bitwidth >= 8 &&
+               Bitwidth > Op->getType()->getScalarSizeInBits()) {
+          Type *NarrowTy = IntegerType::get(SE.getContext(), Bitwidth);
+          auto *NarrowExt = SE.getZeroExtendExpr(Op, NarrowTy);
+          auto I = Map.find(NarrowExt);
+          if (I != Map.end())
+            return SE.getZeroExtendExpr(I->second, Ty);
+          Bitwidth = Bitwidth / 2;
+        }
+
+        return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitZeroExtendExpr(
+            Expr);
+      }
+      return I->second;
+    }
+
+    const SCEV *visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
+      auto I = Map.find(Expr);
+      if (I == Map.end())
+        return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitSignExtendExpr(
+            Expr);
+      return I->second;
+    }
+
+    const SCEV *visitUMinExpr(const SCEVUMinExpr *Expr) {
+      auto I = Map.find(Expr);
+      if (I == Map.end())
+        return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitUMinExpr(Expr);
+      return I->second;
+    }
+
+    const SCEV *visitSMinExpr(const SCEVSMinExpr *Expr) {
+      auto I = Map.find(Expr);
+      if (I == Map.end())
+        return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitSMinExpr(Expr);
+      return I->second;
+    }
+
+    const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
+      SmallVector<const SCEV *, 2> Operands;
+      bool Changed = false;
+      for (const auto *Op : Expr->operands()) {
+        Operands.push_back(
+            SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visit(Op));
+        Changed |= Op != Operands.back();
+      }
+      // We are only replacing operands with equivalent values, so transfer the
+      // flags from the original expression.
+      return !Changed ? Expr
+                      : SE.getAddExpr(Operands,
+                                      ScalarEvolution::maskFlags(
+                                          Expr->getNoWrapFlags(), FlagMask));
+    }
+
+    const SCEV *visitMulExpr(const SCEVMulExpr *Expr) {
+      SmallVector<const SCEV *, 2> Operands;
+      bool Changed = false;
+      for (const auto *Op : Expr->operands()) {
+        Operands.push_back(
+            SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visit(Op));
+        Changed |= Op != Operands.back();
+      }
+      // We are only replacing operands with equivalent values, so transfer the
+      // flags from the original expression.
+      return !Changed ? Expr
+                      : SE.getMulExpr(Operands,
+                                      ScalarEvolution::maskFlags(
+                                          Expr->getNoWrapFlags(), FlagMask));
+    }
+  };
+
+  if (RewriteMap.empty())
+    return Expr;
+
+  SCEVLoopGuardRewriter Rewriter(SE, *this);
   return Rewriter.visit(Expr);
+}
+
+const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
+  return applyLoopGuards(Expr, LoopGuards::collect(L, *this));
+}
+
+const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr,
+                                             const LoopGuards &Guards) {
+  return Guards.rewrite(Expr);
 }

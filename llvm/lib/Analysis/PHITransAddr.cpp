@@ -17,6 +17,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -215,8 +216,8 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
     if (Value *V = simplifyGEPInst(GEP->getSourceElementType(), GEPOps[0],
                                    ArrayRef<Value *>(GEPOps).slice(1),
                                    GEP->getNoWrapFlags(), {DL, TLI, DT, AC})) {
-      for (unsigned i = 0, e = GEPOps.size(); i != e; ++i)
-        RemoveInstInputs(GEPOps[i], InstInputs);
+      for (Value *Op : GEPOps)
+        RemoveInstInputs(Op, InstInputs);
 
       return addAsInput(V);
     }

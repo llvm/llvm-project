@@ -233,7 +233,6 @@ int main()
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[DOTCNT_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK-NEXT:    store i32 [[TMP1]], ptr [[DOTADDR1]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
@@ -249,6 +248,7 @@ int main()
 // CHECK-NEXT:    [[TMP8:%.*]] = icmp ult i32 [[TMP7]], 2
 // CHECK-NEXT:    br i1 [[TMP8]], label [[BODY:%.*]], label [[EXIT:%.*]]
 // CHECK:       body:
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2:[0-9]+]], i32 [[TMP2]])
 // CHECK-NEXT:    [[WARP_MASTER:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
 // CHECK-NEXT:    br i1 [[WARP_MASTER]], label [[THEN:%.*]], label [[ELSE:%.*]]
@@ -263,11 +263,12 @@ int main()
 // CHECK:       else:
 // CHECK-NEXT:    br label [[IFCONT]]
 // CHECK:       ifcont:
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
 // CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTADDR1]], align 4
 // CHECK-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP3]], [[TMP14]]
 // CHECK-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN2:%.*]], label [[ELSE3:%.*]]
-// CHECK:       then2:
+// CHECK:       then3:
 // CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP3]]
 // CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP6]], i64 0, i64 0
 // CHECK-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[TMP16]], align 8
@@ -275,9 +276,9 @@ int main()
 // CHECK-NEXT:    [[TMP19:%.*]] = load volatile i32, ptr addrspace(3) [[TMP15]], align 4
 // CHECK-NEXT:    store i32 [[TMP19]], ptr [[TMP18]], align 4
 // CHECK-NEXT:    br label [[IFCONT4:%.*]]
-// CHECK:       else3:
+// CHECK:       else4:
 // CHECK-NEXT:    br label [[IFCONT4]]
-// CHECK:       ifcont4:
+// CHECK:       ifcont5:
 // CHECK-NEXT:    [[TMP20:%.*]] = add nsw i32 [[TMP7]], 1
 // CHECK-NEXT:    store i32 [[TMP20]], ptr [[DOTCNT_ADDR]], align 4
 // CHECK-NEXT:    br label [[PRECOND]]

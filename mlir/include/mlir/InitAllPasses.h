@@ -98,9 +98,7 @@ inline void registerAllPasses() {
   bufferization::registerBufferizationPipelines();
   sparse_tensor::registerSparseTensorPipelines();
   tosa::registerTosaToLinalgPipelines();
-#if LLVM_HAS_NVPTX_TARGET
   gpu::registerGPUToNVVMPipeline();
-#endif
 }
 
 } // namespace mlir

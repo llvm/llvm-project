@@ -3,6 +3,7 @@
 
 ; Make sure that interaction of "writable" with various passes does not
 ; result in the elimination of the store prior to @j().
+; FIXME: This is a miscompile.
 
 declare void @use(i64)
 

@@ -160,14 +160,13 @@ mlir::transform::HasOperandSatisfyingOp::apply(
 void mlir::transform::HasOperandSatisfyingOp::getEffects(
     llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &effects) {
   onlyReadsPayload(effects);
-  onlyReadsHandle(getOp(), effects);
-  producesHandle(getPosition(), effects);
-  producesHandle(getResults(), effects);
+  onlyReadsHandle(getOpMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
 }
 
 // Verify well-formedness of the operation and emit diagnostics if it is
 // ill-formed.
-mlir::LogicalResult mlir::transform::HasOperandSatisfyingOp::verify() {
+llvm::LogicalResult mlir::transform::HasOperandSatisfyingOp::verify() {
   mlir::Block &bodyBlock = getBody().front();
   if (bodyBlock.getNumArguments() != 1 ||
       !isa<TransformValueHandleTypeInterface>(

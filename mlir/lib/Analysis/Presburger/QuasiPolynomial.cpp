@@ -9,14 +9,13 @@
 #include "mlir/Analysis/Presburger/QuasiPolynomial.h"
 #include "mlir/Analysis/Presburger/Fraction.h"
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
-#include "mlir/Analysis/Presburger/Utils.h"
 
 using namespace mlir;
 using namespace presburger;
 
 QuasiPolynomial::QuasiPolynomial(
-    unsigned numVars, SmallVector<Fraction> coeffs,
-    std::vector<std::vector<SmallVector<Fraction>>> aff)
+    unsigned numVars, ArrayRef<Fraction> coeffs,
+    ArrayRef<std::vector<SmallVector<Fraction>>> aff)
     : PresburgerSpace(/*numDomain=*/numVars, /*numRange=*/1, /*numSymbols=*/0,
                       /*numLocals=*/0),
       coefficients(coeffs), affine(aff) {
@@ -37,7 +36,7 @@ QuasiPolynomial::QuasiPolynomial(
 }
 
 /// Define a quasipolynomial which is a single constant.
-QuasiPolynomial::QuasiPolynomial(unsigned numVars, Fraction constant)
+QuasiPolynomial::QuasiPolynomial(unsigned numVars, const Fraction &constant)
     : PresburgerSpace(/*numDomain=*/numVars, /*numRange=*/1, /*numSymbols=*/0,
                       /*numLocals=*/0),
       coefficients({constant}), affine({{}}) {}
@@ -72,7 +71,7 @@ QuasiPolynomial QuasiPolynomial::operator*(const QuasiPolynomial &x) const {
   coeffs.reserve(coefficients.size() * x.coefficients.size());
   for (const Fraction &coeff : coefficients)
     for (const Fraction &xcoeff : x.coefficients)
-      coeffs.push_back(coeff * xcoeff);
+      coeffs.emplace_back(coeff * xcoeff);
 
   std::vector<SmallVector<Fraction>> product;
   std::vector<std::vector<SmallVector<Fraction>>> aff;
@@ -82,14 +81,14 @@ QuasiPolynomial QuasiPolynomial::operator*(const QuasiPolynomial &x) const {
       product.clear();
       product.insert(product.end(), term.begin(), term.end());
       product.insert(product.end(), xterm.begin(), xterm.end());
-      aff.push_back(product);
+      aff.emplace_back(product);
     }
   }
 
   return QuasiPolynomial(getNumInputs(), coeffs, aff);
 }
 
-QuasiPolynomial QuasiPolynomial::operator/(const Fraction x) const {
+QuasiPolynomial QuasiPolynomial::operator/(const Fraction &x) const {
   assert(x != 0 && "division by zero!");
   QuasiPolynomial qp(*this);
   for (Fraction &coeff : qp.coefficients)
@@ -131,15 +130,15 @@ QuasiPolynomial QuasiPolynomial::simplify() {
     newCoeff = coefficients[i];
     for (ArrayRef<Fraction> term : affine[i]) {
       bool allCoeffsZero = llvm::all_of(
-          term.slice(0, numParam), [](const Fraction c) { return c == 0; });
+          term.slice(0, numParam), [](const Fraction &c) { return c == 0; });
       if (allCoeffsZero)
         newCoeff *= term[numParam];
       else
-        newAffineTerm.push_back(SmallVector<Fraction>(term));
+        newAffineTerm.emplace_back(term);
     }
 
-    newCoeffs.push_back(newCoeff);
-    newAffine.push_back(newAffineTerm);
+    newCoeffs.emplace_back(newCoeff);
+    newAffine.emplace_back(newAffineTerm);
   }
   return QuasiPolynomial(getNumInputs(), newCoeffs, newAffine);
 }
@@ -158,8 +157,8 @@ QuasiPolynomial QuasiPolynomial::collectTerms() {
     }
     if (alreadyPresent)
       continue;
-    newCoeffs.push_back(coefficients[i]);
-    newAffine.push_back(affine[i]);
+    newCoeffs.emplace_back(coefficients[i]);
+    newAffine.emplace_back(affine[i]);
   }
 
   return QuasiPolynomial(getNumInputs(), newCoeffs, newAffine);
@@ -168,7 +167,7 @@ QuasiPolynomial QuasiPolynomial::collectTerms() {
 Fraction QuasiPolynomial::getConstantTerm() {
   Fraction constTerm = 0;
   for (unsigned i = 0, e = coefficients.size(); i < e; ++i)
-    if (affine[i].size() == 0)
+    if (affine[i].empty())
       constTerm += coefficients[i];
   return constTerm;
 }

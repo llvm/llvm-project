@@ -411,10 +411,9 @@ static void builtinTransfer(unsigned CurBlockID, const CFGElement &Elt,
 /// by the user-specified analysis.
 static TypeErasedDataflowAnalysisState
 transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
-                 std::function<void(const CFGElement &,
-                                    const TypeErasedDataflowAnalysisState &)>
-                     PostVisitCFG = nullptr) {
-  AC.Log.enterBlock(Block, PostVisitCFG != nullptr);
+                 const CFGEltCallbacksTypeErased &PostAnalysisCallbacks = {}) {
+  AC.Log.enterBlock(Block, PostAnalysisCallbacks.Before != nullptr ||
+                               PostAnalysisCallbacks.After != nullptr);
   auto State = computeBlockInputState(Block, AC);
   AC.Log.recordState(State);
   int ElementIdx = 1;
@@ -423,6 +422,11 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
                                          ElementIdx++, "transferCFGBlock");
 
     AC.Log.enterElement(Element);
+
+    if (PostAnalysisCallbacks.Before) {
+      PostAnalysisCallbacks.Before(Element, State);
+    }
+
     // Built-in analysis
     if (AC.Analysis.builtinOptions()) {
       builtinTransfer(Block.getBlockID(), Element, State, AC);
@@ -431,10 +435,10 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
     // User-provided analysis
     AC.Analysis.transferTypeErased(Element, State.Lattice, State.Env);
 
-    // Post processing
-    if (PostVisitCFG) {
-      PostVisitCFG(Element, State);
+    if (PostAnalysisCallbacks.After) {
+      PostAnalysisCallbacks.After(Element, State);
     }
+
     AC.Log.recordState(State);
   }
 
@@ -469,9 +473,7 @@ llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
 runTypeErasedDataflowAnalysis(
     const AdornedCFG &ACFG, TypeErasedDataflowAnalysis &Analysis,
     const Environment &InitEnv,
-    std::function<void(const CFGElement &,
-                       const TypeErasedDataflowAnalysisState &)>
-        PostVisitCFG,
+    const CFGEltCallbacksTypeErased &PostAnalysisCallbacks,
     std::int32_t MaxBlockVisits) {
   PrettyStackTraceAnalysis CrashInfo(ACFG, "runTypeErasedDataflowAnalysis");
 
@@ -553,12 +555,12 @@ runTypeErasedDataflowAnalysis(
   // FIXME: Consider evaluating unreachable basic blocks (those that have a
   // state set to `std::nullopt` at this point) to also analyze dead code.
 
-  if (PostVisitCFG) {
+  if (PostAnalysisCallbacks.Before || PostAnalysisCallbacks.After) {
     for (const CFGBlock *Block : ACFG.getCFG()) {
       // Skip blocks that were not evaluated.
       if (!BlockStates[Block->getBlockID()])
         continue;
-      transferCFGBlock(*Block, AC, PostVisitCFG);
+      transferCFGBlock(*Block, AC, PostAnalysisCallbacks);
     }
   }
 

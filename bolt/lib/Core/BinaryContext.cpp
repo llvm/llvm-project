@@ -20,7 +20,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -2404,32 +2403,23 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
     Streamer->emitLabel(SplitStartLabel);
     emitFunctionBody(*Streamer, BF, FF, /*EmitCodeOnly=*/true);
     Streamer->emitLabel(SplitEndLabel);
-    // To avoid calling MCObjectStreamer::flushPendingLabels() which is
-    // private
-    Streamer->emitBytes(StringRef(""));
-    Streamer->switchSection(Section);
   }
-
-  // To avoid calling MCObjectStreamer::flushPendingLabels() which is private or
-  // MCStreamer::Finish(), which does more than we want
-  Streamer->emitBytes(StringRef(""));
 
   MCAssembler &Assembler =
       static_cast<MCObjectStreamer *>(Streamer.get())->getAssembler();
-  MCAsmLayout Layout(Assembler);
-  Assembler.layout(Layout);
+  Assembler.layout();
 
   // Obtain fragment sizes.
   std::vector<uint64_t> FragmentSizes;
   // Main fragment size.
-  const uint64_t HotSize =
-      Layout.getSymbolOffset(*EndLabel) - Layout.getSymbolOffset(*StartLabel);
+  const uint64_t HotSize = Assembler.getSymbolOffset(*EndLabel) -
+                           Assembler.getSymbolOffset(*StartLabel);
   FragmentSizes.push_back(HotSize);
   // Split fragment sizes.
   uint64_t ColdSize = 0;
   for (const auto &Labels : SplitLabels) {
-    uint64_t Size = Layout.getSymbolOffset(*Labels.second) -
-                    Layout.getSymbolOffset(*Labels.first);
+    uint64_t Size = Assembler.getSymbolOffset(*Labels.second) -
+                    Assembler.getSymbolOffset(*Labels.first);
     FragmentSizes.push_back(Size);
     ColdSize += Size;
   }
@@ -2439,7 +2429,8 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   for (FunctionFragment &FF : BF.getLayout().fragments()) {
     BinaryBasicBlock *PrevBB = nullptr;
     for (BinaryBasicBlock *BB : FF) {
-      const uint64_t BBStartOffset = Layout.getSymbolOffset(*(BB->getLabel()));
+      const uint64_t BBStartOffset =
+          Assembler.getSymbolOffset(*(BB->getLabel()));
       BB->setOutputStartAddress(BBStartOffset);
       if (PrevBB)
         PrevBB->setOutputEndAddress(BBStartOffset);
@@ -2530,6 +2521,16 @@ BinaryFunction *BinaryContext::getBinaryFunctionAtAddress(uint64_t Address) {
       return BF;
   }
   return nullptr;
+}
+
+/// Deregister JumpTable registered at a given \p Address and delete it.
+void BinaryContext::deleteJumpTable(uint64_t Address) {
+  assert(JumpTables.count(Address) && "Must have a jump table at address");
+  JumpTable *JT = JumpTables.at(Address);
+  for (BinaryFunction *Parent : JT->Parents)
+    Parent->JumpTables.erase(Address);
+  JumpTables.erase(Address);
+  delete JT;
 }
 
 DebugAddressRangesVector BinaryContext::translateModuleAddressRanges(

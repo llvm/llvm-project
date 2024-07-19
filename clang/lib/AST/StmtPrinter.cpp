@@ -763,6 +763,16 @@ void StmtPrinter::VisitOMPUnrollDirective(OMPUnrollDirective *Node) {
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPReverseDirective(OMPReverseDirective *Node) {
+  Indent() << "#pragma omp reverse";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPInterchangeDirective(OMPInterchangeDirective *Node) {
+  Indent() << "#pragma omp interchange";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPForDirective(OMPForDirective *Node) {
   Indent() << "#pragma omp for";
   PrintOMPExecutableDirective(Node);
@@ -1175,6 +1185,10 @@ void StmtPrinter::VisitOpenACCLoopConstruct(OpenACCLoopConstruct *S) {
 
 void StmtPrinter::VisitSourceLocExpr(SourceLocExpr *Node) {
   OS << Node->getBuiltinStr() << "()";
+}
+
+void StmtPrinter::VisitEmbedExpr(EmbedExpr *Node) {
+  llvm::report_fatal_error("Not implemented");
 }
 
 void StmtPrinter::VisitConstantExpr(ConstantExpr *Node) {

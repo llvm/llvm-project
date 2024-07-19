@@ -231,7 +231,8 @@ def SIFIVE_X280 : RISCVProcessorModel<"sifive-x280", SiFive7Model,
                                        FeatureStdExtZbb],
                                       [TuneSiFive7,
                                        FeaturePostRAScheduler,
-                                       TuneDLenFactor2]>;
+                                       TuneDLenFactor2,
+                                       TuneOptimizedZeroStrideLoad]>;
 
 def SIFIVE_P450 : RISCVProcessorModel<"sifive-p450", SiFiveP400Model,
                                       [Feature64Bit,
@@ -326,6 +327,27 @@ def SYNTACORE_SCR1_MAX : RISCVProcessorModel<"syntacore-scr1-max",
                                               FeatureStdExtC],
                                              [TuneNoDefaultUnroll]>;
 
+def SYNTACORE_SCR3_RV32 : RISCVProcessorModel<"syntacore-scr3-rv32",
+                                              SyntacoreSCR3RV32Model,
+                                              [Feature32Bit,
+                                               FeatureStdExtI,
+                                               FeatureStdExtZicsr,
+                                               FeatureStdExtZifencei,
+                                               FeatureStdExtM,
+                                               FeatureStdExtC],
+                                              [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
+
+def SYNTACORE_SCR3_RV64 : RISCVProcessorModel<"syntacore-scr3-rv64",
+                                              SyntacoreSCR3RV64Model,
+                                              [Feature64Bit,
+                                               FeatureStdExtI,
+                                               FeatureStdExtZicsr,
+                                               FeatureStdExtZifencei,
+                                               FeatureStdExtM,
+                                               FeatureStdExtA,
+                                               FeatureStdExtC],
+                                              [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
+
 def VENTANA_VEYRON_V1 : RISCVProcessorModel<"veyron-v1",
                                             NoSchedModel,
                                             [Feature64Bit,
@@ -381,3 +403,19 @@ def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
                                             TuneZExtHFusion,
                                             TuneZExtWFusion,
                                             TuneShiftedZExtWFusion]>;
+
+def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
+                                       NoSchedModel,
+                                       !listconcat(RVA22S64Features,
+                                       [FeatureStdExtV,
+                                        FeatureStdExtSscofpmf,
+                                        FeatureStdExtSstc,
+                                        FeatureStdExtSvnapot,
+                                        FeatureStdExtZbc,
+                                        FeatureStdExtZbkc,
+                                        FeatureStdExtZfh,
+                                        FeatureStdExtZicond,
+                                        FeatureStdExtZvfh,
+                                        FeatureStdExtZvkt,
+                                        FeatureStdExtZvl256b]),
+                                       [TuneDLenFactor2]>;

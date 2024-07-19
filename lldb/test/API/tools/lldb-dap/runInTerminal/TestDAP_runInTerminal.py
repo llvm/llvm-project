@@ -105,7 +105,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         )
         self.assertFalse(response["success"])
         self.assertIn(
-            "Could not create a target for a program 'INVALIDPROGRAM': unable to find executable",
+            "Could not create a target for a program 'INVALIDPROGRAM': 'INVALIDPROGRAM' does not exist",
             response["message"],
         )
 

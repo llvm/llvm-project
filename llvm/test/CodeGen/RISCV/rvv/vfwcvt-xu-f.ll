@@ -426,3 +426,19 @@ entry:
 
   ret <vscale x 8 x i64> %a
 }
+
+define <vscale x 8 x i64> @intrinsic_vfwcvt_mask_xu.f.v_rtz_nxv8i64_nxv8f32(<vscale x 8 x i64> %0, <vscale x 8 x float> %1, <vscale x 8 x i1> %2, iXLen %3) nounwind {
+; CHECK-LABEL: intrinsic_vfwcvt_mask_xu.f.v_rtz_nxv8i64_nxv8f32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
+; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v8, v16, v0.t
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 8 x i64> @llvm.riscv.vfwcvt.xu.f.v.mask.nxv8i64.nxv8f32(
+    <vscale x 8 x i64> %0,
+    <vscale x 8 x float> %1,
+    <vscale x 8 x i1> %2,
+    iXLen 1, iXLen %3, iXLen 1)
+
+  ret <vscale x 8 x i64> %a
+}

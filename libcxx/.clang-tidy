@@ -17,6 +17,7 @@ Checks: >
   modernize-redundant-void-arg,
   modernize-use-nullptr,
   modernize-use-override,
+  modernize-use-equals-delete,
 
   readability-duplicate-include,
   readability-identifier-naming,
@@ -72,7 +73,6 @@ CheckOptions:
 # modernize-use-bool-literals,
 # modernize-use-default-member-init,
 # modernize-use-equals-default,
-# modernize-use-equals-delete,
 # portability-restrict-system-includes,
 # readability-function-cognitive-complexity,
 # readability-implicit-bool-conversion,

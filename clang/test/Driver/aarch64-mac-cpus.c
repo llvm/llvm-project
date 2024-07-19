@@ -21,4 +21,4 @@
 // EXPLICIT-A11: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-a11"
 // EXPLICIT-A7: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-a7"
 // EXPLICIT-A14: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-a14"
-// EXPLICIT-M1: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-m1"
+// EXPLICIT-M1: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-a14"

@@ -95,6 +95,17 @@ static bool isStaticallyPresent(const fir::ExtendedValue &exv) {
   return !isStaticallyAbsent(exv);
 }
 
+/// IEEE module procedure names not yet implemented for genModuleProcTODO.
+static constexpr char ieee_int[] = "ieee_int";
+static constexpr char ieee_get_underflow_mode[] = "ieee_get_underflow_mode";
+static constexpr char ieee_next_after[] = "ieee_next_after";
+static constexpr char ieee_next_down[] = "ieee_next_down";
+static constexpr char ieee_next_up[] = "ieee_next_up";
+static constexpr char ieee_real[] = "ieee_real";
+static constexpr char ieee_rem[] = "ieee_rem";
+static constexpr char ieee_rint[] = "ieee_rint";
+static constexpr char ieee_set_underflow_mode[] = "ieee_set_underflow_mode";
+
 using I = IntrinsicLibrary;
 
 /// Flag to indicate that an intrinsic argument has to be handled as
@@ -321,6 +332,8 @@ static constexpr IntrinsicHandler handlers[]{
        {"radix", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"ieee_get_status", &I::genIeeeGetOrSetStatus</*isGet=*/true>},
+    {"ieee_get_underflow_mode", &I::genModuleProcTODO<ieee_get_underflow_mode>},
+    {"ieee_int", &I::genModuleProcTODO<ieee_int>},
     {"ieee_is_finite", &I::genIeeeIsFinite},
     {"ieee_is_nan", &I::genIeeeIsNan},
     {"ieee_is_negative", &I::genIeeeIsNegative},
@@ -342,12 +355,18 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genIeeeMaxMin</*isMax=*/false, /*isNum=*/true, /*isMag=*/false>},
     {"ieee_min_num_mag",
      &I::genIeeeMaxMin</*isMax=*/false, /*isNum=*/true, /*isMag=*/true>},
+    {"ieee_next_after", &I::genModuleProcTODO<ieee_next_after>},
+    {"ieee_next_down", &I::genModuleProcTODO<ieee_next_down>},
+    {"ieee_next_up", &I::genModuleProcTODO<ieee_next_up>},
     {"ieee_quiet_eq", &I::genIeeeQuietCompare<mlir::arith::CmpFPredicate::OEQ>},
     {"ieee_quiet_ge", &I::genIeeeQuietCompare<mlir::arith::CmpFPredicate::OGE>},
     {"ieee_quiet_gt", &I::genIeeeQuietCompare<mlir::arith::CmpFPredicate::OGT>},
     {"ieee_quiet_le", &I::genIeeeQuietCompare<mlir::arith::CmpFPredicate::OLE>},
     {"ieee_quiet_lt", &I::genIeeeQuietCompare<mlir::arith::CmpFPredicate::OLT>},
     {"ieee_quiet_ne", &I::genIeeeQuietCompare<mlir::arith::CmpFPredicate::UNE>},
+    {"ieee_real", &I::genModuleProcTODO<ieee_real>},
+    {"ieee_rem", &I::genModuleProcTODO<ieee_rem>},
+    {"ieee_rint", &I::genModuleProcTODO<ieee_rint>},
     {"ieee_round_eq", &I::genIeeeTypeCompare<mlir::arith::CmpIPredicate::eq>},
     {"ieee_round_ne", &I::genIeeeTypeCompare<mlir::arith::CmpIPredicate::ne>},
     {"ieee_set_flag", &I::genIeeeSetFlagOrHaltingMode</*isFlag=*/true>},
@@ -360,6 +379,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"radix", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"ieee_set_status", &I::genIeeeGetOrSetStatus</*isGet=*/false>},
+    {"ieee_set_underflow_mode", &I::genModuleProcTODO<ieee_set_underflow_mode>},
     {"ieee_signaling_eq",
      &I::genIeeeSignalingCompare<mlir::arith::CmpFPredicate::OEQ>},
     {"ieee_signaling_ge",
@@ -530,6 +550,12 @@ static constexpr IntrinsicHandler handlers[]{
        {"identity", asAddr, handleDynamicOptional},
        {"ordered", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"rename",
+     &I::genRename,
+     {{{"path1", asBox},
+       {"path2", asBox},
+       {"status", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"repeat",
      &I::genRepeat,
      {{{"string", asAddr}, {"ncopies", asValue}}},
@@ -557,6 +583,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"back", asValue, handleDynamicOptional},
        {"kind", asValue}}},
      /*isElemental=*/true},
+    {"second",
+     &I::genSecond,
+     {{{"time", asAddr}}},
+     /*isElemental=*/false},
     {"selected_char_kind",
      &I::genSelectedCharKind,
      {{{"name", asAddr}}},
@@ -701,18 +731,19 @@ prettyPrintIntrinsicName(fir::FirOpBuilder &builder, mlir::Location loc,
   if (name == "pow") {
     assert(funcType.getNumInputs() == 2 && "power operator has two arguments");
     std::string displayName{" ** "};
-    sstream << numericMlirTypeToFortran(builder, funcType.getInput(0), loc,
-                                        displayName)
+    sstream << mlirTypeToIntrinsicFortran(builder, funcType.getInput(0), loc,
+                                          displayName)
             << displayName
-            << numericMlirTypeToFortran(builder, funcType.getInput(1), loc,
-                                        displayName);
+            << mlirTypeToIntrinsicFortran(builder, funcType.getInput(1), loc,
+                                          displayName);
   } else {
     sstream << name.upper() << "(";
     if (funcType.getNumInputs() > 0)
-      sstream << numericMlirTypeToFortran(builder, funcType.getInput(0), loc,
-                                          name);
+      sstream << mlirTypeToIntrinsicFortran(builder, funcType.getInput(0), loc,
+                                            name);
     for (mlir::Type argType : funcType.getInputs().drop_front()) {
-      sstream << ", " << numericMlirTypeToFortran(builder, argType, loc, name);
+      sstream << ", "
+              << mlirTypeToIntrinsicFortran(builder, argType, loc, name);
     }
     sstream << ")";
   }
@@ -1037,6 +1068,12 @@ static constexpr MathOperation mathOperations[] = {
     {"atan", "catanf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>, genLibCall},
     {"atan", "catan", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
     {"atan", RTNAME_STRING(CAtanF128), FuncTypeComplex16Complex16,
+     genLibF128Call},
+    {"atan", "atan2f", genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::Atan2Op>},
+    {"atan", "atan2", genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::Atan2Op>},
+    {"atan", RTNAME_STRING(Atan2F128), FuncTypeReal16Real16Real16,
      genLibF128Call},
     {"atan2", "atan2f", genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>,
      genMathOp<mlir::math::Atan2Op>},
@@ -1492,17 +1529,11 @@ static_assert(mathOps.Verify() && "map must be sorted");
 /// \p bestMatchDistance specifies the FunctionDistance between
 /// the requested operation and the non-exact match.
 static const MathOperation *
-searchMathOperation(fir::FirOpBuilder &builder, llvm::StringRef name,
+searchMathOperation(fir::FirOpBuilder &builder,
+                    const IntrinsicHandlerEntry::RuntimeGeneratorRange &range,
                     mlir::FunctionType funcType,
                     const MathOperation **bestNearMatch,
                     FunctionDistance &bestMatchDistance) {
-  auto range = mathOps.equal_range(name);
-  auto mod = builder.getModule();
-
-  // Search ppcMathOps only if targetting PowerPC arch
-  if (fir::getTargetTriple(mod).isPPC() && range.first == range.second) {
-    range = checkPPCMathOperationsRange(name);
-  }
   for (auto iter = range.first; iter != range.second && iter; ++iter) {
     const auto &impl = *iter;
     auto implType = impl.typeGenerator(builder.getContext(), builder);
@@ -1648,8 +1679,46 @@ llvm::StringRef genericName(llvm::StringRef specificName) {
   return name.drop_back(name.size() - size);
 }
 
+std::optional<IntrinsicHandlerEntry::RuntimeGeneratorRange>
+lookupRuntimeGenerator(llvm::StringRef name, bool isPPCTarget) {
+  if (auto range = mathOps.equal_range(name); range.first != range.second)
+    return std::make_optional<IntrinsicHandlerEntry::RuntimeGeneratorRange>(
+        range);
+  // Search ppcMathOps only if targetting PowerPC arch
+  if (isPPCTarget)
+    if (auto range = checkPPCMathOperationsRange(name);
+        range.first != range.second)
+      return std::make_optional<IntrinsicHandlerEntry::RuntimeGeneratorRange>(
+          range);
+  return std::nullopt;
+}
+
+std::optional<IntrinsicHandlerEntry>
+lookupIntrinsicHandler(fir::FirOpBuilder &builder,
+                       llvm::StringRef intrinsicName,
+                       std::optional<mlir::Type> resultType) {
+  llvm::StringRef name = genericName(intrinsicName);
+  if (const IntrinsicHandler *handler = findIntrinsicHandler(name))
+    return std::make_optional<IntrinsicHandlerEntry>(handler);
+  bool isPPCTarget = fir::getTargetTriple(builder.getModule()).isPPC();
+  // If targeting PowerPC, check PPC intrinsic handlers.
+  if (isPPCTarget)
+    if (const IntrinsicHandler *ppcHandler = findPPCIntrinsicHandler(name))
+      return std::make_optional<IntrinsicHandlerEntry>(ppcHandler);
+  // Subroutines should have a handler.
+  if (!resultType)
+    return std::nullopt;
+  // Try the runtime if no special handler was defined for the
+  // intrinsic being called. Maths runtime only has numerical elemental.
+  if (auto runtimeGeneratorRange = lookupRuntimeGenerator(name, isPPCTarget))
+    return std::make_optional<IntrinsicHandlerEntry>(*runtimeGeneratorRange);
+  return std::nullopt;
+}
+
 /// Generate a TODO error message for an as yet unimplemented intrinsic.
-void crashOnMissingIntrinsic(mlir::Location loc, llvm::StringRef name) {
+void crashOnMissingIntrinsic(mlir::Location loc,
+                             llvm::StringRef intrinsicName) {
+  llvm::StringRef name = genericName(intrinsicName);
   if (isIntrinsicModuleProcedure(name))
     TODO(loc, "intrinsic module procedure: " + llvm::Twine(name));
   else if (isCoarrayIntrinsic(name))
@@ -1781,46 +1850,33 @@ invokeHandler(IntrinsicLibrary::DualGenerator generator,
   return std::invoke(generator, lib, resultType, args);
 }
 
-std::pair<fir::ExtendedValue, bool>
-IntrinsicLibrary::genIntrinsicCall(llvm::StringRef specificName,
-                                   std::optional<mlir::Type> resultType,
-                                   llvm::ArrayRef<fir::ExtendedValue> args) {
-  llvm::StringRef name = genericName(specificName);
-  if (const IntrinsicHandler *handler = findIntrinsicHandler(name)) {
-    bool outline = handler->outline || outlineAllIntrinsics;
-    return {std::visit(
-                [&](auto &generator) -> fir::ExtendedValue {
-                  return invokeHandler(generator, *handler, resultType, args,
-                                       outline, *this);
-                },
-                handler->generator),
-            this->resultMustBeFreed};
-  }
+static std::pair<fir::ExtendedValue, bool> genIntrinsicCallHelper(
+    const IntrinsicHandler *handler, std::optional<mlir::Type> resultType,
+    llvm::ArrayRef<fir::ExtendedValue> args, IntrinsicLibrary &lib) {
+  assert(handler && "must be set");
+  bool outline = handler->outline || outlineAllIntrinsics;
+  return {Fortran::common::visit(
+              [&](auto &generator) -> fir::ExtendedValue {
+                return invokeHandler(generator, *handler, resultType, args,
+                                     outline, lib);
+              },
+              handler->generator),
+          lib.resultMustBeFreed};
+}
 
-  // If targeting PowerPC, check PPC intrinsic handlers.
-  auto mod = builder.getModule();
-  if (fir::getTargetTriple(mod).isPPC()) {
-    if (const IntrinsicHandler *ppcHandler = findPPCIntrinsicHandler(name)) {
-      bool outline = ppcHandler->outline || outlineAllIntrinsics;
-      return {std::visit(
-                  [&](auto &generator) -> fir::ExtendedValue {
-                    return invokeHandler(generator, *ppcHandler, resultType,
-                                         args, outline, *this);
-                  },
-                  ppcHandler->generator),
-              this->resultMustBeFreed};
-    }
-  }
+static IntrinsicLibrary::RuntimeCallGenerator getRuntimeCallGeneratorHelper(
+    const IntrinsicHandlerEntry::RuntimeGeneratorRange &, mlir::FunctionType,
+    fir::FirOpBuilder &, mlir::Location);
 
-  // Try the runtime if no special handler was defined for the
-  // intrinsic being called. Maths runtime only has numerical elemental.
-  // No optional arguments are expected at this point, the code will
-  // crash if it gets absent optional.
-
-  if (!resultType)
-    // Subroutine should have a handler, they are likely missing for now.
-    crashOnMissingIntrinsic(loc, name);
-
+static std::pair<fir::ExtendedValue, bool> genIntrinsicCallHelper(
+    const IntrinsicHandlerEntry::RuntimeGeneratorRange &range,
+    std::optional<mlir::Type> resultType,
+    llvm::ArrayRef<fir::ExtendedValue> args, IntrinsicLibrary &lib) {
+  assert(resultType.has_value() && "RuntimeGenerator are for functions only");
+  assert(range.first != nullptr && "range should not be empty");
+  fir::FirOpBuilder &builder = lib.builder;
+  mlir::Location loc = lib.loc;
+  llvm::StringRef name = range.first->key;
   // FIXME: using toValue to get the type won't work with array arguments.
   llvm::SmallVector<mlir::Value> mlirArgs;
   for (const fir::ExtendedValue &extendedVal : args) {
@@ -1835,10 +1891,39 @@ IntrinsicLibrary::genIntrinsicCall(llvm::StringRef specificName,
       getFunctionType(*resultType, mlirArgs, builder);
 
   IntrinsicLibrary::RuntimeCallGenerator runtimeCallGenerator =
-      getRuntimeCallGenerator(name, soughtFuncType);
-  return {genElementalCall(runtimeCallGenerator, name, *resultType, args,
-                           /*outline=*/outlineAllIntrinsics),
-          resultMustBeFreed};
+      getRuntimeCallGeneratorHelper(range, soughtFuncType, builder, loc);
+  return {lib.genElementalCall(runtimeCallGenerator, name, *resultType, args,
+                               /*outline=*/outlineAllIntrinsics),
+          lib.resultMustBeFreed};
+}
+
+std::pair<fir::ExtendedValue, bool>
+genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
+                 const IntrinsicHandlerEntry &intrinsic,
+                 std::optional<mlir::Type> resultType,
+                 llvm::ArrayRef<fir::ExtendedValue> args,
+                 Fortran::lower::AbstractConverter *converter) {
+  IntrinsicLibrary library{builder, loc, converter};
+  return std::visit(
+      [&](auto handler) -> auto {
+        return genIntrinsicCallHelper(handler, resultType, args, library);
+      },
+      intrinsic.entry);
+}
+
+std::pair<fir::ExtendedValue, bool>
+IntrinsicLibrary::genIntrinsicCall(llvm::StringRef specificName,
+                                   std::optional<mlir::Type> resultType,
+                                   llvm::ArrayRef<fir::ExtendedValue> args) {
+  std::optional<IntrinsicHandlerEntry> intrinsic =
+      lookupIntrinsicHandler(builder, specificName, resultType);
+  if (!intrinsic.has_value())
+    crashOnMissingIntrinsic(loc, specificName);
+  return std::visit(
+      [&](auto handler) -> auto {
+        return genIntrinsicCallHelper(handler, resultType, args, *this);
+      },
+      intrinsic->entry);
 }
 
 mlir::Value
@@ -2081,19 +2166,19 @@ fir::ExtendedValue IntrinsicLibrary::outlineInExtendedWrapper(
   return mlir::Value{};
 }
 
-IntrinsicLibrary::RuntimeCallGenerator
-IntrinsicLibrary::getRuntimeCallGenerator(llvm::StringRef name,
-                                          mlir::FunctionType soughtFuncType) {
-  mlir::FunctionType actualFuncType;
-  const MathOperation *mathOp = nullptr;
-
+static IntrinsicLibrary::RuntimeCallGenerator getRuntimeCallGeneratorHelper(
+    const IntrinsicHandlerEntry::RuntimeGeneratorRange &range,
+    mlir::FunctionType soughtFuncType, fir::FirOpBuilder &builder,
+    mlir::Location loc) {
+  assert(range.first != nullptr && "range should not be empty");
+  llvm::StringRef name = range.first->key;
   // Look for a dedicated math operation generator, which
   // normally produces a single MLIR operation implementing
   // the math operation.
   const MathOperation *bestNearMatch = nullptr;
   FunctionDistance bestMatchDistance;
-  mathOp = searchMathOperation(builder, name, soughtFuncType, &bestNearMatch,
-                               bestMatchDistance);
+  const MathOperation *mathOp = searchMathOperation(
+      builder, range, soughtFuncType, &bestNearMatch, bestMatchDistance);
   if (!mathOp && bestNearMatch) {
     // Use the best near match, optionally issuing an error,
     // if types conversions cause precision loss.
@@ -2108,7 +2193,8 @@ IntrinsicLibrary::getRuntimeCallGenerator(llvm::StringRef name,
     crashOnMissingIntrinsic(loc, nameAndType);
   }
 
-  actualFuncType = mathOp->typeGenerator(builder.getContext(), builder);
+  mlir::FunctionType actualFuncType =
+      mathOp->typeGenerator(builder.getContext(), builder);
 
   assert(actualFuncType.getNumResults() == soughtFuncType.getNumResults() &&
          actualFuncType.getNumInputs() == soughtFuncType.getNumInputs() &&
@@ -2127,6 +2213,17 @@ IntrinsicLibrary::getRuntimeCallGenerator(llvm::StringRef name,
   };
 }
 
+IntrinsicLibrary::RuntimeCallGenerator
+IntrinsicLibrary::getRuntimeCallGenerator(llvm::StringRef name,
+                                          mlir::FunctionType soughtFuncType) {
+  bool isPPCTarget = fir::getTargetTriple(builder.getModule()).isPPC();
+  std::optional<IntrinsicHandlerEntry::RuntimeGeneratorRange> range =
+      lookupRuntimeGenerator(name, isPPCTarget);
+  if (!range.has_value())
+    crashOnMissingIntrinsic(loc, name);
+  return getRuntimeCallGeneratorHelper(*range, soughtFuncType, builder, loc);
+}
+
 mlir::SymbolRefAttr IntrinsicLibrary::getUnrestrictedIntrinsicSymbolRefAttr(
     llvm::StringRef name, mlir::FunctionType signature) {
   // Unrestricted intrinsics signature follows implicit rules: argument
@@ -2136,7 +2233,7 @@ mlir::SymbolRefAttr IntrinsicLibrary::getUnrestrictedIntrinsicSymbolRefAttr(
   bool loadRefArguments = true;
   mlir::func::FuncOp funcOp;
   if (const IntrinsicHandler *handler = findIntrinsicHandler(name))
-    funcOp = std::visit(
+    funcOp = Fortran::common::visit(
         [&](auto generator) {
           return getWrapper(generator, name, signature, loadRefArguments);
         },
@@ -2211,6 +2308,12 @@ mlir::Value IntrinsicLibrary::genConversion(mlir::Type resultType,
   // There can be an optional kind in second argument.
   assert(args.size() >= 1);
   return builder.convertWithSemantics(loc, resultType, args[0]);
+}
+
+template <const char *intrinsicName>
+void IntrinsicLibrary::genModuleProcTODO(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  crashOnMissingIntrinsic(loc, intrinsicName);
 }
 
 // ABORT
@@ -5747,9 +5850,17 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
 
   // Arguements to the reduction operation are passed by reference or value?
   bool argByRef = true;
+  if (!operation.getDefiningOp())
+    TODO(loc, "Distinguigh dummy procedure arguments");
   if (auto embox =
           mlir::dyn_cast_or_null<fir::EmboxProcOp>(operation.getDefiningOp())) {
     auto fctTy = mlir::dyn_cast<mlir::FunctionType>(embox.getFunc().getType());
+    argByRef = mlir::isa<fir::ReferenceType>(fctTy.getInput(0));
+  } else if (auto load = mlir::dyn_cast_or_null<fir::LoadOp>(
+                 operation.getDefiningOp())) {
+    auto boxProcTy = mlir::dyn_cast_or_null<fir::BoxProcType>(load.getType());
+    assert(boxProcTy && "expect BoxProcType");
+    auto fctTy = mlir::dyn_cast<mlir::FunctionType>(boxProcTy.getEleTy());
     argByRef = mlir::isa<fir::ReferenceType>(fctTy.getInput(0));
   }
 
@@ -5814,6 +5925,37 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
   fir::runtime::genReduceDim(builder, loc, array, operation, dim, mask,
                              identity, ordered, resultIrBox, argByRef);
   return readAndAddCleanUp(resultMutableBox, resultType, "REDUCE");
+}
+
+// RENAME
+fir::ExtendedValue
+IntrinsicLibrary::genRename(std::optional<mlir::Type> resultType,
+                            mlir::ArrayRef<fir::ExtendedValue> args) {
+  assert((args.size() == 3 && !resultType.has_value()) ||
+         (args.size() == 2 && resultType.has_value()));
+
+  mlir::Value path1 = fir::getBase(args[0]);
+  mlir::Value path2 = fir::getBase(args[1]);
+  if (!path1 || !path2)
+    fir::emitFatalError(loc, "Expected at least two dummy arguments");
+
+  if (resultType.has_value()) {
+    // code-gen for the function form of RENAME
+    auto statusAddr = builder.createTemporary(loc, *resultType);
+    auto statusBox = builder.createBox(loc, statusAddr);
+    fir::runtime::genRename(builder, loc, path1, path2, statusBox);
+    return builder.create<fir::LoadOp>(loc, statusAddr);
+  } else {
+    // code-gen for the procedure form of RENAME
+    mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
+    auto status = args[2];
+    mlir::Value statusBox =
+        isStaticallyPresent(status)
+            ? fir::getBase(status)
+            : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+    fir::runtime::genRename(builder, loc, path1, path2, statusBox);
+    return {};
+  }
 }
 
 // REPEAT
@@ -6000,6 +6142,27 @@ IntrinsicLibrary::genScan(mlir::Type resultType,
 
   // Handle cleanup of allocatable result descriptor and return
   return readAndAddCleanUp(resultMutableBox, resultType, "SCAN");
+}
+
+// SECOND
+fir::ExtendedValue
+IntrinsicLibrary::genSecond(std::optional<mlir::Type> resultType,
+                            mlir::ArrayRef<fir::ExtendedValue> args) {
+  assert((args.size() == 1 && !resultType) || (args.empty() && resultType));
+
+  fir::ExtendedValue result;
+
+  if (resultType)
+    result = builder.createTemporary(loc, *resultType);
+  else
+    result = args[0];
+
+  llvm::SmallVector<fir::ExtendedValue, 1> subroutineArgs(1, result);
+  genCpuTime(subroutineArgs);
+
+  if (resultType)
+    return builder.create<fir::LoadOp>(loc, fir::getBase(result));
+  return {};
 }
 
 // SELECTED_CHAR_KIND
@@ -7064,6 +7227,17 @@ getIntrinsicArgumentLowering(llvm::StringRef specificName) {
   if (const IntrinsicHandler *ppcHandler = findPPCIntrinsicHandler(name))
     if (!ppcHandler->argLoweringRules.hasDefaultRules())
       return &ppcHandler->argLoweringRules;
+  return nullptr;
+}
+
+const IntrinsicArgumentLoweringRules *
+IntrinsicHandlerEntry::getArgumentLoweringRules() const {
+  if (const IntrinsicHandler *const *handler =
+          std::get_if<const IntrinsicHandler *>(&entry)) {
+    assert(*handler);
+    if (!(*handler)->argLoweringRules.hasDefaultRules())
+      return &(*handler)->argLoweringRules;
+  }
   return nullptr;
 }
 

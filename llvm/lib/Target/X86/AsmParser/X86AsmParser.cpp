@@ -58,6 +58,10 @@ static bool checkScale(unsigned Scale, StringRef &ErrMsg) {
 
 namespace {
 
+// Including the generated SSE2AVX compression tables.
+#define GET_X86_SSE2AVX_TABLE
+#include "X86GenInstrMapping.inc"
+
 static const char OpPrecedence[] = {
     0,  // IC_OR
     1,  // IC_XOR
@@ -475,7 +479,9 @@ private:
     unsigned getLength() const { return CurType.Length; }
     int64_t getImm() { return Imm + IC.execute(); }
     bool isValidEndState() const {
-      return State == IES_RBRAC || State == IES_INTEGER;
+      return State == IES_RBRAC || State == IES_RPAREN ||
+             State == IES_INTEGER || State == IES_REGISTER ||
+             State == IES_OFFSET;
     }
 
     // Is the intel expression appended after an operand index.
@@ -1898,9 +1904,6 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
     case AsmToken::Error:
       return Error(getLexer().getErrLoc(), getLexer().getErr());
       break;
-    case AsmToken::EndOfStatement:
-      Done = true;
-      break;
     case AsmToken::Real:
       // DotOperator: [ebx].0
       UpdateLocLex = false;
@@ -2318,7 +2321,7 @@ bool X86AsmParser::parseCFlagsOp(OperandVector &Operands) {
     return Error(Tok.getLoc(), "Expected { at this point");
   Parser.Lex(); // Eat "{"
   Tok = Parser.getTok();
-  if (Tok.getIdentifier() != "dfv")
+  if (Tok.getIdentifier().lower() != "dfv")
     return Error(Tok.getLoc(), "Expected dfv at this point");
   Parser.Lex(); // Eat "dfv"
   Tok = Parser.getTok();
@@ -2338,7 +2341,7 @@ bool X86AsmParser::parseCFlagsOp(OperandVector &Operands) {
   unsigned CFlags = 0;
   for (unsigned I = 0; I < 4; ++I) {
     Tok = Parser.getTok();
-    unsigned CFlag = StringSwitch<unsigned>(Tok.getIdentifier())
+    unsigned CFlag = StringSwitch<unsigned>(Tok.getIdentifier().lower())
                          .Case("of", 0x8)
                          .Case("sf", 0x4)
                          .Case("zf", 0x2)
@@ -3745,7 +3748,27 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   return false;
 }
 
+static bool convertSSEToAVX(MCInst &Inst) {
+  ArrayRef<X86TableEntry> Table{X86SSE2AVXTable};
+  unsigned Opcode = Inst.getOpcode();
+  const auto I = llvm::lower_bound(Table, Opcode);
+  if (I == Table.end() || I->OldOpc != Opcode)
+    return false;
+
+  Inst.setOpcode(I->NewOpc);
+  // AVX variant of BLENDVPD/BLENDVPS/PBLENDVB instructions has more
+  // operand compare to SSE variant, which is added below
+  if (X86::isBLENDVPD(Opcode) || X86::isBLENDVPS(Opcode) ||
+      X86::isPBLENDVB(Opcode))
+    Inst.addOperand(Inst.getOperand(2));
+
+  return true;
+}
+
 bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
+  if (MCOptions.X86Sse2Avx && convertSSEToAVX(Inst))
+    return true;
+
   if (ForcedOpcodePrefix != OpcodePrefix_VEX3 &&
       X86::optimizeInstFromVEX3ToVEX2(Inst, MII.get(Inst.getOpcode())))
     return true;
@@ -3849,6 +3872,14 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
         return Warning(Ops[0]->getStartLoc(), "mask, index, and destination "
                                               "registers should be distinct");
     }
+  } else if (isTCMMIMFP16PS(Opcode) || isTCMMRLFP16PS(Opcode) ||
+             isTDPBF16PS(Opcode) || isTDPFP16PS(Opcode) || isTDPBSSD(Opcode) ||
+             isTDPBSUD(Opcode) || isTDPBUSD(Opcode) || isTDPBUUD(Opcode)) {
+    unsigned SrcDest = Inst.getOperand(0).getReg();
+    unsigned Src1 = Inst.getOperand(2).getReg();
+    unsigned Src2 = Inst.getOperand(3).getReg();
+    if (SrcDest == Src1 || SrcDest == Src2 || Src1 == Src2)
+      return Error(Ops[0]->getStartLoc(), "all tmm registers must be distinct");
   }
 
   // Check that we aren't mixing AH/BH/CH/DH with REX prefix. We only need to

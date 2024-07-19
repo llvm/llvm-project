@@ -152,7 +152,7 @@ static constexpr llvm::StringRef getFuncPureAttrName() {
   return "fir.func_pure";
 }
 
-static constexpr llvm::StringRef getFuncElementAttrName() {
+static constexpr llvm::StringRef getFuncElementalAttrName() {
   return "fir.func_elemental";
 }
 

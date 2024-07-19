@@ -752,6 +752,7 @@ public:
   Register addKernargSegmentPtr(const SIRegisterInfo &TRI);
   Register addDispatchID(const SIRegisterInfo &TRI);
   Register addFlatScratchInit(const SIRegisterInfo &TRI);
+  Register addPrivateSegmentSize(const SIRegisterInfo &TRI);
   Register addImplicitBufferPtr(const SIRegisterInfo &TRI);
   Register addLDSKernelId();
   SmallVectorImpl<MCRegister> *

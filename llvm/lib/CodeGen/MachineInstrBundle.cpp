@@ -177,26 +177,25 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       }
     }
 
-    for (unsigned i = 0, e = Defs.size(); i != e; ++i) {
-      MachineOperand &MO = *Defs[i];
-      Register Reg = MO.getReg();
+    for (MachineOperand *MO : Defs) {
+      Register Reg = MO->getReg();
       if (!Reg)
         continue;
 
       if (LocalDefSet.insert(Reg).second) {
         LocalDefs.push_back(Reg);
-        if (MO.isDead()) {
+        if (MO->isDead()) {
           DeadDefSet.insert(Reg);
         }
       } else {
         // Re-defined inside the bundle, it's no longer killed.
         KilledDefSet.erase(Reg);
-        if (!MO.isDead())
+        if (!MO->isDead())
           // Previously defined but dead.
           DeadDefSet.erase(Reg);
       }
 
-      if (!MO.isDead() && Reg.isPhysical()) {
+      if (!MO->isDead() && Reg.isPhysical()) {
         for (MCPhysReg SubReg : TRI->subregs(Reg)) {
           if (LocalDefSet.insert(SubReg).second)
             LocalDefs.push_back(SubReg);

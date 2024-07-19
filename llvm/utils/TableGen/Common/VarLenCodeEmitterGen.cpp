@@ -405,7 +405,7 @@ void VarLenCodeEmitterGen::emitInstructionBaseValues(
   IS.indent(4) << "{/*NumBits*/0, /*Index*/0}\n  };\n";
   SS.indent(4) << "UINT64_C(0)\n  };\n";
 
-  OS << IS.str() << SS.str();
+  OS << IndexArray << StorageArray;
 }
 
 std::string VarLenCodeEmitterGen::getInstructionCases(Record *R,

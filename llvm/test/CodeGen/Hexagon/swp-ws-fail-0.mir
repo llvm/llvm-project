@@ -1,13 +1,14 @@
 # REQUIRES: asserts
 # RUN: llc --march=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
-# RUN: -window-sched=force -o - 2>&1 | FileCheck %s \
+# RUN: -window-sched=force -filetype=null -verify-machineinstrs 2>&1 \
+# RUN: | FileCheck %s \
 # RUN: --check-prefix=CHECK-INITIALIZE
 # RUN: llc --march=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
-# RUN: -window-sched=force -window-region-limit=1 -window-ii-limit=1 -o - \
-# RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-ANALYSE-II
+# RUN: -window-sched=force -window-region-limit=1 -window-ii-limit=1 \
+# RUN: -filetype=null 2>&1 | FileCheck %s --check-prefix=CHECK-ANALYSE-II
 # RUN: llc --march=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
 # RUN: -window-sched=force -window-region-limit=1 -window-search-ratio=80 \
-# RUN: -o - 2>&1 | FileCheck %s --check-prefix=CHECK-SCHED-NOT-NEEDED
+# RUN: -filetype=null 2>&1 | FileCheck %s --check-prefix=CHECK-SCHED-NOT-NEEDED
 
 # CHECK-INITIALIZE: There are too few MIs in the window region!
 # CHECK-INITIALIZE: The WindowScheduler failed to initialize!

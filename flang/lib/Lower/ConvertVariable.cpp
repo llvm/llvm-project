@@ -715,8 +715,9 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
     auto idxTy = builder.getIndexType();
     for (mlir::Value sh : elidedShape)
       indices.push_back(builder.createConvert(loc, idxTy, sh));
-    return builder.create<cuf::AllocOp>(loc, ty, nm, symNm, dataAttr, lenParams,
-                                        indices);
+    mlir::Value alloc = builder.create<cuf::AllocOp>(
+        loc, ty, nm, symNm, dataAttr, lenParams, indices);
+    return alloc;
   }
 
   // Let the builder do all the heavy lifting.
@@ -927,6 +928,19 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
     finalizeAtRuntime(converter, var, symMap);
   if (mustBeDefaultInitializedAtRuntime(var))
     defaultInitializeAtRuntime(converter, var, symMap);
+  if (Fortran::semantics::NeedCUDAAlloc(var.getSymbol())) {
+    auto *builder = &converter.getFirOpBuilder();
+    mlir::Location loc = converter.getCurrentLocation();
+    fir::ExtendedValue exv =
+        converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
+    auto *sym = &var.getSymbol();
+    converter.getFctCtx().attachCleanup([builder, loc, exv, sym]() {
+      cuf::DataAttributeAttr dataAttr =
+          Fortran::lower::translateSymbolCUFDataAttribute(builder->getContext(),
+                                                          *sym);
+      builder->create<cuf::FreeOp>(loc, fir::getBase(exv), dataAttr);
+    });
+  }
   if (std::optional<VariableCleanUp> cleanup =
           needDeallocationOrFinalization(var)) {
     auto *builder = &converter.getFirOpBuilder();
@@ -950,21 +964,9 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
                "trying to deallocate entity not lowered as allocatable");
         Fortran::lower::genDeallocateIfAllocated(*converterPtr, *mutableBox,
                                                  loc, sym);
+        
       });
     }
-  }
-  if (Fortran::semantics::NeedCUDAAlloc(var.getSymbol())) {
-    auto *builder = &converter.getFirOpBuilder();
-    mlir::Location loc = converter.getCurrentLocation();
-    fir::ExtendedValue exv =
-        converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
-    auto *sym = &var.getSymbol();
-    converter.getFctCtx().attachCleanup([builder, loc, exv, sym]() {
-      cuf::DataAttributeAttr dataAttr =
-          Fortran::lower::translateSymbolCUFDataAttribute(builder->getContext(),
-                                                          *sym);
-      builder->create<cuf::FreeOp>(loc, fir::getBase(exv), dataAttr);
-    });
   }
 }
 
@@ -2036,11 +2038,6 @@ void Fortran::lower::mapSymbolAttributes(
     if (isUnusedEntryDummy) {
       assert(!Fortran::semantics::IsAllocatableOrPointer(sym) &&
              "handled above");
-      // Need to add support for allocatable assumed-rank to use
-      // logic below, or to simplify it and add codegen for fir.zero
-      // !fir.box<> instead.
-      if (isAssumedRank)
-        TODO(loc, "assumed rank in ENTRY");
       // The box is read right away because lowering code does not expect
       // a non pointer/allocatable symbol to be mapped to a MutableBox.
       mlir::Type ty = converter.genType(var);

@@ -506,14 +506,15 @@ func.func @memref_reinterpret_cast_unranked_to_dynamic_shape(%offset: index,
 
 // -----
 
-// CHECK-LABEL: @memref_reshape
+// CHECK-LABEL: @memref_reshape(
+//  CHECK-SAME:     %[[ARG0:.*]]: memref<2x3xf32>, %[[ARG1:.*]]: memref<?xindex>)
 func.func @memref_reshape(%input : memref<2x3xf32>, %shape : memref<?xindex>) {
   %output = memref.reshape %input(%shape)
                 : (memref<2x3xf32>, memref<?xindex>) -> memref<*xf32>
   return
 }
-// CHECK: [[INPUT:%.*]] = builtin.unrealized_conversion_cast %{{.*}} to [[INPUT_TY:!.*]]
-// CHECK: [[SHAPE:%.*]] = builtin.unrealized_conversion_cast %{{.*}} to [[SHAPE_TY:!.*]]
+// CHECK-DAG: [[INPUT:%.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : {{.*}} to [[INPUT_TY:!.*]]
+// CHECK-DAG: [[SHAPE:%.*]] = builtin.unrealized_conversion_cast %[[ARG1]] : {{.*}} to [[SHAPE_TY:!.*]]
 // CHECK: [[RANK:%.*]] = llvm.extractvalue [[SHAPE]][3, 0] : [[SHAPE_TY]]
 // CHECK: [[UNRANKED_OUT_O:%.*]] = llvm.mlir.undef : !llvm.struct<(i64, ptr)>
 // CHECK: [[UNRANKED_OUT_1:%.*]] = llvm.insertvalue [[RANK]], [[UNRANKED_OUT_O]][0] : !llvm.struct<(i64, ptr)>

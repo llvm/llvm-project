@@ -129,7 +129,7 @@ void locAsIntegerCasts(void *p) {
 }
 
 void multiDimensionalArrayPointerCasts(void) {
-  static int x[10][10];
+  static int x[10][10]; // expected-note2{{Array at the right-hand side of subtraction}}
   int *y1 = &(x[3][5]);
   char *z = ((char *) y1) + 2;
   int *y2 = (int *)(z - 2);

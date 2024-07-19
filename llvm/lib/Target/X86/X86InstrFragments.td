@@ -15,6 +15,15 @@ def SDTX86FCmp    : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisFP<1>,
 def SDTX86Ccmp    : SDTypeProfile<1, 5,
                                   [SDTCisVT<3, i8>, SDTCisVT<4, i8>, SDTCisVT<5, i32>]>;
 
+// RES = op PTR, PASSTHRU, COND, EFLAGS
+def SDTX86Cload    : SDTypeProfile<1, 4,
+                                  [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisSameAs<0, 2>,
+                                   SDTCisVT<3, i8>, SDTCisVT<4, i32>]>;
+// op VAL, PTR, COND, EFLAGS
+def SDTX86Cstore    : SDTypeProfile<0, 4,
+                                  [SDTCisInt<0>, SDTCisPtrTy<1>,
+                                   SDTCisVT<2, i8>, SDTCisVT<3, i32>]>;
+
 def SDTX86Cmov    : SDTypeProfile<1, 4,
                                   [SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
                                    SDTCisVT<3, i8>, SDTCisVT<4, i32>]>;
@@ -143,6 +152,9 @@ def X86bt      : SDNode<"X86ISD::BT",       SDTX86CmpTest>;
 
 def X86ccmp    : SDNode<"X86ISD::CCMP",     SDTX86Ccmp>;
 def X86ctest   : SDNode<"X86ISD::CTEST",    SDTX86Ccmp>;
+
+def X86cload    : SDNode<"X86ISD::CLOAD",   SDTX86Cload, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def X86cstore   : SDNode<"X86ISD::CSTORE",  SDTX86Cstore, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def X86cmov    : SDNode<"X86ISD::CMOV",     SDTX86Cmov>;
 def X86brcond  : SDNode<"X86ISD::BRCOND",   SDTX86BrCond,

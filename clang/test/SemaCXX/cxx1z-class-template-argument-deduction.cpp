@@ -139,11 +139,13 @@ namespace look_into_current_instantiation {
                     // templates, and members of the current instantiation
   A<float> &r = a;
 
-  template<typename T> struct B { // expected-note {{could not match 'B<T>' against 'int'}}
+  template<typename T> struct B { // expected-note {{could not match 'B<T>' against 'int'}} \
+                                  // expected-note {{implicit deduction guide declared as 'template <typename T> B(B<T>) -> B<T>'}}
     struct X {
       typedef T type;
     };
-    B(typename X::type); // expected-note {{couldn't infer template argument 'T'}}
+    B(typename X::type); // expected-note {{couldn't infer template argument 'T'}} \
+                         // expected-note {{implicit deduction guide declared as 'template <typename T> B(typename X::type) -> B<T>'}}
   };
   B b = 0; // expected-error {{no viable}}
 
@@ -564,8 +566,10 @@ namespace PR47175 {
 
 // Ensure we don't crash when CTAD fails.
 template <typename T1, typename T2>
-struct Foo {   // expected-note{{candidate function template not viable}}
-  Foo(T1, T2); // expected-note{{candidate function template not viable}}
+struct Foo {   // expected-note {{candidate function template not viable}} \
+               // expected-note {{implicit deduction guide declared as 'template <typename T1, typename T2> Foo(Foo<T1, T2>) -> Foo<T1, T2>'}}
+  Foo(T1, T2); // expected-note {{candidate function template not viable}} \
+               // expected-note {{implicit deduction guide declared as 'template <typename T1, typename T2> Foo(T1, T2) -> Foo<T1, T2>'}}
 };
 
 template <typename... Args>

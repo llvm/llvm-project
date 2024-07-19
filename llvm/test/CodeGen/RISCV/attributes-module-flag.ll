@@ -3,8 +3,8 @@
 
 ; Test generation of ELF attribute from module metadata
 
-; RV32: .attribute 5, "rv32i2p1_m2p0_zba1p0"
-; RV64: .attribute 5, "rv64i2p1_m2p0_zba1p0"
+; RV32: .attribute 5, "rv32i2p1_m2p0_zmmul1p0_zba1p0"
+; RV64: .attribute 5, "rv64i2p1_m2p0_zmmul1p0_zba1p0"
 
 define i32 @addi(i32 %a) {
   %1 = add i32 %a, 1

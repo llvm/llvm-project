@@ -202,6 +202,11 @@ void mlirOpPrintingFlagsElideLargeElementsAttrs(MlirOpPrintingFlags flags,
   unwrap(flags)->elideLargeElementsAttrs(largeElementLimit);
 }
 
+void mlirOpPrintingFlagsElideLargeResourceString(MlirOpPrintingFlags flags,
+                                                 intptr_t largeResourceLimit) {
+  unwrap(flags)->elideLargeResourceString(largeResourceLimit);
+}
+
 void mlirOpPrintingFlagsEnableDebugInfo(MlirOpPrintingFlags flags, bool enable,
                                         bool prettyForm) {
   unwrap(flags)->enableDebugInfo(enable, /*prettyForm=*/prettyForm);
@@ -219,6 +224,9 @@ void mlirOpPrintingFlagsAssumeVerified(MlirOpPrintingFlags flags) {
   unwrap(flags)->assumeVerified();
 }
 
+void mlirOpPrintingFlagsSkipRegions(MlirOpPrintingFlags flags) {
+  unwrap(flags)->skipRegions();
+}
 //===----------------------------------------------------------------------===//
 // Bytecode printing flags API.
 //===----------------------------------------------------------------------===//

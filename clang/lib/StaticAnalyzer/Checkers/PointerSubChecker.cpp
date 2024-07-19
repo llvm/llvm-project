@@ -43,8 +43,6 @@ class PointerSubChecker
   bool checkArrayBounds(CheckerContext &C, const Expr *E,
                         const ElementRegion *ElemReg,
                         const MemRegion *Reg) const;
-  void reportBug(CheckerContext &C, const Expr *E,
-                 const llvm::StringLiteral &Msg) const;
 
 public:
   void checkPreStmt(const BinaryOperator *B, CheckerContext &C) const;
@@ -57,6 +55,14 @@ bool PointerSubChecker::checkArrayBounds(CheckerContext &C, const Expr *E,
   if (!ElemReg)
     return true;
 
+  auto ReportBug = [&](const llvm::StringLiteral &Msg) {
+    if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
+      auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
+      R->addRange(E->getSourceRange());
+      C.emitReport(std::move(R));
+    }
+  };
+
   ProgramStateRef State = C.getState();
   const MemRegion *SuperReg = ElemReg->getSuperRegion();
   SValBuilder &SVB = C.getSValBuilder();
@@ -64,7 +70,7 @@ bool PointerSubChecker::checkArrayBounds(CheckerContext &C, const Expr *E,
   if (SuperReg == Reg) {
     if (const llvm::APSInt *I = SVB.getKnownValue(State, ElemReg->getIndex());
         I && (!I->isOne() && !I->isZero()))
-      reportBug(C, E, Msg_BadVarIndex);
+      ReportBug(Msg_BadVarIndex);
     return false;
   }
 
@@ -77,7 +83,7 @@ bool PointerSubChecker::checkArrayBounds(CheckerContext &C, const Expr *E,
     ProgramStateRef S1, S2;
     std::tie(S1, S2) = C.getState()->assume(*IndexTooLarge);
     if (S1 && !S2) {
-      reportBug(C, E, Msg_LargeArrayIndex);
+      ReportBug(Msg_LargeArrayIndex);
       return false;
     }
   }
@@ -89,20 +95,11 @@ bool PointerSubChecker::checkArrayBounds(CheckerContext &C, const Expr *E,
     ProgramStateRef S1, S2;
     std::tie(S1, S2) = State->assume(*IndexTooSmall);
     if (S1 && !S2) {
-      reportBug(C, E, Msg_NegativeArrayIndex);
+      ReportBug(Msg_NegativeArrayIndex);
       return false;
     }
   }
   return true;
-}
-
-void PointerSubChecker::reportBug(CheckerContext &C, const Expr *E,
-                                  const llvm::StringLiteral &Msg) const {
-  if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
-    auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
-    R->addRange(E->getSourceRange());
-    C.emitReport(std::move(R));
-  }
 }
 
 void PointerSubChecker::checkPreStmt(const BinaryOperator *B,
@@ -136,6 +133,9 @@ void PointerSubChecker::checkPreStmt(const BinaryOperator *B,
   if (!checkArrayBounds(C, B->getRHS(), ElemRR, LR))
     return;
 
+  const ValueDecl *DiffDeclL = nullptr;
+  const ValueDecl *DiffDeclR = nullptr;
+
   if (ElemLR && ElemRR) {
     const MemRegion *SuperLR = ElemLR->getSuperRegion();
     const MemRegion *SuperRR = ElemRR->getSuperRegion();
@@ -144,9 +144,30 @@ void PointerSubChecker::checkPreStmt(const BinaryOperator *B,
     // Allow arithmetic on different symbolic regions.
     if (isa<SymbolicRegion>(SuperLR) || isa<SymbolicRegion>(SuperRR))
       return;
+    if (const auto *SuperDLR = dyn_cast<DeclRegion>(SuperLR))
+      DiffDeclL = SuperDLR->getDecl();
+    if (const auto *SuperDRR = dyn_cast<DeclRegion>(SuperRR))
+      DiffDeclR = SuperDRR->getDecl();
   }
 
-  reportBug(C, B, Msg_MemRegionDifferent);
+  if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
+    auto R =
+        std::make_unique<PathSensitiveBugReport>(BT, Msg_MemRegionDifferent, N);
+    R->addRange(B->getSourceRange());
+    // The declarations may be identical even if the regions are different:
+    //   struct { int array[10]; } a, b;
+    //   do_something(&a.array[5] - &b.array[5]);
+    // In this case don't emit notes.
+    if (DiffDeclL != DiffDeclR) {
+      if (DiffDeclL)
+        R->addNote("Array at the left-hand side of subtraction",
+                   {DiffDeclL, C.getSourceManager()});
+      if (DiffDeclR)
+        R->addNote("Array at the right-hand side of subtraction",
+                   {DiffDeclR, C.getSourceManager()});
+    }
+    C.emitReport(std::move(R));
+  }
 }
 
 void ento::registerPointerSubChecker(CheckerManager &mgr) {

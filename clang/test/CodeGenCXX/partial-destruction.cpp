@@ -107,13 +107,12 @@ namespace test1 {
   // CHECK:      [[V:%.*]] = alloca [[B:%.*]], align 4
   // CHECK-NEXT: alloca ptr
   // CHECK-NEXT: alloca i32
-  // CHECK-NEXT: [[X:%.*]] = getelementptr inbounds [[B]], ptr [[V]], i32 0, i32 0
-  // CHECK-NEXT: call void @_ZN5test11AC1Ei(ptr {{[^,]*}} [[X]], i32 noundef 5)
-  // CHECK-NEXT: [[Y:%.*]] = getelementptr inbounds [[B]], ptr [[V]], i32 0, i32 1
+  // CHECK-NEXT: call void @_ZN5test11AC1Ei(ptr {{[^,]*}} [[V]], i32 noundef 5)
+  // CHECK-NEXT: [[Y:%.*]] = getelementptr inbounds i8, ptr [[V]], i64 1
   // CHECK-NEXT: invoke void @_ZN5test11AC1Ei(ptr {{[^,]*}} [[Y]], i32 noundef 6)
-  // CHECK:      [[Z:%.*]] = getelementptr inbounds [[B]], ptr [[V]], i32 0, i32 2
+  // CHECK:      [[Z:%.*]] = getelementptr inbounds i8, ptr [[V]], i64 2
   // CHECK-NEXT: invoke void @_ZN5test11AC1Ei(ptr {{[^,]*}} [[Z]], i32 noundef 7)
-  // CHECK:      [[W:%.*]] = getelementptr inbounds [[B]], ptr [[V]], i32 0, i32 3
+  // CHECK:      [[W:%.*]] = getelementptr inbounds [[B]], ptr [[V]], i32 0, i32 1
   // CHECK-NEXT: store i32 8, ptr [[W]], align 4
   // CHECK-NEXT: call void @_ZN5test11BD1Ev(ptr {{[^,]*}} [[V]])
   // CHECK-NEXT: ret void
@@ -124,9 +123,9 @@ namespace test1 {
   // CHECK:      landingpad { ptr, i32 }
   // CHECK-NEXT:   cleanup
   // CHECKv03:      invoke void @_ZN5test11AD1Ev(ptr {{[^,]*}} [[Y]])
-  // CHECKv03:      invoke void @_ZN5test11AD1Ev(ptr {{[^,]*}} [[X]])
+  // CHECKv03:      invoke void @_ZN5test11AD1Ev(ptr {{[^,]*}} [[V]])
   // CHECKv11:      call   void @_ZN5test11AD1Ev(ptr {{[^,]*}} [[Y]])
-  // CHECKv11:      call   void @_ZN5test11AD1Ev(ptr {{[^,]*}} [[X]])
+  // CHECKv11:      call   void @_ZN5test11AD1Ev(ptr {{[^,]*}} [[V]])
 }
 
 namespace test2 {

@@ -174,6 +174,7 @@ func.func @loop_nest_block_arg(%val : i32, %ub : i32, %i : index) {
     ^bb3:
       omp.yield
     }
+    omp.terminator
   }
   return
 }

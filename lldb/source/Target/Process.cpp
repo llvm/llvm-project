@@ -21,6 +21,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/DynamicCheckerFunctions.h"
 #include "lldb/Expression/UserExpression.h"
@@ -63,6 +64,7 @@
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Target/VerboseTrapFrameRecognizer.h"
 #include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -460,12 +462,10 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_private_state_listener_sp(
           Listener::MakeListener("lldb.process.internal_state_listener")),
       m_mod_id(), m_process_unique_id(0), m_thread_index_id(0),
-      m_thread_id_to_index_id_map(), m_exit_status(-1), m_exit_string(),
-      m_exit_status_mutex(), m_thread_mutex(), m_thread_list_real(this),
-      m_thread_list(this), m_thread_plans(*this), m_extended_thread_list(this),
-      m_extended_thread_stop_id(0), m_queue_list(this), m_queue_list_stop_id(0),
-      m_watchpoint_resource_list(), m_notifications(), m_image_tokens(),
-      m_breakpoint_site_list(), m_dynamic_checkers_up(),
+      m_thread_id_to_index_id_map(), m_exit_status(-1),
+      m_thread_list_real(*this), m_thread_list(*this), m_thread_plans(*this),
+      m_extended_thread_list(*this), m_extended_thread_stop_id(0),
+      m_queue_list(this), m_queue_list_stop_id(0),
       m_unix_signals_sp(unix_signals_sp), m_abi_sp(), m_process_input_reader(),
       m_stdio_communication("process.stdio"), m_stdio_communication_mutex(),
       m_stdin_forward(false), m_stdout_data(), m_stderr_data(),
@@ -524,7 +524,11 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
   if (!value_sp->OptionWasSet() && platform_cache_line_size != 0)
     value_sp->SetValueAs(platform_cache_line_size);
 
+  // FIXME: Frame recognizer registration should not be done in Target.
+  // We should have a plugin do the registration instead, for example, a
+  // common C LanguageRuntime plugin.
   RegisterAssertFrameRecognizer(this);
+  RegisterVerboseTrapFrameRecognizer(*this);
 }
 
 Process::~Process() {
@@ -1183,8 +1187,8 @@ void Process::UpdateThreadListIfNeeded() {
       // mutex between the call to UpdateThreadList(...) and the
       // os->UpdateThreadList(...) so it doesn't change on us
       ThreadList &old_thread_list = m_thread_list;
-      ThreadList real_thread_list(this);
-      ThreadList new_thread_list(this);
+      ThreadList real_thread_list(*this);
+      ThreadList new_thread_list(*this);
       // Always update the thread list with the protocol specific thread list,
       // but only update if "true" is returned
       if (UpdateThreadList(m_thread_list_real, real_thread_list)) {
@@ -2007,6 +2011,129 @@ size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, Status &error) {
   }
 }
 
+void Process::DoFindInMemory(lldb::addr_t start_addr, lldb::addr_t end_addr,
+                             const uint8_t *buf, size_t size,
+                             AddressRanges &matches, size_t alignment,
+                             size_t max_matches) {
+  // Inputs are already validated in FindInMemory() functions.
+  assert(buf != nullptr);
+  assert(size > 0);
+  assert(alignment > 0);
+  assert(max_matches > 0);
+  assert(start_addr != LLDB_INVALID_ADDRESS);
+  assert(end_addr != LLDB_INVALID_ADDRESS);
+  assert(start_addr < end_addr);
+
+  lldb::addr_t start = llvm::alignTo(start_addr, alignment);
+  while (matches.size() < max_matches && (start + size) < end_addr) {
+    const lldb::addr_t found_addr = FindInMemory(start, end_addr, buf, size);
+    if (found_addr == LLDB_INVALID_ADDRESS)
+      break;
+
+    if (found_addr % alignment) {
+      // We need to check the alignment because the FindInMemory uses a special
+      // algorithm to efficiently search mememory but doesn't support alignment.
+      start = llvm::alignTo(start + 1, alignment);
+      continue;
+    }
+
+    matches.emplace_back(found_addr, size);
+    start = found_addr + alignment;
+  }
+}
+
+AddressRanges Process::FindRangesInMemory(const uint8_t *buf, uint64_t size,
+                                          const AddressRanges &ranges,
+                                          size_t alignment, size_t max_matches,
+                                          Status &error) {
+  AddressRanges matches;
+  if (buf == nullptr) {
+    error.SetErrorString("buffer is null");
+    return matches;
+  }
+  if (size == 0) {
+    error.SetErrorString("buffer size is zero");
+    return matches;
+  }
+  if (ranges.empty()) {
+    error.SetErrorString("empty ranges");
+    return matches;
+  }
+  if (alignment == 0) {
+    error.SetErrorString("alignment must be greater than zero");
+    return matches;
+  }
+  if (max_matches == 0) {
+    error.SetErrorString("max_matches must be greater than zero");
+    return matches;
+  }
+
+  int resolved_ranges = 0;
+  Target &target = GetTarget();
+  for (size_t i = 0; i < ranges.size(); ++i) {
+    if (matches.size() >= max_matches)
+      break;
+    const AddressRange &range = ranges[i];
+    if (range.IsValid() == false)
+      continue;
+
+    const lldb::addr_t start_addr =
+        range.GetBaseAddress().GetLoadAddress(&target);
+    if (start_addr == LLDB_INVALID_ADDRESS)
+      continue;
+
+    ++resolved_ranges;
+    const lldb::addr_t end_addr = start_addr + range.GetByteSize();
+    DoFindInMemory(start_addr, end_addr, buf, size, matches, alignment,
+                   max_matches);
+  }
+
+  if (resolved_ranges > 0)
+    error.Clear();
+  else
+    error.SetErrorString("unable to resolve any ranges");
+
+  return matches;
+}
+
+lldb::addr_t Process::FindInMemory(const uint8_t *buf, uint64_t size,
+                                   const AddressRange &range, size_t alignment,
+                                   Status &error) {
+  if (buf == nullptr) {
+    error.SetErrorString("buffer is null");
+    return LLDB_INVALID_ADDRESS;
+  }
+  if (size == 0) {
+    error.SetErrorString("buffer size is zero");
+    return LLDB_INVALID_ADDRESS;
+  }
+  if (!range.IsValid()) {
+    error.SetErrorString("range is invalid");
+    return LLDB_INVALID_ADDRESS;
+  }
+  if (alignment == 0) {
+    error.SetErrorString("alignment must be greater than zero");
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  Target &target = GetTarget();
+  const lldb::addr_t start_addr =
+      range.GetBaseAddress().GetLoadAddress(&target);
+  if (start_addr == LLDB_INVALID_ADDRESS) {
+    error.SetErrorString("range load address is invalid");
+    return LLDB_INVALID_ADDRESS;
+  }
+  const lldb::addr_t end_addr = start_addr + range.GetByteSize();
+
+  AddressRanges matches;
+  DoFindInMemory(start_addr, end_addr, buf, size, matches, alignment, 1);
+  if (matches.empty())
+    return LLDB_INVALID_ADDRESS;
+
+  error.Clear();
+  return matches[0].GetBaseAddress().GetLoadAddress(&target);
+}
+
 size_t Process::ReadCStringFromMemory(addr_t addr, std::string &out_str,
                                       Status &error) {
   char buf[256];
@@ -2424,6 +2551,14 @@ ModuleSP Process::ReadModuleFromMemory(const FileSpec &file_spec,
   ModuleSP module_sp(new Module(file_spec, ArchSpec()));
   if (module_sp) {
     Status error;
+    std::unique_ptr<Progress> progress_up;
+    // Reading an ObjectFile from a local corefile is very fast,
+    // only print a progress update if we're reading from a
+    // live session which might go over gdb remote serial protocol.
+    if (IsLiveDebugSession())
+      progress_up = std::make_unique<Progress>(
+          "Reading binary from memory", file_spec.GetFilename().GetString());
+
     ObjectFile *objfile = module_sp->GetMemoryObjectFile(
         shared_from_this(), header_addr, error, size_to_read);
     if (objfile)
@@ -4029,7 +4164,6 @@ bool Process::ProcessEventData::ShouldStop(Event *event_ptr,
 
   ThreadList &curr_thread_list = process_sp->GetThreadList();
   uint32_t num_threads = curr_thread_list.GetSize();
-  uint32_t idx;
 
   // The actions might change one of the thread's stop_info's opinions about
   // whether we should stop the process, so we need to query that as we go.
@@ -4039,23 +4173,18 @@ bool Process::ProcessEventData::ShouldStop(Event *event_ptr,
   // get that wrong (which is possible) then the thread list might have
   // changed, and that would cause our iteration here to crash.  We could
   // make a copy of the thread list, but we'd really like to also know if it
-  // has changed at all, so we make up a vector of the thread ID's and check
-  // what we get back against this list & bag out if anything differs.
-  ThreadList not_suspended_thread_list(process_sp.get());
-  std::vector<uint32_t> thread_index_array(num_threads);
-  uint32_t not_suspended_idx = 0;
-  for (idx = 0; idx < num_threads; ++idx) {
+  // has changed at all, so we store the original thread ID's of all threads and
+  // check what we get back against this list & bag out if anything differs.
+  std::vector<std::pair<ThreadSP, size_t>> not_suspended_threads;
+  for (uint32_t idx = 0; idx < num_threads; ++idx) {
     lldb::ThreadSP thread_sp = curr_thread_list.GetThreadAtIndex(idx);
 
     /*
      Filter out all suspended threads, they could not be the reason
      of stop and no need to perform any actions on them.
      */
-    if (thread_sp->GetResumeState() != eStateSuspended) {
-      not_suspended_thread_list.AddThread(thread_sp);
-      thread_index_array[not_suspended_idx] = thread_sp->GetIndexID();
-      not_suspended_idx++;
-    }
+    if (thread_sp->GetResumeState() != eStateSuspended)
+      not_suspended_threads.emplace_back(thread_sp, thread_sp->GetIndexID());
   }
 
   // Use this to track whether we should continue from here.  We will only
@@ -4071,8 +4200,7 @@ bool Process::ProcessEventData::ShouldStop(Event *event_ptr,
   // is, and it's better to let the user decide than continue behind their
   // backs.
 
-  for (idx = 0; idx < not_suspended_thread_list.GetSize(); ++idx) {
-    curr_thread_list = process_sp->GetThreadList();
+  for (auto [thread_sp, thread_index] : not_suspended_threads) {
     if (curr_thread_list.GetSize() != num_threads) {
       Log *log(GetLog(LLDBLog::Step | LLDBLog::Process));
       LLDB_LOGF(
@@ -4082,14 +4210,11 @@ bool Process::ProcessEventData::ShouldStop(Event *event_ptr,
       break;
     }
 
-    lldb::ThreadSP thread_sp = not_suspended_thread_list.GetThreadAtIndex(idx);
-
-    if (thread_sp->GetIndexID() != thread_index_array[idx]) {
+    if (thread_sp->GetIndexID() != thread_index) {
       Log *log(GetLog(LLDBLog::Step | LLDBLog::Process));
-      LLDB_LOGF(log,
-                "The thread at position %u changed from %u to %u while "
-                "processing event.",
-                idx, thread_index_array[idx], thread_sp->GetIndexID());
+      LLDB_LOG(log,
+               "The thread {0} changed from {1} to {2} while processing event.",
+               thread_sp.get(), thread_index, thread_sp->GetIndexID());
       break;
     }
 
@@ -4125,7 +4250,22 @@ bool Process::ProcessEventData::ShouldStop(Event *event_ptr,
   return still_should_stop;
 }
 
+bool Process::ProcessEventData::ForwardEventToPendingListeners(
+    Event *event_ptr) {
+  // STDIO and the other async event notifications should always be forwarded.
+  if (event_ptr->GetType() != Process::eBroadcastBitStateChanged)
+    return true;
+
+  // For state changed events, if the update state is zero, we are handling
+  // this on the private state thread.  We should wait for the public event.
+  return m_update_state == 1;
+}
+
 void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
+  // We only have work to do for state changed events:
+  if (event_ptr->GetType() != Process::eBroadcastBitStateChanged)
+    return;
+
   ProcessSP process_sp(m_process_wp.lock());
 
   if (!process_sp)
@@ -5924,7 +6064,9 @@ void Process::PrintWarningUnsupportedLanguage(const SymbolContext &sc) {
   if (!sc.module_sp)
     return;
   LanguageType language = sc.GetLanguage();
-  if (language == eLanguageTypeUnknown)
+  if (language == eLanguageTypeUnknown ||
+      language == lldb::eLanguageTypeAssembly ||
+      language == lldb::eLanguageTypeMipsAssembler)
     return;
   LanguageSet plugins =
       PluginManager::GetAllTypeSystemSupportedLanguagesForTypes();

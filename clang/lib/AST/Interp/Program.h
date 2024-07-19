@@ -77,6 +77,7 @@ public:
 
   /// Finds a global's index.
   std::optional<unsigned> getGlobal(const ValueDecl *VD);
+  std::optional<unsigned> getGlobal(const Expr *E);
 
   /// Returns or creates a global an creates an index to it.
   std::optional<unsigned> getOrCreateGlobal(const ValueDecl *VD,

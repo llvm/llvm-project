@@ -8,10 +8,10 @@
 ; CHECK-LABEL: DW_TAG_subprogram
 ; CHECK: DW_AT_name ("test1")
 ; CHECK: DW_TAG_variable
-; CHECK: DW_AT_location (DW_OP_fbreg -1, DW_OP_deref, DW_OP_constu 0x3d, DW_OP_shl, DW_OP_constu 0x3d, DW_OP_shr, DW_OP_stack_value)
+; CHECK: DW_AT_location (DW_OP_fbreg -1, DW_OP_deref_size 0x1, DW_OP_constu 0x3d, DW_OP_shl, DW_OP_constu 0x3d, DW_OP_shr, DW_OP_stack_value)
 ; CHECK: DW_AT_name ("x")
 ; CHECK: DW_TAG_variable
-; CHECK: DW_AT_location (DW_OP_fbreg -1, DW_OP_deref, DW_OP_constu 0x39, DW_OP_shl, DW_OP_constu 0x3c, DW_OP_shra, DW_OP_stack_value)
+; CHECK: DW_AT_location (DW_OP_fbreg -1, DW_OP_deref_size 0x1, DW_OP_constu 0x39, DW_OP_shl, DW_OP_constu 0x3c, DW_OP_shra, DW_OP_stack_value)
 ; CHECK: DW_AT_name ("y")
 
 define i32 @test1() !dbg !13 {
@@ -56,6 +56,27 @@ entry:
   ret i64 %0, !dbg !26
 }
 
+; CHECK-LABEL: DW_TAG_subprogram
+; CHECK: DW_AT_name ("test4")
+; CHECK: DW_TAG_variable
+; CHECK: DW_AT_location (DW_OP_fbreg -4, DW_OP_deref_size 0x4, DW_OP_constu 0x20, DW_OP_shl, DW_OP_constu 0x3f, DW_OP_shr, DW_OP_stack_value)
+; CHECK: DW_AT_name ("x")
+; CHECK: DW_TAG_variable
+; CHECK: DW_AT_location (DW_OP_fbreg -4, DW_OP_deref_size 0x4, DW_OP_constu 0x20, DW_OP_shl, DW_OP_constu 0x21, DW_OP_shra, DW_OP_stack_value)
+; CHECK: DW_AT_name ("y")
+; CHECK: DW_TAG_variable
+; CHECK: DW_AT_location (DW_OP_fbreg -4, DW_OP_plus_uconst 0x3, DW_OP_deref_size 0x1, DW_OP_constu 0x38, DW_OP_shl, DW_OP_constu 0x39, DW_OP_shr, DW_OP_stack_value)
+; CHECK: DW_AT_name ("z")
+
+define i32 @test4() !dbg !28 {
+entry:
+  %0 = alloca i32, align 4
+  tail call void @llvm.dbg.declare(metadata ptr %0, metadata !29, metadata !DIExpression(DW_OP_LLVM_extract_bits_zext, 31, 1)), !dbg !30
+  tail call void @llvm.dbg.declare(metadata ptr %0, metadata !31, metadata !DIExpression(DW_OP_LLVM_extract_bits_sext, 1, 31)), !dbg !30
+  tail call void @llvm.dbg.declare(metadata ptr %0, metadata !32, metadata !DIExpression(DW_OP_plus_uconst, 3, DW_OP_LLVM_extract_bits_zext, 1, 7)), !dbg !30
+  ret i32 0, !dbg !30
+}
+
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
@@ -90,3 +111,8 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !25 = !DILocalVariable(name: "x", scope: !24, file: !3, type: !9)
 !26 = !DILocation(line: 0, scope: !24)
 !27 = !DILocalVariable(name: "y", scope: !24, file: !3, type: !19)
+!28 = distinct !DISubprogram(name: "test4", linkageName: "test4", scope: !3, file: !3, type: !14, spFlags: DISPFlagDefinition, unit: !2)
+!29 = !DILocalVariable(name: "x", scope: !28, file: !3, type: !9)
+!30 = !DILocation(line: 0, scope: !28)
+!31 = !DILocalVariable(name: "y", scope: !28, file: !3, type: !19)
+!32 = !DILocalVariable(name: "z", scope: !28, file: !3, type: !9)

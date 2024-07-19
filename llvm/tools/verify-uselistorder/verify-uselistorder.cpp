@@ -176,7 +176,7 @@ std::unique_ptr<Module> TempFile::readAssembly(LLVMContext &Context) const {
   LLVM_DEBUG(dbgs() << " - read assembly\n");
   SMDiagnostic Err;
   std::unique_ptr<Module> M = parseAssemblyFile(Filename, Err, Context);
-  if (!M.get())
+  if (!M)
     Err.print("verify-uselistorder", errs());
   return M;
 }
@@ -555,7 +555,7 @@ int main(int argc, char **argv) {
   // Load the input module...
   std::unique_ptr<Module> M = parseIRFile(InputFilename, Err, Context);
 
-  if (!M.get()) {
+  if (!M) {
     Err.print(argv[0], errs());
     return 1;
   }

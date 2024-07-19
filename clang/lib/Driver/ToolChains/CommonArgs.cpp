@@ -78,19 +78,8 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
       !Args.hasArg(clang::driver::options::OPT_mfentry))
     return true;
 
-  if (Triple.isAndroid()) {
-    switch (Triple.getArch()) {
-    case llvm::Triple::aarch64:
-    case llvm::Triple::arm:
-    case llvm::Triple::armeb:
-    case llvm::Triple::thumb:
-    case llvm::Triple::thumbeb:
-    case llvm::Triple::riscv64:
-      return true;
-    default:
-      break;
-    }
-  }
+  if (Triple.isAndroid())
+    return true;
 
   switch (Triple.getArch()) {
   case llvm::Triple::xcore:
@@ -166,7 +155,7 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
 
 static bool useLeafFramePointerForTargetByDefault(const llvm::Triple &Triple) {
   if (Triple.isAArch64() || Triple.isPS() || Triple.isVE() ||
-      (Triple.isAndroid() && Triple.isRISCV64()))
+      (Triple.isAndroid() && !Triple.isARM()))
     return false;
 
   return true;
@@ -1133,6 +1122,27 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
 
   addMachineOutlinerArgs(D, Args, CmdArgs, ToolChain.getEffectiveTriple(),
                          /*IsLTO=*/true, PluginOptPrefix);
+
+  for (const Arg *A : Args.filtered(options::OPT_Wa_COMMA)) {
+    bool Crel = false;
+    for (StringRef V : A->getValues()) {
+      if (V == "--crel")
+        Crel = true;
+      else if (V == "--no-crel")
+        Crel = false;
+      else
+        continue;
+      A->claim();
+    }
+    if (Crel) {
+      if (Triple.isOSBinFormatELF() && !Triple.isMIPS()) {
+        CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + "-crel"));
+      } else {
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << "-Wa,--crel" << D.getTargetTriple();
+      }
+    }
+  }
 }
 
 /// Adds the '-lcgpu' and '-lmgpu' libraries to the compilation to include the
@@ -1399,6 +1409,8 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
         HelperStaticRuntimes.push_back("memprof-preinit");
     }
+    if (SanArgs.needsNsanRt())
+      SharedRuntimes.push_back("nsan");
     if (SanArgs.needsUbsanRt()) {
       if (SanArgs.requiresMinimalRuntime())
         SharedRuntimes.push_back("ubsan_minimal");
@@ -1469,6 +1481,8 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("msan_cxx");
   }
+  if (!SanArgs.needsSharedRt() && SanArgs.needsNsanRt())
+    StaticRuntimes.push_back("nsan");
   if (!SanArgs.needsSharedRt() && SanArgs.needsTsanRt()) {
     StaticRuntimes.push_back("tsan");
     if (SanArgs.linkCXXRuntimes())
@@ -1520,6 +1534,12 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
                              RequiredSymbols);
   }
 
+  // -u options must be added before the runtime libs that resolve them.
+  for (auto S : RequiredSymbols) {
+    CmdArgs.push_back("-u");
+    CmdArgs.push_back(Args.MakeArgString(S));
+  }
+
   // Inject libfuzzer dependencies.
   if (SanArgs.needsFuzzer() && SanArgs.linkRuntimes() &&
       !Args.hasArg(options::OPT_shared)) {
@@ -1551,10 +1571,6 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   for (auto RT : NonWholeStaticRuntimes) {
     addSanitizerRuntime(TC, Args, CmdArgs, RT, false, false);
     AddExportDynamic |= !addSanitizerDynamicList(TC, Args, CmdArgs, RT);
-  }
-  for (auto S : RequiredSymbols) {
-    CmdArgs.push_back("-u");
-    CmdArgs.push_back(Args.MakeArgString(S));
   }
   // If there is a static runtime with no dynamic list, force all the symbols
   // to be dynamic to be sure we export sanitizer interface functions.
@@ -2822,4 +2838,85 @@ void tools::addOffloadCompressArgs(const llvm::opt::ArgList &TCArgs,
   if (auto *Arg = TCArgs.getLastArg(options::OPT_offload_compression_level_EQ))
     CmdArgs.push_back(
         TCArgs.MakeArgString(Twine("-compression-level=") + Arg->getValue()));
+}
+
+void tools::addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
+                       const llvm::Triple &Triple,
+                       const llvm::Reloc::Model &RelocationModel,
+                       llvm::opt::ArgStringList &CmdArgs) {
+  if (Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ)) {
+    StringRef CM = A->getValue();
+    bool Ok = false;
+    if (Triple.isOSAIX() && CM == "medium")
+      CM = "large";
+    if (Triple.isAArch64(64)) {
+      Ok = CM == "tiny" || CM == "small" || CM == "large";
+      if (CM == "large" && !Triple.isOSBinFormatMachO() &&
+          RelocationModel != llvm::Reloc::Static)
+        D.Diag(diag::err_drv_argument_only_allowed_with)
+            << A->getAsString(Args) << "-fno-pic";
+    } else if (Triple.isLoongArch()) {
+      if (CM == "extreme" &&
+          Args.hasFlagNoClaim(options::OPT_fplt, options::OPT_fno_plt, false))
+        D.Diag(diag::err_drv_argument_not_allowed_with)
+            << A->getAsString(Args) << "-fplt";
+      Ok = CM == "normal" || CM == "medium" || CM == "extreme";
+      // Convert to LLVM recognizable names.
+      if (Ok)
+        CM = llvm::StringSwitch<StringRef>(CM)
+                 .Case("normal", "small")
+                 .Case("extreme", "large")
+                 .Default(CM);
+    } else if (Triple.isPPC64() || Triple.isOSAIX()) {
+      Ok = CM == "small" || CM == "medium" || CM == "large";
+    } else if (Triple.isRISCV()) {
+      if (CM == "medlow")
+        CM = "small";
+      else if (CM == "medany")
+        CM = "medium";
+      Ok = CM == "small" || CM == "medium";
+    } else if (Triple.getArch() == llvm::Triple::x86_64) {
+      Ok = llvm::is_contained({"small", "kernel", "medium", "large", "tiny"},
+                              CM);
+    } else if (Triple.isNVPTX() || Triple.isAMDGPU() || Triple.isSPIRV()) {
+      // NVPTX/AMDGPU/SPIRV does not care about the code model and will accept
+      // whatever works for the host.
+      Ok = true;
+    } else if (Triple.isSPARC64()) {
+      if (CM == "medlow")
+        CM = "small";
+      else if (CM == "medmid")
+        CM = "medium";
+      else if (CM == "medany")
+        CM = "large";
+      Ok = CM == "small" || CM == "medium" || CM == "large";
+    }
+    if (Ok) {
+      CmdArgs.push_back(Args.MakeArgString("-mcmodel=" + CM));
+    } else {
+      D.Diag(diag::err_drv_unsupported_option_argument_for_target)
+          << A->getSpelling() << CM << Triple.getTriple();
+    }
+  }
+
+  if (Triple.getArch() == llvm::Triple::x86_64) {
+    bool IsMediumCM = false;
+    bool IsLargeCM = false;
+    if (Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ)) {
+      IsMediumCM = StringRef(A->getValue()) == "medium";
+      IsLargeCM = StringRef(A->getValue()) == "large";
+    }
+    if (Arg *A = Args.getLastArg(options::OPT_mlarge_data_threshold_EQ)) {
+      if (!IsMediumCM && !IsLargeCM) {
+        D.Diag(diag::warn_drv_large_data_threshold_invalid_code_model)
+            << A->getOption().getRenderName();
+      } else {
+        A->render(Args, CmdArgs);
+      }
+    } else if (IsMediumCM) {
+      CmdArgs.push_back("-mlarge-data-threshold=65536");
+    } else if (IsLargeCM) {
+      CmdArgs.push_back("-mlarge-data-threshold=0");
+    }
+  }
 }

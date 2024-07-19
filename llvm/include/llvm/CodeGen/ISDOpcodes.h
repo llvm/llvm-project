@@ -83,6 +83,12 @@ enum NodeType {
   ExternalSymbol,
   BlockAddress,
 
+  /// A ptrauth constant.
+  /// ptr, key, addr-disc, disc
+  /// Note that the addr-disc can be a non-constant value, to allow representing
+  /// a constant global address signed using address-diversification, in code.
+  PtrAuthGlobalAddress,
+
   /// The address of the GOT
   GLOBAL_OFFSET_TABLE,
 
@@ -416,6 +422,12 @@ enum NodeType {
   STRICT_FSIN,
   STRICT_FCOS,
   STRICT_FTAN,
+  STRICT_FASIN,
+  STRICT_FACOS,
+  STRICT_FATAN,
+  STRICT_FSINH,
+  STRICT_FCOSH,
+  STRICT_FTANH,
   STRICT_FEXP,
   STRICT_FEXP2,
   STRICT_FLOG,
@@ -646,6 +658,14 @@ enum NodeType {
   /// The operation does not support returning fixed-width vectors or
   /// non-constant operands.
   STEP_VECTOR,
+
+  /// VECTOR_COMPRESS(Vec, Mask, Passthru)
+  /// consecutively place vector elements based on mask
+  /// e.g., vec = {A, B, C, D} and mask = {1, 0, 1, 0}
+  ///         --> {A, C, ?, ?} where ? is undefined
+  /// If passthru is defined, ?s are replaced with elements from passthru.
+  /// If passthru is undef, ?s remain undefined.
+  VECTOR_COMPRESS,
 
   /// MULHU/MULHS - Multiply high - Multiply two integers of type iN,
   /// producing an unsigned/signed value of type i[2*N], then return the top
@@ -942,6 +962,12 @@ enum NodeType {
   FSIN,
   FCOS,
   FTAN,
+  FASIN,
+  FACOS,
+  FATAN,
+  FSINH,
+  FCOSH,
+  FTANH,
   FPOW,
   FPOWI,
   /// FLDEXP - ldexp, inspired by libm (op0 * 2**op1).

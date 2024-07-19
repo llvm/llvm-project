@@ -407,3 +407,22 @@ func.func private @some_assumed_rank_func(!fir.box<!fir.array<*:f64>>) -> ()
 // CHECK:           %[[VAL_9:.*]] = llvm.add %[[VAL_3]], %[[VAL_8]] : i32
 // CHECK:           "llvm.intr.memcpy"(%[[VAL_2]], %[[VAL_0]], %[[VAL_9]]) <{isVolatile = false, tbaa = [#[[$BOXT]]]}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK:           llvm.call @some_assumed_rank_func(%[[VAL_2]]) : (!llvm.ptr) -> ()
+
+// -----
+
+func.func @store_assumed_rank_box(%box: !fir.box<!fir.array<*:f32>>, %ref: !fir.ref<!fir.box<!fir.array<*:f32>>>) {
+  fir.store %box to %ref : !fir.ref<!fir.box<!fir.array<*:f32>>>
+  return
+}
+
+// CHECK-DAG:     #[[ROOT:.*]] = #llvm.tbaa_root<id = "Flang function root ">
+// CHECK-DAG:     #[[ANYACC:.*]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[ROOT]], 0>}>
+// CHECK-DAG:     #[[BOXMEM:.*]] = #llvm.tbaa_type_desc<id = "descriptor member", members = {<#[[ANYACC]], 0>}>
+// CHECK-DAG:     #[[$BOXT:.*]] = #llvm.tbaa_tag<base_type = #[[BOXMEM]], access_type = #[[BOXMEM]], offset = 0>
+
+// CHECK-LABEL:   llvm.func @store_assumed_rank_box(
+// CHECK-SAME:                                      %[[VAL_0:[^:]*]]: !llvm.ptr,
+// CHECK-SAME:                                      %[[VAL_1:.*]]: !llvm.ptr) {
+// CHECK:           %[[VAL_3:.*]] = llvm.getelementptr %[[VAL_0]][0, 3] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<15 x array<3 x i64>>)>
+// CHECK:           %[[VAL_4:.*]] = llvm.load %[[VAL_3]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> i8
+// CHECK:           "llvm.intr.memcpy"(%[[VAL_1]], %[[VAL_0]], %{{.*}}) <{isVolatile = false, tbaa = [#[[$BOXT]]]}> : (!llvm.ptr, !llvm.ptr, i32) -> ()

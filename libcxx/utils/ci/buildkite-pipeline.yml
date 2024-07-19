@@ -17,11 +17,6 @@
 # goal being to reduce the load on testers when a commit is known to fail.
 #
 
-# The Linux CI runners use the nightly ToT build provided by the Docker image.
-# (Note the image isn't updated daily.) The LLVM_HEAD_VERSION contains that
-# version number. The Linux CI runners for GCC use the latest stable version.
-# Theses numbers are available in all runners, making it easier to update the
-# version number.
 env:
     # LLVM POST-BRANCH bump version
     # LLVM POST-BRANCH add compiler test for ToT - 1, e.g. "Clang 17"
@@ -40,20 +35,6 @@ definitions:
       - "**/test-results.xml"
       - "**/*.abilist"
       - "**/crash_diagnostics/*"
-
-environment_definitions:
-  _common_env: &common_env
-      LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-${LLVM_HEAD_VERSION}"
-      CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
-      CC: clang-${LLVM_HEAD_VERSION}
-      CXX: clang++-${LLVM_HEAD_VERSION}
-
-  _absolute_path_clang: &absolute_path_clang
-    # Note modules require and absolute path for clang-scan-deps
-    # https://github.com/llvm/llvm-project/issues/61006
-    CC: /usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang
-    CXX: /usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++
-
 
 steps:
 - group: ':mac: Apple'
@@ -89,8 +70,8 @@ steps:
     <<: *common
 
     # Build with the configuration we use to generate libc++.dylib on Apple platforms
-  - label: Apple system
-    command: libcxx/utils/ci/run-buildbot apple-system
+  - label: Apple system configuration
+    command: libcxx/utils/ci/run-buildbot apple-configuration
     agents:
       queue: libcxx-builders
       os: macos

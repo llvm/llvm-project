@@ -56,7 +56,7 @@ define i32 @foo(i32 noundef %n, i32 noundef %lag, i32 noundef %shift) vscale_ran
 ; SC_SVE-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; SC_SVE:       scalar.ph:
 ; SC_SVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; SC_SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP19]], [[MIDDLE_BLOCK]] ]
+; SC_SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP19]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; SC_SVE-NEXT:    br label [[FOR_BODY:%.*]]
 ; SC_SVE:       for.body:
 ; SC_SVE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -131,7 +131,7 @@ define i32 @foo(i32 noundef %n, i32 noundef %lag, i32 noundef %shift) vscale_ran
 ; NO_SC_SVE-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; NO_SC_SVE:       scalar.ph:
 ; NO_SC_SVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; NO_SC_SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP19]], [[MIDDLE_BLOCK]] ]
+; NO_SC_SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP19]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; NO_SC_SVE-NEXT:    br label [[FOR_BODY:%.*]]
 ; NO_SC_SVE:       for.body:
 ; NO_SC_SVE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]

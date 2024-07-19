@@ -985,6 +985,15 @@ void StmtProfiler::VisitOMPUnrollDirective(const OMPUnrollDirective *S) {
   VisitOMPLoopTransformationDirective(S);
 }
 
+void StmtProfiler::VisitOMPReverseDirective(const OMPReverseDirective *S) {
+  VisitOMPLoopTransformationDirective(S);
+}
+
+void StmtProfiler::VisitOMPInterchangeDirective(
+    const OMPInterchangeDirective *S) {
+  VisitOMPLoopTransformationDirective(S);
+}
+
 void StmtProfiler::VisitOMPForDirective(const OMPForDirective *S) {
   VisitOMPLoopDirective(S);
 }
@@ -2312,6 +2321,8 @@ void StmtProfiler::VisitTypoExpr(const TypoExpr *E) {
 void StmtProfiler::VisitSourceLocExpr(const SourceLocExpr *E) {
   VisitExpr(E);
 }
+
+void StmtProfiler::VisitEmbedExpr(const EmbedExpr *E) { VisitExpr(E); }
 
 void StmtProfiler::VisitRecoveryExpr(const RecoveryExpr *E) { VisitExpr(E); }
 

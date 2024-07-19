@@ -749,10 +749,10 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     }
 
     Constant *C;
-    if (match(Src, m_OneUse(m_LShr(m_Value(X), m_Constant(C))))) {
+    if (match(Src, m_OneUse(m_LShr(m_Value(X), m_ImmConstant(C))))) {
       // trunc (lshr X, C) to i1 --> icmp ne (and X, C'), 0
       Constant *One = ConstantInt::get(SrcTy, APInt(SrcWidth, 1));
-      Constant *MaskC = ConstantExpr::getShl(One, C);
+      Value *MaskC = Builder.CreateShl(One, C);
       Value *And = Builder.CreateAnd(X, MaskC);
       return new ICmpInst(ICmpInst::ICMP_NE, And, Zero);
     }
@@ -760,7 +760,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
                                    m_Deferred(X))))) {
       // trunc (or (lshr X, C), X) to i1 --> icmp ne (and X, C'), 0
       Constant *One = ConstantInt::get(SrcTy, APInt(SrcWidth, 1));
-      Constant *MaskC = ConstantExpr::getShl(One, C);
+      Value *MaskC = Builder.CreateShl(One, C);
       Value *And = Builder.CreateAnd(X, Builder.CreateOr(MaskC, One));
       return new ICmpInst(ICmpInst::ICMP_NE, And, Zero);
     }
@@ -2070,7 +2070,9 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
         Base->getType() == Ty) {
       Value *Offset = EmitGEPOffset(GEP);
       auto *NewOp = BinaryOperator::CreateAdd(Base, Offset);
-      if (GEP->isInBounds() && isKnownNonNegative(Offset, SQ))
+      if (GEP->hasNoUnsignedWrap() ||
+          (GEP->hasNoUnsignedSignedWrap() &&
+           isKnownNonNegative(Offset, SQ.getWithInstruction(&CI))))
         NewOp->setHasNoUnsignedWrap(true);
       return NewOp;
     }
