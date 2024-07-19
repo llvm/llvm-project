@@ -60,7 +60,7 @@ private:
   // bits.
   FCmpLibcallsList getFCmpLibcalls(CmpInst::Predicate, unsigned Size) const;
 
-  const ARMSubtarget *ST;
+  const ARMSubtarget &ST;
 };
 } // End llvm namespace.
 #endif

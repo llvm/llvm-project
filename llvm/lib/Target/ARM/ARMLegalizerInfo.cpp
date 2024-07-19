@@ -29,7 +29,7 @@ static bool AEABI(const ARMSubtarget &ST) {
   return ST.isTargetAEABI() || ST.isTargetGNUAEABI() || ST.isTargetMuslAEABI();
 }
 
-ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(&ST) {
+ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
   using namespace TargetOpcode;
 
   const LLT p0 = LLT::pointer(0, 32);
@@ -440,8 +440,7 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
   case G_CONSTANT: {
     const ConstantInt *ConstVal = MI.getOperand(1).getCImm();
     uint64_t ImmVal = ConstVal->getZExtValue();
-    if (ConstantMaterializationCost(ImmVal, ST) > 2 &&
-        !ST->genExecuteOnly())
+    if (ConstantMaterializationCost(ImmVal, &ST) > 2 && !ST.genExecuteOnly())
       return Helper.lowerConstant(MI) == LegalizerHelper::Legalized;
     return true;
   }
