@@ -8,7 +8,17 @@
 ; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
 ; RUN:   FileCheck %s --check-prefix=CHECK32
 
-; These test cases aim to test constant materialization using the pli instruction on Power10.
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN:   -mcpu=pwr11 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
+; RUN:   FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
+; RUN:   -mcpu=pwr11 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
+; RUN:   FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc-unknown-linux-gnu \
+; RUN:   -mcpu=pwr11 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
+; RUN:   FileCheck %s --check-prefix=CHECK32
+
+; These test cases aim to test constant materialization using the pli instruction on Power10 and Power11.
 
 define  signext i32 @t_16BitsMinRequiring34Bits() {
 ; CHECK-LABEL: t_16BitsMinRequiring34Bits:
