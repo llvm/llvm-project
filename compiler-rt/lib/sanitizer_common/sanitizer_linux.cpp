@@ -2180,20 +2180,20 @@ static const char *RegNumToRegName(int reg) {
   return NULL;
 }
 
-#if SANITIZER_LINUX
+#  if SANITIZER_LINUX
 UNUSED
 static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
   const char *RegName = RegNumToRegName(RegNum);
-#  if defined(__x86_64__)
+#    if defined(__x86_64__)
   Printf("%s%s = 0x%016llx  ", internal_strlen(RegName) == 2 ? " " : "",
          RegName, ctx->uc_mcontext.gregs[RegNum]);
-#  elif defined(__i386__)
+#    elif defined(__i386__)
   Printf("%s = 0x%08x  ", RegName, ctx->uc_mcontext.gregs[RegNum]);
-#  else
+#    else
   (void)RegName;
-#  endif
+#    endif
 }
-#endif
+#  endif
 
 void SignalContext::DumpAllRegisters(void *context) {
   ucontext_t *ucontext = (ucontext_t *)context;
@@ -2242,25 +2242,25 @@ void SignalContext::DumpAllRegisters(void *context) {
 #  elif SANITIZER_FREEBSD
 #    if defined(__x86_64__)
   Report("Register values:\n");
-  Printf("RAX = 0x%016llx  ", ucontext->uc_mcontext.mc_rax);
-  Printf("RBX = 0x%016llx  ", ucontext->uc_mcontext.mc_rbx);
-  Printf("RCX = 0x%016llx  ", ucontext->uc_mcontext.mc_rcx);
-  Printf("RDX = 0x%016llx  ", ucontext->uc_mcontext.mc_rdx);
+  Printf("rax = 0x%016llx  ", ucontext->uc_mcontext.mc_rax);
+  Printf("rbx = 0x%016llx  ", ucontext->uc_mcontext.mc_rbx);
+  Printf("rcx = 0x%016llx  ", ucontext->uc_mcontext.mc_rcx);
+  Printf("rdx = 0x%016llx  ", ucontext->uc_mcontext.mc_rdx);
   Printf("\n");
-  Printf("RDI = 0x%016llx  ", ucontext->uc_mcontext.mc_rdi);
-  Printf("RSI = 0x%016llx  ", ucontext->uc_mcontext.mc_rsi);
-  Printf("RBP = 0x%016llx  ", ucontext->uc_mcontext.mc_rbp);
-  Printf("RSP = 0x%016llx  ", ucontext->uc_mcontext.mc_rsp);
+  Printf("rdi = 0x%016llx  ", ucontext->uc_mcontext.mc_rdi);
+  Printf("rsi = 0x%016llx  ", ucontext->uc_mcontext.mc_rsi);
+  Printf("rbp = 0x%016llx  ", ucontext->uc_mcontext.mc_rbp);
+  Printf("rsp = 0x%016llx  ", ucontext->uc_mcontext.mc_rsp);
   Printf("\n");
-  Printf(" R8 = 0x%016llx  ", ucontext->uc_mcontext.mc_r8);
-  Printf(" R9 = 0x%016llx  ", ucontext->uc_mcontext.mc_r9);
-  Printf("R10 = 0x%016llx  ", ucontext->uc_mcontext.mc_r10);
-  Printf("R11 = 0x%016llx  ", ucontext->uc_mcontext.mc_r11);
+  Printf(" r8 = 0x%016llx  ", ucontext->uc_mcontext.mc_r8);
+  Printf(" r9 = 0x%016llx  ", ucontext->uc_mcontext.mc_r9);
+  Printf("r10 = 0x%016llx  ", ucontext->uc_mcontext.mc_r10);
+  Printf("r11 = 0x%016llx  ", ucontext->uc_mcontext.mc_r11);
   Printf("\n");
-  Printf("R12 = 0x%016llx  ", ucontext->uc_mcontext.mc_r12);
-  Printf("R13 = 0x%016llx  ", ucontext->uc_mcontext.mc_r13);
-  Printf("R14 = 0x%016llx  ", ucontext->uc_mcontext.mc_r14);
-  Printf("R15 = 0x%016llx  ", ucontext->uc_mcontext.mc_r15);
+  Printf("r12 = 0x%016llx  ", ucontext->uc_mcontext.mc_r12);
+  Printf("r13 = 0x%016llx  ", ucontext->uc_mcontext.mc_r13);
+  Printf("r14 = 0x%016llx  ", ucontext->uc_mcontext.mc_r14);
+  Printf("r15 = 0x%016llx  ", ucontext->uc_mcontext.mc_r15);
   Printf("\n");
 #    else
   (void)ucontext;
