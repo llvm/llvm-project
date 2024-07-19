@@ -60,6 +60,8 @@ OperandUseIterator &OperandUseIterator::operator++() {
 }
 
 UserUseIterator &UserUseIterator::operator++() {
+  // Get the corresponding llvm::Use, get the next in the list, and update the
+  // sandboxir::Use.
   llvm::Use *&LLVMUse = Use.LLVMUse;
   assert(LLVMUse != nullptr && "Already at end!");
   LLVMUse = LLVMUse->getNext();
@@ -107,6 +109,7 @@ void Value::replaceUsesWithIf(
     Value *OtherV, llvm::function_ref<bool(const Use &)> ShouldReplace) {
   assert(getType() == OtherV->getType() && "Can't replace with different type");
   llvm::Value *OtherVal = OtherV->Val;
+  // We are delegating RUWIf to LLVM IR's RUWIf.
   Val->replaceUsesWithIf(
       OtherVal, [&ShouldReplace, this](llvm::Use &LLVMUse) -> bool {
         User *DstU = cast_or_null<User>(Ctx.getValue(LLVMUse.getUser()));
@@ -119,6 +122,7 @@ void Value::replaceUsesWithIf(
 void Value::replaceAllUsesWith(Value *Other) {
   assert(getType() == Other->getType() &&
          "Replacing with Value of different type!");
+  // We are delegating RAUW to LLVM IR's RAUW.
   Val->replaceAllUsesWith(Other->Val);
 }
 
@@ -208,10 +212,12 @@ bool User::classof(const Value *From) {
 
 void User::setOperand(unsigned OperandIdx, Value *Operand) {
   assert(isa<llvm::User>(Val) && "No operands!");
+  // We are delegating to llvm::User::setOperand().
   cast<llvm::User>(Val)->setOperand(OperandIdx, Operand->Val);
 }
 
 bool User::replaceUsesOfWith(Value *FromV, Value *ToV) {
+  // We are delegating RUOW to LLVM IR's RUOW.
   return cast<llvm::User>(Val)->replaceUsesOfWith(FromV->Val, ToV->Val);
 }
 
@@ -282,6 +288,9 @@ BBIterator Instruction::getIterator() const {
 Instruction *Instruction::getNextNode() const {
   assert(getParent() != nullptr && "Detached!");
   assert(getIterator() != getParent()->end() && "Already at end!");
+  // `Val` is the bottom-most LLVM IR instruction. Get the next in the chain,
+  // and get the corresponding sandboxir Instruction that maps to it. This works
+  // even for SandboxIR Instructions that map to more than one LLVM Instruction.
   auto *LLVMI = cast<llvm::Instruction>(Val);
   assert(LLVMI->getParent() != nullptr && "LLVM IR instr is detached!");
   auto *NextLLVMI = LLVMI->getNextNode();
@@ -342,6 +351,7 @@ void Instruction::insertBefore(Instruction *BeforeI) {
   assert(is_sorted(getLLVMInstrs(),
                    [](auto *I1, auto *I2) { return I1->comesBefore(I2); }) &&
          "Expected program order!");
+  // Insert the LLVM IR Instructions in program order.
   for (llvm::Instruction *I : getLLVMInstrs())
     I->insertBefore(BeforeTopI);
 }
@@ -362,11 +372,14 @@ void Instruction::insertInto(BasicBlock *BB, const BBIterator &WhereIt) {
     LLVMBeforeI = nullptr;
     LLVMBeforeIt = LLVMBB->end();
   }
+  // Insert the LLVM IR Instructions in program order.
   for (llvm::Instruction *I : getLLVMInstrs())
     I->insertInto(LLVMBB, LLVMBeforeIt);
 }
 
 BasicBlock *Instruction::getParent() const {
+  // Get the LLVM IR Instruction that this maps to, get its parent, and get the
+  // corresponding sandboxir::BasicBlock by looking it up in sandboxir::Context.
   auto *BB = cast<llvm::Instruction>(Val)->getParent();
   if (BB == nullptr)
     return nullptr;
