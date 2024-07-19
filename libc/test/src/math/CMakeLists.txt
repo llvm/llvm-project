@@ -175,6 +175,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fadd_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    fadd_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.fadd
+    libc.src.__support.FPUtil.basic_operations
+)
+
+add_fp_unittest(
   trunc_test
   NEED_MPFR
   SUITE
