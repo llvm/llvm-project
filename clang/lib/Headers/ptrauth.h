@@ -234,9 +234,8 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
                                   extra_discrimination)]]
 
 #define __ptrauth_init_fini_discriminator 0xd9d4
-#define __ptrauth_init_fini_pointer(address_discrimination)                    \
-  __ptrauth(ptrauth_key_init_fini_pointer, address_discrimination,             \
-            __ptrauth_init_fini_discriminator)
+#define __ptrauth_init_fini_pointer                                            \
+  __ptrauth(ptrauth_key_init_fini_pointer, 1, __ptrauth_init_fini_discriminator)
 
 #else
 
