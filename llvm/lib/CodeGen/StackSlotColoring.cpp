@@ -224,13 +224,10 @@ void StackSlotColoring::ScanForSpillSlotRefs(MachineFunction &MF) {
           li.incrementWeight(
               LiveIntervals::getSpillWeight(false, true, MBFI, MI));
       }
-      for (MachineInstr::mmo_iterator MMOI = MI.memoperands_begin(),
-                                      EE = MI.memoperands_end();
-           MMOI != EE; ++MMOI) {
-        MachineMemOperand *MMO = *MMOI;
+      for (MachineMemOperand *MMO : MI.memoperands()) {
         if (const FixedStackPseudoSourceValue *FSV =
-            dyn_cast_or_null<FixedStackPseudoSourceValue>(
-                MMO->getPseudoValue())) {
+                dyn_cast_or_null<FixedStackPseudoSourceValue>(
+                    MMO->getPseudoValue())) {
           int FI = FSV->getFrameIndex();
           if (FI >= 0)
             SSRefs[FI].push_back(MMO);
@@ -552,8 +549,8 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
     Next = -1;
 
   SSIntervals.clear();
-  for (unsigned i = 0, e = SSRefs.size(); i != e; ++i)
-    SSRefs[i].clear();
+  for (auto &RefMMOs : SSRefs)
+    RefMMOs.clear();
   SSRefs.clear();
   OrigAlignments.clear();
   OrigSizes.clear();
