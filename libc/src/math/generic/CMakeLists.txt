@@ -459,7 +459,6 @@ add_entrypoint_object(
   HDRS
     ../fadd.h
   DEPENDS
-    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O3

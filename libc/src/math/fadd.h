@@ -12,9 +12,9 @@
 #define LLVM_LIBC_SRC_MATH_FADD_H
 
 namespace LIBC_NAMESPACE_DECL {
-    
+
 float fadd(double x, double y);
 
-} // namesapce LIBC_NAMESPACE_DECL 
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_FADD_H
