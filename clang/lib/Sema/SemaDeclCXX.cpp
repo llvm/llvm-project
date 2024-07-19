@@ -18138,38 +18138,40 @@ bool Sema::CheckOverridingFunctionAttributes(CXXMethodDecl *New,
   }
 
   // Virtual overrides: check for matching effects.
-  const auto OldFX = Old->getFunctionEffects();
-  const auto NewFXOrig = New->getFunctionEffects();
+  if (Context.hasAnyFunctionEffects()) {
+    const auto OldFX = Old->getFunctionEffects();
+    const auto NewFXOrig = New->getFunctionEffects();
 
-  if (OldFX != NewFXOrig) {
-    FunctionEffectSet NewFX(NewFXOrig);
-    const auto Diffs = FunctionEffectDifferences(OldFX, NewFX);
-    FunctionEffectSet::Conflicts Errs;
-    for (const auto &Diff : Diffs) {
-      switch (Diff.shouldDiagnoseMethodOverride(*Old, OldFX, *New, NewFX)) {
-      case FunctionEffectDiff::OverrideResult::NoAction:
-        break;
-      case FunctionEffectDiff::OverrideResult::Warn:
-        Diag(New->getLocation(), diag::warn_mismatched_func_effect_override)
-            << Diff.effectName();
-        Diag(Old->getLocation(), diag::note_overridden_virtual_function)
-            << Old->getReturnTypeSourceRange();
-        break;
-      case FunctionEffectDiff::OverrideResult::Merge: {
-        NewFX.insert(Diff.Old, Errs);
-        const auto *NewFT = New->getType()->castAs<FunctionProtoType>();
-        FunctionProtoType::ExtProtoInfo EPI = NewFT->getExtProtoInfo();
-        EPI.FunctionEffects = FunctionEffectsRef(NewFX);
-        QualType ModQT = Context.getFunctionType(NewFT->getReturnType(),
-                                                 NewFT->getParamTypes(), EPI);
-        New->setType(ModQT);
-        break;
+    if (OldFX != NewFXOrig) {
+      FunctionEffectSet NewFX(NewFXOrig);
+      const auto Diffs = FunctionEffectDifferences(OldFX, NewFX);
+      FunctionEffectSet::Conflicts Errs;
+      for (const auto &Diff : Diffs) {
+        switch (Diff.shouldDiagnoseMethodOverride(*Old, OldFX, *New, NewFX)) {
+        case FunctionEffectDiff::OverrideResult::NoAction:
+          break;
+        case FunctionEffectDiff::OverrideResult::Warn:
+          Diag(New->getLocation(), diag::warn_mismatched_func_effect_override)
+              << Diff.effectName();
+          Diag(Old->getLocation(), diag::note_overridden_virtual_function)
+              << Old->getReturnTypeSourceRange();
+          break;
+        case FunctionEffectDiff::OverrideResult::Merge: {
+          NewFX.insert(Diff.Old, Errs);
+          const auto *NewFT = New->getType()->castAs<FunctionProtoType>();
+          FunctionProtoType::ExtProtoInfo EPI = NewFT->getExtProtoInfo();
+          EPI.FunctionEffects = FunctionEffectsRef(NewFX);
+          QualType ModQT = Context.getFunctionType(NewFT->getReturnType(),
+                                                   NewFT->getParamTypes(), EPI);
+          New->setType(ModQT);
+          break;
+        }
+        }
       }
-      }
+      if (!Errs.empty())
+        diagnoseFunctionEffectMergeConflicts(Errs, New->getLocation(),
+                                             Old->getLocation());
     }
-    if (!Errs.empty())
-      diagnoseFunctionEffectMergeConflicts(Errs, New->getLocation(),
-                                           Old->getLocation());
   }
 
   CallingConv NewCC = NewFT->getCallConv(), OldCC = OldFT->getCallConv();
