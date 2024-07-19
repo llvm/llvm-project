@@ -5274,8 +5274,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     }
       // reverse preserves all characteristics of the input vec's element.
     case Intrinsic::vector_reverse:
-      Known = computeKnownFPClass(II->getArgOperand(0), II->getFastMathFlags(),
-                                  InterestedClasses, Depth + 1, Q);
+      Known = computeKnownFPClass(
+          II->getArgOperand(0), DemandedElts.reverseBits(),
+          II->getFastMathFlags(), InterestedClasses, Depth + 1, Q);
       break;
     case Intrinsic::trunc:
     case Intrinsic::floor:
