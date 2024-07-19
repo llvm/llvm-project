@@ -182,9 +182,11 @@ enum PPCMachineCombinerPattern : unsigned {
 
 // Initialize arrays for load and store spill opcodes on supported subtargets.
 #define StoreOpcodesForSpill                                                   \
-  { Pwr8StoreOpcodes, Pwr9StoreOpcodes, Pwr10StoreOpcodes, Pwr11StoreOpcodes, FutureStoreOpcodes }
+  {Pwr8StoreOpcodes, Pwr9StoreOpcodes, Pwr10StoreOpcodes, Pwr11StoreOpcodes,   \
+   FutureStoreOpcodes}
 #define LoadOpcodesForSpill                                                    \
-  { Pwr8LoadOpcodes, Pwr9LoadOpcodes, Pwr10LoadOpcodes, Pwr11LoadOpcodes, FutureLoadOpcodes }
+  {Pwr8LoadOpcodes, Pwr9LoadOpcodes, Pwr10LoadOpcodes, Pwr11LoadOpcodes,       \
+   FutureLoadOpcodes}
 
 class PPCSubtarget;
 class PPCInstrInfo : public PPCGenInstrInfo {
