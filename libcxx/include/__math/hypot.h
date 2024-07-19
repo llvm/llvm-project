@@ -66,13 +66,18 @@ _LIBCPP_HIDE_FROM_ABI std::pair<_Real, _Real> __hypot_factors() {
     return {0x1.0p+510, 0x1.0p-600};
   } else { // long double
     static_assert(std::is_same_v<_Real, long double>);
-    if constexpr (sizeof(_Real) == sizeof(double))
-      return static_cast<std::pair<_Real, _Real>>(__math::__hypot_factors<double>());
-    else {
-      static_assert(-16'381 == std::numeric_limits<_Real>::min_exponent);
-      static_assert(+16'384 == std::numeric_limits<_Real>::max_exponent);
-      return {0x1.0p+8'190l, 0x1.0p-9'000l};
-    }
+
+    // preprocessor guard necessary, otherwise literals (e.g. `0x1.0p+8'190l`) throw warnings even when shielded by `if
+    // constexpr`
+#  if __DBL_MAX_EXP__ == __LDBL_MAX_EXP__
+    static_assert(sizeof(_Real) == sizeof(double));
+    return static_cast<std::pair<_Real, _Real>>(__math::__hypot_factors<double>());
+#  else
+    static_assert(sizeof(_Real) > sizeof(double));
+    static_assert(-16'381 == std::numeric_limits<_Real>::min_exponent);
+    static_assert(+16'384 == std::numeric_limits<_Real>::max_exponent);
+    return {0x1.0p+8'190l, 0x1.0p-9'000l};
+#  endif
   }
 }
 
