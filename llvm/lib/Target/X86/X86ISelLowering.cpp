@@ -41024,23 +41024,59 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
   case X86ISD::BLENDI: {
     SDValue N0 = N.getOperand(0);
     SDValue N1 = N.getOperand(1);
+    unsigned EltBits = VT.getScalarSizeInBits();
 
-    // blend(bitcast(x),bitcast(y)) -> bitcast(blend(x,y)) to narrower types.
-    // TODO: Handle MVT::v16i16 repeated blend mask.
-    if (N0.getOpcode() == ISD::BITCAST && N1.getOpcode() == ISD::BITCAST &&
-        N0.getOperand(0).getValueType() == N1.getOperand(0).getValueType()) {
-      MVT SrcVT = N0.getOperand(0).getSimpleValueType();
-      if ((VT.getScalarSizeInBits() % SrcVT.getScalarSizeInBits()) == 0 &&
-          SrcVT.getScalarSizeInBits() >= 32) {
-        unsigned Size = VT.getVectorNumElements();
-        unsigned NewSize = SrcVT.getVectorNumElements();
-        APInt BlendMask = N.getConstantOperandAPInt(2).zextOrTrunc(Size);
-        APInt NewBlendMask = APIntOps::ScaleBitMask(BlendMask, NewSize);
-        return DAG.getBitcast(
-            VT, DAG.getNode(X86ISD::BLENDI, DL, SrcVT, N0.getOperand(0),
-                            N1.getOperand(0),
-                            DAG.getTargetConstant(NewBlendMask.getZExtValue(),
-                                                  DL, MVT::i8)));
+    if (N0.getOpcode() == ISD::BITCAST && N1.getOpcode() == ISD::BITCAST) {
+      // blend(bitcast(x),bitcast(y)) -> bitcast(blend(x,y)) to narrower types.
+      // TODO: Handle MVT::v16i16 repeated blend mask.
+      if (N0.getOperand(0).getValueType() == N1.getOperand(0).getValueType()) {
+        MVT SrcVT = N0.getOperand(0).getSimpleValueType();
+        unsigned SrcBits = SrcVT.getScalarSizeInBits();
+        if ((EltBits % SrcBits) == 0 && SrcBits >= 32) {
+          unsigned Size = VT.getVectorNumElements();
+          unsigned NewSize = SrcVT.getVectorNumElements();
+          APInt BlendMask = N.getConstantOperandAPInt(2).zextOrTrunc(Size);
+          APInt NewBlendMask = APIntOps::ScaleBitMask(BlendMask, NewSize);
+          return DAG.getBitcast(
+              VT, DAG.getNode(X86ISD::BLENDI, DL, SrcVT, N0.getOperand(0),
+                              N1.getOperand(0),
+                              DAG.getTargetConstant(NewBlendMask.getZExtValue(),
+                                                    DL, MVT::i8)));
+        }
+      }
+      // Share PSHUFB masks:
+      // blend(pshufb(x,m1),pshufb(y,m2))
+      // --> m3 = blend(m1,m2)
+      //     blend(pshufb(x,m3),pshufb(y,m3))
+      if (N0.hasOneUse() && N1.hasOneUse()) {
+        SmallVector<int> Mask, ByteMask;
+        SmallVector<SDValue> Ops;
+        SDValue LHS = peekThroughOneUseBitcasts(N0);
+        SDValue RHS = peekThroughOneUseBitcasts(N1);
+        if (LHS.getOpcode() == X86ISD::PSHUFB &&
+            RHS.getOpcode() == X86ISD::PSHUFB &&
+            LHS.getOperand(1) != RHS.getOperand(1) &&
+            LHS.getOperand(1).hasOneUse() && RHS.getOperand(1).hasOneUse() &&
+            getTargetShuffleMask(N, /*AllowSentinelZero=*/false, Ops, Mask)) {
+          assert(Ops.size() == 2 && LHS == peekThroughOneUseBitcasts(Ops[0]) &&
+                 RHS == peekThroughOneUseBitcasts(Ops[1]) &&
+                 "BLENDI decode mismatch");
+          MVT ShufVT = LHS.getSimpleValueType();
+          SDValue MaskLHS = LHS.getOperand(1);
+          SDValue MaskRHS = RHS.getOperand(1);
+          llvm::narrowShuffleMaskElts(EltBits / 8, Mask, ByteMask);
+          if (SDValue NewMask = combineX86ShufflesConstants(
+                  ShufVT, {MaskLHS, MaskRHS}, ByteMask,
+                  /*HasVariableMask=*/true, DAG, DL, Subtarget)) {
+            SDValue NewLHS = DAG.getNode(X86ISD::PSHUFB, DL, ShufVT,
+                                         LHS.getOperand(0), NewMask);
+            SDValue NewRHS = DAG.getNode(X86ISD::PSHUFB, DL, ShufVT,
+                                         RHS.getOperand(0), NewMask);
+            return DAG.getNode(X86ISD::BLENDI, DL, VT,
+                               DAG.getBitcast(VT, NewLHS),
+                               DAG.getBitcast(VT, NewRHS), N.getOperand(2));
+          }
+        }
       }
     }
     return SDValue();
