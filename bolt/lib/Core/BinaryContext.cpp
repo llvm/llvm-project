@@ -71,7 +71,7 @@ PrintMemData("print-mem-data",
 
 cl::opt<std::string> CompDirOverride(
     "comp-dir-override",
-    cl::desc("overrides DW_AT_comp_dir, and provides an alterantive base "
+    cl::desc("overrides DW_AT_comp_dir, and provides an alternative base "
              "location, which is used with DW_AT_dwo_name to construct a path "
              "to *.dwo files."),
     cl::Hidden, cl::init(""), cl::cat(BoltCategory));
