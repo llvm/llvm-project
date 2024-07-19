@@ -2466,7 +2466,7 @@ int SchedGroup::link(SUnit &SU, bool MakePred,
     // the A->B edge impossible, otherwise it returns true;
     bool Added = tryAddEdge(A, B);
     if (Added)
-      AddedEdges.push_back(std::pair(A, B));
+      AddedEdges.emplace_back(A, B);
     else
       ++MissedEdges;
   }
