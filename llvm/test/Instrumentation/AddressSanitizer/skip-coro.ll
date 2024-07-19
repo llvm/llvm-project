@@ -14,7 +14,7 @@ define ptr @foo() #0 {
 ; CHECK-NOT: %asan_local_stack_base
 entry:
   %__promise = alloca %struct.Promise, align 8
-  %0 = call token @llvm.coro.id(i32 16, ptr nonnull %__promise, ptr nonnull @foo, ptr null)
+  %0 = call token @llvm.coro.id(i32 16, ptr nonnull %__promise, ptr null, ptr null)
   %1 = call ptr @llvm.coro.noop()
   ret ptr %1
 }
@@ -32,5 +32,3 @@ attributes #0 = { sanitize_address presplitcoroutine }
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-
-
