@@ -850,9 +850,40 @@ ExprDependence clang::computeDependence(CXXDefaultArgExpr *E) {
 }
 
 ExprDependence clang::computeDependence(LambdaExpr *E,
-                                        bool ContainsUnexpandedParameterPack) {
+                                        bool BodyContainsUnexpandedPacks) {
   auto D = toExprDependenceForImpliedType(E->getType()->getDependence());
-  if (ContainsUnexpandedParameterPack)
+
+  // Record the presence of unexpanded packs.
+  bool ContainsUnexpandedPack =
+      BodyContainsUnexpandedPacks ||
+      (E->getTemplateParameterList() &&
+       E->getTemplateParameterList()->containsUnexpandedParameterPack());
+  if (!ContainsUnexpandedPack) {
+    // Also look at captures.
+    for (const auto &C : E->explicit_captures()) {
+      if (!C.capturesVariable() || C.isPackExpansion())
+        continue;
+      auto *Var = C.getCapturedVar();
+      if ((!Var->isInitCapture() && Var->isParameterPack()) ||
+          (Var->isInitCapture() && !Var->isParameterPack() &&
+           cast<VarDecl>(Var)->getInit()->containsUnexpandedParameterPack())) {
+        ContainsUnexpandedPack = true;
+        break;
+      }
+    }
+  }
+  // FIXME: Support other attributes, e.g. by storing corresponding flag inside
+  // Attr (similar to Attr::IsPackExpansion).
+  if (!ContainsUnexpandedPack) {
+    for (auto *A : E->getCallOperator()->specific_attrs<DiagnoseIfAttr>()) {
+      if (A->getCond() && A->getCond()->containsUnexpandedParameterPack()) {
+        ContainsUnexpandedPack = true;
+        break;
+      }
+    }
+  }
+
+  if (ContainsUnexpandedPack)
     D |= ExprDependence::UnexpandedPack;
   return D;
 }

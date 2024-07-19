@@ -1109,8 +1109,6 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
   PushDeclContext(CurScope, Method);
 
-  bool ContainsUnexpandedParameterPack = false;
-
   // Distinct capture names, for diagnostics.
   llvm::DenseMap<IdentifierInfo *, ValueDecl *> CaptureNames;
 
@@ -1312,8 +1310,6 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
         // Just ignore the ellipsis.
       }
-    } else if (Var->isParameterPack()) {
-      ContainsUnexpandedParameterPack = true;
     }
 
     if (C->Init.isUsable()) {
@@ -1328,7 +1324,6 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = C->ExplicitRange;
   }
   finishLambdaExplicitCaptures(LSI);
-  LSI->ContainsUnexpandedParameterPack |= ContainsUnexpandedParameterPack;
   PopDeclContext();
 }
 
@@ -1380,8 +1375,6 @@ void Sema::ActOnLambdaClosureParameters(
     AddTemplateParametersToLambdaCallOperator(LSI->CallOperator, LSI->Lambda,
                                               TemplateParams);
     LSI->Lambda->setLambdaIsGeneric(true);
-    LSI->ContainsUnexpandedParameterPack |=
-        TemplateParams->containsUnexpandedParameterPack();
   }
   LSI->AfterParameterList = true;
 }
@@ -2079,7 +2072,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
   bool ExplicitParams;
   bool ExplicitResultType;
   CleanupInfo LambdaCleanup;
-  bool ContainsUnexpandedParameterPack;
+  bool BodyContainsUnexpandedParameterPack;
   bool IsGenericLambda;
   {
     CallOperator = LSI->CallOperator;
@@ -2088,7 +2081,8 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     ExplicitParams = LSI->ExplicitParams;
     ExplicitResultType = !LSI->HasImplicitReturnType;
     LambdaCleanup = LSI->Cleanup;
-    ContainsUnexpandedParameterPack = LSI->ContainsUnexpandedParameterPack;
+    BodyContainsUnexpandedParameterPack =
+        LSI->BodyContainsUnexpandedParameterPack;
     IsGenericLambda = Class->isGenericLambda();
 
     CallOperator->setLexicalDeclContext(Class);
@@ -2227,11 +2221,10 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
 
   Cleanup.mergeFrom(LambdaCleanup);
 
-  LambdaExpr *Lambda = LambdaExpr::Create(Context, Class, IntroducerRange,
-                                          CaptureDefault, CaptureDefaultLoc,
-                                          ExplicitParams, ExplicitResultType,
-                                          CaptureInits, EndLoc,
-                                          ContainsUnexpandedParameterPack);
+  LambdaExpr *Lambda = LambdaExpr::Create(
+      Context, Class, IntroducerRange, CaptureDefault, CaptureDefaultLoc,
+      ExplicitParams, ExplicitResultType, CaptureInits, EndLoc,
+      BodyContainsUnexpandedParameterPack);
   // If the lambda expression's call operator is not explicitly marked constexpr
   // and we are not in a dependent context, analyze the call operator to infer
   // its constexpr-ness, suppressing diagnostics while doing so.

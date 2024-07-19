@@ -166,7 +166,7 @@ ExprDependence computeDependence(CXXTemporaryObjectExpr *E);
 ExprDependence computeDependence(CXXDefaultInitExpr *E);
 ExprDependence computeDependence(CXXDefaultArgExpr *E);
 ExprDependence computeDependence(LambdaExpr *E,
-                                 bool ContainsUnexpandedParameterPack);
+                                 bool BodyContainsUnexpandedPacks);
 ExprDependence computeDependence(CXXUnresolvedConstructExpr *E);
 ExprDependence computeDependence(CXXDependentScopeMemberExpr *E);
 ExprDependence computeDependence(MaterializeTemporaryExpr *E);

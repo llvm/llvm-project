@@ -895,8 +895,9 @@ public:
   /// Whether any of the capture expressions requires cleanups.
   CleanupInfo Cleanup;
 
-  /// Whether the lambda contains an unexpanded parameter pack.
-  bool ContainsUnexpandedParameterPack = false;
+  /// Whether the lambda body contains an unexpanded parameter pack.
+  /// Note that the captures and template paramters are handled separately.
+  bool BodyContainsUnexpandedParameterPack = false;
 
   /// Packs introduced by this lambda, if any.
   SmallVector<NamedDecl*, 4> LocalPacks;

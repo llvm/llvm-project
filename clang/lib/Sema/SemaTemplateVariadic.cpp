@@ -353,7 +353,11 @@ Sema::DiagnoseUnexpandedParameterPacks(SourceLocation Loc,
       }
 
       if (!EnclosingStmtExpr) {
-        LSI->ContainsUnexpandedParameterPack = true;
+        // It is ok to have unexpanded packs in captures, template parameters
+        // and parameters too, but only the body statement does not store this
+        // flag, so we have to propagate it through LamdaScopeInfo.
+        if (LSI->AfterParameterList)
+          LSI->BodyContainsUnexpandedParameterPack = true;
         return false;
       }
     } else {

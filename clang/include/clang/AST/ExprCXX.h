@@ -1975,7 +1975,8 @@ class LambdaExpr final : public Expr,
              LambdaCaptureDefault CaptureDefault,
              SourceLocation CaptureDefaultLoc, bool ExplicitParams,
              bool ExplicitResultType, ArrayRef<Expr *> CaptureInits,
-             SourceLocation ClosingBrace, bool ContainsUnexpandedParameterPack);
+             SourceLocation ClosingBrace,
+             bool BodyContainsUnexpandedParameterPack);
 
   /// Construct an empty lambda expression.
   LambdaExpr(EmptyShell Empty, unsigned NumCaptures);
@@ -1996,7 +1997,7 @@ public:
          LambdaCaptureDefault CaptureDefault, SourceLocation CaptureDefaultLoc,
          bool ExplicitParams, bool ExplicitResultType,
          ArrayRef<Expr *> CaptureInits, SourceLocation ClosingBrace,
-         bool ContainsUnexpandedParameterPack);
+         bool BodyContainsUnexpandedParameterPack);
 
   /// Construct a new lambda expression that will be deserialized from
   /// an external source.
@@ -4854,15 +4855,7 @@ public:
   CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
               SourceLocation LParenLoc, Expr *LHS, BinaryOperatorKind Opcode,
               SourceLocation EllipsisLoc, Expr *RHS, SourceLocation RParenLoc,
-              std::optional<unsigned> NumExpansions)
-      : Expr(CXXFoldExprClass, T, VK_PRValue, OK_Ordinary),
-        LParenLoc(LParenLoc), EllipsisLoc(EllipsisLoc), RParenLoc(RParenLoc),
-        NumExpansions(NumExpansions ? *NumExpansions + 1 : 0), Opcode(Opcode) {
-    SubExprs[SubExpr::Callee] = Callee;
-    SubExprs[SubExpr::LHS] = LHS;
-    SubExprs[SubExpr::RHS] = RHS;
-    setDependence(computeDependence(this));
-  }
+              std::optional<unsigned> NumExpansions);
 
   CXXFoldExpr(EmptyShell Empty) : Expr(CXXFoldExprClass, Empty) {}
 
