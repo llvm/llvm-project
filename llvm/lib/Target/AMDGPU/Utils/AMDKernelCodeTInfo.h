@@ -12,34 +12,51 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define QNAME(name) amd_kernel_code_t::name
+#define QNAME(name) AMDGPUMCKernelCodeT::name
 #define FLD_T(name) decltype(QNAME(name)), &QNAME(name)
 
-#define FIELD2(sname, aname, name) \
-  RECORD(sname, aname, printField<FLD_T(name)>, parseField<FLD_T(name)>)
+#ifndef PRINTFIELD
+#define PRINTFIELD(sname, aname, name) printField<FLD_T(name)>
+#endif
 
+#ifndef FIELD2
+#define FIELD2(sname, aname, name)                                             \
+  RECORD(sname, aname, PRINTFIELD(sname, aname, name), parseField<FLD_T(name)>)
+#endif
+
+#ifndef FIELD
 #define FIELD(name) FIELD2(name, name, name)
+#endif
 
-
+#ifndef PRINTCODEPROP
 #define PRINTCODEPROP(name) \
   printBitField<FLD_T(code_properties),\
                 AMD_CODE_PROPERTY_##name##_SHIFT,\
                 AMD_CODE_PROPERTY_##name##_WIDTH>
+#endif
 
+#ifndef PARSECODEPROP
 #define PARSECODEPROP(name) \
   parseBitField<FLD_T(code_properties),\
                 AMD_CODE_PROPERTY_##name##_SHIFT,\
                 AMD_CODE_PROPERTY_##name##_WIDTH>
+#endif
 
+#ifndef CODEPROP
 #define CODEPROP(name, shift) \
   RECORD(name, name, PRINTCODEPROP(shift), PARSECODEPROP(shift))
+#endif
 
 // have to define these lambdas because of Set/GetMacro
+#ifndef PRINTCOMP
 #define PRINTCOMP(GetMacro, Shift) \
 [](StringRef Name, const amd_kernel_code_t &C, raw_ostream &OS) { \
    printName(OS, Name) << \
      (int)GetMacro(C.compute_pgm_resource_registers >> Shift); \
 }
+#endif
+
+#ifndef PARSECOMP
 #define PARSECOMP(SetMacro, Shift) \
 [](amd_kernel_code_t &C, MCAsmParser &MCParser, raw_ostream &Err) { \
    int64_t Value = 0; \
@@ -49,15 +66,22 @@
    C.compute_pgm_resource_registers |= SetMacro(Value) << Shift; \
    return true; \
 }
+#endif
 
+#ifndef COMPPGM
 #define COMPPGM(name, aname, GetMacro, SetMacro, Shift) \
   RECORD(name, aname, PRINTCOMP(GetMacro, Shift), PARSECOMP(SetMacro, Shift))
+#endif
 
+#ifndef COMPPGM1
 #define COMPPGM1(name, aname, AccMacro) \
   COMPPGM(name, aname, G_00B848_##AccMacro, S_00B848_##AccMacro, 0)
+#endif
 
+#ifndef COMPPGM2
 #define COMPPGM2(name, aname, AccMacro) \
   COMPPGM(name, aname, G_00B84C_##AccMacro, S_00B84C_##AccMacro, 32)
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 // Begin of the table
@@ -143,13 +167,14 @@ FIELD(runtime_loader_kernel_symbol)
 
 #undef QNAME
 #undef FLD_T
+#undef PRINTFIELD
 #undef FIELD2
 #undef FIELD
 #undef PRINTCODEPROP
 #undef PARSECODEPROP
 #undef CODEPROP
 #undef PRINTCOMP
-#undef PAPSECOMP
+#undef PARSECOMP
 #undef COMPPGM
 #undef COMPPGM1
 #undef COMPPGM2

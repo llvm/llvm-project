@@ -13,7 +13,6 @@ import json
 
 class TestDAP_terminatedEvent(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
-    @skipIfRemote
     def test_terminated_event(self):
         """
         Terminated Event

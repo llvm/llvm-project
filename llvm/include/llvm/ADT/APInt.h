@@ -17,6 +17,7 @@
 
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/float128.h"
 #include <cassert>
 #include <climits>
 #include <cstring>
@@ -29,6 +30,7 @@ class StringRef;
 class hash_code;
 class raw_ostream;
 struct Align;
+class DynamicAPInt;
 
 template <typename T> class SmallVectorImpl;
 template <typename T> class ArrayRef;
@@ -1398,6 +1400,13 @@ public:
     *this &= Keep;
   }
 
+  /// Set top hiBits bits to 0.
+  void clearHighBits(unsigned hiBits) {
+    assert(hiBits <= BitWidth && "More bits than bitwidth");
+    APInt Keep = getLowBitsSet(BitWidth, BitWidth - hiBits);
+    *this &= Keep;
+  }
+
   /// Set the sign bit to 0.
   void clearSignBit() { clearBit(BitWidth - 1); }
 
@@ -1670,6 +1679,13 @@ public:
   /// any bit width. Exactly 64 bits will be translated.
   double bitsToDouble() const { return llvm::bit_cast<double>(getWord(0)); }
 
+#ifdef HAS_IEE754_FLOAT128
+  float128 bitsToQuad() const {
+    __uint128_t ul = ((__uint128_t)U.pVal[1] << 64) + U.pVal[0];
+    return llvm::bit_cast<float128>(ul);
+  }
+#endif
+
   /// Converts APInt bits to a float
   ///
   /// The conversion does not do a translation from integer to float, it just
@@ -1879,6 +1895,9 @@ private:
 
   friend struct DenseMapInfo<APInt, void>;
   friend class APSInt;
+
+  // Make DynamicAPInt a friend so it can access BitWidth directly.
+  friend DynamicAPInt;
 
   /// This constructor is used only internally for speed of construction of
   /// temporaries. It is unsafe since it takes ownership of the pointer, so it

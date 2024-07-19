@@ -126,3 +126,51 @@ raw_ostream &mlir::operator<<(raw_ostream &os, const ConstantIntRanges &range) {
   return os << "unsigned : [" << range.umin() << ", " << range.umax()
             << "] signed : [" << range.smin() << ", " << range.smax() << "]";
 }
+
+IntegerValueRange IntegerValueRange::getMaxRange(Value value) {
+  unsigned width = ConstantIntRanges::getStorageBitwidth(value.getType());
+  if (width == 0)
+    return {};
+
+  APInt umin = APInt::getMinValue(width);
+  APInt umax = APInt::getMaxValue(width);
+  APInt smin = width != 0 ? APInt::getSignedMinValue(width) : umin;
+  APInt smax = width != 0 ? APInt::getSignedMaxValue(width) : umax;
+  return IntegerValueRange{ConstantIntRanges{umin, umax, smin, smax}};
+}
+
+raw_ostream &mlir::operator<<(raw_ostream &os, const IntegerValueRange &range) {
+  range.print(os);
+  return os;
+}
+
+void mlir::intrange::detail::defaultInferResultRanges(
+    InferIntRangeInterface interface, ArrayRef<IntegerValueRange> argRanges,
+    SetIntLatticeFn setResultRanges) {
+  llvm::SmallVector<ConstantIntRanges> unpacked;
+  unpacked.reserve(argRanges.size());
+
+  for (const IntegerValueRange &range : argRanges) {
+    if (range.isUninitialized())
+      return;
+    unpacked.push_back(range.getValue());
+  }
+
+  interface.inferResultRanges(
+      unpacked,
+      [&setResultRanges](Value value, const ConstantIntRanges &argRanges) {
+        setResultRanges(value, IntegerValueRange{argRanges});
+      });
+}
+
+void mlir::intrange::detail::defaultInferResultRangesFromOptional(
+    InferIntRangeInterface interface, ArrayRef<ConstantIntRanges> argRanges,
+    SetIntRangeFn setResultRanges) {
+  auto ranges = llvm::to_vector_of<IntegerValueRange>(argRanges);
+  interface.inferResultRangesFromOptional(
+      ranges,
+      [&setResultRanges](Value value, const IntegerValueRange &argRanges) {
+        if (!argRanges.isUninitialized())
+          setResultRanges(value, argRanges.getValue());
+      });
+}

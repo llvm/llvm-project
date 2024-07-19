@@ -90,6 +90,18 @@ void dxil::createShaderModelMD(Module &M) {
   Entry->addOperand(MDNode::get(Ctx, Vals));
 }
 
+void dxil::createDXILVersionMD(Module &M) {
+  Triple TT(Triple::normalize(M.getTargetTriple()));
+  VersionTuple Ver = TT.getDXILVersion();
+  LLVMContext &Ctx = M.getContext();
+  IRBuilder<> B(Ctx);
+  NamedMDNode *Entry = M.getOrInsertNamedMetadata("dx.version");
+  Metadata *Vals[2];
+  Vals[0] = ConstantAsMetadata::get(B.getInt32(Ver.getMajor()));
+  Vals[1] = ConstantAsMetadata::get(B.getInt32(Ver.getMinor().value_or(0)));
+  Entry->addOperand(MDNode::get(Ctx, Vals));
+}
+
 static uint32_t getShaderStage(Triple::EnvironmentType Env) {
   return (uint32_t)Env - (uint32_t)llvm::Triple::Pixel;
 }

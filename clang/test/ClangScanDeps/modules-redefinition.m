@@ -49,6 +49,7 @@ module third {}
 // CHECK-NEXT:         [[PREFIX]]/first/module.modulemap",
 // CHECK-NEXT:         [[PREFIX]]/third/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "first"
 // CHECK-NEXT:     }
 // CHECK:        ]

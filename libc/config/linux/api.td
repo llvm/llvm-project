@@ -9,42 +9,6 @@ include "spec/stdc_ext.td"
 include "spec/llvm_libc_ext.td"
 include "spec/llvm_libc_stdfix_ext.td"
 
-def AssertMacro : MacroDef<"assert"> {
-  let Defn = [{
-    #undef assert
-
-    #ifdef NDEBUG
-    #define assert(e) (void)0
-    #else
-
-    #ifdef __cplusplus
-    extern "C"
-    #endif
-    _Noreturn void __assert_fail(const char *, const char *, unsigned, const char *) __NOEXCEPT;
-
-    #define assert(e)  \
-      ((e) ? (void)0 : __assert_fail(#e, __FILE__, __LINE__, __PRETTY_FUNCTION__))
-
-    #endif
-  }];
-}
-
-def StaticAssertMacro : MacroDef<"static_assert"> {
-  let Defn = [{
-    #ifndef __cplusplus
-    #undef static_assert
-    #define static_assert _Static_assert
-    #endif
-  }];
-}
-
-def AssertAPI : PublicAPI<"assert.h"> {
-  let Macros = [
-    AssertMacro,
-    StaticAssertMacro,
-  ];
-}
-
 def CTypeAPI : PublicAPI<"ctype.h"> {
 }
 
@@ -76,9 +40,6 @@ def StdIOAPI : PublicAPI<"stdio.h"> {
     SimpleMacroDef<"stderr", "stderr">,
     SimpleMacroDef<"stdin", "stdin">,
     SimpleMacroDef<"stdout", "stdout">,
-    SimpleMacroDef<"_IOFBF", "0">,
-    SimpleMacroDef<"_IOLBF", "1">,
-    SimpleMacroDef<"_IONBF", "2">,
   ];
   let Types = [
     "FILE",
@@ -181,6 +142,7 @@ def PThreadAPI : PublicAPI<"pthread.h"> {
       "pthread_mutexattr_t",
       "pthread_once_t",
       "pthread_rwlockattr_t",
+      "pthread_rwlock_t",
       "pthread_t",
   ];
 }
@@ -270,6 +232,7 @@ def SysTypesAPI : PublicAPI<"sys/types.h"> {
     "pthread_mutexattr_t",
     "pthread_once_t",
     "pthread_rwlockattr_t",
+    "pthread_rwlock_t",
     "pthread_t",
     "size_t",
     "ssize_t",
@@ -304,5 +267,5 @@ def SearchAPI : PublicAPI<"search.h"> {
 }
 
 def SysStatvfsAPI : PublicAPI<"sys/statvfs.h"> {
-  let Types = ["fsblkcnt_t", "fsfilcnt_t", "struct statvfs"];
+  let Types = ["struct statvfs"];
 }

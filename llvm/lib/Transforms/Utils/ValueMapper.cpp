@@ -1236,14 +1236,14 @@ void ValueMapper::remapInstruction(Instruction &I) {
   FlushingMapper(pImpl)->remapInstruction(&I);
 }
 
-void ValueMapper::remapDbgVariableRecord(Module *M, DbgVariableRecord &V) {
-  FlushingMapper(pImpl)->remapDbgRecord(V);
+void ValueMapper::remapDbgRecord(Module *M, DbgRecord &DR) {
+  FlushingMapper(pImpl)->remapDbgRecord(DR);
 }
 
-void ValueMapper::remapDbgVariableRecordRange(
+void ValueMapper::remapDbgRecordRange(
     Module *M, iterator_range<DbgRecord::self_iterator> Range) {
-  for (DbgVariableRecord &DVR : filterDbgVars(Range)) {
-    remapDbgVariableRecord(M, DVR);
+  for (DbgRecord &DR : Range) {
+    remapDbgRecord(M, DR);
   }
 }
 

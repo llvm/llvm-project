@@ -144,8 +144,17 @@ Tag release candidates:
 
   $ git tag -sa llvmorg-X.Y.Z-rcN
 
-The Release Manager must supply pre-packaged source tarballs for users.  This can
-be done with the export.sh script in utils/release.
+The pre-packaged source tarballs will be automatically generated via the
+"Release Sources" workflow on GitHub.  This workflow will create an artifact
+containing all the release tarballs and the artifact attestation.  The
+Release Manager should download the artifact, verify the tarballs, sign them,
+and then upload them to the release page.
+
+::
+
+  $ unzip artifact.zip
+  $ gh auth login
+  $ for f in *.xz; do gh attestation verify --owner llvm $f && gpg -b $f; done
 
 Tarballs, release binaries,  or any other release artifacts must be uploaded to
 GitHub.  This can be done using the github-upload-release.py script in utils/release.
@@ -154,12 +163,6 @@ GitHub.  This can be done using the github-upload-release.py script in utils/rel
 
   $ github-upload-release.py upload --token <github-token> --release X.Y.Z-rcN --files <release_files>
 
-::
-
-  $ ./export.sh -release X.Y.Z -rc $RC
-
-This will generate source tarballs for each LLVM project being validated, which
-can be uploaded to github for further testing.
 
 Build The Binary Distribution
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

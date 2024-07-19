@@ -174,11 +174,11 @@ module {
     // CHECK-NEXT: nse = 5
     // CHECK-NEXT: dim = ( 4, 4 )
     // CHECK-NEXT: lvl = ( 4, 4 )
-    // CHECK-NEXT: pos[0] : ( 0, 3
-    // CHECK-NEXT: crd[0] : ( 0, 2, 3
-    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 5
-    // CHECK-NEXT: crd[1] : ( 1, 2, 2, 2, 3
-    // CHECK-NEXT: values : ( 30.5, 4.2, 4.6, 7, 8
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 5 )
+    // CHECK-NEXT: crd[1] : ( 1, 2, 2, 2, 3 )
+    // CHECK-NEXT: values : ( 30.5, 4.2, 4.6, 7, 8 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %2 : tensor<4x4xf64, #DCSR>
@@ -196,9 +196,9 @@ module {
     // CHECK-NEXT: nse = 5
     // CHECK-NEXT: dim = ( 4, 4 )
     // CHECK-NEXT: lvl = ( 4, 4 )
-    // CHECK-NEXT: pos[1] : ( 0, 2, 2, 3, 5
-    // CHECK-NEXT: crd[1] : ( 1, 2, 2, 2, 3
-    // CHECK-NEXT: values : ( 30.5, 4.2, 4.6, 7, 8
+    // CHECK-NEXT: pos[1] : ( 0, 2, 2, 3, 5 )
+    // CHECK-NEXT: crd[1] : ( 1, 2, 2, 2, 3 )
+    // CHECK-NEXT: values : ( 30.5, 4.2, 4.6, 7, 8 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %3 : tensor<4x4xf64, #CSR>
@@ -210,9 +210,9 @@ module {
     // CHECK-NEXT: nse = 3
     // CHECK-NEXT: dim = ( 4, 4 )
     // CHECK-NEXT: lvl = ( 4, 4 )
-    // CHECK-NEXT: pos[1] : ( 0, 1, 2, 2, 3
-    // CHECK-NEXT: crd[1] : ( 0, 0, 0
-    // CHECK-NEXT: values : ( 2.3, 6.9, 12.6
+    // CHECK-NEXT: pos[1] : ( 0, 1, 2, 2, 3 )
+    // CHECK-NEXT: crd[1] : ( 0, 0, 0 )
+    // CHECK-NEXT: values : ( 2.3, 6.9, 12.6 )
     // CHECK-NEXT: ----
     //
     %s1 = tensor.extract_slice %tmp[0, 1][4, 4][2, 1] : tensor<8x8xf64, #DCSR> to tensor<4x4xf64, #DCSR_SLICE_1>
@@ -228,9 +228,9 @@ module {
     // CHECK-NEXT: nse = 3
     // CHECK-NEXT: dim = ( 4, 4 )
     // CHECK-NEXT: lvl = ( 4, 4 )
-    // CHECK-NEXT: pos[0] : ( 0, 3
-    // CHECK-NEXT: crd[0] : ( 0, 0, 1, 0, 3, 0
-    // CHECK-NEXT: values : ( 2.3, 6.9, 12.6
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 0, 1, 0, 3, 0 )
+    // CHECK-NEXT: values : ( 2.3, 6.9, 12.6 )
     // CHECK-NEXT: ----
     //
     %t1_coo = sparse_tensor.convert %sa : tensor<8x8xf64> to tensor<8x8xf64, #COO>
@@ -246,9 +246,9 @@ module {
     // CHECK-NEXT: nse = 3
     // CHECK-NEXT: dim = ( 4, 4 )
     // CHECK-NEXT: lvl = ( 4, 4 )
-    // CHECK-NEXT: pos[1] : ( 0, 1, 2, 2, 3
-    // CHECK-NEXT: crd[1] : ( 0, 0, 0
-    // CHECK-NEXT: values : ( 2.3, 6.9, 12.6
+    // CHECK-NEXT: pos[1] : ( 0, 1, 2, 2, 3 )
+    // CHECK-NEXT: crd[1] : ( 0, 0, 0 )
+    // CHECK-NEXT: values : ( 2.3, 6.9, 12.6 )
     // CHECK-NEXT: ----
     //
     %s1_dyn = tensor.extract_slice %tmp[%c_0, %c_1][4, 4][%c_2, %c_1] : tensor<8x8xf64, #DCSR> to tensor<4x4xf64, #DCSR_SLICE_dyn>

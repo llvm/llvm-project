@@ -73,8 +73,8 @@ struct Scanner {
     // Set the lexer to use 'tok::at' for '@', instead of 'tok::unknown'.
     LangOpts.ObjC = true;
     LangOpts.LineComment = true;
-    // FIXME: we do not enable C11 or C++11, so we are missing u/u8/U"" and
-    // R"()" literals.
+    LangOpts.RawStringLiterals = true;
+    // FIXME: we do not enable C11 or C++11, so we are missing u/u8/U"".
     return LangOpts;
   }
 
@@ -660,7 +660,18 @@ bool Scanner::lexModule(const char *&First, const char *const End) {
   // an import.
 
   switch (*First) {
-  case ':':
+  case ':': {
+    // `module :` is never the start of a valid module declaration.
+    if (Id == "module") {
+      skipLine(First, End);
+      return false;
+    }
+    // `import:(type)name` is a valid ObjC method decl, so check one more token.
+    (void)lexToken(First, End);
+    if (!tryLexIdentifierOrSkipLine(First, End))
+      return false;
+    break;
+  }
   case '<':
   case '"':
     break;

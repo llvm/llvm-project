@@ -45,7 +45,7 @@ getIntrinsicEffects(mlir::Operation *self,
          "hlfir intrinsic ops only produce 1 result");
   if (mlir::isa<hlfir::ExprType>(self->getResult(0).getType()))
     effects.emplace_back(mlir::MemoryEffects::Allocate::get(),
-                         self->getResult(0),
+                         self->getOpResult(0),
                          mlir::SideEffects::DefaultResource::get());
 
   // read effect if we read from a pointer or refference type
@@ -59,10 +59,10 @@ getIntrinsicEffects(mlir::Operation *self,
   // } to {
   //   hlfir.yield %0#0 : !fir.box<!fir.array<?x?xf32>>
   // }
-  for (mlir::Value operand : self->getOperands()) {
-    mlir::Type opTy = operand.getType();
+  for (mlir::OpOperand &operand : self->getOpOperands()) {
+    mlir::Type opTy = operand.get().getType();
     if (fir::isa_ref_type(opTy) || fir::isa_box_type(opTy))
-      effects.emplace_back(mlir::MemoryEffects::Read::get(), operand,
+      effects.emplace_back(mlir::MemoryEffects::Read::get(), &operand,
                            mlir::SideEffects::DefaultResource::get());
   }
 }
@@ -78,7 +78,7 @@ static bool isAllocatableBoxRef(mlir::Type type) {
   return boxType && mlir::isa<fir::HeapType>(boxType.getEleTy());
 }
 
-mlir::LogicalResult hlfir::AssignOp::verify() {
+llvm::LogicalResult hlfir::AssignOp::verify() {
   mlir::Type lhsType = getLhs().getType();
   if (isAllocatableAssignment() && !isAllocatableBoxRef(lhsType))
     return emitOpError("lhs must be an allocatable when `realloc` is set");
@@ -125,19 +125,19 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
                              mlir::OperationState &result, mlir::Value memref,
                              llvm::StringRef uniq_name, mlir::Value shape,
                              mlir::ValueRange typeparams,
+                             mlir::Value dummy_scope,
                              fir::FortranVariableFlagsAttr fortran_attrs,
-                             fir::CUDADataAttributeAttr cuda_attr) {
+                             cuf::DataAttributeAttr data_attr) {
   auto nameAttr = builder.getStringAttr(uniq_name);
   mlir::Type inputType = memref.getType();
   bool hasExplicitLbs = hasExplicitLowerBounds(shape);
   mlir::Type hlfirVariableType =
       getHLFIRVariableType(inputType, hasExplicitLbs);
   build(builder, result, {hlfirVariableType, inputType}, memref, shape,
-        typeparams, /*dummy_scope=*/nullptr, nameAttr, fortran_attrs,
-        cuda_attr);
+        typeparams, dummy_scope, nameAttr, fortran_attrs, data_attr);
 }
 
-mlir::LogicalResult hlfir::DeclareOp::verify() {
+llvm::LogicalResult hlfir::DeclareOp::verify() {
   if (getMemref().getType() != getResult(1).getType())
     return emitOpError("second result type must match input memref type");
   mlir::Type hlfirVariableType = getHLFIRVariableType(
@@ -278,7 +278,7 @@ static void printDesignatorComplexPart(mlir::OpAsmPrinter &p,
   }
 }
 
-mlir::LogicalResult hlfir::DesignateOp::verify() {
+llvm::LogicalResult hlfir::DesignateOp::verify() {
   mlir::Type memrefType = getMemref().getType();
   mlir::Type baseType = getFortranElementOrSequenceType(memrefType);
   mlir::Type baseElementType = fir::unwrapSequenceType(baseType);
@@ -433,7 +433,7 @@ mlir::LogicalResult hlfir::DesignateOp::verify() {
 // ParentComponentOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::ParentComponentOp::verify() {
+llvm::LogicalResult hlfir::ParentComponentOp::verify() {
   mlir::Type baseType =
       hlfir::getFortranElementOrSequenceType(getMemref().getType());
   auto maybeInputSeqType = mlir::dyn_cast<fir::SequenceType>(baseType);
@@ -488,7 +488,7 @@ mlir::LogicalResult hlfir::ParentComponentOp::verify() {
 // LogicalReductionOp
 //===----------------------------------------------------------------------===//
 template <typename LogicalReductionOp>
-static mlir::LogicalResult
+static llvm::LogicalResult
 verifyLogicalReductionOp(LogicalReductionOp reductionOp) {
   mlir::Operation *op = reductionOp->getOperation();
 
@@ -539,7 +539,7 @@ verifyLogicalReductionOp(LogicalReductionOp reductionOp) {
 // AllOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::AllOp::verify() {
+llvm::LogicalResult hlfir::AllOp::verify() {
   return verifyLogicalReductionOp<hlfir::AllOp *>(this);
 }
 
@@ -554,7 +554,7 @@ void hlfir::AllOp::getEffects(
 // AnyOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::AnyOp::verify() {
+llvm::LogicalResult hlfir::AnyOp::verify() {
   return verifyLogicalReductionOp<hlfir::AnyOp *>(this);
 }
 
@@ -569,7 +569,7 @@ void hlfir::AnyOp::getEffects(
 // CountOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::CountOp::verify() {
+llvm::LogicalResult hlfir::CountOp::verify() {
   mlir::Operation *op = getOperation();
 
   auto results = op->getResultTypes();
@@ -626,7 +626,7 @@ getCharacterLengthIfStatic(mlir::Type t) {
   return std::nullopt;
 }
 
-mlir::LogicalResult hlfir::ConcatOp::verify() {
+llvm::LogicalResult hlfir::ConcatOp::verify() {
   if (getStrings().size() < 2)
     return emitOpError("must be provided at least two string operands");
   unsigned kind = getCharacterKind(getResult().getType());
@@ -668,7 +668,7 @@ void hlfir::ConcatOp::getEffects(
 //===----------------------------------------------------------------------===//
 
 template <typename NumericalReductionOp>
-static mlir::LogicalResult
+static llvm::LogicalResult
 verifyArrayAndMaskForReductionOp(NumericalReductionOp reductionOp) {
   mlir::Value array = reductionOp->getArray();
   mlir::Value mask = reductionOp->getMask();
@@ -707,7 +707,7 @@ verifyArrayAndMaskForReductionOp(NumericalReductionOp reductionOp) {
 }
 
 template <typename NumericalReductionOp>
-static mlir::LogicalResult
+static llvm::LogicalResult
 verifyNumericalReductionOp(NumericalReductionOp reductionOp) {
   mlir::Operation *op = reductionOp->getOperation();
   auto results = op->getResultTypes();
@@ -760,7 +760,7 @@ verifyNumericalReductionOp(NumericalReductionOp reductionOp) {
 // ProductOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::ProductOp::verify() {
+llvm::LogicalResult hlfir::ProductOp::verify() {
   return verifyNumericalReductionOp<hlfir::ProductOp *>(this);
 }
 
@@ -776,7 +776,7 @@ void hlfir::ProductOp::getEffects(
 //===----------------------------------------------------------------------===//
 
 template <typename CharacterReductionOp>
-static mlir::LogicalResult
+static llvm::LogicalResult
 verifyCharacterReductionOp(CharacterReductionOp reductionOp) {
   mlir::Operation *op = reductionOp->getOperation();
   auto results = op->getResultTypes();
@@ -821,7 +821,7 @@ verifyCharacterReductionOp(CharacterReductionOp reductionOp) {
 // MaxvalOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::MaxvalOp::verify() {
+llvm::LogicalResult hlfir::MaxvalOp::verify() {
   mlir::Operation *op = getOperation();
 
   auto results = op->getResultTypes();
@@ -845,7 +845,7 @@ void hlfir::MaxvalOp::getEffects(
 // MinvalOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::MinvalOp::verify() {
+llvm::LogicalResult hlfir::MinvalOp::verify() {
   mlir::Operation *op = getOperation();
 
   auto results = op->getResultTypes();
@@ -870,7 +870,7 @@ void hlfir::MinvalOp::getEffects(
 //===----------------------------------------------------------------------===//
 
 template <typename NumericalReductionOp>
-static mlir::LogicalResult
+static llvm::LogicalResult
 verifyResultForMinMaxLoc(NumericalReductionOp reductionOp) {
   mlir::Operation *op = reductionOp->getOperation();
   auto results = op->getResultTypes();
@@ -908,7 +908,7 @@ verifyResultForMinMaxLoc(NumericalReductionOp reductionOp) {
   return mlir::success();
 }
 
-mlir::LogicalResult hlfir::MinlocOp::verify() {
+llvm::LogicalResult hlfir::MinlocOp::verify() {
   auto res = verifyArrayAndMaskForReductionOp(this);
   if (failed(res))
     return res;
@@ -927,7 +927,7 @@ void hlfir::MinlocOp::getEffects(
 // MaxlocOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::MaxlocOp::verify() {
+llvm::LogicalResult hlfir::MaxlocOp::verify() {
   auto res = verifyArrayAndMaskForReductionOp(this);
   if (failed(res))
     return res;
@@ -971,7 +971,7 @@ void hlfir::SetLengthOp::getEffects(
 // SumOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::SumOp::verify() {
+llvm::LogicalResult hlfir::SumOp::verify() {
   return verifyNumericalReductionOp<hlfir::SumOp *>(this);
 }
 
@@ -986,7 +986,7 @@ void hlfir::SumOp::getEffects(
 // DotProductOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::DotProductOp::verify() {
+llvm::LogicalResult hlfir::DotProductOp::verify() {
   mlir::Value lhs = getLhs();
   mlir::Value rhs = getRhs();
   fir::SequenceType lhsTy = mlir::cast<fir::SequenceType>(
@@ -1042,7 +1042,7 @@ void hlfir::DotProductOp::getEffects(
 // MatmulOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::MatmulOp::verify() {
+llvm::LogicalResult hlfir::MatmulOp::verify() {
   mlir::Value lhs = getLhs();
   mlir::Value rhs = getRhs();
   fir::SequenceType lhsTy = mlir::cast<fir::SequenceType>(
@@ -1111,11 +1111,11 @@ mlir::LogicalResult hlfir::MatmulOp::verify() {
   return mlir::success();
 }
 
-mlir::LogicalResult
+llvm::LogicalResult
 hlfir::MatmulOp::canonicalize(MatmulOp matmulOp,
                               mlir::PatternRewriter &rewriter) {
   // the only two uses of the transposed matrix should be for the hlfir.matmul
-  // and hlfir.destory
+  // and hlfir.destroy
   auto isOtherwiseUnused = [&](hlfir::TransposeOp transposeOp) -> bool {
     std::size_t numUses = 0;
     for (mlir::Operation *user : transposeOp.getResult().getUsers()) {
@@ -1170,7 +1170,7 @@ void hlfir::MatmulOp::getEffects(
 // TransposeOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::TransposeOp::verify() {
+llvm::LogicalResult hlfir::TransposeOp::verify() {
   mlir::Value array = getArray();
   fir::SequenceType arrayTy = mlir::cast<fir::SequenceType>(
       hlfir::getFortranElementOrSequenceType(array.getType()));
@@ -1212,7 +1212,7 @@ void hlfir::TransposeOp::getEffects(
 // MatmulTransposeOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::MatmulTransposeOp::verify() {
+llvm::LogicalResult hlfir::MatmulTransposeOp::verify() {
   mlir::Value lhs = getLhs();
   mlir::Value rhs = getRhs();
   fir::SequenceType lhsTy = mlir::cast<fir::SequenceType>(
@@ -1350,7 +1350,7 @@ void hlfir::EndAssociateOp::build(mlir::OpBuilder &builder,
                associate.getMustFreeStrorageFlag());
 }
 
-mlir::LogicalResult hlfir::EndAssociateOp::verify() {
+llvm::LogicalResult hlfir::EndAssociateOp::verify() {
   mlir::Value var = getVar();
   if (hlfir::mayHaveAllocatableComponent(var.getType()) &&
       !hlfir::isFortranEntity(var))
@@ -1438,7 +1438,7 @@ mlir::Value hlfir::ElementalOp::getElementEntity() {
   return mlir::cast<hlfir::YieldElementOp>(getBody()->back()).getElementValue();
 }
 
-mlir::LogicalResult hlfir::ElementalOp::verify() {
+llvm::LogicalResult hlfir::ElementalOp::verify() {
   mlir::Value mold = getMold();
   hlfir::ExprType resultType = mlir::cast<hlfir::ExprType>(getType());
   if (!!mold != resultType.isPolymorphic())
@@ -1476,7 +1476,7 @@ void hlfir::NullOp::build(mlir::OpBuilder &builder,
 // DestroyOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::DestroyOp::verify() {
+llvm::LogicalResult hlfir::DestroyOp::verify() {
   if (mustFinalizeExpr()) {
     mlir::Value expr = getExpr();
     hlfir::ExprType exprTy = mlir::cast<hlfir::ExprType>(expr.getType());
@@ -1495,9 +1495,9 @@ mlir::LogicalResult hlfir::DestroyOp::verify() {
 
 void hlfir::CopyInOp::build(mlir::OpBuilder &builder,
                             mlir::OperationState &odsState, mlir::Value var,
-                            mlir::Value var_is_present) {
+                            mlir::Value tempBox, mlir::Value var_is_present) {
   return build(builder, odsState, {var.getType(), builder.getI1Type()}, var,
-               var_is_present);
+               tempBox, var_is_present);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1517,7 +1517,7 @@ std::size_t hlfir::ShapeOfOp::getRank() {
   return shape.getRank();
 }
 
-mlir::LogicalResult hlfir::ShapeOfOp::verify() {
+llvm::LogicalResult hlfir::ShapeOfOp::verify() {
   mlir::Value expr = getExpr();
   hlfir::ExprType exprTy = mlir::cast<hlfir::ExprType>(expr.getType());
   std::size_t exprRank = exprTy.getShape().size();
@@ -1532,7 +1532,7 @@ mlir::LogicalResult hlfir::ShapeOfOp::verify() {
   return mlir::success();
 }
 
-mlir::LogicalResult
+llvm::LogicalResult
 hlfir::ShapeOfOp::canonicalize(ShapeOfOp shapeOf,
                                mlir::PatternRewriter &rewriter) {
   // if extent information is available at compile time, immediately fold the
@@ -1544,11 +1544,11 @@ hlfir::ShapeOfOp::canonicalize(ShapeOfOp shapeOf,
   mlir::Value shape = hlfir::genExprShape(rewriter, loc, expr);
   if (!shape)
     // shape information is not available at compile time
-    return mlir::LogicalResult::failure();
+    return llvm::LogicalResult::failure();
 
   rewriter.replaceAllUsesWith(shapeOf.getResult(), shape);
   rewriter.eraseOp(shapeOf);
-  return mlir::LogicalResult::success();
+  return llvm::LogicalResult::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1563,7 +1563,7 @@ void hlfir::GetExtentOp::build(mlir::OpBuilder &builder,
   build(builder, result, indexTy, shape, dimAttr);
 }
 
-mlir::LogicalResult hlfir::GetExtentOp::verify() {
+llvm::LogicalResult hlfir::GetExtentOp::verify() {
   fir::ShapeType shapeTy = mlir::cast<fir::ShapeType>(getShape().getType());
   std::uint64_t rank = shapeTy.getRank();
   llvm::APInt dim = getDim();
@@ -1640,7 +1640,7 @@ static mlir::Operation *getTerminator(mlir::Region &region) {
   return &region.back().back();
 }
 
-mlir::LogicalResult hlfir::RegionAssignOp::verify() {
+llvm::LogicalResult hlfir::RegionAssignOp::verify() {
   if (!mlir::isa_and_nonnull<hlfir::YieldOp>(getTerminator(getRhsRegion())))
     return emitOpError(
         "right-hand side region must be terminated by an hlfir.yield");
@@ -1692,7 +1692,7 @@ void hlfir::ElementalAddrOp::build(mlir::OpBuilder &builder,
   odsState.addRegion();
 }
 
-mlir::LogicalResult hlfir::ElementalAddrOp::verify() {
+llvm::LogicalResult hlfir::ElementalAddrOp::verify() {
   hlfir::YieldOp yieldOp =
       mlir::dyn_cast_or_null<hlfir::YieldOp>(getTerminator(getBody()));
   if (!yieldOp)
@@ -1729,7 +1729,7 @@ mlir::Region *hlfir::ElementalAddrOp::getElementCleanup() {
 // OrderedAssignmentTreeOpInterface
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::OrderedAssignmentTreeOpInterface::verifyImpl() {
+llvm::LogicalResult hlfir::OrderedAssignmentTreeOpInterface::verifyImpl() {
   if (mlir::Region *body = getSubTreeRegion())
     if (!body->empty())
       for (mlir::Operation &op : body->front())
@@ -1812,7 +1812,7 @@ static bool yieldsLogical(mlir::Region &region, bool mustBeScalarI1) {
              hlfir::getFortranElementOrSequenceType(yieldType));
 }
 
-mlir::LogicalResult hlfir::ForallMaskOp::verify() {
+llvm::LogicalResult hlfir::ForallMaskOp::verify() {
   if (!yieldsLogical(getMaskRegion(), /*mustBeScalarI1=*/true))
     return emitOpError("mask region must yield a scalar i1");
   mlir::Operation *op = getOperation();
@@ -1828,7 +1828,7 @@ mlir::LogicalResult hlfir::ForallMaskOp::verify() {
 //===----------------------------------------------------------------------===//
 
 template <typename ConcreteOp>
-static mlir::LogicalResult verifyWhereAndElseWhereBody(ConcreteOp &concreteOp) {
+static llvm::LogicalResult verifyWhereAndElseWhereBody(ConcreteOp &concreteOp) {
   for (mlir::Operation &op : concreteOp.getBody().front())
     if (mlir::isa<hlfir::ForallOp>(op))
       return concreteOp.emitOpError(
@@ -1836,13 +1836,13 @@ static mlir::LogicalResult verifyWhereAndElseWhereBody(ConcreteOp &concreteOp) {
   return mlir::success();
 }
 
-mlir::LogicalResult hlfir::WhereOp::verify() {
+llvm::LogicalResult hlfir::WhereOp::verify() {
   if (!yieldsLogical(getMaskRegion(), /*mustBeScalarI1=*/false))
     return emitOpError("mask region must yield a logical array");
   return verifyWhereAndElseWhereBody(*this);
 }
 
-mlir::LogicalResult hlfir::ElseWhereOp::verify() {
+llvm::LogicalResult hlfir::ElseWhereOp::verify() {
   if (!getMaskRegion().empty())
     if (!yieldsLogical(getMaskRegion(), /*mustBeScalarI1=*/false))
       return emitOpError(
@@ -1854,7 +1854,7 @@ mlir::LogicalResult hlfir::ElseWhereOp::verify() {
 // ForallIndexOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult
+llvm::LogicalResult
 hlfir::ForallIndexOp::canonicalize(hlfir::ForallIndexOp indexOp,
                                    mlir::PatternRewriter &rewriter) {
   for (mlir::Operation *user : indexOp->getResult(0).getUsers())
@@ -1878,7 +1878,7 @@ hlfir::ForallIndexOp::canonicalize(hlfir::ForallIndexOp indexOp,
 // CharExtremumOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::CharExtremumOp::verify() {
+llvm::LogicalResult hlfir::CharExtremumOp::verify() {
   if (getStrings().size() < 2)
     return emitOpError("must be provided at least two string operands");
   unsigned kind = getCharacterKind(getResult().getType());
@@ -1922,7 +1922,7 @@ void hlfir::CharExtremumOp::getEffects(
 // GetLength
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult
+llvm::LogicalResult
 hlfir::GetLengthOp::canonicalize(GetLengthOp getLength,
                                  mlir::PatternRewriter &rewriter) {
   mlir::Location loc = getLength.getLoc();

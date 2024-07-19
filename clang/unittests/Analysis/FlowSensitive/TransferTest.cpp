@@ -27,6 +27,14 @@
 #include <string>
 #include <utility>
 
+namespace clang {
+namespace dataflow {
+namespace {
+AST_MATCHER(FunctionDecl, isTemplated) { return Node.isTemplated(); }
+} // namespace
+} // namespace dataflow
+} // namespace clang
+
 namespace {
 
 using namespace clang;
@@ -1626,6 +1634,49 @@ TEST(TransferTest, StructModeledFieldsWithAccessor) {
         ASSERT_THAT(Fields, UnorderedElementsAre(
             findValueDecl(ASTCtx, "Ptr"), findValueDecl(ASTCtx, "PtrNonConst"),
             findValueDecl(ASTCtx, "Int"), findValueDecl(ASTCtx, "IntRef")));
+      });
+}
+
+TEST(TransferTest, StructModeledFieldsInTypeid) {
+  // Test that we model fields mentioned inside a `typeid()` expression only if
+  // that expression is potentially evaluated -- i.e. if the expression inside
+  // `typeid()` is a glvalue of polymorphic type (see
+  // `CXXTypeidExpr::isPotentiallyEvaluated()` and [expr.typeid]p3).
+  std::string Code = R"(
+    // Definitions needed for `typeid`.
+    namespace std {
+      class type_info {};
+      class bad_typeid {};
+    }  // namespace std
+
+    struct NonPolymorphic {};
+
+    struct Polymorphic {
+      virtual ~Polymorphic() = default;
+    };
+
+    struct S {
+      NonPolymorphic *NonPoly;
+      Polymorphic *Poly;
+    };
+
+    void target(S &s) {
+      typeid(*s.NonPoly);
+      typeid(*s.Poly);
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        auto &SLoc = getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "s");
+        std::vector<const ValueDecl *> Fields;
+        for (auto [Field, _] : SLoc.children())
+          Fields.push_back(Field);
+        EXPECT_THAT(Fields,
+                    UnorderedElementsAre(findValueDecl(ASTCtx, "Poly")));
       });
 }
 
@@ -3257,7 +3308,7 @@ TEST(TransferTest, ResultObjectLocationForStdInitializerListExpr) {
   std::string Code = R"(
     namespace std {
     template <typename T>
-    struct initializer_list {};
+    struct initializer_list { const T *a, *b; };
     } // namespace std
 
     void target() {
@@ -3333,6 +3384,32 @@ TEST(TransferTest, ResultObjectLocationForBuiltinBitCastExpr) {
             "cast", match(explicitCastExpr().bind("cast"), ASTCtx));
 
         EXPECT_EQ(&Env.getResultObjectLocation(*BuiltinBitCast),
+                  &getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "s"));
+      });
+}
+
+TEST(TransferTest, ResultObjectLocationForAtomicExpr) {
+  std::string Code = R"(
+    struct S {};
+    void target(_Atomic(S) *ptr) {
+      S s = __c11_atomic_load(ptr, __ATOMIC_SEQ_CST);
+      // [[p]]
+    }
+  )";
+  using ast_matchers::atomicExpr;
+  using ast_matchers::match;
+  using ast_matchers::selectFirst;
+  using ast_matchers::traverse;
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *Atomic = selectFirst<AtomicExpr>(
+            "atomic", match(atomicExpr().bind("atomic"), ASTCtx));
+
+        EXPECT_EQ(&Env.getResultObjectLocation(*Atomic),
                   &getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "s"));
       });
 }
@@ -3749,6 +3826,77 @@ TEST(TransferTest, AddrOfReference) {
         const auto *FooVal = cast<PointerValue>(Env.getValue(*FooDecl));
         const auto *BarVal = cast<PointerValue>(Env.getValue(*BarDecl));
         EXPECT_EQ(&BarVal->getPointeeLoc(), &FooVal->getPointeeLoc());
+      });
+}
+
+TEST(TransferTest, Preincrement) {
+  std::string Code = R"(
+    void target(int I) {
+      (void)0; // [[before]]
+      int &IRef = ++I;
+      // [[after]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &EnvBefore =
+            getEnvironmentAtAnnotation(Results, "before");
+        const Environment &EnvAfter =
+            getEnvironmentAtAnnotation(Results, "after");
+
+        EXPECT_EQ(&getLocForDecl(ASTCtx, EnvAfter, "IRef"),
+                  &getLocForDecl(ASTCtx, EnvBefore, "I"));
+
+        const ValueDecl *IDecl = findValueDecl(ASTCtx, "I");
+        EXPECT_NE(EnvBefore.getValue(*IDecl), nullptr);
+        EXPECT_EQ(EnvAfter.getValue(*IDecl), nullptr);
+      });
+}
+
+TEST(TransferTest, Postincrement) {
+  std::string Code = R"(
+    void target(int I) {
+      (void)0; // [[before]]
+      int OldVal = I++;
+      // [[after]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &EnvBefore =
+            getEnvironmentAtAnnotation(Results, "before");
+        const Environment &EnvAfter =
+            getEnvironmentAtAnnotation(Results, "after");
+
+        EXPECT_EQ(&getValueForDecl(ASTCtx, EnvBefore, "I"),
+                  &getValueForDecl(ASTCtx, EnvAfter, "OldVal"));
+
+        const ValueDecl *IDecl = findValueDecl(ASTCtx, "I");
+        EXPECT_EQ(EnvAfter.getValue(*IDecl), nullptr);
+      });
+}
+
+// We test just one of the compound assignment operators because we know the
+// code for propagating the storage location is shared among all of them.
+TEST(TransferTest, AddAssign) {
+  std::string Code = R"(
+    void target(int I) {
+      int &IRef = (I += 1);
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        EXPECT_EQ(&getLocForDecl(ASTCtx, Env, "IRef"),
+                  &getLocForDecl(ASTCtx, Env, "I"));
       });
 }
 
@@ -7414,6 +7562,33 @@ TEST(TransferTest, ConditionalRelation) {
 
         EXPECT_FALSE(Env.allows(A.makeAnd(VarA, A.makeNot(VarB))));
       });
+}
+
+// This is a crash repro.
+// We used to crash while transferring `S().i` because Clang contained a bug
+// causing the AST to be malformed.
+TEST(TransferTest, AnonymousUnionMemberExprInTemplate) {
+  using ast_matchers::functionDecl;
+  using ast_matchers::hasName;
+  using ast_matchers::unless;
+
+  std::string Code = R"cc(
+    struct S {
+      struct {
+        int i;
+      };
+    };
+
+    template <class>
+    void target() {
+        S().i;
+    }
+
+    template void target<int>();
+  )cc";
+  auto Matcher = functionDecl(hasName("target"), unless(isTemplated()));
+  ASSERT_THAT_ERROR(checkDataflowWithNoopAnalysis(Code, Matcher),
+                    llvm::Succeeded());
 }
 
 } // namespace

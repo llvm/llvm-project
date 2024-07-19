@@ -76,7 +76,7 @@ void PPCELFStreamer::emitPrefixedInstruction(const MCInst &Inst,
     // label to the top of the fragment containing the aligned instruction that
     // was just added.
     if (InstLine == LabelLine) {
-      assignFragment(LastLabel, InstructionFragment);
+      LastLabel->setFragment(InstructionFragment);
       LastLabel->setOffset(0);
     }
   }

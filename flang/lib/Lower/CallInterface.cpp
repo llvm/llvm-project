@@ -177,9 +177,10 @@ mlir::Location Fortran::lower::CallerInterface::getCalleeLocation() const {
 // explicit.
 static Fortran::evaluate::characteristics::DummyDataObject
 asImplicitArg(Fortran::evaluate::characteristics::DummyDataObject &&dummy) {
-  Fortran::evaluate::Shape shape =
-      dummy.type.attrs().none() ? dummy.type.shape()
-                                : Fortran::evaluate::Shape(dummy.type.Rank());
+  std::optional<Fortran::evaluate::Shape> shape =
+      dummy.type.attrs().none()
+          ? dummy.type.shape()
+          : std::make_optional<Fortran::evaluate::Shape>(dummy.type.Rank());
   return Fortran::evaluate::characteristics::DummyDataObject(
       Fortran::evaluate::characteristics::TypeAndShape(dummy.type.type(),
                                                        std::move(shape)));
@@ -187,7 +188,7 @@ asImplicitArg(Fortran::evaluate::characteristics::DummyDataObject &&dummy) {
 
 static Fortran::evaluate::characteristics::DummyArgument
 asImplicitArg(Fortran::evaluate::characteristics::DummyArgument &&dummy) {
-  return std::visit(
+  return Fortran::common::visit(
       Fortran::common::visitors{
           [&](Fortran::evaluate::characteristics::DummyDataObject &obj) {
             return Fortran::evaluate::characteristics::DummyArgument(
@@ -610,6 +611,17 @@ static void addSymbolAttribute(mlir::func::FuncOp func,
     }
   }
 
+  // Set procedure attributes to the func op.
+  if (IsPureProcedure(sym))
+    func->setAttr(fir::getFuncPureAttrName(),
+                  mlir::UnitAttr::get(&mlirContext));
+  if (IsElementalProcedure(sym))
+    func->setAttr(fir::getFuncElementalAttrName(),
+                  mlir::UnitAttr::get(&mlirContext));
+  if (sym.attrs().test(Fortran::semantics::Attr::RECURSIVE))
+    func->setAttr(fir::getFuncRecursiveAttrName(),
+                  mlir::UnitAttr::get(&mlirContext));
+
   // Only add this on bind(C) functions for which the symbol is not reflected in
   // the current context.
   if (!Fortran::semantics::IsBindCProcedure(sym))
@@ -627,9 +639,9 @@ setCUDAAttributes(mlir::func::FuncOp func,
                       characteristic) {
   if (characteristic && characteristic->cudaSubprogramAttrs) {
     func.getOperation()->setAttr(
-        fir::getCUDAAttrName(),
-        fir::getCUDAProcAttribute(func.getContext(),
-                                  *characteristic->cudaSubprogramAttrs));
+        cuf::getProcAttrName(),
+        cuf::getProcAttribute(func.getContext(),
+                              *characteristic->cudaSubprogramAttrs));
   }
 
   if (sym) {
@@ -649,9 +661,9 @@ setCUDAAttributes(mlir::func::FuncOp func,
           ubAttr =
               mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[2]);
         func.getOperation()->setAttr(
-            fir::getCUDALaunchBoundsAttrName(),
-            fir::CUDALaunchBoundsAttr::get(func.getContext(), maxTPBAttr,
-                                           minBPMAttr, ubAttr));
+            cuf::getLaunchBoundsAttrName(),
+            cuf::LaunchBoundsAttr::get(func.getContext(), maxTPBAttr,
+                                       minBPMAttr, ubAttr));
       }
 
       if (!details->cudaClusterDims().empty()) {
@@ -663,9 +675,8 @@ setCUDAAttributes(mlir::func::FuncOp func,
         auto zAttr =
             mlir::IntegerAttr::get(i64Ty, details->cudaClusterDims()[2]);
         func.getOperation()->setAttr(
-            fir::getCUDAClusterDimsAttrName(),
-            fir::CUDAClusterDimsAttr::get(func.getContext(), xAttr, yAttr,
-                                          zAttr));
+            cuf::getClusterDimsAttrName(),
+            cuf::ClusterDimsAttr::get(func.getContext(), xAttr, yAttr, zAttr));
       }
     }
   }
@@ -833,7 +844,7 @@ public:
     for (auto pair : llvm::zip(procedure.dummyArguments, argumentEntities)) {
       const Fortran::evaluate::characteristics::DummyArgument
           &argCharacteristics = std::get<0>(pair);
-      std::visit(
+      Fortran::common::visit(
           Fortran::common::visitors{
               [&](const auto &dummy) {
                 const auto &entity = getDataObjectEntity(std::get<1>(pair));
@@ -867,7 +878,7 @@ public:
     for (auto pair : llvm::zip(procedure.dummyArguments, argumentEntities)) {
       const Fortran::evaluate::characteristics::DummyArgument
           &argCharacteristics = std::get<0>(pair);
-      std::visit(
+      Fortran::common::visit(
           Fortran::common::visitors{
               [&](const Fortran::evaluate::characteristics::DummyDataObject
                       &dummy) {
@@ -1116,8 +1127,8 @@ private:
       addMLIRAttr(fir::getTargetAttrName());
     if (obj.cudaDataAttr)
       attrs.emplace_back(
-          mlir::StringAttr::get(&mlirContext, fir::getCUDAAttrName()),
-          fir::getCUDADataAttribute(&mlirContext, obj.cudaDataAttr));
+          mlir::StringAttr::get(&mlirContext, cuf::getDataAttrName()),
+          cuf::getDataAttribute(&mlirContext, obj.cudaDataAttr));
 
     // TODO: intents that require special care (e.g finalization)
 
@@ -1298,18 +1309,17 @@ private:
   // with the shape (may contain unknown extents) for arrays.
   std::optional<fir::SequenceType::Shape> getBounds(
       const Fortran::evaluate::characteristics::TypeAndShape &typeAndShape) {
-    using ShapeAttr = Fortran::evaluate::characteristics::TypeAndShape::Attr;
-    if (typeAndShape.shape().empty() &&
-        !typeAndShape.attrs().test(ShapeAttr::AssumedRank))
+    if (typeAndShape.shape() && typeAndShape.shape()->empty())
       return std::nullopt;
     fir::SequenceType::Shape bounds;
-    for (const std::optional<Fortran::evaluate::ExtentExpr> &extent :
-         typeAndShape.shape()) {
-      fir::SequenceType::Extent bound = fir::SequenceType::getUnknownExtent();
-      if (std::optional<std::int64_t> i = toInt64(extent))
-        bound = *i;
-      bounds.emplace_back(bound);
-    }
+    if (typeAndShape.shape())
+      for (const std::optional<Fortran::evaluate::ExtentExpr> &extent :
+           *typeAndShape.shape()) {
+        fir::SequenceType::Extent bound = fir::SequenceType::getUnknownExtent();
+        if (std::optional<std::int64_t> i = toInt64(extent))
+          bound = *i;
+        bounds.emplace_back(bound);
+      }
     return bounds;
   }
   std::optional<std::int64_t>

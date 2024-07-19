@@ -571,6 +571,7 @@ bool doesDirectiveHaveAssociatedStmt(OpenACCDirectiveKind DirKind) {
   case OpenACCDirectiveKind::Parallel:
   case OpenACCDirectiveKind::Serial:
   case OpenACCDirectiveKind::Kernels:
+  case OpenACCDirectiveKind::Loop:
     return true;
   }
   llvm_unreachable("Unhandled directive->assoc stmt");
@@ -711,14 +712,16 @@ bool Parser::ParseOpenACCIntExprList(OpenACCDirectiveKind DK,
 /// device_type( device-type-list )
 ///
 /// The device_type clause may be abbreviated to dtype.
-bool Parser::ParseOpenACCDeviceTypeList() {
+bool Parser::ParseOpenACCDeviceTypeList(
+    llvm::SmallVector<std::pair<IdentifierInfo *, SourceLocation>> &Archs) {
 
   if (expectIdentifierOrKeyword(*this)) {
     SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end,
               Parser::StopBeforeMatch);
-    return false;
+    return true;
   }
-  ConsumeToken();
+  IdentifierInfo *Ident = getCurToken().getIdentifierInfo();
+  Archs.emplace_back(Ident, ConsumeToken());
 
   while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
     ExpectAndConsume(tok::comma);
@@ -726,9 +729,10 @@ bool Parser::ParseOpenACCDeviceTypeList() {
     if (expectIdentifierOrKeyword(*this)) {
       SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end,
                 Parser::StopBeforeMatch);
-      return false;
+      return true;
     }
-    ConsumeToken();
+    Ident = getCurToken().getIdentifierInfo();
+    Archs.emplace_back(Ident, ConsumeToken());
   }
   return false;
 }
@@ -867,7 +871,6 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
   SemaOpenACC::OpenACCParsedClause ParsedClause(DirKind, ClauseKind, ClauseLoc);
 
   if (ClauseHasRequiredParens(DirKind, ClauseKind)) {
-    ParsedClause.setLParenLoc(getCurToken().getLocation());
     if (Parens.expectAndConsume()) {
       // We are missing a paren, so assume that the person just forgot the
       // parameter.  Return 'false' so we try to continue on and parse the next
@@ -876,6 +879,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
                 Parser::StopBeforeMatch);
       return OpenACCCanContinue();
     }
+    ParsedClause.setLParenLoc(Parens.getOpenLocation());
 
     switch (ClauseKind) {
     case OpenACCClauseKind::Default: {
@@ -917,7 +921,8 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     case OpenACCClauseKind::PresentOrCopyIn: {
       bool IsReadOnly = tryParseAndConsumeSpecialTokenKind(
           *this, OpenACCSpecialTokenKind::ReadOnly, ClauseKind);
-      ParsedClause.setVarListDetails(ParseOpenACCVarList(), IsReadOnly,
+      ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),
+                                     IsReadOnly,
                                      /*IsZero=*/false);
       break;
     }
@@ -929,16 +934,17 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     case OpenACCClauseKind::PresentOrCopyOut: {
       bool IsZero = tryParseAndConsumeSpecialTokenKind(
           *this, OpenACCSpecialTokenKind::Zero, ClauseKind);
-      ParsedClause.setVarListDetails(ParseOpenACCVarList(),
+      ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),
                                      /*IsReadOnly=*/false, IsZero);
       break;
     }
-    case OpenACCClauseKind::Reduction:
+    case OpenACCClauseKind::Reduction: {
       // If we're missing a clause-kind (or it is invalid), see if we can parse
       // the var-list anyway.
-      ParseReductionOperator(*this);
-      ParseOpenACCVarList();
+      OpenACCReductionOperator Op = ParseReductionOperator(*this);
+      ParsedClause.setReductionDetails(Op, ParseOpenACCVarList(ClauseKind));
       break;
+    }
     case OpenACCClauseKind::Self:
       // The 'self' clause is a var-list instead of a 'condition' in the case of
       // the 'update' clause, so we have to handle it here.  U se an assert to
@@ -952,12 +958,11 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     case OpenACCClauseKind::Host:
     case OpenACCClauseKind::Link:
     case OpenACCClauseKind::UseDevice:
-      ParseOpenACCVarList();
+      ParseOpenACCVarList(ClauseKind);
       break;
     case OpenACCClauseKind::Attach:
     case OpenACCClauseKind::DevicePtr:
-      // TODO: ERICH: Figure out how to limit to just ptrs?
-      ParsedClause.setVarListDetails(ParseOpenACCVarList(),
+      ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),
                                      /*IsReadOnly=*/false, /*IsZero=*/false);
       break;
     case OpenACCClauseKind::Copy:
@@ -967,7 +972,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     case OpenACCClauseKind::NoCreate:
     case OpenACCClauseKind::Present:
     case OpenACCClauseKind::Private:
-      ParsedClause.setVarListDetails(ParseOpenACCVarList(),
+      ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),
                                      /*IsReadOnly=*/false, /*IsZero=*/false);
       break;
     case OpenACCClauseKind::Collapse: {
@@ -1022,16 +1027,20 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       break;
     }
     case OpenACCClauseKind::DType:
-    case OpenACCClauseKind::DeviceType:
+    case OpenACCClauseKind::DeviceType: {
+      llvm::SmallVector<std::pair<IdentifierInfo *, SourceLocation>> Archs;
       if (getCurToken().is(tok::star)) {
         // FIXME: We want to mark that this is an 'everything else' type of
         // device_type in Sema.
-        ConsumeToken();
-      } else if (ParseOpenACCDeviceTypeList()) {
+        ParsedClause.setDeviceTypeDetails({{nullptr, ConsumeToken()}});
+      } else if (!ParseOpenACCDeviceTypeList(Archs)) {
+        ParsedClause.setDeviceTypeDetails(std::move(Archs));
+      } else {
         Parens.skipToEnd();
         return OpenACCCanContinue();
       }
       break;
+    }
     case OpenACCClauseKind::Tile:
       if (ParseOpenACCSizeExprList()) {
         Parens.skipToEnd();
@@ -1048,8 +1057,8 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       return OpenACCCannotContinue();
 
   } else if (ClauseHasOptionalParens(DirKind, ClauseKind)) {
-    ParsedClause.setLParenLoc(getCurToken().getLocation());
     if (!Parens.consumeOpen()) {
+      ParsedClause.setLParenLoc(Parens.getOpenLocation());
       switch (ClauseKind) {
       case OpenACCClauseKind::Self: {
         assert(DirKind != OpenACCDirectiveKind::Update);
@@ -1099,20 +1108,32 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
           return OpenACCCanContinue();
         }
         break;
-      case OpenACCClauseKind::Wait:
-        if (ParseOpenACCWaitArgument(ClauseLoc,
-                                     /*IsDirective=*/false)) {
+      case OpenACCClauseKind::Wait: {
+        OpenACCWaitParseInfo Info =
+            ParseOpenACCWaitArgument(ClauseLoc,
+                                     /*IsDirective=*/false);
+        if (Info.Failed) {
           Parens.skipToEnd();
           return OpenACCCanContinue();
         }
+
+        ParsedClause.setWaitDetails(Info.DevNumExpr, Info.QueuesLoc,
+                                    std::move(Info.QueueIdExprs));
         break;
+      }
       default:
         llvm_unreachable("Not an optional parens type?");
       }
       ParsedClause.setEndLoc(getCurToken().getLocation());
       if (Parens.consumeClose())
         return OpenACCCannotContinue();
+    } else {
+      // If we have optional parens, make sure we set the end-location to the
+      // clause, as we are a 'single token' clause.
+      ParsedClause.setEndLoc(ClauseLoc);
     }
+  } else {
+    ParsedClause.setEndLoc(ClauseLoc);
   }
   return OpenACCSuccess(
       Actions.OpenACC().ActOnClause(ExistingClauses, ParsedClause));
@@ -1135,7 +1156,9 @@ Parser::ParseOpenACCAsyncArgument(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
 /// In this section and throughout the specification, the term wait-argument
 /// means:
 /// [ devnum : int-expr : ] [ queues : ] async-argument-list
-bool Parser::ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective) {
+Parser::OpenACCWaitParseInfo
+Parser::ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective) {
+  OpenACCWaitParseInfo Result;
   // [devnum : int-expr : ]
   if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::DevNum, Tok) &&
       NextToken().is(tok::colon)) {
@@ -1149,18 +1172,25 @@ bool Parser::ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective) {
                     : OpenACCDirectiveKind::Invalid,
         IsDirective ? OpenACCClauseKind::Invalid : OpenACCClauseKind::Wait,
         Loc);
-    if (Res.first.isInvalid() && Res.second == OpenACCParseCanContinue::Cannot)
-      return true;
+    if (Res.first.isInvalid() &&
+        Res.second == OpenACCParseCanContinue::Cannot) {
+      Result.Failed = true;
+      return Result;
+    }
 
-    if (ExpectAndConsume(tok::colon))
-      return true;
+    if (ExpectAndConsume(tok::colon)) {
+      Result.Failed = true;
+      return Result;
+    }
+
+    Result.DevNumExpr = Res.first.get();
   }
 
   // [ queues : ]
   if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::Queues, Tok) &&
       NextToken().is(tok::colon)) {
     // Consume queues.
-    ConsumeToken();
+    Result.QueuesLoc = ConsumeToken();
     // Consume colon.
     ConsumeToken();
   }
@@ -1172,8 +1202,10 @@ bool Parser::ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective) {
   bool FirstArg = true;
   while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
     if (!FirstArg) {
-      if (ExpectAndConsume(tok::comma))
-        return true;
+      if (ExpectAndConsume(tok::comma)) {
+        Result.Failed = true;
+        return Result;
+      }
     }
     FirstArg = false;
 
@@ -1183,11 +1215,16 @@ bool Parser::ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective) {
         IsDirective ? OpenACCClauseKind::Invalid : OpenACCClauseKind::Wait,
         Loc);
 
-    if (Res.first.isInvalid() && Res.second == OpenACCParseCanContinue::Cannot)
-      return true;
+    if (Res.first.isInvalid() &&
+        Res.second == OpenACCParseCanContinue::Cannot) {
+      Result.Failed = true;
+      return Result;
+    }
+
+    Result.QueueIdExprs.push_back(Res.first.get());
   }
 
-  return false;
+  return Result;
 }
 
 ExprResult Parser::ParseOpenACCIDExpression() {
@@ -1246,7 +1283,7 @@ ExprResult Parser::ParseOpenACCBindClauseArgument() {
 /// - an array element
 /// - a member of a composite variable
 /// - a common block name between slashes (fortran only)
-Parser::OpenACCVarParseResult Parser::ParseOpenACCVar() {
+Parser::OpenACCVarParseResult Parser::ParseOpenACCVar(OpenACCClauseKind CK) {
   OpenACCArraySectionRAII ArraySections(*this);
 
   ExprResult Res = ParseAssignmentExpression();
@@ -1257,15 +1294,15 @@ Parser::OpenACCVarParseResult Parser::ParseOpenACCVar() {
   if (!Res.isUsable())
     return {Res, OpenACCParseCanContinue::Can};
 
-  Res = getActions().OpenACC().ActOnVar(Res.get());
+  Res = getActions().OpenACC().ActOnVar(CK, Res.get());
 
   return {Res, OpenACCParseCanContinue::Can};
 }
 
-llvm::SmallVector<Expr *> Parser::ParseOpenACCVarList() {
+llvm::SmallVector<Expr *> Parser::ParseOpenACCVarList(OpenACCClauseKind CK) {
   llvm::SmallVector<Expr *> Vars;
 
-  auto [Res, CanContinue] = ParseOpenACCVar();
+  auto [Res, CanContinue] = ParseOpenACCVar(CK);
   if (Res.isUsable()) {
     Vars.push_back(Res.get());
   } else if (CanContinue == OpenACCParseCanContinue::Cannot) {
@@ -1276,7 +1313,7 @@ llvm::SmallVector<Expr *> Parser::ParseOpenACCVarList() {
   while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
     ExpectAndConsume(tok::comma);
 
-    auto [Res, CanContinue] = ParseOpenACCVar();
+    auto [Res, CanContinue] = ParseOpenACCVar(CK);
 
     if (Res.isUsable()) {
       Vars.push_back(Res.get());
@@ -1310,14 +1347,16 @@ void Parser::ParseOpenACCCacheVarList() {
 
   // ParseOpenACCVarList should leave us before a r-paren, so no need to skip
   // anything here.
-  ParseOpenACCVarList();
+  ParseOpenACCVarList(OpenACCClauseKind::Invalid);
 }
 
-Parser::OpenACCDirectiveParseInfo Parser::ParseOpenACCDirective() {
-  SourceLocation StartLoc = getCurToken().getLocation();
+Parser::OpenACCDirectiveParseInfo
+Parser::ParseOpenACCDirective() {
+  SourceLocation StartLoc = ConsumeAnnotationToken();
+  SourceLocation DirLoc = getCurToken().getLocation();
   OpenACCDirectiveKind DirKind = ParseOpenACCDirectiveKind(*this);
 
-  getActions().OpenACC().ActOnConstruct(DirKind, StartLoc);
+  getActions().OpenACC().ActOnConstruct(DirKind, DirLoc);
 
   // Once we've parsed the construct/directive name, some have additional
   // specifiers that need to be taken care of. Atomic has an 'atomic-clause'
@@ -1356,7 +1395,7 @@ Parser::OpenACCDirectiveParseInfo Parser::ParseOpenACCDirective() {
       break;
     case OpenACCDirectiveKind::Wait:
       // OpenACC has an optional paren-wrapped 'wait-argument'.
-      if (ParseOpenACCWaitArgument(StartLoc, /*IsDirective=*/true))
+      if (ParseOpenACCWaitArgument(DirLoc, /*IsDirective=*/true).Failed)
         T.skipToEnd();
       else
         T.consumeClose();
@@ -1370,7 +1409,8 @@ Parser::OpenACCDirectiveParseInfo Parser::ParseOpenACCDirective() {
   }
 
   // Parses the list of clauses, if present, plus set up return value.
-  OpenACCDirectiveParseInfo ParseInfo{DirKind, StartLoc, SourceLocation{},
+  OpenACCDirectiveParseInfo ParseInfo{DirKind, StartLoc, DirLoc,
+                                      SourceLocation{},
                                       ParseOpenACCClauseList(DirKind)};
 
   assert(Tok.is(tok::annot_pragma_openacc_end) &&
@@ -1387,7 +1427,6 @@ Parser::DeclGroupPtrTy Parser::ParseOpenACCDirectiveDecl() {
   assert(Tok.is(tok::annot_pragma_openacc) && "expected OpenACC Start Token");
 
   ParsingOpenACCDirectiveRAII DirScope(*this);
-  ConsumeAnnotationToken();
 
   OpenACCDirectiveParseInfo DirInfo = ParseOpenACCDirective();
 
@@ -1404,7 +1443,6 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
   assert(Tok.is(tok::annot_pragma_openacc) && "expected OpenACC Start Token");
 
   ParsingOpenACCDirectiveRAII DirScope(*this);
-  ConsumeAnnotationToken();
 
   OpenACCDirectiveParseInfo DirInfo = ParseOpenACCDirective();
   if (getActions().OpenACC().ActOnStartStmtDirective(DirInfo.DirKind,
@@ -1412,16 +1450,17 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
     return StmtError();
 
   StmtResult AssocStmt;
-
+  SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(getActions().OpenACC(),
+                                                DirInfo.DirKind);
   if (doesDirectiveHaveAssociatedStmt(DirInfo.DirKind)) {
     ParsingOpenACCDirectiveRAII DirScope(*this, /*Value=*/false);
     ParseScope ACCScope(this, getOpenACCScopeFlags(DirInfo.DirKind));
 
-    AssocStmt = getActions().OpenACC().ActOnAssociatedStmt(DirInfo.DirKind,
-                                                           ParseStatement());
+    AssocStmt = getActions().OpenACC().ActOnAssociatedStmt(
+        DirInfo.StartLoc, DirInfo.DirKind, ParseStatement());
   }
 
   return getActions().OpenACC().ActOnEndStmtDirective(
-      DirInfo.DirKind, DirInfo.StartLoc, DirInfo.EndLoc, DirInfo.Clauses,
-      AssocStmt);
+      DirInfo.DirKind, DirInfo.StartLoc, DirInfo.DirLoc, DirInfo.EndLoc,
+      DirInfo.Clauses, AssocStmt);
 }

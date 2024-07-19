@@ -23,5 +23,5 @@
 
 // Plugins are only relevant for the -cc1 phase. No warning should be raised
 // when only using the assembler. See GH #88173.
-// RUN: %clang -c -fpass-plugin=bar.so -fplugin=bar.so -fplugin-arg-bar-option -Werror -x assembler %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-PLUGIN-ASM
-// CHECK-PLUGIN-ASM-NOT: argument unused during compilation
+// RUN: %clang -c -fpass-plugin=bar.so -fplugin=bar.so -fplugin-arg-bar-option -Wunused-command-line-argument -x assembler %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-PLUGIN-ASM
+// CHECK-PLUGIN-ASM-NOT: argument unused during compilation: '-f{{[a-z-]*plugin[^']*}}'

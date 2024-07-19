@@ -34,7 +34,6 @@ class BackendConsumer : public ASTConsumer {
   const CodeGenOptions &CodeGenOpts;
   const TargetOptions &TargetOpts;
   const LangOptions &LangOpts;
-  const FileManager &FileMgr;
   std::unique_ptr<raw_pwrite_stream> AsmOutStream;
   ASTContext *Context;
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
@@ -76,7 +75,7 @@ public:
                   const PreprocessorOptions &PPOpts,
                   const CodeGenOptions &CodeGenOpts,
                   const TargetOptions &TargetOpts, const LangOptions &LangOpts,
-                  const FileManager &FileMgr, const std::string &InFile,
+                  const std::string &InFile,
                   SmallVector<LinkModule, 4> LinkModules,
                   std::unique_ptr<raw_pwrite_stream> OS, llvm::LLVMContext &C,
                   CoverageSourceInfo *CoverageInfo = nullptr);
@@ -90,8 +89,8 @@ public:
                   const PreprocessorOptions &PPOpts,
                   const CodeGenOptions &CodeGenOpts,
                   const TargetOptions &TargetOpts, const LangOptions &LangOpts,
-                  const FileManager &FileMgr, llvm::Module *Module,
-                  SmallVector<LinkModule, 4> LinkModules, llvm::LLVMContext &C,
+                  llvm::Module *Module, SmallVector<LinkModule, 4> LinkModules,
+                  llvm::LLVMContext &C,
                   CoverageSourceInfo *CoverageInfo = nullptr);
 
   llvm::Module *getModule() const;
@@ -108,16 +107,12 @@ public:
   void HandleTagDeclDefinition(TagDecl *D) override;
   void HandleTagDeclRequiredDefinition(const TagDecl *D) override;
   void CompleteTentativeDefinition(VarDecl *D) override;
-  void CompleteExternalDeclaration(VarDecl *D) override;
+  void CompleteExternalDeclaration(DeclaratorDecl *D) override;
   void AssignInheritanceModel(CXXRecordDecl *RD) override;
   void HandleVTable(CXXRecordDecl *RD) override;
 
   // Links each entry in LinkModules into our module.  Returns true on error.
-  bool LinkInModules(llvm::Module *M, bool ShouldLinkFiles = true);
-
-  // Load a bitcode module from -mlink-builtin-bitcode option using
-  // methods from a BackendConsumer instead of CompilerInstance
-  bool ReloadModules(llvm::Module *M);
+  bool LinkInModules(llvm::Module *M);
 
   /// Get the best possible source location to represent a diagnostic that
   /// may have associated debug info.

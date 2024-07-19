@@ -267,18 +267,21 @@ public:
     return true;
   }
 
-  // Report a reference from explicit specializations to the specialized
-  // template. Implicit ones are filtered out by RAV and explicit instantiations
-  // are already traversed through typelocs.
+  // Report a reference from explicit specializations/instantiations to the
+  // specialized template. Implicit ones are filtered out by RAV.
   bool
   VisitClassTemplateSpecializationDecl(ClassTemplateSpecializationDecl *CTSD) {
-    if (CTSD->isExplicitSpecialization())
+    // if (CTSD->isExplicitSpecialization())
+    if (clang::isTemplateExplicitInstantiationOrSpecialization(
+            CTSD->getTemplateSpecializationKind()))
       report(CTSD->getLocation(),
              CTSD->getSpecializedTemplate()->getTemplatedDecl());
     return true;
   }
   bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *VTSD) {
-    if (VTSD->isExplicitSpecialization())
+    // if (VTSD->isExplicitSpecialization())
+    if (clang::isTemplateExplicitInstantiationOrSpecialization(
+            VTSD->getTemplateSpecializationKind()))
       report(VTSD->getLocation(),
              VTSD->getSpecializedTemplate()->getTemplatedDecl());
     return true;

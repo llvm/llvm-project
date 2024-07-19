@@ -53,12 +53,19 @@ def FeatureDummy
 
 class RISCVProfile<string name, list<SubtargetFeature> features>
     : SubtargetFeature<name, "Is" # NAME, "true",
-                       "RISC-V " # name # " profile", features>;
+                       "RISC-V " # name # " profile", features> {
+  bit Experimental = false;
+}
+class RISCVExperimentalProfile<string name, list<SubtargetFeature> features>
+    : RISCVProfile<"experimental-"#name, features> {
+  let Experimental = true;
+}
 
 def RVI20U32 : RISCVProfile<"rvi20u32", [Feature32Bit, FeatureStdExtI]>;
 def RVI20U64 : RISCVProfile<"rvi20u64", [Feature64Bit, FeatureStdExtI]>;
 def ProfileDummy : RISCVProfile<"dummy", [Feature64Bit, FeatureStdExtI,
                                           FeatureStdExtF, FeatureStdExtZidummy]>;
+def RVI99U64 : RISCVExperimentalProfile<"rvi99u64", [Feature64Bit, FeatureStdExtI]>;
 
 class RISCVProcessorModel<string n,
                           SchedMachineModel m,
@@ -139,16 +146,20 @@ def ROCKET : RISCVTuneProcessorModel<"rocket",
 // CHECK-NEXT:     {"rvi20u64","rv64i2p1"},
 // CHECK-NEXT: };
 
+// CHECK:      static constexpr RISCVProfile SupportedExperimentalProfiles[] = {
+// CHECK-NEXT:     {"rvi99u64","rv64i2p1"},
+// CHECK-NEXT: };
+
 // CHECK:      #endif // GET_SUPPORTED_PROFILES
 
 // CHECK:      #ifndef PROC
-// CHECK-NEXT: #define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_UNALIGNED_ACCESS)
+// CHECK-NEXT: #define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_SCALAR_UNALIGN, FAST_VECTOR_UNALIGN)
 // CHECK-NEXT: #endif
 
-// CHECK:      PROC(GENERIC_RV32, {"generic-rv32"}, {"rv32i2p1"}, 0)
-// CHECK-NEXT: PROC(GENERIC_RV64, {"generic-rv64"}, {"rv64i2p1"}, 0)
-// CHECK-NEXT: PROC(ROCKET_RV32, {"rocket-rv32"}, {"rv32i2p1_zicsr2p0_zidummy0p1_zifencei2p0"}, 0)
-// CHECK-NEXT: PROC(ROCKET_RV64, {"rocket-rv64"}, {"rv64i2p1_zicsr2p0_zidummy0p1_zifencei2p0"}, 0)
+// CHECK:      PROC(GENERIC_RV32, {"generic-rv32"}, {"rv32i2p1"}, 0, 0)
+// CHECK-NEXT: PROC(GENERIC_RV64, {"generic-rv64"}, {"rv64i2p1"}, 0, 0)
+// CHECK-NEXT: PROC(ROCKET_RV32, {"rocket-rv32"}, {"rv32i2p1_zicsr2p0_zidummy0p1_zifencei2p0"}, 0, 0)
+// CHECK-NEXT: PROC(ROCKET_RV64, {"rocket-rv64"}, {"rv64i2p1_zicsr2p0_zidummy0p1_zifencei2p0"}, 0, 0)
 
 // CHECK: #undef PROC
 

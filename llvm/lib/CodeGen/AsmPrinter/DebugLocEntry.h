@@ -238,10 +238,10 @@ public:
     if (Values.size() == 1)
       return;
     llvm::sort(Values);
-    Values.erase(std::unique(Values.begin(), Values.end(),
-                             [](const DbgValueLoc &A, const DbgValueLoc &B) {
-                               return A.getExpression() == B.getExpression();
-                             }),
+    Values.erase(llvm::unique(Values,
+                              [](const DbgValueLoc &A, const DbgValueLoc &B) {
+                                return A.getExpression() == B.getExpression();
+                              }),
                  Values.end());
   }
 

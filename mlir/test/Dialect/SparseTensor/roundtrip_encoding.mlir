@@ -156,6 +156,17 @@ func.func private @sparse_coo(tensor<?x?xf32, #COO>)
 
 // -----
 
+#COO_DENSE = #sparse_tensor.encoding<{
+  map = (d0, d1, d2) -> (d0 : compressed(nonunique), d1 : singleton, d2: dense)
+}>
+
+// CHECK-DAG: #[[$COO:.*]] = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : compressed(nonunique), d1 : singleton, d2 : dense) }>
+// CHECK-LABEL: func private @sparse_coo_trailing_dense(
+// CHECK-SAME: tensor<?x?x1xf32, #[[$COO]]>)
+func.func private @sparse_coo_trailing_dense(tensor<?x?x1xf32, #COO_DENSE>)
+
+// -----
+
 #BCOO = #sparse_tensor.encoding<{
   map = (d0, d1, d2) -> (d0 : dense, d1 : loose_compressed(nonunique), d2 : singleton)
 }>

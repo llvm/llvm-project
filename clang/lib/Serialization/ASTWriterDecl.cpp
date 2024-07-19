@@ -225,7 +225,7 @@ namespace clang {
 
       ArrayRef<GlobalDeclID> LazySpecializations;
       if (auto *LS = Common->LazySpecializations)
-        LazySpecializations = llvm::ArrayRef(LS + 1, LS[0].get());
+        LazySpecializations = llvm::ArrayRef(LS + 1, LS[0].getRawValue());
 
       // Add a slot to the record for the number of specializations.
       unsigned I = Record.size();
@@ -527,16 +527,12 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
   BitsPacker EnumDeclBits;
   EnumDeclBits.addBits(D->getNumPositiveBits(), /*BitWidth=*/8);
   EnumDeclBits.addBits(D->getNumNegativeBits(), /*BitWidth=*/8);
-  bool ShouldSkipCheckingODR = shouldSkipCheckingODR(D);
-  EnumDeclBits.addBit(ShouldSkipCheckingODR);
   EnumDeclBits.addBit(D->isScoped());
   EnumDeclBits.addBit(D->isScopedUsingClassTag());
   EnumDeclBits.addBit(D->isFixed());
   Record.push_back(EnumDeclBits);
 
-  // We only perform ODR checks for decls not in GMF.
-  if (!ShouldSkipCheckingODR)
-    Record.push_back(D->getODRHash());
+  Record.push_back(D->getODRHash());
 
   if (MemberSpecializationInfo *MemberInfo = D->getMemberSpecializationInfo()) {
     Record.AddDeclRef(MemberInfo->getInstantiatedFrom());
@@ -553,7 +549,7 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
       !D->isTopLevelDeclInObjCContainer() &&
       !CXXRecordDecl::classofKind(D->getKind()) &&
       !D->getIntegerTypeSourceInfo() && !D->getMemberSpecializationInfo() &&
-      !needsAnonymousDeclarationNumber(D) && !shouldSkipCheckingODR(D) &&
+      !needsAnonymousDeclarationNumber(D) &&
       D->getDeclName().getNameKind() == DeclarationName::Identifier)
     AbbrevToUse = Writer.getDeclEnumAbbrev();
 
@@ -719,8 +715,6 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   // FIXME: stable encoding
   FunctionDeclBits.addBits(llvm::to_underlying(D->getLinkageInternal()), 3);
   FunctionDeclBits.addBits((uint32_t)D->getStorageClass(), /*BitWidth=*/3);
-  bool ShouldSkipCheckingODR = shouldSkipCheckingODR(D);
-  FunctionDeclBits.addBit(ShouldSkipCheckingODR);
   FunctionDeclBits.addBit(D->isInlineSpecified());
   FunctionDeclBits.addBit(D->isInlined());
   FunctionDeclBits.addBit(D->hasSkippedBody());
@@ -746,9 +740,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   if (D->isExplicitlyDefaulted())
     Record.AddSourceLocation(D->getDefaultLoc());
 
-  // We only perform ODR checks for decls not in GMF.
-  if (!ShouldSkipCheckingODR)
-    Record.push_back(D->getODRHash());
+  Record.push_back(D->getODRHash());
 
   if (D->isDefaulted() || D->isDeletedAsWritten()) {
     if (auto *FDI = D->getDefalutedOrDeletedInfo()) {
@@ -1383,7 +1375,7 @@ void ASTDeclWriter::VisitNamespaceDecl(NamespaceDecl *D) {
   Record.AddSourceLocation(D->getBeginLoc());
   Record.AddSourceLocation(D->getRBraceLoc());
 
-  if (D->isOriginalNamespace())
+  if (D->isFirstDecl())
     Record.AddDeclRef(D->getAnonymousNamespace());
   Code = serialization::DECL_NAMESPACE;
 
@@ -1560,8 +1552,7 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
       D->getFirstDecl() == D->getMostRecentDecl() && !D->isInvalidDecl() &&
       !D->hasAttrs() && !D->isTopLevelDeclInObjCContainer() &&
       D->getDeclName().getNameKind() == DeclarationName::Identifier &&
-      !shouldSkipCheckingODR(D) && !D->hasExtInfo() &&
-      !D->isExplicitlyDefaulted()) {
+      !D->hasExtInfo() && !D->isExplicitlyDefaulted()) {
     if (D->getTemplatedKind() == FunctionDecl::TK_NonTemplate ||
         D->getTemplatedKind() == FunctionDecl::TK_FunctionTemplate ||
         D->getTemplatedKind() == FunctionDecl::TK_MemberSpecialization ||
@@ -1733,7 +1724,7 @@ void ASTDeclWriter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   if (Writer.isGeneratingReducedBMI()) {
     auto Name = Context.DeclarationNames.getCXXDeductionGuideName(D);
     for (auto *DG : D->getDeclContext()->noload_lookup(Name))
-      Writer.GetDeclRef(DG);
+      Writer.GetDeclRef(DG->getCanonicalDecl());
   }
 
   Code = serialization::DECL_CLASS_TEMPLATE;
@@ -1765,12 +1756,21 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
     Record.AddDeclRef(D->getSpecializedTemplate()->getCanonicalDecl());
   }
 
-  // Explicit info.
-  Record.AddTypeSourceInfo(D->getTypeAsWritten());
-  if (D->getTypeAsWritten()) {
-    Record.AddSourceLocation(D->getExternLoc());
+  bool ExplicitInstantiation =
+      D->getTemplateSpecializationKind() ==
+          TSK_ExplicitInstantiationDeclaration ||
+      D->getTemplateSpecializationKind() == TSK_ExplicitInstantiationDefinition;
+  Record.push_back(ExplicitInstantiation);
+  if (ExplicitInstantiation) {
+    Record.AddSourceLocation(D->getExternKeywordLoc());
     Record.AddSourceLocation(D->getTemplateKeywordLoc());
   }
+
+  const ASTTemplateArgumentListInfo *ArgsWritten =
+      D->getTemplateArgsAsWritten();
+  Record.push_back(!!ArgsWritten);
+  if (ArgsWritten)
+    Record.AddASTTemplateArgumentListInfo(ArgsWritten);
 
   Code = serialization::DECL_CLASS_TEMPLATE_SPECIALIZATION;
 }
@@ -1778,7 +1778,6 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
 void ASTDeclWriter::VisitClassTemplatePartialSpecializationDecl(
                                     ClassTemplatePartialSpecializationDecl *D) {
   Record.AddTemplateParameterList(D->getTemplateParameters());
-  Record.AddASTTemplateArgumentListInfo(D->getTemplateArgsAsWritten());
 
   VisitClassTemplateSpecializationDecl(D);
 
@@ -1812,12 +1811,21 @@ void ASTDeclWriter::VisitVarTemplateSpecializationDecl(
     Record.AddTemplateArgumentList(&D->getTemplateInstantiationArgs());
   }
 
-  // Explicit info.
-  Record.AddTypeSourceInfo(D->getTypeAsWritten());
-  if (D->getTypeAsWritten()) {
-    Record.AddSourceLocation(D->getExternLoc());
+  bool ExplicitInstantiation =
+      D->getTemplateSpecializationKind() ==
+          TSK_ExplicitInstantiationDeclaration ||
+      D->getTemplateSpecializationKind() == TSK_ExplicitInstantiationDefinition;
+  Record.push_back(ExplicitInstantiation);
+  if (ExplicitInstantiation) {
+    Record.AddSourceLocation(D->getExternKeywordLoc());
     Record.AddSourceLocation(D->getTemplateKeywordLoc());
   }
+
+  const ASTTemplateArgumentListInfo *ArgsWritten =
+      D->getTemplateArgsAsWritten();
+  Record.push_back(!!ArgsWritten);
+  if (ArgsWritten)
+    Record.AddASTTemplateArgumentListInfo(ArgsWritten);
 
   Record.AddTemplateArgumentList(&D->getTemplateArgs());
   Record.AddSourceLocation(D->getPointOfInstantiation());
@@ -1839,7 +1847,6 @@ void ASTDeclWriter::VisitVarTemplateSpecializationDecl(
 void ASTDeclWriter::VisitVarTemplatePartialSpecializationDecl(
     VarTemplatePartialSpecializationDecl *D) {
   Record.AddTemplateParameterList(D->getTemplateParameters());
-  Record.AddASTTemplateArgumentListInfo(D->getTemplateArgsAsWritten());
 
   VisitVarTemplateSpecializationDecl(D);
 
@@ -1883,7 +1890,7 @@ void ASTDeclWriter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
                         !D->defaultArgumentWasInherited();
   Record.push_back(OwnsDefaultArg);
   if (OwnsDefaultArg)
-    Record.AddTypeSourceInfo(D->getDefaultArgumentInfo());
+    Record.AddTemplateArgumentLoc(D->getDefaultArgument());
 
   if (!TC && !OwnsDefaultArg &&
       D->getDeclContext() == D->getLexicalDeclContext() &&
@@ -1925,7 +1932,7 @@ void ASTDeclWriter::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
                           !D->defaultArgumentWasInherited();
     Record.push_back(OwnsDefaultArg);
     if (OwnsDefaultArg)
-      Record.AddStmt(D->getDefaultArgument());
+      Record.AddTemplateArgumentLoc(D->getDefaultArgument());
     Code = serialization::DECL_NON_TYPE_TEMPLATE_PARM;
   }
 }
@@ -2812,7 +2819,7 @@ void ASTWriter::WriteDecl(ASTContext &Context, Decl *D) {
   SourceLocationEncoding::RawLocEncoding RawLoc =
       getRawSourceLocationEncoding(getAdjustedLocation(Loc));
 
-  unsigned Index = ID.get() - FirstDeclID.get();
+  unsigned Index = ID.getRawValue() - FirstDeclID.getRawValue();
   if (DeclOffsets.size() == Index)
     DeclOffsets.emplace_back(RawLoc, Offset, DeclTypesBlockStartOffset);
   else if (DeclOffsets.size() < Index) {

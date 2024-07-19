@@ -648,7 +648,19 @@ define float @test_v3f32_ninf(<3 x float> %a) nounwind {
 define fp128 @test_v2f128(<2 x fp128> %a) nounwind {
 ; CHECK-LABEL: test_v2f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    b fminl
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
+; CHECK-NEXT:    bl __lttf2
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    b.ge .LBB18_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:  .LBB18_2:
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
   %b = call nnan fp128 @llvm.vector.reduce.fmin.v2f128(<2 x fp128> %a)
   ret fp128 %b
 }

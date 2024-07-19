@@ -20,6 +20,10 @@
 # CHECK: encoding: [0xd5,0x58,0x63,0xc8]
          movslq	%r16d, %r17
 
+# CHECK: popcntl %r16d, %r17d
+# CHECK: encoding: [0xf3,0xd5,0xd0,0xb8,0xc8]
+         popcntl %r16d, %r17d
+
 ## MRMSrcRegCC
 
 # CHECK: cmovll	%r16d, %eax

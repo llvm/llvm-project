@@ -802,7 +802,7 @@ bool lldb_private::formatters::NSURLSummaryProvider(
 
   llvm::StringRef class_name = descriptor->GetClassName().GetStringRef();
 
-  if (!class_name.equals("NSURL"))
+  if (class_name != "NSURL")
     return false;
 
   uint64_t offset_text = ptr_size + ptr_size +

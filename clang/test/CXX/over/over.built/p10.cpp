@@ -15,6 +15,6 @@ void f(int i, float f, bool b, char c, int* pi, A* pa, T* pt) {
 
   (void)-pi; // expected-error {{invalid argument type}}
   (void)-pa; // expected-error {{invalid argument type}}
-  (void)-pt; // FIXME: we should be able to give an error here.
+  (void)-pt; // expected-error {{invalid argument type}}
 }
 

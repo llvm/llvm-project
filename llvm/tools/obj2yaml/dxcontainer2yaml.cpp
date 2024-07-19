@@ -58,8 +58,8 @@ dumpDXContainer(MemoryBufferRef Source) {
       assert(DXIL && "Since we are iterating and found a DXIL part, "
                      "this should never not have a value");
       NewPart.Program = DXContainerYAML::DXILProgram{
-          DXIL->first.MajorVersion,
-          DXIL->first.MinorVersion,
+          DXIL->first.getMajorVersion(),
+          DXIL->first.getMinorVersion(),
           DXIL->first.ShaderKind,
           DXIL->first.Size,
           DXIL->first.Bitcode.MajorVersion,

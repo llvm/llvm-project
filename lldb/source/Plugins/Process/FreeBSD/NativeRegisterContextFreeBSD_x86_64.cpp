@@ -237,7 +237,7 @@ static const RegisterSet g_reg_sets_x86_64[k_num_register_sets] = {
 
 NativeRegisterContextFreeBSD *
 NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread) {
+    const ArchSpec &target_arch, NativeThreadFreeBSD &native_thread) {
   return new NativeRegisterContextFreeBSD_x86_64(target_arch, native_thread);
 }
 
@@ -258,7 +258,7 @@ CreateRegisterInfoInterface(const ArchSpec &target_arch) {
 }
 
 NativeRegisterContextFreeBSD_x86_64::NativeRegisterContextFreeBSD_x86_64(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
+    const ArchSpec &target_arch, NativeThreadFreeBSD &native_thread)
     : NativeRegisterContextRegisterInfo(
           native_thread, CreateRegisterInfoInterface(target_arch)),
       NativeRegisterContextDBReg_x86(native_thread), m_regset_offsets({0}) {

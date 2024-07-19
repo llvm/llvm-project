@@ -150,7 +150,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void swap(__compressed_pair& __x)
-      _NOEXCEPT_(__is_nothrow_swappable<_T1>::value&& __is_nothrow_swappable<_T2>::value) {
+      _NOEXCEPT_(__is_nothrow_swappable_v<_T1>&& __is_nothrow_swappable_v<_T2>) {
     using std::swap;
     swap(first(), __x.first());
     swap(second(), __x.second());
@@ -160,7 +160,7 @@ public:
 template <class _T1, class _T2>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
 swap(__compressed_pair<_T1, _T2>& __x, __compressed_pair<_T1, _T2>& __y)
-    _NOEXCEPT_(__is_nothrow_swappable<_T1>::value&& __is_nothrow_swappable<_T2>::value) {
+    _NOEXCEPT_(__is_nothrow_swappable_v<_T1>&& __is_nothrow_swappable_v<_T2>) {
   __x.swap(__y);
 }
 

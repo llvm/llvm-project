@@ -37,7 +37,7 @@ class XCoreTTIImpl : public BasicTTIImplBase<XCoreTTIImpl> {
 
 public:
   explicit XCoreTTIImpl(const XCoreTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl()),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl()),
         TLI(ST->getTargetLowering()) {}
 
   unsigned getNumberOfRegisters(unsigned ClassID) const {

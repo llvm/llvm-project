@@ -34,7 +34,7 @@ void llvm::createMemCpyLoopKnownSize(
   BasicBlock *PostLoopBB = nullptr;
   Function *ParentFunc = PreLoopBB->getParent();
   LLVMContext &Ctx = PreLoopBB->getContext();
-  const DataLayout &DL = ParentFunc->getParent()->getDataLayout();
+  const DataLayout &DL = ParentFunc->getDataLayout();
   MDBuilder MDB(Ctx);
   MDNode *NewDomain = MDB.createAnonymousAliasScopeDomain("MemCopyDomain");
   StringRef Name = "MemCopyAliasScope";
@@ -186,7 +186,7 @@ void llvm::createMemCpyLoopUnknownSize(
       PreLoopBB->splitBasicBlock(InsertBefore, "post-loop-memcpy-expansion");
 
   Function *ParentFunc = PreLoopBB->getParent();
-  const DataLayout &DL = ParentFunc->getParent()->getDataLayout();
+  const DataLayout &DL = ParentFunc->getDataLayout();
   LLVMContext &Ctx = PreLoopBB->getContext();
   MDBuilder MDB(Ctx);
   MDNode *NewDomain = MDB.createAnonymousAliasScopeDomain("MemCopyDomain");
@@ -262,6 +262,9 @@ void llvm::createMemCpyLoopUnknownSize(
     assert((ResLoopOpSize == AtomicElementSize ? *AtomicElementSize : 1) &&
            "Store size is expected to match type size");
 
+    Align ResSrcAlign(commonAlignment(PartSrcAlign, ResLoopOpSize));
+    Align ResDstAlign(commonAlignment(PartDstAlign, ResLoopOpSize));
+
     Value *RuntimeResidual = getRuntimeLoopRemainder(DL, PLBuilder, CopyLen,
                                                      CILoopOpSize, LoopOpSize);
     Value *RuntimeBytesCopied = PLBuilder.CreateSub(CopyLen, RuntimeResidual);
@@ -303,7 +306,7 @@ void llvm::createMemCpyLoopUnknownSize(
     Value *SrcGEP =
         ResBuilder.CreateInBoundsGEP(ResLoopOpType, SrcAddr, FullOffset);
     LoadInst *Load = ResBuilder.CreateAlignedLoad(ResLoopOpType, SrcGEP,
-                                                  PartSrcAlign, SrcIsVolatile);
+                                                  ResSrcAlign, SrcIsVolatile);
     if (!CanOverlap) {
       // Set alias scope for loads.
       Load->setMetadata(LLVMContext::MD_alias_scope,
@@ -311,8 +314,8 @@ void llvm::createMemCpyLoopUnknownSize(
     }
     Value *DstGEP =
         ResBuilder.CreateInBoundsGEP(ResLoopOpType, DstAddr, FullOffset);
-    StoreInst *Store = ResBuilder.CreateAlignedStore(Load, DstGEP, PartDstAlign,
-                                                     DstIsVolatile);
+    StoreInst *Store =
+        ResBuilder.CreateAlignedStore(Load, DstGEP, ResDstAlign, DstIsVolatile);
     if (!CanOverlap) {
       // Indicate that stores don't overlap loads.
       Store->setMetadata(LLVMContext::MD_noalias, MDNode::get(Ctx, NewScope));
@@ -374,7 +377,7 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
   Type *TypeOfCopyLen = CopyLen->getType();
   BasicBlock *OrigBB = InsertBefore->getParent();
   Function *F = OrigBB->getParent();
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   // TODO: Use different element type if possible?
   Type *EltTy = Type::getInt8Ty(F->getContext());
 
@@ -422,10 +425,10 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
       LoopPhi, ConstantInt::get(TypeOfCopyLen, 1), "index_ptr");
   Value *Element = LoopBuilder.CreateAlignedLoad(
       EltTy, LoopBuilder.CreateInBoundsGEP(EltTy, SrcAddr, IndexPtr),
-      PartSrcAlign, "element");
+      PartSrcAlign, SrcIsVolatile, "element");
   LoopBuilder.CreateAlignedStore(
       Element, LoopBuilder.CreateInBoundsGEP(EltTy, DstAddr, IndexPtr),
-      PartDstAlign);
+      PartDstAlign, DstIsVolatile);
   LoopBuilder.CreateCondBr(
       LoopBuilder.CreateICmpEQ(IndexPtr, ConstantInt::get(TypeOfCopyLen, 0)),
       ExitBB, LoopBB);
@@ -440,10 +443,11 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
   IRBuilder<> FwdLoopBuilder(FwdLoopBB);
   PHINode *FwdCopyPhi = FwdLoopBuilder.CreatePHI(TypeOfCopyLen, 0, "index_ptr");
   Value *SrcGEP = FwdLoopBuilder.CreateInBoundsGEP(EltTy, SrcAddr, FwdCopyPhi);
-  Value *FwdElement =
-      FwdLoopBuilder.CreateAlignedLoad(EltTy, SrcGEP, PartSrcAlign, "element");
+  Value *FwdElement = FwdLoopBuilder.CreateAlignedLoad(
+      EltTy, SrcGEP, PartSrcAlign, SrcIsVolatile, "element");
   Value *DstGEP = FwdLoopBuilder.CreateInBoundsGEP(EltTy, DstAddr, FwdCopyPhi);
-  FwdLoopBuilder.CreateAlignedStore(FwdElement, DstGEP, PartDstAlign);
+  FwdLoopBuilder.CreateAlignedStore(FwdElement, DstGEP, PartDstAlign,
+                                    DstIsVolatile);
   Value *FwdIndexPtr = FwdLoopBuilder.CreateAdd(
       FwdCopyPhi, ConstantInt::get(TypeOfCopyLen, 1), "index_increment");
   FwdLoopBuilder.CreateCondBr(FwdLoopBuilder.CreateICmpEQ(FwdIndexPtr, CopyLen),
@@ -461,7 +465,7 @@ static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
   Type *TypeOfCopyLen = CopyLen->getType();
   BasicBlock *OrigBB = InsertBefore->getParent();
   Function *F = OrigBB->getParent();
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   BasicBlock *NewBB =
       OrigBB->splitBasicBlock(InsertBefore, "split");
   BasicBlock *LoopBB

@@ -1107,7 +1107,12 @@ enum MemberFunctionKind {
 };
 
 /// String matching algorithm used by SBTarget.
-enum MatchType { eMatchTypeNormal, eMatchTypeRegex, eMatchTypeStartsWith };
+enum MatchType {
+  eMatchTypeNormal,
+  eMatchTypeRegex,
+  eMatchTypeStartsWith,
+  eMatchTypeRegexInsensitive
+};
 
 /// Bitmask that describes details about a type.
 FLAGS_ENUM(TypeFlags){
@@ -1344,7 +1349,8 @@ enum DebuggerBroadcastBit {
   eBroadcastBitProgress = (1 << 0),
   eBroadcastBitWarning = (1 << 1),
   eBroadcastBitError = (1 << 2),
-  eBroadcastBitProgressCategory = (1 << 3),
+  eBroadcastSymbolChange = (1 << 3),
+  eBroadcastBitProgressCategory = (1 << 4),
 };
 
 /// Used for expressing severity in logs and diagnostics.

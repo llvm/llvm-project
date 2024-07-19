@@ -34,7 +34,7 @@
 // RUN:   FileCheck --check-prefix=FULL-MANGLED-METHOD %s
 // RUN: lldb-test symbols --name=foo --context=context --find=function --function-flags=base %t | \
 // RUN:   FileCheck --check-prefix=CONTEXT %s
-// RUN: lldb-test symbols --compiler-context=Struct:sbar,Function:foo -language=c++ -find=function -function-flags=method %t | \
+// RUN: lldb-test symbols --compiler-context=ClassOrStruct:sbar,Function:foo -language=c++ -find=function -function-flags=method %t | \
 // RUN:   FileCheck --check-prefix=COMPILER-CONTEXT %s
 // RUN: lldb-test symbols --name=not_there --find=function %t | \
 // RUN:   FileCheck --check-prefix=EMPTY %s

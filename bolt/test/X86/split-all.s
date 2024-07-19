@@ -1,4 +1,4 @@
-# Test split all block strategy
+## Test split all block strategy
 
 # RUN: llvm-mc --filetype=obj --triple x86_64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q

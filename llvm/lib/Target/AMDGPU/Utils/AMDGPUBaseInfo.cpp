@@ -11,6 +11,7 @@
 #include "AMDGPUAsmUtils.h"
 #include "AMDKernelCodeT.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "Utils/AMDKernelCodeTUtils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Attributes.h"
@@ -152,11 +153,17 @@ inline unsigned getSaSdstBitWidth() { return 1; }
 /// \returns SaSdst bit shift
 inline unsigned getSaSdstBitShift() { return 0; }
 
-} // end namespace anonymous
+} // end anonymous namespace
 
 namespace llvm {
 
 namespace AMDGPU {
+
+/// \returns true if the target supports signed immediate offset for SMRD
+/// instructions.
+bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {
+  return isGFX9Plus(ST);
+}
 
 /// \returns True if \p STI is AMDHSA.
 bool isHsaAbi(const MCSubtargetInfo &STI) {
@@ -372,10 +379,18 @@ struct VOPTrue16Info {
   bool IsTrue16;
 };
 
+struct SingleUseExceptionInfo {
+  uint16_t Opcode;
+  bool IsInvalidSingleUseConsumer;
+  bool IsInvalidSingleUseProducer;
+};
+
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
 #define GET_MUBUFInfoTable_IMPL
+#define GET_SingleUseExceptionTable_DECL
+#define GET_SingleUseExceptionTable_IMPL
 #define GET_SMInfoTable_DECL
 #define GET_SMInfoTable_IMPL
 #define GET_VOP1InfoTable_DECL
@@ -481,17 +496,17 @@ bool getSMEMIsBuffer(unsigned Opc) {
 
 bool getVOP1IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP1OpcodeHelper(Opc);
-  return Info ? Info->IsSingle : false;
+  return Info ? Info->IsSingle : true;
 }
 
 bool getVOP2IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP2OpcodeHelper(Opc);
-  return Info ? Info->IsSingle : false;
+  return Info ? Info->IsSingle : true;
 }
 
 bool getVOP3IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP3OpcodeHelper(Opc);
-  return Info ? Info->IsSingle : false;
+  return Info ? Info->IsSingle : true;
 }
 
 bool isVOPC64DPP(unsigned Opc) {
@@ -522,8 +537,7 @@ CanBeVOPD getCanBeVOPD(unsigned Opc) {
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   if (Info)
     return {Info->CanBeVOPDX, true};
-  else
-    return {false, false};
+  return {false, false};
 }
 
 unsigned getVOPDOpcode(unsigned Opc) {
@@ -581,9 +595,7 @@ bool isCvt_F32_Fp8_Bf8_e64(unsigned Opc) {
 }
 
 bool isGenericAtomic(unsigned Opc) {
-  return Opc == AMDGPU::G_AMDGPU_ATOMIC_FMIN ||
-         Opc == AMDGPU::G_AMDGPU_ATOMIC_FMAX ||
-         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP ||
+  return Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_ADD ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMIN ||
@@ -605,6 +617,16 @@ bool isGenericAtomic(unsigned Opc) {
 bool isTrue16Inst(unsigned Opc) {
   const VOPTrue16Info *Info = getTrue16OpcodeHelper(Opc);
   return Info ? Info->IsTrue16 : false;
+}
+
+bool isInvalidSingleUseConsumerInst(unsigned Opc) {
+  const SingleUseExceptionInfo *Info = getSingleUseExceptionHelper(Opc);
+  return Info && Info->IsInvalidSingleUseConsumer;
+}
+
+bool isInvalidSingleUseProducerInst(unsigned Opc) {
+  const SingleUseExceptionInfo *Info = getSingleUseExceptionHelper(Opc);
+  return Info && Info->IsInvalidSingleUseProducer;
 }
 
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
@@ -1129,12 +1151,45 @@ unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
 
 unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo *STI,
                                       unsigned NumVGPRs) {
-  unsigned MaxWaves = getMaxWavesPerEU(STI);
-  unsigned Granule = getVGPRAllocGranule(STI);
+  return getNumWavesPerEUWithNumVGPRs(NumVGPRs, getVGPRAllocGranule(STI),
+                                      getMaxWavesPerEU(STI),
+                                      getTotalNumVGPRs(STI));
+}
+
+unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
+                                      unsigned MaxWaves,
+                                      unsigned TotalNumVGPRs) {
   if (NumVGPRs < Granule)
     return MaxWaves;
   unsigned RoundedRegs = alignTo(NumVGPRs, Granule);
-  return std::min(std::max(getTotalNumVGPRs(STI) / RoundedRegs, 1u), MaxWaves);
+  return std::min(std::max(TotalNumVGPRs / RoundedRegs, 1u), MaxWaves);
+}
+
+unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
+                                  AMDGPUSubtarget::Generation Gen) {
+  if (Gen >= AMDGPUSubtarget::GFX10)
+    return MaxWaves;
+
+  if (Gen >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+    if (SGPRs <= 80)
+      return 10;
+    if (SGPRs <= 88)
+      return 9;
+    if (SGPRs <= 100)
+      return 8;
+    return 7;
+  }
+  if (SGPRs <= 48)
+    return 10;
+  if (SGPRs <= 56)
+    return 9;
+  if (SGPRs <= 64)
+    return 8;
+  if (SGPRs <= 72)
+    return 7;
+  if (SGPRs <= 80)
+    return 6;
+  return 5;
 }
 
 unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
@@ -1185,39 +1240,37 @@ unsigned getAllocatedNumVGPRBlocks(const MCSubtargetInfo *STI,
 }
 } // end namespace IsaInfo
 
-void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
+void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &KernelCode,
                                const MCSubtargetInfo *STI) {
   IsaVersion Version = getIsaVersion(STI->getCPU());
-
-  memset(&Header, 0, sizeof(Header));
-
-  Header.amd_kernel_code_version_major = 1;
-  Header.amd_kernel_code_version_minor = 2;
-  Header.amd_machine_kind = 1; // AMD_MACHINE_KIND_AMDGPU
-  Header.amd_machine_version_major = Version.Major;
-  Header.amd_machine_version_minor = Version.Minor;
-  Header.amd_machine_version_stepping = Version.Stepping;
-  Header.kernel_code_entry_byte_offset = sizeof(Header);
-  Header.wavefront_size = 6;
+  KernelCode.amd_kernel_code_version_major = 1;
+  KernelCode.amd_kernel_code_version_minor = 2;
+  KernelCode.amd_machine_kind = 1; // AMD_MACHINE_KIND_AMDGPU
+  KernelCode.amd_machine_version_major = Version.Major;
+  KernelCode.amd_machine_version_minor = Version.Minor;
+  KernelCode.amd_machine_version_stepping = Version.Stepping;
+  KernelCode.kernel_code_entry_byte_offset = sizeof(amd_kernel_code_t);
+  if (STI->getFeatureBits().test(FeatureWavefrontSize32)) {
+    KernelCode.wavefront_size = 5;
+    KernelCode.code_properties |= AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
+  } else {
+    KernelCode.wavefront_size = 6;
+  }
 
   // If the code object does not support indirect functions, then the value must
   // be 0xffffffff.
-  Header.call_convention = -1;
+  KernelCode.call_convention = -1;
 
   // These alignment values are specified in powers of two, so alignment =
   // 2^n.  The minimum alignment is 2^4 = 16.
-  Header.kernarg_segment_alignment = 4;
-  Header.group_segment_alignment = 4;
-  Header.private_segment_alignment = 4;
+  KernelCode.kernarg_segment_alignment = 4;
+  KernelCode.group_segment_alignment = 4;
+  KernelCode.private_segment_alignment = 4;
 
   if (Version.Major >= 10) {
-    if (STI->getFeatureBits().test(FeatureWavefrontSize32)) {
-      Header.wavefront_size = 5;
-      Header.code_properties |= AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
-    }
-    Header.compute_pgm_resource_registers |=
-      S_00B848_WGP_MODE(STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1) |
-      S_00B848_MEM_ORDERED(1);
+    KernelCode.compute_pgm_resource_registers |=
+        S_00B848_WGP_MODE(STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1) |
+        S_00B848_MEM_ORDERED(1);
   }
 }
 
@@ -1425,11 +1478,10 @@ static unsigned getCombinedCountBitMask(const IsaVersion &Version,
     unsigned Storecnt = getBitMask(getLoadcntStorecntBitShift(Version.Major),
                                    getStorecntBitWidth(Version.Major));
     return Dscnt | Storecnt;
-  } else {
-    unsigned Loadcnt = getBitMask(getLoadcntStorecntBitShift(Version.Major),
-                                  getLoadcntBitWidth(Version.Major));
-    return Dscnt | Loadcnt;
   }
+  unsigned Loadcnt = getBitMask(getLoadcntStorecntBitShift(Version.Major),
+                                getLoadcntBitWidth(Version.Major));
+  return Dscnt | Loadcnt;
 }
 
 Waitcnt decodeLoadcntDscnt(const IsaVersion &Version, unsigned LoadcntDscnt) {
@@ -2771,10 +2823,6 @@ static bool hasSMEMByteOffset(const MCSubtargetInfo &ST) {
   return isGCN3Encoding(ST) || isGFX10Plus(ST);
 }
 
-static bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {
-  return isGFX9Plus(ST);
-}
-
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
                                       int64_t EncodedOffset) {
   if (isGFX12Plus(ST))
@@ -2809,7 +2857,14 @@ uint64_t convertSMRDOffsetUnits(const MCSubtargetInfo &ST,
 }
 
 std::optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
-                                            int64_t ByteOffset, bool IsBuffer) {
+                                            int64_t ByteOffset, bool IsBuffer,
+                                            bool HasSOffset) {
+  // For unbuffered smem loads, it is illegal for the Immediate Offset to be
+  // negative if the resulting (Offset + (M0 or SOffset or zero) is negative.
+  // Handle case where SOffset is not present.
+  if (!IsBuffer && !HasSOffset && ByteOffset < 0 && hasSMRDSignedImmOffset(ST))
+    return std::nullopt;
+
   if (isGFX12Plus(ST)) // 24 bit signed offsets
     return isInt<24>(ByteOffset) ? std::optional<int64_t>(ByteOffset)
                                  : std::nullopt;

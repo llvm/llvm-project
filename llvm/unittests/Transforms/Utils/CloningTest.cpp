@@ -1122,4 +1122,41 @@ TEST_F(CloneModule, IFunc) {
   EXPECT_EQ("resolver", Resolver->getName());
   EXPECT_EQ(GlobalValue::PrivateLinkage, Resolver->getLinkage());
 }
+
+TEST_F(CloneModule, CloneDbgLabel) {
+  LLVMContext Context;
+
+  std::unique_ptr<Module> M = parseIR(Context,
+                                      R"M(
+define void @noop(ptr nocapture noundef writeonly align 4 %dst) local_unnamed_addr !dbg !3 {
+entry:
+  %call = tail call spir_func i64 @foo(i32 noundef 0)
+    #dbg_label(!11, !12)
+  store i64 %call, ptr %dst, align 4
+  ret void
 }
+
+declare i64 @foo(i32 noundef) local_unnamed_addr
+
+!llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!2}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 19.0.0git", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
+!1 = !DIFile(filename: "<stdin>", directory: "foo")
+!2 = !{i32 2, !"Debug Info Version", i32 3}
+!3 = distinct !DISubprogram(name: "noop", scope: !4, file: !4, line: 17, type: !5, scopeLine: 17, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !9)
+!4 = !DIFile(filename: "file", directory: "foo")
+!5 = !DISubroutineType(types: !6)
+!6 = !{null, !7}
+!7 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !8, size: 64)
+!8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!9 = !{}
+!11 = !DILabel(scope: !3, name: "foo", file: !4, line: 23)
+!12 = !DILocation(line: 23, scope: !3)
+)M");
+
+  ASSERT_FALSE(verifyModule(*M, &errs()));
+  auto NewM = llvm::CloneModule(*M);
+  EXPECT_FALSE(verifyModule(*NewM, &errs()));
+}
+} // namespace

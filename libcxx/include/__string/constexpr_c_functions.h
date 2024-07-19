@@ -123,7 +123,7 @@ __constexpr_memcmp_equal(const _Tp* __lhs, const _Up* __rhs, __element_count __n
     }
     return true;
   } else {
-    return __builtin_memcmp(__lhs, __rhs, __count * sizeof(_Tp)) == 0;
+    return ::__builtin_memcmp(__lhs, __rhs, __count * sizeof(_Tp)) == 0;
   }
 }
 

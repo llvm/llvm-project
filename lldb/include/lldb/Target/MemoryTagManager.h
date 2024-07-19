@@ -103,7 +103,7 @@ public:
   // transport.
   virtual size_t GetTagSizeInBytes() const = 0;
 
-  // Unpack tags from their stored format (e.g. gdb qMemTags data) into seperate
+  // Unpack tags from their stored format (e.g. gdb qMemTags data) into separate
   // tags.
   //
   // Checks that each tag is within the expected value range and if granules is

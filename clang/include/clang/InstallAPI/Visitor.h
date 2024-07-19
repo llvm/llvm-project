@@ -60,8 +60,8 @@ private:
   std::string getMangledName(const NamedDecl *D) const;
   std::string getBackendMangledName(llvm::Twine Name) const;
   std::string getMangledCXXVTableName(const CXXRecordDecl *D) const;
-  std::string getMangledCXXThunk(const GlobalDecl &D,
-                                 const ThunkInfo &Thunk) const;
+  std::string getMangledCXXThunk(const GlobalDecl &D, const ThunkInfo &Thunk,
+                                 bool ElideOverrideInfo) const;
   std::string getMangledCXXRTTI(const CXXRecordDecl *D) const;
   std::string getMangledCXXRTTIName(const CXXRecordDecl *D) const;
   std::string getMangledCtorDtor(const CXXMethodDecl *D, int Type) const;

@@ -147,12 +147,10 @@ namespace {
     unsigned GlobalBaseReg = 0;
 
   public:
-    static char ID;
-
     PPCDAGToDAGISel() = delete;
 
     explicit PPCDAGToDAGISel(PPCTargetMachine &tm, CodeGenOptLevel OptLevel)
-        : SelectionDAGISel(ID, tm, OptLevel), TM(tm) {}
+        : SelectionDAGISel(tm, OptLevel), TM(tm) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override {
       // Make sure we re-emit a set of the global base reg if necessary
@@ -447,11 +445,19 @@ private:
     void transferMemOperands(SDNode *N, SDNode *Result);
   };
 
+  class PPCDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+  public:
+    static char ID;
+    explicit PPCDAGToDAGISelLegacy(PPCTargetMachine &tm,
+                                   CodeGenOptLevel OptLevel)
+        : SelectionDAGISelLegacy(
+              ID, std::make_unique<PPCDAGToDAGISel>(tm, OptLevel)) {}
+  };
 } // end anonymous namespace
 
-char PPCDAGToDAGISel::ID = 0;
+char PPCDAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(PPCDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(PPCDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 /// getGlobalBaseReg - Output the instructions required to put the
 /// base address to use for accessing globals into a register.
@@ -6096,8 +6102,15 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
                                    EVT OperandTy) {
       SDValue GA = TocEntry->getOperand(0);
       SDValue TocBase = TocEntry->getOperand(1);
-      SDNode *MN = CurDAG->getMachineNode(OpCode, dl, OperandTy, GA, TocBase);
-      transferMemOperands(TocEntry, MN);
+      SDNode *MN = nullptr;
+      if (OpCode == PPC::ADDItoc || OpCode == PPC::ADDItoc8)
+        // toc-data access doesn't involve in loading from got, no need to
+        // keep memory operands.
+        MN = CurDAG->getMachineNode(OpCode, dl, OperandTy, TocBase, GA);
+      else {
+        MN = CurDAG->getMachineNode(OpCode, dl, OperandTy, GA, TocBase);
+        transferMemOperands(TocEntry, MN);
+      }
       ReplaceNode(TocEntry, MN);
     };
 
@@ -6143,23 +6156,22 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
            " ELF/AIX or 32-bit AIX in the following.");
 
     // Transforms the ISD::TOC_ENTRY node for 32-bit AIX large code model mode,
-    // or 64-bit medium (ELF-only), or large (ELF and AIX) code model code that
-    // does not conain TOC data symbols.
-    // We generate two instructions as described below. The first source
-    // operand is a symbol reference. If it must be referenced via the toc
-    // according to Subtarget, we generate:
+    // 64-bit medium (ELF-only), or 64-bit large (ELF and AIX) code model code
+    // that does not contain TOC data symbols. We generate two instructions as
+    // described below. The first source operand is a symbol reference. If it
+    // must be referenced via the TOC according to Subtarget, we generate:
     // [32-bit AIX]
     //   LWZtocL(@sym, ADDIStocHA(%r2, @sym))
     // [64-bit ELF/AIX]
     //   LDtocL(@sym, ADDIStocHA8(%x2, @sym))
-    // Otherwise we generate:
+    // Otherwise for medium code model ELF we generate:
     //   ADDItocL8(ADDIStocHA8(%x2, @sym), @sym)
 
-    // For large code model with TOC data symbols we generate:
+    // And finally for AIX with toc-data we generate:
     // [32-bit AIX]
     //   ADDItocL(ADDIStocHA(%x2, @sym), @sym)
     // [64-bit AIX]
-    //   Currently not supported.
+    //   ADDItocL8(ADDIStocHA8(%x2, @sym), @sym)
 
     SDValue GA = N->getOperand(0);
     SDValue TOCbase = N->getOperand(1);
@@ -6171,12 +6183,9 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     // On AIX, if the symbol has the toc-data attribute it will be defined
     // in the TOC entry, so we use an ADDItocL/ADDItocL8.
     if (isAIXABI && hasTocDataAttr(GA)) {
-      if (isPPC64)
-        report_fatal_error(
-            "64-bit large code model toc-data not yet supported");
-
-      ReplaceNode(N, CurDAG->getMachineNode(PPC::ADDItocL, dl, VT,
-                                            SDValue(Tmp, 0), GA));
+      ReplaceNode(
+          N, CurDAG->getMachineNode(isPPC64 ? PPC::ADDItocL8 : PPC::ADDItocL,
+                                    dl, VT, SDValue(Tmp, 0), GA));
       return;
     }
 
@@ -6191,6 +6200,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       return;
     }
 
+    assert(isPPC64 && "TOC_ENTRY already handled for 32-bit.");
     // Build the address relative to the TOC-pointer.
     ReplaceNode(N, CurDAG->getMachineNode(PPC::ADDItocL8, dl, MVT::i64,
                                           SDValue(Tmp, 0), GA));
@@ -7777,6 +7787,10 @@ void PPCDAGToDAGISel::PeepholePPC64() {
       Flags = PPCII::MO_TLSLD_LO;
       break;
     case PPC::ADDItocL8:
+      // Skip the following peephole optimizations for ADDItocL8 on AIX which
+      // is used for toc-data access.
+      if (Subtarget->isAIXABI())
+        continue;
       Flags = PPCII::MO_TOC_LO;
       break;
     }
@@ -7920,5 +7934,5 @@ void PPCDAGToDAGISel::PeepholePPC64() {
 ///
 FunctionPass *llvm::createPPCISelDag(PPCTargetMachine &TM,
                                      CodeGenOptLevel OptLevel) {
-  return new PPCDAGToDAGISel(TM, OptLevel);
+  return new PPCDAGToDAGISelLegacy(TM, OptLevel);
 }

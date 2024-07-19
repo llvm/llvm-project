@@ -144,7 +144,7 @@ public:
       return CatchTypeInfo{nullptr, 0x40};
   }
 
-  bool shouldTypeidBeNullChecked(bool IsDeref, QualType SrcRecordTy) override;
+  bool shouldTypeidBeNullChecked(QualType SrcRecordTy) override;
   void EmitBadTypeidCall(CodeGenFunction &CGF) override;
   llvm::Value *EmitTypeid(CodeGenFunction &CGF, QualType SrcRecordTy,
                           Address ThisPtr,
@@ -415,9 +415,11 @@ public:
   bool exportThunk() override { return false; }
 
   llvm::Value *performThisAdjustment(CodeGenFunction &CGF, Address This,
-                                     const ThisAdjustment &TA) override;
+                                     const CXXRecordDecl * /*UnadjustedClass*/,
+                                     const ThunkInfo &TI) override;
 
   llvm::Value *performReturnAdjustment(CodeGenFunction &CGF, Address Ret,
+                                       const CXXRecordDecl * /*UnadjustedClass*/,
                                        const ReturnAdjustment &RA) override;
 
   void EmitThreadLocalInitFuncs(
@@ -977,11 +979,9 @@ MicrosoftCXXABI::performBaseAdjustment(CodeGenFunction &CGF, Address Value,
                          PolymorphicBase);
 }
 
-bool MicrosoftCXXABI::shouldTypeidBeNullChecked(bool IsDeref,
-                                                QualType SrcRecordTy) {
+bool MicrosoftCXXABI::shouldTypeidBeNullChecked(QualType SrcRecordTy) {
   const CXXRecordDecl *SrcDecl = SrcRecordTy->getAsCXXRecordDecl();
-  return IsDeref &&
-         !getContext().getASTRecordLayout(SrcDecl).hasExtendableVFPtr();
+  return !getContext().getASTRecordLayout(SrcDecl).hasExtendableVFPtr();
 }
 
 static llvm::CallBase *emitRTtypeidCall(CodeGenFunction &CGF,
@@ -2225,9 +2225,10 @@ void MicrosoftCXXABI::emitVBTableDefinition(const VPtrInfo &VBT,
     GV->setLinkage(llvm::GlobalVariable::AvailableExternallyLinkage);
 }
 
-llvm::Value *MicrosoftCXXABI::performThisAdjustment(CodeGenFunction &CGF,
-                                                    Address This,
-                                                    const ThisAdjustment &TA) {
+llvm::Value *MicrosoftCXXABI::performThisAdjustment(
+    CodeGenFunction &CGF, Address This,
+    const CXXRecordDecl * /*UnadjustedClass*/, const ThunkInfo &TI) {
+  const ThisAdjustment &TA = TI.This;
   if (TA.isEmpty())
     return This.emitRawPointer(CGF);
 
@@ -2277,9 +2278,10 @@ llvm::Value *MicrosoftCXXABI::performThisAdjustment(CodeGenFunction &CGF,
   return V;
 }
 
-llvm::Value *
-MicrosoftCXXABI::performReturnAdjustment(CodeGenFunction &CGF, Address Ret,
-                                         const ReturnAdjustment &RA) {
+llvm::Value *MicrosoftCXXABI::performReturnAdjustment(
+    CodeGenFunction &CGF, Address Ret,
+    const CXXRecordDecl * /*UnadjustedClass*/, const ReturnAdjustment &RA) {
+
   if (RA.isEmpty())
     return Ret.emitRawPointer(CGF);
 
