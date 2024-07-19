@@ -13,6 +13,6 @@ else()
     SOURCES
     ${LIBC_SOURCE_DIR}/utils/MPFRWrapper/check_mpfr.cpp
     LINK_LIBRARIES
-      -lmpfr -lgmp
+      -lmpfr -lgmp -latomic
   )
 endif()

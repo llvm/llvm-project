@@ -17,6 +17,7 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/threads/linux/futex_utils.h"
 #include "src/__support/threads/linux/futex_word.h"
@@ -36,7 +37,7 @@
 #include "src/__support/time/linux/monotonicity.h"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 // Forward declaration of the RwLock class.
 class RwLock;
 // A namespace to rwlock specific utilities.
@@ -553,6 +554,6 @@ public:
     return LockResult::Success;
   }
 };
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SUPPORT_THREADS_LINUX_RWLOCK_H

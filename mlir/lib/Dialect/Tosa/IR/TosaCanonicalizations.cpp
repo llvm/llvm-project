@@ -764,7 +764,8 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
           llvm::cast<IntegerType>(outETy).getIntOrFloatBitWidth(), unsign);
       auto floatVal = operand.getSplatValue<APFloat>();
       bool exact;
-      floatVal.convertToInteger(intVal, llvm::RoundingMode::TowardZero, &exact);
+      floatVal.convertToInteger(intVal, llvm::RoundingMode::NearestTiesToEven,
+                                &exact);
       return SplatElementsAttr::get(outTy, intVal);
     }
 
@@ -859,7 +860,7 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
 
 OpFoldResult PadOp::fold(FoldAdaptor adaptor) {
   // If the pad is all zeros we can fold this operation away.
-  if (adaptor.getPadding()) {
+  if (adaptor.getPadding() && getInput1().getType() == getType()) {
     auto densePad = llvm::cast<DenseElementsAttr>(adaptor.getPadding());
     if (densePad.isSplat() && densePad.getSplatValue<APInt>().isZero()) {
       return getInput1();

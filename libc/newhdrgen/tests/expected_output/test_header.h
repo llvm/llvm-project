@@ -10,7 +10,9 @@
 #define LLVM_LIBC_TEST_SMALL_H
 
 #include "__llvm-libc-common.h"
+#include "llvm-libc-macros/float16-macros.h"
 #include "llvm-libc-macros/test_small-macros.h"
+#include "llvm-libc-types/float128.h"
 
 #define MACRO_A 1
 
@@ -26,13 +28,21 @@ enum {
 
 __BEGIN_C_DECLS
 
-#ifdef FUNC_A_16
-void func_a()CONST_FUNC_A;
-#endif // FUNC_A_16
+CONST_FUNC_A void func_a() __NOEXCEPT;
 
-#ifdef FUNC_B_16
-int func_b(int, float)CONST_FUNC_B;
-#endif // FUNC_B_16
+#ifdef LIBC_TYPES_HAS_FLOAT128
+float128 func_b() __NOEXCEPT;
+#endif // LIBC_TYPES_HAS_FLOAT128
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+_Float16 func_c(int, float) __NOEXCEPT;
+
+_Float16 func_d(int, float) __NOEXCEPT;
+#endif // LIBC_TYPES_HAS_FLOAT16
+
+#ifdef LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
+_Float16 func_e(float128) __NOEXCEPT;
+#endif // LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
 
 extern obj object_1;
 extern obj object_2;

@@ -4,7 +4,7 @@ function(_get_compile_options_from_flags output_var)
   if(LIBC_TARGET_ARCHITECTURE_IS_RISCV64 OR(LIBC_CPU_FEATURES MATCHES "FMA"))
     check_flag(ADD_FMA_FLAG ${FMA_OPT_FLAG} ${ARGN})
   endif()
-  check_flag(ADD_SSE4_2_FLAG ${ROUND_OPT_FLAG} ${ARGN})
+  check_flag(ADD_ROUND_OPT_FLAG ${ROUND_OPT_FLAG} ${ARGN})
   check_flag(ADD_EXPLICIT_SIMD_OPT_FLAG ${EXPLICIT_SIMD_OPT_FLAG} ${ARGN})
 
   if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
@@ -16,8 +16,23 @@ function(_get_compile_options_from_flags output_var)
         list(APPEND compile_options "-D__LIBC_RISCV_USE_FMA")
       endif()
     endif()
-    if(ADD_SSE4_2_FLAG)
-      list(APPEND compile_options "-msse4.2")
+    if(ADD_ROUND_OPT_FLAG)
+      if(LIBC_TARGET_ARCHITECTURE_IS_X86)
+        # ROUND_OPT_FLAG is only enabled if SSE4.2 is detected, not just SSE4.1,
+        # because there was code to check for SSE4.2 already, and few CPUs only
+        # have SSE4.1.
+        list(APPEND compile_options "-msse4.2")
+      endif()
+      if(LIBC_COMPILER_HAS_BUILTIN_CEIL_FLOOR_RINT_TRUNC)
+        list(APPEND compile_options
+             "-D__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC")
+      endif()
+      if(LIBC_COMPILER_HAS_BUILTIN_ROUND)
+        list(APPEND compile_options "-D__LIBC_USE_BUILTIN_ROUND")
+      endif()
+      if(LIBC_COMPILER_HAS_BUILTIN_ROUNDEVEN)
+        list(APPEND compile_options "-D__LIBC_USE_BUILTIN_ROUNDEVEN")
+      endif()
     endif()
     if(ADD_EXPLICIT_SIMD_OPT_FLAG)
       list(APPEND compile_options "-D__LIBC_EXPLICIT_SIMD_OPT")
@@ -34,10 +49,21 @@ function(_get_compile_options_from_flags output_var)
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction(_get_compile_options_from_flags)
 
+function(_get_compile_options_from_config output_var)
+  set(config_options "")
+
+  if(LIBC_CONF_QSORT_IMPL)
+    list(APPEND config_options "-DLIBC_QSORT_IMPL=${LIBC_CONF_QSORT_IMPL}")
+  endif()
+
+  set(${output_var} ${config_options} PARENT_SCOPE)
+endfunction(_get_compile_options_from_config)
+
 function(_get_common_compile_options output_var flags)
   _get_compile_options_from_flags(compile_flags ${flags})
+  _get_compile_options_from_config(config_flags)
 
-  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags})
+  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags} ${config_flags})
 
   if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
