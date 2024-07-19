@@ -527,10 +527,14 @@ size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
     size_t BufferSize = 1;
     char *Buffer = static_cast<char *>(std::malloc(BufferSize));
     char *BaseName = Demangler.getFunctionBaseName(Buffer, &BufferSize);
-    if (!BaseName)
+    if (!BaseName) {
+      std::free(Buffer);
       return std::string("");
-    std::string BaseNameStr(BaseName, BufferSize);
-    std::free(BaseName);
+    }
+    if (Buffer != BaseName)
+      Buffer = BaseName;
+    std::string BaseNameStr(Buffer, BufferSize);
+    std::free(Buffer);
     return BaseNameStr;
   };
 
