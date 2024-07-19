@@ -1911,6 +1911,14 @@ def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
   MetaVarName<"<version>">,
   HelpText<"Specify the Swift version to use when filtering API notes">;
 
+defm bounds_safety : BoolFOption<
+  "experimental-bounds-safety",
+  LangOpts<"BoundsSafety">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [CC1Option], "Disable">,
+  BothFlags<[], [CC1Option],
+          " experimental bounds safety extension for C">>;
+
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Emit">,
