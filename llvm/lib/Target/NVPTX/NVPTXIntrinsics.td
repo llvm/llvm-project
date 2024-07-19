@@ -2096,13 +2096,13 @@ def atomic_cmp_swap_i64_gen: ATOMIC_GENERIC_CHK<(ops node:$a, node:$b, node:$c),
   (atomic_cmp_swap_i64 node:$a, node:$b, node:$c)>;
 
 defm INT_PTX_ATOM_CAS_G_16 : F_ATOMIC_3<i16, Int16Regs, ".global", ".b16", ".cas",
-  atomic_cmp_swap_i16_g, i16imm>;
+  atomic_cmp_swap_i16_g, i16imm, [hasSM<70>, hasPTX<63>]>;
 defm INT_PTX_ATOM_CAS_S_16 : F_ATOMIC_3<i16, Int16Regs, ".shared", ".b16", ".cas",
-  atomic_cmp_swap_i16_s, i16imm>;
+  atomic_cmp_swap_i16_s, i16imm, [hasSM<70>, hasPTX<63>]>;
 defm INT_PTX_ATOM_CAS_GEN_16 : F_ATOMIC_3<i16, Int16Regs, "", ".b16", ".cas",
-  atomic_cmp_swap_i16_gen, i16imm>;
+  atomic_cmp_swap_i16_gen, i16imm, [hasSM<70>, hasPTX<63>]>;
 defm INT_PTX_ATOM_CAS_GEN_16_USE_G : F_ATOMIC_3<i16, Int16Regs, ".global", ".b16", ".cas",
-  atomic_cmp_swap_i16_gen, i16imm>;
+  atomic_cmp_swap_i16_gen, i16imm, [hasSM<70>, hasPTX<63>]>;
 defm INT_PTX_ATOM_CAS_G_32 : F_ATOMIC_3<i32, Int32Regs, ".global", ".b32", ".cas",
   atomic_cmp_swap_i32_g, i32imm>;
 defm INT_PTX_ATOM_CAS_S_32 : F_ATOMIC_3<i32, Int32Regs, ".shared", ".b32", ".cas",
