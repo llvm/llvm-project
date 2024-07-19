@@ -178,6 +178,8 @@ public:
 
   static bool UnregisterPlugin(ObjectFileCreateInstance create_callback);
 
+  static bool IsRegisteredObjectFilePluginName(llvm::StringRef name);
+
   static ObjectFileCreateInstance
   GetObjectFileCreateCallbackAtIndex(uint32_t idx);
 
@@ -191,9 +193,7 @@ public:
   GetObjectFileCreateMemoryCallbackForPluginName(llvm::StringRef name);
 
   static Status SaveCore(const lldb::ProcessSP &process_sp,
-                         const FileSpec &outfile,
-                         lldb::SaveCoreStyle &core_style,
-                         llvm::StringRef plugin_name);
+                         const lldb_private::SaveCoreOptions &core_options);
 
   // ObjectContainer
   static bool RegisterPlugin(
