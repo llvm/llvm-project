@@ -354,7 +354,7 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
 
   UseLocSection = !TT.isNVPTX();
 
-  // Always emits .debug_aranges for SCE tuning.
+  // Always emit .debug_aranges for SCE tuning.
   UseARangesSection = GenerateARangeSection || tuneForSCE();
 
   HasAppleExtensionAttributes = tuneForLLDB();
