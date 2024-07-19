@@ -27477,8 +27477,8 @@ SDValue AArch64TargetLowering::LowerReductionToSVE(unsigned Opcode,
       // CNTP(BoolVec & BoolVec) <=> CNTP(BoolVec & PTRUE)
       SDValue CntpOp = DAG.getNode(
           ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
-          DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64), BoolVec,
-          BoolVec);
+          DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64),
+          BoolVec, BoolVec);
       return DAG.getAnyExtOrTrunc(CntpOp, DL, ScalarOp.getValueType());
     }
   }
