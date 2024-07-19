@@ -405,9 +405,9 @@ define void @large_offset(ptr %out, i32 %in) {
 ; CHECK-SAME: ptr [[OUT:%.*]], i32 [[IN:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[OUT]], i64 [[TMP1]]
-; CHECK-NEXT:    [[GETELEM:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 2147483648
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[TMP0]], 536870912
+; CHECK-NEXT:    [[IDX:%.*]] = zext nneg i32 [[ADD]] to i64
+; CHECK-NEXT:    [[GETELEM:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[IDX]]
 ; CHECK-NEXT:    store i32 [[IN]], ptr [[GETELEM]], align 4
 ; CHECK-NEXT:    ret void
 ;

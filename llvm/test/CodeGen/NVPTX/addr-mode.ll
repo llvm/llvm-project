@@ -71,11 +71,12 @@ define i32 @test_addr_mode_i64_large(ptr %x) {
 ; CHECK-LABEL: test_addr_mode_i64_large(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [test_addr_mode_i64_large_param_0];
-; CHECK-NEXT:    ld.u32 %r1, [%rd1+17179869172];
+; CHECK-NEXT:    add.s64 %rd2, %rd1, 17179869172;
+; CHECK-NEXT:    ld.u32 %r1, [%rd2];
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r1;
 ; CHECK-NEXT:    ret;
   %addr = getelementptr i32, ptr %x, i64 4294967293
