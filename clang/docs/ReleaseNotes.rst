@@ -1189,6 +1189,8 @@ DWARF Support in Clang
 Floating Point Support in Clang
 -------------------------------
 
+- Add ``__builtin__fmaf16`` builtin for floating point types.
+
 Fixed Point Support in Clang
 ----------------------------
 
