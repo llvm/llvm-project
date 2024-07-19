@@ -1385,6 +1385,15 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
     if (!getLangOpts().ObjC && Next.is(tok::identifier))
       return TPResult::True;
 
+    // If this identifier was reverted from a token ID, and the next token
+    // is a '(', we assume it to be a use of a type trait, so this
+    // can never be a type name.
+    if (Next.is(tok::l_paren) &&
+        Tok.getIdentifierInfo()->hasRevertedTokenIDToIdentifier() &&
+        isRevertibleTypeTrait(Tok.getIdentifierInfo())) {
+      return TPResult::False;
+    }
+
     if (Next.isNot(tok::coloncolon) && Next.isNot(tok::less)) {
       // Determine whether this is a valid expression. If not, we will hit
       // a parse error one way or another. In that case, tell the caller that
