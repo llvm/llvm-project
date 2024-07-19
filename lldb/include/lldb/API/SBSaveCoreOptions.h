@@ -10,7 +10,6 @@
 #define LLDB_API_SBSAVECOREOPTIONS_H
 
 #include "lldb/API/SBDefines.h"
-#include "lldb/Symbol/SaveCoreOptions.h"
 
 namespace lldb {
 
