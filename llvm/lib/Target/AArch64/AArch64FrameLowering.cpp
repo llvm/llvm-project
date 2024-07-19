@@ -3550,7 +3550,8 @@ void AArch64FrameLowering::determineStackHazardSlot(
       for (auto &MI : MBB) {
         std::optional<int> FI = getLdStFrameID(MI, MFI);
         if (FI && *FI >= 0 && *FI < (int)FrameObjects.size()) {
-          if (MFI.getStackID(*FI) == 2 || AArch64InstrInfo::isFpOrNEON(MI))
+          if (MFI.getStackID(*FI) == TargetStackID::ScalableVector ||
+              AArch64InstrInfo::isFpOrNEON(MI))
             FrameObjects[*FI] |= 2;
           else
             FrameObjects[*FI] |= 1;
@@ -4734,7 +4735,8 @@ void AArch64FrameLowering::orderFrameObjects(
       if (AFI.hasStackHazardSlotIndex()) {
         std::optional<int> FI = getLdStFrameID(MI, MFI);
         if (FI && *FI >= 0 && *FI < (int)FrameObjects.size()) {
-          if (MFI.getStackID(*FI) == 2 || AArch64InstrInfo::isFpOrNEON(MI))
+          if (MFI.getStackID(*FI) == TargetStackID::ScalableVector ||
+              AArch64InstrInfo::isFpOrNEON(MI))
             FrameObjects[*FI].Accesses |= FrameObject::AccessFPR;
           else
             FrameObjects[*FI].Accesses |= FrameObject::AccessGPR;

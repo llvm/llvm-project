@@ -174,6 +174,13 @@ here. Generic improvements to Clang as a whole or to its underlying
 infrastructure are described first, followed by language-specific
 sections with improvements to Clang's support for those languages.
 
+- Implemented improvements to BMIs for C++20 Modules that can reduce
+  the number of rebuilds during incremental recompilation. We are seeking
+  feedback from Build System authors and other interested users, especially
+  when you feel Clang changes the BMI and misses an opportunity to avoid
+  recompilations or causes correctness issues. See StandardCPlusPlusModules
+  `StandardCPlusPlusModules <StandardCPlusPlusModules.html>`_ for more details.
+
 - The ``\par`` documentation comment command now supports an optional
   argument, which denotes the header of the paragraph started by
   an instance of the ``\par`` command comment. The implementation
@@ -849,6 +856,9 @@ Bug Fixes in This Version
   types by ensuring they are complete and instantiating them if needed. Fixes (#GH95311).
 
 - ``typeof_unqual`` now properly removes type qualifiers from arrays and their element types. (#GH92667)
+
+- Fixed an assertion failure when a template non-type parameter contains
+  an invalid expression.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
