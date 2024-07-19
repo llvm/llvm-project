@@ -95,14 +95,14 @@ private:
 
   friend struct __atomic_waitable_traits<__atomic_ref_base<_Tp>>;
 
-  // require types that are 1, 2, 4, 8, or 16 bytes in length to be aligned to at least their size to allow them to be
+  // require types that are 1, 2, 4, 8, or 16 bytes in length to be aligned to at least their size to be potentially
   // used lock-free
-  static constexpr bool __min_alignement = (sizeof(_Tp) & (sizeof(_Tp) - 1)) || (sizeof(_Tp) > 16) ? 0 : sizeof(_Tp);
+  static constexpr bool __min_alignment = (sizeof(_Tp) & (sizeof(_Tp) - 1)) || (sizeof(_Tp) > 16) ? 0 : sizeof(_Tp);
 
 public:
   using value_type = _Tp;
 
-  static constexpr size_t required_alignment = alignof(_Tp) > __min_alignement ? alignof(_Tp) : __min_alignement;
+  static constexpr size_t required_alignment = alignof(_Tp) > __min_alignment ? alignof(_Tp) : __min_alignment;
 
   // The __atomic_always_lock_free builtin takes into account the alignment of the pointer if provided,
   // so we create a fake pointer with a suitable alignment when querying it. Note that we are guaranteed
