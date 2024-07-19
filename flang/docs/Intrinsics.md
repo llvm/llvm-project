@@ -1047,3 +1047,16 @@ program rename_proc
     call rename('dst', 'src')
 end program rename_proc
 ```
+
+### Non-standard Intrinsics: SECOND
+This intrinsic is an alias for `CPU_TIME`: supporting both a subroutine and a
+function form.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL SECOND(TIME)` or `TIME = SECOND()`
+- **Arguments:** `TIME` - a REAL value into which the elapsed CPU time in
+                          seconds is written
+- **RETURN value:** same as TIME argument

@@ -16,6 +16,8 @@ using namespace llvm::sandboxir;
 
 Value *Use::get() const { return Ctx->getValue(LLVMUse->get()); }
 
+void Use::set(Value *V) { LLVMUse->set(V->Val); }
+
 unsigned Use::getOperandNo() const { return Usr->getUseOperandNo(*this); }
 
 #ifndef NDEBUG
@@ -60,6 +62,8 @@ OperandUseIterator &OperandUseIterator::operator++() {
 }
 
 UserUseIterator &UserUseIterator::operator++() {
+  // Get the corresponding llvm::Use, get the next in the list, and update the
+  // sandboxir::Use.
   llvm::Use *&LLVMUse = Use.LLVMUse;
   assert(LLVMUse != nullptr && "Already at end!");
   LLVMUse = LLVMUse->getNext();
@@ -107,18 +111,31 @@ void Value::replaceUsesWithIf(
     Value *OtherV, llvm::function_ref<bool(const Use &)> ShouldReplace) {
   assert(getType() == OtherV->getType() && "Can't replace with different type");
   llvm::Value *OtherVal = OtherV->Val;
+  // We are delegating RUWIf to LLVM IR's RUWIf.
   Val->replaceUsesWithIf(
       OtherVal, [&ShouldReplace, this](llvm::Use &LLVMUse) -> bool {
         User *DstU = cast_or_null<User>(Ctx.getValue(LLVMUse.getUser()));
         if (DstU == nullptr)
           return false;
-        return ShouldReplace(Use(&LLVMUse, DstU, Ctx));
+        Use UseToReplace(&LLVMUse, DstU, Ctx);
+        if (!ShouldReplace(UseToReplace))
+          return false;
+        auto &Tracker = Ctx.getTracker();
+        if (Tracker.isTracking())
+          Tracker.track(std::make_unique<UseSet>(UseToReplace, Tracker));
+        return true;
       });
 }
 
 void Value::replaceAllUsesWith(Value *Other) {
   assert(getType() == Other->getType() &&
          "Replacing with Value of different type!");
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking()) {
+    for (auto Use : uses())
+      Tracker.track(std::make_unique<UseSet>(Use, Tracker));
+  }
+  // We are delegating RAUW to LLVM IR's RAUW.
   Val->replaceAllUsesWith(Other->Val);
 }
 
@@ -208,10 +225,23 @@ bool User::classof(const Value *From) {
 
 void User::setOperand(unsigned OperandIdx, Value *Operand) {
   assert(isa<llvm::User>(Val) && "No operands!");
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<UseSet>(getOperandUse(OperandIdx), Tracker));
+  // We are delegating to llvm::User::setOperand().
   cast<llvm::User>(Val)->setOperand(OperandIdx, Operand->Val);
 }
 
 bool User::replaceUsesOfWith(Value *FromV, Value *ToV) {
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking()) {
+    for (auto OpIdx : seq<unsigned>(0, getNumOperands())) {
+      auto Use = getOperandUse(OpIdx);
+      if (Use.get() == FromV)
+        Tracker.track(std::make_unique<UseSet>(Use, Tracker));
+    }
+  }
+  // We are delegating RUOW to LLVM IR's RUOW.
   return cast<llvm::User>(Val)->replaceUsesOfWith(FromV->Val, ToV->Val);
 }
 
@@ -260,6 +290,148 @@ const char *Instruction::getOpcodeName(Opcode Opc) {
 #include "llvm/SandboxIR/SandboxIRValues.def"
   }
   llvm_unreachable("Unknown Opcode");
+}
+
+llvm::Instruction *Instruction::getTopmostLLVMInstruction() const {
+  Instruction *Prev = getPrevNode();
+  if (Prev == nullptr) {
+    // If at top of the BB, return the first BB instruction.
+    return &*cast<llvm::BasicBlock>(getParent()->Val)->begin();
+  }
+  // Else get the Previous sandbox IR instruction's bottom IR instruction and
+  // return its successor.
+  llvm::Instruction *PrevBotI = cast<llvm::Instruction>(Prev->Val);
+  return PrevBotI->getNextNode();
+}
+
+BBIterator Instruction::getIterator() const {
+  auto *I = cast<llvm::Instruction>(Val);
+  return BasicBlock::iterator(I->getParent(), I->getIterator(), &Ctx);
+}
+
+Instruction *Instruction::getNextNode() const {
+  assert(getParent() != nullptr && "Detached!");
+  assert(getIterator() != getParent()->end() && "Already at end!");
+  // `Val` is the bottom-most LLVM IR instruction. Get the next in the chain,
+  // and get the corresponding sandboxir Instruction that maps to it. This works
+  // even for SandboxIR Instructions that map to more than one LLVM Instruction.
+  auto *LLVMI = cast<llvm::Instruction>(Val);
+  assert(LLVMI->getParent() != nullptr && "LLVM IR instr is detached!");
+  auto *NextLLVMI = LLVMI->getNextNode();
+  auto *NextI = cast_or_null<Instruction>(Ctx.getValue(NextLLVMI));
+  if (NextI == nullptr)
+    return nullptr;
+  return NextI;
+}
+
+Instruction *Instruction::getPrevNode() const {
+  assert(getParent() != nullptr && "Detached!");
+  auto It = getIterator();
+  if (It != getParent()->begin())
+    return std::prev(getIterator()).get();
+  return nullptr;
+}
+
+void Instruction::removeFromParent() {
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<RemoveFromParent>(this, Tracker));
+
+  // Detach all the LLVM IR instructions from their parent BB.
+  for (llvm::Instruction *I : getLLVMInstrs())
+    I->removeFromParent();
+}
+
+void Instruction::eraseFromParent() {
+  assert(users().empty() && "Still connected to users, can't erase!");
+  std::unique_ptr<Value> Detached = Ctx.detach(this);
+  auto LLVMInstrs = getLLVMInstrs();
+
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking()) {
+    Tracker.track(
+        std::make_unique<EraseFromParent>(std::move(Detached), Tracker));
+    // We don't actually delete the IR instruction, because then it would be
+    // impossible to bring it back from the dead at the same memory location.
+    // Instead we remove it from its BB and track its current location.
+    for (llvm::Instruction *I : LLVMInstrs)
+      I->removeFromParent();
+    // TODO: Multi-instructions need special treatment because some of the
+    // references are internal to the instruction.
+    for (llvm::Instruction *I : LLVMInstrs)
+      I->dropAllReferences();
+  } else {
+    // Erase in reverse to avoid erasing nstructions with attached uses.
+    for (llvm::Instruction *I : reverse(LLVMInstrs))
+      I->eraseFromParent();
+  }
+}
+
+void Instruction::moveBefore(BasicBlock &BB, const BBIterator &WhereIt) {
+  if (std::next(getIterator()) == WhereIt)
+    // Destination is same as origin, nothing to do.
+    return;
+
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<MoveInstr>(this, Tracker));
+
+  auto *LLVMBB = cast<llvm::BasicBlock>(BB.Val);
+  llvm::BasicBlock::iterator It;
+  if (WhereIt == BB.end()) {
+    It = LLVMBB->end();
+  } else {
+    Instruction *WhereI = &*WhereIt;
+    It = WhereI->getTopmostLLVMInstruction()->getIterator();
+  }
+  // TODO: Move this to the verifier of sandboxir::Instruction.
+  assert(is_sorted(getLLVMInstrs(),
+                   [](auto *I1, auto *I2) { return I1->comesBefore(I2); }) &&
+         "Expected program order!");
+  // Do the actual move in LLVM IR.
+  for (auto *I : getLLVMInstrs())
+    I->moveBefore(*LLVMBB, It);
+}
+
+void Instruction::insertBefore(Instruction *BeforeI) {
+  llvm::Instruction *BeforeTopI = BeforeI->getTopmostLLVMInstruction();
+  // TODO: Move this to the verifier of sandboxir::Instruction.
+  assert(is_sorted(getLLVMInstrs(),
+                   [](auto *I1, auto *I2) { return I1->comesBefore(I2); }) &&
+         "Expected program order!");
+  // Insert the LLVM IR Instructions in program order.
+  for (llvm::Instruction *I : getLLVMInstrs())
+    I->insertBefore(BeforeTopI);
+}
+
+void Instruction::insertAfter(Instruction *AfterI) {
+  insertInto(AfterI->getParent(), std::next(AfterI->getIterator()));
+}
+
+void Instruction::insertInto(BasicBlock *BB, const BBIterator &WhereIt) {
+  llvm::BasicBlock *LLVMBB = cast<llvm::BasicBlock>(BB->Val);
+  llvm::Instruction *LLVMBeforeI;
+  llvm::BasicBlock::iterator LLVMBeforeIt;
+  if (WhereIt != BB->end()) {
+    Instruction *BeforeI = &*WhereIt;
+    LLVMBeforeI = BeforeI->getTopmostLLVMInstruction();
+    LLVMBeforeIt = LLVMBeforeI->getIterator();
+  } else {
+    LLVMBeforeI = nullptr;
+    LLVMBeforeIt = LLVMBB->end();
+  }
+  // Insert the LLVM IR Instructions in program order.
+  for (llvm::Instruction *I : getLLVMInstrs())
+    I->insertInto(LLVMBB, LLVMBeforeIt);
+}
+
+BasicBlock *Instruction::getParent() const {
+  // Get the LLVM IR Instruction that this maps to, get its parent, and get the
+  // corresponding sandboxir::BasicBlock by looking it up in sandboxir::Context.
+  auto *BB = cast<llvm::Instruction>(Val)->getParent();
+  if (BB == nullptr)
+    return nullptr;
+  return cast<BasicBlock>(Ctx.getValue(BB));
 }
 
 bool Instruction::classof(const sandboxir::Value *From) {
@@ -342,6 +514,24 @@ void Function::dump() const {
 BasicBlock::iterator::pointer
 BasicBlock::iterator::getInstr(llvm::BasicBlock::iterator It) const {
   return cast_or_null<Instruction>(Ctx->getValue(&*It));
+}
+
+std::unique_ptr<Value> Context::detachLLVMValue(llvm::Value *V) {
+  std::unique_ptr<Value> Erased;
+  auto It = LLVMValueToValueMap.find(V);
+  if (It != LLVMValueToValueMap.end()) {
+    auto *Val = It->second.release();
+    Erased = std::unique_ptr<Value>(Val);
+    LLVMValueToValueMap.erase(It);
+  }
+  return Erased;
+}
+
+std::unique_ptr<Value> Context::detach(Value *V) {
+  assert(V->getSubclassID() != Value::ClassID::Constant &&
+         "Can't detach a constant!");
+  assert(V->getSubclassID() != Value::ClassID::User && "Can't detach a user!");
+  return detachLLVMValue(V->Val);
 }
 
 Value *Context::registerValue(std::unique_ptr<Value> &&VPtr) {

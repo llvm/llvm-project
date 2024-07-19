@@ -456,7 +456,6 @@ ranges cwchar
 ranges initializer_list
 ranges iterator
 ranges limits
-ranges new
 ranges optional
 ranges span
 ranges tuple
