@@ -40,10 +40,18 @@ Location DebugImporter::translateFuncLocation(llvm::Function *func) {
   // Add a fused location to link the subprogram information.
   StringAttr funcName = StringAttr::get(context, subprogram->getName());
   StringAttr fileName = StringAttr::get(context, subprogram->getFilename());
-  return FusedLocWith<DISubprogramAttr>::get(
+  auto loc = FusedLocWith<DISubprogramAttr>::get(
       {NameLoc::get(funcName),
        FileLineColLoc::get(fileName, subprogram->getLine(), /*column=*/0)},
       translate(subprogram), context);
+  if (subprogram->getRetainedNodes().empty())
+    return loc;
+  llvm::SmallVector<mlir::Attribute> entities;
+  for (auto node : subprogram->getRetainedNodes())
+    entities.push_back(translate(node));
+
+  auto entitiesAttr = mlir::ArrayAttr::get(context, entities);
+  return FusedLocWith<mlir::ArrayAttr>::get(loc, entitiesAttr, context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -208,6 +216,21 @@ DINamespaceAttr DebugImporter::translateImpl(llvm::DINamespace *node) {
                               node->getExportSymbols());
 }
 
+DIImportedEntityAttr
+DebugImporter::translateImpl(llvm::DIImportedEntity *node) {
+  SmallVector<DINodeAttr> elements;
+
+  for (llvm::DINode *element : node->getElements()) {
+    assert(element && "expected a non-null element type");
+    elements.push_back(translate(element));
+  }
+
+  return DIImportedEntityAttr::get(
+      context, node->getTag(), translate(node->getScope()),
+      translate(node->getEntity()), translate(node->getFile()), node->getLine(),
+      getStringAttrOrNull(node->getRawName()), elements);
+}
+
 DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
   // Only definitions require a distinct identifier.
   mlir::DistinctAttr id;
@@ -307,6 +330,8 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
     if (auto *casted = dyn_cast<llvm::DIFile>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DIGlobalVariable>(node))
+      return translateImpl(casted);
+    if (auto *casted = dyn_cast<llvm::DIImportedEntity>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DILabel>(node))
       return translateImpl(casted);
