@@ -111,7 +111,7 @@ public:
     B.setChangeObserver(*this);
   }
 
-  ~ApplyRegBankMapping() {
+  ~ApplyRegBankMapping() override {
     for (MachineInstr *MI : NewInsts)
       applyBank(*MI);
 
