@@ -27663,8 +27663,7 @@ SDValue AArch64TargetLowering::LowerReductionToSVE(unsigned Opcode,
   if (ScalarOp.getOpcode() == ISD::VECREDUCE_ADD &&
       VecOp.getOpcode() == ISD::ZERO_EXTEND) {
     SDValue BoolVec = VecOp.getOperand(0);
-    EVT VecVT = BoolVec.getValueType();
-    if (VecVT.getVectorElementType() == MVT::i1) {
+    if (BoolVec.getValueType().getVectorElementType() == MVT::i1) {
       // CNTP(BoolVec & BoolVec) <=> CNTP(BoolVec & PTRUE)
       SDValue CntpOp = DAG.getNode(
           ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
