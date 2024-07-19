@@ -890,7 +890,8 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
     const MCExpr *FixedEntryDispExpr = FixedEntryDispOperand->getExpr();
     const uint64_t EntryAddress = getExprValue(FixedEntryDispExpr);
     uint64_t EntrySize = BC.getJumpTableEntrySize(JumpTable::JTT_PIC);
-    ErrorOr<int64_t> Value = BC.getSignedValueAtAddress(EntryAddress, EntrySize);
+    ErrorOr<int64_t> Value =
+        BC.getSignedValueAtAddress(EntryAddress, EntrySize);
     if (!Value)
       return IndirectBranchType::UNKNOWN;
 
