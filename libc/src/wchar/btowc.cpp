@@ -8,12 +8,11 @@
 
 #include "src/wchar/btowc.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/wctype_utils.h"
 
 #include "hdr/stdio_macros.h" // for EOF.
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, btowc, (wint_t c)) {
   auto result = internal::btowc(c);
@@ -24,4 +23,4 @@ LLVM_LIBC_FUNCTION(int, btowc, (wint_t c)) {
   }
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CONVERTER_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CONVERTER_H
 
-#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/writer.h"
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
 // convert will call a conversion function to convert the FormatSection into
@@ -24,6 +23,6 @@ namespace printf_core {
 int convert(Writer *writer, const FormatSection &to_conv);
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CONVERTER_H

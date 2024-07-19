@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_THREADS_THRD_JOIN_H
 #define LLVM_LIBC_SRC_THREADS_THRD_JOIN_H
 
-#include "src/__support/macros/config.h"
 #include <threads.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int thrd_join(thrd_t thread, int *retval);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_THREADS_THRD_JOIN_H

@@ -10,12 +10,11 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_BUILTIN_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
-#include "src/__support/macros/config.h"
-#include "src/string/memory_utils/utils.h" // Ptr, CPtr
+#include "src/string/memory_utils/utils.h"   // Ptr, CPtr
 
 #include <stddef.h> // size_t
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 #if !__has_builtin(__builtin_memcpy) || !__has_builtin(__builtin_memset) ||    \
     !__has_builtin(__builtin_memmove)
@@ -37,6 +36,6 @@ inline_memset_builtin(Ptr dst, uint8_t value, size_t count, size_t offset = 0) {
   __builtin_memset(dst + offset, value, count);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_BUILTIN_H

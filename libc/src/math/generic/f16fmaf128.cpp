@@ -9,12 +9,11 @@
 #include "src/math/f16fmaf128.h"
 #include "src/__support/FPUtil/FMA.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float16, f16fmaf128, (float128 x, float128 y, float128 z)) {
   return fputil::fma<float16>(x, y, z);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

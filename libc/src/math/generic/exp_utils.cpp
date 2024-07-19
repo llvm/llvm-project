@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "exp_utils.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 const Exp2fDataTable exp2f_data = {
     // :tab[i] = uint(2^(i/N)) - (i << 52-BITS)
@@ -125,4 +124,4 @@ const Exp2fDataTable exp2f_data = {
     },
 };
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
