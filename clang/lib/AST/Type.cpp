@@ -1623,9 +1623,10 @@ QualType QualType::stripObjCKindOfType(const ASTContext &constCtx) const {
 }
 
 QualType QualType::getAtomicUnqualifiedType() const {
-  if (const auto AT = getTypePtr()->getAs<AtomicType>())
-    return AT->getValueType().getUnqualifiedType();
-  return getUnqualifiedType();
+  QualType T = *this;
+  if (const auto AT = T.getTypePtr()->getAs<AtomicType>())
+    T = AT->getValueType();
+  return T.getUnqualifiedType();
 }
 
 std::optional<ArrayRef<QualType>>
@@ -3888,18 +3889,19 @@ QualType MacroQualifiedType::getModifiedType() const {
   return Inner;
 }
 
-TypeOfExprType::TypeOfExprType(Expr *E, TypeOfKind Kind, QualType Can)
+TypeOfExprType::TypeOfExprType(const ASTContext &Context, Expr *E,
+                               TypeOfKind Kind, QualType Can)
     : Type(TypeOfExpr,
            // We have to protect against 'Can' being invalid through its
            // default argument.
            Kind == TypeOfKind::Unqualified && !Can.isNull()
-               ? Can.getAtomicUnqualifiedType()
+               ? Context.getUnqualifiedArrayType(Can).getAtomicUnqualifiedType()
                : Can,
            toTypeDependence(E->getDependence()) |
                (E->getType()->getDependence() &
                 TypeDependence::VariablyModified)),
-      TOExpr(E) {
-  TypeOfBits.IsUnqual = Kind == TypeOfKind::Unqualified;
+      TOExpr(E), Context(Context) {
+  TypeOfBits.Kind = static_cast<unsigned>(Kind);
 }
 
 bool TypeOfExprType::isSugared() const {
@@ -3909,7 +3911,9 @@ bool TypeOfExprType::isSugared() const {
 QualType TypeOfExprType::desugar() const {
   if (isSugared()) {
     QualType QT = getUnderlyingExpr()->getType();
-    return TypeOfBits.IsUnqual ? QT.getAtomicUnqualifiedType() : QT;
+    return getKind() == TypeOfKind::Unqualified
+               ? Context.getUnqualifiedArrayType(QT).getAtomicUnqualifiedType()
+               : QT;
   }
   return QualType(this, 0);
 }
@@ -3919,6 +3923,24 @@ void DependentTypeOfExprType::Profile(llvm::FoldingSetNodeID &ID,
                                       bool IsUnqual) {
   E->Profile(ID, Context, true);
   ID.AddBoolean(IsUnqual);
+}
+
+TypeOfType::TypeOfType(const ASTContext &Context, QualType T, QualType Can,
+                       TypeOfKind Kind)
+    : Type(TypeOf,
+           Kind == TypeOfKind::Unqualified
+               ? Context.getUnqualifiedArrayType(Can).getAtomicUnqualifiedType()
+               : Can,
+           T->getDependence()),
+      TOType(T), Context(Context) {
+  TypeOfBits.Kind = static_cast<unsigned>(Kind);
+}
+
+QualType TypeOfType::desugar() const {
+  QualType QT = getUnmodifiedType();
+  return getKind() == TypeOfKind::Unqualified
+             ? Context.getUnqualifiedArrayType(QT).getAtomicUnqualifiedType()
+             : QT;
 }
 
 DecltypeType::DecltypeType(Expr *E, QualType underlyingType, QualType can)
