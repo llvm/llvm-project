@@ -60,6 +60,7 @@ static_library("Sema") {
     "SemaAvailability.cpp",
     "SemaBPF.cpp",
     "SemaBase.cpp",
+    "SemaBoundsSafety.cpp",
     "SemaCUDA.cpp",
     "SemaCXXScopeSpec.cpp",
     "SemaCast.cpp",
