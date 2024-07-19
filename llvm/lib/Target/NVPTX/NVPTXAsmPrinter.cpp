@@ -861,8 +861,8 @@ void NVPTXAsmPrinter::emitGlobals(const Module &M) {
       *static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
 
   // Print out module-level global variables in proper order
-  for (unsigned i = 0, e = Globals.size(); i != e; ++i)
-    printModuleLevelGV(Globals[i], OS2, /*processDemoted=*/false, STI);
+  for (const GlobalVariable *GV : Globals)
+    printModuleLevelGV(GV, OS2, /*processDemoted=*/false, STI);
 
   OS2 << '\n';
 

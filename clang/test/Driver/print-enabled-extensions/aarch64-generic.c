@@ -6,5 +6,5 @@
 // CHECK-NEXT:     Architecture Feature(s)                                Description
 // CHECK-NEXT:     FEAT_AdvSIMD                                           Enable Advanced SIMD instructions
 // CHECK-NEXT:     FEAT_ETE                                               Enable Embedded Trace Extension
-// CHECK-NEXT:     FEAT_FP                                                Enable ARMv8
+// CHECK-NEXT:     FEAT_FP                                                Enable Armv8.0-A Floating Point Extensions
 // CHECK-NEXT:     FEAT_TRBE                                              Enable Trace Buffer Extension

@@ -2182,6 +2182,8 @@ public:
   VisitOMPLoopTransformationDirective(const OMPLoopTransformationDirective *D);
   void VisitOMPTileDirective(const OMPTileDirective *D);
   void VisitOMPUnrollDirective(const OMPUnrollDirective *D);
+  void VisitOMPReverseDirective(const OMPReverseDirective *D);
+  void VisitOMPInterchangeDirective(const OMPInterchangeDirective *D);
   void VisitOMPForDirective(const OMPForDirective *D);
   void VisitOMPForSimdDirective(const OMPForSimdDirective *D);
   void VisitOMPSectionsDirective(const OMPSectionsDirective *D);
@@ -3225,6 +3227,15 @@ void EnqueueVisitor::VisitOMPTileDirective(const OMPTileDirective *D) {
 }
 
 void EnqueueVisitor::VisitOMPUnrollDirective(const OMPUnrollDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPReverseDirective(const OMPReverseDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPInterchangeDirective(
+    const OMPInterchangeDirective *D) {
   VisitOMPLoopTransformationDirective(D);
 }
 
@@ -5225,6 +5236,11 @@ CXString clang_getCursorSpelling(CXCursor C) {
       return cxstring::createDup(OS.str());
     }
 
+    if (C.kind == CXCursor_BinaryOperator ||
+        C.kind == CXCursor_CompoundAssignOperator) {
+      return clang_Cursor_getBinaryOpcodeStr(clang_Cursor_getBinaryOpcode(C));
+    }
+
     const Decl *D = getDeclFromExpr(getCursorExpr(C));
     if (D)
       return getDeclSpelling(D);
@@ -6092,6 +6108,10 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPTileDirective");
   case CXCursor_OMPUnrollDirective:
     return cxstring::createRef("OMPUnrollDirective");
+  case CXCursor_OMPReverseDirective:
+    return cxstring::createRef("OMPReverseDirective");
+  case CXCursor_OMPInterchangeDirective:
+    return cxstring::createRef("OMPInterchangeDirective");
   case CXCursor_OMPForDirective:
     return cxstring::createRef("OMPForDirective");
   case CXCursor_OMPForSimdDirective:
@@ -8953,6 +8973,35 @@ unsigned clang_Cursor_isExternalSymbol(CXCursor C, CXString *language,
     return 1;
   }
   return 0;
+}
+
+enum CX_BinaryOperatorKind clang_Cursor_getBinaryOpcode(CXCursor C) {
+  if (C.kind != CXCursor_BinaryOperator &&
+      C.kind != CXCursor_CompoundAssignOperator) {
+    return CX_BO_Invalid;
+  }
+
+  const Expr *D = getCursorExpr(C);
+  if (const auto *BinOp = dyn_cast<BinaryOperator>(D)) {
+    switch (BinOp->getOpcode()) {
+#define BINARY_OPERATION(Name, Spelling)                                       \
+  case BO_##Name:                                                              \
+    return CX_BO_##Name;
+#include "clang/AST/OperationKinds.def"
+    }
+  }
+
+  return CX_BO_Invalid;
+}
+
+CXString clang_Cursor_getBinaryOpcodeStr(enum CX_BinaryOperatorKind Op) {
+  if (Op > CX_BO_LAST)
+    return cxstring::createEmpty();
+
+  return cxstring::createDup(
+      // BinaryOperator::getOpcodeStr has no case for CX_BO_Invalid,
+      // so subtract 1
+      BinaryOperator::getOpcodeStr(static_cast<BinaryOperatorKind>(Op - 1)));
 }
 
 CXSourceRange clang_Cursor_getCommentRange(CXCursor C) {

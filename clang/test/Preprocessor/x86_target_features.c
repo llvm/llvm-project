@@ -348,12 +348,12 @@
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -m3dnow -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=3DNOWPRFCHW %s
 
-// 3DNOWPRFCHW: #define __3dNOW__ 1
+// 3DNOWPRFCHW-NOT: #define __3dNOW__ 1
 // 3DNOWPRFCHW-NOT: #define __PRFCHW__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mno-prfchw -m3dnow -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=3DNOWNOPRFCHW %s
 
-// 3DNOWNOPRFCHW: #define __3dNOW__ 1
+// 3DNOWNOPRFCHW-NOT: #define __3dNOW__ 1
 // 3DNOWNOPRFCHW-NOT: #define __PRFCHW__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mprfchw -mno-3dnow -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=NO3DNOWPRFCHW %s
@@ -755,7 +755,7 @@
 // RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=nf -x c -E -dM -o - %s | FileCheck --check-prefix=NF %s
 // RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=cf -x c -E -dM -o - %s | FileCheck --check-prefix=CF %s
 // RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=zu -x c -E -dM -o - %s | FileCheck --check-prefix=ZU %s
-// RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapxf -x c -E -dM -o - %s | FileCheck --check-prefixes=EGPR,PUSH2POP2,PPX,NDD,CCMP,NF,CF,APXF %s
+// RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapxf -x c -E -dM -o - %s | FileCheck --check-prefixes=EGPR,PUSH2POP2,PPX,NDD,CCMP,NF,CF,ZU,APXF %s
 // APXF: #define __APX_F__ 1
 // CCMP: #define __CCMP__ 1
 // CF: #define __CF__ 1

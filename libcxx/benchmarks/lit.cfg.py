@@ -19,5 +19,5 @@ config.test_exec_root = os.path.join(config.libcxx_obj_root, "benchmarks")
 config.test_source_root = config.test_exec_root
 
 config.test_format = GoogleBenchmark(
-    test_sub_dirs=".", test_suffix=".libcxx.out", benchmark_args=config.benchmark_args
+    test_sub_dirs=".", test_suffix=".bench.out", benchmark_args=config.benchmark_args
 )

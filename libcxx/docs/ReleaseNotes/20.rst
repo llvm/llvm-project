@@ -55,6 +55,10 @@ Deprecations and Removals
 
 - TODO: The C++20 synchronization library will be removed entirely in language modes prior to C++20 in LLVM 20.
 
+- TODO: The relational operators for ``std::chrono::weekday`` will be removed entirely, and the
+  ``_LIBCPP_ENABLE_REMOVED_WEEKDAY_RELATIONAL_OPERATORS`` macro that was used to re-enable this extension will be
+  ignored in LLVM 20.
+
 
 Upcoming Deprecations and Removals
 ----------------------------------

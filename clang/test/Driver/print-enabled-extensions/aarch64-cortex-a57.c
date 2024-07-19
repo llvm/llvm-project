@@ -6,7 +6,7 @@
 // CHECK-NEXT:     Architecture Feature(s)                                Description
 // CHECK-NEXT:     FEAT_AES, FEAT_PMULL                                   Enable AES support
 // CHECK-NEXT:     FEAT_AdvSIMD                                           Enable Advanced SIMD instructions
-// CHECK-NEXT:     FEAT_CRC32                                             Enable ARMv8 CRC-32 checksum instructions
-// CHECK-NEXT:     FEAT_FP                                                Enable ARMv8
-// CHECK-NEXT:     FEAT_PMUv3                                             Enable Code Generation for ARMv8 PMUv3 Performance Monitors extension
+// CHECK-NEXT:     FEAT_CRC32                                             Enable Armv8.0-A CRC-32 checksum instructions
+// CHECK-NEXT:     FEAT_FP                                                Enable Armv8.0-A Floating Point Extensions
+// CHECK-NEXT:     FEAT_PMUv3                                             Enable Armv8.0-A PMUv3 Performance Monitors extension
 // CHECK-NEXT:     FEAT_SHA1, FEAT_SHA256                                 Enable SHA1 and SHA256 support
