@@ -16,5 +16,7 @@ const static llvm::StringRef RequiredNamespaceDeclStart =
     "[[gnu::visibility(\"hidden\")]] __llvm_libc";
 const static llvm::StringRef RequiredNamespaceDeclMacroName =
     "LIBC_NAMESPACE_DECL";
+const static llvm::StringRef
+    NamespaceMacroHeader("src/__support/macros/config.h");
 
 } // namespace clang::tidy::llvm_libc

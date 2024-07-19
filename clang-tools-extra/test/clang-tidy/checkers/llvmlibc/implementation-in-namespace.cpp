@@ -1,4 +1,6 @@
-// RUN: %check_clang_tidy %s llvmlibc-implementation-in-namespace %t
+// RUN: %check_clang_tidy %s llvmlibc-implementation-in-namespace %t -fix
+
+// CHECK-FIXES: #include "src/__support/macros/config.h"
 
 #define MACRO_A "defining macros outside namespace is valid"
 
@@ -15,6 +17,7 @@ void funcF() {}
 
 namespace outer_most {
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: the outermost namespace should be the 'LIBC_NAMESPACE_DECL' macro
+// CHECK-FIXES: namespace LIBC_NAMESPACE_DECL {
  class A {};
 }
 
@@ -26,6 +29,7 @@ namespace {
 
 namespace namespaceG {
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: the outermost namespace should be the 'LIBC_NAMESPACE_DECL' macro
+// CHECK-FIXES: namespace LIBC_NAMESPACE_DECL {
 namespace __llvm_libc {
 namespace namespaceH {
 class ClassB;

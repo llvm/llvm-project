@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVMLIBC_IMPLEMENTATIONINNAMESPACECHECK_H
 
 #include "../ClangTidyCheck.h"
+#include "../utils/IncludeInserter.h"
 
 namespace clang::tidy::llvm_libc {
 
@@ -20,13 +21,22 @@ namespace clang::tidy::llvm_libc {
 class ImplementationInNamespaceCheck : public ClangTidyCheck {
 public:
   ImplementationInNamespaceCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+      : ClangTidyCheck(Name, Context),
+        IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
+                                                 utils::IncludeSorter::IS_LLVM),
+                        areDiagsSelfContained()) {}
 
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
+private:
+  utils::IncludeInserter IncludeInserter;
 };
 
 } // namespace clang::tidy::llvm_libc

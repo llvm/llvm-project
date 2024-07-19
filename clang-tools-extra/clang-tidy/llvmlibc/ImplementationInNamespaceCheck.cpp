@@ -8,7 +8,6 @@
 
 #include "ImplementationInNamespaceCheck.h"
 #include "NamespaceConstants.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -23,6 +22,16 @@ void ImplementationInNamespaceCheck::registerMatchers(MatchFinder *Finder) {
                        unless(usingDirectiveDecl(isImplicit())))
                       .bind("child_of_translation_unit"))),
       this);
+}
+
+void ImplementationInNamespaceCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
+}
+
+void ImplementationInNamespaceCheck::registerPPCallbacks(
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  IncludeInserter.registerPreprocessor(PP);
 }
 
 void ImplementationInNamespaceCheck::check(
@@ -41,8 +50,26 @@ void ImplementationInNamespaceCheck::check(
 
   // Enforce that the namespace is the result of macro expansion
   if (Result.SourceManager->isMacroBodyExpansion(NS->getLocation()) == false) {
-    diag(NS->getLocation(), "the outermost namespace should be the '%0' macro")
-        << RequiredNamespaceDeclMacroName;
+    auto DB = diag(NS->getLocation(),
+                   "the outermost namespace should be the '%0' macro")
+              << RequiredNamespaceDeclMacroName;
+
+    // TODO: Determine how to split inline namespaces correctly in the FixItHint
+    //
+    // We can't easily replace LIBC_NAMEPACE::inner::namespace { with
+    //
+    // namespace LIBC_NAMEPACE_DECL {
+    //   namespace inner::namespace {
+    //
+    // For now, just update the simple case w/ LIBC_NAMEPACE_DECL
+    if (!NS->isInlineNamespace())
+      DB << FixItHint::CreateReplacement(NS->getLocation(),
+                                         RequiredNamespaceDeclMacroName);
+
+    DB << IncludeInserter.createIncludeInsertion(
+        Result.SourceManager->getFileID(NS->getBeginLoc()),
+        NamespaceMacroHeader);
+
     return;
   }
 
@@ -51,7 +78,9 @@ void ImplementationInNamespaceCheck::check(
   // instead.
   if (NS->getVisibility() != Visibility::HiddenVisibility) {
     diag(NS->getLocation(), "the '%0' macro should start with '%1'")
-        << RequiredNamespaceDeclMacroName << RequiredNamespaceDeclStart;
+        << RequiredNamespaceDeclMacroName << RequiredNamespaceDeclStart
+        << FixItHint::CreateReplacement(NS->getLocation(),
+                                        RequiredNamespaceDeclMacroName);
     return;
   }
 
