@@ -1313,8 +1313,6 @@ void ObjcCategoryMerger::eraseMergedCategories() {
       //   objc-category-merging-erase-objc-name-test.s
       // TODO: handle the above in a smarter way
 
-      // tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec, catLayout.nameOffset);
-
       tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec,
                                   catLayout.instanceMethodsOffset);
       tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec,
