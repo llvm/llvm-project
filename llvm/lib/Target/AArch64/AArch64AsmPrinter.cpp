@@ -1422,7 +1422,7 @@ void AArch64AsmPrinter::LowerHardenedBRJumpTable(const MachineInstr &MI) {
   ++InstsEmitted;
 
   MCSymbol *AdrLabel = MF->getContext().createTempSymbol();
-  auto *AdrLabelE = MCSymbolRefExpr::create(AdrLabel, MF->getContext());
+  const auto *AdrLabelE = MCSymbolRefExpr::create(AdrLabel, MF->getContext());
   AArch64FI->setJumpTableEntryInfo(JTI, 4, AdrLabel);
 
   OutStreamer->emitLabel(AdrLabel);
@@ -1441,6 +1441,7 @@ void AArch64AsmPrinter::LowerHardenedBRJumpTable(const MachineInstr &MI) {
   EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::BR).addReg(AArch64::X16));
   ++InstsEmitted;
 
+  (void)InstsEmitted;
   assert(STI->getInstrInfo()->getInstSizeInBytes(MI) >= InstsEmitted * 4);
 }
 

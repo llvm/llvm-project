@@ -1152,6 +1152,7 @@ def JumpTableDest8 : Pseudo<(outs GPR64:$dst, GPR64sp:$scratch),
 // mean that the index can be attacker-controlled.  To address that, we also do
 // limited checking of the offset, mainly ensuring it still points within the
 // jump-table array.  When it doesn't, this branches to the first entry.
+// We might want to trap instead.
 //
 // This is intended for use in conjunction with ptrauth for other code pointers,
 // to avoid signing jump-table entries and turning them into pointers.

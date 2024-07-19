@@ -10678,13 +10678,22 @@ SDValue AArch64TargetLowering::LowerBR_JT(SDValue Op,
   auto *AFI = DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
   AFI->setJumpTableEntryInfo(JTI, 4, nullptr);
 
-  // With jump-table-hardening, we only expand the full jump table dispatch
+  // With aarch64-jump-table-hardening, we only expand the jump table dispatch
   // sequence later, to guarantee the integrity of the intermediate values.
   if (DAG.getMachineFunction().getFunction().hasFnAttribute(
-          "jump-table-hardening") ||
-      Subtarget->getTargetTriple().isArm64e()) {
-    assert(Subtarget->isTargetMachO() &&
-           "hardened jump-table not yet supported on non-macho");
+          "aarch64-jump-table-hardening")) {
+    CodeModel::Model CM = getTargetMachine().getCodeModel();
+    if (Subtarget->isTargetMachO()) {
+      if (CM != CodeModel::Small && CM != CodeModel::Large)
+        report_fatal_error("Unsupported code-model for hardened jump-table");
+    } else {
+      // Note that COFF support would likely also need JUMP_TABLE_DEBUG_INFO.
+      assert(Subtarget->isTargetELF() &&
+             "jump table hardening only supported on MachO/ELF");
+      if (CM != CodeModel::Small)
+        report_fatal_error("Unsupported code-model for hardened jump-table");
+    }
+
     SDValue X16Copy = DAG.getCopyToReg(DAG.getEntryNode(), DL, AArch64::X16,
                                        Entry, SDValue());
     SDNode *B = DAG.getMachineNode(AArch64::BR_JumpTable, DL, MVT::Other,
