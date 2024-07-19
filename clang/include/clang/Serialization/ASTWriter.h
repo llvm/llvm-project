@@ -18,7 +18,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaConsumer.h"
@@ -75,6 +74,10 @@ class Stmt;
 class StoredDeclsList;
 class SwitchCase;
 class Token;
+
+namespace SrcMgr {
+class FileInfo;
+} // namespace SrcMgr
 
 /// Writes an AST file containing the contents of a translation unit.
 ///
@@ -225,6 +228,11 @@ private:
   /// unit, while 0 is reserved for NULL.
   llvm::DenseMap<const Decl *, LocalDeclID> DeclIDs;
 
+  /// Set of predefined decls. This is a helper data to determine if a decl
+  /// is predefined. It should be more clear and safer to query the set
+  /// instead of comparing the result of `getDeclID()` or `GetDeclRef()`.
+  llvm::SmallPtrSet<const Decl *, 32> PredefinedDecls;
+
   /// Offset of each declaration in the bitstream, indexed by
   /// the declaration's ID.
   std::vector<serialization::DeclOffset> DeclOffsets;
@@ -270,13 +278,13 @@ private:
 
   /// Offset of each type in the bitstream, indexed by
   /// the type's ID.
-  std::vector<serialization::UnderalignedInt64> TypeOffsets;
+  std::vector<serialization::UnalignedUInt64> TypeOffsets;
 
   /// The first ID number we can use for our own identifiers.
-  serialization::IdentID FirstIdentID = serialization::NUM_PREDEF_IDENT_IDS;
+  serialization::IdentifierID FirstIdentID = serialization::NUM_PREDEF_IDENT_IDS;
 
   /// The identifier ID that will be assigned to the next new identifier.
-  serialization::IdentID NextIdentID = FirstIdentID;
+  serialization::IdentifierID NextIdentID = FirstIdentID;
 
   /// Map that provides the ID numbers of each identifier in
   /// the output stream.
@@ -284,7 +292,7 @@ private:
   /// The ID numbers for identifiers are consecutive (in order of
   /// discovery), starting at 1. An ID of zero refers to a NULL
   /// IdentifierInfo.
-  llvm::MapVector<const IdentifierInfo *, serialization::IdentID> IdentifierIDs;
+  llvm::MapVector<const IdentifierInfo *, serialization::IdentifierID> IdentifierIDs;
 
   /// The first ID number we can use for our own macros.
   serialization::MacroID FirstMacroID = serialization::NUM_PREDEF_MACRO_IDS;
@@ -352,6 +360,13 @@ private:
   /// Cache of indices of anonymous declarations within their lexical
   /// contexts.
   llvm::DenseMap<const Decl *, unsigned> AnonymousDeclarationNumbers;
+
+  /// The external top level module during the writing process. Used to
+  /// generate signature for the module file being written.
+  ///
+  /// Only meaningful for standard C++ named modules. See the comments in
+  /// createSignatureForNamedModule() for details.
+  llvm::DenseSet<Module *> TouchedTopLevelModules;
 
   /// An update to a Decl.
   class DeclUpdate {
@@ -490,6 +505,11 @@ private:
   /// during \c SourceManager serialization.
   void computeNonAffectingInputFiles();
 
+  /// Some affecting files can be included from files that are not affecting.
+  /// This function erases source locations pointing into such files.
+  SourceLocation getAffectingIncludeLoc(const SourceManager &SourceMgr,
+                                        const SrcMgr::FileInfo &File);
+
   /// Returns an adjusted \c FileID, accounting for any non-affecting input
   /// files.
   FileID getAdjustedFileID(FileID FID) const;
@@ -544,12 +564,11 @@ private:
   void WriteType(QualType T);
 
   bool isLookupResultExternal(StoredDeclsList &Result, DeclContext *DC);
-  bool isLookupResultEntirelyExternalOrUnreachable(StoredDeclsList &Result,
-                                                   DeclContext *DC);
 
   void GenerateNameLookupTable(const DeclContext *DC,
                                llvm::SmallVectorImpl<char> &LookupTable);
-  uint64_t WriteDeclContextLexicalBlock(ASTContext &Context, DeclContext *DC);
+  uint64_t WriteDeclContextLexicalBlock(ASTContext &Context,
+                                        const DeclContext *DC);
   uint64_t WriteDeclContextVisibleBlock(ASTContext &Context, DeclContext *DC);
   void WriteTypeDeclOffsets();
   void WriteFileDeclIDsMap();
@@ -667,6 +686,10 @@ public:
   void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
                          LocSeq *Seq = nullptr);
 
+  /// Return the raw encodings for source locations.
+  SourceLocationEncoding::RawLocEncoding
+  getRawSourceLocationEncoding(SourceLocation Loc, LocSeq *Seq = nullptr);
+
   /// Emit a source range.
   void AddSourceRange(SourceRange Range, RecordDataImpl &Record,
                       LocSeq *Seq = nullptr);
@@ -678,7 +701,7 @@ public:
   serialization::SelectorID getSelectorRef(Selector Sel);
 
   /// Get the unique number used to refer to the given identifier.
-  serialization::IdentID getIdentifierRef(const IdentifierInfo *II);
+  serialization::IdentifierID getIdentifierRef(const IdentifierInfo *II);
 
   /// Get the unique number used to refer to the given macro.
   serialization::MacroID getMacroRef(MacroInfo *MI, const IdentifierInfo *Name);
@@ -694,9 +717,6 @@ public:
   /// Force a type to be emitted and get its ID.
   serialization::TypeID GetOrCreateTypeID(QualType T);
 
-  /// Determine the type ID of an already-emitted type.
-  serialization::TypeID getTypeID(QualType T) const;
-
   /// Find the first local declaration of a given local redeclarable
   /// decl.
   const Decl *getFirstLocalDecl(const Decl *D);
@@ -708,8 +728,7 @@ public:
     if (D->isFromASTFile())
       return false;
     auto I = DeclIDs.find(D);
-    return (I == DeclIDs.end() ||
-            I->second.get() >= clang::NUM_PREDEF_DECL_IDS);
+    return (I == DeclIDs.end() || I->second >= clang::NUM_PREDEF_DECL_IDS);
   };
 
   /// Emit a reference to a declaration.
@@ -824,6 +843,8 @@ public:
   bool hasChain() const { return Chain; }
   ASTReader *getChain() const { return Chain; }
 
+  bool isWritingModule() const { return WritingModule; }
+
   bool isWritingStdCXXNamedModules() const {
     return WritingModule && WritingModule->isNamedModule();
   }
@@ -832,10 +853,14 @@ public:
 
   bool getDoneWritingDeclsAndTypes() const { return DoneWritingDeclsAndTypes; }
 
+  bool isDeclPredefined(const Decl *D) const {
+    return PredefinedDecls.count(D);
+  }
+
 private:
   // ASTDeserializationListener implementation
   void ReaderInitialized(ASTReader *Reader) override;
-  void IdentifierRead(serialization::IdentID ID, IdentifierInfo *II) override;
+  void IdentifierRead(serialization::IdentifierID ID, IdentifierInfo *II) override;
   void MacroRead(serialization::MacroID ID, MacroInfo *MI) override;
   void TypeRead(serialization::TypeIdx Idx, QualType T) override;
   void SelectorRead(serialization::SelectorID ID, Selector Sel) override;

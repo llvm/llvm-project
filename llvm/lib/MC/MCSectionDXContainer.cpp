@@ -12,4 +12,4 @@ using namespace llvm;
 
 void MCSectionDXContainer::printSwitchToSection(const MCAsmInfo &,
                                                 const Triple &, raw_ostream &,
-                                                const MCExpr *) const {}
+                                                uint32_t) const {}

@@ -185,15 +185,15 @@
 
 // RUN: %clang_cc1 -triple arm64-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=AARCH64
-// AARCH64: target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+// AARCH64: target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
 
 // RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=AARCH64-ILP32
-// AARCH64-ILP32: target datalayout = "e-m:o-p:32:32-i64:64-i128:128-n32:64-S128"
+// AARCH64-ILP32: target datalayout = "e-m:o-p:32:32-i64:64-i128:128-n32:64-S128-Fn32"
 
 // RUN: %clang_cc1 -triple arm64-pc-win32-macho -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=AARCH64-WIN32-MACHO
-// AARCH64-WIN32-MACHO: target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+// AARCH64-WIN32-MACHO: target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128-Fn32"
 
 // RUN: %clang_cc1 -triple thumb-unknown-gnueabi -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=THUMB
@@ -268,3 +268,7 @@
 // RUN: %clang_cc1 -triple ve -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=VE
 // VE: target datalayout = "e-m:e-i64:64-n32:64-S128-v64:64:64-v128:64:64-v256:64:64-v512:64:64-v1024:64:64-v2048:64:64-v4096:64:64-v8192:64:64-v16384:64:64"
+
+// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -o - -emit-llvm %s | \
+// RUN: FileCheck %s -check-prefix=AMDGPUSPIRV64
+// AMDGPUSPIRV64: target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-G1-P4-A0"

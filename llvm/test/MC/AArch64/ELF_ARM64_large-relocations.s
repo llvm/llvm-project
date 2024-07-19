@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple=arm64-none-linux-gnu -large-code-model -filetype=obj -o %T/large-reloc.o %s
 # RUN: llvm-rtdyld -triple=arm64-none-linux-gnu -verify -map-section large-reloc.o,.eh_frame=0x10000 -map-section large-reloc.o,.text=0xffff000000000000 -check=%s %T/large-reloc.o
-# RUN-BE: llvm-mc -triple=aarch64_be-none-linux-gnu -large-code-model -filetype=obj -o %T/be-large-reloc.o %s
-# RUN-BE: llvm-rtdyld -triple=aarch64_be-none-linux-gnu -verify -map-section be-large-reloc.o,.eh_frame=0x10000 -map-section be-large-reloc.o,.text=0xffff000000000000 -check=%s %T/be-large-reloc.o
+# RUN: llvm-mc -triple=aarch64_be-none-linux-gnu -large-code-model -filetype=obj -o %T/large-reloc.o %s
+# RUN: llvm-rtdyld -triple=aarch64_be-none-linux-gnu -verify -map-section large-reloc.o,.eh_frame=0x10000 -map-section large-reloc.o,.text=0xffff000000000000 -check=%s %T/large-reloc.o
 
         .text
         .globl  g

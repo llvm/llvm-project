@@ -95,7 +95,7 @@ public:
 class ConvertConversion : public mlir::OpRewritePattern<fir::ConvertOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::ConvertOp op,
                   mlir::PatternRewriter &rewriter) const override {
     if (mlir::isa<mlir::MemRefType>(op.getRes().getType())) {
@@ -133,7 +133,7 @@ mlir::Type convertMemRef(mlir::MemRefType type) {
 class StdAllocConversion : public mlir::OpRewritePattern<memref::AllocOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(memref::AllocOp op,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<fir::AllocaOp>(op, convertMemRef(op.getType()),

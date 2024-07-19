@@ -37,6 +37,7 @@
 #define LLVM_LIB_CODEGEN_REGALLOCBASE_H
 
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegAllocCommon.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 
@@ -68,21 +69,31 @@ protected:
   LiveIntervals *LIS = nullptr;
   LiveRegMatrix *Matrix = nullptr;
   RegisterClassInfo RegClassInfo;
+
+private:
+  /// Private, callees should go through shouldAllocateRegister
   const RegClassFilterFunc ShouldAllocateClass;
 
+protected:
   /// Inst which is a def of an original reg and whose defs are already all
   /// dead after remat is saved in DeadRemats. The deletion of such inst is
   /// postponed till all the allocations are done, so its remat expr is
   /// always available for the remat of all the siblings of the original reg.
   SmallPtrSet<MachineInstr *, 32> DeadRemats;
 
-  RegAllocBase(const RegClassFilterFunc F = allocateAllRegClasses) :
-    ShouldAllocateClass(F) {}
+  RegAllocBase(const RegClassFilterFunc F = nullptr) : ShouldAllocateClass(F) {}
 
   virtual ~RegAllocBase() = default;
 
   // A RegAlloc pass should call this before allocatePhysRegs.
   void init(VirtRegMap &vrm, LiveIntervals &lis, LiveRegMatrix &mat);
+
+  /// Get whether a given register should be allocated
+  bool shouldAllocateRegister(Register Reg) {
+    if (!ShouldAllocateClass)
+      return true;
+    return ShouldAllocateClass(*TRI, *MRI->getRegClass(Reg));
+  }
 
   // The top-level driver. The output is a VirtRegMap that us updated with
   // physical register assignments.

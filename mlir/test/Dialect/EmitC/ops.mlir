@@ -41,6 +41,9 @@ func.func @cast(%arg0: i32) {
 
 func.func @c() {
   %1 = "emitc.constant"(){value = 42 : i32} : () -> i32
+  %2 = "emitc.constant"(){value = 42 : index} : () -> !emitc.size_t
+  %3 = "emitc.constant"(){value = 42 : index} : () -> !emitc.ssize_t
+  %4 = "emitc.constant"(){value = 42 : index} : () -> !emitc.ptrdiff_t
   return
 }
 
@@ -244,4 +247,17 @@ func.func @use_global(%i: index) -> f32 {
   %0 = emitc.get_global @myglobal : !emitc.array<2xf32>
   %1 = emitc.subscript %0[%i] : (!emitc.array<2xf32>, index) -> f32
   return %1 : f32
+}
+
+func.func @assign_global(%arg0 : i32) {
+  %0 = emitc.get_global @myglobal_int : i32
+  emitc.assign %arg0 : i32 to %0 : i32
+  return
+}
+
+func.func @member_access(%arg0: !emitc.opaque<"mystruct">, %arg1: !emitc.opaque<"mystruct_ptr">, %arg2: !emitc.ptr<!emitc.opaque<"mystruct">>) {
+  %0 = "emitc.member" (%arg0) {member = "a"} : (!emitc.opaque<"mystruct">) -> i32
+  %1 = "emitc.member_of_ptr" (%arg1) {member = "a"} : (!emitc.opaque<"mystruct_ptr">) -> i32
+  %2 = "emitc.member_of_ptr" (%arg2) {member = "a"} : (!emitc.ptr<!emitc.opaque<"mystruct">>) -> i32
+  return
 }

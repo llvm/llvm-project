@@ -108,6 +108,8 @@ struct basic_string_view {
   constexpr bool starts_with(C ch) const noexcept;
   constexpr bool starts_with(const C* s) const;
 
+  constexpr int compare(basic_string_view sv) const noexcept;
+
   static constexpr size_t npos = -1;
 };
 
@@ -131,6 +133,14 @@ bool operator!=(const char*, const std::string&);
 bool operator==(const std::wstring&, const std::wstring&);
 bool operator==(const std::wstring&, const wchar_t*);
 bool operator==(const wchar_t*, const std::wstring&);
+
+bool operator==(const std::string_view&, const std::string_view&);
+bool operator==(const std::string_view&, const char*);
+bool operator==(const char*, const std::string_view&);
+
+bool operator!=(const std::string_view&, const std::string_view&);
+bool operator!=(const std::string_view&, const char*);
+bool operator!=(const char*, const std::string_view&);
 
 size_t strlen(const char* str);
 }

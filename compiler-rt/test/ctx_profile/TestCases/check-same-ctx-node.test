@@ -1,0 +1,5 @@
+;
+; NOTE: if this test fails, please make sure the two files are identical copies
+; of eachother.
+;
+; RUN: diff %crt_src/lib/ctx_profile/CtxInstrContextNode.h %llvm_src/include/llvm/ProfileData/CtxInstrContextNode.h

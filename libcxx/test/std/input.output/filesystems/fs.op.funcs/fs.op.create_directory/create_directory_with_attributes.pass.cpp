@@ -11,8 +11,8 @@
 // UNSUPPORTED: no-filesystem
 // UNSUPPORTED: availability-filesystem-missing
 
-// This test requires the dylib support introduced in http://llvm.org/D92769.
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.15|11.0}}
+// This test requires the dylib support introduced in e4ed349c7658.
+// XFAIL: using-built-library-before-llvm-12
 
 // <filesystem>
 

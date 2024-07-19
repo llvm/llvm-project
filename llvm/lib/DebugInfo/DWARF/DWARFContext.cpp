@@ -247,6 +247,7 @@ DWARFContext::DWARFContextState::parseMacroOrMacinfo(MacroSecType SectionType) {
   return Macro;
 }
 
+namespace {
 class ThreadUnsafeDWARFContextState : public DWARFContext::DWARFContextState {
 
   DWARFUnitVector NormalUnits;
@@ -740,8 +741,7 @@ public:
     return ThreadUnsafeDWARFContextState::getTypeUnitMap(IsDWO);
   }
 };
-
-
+} // namespace
 
 DWARFContext::DWARFContext(std::unique_ptr<const DWARFObject> DObj,
                            std::string DWPName,
@@ -807,13 +807,14 @@ collectContributionData(DWARFContext::unit_iterator_range Units) {
   // type units in dwo or dwp files) share contributions. We don't want
   // to report them more than once.
   Contributions.erase(
-      std::unique(Contributions.begin(), Contributions.end(),
-                  [](const std::optional<StrOffsetsContributionDescriptor> &L,
-                     const std::optional<StrOffsetsContributionDescriptor> &R) {
-                    if (L && R)
-                      return L->Base == R->Base && L->Size == R->Size;
-                    return false;
-                  }),
+      llvm::unique(
+          Contributions,
+          [](const std::optional<StrOffsetsContributionDescriptor> &L,
+             const std::optional<StrOffsetsContributionDescriptor> &R) {
+            if (L && R)
+              return L->Base == R->Base && L->Size == R->Size;
+            return false;
+          }),
       Contributions.end());
   return Contributions;
 }

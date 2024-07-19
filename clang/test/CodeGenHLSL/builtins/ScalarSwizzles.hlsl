@@ -55,7 +55,7 @@ vector<uint64_t,4> FillOneUnsignedLong(){
 // CHECK: [[vec2:%.*]] = shufflevector <1 x double> [[vec1]], <1 x double> poison, <2 x i32> zeroinitializer
 // CHECK: ret <2 x double> [[vec2]]
 double2 FillTwoPointFive(){
-  return 2.5.rr;
+  return 2.5l.rr;
 }
 
 // CHECK-LABEL: FillOneHalf
@@ -65,7 +65,7 @@ double2 FillTwoPointFive(){
 // CHECK: [[vec3:%.*]] = shufflevector <1 x double> [[vec1]], <1 x double> poison, <3 x i32> zeroinitializer
 // CHECK: ret <3 x double> [[vec3]]
 double3 FillOneHalf(){
-  return .5.rrr;
+  return .5l.rrr;
 }
 
 // CHECK-LABEL: FillTwoPointFiveFloat
@@ -110,7 +110,7 @@ float2 HowManyFloats(float V) {
   return V.rr.rr;
 }
 
-// This codegen is gnarly because `1.` is a double, so this creates double
+// This codegen is gnarly because `1.l` is a double, so this creates double
 // vectors that need to be truncated down to floats. The optimizer cleans this
 // up nicely too.
 
@@ -123,6 +123,17 @@ float2 HowManyFloats(float V) {
 // CHECK: ret <3 x float> [[vec3f]]
 
 float3 AllRighty() {
+  return 1.l.rrr;
+}
+
+// CHECK-LABEL: AllRighty2
+// CHECK: [[vec1Ptr:%.*]] = alloca <1 x float>, align 4
+// CHECK: store <1 x float> <float 1.000000e+00>, ptr [[vec1Ptr]], align 4
+// CHECK: [[vec1:%.*]] = load <1 x float>, ptr [[vec1Ptr]], align 4
+// CHECK: [[vec3:%.*]] = shufflevector <1 x float> [[vec1]], <1 x float> poison, <3 x i32>
+// CHECK: ret <3 x float> [[vec3]]
+
+float3 AllRighty2() {
   return 1..rrr;
 }
 

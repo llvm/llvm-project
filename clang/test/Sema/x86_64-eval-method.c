@@ -10,4 +10,4 @@
 float add2(float a, float b, float c) {
 #pragma clang fp eval_method(source)
   return a + b + c;
-} // warn-warning{{Setting the floating point evaluation method to `source` on a target without SSE is not supported.}}
+} // warn-warning{{setting the floating point evaluation method to `source` on a target without SSE is not supported}}

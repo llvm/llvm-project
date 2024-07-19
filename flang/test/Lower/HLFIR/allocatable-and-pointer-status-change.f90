@@ -5,7 +5,7 @@
 subroutine allocation(x)
   character(*), allocatable :: x(:)
 ! CHECK-LABEL: func.func @_QPallocation(
-! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] typeparams %[[VAL_2:[a-z0-9]*]] {fortran_attrs = #fir.var_attrs<allocatable>,  {{.*}}Ex
+! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] typeparams %[[VAL_2:[a-z0-9]*]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>,  {{.*}}Ex
   deallocate(x)
 ! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
 ! CHECK:  %[[VAL_5:.*]] = fir.box_addr %[[VAL_4]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> !fir.heap<!fir.array<?x!fir.char<1,?>>>
@@ -30,8 +30,8 @@ subroutine pointer_assignment(p, ziel)
   real, pointer :: p(:)
   real, target :: ziel(42:)
 ! CHECK-LABEL: func.func @_QPpointer_assignment(
-! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] {fortran_attrs = #fir.var_attrs<pointer>,  {{.*}}Ep
-! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]](%[[VAL_5:[a-z0-9]*]]) {fortran_attrs = #fir.var_attrs<target>,  {{.*}}Eziel
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>,  {{.*}}Ep
+! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]](%[[VAL_5:[a-z0-9]*]]) dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<target>,  {{.*}}Eziel
   p => ziel
 ! CHECK:  %[[VAL_7:.*]] = fir.shift %[[VAL_4:.*]] : (index) -> !fir.shift<1>
 ! CHECK:  %[[VAL_8:.*]] = fir.rebox %[[VAL_6]]#1(%[[VAL_7]]) : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
@@ -46,8 +46,8 @@ subroutine pointer_remapping(p, ziel)
   real, pointer :: p(:, :)
   real, target :: ziel(10, 20, 30)
 ! CHECK-LABEL: func.func @_QPpointer_remapping(
-! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] {fortran_attrs = #fir.var_attrs<pointer>,  {{.*}}Ep
-! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]](%[[VAL_6:[a-z0-9]*]]) {fortran_attrs = #fir.var_attrs<target>,  {{.*}}Eziel
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>,  {{.*}}Ep
+! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]](%[[VAL_6:[a-z0-9]*]]) dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<target>,  {{.*}}Eziel
   p(2:7, 3:102) => ziel
 ! CHECK:  %[[VAL_8:.*]] = arith.constant 2 : i64
 ! CHECK:  %[[VAL_9:.*]] = arith.constant 7 : i64
@@ -101,7 +101,7 @@ subroutine ptr_comp_assign(x, ziel)
   x(9_8)%p => ziel
 ! CHECK:  %[[VAL_5:.*]] = arith.constant 100 : index
 ! CHECK:  %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
-! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]](%[[VAL_6:[a-z0-9]*]]) {fortran_attrs = #fir.var_attrs<target>,  {{.*}}Eziel
+! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]](%[[VAL_6:[a-z0-9]*]]) dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<target>,  {{.*}}Eziel
 ! CHECK:  %[[VAL_8:.*]] = arith.constant 9 : index
 ! CHECK:  %[[VAL_9:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_8]])  : (!fir.ref<!fir.array<10x!fir.type<_QFptr_comp_assignTt{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>>, index) -> !fir.ref<!fir.type<_QFptr_comp_assignTt{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
 ! CHECK:  %[[VAL_10:.*]] = hlfir.designate %[[VAL_9]]{"p"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QFptr_comp_assignTt{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>

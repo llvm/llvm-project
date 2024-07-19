@@ -6,7 +6,7 @@
 # RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | FileCheck --check-prefix=CHECK %s
 
-# This test checks that we update relative DIE references with DW_OP_convert that are in locexpr.
+## This test checks that we update relative DIE references with DW_OP_convert that are in locexpr.
 
 # CHECK: version = 0x0005
 # CHECK: DW_TAG_variable

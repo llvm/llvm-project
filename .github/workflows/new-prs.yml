@@ -43,7 +43,7 @@ jobs:
       - name: Setup Automation Script
         working-directory: ./llvm/utils/git/
         run: |
-          pip install -r requirements.txt
+          pip install --require-hashes -r requirements.txt
 
       - name: Greet Author
         working-directory: ./llvm/utils/git/

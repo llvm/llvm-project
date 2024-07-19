@@ -1,5 +1,5 @@
-; RUN: not llc --mtriple=loongarch32 2>&1 < %s | FileCheck %s
-; RUN: not llc --mtriple=loongarch64 2>&1 < %s | FileCheck %s
+; RUN: not llc --mtriple=loongarch32 -mattr=+d 2>&1 < %s | FileCheck %s
+; RUN: not llc --mtriple=loongarch64 -mattr=+d 2>&1 < %s | FileCheck %s
 
 define i32 @non_exit_r32(i32 %a) nounwind {
 ; CHECK: error: couldn't allocate input reg for constraint '{$r32}'

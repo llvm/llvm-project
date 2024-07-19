@@ -14,6 +14,7 @@
 
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -114,8 +115,9 @@ private:
   bool foldShuffleOfBinops(Instruction &I);
   bool foldShuffleOfCastops(Instruction &I);
   bool foldShuffleOfShuffles(Instruction &I);
+  bool foldShuffleToIdentity(Instruction &I);
   bool foldShuffleFromReductions(Instruction &I);
-  bool foldTruncFromReductions(Instruction &I);
+  bool foldCastFromReductions(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
 
   void replaceValue(Value &Old, Value &New) {
@@ -1489,8 +1491,7 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
 bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   Value *V0, *V1;
   ArrayRef<int> OldMask;
-  if (!match(&I, m_Shuffle(m_OneUse(m_Value(V0)), m_OneUse(m_Value(V1)),
-                           m_Mask(OldMask))))
+  if (!match(&I, m_Shuffle(m_Value(V0), m_Value(V1), m_Mask(OldMask))))
     return false;
 
   auto *C0 = dyn_cast<CastInst>(V0);
@@ -1549,11 +1550,13 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   // Try to replace a castop with a shuffle if the shuffle is not costly.
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
-  InstructionCost OldCost =
+  InstructionCost CostC0 =
       TTI.getCastInstrCost(C0->getOpcode(), CastDstTy, CastSrcTy,
-                           TTI::CastContextHint::None, CostKind) +
+                           TTI::CastContextHint::None, CostKind);
+  InstructionCost CostC1 =
       TTI.getCastInstrCost(C1->getOpcode(), CastDstTy, CastSrcTy,
                            TTI::CastContextHint::None, CostKind);
+  InstructionCost OldCost = CostC0 + CostC1;
   OldCost +=
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, CastDstTy,
                          OldMask, CostKind, 0, nullptr, std::nullopt, &I);
@@ -1562,6 +1565,10 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
       TargetTransformInfo::SK_PermuteTwoSrc, CastSrcTy, NewMask, CostKind);
   NewCost += TTI.getCastInstrCost(Opcode, ShuffleDstTy, NewShuffleDstTy,
                                   TTI::CastContextHint::None, CostKind);
+  if (!C0->hasOneUse())
+    NewCost += CostC0;
+  if (!C1->hasOneUse())
+    NewCost += CostC1;
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two casts: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
@@ -1664,6 +1671,324 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
 
   Value *Shuf = Builder.CreateShuffleVector(V0, V1, NewMask);
   replaceValue(I, *Shuf);
+  return true;
+}
+
+using InstLane = std::pair<Use *, int>;
+
+static InstLane lookThroughShuffles(Use *U, int Lane) {
+  while (auto *SV = dyn_cast<ShuffleVectorInst>(U->get())) {
+    unsigned NumElts =
+        cast<FixedVectorType>(SV->getOperand(0)->getType())->getNumElements();
+    int M = SV->getMaskValue(Lane);
+    if (M < 0)
+      return {nullptr, PoisonMaskElem};
+    if (static_cast<unsigned>(M) < NumElts) {
+      U = &SV->getOperandUse(0);
+      Lane = M;
+    } else {
+      U = &SV->getOperandUse(1);
+      Lane = M - NumElts;
+    }
+  }
+  return InstLane{U, Lane};
+}
+
+static SmallVector<InstLane>
+generateInstLaneVectorFromOperand(ArrayRef<InstLane> Item, int Op) {
+  SmallVector<InstLane> NItem;
+  for (InstLane IL : Item) {
+    auto [U, Lane] = IL;
+    InstLane OpLane =
+        U ? lookThroughShuffles(&cast<Instruction>(U->get())->getOperandUse(Op),
+                                Lane)
+          : InstLane{nullptr, PoisonMaskElem};
+    NItem.emplace_back(OpLane);
+  }
+  return NItem;
+}
+
+/// Detect concat of multiple values into a vector
+static bool isFreeConcat(ArrayRef<InstLane> Item,
+                         const TargetTransformInfo &TTI) {
+  auto *Ty = cast<FixedVectorType>(Item.front().first->get()->getType());
+  unsigned NumElts = Ty->getNumElements();
+  if (Item.size() == NumElts || NumElts == 1 || Item.size() % NumElts != 0)
+    return false;
+
+  // Check that the concat is free, usually meaning that the type will be split
+  // during legalization.
+  SmallVector<int, 16> ConcatMask(NumElts * 2);
+  std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
+  if (TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, Ty, ConcatMask,
+                         TTI::TCK_RecipThroughput) != 0)
+    return false;
+
+  unsigned NumSlices = Item.size() / NumElts;
+  // Currently we generate a tree of shuffles for the concats, which limits us
+  // to a power2.
+  if (!isPowerOf2_32(NumSlices))
+    return false;
+  for (unsigned Slice = 0; Slice < NumSlices; ++Slice) {
+    Use *SliceV = Item[Slice * NumElts].first;
+    if (!SliceV || SliceV->get()->getType() != Ty)
+      return false;
+    for (unsigned Elt = 0; Elt < NumElts; ++Elt) {
+      auto [V, Lane] = Item[Slice * NumElts + Elt];
+      if (Lane != static_cast<int>(Elt) || SliceV->get() != V->get())
+        return false;
+    }
+  }
+  return true;
+}
+
+static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
+                                  const SmallPtrSet<Use *, 4> &IdentityLeafs,
+                                  const SmallPtrSet<Use *, 4> &SplatLeafs,
+                                  const SmallPtrSet<Use *, 4> &ConcatLeafs,
+                                  IRBuilder<> &Builder) {
+  auto [FrontU, FrontLane] = Item.front();
+
+  if (IdentityLeafs.contains(FrontU)) {
+    return FrontU->get();
+  }
+  if (SplatLeafs.contains(FrontU)) {
+    SmallVector<int, 16> Mask(Ty->getNumElements(), FrontLane);
+    return Builder.CreateShuffleVector(FrontU->get(), Mask);
+  }
+  if (ConcatLeafs.contains(FrontU)) {
+    unsigned NumElts =
+        cast<FixedVectorType>(FrontU->get()->getType())->getNumElements();
+    SmallVector<Value *> Values(Item.size() / NumElts, nullptr);
+    for (unsigned S = 0; S < Values.size(); ++S)
+      Values[S] = Item[S * NumElts].first->get();
+
+    while (Values.size() > 1) {
+      NumElts *= 2;
+      SmallVector<int, 16> Mask(NumElts, 0);
+      std::iota(Mask.begin(), Mask.end(), 0);
+      SmallVector<Value *> NewValues(Values.size() / 2, nullptr);
+      for (unsigned S = 0; S < NewValues.size(); ++S)
+        NewValues[S] =
+            Builder.CreateShuffleVector(Values[S * 2], Values[S * 2 + 1], Mask);
+      Values = NewValues;
+    }
+    return Values[0];
+  }
+
+  auto *I = cast<Instruction>(FrontU->get());
+  auto *II = dyn_cast<IntrinsicInst>(I);
+  unsigned NumOps = I->getNumOperands() - (II ? 1 : 0);
+  SmallVector<Value *> Ops(NumOps);
+  for (unsigned Idx = 0; Idx < NumOps; Idx++) {
+    if (II && isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(), Idx)) {
+      Ops[Idx] = II->getOperand(Idx);
+      continue;
+    }
+    Ops[Idx] =
+        generateNewInstTree(generateInstLaneVectorFromOperand(Item, Idx), Ty,
+                            IdentityLeafs, SplatLeafs, ConcatLeafs, Builder);
+  }
+
+  SmallVector<Value *, 8> ValueList;
+  for (const auto &Lane : Item)
+    if (Lane.first)
+      ValueList.push_back(Lane.first->get());
+
+  Type *DstTy =
+      FixedVectorType::get(I->getType()->getScalarType(), Ty->getNumElements());
+  if (auto *BI = dyn_cast<BinaryOperator>(I)) {
+    auto *Value = Builder.CreateBinOp((Instruction::BinaryOps)BI->getOpcode(),
+                                      Ops[0], Ops[1]);
+    propagateIRFlags(Value, ValueList);
+    return Value;
+  }
+  if (auto *CI = dyn_cast<CmpInst>(I)) {
+    auto *Value = Builder.CreateCmp(CI->getPredicate(), Ops[0], Ops[1]);
+    propagateIRFlags(Value, ValueList);
+    return Value;
+  }
+  if (auto *SI = dyn_cast<SelectInst>(I)) {
+    auto *Value = Builder.CreateSelect(Ops[0], Ops[1], Ops[2], "", SI);
+    propagateIRFlags(Value, ValueList);
+    return Value;
+  }
+  if (auto *CI = dyn_cast<CastInst>(I)) {
+    auto *Value = Builder.CreateCast((Instruction::CastOps)CI->getOpcode(),
+                                     Ops[0], DstTy);
+    propagateIRFlags(Value, ValueList);
+    return Value;
+  }
+  if (II) {
+    auto *Value = Builder.CreateIntrinsic(DstTy, II->getIntrinsicID(), Ops);
+    propagateIRFlags(Value, ValueList);
+    return Value;
+  }
+  assert(isa<UnaryInstruction>(I) && "Unexpected instruction type in Generate");
+  auto *Value =
+      Builder.CreateUnOp((Instruction::UnaryOps)I->getOpcode(), Ops[0]);
+  propagateIRFlags(Value, ValueList);
+  return Value;
+}
+
+// Starting from a shuffle, look up through operands tracking the shuffled index
+// of each lane. If we can simplify away the shuffles to identities then
+// do so.
+bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
+  auto *Ty = dyn_cast<FixedVectorType>(I.getType());
+  if (!Ty || I.use_empty())
+    return false;
+
+  SmallVector<InstLane> Start(Ty->getNumElements());
+  for (unsigned M = 0, E = Ty->getNumElements(); M < E; ++M)
+    Start[M] = lookThroughShuffles(&*I.use_begin(), M);
+
+  SmallVector<SmallVector<InstLane>> Worklist;
+  Worklist.push_back(Start);
+  SmallPtrSet<Use *, 4> IdentityLeafs, SplatLeafs, ConcatLeafs;
+  unsigned NumVisited = 0;
+
+  while (!Worklist.empty()) {
+    if (++NumVisited > MaxInstrsToScan)
+      return false;
+
+    SmallVector<InstLane> Item = Worklist.pop_back_val();
+    auto [FrontU, FrontLane] = Item.front();
+
+    // If we found an undef first lane then bail out to keep things simple.
+    if (!FrontU)
+      return false;
+
+    // Helper to peek through bitcasts to the same value.
+    auto IsEquiv = [&](Value *X, Value *Y) {
+      return X->getType() == Y->getType() &&
+             peekThroughBitcasts(X) == peekThroughBitcasts(Y);
+    };
+
+    // Look for an identity value.
+    if (FrontLane == 0 &&
+        cast<FixedVectorType>(FrontU->get()->getType())->getNumElements() ==
+            Ty->getNumElements() &&
+        all_of(drop_begin(enumerate(Item)), [IsEquiv, Item](const auto &E) {
+          Value *FrontV = Item.front().first->get();
+          return !E.value().first || (IsEquiv(E.value().first->get(), FrontV) &&
+                                      E.value().second == (int)E.index());
+        })) {
+      IdentityLeafs.insert(FrontU);
+      continue;
+    }
+    // Look for constants, for the moment only supporting constant splats.
+    if (auto *C = dyn_cast<Constant>(FrontU);
+        C && C->getSplatValue() &&
+        all_of(drop_begin(Item), [Item](InstLane &IL) {
+          Value *FrontV = Item.front().first->get();
+          Use *U = IL.first;
+          return !U || U->get() == FrontV;
+        })) {
+      SplatLeafs.insert(FrontU);
+      continue;
+    }
+    // Look for a splat value.
+    if (all_of(drop_begin(Item), [Item](InstLane &IL) {
+          auto [FrontU, FrontLane] = Item.front();
+          auto [U, Lane] = IL;
+          return !U || (U->get() == FrontU->get() && Lane == FrontLane);
+        })) {
+      SplatLeafs.insert(FrontU);
+      continue;
+    }
+
+    // We need each element to be the same type of value, and check that each
+    // element has a single use.
+    if (all_of(drop_begin(Item), [Item](InstLane IL) {
+          Value *FrontV = Item.front().first->get();
+          if (!IL.first)
+            return true;
+          Value *V = IL.first->get();
+          if (auto *I = dyn_cast<Instruction>(V); I && !I->hasOneUse())
+            return false;
+          if (V->getValueID() != FrontV->getValueID())
+            return false;
+          if (auto *CI = dyn_cast<CmpInst>(V))
+            if (CI->getPredicate() != cast<CmpInst>(FrontV)->getPredicate())
+              return false;
+          if (auto *CI = dyn_cast<CastInst>(V))
+            if (CI->getSrcTy() != cast<CastInst>(FrontV)->getSrcTy())
+              return false;
+          if (auto *SI = dyn_cast<SelectInst>(V))
+            if (!isa<VectorType>(SI->getOperand(0)->getType()) ||
+                SI->getOperand(0)->getType() !=
+                    cast<SelectInst>(FrontV)->getOperand(0)->getType())
+              return false;
+          if (isa<CallInst>(V) && !isa<IntrinsicInst>(V))
+            return false;
+          auto *II = dyn_cast<IntrinsicInst>(V);
+          return !II || (isa<IntrinsicInst>(FrontV) &&
+                         II->getIntrinsicID() ==
+                             cast<IntrinsicInst>(FrontV)->getIntrinsicID());
+        })) {
+      // Check the operator is one that we support.
+      if (isa<BinaryOperator, CmpInst>(FrontU)) {
+        //  We exclude div/rem in case they hit UB from poison lanes.
+        if (auto *BO = dyn_cast<BinaryOperator>(FrontU);
+            BO && BO->isIntDivRem())
+          return false;
+        Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
+        Worklist.push_back(generateInstLaneVectorFromOperand(Item, 1));
+        continue;
+      } else if (isa<UnaryOperator, TruncInst, ZExtInst, SExtInst>(FrontU)) {
+        Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
+        continue;
+      } else if (auto *BitCast = dyn_cast<BitCastInst>(FrontU)) {
+        // TODO: Handle vector widening/narrowing bitcasts.
+        auto *DstTy = dyn_cast<FixedVectorType>(BitCast->getDestTy());
+        auto *SrcTy = dyn_cast<FixedVectorType>(BitCast->getSrcTy());
+        if (DstTy && SrcTy &&
+            SrcTy->getNumElements() == DstTy->getNumElements()) {
+          Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
+          continue;
+        }
+      } else if (isa<SelectInst>(FrontU)) {
+        Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
+        Worklist.push_back(generateInstLaneVectorFromOperand(Item, 1));
+        Worklist.push_back(generateInstLaneVectorFromOperand(Item, 2));
+        continue;
+      } else if (auto *II = dyn_cast<IntrinsicInst>(FrontU);
+                 II && isTriviallyVectorizable(II->getIntrinsicID())) {
+        for (unsigned Op = 0, E = II->getNumOperands() - 1; Op < E; Op++) {
+          if (isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(), Op)) {
+            if (!all_of(drop_begin(Item), [Item, Op](InstLane &IL) {
+                  Value *FrontV = Item.front().first->get();
+                  Use *U = IL.first;
+                  return !U || (cast<Instruction>(U->get())->getOperand(Op) ==
+                                cast<Instruction>(FrontV)->getOperand(Op));
+                }))
+              return false;
+            continue;
+          }
+          Worklist.push_back(generateInstLaneVectorFromOperand(Item, Op));
+        }
+        continue;
+      }
+    }
+
+    if (isFreeConcat(Item, TTI)) {
+      ConcatLeafs.insert(FrontU);
+      continue;
+    }
+
+    return false;
+  }
+
+  if (NumVisited <= 1)
+    return false;
+
+  // If we got this far, we know the shuffles are superfluous and can be
+  // removed. Scan through again and generate the new tree of instructions.
+  Builder.SetInsertPoint(&I);
+  Value *V = generateNewInstTree(Start, Ty, IdentityLeafs, SplatLeafs,
+                                 ConcatLeafs, Builder);
+  replaceValue(I, *V);
   return true;
 }
 
@@ -1788,15 +2113,20 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
 
 /// Determine if its more efficient to fold:
 ///   reduce(trunc(x)) -> trunc(reduce(x)).
-bool VectorCombine::foldTruncFromReductions(Instruction &I) {
+///   reduce(sext(x))  -> sext(reduce(x)).
+///   reduce(zext(x))  -> zext(reduce(x)).
+bool VectorCombine::foldCastFromReductions(Instruction &I) {
   auto *II = dyn_cast<IntrinsicInst>(&I);
   if (!II)
     return false;
 
+  bool TruncOnly = false;
   Intrinsic::ID IID = II->getIntrinsicID();
   switch (IID) {
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_mul:
+    TruncOnly = true;
+    break;
   case Intrinsic::vector_reduce_and:
   case Intrinsic::vector_reduce_or:
   case Intrinsic::vector_reduce_xor:
@@ -1808,35 +2138,37 @@ bool VectorCombine::foldTruncFromReductions(Instruction &I) {
   unsigned ReductionOpc = getArithmeticReductionInstruction(IID);
   Value *ReductionSrc = I.getOperand(0);
 
-  Value *TruncSrc;
-  if (!match(ReductionSrc, m_OneUse(m_Trunc(m_Value(TruncSrc)))))
+  Value *Src;
+  if (!match(ReductionSrc, m_OneUse(m_Trunc(m_Value(Src)))) &&
+      (TruncOnly || !match(ReductionSrc, m_OneUse(m_ZExtOrSExt(m_Value(Src))))))
     return false;
 
-  auto *Trunc = cast<CastInst>(ReductionSrc);
-  auto *TruncSrcTy = cast<VectorType>(TruncSrc->getType());
+  auto CastOpc =
+      (Instruction::CastOps)cast<Instruction>(ReductionSrc)->getOpcode();
+
+  auto *SrcTy = cast<VectorType>(Src->getType());
   auto *ReductionSrcTy = cast<VectorType>(ReductionSrc->getType());
   Type *ResultTy = I.getType();
 
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-  InstructionCost OldCost =
-      TTI.getCastInstrCost(Instruction::Trunc, ReductionSrcTy, TruncSrcTy,
-                           TTI::CastContextHint::None, CostKind, Trunc) +
-      TTI.getArithmeticReductionCost(ReductionOpc, ReductionSrcTy, std::nullopt,
-                                     CostKind);
+  InstructionCost OldCost = TTI.getArithmeticReductionCost(
+      ReductionOpc, ReductionSrcTy, std::nullopt, CostKind);
+  OldCost += TTI.getCastInstrCost(CastOpc, ReductionSrcTy, SrcTy,
+                                  TTI::CastContextHint::None, CostKind,
+                                  cast<CastInst>(ReductionSrc));
   InstructionCost NewCost =
-      TTI.getArithmeticReductionCost(ReductionOpc, TruncSrcTy, std::nullopt,
+      TTI.getArithmeticReductionCost(ReductionOpc, SrcTy, std::nullopt,
                                      CostKind) +
-      TTI.getCastInstrCost(Instruction::Trunc, ResultTy,
-                           ReductionSrcTy->getScalarType(),
+      TTI.getCastInstrCost(CastOpc, ResultTy, ReductionSrcTy->getScalarType(),
                            TTI::CastContextHint::None, CostKind);
 
   if (OldCost <= NewCost || !NewCost.isValid())
     return false;
 
-  Value *NewReduction = Builder.CreateIntrinsic(
-      TruncSrcTy->getScalarType(), II->getIntrinsicID(), {TruncSrc});
-  Value *NewTruncation = Builder.CreateTrunc(NewReduction, ResultTy);
-  replaceValue(I, *NewTruncation);
+  Value *NewReduction = Builder.CreateIntrinsic(SrcTy->getScalarType(),
+                                                II->getIntrinsicID(), {Src});
+  Value *NewCast = Builder.CreateCast(CastOpc, NewReduction, ResultTy);
+  replaceValue(I, *NewCast);
   return true;
 }
 
@@ -2224,6 +2556,7 @@ bool VectorCombine::run() {
         MadeChange |= foldShuffleOfCastops(I);
         MadeChange |= foldShuffleOfShuffles(I);
         MadeChange |= foldSelectShuffle(I);
+        MadeChange |= foldShuffleToIdentity(I);
         break;
       case Instruction::BitCast:
         MadeChange |= foldBitcastShuffle(I);
@@ -2233,7 +2566,7 @@ bool VectorCombine::run() {
       switch (Opcode) {
       case Instruction::Call:
         MadeChange |= foldShuffleFromReductions(I);
-        MadeChange |= foldTruncFromReductions(I);
+        MadeChange |= foldCastFromReductions(I);
         break;
       case Instruction::ICmp:
       case Instruction::FCmp:
@@ -2283,7 +2616,7 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
   TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
   DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   AAResults &AA = FAM.getResult<AAManager>(F);
-  const DataLayout *DL = &F.getParent()->getDataLayout();
+  const DataLayout *DL = &F.getDataLayout();
   VectorCombine Combiner(F, TTI, DT, AA, AC, DL, TryEarlyFoldsOnly);
   if (!Combiner.run())
     return PreservedAnalyses::all();

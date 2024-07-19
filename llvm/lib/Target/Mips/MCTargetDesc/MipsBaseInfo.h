@@ -135,6 +135,15 @@ namespace MipsII {
     OPERAND_LAST_MIPS_MEM_IMM = OPERAND_MEM_SIMM9
   };
 }
+
+inline static MCRegister getMSARegFromFReg(MCRegister Reg) {
+  if (Reg >= Mips::F0 && Reg <= Mips::F31)
+    return Reg - Mips::F0 + Mips::W0;
+  else if (Reg >= Mips::D0_64 && Reg <= Mips::D31_64)
+    return Reg - Mips::D0_64 + Mips::W0;
+  else
+    return Mips::NoRegister;
+}
 }
 
 #endif

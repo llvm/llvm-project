@@ -10,11 +10,12 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_ATOMIC_H
 
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #include "type_traits.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 enum class MemoryOrder : int {
@@ -101,6 +102,36 @@ public:
                                        int(mem_ord), int(mem_ord));
   }
 
+  // Atomic compare exchange (separate success and failure memory orders)
+  bool compare_exchange_strong(
+      T &expected, T desired, MemoryOrder success_order,
+      MemoryOrder failure_order,
+      [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
+    return __atomic_compare_exchange_n(&val, &expected, desired, false,
+                                       static_cast<int>(success_order),
+                                       static_cast<int>(failure_order));
+  }
+
+  // Atomic compare exchange (weak version)
+  bool compare_exchange_weak(
+      T &expected, T desired, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
+      [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
+    return __atomic_compare_exchange_n(&val, &expected, desired, true,
+                                       static_cast<int>(mem_ord),
+                                       static_cast<int>(mem_ord));
+  }
+
+  // Atomic compare exchange (weak version with separate success and failure
+  // memory orders)
+  bool compare_exchange_weak(
+      T &expected, T desired, MemoryOrder success_order,
+      MemoryOrder failure_order,
+      [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
+    return __atomic_compare_exchange_n(&val, &expected, desired, true,
+                                       static_cast<int>(success_order),
+                                       static_cast<int>(failure_order));
+  }
+
   T exchange(T desired, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
              [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
 #if __has_builtin(__scoped_atomic_exchange_n)
@@ -181,6 +212,6 @@ LIBC_INLINE void atomic_signal_fence([[maybe_unused]] MemoryOrder mem_ord) {
 }
 
 } // namespace cpp
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_ATOMIC_H

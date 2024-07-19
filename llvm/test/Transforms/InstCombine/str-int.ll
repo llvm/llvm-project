@@ -46,7 +46,7 @@ define i32 @strtol_hex() #0 {
 define i32 @strtol_endptr_not_null(ptr %pend) {
 ; CHECK-LABEL: @strtol_endptr_not_null(
 ; CHECK-NEXT:    [[ENDP1:%.*]] = getelementptr inbounds i8, ptr [[PEND:%.*]], i64 8
-; CHECK-NEXT:    store ptr getelementptr inbounds ([3 x i8], ptr @.str, i64 0, i64 2), ptr [[ENDP1]], align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @.str, i64 2), ptr [[ENDP1]], align 8
 ; CHECK-NEXT:    ret i32 12
 ;
   %endp1 = getelementptr inbounds ptr, ptr %pend, i32 1

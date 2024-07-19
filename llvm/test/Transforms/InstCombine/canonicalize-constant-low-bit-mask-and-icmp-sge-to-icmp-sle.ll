@@ -98,8 +98,7 @@ declare i8 @gen8()
 define i1 @c0() {
 ; CHECK-LABEL: @c0(
 ; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[X]], 3
-; CHECK-NEXT:    [[RET:%.*]] = icmp sge i8 [[X]], [[TMP0]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp sgt i8 [[X]], -1
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %x = call i8 @gen8()

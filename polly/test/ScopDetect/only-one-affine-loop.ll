@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-process-unprofitable=false -polly-allow-nonaffine-loops -polly-print-detect -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-process-unprofitable=false -polly-allow-nonaffine-loops '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; Even if we allow non-affine loops we can only model the outermost loop, all
 ; other loops are boxed in non-affine regions. However, the inner loops can be

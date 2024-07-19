@@ -173,27 +173,27 @@ TEST(VerifierTest, CrossModuleRef) {
   std::string Error;
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyModule(M2, &ErrorOS));
-  EXPECT_TRUE(StringRef(ErrorOS.str())
-                  .equals("Global is referenced in a different module!\n"
-                          "ptr @foo2\n"
-                          "; ModuleID = 'M2'\n"
-                          "  %call = call i32 @foo2()\n"
-                          "ptr @foo1\n"
-                          "; ModuleID = 'M1'\n"
-                          "Global is used by function in a different module\n"
-                          "ptr @foo2\n"
-                          "; ModuleID = 'M2'\n"
-                          "ptr @foo3\n"
-                          "; ModuleID = 'M3'\n"));
+  EXPECT_TRUE(StringRef(ErrorOS.str()) ==
+              "Global is referenced in a different module!\n"
+              "ptr @foo2\n"
+              "; ModuleID = 'M2'\n"
+              "  %call = call i32 @foo2()\n"
+              "ptr @foo1\n"
+              "; ModuleID = 'M1'\n"
+              "Global is used by function in a different module\n"
+              "ptr @foo2\n"
+              "; ModuleID = 'M2'\n"
+              "ptr @foo3\n"
+              "; ModuleID = 'M3'\n");
 
   Error.clear();
   EXPECT_TRUE(verifyModule(M1, &ErrorOS));
-  EXPECT_TRUE(StringRef(ErrorOS.str()).equals(
-      "Referencing function in another module!\n"
-      "  %call = call i32 @foo2()\n"
-      "; ModuleID = 'M1'\n"
-      "ptr @foo2\n"
-      "; ModuleID = 'M2'\n"));
+  EXPECT_TRUE(StringRef(ErrorOS.str()) ==
+              "Referencing function in another module!\n"
+              "  %call = call i32 @foo2()\n"
+              "; ModuleID = 'M1'\n"
+              "ptr @foo2\n"
+              "; ModuleID = 'M2'\n");
 
   Error.clear();
   EXPECT_TRUE(verifyModule(M3, &ErrorOS));

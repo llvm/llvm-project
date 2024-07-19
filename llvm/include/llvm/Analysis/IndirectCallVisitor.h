@@ -27,31 +27,23 @@ struct PGOIndirectCallVisitor : public InstVisitor<PGOIndirectCallVisitor> {
   std::vector<Instruction *> ProfiledAddresses;
   PGOIndirectCallVisitor(InstructionType Type) : Type(Type) {}
 
-  void visitCallBase(CallBase &Call) {
-    if (!Call.isIndirectCall())
-      return;
+  // Given an indirect call instruction, try to find the the following pattern
+  //
+  // %vtable = load ptr, ptr %obj
+  // %vfn = getelementptr inbounds ptr, ptr %vtable, i64 1
+  // %2 = load ptr, ptr %vfn
+  // $call = tail call i32 %2
+  //
+  // A heuristic is used to find the address feeding instructions.
+  static Instruction *tryGetVTableInstruction(CallBase *CB) {
+    assert(CB != nullptr && "Caller guaranteed");
+    if (!CB->isIndirectCall())
+      return nullptr;
 
-    if (Type == InstructionType::kIndirectCall) {
-      IndirectCalls.push_back(&Call);
-      return;
-    }
-
-    assert(Type == InstructionType::kVTableVal && "Control flow guaranteed");
-
-    LoadInst *LI = dyn_cast<LoadInst>(Call.getCalledOperand());
-    // The code pattern to look for
-    //
-    // %vtable = load ptr, ptr %b
-    // %vfn = getelementptr inbounds ptr, ptr %vtable, i64 1
-    // %2 = load ptr, ptr %vfn
-    // %call = tail call i32 %2(ptr %b)
-    //
-    // %vtable is the vtable address value to profile, and
-    // %2 is the indirect call target address to profile.
+    LoadInst *LI = dyn_cast<LoadInst>(CB->getCalledOperand());
     if (LI != nullptr) {
-      Value *Ptr = LI->getPointerOperand();
-      Value *VTablePtr = Ptr->stripInBoundsConstantOffsets();
-      // This is a heuristic to find address feeding instructions.
+      Value *FuncPtr = LI->getPointerOperand(); // GEP (or bitcast)
+      Value *VTablePtr = FuncPtr->stripInBoundsConstantOffsets();
       // FIXME: Add support in the frontend so LLVM type intrinsics are
       // emitted without LTO. This way, added intrinsics could filter
       // non-vtable instructions and reduce instrumentation overhead.
@@ -63,7 +55,22 @@ struct PGOIndirectCallVisitor : public InstVisitor<PGOIndirectCallVisitor> {
       // address is negligible if exists at all. Comparing loaded address
       // with symbol address guarantees correctness.
       if (VTablePtr != nullptr && isa<Instruction>(VTablePtr))
-        ProfiledAddresses.push_back(cast<Instruction>(VTablePtr));
+        return cast<Instruction>(VTablePtr);
+    }
+    return nullptr;
+  }
+
+  void visitCallBase(CallBase &Call) {
+    if (Call.isIndirectCall()) {
+      IndirectCalls.push_back(&Call);
+
+      if (Type != InstructionType::kVTableVal)
+        return;
+
+      Instruction *VPtr =
+          PGOIndirectCallVisitor::tryGetVTableInstruction(&Call);
+      if (VPtr)
+        ProfiledAddresses.push_back(VPtr);
     }
   }
 

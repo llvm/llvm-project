@@ -1,14 +1,14 @@
 Tutorial
 ========
 
-This document describes how to use lldb if you are already familiar with
-gdb's command set. We will start with some details on lldb command structure and
+This document describes how to use LLDB if you are already familiar with
+GDB's command set. We will start with some details on LLDB command structure and
 syntax.
 
 Command Structure
 -----------------
 
-Unlike gdb's quite free-form commands, lldb's are more structured. All commands
+Unlike GDB's quite free-form commands, LLDB's are more structured. All commands
 are of the form:
 
 ::
@@ -24,11 +24,11 @@ all commands. The command syntax for basic commands is very simple.
 * Escape backslashes and double quotes within arguments should be escaped
   with a backslash ``\``.
 
-This makes lldb's commands more regular, but it also means you may have to quote
-some arguments in lldb that you would not in gdb.
+This makes LLDB's commands more regular, but it also means you may have to quote
+some arguments in LLDB that you would not in GDB.
 
-There is one other special quote character in lldb - the backtick `````.
-If you put backticks around an argument or option value, lldb will run the text
+There is one other special quote character in LLDB - the backtick `````.
+If you put backticks around an argument or option value, LLDB will run the text
 of the value through the expression parser, and the result of the expression
 will be passed to the command.  So for instance, if ``len`` is a local
 ``int`` variable with the value ``5``, then the command:
@@ -40,7 +40,7 @@ will be passed to the command.  So for instance, if ``len`` is a local
 Will receive the value ``5`` for the count option, rather than the string ``len``.
 
 Options can be placed anywhere on the command line, but if the arguments begin
-with a ``-`` then you have to tell lldb that you are done with options for the
+with a ``-`` then you have to tell LLDB that you are done with options for the
 current command by adding an option termination: ``--``.
 
 So for instance, if you want to launch a process and give the ``process launch``
@@ -53,7 +53,7 @@ to launch to be launched with the arguments ``-program_arg value``, you would ty
 
 We also tried to reduce the number of special purpose argument parsers, which
 sometimes forces the user to be explicit about their intentions. The first
-instance you willl see of this is the breakpoint command. In gdb, to set a
+instance you willl see of this is the breakpoint command. In GDB, to set a
 breakpoint, you might enter:
 
 ::
@@ -71,17 +71,17 @@ from ``foo`` from ``foo.c::foo`` (which means the function ``foo`` in the file `
 got more and more complex. Especially in C++ there are times where there is
 really no way to specify the function you want to break on.
 
-The lldb commands are more verbose but also more precise and allow for
+The LLDB commands are more verbose but also more precise and allow for
 intelligent auto completion.
 
-To set the same file and line breakpoint in lldb you can enter either of:
+To set the same file and line breakpoint in LLDB you can enter either of:
 
 ::
 
    (lldb) breakpoint set --file foo.c --line 12
    (lldb) breakpoint set -f foo.c -l 12
 
-To set a breakpoint on a function named ``foo`` in lldb you can enter either of:
+To set a breakpoint on a function named ``foo`` in LLDB you can enter either of:
 
 ::
 
@@ -96,7 +96,7 @@ conditions or commands without having to specify them multiple times:
 
    (lldb) breakpoint set --name foo --name bar
 
-Setting breakpoints by name is even more specialized in lldb as you can specify
+Setting breakpoints by name is even more specialized in LLDB as you can specify
 that you want to set a breakpoint at a function by method name. To set a
 breakpoint on all C++ methods named ``foo`` you can enter either of:
 
@@ -125,7 +125,7 @@ The ``--shlib`` option can also be repeated to specify several shared libraries.
 
 Suggestions on more interesting primitives of this sort are also very welcome.
 
-Just like gdb, the lldb command interpreter does a shortest unique string match
+Just like GDB, the LLDB command interpreter does a shortest unique string match
 on command names, so the following two commands will both execute the same
 command:
 
@@ -134,12 +134,12 @@ command:
    (lldb) breakpoint set -n "-[SKTGraphicView alignLeftEdges:]"
    (lldb) br s -n "-[SKTGraphicView alignLeftEdges:]"
 
-lldb also supports command completion for source file names, symbol names, file
+LLDB also supports command completion for source file names, symbol names, file
 names, etc. Completion is initiated by hitting TAB. Individual options in a
 command can have different completers, so for instance, the ``--file <path>``
 option in ``breakpoint`` completes to source files, the ``--shlib <path>`` option
 to currently loaded shared libraries, etc. You can even do things like if you
-specify ``--shlib <path>``, and are completing on ``--file <path>``, lldb will only
+specify ``--shlib <path>``, and are completing on ``--file <path>``, LLDB will only
 list source files in the shared library specified by ``--shlib <path>``.
 
 The individual commands are pretty extensively documented. You can use the ``help``
@@ -162,23 +162,23 @@ You can do:
    (lldb) command alias bfl breakpoint set -f %1 -l %2
    (lldb) bfl foo.c 12
 
-lldb has a few aliases for commonly used commands (e.g. ``step``, ``next`` and
+LLDB has a few aliases for commonly used commands (e.g. ``step``, ``next`` and
 ``continue``) but it does not try to be exhaustive because in our experience it
 is more convenient to make the basic commands unique down to a letter or two,
 and then learn these sequences than to fill the namespace with lots of aliases,
 and then have to type them all the way out.
 
-However, users are free to customize lldb's command set however they like, and
-since lldb reads the file ``~/.lldbinit`` at startup, you can store all your
+However, users are free to customize LLDB's command set however they like, and
+since LLDB reads the file ``~/.lldbinit`` at startup, you can store all your
 aliases there and they will be generally available to you. Your aliases are
 also documented in the ``help`` command so you can remind yourself of what you have
 set up.
 
-One alias of note that lldb does include by popular demand is a weak emulator of
-gdb's ``break`` command. It does not try to do everything that gdb's break command
+One alias of note that LLDB does include by popular demand is a weak emulator of
+GDB's ``break`` command. It does not try to do everything that GDB's break command
 does (for instance, it does not handle ``foo.c::bar``). But it mostly works, and
 makes the transition easier. Also, by popular demand, it is aliased to ``b``. If you
-actually want to learn the lldb command set natively, that means it will get in
+actually want to learn the LLDB command set natively, that means it will get in
 the way of the rest of the breakpoint commands. Fortunately, if you do not like
 one of our aliases, you can easily get rid of it by running, for example:
 
@@ -192,9 +192,9 @@ You can also do:
 
    (lldb) command alias b breakpoint
 
-So you can run the native lldb breakpoint command with just ``b``.
+So you can run the native LLDB breakpoint command with just ``b``.
 
-The lldb command parser also supports "raw" commands, where, after command
+The LLDB command parser also supports "raw" commands, where, after command
 options are stripped off, the rest of the command string is passed
 uninterpreted to the command. This is convenient for commands whose arguments
 might be some complex expression that would be painful to backslash protect.
@@ -205,17 +205,17 @@ commands still can have options, if your command string has dashes in it,
 you will have to indicate these are not option markers by putting ``--`` after the
 command name, but before your command string.
 
-lldb also has a built-in Python interpreter, which is accessible by the
+LLDB also has a built-in Python interpreter, which is accessible by the
 ``"script`` command. All the functionality of the debugger is available as classes
-in the Python interpreter, so the more complex commands that in gdb you would
+in the Python interpreter, so the more complex commands that in GDB you would
 introduce with the ``define`` command can be done by writing Python functions
-using the lldb-Python library, then loading the scripts into your running
+using the LLDB Python library, then loading the scripts into your running
 session and accessing them with the ``script`` command.
 
-Loading a Program Into lldb
+Loading a Program Into LLDB
 ---------------------------
 
-First you need to set the program to debug. As with gdb, you can start lldb and
+First you need to set the program to debug. As with GDB, you can start LLDB and
 specify the file you wish to debug on the command line:
 
 ::
@@ -273,16 +273,16 @@ address it corresponds to gets loaded into the program you are debugging. For
 instance if you set a breakpoint in a shared library that then gets unloaded,
 that breakpoint location will remain, but it will no longer be resolved.
 
-One other thing to note for gdb users is that lldb acts like gdb with:
+One other thing to note for GDB users is that LLDB acts like GDB with:
 
 ::
 
    (gdb) set breakpoint pending on
 
-Which means that lldb will always make a breakpoint from your specification, even if it
+Which means that LLDB will always make a breakpoint from your specification, even if it
 could not find any locations that match the specification. You can tell whether
 the expression was resolved or not by checking the locations field in
-``breakpoint list``, and lldb reports the breakpoint as ``pending`` when you set it so
+``breakpoint list``, and LLDB reports the breakpoint as ``pending`` when you set it so
 you can tell you have made a typo more easily, if that was indeed the reason no
 locations were found:
 
@@ -304,12 +304,12 @@ command to print a backtrace when you hit this breakpoint you could do:
    > bt
    > DONE
 
-By default, the breakpoint command add command takes lldb command line
+By default, the breakpoint command add command takes LLDB command line
 commands. You can also specify this explicitly by passing the ``--command``
 option. Use ``--script`` if you want to implement your breakpoint command using
 the Python script instead.
 
-This is a convenient point to bring up another feature of the lldb command
+This is a convenient point to bring up another feature of the LLDB command
 ``help``. Do:
 
 ::
@@ -447,7 +447,7 @@ a variable called ``global`` for write operation, but only stop if the condition
 Starting or Attaching to Your Program
 -------------------------------------
 
-To launch a program in lldb you will use the ``process launch`` command or one of
+To launch a program in LLDB you will use the ``process launch`` command or one of
 its built in aliases:
 
 ::
@@ -457,7 +457,7 @@ its built in aliases:
    (lldb) r
 
 You can also attach to a process by process ID or process name. When attaching
-to a process by name, lldb also supports the ``--waitfor`` option which waits for
+to a process by name, LLDB also supports the ``--waitfor`` option which waits for
 the next process that has that name to show up, and attaches to it
 
 ::
@@ -497,32 +497,32 @@ for process control all exist under the "thread" command:
 
 At present you can only operate on one thread at a time, but the design will
 ultimately support saying "step over the function in Thread 1, and step into the
-function in Thread 2, and continue Thread 3" etc. When lldb eventually supports
+function in Thread 2, and continue Thread 3" etc. When LLDB eventually supports
 keeping some threads running while others are stopped this will be particularly
 important. For convenience, however, all the stepping commands have easy aliases.
 So ``thread continue`` is just ``c``, etc.
 
-The other program stepping commands are pretty much the same as in gdb. You have got:
+The other program stepping commands are pretty much the same as in GDB. You have got:
 
 ::
 
-   (lldb) thread step-in    // The same as gdb's "step" or "s"
-   (lldb) thread step-over  // The same as gdb's "next" or "n"
-   (lldb) thread step-out   // The same as gdb's "finish" or "f"
+   (lldb) thread step-in    // The same as GDB's "step" or "s"
+   (lldb) thread step-over  // The same as GDB's "next" or "n"
+   (lldb) thread step-out   // The same as GDB's "finish" or "f"
 
-By default, lldb does defined aliases to all common gdb process control commands
-(``s``, ``step``, ``n``, ``next``, ``finish``). If lldb is missing any, please add
+By default, LLDB does defined aliases to all common GDB process control commands
+(``s``, ``step``, ``n``, ``next``, ``finish``). If LLDB is missing any, please add
 them to your ``~/.lldbinit`` file using the ``command alias`` command.
 
-lldb also supports the step by instruction versions:
+LLDB also supports the step by instruction versions:
 
 ::
 
 
-   (lldb) thread step-inst       // The same as gdb's "stepi" / "si"
-   (lldb) thread step-over-inst  // The same as gdb's "nexti" / "ni"
+   (lldb) thread step-inst       // The same as GDB's "stepi" / "si"
+   (lldb) thread step-over-inst  // The same as GDB's "nexti" / "ni"
 
-Finally, lldb has a run until line or frame exit stepping mode:
+Finally, LLDB has a run until line or frame exit stepping mode:
 
 ::
 
@@ -530,16 +530,16 @@ Finally, lldb has a run until line or frame exit stepping mode:
 
 This command will run the thread in the current frame until it reaches line 100
 in this frame or stops if it leaves the current frame. This is a pretty close
-equivalent to gdb's ``until`` command.
+equivalent to GDB's ``until`` command.
 
-A process, by default, will share the lldb terminal with the inferior process.
-When in this mode, much like when debugging with gdb, when the process is
+A process, by default, will share the LLDB terminal with the inferior process.
+When in this mode, much like when debugging with GDB, when the process is
 running anything you type will go to the ``STDIN`` of the inferior process. To
 interrupt your inferior program, type ``CTRL+C``.
 
 If you attach to a process, or launch a process with the ``--no-stdin`` option,
 the command interpreter is always available to enter commands. It might be a
-little disconcerting to gdb users to always have an ``(lldb)`` prompt. This allows
+little disconcerting to GDB users to always have an ``(lldb)`` prompt. This allows
 you to set a breakpoint, or use any other command without having to explicitly
 interrupt the program you are debugging:
 
@@ -563,16 +563,16 @@ and memory reading and writing (``memory [read|write] ...``).
 The question of disabling stdio when running brings up a good opportunity to
 show how to set debugger properties. If you always want to run in
 the ``--no-stdin`` mode, you can set this as a generic process property using the
-lldb ``settings`` command, which is equivalent to gdb's ``set`` command.
+LLDB ``settings`` command, which is equivalent to GDB's ``set`` command.
 In this case you would say:
 
 ::
 
    (lldb) settings set target.process.disable-stdio true
 
-Over time, gdb's ``set`` command became a wilderness of disordered options, so
-that there were useful options that even experienced gdb users did not know
-about because they were too hard to find. lldb instead organizes the settings
+Over time, GDB's ``set`` command became a wilderness of disordered options, so
+that there were useful options that even experienced GDB users did not know
+about because they were too hard to find. LLDB instead organizes the settings
 hierarchically using the structure of the basic entities in the debugger. For
 the most part anywhere you can specify a setting on a generic entity (threads,
 for example) you can also apply the option to a particular instance. You can
@@ -582,7 +582,7 @@ on the settings command explaining how it works more generally.
 Examining Thread State
 ----------------------
 
-Once you have stopped, lldb will choose a current thread, usually the one that
+Once you have stopped, LLDB will choose a current thread, usually the one that
 stopped "for a reason", and a current frame in that thread (on stop this is
 always the bottom-most frame). Many the commands for inspecting state work on
 this current thread/frame.
@@ -685,7 +685,7 @@ pointers as arrays:
    (char const *) argv[0] = 0x00007fff5fbffaf8 "/Projects/Sketch/build/Debug/Sketch.app/Contents/MacOS/Sketch"
 
 The frame variable command will also perform "object printing" operations on
-variables (currently lldb only supports ObjC printing, using the object's
+variables (currently LLDB only supports ObjC printing, using the object's
 ``description`` method. Turn this on by passing the ``-o`` flag to frame variable:
 
 ::
@@ -697,4 +697,4 @@ variables (currently lldb only supports ObjC printing, using the object's
    frame #9: 0x0000000100015ae3, where = Sketch`function1 + 33 at /Projects/Sketch/SKTFunctions.m:11
 
 You can also move up and down the stack by passing the ``--relative`` (``-r``) option.
-We also have built-in aliases ``u`` and ``d`` which behave like their gdb equivalents.
+We also have built-in aliases ``u`` and ``d`` which behave like their GDB equivalents.

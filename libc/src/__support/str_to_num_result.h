@@ -10,10 +10,11 @@
 #define LLVM_LIBC_SRC___SUPPORT_STR_TO_NUM_RESULT_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 template <typename T> struct StrToNumResult {
   T value;
@@ -31,6 +32,6 @@ template <typename T> struct StrToNumResult {
 
   LIBC_INLINE constexpr operator T() { return value; }
 };
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STR_TO_NUM_RESULT_H

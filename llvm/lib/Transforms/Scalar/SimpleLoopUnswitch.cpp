@@ -41,6 +41,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Use.h"
@@ -631,7 +632,8 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
     } else {
       // Create a new unconditional branch that will continue the loop as a new
       // terminator.
-      BranchInst::Create(ContinueBB, ParentBB);
+      Instruction *NewBI = BranchInst::Create(ContinueBB, ParentBB);
+      NewBI->setDebugLoc(BI.getDebugLoc());
     }
     BI.setSuccessor(LoopExitSuccIdx, UnswitchedBB);
     BI.setSuccessor(1 - LoopExitSuccIdx, NewPH);
@@ -665,10 +667,12 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   // Finish updating dominator tree and memory ssa for full unswitch.
   if (FullUnswitch) {
     if (MSSAU) {
-      // Remove the cloned branch instruction.
-      ParentBB->getTerminator()->eraseFromParent();
-      // Create unconditional branch now.
-      BranchInst::Create(ContinueBB, ParentBB);
+      Instruction *Term = ParentBB->getTerminator();
+      // Remove the cloned branch instruction and create unconditional branch
+      // now.
+      Instruction *NewBI = BranchInst::Create(ContinueBB, ParentBB);
+      NewBI->setDebugLoc(Term->getDebugLoc());
+      Term->eraseFromParent();
       MSSAU->removeEdge(ParentBB, LoopExitBB);
     }
     DT.deleteEdge(ParentBB, LoopExitBB);
@@ -860,8 +864,11 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
   BasicBlock *NewPH = SplitEdge(OldPH, L.getHeader(), &DT, &LI, MSSAU);
   OldPH->getTerminator()->eraseFromParent();
 
-  // Now add the unswitched switch.
+  // Now add the unswitched switch. This new switch instruction inherits the
+  // debug location of the old switch, because it semantically replace the old
+  // one.
   auto *NewSI = SwitchInst::Create(LoopCond, NewPH, ExitCases.size(), OldPH);
+  NewSI->setDebugLoc(SIW->getDebugLoc());
   SwitchInstProfUpdateWrapper NewSIW(*NewSI);
 
   // Rewrite the IR for the unswitched basic blocks. This requires two steps.
@@ -971,8 +978,9 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
                                       /*KeepOneInputPHIs*/ true);
     }
     // Now nuke the switch and replace it with a direct branch.
+    Instruction *NewBI = BranchInst::Create(CommonSuccBB, BB);
+    NewBI->setDebugLoc(SIW->getDebugLoc());
     SIW.eraseFromParent();
-    BranchInst::Create(CommonSuccBB, BB);
   } else if (DefaultExitBB) {
     assert(SI.getNumCases() > 0 &&
            "If we had no cases we'd have a common successor!");
@@ -1244,9 +1252,12 @@ static BasicBlock *buildClonedLoopBlocks(
       if (SE && isa<PHINode>(I))
         SE->forgetValue(&I);
 
+      BasicBlock::iterator InsertPt = MergeBB->getFirstInsertionPt();
+
       auto *MergePN =
           PHINode::Create(I.getType(), /*NumReservedValues*/ 2, ".us-phi");
-      MergePN->insertBefore(MergeBB->getFirstInsertionPt());
+      MergePN->insertBefore(InsertPt);
+      MergePN->setDebugLoc(InsertPt->getDebugLoc());
       I.replaceAllUsesWith(MergePN);
       MergePN->addIncoming(&I, ExitBB);
       MergePN->addIncoming(&ClonedI, ClonedExitBB);
@@ -1261,9 +1272,8 @@ static BasicBlock *buildClonedLoopBlocks(
   Module *M = ClonedPH->getParent()->getParent();
   for (auto *ClonedBB : NewBlocks)
     for (Instruction &I : *ClonedBB) {
-      RemapDbgVariableRecordRange(M, I.getDbgRecordRange(), VMap,
-                                  RF_NoModuleLevelChanges |
-                                      RF_IgnoreMissingLocals);
+      RemapDbgRecordRange(M, I.getDbgRecordRange(), VMap,
+                          RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
       RemapInstruction(&I, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
       if (auto *II = dyn_cast<AssumeInst>(&I))
@@ -1306,8 +1316,9 @@ static BasicBlock *buildClonedLoopBlocks(
   else if (auto *SI = dyn_cast<SwitchInst>(ClonedTerminator))
     ClonedConditionToErase = SI->getCondition();
 
+  Instruction *BI = BranchInst::Create(ClonedSuccBB, ClonedParentBB);
+  BI->setDebugLoc(ClonedTerminator->getDebugLoc());
   ClonedTerminator->eraseFromParent();
-  BranchInst::Create(ClonedSuccBB, ClonedParentBB);
 
   if (ClonedConditionToErase)
     RecursivelyDeleteTriviallyDeadInstructions(ClonedConditionToErase, nullptr,
@@ -2334,13 +2345,14 @@ static void unswitchNontrivialInvariants(
   // nuke the initial terminator placed in the split block.
   SplitBB->getTerminator()->eraseFromParent();
   if (FullUnswitch) {
-    // Splice the terminator from the original loop and rewrite its
-    // successors.
-    TI.moveBefore(*SplitBB, SplitBB->end());
-
     // Keep a clone of the terminator for MSSA updates.
     Instruction *NewTI = TI.clone();
     NewTI->insertInto(ParentBB, ParentBB->end());
+
+    // Splice the terminator from the original loop and rewrite its
+    // successors.
+    TI.moveBefore(*SplitBB, SplitBB->end());
+    TI.dropLocation();
 
     // First wire up the moved terminator to the preheaders.
     if (BI) {
@@ -2348,8 +2360,12 @@ static void unswitchNontrivialInvariants(
       BI->setSuccessor(ClonedSucc, ClonedPH);
       BI->setSuccessor(1 - ClonedSucc, LoopPH);
       Value *Cond = skipTrivialSelect(BI->getCondition());
-      if (InsertFreeze)
+      if (InsertFreeze) {
+        // We don't give any debug location to the new freeze, because the
+        // BI (`dyn_cast<BranchInst>(TI)`) is an in-loop instruction hoisted
+        // out of the loop.
         Cond = new FreezeInst(Cond, Cond->getName() + ".fr", BI->getIterator());
+      }
       BI->setCondition(Cond);
       DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
     } else {
@@ -2432,12 +2448,13 @@ static void unswitchNontrivialInvariants(
         DTUpdates.push_back({DominatorTree::Delete, ParentBB, SuccBB});
     }
 
-    // After MSSAU update, remove the cloned terminator instruction NewTI.
-    ParentBB->getTerminator()->eraseFromParent();
-
     // Create a new unconditional branch to the continuing block (as opposed to
     // the one cloned).
-    BranchInst::Create(RetainedSuccBB, ParentBB);
+    Instruction *NewBI = BranchInst::Create(RetainedSuccBB, ParentBB);
+    NewBI->setDebugLoc(NewTI->getDebugLoc());
+
+    // After MSSAU update, remove the cloned terminator instruction NewTI.
+    NewTI->eraseFromParent();
   } else {
     assert(BI && "Only branches have partial unswitching.");
     assert(UnswitchedSuccBBs.size() == 1 &&
@@ -2710,6 +2727,7 @@ static BranchInst *turnSelectIntoBranch(SelectInst *SI, DominatorTree &DT,
       PHINode::Create(SI->getType(), 2, "unswitched.select", SI->getIterator());
   Phi->addIncoming(SI->getTrueValue(), ThenBB);
   Phi->addIncoming(SI->getFalseValue(), HeadBB);
+  Phi->setDebugLoc(SI->getDebugLoc());
   SI->replaceAllUsesWith(Phi);
   SI->eraseFromParent();
 

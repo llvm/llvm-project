@@ -9,6 +9,10 @@ if(LLVM_LIBC_FULL_BUILD)
   set(full_build_flag "-DLIBC_FULL_BUILD")
 endif()
 
+if(LIBC_CONF_ERRNO_MODE)
+  set(errno_config_copts "-DLIBC_ERRNO_MODE=${LIBC_CONF_ERRNO_MODE}")
+endif()
+
 add_entrypoint_object(
   errno
   SRCS
@@ -17,7 +21,8 @@ add_entrypoint_object(
     libc_errno.h     # Include this
   COMPILE_OPTIONS
     ${full_build_flag}
+    ${errno_config_copts}
   DEPENDS
-    libc.include.errno
+    libc.hdr.errno_macros
     libc.src.__support.common
 )

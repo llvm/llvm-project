@@ -1,3 +1,5 @@
+@ RUN: llvm-mc -triple=thumbv8r-apple-darwin -mcpu=cortex-r52 -show-encoding < %s | FileCheck %s
+@ RUN: llvm-mc -triple=thumbv8r-apple-darwin -mcpu=cortex-r52plus -show-encoding < %s | FileCheck %s
 @ RUN: llvm-mc -triple=thumbv7-apple-darwin -show-encoding < %s | FileCheck %s
 @ RUN: llvm-mc -triple=thumbv6-apple-darwin -mcpu=cortex-m0 -show-encoding < %s | FileCheck %s 
 @ RUN: not llvm-mc -triple=thumbv6-apple-darwin -show-encoding < %s > %t 2> %t2

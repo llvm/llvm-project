@@ -14,12 +14,12 @@ entry:
 for.cond:
 ; CHECK: %[[PHI:.*]] = phi i1 [ false, %entry ], [ %0, %for.cond ]
   %entryN = load i1, ptr %entry1, align 8, !dbg !20
-; CHECK: call void @llvm.dbg.value(metadata i1 %[[PHI]],
-; CHECK-SAME:                      metadata !DIExpression())
+; CHECK: #dbg_value(i1 %[[PHI]],
+; CHECK-SAME:                      !DIExpression(),
   %0 = add i1 %entryN, 1
 ; CHECK: %0 = add i1 %[[PHI]], true
-; CHECK: call void @llvm.dbg.value(metadata i1 %0,
-; CHECK-SAME:                      metadata !DIExpression())
+; CHECK: #dbg_value(i1 %0,
+; CHECK-SAME:                      !DIExpression(),
   store i1 %0, ptr %entry1, align 8, !dbg !20
   br label %for.cond, !dbg !20
 }

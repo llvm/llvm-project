@@ -386,7 +386,7 @@ llvm::getAllocSize(const CallBase *CB, const TargetLibraryInfo *TLI,
 
   // Get the index type for this address space, results and intermediate
   // computations are performed at that width.
-  auto &DL = CB->getModule()->getDataLayout();
+  auto &DL = CB->getDataLayout();
   const unsigned IntTyBits = DL.getIndexTypeSizeInBits(CB->getType());
 
   // Handle strdup-like functions separately.
@@ -1138,8 +1138,8 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::visitAllocaInst(AllocaInst &I) {
   if (!I.getAllocatedType()->isSized())
     return ObjectSizeOffsetEvaluator::unknown();
 
-  // must be a VLA
-  assert(I.isArrayAllocation());
+  // must be a VLA or vscale.
+  assert(I.isArrayAllocation() || I.getAllocatedType()->isScalableTy());
 
   // If needed, adjust the alloca's operand size to match the pointer indexing
   // size. Subsequent math operations expect the types to match.
@@ -1149,8 +1149,8 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::visitAllocaInst(AllocaInst &I) {
   assert(ArraySize->getType() == Zero->getType() &&
          "Expected zero constant to have pointer index type");
 
-  Value *Size = ConstantInt::get(ArraySize->getType(),
-                                 DL.getTypeAllocSize(I.getAllocatedType()));
+  Value *Size = Builder.CreateTypeSize(
+      ArraySize->getType(), DL.getTypeAllocSize(I.getAllocatedType()));
   Size = Builder.CreateMul(Size, ArraySize);
   return SizeOffsetValue(Size, Zero);
 }

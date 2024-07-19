@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-windows -fms-extensions -Wno-implicit-function-declaration -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-windows -fms-extensions -Wno-implicit-function-declaration -emit-llvm %s -o - | FileCheck %s
 
 // CHECK: %[[dst:[0-9-]+]] = call ptr @llvm.eh.recoverfp(ptr @"?fin$0@0@main@@", ptr %frame_pointer)
 // CHECK-NEXT: %[[dst1:[0-9-]+]] = call ptr @llvm.localrecover(ptr @"?fin$0@0@main@@", ptr %[[dst]], i32 0)

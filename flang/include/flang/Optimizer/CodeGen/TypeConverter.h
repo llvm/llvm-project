@@ -60,7 +60,7 @@ public:
   mlir::Type indexType() const;
 
   // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
-  std::optional<mlir::LogicalResult>
+  std::optional<llvm::LogicalResult>
   convertRecordType(fir::RecordType derived,
                     llvm::SmallVectorImpl<mlir::Type> &results);
 
@@ -123,10 +123,16 @@ public:
                      mlir::Type baseFIRType, mlir::Type accessFIRType,
                      mlir::LLVM::GEPOp gep) const;
 
+  const mlir::DataLayout &getDataLayout() const {
+    assert(dataLayout && "must be set in ctor");
+    return *dataLayout;
+  }
+
 private:
   KindMapping kindMapping;
   std::unique_ptr<CodeGenSpecifics> specifics;
   std::unique_ptr<TBAABuilder> tbaaBuilder;
+  const mlir::DataLayout *dataLayout;
 };
 
 } // namespace fir

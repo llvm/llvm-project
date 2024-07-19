@@ -9,7 +9,7 @@ target datalayout = "E-p:64:64:64-p1:64:64:64-p2:32:32:32-a0:0:8-f32:32:32-f64:6
 
 define <2 x i64> @static_hem() {
 ; CHECK-LABEL: @static_hem(
-; CHECK-NEXT:    [[L:%.*]] = load <2 x i64>, ptr getelementptr (<2 x i64>, ptr @x, i64 7), align 1
+; CHECK-NEXT:    [[L:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @x, i64 112), align 1
 ; CHECK-NEXT:    ret <2 x i64> [[L]]
 ;
   %t = getelementptr <2 x i64>, ptr @x, i32 7
@@ -66,7 +66,7 @@ define <2 x i64> @bar() {
 
 define void @static_hem_store(<2 x i64> %y) {
 ; CHECK-LABEL: @static_hem_store(
-; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr getelementptr (<2 x i64>, ptr @x, i64 7), align 1
+; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr getelementptr (i8, ptr @x, i64 112), align 1
 ; CHECK-NEXT:    ret void
 ;
   %t = getelementptr <2 x i64>, ptr @x, i32 7

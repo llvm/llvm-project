@@ -171,9 +171,9 @@ getArgAccessQual(const Function &F, unsigned ArgIdx) {
   if (!ArgAttribute)
     return SPIRV::AccessQualifier::ReadWrite;
 
-  if (ArgAttribute->getString().compare("read_only") == 0)
+  if (ArgAttribute->getString() == "read_only")
     return SPIRV::AccessQualifier::ReadOnly;
-  if (ArgAttribute->getString().compare("write_only") == 0)
+  if (ArgAttribute->getString() == "write_only")
     return SPIRV::AccessQualifier::WriteOnly;
   return SPIRV::AccessQualifier::ReadWrite;
 }
@@ -181,7 +181,7 @@ getArgAccessQual(const Function &F, unsigned ArgIdx) {
 static std::vector<SPIRV::Decoration::Decoration>
 getKernelArgTypeQual(const Function &F, unsigned ArgIdx) {
   MDString *ArgAttribute = getOCLKernelArgTypeQual(F, ArgIdx);
-  if (ArgAttribute && ArgAttribute->getString().compare("volatile") == 0)
+  if (ArgAttribute && ArgAttribute->getString() == "volatile")
     return {SPIRV::Decoration::Volatile};
   return {};
 }
@@ -243,11 +243,8 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
       continue;
 
     MetadataAsValue *VMD = cast<MetadataAsValue>(II->getOperand(1));
-    Type *ElementTy = cast<ConstantAsMetadata>(VMD->getMetadata())->getType();
-    if (isUntypedPointerTy(ElementTy))
-      ElementTy =
-          TypedPointerType::get(IntegerType::getInt8Ty(II->getContext()),
-                                getPointerAddressSpace(ElementTy));
+    Type *ElementTy =
+        toTypedPointer(cast<ConstantAsMetadata>(VMD->getMetadata())->getType());
     SPIRVType *ElementType = GR->getOrCreateSPIRVType(ElementTy, MIRBuilder);
     return GR->getOrCreateSPIRVPointerType(
         ElementType, MIRBuilder,
@@ -257,12 +254,8 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
 
   // Replace PointerType with TypedPointerType to be able to map SPIR-V types to
   // LLVM types in a consistent manner
-  if (isUntypedPointerTy(OriginalArgType)) {
-    OriginalArgType =
-        TypedPointerType::get(Type::getInt8Ty(F.getContext()),
-                              getPointerAddressSpace(OriginalArgType));
-  }
-  return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual);
+  return GR->getOrCreateSPIRVType(toTypedPointer(OriginalArgType), MIRBuilder,
+                                  ArgAccessQual);
 }
 
 static SPIRV::ExecutionModel::ExecutionModel
@@ -386,8 +379,8 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   Type *FRetTy = FTy->getReturnType();
   if (isUntypedPointerTy(FRetTy)) {
     if (Type *FRetElemTy = GR->findDeducedElementType(&F)) {
-      TypedPointerType *DerivedTy =
-          TypedPointerType::get(FRetElemTy, getPointerAddressSpace(FRetTy));
+      TypedPointerType *DerivedTy = TypedPointerType::get(
+          toTypedPointer(FRetElemTy), getPointerAddressSpace(FRetTy));
       GR->addReturnType(&F, DerivedTy);
       FRetTy = DerivedTy;
     }
@@ -430,8 +423,8 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                    .addImm(static_cast<uint32_t>(executionModel))
                    .addUse(FuncVReg);
     addStringImm(F.getName(), MIB);
-  } else if (F.getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage ||
-             F.getLinkage() == GlobalValue::LinkOnceODRLinkage) {
+  } else if (F.getLinkage() != GlobalValue::InternalLinkage &&
+             F.getLinkage() != GlobalValue::PrivateLinkage) {
     SPIRV::LinkageType::LinkageType LnkTy =
         F.isDeclaration()
             ? SPIRV::LinkageType::Import

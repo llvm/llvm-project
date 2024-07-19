@@ -180,6 +180,8 @@ void StackInfoBuilder::visit(Instruction &Inst) {
 
 bool StackInfoBuilder::isInterestingAlloca(const AllocaInst &AI) {
   return (AI.getAllocatedType()->isSized() &&
+          // FIXME: support vscale.
+          !AI.getAllocatedType()->isScalableTy() &&
           // FIXME: instrument dynamic allocas, too
           AI.isStaticAlloca() &&
           // alloca() may be called with 0 size, ignore it.
@@ -197,7 +199,7 @@ bool StackInfoBuilder::isInterestingAlloca(const AllocaInst &AI) {
 }
 
 uint64_t getAllocaSizeInBytes(const AllocaInst &AI) {
-  auto DL = AI.getModule()->getDataLayout();
+  auto DL = AI.getDataLayout();
   return *AI.getAllocationSize(DL);
 }
 

@@ -49,6 +49,9 @@ struct UnwrappedLine {
   /// Whether it is part of a macro body.
   bool InMacroBody = false;
 
+  /// Nesting level of unbraced body of a control statement.
+  unsigned UnbracedBodyLevel = 0;
+
   bool MustBeDeclaration = false;
 
   /// Whether the parser has seen \c decltype(auto) in this line.
@@ -157,7 +160,7 @@ private:
   void parseDoWhile();
   void parseLabel(bool LeftAlignLabel = false);
   void parseCaseLabel();
-  void parseSwitch();
+  void parseSwitch(bool IsExpr);
   void parseNamespace();
   bool parseModuleImport();
   void parseNew();
@@ -316,6 +319,7 @@ private:
 
   const FormatStyle &Style;
   bool IsCpp;
+  LangOptions LangOpts;
   const AdditionalKeywords &Keywords;
 
   llvm::Regex CommentPragmasRegex;

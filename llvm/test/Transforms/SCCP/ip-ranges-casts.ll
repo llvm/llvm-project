@@ -167,7 +167,7 @@ define i1 @caller.sext() {
 define internal i1 @f.fptosi(i32 %x) {
 ; CHECK-LABEL: define internal i1 @f.fptosi(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[TO_DOUBLE:%.*]] = sitofp i32 [[X]] to double
+; CHECK-NEXT:    [[TO_DOUBLE:%.*]] = uitofp nneg i32 [[X]] to double
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double 0.000000e+00, [[TO_DOUBLE]]
 ; CHECK-NEXT:    [[TO_I32:%.*]] = fptosi double [[ADD]] to i32
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sgt i32 [[TO_I32]], 300
@@ -209,7 +209,7 @@ define i1 @caller.fptosi() {
 define internal i1 @f.fpext(i16 %x) {
 ; CHECK-LABEL: define internal i1 @f.fpext(
 ; CHECK-SAME: i16 [[X:%.*]]) {
-; CHECK-NEXT:    [[TO_FLOAT:%.*]] = sitofp i16 [[X]] to float
+; CHECK-NEXT:    [[TO_FLOAT:%.*]] = uitofp nneg i16 [[X]] to float
 ; CHECK-NEXT:    [[TO_DOUBLE:%.*]] = fpext float [[TO_FLOAT]] to double
 ; CHECK-NEXT:    [[TO_I64:%.*]] = fptoui float [[TO_FLOAT]] to i64
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sgt i64 [[TO_I64]], 300
@@ -293,7 +293,7 @@ define i1 @int_range_to_double_cast(i32 %a) {
 ; CHECK-LABEL: define i1 @int_range_to_double_cast(
 ; CHECK-SAME: i32 [[A:%.*]]) {
 ; CHECK-NEXT:    [[R:%.*]] = and i32 [[A]], 255
-; CHECK-NEXT:    [[T4:%.*]] = sitofp i32 [[R]] to double
+; CHECK-NEXT:    [[T4:%.*]] = uitofp nneg i32 [[R]] to double
 ; CHECK-NEXT:    [[T10:%.*]] = fadd double 0.000000e+00, [[T4]]
 ; CHECK-NEXT:    [[T11:%.*]] = fcmp olt double [[T4]], [[T10]]
 ; CHECK-NEXT:    ret i1 [[T11]]

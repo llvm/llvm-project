@@ -32,9 +32,8 @@
 //       ; }
 //       ;; There is a debug-info record in front of the %bar instruction,
 //       ;; thus it points at a DbgMarker object. That DbgMarker contains a
-//       ;; DbgVariableRecord in it's ilist, storing the equivalent information
-//       to the
-//       ;; dbg.value above: the Value, DILocalVariable, etc.
+//       ;; DbgVariableRecord in its ilist, storing the equivalent information
+//       ;; to the dbg.value above: the Value, DILocalVariable, etc.
 //
 // This structure separates the two concerns of the position of the debug-info
 // in the function, and the Value that it refers to. It also creates a new
@@ -51,6 +50,7 @@
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/IR/DbgVariableFragmentInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/SymbolTableListTraits.h"
@@ -121,7 +121,7 @@ public:
 /// within IR. Features various methods copied across from the Instruction
 /// class to aid ease-of-use. DbgRecords should always be linked into a
 /// DbgMarker's StoredDbgRecords list. The marker connects a DbgRecord back to
-/// it's position in the BasicBlock.
+/// its position in the BasicBlock.
 ///
 /// We need a discriminator for dyn/isa casts. In order to avoid paying for a
 /// vtable for "virtual" functions too, subclasses must add a new discriminator
@@ -272,9 +272,8 @@ public:
     Any, ///< To indicate all LocationTypes in searches.
   };
   /// Classification of the debug-info record that this DbgVariableRecord
-  /// represents. Essentially, "is this a dbg.value or dbg.declare?".
-  /// dbg.declares are not currently supported, but it would be trivial to do
-  /// so.
+  /// represents. Essentially, "does this correspond to a dbg.value,
+  /// dbg.declare, or dbg.assign?".
   /// FIXME: We could use spare padding bits from DbgRecord for this.
   LocationType Type;
 
@@ -462,6 +461,17 @@ public:
     resetDebugValue(0, NewLocation);
   }
 
+  std::optional<DbgVariableFragmentInfo> getFragment() const;
+  /// Get the FragmentInfo for the variable if it exists, otherwise return a
+  /// FragmentInfo that covers the entire variable if the variable size is
+  /// known, otherwise return a zero-sized fragment.
+  DbgVariableFragmentInfo getFragmentOrEntireVariable() const {
+    if (auto Frag = getFragment())
+      return *Frag;
+    if (auto Sz = getFragmentSizeInBits())
+      return {*Sz, 0};
+    return {0, 0};
+  }
   /// Get the size (in bits) of the variable, or fragment of the variable that
   /// is described.
   std::optional<uint64_t> getFragmentSizeInBits() const;

@@ -124,7 +124,7 @@ public:
   /// default).
   std::vector<std::string> VerifyPrefixes;
 
-  /// The list of -Wsystem-header-in-module=... options used to override
+  /// The list of -Wsystem-headers-in-module=... options used to override
   /// whether -Wsystem-headers is enabled on a per-module basis.
   std::vector<std::string> SystemHeaderWarningsModules;
 

@@ -121,8 +121,18 @@ libc_support_library(
     deps = [
         "//libc:__support_cpp_span",
         "//libc:__support_libc_assert",
+        "//libc:__support_macros_config",
         "//libc:__support_macros_sanitizer",
         "//libc:string_memory_utils",
+    ],
+)
+
+libc_support_library(
+    name = "protected_pages",
+    hdrs = ["memory_utils/protected_pages.h"],
+    deps = [
+        "//libc:__support_macros_attributes",
+        "//libc:__support_macros_properties_os",
     ],
 )
 
@@ -132,7 +142,11 @@ libc_test(
     libc_function_deps = [
         "//libc:memcpy",
     ],
-    deps = [":memory_check_utils"],
+    deps = [
+        ":memory_check_utils",
+        ":protected_pages",
+        "//libc:__support_macros_properties_os",
+    ],
 )
 
 libc_test(
@@ -149,7 +163,11 @@ libc_test(
     libc_function_deps = [
         "//libc:memset",
     ],
-    deps = [":memory_check_utils"],
+    deps = [
+        ":memory_check_utils",
+        ":protected_pages",
+        "//libc:__support_macros_properties_os",
+    ],
 )
 
 libc_test(

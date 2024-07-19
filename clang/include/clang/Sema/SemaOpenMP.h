@@ -42,6 +42,7 @@
 #include <utility>
 
 namespace clang {
+class ParsedAttr;
 
 class SemaOpenMP : public SemaBase {
 public:
@@ -422,6 +423,15 @@ public:
   StmtResult ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
                                         Stmt *AStmt, SourceLocation StartLoc,
                                         SourceLocation EndLoc);
+  /// Called on well-formed '#pragma omp reverse'.
+  StmtResult ActOnOpenMPReverseDirective(Stmt *AStmt, SourceLocation StartLoc,
+                                         SourceLocation EndLoc);
+  /// Called on well-formed '#pragma omp interchange' after parsing of its
+  /// clauses and the associated statement.
+  StmtResult ActOnOpenMPInterchangeDirective(ArrayRef<OMPClause *> Clauses,
+                                             Stmt *AStmt,
+                                             SourceLocation StartLoc,
+                                             SourceLocation EndLoc);
   /// Called on well-formed '\#pragma omp for' after parsing
   /// of the associated statement.
   StmtResult
@@ -1348,6 +1358,8 @@ public:
                                   SourceLocation LLoc, SourceLocation RLoc,
                                   ArrayRef<OMPIteratorData> Data);
 
+  void handleOMPAssumeAttr(Decl *D, const ParsedAttr &AL);
+
 private:
   void *VarDataSharingAttributesStack;
 
@@ -1390,9 +1402,7 @@ private:
   bool checkTransformableLoopNest(
       OpenMPDirectiveKind Kind, Stmt *AStmt, int NumLoops,
       SmallVectorImpl<OMPLoopBasedDirective::HelperExprs> &LoopHelpers,
-      Stmt *&Body,
-      SmallVectorImpl<SmallVector<llvm::PointerUnion<Stmt *, Decl *>, 0>>
-          &OriginalInits);
+      Stmt *&Body, SmallVectorImpl<SmallVector<Stmt *, 0>> &OriginalInits);
 
   /// Helper to keep information about the current `omp begin/end declare
   /// variant` nesting.

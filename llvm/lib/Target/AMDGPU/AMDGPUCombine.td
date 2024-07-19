@@ -15,9 +15,10 @@ def fmin_fmax_legacy_matchdata : GIDefMatchData<"FMinFMaxLegacyInfo">;
 let Predicates = [HasFminFmaxLegacy] in
 def fcmp_select_to_fmin_fmax_legacy : GICombineRule<
   (defs root:$select, fmin_fmax_legacy_matchdata:$matchinfo),
-  (match (wip_match_opcode G_SELECT):$select,
-         [{ return matchFMinFMaxLegacy(*${select}, ${matchinfo}); }]),
-  (apply [{ applySelectFCmpToFMinToFMaxLegacy(*${select}, ${matchinfo}); }])>;
+  (match (G_FCMP $cond, $pred, $lhs, $rhs):$fcmp,
+         (G_SELECT f32:$dst, $cond, $true, $false):$select,
+         [{ return matchFMinFMaxLegacy(*${select}, *${fcmp}, ${matchinfo}); }]),
+  (apply [{ applySelectFCmpToFMinFMaxLegacy(*${select}, ${matchinfo}); }])>;
 
 
 def uchar_to_float : GICombineRule<
@@ -94,10 +95,8 @@ def fmed3_intrinsic_to_clamp : GICombineRule<
          [{ return matchFPMed3ToClamp(*${fmed3}, ${matchinfo}); }]),
   (apply [{ applyClamp(*${fmed3}, ${matchinfo}); }])>;
 
-def remove_fcanonicalize_matchinfo : GIDefMatchData<"Register">;
-
 def remove_fcanonicalize : GICombineRule<
-  (defs root:$fcanonicalize, remove_fcanonicalize_matchinfo:$matchinfo),
+  (defs root:$fcanonicalize, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_FCANONICALIZE):$fcanonicalize,
          [{ return matchRemoveFcanonicalize(*${fcanonicalize}, ${matchinfo}); }]),
   (apply [{ Helper.replaceSingleDefInstWithReg(*${fcanonicalize}, ${matchinfo}); }])>;
@@ -115,7 +114,7 @@ def smulu64 : GICombineRule<
   (defs root:$smul, unsigned_matchinfo:$matchinfo),
   (match (wip_match_opcode G_MUL):$smul,
          [{ return matchCombine_s_mul_u64(*${smul}, ${matchinfo}); }]),
-  (apply [{ applyCombine_s_mul_u64(*${smul}, ${matchinfo}); }])>;
+  (apply [{ Helper.replaceOpcodeWith(*${smul}, ${matchinfo}); }])>;
 
 def sign_exension_in_reg_matchdata : GIDefMatchData<"std::pair<MachineInstr *, unsigned>">;
 

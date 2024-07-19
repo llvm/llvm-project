@@ -14,7 +14,7 @@
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace gpu {
 
 /// Type aliases to the address spaces used by the AMDGPU backend.
@@ -140,6 +140,11 @@ LIBC_INLINE uint32_t get_lane_size() {
   __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "workgroup");
 }
 
+/// Waits for all pending memory operations to complete in program order.
+[[clang::convergent]] LIBC_INLINE void memory_fence() {
+  __builtin_amdgcn_fence(__ATOMIC_ACQ_REL, "");
+}
+
 /// Wait for all threads in the wavefront to converge, this is a noop on AMDGPU.
 [[clang::convergent]] LIBC_INLINE void sync_lane(uint64_t) {
   __builtin_amdgcn_wave_barrier();
@@ -173,6 +178,6 @@ LIBC_INLINE uint64_t fixed_frequency_clock() {
 LIBC_INLINE uint32_t get_cluster_id() { return 0; }
 
 } // namespace gpu
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif

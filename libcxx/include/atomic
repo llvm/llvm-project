@@ -609,6 +609,10 @@ template <class T>
 #include <__atomic/memory_order.h>
 #include <version>
 
+#if _LIBCPP_STD_VER >= 20
+#  include <__atomic/atomic_ref.h>
+#endif
+
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif

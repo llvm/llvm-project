@@ -12,6 +12,7 @@
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/ValueObject.h"
+#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -105,13 +106,16 @@ public:
     bool child_is_deref_of_parent = false;
     uint64_t language_flags = 0;
 
-    const CompilerType child_type =
-        m_block_struct_type.GetChildCompilerTypeAtIndex(
-            &exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
-            ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
-            child_bitfield_bit_size, child_bitfield_bit_offset,
-            child_is_base_class, child_is_deref_of_parent, value_object,
-            language_flags);
+    auto child_type_or_err = m_block_struct_type.GetChildCompilerTypeAtIndex(
+        &exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
+        ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
+        child_bitfield_bit_size, child_bitfield_bit_offset, child_is_base_class,
+        child_is_deref_of_parent, value_object, language_flags);
+    if (!child_type_or_err)
+      return ValueObjectConstResult::Create(
+          exe_ctx.GetBestExecutionContextScope(),
+          Status(child_type_or_err.takeError()));
+    CompilerType child_type = *child_type_or_err;
 
     ValueObjectSP struct_pointer_sp =
         m_backend.Cast(m_block_struct_type.GetPointerType());

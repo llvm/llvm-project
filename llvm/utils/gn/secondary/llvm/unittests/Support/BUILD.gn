@@ -78,6 +78,7 @@ unittest("SupportTests") {
     "ScaledNumberTest.cpp",
     "ScopedPrinterTest.cpp",
     "SignalsTest.cpp",
+    "SipHashTest.cpp",
     "SourceMgrTest.cpp",
     "SpecialCaseListTest.cpp",
     "SuffixTreeTest.cpp",

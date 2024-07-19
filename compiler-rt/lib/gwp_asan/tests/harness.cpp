@@ -10,15 +10,6 @@
 
 #include <string>
 
-namespace gwp_asan {
-namespace test {
-bool OnlyOnce() {
-  static int x = 0;
-  return !x++;
-}
-} // namespace test
-} // namespace gwp_asan
-
 // Optnone to ensure that the calls to these functions are not optimized away,
 // as we're looking for them in the backtraces.
 __attribute__((optnone)) char *

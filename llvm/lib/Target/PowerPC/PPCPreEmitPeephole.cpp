@@ -415,7 +415,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
     bool runOnMachineFunction(MachineFunction &MF) override {
       // If the user wants to set the DSCR using command-line options,
       // load in the specified value at the start of main.
-      if (DSCRValue.getNumOccurrences() > 0 && MF.getName().equals("main") &&
+      if (DSCRValue.getNumOccurrences() > 0 && MF.getName() == "main" &&
           MF.getFunction().hasExternalLinkage()) {
         DSCRValue = (uint32_t)(DSCRValue & 0x01FFFFFF); // 25-bit DSCR mask
         RegScavenger RS;

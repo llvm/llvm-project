@@ -829,7 +829,7 @@ define <vscale x 8 x i32> @masked_gather_nxv8i32(<vscale x 8 x ptr> %ld, <vscale
 
 define <4 x i32> @masked_gather_v4i32(<4 x ptr> %ld, <4 x i1> %masks, <4 x i32> %passthru) {
 ; CHECK-LABEL: 'masked_gather_v4i32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i32> %passthru)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i32> %passthru)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_gather_v4i32'
@@ -842,7 +842,7 @@ define <4 x i32> @masked_gather_v4i32(<4 x ptr> %ld, <4 x i1> %masks, <4 x i32> 
 
 define <1 x i128> @masked_gather_v1i128(<1 x ptr> %ld, <1 x i1> %masks, <1 x i128> %passthru) {
 ; CHECK-LABEL: 'masked_gather_v1i128'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> %ld, i32 0, <1 x i1> %masks, <1 x i128> %passthru)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> %ld, i32 0, <1 x i1> %masks, <1 x i128> %passthru)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <1 x i128> %res
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_gather_v1i128'
@@ -883,7 +883,7 @@ define void @masked_scatter_nxv8i32(<vscale x 8 x i32> %data, <vscale x 8 x ptr>
 
 define void @masked_scatter_v4i32(<4 x i32> %data, <4 x ptr> %ptrs, <4 x i1> %masks) {
 ; CHECK-LABEL: 'masked_scatter_v4i32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %data, <4 x ptr> %ptrs, i32 0, <4 x i1> %masks)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %data, <4 x ptr> %ptrs, i32 0, <4 x i1> %masks)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_scatter_v4i32'
@@ -897,7 +897,7 @@ define void @masked_scatter_v4i32(<4 x i32> %data, <4 x ptr> %ptrs, <4 x i1> %ma
 
 define void @masked_scatter_v1i128(<1 x i128> %data, <1 x ptr> %ptrs, <1 x i1> %masks) {
 ; CHECK-LABEL: 'masked_scatter_v1i128'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: call void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> %data, <1 x ptr> %ptrs, i32 0, <1 x i1> %masks)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> %data, <1 x ptr> %ptrs, i32 0, <1 x i1> %masks)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_scatter_v1i128'
@@ -906,6 +906,123 @@ define void @masked_scatter_v1i128(<1 x i128> %data, <1 x ptr> %ptrs, <1 x i1> %
 ;
 
   call void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> %data, <1 x ptr> %ptrs, i32 0, <1 x i1> %masks)
+  ret void
+}
+
+define void @histogram_nxv2i64(<vscale x 2 x ptr> %buckets, <vscale x 2 x i1> %mask) #3 {
+; CHECK-LABEL: 'histogram_nxv2i64'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> %buckets, i64 1, <vscale x 2 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'histogram_nxv2i64'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> %buckets, i64 1, <vscale x 2 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> %buckets, i64 1, <vscale x 2 x i1> %mask)
+  ret void
+}
+
+define void @histogram_nxv4i32(<vscale x 4 x ptr> %buckets, <vscale x 4 x i1> %mask) #3 {
+; CHECK-LABEL: 'histogram_nxv4i32'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> %buckets, i32 1, <vscale x 4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'histogram_nxv4i32'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> %buckets, i32 1, <vscale x 4 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> %buckets, i32 1, <vscale x 4 x i1> %mask)
+  ret void
+}
+
+define void @histogram_nxv8i16(<vscale x 8 x ptr> %buckets, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: 'histogram_nxv8i16'
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv8p0.i16(<vscale x 8 x ptr> %buckets, i16 1, <vscale x 8 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'histogram_nxv8i16'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv8p0.i16(<vscale x 8 x ptr> %buckets, i16 1, <vscale x 8 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call void @llvm.experimental.vector.histogram.add.nxv8p0.i16(<vscale x 8 x ptr> %buckets, i16 1, <vscale x 8 x i1> %mask)
+  ret void
+}
+
+define void @histogram_nxv16i8(<vscale x 16 x ptr> %buckets, <vscale x 16 x i1> %mask) {
+; CHECK-LABEL: 'histogram_nxv16i8'
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv16p0.i8(<vscale x 16 x ptr> %buckets, i8 1, <vscale x 16 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'histogram_nxv16i8'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv16p0.i8(<vscale x 16 x ptr> %buckets, i8 1, <vscale x 16 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call void @llvm.experimental.vector.histogram.add.nxv16p0.i64(<vscale x 16 x ptr> %buckets, i8 1, <vscale x 16 x i1> %mask)
+  ret void
+}
+
+define void @histogram_v2i64(<2 x ptr> %buckets, <2 x i1> %mask) {
+; CHECK-LABEL: 'histogram_v2i64'
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'histogram_v2i64'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
+  ret void
+}
+
+define void @histogram_v4i32(<4 x ptr> %buckets, <4 x i1> %mask) {
+; CHECK-LABEL: 'histogram_v4i32'
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'histogram_v4i32'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
+  ret void
+}
+
+define void @histogram_v8i16(<8 x ptr> %buckets, <8 x i1> %mask) {
+; CHECK-LABEL: 'histogram_v8i16'
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'histogram_v8i16'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
+  ret void
+}
+
+define void @histogram_v16i8(<16 x ptr> %buckets, <16 x i1> %mask) {
+; CHECK-LABEL: 'histogram_v16i8'
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'histogram_v16i8'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call void @llvm.experimental.vector.histogram.add.v16p0.i64(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
+  ret void
+}
+
+define void @histogram_nxv4i64(<vscale x 4 x ptr> %buckets, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: 'histogram_nxv4i64'
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv4p0.i64(<vscale x 4 x ptr> %buckets, i64 1, <vscale x 4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'histogram_nxv4i64'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv4p0.i64(<vscale x 4 x ptr> %buckets, i64 1, <vscale x 4 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call void @llvm.experimental.vector.histogram.add.nxv4p0.i64(<vscale x 4 x ptr> %buckets, i64 1, <vscale x 4 x i1> %mask)
   ret void
 }
 
@@ -949,3 +1066,4 @@ declare void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> %data, <1 x ptr> %ptrs,
 attributes #0 = { "target-features"="+sve,+bf16" }
 attributes #1 = { "target-features"="+sve" vscale_range(1,16) }
 attributes #2 = { "target-features"="+sve" vscale_range(2, 16) }
+attributes #3 = { "target-features"="+sve,+sve2" vscale_range(1,16) }

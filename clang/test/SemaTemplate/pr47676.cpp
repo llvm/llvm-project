@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple=powerpc64le-unknown-linux-gnu \
-// RUN:            -target-feature +altivec -fsyntax-only -ast-dump \
+// RUN:            -target-feature +altivec -ast-dump \
 // RUN:            -xc++ < %s \
 // RUN:   | FileCheck %s
 

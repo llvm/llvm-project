@@ -353,9 +353,9 @@ define <16 x i1> @lane_mask_v16i1_i32(i32 %index, i32 %TC) {
 define <8 x i1> @lane_mask_v8i1_i32(i32 %index, i32 %TC) {
 ; CHECK-LABEL: lane_mask_v8i1_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilelo p0.h, w0, w1
-; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    whilelo p0.b, w0, w1
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %active.lane.mask = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 %index, i32 %TC)
   ret <8 x i1> %active.lane.mask
@@ -364,9 +364,9 @@ define <8 x i1> @lane_mask_v8i1_i32(i32 %index, i32 %TC) {
 define <4 x i1> @lane_mask_v4i1_i32(i32 %index, i32 %TC) {
 ; CHECK-LABEL: lane_mask_v4i1_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilelo p0.s, w0, w1
-; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    whilelo p0.h, w0, w1
+; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %TC)
   ret <4 x i1> %active.lane.mask
@@ -375,9 +375,9 @@ define <4 x i1> @lane_mask_v4i1_i32(i32 %index, i32 %TC) {
 define <2 x i1> @lane_mask_v2i1_i32(i32 %index, i32 %TC) {
 ; CHECK-LABEL: lane_mask_v2i1_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilelo p0.d, w0, w1
-; CHECK-NEXT:    mov z0.d, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    whilelo p0.s, w0, w1
+; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %active.lane.mask = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i32(i32 %index, i32 %TC)
   ret <2 x i1> %active.lane.mask
@@ -397,9 +397,9 @@ define <16 x i1> @lane_mask_v16i1_i64(i64 %index, i64 %TC) {
 define <8 x i1> @lane_mask_v8i1_i64(i64 %index, i64 %TC) {
 ; CHECK-LABEL: lane_mask_v8i1_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilelo p0.h, x0, x1
-; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    whilelo p0.b, x0, x1
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %active.lane.mask = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 %index, i64 %TC)
   ret <8 x i1> %active.lane.mask
@@ -408,9 +408,9 @@ define <8 x i1> @lane_mask_v8i1_i64(i64 %index, i64 %TC) {
 define <4 x i1> @lane_mask_v4i1_i64(i64 %index, i64 %TC) {
 ; CHECK-LABEL: lane_mask_v4i1_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilelo p0.s, x0, x1
-; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    whilelo p0.h, x0, x1
+; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %index, i64 %TC)
   ret <4 x i1> %active.lane.mask
@@ -419,9 +419,9 @@ define <4 x i1> @lane_mask_v4i1_i64(i64 %index, i64 %TC) {
 define <2 x i1> @lane_mask_v2i1_i64(i64 %index, i64 %TC) {
 ; CHECK-LABEL: lane_mask_v2i1_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilelo p0.d, x0, x1
-; CHECK-NEXT:    mov z0.d, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    whilelo p0.s, x0, x1
+; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %active.lane.mask = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 %index, i64 %TC)
   ret <2 x i1> %active.lane.mask

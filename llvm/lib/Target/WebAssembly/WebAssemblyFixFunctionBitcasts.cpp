@@ -112,7 +112,7 @@ static Function *createWrapper(Function *F, FunctionType *Ty) {
   Function *Wrapper = Function::Create(Ty, Function::PrivateLinkage,
                                        F->getName() + "_bitcast", M);
   BasicBlock *BB = BasicBlock::Create(M->getContext(), "body", Wrapper);
-  const DataLayout &DL = BB->getModule()->getDataLayout();
+  const DataLayout &DL = BB->getDataLayout();
 
   // Determine what arguments to pass.
   SmallVector<Value *, 4> Args;

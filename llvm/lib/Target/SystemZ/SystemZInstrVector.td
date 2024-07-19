@@ -1692,6 +1692,7 @@ let Predicates = [FeatureVector] in
 // Conversions
 //===----------------------------------------------------------------------===//
 
+let Predicates = [FeatureVector] in {
 def : Pat<(v16i8 (bitconvert (v8i16 VR128:$src))), (v16i8 VR128:$src)>;
 def : Pat<(v16i8 (bitconvert (v4i32 VR128:$src))), (v16i8 VR128:$src)>;
 def : Pat<(v16i8 (bitconvert (v2i64 VR128:$src))), (v16i8 VR128:$src)>;
@@ -1755,6 +1756,7 @@ def : Pat<(i128  (bitconvert (v2i64 VR128:$src))), (i128  VR128:$src)>;
 def : Pat<(i128  (bitconvert (v4f32 VR128:$src))), (i128  VR128:$src)>;
 def : Pat<(i128  (bitconvert (v2f64 VR128:$src))), (i128  VR128:$src)>;
 def : Pat<(i128  (bitconvert (f128  VR128:$src))), (i128  VR128:$src)>;
+} // End Predicates = [FeatureVector]
 
 //===----------------------------------------------------------------------===//
 // Replicating scalars

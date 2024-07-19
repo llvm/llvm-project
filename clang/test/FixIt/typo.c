@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: not %clang_cc1 -fsyntax-only -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 // RUN: cp %s %t
-// RUN: not %clang_cc1 -fsyntax-only -fixit -x c %t
+// RUN: not %clang_cc1 -fixit -x c %t
 // RUN: %clang_cc1 -fsyntax-only -pedantic -Werror -x c %t
 
 struct Point {

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -S -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s
 
 @interface I1
 // CHECK: !DIObjCProperty(name: "p1"

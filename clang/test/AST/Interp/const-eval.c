@@ -140,15 +140,8 @@ EVAL_EXPR(47, &x < &x + 1 ? 1 : -1)
 EVAL_EXPR(48, &x != &x - 1 ? 1 : -1)
 EVAL_EXPR(49, &x < &x - 100 ? 1 : -1) // ref-error {{not an integer constant expression}}
 
-/// FIXME: Rejecting this is correct, BUT when converting the innermost pointer
-/// to an integer, we do not preserve the information where it came from. So when we later
-/// create a pointer from it, it also doesn't have that information, which means
-/// hasSameBase() for those two pointers will return false. And in those cases, we emit
-/// the diagnostic:
-///   comparison between '&Test50' and '&(631578)' has unspecified value
 extern struct Test50S Test50;
-EVAL_EXPR(50, &Test50 < (struct Test50S*)((unsigned long)&Test50 + 10)) // both-error {{not an integer constant expression}} \
-                                                                        // expected-note {{comparison between}}
+EVAL_EXPR(50, &Test50 < (struct Test50S*)((unsigned long)&Test50 + 10)) // both-error {{not an integer constant expression}}
 
 EVAL_EXPR(51, 0 != (float)1e99)
 

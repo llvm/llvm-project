@@ -41,6 +41,9 @@ Paper Status
 
    .. [#note-P2510R3] This paper is applied as DR against C++20. (MSVC STL and libstdc++ will do the same.)
    .. [#note-P3142R0] This paper is applied as DR against C++23. (MSVC STL and libstdc++ will do the same.)
+   .. [#note-P2944R3] Implemented comparisons for ``reference_wrapper`` only.
+   .. [#note-P2422R1] Libc++ keeps the ``nodiscard`` attributes as a conforming extension.
+   .. [#note-P2997R1] This paper is applied as DR against C++20. (MSVC STL and libstdc++ will do the same.)
 
 .. _issues-status-cxx2c:
 
