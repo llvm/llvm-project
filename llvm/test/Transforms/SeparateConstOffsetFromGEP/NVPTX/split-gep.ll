@@ -397,3 +397,27 @@ entry:
   %ptr2 = getelementptr inbounds %struct0, ptr %ptr, i65 1, i32 3, i64 %idx, i32 1
   ret ptr %ptr2
 }
+
+; Do not extract large constant offset that cannot be folded in to PTX
+; addressing mode
+define void @large_offset(ptr %out, i32 %in) {
+; CHECK-LABEL: define void @large_offset(
+; CHECK-SAME: ptr [[OUT:%.*]], i32 [[IN:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[OUT]], i64 [[TMP1]]
+; CHECK-NEXT:    [[GETELEM:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 2147483648
+; CHECK-NEXT:    store i32 [[IN]], ptr [[GETELEM]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+  %add = add nuw nsw i32 %0, 536870912
+  %idx = zext nneg i32 %add to i64
+  %getElem = getelementptr inbounds i32, ptr %out, i64 %idx
+  store i32 %in, ptr %getElem, align 4
+  ret void
+}
+
+declare i32 @llvm.nvvm.read.ptx.sreg.tid.x()
