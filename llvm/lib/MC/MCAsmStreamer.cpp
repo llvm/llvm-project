@@ -301,6 +301,8 @@ public:
                              unsigned Flags, unsigned Isa,
                              unsigned Discriminator,
                              StringRef FileName) override;
+  virtual void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) override;
+
   MCSymbol *getDwarfLineTableSymbol(unsigned CUID) override;
 
   bool emitCVFileDirective(unsigned FileNo, StringRef Filename,
@@ -1765,6 +1767,12 @@ void MCAsmStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
   EmitEOL();
   this->MCStreamer::emitDwarfLocDirective(FileNo, Line, Column, Flags, Isa,
                                           Discriminator, FileName);
+}
+
+void MCAsmStreamer::emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) {
+  MCStreamer::emitDwarfLocLabelDirective(Loc, Name);
+  OS << "\t.loc_label " << Name;
+  EmitEOL();
 }
 
 MCSymbol *MCAsmStreamer::getDwarfLineTableSymbol(unsigned CUID) {

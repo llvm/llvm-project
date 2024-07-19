@@ -912,6 +912,9 @@ public:
                                      unsigned Isa, unsigned Discriminator,
                                      StringRef FileName);
 
+  /// This implements the '.loc_label Name' directive.
+  virtual void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name);
+
   /// Associate a filename with a specified logical file number, and also
   /// specify that file's checksum information.  This implements the '.cv_file 4
   /// "foo.c"' assembler directive. Returns true on success.

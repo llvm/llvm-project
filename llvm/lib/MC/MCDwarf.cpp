@@ -172,6 +172,7 @@ void MCDwarfLineTable::emitOne(
     const MCLineSection::MCDwarfLineEntryCollection &LineEntries) {
 
   unsigned FileNum, LastLine, Column, Flags, Isa, Discriminator;
+  bool IsAtStartSeq;
   MCSymbol *LastLabel;
   auto init = [&]() {
     FileNum = 1;
@@ -181,6 +182,7 @@ void MCDwarfLineTable::emitOne(
     Isa = 0;
     Discriminator = 0;
     LastLabel = nullptr;
+    IsAtStartSeq = true;
   };
   init();
 
@@ -189,11 +191,24 @@ void MCDwarfLineTable::emitOne(
   for (const MCDwarfLineEntry &LineEntry : LineEntries) {
     MCSymbol *Label = LineEntry.getLabel();
     const MCAsmInfo *asmInfo = MCOS->getContext().getAsmInfo();
+
+    if (LineEntry.LineStreamLabel) {
+      if (!IsAtStartSeq) {
+        MCOS->emitDwarfLineEndEntry(Section, LastLabel);
+        init();
+      }
+      MCOS->emitLabel(LineEntry.LineStreamLabel);
+
+      IsAtStartSeq = true;
+      continue;
+    }
+
     if (LineEntry.IsEndEntry) {
       MCOS->emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, Label,
                                      asmInfo->getCodePointerSize());
       init();
       EndEntryEmitted = true;
+      IsAtStartSeq = true;
       continue;
     }
 
@@ -243,6 +258,7 @@ void MCDwarfLineTable::emitOne(
     Discriminator = 0;
     LastLine = LineEntry.getLine();
     LastLabel = Label;
+    IsAtStartSeq = false;
   }
 
   // Generate DWARF line end entry.
@@ -250,7 +266,7 @@ void MCDwarfLineTable::emitOne(
   // table using ranges whenever CU or section changes. However, the MC path
   // does not track ranges nor terminate the line table. In that case,
   // conservatively use the section end symbol to end the line table.
-  if (!EndEntryEmitted)
+  if (!EndEntryEmitted && !IsAtStartSeq)
     MCOS->emitDwarfLineEndEntry(Section, LastLabel);
 }
 
