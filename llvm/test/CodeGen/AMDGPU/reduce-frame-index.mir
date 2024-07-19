@@ -30,14 +30,14 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: renamable $sgpr18_sgpr19 = S_MOV_B64 $src_private_base
     ; CHECK-NEXT: renamable $sgpr17 = S_MOV_B32 0
-    ; CHECK-NEXT: undef renamable $vcc_lo = COPY undef renamable $sgpr17, implicit-def $vcc_lo
-    ; CHECK-NEXT: $sgpr24 = S_LSHR_B32 $sgpr32, 5, implicit-def dead $scc
+    ; CHECK-NEXT: undef renamable $vcc_lo = COPY undef renamable $sgpr17, implicit-def $vcc
+    ; CHECK-NEXT: $sgpr24 = S_LSHR_B32 $sgpr32, 6, implicit-def dead $scc
     ; CHECK-NEXT: renamable $sgpr29 = COPY undef renamable $sgpr30
-    ; CHECK-NEXT: $sgpr20 = S_LSHR_B32 $sgpr32, 5, implicit-def $scc
+    ; CHECK-NEXT: $sgpr20 = S_LSHR_B32 $sgpr32, 6, implicit-def $scc
     ; CHECK-NEXT: $sgpr20 = S_ADD_I32 killed $sgpr20, 4, implicit-def $scc
     ; CHECK-NEXT: undef renamable $sgpr22 = COPY killed undef renamable $sgpr22, implicit-def $sgpr22_sgpr23
     ; CHECK-NEXT: undef renamable $sgpr26 = COPY killed undef renamable $sgpr26, implicit-def $sgpr26_sgpr27
-    ; CHECK-NEXT: $sgpr31 = S_LSHR_B32 $sgpr32, 5, implicit-def $scc
+    ; CHECK-NEXT: $sgpr31 = S_LSHR_B32 $sgpr32, 6, implicit-def $scc
     ; CHECK-NEXT: $sgpr31 = S_ADD_I32 killed $sgpr31, 8, implicit-def $scc
     ; CHECK-NEXT: renamable $vgpr3 = COPY killed renamable $sgpr30, implicit $exec
     ; CHECK-NEXT: renamable $vgpr0_vgpr1 = COPY renamable $sgpr28_sgpr29, implicit $exec
