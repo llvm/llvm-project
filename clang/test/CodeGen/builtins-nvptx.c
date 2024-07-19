@@ -1,4 +1,7 @@
 // REQUIRES: nvptx-registered-target
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_70 -target-feature +ptx63 \
+// RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX63_SM70 -check-prefix=LP64 %s
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_80 -target-feature +ptx70 \
 // RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX70_SM80 -check-prefix=LP32 %s
@@ -238,7 +241,8 @@ __shared__ long long sll;
 
 // Check for atomic intrinsics
 // CHECK-LABEL: nvvm_atom
-__device__ void nvvm_atom(float *fp, float f, double *dfp, double df, int *ip,
+__device__ void nvvm_atom(float *fp, float f, double *dfp, double df,
+                          unsigned short *usp, unsigned short us, int *ip,
                           int i, unsigned int *uip, unsigned ui, long *lp,
                           long l, long long *llp, long long ll) {
   // CHECK: atomicrmw add ptr {{.*}} seq_cst, align 4
@@ -309,9 +313,6 @@ __device__ void nvvm_atom(float *fp, float f, double *dfp, double df, int *ip,
   // CHECK: atomicrmw umin ptr {{.*}} seq_cst, align 8
   __nvvm_atom_min_gen_ull((unsigned long long *)&sll, ll);
 
-  // CHECK: cmpxchg ptr {{.*}} seq_cst seq_cst, align 2
-  // CHECK-NEXT: extractvalue { i16, i1 } {{%[0-9]+}}, 0
-  __nvvm_atom_cas_gen_us(ip, 0, i);
   // CHECK: cmpxchg ptr {{.*}} seq_cst seq_cst, align 4
   // CHECK-NEXT: extractvalue { i32, i1 } {{%[0-9]+}}, 0
   __nvvm_atom_cas_gen_i(ip, 0, i);
@@ -578,6 +579,12 @@ __device__ void nvvm_atom(float *fp, float f, double *dfp, double df, int *ip,
   // CHECK: call i64 @llvm.nvvm.atomic.cas.gen.i.sys.i64.p0
   // expected-error@+1 {{'__nvvm_atom_sys_cas_gen_ll' needs target feature sm_60}}
   __nvvm_atom_sys_cas_gen_ll(&sll, ll, 0);
+#endif
+
+#if __CUDA_ARCH__ >= 700
+  // CHECK_PTX63_SM70: cmpxchg ptr {{.*}} seq_cst seq_cst, align 2
+  // CHECK_PTX63_SM70-NEXT: extractvalue { i16, i1 } {{%[0-9]+}}, 0
+  __nvvm_atom_cas_gen_us(usp, 0, us);
 #endif
 
   // CHECK: ret
