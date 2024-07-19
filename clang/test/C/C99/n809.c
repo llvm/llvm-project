@@ -108,11 +108,11 @@ void func(void) {
   // a real type; Clang supports this as an extension on complex types as well.
   _Complex float cf = 0.0f;
 
-  cf++; // expected-warning {{'++' on an object of complex type is a Clang extension}}
-  ++cf; // expected-warning {{'++' on an object of complex type is a Clang extension}}
+  cf++; // expected-warning {{'++' on an object of complex type is a C2y extension}}
+  ++cf; // expected-warning {{'++' on an object of complex type is a C2y extension}}
 
-  cf--; // expected-warning {{'--' on an object of complex type is a Clang extension}}
-  --cf; // expected-warning {{'--' on an object of complex type is a Clang extension}}
+  cf--; // expected-warning {{'--' on an object of complex type is a C2y extension}}
+  --cf; // expected-warning {{'--' on an object of complex type is a C2y extension}}
 
   // However, unary + and - are fine, as is += 1.
   (void)-cf;

@@ -1,3 +1,13 @@
+if(LIBC_TARGET_OS_IS_GPU)
+  add_subdirectory(gpu)
+  return()
+endif()
+
+# The CPU build depends on Google benchmark.
+if(NOT LIBC_INCLUDE_BENCHMARKS)
+  return()
+endif()
+
 find_package(Threads)
 
 set(LLVM_LINK_COMPONENTS

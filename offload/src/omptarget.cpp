@@ -315,7 +315,7 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
         FAILURE_MESSAGE("Consult https://openmp.llvm.org/design/Runtimes.html "
                         "for debugging options.\n");
 
-      if (!PM->getNumUsedPlugins()) {
+      if (!PM->getNumActivePlugins()) {
         FAILURE_MESSAGE(
             "No images found compatible with the installed hardware. ");
 

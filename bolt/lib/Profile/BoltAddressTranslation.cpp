@@ -129,6 +129,9 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
     LLVM_DEBUG(dbgs() << " Cold part\n");
     for (const FunctionFragment &FF :
          Function.getLayout().getSplitFragments()) {
+      // Skip empty fragments to avoid adding zero-address entries to maps.
+      if (FF.empty())
+        continue;
       ColdPartSource.emplace(FF.getAddress(), Function.getOutputAddress());
       Map.clear();
       for (const BinaryBasicBlock *const BB : FF)
@@ -304,7 +307,7 @@ std::error_code BoltAddressTranslation::parse(raw_ostream &OS, StringRef Buf) {
 
   StringRef Name = Buf.slice(Offset, Offset + NameSz);
   Offset = alignTo(Offset + NameSz, 4);
-  if (Name.substr(0, 4) != "BOLT")
+  if (!Name.starts_with("BOLT"))
     return make_error_code(llvm::errc::io_error);
 
   Error Err(Error::success());

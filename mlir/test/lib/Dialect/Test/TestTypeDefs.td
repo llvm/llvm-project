@@ -154,7 +154,7 @@ def TestTypeWithLayoutType : Test_Type<"TestTypeWithLayout", [
   let mnemonic = "test_type_with_layout";
   let parameters = (ins "unsigned":$key);
   let extraClassDeclaration = [{
-    ::mlir::LogicalResult verifyEntries(::mlir::DataLayoutEntryListRef params,
+    ::llvm::LogicalResult verifyEntries(::mlir::DataLayoutEntryListRef params,
                                 ::mlir::Location loc) const;
 
   private:

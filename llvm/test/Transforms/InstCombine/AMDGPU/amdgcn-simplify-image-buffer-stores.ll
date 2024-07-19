@@ -72,33 +72,6 @@ define amdgpu_ps void @image_store_mip_1d_store_insert_zeros_at_end(<8 x i32> in
   ret void
 }
 
-define amdgpu_ps void @buffer_store_format_insert_zeros_at_end(<4 x i32> inreg %a, float %vdata1, i32 %b) {
-; GCN-LABEL: @buffer_store_format_insert_zeros_at_end(
-; GCN-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[VDATA1:%.*]], i64 0
-; GCN-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
-; GCN-NEXT:    call void @llvm.amdgcn.buffer.store.format.v2f32(<2 x float> [[TMP2]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i1 false, i1 false)
-; GCN-NEXT:    ret void
-;
-; GFX12-LABEL: @buffer_store_format_insert_zeros_at_end(
-; GFX12-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> <float poison, float poison, float 0.000000e+00, float 0.000000e+00>, float [[VDATA1:%.*]], i64 0
-; GFX12-NEXT:    [[NEWVDATA4:%.*]] = insertelement <4 x float> [[TMP1]], float [[VDATA1]], i64 1
-; GFX12-NEXT:    call void @llvm.amdgcn.buffer.store.format.v4f32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i1 false, i1 false)
-; GFX12-NEXT:    ret void
-;
-; GFXUNKNOWN-LABEL: @buffer_store_format_insert_zeros_at_end(
-; GFXUNKNOWN-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> <float poison, float poison, float 0.000000e+00, float 0.000000e+00>, float [[VDATA1:%.*]], i64 0
-; GFXUNKNOWN-NEXT:    [[NEWVDATA4:%.*]] = insertelement <4 x float> [[TMP1]], float [[VDATA1]], i64 1
-; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.buffer.store.format.v4f32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i1 false, i1 false)
-; GFXUNKNOWN-NEXT:    ret void
-;
-  %newvdata1 = insertelement <4 x float> undef, float %vdata1, i32 0
-  %newvdata2 = insertelement <4 x float> %newvdata1, float %vdata1, i32 1
-  %newvdata3 = insertelement <4 x float> %newvdata2, float 0.0, i32 2
-  %newvdata4 = insertelement <4 x float> %newvdata3, float 0.0, i32 3
-  call void @llvm.amdgcn.buffer.store.format.v4f32(<4 x float> %newvdata4, <4 x i32> %a, i32 %b, i32 0, i1 0, i1 0)
-  ret void
-}
-
 define amdgpu_ps void @struct_buffer_store_format_insert_zeros(<4 x i32> inreg %a, float %vdata1, i32 %b) {
 ; GCN-LABEL: @struct_buffer_store_format_insert_zeros(
 ; GCN-NEXT:    [[TMP1:%.*]] = insertelement <3 x float> <float poison, float 0.000000e+00, float poison>, float [[VDATA1:%.*]], i64 0
@@ -304,11 +277,9 @@ define amdgpu_ps void @struct_tbuffer_store_argument_insert_first(<4 x i32> inre
 }
 
 declare void @llvm.amdgcn.raw.buffer.store.format.v4f32(<4 x float>, <4 x i32>, i32, i32, i32) #2
-declare void @llvm.amdgcn.buffer.store.format.v4f32(<4 x float>, <4 x i32>, i32, i32, i1, i1) #1
 declare void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32) #2
 declare void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32, i32) #0
 declare void @llvm.amdgcn.raw.tbuffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.tbuffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1) #0
 declare void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float>, i32, i32, <8 x i32>, i32, i32) #0
 declare void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float>, i32, i32, i32, <8 x i32>, i32, i32) #0
 declare void @llvm.amdgcn.image.store.3d.v4f32.i32(<4 x float>, i32, i32, i32, i32, <8 x i32>, i32, i32) #0

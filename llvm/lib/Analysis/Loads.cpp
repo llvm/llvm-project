@@ -165,7 +165,7 @@ static bool isDereferenceableAndAlignedPointer(
     if (getKnowledgeForValue(
             V, {Attribute::Dereferenceable, Attribute::Alignment}, AC,
             [&](RetainedKnowledge RK, Instruction *Assume, auto) {
-              if (!isValidAssumeForContext(Assume, CtxI))
+              if (!isValidAssumeForContext(Assume, CtxI, DT))
                 return false;
               if (RK.AttrKind == Attribute::Alignment)
                 AlignRK = std::max(AlignRK, RK);
@@ -263,7 +263,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
                                              ScalarEvolution &SE,
                                              DominatorTree &DT,
                                              AssumptionCache *AC) {
-  auto &DL = LI->getModule()->getDataLayout();
+  auto &DL = LI->getDataLayout();
   Value *Ptr = LI->getPointerOperand();
 
   APInt EltSize(DL.getIndexTypeSizeInBits(Ptr->getType()),
@@ -349,7 +349,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
 ///
 /// This uses the pointee type to determine how many bytes need to be safe to
 /// load from the pointer.
-bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, APInt &Size,
+bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, const APInt &Size,
                                        const DataLayout &DL,
                                        Instruction *ScanFrom,
                                        AssumptionCache *AC,
@@ -588,7 +588,7 @@ Value *llvm::findAvailablePtrLoadStore(
   if (MaxInstsToScan == 0)
     MaxInstsToScan = ~0U;
 
-  const DataLayout &DL = ScanBB->getModule()->getDataLayout();
+  const DataLayout &DL = ScanBB->getDataLayout();
   const Value *StrippedPtr = Loc.Ptr->stripPointerCasts();
 
   while (ScanFrom != ScanBB->begin()) {
@@ -668,7 +668,7 @@ Value *llvm::findAvailablePtrLoadStore(
 Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
                                       bool *IsLoadCSE,
                                       unsigned MaxInstsToScan) {
-  const DataLayout &DL = Load->getModule()->getDataLayout();
+  const DataLayout &DL = Load->getDataLayout();
   Value *StrippedPtr = Load->getPointerOperand()->stripPointerCasts();
   BasicBlock *ScanBB = Load->getParent();
   Type *AccessTy = Load->getType();

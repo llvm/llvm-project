@@ -16,3 +16,16 @@ define i32 @foo(i32 %a, i32 %b) nounwind ssp {
   %tmp2 = load i32, ptr %x, align 4
   ret i32 %tmp2
 }
+
+; We disable red-zone if NEON is available because copies of Q-regs
+; require a spill/fill and dynamic allocation. But we only need to do
+; this when FP registers are enabled.
+define void @bar(fp128 %f) "target-features"="-fp-armv8" {
+; CHECK-LABEL: bar:
+; CHECK: // %bb.0:
+; CHECK-NEXT: stp x0, x1, [sp, #-16]
+; CHECK-NEXT: ret
+  %ptr = alloca fp128
+  store fp128 %f, ptr %ptr
+  ret void
+}

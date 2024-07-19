@@ -1,5 +1,3 @@
-// REQUIRES: amdgpu-registered-target
-
 // RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   --offload-arch=gfx803 --offload-arch=gfx900 \
 // RUN:   --cuda-device-only -nogpuinc -nogpulib -c \

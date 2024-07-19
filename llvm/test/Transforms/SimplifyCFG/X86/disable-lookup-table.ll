@@ -8,10 +8,10 @@ define i32 @foo(i32 %c) "no-jump-tables"="true" {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[C:%.*]], label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 42, label [[RETURN:%.*]]
-; CHECK-NEXT:    i32 43, label [[SW_BB1:%.*]]
-; CHECK-NEXT:    i32 44, label [[SW_BB2:%.*]]
-; CHECK-NEXT:    i32 45, label [[SW_BB3:%.*]]
+; CHECK-NEXT:      i32 42, label [[RETURN:%.*]]
+; CHECK-NEXT:      i32 43, label [[SW_BB1:%.*]]
+; CHECK-NEXT:      i32 44, label [[SW_BB2:%.*]]
+; CHECK-NEXT:      i32 45, label [[SW_BB3:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb1:
 ; CHECK-NEXT:    br label [[RETURN]]

@@ -28,11 +28,14 @@ Supported Instructions
 
 Metadata is only assigned to the conditional branches. There are two extra
 operands for the true and the false branch.
+We optionally track if the metadata was added by ``__builtin_expect`` or
+``__builtin_expect_with_probability`` with an optional field ``!"expected"``.
 
 .. code-block:: none
 
   !0 = !{
     !"branch_weights",
+    [ !"expected", ]
     i32 <TRUE_BRANCH_WEIGHT>,
     i32 <FALSE_BRANCH_WEIGHT>
   }
@@ -47,6 +50,7 @@ is always case #0).
 
   !0 = !{
     !"branch_weights",
+    [ !"expected", ]
     i32 <DEFAULT_BRANCH_WEIGHT>
     [ , i32 <CASE_BRANCH_WEIGHT> ... ]
   }
@@ -60,6 +64,7 @@ Branch weights are assigned to every destination.
 
   !0 = !{
     !"branch_weights",
+    [ !"expected", ]
     i32 <LABEL_BRANCH_WEIGHT>
     [ , i32 <LABEL_BRANCH_WEIGHT> ... ]
   }
@@ -75,6 +80,7 @@ block and entry counts which may not be accurate with sampling.
 
   !0 = !{
     !"branch_weights",
+    [ !"expected", ]
     i32 <CALL_BRANCH_WEIGHT>
   }
 
@@ -95,6 +101,7 @@ is used.
 
   !0 = !{
     !"branch_weights",
+    [ !"expected", ]
     i32 <INVOKE_NORMAL_WEIGHT>
     [ , i32 <INVOKE_UNWIND_WEIGHT> ]
   }

@@ -1,17 +1,6 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 //
-// UNSUPPORTED: x86_64-pc-linux-gnu
-// UNSUPPORTED: x86_64-pc-linux-gnu-LTO
-// UNSUPPORTED: aarch64-unknown-linux-gnu
-// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-// UNSUPPORTED: s390x-ibm-linux-gnu
-// UNSUPPORTED: s390x-ibm-linux-gnu-LTO
-
-#ifdef __AMDGCN_WAVEFRONT_SIZE
-#define WARP_SIZE __AMDGCN_WAVEFRONT_SIZE
-#else
-#define WARP_SIZE 32
-#endif
+// REQUIRES: gpu
 
 #include <cassert>
 #include <cmath>
@@ -29,30 +18,35 @@ bool equal(T LHS, T RHS) {
 template <typename T,
           std::enable_if_t<std::is_floating_point<T>::value, bool> = true>
 bool equal(T LHS, T RHS) {
-  return std::abs(LHS - RHS) < std::numeric_limits<T>::epsilon();
+  return __builtin_fabs(LHS - RHS) < std::numeric_limits<T>::epsilon();
 }
 
 template <typename T> void test() {
   constexpr const int num_blocks = 1;
   constexpr const int block_size = 256;
   constexpr const int N = num_blocks * block_size;
-  T *data = new T[N];
+  int *res = new int[N];
 
-  for (int i = 0; i < N; ++i)
-    data[i] = i;
-
-#pragma omp target teams ompx_bare num_teams(num_blocks)                       \
-    thread_limit(block_size) map(tofrom : data[0 : N])
+#pragma omp target teams ompx_bare num_teams(num_blocks) thread_limit(block_size) \
+        map(from: res[0:N])
   {
     int tid = ompx_thread_id_x();
-    data[tid] = ompx::shfl_down_sync(~0U, data[tid], 1);
+    T val = ompx::shfl_down_sync(~0U, static_cast<T>(tid), 1);
+#ifdef __AMDGCN_WAVEFRONT_SIZE
+    int warp_size = __AMDGCN_WAVEFRONT_SIZE;
+#else
+    int warp_size = 32;
+#endif
+    if ((tid & (warp_size - 1)) != warp_size - 1)
+      res[tid] = equal(val, static_cast<T>(tid + 1));
+    else
+      res[tid] = equal(val, static_cast<T>(tid));
   }
 
-  for (int i = N - 1; i > 0; i -= WARP_SIZE)
-    for (int j = i; j > i - WARP_SIZE; --j)
-      assert(equal(data[i], data[i - 1]));
+  for (int i = 0; i < N; ++i)
+    assert(res[i]);
 
-  delete[] data;
+  delete[] res;
 }
 
 int main(int argc, char *argv[]) {

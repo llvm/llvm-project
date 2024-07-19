@@ -1,7 +1,7 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
 
-module attributes {} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
   fir.global @_QMhelperEgli : i32 {
     %0 = fir.zero_bits i32
     fir.has_value %0 : i32

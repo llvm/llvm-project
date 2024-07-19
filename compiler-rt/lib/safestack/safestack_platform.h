@@ -17,6 +17,7 @@
 #include "sanitizer_common/sanitizer_platform.h"
 
 #include <dlfcn.h>
+#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,8 +26,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#if !(SANITIZER_NETBSD || SANITIZER_FREEBSD || SANITIZER_LINUX)
-#error "Support for your platform has not been implemented"
+#if !(SANITIZER_NETBSD || SANITIZER_FREEBSD || SANITIZER_LINUX || \
+      SANITIZER_SOLARIS)
+#  error "Support for your platform has not been implemented"
 #endif
 
 #if SANITIZER_NETBSD
@@ -37,6 +39,10 @@ extern "C" void *__mmap(void *, size_t, int, int, int, int, off_t);
 
 #if SANITIZER_FREEBSD
 #include <sys/thr.h>
+#endif
+
+#if SANITIZER_SOLARIS
+#  include <thread.h>
 #endif
 
 namespace safestack {
@@ -63,6 +69,24 @@ static void *GetRealLibcAddress(const char *symbol) {
   SFS_CHECK(real_##func);
 #endif
 
+#if SANITIZER_SOLARIS
+#  define _REAL(func) _##func
+#  define DEFINE__REAL(ret_type, func, ...) \
+    extern "C" ret_type _REAL(func)(__VA_ARGS__)
+
+#  if !defined(_LP64) && _FILE_OFFSET_BITS == 64
+#    define _REAL64(func) _##func##64
+#  else
+#    define _REAL64(func) _REAL(func)
+#  endif
+#  define DEFINE__REAL64(ret_type, func, ...) \
+    extern "C" ret_type _REAL64(func)(__VA_ARGS__)
+
+DEFINE__REAL64(void *, mmap, void *a, size_t b, int c, int d, int e, off_t f);
+DEFINE__REAL(int, munmap, void *a, size_t b);
+DEFINE__REAL(int, mprotect, void *a, size_t b, int c);
+#endif
+
 using ThreadId = uint64_t;
 
 inline ThreadId GetTid() {
@@ -73,6 +97,8 @@ inline ThreadId GetTid() {
   long Tid;
   thr_self(&Tid);
   return Tid;
+#elif SANITIZER_SOLARIS
+  return thr_self();
 #else
   return syscall(SYS_gettid);
 #endif
@@ -83,6 +109,11 @@ inline int TgKill(pid_t pid, ThreadId tid, int sig) {
   DEFINE__REAL(int, _lwp_kill, int a, int b);
   (void)pid;
   return _REAL(_lwp_kill, tid, sig);
+#elif SANITIZER_SOLARIS
+  (void)pid;
+  errno = thr_kill(tid, sig);
+  // TgKill is expected to return -1 on error, not an errno.
+  return errno != 0 ? -1 : 0;
 #elif SANITIZER_FREEBSD
   return syscall(SYS_thr_kill2, pid, tid, sig);
 #else
@@ -96,6 +127,8 @@ inline void *Mmap(void *addr, size_t length, int prot, int flags, int fd,
   return __mmap(addr, length, prot, flags, fd, 0, offset);
 #elif SANITIZER_FREEBSD && (defined(__aarch64__) || defined(__x86_64__))
   return (void *)__syscall(SYS_mmap, addr, length, prot, flags, fd, offset);
+#elif SANITIZER_SOLARIS
+  return _REAL64(mmap)(addr, length, prot, flags, fd, offset);
 #else
   return (void *)syscall(SYS_mmap, addr, length, prot, flags, fd, offset);
 #endif
@@ -105,6 +138,8 @@ inline int Munmap(void *addr, size_t length) {
 #if SANITIZER_NETBSD
   DEFINE__REAL(int, munmap, void *a, size_t b);
   return _REAL(munmap, addr, length);
+#elif SANITIZER_SOLARIS
+  return _REAL(munmap)(addr, length);
 #else
   return syscall(SYS_munmap, addr, length);
 #endif
@@ -114,6 +149,8 @@ inline int Mprotect(void *addr, size_t length, int prot) {
 #if SANITIZER_NETBSD
   DEFINE__REAL(int, mprotect, void *a, size_t b, int c);
   return _REAL(mprotect, addr, length, prot);
+#elif SANITIZER_SOLARIS
+  return _REAL(mprotect)(addr, length, prot);
 #else
   return syscall(SYS_mprotect, addr, length, prot);
 #endif

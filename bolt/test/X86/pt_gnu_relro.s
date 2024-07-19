@@ -1,7 +1,7 @@
 # REQUIRES: system-linux
 
-# Check that BOLT recognizes PT_GNU_RELRO segment and marks respective sections
-# accordingly.
+## Check that BOLT recognizes PT_GNU_RELRO segment and marks respective sections
+## accordingly.
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe -q --no-relax

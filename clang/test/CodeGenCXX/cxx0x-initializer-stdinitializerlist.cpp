@@ -122,8 +122,7 @@ void fn1(int i) {
   // X86: [[array:%[^ ]+]] = alloca [3 x i32]
   // AMDGCN: [[alloca:%[^ ]+]] = alloca [3 x i32], align 4, addrspace(5)
   // AMDGCN: [[array:%[^ ]+]] ={{.*}} addrspacecast ptr addrspace(5) [[alloca]] to ptr
-  // CHECK: getelementptr inbounds [3 x i32], ptr [[array]], i{{32|64}} 0
-  // CHECK-NEXT: store i32 1, ptr
+  // CHECK:      store i32 1, ptr
   // CHECK-NEXT: getelementptr
   // CHECK-NEXT: store
   // CHECK-NEXT: getelementptr
@@ -131,7 +130,6 @@ void fn1(int i) {
   // CHECK-NEXT: store
   // init the list
   // CHECK-NEXT: getelementptr
-  // CHECK-NEXT: getelementptr inbounds [3 x i32], ptr
   // CHECK-NEXT: store ptr
   // CHECK-NEXT: getelementptr
   // CHECK-NEXT: store i{{32|64}} 3
@@ -367,12 +365,12 @@ namespace partly_constant {
   //
   // Second init list.
   // CHECK: store ptr {{.*}}@[[PARTLY_CONSTANT_SECOND]]{{.*}}, ptr getelementptr inbounds ({{.*}}, ptr {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i64 1)
-  // CHECK: store i64 2, ptr getelementptr inbounds ({{.*}}, ptr {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i64 1, i32 1)
+  // CHECK: store i64 2, ptr getelementptr inbounds ({{.*}}, ptr getelementptr inbounds ({{.*}}, ptr {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i64 1), i32 0, i32 1)
   //
   // Third init list.
   // CHECK-NOT: @[[PARTLY_CONSTANT_THIRD]],
   // CHECK: store ptr {{.*}}@[[PARTLY_CONSTANT_THIRD]]{{.*}}, ptr getelementptr inbounds ({{.*}}, ptr {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i64 2)
-  // CHECK: store i64 4, ptr getelementptr inbounds ({{.*}}, ptr {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i64 2, i32 1)
+  // CHECK: store i64 4, ptr getelementptr inbounds ({{.*}}, ptr getelementptr inbounds ({{.*}}, ptr {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i64 2), i32 0, i32 1)
   // CHECK-NOT: @[[PARTLY_CONSTANT_THIRD]],
   //
   // Outer init list.

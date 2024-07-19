@@ -1208,3 +1208,9 @@
 # CHECK: ccmpe {dfv=of} r15, r9
 # CHECK: encoding: [0x62,0x54,0xc4,0x04,0x39,0xcf]
          ccmpe {dfv=of} r15, r9
+
+## Case sensitive
+
+# CHECK: ccmpo {dfv=of,sf,zf,cf} rbx, rax
+# CHECK: encoding: [0x62,0xf4,0xfc,0x00,0x39,0xc3]
+         ccmpo {DFv=Cf,zF,SF,of} rbx, rax

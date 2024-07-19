@@ -18,11 +18,8 @@
 
 using namespace llvm;
 
-static KnownBits computeForAddCarry(
-    const KnownBits &LHS, const KnownBits &RHS,
-    bool CarryZero, bool CarryOne) {
-  assert(!(CarryZero && CarryOne) &&
-         "Carry can't be zero and one at the same time");
+static KnownBits computeForAddCarry(const KnownBits &LHS, const KnownBits &RHS,
+                                    bool CarryZero, bool CarryOne) {
 
   APInt PossibleSumZero = LHS.getMaxValue() + RHS.getMaxValue() + !CarryZero;
   APInt PossibleSumOne = LHS.getMinValue() + RHS.getMinValue() + CarryOne;
@@ -36,9 +33,6 @@ static KnownBits computeForAddCarry(
   APInt RHSKnownUnion = RHS.Zero | RHS.One;
   APInt CarryKnownUnion = std::move(CarryKnownZero) | CarryKnownOne;
   APInt Known = std::move(LHSKnownUnion) & RHSKnownUnion & CarryKnownUnion;
-
-  assert((PossibleSumZero & Known) == (PossibleSumOne & Known) &&
-         "known bits of sum differ");
 
   // Compute known bits of the result.
   KnownBits KnownOut;
@@ -608,14 +602,12 @@ KnownBits KnownBits::abs(bool IntMinIsPoison) const {
     }
   }
 
-  assert(!KnownAbs.hasConflict() && "Bad Output");
   return KnownAbs;
 }
 
 static KnownBits computeForSatAddSub(bool Add, bool Signed,
                                      const KnownBits &LHS,
                                      const KnownBits &RHS) {
-  assert(!LHS.hasConflict() && !RHS.hasConflict() && "Bad inputs");
   // We don't see NSW even for sadd/ssub as we want to check if the result has
   // signed overflow.
   KnownBits Res =
@@ -715,7 +707,6 @@ static KnownBits computeForSatAddSub(bool Add, bool Signed,
     // We know whether or not we overflowed.
     if (!(*Overflow)) {
       // No overflow.
-      assert(!Res.hasConflict() && "Bad Output");
       return Res;
     }
 
@@ -737,7 +728,6 @@ static KnownBits computeForSatAddSub(bool Add, bool Signed,
 
     Res.One = C;
     Res.Zero = ~C;
-    assert(!Res.hasConflict() && "Bad Output");
     return Res;
   }
 
@@ -757,7 +747,6 @@ static KnownBits computeForSatAddSub(bool Add, bool Signed,
     Res.One.clearAllBits();
   }
 
-  assert(!Res.hasConflict() && "Bad Output");
   return Res;
 }
 
@@ -779,8 +768,8 @@ static KnownBits avgCompute(KnownBits LHS, KnownBits RHS, bool IsCeil,
   unsigned BitWidth = LHS.getBitWidth();
   LHS = IsSigned ? LHS.sext(BitWidth + 1) : LHS.zext(BitWidth + 1);
   RHS = IsSigned ? RHS.sext(BitWidth + 1) : RHS.zext(BitWidth + 1);
-  KnownBits Carry = KnownBits::makeConstant(APInt(1, IsCeil ? 1 : 0));
-  LHS = KnownBits::computeForAddCarry(LHS, RHS, Carry);
+  LHS =
+      computeForAddCarry(LHS, RHS, /*CarryZero*/ !IsCeil, /*CarryOne*/ IsCeil);
   LHS = LHS.extractBits(BitWidth, 1);
   return LHS;
 }
@@ -808,8 +797,7 @@ KnownBits KnownBits::avgCeilU(const KnownBits &LHS, const KnownBits &RHS) {
 KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
                          bool NoUndefSelfMultiply) {
   unsigned BitWidth = LHS.getBitWidth();
-  assert(BitWidth == RHS.getBitWidth() && !LHS.hasConflict() &&
-         !RHS.hasConflict() && "Operand mismatch");
+  assert(BitWidth == RHS.getBitWidth() && "Operand mismatch");
   assert((!NoUndefSelfMultiply || LHS == RHS) &&
          "Self multiplication knownbits mismatch");
 
@@ -905,8 +893,7 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
 
 KnownBits KnownBits::mulhs(const KnownBits &LHS, const KnownBits &RHS) {
   unsigned BitWidth = LHS.getBitWidth();
-  assert(BitWidth == RHS.getBitWidth() && !LHS.hasConflict() &&
-         !RHS.hasConflict() && "Operand mismatch");
+  assert(BitWidth == RHS.getBitWidth() && "Operand mismatch");
   KnownBits WideLHS = LHS.sext(2 * BitWidth);
   KnownBits WideRHS = RHS.sext(2 * BitWidth);
   return mul(WideLHS, WideRHS).extractBits(BitWidth, BitWidth);
@@ -914,8 +901,7 @@ KnownBits KnownBits::mulhs(const KnownBits &LHS, const KnownBits &RHS) {
 
 KnownBits KnownBits::mulhu(const KnownBits &LHS, const KnownBits &RHS) {
   unsigned BitWidth = LHS.getBitWidth();
-  assert(BitWidth == RHS.getBitWidth() && !LHS.hasConflict() &&
-         !RHS.hasConflict() && "Operand mismatch");
+  assert(BitWidth == RHS.getBitWidth() && "Operand mismatch");
   KnownBits WideLHS = LHS.zext(2 * BitWidth);
   KnownBits WideRHS = RHS.zext(2 * BitWidth);
   return mul(WideLHS, WideRHS).extractBits(BitWidth, BitWidth);
@@ -964,7 +950,6 @@ KnownBits KnownBits::sdiv(const KnownBits &LHS, const KnownBits &RHS,
     return udiv(LHS, RHS, Exact);
 
   unsigned BitWidth = LHS.getBitWidth();
-  assert(!LHS.hasConflict() && !RHS.hasConflict() && "Bad inputs");
   KnownBits Known(BitWidth);
 
   if (LHS.isZero() || RHS.isZero()) {
@@ -1011,15 +996,12 @@ KnownBits KnownBits::sdiv(const KnownBits &LHS, const KnownBits &RHS,
   }
 
   Known = divComputeLowBit(Known, LHS, RHS, Exact);
-
-  assert(!Known.hasConflict() && "Bad Output");
   return Known;
 }
 
 KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
                           bool Exact) {
   unsigned BitWidth = LHS.getBitWidth();
-  assert(!LHS.hasConflict() && !RHS.hasConflict());
   KnownBits Known(BitWidth);
 
   if (LHS.isZero() || RHS.isZero()) {
@@ -1041,7 +1023,6 @@ KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
   Known.Zero.setHighBits(LeadZ);
   Known = divComputeLowBit(Known, LHS, RHS, Exact);
 
-  assert(!Known.hasConflict() && "Bad Output");
   return Known;
 }
 
@@ -1059,8 +1040,6 @@ KnownBits KnownBits::remGetLowBits(const KnownBits &LHS, const KnownBits &RHS) {
 }
 
 KnownBits KnownBits::urem(const KnownBits &LHS, const KnownBits &RHS) {
-  assert(!LHS.hasConflict() && !RHS.hasConflict());
-
   KnownBits Known = remGetLowBits(LHS, RHS);
   if (RHS.isConstant() && RHS.getConstant().isPowerOf2()) {
     // NB: Low bits set in `remGetLowBits`.
@@ -1078,8 +1057,6 @@ KnownBits KnownBits::urem(const KnownBits &LHS, const KnownBits &RHS) {
 }
 
 KnownBits KnownBits::srem(const KnownBits &LHS, const KnownBits &RHS) {
-  assert(!LHS.hasConflict() && !RHS.hasConflict());
-
   KnownBits Known = remGetLowBits(LHS, RHS);
   if (RHS.isConstant() && RHS.getConstant().isPowerOf2()) {
     // NB: Low bits are set in `remGetLowBits`.

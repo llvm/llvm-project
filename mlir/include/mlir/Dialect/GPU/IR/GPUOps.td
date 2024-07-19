@@ -17,8 +17,8 @@ include "mlir/Dialect/DLTI/DLTIBase.td"
 include "mlir/Dialect/GPU/IR/GPUBase.td"
 include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 include "mlir/Dialect/GPU/IR/CompilationAttrs.td"
+include "mlir/Dialect/GPU/IR/GPUDeviceMappingAttr.td"
 include "mlir/Dialect/GPU/IR/ParallelLoopMapperAttr.td"
-include "mlir/Dialect/GPU/TransformOps/GPUDeviceMappingAttr.td"
 include "mlir/IR/CommonTypeConstraints.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/SymbolInterfaces.td"
@@ -52,10 +52,11 @@ def GPU_DimensionAttr : EnumAttr<GPU_Dialect, GPU_Dimension, "dim">;
 class GPU_IndexOp<string mnemonic, list<Trait> traits = []> :
     GPU_Op<mnemonic, !listconcat(traits, [
         Pure,
-        DeclareOpInterfaceMethods<InferIntRangeInterface>,
+        DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
         DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>])>,
-    Arguments<(ins GPU_DimensionAttr:$dimension)>, Results<(outs Index)> {
-  let assemblyFormat = "$dimension attr-dict";
+    Arguments<(ins GPU_DimensionAttr:$dimension,
+                   OptionalAttr<IndexAttr>:$upper_bound)>, Results<(outs Index)> {
+  let assemblyFormat = "$dimension (`upper_bound` $upper_bound^)? attr-dict";
   let extraClassDefinition = [{
     void $cppClass::getAsmResultNames(
         llvm::function_ref<void(mlir::Value, mlir::StringRef)> setNameFn) {
@@ -66,11 +67,19 @@ class GPU_IndexOp<string mnemonic, list<Trait> traits = []> :
       setNameFn(getResult(),resultName);
     }
   }];
+  let builders = [
+    OpBuilder<(ins "::mlir::gpu::Dimension":$dimension), [{
+      build($_builder, $_state, dimension, /*upperBound=*/nullptr);
+    }]>,
+    OpBuilder<(ins "::mlir::Type":$resultType, "::mlir::gpu::Dimension":$dimension), [{
+      build($_builder, $_state, resultType, dimension, /*upperBound=*/nullptr);
+    }]>
+  ];
 }
 
 def GPU_ClusterDimOp : GPU_IndexOp<"cluster_dim"> {
   let description = [{
-    Returns the number of thread blocks in the cluster along
+    Returns the number of cluster identifiers per grid along
     the x, y, or z `dimension`.
 
     Example:
@@ -78,6 +87,31 @@ def GPU_ClusterDimOp : GPU_IndexOp<"cluster_dim"> {
     ```mlir
     %cDimX = gpu.cluster_dim x
     ```
+
+    If `upper_bound` is set, then executing (a lowering of) this operation in an
+    environment where the clusters per grid is greater than `upper_bound` causes
+    undefined behavior.
+
+    There is an implicit upper bound of `kMaxDim` (currently uint32_t::max).
+  }];
+}
+
+def GPU_ClusterDimBlocksOp : GPU_IndexOp<"cluster_dim_blocks"> {
+  let description = [{
+    Returns the number of thread blocks in the cluster along
+    the x, y, or z `dimension`.
+
+    Example:
+
+    ```mlir
+    %cDimBlocksX = gpu.cluster_dim_blocks x
+    ```
+
+    If `upper_bound` is set, then executing (a lowering of) this operation in an
+    environment where the thread blocks per cluster  is greater than `upper_bound`
+    causes undefined behavior.
+
+    There is an implicit upper bound of `kMaxClusterDim` (currently 8).
   }];
 }
 
@@ -91,6 +125,30 @@ def GPU_ClusterIdOp : GPU_IndexOp<"cluster_id"> {
     ```mlir
     %cIdY = gpu.cluster_id y
     ```
+
+    If `upper_bound` is set, then executing (a lowering of) this operation in an
+    environment where the number of clusters in the grid along `dimension` is
+    greater than `upper_bound` causes undefined behavior.
+
+    There is an implicit upper bound of `kMaxDim` (currently uint32_t::max).
+  }];
+}
+
+def GPU_ClusterBlockIdOp : GPU_IndexOp<"cluster_block_id"> {
+  let description = [{
+    Returns the block id within the cluster along the x, y, or z `dimension`.
+
+    Example:
+
+    ```mlir
+    %cBlockIdY = gpu.cluster_block_id y
+    ```
+
+    If `upper_bound` is set, then executing (a lowering of) this operation in an
+    environment where the number of thread blocks per cluster  along `dimension`
+    is greater than `upper_bound` causes undefined behavior.
+
+    There is an implicit upper bound of `kMaxClusterDim` (currently 8).
   }];
 }
 
@@ -104,6 +162,19 @@ def GPU_BlockDimOp : GPU_IndexOp<"block_dim"> {
     ```mlir
     %bDimX = gpu.block_dim x
     ```
+
+    If `known_block_size` is set on an this operation's enclosing `gpu.func`,
+    or `gpu.known_block_size` is set on an enclosing `FunctionOpInterface`
+    implementor, or if the enclosing `gpu.launch` specifies a constant size for
+    `dimension`'s blocks, these contextual facts may be used to infer that this
+    operation has a constant value, though such a transformation will not be
+    performed by canonicalization or the default constant folder. Executions which
+    cause that constant-value assumption to be false incur undefined behavior.
+
+    If `upper_bound` is set, executions where the bblock size along `dimension`
+    exceeds `upper_bound` cause undefined behavior.
+
+    There is an implicit upper bound of `kMaxDim` (currently uint32_t::max).
   }];
 }
 def GPU_BlockIdOp : GPU_IndexOp<"block_id"> {
@@ -116,6 +187,13 @@ def GPU_BlockIdOp : GPU_IndexOp<"block_id"> {
     ```mlir
     %bIdY = gpu.block_id y
     ```
+
+    If `upper_bound` is set, or if one can be inferred from `known_grid_size`-type
+    annotations in context, executions where the block index in `dimension` would
+    be greater than or equal to that bound cause undefined behavior. `upper_bound`
+    takes priority over bounds inferrable from context.
+
+    There is an implicit upper bound of `kMaxDim` (currently uint32_t::max).
   }];
 }
 def GPU_GridDimOp : GPU_IndexOp<"grid_dim"> {
@@ -128,6 +206,20 @@ def GPU_GridDimOp : GPU_IndexOp<"grid_dim"> {
     ```mlir
     %gDimZ = gpu.grid_dim z
     ```
+
+
+    If `known_grid_size` is set on an this operation's enclosing `gpu.func`,
+    or `gpu.known_grid_size` is set on an enclosing `FunctionOpInterface`
+    implementor, or if the enclosing `gpu.launch` specifies a constant size for
+    `dimension`'s grid length, these contextual facts may be used to infer that this
+    operation has a constant value, though such a transformation will not be
+    performed by canonicalization or the default constant folder. Executions which
+    cause that constant-value assumption to be false incur undefined behavior.
+
+    If `upper_bound` is set, executions where the grid size in `dimension` would
+    exceed `upper_bound` cause undefined behavior.
+
+    There is an implicit upper bound of `kMaxDim` (currently uint32_t::max).
   }];
 }
 def GPU_ThreadIdOp : GPU_IndexOp<"thread_id"> {
@@ -140,11 +232,17 @@ def GPU_ThreadIdOp : GPU_IndexOp<"thread_id"> {
     ```mlir
     %tIdX = gpu.thread_id x
     ```
+
+    If `upper_bound` is set, or if one can be inferred from `known_block_size`-type
+    annotations in context, executions where the thread index would be greater
+    than or equal to that bound cause undefined behavior.
+
+    There is an implicit upper bound of `kMaxDim` (currently uint32_t::max).
   }];
 }
 
 def GPU_LaneIdOp : GPU_Op<"lane_id", [
-      Pure, DeclareOpInterfaceMethods<InferIntRangeInterface>]> {
+      Pure, DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
   let description = [{
     Returns the lane id within the subgroup (warp/wave).
 
@@ -152,14 +250,21 @@ def GPU_LaneIdOp : GPU_Op<"lane_id", [
     ```mlir
     %laneId = gpu.lane_id
     ```
+
+    If `upper_bound` is set, executions with more than `upper_bound` lanes per
+    subgroup cause undefined behavior. In the abscence of `upper_bound`,
+    the lane id is still assumed to be non-negative and less than the
+    target-independent `kMaxSubgroupSize` (currently 128).
   }];
+  let arguments = (ins OptionalAttr<IndexAttr>:$upper_bound);
   let results = (outs Index:$result);
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "(`upper_bound` $upper_bound^)? attr-dict";
 }
 
 def GPU_SubgroupIdOp : GPU_Op<"subgroup_id", [
-      Pure, DeclareOpInterfaceMethods<InferIntRangeInterface>]>,
-    Arguments<(ins)>, Results<(outs Index:$result)> {
+      Pure, DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]>,
+    Arguments<(ins OptionalAttr<IndexAttr>:$upper_bound)>,
+    Results<(outs Index:$result)> {
   let description = [{
     Returns the subgroup id, i.e., the index of the current subgroup within the
     workgroup.
@@ -169,9 +274,13 @@ def GPU_SubgroupIdOp : GPU_Op<"subgroup_id", [
     ```mlir
     %sgId = gpu.subgroup_id : index
     ```
+
+    Executions where there are more than `upper_bound` subgroups per workgroup
+    cause undefined behavior. There is an implicit upper bound of `kMaxDim`
+    (currently uint32_t::max).
   }];
 
-  let assemblyFormat = "attr-dict `:` type($result)";
+  let assemblyFormat = "(`upper_bound` $upper_bound^)? attr-dict `:` type($result)";
 }
 
 def GPU_GlobalIdOp : GPU_IndexOp<"global_id"> {
@@ -184,14 +293,20 @@ def GPU_GlobalIdOp : GPU_IndexOp<"global_id"> {
 
     ```mlir
     %gidX = gpu.global_id x
+    %gidX = gpu.global_id x upper_bound 65536
     ```
+
+    The `upper_bound` attribute defines an upper bound analogously to the ones on
+    `thread_id` and `block_id`. If one is not set, the bound may be inferred from
+    a combination of `known_block_size` and `known_grid_size`-type annotations.
   }];
 }
 
 
 def GPU_NumSubgroupsOp : GPU_Op<"num_subgroups", [
-      Pure, DeclareOpInterfaceMethods<InferIntRangeInterface>]>,
-    Arguments<(ins)>, Results<(outs Index:$result)> {
+      Pure, DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]>,
+    Arguments<(ins OptionalAttr<IndexAttr>:$upper_bound)>,
+    Results<(outs Index:$result)> {
   let description = [{
     Returns the number of subgroups within a workgroup.
 
@@ -200,14 +315,19 @@ def GPU_NumSubgroupsOp : GPU_Op<"num_subgroups", [
     ```mlir
     %numSg = gpu.num_subgroups : index
     ```
+
+    If `upper_bound` is set, executions with more than `upper_bound` subgroups
+    per workgroup cause undefined behavior. There is a default upper bound of
+    `kMaxDim` (currently uint32_t::max).
   }];
 
-  let assemblyFormat = "attr-dict `:` type($result)";
+  let assemblyFormat = "(`upper_bound` $upper_bound^)? attr-dict `:` type($result)";
 }
 
 def GPU_SubgroupSizeOp : GPU_Op<"subgroup_size", [
-      Pure, DeclareOpInterfaceMethods<InferIntRangeInterface>]>,
-    Arguments<(ins)>, Results<(outs Index:$result)> {
+      Pure, DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]>,
+    Arguments<(ins OptionalAttr<IndexAttr>:$upper_bound)>,
+    Results<(outs Index:$result)> {
   let description = [{
     Returns the number of threads within a subgroup.
 
@@ -216,10 +336,19 @@ def GPU_SubgroupSizeOp : GPU_Op<"subgroup_size", [
     ```mlir
     %sgSz = gpu.subgroup_size : index
     ```
+
+    Executions where the number of threads per subgroup exceed `upper_bound` cause
+    undefined behavior. When no `upper_bound` is specified, range analyses and
+    similar machinery assume the default bound of `kMaxSubgroupSize`, currently
+    128.
   }];
 
-  let assemblyFormat = "attr-dict `:` type($result)";
+  let assemblyFormat = "(`upper_bound` $upper_bound^)? attr-dict `:` type($result)";
 }
+
+def GPU_OptionalDimSizeHintAttr : ConfinedAttr<OptionalAttr<DenseI32ArrayAttr>,
+  [AttrConstraint<Or<[IsNullAttr.predicate, DenseArrayCount<3>.predicate]>,
+    "with 3 elements (if present)">]>;
 
 def GPU_GPUFuncOp : GPU_Op<"func", [
     HasParent<"GPUModuleOp">, AutomaticAllocationScope, FunctionOpInterface,
@@ -249,12 +378,14 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     body region, are not supported.
 
     A function may optionally be annotated with the block and/or grid sizes
-    that will be used when it is launched using the `gpu.known_block_size` and
-    `gpu.known_grid_size` attributes, respectively. If set, these attributes must
+    that will be used when it is launched using the `known_block_size` and
+    `known_grid_size` attributes, respectively. If set, these attributes must
     be arrays of three 32-bit integers giving the x, y, and z launch dimensions.
     Launching a kernel that has these annotations, or that calls a function with
     these annotations, using a block size or grid size other than what is specified
-    is undefined behavior.
+    is undefined behavior. These attributes may be set on non-`gpu.func` functions
+    by using `gpu.known_block_size` or `gpu.known_grid_size`, but this carries
+    the risk that they will de discarded.
 
     Syntax:
 
@@ -297,7 +428,9 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
                        OptionalAttr<DictArrayAttr>:$res_attrs,
                        OptionalAttr<DictArrayAttr>:$workgroup_attrib_attrs,
-                       OptionalAttr<DictArrayAttr>:$private_attrib_attrs);
+                       OptionalAttr<DictArrayAttr>:$private_attrib_attrs,
+                       GPU_OptionalDimSizeHintAttr:$known_block_size,
+                       GPU_OptionalDimSizeHintAttr:$known_grid_size);
   let regions = (region AnyRegion:$body);
 
   let skipDefaultBuilders = 1;
@@ -420,36 +553,6 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
       return "workgroup_attributions";
     }
 
-    static constexpr StringLiteral getKnownBlockSizeAttrName() {
-      return StringLiteral("gpu.known_block_size");
-    }
-
-    static constexpr StringLiteral getKnownGridSizeAttrName() {
-      return StringLiteral("gpu.known_grid_size");
-    }
-
-    /// Returns the block size this kernel will be launched with along
-    /// dimension `dim` if known. The value of gpu.thread_id dim will be strictly
-    /// less than this size.
-    std::optional<uint32_t> getKnownBlockSize(gpu::Dimension dim) {
-      if (auto array =
-        (*this)->getAttrOfType<DenseI32ArrayAttr>(getKnownBlockSizeAttrName())) {
-        return array[static_cast<uint32_t>(dim)];
-      }
-      return std::nullopt;
-    }
-
-    /// Returns the grid size this kernel will be launched with along
-    /// dimension `dim` if known. The value of gpu.block_id dim will be strictly
-    /// less than this size.
-    std::optional<uint32_t> getKnownGridSize(gpu::Dimension dim) {
-      if (auto array =
-        (*this)->getAttrOfType<DenseI32ArrayAttr>(getKnownGridSizeAttrName())) {
-        return array[static_cast<uint32_t>(dim)];
-      }
-      return std::nullopt;
-    }
-
     /// Returns the argument types of this function.
     ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }
 
@@ -470,8 +573,6 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     LogicalResult verifyBody();
   }];
   let hasCustomAssemblyFormat = 1;
-
-  let hasVerifier = 1;
 }
 
 def GPU_DynamicSharedMemoryOp : GPU_Op<"dynamic_shared_memory", [Pure]>
@@ -631,6 +732,12 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
     OpBuilder<(ins "SymbolRefAttr":$kernel, "KernelDim3":$gridSize,
       "KernelDim3":$blockSize, "Value":$dynamicSharedMemorySize,
       "ValueRange":$kernelOperands,
+      "Type":$asyncTokenType,
+      CArg<"ValueRange", "{}">:$asyncDependencies,
+      CArg<"std::optional<KernelDim3>", "std::nullopt">:$clusterSize)>,
+    OpBuilder<(ins "SymbolRefAttr":$kernel, "KernelDim3":$gridSize,
+      "KernelDim3":$blockSize, "Value":$dynamicSharedMemorySize,
+      "ValueRange":$kernelOperands,
       CArg<"Value", "nullptr">:$asyncObject,
       CArg<"std::optional<KernelDim3>", "std::nullopt">:$clusterSize)>
   ];
@@ -687,13 +794,13 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
 
 def GPU_LaunchOp : GPU_Op<"launch", [
       AutomaticAllocationScope, AttrSizedOperandSegments, GPU_AsyncOpInterface,
-      DeclareOpInterfaceMethods<InferIntRangeInterface>,
+      DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
       RecursiveMemoryEffects]>,
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
                Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
-               Optional<Index>:$clusterSizeX, 
-               Optional<Index>:$clusterSizeY, 
+               Optional<Index>:$clusterSizeX,
+               Optional<Index>:$clusterSizeY,
                Optional<Index>:$clusterSizeZ,
                Optional<I32>:$dynamicSharedMemorySize)>,
     Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
@@ -717,7 +824,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     to the amount of dynamic shared memory a kernel's workgroup should be
     allocated; when this operand is not present, a zero size is assumed.
 
-    The body region has at least _twelve_ arguments, or _eighteen_ if cluster 
+    The body region has at least _twelve_ arguments, or _eighteen_ if cluster
     dimensions are present, grouped as follows:
 
     -   three optional arguments that contain cluster identifiers along x,y,z
@@ -790,7 +897,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
                blocks(%bx, %by, %bz) in (%sz_bx = %3, %sz_by = %4, %sz_bz = %5)
                threads(%tx, %ty, %tz) in (%sz_tx = %6, %sz_ty = %7, %sz_tz = %8)
     {
-      // Cluster, block and thread identifiers, as well as cluster/block/grid 
+      // Cluster, block and thread identifiers, as well as cluster/block/grid
       // sizes are immediately usable inside body region.
       "some_op"(%cx, %bx, %tx) : (index, index, index) -> ()
     }
@@ -867,7 +974,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     unsigned getNumConfigOperands() {
       return kNumConfigOperands + (hasClusterSize() ? 3 : 0);
     }
-    /// Returns the number of region attributes including cluster size 
+    /// Returns the number of region attributes including cluster size
     unsigned getNumConfigRegionAttributes() {
       return kNumConfigRegionAttributes + (hasClusterSize() ? 6 : 0);
     }
@@ -1241,7 +1348,7 @@ def GPU_BarrierOp : GPU_Op<"barrier"> {
 def GPU_GPUModuleOp : GPU_Op<"module", [
       DataLayoutOpInterface, HasDefaultDLTIDataLayout, IsolatedFromAbove,
       SymbolTable, Symbol, SingleBlockImplicitTerminator<"ModuleEndOp">
-    ]>, Arguments<(ins
+    ]>, Arguments<(ins SymbolNameAttr:$sym_name,
           OptionalAttr<GPUNonEmptyTargetArrayAttr>:$targets,
           OptionalAttr<OffloadingTranslationAttr>:$offloadingHandler)> {
   let summary = "A top level compilation unit containing code to be run on a GPU.";

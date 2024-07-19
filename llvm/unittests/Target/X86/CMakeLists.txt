@@ -25,5 +25,3 @@ add_llvm_unittest(X86Tests
   MachineSizeOptsTest.cpp
   TernlogTest.cpp
   )
-
-set_property(TARGET X86Tests PROPERTY FOLDER "Tests/UnitTests/TargetTests")

@@ -25,7 +25,7 @@ int main(int, char**) {
   //  Test the implicit deduction guides
   {
     //  vector (allocator &)
-    // expected-error@+1 {{no viable constructor or deduction guide for deduction of template arguments of 'vector'}}
+    // expected-error-re@+1 {{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}vector'}}
     std::vector vec(std::allocator< int>{});
   }
 

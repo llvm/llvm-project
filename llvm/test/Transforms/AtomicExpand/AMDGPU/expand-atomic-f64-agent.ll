@@ -1246,17 +1246,17 @@ define double @test_atomicrmw_fmax_f64_global_agent(ptr addrspace(1) %ptr, doubl
 ; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
 ; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 8
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[RES]] = bitcast i64 [[NEWLOADED]] to double
+; COMMON-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret double [[RES]]
+; COMMON-NEXT:    ret double [[TMP6]]
 ;
   %res = atomicrmw fmax ptr addrspace(1) %ptr, double %value syncscope("agent") seq_cst
   ret double %res
@@ -1268,17 +1268,17 @@ define double @test_atomicrmw_fmax_f64_global_agent__amdgpu_no_fine_grained_memo
 ; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
 ; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 8
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[RES]] = bitcast i64 [[NEWLOADED]] to double
+; COMMON-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret double [[RES]]
+; COMMON-NEXT:    ret double [[TMP6]]
 ;
   %res = atomicrmw fmax ptr addrspace(1) %ptr, double %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret double %res
@@ -1290,17 +1290,17 @@ define double @test_atomicrmw_fmax_f64_global_agent__amdgpu_no_remote_memory(ptr
 ; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
 ; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 8
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[RES]] = bitcast i64 [[NEWLOADED]] to double
+; COMMON-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret double [[RES]]
+; COMMON-NEXT:    ret double [[TMP6]]
 ;
   %res = atomicrmw fmax ptr addrspace(1) %ptr, double %value syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret double %res
@@ -1312,17 +1312,17 @@ define double @test_atomicrmw_fmax_f64_global_agent__amdgpu_no_fine_grained_memo
 ; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
 ; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 8
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[RES]] = bitcast i64 [[NEWLOADED]] to double
+; COMMON-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret double [[RES]]
+; COMMON-NEXT:    ret double [[TMP6]]
 ;
   %res = atomicrmw fmax ptr addrspace(1) %ptr, double %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret double %res
@@ -1462,17 +1462,17 @@ define double @test_atomicrmw_fmin_f64_global_agent(ptr addrspace(1) %ptr, doubl
 ; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
 ; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 8
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[RES]] = bitcast i64 [[NEWLOADED]] to double
+; COMMON-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret double [[RES]]
+; COMMON-NEXT:    ret double [[TMP6]]
 ;
   %res = atomicrmw fmin ptr addrspace(1) %ptr, double %value syncscope("agent") seq_cst
   ret double %res
@@ -1484,17 +1484,17 @@ define double @test_atomicrmw_fmin_f64_global_agent__amdgpu_no_fine_grained_memo
 ; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
 ; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 8
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[RES]] = bitcast i64 [[NEWLOADED]] to double
+; COMMON-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret double [[RES]]
+; COMMON-NEXT:    ret double [[TMP6]]
 ;
   %res = atomicrmw fmin ptr addrspace(1) %ptr, double %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret double %res
@@ -1506,17 +1506,17 @@ define double @test_atomicrmw_fmin_f64_global_agent__amdgpu_no_remote_memory(ptr
 ; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
 ; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 8
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[RES]] = bitcast i64 [[NEWLOADED]] to double
+; COMMON-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret double [[RES]]
+; COMMON-NEXT:    ret double [[TMP6]]
 ;
   %res = atomicrmw fmin ptr addrspace(1) %ptr, double %value syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret double %res
@@ -1528,17 +1528,17 @@ define double @test_atomicrmw_fmin_f64_global_agent__amdgpu_no_fine_grained_memo
 ; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
 ; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 8
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[RES]] = bitcast i64 [[NEWLOADED]] to double
+; COMMON-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret double [[RES]]
+; COMMON-NEXT:    ret double [[TMP6]]
 ;
   %res = atomicrmw fmin ptr addrspace(1) %ptr, double %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret double %res

@@ -44,6 +44,8 @@ pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
 # see https://github.com/llvm/llvm-project/pull/82393 and
 # https://discourse.llvm.org/t/rfc-future-of-windows-pre-commit-ci/76840/40
 # for further information.
+# We limit the number of parallel compile jobs to 24 control memory
+# consumption and improve build reliability.
 cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_PROJECTS="${projects}" \
       -G Ninja \
@@ -58,7 +60,9 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
       -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
-      -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO"
+      -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
+      -D LLVM_PARALLEL_COMPILE_JOBS=16 \
+      -D LLVM_PARALLEL_LINK_JOBS=4
 
 echo "--- ninja"
 # Targets are not escaped as they are passed as separate arguments.

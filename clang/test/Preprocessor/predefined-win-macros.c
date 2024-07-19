@@ -116,6 +116,7 @@
 // CHECK-X86-MINGW: #define WINNT 1
 // CHECK-X86-MINGW: #define _WIN32 1
 // CHECK-X86-MINGW-NOT: #define _WIN64 1
+// CHECK-X86-MINGW: #define __GXX_TYPEINFO_EQUALITY_INLINE 0
 
 // RUN: %clang_cc1 -triple thumbv7-windows-gnu %s -E -dM -o - \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-ARM-MINGW
@@ -125,6 +126,7 @@
 // CHECK-ARM-MINGW: #define WINNT 1
 // CHECK-ARM-MINGW: #define _WIN32 1
 // CHECK-ARM-MINGW-NOT: #define _WIN64 1
+// CHECK-ARM-MINGW: #define __GXX_TYPEINFO_EQUALITY_INLINE 0
 
 // RUN: %clang_cc1 -triple x86_64-windows-gnu %s -E -dM -o - \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-AMD64-MINGW
@@ -134,6 +136,7 @@
 // CHECK-AMD64-MINGW: #define WINNT 1
 // CHECK-AMD64-MINGW: #define _WIN32 1
 // CHECK-AMD64-MINGW: #define _WIN64 1
+// CHECK-AMD64-MINGW: #define __GXX_TYPEINFO_EQUALITY_INLINE 0
 
 // RUN: %clang_cc1 -triple aarch64-windows-gnu %s -E -dM -o - \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-ARM64-MINGW
@@ -145,6 +148,7 @@
 // CHECK-ARM64-MINGW: #define _WIN32 1
 // CHECK-ARM64-MINGW: #define _WIN64 1
 // CHECK-ARM64-MINGW: #define __GCC_ASM_FLAG_OUTPUTS__ 1
+// CHECK-ARM64-MINGW: #define __GXX_TYPEINFO_EQUALITY_INLINE 0
 // CHECK-ARM64-MINGW: #define __aarch64__ 1
 
 // RUN: %clang_cc1 -triple arm64ec-windows-gnu %s -E -dM -o - \
@@ -157,6 +161,7 @@
 // CHECK-ARM64EC-MINGW: #define _WIN32 1
 // CHECK-ARM64EC-MINGW: #define _WIN64 1
 // CHECK-ARM64EC-MINGW: #define __GCC_ASM_FLAG_OUTPUTS__ 1
+// CHECK-ARM64EC-MINGW: #define __GXX_TYPEINFO_EQUALITY_INLINE 0
 // CHECK-ARM64EC-MINGW-NOT: #define __aarch64__ 1
 // CHECK-ARM64EC-MINGW: #define __amd64 1
 // CHECK-ARM64EC-MINGW: #define __amd64__ 1

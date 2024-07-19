@@ -19,6 +19,14 @@ extern "C" {
 
 MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(GPU, gpu);
 
+//===-------------------------------------------------------------------===//
+// AsyncTokenType
+//===-------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED bool mlirTypeIsAGPUAsyncTokenType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirType mlirGPUAsyncTokenTypeGet(MlirContext ctx);
+
 //===---------------------------------------------------------------------===//
 // ObjectAttr
 //===---------------------------------------------------------------------===//

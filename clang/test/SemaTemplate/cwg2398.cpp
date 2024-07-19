@@ -4,7 +4,7 @@
 namespace issue1 {
   template<class T, class U = T> class B {};
   template<template<class> class P, class T> void f(P<T>);
-  // new-note@-1 {{deduced type 'B<[...], (default) int>' of 1st parameter does not match adjusted type 'B<[...], float>' of argument [with P = issue1::B, T = int]}}
+  // new-note@-1 {{deduced type 'B<[...], (default) int>' of 1st parameter does not match adjusted type 'B<[...], float>' of argument [with P = B, T = int]}}
   // old-note@-2 2{{template template argument has different template parameters}}
 
   void g() {
@@ -200,4 +200,132 @@ namespace consistency {
     template struct A<B<int>, B<int>, B<int>>;
     // new-error@-1 {{ambiguous partial specializations}}
   } // namespace t2
+  namespace t3 {
+    template<class T1, class T2, class T3> struct A;
+
+    template<template<class, class> class TT1,
+             class T1, class T2, class T3, class T4>
+    struct A<TT1<T1, T2>, TT1<T3, T4>, typename nondeduced<TT1<T1, T2>>::type> {};
+    // new-note@-1 {{partial specialization matches}}
+
+    template<template<class> class UU1,
+             class U1, class U2>
+    struct A<UU1<U1>, UU1<U2>, typename nondeduced<UU1<U1>>::type>;
+    // new-note@-1 {{partial specialization matches}}
+
+    template struct A<B<int>, B<int>, B<int>>;
+    // new-error@-1 {{ambiguous partial specializations}}
+  } // namespace t3
+  namespace t4 {
+    template<class T1, class T2, class T3> struct A;
+
+    template<template<class, class> class TT1,
+             class T1, class T2, class T3, class T4>
+    struct A<TT1<T1, T2>, TT1<T3, T4>, typename nondeduced<TT1<T1, T4>>::type> {};
+    // new-note@-1 {{partial specialization matches}}
+
+    template<template<class> class UU1,
+             class U1, class U2>
+    struct A<UU1<U1>, UU1<U2>, typename nondeduced<UU1<U1>>::type>;
+    // new-note@-1 {{partial specialization matches}}
+
+    template struct A<B<int>, B<int>, B<int>>;
+    // new-error@-1 {{ambiguous partial specializations}}
+  } // namespace t4
+  namespace t5 {
+    template<class T1, class T2> struct A;
+
+    template<template<class, class> class TT1,
+             class T1, class T2, class T3, class T4>
+    struct A<TT1<T1, T2>, TT1<T3, T4>> {};
+    // new-note@-1 {{partial specialization matches}}
+
+    template<template<class> class UU1,
+             class U1, class U2>
+    struct A<UU1<U1>, UU1<U2>>;
+    // new-note@-1 {{partial specialization matches}}
+
+    template struct A<B<int>, B<int>>;
+    // new-error@-1 {{ambiguous partial specializations}}
+  } // namespace t5
+  namespace t6 {
+    template<class T1, class T2> struct A;
+
+    template<template<class, class> class TT1,
+             class T1, class T2, class T3>
+    struct A<TT1<T1, T2>, TT1<T1, T3>> {};
+    // new-note@-1 {{partial specialization matches}}
+
+    template<template<class> class UU1,
+             class U1, class U2>
+    struct A<UU1<U1>, UU1<U2>>;
+    // new-note@-1 {{partial specialization matches}}
+
+    template struct A<B<int>, B<int>>;
+    // new-error@-1 {{ambiguous partial specializations}}
+  } // namespace t6
 } // namespace consistency
+
+namespace classes {
+  namespace canon {
+    template<class T, class U> struct A {};
+
+    template<template<class> class TT> auto f(TT<int> a) { return a; }
+    // old-note@-1 2{{template template argument has different template parameters}}
+    // new-note@-2 2{{substitution failure: too few template arguments}}
+
+    A<int, float> v1;
+    A<int, double> v2;
+
+    using X = decltype(f(v1));
+    // expected-error@-1 {{no matching function for call}}
+
+    using X = decltype(f(v2));
+    // expected-error@-1 {{no matching function for call}}
+  } // namespace canon
+  namespace expr {
+    template <class T1, int E1> struct A {
+      static constexpr auto val = E1;
+    };
+    template <template <class T3> class TT> void f(TT<int> v) {
+      // old-note@-1 {{template template argument has different template parameters}}
+      // new-note@-2 {{substitution failure: too few template arguments}}
+      static_assert(v.val == 3);
+    };
+    void test() {
+      f(A<int, 3>());
+      // expected-error@-1 {{no matching function for call}}
+    }
+  } // namespace expr
+  namespace packs {
+    template <class T1, class ...T2s> struct A {
+      static constexpr auto val = sizeof...(T2s);
+    };
+
+    template <template <class T3> class TT> void f(TT<int> v) {
+      // old-note@-1 {{template template argument has different template parameters}}
+      // new-note@-2 {{deduced type 'A<[...], (no argument), (no argument), (no argument)>' of 1st parameter does not match adjusted type 'A<[...], void, void, void>' of argument [with TT = A]}}
+      static_assert(v.val == 3);
+    };
+    void test() {
+      f(A<int, void, void, void>());
+      // expected-error@-1 {{no matching function for call}}
+    }
+  } // namespace packs
+} // namespace classes
+
+namespace regression1 {
+  template <typename T, typename Y> struct map {};
+  template <typename T> class foo {};
+
+  template <template <typename...> class MapType, typename Value>
+  Value bar(MapType<int, Value> map);
+
+  template <template <typename...> class MapType, typename Value>
+  Value bar(MapType<int, foo<Value>> map);
+
+  void aux() {
+    map<int, foo<int>> input;
+    bar(input);
+  }
+} // namespace regression1

@@ -4,7 +4,7 @@
 
 /// Check multiple targets are captured.
 // RUN: clang-installapi -target arm64-apple-macos13.1 -target arm64e-apple-macos13.1 \
-// RUN: -fapplication-extension -install_name /usr/lib/vars.dylib \
+// RUN: -fapplication-extension -install_name /usr/lib/vars.dylib -dynamiclib \
 // RUN: %t/vars_inputs.json -o %t/vars.tbd 2>&1 | FileCheck %s --allow-empty
 // RUN: llvm-readtapi -compare %t/vars.tbd %t/expected.tbd 2>&1 | FileCheck %s --allow-empty
 

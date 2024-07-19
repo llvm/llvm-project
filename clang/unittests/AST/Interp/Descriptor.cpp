@@ -53,7 +53,7 @@ TEST(Descriptor, Primitives) {
   ASSERT_FALSE(GlobalDesc->asRecordDecl());
 
   // Still true because this is a global variable.
-  ASSERT_TRUE(GlobalDesc->getMetadataSize() == sizeof(InlineDescriptor));
+  ASSERT_TRUE(GlobalDesc->getMetadataSize() == sizeof(GlobalInlineDescriptor));
   ASSERT_FALSE(GlobalDesc->isPrimitiveArray());
   ASSERT_FALSE(GlobalDesc->isCompositeArray());
   ASSERT_FALSE(GlobalDesc->isZeroSizeArray());

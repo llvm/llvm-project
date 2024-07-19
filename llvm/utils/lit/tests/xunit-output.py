@@ -1,4 +1,4 @@
-# REQUIRES: shell
+# UNSUPPORTED: system-windows
 
 # Check xunit output
 # RUN: rm -rf %t.xunit.xml

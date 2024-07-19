@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the subclesses of Stmt class declared in StmtOpenMP.h
+// This file implements the subclasses of Stmt class declared in StmtOpenMP.h
 //
 //===----------------------------------------------------------------------===//
 
@@ -454,7 +454,8 @@ OMPReverseDirective::Create(const ASTContext &C, SourceLocation StartLoc,
                             SourceLocation EndLoc, Stmt *AssociatedStmt,
                             Stmt *TransformedStmt, Stmt *PreInits) {
   OMPReverseDirective *Dir = createDirective<OMPReverseDirective>(
-      C, {}, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc);
+      C, std::nullopt, AssociatedStmt, TransformedStmtOffset + 1, StartLoc,
+      EndLoc);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
   return Dir;

@@ -18,11 +18,11 @@ template struct C<cval>;
 
 /// FIXME: This example does not get properly diagnosed in the new interpreter.
 extern const int recurse1;
-const int recurse2 = recurse1; // ref-note {{declared here}}
+const int recurse2 = recurse1; // both-note {{declared here}}
 const int recurse1 = 1;
 int array1[recurse1];
 int array2[recurse2]; // ref-warning 2{{variable length array}} \
-                      // ref-note {{initializer of 'recurse2' is not a constant expression}} \
+                      // both-note {{initializer of 'recurse2' is not a constant expression}} \
                       // expected-warning {{variable length array}} \
                       // expected-error {{variable length array}}
 

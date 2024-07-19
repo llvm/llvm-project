@@ -119,18 +119,16 @@ define float @fcopysign_fneg(float %a, float %b) nounwind {
 ;
 ; RV32IF-LABEL: fcopysign_fneg:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    lui a2, 524288
-; RV32IF-NEXT:    xor a1, a1, a2
-; RV32IF-NEXT:    fmv.w.x fa5, a1
+; RV32IF-NEXT:    fmv.w.x fa5, a0
+; RV32IF-NEXT:    not a0, a1
 ; RV32IF-NEXT:    fmv.w.x fa4, a0
-; RV32IF-NEXT:    fsgnj.s fa5, fa4, fa5
+; RV32IF-NEXT:    fsgnj.s fa5, fa5, fa4
 ; RV32IF-NEXT:    fmv.x.w a0, fa5
 ; RV32IF-NEXT:    ret
 ;
 ; RV32IZFINX-LABEL: fcopysign_fneg:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a2, 524288
-; RV32IZFINX-NEXT:    xor a1, a1, a2
+; RV32IZFINX-NEXT:    not a1, a1
 ; RV32IZFINX-NEXT:    fsgnj.s a0, a0, a1
 ; RV32IZFINX-NEXT:    ret
 ;

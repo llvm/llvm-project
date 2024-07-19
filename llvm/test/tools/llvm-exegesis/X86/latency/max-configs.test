@@ -9,7 +9,7 @@ CHECK-NEXT:     SBB8rr
 CHECK-NEXT: config: ''
 CHECK-NEXT: register_initial_values:
 CHECK-DAG: - '[[REG1:[A-Z0-9]+]]=0x0'
-CHECK-LAST: ...
+CHECK-DAG: ...
 
 CHECK1-NOT: SBB8rr
 
@@ -21,4 +21,4 @@ CHECK2-NEXT:     SBB8rr
 CHECK2-NEXT: config: ''
 CHECK2-NEXT: register_initial_values:
 CHECK2-DAG: - '[[REG1:[A-Z0-9]+]]=0x0'
-CHECK2-LAST: ...
+CHECK2-DAG: ...

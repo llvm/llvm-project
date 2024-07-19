@@ -18,6 +18,9 @@ class FuncOp;
 namespace bufferization {
 struct OneShotBufferizationOptions;
 
+/// Maps from symbol table to its corresponding dealloc helper function.
+using DeallocHelperMap = llvm::DenseMap<Operation *, func::FuncOp>;
+
 //===----------------------------------------------------------------------===//
 // Passes
 //===----------------------------------------------------------------------===//
@@ -46,7 +49,7 @@ std::unique_ptr<Pass> createLowerDeallocationsPass();
 /// Adds the conversion pattern of the `bufferization.dealloc` operation to the
 /// given pattern set for use in other transformation passes.
 void populateBufferizationDeallocLoweringPattern(
-    RewritePatternSet &patterns, func::FuncOp deallocLibraryFunc);
+    RewritePatternSet &patterns, const DeallocHelperMap &deallocHelperFuncMap);
 
 /// Construct the library function needed for the fully generic
 /// `bufferization.dealloc` lowering implemented in the LowerDeallocations pass.
@@ -220,9 +223,6 @@ createPromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc);
 /// Create a pass that tries to eliminate tensor.empty ops that are anchored on
 /// insert_slice ops.
 std::unique_ptr<Pass> createEmptyTensorEliminationPass();
-
-/// Create a pass that bufferizes ops from the bufferization dialect.
-std::unique_ptr<Pass> createBufferizationBufferizePass();
 
 //===----------------------------------------------------------------------===//
 // Registration

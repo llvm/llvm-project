@@ -68,7 +68,7 @@ def AOp : NS_Op<"a_op", []> {
 // Test verify method
 // ---
 
-// DEF:      ::mlir::LogicalResult AOpAdaptor::verify
+// DEF:      ::llvm::LogicalResult AOpAdaptor::verify
 // DEF:      ::mlir::Attribute tblgen_aAttr;
 // DEF: while (true) {
 // DEF-NEXT:   if (namedAttrIt == namedAttrRange.end())
@@ -220,7 +220,7 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 // Test verify method
 // ---
 
-// DEF:      ::mlir::LogicalResult AgetOpAdaptor::verify
+// DEF:      ::llvm::LogicalResult AgetOpAdaptor::verify
 // DEF:      ::mlir::Attribute tblgen_aAttr;
 // DEF: while (true)
 // DEF:      ::mlir::Attribute tblgen_bAttr;

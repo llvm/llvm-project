@@ -625,6 +625,23 @@ B, C, and D, and a log message for the failing test C:
   ********************
   PASS: D (4 of 4)
 
+DEFAULT FEATURES
+~~~~~~~~~~~~~~~~~
+
+For convenience :program:`lit` automatically adds **available_features** for
+some common use cases.
+
+:program:`lit` adds a feature based on the operating system being built on, for
+example: `system-darwin`, `system-linux`, etc. :program:`lit` also
+automatically adds a feature based on the current architecture, for example
+`target-x86_64`, `target-aarch64`, etc.
+
+When building with sanitizers enabled, :program:`lit` automatically adds the
+short name of the sanitizer, for example: `asan`, `tsan`, etc.
+
+To see the full list of features that can be added, see
+*llvm/utils/lit/lit/llvm/config.py*.
+
 LIT EXAMPLE TESTS
 ~~~~~~~~~~~~~~~~~
 

@@ -14,11 +14,11 @@
 ;; Check that there's an unlinked dbg.assign inserted after each overlapping
 ;; fragment of the shortened store.
 ;;
-; CHECK: llvm.dbg.assign({{.*}}, metadata ptr %g, metadata !DIExpression())
-; CHECK: llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32), metadata ![[ID:[0-9]+]], metadata ptr %arrayidx.i, metadata !DIExpression())
-; CHECK: llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata ![[ID]], metadata ptr %arrayidx3.i, metadata !DIExpression())
-; CHECK: llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32), metadata ![[UniqueID1:[0-9]+]], metadata ptr undef, metadata !DIExpression())
-; CHECK: llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32), metadata ![[UniqueID2:[0-9]+]], metadata ptr undef, metadata !DIExpression())
+; CHECK: #dbg_assign({{.*}}, ptr %g, !DIExpression(),
+; CHECK: #dbg_assign(float 0.000000e+00, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 64, 32), ![[ID:[0-9]+]], ptr %arrayidx.i, !DIExpression(),
+; CHECK: #dbg_assign(float 0.000000e+00, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 32, 32), ![[ID]], ptr %arrayidx3.i, !DIExpression(),
+; CHECK: #dbg_assign(float 0.000000e+00, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 0, 32), ![[UniqueID1:[0-9]+]], ptr undef, !DIExpression(),
+; CHECK: #dbg_assign(float 0.000000e+00, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 96, 32), ![[UniqueID2:[0-9]+]], ptr undef, !DIExpression(),
 ; CHECK: call void @llvm.memset{{.*}}, !DIAssignID ![[ID]]
 
 ; CHECK-DAG: ![[ID]] = distinct !DIAssignID()

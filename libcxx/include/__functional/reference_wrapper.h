@@ -39,7 +39,7 @@ private:
   type* __f_;
 
   static void __fun(_Tp&) _NOEXCEPT;
-  static void __fun(_Tp&&) = delete;
+  static void __fun(_Tp&&) = delete; // NOLINT(modernize-use-equals-delete) ; This is llvm.org/PR54276
 
 public:
   template <class _Up,

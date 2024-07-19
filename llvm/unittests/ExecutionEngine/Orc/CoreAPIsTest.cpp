@@ -24,6 +24,32 @@ class CoreAPIsStandardTest : public CoreAPIsBasedStandardTest {};
 
 namespace {
 
+class CustomError : public ErrorInfo<CustomError> {
+public:
+  static char ID;
+  void log(raw_ostream &OS) const override { OS << "CustomError"; }
+  std::error_code convertToErrorCode() const override { return {}; }
+};
+char CustomError::ID = 0;
+
+TEST_F(CoreAPIsStandardTest, ErrorReporter) {
+  // Check that errors reported via ExecutionSession::reportError are sent to
+  // the registered error reporter, and that the error reporter can hold
+  // uniquely owned state.
+
+  Error ReportedError = Error::success();
+
+  ES.setErrorReporter(
+      // Make sure error reporter can capture uniquely-owned state.
+      [&, State = std::make_unique<int>(42)](Error Err) {
+        ReportedError = joinErrors(std::move(Err), std::move(ReportedError));
+      });
+
+  ES.reportError(make_error<CustomError>());
+
+  EXPECT_THAT_ERROR(std::move(ReportedError), Failed<CustomError>());
+}
+
 TEST_F(CoreAPIsStandardTest, JITDylibAddToLinkOrder) {
   // Check that the JITDylib::addToLinkOrder methods behave as expected.
   auto &JD2 = ES.createBareJITDylib("JD2");
