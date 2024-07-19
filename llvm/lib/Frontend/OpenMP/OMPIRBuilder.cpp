@@ -1703,9 +1703,9 @@ void OpenMPIRBuilder::createTaskyield(const LocationDescription &Loc) {
 // - Populates each DependInfo object with relevant information of
 //   the corresponding dependence.
 // - All code is inserted in the entry block of the current function.
-static Value *
-emitTaskDependencies(OpenMPIRBuilder &OMPBuilder,
-                     SmallVector<OpenMPIRBuilder::DependData> &Dependencies) {
+static Value *emitTaskDependencies(
+    OpenMPIRBuilder &OMPBuilder,
+    SmallVectorImpl<OpenMPIRBuilder::DependData> &Dependencies) {
   // Early return if we have no dependencies to process
   if (Dependencies.empty())
     return nullptr;
