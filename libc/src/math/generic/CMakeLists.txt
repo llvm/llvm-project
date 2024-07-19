@@ -130,6 +130,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  dadd
+  SRCS
+    dadd.cpp
+  HDRS
+    ../dadd.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+
+)
+
+add_entrypoint_object(
   dsqrtl
   SRCS
     dsqrtl.cpp

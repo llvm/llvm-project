@@ -10,11 +10,10 @@
 #define LLVM_LIBC_SRC_MATH_DADD_H
 
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-double daadd(float x, float y);
+double dadd(float x, float y);
 
 } // namespace LIBC_NAMESPACE_DECL
 

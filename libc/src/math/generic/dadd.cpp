@@ -13,8 +13,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(double, f16add, (float x, float y)) {
-  return fputil::generic::add<double>(x, y);
+LLVM_LIBC_FUNCTION(double, dadd, (float x, float y)) {
+  return static_cast<double>(x) + static_cast<double>(y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

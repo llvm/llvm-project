@@ -44,6 +44,21 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
+
+add_fp_unittest(
+  dadd_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    dadd_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.dadd
+    libc.src.__support.FPUtil.basic_operations
+)
+
 add_fp_unittest(
   sinf_test
   NEED_MPFR
