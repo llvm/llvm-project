@@ -314,8 +314,8 @@ namespace GH63903 {
                     // expected-error {{constexpr variable 's' must be initialized by a constant expression}}
 }
 
-
 namespace gh62863 {
+
 int (&&arr)[] = static_cast<int[]>(42);
 // beforecxx20-warning@-1 {{aggregate initialization of type 'int[1]' from a parenthesized list of values is a C++20 extension}}
 int (&&arr1)[1] = static_cast<int[]>(42);
@@ -333,4 +333,23 @@ int (&&arr6)[2] = (int[])(42); // expected-error {{reference to type 'int[2]' co
 // beforecxx20-warning@-1 {{aggregate initialization of type 'int[1]' from a parenthesized list of values is a C++20 extension}}
 int (&&arr7)[3] = (int[3])(42);
 // beforecxx20-warning@-1 {{aggregate initialization of type 'int[3]' from a parenthesized list of values is a C++20 extension}}
+
+}
+
+namespace GH92284 {
+
+using T = int[1]; T x(42);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'T' (aka 'int[1]') from a parenthesized list of values is a C++20 extension}}
+using Ta = int[2]; Ta a(42);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'Ta' (aka 'int[2]') from a parenthesized list of values is a C++20 extension}}
+using Tb = int[2]; Tb b(42,43);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'Tb' (aka 'int[2]') from a parenthesized list of values is a C++20 extension}}
+using Tc = int[]; Tc c(42);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'int[1]' from a parenthesized list of values is a C++20 extension}}
+using Td = int[]; Td d(42,43);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'int[2]' from a parenthesized list of values is a C++20 extension}}
+template<typename T, int Sz> using ThroughAlias = T[Sz];
+ThroughAlias<int, 1> e(42);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'ThroughAlias<int, 1>' (aka 'int[1]') from a parenthesized list of values is a C++20 extension}} 
+
 }
