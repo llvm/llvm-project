@@ -917,6 +917,22 @@ unsigned LLVMGetVectorSize(LLVMTypeRef VectorTy) {
   return unwrap<VectorType>(VectorTy)->getElementCount().getKnownMinValue();
 }
 
+LLVMValueRef LLVMGetConstantPtrAuthPointer(LLVMValueRef PtrAuth) {
+  return wrap(unwrap<ConstantPtrAuth>(PtrAuth)->getPointer());
+}
+
+LLVMValueRef LLVMGetConstantPtrAuthKey(LLVMValueRef PtrAuth) {
+  return wrap(unwrap<ConstantPtrAuth>(PtrAuth)->getKey());
+}
+
+LLVMValueRef LLVMGetConstantPtrAuthDiscriminator(LLVMValueRef PtrAuth) {
+  return wrap(unwrap<ConstantPtrAuth>(PtrAuth)->getDiscriminator());
+}
+
+LLVMValueRef LLVMGetConstantPtrAuthAddrDiscriminator(LLVMValueRef PtrAuth) {
+  return wrap(unwrap<ConstantPtrAuth>(PtrAuth)->getAddrDiscriminator());
+}
+
 /*--.. Operations on other types ...........................................--*/
 
 LLVMTypeRef LLVMPointerTypeInContext(LLVMContextRef C, unsigned AddressSpace) {
@@ -1661,6 +1677,13 @@ LLVMValueRef LLVMConstNamedStruct(LLVMTypeRef StructTy,
 LLVMValueRef LLVMConstVector(LLVMValueRef *ScalarConstantVals, unsigned Size) {
   return wrap(ConstantVector::get(
       ArrayRef(unwrap<Constant>(ScalarConstantVals, Size), Size)));
+}
+
+LLVMValueRef LLVMConstantPtrAuth(LLVMValueRef Ptr, LLVMValueRef Key,
+                                 LLVMValueRef Disc, LLVMValueRef AddrDisc) {
+  return wrap(ConstantPtrAuth::get(
+      unwrap<Constant>(Ptr), unwrap<ConstantInt>(Key),
+      unwrap<ConstantInt>(Disc), unwrap<Constant>(AddrDisc)));
 }
 
 /*-- Opcode mapping */
