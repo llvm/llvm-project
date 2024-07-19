@@ -132,7 +132,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cos
     libc.src.math.cosf
     libc.src.math.coshf
-    libc.src.math.dadd
+    libc.src.math.daddl
+    libc.src.math.daddf128
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.expf

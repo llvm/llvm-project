@@ -1,4 +1,4 @@
-//===-- Implementation of dadd function ---------------------------------===//
+//===-- Implementation header for dadd --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/dadd.h"
-#include "src/__support/FPUtil/generic/add_sub.h"
-#include "src/__support/common.h"
+#ifndef LLVM_LIBC_SRC_MATH_DADDL_H
+#define LLVM_LIBC_SRC_MATH_DADDL_H
+
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(double, dadd, (float x, float y)) {
-  return static_cast<double>(x) + static_cast<double>(y);
-}
+double daddl(long double x, long double y);
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC_MATH_DADDL_H
