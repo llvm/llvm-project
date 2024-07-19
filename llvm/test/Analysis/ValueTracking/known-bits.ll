@@ -26,11 +26,7 @@ define <4 x i1> @vec_reverse_known_bits_fail(<4 x i8> %xx) {
 
 define i1 @vec_reverse_known_bits_demanded(<4 x i8> %xx) {
 ; CHECK-LABEL: @vec_reverse_known_bits_demanded(
-; CHECK-NEXT:    [[X:%.*]] = or <4 x i8> [[XX:%.*]], <i8 127, i8 55, i8 -128, i8 123>
-; CHECK-NEXT:    [[REV:%.*]] = call <4 x i8> @llvm.vector.reverse.v4i8(<4 x i8> [[X]])
-; CHECK-NEXT:    [[ELE:%.*]] = extractelement <4 x i8> [[REV]], i64 1
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[ELE]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x = or <4 x i8> %xx, <i8 127, i8 55, i8 128, i8 123>
   %rev = call <4 x i8> @llvm.vector.reverse(<4 x i8> %x)
