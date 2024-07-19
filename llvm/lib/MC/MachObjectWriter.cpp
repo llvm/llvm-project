@@ -295,9 +295,12 @@ void MachObjectWriter::writeSection(const MCAssembler &Asm,
     W.write<uint32_t>(VMAddr);      // address
     W.write<uint32_t>(SectionSize); // size
   }
+  assert(isUInt<32>(FileOffset) && "Cannot encode offset of section");
   W.write<uint32_t>(FileOffset);
 
   W.write<uint32_t>(Log2(Section.getAlign()));
+  assert((!NumRelocations || isUInt<32>(RelocationsStart)) &&
+         "Cannot encode offset of relocations");
   W.write<uint32_t>(NumRelocations ? RelocationsStart : 0);
   W.write<uint32_t>(NumRelocations);
   W.write<uint32_t>(Flags);
@@ -937,6 +940,18 @@ void MachObjectWriter::writeMachOHeader(MCAssembler &Asm) {
     unsigned Flags = Sec.getTypeAndAttributes();
     if (Sec.hasInstructions())
       Flags |= MachO::S_ATTR_SOME_INSTRUCTIONS;
+    if (!cast<MCSectionMachO>(Sec).isVirtualSection() &&
+        !isUInt<32>(SectionStart)) {
+      Asm.getContext().reportError(
+          SMLoc(), "cannot encode offset of section; object file too large");
+      return;
+    }
+    if (NumRelocs && !isUInt<32>(RelocTableEnd)) {
+      Asm.getContext().reportError(
+          SMLoc(),
+          "cannot encode offset of relocations; object file too large");
+      return;
+    }
     writeSection(Asm, Sec, getSectionAddress(&Sec), SectionStart, Flags,
                  RelocTableEnd, NumRelocs);
     RelocTableEnd += NumRelocs * sizeof(MachO::any_relocation_info);
@@ -1142,6 +1157,7 @@ void MachObjectWriter::writeSymbolTable(MCAssembler &Asm) {
 
 uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   uint64_t StartOffset = W.OS.tell();
+  auto NumBytesWritten = [&] { return W.OS.tell() - StartOffset; };
 
   prepareObject(Asm);
   writeMachOHeader(Asm);
@@ -1150,7 +1166,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   writeDataInCodeRegion(Asm);
   writeSymbolTable(Asm);
 
-  return W.OS.tell() - StartOffset;
+  return NumBytesWritten();
 }
 // END MCCAS
 
