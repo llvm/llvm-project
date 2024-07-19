@@ -949,7 +949,6 @@ feature_test_macros = [
                 "c++26": 202311,  # P2833R2 Freestanding Library: inout expected span
             },
             "headers": ["memory"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_parallel_algorithm",
