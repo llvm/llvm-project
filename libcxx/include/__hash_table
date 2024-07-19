@@ -77,11 +77,18 @@ struct __hash_node_base {
   typedef __hash_node_base __first_node;
   typedef __rebind_pointer_t<_NodePtr, __first_node> __node_base_pointer;
   typedef _NodePtr __node_pointer;
-
-#if defined(_LIBCPP_ABI_FIX_UNORDERED_NODE_POINTER_UB)
   typedef __node_base_pointer __next_pointer;
-#else
-  typedef __conditional_t<is_pointer<__node_pointer>::value, __node_base_pointer, __node_pointer> __next_pointer;
+
+// TODO(LLVM 22): Remove this check
+#ifndef _LIBCPP_ABI_FIX_UNORDERED_NODE_POINTER_UB
+  static_assert(sizeof(__node_base_pointer) == sizeof(__node_pointer) && _LIBCPP_ALIGNOF(__node_base_pointer) ==
+                    _LIBCPP_ALIGNOF(__node_pointer),
+                "It looks like you are using std::__hash_table (an implementation detail for the unordered containers) "
+                "with a fancy pointer type that thas a different representation depending on whether it points to a "
+                "__hash_table base pointer or a __hash_table node pointer (both of which are implementation details of "
+                "the standard library). This means that your ABI is being broken between LLVM 19 and LLVM 20. If you "
+                "don't care about your ABI being broken, define the _LIBCPP_ABI_TREE_REMOVE_NODE_POINTER_UB macro to "
+                "silence this diagnostic.");
 #endif
 
   __next_pointer __next_;
