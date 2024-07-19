@@ -5167,7 +5167,7 @@ bool NVPTXTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   // - [areg+immoff]
   // - [immAddr]
 
-  // immoff is signed 32-bit
+  // immoff must fit in a signed 32-bit int
   if (!APInt(64, AM.BaseOffs).isSignedIntN(32))
     return false;
 

@@ -3915,7 +3915,8 @@ bool NVPTXDAGToDAGISel::SelectADDRri_imp(
       else
         Base = Addr.getOperand(0);
 
-      // Offset is a signed i32 constant in PTX [register+offset] address mode
+      // Offset must fit in a 32-bit signed int in PTX [register+offset] address
+      // mode
       if (!CN->getAPIntValue().isSignedIntN(32))
         return false;
 
