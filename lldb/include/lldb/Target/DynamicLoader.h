@@ -14,7 +14,6 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UUID.h"
-#include "lldb/Utility/UnimplementedError.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
