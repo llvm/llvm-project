@@ -5748,7 +5748,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_VP_STRIDED_LOAD(VPStridedLoadSDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
-  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(),N->getValueType(0));
   SDValue Mask = N->getMask();
   EVT MaskVT = Mask.getValueType();
   SDValue PassThru = GetWidenedVector(N->getPassThru());
@@ -5756,9 +5756,9 @@ SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
   SDLoc dl(N);
 
   // The mask should be widened as well
-  EVT WideMaskVT =
-      EVT::getVectorVT(*DAG.getContext(), MaskVT.getVectorElementType(),
-                       WidenVT.getVectorElementCount());
+  EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(),
+                                    MaskVT.getVectorElementType(),
+                                    WidenVT.getVectorElementCount());
   Mask = ModifyToType(Mask, WideMaskVT, true);
 
   SDValue Res = DAG.getMaskedLoad(
@@ -6911,24 +6911,25 @@ SDValue DAGTypeLegalizer::WidenVecOp_MSTORE(SDNode *N, unsigned OpNo) {
   SDValue Mask = MST->getMask();
   EVT MaskVT = Mask.getValueType();
   SDValue StVal = MST->getValue();
-  EVT VT = StVal.getValueType();
   SDLoc dl(N);
 
   if (OpNo == 1) {
     // Widen the value.
     StVal = GetWidenedVector(StVal);
-    // The mask should be widened as well
+
+    // The mask should be widened as well.
     EVT WideVT = StVal.getValueType();
-    EVT WideMaskVT =
-        EVT::getVectorVT(*DAG.getContext(), MaskVT.getVectorElementType(),
-                         WideVT.getVectorElementCount());
+    EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(),
+                                      MaskVT.getVectorElementType(),
+                                      WideVT.getVectorElementCount());
     Mask = ModifyToType(Mask, WideMaskVT, true);
   } else {
     // Widen the mask.
     EVT WideMaskVT = TLI.getTypeToTransformTo(*DAG.getContext(), MaskVT);
     Mask = ModifyToType(Mask, WideMaskVT, true);
-
-    EVT WideVT = EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(),
+    EVT ValueVT = StVal.getValueType();
+    EVT WideVT = EVT::getVectorVT(*DAG.getContext(),
+                                  ValueVT.getVectorElementType(),
                                   WideMaskVT.getVectorNumElements());
     StVal = ModifyToType(StVal, WideVT);
   }
