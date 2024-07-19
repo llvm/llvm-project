@@ -1011,7 +1011,7 @@ buildInheritedConstructorDeductionGuideType(
                         DeducingTemplate->getBeginLoc(), DeclarationName());
   if (!ReturnTypeTSI || Trap.hasErrorOccurred())
     return {nullptr, QualType()};
-  const QualType &ReturnType = ReturnTypeTSI->getType();
+  QualType ReturnType = ReturnTypeTSI->getType();
 
   TypeLocBuilder TLB;
   TLB.pushFullCopy(ReturnTypeTSI->getTypeLoc());
@@ -1454,6 +1454,7 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
   auto *TParam = TemplateTypeParmDecl::Create(
       Context, DC, SourceLocation(), SourceLocation(),
       Template->getTemplateDepth(), 0, nullptr, false, false);
+  TParam->setImplicit();
   auto *MapperTPL = TemplateParameterList::Create(
       Context, SourceLocation(), SourceLocation(),
       ArrayRef<NamedDecl *>(TParam), SourceLocation(), nullptr);
