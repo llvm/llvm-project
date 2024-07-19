@@ -12964,12 +12964,19 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
           return Success(1, E);
 
         // Otherwise, check if the type's alignment against Size.
-        QualType PointeeType = E->getArg(1)->IgnoreImpCasts()->getType()->
-          castAs<PointerType>()->getPointeeType();
-        if (!PointeeType->isIncompleteType() &&
-            Info.Ctx.getTypeAlignInChars(PointeeType) >= Size) {
-          // OK, we will inline operations on this object.
-          return Success(1, E);
+        if (auto *ICE = dyn_cast<ImplicitCastExpr>(PtrArg)) {
+          // Drop the potential implicit-cast to 'const volatile void*', getting the underlying type.
+          if (ICE->getCastKind() == CK_BitCast)
+            PtrArg = ICE->getSubExpr();
+        }
+
+        if (auto PtrTy = PtrArg->getType()->getAs<PointerType>()) {
+          QualType PointeeType = PtrTy->getPointeeType();
+          if (!PointeeType->isIncompleteType() &&
+              Info.Ctx.getTypeAlignInChars(PointeeType) >= Size) {
+            // OK, we will inline operations on this object.
+            return Success(1, E);
+          }
         }
       }
     }
