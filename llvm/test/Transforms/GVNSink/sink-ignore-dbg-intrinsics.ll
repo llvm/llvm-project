@@ -1,6 +1,8 @@
 ; RUN: opt < %s -passes=gvn-sink -S | FileCheck %s
 
 ; Test that GVNSink correctly performs the sink optimization in the presence of debug information
+; Test that GVNSink correctly merges the debug locations of sinked instruction, eg, propagating
+; the merged debug location of `%add` and `%add1` to the sinked add instruction.
 
 ; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @fun(i32 noundef %a, i32 noundef %b) #0 !dbg !10 {
@@ -8,8 +10,9 @@ define dso_local i32 @fun(i32 noundef %a, i32 noundef %b) #0 !dbg !10 {
 ; CHECK-SAME:    i32 noundef [[A:%.*]], i32 noundef [[B:%.*]])
 ; CHECK:       if.end:
 ; CHECK:         [[B_SINK:%.*]] = phi i32 [ [[B]], %if.else ], [ [[A]], %if.then ]
-; CHECK:         [[ADD1:%.*]] = add nsw i32 [[B_SINK]], 1
-; CHECK:         [[XOR2:%.*]] = xor i32 [[ADD1]], 1
+; CHECK:         [[ADD1:%.*]] = add nsw i32 [[B_SINK]], 1, !dbg [[DBG:![0-9]+]]
+; CHECK:         [[XOR2:%.*]] = xor i32 [[ADD1]], 1, !dbg [[DBG:![0-9]+]]
+; CHECK:       [[DBG]] = !DILocation(line: 0,
 ;
 entry:
   tail call void @llvm.dbg.value(metadata i32 %a, metadata !15, metadata !DIExpression()), !dbg !16

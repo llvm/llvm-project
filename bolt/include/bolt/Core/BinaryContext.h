@@ -17,6 +17,7 @@
 #include "bolt/Core/BinaryData.h"
 #include "bolt/Core/BinarySection.h"
 #include "bolt/Core/DebugData.h"
+#include "bolt/Core/DynoStats.h"
 #include "bolt/Core/JumpTable.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "bolt/RuntimeLibs/RuntimeLibrary.h"
@@ -31,6 +32,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
@@ -245,6 +247,9 @@ class BinaryContext {
   /// DWP Context.
   std::shared_ptr<DWARFContext> DWPContext;
 
+  /// Decoded pseudo probes.
+  std::shared_ptr<MCPseudoProbeDecoder> PseudoProbeDecoder;
+
   /// A map of DWO Ids to CUs.
   using DWOIdToCUMapType = std::unordered_map<uint64_t, DWARFUnit *>;
   DWOIdToCUMapType DWOCUs;
@@ -359,7 +364,7 @@ public:
   void setFileBuildID(StringRef ID) { FileBuildID = std::string(ID); }
 
   bool hasSymbolsWithFileName() const { return HasSymbolsWithFileName; }
-  void setHasSymbolsWithFileName(bool Value) { HasSymbolsWithFileName = true; }
+  void setHasSymbolsWithFileName(bool Value) { HasSymbolsWithFileName = Value; }
 
   /// Return true if relocations against symbol with a given name
   /// must be created.
@@ -374,6 +379,15 @@ public:
   void setRuntimeLibrary(std::unique_ptr<RuntimeLibrary> Lib) {
     assert(!RtLibrary && "Cannot set runtime library twice.");
     RtLibrary = std::move(Lib);
+  }
+
+  const MCPseudoProbeDecoder *getPseudoProbeDecoder() const {
+    return PseudoProbeDecoder.get();
+  }
+
+  void setPseudoProbeDecoder(std::shared_ptr<MCPseudoProbeDecoder> Decoder) {
+    assert(!PseudoProbeDecoder && "Cannot set pseudo probe decoder twice.");
+    PseudoProbeDecoder = Decoder;
   }
 
   /// Return BinaryFunction containing a given \p Address or nullptr if
@@ -429,6 +443,9 @@ public:
       return JTI->second;
     return nullptr;
   }
+
+  /// Deregister JumpTable registered at a given \p Address and delete it.
+  void deleteJumpTable(uint64_t Address);
 
   unsigned getDWARFEncodingSize(unsigned Encoding) {
     if (Encoding == dwarf::DW_EH_PE_omit)
@@ -677,6 +694,9 @@ public:
   /// have an origin file name available.
   bool HasSymbolsWithFileName{false};
 
+  /// Does the binary have BAT section.
+  bool HasBATSection{false};
+
   /// Sum of execution count of all functions
   uint64_t SumExecutionCount{0};
 
@@ -694,10 +714,6 @@ public:
 
   /// Binary-wide aggregated stats.
   struct BinaryStats {
-    /// Stats for macro-fusion.
-    uint64_t MissedMacroFusionPairs{0};
-    uint64_t MissedMacroFusionExecCount{0};
-
     /// Stats for stale profile matching:
     ///   the total number of basic blocks in the profile
     uint32_t NumStaleBlocks{0};
@@ -713,6 +729,9 @@ public:
     ///   the number of blocks that have matching size but a differing hash
     uint64_t NumStaleBlocksWithEqualIcount{0};
   } Stats;
+
+  // Original binary execution count stats.
+  DynoStats InitialDynoStats;
 
   // Address of the first allocated segment.
   uint64_t FirstAllocAddress{std::numeric_limits<uint64_t>::max()};
@@ -1217,8 +1236,7 @@ public:
 
   /// Return a signed value of \p Size stored at \p Address. The address has
   /// to be a valid statically allocated address for the binary.
-  ErrorOr<uint64_t> getSignedValueAtAddress(uint64_t Address,
-                                            size_t Size) const;
+  ErrorOr<int64_t> getSignedValueAtAddress(uint64_t Address, size_t Size) const;
 
   /// Special case of getUnsignedValueAtAddress() that uses a pointer size.
   ErrorOr<uint64_t> getPointerAtAddress(uint64_t Address) const {

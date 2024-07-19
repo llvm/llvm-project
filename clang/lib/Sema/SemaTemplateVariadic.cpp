@@ -66,6 +66,9 @@ namespace {
 
     bool shouldWalkTypesOfTypeLocs() const { return false; }
 
+    // We need this so we can find e.g. attributes on lambdas.
+    bool shouldVisitImplicitCode() const { return true; }
+
     //------------------------------------------------------------------------
     // Recording occurrences of (unexpanded) parameter packs.
     //------------------------------------------------------------------------
@@ -563,6 +566,10 @@ void Sema::collectUnexpandedParameterPacks(
     .TraverseDeclarationNameInfo(NameInfo);
 }
 
+void Sema::collectUnexpandedParameterPacks(
+    Expr *E, SmallVectorImpl<UnexpandedParameterPack> &Unexpanded) {
+  CollectUnexpandedParameterPacksVisitor(Unexpanded).TraverseStmt(E);
+}
 
 ParsedTemplateArgument
 Sema::ActOnPackExpansion(const ParsedTemplateArgument &Arg,
@@ -1007,20 +1014,6 @@ class ParameterPackValidatorCCC final : public CorrectionCandidateCallback {
 
 }
 
-/// Called when an expression computing the size of a parameter pack
-/// is parsed.
-///
-/// \code
-/// template<typename ...Types> struct count {
-///   static const unsigned value = sizeof...(Types);
-/// };
-/// \endcode
-///
-//
-/// \param OpLoc The location of the "sizeof" keyword.
-/// \param Name The name of the parameter pack whose size will be determined.
-/// \param NameLoc The source location of the name of the parameter pack.
-/// \param RParenLoc The location of the closing parentheses.
 ExprResult Sema::ActOnSizeofParameterPackExpr(Scope *S,
                                               SourceLocation OpLoc,
                                               IdentifierInfo &Name,
@@ -1128,7 +1121,7 @@ Sema::BuildPackIndexingExpr(Expr *PackExpression, SourceLocation EllipsisLoc,
 
   return PackIndexingExpr::Create(getASTContext(), EllipsisLoc, RSquareLoc,
                                   PackExpression, IndexExpr, Index,
-                                  ExpandedExprs);
+                                  ExpandedExprs, EmptyPack);
 }
 
 TemplateArgumentLoc Sema::getTemplateArgumentPackExpansionPattern(

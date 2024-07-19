@@ -182,21 +182,6 @@ check_library_exists(m pow "" COMPILER_RT_HAS_LIBM)
 check_library_exists(pthread pthread_create "" COMPILER_RT_HAS_LIBPTHREAD)
 check_library_exists(execinfo backtrace "" COMPILER_RT_HAS_LIBEXECINFO)
 
-# Look for terminfo library, used in unittests that depend on LLVMSupport.
-if(LLVM_ENABLE_TERMINFO STREQUAL FORCE_ON)
-  set(MAYBE_REQUIRED REQUIRED)
-else()
-  set(MAYBE_REQUIRED)
-endif()
-if(LLVM_ENABLE_TERMINFO)
-  find_library(COMPILER_RT_TERMINFO_LIB NAMES terminfo tinfo curses ncurses ncursesw ${MAYBE_REQUIRED})
-endif()
-if(COMPILER_RT_TERMINFO_LIB)
-  set(LLVM_ENABLE_TERMINFO 1)
-else()
-  set(LLVM_ENABLE_TERMINFO 0)
-endif()
-
 if (ANDROID AND COMPILER_RT_HAS_LIBDL)
   # Android's libstdc++ has a dependency on libdl.
   list(APPEND CMAKE_REQUIRED_LIBRARIES dl)
@@ -612,6 +597,9 @@ if(APPLE)
   list_intersect(ASAN_SUPPORTED_ARCH
     ALL_ASAN_SUPPORTED_ARCH
     SANITIZER_COMMON_SUPPORTED_ARCH)
+  list_intersect(RTSAN_SUPPORTED_ARCH
+    ALL_RTSAN_SUPPORTED_ARCH
+    SANITIZER_COMMON_SUPPORTED_ARCH)
   list_intersect(DFSAN_SUPPORTED_ARCH
     ALL_DFSAN_SUPPORTED_ARCH
     SANITIZER_COMMON_SUPPORTED_ARCH)
@@ -623,6 +611,9 @@ if(APPLE)
     SANITIZER_COMMON_SUPPORTED_ARCH)
   list_intersect(MSAN_SUPPORTED_ARCH
     ALL_MSAN_SUPPORTED_ARCH
+    SANITIZER_COMMON_SUPPORTED_ARCH)
+  list_intersect(NSAN_SUPPORTED_ARCH
+    ALL_NSAN_SUPPORTED_ARCH
     SANITIZER_COMMON_SUPPORTED_ARCH)
   list_intersect(HWASAN_SUPPORTED_ARCH
     ALL_HWASAN_SUPPORTED_ARCH
@@ -675,6 +666,7 @@ else()
   filter_available_targets(UBSAN_COMMON_SUPPORTED_ARCH
     ${SANITIZER_COMMON_SUPPORTED_ARCH})
   filter_available_targets(ASAN_SUPPORTED_ARCH ${ALL_ASAN_SUPPORTED_ARCH})
+  filter_available_targets(RTSAN_SUPPORTED_ARCH ${ALL_RTSAN_SUPPORTED_ARCH})
   filter_available_targets(FUZZER_SUPPORTED_ARCH ${ALL_FUZZER_SUPPORTED_ARCH})
   filter_available_targets(DFSAN_SUPPORTED_ARCH ${ALL_DFSAN_SUPPORTED_ARCH})
   filter_available_targets(LSAN_SUPPORTED_ARCH ${ALL_LSAN_SUPPORTED_ARCH})
@@ -693,6 +685,7 @@ else()
   filter_available_targets(SHADOWCALLSTACK_SUPPORTED_ARCH
     ${ALL_SHADOWCALLSTACK_SUPPORTED_ARCH})
   filter_available_targets(GWP_ASAN_SUPPORTED_ARCH ${ALL_GWP_ASAN_SUPPORTED_ARCH})
+  filter_available_targets(NSAN_SUPPORTED_ARCH ${ALL_NSAN_SUPPORTED_ARCH})
   filter_available_targets(ORC_SUPPORTED_ARCH ${ALL_ORC_SUPPORTED_ARCH})
 endif()
 
@@ -727,7 +720,7 @@ if(COMPILER_RT_SUPPORTED_ARCH)
 endif()
 message(STATUS "Compiler-RT supported architectures: ${COMPILER_RT_SUPPORTED_ARCH}")
 
-set(ALL_SANITIZERS asan;dfsan;msan;hwasan;tsan;safestack;cfi;scudo_standalone;ubsan_minimal;gwp_asan;asan_abi)
+set(ALL_SANITIZERS asan;rtsan;dfsan;msan;hwasan;tsan;safestack;cfi;scudo_standalone;ubsan_minimal;gwp_asan;nsan;asan_abi)
 set(COMPILER_RT_SANITIZERS_TO_BUILD all CACHE STRING
     "sanitizers to build if supported on the target (all;${ALL_SANITIZERS})")
 list_replace(COMPILER_RT_SANITIZERS_TO_BUILD all "${ALL_SANITIZERS}")
@@ -758,6 +751,20 @@ else()
   set(COMPILER_RT_HAS_ASAN FALSE)
 endif()
 
+if (COMPILER_RT_HAS_SANITIZER_COMMON AND HWASAN_SUPPORTED_ARCH AND
+    OS_NAME MATCHES "Linux|Android|Fuchsia")
+  set(COMPILER_RT_HAS_HWASAN TRUE)
+else()
+  set(COMPILER_RT_HAS_HWASAN FALSE)
+endif()
+
+if (COMPILER_RT_HAS_SANITIZER_COMMON AND RTSAN_SUPPORTED_ARCH AND
+    OS_NAME MATCHES "Android|Darwin|Linux")
+  set(COMPILER_RT_HAS_RTSAN TRUE)
+else()
+  set(COMPILER_RT_HAS_RTSAN FALSE)
+endif()
+
 if (OS_NAME MATCHES "Linux|FreeBSD|Windows|NetBSD|SunOS")
   set(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME TRUE)
 else()
@@ -785,13 +792,6 @@ if (COMPILER_RT_HAS_SANITIZER_COMMON AND MSAN_SUPPORTED_ARCH AND
   set(COMPILER_RT_HAS_MSAN TRUE)
 else()
   set(COMPILER_RT_HAS_MSAN FALSE)
-endif()
-
-if (COMPILER_RT_HAS_SANITIZER_COMMON AND HWASAN_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Linux|Android|Fuchsia")
-  set(COMPILER_RT_HAS_HWASAN TRUE)
-else()
-  set(COMPILER_RT_HAS_HWASAN FALSE)
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND MEMPROF_SUPPORTED_ARCH AND
@@ -848,7 +848,7 @@ else()
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND SAFESTACK_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Linux|FreeBSD|NetBSD")
+    OS_NAME MATCHES "Linux|FreeBSD|NetBSD|SunOS")
   set(COMPILER_RT_HAS_SAFESTACK TRUE)
 else()
   set(COMPILER_RT_HAS_SAFESTACK FALSE)
@@ -911,5 +911,12 @@ if (GWP_ASAN_SUPPORTED_ARCH AND
   set(COMPILER_RT_HAS_GWP_ASAN TRUE)
 else()
   set(COMPILER_RT_HAS_GWP_ASAN FALSE)
+endif()
+
+if (COMPILER_RT_HAS_SANITIZER_COMMON AND NSAN_SUPPORTED_ARCH AND
+    OS_NAME MATCHES "Linux")
+  set(COMPILER_RT_HAS_NSAN TRUE)
+else()
+  set(COMPILER_RT_HAS_NSAN FALSE)
 endif()
 pythonize_bool(COMPILER_RT_HAS_GWP_ASAN)

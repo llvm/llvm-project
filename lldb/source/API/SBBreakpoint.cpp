@@ -714,7 +714,7 @@ void SBBreakpoint::GetNames(SBStringList &names) {
         bkpt_sp->GetTarget().GetAPIMutex());
     std::vector<std::string> names_vec;
     bkpt_sp->GetNames(names_vec);
-    for (std::string name : names_vec) {
+    for (const std::string &name : names_vec) {
       names.AppendString(name.c_str());
     }
   }

@@ -44,9 +44,9 @@ bool MipsSEDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   return MipsDAGToDAGISel::runOnMachineFunction(MF);
 }
 
-void MipsSEDAGToDAGISel::getAnalysisUsage(AnalysisUsage &AU) const {
+void MipsSEDAGToDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<DominatorTreeWrapperPass>();
-  SelectionDAGISel::getAnalysisUsage(AU);
+  SelectionDAGISelLegacy::getAnalysisUsage(AU);
 }
 
 void MipsSEDAGToDAGISel::addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
@@ -1439,7 +1439,11 @@ bool MipsSEDAGToDAGISel::SelectInlineAsmMemoryOperand(
   return true;
 }
 
+MipsSEDAGToDAGISelLegacy::MipsSEDAGToDAGISelLegacy(MipsTargetMachine &TM,
+                                                   CodeGenOptLevel OL)
+    : MipsDAGToDAGISelLegacy(std::make_unique<MipsSEDAGToDAGISel>(TM, OL)) {}
+
 FunctionPass *llvm::createMipsSEISelDag(MipsTargetMachine &TM,
                                         CodeGenOptLevel OptLevel) {
-  return new MipsSEDAGToDAGISel(TM, OptLevel);
+  return new MipsSEDAGToDAGISelLegacy(TM, OptLevel);
 }

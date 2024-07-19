@@ -12,7 +12,7 @@ module test
 
   !$omp threadprivate(/blk/)
 
-!CHECK: fir.global common @blk_(dense<0> : vector<103xi8>) : !fir.array<103xi8>
+!CHECK: fir.global common @blk_(dense<0> : vector<103xi8>) {alignment = 8 : i64} : !fir.array<103xi8>
 
 contains
   subroutine sub()

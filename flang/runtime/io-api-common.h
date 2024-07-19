@@ -33,13 +33,17 @@ static inline RT_API_ATTRS Cookie NoopUnit(const Terminator &terminator,
 static inline RT_API_ATTRS ExternalFileUnit *GetOrCreateUnit(int unitNumber,
     Direction direction, Fortran::common::optional<bool> isUnformatted,
     const Terminator &terminator, Cookie &errorCookie) {
+  IoErrorHandler handler{terminator};
+  handler.HasIoStat();
   if (ExternalFileUnit *
       unit{ExternalFileUnit::LookUpOrCreateAnonymous(
-          unitNumber, direction, isUnformatted, terminator)}) {
+          unitNumber, direction, isUnformatted, handler)}) {
     errorCookie = nullptr;
     return unit;
   } else {
-    errorCookie = NoopUnit(terminator, unitNumber, IostatBadUnitNumber);
+    auto iostat{static_cast<enum Iostat>(handler.GetIoStat())};
+    errorCookie = NoopUnit(terminator, unitNumber,
+        iostat != IostatOk ? iostat : IostatBadUnitNumber);
     return nullptr;
   }
 }

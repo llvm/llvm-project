@@ -57,7 +57,6 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfWindows
-    @skipIfRemote
     def test_stackTrace(self):
         """
         Tests the 'stackTrace' packet and all its variants.
@@ -190,7 +189,6 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfWindows
-    @skipIfRemote
     def test_functionNameWithArgs(self):
         """
         Test that the stack frame without a function name is given its pc in the response.

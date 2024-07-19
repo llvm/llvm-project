@@ -35,7 +35,8 @@ lbl_133.us:                                       ; preds = %lbl_134.us, %for.co
   br i1 undef, label %if.else14.us-lcssa.us, label %if.then.us
 
 lbl_134.us:                                       ; preds = %if.then.us
-  br i1 icmp eq (i16 ptrtoint (ptr @g_128 to i16), i16 0), label %for.cond9.preheader.us-lcssa.us, label %lbl_133.us
+  %cmp = icmp eq i16 ptrtoint (ptr @g_128 to i16), 0
+  br i1 %cmp, label %for.cond9.preheader.us-lcssa.us, label %lbl_133.us
 
 if.then.us:                                       ; preds = %lbl_133.us
   br i1 true, label %for.cond.loopexit4.us-lcssa.us, label %lbl_134.us
@@ -58,7 +59,8 @@ if.then:                                          ; preds = %lbl_133
   br i1 false, label %for.cond.loopexit4.us-lcssa, label %lbl_134
 
 lbl_134:                                          ; preds = %if.then
-  br i1 icmp eq (i16 ptrtoint (ptr @g_128 to i16), i16 0), label %for.cond9.preheader.us-lcssa, label %lbl_133
+  %cmp2 = icmp eq i16 ptrtoint (ptr @g_128 to i16), 0
+  br i1 %cmp2, label %for.cond9.preheader.us-lcssa, label %lbl_133
 
 for.cond9.preheader.us-lcssa:                     ; preds = %lbl_134
   br label %for.cond9.preheader

@@ -61,3 +61,33 @@ namespace {
   typedef float __attribute__((vector_size(16))) VI42;
   constexpr VI42 A2 = A; // expected-error {{must be initialized by a constant expression}}
 }
+
+namespace BoolToSignedIntegralCast{
+  typedef __attribute__((__ext_vector_type__(4))) unsigned int int4;
+  constexpr int4 intsT = (int4)true;
+  static_assert(intsT[0] == -1, "");// ref-error {{not an integral constant expression}}
+  static_assert(intsT[1] == -1, "");// ref-error {{not an integral constant expression}}
+  static_assert(intsT[2] == -1, "");// ref-error {{not an integral constant expression}}
+  static_assert(intsT[3] == -1, "");// ref-error {{not an integral constant expression}}
+}
+
+namespace VectorElementExpr {
+  typedef int int2 __attribute__((ext_vector_type(2)));
+  typedef int int4 __attribute__((ext_vector_type(4)));
+  constexpr int oneElt = int4(3).x;
+  static_assert(oneElt == 3);
+
+  constexpr int2 twoElts = ((int4){11, 22, 33, 44}).yz;
+  static_assert(twoElts.x == 22, ""); // ref-error {{not an integral constant expression}}
+  static_assert(twoElts.y == 33, ""); // ref-error {{not an integral constant expression}}
+}
+
+namespace Temporaries {
+  typedef __attribute__((vector_size(16))) int vi4a;
+  typedef __attribute__((ext_vector_type(4))) int vi4b;
+  struct S {
+    vi4a v;
+    vi4b w;
+  };
+  int &&s = S().w[1];
+}

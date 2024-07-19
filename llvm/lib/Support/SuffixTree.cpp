@@ -26,7 +26,9 @@ static size_t numElementsInSubstring(const SuffixTreeNode *N) {
   return N->getEndIdx() - N->getStartIdx() + 1;
 }
 
-SuffixTree::SuffixTree(const ArrayRef<unsigned> &Str) : Str(Str) {
+SuffixTree::SuffixTree(const ArrayRef<unsigned> &Str,
+                       bool OutlinerLeafDescendants)
+    : Str(Str), OutlinerLeafDescendants(OutlinerLeafDescendants) {
   Root = insertRoot();
   Active.Node = Root;
 
@@ -46,6 +48,11 @@ SuffixTree::SuffixTree(const ArrayRef<unsigned> &Str) : Str(Str) {
   // Set the suffix indices of each leaf.
   assert(Root && "Root node can't be nullptr!");
   setSuffixIndices();
+
+  // Collect all leaf nodes of the suffix tree. And for each internal node,
+  // record the range of leaf nodes that are descendants of it.
+  if (OutlinerLeafDescendants)
+    setLeafNodes();
 }
 
 SuffixTreeNode *SuffixTree::insertLeaf(SuffixTreeInternalNode &Parent,
@@ -102,6 +109,70 @@ void SuffixTree::setSuffixIndices() {
     // No children, so we are at the end of the string.
     if (auto *LeafNode = dyn_cast<SuffixTreeLeafNode>(CurrNode))
       LeafNode->setSuffixIdx(Str.size() - CurrNodeLen);
+  }
+}
+
+void SuffixTree::setLeafNodes() {
+  // A stack that keeps track of nodes to visit for post-order DFS traversal.
+  SmallVector<SuffixTreeNode *> ToVisit;
+  ToVisit.push_back(Root);
+
+  // This keeps track of the index of the next leaf node to be added to
+  // the LeafNodes vector of the suffix tree.
+  unsigned LeafCounter = 0;
+
+  // This keeps track of nodes whose children have been added to the stack.
+  // The value is a pair, representing a node's first and last children.
+  DenseMap<SuffixTreeInternalNode *,
+           std::pair<SuffixTreeNode *, SuffixTreeNode *>>
+      ChildrenMap;
+
+  // Traverse the tree in post-order.
+  while (!ToVisit.empty()) {
+    SuffixTreeNode *CurrNode = ToVisit.pop_back_val();
+    if (auto *CurrInternalNode = dyn_cast<SuffixTreeInternalNode>(CurrNode)) {
+      // The current node is an internal node.
+      auto I = ChildrenMap.find(CurrInternalNode);
+      if (I == ChildrenMap.end()) {
+        // This is the first time we visit this node.
+        // Its children have not been added to the stack yet.
+        // We add current node back, and add its children to the stack.
+        // We keep track of the first and last children of the current node.
+        auto J = CurrInternalNode->Children.begin();
+        if (J != CurrInternalNode->Children.end()) {
+          ToVisit.push_back(CurrNode);
+          SuffixTreeNode *FirstChild = J->second;
+          SuffixTreeNode *LastChild = nullptr;
+          for (; J != CurrInternalNode->Children.end(); ++J) {
+            LastChild = J->second;
+            ToVisit.push_back(LastChild);
+          }
+          ChildrenMap[CurrInternalNode] = {FirstChild, LastChild};
+        }
+      } else {
+        // This is the second time we visit this node.
+        // All of its children have already been processed.
+        // Now, we can set its LeftLeafIdx and RightLeafIdx;
+        auto [FirstChild, LastChild] = I->second;
+        // Get the first child to use its RightLeafIdx.
+        // The first child is the first one added to the stack, so it is
+        // the last one to be processed. Hence, the leaf descendants
+        // of the first child are assigned the largest index numbers.
+        CurrNode->setRightLeafIdx(FirstChild->getRightLeafIdx());
+        // Get the last child to use its LeftLeafIdx.
+        CurrNode->setLeftLeafIdx(LastChild->getLeftLeafIdx());
+        assert(CurrNode->getLeftLeafIdx() <= CurrNode->getRightLeafIdx() &&
+               "LeftLeafIdx should not be larger than RightLeafIdx");
+      }
+    } else {
+      // The current node is a leaf node.
+      // We can simply set its LeftLeafIdx and RightLeafIdx.
+      CurrNode->setLeftLeafIdx(LeafCounter);
+      CurrNode->setRightLeafIdx(LeafCounter);
+      ++LeafCounter;
+      auto *CurrLeafNode = cast<SuffixTreeLeafNode>(CurrNode);
+      LeafNodes.push_back(CurrLeafNode);
+    }
   }
 }
 
@@ -241,29 +312,33 @@ void SuffixTree::RepeatedSubstringIterator::advance() {
     // it's too short, we'll quit.
     unsigned Length = Curr->getConcatLen();
 
-    // Iterate over each child, saving internal nodes for visiting, and
-    // leaf nodes' SuffixIdx in RepeatedSubstringStarts. Internal nodes
-    // represent individual strings, which may repeat.
-    for (auto &ChildPair : Curr->Children) {
+    // Iterate over each child, saving internal nodes for visiting.
+    // Internal nodes represent individual strings, which may repeat.
+    for (auto &ChildPair : Curr->Children)
       // Save all of this node's children for processing.
       if (auto *InternalChild =
-              dyn_cast<SuffixTreeInternalNode>(ChildPair.second)) {
+              dyn_cast<SuffixTreeInternalNode>(ChildPair.second))
         InternalNodesToVisit.push_back(InternalChild);
-        continue;
-      }
 
-      if (Length < MinLength)
-        continue;
-
-      // Have an occurrence of a potentially repeated string. Save it.
-      auto *Leaf = cast<SuffixTreeLeafNode>(ChildPair.second);
-      RepeatedSubstringStarts.push_back(Leaf->getSuffixIdx());
-    }
+    // If length of repeated substring is below threshold, then skip it.
+    if (Length < MinLength)
+      continue;
 
     // The root never represents a repeated substring. If we're looking at
     // that, then skip it.
     if (Curr->isRoot())
       continue;
+
+    // Collect leaf children or leaf descendants by OutlinerLeafDescendants.
+    if (OutlinerLeafDescendants) {
+      for (unsigned I = Curr->getLeftLeafIdx(); I <= Curr->getRightLeafIdx();
+           ++I)
+        RepeatedSubstringStarts.push_back(LeafNodes[I]->getSuffixIdx());
+    } else {
+      for (auto &ChildPair : Curr->Children)
+        if (auto *Leaf = dyn_cast<SuffixTreeLeafNode>(ChildPair.second))
+          RepeatedSubstringStarts.push_back(Leaf->getSuffixIdx());
+    }
 
     // Do we have any repeated substrings?
     if (RepeatedSubstringStarts.size() < 2)

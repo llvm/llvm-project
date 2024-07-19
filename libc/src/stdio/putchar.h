@@ -9,12 +9,12 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PUTCHAR_H
 #define LLVM_LIBC_SRC_STDIO_PUTCHAR_H
 
-#include <stdio.h>
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int putchar(int c);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_PUTCHAR_H

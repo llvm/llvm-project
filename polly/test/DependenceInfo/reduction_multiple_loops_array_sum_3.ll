@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-dependences -basic-aa -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-dependences>' -aa-pipeline=basic-aa -disable-output < %s | FileCheck %s
 ;
 ; CHECK:      Reduction dependences:
 ; CHECK-NEXT:     { Stmt_for_inc[i0, i1] -> Stmt_for_inc[i0, 1 + i1] : 0 <= i0 <= 99 and 0 <= i1 <= 98 }

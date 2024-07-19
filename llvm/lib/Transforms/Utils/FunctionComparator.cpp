@@ -428,15 +428,13 @@ int FunctionComparator::cmpConstants(const Constant *L,
                                  cast<Constant>(RE->getOperand(i))))
         return Res;
     }
-    if (LE->isCompare())
-      if (int Res = cmpNumbers(LE->getPredicate(), RE->getPredicate()))
-        return Res;
     if (auto *GEPL = dyn_cast<GEPOperator>(LE)) {
       auto *GEPR = cast<GEPOperator>(RE);
       if (int Res = cmpTypes(GEPL->getSourceElementType(),
                              GEPR->getSourceElementType()))
         return Res;
-      if (int Res = cmpNumbers(GEPL->isInBounds(), GEPR->isInBounds()))
+      if (int Res = cmpNumbers(GEPL->getNoWrapFlags().getRaw(),
+                               GEPR->getNoWrapFlags().getRaw()))
         return Res;
 
       std::optional<ConstantRange> InRangeL = GEPL->getInRange();
@@ -526,7 +524,7 @@ int FunctionComparator::cmpTypes(Type *TyL, Type *TyR) const {
   PointerType *PTyL = dyn_cast<PointerType>(TyL);
   PointerType *PTyR = dyn_cast<PointerType>(TyR);
 
-  const DataLayout &DL = FnL->getParent()->getDataLayout();
+  const DataLayout &DL = FnL->getDataLayout();
   if (PTyL && PTyL->getAddressSpace() == 0)
     TyL = DL.getIntPtrType(TyL);
   if (PTyR && PTyR->getAddressSpace() == 0)
@@ -807,7 +805,7 @@ int FunctionComparator::cmpGEPs(const GEPOperator *GEPL,
 
   // When we have target data, we can reduce the GEP down to the value in bytes
   // added to the address.
-  const DataLayout &DL = FnL->getParent()->getDataLayout();
+  const DataLayout &DL = FnL->getDataLayout();
   unsigned OffsetBitWidth = DL.getIndexSizeInBits(ASL);
   APInt OffsetL(OffsetBitWidth, 0), OffsetR(OffsetBitWidth, 0);
   if (GEPL->accumulateConstantOffset(DL, OffsetL) &&

@@ -11,12 +11,13 @@
 # GNU-NEXT:     <corrupt GNU_ABI_TAG>
 # GNU-EMPTY:
 
-# LLVM:      Notes [
+# LLVM:      NoteSections [
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: .note.ABI-tag
 # LLVM-NEXT:     Offset:
 # LLVM-NEXT:     Size: 0x14
-# LLVM-NEXT:     Note {
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:     {
 # LLVM-NEXT:       Owner: GNU
 # LLVM-NEXT:       Data size: 0x4
 # LLVM-NEXT:       Type: NT_GNU_ABI_TAG (ABI version tag)
@@ -25,6 +26,7 @@
 # LLVM-NEXT:         0000: 00000000 |....|
 # LLVM-NEXT:       )
 # LLVM-NEXT:     }
+# LLVM-NEXT:    ]
 # LLVM-NEXT:   }
 # LLVM-NEXT: ]
 

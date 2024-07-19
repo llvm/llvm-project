@@ -762,7 +762,6 @@ define signext i32 @test14(i32 signext %0, i32 signext %1) {
 ; CHECK-NEXT:  # %bb.1: # %.preheader
 ; CHECK-NEXT:    ori $a3, $zero, 1
 ; CHECK-NEXT:    addi.w $a2, $zero, -1
-; CHECK-NEXT:    lu32i.d $a2, 0
 ; CHECK-NEXT:    ori $a4, $zero, 1000
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB13_2: # =>This Inner Loop Header: Depth=1
@@ -772,10 +771,9 @@ define signext i32 @test14(i32 signext %0, i32 signext %1) {
 ; CHECK-NEXT:    addi.w $a3, $a3, 1
 ; CHECK-NEXT:    blt $a3, $a1, .LBB13_2
 ; CHECK-NEXT:  .LBB13_4:
-; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB13_5:
-; CHECK-NEXT:    addi.w $a0, $a2, 0
+; CHECK-NEXT:    move $a0, $a2
 ; CHECK-NEXT:    ret
 ;
 ; NORMV-LABEL: test14:
@@ -785,7 +783,6 @@ define signext i32 @test14(i32 signext %0, i32 signext %1) {
 ; NORMV-NEXT:  # %bb.1: # %.preheader
 ; NORMV-NEXT:    ori $a3, $zero, 1
 ; NORMV-NEXT:    addi.w $a2, $zero, -1
-; NORMV-NEXT:    lu32i.d $a2, 0
 ; NORMV-NEXT:    ori $a4, $zero, 1000
 ; NORMV-NEXT:    .p2align 4, , 16
 ; NORMV-NEXT:  .LBB13_2: # =>This Inner Loop Header: Depth=1
@@ -793,13 +790,14 @@ define signext i32 @test14(i32 signext %0, i32 signext %1) {
 ; NORMV-NEXT:    blt $a4, $a5, .LBB13_5
 ; NORMV-NEXT:  # %bb.3: # in Loop: Header=BB13_2 Depth=1
 ; NORMV-NEXT:    add.d $a0, $a3, $a0
-; NORMV-NEXT:    addi.w $a3, $a3, 1
+; NORMV-NEXT:    addi.d $a3, $a3, 1
+; NORMV-NEXT:    addi.w $a3, $a3, 0
+; NORMV-NEXT:    addi.w $a0, $a0, 0
 ; NORMV-NEXT:    blt $a3, $a1, .LBB13_2
 ; NORMV-NEXT:  .LBB13_4:
-; NORMV-NEXT:    addi.w $a0, $a0, 0
 ; NORMV-NEXT:    ret
 ; NORMV-NEXT:  .LBB13_5:
-; NORMV-NEXT:    addi.w $a0, $a2, 0
+; NORMV-NEXT:    move $a0, $a2
 ; NORMV-NEXT:    ret
   %3 = icmp sgt i32 %1, 1
   br i1 %3, label %4, label %12
@@ -827,23 +825,22 @@ define signext i32 @test14b(i32 %0, i32 signext %1) {
 ; CHECK-NEXT:    ori $a2, $zero, 2
 ; CHECK-NEXT:    blt $a1, $a2, .LBB14_4
 ; CHECK-NEXT:  # %bb.1: # %.preheader
-; CHECK-NEXT:    ori $a3, $zero, 1
-; CHECK-NEXT:    addi.w $a2, $zero, -1
-; CHECK-NEXT:    lu32i.d $a2, 0
-; CHECK-NEXT:    ori $a4, $zero, 1000
+; CHECK-NEXT:    ori $a2, $zero, 1
+; CHECK-NEXT:    ori $a3, $zero, 1000
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB14_2: # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    addi.w $a5, $a0, 0
-; CHECK-NEXT:    blt $a4, $a5, .LBB14_5
+; CHECK-NEXT:    addi.w $a4, $a0, 0
+; CHECK-NEXT:    blt $a3, $a4, .LBB14_5
 ; CHECK-NEXT:  # %bb.3: # in Loop: Header=BB14_2 Depth=1
-; CHECK-NEXT:    add.d $a0, $a3, $a0
-; CHECK-NEXT:    addi.w $a3, $a3, 1
-; CHECK-NEXT:    blt $a3, $a1, .LBB14_2
+; CHECK-NEXT:    add.d $a0, $a2, $a0
+; CHECK-NEXT:    addi.w $a2, $a2, 1
+; CHECK-NEXT:    blt $a2, $a1, .LBB14_2
 ; CHECK-NEXT:  .LBB14_4:
 ; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB14_5:
-; CHECK-NEXT:    addi.w $a0, $a2, 0
+; CHECK-NEXT:    addi.d $a0, $zero, -1
+; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    ret
 ;
 ; NORMV-LABEL: test14b:
@@ -851,23 +848,24 @@ define signext i32 @test14b(i32 %0, i32 signext %1) {
 ; NORMV-NEXT:    ori $a2, $zero, 2
 ; NORMV-NEXT:    blt $a1, $a2, .LBB14_4
 ; NORMV-NEXT:  # %bb.1: # %.preheader
-; NORMV-NEXT:    ori $a3, $zero, 1
-; NORMV-NEXT:    addi.w $a2, $zero, -1
-; NORMV-NEXT:    lu32i.d $a2, 0
-; NORMV-NEXT:    ori $a4, $zero, 1000
+; NORMV-NEXT:    ori $a2, $zero, 1
+; NORMV-NEXT:    ori $a3, $zero, 1000
 ; NORMV-NEXT:    .p2align 4, , 16
 ; NORMV-NEXT:  .LBB14_2: # =>This Inner Loop Header: Depth=1
-; NORMV-NEXT:    addi.w $a5, $a0, 0
-; NORMV-NEXT:    blt $a4, $a5, .LBB14_5
+; NORMV-NEXT:    addi.w $a4, $a0, 0
+; NORMV-NEXT:    blt $a3, $a4, .LBB14_5
 ; NORMV-NEXT:  # %bb.3: # in Loop: Header=BB14_2 Depth=1
-; NORMV-NEXT:    add.d $a0, $a3, $a0
-; NORMV-NEXT:    addi.w $a3, $a3, 1
-; NORMV-NEXT:    blt $a3, $a1, .LBB14_2
+; NORMV-NEXT:    add.d $a0, $a2, $a0
+; NORMV-NEXT:    addi.d $a2, $a2, 1
+; NORMV-NEXT:    addi.w $a2, $a2, 0
+; NORMV-NEXT:    addi.d $a0, $a0, 0
+; NORMV-NEXT:    blt $a2, $a1, .LBB14_2
 ; NORMV-NEXT:  .LBB14_4:
 ; NORMV-NEXT:    addi.w $a0, $a0, 0
 ; NORMV-NEXT:    ret
 ; NORMV-NEXT:  .LBB14_5:
-; NORMV-NEXT:    addi.w $a0, $a2, 0
+; NORMV-NEXT:    addi.d $a0, $zero, -1
+; NORMV-NEXT:    addi.w $a0, $a0, 0
 ; NORMV-NEXT:    ret
   %3 = icmp sgt i32 %1, 1
   br i1 %3, label %4, label %12
@@ -895,23 +893,22 @@ define signext i32 @test14c(i32 zeroext %0, i32 signext %1) {
 ; CHECK-NEXT:    ori $a2, $zero, 2
 ; CHECK-NEXT:    blt $a1, $a2, .LBB15_4
 ; CHECK-NEXT:  # %bb.1: # %.preheader
-; CHECK-NEXT:    ori $a3, $zero, 1
-; CHECK-NEXT:    addi.w $a2, $zero, -1
-; CHECK-NEXT:    lu32i.d $a2, 0
-; CHECK-NEXT:    ori $a4, $zero, 1000
+; CHECK-NEXT:    ori $a2, $zero, 1
+; CHECK-NEXT:    ori $a3, $zero, 1000
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB15_2: # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    addi.w $a5, $a0, 0
-; CHECK-NEXT:    blt $a4, $a5, .LBB15_5
+; CHECK-NEXT:    addi.w $a4, $a0, 0
+; CHECK-NEXT:    blt $a3, $a4, .LBB15_5
 ; CHECK-NEXT:  # %bb.3: # in Loop: Header=BB15_2 Depth=1
-; CHECK-NEXT:    add.d $a0, $a3, $a0
-; CHECK-NEXT:    addi.w $a3, $a3, 1
-; CHECK-NEXT:    blt $a3, $a1, .LBB15_2
+; CHECK-NEXT:    add.d $a0, $a2, $a0
+; CHECK-NEXT:    addi.w $a2, $a2, 1
+; CHECK-NEXT:    blt $a2, $a1, .LBB15_2
 ; CHECK-NEXT:  .LBB15_4:
 ; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB15_5:
-; CHECK-NEXT:    addi.w $a0, $a2, 0
+; CHECK-NEXT:    addi.d $a0, $zero, -1
+; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    ret
 ;
 ; NORMV-LABEL: test14c:
@@ -919,23 +916,24 @@ define signext i32 @test14c(i32 zeroext %0, i32 signext %1) {
 ; NORMV-NEXT:    ori $a2, $zero, 2
 ; NORMV-NEXT:    blt $a1, $a2, .LBB15_4
 ; NORMV-NEXT:  # %bb.1: # %.preheader
-; NORMV-NEXT:    ori $a3, $zero, 1
-; NORMV-NEXT:    addi.w $a2, $zero, -1
-; NORMV-NEXT:    lu32i.d $a2, 0
-; NORMV-NEXT:    ori $a4, $zero, 1000
+; NORMV-NEXT:    ori $a2, $zero, 1
+; NORMV-NEXT:    ori $a3, $zero, 1000
 ; NORMV-NEXT:    .p2align 4, , 16
 ; NORMV-NEXT:  .LBB15_2: # =>This Inner Loop Header: Depth=1
-; NORMV-NEXT:    addi.w $a5, $a0, 0
-; NORMV-NEXT:    blt $a4, $a5, .LBB15_5
+; NORMV-NEXT:    addi.w $a4, $a0, 0
+; NORMV-NEXT:    blt $a3, $a4, .LBB15_5
 ; NORMV-NEXT:  # %bb.3: # in Loop: Header=BB15_2 Depth=1
-; NORMV-NEXT:    add.d $a0, $a3, $a0
-; NORMV-NEXT:    addi.w $a3, $a3, 1
-; NORMV-NEXT:    blt $a3, $a1, .LBB15_2
+; NORMV-NEXT:    add.d $a0, $a2, $a0
+; NORMV-NEXT:    addi.d $a2, $a2, 1
+; NORMV-NEXT:    addi.w $a2, $a2, 0
+; NORMV-NEXT:    addi.d $a0, $a0, 0
+; NORMV-NEXT:    blt $a2, $a1, .LBB15_2
 ; NORMV-NEXT:  .LBB15_4:
 ; NORMV-NEXT:    addi.w $a0, $a0, 0
 ; NORMV-NEXT:    ret
 ; NORMV-NEXT:  .LBB15_5:
-; NORMV-NEXT:    addi.w $a0, $a2, 0
+; NORMV-NEXT:    addi.d $a0, $zero, -1
+; NORMV-NEXT:    addi.w $a0, $a0, 0
 ; NORMV-NEXT:    ret
   %3 = icmp sgt i32 %1, 1
   br i1 %3, label %4, label %12
@@ -965,7 +963,6 @@ define signext i32 @test14d(i31 zeroext %0, i32 signext %1) {
 ; CHECK-NEXT:  # %bb.1: # %.preheader
 ; CHECK-NEXT:    ori $a3, $zero, 1
 ; CHECK-NEXT:    addi.w $a2, $zero, -1
-; CHECK-NEXT:    lu32i.d $a2, 0
 ; CHECK-NEXT:    ori $a4, $zero, 1000
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB16_2: # =>This Inner Loop Header: Depth=1
@@ -975,10 +972,9 @@ define signext i32 @test14d(i31 zeroext %0, i32 signext %1) {
 ; CHECK-NEXT:    addi.w $a3, $a3, 1
 ; CHECK-NEXT:    blt $a3, $a1, .LBB16_2
 ; CHECK-NEXT:  .LBB16_4:
-; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB16_5:
-; CHECK-NEXT:    addi.w $a0, $a2, 0
+; CHECK-NEXT:    move $a0, $a2
 ; CHECK-NEXT:    ret
 ;
 ; NORMV-LABEL: test14d:
@@ -988,7 +984,6 @@ define signext i32 @test14d(i31 zeroext %0, i32 signext %1) {
 ; NORMV-NEXT:  # %bb.1: # %.preheader
 ; NORMV-NEXT:    ori $a3, $zero, 1
 ; NORMV-NEXT:    addi.w $a2, $zero, -1
-; NORMV-NEXT:    lu32i.d $a2, 0
 ; NORMV-NEXT:    ori $a4, $zero, 1000
 ; NORMV-NEXT:    .p2align 4, , 16
 ; NORMV-NEXT:  .LBB16_2: # =>This Inner Loop Header: Depth=1
@@ -996,13 +991,14 @@ define signext i32 @test14d(i31 zeroext %0, i32 signext %1) {
 ; NORMV-NEXT:    blt $a4, $a5, .LBB16_5
 ; NORMV-NEXT:  # %bb.3: # in Loop: Header=BB16_2 Depth=1
 ; NORMV-NEXT:    add.d $a0, $a3, $a0
-; NORMV-NEXT:    addi.w $a3, $a3, 1
+; NORMV-NEXT:    addi.d $a3, $a3, 1
+; NORMV-NEXT:    addi.w $a3, $a3, 0
+; NORMV-NEXT:    addi.w $a0, $a0, 0
 ; NORMV-NEXT:    blt $a3, $a1, .LBB16_2
 ; NORMV-NEXT:  .LBB16_4:
-; NORMV-NEXT:    addi.w $a0, $a0, 0
 ; NORMV-NEXT:    ret
 ; NORMV-NEXT:  .LBB16_5:
-; NORMV-NEXT:    addi.w $a0, $a2, 0
+; NORMV-NEXT:    move $a0, $a2
 ; NORMV-NEXT:    ret
   %zext = zext i31 %0 to i32
   %3 = icmp sgt i32 %1, 1
@@ -1122,8 +1118,8 @@ define signext i32 @bug(i32 signext %x) {
 ; CHECK-NEXT:    masknez $a1, $a1, $a2
 ; CHECK-NEXT:    maskeqz $a2, $a4, $a2
 ; CHECK-NEXT:    or $a1, $a2, $a1
-; CHECK-NEXT:    srai.d $a0, $a0, 31
 ; CHECK-NEXT:    nor $a0, $a0, $zero
+; CHECK-NEXT:    srli.d $a0, $a0, 31
 ; CHECK-NEXT:    add.w $a0, $a1, $a0
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB18_2:
@@ -1176,13 +1172,13 @@ define signext i32 @bug(i32 signext %x) {
 ; NORMV-NEXT:    masknez $a1, $a1, $a2
 ; NORMV-NEXT:    maskeqz $a2, $a4, $a2
 ; NORMV-NEXT:    or $a1, $a2, $a1
-; NORMV-NEXT:    srai.d $a0, $a0, 31
 ; NORMV-NEXT:    nor $a0, $a0, $zero
+; NORMV-NEXT:    srli.d $a0, $a0, 31
 ; NORMV-NEXT:    add.d $a0, $a1, $a0
 ; NORMV-NEXT:    addi.w $a0, $a0, 0
 ; NORMV-NEXT:    ret
 ; NORMV-NEXT:  .LBB18_2:
-; NORMV-NEXT:    addi.w $a0, $zero, 0
+; NORMV-NEXT:    move $a0, $zero
 ; NORMV-NEXT:    ret
 entry:
   %tobool.not = icmp eq i32 %x, 0
@@ -1345,7 +1341,7 @@ declare zeroext i16 @bat(i32 signext)
 define signext i32 @sextw_sh2add(i1 zeroext %0, ptr %1, i32 signext %2, i32 signext %3, i32 signext %4) {
 ; CHECK-LABEL: sextw_sh2add:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    alsl.d $a2, $a2, $a3, 2
+; CHECK-NEXT:    alsl.w $a2, $a2, $a3, 2
 ; CHECK-NEXT:    beqz $a0, .LBB21_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    st.w $a2, $a1, 0
@@ -1355,12 +1351,13 @@ define signext i32 @sextw_sh2add(i1 zeroext %0, ptr %1, i32 signext %2, i32 sign
 ;
 ; NORMV-LABEL: sextw_sh2add:
 ; NORMV:       # %bb.0:
-; NORMV-NEXT:    alsl.d $a2, $a2, $a3, 2
+; NORMV-NEXT:    alsl.w $a2, $a2, $a3, 2
 ; NORMV-NEXT:    beqz $a0, .LBB21_2
 ; NORMV-NEXT:  # %bb.1:
 ; NORMV-NEXT:    st.w $a2, $a1, 0
 ; NORMV-NEXT:  .LBB21_2:
-; NORMV-NEXT:    add.w $a0, $a2, $a4
+; NORMV-NEXT:    add.d $a0, $a2, $a4
+; NORMV-NEXT:    addi.w $a0, $a0, 0
 ; NORMV-NEXT:    ret
   %6 = shl i32 %2, 2
   %7 = add i32 %6, %3

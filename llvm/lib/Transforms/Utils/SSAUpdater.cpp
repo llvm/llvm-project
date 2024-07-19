@@ -136,9 +136,9 @@ Value *SSAUpdater::GetValueInMiddleOfBlock(BasicBlock *BB) {
     }
   }
 
-  // If there are no predecessors, just return undef.
+  // If there are no predecessors, just return poison.
   if (PredValues.empty())
-    return UndefValue::get(ProtoType);
+    return PoisonValue::get(ProtoType);
 
   // Otherwise, if all the merged values are the same, just use it.
   if (SingularValue)
@@ -167,7 +167,7 @@ Value *SSAUpdater::GetValueInMiddleOfBlock(BasicBlock *BB) {
   // See if the PHI node can be merged to a single value.  This can happen in
   // loop cases when we get a PHI of itself and one other value.
   if (Value *V =
-          simplifyInstruction(InsertedPHI, BB->getModule()->getDataLayout())) {
+          simplifyInstruction(InsertedPHI, BB->getDataLayout())) {
     InsertedPHI->eraseFromParent();
     return V;
   }
@@ -307,10 +307,10 @@ public:
       append_range(*Preds, predecessors(BB));
   }
 
-  /// GetUndefVal - Get an undefined value of the same type as the value
+  /// GetPoisonVal - Get a poison value of the same type as the value
   /// being handled.
-  static Value *GetUndefVal(BasicBlock *BB, SSAUpdater *Updater) {
-    return UndefValue::get(Updater->ProtoType);
+  static Value *GetPoisonVal(BasicBlock *BB, SSAUpdater *Updater) {
+    return PoisonValue::get(Updater->ProtoType);
   }
 
   /// CreateEmptyPHI - Create a new PHI instruction in the specified block.

@@ -173,7 +173,7 @@ private:
     return Next;
   }
 
-  void dbgToken(int Position, llvm::StringRef Indent = "") {
+  void dbgToken(int Position, StringRef Indent = "") {
     FormatToken *Tok = Tokens[Position];
     llvm::dbgs() << Indent << "[" << Position
                  << "] Token: " << Tok->Tok.getName() << " / " << Tok->TokenText

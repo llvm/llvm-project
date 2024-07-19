@@ -4,6 +4,7 @@
 ; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a53 %s -o - | FileCheck %s -check-prefix CHECK-NONEGOFF
 ; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a57 %s -o - | FileCheck %s -check-prefix CHECK-NONEGOFF
 ; RUN: llc -mtriple=arm-eabi -mcpu=cortex-r52 %s -o - | FileCheck %s -check-prefix CHECK-NONEGOFF
+; RUN: llc -mtriple=arm-eabi -mcpu=cortex-r52plus %s -o - | FileCheck %s -check-prefix CHECK-NONEGOFF
 ; Should not generate negated register offset
 
 define void @sintzero(ptr %a) nounwind {

@@ -92,7 +92,7 @@ void test6() {
 // CHECK:   [[C1:%[a-zA-Z0-9]+]] = call spir_func noundef i1 @_Z4condv() [[A3]] [ "convergencectrl"(token [[T1]]) ]
 // CHECK:   br i1 [[C1]], label %if.then, label %if.end
 // CHECK: if.then:
-// CHECK    call spir_func void @_Z3foov() [[A3:#[0-9]+]] [ "convergencectrl"(token [[T1]]) ]
+// CHECK:   call spir_func void @_Z3foov() [[A3:#[0-9]+]] [ "convergencectrl"(token [[T1]]) ]
 // CHECK:   br label %for.end
 // CHECK: if.end:
 // CHECK:   br label %for.inc

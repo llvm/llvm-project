@@ -29,10 +29,10 @@ define i1 @sgt_3_impliesT_sgt_2(i8 %x, i8 %y) {
 
 define i1 @sgt_x_impliesF_eq_smin_todo(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @sgt_x_impliesF_eq_smin_todo(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 -128, i8 [[Y:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[SEL]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[SEL:%.*]], [[X]]
+; CHECK-NEXT:    [[CMP3:%.*]] = select i1 [[CMP]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    ret i1 [[CMP3]]
 ;
   %cmp = icmp sgt i8 %x, %z
   %sel = select i1 %cmp, i8 -128, i8 %y
@@ -43,9 +43,9 @@ define i1 @sgt_x_impliesF_eq_smin_todo(i8 %x, i8 %y, i8 %z) {
 define i1 @slt_x_impliesT_ne_smin_todo(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @slt_x_impliesT_ne_smin_todo(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 127, i8 [[Y:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[SEL]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[SEL:%.*]], [[X]]
+; CHECK-NEXT:    [[CMP3:%.*]] = select i1 [[CMP]], i1 true, i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 [[CMP3]]
 ;
   %cmp = icmp slt i8 %x, %z
   %sel = select i1 %cmp, i8 127, i8 %y
@@ -56,9 +56,9 @@ define i1 @slt_x_impliesT_ne_smin_todo(i8 %x, i8 %y, i8 %z) {
 define i1 @ult_x_impliesT_eq_umax_todo(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @ult_x_impliesT_eq_umax_todo(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[Z:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 -1, i8 [[Y:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[SEL]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[SEL:%.*]], [[X]]
+; CHECK-NEXT:    [[CMP3:%.*]] = select i1 [[CMP]], i1 true, i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 [[CMP3]]
 ;
   %cmp = icmp ugt i8 %z, %x
   %sel = select i1 %cmp, i8 255, i8 %y

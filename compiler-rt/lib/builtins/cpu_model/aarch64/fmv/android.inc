@@ -1,6 +1,6 @@
 void __init_cpu_features_resolver(unsigned long hwcap,
                                   const __ifunc_arg_t *arg) {
-  if (__aarch64_cpu_features.features)
+  if (__atomic_load_n(&__aarch64_cpu_features.features, __ATOMIC_RELAXED))
     return;
 
   // ifunc resolvers don't have hwcaps in arguments on Android API lower
@@ -17,7 +17,7 @@ void __init_cpu_features_resolver(unsigned long hwcap,
 
 void CONSTRUCTOR_ATTRIBUTE __init_cpu_features(void) {
   // CPU features already initialized.
-  if (__aarch64_cpu_features.features)
+  if (__atomic_load_n(&__aarch64_cpu_features.features, __ATOMIC_RELAXED))
     return;
 
   // Don't set any CPU features,

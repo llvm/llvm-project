@@ -22,7 +22,7 @@ export namespace std {
 
   // [atomics.ref.generic], class template atomic_ref
   // [atomics.ref.pointer], partial specialization for pointers
-  // using std::atomic_ref _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_ref _LIBCPP_USING_IF_EXISTS;
 
   // [atomics.types.generic], class template atomic
   using std::atomic _LIBCPP_USING_IF_EXISTS;

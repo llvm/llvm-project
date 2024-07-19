@@ -52,11 +52,13 @@ void GuardedPoolAllocator::init(const options::Options &Opts) {
       Opts.MaxSimultaneousAllocations == 0)
     return;
 
-  Check(Opts.SampleRate >= 0, "GWP-ASan Error: SampleRate is < 0.");
-  Check(Opts.SampleRate < (1 << 30), "GWP-ASan Error: SampleRate is >= 2^30.");
-  Check(Opts.MaxSimultaneousAllocations >= 0,
+  check(Opts.SampleRate >= 0, "GWP-ASan Error: SampleRate is < 0.");
+  check(Opts.SampleRate < (1 << 30), "GWP-ASan Error: SampleRate is >= 2^30.");
+  check(Opts.MaxSimultaneousAllocations >= 0,
         "GWP-ASan Error: MaxSimultaneousAllocations is < 0.");
 
+  check(SingletonPtr == nullptr,
+        "There's already a live GuardedPoolAllocator!");
   SingletonPtr = this;
   Backtrace = Opts.Backtrace;
 
@@ -158,6 +160,7 @@ void GuardedPoolAllocator::uninitTestOnly() {
     FreeSlots = nullptr;
   }
   *getThreadLocals() = ThreadLocalPackedVariables();
+  SingletonPtr = nullptr;
 }
 
 // Note, minimum backing allocation size in GWP-ASan is always one page, and

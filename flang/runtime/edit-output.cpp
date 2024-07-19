@@ -263,7 +263,6 @@ template <int KIND>
 RT_API_ATTRS decimal::ConversionToDecimalResult
 RealOutputEditing<KIND>::ConvertToDecimal(
     int significantDigits, enum decimal::FortranRounding rounding, int flags) {
-#if !defined(RT_DEVICE_COMPILATION)
   auto converted{decimal::ConvertToDecimal<binaryPrecision>(buffer_,
       sizeof buffer_, static_cast<enum decimal::DecimalConversionFlags>(flags),
       significantDigits, rounding, x_)};
@@ -273,10 +272,6 @@ RealOutputEditing<KIND>::ConvertToDecimal(
         sizeof buffer_);
   }
   return converted;
-#else // defined(RT_DEVICE_COMPILATION)
-  // TODO: enable Decimal library build for the device.
-  io_.GetIoErrorHandler().Crash("not implemented yet: decimal conversion");
-#endif // defined(RT_DEVICE_COMPILATION)
 }
 
 static RT_API_ATTRS bool IsInfOrNaN(const char *p, int length) {
@@ -832,8 +827,11 @@ RT_API_ATTRS bool EditLogicalOutput(
         reinterpret_cast<const unsigned char *>(&truth), sizeof truth);
   case 'A': { // legacy extension
     int truthBits{truth};
-    return EditCharacterOutput(
-        io, edit, reinterpret_cast<char *>(&truthBits), sizeof truthBits);
+    int len{sizeof truthBits};
+    int width{edit.width.value_or(len)};
+    return EmitRepeated(io, ' ', std::max(0, width - len)) &&
+        EmitEncoded(
+            io, reinterpret_cast<char *>(&truthBits), std::min(width, len));
   }
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,

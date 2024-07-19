@@ -93,7 +93,8 @@ uptr FindDynamicShadowStart() {
 #  endif
 
   return MapDynamicShadow(shadow_size_bytes, ASAN_SHADOW_SCALE,
-                          /*min_shadow_base_alignment*/ 0, kHighMemEnd);
+                          /*min_shadow_base_alignment*/ 0, kHighMemEnd,
+                          GetMmapGranularity());
 }
 
 void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {

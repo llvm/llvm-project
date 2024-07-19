@@ -1,4 +1,4 @@
-// RUN: c-index-test -write-pch %t.ast -arch x86_64 -mmacosx-version-min=10.6 %s
+// RUN: c-index-test -write-pch %t.ast -arch x86_64 -mmacos-version-min=10.6 %s
 // RUN: c-index-test -test-file-scan %t.ast %s | FileCheck -check-prefix=CHECK-scan %s
 // RUN: c-index-test -test-load-tu %t.ast local | FileCheck -check-prefix=CHECK-load %s
 // REQUIRES: x86-registered-target

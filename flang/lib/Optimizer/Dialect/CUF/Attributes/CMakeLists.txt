@@ -5,6 +5,7 @@ add_flang_library(CUFAttrs
   DEPENDS
   MLIRIR
   CUFAttrsIncGen
+  CUFOpsIncGen
 
   LINK_LIBS
   MLIRTargetLLVMIRExport

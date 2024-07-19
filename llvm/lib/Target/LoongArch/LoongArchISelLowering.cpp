@@ -22,7 +22,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsLoongArch.h"
@@ -121,6 +121,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   // Set operations for LA64 only.
 
   if (Subtarget.is64Bit()) {
+    setOperationAction(ISD::ADD, MVT::i32, Custom);
+    setOperationAction(ISD::SUB, MVT::i32, Custom);
     setOperationAction(ISD::SHL, MVT::i32, Custom);
     setOperationAction(ISD::SRA, MVT::i32, Custom);
     setOperationAction(ISD::SRL, MVT::i32, Custom);
@@ -150,15 +152,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::INTRINSIC_VOID, MVT::i64, Custom);
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
     setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i64, Custom);
-
-    // Set libcalls.
-    setLibcallName(RTLIB::MUL_I128, nullptr);
-    // The MULO libcall is not part of libgcc, only compiler-rt.
-    setLibcallName(RTLIB::MULO_I64, nullptr);
   }
-
-  // The MULO libcall is not part of libgcc, only compiler-rt.
-  setLibcallName(RTLIB::MULO_I128, nullptr);
 
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
 
@@ -169,6 +163,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   // Set operations for 'F' feature.
 
   if (Subtarget.hasBasicF()) {
+    setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
+    setTruncStoreAction(MVT::f32, MVT::f16, Expand);
     setCondCodeAction(FPCCToExpand, MVT::f32, Expand);
 
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
@@ -184,6 +180,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
     setOperationAction(ISD::FPOW, MVT::f32, Expand);
     setOperationAction(ISD::FREM, MVT::f32, Expand);
+    setOperationAction(ISD::FP16_TO_FP, MVT::f32, Expand);
+    setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
 
     if (Subtarget.is64Bit())
       setOperationAction(ISD::FRINT, MVT::f32, Legal);
@@ -200,7 +198,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   // Set operations for 'D' feature.
 
   if (Subtarget.hasBasicD()) {
+    setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
+    setTruncStoreAction(MVT::f64, MVT::f16, Expand);
     setTruncStoreAction(MVT::f64, MVT::f32, Expand);
     setCondCodeAction(FPCCToExpand, MVT::f64, Expand);
 
@@ -217,6 +217,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
     setOperationAction(ISD::FPOW, MVT::f64, Expand);
     setOperationAction(ISD::FREM, MVT::f64, Expand);
+    setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
+    setOperationAction(ISD::FP_TO_FP16, MVT::f64, Expand);
 
     if (Subtarget.is64Bit())
       setOperationAction(ISD::FRINT, MVT::f64, Legal);
@@ -333,6 +335,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::AND);
   setTargetDAGCombine(ISD::OR);
   setTargetDAGCombine(ISD::SRL);
+  setTargetDAGCombine(ISD::SETCC);
 
   // Set DAG combine for 'LSX' feature.
 
@@ -775,6 +778,7 @@ SDValue LoongArchTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
   SDLoc DL(N);
   EVT Ty = getPointerTy(DAG.getDataLayout());
   SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
+  SDValue Load;
 
   switch (M) {
   default:
@@ -786,33 +790,49 @@ SDValue LoongArchTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
     // This is not actually used, but is necessary for successfully matching
     // the PseudoLA_*_LARGE nodes.
     SDValue Tmp = DAG.getConstant(0, DL, Ty);
-    if (IsLocal)
+    if (IsLocal) {
       // This generates the pattern (PseudoLA_PCREL_LARGE tmp sym), that
       // eventually becomes the desired 5-insn code sequence.
-      return SDValue(DAG.getMachineNode(LoongArch::PseudoLA_PCREL_LARGE, DL, Ty,
+      Load = SDValue(DAG.getMachineNode(LoongArch::PseudoLA_PCREL_LARGE, DL, Ty,
                                         Tmp, Addr),
                      0);
-
-    // This generates the pattern (PseudoLA_GOT_LARGE tmp sym), that eventually
-    // becomes the desired 5-insn code sequence.
-    return SDValue(
-        DAG.getMachineNode(LoongArch::PseudoLA_GOT_LARGE, DL, Ty, Tmp, Addr),
-        0);
+    } else {
+      // This generates the pattern (PseudoLA_GOT_LARGE tmp sym), that
+      // eventually becomes the desired 5-insn code sequence.
+      Load = SDValue(
+          DAG.getMachineNode(LoongArch::PseudoLA_GOT_LARGE, DL, Ty, Tmp, Addr),
+          0);
+    }
+    break;
   }
 
   case CodeModel::Small:
   case CodeModel::Medium:
-    if (IsLocal)
+    if (IsLocal) {
       // This generates the pattern (PseudoLA_PCREL sym), which expands to
       // (addi.w/d (pcalau12i %pc_hi20(sym)) %pc_lo12(sym)).
-      return SDValue(
+      Load = SDValue(
           DAG.getMachineNode(LoongArch::PseudoLA_PCREL, DL, Ty, Addr), 0);
-
-    // This generates the pattern (PseudoLA_GOT sym), which expands to (ld.w/d
-    // (pcalau12i %got_pc_hi20(sym)) %got_pc_lo12(sym)).
-    return SDValue(DAG.getMachineNode(LoongArch::PseudoLA_GOT, DL, Ty, Addr),
-                   0);
+    } else {
+      // This generates the pattern (PseudoLA_GOT sym), which expands to (ld.w/d
+      // (pcalau12i %got_pc_hi20(sym)) %got_pc_lo12(sym)).
+      Load =
+          SDValue(DAG.getMachineNode(LoongArch::PseudoLA_GOT, DL, Ty, Addr), 0);
+    }
   }
+
+  if (!IsLocal) {
+    // Mark the load instruction as invariant to enable hoisting in MachineLICM.
+    MachineFunction &MF = DAG.getMachineFunction();
+    MachineMemOperand *MemOp = MF.getMachineMemOperand(
+        MachinePointerInfo::getGOT(MF),
+        MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+            MachineMemOperand::MOInvariant,
+        LLT(Ty.getSimpleVT()), Align(Ty.getFixedSizeInBits() / 8));
+    DAG.setNodeMemRefs(cast<MachineSDNode>(Load.getNode()), {MemOp});
+  }
+
+  return Load;
 }
 
 SDValue LoongArchTargetLowering::lowerBlockAddress(SDValue Op,
@@ -850,7 +870,7 @@ SDValue LoongArchTargetLowering::lowerGlobalAddress(SDValue Op,
 
 SDValue LoongArchTargetLowering::getStaticTLSAddr(GlobalAddressSDNode *N,
                                                   SelectionDAG &DAG,
-                                                  unsigned Opc,
+                                                  unsigned Opc, bool UseGOT,
                                                   bool Large) const {
   SDLoc DL(N);
   EVT Ty = getPointerTy(DAG.getDataLayout());
@@ -863,6 +883,16 @@ SDValue LoongArchTargetLowering::getStaticTLSAddr(GlobalAddressSDNode *N,
   SDValue Offset = Large
                        ? SDValue(DAG.getMachineNode(Opc, DL, Ty, Tmp, Addr), 0)
                        : SDValue(DAG.getMachineNode(Opc, DL, Ty, Addr), 0);
+  if (UseGOT) {
+    // Mark the load instruction as invariant to enable hoisting in MachineLICM.
+    MachineFunction &MF = DAG.getMachineFunction();
+    MachineMemOperand *MemOp = MF.getMachineMemOperand(
+        MachinePointerInfo::getGOT(MF),
+        MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+            MachineMemOperand::MOInvariant,
+        LLT(Ty.getSimpleVT()), Align(Ty.getFixedSizeInBits() / 8));
+    DAG.setNodeMemRefs(cast<MachineSDNode>(Offset.getNode()), {MemOp});
+  }
 
   // Add the thread pointer.
   return DAG.getNode(ISD::ADD, DL, Ty, Offset,
@@ -935,6 +965,10 @@ LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
   assert(N->getOffset() == 0 && "unexpected offset in global node");
 
+  if (DAG.getTarget().useEmulatedTLS())
+    report_fatal_error("the emulated TLS is prohibited",
+                       /*GenCrashDiag=*/false);
+
   bool IsDesc = DAG.getTarget().useTLSDESC();
 
   switch (getTargetMachine().getTLSModel(N->getGlobal())) {
@@ -962,13 +996,14 @@ LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
     return getStaticTLSAddr(N, DAG,
                             Large ? LoongArch::PseudoLA_TLS_IE_LARGE
                                   : LoongArch::PseudoLA_TLS_IE,
-                            Large);
+                            /*UseGOT=*/true, Large);
   case TLSModel::LocalExec:
     // This model is used when static linking as the TLS offsets are resolved
     // during program linking.
     //
     // This node doesn't need an extra argument for the large code model.
-    return getStaticTLSAddr(N, DAG, LoongArch::PseudoLA_TLS_LE);
+    return getStaticTLSAddr(N, DAG, LoongArch::PseudoLA_TLS_LE,
+                            /*UseGOT=*/false);
   }
 
   return getTLSDescAddr(N, DAG,
@@ -1723,6 +1758,18 @@ static SDValue customLegalizeToWOp(SDNode *N, SelectionDAG &DAG, int NumOp,
   return DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), NewRes);
 }
 
+// Converts the given 32-bit operation to a i64 operation with signed extension
+// semantic to reduce the signed extension instructions.
+static SDValue customLegalizeToWOpWithSExt(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
+  SDValue NewOp1 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+  SDValue NewWOp = DAG.getNode(N->getOpcode(), DL, MVT::i64, NewOp0, NewOp1);
+  SDValue NewRes = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, NewWOp,
+                               DAG.getValueType(MVT::i32));
+  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewRes);
+}
+
 // Helper function that emits error message for intrinsics with/without chain
 // and return a UNDEF or and the chain as the results.
 static void emitErrorAndReplaceIntrinsicResults(
@@ -1846,6 +1893,12 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   switch (N->getOpcode()) {
   default:
     llvm_unreachable("Don't know how to legalize this operation");
+  case ISD::ADD:
+  case ISD::SUB:
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+    Results.push_back(customLegalizeToWOpWithSExt(N, DAG));
+    break;
   case ISD::UDIV:
   case ISD::UREM:
     assert(VT == MVT::i32 && Subtarget.is64Bit() &&
@@ -2476,6 +2529,165 @@ Retry2:
   return SDValue();
 }
 
+static bool checkValueWidth(SDValue V, ISD::LoadExtType &ExtType) {
+  ExtType = ISD::NON_EXTLOAD;
+
+  switch (V.getNode()->getOpcode()) {
+  case ISD::LOAD: {
+    LoadSDNode *LoadNode = cast<LoadSDNode>(V.getNode());
+    if ((LoadNode->getMemoryVT() == MVT::i8) ||
+        (LoadNode->getMemoryVT() == MVT::i16)) {
+      ExtType = LoadNode->getExtensionType();
+      return true;
+    }
+    return false;
+  }
+  case ISD::AssertSext: {
+    VTSDNode *TypeNode = cast<VTSDNode>(V.getNode()->getOperand(1));
+    if ((TypeNode->getVT() == MVT::i8) || (TypeNode->getVT() == MVT::i16)) {
+      ExtType = ISD::SEXTLOAD;
+      return true;
+    }
+    return false;
+  }
+  case ISD::AssertZext: {
+    VTSDNode *TypeNode = cast<VTSDNode>(V.getNode()->getOperand(1));
+    if ((TypeNode->getVT() == MVT::i8) || (TypeNode->getVT() == MVT::i16)) {
+      ExtType = ISD::ZEXTLOAD;
+      return true;
+    }
+    return false;
+  }
+  default:
+    return false;
+  }
+
+  return false;
+}
+
+// Eliminate redundant truncation and zero-extension nodes.
+// * Case 1:
+//  +------------+ +------------+ +------------+
+//  |   Input1   | |   Input2   | |     CC     |
+//  +------------+ +------------+ +------------+
+//         |              |              |
+//         V              V              +----+
+//  +------------+ +------------+             |
+//  |  TRUNCATE  | |  TRUNCATE  |             |
+//  +------------+ +------------+             |
+//         |              |                   |
+//         V              V                   |
+//  +------------+ +------------+             |
+//  |  ZERO_EXT  | |  ZERO_EXT  |             |
+//  +------------+ +------------+             |
+//         |              |                   |
+//         |              +-------------+     |
+//         V              V             |     |
+//        +----------------+            |     |
+//        |      AND       |            |     |
+//        +----------------+            |     |
+//                |                     |     |
+//                +---------------+     |     |
+//                                |     |     |
+//                                V     V     V
+//                               +-------------+
+//                               |     CMP     |
+//                               +-------------+
+// * Case 2:
+//  +------------+ +------------+ +-------------+ +------------+ +------------+
+//  |   Input1   | |   Input2   | | Constant -1 | | Constant 0 | |     CC     |
+//  +------------+ +------------+ +-------------+ +------------+ +------------+
+//         |              |             |               |               |
+//         V              |             |               |               |
+//  +------------+        |             |               |               |
+//  |     XOR    |<---------------------+               |               |
+//  +------------+        |                             |               |
+//         |              |                             |               |
+//         V              V             +---------------+               |
+//  +------------+ +------------+       |                               |
+//  |  TRUNCATE  | |  TRUNCATE  |       |     +-------------------------+
+//  +------------+ +------------+       |     |
+//         |              |             |     |
+//         V              V             |     |
+//  +------------+ +------------+       |     |
+//  |  ZERO_EXT  | |  ZERO_EXT  |       |     |
+//  +------------+ +------------+       |     |
+//         |              |             |     |
+//         V              V             |     |
+//        +----------------+            |     |
+//        |      AND       |            |     |
+//        +----------------+            |     |
+//                |                     |     |
+//                +---------------+     |     |
+//                                |     |     |
+//                                V     V     V
+//                               +-------------+
+//                               |     CMP     |
+//                               +-------------+
+static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   const LoongArchSubtarget &Subtarget) {
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+
+  SDNode *AndNode = N->getOperand(0).getNode();
+  if (AndNode->getOpcode() != ISD::AND)
+    return SDValue();
+
+  SDValue AndInputValue2 = AndNode->getOperand(1);
+  if (AndInputValue2.getOpcode() != ISD::ZERO_EXTEND)
+    return SDValue();
+
+  SDValue CmpInputValue = N->getOperand(1);
+  SDValue AndInputValue1 = AndNode->getOperand(0);
+  if (AndInputValue1.getOpcode() == ISD::XOR) {
+    if (CC != ISD::SETEQ && CC != ISD::SETNE)
+      return SDValue();
+    ConstantSDNode *CN = dyn_cast<ConstantSDNode>(AndInputValue1.getOperand(1));
+    if (!CN || CN->getSExtValue() != -1)
+      return SDValue();
+    CN = dyn_cast<ConstantSDNode>(CmpInputValue);
+    if (!CN || CN->getSExtValue() != 0)
+      return SDValue();
+    AndInputValue1 = AndInputValue1.getOperand(0);
+    if (AndInputValue1.getOpcode() != ISD::ZERO_EXTEND)
+      return SDValue();
+  } else if (AndInputValue1.getOpcode() == ISD::ZERO_EXTEND) {
+    if (AndInputValue2 != CmpInputValue)
+      return SDValue();
+  } else {
+    return SDValue();
+  }
+
+  SDValue TruncValue1 = AndInputValue1.getNode()->getOperand(0);
+  if (TruncValue1.getOpcode() != ISD::TRUNCATE)
+    return SDValue();
+
+  SDValue TruncValue2 = AndInputValue2.getNode()->getOperand(0);
+  if (TruncValue2.getOpcode() != ISD::TRUNCATE)
+    return SDValue();
+
+  SDValue TruncInputValue1 = TruncValue1.getNode()->getOperand(0);
+  SDValue TruncInputValue2 = TruncValue2.getNode()->getOperand(0);
+  ISD::LoadExtType ExtType1;
+  ISD::LoadExtType ExtType2;
+
+  if (!checkValueWidth(TruncInputValue1, ExtType1) ||
+      !checkValueWidth(TruncInputValue2, ExtType2))
+    return SDValue();
+
+  if ((ExtType2 != ISD::ZEXTLOAD) &&
+      ((ExtType2 != ISD::SEXTLOAD) && (ExtType1 != ISD::SEXTLOAD)))
+    return SDValue();
+
+  // These truncation and zero-extension nodes are not necessary, remove them.
+  SDValue NewAnd = DAG.getNode(ISD::AND, SDLoc(N), AndNode->getValueType(0),
+                               TruncInputValue1, TruncInputValue2);
+  SDValue NewSetCC =
+      DAG.getSetCC(SDLoc(N), N->getValueType(0), NewAnd, TruncInputValue2, CC);
+  DAG.ReplaceAllUsesWith(N, NewSetCC.getNode());
+  return SDValue(N, 0);
+}
+
 // Combine (loongarch_bitrev_w (loongarch_revb_2w X)) to loongarch_bitrev_4b.
 static SDValue performBITREV_WCombine(SDNode *N, SelectionDAG &DAG,
                                       TargetLowering::DAGCombinerInfo &DCI,
@@ -3103,6 +3315,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performANDCombine(N, DAG, DCI, Subtarget);
   case ISD::OR:
     return performORCombine(N, DAG, DCI, Subtarget);
+  case ISD::SETCC:
+    return performSETCCCombine(N, DAG, DCI, Subtarget);
   case ISD::SRL:
     return performSRLCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::BITREV_W:
@@ -4173,7 +4387,7 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment,
                           /*IsVolatile=*/false,
-                          /*AlwaysInline=*/false, /*isTailCall=*/IsTailCall,
+                          /*AlwaysInline=*/false, /*CI=*/nullptr, std::nullopt,
                           MachinePointerInfo(), MachinePointerInfo());
     ByValArgs.push_back(FIPtr);
   }
@@ -4634,7 +4848,7 @@ Value *LoongArchTargetLowering::emitMaskedAtomicRMWIntrinsic(
   // sign-extend.
   if (AI->getOperation() == AtomicRMWInst::Min ||
       AI->getOperation() == AtomicRMWInst::Max) {
-    const DataLayout &DL = AI->getModule()->getDataLayout();
+    const DataLayout &DL = AI->getDataLayout();
     unsigned ValWidth =
         DL.getTypeStoreSizeInBits(AI->getValOperand()->getType());
     Value *SextShamt =
@@ -4982,6 +5196,10 @@ bool LoongArchTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
 bool LoongArchTargetLowering::isSExtCheaperThanZExt(EVT SrcVT,
                                                     EVT DstVT) const {
   return Subtarget.is64Bit() && SrcVT == MVT::i32 && DstVT == MVT::i64;
+}
+
+bool LoongArchTargetLowering::signExtendConstant(const ConstantInt *CI) const {
+  return Subtarget.is64Bit() && CI->getType()->isIntegerTy(32);
 }
 
 bool LoongArchTargetLowering::hasAndNotCompare(SDValue Y) const {

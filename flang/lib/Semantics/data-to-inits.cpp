@@ -387,7 +387,7 @@ bool DataInitializationCompiler<DSV>::InitElement(
       // nothing to do; rely on zero initialization
       return true;
     } else if (isProcPointer) {
-      if (evaluate::IsProcedure(*expr)) {
+      if (evaluate::IsProcedureDesignator(*expr)) {
         if (CheckPointerAssignment(exprAnalyzer_.context(), designator, *expr,
                 scope,
                 /*isBoundsRemapping=*/false, /*isAssumedRank=*/false)) {
@@ -419,7 +419,7 @@ bool DataInitializationCompiler<DSV>::InitElement(
   } else if (evaluate::IsNullPointer(*expr)) {
     exprAnalyzer_.Say("Initializer for '%s' must not be a pointer"_err_en_US,
         DescribeElement());
-  } else if (evaluate::IsProcedure(*expr)) {
+  } else if (evaluate::IsProcedureDesignator(*expr)) {
     exprAnalyzer_.Say("Initializer for '%s' must not be a procedure"_err_en_US,
         DescribeElement());
   } else if (auto designatorType{designator.GetType()}) {

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu \
-// RUN:    -target-feature +sve2 -target-feature +sme2 -target-feature +sme-i16i64 -target-feature +sme-f64f64 -fsyntax-only -verify %s
+// RUN:    -target-feature +bf16 -target-feature +sve -target-feature +sme -target-feature +sve2 -target-feature +sme2 -target-feature +sme-i16i64 -target-feature +sme-f64f64 -fsyntax-only -verify %s
 
 // REQUIRES: aarch64-registered-target
 

@@ -10,6 +10,15 @@ add_header_library(
     sleep.h
 )
 
+add_header_library(
+  spin_lock
+  HDRS
+    spin_lock.h
+  DEPENDS
+    .sleep
+    libc.src.__support.CPP.atomic
+)
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${LIBC_TARGET_OS})
 endif()
@@ -69,5 +78,14 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.callonce)
     ALIAS
     DEPENDS
       .${LIBC_TARGET_OS}.callonce
+  )
+endif()
+
+if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.CndVar)
+  add_object_library(
+    CndVar
+    ALIAS
+    DEPENDS
+    .${LIBC_TARGET_OS}.CndVar
   )
 endif()

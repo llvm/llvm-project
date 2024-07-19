@@ -1123,8 +1123,9 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
         break; // Invalid for floats
       if (HasSize)
         break;
-      if (DoubleUnderscore)
-        break; // Cannot be repeated.
+      // There is currently no way to reach this with DoubleUnderscore set.
+      // If new double underscope literals are added handle it here as above.
+      assert(!DoubleUnderscore && "unhandled double underscore case");
       if (LangOpts.CPlusPlus && s + 2 < ThisTokEnd &&
           s[1] == '_') { // s + 2 < ThisTokEnd to ensure some character exists
                          // after __
