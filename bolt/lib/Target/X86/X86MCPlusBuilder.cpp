@@ -1866,6 +1866,9 @@ public:
     return true;
   }
 
+  /// Analyzes PIC-style jump table code template and return identified
+  /// IndirectBranchType, MemLocInstr (all cases) and FixedEntryLoadInstr
+  /// (POSSIBLE_PIC_FIXED_BRANCH case).
   template <typename Itr>
   std::tuple<IndirectBranchType, MCInst *, MCInst *>
   analyzePICJumpTable(Itr II, Itr IE, MCPhysReg R1, MCPhysReg R2) const {
@@ -1878,7 +1881,7 @@ public:
     //
     // or a fixed indirect jump template:
     //
-    //    movslq En(%rip), {%r2|%r1}
+    //    movslq En(%rip), {%r2|%r1}              <- FixedEntryLoadInstr
     //    lea PIC_JUMP_TABLE(%rip), {%r1|%r2}     <- MemLocInstr
     //    add %r2, %r1
     //    jmp *%r1

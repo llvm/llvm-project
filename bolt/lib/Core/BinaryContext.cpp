@@ -2525,8 +2525,8 @@ BinaryFunction *BinaryContext::getBinaryFunctionAtAddress(uint64_t Address) {
 
 /// Deregister JumpTable registered at a given \p Address and delete it.
 void BinaryContext::deleteJumpTable(uint64_t Address) {
-  JumpTable *JT = getJumpTableContainingAddress(Address);
-  assert(JT && "Must have a jump table at address");
+  assert(JumpTables.count(Address) && "Must have a jump table at address");
+  JumpTable *JT = JumpTables.at(Address);
   for (BinaryFunction *Parent : JT->Parents)
     Parent->JumpTables.erase(Address);
   JumpTables.erase(Address);
