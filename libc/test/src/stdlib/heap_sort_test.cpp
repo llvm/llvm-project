@@ -1,4 +1,4 @@
-//===-- Unittests for qsort -----------------------------------------------===//
+//===-- Unittests for heap sort -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "SortingTest.h"
-#include "src/stdlib/qsort.h"
+#include "src/stdlib/heap_sort.h"
 
 void sort(const LIBC_NAMESPACE::internal::Array &array) {
-  LIBC_NAMESPACE::qsort(reinterpret_cast<void *>(array.get(0)), array.size(),
-                        sizeof(int), SortingTest::int_compare);
+  LIBC_NAMESPACE::internal::heap_sort(array);
 }
 
-LIST_SORTING_TESTS(Qsort, sort);
+LIST_SORTING_TESTS(HeapSort, sort);
