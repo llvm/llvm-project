@@ -99,7 +99,7 @@ inline uintmax_t get_file_size(const WIN32_FIND_DATAW& data) {
 inline file_time_type get_write_time(const WIN32_FIND_DATAW& data) {
   using detail::fs_time;
   const FILETIME& time = data.ftLastWriteTime;
-  auto ts = filetime_to_timespec(time);
+  auto ts              = filetime_to_timespec(time);
   if (!fs_time::is_representable(ts))
     return file_time_type::min();
   return fs_time::convert_from_timespec(ts);

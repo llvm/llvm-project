@@ -353,9 +353,10 @@
 #define _LIBCPP_AVAILABILITY_HAS_BAD_EXPECTED_ACCESS_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_19
 #define _LIBCPP_AVAILABILITY_BAD_EXPECTED_ACCESS_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_19_ATTRIBUTE
 
-// This controls the availability of populating cache for directory entry
-// filesystem system. A directory_iterator builds cache for directory_entry
-// in the library.
+// This determines whether std::filesystem::directory_entry caches all the properties
+// it contains, which improves the performance when accessing a directory entry.
+// Code in the headers like filesystem::directory_entry's implementation needs to
+// know whether the dylib populated the cache or not.
 #define _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY _LIBCPP_INTRODUCED_IN_LLVM_19
 #define _LIBCPP_AVAILABILITY_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY _LIBCPP_INTRODUCED_IN_LLVM_19_ATTRIBUTE
 

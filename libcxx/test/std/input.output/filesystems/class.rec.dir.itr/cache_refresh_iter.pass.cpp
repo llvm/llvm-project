@@ -32,39 +32,81 @@ static void set_last_write_time_in_iteration(const fs::path& dir) {
   // See
   // https://learn.microsoft.com/en-us/windows/win32/sysinfo/file-times
   // To force updating file entries calls "last_write_time" with own value.
-  const recursive_directory_iterator endIt{};
+  const recursive_directory_iterator end_it{};
 
   std::error_code ec;
   recursive_directory_iterator it(dir, ec);
   assert(!ec);
 
   file_time_type now_time = file_time_type::clock::now();
-  for (; it != endIt; ++it) {
+  for (; it != end_it; ++it) {
     const path entry = *it;
     last_write_time(entry, now_time, ec);
     assert(!ec);
   }
 
-  assert(it == endIt);
+  assert(it == end_it);
+}
+
+struct directory_entry_and_values {
+  directory_entry entry;
+
+  file_status symlink_status;
+  file_status status;
+  std::uintmax_t file_size;
+  file_time_type last_write_time;
+};
+
+std::vector<directory_entry_and_values> get_directory_entries_for(const path& dir, const std::set<path>& dir_contents) {
+  const recursive_directory_iterator end_it{};
+
+  std::error_code ec;
+  recursive_directory_iterator it(dir, ec);
+  assert(!ec);
+
+  std::vector<directory_entry_and_values> dir_entries;
+  std::set<path> unseen_entries = dir_contents;
+  while (!unseen_entries.empty()) {
+    assert(it != end_it);
+    const directory_entry& entry = *it;
+
+    assert(unseen_entries.erase(entry.path()) == 1);
+
+    dir_entries.push_back(directory_entry_and_values{
+        .entry           = entry,
+        .symlink_status  = entry.symlink_status(),
+        .status          = entry.status(),
+        .file_size       = entry.is_regular_file() ? entry.file_size() : 0,
+        .last_write_time = entry.last_write_time()});
+
+    recursive_directory_iterator& it_ref = it.increment(ec);
+    assert(!ec);
+    assert(&it_ref == &it);
+  }
+  return dir_entries;
 }
 #endif
 
+// Checks that the directory_entry properties will be the same before and after
+// calling "refresh" in case of iteration.
+// In case of Windows expects that directory_entry caches the properties during
+// iteration.
 static void test_cache_and_refresh_in_iteration() {
   static_test_env static_env;
-  const path testDir = static_env.Dir;
+  const path test_dir = static_env.Dir;
 #if defined(_WIN32)
-  set_last_write_time_in_iteration(testDir);
+  set_last_write_time_in_iteration(test_dir);
 #endif
   const std::set<path> dir_contents(static_env.RecDirIterationList.begin(), static_env.RecDirIterationList.end());
-  const recursive_directory_iterator endIt{};
+  const recursive_directory_iterator end_it{};
 
   std::error_code ec;
-  recursive_directory_iterator it(testDir, ec);
+  recursive_directory_iterator it(test_dir, ec);
   assert(!ec);
 
   std::set<path> unseen_entries = dir_contents;
   while (!unseen_entries.empty()) {
-    assert(it != endIt);
+    assert(it != end_it);
     const directory_entry& entry = *it;
 
     assert(unseen_entries.erase(entry.path()) == 1);
@@ -92,8 +134,54 @@ static void test_cache_and_refresh_in_iteration() {
   }
 }
 
+#if defined(_WIN32)
+// In case of Windows expects that the directory_entry caches the properties
+// during iteration and the properties don't change after deleting folders
+// and files.
+static void test_cached_values_in_iteration() {
+  std::vector<directory_entry_and_values> dir_entries;
+  {
+    static_test_env static_env;
+    const path testDir = static_env.Dir;
+    set_last_write_time_in_iteration(testDir);
+    const std::set<path> dir_contents(static_env.RecDirIterationList.begin(), static_env.RecDirIterationList.end());
+    dir_entries = get_directory_entries_for(testDir, dir_contents);
+  }
+  // Testing folder should be deleted after destoying static_test_env.
+
+  for (const auto& dir_entry : dir_entries) {
+    // During iteration Windows provides information only about symlink itself
+    // not about file/folder which symlink points to.
+    if (dir_entry.entry.is_symlink()) {
+      // Check that symlink is not using cached value about existing file.
+      assert(!dir_entry.entry.exists());
+    } else {
+      // Check that entry uses cached value about existing file.
+      assert(dir_entry.entry.exists());
+    }
+    file_status symlink_status = dir_entry.entry.symlink_status();
+    assert(dir_entry.symlink_status.type() == symlink_status.type() &&
+           dir_entry.symlink_status.permissions() == symlink_status.permissions());
+
+    if (!dir_entry.entry.is_symlink()) {
+      file_status status = dir_entry.entry.status();
+      assert(dir_entry.status.type() == status.type() && dir_entry.status.permissions() == status.permissions());
+
+      std::uintmax_t file_size = dir_entry.entry.is_regular_file() ? dir_entry.entry.file_size() : 0;
+      assert(dir_entry.file_size == file_size);
+
+      file_time_type last_write_time = dir_entry.entry.last_write_time();
+      assert(dir_entry.last_write_time == last_write_time);
+    }
+  }
+}
+#endif
+
 int main(int, char**) {
   test_cache_and_refresh_in_iteration();
+#if defined(_WIN32)
+  test_cached_values_in_iteration();
+#endif
 
   return 0;
 }

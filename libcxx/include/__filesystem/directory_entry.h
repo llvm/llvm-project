@@ -202,10 +202,8 @@ private:
     _RefreshSymlink,
     _RefreshSymlinkUnresolved,
     _RefreshNonSymlink,
-#  if _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
     _IterCachedSymlink,
     _IterCachedNonSymlink
-#  endif // _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
   };
 
   struct __cached_data {
@@ -244,7 +242,6 @@ private:
     return __data;
   }
 
-  #  if _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
   _LIBCPP_HIDE_FROM_ABI static __cached_data
   __create_iter_cached_result(file_type __ft, uintmax_t __size, perms __perm, file_time_type __write_time) {
     __cached_data __data;
@@ -267,7 +264,6 @@ private:
     }();
     return __data;
   }
-  #  endif // _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
 
   _LIBCPP_HIDE_FROM_ABI void __assign_iter_entry(_Path&& __p, __cached_data __dt) {
     __p_    = std::move(__p);
@@ -310,17 +306,13 @@ private:
     case _Empty:
       return __symlink_status(__p_, __ec).type();
     case _IterSymlink:
-#  if _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
     case _IterCachedSymlink:
-#  endif // _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
     case _RefreshSymlink:
     case _RefreshSymlinkUnresolved:
       if (__ec)
         __ec->clear();
       return file_type::symlink;
-#  if _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
     case _IterCachedNonSymlink:
-#  endif // _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
     case _IterNonSymlink:
     case _RefreshNonSymlink: {
       file_status __st(__data_.__type_);
@@ -338,13 +330,10 @@ private:
     switch (__data_.__cache_type_) {
     case _Empty:
     case _IterSymlink:
+    case _IterCachedSymlink:
     case _RefreshSymlinkUnresolved:
       return __status(__p_, __ec).type();
-#  if _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
-    case _IterCachedSymlink:
-      return __status(__p_, __ec).type();
     case _IterCachedNonSymlink:
-#  endif // _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
     case _IterNonSymlink:
     case _RefreshNonSymlink:
     case _RefreshSymlink: {
@@ -364,17 +353,13 @@ private:
     case _Empty:
     case _IterNonSymlink:
     case _IterSymlink:
+    case _IterCachedSymlink:
     case _RefreshSymlinkUnresolved:
       return __status(__p_, __ec);
+    case _IterCachedNonSymlink:
     case _RefreshNonSymlink:
     case _RefreshSymlink:
       return file_status(__get_ft(__ec), __data_.__non_sym_perms_);
-#    if _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
-    case _IterCachedSymlink:
-      return __status(__p_, __ec);
-    case _IterCachedNonSymlink:
-      return file_status(__get_ft(__ec), __data_.__non_sym_perms_);
-#    endif // _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
     }
     __libcpp_unreachable();
   }
@@ -385,17 +370,13 @@ private:
     case _IterNonSymlink:
     case _IterSymlink:
       return __symlink_status(__p_, __ec);
+    case _IterCachedNonSymlink:
     case _RefreshNonSymlink:
       return file_status(__get_sym_ft(__ec), __data_.__non_sym_perms_);
+    case _IterCachedSymlink:
     case _RefreshSymlink:
     case _RefreshSymlinkUnresolved:
       return file_status(__get_sym_ft(__ec), __data_.__sym_perms_);
-#    if _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
-    case _IterCachedNonSymlink:
-      return file_status(__get_sym_ft(__ec), __data_.__non_sym_perms_);
-    case _IterCachedSymlink:
-      return file_status(__get_sym_ft(__ec), __data_.__sym_perms_);
-#    endif // _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
     }
     __libcpp_unreachable();
   }
@@ -405,13 +386,10 @@ private:
     case _Empty:
     case _IterNonSymlink:
     case _IterSymlink:
+    case _IterCachedSymlink:
     case _RefreshSymlinkUnresolved:
       return filesystem::__file_size(__p_, __ec);
-#  if _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
-    case _IterCachedSymlink:
-      return filesystem::__file_size(__p_, __ec);
     case _IterCachedNonSymlink:
-#  endif // _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
     case _RefreshSymlink:
     case _RefreshNonSymlink: {
       error_code __m_ec;
@@ -432,10 +410,8 @@ private:
     case _Empty:
     case _IterNonSymlink:
     case _IterSymlink:
-#  if _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
     case _IterCachedNonSymlink:
     case _IterCachedSymlink:
-#  endif // _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
     case _RefreshSymlinkUnresolved:
       return filesystem::__hard_link_count(__p_, __ec);
     case _RefreshSymlink:
@@ -454,13 +430,10 @@ private:
     case _Empty:
     case _IterNonSymlink:
     case _IterSymlink:
+    case _IterCachedSymlink:
     case _RefreshSymlinkUnresolved:
       return filesystem::__last_write_time(__p_, __ec);
-#  if _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
-    case _IterCachedSymlink:
-      return filesystem::__last_write_time(__p_, __ec);
     case _IterCachedNonSymlink:
-#  endif // _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
     case _RefreshSymlink:
     case _RefreshNonSymlink: {
       error_code __m_ec;

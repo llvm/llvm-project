@@ -79,16 +79,11 @@ public:
       return false;
     __entry_.__assign_iter_entry(
         __root_ / __data_.cFileName,
-#  if _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
         directory_entry::__create_iter_cached_result(
             detail::get_file_type(__data_),
             detail::get_file_size(__data_),
             detail::get_file_perm(__data_),
-            detail::get_write_time(__data_))
-#  else
-        directory_entry::__create_iter_result(detail::get_file_type(__data_))
-#  endif // _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY
-    );
+            detail::get_write_time(__data_)));
     return true;
   }
 
