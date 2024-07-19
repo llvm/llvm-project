@@ -3729,9 +3729,7 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I,
     // unconditionally. If the divisor is loop-invariant no predication is
     // needed, as predication would not prevent the divide-by-0 on the executed
     // lane.
-    if (foldTailByMasking() && !Legal->blockNeedsPredication(I->getParent()) &&
-        TheLoop->isLoopInvariant(I->getOperand(1)) &&
-        (IsKnownUniform || isUniformAfterVectorization(I, VF)))
+    if (!Legal->blockNeedsPredication(I->getParent()) && TheLoop->isLoopInvariant(I->getOperand(1)))
       return false;
 
     // TODO: We can use the loop-preheader as context point here and get
