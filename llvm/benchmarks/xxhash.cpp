@@ -26,11 +26,6 @@ static void BM_xxh3_64bits(benchmark::State &State) {
   delete[] Data;
 }
 
-BENCHMARK(BM_xxh3_64bits)
-    ->Arg(32)
-    ->Arg(512)
-    ->Arg(64 * 1024)
-    ->Arg(1024 * 1024);
+BENCHMARK(BM_xxh3_64bits)->Arg(32)->Arg(512)->Arg(64 * 1024)->Arg(1024 * 1024);
 
 BENCHMARK_MAIN();
-
