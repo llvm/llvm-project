@@ -84,6 +84,12 @@ flags to use, and how to run an executable. This system is meant to be easily
 extended for custom needs, in particular when porting the libc++ test suite to
 new platforms.
 
+.. note::
+  If you run the test suite on Apple platforms, we recommend adding the terminal application
+  used to run the test suite to the list of "Developer Tools". This prevents the system from
+  trying to scan each individual test binary for malware and dramatically speeds up the test
+  suite.
+
 Using a Custom Site Configuration
 ---------------------------------
 

@@ -30,6 +30,13 @@ void (*test_constant_null)(int) = 0;
 // CHECK: @test_constant_cast = global ptr ptrauth (ptr @f, i32 0, i64 2712)
 void (*test_constant_cast)(int) = (void (*)(int))f;
 
+#ifndef __cplusplus
+// CHECKC: @enum_func_ptr = global ptr ptrauth (ptr @enum_func, i32 0, i64 2712)
+enum Enum0;
+void enum_func(enum Enum0);
+void (*enum_func_ptr)(enum Enum0) = enum_func;
+#endif
+
 // CHECK: @test_opaque = global ptr ptrauth (ptr @f, i32 0)
 void *test_opaque =
 #ifdef __cplusplus

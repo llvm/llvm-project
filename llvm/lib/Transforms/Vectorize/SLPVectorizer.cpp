@@ -15529,7 +15529,23 @@ void BoUpSLP::computeMinimumValueSizes() {
     // Check if the root is trunc and the next node is gather/buildvector, then
     // keep trunc in scalars, which is free in most cases.
     if (E.isGather() && IsTruncRoot && E.UserTreeIndices.size() == 1 &&
-        E.Idx > (IsStoreOrInsertElt ? 2 : 1)) {
+        E.Idx > (IsStoreOrInsertElt ? 2 : 1) &&
+        all_of(E.Scalars, [&](Value *V) {
+          return V->hasOneUse() || isa<Constant>(V) ||
+                 (!V->hasNUsesOrMore(UsesLimit) &&
+                  none_of(V->users(), [&](User *U) {
+                    const TreeEntry *TE = getTreeEntry(U);
+                    const TreeEntry *UserTE = E.UserTreeIndices.back().UserTE;
+                    if (TE == UserTE || !TE)
+                      return false;
+                    unsigned UserTESz = DL->getTypeSizeInBits(
+                        UserTE->Scalars.front()->getType());
+                    auto It = MinBWs.find(TE);
+                    if (It != MinBWs.end() && It->second.first > UserTESz)
+                      return true;
+                    return DL->getTypeSizeInBits(U->getType()) > UserTESz;
+                  }));
+        })) {
       ToDemote.push_back(E.Idx);
       const TreeEntry *UserTE = E.UserTreeIndices.back().UserTE;
       auto It = MinBWs.find(UserTE);
