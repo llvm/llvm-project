@@ -11,11 +11,11 @@
 /// reads.
 ///
 /// The algorithm of the tool is similar to Memcheck
-/// (http://goo.gl/QKbem). We associate a few shadow bits with every
-/// byte of the application memory, poison the shadow of the malloc-ed
-/// or alloca-ed memory, load the shadow bits on every memory read,
-/// propagate the shadow bits through some of the arithmetic
-/// instruction (including MOV), store the shadow bits on every memory
+/// (https://static.usenix.org/event/usenix05/tech/general/full_papers/seward/seward_html/usenix2005.html)
+/// We associate a few shadow bits with every byte of the application memory,
+/// poison the shadow of the malloc-ed or alloca-ed memory, load the shadow,
+/// bits on every memory read, propagate the shadow bits through some of the
+/// arithmetic instruction (including MOV), store the shadow bits on every memory
 /// write, report a bug on some other instructions (e.g. JMP) if the
 /// associated shadow is poisoned.
 ///
