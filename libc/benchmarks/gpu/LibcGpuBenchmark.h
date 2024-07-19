@@ -88,6 +88,7 @@ public:
   }
 
   static void run_benchmarks();
+  const cpp::string_view get_name() const { return name; }
 
 protected:
   static void add_benchmark(Benchmark *benchmark);
@@ -97,13 +98,12 @@ private:
     BenchmarkOptions options;
     return benchmark(options, func);
   }
-  const cpp::string_view get_name() const { return name; }
 };
 } // namespace benchmarks
 } // namespace LIBC_NAMESPACE_DECL
 
 #define BENCHMARK(SuiteName, TestName, Func)                                   \
   LIBC_NAMESPACE::benchmarks::Benchmark SuiteName##_##TestName##_Instance(     \
-      Func, #SuiteName "." #TestName);
+      Func, #SuiteName "." #TestName)
 
 #endif
