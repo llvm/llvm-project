@@ -12,12 +12,13 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/threads/sleep.h"
 #include "src/string/memory_utils/generic/byte_per_byte.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace rpc {
 
 /// Conditional to indicate if this process is running on the GPU.
@@ -67,6 +68,6 @@ LIBC_INLINE void rpc_memcpy(void *dst, const void *src, size_t count) {
 }
 
 } // namespace rpc
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTIL_H
