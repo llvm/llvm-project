@@ -53,6 +53,8 @@ bool getSaveTempLabels();
 
 bool getCrel();
 
+bool getOptimizeMappingSymbols();
+
 bool getX86RelaxRelocations();
 
 bool getX86Sse2Avx();
