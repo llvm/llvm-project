@@ -149,6 +149,14 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   // Try looking through a bitcast from one function type to another.
   // Commonly happens with calls to objc_msgSend().
   const Value *CalleeV = CB.getCalledOperand()->stripPointerCasts();
+
+  // If IRTranslator chose to drop the ptrauth info, we can turn this into
+  // a direct call.
+  if (!PAI && CB.countOperandBundlesOfType(LLVMContext::OB_ptrauth)) {
+    CalleeV = cast<ConstantPtrAuth>(CalleeV)->getPointer();
+    assert(isa<Function>(CalleeV));
+  }
+
   if (const Function *F = dyn_cast<Function>(CalleeV)) {
     if (F->hasFnAttribute(Attribute::NonLazyBind)) {
       LLT Ty = getLLTForType(*F->getType(), DL);
