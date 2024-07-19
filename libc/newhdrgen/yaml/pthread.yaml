@@ -13,33 +13,8 @@ types:
   - type_name: __pthread_start_t
   - type_name: __pthread_once_func_t
   - type_name: __atfork_callback_t
-enums:
-  - name: PTHREAD_CREATE_JOINABLE
-    value: 0x0
-  - name: PTHREAD_CREATE_DETACHED
-    value: 0x1
-  - name: PTHREAD_MUTEX_NORMAL
-    value: 0x0
-  - name: PTHREAD_MUTEX_ERRORCHECK
-    value: 0x1
-  - name: PTHREAD_MUTEX_RECURSIVE
-    value: 0x2
-  - name: PTHREAD_MUTEX_DEFAULT
-    value: 0x0
-  - name: PTHREAD_PROCESS_PRIVATE
-    value: 0x0
-  - name: PTHREAD_PROCESS_SHARED
-    value: 0x1
-  - name: PTHREAD_MUTEX_STALLED
-    value: 0x0
-  - name: PTHREAD_MUTEX_ROBUST
-    value: 0x1
-  - name: PTHREAD_RWLOCK_PREFER_READER_NP
-    value: 0
-  - name: PTHREAD_RWLOCK_PREFER_WRITER_NP
-    value: 1
-  - name: PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP
-    value: 2
+  - type_name: pthread_rwlock_t
+enums: []
 functions:
   - name: pthread_atfork
     standards: 
@@ -184,7 +159,7 @@ functions:
   - name: pthread_exit
     standards: 
       - POSIX
-    return_type: __Noreturn void
+    return_type: _Noreturn void
     arguments:
       - type: void *
   - name: pthread_getname_np
