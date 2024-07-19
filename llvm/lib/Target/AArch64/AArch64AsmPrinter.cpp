@@ -201,6 +201,7 @@ private:
   void PrintDebugValueComment(const MachineInstr *MI, raw_ostream &OS);
 
   void emitFunctionBodyEnd() override;
+  void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
 
   MCSymbol *GetCPISymbol(unsigned CPID) const override;
   void emitEndOfAsmFile(Module &M) override;
@@ -848,13 +849,12 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
   }
 }
 
-template <typename MachineModuleInfoTarget>
-static void emitAuthenticatedPointer(
-    MCStreamer &OutStreamer, MCSymbol *StubLabel,
-    const typename MachineModuleInfoTarget::AuthStubInfo &StubInfo) {
+static void emitAuthenticatedPointer(MCStreamer &OutStreamer,
+                                     MCSymbol *StubLabel,
+                                     const MCExpr *StubAuthPtrRef) {
   // sym$auth_ptr$key$disc:
   OutStreamer.emitLabel(StubLabel);
-  OutStreamer.emitValue(StubInfo.AuthPtrRef, /*size=*/8);
+  OutStreamer.emitValue(StubAuthPtrRef, /*size=*/8);
 }
 
 void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
@@ -862,6 +862,25 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
 
   const Triple &TT = TM.getTargetTriple();
   if (TT.isOSBinFormatMachO()) {
+    // Output authenticated pointers as indirect symbols, if we have any.
+    MachineModuleInfoMachO &MMIMacho =
+        MMI->getObjFileInfo<MachineModuleInfoMachO>();
+
+    auto Stubs = MMIMacho.getAuthGVStubList();
+
+    if (!Stubs.empty()) {
+      // Switch to the "__auth_ptr" section.
+      OutStreamer->switchSection(
+          OutContext.getMachOSection("__DATA", "__auth_ptr", MachO::S_REGULAR,
+                                     SectionKind::getMetadata()));
+      emitAlignment(Align(8));
+
+      for (const auto &Stub : Stubs)
+        emitAuthenticatedPointer(*OutStreamer, Stub.first, Stub.second);
+
+      OutStreamer->addBlankLine();
+    }
+
     // Funny Darwin hack: This flag tells the linker that no global symbols
     // contain code that falls through to other global symbols (e.g. the obvious
     // implementation of multiple entry points).  If this doesn't occur, the
@@ -882,8 +901,7 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
       emitAlignment(Align(8));
 
       for (const auto &Stub : Stubs)
-        emitAuthenticatedPointer<MachineModuleInfoELF>(*OutStreamer, Stub.first,
-                                                       Stub.second);
+        emitAuthenticatedPointer(*OutStreamer, Stub.first, Stub.second);
 
       OutStreamer->addBlankLine();
     }
@@ -1244,6 +1262,32 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
       }
     }
   }
+}
+
+void AArch64AsmPrinter::emitGlobalAlias(const Module &M,
+                                        const GlobalAlias &GA) {
+  if (auto F = dyn_cast_or_null<Function>(GA.getAliasee())) {
+    // Global aliases must point to a definition, but unmangled patchable
+    // symbols are special and need to point to an undefined symbol with "EXP+"
+    // prefix. Such undefined symbol is resolved by the linker by creating
+    // x86 thunk that jumps back to the actual EC target.
+    if (MDNode *Node = F->getMetadata("arm64ec_exp_name")) {
+      StringRef ExpStr = cast<MDString>(Node->getOperand(0))->getString();
+      MCSymbol *ExpSym = MMI->getContext().getOrCreateSymbol(ExpStr);
+      MCSymbol *Sym = MMI->getContext().getOrCreateSymbol(GA.getName());
+      OutStreamer->beginCOFFSymbolDef(Sym);
+      OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_EXTERNAL);
+      OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_FUNCTION
+                                      << COFF::SCT_COMPLEX_TYPE_SHIFT);
+      OutStreamer->endCOFFSymbolDef();
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_Weak);
+      OutStreamer->emitAssignment(
+          Sym, MCSymbolRefExpr::create(ExpSym, MCSymbolRefExpr::VK_None,
+                                       MMI->getContext()));
+      return;
+    }
+  }
+  AsmPrinter::emitGlobalAlias(M, GA);
 }
 
 /// Small jump tables contain an unsigned byte or half, representing the offset
@@ -1676,16 +1720,29 @@ void AArch64AsmPrinter::LowerLOADauthptrstatic(const MachineInstr &MI) {
   //
   // Where the $auth_ptr$ symbol is the stub slot containing the signed pointer
   // to symbol.
-  assert(TM.getTargetTriple().isOSBinFormatELF() &&
-         "LOADauthptrstatic is implemented only for ELF");
-  const auto &TLOF =
-      static_cast<const AArch64_ELFTargetObjectFile &>(getObjFileLowering());
+  MCSymbol *AuthPtrStubSym;
+  if (TM.getTargetTriple().isOSBinFormatELF()) {
+    const auto &TLOF =
+        static_cast<const AArch64_ELFTargetObjectFile &>(getObjFileLowering());
 
-  assert(GAOp.getOffset() == 0 &&
-         "non-zero offset for $auth_ptr$ stub slots is not supported");
-  const MCSymbol *GASym = TM.getSymbol(GAOp.getGlobal());
-  MCSymbol *AuthPtrStubSym =
-      TLOF.getAuthPtrSlotSymbol(TM, &MF->getMMI(), GASym, Key, Disc);
+    assert(GAOp.getOffset() == 0 &&
+           "non-zero offset for $auth_ptr$ stub slots is not supported");
+    const MCSymbol *GASym = TM.getSymbol(GAOp.getGlobal());
+    AuthPtrStubSym =
+        TLOF.getAuthPtrSlotSymbol(TM, &MF->getMMI(), GASym, Key, Disc);
+  } else {
+    assert(TM.getTargetTriple().isOSBinFormatMachO() &&
+           "LOADauthptrstatic is implemented only for MachO/ELF");
+
+    const auto &TLOF = static_cast<const AArch64_MachoTargetObjectFile &>(
+        getObjFileLowering());
+
+    assert(GAOp.getOffset() == 0 &&
+           "non-zero offset for $auth_ptr$ stub slots is not supported");
+    const MCSymbol *GASym = TM.getSymbol(GAOp.getGlobal());
+    AuthPtrStubSym =
+        TLOF.getAuthPtrSlotSymbol(TM, &MF->getMMI(), GASym, Key, Disc);
+  }
 
   MachineOperand StubMOHi =
       MachineOperand::CreateMCSymbol(AuthPtrStubSym, AArch64II::MO_PAGE);

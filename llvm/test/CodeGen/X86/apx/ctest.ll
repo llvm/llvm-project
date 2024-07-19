@@ -897,4 +897,43 @@ entry:
   ret i32 %.
 }
 
+define void @ctest64ri64(i64 noundef %a, i64 noundef %b) {
+; CHECK-LABEL: ctest64ri64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    movabsq $9992147483647, %rax # imm = 0x9167A66BBFF
+; CHECK-NEXT:    ctestneq {dfv=zf} %rax, %rsi
+; CHECK-NEXT:    jne .LBB24_1
+; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    jmp foo # TAILCALL
+; CHECK-NEXT:  .LBB24_1: # %if.end
+; CHECK-NEXT:    retq
+;
+; NDD-LABEL: ctest64ri64:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    testq %rdi, %rdi
+; NDD-NEXT:    movabsq $9992147483647, %rax # imm = 0x9167A66BBFF
+; NDD-NEXT:    ctestneq {dfv=zf} %rax, %rsi
+; NDD-NEXT:    jne .LBB24_1
+; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    xorl %eax, %eax
+; NDD-NEXT:    jmp foo # TAILCALL
+; NDD-NEXT:  .LBB24_1: # %if.end
+; NDD-NEXT:    retq
+entry:
+  %cmp = icmp eq i64 %a, 0
+  %and = and i64 %b, 9992147483647
+  %cmp1 = icmp eq i64 %and, 0
+  %or.cond = or i1 %cmp, %cmp1
+  br i1 %or.cond, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  tail call void (...) @foo()
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  ret void
+}
+
 declare dso_local void @foo(...)

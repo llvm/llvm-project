@@ -226,6 +226,7 @@ def err_module_map_not_found : Error<"module map file '%0' not found">,
 def err_missing_module_name : Error<
   "no module name provided; specify one with -fmodule-name=">,
   DefaultFatal;
+def err_file_is_not_module : Error<"file '%0' is not a module file">, DefaultFatal;
 def err_missing_module : Error<
   "no module named '%0' declared in module map file '%1'">, DefaultFatal;
 def err_no_submodule : Error<"no submodule named %0 in module '%1'">;

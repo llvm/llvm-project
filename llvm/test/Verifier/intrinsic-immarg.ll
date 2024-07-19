@@ -36,14 +36,6 @@ define void @memcpy_inline_is_volatile(ptr %dest, ptr %src, i1 %is.volatile) {
   ret void
 }
 
-define void @memcpy_inline_variable_size(ptr %dest, ptr %src, i32 %size) {
-  ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK-NEXT: i32 %size
-  ; CHECK-NEXT: call void @llvm.memcpy.inline.p0.p0.i32(ptr %dest, ptr %src, i32 %size, i1 true)
-  call void @llvm.memcpy.inline.p0.p0.i32(ptr %dest, ptr %src, i32 %size, i1 true)
-  ret void
-}
-
 declare void @llvm.memmove.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1)
 define void @memmove(ptr %dest, ptr %src, i1 %is.volatile) {
   ; CHECK: immarg operand has non-immediate parameter

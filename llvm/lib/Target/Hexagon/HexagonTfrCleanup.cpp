@@ -289,8 +289,7 @@ bool HexagonTfrCleanup::runOnMachineFunction(MachineFunction &MF) {
   HII = HST.getInstrInfo();
   TRI = HST.getRegisterInfo();
 
-  for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I) {
-    MachineBasicBlock &B = *I;
+  for (MachineBasicBlock &B : MF) {
     MachineBasicBlock::iterator J, F, NextJ;
     IMap.clear();
     bool Inserted = false, Erased = false;
