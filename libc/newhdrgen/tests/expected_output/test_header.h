@@ -40,10 +40,6 @@ _Float16 func_c(int, float) __NOEXCEPT;
 _Float16 func_d(int, float) __NOEXCEPT;
 #endif // LIBC_TYPES_HAS_FLOAT16
 
-#ifdef LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
-_Float16 func_e(float128) __NOEXCEPT;
-#endif // LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
-
 extern obj object_1;
 extern obj object_2;
 
