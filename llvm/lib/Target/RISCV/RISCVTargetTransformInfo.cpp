@@ -1663,10 +1663,17 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
   // TODO: Handle scalar type.
-  if (!LT.second.isVector())
+  if (!LT.second.isVector()) {
+    int ISD = TLI->InstructionOpcodeToISD(Opcode);
+    // BasicTTIImpl assumes floating point ops are twice as expensive as integer
+    // ops, but for vectors we cost them the same. Override it here so scalars
+    // are treated the same way.
+    if (Ty->isFPOrFPVectorTy() &&
+        TLI->isOperationLegalOrPromote(ISD, LT.second))
+      return LT.first;
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                          Args, CxtI);
-
+  }
 
   auto getConstantMatCost =
     [&](unsigned Operand, TTI::OperandValueInfo OpInfo) -> InstructionCost {

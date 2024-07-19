@@ -5,9 +5,9 @@
 
 define i32 @fadd() {
 ; CHECK-LABEL: 'fadd'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F16 = fadd half undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = fadd float undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = fadd double undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F16 = fadd half undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fadd float undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fadd double undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1F16 = fadd <1 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F16 = fadd <2 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F16 = fadd <4 x half> undef, undef
@@ -85,9 +85,9 @@ define i32 @fadd() {
 
 define i32 @fsub() {
 ; CHECK-LABEL: 'fsub'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F16 = fsub half undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = fsub float undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = fsub double undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F16 = fsub half undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fsub float undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fsub double undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1F16 = fsub <1 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F16 = fsub <2 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F16 = fsub <4 x half> undef, undef
@@ -165,9 +165,9 @@ define i32 @fsub() {
 
 define i32 @fmul() {
 ; CHECK-LABEL: 'fmul'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F16 = fmul half undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = fmul float undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = fmul double undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F16 = fmul half undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fmul float undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fmul double undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1F16 = fmul <1 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F16 = fmul <2 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F16 = fmul <4 x half> undef, undef
@@ -245,9 +245,9 @@ define i32 @fmul() {
 
 define i32 @fdiv() {
 ; CHECK-LABEL: 'fdiv'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F16 = fdiv half undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = fdiv float undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = fdiv double undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F16 = fdiv half undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fdiv float undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fdiv double undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1F16 = fdiv <1 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F16 = fdiv <2 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F16 = fdiv <4 x half> undef, undef
@@ -325,15 +325,15 @@ define i32 @fdiv() {
 
 define i32 @frem() {
 ; CHECK-LABEL: 'frem'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F16 = frem half undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F16 = frem half undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = frem float undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = frem double undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1F16 = frem <1 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2F16 = frem <2 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V4F16 = frem <4 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %V8F16 = frem <8 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %V16F16 = frem <16 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 127 for instruction: %V32F16 = frem <32 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1F16 = frem <1 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2F16 = frem <2 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V4F16 = frem <4 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %V8F16 = frem <8 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %V16F16 = frem <16 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: %V32F16 = frem <32 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV1F16 = frem <vscale x 1 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV2F16 = frem <vscale x 2 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV4F16 = frem <vscale x 4 x half> undef, undef
@@ -405,9 +405,9 @@ define i32 @frem() {
 
 define i32 @fneg() {
 ; CHECK-LABEL: 'fneg'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F16 = fneg half undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = fneg float undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = fneg double undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F16 = fneg half undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fneg float undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fneg double undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1F16 = fneg <1 x half> undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F16 = fneg <2 x half> undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F16 = fneg <4 x half> undef
