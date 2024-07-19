@@ -8,14 +8,13 @@
 
 #include "src/stdio/clearerr.h"
 #include "src/__support/File/file.h"
-#include "src/__support/macros/config.h"
 
 #include "hdr/types/FILE.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void, clearerr, (::FILE * stream)) {
   reinterpret_cast<LIBC_NAMESPACE::File *>(stream)->clearerr();
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

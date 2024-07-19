@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_SYS_RESOURCE_GETRLIMIT_H
 #define LLVM_LIBC_SRC_SYS_RESOURCE_GETRLIMIT_H
 
-#include "src/__support/macros/config.h"
 #include <sys/resource.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int getrlimit(int resource, struct rlimit *lim);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SYS_RESOURCE_GETRLIMIT_H

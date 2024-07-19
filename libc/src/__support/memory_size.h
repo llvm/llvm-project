@@ -13,11 +13,10 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/string/memory_utils/utils.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace internal {
 template <class T> LIBC_INLINE bool mul_overflow(T a, T b, T *res) {
 #if __has_builtin(__builtin_mul_overflow)
@@ -86,6 +85,6 @@ public:
   }
 };
 } // namespace internal
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MEMORY_SIZE_H

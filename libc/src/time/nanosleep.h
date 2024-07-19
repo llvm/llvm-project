@@ -10,12 +10,11 @@
 #define LLVM_LIBC_SRC_TIME_NANOSLEEP_H
 
 #include "hdr/types/struct_timespec.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int nanosleep(const timespec *req, timespec *rem);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_TIME_NANOSLEEP_H

@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_PREAD_H
 #define LLVM_LIBC_SRC_UNISTD_PREAD_H
 
-#include "src/__support/macros/config.h"
 #include <unistd.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 ssize_t pread(int fd, void *buf, size_t count, off_t offset);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_UNISTD_PREAD_H

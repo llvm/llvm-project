@@ -11,12 +11,11 @@
 
 #include "hdr/types/clockid_t.h"
 #include "hdr/types/struct_timespec.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int clock_gettime(clockid_t clockid, timespec *tp);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_TIME_CLOCK_GETTIME_H

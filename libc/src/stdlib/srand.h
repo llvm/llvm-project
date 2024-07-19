@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_SRAND_H
 #define LLVM_LIBC_SRC_STDLIB_SRAND_H
 
-#include "src/__support/macros/config.h"
 #include <stdlib.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 void srand(unsigned int seed);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDLIB_SRAND_H

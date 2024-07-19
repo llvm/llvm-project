@@ -10,14 +10,13 @@
 #define LLVM_LIBC_SRC_STDIO_FREAD_H
 
 #include "hdr/types/FILE.h"
-#include "src/__support/macros/config.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 size_t fread(void *__restrict buffer, size_t size, size_t nmemb,
              ::FILE *stream);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_FREAD_H

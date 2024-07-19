@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMMOVE_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMMOVE_H
 
-#include "src/__support/macros/config.h"
 #include <stddef.h> // size_t, ptrdiff_t
 
 #if defined(LIBC_TARGET_ARCH_IS_X86)
@@ -43,7 +42,7 @@
 #error "Unsupported architecture"
 #endif
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE constexpr bool inline_memmove_no_small_size(void *, const void *,
                                                         size_t) {
@@ -68,6 +67,6 @@ LIBC_INLINE void inline_memmove(void *dst, const void *src, size_t count) {
   inline_memmove_follow_up(dst, src, count);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif /* LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMMOVE_H */
