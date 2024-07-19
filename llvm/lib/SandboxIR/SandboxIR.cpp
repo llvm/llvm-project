@@ -16,6 +16,8 @@ using namespace llvm::sandboxir;
 
 Value *Use::get() const { return Ctx->getValue(LLVMUse->get()); }
 
+void Use::set(Value *V) { LLVMUse->set(V->Val); }
+
 unsigned Use::getOperandNo() const { return Usr->getUseOperandNo(*this); }
 
 #ifndef NDEBUG
@@ -115,13 +117,24 @@ void Value::replaceUsesWithIf(
         User *DstU = cast_or_null<User>(Ctx.getValue(LLVMUse.getUser()));
         if (DstU == nullptr)
           return false;
-        return ShouldReplace(Use(&LLVMUse, DstU, Ctx));
+        Use UseToReplace(&LLVMUse, DstU, Ctx);
+        if (!ShouldReplace(UseToReplace))
+          return false;
+        auto &Tracker = Ctx.getTracker();
+        if (Tracker.isTracking())
+          Tracker.track(std::make_unique<UseSet>(UseToReplace, Tracker));
+        return true;
       });
 }
 
 void Value::replaceAllUsesWith(Value *Other) {
   assert(getType() == Other->getType() &&
          "Replacing with Value of different type!");
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking()) {
+    for (auto Use : uses())
+      Tracker.track(std::make_unique<UseSet>(Use, Tracker));
+  }
   // We are delegating RAUW to LLVM IR's RAUW.
   Val->replaceAllUsesWith(Other->Val);
 }
@@ -212,11 +225,22 @@ bool User::classof(const Value *From) {
 
 void User::setOperand(unsigned OperandIdx, Value *Operand) {
   assert(isa<llvm::User>(Val) && "No operands!");
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<UseSet>(getOperandUse(OperandIdx), Tracker));
   // We are delegating to llvm::User::setOperand().
   cast<llvm::User>(Val)->setOperand(OperandIdx, Operand->Val);
 }
 
 bool User::replaceUsesOfWith(Value *FromV, Value *ToV) {
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking()) {
+    for (auto OpIdx : seq<unsigned>(0, getNumOperands())) {
+      auto Use = getOperandUse(OpIdx);
+      if (Use.get() == FromV)
+        Tracker.track(std::make_unique<UseSet>(Use, Tracker));
+    }
+  }
   // We are delegating RUOW to LLVM IR's RUOW.
   return cast<llvm::User>(Val)->replaceUsesOfWith(FromV->Val, ToV->Val);
 }
@@ -309,6 +333,10 @@ Instruction *Instruction::getPrevNode() const {
 }
 
 void Instruction::removeFromParent() {
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<RemoveFromParent>(this, Tracker));
+
   // Detach all the LLVM IR instructions from their parent BB.
   for (llvm::Instruction *I : getLLVMInstrs())
     I->removeFromParent();
@@ -317,17 +345,37 @@ void Instruction::removeFromParent() {
 void Instruction::eraseFromParent() {
   assert(users().empty() && "Still connected to users, can't erase!");
   std::unique_ptr<Value> Detached = Ctx.detach(this);
-  // We don't have Tracking yet, so just erase the LLVM IR instructions.
-  // Erase in reverse to avoid erasing nstructions with attached uses.
-  auto Instrs = getLLVMInstrs();
-  for (llvm::Instruction *I : reverse(Instrs))
-    I->eraseFromParent();
+  auto LLVMInstrs = getLLVMInstrs();
+
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking()) {
+    Tracker.track(
+        std::make_unique<EraseFromParent>(std::move(Detached), Tracker));
+    // We don't actually delete the IR instruction, because then it would be
+    // impossible to bring it back from the dead at the same memory location.
+    // Instead we remove it from its BB and track its current location.
+    for (llvm::Instruction *I : LLVMInstrs)
+      I->removeFromParent();
+    // TODO: Multi-instructions need special treatment because some of the
+    // references are internal to the instruction.
+    for (llvm::Instruction *I : LLVMInstrs)
+      I->dropAllReferences();
+  } else {
+    // Erase in reverse to avoid erasing nstructions with attached uses.
+    for (llvm::Instruction *I : reverse(LLVMInstrs))
+      I->eraseFromParent();
+  }
 }
 
 void Instruction::moveBefore(BasicBlock &BB, const BBIterator &WhereIt) {
   if (std::next(getIterator()) == WhereIt)
     // Destination is same as origin, nothing to do.
     return;
+
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<MoveInstr>(this, Tracker));
+
   auto *LLVMBB = cast<llvm::BasicBlock>(BB.Val);
   llvm::BasicBlock::iterator It;
   if (WhereIt == BB.end()) {

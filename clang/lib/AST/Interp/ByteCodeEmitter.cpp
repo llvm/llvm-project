@@ -31,6 +31,12 @@ static bool isUnevaluatedBuiltin(unsigned BuiltinID) {
 }
 
 Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
+
+  // Manually created functions that haven't been assigned proper
+  // parameters yet.
+  if (!FuncDecl->param_empty() && !FuncDecl->param_begin())
+    return nullptr;
+
   bool IsLambdaStaticInvoker = false;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl);
       MD && MD->isLambdaStaticInvoker()) {

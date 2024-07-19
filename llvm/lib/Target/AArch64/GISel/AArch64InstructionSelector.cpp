@@ -414,8 +414,13 @@ private:
     return selectAddrModeIndexed(Root, Width / 8);
   }
 
+  std::optional<bool>
+  isWorthFoldingIntoAddrMode(MachineInstr &MI,
+                             const MachineRegisterInfo &MRI) const;
+
   bool isWorthFoldingIntoExtendedReg(MachineInstr &MI,
-                                     const MachineRegisterInfo &MRI) const;
+                                     const MachineRegisterInfo &MRI,
+                                     bool IsAddrOperand) const;
   ComplexRendererFns
   selectAddrModeShiftedExtendXReg(MachineOperand &Root,
                                   unsigned SizeInBytes) const;
@@ -6869,19 +6874,70 @@ AArch64InstructionSelector::selectNegArithImmed(MachineOperand &Root) const {
   return select12BitValueWithLeftShift(Immed);
 }
 
+/// Checks if we are sure that folding MI into load/store addressing mode is
+/// beneficial or not.
+///
+/// Returns:
+/// - true if folding MI would be beneficial.
+/// - false if folding MI would be bad.
+/// - std::nullopt if it is not sure whether folding MI is beneficial.
+///
+/// \p MI can be the offset operand of G_PTR_ADD, e.g. G_SHL in the example:
+///
+/// %13:gpr(s64) = G_CONSTANT i64 1
+/// %8:gpr(s64) = G_SHL %6, %13(s64)
+/// %9:gpr(p0) = G_PTR_ADD %0, %8(s64)
+/// %12:gpr(s32) = G_LOAD %9(p0) :: (load (s16))
+std::optional<bool> AArch64InstructionSelector::isWorthFoldingIntoAddrMode(
+    MachineInstr &MI, const MachineRegisterInfo &MRI) const {
+  if (MI.getOpcode() == AArch64::G_SHL) {
+    // Address operands with shifts are free, except for running on subtargets
+    // with AddrLSLSlow14.
+    if (const auto ValAndVeg = getIConstantVRegValWithLookThrough(
+            MI.getOperand(2).getReg(), MRI)) {
+      const APInt ShiftVal = ValAndVeg->Value;
+
+      // Don't fold if we know this will be slow.
+      return !(STI.hasAddrLSLSlow14() && (ShiftVal == 1 || ShiftVal == 4));
+    }
+  }
+  return std::nullopt;
+}
+
 /// Return true if it is worth folding MI into an extended register. That is,
 /// if it's safe to pull it into the addressing mode of a load or store as a
 /// shift.
+/// \p IsAddrOperand whether the def of MI is used as an address operand
+/// (e.g. feeding into an LDR/STR).
 bool AArch64InstructionSelector::isWorthFoldingIntoExtendedReg(
-    MachineInstr &MI, const MachineRegisterInfo &MRI) const {
+    MachineInstr &MI, const MachineRegisterInfo &MRI,
+    bool IsAddrOperand) const {
+
   // Always fold if there is one use, or if we're optimizing for size.
   Register DefReg = MI.getOperand(0).getReg();
   if (MRI.hasOneNonDBGUse(DefReg) ||
       MI.getParent()->getParent()->getFunction().hasOptSize())
     return true;
 
-  // FIXME: Consider checking HasAddrLSLSlow14 and HasALULSLFast as
-  // appropriate.
+  if (IsAddrOperand) {
+    // If we are already sure that folding MI is good or bad, return the result.
+    if (const auto Worth = isWorthFoldingIntoAddrMode(MI, MRI))
+      return *Worth;
+
+    // Fold G_PTR_ADD if its offset operand can be folded
+    if (MI.getOpcode() == AArch64::G_PTR_ADD) {
+      MachineInstr *OffsetInst =
+          getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI);
+
+      // Note, we already know G_PTR_ADD is used by at least two instructions.
+      // If we are also sure about whether folding is beneficial or not,
+      // return the result.
+      if (const auto Worth = isWorthFoldingIntoAddrMode(*OffsetInst, MRI))
+        return *Worth;
+    }
+  }
+
+  // FIXME: Consider checking HasALULSLFast as appropriate.
 
   // We have a fastpath, so folding a shift in and potentially computing it
   // many times may be beneficial. Check if this is only used in memory ops.
@@ -6929,7 +6985,7 @@ AArch64InstructionSelector::selectExtendedSHL(
   int64_t LegalShiftVal = Log2_32(SizeInBytes);
   if (LegalShiftVal == 0)
     return std::nullopt;
-  if (!isWorthFoldingIntoExtendedReg(*OffsetInst, MRI))
+  if (!isWorthFoldingIntoExtendedReg(*OffsetInst, MRI, true))
     return std::nullopt;
 
   // Now, try to find the specific G_CONSTANT. Start by assuming that the
@@ -7036,7 +7092,7 @@ AArch64InstructionSelector::selectAddrModeShiftedExtendXReg(
   // Check if we can find the G_PTR_ADD.
   MachineInstr *PtrAdd =
       getOpcodeDef(TargetOpcode::G_PTR_ADD, Root.getReg(), MRI);
-  if (!PtrAdd || !isWorthFoldingIntoExtendedReg(*PtrAdd, MRI))
+  if (!PtrAdd || !isWorthFoldingIntoExtendedReg(*PtrAdd, MRI, true))
     return std::nullopt;
 
   // Now, try to match an opcode which will match our specific offset.
@@ -7170,7 +7226,7 @@ AArch64InstructionSelector::selectAddrModeWRO(MachineOperand &Root,
 
   MachineInstr *PtrAdd =
       getOpcodeDef(TargetOpcode::G_PTR_ADD, Root.getReg(), MRI);
-  if (!PtrAdd || !isWorthFoldingIntoExtendedReg(*PtrAdd, MRI))
+  if (!PtrAdd || !isWorthFoldingIntoExtendedReg(*PtrAdd, MRI, true))
     return std::nullopt;
 
   MachineOperand &LHS = PtrAdd->getOperand(1);
@@ -7201,7 +7257,7 @@ AArch64InstructionSelector::selectAddrModeWRO(MachineOperand &Root,
   //
   // e.g.
   // ldr something, [base_reg, ext_reg, sxtw]
-  if (!isWorthFoldingIntoExtendedReg(*OffsetInst, MRI))
+  if (!isWorthFoldingIntoExtendedReg(*OffsetInst, MRI, true))
     return std::nullopt;
 
   // Check if this is an extend. We'll get an extend type if it is.
@@ -7396,7 +7452,7 @@ AArch64InstructionSelector::selectShiftedRegister(MachineOperand &Root,
     return std::nullopt;
   if (ShType == AArch64_AM::ROR && !AllowROR)
     return std::nullopt;
-  if (!isWorthFoldingIntoExtendedReg(*ShiftInst, MRI))
+  if (!isWorthFoldingIntoExtendedReg(*ShiftInst, MRI, false))
     return std::nullopt;
 
   // Need an immediate on the RHS.
@@ -7510,7 +7566,7 @@ AArch64InstructionSelector::selectArithExtendedRegister(
   if (!RootDef)
     return std::nullopt;
 
-  if (!isWorthFoldingIntoExtendedReg(*RootDef, MRI))
+  if (!isWorthFoldingIntoExtendedReg(*RootDef, MRI, false))
     return std::nullopt;
 
   // Check if we can fold a shift and an extend.

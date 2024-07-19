@@ -61,6 +61,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/SandboxIR/Tracker.h"
 #include "llvm/SandboxIR/Use.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iterator>
@@ -171,6 +172,7 @@ protected:
 
   friend class Context; // For getting `Val`.
   friend class User;    // For getting `Val`.
+  friend class Use;     // For getting `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -491,6 +493,7 @@ protected:
   /// \Returns the LLVM IR Instructions that this SandboxIR maps to in program
   /// order.
   virtual SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const = 0;
+  friend class EraseFromParent; // For getLLVMInstrs().
 
 public:
   static const char *getOpcodeName(Opcode Opc);
@@ -641,6 +644,8 @@ public:
 class Context {
 protected:
   LLVMContext &LLVMCtx;
+  Tracker IRTracker;
+
   /// Maps LLVM Value to the corresponding sandboxir::Value. Owns all
   /// SandboxIR objects.
   DenseMap<llvm::Value *, std::unique_ptr<sandboxir::Value>>
@@ -654,6 +659,7 @@ protected:
   friend void Instruction::eraseFromParent(); // For detach().
   /// Take ownership of VPtr and store it in `LLVMValueToValueMap`.
   Value *registerValue(std::unique_ptr<Value> &&VPtr);
+  friend class EraseFromParent; // For registerValue().
   /// This is the actual function that creates sandboxir values for \p V,
   /// and among others handles all instruction types.
   Value *getOrCreateValueInternal(llvm::Value *V, llvm::User *U = nullptr);
@@ -678,7 +684,15 @@ protected:
   friend class BasicBlock; // For getOrCreateValue().
 
 public:
-  Context(LLVMContext &LLVMCtx) : LLVMCtx(LLVMCtx) {}
+  Context(LLVMContext &LLVMCtx) : LLVMCtx(LLVMCtx), IRTracker(*this) {}
+
+  Tracker &getTracker() { return IRTracker; }
+  /// Convenience function for `getTracker().save()`
+  void save() { IRTracker.save(); }
+  /// Convenience function for `getTracker().revert()`
+  void revert() { IRTracker.revert(); }
+  /// Convenience function for `getTracker().accept()`
+  void accept() { IRTracker.accept(); }
 
   sandboxir::Value *getValue(llvm::Value *V) const;
   const sandboxir::Value *getValue(const llvm::Value *V) const {
