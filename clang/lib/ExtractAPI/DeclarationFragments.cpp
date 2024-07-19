@@ -710,7 +710,8 @@ DeclarationFragmentsBuilder::getFragmentsForFunction(const FunctionDecl *Func) {
 
   Fragments.append(std::move(ReturnValueFragment))
       .appendSpace()
-      .append(Func->getName(), DeclarationFragments::FragmentKind::Identifier);
+      .append(Func->getNameAsString(),
+              DeclarationFragments::FragmentKind::Identifier);
 
   if (Func->getTemplateSpecializationInfo()) {
     Fragments.append("<", DeclarationFragments::FragmentKind::Text);
@@ -1610,8 +1611,11 @@ DeclarationFragmentsBuilder::getSubHeading(const NamedDecl *Decl) {
              cast<CXXMethodDecl>(Decl)->isOverloadedOperator()) {
     Fragments.append(Decl->getNameAsString(),
                      DeclarationFragments::FragmentKind::Identifier);
-  } else if (!Decl->getName().empty())
+  } else if (Decl->getIdentifier()) {
     Fragments.append(Decl->getName(),
+                     DeclarationFragments::FragmentKind::Identifier);
+  } else
+    Fragments.append(Decl->getDeclName().getAsString(),
                      DeclarationFragments::FragmentKind::Identifier);
   return Fragments;
 }
