@@ -115,3 +115,11 @@ void f1() {
   };
 }
 #endif
+
+static_assert(_Generic(
+#embed __FILE__ limit(1)
+  , int : 1, default : 0));
+
+static_assert(alignof(typeof(
+#embed __FILE__ limit(1)
+)) == alignof(int));
