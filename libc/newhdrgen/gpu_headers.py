@@ -17,7 +17,6 @@ class GpuHeaderFile:
         self.enumerations = []
         self.objects = []
         self.functions = []
-        self.includes = []
 
     def add_macro(self, macro):
         self.macros.append(macro)
