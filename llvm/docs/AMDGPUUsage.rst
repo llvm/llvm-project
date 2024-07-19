@@ -14159,19 +14159,16 @@ For GFX12:
   work-group:
 
   * In CU wavefront execution mode, no special action is required.
-  * In WGP wavefront execution mode, a ``global_inv scope:SCOPE_CU`` is required
+  * In WGP wavefront execution mode, a ``global_inv scope:SCOPE_SE`` is required
     as wavefronts may be executing on SIMDs of different CUs that access different L0s.
 
 * The scalar memory operations access a scalar L0 cache shared by all wavefronts
   on a WGP. The scalar and vector L0 caches are not coherent. However, scalar
   operations are used in a restricted way so do not impact the memory model. See
   :ref:`amdgpu-amdhsa-memory-spaces`.
-* The vector and scalar memory L0 caches use an L1 cache shared by all WGPs on
-  the same SA. Therefore, no special action is required for coherence between
-  the wavefronts of a single work-group. However, a ``global_inv scope:SCOPE_DEV`` is
-  required for coherence between wavefronts executing in different work-groups
-  as they may be executing on different SAs that access different L1s.
-* The L1 caches have independent quadrants to service disjoint ranges of virtual
+* The vector and scalar memory L0 caches use an L1 buffer shared by all WGPs on
+  the same SA. The L1 buffer acts as a bridge to L2 for clients within a SA.
+* The L1 buffers have independent quadrants to service disjoint ranges of virtual
   addresses.
 * Each L0 cache has a separate request queue per L1 quadrant. Therefore, the
   vector and scalar memory operations performed by different wavefronts, whether
@@ -14188,7 +14185,7 @@ For GFX12:
   * ``s_wait_bvhcnt 0x0``
   * ``s_wait_storecnt 0x0``
 
-* The L1 caches use an L2 cache shared by all SAs on the same agent.
+* The L1 buffers use an L2 cache shared by all SAs on the same agent.
 * The L2 cache has independent channels to service disjoint ranges of virtual
   addresses.
 * Each L1 quadrant of a single SA accesses a different L2 channel. Each L1
@@ -14223,7 +14220,7 @@ may change between kernel dispatch executions. See
 
 For kernarg backing memory:
 
-* CP invalidates the L0 and L1 caches at the start of each kernel dispatch.
+* CP invalidates caches start of each kernel dispatch.
 * On dGPU the kernarg backing memory is accessed as MTYPE UC (uncached) to avoid
   needing to invalidate the L2 cache.
 * On APU the kernarg backing memory is accessed as MTYPE CC (cache coherent) and
@@ -14232,7 +14229,7 @@ For kernarg backing memory:
 Scratch backing memory (which is used for the private address space) is accessed
 with MTYPE NC (non-coherent). Since the private address space is only accessed
 by a single thread, and is always write-before-read, there is never a need to
-invalidate these entries from the L0 or L1 caches.
+invalidate these entries from L0.
 
 Wavefronts can be executed in WGP or CU wavefront execution mode:
 
