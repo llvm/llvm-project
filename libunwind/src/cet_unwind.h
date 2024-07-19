@@ -45,10 +45,9 @@
 #define _LIBUNWIND_POP_CET_SSP(x)                                              \
   do {                                                                         \
     if (__chkfeat(_CHKFEAT_GCS)) {                                             \
-      unsigned int tmp = (x);                                                  \
-      while (tmp--) {                                                          \
+      unsigned tmp = (x);                                                      \
+      while (tmp--)                                                            \
         __gcspopm();                                                           \
-      }                                                                        \
     }                                                                          \
   } while (0)
 
