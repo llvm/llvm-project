@@ -98,6 +98,95 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+
+- New :doc:`boost-use-ranges
+  <clang-tidy/checks/boost/use-ranges>` check.
+
+  Detects calls to standard library iterator algorithms that could be replaced
+  with a Boost ranges version instead.
+
+- New :doc:`bugprone-crtp-constructor-accessibility
+  <clang-tidy/checks/bugprone/crtp-constructor-accessibility>` check.
+
+  Detects error-prone Curiously Recurring Template Pattern usage, when the CRTP
+  can be constructed outside itself and the derived class.
+
+- New :doc:`bugprone-pointer-arithmetic-on-polymorphic-object
+  <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` check.
+
+  Finds pointer arithmetic performed on classes that contain a virtual function.
+
+- New :doc:`bugprone-return-const-ref-from-parameter
+  <clang-tidy/checks/bugprone/return-const-ref-from-parameter>` check.
+
+  Detects return statements that return a constant reference parameter as constant
+  reference. This may cause use-after-free errors if the caller uses xvalues as
+  arguments.
+
+- New :doc:`bugprone-suspicious-stringview-data-usage
+  <clang-tidy/checks/bugprone/suspicious-stringview-data-usage>` check.
+
+  Identifies suspicious usages of ``std::string_view::data()`` that could lead
+  to reading out-of-bounds data due to inadequate or incorrect string null
+  termination.
+
+- New :doc:`misc-use-internal-linkage
+  <clang-tidy/checks/misc/use-internal-linkage>` check.
+
+  Detects variables and functions that can be marked as static or moved into
+  an anonymous namespace to enforce internal linkage.
+
+- New :doc:`modernize-min-max-use-initializer-list
+  <clang-tidy/checks/modernize/min-max-use-initializer-list>` check.
+
+  Replaces nested ``std::min`` and ``std::max`` calls with an initializer list
+  where applicable.
+
+- New :doc:`modernize-use-cpp-style-comments
+  <clang-tidy/checks/modernize/use-cpp-style-comments>` check.
+
+  Detects C Style comments and suggests to use C++ style comments instead.
+
+- New :doc:`modernize-use-designated-initializers
+  <clang-tidy/checks/modernize/use-designated-initializers>` check.
+
+  Finds initializer lists for aggregate types that could be
+  written as designated initializers instead.
+
+- New :doc:`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` check.
+
+  Detects calls to standard library iterator algorithms that could be replaced
+  with a ranges version instead.
+
+- New :doc:`modernize-use-std-format
+  <clang-tidy/checks/modernize/use-std-format>` check.
+
+  Converts calls to ``absl::StrFormat``, or other functions via
+  configuration options, to C++20's ``std::format``, or another function
+  via a configuration option, modifying the format string appropriately and
+  removing now-unnecessary calls to ``std::string::c_str()`` and
+  ``std::string::data()``.
+
+- New :doc:`readability-enum-initial-value
+  <clang-tidy/checks/readability/enum-initial-value>` check.
+
+  Enforces consistent style for enumerators' initialization, covering three
+  styles: none, first only, or all initialized explicitly.
+
+- New :doc:`readability-math-missing-parentheses
+  <clang-tidy/checks/readability/math-missing-parentheses>` check.
+
+  Check for missing parentheses in mathematical expressions that involve
+  operators of different priorities.
+
+- New :doc:`readability-use-std-min-max
+  <clang-tidy/checks/readability/use-std-min-max>` check.
+
+  Replaces certain conditional statements with equivalent calls to
+  ``std::min`` or ``std::max``.
+
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
