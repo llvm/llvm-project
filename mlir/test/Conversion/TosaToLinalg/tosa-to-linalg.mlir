@@ -546,11 +546,11 @@ func.func @test_simple_f32(%arg0: tensor<1xf32>) -> () {
   %24 = tosa.erf %0 : (tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
-  // CHECK: sin
+  // CHECK: math.sin
   %25 = tosa.sin %arg0 : (tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
-  // CHECK: cos
+  // CHECK: math.cos
   %26 = tosa.cos %arg0 : (tensor<1xf32>) -> tensor<1xf32>
 
   return
