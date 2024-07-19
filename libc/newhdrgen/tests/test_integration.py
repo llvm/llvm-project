@@ -57,7 +57,7 @@ class TestHeaderGenIntegration(unittest.TestCase):
             self.source_dir / "libc/newhdrgen/tests/expected_output/test_header.h"
         )
         output_file = self.output_dir / "test_small.h"
-        entry_points = {"func_b", "func_a", "func_c", "func_d"}
+        entry_points = {"func_b", "func_a", "func_c", "func_d", "func_e"}
 
         if not self.output_dir.exists():
             self.output_dir.mkdir(parents=True)
