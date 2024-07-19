@@ -5,28 +5,15 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: no-threads
 
 // <mutex>
 
-// template <class Mutex>
-// class lock_guard
-// {
-// public:
-//     typedef Mutex mutex_type;
-//     ...
-// };
+// template <class Mutex> class lock_guard;
+
+// lock_guard& operator=(lock_guard const&) = delete;
 
 #include <mutex>
-#include <type_traits>
 
-#include "test_macros.h"
+#include "types.h"
 
-int main(int, char**)
-{
-    static_assert((std::is_same<std::lock_guard<std::mutex>::mutex_type,
-                   std::mutex>::value), "");
-
-  return 0;
-}
+static_assert(!std::is_copy_assignable<std::lock_guard<MyMutex> >::value, "");
