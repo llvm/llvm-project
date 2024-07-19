@@ -1735,8 +1735,17 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       args.hasFlag(OPT_warn_thin_archive_missing_members,
                    OPT_no_warn_thin_archive_missing_members, true);
   config->generateUuid = !args.hasArg(OPT_no_uuid);
-  config->irpgoProfileSortProfilePath =
-      args.getLastArgValue(OPT_irpgo_profile_sort);
+
+  auto IncompatWithCGSort = [&](StringRef firstArgStr) {
+    // Throw an error only if --call-graph-profile-sort is explicitly specified
+    if (config->callGraphProfileSort)
+      if (const Arg *arg = args.getLastArgNoClaim(OPT_call_graph_profile_sort))
+        error(firstArgStr + " is incompatible with " + arg->getSpelling());
+  };
+  if (const Arg *arg = args.getLastArg(OPT_irpgo_profile_sort)) {
+    config->irpgoProfileSortProfilePath = arg->getValue();
+    IncompatWithCGSort(arg->getSpelling());
+  }
   if (const Arg *arg = args.getLastArg(OPT_compression_sort)) {
     StringRef compressionSortStr = arg->getValue();
     if (compressionSortStr == "function") {
@@ -1750,6 +1759,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       error("unknown value `" + compressionSortStr + "` for " +
             arg->getSpelling());
     }
+    if (compressionSortStr != "none")
+      IncompatWithCGSort(arg->getSpelling());
   }
   config->verboseBpSectionOrderer = args.hasArg(OPT_verbose_bp_section_orderer);
 
