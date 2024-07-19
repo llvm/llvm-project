@@ -126,6 +126,16 @@ def no_call_graph_profile_sort : Flag<["--"], "no-call-graph-profile-sort">,
 def print_symbol_order_eq: Joined<["--"], "print-symbol-order=">,
     HelpText<"Print a symbol order specified by --call-graph-profile-sort into the specified file">,
     Group<grp_lld>;
+def irpgo_profile_sort: Joined<["--"], "irpgo-profile-sort=">,
+    MetaVarName<"<profile>">,
+    HelpText<"Read the IRPGO profile at <profile> to order sections to improve startup time">,
+    Group<grp_lld>;
+def compression_sort: Joined<["--"], "compression-sort=">,
+    MetaVarName<"[none,function,data,both]">,
+    HelpText<"Order sections to improve compressed size">, Group<grp_lld>;
+def verbose_bp_section_orderer: Flag<["--"], "verbose-bp-section-orderer">,
+    HelpText<"Print information on how many sections were ordered by balanced partitioning and a measure of the expected number of page faults">,
+    Group<grp_lld>;
 def ignore_auto_link_option : Separate<["--"], "ignore-auto-link-option">,
     Group<grp_lld>;
 def ignore_auto_link_option_eq : Joined<["--"], "ignore-auto-link-option=">,
@@ -156,17 +166,6 @@ defm pgo_warn_mismatch: BB<"pgo-warn-mismatch",
 defm warn_thin_archive_missing_members : BB<"warn-thin-archive-missing-members",
   "Warn on missing object files referenced by thin archives (default)",
   "Do not warn on missing object files referenced by thin archives">, Group<grp_lld>;
-def profile_guided_function_order: Joined<["--"], "profile-guided-function-order=">,
-    MetaVarName<"<profile>">, 
-    HelpText<"Read traces from <profile> to order functions to improve startup time">,
-    Group<grp_lld>;
-def function_order_for_compression: Flag<["--"], "function-order-for-compression">,
-    HelpText<"Order functions to improve compressed size">, Group<grp_lld>;
-def data_order_for_compression: Flag<["--"], "data-order-for-compression">,
-    HelpText<"Order data to improve compressed size">, Group<grp_lld>;
-def verbose_bp_section_orderer : Flag<["--"], "verbose-bp-section-orderer">,
-    HelpText<"Print information on how many sections were ordered by balanced partitioning and a measure of the expected number of page faults">,
-    Group<grp_lld>;
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
 // dated 2018-03-07 and cross checked with ld64 source code in repo

@@ -1735,11 +1735,22 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       args.hasFlag(OPT_warn_thin_archive_missing_members,
                    OPT_no_warn_thin_archive_missing_members, true);
   config->generateUuid = !args.hasArg(OPT_no_uuid);
-  config->profileGuidedFunctionOrderPath =
-      args.getLastArgValue(OPT_profile_guided_function_order);
-  config->functionOrderForCompression =
-      args.hasArg(OPT_function_order_for_compression);
-  config->dataOrderForCompression = args.hasArg(OPT_data_order_for_compression);
+  config->irpgoProfileSortProfilePath =
+      args.getLastArgValue(OPT_irpgo_profile_sort);
+  if (const Arg *arg = args.getLastArg(OPT_compression_sort)) {
+    StringRef compressionSortStr = arg->getValue();
+    if (compressionSortStr == "function") {
+      config->functionOrderForCompression = true;
+    } else if (compressionSortStr == "data") {
+      config->dataOrderForCompression = true;
+    } else if (compressionSortStr == "both") {
+      config->functionOrderForCompression = true;
+      config->dataOrderForCompression = true;
+    } else if (compressionSortStr != "none") {
+      error("unknown value `" + compressionSortStr + "` for " +
+            arg->getSpelling());
+    }
+  }
   config->verboseBpSectionOrderer = args.hasArg(OPT_verbose_bp_section_orderer);
 
   for (const Arg *arg : args.filtered(OPT_alias)) {

@@ -7,8 +7,8 @@
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t.s -o %t.o
 # RUN: llvm-profdata merge %t.proftext -o %t.profdata
 
-# RUN: %lld -arch arm64 -lSystem -e _main --icf=all -o - %t.o --profile-guided-function-order=%t.profdata --function-order-for-compression --data-order-for-compression | llvm-nm --numeric-sort --format=just-symbols - > %t.order1.txt
-# RUN: %lld -arch arm64 -lSystem -e _main --icf=all -o - %t.o --profile-guided-function-order=%t.profdata --function-order-for-compression --data-order-for-compression | llvm-nm --numeric-sort --format=just-symbols - > %t.order2.txt
+# RUN: %lld -arch arm64 -lSystem -e _main --icf=all -o - %t.o --irpgo-profile-sort=%t.profdata --compression-sort=both | llvm-nm --numeric-sort --format=just-symbols - > %t.order1.txt
+# RUN: %lld -arch arm64 -lSystem -e _main --icf=all -o - %t.o --irpgo-profile-sort=%t.profdata --compression-sort=both | llvm-nm --numeric-sort --format=just-symbols - > %t.order2.txt
 # RUN: diff %t.order1.txt %t.order2.txt
 
 import random
