@@ -8,7 +8,6 @@
 
 #include "ImplementationInNamespaceCheck.h"
 #include "NamespaceConstants.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -25,25 +24,70 @@ void ImplementationInNamespaceCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
+void ImplementationInNamespaceCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
+}
+
+void ImplementationInNamespaceCheck::registerPPCallbacks(
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  IncludeInserter.registerPreprocessor(PP);
+}
+
 void ImplementationInNamespaceCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl =
       Result.Nodes.getNodeAs<Decl>("child_of_translation_unit");
   const auto *NS = dyn_cast<NamespaceDecl>(MatchedDecl);
+
+  // LLVM libc declarations should be inside of a non-anonymous namespace.
   if (NS == nullptr || NS->isAnonymousNamespace()) {
     diag(MatchedDecl->getLocation(),
          "declaration must be enclosed within the '%0' namespace")
-        << RequiredNamespaceMacroName;
+        << RequiredNamespaceDeclMacroName;
     return;
   }
+
+  // Enforce that the namespace is the result of macro expansion
   if (Result.SourceManager->isMacroBodyExpansion(NS->getLocation()) == false) {
-    diag(NS->getLocation(), "the outermost namespace should be the '%0' macro")
-        << RequiredNamespaceMacroName;
+    auto DB = diag(NS->getLocation(),
+                   "the outermost namespace should be the '%0' macro")
+              << RequiredNamespaceDeclMacroName;
+
+    // TODO: Determine how to split inline namespaces correctly in the FixItHint
+    //
+    // We can't easily replace LIBC_NAMEPACE::inner::namespace { with
+    //
+    // namespace LIBC_NAMEPACE_DECL {
+    //   namespace inner::namespace {
+    //
+    // For now, just update the simple case w/ LIBC_NAMEPACE_DECL
+    if (!NS->isInlineNamespace())
+      DB << FixItHint::CreateReplacement(NS->getLocation(),
+                                         RequiredNamespaceDeclMacroName);
+
+    DB << IncludeInserter.createIncludeInsertion(
+        Result.SourceManager->getFileID(NS->getBeginLoc()),
+        NamespaceMacroHeader);
+
     return;
   }
-  if (NS->getName().starts_with(RequiredNamespaceStart) == false) {
+
+  // We want the macro to have [[gnu::visibility("hidden")]] as a prefix, but
+  // visibility is just an attribute in the AST construct, so we check that
+  // instead.
+  if (NS->getVisibility() != Visibility::HiddenVisibility) {
     diag(NS->getLocation(), "the '%0' macro should start with '%1'")
-        << RequiredNamespaceMacroName << RequiredNamespaceStart;
+        << RequiredNamespaceDeclMacroName << RequiredNamespaceDeclStart
+        << FixItHint::CreateReplacement(NS->getLocation(),
+                                        RequiredNamespaceDeclMacroName);
+    return;
+  }
+
+  // Lastly, make sure the namespace name actually has the __llvm_libc prefix
+  if (NS->getName().starts_with(RequiredNamespaceRefStart) == false) {
+    diag(NS->getLocation(), "the '%0' macro expansion should start with '%1'")
+        << RequiredNamespaceDeclMacroName << RequiredNamespaceRefStart;
     return;
   }
 }
