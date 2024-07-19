@@ -272,7 +272,7 @@ public:
   }
 
   /// Returns the current list of diagnostic metadata.
-  SmallVector<DiagnosticArgument, 1>& getMetaData() { return metadata; }
+  SmallVector<DiagnosticArgument, 0> &getMetaData() { return metadata; }
 
 private:
   Diagnostic(const Diagnostic &rhs) = delete;
@@ -295,7 +295,7 @@ private:
   NoteVector notes;
 
   /// A list of metadata attached to this Diagnostic.
-  SmallVector<DiagnosticArgument, 1> metadata;
+  SmallVector<DiagnosticArgument, 0> metadata;
 };
 
 inline raw_ostream &operator<<(raw_ostream &os, const Diagnostic &diag) {
