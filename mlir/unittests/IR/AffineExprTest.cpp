@@ -98,3 +98,11 @@ TEST(AffineExprTest, divisionSimplification) {
   ASSERT_EQ((d0 * 6).ceilDiv(4).getKind(), AffineExprKind::CeilDiv);
   ASSERT_EQ((d0 * 6).ceilDiv(-2), d0 * -3);
 }
+
+TEST(AffineExprTest, modSimplificationRegression) {
+  MLIRContext ctx;
+  OpBuilder b(&ctx);
+  auto d0 = b.getAffineDimExpr(0);
+  auto sum = d0 + d0.floorDiv(3).floorDiv(-3);
+  ASSERT_EQ(sum.getKind(), AffineExprKind::Add);
+}
