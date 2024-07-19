@@ -4,6 +4,9 @@
 # RUN: | FileCheck %s
 
 # CHECK-NOT: Can't find a valid II. Keep searching...
+# CHECK: Start analyzing II
+# CHECK: Start scheduling Phis
+# CHECK: Current window Offset is {{[0-9]+}} and II is {{[0-9]+}}
 
 ---
 name:            relu
