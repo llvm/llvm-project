@@ -79,6 +79,22 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_TOKEN(Tokens[6], tok::star, TT_BinaryOperator);
 
+  Tokens = annotate("#define FOO foo.bar(a & b)");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::amp, TT_BinaryOperator);
+
+  Tokens = annotate("#define FOO foo::bar(a && b)");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::ampamp, TT_BinaryOperator);
+
+  Tokens = annotate("#define FOO foo bar(a *b)");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::star, TT_PointerOrReference);
+
+  Tokens = annotate("#define FOO void foo::bar(a &b)");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::amp, TT_PointerOrReference);
+
   Tokens = annotate("void f() {\n"
                     "  while (p < a && *p == 'a')\n"
                     "    p++;\n"
