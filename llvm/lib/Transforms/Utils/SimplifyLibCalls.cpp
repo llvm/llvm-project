@@ -3021,7 +3021,8 @@ void LibCallSimplifier::classifyArgUse(
 /// Constant folds remquo
 Value *LibCallSimplifier::optimizeRemquo(CallInst *CI, IRBuilderBase &B) {
   const APFloat *X, *Y;
-  if (!match(CI->getArgOperand(0), m_APFloat(X)) || !match(CI->getArgOperand(1), m_APFloat(Y)))
+  if (!match(CI->getArgOperand(0), m_APFloat(X)) ||
+      !match(CI->getArgOperand(1), m_APFloat(Y)))
     return nullptr;
 
   if (X->isNaN() || Y->isNaN() || X->isInfinity() || Y->isZero())
@@ -3039,11 +3040,13 @@ Value *LibCallSimplifier::optimizeRemquo(CallInst *CI, IRBuilderBase &B) {
   // TODO: We can only keep at least the three of the last bits of x/y
   APSInt QuotInt(32, /*isUnsigned=*/false);
   bool IsExact;
-  Status = Quot.convertToInteger(QuotInt, APFloat::rmNearestTiesToEven, &IsExact);
-  if (Status != APFloat::opOK || Status != APFloat::opInexact)
+  Status =
+      Quot.convertToInteger(QuotInt, APFloat::rmNearestTiesToEven, &IsExact);
+  if (Status != APFloat::opOK && Status != APFloat::opInexact)
     return nullptr;
 
-  B.CreateAlignedStore(ConstantInt::get(B.getInt32Ty(), QuotInt.getExtValue()), CI->getArgOperand(2), CI->getParamAlign(2));
+  B.CreateAlignedStore(ConstantInt::get(B.getInt32Ty(), QuotInt.getExtValue()),
+                       CI->getArgOperand(2), CI->getParamAlign(2));
   return ConstantFP::get(CI->getType(), Rem);
 }
 
