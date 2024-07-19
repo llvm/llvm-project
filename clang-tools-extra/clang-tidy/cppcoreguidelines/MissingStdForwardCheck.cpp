@@ -129,8 +129,10 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
       unless(anyOf(hasAncestor(typeLoc()),
                    hasAncestor(expr(hasUnevaluatedContext())))));
 
-  auto StaticCast = cxxStaticCastExpr(
-      hasSourceExpression(declRefExpr(to(equalsBoundNode("param")))));
+  auto StaticCast = Options.get("IgnoreStaticCasts", false)
+                        ? cxxStaticCastExpr(hasSourceExpression(
+                              declRefExpr(to(equalsBoundNode("param")))))
+                        : cxxStaticCastExpr(unless(anything()));
 
   Finder->addMatcher(
       parmVarDecl(

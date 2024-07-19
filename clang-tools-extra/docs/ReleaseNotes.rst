@@ -104,12 +104,13 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`cppcoreguidelines-missing-std-forward
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check to allow
+  using ``static_cast<T&>`` to explicitly convey the intention of using a
+  forwarding reference as an lvalue reference.Removed checks
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
-  member function calls too.
-
-- Improved :doc:`modernize-use-std-print
-  <clang-tidy/checks/modernize/use-std-print>` check to support replacing
   member function calls too.
 
 - Improved :doc:`readablility-implicit-bool-conversion
@@ -120,11 +121,6 @@ Changes in existing checks
 - Improved :doc:`readability-redundant-smartptr-get
   <clang-tidy/checks/readability/redundant-smartptr-get>` check to
   remove `->`, when redundant `get()` is removed.
-
-- Improved :doc:`cppcoreguidelines-missing-std-forward
-  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check to allow
-  using ``static_cast<T&>`` to explicitly convey the intention of using a
-  forwarding reference as an lvalue reference.
 
 Removed checks
 ^^^^^^^^^^^^^^
