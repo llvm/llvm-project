@@ -49,16 +49,40 @@ entry:
   ret double %call
 }
 
-define double @remquo_f80(ptr %quo) {
-; CHECK-LABEL: define double @remquo_f80(
+define x86_fp80 @remquo_f80(ptr %quo) {
+; CHECK-LABEL: define x86_fp80 @remquo_f80(
 ; CHECK-SAME: ptr [[QUO:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CALL:%.*]] = call double @remquol(x86_fp80 0xKC001A000000000000000, x86_fp80 0xK4000C000000000000000, ptr [[QUO]])
-; CHECK-NEXT:    ret double [[CALL]]
+; CHECK-NEXT:    store i32 -2, ptr [[QUO]], align 4
+; CHECK-NEXT:    ret x86_fp80 0xK3FFF8000000000000000
 ;
 entry:
-  %call = call double @remquol(x86_fp80 0xKC001A000000000000000, x86_fp80 0xK4000C000000000000000, ptr %quo)
-  ret double %call
+  %call = call x86_fp80 @remquol(x86_fp80 0xKC001A000000000000000, x86_fp80 0xK4000C000000000000000, ptr %quo)
+  ret x86_fp80 %call
+}
+
+define fp128 @remquo_fp128(ptr %quo) {
+; CHECK-LABEL: define fp128 @remquo_fp128(
+; CHECK-SAME: ptr [[QUO:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = call fp128 @remquol(fp128 0xL0000000000000000C001400000000000, fp128 0xL00000000000000004000800000000000, ptr [[QUO]])
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+entry:
+  %call = call fp128 @remquol(fp128 0xL0000000000000000C001400000000000, fp128 0xL00000000000000004000800000000000, ptr %quo)
+  ret fp128 %call
+}
+
+define ppc_fp128 @remquo_ppc_fp128(ptr %quo) {
+; CHECK-LABEL: define ppc_fp128 @remquo_ppc_fp128(
+; CHECK-SAME: ptr [[QUO:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ppc_fp128 @remquol(ppc_fp128 0xMC0140000000000000000000000000000, ppc_fp128 0xM40080000000000000000000000000000, ptr [[QUO]])
+; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
+;
+entry:
+  %call = call ppc_fp128 @remquol(ppc_fp128 0xMC0140000000000000000000000000000, ppc_fp128 0xM40080000000000000000000000000000, ptr %quo)
+  ret ppc_fp128 %call
 }
 
 ; Negative tests
