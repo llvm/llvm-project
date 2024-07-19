@@ -156,10 +156,11 @@ define void @merge_store_ranges(ptr %p) {
 }
 
 define void @partially_overlapping_stores_branches(ptr %p, i1 %i) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @partially_overlapping_stores_branches(
-; CHECK-SAME: ptr nocapture writeonly initializes((4, 8)) [[P:%.*]], i1 [[I:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr nocapture initializes((4, 8)) [[P:%.*]], i1 [[I:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]]
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 4
 ; CHECK-NEXT:    br i1 [[I]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
@@ -172,6 +173,7 @@ define void @partially_overlapping_stores_branches(ptr %p, i1 %i) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  %a = load i32, ptr %p
   %g = getelementptr i8, ptr %p, i64 4
   br i1 %i, label %bb1, label %bb2
 bb1:
@@ -379,6 +381,32 @@ define void @call_initializes_no_clobber_readnone_capture(ptr %p) {
 ;
   call void @g4(ptr %p)
   call void @g2(ptr %p)
+  ret void
+}
+
+define void @call_initializes_escape_bundle(ptr %p) {
+; CHECK-LABEL: define void @call_initializes_escape_bundle(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call void @g1(ptr [[P]]) [ "unknown"(ptr [[P]]) ]
+; CHECK-NEXT:    ret void
+;
+  call void @g1(ptr %p) ["unknown"(ptr %p)]
+  ret void
+}
+
+define void @access_bundle() {
+  %sink = alloca i64, align 8
+  store i64 123, ptr %sink
+  ret void
+}
+
+define void @call_operand_bundle(ptr %p) {
+; CHECK-LABEL: define void @call_operand_bundle(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:    call void @access_bundle() [ "unknown"(ptr [[P]]) ]
+; CHECK-NEXT:    ret void
+;
+  call void @access_bundle() ["unknown"(ptr %p)]
   ret void
 }
 

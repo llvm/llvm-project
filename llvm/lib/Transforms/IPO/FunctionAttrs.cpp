@@ -603,10 +603,18 @@ struct ArgumentAccessInfo {
   ConstantRangeList AccessRanges;
 };
 
+// A struct to wrap the argument use info per block.
 struct UsesPerBlockInfo {
   SmallDenseMap<Instruction *, ArgumentAccessInfo, 4> Insts;
   bool HasWrites = false;
   bool HasClobber = false;
+};
+
+// A struct to summarize the argument use info in a function.
+struct ArgumentUsesSummary {
+  bool HasAnyWrite = false;
+  bool HasWriteOutsideEntryBB = false;
+  SmallDenseMap<const BasicBlock *, UsesPerBlockInfo, 16> UsesPerBlock;
 };
 
 ArgumentAccessInfo GetArgmentAccessInfo(const Instruction *I,
@@ -646,7 +654,8 @@ ArgumentAccessInfo GetArgmentAccessInfo(const Instruction *I,
               /*IsClobber=*/false, AccessRanges};
     }
   } else if (auto *LI = dyn_cast<LoadInst>(I)) {
-    if (!LI->isVolatile() && &LI->getOperandUse(0) == ArgUse.U) {
+    if (!LI->isVolatile()) {
+      assert(&LI->getOperandUse(0) == ArgUse.U);
       // Get the fixed type size of "LI". Different from Write, if "LI"
       // doesn't have a fixed type size, we conservatively set as a clobber
       // with an empty access range.
@@ -695,9 +704,6 @@ ArgumentAccessInfo GetArgmentAccessInfo(const Instruction *I,
       ConstantRangeList AccessRanges;
       if (IsInitialize && ArgUse.Offset) {
         Attribute Attr = CB->getParamAttr(ArgNo, Attribute::Initializes);
-        if (!Attr.isValid())
-          Attr = CB->getCalledFunction()->getParamAttribute(
-              ArgNo, Attribute::Initializes);
         ConstantRangeList CBCRL = Attr.getValueAsConstantRangeList();
         for (ConstantRange &CR : CBCRL)
           AccessRanges.insert(ConstantRange(CR.getLower() + *ArgUse.Offset,
@@ -710,19 +716,12 @@ ArgumentAccessInfo GetArgmentAccessInfo(const Instruction *I,
   return {ArgumentAccessInfo::AccessType::Unknown, /*IsClobber=*/true, {}};
 }
 
-// Collect the uses of argument "A" in "F" and store the uses info per block to
-// "UsesPerBlock". Return a pair of bool that indicate whether there is any
-// write access, and whether there is any write access outside of the entry
-// block in "F", which will be used to simplify the inference for simple cases.
-std::pair<bool, bool> CollectArgumentUsesPerBlock(
-    Argument &A, Function &F,
-    SmallDenseMap<const BasicBlock *, UsesPerBlockInfo, 16> &UsesPerBlock) {
+// Collect the uses of argument "A" in "F".
+ArgumentUsesSummary CollectArgumentUsesPerBlock(Argument &A, Function &F) {
   auto &DL = F.getParent()->getDataLayout();
   auto PointerSize =
       DL.getIndexSizeInBits(A.getType()->getPointerAddressSpace());
-
-  bool HasAnyWrite = false;
-  bool HasWriteOutsideEntryBB = false;
+  ArgumentUsesSummary Result;
 
   BasicBlock &EntryBB = F.getEntryBlock();
   SmallVector<ArgumentUse, 4> Worklist;
@@ -731,10 +730,9 @@ std::pair<bool, bool> CollectArgumentUsesPerBlock(
 
   // Update "UsesPerBlock" with the block of "I" as key and "Info" as value.
   // Return true if the block of "I" has write accesses after updating.
-  auto UpdateUseInfo = [&UsesPerBlock](Instruction *I,
-                                       ArgumentAccessInfo Info) {
+  auto UpdateUseInfo = [&Result](Instruction *I, ArgumentAccessInfo Info) {
     auto *BB = I->getParent();
-    auto &BBInfo = UsesPerBlock.getOrInsertDefault(BB);
+    auto &BBInfo = Result.UsesPerBlock.getOrInsertDefault(BB);
     bool AlreadyVisitedInst = BBInfo.Insts.contains(I);
     auto &IInfo = BBInfo.Insts[I];
 
@@ -776,12 +774,12 @@ std::pair<bool, bool> CollectArgumentUsesPerBlock(
     auto *I = cast<Instruction>(U);
     bool HasWrite = UpdateUseInfo(I, GetArgmentAccessInfo(I, ArgUse, DL));
 
-    HasAnyWrite |= HasWrite;
+    Result.HasAnyWrite |= HasWrite;
 
     if (HasWrite && I->getParent() != &EntryBB)
-      HasWriteOutsideEntryBB = true;
+      Result.HasWriteOutsideEntryBB = true;
   }
-  return {HasAnyWrite, HasWriteOutsideEntryBB};
+  return Result;
 }
 
 } // end anonymous namespace
@@ -1071,23 +1069,21 @@ static bool addAccessAttr(Argument *A, Attribute::AttrKind R) {
 }
 
 static bool inferInitializes(Argument &A, Function &F) {
-  SmallDenseMap<const BasicBlock *, UsesPerBlockInfo, 16> UsesPerBlock;
-  auto [HasAnyWrite, HasWriteOutsideEntryBB] =
-      CollectArgumentUsesPerBlock(A, F, UsesPerBlock);
+  auto ArgumentUses = CollectArgumentUsesPerBlock(A, F);
   // No write anywhere in the function, bail.
-  if (!HasAnyWrite)
+  if (!ArgumentUses.HasAnyWrite)
     return false;
 
+  auto &UsesPerBlock = ArgumentUses.UsesPerBlock;
   BasicBlock &EntryBB = F.getEntryBlock();
+  // A map to store the argument ranges initialized by a BasicBlock (including
+  // its successors).
   DenseMap<const BasicBlock *, ConstantRangeList> Initialized;
+  // Visit the successors of "BB" block and the instructions in BB (post-order)
+  // to get the argument ranges initialized by "BB" (including its successors).
+  // The result will be cached in "Initialized".
   auto VisitBlock = [&](const BasicBlock *BB) -> ConstantRangeList {
     auto UPB = UsesPerBlock.find(BB);
-
-    // If this block has uses and none are writes, the argument is not
-    // initialized in this block.
-    if (UPB != UsesPerBlock.end() && !UPB->second.HasWrites)
-      return ConstantRangeList();
-
     ConstantRangeList CRL;
 
     // Start with intersection of successors.
@@ -1142,7 +1138,7 @@ static bool inferInitializes(Argument &A, Function &F) {
   ConstantRangeList EntryCRL;
   // If all write instructions are in the EntryBB, or if the EntryBB has
   // a clobbering use, we only need to look at EntryBB.
-  bool OnlyScanEntryBlock = !HasWriteOutsideEntryBB;
+  bool OnlyScanEntryBlock = !ArgumentUses.HasWriteOutsideEntryBB;
   if (!OnlyScanEntryBlock)
     if (auto EntryUPB = UsesPerBlock.find(&EntryBB);
         EntryUPB != UsesPerBlock.end())
@@ -1152,8 +1148,11 @@ static bool inferInitializes(Argument &A, Function &F) {
     if (EntryCRL.empty())
       return false;
   } else {
-    // Visit successors before predecessors with a post-order walk of the
-    // blocks.
+    // Now we have to go through CFG to get the initialized argument ranges
+    // across blocks. With dominance and post-dominance, the initialized ranges
+    // by a block include both accesses inside this block and accesses in its
+    // (transitive) successors. So visit successors before predecessors with a
+    // post-order walk of the blocks and memorize the results in "Initialized".
     for (const BasicBlock *BB : post_order(&F)) {
       ConstantRangeList CRL = VisitBlock(BB);
       if (!CRL.empty())
@@ -2167,26 +2166,9 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
 
   SmallSet<Function *, 8> Changed;
   if (ArgAttrsOnly) {
-    // To get precise function attributes fastly, the main postorder CGSCC
-    // pipeline runs PostOrderFunctionAttrsPass twice, and the function
-    // simplification pipeline is scheduled in the middle.
-    //
-    // The first run deduces function attributes that could affect the function
-    // simplification pipeline, which is only the case with recursive functions.
-    // For non-recursive functions, it only infers argument attributes.
-    // The second run deduces any function attributes based on the fully
-    // simplified function
-    //
-    // PostOrderFunctionAttrsPass operates the call graph in "bottom-up" way:
-    //   PostOrderFunctionAttrsPass(callee, ArgAttrsOnly) ->
-    //   FunctionSimplificationPipeline {DSE(callee), ...} ->
-    //   PostOrderFunctionAttrsPass2(callee) ->
-    //   PostOrderFunctionAttrsPass(caller, ArgAttrsOnly) ->
-    //   FunctionSimplificationPipeline {DSE(caller), ...} ->
-    //   PostOrderFunctionAttrsPass2(caller)
-    // Only infer the "initializes" attribute in the 2nd run to get a precise
-    // attribute of callee which would be used to simplify callers in the
-    // function simplification pipeline (like DSE).
+    // ArgAttrsOnly means to only infer attributes that may aid optimizations
+    // on the *current* function. "initializes" attribute is to aid
+    // optimizations (like DSE) on the callers, so skip "initializes" here.
     addArgumentAttrs(Nodes.SCCNodes, Changed, /*SkipInitializes=*/true);
     return Changed;
   }
