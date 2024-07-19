@@ -50,12 +50,10 @@ public:
     size_t total_free_calls;
   };
 
-  constexpr FreeListHeap()
-      : region_(&_end, size_t{0}), heap_limit_(&__libc_heap_limit) {}
+  constexpr FreeListHeap() : begin_(&_end), end_(&__libc_heap_limit) {}
 
   constexpr FreeListHeap(span<cpp::byte> region)
-      : region_(region), heap_limit_{} {
-    heap_stats_.total_bytes = region.size();
+      : begin_(region.begin()), end_(region.end()) {
   }
 
   void *allocate(size_t size);
@@ -68,7 +66,7 @@ public:
 
   const HeapStats &heap_stats() const { return heap_stats_; }
 
-  cpp::span<cpp::byte> region() const { return region_; }
+  cpp::span<cpp::byte> region() const { return {begin_, end_}; }
 
 private:
   void init();
@@ -79,16 +77,11 @@ private:
     return span<cpp::byte>(block->usable_space(), block->inner_size());
   }
 
-  bool is_valid_ptr(void *ptr) {
-    return ptr >= region_.begin() && ptr < region_.end();
-  }
+  bool is_valid_ptr(void *ptr) { return ptr >= begin_ && ptr < end_; }
 
   bool is_initialized_ = false;
-  cpp::span<cpp::byte> region_;
-
-  // Kept to initialize region_ by non-constexpr cast to size_t
-  cpp::byte *heap_limit_;
-
+  cpp::byte *begin_;
+  cpp::byte *end_;
   FreeListType freelist_{DEFAULT_BUCKETS};
   HeapStats heap_stats_{};
 };
@@ -108,11 +101,8 @@ private:
 
 template <size_t NUM_BUCKETS> void FreeListHeap<NUM_BUCKETS>::init() {
   LIBC_ASSERT(!is_initialized_ && "duplicate initialization");
-  if (heap_limit_) {
-    region_ = {region_.begin(), (size_t)heap_limit_};
-    heap_stats_.total_bytes = region_.size();
-  }
-  auto result = BlockType::init(region_);
+  heap_stats_.total_bytes = region().size();
+  auto result = BlockType::init(region());
   BlockType *block = *result;
   freelist_.add_chunk(block_to_span(block));
   is_initialized_ = true;
