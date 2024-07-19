@@ -72,6 +72,7 @@ enum ActionType {
   GenArmNeon,
   GenArmFP16,
   GenArmBF16,
+  GenArmMFloat8,
   GenArmVectorType,
   GenArmNeonSema,
   GenArmNeonTest,
@@ -229,6 +230,7 @@ cl::opt<ActionType> Action(
         clEnumValN(GenArmNeon, "gen-arm-neon", "Generate arm_neon.h for clang"),
         clEnumValN(GenArmFP16, "gen-arm-fp16", "Generate arm_fp16.h for clang"),
         clEnumValN(GenArmBF16, "gen-arm-bf16", "Generate arm_bf16.h for clang"),
+        clEnumValN(GenArmMFloat8, "gen-arm-mfp8", "Generate arm_mfp8.h for clang"),
         clEnumValN(GenArmVectorType, "gen-arm-vector-type",
                    "Generate arm_vector_types.h for clang"),
         clEnumValN(GenArmNeonSema, "gen-arm-neon-sema",
@@ -467,6 +469,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenArmBF16:
     EmitBF16(Records, OS);
+    break;
+  case GenArmMFloat8:
+    EmitMFloat8(Records, OS);
     break;
   case GenArmNeonSema:
     EmitNeonSema(Records, OS);

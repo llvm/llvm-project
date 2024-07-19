@@ -198,7 +198,8 @@ namespace clang {
       Float16,
       Float32,
       Float64,
-      BFloat16
+      BFloat16,
+      ArmMFloat8
     };
 
     NeonTypeFlags(unsigned F) : Flags(F) {}
@@ -220,6 +221,7 @@ namespace clang {
       switch (getEltType()) {
       case Int8:
       case Poly8:
+      case ArmMFloat8:
         return 8;
       case Int16:
       case Float16:

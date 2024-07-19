@@ -414,6 +414,8 @@ if(ARM IN_LIST LLVM_TARGETS_TO_BUILD OR AArch64 IN_LIST LLVM_TARGETS_TO_BUILD)
   clang_generate_header(-gen-arm-sme-header arm_sme.td arm_sme.h)
   # Generate arm_bf16.h
   clang_generate_header(-gen-arm-bf16 arm_bf16.td arm_bf16.h)
+  # Generate arm_mfp8.h
+  clang_generate_header(-gen-arm-mfp8 arm_mfp8.td arm_mfp8.h)
   # Generate arm_mve.h
   clang_generate_header(-gen-arm-mve-header arm_mve.td arm_mve.h)
   # Generate arm_cde.h
@@ -437,6 +439,7 @@ if(ARM IN_LIST LLVM_TARGETS_TO_BUILD OR AArch64 IN_LIST LLVM_TARGETS_TO_BUILD)
     "${CMAKE_CURRENT_BINARY_DIR}/arm_sme.h"
     "${CMAKE_CURRENT_BINARY_DIR}/arm_bf16.h"
     "${CMAKE_CURRENT_BINARY_DIR}/arm_vector_types.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/arm_mfp8.h"
     )
 endif()
 if(RISCV IN_LIST LLVM_TARGETS_TO_BUILD)

@@ -8184,7 +8184,8 @@ static bool isPermittedNeonBaseType(QualType &Ty, VectorKind VecKind, Sema &S) {
          BTy->getKind() == BuiltinType::ULongLong ||
          BTy->getKind() == BuiltinType::Float ||
          BTy->getKind() == BuiltinType::Half ||
-         BTy->getKind() == BuiltinType::BFloat16;
+         BTy->getKind() == BuiltinType::BFloat16 ||
+         BTy->getKind() == BuiltinType::ArmMFloat8;
 }
 
 static bool verifyValidIntegerConstantExpr(Sema &S, const ParsedAttr &Attr,

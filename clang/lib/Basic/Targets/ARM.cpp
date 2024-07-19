@@ -665,6 +665,8 @@ bool ARMTargetInfo::hasBFloat16Type() const {
   return HasBFloat16 || (FPU && !SoftFloat);
 }
 
+bool ARMTargetInfo::hasArmMFloat8Type() const { return true; }
+
 bool ARMTargetInfo::isValidCPUName(StringRef Name) const {
   return Name == "generic" ||
          llvm::ARM::parseCPUArch(Name) != llvm::ARM::ArchKind::INVALID;

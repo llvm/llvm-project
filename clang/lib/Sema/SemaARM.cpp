@@ -352,6 +352,8 @@ static QualType getNeonEltType(NeonTypeFlags Flags, ASTContext &Context,
     return Context.DoubleTy;
   case NeonTypeFlags::BFloat16:
     return Context.BFloat16Ty;
+  case NeonTypeFlags::ArmMFloat8:
+    return Context.ArmMFloat8Ty;
   }
   llvm_unreachable("Invalid NeonTypeFlag!");
 }
