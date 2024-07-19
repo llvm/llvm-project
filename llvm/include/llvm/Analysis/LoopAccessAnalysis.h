@@ -144,9 +144,7 @@ public:
       // on MinDepDistBytes.
       BackwardVectorizable,
       // Same, but may prevent store-to-load forwarding.
-      BackwardVectorizableButPreventsForwarding,
-      // Access is to a loop loaded value, but is part of a histogram operation.
-      Histogram
+      BackwardVectorizableButPreventsForwarding
     };
 
     /// String version of the types.
@@ -203,8 +201,7 @@ public:
   /// Only checks sets with elements in \p CheckDeps.
   bool areDepsSafe(DepCandidates &AccessSets, MemAccessInfoList &CheckDeps,
                    const DenseMap<Value *, SmallVector<const Value *, 16>>
-                       &UnderlyingObjects,
-                   const SmallPtrSetImpl<const Value *> &HistogramPtrs);
+                       &UnderlyingObjects);
 
   /// No memory dependence was encountered that would inhibit
   /// vectorization.
@@ -272,7 +269,8 @@ public:
 
   const Loop *getInnermostLoop() const { return InnermostLoop; }
 
-  DenseMap<const SCEV *, std::pair<const SCEV *, const SCEV *>> &
+  DenseMap<std::pair<const SCEV *, Type *>,
+           std::pair<const SCEV *, const SCEV *>> &
   getPointerBounds() {
     return PointerBounds;
   }
@@ -337,7 +335,9 @@ private:
 
   /// Mapping of SCEV expressions to their expanded pointer bounds (pair of
   /// start and end pointer expressions).
-  DenseMap<const SCEV *, std::pair<const SCEV *, const SCEV *>> PointerBounds;
+  DenseMap<std::pair<const SCEV *, Type *>,
+           std::pair<const SCEV *, const SCEV *>>
+      PointerBounds;
 
   /// Check whether there is a plausible dependence between the two
   /// accesses.
@@ -355,8 +355,7 @@ private:
   isDependent(const MemAccessInfo &A, unsigned AIdx, const MemAccessInfo &B,
               unsigned BIdx,
               const DenseMap<Value *, SmallVector<const Value *, 16>>
-                  &UnderlyingObjects,
-              const SmallPtrSetImpl<const Value *> &HistogramPtrs);
+                  &UnderlyingObjects);
 
   /// Check whether the data dependence could prevent store-load
   /// forwarding.
@@ -397,8 +396,7 @@ private:
       const MemAccessInfo &A, Instruction *AInst, const MemAccessInfo &B,
       Instruction *BInst,
       const DenseMap<Value *, SmallVector<const Value *, 16>>
-          &UnderlyingObjects,
-      const SmallPtrSetImpl<const Value *> &HistogramPtrs);
+          &UnderlyingObjects);
 };
 
 class RuntimePointerChecking;
@@ -448,15 +446,6 @@ struct PointerDiffInfo {
                   unsigned AccessSize, bool NeedsFreeze)
       : SrcStart(SrcStart), SinkStart(SinkStart), AccessSize(AccessSize),
         NeedsFreeze(NeedsFreeze) {}
-};
-
-struct HistogramInfo {
-  LoadInst *Load;
-  Instruction *Update;
-  StoreInst *Store;
-
-  HistogramInfo(LoadInst *Load, Instruction *Update, StoreInst *Store)
-      : Load(Load), Update(Update), Store(Store) {}
 };
 
 /// Holds information about the memory runtime legality checks to verify
@@ -639,13 +628,6 @@ private:
 /// Checks for both memory dependences and the SCEV predicates contained in the
 /// PSE must be emitted in order for the results of this analysis to be valid.
 class LoopAccessInfo {
-  /// Represents whether the memory access dependencies in the loop:
-  ///   * Prohibit vectorization
-  ///   * Allow for vectorization (possibly with runtime checks)
-  ///   * Allow for vectorization (possibly with runtime checks),
-  ///     as long as histogram operations are supported.
-  enum VecMemPossible { CantVec = 0, NormalVec = 1, HistogramVec = 2 };
-
 public:
   LoopAccessInfo(Loop *L, ScalarEvolution *SE, const TargetTransformInfo *TTI,
                  const TargetLibraryInfo *TLI, AAResults *AA, DominatorTree *DT,
@@ -657,11 +639,7 @@ public:
   /// hasStoreStoreDependenceInvolvingLoopInvariantAddress and
   /// hasLoadStoreDependenceInvolvingLoopInvariantAddress also need to be
   /// checked.
-  bool canVectorizeMemory() const { return CanVecMem == NormalVec; }
-
-  bool canVectorizeMemoryWithHistogram() const {
-    return CanVecMem == NormalVec || CanVecMem == HistogramVec;
-  }
+  bool canVectorizeMemory() const { return CanVecMem; }
 
   /// Return true if there is a convergent operation in the loop. There may
   /// still be reported runtime pointer checks that would be required, but it is
@@ -688,10 +666,6 @@ public:
 
   unsigned getNumStores() const { return NumStores; }
   unsigned getNumLoads() const { return NumLoads;}
-
-  const SmallVectorImpl<HistogramInfo> &getHistograms() const {
-    return Histograms;
-  }
 
   /// The diagnostics report generated for the analysis.  E.g. why we
   /// couldn't analyze the loop.
@@ -744,8 +718,8 @@ public:
 private:
   /// Analyze the loop. Returns true if all memory access in the loop can be
   /// vectorized.
-  VecMemPossible analyzeLoop(AAResults *AA, LoopInfo *LI,
-                             const TargetLibraryInfo *TLI, DominatorTree *DT);
+  bool analyzeLoop(AAResults *AA, LoopInfo *LI, const TargetLibraryInfo *TLI,
+                   DominatorTree *DT);
 
   /// Check if the structure of the loop allows it to be analyzed by this
   /// pass.
@@ -786,7 +760,7 @@ private:
   unsigned NumStores = 0;
 
   /// Cache the result of analyzeLoop.
-  VecMemPossible CanVecMem = CantVec;
+  bool CanVecMem = false;
   bool HasConvergentOp = false;
 
   /// Indicator that there are two non vectorizable stores to the same uniform
@@ -806,13 +780,6 @@ private:
   /// If an access has a symbolic strides, this maps the pointer value to
   /// the stride symbol.
   DenseMap<Value *, const SCEV *> SymbolicStrides;
-
-  /// Holds the load, update, and store instructions for all histogram-style
-  /// operations found in the loop.
-  SmallVector<HistogramInfo, 2> Histograms;
-
-  /// Storing Histogram Pointers
-  SmallPtrSet<const Value *, 2> HistogramPtrs;
 };
 
 /// Return the SCEV corresponding to a pointer with the symbolic stride

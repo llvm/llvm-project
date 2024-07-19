@@ -10,10 +10,11 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_STRING_VIEW_H
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 // This is very simple alternate of the std::string_view class. There is no
@@ -214,6 +215,6 @@ public:
 };
 
 } // namespace cpp
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_STRING_VIEW_H

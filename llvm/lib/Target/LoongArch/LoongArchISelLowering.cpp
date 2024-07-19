@@ -22,7 +22,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsLoongArch.h"
@@ -152,15 +152,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::INTRINSIC_VOID, MVT::i64, Custom);
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
     setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i64, Custom);
-
-    // Set libcalls.
-    setLibcallName(RTLIB::MUL_I128, nullptr);
-    // The MULO libcall is not part of libgcc, only compiler-rt.
-    setLibcallName(RTLIB::MULO_I64, nullptr);
   }
-
-  // The MULO libcall is not part of libgcc, only compiler-rt.
-  setLibcallName(RTLIB::MULO_I128, nullptr);
 
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
 
@@ -343,6 +335,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::AND);
   setTargetDAGCombine(ISD::OR);
   setTargetDAGCombine(ISD::SRL);
+  setTargetDAGCombine(ISD::SETCC);
 
   // Set DAG combine for 'LSX' feature.
 
@@ -2536,6 +2529,165 @@ Retry2:
   return SDValue();
 }
 
+static bool checkValueWidth(SDValue V, ISD::LoadExtType &ExtType) {
+  ExtType = ISD::NON_EXTLOAD;
+
+  switch (V.getNode()->getOpcode()) {
+  case ISD::LOAD: {
+    LoadSDNode *LoadNode = cast<LoadSDNode>(V.getNode());
+    if ((LoadNode->getMemoryVT() == MVT::i8) ||
+        (LoadNode->getMemoryVT() == MVT::i16)) {
+      ExtType = LoadNode->getExtensionType();
+      return true;
+    }
+    return false;
+  }
+  case ISD::AssertSext: {
+    VTSDNode *TypeNode = cast<VTSDNode>(V.getNode()->getOperand(1));
+    if ((TypeNode->getVT() == MVT::i8) || (TypeNode->getVT() == MVT::i16)) {
+      ExtType = ISD::SEXTLOAD;
+      return true;
+    }
+    return false;
+  }
+  case ISD::AssertZext: {
+    VTSDNode *TypeNode = cast<VTSDNode>(V.getNode()->getOperand(1));
+    if ((TypeNode->getVT() == MVT::i8) || (TypeNode->getVT() == MVT::i16)) {
+      ExtType = ISD::ZEXTLOAD;
+      return true;
+    }
+    return false;
+  }
+  default:
+    return false;
+  }
+
+  return false;
+}
+
+// Eliminate redundant truncation and zero-extension nodes.
+// * Case 1:
+//  +------------+ +------------+ +------------+
+//  |   Input1   | |   Input2   | |     CC     |
+//  +------------+ +------------+ +------------+
+//         |              |              |
+//         V              V              +----+
+//  +------------+ +------------+             |
+//  |  TRUNCATE  | |  TRUNCATE  |             |
+//  +------------+ +------------+             |
+//         |              |                   |
+//         V              V                   |
+//  +------------+ +------------+             |
+//  |  ZERO_EXT  | |  ZERO_EXT  |             |
+//  +------------+ +------------+             |
+//         |              |                   |
+//         |              +-------------+     |
+//         V              V             |     |
+//        +----------------+            |     |
+//        |      AND       |            |     |
+//        +----------------+            |     |
+//                |                     |     |
+//                +---------------+     |     |
+//                                |     |     |
+//                                V     V     V
+//                               +-------------+
+//                               |     CMP     |
+//                               +-------------+
+// * Case 2:
+//  +------------+ +------------+ +-------------+ +------------+ +------------+
+//  |   Input1   | |   Input2   | | Constant -1 | | Constant 0 | |     CC     |
+//  +------------+ +------------+ +-------------+ +------------+ +------------+
+//         |              |             |               |               |
+//         V              |             |               |               |
+//  +------------+        |             |               |               |
+//  |     XOR    |<---------------------+               |               |
+//  +------------+        |                             |               |
+//         |              |                             |               |
+//         V              V             +---------------+               |
+//  +------------+ +------------+       |                               |
+//  |  TRUNCATE  | |  TRUNCATE  |       |     +-------------------------+
+//  +------------+ +------------+       |     |
+//         |              |             |     |
+//         V              V             |     |
+//  +------------+ +------------+       |     |
+//  |  ZERO_EXT  | |  ZERO_EXT  |       |     |
+//  +------------+ +------------+       |     |
+//         |              |             |     |
+//         V              V             |     |
+//        +----------------+            |     |
+//        |      AND       |            |     |
+//        +----------------+            |     |
+//                |                     |     |
+//                +---------------+     |     |
+//                                |     |     |
+//                                V     V     V
+//                               +-------------+
+//                               |     CMP     |
+//                               +-------------+
+static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   const LoongArchSubtarget &Subtarget) {
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+
+  SDNode *AndNode = N->getOperand(0).getNode();
+  if (AndNode->getOpcode() != ISD::AND)
+    return SDValue();
+
+  SDValue AndInputValue2 = AndNode->getOperand(1);
+  if (AndInputValue2.getOpcode() != ISD::ZERO_EXTEND)
+    return SDValue();
+
+  SDValue CmpInputValue = N->getOperand(1);
+  SDValue AndInputValue1 = AndNode->getOperand(0);
+  if (AndInputValue1.getOpcode() == ISD::XOR) {
+    if (CC != ISD::SETEQ && CC != ISD::SETNE)
+      return SDValue();
+    ConstantSDNode *CN = dyn_cast<ConstantSDNode>(AndInputValue1.getOperand(1));
+    if (!CN || CN->getSExtValue() != -1)
+      return SDValue();
+    CN = dyn_cast<ConstantSDNode>(CmpInputValue);
+    if (!CN || CN->getSExtValue() != 0)
+      return SDValue();
+    AndInputValue1 = AndInputValue1.getOperand(0);
+    if (AndInputValue1.getOpcode() != ISD::ZERO_EXTEND)
+      return SDValue();
+  } else if (AndInputValue1.getOpcode() == ISD::ZERO_EXTEND) {
+    if (AndInputValue2 != CmpInputValue)
+      return SDValue();
+  } else {
+    return SDValue();
+  }
+
+  SDValue TruncValue1 = AndInputValue1.getNode()->getOperand(0);
+  if (TruncValue1.getOpcode() != ISD::TRUNCATE)
+    return SDValue();
+
+  SDValue TruncValue2 = AndInputValue2.getNode()->getOperand(0);
+  if (TruncValue2.getOpcode() != ISD::TRUNCATE)
+    return SDValue();
+
+  SDValue TruncInputValue1 = TruncValue1.getNode()->getOperand(0);
+  SDValue TruncInputValue2 = TruncValue2.getNode()->getOperand(0);
+  ISD::LoadExtType ExtType1;
+  ISD::LoadExtType ExtType2;
+
+  if (!checkValueWidth(TruncInputValue1, ExtType1) ||
+      !checkValueWidth(TruncInputValue2, ExtType2))
+    return SDValue();
+
+  if ((ExtType2 != ISD::ZEXTLOAD) &&
+      ((ExtType2 != ISD::SEXTLOAD) && (ExtType1 != ISD::SEXTLOAD)))
+    return SDValue();
+
+  // These truncation and zero-extension nodes are not necessary, remove them.
+  SDValue NewAnd = DAG.getNode(ISD::AND, SDLoc(N), AndNode->getValueType(0),
+                               TruncInputValue1, TruncInputValue2);
+  SDValue NewSetCC =
+      DAG.getSetCC(SDLoc(N), N->getValueType(0), NewAnd, TruncInputValue2, CC);
+  DAG.ReplaceAllUsesWith(N, NewSetCC.getNode());
+  return SDValue(N, 0);
+}
+
 // Combine (loongarch_bitrev_w (loongarch_revb_2w X)) to loongarch_bitrev_4b.
 static SDValue performBITREV_WCombine(SDNode *N, SelectionDAG &DAG,
                                       TargetLowering::DAGCombinerInfo &DCI,
@@ -3163,6 +3315,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performANDCombine(N, DAG, DCI, Subtarget);
   case ISD::OR:
     return performORCombine(N, DAG, DCI, Subtarget);
+  case ISD::SETCC:
+    return performSETCCCombine(N, DAG, DCI, Subtarget);
   case ISD::SRL:
     return performSRLCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::BITREV_W:
@@ -4233,7 +4387,7 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment,
                           /*IsVolatile=*/false,
-                          /*AlwaysInline=*/false, /*isTailCall=*/IsTailCall,
+                          /*AlwaysInline=*/false, /*CI=*/nullptr, std::nullopt,
                           MachinePointerInfo(), MachinePointerInfo());
     ByValArgs.push_back(FIPtr);
   }

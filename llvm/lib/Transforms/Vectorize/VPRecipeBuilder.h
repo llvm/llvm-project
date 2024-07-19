@@ -102,13 +102,6 @@ class VPRecipeBuilder {
   VPWidenRecipe *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands,
                             VPBasicBlock *VPBB);
 
-  /// Makes Histogram count operations safe for vectorization, by emitting a
-  /// llvm.experimental.vector.histogram.add intrinsic in place of the
-  /// Load + Add|Sub + Store operations that perform the histogram in the
-  /// original scalar loop.
-  VPHistogramRecipe *tryToWidenHistogram(const HistogramInfo *HI,
-                                         ArrayRef<VPValue *> Operands);
-
 public:
   VPRecipeBuilder(VPlan &Plan, Loop *OrigLoop, const TargetLibraryInfo *TLI,
                   LoopVectorizationLegality *Legal,

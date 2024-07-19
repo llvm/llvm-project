@@ -700,7 +700,7 @@ class SplitPtrStructs : public InstVisitor<SplitPtrStructs, PtrParts> {
 
   // Subtarget info, needed for determining what cache control bits to set.
   const TargetMachine *TM;
-  const GCNSubtarget *ST;
+  const GCNSubtarget *ST = nullptr;
 
   IRBuilder<> IRB;
 
@@ -740,7 +740,7 @@ class SplitPtrStructs : public InstVisitor<SplitPtrStructs, PtrParts> {
 
 public:
   SplitPtrStructs(LLVMContext &Ctx, const TargetMachine *TM)
-      : TM(TM), ST(nullptr), IRB(Ctx) {}
+      : TM(TM), IRB(Ctx) {}
 
   void processFunction(Function &F);
 

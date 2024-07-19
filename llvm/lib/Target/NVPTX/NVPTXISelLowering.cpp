@@ -629,6 +629,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   for (MVT VT : MVT::integer_valuetypes()) {
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
     setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i1, Promote);
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i1, Promote);
     setTruncStoreAction(VT, MVT::i1, Expand);
   }
 
@@ -872,6 +873,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   setMinCmpXchgSizeInBits(32);
   setMaxAtomicSizeInBitsSupported(64);
+  setMaxDivRemBitWidthSupported(64);
 }
 
 const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -1438,10 +1440,8 @@ std::string NVPTXTargetLowering::getPrototype(
 
     if (!Outs[OIdx].Flags.isByVal()) {
       if (IsTypePassedAsArray(Ty)) {
-        const CallInst *CallI = cast<CallInst>(&CB);
         Align ParamAlign =
-            getAlign(*CallI, i + AttributeList::FirstArgIndex)
-                .value_or(getFunctionParamOptimizedAlign(F, Ty, DL));
+            getArgumentAlignment(&CB, Ty, i + AttributeList::FirstArgIndex, DL);
         O << ".param .align " << ParamAlign.value() << " .b8 ";
         O << "_";
         O << "[" << DL.getTypeAllocSize(Ty) << "]";
@@ -2921,9 +2921,10 @@ SDValue NVPTXTargetLowering::LowerLOADi1(SDValue Op, SelectionDAG &DAG) const {
   assert(LD->getExtensionType() == ISD::NON_EXTLOAD);
   assert(Node->getValueType(0) == MVT::i1 &&
          "Custom lowering for i1 load only");
-  SDValue newLD = DAG.getLoad(MVT::i16, dl, LD->getChain(), LD->getBasePtr(),
-                              LD->getPointerInfo(), LD->getAlign(),
-                              LD->getMemOperand()->getFlags());
+  SDValue newLD = DAG.getExtLoad(ISD::ZEXTLOAD, dl, MVT::i16, LD->getChain(),
+                                 LD->getBasePtr(), LD->getPointerInfo(),
+                                 MVT::i8, LD->getAlign(),
+                                 LD->getMemOperand()->getFlags());
   SDValue result = DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, newLD);
   // The legalizer (the caller) is expecting two values from the legalized
   // load, so we build a MergeValues node for it. See ExpandUnalignedLoad()

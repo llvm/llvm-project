@@ -1789,6 +1789,9 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
       options::OPT_fno_ptrauth_vtable_pointer_type_discrimination);
   Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_init_fini,
                     options::OPT_fno_ptrauth_init_fini);
+  Args.addOptInFlag(
+      CmdArgs, options::OPT_fptrauth_function_pointer_type_discrimination,
+      options::OPT_fno_ptrauth_function_pointer_type_discrimination);
 }
 
 void Clang::AddLoongArchTargetArgs(const ArgList &Args,
@@ -2541,6 +2544,13 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
 
       switch (C.getDefaultToolChain().getArch()) {
       default:
+        break;
+      case llvm::Triple::x86:
+      case llvm::Triple::x86_64:
+        if (Value == "-msse2avx") {
+          CmdArgs.push_back("-msse2avx");
+          continue;
+        }
         break;
       case llvm::Triple::wasm32:
       case llvm::Triple::wasm64:
@@ -5715,6 +5725,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                      options::OPT_fno_zero_initialized_in_bss);
 
   bool OFastEnabled = isOptimizationLevelFast(Args);
+  if (OFastEnabled)
+    D.Diag(diag::warn_drv_deprecated_arg_ofast);
   // If -Ofast is the optimization level, then -fstrict-aliasing should be
   // enabled.  This alias option is being used to simplify the hasFlag logic.
   OptSpecifier StrictAliasingAliasOption =
@@ -5724,6 +5736,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasFlag(options::OPT_fstrict_aliasing, StrictAliasingAliasOption,
                     options::OPT_fno_strict_aliasing, !IsWindowsMSVC))
     CmdArgs.push_back("-relaxed-aliasing");
+  if (Args.hasFlag(options::OPT_fpointer_tbaa, options::OPT_fno_pointer_tbaa,
+                   false))
+    CmdArgs.push_back("-pointer-tbaa");
   if (!Args.hasFlag(options::OPT_fstruct_path_tbaa,
                     options::OPT_fno_struct_path_tbaa, true))
     CmdArgs.push_back("-no-struct-path-tbaa");
@@ -5822,7 +5837,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // If toolchain choose to use MCAsmParser for inline asm don't pass the
-  // option to disable integrated-as explictly.
+  // option to disable integrated-as explicitly.
   if (!TC.useIntegratedAs() && !TC.parseInlineAsmUsingAsmParser())
     CmdArgs.push_back("-no-integrated-as");
 

@@ -242,16 +242,20 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
           Diag << Inserter.createIncludeInsertion(
               Result.SourceManager->getFileID(Call->getBeginLoc()),
               *ReverseDescriptor->ReverseHeader);
+        StringRef ArgText = Lexer::getSourceText(
+            CharSourceRange::getTokenRange(ArgExpr->getSourceRange()),
+            Result.Context->getSourceManager(), Result.Context->getLangOpts());
+        SmallString<128> ReplaceText;
+        if (ReverseDescriptor->IsPipeSyntax)
+          ReplaceText.assign(
+              {ArgText, " | ", ReverseDescriptor->ReverseAdaptorName});
+        else
+          ReplaceText.assign(
+              {ReverseDescriptor->ReverseAdaptorName, "(", ArgText, ")"});
         Diag << FixItHint::CreateReplacement(
             Call->getArg(Replace == Indexes::Second ? Second : First)
                 ->getSourceRange(),
-            SmallString<128>{
-                ReverseDescriptor->ReverseAdaptorName, "(",
-                Lexer::getSourceText(
-                    CharSourceRange::getTokenRange(ArgExpr->getSourceRange()),
-                    Result.Context->getSourceManager(),
-                    Result.Context->getLangOpts()),
-                ")"});
+            ReplaceText);
       }
       ToRemove.push_back(Replace == Indexes::Second ? First : Second);
     }
