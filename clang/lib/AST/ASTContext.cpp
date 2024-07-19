@@ -1384,7 +1384,8 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #include "clang/Basic/OpenCLExtensionTypes.def"
   }
 
-  if (Target.hasAArch64SVETypes()) {
+  if (Target.hasAArch64SVETypes() ||
+      (AuxTarget && AuxTarget->hasAArch64SVETypes())) {
 #define SVE_TYPE(Name, Id, SingletonId) \
     InitBuiltinType(SingletonId, BuiltinType::Id);
 #include "clang/Basic/AArch64SVEACLETypes.def"

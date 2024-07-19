@@ -376,6 +376,7 @@ void LoongArchMCCodeEmitter::expandAddTPRel(const MCInst &MI,
          "Expected %le_add_r relocation on TP-relative symbol");
 
   // Emit the correct %le_add_r relocation for the symbol.
+  // TODO: Emit R_LARCH_RELAX for %le_add_r where the relax feature is enabled.
   Fixups.push_back(MCFixup::create(
       0, Expr, MCFixupKind(LoongArch::fixup_loongarch_tls_le_add_r),
       MI.getLoc()));

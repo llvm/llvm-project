@@ -57,6 +57,7 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
                            const BoltAddressTranslation *BAT) {
   yaml::bolt::BinaryFunctionProfile YamlBF;
   const BinaryContext &BC = BF.getBinaryContext();
+  const MCPseudoProbeDecoder *PseudoProbeDecoder = BC.getPseudoProbeDecoder();
 
   const uint16_t LBRProfile = BF.getProfileFlags() & BinaryFunction::PF_LBR;
 
@@ -69,6 +70,13 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   YamlBF.Hash = BF.getHash();
   YamlBF.NumBasicBlocks = BF.size();
   YamlBF.ExecCount = BF.getKnownExecutionCount();
+  if (PseudoProbeDecoder) {
+    if ((YamlBF.GUID = BF.getGUID())) {
+      const MCPseudoProbeFuncDesc *FuncDesc =
+          PseudoProbeDecoder->getFuncDescForGUID(YamlBF.GUID);
+      YamlBF.PseudoProbeDescHash = FuncDesc->FuncHash;
+    }
+  }
 
   BinaryFunction::BasicBlockOrderType Order;
   llvm::copy(UseDFS ? BF.dfs() : BF.getLayout().blocks(),
@@ -175,6 +183,21 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
       YamlBB.Successors.emplace_back(YamlSI);
 
       ++BranchInfo;
+    }
+
+    if (PseudoProbeDecoder) {
+      const AddressProbesMap &ProbeMap =
+          PseudoProbeDecoder->getAddress2ProbesMap();
+      const uint64_t FuncAddr = BF.getAddress();
+      const std::pair<uint64_t, uint64_t> &BlockRange =
+          BB->getInputAddressRange();
+      const auto &BlockProbes =
+          llvm::make_range(ProbeMap.lower_bound(FuncAddr + BlockRange.first),
+                           ProbeMap.lower_bound(FuncAddr + BlockRange.second));
+      for (const auto &[_, Probes] : BlockProbes)
+        for (const MCDecodedPseudoProbe &Probe : Probes)
+          YamlBB.PseudoProbes.emplace_back(yaml::bolt::PseudoProbeInfo{
+              Probe.getGuid(), Probe.getIndex(), Probe.getType()});
     }
 
     YamlBF.Blocks.emplace_back(YamlBB);
