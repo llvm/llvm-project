@@ -3,7 +3,7 @@
 # RUN: %{lit-no-order-opt} --skip-test-time-recording %{inputs}/time-tests
 # RUN: not ls %{inputs}/time-tests/.lit_test_times.txt
 
-## Check that --time-tests generates a printed histogram
+## Check that --time-tests generates a printed histogram.
 
 # RUN: %{lit-no-order-opt} --time-tests %{inputs}/time-tests > %t.out
 # RUN: FileCheck < %t.out %s

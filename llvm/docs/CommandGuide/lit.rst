@@ -153,8 +153,7 @@ EXECUTION OPTIONS
 
 .. option:: --skip-test-time-recording
 
- Disable tracking the wall time individual tests take to execute. This allows
- external build systems to orchestrate the scheduled tests.
+ Disable tracking the wall time individual tests take to execute.
 
 .. option:: --time-tests
 

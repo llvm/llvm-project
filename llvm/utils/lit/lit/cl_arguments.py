@@ -212,7 +212,7 @@ def parse_args():
     )
     execution_test_time_group.add_argument(
         "--time-tests",
-        help="Track elapsed wall time for each test in a histogram",
+        help="Track elapsed wall time for each test printed in a histogram",
         action="store_true",
     )
 
