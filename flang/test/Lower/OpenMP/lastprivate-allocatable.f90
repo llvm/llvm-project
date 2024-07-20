@@ -36,9 +36,3 @@ end program
 ! CHECK-NEXT:            }
 ! CHECK-NEXT:            omp.yield
 ! CHECK-NEXT:          }
-! CHECK-NEXT:          omp.terminator
-! CHECK-NEXT:        }
-!                    [no deallocation here]
-! CHECK-NEXT:        omp.terminator
-! CHECK-NEXT:      }
-

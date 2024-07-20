@@ -17,6 +17,7 @@
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Semantics/tools.h"
 
 namespace Fortran {
@@ -79,8 +80,7 @@ void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
 
 void DataSharingProcessor::insertDeallocs() {
   for (const semantics::Symbol *sym : allPrivatizedSymbols)
-    if (semantics::IsAllocatable(sym->GetUltimate()) &&
-        !sym->test(semantics::Symbol::Flag::OmpLastPrivate)) {
+    if (semantics::IsAllocatable(sym->GetUltimate())) {
       if (!useDelayedPrivatization) {
         converter.createHostAssociateVarCloneDealloc(*sym);
         continue;
