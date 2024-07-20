@@ -92,7 +92,7 @@ private:
   SymbolAssignment *readSymbolAssignment(StringRef name);
   ByteCommand *readByteCommand(StringRef tok);
   std::array<uint8_t, 4> readFill();
-  bool readSectionDirective(OutputSection *cmd, StringRef tok2);
+  bool readSectionDirective(OutputSection *cmd, StringRef tok);
   void readSectionAddressType(OutputSection *cmd);
   OutputDesc *readOverlaySectionDescription();
   OutputDesc *readOutputSectionDescription(StringRef outSec);
@@ -875,12 +875,11 @@ constexpr std::pair<const char *, unsigned> typeMap[] = {
 // "(TYPE=<value>)".
 // Tok1 and Tok2 are next 2 tokens peeked. See comment for
 // readSectionAddressType below.
-bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok2) {
-  if (tok2 != "NOLOAD" && tok2 != "COPY" && tok2 != "INFO" &&
-      tok2 != "OVERLAY" && tok2 != "TYPE")
+bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok) {
+  if (tok != "NOLOAD" && tok != "COPY" && tok != "INFO" && tok != "OVERLAY" &&
+      tok != "TYPE")
     return false;
 
-  expect("(");
   if (consume("NOLOAD")) {
     cmd->type = SHT_NOBITS;
     cmd->typeIsSet = true;
@@ -919,19 +918,22 @@ bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok2) {
 // https://sourceware.org/binutils/docs/ld/Output-Section-Address.html
 // https://sourceware.org/binutils/docs/ld/Output-Section-Type.html
 void ScriptParser::readSectionAddressType(OutputSection *cmd) {
-  if (peek() == "(") {
+  if (consume("(")) {
     // Temporarily set inExpr to support TYPE=<value> without spaces.
     SaveAndRestore saved(inExpr, true);
-    if (readSectionDirective(cmd, peek2()))
+    if (readSectionDirective(cmd, peek()))
       return;
+    cmd->addrExpr = readExpr();
+    expect(")");
+  } else {
+    cmd->addrExpr = readExpr();
   }
-  cmd->addrExpr = readExpr();
 
-  if (peek() == "(") {
+  if (consume("(")) {
     SaveAndRestore saved(inExpr, true);
-    StringRef tok2 = peek2();
-    if (!readSectionDirective(cmd, tok2))
-      setError("unknown section directive: " + tok2);
+    StringRef tok = peek();
+    if (!readSectionDirective(cmd, tok))
+      setError("unknown section directive: " + tok);
   }
 }
 
