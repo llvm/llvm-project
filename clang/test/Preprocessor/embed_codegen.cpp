@@ -14,9 +14,9 @@ int ca[] = {
 };
 
 // CHECK: %arrayinit.element = getelementptr inbounds i32, ptr %notca, i64 1
-// CHECK: store i8 106, ptr %arrayinit.element, align 4
+// CHECK: store i32 106, ptr %arrayinit.element, align 4
 // CHECK: %arrayinit.element1 = getelementptr inbounds i32, ptr %notca, i64 2
-// CHECK: store i8 107, ptr %arrayinit.element1, align 4
+// CHECK: store i32 107, ptr %arrayinit.element1, align 4
 int notca[] = {
 a
 #embed <jk.txt> prefix(,)
@@ -75,9 +75,9 @@ constexpr struct T t[] = {
 // CHECK:  %arrayinit.element7 = getelementptr inbounds %struct.T, ptr %tnonc, i64 1
 // CHECK:  call void @llvm.memset.p0.i64(ptr align 4 %arrayinit.element7, i8 0, i64 20, i1 false)
 // CHECK:  %arr8 = getelementptr inbounds %struct.T, ptr %arrayinit.element7, i32 0, i32 0
-// CHECK:  store i8 106, ptr %arr8, align 4
+// CHECK:  store i32 106, ptr %arr8, align 4
 // CHECK:  %arrayinit.element9 = getelementptr inbounds i32, ptr %arr8, i64 1
-// CHECK:  store i8 107, ptr %arrayinit.element9, align 4
+// CHECK:  store i32 107, ptr %arrayinit.element9, align 4
 struct T tnonc[] = {
   a, 300, 1, 2, 3
 #embed <jk.txt> prefix(,)

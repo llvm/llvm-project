@@ -205,6 +205,11 @@ static cl::opt<unsigned> VectorizeMemoryCheckThreshold(
     "vectorize-memory-check-threshold", cl::init(128), cl::Hidden,
     cl::desc("The maximum allowed number of runtime memory checks"));
 
+static cl::opt<bool> UseLegacyCostModel(
+    "vectorize-use-legacy-cost-model", cl::init(false), cl::Hidden,
+    cl::desc("Use the legacy cost model instead of the VPlan-based cost model. "
+             "This option will be removed in the future."));
+
 // Option prefer-predicate-over-epilogue indicates that an epilogue is undesired,
 // that predication is preferred, and this lists all options. I.e., the
 // vectorizer will try to fold the tail-loop (epilogue) into the vector body
@@ -3914,19 +3919,19 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   SetVector<Instruction *> Worklist;
 
   // Add uniform instructions demanding lane 0 to the worklist. Instructions
-  // that are scalar with predication must not be considered uniform after
+  // that require predication must not be considered uniform after
   // vectorization, because that would create an erroneous replicating region
   // where only a single instance out of VF should be formed.
-  // TODO: optimize such seldom cases if found important, see PR40816.
   auto addToWorklistIfAllowed = [&](Instruction *I) -> void {
     if (isOutOfScope(I)) {
       LLVM_DEBUG(dbgs() << "LV: Found not uniform due to scope: "
                         << *I << "\n");
       return;
     }
-    if (isScalarWithPredication(I, VF)) {
-      LLVM_DEBUG(dbgs() << "LV: Found not uniform being ScalarWithPredication: "
-                        << *I << "\n");
+    if (isPredicatedInst(I)) {
+      LLVM_DEBUG(
+          dbgs() << "LV: Found not uniform due to requiring predication: " << *I
+                 << "\n");
       return;
     }
     LLVM_DEBUG(dbgs() << "LV: Found uniform instruction: " << *I << "\n");
@@ -4589,15 +4594,12 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
 
     // Select the largest VF which doesn't require more registers than existing
     // ones.
-    for (int i = RUs.size() - 1; i >= 0; --i) {
-      bool Selected = true;
-      for (auto &pair : RUs[i].MaxLocalUsers) {
-        unsigned TargetNumRegisters = TTI.getNumberOfRegisters(pair.first);
-        if (pair.second > TargetNumRegisters)
-          Selected = false;
-      }
-      if (Selected) {
-        MaxVF = VFs[i];
+    for (int I = RUs.size() - 1; I >= 0; --I) {
+      const auto &MLU = RUs[I].MaxLocalUsers;
+      if (all_of(MLU, [&](decltype(MLU.front()) &LU) {
+            return LU.second <= TTI.getNumberOfRegisters(LU.first);
+          })) {
+        MaxVF = VFs[I];
         break;
       }
     }
@@ -9516,6 +9518,8 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
 void VPReplicateRecipe::execute(VPTransformState &State) {
   Instruction *UI = getUnderlyingInstr();
   if (State.Instance) { // Generate a single instance.
+    assert((State.VF.isScalar() || !isUniform()) &&
+           "uniform recipe shouldn't be predicated");
     assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
     State.ILV->scalarizeInstruction(UI, this, *State.Instance, State);
     // Insert scalar instance packing it into a vector.
@@ -10317,8 +10321,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, AC, ORE, IC, &LVL,
                                  &CM, BFI, PSI, Checks);
 
-      VPlan &BestPlan = LVP.getBestPlan();
-      assert(BestPlan.hasScalarVFOnly() &&
+      VPlan &BestPlan =
+          UseLegacyCostModel ? LVP.getBestPlanFor(VF.Width) : LVP.getBestPlan();
+      assert((UseLegacyCostModel || BestPlan.hasScalarVFOnly()) &&
              "VPlan cost model and legacy cost model disagreed");
       LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
 
@@ -10435,14 +10440,18 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         if (!MainILV.areSafetyChecksAdded())
           DisableRuntimeUnroll = true;
       } else {
-        VPlan &BestPlan = LVP.getBestPlan();
-        assert(size(BestPlan.vectorFactors()) == 1 &&
-               "Plan should have a single VF");
-        ElementCount Width = *BestPlan.vectorFactors().begin();
-        LLVM_DEBUG(dbgs() << "VF picked by VPlan cost model: " << Width
-                          << "\n");
-        assert(VF.Width == Width &&
-               "VPlan cost model and legacy cost model disagreed");
+        ElementCount Width = VF.Width;
+        VPlan &BestPlan =
+            UseLegacyCostModel ? LVP.getBestPlanFor(Width) : LVP.getBestPlan();
+        if (!UseLegacyCostModel) {
+          assert(size(BestPlan.vectorFactors()) == 1 &&
+                 "Plan should have a single VF");
+          Width = *BestPlan.vectorFactors().begin();
+          LLVM_DEBUG(dbgs()
+                     << "VF picked by VPlan cost model: " << Width << "\n");
+          assert(VF.Width == Width &&
+                 "VPlan cost model and legacy cost model disagreed");
+        }
         InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, Width,
                                VF.MinProfitableTripCount, IC, &LVL, &CM, BFI,
                                PSI, Checks);

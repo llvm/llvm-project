@@ -812,6 +812,15 @@ declare x86_fp80 @remainderl(x86_fp80, x86_fp80)
 ; CHECK: declare noundef i32 @remove(ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
 declare i32 @remove(ptr)
 
+; CHECK: declare double @remquo(double, double, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare double @remquo(double, double, ptr)
+
+; CHECK: declare float @remquof(float, float, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare float @remquof(float, float, ptr)
+
+; CHECK: declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr)
+
 ; CHECK: declare noundef i32 @rename(ptr nocapture noundef readonly, ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
 declare i32 @rename(ptr, ptr)
 
