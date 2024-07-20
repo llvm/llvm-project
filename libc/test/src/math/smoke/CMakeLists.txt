@@ -142,6 +142,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fadd_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fadd_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.fadd
+    libc.src.__support.FPUtil.basic_operations
+
+)
+
+add_fp_unittest(
   trunc_test
   SUITE
     libc-math-smoke-tests
@@ -2738,6 +2752,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.hypotf
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.architectures    
 )
 
 add_fp_unittest(
@@ -2751,6 +2766,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.hypot
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.architectures
 )
 
 add_fp_unittest(
