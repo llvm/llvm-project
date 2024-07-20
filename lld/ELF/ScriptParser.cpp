@@ -873,8 +873,6 @@ constexpr std::pair<const char *, unsigned> typeMap[] = {
 // Tries to read the special directive for an output section definition which
 // can be one of following: "(NOLOAD)", "(COPY)", "(INFO)", "(OVERLAY)", and
 // "(TYPE=<value>)".
-// Tok1 and Tok2 are next 2 tokens peeked. See comment for
-// readSectionAddressType below.
 bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok) {
   if (tok != "NOLOAD" && tok != "COPY" && tok != "INFO" && tok != "OVERLAY" &&
       tok != "TYPE")
