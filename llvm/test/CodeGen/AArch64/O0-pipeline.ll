@@ -74,7 +74,6 @@
 ; CHECK-NEXT:       StackMap Liveness Analysis
 ; CHECK-NEXT:       Live DEBUG_VALUE analysis
 ; CHECK-NEXT:       Machine Sanitizer Binary Metadata
-; CHECK-NEXT:       AArch64 Indirect Thunks
 ; CHECK-NEXT:       AArch64 sls hardening pass
 ; CHECK-NEXT:       AArch64 Pointer Authentication
 ; CHECK-NEXT:       AArch64 Branch Targets

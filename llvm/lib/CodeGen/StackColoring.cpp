@@ -517,12 +517,12 @@ char &llvm::StackColoringID = StackColoring::ID;
 
 INITIALIZE_PASS_BEGIN(StackColoring, DEBUG_TYPE,
                       "Merge disjoint stack slots", false, false)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_END(StackColoring, DEBUG_TYPE,
                     "Merge disjoint stack slots", false, false)
 
 void StackColoring::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<SlotIndexes>();
+  AU.addRequired<SlotIndexesWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -1183,7 +1183,7 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
                     << "********** Function: " << Func.getName() << '\n');
   MF = &Func;
   MFI = &MF->getFrameInfo();
-  Indexes = &getAnalysis<SlotIndexes>();
+  Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
   BlockLiveness.clear();
   BasicBlocks.clear();
   BasicBlockNumbering.clear();

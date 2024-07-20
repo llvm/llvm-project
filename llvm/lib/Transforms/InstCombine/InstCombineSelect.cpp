@@ -3012,6 +3012,32 @@ struct DecomposedSelect {
 };
 } // namespace
 
+/// Folds patterns like:
+///   select c2 (select c1 a b) (select c1 b a)
+/// into:
+///   select (xor c1 c2) b a
+static Instruction *
+foldSelectOfSymmetricSelect(SelectInst &OuterSelVal,
+                            InstCombiner::BuilderTy &Builder) {
+
+  Value *OuterCond, *InnerCond, *InnerTrueVal, *InnerFalseVal;
+  if (!match(
+          &OuterSelVal,
+          m_Select(m_Value(OuterCond),
+                   m_OneUse(m_Select(m_Value(InnerCond), m_Value(InnerTrueVal),
+                                     m_Value(InnerFalseVal))),
+                   m_OneUse(m_Select(m_Deferred(InnerCond),
+                                     m_Deferred(InnerFalseVal),
+                                     m_Deferred(InnerTrueVal))))))
+    return nullptr;
+
+  if (OuterCond->getType() != InnerCond->getType())
+    return nullptr;
+
+  Value *Xor = Builder.CreateXor(InnerCond, OuterCond);
+  return SelectInst::Create(Xor, InnerFalseVal, InnerTrueVal);
+}
+
 /// Look for patterns like
 ///   %outer.cond = select i1 %inner.cond, i1 %alt.cond, i1 false
 ///   %inner.sel = select i1 %inner.cond, i8 %inner.sel.t, i8 %inner.sel.f
@@ -3987,6 +4013,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     }
   }
 
+  if (Instruction *I = foldSelectOfSymmetricSelect(SI, Builder))
+    return I;
+
   if (Instruction *I = foldNestedSelects(SI, Builder))
     return I;
 
@@ -4049,7 +4078,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (CondVal->getType() == SI.getType() && isKnownInversion(FalseVal, TrueVal))
     return BinaryOperator::CreateXor(CondVal, FalseVal);
 
-  if (SelType->isIntOrIntVectorTy() &&
+  // For vectors, this transform is only safe if the simplification does not
+  // look through any lane-crossing operations. For now, limit to scalars only.
+  if (SelType->isIntegerTy() &&
       (!isa<Constant>(TrueVal) || !isa<Constant>(FalseVal))) {
     // Try to simplify select arms based on KnownBits implied by the condition.
     CondContext CC(CondVal);

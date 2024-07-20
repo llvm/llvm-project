@@ -20,6 +20,10 @@ void foo() {
   {
     ptr[2] = 8;
   }
+  #pragma omp target data map(ptr, ptr[2])
+  {
+    ptr[2] = 9;
+  }
 }
 #endif
 // CHECK-LABEL: define {{[^@]+}}@_Z3foov
@@ -34,6 +38,9 @@ void foo() {
 // CHECK-NEXT:    [[DOTOFFLOAD_PTRS3:%.*]] = alloca [1 x ptr], align 8
 // CHECK-NEXT:    [[DOTOFFLOAD_MAPPERS4:%.*]] = alloca [1 x ptr], align 8
 // CHECK-NEXT:    [[KERNEL_ARGS5:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
+// CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS9:%.*]] = alloca [1 x ptr], align 8
+// CHECK-NEXT:    [[DOTOFFLOAD_PTRS10:%.*]] = alloca [1 x ptr], align 8
+// CHECK-NEXT:    [[DOTOFFLOAD_MAPPERS11:%.*]] = alloca [1 x ptr], align 8
 // CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef ptr @_Z6malloci(i32 noundef signext 12) #[[ATTR3:[0-9]+]]
 // CHECK-NEXT:    store ptr [[CALL]], ptr [[PTR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR]], align 8
@@ -124,6 +131,23 @@ void foo() {
 // CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l19(ptr [[TMP22]]) #[[ATTR3]]
 // CHECK-NEXT:    br label [[OMP_OFFLOAD_CONT7]]
 // CHECK:       omp_offload.cont7:
+// CHECK-NEXT:    [[TMP44:%.*]] = load ptr, ptr [[PTR]], align 8
+// CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i32, ptr [[TMP44]], i64 2
+// CHECK-NEXT:    [[TMP45:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS9]], i32 0, i32 0
+// CHECK-NEXT:    store ptr [[PTR]], ptr [[TMP45]], align 8
+// CHECK-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS10]], i32 0, i32 0
+// CHECK-NEXT:    store ptr [[ARRAYIDX8]], ptr [[TMP46]], align 8
+// CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS11]], i64 0, i64 0
+// CHECK-NEXT:    store ptr null, ptr [[TMP47]], align 8
+// CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS9]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS10]], i32 0, i32 0
+// CHECK-NEXT:    call void @__tgt_target_data_begin_mapper(ptr @[[GLOB1]], i64 -1, i32 1, ptr [[TMP48]], ptr [[TMP49]], ptr @.offload_sizes.3, ptr @.offload_maptypes.4, ptr null, ptr null)
+// CHECK-NEXT:    [[TMP50:%.*]] = load ptr, ptr [[PTR]], align 8
+// CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i32, ptr [[TMP50]], i64 2
+// CHECK-NEXT:    store i32 9, ptr [[ARRAYIDX12]], align 4
+// CHECK-NEXT:    [[TMP51:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS9]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP52:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS10]], i32 0, i32 0
+// CHECK-NEXT:    call void @__tgt_target_data_end_mapper(ptr @[[GLOB1]], i64 -1, i32 1, ptr [[TMP51]], ptr [[TMP52]], ptr @.offload_sizes.3, ptr @.offload_maptypes.4, ptr null, ptr null)
 // CHECK-NEXT:    ret void
 //
 //

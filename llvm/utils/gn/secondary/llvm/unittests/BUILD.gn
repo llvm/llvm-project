@@ -10,6 +10,7 @@ group("unittests") {
     "Bitstream:BitstreamTests",
     "CodeGen:CodeGenTests",
     "CodeGen/GlobalISel:GlobalISelTests",
+    "CodeGenData:CodeGenDataTests",
     "DWARFLinkerParallel:DWARFLinkerParallelTests",
     "DebugInfo/BTF:DebugInfoBTFTests",
     "DebugInfo/CodeView:DebugInfoCodeViewTests",

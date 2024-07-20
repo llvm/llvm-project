@@ -673,6 +673,12 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::OMPUnrollDirectiveClass:
     K = CXCursor_OMPUnrollDirective;
     break;
+  case Stmt::OMPReverseDirectiveClass:
+    K = CXCursor_OMPReverseDirective;
+    break;
+  case Stmt::OMPInterchangeDirectiveClass:
+    K = CXCursor_OMPTileDirective;
+    break;
   case Stmt::OMPForDirectiveClass:
     K = CXCursor_OMPForDirective;
     break;

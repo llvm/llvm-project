@@ -52,7 +52,7 @@ struct MIRPrintingPass : public MachineFunctionPass {
     std::string Str;
     raw_string_ostream StrOS(Str);
     printMIR(StrOS, MF);
-    MachineFunctions.append(StrOS.str());
+    MachineFunctions.append(Str);
     return false;
   }
 

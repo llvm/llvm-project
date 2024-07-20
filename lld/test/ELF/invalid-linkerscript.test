@@ -58,3 +58,7 @@
 # RUN: not ld.lld %t9 no-such-file 2>&1 | FileCheck -check-prefix=ERR9 %s
 # ERR9: , expected, but got y
 # ERR9: cannot open no-such-file:
+
+# RUN: echo 'OUTPUT_FORMAT("")' > %t10
+# RUN: not ld.lld %t10 2>&1 | FileCheck -check-prefix=ERR10 %s
+# ERR10: error: {{.*}}:1: unknown output format name:

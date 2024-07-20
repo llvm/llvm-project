@@ -108,6 +108,8 @@ protected:
            "addrspace(1)*, i32, <8 x i1>, i32) ";
     Str << " declare <8 x i32> @llvm.vp.gather.v8i32.v8p0i32(<8 x i32*>, <8 x "
            "i1>, i32) ";
+    Str << " declare <8 x i32> @llvm.experimental.vp.splat.v8i32(i32, <8 x "
+           "i1>, i32) ";
 
     for (const char *ReductionOpcode : ReductionIntOpcodes)
       Str << " declare i32 @llvm.vp.reduce." << ReductionOpcode
