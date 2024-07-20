@@ -18,6 +18,7 @@
 #include <__functional/hash.h>
 #include <__functional/invoke.h>
 #include <__iterator/iterator_traits.h>
+#include <__math/rounding_functions.h>
 #include <__memory/addressof.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/compressed_pair.h>
@@ -40,9 +41,8 @@
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
-#include <cmath>
 #include <cstring>
-#include <initializer_list>
+#include <limits>
 #include <new> // __launder
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -875,10 +875,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI void __rehash_unique(size_type __n) { __rehash<true>(__n); }
   _LIBCPP_HIDE_FROM_ABI void __rehash_multi(size_type __n) { __rehash<false>(__n); }
   _LIBCPP_HIDE_FROM_ABI void __reserve_unique(size_type __n) {
-    __rehash_unique(static_cast<size_type>(std::ceil(__n / max_load_factor())));
+    __rehash_unique(static_cast<size_type>(__math::ceil(__n / max_load_factor())));
   }
   _LIBCPP_HIDE_FROM_ABI void __reserve_multi(size_type __n) {
-    __rehash_multi(static_cast<size_type>(std::ceil(__n / max_load_factor())));
+    __rehash_multi(static_cast<size_type>(__math::ceil(__n / max_load_factor())));
   }
 
   _LIBCPP_HIDE_FROM_ABI size_type bucket_count() const _NOEXCEPT { return __bucket_list_.get_deleter().size(); }
@@ -1348,7 +1348,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_unique_prepare(size_t __
   }
   if (size() + 1 > __bc * max_load_factor() || __bc == 0) {
     __rehash_unique(std::max<size_type>(
-        2 * __bc + !std::__is_hash_power2(__bc), size_type(std::ceil(float(size() + 1) / max_load_factor()))));
+        2 * __bc + !std::__is_hash_power2(__bc), size_type(__math::ceil(float(size() + 1) / max_load_factor()))));
   }
   return nullptr;
 }
@@ -1408,7 +1408,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi_prepare(size_t __c
   size_type __bc = bucket_count();
   if (size() + 1 > __bc * max_load_factor() || __bc == 0) {
     __rehash_multi(std::max<size_type>(
-        2 * __bc + !std::__is_hash_power2(__bc), size_type(std::ceil(float(size() + 1) / max_load_factor()))));
+        2 * __bc + !std::__is_hash_power2(__bc), size_type(__math::ceil(float(size() + 1) / max_load_factor()))));
     __bc = bucket_count();
   }
   size_t __chash      = std::__constrain_hash(__cp_hash, __bc);
@@ -1483,7 +1483,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(const_iterator __p
     size_type __bc      = bucket_count();
     if (size() + 1 > __bc * max_load_factor() || __bc == 0) {
       __rehash_multi(std::max<size_type>(
-          2 * __bc + !std::__is_hash_power2(__bc), size_type(std::ceil(float(size() + 1) / max_load_factor()))));
+          2 * __bc + !std::__is_hash_power2(__bc), size_type(__math::ceil(float(size() + 1) / max_load_factor()))));
       __bc = bucket_count();
     }
     size_t __chash      = std::__constrain_hash(__cp->__hash_, __bc);
@@ -1523,7 +1523,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique_key_args(_Key const& 
     __node_holder __h = __construct_node_hash(__hash, std::forward<_Args>(__args)...);
     if (size() + 1 > __bc * max_load_factor() || __bc == 0) {
       __rehash_unique(std::max<size_type>(
-          2 * __bc + !std::__is_hash_power2(__bc), size_type(std::ceil(float(size() + 1) / max_load_factor()))));
+          2 * __bc + !std::__is_hash_power2(__bc), size_type(__math::ceil(float(size() + 1) / max_load_factor()))));
       __bc    = bucket_count();
       __chash = std::__constrain_hash(__hash, __bc);
     }
@@ -1692,8 +1692,8 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__rehash(size_type __n) _LIBCPP_D
   else if (__n < __bc) {
     __n = std::max<size_type>(
         __n,
-        std::__is_hash_power2(__bc) ? std::__next_hash_pow2(size_t(std::ceil(float(size()) / max_load_factor())))
-                                    : std::__next_prime(size_t(std::ceil(float(size()) / max_load_factor()))));
+        std::__is_hash_power2(__bc) ? std::__next_hash_pow2(size_t(__math::ceil(float(size()) / max_load_factor())))
+                                    : std::__next_prime(size_t(__math::ceil(float(size()) / max_load_factor()))));
     if (__n < __bc)
       __do_rehash<_UniqueKeys>(__n);
   }
