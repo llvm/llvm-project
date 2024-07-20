@@ -34,11 +34,8 @@ bool fptest_close(T val, T expected, T eps)
 template<typename T>
 bool fptest_close_pct(T val, T expected, T percent)
 {
-    _LIBCPP_CONSTEXPR T zero = T(0);
-    assert(percent >= zero);
-
+    assert(percent >= T(0));
     T eps = (percent / T(100)) * std::max(std::abs(val), std::abs(expected));
-
     return fptest_close(val, expected, eps);
 }
 
