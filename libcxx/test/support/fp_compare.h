@@ -12,13 +12,14 @@
 #include <cmath>      // for std::abs
 #include <algorithm>  // for std::max
 #include <cassert>
+#include <__config>
 
 // See https://www.boost.org/doc/libs/1_70_0/libs/test/doc/html/boost_test/testing_tools/extended_comparison/floating_point/floating_points_comparison_theory.html
 
 template<typename T>
 bool fptest_close(T val, T expected, T eps)
 {
-    constexpr T zero = T(0);
+    _LIBCPP_CONSTEXPR T zero = T(0);
     assert(eps >= zero);
 
     // Handle the zero cases
@@ -33,7 +34,7 @@ bool fptest_close(T val, T expected, T eps)
 template<typename T>
 bool fptest_close_pct(T val, T expected, T percent)
 {
-    constexpr T zero = T(0);
+    _LIBCPP_CONSTEXPR T zero = T(0);
     assert(percent >= zero);
 
     // Handle the zero cases
