@@ -166,7 +166,8 @@ void DataSharingProcessor::copyLastPrivateSymbol(
     hlfir::Entity src{sb.getAddr()};
     builder.create<hlfir::AssignOp>(
         loc, src, dst, /*isWholeAllocatableAssignment=*/allocatable,
-        /*keepLhsLengthInAllocatableAssignment=*/false, /*temporary_lhs=*/false);
+        /*keepLhsLengthInAllocatableAssignment=*/false,
+        /*temporary_lhs=*/false);
 
     if (lastPrivIP && lastPrivIP->isSet() &&
         sym->test(Fortran::semantics::Symbol::Flag::OmpLastPrivate)) {
