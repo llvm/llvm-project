@@ -4208,7 +4208,6 @@ add_entrypoint_object(
   HDRS
     ../fsqrt.h
   DEPENDS
-    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
     -O3
@@ -4221,7 +4220,6 @@ add_entrypoint_object(
   HDRS
     ../fsqrtl.h
   DEPENDS
-    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
     -O3
@@ -4234,7 +4232,6 @@ add_entrypoint_object(
   HDRS
     ../fsqrtf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
     -O3

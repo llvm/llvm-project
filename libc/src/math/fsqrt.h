@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC_MATH_FSQRT_H
 
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -18,4 +17,4 @@ float fsqrt(double x);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_MATH_F16SQRT_H
+#endif // LLVM_LIBC_SRC_MATH_FSQRT_H
