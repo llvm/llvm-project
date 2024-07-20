@@ -114,8 +114,7 @@ static bool darwinHasSinCos(const Triple &TT) {
 }
 
 void TargetLoweringBase::InitLibcalls(const Triple &TT) {
-#define HANDLE_LIBCALL(code, name) \
-  setLibcallName(RTLIB::code, name);
+#define HANDLE_LIBCALL(code, name) setLibcallName(RTLIB::code, name);
 #include "llvm/IR/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
   // Initialize calling conventions to their default.
@@ -985,7 +984,8 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
   MinCmpXchgSizeInBits = 0;
   SupportsUnalignedAtomics = false;
 
-  std::fill(std::begin(LibcallRoutineNames), std::end(LibcallRoutineNames), nullptr);
+  std::fill(std::begin(LibcallRoutineNames), std::end(LibcallRoutineNames),
+            nullptr);
 
   InitLibcalls(TM.getTargetTriple());
   InitCmpLibcallCCs(CmpLibcallCCs);
