@@ -257,11 +257,12 @@ SmallVector<int64_t> mlir::dropDims(ArrayRef<int64_t> inputPerm,
   assert(inputPerm.size() >= dropPositions.size() &&
          "expect inputPerm size large than position to drop");
   SmallVector<int64_t> res;
-  for (unsigned inputIndex = 0; inputIndex < inputPerm.size(); ++inputIndex) {
+  unsigned permSize = inputPerm.size();
+  for (unsigned inputIndex = 0; inputIndex < permSize; ++inputIndex) {
     int64_t targetIndex = inputPerm[inputIndex];
     bool shouldDrop = false;
-    for (unsigned dropIndex = 0; dropIndex < dropPositions.size();
-         dropIndex++) {
+    unsigned dropSize = dropPositions.size();
+    for (unsigned dropIndex = 0; dropIndex < dropSize; dropIndex++) {
       if (dropPositions[dropIndex] == inputPerm[inputIndex]) {
         shouldDrop = true;
         break;

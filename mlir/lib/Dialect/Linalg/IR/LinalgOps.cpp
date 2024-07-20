@@ -1910,9 +1910,9 @@ struct SwapTransposeWithBroadcast : OpRewritePattern<linalg::TransposeOp> {
     SmallVector<int64_t> resultPerms = dropDims(perms, dimensions);
     SmallVector<int64_t> invertPerm = invertPermutationVector(perms);
     SmallVector<int64_t> resultDimensions;
-    for (unsigned i = 0; i < dimensions.size(); i++) {
+    unsigned dimensionSize = dimensions.size();
+    for (unsigned i = 0; i < dimensionSize; ++i)
       resultDimensions.push_back(invertPerm[dimensions[i]]);
-    }
 
     // Create transpose result.
     Value broadcastInput = broadcastOp.getInput();
@@ -1921,7 +1921,8 @@ struct SwapTransposeWithBroadcast : OpRewritePattern<linalg::TransposeOp> {
     SmallVector<OpFoldResult> dims;
     auto broadcastInputTy =
         mlir::cast<RankedTensorType>(broadcastInput.getType());
-    for (unsigned i = 0; i < broadcastInputTy.getRank(); i++) {
+    unsigned inputRank = broadcastInputTy.getRank();
+    for (unsigned i = 0; i < inputRank; ++i) {
       if (broadcastInputTy.isDynamicDim(i)) {
         dims.push_back(rewriter.create<tensor::DimOp>(loc, broadcastInput, i)
                            ->getResult(0));
