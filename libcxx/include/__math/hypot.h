@@ -87,7 +87,7 @@ _LIBCPP_HIDE_FROM_ABI std::pair<_Real, _Real> __hypot_factors() {
 // See https://github.com/llvm/llvm-project/issues/92782 for a detailed discussion and summary.
 template <class _Real>
 _LIBCPP_HIDE_FROM_ABI _Real __hypot(_Real __x, _Real __y, _Real __z) {
-  const _Real __max_abs = std::max({__math::fabs(__x), __math::fabs(__y), __math::fabs(__z)});
+  const _Real __max_abs = std::max(__math::fabs(__x), std::max(__math::fabs(__y), __math::fabs(__z)));
   const auto [__overflow_threshold, __overflow_scale] = __math::__hypot_factors<_Real>();
   _Real __scale;
   if (__max_abs > __overflow_threshold) { // x*x + y*y + z*z might overflow
