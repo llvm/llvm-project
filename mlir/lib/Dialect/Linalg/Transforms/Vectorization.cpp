@@ -2004,9 +2004,9 @@ vectorizeScalableVectorPrecondition(Operation *op,
 
   if (iterators.back() == utils::IteratorType::reduction) {
     if (iterators.size() != inputVectorSizes.size()) {
-       LDBG("Non-trailing reduction dim requested for scalable "
-            "vectorization\n");
-       return failure();
+      LDBG("Non-trailing reduction dim requested for scalable "
+           "vectorization\n");
+      return failure();
     }
   }
 
