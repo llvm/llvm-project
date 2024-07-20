@@ -622,44 +622,43 @@ void DWARFRewriter::updateDebugInfo() {
   // Needs to be invoked in the same order as CUs are processed.
   llvm::DenseMap<uint64_t, uint64_t> LocListWritersIndexByCU;
   auto createRangeLocListAddressWriters = [&](DWARFUnit &CU) {
-        std::lock_guard<std::mutex> Lock(AccessMutex);
+    std::lock_guard<std::mutex> Lock(AccessMutex);
 
-        const uint16_t DwarfVersion = CU.getVersion();
-        if (DwarfVersion >= 5) {
-          auto AddrW = std::make_unique<DebugAddrWriterDwarf5>(
-              &BC, CU.getAddressByteSize(), CU.getAddrOffsetSectionBase());
-          RangeListsSectionWriter->setAddressWriter(AddrW.get());
-          LocListWritersByCU[CUIndex] = std::make_unique<DebugLoclistWriter>(
-              CU, DwarfVersion, false, *AddrW);
+    const uint16_t DwarfVersion = CU.getVersion();
+    if (DwarfVersion >= 5) {
+      auto AddrW = std::make_unique<DebugAddrWriterDwarf5>(
+          &BC, CU.getAddressByteSize(), CU.getAddrOffsetSectionBase());
+      RangeListsSectionWriter->setAddressWriter(AddrW.get());
+      LocListWritersByCU[CUIndex] =
+          std::make_unique<DebugLoclistWriter>(CU, DwarfVersion, false, *AddrW);
 
-          if (std::optional<uint64_t> DWOId = CU.getDWOId()) {
-            assert(RangeListsWritersByCU.count(*DWOId) == 0 &&
-                   "RangeLists writer for DWO unit already exists.");
-            auto DWORangeListsSectionWriter =
-                std::make_unique<DebugRangeListsSectionWriter>();
-            DWORangeListsSectionWriter->initSection(CU);
-            DWORangeListsSectionWriter->setAddressWriter(AddrW.get());
-            RangeListsWritersByCU[*DWOId] =
-                std::move(DWORangeListsSectionWriter);
-          }
-          AddressWritersByCU[CU.getOffset()] = std::move(AddrW);
-        } else {
-          auto AddrW =
-              std::make_unique<DebugAddrWriter>(&BC, CU.getAddressByteSize());
-          AddressWritersByCU[CU.getOffset()] = std::move(AddrW);
-          LocListWritersByCU[CUIndex] = std::make_unique<DebugLocWriter>();
-          if (std::optional<uint64_t> DWOId = CU.getDWOId()) {
-            assert(LegacyRangesWritersByCU.count(*DWOId) == 0 &&
-                   "LegacyRangeLists writer for DWO unit already exists.");
-            auto LegacyRangesSectionWriterByCU =
-                std::make_unique<DebugRangesSectionWriter>();
-            LegacyRangesSectionWriterByCU->initSection(CU);
-            LegacyRangesWritersByCU[*DWOId] =
-                std::move(LegacyRangesSectionWriterByCU);
-          }
-        }
-        LocListWritersIndexByCU[CU.getOffset()] = CUIndex++;
-      };
+      if (std::optional<uint64_t> DWOId = CU.getDWOId()) {
+        assert(RangeListsWritersByCU.count(*DWOId) == 0 &&
+               "RangeLists writer for DWO unit already exists.");
+        auto DWORangeListsSectionWriter =
+            std::make_unique<DebugRangeListsSectionWriter>();
+        DWORangeListsSectionWriter->initSection(CU);
+        DWORangeListsSectionWriter->setAddressWriter(AddrW.get());
+        RangeListsWritersByCU[*DWOId] = std::move(DWORangeListsSectionWriter);
+      }
+      AddressWritersByCU[CU.getOffset()] = std::move(AddrW);
+    } else {
+      auto AddrW =
+          std::make_unique<DebugAddrWriter>(&BC, CU.getAddressByteSize());
+      AddressWritersByCU[CU.getOffset()] = std::move(AddrW);
+      LocListWritersByCU[CUIndex] = std::make_unique<DebugLocWriter>();
+      if (std::optional<uint64_t> DWOId = CU.getDWOId()) {
+        assert(LegacyRangesWritersByCU.count(*DWOId) == 0 &&
+               "LegacyRangeLists writer for DWO unit already exists.");
+        auto LegacyRangesSectionWriterByCU =
+            std::make_unique<DebugRangesSectionWriter>();
+        LegacyRangesSectionWriterByCU->initSection(CU);
+        LegacyRangesWritersByCU[*DWOId] =
+            std::move(LegacyRangesSectionWriterByCU);
+      }
+    }
+    LocListWritersIndexByCU[CU.getOffset()] = CUIndex++;
+  };
 
   DWARF5AcceleratorTable DebugNamesTable(opts::CreateDebugNames, BC,
                                          *StrWriter);
