@@ -385,8 +385,8 @@ private:
                    TT_ObjCBlockLParen, TT_FunctionTypeLParen)) {
       Contexts.back().IsExpression = false;
     } else if (Line.InPPDirective) {
-      auto IsExpr = [](const FormatToken &LParen) {
-        const auto *Tok = LParen.Previous;
+      auto IsExpr = [&OpeningParen] {
+        const auto *Tok = OpeningParen.Previous;
         if (!Tok || Tok->isNot(tok::identifier))
           return true;
         Tok = Tok->Previous;
@@ -396,7 +396,7 @@ private:
         }
         return !Tok || !Tok->Tok.getIdentifierInfo();
       };
-      Contexts.back().IsExpression = IsExpr(OpeningParen);
+      Contexts.back().IsExpression = IsExpr();
     } else if (!Line.MustBeDeclaration) {
       bool IsForOrCatch =
           OpeningParen.Previous &&
