@@ -75,7 +75,7 @@
     "LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE": {
       "value": 1073741824,
       "doc": "Default size for the constinit freelist buffer used for the freelist malloc implementation (default 1o 1GB)."
-    },
+    }
   },
   "unistd": {
     "LIBC_CONF_ENABLE_TID_CACHE": {
