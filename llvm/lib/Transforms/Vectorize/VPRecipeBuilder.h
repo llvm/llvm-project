@@ -100,7 +100,7 @@ class VPRecipeBuilder {
   /// if it can. The function should only be called if the cost-model indicates
   /// that widening should be performed.
   VPWidenRecipe *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands,
-                            VPBasicBlock *VPBB, VFRange &Range);
+                            VPBasicBlock *VPBB);
 
 public:
   VPRecipeBuilder(VPlan &Plan, Loop *OrigLoop, const TargetLibraryInfo *TLI,
