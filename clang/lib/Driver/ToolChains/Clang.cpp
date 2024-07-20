@@ -4659,8 +4659,11 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
 
   // -gdwarf-aranges turns on the emission of the aranges section in the
   // backend.
-  if (const Arg *A = Args.getLastArg(options::OPT_gdwarf_aranges);
-      A && checkDebugInfoOption(A, Args, D, TC)) {
+  // Always enabled for SCE tuning.
+  bool NeedAranges = DebuggerTuning == llvm::DebuggerKind::SCE;
+  if (const Arg *A = Args.getLastArg(options::OPT_gdwarf_aranges))
+    NeedAranges = checkDebugInfoOption(A, Args, D, TC) || NeedAranges;
+  if (NeedAranges) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-generate-arange-section");
   }
@@ -6754,7 +6757,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (const char *Name = C.getTimeTraceFile(&JA)) {
     CmdArgs.push_back(Args.MakeArgString("-ftime-trace=" + Twine(Name)));
     Args.AddLastArg(CmdArgs, options::OPT_ftime_trace_granularity_EQ);
-    Args.AddLastArg(CmdArgs, options::OPT_ftime_trace_verbose);
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_ftrapv_handler_EQ)) {

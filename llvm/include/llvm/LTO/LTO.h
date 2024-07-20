@@ -301,7 +301,7 @@ public:
 
   /// Static method that returns a list of libcall symbols that can be generated
   /// by LTO but might not be visible from bitcode symbol table.
-  static SmallVector<const char *> getRuntimeLibcallSymbols(const Triple &TT);
+  static ArrayRef<const char *> getRuntimeLibcallSymbols();
 
 private:
   Config Conf;

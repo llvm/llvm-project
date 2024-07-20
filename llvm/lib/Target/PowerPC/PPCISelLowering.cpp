@@ -48,7 +48,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcallUtil.h"
+#include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -5559,7 +5559,7 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
       // C-linkage name. A Qualname is returned here because an external
       // function entry point is a csect with XTY_ER property.
       const auto getExternalFunctionEntryPointSymbol = [&](StringRef SymName) {
-        auto &Context = DAG.getMachineFunction().getMMI().getContext();
+        auto &Context = DAG.getMachineFunction().getContext();
         MCSectionXCOFF *Sec = Context.getXCOFFSection(
             (Twine(".") + Twine(SymName)).str(), SectionKind::getMetadata(),
             XCOFF::CsectProperties(XCOFF::XMC_PR, XCOFF::XTY_ER));

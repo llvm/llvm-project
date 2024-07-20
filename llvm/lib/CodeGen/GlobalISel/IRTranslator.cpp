@@ -38,7 +38,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcallUtil.h"
+#include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
@@ -2451,8 +2451,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
 
       int FI = getOrCreateFrameIndex(*cast<AllocaInst>(Arg));
       MCSymbol *FrameAllocSym =
-          MF->getMMI().getContext().getOrCreateFrameAllocSymbol(EscapedName,
-                                                                Idx);
+          MF->getContext().getOrCreateFrameAllocSymbol(EscapedName, Idx);
 
       // This should be inserted at the start of the entry block.
       auto LocalEscape =
