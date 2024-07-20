@@ -389,6 +389,8 @@ public:
     friend TEST_CONSTEXPR bool operator> (const contiguous_iterator& x, const contiguous_iterator& y) {return x.it_ >  y.it_;}
     friend TEST_CONSTEXPR bool operator>=(const contiguous_iterator& x, const contiguous_iterator& y) {return x.it_ >= y.it_;}
 
+    // Note no operator<=>, use three_way_contiguous_iterator for testing operator<=>
+
     friend TEST_CONSTEXPR It base(const contiguous_iterator& i) { return i.it_; }
 
     template <class T>

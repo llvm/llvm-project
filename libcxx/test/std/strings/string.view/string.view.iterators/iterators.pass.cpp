@@ -12,9 +12,10 @@
 
 // class iterator
 
-#include <string_view>
 #include <cassert>
+#include <concepts>
 #include <iterator>
+#include <string_view>
 
 #include "test_macros.h"
 #include "make_string.h"
@@ -32,7 +33,7 @@ TEST_CONSTEXPR_CXX14 void test_type() {
   assert(!(ii1 != ii2));
   assert(!(ii1 != cii));
 
-#if TEST_STD_VER >= 11
+#if TEST_STD_VER >= 17
   C c = MAKE_STRING_VIEW(CharT, "abc");
   assert(c.begin() == std::begin(c));
   assert(c.rbegin() == std::rbegin(c));
