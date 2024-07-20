@@ -260,14 +260,22 @@ define i32 @neg_range_int(i32 %a, i32 %b, i32 %c) {
 
 ; (b > -(d | 1) && a < c)
 define i32 @neg_range_int_comp(i32 %a, i32 %b, i32 %c, i32 %d) {
-; CHECK-LABEL: neg_range_int_comp:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w8, w3, #0x1
-; CHECK-NEXT:    cmp w0, w2
-; CHECK-NEXT:    neg w8, w8
-; CHECK-NEXT:    ccmp w1, w8, #4, lt
-; CHECK-NEXT:    csel w0, w1, w0, gt
-; CHECK-NEXT:    ret
+; SDISEL-LABEL: neg_range_int_comp:
+; SDISEL:       // %bb.0:
+; SDISEL-NEXT:    orr w8, w3, #0x1
+; SDISEL-NEXT:    cmp w0, w2
+; SDISEL-NEXT:    ccmn w1, w8, #4, lt
+; SDISEL-NEXT:    csel w0, w1, w0, gt
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: neg_range_int_comp:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    orr w8, w3, #0x1
+; GISEL-NEXT:    cmp w0, w2
+; GISEL-NEXT:    neg w8, w8
+; GISEL-NEXT:    ccmp w1, w8, #4, lt
+; GISEL-NEXT:    csel w0, w1, w0, gt
+; GISEL-NEXT:    ret
   %dor = or i32 %d, 1
   %negd = sub i32 0, %dor
   %cmp = icmp sgt i32 %b, %negd
@@ -279,14 +287,22 @@ define i32 @neg_range_int_comp(i32 %a, i32 %b, i32 %c, i32 %d) {
 
 ; (b >u -(d | 1) && a < c)
 define i32 @neg_range_int_comp_u(i32 %a, i32 %b, i32 %c, i32 %d) {
-; CHECK-LABEL: neg_range_int_comp_u:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w8, w3, #0x1
-; CHECK-NEXT:    cmp w0, w2
-; CHECK-NEXT:    neg w8, w8
-; CHECK-NEXT:    ccmp w1, w8, #0, lt
-; CHECK-NEXT:    csel w0, w1, w0, hi
-; CHECK-NEXT:    ret
+; SDISEL-LABEL: neg_range_int_comp_u:
+; SDISEL:       // %bb.0:
+; SDISEL-NEXT:    orr w8, w3, #0x1
+; SDISEL-NEXT:    cmp w0, w2
+; SDISEL-NEXT:    ccmn w1, w8, #0, lt
+; SDISEL-NEXT:    csel w0, w1, w0, hi
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: neg_range_int_comp_u:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    orr w8, w3, #0x1
+; GISEL-NEXT:    cmp w0, w2
+; GISEL-NEXT:    neg w8, w8
+; GISEL-NEXT:    ccmp w1, w8, #0, lt
+; GISEL-NEXT:    csel w0, w1, w0, hi
+; GISEL-NEXT:    ret
   %dor = or i32 %d, 1
   %negd = sub i32 0, %dor
   %cmp = icmp ugt i32 %b, %negd
@@ -298,14 +314,22 @@ define i32 @neg_range_int_comp_u(i32 %a, i32 %b, i32 %c, i32 %d) {
 
 ; (b > -(d | 1) && a u < c)
 define i32 @neg_range_int_comp_ua(i32 %a, i32 %b, i32 %c, i32 %d) {
-; CHECK-LABEL: neg_range_int_comp_ua:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w8, w3, #0x1
-; CHECK-NEXT:    cmp w0, w2
-; CHECK-NEXT:    neg w8, w8
-; CHECK-NEXT:    ccmp w1, w8, #4, lo
-; CHECK-NEXT:    csel w0, w1, w0, gt
-; CHECK-NEXT:    ret
+; SDISEL-LABEL: neg_range_int_comp_ua:
+; SDISEL:       // %bb.0:
+; SDISEL-NEXT:    orr w8, w3, #0x1
+; SDISEL-NEXT:    cmp w0, w2
+; SDISEL-NEXT:    ccmn w1, w8, #4, lo
+; SDISEL-NEXT:    csel w0, w1, w0, gt
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: neg_range_int_comp_ua:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    orr w8, w3, #0x1
+; GISEL-NEXT:    cmp w0, w2
+; GISEL-NEXT:    neg w8, w8
+; GISEL-NEXT:    ccmp w1, w8, #4, lo
+; GISEL-NEXT:    csel w0, w1, w0, gt
+; GISEL-NEXT:    ret
   %dor = or i32 %d, 1
   %negd = sub i32 0, %dor
   %cmp = icmp sgt i32 %b, %negd
@@ -339,14 +363,22 @@ define i32 @neg_range_int_2(i32 %a, i32 %b, i32 %c) {
 
 ; (b < -(d | 1) && a >= c)
 define i32 @neg_range_int_comp2(i32 %a, i32 %b, i32 %c, i32 %d) {
-; CHECK-LABEL: neg_range_int_comp2:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w8, w3, #0x1
-; CHECK-NEXT:    cmp w0, w2
-; CHECK-NEXT:    neg w8, w8
-; CHECK-NEXT:    ccmp w1, w8, #0, ge
-; CHECK-NEXT:    csel w0, w1, w0, lt
-; CHECK-NEXT:    ret
+; SDISEL-LABEL: neg_range_int_comp2:
+; SDISEL:       // %bb.0:
+; SDISEL-NEXT:    orr w8, w3, #0x1
+; SDISEL-NEXT:    cmp w0, w2
+; SDISEL-NEXT:    ccmn w1, w8, #0, ge
+; SDISEL-NEXT:    csel w0, w1, w0, lt
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: neg_range_int_comp2:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    orr w8, w3, #0x1
+; GISEL-NEXT:    cmp w0, w2
+; GISEL-NEXT:    neg w8, w8
+; GISEL-NEXT:    ccmp w1, w8, #0, ge
+; GISEL-NEXT:    csel w0, w1, w0, lt
+; GISEL-NEXT:    ret
   %dor = or i32 %d, 1
   %negd = sub i32 0, %dor
   %cmp = icmp slt i32 %b, %negd
@@ -358,14 +390,22 @@ define i32 @neg_range_int_comp2(i32 %a, i32 %b, i32 %c, i32 %d) {
 
 ; (b <u -(d | 1) && a > c)
 define i32 @neg_range_int_comp_u2(i32 %a, i32 %b, i32 %c, i32 %d) {
-; CHECK-LABEL: neg_range_int_comp_u2:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w8, w3, #0x1
-; CHECK-NEXT:    cmp w0, w2
-; CHECK-NEXT:    neg w8, w8
-; CHECK-NEXT:    ccmp w1, w8, #2, gt
-; CHECK-NEXT:    csel w0, w1, w0, lo
-; CHECK-NEXT:    ret
+; SDISEL-LABEL: neg_range_int_comp_u2:
+; SDISEL:       // %bb.0:
+; SDISEL-NEXT:    orr w8, w3, #0x1
+; SDISEL-NEXT:    cmp w0, w2
+; SDISEL-NEXT:    ccmn w1, w8, #2, gt
+; SDISEL-NEXT:    csel w0, w1, w0, lo
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: neg_range_int_comp_u2:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    orr w8, w3, #0x1
+; GISEL-NEXT:    cmp w0, w2
+; GISEL-NEXT:    neg w8, w8
+; GISEL-NEXT:    ccmp w1, w8, #2, gt
+; GISEL-NEXT:    csel w0, w1, w0, lo
+; GISEL-NEXT:    ret
   %dor = or i32 %d, 1
   %negd = sub i32 0, %dor
   %cmp = icmp ult i32 %b, %negd
@@ -377,14 +417,22 @@ define i32 @neg_range_int_comp_u2(i32 %a, i32 %b, i32 %c, i32 %d) {
 
 ; (b > -(d | 1) && a u > c)
 define i32 @neg_range_int_comp_ua2(i32 %a, i32 %b, i32 %c, i32 %d) {
-; CHECK-LABEL: neg_range_int_comp_ua2:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w8, w3, #0x1
-; CHECK-NEXT:    cmp w0, w2
-; CHECK-NEXT:    neg w8, w8
-; CHECK-NEXT:    ccmp w1, w8, #4, hi
-; CHECK-NEXT:    csel w0, w1, w0, gt
-; CHECK-NEXT:    ret
+; SDISEL-LABEL: neg_range_int_comp_ua2:
+; SDISEL:       // %bb.0:
+; SDISEL-NEXT:    orr w8, w3, #0x1
+; SDISEL-NEXT:    cmp w0, w2
+; SDISEL-NEXT:    ccmn w1, w8, #4, hi
+; SDISEL-NEXT:    csel w0, w1, w0, gt
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: neg_range_int_comp_ua2:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    orr w8, w3, #0x1
+; GISEL-NEXT:    cmp w0, w2
+; GISEL-NEXT:    neg w8, w8
+; GISEL-NEXT:    ccmp w1, w8, #4, hi
+; GISEL-NEXT:    csel w0, w1, w0, gt
+; GISEL-NEXT:    ret
   %dor = or i32 %d, 1
   %negd = sub i32 0, %dor
   %cmp = icmp sgt i32 %b, %negd
@@ -396,14 +444,22 @@ define i32 @neg_range_int_comp_ua2(i32 %a, i32 %b, i32 %c, i32 %d) {
 
 ; (b > -(d | 1) && a u == c)
 define i32 @neg_range_int_comp_ua3(i32 %a, i32 %b, i32 %c, i32 %d) {
-; CHECK-LABEL: neg_range_int_comp_ua3:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w8, w3, #0x1
-; CHECK-NEXT:    cmp w0, w2
-; CHECK-NEXT:    neg w8, w8
-; CHECK-NEXT:    ccmp w1, w8, #4, eq
-; CHECK-NEXT:    csel w0, w1, w0, gt
-; CHECK-NEXT:    ret
+; SDISEL-LABEL: neg_range_int_comp_ua3:
+; SDISEL:       // %bb.0:
+; SDISEL-NEXT:    orr w8, w3, #0x1
+; SDISEL-NEXT:    cmp w0, w2
+; SDISEL-NEXT:    ccmn w1, w8, #4, eq
+; SDISEL-NEXT:    csel w0, w1, w0, gt
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: neg_range_int_comp_ua3:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    orr w8, w3, #0x1
+; GISEL-NEXT:    cmp w0, w2
+; GISEL-NEXT:    neg w8, w8
+; GISEL-NEXT:    ccmp w1, w8, #4, eq
+; GISEL-NEXT:    csel w0, w1, w0, gt
+; GISEL-NEXT:    ret
   %dor = or i32 %d, 1
   %negd = sub i32 0, %dor
   %cmp = icmp sgt i32 %b, %negd
@@ -419,8 +475,7 @@ define i32 @neg_range_int_c(i32 %a, i32 %b, i32 %c) {
 ; SDISEL:       // %bb.0: // %entry
 ; SDISEL-NEXT:    orr w8, w0, #0x1
 ; SDISEL-NEXT:    orr w9, w1, #0x3
-; SDISEL-NEXT:    neg w8, w8
-; SDISEL-NEXT:    cmp w9, w8
+; SDISEL-NEXT:    cmn w9, w8
 ; SDISEL-NEXT:    ccmp w2, w0, #2, lo
 ; SDISEL-NEXT:    cset w0, lo
 ; SDISEL-NEXT:    ret
