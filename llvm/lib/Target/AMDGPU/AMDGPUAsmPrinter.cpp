@@ -1488,7 +1488,7 @@ void AMDGPUAsmPrinter::emitResourceUsageRemarks(
     return;
 
   // Currently non-kernel functions have no resources to emit.
-  if (MF.getFunction().getCallingConv() != CallingConv::AMDGPU_KERNEL)
+  if (!isEntryFunctionCC(MF.getFunction().getCallingConv()))
     return;
 
   auto EmitResourceUsageRemark = [&](StringRef RemarkName,
