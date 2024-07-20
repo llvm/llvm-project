@@ -140,14 +140,14 @@ void Value::replaceAllUsesWith(Value *Other) {
 }
 
 #ifndef NDEBUG
-std::string Value::getName() const {
+std::string Value::getUid() const {
   std::stringstream SS;
   SS << "SB" << UID << ".";
   return SS.str();
 }
 
 void Value::dumpCommonHeader(raw_ostream &OS) const {
-  OS << getName() << " " << getSubclassIDStr(SubclassID) << " ";
+  OS << getUid() << " " << getSubclassIDStr(SubclassID) << " ";
 }
 
 void Value::dumpCommonFooter(raw_ostream &OS) const {
@@ -167,7 +167,7 @@ void Value::dumpCommonPrefix(raw_ostream &OS) const {
 }
 
 void Value::dumpCommonSuffix(raw_ostream &OS) const {
-  OS << " ; " << getName() << " (" << getSubclassIDStr(SubclassID) << ")";
+  OS << " ; " << getUid() << " (" << getSubclassIDStr(SubclassID) << ")";
 }
 
 void Value::printAsOperandCommon(raw_ostream &OS) const {
@@ -453,6 +453,49 @@ void Instruction::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
+#endif // NDEBUG
+
+LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
+                           Instruction *InsertBefore, Context &Ctx,
+                           const Twine &Name) {
+  llvm::Instruction *BeforeIR = InsertBefore->getTopmostLLVMInstruction();
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(BeforeIR);
+  auto *NewLI = Builder.CreateAlignedLoad(Ty, Ptr->Val, Align,
+                                          /*isVolatile=*/false, Name);
+  auto *NewSBI = Ctx.createLoadInst(NewLI);
+  return NewSBI;
+}
+
+LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
+                           BasicBlock *InsertAtEnd, Context &Ctx,
+                           const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
+  auto *NewLI = Builder.CreateAlignedLoad(Ty, Ptr->Val, Align,
+                                          /*isVolatile=*/false, Name);
+  auto *NewSBI = Ctx.createLoadInst(NewLI);
+  return NewSBI;
+}
+
+bool LoadInst::classof(const Value *From) {
+  return From->getSubclassID() == ClassID::Load;
+}
+
+Value *LoadInst::getPointerOperand() const {
+  return Ctx.getValue(cast<llvm::LoadInst>(Val)->getPointerOperand());
+}
+
+#ifndef NDEBUG
+void LoadInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void LoadInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
 
 void OpaqueInst::dump(raw_ostream &OS) const {
   dumpCommonPrefix(OS);
@@ -538,8 +581,9 @@ Value *Context::registerValue(std::unique_ptr<Value> &&VPtr) {
   assert(VPtr->getSubclassID() != Value::ClassID::User &&
          "Can't register a user!");
   Value *V = VPtr.get();
-  llvm::Value *Key = V->Val;
-  LLVMValueToValueMap[Key] = std::move(VPtr);
+  [[maybe_unused]] auto Pair =
+         LLVMValueToValueMap.insert({VPtr->Val, std::move(VPtr)});
+  assert(Pair.second && "Already exists!");
   return V;
 }
 
@@ -568,6 +612,17 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     return nullptr;
   }
   assert(isa<llvm::Instruction>(LLVMV) && "Expected Instruction");
+
+  switch (cast<llvm::Instruction>(LLVMV)->getOpcode()) {
+  case llvm::Instruction::Load: {
+    auto *LLVMLd = cast<llvm::LoadInst>(LLVMV);
+    It->second = std::unique_ptr<LoadInst>(new LoadInst(LLVMLd, *this));
+    return It->second.get();
+  }
+  default:
+    break;
+  }
+
   It->second = std::unique_ptr<OpaqueInst>(
       new OpaqueInst(cast<llvm::Instruction>(LLVMV), *this));
   return It->second.get();
@@ -580,6 +635,11 @@ BasicBlock *Context::createBasicBlock(llvm::BasicBlock *LLVMBB) {
   // Create SandboxIR for BB's body.
   BB->buildBasicBlockFromLLVMIR(LLVMBB);
   return BB;
+}
+
+LoadInst *Context::createLoadInst(llvm::LoadInst *LI) {
+  auto NewPtr = std::unique_ptr<LoadInst>(new LoadInst(LI, *this));
+  return cast<LoadInst>(registerValue(std::move(NewPtr)));
 }
 
 Value *Context::getValue(llvm::Value *V) const {
