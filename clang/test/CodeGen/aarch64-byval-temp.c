@@ -80,33 +80,41 @@ void example_BitInt(void) {
 }
 // CHECK-O0-LABEL: define dso_local void @example_BitInt(
 // CHECK-O0-NEXT:  entry:
-// CHECK-O0-NEXT:    [[L:%.*]] = alloca i129, align 16
-// CHECK-O0-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca i129, align 16
-// CHECK-O0-NEXT:    [[INDIRECT_ARG_TEMP1:%.*]] = alloca i129, align 16
-// CHECK-O0-NEXT:    store i129 0, ptr [[L]], align 16
-// CHECK-O0-NEXT:    [[TMP0:%.*]] = load i129, ptr [[L]], align 16
-// CHECK-O0-NEXT:    store i129 [[TMP0]], ptr [[INDIRECT_ARG_TEMP]], align 16
+// CHECK-O0-NEXT:    [[L:%.*]] = alloca i256, align 16
+// CHECK-O0-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca i256, align 16
+// CHECK-O0-NEXT:    [[INDIRECT_ARG_TEMP1:%.*]] = alloca i256, align 16
+// CHECK-O0-NEXT:    store i256 0, ptr [[L]], align 16
+// CHECK-O0-NEXT:    [[TMP0:%.*]] = load i256, ptr [[L]], align 16
+// CHECK-O0-NEXT:    [[LOADEDV:%.*]] = trunc i256 [[TMP0]] to i129
+// CHECK-O0-NEXT:    [[STOREDV:%.*]] = sext i129 [[LOADEDV]] to i256
+// CHECK-O0-NEXT:    store i256 [[STOREDV]], ptr [[INDIRECT_ARG_TEMP]], align 16
 // CHECK-O0-NEXT:    call void @pass_large_BitInt(ptr noundef [[INDIRECT_ARG_TEMP]])
-// CHECK-O0-NEXT:    [[TMP1:%.*]] = load i129, ptr [[L]], align 16
-// CHECK-O0-NEXT:    store i129 [[TMP1]], ptr [[INDIRECT_ARG_TEMP1]], align 16
+// CHECK-O0-NEXT:    [[TMP1:%.*]] = load i256, ptr [[L]], align 16
+// CHECK-O0-NEXT:    [[LOADEDV1:%.*]] = trunc i256 [[TMP1]] to i129
+// CHECK-O0-NEXT:    [[STOREDV1:%.*]] = sext i129 [[LOADEDV1]] to i256
+// CHECK-O0-NEXT:    store i256 [[STOREDV1]], ptr [[INDIRECT_ARG_TEMP1]], align 16
 // CHECK-O0-NEXT:    call void @pass_large_BitInt(ptr noundef [[INDIRECT_ARG_TEMP1]])
 // CHECK-O0-NEXT:    ret void
 //
 // CHECK-O3-LABEL: define dso_local void @example_BitInt(
 // CHECK-O3-NEXT:  entry:
-// CHECK-O3-NEXT:    [[L:%.*]] = alloca i129, align 16
-// CHECK-O3-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca i129, align 16
-// CHECK-O3-NEXT:    [[INDIRECT_ARG_TEMP1:%.*]] = alloca i129, align 16
+// CHECK-O3-NEXT:    [[L:%.*]] = alloca i256, align 16
+// CHECK-O3-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca i256, align 16
+// CHECK-O3-NEXT:    [[INDIRECT_ARG_TEMP1:%.*]] = alloca i256, align 16
 // CHECK-O3-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr [[L]]) 
-// CHECK-O3-NEXT:    store i129 0, ptr [[L]], align 16, !tbaa [[TBAA6:![0-9]+]]
-// CHECK-O3-NEXT:    [[TMP0:%.*]] = load i129, ptr [[L]], align 16, !tbaa [[TBAA6]]
+// CHECK-O3-NEXT:    store i256 0, ptr [[L]], align 16, !tbaa [[TBAA6:![0-9]+]]
+// CHECK-O3-NEXT:    [[TMP0:%.*]] = load i256, ptr [[L]], align 16, !tbaa [[TBAA6]]
+// CHECK-O3-NEXT:    [[LOADEDV:%.*]] = trunc i256 [[TMP0]] to i129
 // CHECK-O3-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr [[INDIRECT_ARG_TEMP]]) 
-// CHECK-O3-NEXT:    store i129 [[TMP0]], ptr [[INDIRECT_ARG_TEMP]], align 16, !tbaa [[TBAA6]]
+// CHECK-O3-NEXT:    [[STOREDV:%.*]] = sext i129 [[LOADEDV]] to i256
+// CHECK-O3-NEXT:    store i256 [[STOREDV]], ptr [[INDIRECT_ARG_TEMP]], align 16, !tbaa [[TBAA6]]
 // CHECK-O3-NEXT:    call void @pass_large_BitInt(ptr noundef [[INDIRECT_ARG_TEMP]])
 // CHECK-O3-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr [[INDIRECT_ARG_TEMP]]) 
-// CHECK-O3-NEXT:    [[TMP1:%.*]] = load i129, ptr [[L]], align 16, !tbaa [[TBAA6]]
+// CHECK-O3-NEXT:    [[TMP1:%.*]] = load i256, ptr [[L]], align 16, !tbaa [[TBAA6]]
+// CHECK-O3-NEXT:    [[LOADEDV1:%.*]] = trunc i256 [[TMP1]] to i129
 // CHECK-O3-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr [[INDIRECT_ARG_TEMP1]]) 
-// CHECK-O3-NEXT:    store i129 [[TMP1]], ptr [[INDIRECT_ARG_TEMP1]], align 16, !tbaa [[TBAA6]]
+// CHECK-O3-NEXT:    [[STOREDV1:%.*]] = sext i129 [[LOADEDV1]] to i256
+// CHECK-O3-NEXT:    store i256 [[STOREDV1]], ptr [[INDIRECT_ARG_TEMP1]], align 16, !tbaa [[TBAA6]]
 // CHECK-O3-NEXT:    call void @pass_large_BitInt(ptr noundef [[INDIRECT_ARG_TEMP1]])
 // CHECK-O3-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr [[INDIRECT_ARG_TEMP1]]) 
 // CHECK-O3-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr [[L]]) 

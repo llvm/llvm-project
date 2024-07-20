@@ -108,6 +108,18 @@ def negf(
     O[None] = UnaryFn.negf(I[None])
 
 
+@linalg_structured_op(op_class_name="ReciprocalOp")
+def reciprocal(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies reciprocal(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.reciprocal(I[None])
+
+
 @linalg_structured_op
 def round(
     I=TensorDef(T1),

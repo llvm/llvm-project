@@ -9,6 +9,7 @@
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter Namespace1::Nested2::varInNestedNamespace -x objective-c++ | FileCheck -check-prefix=CHECK-ANOTHER-GLOBAL-IN-NESTED-NAMESPACE %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter Namespace1::Nested1::char_box -x objective-c++ | FileCheck -check-prefix=CHECK-STRUCT-IN-NESTED-NAMESPACE %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter Namespace1::Nested1::funcInNestedNamespace -x objective-c++ | FileCheck -check-prefix=CHECK-FUNC-IN-NESTED-NAMESPACE %s
+// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter Namespace1::Nested1::char_box::methodInNestedNamespace -x objective-c++ | FileCheck -check-prefix=CHECK-METHOD-IN-NESTED-NAMESPACE %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter Namespace1::Nested1::Namespace1::char_box -x objective-c++ | FileCheck -check-prefix=CHECK-STRUCT-IN-DEEP-NESTED-NAMESPACE %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter varInInlineNamespace -x objective-c++ | FileCheck -check-prefix=CHECK-GLOBAL-IN-INLINE-NAMESPACE %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter funcInInlineNamespace -x objective-c++ | FileCheck -check-prefix=CHECK-FUNC-IN-INLINE-NAMESPACE %s
@@ -54,6 +55,10 @@
 // CHECK-STRUCT-IN-NESTED-NAMESPACE: Dumping Namespace1::Nested1::char_box:
 // CHECK-STRUCT-IN-NESTED-NAMESPACE-NEXT: CXXRecordDecl {{.+}} imported in Namespaces <undeserialized declarations> struct char_box
 // CHECK-STRUCT-IN-NESTED-NAMESPACE: SwiftNameAttr {{.+}} <<invalid sloc>> "NestedCharBox"
+
+// CHECK-METHOD-IN-NESTED-NAMESPACE: Dumping Namespace1::Nested1::char_box::methodInNestedNamespace:
+// CHECK-METHOD-IN-NESTED-NAMESPACE-NEXT: CXXMethodDecl {{.+}} imported in Namespaces methodInNestedNamespace
+// CHECK-METHOD-IN-NESTED-NAMESPACE: SwiftNameAttr {{.+}} <<invalid sloc>> "swiftMethodInNestedNamespace()"
 
 // CHECK-STRUCT-IN-DEEP-NESTED-NAMESPACE: Dumping Namespace1::Nested1::Namespace1::char_box:
 // CHECK-STRUCT-IN-DEEP-NESTED-NAMESPACE-NEXT: CXXRecordDecl {{.+}} imported in Namespaces <undeserialized declarations> struct char_box

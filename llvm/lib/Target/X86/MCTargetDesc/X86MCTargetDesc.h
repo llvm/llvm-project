@@ -128,8 +128,7 @@ MCTargetStreamer *createX86ObjectTargetStreamer(MCStreamer &S,
 MCStreamer *createX86WinCOFFStreamer(MCContext &C,
                                      std::unique_ptr<MCAsmBackend> &&AB,
                                      std::unique_ptr<MCObjectWriter> &&OW,
-                                     std::unique_ptr<MCCodeEmitter> &&CE,
-                                     bool IncrementalLinkerCompatible);
+                                     std::unique_ptr<MCCodeEmitter> &&CE);
 
 MCStreamer *createX86ELFStreamer(const Triple &T, MCContext &Context,
                                  std::unique_ptr<MCAsmBackend> &&MAB,

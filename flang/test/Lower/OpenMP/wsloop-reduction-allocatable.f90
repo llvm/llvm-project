@@ -85,9 +85,7 @@ end program
 ! CHECK:                 %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_14]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFEr"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
 ! CHECK:                 fir.store %[[VAL_15]] to %[[VAL_10]]#1 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_17:.*]] = fir.load %[[VAL_10]]#0 : !fir.ref<i32>
-! CHECK:                 %[[VAL_18:.*]] = fir.load %[[VAL_16]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:                 %[[VAL_19:.*]] = fir.box_addr %[[VAL_18]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-! CHECK:                 hlfir.assign %[[VAL_17]] to %[[VAL_19]] : i32, !fir.heap<i32>
+! CHECK:                 hlfir.assign %[[VAL_17]] to %[[VAL_16]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:                 omp.yield
 ! CHECK:               }
 ! CHECK:               omp.terminator

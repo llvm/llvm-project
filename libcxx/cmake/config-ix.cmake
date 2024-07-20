@@ -27,6 +27,9 @@ if (NOT LIBCXX_USE_COMPILER_RT)
   endif()
 endif()
 
+check_cxx_compiler_flag(-nostdlibinc CXX_SUPPORTS_NOSTDLIBINC_FLAG)
+check_cxx_compiler_flag(-nolibc CXX_SUPPORTS_NOLIBC_FLAG)
+
 # libc++ is using -nostdlib++ at the link step when available,
 # otherwise -nodefaultlibs is used. We want all our checks to also
 # use one of these options, otherwise we may end up with an inconsistency between
