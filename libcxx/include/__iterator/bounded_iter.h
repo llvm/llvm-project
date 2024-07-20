@@ -12,7 +12,7 @@
 
 #include <__assert>
 #include <__compare/ordering.h>
-#include <__concepts/same_as.h>
+#include <__compare/three_way_comparable.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__memory/pointer_traits.h>
@@ -226,15 +226,10 @@ public:
   }
 
 #if _LIBCPP_STD_VER >= 20
-  // It is not required that the underlying iterator supports operator<=>.
-  // Therefore this operator is only conditionally provided, which requires a
-  // templated function.
-  template <class _Tp = void>
-    requires requires(_Iterator const& __i) {
-      { __i <=> __i } -> same_as<strong_ordering>;
-    }
   _LIBCPP_HIDE_FROM_ABI constexpr friend strong_ordering
-  operator<=>(__bounded_iter const& __x, __bounded_iter const& __y) noexcept {
+  operator<=>(__bounded_iter const& __x, __bounded_iter const& __y) noexcept
+    requires three_way_comparable<_Iterator, strong_ordering>
+  {
     return __x.__current_ <=> __y.__current_;
   }
 #endif // _LIBCPP_STD_VER >= 20

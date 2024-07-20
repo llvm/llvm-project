@@ -11,6 +11,7 @@
 #define _LIBCPP___ITERATOR_WRAP_ITER_H
 
 #include <__compare/ordering.h>
+#include <__compare/three_way_comparable.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
@@ -120,8 +121,6 @@ operator==(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEX
   return __x.base() == __y.base();
 }
 
-#if _LIBCPP_STD_VER <= 17
-
 template <class _Iter1>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
 operator<(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
@@ -182,21 +181,25 @@ operator<=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEX
   return !(__y < __x);
 }
 
-#else // _LIBCPP_STD_VER <= 17
+#if _LIBCPP_STD_VER >= 20
 
 template <class _Iter1>
 _LIBCPP_HIDE_FROM_ABI constexpr strong_ordering
-operator<=>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) noexcept {
+operator<=>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) noexcept
+  requires three_way_comparable<_Iter1, strong_ordering>
+{
   return __x.base() <=> __y.base();
 }
 
 template <class _Iter1, class _Iter2>
 _LIBCPP_HIDE_FROM_ABI constexpr strong_ordering
-operator<=>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) noexcept {
+operator<=>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) noexcept
+  requires three_way_comparable_with<_Iter1, _Iter2, strong_ordering>
+{
   return __x.base() <=> __y.base();
 }
 
-#endif // _LIBCPP_STD_VER <= 17
+#endif // _LIBCPP_STD_VER >= 20
 
 template <class _Iter1, class _Iter2>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14

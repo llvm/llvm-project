@@ -71,8 +71,10 @@ TEST_CONSTEXPR void test_type() {
   std::same_as<std::strong_ordering> decltype(auto) r1 = ii1 <=> ii2;
   assert(r1 == std::strong_ordering::equal);
 
-  std::same_as<std::strong_ordering> decltype(auto) r2 = ii1 <=> ii2;
+#ifdef __cpp_lib_ranges_as_const
+  std::same_as<std::strong_ordering> decltype(auto) r2 = cii <=> ii2;
   assert(r2 == std::strong_ordering::equal);
+#endif
 }
 
 TEST_CONSTEXPR bool test() {

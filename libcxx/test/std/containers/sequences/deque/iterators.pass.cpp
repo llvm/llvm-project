@@ -41,7 +41,23 @@ int main(int, char**)
     i = c.begin();
     C::const_iterator j;
     j = c.cbegin();
+
     assert(i == j);
+    assert(!(i != j));
+
+    assert(!(i < j));
+    assert((i <= j));
+
+    assert(!(i > j));
+    assert((i >= j));
+
+#  if TEST_STD_VER >= 20
+    // P1614 + LWG3352
+    // When the allocator does not have operator<=> then neither does the iterator.
+    // Make sure to test with an allocator that does not have operator<=>.
+    static_assert(!std::three_way_comparable<min_allocator<int>, std::strong_ordering>);
+    static_assert(!std::three_way_comparable<typename C::iterator, std::strong_ordering>);
+#  endif
     }
 #endif
 #if TEST_STD_VER > 11
@@ -80,7 +96,7 @@ int main(int, char**)
         std::same_as<std::strong_ordering> decltype(auto) r1 = ii1 <=> ii2;
         assert(r1 == std::strong_ordering::equal);
 
-        std::same_as<std::strong_ordering> decltype(auto) r2 = ii1 <=> ii2;
+        std::same_as<std::strong_ordering> decltype(auto) r2 = cii <=> ii2;
         assert(r2 == std::strong_ordering::equal);
 #  endif // TEST_STD_VER > 20
     }

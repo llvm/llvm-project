@@ -154,7 +154,7 @@ TEST_CONSTEXPR_CXX17 bool tests()
             std::same_as<std::strong_ordering> decltype(auto) r1 = ii1 <=> ii2;
             assert(r1 == std::strong_ordering::equal);
 
-            std::same_as<std::strong_ordering> decltype(auto) r2 = ii1 <=> ii2;
+            std::same_as<std::strong_ordering> decltype(auto) r2 = cii <=> ii2;
             assert(r2 == std::strong_ordering::equal);
 #  endif
         }
@@ -204,7 +204,7 @@ TEST_CONSTEXPR_CXX17 bool tests()
             std::same_as<std::strong_ordering> decltype(auto) r1 = ii1 <=> ii2;
             assert(r1 == std::strong_ordering::equal);
 
-            std::same_as<std::strong_ordering> decltype(auto) r2 = ii1 <=> ii2;
+            std::same_as<std::strong_ordering> decltype(auto) r2 = cii <=> ii2;
             assert(r2 == std::strong_ordering::equal);
 #  endif
         }
