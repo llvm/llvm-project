@@ -1307,7 +1307,7 @@ void ObjcCategoryMerger::eraseMergedCategories() {
       // We can't erase 'catLayout.nameOffset' for either Swift or ObjC
       //   categories because the name will sometimes also be used for other
       //   purposes.
-      // For Swift, see  usages of 'l_.str.11.SimpleClass' in
+      // For Swift, see usages of 'l_.str.11.SimpleClass' in
       //   objc-category-merging-swift.s
       // For ObjC, see usages of 'l_OBJC_CLASS_NAME_.1' in
       //   objc-category-merging-erase-objc-name-test.s

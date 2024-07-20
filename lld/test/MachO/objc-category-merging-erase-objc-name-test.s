@@ -1,7 +1,6 @@
 ; REQUIRES: aarch64
 
-
-; Here we test that if we defined a protocl MyTestProtocol and also a category MyTestProtocol
+; Here we test that if we defined a protocol MyTestProtocol and also a category MyTestProtocol
 ; then when merging the category into the base class (and deleting the category), we don't
 ; delete the 'MyTestProtocol' name
 
