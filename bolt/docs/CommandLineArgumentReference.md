@@ -681,6 +681,10 @@
   threshold means fewer functions to process. E.g threshold of 90 means only top
   10 percent of functions with profile will be processed.
 
+- `--match-with-call-graph`
+
+  Match functions with call graph
+
 - `--memcpy1-spec=<func1,func2:cs1:cs2,func3:cs1,...>`
 
   List of functions with call sites for which to specialize memcpy() for size 1
