@@ -53,10 +53,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #ifndef _LIBCPP_CXX03_LANG
-// Dereferencing _Ptr directly in noexcept fails for a void pointer.
-// This is not SFINAE-ed away leading to a hard error.
-// The issue was originally triggered by
-// test/std/utilities/memory/unique.ptr/iterator_concept_conformance.compile.pass.cpp
+
 template <class _Ptr>
 struct __is_noexcept_deref_or_void {
   static constexpr bool value = noexcept(*std::declval<_Ptr>());
@@ -269,10 +266,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __add_lvalue_reference_t<_Tp> operator*() const
-#ifndef _LIBCPP_CXX03_LANG
-      noexcept(__is_noexcept_deref_or_void<pointer>::value)
-#endif
-  {
+      _NOEXCEPT_(__is_noexcept_deref_or_void<pointer>::value) {
     return *__ptr_.first();
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 pointer operator->() const _NOEXCEPT { return __ptr_.first(); }
