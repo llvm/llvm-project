@@ -3696,47 +3696,48 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I,
     return false;
 
   // Can we prove this instruction is safe to unconditionally execute?
-  // If not, we must use some form of predication.
+  if (I->getOpcode() == Instruction::Call)
+    return Legal->isMaskRequired(I);
+
+  if (isa<LoadInst, StoreInst>(I) && !Legal->isMaskRequired(I))
+    return false;
+
+  // TODO: We can use the loop-preheader as context point here and get
+  // context sensitive reasoning
+  if (isa<BranchInst, PHINode>(I) || isSafeToSpeculativelyExecute(I))
+    return false;
+
+  // If the instruction was executed conditionally in the original scalar loop,
+  // predication is needed.
+  if (Legal->blockNeedsPredication(I->getParent()))
+    return true;
+
+  // Tail folding may introduce additional predication, but we're guaranteed to
+  // always have at least one active lane. If the instruction in the original
+  // scalar loop was executed unconditionally, it may not need predication,
+  // depending on its operands.
   switch(I->getOpcode()) {
   default:
-    return false;
+    llvm_unreachable(
+        "instruction should have been considered to not require predication "
+        "by earlier checks");
   case Instruction::Load:
+    // If the address is loop invariant no predication is needed.
+    return !Legal->isInvariant(getLoadStorePointerOperand(I));
   case Instruction::Store: {
-    if (!Legal->isMaskRequired(I))
-      return false;
-    // When we know the load's address is loop invariant and the instruction
-    // in the original scalar loop was unconditionally executed then we
-    // don't need to mark it as a predicated instruction. Tail folding may
-    // introduce additional predication, but we're guaranteed to always have
-    // at least one active lane.  We call Legal->blockNeedsPredication here
-    // because it doesn't query tail-folding.  For stores, we need to prove
+    // For stores, we need to prove
     // both speculation safety (which follows from the same argument as loads),
     // but also must prove the value being stored is correct.  The easiest
     // form of the later is to require that all values stored are the same.
-    if (Legal->isInvariant(getLoadStorePointerOperand(I)) &&
-        (isa<LoadInst>(I) ||
-         (isa<StoreInst>(I) &&
-          TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand()))) &&
-        !Legal->blockNeedsPredication(I->getParent()))
-      return false;
-    return true;
+    return !(Legal->isInvariant(getLoadStorePointerOperand(I)) &&
+             TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand()));
   }
   case Instruction::UDiv:
   case Instruction::SDiv:
   case Instruction::SRem:
   case Instruction::URem:
-    // When folding the tail, at least one of the lanes must execute
-    // unconditionally. If the divisor is loop-invariant no predication is
-    // needed, as predication would not prevent the divide-by-0 on the executed
-    // lane.
-    if (!Legal->blockNeedsPredication(I->getParent()) && TheLoop->isLoopInvariant(I->getOperand(1)))
-      return false;
-
-    // TODO: We can use the loop-preheader as context point here and get
-    // context sensitive reasoning
-    return !isSafeToSpeculativelyExecute(I);
-  case Instruction::Call:
-    return Legal->isMaskRequired(I);
+    // If the divisor is loop-invariant no predication is needed.
+    return !TheLoop->isLoopInvariant(I->getOperand(1));
   }
 }
 
