@@ -22,6 +22,7 @@ add_benchmark(
     libc.src.stdlib.srand
     libc.src.stdlib.rand
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.bit
   COMPILE_OPTIONS
     ${nvptx_math_found}
     ${nvptx_bitcode_link_flags}

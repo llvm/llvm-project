@@ -1,5 +1,7 @@
 #include "benchmarks/gpu/LibcGpuBenchmark.h"
 
+#include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/functional.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/sin.h"
 #include "src/stdlib/rand.h"
@@ -9,39 +11,45 @@
 #include "src/math/nvptx/declarations.h"
 #endif
 
-// We want our values to be approximately
-// |real value| <= 2^(max_exponent) * (1 + (random 52 bits) * 2^-52) <
-// 2^(max_exponent + 1)
-// The largest integer that can be stored in a double is 2^53
-const int MAX_EXPONENT = 52;
-
-double get_rand(int max_exponent) {
-  using FPBits = LIBC_NAMESPACE::fputil::FPBits<double>;
-  uint64_t bits = LIBC_NAMESPACE::rand();
-  double scale = 0.5 + max_exponent / 2048.0;
-  FPBits fp(bits);
-  fp.set_biased_exponent(
-      static_cast<uint32_t>(fp.get_biased_exponent() * scale));
-  return fp.get_val();
+constexpr double M_PI = 3.14159265358979323846;
+uint64_t get_bits(double x) {
+  return LIBC_NAMESPACE::cpp::bit_cast<uint64_t>(x);
 }
 
-uint64_t BM_Sin() {
-  LIBC_NAMESPACE::srand(LIBC_NAMESPACE::gpu::get_thread_id());
-  double x = get_rand(MAX_EXPONENT);
-  return LIBC_NAMESPACE::latency(LIBC_NAMESPACE::sin, x);
-}
-BENCHMARK(LlvmLibcSinGpuBenchmark, Sin, BM_Sin);
-SINGLE_THREADED_BENCHMARK(LlvmLibcSinGpuBenchmark, SinSingleThread, BM_Sin);
-SINGLE_WAVE_BENCHMARK(LlvmLibcSinGpuBenchmark, SinSingleWave, BM_Sin);
+// BENCHMARK() expects a function that with no parameters that returns a
+// uint64_t representing the latency. Defining each benchmark as a macro uses a
+// lambda to allow us to switch the implementation of `sin()` to easily register
+// NVPTX benchmarks.
+#define BM_RANDOM_INPUT(Func)                                                  \
+  []() {                                                                       \
+    uint64_t total_time = 0;                                                   \
+    for (double i : LIBC_NAMESPACE::benchmarks::random_input) {                \
+      total_time += LIBC_NAMESPACE::latency(Func, i);                          \
+    }                                                                          \
+    return total_time / LIBC_NAMESPACE::benchmarks::random_input.size();       \
+  }
+BENCHMARK(LlvmLibcSinGpuBenchmark, Sin, BM_RANDOM_INPUT(LIBC_NAMESPACE::sin));
+
+#define BM_TWO_PI(Func)                                                        \
+  []() {                                                                       \
+    return LIBC_NAMESPACE::benchmarks::MathPerf<double>::run_perf_in_range(    \
+        Func, 0, get_bits(2 * M_PI), get_bits(M_PI / 64));                     \
+  }
+BENCHMARK(LlvmLibcSinGpuBenchmark, SinTwoPi, BM_TWO_PI(LIBC_NAMESPACE::sin));
+
+#define BM_LARGE_INT(Func)                                                     \
+  []() {                                                                       \
+    return LIBC_NAMESPACE::benchmarks::MathPerf<double>::run_perf_in_range(    \
+        Func, 0, get_bits(1 << 30), get_bits(1 << 4));                         \
+  }
+BENCHMARK(LlvmLibcSinGpuBenchmark, SinLargeInt,
+          BM_LARGE_INT(LIBC_NAMESPACE::sin));
 
 #ifdef NVPTX_MATH_FOUND
-uint64_t BM_NvSin() {
-  LIBC_NAMESPACE::srand(LIBC_NAMESPACE::gpu::get_thread_id());
-  double x = get_rand(MAX_EXPONENT);
-  return LIBC_NAMESPACE::latency(LIBC_NAMESPACE::__nv_sin, x);
-}
-BENCHMARK(LlvmLibcSinGpuBenchmark, NvSin, BM_NvSin);
-SINGLE_THREADED_BENCHMARK(lvmLibcSinGpuBenchmark, NvSinSingleThread, BM_NvSin);
-SINGLE_WAVE_BENCHMARK(LlvmLibcSinGpuBenchmark, NvSinSingleWave, BM_NvSin);
-
+BENCHMARK(LlvmLibcSinGpuBenchmark, NvSin,
+          BM_RANDOM_INPUT(LIBC_NAMESPACE::__nv_sin));
+BENCHMARK(LlvmLibcSinGpuBenchmark, NvSinTwoPi,
+          BM_TWO_PI(LIBC_NAMESPACE::__nv_sin));
+BENCHMARK(LlvmLibcSinGpuBenchmark, NvSinLargeInt,
+          BM_LARGE_INT(LIBC_NAMESPACE::__nv_sin));
 #endif

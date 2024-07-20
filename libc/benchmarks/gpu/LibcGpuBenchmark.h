@@ -3,10 +3,13 @@
 
 #include "benchmarks/gpu/BenchmarkLogger.h"
 #include "benchmarks/gpu/timing/timing.h"
+#include "src/__support/CPP/array.h"
 #include "src/__support/CPP/functional.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
+#include "src/stdlib/rand.h"
 #include "src/time/clock.h"
 
 #include <stdint.h>
@@ -105,6 +108,66 @@ private:
     return benchmark(options, func);
   }
 };
+
+// We want our random values to be approximately
+// |real value| <= 2^(max_exponent) * (1 + (random 52 bits) * 2^-52) <
+// 2^(max_exponent + 1)
+// The largest integer that can be stored in a double is 2^53
+static constexpr int MAX_EXPONENT = 52;
+static constexpr int RANDOM_INPUT_SIZE = 1024;
+static cpp::array<double, RANDOM_INPUT_SIZE> random_input;
+
+static double get_rand() {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<double>;
+  uint64_t bits = LIBC_NAMESPACE::rand();
+  double scale = 0.5 + MAX_EXPONENT / 2048.0;
+  FPBits fp(bits);
+  fp.set_biased_exponent(
+      static_cast<uint32_t>(fp.get_biased_exponent() * scale));
+  return fp.get_val();
+}
+
+static void init_random_input() {
+  for (int i = 0; i < RANDOM_INPUT_SIZE; i++) {
+    random_input[i] = get_rand();
+  }
+}
+
+template <typename T> class MathPerf {
+  using FPBits = fputil::FPBits<T>;
+  using StorageType = typename FPBits::StorageType;
+  static constexpr StorageType UIntMax =
+      cpp::numeric_limits<StorageType>::max();
+
+public:
+  typedef T Func(T);
+
+  static uint64_t run_perf_in_range(Func f, StorageType starting_bit,
+                                    StorageType ending_bit, StorageType step) {
+    uint64_t total_time = 0;
+    if (step <= 0)
+      step = 1;
+    volatile T result;
+    for (StorageType bits = starting_bit; bits < ending_bit; bits += step) {
+      T x = FPBits(bits).get_val();
+      total_time += LIBC_NAMESPACE::latency(f, x);
+    }
+    StorageType num_runs = (ending_bit - starting_bit) / step + 1;
+
+    return total_time / num_runs;
+  }
+
+  static uint64_t run_perf_normal(Func f) {
+    return run_perf_in_range(f, FPBits::min_normal().uintval(),
+                             FPBits::max_normal().uintval());
+  }
+
+  static uint64_t run_perf_denormal(Func f) {
+    return run_perf_in_range(f, StorageType(0),
+                             FPBits::max_subnormal().uintval());
+  }
+};
+
 } // namespace benchmarks
 } // namespace LIBC_NAMESPACE_DECL
 
