@@ -1,4 +1,4 @@
-//===-- CodeGen/RuntimeLibcalls.h - Runtime Library Calls -------*- C++ -*-===//
+//===-- CodeGen/RuntimeLibcallUtil.h - Runtime Library Calls ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,32 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the enum representing the list of runtime library calls
-// the backend may emit during code generation, and also some helper functions.
+// This file defines some helper functions for runtime library calls.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CODEGEN_RUNTIMELIBCALLS_H
 #define LLVM_CODEGEN_RUNTIMELIBCALLS_H
 
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/Support/AtomicOrdering.h"
 
 namespace llvm {
 namespace RTLIB {
-/// RTLIB::Libcall enum - This enum defines all of the runtime library calls
-/// the backend can emit.  The various long double types cannot be merged,
-/// because 80-bit library functions use "xf" and 128-bit use "tf".
-///
-/// When adding PPCF128 functions here, note that their names generally need
-/// to be overridden for Darwin with the xxx$LDBL128 form.  See
-/// PPCISelLowering.cpp.
-///
-enum Libcall {
-#define HANDLE_LIBCALL(code, name) code,
-#include "llvm/IR/RuntimeLibcalls.def"
-#undef HANDLE_LIBCALL
-};
 
 /// GetFPLibCall - Helper to return the right libcall for the given floating
 /// point type, or UNKNOWN_LIBCALL if there is none.
@@ -102,6 +90,9 @@ Libcall getMEMMOVE_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize);
 /// MEMSET_ELEMENT_UNORDERED_ATOMIC_* value for the given element size or
 /// UNKNOW_LIBCALL if there is none.
 Libcall getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize);
+
+/// Initialize the default condition code on the libcalls.
+void initCmpLibcallCCs(ISD::CondCode *CmpLibcallCCs);
 
 } // namespace RTLIB
 } // namespace llvm
