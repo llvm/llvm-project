@@ -5426,6 +5426,7 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
 
   bool NestedDefaultChecking = isCheckingDefaultArgumentOrInitializer();
   bool InLifetimeExtendingContext = isInLifetimeExtendingContext();
+  bool HasRewrittenInit = false;
   std::optional<ExpressionEvaluationContextRecord::InitializationContext>
       InitializationContext =
           OutermostDeclarationWithDelayedImmediateInvocations();
@@ -5458,10 +5459,10 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
     ImmediateCallVisitor V(getASTContext());
     if (!NestedDefaultChecking)
       V.TraverseDecl(Param);
-
+    HasRewrittenInit = V.HasImmediateCalls || InLifetimeExtendingContext;
     // Rewrite the call argument that was created from the corresponding
     // parameter's default argument.
-    if (V.HasImmediateCalls || InLifetimeExtendingContext) {
+    if (HasRewrittenInit) {
       if (V.HasImmediateCalls)
         ExprEvalContexts.back().DelayedDefaultInitializationContext = {
             CallLoc, Param, CurContext};
@@ -5490,7 +5491,8 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
     return ExprError();
 
   return CXXDefaultArgExpr::Create(Context, InitializationContext->Loc, Param,
-                                   Init, InitializationContext->Context);
+                                   InitializationContext->Context, Init,
+                                   HasRewrittenInit);
 }
 
 ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
@@ -5548,7 +5550,9 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   ImmediateCallVisitor V(getASTContext());
   if (!NestedDefaultChecking)
     V.TraverseDecl(Field);
-  if (V.HasImmediateCalls) {
+
+  bool HasRewrittenInit = V.HasImmediateCalls;
+  if (HasRewrittenInit) {
     ExprEvalContexts.back().DelayedDefaultInitializationContext = {Loc, Field,
                                                                    CurContext};
     ExprEvalContexts.back().IsCurrentlyCheckingDefaultArgumentOrInitializer =
@@ -5587,7 +5591,7 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
 
     return CXXDefaultInitExpr::Create(Context, InitializationContext->Loc,
                                       Field, InitializationContext->Context,
-                                      Init);
+                                      Init, HasRewrittenInit);
   }
 
   // DR1351:

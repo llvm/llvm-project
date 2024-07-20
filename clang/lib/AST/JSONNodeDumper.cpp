@@ -1579,11 +1579,11 @@ void JSONNodeDumper::VisitMaterializeTemporaryExpr(
 }
 
 void JSONNodeDumper::VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node) {
-  attributeOnlyIfTrue("hasRewrittenInit", Node->hasRewrittenInit());
+  JOS.attribute("hasRewrittenInit", Node->hasRewrittenInit());
 }
 
 void JSONNodeDumper::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node) {
-  attributeOnlyIfTrue("hasRewrittenInit", Node->hasRewrittenInit());
+  JOS.attribute("hasRewrittenInit", Node->hasRewrittenInit());
 }
 
 void JSONNodeDumper::VisitCXXDependentScopeMemberExpr(
