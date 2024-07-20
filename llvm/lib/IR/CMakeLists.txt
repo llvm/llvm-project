@@ -73,7 +73,6 @@ add_llvm_component_library(LLVMCore
   VectorBuilder.cpp
   Verifier.cpp
   VFABIDemangler.cpp
-  RuntimeLibcalls.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/IR
@@ -82,7 +81,6 @@ add_llvm_component_library(LLVMCore
   ${LLVM_PTHREAD_LIB}
 
   DEPENDS
-  vt_gen
   intrinsics_gen
 
   LINK_COMPONENTS
