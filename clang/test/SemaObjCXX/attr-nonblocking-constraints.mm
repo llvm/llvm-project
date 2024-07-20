@@ -1,9 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -verify %s
 
-#if !__has_attribute(clang_nonblocking)
-#error "the 'nonblocking' attribute is not available"
-#endif
-
 #pragma clang diagnostic ignored "-Wperf-constraint-implies-noexcept"
 
 // Objective-C
