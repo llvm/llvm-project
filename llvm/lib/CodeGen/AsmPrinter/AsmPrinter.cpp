@@ -1669,8 +1669,8 @@ void AsmPrinter::emitPCSections(const MachineFunction &MF) {
 }
 
 /// Returns true if function begin and end labels should be emitted.
-static bool needFuncLabels(const MachineFunction &MF) {
-  MachineModuleInfo &MMI = MF.getMMI();
+static bool needFuncLabels(const MachineFunction &MF,
+                           const MachineModuleInfo &MMI) {
   if (!MF.getLandingPads().empty() || MF.hasEHFunclets() ||
       MMI.hasDebugInfo() ||
       MF.getFunction().hasMetadata(LLVMContext::MD_pcsections))
@@ -1944,7 +1944,7 @@ void AsmPrinter::emitFunctionBody() {
   // are automatically sized.
   bool EmitFunctionSize = MAI->hasDotTypeDotSizeDirective() && !TT.isWasm();
 
-  if (needFuncLabels(*MF) || EmitFunctionSize) {
+  if (needFuncLabels(*MF, *MMI) || EmitFunctionSize) {
     // Create a symbol for the end of function.
     CurrentFnEnd = createTempSymbol("func_end");
     OutStreamer->emitLabel(CurrentFnEnd);
@@ -2587,8 +2587,9 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   bool NeedsLocalForSize = MAI->needsLocalForSize();
   if (F.hasFnAttribute("patchable-function-entry") ||
       F.hasFnAttribute("function-instrument") ||
-      F.hasFnAttribute("xray-instruction-threshold") || needFuncLabels(MF) ||
-      NeedsLocalForSize || MF.getTarget().Options.EmitStackSizeSection ||
+      F.hasFnAttribute("xray-instruction-threshold") ||
+      needFuncLabels(MF, *MMI) || NeedsLocalForSize ||
+      MF.getTarget().Options.EmitStackSizeSection ||
       MF.getTarget().Options.BBAddrMap || MF.hasBBLabels()) {
     CurrentFnBegin = createTempSymbol("func_begin");
     if (NeedsLocalForSize)
