@@ -4,7 +4,8 @@ import re
 import subprocess
 import sys
 
-from looseversion import LooseVersion
+# TODO: LooseVersion is undocumented; use something else.
+from distutils.version import LooseVersion
 
 import lit.formats
 import lit.util
