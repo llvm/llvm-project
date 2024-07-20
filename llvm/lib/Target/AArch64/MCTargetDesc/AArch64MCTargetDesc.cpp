@@ -399,11 +399,9 @@ static MCStreamer *createMachOStreamer(MCContext &Ctx,
 static MCStreamer *
 createWinCOFFStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
                       std::unique_ptr<MCObjectWriter> &&OW,
-                      std::unique_ptr<MCCodeEmitter> &&Emitter,
-                      bool IncrementalLinkerCompatible) {
+                      std::unique_ptr<MCCodeEmitter> &&Emitter) {
   return createAArch64WinCOFFStreamer(Ctx, std::move(TAB), std::move(OW),
-                                      std::move(Emitter),
-                                      IncrementalLinkerCompatible);
+                                      std::move(Emitter));
 }
 
 namespace {

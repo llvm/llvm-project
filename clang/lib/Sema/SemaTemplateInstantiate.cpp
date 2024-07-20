@@ -3426,16 +3426,11 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
     return true;
 
   llvm::TimeTraceScope TimeScope("InstantiateClass", [&]() {
-    llvm::TimeTraceMetadata M;
-    llvm::raw_string_ostream OS(M.Detail);
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
     Instantiation->getNameForDiagnostic(OS, getPrintingPolicy(),
                                         /*Qualified=*/true);
-    if (llvm::isTimeTraceVerbose()) {
-      auto Loc = SourceMgr.getExpansionLoc(Instantiation->getLocation());
-      M.File = SourceMgr.getFilename(Loc);
-      M.Line = SourceMgr.getExpansionLineNumber(Loc);
-    }
-    return M;
+    return Name;
   });
 
   Pattern = PatternDef;

@@ -1870,6 +1870,8 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
       VDataIn = MI.getOperand(1).getReg();
       VDataTy = MRI->getType(VDataIn);
       NumVDataDwords = (VDataTy.getSizeInBits() + 31) / 32;
+    } else if (BaseOpcode->NoReturn) {
+      NumVDataDwords = 0;
     } else {
       VDataOut = MI.getOperand(0).getReg();
       VDataTy = MRI->getType(VDataOut);
@@ -3616,6 +3618,7 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectG_INSERT_VECTOR_ELT(I);
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_D16:
+  case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_NORET:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE_D16: {
     const AMDGPU::ImageDimIntrinsicInfo *Intr =
