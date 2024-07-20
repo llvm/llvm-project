@@ -392,7 +392,7 @@ void ProfileGeneratorBase::updateBodySamplesforFunctionProfile(
 
   if (LeadingIPOnly) {
     // When computing an IP-based profile we take the SUM of counts at the
-    // location instead of applying duplication factors.
+    // location instead of applying duplication factors and taking the MAX.
     FunctionProfile.addBodySamples(LeafLoc.Location.LineOffset, Discriminator,
                                    Count);
   } else {
