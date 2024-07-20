@@ -10320,8 +10320,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, AC, ORE, IC, &LVL,
                                  &CM, BFI, PSI, Checks);
 
-      VPlan &BestPlan =
-          UseLegacyCostModel ? LVP.getBestPlanFor(VF.Width) : LVP.getBestPlan();
+      VPlan &BestPlan = UseLegacyCostModel ? LVP.getBestPlanFor(VF.Width)
+                                           : LVP.getBestPlan().second;
       assert((UseLegacyCostModel || BestPlan.hasScalarVFOnly()) &&
              "VPlan cost model and legacy cost model disagreed");
       LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
@@ -10335,10 +10335,18 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     } else {
       // If we decided that it is *legal* to vectorize the loop, then do it.
 
-      const auto &[Width, BestPlan] = LVP.getBestPlan();
-      LLVM_DEBUG(dbgs() << "VF picked by VPlan cost model: " << Width << "\n");
-      assert(VF.Width == Width &&
-             "VPlan cost model and legacy cost model disagreed");
+      ElementCount Width = VF.Width;
+      std::optional<VPlan *> VPlanFromVPCost;
+      if (!UseLegacyCostModel) {
+        const auto &[VPWidth, Plan] = LVP.getBestPlan();
+        LLVM_DEBUG(dbgs() << "VF picked by VPlan cost model: " << Width
+                          << "\n");
+        Width = VPWidth;
+        assert(VF.Width == Width &&
+               "VPlan cost model and legacy cost model disagreed");
+      }
+      VPlan &BestPlan =
+          *VPlanFromVPCost.value_or(&LVP.getBestPlanFor(VF.Width));
 
       // Consider vectorizing the epilogue too if it's profitable.
       VectorizationFactor EpilogueVF =
@@ -10444,18 +10452,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         if (!MainILV.areSafetyChecksAdded())
           DisableRuntimeUnroll = true;
       } else {
-        ElementCount Width = VF.Width;
-        VPlan &BestPlan =
-            UseLegacyCostModel ? LVP.getBestPlanFor(Width) : LVP.getBestPlan();
-        if (!UseLegacyCostModel) {
-          assert(size(BestPlan.vectorFactors()) == 1 &&
-                 "Plan should have a single VF");
-          Width = *BestPlan.vectorFactors().begin();
-          LLVM_DEBUG(dbgs()
-                     << "VF picked by VPlan cost model: " << Width << "\n");
-          assert(VF.Width == Width &&
-                 "VPlan cost model and legacy cost model disagreed");
-        }
         InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, Width,
                                VF.MinProfitableTripCount, IC, &LVL, &CM, BFI,
                                PSI, Checks);
