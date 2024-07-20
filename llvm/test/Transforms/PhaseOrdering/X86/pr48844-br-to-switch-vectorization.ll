@@ -8,47 +8,6 @@ target triple = "x86_64-unknown-linux-gnu"
 ; FIXME: The br -> switch conversion blocks vectorization.
 
 define dso_local void @test(ptr %start, ptr %end) #0 {
-; AVX-LABEL: @test(
-; AVX-NEXT:  entry:
-; AVX-NEXT:    [[I11_NOT1:%.*]] = icmp eq ptr [[START:%.*]], [[END:%.*]]
-; AVX-NEXT:    br i1 [[I11_NOT1]], label [[EXIT:%.*]], label [[BB12:%.*]]
-; AVX:       bb12:
-; AVX-NEXT:    [[PTR2:%.*]] = phi ptr [ [[PTR_NEXT:%.*]], [[LATCH:%.*]] ], [ [[START]], [[ENTRY:%.*]] ]
-; AVX-NEXT:    [[VAL:%.*]] = load i32, ptr [[PTR2]], align 4
-; AVX-NEXT:    switch i32 [[VAL]], label [[LATCH]] [
-; AVX-NEXT:      i32 -12, label [[STORE:%.*]]
-; AVX-NEXT:      i32 13, label [[STORE]]
-; AVX-NEXT:    ]
-; AVX:       store:
-; AVX-NEXT:    store i32 42, ptr [[PTR2]], align 4
-; AVX-NEXT:    br label [[LATCH]]
-; AVX:       latch:
-; AVX-NEXT:    [[PTR_NEXT]] = getelementptr inbounds i8, ptr [[PTR2]], i64 4
-; AVX-NEXT:    [[I11_NOT:%.*]] = icmp eq ptr [[PTR_NEXT]], [[END]]
-; AVX-NEXT:    br i1 [[I11_NOT]], label [[EXIT]], label [[BB12]]
-; AVX:       exit:
-; AVX-NEXT:    ret void
-;
-; AVX2-LABEL: @test(
-; AVX2-NEXT:  entry:
-; AVX2-NEXT:    [[I11_NOT1:%.*]] = icmp eq ptr [[START:%.*]], [[END:%.*]]
-; AVX2-NEXT:    br i1 [[I11_NOT1]], label [[EXIT:%.*]], label [[BB12:%.*]]
-; AVX2:       bb12:
-; AVX2-NEXT:    [[PTR2:%.*]] = phi ptr [ [[PTR_NEXT:%.*]], [[LATCH:%.*]] ], [ [[START]], [[ENTRY:%.*]] ]
-; AVX2-NEXT:    [[VAL:%.*]] = load i32, ptr [[PTR2]], align 4
-; AVX2-NEXT:    switch i32 [[VAL]], label [[LATCH]] [
-; AVX2-NEXT:      i32 -12, label [[STORE:%.*]]
-; AVX2-NEXT:      i32 13, label [[STORE]]
-; AVX2-NEXT:    ]
-; AVX2:       store:
-; AVX2-NEXT:    store i32 42, ptr [[PTR2]], align 4
-; AVX2-NEXT:    br label [[LATCH]]
-; AVX2:       latch:
-; AVX2-NEXT:    [[PTR_NEXT]] = getelementptr inbounds i8, ptr [[PTR2]], i64 4
-; AVX2-NEXT:    [[I11_NOT:%.*]] = icmp eq ptr [[PTR_NEXT]], [[END]]
-; AVX2-NEXT:    br i1 [[I11_NOT]], label [[EXIT]], label [[BB12]]
-; AVX2:       exit:
-; AVX2-NEXT:    ret void
 ;
 entry:
   br label %header

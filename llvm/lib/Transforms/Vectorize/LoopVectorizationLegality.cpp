@@ -1341,11 +1341,11 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
   // Collect the blocks that need predication.
   for (BasicBlock *BB : TheLoop->blocks()) {
     // We don't support switch statements inside loops.
-    if (!isa<BranchInst>(BB->getTerminator())) {
-      reportVectorizationFailure("Loop contains a switch statement",
-                                 "loop contains a switch statement",
-                                 "LoopContainsSwitch", ORE, TheLoop,
-                                 BB->getTerminator());
+    if (!isa<BranchInst, SwitchInst>(BB->getTerminator())) {
+      reportVectorizationFailure("Loop contains an unsupported termaintor",
+                                 "loop contains an unsupported terminator",
+                                 "LoopContainsUnsupportedTerminator", ORE,
+                                 TheLoop, BB->getTerminator());
       return false;
     }
 

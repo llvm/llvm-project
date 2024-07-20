@@ -7852,6 +7852,41 @@ VPValue *VPRecipeBuilder::createEdgeMask(BasicBlock *Src, BasicBlock *Dst) {
 
   VPValue *SrcMask = getBlockInMask(Src);
 
+  if (auto *SI = dyn_cast<SwitchInst>(Src->getTerminator())) {
+    // Create mask where the terminator in Src is a switch. We need to handle 2
+    // separate cases:
+    // 1. Dst is not the default desintation. Dst is reached if any of the cases
+    // with destination == Dst are taken. Join the conditions for each case
+    // where destination == Dst using a logical OR.
+    // 2. Dst is the default destination. Dst is reached if none of the cases
+    // with destination != Dst are taken. Join the conditions for each case
+    // where the destination is != Dst using a logical OR and negate it.
+    VPValue *Mask = nullptr;
+    VPValue *Cond = getVPValueOrAddLiveIn(SI->getCondition(), Plan);
+    bool IsDefault = SI->getDefaultDest() == Dst;
+    for (auto &C : SI->cases()) {
+      if (IsDefault) {
+        if (C.getCaseSuccessor() == Dst)
+          continue;
+      } else if (C.getCaseSuccessor() != Dst)
+        continue;
+
+      VPValue *Eq = EdgeMaskCache.lookup({Src, C.getCaseSuccessor()});
+      if (!Eq) {
+        VPValue *V = getVPValueOrAddLiveIn(C.getCaseValue(), Plan);
+        Eq = Builder.createICmp(CmpInst::ICMP_EQ, Cond, V);
+      }
+      if (Mask)
+        Mask = Builder.createOr(Mask, Eq);
+      else
+        Mask = Eq;
+    }
+    if (IsDefault)
+      Mask = Builder.createNot(Mask);
+    assert(Mask && "mask must be created");
+    return EdgeMaskCache[Edge] = Mask;
+  }
+
   // The terminator has to be a branch inst!
   BranchInst *BI = dyn_cast<BranchInst>(Src->getTerminator());
   assert(BI && "Unexpected terminator found");
