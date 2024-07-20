@@ -97,11 +97,11 @@ struct alignas(STACK_ALIGNMENT) ThreadAttributes {
   //          exits. It will clean up the thread resources once the thread
   //          exits.
   cpp::Atomic<uint32_t> detach_state;
-  void *stack;                  // Pointer to the thread stack
-  unsigned long long stacksize; // Size of the stack
-  unsigned long long guardsize; // Guard size on stack
-  uintptr_t tls;                // Address to the thread TLS memory
-  uintptr_t tls_size;           // The size of area pointed to by |tls|.
+  void *stack;               // Pointer to the thread stack
+  size_t stacksize;          // Size of the stack
+  size_t guardsize;          // Guard size on stack
+  uintptr_t tls;             // Address to the thread TLS memory
+  uintptr_t tls_size;        // The size of area pointed to by |tls|.
   unsigned char owned_stack; // Indicates if the thread owns this stack memory
   int tid;
   ThreadStyle style;
