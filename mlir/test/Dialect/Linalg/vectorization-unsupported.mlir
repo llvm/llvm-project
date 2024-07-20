@@ -129,35 +129,35 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-func.func @linalg_reduce_scalable(%input: tensor<?xf32>,
-                                  %acc: tensor<f32>) -> tensor<f32> {
+func.func @linalg_reduce_scalable_leading_dim(%input: tensor<?x?xf32>,
+                                              %acc: tensor<?xf32>) -> tensor<?xf32> {
 
   // expected-error @+1 {{Attempted to vectorize, but failed}}
-  %0 = linalg.reduce ins(%input : tensor<?xf32>) outs(%acc : tensor<f32>) dimensions = [0]
+  %0 = linalg.reduce ins(%input : tensor<?x?xf32>) outs(%acc : tensor<?xf32>) dimensions = [0]
   (%in: f32, %init: f32) {
     %0 = arith.addf %in, %init : f32
     linalg.yield %0 : f32
   }
-  return %0 : tensor<f32>
+  return %0 : tensor<?xf32>
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.reduce"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.structured.vectorize %0 vector_sizes [[4]] : !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [[4], 1] : !transform.any_op
     transform.yield
   }
 }
 
 // -----
 
-func.func @linalg_generic_scalable_reduction_dim(%input: tensor<?x?xf32>,
-                                                 %acc: tensor<?xf32>) -> tensor<?xf32> {
+func.func @linalg_generic_scalable_reduction_leading_dim(%input: tensor<?x?xf32>,
+                                                         %acc: tensor<?xf32>) -> tensor<?xf32> {
 
   // expected-error @+1 {{Attempted to vectorize, but failed}}
   %0 = linalg.generic { indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
-                                         affine_map<(d0, d1) -> (d0)>],
-                        iterator_types = ["parallel", "reduction"] }
+                                         affine_map<(d0, d1) -> (d1)>],
+                        iterator_types = ["reduction", "parallel"] }
     ins(%input : tensor<?x?xf32>)
     outs(%acc : tensor<?xf32>) {
     ^bb(%in: f32, %out: f32) :
@@ -170,7 +170,7 @@ func.func @linalg_generic_scalable_reduction_dim(%input: tensor<?x?xf32>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.structured.vectorize %0 vector_sizes [1, [4]] : !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [[4], 1] : !transform.any_op
     transform.yield
   }
 }

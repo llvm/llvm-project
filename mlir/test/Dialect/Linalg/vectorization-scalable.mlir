@@ -189,3 +189,85 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+func.func @vectorize_dynamic_reduction_scalable_1d(%arg0: tensor<?xf32>,
+                                          %arg1: tensor<f32>) -> tensor<f32> {
+
+  %0 = linalg.reduce ins(%arg0 : tensor<?xf32>) outs(%arg1 : tensor<f32>) dimensions = [0]
+  (%in: f32, %init: f32) {
+    %0 = arith.addf %in, %init : f32
+    linalg.yield %0 : f32
+  }
+  return %0 : tensor<f32>
+}
+
+// CHECK-LABEL:  func.func @vectorize_dynamic_reduction_scalable_1d(
+// CHECK-SAME:     %[[ARG_0:.*]]: tensor<?xf32>, %[[ARG_1:.*]]: tensor<f32>) -> tensor<f32> {
+// CHECK:          %[[VAL_0:.*]] = arith.constant 0 : index
+// CHECK:          %[[VAL_1:.*]] = tensor.dim %[[ARG_0]], %[[VAL_0]] : tensor<?xf32>
+// CHECK:          %[[VAL_2:.*]] = arith.constant 0 : index
+// CHECK:          %[[VAL_3:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:          %[[VAL_4:.*]] = vector.create_mask %[[VAL_1]] : vector<[4]xi1>
+// CHECK:          %[[VAL_5:.*]] = vector.mask %[[VAL_4]] { vector.transfer_read %[[ARG_0]][%[[VAL_2]]], %[[VAL_3]] {in_bounds = [true]} : tensor<?xf32>, vector<[4]xf32> } : vector<[4]xi1> -> vector<[4]xf32>
+// CHECK:          %[[VAL_6:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:          %[[VAL_7:.*]] = vector.transfer_read %[[ARG_1]][], %[[VAL_6]] : tensor<f32>, vector<f32>
+// CHECK:          %[[VAL_8:.*]] = vector.extractelement %[[VAL_7]][] : vector<f32>
+// CHECK:          %[[VAL_9:.*]] = vector.mask %[[VAL_4]] { vector.multi_reduction <add>, %[[VAL_5]], %[[VAL_8]] [0] : vector<[4]xf32> to f32 } : vector<[4]xi1> -> f32
+// CHECK:          %[[VAL_10:.*]] = vector.broadcast %[[VAL_9]] : f32 to vector<f32>
+// CHECK:          %[[VAL_11:.*]] = vector.transfer_write %[[VAL_10]], %[[ARG_1]][] : vector<f32>, tensor<f32>
+// CHECK:          return %[[VAL_11]] : tensor<f32>
+// CHECK:        }
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.reduce"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [[4]] : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Note: scalable version of `vectorize_dynamic_reduction` in test/Dialect/Linalg/vectorization.mlir.
+func.func @vectorize_dynamic_reduction_scalable_2d(%arg0: tensor<?x?xf32>,
+                                          %arg1: tensor<?xf32>) -> tensor<?xf32> {
+  %0 = linalg.generic { indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                         affine_map<(d0, d1) -> (d0)>],
+                        iterator_types = ["parallel", "reduction"] }
+    ins(%arg0 : tensor<?x?xf32>)
+    outs(%arg1 : tensor<?xf32>) {
+    ^bb(%in: f32, %out: f32) :
+      %0 = arith.addf %in, %out : f32
+      linalg.yield %0 : f32
+    } -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// CHECK-LABEL:  func.func @vectorize_dynamic_reduction_scalable_2d(
+// CHECK-SAME:     %[[ARG_0:.*]]: tensor<?x?xf32>, %[[ARG_1:.*]]: tensor<?xf32>) -> tensor<?xf32> {
+// CHECK:    %[[VAL_0:.*]] = arith.constant 0 : index
+// CHECK:    %[[VAL_1:.*]] = tensor.dim %[[ARG_0]], %[[VAL_0]] : tensor<?x?xf32>
+// CHECK:    %[[VAL_2:.*]] = arith.constant 1 : index
+// CHECK:    %[[VAL_3:.*]] = tensor.dim %[[ARG_0]], %[[VAL_2]] : tensor<?x?xf32>
+// CHECK:    %[[VAL_4:.*]] = arith.constant 0 : index
+// CHECK:    %[[VAL_5:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:    %[[VAL_6:.*]] = vector.create_mask %[[VAL_1]], %[[VAL_3]] : vector<1x[4]xi1>
+// CHECK:    %[[VAL_7:.*]] = vector.mask %[[VAL_6]] { vector.transfer_read %[[ARG_0]][%[[VAL_4]], %[[VAL_4]]], %[[VAL_5]] {in_bounds = [true, true]} : tensor<?x?xf32>, vector<1x[4]xf32> } : vector<1x[4]xi1> -> vector<1x[4]xf32>
+// CHECK:    %[[VAL_8:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:    %[[VAL_9:.*]] = vector.create_mask %[[VAL_1]] : vector<1xi1>
+// CHECK:    %[[VAL_10:.*]] = vector.mask %[[VAL_9]] { vector.transfer_read %[[ARG_1]][%[[VAL_4]]], %[[VAL_8]] {in_bounds = [true]} : tensor<?xf32>, vector<1xf32> } : vector<1xi1> -> vector<1xf32>
+// CHECK:    %[[VAL_11:.*]] = vector.mask %[[VAL_6]] { vector.multi_reduction <add>, %[[VAL_7]], %[[VAL_10]] [1] : vector<1x[4]xf32> to vector<1xf32> } : vector<1x[4]xi1> -> vector<1xf32>
+// CHECK:    %[[VAL_12:.*]] = arith.constant 0 : index
+// CHECK:    %[[VAL_13:.*]] = vector.mask %[[VAL_9]] { vector.transfer_write %[[VAL_11]], %[[ARG_1]][%[[VAL_12]]] {in_bounds = [true]} : vector<1xf32>, tensor<?xf32> } : vector<1xi1> -> tensor<?xf32>
+// CHECK:    return %[[VAL_13]] : tensor<?xf32>
+// CHECK:  }
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [1, [4]] : !transform.any_op
+    transform.yield
+  }
+}
