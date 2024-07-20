@@ -151,13 +151,13 @@ void ScriptLexer::tokenize(MemoryBufferRef mb) {
     }
     // Some operators form separate tokens.
     if (s.starts_with("<<=") || s.starts_with(">>=")) {
-      vec.push_back({Kind::LeftShiftAssign, s.substr(0, 3)});
+      vec.push_back(getOperatorToken(s));
       s = s.substr(3);
       continue;
     }
     if (s.size() > 1 && ((s[1] == '=' && strchr("*/+-<>&^|", s[0])) ||
                          (s[0] == s[1] && strchr("<>&|", s[0])))) {
-      vec.push_back({Kind::Assign, s.substr(0, 2)});
+      vec.push_back(getOperatorToken(s));
       s = s.substr(2);
       continue;
     }
@@ -170,9 +170,12 @@ void ScriptLexer::tokenize(MemoryBufferRef mb) {
 
     // A character that cannot start a word (which is usually a
     // punctuation) forms a single character token.
-    if (pos == 0)
+    if (pos == 0) {
       pos = 1;
-    vec.push_back({Kind::Identifier, s.substr(0, pos)});
+      vec.push_back(getOperatorToken(s));
+    } else {
+      vec.push_back(getKeywordorIdentifier(s.substr(0, pos)));
+    }
     s = s.substr(pos);
   }
 
@@ -186,7 +189,7 @@ ScriptLexer::Token ScriptLexer::getOperatorToken(StringRef s) {
 
   switch (s.front()) {
   case EOF:
-    return createToken(Kind::Eof, 1);
+    return createToken(Kind::Eof, 0);
   case '(':
     return createToken(Kind::BracektBegin, 1);
   case ')':
@@ -269,10 +272,22 @@ ScriptLexer::Token ScriptLexer::getOperatorToken(StringRef s) {
     }
     return createToken(Kind::Or, 1);
   case '.':
+    return createToken(Kind::Dot, 1);
   case '_':
-    // TODO
+    return createToken(Kind::Underscore, 1);
+  case '0':
+  case '1':
+  case '2':
+  case '3':
+  case '4':
+  case '5':
+  case '6':
+  case '7':
+  case '8':
+  case '9':
+    return createToken(Kind::Decimal, 1);
   default:
-    return createToken(Kind::Error, 1);
+    return createToken(Kind::Identifier, 1);
   }
 }
 
@@ -403,10 +418,10 @@ std::vector<ScriptLexer::Token> ScriptLexer::tokenizeExpr(StringRef s) {
     if (s.substr(e).starts_with("!=") || s.substr(e).starts_with("==") ||
         s.substr(e).starts_with(">=") || s.substr(e).starts_with("<=") ||
         s.substr(e).starts_with("<<") || s.substr(e).starts_with(">>")) {
-      ret.push_back({Kind::GreaterEqual, s.substr(e, 2)});
+      ret.push_back(getOperatorToken(s));
       s = s.substr(e + 2);
     } else {
-      ret.push_back({Kind::Identifier, s.substr(e, 1)});
+      ret.push_back(getKeywordorIdentifier(s.substr(e, 1)));
       s = s.substr(e + 1);
     }
   }
