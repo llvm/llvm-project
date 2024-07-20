@@ -169,7 +169,9 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
       return false;
     // Never allow reading from a non-const pointer, unless the memory
     // has been created in this evaluation.
-    if (!Ptr.isConst() && Ptr.block()->getEvalID() != Ctx.getEvalID())
+    if (!Ptr.isZero() && Ptr.isBlockPointer() &&
+        Ptr.block()->getEvalID() != Ctx.getEvalID() &&
+        (!CheckLoad(S, OpPC, Ptr, AK_Read) || !Ptr.isConst()))
       return false;
 
     if (std::optional<APValue> V =

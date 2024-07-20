@@ -1333,7 +1333,7 @@ void SelectionDAG::init(MachineFunction &NewMF,
                         OptimizationRemarkEmitter &NewORE, Pass *PassPtr,
                         const TargetLibraryInfo *LibraryInfo,
                         UniformityInfo *NewUA, ProfileSummaryInfo *PSIin,
-                        BlockFrequencyInfo *BFIin,
+                        BlockFrequencyInfo *BFIin, MachineModuleInfo &MMIin,
                         FunctionVarLocs const *VarLocs) {
   MF = &NewMF;
   SDAGISelPass = PassPtr;
@@ -1345,6 +1345,7 @@ void SelectionDAG::init(MachineFunction &NewMF,
   UA = NewUA;
   PSI = PSIin;
   BFI = BFIin;
+  MMI = &MMIin;
   FnVarLocs = VarLocs;
 }
 
