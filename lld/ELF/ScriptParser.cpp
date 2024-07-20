@@ -1100,9 +1100,7 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
 
   if (cmd) {
     cmd->dataSegmentRelroEnd = !savedSeenRelroEnd && script->seenRelroEnd;
-    cmd->commandString =
-        tok.str() + " " +
-        llvm::join(tokens.begin() + oldPos, tokens.begin() + pos, " ");
+    cmd->commandString = tok.str() + " " + joinTokens(oldPos, pos);
     expect(";");
   }
   return cmd;
@@ -1310,9 +1308,7 @@ ByteCommand *ScriptParser::readByteCommand(StringRef tok) {
 
   size_t oldPos = pos;
   Expr e = readParenExpr();
-  std::string commandString =
-      tok.str() + " " +
-      llvm::join(tokens.begin() + oldPos, tokens.begin() + pos, " ");
+  std::string commandString = tok.str() + " " + joinTokens(oldPos, pos);
   return make<ByteCommand>(e, size, commandString);
 }
 

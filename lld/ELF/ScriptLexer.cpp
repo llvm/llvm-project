@@ -44,7 +44,7 @@ using namespace lld::elf;
 // Returns a whole line containing the current token.
 StringRef ScriptLexer::getLine() {
   StringRef s = getCurrentMB().getBuffer();
-  StringRef tok = tokens[pos - 1];
+  StringRef tok = tokens[pos - 1].val;
 
   size_t pos = s.rfind('\n', tok.data() - s.data());
   if (pos != StringRef::npos)
@@ -57,7 +57,7 @@ size_t ScriptLexer::getLineNumber() {
   if (pos == 0)
     return 1;
   StringRef s = getCurrentMB().getBuffer();
-  StringRef tok = tokens[pos - 1];
+  StringRef tok = tokens[pos - 1].val;
   const size_t tokOffset = tok.data() - s.data();
 
   // For the first token, or when going backwards, start from the beginning of
@@ -81,13 +81,29 @@ size_t ScriptLexer::getLineNumber() {
 
 // Returns 0-based column number of the current token.
 size_t ScriptLexer::getColumnNumber() {
-  StringRef tok = tokens[pos - 1];
+  StringRef tok = tokens[pos - 1].val;
   return tok.data() - getLine().data();
 }
 
 std::string ScriptLexer::getCurrentLocation() {
   std::string filename = std::string(getCurrentMB().getBufferIdentifier());
   return (filename + ":" + Twine(getLineNumber())).str();
+}
+
+std::string ScriptLexer::joinTokens(size_t begin, size_t end) {
+  auto itBegin = tokens.begin() + begin;
+  auto itEnd = tokens.begin() + end;
+
+  std::string S;
+  if (itBegin == itEnd)
+    return S;
+
+  S += (*itBegin).val;
+  while (++itBegin != itEnd) {
+    S += " ";
+    S += (*itBegin).val;
+  }
+  return S;
 }
 
 ScriptLexer::ScriptLexer(MemoryBufferRef mb) { tokenize(mb); }
@@ -106,7 +122,7 @@ void ScriptLexer::setError(const Twine &msg) {
 
 // Split S into linker script tokens.
 void ScriptLexer::tokenize(MemoryBufferRef mb) {
-  std::vector<StringRef> vec;
+  std::vector<Token> vec;
   mbs.push_back(mb);
   StringRef s = mb.getBuffer();
   StringRef begin = s;
@@ -129,20 +145,19 @@ void ScriptLexer::tokenize(MemoryBufferRef mb) {
         return;
       }
 
-      vec.push_back(s.take_front(e + 1));
+      vec.push_back({Kind::Quote, s.take_front(e + 1)});
       s = s.substr(e + 1);
       continue;
     }
-
     // Some operators form separate tokens.
     if (s.starts_with("<<=") || s.starts_with(">>=")) {
-      vec.push_back(s.substr(0, 3));
+      vec.push_back({Kind::LeftShiftAssign, s.substr(0, 3)});
       s = s.substr(3);
       continue;
     }
     if (s.size() > 1 && ((s[1] == '=' && strchr("*/+-<>&^|", s[0])) ||
                          (s[0] == s[1] && strchr("<>&|", s[0])))) {
-      vec.push_back(s.substr(0, 2));
+      vec.push_back({Kind::Assign, s.substr(0, 2)});
       s = s.substr(2);
       continue;
     }
@@ -157,11 +172,177 @@ void ScriptLexer::tokenize(MemoryBufferRef mb) {
     // punctuation) forms a single character token.
     if (pos == 0)
       pos = 1;
-    vec.push_back(s.substr(0, pos));
+    vec.push_back({Kind::Identifier, s.substr(0, pos)});
     s = s.substr(pos);
   }
 
   tokens.insert(tokens.begin() + pos, vec.begin(), vec.end());
+}
+
+ScriptLexer::Token ScriptLexer::getOperatorToken(StringRef s) {
+  auto createToken = [&](Kind kind, size_t pos) -> Token {
+    return {kind, s.substr(0, pos)};
+  };
+
+  switch (s.front()) {
+  case EOF:
+    return createToken(Kind::Eof, 1);
+  case '(':
+    return createToken(Kind::BracektBegin, 1);
+  case ')':
+    return createToken(Kind::BracektEnd, 1);
+  case '{':
+    return createToken(Kind::CurlyBegin, 1);
+  case '}':
+    return createToken(Kind::CurlyEnd, 1);
+  case ';':
+    return createToken(Kind::Semicolon, 1);
+  case ',':
+    return createToken(Kind::Comma, 1);
+  case ':':
+    return createToken(Kind::Colon, 1);
+  case '?':
+    return createToken(Kind::Question, 1);
+  case '!':
+    if (s.size() > 1 && s[1] == '=')
+      return createToken(Kind::NotEqual, 2);
+    return createToken(Kind::Excalamation, 1);
+  case '*':
+    if (s.size() > 1 && s[1] == '=')
+      return createToken(Kind::MulAssign, 2);
+    return createToken(Kind::Asterisk, 1);
+  case '/':
+    if (s.size() > 1 && s[1] == '=')
+      return createToken(Kind::DivAssign, 2);
+    return createToken(Kind::Slash, 1);
+  case '=':
+    if (s.size() > 1 && s[1] == '=')
+      return createToken(Kind::Equal, 2);
+    return createToken(Kind::Assign, 1);
+  case '+':
+    if (s.size() > 1 && s[1] == '=')
+      return createToken(Kind::PlusAssign, 2);
+    else
+      return createToken(Kind::Plus, 1);
+  case '-':
+    if (s.size() > 1 && s[1] == '=')
+      return createToken(Kind::MinusAssign, 2);
+    return createToken(Kind::Minus, 1);
+  case '<':
+    if (s.size() > 2 && s[1] == s[0] && s[2] == '=')
+      return createToken(Kind::LeftShiftAssign, 3);
+    if (s.size() > 1) {
+      if (s[1] == '=')
+        return createToken(Kind::LessEqual, 2);
+      if (s[1] == '<')
+        return createToken(Kind::LeftShift, 2);
+    }
+    return createToken(Kind::Less, 1);
+  case '>':
+    if (s.size() > 2 && s[1] == s[0] && s[2] == '=')
+      return createToken(Kind::RightShiftAssign, 3);
+    if (s.size() > 1) {
+      if (s[1] == '=')
+        return createToken(Kind::GreaterEqual, 2);
+      if (s[1] == '>')
+        return createToken(Kind::RightShift, 2);
+    }
+    return createToken(Kind::Greater, 1);
+  case '&':
+    if (s.size() > 1) {
+      if (s[1] == '=')
+        return createToken(Kind::AndAssign, 2);
+      if (s[1] == '&')
+        return createToken(Kind::AndGate, 2);
+    }
+    return createToken(Kind::Bitwise, 1);
+  case '^':
+    if (s.size() > 1 && s[1] == '=')
+      return createToken(Kind::XorAssign, 2);
+    return createToken(Kind::Xor, 1);
+  case '|':
+    if (s.size() > 1) {
+      if (s[1] == '=')
+        return createToken(Kind::OrAssign, 2);
+      if (s[1] == '|')
+        return createToken(Kind::OrGate, 2);
+    }
+    return createToken(Kind::Or, 1);
+  case '.':
+  case '_':
+    // TODO
+  default:
+    return createToken(Kind::Error, 1);
+  }
+}
+
+ScriptLexer::Token ScriptLexer::getKeywordorIdentifier(StringRef s) {
+  static const std::unordered_map<std::string, Kind> keywords = {
+      {"ENTRY", Kind::Entry},
+      {"INPUT", Kind::Input},
+      {"GROUP", Kind::Group},
+      {"MEMORY", Kind::Memory},
+      {"OUTPUT", Kind::Output},
+      {"SEARCH_DIR", Kind::SearchDir},
+      {"STARTUP", Kind::Startup},
+      {"INSERT", Kind::Insert},
+      {"AFTER", Kind::After},
+      {"OUTPUT_FORMAT", Kind::OutputFormat},
+      {"TARGET", Kind::Target},
+      {"ASSERT", Kind::Assert},
+      {"CONSTANT", Kind::Constant},
+      {"EXTERN", Kind::Extern},
+      {"OUTPUT_ARCH", Kind::OutputArch},
+      {"NOCROSSREFS", Kind::Nocrossrefs},
+      {"NOCROSSREFS_TO", Kind::NocrossrefsTo},
+      {"PROVIDE", Kind::Provide},
+      {"HIDDEN", Kind::Hidden},
+      {"PROVIDE_HIDDEN", Kind::ProvideHidden},
+      {"SECTIONS", Kind::Sections},
+      {"BEFORE", Kind::Before},
+      {"EXCLUDE_FILE", Kind::ExcludeFile},
+      {"KEEP", Kind::Keep},
+      {"INPUT_SECTION_FLAGS", Kind::InputSectionFlags},
+      {"OVERLAY", Kind::Overlay},
+      {"Noload", Kind::Noload},
+      {"COPY", Kind::Copy},
+      {"INFO", Kind::Info},
+      {"OVERWRITE_SECTIONS", Kind::OverwriteSections},
+      {"SUBALIGN", Kind::Subalign},
+      {"ONLY_IF_RO", Kind::OnlyIfRO},
+      {"ONLY_IF_RW", Kind::OnlyIfRW},
+      {"FILL", Kind::Fill},
+      {"SORT", Kind::Sort},
+      {"ABSOLUTE", Kind::Absolute},
+      {"ADDR", Kind::Addr},
+      {"ALIGN", Kind::Align},
+      {"ALIGNOF", Kind::Alignof},
+      {"DATA_SEGMENT_ALIGN", Kind::DataSegmentAlign},
+      {"DATA_SEGMENT_END", Kind::DataSegmentEnd},
+      {"DEFINED", Kind::Defined},
+      {"LENGTH", Kind::Length},
+      {"LOADADDR", Kind::Loadaddr},
+      {"LOG2CEIL", Kind::Log2ceil},
+      {"MAX", Kind::Max},
+      {"MIN", Kind::Min},
+      {"ORIGIN", Kind::Origin},
+      {"SEGMENT_START", Kind::SegmentStart},
+      {"SIZEOF", Kind::Sizeof},
+      {"SIZEOF_HEADERS", Kind::SizeofHeaders},
+      {"FILEHDR", Kind::Filehdr},
+      {"PHDRS", Kind::Phdrs},
+      {"AT", Kind::At},
+      {"FLAGS", Kind::Flags},
+      {"VERSION", Kind::Version},
+      {"REGION_ALIAS", Kind::RegionAlias},
+      {"AS_NEEDED", Kind::AsNeeded},
+      {"CONSTRUCTORS", Kind::Constructors},
+      {"MAXPAGESIZE", Kind::Maxpagesize},
+      {"COMMONPAGESIZE", Kind::Commonpagesize}};
+  auto it = keywords.find(s.str());
+  if (it != keywords.end())
+    return {it->second, s};
+  return {Kind::Identifier, s};
 }
 
 // Skip leading whitespace characters or comments.
@@ -195,37 +376,37 @@ bool ScriptLexer::atEOF() { return errorCount() || tokens.size() == pos; }
 
 // Split a given string as an expression.
 // This function returns "3", "*" and "5" for "3*5" for example.
-static std::vector<StringRef> tokenizeExpr(StringRef s) {
+std::vector<ScriptLexer::Token> ScriptLexer::tokenizeExpr(StringRef s) {
   StringRef ops = "!~*/+-<>?^:="; // List of operators
 
   // Quoted strings are literal strings, so we don't want to split it.
   if (s.starts_with("\""))
-    return {s};
+    return {{Kind::Quote, s}};
 
   // Split S with operators as separators.
-  std::vector<StringRef> ret;
+  std::vector<ScriptLexer::Token> ret;
   while (!s.empty()) {
     size_t e = s.find_first_of(ops);
 
     // No need to split if there is no operator.
     if (e == StringRef::npos) {
-      ret.push_back(s);
+      ret.push_back({Kind::Identifier, s});
       break;
     }
 
     // Get a token before the operator.
     if (e != 0)
-      ret.push_back(s.substr(0, e));
+      ret.push_back({Kind::Identifier, s.substr(0, e)});
 
     // Get the operator as a token.
     // Keep !=, ==, >=, <=, << and >> operators as a single tokens.
     if (s.substr(e).starts_with("!=") || s.substr(e).starts_with("==") ||
         s.substr(e).starts_with(">=") || s.substr(e).starts_with("<=") ||
         s.substr(e).starts_with("<<") || s.substr(e).starts_with(">>")) {
-      ret.push_back(s.substr(e, 2));
+      ret.push_back({Kind::GreaterEqual, s.substr(e, 2)});
       s = s.substr(e + 2);
     } else {
-      ret.push_back(s.substr(e, 1));
+      ret.push_back({Kind::Identifier, s.substr(e, 1)});
       s = s.substr(e + 1);
     }
   }
@@ -245,7 +426,7 @@ void ScriptLexer::maybeSplitExpr() {
   if (!inExpr || errorCount() || atEOF())
     return;
 
-  std::vector<StringRef> v = tokenizeExpr(tokens[pos]);
+  std::vector<Token> v = tokenizeExpr(tokens[pos].val);
   if (v.size() == 1)
     return;
   tokens.erase(tokens.begin() + pos);
@@ -261,7 +442,7 @@ StringRef ScriptLexer::next() {
     setError("unexpected EOF");
     return "";
   }
-  return tokens[pos++];
+  return tokens[pos++].val;
 }
 
 StringRef ScriptLexer::peek() {
@@ -293,8 +474,8 @@ bool ScriptLexer::consume(StringRef tok) {
 bool ScriptLexer::consumeLabel(StringRef tok) {
   if (consume((tok + ":").str()))
     return true;
-  if (tokens.size() >= pos + 2 && tokens[pos] == tok &&
-      tokens[pos + 1] == ":") {
+  if (tokens.size() >= pos + 2 && tokens[pos].val == tok &&
+      tokens[pos + 1].val == ":") {
     pos += 2;
     return true;
   }
@@ -322,7 +503,7 @@ MemoryBufferRef ScriptLexer::getCurrentMB() {
   if (pos == 0)
     return mbs.back();
   for (MemoryBufferRef mb : mbs)
-    if (encloses(mb.getBuffer(), tokens[pos - 1]))
+    if (encloses(mb.getBuffer(), tokens[pos - 1].val))
       return mb;
   llvm_unreachable("getCurrentMB: failed to find a token");
 }
