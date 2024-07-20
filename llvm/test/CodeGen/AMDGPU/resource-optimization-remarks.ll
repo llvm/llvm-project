@@ -135,7 +135,7 @@ define amdgpu_kernel void @empty_kernel() !dbg !7 {
   ret void
 }
 
-; STDERR-NOT: remark: foo.cl:52:0: Function Name: empty_func
+; STDERR-NOT: empty_func
 define void @empty_func() !dbg !8 {
   ret void
 }
