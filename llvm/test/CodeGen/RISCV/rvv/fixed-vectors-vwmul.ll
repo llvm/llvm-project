@@ -882,3 +882,40 @@ define <2 x i64> @vwmul_vx_v2i64_i64(ptr %x, ptr %y) {
   %g = mul <2 x i64> %e, %f
   ret <2 x i64> %g
 }
+
+define <2 x i16> @vwmul_v2i16_multiuse(ptr %x, ptr %y, ptr %z, ptr %w) {
+; CHECK-LABEL: vwmul_v2i16_multiuse:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vle8.v v9, (a1)
+; CHECK-NEXT:    vle8.v v10, (a2)
+; CHECK-NEXT:    vle8.v v11, (a3)
+; CHECK-NEXT:    vsext.vf2 v12, v8
+; CHECK-NEXT:    vsext.vf2 v8, v9
+; CHECK-NEXT:    vsext.vf2 v9, v10
+; CHECK-NEXT:    vsext.vf2 v10, v11
+; CHECK-NEXT:    vmul.vv v11, v12, v10
+; CHECK-NEXT:    vmul.vv v10, v8, v10
+; CHECK-NEXT:    vdivu.vv v8, v8, v9
+; CHECK-NEXT:    vor.vv v9, v11, v10
+; CHECK-NEXT:    vor.vv v8, v9, v8
+; CHECK-NEXT:    ret
+  %a = load <2 x i8>, ptr %x
+  %b = load <2 x i8>, ptr %y
+  %c = load <2 x i8>, ptr %z
+  %d = load <2 x i8>, ptr %w
+
+  %as = sext <2 x i8> %a to <2 x i16>
+  %bs = sext <2 x i8> %b to <2 x i16>
+  %cs = sext <2 x i8> %c to <2 x i16>
+  %ds = sext <2 x i8> %d to <2 x i16>
+
+  %e = mul <2 x i16> %as, %ds
+  %f = mul <2 x i16> %bs, %ds ; shares 1 use with %e
+  %g = udiv <2 x i16> %bs, %cs ; shares 1 use with %f, and no uses with %e
+
+  %h = or <2 x i16> %e, %f
+  %i = or <2 x i16> %h, %g
+  ret <2 x i16> %i
+}

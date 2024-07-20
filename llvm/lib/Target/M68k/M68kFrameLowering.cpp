@@ -246,9 +246,7 @@ MachineBasicBlock::iterator M68kFrameLowering::eliminateCallFramePseudoInstr(
     unsigned StackAlign = getStackAlignment();
     Amount = alignTo(Amount, StackAlign);
 
-    MachineModuleInfo &MMI = MF.getMMI();
-    const auto &Fn = MF.getFunction();
-    bool DwarfCFI = MMI.hasDebugInfo() || Fn.needsUnwindTableEntry();
+    bool DwarfCFI = MF.needsFrameMoves();
 
     // If we have any exception handlers in this function, and we adjust
     // the SP before calls, we may need to indicate this to the unwinder
@@ -452,8 +450,7 @@ void M68kFrameLowering::emitPrologueCalleeSavedFrameMoves(
     const DebugLoc &DL) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  MachineModuleInfo &MMI = MF.getMMI();
-  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
 
   // Add callee saved registers to move list.
   const auto &CSI = MFI.getCalleeSavedInfo();

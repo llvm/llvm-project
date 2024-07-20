@@ -174,6 +174,13 @@ here. Generic improvements to Clang as a whole or to its underlying
 infrastructure are described first, followed by language-specific
 sections with improvements to Clang's support for those languages.
 
+- Implemented improvements to BMIs for C++20 Modules that can reduce
+  the number of rebuilds during incremental recompilation. We are seeking
+  feedback from Build System authors and other interested users, especially
+  when you feel Clang changes the BMI and misses an opportunity to avoid
+  recompilations or causes correctness issues. See StandardCPlusPlusModules
+  `StandardCPlusPlusModules <StandardCPlusPlusModules.html>`_ for more details.
+
 - The ``\par`` documentation comment command now supports an optional
   argument, which denotes the header of the paragraph started by
   an instance of the ``\par`` command comment. The implementation
@@ -282,6 +289,8 @@ C++2c Feature Support
 - Implemented `P3144R2 Deleting a Pointer to an Incomplete Type Should be Ill-formed <https://wg21.link/P3144R2>`_.
 
 - Implemented `P2963R3 Ordering of constraints involving fold expressions <https://wg21.link/P2963R3>`_.
+
+- Implemented `P3034R1 Module Declarations Shouldn’t be Macros <https://wg21.link/P3034R1>`_.
 
 
 Resolutions to C++ Defect Reports
@@ -433,6 +442,10 @@ Non-comprehensive list of changes in this release
 - Added support for ``TypeLoc::dump()`` for easier debugging, and improved
   textual and JSON dumping for various ``TypeLoc``-related nodes.
 
+- Clang can now emit distinct type-based alias analysis tags for incompatible
+  pointers, enabling more powerful alias analysis when accessing pointer types.
+  The new behavior can be enabled using ``-fpointer-tbaa``.
+
 New Compiler Flags
 ------------------
 - ``-fsanitize=implicit-bitfield-conversion`` checks implicit truncation and
@@ -474,6 +487,9 @@ New Compiler Flags
 
 - For the ARM target, added ``-Warm-interrupt-vfp-clobber`` that will emit a
   diagnostic when an interrupt handler is declared and VFP is enabled.
+
+- ``-fpointer-tbaa`` enables emission of distinct type-based alias
+  analysis tags for incompatible pointers.
 
 Deprecated Compiler Flags
 -------------------------
@@ -854,6 +870,9 @@ Bug Fixes in This Version
   types by ensuring they are complete and instantiating them if needed. Fixes (#GH95311).
 
 - ``typeof_unqual`` now properly removes type qualifiers from arrays and their element types. (#GH92667)
+
+- Fixed an assertion failure when a template non-type parameter contains
+  an invalid expression.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

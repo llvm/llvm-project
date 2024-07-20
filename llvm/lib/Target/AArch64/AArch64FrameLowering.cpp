@@ -1714,7 +1714,6 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
 
-  MachineModuleInfo &MMI = MF.getMMI();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   bool EmitCFI = AFI->needsDwarfUnwindInfo(MF);
   bool EmitAsyncCFI = AFI->needsAsyncDwarfUnwindInfo(MF);
@@ -1882,7 +1881,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                       MachineInstr::FrameSetup, false, NeedsWinCFI, &HasWinCFI);
       if (EmitCFI) {
         // Label used to tie together the PROLOG_LABEL and the MachineMoves.
-        MCSymbol *FrameLabel = MMI.getContext().createTempSymbol();
+        MCSymbol *FrameLabel = MF.getContext().createTempSymbol();
         // Encode the stack size of the leaf function.
         unsigned CFIIndex = MF.addFrameInst(
             MCCFIInstruction::cfiDefCfaOffset(FrameLabel, NumBytes));
@@ -3550,7 +3549,8 @@ void AArch64FrameLowering::determineStackHazardSlot(
       for (auto &MI : MBB) {
         std::optional<int> FI = getLdStFrameID(MI, MFI);
         if (FI && *FI >= 0 && *FI < (int)FrameObjects.size()) {
-          if (MFI.getStackID(*FI) == 2 || AArch64InstrInfo::isFpOrNEON(MI))
+          if (MFI.getStackID(*FI) == TargetStackID::ScalableVector ||
+              AArch64InstrInfo::isFpOrNEON(MI))
             FrameObjects[*FI] |= 2;
           else
             FrameObjects[*FI] |= 1;
@@ -4734,7 +4734,8 @@ void AArch64FrameLowering::orderFrameObjects(
       if (AFI.hasStackHazardSlotIndex()) {
         std::optional<int> FI = getLdStFrameID(MI, MFI);
         if (FI && *FI >= 0 && *FI < (int)FrameObjects.size()) {
-          if (MFI.getStackID(*FI) == 2 || AArch64InstrInfo::isFpOrNEON(MI))
+          if (MFI.getStackID(*FI) == TargetStackID::ScalableVector ||
+              AArch64InstrInfo::isFpOrNEON(MI))
             FrameObjects[*FI].Accesses |= FrameObject::AccessFPR;
           else
             FrameObjects[*FI].Accesses |= FrameObject::AccessGPR;

@@ -209,7 +209,7 @@ static const unsigned AliasedCheckLimit = 10;
 
 // Limit of the number of uses for potentially transformed instructions/values,
 // used in checks to avoid compile-time explode.
-static constexpr int UsesLimit = 8;
+static constexpr int UsesLimit = 64;
 
 // Another limit for the alias checks: The maximum distance between load/store
 // instructions where alias checks are done.
@@ -11846,8 +11846,7 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
   Value *castToScalarTyElem(Value *V,
                             std::optional<bool> IsSigned = std::nullopt) {
     auto *VecTy = cast<VectorType>(V->getType());
-    assert(getNumElements(ScalarTy) < getNumElements(VecTy) &&
-           (getNumElements(VecTy) % getNumElements(ScalarTy) == 0));
+    assert(getNumElements(VecTy) % getNumElements(ScalarTy) == 0);
     if (VecTy->getElementType() == ScalarTy->getScalarType())
       return V;
     return Builder.CreateIntCast(
@@ -13494,7 +13493,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         }
         ScalarArg = CEI->getArgOperand(I);
         if (cast<VectorType>(OpVec->getType())->getElementType() !=
-                ScalarArg->getType() &&
+                ScalarArg->getType()->getScalarType() &&
             It == MinBWs.end()) {
           auto *CastTy =
               getWidenedType(ScalarArg->getType(), VecTy->getNumElements());

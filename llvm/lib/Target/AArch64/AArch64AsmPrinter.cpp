@@ -194,6 +194,7 @@ private:
   void PrintDebugValueComment(const MachineInstr *MI, raw_ostream &OS);
 
   void emitFunctionBodyEnd() override;
+  void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
 
   MCSymbol *GetCPISymbol(unsigned CPID) const override;
   void emitEndOfAsmFile(Module &M) override;
@@ -1257,6 +1258,32 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
   }
 }
 
+void AArch64AsmPrinter::emitGlobalAlias(const Module &M,
+                                        const GlobalAlias &GA) {
+  if (auto F = dyn_cast_or_null<Function>(GA.getAliasee())) {
+    // Global aliases must point to a definition, but unmangled patchable
+    // symbols are special and need to point to an undefined symbol with "EXP+"
+    // prefix. Such undefined symbol is resolved by the linker by creating
+    // x86 thunk that jumps back to the actual EC target.
+    if (MDNode *Node = F->getMetadata("arm64ec_exp_name")) {
+      StringRef ExpStr = cast<MDString>(Node->getOperand(0))->getString();
+      MCSymbol *ExpSym = MMI->getContext().getOrCreateSymbol(ExpStr);
+      MCSymbol *Sym = MMI->getContext().getOrCreateSymbol(GA.getName());
+      OutStreamer->beginCOFFSymbolDef(Sym);
+      OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_EXTERNAL);
+      OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_FUNCTION
+                                      << COFF::SCT_COMPLEX_TYPE_SHIFT);
+      OutStreamer->endCOFFSymbolDef();
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_Weak);
+      OutStreamer->emitAssignment(
+          Sym, MCSymbolRefExpr::create(ExpSym, MCSymbolRefExpr::VK_None,
+                                       MMI->getContext()));
+      return;
+    }
+  }
+  AsmPrinter::emitGlobalAlias(M, GA);
+}
+
 /// Small jump tables contain an unsigned byte or half, representing the offset
 /// from the lowest-addressed possible destination to the desired basic
 /// block. Since all instructions are 4-byte aligned, this is further compressed
@@ -1695,8 +1722,7 @@ void AArch64AsmPrinter::LowerLOADauthptrstatic(const MachineInstr &MI) {
     assert(GAOp.getOffset() == 0 &&
            "non-zero offset for $auth_ptr$ stub slots is not supported");
     const MCSymbol *GASym = TM.getSymbol(GAOp.getGlobal());
-    AuthPtrStubSym =
-        TLOF.getAuthPtrSlotSymbol(TM, &MF->getMMI(), GASym, Key, Disc);
+    AuthPtrStubSym = TLOF.getAuthPtrSlotSymbol(TM, MMI, GASym, Key, Disc);
   } else {
     assert(TM.getTargetTriple().isOSBinFormatMachO() &&
            "LOADauthptrstatic is implemented only for MachO/ELF");
@@ -1707,8 +1733,7 @@ void AArch64AsmPrinter::LowerLOADauthptrstatic(const MachineInstr &MI) {
     assert(GAOp.getOffset() == 0 &&
            "non-zero offset for $auth_ptr$ stub slots is not supported");
     const MCSymbol *GASym = TM.getSymbol(GAOp.getGlobal());
-    AuthPtrStubSym =
-        TLOF.getAuthPtrSlotSymbol(TM, &MF->getMMI(), GASym, Key, Disc);
+    AuthPtrStubSym = TLOF.getAuthPtrSlotSymbol(TM, MMI, GASym, Key, Disc);
   }
 
   MachineOperand StubMOHi =

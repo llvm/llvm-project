@@ -113,8 +113,14 @@ fb5a38bb4930 [llvm-objcopy] Add verification of added .note section format
 ---
 Reverts: depends upon older SLP reverts
 beccecaacde4 [SLP]Fix PR98838: do no replace condition of select-based logical op by poison.
+f6e01b9ec [SLP]Do not trunc bv nodes, if the user is vectorized an requires wider type.
 ---
 Reverts: Failing test llvm/test/Transforms/SLPVectorizer/X86/minbitwidth-transformed-operand.ll
 c5c1bd164 [SLP]Improve minbitwidth analysis for trun'ed gather nodes
 ---
-
+problematic cmake in npsdb:
+[LLVM] Silence compiler-rt warning in runtimes build (#99525)  
+---
+breaks rocALUTION build
+72ff0499bba7 [ValueTracking] Consistently propagate `DemandedElts` is `isKnownNonZero`  
+--

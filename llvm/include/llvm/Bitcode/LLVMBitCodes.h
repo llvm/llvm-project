@@ -761,6 +761,7 @@ enum AttributeKindCodes {
   ATTR_KIND_RANGE = 93,
   ATTR_KIND_SANITIZE_NUMERICAL_STABILITY = 94,
   ATTR_KIND_INITIALIZES = 95,
+  ATTR_KIND_HYBRID_PATCHABLE = 96,
 };
 
 enum ComdatSelectionKindCodes {

@@ -83,7 +83,6 @@ add_llvm_component_library(LLVMCore
   ${LLVM_PTHREAD_LIB}
 
   DEPENDS
-  vt_gen
   intrinsics_gen
 
   LINK_COMPONENTS
