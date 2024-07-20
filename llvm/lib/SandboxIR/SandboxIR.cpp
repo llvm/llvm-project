@@ -581,7 +581,8 @@ Value *Context::registerValue(std::unique_ptr<Value> &&VPtr) {
   assert(VPtr->getSubclassID() != Value::ClassID::User &&
          "Can't register a user!");
   Value *V = VPtr.get();
-  auto Pair = LLVMValueToValueMap.insert({VPtr->Val, std::move(VPtr)});
+  [[maybe_unused]] auto Pair =
+         LLVMValueToValueMap.insert({VPtr->Val, std::move(VPtr)});
   assert(Pair.second && "Already exists!");
   return V;
 }
