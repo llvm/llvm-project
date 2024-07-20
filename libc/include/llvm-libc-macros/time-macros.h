@@ -7,4 +7,6 @@
 #include "linux/time-macros.h"
 #endif
 
+#define TIME_UTC 1
+
 #endif // LLVM_LIBC_MACROS_TIME_MACROS_H
