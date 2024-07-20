@@ -4317,7 +4317,8 @@ public:
   // Whether the callee should be ignored in CUDA/HIP/OpenMP host/device check.
   bool shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee);
 
-  /// Warn and return true if adding a function effect to a set would create a conflict.
+  /// Warn and return true if adding a function effect to a set would create a
+  /// conflict.
   bool diagnoseConflictingFunctionEffect(const FunctionEffectsRef &FX,
                                          const FunctionEffectWithCondition &EC,
                                          SourceLocation NewAttrLoc);
