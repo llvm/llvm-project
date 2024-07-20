@@ -13004,11 +13004,32 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetUpdateDirective(
                                           Clauses, AStmt);
 }
 
+// This checks whether num_teams clause only has one expression.
+static bool checkNumTeamsClauseSingleExpr(SemaBase &SemaRef,
+                                          ArrayRef<OMPClause *> Clauses) {
+  auto NumTeamsClauseItr =
+      llvm::find_if(Clauses, llvm::IsaPred<OMPNumTeamsClause>);
+  if (NumTeamsClauseItr != Clauses.end()) {
+    ArrayRef<const Expr *> NumTeams =
+        cast<OMPNumTeamsClause>(*NumTeamsClauseItr)->getNumTeams();
+    if (NumTeams.size() > 1) {
+      SemaRef.Diag(NumTeams[1]->getBeginLoc(),
+                   diag::err_omp_multi_expr_not_allowed)
+          << getOpenMPClauseName(OMPC_num_teams);
+      return false;
+    }
+  }
+  return true;
+}
+
 StmtResult SemaOpenMP::ActOnOpenMPTeamsDirective(ArrayRef<OMPClause *> Clauses,
                                                  Stmt *AStmt,
                                                  SourceLocation StartLoc,
                                                  SourceLocation EndLoc) {
   if (!AStmt)
+    return StmtError();
+
+  if (!checkNumTeamsClauseSingleExpr(*this, Clauses))
     return StmtError();
 
   // Report affected OpenMP target offloading behavior when in HIP lang-mode.
@@ -13785,6 +13806,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDirective(
     return StmtError();
   }
 
+  if (!HasBareClause && !checkNumTeamsClauseSingleExpr(*this, Clauses))
+    return StmtError();
+
   return OMPTargetTeamsDirective::Create(getASTContext(), StartLoc, EndLoc,
                                          Clauses, AStmt);
 }
@@ -13793,6 +13817,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeDirective(
     ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
     SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA) {
   if (!AStmt)
+    return StmtError();
+
+  if (!checkNumTeamsClauseSingleExpr(*this, Clauses))
     return StmtError();
 
   CapturedStmt *CS =
@@ -13821,6 +13848,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeParallelForDirective(
   if (!AStmt)
     return StmtError();
 
+  if (!checkNumTeamsClauseSingleExpr(*this, Clauses))
+    return StmtError();
+
   CapturedStmt *CS = setBranchProtectedScope(
       SemaRef, OMPD_target_teams_distribute_parallel_for, AStmt);
 
@@ -13846,6 +13876,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeParallelForSimdDirective(
     ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
     SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA) {
   if (!AStmt)
+    return StmtError();
+
+  if (!checkNumTeamsClauseSingleExpr(*this, Clauses))
     return StmtError();
 
   CapturedStmt *CS = setBranchProtectedScope(
@@ -13876,6 +13909,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeSimdDirective(
     ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
     SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA) {
   if (!AStmt)
+    return StmtError();
+
+  if (!checkNumTeamsClauseSingleExpr(*this, Clauses))
     return StmtError();
 
   CapturedStmt *CS = setBranchProtectedScope(
@@ -14925,9 +14961,6 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
   case OMPC_ordered:
     Res = ActOnOpenMPOrderedClause(StartLoc, EndLoc, LParenLoc, Expr);
     break;
-  case OMPC_num_teams:
-    Res = ActOnOpenMPNumTeamsClause(Expr, StartLoc, LParenLoc, EndLoc);
-    break;
   case OMPC_thread_limit:
     Res = ActOnOpenMPThreadLimitClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
@@ -15031,6 +15064,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
   case OMPC_affinity:
   case OMPC_when:
   case OMPC_bind:
+  case OMPC_num_teams:
   default:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -16894,6 +16928,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
         static_cast<OpenMPDoacrossClauseModifier>(ExtraModifier),
         ExtraModifierLoc, ColonLoc, VarList, StartLoc, LParenLoc, EndLoc);
     break;
+  case OMPC_num_teams:
+    Res = ActOnOpenMPNumTeamsClause(VarList, StartLoc, LParenLoc, EndLoc);
+    break;
   case OMPC_if:
   case OMPC_depobj:
   case OMPC_final:
@@ -16924,7 +16961,6 @@ OMPClause *SemaOpenMP::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
   case OMPC_device:
   case OMPC_threads:
   case OMPC_simd:
-  case OMPC_num_teams:
   case OMPC_thread_limit:
   case OMPC_priority:
   case OMPC_grainsize:
@@ -21587,32 +21623,40 @@ const ValueDecl *SemaOpenMP::getOpenMPDeclareMapperVarName() const {
   return cast<DeclRefExpr>(DSAStack->getDeclareMapperVarRef())->getDecl();
 }
 
-OMPClause *SemaOpenMP::ActOnOpenMPNumTeamsClause(Expr *NumTeams,
+OMPClause *SemaOpenMP::ActOnOpenMPNumTeamsClause(ArrayRef<Expr *> VarList,
                                                  SourceLocation StartLoc,
                                                  SourceLocation LParenLoc,
                                                  SourceLocation EndLoc) {
-  Expr *ValExpr = NumTeams;
-  Stmt *HelperValStmt = nullptr;
-
-  // OpenMP [teams Constrcut, Restrictions]
-  // The num_teams expression must evaluate to a positive integer value.
-  if (!isNonNegativeIntegerValue(ValExpr, SemaRef, OMPC_num_teams,
-                                 /*StrictlyPositive=*/true))
+  if (VarList.empty())
     return nullptr;
+
+  for (Expr *ValExpr : VarList) {
+    // OpenMP [teams Constrcut, Restrictions]
+    // The num_teams expression must evaluate to a positive integer value.
+    if (!isNonNegativeIntegerValue(ValExpr, SemaRef, OMPC_num_teams,
+                                   /*StrictlyPositive=*/true))
+      return nullptr;
+  }
 
   OpenMPDirectiveKind DKind = DSAStack->getCurrentDirective();
   OpenMPDirectiveKind CaptureRegion = getOpenMPCaptureRegionForClause(
       DKind, OMPC_num_teams, getLangOpts().OpenMP);
-  if (CaptureRegion != OMPD_unknown &&
-      !SemaRef.CurContext->isDependentContext()) {
+  if (CaptureRegion == OMPD_unknown || SemaRef.CurContext->isDependentContext())
+    return OMPNumTeamsClause::Create(getASTContext(), CaptureRegion, StartLoc,
+                                     LParenLoc, EndLoc, VarList,
+                                     /*PreInit=*/nullptr);
+
+  llvm::MapVector<const Expr *, DeclRefExpr *> Captures;
+  SmallVector<Expr *, 3> Vars;
+  for (Expr *ValExpr : VarList) {
     ValExpr = SemaRef.MakeFullExpr(ValExpr).get();
-    llvm::MapVector<const Expr *, DeclRefExpr *> Captures;
     ValExpr = tryBuildCapture(SemaRef, ValExpr, Captures).get();
-    HelperValStmt = buildPreInits(getASTContext(), Captures);
+    Vars.push_back(ValExpr);
   }
 
-  return new (getASTContext()) OMPNumTeamsClause(
-      ValExpr, HelperValStmt, CaptureRegion, StartLoc, LParenLoc, EndLoc);
+  Stmt *PreInit = buildPreInits(getASTContext(), Captures);
+  return OMPNumTeamsClause::Create(getASTContext(), CaptureRegion, StartLoc,
+                                   LParenLoc, EndLoc, Vars, PreInit);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPThreadLimitClause(Expr *ThreadLimit,

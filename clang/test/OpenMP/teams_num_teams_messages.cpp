@@ -57,6 +57,9 @@ T tmain(T argc) {
 #pragma omp target
 #pragma omp teams num_teams(3.14) // expected-error 2 {{expression must have integral or unscoped enumeration type, not 'double'}}
   foo();
+#pragma omp target
+#pragma omp teams num_teams (1, 2, 3) // expected-error {{only one expression allowed to 'num_teams' clause}}
+  foo();
 
   return 0;
 }
@@ -109,6 +112,10 @@ int main(int argc, char **argv) {
 
 #pragma omp target
 #pragma omp teams num_teams (3.14) // expected-error {{expression must have integral or unscoped enumeration type, not 'double'}}
+  foo();
+
+#pragma omp target
+#pragma omp teams num_teams (1, 2, 3) // expected-error {{only one expression allowed to 'num_teams' clause}}
   foo();
 
   return tmain<int, 10>(argc); // expected-note {{in instantiation of function template specialization 'tmain<int, 10>' requested here}}

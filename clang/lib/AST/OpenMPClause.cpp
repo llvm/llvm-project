@@ -1720,6 +1720,24 @@ const Expr *OMPDoacrossClause::getLoopData(unsigned NumLoop) const {
   return *It;
 }
 
+OMPNumTeamsClause *OMPNumTeamsClause::Create(
+    const ASTContext &C, OpenMPDirectiveKind CaptureRegion,
+    SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc,
+    ArrayRef<Expr *> VL, Stmt *PreInit) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size()));
+  OMPNumTeamsClause *Clause =
+      new (Mem) OMPNumTeamsClause(C, StartLoc, LParenLoc, EndLoc, VL.size());
+  Clause->setVarRefs(VL);
+  Clause->setPreInitStmt(PreInit, CaptureRegion);
+  return Clause;
+}
+
+OMPNumTeamsClause *OMPNumTeamsClause::CreateEmpty(const ASTContext &C,
+                                                  unsigned N) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N));
+  return new (Mem) OMPNumTeamsClause(N);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenMP clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -1977,9 +1995,11 @@ void OMPClausePrinter::VisitOMPDeviceClause(OMPDeviceClause *Node) {
 }
 
 void OMPClausePrinter::VisitOMPNumTeamsClause(OMPNumTeamsClause *Node) {
-  OS << "num_teams(";
-  Node->getNumTeams()->printPretty(OS, nullptr, Policy, 0);
-  OS << ")";
+  if (!Node->varlist_empty()) {
+    OS << "num_teams";
+    VisitOMPClauseList(Node, '(');
+    OS << ")";
+  }
 }
 
 void OMPClausePrinter::VisitOMPThreadLimitClause(OMPThreadLimitClause *Node) {

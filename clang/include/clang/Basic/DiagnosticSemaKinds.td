@@ -11639,6 +11639,7 @@ def warn_omp_unterminated_declare_target : Warning<
   InGroup<SourceUsesOpenMP>;
 def err_ompx_bare_no_grid : Error<
   "'ompx_bare' clauses requires explicit grid size via 'num_teams' and 'thread_limit' clauses">;
+def err_omp_multi_expr_not_allowed: Error<"only one expression allowed to '%0' clause">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

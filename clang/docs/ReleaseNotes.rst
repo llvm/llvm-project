@@ -307,6 +307,9 @@ Python Binding Changes
 OpenMP Support
 --------------
 
+- `num_teams` now accepts multiple expressions when it is used along in ``target teams ompx_bare`` construct.
+  This allows the target region to be launched with multi-dim grid on GPUs.
+
 Additional Information
 ======================
 

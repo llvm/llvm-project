@@ -6131,43 +6131,54 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp teams' has clause 'num_teams'
 /// with single expression 'n'.
-class OMPNumTeamsClause : public OMPClause, public OMPClauseWithPreInit {
-  friend class OMPClauseReader;
+///
+/// When 'ompx_bare' clause exists on a 'target' directive, 'num_teams' clause
+/// can accept up to three expressions.
+///
+/// \code
+/// #pragma omp target teams ompx_bare num_teams(x, y, z)
+/// \endcode
+class OMPNumTeamsClause final
+    : public OMPVarListClause<OMPNumTeamsClause>,
+      public OMPClauseWithPreInit,
+      private llvm::TrailingObjects<OMPNumTeamsClause, Expr *> {
+  friend OMPVarListClause;
+  friend TrailingObjects;
 
   /// Location of '('.
   SourceLocation LParenLoc;
 
-  /// NumTeams number.
-  Stmt *NumTeams = nullptr;
+  OMPNumTeamsClause(const ASTContext &C, SourceLocation StartLoc,
+                    SourceLocation LParenLoc, SourceLocation EndLoc, unsigned N)
+      : OMPVarListClause(llvm::omp::OMPC_num_teams, StartLoc, LParenLoc, EndLoc,
+                         N),
+        OMPClauseWithPreInit(this) {}
 
-  /// Set the NumTeams number.
-  ///
-  /// \param E NumTeams number.
-  void setNumTeams(Expr *E) { NumTeams = E; }
+  /// Build an empty clause.
+  OMPNumTeamsClause(unsigned N)
+      : OMPVarListClause(llvm::omp::OMPC_num_teams, SourceLocation(),
+                         SourceLocation(), SourceLocation(), N),
+        OMPClauseWithPreInit(this) {}
 
 public:
-  /// Build 'num_teams' clause.
+  /// Creates clause with a list of variables \a VL.
   ///
-  /// \param E Expression associated with this clause.
-  /// \param HelperE Helper Expression associated with this clause.
-  /// \param CaptureRegion Innermost OpenMP region where expressions in this
-  /// clause must be captured.
+  /// \param C AST context.
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
-  OMPNumTeamsClause(Expr *E, Stmt *HelperE, OpenMPDirectiveKind CaptureRegion,
-                    SourceLocation StartLoc, SourceLocation LParenLoc,
-                    SourceLocation EndLoc)
-      : OMPClause(llvm::omp::OMPC_num_teams, StartLoc, EndLoc),
-        OMPClauseWithPreInit(this), LParenLoc(LParenLoc), NumTeams(E) {
-    setPreInitStmt(HelperE, CaptureRegion);
-  }
+  /// \param VL List of references to the variables.
+  /// \param PreInit
+  static OMPNumTeamsClause *
+  Create(const ASTContext &C, OpenMPDirectiveKind CaptureRegion,
+         SourceLocation StartLoc, SourceLocation LParenLoc,
+         SourceLocation EndLoc, ArrayRef<Expr *> VL, Stmt *PreInit);
 
-  /// Build an empty clause.
-  OMPNumTeamsClause()
-      : OMPClause(llvm::omp::OMPC_num_teams, SourceLocation(),
-                  SourceLocation()),
-        OMPClauseWithPreInit(this) {}
+  /// Creates an empty clause with \a N variables.
+  ///
+  /// \param C AST context.
+  /// \param N The number of variables.
+  static OMPNumTeamsClause *CreateEmpty(const ASTContext &C, unsigned N);
 
   /// Sets the location of '('.
   void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
@@ -6175,16 +6186,22 @@ public:
   /// Returns the location of '('.
   SourceLocation getLParenLoc() const { return LParenLoc; }
 
-  /// Return NumTeams number.
-  Expr *getNumTeams() { return cast<Expr>(NumTeams); }
+  /// Return NumTeams expressions.
+  ArrayRef<Expr *> getNumTeams() { return getVarRefs(); }
 
-  /// Return NumTeams number.
-  Expr *getNumTeams() const { return cast<Expr>(NumTeams); }
+  /// Return NumTeams expressions.
+  ArrayRef<Expr *> getNumTeams() const {
+    return const_cast<OMPNumTeamsClause *>(this)->getNumTeams();
+  }
 
-  child_range children() { return child_range(&NumTeams, &NumTeams + 1); }
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
+                       reinterpret_cast<Stmt **>(varlist_end()));
+  }
 
   const_child_range children() const {
-    return const_child_range(&NumTeams, &NumTeams + 1);
+    auto Children = const_cast<OMPNumTeamsClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
   }
 
   child_range used_children() {
