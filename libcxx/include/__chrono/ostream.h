@@ -302,16 +302,16 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const local_info& __info) {
   return __os << std::format(
              _LIBCPP_STATICALLY_WIDEN(_CharT, "{}: {{{}, {}}}"), __result(), __info.first, __info.second);
 }
-#  endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
-#  if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&                            \
-      !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#    if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&                          \
+        !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 template <class _CharT, class _Traits, class _Duration, class _TimeZonePtr>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const zoned_time<_Duration, _TimeZonePtr>& __tp) {
   return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T %Z}"), __tp);
 }
-#  endif
+#    endif
+#  endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
 } // namespace chrono
 
