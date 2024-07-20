@@ -37,8 +37,6 @@ bool fptest_close_pct(T val, T expected, T percent)
     _LIBCPP_CONSTEXPR T zero = T(0);
     assert(percent >= zero);
 
-    // Handle the zero cases
-    if (percent == zero) return val == expected;
     T eps = (percent / T(100)) * std::max(std::abs(val), std::abs(expected));
 
     return fptest_close(val, expected, eps);
