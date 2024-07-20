@@ -843,7 +843,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.select.select
 
     # sys/socket.h entrypoints
-    libc.src.sys.socket.bind
     libc.src.sys.socket.socket
   )
 endif()
