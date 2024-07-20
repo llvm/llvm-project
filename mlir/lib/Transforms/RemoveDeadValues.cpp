@@ -208,7 +208,8 @@ static void cleanFuncOp(FunctionOpInterface funcOp, Operation *module,
       arg.dropAllUses();
 
   // Do (2).
-  funcOp.eraseArguments(nonLiveArgs);
+  if (nonLiveArgs.size())
+    funcOp.eraseArguments(nonLiveArgs);
 
   // Do (3).
   SymbolTable::UseRange uses = *funcOp.getSymbolUses(module);

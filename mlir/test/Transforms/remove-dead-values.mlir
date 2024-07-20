@@ -357,3 +357,17 @@ func.func @kernel(%arg0: memref<18xf32>) {
 // CHECK: gpu.launch blocks
 // CHECK: memref.store
 // CHECK-NEXT: gpu.terminator
+
+// -----
+
+// Removed arguments have no memroy effect
+// 
+// CHECK-LABEL:  func.func @transpose() {
+// CHECK-NEXT:     return
+// CHECK-NEXT:   }
+func.func @transpose() {
+  %cst_2 = arith.constant dense<[[1., 2., 3.], [4., 5., 6.]]> : tensor<2x3xf64>
+  %cst_3 = arith.constant dense<0.> : tensor<3x2xf64>
+  %transposed = linalg.transpose ins(%cst_2 : tensor<2x3xf64>) outs(%cst_3 : tensor<3x2xf64>) permutation = [1, 0]
+  return
+}
