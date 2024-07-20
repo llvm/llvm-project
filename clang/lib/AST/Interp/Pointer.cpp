@@ -119,7 +119,7 @@ void Pointer::operator=(Pointer &&P) {
   }
 }
 
-APValue Pointer::toAPValue() const {
+APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   llvm::SmallVector<APValue::LValuePathEntry, 5> Path;
 
   if (isZero())
@@ -220,7 +220,7 @@ std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
   if (isIntegralPointer())
     return (Twine("&(") + Twine(asIntPointer().Value + Offset) + ")").str();
 
-  return toAPValue().getAsString(Ctx, getType());
+  return toAPValue(Ctx).getAsString(Ctx, getType());
 }
 
 bool Pointer::isInitialized() const {
@@ -344,10 +344,12 @@ bool Pointer::hasSameArray(const Pointer &A, const Pointer &B) {
 
 std::optional<APValue> Pointer::toRValue(const Context &Ctx,
                                          QualType ResultType) const {
+  const ASTContext &ASTCtx = Ctx.getASTContext();
   assert(!ResultType.isNull());
   // Method to recursively traverse composites.
   std::function<bool(QualType, const Pointer &, APValue &)> Composite;
-  Composite = [&Composite, &Ctx](QualType Ty, const Pointer &Ptr, APValue &R) {
+  Composite = [&Composite, &Ctx, &ASTCtx](QualType Ty, const Pointer &Ptr,
+                                          APValue &R) {
     if (const auto *AT = Ty->getAs<AtomicType>())
       Ty = AT->getValueType();
 
@@ -358,7 +360,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
     // Primitive values.
     if (std::optional<PrimType> T = Ctx.classify(Ty)) {
-      TYPE_SWITCH(*T, R = Ptr.deref<T>().toAPValue());
+      TYPE_SWITCH(*T, R = Ptr.deref<T>().toAPValue(ASTCtx));
       return true;
     }
 
@@ -375,7 +377,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
           QualType FieldTy = F.Decl->getType();
           if (FP.isActive()) {
             if (std::optional<PrimType> T = Ctx.classify(FieldTy)) {
-              TYPE_SWITCH(*T, Value = FP.deref<T>().toAPValue());
+              TYPE_SWITCH(*T, Value = FP.deref<T>().toAPValue(ASTCtx));
             } else {
               Ok &= Composite(FieldTy, FP, Value);
             }
@@ -398,7 +400,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
           APValue &Value = R.getStructField(I);
 
           if (std::optional<PrimType> T = Ctx.classify(FieldTy)) {
-            TYPE_SWITCH(*T, Value = FP.deref<T>().toAPValue());
+            TYPE_SWITCH(*T, Value = FP.deref<T>().toAPValue(ASTCtx));
           } else {
             Ok &= Composite(FieldTy, FP, Value);
           }
@@ -436,7 +438,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
         APValue &Slot = R.getArrayInitializedElt(I);
         const Pointer &EP = Ptr.atIndex(I);
         if (std::optional<PrimType> T = Ctx.classify(ElemTy)) {
-          TYPE_SWITCH(*T, Slot = EP.deref<T>().toAPValue());
+          TYPE_SWITCH(*T, Slot = EP.deref<T>().toAPValue(ASTCtx));
         } else {
           Ok &= Composite(ElemTy, EP.narrow(), Slot);
         }
@@ -475,7 +477,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
       Values.reserve(VT->getNumElements());
       for (unsigned I = 0; I != VT->getNumElements(); ++I) {
         TYPE_SWITCH(ElemT, {
-          Values.push_back(Ptr.atIndex(I).deref<T>().toAPValue());
+          Values.push_back(Ptr.atIndex(I).deref<T>().toAPValue(ASTCtx));
         });
       }
 
@@ -493,11 +495,11 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
   // We can return these as rvalues, but we can't deref() them.
   if (isZero() || isIntegralPointer())
-    return toAPValue();
+    return toAPValue(ASTCtx);
 
   // Just load primitive types.
   if (std::optional<PrimType> T = Ctx.classify(ResultType)) {
-    TYPE_SWITCH(*T, return this->deref<T>().toAPValue());
+    TYPE_SWITCH(*T, return this->deref<T>().toAPValue(ASTCtx));
   }
 
   // Return the composite type.
