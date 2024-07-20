@@ -107,10 +107,6 @@ MCStreamer *createWasmStreamer(MCContext &Ctx,
                                std::unique_ptr<MCAsmBackend> &&TAB,
                                std::unique_ptr<MCObjectWriter> &&OW,
                                std::unique_ptr<MCCodeEmitter> &&CE);
-MCStreamer *createXCOFFStreamer(MCContext &Ctx,
-                                std::unique_ptr<MCAsmBackend> &&TAB,
-                                std::unique_ptr<MCObjectWriter> &&OW,
-                                std::unique_ptr<MCCodeEmitter> &&CE);
 MCStreamer *createSPIRVStreamer(MCContext &Ctx,
                                 std::unique_ptr<MCAsmBackend> &&TAB,
                                 std::unique_ptr<MCObjectWriter> &&OW,
@@ -194,10 +190,6 @@ public:
                       std::unique_ptr<MCAsmBackend> &&TAB,
                       std::unique_ptr<MCObjectWriter> &&OW,
                       std::unique_ptr<MCCodeEmitter> &&Emitter);
-  using GOFFStreamerCtorTy =
-      MCStreamer *(*)(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
-                      std::unique_ptr<MCObjectWriter> &&OW,
-                      std::unique_ptr<MCCodeEmitter> &&Emitter);
   using MachOStreamerCtorTy =
       MCStreamer *(*)(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
                       std::unique_ptr<MCObjectWriter> &&OW,
@@ -206,23 +198,7 @@ public:
       MCStreamer *(*)(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
                       std::unique_ptr<MCObjectWriter> &&OW,
                       std::unique_ptr<MCCodeEmitter> &&Emitter);
-  using WasmStreamerCtorTy =
-      MCStreamer *(*)(const Triple &T, MCContext &Ctx,
-                      std::unique_ptr<MCAsmBackend> &&TAB,
-                      std::unique_ptr<MCObjectWriter> &&OW,
-                      std::unique_ptr<MCCodeEmitter> &&Emitter);
   using XCOFFStreamerCtorTy =
-      MCStreamer *(*)(const Triple &T, MCContext &Ctx,
-                      std::unique_ptr<MCAsmBackend> &&TAB,
-                      std::unique_ptr<MCObjectWriter> &&OW,
-                      std::unique_ptr<MCCodeEmitter> &&Emitter);
-  using SPIRVStreamerCtorTy =
-      MCStreamer *(*)(const Triple &T, MCContext &Ctx,
-                      std::unique_ptr<MCAsmBackend> &&TAB,
-                      std::unique_ptr<MCObjectWriter> &&OW,
-                      std::unique_ptr<MCCodeEmitter> &&Emitter);
-
-  using DXContainerStreamerCtorTy =
       MCStreamer *(*)(const Triple &T, MCContext &Ctx,
                       std::unique_ptr<MCAsmBackend> &&TAB,
                       std::unique_ptr<MCObjectWriter> &&OW,
@@ -328,13 +304,9 @@ private:
 
   // Construction functions for the various object formats, if registered.
   COFFStreamerCtorTy COFFStreamerCtorFn = nullptr;
-  GOFFStreamerCtorTy GOFFStreamerCtorFn = nullptr;
   MachOStreamerCtorTy MachOStreamerCtorFn = nullptr;
   ELFStreamerCtorTy ELFStreamerCtorFn = nullptr;
-  WasmStreamerCtorTy WasmStreamerCtorFn = nullptr;
   XCOFFStreamerCtorTy XCOFFStreamerCtorFn = nullptr;
-  SPIRVStreamerCtorTy SPIRVStreamerCtorFn = nullptr;
-  DXContainerStreamerCtorTy DXContainerStreamerCtorFn = nullptr;
 
   /// Construction function for this target's null TargetStreamer, if
   /// registered (default = nullptr).
@@ -586,44 +558,24 @@ public:
                               std::move(Emitter));
       break;
     case Triple::Wasm:
-      if (WasmStreamerCtorFn)
-        S = WasmStreamerCtorFn(T, Ctx, std::move(TAB), std::move(OW),
-                               std::move(Emitter));
-      else
-        S = createWasmStreamer(Ctx, std::move(TAB), std::move(OW),
-                               std::move(Emitter));
+      S = createWasmStreamer(Ctx, std::move(TAB), std::move(OW),
+                             std::move(Emitter));
       break;
     case Triple::GOFF:
-      if (GOFFStreamerCtorFn)
-        S = GOFFStreamerCtorFn(Ctx, std::move(TAB), std::move(OW),
-                               std::move(Emitter));
-      else
-        S = createGOFFStreamer(Ctx, std::move(TAB), std::move(OW),
-                               std::move(Emitter));
+      S = createGOFFStreamer(Ctx, std::move(TAB), std::move(OW),
+                             std::move(Emitter));
       break;
     case Triple::XCOFF:
-      if (XCOFFStreamerCtorFn)
-        S = XCOFFStreamerCtorFn(T, Ctx, std::move(TAB), std::move(OW),
-                                std::move(Emitter));
-      else
-        S = createXCOFFStreamer(Ctx, std::move(TAB), std::move(OW),
-                                std::move(Emitter));
+      S = XCOFFStreamerCtorFn(T, Ctx, std::move(TAB), std::move(OW),
+                              std::move(Emitter));
       break;
     case Triple::SPIRV:
-      if (SPIRVStreamerCtorFn)
-        S = SPIRVStreamerCtorFn(T, Ctx, std::move(TAB), std::move(OW),
-                                std::move(Emitter));
-      else
-        S = createSPIRVStreamer(Ctx, std::move(TAB), std::move(OW),
-                                std::move(Emitter));
+      S = createSPIRVStreamer(Ctx, std::move(TAB), std::move(OW),
+                              std::move(Emitter));
       break;
     case Triple::DXContainer:
-      if (DXContainerStreamerCtorFn)
-        S = DXContainerStreamerCtorFn(T, Ctx, std::move(TAB), std::move(OW),
-                                      std::move(Emitter));
-      else
-        S = createDXContainerStreamer(Ctx, std::move(TAB), std::move(OW),
-                                      std::move(Emitter));
+      S = createDXContainerStreamer(Ctx, std::move(TAB), std::move(OW),
+                                    std::move(Emitter));
       break;
     }
     if (ObjectTargetStreamerCtorFn)
@@ -1007,28 +959,12 @@ struct TargetRegistry {
     T.COFFStreamerCtorFn = Fn;
   }
 
-  static void RegisterGOFFStreamer(Target &T, Target::GOFFStreamerCtorTy Fn) {
-    T.GOFFStreamerCtorFn = Fn;
-  }
-
   static void RegisterMachOStreamer(Target &T, Target::MachOStreamerCtorTy Fn) {
     T.MachOStreamerCtorFn = Fn;
   }
 
   static void RegisterELFStreamer(Target &T, Target::ELFStreamerCtorTy Fn) {
     T.ELFStreamerCtorFn = Fn;
-  }
-
-  static void RegisterSPIRVStreamer(Target &T, Target::SPIRVStreamerCtorTy Fn) {
-    T.SPIRVStreamerCtorFn = Fn;
-  }
-
-  static void RegisterDXContainerStreamer(Target &T, Target::DXContainerStreamerCtorTy Fn) {
-    T.DXContainerStreamerCtorFn = Fn;
-  }
-
-  static void RegisterWasmStreamer(Target &T, Target::WasmStreamerCtorTy Fn) {
-    T.WasmStreamerCtorFn = Fn;
   }
 
   static void RegisterXCOFFStreamer(Target &T, Target::XCOFFStreamerCtorTy Fn) {
