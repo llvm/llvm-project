@@ -295,3 +295,9 @@ else()
     FortranRuntime.static_dbg FortranRuntime.dynamic_dbg)
 endif()
 set_target_properties(FortranRuntime PROPERTIES FOLDER "Flang/Runtime Libraries")
+
+# Add dependency to make sure that Fortran runtime library is being built after
+# we have the Flang compiler available.  This also includes the MODULE files
+# that compile when the 'flang-new' target is built.
+add_dependencies(FortranRuntime flang-new)
+
