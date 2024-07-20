@@ -50,7 +50,7 @@ static cl::opt<unsigned> NumThreadsOpt("num-threads",
 static cl::opt<int32_t> DeviceIdOpt("device-id", cl::desc("Set the device id."),
                                     cl::init(-1), cl::cat(ReplayOptions));
 
-int main(int argc, char **argv) {
+int main(int argc, char *argv[]) {
   cl::HideUnrelatedOptions(ReplayOptions);
   cl::ParseCommandLineOptions(argc, argv, "llvm-omp-kernel-replay\n");
 

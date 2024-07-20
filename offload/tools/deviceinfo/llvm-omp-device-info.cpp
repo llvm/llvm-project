@@ -14,7 +14,7 @@
 #include "omptarget.h"
 #include <cstdio>
 
-int main(int argc, char **argv) {
+int main(int argc, char *argv[]) {
   __tgt_bin_desc EmptyDesc = {0, nullptr, nullptr, nullptr};
   __tgt_register_lib(&EmptyDesc);
   __tgt_init_all_rtls();
