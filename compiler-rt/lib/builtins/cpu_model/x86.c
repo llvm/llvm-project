@@ -125,8 +125,8 @@ enum ProcessorFeatures {
   FEATURE_AVX512BW,
   FEATURE_AVX512DQ,
   FEATURE_AVX512CD,
-  FEATURE_AVX512ER,
-  FEATURE_AVX512PF,
+  FEATURE_NF,
+  FEATURE_CF,
   FEATURE_AVX512VBMI,
   FEATURE_AVX512IFMA,
   FEATURE_AVX5124VNNIW,
@@ -142,7 +142,7 @@ enum ProcessorFeatures {
   // FIXME: Below Features has some missings comparing to gcc, it's because gcc
   // has some not one-to-one mapped in llvm.
   FEATURE_3DNOW,
-  // FEATURE_3DNOWP,
+  // FEATURE_3DNOWA,
   FEATURE_ADX = 40,
   // FEATURE_ABM,
   FEATURE_CLDEMOTE = 42,
@@ -171,7 +171,7 @@ enum ProcessorFeatures {
   // FEATURE_OSXSAVE,
   FEATURE_PCONFIG = 63,
   FEATURE_PKU,
-  FEATURE_PREFETCHWT1,
+  FEATURE_EVEX512,
   FEATURE_PRFCHW,
   FEATURE_PTWRITE,
   FEATURE_RDPID,
@@ -205,6 +205,7 @@ enum ProcessorFeatures {
   FEATURE_X86_64_V2,
   FEATURE_X86_64_V3,
   FEATURE_X86_64_V4,
+  FEATURE_APXF,
   FEATURE_AVXIFMA,
   FEATURE_AVXVNNIINT8,
   FEATURE_AVXNECONVERT,
@@ -217,7 +218,7 @@ enum ProcessorFeatures {
   FEATURE_SM3,
   FEATURE_SHA512,
   FEATURE_SM4,
-  FEATURE_APXF,
+  FEATUE_EGPR,
   FEATURE_USERMSR,
   FEATURE_AVX10_1_256,
   FEATURE_AVX10_1_512,
@@ -906,10 +907,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_AVX512IFMA);
   if (HasLeaf7 && ((EBX >> 24) & 1))
     setFeature(FEATURE_CLWB);
-  if (HasLeaf7 && ((EBX >> 26) & 1) && HasAVX512Save)
-    setFeature(FEATURE_AVX512PF);
-  if (HasLeaf7 && ((EBX >> 27) & 1) && HasAVX512Save)
-    setFeature(FEATURE_AVX512ER);
   if (HasLeaf7 && ((EBX >> 28) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX512CD);
   if (HasLeaf7 && ((EBX >> 29) & 1))
@@ -919,8 +916,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   if (HasLeaf7 && ((EBX >> 31) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX512VL);
 
-  if (HasLeaf7 && ((ECX >> 0) & 1))
-    setFeature(FEATURE_PREFETCHWT1);
   if (HasLeaf7 && ((ECX >> 1) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX512VBMI);
   if (HasLeaf7 && ((ECX >> 4) & 1))

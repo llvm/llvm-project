@@ -66,7 +66,7 @@ constexpr FeatureBitset FeaturesNocona =
 
 // Basic 64-bit capable CPU.
 constexpr FeatureBitset FeaturesX86_64 = FeaturesPentium4 | Feature64BIT;
-constexpr FeatureBitset FeaturesX86_64_V2 = FeaturesX86_64 | FeatureSAHF |
+constexpr FeatureBitset FeaturesX86_64_V2 = FeaturesX86_64 | FeatureLAHF_LM |
                                             FeaturePOPCNT | FeatureCRC32 |
                                             FeatureSSE4_2 | FeatureCMPXCHG16B;
 constexpr FeatureBitset FeaturesX86_64_V3 =
@@ -78,7 +78,7 @@ constexpr FeatureBitset FeaturesX86_64_V4 = FeaturesX86_64_V3 | FeatureEVEX512 |
 
 // Intel Core CPUs
 constexpr FeatureBitset FeaturesCore2 =
-    FeaturesNocona | FeatureSAHF | FeatureSSSE3;
+    FeaturesNocona | FeatureLAHF_LM | FeatureSSSE3;
 constexpr FeatureBitset FeaturesPenryn = FeaturesCore2 | FeatureSSE4_1;
 constexpr FeatureBitset FeaturesNehalem =
     FeaturesPenryn | FeaturePOPCNT | FeatureCRC32 | FeatureSSE4_2;
@@ -186,14 +186,14 @@ constexpr FeatureBitset FeaturesK8 =
 constexpr FeatureBitset FeaturesK8SSE3 = FeaturesK8 | FeatureSSE3;
 constexpr FeatureBitset FeaturesAMDFAM10 =
     FeaturesK8SSE3 | FeatureCMPXCHG16B | FeatureLZCNT | FeaturePOPCNT |
-    FeaturePRFCHW | FeatureSAHF | FeatureSSE4_A;
+    FeaturePRFCHW | FeatureLAHF_LM | FeatureSSE4_A;
 
 // Bobcat architecture processors.
 constexpr FeatureBitset FeaturesBTVER1 =
     FeatureX87 | FeatureCMPXCHG8B | FeatureCMPXCHG16B | Feature64BIT |
     FeatureFXSR | FeatureLZCNT | FeatureMMX | FeaturePOPCNT | FeaturePRFCHW |
     FeatureSSE | FeatureSSE2 | FeatureSSE3 | FeatureSSSE3 | FeatureSSE4_A |
-    FeatureSAHF;
+    FeatureLAHF_LM;
 constexpr FeatureBitset FeaturesBTVER2 =
     FeaturesBTVER1 | FeatureAES | FeatureAVX | FeatureBMI | FeatureCRC32 |
     FeatureF16C | FeatureMOVBE | FeaturePCLMUL | FeatureXSAVE | FeatureXSAVEOPT;
@@ -203,7 +203,7 @@ constexpr FeatureBitset FeaturesBDVER1 =
     FeatureX87 | FeatureAES | FeatureAVX | FeatureCMPXCHG8B |
     FeatureCMPXCHG16B | FeatureCRC32 | Feature64BIT | FeatureFMA4 |
     FeatureFXSR | FeatureLWP | FeatureLZCNT | FeatureMMX | FeaturePCLMUL |
-    FeaturePOPCNT | FeaturePRFCHW | FeatureSAHF | FeatureSSE | FeatureSSE2 |
+    FeaturePOPCNT | FeaturePRFCHW | FeatureLAHF_LM | FeatureSSE | FeatureSSE2 |
     FeatureSSE3 | FeatureSSSE3 | FeatureSSE4_1 | FeatureSSE4_2 | FeatureSSE4_A |
     FeatureXOP | FeatureXSAVE;
 constexpr FeatureBitset FeaturesBDVER2 =
@@ -221,7 +221,7 @@ constexpr FeatureBitset FeaturesZNVER1 =
     FeatureCMPXCHG8B | FeatureCMPXCHG16B | FeatureCRC32 | Feature64BIT |
     FeatureF16C | FeatureFMA | FeatureFSGSBASE | FeatureFXSR | FeatureLZCNT |
     FeatureMMX | FeatureMOVBE | FeatureMWAITX | FeaturePCLMUL | FeaturePOPCNT |
-    FeaturePRFCHW | FeatureRDRND | FeatureRDSEED | FeatureSAHF | FeatureSHA |
+    FeaturePRFCHW | FeatureRDRND | FeatureRDSEED | FeatureLAHF_LM | FeatureSHA |
     FeatureSSE | FeatureSSE2 | FeatureSSE3 | FeatureSSSE3 | FeatureSSE4_1 |
     FeatureSSE4_2 | FeatureSSE4_A | FeatureXSAVE | FeatureXSAVEC |
     FeatureXSAVEOPT | FeatureXSAVES;
@@ -507,7 +507,8 @@ constexpr FeatureBitset ImpliedFeaturesRDPRU = {};
 constexpr FeatureBitset ImpliedFeaturesRDRND = {};
 constexpr FeatureBitset ImpliedFeaturesRDSEED = {};
 constexpr FeatureBitset ImpliedFeaturesRTM = {};
-constexpr FeatureBitset ImpliedFeaturesSAHF = {};
+constexpr FeatureBitset ImpliedFeaturesLAHF_LM = {};
+constexpr FeatureBitset ImpliedFeaturesLM = {};
 constexpr FeatureBitset ImpliedFeaturesSERIALIZE = {};
 constexpr FeatureBitset ImpliedFeaturesSGX = {};
 constexpr FeatureBitset ImpliedFeaturesSHSTK = {};
@@ -517,7 +518,6 @@ constexpr FeatureBitset ImpliedFeaturesUINTR = {};
 constexpr FeatureBitset ImpliedFeaturesUSERMSR = {};
 constexpr FeatureBitset ImpliedFeaturesWAITPKG = {};
 constexpr FeatureBitset ImpliedFeaturesWBNOINVD = {};
-constexpr FeatureBitset ImpliedFeaturesVZEROUPPER = {};
 constexpr FeatureBitset ImpliedFeaturesX87 = {};
 constexpr FeatureBitset ImpliedFeaturesXSAVE = {};
 
@@ -615,13 +615,13 @@ constexpr FeatureBitset ImpliedFeaturesWIDEKL = FeatureKL;
 constexpr FeatureBitset ImpliedFeaturesAVXVNNI = FeatureAVX2;
 
 // AVX10 Features
-constexpr FeatureBitset ImpliedFeaturesAVX10_1 =
+constexpr FeatureBitset ImpliedFeaturesAVX10_1_256 =
     FeatureAVX512CD | FeatureAVX512VBMI | FeatureAVX512IFMA |
     FeatureAVX512VNNI | FeatureAVX512BF16 | FeatureAVX512VPOPCNTDQ |
     FeatureAVX512VBMI2 | FeatureAVX512BITALG | FeatureVAES | FeatureVPCLMULQDQ |
     FeatureAVX512FP16;
 constexpr FeatureBitset ImpliedFeaturesAVX10_1_512 =
-    FeatureAVX10_1 | FeatureEVEX512;
+    FeatureAVX10_1_256 | FeatureEVEX512;
 
 // APX Features
 constexpr FeatureBitset ImpliedFeaturesEGPR = {};
