@@ -1684,30 +1684,47 @@ static void dryRunAddFact(CmpInst::Predicate Pred, Value *A, Value *B,
   auto UpdateEstimate = [&Info, &EstimatedRowsA, &EstimatedRowsB,
                          &EstimatedColumns](CmpInst::Predicate Pred, Value *A,
                                             Value *B) {
-    SmallVector<Value *> NewVars;
-    auto R = Info.getConstraint(Pred, A, B, NewVars);
+    // What follows is a simplified dry-run of Info.getConstraint and addFact.
+    unsigned NumNewVars = 0;
+    bool IsSigned = false;
 
-    // We offset it by 1 due to logic in addFact.
-    unsigned NewEstimate =
-        count_if(R.Coefficients, [](int64_t C) { return C != 0; }) + 1;
+    switch (Pred) {
+    case CmpInst::ICMP_UGT:
+    case CmpInst::ICMP_UGE:
+    case CmpInst::ICMP_NE:
+    case CmpInst::ICMP_EQ:
+      break;
+    case CmpInst::ICMP_SGT:
+    case CmpInst::ICMP_SGE:
+      IsSigned = true;
+      break;
+    default:
+      return;
+    }
 
-    EstimatedColumns = std::max(EstimatedColumns, NewEstimate);
-    if (R.IsSigned)
+    SmallVector<ConditionTy, 4> Preconditions;
+    auto &Value2Index = Info.getValue2Index(IsSigned);
+    auto ADec = decompose(A->stripPointerCastsSameRepresentation(),
+                          Preconditions, IsSigned, Info.getDataLayout());
+    auto BDec = decompose(B->stripPointerCastsSameRepresentation(),
+                          Preconditions, IsSigned, Info.getDataLayout());
+    for (const auto &KV : concat<DecompEntry>(ADec.Vars, BDec.Vars)) {
+      if (!Value2Index.contains(KV.Variable))
+        ++NumNewVars;
+    }
+
+    if (IsSigned)
       ++EstimatedRowsA;
     else
       ++EstimatedRowsB;
+
+    EstimatedColumns =
+        std::max(EstimatedColumns, NumNewVars + Value2Index.size() + 2);
   };
 
   UpdateEstimate(Pred, A, B);
 
-  // What follows is a dry-run of transferToOtherSystem.
-  auto IsKnownNonNegative = [&Info](Value *V) {
-    return Info.doesHold(CmpInst::ICMP_SGE, V,
-                         ConstantInt::get(V->getType(), 0)) ||
-           isKnownNonNegative(V, Info.getDataLayout(),
-                              MaxAnalysisRecursionDepth - 1);
-  };
-
+  // What follows is a simplified dry-run of transferToOtherSystem.
   if (!A->getType()->isIntegerTy())
     return;
 
@@ -1716,31 +1733,20 @@ static void dryRunAddFact(CmpInst::Predicate Pred, Value *A, Value *B,
     break;
   case CmpInst::ICMP_ULT:
   case CmpInst::ICMP_ULE:
-    if (IsKnownNonNegative(B)) {
-      UpdateEstimate(CmpInst::ICMP_SGE, A, ConstantInt::get(B->getType(), 0));
-      UpdateEstimate(CmpInst::getSignedPredicate(Pred), A, B);
-    }
-    break;
   case CmpInst::ICMP_UGE:
   case CmpInst::ICMP_UGT:
-    if (IsKnownNonNegative(A)) {
-      UpdateEstimate(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), 0));
-      UpdateEstimate(CmpInst::getSignedPredicate(Pred), A, B);
-    }
+    UpdateEstimate(CmpInst::ICMP_SGE, A, ConstantInt::get(B->getType(), 0));
+    UpdateEstimate(CmpInst::getSignedPredicate(Pred), A, B);
     break;
   case CmpInst::ICMP_SLT:
-    if (IsKnownNonNegative(A))
-      UpdateEstimate(CmpInst::ICMP_ULT, A, B);
+    UpdateEstimate(CmpInst::ICMP_ULT, A, B);
     break;
   case CmpInst::ICMP_SGT:
-    if (Info.doesHold(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), -1)))
-      UpdateEstimate(CmpInst::ICMP_UGE, A, ConstantInt::get(B->getType(), 0));
-    if (IsKnownNonNegative(B))
-      UpdateEstimate(CmpInst::ICMP_UGT, A, B);
+    UpdateEstimate(CmpInst::ICMP_UGE, A, ConstantInt::get(B->getType(), 0));
+    UpdateEstimate(CmpInst::ICMP_UGT, A, B);
     break;
   case CmpInst::ICMP_SGE:
-    if (IsKnownNonNegative(B))
-      UpdateEstimate(CmpInst::ICMP_UGE, A, B);
+    UpdateEstimate(CmpInst::ICMP_UGE, A, B);
     break;
   }
 }
