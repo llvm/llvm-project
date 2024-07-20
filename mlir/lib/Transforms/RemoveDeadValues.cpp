@@ -226,6 +226,9 @@ static void cleanFuncOp(FunctionOpInterface funcOp, Operation *module,
     callOp->eraseOperands(nonLiveCallOperands);
   }
 
+  if (funcOp.isExternal())
+    return;
+
   // Get the list of unnecessary terminator operands (return values that are
   // non-live across all callers) in `nonLiveRets`. There is a very important
   // subtlety here. Unnecessary terminator operands are NOT the operands of the

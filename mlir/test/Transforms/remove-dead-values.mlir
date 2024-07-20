@@ -360,6 +360,43 @@ func.func @kernel(%arg0: memref<18xf32>) {
 
 // -----
 
+// skip removing return values of an external function
+// 
+// CHECK-LABEL: func.func private @printF64(f64)
+// CHECK-NEXT:  func.func @main() -> f64 {
+// CHECK-NEXT:    %cst = arith.constant 1.500000e+00 : f64
+// CHECK-NEXT:    %cst_0 = arith.constant 2.000000e+00 : f64
+// CHECK-NEXT:    %0 = arith.addf %cst_0, %cst : f64
+// CHECK-NEXT:    call @printF64(%cst) : (f64) -> ()
+// CHECK-NEXT:    return %0 : f64
+// CHECK-NEXT:  }
+// CHECK:       func.func private @rtf32(f64) -> f32
+// CHECK-NEXT:  func.func @main2() -> f32 {
+// CHECK-NEXT:    %cst = arith.constant 1.500000e+00 : f64
+// CHECK-NEXT:    %0 = call @rtf32(%cst) : (f64) -> f32
+// CHECK-NEXT:    return %0 : f32
+// CHECK-NEXT:  }
+func.func private @printF64(f64)
+func.func @main() -> f64 {
+    %cst = arith.constant 1.500000e+00 : f64
+    %cst_0 = arith.constant 1.500000e+00 : f64
+    %cst_1 = arith.constant 2.000000e+00 : f64
+    %cst_2 = arith.constant 2.000000e+00 : f64
+    %cst_3 = arith.constant 3.500000e+00 : f64
+    %0 = arith.addf %cst_1, %cst : f64
+    call @printF64(%cst) : (f64) -> ()
+    return %0 : f64
+}
+
+func.func private @rtf32(f64) -> f32
+func.func @main2() -> f32 {
+    %cst = arith.constant 1.500000e+00 : f64
+    %test = call @rtf32(%cst) : (f64) -> (f32)
+    return %test : f32
+}
+
+// -----
+
 // Removed arguments have no memroy effect
 // 
 // CHECK-LABEL:  func.func @transpose() {
