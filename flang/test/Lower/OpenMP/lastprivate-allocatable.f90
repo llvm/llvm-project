@@ -31,8 +31,8 @@ end program
 ! CHECK:                 fir.if %{{.*}} {
 !                          store loop IV
 ! CHECK:                   fir.store %{{.*}} to %[[VAL_18]]#1 : !fir.ref<i32>
-!                          assign private variable to original copy: realloc and temporary_lhs
-! CHECK:                   hlfir.assign %[[VAL_16]]#0 to %[[VAL_3]]#0 realloc temporary_lhs : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>
+!                          assign private variable to original copy: realloc
+! CHECK:                   hlfir.assign %[[VAL_16]]#0 to %[[VAL_3]]#0 realloc : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK-NEXT:            }
 ! CHECK-NEXT:            omp.yield
 ! CHECK-NEXT:          }
