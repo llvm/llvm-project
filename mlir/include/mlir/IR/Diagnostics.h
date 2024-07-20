@@ -272,7 +272,7 @@ public:
   }
 
   /// Returns the current list of diagnostic metadata.
-  SmallVector<DiagnosticArgument, 0> &getMetaData() { return metadata; }
+  SmallVectorImpl<DiagnosticArgument> &getMetadata() { return metadata; }
 
 private:
   Diagnostic(const Diagnostic &rhs) = delete;
