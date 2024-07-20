@@ -39,7 +39,7 @@
 // UNPRED-RAW-PROFILE-NEXT: 2fa-2fa:9
 
 // original code:
-// icx -fprofile-sample-generate lit.c
+// clang -O2 -gline-tables-only -fdebug-info-for-profiling lit.c
 #include <stdlib.h>
 
 #define N 20000
