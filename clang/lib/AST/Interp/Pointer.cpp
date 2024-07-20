@@ -16,6 +16,7 @@
 #include "MemberPointer.h"
 #include "PrimType.h"
 #include "Record.h"
+#include "clang/AST/RecordLayout.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -141,12 +142,17 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   else
     llvm_unreachable("Invalid allocation type");
 
-  if (isDummy() || isUnknownSizeArray() || Desc->asExpr())
+  if (isUnknownSizeArray() || Desc->asExpr())
     return APValue(Base, CharUnits::Zero(), Path,
                    /*IsOnePastEnd=*/isOnePastEnd(), /*IsNullPtr=*/false);
 
-  // TODO: compute the offset into the object.
   CharUnits Offset = CharUnits::Zero();
+
+  auto getFieldOffset = [&](const FieldDecl *FD) -> CharUnits {
+    const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(FD->getParent());
+    unsigned FieldIndex = FD->getFieldIndex();
+    return ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex));
+  };
 
   // Build the path into the object.
   Pointer Ptr = *this;
@@ -154,12 +160,20 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
     if (Ptr.isArrayRoot()) {
       Path.push_back(APValue::LValuePathEntry(
           {Ptr.getFieldDesc()->asDecl(), /*IsVirtual=*/false}));
+
+      if (const auto *FD = dyn_cast<FieldDecl>(Ptr.getFieldDesc()->asDecl()))
+        Offset += getFieldOffset(FD);
+
       Ptr = Ptr.getBase();
     } else if (Ptr.isArrayElement()) {
+      unsigned Index;
       if (Ptr.isOnePastEnd())
-        Path.push_back(APValue::LValuePathEntry::ArrayIndex(Ptr.getArray().getNumElems()));
+        Index = Ptr.getArray().getNumElems();
       else
-        Path.push_back(APValue::LValuePathEntry::ArrayIndex(Ptr.getIndex()));
+        Index = Ptr.getIndex();
+
+      Offset += (Index * ASTCtx.getTypeSizeInChars(Ptr.getType()));
+      Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
       Ptr = Ptr.getArray();
     } else {
       // TODO: figure out if base is virtual
@@ -170,11 +184,20 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
       if (const auto *BaseOrMember = Desc->asDecl()) {
         Path.push_back(APValue::LValuePathEntry({BaseOrMember, IsVirtual}));
         Ptr = Ptr.getBase();
+
+        if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember))
+          Offset += getFieldOffset(FD);
+
         continue;
       }
       llvm_unreachable("Invalid field type");
     }
   }
+
+  // FIXME(perf): We compute the lvalue path above, but we can't supply it
+  // for dummy pointers (that causes crashes later in CheckConstantExpression).
+  if (isDummy())
+    Path.clear();
 
   // We assemble the LValuePath starting from the innermost pointer to the
   // outermost one. SO in a.b.c, the first element in Path will refer to
