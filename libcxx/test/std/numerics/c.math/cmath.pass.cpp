@@ -1116,6 +1116,7 @@ void test_fmin()
     assert(std::fmin(1,0) == 0);
 }
 
+#if TEST_STD_VER >= 17
 struct TestHypot3 {
   template <class Real>
   void operator()() const {
@@ -1153,6 +1154,7 @@ struct TestHypot3 {
     }
   }
 };
+#endif
 
 void test_hypot()
 {
@@ -1176,7 +1178,7 @@ void test_hypot()
     static_assert((std::is_same<decltype(hypot(Ambiguous(), Ambiguous())), Ambiguous>::value), "");
     assert(std::hypot(3,4) == 5);
 
-#if TEST_STD_VER > 14
+#if TEST_STD_VER >= 17
     // clang-format off
     static_assert((std::is_same_v<decltype(std::hypot((float)0, (float)0,          (float)0)),              float>));
     static_assert((std::is_same_v<decltype(std::hypot((float)0, (bool)0,           (float)0)),              double>));
