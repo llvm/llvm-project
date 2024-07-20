@@ -5810,7 +5810,7 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
       return SDValue();
     // Be extra careful sinking truncate. If it's free, there's no benefit in
     // widening a binop. Also, don't create a logic op on an illegal type.
-    if (TLI.isZExtFree(VT, XVT) && TLI.isTruncateFree(XVT, VT))
+    if (/*TLI.isZExtFree(VT, XVT) && */TLI.isTruncateFree(XVT, VT))
       return SDValue();
     if (!TLI.isTypeLegal(XVT))
       return SDValue();
