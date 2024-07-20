@@ -1,4 +1,4 @@
-//===-- Unittests for f16sqrtf128 -------------------------------------===//
+//===-- Unittests for fsqrt -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,6 +8,6 @@
 
 #include "SqrtTest.h"
 
-#include "src/math/f16sqrtf128.h"
+#include "src/math/fsqrt.h"
 
-LIST_NARROWING_SQRT_TESTS(float16, float128, LIBC_NAMESPACE::f16sqrtf128)
+LIST_NARROWING_SQRT_TESTS(float, double, LIBC_NAMESPACE::fsqrt)
