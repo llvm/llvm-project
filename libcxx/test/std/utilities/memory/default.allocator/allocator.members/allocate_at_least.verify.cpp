@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // <memory>
 
 // allocator:
-// T* allocate(size_t n);
+// T* allocate_at_least(size_t n);
 
 #include <memory>
 
@@ -20,16 +20,16 @@ struct incomplete;
 void f() {
   {
     std::allocator<int> a;
-    a.allocate(3); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    a.allocate_at_least(3); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
   {
     std::allocator<void> a;
     [[maybe_unused]] auto b =
-        a.allocate(3); // expected-error@*:* {{invalid application of 'sizeof' to an incomplete type 'void'}}
+        a.allocate_at_least(3); // expected-error@*:* {{invalid application of 'sizeof' to an incomplete type 'void'}}
   }
   {
     std::allocator<incomplete> a;
-    [[maybe_unused]] auto b =
-        a.allocate(3); // expected-error@*:* {{invalid application of 'sizeof' to an incomplete type 'incomplete'}}
+    [[maybe_unused]] auto b = a.allocate_at_least(
+        3); // expected-error@*:* {{invalid application of 'sizeof' to an incomplete type 'incomplete'}}
   }
 }
