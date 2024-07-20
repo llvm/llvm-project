@@ -225,7 +225,7 @@
 "`3773 <https://wg21.link/LWG3773>`__","``views::zip_transform`` still requires ``F`` to be ``copy_constructible`` when empty pack", "November 2022","","","|ranges|"
 "`3774 <https://wg21.link/LWG3774>`__","``<flat_set>`` should include ``<compare>``", "November 2022","","","|flat_containers|"
 "`3775 <https://wg21.link/LWG3775>`__","Broken dependencies in the ``Cpp17Allocator`` requirements", "November 2022","","",""
-"`3778 <https://wg21.link/LWG3778>`__","``vector<bool>`` missing exception specifications", "November 2022","","",""
+"`3778 <https://wg21.link/LWG3778>`__","``vector<bool>`` missing exception specifications", "November 2022","|Complete|","3.7",""
 "`3781 <https://wg21.link/LWG3781>`__","The exposition-only alias templates ``cont-key-type`` and ``cont-mapped-type`` should be removed", "November 2022","|Nothing to do|","",""
 "`3782 <https://wg21.link/LWG3782>`__","Should ``<math.h>`` declare ``::lerp``?", "November 2022","|Complete|","17.0",""
 "`3784 <https://wg21.link/LWG3784>`__","std.compat should not provide ``::byte`` and its friends", "November 2022","","",""
