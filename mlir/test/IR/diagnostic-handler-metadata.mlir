@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(test-diagnostic-metadata))" -o - 2>&1 | FileCheck %s
-// This test verifies that diagnostic handler can filter the diagnostic to emit the errors.
+// This test verifies that diagnostic handler can filter the diagnostic whether to emit the errors.
 
 // CHECK-LABEL: Test 'test'
 // CHECK-NEXT: 8:3: error: test diagnostic metadata
