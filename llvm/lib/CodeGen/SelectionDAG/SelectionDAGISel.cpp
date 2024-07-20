@@ -509,6 +509,8 @@ void SelectionDAGISel::initializeAnalysisResults(
     FnVarLocs = &FAM.getResult<DebugAssignmentTrackingAnalysis>(Fn);
 
   auto *UA = FAM.getCachedResult<UniformityInfoAnalysis>(Fn);
+  MMI = &MFAM.getResult<MachineModuleAnalysis>(*MF).getMMI();
+
   CurDAG->init(*MF, *ORE, MFAM, LibInfo, UA, PSI, BFI, *MMI, FnVarLocs);
 
   // Now get the optional analyzes if we want to.
