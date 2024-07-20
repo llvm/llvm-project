@@ -48,7 +48,6 @@ public:
   std::unique_ptr<FunctionLoweringInfo> FuncInfo;
   SwiftErrorValueTracking *SwiftError;
   MachineFunction *MF;
-  MachineModuleInfo *MMI;
   MachineRegisterInfo *RegInfo;
   SelectionDAG *CurDAG;
   std::unique_ptr<SelectionDAGBuilder> SDB;
