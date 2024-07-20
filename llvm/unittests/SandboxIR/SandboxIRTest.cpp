@@ -591,3 +591,36 @@ define void @foo(ptr %arg0, ptr %arg1) {
   EXPECT_EQ(NewLd->getAlign(), 8);
   EXPECT_EQ(NewLd->getName(), "NewLd");
 }
+
+TEST_F(SandboxIRTest, StoreInst) {
+  parseIR(C, R"IR(
+define void @foo(i8 %val, ptr %ptr) {
+  store i8 %val, ptr %ptr, align 64
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *Val = F->getArg(0);
+  auto *Ptr = F->getArg(1);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *St = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ret = &*It++;
+
+  // Check that the StoreInst has been created correctly.
+  // Check getPointerOperand()
+  EXPECT_EQ(St->getValueOperand(), Val);
+  EXPECT_EQ(St->getPointerOperand(), Ptr);
+  // Check getAlign()
+  EXPECT_EQ(St->getAlign(), 64);
+  // Check create(InsertBefore)
+  sandboxir::StoreInst *NewSt =
+      sandboxir::StoreInst::create(Val, Ptr, Align(8),
+                                   /*InsertBefore=*/Ret, Ctx);
+  EXPECT_EQ(NewSt->getType(), St->getType());
+  EXPECT_EQ(NewSt->getValueOperand(), Val);
+  EXPECT_EQ(NewSt->getPointerOperand(), Ptr);
+  EXPECT_EQ(NewSt->getAlign(), 8);
+}
