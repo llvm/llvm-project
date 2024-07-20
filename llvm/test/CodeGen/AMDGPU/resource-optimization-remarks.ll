@@ -113,7 +113,7 @@ define amdgpu_kernel void @test_kernel() !dbg !3 {
   ret void
 }
 
-; STDERR-NOT: remark: foo.cl:42:0: Function Name: test_func
+; STDERR-NOT: test_func
 define void @test_func() !dbg !6 {
   call void asm sideeffect "; clobber v17", "~{v17}"()
   call void asm sideeffect "; clobber s11", "~{s11}"()
