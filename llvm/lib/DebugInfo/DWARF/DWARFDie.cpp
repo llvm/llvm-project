@@ -117,6 +117,10 @@ static void dumpLocationExpr(raw_ostream &OS, const DWARFFormValue &FormValue,
       .print(OS, DumpOpts, U);
 }
 
+static DWARFDie resolveReferencedType(DWARFDie D, DWARFFormValue F) {
+  return D.getAttributeValueAsReferencedDie(F).resolveTypeUnitReference();
+}
+
 static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
                           const DWARFAttribute &AttrValue, unsigned Indent,
                           DIDumpOptions DumpOpts) {
@@ -210,8 +214,8 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
                 DINameKind::LinkageName))
       OS << Space << "\"" << Name << '\"';
   } else if (Attr == DW_AT_type || Attr == DW_AT_containing_type) {
-    if (DWARFDie D = Die.getAttributeValueAsReferencedDie(FormValue);
-        D && !D.isNULL()) {
+    DWARFDie D = resolveReferencedType(Die, FormValue);
+    if (D && !D.isNULL()) {
       OS << Space << "\"";
       dumpTypeQualifiedName(D, OS);
       OS << '"';
@@ -303,12 +307,13 @@ DWARFDie::findRecursively(ArrayRef<dwarf::Attribute> Attrs) const {
     if (auto Value = Die.find(Attrs))
       return Value;
 
-    for (dwarf::Attribute Attr :
-         {DW_AT_abstract_origin, DW_AT_specification, DW_AT_signature}) {
-      if (auto D = Die.getAttributeValueAsReferencedDie(Attr))
-        if (Seen.insert(D).second)
-          Worklist.push_back(D);
-    }
+    if (auto D = Die.getAttributeValueAsReferencedDie(DW_AT_abstract_origin))
+      if (Seen.insert(D).second)
+        Worklist.push_back(D);
+
+    if (auto D = Die.getAttributeValueAsReferencedDie(DW_AT_specification))
+      if (Seen.insert(D).second)
+        Worklist.push_back(D);
   }
 
   return std::nullopt;
@@ -330,12 +335,19 @@ DWARFDie::getAttributeValueAsReferencedDie(const DWARFFormValue &V) const {
   } else if (Offset = V.getAsDebugInfoReference(); Offset) {
     if (DWARFUnit *SpecUnit = U->getUnitVector().getUnitForOffset(*Offset))
       Result = SpecUnit->getDIEForOffset(*Offset);
-  } else if (std::optional<uint64_t> Sig = V.getAsSignatureReference()) {
-    if (DWARFTypeUnit *TU = U->getContext().getTypeUnitForHash(
-            U->getVersion(), *Sig, U->isDWOUnit()))
-      Result = TU->getDIEForOffset(TU->getTypeOffset() + TU->getOffset());
   }
   return Result;
+}
+
+DWARFDie DWARFDie::resolveTypeUnitReference() const {
+  if (auto Attr = find(DW_AT_signature)) {
+    if (std::optional<uint64_t> Sig = Attr->getAsReferenceUVal()) {
+      if (DWARFTypeUnit *TU = U->getContext().getTypeUnitForHash(
+              U->getVersion(), *Sig, U->isDWOUnit()))
+        return TU->getDIEForOffset(TU->getTypeOffset() + TU->getOffset());
+    }
+  }
+  return *this;
 }
 
 std::optional<uint64_t> DWARFDie::getRangesBaseAttribute() const {
