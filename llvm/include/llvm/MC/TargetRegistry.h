@@ -201,8 +201,7 @@ public:
   using MachOStreamerCtorTy =
       MCStreamer *(*)(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
                       std::unique_ptr<MCObjectWriter> &&OW,
-                      std::unique_ptr<MCCodeEmitter> &&Emitter,
-                      bool DWARFMustBeAtTheEnd);
+                      std::unique_ptr<MCCodeEmitter> &&Emitter);
   using COFFStreamerCtorTy =
       MCStreamer *(*)(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
                       std::unique_ptr<MCObjectWriter> &&OW,
@@ -559,7 +558,7 @@ public:
                                      std::unique_ptr<MCObjectWriter> &&OW,
                                      std::unique_ptr<MCCodeEmitter> &&Emitter,
                                      const MCSubtargetInfo &STI, bool, bool,
-                                     bool DWARFMustBeAtTheEnd) const {
+                                     bool) const {
     MCStreamer *S = nullptr;
     switch (T.getObjectFormat()) {
     case Triple::UnknownObjectFormat:
@@ -573,10 +572,10 @@ public:
     case Triple::MachO:
       if (MachOStreamerCtorFn)
         S = MachOStreamerCtorFn(Ctx, std::move(TAB), std::move(OW),
-                                std::move(Emitter), DWARFMustBeAtTheEnd);
+                                std::move(Emitter));
       else
         S = createMachOStreamer(Ctx, std::move(TAB), std::move(OW),
-                                std::move(Emitter), DWARFMustBeAtTheEnd);
+                                std::move(Emitter), false);
       break;
     case Triple::ELF:
       if (ELFStreamerCtorFn)
