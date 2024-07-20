@@ -3752,8 +3752,14 @@ bool NVPTXDAGToDAGISel::SelectADDRri_imp(
         Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), mvt);
       else
         Base = Addr.getOperand(0);
-      Offset = CurDAG->getTargetConstant(CN->getZExtValue(), SDLoc(OpNode),
-                                         mvt);
+
+      // Offset must fit in a 32-bit signed int in PTX [register+offset] address
+      // mode
+      if (!CN->getAPIntValue().isSignedIntN(32))
+        return false;
+
+      Offset = CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(OpNode),
+                                         MVT::i32);
       return true;
     }
   }
