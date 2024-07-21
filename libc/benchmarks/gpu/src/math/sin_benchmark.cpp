@@ -16,10 +16,10 @@ uint64_t get_bits(double x) {
   return LIBC_NAMESPACE::cpp::bit_cast<uint64_t>(x);
 }
 
-// BENCHMARK() expects a function that with no parameters that returns a
+// BENCHMARK() expects a function with no parameters that returns a
 // uint64_t representing the latency. Defining each benchmark using macro that
-// expands to a lambda to allow us to switch the implementation of `sin()` to
-// easily register NVPTX benchmarks.
+// expands to a lambda to allow us to switch the implementation of `sin()` and
+// easily register vendor-specific benchmarks.
 #define BM_RANDOM_INPUT(Func)                                                  \
   []() {                                                                       \
     uint64_t total_time = 0;                                                   \

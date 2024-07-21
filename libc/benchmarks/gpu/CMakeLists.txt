@@ -22,6 +22,8 @@ function(add_benchmark benchmark_name)
       ${BENCHMARK_LINK_LIBRARIES}
     DEPENDS
       libc.src.stdio.printf
+      libc.src.stdlib.srand
+      libc.src.stdlib.rand
       ${BENCHMARK_DEPENDS}
     ${BENCHMARK_UNPARSED_ARGUMENTS}
     COMPILE_OPTIONS
@@ -62,6 +64,7 @@ add_unittest_framework_library(
     libc.src.__support.fixedvector
     libc.src.time.clock
     libc.src.stdlib.rand
+    libc.src.stdlib.srand
     libc.benchmarks.gpu.timing.timing
     libc.src.stdio.printf
 )
