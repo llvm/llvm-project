@@ -12,6 +12,10 @@
  *
 \*===----------------------------------------------------------------------===*/
 
+/* Helper macros.  */
+#define CG_DATA_SIMPLE_QUOTE(x) #x
+#define CG_DATA_QUOTE(x) CG_DATA_SIMPLE_QUOTE(x)
+
 #ifdef CG_DATA_SECT_ENTRY
 #define CG_DATA_DEFINED
 CG_DATA_SECT_ENTRY(CG_outline, CG_DATA_QUOTE(CG_DATA_OUTLINE_COMMON),
@@ -34,13 +38,9 @@ CG_DATA_SECT_ENTRY(CG_outline, CG_DATA_QUOTE(CG_DATA_OUTLINE_COMMON),
 
 #else
 /* Runtime section names and name strings.  */
-#define CG_DATA_SECT_NAME INSTR_PROF_QUOTE(CG_DATA_OUTLINE_COMMON)
+#define CG_DATA_SECT_NAME CG_DATA_QUOTE(CG_DATA_OUTLINE_COMMON)
 
 #endif
 
 /* Indexed codegen data format version (start from 1). */
 #define CG_DATA_INDEX_VERSION 1
-
-/* Helper macros.  */
-#define CG_DATA_SIMPLE_QUOTE(x) #x
-#define CG_DATA_QUOTE(x) CG_DATA_SIMPLE_QUOTE(x)

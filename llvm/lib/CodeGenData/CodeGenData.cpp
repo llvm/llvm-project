@@ -130,8 +130,7 @@ std::once_flag CodeGenData::OnceFlag;
 
 CodeGenData &CodeGenData::getInstance() {
   std::call_once(CodeGenData::OnceFlag, []() {
-    auto *CGD = new CodeGenData();
-    Instance.reset(CGD);
+    Instance = std::unique_ptr<CodeGenData>(new CodeGenData());
 
     // TODO: Initialize writer or reader mode for the client optimization.
   });
@@ -187,7 +186,7 @@ void warn(Twine Message, std::string Whence, std::string Hint) {
 void warn(Error E, StringRef Whence) {
   if (E.isA<CGDataError>()) {
     handleAllErrors(std::move(E), [&](const CGDataError &IPE) {
-      warn(IPE.message(), std::string(Whence), std::string(""));
+      warn(IPE.message(), Whence.str(), "");
     });
   }
 }

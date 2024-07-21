@@ -47,7 +47,7 @@ Error CodeGenDataReader::mergeFromObjectFile(
     auto *EndData = Data + ContentsOrErr->size();
 
     if (*NameOrErr == CGOutLineName) {
-      // In case dealing with an executable that has concatenaed cgdata,
+      // In case dealing with an executable that has concatenated cgdata,
       // we want to merge them into a single cgdata.
       // Although it's not a typical workflow, we support this scenario.
       while (Data != EndData) {
@@ -74,10 +74,8 @@ Error IndexedCodeGenDataReader::read() {
       reinterpret_cast<const unsigned char *>(DataBuffer->getBufferStart());
   auto *End =
       reinterpret_cast<const unsigned char *>(DataBuffer->getBufferEnd());
-  auto HeaderOr = IndexedCGData::Header::readFromBuffer(Start);
-  if (!HeaderOr)
-    return HeaderOr.takeError();
-  Header = HeaderOr.get();
+  if (auto E = IndexedCGData::Header::readFromBuffer(Start).moveInto(Header))
+    return std::move(E);
 
   if (hasOutlinedHashTree()) {
     const unsigned char *Ptr = Start + Header.OutlinedHashTreeOffset;
@@ -106,9 +104,9 @@ CodeGenDataReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
   std::unique_ptr<CodeGenDataReader> Reader;
   // Create the reader.
   if (IndexedCodeGenDataReader::hasFormat(*Buffer))
-    Reader.reset(new IndexedCodeGenDataReader(std::move(Buffer)));
+    Reader = std::make_unique<IndexedCodeGenDataReader>(std::move(Buffer));
   else if (TextCodeGenDataReader::hasFormat(*Buffer))
-    Reader.reset(new TextCodeGenDataReader(std::move(Buffer)));
+    Reader = std::make_unique<TextCodeGenDataReader>(std::move(Buffer));
   else
     return make_error<CGDataError>(cgdata_error::malformed);
 
@@ -132,31 +130,33 @@ bool IndexedCodeGenDataReader::hasFormat(const MemoryBuffer &DataBuffer) {
 
 bool TextCodeGenDataReader::hasFormat(const MemoryBuffer &Buffer) {
   // Verify that this really looks like plain ASCII text by checking a
-  // 'reasonable' number of characters (up to profile magic size).
-  size_t count = std::min(Buffer.getBufferSize(), sizeof(uint64_t));
-  StringRef buffer = Buffer.getBufferStart();
-  return count == 0 ||
-         std::all_of(buffer.begin(), buffer.begin() + count,
-                     [](char c) { return isPrint(c) || isSpace(c); });
+  // 'reasonable' number of characters (up to the magic size).
+  StringRef Prefix = Buffer.getBuffer().take_front(sizeof(uint64_t));
+  return llvm::all_of(Prefix, [](char c) { return isPrint(c) || isSpace(c); });
 }
 Error TextCodeGenDataReader::read() {
   using namespace support;
 
   // Parse the custom header line by line.
-  while (Line->starts_with(":")) {
+  for (; !Line.is_at_eof(); ++Line) {
+    // Skip empty or whitespace-only lines
+    if (Line->trim().empty())
+      continue;
+
+    if (!Line->starts_with(":"))
+      break;
     StringRef Str = Line->drop_front().rtrim();
     if (Str.equals_insensitive("outlined_hash_tree"))
       DataKind |= CGDataKind::FunctionOutlinedHashTree;
     else
       return error(cgdata_error::bad_header);
-    ++Line;
   }
 
   // We treat an empty header (that is a comment # only) as a valid header.
   if (Line.is_at_eof()) {
-    if (DataKind != CGDataKind::Unknown)
-      return error(cgdata_error::bad_header);
-    return Error::success();
+    if (DataKind == CGDataKind::Unknown)
+      return Error::success();
+    return error(cgdata_error::bad_header);
   }
 
   // The YAML docs follow after the header.
