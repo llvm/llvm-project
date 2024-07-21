@@ -64,7 +64,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr enumerate_view()
     requires default_initializable<_View>
   = default;
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit enumerate_view(_View __base) : __base_(std::move(__base)){};
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit enumerate_view(_View __base) : __base_(std::move(__base)) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto begin()
     requires(!__simple_view<_View>)
@@ -161,23 +161,23 @@ public:
     requires _Const && convertible_to<iterator_t<_View>, iterator_t<_Base>>
       : __current_(std::move(__i.__current_)), __pos_(__i.__pos_) {}
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABIconstexpr const iterator_t<_Base>& base() const& noexcept { return __current_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const iterator_t<_Base>& base() const& noexcept { return __current_; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABIconstexpr iterator_t<_Base> base() && { return std::move(__current_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Base> base() && { return std::move(__current_); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABIconstexpr difference_type index() const noexcept { return __pos_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr difference_type index() const noexcept { return __pos_; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABIconstexpr auto operator*() const { return __reference_type(__pos_, *__current_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator*() const { return __reference_type(__pos_, *__current_); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABIconstexpr __iterator& operator++() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
     ++__current_;
     ++__pos_;
     return *this;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABIconstexpr void operator++(int) { return ++*this; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) { return ++*this; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABIconstexpr __iterator operator++(int)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int)
     requires forward_range<_Base>
   {
     auto __temp = *this;
@@ -185,7 +185,7 @@ public:
     return __temp;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABIconstexpr __iterator& operator--()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator--()
     requires bidirectional_range<_Base>
   {
     --__current_;
@@ -193,7 +193,7 @@ public:
     return *this;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABIconstexpr __iterator operator--(int)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator--(int)
     requires bidirectional_range<_Base>
   {
     auto __temp = *this;
@@ -201,7 +201,7 @@ public:
     return *__temp;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABIconstexpr __iterator& operator+=(difference_type __n)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator+=(difference_type __n)
     requires random_access_range<_Base>
   {
     __current_ += __n;
@@ -209,7 +209,7 @@ public:
     return *this;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABIconstexpr __iterator& operator-=(difference_type __n)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator-=(difference_type __n)
     requires random_access_range<_Base>
   {
     __current_ -= __n;
@@ -217,7 +217,7 @@ public:
     return *this;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABIconstexpr auto operator[](difference_type __n) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator[](difference_type __n) const
     requires random_access_range<_Base>
   {
     return __reference_type(__pos_ + __n, __current_[__n]);
@@ -286,7 +286,7 @@ public:
     requires _Const && convertible_to<sentinel_t<_View>, sentinel_t<_Base>>
       : __end_(std::move(__other.__end_)) {}
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABIconstexpr sentinel_t<_Base> base() const { return __end_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr sentinel_t<_Base> base() const { return __end_; }
 
   template <bool _OtherConst>
     requires sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
