@@ -2509,12 +2509,10 @@ define <16 x i8> @test_unsigned_v16f32_v16i8(<16 x float> %f) {
 define <8 x i16> @test_unsigned_v8f32_v8i16(<8 x float> %f) {
 ; CHECK-LABEL: test_unsigned_v8f32_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    fcvtzu v1.4s, v1.4s
 ; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-NEXT:    umin v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    umin v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    fcvtzu v1.4s, v1.4s
+; CHECK-NEXT:    uqxtn v0.4h, v0.4s
+; CHECK-NEXT:    uqxtn2 v0.8h, v1.4s
 ; CHECK-NEXT:    ret
     %x = call <8 x i16> @llvm.fptoui.sat.v8f32.v8i16(<8 x float> %f)
     ret <8 x i16> %x
@@ -2523,17 +2521,14 @@ define <8 x i16> @test_unsigned_v8f32_v8i16(<8 x float> %f) {
 define <16 x i16> @test_unsigned_v16f32_v16i16(<16 x float> %f) {
 ; CHECK-LABEL: test_unsigned_v16f32_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v4.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    fcvtzu v1.4s, v1.4s
 ; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-NEXT:    fcvtzu v3.4s, v3.4s
 ; CHECK-NEXT:    fcvtzu v2.4s, v2.4s
-; CHECK-NEXT:    umin v1.4s, v1.4s, v4.4s
-; CHECK-NEXT:    umin v0.4s, v0.4s, v4.4s
-; CHECK-NEXT:    umin v3.4s, v3.4s, v4.4s
-; CHECK-NEXT:    umin v2.4s, v2.4s, v4.4s
-; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    uzp1 v1.8h, v2.8h, v3.8h
+; CHECK-NEXT:    fcvtzu v4.4s, v1.4s
+; CHECK-NEXT:    uqxtn v0.4h, v0.4s
+; CHECK-NEXT:    uqxtn v1.4h, v2.4s
+; CHECK-NEXT:    fcvtzu v2.4s, v3.4s
+; CHECK-NEXT:    uqxtn2 v0.8h, v4.4s
+; CHECK-NEXT:    uqxtn2 v1.8h, v2.4s
 ; CHECK-NEXT:    ret
     %x = call <16 x i16> @llvm.fptoui.sat.v16f32.v16i16(<16 x float> %f)
     ret <16 x i16> %x
@@ -2632,12 +2627,10 @@ define <16 x i8> @test_unsigned_v16f16_v16i8(<16 x half> %f) {
 ;
 ; CHECK-FP16-LABEL: test_unsigned_v16f16_v16i8:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    movi v2.2d, #0xff00ff00ff00ff
-; CHECK-FP16-NEXT:    fcvtzu v1.8h, v1.8h
 ; CHECK-FP16-NEXT:    fcvtzu v0.8h, v0.8h
-; CHECK-FP16-NEXT:    umin v1.8h, v1.8h, v2.8h
-; CHECK-FP16-NEXT:    umin v0.8h, v0.8h, v2.8h
-; CHECK-FP16-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
+; CHECK-FP16-NEXT:    fcvtzu v1.8h, v1.8h
+; CHECK-FP16-NEXT:    uqxtn v0.8b, v0.8h
+; CHECK-FP16-NEXT:    uqxtn2 v0.16b, v1.8h
 ; CHECK-FP16-NEXT:    ret
     %x = call <16 x i8> @llvm.fptoui.sat.v16f16.v16i8(<16 x half> %f)
     ret <16 x i8> %x
