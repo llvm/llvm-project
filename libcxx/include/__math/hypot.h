@@ -77,9 +77,9 @@ _LIBCPP_HIDE_FROM_ABI std::pair<_Real, _Real> __hypot_factors() {
     return static_cast<std::pair<_Real, _Real>>(__math::__hypot_factors<double>());
 #  else
     static_assert(sizeof(_Real) > sizeof(double));
-    static_assert(-16'381 == std::numeric_limits<_Real>::min_exponent);
-    static_assert(+16'384 == std::numeric_limits<_Real>::max_exponent);
-    return {0x1.0p+8'190l, 0x1.0p-9'000l};
+    static_assert(-16381 == std::numeric_limits<_Real>::min_exponent);
+    static_assert(+16384 == std::numeric_limits<_Real>::max_exponent);
+    return {0x1.0p+8190l, 0x1.0p-9000l};
 #  endif
   }
 }
