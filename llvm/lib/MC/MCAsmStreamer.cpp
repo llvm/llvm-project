@@ -2657,11 +2657,9 @@ void MCAsmStreamer::doFinalizationAtSectionEnd(MCSection *Section) {
 
 MCStreamer *llvm::createAsmStreamer(MCContext &Context,
                                     std::unique_ptr<formatted_raw_ostream> OS,
-                                    bool isVerboseAsm, bool useDwarfDirectory,
                                     MCInstPrinter *IP,
                                     std::unique_ptr<MCCodeEmitter> &&CE,
-                                    std::unique_ptr<MCAsmBackend> &&MAB,
-                                    bool ShowInst) {
+                                    std::unique_ptr<MCAsmBackend> &&MAB) {
   return new MCAsmStreamer(Context, std::move(OS), IP, std::move(CE),
                            std::move(MAB));
 }
