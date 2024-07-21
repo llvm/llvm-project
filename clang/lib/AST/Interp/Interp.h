@@ -29,6 +29,7 @@
 #include "State.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include <type_traits>
@@ -2733,6 +2734,13 @@ inline bool InvalidDeclRef(InterpState &S, CodePtr OpPC,
                            const DeclRefExpr *DR) {
   assert(DR);
   return CheckDeclRef(S, OpPC, DR);
+}
+
+inline bool SizelessVectorElementSize(InterpState &S, CodePtr OpPC) {
+  const SourceRange &ArgRange = S.Current->getRange(OpPC);
+  const Expr *E = S.Current->getExpr(OpPC);
+  S.FFDiag(E, diag::note_constexpr_non_const_vectorelements) << ArgRange;
+  return false;
 }
 
 inline bool Assume(InterpState &S, CodePtr OpPC) {

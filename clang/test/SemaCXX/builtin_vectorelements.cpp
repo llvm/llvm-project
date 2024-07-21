@@ -2,6 +2,7 @@
 
 // REQUIRES: aarch64-registered-target
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -std=c++20 -fsyntax-only -verify -disable-llvm-passes %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sve -std=c++20 -fsyntax-only -verify -disable-llvm-passes -fexperimental-new-constant-interpreter %s
 
 template <typename T>
 using VecT __attribute__((vector_size(16))) = T;
