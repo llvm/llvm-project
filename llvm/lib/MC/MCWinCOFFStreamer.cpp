@@ -28,6 +28,7 @@
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSymbolCOFF.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/MCWinCOFFObjectWriter.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -49,7 +50,11 @@ MCWinCOFFStreamer::MCWinCOFFStreamer(MCContext &Context,
       CurSymbol(nullptr) {
   auto *TO = Context.getTargetOptions();
   if (TO && TO->MCIncrementalLinkerCompatible)
-    getAssembler().setIncrementalLinkerCompatible(true);
+    getWriter().setIncrementalLinkerCompatible(true);
+}
+
+WinCOFFObjectWriter &MCWinCOFFStreamer::getWriter() {
+  return static_cast<WinCOFFObjectWriter &>(getAssembler().getWriter());
 }
 
 void MCWinCOFFStreamer::emitInstToData(const MCInst &Inst,
