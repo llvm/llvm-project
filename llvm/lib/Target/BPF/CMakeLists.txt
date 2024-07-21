@@ -22,7 +22,6 @@ add_llvm_target(BPFCodeGen
   GISel/BPFRegisterBankInfo.cpp
   GISel/BPFLegalizerInfo.cpp
   BPFAbstractMemberAccess.cpp
-  BPFAdjustOpt.cpp
   BPFAsmPrinter.cpp
   BPFASpaceCastSimplifyPass.cpp
   BPFCheckAndAdjustIR.cpp

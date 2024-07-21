@@ -81,6 +81,9 @@ public:
     return 5;
   }
 
+  bool needsPreserveRangeInfoInVerification() const {
+    return true;
+  }
 };
 
 } // end namespace llvm

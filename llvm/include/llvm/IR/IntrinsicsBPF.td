@@ -34,9 +34,6 @@ let TargetPrefix = "bpf" in {  // All intrinsics start with "llvm.bpf."
               [IntrNoMem]>;
   def int_bpf_passthrough : ClangBuiltin<"__builtin_bpf_passthrough">,
               Intrinsic<[llvm_any_ty], [llvm_i32_ty, llvm_any_ty], [IntrNoMem]>;
-  def int_bpf_compare : ClangBuiltin<"__builtin_bpf_compare">,
-              Intrinsic<[llvm_i1_ty], [llvm_i32_ty, llvm_anyint_ty, llvm_anyint_ty],
-              [IntrNoMem]>;
   def int_bpf_getelementptr_and_load : ClangBuiltin<"__builtin_bpf_getelementptr_and_load">,
               Intrinsic<[llvm_any_ty],
                         [llvm_ptr_ty,     // base ptr for getelementptr

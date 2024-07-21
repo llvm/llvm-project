@@ -137,10 +137,6 @@ void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         // SimplifyCFGPass(... .sinkCommonInsts(true))
         FPM.addPass(BPFPreserveStaticOffsetPass(false));
       });
-  PB.registerPipelineEarlySimplificationEPCallback(
-      [=](ModulePassManager &MPM, OptimizationLevel) {
-        MPM.addPass(BPFAdjustOptPass());
-      });
 }
 
 void BPFPassConfig::addIRPasses() {

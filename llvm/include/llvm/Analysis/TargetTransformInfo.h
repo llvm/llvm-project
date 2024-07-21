@@ -1788,6 +1788,10 @@ public:
   /// \return The maximum number of function arguments the target supports.
   unsigned getMaxNumArgs() const;
 
+  /// \returns True if the target wants to preserve range information to make
+  /// later code verification easier.
+  bool needsPreserveRangeInfoInVerification() const;
+
   /// @}
 
 private:
@@ -2181,6 +2185,7 @@ public:
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
   virtual bool hasArmWideBranch(bool Thumb) const = 0;
   virtual unsigned getMaxNumArgs() const = 0;
+  virtual bool needsPreserveRangeInfoInVerification() const = 0;
 };
 
 template <typename T>
@@ -2953,6 +2958,10 @@ public:
 
   unsigned getMaxNumArgs() const override {
     return Impl.getMaxNumArgs();
+  }
+
+  bool needsPreserveRangeInfoInVerification() const override {
+    return Impl.needsPreserveRangeInfoInVerification();
   }
 };
 

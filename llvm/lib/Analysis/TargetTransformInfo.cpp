@@ -1317,6 +1317,10 @@ unsigned TargetTransformInfo::getMaxNumArgs() const {
   return TTIImpl->getMaxNumArgs();
 }
 
+bool TargetTransformInfo::needsPreserveRangeInfoInVerification() const {
+  return TTIImpl->needsPreserveRangeInfoInVerification();
+}
+
 bool TargetTransformInfo::shouldExpandReduction(const IntrinsicInst *II) const {
   return TTIImpl->shouldExpandReduction(II);
 }
