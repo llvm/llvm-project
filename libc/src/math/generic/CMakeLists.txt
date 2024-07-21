@@ -4202,6 +4202,43 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fsqrt
+  SRCS
+    fsqrt.cpp
+  HDRS
+    ../fsqrt.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fsqrtl
+  SRCS
+    fsqrtl.cpp
+  HDRS
+    ../fsqrtl.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fsqrtf128
+  SRCS
+    fsqrtf128.cpp
+  HDRS
+    ../fsqrtf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   cbrtf
   SRCS
     cbrtf.cpp
