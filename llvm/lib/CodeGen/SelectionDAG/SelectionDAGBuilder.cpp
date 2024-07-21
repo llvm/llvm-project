@@ -44,7 +44,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -6707,11 +6707,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(0))));
     return;
   case Intrinsic::eh_sjlj_callsite: {
+    MachineModuleInfo &MMI = DAG.getMachineFunction().getMMI();
     ConstantInt *CI = cast<ConstantInt>(I.getArgOperand(0));
-    assert(DAG.getMMI()->getCurrentCallSite() == 0 &&
-           "Overlapping call sites!");
+    assert(MMI.getCurrentCallSite() == 0 && "Overlapping call sites!");
 
-    DAG.getMMI()->setCurrentCallSite(CI->getZExtValue());
+    MMI.setCurrentCallSite(CI->getZExtValue());
     return;
   }
   case Intrinsic::eh_sjlj_functioncontext: {

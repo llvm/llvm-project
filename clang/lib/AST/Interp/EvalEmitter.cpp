@@ -145,7 +145,7 @@ template <PrimType OpType> bool EvalEmitter::emitRet(const SourceInfo &Info) {
     return false;
 
   using T = typename PrimConv<OpType>::T;
-  EvalResult.setValue(S.Stk.pop<T>().toAPValue());
+  EvalResult.setValue(S.Stk.pop<T>().toAPValue(Ctx.getASTContext()));
   return true;
 }
 
@@ -181,7 +181,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
       return false;
     }
   } else {
-    EvalResult.setValue(Ptr.toAPValue());
+    EvalResult.setValue(Ptr.toAPValue(Ctx.getASTContext()));
   }
 
   return true;
@@ -285,7 +285,8 @@ void EvalEmitter::updateGlobalTemporaries() {
       APValue *Cached = Temp->getOrCreateValue(true);
 
       if (std::optional<PrimType> T = Ctx.classify(E->getType())) {
-        TYPE_SWITCH(*T, { *Cached = Ptr.deref<T>().toAPValue(); });
+        TYPE_SWITCH(
+            *T, { *Cached = Ptr.deref<T>().toAPValue(Ctx.getASTContext()); });
       } else {
         if (std::optional<APValue> APV =
                 Ptr.toRValue(Ctx, Temp->getTemporaryExpr()->getType()))

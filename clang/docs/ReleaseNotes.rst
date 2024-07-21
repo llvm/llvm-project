@@ -285,6 +285,8 @@ C++2c Feature Support
 
 - Implemented `P2963R3 Ordering of constraints involving fold expressions <https://wg21.link/P2963R3>`_.
 
+- Implemented `P3034R1 Module Declarations Shouldn’t be Macros <https://wg21.link/P3034R1>`_.
+
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -749,6 +751,9 @@ Improvements to Clang's time-trace
 
 - Clang now specifies that using ``auto`` in a lambda parameter is a C++14 extension when
   appropriate. (`#46059: <https://github.com/llvm/llvm-project/issues/46059>`_).
+
+- Clang now adds source file infomation for template instantiations as ``event["args"]["filename"]``. This
+  added behind an option ``-ftime-trace-verbose``. This is expected to increase the size of trace by 2-3 times.
 
 Improvements to Coverage Mapping
 --------------------------------
