@@ -1,4 +1,4 @@
-//===-- Implementation of vasprintf -----------------------------*- C++ -*-===//
+//===-- Implementation of asprintf -----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdio/vasprintf.h"
+#include "src/stdio/asprintf.h"
 #include "src/__support/arg_list.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/vasprintf_internal.h"
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(int, vasprintf,
-                   (char **__restrict ret, const char *format, va_list vlist)) {
+LLVM_LIBC_FUNCTION(int, asprintf,
+                   (char **__restrict buffer, const char *format, ...)) {
+  va_list vlist;
+  va_start(vlist, format);
   internal::ArgList args(vlist); // This holder class allows for easier copying
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
-  return printf_core::vasprintf_internal(ret, format, args);
+  va_end(vlist);
+  int ret = printf_core::vasprintf_internal(buffer, format, args);
+  return ret;
 }
 
 } // namespace LIBC_NAMESPACE
