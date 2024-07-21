@@ -269,15 +269,21 @@ totalordermag(T x, T y) {
 template <typename T>
 LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> getpayload(T x) {
   using FPBits = FPBits<T>;
+  using StorageType = typename FPBits::StorageType;
   FPBits x_bits(x);
 
   if (!x_bits.is_nan())
     return T(-1.0);
 
-  DyadicFloat<FPBits::STORAGE_LEN> payload(
-      Sign::POS, 0, x_bits.uintval() & (FPBits::FRACTION_MASK >> 1));
+  StorageType payload = x_bits.uintval() & (FPBits::FRACTION_MASK >> 1);
 
-  return static_cast<T>(payload);
+  if constexpr (is_big_int_v<StorageType>) {
+    DyadicFloat<FPBits::STORAGE_LEN> payload_dfloat(Sign::POS, 0, payload);
+
+    return static_cast<T>(payload_dfloat);
+  } else {
+    return static_cast<T>(payload);
+  }
 }
 
 template <bool IsSignaling, typename T>
