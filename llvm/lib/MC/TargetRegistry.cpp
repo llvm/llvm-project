@@ -11,8 +11,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <vector>
@@ -88,17 +90,26 @@ MCStreamer *Target::createMCObjectStreamer(
 
 MCStreamer *Target::createAsmStreamer(MCContext &Ctx,
                                       std::unique_ptr<formatted_raw_ostream> OS,
+                                      MCInstPrinter *IP,
+                                      std::unique_ptr<MCCodeEmitter> CE,
+                                      std::unique_ptr<MCAsmBackend> TAB) const {
+  formatted_raw_ostream &OSRef = *OS;
+  MCStreamer *S = llvm::createAsmStreamer(Ctx, std::move(OS), false, false, IP,
+                                          std::move(CE), std::move(TAB), false);
+  auto *TO = Ctx.getTargetOptions();
+  createAsmTargetStreamer(*S, OSRef, IP, TO && TO->AsmVerbose);
+  return S;
+}
+
+MCStreamer *Target::createAsmStreamer(MCContext &Ctx,
+                                      std::unique_ptr<formatted_raw_ostream> OS,
                                       bool IsVerboseAsm, bool UseDwarfDirectory,
-                                      MCInstPrinter *InstPrint,
+                                      MCInstPrinter *IP,
                                       std::unique_ptr<MCCodeEmitter> &&CE,
                                       std::unique_ptr<MCAsmBackend> &&TAB,
                                       bool ShowInst) const {
-  formatted_raw_ostream &OSRef = *OS;
-  MCStreamer *S = llvm::createAsmStreamer(
-      Ctx, std::move(OS), IsVerboseAsm, UseDwarfDirectory, InstPrint,
-      std::move(CE), std::move(TAB), ShowInst);
-  createAsmTargetStreamer(*S, OSRef, InstPrint, IsVerboseAsm);
-  return S;
+  return createAsmStreamer(Ctx, std::move(OS), IP, std::move(CE),
+                           std::move(TAB));
 }
 
 iterator_range<TargetRegistry::iterator> TargetRegistry::targets() {
