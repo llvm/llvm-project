@@ -344,36 +344,3 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     }
   }
 }
-
-void RuntimeLibcallsInfo::initCmpLibcallCCs() {
-  std::fill(CmpLibcallCCs, CmpLibcallCCs + RTLIB::UNKNOWN_LIBCALL,
-            ISD::SETCC_INVALID);
-  CmpLibcallCCs[RTLIB::OEQ_F32] = ISD::SETEQ;
-  CmpLibcallCCs[RTLIB::OEQ_F64] = ISD::SETEQ;
-  CmpLibcallCCs[RTLIB::OEQ_F128] = ISD::SETEQ;
-  CmpLibcallCCs[RTLIB::OEQ_PPCF128] = ISD::SETEQ;
-  CmpLibcallCCs[RTLIB::UNE_F32] = ISD::SETNE;
-  CmpLibcallCCs[RTLIB::UNE_F64] = ISD::SETNE;
-  CmpLibcallCCs[RTLIB::UNE_F128] = ISD::SETNE;
-  CmpLibcallCCs[RTLIB::UNE_PPCF128] = ISD::SETNE;
-  CmpLibcallCCs[RTLIB::OGE_F32] = ISD::SETGE;
-  CmpLibcallCCs[RTLIB::OGE_F64] = ISD::SETGE;
-  CmpLibcallCCs[RTLIB::OGE_F128] = ISD::SETGE;
-  CmpLibcallCCs[RTLIB::OGE_PPCF128] = ISD::SETGE;
-  CmpLibcallCCs[RTLIB::OLT_F32] = ISD::SETLT;
-  CmpLibcallCCs[RTLIB::OLT_F64] = ISD::SETLT;
-  CmpLibcallCCs[RTLIB::OLT_F128] = ISD::SETLT;
-  CmpLibcallCCs[RTLIB::OLT_PPCF128] = ISD::SETLT;
-  CmpLibcallCCs[RTLIB::OLE_F32] = ISD::SETLE;
-  CmpLibcallCCs[RTLIB::OLE_F64] = ISD::SETLE;
-  CmpLibcallCCs[RTLIB::OLE_F128] = ISD::SETLE;
-  CmpLibcallCCs[RTLIB::OLE_PPCF128] = ISD::SETLE;
-  CmpLibcallCCs[RTLIB::OGT_F32] = ISD::SETGT;
-  CmpLibcallCCs[RTLIB::OGT_F64] = ISD::SETGT;
-  CmpLibcallCCs[RTLIB::OGT_F128] = ISD::SETGT;
-  CmpLibcallCCs[RTLIB::OGT_PPCF128] = ISD::SETGT;
-  CmpLibcallCCs[RTLIB::UO_F32] = ISD::SETNE;
-  CmpLibcallCCs[RTLIB::UO_F64] = ISD::SETNE;
-  CmpLibcallCCs[RTLIB::UO_F128] = ISD::SETNE;
-  CmpLibcallCCs[RTLIB::UO_PPCF128] = ISD::SETNE;
-}

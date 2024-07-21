@@ -1714,7 +1714,6 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
 
-  MachineModuleInfo &MMI = MF.getMMI();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   bool EmitCFI = AFI->needsDwarfUnwindInfo(MF);
   bool EmitAsyncCFI = AFI->needsAsyncDwarfUnwindInfo(MF);
@@ -1882,7 +1881,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                       MachineInstr::FrameSetup, false, NeedsWinCFI, &HasWinCFI);
       if (EmitCFI) {
         // Label used to tie together the PROLOG_LABEL and the MachineMoves.
-        MCSymbol *FrameLabel = MMI.getContext().createTempSymbol();
+        MCSymbol *FrameLabel = MF.getContext().createTempSymbol();
         // Encode the stack size of the leaf function.
         unsigned CFIIndex = MF.addFrameInst(
             MCCFIInstruction::cfiDefCfaOffset(FrameLabel, NumBytes));
