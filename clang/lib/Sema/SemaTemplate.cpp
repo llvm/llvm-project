@@ -1691,10 +1691,7 @@ public:
   using inherited::TransformTemplateTypeParmType;
   QualType TransformTemplateTypeParmType(TypeLocBuilder &TLB,
                                          TemplateTypeParmTypeLoc TL, bool) {
-    assert(TL.getDecl()->getDepth() <= TemplateDepth &&
-           "Nothing should reference a value below the actual template depth, "
-           "depth is likely wrong");
-    if (TL.getDecl()->getDepth() != TemplateDepth)
+    if (TL.getDecl()->getDepth() < TemplateDepth)
       Result = true;
     return inherited::TransformTemplateTypeParmType(
         TLB, TL,

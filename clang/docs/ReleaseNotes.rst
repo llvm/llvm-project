@@ -158,6 +158,8 @@ Bug Fixes to C++ Support
 
 - Fixed a crash when an expression with a dependent ``__typeof__`` type is used as the operand of a unary operator. (#GH97646)
 - Fixed a failed assertion when checking invalid delete operator declaration. (#GH96191)
+- Fixed an assertion failure about a constraint of a friend function template references to a value with greater
+  template depth than the friend function template. (#GH98258)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
