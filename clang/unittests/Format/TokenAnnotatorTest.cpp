@@ -1931,9 +1931,9 @@ TEST_F(TokenAnnotatorTest, UnderstandsFunctionAnnotations) {
   ASSERT_EQ(Tokens.size(), 12u) << Tokens;
   EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_Unknown);
 
-  Tokens = annotate("FOO()();");
-  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
-  EXPECT_TOKEN(Tokens[2], tok::r_paren, TT_Unknown);
+  Tokens = annotate("FOO(bar)();");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_Unknown);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsFunctionDeclarationNames) {
