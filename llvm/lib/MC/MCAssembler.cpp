@@ -84,10 +84,7 @@ MCAssembler::MCAssembler(MCContext &Context,
                          std::unique_ptr<MCCodeEmitter> Emitter,
                          std::unique_ptr<MCObjectWriter> Writer)
     : Context(Context), Backend(std::move(Backend)),
-      Emitter(std::move(Emitter)), Writer(std::move(Writer)) {
-  VersionInfo.Major = 0; // Major version == 0 for "none specified"
-  DarwinTargetVariantVersionInfo.Major = 0;
-}
+      Emitter(std::move(Emitter)), Writer(std::move(Writer)) {}
 
 MCAssembler::~MCAssembler() = default;
 
@@ -101,10 +98,6 @@ void MCAssembler::reset() {
   ThumbFuncs.clear();
   BundleAlignSize = 0;
   ELFHeaderEFlags = 0;
-  VersionInfo.Major = 0;
-  VersionInfo.SDKVersion = VersionTuple();
-  DarwinTargetVariantVersionInfo.Major = 0;
-  DarwinTargetVariantVersionInfo.SDKVersion = VersionTuple();
 
   // reset objects owned by us
   if (getBackendPtr())
