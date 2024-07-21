@@ -49,12 +49,16 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=AMDGPU-LTO-TEMPS
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --wrapper-verbose --dry-run --save-temps -O2 \
 // RUN:   --lto-in-process --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=AMDGPU-LTO-IN-PROC
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --wrapper-verbose --dry-run --save-temps -O2 \
+// RUN:   --lto-debug-pass-manager --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=AMDGPU-LTO-OPTS
 
 // AMDGPU-LTO-TEMPS-NOT: Linking bitcode files
 // AMDGPU-LTO-TEMPS: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030 -O2 -Wl,--no-undefined {{.*}}.o -save-temps
 
 // AMDGPU-LTO-IN-PROC: Linking bitcode files
 // AMDGPU-LTO-IN-PROC: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030 -O2 -Wl,--no-undefined {{.*}}.s -save-temps
+
+// AMDGPU-LTO-OPTS: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030 -O2 -Wl,--no-undefined {{.*}}.o -save-temps -Wl,--save-temps -Wl,--lto-debug-pass-manager
 
 // RUN: clang-offload-packager -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu \

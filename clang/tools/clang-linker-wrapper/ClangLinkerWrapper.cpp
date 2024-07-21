@@ -581,8 +581,12 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
   if (SaveTemps)
     CmdArgs.push_back("-save-temps");
 
-  if (SaveTemps && linkerSupportsLTO(Args))
-    CmdArgs.push_back("-Wl,--save-temps");
+  if (linkerSupportsLTO(Args)) {
+    if (SaveTemps)
+      CmdArgs.push_back("-Wl,--save-temps");
+    if (Args.hasArg(OPT_lto_debug_pass_manager))
+      CmdArgs.push_back("-Wl,--lto-debug-pass-manager");
+  }
 
   if (Args.hasArg(OPT_embed_bitcode))
     CmdArgs.push_back("-Wl,--lto-emit-llvm");
@@ -766,6 +770,8 @@ std::unique_ptr<lto::LTO> createLTO(
 
   // TODO: Handle remark files
   Conf.HasWholeProgramVisibility = Args.hasArg(OPT_whole_program);
+
+  Conf.DebugPassManager = Args.hasArg(OPT_lto_debug_pass_manager);
 
   return std::make_unique<lto::LTO>(std::move(Conf), Backend);
 }
@@ -1201,7 +1207,8 @@ bundleLinkedOutput(ArrayRef<OffloadingImage> Images, const ArgList &Args,
   }
 }
 
-/// Returns a new ArgList containg arguments used for the device linking phase.
+/// Returns a new ArgList containing arguments used for the device linking
+/// phase.
 DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
                              const InputArgList &Args) {
   DerivedArgList DAL = DerivedArgList(DerivedArgList(Args));

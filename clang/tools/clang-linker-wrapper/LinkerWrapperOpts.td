@@ -105,6 +105,8 @@ def offload_opt_eq_minus : Joined<["--", "-"], "offload-opt=">, Flags<[HelpHidde
 // Arguments for LTO
 def lto_in_process : Flag<["--"], "lto-in-process">,
   Flags<[WrapperOnlyOption]>, HelpText<"Use in-process LTO even if linker supports LTO">;
+def lto_debug_pass_manager : Flag<["--"], "lto-debug-pass-manager">,
+  Flags<[WrapperOnlyOption]>, HelpText<"Prints debug information for the new pass manager during LTO">;
 
 // Standard linker flags also used by the linker wrapper.
 def sysroot_EQ : Joined<["--"], "sysroot=">, HelpText<"Set the system root">;
