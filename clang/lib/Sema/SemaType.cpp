@@ -143,7 +143,8 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_PreserveAll:                                             \
   case ParsedAttr::AT_M68kRTD:                                                 \
   case ParsedAttr::AT_PreserveNone:                                            \
-  case ParsedAttr::AT_RISCVVectorCC
+  case ParsedAttr::AT_RISCVVectorCC:                                           \
+  case ParsedAttr::AT_RISCVVLSCC
 
 // Function type attributes.
 #define FUNCTION_TYPE_ATTRS_CASELIST                                           \
@@ -7617,6 +7618,8 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<PreserveNoneAttr>(Ctx, Attr);
   case ParsedAttr::AT_RISCVVectorCC:
     return createSimpleAttr<RISCVVectorCCAttr>(Ctx, Attr);
+  case ParsedAttr::AT_RISCVVLSCC:
+    return ::new (Ctx) RISCVVLSCCAttr(Ctx, Attr, /*dummy*/ 0);
   }
   llvm_unreachable("unexpected attribute kind!");
 }
@@ -8102,6 +8105,27 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
   const FunctionType *fn = unwrapped.get();
   CallingConv CCOld = fn->getCallConv();
   Attr *CCAttr = getCCTypeAttr(S.Context, attr);
+
+  if (attr.getKind() == ParsedAttr::AT_RISCVVLSCC) {
+    // If the riscv_abi_vlen doesn't have any argument, default ABI_VLEN is 128.
+    unsigned ABIVLen = 128;
+    if (attr.getNumArgs() &&
+        !S.checkUInt32Argument(attr, attr.getArgAsExpr(0), ABIVLen))
+      return false;
+    if (ABIVLen < 32 || ABIVLen > 65536) {
+      S.Diag(attr.getLoc(), diag::err_argument_invalid_range)
+          << ABIVLen << 32 << 65536;
+      return false;
+    }
+    if (!llvm::isPowerOf2_64(ABIVLen)) {
+      S.Diag(attr.getLoc(), diag::err_argument_not_power_of_2);
+      return false;
+    }
+
+    auto EI = unwrapped.get()->getExtInfo().withLog2RISCVABIVLen(
+        llvm::Log2_64(ABIVLen));
+    type = unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
+  }
 
   if (CCOld != CC) {
     // Error out on when there's already an attribute on the type

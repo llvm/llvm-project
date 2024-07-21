@@ -3053,6 +3053,7 @@ enum CXCallingConv {
   CXCallingConv_M68kRTD = 19,
   CXCallingConv_PreserveNone = 20,
   CXCallingConv_RISCVVectorCall = 21,
+  CXCallingConv_RISCVVLSCall = 22,
 
   CXCallingConv_Invalid = 100,
   CXCallingConv_Unexposed = 200

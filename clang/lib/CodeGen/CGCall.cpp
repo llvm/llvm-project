@@ -76,6 +76,7 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
   case CC_PreserveNone: return llvm::CallingConv::PreserveNone;
     // clang-format off
   case CC_RISCVVectorCall: return llvm::CallingConv::RISCV_VectorCall;
+  case CC_RISCVVLSCall: return llvm::CallingConv::RISCV_VLSCall;
     // clang-format on
   }
 }
@@ -265,6 +266,9 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
 
   if (D->hasAttr<RISCVVectorCCAttr>())
     return CC_RISCVVectorCall;
+
+  if (D->hasAttr<RISCVVLSCCAttr>())
+    return CC_RISCVVLSCall;
 
   return CC_C;
 }
@@ -861,6 +865,7 @@ CGFunctionInfo *CGFunctionInfo::create(unsigned llvmCC, bool instanceMethod,
   FI->HasExtParameterInfos = !paramInfos.empty();
   FI->getArgsBuffer()[0].type = resultType;
   FI->MaxVectorWidth = 0;
+  FI->Log2RISCVABIVLen = info.getLog2RISCVABIVLen();
   for (unsigned i = 0, e = argTypes.size(); i != e; ++i)
     FI->getArgsBuffer()[i + 1].type = argTypes[i];
   for (unsigned i = 0, e = paramInfos.size(); i != e; ++i)

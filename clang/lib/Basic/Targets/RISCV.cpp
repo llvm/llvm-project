@@ -516,6 +516,7 @@ RISCVTargetInfo::checkCallingConvention(CallingConv CC) const {
     return CCCR_Warning;
   case CC_C:
   case CC_RISCVVectorCall:
+  case CC_RISCVVLSCall:
     return CCCR_OK;
   }
 }

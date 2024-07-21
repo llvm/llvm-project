@@ -551,7 +551,7 @@ createPPC64_SVR4_TargetCodeGenInfo(CodeGenModule &CGM, PPC64_SVR4_ABIKind Kind,
 
 std::unique_ptr<TargetCodeGenInfo>
 createRISCVTargetCodeGenInfo(CodeGenModule &CGM, unsigned XLen, unsigned FLen,
-                             bool EABI);
+                             unsigned ABIVLen, bool EABI);
 
 std::unique_ptr<TargetCodeGenInfo>
 createCommonSPIRTargetCodeGenInfo(CodeGenModule &CGM);

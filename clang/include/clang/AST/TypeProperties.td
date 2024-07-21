@@ -313,6 +313,9 @@ let Class = FunctionType in {
   def : Property<"cmseNSCall", Bool> {
     let Read = [{ node->getExtInfo().getCmseNSCall() }];
   }
+  def : Property<"Log2RISCVABIVLen", UInt32> {
+    let Read = [{ node->getExtInfo().getLog2RISCVABIVLen() }];
+  }
 }
 
 let Class = FunctionNoProtoType in {
@@ -320,7 +323,7 @@ let Class = FunctionNoProtoType in {
     auto extInfo = FunctionType::ExtInfo(noReturn, hasRegParm, regParm,
                                          callingConvention, producesResult,
                                          noCallerSavedRegs, noCfCheck,
-                                         cmseNSCall);
+                                         cmseNSCall, Log2RISCVABIVLen);
     return ctx.getFunctionNoProtoType(returnType, extInfo);
   }]>;
 }
@@ -363,7 +366,7 @@ let Class = FunctionProtoType in {
     auto extInfo = FunctionType::ExtInfo(noReturn, hasRegParm, regParm,
                                          callingConvention, producesResult,
                                          noCallerSavedRegs, noCfCheck,
-                                         cmseNSCall);
+                                         cmseNSCall, Log2RISCVABIVLen);
     FunctionProtoType::ExtProtoInfo epi;
     epi.ExtInfo = extInfo;
     epi.Variadic = variadic;

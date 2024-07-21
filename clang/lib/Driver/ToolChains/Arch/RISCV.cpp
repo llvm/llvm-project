@@ -95,6 +95,10 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       CPUFastVectorUnaligned = true;
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_mriscv_abi_vlen_EQ))
+    Features.push_back(
+        Args.MakeArgString(Twine("+abi-vlen-") + A->getValue() + "b"));
+
 // Handle features corresponding to "-ffixed-X" options
 #define RESERVE_REG(REG)                                                       \
   if (Args.hasArg(options::OPT_ffixed_##REG))                                  \

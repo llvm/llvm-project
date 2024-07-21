@@ -2225,6 +2225,21 @@ void Clang::AddRISCVTargetArgs(const ArgList &Args,
           << A->getSpelling() << Val;
     }
   }
+
+  if (Arg *A = Args.getLastArg(options::OPT_mriscv_abi_vlen_EQ)) {
+    StringRef ABIVLenStr = A->getValue();
+    unsigned ABIVLen;
+    const Driver &D = getToolChain().getDriver();
+    if (ABIVLenStr.getAsInteger(10, ABIVLen) || ABIVLen < 32 ||
+        ABIVLen > 65536 || !llvm::isPowerOf2_64(ABIVLen)) {
+      D.Diag(diag::err_drv_invalid_value)
+          << A->getOption().getName() << ABIVLenStr;
+      return;
+    }
+
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-mriscv-abi-vlen=") + A->getValue()));
+  }
 }
 
 void Clang::AddSparcTargetArgs(const ArgList &Args,
