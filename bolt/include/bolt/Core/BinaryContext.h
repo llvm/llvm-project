@@ -1452,10 +1452,7 @@ public:
     std::unique_ptr<MCObjectWriter> OW = MAB->createObjectWriter(OS);
     std::unique_ptr<MCStreamer> Streamer(TheTarget->createMCObjectStreamer(
         *TheTriple, *Ctx, std::unique_ptr<MCAsmBackend>(MAB), std::move(OW),
-        std::unique_ptr<MCCodeEmitter>(MCE), *STI,
-        /* RelaxAll */ false,
-        /* IncrementalLinkerCompatible */ false,
-        /* DWARFMustBeAtTheEnd */ false));
+        std::unique_ptr<MCCodeEmitter>(MCE), *STI));
     return Streamer;
   }
 

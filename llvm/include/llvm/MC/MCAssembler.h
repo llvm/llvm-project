@@ -18,7 +18,6 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/VersionTuple.h"
@@ -85,7 +84,6 @@ private:
   bool HasLayout = false;
   bool RelaxAll = false;
   bool SubsectionsViaSymbols = false;
-  bool IncrementalLinkerCompatible = false;
 
   SectionListType Sections;
 
@@ -121,10 +119,6 @@ private:
   // Access to the flags is necessary in cases where assembler directives affect
   // which flags to be set.
   unsigned ELFHeaderEFlags = 0;
-
-  /// Used to communicate Linker Optimization Hint information between
-  /// the Streamer and the .o writer
-  MCLOHContainer LOHContainer;
 
   VersionInfoType VersionInfo;
   VersionInfoType DarwinTargetVariantVersionInfo;
@@ -303,13 +297,6 @@ public:
   bool getSubsectionsViaSymbols() const { return SubsectionsViaSymbols; }
   void setSubsectionsViaSymbols(bool Value) { SubsectionsViaSymbols = Value; }
 
-  bool isIncrementalLinkerCompatible() const {
-    return IncrementalLinkerCompatible;
-  }
-  void setIncrementalLinkerCompatible(bool Value) {
-    IncrementalLinkerCompatible = Value;
-  }
-
   bool hasLayout() const { return HasLayout; }
   bool getRelaxAll() const { return RelaxAll; }
   void setRelaxAll(bool Value) { RelaxAll = Value; }
@@ -339,14 +326,6 @@ public:
 
   std::vector<std::vector<std::string>> &getLinkerOptions() {
     return LinkerOptions;
-  }
-
-  // FIXME: This is a total hack, this should not be here. Once things are
-  // factored so that the streamer has direct access to the .o writer, it can
-  // disappear.
-  MCLOHContainer &getLOHContainer() { return LOHContainer; }
-  const MCLOHContainer &getLOHContainer() const {
-    return const_cast<MCAssembler *>(this)->getLOHContainer();
   }
 
   struct CGProfileEntry {
