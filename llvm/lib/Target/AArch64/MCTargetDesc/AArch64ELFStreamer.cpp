@@ -332,8 +332,7 @@ void AArch64TargetELFStreamer::finish() {
 
 MCTargetStreamer *
 llvm::createAArch64AsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
-                                     MCInstPrinter *InstPrint,
-                                     bool isVerboseAsm) {
+                                     MCInstPrinter *InstPrint) {
   return new AArch64TargetAsmStreamer(S, OS);
 }
 

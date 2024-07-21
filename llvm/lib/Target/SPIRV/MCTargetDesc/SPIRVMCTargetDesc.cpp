@@ -51,7 +51,7 @@ createSPIRVMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
 
 static MCTargetStreamer *createTargetAsmStreamer(MCStreamer &S,
                                                  formatted_raw_ostream &,
-                                                 MCInstPrinter *, bool) {
+                                                 MCInstPrinter *) {
   return new SPIRVTargetStreamer(S);
 }
 
