@@ -55,6 +55,7 @@ void MachObjectWriter::reset() {
   LocalSymbolData.clear();
   ExternalSymbolData.clear();
   UndefinedSymbolData.clear();
+  LOHContainer.reset();
   MCObjectWriter::reset();
 }
 
@@ -839,7 +840,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   }
 
   // Add the loh load command size, if used.
-  uint64_t LOHRawSize = Asm.getLOHContainer().getEmitSize(Asm, *this);
+  uint64_t LOHRawSize = LOHContainer.getEmitSize(Asm, *this);
   uint64_t LOHSize = alignTo(LOHRawSize, is64Bit() ? 8 : 4);
   if (LOHSize) {
     ++NumLoadCommands;
@@ -1063,7 +1064,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
 #ifndef NDEBUG
     unsigned Start = W.OS.tell();
 #endif
-    Asm.getLOHContainer().emit(Asm, *this);
+    LOHContainer.emit(Asm, *this);
     // Pad to a multiple of the pointer size.
     W.OS.write_zeros(
         offsetToAlignment(LOHRawSize, is64Bit() ? Align(8) : Align(4)));
