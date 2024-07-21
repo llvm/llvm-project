@@ -17,9 +17,9 @@ uint64_t get_bits(double x) {
 }
 
 // BENCHMARK() expects a function that with no parameters that returns a
-// uint64_t representing the latency. Defining each benchmark as a macro uses a
-// lambda to allow us to switch the implementation of `sin()` to easily register
-// NVPTX benchmarks.
+// uint64_t representing the latency. Defining each benchmark using macro that
+// expands to a lambda to allow us to switch the implementation of `sin()` to
+// easily register NVPTX benchmarks.
 #define BM_RANDOM_INPUT(Func)                                                  \
   []() {                                                                       \
     uint64_t total_time = 0;                                                   \

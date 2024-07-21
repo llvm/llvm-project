@@ -156,16 +156,6 @@ public:
 
     return total_time / num_runs;
   }
-
-  static uint64_t run_perf_normal(Func f) {
-    return run_perf_in_range(f, FPBits::min_normal().uintval(),
-                             FPBits::max_normal().uintval());
-  }
-
-  static uint64_t run_perf_denormal(Func f) {
-    return run_perf_in_range(f, StorageType(0),
-                             FPBits::max_subnormal().uintval());
-  }
 };
 
 } // namespace benchmarks
