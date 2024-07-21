@@ -296,6 +296,7 @@ ScriptLexer::Token ScriptLexer::getKeywordorIdentifier(StringRef s) {
       {"ENTRY", Kind::Entry},
       {"INPUT", Kind::Input},
       {"GROUP", Kind::Group},
+      {"INCLUDE", Kind::Include},
       {"MEMORY", Kind::Memory},
       {"OUTPUT", Kind::Output},
       {"SEARCH_DIR", Kind::SearchDir},
@@ -319,7 +320,7 @@ ScriptLexer::Token ScriptLexer::getKeywordorIdentifier(StringRef s) {
       {"KEEP", Kind::Keep},
       {"INPUT_SECTION_FLAGS", Kind::InputSectionFlags},
       {"OVERLAY", Kind::Overlay},
-      {"Noload", Kind::Noload},
+      {"NOLOAD", Kind::Noload},
       {"COPY", Kind::Copy},
       {"INFO", Kind::Info},
       {"OVERWRITE_SECTIONS", Kind::OverwriteSections},
@@ -448,22 +449,22 @@ void ScriptLexer::maybeSplitExpr() {
   tokens.insert(tokens.begin() + pos, v.begin(), v.end());
 }
 
-StringRef ScriptLexer::next() {
+ScriptLexer::Token ScriptLexer::next() {
   maybeSplitExpr();
 
   if (errorCount())
-    return "";
+    return {Kind::Error, ""};
   if (atEOF()) {
     setError("unexpected EOF");
-    return "";
+    return {Kind::Eof, ""};
   }
-  return tokens[pos++].val;
+  return tokens[pos++];
 }
 
-StringRef ScriptLexer::peek() {
-  StringRef tok = next();
+ScriptLexer::Token ScriptLexer::peek() {
+  Token tok = next();
   if (errorCount())
-    return "";
+    return {Kind::Error, ""};
   pos = pos - 1;
   return tok;
 }
@@ -492,9 +493,9 @@ void ScriptLexer::skip() { (void)next(); }
 void ScriptLexer::expect(StringRef expect) {
   if (errorCount())
     return;
-  StringRef tok = next();
+  Token tok = next();
   if (tok != expect)
-    setError(expect + " expected, but got " + tok);
+    setError(expect + " expected, but got " + tok.val);
 }
 
 // Returns true if S encloses T.

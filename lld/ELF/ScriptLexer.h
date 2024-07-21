@@ -22,6 +22,9 @@ public:
   struct Token {
     Kind kind;
     StringRef val;
+    inline bool operator==(StringRef other) { return val == other; }
+
+    inline bool operator!=(StringRef other) { return val != other; }
   };
 
   explicit ScriptLexer(MemoryBufferRef mb);
@@ -30,8 +33,8 @@ public:
   void tokenize(MemoryBufferRef mb);
   StringRef skipSpace(StringRef s);
   bool atEOF();
-  StringRef next();
-  StringRef peek();
+  Token next();
+  Token peek();
   void skip();
   bool consume(StringRef tok);
   void expect(StringRef expect);
