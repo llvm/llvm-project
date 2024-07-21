@@ -102,7 +102,6 @@ void MCAssembler::reset() {
   ThumbFuncs.clear();
   BundleAlignSize = 0;
   ELFHeaderEFlags = 0;
-  LOHContainer.reset();
   VersionInfo.Major = 0;
   VersionInfo.SDKVersion = VersionTuple();
   DarwinTargetVariantVersionInfo.Major = 0;
@@ -115,7 +114,6 @@ void MCAssembler::reset() {
     getEmitterPtr()->reset();
   if (getWriterPtr())
     getWriterPtr()->reset();
-  getLOHContainer().reset();
 }
 
 bool MCAssembler::registerSection(MCSection &Section) {
