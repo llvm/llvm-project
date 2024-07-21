@@ -11,8 +11,8 @@
 
 #include "FEnvImpl.h"
 #include "FPBits.h"
+#include "dyadic_float.h"
 
-#include "FEnvImpl.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
@@ -274,7 +274,10 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> getpayload(T x) {
   if (!x_bits.is_nan())
     return T(-1.0);
 
-  return T(x_bits.uintval() & (FPBits::FRACTION_MASK >> 1));
+  DyadicFloat<FPBits::STORAGE_LEN> payload(
+      Sign::POS, 0, x_bits.uintval() & (FPBits::FRACTION_MASK >> 1));
+
+  return static_cast<T>(payload);
 }
 
 template <bool IsSignaling, typename T>
