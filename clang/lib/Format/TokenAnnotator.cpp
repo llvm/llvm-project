@@ -5638,6 +5638,23 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     }
     if (BeforeClosingBrace && (BeforeClosingBrace->is(tok::comma) ||
                                BeforeClosingBrace->isTrailingComment())) {
+      // Except let's not always break after the open brace/parenthesis/array.
+      // A style option allowing keeping trailing comments together with the
+      // open token can be desirable. E.g -
+      // int a[2][2] = {
+      //   { // [0][...]
+      //     0, // [0][0]
+      //     1, // [0][1]
+      //   },
+      //   { // [1][...]
+      //     2, // [1][0]
+      //     3, // [1][1]
+      //   }
+      // };
+      if (Right.isTrailingComment() &&
+          Style.AlignTrailingComments.Kind == FormatStyle::TCAS_Leave) {
+        return false;
+      }
       return true;
     }
   }
@@ -6049,10 +6066,13 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   if (Right.isTrailingComment()) {
     // We rely on MustBreakBefore being set correctly here as we should not
     // change the "binding" behavior of a comment.
-    // The first comment in a braced lists is always interpreted as belonging to
-    // the first list element. Otherwise, it should be placed outside of the
-    // list.
-    return Left.is(BK_BracedInit) ||
+    // The first comment in a braced lists is usually interpreted as belonging
+    // to the first list element, unless the style is to leave trailing comments
+    // alone. Otherwise, it should be placed outside of the list.
+    bool AfterBracedInitAndBrakeable =
+        Left.is(BK_BracedInit) &&
+        Style.AlignTrailingComments.Kind != FormatStyle::TCAS_Leave;
+    return AfterBracedInitAndBrakeable ||
            (Left.is(TT_CtorInitializerColon) && Right.NewlinesBefore > 0 &&
             Style.BreakConstructorInitializers == FormatStyle::BCIS_AfterColon);
   }
