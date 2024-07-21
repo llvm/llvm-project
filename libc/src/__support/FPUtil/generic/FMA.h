@@ -164,10 +164,12 @@ fma(InType x, InType y, InType z) {
   int z_exp = 0;
 
   // Denormal scaling = 2^(fraction length).
+  constexpr InStorageType IMPLICIT_MASK =
+      InFPBits::SIG_MASK - InFPBits::FRACTION_MASK;
+
   constexpr InType DENORMAL_SCALING =
-      InFPBits(static_cast<InStorageType>(InFPBits::FRACTION_LEN +
-                                          InFPBits::EXP_BIAS)
-               << InFPBits::SIG_LEN)
+      InFPBits::create_value(
+          Sign::POS, InFPBits::FRACTION_LEN + InFPBits::EXP_BIAS, IMPLICIT_MASK)
           .get_val();
 
   // Normalize denormal inputs.
