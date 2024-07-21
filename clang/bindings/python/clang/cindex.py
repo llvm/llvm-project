@@ -2487,6 +2487,20 @@ class Type(Structure):
         """
         return conf.lib.clang_getCanonicalType(self)
 
+    def get_unqualified(self):
+        """
+        Return the unqualified variant of the given type, removing as little sugar as possible.
+        """
+
+        return conf.lib.clang_getUnqualifiedType(self)
+
+    def get_non_reference(self):
+        """
+        Returns the type that the reference refers to, otherwise the type itself.
+        """
+
+        return conf.lib.clang_getNonReferenceType(self)
+
     def is_const_qualified(self):
         """Determine whether a Type has the "const" qualifier set.
 
@@ -3738,6 +3752,8 @@ functionList = [
     ("clang_getFieldDeclBitWidth", [Cursor], c_int),
     ("clang_getCanonicalCursor", [Cursor], Cursor, Cursor.from_cursor_result),
     ("clang_getCanonicalType", [Type], Type, Type.from_result),
+    ("clang_getUnqualifiedType", [Type], Type, Type.from_result),
+    ("clang_getNonReferenceType", [Type], Type, Type.from_result),
     ("clang_getChildDiagnostics", [Diagnostic], c_object_p),
     ("clang_getCompletionAvailability", [c_void_p], c_int),
     ("clang_getCompletionBriefComment", [c_void_p], _CXString, _CXString.from_result),
