@@ -1,11 +1,11 @@
 # REQUIRES: shell
 # UNSUPPORTED: system-windows
 
-# Merge a binary file (e.g., a linked executable) having concatnated cgdata (__llvm_outline)
+# Merge a binary file (e.g., a linked executable) having concatenated cgdata (__llvm_outline)
 
 RUN: split-file %s %t
 
-# Synthesize two set of raw cgdata without the header (24 byte) from the indexed cgdata.
+# Synthesize two sets of raw cgdata without the header (24 byte) from the indexed cgdata.
 # Concatenate them in merge-concat.ll
 RUN: llvm-cgdata dump -binary %t/raw-1.cgtext -o %t/raw-1.cgdata
 RUN: od -t x1 -j 24 -An %t/raw-1.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-1-bytes.txt
