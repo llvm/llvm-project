@@ -15,6 +15,8 @@
 #include "src/__support/threads/sleep.h"
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_join.h"
+#include "src/pthread/pthread_rwlock_clockrdlock.h"
+#include "src/pthread/pthread_rwlock_clockwrlock.h"
 #include "src/pthread/pthread_rwlock_destroy.h"
 #include "src/pthread/pthread_rwlock_init.h"
 #include "src/pthread/pthread_rwlock_rdlock.h"
@@ -112,6 +114,8 @@ static void nullptr_test() {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_wrlock(nullptr), EINVAL);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedrdlock(nullptr, &ts), EINVAL);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedwrlock(nullptr, &ts), EINVAL);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_clockrdlock(nullptr, &ts), EINVAL);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_clockwrlock(nullptr, &ts), EINVAL);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_tryrdlock(nullptr), EINVAL);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_trywrlock(nullptr), EINVAL);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(nullptr), EINVAL);
@@ -159,15 +163,25 @@ static void unusual_timespec_test() {
   timespec ts = {0, -1};
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedrdlock(&rwlock, &ts), EINVAL);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedwrlock(&rwlock, &ts), EINVAL);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_clockrdlock(&rwlock, &ts), EINVAL);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_clockwrlock(&rwlock, &ts), EINVAL);
   ts.tv_nsec = 1'000'000'000;
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedrdlock(&rwlock, &ts), EINVAL);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_clockrdlock(&rwlock, &ts), EINVAL);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_clockwrlock(&rwlock, &ts), EINVAL);
   ts.tv_nsec += 1;
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedwrlock(&rwlock, &ts), EINVAL);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_clockrdlock(&rwlock, &ts), EINVAL);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_clockwrlock(&rwlock, &ts), EINVAL);
   ts.tv_nsec = 0;
   ts.tv_sec = -1;
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedrdlock(&rwlock, &ts),
             ETIMEDOUT);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedwrlock(&rwlock, &ts),
+            ETIMEDOUT);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_clockrdlock(&rwlock, &ts),
+            ETIMEDOUT);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_clockwrlock(&rwlock, &ts),
             ETIMEDOUT);
 }
 
@@ -184,6 +198,9 @@ static void timedlock_with_deadlock_test() {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedwrlock(&rwlock, &ts),
             ETIMEDOUT);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedrdlock(&rwlock, &ts), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_clockwrlock(&rwlock, &ts),
+            ETIMEDOUT);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_clockrdlock(&rwlock, &ts), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(&rwlock), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(&rwlock), 0);
   // notice that ts is already expired, but the following should still succeed.
@@ -270,9 +287,11 @@ enum class Operation : int {
   WRITE = 1,
   TIMED_READ = 2,
   TIMED_WRITE = 3,
-  TRY_READ = 4,
-  TRY_WRITE = 5,
-  COUNT = 6
+  CLOCK_READ = 4,
+  CLOCK_WRITE = 5,
+  TRY_READ = 6,
+  TRY_WRITE = 7,
+  COUNT = 8
 };
 
 LIBC_NAMESPACE::RawMutex *io_mutex;
@@ -353,6 +372,22 @@ static void randomized_thread_operation(SharedData *data, ThreadGuard &guard) {
   case Operation::TIMED_WRITE: {
     timespec ts = get_ts();
     if (LIBC_NAMESPACE::pthread_rwlock_timedwrlock(&data->lock, &ts) == 0) {
+      write_ops();
+      LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock);
+    }
+    break;
+  }
+  case Operation::CLOCK_READ: {
+    timespec ts = get_ts();
+    if (LIBC_NAMESPACE::pthread_rwlock_clockrdlock(&data->lock, &ts) == 0) {
+      read_ops();
+      LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock);
+    }
+    break;
+  }
+  case Operation::CLOCK_WRITE: {
+    timespec ts = get_ts();
+    if (LIBC_NAMESPACE::pthread_rwlock_clockwrlock(&data->lock, &ts) == 0) {
       write_ops();
       LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock);
     }
