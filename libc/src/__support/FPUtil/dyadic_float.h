@@ -14,11 +14,13 @@
 #include "multiply_add.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/big_int.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE::fputil {
+namespace LIBC_NAMESPACE_DECL {
+namespace fputil {
 
 // A generic class to perform computations of high precision floating points.
 // We store the value in dyadic format, including 3 fields:
@@ -371,6 +373,7 @@ LIBC_INLINE constexpr DyadicFloat<Bits> mul_pow_2(const DyadicFloat<Bits> &a,
   return result;
 }
 
-} // namespace LIBC_NAMESPACE::fputil
+} // namespace fputil
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_DYADIC_FLOAT_H

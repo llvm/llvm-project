@@ -673,6 +673,9 @@ public:
   /// Whether this declaration comes from explicit global module.
   bool isFromExplicitGlobalModule() const;
 
+  /// Whether this declaration comes from a named module.
+  bool isInNamedModule() const;
+
   /// Return true if this declaration has an attribute which acts as
   /// definition of the entity, such as 'alias' or 'ifunc'.
   bool hasDefiningAttr() const;
@@ -1484,6 +1487,27 @@ class DeclContext {
   /// Number of bits in DeclContextBitfields.
   enum { NumDeclContextBits = 13 };
 
+  /// Stores the bits used by NamespaceDecl.
+  /// If modified NumNamespaceDeclBits and the accessor
+  /// methods in NamespaceDecl should be updated appropriately.
+  class NamespaceDeclBitfields {
+    friend class NamespaceDecl;
+    /// For the bits in DeclContextBitfields
+    LLVM_PREFERRED_TYPE(DeclContextBitfields)
+    uint64_t : NumDeclContextBits;
+
+    /// True if this is an inline namespace.
+    LLVM_PREFERRED_TYPE(bool)
+    uint64_t IsInline : 1;
+
+    /// True if this is a nested-namespace-definition.
+    LLVM_PREFERRED_TYPE(bool)
+    uint64_t IsNested : 1;
+  };
+
+  /// Number of inherited and non-inherited bits in NamespaceDeclBitfields.
+  enum { NumNamespaceDeclBits = NumDeclContextBits + 2 };
+
   /// Stores the bits used by TagDecl.
   /// If modified NumTagDeclBits and the accessor
   /// methods in TagDecl should be updated appropriately.
@@ -1982,6 +2006,7 @@ protected:
   /// 8 bytes with static_asserts in the ctor of DeclContext.
   union {
     DeclContextBitfields DeclContextBits;
+    NamespaceDeclBitfields NamespaceDeclBits;
     TagDeclBitfields TagDeclBits;
     EnumDeclBitfields EnumDeclBits;
     RecordDeclBitfields RecordDeclBits;
@@ -1995,6 +2020,8 @@ protected:
 
     static_assert(sizeof(DeclContextBitfields) <= 8,
                   "DeclContextBitfields is larger than 8 bytes!");
+    static_assert(sizeof(NamespaceDeclBitfields) <= 8,
+                  "NamespaceDeclBitfields is larger than 8 bytes!");
     static_assert(sizeof(TagDeclBitfields) <= 8,
                   "TagDeclBitfields is larger than 8 bytes!");
     static_assert(sizeof(EnumDeclBitfields) <= 8,

@@ -21,6 +21,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/DynamicCheckerFunctions.h"
 #include "lldb/Expression/UserExpression.h"
@@ -63,6 +64,7 @@
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Target/VerboseTrapFrameRecognizer.h"
 #include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -460,12 +462,10 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_private_state_listener_sp(
           Listener::MakeListener("lldb.process.internal_state_listener")),
       m_mod_id(), m_process_unique_id(0), m_thread_index_id(0),
-      m_thread_id_to_index_id_map(), m_exit_status(-1), m_exit_string(),
-      m_exit_status_mutex(), m_thread_mutex(), m_thread_list_real(this),
-      m_thread_list(this), m_thread_plans(*this), m_extended_thread_list(this),
-      m_extended_thread_stop_id(0), m_queue_list(this), m_queue_list_stop_id(0),
-      m_watchpoint_resource_list(), m_notifications(), m_image_tokens(),
-      m_breakpoint_site_list(), m_dynamic_checkers_up(),
+      m_thread_id_to_index_id_map(), m_exit_status(-1),
+      m_thread_list_real(*this), m_thread_list(*this), m_thread_plans(*this),
+      m_extended_thread_list(*this), m_extended_thread_stop_id(0),
+      m_queue_list(this), m_queue_list_stop_id(0),
       m_unix_signals_sp(unix_signals_sp), m_abi_sp(), m_process_input_reader(),
       m_stdio_communication("process.stdio"), m_stdio_communication_mutex(),
       m_stdin_forward(false), m_stdout_data(), m_stderr_data(),
@@ -524,7 +524,11 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
   if (!value_sp->OptionWasSet() && platform_cache_line_size != 0)
     value_sp->SetValueAs(platform_cache_line_size);
 
+  // FIXME: Frame recognizer registration should not be done in Target.
+  // We should have a plugin do the registration instead, for example, a
+  // common C LanguageRuntime plugin.
   RegisterAssertFrameRecognizer(this);
+  RegisterVerboseTrapFrameRecognizer(*this);
 }
 
 Process::~Process() {
@@ -1183,8 +1187,8 @@ void Process::UpdateThreadListIfNeeded() {
       // mutex between the call to UpdateThreadList(...) and the
       // os->UpdateThreadList(...) so it doesn't change on us
       ThreadList &old_thread_list = m_thread_list;
-      ThreadList real_thread_list(this);
-      ThreadList new_thread_list(this);
+      ThreadList real_thread_list(*this);
+      ThreadList new_thread_list(*this);
       // Always update the thread list with the protocol specific thread list,
       // but only update if "true" is returned
       if (UpdateThreadList(m_thread_list_real, real_thread_list)) {
@@ -2547,6 +2551,14 @@ ModuleSP Process::ReadModuleFromMemory(const FileSpec &file_spec,
   ModuleSP module_sp(new Module(file_spec, ArchSpec()));
   if (module_sp) {
     Status error;
+    std::unique_ptr<Progress> progress_up;
+    // Reading an ObjectFile from a local corefile is very fast,
+    // only print a progress update if we're reading from a
+    // live session which might go over gdb remote serial protocol.
+    if (IsLiveDebugSession())
+      progress_up = std::make_unique<Progress>(
+          "Reading binary from memory", file_spec.GetFilename().GetString());
+
     ObjectFile *objfile = module_sp->GetMemoryObjectFile(
         shared_from_this(), header_addr, error, size_to_read);
     if (objfile)
@@ -4238,7 +4250,22 @@ bool Process::ProcessEventData::ShouldStop(Event *event_ptr,
   return still_should_stop;
 }
 
+bool Process::ProcessEventData::ForwardEventToPendingListeners(
+    Event *event_ptr) {
+  // STDIO and the other async event notifications should always be forwarded.
+  if (event_ptr->GetType() != Process::eBroadcastBitStateChanged)
+    return true;
+
+  // For state changed events, if the update state is zero, we are handling
+  // this on the private state thread.  We should wait for the public event.
+  return m_update_state == 1;
+}
+
 void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
+  // We only have work to do for state changed events:
+  if (event_ptr->GetType() != Process::eBroadcastBitStateChanged)
+    return;
+
   ProcessSP process_sp(m_process_wp.lock());
 
   if (!process_sp)

@@ -9,13 +9,14 @@
 #define LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_MEMSET_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_generic.h"
 #include "src/string/memory_utils/utils.h" // Ptr, CPtr
 
 #include <stddef.h> // size_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 [[maybe_unused]] LIBC_INLINE static void
 inline_memset_aarch64(Ptr dst, uint8_t value, size_t count) {
@@ -56,6 +57,6 @@ inline_memset_aarch64(Ptr dst, uint8_t value, size_t count) {
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_MEMSET_H

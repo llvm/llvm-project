@@ -229,7 +229,7 @@ class ShrinkWrap : public MachineFunctionPass {
     MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
     Save = nullptr;
     Restore = nullptr;
-    MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+    MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
     MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
     ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
     EntryFreq = MBFI->getEntryFreq();
@@ -261,7 +261,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
-    AU.addRequired<MachineBlockFrequencyInfo>();
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachinePostDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
@@ -288,7 +288,7 @@ char ShrinkWrap::ID = 0;
 char &llvm::ShrinkWrapID = ShrinkWrap::ID;
 
 INITIALIZE_PASS_BEGIN(ShrinkWrap, DEBUG_TYPE, "Shrink Wrap Pass", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)

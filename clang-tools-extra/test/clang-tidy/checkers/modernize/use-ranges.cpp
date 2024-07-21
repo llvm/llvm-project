@@ -1,116 +1,11 @@
-// RUN: %check_clang_tidy -std=c++20 %s modernize-use-ranges %t
-// RUN: %check_clang_tidy -std=c++23 %s modernize-use-ranges %t -check-suffixes=,CPP23
+// RUN: %check_clang_tidy -std=c++20 %s modernize-use-ranges %t -- -- -I %S/Inputs/use-ranges/
+// RUN: %check_clang_tidy -std=c++23 %s modernize-use-ranges %t -check-suffixes=,CPP23 -- -I %S/Inputs/use-ranges/
 
 // CHECK-FIXES: #include <algorithm>
 // CHECK-FIXES-CPP23: #include <numeric>
 // CHECK-FIXES: #include <ranges>
 
-namespace std {
-
-template <typename T> class vector {
-public:
-  using iterator = T *;
-  using const_iterator = const T *;
-  using reverse_iterator = T*;
-  using reverse_const_iterator = const T*;
-
-  constexpr const_iterator begin() const;
-  constexpr const_iterator end() const;
-  constexpr const_iterator cbegin() const;
-  constexpr const_iterator cend() const;
-  constexpr iterator begin();
-  constexpr iterator end();
-  constexpr reverse_const_iterator rbegin() const;
-  constexpr reverse_const_iterator rend() const;
-  constexpr reverse_const_iterator crbegin() const;
-  constexpr reverse_const_iterator crend() const;
-  constexpr reverse_iterator rbegin();
-  constexpr reverse_iterator rend();
-};
-
-template <typename Container> constexpr auto begin(const Container &Cont) {
-  return Cont.begin();
-}
-
-template <typename Container> constexpr auto begin(Container &Cont) {
-  return Cont.begin();
-}
-
-template <typename Container> constexpr auto end(const Container &Cont) {
-  return Cont.end();
-}
-
-template <typename Container> constexpr auto end(Container &Cont) {
-  return Cont.end();
-}
-
-template <typename Container> constexpr auto cbegin(const Container &Cont) {
-  return Cont.cbegin();
-}
-
-template <typename Container> constexpr auto cend(const Container &Cont) {
-  return Cont.cend();
-}
-
-template <typename Container> constexpr auto rbegin(const Container &Cont) {
-  return Cont.rbegin();
-}
-
-template <typename Container> constexpr auto rbegin(Container &Cont) {
-  return Cont.rbegin();
-}
-
-template <typename Container> constexpr auto rend(const Container &Cont) {
-  return Cont.rend();
-}
-
-template <typename Container> constexpr auto rend(Container &Cont) {
-  return Cont.rend();
-}
-
-template <typename Container> constexpr auto crbegin(const Container &Cont) {
-  return Cont.crbegin();
-}
-
-template <typename Container> constexpr auto crend(const Container &Cont) {
-  return Cont.crend();
-}
-// Find
-template< class InputIt, class T >
-InputIt find( InputIt first, InputIt last, const T& value );
-
-// Reverse
-template <typename Iter> void reverse(Iter begin, Iter end);
-
-// Includes
-template <class InputIt1, class InputIt2>
-bool includes(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 last2);
-
-// IsPermutation
-template <class ForwardIt1, class ForwardIt2>
-bool is_permutation(ForwardIt1 first1, ForwardIt1 last1, ForwardIt2 first2);
-template <class ForwardIt1, class ForwardIt2>
-bool is_permutation(ForwardIt1 first1, ForwardIt1 last1, ForwardIt2 first2,
-                    ForwardIt2 last2);
-
-// Equal
-template <class InputIt1, class InputIt2>
-bool equal(InputIt1 first1, InputIt1 last1, InputIt2 first2);
-
-template <class InputIt1, class InputIt2>
-bool equal(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 last2);
-
-template <class InputIt1, class InputIt2, class BinaryPred>
-bool equal(InputIt1 first1, InputIt1 last1,
-           InputIt2 first2, InputIt2 last2, BinaryPred p) {
-  // Need a definition to suppress undefined_internal_type when invoked with lambda
-  return true;
-}
-
-template <class ForwardIt, class T>
-void iota(ForwardIt first, ForwardIt last, T value);
-
-} // namespace std
+#include "fake_std.h"
 
 void Positives() {
   std::vector<int> I, J;
@@ -162,6 +57,10 @@ void Positives() {
   // CHECK-MESSAGES-CPP23: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES-CPP23: std::ranges::iota(I, 0);
 
+  std::rotate(I.begin(), I.begin() + 2, I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::rotate(I, I.begin() + 2);
+
   using std::find;
   namespace my_std = std;
 
@@ -179,15 +78,15 @@ void Reverse(){
   std::vector<int> I, J;
   std::find(I.rbegin(), I.rend(), 0);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
-  // CHECK-FIXES: std::ranges::find(std::views::reverse(I), 0);
+  // CHECK-FIXES: std::ranges::find(std::ranges::reverse_view(I), 0);
 
   std::equal(std::rbegin(I), std::rend(I), J.begin(), J.end());
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
-  // CHECK-FIXES: std::ranges::equal(std::views::reverse(I), J);
+  // CHECK-FIXES: std::ranges::equal(std::ranges::reverse_view(I), J);
 
   std::equal(I.begin(), I.end(), std::crbegin(J), std::crend(J));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
-  // CHECK-FIXES: std::ranges::equal(I, std::views::reverse(J));
+  // CHECK-FIXES: std::ranges::equal(I, std::ranges::reverse_view(J));
 }
 
 void Negatives() {
@@ -205,4 +104,11 @@ void Negatives() {
   std::equal(I.begin(), I.end(), J.end(), J.end());
   std::equal(std::rbegin(I), std::rend(I), std::rend(J), std::rbegin(J));
   std::equal(I.begin(), J.end(), I.begin(), I.end());
+
+  // std::rotate expects the full range in the 1st and 3rd argument.
+  // Anyone writing this code has probably written a bug, but this isn't the
+  // purpose of this check.
+  std::rotate(I.begin(), I.end(), I.begin() + 2);
+  // Pathological, but probably shouldn't diagnose this
+  std::rotate(I.begin(), I.end(), I.end() + 0);
 }
