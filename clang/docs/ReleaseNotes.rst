@@ -826,6 +826,8 @@ Bug Fixes in This Version
 - ``__is_trivially_equality_comparable`` no longer returns true for types which
   have a constrained defaulted comparison operator (#GH89293).
 
+- Fixed defaulted `operator==` doesn't lookup its scope properly (#GH97087).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
