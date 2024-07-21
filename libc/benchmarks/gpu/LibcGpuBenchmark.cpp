@@ -80,9 +80,10 @@ const char *header_format_string =
 const char *output_format_string =
     "%-20s |%8ld |%8ld |%8ld |%11ld |%12ld |%9ld |%9d |\n";
 
+constexpr auto GREEN = "\033[32m";
+constexpr auto RESET = "\033[0m";
+
 void print_results(Benchmark *b) {
-  constexpr auto GREEN = "\033[32m";
-  constexpr auto RESET = "\033[0m";
 
   BenchmarkResult result;
   cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
@@ -102,25 +103,18 @@ void print_results(Benchmark *b) {
       all_results.time_sum.load(cpp::MemoryOrder::RELAXED) / num_threads;
   cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
 
-  log << GREEN << "[ RUN      ] " << RESET << b->get_suite_name() << '.'
-      << b->get_test_name() << '\n';
-  log << GREEN << "[       OK ] " << RESET << b->get_suite_name() << '.'
-      << b->get_test_name() << ": " << result.cycles << " cycles, "
-      << result.min << " min, " << result.max << " max, "
-      << result.total_iterations << " iterations, " << result.total_time
-      << " ns, " << static_cast<uint64_t>(result.standard_deviation)
-      << " stddev (num threads: " << num_threads << ")\n";
-
   printf(output_format_string, b->get_test_name().data(), result.cycles,
          result.min, result.max, result.total_iterations, result.total_time,
          static_cast<uint64_t>(result.standard_deviation), num_threads);
 }
 
 void print_header() {
+  printf("%s", GREEN);
   printf("Running Suite: %-10s\n", benchmarks[0]->get_suite_name().data());
+  printf("%s", RESET);
   printf(header_format_string);
   printf("---------------------------------------------------------------------"
-         "----------------------\n");
+         "--------------------------------\n");
 }
 
 void Benchmark::run_benchmarks() {
