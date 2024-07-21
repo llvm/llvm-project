@@ -526,62 +526,16 @@ public:
   /// \param OW The stream object.
   /// \param Emitter The target independent assembler object.Takes ownership.
   MCStreamer *createMCObjectStreamer(const Triple &T, MCContext &Ctx,
+                                     std::unique_ptr<MCAsmBackend> TAB,
+                                     std::unique_ptr<MCObjectWriter> OW,
+                                     std::unique_ptr<MCCodeEmitter> Emitter,
+                                     const MCSubtargetInfo &STI) const;
+  MCStreamer *createMCObjectStreamer(const Triple &T, MCContext &Ctx,
                                      std::unique_ptr<MCAsmBackend> &&TAB,
                                      std::unique_ptr<MCObjectWriter> &&OW,
                                      std::unique_ptr<MCCodeEmitter> &&Emitter,
                                      const MCSubtargetInfo &STI, bool, bool,
-                                     bool) const {
-    MCStreamer *S = nullptr;
-    switch (T.getObjectFormat()) {
-    case Triple::UnknownObjectFormat:
-      llvm_unreachable("Unknown object format");
-    case Triple::COFF:
-      assert((T.isOSWindows() || T.isUEFI()) &&
-             "only Windows and UEFI COFF are supported");
-      S = COFFStreamerCtorFn(Ctx, std::move(TAB), std::move(OW),
-                             std::move(Emitter));
-      break;
-    case Triple::MachO:
-      if (MachOStreamerCtorFn)
-        S = MachOStreamerCtorFn(Ctx, std::move(TAB), std::move(OW),
-                                std::move(Emitter));
-      else
-        S = createMachOStreamer(Ctx, std::move(TAB), std::move(OW),
-                                std::move(Emitter), false);
-      break;
-    case Triple::ELF:
-      if (ELFStreamerCtorFn)
-        S = ELFStreamerCtorFn(T, Ctx, std::move(TAB), std::move(OW),
-                              std::move(Emitter));
-      else
-        S = createELFStreamer(Ctx, std::move(TAB), std::move(OW),
-                              std::move(Emitter));
-      break;
-    case Triple::Wasm:
-      S = createWasmStreamer(Ctx, std::move(TAB), std::move(OW),
-                             std::move(Emitter));
-      break;
-    case Triple::GOFF:
-      S = createGOFFStreamer(Ctx, std::move(TAB), std::move(OW),
-                             std::move(Emitter));
-      break;
-    case Triple::XCOFF:
-      S = XCOFFStreamerCtorFn(T, Ctx, std::move(TAB), std::move(OW),
-                              std::move(Emitter));
-      break;
-    case Triple::SPIRV:
-      S = createSPIRVStreamer(Ctx, std::move(TAB), std::move(OW),
-                              std::move(Emitter));
-      break;
-    case Triple::DXContainer:
-      S = createDXContainerStreamer(Ctx, std::move(TAB), std::move(OW),
-                                    std::move(Emitter));
-      break;
-    }
-    if (ObjectTargetStreamerCtorFn)
-      ObjectTargetStreamerCtorFn(*S, STI);
-    return S;
-  }
+                                     bool) const;
 
   MCStreamer *createAsmStreamer(MCContext &Ctx,
                                 std::unique_ptr<formatted_raw_ostream> OS,
@@ -589,14 +543,7 @@ public:
                                 MCInstPrinter *InstPrint,
                                 std::unique_ptr<MCCodeEmitter> &&CE,
                                 std::unique_ptr<MCAsmBackend> &&TAB,
-                                bool ShowInst) const {
-    formatted_raw_ostream &OSRef = *OS;
-    MCStreamer *S = llvm::createAsmStreamer(
-        Ctx, std::move(OS), IsVerboseAsm, UseDwarfDirectory, InstPrint,
-        std::move(CE), std::move(TAB), ShowInst);
-    createAsmTargetStreamer(*S, OSRef, InstPrint, IsVerboseAsm);
-    return S;
-  }
+                                bool ShowInst) const;
 
   MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
                                             formatted_raw_ostream &OS,
