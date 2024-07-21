@@ -541,11 +541,14 @@ public:
 
   MCStreamer *createAsmStreamer(MCContext &Ctx,
                                 std::unique_ptr<formatted_raw_ostream> OS,
-                                bool IsVerboseAsm, bool UseDwarfDirectory,
-                                MCInstPrinter *InstPrint,
-                                std::unique_ptr<MCCodeEmitter> &&CE,
-                                std::unique_ptr<MCAsmBackend> &&TAB,
-                                bool ShowInst) const;
+                                MCInstPrinter *IP,
+                                std::unique_ptr<MCCodeEmitter> CE,
+                                std::unique_ptr<MCAsmBackend> TAB) const;
+  MCStreamer *
+  createAsmStreamer(MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> OS,
+                    bool IsVerboseAsm, bool UseDwarfDirectory,
+                    MCInstPrinter *IP, std::unique_ptr<MCCodeEmitter> &&CE,
+                    std::unique_ptr<MCAsmBackend> &&TAB, bool ShowInst) const;
 
   MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
                                             formatted_raw_ostream &OS,
