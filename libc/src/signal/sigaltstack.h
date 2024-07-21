@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_SIGNAL_SIGALTSTACK_H
 #define LLVM_LIBC_SRC_SIGNAL_SIGALTSTACK_H
 
+#include "src/__support/macros/config.h"
 #include <signal.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int sigaltstack(const stack_t *__restrict ss, stack_t *__restrict oss);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SIGNAL_SIGALTSTACK_H

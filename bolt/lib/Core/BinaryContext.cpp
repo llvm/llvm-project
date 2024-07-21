@@ -20,7 +20,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -2368,10 +2367,7 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   std::unique_ptr<MCObjectWriter> OW = MAB->createObjectWriter(VecOS);
   std::unique_ptr<MCStreamer> Streamer(TheTarget->createMCObjectStreamer(
       *TheTriple, *LocalCtx, std::unique_ptr<MCAsmBackend>(MAB), std::move(OW),
-      std::unique_ptr<MCCodeEmitter>(MCEInstance.MCE.release()), *STI,
-      /*RelaxAll=*/false,
-      /*IncrementalLinkerCompatible=*/false,
-      /*DWARFMustBeAtTheEnd=*/false));
+      std::unique_ptr<MCCodeEmitter>(MCEInstance.MCE.release()), *STI));
 
   Streamer->initSections(false, *STI);
 
@@ -2404,20 +2400,11 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
     Streamer->emitLabel(SplitStartLabel);
     emitFunctionBody(*Streamer, BF, FF, /*EmitCodeOnly=*/true);
     Streamer->emitLabel(SplitEndLabel);
-    // To avoid calling MCObjectStreamer::flushPendingLabels() which is
-    // private
-    Streamer->emitBytes(StringRef(""));
-    Streamer->switchSection(Section);
   }
-
-  // To avoid calling MCObjectStreamer::flushPendingLabels() which is private or
-  // MCStreamer::Finish(), which does more than we want
-  Streamer->emitBytes(StringRef(""));
 
   MCAssembler &Assembler =
       static_cast<MCObjectStreamer *>(Streamer.get())->getAssembler();
-  MCAsmLayout Layout(Assembler);
-  Assembler.layout(Layout);
+  Assembler.layout();
 
   // Obtain fragment sizes.
   std::vector<uint64_t> FragmentSizes;
@@ -2531,6 +2518,16 @@ BinaryFunction *BinaryContext::getBinaryFunctionAtAddress(uint64_t Address) {
       return BF;
   }
   return nullptr;
+}
+
+/// Deregister JumpTable registered at a given \p Address and delete it.
+void BinaryContext::deleteJumpTable(uint64_t Address) {
+  assert(JumpTables.count(Address) && "Must have a jump table at address");
+  JumpTable *JT = JumpTables.at(Address);
+  for (BinaryFunction *Parent : JT->Parents)
+    Parent->JumpTables.erase(Address);
+  JumpTables.erase(Address);
+  delete JT;
 }
 
 DebugAddressRangesVector BinaryContext::translateModuleAddressRanges(

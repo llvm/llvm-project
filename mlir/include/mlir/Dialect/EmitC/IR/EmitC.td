@@ -908,6 +908,48 @@ def EmitC_SubOp : EmitC_BinaryOp<"sub", [CExpression]> {
   let hasVerifier = 1;
 }
 
+def EmitC_MemberOp : EmitC_Op<"member"> {
+  let summary = "Member operation";
+  let description = [{
+    With the `member` operation the member access operator `.` can be
+    applied.
+
+    Example:
+
+    ```mlir
+    %0 = "emitc.member" (%arg0) {member = "a"}
+        : (!emitc.opaque<"mystruct">) -> i32
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<StrAttr, "the member to access">:$member,
+    EmitC_OpaqueType:$operand
+  );
+  let results = (outs EmitCType);
+}
+
+def EmitC_MemberOfPtrOp : EmitC_Op<"member_of_ptr"> {
+  let summary = "Member of pointer operation";
+  let description = [{
+    With the `member_of_ptr` operation the member access operator `->`
+    can be applied.
+
+    Example:
+
+    ```mlir
+    %0 = "emitc.member_of_ptr" (%arg0) {member = "a"}
+        : (!emitc.ptr<!emitc.opaque<"mystruct">>) -> i32
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<StrAttr, "the member to access">:$member,
+    AnyTypeOf<[EmitC_OpaqueType,EmitC_PointerType]>:$operand
+  );
+  let results = (outs EmitCType);
+}
+
 def EmitC_ConditionalOp : EmitC_Op<"conditional",
     [AllTypesMatch<["true_value", "false_value", "result"]>, CExpression]> {
   let summary = "Conditional (ternary) operation";

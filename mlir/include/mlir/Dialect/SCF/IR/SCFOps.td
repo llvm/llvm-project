@@ -303,8 +303,7 @@ def ForallOp : SCF_Op<"forall", [
        DeclareOpInterfaceMethods<LoopLikeOpInterface,
           ["getInitsMutable", "getRegionIterArgs", "getLoopInductionVars", 
            "getLoopLowerBounds", "getLoopUpperBounds", "getLoopSteps",
-           "replaceWithAdditionalYields", "promoteIfSingleIteration",
-           "yieldTiledValuesAndReplace"]>,
+           "promoteIfSingleIteration", "yieldTiledValuesAndReplace"]>,
        RecursiveMemoryEffects,
        SingleBlockImplicitTerminator<"scf::InParallelOp">,
        DeclareOpInterfaceMethods<RegionBranchOpInterface>,
@@ -1160,7 +1159,7 @@ def IndexSwitchOp : SCF_Op<"index_switch", [RecursiveMemoryEffects,
     Block &getCaseBlock(unsigned idx);
   }];
 
-  let hasFolder = 1;
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 

@@ -22,9 +22,9 @@ casx [%i0], %l6, %o2
 ! LEON: error: instruction requires a CPU feature not currently enabled
 casxl [%i0], %l6, %o2
 
-! V8: error: malformed ASI tag, must be a constant integer expression
+! V8: error: instruction requires a CPU feature not currently enabled
 ! V9: casxa [%i0] %asi, %l6, %o2   ! encoding: [0xd5,0xf6,0x20,0x16]
-! LEON: error: malformed ASI tag, must be a constant integer expression
+! LEON: error: instruction requires a CPU feature not currently enabled
 casxa [%i0] %asi, %l6, %o2
 
 ! V8: error: instruction requires a CPU feature not currently enabled
@@ -37,7 +37,7 @@ casxa [%i0] 0x80, %l6, %o2
 ! LEON: error: instruction requires a CPU feature not currently enabled
 casxa [%i0] (0x40+0x40), %l6, %o2
 
-! V8: error: malformed ASI tag, must be a constant integer expression
+! V8: error: instruction requires a CPU feature not currently enabled
 ! V9: casa [%i0] %asi, %l6, %o2   ! encoding: [0xd5,0xe6,0x20,0x16]
 ! LEON: error: malformed ASI tag, must be a constant integer expression
 casa [%i0] %asi, %l6, %o2

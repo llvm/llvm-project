@@ -5339,8 +5339,7 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
   std::vector<DominatorTree::UpdateType> Updates;
 
   SmallSetVector<BasicBlock *, 8> Preds(pred_begin(BB), pred_end(BB));
-  for (unsigned i = 0, e = Preds.size(); i != e; ++i) {
-    auto *Predecessor = Preds[i];
+  for (BasicBlock *Predecessor : Preds) {
     Instruction *TI = Predecessor->getTerminator();
     IRBuilder<> Builder(TI);
     if (auto *BI = dyn_cast<BranchInst>(TI)) {
@@ -7574,11 +7573,31 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
     return false;
 
   if (C->isNullValue() || isa<UndefValue>(C)) {
-    // Only look at the first use, avoid hurting compile time with long uselists
-    auto *Use = cast<Instruction>(*I->user_begin());
+    // Only look at the first use we can handle, avoid hurting compile time with
+    // long uselists
+    auto FindUse = llvm::find_if(I->users(), [](auto *U) {
+      auto *Use = cast<Instruction>(U);
+      // Change this list when we want to add new instructions.
+      switch (Use->getOpcode()) {
+      default:
+        return false;
+      case Instruction::GetElementPtr:
+      case Instruction::Ret:
+      case Instruction::BitCast:
+      case Instruction::Load:
+      case Instruction::Store:
+      case Instruction::Call:
+      case Instruction::CallBr:
+      case Instruction::Invoke:
+        return true;
+      }
+    });
+    if (FindUse == I->user_end())
+      return false;
+    auto *Use = cast<Instruction>(*FindUse);
     // Bail out if Use is not in the same BB as I or Use == I or Use comes
-    // before I in the block. The latter two can be the case if Use is a PHI
-    // node.
+    // before I in the block. The latter two can be the case if Use is a
+    // PHI node.
     if (Use->getParent() != I->getParent() || Use == I || Use->comesBefore(I))
       return false;
 

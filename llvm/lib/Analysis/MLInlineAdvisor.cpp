@@ -211,14 +211,12 @@ void MLInlineAdvisor::onPassEntry(LazyCallGraph::SCC *CurSCC) {
   // care about the nature of the Edge (call or ref). `FunctionLevels`-wise, we
   // record them at the same level as the original node (this is a choice, may
   // need revisiting).
+  // - nodes are only deleted at the end of a call graph walk where they are
+  // batch deleted, so we shouldn't see any dead nodes here.
   while (!NodesInLastSCC.empty()) {
     const auto *N = *NodesInLastSCC.begin();
+    assert(!N->isDead());
     NodesInLastSCC.erase(N);
-    // The Function wrapped by N could have been deleted since we last saw it.
-    if (N->isDead()) {
-      assert(!N->getFunction().isDeclaration());
-      continue;
-    }
     EdgeCount += getLocalCalls(N->getFunction());
     const auto NLevel = FunctionLevels.at(N);
     for (const auto &E : *(*N)) {
@@ -256,11 +254,9 @@ void MLInlineAdvisor::onPassExit(LazyCallGraph::SCC *CurSCC) {
   EdgesOfLastSeenNodes = 0;
 
   // Check on nodes that were in SCC onPassEntry
-  for (auto I = NodesInLastSCC.begin(); I != NodesInLastSCC.end();) {
-    if ((*I)->isDead())
-      NodesInLastSCC.erase(*I++);
-    else
-      EdgesOfLastSeenNodes += getLocalCalls((*I++)->getFunction());
+  for (const LazyCallGraph::Node *N : NodesInLastSCC) {
+    assert(!N->isDead());
+    EdgesOfLastSeenNodes += getLocalCalls(N->getFunction());
   }
 
   // Check on nodes that may have got added to SCC
@@ -311,8 +307,12 @@ void MLInlineAdvisor::onSuccessfulInlining(const MLInlineAdvice &Advice,
   int64_t NewCallerAndCalleeEdges =
       getCachedFPI(*Caller).DirectCallsToDefinedFunctions;
 
+  // A dead function's node is not actually removed from the call graph until
+  // the end of the call graph walk, but the node no longer belongs to any valid
+  // SCC.
   if (CalleeWasDeleted) {
     --NodeCount;
+    NodesInLastSCC.erase(CG.lookup(*Callee));
     DeadFunctions.insert(Callee);
   } else {
     NewCallerAndCalleeEdges +=

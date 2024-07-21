@@ -222,6 +222,40 @@ def POSIX : StandardSpec<"POSIX"> {
       []  // Functions
   >;
 
+  HeaderSpec DlFcn = HeaderSpec<
+    "dlfcn.h",
+    [
+      Macro<"RTLD_LAZY">,
+      Macro<"RTLD_NOW">,
+      Macro<"RTLD_GLOBAL">,
+      Macro<"RTLD_LOCAL">,
+    ],
+    [],  // Types
+    [], // Enumerations
+    [
+      FunctionSpec<
+          "dlclose",
+          RetValSpec<IntType>,
+          [ArgSpec<VoidPtr>]
+      >,
+      FunctionSpec<
+          "dlerror",
+          RetValSpec<CharPtr>,
+          []
+      >,
+      FunctionSpec<
+          "dlopen",
+          RetValSpec<VoidPtr>,
+          [ArgSpec<ConstCharPtr>, ArgSpec<IntType>]
+      >,
+      FunctionSpec<
+          "dlsym",
+          RetValSpec<VoidPtr>,
+          [ArgSpec<VoidRestrictedPtr>, ArgSpec<ConstCharRestrictedPtr>]
+      >,
+    ]
+  >;
+
   HeaderSpec FCntl = HeaderSpec<
     "fcntl.h",
     [], // Macros
@@ -513,6 +547,11 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<VoidType>]
         >,
         FunctionSpec<
+          "gettid",
+          RetValSpec<PidT>,
+          [ArgSpec<VoidType>]
+        >,
+        FunctionSpec<
           "getuid",
           RetValSpec<UidT>,
           [ArgSpec<VoidType>]
@@ -566,16 +605,6 @@ def POSIX : StandardSpec<"POSIX"> {
           "rmdir",
           RetValSpec<IntType>,
           [ArgSpec<ConstCharPtr>]
-        >,
-        FunctionSpec<
-          "getpid",
-          RetValSpec<IntType>,
-          [ArgSpec<VoidType>]
-        >,
-        FunctionSpec<
-          "getppid",
-          RetValSpec<IntType>,
-          [ArgSpec<VoidType>]
         >,
         FunctionSpec<
           "link",
@@ -1690,6 +1719,7 @@ def POSIX : StandardSpec<"POSIX"> {
     ArpaInet,
     CType,
     Dirent,
+    DlFcn,
     Errno,
     FCntl,
     PThread,

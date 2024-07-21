@@ -728,6 +728,9 @@ public:
     switch (ICA.getID()) {
     default:
       break;
+    case Intrinsic::experimental_vector_histogram_add:
+      // For now, we want explicit support from the target for histograms.
+      return InstructionCost::getInvalid();
     case Intrinsic::allow_runtime_check:
     case Intrinsic::allow_ubsan_check:
     case Intrinsic::annotation:
@@ -917,6 +920,8 @@ public:
     return VF;
   }
 
+  bool preferFixedOverScalableIfEqualCost() const { return false; }
+
   bool preferInLoopReduction(unsigned Opcode, Type *Ty,
                              TTI::ReductionFlags Flags) const {
     return false;
@@ -932,6 +937,11 @@ public:
   }
 
   bool shouldExpandReduction(const IntrinsicInst *II) const { return true; }
+
+  TTI::ReductionShuffle
+  getPreferredExpandedReductionShuffle(const IntrinsicInst *II) const {
+    return TTI::ReductionShuffle::SplitHalf;
+  }
 
   unsigned getGISelRematGlobalCost() const { return 1; }
 

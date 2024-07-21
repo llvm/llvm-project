@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 #include "startup/linux/do_start.h"
 #include "include/llvm-libc-macros/link-macros.h"
+#include "src/__support/OSUtil/pid.h"
 #include "src/__support/OSUtil/syscall.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"
@@ -37,7 +39,7 @@ extern uintptr_t __fini_array_end[];
   gnu::visibility("hidden")]] extern const Elf64_Dyn _DYNAMIC[]; // NOLINT
 }
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 AppProperties app;
 
 using InitCallback = void(int, char **, char **);
@@ -126,6 +128,10 @@ static ThreadAttributes main_thread_attrib;
   if (tls.size != 0 && !set_thread_ptr(tls.tp))
     syscall_impl<long>(SYS_exit, 1);
 
+  // Validate process identity cache (TLS needed).
+  ProcessIdentity::refresh_cache();
+  ProcessIdentity::end_fork();
+
   self.attrib = &main_thread_attrib;
   main_thread_attrib.atexit_callback_mgr =
       internal::get_thread_atexit_callback_mgr();
@@ -150,4 +156,4 @@ static ThreadAttributes main_thread_attrib;
   exit(retval);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

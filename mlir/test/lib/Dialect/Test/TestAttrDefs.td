@@ -356,8 +356,17 @@ def NestedPolynomialAttr : Test_Attr<"NestedPolynomialAttr"> {
   let mnemonic = "nested_polynomial";
   let parameters = (ins Polynomial_IntPolynomialAttr:$poly);
   let assemblyFormat = [{
-    `<` $poly `>`
+    `<` struct(params) `>`
   }];
 }
+
+def NestedPolynomialAttr2 : Test_Attr<"NestedPolynomialAttr2"> {
+  let mnemonic = "nested_polynomial2";
+  let parameters = (ins OptionalParameter<"::mlir::polynomial::IntPolynomialAttr">:$poly);
+  let assemblyFormat = [{
+    `<` struct(params) `>`
+  }];
+}
+
 
 #endif // TEST_ATTRDEFS

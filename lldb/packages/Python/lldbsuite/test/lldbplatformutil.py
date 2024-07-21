@@ -34,6 +34,8 @@ def check_first_register_readable(test_case):
         test_case.expect("register read r0", substrs=["r0 = 0x"])
     elif arch in ["powerpc64le"]:
         test_case.expect("register read r0", substrs=["r0 = 0x"])
+    elif re.match("^rv(32|64)", arch):
+        test_case.expect("register read zero", substrs=["zero = 0x"])
     else:
         # TODO: Add check for other architectures
         test_case.fail(
@@ -92,11 +94,28 @@ def match_android_device(device_arch, valid_archs=None, valid_api_levels=None):
 
 
 def finalize_build_dictionary(dictionary):
+    # Provide uname-like platform name
+    platform_name_to_uname = {
+        "linux": "Linux",
+        "netbsd": "NetBSD",
+        "freebsd": "FreeBSD",
+        "windows": "Windows_NT",
+        "macosx": "Darwin",
+        "darwin": "Darwin",
+    }
+
+    if dictionary is None:
+        dictionary = {}
     if target_is_android():
-        if dictionary is None:
-            dictionary = {}
         dictionary["OS"] = "Android"
         dictionary["PIE"] = 1
+    elif platformIsDarwin():
+        dictionary["OS"] = "Darwin"
+    else:
+        dictionary["OS"] = platform_name_to_uname[getPlatform()]
+
+    dictionary["HOST_OS"] = platform_name_to_uname[getHostPlatform()]
+
     return dictionary
 
 

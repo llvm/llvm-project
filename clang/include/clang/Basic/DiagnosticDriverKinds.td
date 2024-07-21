@@ -156,6 +156,8 @@ def err_drv_unsupported_rtlib_for_platform : Error<
   "unsupported runtime library '%0' for platform '%1'">;
 def err_drv_invalid_unwindlib_name : Error<
   "invalid unwind library name in argument '%0'">;
+def err_drv_unsupported_unwind_for_platform : Error<
+  "unsupported unwind library '%0' for platform '%1'">;
 def err_drv_incompatible_unwindlib : Error<
   "--rtlib=libgcc requires --unwindlib=libgcc">;
 def err_drv_incompatible_options : Error<
@@ -375,6 +377,9 @@ def err_drv_negative_columns : Error<
   "invalid value '%1' in '%0', value must be 'none' or a positive integer">;
 def err_drv_small_columns : Error<
   "invalid value '%1' in '%0', value must be '%2' or greater">;
+def warn_drv_fraw_string_literals_in_cxx11 : Warning<
+  "ignoring '-f%select{no-|}0raw-string-literals', which is only valid for C and C++ standards before C++11">,
+  InGroup<UnusedCommandLineArgument>;
 
 def err_drv_invalid_malign_branch_EQ : Error<
   "invalid argument '%0' to -malign-branch=; each element must be one of: %1">;
@@ -439,6 +444,10 @@ def warn_drv_deprecated_arg : Warning<
 def warn_drv_deprecated_arg_no_relaxed_template_template_args : Warning<
   "argument '-fno-relaxed-template-template-args' is deprecated">,
   InGroup<DeprecatedNoRelaxedTemplateTemplateArgs>;
+def warn_drv_deprecated_arg_ofast : Warning<
+  "argument '-Ofast' is deprecated; use '-O3 -ffast-math' for the same behavior,"
+  " or '-O3' to enable only conforming optimizations">,
+  InGroup<DeprecatedOFast>;
 def warn_drv_deprecated_custom : Warning<
   "argument '%0' is deprecated, %1">, InGroup<Deprecated>;
 def warn_drv_assuming_mfloat_abi_is : Warning<
@@ -791,6 +800,8 @@ def err_drv_loongarch_wrong_fpu_width : Error<
   "wrong fpu width; %select{LSX|LASX}0 depends on 64-bit FPU">;
 def err_drv_loongarch_invalid_simd_option_combination : Error<
   "invalid option combination; LASX depends on LSX">;
+def err_drv_loongarch_invalid_msimd_EQ : Error<
+  "invalid argument '%0' to -msimd=; must be one of: none, lsx, lasx">;
 
 def err_drv_expand_response_file : Error<
   "failed to expand response file: %0">;
@@ -800,6 +811,10 @@ def warn_drv_missing_multilib : Warning<
   InGroup<DiagGroup<"missing-multilib">>;
 def note_drv_available_multilibs : Note<
   "available multilibs are:%0">;
+
+def err_drv_experimental_crel : Error<
+  "-Wa,--allow-experimental-crel must be specified to use -Wa,--crel. "
+  "CREL is experimental and uses a non-standard section type code">;
 
 def warn_android_unversioned_fallback : Warning<
   "using unversioned Android target directory %0 for target %1; unversioned "

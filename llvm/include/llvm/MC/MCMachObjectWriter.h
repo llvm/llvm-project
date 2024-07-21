@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/StringTableBuilder.h"
@@ -81,6 +82,14 @@ public:
 };
 
 class MachObjectWriter : public MCObjectWriter {
+public:
+  struct DataRegionData {
+    MachO::DataRegionType Kind;
+    MCSymbol *Start;
+    MCSymbol *End;
+  };
+
+private:
   /// Helper struct for containing some precomputed information on symbols.
   struct MachSymbolData {
     const MCSymbol *Symbol;
@@ -89,6 +98,11 @@ class MachObjectWriter : public MCObjectWriter {
 
     // Support lexicographic sorting.
     bool operator<(const MachSymbolData &RHS) const;
+  };
+
+  struct IndirectSymbolData {
+    MCSymbol *Symbol;
+    MCSection *Section;
   };
 
   /// The target specific Mach-O writer instance.
@@ -105,7 +119,10 @@ class MachObjectWriter : public MCObjectWriter {
   };
 
   DenseMap<const MCSection *, std::vector<RelAndSymbol>> Relocations;
+  std::vector<IndirectSymbolData> IndirectSymbols;
   DenseMap<const MCSection *, unsigned> IndirectSymBase;
+
+  std::vector<DataRegionData> DataRegions;
 
   SectionAddrMap SectionAddress;
 
@@ -123,6 +140,9 @@ class MachObjectWriter : public MCObjectWriter {
   std::vector<MachSymbolData> UndefinedSymbolData;
 
   /// @}
+
+  // Used to communicate Linker Optimization Hint information.
+  MCLOHContainer LOHContainer;
 
   MachSymbolData *findSymbolData(const MCSymbol &Sym);
 
@@ -153,10 +173,15 @@ public:
 
   bool isFixupKindPCRel(const MCAssembler &Asm, unsigned Kind);
 
+  std::vector<IndirectSymbolData> &getIndirectSymbols() {
+    return IndirectSymbols;
+  }
+  std::vector<DataRegionData> &getDataRegions() { return DataRegions; }
   const llvm::SmallVectorImpl<MCSection *> &getSectionOrder() const {
     return SectionOrder;
   }
   SectionAddrMap &getSectionAddressMap() { return SectionAddress; }
+  MCLOHContainer &getLOHContainer() { return LOHContainer; }
 
   uint64_t getSectionAddress(const MCSection *Sec) const {
     return SectionAddress.lookup(Sec);

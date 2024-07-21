@@ -26,7 +26,7 @@ define float @pr70988() {
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1022, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[TMP5]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP5]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
@@ -62,7 +62,7 @@ define float @pr70988() {
 ; CHECK-ALM-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-ALM:       scalar.ph:
 ; CHECK-ALM-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1022, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-ALM-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[TMP5]], [[MIDDLE_BLOCK]] ]
+; CHECK-ALM-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP5]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-ALM-NEXT:    br label [[LOOP:%.*]]
 ; CHECK-ALM:       loop:
 ; CHECK-ALM-NEXT:    [[INDEX:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
@@ -132,7 +132,7 @@ define float @pr72720reduction_using_active_lane_mask(ptr %src) {
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 16, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[TMP13]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP13]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NARROW:%.*]], [[LOOP]] ]
@@ -185,7 +185,7 @@ define float @pr72720reduction_using_active_lane_mask(ptr %src) {
 ; CHECK-ALM-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-ALM:       scalar.ph:
 ; CHECK-ALM-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 16, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-ALM-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[TMP11]], [[MIDDLE_BLOCK]] ]
+; CHECK-ALM-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP11]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-ALM-NEXT:    br label [[LOOP:%.*]]
 ; CHECK-ALM:       loop:
 ; CHECK-ALM-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NARROW:%.*]], [[LOOP]] ]

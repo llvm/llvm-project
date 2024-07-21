@@ -397,6 +397,8 @@ public:
   bool shouldFoldTerminatingConditionAfterLSR() const {
     return true;
   }
+
+  std::optional<unsigned> getMinPageSize() const { return 4096; }
 };
 
 } // end namespace llvm

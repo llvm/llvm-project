@@ -90,24 +90,4 @@ struct JamBlockGatherer {
 /// Include the generated interface declarations.
 #include "mlir/Interfaces/LoopLikeInterface.h.inc"
 
-namespace mlir {
-/// A function that rewrites `target`'s terminator as a teminator obtained by
-/// fusing `source` into `target`.
-using FuseTerminatorFn =
-    function_ref<void(RewriterBase &rewriter, LoopLikeOpInterface source,
-                      LoopLikeOpInterface &target, IRMapping mapping)>;
-
-/// Returns a fused `LoopLikeOpInterface` created by fusing `source` to
-/// `target`.  The `NewYieldValuesFn` callback is used to pass to the
-/// `replaceWithAdditionalYields` interface method to replace the loop with a
-/// new loop with (possibly) additional yields, while the `FuseTerminatorFn`
-/// callback is repsonsible for updating the fused loop terminator.
-LoopLikeOpInterface createFused(LoopLikeOpInterface target,
-                                LoopLikeOpInterface source,
-                                RewriterBase &rewriter,
-                                NewYieldValuesFn newYieldValuesFn,
-                                FuseTerminatorFn fuseTerminatorFn);
-
-} // namespace mlir
-
 #endif // MLIR_INTERFACES_LOOPLIKEINTERFACE_H_

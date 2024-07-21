@@ -449,6 +449,44 @@ OMPUnrollDirective *OMPUnrollDirective::CreateEmpty(const ASTContext &C,
       SourceLocation(), SourceLocation());
 }
 
+OMPReverseDirective *
+OMPReverseDirective::Create(const ASTContext &C, SourceLocation StartLoc,
+                            SourceLocation EndLoc, Stmt *AssociatedStmt,
+                            Stmt *TransformedStmt, Stmt *PreInits) {
+  OMPReverseDirective *Dir = createDirective<OMPReverseDirective>(
+      C, std::nullopt, AssociatedStmt, TransformedStmtOffset + 1, StartLoc,
+      EndLoc);
+  Dir->setTransformedStmt(TransformedStmt);
+  Dir->setPreInits(PreInits);
+  return Dir;
+}
+
+OMPReverseDirective *OMPReverseDirective::CreateEmpty(const ASTContext &C) {
+  return createEmptyDirective<OMPReverseDirective>(
+      C, /*NumClauses=*/0, /*HasAssociatedStmt=*/true,
+      TransformedStmtOffset + 1, SourceLocation(), SourceLocation());
+}
+
+OMPInterchangeDirective *OMPInterchangeDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    ArrayRef<OMPClause *> Clauses, unsigned NumLoops, Stmt *AssociatedStmt,
+    Stmt *TransformedStmt, Stmt *PreInits) {
+  OMPInterchangeDirective *Dir = createDirective<OMPInterchangeDirective>(
+      C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc,
+      NumLoops);
+  Dir->setTransformedStmt(TransformedStmt);
+  Dir->setPreInits(PreInits);
+  return Dir;
+}
+
+OMPInterchangeDirective *
+OMPInterchangeDirective::CreateEmpty(const ASTContext &C, unsigned NumClauses,
+                                     unsigned NumLoops) {
+  return createEmptyDirective<OMPInterchangeDirective>(
+      C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
+      SourceLocation(), SourceLocation(), NumLoops);
+}
+
 OMPForSimdDirective *
 OMPForSimdDirective::Create(const ASTContext &C, SourceLocation StartLoc,
                             SourceLocation EndLoc, unsigned CollapsedNum,

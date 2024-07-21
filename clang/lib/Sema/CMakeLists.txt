@@ -36,6 +36,7 @@ add_clang_library(clangSema
   SemaAvailability.cpp
   SemaBPF.cpp
   SemaBase.cpp
+  SemaBoundsSafety.cpp
   SemaCXXScopeSpec.cpp
   SemaCast.cpp
   SemaChecking.cpp
@@ -82,6 +83,7 @@ add_clang_library(clangSema
   SemaSystemZ.cpp
   SemaTemplate.cpp
   SemaTemplateDeduction.cpp
+  SemaTemplateDeductionGuide.cpp
   SemaTemplateInstantiate.cpp
   SemaTemplateInstantiateDecl.cpp
   SemaTemplateVariadic.cpp

@@ -2323,12 +2323,6 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
     return OS.str();
   };
 
-  const std::map<uint64_t, const char *> TagNames = {
-      {DT_NEEDED, "Shared library"},       {DT_SONAME, "Library soname"},
-      {DT_AUXILIARY, "Auxiliary library"}, {DT_USED, "Not needed object"},
-      {DT_FILTER, "Filter library"},       {DT_RPATH, "Library rpath"},
-      {DT_RUNPATH, "Library runpath"},
-  };
   // Handle custom printing of architecture specific tags
   switch (Obj.getHeader().e_machine) {
   case EM_AARCH64:
@@ -2489,11 +2483,18 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
   case DT_AUXILIARY:
   case DT_USED:
   case DT_FILTER:
-    return (Twine(TagNames.at(Type)) + ": " + getDynamicString(Value)).str();
   case DT_RPATH:
-  case DT_RUNPATH:
+  case DT_RUNPATH: {
+    const std::map<uint64_t, const char *> TagNames = {
+        {DT_NEEDED, "Shared library"},       {DT_SONAME, "Library soname"},
+        {DT_AUXILIARY, "Auxiliary library"}, {DT_USED, "Not needed object"},
+        {DT_FILTER, "Filter library"},       {DT_RPATH, "Library rpath"},
+        {DT_RUNPATH, "Library runpath"},
+    };
+
     return (Twine(TagNames.at(Type)) + ": [" + getDynamicString(Value) + "]")
         .str();
+  }
   case DT_FLAGS:
     return FormatFlags(Value, ArrayRef(ElfDynamicDTFlags));
   case DT_FLAGS_1:
@@ -7988,24 +7989,29 @@ static void printCoreNoteLLVMStyle(const CoreNote &Note, ScopedPrinter &W) {
 }
 
 template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
-  ListScope L(W, "Notes");
+  ListScope L(W, "NoteSections");
 
-  std::unique_ptr<DictScope> NoteScope;
+  std::unique_ptr<DictScope> NoteSectionScope;
+  std::unique_ptr<ListScope> NotesScope;
   size_t Align = 0;
   auto StartNotes = [&](std::optional<StringRef> SecName,
                         const typename ELFT::Off Offset,
                         const typename ELFT::Addr Size, size_t Al) {
     Align = std::max<size_t>(Al, 4);
-    NoteScope = std::make_unique<DictScope>(W, "NoteSection");
+    NoteSectionScope = std::make_unique<DictScope>(W, "NoteSection");
     W.printString("Name", SecName ? *SecName : "<?>");
     W.printHex("Offset", Offset);
     W.printHex("Size", Size);
+    NotesScope = std::make_unique<ListScope>(W, "Notes");
   };
 
-  auto EndNotes = [&] { NoteScope.reset(); };
+  auto EndNotes = [&] {
+    NotesScope.reset();
+    NoteSectionScope.reset();
+  };
 
   auto ProcessNote = [&](const Elf_Note &Note, bool IsCore) -> Error {
-    DictScope D2(W, "Note");
+    DictScope D2(W);
     StringRef Name = Note.getName();
     ArrayRef<uint8_t> Descriptor = Note.getDesc(Align);
     Elf_Word Type = Note.getType();
