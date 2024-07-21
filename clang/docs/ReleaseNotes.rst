@@ -59,7 +59,7 @@ C++ Specific Potentially Breaking Changes
   disabled with `-Wno-deprecated-no-relaxed-template-template-args`.
 
 - Clang no longer tries to form pointer-to-members from qualified and parenthesized unevaluated expressions
-  such``decltype(&(foo::bar))``. (#GH40906).
+  such as ``decltype(&(foo::bar))``. (#GH40906).
 
 - Clang now performs semantic analysis for unary operators with dependent operands
   that are known to be of non-class non-enumeration type prior to instantiation.
