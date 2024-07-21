@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/StringTableBuilder.h"
@@ -140,6 +141,9 @@ private:
 
   /// @}
 
+  // Used to communicate Linker Optimization Hint information.
+  MCLOHContainer LOHContainer;
+
   MachSymbolData *findSymbolData(const MCSymbol &Sym);
 
   void writeWithPadding(StringRef Str, uint64_t Size);
@@ -177,6 +181,7 @@ public:
     return SectionOrder;
   }
   SectionAddrMap &getSectionAddressMap() { return SectionAddress; }
+  MCLOHContainer &getLOHContainer() { return LOHContainer; }
 
   uint64_t getSectionAddress(const MCSection *Sec) const {
     return SectionAddress.lookup(Sec);

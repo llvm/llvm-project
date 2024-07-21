@@ -139,6 +139,7 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx10-3-generic"},   {"gfx10-3-generic"}, GK_GFX10_3_GENERIC, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx11-generic"},     {"gfx11-generic"},   GK_GFX11_GENERIC,   FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx12-generic"},     {"gfx12-generic"},   GK_GFX12_GENERIC,   FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+    {{"gfx12-1-generic"},   {"gfx12-1-generic"}, GK_GFX12_1_GENERIC, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
     // clang-format on
 };
 
@@ -167,6 +168,7 @@ StringRef llvm::AMDGPU::getArchFamilyNameAMDGCN(GPUKind AK) {
   case AMDGPU::GK_GFX11_GENERIC:
     return "gfx11";
   case AMDGPU::GK_GFX12_GENERIC:
+  case AMDGPU::GK_GFX12_1_GENERIC:
     return "gfx12";
   default: {
     StringRef ArchName = getArchNameAMDGCN(AK);
@@ -310,6 +312,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX10_3_GENERIC: return {10, 3, 0};
   case GK_GFX11_GENERIC:   return {11, 0, 3};
   case GK_GFX12_GENERIC:   return {12, 0, 0};
+  case GK_GFX12_1_GENERIC: return {12, 1, 0};
   default:         return {0, 0, 0};
   }
   // clang-format on
@@ -377,6 +380,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gfx1211-gemm-insts"] = true;
       [[fallthrough]];
     case GK_GFX1210:
+    case GK_GFX12_1_GENERIC:
       Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
       Features["ci-insts"] = true;
       Features["dot7-insts"] = true;
@@ -673,6 +677,7 @@ static bool isWave32Capable(StringRef GPU, const Triple &T) {
     case GK_GFX1011:
     case GK_GFX1013:
     case GK_GFX1010:
+    case GK_GFX12_1_GENERIC:
     case GK_GFX12_GENERIC:
     case GK_GFX11_GENERIC:
     case GK_GFX10_3_GENERIC:
@@ -689,6 +694,7 @@ static bool isWave32Capable(StringRef GPU, const Triple &T) {
 static bool isWave64Capable(StringRef GPU, const Triple &T) {
   if (T.isAMDGCN()) {
     switch (parseArchAMDGCN(GPU)) {
+    case GK_GFX12_1_GENERIC:
     case GK_GFX1211:
     case GK_GFX1210:
       return false;

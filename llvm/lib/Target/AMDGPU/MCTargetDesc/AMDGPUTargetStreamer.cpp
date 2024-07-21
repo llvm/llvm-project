@@ -127,6 +127,7 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC:  AK = GK_GFX10_3_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC:    AK = GK_GFX11_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC:    AK = GK_GFX12_GENERIC; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_1_GENERIC:  AK = GK_GFX12_1_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_NONE:           AK = GK_NONE;    break;
   default:                                 AK = GK_NONE;    break;
   }
@@ -217,6 +218,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX10_3_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC;
   case GK_GFX11_GENERIC:    return ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC;
   case GK_GFX12_GENERIC:    return ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC;
+  case GK_GFX12_1_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_1_GENERIC;
   case GK_NONE:    return ELF::EF_AMDGPU_MACH_NONE;
   }
   // clang-format on
@@ -809,6 +811,9 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsV6() {
     case AMDGPU::GK_GFX12_GENERIC:
       Version = GenericVersion::GFX12;
       break;
+    case AMDGPU::GK_GFX12_1_GENERIC:
+      Version = GenericVersion::GFX12_1;
+      break;
     default:
       break;
     }
@@ -847,10 +852,8 @@ void AMDGPUTargetELFStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
   MCSymbolELF *SymbolELF = cast<MCSymbolELF>(Symbol);
   SymbolELF->setType(ELF::STT_OBJECT);
 
-  if (!SymbolELF->isBindingSet()) {
+  if (!SymbolELF->isBindingSet())
     SymbolELF->setBinding(ELF::STB_GLOBAL);
-    SymbolELF->setExternal(true);
-  }
 
   if (SymbolELF->declareCommon(Size, Alignment, true)) {
     report_fatal_error("Symbol: " + Symbol->getName() +

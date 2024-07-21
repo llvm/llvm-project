@@ -6,6 +6,8 @@ declare <2 x i32>    @llvm.amdgcn.global.load.tr4.b64.v2i32.p1(ptr addrspace(1))
 declare <2 x i32>    @llvm.amdgcn.global.load.tr.b64.v2i32.p1(ptr addrspace(1))
 declare <3 x i32>    @llvm.amdgcn.global.load.tr6.b96.v3i32.p1(ptr addrspace(1))
 declare <8 x i16>    @llvm.amdgcn.global.load.tr.b128.v8i16.p1(ptr addrspace(1))
+declare <8 x half>   @llvm.amdgcn.global.load.tr.b128.v8f16.p1(ptr addrspace(1))
+declare <8 x bfloat> @llvm.amdgcn.global.load.tr.b128.v8bf16.p1(ptr addrspace(1))
 
 declare <2 x i32>    @llvm.amdgcn.ds.load.tr4.b64.v2i32.p3(ptr addrspace(3))
 declare <2 x i32>    @llvm.amdgcn.ds.load.tr8.b64.v2i32.p3(ptr addrspace(3))
@@ -136,6 +138,68 @@ entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
   %val = call <8 x i16> @llvm.amdgcn.global.load.tr.b128.v8i16.p1(ptr addrspace(1) %gep)
   store <8 x i16> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define amdgpu_ps void @global_load_tr16_b128_v8f16_vaddr(ptr addrspace(1) %addr, ptr addrspace(1) %use) {
+; GFX1210-LABEL: global_load_tr16_b128_v8f16_vaddr:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    global_load_tr_b128 v[4:7], v[0:1], off offset:32
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1210-NEXT:    s_endpgm
+entry:
+  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
+  %val = call <8 x half> @llvm.amdgcn.global.load.tr.b128.v8f16.p1(ptr addrspace(1) %gep)
+  store <8 x half> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define amdgpu_ps void @global_load_tr16_b128_v8f16_saddr(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use) {
+; GFX1210-LABEL: global_load_tr16_b128_v8f16_saddr:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1210-NEXT:    global_load_tr_b128 v[2:5], v2, s[0:1] offset:32
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1210-NEXT:    s_endpgm
+entry:
+  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
+  %val = call <8 x half> @llvm.amdgcn.global.load.tr.b128.v8f16.p1(ptr addrspace(1) %gep)
+  store <8 x half> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define amdgpu_ps void @global_load_tr16_b128_v8b16_vaddr(ptr addrspace(1) %addr, ptr addrspace(1) %use) {
+; GFX1210-LABEL: global_load_tr16_b128_v8b16_vaddr:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    global_load_tr_b128 v[4:7], v[0:1], off offset:32
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1210-NEXT:    s_endpgm
+entry:
+  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
+  %val = call <8 x bfloat> @llvm.amdgcn.global.load.tr.b128.v8bf16.p1(ptr addrspace(1) %gep)
+  store <8 x bfloat> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define amdgpu_ps void @global_load_tr16_b128_v8bf16_saddr(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use) {
+; GFX1210-LABEL: global_load_tr16_b128_v8bf16_saddr:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1210-NEXT:    global_load_tr_b128 v[2:5], v2, s[0:1] offset:32
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1210-NEXT:    s_endpgm
+entry:
+  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
+  %val = call <8 x bfloat> @llvm.amdgcn.global.load.tr.b128.v8bf16.p1(ptr addrspace(1) %gep)
+  store <8 x bfloat> %val, ptr addrspace(1) %use
   ret void
 }
 

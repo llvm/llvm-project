@@ -160,6 +160,13 @@ static char GetFirstChar(const Preprocessor &PP, const Token &Tok) {
 bool TokenConcatenation::AvoidConcat(const Token &PrevPrevTok,
                                      const Token &PrevTok,
                                      const Token &Tok) const {
+  // If previous token is a module name, we need avoid concat it with current
+  // token, otherwise, there will has an extra space between 'M' and ';' for the
+  // following code:
+  //
+  // import M;
+  if (PrevTok.is(tok::annot_module_name))
+    return false;
   // Conservatively assume that every annotation token that has a printable
   // form requires whitespace.
   if (PrevTok.isAnnotation())
@@ -190,6 +197,9 @@ bool TokenConcatenation::AvoidConcat(const Token &PrevPrevTok,
       return true;
     ConcatInfo &= ~aci_avoid_equal;
   }
+
+  if (Tok.is(tok::annot_module_name))
+    return true;
   if (Tok.isAnnotation()) {
     // Modules annotation can show up when generated automatically for includes.
     assert(Tok.isOneOf(tok::annot_module_include, tok::annot_module_begin,

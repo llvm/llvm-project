@@ -952,6 +952,11 @@ def warn_module_conflict : Warning<
   InGroup<ModuleConflict>;
 
 // C++20 modules
+def err_module_decl_cannot_be_macros : Error<
+  "the module name in a module%select{| partition}0 declaration cannot contain "
+  "an object-like macro %1">;
+def err_unxepected_paren_in_module_decl : Error<
+  "unexpected '(' after the module name in a module%select{| partition}0 declaration">;
 def err_header_import_semi_in_macro : Error<
   "semicolon terminating header import declaration cannot be produced "
   "by a macro">;
