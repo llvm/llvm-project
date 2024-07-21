@@ -8,27 +8,19 @@
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface -fmodule-file=x=%t/x.pcm %t/x.y.cppm -o %t/x.y.pcm
 //
 // Module implementation for unknown and known module. (The former is ill-formed.)
-// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -verify -x c++ %t/M.cpp \
-// RUN:            -DTEST=1 -DEXPORT= -DMODULE_NAME=z
-// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x=%t/x.pcm -fmodule-file=x.y=%t/x.y.pcm -verify -x c++ %t/M.cpp \
-// RUN:            -DTEST=2 -DEXPORT= -DMODULE_NAME=x
+// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -verify -x c++ %t/M1.cpp
+// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x=%t/x.pcm -fmodule-file=x.y=%t/x.y.pcm -verify -x c++ %t/M2.cpp
 //
 // Module interface for unknown and known module. (The latter is ill-formed due to
 // redefinition.)
-// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -verify %t/M.cpp \
-// RUN:            -DTEST=3 -DEXPORT=export -DMODULE_NAME=z
-// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -verify %t/M.cpp \
-// RUN:            -DTEST=4 -DEXPORT=export -DMODULE_NAME=x
+// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -verify %t/M3.cpp
+// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -verify %t/M4.cpp
 //
 // Miscellaneous syntax.
-// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -verify %t/M.cpp \
-// RUN:            -DTEST=7 -DEXPORT=export -DMODULE_NAME='z elderberry'
-// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -verify %t/M.cpp \
-// RUN:            -DTEST=8 -DEXPORT=export -DMODULE_NAME='z [[]]'
-// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -verify %t/M.cpp \
-// RUN:            -DTEST=9 -DEXPORT=export -DMODULE_NAME='z [[fancy]]'
-// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -verify %t/M.cpp \
-// RUN:            -DTEST=10 -DEXPORT=export -DMODULE_NAME='z [[maybe_unused]]'
+// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -verify %t/M5.cpp
+// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -verify %t/M6.cpp
+// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -verify %t/M7.cpp
+// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -verify %t/M8.cpp
 
 //--- x.cppm
 export module x;
@@ -38,17 +30,26 @@ int a, b;
 export module x.y;
 int c;
 
-//--- M.cpp
+//--- M1.cpp
+module z; // expected-error {{module 'z' not found}}
 
-EXPORT module MODULE_NAME;
-#if TEST == 7
-// expected-error@-2 {{expected ';'}} expected-error@-2 {{a type specifier is required}}
-#elif TEST == 9
-// expected-warning@-4 {{unknown attribute 'fancy' ignored}}
-#elif TEST == 10
-// expected-error-re@-6 {{'maybe_unused' attribute cannot be applied to a module{{$}}}}
-#elif TEST == 1
-// expected-error@-8 {{module 'z' not found}}
-#else
-// expected-no-diagnostics
-#endif
+//--- M2.cpp
+module x; // expected-no-diagnostics
+
+//--- M3.cpp
+export module z; // expected-no-diagnostics
+
+//--- M4.cpp
+export module x; // expected-no-diagnostics
+
+//--- M5.cpp
+export module z elderberry; // expected-error {{expected ';'}} expected-error {{a type specifier is required}}
+
+//--- M6.cpp
+export module z [[]]; // expected-no-diagnostics
+
+//--- M7.cpp
+export module z [[fancy]]; // expected-warning {{unknown attribute 'fancy' ignored}}
+
+//--- M8.cpp
+export module z [[maybe_unused]]; // expected-error-re {{'maybe_unused' attribute cannot be applied to a module{{$}}}}

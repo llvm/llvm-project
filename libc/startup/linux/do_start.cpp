@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "startup/linux/do_start.h"
 #include "include/llvm-libc-macros/link-macros.h"
+#include "src/__support/OSUtil/pid.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
@@ -126,6 +127,10 @@ static ThreadAttributes main_thread_attrib;
   init_tls(tls);
   if (tls.size != 0 && !set_thread_ptr(tls.tp))
     syscall_impl<long>(SYS_exit, 1);
+
+  // Validate process identity cache (TLS needed).
+  ProcessIdentity::refresh_cache();
+  ProcessIdentity::end_fork();
 
   self.attrib = &main_thread_attrib;
   main_thread_attrib.atexit_callback_mgr =

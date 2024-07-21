@@ -1443,7 +1443,11 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::shrink_to_fit() _NOE
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
       allocator_type& __a = this->__alloc();
       __split_buffer<value_type, allocator_type&> __v(size(), size(), __a);
-      __swap_out_circular_buffer(__v);
+      // The Standard mandates shrink_to_fit() does not increase the capacity.
+      // With equal capacity keep the existing buffer. This avoids extra work
+      // due to swapping the elements.
+      if (__v.capacity() < capacity())
+        __swap_out_circular_buffer(__v);
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     } catch (...) {
     }
