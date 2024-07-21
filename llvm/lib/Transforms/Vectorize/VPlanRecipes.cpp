@@ -48,6 +48,9 @@ extern cl::opt<unsigned> ForceTargetInstructionCost;
 
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPDefID()) {
+  case VPInstructionSC: {
+    return !Instruction::isBinaryOp(cast<VPInstruction>(this)->getOpcode());
+  }
   case VPInterleaveSC:
     return cast<VPInterleaveRecipe>(this)->getNumStoreOperands() > 0;
   case VPWidenStoreEVLSC:
@@ -63,6 +66,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPBranchOnMaskSC:
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
+  case VPVectorPointerSC:
     return false;
   case VPBlendSC:
   case VPReductionEVLSC:
