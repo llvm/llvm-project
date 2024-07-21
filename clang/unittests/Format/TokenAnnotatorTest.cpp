@@ -2125,6 +2125,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsTrailingReturnArrow) {
   ASSERT_EQ(Tokens.size(), 21u) << Tokens;
   EXPECT_TOKEN(Tokens[13], tok::arrow, TT_Unknown);
 
+  auto Style = getLLVMStyle();
+  Style.StatementAttributeLikeMacros.push_back("emit");
+  Tokens = annotate("emit foo()->bar;", Style);
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_StatementAttributeLikeMacro);
+  EXPECT_TOKEN(Tokens[4], tok::arrow, TT_Unknown);
+
   // Mixed
   Tokens = annotate("auto f() -> int { auto a = b()->c; }");
   ASSERT_EQ(Tokens.size(), 18u) << Tokens;
@@ -2950,6 +2957,13 @@ TEST_F(TokenAnnotatorTest, StartOfName) {
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::at, TT_ObjCDecl);
   EXPECT_TOKEN(Tokens[2], tok::identifier, TT_StartOfName);
+
+  auto Style = getLLVMStyle();
+  Style.StatementAttributeLikeMacros.push_back("emit");
+  Tokens = annotate("emit foo = 0;", Style);
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_StatementAttributeLikeMacro);
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_Unknown);
 }
 
 TEST_F(TokenAnnotatorTest, BraceKind) {
