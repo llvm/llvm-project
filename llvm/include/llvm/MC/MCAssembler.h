@@ -84,7 +84,6 @@ private:
   bool HasLayout = false;
   bool RelaxAll = false;
   bool SubsectionsViaSymbols = false;
-  bool IncrementalLinkerCompatible = false;
 
   SectionListType Sections;
 
@@ -297,13 +296,6 @@ public:
   // FIXME: This does not belong here.
   bool getSubsectionsViaSymbols() const { return SubsectionsViaSymbols; }
   void setSubsectionsViaSymbols(bool Value) { SubsectionsViaSymbols = Value; }
-
-  bool isIncrementalLinkerCompatible() const {
-    return IncrementalLinkerCompatible;
-  }
-  void setIncrementalLinkerCompatible(bool Value) {
-    IncrementalLinkerCompatible = Value;
-  }
 
   bool hasLayout() const { return HasLayout; }
   bool getRelaxAll() const { return RelaxAll; }
