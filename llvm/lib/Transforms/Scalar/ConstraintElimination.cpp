@@ -31,6 +31,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -1678,7 +1679,7 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
 /// Performs a dry run of AddFact, computing a conservative estimate of the
 /// number of new variables introduced.
 static void dryRunAddFact(CmpInst::Predicate Pred, Value *A, Value *B,
-                          const ConstraintInfo &Info, unsigned &EstimatedRowsA,
+                          ConstraintInfo &Info, unsigned &EstimatedRowsA,
                           unsigned &EstimatedRowsB,
                           unsigned &EstimatedColumns) {
   auto UpdateEstimate = [&Info, &EstimatedRowsA, &EstimatedRowsB,
@@ -1704,12 +1705,24 @@ static void dryRunAddFact(CmpInst::Predicate Pred, Value *A, Value *B,
 
     SmallVector<ConditionTy, 4> Preconditions;
     auto &Value2Index = Info.getValue2Index(IsSigned);
-    auto ADec = decompose(A->stripPointerCastsSameRepresentation(),
-                          Preconditions, IsSigned, Info.getDataLayout());
-    auto BDec = decompose(B->stripPointerCastsSameRepresentation(),
-                          Preconditions, IsSigned, Info.getDataLayout());
-    for (const auto &KV : concat<DecompEntry>(ADec.Vars, BDec.Vars)) {
-      if (!Value2Index.contains(KV.Variable))
+    Value *AStrip = A->stripPointerCastsSameRepresentation();
+    Value *BStrip = B->stripPointerCastsSameRepresentation();
+    SmallVector<DecompEntry> AVars, BVars;
+
+    if (!Value2Index.contains(AStrip)) {
+      AVars =
+          decompose(AStrip, Preconditions, IsSigned, Info.getDataLayout()).Vars;
+      Value2Index.insert({AStrip, Value2Index.size() + 1});
+    }
+    if (!Value2Index.contains(BStrip)) {
+      BVars =
+          decompose(BStrip, Preconditions, IsSigned, Info.getDataLayout()).Vars;
+      Value2Index.insert({BStrip, Value2Index.size() + 1});
+    }
+
+    for (const auto &KV : concat<DecompEntry>(AVars, BVars)) {
+      if (KV.Variable == AStrip || KV.Variable == BStrip ||
+          !Value2Index.contains(KV.Variable))
         ++NumNewVars;
     }
 
@@ -1718,8 +1731,7 @@ static void dryRunAddFact(CmpInst::Predicate Pred, Value *A, Value *B,
     else
       ++EstimatedRowsB;
 
-    EstimatedColumns =
-        std::max(EstimatedColumns, NumNewVars + Value2Index.size() + 2);
+    EstimatedColumns = std::max(EstimatedColumns, NumNewVars + 2);
   };
 
   UpdateEstimate(Pred, A, B);
@@ -1756,16 +1768,13 @@ static void dryRunAddFact(CmpInst::Predicate Pred, Value *A, Value *B,
 static std::tuple<State, unsigned, unsigned>
 dryRun(Function &F, DominatorTree &DT, LoopInfo &LI, ScalarEvolution &SE) {
   DT.updateDFSNumbers();
-  SmallVector<Value *> FunctionArgs;
-  for (Value &Arg : F.args())
-    FunctionArgs.push_back(&Arg);
   State S(DT, LI, SE);
-  unsigned EstimatedColumns = FunctionArgs.size() + 1;
 
   // EstimatedRowsA corresponds to SignedCS, and EstimatedRowsB corresponds to
   // UnsignedCS.
   unsigned EstimatedRowsA = 0, EstimatedRowsB = 1;
-  ConstraintInfo Info(F.getDataLayout(), FunctionArgs);
+  unsigned EstimatedColumns = 1;
+  ConstraintInfo Info(F.getDataLayout(), {});
 
   // First, collect conditions implied by branches and blocks with their
   // Dominator DFS in and out numbers.
