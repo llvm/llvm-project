@@ -3798,7 +3798,6 @@ add_entrypoint_object(
     libc.src.__support.macros.optimization
 )
 
-
 add_entrypoint_object(
   scalblnf16
   SRCS

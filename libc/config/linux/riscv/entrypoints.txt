@@ -550,6 +550,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.ceilf128
     libc.src.math.copysignf128
     libc.src.math.dmulf128
+    libc.src.math.dsqrtl
     libc.src.math.fabsf128
     libc.src.math.fdimf128
     libc.src.math.floorf128
