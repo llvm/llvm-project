@@ -264,6 +264,7 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
   MCOptions.AssemblyLanguage = "masm";
   MCOptions.MCFatalWarnings = InputArgs.hasArg(OPT_fatal_warnings);
   MCOptions.MCSaveTempLabels = InputArgs.hasArg(OPT_save_temp_labels);
+  MCOptions.AsmVerbose = true;
 
   Triple TheTriple = GetTriple(ProgName, InputArgs);
   std::string Error;

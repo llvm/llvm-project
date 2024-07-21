@@ -356,6 +356,9 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "llvm machine code playground\n");
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
   MCOptions.CompressDebugSections = CompressDebugSections.getValue();
+  MCOptions.ShowMCInst = ShowInst;
+  MCOptions.AsmVerbose = true;
+  MCOptions.MCUseDwarfDirectory = MCTargetOptions::EnableDwarfDirectory;
 
   setDwarfDebugFlags(argc, argv);
   setDwarfDebugProducer();
