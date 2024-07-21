@@ -14,7 +14,7 @@
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   std::string NullTerminatedString((const char *)Data, Size);
-  if (char *demangle = llvm::itaniumDemangle(NullTerminatedString.c_str()))
+  if (char *demangle = llvm::itaniumDemangle(NullTerminatedString))
     free(demangle);
 
   return 0;

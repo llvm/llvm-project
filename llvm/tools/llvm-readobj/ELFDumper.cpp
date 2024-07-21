@@ -7596,7 +7596,7 @@ void LLVMELFDumper<ELFT>::printVersionDefinitionSection(const Elf_Shdr *Sec) {
     W.printFlags("Flags", D.Flags, ArrayRef(SymVersionFlags));
     W.printNumber("Index", D.Ndx);
     W.printNumber("Hash", D.Hash);
-    W.printString("Name", D.Name.c_str());
+    W.printString("Name", D.Name);
     W.printList(
         "Predecessors", D.AuxV,
         [](raw_ostream &OS, const VerdAux &Aux) { OS << Aux.Name.c_str(); });
@@ -7620,7 +7620,7 @@ void LLVMELFDumper<ELFT>::printVersionDependencySection(const Elf_Shdr *Sec) {
     DictScope Entry(W, "Dependency");
     W.printNumber("Version", VN.Version);
     W.printNumber("Count", VN.Cnt);
-    W.printString("FileName", VN.File.c_str());
+    W.printString("FileName", VN.File);
 
     ListScope L(W, "Entries");
     for (const VernAux &Aux : VN.AuxV) {
@@ -7628,7 +7628,7 @@ void LLVMELFDumper<ELFT>::printVersionDependencySection(const Elf_Shdr *Sec) {
       W.printNumber("Hash", Aux.Hash);
       W.printFlags("Flags", Aux.Flags, ArrayRef(SymVersionFlags));
       W.printNumber("Index", Aux.Other);
-      W.printString("Name", Aux.Name.c_str());
+      W.printString("Name", Aux.Name);
     }
   }
 }

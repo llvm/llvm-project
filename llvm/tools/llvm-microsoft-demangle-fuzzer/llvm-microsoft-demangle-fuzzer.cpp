@@ -14,6 +14,6 @@
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   std::string NullTerminatedString((const char *)Data, Size);
-  free(llvm::microsoftDemangle(NullTerminatedString.c_str(), nullptr, nullptr));
+  free(llvm::microsoftDemangle(NullTerminatedString, nullptr, nullptr));
   return 0;
 }
