@@ -95,7 +95,7 @@ MCStreamer *Target::createAsmStreamer(MCContext &Ctx,
   formatted_raw_ostream &OSRef = *OS;
   MCStreamer *S = llvm::createAsmStreamer(Ctx, std::move(OS), IP,
                                           std::move(CE), std::move(TAB));
-  createAsmTargetStreamer(*S, OSRef, IP, /*ignore=*/false);
+  createAsmTargetStreamer(*S, OSRef, IP);
   return S;
 }
 
