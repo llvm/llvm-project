@@ -2625,8 +2625,10 @@ private:
       return false;
 
     // int a or auto a.
-    if (PreviousNotConst->isOneOf(tok::identifier, tok::kw_auto))
+    if (PreviousNotConst->isOneOf(tok::identifier, tok::kw_auto) &&
+        PreviousNotConst->isNot(TT_StatementAttributeLikeMacro)) {
       return true;
+    }
 
     // *a or &a or &&a.
     if (PreviousNotConst->is(TT_PointerOrReference))
