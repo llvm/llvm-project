@@ -52,15 +52,15 @@ void g(size_t s) {
 void h() {
   std::string s;
   f(&((s).operator[]((z))));
-  // CHECK-MESSAGES-CLASSIC: :[[@LINE-1]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
-  // CHECK-FIXES-CLASSIC: {{^  }}f(s.data());{{$}}
-  // CHECK-MESSAGES-WITH-CONFIG-NOT: :[[@LINE-3]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
+  // CHECK-MESSAGES-CLASSIC: :[[@LINE-1]]:5: warning: 'c_str' should be used instead of taking the address of the 0-th element [readability-container-data-pointer]
+  // CHECK-FIXES-CLASSIC: {{^  }}f(s.c_str());{{$}}
+  // CHECK-MESSAGES-WITH-CONFIG-NOT: :[[@LINE-3]]:5: warning: 'c_str' should be used instead of taking the address of the 0-th element [readability-container-data-pointer]
 
   std::wstring w;
   f(&((&(w))->operator[]((z))));
-  // CHECK-MESSAGES-CLASSIC: :[[@LINE-1]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
-  // CHECK-FIXES-CLASSIC: {{^  }}f(w.data());{{$}}
-  // CHECK-MESSAGES-WITH-CONFIG-NOT: :[[@LINE-3]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
+  // CHECK-MESSAGES-CLASSIC: :[[@LINE-1]]:5: warning: 'c_str' should be used instead of taking the address of the 0-th element [readability-container-data-pointer]
+  // CHECK-FIXES-CLASSIC: {{^  }}f(w.c_str());{{$}}
+  // CHECK-MESSAGES-WITH-CONFIG-NOT: :[[@LINE-3]]:5: warning: 'c_str' should be used instead of taking the address of the 0-th element [readability-container-data-pointer]
 }
 
 template <typename T, typename U,

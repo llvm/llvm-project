@@ -40,8 +40,10 @@ void ContainerDataPointerCheck::registerMatchers(MatchFinder *Finder) {
       cxxRecordDecl(
           unless(matchers::matchesAnyListedName(IgnoredContainers)),
           isSameOrDerivedFrom(
-              namedDecl(
-                  has(cxxMethodDecl(isPublic(), hasName("data")).bind("data")))
+              namedDecl(anyOf(has(cxxMethodDecl(isPublic(), hasName("c_str"))
+                                      .bind("c_str")),
+                              has(cxxMethodDecl(isPublic(), hasName("data"))
+                                      .bind("data"))))
                   .bind("container")))
           .bind("record");
 
@@ -93,6 +95,8 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *DCE = Result.Nodes.getNodeAs<Expr>(DerefContainerExprName);
   const auto *ACE = Result.Nodes.getNodeAs<Expr>(AddrOfContainerExprName);
 
+  const auto *CStrMethod = Result.Nodes.getNodeAs<CXXMethodDecl>("c_str");
+
   if (!UO || !CE)
     return;
 
@@ -111,16 +115,18 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
            MemberExpr>(CE))
     ReplacementText = "(" + ReplacementText + ")";
 
-  if (CE->getType()->isPointerType())
-    ReplacementText += "->data()";
-  else
-    ReplacementText += ".data()";
+  ReplacementText += CE->getType()->isPointerType() ? "->" : ".";
+  ReplacementText += CStrMethod ? "c_str()" : "data()";
+
+  std::string Description =
+      CStrMethod
+          ? "'c_str' should be used instead of taking the address of the 0-th "
+            "element"
+          : "'data' should be used for accessing the data pointer instead of "
+            "taking the address of the 0-th element";
 
   FixItHint Hint =
       FixItHint::CreateReplacement(UO->getSourceRange(), ReplacementText);
-  diag(UO->getBeginLoc(),
-       "'data' should be used for accessing the data pointer instead of taking "
-       "the address of the 0-th element")
-      << Hint;
+  diag(UO->getBeginLoc(), Description) << Hint;
 }
 } // namespace clang::tidy::readability
