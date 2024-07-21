@@ -555,9 +555,7 @@ int main(int argc, char **argv) {
         TheTriple, Ctx, std::unique_ptr<MCAsmBackend>(MAB),
         DwoOut ? MAB->createDwoObjectWriter(*OS, DwoOut->os())
                : MAB->createObjectWriter(*OS),
-        std::unique_ptr<MCCodeEmitter>(CE), *STI, MCOptions.MCRelaxAll,
-        MCOptions.MCIncrementalLinkerCompatible,
-        /*DWARFMustBeAtTheEnd*/ false));
+        std::unique_ptr<MCCodeEmitter>(CE), *STI));
     if (NoExecStack)
       Str->initSections(true, *STI);
   }
