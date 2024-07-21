@@ -24,7 +24,7 @@ unsigned AddressPool::getIndex(const MCSymbol *Sym, bool TLS) {
   return IterBool.first->second.Number;
 }
 
-MCSymbol *AddressPool::emitHeader(AsmPrinter &Asm, MCSection *Section) {
+MCSymbol *AddressPool::emitHeader(AsmPrinter &Asm) {
   static const uint8_t AddrSize = Asm.MAI->getCodePointerSize();
 
   MCSymbol *EndLabel =
@@ -50,7 +50,7 @@ void AddressPool::emit(AsmPrinter &Asm, MCSection *AddrSection) {
   MCSymbol *EndLabel = nullptr;
 
   if (Asm.getDwarfVersion() >= 5)
-    EndLabel = emitHeader(Asm, AddrSection);
+    EndLabel = emitHeader(Asm);
 
   // Define the symbol that marks the start of the contribution.
   // It is referenced via DW_AT_addr_base.
