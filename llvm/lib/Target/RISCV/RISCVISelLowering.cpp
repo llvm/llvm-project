@@ -389,6 +389,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     }
   } else if (!Subtarget.hasVendorXCVbitmanip()) {
     setOperationAction({ISD::CTTZ, ISD::CTPOP}, XLenVT, Expand);
+    if (Subtarget.is64Bit())
+      setOperationAction(ISD::CTPOP, MVT::i64, LibCall);
     if (RV64LegalI32 && Subtarget.is64Bit())
       setOperationAction({ISD::CTTZ, ISD::CTPOP}, MVT::i32, Expand);
   }
