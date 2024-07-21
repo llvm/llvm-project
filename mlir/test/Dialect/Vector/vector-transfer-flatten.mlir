@@ -132,7 +132,7 @@ func.func @transfer_read_dims_mismatch_non_contiguous_non_zero_indices(
 // -----
 
 /// The leading dynamic shapes don't affect whether this example is flattenable
-/// or not as those dynamic shapes are not candidates for flattening anyway.
+/// or not. Indeed, those dynamic shapes are not candidates for flattening anyway.
 
 func.func @transfer_read_leading_dynamic_dims(
     %arg : memref<?x?x8x4xi8, strided<[?, 32, 4, 1], offset: ?>>,
@@ -141,7 +141,8 @@ func.func @transfer_read_leading_dynamic_dims(
 
   %c0_i8 = arith.constant 0 : i8
   %c0 = arith.constant 0 : index
-  %result = vector.transfer_read %arg[%idx_1, %idx_2, %c0, %c0], %c0_i8 {in_bounds = [true, true]} : memref<?x?x8x4xi8, strided<[?, 32, 4, 1], offset: ?>>, vector<8x4xi8>
+  %result = vector.transfer_read %arg[%idx_1, %idx_2, %c0, %c0], %c0_i8 {in_bounds = [true, true]} :
+    memref<?x?x8x4xi8, strided<[?, 32, 4, 1], offset: ?>>, vector<8x4xi8>
   return %result : vector<8x4xi8>
 }
 
@@ -163,10 +164,9 @@ func.func @transfer_read_leading_dynamic_dims(
 
 // -----
 
-// The input memref has a dynamic trailing shape and hence is not flattened.
-// TODO: This case could be supported via memref.dim
+// One of the dims to be flattened is dynamic - not supported ATM.
 
-func.func @transfer_read_dims_mismatch_non_zero_indices_trailing_dynamic_dim(
+func.func @negative_transfer_read_dynamic_dim_to_flatten(
     %idx_1: index,
     %idx_2: index,
     %m_in: memref<1x?x4x6xi32>) -> vector<1x2x6xi32> {
@@ -178,11 +178,11 @@ func.func @transfer_read_dims_mismatch_non_zero_indices_trailing_dynamic_dim(
   return %v : vector<1x2x6xi32>
 }
 
-// CHECK-LABEL: func.func @transfer_read_dims_mismatch_non_zero_indices_trailing_dynamic_dim
+// CHECK-LABEL: func.func @negative_transfer_read_dynamic_dim_to_flatten
 // CHECK-NOT: memref.collapse_shape
 // CHECK-NOT: vector.shape_cast
 
-// CHECK-128B-LABEL: func @transfer_read_dims_mismatch_non_zero_indices_trailing_dynamic_dim
+// CHECK-128B-LABEL: func @negative_transfer_read_dynamic_dim_to_flatten
 //   CHECK-128B-NOT:   memref.collapse_shape
 
 // -----
@@ -377,8 +377,8 @@ func.func @transfer_write_dims_mismatch_non_contiguous_non_zero_indices(
 
 // -----
 
-// The leading dynamic shapes don't affect whether this example is flattenable
-// or not as those dynamic shapes are not candidates for flattening anyway.
+/// The leading dynamic shapes don't affect whether this example is flattenable
+/// or not. Indeed, those dynamic shapes are not candidates for flattening anyway.
 
 func.func @transfer_write_leading_dynamic_dims(
     %vec : vector<8x4xi8>,
@@ -387,7 +387,8 @@ func.func @transfer_write_leading_dynamic_dims(
     %idx_2 : index) {
 
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vec, %arg[%idx_1, %idx_2, %c0, %c0] {in_bounds = [true, true]} : vector<8x4xi8>, memref<?x?x8x4xi8, strided<[?, 32, 4, 1], offset: ?>>
+  vector.transfer_write %vec, %arg[%idx_1, %idx_2, %c0, %c0] {in_bounds = [true, true]} :
+    vector<8x4xi8>, memref<?x?x8x4xi8, strided<[?, 32, 4, 1], offset: ?>>
   return
 }
 
@@ -407,10 +408,9 @@ func.func @transfer_write_leading_dynamic_dims(
 
 // -----
 
-// The input memref has a dynamic trailing shape and hence is not flattened.
-// TODO: This case could be supported via memref.dim
+// One of the dims to be flattened is dynamic - not supported ATM.
 
-func.func @transfer_write_dims_mismatch_non_zero_indices_trailing_dynamic_dim(
+func.func @negative_transfer_write_dynamic_to_flatten(
     %idx_1: index,
     %idx_2: index,
     %vec : vector<1x2x6xi32>,
@@ -423,11 +423,11 @@ func.func @transfer_write_dims_mismatch_non_zero_indices_trailing_dynamic_dim(
   return
 }
 
-// CHECK-LABEL: func.func @transfer_write_dims_mismatch_non_zero_indices_trailing_dynamic_dim(
+// CHECK-LABEL: func.func @negative_transfer_write_dynamic_to_flatten
 // CHECK-NOT: memref.collapse_shape
 // CHECK-NOT: vector.shape_cast
 
-// CHECK-128B-LABEL: func @transfer_write_dims_mismatch_non_zero_indices_trailing_dynamic_dim(
+// CHECK-128B-LABEL: func @negative_transfer_write_dynamic_to_flatten
 //   CHECK-128B-NOT:   memref.collapse_shape
 
 // -----
