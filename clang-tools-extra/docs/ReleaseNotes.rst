@@ -104,6 +104,12 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`modernize-use-std-print
+  <clang-tidy/checks/modernize/use-std-format>` and
+  :doc:`modernize-use-std-print
+  <clang-tidy/checks/modernize/use-std-print>` checks to support replacing
+  member function calls too.
+
 - Improved :doc:`readability-redundant-smartptr-get
   <clang-tidy/checks/readability/redundant-smartptr-get>` check to
   remove `->`, when reduntant `get()` is removed.
