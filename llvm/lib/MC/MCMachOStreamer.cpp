@@ -151,12 +151,13 @@ void MCMachOStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
 
 void MCMachOStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
                                           MCSymbol *EHSymbol) {
+  auto *Sym = cast<MCSymbolMachO>(Symbol);
   getAssembler().registerSymbol(*Symbol);
   if (Symbol->isExternal())
     emitSymbolAttribute(EHSymbol, MCSA_Global);
-  if (cast<MCSymbolMachO>(Symbol)->isWeakDefinition())
+  if (Sym->isWeakDefinition())
     emitSymbolAttribute(EHSymbol, MCSA_WeakDefinition);
-  if (Symbol->isPrivateExtern())
+  if (Sym->isPrivateExtern())
     emitSymbolAttribute(EHSymbol, MCSA_PrivateExtern);
 }
 
