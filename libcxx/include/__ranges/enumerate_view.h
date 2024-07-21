@@ -169,7 +169,7 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator*() const { return __reference_type(__pos_, *__current_); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
     ++__current_;
     ++__pos_;
     return *this;
@@ -177,7 +177,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) { return ++*this; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int)
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int)
     requires forward_range<_Base>
   {
     auto __temp = *this;
@@ -185,7 +185,7 @@ public:
     return __temp;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator--()
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator--()
     requires bidirectional_range<_Base>
   {
     --__current_;
@@ -193,7 +193,7 @@ public:
     return *this;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator--(int)
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator--(int)
     requires bidirectional_range<_Base>
   {
     auto __temp = *this;
