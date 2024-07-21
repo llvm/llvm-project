@@ -133,6 +133,7 @@ operator<(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXC
   return __x.base() < __y.base();
 }
 
+#if _LIBCPP_STD_VER <= 17
 template <class _Iter1>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
 operator!=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
@@ -144,6 +145,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
 operator!=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
   return !(__x == __y);
 }
+#endif
 
 template <class _Iter1>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
@@ -185,18 +187,34 @@ operator<=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEX
 
 template <class _Iter1>
 _LIBCPP_HIDE_FROM_ABI constexpr strong_ordering
-operator<=>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) noexcept
-  requires three_way_comparable<_Iter1, strong_ordering>
-{
-  return __x.base() <=> __y.base();
+operator<=>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) noexcept {
+  if constexpr (three_way_comparable<_Iter1, strong_ordering>) {
+    return __x.base() <=> __y.base();
+  } else {
+    if (__x.base() < __y.base())
+      return strong_ordering::less;
+
+    if (__x.base() == __y.base())
+      return strong_ordering::equal;
+
+    return strong_ordering::greater;
+  }
 }
 
 template <class _Iter1, class _Iter2>
 _LIBCPP_HIDE_FROM_ABI constexpr strong_ordering
-operator<=>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) noexcept
-  requires three_way_comparable_with<_Iter1, _Iter2, strong_ordering>
-{
-  return __x.base() <=> __y.base();
+operator<=>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) noexcept {
+  if constexpr (three_way_comparable_with<_Iter1, _Iter2, strong_ordering>) {
+    return __x.base() <=> __y.base();
+  } else {
+    if (__x.base() < __y.base())
+      return strong_ordering::less;
+
+    if (__x.base() == __y.base())
+      return strong_ordering::equal;
+
+    return strong_ordering::greater;
+  }
 }
 
 #endif // _LIBCPP_STD_VER >= 20
