@@ -199,8 +199,8 @@ static long initHwProbe(struct riscv_hwprobe *Hwprobes, int len) {
 
 static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
 
-  // Note: If a hwprobe key is unknown to the kernel, its key field 
-  // will be cleared to -1, and its value set to 0. 
+  // Note: If a hwprobe key is unknown to the kernel, its key field
+  // will be cleared to -1, and its value set to 0.
   // This unsets all extension bitmask bits.
 
   // Init vendor extension
