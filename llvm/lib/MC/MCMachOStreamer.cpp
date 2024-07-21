@@ -118,7 +118,7 @@ public:
   }
 
   void emitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) override {
-    getAssembler().getLOHContainer().addDirective(Kind, Args);
+    getWriter().getLOHContainer().addDirective(Kind, Args);
   }
   void emitCGProfileEntry(const MCSymbolRefExpr *From,
                           const MCSymbolRefExpr *To, uint64_t Count) override {
