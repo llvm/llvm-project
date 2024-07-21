@@ -57,9 +57,10 @@ static cl::opt<double>
                 cl::desc("Multiply all ratios by this factor"), cl::init(1.0),
                 cl::ReallyHidden);
 
-// Lookup samples for an Instruction's corresponding location in a
-// FunctionSamples profile. The count returned is directly from the profile
-// representing the number of samples seen.
+// Lookup execution frequency and mispredict samples for an Instruction's
+// corresponding location in a the two FunctionSamples profiles and compute an
+// effective branch mispredict ratio. The counts used to compute the ratio are
+// uint64s read directly from the profile files.
 ErrorOr<double> UnpredictableProfileLoaderPass::getMispredictRatio(
     const FunctionSamples *FuncFreqSamples,
     const FunctionSamples *FuncMispSamples, const Instruction *I) {
@@ -101,8 +102,9 @@ ErrorOr<double> UnpredictableProfileLoaderPass::getMispredictRatio(
   return MissRatio;
 }
 
-// Examine all Select and BranchInsts in a function, adding !unpredictable
-// metadata if they appear in the mispredict profile with sufficient weight.
+// Examine all Branch, Select, and SwitchInsts in a function, adding
+// !unpredictable metadata if they appear in the mispredict profile with
+// sufficient weight.
 bool UnpredictableProfileLoaderPass::addUpredictableMetadata(Function &F) {
 
   const FunctionSamples *FreqSamples = FreqReader->getSamplesFor(F);
