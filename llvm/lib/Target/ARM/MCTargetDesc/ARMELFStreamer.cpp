@@ -1461,8 +1461,7 @@ namespace llvm {
 
 MCTargetStreamer *createARMTargetAsmStreamer(MCStreamer &S,
                                              formatted_raw_ostream &OS,
-                                             MCInstPrinter *InstPrint,
-                                             bool isVerboseAsm) {
+                                             MCInstPrinter *InstPrint) {
   return new ARMTargetAsmStreamer(S, OS, *InstPrint);
 }
 
