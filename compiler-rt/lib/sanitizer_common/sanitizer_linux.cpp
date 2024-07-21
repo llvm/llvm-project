@@ -2374,7 +2374,7 @@ void SignalContext::DumpAllRegisters(void *context) {
     if (i % 4 == 3)
       Printf("\n");
   }
-#    endif
+#    else
   (void)ucontext;
 #    endif
 #  elif SANITIZER_FREEBSD
