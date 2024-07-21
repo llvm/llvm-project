@@ -99,7 +99,7 @@
 "","","","","",""
 `2191 <https://wg21.link/LWG2191>`__,"Incorrect specification of ``match_results(match_results&&)``","October 2021","|Nothing To Do|",""
 `2381 <https://wg21.link/LWG2381>`__,"Inconsistency in parsing floating point numbers","October 2021","|Complete|","19.0"
-`2762 <https://wg21.link/LWG2762>`__,"``unique_ptr operator*()`` should be ``noexcept``","October 2021","",""
+`2762 <https://wg21.link/LWG2762>`__,"``unique_ptr operator*()`` should be ``noexcept``","October 2021","|Complete|","19.0"
 `3121 <https://wg21.link/LWG3121>`__,"``tuple`` constructor constraints for ``UTypes&&...`` overloads","October 2021","",""
 `3123 <https://wg21.link/LWG3123>`__,"``duration`` constructor from representation shouldn't be effectively non-throwing","October 2021","","","|chrono|"
 `3146 <https://wg21.link/LWG3146>`__,"Excessive unwrapping in ``std::ref/cref``","October 2021","|Complete|","14.0"
