@@ -178,9 +178,11 @@ def Feature8MSecExt       : SubtargetFeature<"8msecext", "Has8MSecExt", "true",
                                              "Enable support for ARMv8-M "
                                              "Security Extensions">;
 
-// True if processor supports SHA1 and SHA256.
+def FeatureSHA1           : SubtargetFeature<"sha1", "HasSHA1", "true",
+                                             "Enable SHA1 support", [FeatureNEON]>;
+
 def FeatureSHA2           : SubtargetFeature<"sha2", "HasSHA2", "true",
-                                             "Enable SHA1 and SHA256 support", [FeatureNEON]>;
+                                             "Enable SHA256 support", [FeatureSHA1]>;
 
 def FeatureAES            : SubtargetFeature<"aes", "HasAES", "true",
                                              "Enable AES support", [FeatureNEON]>;

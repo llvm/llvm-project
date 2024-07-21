@@ -12,5 +12,6 @@
 // CHECK-NEXT:     FEAT_LSE                                               Enable Armv8.1-A Large System Extension (LSE) atomic instructions
 // CHECK-NEXT:     FEAT_PAN                                               Enable Armv8.1-A Privileged Access-Never extension
 // CHECK-NEXT:     FEAT_RDM                                               Enable Armv8.1-A Rounding Double Multiply Add/Subtract instructions
-// CHECK-NEXT:     FEAT_SHA1, FEAT_SHA256                                 Enable SHA1 and SHA256 support
+// CHECK-NEXT:     FEAT_SHA1                                              Enable SHA1 support
+// CHECK-NEXT:     FEAT_SHA256                                            Enable SHA256 support
 // CHECK-NEXT:     FEAT_VHE                                               Enable Armv8.1-A Virtual Host extension

@@ -49,5 +49,5 @@ void test_sha2aes(uint8x16_t data, uint8x16_t key)
 void test_errors(uint8x16_t data, uint8x16_t key)
 {
   vaeseq_u8(data, key); // expected-error {{always_inline function 'vaeseq_u8' requires target feature 'aes'}}
-  vsha1su1q_u32(data, key); // expected-error {{always_inline function 'vsha1su1q_u32' requires target feature 'sha2'}}
+  vsha1su1q_u32(data, key); // expected-error {{always_inline function 'vsha1su1q_u32' requires target feature 'sha1'}}
 }

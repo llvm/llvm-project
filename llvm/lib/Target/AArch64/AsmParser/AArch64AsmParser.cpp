@@ -3655,6 +3655,7 @@ static const struct Extension {
     {"sm4", {AArch64::FeatureSM4}},
     {"sha3", {AArch64::FeatureSHA3}},
     {"sha2", {AArch64::FeatureSHA2}},
+    {"sha1", {AArch64::FeatureSHA1}},
     {"aes", {AArch64::FeatureAES}},
     {"crypto", {AArch64::FeatureCrypto}},
     {"fp", {AArch64::FeatureFPARMv8}},

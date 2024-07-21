@@ -44,7 +44,8 @@
 // CHECK-NEXT:     FEAT_RDM                                               Enable Armv8.1-A Rounding Double Multiply Add/Subtract instructions
 // CHECK-NEXT:     FEAT_SB                                                Enable Armv8.5-A Speculation Barrier
 // CHECK-NEXT:     FEAT_SEL2                                              Enable Armv8.4-A Secure Exception Level 2 extension
-// CHECK-NEXT:     FEAT_SHA1, FEAT_SHA256                                 Enable SHA1 and SHA256 support
+// CHECK-NEXT:     FEAT_SHA1                                              Enable SHA1 support
+// CHECK-NEXT:     FEAT_SHA256                                            Enable SHA256 support
 // CHECK-NEXT:     FEAT_SHA3, FEAT_SHA512                                 Enable SHA512 and SHA3 support
 // CHECK-NEXT:     FEAT_SME                                               Enable Scalable Matrix Extension (SME)
 // CHECK-NEXT:     FEAT_SME2                                              Enable Scalable Matrix Extension 2 (SME2) instructions

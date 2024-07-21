@@ -506,6 +506,7 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   CRC = 0;
   Crypto = 0;
   SHA2 = 0;
+  SHA1 = 0;
   AES = 0;
   DSP = 0;
   HasUnalignedAccess = true;
@@ -563,6 +564,9 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       Crypto = 1;
     } else if (Feature == "+sha2") {
       SHA2 = 1;
+      SHA1 = 1;
+    } else if (Feature == "+sha1") {
+      SHA1 = 1;
     } else if (Feature == "+aes") {
       AES = 1;
     } else if (Feature == "+dsp") {

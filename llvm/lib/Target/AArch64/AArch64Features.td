@@ -71,8 +71,11 @@ let ArchExtKindSpelling = "AEK_SIMD", UserVisibleName = "simd" in
 def FeatureNEON : ExtensionWithMArch<"neon", "NEON", "FEAT_AdvSIMD",
   "Enable Advanced SIMD instructions", [FeatureFPARMv8]>;
 
-def FeatureSHA2 : ExtensionWithMArch<"sha2", "SHA2", "FEAT_SHA1, FEAT_SHA256",
-  "Enable SHA1 and SHA256 support", [FeatureNEON]>;
+def FeatureSHA1 : ExtensionWithMArch<"sha1", "SHA1", "FEAT_SHA1",
+  "Enable SHA1 support", [FeatureNEON]>;
+
+def FeatureSHA2 : ExtensionWithMArch<"sha2", "SHA2", "FEAT_SHA256",
+  "Enable SHA256 support", [FeatureSHA1]>;
 
 def FeatureAES : ExtensionWithMArch<"aes", "AES", "FEAT_AES, FEAT_PMULL",
   "Enable AES support", [FeatureNEON]>;

@@ -93,6 +93,8 @@ def HasFPARMv8       : Predicate<"Subtarget->hasFPARMv8Base()">,
                                  AssemblerPredicate<(all_of FeatureFPARMv8_D16_SP), "FPARMv8">;
 def HasNEON          : Predicate<"Subtarget->hasNEON()">,
                                  AssemblerPredicate<(all_of FeatureNEON), "NEON">;
+def HasSHA1          : Predicate<"Subtarget->hasSHA1()">,
+                                 AssemblerPredicate<(all_of FeatureSHA1), "sha1">;
 def HasSHA2          : Predicate<"Subtarget->hasSHA2()">,
                                  AssemblerPredicate<(all_of FeatureSHA2), "sha2">;
 def HasAES           : Predicate<"Subtarget->hasAES()">,

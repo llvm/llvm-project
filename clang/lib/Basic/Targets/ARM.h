@@ -84,6 +84,8 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned SHA2 : 1;
   LLVM_PREFERRED_TYPE(bool)
+  unsigned SHA1 : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned AES : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned DSP : 1;

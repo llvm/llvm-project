@@ -728,6 +728,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("rdm", HasRDM)
       .Case("lse", HasLSE)
       .Case("crc", HasCRC)
+      .Case("sha1", HasSHA1)
       .Case("sha2", HasSHA2)
       .Case("sha3", HasSHA3)
       .Cases("aes", "pmull", HasAES)
@@ -932,12 +933,18 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       FPU |= NeonMode;
       HasAES = true;
     }
+    if (Feature == "+sha1") {
+      FPU |= NeonMode;
+      HasSHA1 = true;
+    }
     if (Feature == "+sha2") {
       FPU |= NeonMode;
+      HasSHA1 = true;
       HasSHA2 = true;
     }
     if (Feature == "+sha3") {
       FPU |= NeonMode;
+      HasSHA1 = true;
       HasSHA2 = true;
       HasSHA3 = true;
     }

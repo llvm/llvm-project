@@ -6,7 +6,8 @@
 // CHECK-NEXT:     Name                Description
 // CHECK-NEXT:     crc                 Enable support for CRC instructions
 // CHECK-NEXT:     crypto              Enable support for Cryptography extensions
-// CHECK-NEXT:     sha2                Enable SHA1 and SHA256 support
+// CHECK-NEXT:     sha1                Enable SHA1 support
+// CHECK-NEXT:     sha2                Enable SHA256 support
 // CHECK-NEXT:     aes                 Enable AES support
 // CHECK-NEXT:     dotprod             Enable support for dot product instructions
 // CHECK-NEXT:     dsp                 Supports DSP instructions in ARM and/or Thumb2

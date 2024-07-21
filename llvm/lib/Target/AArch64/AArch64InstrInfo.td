@@ -115,6 +115,8 @@ def HasSHA3          : Predicate<"Subtarget->hasSHA3()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSHA3), "sha3">;
 def HasSHA2          : Predicate<"Subtarget->hasSHA2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSHA2), "sha2">;
+def HasSHA1          : Predicate<"Subtarget->hasSHA1()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSHA1), "sha1">;
 def HasAES           : Predicate<"Subtarget->hasAES()">,
                                  AssemblerPredicateWithAll<(all_of FeatureAES), "aes">;
 def HasDotProd       : Predicate<"Subtarget->hasDotProd()">,
@@ -8651,18 +8653,20 @@ def : Pat<(v16i8 (int_aarch64_crypto_aesimc
                                               (v16i8 V128:$src2)))))>,
           Requires<[HasFuseAES]>;
 
-let Predicates = [HasSHA2] in {
+let Predicates = [HasSHA1] in {
+def SHA1Hrr      : SHAInstSS<    0b0000, "sha1h",   int_aarch64_crypto_sha1h>;
 def SHA1Crrr     : SHATiedInstQSV<0b000, "sha1c",   int_aarch64_crypto_sha1c>;
 def SHA1Prrr     : SHATiedInstQSV<0b001, "sha1p",   int_aarch64_crypto_sha1p>;
 def SHA1Mrrr     : SHATiedInstQSV<0b010, "sha1m",   int_aarch64_crypto_sha1m>;
 def SHA1SU0rrr   : SHATiedInstVVV<0b011, "sha1su0", int_aarch64_crypto_sha1su0>;
-def SHA256Hrrr   : SHATiedInstQQV<0b100, "sha256h", int_aarch64_crypto_sha256h>;
-def SHA256H2rrr  : SHATiedInstQQV<0b101, "sha256h2",int_aarch64_crypto_sha256h2>;
-def SHA256SU1rrr :SHATiedInstVVV<0b110, "sha256su1",int_aarch64_crypto_sha256su1>;
+def SHA1SU1rr    : SHATiedInstVV<0b0001, "sha1su1", int_aarch64_crypto_sha1su1>;
+}
 
-def SHA1Hrr     : SHAInstSS<    0b0000, "sha1h",    int_aarch64_crypto_sha1h>;
-def SHA1SU1rr   : SHATiedInstVV<0b0001, "sha1su1",  int_aarch64_crypto_sha1su1>;
-def SHA256SU0rr : SHATiedInstVV<0b0010, "sha256su0",int_aarch64_crypto_sha256su0>;
+let Predicates = [HasSHA2] in {
+def SHA256Hrrr   : SHATiedInstQQV<0b100, "sha256h",   int_aarch64_crypto_sha256h>;
+def SHA256H2rrr  : SHATiedInstQQV<0b101, "sha256h2",  int_aarch64_crypto_sha256h2>;
+def SHA256SU1rrr : SHATiedInstVVV<0b110, "sha256su1", int_aarch64_crypto_sha256su1>;
+def SHA256SU0rr  : SHATiedInstVV<0b0010, "sha256su0", int_aarch64_crypto_sha256su0>;
 }
 
 //----------------------------------------------------------------------------

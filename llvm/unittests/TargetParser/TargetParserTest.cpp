@@ -1047,6 +1047,7 @@ TEST(TargetParserTest, ARMPrintSupportedExtensions) {
       "    Name                Description\n"
       "    crc                 This is a long dummy description\n"
       "    crypto\n"
+      "    sha1\n"
       "    sha2\n";
 
   StringMap<StringRef> DummyMap;
@@ -2261,7 +2262,6 @@ TEST(TargetParserTest, AArch64PrintSupportedExtensions) {
   // Should not include anything that lacks a feature name. Checking a few here
   // but not all as if one is hidden correctly the rest should be.
   EXPECT_EQ(std::string::npos, captured.find("memtag3"));
-  EXPECT_EQ(std::string::npos, captured.find("sha1"));
   EXPECT_EQ(std::string::npos, captured.find("ssbs2"));
 }
 

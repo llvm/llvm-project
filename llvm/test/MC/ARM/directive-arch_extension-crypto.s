@@ -30,20 +30,20 @@ crypto:
 @ CHECK-V7: error: instruction requires: aes armv8
 
 	sha1h.32 q0, q1
-@ CHECK-V7: error: instruction requires: sha2 armv8
+@ CHECK-V7: error: instruction requires: sha1 armv8
 	sha1su1.32 q0, q1
-@ CHECK-V7: error: instruction requires: sha2 armv8
+@ CHECK-V7: error: instruction requires: sha1 armv8
 	sha256su0.32 q0, q1
 @ CHECK-V7: error: instruction requires: sha2 armv8
 
 	sha1c.32 q0, q1, q2
-@ CHECK-V7: error: instruction requires: sha2 armv8
+@ CHECK-V7: error: instruction requires: sha1 armv8
 	sha1m.32 q0, q1, q2
-@ CHECK-V7: error: instruction requires: sha2 armv8
+@ CHECK-V7: error: instruction requires: sha1 armv8
 	sha1p.32 q0, q1, q2
-@ CHECK-V7: error: instruction requires: sha2 armv8
+@ CHECK-V7: error: instruction requires: sha1 armv8
 	sha1su0.32 q0, q1, q2
-@ CHECK-V7: error: instruction requires: sha2 armv8
+@ CHECK-V7: error: instruction requires: sha1 armv8
 	sha256h.32 q0, q1, q2
 @ CHECK-V7: error: instruction requires: sha2 armv8
 	sha256h2.32 q0, q1, q2
@@ -80,27 +80,27 @@ nocrypto:
 @ CHECK-V8: error: instruction requires: aes
 
 	sha1h.32 q0, q1
-@ CHECK-V7: error: instruction requires: sha2 armv8
-@ CHECK-V8: error: instruction requires: sha2
+@ CHECK-V7: error: instruction requires: sha1 armv8
+@ CHECK-V8: error: instruction requires: sha1
 	sha1su1.32 q0, q1
-@ CHECK-V7: error: instruction requires: sha2 armv8
-@ CHECK-V8: error: instruction requires: sha2
+@ CHECK-V7: error: instruction requires: sha1 armv8
+@ CHECK-V8: error: instruction requires: sha1
 	sha256su0.32 q0, q1
 @ CHECK-V7: error: instruction requires: sha2 armv8
 @ CHECK-V8: error: instruction requires: sha2
 
 	sha1c.32 q0, q1, q2
-@ CHECK-V7: error: instruction requires: sha2 armv8
-@ CHECK-V8: error: instruction requires: sha2
+@ CHECK-V7: error: instruction requires: sha1 armv8
+@ CHECK-V8: error: instruction requires: sha1
 	sha1m.32 q0, q1, q2
-@ CHECK-V7: error: instruction requires: sha2 armv8
-@ CHECK-V8: error: instruction requires: sha2
+@ CHECK-V7: error: instruction requires: sha1 armv8
+@ CHECK-V8: error: instruction requires: sha1
 	sha1p.32 q0, q1, q2
-@ CHECK-V7: error: instruction requires: sha2 armv8
-@ CHECK-V8: error: instruction requires: sha2
+@ CHECK-V7: error: instruction requires: sha1 armv8
+@ CHECK-V8: error: instruction requires: sha1
 	sha1su0.32 q0, q1, q2
-@ CHECK-V7: error: instruction requires: sha2 armv8
-@ CHECK-V8: error: instruction requires: sha2
+@ CHECK-V7: error: instruction requires: sha1 armv8
+@ CHECK-V8: error: instruction requires: sha1
 	sha256h.32 q0, q1, q2
 @ CHECK-V7: error: instruction requires: sha2 armv8
 @ CHECK-V8: error: instruction requires: sha2
