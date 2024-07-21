@@ -184,6 +184,7 @@ static const std::pair<AlignTypeEnum, LayoutAlignElem> DefaultAlignments[] = {
     {INTEGER_ALIGN, {16, Align(2), Align(2)}},   // i16
     {INTEGER_ALIGN, {32, Align(4), Align(4)}},   // i32
     {INTEGER_ALIGN, {64, Align(4), Align(8)}},   // i64
+    {FLOAT_ALIGN, {8, Align(1), Align(1)}},     // float8e4m3fn, float8e5m2
     {FLOAT_ALIGN, {16, Align(2), Align(2)}},     // half, bfloat
     {FLOAT_ALIGN, {32, Align(4), Align(4)}},     // float
     {FLOAT_ALIGN, {64, Align(8), Align(8)}},     // double
@@ -813,6 +814,8 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   }
   case Type::IntegerTyID:
     return getIntegerAlignment(Ty->getIntegerBitWidth(), abi_or_pref);
+  case Type::Float8E4M3FNTyID:
+  case Type::Float8E5M2TyID:
   case Type::HalfTyID:
   case Type::BFloatTyID:
   case Type::FloatTyID:

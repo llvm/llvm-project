@@ -1044,17 +1044,19 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
   } else if (Ty) {
     switch (Ty->getTypeID()) {
     default: llvm_unreachable("Unhandled type");
-    case Type::VoidTyID:      Result += "isVoid";   break;
-    case Type::MetadataTyID:  Result += "Metadata"; break;
-    case Type::HalfTyID:      Result += "f16";      break;
-    case Type::BFloatTyID:    Result += "bf16";     break;
-    case Type::FloatTyID:     Result += "f32";      break;
-    case Type::DoubleTyID:    Result += "f64";      break;
-    case Type::X86_FP80TyID:  Result += "f80";      break;
-    case Type::FP128TyID:     Result += "f128";     break;
-    case Type::PPC_FP128TyID: Result += "ppcf128";  break;
-    case Type::X86_MMXTyID:   Result += "x86mmx";   break;
-    case Type::X86_AMXTyID:   Result += "x86amx";   break;
+    case Type::VoidTyID:          Result += "isVoid";     break;
+    case Type::MetadataTyID:      Result += "Metadata";   break;
+    case Type::Float8E4M3FNTyID:  Result += "f8e4m3fn";   break;
+    case Type::Float8E5M2TyID:    Result += "f8e5m2";     break;
+    case Type::HalfTyID:          Result += "f16";        break;
+    case Type::BFloatTyID:        Result += "bf16";       break;
+    case Type::FloatTyID:         Result += "f32";        break;
+    case Type::DoubleTyID:        Result += "f64";        break;
+    case Type::X86_FP80TyID:      Result += "f80";        break;
+    case Type::FP128TyID:         Result += "f128";       break;
+    case Type::PPC_FP128TyID:     Result += "ppcf128";    break;
+    case Type::X86_MMXTyID:       Result += "x86mmx";     break;
+    case Type::X86_AMXTyID:       Result += "x86amx";     break;
     case Type::IntegerTyID:
       Result += "i" + utostr(cast<IntegerType>(Ty)->getBitWidth());
       break;

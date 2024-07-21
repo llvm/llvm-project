@@ -35,19 +35,21 @@ using namespace llvm;
 
 Type *Type::getPrimitiveType(LLVMContext &C, TypeID IDNumber) {
   switch (IDNumber) {
-  case VoidTyID      : return getVoidTy(C);
-  case HalfTyID      : return getHalfTy(C);
-  case BFloatTyID    : return getBFloatTy(C);
-  case FloatTyID     : return getFloatTy(C);
-  case DoubleTyID    : return getDoubleTy(C);
-  case X86_FP80TyID  : return getX86_FP80Ty(C);
-  case FP128TyID     : return getFP128Ty(C);
-  case PPC_FP128TyID : return getPPC_FP128Ty(C);
-  case LabelTyID     : return getLabelTy(C);
-  case MetadataTyID  : return getMetadataTy(C);
-  case X86_MMXTyID   : return getX86_MMXTy(C);
-  case X86_AMXTyID   : return getX86_AMXTy(C);
-  case TokenTyID     : return getTokenTy(C);
+  case VoidTyID          : return getVoidTy(C);
+  case Float8E4M3FNTyID  : return getFloat8E4M3FNTy(C);
+  case Float8E5M2TyID    : return getFloat8E5M2Ty(C);
+  case HalfTyID          : return getHalfTy(C);
+  case BFloatTyID        : return getBFloatTy(C);
+  case FloatTyID         : return getFloatTy(C);
+  case DoubleTyID        : return getDoubleTy(C);
+  case X86_FP80TyID      : return getX86_FP80Ty(C);
+  case FP128TyID         : return getFP128Ty(C);
+  case PPC_FP128TyID     : return getPPC_FP128Ty(C);
+  case LabelTyID         : return getLabelTy(C);
+  case MetadataTyID      : return getMetadataTy(C);
+  case X86_MMXTyID       : return getX86_MMXTy(C);
+  case X86_AMXTyID       : return getX86_AMXTy(C);
+  case TokenTyID         : return getTokenTy(C);
   default:
     return nullptr;
   }
@@ -69,6 +71,8 @@ bool Type::isScalableTy() const {
 
 const fltSemantics &Type::getFltSemantics() const {
   switch (getTypeID()) {
+  case Float8E5M2TyID: return APFloat::Float8E5M2();
+  case Float8E4M3FNTyID: return APFloat::Float8E4M3FN();
   case HalfTyID: return APFloat::IEEEhalf();
   case BFloatTyID: return APFloat::BFloat();
   case FloatTyID: return APFloat::IEEEsingle();
@@ -92,7 +96,11 @@ bool Type::isScalableTargetExtTy() const {
 
 Type *Type::getFloatingPointTy(LLVMContext &C, const fltSemantics &S) {
   Type *Ty;
-  if (&S == &APFloat::IEEEhalf())
+  if (&S == &APFloat::Float8E4M3FN())
+    Ty = Type::getFloat8E4M3FNTy(C);
+  else if (&S == &APFloat::Float8E5M2())
+    Ty = Type::getFloat8E5M2Ty(C);
+  else if (&S == &APFloat::IEEEhalf())
     Ty = Type::getHalfTy(C);
   else if (&S == &APFloat::BFloat())
     Ty = Type::getBFloatTy(C);
@@ -165,6 +173,10 @@ bool Type::isEmptyTy() const {
 
 TypeSize Type::getPrimitiveSizeInBits() const {
   switch (getTypeID()) {
+  case Type::Float8E4M3FNTyID:
+    return TypeSize::getFixed(8);
+  case Type::Float8E5M2TyID:
+    return TypeSize::getFixed(8);
   case Type::HalfTyID:
     return TypeSize::getFixed(16);
   case Type::BFloatTyID:
@@ -207,6 +219,8 @@ int Type::getFPMantissaWidth() const {
   if (auto *VTy = dyn_cast<VectorType>(this))
     return VTy->getElementType()->getFPMantissaWidth();
   assert(isFloatingPointTy() && "Not a floating point type!");
+  if (getTypeID() == Float8E4M3FNTyID) return 3;
+  if (getTypeID() == Float8E5M2TyID) return 2;
   if (getTypeID() == HalfTyID) return 11;
   if (getTypeID() == BFloatTyID) return 8;
   if (getTypeID() == FloatTyID) return 24;
@@ -236,6 +250,8 @@ bool Type::isSizedDerivedType(SmallPtrSetImpl<Type*> *Visited) const {
 
 Type *Type::getVoidTy(LLVMContext &C) { return &C.pImpl->VoidTy; }
 Type *Type::getLabelTy(LLVMContext &C) { return &C.pImpl->LabelTy; }
+Type *Type::getFloat8E5M2Ty(LLVMContext &C) { return &C.pImpl->Float8E5M2Ty; }
+Type *Type::getFloat8E4M3FNTy(LLVMContext &C) { return &C.pImpl->Float8E4M3FNTy; }
 Type *Type::getHalfTy(LLVMContext &C) { return &C.pImpl->HalfTy; }
 Type *Type::getBFloatTy(LLVMContext &C) { return &C.pImpl->BFloatTy; }
 Type *Type::getFloatTy(LLVMContext &C) { return &C.pImpl->FloatTy; }

@@ -6126,13 +6126,20 @@ bool LLParser::convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
         !ConstantFP::isValueValidForType(Ty, ID.APFloatVal))
       return error(ID.Loc, "floating point constant invalid for type");
 
-    // The lexer has no type info, so builds all half, bfloat, float, and double
-    // FP constants as double.  Fix this here.  Long double does not need this.
+    // The lexer has no type info, so builds all float8e5m2, float8e4m3fn, half,
+    // bfloat, float, and double FP constants as double.  Fix this here. Long
+    // double does not need this.
     if (&ID.APFloatVal.getSemantics() == &APFloat::IEEEdouble()) {
       // Check for signaling before potentially converting and losing that info.
       bool IsSNAN = ID.APFloatVal.isSignaling();
       bool Ignored;
-      if (Ty->isHalfTy())
+      if (Ty->isFloat8E5M2Ty())
+        ID.APFloatVal.convert(APFloat::Float8E5M2(), APFloat::rmNearestTiesToEven,
+                              &Ignored);
+      else if (Ty->isFloat8E4M3FNTy())
+        ID.APFloatVal.convert(APFloat::Float8E4M3FN(), APFloat::rmNearestTiesToEven,
+                              &Ignored);
+      else if (Ty->isHalfTy())
         ID.APFloatVal.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven,
                               &Ignored);
       else if (Ty->isBFloatTy())

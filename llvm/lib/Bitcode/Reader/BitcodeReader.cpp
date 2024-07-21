@@ -2468,6 +2468,12 @@ Error BitcodeReader::parseTypeTableBody() {
     case bitc::TYPE_CODE_VOID:      // VOID
       ResultTy = Type::getVoidTy(Context);
       break;
+    case bitc::TYPE_CODE_Float8E4M3FN: // FP8E4M3FN
+      ResultTy = Type::getFloat8E4M3FNTy(Context);
+      break;
+    case bitc::TYPE_CODE_Float8E5M2:   // FP8E5M2
+      ResultTy = Type::getFloat8E5M2Ty(Context);
+      break;
     case bitc::TYPE_CODE_HALF:     // HALF
       ResultTy = Type::getHalfTy(Context);
       break;
@@ -3202,7 +3208,13 @@ Error BitcodeReader::parseConstants() {
         return error("Invalid float const record");
 
       auto *ScalarTy = CurTy->getScalarType();
-      if (ScalarTy->isHalfTy())
+      if (ScalarTy->isFloat8E4M3FNTy())
+        V = ConstantFP::get(Context, APFloat(APFloat::Float8E4M3FN(),
+                                             APInt(8, (uint8_t)Record[0])));
+      else if (ScalarTy->isFloat8E5M2Ty())
+        V = ConstantFP::get(Context, APFloat(APFloat::Float8E5M2(),
+                                             APInt(8, (uint8_t)Record[0])));
+      else if (ScalarTy->isHalfTy())
         V = ConstantFP::get(CurTy, APFloat(APFloat::IEEEhalf(),
                                            APInt(16, (uint16_t)Record[0])));
       else if (ScalarTy->isBFloatTy())
@@ -3298,6 +3310,18 @@ Error BitcodeReader::parseConstants() {
           V = ConstantDataVector::get(Context, Elts);
         else
           V = ConstantDataArray::get(Context, Elts);
+      } else if (EltTy->isFloat8E4M3FNTy()) {
+        SmallVector<uint8_t, 16> Elts(Record.begin(), Record.end());
+        if (isa<VectorType>(CurTy))
+          V = ConstantDataVector::getFP(EltTy, Elts);
+        else
+          V = ConstantDataArray::getFP(EltTy, Elts);
+      } else if (EltTy->isFloat8E5M2Ty()) {
+        SmallVector<uint8_t, 16> Elts(Record.begin(), Record.end());
+        if (isa<VectorType>(CurTy))
+          V = ConstantDataVector::getFP(EltTy, Elts);
+        else
+          V = ConstantDataArray::getFP(EltTy, Elts);
       } else if (EltTy->isHalfTy()) {
         SmallVector<uint16_t, 16> Elts(Record.begin(), Record.end());
         if (isa<VectorType>(CurTy))

@@ -3899,6 +3899,14 @@ Floating-Point Types
    * - Type
      - Description
 
+   * - ``float8e5m2``
+     - 8-bit floating-point value(2-bit significand)
+
+   * - ``float8e4m3fn``
+     - 8-bit floating-point value(3-bit significand), there are no infinity
+       values, and NaN is represented with the exponent and mantissa bits set
+       to all 1s
+
    * - ``half``
      - 16-bit floating-point value
 
@@ -3923,9 +3931,9 @@ Floating-Point Types
    * - ``ppc_fp128``
      - 128-bit floating-point value (two 64-bits)
 
-The binary format of half, float, double, and fp128 correspond to the
-IEEE-754-2008 specifications for binary16, binary32, binary64, and binary128
-respectively.
+The binary format of float8e5m2, half, float, double, and fp128 correspond
+to the IEEE-754-2008 specifications for binary8, binary16, binary32, binary64,
+and binary128 respectively.
 
 X86_amx Type
 """"""""""""
@@ -4381,20 +4389,23 @@ number of digits. For example, NaN's, infinities, and other special
 values are represented in their IEEE hexadecimal format so that assembly
 and disassembly do not cause any bits to change in the constants.
 
-When using the hexadecimal form, constants of types bfloat, half, float, and
-double are represented using the 16-digit form shown above (which matches the
-IEEE754 representation for double); bfloat, half and float values must, however,
-be exactly representable as bfloat, IEEE 754 half, and IEEE 754 single
+When using the hexadecimal form, constants of types float8e5m2, float8e4m3fn,
+bfloat, half, float, and double are represented using the 16-digit form shown
+above (which matches the IEEE754 representation for double); float8e5m2,
+float8e4m3fn, bfloat, half and float values must, however, be exactly representable
+as float8e5m2, float8e4m3fn, bfloat, IEEE 754 half, and IEEE 754 single
 precision respectively. Hexadecimal format is always used for long double, and
 there are three forms of long double. The 80-bit format used by x86 is
 represented as ``0xK`` followed by 20 hexadecimal digits. The 128-bit format
 used by PowerPC (two adjacent doubles) is represented by ``0xM`` followed by 32
 hexadecimal digits. The IEEE 128-bit format is represented by ``0xL`` followed
 by 32 hexadecimal digits. Long doubles will only work if they match the long
-double format on your target.  The IEEE 16-bit format (half precision) is
-represented by ``0xH`` followed by 4 hexadecimal digits. The bfloat 16-bit
-format is represented by ``0xR`` followed by 4 hexadecimal digits. All
-hexadecimal formats are big-endian (sign bit at the left).
+double format on your target. The IEEE 8-bit format (floate5m2 precision) is
+represented by ``0xS`` followed by 2 hexadecimal digits. The float8e4m3fn 8-bit
+format is represented by ``0xQ`` followed by 2 hexadecimal digits. The IEEE 16-bit
+format (half precision) is represented by ``0xH`` followed by 4 hexadecimal digits.
+The bfloat 16-bit format is represented by ``0xR`` followed by 4 hexadecimal digits.
+All hexadecimal formats are big-endian (sign bit at the left).
 
 There are no constants of type x86_mmx and x86_amx.
 

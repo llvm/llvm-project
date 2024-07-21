@@ -564,19 +564,21 @@ void TypePrinting::incorporateTypes() {
 /// names or up references to shorten the type name where possible.
 void TypePrinting::print(Type *Ty, raw_ostream &OS) {
   switch (Ty->getTypeID()) {
-  case Type::VoidTyID:      OS << "void"; return;
-  case Type::HalfTyID:      OS << "half"; return;
-  case Type::BFloatTyID:    OS << "bfloat"; return;
-  case Type::FloatTyID:     OS << "float"; return;
-  case Type::DoubleTyID:    OS << "double"; return;
-  case Type::X86_FP80TyID:  OS << "x86_fp80"; return;
-  case Type::FP128TyID:     OS << "fp128"; return;
-  case Type::PPC_FP128TyID: OS << "ppc_fp128"; return;
-  case Type::LabelTyID:     OS << "label"; return;
-  case Type::MetadataTyID:  OS << "metadata"; return;
-  case Type::X86_MMXTyID:   OS << "x86_mmx"; return;
-  case Type::X86_AMXTyID:   OS << "x86_amx"; return;
-  case Type::TokenTyID:     OS << "token"; return;
+  case Type::VoidTyID:         OS << "void"; return;
+  case Type::Float8E4M3FNTyID: OS << "float8e4m3fn"; return;
+  case Type::Float8E5M2TyID:   OS << "float8e5m2"; return;
+  case Type::HalfTyID:         OS << "half"; return;
+  case Type::BFloatTyID:       OS << "bfloat"; return;
+  case Type::FloatTyID:        OS << "float"; return;
+  case Type::DoubleTyID:       OS << "double"; return;
+  case Type::X86_FP80TyID:     OS << "x86_fp80"; return;
+  case Type::FP128TyID:        OS << "fp128"; return;
+  case Type::PPC_FP128TyID:    OS << "ppc_fp128"; return;
+  case Type::LabelTyID:        OS << "label"; return;
+  case Type::MetadataTyID:     OS << "metadata"; return;
+  case Type::X86_MMXTyID:      OS << "x86_mmx"; return;
+  case Type::X86_AMXTyID:      OS << "x86_amx"; return;
+  case Type::TokenTyID:        OS << "token"; return;
   case Type::IntegerTyID:
     OS << 'i' << cast<IntegerType>(Ty)->getBitWidth();
     return;
@@ -1528,7 +1530,16 @@ static void WriteAPFloatInternal(raw_ostream &Out, const APFloat &APF) {
     Out << 'R';
     Out << format_hex_no_prefix(API.getZExtValue(), 4,
                                 /*Upper=*/true);
-  } else
+  } else if (&APF.getSemantics() == &APFloat::Float8E4M3FN()) {
+    Out << 'Q';
+    Out << format_hex_no_prefix(API.getZExtValue(), 2,
+                                /*Upper=*/true);
+  } else if (&APF.getSemantics() == &APFloat::Float8E5M2()) {
+    Out << 'S';
+    Out << format_hex_no_prefix(API.getZExtValue(), 2,
+                                /*Upper=*/true);
+  }
+    else
     llvm_unreachable("Unsupported floating point type");
 }
 

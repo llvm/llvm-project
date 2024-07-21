@@ -167,6 +167,8 @@ typedef enum {
   LLVMBFloatTypeKind,    /**< 16 bit brain floating point type */
   LLVMX86_AMXTypeKind,   /**< X86 AMX */
   LLVMTargetExtTypeKind, /**< Target extension type */
+  LLVMFloat8E5M2TypeKind, /**< 8 bit floating point with 2 bit mantissa */
+  LLVMFloat8E4M3FNTypeKind, /**< 8 bit floating point with 3 bit mantissa */
 } LLVMTypeKind;
 
 typedef enum {
@@ -1325,6 +1327,17 @@ unsigned LLVMGetIntTypeWidth(LLVMTypeRef IntegerTy);
  * @{
  */
 
+
+/**
+ * Obtain a 8-bit floating point type from a context.
+ */
+LLVMTypeRef LLVMFloat8E5M2TypeInContext(LLVMContextRef C);
+
+/**
+ * Obtain a 8-bit floating point type from a context.
+ */
+LLVMTypeRef LLVMFloat8E4M3FNTypeInContext(LLVMContextRef C);
+
 /**
  * Obtain a 16-bit floating point type from a context.
  */
@@ -1366,6 +1379,8 @@ LLVMTypeRef LLVMPPCFP128TypeInContext(LLVMContextRef C);
  *
  * These map to the functions in this group of the same name.
  */
+LLVMTypeRef LLVMFloat8E5M2Type(void);
+LLVMTypeRef LLVMFloat8E4M3FNType(void);
 LLVMTypeRef LLVMHalfType(void);
 LLVMTypeRef LLVMBFloatType(void);
 LLVMTypeRef LLVMFloatType(void);

@@ -371,6 +371,8 @@ Constant *Constant::getNullValue(Type *Ty) {
   switch (Ty->getTypeID()) {
   case Type::IntegerTyID:
     return ConstantInt::get(Ty, 0);
+  case Type::Float8E4M3FNTyID:
+  case Type::Float8E5M2TyID:
   case Type::HalfTyID:
   case Type::BFloatTyID:
   case Type::FloatTyID:
@@ -1256,6 +1258,8 @@ static Constant *getSequenceIfElementsMatch(Constant *C,
     else if (CI->getType()->isIntegerTy(64))
       return getIntSequenceIfElementsMatch<SequenceTy, uint64_t>(V);
   } else if (ConstantFP *CFP = dyn_cast<ConstantFP>(C)) {
+    if (CFP->getType()->isFloat8E4M3FNTy() || CFP->getType()->isFloat8E5M2Ty())
+      return getFPSequenceIfElementsMatch<SequenceTy, uint8_t>(V);
     if (CFP->getType()->isHalfTy() || CFP->getType()->isBFloatTy())
       return getFPSequenceIfElementsMatch<SequenceTy, uint16_t>(V);
     else if (CFP->getType()->isFloatTy())
@@ -1595,6 +1599,18 @@ bool ConstantFP::isValueValidForType(Type *Ty, const APFloat& Val) {
     return false;         // These can't be represented as floating point!
 
   // FIXME rounding mode needs to be more flexible
+  case Type::Float8E4M3FNTyID: {
+    if (&Val2.getSemantics() == &APFloat::Float8E4M3FN())
+      return true;
+    Val2.convert(APFloat::Float8E4M3FN(), APFloat::rmNearestTiesToEven, &losesInfo);
+    return !losesInfo;
+  }
+  case Type::Float8E5M2TyID: {
+    if (&Val2.getSemantics() == &APFloat::Float8E5M2())
+      return true;
+    Val2.convert(APFloat::Float8E5M2(), APFloat::rmNearestTiesToEven, &losesInfo);
+    return !losesInfo;
+  }
   case Type::HalfTyID: {
     if (&Val2.getSemantics() == &APFloat::IEEEhalf())
       return true;
@@ -1614,7 +1630,9 @@ bool ConstantFP::isValueValidForType(Type *Ty, const APFloat& Val) {
     return !losesInfo;
   }
   case Type::DoubleTyID: {
-    if (&Val2.getSemantics() == &APFloat::IEEEhalf() ||
+    if (&Val2.getSemantics() == &APFloat::Float8E5M2() ||
+        &Val2.getSemantics() == &APFloat::Float8E4M3FN() ||
+        &Val2.getSemantics() == &APFloat::IEEEhalf() ||
         &Val2.getSemantics() == &APFloat::BFloat() ||
         &Val2.getSemantics() == &APFloat::IEEEsingle() ||
         &Val2.getSemantics() == &APFloat::IEEEdouble())
@@ -1623,19 +1641,25 @@ bool ConstantFP::isValueValidForType(Type *Ty, const APFloat& Val) {
     return !losesInfo;
   }
   case Type::X86_FP80TyID:
-    return &Val2.getSemantics() == &APFloat::IEEEhalf() ||
+    return &Val2.getSemantics() == &APFloat::Float8E5M2() ||
+           &Val2.getSemantics() == &APFloat::Float8E4M3FN() ||
+           &Val2.getSemantics() == &APFloat::IEEEhalf() ||
            &Val2.getSemantics() == &APFloat::BFloat() ||
            &Val2.getSemantics() == &APFloat::IEEEsingle() ||
            &Val2.getSemantics() == &APFloat::IEEEdouble() ||
            &Val2.getSemantics() == &APFloat::x87DoubleExtended();
   case Type::FP128TyID:
-    return &Val2.getSemantics() == &APFloat::IEEEhalf() ||
+    return &Val2.getSemantics() == &APFloat::Float8E5M2() ||
+           &Val2.getSemantics() == &APFloat::Float8E4M3FN() ||
+           &Val2.getSemantics() == &APFloat::IEEEhalf() ||
            &Val2.getSemantics() == &APFloat::BFloat() ||
            &Val2.getSemantics() == &APFloat::IEEEsingle() ||
            &Val2.getSemantics() == &APFloat::IEEEdouble() ||
            &Val2.getSemantics() == &APFloat::IEEEquad();
   case Type::PPC_FP128TyID:
-    return &Val2.getSemantics() == &APFloat::IEEEhalf() ||
+    return &Val2.getSemantics() == &APFloat::Float8E5M2() ||
+           &Val2.getSemantics() == &APFloat::Float8E4M3FN() ||
+           &Val2.getSemantics() == &APFloat::IEEEhalf() ||
            &Val2.getSemantics() == &APFloat::BFloat() ||
            &Val2.getSemantics() == &APFloat::IEEEsingle() ||
            &Val2.getSemantics() == &APFloat::IEEEdouble() ||
@@ -2787,7 +2811,8 @@ StringRef ConstantDataSequential::getRawDataValues() const {
 }
 
 bool ConstantDataSequential::isElementTypeCompatible(Type *Ty) {
-  if (Ty->isHalfTy() || Ty->isBFloatTy() || Ty->isFloatTy() || Ty->isDoubleTy())
+  if (Ty->isFloat8E4M3FNTy() || Ty->isFloat8E5M2Ty() || Ty->isHalfTy() ||
+      Ty->isBFloatTy() || Ty->isFloatTy() || Ty->isDoubleTy())
     return true;
   if (auto *IT = dyn_cast<IntegerType>(Ty)) {
     switch (IT->getBitWidth()) {
@@ -2912,8 +2937,16 @@ void ConstantDataSequential::destroyConstantImpl() {
 /// element type taken from argument `ElementType', and count taken from
 /// argument `Elts'.  The amount of bits of the contained type must match the
 /// number of bits of the type contained in the passed in ArrayRef.
-/// (i.e. half or bfloat for 16bits, float for 32bits, double for 64bits) Note
-/// that this can return a ConstantAggregateZero object.
+/// (i.e. float8e4m3fn or float8e5m2 or half or bfloat for 16bits, float for
+/// 32bits, double for 64bits) Note that this can return a ConstantAggregateZero
+/// object.
+Constant *ConstantDataArray::getFP(Type *ElementType, ArrayRef<uint8_t> Elts) {
+  assert((ElementType->isFloat8E4M3FNTy() || ElementType->isFloat8E5M2Ty()) &&
+         "Element type is not a 8-bit float type");
+  Type *Ty = ArrayType::get(ElementType, Elts.size());
+  const char *Data = reinterpret_cast<const char *>(Elts.data());
+  return getImpl(StringRef(Data, Elts.size() * 1), Ty);
+}
 Constant *ConstantDataArray::getFP(Type *ElementType, ArrayRef<uint16_t> Elts) {
   assert((ElementType->isHalfTy() || ElementType->isBFloatTy()) &&
          "Element type is not a 16-bit float type");
@@ -2986,8 +3019,16 @@ Constant *ConstantDataVector::get(LLVMContext &Context, ArrayRef<double> Elts) {
 /// element type taken from argument `ElementType', and count taken from
 /// argument `Elts'.  The amount of bits of the contained type must match the
 /// number of bits of the type contained in the passed in ArrayRef.
-/// (i.e. half or bfloat for 16bits, float for 32bits, double for 64bits) Note
-/// that this can return a ConstantAggregateZero object.
+/// (i.e. float8e4m3 or float8e5m2 or half or bfloat for 16bits, float for 32bits,
+/// double for 64bits) Note that this can return a ConstantAggregateZero object.
+Constant *ConstantDataVector::getFP(Type *ElementType,
+                                    ArrayRef<uint8_t> Elts) {
+  assert((ElementType->isFloat8E4M3FNTy() || ElementType->isFloat8E5M2Ty()) &&
+         "Element type is not a 8-bit float type");
+  auto *Ty = FixedVectorType::get(ElementType, Elts.size());
+  const char *Data = reinterpret_cast<const char *>(Elts.data());
+  return getImpl(StringRef(Data, Elts.size() * 1), Ty);
+}
 Constant *ConstantDataVector::getFP(Type *ElementType,
                                     ArrayRef<uint16_t> Elts) {
   assert((ElementType->isHalfTy() || ElementType->isBFloatTy()) &&
@@ -3034,6 +3075,16 @@ Constant *ConstantDataVector::getSplat(unsigned NumElts, Constant *V) {
   }
 
   if (ConstantFP *CFP = dyn_cast<ConstantFP>(V)) {
+    if (CFP->getType()->isFloat8E4M3FNTy()) {
+      SmallVector<uint8_t, 16> Elts(
+          NumElts, CFP->getValueAPF().bitcastToAPInt().getLimitedValue());
+      return getFP(V->getType(), Elts);
+    }
+    if (CFP->getType()->isFloat8E5M2Ty()) {
+      SmallVector<uint8_t, 16> Elts(
+          NumElts, CFP->getValueAPF().bitcastToAPInt().getLimitedValue());
+      return getFP(V->getType(), Elts);
+    }
     if (CFP->getType()->isHalfTy()) {
       SmallVector<uint16_t, 16> Elts(
           NumElts, CFP->getValueAPF().bitcastToAPInt().getLimitedValue());
@@ -3113,6 +3164,14 @@ APFloat ConstantDataSequential::getElementAsAPFloat(unsigned Elt) const {
   switch (getElementType()->getTypeID()) {
   default:
     llvm_unreachable("Accessor can only be used when element is float/double!");
+  case Type::Float8E4M3FNTyID: {
+    auto EltVal = *reinterpret_cast<const uint8_t *>(EltPtr);
+    return APFloat(APFloat::Float8E4M3FN(), APInt(8, EltVal));
+  }
+  case Type::Float8E5M2TyID: {
+    auto EltVal = *reinterpret_cast<const uint8_t *>(EltPtr);
+    return APFloat(APFloat::Float8E5M2(), APInt(8, EltVal));
+  }
   case Type::HalfTyID: {
     auto EltVal = *reinterpret_cast<const uint16_t *>(EltPtr);
     return APFloat(APFloat::IEEEhalf(), APInt(16, EltVal));
@@ -3145,7 +3204,8 @@ double ConstantDataSequential::getElementAsDouble(unsigned Elt) const {
 }
 
 Constant *ConstantDataSequential::getElementAsConstant(unsigned Elt) const {
-  if (getElementType()->isHalfTy() || getElementType()->isBFloatTy() ||
+  if (getElementType()->isFloat8E4M3FNTy() || getElementType()->isFloat8E5M2Ty() ||
+      getElementType()->isHalfTy() || getElementType()->isBFloatTy() ||
       getElementType()->isFloatTy() || getElementType()->isDoubleTy())
     return ConstantFP::get(getContext(), getElementAsAPFloat(Elt));
 

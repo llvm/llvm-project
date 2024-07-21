@@ -537,6 +537,16 @@ public:
     return Type::getIntNTy(Context, N);
   }
 
+  /// Fetch the type representing a 8-bit e5m2 floating point value.
+  Type *getFloat8E5M2Ty() {
+    return Type::getFloat8E5M2Ty(Context);
+  }
+
+  /// Fetch the type representing a 8-bit e4m3fn floating point value.
+  Type *getFloat8E4M3FNTy() {
+    return Type::getFloat8E4M3FNTy(Context);
+  }
+
   /// Fetch the type representing a 16-bit floating point value.
   Type *getHalfTy() {
     return Type::getHalfTy(Context);
