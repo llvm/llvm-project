@@ -6761,15 +6761,15 @@ bool llvm::isSafeToSpeculativelyExecute(const Instruction *Inst,
                                         AssumptionCache *AC,
                                         const DominatorTree *DT,
                                         const TargetLibraryInfo *TLI,
-                                        bool UseOperandInfo) {
+                                        bool UseVariableInfo) {
   return isSafeToSpeculativelyExecuteWithOpcode(Inst->getOpcode(), Inst, CtxI,
-                                                AC, DT, TLI, UseOperandInfo);
+                                                AC, DT, TLI, UseVariableInfo);
 }
 
 bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     unsigned Opcode, const Instruction *Inst, const Instruction *CtxI,
     AssumptionCache *AC, const DominatorTree *DT, const TargetLibraryInfo *TLI,
-    bool UseOperandInfo) {
+    bool UseVariableInfo) {
 #ifndef NDEBUG
   if (Inst->getOpcode() != Opcode) {
     // Check that the operands are actually compatible with the Opcode override.
@@ -6821,7 +6821,7 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     return false;
   }
   case Instruction::Load: {
-    if (!UseOperandInfo)
+    if (!UseVariableInfo)
       return false;
 
     const LoadInst *LI = dyn_cast<LoadInst>(Inst);

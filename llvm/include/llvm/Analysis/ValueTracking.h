@@ -823,24 +823,24 @@ bool isSafeToSpeculativelyExecute(const Instruction *I,
                                   AssumptionCache *AC = nullptr,
                                   const DominatorTree *DT = nullptr,
                                   const TargetLibraryInfo *TLI = nullptr,
-                                  bool UseOperandInfo = true);
+                                  bool UseVariableInfo = true);
 
 inline bool isSafeToSpeculativelyExecute(const Instruction *I,
                                          BasicBlock::iterator CtxI,
                                          AssumptionCache *AC = nullptr,
                                          const DominatorTree *DT = nullptr,
                                          const TargetLibraryInfo *TLI = nullptr,
-                                         bool UseOperandInfo = true) {
+                                         bool UseVariableInfo = true) {
   // Take an iterator, and unwrap it into an Instruction *.
-  return isSafeToSpeculativelyExecute(I, &*CtxI, AC, DT, TLI, UseOperandInfo);
+  return isSafeToSpeculativelyExecute(I, &*CtxI, AC, DT, TLI, UseVariableInfo);
 }
 
 /// Don't use information from its non-constant operands. This helper is used
 /// when its operands are going to be replaced.
 inline bool
-isSafeToSpeculativelyExecuteWithOperandsReplaced(const Instruction *I) {
+isSafeToSpeculativelyExecuteWithVariableReplaced(const Instruction *I) {
   return isSafeToSpeculativelyExecute(I, nullptr, nullptr, nullptr, nullptr,
-                                      /*UseOperandInfo=*/false);
+                                      /*UseVariableInfo=*/false);
 }
 
 /// This returns the same result as isSafeToSpeculativelyExecute if Opcode is
@@ -863,7 +863,7 @@ isSafeToSpeculativelyExecuteWithOperandsReplaced(const Instruction *I) {
 bool isSafeToSpeculativelyExecuteWithOpcode(
     unsigned Opcode, const Instruction *Inst, const Instruction *CtxI = nullptr,
     AssumptionCache *AC = nullptr, const DominatorTree *DT = nullptr,
-    const TargetLibraryInfo *TLI = nullptr, bool UseOperandInfo = true);
+    const TargetLibraryInfo *TLI = nullptr, bool UseVariableInfo = true);
 
 /// Returns true if the result or effects of the given instructions \p I
 /// depend values not reachable through the def use graph.
