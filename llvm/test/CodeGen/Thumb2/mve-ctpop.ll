@@ -4,35 +4,21 @@
 define arm_aapcs_vfpcc <2 x i64> @ctpop_2i64_t(<2 x i64> %src){
 ; CHECK-LABEL: ctpop_2i64_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r6, lr}
-; CHECK-NEXT:    push {r4, r5, r6, lr}
+; CHECK-NEXT:    .save {r4, r5, r7, lr}
+; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmov q4, q0
-; CHECK-NEXT:    vmov r4, r0, d9
-; CHECK-NEXT:    bl __popcountsi2
-; CHECK-NEXT:    mov r5, r0
-; CHECK-NEXT:    mov r0, r4
-; CHECK-NEXT:    bl __popcountsi2
-; CHECK-NEXT:    vmov r4, r1, d8
-; CHECK-NEXT:    adds r6, r0, r5
-; CHECK-NEXT:    vldr s17, .LCPI0_0
-; CHECK-NEXT:    mov r0, r1
-; CHECK-NEXT:    bl __popcountsi2
-; CHECK-NEXT:    mov r5, r0
-; CHECK-NEXT:    mov r0, r4
-; CHECK-NEXT:    vmov s18, r6
-; CHECK-NEXT:    bl __popcountsi2
-; CHECK-NEXT:    add r0, r5
-; CHECK-NEXT:    vmov.f32 s19, s17
-; CHECK-NEXT:    vmov s16, r0
-; CHECK-NEXT:    vmov q0, q4
+; CHECK-NEXT:    vmov r0, r1, d9
+; CHECK-NEXT:    bl __popcountdi2
+; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, r1, d8
+; CHECK-NEXT:    bl __popcountdi2
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r5
 ; CHECK-NEXT:    vpop {d8, d9}
-; CHECK-NEXT:    pop {r4, r5, r6, pc}
-; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI0_0:
-; CHECK-NEXT:    .long 0x00000000 @ float 0
+; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %0 = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %src)
   ret <2 x i64> %0

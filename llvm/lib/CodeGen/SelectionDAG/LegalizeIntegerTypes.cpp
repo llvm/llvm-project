@@ -3847,15 +3847,36 @@ void DAGTypeLegalizer::ExpandIntRes_CTLZ(SDNode *N,
   Hi = DAG.getConstant(0, dl, NVT);
 }
 
-void DAGTypeLegalizer::ExpandIntRes_CTPOP(SDNode *N,
-                                          SDValue &Lo, SDValue &Hi) {
-  SDLoc dl(N);
+void DAGTypeLegalizer::ExpandIntRes_CTPOP(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  SDValue Op = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // If the narrow CTPOP is not supported by the target, try to convert it
+  // to a libcall.
+  EVT ExpandedVT = TLI.getTypeToExpandTo(*DAG.getContext(), VT);
+  if (!TLI.isOperationLegalOrCustom(ISD::CTPOP, ExpandedVT)) {
+    RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
+    if (VT == MVT::i32)
+      LC = RTLIB::CTPOP_I32;
+    else if (VT == MVT::i64)
+      LC = RTLIB::CTPOP_I64;
+    else if (VT == MVT::i128)
+      LC = RTLIB::CTPOP_I128;
+    if (LC != RTLIB::UNKNOWN_LIBCALL && TLI.getLibcallName(LC)) {
+      TargetLowering::MakeLibCallOptions CallOptions;
+      SDValue Res = TLI.makeLibCall(DAG, LC, VT, Op, CallOptions, DL).first;
+      SplitInteger(Res, Lo, Hi);
+      return;
+    }
+  }
+
   // ctpop(HiLo) -> ctpop(Hi)+ctpop(Lo)
-  GetExpandedInteger(N->getOperand(0), Lo, Hi);
+  GetExpandedInteger(Op, Lo, Hi);
   EVT NVT = Lo.getValueType();
-  Lo = DAG.getNode(ISD::ADD, dl, NVT, DAG.getNode(ISD::CTPOP, dl, NVT, Lo),
-                   DAG.getNode(ISD::CTPOP, dl, NVT, Hi));
-  Hi = DAG.getConstant(0, dl, NVT);
+  Lo = DAG.getNode(ISD::ADD, DL, NVT, DAG.getNode(ISD::CTPOP, DL, NVT, Lo),
+                   DAG.getNode(ISD::CTPOP, DL, NVT, Hi));
+  Hi = DAG.getConstant(0, DL, NVT);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_CTTZ(SDNode *N,
