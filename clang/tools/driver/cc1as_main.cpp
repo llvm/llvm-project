@@ -571,9 +571,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
 
     Triple T(Opts.Triple);
     Str.reset(TheTarget->createMCObjectStreamer(
-        T, Ctx, std::move(MAB), std::move(OW), std::move(CE), *STI,
-        Opts.RelaxAll, Opts.IncrementalLinkerCompatible,
-        /*DWARFMustBeAtTheEnd*/ true));
+        T, Ctx, std::move(MAB), std::move(OW), std::move(CE), *STI));
     Str.get()->initSections(Opts.NoExecStack, *STI);
   }
 
