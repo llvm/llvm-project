@@ -89,6 +89,9 @@ def HasStaticShapePred :
 // Whether a type is a TupleType.
 def IsTupleTypePred : CPred<"::llvm::isa<::mlir::TupleType>($_self)">;
 
+// Whether a type has a ValueSemantics trait.
+def HasValueSemanticsPred : CPred<"$_self.hasTrait<::mlir::ValueSemantics>()">;
+
 //===----------------------------------------------------------------------===//
 // Type definitions
 //===----------------------------------------------------------------------===//
@@ -402,6 +405,11 @@ class HasRankGreaterOrEqualPred<int rank> : And<[
     HasRankPred,
     CPred<[{::llvm::cast<::mlir::ShapedType>($_self).getRank() >= }] # rank>
 ]>;
+
+// Container with value semantics.
+class ValueSemanticsContainerOf<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, HasValueSemanticsPred,
+  "container with value semantics">;
 
 // Vector types.
 
@@ -842,10 +850,18 @@ class NestedTupleOf<list<Type> allowedTypes> :
 // Common type constraints
 //===----------------------------------------------------------------------===//
 // Type constraint for types that are "like" some type or set of types T, that is
-// they're either a T, a vector of Ts, or a tensor of Ts
+// they're either a T, a vector of Ts, or a tensor of Ts.
 class TypeOrContainer<Type allowedType, string name> : TypeConstraint<Or<[
-  allowedType.predicate, VectorOf<[allowedType]>.predicate,
-  TensorOf<[allowedType]>.predicate]>,
+  allowedType.predicate,
+  ValueSemanticsContainerOf<[allowedType]>.predicate]>,
+  name>;
+
+// Type constraint for types that are "like" some type or set of types T, that is
+// they're either a T or a mapable container of Ts.
+class TypeOrValueSemanticsContainer<Type allowedType, string name>
+    : TypeConstraint<Or<[
+  allowedType.predicate,
+  ValueSemanticsContainerOf<[allowedType]>.predicate]>,
   name>;
 
 // Temporary constraint to allow gradual transition to supporting 0-D vectors.
@@ -864,8 +880,8 @@ def BoolLikeOfAnyRank : TypeOrContainerOfAnyRank<I1, "bool-like">;
 
 // Type constraint for signless-integer-like types: signless integers, indices,
 // vectors of signless integers or indices, tensors of signless integers.
-def SignlessIntegerLike : TypeOrContainer<AnySignlessIntegerOrIndex,
-    "signless-integer-like">;
+def SignlessIntegerLike : TypeOrValueSemanticsContainer<
+    AnySignlessIntegerOrIndex, "signless-integer-like">;
 
 def SignlessIntegerLikeOfAnyRank : TypeOrContainerOfAnyRank<
     AnySignlessIntegerOrIndex,
