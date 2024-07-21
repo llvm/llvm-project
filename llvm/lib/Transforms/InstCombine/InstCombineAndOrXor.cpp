@@ -3604,7 +3604,8 @@ static Value *foldBitFieldArithmetic(BinaryOperator &I,
   // BitFieldAddInfo.
   auto MatchBitFieldAdd =
       [&](BinaryOperator &I) -> std::optional<BitFieldAddInfo> {
-    const APInt *OptLoMask, *OptUpMask, *LoMask, *UpMask, *UpMask2 = nullptr;
+    const APInt *OptLoMask, *OptLoMask2 = nullptr, *OptUpMask, *LoMask, *UpMask,
+                            *UpMask2 = nullptr;
     Value *X, *Y, *UpY;
 
     // Bitfield has more than 2 member.
@@ -3631,7 +3632,7 @@ static Value *foldBitFieldArithmetic(BinaryOperator &I,
         m_c_Xor(m_CombineOr(
                     // When Y is not the constant.
                     m_c_Add(m_And(m_Value(X), m_APInt(OptLoMask)),
-                            m_And(m_Value(Y), m_APInt(OptLoMask))),
+                            m_And(m_Value(Y), m_APInt(OptLoMask2))),
                     // When Y is Constant, it can be accumulated.
                     m_c_Add(m_And(m_Value(X), m_APInt(OptLoMask)), m_Value(Y))),
                 // If Y is a constant, X^Y&OptUpMask can be pre-computed and
@@ -3662,7 +3663,8 @@ static Value *foldBitFieldArithmetic(BinaryOperator &I,
     }
 
     // Match already optimized bitfield operation.
-    if (match(&I, OptBitFieldAdd)) {
+    if (match(&I, OptBitFieldAdd) &&
+        (OptLoMask2 == OptLoMask || OptLoMask2 == nullptr)) {
       APInt Mask = APInt::getBitsSet(
           BitWidth, BitWidth - OptUpMask->countl_zero(), BitWidth);
       APInt Mask2 = APInt::getBitsSet(
