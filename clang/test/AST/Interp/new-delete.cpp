@@ -560,4 +560,9 @@ constexpr int a() { // both-error {{never produces a constant expression}}
 }
 static_assert(a() == 1, ""); // both-error {{not an integral constant expression}} \
                              // both-note {{in call to 'a()'}}
+
+
+static_assert(true ? *new int : 4, ""); // both-error {{expression is not an integral constant expression}} \
+                                        // both-note {{read of uninitialized object is not allowed in a constant expression}}
+
 #endif

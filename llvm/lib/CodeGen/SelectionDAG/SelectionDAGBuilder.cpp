@@ -7375,8 +7375,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::codeview_annotation: {
     // Emit a label associated with this metadata.
     MachineFunction &MF = DAG.getMachineFunction();
-    MCSymbol *Label =
-        MF.getMMI().getContext().createTempSymbol("annotation", true);
+    MCSymbol *Label = MF.getContext().createTempSymbol("annotation", true);
     Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(0))->getMetadata();
     MF.addCodeViewAnnotation(Label, cast<MDNode>(MD));
     Res = DAG.getLabelNode(ISD::ANNOTATION_LABEL, sdl, getRoot(), Label);
@@ -7644,9 +7643,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       assert(FuncInfo.StaticAllocaMap.count(Slot) &&
              "can only escape static allocas");
       int FI = FuncInfo.StaticAllocaMap[Slot];
-      MCSymbol *FrameAllocSym =
-          MF.getMMI().getContext().getOrCreateFrameAllocSymbol(
-              GlobalValue::dropLLVMManglingEscape(MF.getName()), Idx);
+      MCSymbol *FrameAllocSym = MF.getContext().getOrCreateFrameAllocSymbol(
+          GlobalValue::dropLLVMManglingEscape(MF.getName()), Idx);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, dl,
               TII->get(TargetOpcode::LOCAL_ESCAPE))
           .addSym(FrameAllocSym)
@@ -7665,9 +7663,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     auto *Idx = cast<ConstantInt>(I.getArgOperand(2));
     unsigned IdxVal =
         unsigned(Idx->getLimitedValue(std::numeric_limits<int>::max()));
-    MCSymbol *FrameAllocSym =
-        MF.getMMI().getContext().getOrCreateFrameAllocSymbol(
-            GlobalValue::dropLLVMManglingEscape(Fn->getName()), IdxVal);
+    MCSymbol *FrameAllocSym = MF.getContext().getOrCreateFrameAllocSymbol(
+        GlobalValue::dropLLVMManglingEscape(Fn->getName()), IdxVal);
 
     Value *FP = I.getArgOperand(1);
     SDValue FPVal = getValue(FP);
@@ -8626,7 +8623,7 @@ SDValue SelectionDAGBuilder::lowerStartEH(SDValue Chain,
 
   // Insert a label before the invoke call to mark the try range.  This can be
   // used to detect deletion of the invoke via the MachineModuleInfo.
-  BeginLabel = MMI.getContext().createTempSymbol();
+  BeginLabel = MF.getContext().createTempSymbol();
 
   // For SjLj, keep track of which landing pads go with which invokes
   // so as to maintain the ordering of pads in the LSDA.
@@ -8648,11 +8645,10 @@ SDValue SelectionDAGBuilder::lowerEndEH(SDValue Chain, const InvokeInst *II,
   assert(BeginLabel && "BeginLabel should've been set");
 
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineModuleInfo &MMI = MF.getMMI();
 
   // Insert a label at the end of the invoke call to mark the try range.  This
   // can be used to detect deletion of the invoke via the MachineModuleInfo.
-  MCSymbol *EndLabel = MMI.getContext().createTempSymbol();
+  MCSymbol *EndLabel = MF.getContext().createTempSymbol();
   Chain = DAG.getEHLabel(getCurSDLoc(), Chain, EndLabel);
 
   // Inform MachineModuleInfo of range.

@@ -13,6 +13,7 @@
 #include <cassert>
 #include <charconv>
 #include <chrono>
+#include <format>
 #include <string_view>
 #include <type_traits>
 
@@ -42,11 +43,29 @@ public:
 
   offset_time_zone* operator->() { return this; }
 
+  const offset_time_zone* operator->() const { return this; }
+
   template <class Duration>
   std::chrono::sys_time<std::common_type_t<Duration, std::chrono::seconds>>
   to_sys(const std::chrono::local_time<Duration>& local) const {
     return std::chrono::sys_time<std::common_type_t<Duration, std::chrono::seconds>>{
         local.time_since_epoch() + offset_};
+  }
+
+  template <class Duration>
+  std::chrono::local_time<std::common_type_t<Duration, std::chrono::seconds>>
+  to_local(const std::chrono::sys_time<Duration>& sys) const {
+    return std::chrono::local_time<std::common_type_t<Duration, std::chrono::seconds>>{
+        sys.time_since_epoch() - offset_};
+  }
+
+  template <class Duration>
+  std::chrono::sys_info get_info(const std::chrono::sys_time<Duration>&) const {
+    return {std::chrono::sys_seconds::min(),
+            std::chrono::sys_seconds::max(),
+            offset_,
+            std::chrono::minutes{0},
+            std::format("{:+03d}s", offset_.count())};
   }
 
 private:

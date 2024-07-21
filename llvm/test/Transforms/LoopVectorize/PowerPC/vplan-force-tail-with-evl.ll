@@ -40,8 +40,6 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; CHECK-NEXT:    Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.store.continue:
-; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<[[P1:%.+]]> = ir<%0>
-; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<[[P2:%.+]]> = ir<%1>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): for.body.2
