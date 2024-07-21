@@ -56,6 +56,10 @@ void MachObjectWriter::reset() {
   ExternalSymbolData.clear();
   UndefinedSymbolData.clear();
   LOHContainer.reset();
+  VersionInfo.Major = 0;
+  VersionInfo.SDKVersion = VersionTuple();
+  TargetVariantVersionInfo.Major = 0;
+  TargetVariantVersionInfo.SDKVersion = VersionTuple();
   MCObjectWriter::reset();
 }
 
@@ -803,7 +807,6 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   }
 
   unsigned NumSections = Asm.end() - Asm.begin();
-  const MCAssembler::VersionInfoType &VersionInfo = Asm.getVersionInfo();
 
   // The section data starts after the header, the segment load command (and
   // section headers) and the symbol table.
@@ -820,9 +823,6 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
     else
       LoadCommandsSize += sizeof(MachO::version_min_command);
   }
-
-  const MCAssembler::VersionInfoType &TargetVariantVersionInfo =
-      Asm.getDarwinTargetVariantVersionInfo();
 
   // Add the target variant version info load command size, if used.
   if (TargetVariantVersionInfo.Major != 0) {
@@ -928,7 +928,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
 
   // Write out the deployment target information, if it's available.
   auto EmitDeploymentTargetVersion =
-      [&](const MCAssembler::VersionInfoType &VersionInfo) {
+      [&](const VersionInfoType &VersionInfo) {
         auto EncodeVersion = [](VersionTuple V) -> uint32_t {
           assert(!V.empty() && "empty version");
           unsigned Update = V.getSubminor().value_or(0);
