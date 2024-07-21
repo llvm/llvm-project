@@ -415,7 +415,7 @@ static uint64_t computeSymbolMapSize(uint64_t NumObj, SymMap &SymMap,
   uint64_t Size = sizeof(uint32_t) * 2; // Number of symbols and objects entries
   Size += NumObj * sizeof(uint32_t);    // Offset table
 
-  for (auto S : SymMap.Map)
+  for (const auto &S : SymMap.Map)
     Size += sizeof(uint16_t) + S.first.length() + 1;
 
   uint32_t Pad = offsetToAlignment(Size, Align(2));
@@ -429,7 +429,7 @@ static uint64_t computeECSymbolsSize(SymMap &SymMap,
                                      uint32_t *Padding = nullptr) {
   uint64_t Size = sizeof(uint32_t); // Number of symbols
 
-  for (auto S : SymMap.ECMap)
+  for (const auto &S : SymMap.ECMap)
     Size += sizeof(uint16_t) + S.first.length() + 1;
 
   uint32_t Pad = offsetToAlignment(Size, Align(2));
@@ -659,9 +659,9 @@ static void writeSymbolMap(raw_ostream &Out, object::Archive::Kind Kind,
 
   printLE<uint32_t>(Out, SymMap.Map.size());
 
-  for (auto S : SymMap.Map)
+  for (const auto &S : SymMap.Map)
     printLE(Out, S.second);
-  for (auto S : SymMap.Map)
+  for (const auto &S : SymMap.Map)
     Out << S.first << '\0';
 
   while (Pad--)
@@ -678,9 +678,9 @@ static void writeECSymbols(raw_ostream &Out, object::Archive::Kind Kind,
 
   printLE<uint32_t>(Out, SymMap.ECMap.size());
 
-  for (auto S : SymMap.ECMap)
+  for (const auto &S : SymMap.ECMap)
     printLE(Out, S.second);
-  for (auto S : SymMap.ECMap)
+  for (const auto &S : SymMap.ECMap)
     Out << S.first << '\0';
   while (Pad--)
     Out.write(uint8_t(0));

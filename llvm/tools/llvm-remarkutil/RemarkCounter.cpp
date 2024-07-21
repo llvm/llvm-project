@@ -222,7 +222,7 @@ Error ArgumentCounter::print(StringRef OutputFileName) {
     Idx++;
   }
   OF->os() << "\n";
-  for (auto [Header, CountVector] : CountByKeysMap) {
+  for (const auto &[Header, CountVector] : CountByKeysMap) {
     OF->os() << Header << ",";
     unsigned Idx = 0;
     for (auto Count : CountVector) {
@@ -245,7 +245,7 @@ Error RemarkCounter::print(StringRef OutputFileName) {
   auto OF = std::move(*MaybeOF);
   OF->os() << groupByToStr(Group) << ","
            << "Count\n";
-  for (auto [Key, Count] : CountedByRemarksMap)
+  for (const auto &[Key, Count] : CountedByRemarksMap)
     OF->os() << Key << "," << Count << "\n";
   OF->keep();
   return Error::success();
@@ -319,7 +319,7 @@ static Error collectRemarks() {
       for (auto &Key : Keys)
         ArgumentsVector.push_back({Key, false});
     } else if (!RKeys.empty())
-      for (auto Key : RKeys)
+      for (const auto &Key : RKeys)
         ArgumentsVector.push_back({Key, true});
     else
       ArgumentsVector.push_back({".*", true});
