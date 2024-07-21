@@ -182,7 +182,11 @@ bool UnpredictableProfileLoaderPass::loadSampleProfile(Module &M) {
     }
 
     ReaderPtr = std::move(ReaderOrErr.get());
-    ReaderPtr->read();
+    if (std::error_code EC = ReaderPtr->read()) {
+      std::string Msg = "Profile reading failed: " + EC.message();
+      Ctx.diagnose(DiagnosticInfoSampleProfile(ProfileFile, Msg));
+      return false;
+    }
 
     return true;
   };
