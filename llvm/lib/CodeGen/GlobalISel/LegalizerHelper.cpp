@@ -4006,6 +4006,9 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_UMIN:
   case G_UMAX:
     return lowerMinMax(MI);
+  case G_SCMP:
+  case G_UCMP:
+    return lowerThreewayCompare(MI);
   case G_FCOPYSIGN:
     return lowerFCopySign(MI);
   case G_FMINNUM:
@@ -7264,6 +7267,36 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerMinMax(MachineInstr &MI) {
 
   auto Cmp = MIRBuilder.buildICmp(Pred, CmpType, Src0, Src1);
   MIRBuilder.buildSelect(Dst, Cmp, Src0, Src1);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerThreewayCompare(MachineInstr &MI) {
+  GSUCmp *Cmp = cast<GSUCmp>(&MI);
+
+  Register Dst = Cmp->getReg(0);
+  LLT DstTy = MRI.getType(Dst);
+  LLT CmpTy = DstTy.changeElementSize(1);
+
+  CmpInst::Predicate LTPredicate = Cmp->isSigned()
+                                       ? CmpInst::Predicate::ICMP_SLT
+                                       : CmpInst::Predicate::ICMP_ULT;
+  CmpInst::Predicate GTPredicate = Cmp->isSigned()
+                                       ? CmpInst::Predicate::ICMP_SGT
+                                       : CmpInst::Predicate::ICMP_UGT;
+
+  auto One = MIRBuilder.buildConstant(DstTy, 1);
+  auto Zero = MIRBuilder.buildConstant(DstTy, 0);
+  auto MinusOne = MIRBuilder.buildConstant(DstTy, -1);
+
+  auto IsLT = MIRBuilder.buildICmp(LTPredicate, CmpTy, Cmp->getLHSReg(),
+                                   Cmp->getRHSReg());
+  auto IsGT = MIRBuilder.buildICmp(GTPredicate, CmpTy, Cmp->getLHSReg(),
+                                   Cmp->getRHSReg());
+  auto SelectZeroOrOne = MIRBuilder.buildSelect(DstTy, IsGT, One, Zero);
+  MIRBuilder.buildSelect(Dst, IsLT, MinusOne, SelectZeroOrOne);
 
   MI.eraseFromParent();
   return Legalized;
