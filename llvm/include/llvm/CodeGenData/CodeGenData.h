@@ -171,7 +171,9 @@ void warn(Twine Message, std::string Whence = "", std::string Hint = "");
 
 namespace IndexedCGData {
 
-const uint64_t Magic = 0x81617461646763ff; // "\xffcgdata\x81"
+// A signature for data validation, representing "\xffcgdata\x81" in
+// little-endian order
+const uint64_t Magic = 0x81617461646763ff;
 
 enum CGDataVersion {
   // Version 1 is the first version. This version supports the outlined
