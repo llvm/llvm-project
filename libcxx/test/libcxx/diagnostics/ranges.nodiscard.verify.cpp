@@ -30,17 +30,19 @@ void test() {
   std::views::take(1);        // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
 #if TEST_STD_VER >= 23
-  std::views::drop(std::views::repeat(1)); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-  std::views::repeat(1);                            // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::repeat(1, std::unreachable_sentinel); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
   auto rvalue_view = std::views::as_rvalue(range);
   std::views::as_rvalue(range);       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::as_rvalue(rvalue_view); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   std::views::chunk_by(pred);        // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::chunk_by(range, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  std::views::drop(std::views::repeat(1)); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  std::views::enumerate(range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  std::views::repeat(1);                            // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::views::repeat(1, std::unreachable_sentinel); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   std::views::take(std::views::repeat(3), 3);                            // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::take(std::views::repeat(3, std::unreachable_sentinel), 3); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
