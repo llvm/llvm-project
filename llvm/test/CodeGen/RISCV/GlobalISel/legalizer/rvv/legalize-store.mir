@@ -1007,17 +1007,17 @@ body:             |
 name:            vstore_nx2ptr
 body:             |
   bb.1 (%ir-block.0):
-    liveins: $v8, $x10
+    liveins: $x10, $v8m2
 
     ; CHECK-LABEL: name: vstore_nx2ptr
-    ; CHECK: liveins: $v8, $x10
+    ; CHECK: liveins: $x10, $v8m2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 2 x p0>) = COPY $v8
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 2 x p0>) = COPY $v8m2
     ; CHECK-NEXT: G_STORE [[COPY1]](<vscale x 2 x p0>), [[COPY]](p0) :: (store (<vscale x 2 x p0>) into %ir.pa)
     ; CHECK-NEXT: PseudoRET
     %0:_(p0) = COPY $x10
-    %1:_(<vscale x 2 x p0>) = COPY $v8
+    %1:_(<vscale x 2 x p0>) = COPY $v8m2
     G_STORE %1(<vscale x 2 x p0>), %0(p0) :: (store (<vscale x 2 x p0>) into %ir.pa)
     PseudoRET
 
@@ -1026,17 +1026,17 @@ body:             |
 name:            vstore_nx8ptr
 body:             |
   bb.1 (%ir-block.0):
-    liveins: $x10, $v8m4
+    liveins: $x10, $v8m8
 
     ; CHECK-LABEL: name: vstore_nx8ptr
-    ; CHECK: liveins: $x10, $v8m4
+    ; CHECK: liveins: $x10, $v8m8
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 8 x p0>) = COPY $v8m4
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 8 x p0>) = COPY $v8m8
     ; CHECK-NEXT: G_STORE [[COPY1]](<vscale x 8 x p0>), [[COPY]](p0) :: (store (<vscale x 8 x p0>) into %ir.pa)
     ; CHECK-NEXT: PseudoRET
     %0:_(p0) = COPY $x10
-    %1:_(<vscale x 8 x p0>) = COPY $v8m4
+    %1:_(<vscale x 8 x p0>) = COPY $v8m8
     G_STORE %1(<vscale x 8 x p0>), %0(p0) :: (store (<vscale x 8 x p0>) into %ir.pa)
     PseudoRET
 
