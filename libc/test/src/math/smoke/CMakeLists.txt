@@ -3997,6 +3997,30 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  dsqrtl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    dsqrtl_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.dsqrtl
+)
+
+add_fp_unittest(
+  dsqrtf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    dsqrtf128_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.dsqrtf128
+)
+
+add_fp_unittest(
   sin_test
   SUITE
     libc-math-smoke-tests
