@@ -7,6 +7,7 @@
 #include "src/__support/GPU/utils.h"
 #include "src/__support/fixedvector.h"
 #include "src/__support/macros/config.h"
+#include "src/stdio/printf.h"
 #include "src/time/gpu/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -73,6 +74,11 @@ struct AtomicBenchmarkSums {
 };
 
 AtomicBenchmarkSums all_results;
+const char *header_format_string =
+    "Benchmark            |  Cycles |     Min |     Max | Iterations |   Time "
+    "(ns) |   Stddev |  Threads |\n";
+const char *output_format_string =
+    "%-20s |%8ld |%8ld |%8ld |%11ld |%12ld |%9ld |%9d |\n";
 
 void print_results(Benchmark *b) {
   constexpr auto GREEN = "\033[32m";
@@ -96,17 +102,33 @@ void print_results(Benchmark *b) {
       all_results.time_sum.load(cpp::MemoryOrder::RELAXED) / num_threads;
   cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
 
-  log << GREEN << "[ RUN      ] " << RESET << b->get_name() << '\n';
-  log << GREEN << "[       OK ] " << RESET << b->get_name() << ": "
-      << result.cycles << " cycles, " << result.min << " min, " << result.max
-      << " max, " << result.total_iterations << " iterations, "
-      << result.total_time << " ns, "
-      << static_cast<uint64_t>(result.standard_deviation)
+  log << GREEN << "[ RUN      ] " << RESET << b->get_suite_name() << '.'
+      << b->get_test_name() << '\n';
+  log << GREEN << "[       OK ] " << RESET << b->get_suite_name() << '.'
+      << b->get_test_name() << ": " << result.cycles << " cycles, "
+      << result.min << " min, " << result.max << " max, "
+      << result.total_iterations << " iterations, " << result.total_time
+      << " ns, " << static_cast<uint64_t>(result.standard_deviation)
       << " stddev (num threads: " << num_threads << ")\n";
+
+  printf(output_format_string, b->get_test_name().data(), result.cycles,
+         result.min, result.max, result.total_iterations, result.total_time,
+         static_cast<uint64_t>(result.standard_deviation), num_threads);
+}
+
+void print_header() {
+  printf("Running Suite: %-10s\n", benchmarks[0]->get_suite_name().data());
+  printf(header_format_string);
+  printf("---------------------------------------------------------------------"
+         "----------------------\n");
 }
 
 void Benchmark::run_benchmarks() {
   uint64_t id = gpu::get_thread_id();
+
+  if (id == 0)
+    print_header();
+
   gpu::sync_threads();
 
   for (Benchmark *b : benchmarks) {
