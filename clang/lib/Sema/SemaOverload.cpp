@@ -11152,7 +11152,8 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
   // non-constructor method.  Note that 'I' corresponds the
   // conversion-slot index.
   bool isObjectArgument = false;
-  if (isa<CXXMethodDecl>(Fn) && !isa<CXXConstructorDecl>(Fn)) {
+  if (isa<CXXMethodDecl>(Fn) && !isa<CXXConstructorDecl>(Fn) &&
+      !Fn->hasCXXExplicitFunctionObjectParameter()) {
     if (I == 0)
       isObjectArgument = true;
     else
