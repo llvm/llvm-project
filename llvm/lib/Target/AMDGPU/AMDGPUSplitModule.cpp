@@ -256,11 +256,12 @@ calculateFunctionCosts(SplitModuleLogger &SML, GetTTIFn GetTTI, Module &M,
   }
 
   CostType FnCost = (ModuleCost - KernelCost);
+  CostType ModuleCostOr1 = ModuleCost ? ModuleCost : 1;
   SML << "=> Total Module Cost: " << ModuleCost << '\n'
       << "  => KernelCost: " << KernelCost << " ("
-      << format("%0.2f", (float(KernelCost) / ModuleCost) * 100) << "%)\n"
+      << format("%0.2f", (float(KernelCost) / ModuleCostOr1) * 100) << "%)\n"
       << "  => FnsCost: " << FnCost << " ("
-      << format("%0.2f", (float(FnCost) / ModuleCost) * 100) << "%)\n";
+      << format("%0.2f", (float(FnCost) / ModuleCostOr1) * 100) << "%)\n";
 
   return ModuleCost;
 }
@@ -479,7 +480,7 @@ doPartitioning(SplitModuleLogger &SML, Module &M, unsigned NumParts,
   // partitions) so it's a cheap operation.
   std::vector<std::pair<PartitionID, CostType>> BalancingQueue;
   for (unsigned I = 0; I < NumParts; ++I)
-    BalancingQueue.push_back(std::make_pair(I, 0));
+    BalancingQueue.emplace_back(I, 0);
 
   // Helper function to handle assigning a function to a partition. This takes
   // care of updating the balancing queue.

@@ -44,6 +44,7 @@ using namespace mlir;
 using namespace mlir::LLVM;
 using mlir::LLVM::cconv::getMaxEnumValForCConv;
 using mlir::LLVM::linkage::getMaxEnumValForLinkage;
+using mlir::LLVM::tailcallkind::getMaxEnumValForTailCallKind;
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsDialect.cpp.inc"
 
@@ -197,6 +198,7 @@ struct EnumTraits {};
 REGISTER_ENUM_TYPE(Linkage);
 REGISTER_ENUM_TYPE(UnnamedAddr);
 REGISTER_ENUM_TYPE(CConv);
+REGISTER_ENUM_TYPE(TailCallKind);
 REGISTER_ENUM_TYPE(Visibility);
 } // namespace
 
@@ -974,7 +976,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
   build(builder, state, results,
         TypeAttr::get(getLLVMFuncType(builder.getContext(), results, args)),
         callee, args, /*fastmathFlags=*/nullptr, /*branch_weights=*/nullptr,
-        /*CConv=*/nullptr,
+        /*CConv=*/nullptr, /*TailCallKind=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -997,7 +999,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state, getCallOpResultTypes(calleeType),
         TypeAttr::get(calleeType), callee, args, /*fastmathFlags=*/nullptr,
         /*branch_weights=*/nullptr, /*CConv=*/nullptr,
-        /*access_groups=*/nullptr,
+        /*TailCallKind=*/nullptr, /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
 
@@ -1006,7 +1008,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state, getCallOpResultTypes(calleeType),
         TypeAttr::get(calleeType), /*callee=*/nullptr, args,
         /*fastmathFlags=*/nullptr, /*branch_weights=*/nullptr,
-        /*CConv=*/nullptr,
+        /*CConv=*/nullptr, /*TailCallKind=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -1017,7 +1019,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
   build(builder, state, getCallOpResultTypes(calleeType),
         TypeAttr::get(calleeType), SymbolRefAttr::get(func), args,
         /*fastmathFlags=*/nullptr, /*branch_weights=*/nullptr,
-        /*CConv=*/nullptr,
+        /*CConv=*/nullptr, /*TailCallKind=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -1180,6 +1182,9 @@ void CallOp::print(OpAsmPrinter &p) {
   if (getCConv() != LLVM::CConv::C)
     p << stringifyCConv(getCConv()) << ' ';
 
+  if(getTailCallKind() != LLVM::TailCallKind::None)
+    p << tailcallkind::stringifyTailCallKind(getTailCallKind()) << ' ';
+
   // Print the direct callee if present as a function attribute, or an indirect
   // callee (first operand) otherwise.
   if (isDirect)
@@ -1194,7 +1199,8 @@ void CallOp::print(OpAsmPrinter &p) {
     p << " vararg(" << calleeType << ")";
 
   p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()),
-                          {getCConvAttrName(), "callee", "callee_type"});
+                          {getCConvAttrName(), "callee", "callee_type",
+                           getTailCallKindAttrName()});
 
   p << " : ";
   if (!isDirect)
@@ -1262,7 +1268,7 @@ static ParseResult parseOptionalCallFuncPtr(
   return success();
 }
 
-// <operation> ::= `llvm.call` (cconv)? (function-id | ssa-use)
+// <operation> ::= `llvm.call` (cconv)? (tailcallkind)? (function-id | ssa-use)
 //                             `(` ssa-use-list `)`
 //                             ( `vararg(` var-arg-func-type `)` )?
 //                             attribute-dict? `:` (type `,`)? function-type
@@ -1276,6 +1282,12 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
       getCConvAttrName(result.name),
       CConvAttr::get(parser.getContext(), parseOptionalLLVMKeyword<CConv>(
                                               parser, result, LLVM::CConv::C)));
+
+  result.addAttribute(
+      getTailCallKindAttrName(result.name),
+      TailCallKindAttr::get(parser.getContext(),
+                            parseOptionalLLVMKeyword<TailCallKind>(
+                                parser, result, LLVM::TailCallKind::None)));
 
   // Parse a function pointer for indirect calls.
   if (parseOptionalCallFuncPtr(parser, operands))
@@ -3074,6 +3086,40 @@ void InlineAsmOp::getEffects(
     effects.emplace_back(MemoryEffects::Write::get());
     effects.emplace_back(MemoryEffects::Read::get());
   }
+}
+
+//===----------------------------------------------------------------------===//
+// masked_gather (intrinsic)
+//===----------------------------------------------------------------------===//
+
+LogicalResult LLVM::masked_gather::verify() {
+  auto ptrsVectorType = getPtrs().getType();
+  Type expectedPtrsVectorType =
+      LLVM::getVectorType(extractVectorElementType(ptrsVectorType),
+                          LLVM::getVectorNumElements(getRes().getType()));
+  // Vector of pointers type should match result vector type, other than the
+  // element type.
+  if (ptrsVectorType != expectedPtrsVectorType)
+    return emitOpError("expected operand #1 type to be ")
+           << expectedPtrsVectorType;
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// masked_scatter (intrinsic)
+//===----------------------------------------------------------------------===//
+
+LogicalResult LLVM::masked_scatter::verify() {
+  auto ptrsVectorType = getPtrs().getType();
+  Type expectedPtrsVectorType =
+      LLVM::getVectorType(extractVectorElementType(ptrsVectorType),
+                          LLVM::getVectorNumElements(getValue().getType()));
+  // Vector of pointers type should match value vector type, other than the
+  // element type.
+  if (ptrsVectorType != expectedPtrsVectorType)
+    return emitOpError("expected operand #2 type to be ")
+           << expectedPtrsVectorType;
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

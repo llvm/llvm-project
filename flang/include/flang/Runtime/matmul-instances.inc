@@ -17,6 +17,10 @@
 #error "Define MATMUL_DIRECT_INSTANCE before including this file"
 #endif
 
+#ifndef MATMUL_FORCE_ALL_TYPES
+#error "Define MATMUL_FORCE_ALL_TYPES to 0 or 1 before including this file"
+#endif
+
 // clang-format off
 
 #define FOREACH_MATMUL_TYPE_PAIR(macro)         \
@@ -88,7 +92,7 @@
 FOREACH_MATMUL_TYPE_PAIR(MATMUL_INSTANCE)
 FOREACH_MATMUL_TYPE_PAIR(MATMUL_DIRECT_INSTANCE)
 
-#if defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T
+#if MATMUL_FORCE_ALL_TYPES || (defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T)
 #define FOREACH_MATMUL_TYPE_PAIR_WITH_INT16(macro)      \
   macro(Integer, 16, Integer, 1)                        \
   macro(Integer, 16, Integer, 2)                        \
@@ -107,7 +111,7 @@ FOREACH_MATMUL_TYPE_PAIR(MATMUL_DIRECT_INSTANCE)
 FOREACH_MATMUL_TYPE_PAIR_WITH_INT16(MATMUL_INSTANCE)
 FOREACH_MATMUL_TYPE_PAIR_WITH_INT16(MATMUL_DIRECT_INSTANCE)
 
-#if LDBL_MANT_DIG == 64
+#if MATMUL_FORCE_ALL_TYPES || LDBL_MANT_DIG == 64
 MATMUL_INSTANCE(Integer, 16, Real, 10)
 MATMUL_INSTANCE(Integer, 16, Complex, 10)
 MATMUL_INSTANCE(Real, 10, Integer, 16)
@@ -117,7 +121,7 @@ MATMUL_DIRECT_INSTANCE(Integer, 16, Complex, 10)
 MATMUL_DIRECT_INSTANCE(Real, 10, Integer, 16)
 MATMUL_DIRECT_INSTANCE(Complex, 10, Integer, 16)
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if MATMUL_FORCE_ALL_TYPES || (LDBL_MANT_DIG == 113 || HAS_FLOAT128)
 MATMUL_INSTANCE(Integer, 16, Real, 16)
 MATMUL_INSTANCE(Integer, 16, Complex, 16)
 MATMUL_INSTANCE(Real, 16, Integer, 16)
@@ -127,9 +131,9 @@ MATMUL_DIRECT_INSTANCE(Integer, 16, Complex, 16)
 MATMUL_DIRECT_INSTANCE(Real, 16, Integer, 16)
 MATMUL_DIRECT_INSTANCE(Complex, 16, Integer, 16)
 #endif
-#endif // defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T
+#endif // MATMUL_FORCE_ALL_TYPES || (defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T)
 
-#if LDBL_MANT_DIG == 64
+#if MATMUL_FORCE_ALL_TYPES || LDBL_MANT_DIG == 64
 #define FOREACH_MATMUL_TYPE_PAIR_WITH_REAL10(macro)         \
   macro(Integer, 1, Real, 10)                               \
   macro(Integer, 1, Complex, 10)                            \
@@ -171,7 +175,7 @@ MATMUL_DIRECT_INSTANCE(Complex, 16, Integer, 16)
 FOREACH_MATMUL_TYPE_PAIR_WITH_REAL10(MATMUL_INSTANCE)
 FOREACH_MATMUL_TYPE_PAIR_WITH_REAL10(MATMUL_DIRECT_INSTANCE)
 
-#if HAS_FLOAT128
+#if MATMUL_FORCE_ALL_TYPES || HAS_FLOAT128
 MATMUL_INSTANCE(Real, 10, Real, 16)
 MATMUL_INSTANCE(Real, 10, Complex, 16)
 MATMUL_INSTANCE(Real, 16, Real, 10)
@@ -189,9 +193,9 @@ MATMUL_DIRECT_INSTANCE(Complex, 10, Complex, 16)
 MATMUL_DIRECT_INSTANCE(Complex, 16, Real, 10)
 MATMUL_DIRECT_INSTANCE(Complex, 16, Complex, 10)
 #endif
-#endif // LDBL_MANT_DIG == 64
+#endif // MATMUL_FORCE_ALL_TYPES || LDBL_MANT_DIG == 64
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if MATMUL_FORCE_ALL_TYPES || (LDBL_MANT_DIG == 113 || HAS_FLOAT128)
 #define FOREACH_MATMUL_TYPE_PAIR_WITH_REAL16(macro)         \
   macro(Integer, 1, Real, 16)                               \
   macro(Integer, 1, Complex, 16)                            \
@@ -232,7 +236,7 @@ MATMUL_DIRECT_INSTANCE(Complex, 16, Complex, 10)
 
 FOREACH_MATMUL_TYPE_PAIR_WITH_REAL16(MATMUL_INSTANCE)
 FOREACH_MATMUL_TYPE_PAIR_WITH_REAL16(MATMUL_DIRECT_INSTANCE)
-#endif // LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#endif // MATMUL_FORCE_ALL_TYPES || (LDBL_MANT_DIG == 113 || HAS_FLOAT128)
 
 #define FOREACH_MATMUL_LOGICAL_TYPE_PAIR(macro) \
   macro(Logical, 1, Logical, 1)                 \
@@ -257,5 +261,6 @@ FOREACH_MATMUL_LOGICAL_TYPE_PAIR(MATMUL_DIRECT_INSTANCE)
 
 #undef MATMUL_INSTANCE
 #undef MATMUL_DIRECT_INSTANCE
+#undef MATMUL_FORCE_ALL_TYPES
 
 // clang-format on

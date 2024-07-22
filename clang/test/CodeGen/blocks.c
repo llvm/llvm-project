@@ -1,7 +1,14 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -Wno-strict-prototypes -o - -fblocks | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -Wno-strict-prototypes -o - -fblocks | FileCheck --check-prefix=CHECK --check-prefix=SIG_STR %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -Wno-strict-prototypes -o - -fblocks -fdisable-block-signature-string | FileCheck --check-prefix=CHECK --check-prefix=NO_SIG_STR %s
 
-// CHECK: @{{.*}} = internal constant { i32, i32, ptr, ptr, ptr, ptr } { i32 0, i32 24, ptr @__copy_helper_block_4_20r, ptr @__destroy_helper_block_4_20r, ptr @{{.*}}, ptr null }, align 4
-// CHECK: @[[BLOCK_DESCRIPTOR_TMP21:.*]] = internal constant { i32, i32, ptr, ptr, ptr, ptr } { i32 0, i32 24, ptr @__copy_helper_block_4_20r, ptr @__destroy_helper_block_4_20r, ptr @{{.*}}, ptr null }, align 4
+// SIG_STR: @[[STR:.*]] = private unnamed_addr constant [6 x i8] c"v4@?0\00", align 1
+// SIG_STR: @{{.*}} = internal constant { ptr, i32, i32, ptr, ptr } { ptr @_NSConcreteGlobalBlock, i32 1342177280, i32 0, ptr @f_block_invoke, ptr @{{.*}} }, align 4
+// NO_SIG_STR: @{{.*}} = internal constant { ptr, i32, i32, ptr, ptr } { ptr @_NSConcreteGlobalBlock, i32 268435456, i32 0, ptr @f_block_invoke, ptr @{{.*}} }, align 4
+
+// SIG_STR: @{{.*}} = internal constant { i32, i32, ptr, ptr, ptr, ptr } { i32 0, i32 24, ptr @__copy_helper_block_4_20r, ptr @__destroy_helper_block_4_20r, ptr @[[STR]], ptr null }, align 4
+// SIG_STR: @[[BLOCK_DESCRIPTOR_TMP21:.*]] = internal constant { i32, i32, ptr, ptr, ptr, ptr } { i32 0, i32 24, ptr @__copy_helper_block_4_20r, ptr @__destroy_helper_block_4_20r, ptr @[[STR]], ptr null }, align 4
+// NO_SIG_STR: @{{.*}} = internal constant { i32, i32, ptr, ptr, ptr, ptr } { i32 0, i32 24, ptr @__copy_helper_block_4_20r, ptr @__destroy_helper_block_4_20r, ptr null, ptr null }, align 4
+// NO_SIG_STR: @[[BLOCK_DESCRIPTOR_TMP21:.*]] = internal constant { i32, i32, ptr, ptr, ptr, ptr } { i32 0, i32 24, ptr @__copy_helper_block_4_20r, ptr @__destroy_helper_block_4_20r, ptr null, ptr null }, align 4
 
 void (^f)(void) = ^{};
 

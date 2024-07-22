@@ -6,6 +6,12 @@ module mod1
   type :: t1
     integer :: i
   end type
+
+contains
+  function dev1(a)
+    integer, device :: a(:)
+    integer :: dev1
+  end function
 end
 
 subroutine sub1()
@@ -103,7 +109,7 @@ end
 ! CHECK: cuf.data_transfer %[[ADEV]]#1 to %[[DECL_TEMP]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>
 ! CHECK: %[[ELEMENTAL:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<10xi32>
 ! CHECK: hlfir.assign %[[ELEMENTAL]] to %[[BHOST]]#0 : !hlfir.expr<10xi32>, !fir.ref<!fir.array<10xi32>>
-! CHECK: fir.freemem %[[DECL_TEMP]]#0 : !fir.heap<!fir.array<10xi32>>
+! CHECK: fir.freemem %[[TEMP]] : !fir.heap<!fir.array<10xi32>>
 
 subroutine sub3()
   use mod1
@@ -213,8 +219,6 @@ subroutine sub10(a, b)
   res = a + b
 end subroutine
 
-
-
 ! CHECK-LABEL: func.func @_QPsub10(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"}
 
@@ -222,3 +226,51 @@ end subroutine
 ! CHECK: cuf.data_transfer %[[A]]#1 to %{{.*}}#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<i32>, !fir.ref<i32>
 ! CHECK-NOT: cuf.data_transfer
 
+subroutine sub11(n)
+  integer :: n
+  real, dimension(10) :: h
+  real, dimension(n), device :: d
+  do i=1,10
+    h(i) = d(i)
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub11
+! CHECK: %[[RHS:.*]] = hlfir.designate %{{.*}} (%{{.*}})  : (!fir.box<!fir.array<?xf32>>, i64) -> !fir.ref<f32>
+! CHECK: %[[LHS:.*]] = hlfir.designate %{{.*}} (%{{.*}})  : (!fir.ref<!fir.array<10xf32>>, i64) -> !fir.ref<f32>
+! CHECK: cuf.data_transfer %[[RHS]] to %[[LHS]] {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<f32>, !fir.ref<f32>
+
+subroutine sub12()
+  use mod1
+  integer, device :: a(10)
+  integer :: x
+  x = dev1(a)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub12
+! CHECK: %{{.*}} = fir.call @_QMmod1Pdev1
+! CHECK: hlfir.assign
+! CHECK-NOT: cuf.data_transfer
+
+subroutine sub13(a, b, n)
+  integer :: n
+  integer :: a(n)
+  integer, allocatable, device :: b(:)
+  integer :: res(10)
+
+  res = a + b
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub13
+! CHECK: %[[TEMP:.*]] = fir.allocmem !fir.array<?xi32>, %14#1 {bindc_name = ".tmp", uniq_name = ""}
+! CHECK: cuf.data_transfer
+! CHECK: fir.freemem %[[TEMP]] : !fir.heap<!fir.array<?xi32>>
+
+subroutine sub14()
+  logical(4), device :: log(10)
+  log = .true.
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub14()
+! CHECK: %[[TRUE:.*]] = arith.constant true
+! CHECK: cuf.data_transfer %[[TRUE]] to %{{.*}}#0 {transfer_kind = #cuf.cuda_transfer<host_device>} : i1, !fir.ref<!fir.array<10x!fir.logical<4>>>

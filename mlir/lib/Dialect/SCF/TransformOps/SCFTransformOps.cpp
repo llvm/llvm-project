@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SCF/TransformOps/SCFTransformOps.h"
+
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -47,6 +49,11 @@ void transform::ApplySCFStructuralConversionPatternsOp::
                                   ConversionTarget &conversionTarget) {
   scf::populateSCFStructuralTypeConversionTarget(typeConverter,
                                                  conversionTarget);
+}
+
+void transform::ApplySCFToControlFlowPatternsOp::populatePatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
+  populateSCFToControlFlowConversionPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//
@@ -449,6 +456,113 @@ void transform::TakeAssumedBranchOp::getEffects(
 // LoopFuseSiblingOp
 //===----------------------------------------------------------------------===//
 
+/// Check if `target` and `source` are siblings, in the context that `target`
+/// is being fused into `source`.
+///
+/// This is a simple check that just checks if both operations are in the same
+/// block and some checks to ensure that the fused IR does not violate
+/// dominance.
+static DiagnosedSilenceableFailure isOpSibling(Operation *target,
+                                               Operation *source) {
+  // Check if both operations are same.
+  if (target == source)
+    return emitSilenceableFailure(source)
+           << "target and source need to be different loops";
+
+  // Check if both operations are in the same block.
+  if (target->getBlock() != source->getBlock())
+    return emitSilenceableFailure(source)
+           << "target and source are not in the same block";
+
+  // Check if fusion will violate dominance.
+  DominanceInfo domInfo(source);
+  if (target->isBeforeInBlock(source)) {
+    // Since `target` is before `source`, all users of results of `target`
+    // need to be dominated by `source`.
+    for (Operation *user : target->getUsers()) {
+      if (!domInfo.properlyDominates(source, user, /*enclosingOpOk=*/false)) {
+        return emitSilenceableFailure(target)
+               << "user of results of target should be properly dominated by "
+                  "source";
+      }
+    }
+  } else {
+    // Since `target` is after `source`, all values used by `target` need
+    // to dominate `source`.
+
+    // Check if operands of `target` are dominated by `source`.
+    for (Value operand : target->getOperands()) {
+      Operation *operandOp = operand.getDefiningOp();
+      // Operands without defining operations are block arguments. When `target`
+      // and `source` occur in the same block, these operands dominate `source`.
+      if (!operandOp)
+        continue;
+
+      // Operand's defining operation should properly dominate `source`.
+      if (!domInfo.properlyDominates(operandOp, source,
+                                     /*enclosingOpOk=*/false))
+        return emitSilenceableFailure(target)
+               << "operands of target should be properly dominated by source";
+    }
+
+    // Check if values used by `target` are dominated by `source`.
+    bool failed = false;
+    OpOperand *failedValue = nullptr;
+    visitUsedValuesDefinedAbove(target->getRegions(), [&](OpOperand *operand) {
+      Operation *operandOp = operand->get().getDefiningOp();
+      if (operandOp && !domInfo.properlyDominates(operandOp, source,
+                                                  /*enclosingOpOk=*/false)) {
+        // `operand` is not an argument of an enclosing block and the defining
+        // op of `operand` is outside `target` but does not dominate `source`.
+        failed = true;
+        failedValue = operand;
+      }
+    });
+
+    if (failed)
+      return emitSilenceableFailure(failedValue->getOwner())
+             << "values used inside regions of target should be properly "
+                "dominated by source";
+  }
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+/// Check if `target` scf.forall can be fused into `source` scf.forall.
+///
+/// This simply checks if both loops have the same bounds, steps and mapping.
+/// No attempt is made at checking that the side effects of `target` and
+/// `source` are independent of each other.
+static bool isForallWithIdenticalConfiguration(Operation *target,
+                                               Operation *source) {
+  auto targetOp = dyn_cast<scf::ForallOp>(target);
+  auto sourceOp = dyn_cast<scf::ForallOp>(source);
+  if (!targetOp || !sourceOp)
+    return false;
+
+  return targetOp.getMixedLowerBound() == sourceOp.getMixedLowerBound() &&
+         targetOp.getMixedUpperBound() == sourceOp.getMixedUpperBound() &&
+         targetOp.getMixedStep() == sourceOp.getMixedStep() &&
+         targetOp.getMapping() == sourceOp.getMapping();
+}
+
+/// Check if `target` scf.for can be fused into `source` scf.for.
+///
+/// This simply checks if both loops have the same bounds and steps. No attempt
+/// is made at checking that the side effects of `target` and `source` are
+/// independent of each other.
+static bool isForWithIdenticalConfiguration(Operation *target,
+                                            Operation *source) {
+  auto targetOp = dyn_cast<scf::ForOp>(target);
+  auto sourceOp = dyn_cast<scf::ForOp>(source);
+  if (!targetOp || !sourceOp)
+    return false;
+
+  return targetOp.getLowerBound() == sourceOp.getLowerBound() &&
+         targetOp.getUpperBound() == sourceOp.getUpperBound() &&
+         targetOp.getStep() == sourceOp.getStep();
+}
+
 DiagnosedSilenceableFailure
 transform::LoopFuseSiblingOp::apply(transform::TransformRewriter &rewriter,
                                     transform::TransformResults &results,
@@ -464,32 +578,25 @@ transform::LoopFuseSiblingOp::apply(transform::TransformRewriter &rewriter,
            << "source handle (got " << llvm::range_size(sourceOps) << ")";
   }
 
-  auto target = dyn_cast<LoopLikeOpInterface>(*targetOps.begin());
-  auto source = dyn_cast<LoopLikeOpInterface>(*sourceOps.begin());
-  if (!target || !source)
-    return emitSilenceableFailure(target->getLoc())
-           << "target or source is not a loop op";
+  Operation *target = *targetOps.begin();
+  Operation *source = *sourceOps.begin();
 
-  // Check if loops can be fused
-  Diagnostic diag(target.getLoc(), DiagnosticSeverity::Error);
-  if (!mlir::checkFusionStructuralLegality(target, source, diag))
-    return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
+  // Check if the target and source are siblings.
+  DiagnosedSilenceableFailure diag = isOpSibling(target, source);
+  if (!diag.succeeded())
+    return diag;
 
   Operation *fusedLoop;
-  // TODO: Support fusion for loop-like ops besides scf.for, scf.forall
-  // and scf.parallel.
-  if (isa<scf::ForOp>(target) && isa<scf::ForOp>(source)) {
+  /// TODO: Support fusion for loop-like ops besides scf.for and scf.forall.
+  if (isForWithIdenticalConfiguration(target, source)) {
     fusedLoop = fuseIndependentSiblingForLoops(
         cast<scf::ForOp>(target), cast<scf::ForOp>(source), rewriter);
-  } else if (isa<scf::ForallOp>(target) && isa<scf::ForallOp>(source)) {
+  } else if (isForallWithIdenticalConfiguration(target, source)) {
     fusedLoop = fuseIndependentSiblingForallLoops(
         cast<scf::ForallOp>(target), cast<scf::ForallOp>(source), rewriter);
-  } else if (isa<scf::ParallelOp>(target) && isa<scf::ParallelOp>(source)) {
-    fusedLoop = fuseIndependentSiblingParallelLoops(
-        cast<scf::ParallelOp>(target), cast<scf::ParallelOp>(source), rewriter);
   } else
     return emitSilenceableFailure(target->getLoc())
-           << "unsupported loop type for fusion";
+           << "operations cannot be fused";
 
   assert(fusedLoop && "failed to fuse operations");
 

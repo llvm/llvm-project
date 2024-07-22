@@ -17,6 +17,7 @@ DEF_VALUE(Argument, Argument)
 #define DEF_USER(ID, CLASS)
 #endif
 DEF_USER(User, User)
+DEF_VALUE(Block, BasicBlock)
 DEF_USER(Constant, Constant)
 
 #ifndef DEF_INSTR
@@ -24,6 +25,8 @@ DEF_USER(Constant, Constant)
 #endif
 //       ClassID, Opcode(s),  Class
 DEF_INSTR(Opaque, OP(Opaque), OpaqueInst)
+DEF_INSTR(Load, OP(Load), LoadInst)
+DEF_INSTR(Store, OP(Store), StoreInst)
 
 #ifdef DEF_VALUE
 #undef DEF_VALUE

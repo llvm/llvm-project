@@ -11,8 +11,7 @@
 
 ## Check we are reporting the error correctly and don't crash
 ## when handling the second --defsym.
-# RUN: not ld.lld -o /dev/null %t.o --defsym ERR+ \
-#        --defsym foo2=foo1 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not ld.lld -o /dev/null %t.o --defsym ERR+ --defsym foo2=foo1 2>&1 | FileCheck %s --check-prefix=ERR
 # ERR: error: --defsym: syntax error: ERR+
 
 # CHECK-DAG: 0000000000000123     0 NOTYPE  GLOBAL DEFAULT   ABS foo1
@@ -27,7 +26,7 @@
 # RUN: ld.lld -o %t %t.o --defsym=foo2=1
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=ABS
 
-# ABS: 0000000000000123     0 NOTYPE  GLOBAL DEFAULT   ABS foo2
+# ABS: 0000000000000001     0 NOTYPE  GLOBAL DEFAULT   ABS foo2
 
 # RUN: ld.lld -o %t %t.o --defsym=foo2=foo1+5
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=EXPR

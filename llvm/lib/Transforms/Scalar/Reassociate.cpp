@@ -596,8 +596,8 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
   /// of leaf nodes as inner nodes cannot occur by remembering all of the future
   /// leaves and refusing to reuse any of them as inner nodes.
   SmallPtrSet<Value*, 8> NotRewritable;
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i)
-    NotRewritable.insert(Ops[i].Op);
+  for (const ValueEntry &Op : Ops)
+    NotRewritable.insert(Op.Op);
 
   // ExpressionChangedStart - Non-null if the rewritten expression differs from
   // the original in some non-trivial way, requiring the clearing of optional
@@ -762,8 +762,8 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
   }
 
   // Throw away any left over nodes from the original expression.
-  for (unsigned i = 0, e = NodesToRewrite.size(); i != e; ++i)
-    RedoInsts.insert(NodesToRewrite[i]);
+  for (BinaryOperator *BO : NodesToRewrite)
+    RedoInsts.insert(BO);
 }
 
 /// Insert instructions before the instruction pointed to by BI,
@@ -1399,8 +1399,8 @@ Value *ReassociatePass::OptimizeXor(Instruction *I,
   //  the "OpndPtrs" as well. For the similar reason, do not fuse this loop
   //  with the previous loop --- the iterator of the "Opnds" may be invalidated
   //  when new elements are added to the vector.
-  for (unsigned i = 0, e = Opnds.size(); i != e; ++i)
-    OpndPtrs.push_back(&Opnds[i]);
+  for (XorOpnd &Op : Opnds)
+    OpndPtrs.push_back(&Op);
 
   // Step 2: Sort the Xor-Operands in a way such that the operands containing
   //  the same symbolic value cluster together. For instance, the input operand
@@ -1988,8 +1988,8 @@ void ReassociatePass::EraseInst(Instruction *I) {
   I->eraseFromParent();
   // Optimize its operands.
   SmallPtrSet<Instruction *, 8> Visited; // Detect self-referential nodes.
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i)
-    if (Instruction *Op = dyn_cast<Instruction>(Ops[i])) {
+  for (Value *V : Ops)
+    if (Instruction *Op = dyn_cast<Instruction>(V)) {
       // If this is a node in an expression tree, climb to the expression root
       // and add that since that's where optimization actually happens.
       unsigned Opcode = Op->getOpcode();
