@@ -137,7 +137,7 @@ static inline void genOmpAtomicHintAndMemoryOrderClauses(
 }
 
 template <typename AtomicListT>
-static void processAtomicTODO(mlir::Type elementType, mlir::Location loc) {
+static void processOmpAtomicTODO(mlir::Type elementType, mlir::Location loc) {
   if (!elementType)
     return;
   if constexpr (std::is_same<AtomicListT,
@@ -164,7 +164,7 @@ static inline void genOmpAccAtomicCaptureStatement(
   // Generate `atomic.read` operation for atomic assigment statements
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  processAtomicTODO<AtomicListT>(elementType, loc);
+  processOmpAtomicTODO<AtomicListT>(elementType, loc);
 
   if constexpr (std::is_same<AtomicListT,
                              Fortran::parser::OmpAtomicClauseList>()) {
@@ -202,7 +202,7 @@ static inline void genOmpAccAtomicWriteStatement(
   mlir::Type varType = fir::unwrapRefType(lhsAddr.getType());
   rhsExpr = firOpBuilder.createConvert(loc, varType, rhsExpr);
 
-  processAtomicTODO<AtomicListT>(varType, loc);
+  processOmpAtomicTODO<AtomicListT>(varType, loc);
 
   if constexpr (std::is_same<AtomicListT,
                              Fortran::parser::OmpAtomicClauseList>()) {
@@ -344,7 +344,7 @@ static inline void genOmpAccAtomicUpdateStatement(
         currentLocation, lhsAddr);
   }
 
-  processAtomicTODO<AtomicListT>(varType, loc);
+  processOmpAtomicTODO<AtomicListT>(varType, loc);
 
   llvm::SmallVector<mlir::Type> varTys = {varType};
   llvm::SmallVector<mlir::Location> locs = {currentLocation};
