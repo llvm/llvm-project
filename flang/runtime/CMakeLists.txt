@@ -303,7 +303,7 @@ set_target_properties(FortranRuntime PROPERTIES FOLDER "Flang/Runtime Libraries"
 #
 # TODO: This is a workaround and should be updated when runtime build procedure
 # is changed to a regular runtime build.  See discussion in PR #95388.
-if (TARGET flang-new)
+if (TARGET flang-new AND TARGET module_files)
   add_dependencies(FortranRuntime flang-new module_files)
 endif()
 
