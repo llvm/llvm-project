@@ -130,16 +130,52 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  dadd
+  daddl
   SRCS
-    dadd.cpp
+    daddl.cpp
   HDRS
-    ../dadd.h
+    ../daddl.h
   COMPILE_OPTIONS
     -O3
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.generic.add_sub.h
 
+)
+
+add_entrypoint_object(
+  daddf128
+  SRCS
+    daddf128.cpp
+  HDRS
+    ../daddf128.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.generic.add_sub.h
+)
+
+add_entrypoint_object(
+  ddivl
+  SRCS
+    ddivl.cpp
+  HDRS
+    ../ddivl.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.generic.div.h
+)
+
+add_entrypoint_object(
+  ddivf128
+  SRCS
+    ddivf128.cpp
+  HDRS
+    ../ddivf128.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.generic.div.h
 )
 
 add_entrypoint_object(
@@ -505,7 +541,7 @@ add_entrypoint_object(
   HDRS
     ../fadd.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.generic.add_sub
   COMPILE_OPTIONS
     -O3
 )

@@ -360,6 +360,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cospif
     libc.src.math.daddl
     libc.src.math.daddf128
+    libc.src.math.ddivl
+    libc.src.math.ddivf128
     libc.src.math.dmull
     libc.src.math.dsqrtl
     libc.src.math.erff

@@ -1,4 +1,4 @@
-//===-- Implementation of fadd function ----------------------------------===//
+//===-- Implementation of ddivl function ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_FADD_H
-#define LLVM_LIBC_SRC_MATH_FADD_H
-
+#include "src/math/ddivl.h"
+#include "src/__support/FPUtil/generic/div.h"
+#include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
-float fadd(double x, double y);
+LLVM_LIBC_FUNCTION(double, ddivl, (long double x, long double y)) {
+  return fputil::generic::div<double>(x, y);
+}
 
 } // namespace LIBC_NAMESPACE_DECL
-
-#endif // LLVM_LIBC_SRC_MATH_FADD_H

@@ -1,4 +1,4 @@
-//===-- Implementation of fadd function ----------------------------------===//
+//===-- Implementation header for daddf128 --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_FADD_H
-#define LLVM_LIBC_SRC_MATH_FADD_H
+#ifndef LLVM_LIBC_SRC_MATH_DADDF128_H
+#define LLVM_LIBC_SRC_MATH_DADDF128_H
 
 #include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
-float fadd(double x, double y);
+double daddf128(float128 x, float128 y);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_MATH_FADD_H
+#endif // LLVM_LIBC_SRC_MATH_DADDF128_H

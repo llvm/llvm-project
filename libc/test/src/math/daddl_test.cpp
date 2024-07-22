@@ -1,4 +1,4 @@
-//===-- Unittests for dadd ----------------------------------------------===//
+//===-- Unittests for daddl ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,6 +8,6 @@
 
 #include "AddTest.h"
 
-#include "src/math/dadd.h"
+#include "src/math/daddl.h"
 
-LIST_ADD_TESTS(double, float, LIBC_NAMESPACE::dadd)
+LIST_ADD_TESTS(double, long double, LIBC_NAMESPACE::daddl)

@@ -359,19 +359,6 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  dadd_test
-  SUITE
-    libc-math-smoke-tests
-  SRCS
-    dadd_test.cpp
-  HDRS
-    AddTest.h
-  DEPENDS
-    libc.src.math.dadd
-    libc.src.__support.FPUtil.basic_operations
-)
-
-add_fp_unittest(
   floor_test
   SUITE
     libc-math-smoke-tests
@@ -4166,4 +4153,52 @@ add_fp_unittest(
     libc.hdr.fenv_macros
     libc.src.__support.FPUtil.basic_operations
     libc.src.math.f16mulf128
+)
+
+add_fp_unittest(
+  daddl
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    daddl_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.daddl
+)
+
+add_fp_unittest(
+  daddf128
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    daddf128_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.daddf128
+)
+
+add_fp_unittest(
+  ddivl
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ddivl_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.src.math.ddivl
+)
+
+add_fp_unittest(
+  ddivf128
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ddivf128_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.src.math.ddivf128
 )

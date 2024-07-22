@@ -399,6 +399,8 @@ def StdC : StandardSpec<"stdc"> {
 
           FunctionSpec<"daddf128", RetValSpec<DoubleType>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>]>,
           FunctionSpec<"daddl", RetValSpec<DoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
+          FunctionSpec<"ddivl", RetValSpec<DoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
+          FunctionSpec<"ddivf128", RetValSpec<DoubleType>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>]>,
 
           FunctionSpec<"fabs", RetValSpec<DoubleType>, [ArgSpec<DoubleType>], [ConstAttr]>,
           FunctionSpec<"fabsf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,

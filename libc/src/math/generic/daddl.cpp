@@ -1,4 +1,4 @@
-//===-- Implementation of dadd function ---------------------------------===//
+//===-- Implementation of daddl function ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +14,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(double, daddl, (long double x, long double y)) {
-  return static_cast<double>(x) + static_cast<double>(y);
+  return fputil::generic::add<double>(x, y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

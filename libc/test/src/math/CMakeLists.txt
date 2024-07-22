@@ -46,17 +46,59 @@ add_fp_unittest(
 
 
 add_fp_unittest(
-  dadd_test
+  daddl_test
   NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
-    dadd_test.cpp
+    daddl_test.cpp
   HDRS
     AddTest.h
   DEPENDS
-    libc.src.math.dadd
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.math.daddl
+    libc.src.__support.FPUtil.generic.add_sub
+)
+
+add_fp_unittest(
+  daddf128_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    daddf128_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.daddf128
+    libc.src.__support.FPUtil.generic.add_sub
+)
+
+add_fp_unittest(
+  ddivf128_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    ddivf128_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.div
+    libc.src.math.ddivf128
+)
+
+add_fp_unittest(
+  ddivf128_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    ddivf128_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.div
+    libc.src.math.ddivf128
 )
 
 add_fp_unittest(
