@@ -208,7 +208,6 @@ Sema::isTemplateName(Scope *S, CXXScopeSpec &SS, bool hasTemplateKeyword,
                          &AssumedTemplate,
                          /*AllowTypoCorrection=*/!Disambiguation, MayBeNNS))
     return TNK_Non_template;
-
   MemberOfUnknownSpecialization = R.wasNotFoundInCurrentInstantiation();
 
   if (AssumedTemplate != AssumedTemplateKind::None) {

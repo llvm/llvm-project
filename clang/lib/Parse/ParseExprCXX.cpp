@@ -354,7 +354,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
       TemplateTy Template;
       TemplateNameKind TNK = Actions.ActOnTemplateName(
           getCurScope(), SS, TemplateKWLoc, TemplateName, ObjectType,
-          EnteringContext, Template, /*AllowInjectedClassName*/ true,
+          EnteringContext, Template, /*AllowInjectedClassName=*/true,
           /*MayBeNNS=*/true);
       if (AnnotateTemplateIdToken(Template, TNK, SS, TemplateKWLoc,
                                   TemplateName, false))
@@ -407,6 +407,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
                                       : TemplateId->TemplateNameLoc;
         SS.SetInvalid(SourceRange(StartLoc, CCLoc));
       }
+
       continue;
     }
 
@@ -540,7 +541,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         // error recovery. But before we commit to this, check that we actually
         // have something that looks like a template-argument-list next.
         if (!IsTypename && (ObjectType || TNK == TNK_Undeclared_template) &&
-          isTemplateArgumentList(1) == TPResult::False)
+            isTemplateArgumentList(1) == TPResult::False)
           break;
 
         // We have found a template name, so annotate this token
@@ -652,10 +653,10 @@ ExprResult Parser::tryParseCXXIdExpression(CXXScopeSpec &SS,
     if (isAddressOfOperand && isPostfixExpressionSuffixStart())
       isAddressOfOperand = false;
 
-    E = Actions.ActOnIdExpression(
-        getCurScope(), SS, TemplateKWLoc, Name, Tok.is(tok::l_paren),
-        isAddressOfOperand, /*CCC=*/nullptr, /*IsInlineAsmIdentifier=*/false,
-        Replacement);
+    E = Actions.ActOnIdExpression(getCurScope(), SS, TemplateKWLoc, Name,
+                                  Tok.is(tok::l_paren), isAddressOfOperand,
+                                  /*CCC=*/nullptr,
+                                  /*IsInlineAsmIdentifier=*/false, Replacement);
     break;
   }
 
@@ -1920,7 +1921,7 @@ Parser::ParseCXXPseudoDestructor(Expr *Base, SourceLocation OpLoc,
   // argument list. This affects examples such as
   //   void f(auto *p) { p->~X<int>(); }
   // ... but there's no ambiguity, and nowhere to write 'template' in such an
-  // example, so we accept it anyway
+  // example, so we accept it anyway.
   if (Tok.is(tok::less) && ParseUnqualifiedIdTemplateId(
                                SS, ObjectType, Base && Base->containsErrors(),
                                /*TemplateKWLoc=*/SourceLocation(), TildeLoc,

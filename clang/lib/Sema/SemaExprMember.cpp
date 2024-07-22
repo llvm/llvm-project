@@ -1752,9 +1752,8 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
   // Decompose the name into its component parts.
   DeclarationNameInfo NameInfo;
   const TemplateArgumentListInfo *TemplateArgs;
-  DecomposeUnqualifiedId(Id, TemplateArgsBuffer,
-                         NameInfo, TemplateArgs);
-  bool IsArrow = OpKind == tok::arrow;
+  DecomposeUnqualifiedId(Id, TemplateArgsBuffer, NameInfo, TemplateArgs);
+  bool IsArrow = (OpKind == tok::arrow);
 
   if (getLangOpts().HLSL && IsArrow)
     return ExprError(Diag(OpLoc, diag::err_hlsl_operator_unsupported) << 2);
