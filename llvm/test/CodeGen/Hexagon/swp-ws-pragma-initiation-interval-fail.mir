@@ -6,7 +6,7 @@
 # Test that checks no window scheduler is performed if the II set by pragma was
 # enabled
 
-# CHECK: Window scheduling is disabled when Pragma II is set.
+# CHECK: Window scheduling is disabled when llvm.loop.pipeline.initiationinterval is set.
 
 --- |
   define void @test_pragma_ii_fail(ptr %a0, i32 %a1) {

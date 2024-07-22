@@ -533,8 +533,8 @@ bool MachinePipeliner::useWindowScheduler(bool Changed) {
   // 2. when SwingModuloScheduler is successfully scheduled.
   // 3. when pragma II is enabled.
   if (II_setByPragma) {
-    LLVM_DEBUG(
-        dbgs() << "Window scheduling is disabled when Pragma II is set.\n");
+    LLVM_DEBUG(dbgs() << "Window scheduling is disabled when "
+                         "llvm.loop.pipeline.initiationinterval is set.\n");
     return false;
   }
 
