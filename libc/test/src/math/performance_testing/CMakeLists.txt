@@ -1,5 +1,5 @@
 add_library(
-  libc_diff_test_utils
+  libc_diff_test_utils STATIC
   Timer.cpp
   Timer.h
 )

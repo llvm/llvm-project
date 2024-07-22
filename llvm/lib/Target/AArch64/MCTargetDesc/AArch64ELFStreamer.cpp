@@ -184,7 +184,7 @@ public:
                      std::unique_ptr<MCCodeEmitter> Emitter)
       : MCELFStreamer(Context, std::move(TAB), std::move(OW),
                       std::move(Emitter)),
-        MappingSymbolCounter(0), LastEMS(EMS_None) {
+        LastEMS(EMS_None) {
     auto *TO = getContext().getTargetOptions();
     OptimizeMappingSymbols = TO && TO->OptimizeMappingSymbols;
   }
@@ -207,7 +207,6 @@ public:
 
   // Reset state between object emissions
   void reset() override {
-    MappingSymbolCounter = 0;
     MCELFStreamer::reset();
     LastMappingSymbols.clear();
     LastEMS = EMS_None;
@@ -283,19 +282,15 @@ private:
   }
 
   void emitMappingSymbol(StringRef Name) {
-    auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
-        Name + "." + Twine(MappingSymbolCounter++)));
+    auto *Symbol = cast<MCSymbolELF>(getContext().createLocalSymbol(Name));
     emitLabel(Symbol);
     Symbol->setType(ELF::STT_NOTYPE);
     Symbol->setBinding(ELF::STB_LOCAL);
-    Symbol->setExternal(false);
   }
-
-  int64_t MappingSymbolCounter;
-  bool OptimizeMappingSymbols;
 
   DenseMap<const MCSection *, ElfMappingSymbol> LastMappingSymbols;
   ElfMappingSymbol LastEMS;
+  bool OptimizeMappingSymbols;
 };
 } // end anonymous namespace
 
@@ -360,8 +355,7 @@ void AArch64TargetELFStreamer::finish() {
 
 MCTargetStreamer *
 llvm::createAArch64AsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
-                                     MCInstPrinter *InstPrint,
-                                     bool isVerboseAsm) {
+                                     MCInstPrinter *InstPrint) {
   return new AArch64TargetAsmStreamer(S, OS);
 }
 

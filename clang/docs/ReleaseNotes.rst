@@ -58,7 +58,8 @@ C++ Specific Potentially Breaking Changes
   versions of clang. The deprecation warning for the negative spelling can be
   disabled with `-Wno-deprecated-no-relaxed-template-template-args`.
 
-- Clang now rejects pointer to member from parenthesized expression in unevaluated context such as ``decltype(&(foo::bar))``. (#GH40906).
+- Clang no longer tries to form pointer-to-members from qualified and parenthesized unevaluated expressions
+  such as ``decltype(&(foo::bar))``. (#GH40906).
 
 - Clang now performs semantic analysis for unary operators with dependent operands
   that are known to be of non-class non-enumeration type prior to instantiation.
@@ -743,6 +744,19 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses dangling assignments for pointer-like objects (annotated with `[[gsl::Pointer]]`) under `-Wdangling-assignment-gsl` (off by default)
   Fixes #GH63310.
+  
+- Clang now diagnoses uses of alias templates with a deprecated attribute. (Fixes #GH18236).
+
+  .. code-block:: c++
+
+     template <typename T>
+     struct NoAttr {
+     };
+
+     template <typename T>
+     using UsingWithAttr __attribute__((deprecated)) = NoAttr<T>;
+
+     UsingWithAttr<int> objUsingWA; // warning: 'UsingWithAttr' is deprecated
 
 Improvements to Clang's time-trace
 ----------------------------------

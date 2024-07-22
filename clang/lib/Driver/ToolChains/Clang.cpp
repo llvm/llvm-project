@@ -1077,33 +1077,6 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   if (JA.isOffloading(Action::OFK_HIP))
     getToolChain().AddHIPIncludeArgs(Args, CmdArgs);
 
-  // If we are compiling for a GPU target we want to override the system headers
-  // with ones created by the 'libc' project if present.
-  if (!Args.hasArg(options::OPT_nostdinc) &&
-      !Args.hasArg(options::OPT_nogpuinc) &&
-      !Args.hasArg(options::OPT_nobuiltininc)) {
-    // Without an offloading language we will include these headers directly.
-    // Offloading languages will instead only use the declarations stored in
-    // the resource directory at clang/lib/Headers/llvm_libc_wrappers.
-    if ((getToolChain().getTriple().isNVPTX() ||
-         getToolChain().getTriple().isAMDGCN()) &&
-        C.getActiveOffloadKinds() == Action::OFK_None) {
-      SmallString<128> P(llvm::sys::path::parent_path(D.Dir));
-      llvm::sys::path::append(P, "include");
-      llvm::sys::path::append(P, getToolChain().getTripleString());
-      CmdArgs.push_back("-internal-isystem");
-      CmdArgs.push_back(Args.MakeArgString(P));
-    } else if (C.getActiveOffloadKinds() == Action::OFK_OpenMP) {
-      // TODO: CUDA / HIP include their own headers for some common functions
-      // implemented here. We'll need to clean those up so they do not conflict.
-      SmallString<128> P(D.ResourceDir);
-      llvm::sys::path::append(P, "include");
-      llvm::sys::path::append(P, "llvm_libc_wrappers");
-      CmdArgs.push_back("-internal-isystem");
-      CmdArgs.push_back(Args.MakeArgString(P));
-    }
-  }
-
   // If we are offloading to a target via OpenMP we need to include the
   // openmp_wrappers folder which contains alternative system headers.
   if (JA.isDeviceOffloading(Action::OFK_OpenMP) &&
@@ -1274,6 +1247,35 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
           HasStdlibxxIsystem ? TC.AddClangCXXStdlibIsystemArgs(Args, CmdArgs)
                              : TC.AddClangCXXStdlibIncludeArgs(Args, CmdArgs);
         });
+  }
+
+  // If we are compiling for a GPU target we want to override the system headers
+  // with ones created by the 'libc' project if present.
+  // TODO: This should be moved to `AddClangSystemIncludeArgs` by passing the
+  //       OffloadKind as an argument.
+  if (!Args.hasArg(options::OPT_nostdinc) &&
+      !Args.hasArg(options::OPT_nogpuinc) &&
+      !Args.hasArg(options::OPT_nobuiltininc)) {
+    // Without an offloading language we will include these headers directly.
+    // Offloading languages will instead only use the declarations stored in
+    // the resource directory at clang/lib/Headers/llvm_libc_wrappers.
+    if ((getToolChain().getTriple().isNVPTX() ||
+         getToolChain().getTriple().isAMDGCN()) &&
+        C.getActiveOffloadKinds() == Action::OFK_None) {
+      SmallString<128> P(llvm::sys::path::parent_path(D.Dir));
+      llvm::sys::path::append(P, "include");
+      llvm::sys::path::append(P, getToolChain().getTripleString());
+      CmdArgs.push_back("-internal-isystem");
+      CmdArgs.push_back(Args.MakeArgString(P));
+    } else if (C.getActiveOffloadKinds() == Action::OFK_OpenMP) {
+      // TODO: CUDA / HIP include their own headers for some common functions
+      // implemented here. We'll need to clean those up so they do not conflict.
+      SmallString<128> P(D.ResourceDir);
+      llvm::sys::path::append(P, "include");
+      llvm::sys::path::append(P, "llvm_libc_wrappers");
+      CmdArgs.push_back("-internal-isystem");
+      CmdArgs.push_back(Args.MakeArgString(P));
+    }
   }
 
   // Add system include arguments for all targets but IAMCU.
@@ -6664,7 +6666,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     StringRef S0 = A->getValue(), S = S0;
     unsigned Size, Offset = 0;
     if (!Triple.isAArch64() && !Triple.isLoongArch() && !Triple.isRISCV() &&
-        !Triple.isX86())
+        !Triple.isX86() &&
+        !(!Triple.isOSAIX() && (Triple.getArch() == llvm::Triple::ppc ||
+                                Triple.getArch() == llvm::Triple::ppc64)))
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
     else if (S.consumeInteger(10, Size) ||

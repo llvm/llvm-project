@@ -228,9 +228,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.epoll.epoll_ctl
     libc.src.sys.epoll.epoll_pwait
     libc.src.sys.epoll.epoll_wait
-    # TODO: Need to check if pwait2 is available before providing.
-    # https://github.com/llvm/llvm-project/issues/80060
-    # libc.src.sys.epoll.epoll_pwait2
+    libc.src.sys.epoll.epoll_pwait2
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
@@ -315,6 +313,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.geteuid
     libc.src.unistd.getpid
     libc.src.unistd.getppid
+    libc.src.unistd.gettid
     libc.src.unistd.getuid
     libc.src.unistd.isatty
     libc.src.unistd.link
@@ -383,6 +382,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.coshf
     libc.src.math.cospif
     libc.src.math.dmull
+    libc.src.math.dsqrtl
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.exp10
@@ -449,6 +449,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fromfpx
     libc.src.math.fromfpxf
     libc.src.math.fromfpxl
+    libc.src.math.fsqrt
+    libc.src.math.fsqrtl
     libc.src.math.hypot
     libc.src.math.hypotf
     libc.src.math.ilogb
@@ -642,6 +644,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.ceilf128
     libc.src.math.copysignf128
     libc.src.math.dmulf128
+    libc.src.math.dsqrtf128
     libc.src.math.fabsf128
     libc.src.math.fdimf128
     libc.src.math.floorf128
@@ -660,6 +663,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.frexpf128
     libc.src.math.fromfpf128
     libc.src.math.fromfpxf128
+    libc.src.math.fsqrtf128
     libc.src.math.ilogbf128
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
