@@ -3577,12 +3577,15 @@ static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
   } else if (isCMN(RHS, CC, DAG)) {
     Opcode = AArch64ISD::CCMN;
     RHS = RHS.getOperand(1);
-  } else if (LHS.getOpcode() == ISD::SUB && isNullConstant(LHS.getOperand(0)) &&
-             isIntEqualitySetCC(CC)) {
-    // As we are looking for EQ/NE compares, the operands can be commuted ; can
-    // we combine a (CCMP (sub 0, op1), op2) into a CCMN instruction ?
+  } else if (isCMN(LHS, CC, DAG) &&
+             (isIntEqualitySetCC(CC) ||
+              (isUnsignedIntSetCC(CC) && DAG.isKnownNeverZero(RHS)) ||
+              (isSignedIntSetCC(CC) && cannotBeIntMin(RHS, DAG)))) {
     Opcode = AArch64ISD::CCMN;
     LHS = LHS.getOperand(1);
+
+    // Swap LHS and RHS to avoid worrying about changed CC
+    std::swap(LHS, RHS);
   }
   if (Opcode == 0)
     Opcode = AArch64ISD::CCMP;

@@ -505,11 +505,10 @@ entry:
 define i32 @and_ult_eq_s0s1_or(i32 %s0a, i32 %s1a, i32 %s2, i32 %s3) {
 ; SDISEL-LABEL: and_ult_eq_s0s1_or:
 ; SDISEL:       // %bb.0: // %entry
-; SDISEL-NEXT:    orr w9, w0, #0x1
 ; SDISEL-NEXT:    orr w8, w1, #0x1
+; SDISEL-NEXT:    orr w9, w0, #0x1
 ; SDISEL-NEXT:    cmp w2, w3
-; SDISEL-NEXT:    neg w9, w9
-; SDISEL-NEXT:    ccmp w9, w8, #2, eq
+; SDISEL-NEXT:    ccmn w8, w9, #2, eq
 ; SDISEL-NEXT:    mov w8, #20 // =0x14
 ; SDISEL-NEXT:    mov w9, #10 // =0xa
 ; SDISEL-NEXT:    csel w0, w9, w8, lo
@@ -540,11 +539,10 @@ entry:
 define i32 @and_ult_gt_s0s1_or(i32 %s0a, i32 %s1a, i32 %s2, i32 %s3) {
 ; SDISEL-LABEL: and_ult_gt_s0s1_or:
 ; SDISEL:       // %bb.0: // %entry
-; SDISEL-NEXT:    orr w9, w0, #0x1
 ; SDISEL-NEXT:    orr w8, w1, #0x1
+; SDISEL-NEXT:    orr w9, w0, #0x1
 ; SDISEL-NEXT:    cmp w2, w3
-; SDISEL-NEXT:    neg w9, w9
-; SDISEL-NEXT:    ccmp w9, w8, #2, hi
+; SDISEL-NEXT:    ccmn w8, w9, #2, hi
 ; SDISEL-NEXT:    mov w8, #20 // =0x14
 ; SDISEL-NEXT:    mov w9, #10 // =0xa
 ; SDISEL-NEXT:    csel w0, w9, w8, lo
@@ -575,11 +573,10 @@ entry:
 define i32 @and_ult_sgt_s0s1_or(i32 %s0a, i32 %s1a, i32 %s2, i32 %s3) {
 ; SDISEL-LABEL: and_ult_sgt_s0s1_or:
 ; SDISEL:       // %bb.0: // %entry
-; SDISEL-NEXT:    orr w9, w0, #0x1
 ; SDISEL-NEXT:    orr w8, w1, #0x1
+; SDISEL-NEXT:    orr w9, w0, #0x1
 ; SDISEL-NEXT:    cmp w2, w3
-; SDISEL-NEXT:    neg w9, w9
-; SDISEL-NEXT:    ccmp w9, w8, #2, gt
+; SDISEL-NEXT:    ccmn w8, w9, #2, gt
 ; SDISEL-NEXT:    mov w8, #20 // =0x14
 ; SDISEL-NEXT:    mov w9, #10 // =0xa
 ; SDISEL-NEXT:    csel w0, w9, w8, lo
@@ -610,11 +607,10 @@ entry:
 define i32 @and_ult_slt_s0s1_or(i32 %s0a, i32 %s1a, i32 %s2, i32 %s3) {
 ; SDISEL-LABEL: and_ult_slt_s0s1_or:
 ; SDISEL:       // %bb.0: // %entry
-; SDISEL-NEXT:    orr w9, w0, #0x1
 ; SDISEL-NEXT:    orr w8, w1, #0x1
+; SDISEL-NEXT:    orr w9, w0, #0x1
 ; SDISEL-NEXT:    cmp w2, w3
-; SDISEL-NEXT:    neg w9, w9
-; SDISEL-NEXT:    ccmp w9, w8, #2, lt
+; SDISEL-NEXT:    ccmn w8, w9, #2, lt
 ; SDISEL-NEXT:    mov w8, #20 // =0x14
 ; SDISEL-NEXT:    mov w9, #10 // =0xa
 ; SDISEL-NEXT:    csel w0, w9, w8, lo
@@ -645,11 +641,10 @@ entry:
 define i32 @and_ult_ne_s0s1_or(i32 %s0a, i32 %s1a, i32 %s2, i32 %s3) {
 ; SDISEL-LABEL: and_ult_ne_s0s1_or:
 ; SDISEL:       // %bb.0: // %entry
-; SDISEL-NEXT:    orr w9, w0, #0x1
 ; SDISEL-NEXT:    orr w8, w1, #0x1
+; SDISEL-NEXT:    orr w9, w0, #0x1
 ; SDISEL-NEXT:    cmp w2, w3
-; SDISEL-NEXT:    neg w9, w9
-; SDISEL-NEXT:    ccmp w9, w8, #2, ne
+; SDISEL-NEXT:    ccmn w8, w9, #2, ne
 ; SDISEL-NEXT:    mov w8, #20 // =0x14
 ; SDISEL-NEXT:    mov w9, #10 // =0xa
 ; SDISEL-NEXT:    csel w0, w9, w8, lo
@@ -680,11 +675,10 @@ entry:
 define i32 @and_ult_ult_s0s1_or(i32 %s0a, i32 %s1a, i32 %s2, i32 %s3) {
 ; SDISEL-LABEL: and_ult_ult_s0s1_or:
 ; SDISEL:       // %bb.0: // %entry
-; SDISEL-NEXT:    orr w9, w0, #0x1
 ; SDISEL-NEXT:    orr w8, w1, #0x1
+; SDISEL-NEXT:    orr w9, w0, #0x1
 ; SDISEL-NEXT:    cmp w2, w3
-; SDISEL-NEXT:    neg w9, w9
-; SDISEL-NEXT:    ccmp w9, w8, #2, lo
+; SDISEL-NEXT:    ccmn w8, w9, #2, lo
 ; SDISEL-NEXT:    mov w8, #20 // =0x14
 ; SDISEL-NEXT:    mov w9, #10 // =0xa
 ; SDISEL-NEXT:    csel w0, w9, w8, lo
