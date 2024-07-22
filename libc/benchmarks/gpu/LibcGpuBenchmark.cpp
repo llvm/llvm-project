@@ -8,7 +8,6 @@
 #include "src/__support/fixedvector.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf.h"
-#include "src/stdlib/srand.h"
 #include "src/time/gpu/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -134,34 +133,10 @@ void print_header() {
       "--------------------------------\n");
 }
 
-// We want our random values to be approximately
-// |real value| <= 2^(max_exponent) * (1 + (random 52 bits) * 2^-52) <
-// 2^(max_exponent + 1)
-// The largest integer that can be stored in a double is 2^53
-static constexpr int MAX_EXPONENT = 52;
-
-static double get_rand() {
-  using FPBits = LIBC_NAMESPACE::fputil::FPBits<double>;
-  uint64_t bits = LIBC_NAMESPACE::rand();
-  double scale = 0.5 + MAX_EXPONENT / 2048.0;
-  FPBits fp(bits);
-  fp.set_biased_exponent(
-      static_cast<uint32_t>(fp.get_biased_exponent() * scale));
-  return fp.get_val();
-}
-
-static void init_random_input() {
-  LIBC_NAMESPACE::srand(LIBC_NAMESPACE::gpu::processor_clock());
-  for (int i = 0; i < RANDOM_INPUT_SIZE; i++) {
-    random_input[i] = get_rand();
-  }
-}
-
 void Benchmark::run_benchmarks() {
   uint64_t id = gpu::get_thread_id();
 
   if (id == 0) {
-    LIBC_NAMESPACE::benchmarks::init_random_input();
     print_header();
   }
   gpu::sync_threads();

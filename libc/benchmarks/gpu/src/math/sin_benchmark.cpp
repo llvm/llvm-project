@@ -1,5 +1,6 @@
 #include "benchmarks/gpu/LibcGpuBenchmark.h"
 
+#include "src/__support/CPP/array.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/functional.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -16,17 +17,21 @@ uint64_t get_bits(double x) {
   return LIBC_NAMESPACE::cpp::bit_cast<uint64_t>(x);
 }
 
-// BENCHMARK() expects a function with no parameters that returns a
+constexpr int RANDOM_INPUT_SIZE = 256;
+
+// BENCHMARK() expects a function that with no parameters that returns a
 // uint64_t representing the latency. Defining each benchmark using macro that
-// expands to a lambda to allow us to switch the implementation of `sin()` and
-// easily register vendor-specific benchmarks.
+// expands to a lambda to allow us to switch the implementation of `sin()` to
+// easily register NVPTX benchmarks.
 #define BM_RANDOM_INPUT(Func)                                                  \
   []() {                                                                       \
+    LIBC_NAMESPACE::cpp::array<double, RANDOM_INPUT_SIZE> random_input;        \
+    LIBC_NAMESPACE::benchmarks::init_random_double_input(random_input);        \
     uint64_t total_time = 0;                                                   \
-    for (double i : LIBC_NAMESPACE::benchmarks::random_input) {                \
+    for (double i : random_input) {                                            \
       total_time += LIBC_NAMESPACE::latency(Func, i);                          \
     }                                                                          \
-    return total_time / LIBC_NAMESPACE::benchmarks::random_input.size();       \
+    return total_time / random_input.size();                                   \
   }
 BENCHMARK(LlvmLibcSinGpuBenchmark, Sin, BM_RANDOM_INPUT(LIBC_NAMESPACE::sin));
 
