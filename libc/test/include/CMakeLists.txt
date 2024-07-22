@@ -1,4 +1,5 @@
 add_custom_target(libc_include_tests)
+add_dependencies(check-libc libc_include_tests)
 
 add_libc_test(
   assert_test
