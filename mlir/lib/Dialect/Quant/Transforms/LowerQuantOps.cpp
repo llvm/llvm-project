@@ -223,12 +223,11 @@ Value convertIntegerToFloat(OpBuilder &builder, Location loc, Value input,
   return builder.create<arith::UIToFPOp>(loc, resultType, input);
 }
 
-// Quantize a floating-point input using the given input shape, scale, and
-// zero point. The stored value is clamped using the storage bounds encoded in
-// the given quantized type.
-Value quantizeScalarOrTensor(OpBuilder &builder, Location loc, Value input,
-                             ArrayRef<OpFoldResult> inputShape, Value scale,
-                             Value zeroPoint, QuantizedType quantizedType) {
+// Quantize a scalar or ranked tensor value. The stored value is clamped using 
+// the storage bounds encoded in the given quantized type.
+Value quantizeValue(OpBuilder &builder, Location loc, Value input,
+                    ArrayRef<OpFoldResult> inputShape, Value scale,
+                    Value zeroPoint, QuantizedType quantizedType) {
   // Convert scale to tensor if necessary
   auto inputType = input.getType();
   scale = getScalarOrTensorConstant(
@@ -267,9 +266,10 @@ Value quantizeScalarOrTensor(OpBuilder &builder, Location loc, Value input,
   return storedValueClamped;
 }
 
-Value dequantizeScalarOrTensor(OpBuilder &builder, Location loc, Value input,
-                               ArrayRef<OpFoldResult> inputShape, Value scale,
-                               Value zeroPoint, QuantizedType quantizedType) {
+// Dequantize a scalar or ranked tensor value.
+Value dequantizeValue(OpBuilder &builder, Location loc, Value input,
+                      ArrayRef<OpFoldResult> inputShape, Value scale,
+                      Value zeroPoint, QuantizedType quantizedType) {
   // Convert scale to tensor if necessary
   auto inputType = input.getType();
   scale = getScalarOrTensorConstant(
@@ -299,125 +299,168 @@ Value dequantizeScalarOrTensor(OpBuilder &builder, Location loc, Value input,
   return result;
 }
 
+// Convert a scalar or ranked tensor input with the given scale and zero point
+// values.
+//
+// - input
+//   Scalar or ranked tensor value.
+//
+// - inputShape
+//   If 'input' is a tensor, combination or attributes/values representing its
+//   static/dynamic dimensions. If 'input' is a scalar, empty list.
+//
+// - scale
+//   Scale as a scalar value.
+//
+// - zeroPoint
+//   Zero point as a scalar value.
+//
+// - quantizedType
+//   Scalar quantized type of the result ('quant.qcast') or of the input
+//   ('quant.dcast').
+//
+Value convertRanked(OpBuilder &builder, Location loc, Operation *op,
+                    Value input, ArrayRef<OpFoldResult> inputShape, Value scale,
+                    Value zeroPoint, QuantizedType quantizedType) {
+  if (isa<QuantizeCastOp>(op))
+    return quantizeValue(builder, loc, input, inputShape, scale, zeroPoint,
+                         quantizedType);
+  if (isa<DequantizeCastOp>(op))
+    return dequantizeValue(builder, loc, input, inputShape, scale, zeroPoint,
+                           quantizedType);
+  llvm_unreachable("unexpected quant op");
+}
+
+Value convertPerLayerRanked(OpBuilder &builder, Location loc, Operation *op,
+                            Value input, UniformQuantizedType quantizedType) {
+
+  // Create scale and zero point constants
+  auto expressedType = quantizedType.getExpressedType();
+  auto storageType = quantizedType.getStorageType();
+  auto scaleAttr =
+      builder.getFloatAttr(expressedType, quantizedType.getScale());
+  auto scale = builder.create<arith::ConstantOp>(loc, expressedType, scaleAttr);
+  auto zeroPointAttr =
+      builder.getIntegerAttr(storageType, quantizedType.getZeroPoint());
+  auto zeroPoint =
+      builder.create<arith::ConstantOp>(loc, storageType, zeroPointAttr);
+
+  auto inputShape = getScalarOrTensorShape(builder, loc, input);
+  return convertRanked(builder, loc, op, input, inputShape, scale, zeroPoint,
+                       quantizedType);
+}
+
+Value convertPerLayer(OpBuilder &builder, Location loc, Operation *op,
+                      Value input, UniformQuantizedType quantizedType) {
+  // Flatten input if unranked
+  bool isUnranked = isa<UnrankedTensorType>(input.getType());
+  Value inputShape;
+  if (isUnranked)
+    std::tie(input, inputShape) = flattenUnrankedTensor(builder, loc, input);
+
+  // Process ranked tensor
+  auto result = convertPerLayerRanked(builder, loc, op, input, quantizedType);
+
+  // Restore original shape if unranked
+  if (isUnranked)
+    result = restoreUnrankedTensorShape(builder, loc, result, inputShape);
+
+  return result;
+}
+
+Value convertPerChannelRanked(OpBuilder &builder, Location loc, Operation *op,
+                              Value input,
+                              UniformQuantizedPerAxisType quantizedType,
+                              int64_t channelAxis) {
+  auto *context = builder.getContext();
+
+  auto inputType = cast<RankedTensorType>(input.getType());
+  auto inputRank = inputType.getRank();
+
+  auto scales = materializePerChannelScales(builder, loc, quantizedType);
+  auto zeroPoints =
+      materializePerChannelZeroPoints(builder, loc, quantizedType);
+
+  auto storageType = quantizedType.getStorageType();
+  auto initShape = tensor::getMixedSizes(builder, loc, input);
+  Value init = builder.create<tensor::EmptyOp>(loc, initShape, storageType);
+
+  SmallVector<utils::IteratorType> iteratorTypes(
+      inputRank, utils::IteratorType::parallel);
+  auto channelAxisAffineMap = AffineMap::get(
+      inputRank, 0, builder.getAffineDimExpr(channelAxis), context);
+  SmallVector<AffineMap> indexingMaps{
+    builder.getMultiDimIdentityMap(inputRank),
+    channelAxisAffineMap,
+    channelAxisAffineMap,
+    builder.getMultiDimIdentityMap(inputRank)
+  };
+  auto storedValue = builder.create<linalg::GenericOp>(
+      loc,
+      init.getType(),  // resultType
+      ValueRange{input, scales, zeroPoints},  // inputs
+      ValueRange{init},  // outputs
+      indexingMaps,
+      iteratorTypes,
+      [&](OpBuilder& builder, Location loc, ValueRange args) {
+        assert(args.size() == 4);
+        auto expressedValue = args[0];
+        auto scale = args[1];
+        auto zeroPoint = args[2];
+
+        auto result = convertRanked(builder, loc, op, expressedValue, {}, scale,
+                                    zeroPoint, quantizedType);
+
+        builder.create<linalg::YieldOp>(loc, result);
+      })
+      .getResult(0);
+
+  return storedValue;
+}
+
+Value convertPerChannel(OpBuilder &builder, Location loc, Operation *op,
+                        Value input,
+                        UniformQuantizedPerAxisType quantizedType) {
+  // Flatten unranked tensor into a 3D ranked tensor if necessary
+  bool isUnranked = isa<UnrankedTensorType>(input.getType());
+  int64_t channelAxis = quantizedType.getQuantizedDimension();
+  int64_t channelAxisSize = (int64_t) quantizedType.getScales().size();
+  Value inputShape;
+  if (isUnranked) {
+    std::tie(input, inputShape) = flattenUnrankedTensorAroundAxis(
+        builder, loc, input, channelAxis, channelAxisSize);
+    channelAxis = 1;
+  }
+
+  // Work on a ranked tensor
+  auto result = convertPerChannelRanked(builder, loc, op, input, quantizedType,
+                                        channelAxis);
+
+  // Restore original tensor shape if unranked
+  if (isUnranked)
+    result = restoreUnrankedTensorShape(builder, loc, result, inputShape);
+
+  return result;
+}
+
+Value convertQuantized(OpBuilder &builder, Location loc, Operation *op,
+                       Value input, Type quantizedType) {
+  if (auto uniformQuantizedType = dyn_cast<UniformQuantizedType>(quantizedType))
+    return convertPerLayer(builder, loc, op, input, uniformQuantizedType);
+
+  if (auto uniformQuantizedPerAxisType =
+          dyn_cast<UniformQuantizedPerAxisType>(quantizedType))
+    return convertPerChannel(builder, loc, op, input,
+                             uniformQuantizedPerAxisType);
+
+  llvm_unreachable("unexpected quantized type");
+}
 
 //===----------------------------------------------------------------------===//
 // DequantizeCastOp
 //===----------------------------------------------------------------------===//
 
-class DequantizeCastOpConversion : public OpConversionPattern<quant::DequantizeCastOp> {
-  
-  Value convertPerLayerRanked(OpBuilder &builder, Location loc, Value input,
-                              UniformQuantizedType quantizedType) const {
-
-    // Create scale and zero point constants
-    auto expressedType = quantizedType.getExpressedType();
-    auto storageType = quantizedType.getStorageType();
-    auto scaleAttr =
-        builder.getFloatAttr(expressedType, quantizedType.getScale());
-    auto scale =
-        builder.create<arith::ConstantOp>(loc, expressedType, scaleAttr);
-    auto zeroPointAttr =
-        builder.getIntegerAttr(storageType, quantizedType.getZeroPoint());
-    auto zeroPoint =
-        builder.create<arith::ConstantOp>(loc, storageType, zeroPointAttr);
-
-    auto inputShape = getScalarOrTensorShape(builder, loc, input);
-    return dequantizeScalarOrTensor(builder, loc, input, inputShape, scale,
-                                    zeroPoint, quantizedType);
-  }
-
-  Value convertPerLayer(OpBuilder &builder, Location loc, Value input,
-                        UniformQuantizedType quantizedType) const {
-    // Flatten input if unranked
-    bool isUnranked = isa<UnrankedTensorType>(input.getType());
-    Value inputShape;
-    if (isUnranked)
-      std::tie(input, inputShape) = flattenUnrankedTensor(builder, loc, input);
-
-    // Process ranked tensor
-    auto result = convertPerLayerRanked(builder, loc, input, quantizedType);
-
-    // Restore original shape if unranked
-    if (isUnranked)
-      result = restoreUnrankedTensorShape(builder, loc, result, inputShape);
-
-    return result;
-  }
-
-  Value convertPerChannelRanked(OpBuilder &builder, Location loc, Value input,
-                                UniformQuantizedPerAxisType quantizedType,
-                                int64_t channelAxis) const {
-    auto *context = builder.getContext();
-
-    auto inputType = cast<RankedTensorType>(input.getType());
-    auto inputRank = inputType.getRank();
-
-    auto scales = materializePerChannelScales(builder, loc, quantizedType);
-    auto zeroPoints =
-        materializePerChannelZeroPoints(builder, loc, quantizedType);
-
-    auto storageType = quantizedType.getStorageType();
-    auto initShape = tensor::getMixedSizes(builder, loc, input);
-    Value init = builder.create<tensor::EmptyOp>(loc, initShape, storageType);
-
-    SmallVector<utils::IteratorType> iteratorTypes(
-        inputRank, utils::IteratorType::parallel);
-    auto channelAxisAffineMap = AffineMap::get(
-        inputRank, 0, builder.getAffineDimExpr(channelAxis), context);
-    SmallVector<AffineMap> indexingMaps{
-      builder.getMultiDimIdentityMap(inputRank),
-      channelAxisAffineMap,
-      channelAxisAffineMap,
-      builder.getMultiDimIdentityMap(inputRank)
-    };
-    auto storedValue = builder.create<linalg::GenericOp>(
-        loc,
-        init.getType(),  // resultType
-        ValueRange{input, scales, zeroPoints},  // inputs
-        ValueRange{init},  // outputs
-        indexingMaps,
-        iteratorTypes,
-        [&](OpBuilder& builder, Location loc, ValueRange args) {
-          assert(args.size() == 4);
-          auto expressedValue = args[0];
-          auto scale = args[1];
-          auto zeroPoint = args[2];
-
-          auto result = quantizeScalarOrTensor(builder, loc, expressedValue, {},
-                                               scale, zeroPoint, quantizedType);
-
-          builder.create<linalg::YieldOp>(loc, result);
-        })
-        .getResult(0);
-
-    return storedValue;
-  }
-
-  Value convertPerChannel(OpBuilder &builder, Location loc, Value input,
-                          UniformQuantizedPerAxisType quantizedType) const {
-    // Flatten unranked tensor into a 3D ranked tensor if necessary
-    bool isUnranked = isa<UnrankedTensorType>(input.getType());
-    int64_t channelAxis = quantizedType.getQuantizedDimension();
-    int64_t channelAxisSize = (int64_t) quantizedType.getScales().size();
-    Value inputShape;
-    if (isUnranked) {
-      std::tie(input, inputShape) = flattenUnrankedTensorAroundAxis(
-          builder, loc, input, channelAxis, channelAxisSize);
-      channelAxis = 1;
-    }
-
-    // Work on a ranked tensor
-    auto result = convertPerChannelRanked(builder, loc, input, quantizedType,
-                                          channelAxis);
-
-    // Restore original tensor shape if unranked
-    if (isUnranked)
-      result = restoreUnrankedTensorShape(builder, loc, result, inputShape);
-
-    return result;
-  }
-
-public:
+struct DequantizeCastOpConversion : public OpConversionPattern<quant::DequantizeCastOp> {
   using OpConversionPattern<quant::DequantizeCastOp>::OpConversionPattern;
 
   LogicalResult
@@ -434,19 +477,7 @@ public:
     input = rewriter.create<quant::StorageCastOp>(
         loc, storageScalarOrTensorType, input);
 
-    // Flatten unranked tensor input
-    Value result;
-    if (auto uniformQuantizedType =
-            dyn_cast<UniformQuantizedType>(quantizedType)) {
-      result = convertPerLayer(rewriter, loc, input, uniformQuantizedType);
-    } else if (auto uniformQuantizedPerAxisType =
-                   dyn_cast<UniformQuantizedPerAxisType>(quantizedType)) {
-      result =
-          convertPerChannel(rewriter, loc, input, uniformQuantizedPerAxisType);
-    } else {
-      llvm_unreachable("unexpected quantized type");
-    }
-
+    auto result = convertQuantized(rewriter, loc, op, input, quantizedType);
     rewriter.replaceOp(op, result);
     return success();
   }
@@ -457,120 +488,7 @@ public:
 // QuantizeCastOp
 //===----------------------------------------------------------------------===//
 
-class QuantizeCastOpConversion : public OpConversionPattern<quant::QuantizeCastOp> {
-
-  Value convertPerLayerRanked(OpBuilder &builder, Location loc, Value input,
-                              UniformQuantizedType quantizedType) const {
-
-    // Create scale and zero point constants
-    auto expressedType = quantizedType.getExpressedType();
-    auto storageType = quantizedType.getStorageType();
-    auto scaleAttr =
-        builder.getFloatAttr(expressedType, quantizedType.getScale());
-    auto scale =
-        builder.create<arith::ConstantOp>(loc, expressedType, scaleAttr);
-    auto zeroPointAttr =
-        builder.getIntegerAttr(storageType, quantizedType.getZeroPoint());
-    auto zeroPoint =
-        builder.create<arith::ConstantOp>(loc, storageType, zeroPointAttr);
-
-    auto inputShape = getScalarOrTensorShape(builder, loc, input);
-    return quantizeScalarOrTensor(builder, loc, input, inputShape, scale,
-                                  zeroPoint, quantizedType);
-  }
-
-  Value convertPerLayer(OpBuilder &builder, Location loc, Value input,
-                        UniformQuantizedType quantizedType) const {
-    // Flatten input if unranked
-    bool isUnranked = isa<UnrankedTensorType>(input.getType());
-    Value inputShape;
-    if (isUnranked)
-      std::tie(input, inputShape) = flattenUnrankedTensor(builder, loc, input);
-
-    // Process ranked tensor
-    auto result = convertPerLayerRanked(builder, loc, input, quantizedType);
-
-    // Restore original shape if unranked
-    if (isUnranked)
-      result = restoreUnrankedTensorShape(builder, loc, result, inputShape);
-
-    return result;
-  }
-
-  Value convertPerChannelRanked(OpBuilder &builder, Location loc, Value input,
-                                UniformQuantizedPerAxisType quantizedType,
-                                int64_t channelAxis) const {
-    auto *context = builder.getContext();
-
-    auto inputType = cast<RankedTensorType>(input.getType());
-    auto inputRank = inputType.getRank();
-
-    auto scales = materializePerChannelScales(builder, loc, quantizedType);
-    auto zeroPoints =
-        materializePerChannelZeroPoints(builder, loc, quantizedType);
-
-    auto storageType = quantizedType.getStorageType();
-    auto initShape = tensor::getMixedSizes(builder, loc, input);
-    Value init = builder.create<tensor::EmptyOp>(loc, initShape, storageType);
-
-    SmallVector<utils::IteratorType> iteratorTypes(
-        inputRank, utils::IteratorType::parallel);
-    auto channelAxisAffineMap = AffineMap::get(
-        inputRank, 0, builder.getAffineDimExpr(channelAxis), context);
-    SmallVector<AffineMap> indexingMaps{
-      builder.getMultiDimIdentityMap(inputRank),
-      channelAxisAffineMap,
-      channelAxisAffineMap,
-      builder.getMultiDimIdentityMap(inputRank)
-    };
-    auto storedValue = builder.create<linalg::GenericOp>(
-        loc,
-        init.getType(),  // resultType
-        ValueRange{input, scales, zeroPoints},  // inputs
-        ValueRange{init},  // outputs
-        indexingMaps,
-        iteratorTypes,
-        [&](OpBuilder& builder, Location loc, ValueRange args) {
-          assert(args.size() == 4);
-          auto expressedValue = args[0];
-          auto scale = args[1];
-          auto zeroPoint = args[2];
-
-          auto result = quantizeScalarOrTensor(builder, loc, expressedValue, {},
-                                               scale, zeroPoint, quantizedType);
-
-          builder.create<linalg::YieldOp>(loc, result);
-        })
-        .getResult(0);
-
-    return storedValue;
-  }
-
-  Value convertPerChannel(OpBuilder &builder, Location loc, Value input,
-                          UniformQuantizedPerAxisType quantizedType) const {
-    // Flatten unranked tensor into a 3D ranked tensor if necessary
-    bool isUnranked = isa<UnrankedTensorType>(input.getType());
-    int64_t channelAxis = quantizedType.getQuantizedDimension();
-    int64_t channelAxisSize = (int64_t) quantizedType.getScales().size();
-    Value inputShape;
-    if (isUnranked) {
-      std::tie(input, inputShape) = flattenUnrankedTensorAroundAxis(
-          builder, loc, input, channelAxis, channelAxisSize);
-      channelAxis = 1;
-    }
-
-    // Work on a ranked tensor
-    auto result = convertPerChannelRanked(builder, loc, input, quantizedType,
-                                          channelAxis);
-
-    // Restore original tensor shape if unranked
-    if (isUnranked)
-      result = restoreUnrankedTensorShape(builder, loc, result, inputShape);
-
-    return result;
-  }
-
-public:
+struct QuantizeCastOpConversion : public OpConversionPattern<quant::QuantizeCastOp> {
   using OpConversionPattern<quant::QuantizeCastOp>::OpConversionPattern;
 
   LogicalResult
@@ -578,18 +496,10 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
     auto input = op.getInput();
-    auto resultScalarType = getScalarType(op.getResult().getType());
+    auto quantizedType = getScalarType(op.getResult().getType());
 
     // Flatten unranked tensor input
-    Value result;
-    if (auto quantizedType = dyn_cast<UniformQuantizedType>(resultScalarType)) {
-      result = convertPerLayer(rewriter, loc, input, quantizedType);
-    } else if (auto quantizedType =
-                   dyn_cast<UniformQuantizedPerAxisType>(resultScalarType)) {
-      result = convertPerChannel(rewriter, loc, input, quantizedType);
-    } else {
-      llvm_unreachable("unexpected quantized type");
-    }
+    auto result = convertQuantized(rewriter, loc, op, input, quantizedType);
 
     // Cast stored value to result quantized value
     rewriter.replaceOpWithNewOp<quant::StorageCastOp>(
