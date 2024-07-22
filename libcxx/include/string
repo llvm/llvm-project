@@ -1983,6 +1983,11 @@ private:
     (void)__old_mid;
     (void)__new_mid;
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
+  #if defined(__APPLE__)
+    // TODO: remove after addressing issue #96099 (https://github.com/llvm/llvm-project/issues/96099)
+    if(!__is_long())
+      return;
+  #endif
     std::__annotate_contiguous_container<_Allocator>(data(), data() + capacity() + 1, __old_mid, __new_mid);
 #endif
   }

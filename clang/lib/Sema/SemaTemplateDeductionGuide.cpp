@@ -363,8 +363,7 @@ struct ConvertConstructorToDeductionGuideTransform {
           return nullptr;
         // Constraints require that we substitute depth-1 arguments
         // to match depths when substituted for evaluation later
-        Depth1Args.push_back(SemaRef.Context.getCanonicalTemplateArgument(
-            SemaRef.Context.getInjectedTemplateArg(NewParam)));
+        Depth1Args.push_back(SemaRef.Context.getInjectedTemplateArg(NewParam));
 
         if (NestedPattern) {
           TemplateDeclInstantiator Instantiator(SemaRef, DC,
@@ -379,8 +378,7 @@ struct ConvertConstructorToDeductionGuideTransform {
                "Unexpected template parameter depth");
 
         AllParams.push_back(NewParam);
-        SubstArgs.push_back(SemaRef.Context.getCanonicalTemplateArgument(
-            SemaRef.Context.getInjectedTemplateArg(NewParam)));
+        SubstArgs.push_back(SemaRef.Context.getInjectedTemplateArg(NewParam));
       }
 
       // Substitute new template parameters into requires-clause if present.
@@ -796,8 +794,8 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
         /*NewIndex=*/AdjustedAliasTemplateArgs.size(),
         getTemplateParameterDepth(TP) + AdjustDepth);
 
-    auto NewTemplateArgument = Context.getCanonicalTemplateArgument(
-        Context.getInjectedTemplateArg(NewParam));
+    TemplateArgument NewTemplateArgument =
+        Context.getInjectedTemplateArg(NewParam);
     AdjustedAliasTemplateArgs.push_back(NewTemplateArgument);
   }
   // Template arguments used to transform the template arguments in
@@ -823,8 +821,8 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
           getTemplateParameterDepth(TP) + AdjustDepth);
       FirstUndeducedParamIdx += 1;
       assert(TemplateArgsForBuildingRC[Index].isNull());
-      TemplateArgsForBuildingRC[Index] = Context.getCanonicalTemplateArgument(
-          Context.getInjectedTemplateArg(NewParam));
+      TemplateArgsForBuildingRC[Index] =
+          Context.getInjectedTemplateArg(NewParam);
       continue;
     }
     TemplateArgumentLoc Input =
@@ -927,8 +925,8 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
           /*NewIndex=*/TransformedTemplateArgs.size(),
           getTemplateParameterDepth(TP) + AdjustDepth);
 
-      auto NewTemplateArgument = Context.getCanonicalTemplateArgument(
-          Context.getInjectedTemplateArg(NewParam));
+      TemplateArgument NewTemplateArgument =
+          Context.getInjectedTemplateArg(NewParam);
       TransformedTemplateArgs.push_back(NewTemplateArgument);
     }
     // Transformed the ReturnType to restore the uninstantiated depth.
@@ -1143,8 +1141,8 @@ FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
         getTemplateParameterDepth(TP));
     FPrimeTemplateParams.push_back(NewParam);
 
-    auto NewTemplateArgument = Context.getCanonicalTemplateArgument(
-        Context.getInjectedTemplateArg(NewParam));
+    TemplateArgument NewTemplateArgument =
+        Context.getInjectedTemplateArg(NewParam);
     TransformedDeducedAliasArgs[AliasTemplateParamIdx] = NewTemplateArgument;
   }
   unsigned FirstUndeducedParamIdx = FPrimeTemplateParams.size();
@@ -1165,8 +1163,7 @@ FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
     assert(TemplateArgsForBuildingFPrime[FTemplateParamIdx].isNull() &&
            "The argument must be null before setting");
     TemplateArgsForBuildingFPrime[FTemplateParamIdx] =
-        Context.getCanonicalTemplateArgument(
-            Context.getInjectedTemplateArg(NewParam));
+        Context.getInjectedTemplateArg(NewParam);
   }
 
   // To form a deduction guide f' from f, we leverage clang's instantiation

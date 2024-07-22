@@ -58,7 +58,8 @@ C++ Specific Potentially Breaking Changes
   versions of clang. The deprecation warning for the negative spelling can be
   disabled with `-Wno-deprecated-no-relaxed-template-template-args`.
 
-- Clang now rejects pointer to member from parenthesized expression in unevaluated context such as ``decltype(&(foo::bar))``. (#GH40906).
+- Clang no longer tries to form pointer-to-members from qualified and parenthesized unevaluated expressions
+  such as ``decltype(&(foo::bar))``. (#GH40906).
 
 - Clang now performs semantic analysis for unary operators with dependent operands
   that are known to be of non-class non-enumeration type prior to instantiation.
@@ -437,6 +438,17 @@ Non-comprehensive list of changes in this release
 - Added support for ``TypeLoc::dump()`` for easier debugging, and improved
   textual and JSON dumping for various ``TypeLoc``-related nodes.
 
+- Clang can now emit distinct type-based alias analysis tags for incompatible
+  pointers, enabling more powerful alias analysis when accessing pointer types.
+  The new behavior can be enabled using ``-fpointer-tbaa``.
+
+- The ``__atomic_always_lock_free`` and ``__atomic_is_lock_free``
+  builtins may now return true if the pointer argument is a
+  compile-time constant (e.g. ``(void*)4``), and constant pointer is
+  sufficiently-aligned for the access requested. Previously, only the
+  type of the pointer was taken into account. This improves
+  compatibility with GCC's libstdc++.
+
 New Compiler Flags
 ------------------
 - ``-fsanitize=implicit-bitfield-conversion`` checks implicit truncation and
@@ -478,6 +490,9 @@ New Compiler Flags
 
 - For the ARM target, added ``-Warm-interrupt-vfp-clobber`` that will emit a
   diagnostic when an interrupt handler is declared and VFP is enabled.
+
+- ``-fpointer-tbaa`` enables emission of distinct type-based alias
+  analysis tags for incompatible pointers.
 
 Deprecated Compiler Flags
 -------------------------
@@ -738,12 +753,28 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses dangling assignments for pointer-like objects (annotated with `[[gsl::Pointer]]`) under `-Wdangling-assignment-gsl` (off by default)
   Fixes #GH63310.
+  
+- Clang now diagnoses uses of alias templates with a deprecated attribute. (Fixes #GH18236).
+
+  .. code-block:: c++
+
+     template <typename T>
+     struct NoAttr {
+     };
+
+     template <typename T>
+     using UsingWithAttr __attribute__((deprecated)) = NoAttr<T>;
+
+     UsingWithAttr<int> objUsingWA; // warning: 'UsingWithAttr' is deprecated
 
 Improvements to Clang's time-trace
 ----------------------------------
 
 - Clang now specifies that using ``auto`` in a lambda parameter is a C++14 extension when
   appropriate. (`#46059: <https://github.com/llvm/llvm-project/issues/46059>`_).
+
+- Clang now adds source file infomation for template instantiations as ``event["args"]["filename"]``. This
+  added behind an option ``-ftime-trace-verbose``. This is expected to increase the size of trace by 2-3 times.
 
 Improvements to Coverage Mapping
 --------------------------------
@@ -858,6 +889,9 @@ Bug Fixes in This Version
   types by ensuring they are complete and instantiating them if needed. Fixes (#GH95311).
 
 - ``typeof_unqual`` now properly removes type qualifiers from arrays and their element types. (#GH92667)
+
+- Fixed an assertion failure when a template non-type parameter contains
+  an invalid expression.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -143,6 +143,8 @@ inline void *Mmap(void *addr, size_t length, int prot, int flags, int fd,
   return __mmap(addr, length, prot, flags, fd, 0, offset);
 #elif SANITIZER_FREEBSD && (defined(__aarch64__) || defined(__x86_64__))
   return (void *)__syscall(SYS_mmap, addr, length, prot, flags, fd, offset);
+#elif SANITIZER_FREEBSD && (defined(__i386__))
+  return (void *)syscall(SYS_mmap, addr, length, prot, flags, fd, offset);
 #elif SANITIZER_SOLARIS
   return _REAL64(mmap)(addr, length, prot, flags, fd, offset);
 #elif SANITIZER_LINUX_USES_64BIT_SYSCALLS

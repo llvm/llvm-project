@@ -677,8 +677,11 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
         assert(tempDsp.has_value());
         tempDsp->processStep2(privatizationTopLevelOp, isLoop);
       } else {
-        if (isLoop && regionArgs.size() > 0)
-          info.dsp->setLoopIV(info.converter.getSymbolAddress(*regionArgs[0]));
+        if (isLoop && regionArgs.size() > 0) {
+          for (const auto &regionArg : regionArgs) {
+            info.dsp->pushLoopIV(info.converter.getSymbolAddress(*regionArg));
+          }
+        }
         info.dsp->processStep2(privatizationTopLevelOp, isLoop);
       }
     }
