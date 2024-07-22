@@ -1569,8 +1569,10 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
 #      else
 #        error "Unsupported PPC64 ABI"
 #      endif
-  if (!fn || !child_stack)
-    return -EINVAL;
+  if (!fn || !child_stack) {
+    errno = EINVAL;
+    return -1;
+  }
   CHECK_EQ(0, (uptr)child_stack % 16);
 
   register int (*__fn)(void *) __asm__("r3") = fn;
@@ -1601,8 +1603,8 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
       "sc\n\t"
 
       /* Test if syscall was successful */
+      "bso-   0f\n\t"
       "cmpdi  cr1, 3, 0\n\t"
-      "crandc cr1*4+eq, cr1*4+eq, cr0*4+so\n\t"
       "bne-   cr1, 1f\n\t"
 
       /* Set up stack frame */
@@ -1630,6 +1632,8 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
       "sc\n\t"
 
       /* Return to parent */
+      "0:\n\t"
+      "neg 3, 3\n\t"
       "1:\n\t"
       "mr %0, 3\n\t"
       : "=r"(res)
@@ -1637,6 +1641,10 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
         "r"(__cstack), "r"(__flags), "r"(__arg), "r"(__ptidptr), "r"(__newtls),
         "r"(__ctidptr), "i"(FRAME_SIZE), "i"(FRAME_TOC_SAVE_OFFSET)
       : "cr0", "cr1", "memory", "ctr", "r0", "r27", "r28", "r29");
+  if ((uptr)res >= (uptr)-4095) {
+    errno = -res;
+    res = -1;
+  }
   return res;
 }
 #    elif defined(__i386__)
