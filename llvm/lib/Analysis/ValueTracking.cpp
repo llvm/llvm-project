@@ -6615,19 +6615,18 @@ const Value *llvm::getUnderlyingObjectAggressive(const Value *V) {
   SmallPtrSet<const Value *, 8> Visited;
   SmallVector<const Value *, 8> Worklist;
   Worklist.push_back(V);
-  const Value *Object = nullptr, *FirstObject = nullptr;
+  const Value *Object = nullptr;
   do {
     const Value *P = Worklist.pop_back_val();
     P = getUnderlyingObject(P);
 
-    if (!FirstObject)
-      FirstObject = P;
-
     if (!Visited.insert(P).second)
       continue;
 
-    if (Visited.size() == MaxVisited)
-      return FirstObject;
+    if (Visited.size() == MaxVisited) {
+      Object = nullptr;
+      break;
+    }
 
     if (auto *SI = dyn_cast<SelectInst>(P)) {
       Worklist.push_back(SI->getTrueValue());
@@ -6642,10 +6641,16 @@ const Value *llvm::getUnderlyingObjectAggressive(const Value *V) {
 
     if (!Object)
       Object = P;
-    else if (Object != P)
-      return FirstObject;
+    else if (Object != P) {
+      Object = nullptr;
+      break;
+    }
   } while (!Worklist.empty());
 
+  // If we tried looking through phi/select but did not end up with a single
+  // underlying object, fall back to the non-recursive underlying object of V.
+  if (!Object)
+    return getUnderlyingObject(V);
   return Object;
 }
 
