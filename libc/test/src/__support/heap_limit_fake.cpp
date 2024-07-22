@@ -12,8 +12,9 @@
 namespace LIBC_NAMESPACE_DECL {
 
 extern "C" {
-// This isn't used in the unit tests, but it must be defined for the non-fake
+// These aren't used in the unit tests, but they must be defined for the non-fake
 // version of the heap to work.
+cpp::byte _end;
 cpp::byte __llvm_libc_heap_limit;
 }
 
