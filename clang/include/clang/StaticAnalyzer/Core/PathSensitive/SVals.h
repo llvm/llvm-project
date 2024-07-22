@@ -360,8 +360,8 @@ public:
 /// storing two things:
 ///   * a reference to the TypedValueRegion being snapshotted (yes, it is always
 ///     typed), and also
-///  * a reference to the whole Store object, obtained from the ProgramState in
-///    which the nonloc::LazyCompoundVal was created.
+///   * a reference to the whole Store object, obtained from the ProgramState in
+///     which the nonloc::LazyCompoundVal was created.
 ///
 /// Note that the old ProgramState and its Store is kept alive during the
 /// analysis because these are immutable functional data structures and each new
@@ -373,7 +373,7 @@ public:
 /// the program state, not only related to the region. Later, if necessary, such
 /// value can be unpacked -- eg. when it is assigned to another variable.
 ///
-/// If you ever need inspect the contents of the LazyCompoundVal, you can use
+/// If you ever need to inspect the contents of the LazyCompoundVal, you can use
 /// StoreManager::iterBindings(). It'll iterate through all values in the Store,
 /// but you're only interested in the ones that belong to
 /// LazyCompoundVal::getRegion(); other bindings are immaterial.
