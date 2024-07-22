@@ -9473,10 +9473,10 @@ static void genMapInfoForCaptures(
     MappableExprsHandler &MEHandler, CodeGenFunction &CGF,
     const CapturedStmt &CS, llvm::SmallVectorImpl<llvm::Value *> &CapturedVars,
     llvm::OpenMPIRBuilder &OMPBuilder,
-    llvm::DenseMap<llvm::Value *, llvm::Value *> &LambdaPointers,
     llvm::DenseSet<CanonicalDeclPtr<const Decl>> &MappedVarSet,
     MappableExprsHandler::MapCombinedInfoTy &CombinedInfo) {
 
+  llvm::DenseMap<llvm::Value *, llvm::Value *> LambdaPointers;
   auto RI = CS.getCapturedRecordDecl()->field_begin();
   auto *CV = CapturedVars.begin();
   for (CapturedStmt::const_capture_iterator CI = CS.capture_begin(),
@@ -9574,11 +9574,10 @@ static void genMapInfo(const OMPExecutableDirective &D, CodeGenFunction &CGF,
                        MappableExprsHandler::MapCombinedInfoTy &CombinedInfo) {
   // Get mappable expression information.
   MappableExprsHandler MEHandler(D, CGF);
-  llvm::DenseMap<llvm::Value *, llvm::Value *> LambdaPointers;
   llvm::DenseSet<CanonicalDeclPtr<const Decl>> MappedVarSet;
 
   genMapInfoForCaptures(MEHandler, CGF, CS, CapturedVars, OMPBuilder,
-                        LambdaPointers, MappedVarSet, CombinedInfo);
+                        MappedVarSet, CombinedInfo);
   genMapInfo(MEHandler, CGF, CombinedInfo, OMPBuilder, MappedVarSet);
 }
 static void emitTargetCallKernelLaunch(
