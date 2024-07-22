@@ -206,6 +206,8 @@ ScriptLexer::Token ScriptLexer::getOperatorToken(StringRef s) {
     return createToken(Kind::Colon, 1);
   case '?':
     return createToken(Kind::Question, 1);
+  case '%':
+    return createToken(Kind::Percent, 1);
   case '!':
     if (s.size() > 1 && s[1] == '=')
       return createToken(Kind::NotEqual, 2);
@@ -225,8 +227,7 @@ ScriptLexer::Token ScriptLexer::getOperatorToken(StringRef s) {
   case '+':
     if (s.size() > 1 && s[1] == '=')
       return createToken(Kind::PlusAssign, 2);
-    else
-      return createToken(Kind::Plus, 1);
+    return createToken(Kind::Plus, 1);
   case '-':
     if (s.size() > 1 && s[1] == '=')
       return createToken(Kind::MinusAssign, 2);
@@ -335,6 +336,7 @@ ScriptLexer::Token ScriptLexer::getKeywordorIdentifier(StringRef s) {
       {"ALIGNOF", Kind::Alignof},
       {"DATA_SEGMENT_ALIGN", Kind::DataSegmentAlign},
       {"DATA_SEGMENT_END", Kind::DataSegmentEnd},
+      {"DATA_SEGMENT_RELRO_END", Kind::DataSegmentRelroEnd},
       {"DEFINED", Kind::Defined},
       {"LENGTH", Kind::Length},
       {"LOADADDR", Kind::Loadaddr},
@@ -419,10 +421,13 @@ std::vector<ScriptLexer::Token> ScriptLexer::tokenizeExpr(StringRef s) {
     if (s.substr(e).starts_with("!=") || s.substr(e).starts_with("==") ||
         s.substr(e).starts_with(">=") || s.substr(e).starts_with("<=") ||
         s.substr(e).starts_with("<<") || s.substr(e).starts_with(">>")) {
-      ret.push_back(getOperatorToken(s));
+      ret.push_back(getOperatorToken(s.substr(e)));
       s = s.substr(e + 2);
     } else {
-      ret.push_back(getKeywordorIdentifier(s.substr(e, 1)));
+      llvm::errs() << "s.substr(e) is " << s.substr(e, 1);
+      ret.push_back(getOperatorToken(s.substr(e, 1)));
+      llvm::errs() << ", token.kind == "
+                   << static_cast<unsigned int>(ret.back().kind) << "\n";
       s = s.substr(e + 1);
     }
   }

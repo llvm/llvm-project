@@ -79,6 +79,7 @@ enum class Kind {
   // BLOCK, // synonym for ALIGN for compatibility with older linker script
   DataSegmentAlign,
   DataSegmentEnd,
+  DataSegmentRelroEnd,
   Defined,
   Length,
   Loadaddr,
@@ -134,6 +135,7 @@ enum class Kind {
   Excalamation, // !
   Backslash,    // "\"
   Slash,        // /
+  Percent,      // %
   Greater,      // >
   Less,         // <
   Minus,        // -
