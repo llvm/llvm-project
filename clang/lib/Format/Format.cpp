@@ -979,7 +979,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.BreakBeforeInlineASMColon);
     IO.mapOptional("BreakBeforeTernaryOperators",
                    Style.BreakBeforeTernaryOperators);
-    IO.mapOptional("Style.BreakBinaryOperations", Style.BreakBinaryOperations);
+    IO.mapOptional("BreakBinaryOperations", Style.BreakBinaryOperations);
     IO.mapOptional("BreakConstructorInitializers",
                    Style.BreakConstructorInitializers);
     IO.mapOptional("BreakFunctionDefinitionParameters",
