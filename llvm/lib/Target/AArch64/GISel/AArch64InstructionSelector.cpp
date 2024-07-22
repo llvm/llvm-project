@@ -3614,7 +3614,6 @@ bool AArch64InstructionSelector::selectBrJT(MachineInstr &I,
         report_fatal_error("Unsupported code-model for hardened jump-table");
     }
 
-
     MIB.buildCopy({AArch64::X16}, I.getOperand(2).getReg());
     MIB.buildInstr(AArch64::BR_JumpTable)
         .addJumpTableIndex(I.getOperand(1).getIndex());
