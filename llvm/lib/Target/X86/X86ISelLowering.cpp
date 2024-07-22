@@ -46190,19 +46190,31 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // to bitwidth-1 for unsigned shifts, effectively performing a maximum left
   // shift of bitwidth-1 positions. and returns zero for unsigned right shifts
   // exceeding bitwidth-1.
-  if (N->getOpcode() == ISD::VSELECT &&
-      (LHS.getOpcode() == ISD::SRL || LHS.getOpcode() == ISD::SHL) &&
-      supportedVectorVarShift(VT, Subtarget, LHS.getOpcode())) {
+  if (N->getOpcode() == ISD::VSELECT) {
     using namespace llvm::SDPatternMatch;
     // fold select(icmp_ult(amt,BW),shl(x,amt),0) -> avx2 psllv(x,amt)
     // fold select(icmp_ult(amt,BW),srl(x,amt),0) -> avx2 psrlv(x,amt)
-    if (ISD::isConstantSplatVectorAllZeros(RHS.getNode()) &&
+    if ((LHS.getOpcode() == ISD::SRL || LHS.getOpcode() == ISD::SHL) &&
+        supportedVectorVarShift(VT, Subtarget, LHS.getOpcode()) &&
+        ISD::isConstantSplatVectorAllZeros(RHS.getNode()) &&
         sd_match(Cond, m_SetCC(m_Specific(LHS.getOperand(1)),
                                m_SpecificInt(VT.getScalarSizeInBits()),
                                m_SpecificCondCode(ISD::SETULT)))) {
       return DAG.getNode(LHS.getOpcode() == ISD::SRL ? X86ISD::VSRLV
                                                      : X86ISD::VSHLV,
                          DL, VT, LHS.getOperand(0), LHS.getOperand(1));
+    }
+    // fold select(icmp_uge(amt,BW),0,shl(x,amt)) -> avx2 psllv(x,amt)
+    // fold select(icmp_uge(amt,BW),0,srl(x,amt)) -> avx2 psrlv(x,amt)
+    if ((RHS.getOpcode() == ISD::SRL || RHS.getOpcode() == ISD::SHL) &&
+        supportedVectorVarShift(VT, Subtarget, RHS.getOpcode()) &&
+        ISD::isConstantSplatVectorAllZeros(LHS.getNode()) &&
+        sd_match(Cond, m_SetCC(m_Specific(RHS.getOperand(1)),
+                               m_SpecificInt(VT.getScalarSizeInBits()),
+                               m_SpecificCondCode(ISD::SETUGE)))) {
+      return DAG.getNode(RHS.getOpcode() == ISD::SRL ? X86ISD::VSRLV
+                                                     : X86ISD::VSHLV,
+                         DL, VT, RHS.getOperand(0), RHS.getOperand(1));
     }
   }
 
