@@ -8229,7 +8229,7 @@ void Sema::CheckInfNaNFunction(const CallExpr *Call,
   if ((IsNaNOrIsUnordered || IsSpecialNaN) && FPO.getNoHonorNaNs()) {
     Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
         << 1 << 0 << Call->getSourceRange();
-  }  else {
+  } else {
     bool IsInfOrIsFinite =
         IsStdFunction(FDecl, "isinf") || IsStdFunction(FDecl, "isfinite");
     bool IsInfinityOrIsSpecialInf =
