@@ -3784,13 +3784,13 @@ bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
     Inst.setOpcode(X86::INT3);
     return true;
   }
-  // `{evex} cmp <>, <>` is alias of `ccmpt {dfv=of,sf,zf,cf} <>, <>`
+  // `{evex} cmp <>, <>` is alias of `ccmpt {dfv=} <>, <>`
 #define FROM_TO(FROM, TO)                                                      \
   case X86::FROM: {                                                            \
     if (ForcedOpcodePrefix == OpcodePrefix_EVEX) {                             \
       Inst.setFlags(~(X86::IP_USE_EVEX) & Inst.getFlags());                    \
       Inst.setOpcode(X86::TO);                                                 \
-      Inst.addOperand(MCOperand::createImm(15));                               \
+      Inst.addOperand(MCOperand::createImm(0));                                \
       Inst.addOperand(MCOperand::createImm(10));                               \
       return true;                                                             \
     }                                                                          \
