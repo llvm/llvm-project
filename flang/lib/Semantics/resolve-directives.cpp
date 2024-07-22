@@ -2764,13 +2764,12 @@ void OmpAttributeVisitor::IssueNonConformanceWarning(
   std::string dirName = llvm::omp::getOpenMPDirectiveName(D).str();
   switch (D) {
   case llvm::omp::OMPD_master:
-    warnStr = "OpenMP directive " + dirName +
-        " has been deprecated, please use masked instead.";
+    warnStr = "OpenMP directive '" + dirName +
+        "' has been deprecated, please use 'masked' instead.";
     break;
   case llvm::omp::OMPD_target_loop:
   default:
-    warnStr = "Usage of directive " + dirName +
-        "is non-confirming to OpenMP standard.";
+    warnStr = "OpenMP directive '" + dirName + "' has been deprecated.";
   }
   if (context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
     context_.Say(source, "%s"_warn_en_US, warnStr);
