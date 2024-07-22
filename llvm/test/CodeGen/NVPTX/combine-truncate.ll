@@ -59,7 +59,7 @@ define i32 @trunc_cvt(i64 %a, i64 %b) {
   ret i32 %trunc
 }
 
-define i32 @trunc_cvt_not(i64 %a, i64 %b) {
+define i32 @trunc_cvt_not(i64 %a, i64 %b, ptr %p) {
 ; CHECK-LABEL: trunc_cvt_not(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -69,7 +69,7 @@ define i32 @trunc_cvt_not(i64 %a, i64 %b) {
 ; CHECK-NEXT:    ld.param.u64 %rd1, [trunc_cvt_not_param_0];
 ; CHECK-NEXT:    ld.param.u64 %rd2, [trunc_cvt_not_param_1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd1, %rd2;
-; CHECK-NEXT:    mov.u64 %rd4, 0;
+; CHECK-NEXT:    ld.param.u64 %rd4, [trunc_cvt_not_param_2];
 ; CHECK-NEXT:    st.u64 [%rd4], %rd3;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    cvt.u32.u64 %r2, %rd1;
@@ -77,7 +77,7 @@ define i32 @trunc_cvt_not(i64 %a, i64 %b) {
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r3;
 ; CHECK-NEXT:    ret;
   %add = add i64 %a, %b
-  store i64 %add, ptr null
+  store i64 %add, ptr %p
   %or = or i64 %add, %a
   %trunc = trunc i64 %or to i32
   ret i32 %trunc
