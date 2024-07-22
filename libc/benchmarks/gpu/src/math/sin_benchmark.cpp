@@ -25,13 +25,8 @@ constexpr int RANDOM_INPUT_SIZE = 256;
 // easily register NVPTX benchmarks.
 #define BM_RANDOM_INPUT(Func)                                                  \
   []() {                                                                       \
-    LIBC_NAMESPACE::cpp::array<double, RANDOM_INPUT_SIZE> random_input;        \
-    LIBC_NAMESPACE::benchmarks::init_random_double_input(random_input);        \
-    uint64_t total_time = 0;                                                   \
-    for (double i : random_input) {                                            \
-      total_time += LIBC_NAMESPACE::latency(Func, i);                          \
-    }                                                                          \
-    return total_time / random_input.size();                                   \
+    double x = LIBC_NAMESPACE::benchmarks::get_rand_double();                  \
+    return LIBC_NAMESPACE::latency(Func, x);                                   \
   }
 BENCHMARK(LlvmLibcSinGpuBenchmark, Sin, BM_RANDOM_INPUT(LIBC_NAMESPACE::sin));
 
