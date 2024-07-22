@@ -1300,13 +1300,13 @@ public:
   /// space.
   QualType removeAddrSpaceQualType(QualType T) const;
 
-  /// Return the "other" type-specific discriminator for the given type.
-  uint16_t getPointerAuthTypeDiscriminator(QualType T);
-
   /// Return the "other" discriminator used for the pointer auth schema used for
   /// vtable pointers in instances of the requested type.
   uint16_t
   getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD);
+
+  /// Return the "other" type-specific discriminator for the given type.
+  uint16_t getPointerAuthTypeDiscriminator(QualType T);
 
   /// Apply Objective-C protocol qualifiers to the given type.
   /// \param allowOnPointerType specifies if we can apply protocol
