@@ -196,11 +196,11 @@ as follows
 .. code-block::
 
    // Shader stages
-   class ShaderStage;
+   class DXILShaderStage;
 
-   def compute : ShaderStage;
-   def pixel : ShaderStage;
-   def vertex : ShaderStage;
+   def compute : DXILShaderStage;
+   def pixel : DXILShaderStage;
+   def vertex : DXILShaderStage;
    ...
 
 Shader Attribute Specification
@@ -259,9 +259,9 @@ stages predicated on DXIL version as list of records of the following class
 
 .. code-block::
 
-   class VersionedStages<Version minver, list<ShaderStage> sts> {
+   class VersionedStages<Version minver, list<DXILShaderStage> sts> {
      Version dxil_version = minver;
-     list<ShaderStage> shader_stages = sts;
+     list<DXILShaderStage> shader_stages = sts;
    }
 
 Following is an example specification of valid stages for ``DXIL1_0``,
