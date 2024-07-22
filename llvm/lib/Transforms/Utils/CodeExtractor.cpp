@@ -1003,6 +1003,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::DeadOnUnwind:
       case Attribute::Range:
       case Attribute::Initializes:
+      case Attribute::SanitizedPaddedGlobal:
       //  These are not really attributes.
       case Attribute::None:
       case Attribute::EndAttrKinds:
