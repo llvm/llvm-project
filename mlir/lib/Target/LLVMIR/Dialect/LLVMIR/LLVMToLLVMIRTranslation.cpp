@@ -226,9 +226,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     if (callOp.getWillReturnAttr())
       call->addFnAttr(llvm::Attribute::WillReturn);
 
-    // memory effects
     if (MemoryEffectsAttr memAttr = callOp.getMemoryAttr()) {
-      llvm::MemoryEffects newMemEffects =
+      llvm::MemoryEffects memEffects =
           llvm::MemoryEffects(llvm::MemoryEffects::Location::ArgMem,
                               convertModRefInfoToLLVM(memAttr.getArgMem())) |
           llvm::MemoryEffects(
@@ -236,8 +235,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
               convertModRefInfoToLLVM(memAttr.getInaccessibleMem())) |
           llvm::MemoryEffects(llvm::MemoryEffects::Location::Other,
                               convertModRefInfoToLLVM(memAttr.getOther()));
-
-      call->setMemoryEffects(newMemEffects);
+      call->setMemoryEffects(memEffects);
     }
 
     moduleTranslation.setAccessGroupsMetadata(callOp, call);
