@@ -568,8 +568,8 @@ public:
     }
   }
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                    QualType Ty, AggValueSlot Slot) const override;
 };
 
 class ZOSXPLinkTargetCodeGenInfo : public TargetCodeGenInfo {
@@ -746,13 +746,16 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy) const {
 
 ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty,
                                                   bool IsNamedArg) const {
+  // Handle transparent union types.
+  Ty = useFirstFieldIfTransparentUnion(Ty);
+
   // Handle the generic C++ ABI.
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
     return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
 
   // Integers and enums are extended to full register width.
   if (isPromotableIntegerType(Ty))
-    return ABIArgInfo::getExtend(Ty);
+    return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
 
   // Complex types are passed by value as per the XPLINK docs.
   // If place available, their members will be placed in FPRs.
@@ -804,12 +807,12 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty,
   return ABIArgInfo::getDirect();
 }
 
-Address ZOSXPLinkABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                    QualType Ty) const {
+RValue ZOSXPLinkABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                    QualType Ty, AggValueSlot Slot) const {
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*indirect*/ false,
                           CGF.getContext().getTypeInfoInChars(Ty),
                           CGF.getPointerSize(),
-                          /*allowHigherAlign*/ false);
+                          /*allowHigherAlign*/ false, Slot);
 }
 
 std::unique_ptr<TargetCodeGenInfo>
