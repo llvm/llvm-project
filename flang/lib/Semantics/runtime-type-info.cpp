@@ -42,7 +42,8 @@ static int FindLenParameterIndex(
     if (&*ref == &symbol) {
       return lenIndex;
     }
-    if (ref->get<TypeParamDetails>().attr() == common::TypeParamAttr::Len) {
+    if (auto attr{ref->get<TypeParamDetails>().attr()};
+        attr && *attr == common::TypeParamAttr::Len) {
       ++lenIndex;
     }
   }
@@ -371,7 +372,7 @@ static std::optional<std::string> GetSuffixIfTypeKindParameters(
     std::optional<std::string> suffix;
     for (SymbolRef ref : *parameters) {
       const auto &tpd{ref->get<TypeParamDetails>()};
-      if (tpd.attr() == common::TypeParamAttr::Kind) {
+      if (tpd.attr() && *tpd.attr() == common::TypeParamAttr::Kind) {
         if (const auto *pv{derivedTypeSpec.FindParameter(ref->name())}) {
           if (pv->GetExplicit()) {
             if (auto instantiatedValue{evaluate::ToInt64(*pv->GetExplicit())}) {
@@ -497,7 +498,7 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
     for (SymbolRef ref : *parameters) {
       if (const auto *inst{dtScope.FindComponent(ref->name())}) {
         const auto &tpd{inst->get<TypeParamDetails>()};
-        if (tpd.attr() == common::TypeParamAttr::Kind) {
+        if (tpd.attr() && *tpd.attr() == common::TypeParamAttr::Kind) {
           auto value{evaluate::ToInt64(tpd.init()).value_or(0)};
           if (derivedTypeSpec) {
             if (const auto *pv{derivedTypeSpec->FindParameter(inst->name())}) {
@@ -799,7 +800,7 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
           specParams{GetTypeParameters(spec.typeSymbol())}) {
         for (SymbolRef ref : *specParams) {
           const auto &tpd{ref->get<TypeParamDetails>()};
-          if (tpd.attr() == common::TypeParamAttr::Len) {
+          if (tpd.attr() && *tpd.attr() == common::TypeParamAttr::Len) {
             if (const ParamValue *
                 paramValue{spec.FindParameter(ref->name())}) {
               lenParams.emplace_back(GetValue(*paramValue, parameters));

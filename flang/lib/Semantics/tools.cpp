@@ -1135,12 +1135,12 @@ std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
   return std::nullopt;
 }
 
-std::list<SourceName> OrderParameterNames(const Symbol &typeSymbol) {
-  std::list<SourceName> result;
+SymbolVector OrderParameterNames(const Symbol &typeSymbol) {
+  SymbolVector result;
   if (const DerivedTypeSpec * spec{typeSymbol.GetParentTypeSpec()}) {
     result = OrderParameterNames(spec->typeSymbol());
   }
-  const auto &paramNames{typeSymbol.get<DerivedTypeDetails>().paramNames()};
+  const auto &paramNames{typeSymbol.get<DerivedTypeDetails>().paramNameOrder()};
   result.insert(result.end(), paramNames.begin(), paramNames.end());
   return result;
 }
@@ -1150,7 +1150,7 @@ SymbolVector OrderParameterDeclarations(const Symbol &typeSymbol) {
   if (const DerivedTypeSpec * spec{typeSymbol.GetParentTypeSpec()}) {
     result = OrderParameterDeclarations(spec->typeSymbol());
   }
-  const auto &paramDecls{typeSymbol.get<DerivedTypeDetails>().paramDecls()};
+  const auto &paramDecls{typeSymbol.get<DerivedTypeDetails>().paramDeclOrder()};
   result.insert(result.end(), paramDecls.begin(), paramDecls.end());
   return result;
 }

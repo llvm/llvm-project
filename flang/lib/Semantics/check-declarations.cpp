@@ -2919,7 +2919,7 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
     if (derived->sequence()) { // C1801
       msgs.Say(symbol.name(),
           "An interoperable derived type cannot have the SEQUENCE attribute"_err_en_US);
-    } else if (!derived->paramDecls().empty()) { // C1802
+    } else if (!derived->paramNameOrder().empty()) { // C1802
       msgs.Say(symbol.name(),
           "An interoperable derived type cannot have a type parameter"_err_en_US);
     } else if (const auto *parent{
