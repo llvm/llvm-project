@@ -8,10 +8,13 @@
 
 // RUN: %{compile}
 
-// RUN: %{run} | FileCheck %s --check-prefix=REDUCE
+// RUN: %{run} | FileCheck %s --check-prefix=REDUCE-F32
+
+// REDEFINE: %{entry_point} = reduce_1d_i32
+// RUN: %{run} | FileCheck %s --check-prefix=REDUCE-I32
 
 // REDEFINE: %{entry_point} = generic_reduce_1d_f32
-// RUN: %{run} | FileCheck %s --check-prefix=GENERIC
+// RUN: %{run} | FileCheck %s --check-prefix=GENERIC-F32
 
 func.func @reduce_1d_f32() {
   // 1-D Tensor
@@ -23,7 +26,7 @@ func.func @reduce_1d_f32() {
   %C_alloc = bufferization.alloc_tensor() : tensor<f32>
 
   // Initialise the tensors
-  %pi = arith.constant  3.1416 : f32
+  %pi = arith.constant 3.1416 : f32
   %A_in = linalg.fill ins(%pi : f32) outs(%A_alloc : tensor<?xf32>) -> tensor<?xf32>
   %C_in = tensor.insert %c0_f32 into %C_alloc[] : tensor<f32>
 
@@ -35,16 +38,53 @@ func.func @reduce_1d_f32() {
     }
 
   // Print and verify the output
-  // REDUCE-LABEL: SVE: START OF TEST OUTPUT
+  // REDUCE-F32-LABEL: SVE: START OF TEST OUTPUT
   vector.print str "SVE: START OF TEST OUTPUT\n"
 
-  // REDUCE-NEXT: Unranked Memref {{.*}} rank = 0 offset = 0 sizes = [] strides = [] data =
-  // REDUCE-NEXT: [3141.6]
+  // REDUCE-F32-NEXT: Unranked Memref {{.*}} rank = 0 offset = 0 sizes = [] strides = [] data =
+  // REDUCE-F32-NEXT: [3141.6]
 
   %xf = tensor.cast %C_out : tensor<f32> to tensor<*xf32>
   call @printMemrefF32(%xf) : (tensor<*xf32>) -> ()
 
-  // REDUCE-NEXT: SVE: END OF TEST OUTPUT
+  // REDUCE-F32-NEXT: SVE: END OF TEST OUTPUT
+  vector.print str "SVE: END OF TEST OUTPUT\n"
+
+  return
+}
+
+func.func @reduce_1d_i32() {
+  // 1-D Tensor
+  %N = arith.constant 1000 : index
+  %c0_i32 = arith.constant 0 : i32
+
+  // Allocate the input and output tensors
+  %A_alloc = bufferization.alloc_tensor(%N) : tensor<?xi32>
+  %C_alloc = bufferization.alloc_tensor() : tensor<i32>
+
+  // Initialise the tensors
+  %pi = arith.constant 3 : i32
+  %A_in = linalg.fill ins(%pi : i32) outs(%A_alloc : tensor<?xi32>) -> tensor<?xi32>
+  %C_in = tensor.insert %c0_i32 into %C_alloc[] : tensor<i32>
+
+  // Reduce
+  %C_out = linalg.reduce ins(%A_in : tensor<?xi32>) outs(%C_in: tensor<i32>) dimensions = [0]
+    (%in: i32, %init: i32) {
+      %0 = arith.addi %in, %init : i32
+      linalg.yield %0 : i32
+    }
+
+  // Print and verify the output
+  // REDUCE-I32-LABEL: SVE: START OF TEST OUTPUT
+  vector.print str "SVE: START OF TEST OUTPUT\n"
+
+  // REDUCE-I32-NEXT: Unranked Memref {{.*}} rank = 0 offset = 0 sizes = [] strides = [] data =
+  // REDUCE-I32-NEXT: [3000]
+
+  %xf = tensor.cast %C_out : tensor<i32> to tensor<*xi32>
+  call @printMemrefI32(%xf) : (tensor<*xi32>) -> ()
+
+  // REDUCE-I32-NEXT: SVE: END OF TEST OUTPUT
   vector.print str "SVE: END OF TEST OUTPUT\n"
 
   return
@@ -60,7 +100,7 @@ func.func @generic_reduce_1d_f32() {
   %C_alloc = bufferization.alloc_tensor() : tensor<f32>
 
   // Initialise the tensors
-  %pi = arith.constant  3.1416 : f32
+  %pi = arith.constant 3.1416 : f32
   %A_in = linalg.fill ins(%pi : f32) outs(%A_alloc : tensor<?xf32>) -> tensor<?xf32>
   %C_in = tensor.insert %c0_f32 into %C_alloc[] : tensor<f32>
 
@@ -76,16 +116,16 @@ func.func @generic_reduce_1d_f32() {
     } -> tensor<f32>
 
   // Print and verify the output
-  // GENERIC-LABEL: SVE: START OF TEST OUTPUT
+  // GENERIC-F32-LABEL: SVE: START OF TEST OUTPUT
   vector.print str "SVE: START OF TEST OUTPUT\n"
 
-  // GENERIC-NEXT: Unranked Memref {{.*}} rank = 0 offset = 0 sizes = [] strides = [] data =
-  // GENERIC-NEXT: [3141.6]
+  // GENERIC-F32-NEXT: Unranked Memref {{.*}} rank = 0 offset = 0 sizes = [] strides = [] data =
+  // GENERIC-F32-NEXT: [3141.6]
 
   %xf = tensor.cast %C_out : tensor<f32> to tensor<*xf32>
   call @printMemrefF32(%xf) : (tensor<*xf32>) -> ()
 
-  // GENERIC-NEXT: SVE: END OF TEST OUTPUT
+  // GENERIC-F32-NEXT: SVE: END OF TEST OUTPUT
   vector.print str "SVE: END OF TEST OUTPUT\n"
 
   return
@@ -132,3 +172,4 @@ module attributes {transform.with_named_sequence} {
 }
 
 func.func private @printMemrefF32(%ptr : tensor<*xf32>)
+func.func private @printMemrefI32(%ptr : tensor<*xi32>)

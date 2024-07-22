@@ -24,7 +24,7 @@ func.func @reduce_2d_f32() {
   %C_alloc = bufferization.alloc_tensor(%M) : tensor<?xf32>
 
   // Initialise the tensors
-  %pi = arith.constant  3.1416 : f32
+  %pi = arith.constant 3.1416 : f32
   %A_in = linalg.fill ins(%pi : f32) outs(%A_alloc : tensor<?x?xf32>) -> tensor<?x?xf32>
   %C_in = linalg.fill ins(%c0_f32 : f32) outs(%C_alloc : tensor<?xf32>) -> tensor<?xf32>
 
@@ -62,7 +62,7 @@ func.func @generic_reduce_2d_f32() {
   %C_alloc = bufferization.alloc_tensor(%M) : tensor<?xf32>
 
   // Initialise the tensors
-  %pi = arith.constant  3.1416 : f32
+  %pi = arith.constant 3.1416 : f32
   %A_in = linalg.fill ins(%pi : f32) outs(%A_alloc : tensor<?x?xf32>) -> tensor<?x?xf32>
   %C_in = linalg.fill ins(%c0_f32 : f32) outs(%C_alloc : tensor<?xf32>) -> tensor<?xf32>
 
@@ -92,6 +92,49 @@ func.func @generic_reduce_2d_f32() {
 
   return
 }
+
+func.func @generic_reduce_2d_i32() {
+  // 2-D Tensor
+  %M = arith.constant 16 : index
+  %N = arith.constant 1000 : index
+  %c0_i32 = arith.constant 0 : i32
+
+  // Allocate the input and output tensors
+  %A_alloc = bufferization.alloc_tensor(%M, %N) : tensor<?x?xi32>
+  %C_alloc = bufferization.alloc_tensor(%M) : tensor<?xi32>
+
+  // Initialise the tensors
+  %pi = arith.constant 3 : i32
+  %A_in = linalg.fill ins(%pi : i32) outs(%A_alloc : tensor<?x?xi32>) -> tensor<?x?xi32>
+  %C_in = linalg.fill ins(%c0_i32 : i32) outs(%C_alloc : tensor<?xi32>) -> tensor<?xi32>
+
+  // Reduce
+  %C_out = linalg.generic { indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                             affine_map<(d0, d1) -> (d0)>],
+                            iterator_types = ["parallel", "reduction"] }
+    ins(%A_in : tensor<?x?xi32>)
+    outs(%C_in : tensor<?xi32>) {
+    ^bb(%in: i32, %out: i32) :
+      %0 = arith.addi %in, %out : i32
+      linalg.yield %0 : i32
+    } -> tensor<?xi32>
+
+  // Print and verify the output
+  // GENERIC-I32-LABEL: SVE: START OF TEST OUTPUT
+  vector.print str "SVE: START OF TEST OUTPUT\n"
+
+  // GENERIC-I32-NEXT: Unranked Memref {{.*}} rank = 1 offset = 0 sizes = [16] strides = [1] data =
+  // GENERIC-I32-NEXT: [3000,  3000,  3000,  3000,  3000,  3000,  3000,  3000,  3000,  3000,  3000,  3000,  3000,  3000,  3000,  3000]
+
+  %xf = tensor.cast %C_out : tensor<?xi32> to tensor<*xi32>
+  call @printMemrefI32(%xf) : (tensor<*xi32>) -> ()
+
+  // GENERIC-I32-NEXT: SVE: END OF TEST OUTPUT
+  vector.print str "SVE: END OF TEST OUTPUT\n"
+
+  return
+}
+
 
 module attributes {transform.with_named_sequence} {
   // A sequence that will tile and vectorise a Reduce Op
@@ -134,3 +177,4 @@ module attributes {transform.with_named_sequence} {
 }
 
 func.func private @printMemrefF32(%ptr : tensor<*xf32>)
+func.func private @printMemrefI32(%ptr : tensor<*xi32>)

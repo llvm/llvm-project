@@ -586,7 +586,9 @@ static SmallVector<bool> getDimsToReduce(LinalgOp linalgOp) {
       llvm::map_range(linalgOp.getIteratorTypesArray(), isReductionIterator));
 }
 
-static bool hasLinalgReduction(LinalgOp &op) {
+/// Check if `op` is a linalg.reduce or a linalg.generic that has at least one
+/// reduction iterator.
+static bool hasReductionIterator(LinalgOp &op) {
   return isa<linalg::ReduceOp>(op) ||
          (isa<linalg::GenericOp>(op) &&
           llvm::any_of(op.getIteratorTypesArray(), isReductionIterator));
@@ -1793,7 +1795,7 @@ vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
   if (isa<ConvolutionOpInterface>(op.getOperation()))
     return vectorizeDynamicConvOpPrecondition(op, flatten1DDepthwiseConv);
 
-  if (hasLinalgReduction(op))
+  if (hasReductionIterator(op))
     return reductionPreconditions(op);
 
   // TODO: Masking only supports dynamic element-wise ops, linalg.generic ops,
@@ -2002,17 +2004,26 @@ vectorizeScalableVectorPrecondition(Operation *op,
     scalableFlags.pop_back();
   }
 
-  if (iterators.back() == utils::IteratorType::reduction) {
-    if (iterators.size() != inputVectorSizes.size()) {
-      LDBG("Non-trailing reduction dim requested for scalable "
-           "vectorization\n");
-      return failure();
+  switch (iterators.back()) {
+    case utils::IteratorType::reduction: {
+      // Check 3. above is met.
+      if (iterators.size() != inputVectorSizes.size()) {
+        LDBG("Non-trailing reduction dim requested for scalable "
+             "vectorization\n");
+        return failure();
+      }
+      break;
+    }
+    case utils::IteratorType::parallel: {
+      // Check 1. and 2. above are met.
+      if (seenParalell) {
+        LDBG("Inner parallel dim not requested for scalable "
+             "vectorization\n");
+        return failure();
+      }
+      break;
     }
   }
-
-  // If this is not the _last_ parallel dim, 1. or 3. above is not met
-  if (seenParalell)
-    return failure();
 
   // If present, check the 2nd scalable dim. ATM, only Matmul-like Ops are
   // supported for which expect the folowing config:
@@ -2032,7 +2043,7 @@ vectorizeScalableVectorPrecondition(Operation *op,
   return success(isElementwise(linalgOp) || isa<linalg::MatmulOp>(op) ||
                  isa<linalg::MatmulTransposeAOp>(op) ||
                  isa<linalg::DepthwiseConv1DNwcWcOp>(op) ||
-                 hasLinalgReduction(linalgOp));
+                 hasReductionIterator(linalgOp));
 }
 
 LogicalResult mlir::linalg::vectorizeOpPrecondition(

@@ -151,7 +151,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-func.func @linalg_generic_scalable_reduction_leading_dim(%input: tensor<?x?xf32>,
+func.func @linalg_generic_reduction_scalable_leading_dim(%input: tensor<?x?xf32>,
                                                          %acc: tensor<?xf32>) -> tensor<?xf32> {
 
   // expected-error @+1 {{Attempted to vectorize, but failed}}
