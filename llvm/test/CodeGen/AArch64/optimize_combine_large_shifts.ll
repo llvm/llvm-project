@@ -1,6 +1,6 @@
-; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -mattr=neon | FileCheck %s
+; RUN: update_llc_test_checks < %s -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -mattr=neon | FileCheck %s
 
-define dso_local <16 x i8> @combine16ix8(<8 x i16> noundef %0, <8 x i16> noundef %1) local_unnamed_addr #0 {
+define <16 x i8> @combine16ix8(<8 x i16> %0, <8 x i16> %1) {
 ; CHECK-LABEL: combine16ix8
 ; CHECK: uzp2 {{v[0-9]+}}.16b, {{v[0-9]+}}.16b, {{v[0-9]+}}.16b
 ; CHECK-NEXT: ushr {{v[0-9]+}}.16b, {{v[0-9]+}}.16b, #2
@@ -12,7 +12,7 @@ define dso_local <16 x i8> @combine16ix8(<8 x i16> noundef %0, <8 x i16> noundef
   ret <16 x i8> %6
 }
 
-define dso_local <8 x i16> @combine32ix4(<4 x i32> noundef %0, <4 x i32> noundef %1) local_unnamed_addr #0 {
+define <8 x i16> @combine32ix4(<4 x i32> %0, <4 x i32> %1) {
 ; CHECK-LABEL: combine32ix4
 ; CHECK: uzp2 {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
 ; CHECK-NEXT: ushr {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, #4
@@ -24,7 +24,7 @@ define dso_local <8 x i16> @combine32ix4(<4 x i32> noundef %0, <4 x i32> noundef
   ret <8 x i16> %6
 }
 
-define dso_local <4 x i32> @combine64ix2(<2 x i64> noundef %0, <2 x i64> noundef %1) local_unnamed_addr #0 {
+define <4 x i32> @combine64ix2(<2 x i64> %0, <2 x i64> %1) {
 ; CHECK-LABEL: combine64ix2
 ; CHECK: uzp2 {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.4s
 ; CHECK-NEXT: ushr {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, #8
