@@ -39,15 +39,19 @@ define void @call_will_return() {
 ; CHECK: llvm.func @f()
 declare void @f()
 
-; CHECK-LABEL: @call_will_return
-define void @call_will_return() {
+; CHECK-LABEL: @call_memory_effects
+define void @call_memory_effects() {
 ; CHECK: llvm.call @f() {memory = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
   call void @f() memory(none)
 ; CHECK: llvm.call @f() {memory = #llvm.memory_effects<other = none, argMem = write, inaccessibleMem = read>}
-  call void @f() memory(none, inaccessiblemem: read, argmem: write)
+  call void @f() memory(none, argmem: write, inaccessiblemem: read)
 ; CHECK: llvm.call @f() {memory = #llvm.memory_effects<other = write, argMem = none, inaccessibleMem = write>}
   call void @f() memory(write, argmem: none)
 ; CHECK: llvm.call @f() {memory = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = read>}
   call void @f() memory(readwrite, inaccessiblemem: read)
+; CHECK: llvm.call @f()
+; CHECK-NOT: #llvm.memory_effects
+; CHECK-SAME: : () -> ()
+  call void @f() memory(readwrite)
   ret void
 }

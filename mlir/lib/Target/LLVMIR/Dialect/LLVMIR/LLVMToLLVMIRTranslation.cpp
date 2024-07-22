@@ -227,8 +227,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
       call->addFnAttr(llvm::Attribute::WillReturn);
 
     // memory effects
-    if (callOp.getMemory()) {
-      MemoryEffectsAttr memAttr = callOp.getMemoryAttr();
+    if (MemoryEffectsAttr memAttr = callOp.getMemoryAttr()) {
       llvm::MemoryEffects newMemEffects =
           llvm::MemoryEffects(llvm::MemoryEffects::Location::ArgMem,
                               convertModRefInfoToLLVM(memAttr.getArgMem())) |

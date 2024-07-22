@@ -1482,15 +1482,15 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
 
     // memory effects
     llvm::MemoryEffects memEffects = callInst->getMemoryEffects();
-    // Only set the attr when it does not match the default value.
-    auto othermem = convertModRefInfoFromLLVM(
+    ModRefInfo othermem = convertModRefInfoFromLLVM(
         memEffects.getModRef(llvm::MemoryEffects::Location::Other));
-    auto argMem = convertModRefInfoFromLLVM(
+    ModRefInfo argMem = convertModRefInfoFromLLVM(
         memEffects.getModRef(llvm::MemoryEffects::Location::ArgMem));
-    auto inaccessibleMem = convertModRefInfoFromLLVM(
+    ModRefInfo inaccessibleMem = convertModRefInfoFromLLVM(
         memEffects.getModRef(llvm::MemoryEffects::Location::InaccessibleMem));
     auto memAttr = MemoryEffectsAttr::get(callOp.getContext(), othermem, argMem,
                                           inaccessibleMem);
+    // Only set the attr when it does not match the default value.
     if (!memAttr.isReadWrite()) {
       callOp.setMemoryAttr(memAttr);
     }
