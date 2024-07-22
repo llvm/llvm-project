@@ -313,6 +313,13 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
     const auto *Offset = dyn_cast<SCEVConstant>(StartS->getOperand(0));
     const auto *NewBase = dyn_cast<SCEVUnknown>(StartS->getOperand(1));
     if (StartS->getNumOperands() == 2 && Offset && NewBase) {
+      // The following code below assumes the offset is unsigned, but GEP
+      // offsets are treated as signed so we can end up with a signed value
+      // here too. For example, suppose the initial PHI value is (i8 255),
+      // the offset will be treated as (i8 -1) and sign-extended to (i64 -1).
+      if (Offset->getAPInt().isNegative())
+        return false;
+
       // For the moment, restrict ourselves to the case where the offset is a
       // multiple of the requested alignment and the base is aligned.
       // TODO: generalize if a case found which warrants
