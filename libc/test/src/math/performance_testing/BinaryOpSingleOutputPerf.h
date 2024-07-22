@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
 #include "test/src/math/performance_testing/Timer.h"
 
-#include <algorithm>
 #include <cstddef>
 #include <fstream>
 
@@ -30,7 +30,7 @@ public:
                                 StorageType startingBit, StorageType endingBit,
                                 size_t N, size_t rounds, std::ofstream &log) {
     if (sizeof(StorageType) <= sizeof(size_t))
-      N = std::min(N, static_cast<size_t>(endingBit - startingBit));
+      N = cpp::min(N, static_cast<size_t>(endingBit - startingBit));
 
     auto runner = [=](Func func) {
       [[maybe_unused]] volatile T result;

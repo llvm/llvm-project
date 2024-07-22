@@ -95,6 +95,9 @@ add_header_library(
   single_input_single_output_diff
   HDRS
     SingleInputSingleOutputPerf.h
+  DEPENDS
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_header_library(
@@ -102,6 +105,7 @@ add_header_library(
   HDRS
     BinaryOpSingleOutputPerf.h
   DEPENDS
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 

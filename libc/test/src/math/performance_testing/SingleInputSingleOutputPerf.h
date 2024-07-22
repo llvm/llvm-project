@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
 #include "test/src/math/performance_testing/Timer.h"
 
-#include <algorithm>
 #include <fstream>
 
 namespace LIBC_NAMESPACE_DECL {
@@ -30,7 +30,7 @@ public:
                              size_t rounds, std::ofstream &log) {
     size_t n = 10'010'001;
     if (sizeof(StorageType) <= sizeof(size_t))
-      n = std::min(n, static_cast<size_t>(endingBit - startingBit));
+      n = cpp::min(n, static_cast<size_t>(endingBit - startingBit));
 
     auto runner = [=](Func func) {
       StorageType step = (endingBit - startingBit) / n;
