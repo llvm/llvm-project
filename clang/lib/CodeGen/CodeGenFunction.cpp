@@ -2835,7 +2835,8 @@ static void CreateMultiVersionResolverReturn(CodeGenModule &CGM,
   if (SupportsIFunc) {
     llvm::Constant *Fn = FuncToReturn;
     const ASTContext &Ctx = CGM.getContext();
-    QualType FTy = Ctx.getFunctionType(Ctx.VoidTy, {}, FunctionProtoType::ExtProtoInfo());
+    QualType FTy =
+        Ctx.getFunctionType(Ctx.VoidTy, {}, FunctionProtoType::ExtProtoInfo());
     Fn = CGM.getFunctionPointer(Fn, FTy);
     Builder.CreateRet(Fn);
     return;
