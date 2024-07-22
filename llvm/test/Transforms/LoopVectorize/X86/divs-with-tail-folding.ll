@@ -288,9 +288,7 @@ define void @udiv_urem_feeding_gep(i64 %x, ptr %dst, i64 %N) {
 ; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE]]
 ; CHECK:       [[PRED_UREM_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_BODY]] ], [ [[TMP9]], %[[PRED_UREM_IF]] ]
-; CHECK-NEXT:    [[TMP16:%.*]] = phi i64 [ poison, %[[VECTOR_BODY]] ], [ [[TMP10]], %[[PRED_UREM_IF]] ]
 ; CHECK-NEXT:    [[TMP17:%.*]] = phi i64 [ poison, %[[VECTOR_BODY]] ], [ [[TMP11]], %[[PRED_UREM_IF]] ]
-; CHECK-NEXT:    [[TMP18:%.*]] = phi i64 [ poison, %[[VECTOR_BODY]] ], [ [[TMP12]], %[[PRED_UREM_IF]] ]
 ; CHECK-NEXT:    [[TMP19:%.*]] = phi i64 [ poison, %[[VECTOR_BODY]] ], [ [[TMP13]], %[[PRED_UREM_IF]] ]
 ; CHECK-NEXT:    [[TMP20:%.*]] = phi i64 [ poison, %[[VECTOR_BODY]] ], [ [[TMP14]], %[[PRED_UREM_IF]] ]
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i1> [[TMP5]], i32 1
@@ -307,9 +305,7 @@ define void @udiv_urem_feeding_gep(i64 %x, ptr %dst, i64 %N) {
 ; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE2]]
 ; CHECK:       [[PRED_UREM_CONTINUE2]]:
 ; CHECK-NEXT:    [[TMP30:%.*]] = phi <4 x i64> [ [[TMP15]], %[[PRED_UREM_CONTINUE]] ], [ [[TMP24]], %[[PRED_UREM_IF1]] ]
-; CHECK-NEXT:    [[TMP31:%.*]] = phi i64 [ poison, %[[PRED_UREM_CONTINUE]] ], [ [[TMP25]], %[[PRED_UREM_IF1]] ]
 ; CHECK-NEXT:    [[TMP32:%.*]] = phi i64 [ poison, %[[PRED_UREM_CONTINUE]] ], [ [[TMP26]], %[[PRED_UREM_IF1]] ]
-; CHECK-NEXT:    [[TMP33:%.*]] = phi i64 [ poison, %[[PRED_UREM_CONTINUE]] ], [ [[TMP27]], %[[PRED_UREM_IF1]] ]
 ; CHECK-NEXT:    [[TMP34:%.*]] = phi i64 [ poison, %[[PRED_UREM_CONTINUE]] ], [ [[TMP28]], %[[PRED_UREM_IF1]] ]
 ; CHECK-NEXT:    [[TMP35:%.*]] = phi i64 [ poison, %[[PRED_UREM_CONTINUE]] ], [ [[TMP29]], %[[PRED_UREM_IF1]] ]
 ; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <4 x i1> [[TMP5]], i32 2
@@ -326,9 +322,7 @@ define void @udiv_urem_feeding_gep(i64 %x, ptr %dst, i64 %N) {
 ; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE4]]
 ; CHECK:       [[PRED_UREM_CONTINUE4]]:
 ; CHECK-NEXT:    [[TMP45:%.*]] = phi <4 x i64> [ [[TMP30]], %[[PRED_UREM_CONTINUE2]] ], [ [[TMP39]], %[[PRED_UREM_IF3]] ]
-; CHECK-NEXT:    [[TMP46:%.*]] = phi i64 [ poison, %[[PRED_UREM_CONTINUE2]] ], [ [[TMP40]], %[[PRED_UREM_IF3]] ]
 ; CHECK-NEXT:    [[TMP47:%.*]] = phi i64 [ poison, %[[PRED_UREM_CONTINUE2]] ], [ [[TMP41]], %[[PRED_UREM_IF3]] ]
-; CHECK-NEXT:    [[TMP48:%.*]] = phi i64 [ poison, %[[PRED_UREM_CONTINUE2]] ], [ [[TMP42]], %[[PRED_UREM_IF3]] ]
 ; CHECK-NEXT:    [[TMP49:%.*]] = phi i64 [ poison, %[[PRED_UREM_CONTINUE2]] ], [ [[TMP43]], %[[PRED_UREM_IF3]] ]
 ; CHECK-NEXT:    [[TMP50:%.*]] = phi i64 [ poison, %[[PRED_UREM_CONTINUE2]] ], [ [[TMP44]], %[[PRED_UREM_IF3]] ]
 ; CHECK-NEXT:    [[TMP51:%.*]] = extractelement <4 x i1> [[TMP5]], i32 3
@@ -345,9 +339,7 @@ define void @udiv_urem_feeding_gep(i64 %x, ptr %dst, i64 %N) {
 ; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE6]]
 ; CHECK:       [[PRED_UREM_CONTINUE6]]:
 ; CHECK-NEXT:    [[TMP60:%.*]] = phi <4 x i64> [ [[TMP45]], %[[PRED_UREM_CONTINUE4]] ], [ [[TMP54]], %[[PRED_UREM_IF5]] ]
-; CHECK-NEXT:    [[TMP61:%.*]] = phi i64 [ poison, %[[PRED_UREM_CONTINUE4]] ], [ [[TMP55]], %[[PRED_UREM_IF5]] ]
 ; CHECK-NEXT:    [[TMP62:%.*]] = phi i64 [ poison, %[[PRED_UREM_CONTINUE4]] ], [ [[TMP56]], %[[PRED_UREM_IF5]] ]
-; CHECK-NEXT:    [[TMP63:%.*]] = phi i64 [ poison, %[[PRED_UREM_CONTINUE4]] ], [ [[TMP57]], %[[PRED_UREM_IF5]] ]
 ; CHECK-NEXT:    [[TMP64:%.*]] = phi i64 [ poison, %[[PRED_UREM_CONTINUE4]] ], [ [[TMP58]], %[[PRED_UREM_IF5]] ]
 ; CHECK-NEXT:    [[TMP65:%.*]] = phi i64 [ poison, %[[PRED_UREM_CONTINUE4]] ], [ [[TMP59]], %[[PRED_UREM_IF5]] ]
 ; CHECK-NEXT:    [[TMP66:%.*]] = extractelement <4 x i64> [[TMP60]], i32 0

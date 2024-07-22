@@ -728,8 +728,8 @@ bool CheckDynamicMemoryAllocation(InterpState &S, CodePtr OpPC) {
     return true;
 
   const SourceInfo &E = S.Current->getSource(OpPC);
-  S.FFDiag(E, diag::note_constexpr_new);
-  return false;
+  S.CCEDiag(E, diag::note_constexpr_new);
+  return true;
 }
 
 bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC, bool NewWasArray,

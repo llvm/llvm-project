@@ -356,6 +356,9 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "llvm machine code playground\n");
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
   MCOptions.CompressDebugSections = CompressDebugSections.getValue();
+  MCOptions.ShowMCInst = ShowInst;
+  MCOptions.AsmVerbose = true;
+  MCOptions.MCUseDwarfDirectory = MCTargetOptions::EnableDwarfDirectory;
 
   setDwarfDebugFlags(argc, argv);
   setDwarfDebugProducer();
@@ -555,9 +558,7 @@ int main(int argc, char **argv) {
         TheTriple, Ctx, std::unique_ptr<MCAsmBackend>(MAB),
         DwoOut ? MAB->createDwoObjectWriter(*OS, DwoOut->os())
                : MAB->createObjectWriter(*OS),
-        std::unique_ptr<MCCodeEmitter>(CE), *STI, MCOptions.MCRelaxAll,
-        MCOptions.MCIncrementalLinkerCompatible,
-        /*DWARFMustBeAtTheEnd*/ false));
+        std::unique_ptr<MCCodeEmitter>(CE), *STI));
     if (NoExecStack)
       Str->initSections(true, *STI);
   }
