@@ -81,7 +81,6 @@ std::string GetMetadata(json::Object *Event) {
   if (json::Object *Args = Event->getObject("args")) {
     if (auto Detail = Args->getString("detail"))
       OS << Detail;
-    // Use only filename to not include os-specific path separators.
     if (auto File = Args->getString("file"))
       OS << ", " << llvm::sys::path::filename(*File);
     if (auto Line = Args->getInteger("line"))
@@ -209,7 +208,7 @@ constexpr int slow_init_list[] = {1, 1, 2, 3, 5, 8, 13, 21}; // 25th line
   ASSERT_TRUE(compileFromString(Code, "-std=c++20", "test.cc"));
   std::string Json = teardownProfiler();
   ASSERT_EQ(R"(
-Frontend
+Frontend (, test.cc)
 | ParseDeclarationOrFunctionDefinition (test.cc:2:1)
 | ParseDeclarationOrFunctionDefinition (test.cc:6:1)
 | | ParseFunctionDefinition (slow_func)
@@ -266,7 +265,7 @@ TEST(TimeProfilerTest, TemplateInstantiations) {
                                 /*Headers=*/{{"a.h", A_H}, {"b.h", B_H}}));
   std::string Json = teardownProfiler();
   ASSERT_EQ(R"(
-Frontend
+Frontend (, test.cc)
 | ParseFunctionDefinition (fooB)
 | ParseFunctionDefinition (fooMTA)
 | ParseFunctionDefinition (fooA)
@@ -291,7 +290,7 @@ struct {
   ASSERT_TRUE(compileFromString(Code, "-std=c99", "test.c"));
   std::string Json = teardownProfiler();
   ASSERT_EQ(R"(
-Frontend
+Frontend (, test.c)
 | ParseDeclarationOrFunctionDefinition (test.c:2:1)
 | | isIntegerConstantExpr (<test.c:3:18>)
 | | EvaluateKnownConstIntCheckOverflow (<test.c:3:18>)

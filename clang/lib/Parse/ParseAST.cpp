@@ -152,7 +152,13 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
   bool HaveLexer = S.getPreprocessor().getCurrentLexer();
 
   if (HaveLexer) {
-    llvm::TimeTraceScope TimeScope("Frontend");
+    llvm::TimeTraceScope TimeScope("Frontend", [&]() {
+      llvm::TimeTraceMetadata M;
+      const SourceManager &SM = S.getSourceManager();
+      if (const auto *FE = SM.getFileEntryForID(SM.getMainFileID()))
+        M.File = FE->tryGetRealPathName();
+      return M;
+    });
     P.Initialize();
     Parser::DeclGroupPtrTy ADecl;
     Sema::ModuleImportState ImportState;
