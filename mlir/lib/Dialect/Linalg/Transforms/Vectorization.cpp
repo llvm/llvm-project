@@ -2012,6 +2012,12 @@ vectorizeScalableVectorPrecondition(Operation *op,
              "vectorization\n");
         return failure();
       }
+      if (isa<linalg::MatmulOp>(op) ||
+          isa<linalg::MatmulTransposeAOp>(op)) {
+        LDBG("Scalable vectorization of the reduction dim in Matmul-like ops "
+             "is not supported\n");
+        return failure();
+      }
       break;
     }
     case utils::IteratorType::parallel: {
@@ -2030,6 +2036,14 @@ vectorizeScalableVectorPrecondition(Operation *op,
   //    * iterators = [parallel, parallel, reduction]
   //    * scalable flags = [true, true, false]
   if (numOfScalableDims == 2) {
+    // Disallow below case which breaks 3. above:
+    //    * iterators = [..., parallel, reduction]
+    //    * scalable flags = [..., true, true]
+    if (iterators.back() == utils::IteratorType::reduction) {
+      LDBG("Higher dim than the trailing reduction dim requested for scalable "
+           "vectorization\n");
+      return failure();
+    }
     scalableFlags.pop_back();
     iterators.pop_back();
 
@@ -2043,6 +2057,7 @@ vectorizeScalableVectorPrecondition(Operation *op,
   return success(isElementwise(linalgOp) || isa<linalg::MatmulOp>(op) ||
                  isa<linalg::MatmulTransposeAOp>(op) ||
                  isa<linalg::DepthwiseConv1DNwcWcOp>(op) ||
+		 isa<linalg::MatvecOp>(op) ||
                  hasReductionIterator(linalgOp));
 }
 
