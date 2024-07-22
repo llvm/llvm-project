@@ -932,7 +932,7 @@ public:
     case VPRecipeBase::VPScalarCastSC:
       return true;
     case VPRecipeBase::VPInterleaveSC:
-    case VPRecipeBase::VPIntermediateStoreSC:
+    case VPRecipeBase::VPScalarStoreSC:
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
@@ -1103,7 +1103,7 @@ protected:
 public:
   static inline bool classof(const VPRecipeBase *R) {
     return R->getVPDefID() == VPRecipeBase::VPInstructionSC ||
-           R->getVPDefID() == VPRecipeBase::VPIntermediateStoreSC ||
+           R->getVPDefID() == VPRecipeBase::VPScalarStoreSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenGEPSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
@@ -2967,23 +2967,22 @@ public:
 };
 
 /// A recipe to represent scalar stores that sink outside the vector loop.
-class VPIntermediateStoreRecipe : public VPRecipeBase {
+class VPScalarStoreRecipe : public VPRecipeBase {
   StoreInst &SI;
 
 public:
-  VPIntermediateStoreRecipe(StoreInst &SI, VPValue *StoredVal, VPValue *Addr,
-                            DebugLoc DL)
-      : VPRecipeBase(VPDef::VPIntermediateStoreSC, {StoredVal, Addr}, DL),
-        SI(SI) {}
+  VPScalarStoreRecipe(StoreInst &SI, VPValue *StoredVal, VPValue *Addr,
+                      DebugLoc DL)
+      : VPRecipeBase(VPDef::VPScalarStoreSC, {StoredVal, Addr}, DL), SI(SI) {}
 
-  ~VPIntermediateStoreRecipe() override = default;
+  ~VPScalarStoreRecipe() override = default;
 
-  VPIntermediateStoreRecipe *clone() override {
-    return new VPIntermediateStoreRecipe(SI, getStoredVal(), getAddress(),
-                                         getDebugLoc());
+  VPScalarStoreRecipe *clone() override {
+    return new VPScalarStoreRecipe(SI, getStoredVal(), getAddress(),
+                                   getDebugLoc());
   }
 
-  VP_CLASSOF_IMPL(VPDef::VPIntermediateStoreSC)
+  VP_CLASSOF_IMPL(VPDef::VPScalarStoreSC)
 
   /// Generate the scalar store instruction for intermediate store.
   void execute(VPTransformState &State) override;

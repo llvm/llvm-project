@@ -8658,7 +8658,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
           Legal->isInvariantAddressOfReduction(SI->getPointerOperand())) {
         // Only create recipe for the last intermediate store of the reduction.
         if (Legal->isInvariantStoreOfReduction(SI)) {
-          auto *Recipe = new VPIntermediateStoreRecipe(
+          auto *Recipe = new VPScalarStoreRecipe(
               *SI, /* StoredVal = */ Operands[0], /* Address = */ Operands[1],
               SI->getDebugLoc());
           Recipe->insertBefore(*MiddleVPBB, MBIP);
@@ -8883,9 +8883,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       for (VPUser *U : Cur->users()) {
         auto *UserRecipe = dyn_cast<VPSingleDefRecipe>(U);
         if (!UserRecipe) {
-          assert((isa<VPLiveOut>(U) || isa<VPIntermediateStoreRecipe>(U)) &&
+          assert((isa<VPLiveOut>(U) || isa<VPScalarStoreRecipe>(U)) &&
                  "U must either be a VPSingleDef, VPLiveOut or "
-                 "VPIntermediateStore");
+                 "VPScalarStore");
           continue;
         }
         Worklist.insert(UserRecipe);
@@ -9104,7 +9104,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     FinalReductionResult->insertBefore(*MiddleVPBB, IP);
     OrigExitingVPV->replaceUsesWithIf(
         FinalReductionResult, [](VPUser &User, unsigned) {
-          return isa<VPLiveOut>(&User) || isa<VPIntermediateStoreRecipe>(&User);
+          return isa<VPLiveOut>(&User) || isa<VPScalarStoreRecipe>(&User);
         });
   }
 

@@ -48,7 +48,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPDefID()) {
   case VPInterleaveSC:
     return cast<VPInterleaveRecipe>(this)->getNumStoreOperands() > 0;
-  case VPIntermediateStoreSC:
+  case VPScalarStoreSC:
   case VPWidenStoreEVLSC:
   case VPWidenStoreSC:
     return true;
@@ -102,7 +102,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPBranchOnMaskSC:
   case VPPredInstPHISC:
   case VPScalarIVStepsSC:
-  case VPIntermediateStoreSC:
+  case VPScalarStoreSC:
   case VPWidenStoreEVLSC:
   case VPWidenStoreSC:
     return false;
@@ -1921,7 +1921,7 @@ void VPScalarCastRecipe ::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-void VPIntermediateStoreRecipe::execute(VPTransformState &State) {
+void VPScalarStoreRecipe::execute(VPTransformState &State) {
   IRBuilderBase &Builder = State.Builder;
   Value *StoredVal = State.get(getStoredVal(), 0, /*IsScalar*/ true);
   Value *Addr = State.get(getAddress(), 0, /*IsScalar*/ true);
@@ -1932,8 +1932,8 @@ void VPIntermediateStoreRecipe::execute(VPTransformState &State) {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPIntermediateStoreRecipe::print(raw_ostream &O, const Twine &Indent,
-                                      VPSlotTracker &SlotTracker) const {
+void VPScalarStoreRecipe::print(raw_ostream &O, const Twine &Indent,
+                                VPSlotTracker &SlotTracker) const {
   O << Indent << "SINK store ";
   printOperands(O, SlotTracker);
 }
