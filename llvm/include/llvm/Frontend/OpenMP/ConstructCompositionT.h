@@ -81,6 +81,10 @@ private:
   std::unordered_map<llvm::omp::Clause, ClauseSet> clauseSets;
 };
 
+template <typename ClauseTy>
+ConstructCompositionT(uint32_t, llvm::ArrayRef<DirectiveWithClauses<ClauseTy>>)
+    -> ConstructCompositionT<ClauseTy>;
+
 template <typename C>
 ConstructCompositionT<C>::ConstructCompositionT(
     uint32_t version, llvm::ArrayRef<DirectiveWithClauses<C>> leafs)
