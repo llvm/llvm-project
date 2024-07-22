@@ -1102,8 +1102,8 @@ body: |
     ; GFX7: liveins: $sgpr0_sgpr1
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX7-NEXT: [[S_LOAD_DWORD_IMM_ci:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM_ci [[COPY]], 255, 0 :: (load (s32), addrspace 4)
-    ; GFX7-NEXT: $sgpr0 = COPY [[S_LOAD_DWORD_IMM_ci]]
+    ; GFX7-NEXT: [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]], 255, 0 :: (load (s32), addrspace 4)
+    ; GFX7-NEXT: $sgpr0 = COPY [[S_LOAD_DWORD_IMM]]
     ;
     ; GFX8-LABEL: name: load_constant_s32_from_4_gep_1020
     ; GFX8: liveins: $sgpr0_sgpr1

@@ -492,9 +492,7 @@ define amdgpu_kernel void @raw_ptr_buffer_atomic_max_rtn_f64_off4_slc(ptr addrsp
 ;
 ; G_GFX7-LABEL: raw_ptr_buffer_atomic_max_rtn_f64_off4_slc:
 ; G_GFX7:       ; %bb.0: ; %main_body
-; G_GFX7-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xd
-; G_GFX7-NEXT:    s_load_dwordx2 s[6:7], s[0:1], 0xf
-; G_GFX7-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; G_GFX7-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
 ; G_GFX7-NEXT:    s_mov_b32 m0, -1
 ; G_GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; G_GFX7-NEXT:    v_mov_b32_e32 v0, s4

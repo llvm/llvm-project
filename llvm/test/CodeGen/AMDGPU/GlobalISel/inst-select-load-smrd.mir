@@ -20,13 +20,11 @@ regBankSelected: true
 # GCN: [[PTR:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
 
 # Immediate offset:
-# SI: S_LOAD_DWORD_IMM [[PTR]], 1, 0
-# CI: S_LOAD_DWORD_IMM_ci [[PTR]], 1, 0
+# SICI: S_LOAD_DWORD_IMM [[PTR]], 1, 0
 # VI:   S_LOAD_DWORD_IMM [[PTR]], 4, 0
 
 # Max immediate offset for SI
-# SI: S_LOAD_DWORD_IMM [[PTR]], 255, 0
-# CI: S_LOAD_DWORD_IMM_ci [[PTR]], 255, 0
+# SICI: S_LOAD_DWORD_IMM [[PTR]], 255, 0
 # VI:   S_LOAD_DWORD_IMM [[PTR]], 1020, 0
 
 # Immediate overflow for SI
@@ -198,8 +196,7 @@ body: |
 # GCN: %0:sreg_64 = S_MOV_B64_IMM_PSEUDO 44
 
 # VI: %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 64, 0 :: (dereferenceable invariant load (s32), addrspace 4)
-# SI: %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 16, 0 :: (dereferenceable invariant load (s32), addrspace 4)
-# CI: %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM_ci %0, 16, 0 :: (dereferenceable invariant load (s32), addrspace 4)
+# SICI: %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 16, 0 :: (dereferenceable invariant load (s32), addrspace 4)
 
 ---
 

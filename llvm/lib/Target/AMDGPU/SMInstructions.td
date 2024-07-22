@@ -867,19 +867,12 @@ def SMRDBufferImm32 : ComplexPattern<iPTR, 1, "SelectSMRDBufferImm32">;
 def SMRDBufferSgprImm : ComplexPattern<iPTR, 2, "SelectSMRDBufferSgprImm">;
 
 class SMRDAlignedLoadPat<PatFrag Op> : PatFrag <(ops node:$ptr), (Op node:$ptr), [{
-  // Ignore the alignment check if XNACK support is disabled.
-  if (!Subtarget->isXNACKEnabled())
-    return true;
-
   // Returns true if it is a single dword load or naturally aligned multi-dword load.
   LoadSDNode *Ld = cast<LoadSDNode>(N);
   unsigned Size = Ld->getMemoryVT().getStoreSize();
   return Size <= 4 || Ld->getAlign().value() >= Size;
 }]> {
   let GISelPredicateCode = [{
-  if (!Subtarget->isXNACKEnabled())
-    return true;
-
   auto &Ld = cast<GLoad>(MI);
   TypeSize Size = Ld.getMMO().getSize().getValue();
   return Size <= 4 || Ld.getMMO().getAlign().value() >= Size;
@@ -888,79 +881,59 @@ class SMRDAlignedLoadPat<PatFrag Op> : PatFrag <(ops node:$ptr), (Op node:$ptr),
 
 def aligned_smrd_load : SMRDAlignedLoadPat<smrd_load>;
 
+multiclass SMRD_Patterns <string Instr, ValueType vt, PatFrag frag,
+                          bit immci = true, string suffix = ""> {
+  // 1. IMM offset
+  def : GCNPat <
+    (frag (SMRDImm i64:$sbase, i32:$offset)),
+    (vt (!cast<SM_Pseudo>(Instr#"_IMM"#suffix) $sbase, $offset, 0))>;
+
+  // 2. 32-bit IMM offset on CI
+  if immci then def : GCNPat <
+    (frag (SMRDImm32 i64:$sbase, i32:$offset)),
+    (vt (!cast<InstSI>(Instr#"_IMM_ci"#suffix) $sbase, $offset, 0))> {
+    let SubtargetPredicate = isGFX7Only;
+  }
+
+  // 3. SGPR offset
+  def : GCNPat <
+    (frag (SMRDSgpr i64:$sbase, i32:$soffset)),
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR"#suffix) $sbase, $soffset, 0))> {
+    let SubtargetPredicate = isNotGFX9Plus;
+  }
+  def : GCNPat <
+    (frag (SMRDSgpr i64:$sbase, i32:$soffset)),
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM"#suffix) $sbase, $soffset, 0, 0))> {
+    let SubtargetPredicate = isGFX9Plus;
+  }
+
+  // 4. SGPR+IMM offset
+  def : GCNPat <
+    (frag (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM"#suffix) $sbase, $soffset, $offset, 0))> {
+    let SubtargetPredicate = isGFX9Plus;
+  }
+
+  // 5. No offset
+  def : GCNPat <
+    (vt (frag (i64 SReg_64:$sbase))),
+    (vt (!cast<SM_Pseudo>(Instr#"_IMM"#suffix) i64:$sbase, 0, 0))>;
+}
+
 multiclass SMRD_Pattern <string Instr, ValueType vt, bit immci = true> {
+  // High priority when XNACK is enabled and the load was naturally aligned.
+  let OtherPredicates = [HasXNACKEnabled], AddedComplexity = 102 in
+    defm: SMRD_Patterns <Instr, vt, aligned_smrd_load, immci>;
 
-  let AddedComplexity = 101 in {
-    // 1. IMM offset
-    def : GCNPat <
-      (aligned_smrd_load (SMRDImm i64:$sbase, i32:$offset)),
-      (vt (!cast<SM_Pseudo>(Instr#"_IMM") $sbase, $offset, 0))>;
-
-    // 2. 32-bit IMM offset on CI
-    if immci then def : GCNPat <
-      (smrd_load (SMRDImm32 i64:$sbase, i32:$offset)),
-      (vt (!cast<InstSI>(Instr#"_IMM_ci") $sbase, $offset, 0))> {
-      let SubtargetPredicate = isGFX7Only;
-    }
-
-    // 3. SGPR offset
-    def : GCNPat <
-      (aligned_smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
-      (vt (!cast<SM_Pseudo>(Instr#"_SGPR") $sbase, $soffset, 0))> {
-      let SubtargetPredicate = isNotGFX9Plus;
-    }
-    def : GCNPat <
-      (aligned_smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
-      (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, 0, 0))> {
-      let SubtargetPredicate = isGFX9Plus;
-    }
-
-    // 4. SGPR+IMM offset
-    def : GCNPat <
-      (aligned_smrd_load (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
-      (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, $offset, 0))> {
-      let SubtargetPredicate = isGFX9Plus;
-    }
-
-    // 5. No offset
-    def : GCNPat <
-      (vt (aligned_smrd_load (i64 SReg_64:$sbase))),
-      (vt (!cast<SM_Pseudo>(Instr#"_IMM") i64:$sbase, 0, 0))>;
-  }
-
-  // The constrained multi-dword load equivalents.
+  // XNACK is enabled and the load wasn't naturally aligned. The constrained sload variant.
   if !gt(vt.Size, 32) then {
-    let AddedComplexity = 100 in {
-      // 1. IMM offset
-      def : GCNPat <
-        (smrd_load (SMRDImm i64:$sbase, i32:$offset)),
-        (vt (!cast<SM_Pseudo>(Instr#"_IMM_ec") $sbase, $offset, 0))>;
-
-      // 2. SGPR offset
-      def : GCNPat <
-        (smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
-        (vt (!cast<SM_Pseudo>(Instr#"_SGPR_ec") $sbase, $soffset, 0))> {
-        let SubtargetPredicate = isNotGFX9Plus;
-      }
-      def : GCNPat <
-        (smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
-        (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM_ec") $sbase, $soffset, 0, 0))> {
-        let SubtargetPredicate = isGFX9Plus;
-      }
-
-      // 3. SGPR+IMM offset
-      def : GCNPat <
-        (smrd_load (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
-        (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM_ec") $sbase, $soffset, $offset, 0))> {
-        let SubtargetPredicate = isGFX9Plus;
-      }
-
-      // 4. No offset
-      def : GCNPat <
-        (vt (smrd_load (i64 SReg_64:$sbase))),
-        (vt (!cast<SM_Pseudo>(Instr#"_IMM_ec") i64:$sbase, 0, 0))>;
-    }
+    let OtherPredicates = [HasXNACKEnabled], AddedComplexity = 101 in
+      defm: SMRD_Patterns <Instr, vt, smrd_load, /*immci=*/false, /*suffix=*/"_ec">;
   }
+
+  // XNACK is disabled.
+  let AddedComplexity = 100 in
+    defm: SMRD_Patterns <Instr, vt, smrd_load, immci>;
 }
 
 multiclass SMLoad_Pattern <string Instr, ValueType vt, bit immci = true> {

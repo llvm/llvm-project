@@ -729,15 +729,14 @@ define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f32_off4_slc(<4 x i32> inre
 ;
 ; G_GFX7-LABEL: raw_buffer_atomic_max_rtn_f32_off4_slc:
 ; G_GFX7:       ; %bb.0: ; %main_body
-; G_GFX7-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0xd
-; G_GFX7-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; G_GFX7-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xf
+; G_GFX7-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
 ; G_GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; G_GFX7-NEXT:    v_mov_b32_e32 v0, s2
-; G_GFX7-NEXT:    v_mov_b32_e32 v1, s3
-; G_GFX7-NEXT:    buffer_atomic_fmax v0, v1, s[4:7], 4 offen glc slc
+; G_GFX7-NEXT:    v_mov_b32_e32 v0, s4
+; G_GFX7-NEXT:    v_mov_b32_e32 v1, s5
+; G_GFX7-NEXT:    buffer_atomic_fmax v0, v1, s[0:3], 4 offen glc slc
 ; G_GFX7-NEXT:    s_mov_b32 s2, -1
 ; G_GFX7-NEXT:    s_mov_b32 s3, 0xf000
+; G_GFX7-NEXT:    s_mov_b64 s[0:1], s[6:7]
 ; G_GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; G_GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; G_GFX7-NEXT:    s_endpgm
