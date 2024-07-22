@@ -6048,8 +6048,8 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
 
   // logic_op (truncate x), (truncate y) --> truncate (logic_op x, y)
   //
-  // For targets that are particulaly senesitve to register pressure (e.g. GPUs) it's
-  // preferable to increase the number of truncate instructions in order to
+  // For targets that are particulaly senesitve to register pressure (e.g. GPUs)
+  // it's preferable to increase the number of truncate instructions in order to
   // decrease the bit width of the logic_op.
   if (HandOpcode == ISD::TRUNCATE && !TLI.shouldReduceRegisterPressure()) {
     // If both operands have other uses, this transform would create extra
