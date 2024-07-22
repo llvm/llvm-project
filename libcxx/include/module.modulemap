@@ -1485,6 +1485,7 @@ module std_private_math_modulo                          [system] { header "__mat
 module std_private_math_remainder                       [system] { header "__math/remainder.h" }
 module std_private_math_roots                           [system] { header "__math/roots.h" }
 module std_private_math_rounding_functions              [system] { header "__math/rounding_functions.h" }
+module std_private_math_special_functions               [system] { header "__math/special_functions.h" }
 module std_private_math_traits                          [system] { header "__math/traits.h" }
 module std_private_math_trigonometric_functions         [system] { header "__math/trigonometric_functions.h" }
 
