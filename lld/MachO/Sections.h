@@ -9,10 +9,11 @@
 #ifndef LLD_MACHO_SECTIONS_H
 #define LLD_MACHO_SECTIONS_H
 
-#include "lld/Common/LLVM.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace lld::macho::sections {
-bool isCodeSection(StringRef name, StringRef segName, uint32_t flags);
+bool isCodeSection(llvm::StringRef name, llvm::StringRef segName,
+                   uint32_t flags);
 } // namespace lld::macho::sections
 
 #endif // #ifndef LLD_MACHO_SECTIONS_H
