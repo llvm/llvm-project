@@ -1849,7 +1849,7 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setOperationAction(ISD::SHL, VT, Custom);
   setOperationAction(ISD::OR, VT, Custom);
   setOperationAction(ISD::SETCC, VT, Custom);
-  setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
+  setOperationAction(ISD::CONCAT_VECTORS, VT, Legal);
 
   setOperationAction(ISD::SELECT, VT, Expand);
   setOperationAction(ISD::SELECT_CC, VT, Expand);
@@ -14198,43 +14198,9 @@ SDValue AArch64TargetLowering::LowerCONCAT_VECTORS(SDValue Op,
                                    !Subtarget->isNeonAvailable()))
     return LowerFixedLengthConcatVectorsToSVE(Op, DAG);
 
-  if (!Op.getValueType().isScalableVector()) {
-    const SDValue Trunc1 = Op.getOperand(0);
-    const SDValue Trunc2 = Op.getOperand(1);
-
-    if (Trunc1->getOpcode() == ISD::TRUNCATE &&
-        Trunc2->getOpcode() == ISD::TRUNCATE) {
-      const SDValue Shift1 = Trunc1->getOperand(0);
-      const SDValue Shift2 = Trunc2->getOperand(0);
-
-      // check for VLSHR with the same shift amount
-      if (Shift1->getOpcode() == AArch64ISD::VLSHR &&
-          Shift2->getOpcode() == AArch64ISD::VLSHR &&
-          Shift1->getOperand(1) == Shift2->getOperand(1)) {
-
-        const SDValue Vector1 = Shift1->getOperand(0);
-        const SDValue Vector2 = Shift2->getOperand(0);
-
-        const uint64_t ShiftConstant = Shift1->getConstantOperandVal(1);
-        const uint64_t PostUzpsize = Op.getScalarValueSizeInBits();
-
-        // Check if the shift constant is greater than the scalar value size
-        if (ShiftConstant > PostUzpsize) {
-          const EVT VT = Op.getValueType();
-          const SDLoc DL(Op);
-
-          const SDValue Uzp =
-              DAG.getNode(AArch64ISD::UZP2, DL, VT, Vector1, Vector2);
-          const SDValue NewShiftConstant =
-              DAG.getConstant(ShiftConstant - PostUzpsize, DL, MVT::i32);
-
-          return DAG.getNode(AArch64ISD::VLSHR, DL, VT, Uzp, NewShiftConstant);
-        }
-      }
-    }
-
-    return Op;
-  }
+  assert(Op.getValueType().isScalableVector() &&
+         isTypeLegal(Op.getValueType()) &&
+         "Expected legal scalable vector type!");
 
   if (isTypeLegal(Op.getOperand(0).getValueType())) {
     unsigned NumOperands = Op->getNumOperands();
@@ -19152,23 +19118,24 @@ static SDValue performConcatVectorsCombine(SDNode *N,
   if (VT.isScalableVector())
     return SDValue();
 
-  // Optimize concat_vectors of truncated vectors, where the intermediate
-  // type is illegal, to avoid said illegality,  e.g.,
-  //   (v4i16 (concat_vectors (v2i16 (truncate (v2i64))),
-  //                          (v2i16 (truncate (v2i64)))))
-  // ->
-  //   (v4i16 (truncate (vector_shuffle (v4i32 (bitcast (v2i64))),
-  //                                    (v4i32 (bitcast (v2i64))),
-  //                                    <0, 2, 4, 6>)))
-  // This isn't really target-specific, but ISD::TRUNCATE legality isn't keyed
-  // on both input and result type, so we might generate worse code.
-  // On AArch64 we know it's fine for v2i64->v4i16 and v4i32->v8i8.
   if (N->getNumOperands() == 2 && N0Opc == ISD::TRUNCATE &&
       N1Opc == ISD::TRUNCATE) {
     SDValue N00 = N0->getOperand(0);
     SDValue N10 = N1->getOperand(0);
     EVT N00VT = N00.getValueType();
+    unsigned N00Opc = N00.getOpcode(), N10Opc = N10.getOpcode();
 
+    // Optimize concat_vectors of truncated vectors, where the intermediate
+    // type is illegal, to avoid said illegality,  e.g.,
+    //   (v4i16 (concat_vectors (v2i16 (truncate (v2i64))),
+    //                          (v2i16 (truncate (v2i64)))))
+    // ->
+    //   (v4i16 (truncate (vector_shuffle (v4i32 (bitcast (v2i64))),
+    //                                    (v4i32 (bitcast (v2i64))),
+    //                                    <0, 2, 4, 6>)))
+    // This isn't really target-specific, but ISD::TRUNCATE legality isn't keyed
+    // on both input and result type, so we might generate worse code.
+    // On AArch64 we know it's fine for v2i64->v4i16 and v4i32->v8i8.
     if (N00VT == N10.getValueType() &&
         (N00VT == MVT::v2i64 || N00VT == MVT::v4i32) &&
         N00VT.getScalarSizeInBits() == 4 * VT.getScalarSizeInBits()) {
@@ -19181,6 +19148,40 @@ static SDValue performConcatVectorsCombine(SDNode *N,
                              MidVT, dl,
                              DAG.getNode(ISD::BITCAST, dl, MidVT, N00),
                              DAG.getNode(ISD::BITCAST, dl, MidVT, N10), Mask));
+    }
+
+    // Optimize two large shifts and a combine into a single combine and shift
+    // For AArch64 architectures, sequences like the following:
+    //
+    //     ushr    v0.4s, v0.4s, #20
+    //     ushr    v1.4s, v1.4s, #20
+    //     uzp1    v0.8h, v0.8h, v1.8h
+    //
+    // Can be optimized to:
+    //
+    //     uzp2    v0.8h, v0.8h, v1.8h
+    //     ushr    v0.8h, v0.8h, #4
+    //
+    // This optimization reduces instruction count.
+    if (N00Opc == AArch64ISD::VLSHR &&
+        N10Opc == AArch64ISD::VLSHR &&
+        N00->getOperand(1) == N10->getOperand(1)) {
+
+      SDValue N000 = N00->getOperand(0);
+      SDValue N100 = N10->getOperand(0);
+      uint64_t N001ConstVal = N00->getConstantOperandVal(1),
+               N101ConstVal = N10->getConstantOperandVal(1),
+               NScalarSize = N->getValueType(0).getScalarSizeInBits();
+
+      if (N001ConstVal == N101ConstVal &&
+          N001ConstVal > NScalarSize) {
+
+        SDValue Uzp = DAG.getNode(AArch64ISD::UZP2, dl, VT, N000, N100);
+        SDValue NewShiftConstant =
+            DAG.getConstant(N001ConstVal - NScalarSize, dl, MVT::i32);
+
+        return DAG.getNode(AArch64ISD::VLSHR, dl, VT, Uzp, NewShiftConstant);
+      }
     }
   }
 
