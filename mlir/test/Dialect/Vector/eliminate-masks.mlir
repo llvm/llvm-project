@@ -51,8 +51,8 @@ func.func @negative_extract_slice_size_shrink(%tensor: tensor<1000xf32>) {
   %c4_vscale = arith.muli %vscale, %c4 : index
   %extracted_slice = tensor.extract_slice %tensor[0] [%c4_vscale] [1] : tensor<1000xf32> to tensor<?xf32>
   %slice = scf.for %i = %c0 to %c1000 step %c4_vscale iter_args(%arg = %extracted_slice) -> tensor<?xf32> {
-    // This mask cannot be eliminated even though looking at the above operations
-    // it appears `tensor.dim` will always be c4_vscale (so the mask all-true).
+    // This mask cannot be eliminated even though looking at the operations above
+    // (this comment) it appears `tensor.dim` will always be c4_vscale (so the mask all-true).
     %dim = tensor.dim %arg, %c0 : tensor<?xf32>
     %mask = vector.create_mask %dim : vector<[4]xi1>
     "test.some_use"(%mask) : (vector<[4]xi1>) -> ()
@@ -77,6 +77,8 @@ func.func @negative_constant_dim_not_all_true()
   %c4 = arith.constant 4 : index
   %vscale = vector.vscale
   %c4_vscale = arith.muli %vscale, %c4 : index
+  // Since %c1 is a constant, this will be found not to be all-true via simple
+  // pattern matching.
   %mask = vector.create_mask %c1, %c4_vscale : vector<2x[4]xi1>
   "test.some_use"(%mask) : (vector<2x[4]xi1>) -> ()
   return
@@ -93,6 +95,8 @@ func.func @negative_constant_vscale_multiple_not_all_true() {
   %c3 = arith.constant 3 : index
   %vscale = vector.vscale
   %c3_vscale = arith.muli %vscale, %c3 : index
+  // Since %c3_vscale is a constant vscale multiple, this will be found not to
+  // be all-true via simple pattern matching.
   %mask = vector.create_mask %c2, %c3_vscale : vector<2x[4]xi1>
   "test.some_use"(%mask) : (vector<2x[4]xi1>) -> ()
   return
