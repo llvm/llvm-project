@@ -22,6 +22,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
+// TODO: fix this unguarded linux dep
 #include <linux/param.h> // for exec_pagesize.
 
 #include <stddef.h> // For size_t
