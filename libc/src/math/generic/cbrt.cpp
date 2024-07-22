@@ -35,7 +35,7 @@ namespace {
 // > P = fpminimax(x^(-2/3), 7, [|D...|], [1, 2]);
 // > dirtyinfnorm(P/x^(-2/3) - 1, [1, 2]);
 // 0x1.28...p-21
-constexpr double intial_approximation(double x) {
+double intial_approximation(double x) {
   constexpr double COEFFS[8] = {
       0x1.bc52aedead5c6p1,  -0x1.b52bfebf110b3p2,  0x1.1d8d71d53d126p3,
       -0x1.de2db9e81cf87p2, 0x1.0154ca06153bdp2,   -0x1.5973c66ee6da7p0,
@@ -59,12 +59,12 @@ constexpr double intial_approximation(double x) {
 // Get the error term for Newton iteration:
 //   h(x) = x^3 * a^2 - 1,
 #ifdef LIBC_TARGET_CPU_HAS_FMA
-constexpr double get_error(const DoubleDouble &x_3, const DoubleDouble &a_sq) {
+double get_error(const DoubleDouble &x_3, const DoubleDouble &a_sq) {
   return fputil::multiply_add(x_3.hi, a_sq.hi, -1.0) +
          fputil::multiply_add(x_3.lo, a_sq.hi, x_3.hi * a_sq.lo);
 }
 #else
-constexpr double get_error(const DoubleDouble &x_3, const DoubleDouble &a_sq) {
+double get_error(const DoubleDouble &x_3, const DoubleDouble &a_sq) {
   DoubleDouble x_3_a_sq = fputil::quick_mult(a_sq, x_3);
   return (x_3_a_sq.hi - 1.0) + x_3_a_sq.lo;
 }
