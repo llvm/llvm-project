@@ -2012,8 +2012,7 @@ vectorizeScalableVectorPrecondition(Operation *op,
            "vectorization\n");
       return failure();
     }
-    if (isa<linalg::MatmulOp>(op) ||
-        isa<linalg::MatmulTransposeAOp>(op)) {
+    if (isa<linalg::MatmulOp>(op) || isa<linalg::MatmulTransposeAOp>(op)) {
       LDBG("Scalable vectorization of the reduction dim in Matmul-like ops "
            "is not supported\n");
       return failure();
