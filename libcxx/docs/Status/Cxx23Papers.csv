@@ -120,4 +120,4 @@
 "`P2614R2 <https://wg21.link/P2614R2>`__","LWG", "Deprecate ``numeric_limits::has_denorm``","February 2023","|Complete|","18.0",""
 "`P2588R3 <https://wg21.link/P2588R3>`__","LWG", "``barrier``’s phase completion guarantees","February 2023","","",""
 "`P2763R1 <https://wg21.link/P2763R1>`__","LWG", "``layout_stride`` static extents default constructor fix","February 2023","","",""
-"`P2736R2 <https://wg21.link/P2736R2>`__","CWG","Referencing The Unicode Standard","February 2023","Nothing to do","","|format|"
+"`P2736R2 <https://wg21.link/P2736R2>`__","CWG","Referencing The Unicode Standard","February 2023","Complete","19.0","|format|"
