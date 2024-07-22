@@ -4243,8 +4243,27 @@ SelectionDAG::computeOverflowForSignedAdd(SDValue N0, SDValue N1) const {
   if (ComputeNumSignBits(N0) > 1 && ComputeNumSignBits(N1) > 1)
     return OFK_Never;
 
-  // TODO: Add ConstantRange::signedAddMayOverflow handling.
-  return OFK_Sometime;
+  // smulhi + any value less than half of signed max
+  KnownBits N1Known = computeKnownBits(N1);
+  if (N0.getOpcode() == ISD::SMUL_LOHI && N0.getResNo() == 1) {
+    APInt Max = APInt::getSignedMaxValue(N1.getScalarValueSizeInBits());
+    Max.lshrInPlace(1);
+    if (N1Known.getMaxValue().sle(Max))
+      return OFK_Never;
+  }
+
+  KnownBits N0Known = computeKnownBits(N0);
+  if (N1.getOpcode() == ISD::SMUL_LOHI && N1.getResNo() == 1) {
+    APInt Max = APInt::getSignedMaxValue(N0.getScalarValueSizeInBits());
+    Max.lshrInPlace(1);
+    if (N0Known.getMaxValue().sle(Max))
+      return OFK_Never;
+  }
+
+  // Fallback to ConstantRange::signedAddMayOverflow handling.
+  ConstantRange N0Range = ConstantRange::fromKnownBits(N0Known, true);
+  ConstantRange N1Range = ConstantRange::fromKnownBits(N1Known, true);
+  return mapOverflowResult(N0Range.signedAddMayOverflow(N1Range));
 }
 
 SelectionDAG::OverflowKind
