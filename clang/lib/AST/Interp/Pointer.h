@@ -637,6 +637,7 @@ private:
   friend class MemberPointer;
   friend class InterpState;
   friend struct InitMap;
+  friend class DynamicAllocator;
 
   Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
 
