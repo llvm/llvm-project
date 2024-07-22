@@ -142,7 +142,7 @@ static void processAtomicTODO(mlir::Type elementType, mlir::Location loc) {
     return;
   if constexpr (std::is_same<AtomicListT,
                              Fortran::parser::OmpAtomicClauseList>()) {
-    // based on assertion for supported element types in OMPIRBuilder.cpp
+    // Based on assertion for supported element types in OMPIRBuilder.cpp
     // createAtomicRead
     mlir::Type unwrappedEleTy = fir::unwrapRefType(elementType);
     bool supportedAtomicType =
