@@ -16,7 +16,7 @@
 namespace mlir {
 
 class ConversionTarget;
-class SCFRotateWhileLoopPassOptions;
+struct SCFRotateWhileLoopPassOptions;
 class TypeConverter;
 
 namespace scf {
@@ -88,6 +88,10 @@ void populateUpliftWhileToForPatterns(RewritePatternSet &patterns);
 
 /// Populate patterns to rotate `scf.while` ops, constructing `do-while` loops
 /// from `while` loops.
+///
+/// Note applying these patterns recursively to newly created operations will
+/// lead to infinite recursion, so `mlir::GreedyRewriteStrictness::ExistingOps`
+/// must be used in passes using these patterns.
 void populateSCFRotateWhileLoopPatterns(
     RewritePatternSet &patterns, const SCFRotateWhileLoopPassOptions &options);
 } // namespace scf
