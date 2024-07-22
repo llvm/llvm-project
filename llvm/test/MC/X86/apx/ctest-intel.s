@@ -771,8 +771,6 @@
 
 ## "{evex} test*" are alias for "ctestt* {dfv=of,sf,zf,cf}"
 
-# RUN: llvm-mc -triple x86_64 -show-encoding -x86-asm-syntax=intel -output-asm-variant=1 %s | FileCheck %s
-
 # CHECK: ctestt	{dfv=of,sf,zf,cf}	byte ptr [r8 + 4*rax + 123], 123
 # CHECK: encoding: [0x62,0xd4,0x7c,0x0a,0xf6,0x44,0x80,0x7b,0x7b]
          {evex} test	byte ptr [r8 + 4*rax + 123], 123

@@ -1295,4 +1295,3 @@
 # CHECK: ccmpt	{dfv=of,sf,zf,cf}	r15, r9
 # CHECK: encoding: [0x62,0x54,0xfc,0x0a,0x39,0xcf]
          {evex} cmp	r15, r9
-
