@@ -99,8 +99,6 @@ private:
   /// Whether this section has had instructions emitted into it.
   bool HasInstructions : 1;
 
-  bool HasLayout : 1;
-
   bool IsRegistered : 1;
 
   bool IsText : 1;
@@ -168,9 +166,6 @@ public:
 
   bool hasInstructions() const { return HasInstructions; }
   void setHasInstructions(bool Value) { HasInstructions = Value; }
-
-  bool hasLayout() const { return HasLayout; }
-  void setHasLayout(bool Value) { HasLayout = Value; }
 
   bool isRegistered() const { return IsRegistered; }
   void setIsRegistered(bool Value) { IsRegistered = Value; }
