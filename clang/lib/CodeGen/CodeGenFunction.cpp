@@ -233,6 +233,11 @@ llvm::Type *CodeGenFunction::ConvertType(QualType T) {
   return CGM.getTypes().ConvertType(T);
 }
 
+llvm::Type *CodeGenFunction::convertTypeForLoadStore(QualType ASTTy,
+                                                     llvm::Type *LLVMTy) {
+  return CGM.getTypes().convertTypeForLoadStore(ASTTy, LLVMTy);
+}
+
 TypeEvaluationKind CodeGenFunction::getEvaluationKind(QualType type) {
   type = type.getCanonicalType();
   while (true) {
