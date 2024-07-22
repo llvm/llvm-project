@@ -1150,6 +1150,18 @@ def DoubleConst1 : PatLeaf<(fpimm), [{
   return &N->getValueAPF().getSemantics() == &llvm::APFloat::IEEEdouble() &&
          N->getValueAPF().convertToDouble() == 1.0;
 }]>;
+// Constant -1.0 (double)
+def DoubleConstNeg1 : PatLeaf<(fpimm), [{
+  return &N->getValueAPF().getSemantics() == &llvm::APFloat::IEEEdouble() &&
+         N->getValueAPF().convertToDouble() == -1.0;
+}]>;
+
+
+// Constant -X -> X (double)
+def NegDoubleConst : SDNodeXForm<fpimm, [{
+  return CurDAG->getTargetConstantFP(-(N->getValueAPF()),
+                                     SDLoc(N), MVT::f64);
+}]>;
 
 // Loads FP16 constant into a register.
 //
@@ -1224,6 +1236,11 @@ def FDIV64ri :
             (ins Float64Regs:$a, f64imm:$b),
             "div.rn.f64 \t$dst, $a, $b;",
             [(set Float64Regs:$dst, (fdiv Float64Regs:$a, fpimm:$b))]>;
+
+// fdiv will be converted to rcp
+// fneg (fdiv 1.0, X) => fneg (rcp.rn X)
+def : Pat<(fdiv DoubleConstNeg1:$a, Float64Regs:$b),
+          (FNEGf64 (FDIV641r (NegDoubleConst node:$a), Float64Regs:$b))>;
 
 //
 // F32 Approximate reciprocal

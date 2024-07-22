@@ -10,6 +10,7 @@
 
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/threads/linux/rwlock.h"
 #include "src/__support/time/linux/abs_timeout.h"
@@ -17,7 +18,7 @@
 #include <errno.h>
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 static_assert(
     sizeof(RwLock) == sizeof(pthread_rwlock_t) &&
@@ -46,4 +47,4 @@ LLVM_LIBC_FUNCTION(int, pthread_rwlock_timedrdlock,
   __builtin_unreachable();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

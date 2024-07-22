@@ -17,6 +17,7 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
@@ -52,7 +53,7 @@ LIBC_INLINE constexpr bool NO_FMA = true;
 #define LIBC_MATH_TAN_SKIP_ACCURATE_PASS
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using DoubleDouble = fputil::DoubleDouble;
 using Float128 = typename fputil::DyadicFloat<128>;
@@ -149,7 +150,7 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
 
   DoubleDouble y;
   unsigned k;
-  generic::LargeRangeReduction<NO_FMA> range_reduction_large;
+  generic::LargeRangeReduction<NO_FMA> range_reduction_large{};
 
   // |x| < 2^32 (with FMA) or |x| < 2^23 (w/o FMA)
   if (LIBC_LIKELY(x_e < FPBits::EXP_BIAS + FAST_PASS_EXPONENT)) {
@@ -159,7 +160,7 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
       if (LIBC_UNLIKELY(x == 0.0))
         return x;
 
-      // For |x| < 2^-27, |tan(x) - x| < ulp(x)/2.
+        // For |x| < 2^-27, |tan(x) - x| < ulp(x)/2.
 #ifdef LIBC_TARGET_CPU_HAS_FMA
       return fputil::multiply_add(x, 0x1.0p-54, x);
 #else
@@ -316,4 +317,4 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
 #endif // !LIBC_MATH_TAN_SKIP_ACCURATE_PASS
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

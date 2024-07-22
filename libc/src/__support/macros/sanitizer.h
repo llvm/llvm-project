@@ -28,6 +28,7 @@
 #endif
 
 #if LIBC_HAS_FEATURE(address_sanitizer)
+#define LIBC_HAVE_ADDRESS_SANITIZER
 #include <sanitizer/asan_interface.h>
 #define ASAN_POISON_MEMORY_REGION(addr, size)                                  \
   __asan_poison_memory_region((addr), (size))

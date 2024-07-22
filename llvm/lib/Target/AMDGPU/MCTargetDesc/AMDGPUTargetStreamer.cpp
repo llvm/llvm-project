@@ -828,10 +828,8 @@ void AMDGPUTargetELFStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
   MCSymbolELF *SymbolELF = cast<MCSymbolELF>(Symbol);
   SymbolELF->setType(ELF::STT_OBJECT);
 
-  if (!SymbolELF->isBindingSet()) {
+  if (!SymbolELF->isBindingSet())
     SymbolELF->setBinding(ELF::STB_GLOBAL);
-    SymbolELF->setExternal(true);
-  }
 
   if (SymbolELF->declareCommon(Size, Alignment, true)) {
     report_fatal_error("Symbol: " + Symbol->getName() +

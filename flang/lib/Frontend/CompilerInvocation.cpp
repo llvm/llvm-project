@@ -431,6 +431,10 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
           args.getLastArg(clang::driver::options::OPT_target_cpu))
     opts.cpu = a->getValue();
 
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_tune_cpu))
+    opts.cpuToTuneFor = a->getValue();
+
   for (const llvm::opt::Arg *currentArg :
        args.filtered(clang::driver::options::OPT_target_feature))
     opts.featuresAsWritten.emplace_back(currentArg->getValue());
@@ -831,6 +835,11 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   // -fdebug-module-writer option
   if (args.hasArg(clang::driver::options::OPT_fdebug_module_writer)) {
     res.setDebugModuleDir(true);
+  }
+
+  // -fhermetic-module-files option
+  if (args.hasArg(clang::driver::options::OPT_fhermetic_module_files)) {
+    res.setHermeticModuleFileOutput(true);
   }
 
   // -module-suffix

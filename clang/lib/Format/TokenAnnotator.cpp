@@ -372,10 +372,6 @@ private:
                OpeningParen.Previous->is(tok::kw__Generic)) {
       Contexts.back().ContextType = Context::C11GenericSelection;
       Contexts.back().IsExpression = true;
-    } else if (Line.InPPDirective &&
-               (!OpeningParen.Previous ||
-                OpeningParen.Previous->isNot(tok::identifier))) {
-      Contexts.back().IsExpression = true;
     } else if (Contexts[Contexts.size() - 2].CaretFound) {
       // This is the parameter list of an ObjC block.
       Contexts.back().IsExpression = false;
@@ -388,7 +384,20 @@ private:
                OpeningParen.Previous->MatchingParen->isOneOf(
                    TT_ObjCBlockLParen, TT_FunctionTypeLParen)) {
       Contexts.back().IsExpression = false;
-    } else if (!Line.MustBeDeclaration && !Line.InPPDirective) {
+    } else if (Line.InPPDirective) {
+      auto IsExpr = [&OpeningParen] {
+        const auto *Tok = OpeningParen.Previous;
+        if (!Tok || Tok->isNot(tok::identifier))
+          return true;
+        Tok = Tok->Previous;
+        while (Tok && Tok->endsSequence(tok::coloncolon, tok::identifier)) {
+          assert(Tok->Previous);
+          Tok = Tok->Previous->Previous;
+        }
+        return !Tok || !Tok->Tok.getIdentifierInfo();
+      };
+      Contexts.back().IsExpression = IsExpr();
+    } else if (!Line.MustBeDeclaration) {
       bool IsForOrCatch =
           OpeningParen.Previous &&
           OpeningParen.Previous->isOneOf(tok::kw_for, tok::kw_catch);
@@ -2458,9 +2467,9 @@ private:
         Current.setType(TT_CastRParen);
       if (Current.MatchingParen && Current.Next &&
           !Current.Next->isBinaryOperator() &&
-          !Current.Next->isOneOf(tok::semi, tok::colon, tok::l_brace,
-                                 tok::comma, tok::period, tok::arrow,
-                                 tok::coloncolon, tok::kw_noexcept)) {
+          !Current.Next->isOneOf(
+              tok::semi, tok::colon, tok::l_brace, tok::l_paren, tok::comma,
+              tok::period, tok::arrow, tok::coloncolon, tok::kw_noexcept)) {
         if (FormatToken *AfterParen = Current.MatchingParen->Next;
             AfterParen && AfterParen->isNot(tok::caret)) {
           // Make sure this isn't the return type of an Obj-C block declaration.
@@ -2616,8 +2625,10 @@ private:
       return false;
 
     // int a or auto a.
-    if (PreviousNotConst->isOneOf(tok::identifier, tok::kw_auto))
+    if (PreviousNotConst->isOneOf(tok::identifier, tok::kw_auto) &&
+        PreviousNotConst->isNot(TT_StatementAttributeLikeMacro)) {
       return true;
+    }
 
     // *a or &a or &&a.
     if (PreviousNotConst->is(TT_PointerOrReference))
@@ -4713,14 +4724,13 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (Right.is(TT_OverloadedOperatorLParen))
       return spaceRequiredBeforeParens(Right);
     // Function declaration or definition
-    if (Line.MightBeFunctionDecl && (Left.is(TT_FunctionDeclarationName))) {
-      if (Line.mightBeFunctionDefinition()) {
-        return Style.SpaceBeforeParensOptions.AfterFunctionDefinitionName ||
-               spaceRequiredBeforeParens(Right);
-      } else {
-        return Style.SpaceBeforeParensOptions.AfterFunctionDeclarationName ||
-               spaceRequiredBeforeParens(Right);
-      }
+    if (Line.MightBeFunctionDecl && Right.is(TT_FunctionDeclarationLParen)) {
+      if (spaceRequiredBeforeParens(Right))
+        return true;
+      const auto &Options = Style.SpaceBeforeParensOptions;
+      return Line.mightBeFunctionDefinition()
+                 ? Options.AfterFunctionDefinitionName
+                 : Options.AfterFunctionDeclarationName;
     }
     // Lambda
     if (Line.Type != LT_PreprocessorDirective && Left.is(tok::r_square) &&

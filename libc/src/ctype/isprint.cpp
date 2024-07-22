@@ -9,8 +9,9 @@
 #include "src/ctype/isprint.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // TODO: Currently restricted to default locale.
 // These should be extended using locale information.
@@ -19,4 +20,4 @@ LLVM_LIBC_FUNCTION(int, isprint, (int c)) {
   return static_cast<int>((ch - ' ') < 95);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

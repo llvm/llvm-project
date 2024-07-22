@@ -1182,16 +1182,22 @@ public:
   /// stack arguments from being clobbered.
   SDValue getStackArgumentTokenFactor(SDValue Chain);
 
-  SDValue getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
-                    SDValue Size, Align Alignment, bool isVol,
-                    bool AlwaysInline, bool isTailCall,
-                    MachinePointerInfo DstPtrInfo,
-                    MachinePointerInfo SrcPtrInfo,
-                    const AAMDNodes &AAInfo = AAMDNodes(),
-                    AAResults *AA = nullptr);
+  /* \p CI if not null is the memset call being lowered.
+   * \p OverrideTailCall is an optional parameter that can be used to override
+   * the tail call optimization decision. */
+  SDValue
+  getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
+            SDValue Size, Align Alignment, bool isVol, bool AlwaysInline,
+            const CallInst *CI, std::optional<bool> OverrideTailCall,
+            MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo,
+            const AAMDNodes &AAInfo = AAMDNodes(), AAResults *AA = nullptr);
 
+  /* \p CI if not null is the memset call being lowered.
+   * \p OverrideTailCall is an optional parameter that can be used to override
+   * the tail call optimization decision. */
   SDValue getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
-                     SDValue Size, Align Alignment, bool isVol, bool isTailCall,
+                     SDValue Size, Align Alignment, bool isVol,
+                     const CallInst *CI, std::optional<bool> OverrideTailCall,
                      MachinePointerInfo DstPtrInfo,
                      MachinePointerInfo SrcPtrInfo,
                      const AAMDNodes &AAInfo = AAMDNodes(),
@@ -1199,7 +1205,7 @@ public:
 
   SDValue getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
                     SDValue Size, Align Alignment, bool isVol,
-                    bool AlwaysInline, bool isTailCall,
+                    bool AlwaysInline, const CallInst *CI,
                     MachinePointerInfo DstPtrInfo,
                     const AAMDNodes &AAInfo = AAMDNodes());
 

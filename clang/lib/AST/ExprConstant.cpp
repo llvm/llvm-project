@@ -2859,6 +2859,9 @@ static bool handleIntIntBinOp(EvalInfo &Info, const BinaryOperator *E,
       else if (LHS.countl_zero() < SA)
         Info.CCEDiag(E, diag::note_constexpr_lshift_discards);
     }
+    if (Info.EvalStatus.Diag && !Info.EvalStatus.Diag->empty() &&
+        Info.getLangOpts().CPlusPlus11)
+      return false;
     Result = LHS << SA;
     return true;
   }
@@ -2882,6 +2885,10 @@ static bool handleIntIntBinOp(EvalInfo &Info, const BinaryOperator *E,
     if (SA != RHS)
       Info.CCEDiag(E, diag::note_constexpr_large_shift)
         << RHS << E->getType() << LHS.getBitWidth();
+
+    if (Info.EvalStatus.Diag && !Info.EvalStatus.Diag->empty() &&
+        Info.getLangOpts().CPlusPlus11)
+      return false;
     Result = LHS >> SA;
     return true;
   }
@@ -11471,7 +11478,7 @@ bool ArrayExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
 
 bool ArrayExprEvaluator::VisitCXXParenListInitExpr(
     const CXXParenListInitExpr *E) {
-  assert(dyn_cast<ConstantArrayType>(E->getType()) &&
+  assert(E->getType()->isConstantArrayType() &&
          "Expression result is not a constant array type");
 
   return VisitCXXParenListOrInitListExpr(E, E->getInitExprs(),

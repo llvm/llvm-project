@@ -10,9 +10,11 @@ from lldbsuite.test import lldbutil
 
 
 class TestBitfieldEnum(TestBase):
-    # clang's DWARF v2 output is missing DW_AT_type which causes unsigned_max to
-    # appear as -1 instead of the "max" enumerator, whose value is 3.
-    @skipIf(dwarf_version=["<", "3"], compiler="clang")
+    # Prior to clang-19, clang's DWARF v2 is missing missing DW_AT_type which
+    # causes unsigned_max to appear as -1 instead of the "max" enumerator, whose
+    # value is 3. From 19 onward, DW_AT_type is added as long as strict DWARF
+    # is not enabled.
+    @skipIf(dwarf_version=["<", "3"], compiler="clang", compiler_version=["<", "19.0"])
     def test_bitfield_enums(self):
         self.build()
 

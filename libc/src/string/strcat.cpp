@@ -7,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strcat.h"
+#include "src/__support/macros/config.h"
 #include "src/string/strcpy.h"
 #include "src/string/string_utils.h"
 
 #include "src/__support/common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(char *, strcat,
                    (char *__restrict dest, const char *__restrict src)) {
@@ -23,4 +24,4 @@ LLVM_LIBC_FUNCTION(char *, strcat,
   return dest;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

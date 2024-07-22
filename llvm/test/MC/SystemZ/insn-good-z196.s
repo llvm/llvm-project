@@ -277,9 +277,12 @@
 # fixup A - offset: 2, value: frob@PLT+2, kind: FK_390_PC32DBL
 #CHECK: brcth	%r8, frob@PLT           # encoding: [0xcc,0x86,A,A,A,A]
 # fixup A - offset: 2, value: frob@PLT+2, kind: FK_390_PC32DBL
+#CHECK: brcth	%r8, frob@PLT           # encoding: [0xcc,0x86,A,A,A,A]
+# fixup A - offset: 2, value: frob@PLT+2, kind: FK_390_PC32DBL
 
 	brcth	%r7,frob@PLT
 	brcth	%r8,frob@PLT
+	jcth	%r8,frob@PLT
 
 #CHECK: cdfbra	%f0, 0, %r0, 0          # encoding: [0xb3,0x95,0x00,0x00]
 #CHECK: cdfbra	%f0, 0, %r0, 15         # encoding: [0xb3,0x95,0x0f,0x00]

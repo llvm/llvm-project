@@ -34,13 +34,13 @@
 #error "Unsupported architecture"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE static void inline_memset(void *dst, uint8_t value, size_t count) {
   LIBC_SRC_STRING_MEMORY_UTILS_MEMSET(reinterpret_cast<Ptr>(dst), value, count);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #undef LIBC_SRC_STRING_MEMORY_UTILS_MEMSET
 

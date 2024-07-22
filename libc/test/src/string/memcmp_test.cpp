@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "memory_utils/memory_check_utils.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memcmp.h"
 #include "test/UnitTest/Test.h"
 #include "test/UnitTest/TestLogger.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 TEST(LlvmLibcMemcmpTest, CmpZeroByte) {
   const char *lhs = "ab";
@@ -64,4 +65,4 @@ TEST(LlvmLibcMemcmpTest, SizeSweep) {
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

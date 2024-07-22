@@ -9,6 +9,7 @@
 #ifndef LLDB_LLDB_PRIVATE_INTERFACES_H
 #define LLDB_LLDB_PRIVATE_INTERFACES_H
 
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -55,8 +56,7 @@ typedef ObjectFile *(*ObjectFileCreateMemoryInstance)(
     const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
     const lldb::ProcessSP &process_sp, lldb::addr_t offset);
 typedef bool (*ObjectFileSaveCore)(const lldb::ProcessSP &process_sp,
-                                   const FileSpec &outfile,
-                                   lldb::SaveCoreStyle &core_style,
+                                   const lldb_private::SaveCoreOptions &options,
                                    Status &error);
 typedef EmulateInstruction *(*EmulateInstructionCreateInstance)(
     const ArchSpec &arch, InstructionType inst_type);
