@@ -3,92 +3,96 @@
 ; RUN: opt < %s -S -passes=simplifycfg | FileCheck --check-prefix=CHECK-NOFOLD %s
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -mattr=+avx2 < %s -S -passes=simplifycfg | FileCheck --check-prefix=CHECK-FOLD %s
 
-define { <2 x float>, <2 x float> } @foo(float %speed, <2 x float> %velocity.coerce0, <2 x float> %velocity.coerce1) {
+define { <2 x float>, <2 x float> } @foo(float %arg, <2 x float> %arg1, <2 x float> %arg2) {
 ; CHECK-NOFOLD-LABEL: define { <2 x float>, <2 x float> } @foo(
-; CHECK-NOFOLD-SAME: float [[SPEED:%.*]], <2 x float> [[VELOCITY_COERCE0:%.*]], <2 x float> [[VELOCITY_COERCE1:%.*]]) {
-; CHECK-NOFOLD-NEXT:  [[ENTRY:.*]]:
-; CHECK-NOFOLD-NEXT:    [[CMP:%.*]] = fcmp fast ogt float [[SPEED]], 0x3F747AE140000000
-; CHECK-NOFOLD-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]], !unpredictable [[META0:![0-9]+]]
-; CHECK-NOFOLD:       [[IF_THEN]]:
-; CHECK-NOFOLD-NEXT:    [[VELOCITY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[VELOCITY_COERCE0]], i64 0
-; CHECK-NOFOLD-NEXT:    [[MUL_I_I_I_I:%.*]] = fmul fast float [[VELOCITY_SROA_0_0_VEC_EXTRACT]], [[VELOCITY_SROA_0_0_VEC_EXTRACT]]
-; CHECK-NOFOLD-NEXT:    [[VELOCITY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[VELOCITY_COERCE0]], i64 1
-; CHECK-NOFOLD-NEXT:    [[MUL8_I_I_I_I:%.*]] = fmul fast float [[VELOCITY_SROA_0_4_VEC_EXTRACT]], [[VELOCITY_SROA_0_4_VEC_EXTRACT]]
-; CHECK-NOFOLD-NEXT:    [[ADD_I_I_I_I:%.*]] = fadd fast float [[MUL8_I_I_I_I]], [[MUL_I_I_I_I]]
-; CHECK-NOFOLD-NEXT:    [[VELOCITY_SROA_14_8_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[VELOCITY_COERCE1]], i64 0
-; CHECK-NOFOLD-NEXT:    [[MUL13_I_I_I_I:%.*]] = fmul fast float [[VELOCITY_SROA_14_8_VEC_EXTRACT]], [[VELOCITY_SROA_14_8_VEC_EXTRACT]]
-; CHECK-NOFOLD-NEXT:    [[ADD14_I_I_I_I:%.*]] = fadd fast float [[ADD_I_I_I_I]], [[MUL13_I_I_I_I]]
-; CHECK-NOFOLD-NEXT:    [[TMP0:%.*]] = tail call fast noundef float @llvm.sqrt.f32(float [[ADD14_I_I_I_I]])
-; CHECK-NOFOLD-NEXT:    [[MUL_I_I_I:%.*]] = fdiv fast float 0x3FEFD70A40000000, [[TMP0]]
-; CHECK-NOFOLD-NEXT:    [[SUB_I:%.*]] = fmul fast float [[MUL_I_I_I]], [[VELOCITY_SROA_0_0_VEC_EXTRACT]]
-; CHECK-NOFOLD-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[SUB_I]], i64 0
-; CHECK-NOFOLD-NEXT:    [[SUB8_I:%.*]] = fmul fast float [[MUL_I_I_I]], [[VELOCITY_SROA_0_4_VEC_EXTRACT]]
-; CHECK-NOFOLD-NEXT:    [[VELOCITY_SROA_0_4_VEC_INSERT25:%.*]] = insertelement <2 x float> [[TMP1]], float [[SUB8_I]], i64 1
-; CHECK-NOFOLD-NEXT:    [[SUB13_I:%.*]] = fmul fast float [[MUL_I_I_I]], [[VELOCITY_SROA_14_8_VEC_EXTRACT]]
-; CHECK-NOFOLD-NEXT:    [[VELOCITY_SROA_14_8_VEC_INSERT35:%.*]] = insertelement <2 x float> [[VELOCITY_COERCE1]], float [[SUB13_I]], i64 0
-; CHECK-NOFOLD-NEXT:    br label %[[IF_END]]
-; CHECK-NOFOLD:       [[IF_END]]:
-; CHECK-NOFOLD-NEXT:    [[VELOCITY_SROA_0_0:%.*]] = phi nsz <2 x float> [ [[VELOCITY_SROA_0_4_VEC_INSERT25]], %[[IF_THEN]] ], [ zeroinitializer, %[[ENTRY]] ]
-; CHECK-NOFOLD-NEXT:    [[VELOCITY_SROA_14_0:%.*]] = phi nsz <2 x float> [ [[VELOCITY_SROA_14_8_VEC_INSERT35]], %[[IF_THEN]] ], [ zeroinitializer, %[[ENTRY]] ]
-; CHECK-NOFOLD-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } poison, <2 x float> [[VELOCITY_SROA_0_0]], 0
-; CHECK-NOFOLD-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } [[DOTFCA_0_INSERT]], <2 x float> [[VELOCITY_SROA_14_0]], 1
-; CHECK-NOFOLD-NEXT:    ret { <2 x float>, <2 x float> } [[DOTFCA_1_INSERT]]
+; CHECK-NOFOLD-SAME: float [[ARG:%.*]], <2 x float> [[ARG1:%.*]], <2 x float> [[ARG2:%.*]]) {
+; CHECK-NOFOLD-NEXT:  [[BB:.*]]:
+; CHECK-NOFOLD-NEXT:    [[I:%.*]] = fcmp fast ogt float [[ARG]], 0x3F747AE140000000
+; CHECK-NOFOLD-NEXT:    br i1 [[I]], label %[[BB3:.*]], label %[[BB20:.*]], !unpredictable [[META0:![0-9]+]]
+; CHECK-NOFOLD:       [[BB3]]:
+; CHECK-NOFOLD-NEXT:    [[I4:%.*]] = extractelement <2 x float> [[ARG1]], i64 0
+; CHECK-NOFOLD-NEXT:    [[I5:%.*]] = fmul fast float [[I4]], [[I4]]
+; CHECK-NOFOLD-NEXT:    [[I6:%.*]] = extractelement <2 x float> [[ARG1]], i64 1
+; CHECK-NOFOLD-NEXT:    [[I7:%.*]] = fmul fast float [[I6]], [[I6]]
+; CHECK-NOFOLD-NEXT:    [[I8:%.*]] = fadd fast float [[I7]], [[I5]]
+; CHECK-NOFOLD-NEXT:    [[I9:%.*]] = extractelement <2 x float> [[ARG2]], i64 0
+; CHECK-NOFOLD-NEXT:    [[I10:%.*]] = fmul fast float [[I9]], [[I9]]
+; CHECK-NOFOLD-NEXT:    [[I11:%.*]] = fadd fast float [[I8]], [[I10]]
+; CHECK-NOFOLD-NEXT:    [[I12:%.*]] = tail call fast noundef float @llvm.sqrt.f32(float [[I11]])
+; CHECK-NOFOLD-NEXT:    [[I13:%.*]] = fdiv fast float 0x3FEFD70A40000000, [[I12]]
+; CHECK-NOFOLD-NEXT:    [[I14:%.*]] = fmul fast float [[I13]], [[I4]]
+; CHECK-NOFOLD-NEXT:    [[I15:%.*]] = insertelement <2 x float> poison, float [[I14]], i64 0
+; CHECK-NOFOLD-NEXT:    [[I16:%.*]] = fmul fast float [[I13]], [[I6]]
+; CHECK-NOFOLD-NEXT:    [[I17:%.*]] = insertelement <2 x float> [[I15]], float [[I16]], i64 1
+; CHECK-NOFOLD-NEXT:    [[I18:%.*]] = fmul fast float [[I13]], [[I9]]
+; CHECK-NOFOLD-NEXT:    [[I19:%.*]] = insertelement <2 x float> [[ARG2]], float [[I18]], i64 0
+; CHECK-NOFOLD-NEXT:    br label %[[BB20]]
+; CHECK-NOFOLD:       [[BB20]]:
+; CHECK-NOFOLD-NEXT:    [[I21:%.*]] = phi nsz <2 x float> [ [[I17]], %[[BB3]] ], [ zeroinitializer, %[[BB]] ]
+; CHECK-NOFOLD-NEXT:    [[I22:%.*]] = phi nsz <2 x float> [ [[I19]], %[[BB3]] ], [ zeroinitializer, %[[BB]] ]
+; CHECK-NOFOLD-NEXT:    [[I23:%.*]] = insertvalue { <2 x float>, <2 x float> } poison, <2 x float> [[I21]], 0
+; CHECK-NOFOLD-NEXT:    [[I24:%.*]] = insertvalue { <2 x float>, <2 x float> } [[I23]], <2 x float> [[I22]], 1
+; CHECK-NOFOLD-NEXT:    ret { <2 x float>, <2 x float> } [[I24]]
 ;
 ; CHECK-FOLD-LABEL: define { <2 x float>, <2 x float> } @foo(
-; CHECK-FOLD-SAME: float [[SPEED:%.*]], <2 x float> [[VELOCITY_COERCE0:%.*]], <2 x float> [[VELOCITY_COERCE1:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-FOLD-NEXT:  [[ENTRY:.*:]]
-; CHECK-FOLD-NEXT:    [[CMP:%.*]] = fcmp fast ogt float [[SPEED]], 0x3F747AE140000000
-; CHECK-FOLD-NEXT:    [[VELOCITY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[VELOCITY_COERCE0]], i64 0
-; CHECK-FOLD-NEXT:    [[MUL_I_I_I_I:%.*]] = fmul fast float [[VELOCITY_SROA_0_0_VEC_EXTRACT]], [[VELOCITY_SROA_0_0_VEC_EXTRACT]]
-; CHECK-FOLD-NEXT:    [[VELOCITY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[VELOCITY_COERCE0]], i64 1
-; CHECK-FOLD-NEXT:    [[MUL8_I_I_I_I:%.*]] = fmul fast float [[VELOCITY_SROA_0_4_VEC_EXTRACT]], [[VELOCITY_SROA_0_4_VEC_EXTRACT]]
-; CHECK-FOLD-NEXT:    [[ADD_I_I_I_I:%.*]] = fadd fast float [[MUL8_I_I_I_I]], [[MUL_I_I_I_I]]
-; CHECK-FOLD-NEXT:    [[VELOCITY_SROA_14_8_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[VELOCITY_COERCE1]], i64 0
-; CHECK-FOLD-NEXT:    [[MUL13_I_I_I_I:%.*]] = fmul fast float [[VELOCITY_SROA_14_8_VEC_EXTRACT]], [[VELOCITY_SROA_14_8_VEC_EXTRACT]]
-; CHECK-FOLD-NEXT:    [[ADD14_I_I_I_I:%.*]] = fadd fast float [[ADD_I_I_I_I]], [[MUL13_I_I_I_I]]
-; CHECK-FOLD-NEXT:    [[TMP0:%.*]] = tail call fast float @llvm.sqrt.f32(float [[ADD14_I_I_I_I]])
-; CHECK-FOLD-NEXT:    [[MUL_I_I_I:%.*]] = fdiv fast float 0x3FEFD70A40000000, [[TMP0]]
-; CHECK-FOLD-NEXT:    [[SUB_I:%.*]] = fmul fast float [[MUL_I_I_I]], [[VELOCITY_SROA_0_0_VEC_EXTRACT]]
-; CHECK-FOLD-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[SUB_I]], i64 0
-; CHECK-FOLD-NEXT:    [[SUB8_I:%.*]] = fmul fast float [[MUL_I_I_I]], [[VELOCITY_SROA_0_4_VEC_EXTRACT]]
-; CHECK-FOLD-NEXT:    [[VELOCITY_SROA_0_4_VEC_INSERT25:%.*]] = insertelement <2 x float> [[TMP1]], float [[SUB8_I]], i64 1
-; CHECK-FOLD-NEXT:    [[SUB13_I:%.*]] = fmul fast float [[MUL_I_I_I]], [[VELOCITY_SROA_14_8_VEC_EXTRACT]]
-; CHECK-FOLD-NEXT:    [[VELOCITY_SROA_14_8_VEC_INSERT35:%.*]] = insertelement <2 x float> [[VELOCITY_COERCE1]], float [[SUB13_I]], i64 0
-; CHECK-FOLD-NEXT:    [[VELOCITY_SROA_0_0:%.*]] = select nsz i1 [[CMP]], <2 x float> [[VELOCITY_SROA_0_4_VEC_INSERT25]], <2 x float> zeroinitializer, !unpredictable [[META0:![0-9]+]]
-; CHECK-FOLD-NEXT:    [[VELOCITY_SROA_14_0:%.*]] = select nsz i1 [[CMP]], <2 x float> [[VELOCITY_SROA_14_8_VEC_INSERT35]], <2 x float> zeroinitializer, !unpredictable [[META0]]
-; CHECK-FOLD-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } poison, <2 x float> [[VELOCITY_SROA_0_0]], 0
-; CHECK-FOLD-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } [[DOTFCA_0_INSERT]], <2 x float> [[VELOCITY_SROA_14_0]], 1
-; CHECK-FOLD-NEXT:    ret { <2 x float>, <2 x float> } [[DOTFCA_1_INSERT]]
+; CHECK-FOLD-SAME: float [[ARG:%.*]], <2 x float> [[ARG1:%.*]], <2 x float> [[ARG2:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-FOLD-NEXT:  [[BB:.*]]:
+; CHECK-FOLD-NEXT:    [[I:%.*]] = fcmp fast ogt float [[ARG]], 0x3F747AE140000000
+; CHECK-FOLD-NEXT:    br i1 [[I]], label %[[BB3:.*]], label %[[BB20:.*]], !unpredictable [[META0:![0-9]+]]
+; CHECK-FOLD:       [[BB3]]:
+; CHECK-FOLD-NEXT:    [[I4:%.*]] = extractelement <2 x float> [[ARG1]], i64 0
+; CHECK-FOLD-NEXT:    [[I5:%.*]] = fmul fast float [[I4]], [[I4]]
+; CHECK-FOLD-NEXT:    [[I6:%.*]] = extractelement <2 x float> [[ARG1]], i64 1
+; CHECK-FOLD-NEXT:    [[I7:%.*]] = fmul fast float [[I6]], [[I6]]
+; CHECK-FOLD-NEXT:    [[I8:%.*]] = fadd fast float [[I7]], [[I5]]
+; CHECK-FOLD-NEXT:    [[I9:%.*]] = extractelement <2 x float> [[ARG2]], i64 0
+; CHECK-FOLD-NEXT:    [[I10:%.*]] = fmul fast float [[I9]], [[I9]]
+; CHECK-FOLD-NEXT:    [[I11:%.*]] = fadd fast float [[I8]], [[I10]]
+; CHECK-FOLD-NEXT:    [[I12:%.*]] = tail call fast noundef float @llvm.sqrt.f32(float [[I11]])
+; CHECK-FOLD-NEXT:    [[I13:%.*]] = fdiv fast float 0x3FEFD70A40000000, [[I12]]
+; CHECK-FOLD-NEXT:    [[I14:%.*]] = fmul fast float [[I13]], [[I4]]
+; CHECK-FOLD-NEXT:    [[I15:%.*]] = insertelement <2 x float> poison, float [[I14]], i64 0
+; CHECK-FOLD-NEXT:    [[I16:%.*]] = fmul fast float [[I13]], [[I6]]
+; CHECK-FOLD-NEXT:    [[I17:%.*]] = insertelement <2 x float> [[I15]], float [[I16]], i64 1
+; CHECK-FOLD-NEXT:    [[I18:%.*]] = fmul fast float [[I13]], [[I9]]
+; CHECK-FOLD-NEXT:    [[I19:%.*]] = insertelement <2 x float> [[ARG2]], float [[I18]], i64 0
+; CHECK-FOLD-NEXT:    br label %[[BB20]]
+; CHECK-FOLD:       [[BB20]]:
+; CHECK-FOLD-NEXT:    [[I21:%.*]] = phi nsz <2 x float> [ [[I17]], %[[BB3]] ], [ zeroinitializer, %[[BB]] ]
+; CHECK-FOLD-NEXT:    [[I22:%.*]] = phi nsz <2 x float> [ [[I19]], %[[BB3]] ], [ zeroinitializer, %[[BB]] ]
+; CHECK-FOLD-NEXT:    [[I23:%.*]] = insertvalue { <2 x float>, <2 x float> } poison, <2 x float> [[I21]], 0
+; CHECK-FOLD-NEXT:    [[I24:%.*]] = insertvalue { <2 x float>, <2 x float> } [[I23]], <2 x float> [[I22]], 1
+; CHECK-FOLD-NEXT:    ret { <2 x float>, <2 x float> } [[I24]]
 ;
-entry:
-  %cmp = fcmp fast ogt float %speed, 0x3F747AE140000000
-  br i1 %cmp, label %if.then, label %if.end, !unpredictable !0
+bb:
+  %i = fcmp fast ogt float %arg, 0x3F747AE140000000
+  br i1 %i, label %bb3, label %bb20, !unpredictable !0
 
-if.then:
-  %velocity.sroa.0.0.vec.extract = extractelement <2 x float> %velocity.coerce0, i64 0
-  %mul.i.i.i.i = fmul fast float %velocity.sroa.0.0.vec.extract, %velocity.sroa.0.0.vec.extract
-  %velocity.sroa.0.4.vec.extract = extractelement <2 x float> %velocity.coerce0, i64 1
-  %mul8.i.i.i.i = fmul fast float %velocity.sroa.0.4.vec.extract, %velocity.sroa.0.4.vec.extract
-  %add.i.i.i.i = fadd fast float %mul8.i.i.i.i, %mul.i.i.i.i
-  %velocity.sroa.14.8.vec.extract = extractelement <2 x float> %velocity.coerce1, i64 0
-  %mul13.i.i.i.i = fmul fast float %velocity.sroa.14.8.vec.extract, %velocity.sroa.14.8.vec.extract
-  %add14.i.i.i.i = fadd fast float %add.i.i.i.i, %mul13.i.i.i.i
-  %0 = tail call fast noundef float @llvm.sqrt.f32(float %add14.i.i.i.i)
-  %mul.i.i.i = fdiv fast float 0x3FEFD70A40000000, %0
-  %sub.i = fmul fast float %mul.i.i.i, %velocity.sroa.0.0.vec.extract
-  %1 = insertelement <2 x float> poison, float %sub.i, i64 0
-  %sub8.i = fmul fast float %mul.i.i.i, %velocity.sroa.0.4.vec.extract
-  %velocity.sroa.0.4.vec.insert25 = insertelement <2 x float> %1, float %sub8.i, i64 1
-  %sub13.i = fmul fast float %mul.i.i.i, %velocity.sroa.14.8.vec.extract
-  %velocity.sroa.14.8.vec.insert35 = insertelement <2 x float> %velocity.coerce1, float %sub13.i, i64 0
-  br label %if.end
+bb3:                                              ; preds = %bb
+  %i4 = extractelement <2 x float> %arg1, i64 0
+  %i5 = fmul fast float %i4, %i4
+  %i6 = extractelement <2 x float> %arg1, i64 1
+  %i7 = fmul fast float %i6, %i6
+  %i8 = fadd fast float %i7, %i5
+  %i9 = extractelement <2 x float> %arg2, i64 0
+  %i10 = fmul fast float %i9, %i9
+  %i11 = fadd fast float %i8, %i10
+  %i12 = tail call fast noundef float @llvm.sqrt.f32(float %i11)
+  %i13 = fdiv fast float 0x3FEFD70A40000000, %i12
+  %i14 = fmul fast float %i13, %i4
+  %i15 = insertelement <2 x float> poison, float %i14, i64 0
+  %i16 = fmul fast float %i13, %i6
+  %i17 = insertelement <2 x float> %i15, float %i16, i64 1
+  %i18 = fmul fast float %i13, %i9
+  %i19 = insertelement <2 x float> %arg2, float %i18, i64 0
+  br label %bb20
 
-if.end:
-  %velocity.sroa.0.0 = phi nsz <2 x float> [ %velocity.sroa.0.4.vec.insert25, %if.then ], [ zeroinitializer, %entry ]
-  %velocity.sroa.14.0 = phi nsz <2 x float> [ %velocity.sroa.14.8.vec.insert35, %if.then ], [ zeroinitializer, %entry ]
-  %.fca.0.insert = insertvalue { <2 x float>, <2 x float> } poison, <2 x float> %velocity.sroa.0.0, 0
-  %.fca.1.insert = insertvalue { <2 x float>, <2 x float> } %.fca.0.insert, <2 x float> %velocity.sroa.14.0, 1
-  ret { <2 x float>, <2 x float> } %.fca.1.insert
+bb20:                                             ; preds = %bb3, %bb
+  %i21 = phi nsz <2 x float> [ %i17, %bb3 ], [ zeroinitializer, %bb ]
+  %i22 = phi nsz <2 x float> [ %i19, %bb3 ], [ zeroinitializer, %bb ]
+  %i23 = insertvalue { <2 x float>, <2 x float> } poison, <2 x float> %i21, 0
+  %i24 = insertvalue { <2 x float>, <2 x float> } %i23, <2 x float> %i22, 1
+  ret { <2 x float>, <2 x float> } %i24
 }
 
 declare float @llvm.sqrt.f32(float)
