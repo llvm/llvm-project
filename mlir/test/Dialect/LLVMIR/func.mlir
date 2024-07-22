@@ -312,6 +312,19 @@ module {
     llvm.return
   }
 
+  llvm.func @nounwind_function() attributes {no_unwind} {
+    // CHECK: @nounwind_function
+    // CHECK-SAME: attributes {no_unwind}
+    llvm.return
+  }
+
+  llvm.func @willreturn_function() attributes {will_return} {
+    // CHECK: @willreturn_function
+    // CHECK-SAME: attributes {will_return}
+    llvm.return
+  }
+
+
 }
 
 // -----
