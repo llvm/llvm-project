@@ -346,7 +346,7 @@ public:
   /// the appropriate mutex expression in the lexical context where the function
   /// is called.  PrevCtx holds the context in which the arguments themselves
   /// should be evaluated; multiple calling contexts can be chained together
-  /// by the lock_returned attribute.
+  /// by the capability_returned attribute.
   struct CallingContext {
     // The previous context; or 0 if none.
     CallingContext  *Prev;
