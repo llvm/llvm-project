@@ -10,24 +10,15 @@
 
 // Index iterator out of bounds.
 
-// REQUIRES: has-unix-headers, libcpp-has-abi-bounded-iterators
+// REQUIRES: has-unix-headers, libcpp-has-abi-bounded-iterators-in-vector
 // UNSUPPORTED: libcpp-hardening-mode=none, c++03
 
 #include <vector>
 #include <cassert>
 
 #include "check_assertion.h"
+#include "fill_to_capacity.h"
 #include "min_allocator.h"
-
-template <typename T, typename A>
-void fill_to_capacity(std::vector<T, A>& vec) {
-  // Fill vec up to its capacity. Our bounded iterators currently unable to
-  // catch accesses between size and capacity due to iterator stability
-  // guarantees. This function clears those effects.
-  while (vec.size() < vec.capacity()) {
-    vec.push_back(T());
-  }
-}
 
 int main(int, char**) {
   {

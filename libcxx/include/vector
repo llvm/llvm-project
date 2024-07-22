@@ -402,10 +402,10 @@ public:
   typedef typename __alloc_traits::difference_type difference_type;
   typedef typename __alloc_traits::pointer pointer;
   typedef typename __alloc_traits::const_pointer const_pointer;
-#ifdef _LIBCPP_ABI_BOUNDED_ITERATORS
-  // The pointer must be passed through __wrap_iter because
-  // __alloc_traits::pointer may not be detected as a continguous iterator on
-  // its own.
+#ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
+  // Users might provide custom allocators, and prior to C++20 we have no existing way to detect whether the allocator's
+  // pointer type is contiguous (though it has to be by the Standard). Using the wrapper type ensures the iterator is
+  // considered contiguous.
   typedef __bounded_iter<__wrap_iter<pointer>> iterator;
   typedef __bounded_iter<__wrap_iter<const_pointer>> const_iterator;
 #else
@@ -805,32 +805,39 @@ private:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __append(size_type __n);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __append(size_type __n, const_reference __x);
+
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator __make_iter(pointer __p) _NOEXCEPT {
-#ifdef _LIBCPP_ABI_BOUNDED_ITERATORS
+#ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
     // Bound the iterator according to the capacity, rather than the size.
-    // Resizing a vector up to the capacity will not invalidate iterators, so,
-    // Without a way to update all live iterators on resize, we must
-    // conservatively bound the iterator by the capacity rather than the size.
-    return __make_bounded_iter(
-        __wrap_iter<pointer>(__p), __wrap_iter<pointer>(this->__begin_), __wrap_iter<pointer>(this->__end_cap()));
+    //
+    // Vector guarantees that iterators stay valid as long as no reallocation occurs even if new elements are inserted
+    // into the container; for these cases, we need to make sure that the newly-inserted elements can be accessed
+    // through the bounded iterator without failing checks. The downside is that the bounded iterator won't catch
+    // access that is logically out-of-bounds, i.e., goes beyond the size, but is still within the capacity. With the
+    // current implementation, there is no connection between a bounded iterator and its associated container, so we
+    // don't have a way to update existing valid iterators when the container is resized, so we have to go with a more
+    // lax approach.
+    return std::__make_bounded_iter(
+        std::__wrap_iter<pointer>(__p),
+        std::__wrap_iter<pointer>(this->__begin_),
+        std::__wrap_iter<pointer>(this->__end_cap()));
 #else
     return iterator(__p);
-#endif
+#endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
   }
+
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_iterator __make_iter(const_pointer __p) const _NOEXCEPT {
-#ifdef _LIBCPP_ABI_BOUNDED_ITERATORS
+#ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
     // Bound the iterator according to the capacity, rather than the size.
-    // Resizing a vector up to the capacity will not invalidate iterators, so,
-    // Without a way to update all live iterators on resize, we must
-    // conservatively bound the iterator by the capacity rather than the size.
-    return __make_bounded_iter(
-        __wrap_iter<const_pointer>(__p),
-        __wrap_iter<const_pointer>(this->__begin_),
-        __wrap_iter<const_pointer>(this->__end_cap()));
+    return std::__make_bounded_iter(
+        std::__wrap_iter<const_pointer>(__p),
+        std::__wrap_iter<const_pointer>(this->__begin_),
+        std::__wrap_iter<const_pointer>(this->__end_cap()));
 #else
     return const_iterator(__p);
-#endif
+#endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
   }
+
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer

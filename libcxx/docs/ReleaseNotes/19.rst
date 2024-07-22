@@ -76,6 +76,20 @@ Improvements and New Features
 
 - The formatting library is updated to Unicode 15.1.0.
 
+- ``string`` and ``vector`` can now be configured to use bounded iterators when hardening is enabled. Note that checks
+  for iterator invalidation are currently not supported -- any accesses made through an invalidated bounded iterator
+  will still result in undefined behavior (bounded iterator follow the normal invalidation rules of the associated
+  container). ``string`` bounded iterators use the logical size of the container (``index < str.size()``) whereas
+  ``vector`` bounded iterators use the "physical" size of the container (``index < vec.capacity()``) which is a less
+  strict check; refer to the implementation for further details.
+
+  Bounded iterators can be enabled via the ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING`` for ``string`` and via the
+  ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR`` for ``vector``; note that checks will only be performed if the hardening
+  mode is set to ``fast`` or above (i.e., no checking is performed in the unchecked mode, even if bounded iterators are
+  enabled in the ABI configuration).
+
+  Note: bounded iterators currently are not supported for ``vector<bool>``.
+
 Deprecations and Removals
 -------------------------
 
