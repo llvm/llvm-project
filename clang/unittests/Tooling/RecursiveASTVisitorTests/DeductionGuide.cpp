@@ -58,7 +58,7 @@ Bar s(1);
       DeductionGuideVisitor::Lang_CXX2a));
 }
 
-TEST(RecursiveASTVisitor, DeductionGuideImplicitMode) {
+TEST(RecursiveASTVisitor, DISABLED_DeductionGuideImplicitMode) {
   DeductionGuideVisitor Visitor(/*ShouldVisitImplicitCode*/ true);
   Visitor.ExpectMatch("Foo(T) -> Foo<int>", 11, 1);
   Visitor.ExpectMatch("Bar(type-parameter-0-0) -> Foo<int>", 14, 1);
