@@ -285,7 +285,7 @@ void AMDGPUAsmPrinter::emitFunctionEntryLabel() {
     // Disassemble function name label to text.
     DisasmLines.push_back(MF->getName().str() + ":");
     DisasmLineMaxLen = std::max(DisasmLineMaxLen, DisasmLines.back().size());
-    HexLines.push_back("");
+    HexLines.emplace_back("");
   }
 
   AsmPrinter::emitFunctionEntryLabel();
@@ -298,7 +298,7 @@ void AMDGPUAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
         (Twine("BB") + Twine(getFunctionNumber())
          + "_" + Twine(MBB.getNumber()) + ":").str());
     DisasmLineMaxLen = std::max(DisasmLineMaxLen, DisasmLines.back().size());
-    HexLines.push_back("");
+    HexLines.emplace_back("");
   }
   AsmPrinter::emitBasicBlockStart(MBB);
 }
