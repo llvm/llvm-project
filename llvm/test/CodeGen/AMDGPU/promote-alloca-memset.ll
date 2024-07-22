@@ -84,4 +84,58 @@ entry:
   ret void
 }
 
+define amdgpu_kernel void @memset_array_ptr_alloca(ptr %out) {
+; CHECK-LABEL: @memset_array_ptr_alloca(
+; CHECK-NEXT:    store i64 0, ptr [[OUT:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca [6 x ptr], align 16, addrspace(5)
+  call void @llvm.memset.p5.i64(ptr addrspace(5) %alloca, i8 0, i64 48, i1 false)
+  %load = load i64, ptr addrspace(5) %alloca
+  store i64 %load, ptr %out
+  ret void
+}
+
+define amdgpu_kernel void @memset_vector_ptr_alloca(ptr %out) {
+; CHECK-LABEL: @memset_vector_ptr_alloca(
+; CHECK-NEXT:    store i64 0, ptr [[OUT:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca <6 x ptr>, align 16, addrspace(5)
+  call void @llvm.memset.p5.i64(ptr addrspace(5) %alloca, i8 0, i64 48, i1 false)
+  %load = load i64, ptr addrspace(5) %alloca
+  store i64 %load, ptr %out
+  ret void
+}
+
+define amdgpu_kernel void @memset_array_of_array_ptr_alloca(ptr %out) {
+; CHECK-LABEL: @memset_array_of_array_ptr_alloca(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [2 x [3 x ptr]], align 16, addrspace(5)
+; CHECK-NEXT:    call void @llvm.memset.p5.i64(ptr addrspace(5) [[ALLOCA]], i8 0, i64 48, i1 false)
+; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr addrspace(5) [[ALLOCA]], align 8
+; CHECK-NEXT:    store i64 [[LOAD]], ptr [[OUT:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca [2 x [3 x ptr]], align 16, addrspace(5)
+  call void @llvm.memset.p5.i64(ptr addrspace(5) %alloca, i8 0, i64 48, i1 false)
+  %load = load i64, ptr addrspace(5) %alloca
+  store i64 %load, ptr %out
+  ret void
+}
+
+define amdgpu_kernel void @memset_array_of_vec_ptr_alloca(ptr %out) {
+; CHECK-LABEL: @memset_array_of_vec_ptr_alloca(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [2 x <3 x ptr>], align 16, addrspace(5)
+; CHECK-NEXT:    call void @llvm.memset.p5.i64(ptr addrspace(5) [[ALLOCA]], i8 0, i64 48, i1 false)
+; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr addrspace(5) [[ALLOCA]], align 8
+; CHECK-NEXT:    store i64 [[LOAD]], ptr [[OUT:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca [2 x <3 x ptr>], align 16, addrspace(5)
+  call void @llvm.memset.p5.i64(ptr addrspace(5) %alloca, i8 0, i64 48, i1 false)
+  %load = load i64, ptr addrspace(5) %alloca
+  store i64 %load, ptr %out
+  ret void
+}
+
 declare void @llvm.memset.p5.i64(ptr addrspace(5) nocapture writeonly, i8, i64, i1 immarg)

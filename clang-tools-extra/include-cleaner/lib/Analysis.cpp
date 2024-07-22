@@ -105,9 +105,20 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
              }
              if (!Satisfied && !Providers.empty() &&
                  Ref.RT == RefType::Explicit &&
-                 !HeaderFilter(Providers.front().resolvedPath()))
-               Missing.insert(spellHeader(
-                   {Providers.front(), PP.getHeaderSearchInfo(), MainFile}));
+                 !HeaderFilter(Providers.front().resolvedPath())) {
+               // Check if we have any headers with the same spelling, in edge
+               // cases like `#include_next "foo.h"`, the user can't ever
+               // include the physical foo.h, but can have a spelling that
+               // refers to it.
+               auto Spelling = spellHeader(
+                   {Providers.front(), PP.getHeaderSearchInfo(), MainFile});
+               for (const Include *I : Inc.match(Header{Spelling})) {
+                 Used.insert(I);
+                 Satisfied = true;
+               }
+               if (!Satisfied)
+                 Missing.insert(std::move(Spelling));
+             }
            });
 
   AnalysisResults Results;
@@ -126,7 +137,7 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
         // Since most private -> public mappings happen in a verbatim way, we
         // check textually here. This might go wrong in presence of symlinks or
         // header mappings. But that's not different than rest of the places.
-        if (MainFile->tryGetRealPathName().endswith(PHeader))
+        if (MainFile->tryGetRealPathName().ends_with(PHeader))
           continue;
       }
     }

@@ -13,7 +13,6 @@
 #include <optional>
 #include <string>
 
-#include "lldb/Utility/Checksum.h"
 #include "lldb/Utility/ConstString.h"
 
 #include "llvm/ADT/StringRef.h"
@@ -72,12 +71,8 @@ public:
   /// \param[in] style
   ///     The style of the path
   ///
-  /// \param[in] checksum
-  ///     The MD5 checksum of the path.
-  ///
   /// \see FileSpec::SetFile (const char *path)
-  explicit FileSpec(llvm::StringRef path, Style style = Style::native,
-                    const Checksum &checksum = {});
+  explicit FileSpec(llvm::StringRef path, Style style = Style::native);
 
   explicit FileSpec(llvm::StringRef path, const llvm::Triple &triple);
 
@@ -367,11 +362,7 @@ public:
   ///
   /// \param[in] style
   ///     The style for the given path.
-  ///
-  /// \param[in] checksum
-  ///     The checksum for the given path.
-  void SetFile(llvm::StringRef path, Style style,
-               const Checksum &checksum = {});
+  void SetFile(llvm::StringRef path, Style style);
 
   /// Change the file specified with a new path.
   ///
@@ -385,21 +376,6 @@ public:
   /// \param[in] triple
   ///     The triple which is used to set the Path style.
   void SetFile(llvm::StringRef path, const llvm::Triple &triple);
-
-  bool IsResolved() const { return m_is_resolved; }
-
-  /// Set if the file path has been resolved or not.
-  ///
-  /// If you know a file path is already resolved and avoided passing a \b
-  /// true parameter for any functions that take a "bool resolve_path"
-  /// parameter, you can set the value manually using this call to make sure
-  /// we don't try and resolve it later, or try and resolve a path that has
-  /// already been resolved.
-  ///
-  /// \param[in] is_resolved
-  ///     A boolean value that will replace the current value that
-  ///     indicates if the paths in this object have been resolved.
-  void SetIsResolved(bool is_resolved) { m_is_resolved = is_resolved; }
 
   FileSpec CopyByAppendingPathComponent(llvm::StringRef component) const;
   FileSpec CopyByRemovingLastPathComponent() const;
@@ -429,20 +405,13 @@ public:
   ///   The lifetime of the StringRefs is tied to the lifetime of the FileSpec.
   std::vector<llvm::StringRef> GetComponents() const;
 
-  /// Return the checksum for this FileSpec or all zeros if there is none.
-  const Checksum &GetChecksum() const { return m_checksum; };
-
 protected:
   // Convenience method for setting the file without changing the style.
   void SetFile(llvm::StringRef path);
 
   /// Called anytime m_directory or m_filename is changed to clear any cached
   /// state in this object.
-  void PathWasModified() {
-    m_checksum = Checksum();
-    m_is_resolved = false;
-    m_absolute = Absolute::Calculate;
-  }
+  void PathWasModified() { m_absolute = Absolute::Calculate; }
 
   enum class Absolute : uint8_t {
     Calculate,
@@ -455,12 +424,6 @@ protected:
 
   /// The unique'd filename path.
   ConstString m_filename;
-
-  /// The optional MD5 checksum of the file.
-  Checksum m_checksum;
-
-  /// True if this path has been resolved.
-  mutable bool m_is_resolved = false;
 
   /// Cache whether this path is absolute.
   mutable Absolute m_absolute = Absolute::Calculate;

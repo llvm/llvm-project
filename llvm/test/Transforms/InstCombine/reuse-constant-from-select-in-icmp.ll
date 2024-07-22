@@ -102,36 +102,36 @@ define <2 x i32> @p7_vec_splat_sgt(<2 x i32> %x, <2 x i32> %y) {
   ret <2 x i32> %r
 }
 
-; Vectors with undef
+; Vectors with poison
 
-define <2 x i32> @p8_vec_nonsplat_undef0(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @p8_vec_nonsplat_undef0(
+define <2 x i32> @p8_vec_nonsplat_poison0(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @p8_vec_nonsplat_poison0(
 ; CHECK-NEXT:    [[T_INV:%.*]] = icmp ugt <2 x i32> [[X:%.*]], <i32 65535, i32 65535>
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T_INV]], <2 x i32> <i32 65535, i32 65535>, <2 x i32> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
-  %t = icmp ult <2 x i32> %x, <i32 65536, i32 undef>
+  %t = icmp ult <2 x i32> %x, <i32 65536, i32 poison>
   %r = select <2 x i1> %t, <2 x i32> %y, <2 x i32> <i32 65535, i32 65535>
   ret <2 x i32> %r
 }
-define <2 x i32> @p9_vec_nonsplat_undef1(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @p9_vec_nonsplat_undef1(
+define <2 x i32> @p9_vec_nonsplat_poison1(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @p9_vec_nonsplat_poison1(
 ; CHECK-NEXT:    [[T_INV:%.*]] = icmp ugt <2 x i32> [[X:%.*]], <i32 65535, i32 65535>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T_INV]], <2 x i32> <i32 65535, i32 undef>, <2 x i32> [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T_INV]], <2 x i32> <i32 65535, i32 poison>, <2 x i32> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %t = icmp ult <2 x i32> %x, <i32 65536, i32 65536>
-  %r = select <2 x i1> %t, <2 x i32> %y, <2 x i32> <i32 65535, i32 undef>
+  %r = select <2 x i1> %t, <2 x i32> %y, <2 x i32> <i32 65535, i32 poison>
   ret <2 x i32> %r
 }
-define <2 x i32> @p10_vec_nonsplat_undef2(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @p10_vec_nonsplat_undef2(
+define <2 x i32> @p10_vec_nonsplat_poison2(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @p10_vec_nonsplat_poison2(
 ; CHECK-NEXT:    [[T_INV:%.*]] = icmp ugt <2 x i32> [[X:%.*]], <i32 65535, i32 65535>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T_INV]], <2 x i32> <i32 65535, i32 undef>, <2 x i32> [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T_INV]], <2 x i32> <i32 65535, i32 poison>, <2 x i32> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
-  %t = icmp ult <2 x i32> %x, <i32 65536, i32 undef>
-  %r = select <2 x i1> %t, <2 x i32> %y, <2 x i32> <i32 65535, i32 undef>
+  %t = icmp ult <2 x i32> %x, <i32 65536, i32 poison>
+  %r = select <2 x i1> %t, <2 x i32> %y, <2 x i32> <i32 65535, i32 poison>
   ret <2 x i32> %r
 }
 

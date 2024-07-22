@@ -10,25 +10,25 @@ define dso_local signext i32 @b() local_unnamed_addr #0 {
 ; CHECK-NEXT:    stdu r1, -144(r1)
 ; CHECK-NEXT:    std r0, 160(r1)
 ; CHECK-NEXT:    addis r3, r2, a@toc@ha
-; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    lfd f0, a@toc@l(r3)
 ; CHECK-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
-; CHECK-NEXT:    rldic r4, r4, 63, 0
 ; CHECK-NEXT:    lfs f1, .LCPI0_0@toc@l(r3)
 ; CHECK-NEXT:    fsub f2, f0, f1
 ; CHECK-NEXT:    fctidz f2, f2
 ; CHECK-NEXT:    stfd f2, 128(r1)
 ; CHECK-NEXT:    fctidz f2, f0
-; CHECK-NEXT:    stfd f2, 120(r1)
-; CHECK-NEXT:    ld r3, 128(r1)
-; CHECK-NEXT:    ld r5, 120(r1)
 ; CHECK-NEXT:    fcmpu cr0, f0, f1
+; CHECK-NEXT:    stfd f2, 120(r1)
+; CHECK-NEXT:    blt cr0, .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    ld r3, 128(r1)
+; CHECK-NEXT:    li r4, 1
+; CHECK-NEXT:    rldic r4, r4, 63, 0
 ; CHECK-NEXT:    xor r3, r3, r4
-; CHECK-NEXT:    bc 12, lt, .LBB0_1
-; CHECK-NEXT:    b .LBB0_2
-; CHECK-NEXT:  .LBB0_1: # %entry
-; CHECK-NEXT:    addi r3, r5, 0
-; CHECK-NEXT:  .LBB0_2: # %entry
+; CHECK-NEXT:    b .LBB0_3
+; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:    ld r3, 120(r1)
+; CHECK-NEXT:  .LBB0_3: # %entry
 ; CHECK-NEXT:    std r3, 112(r1)
 ; CHECK-NEXT:    addis r3, r2, .LCPI0_1@toc@ha
 ; CHECK-NEXT:    lfd f0, 112(r1)

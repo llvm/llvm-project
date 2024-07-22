@@ -162,9 +162,7 @@ static void getProducerCandidates(unsigned dstId, MemRefDependenceGraph *mdg,
   }
 
   llvm::sort(srcIdCandidates);
-  srcIdCandidates.erase(
-      std::unique(srcIdCandidates.begin(), srcIdCandidates.end()),
-      srcIdCandidates.end());
+  srcIdCandidates.erase(llvm::unique(srcIdCandidates), srcIdCandidates.end());
 }
 
 /// Returns in 'producerConsumerMemrefs' the memrefs involved in a
@@ -205,7 +203,10 @@ static bool isEscapingMemref(Value memref, Block *block) {
   // (e.g., call ops, alias creating ops, etc.).
   return llvm::any_of(memref.getUsers(), [&](Operation *user) {
     // Ignore users outside of `block`.
-    if (block->getParent()->findAncestorOpInRegion(*user)->getBlock() != block)
+    Operation *ancestorOp = block->getParent()->findAncestorOpInRegion(*user);
+    if (!ancestorOp)
+      return true;
+    if (ancestorOp->getBlock() != block)
       return false;
     return !isa<AffineMapAccessInterface>(*user);
   });

@@ -716,10 +716,8 @@ bool X86FastISel::handleConstantAddresses(const Value *V, X86AddressMode &AM) {
       return false;
 
     // Can't handle large objects yet.
-    if (auto *GO = dyn_cast<GlobalObject>(GV)) {
-      if (TM.isLargeGlobalObject(GO))
-        return false;
-    }
+    if (TM.isLargeGlobalValue(GV))
+      return false;
 
     // Can't handle TLS yet.
     if (GV->isThreadLocal())
@@ -918,7 +916,7 @@ redo_gep:
 
       // A array/variable index is always of the form i*S where S is the
       // constant scale size.  See if we can push the scale into immediates.
-      uint64_t S = DL.getTypeAllocSize(GTI.getIndexedType());
+      uint64_t S = GTI.getSequentialElementStride(DL);
       for (;;) {
         if (const ConstantInt *CI = dyn_cast<ConstantInt>(Op)) {
           // Constant-offset addressing.
@@ -1252,19 +1250,18 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
       if (!Outs[0].Flags.isZExt() && !Outs[0].Flags.isSExt())
         return false;
 
-      assert(DstVT == MVT::i32 && "X86 should always ext to i32");
-
       if (SrcVT == MVT::i1) {
         if (Outs[0].Flags.isSExt())
           return false;
-        // TODO
         SrcReg = fastEmitZExtFromI1(MVT::i8, SrcReg);
         SrcVT = MVT::i8;
       }
-      unsigned Op = Outs[0].Flags.isZExt() ? ISD::ZERO_EXTEND :
-                                             ISD::SIGN_EXTEND;
-      // TODO
-      SrcReg = fastEmit_r(SrcVT.getSimpleVT(), DstVT.getSimpleVT(), Op, SrcReg);
+      if (SrcVT != DstVT) {
+        unsigned Op =
+            Outs[0].Flags.isZExt() ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND;
+        SrcReg =
+            fastEmit_r(SrcVT.getSimpleVT(), DstVT.getSimpleVT(), Op, SrcReg);
+      }
     }
 
     // Make the copy.
@@ -1308,8 +1305,8 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
     MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                   TII.get(Subtarget->is64Bit() ? X86::RET64 : X86::RET32));
   }
-  for (unsigned i = 0, e = RetRegs.size(); i != e; ++i)
-    MIB.addReg(RetRegs[i], RegState::Implicit);
+  for (unsigned Reg : RetRegs)
+    MIB.addReg(Reg, RegState::Implicit);
   return true;
 }
 
@@ -2136,7 +2133,8 @@ bool X86FastISel::X86FastEmitCMoveSelect(MVT RetVT, const Instruction *I) {
     return false;
 
   const TargetRegisterInfo &TRI = *Subtarget->getRegisterInfo();
-  unsigned Opc = X86::getCMovOpcode(TRI.getRegSizeInBits(*RC)/8);
+  unsigned Opc = X86::getCMovOpcode(TRI.getRegSizeInBits(*RC) / 8, false,
+                                    Subtarget->hasNDD());
   Register ResultReg = fastEmitInst_rri(Opc, RC, RHSReg, LHSReg, CC);
   updateValueMap(I, ResultReg);
   return true;
@@ -2201,7 +2199,7 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
     const TargetRegisterClass *VK1 = &X86::VK1RegClass;
 
     unsigned CmpOpcode =
-      (RetVT == MVT::f32) ? X86::VCMPSSZrr : X86::VCMPSDZrr;
+      (RetVT == MVT::f32) ? X86::VCMPSSZrri : X86::VCMPSDZrri;
     Register CmpReg = fastEmitInst_rri(CmpOpcode, VK1, CmpLHSReg, CmpRHSReg,
                                        CC);
 
@@ -2231,9 +2229,9 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
     // instructions as the AND/ANDN/OR sequence due to register moves, so
     // don't bother.
     unsigned CmpOpcode =
-      (RetVT == MVT::f32) ? X86::VCMPSSrr : X86::VCMPSDrr;
+      (RetVT == MVT::f32) ? X86::VCMPSSrri : X86::VCMPSDrri;
     unsigned BlendOpcode =
-      (RetVT == MVT::f32) ? X86::VBLENDVPSrr : X86::VBLENDVPDrr;
+      (RetVT == MVT::f32) ? X86::VBLENDVPSrrr : X86::VBLENDVPDrrr;
 
     Register CmpReg = fastEmitInst_rri(CmpOpcode, RC, CmpLHSReg, CmpRHSReg,
                                        CC);
@@ -2245,8 +2243,8 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
   } else {
     // Choose the SSE instruction sequence based on data type (float or double).
     static const uint16_t OpcTable[2][4] = {
-      { X86::CMPSSrr,  X86::ANDPSrr,  X86::ANDNPSrr,  X86::ORPSrr  },
-      { X86::CMPSDrr,  X86::ANDPDrr,  X86::ANDNPDrr,  X86::ORPDrr  }
+      { X86::CMPSSrri,  X86::ANDPSrr,  X86::ANDNPSrr,  X86::ORPSrr  },
+      { X86::CMPSDrri,  X86::ANDPDrr,  X86::ANDNPDrr,  X86::ORPDrr  }
     };
 
     const uint16_t *Opc = nullptr;
@@ -3048,22 +3046,24 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     switch (II->getIntrinsicID()) {
     default:
       llvm_unreachable("Unexpected intrinsic.");
+#define GET_EGPR_IF_ENABLED(OPC) Subtarget->hasEGPR() ? OPC##_EVEX : OPC
     case Intrinsic::x86_sse42_crc32_32_8:
-      Opc = X86::CRC32r32r8;
+      Opc = GET_EGPR_IF_ENABLED(X86::CRC32r32r8);
       RC = &X86::GR32RegClass;
       break;
     case Intrinsic::x86_sse42_crc32_32_16:
-      Opc = X86::CRC32r32r16;
+      Opc = GET_EGPR_IF_ENABLED(X86::CRC32r32r16);
       RC = &X86::GR32RegClass;
       break;
     case Intrinsic::x86_sse42_crc32_32_32:
-      Opc = X86::CRC32r32r32;
+      Opc = GET_EGPR_IF_ENABLED(X86::CRC32r32r32);
       RC = &X86::GR32RegClass;
       break;
     case Intrinsic::x86_sse42_crc32_64_64:
-      Opc = X86::CRC32r64r64;
+      Opc = GET_EGPR_IF_ENABLED(X86::CRC32r64r64);
       RC = &X86::GR64RegClass;
       break;
+#undef GET_EGPR_IF_ENABLED
     }
 
     const Value *LHS = II->getArgOperand(0);
@@ -3348,8 +3348,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   // Walk the register/memloc assignments, inserting copies/loads.
   const X86RegisterInfo *RegInfo = Subtarget->getRegisterInfo();
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-    CCValAssign const &VA = ArgLocs[i];
+  for (const CCValAssign &VA : ArgLocs) {
     const Value *ArgVal = OutVals[VA.getValNo()];
     MVT ArgVT = OutVTs[VA.getValNo()];
 
@@ -3849,7 +3848,7 @@ unsigned X86FastISel::X86MaterializeGV(const GlobalValue *GV, MVT VT) {
   if (TM.getCodeModel() != CodeModel::Small &&
       TM.getCodeModel() != CodeModel::Medium)
     return 0;
-  if (!isa<GlobalObject>(GV) || TM.isLargeGlobalObject(cast<GlobalObject>(GV)))
+  if (TM.isLargeGlobalValue(GV))
     return 0;
 
   // Materialize addresses with LEA/MOV instructions.

@@ -81,7 +81,7 @@ spirv.func @pointerIncomingRayPayloadKHR(!spirv.ptr<i1, IncomingRayPayloadKHR>) 
 spirv.func @pointerShaderRecordBufferKHR(!spirv.ptr<i1, ShaderRecordBufferKHR>) "None"
 
 // CHECK-ALL:            llvm.func @pointerPhysicalStorageBuffer(!llvm.ptr)
-spirv.func @pointerPhysicalStorageBuffer(!spirv.ptr<i1, PhysicalStorageBuffer>) "None"
+spirv.func @pointerPhysicalStorageBuffer(!spirv.ptr<i1, PhysicalStorageBuffer> { spirv.decoration = #spirv.decoration<Aliased> }) "None"
 
 // CHECK-ALL:            llvm.func @pointerCodeSectionINTEL(!llvm.ptr)
 spirv.func @pointerCodeSectionINTEL(!spirv.ptr<i1, CodeSectionINTEL>) "None"
@@ -91,5 +91,5 @@ spirv.func @pointerCodeSectionINTEL(!spirv.ptr<i1, CodeSectionINTEL>) "None"
 spirv.func @pointerDeviceOnlyINTEL(!spirv.ptr<i1, DeviceOnlyINTEL>) "None"
 
 // CHECK-OPENCL:         llvm.func @pointerHostOnlyINTEL(!llvm.ptr<6>)
-// CHECK-UNKOWN:         llvm.func @pointerHostOnlyINTEL(!llvm.ptr)
+// CHECK-UNKNOWN:        llvm.func @pointerHostOnlyINTEL(!llvm.ptr)
 spirv.func @pointerHostOnlyINTEL(!spirv.ptr<i1, HostOnlyINTEL>) "None"

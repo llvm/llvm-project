@@ -58,7 +58,7 @@ define void @strided_store_zero_start(i64 %n, ptr %p) {
 ; RV64-NEXT:    ret
   %step = tail call <vscale x 1 x i64> @llvm.experimental.stepvector.nxv1i64()
   %gep = getelementptr inbounds %struct, ptr %p, <vscale x 1 x i64> %step, i32 6
-  tail call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> zeroinitializer, <vscale x 1 x ptr> %gep, i32 8, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i32 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer))
+  tail call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> zeroinitializer, <vscale x 1 x ptr> %gep, i32 8, <vscale x 1 x i1> splat (i1 true))
   ret void
 }
 
@@ -80,20 +80,22 @@ define void @strided_store_offset_start(i64 %n, ptr %p) {
 ;
 ; RV64-LABEL: strided_store_offset_start:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a2, 56
-; RV64-NEXT:    mul a0, a0, a2
+; RV64-NEXT:    slli a2, a0, 3
+; RV64-NEXT:    slli a0, a0, 6
+; RV64-NEXT:    sub a0, a0, a2
 ; RV64-NEXT:    add a0, a1, a0
 ; RV64-NEXT:    addi a0, a0, 36
 ; RV64-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.v.i v8, 0
-; RV64-NEXT:    vsse64.v v8, (a0), a2
+; RV64-NEXT:    li a1, 56
+; RV64-NEXT:    vsse64.v v8, (a0), a1
 ; RV64-NEXT:    ret
   %step = tail call <vscale x 1 x i64> @llvm.experimental.stepvector.nxv1i64()
   %.splatinsert = insertelement <vscale x 1 x i64> poison, i64 %n, i64 0
   %.splat = shufflevector <vscale x 1 x i64> %.splatinsert, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
   %add = add <vscale x 1 x i64> %step, %.splat
   %gep = getelementptr inbounds %struct, ptr %p, <vscale x 1 x i64> %add, i32 6
-  tail call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> zeroinitializer, <vscale x 1 x ptr> %gep, i32 8, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i32 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer))
+  tail call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> zeroinitializer, <vscale x 1 x ptr> %gep, i32 8, <vscale x 1 x i1> splat (i1 true))
   ret void
 }
 
@@ -118,7 +120,7 @@ define void @stride_one_store(i64 %n, ptr %p) {
 ; RV64-NEXT:    ret
   %step = tail call <vscale x 1 x i64> @llvm.experimental.stepvector.nxv1i64()
   %gep = getelementptr inbounds i64, ptr %p, <vscale x 1 x i64> %step
-  tail call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> zeroinitializer, <vscale x 1 x ptr> %gep, i32 8, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i32 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer))
+  tail call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> zeroinitializer, <vscale x 1 x ptr> %gep, i32 8, <vscale x 1 x i1> splat (i1 true))
   ret void
 }
 

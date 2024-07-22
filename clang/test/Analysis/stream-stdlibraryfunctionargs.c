@@ -1,10 +1,13 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,unix.StdCLibraryFunctions,debug.ExprInspection \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Stream,unix.StdCLibraryFunctions,debug.ExprInspection \
+// RUN:   -analyzer-config unix.Stream:Pedantic=true \
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true -verify=stream,any %s
 
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,debug.ExprInspection \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Stream,debug.ExprInspection \
+// RUN:   -analyzer-config unix.Stream:Pedantic=true \
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true -verify=stream,any %s
 
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.StdCLibraryFunctions,debug.ExprInspection \
+// RUN:   -analyzer-config unix.Stream:Pedantic=true \
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true -verify=stdfunc,any %s
 
 #include "Inputs/system-header-simulator.h"
@@ -17,6 +20,14 @@ size_t n;
 
 void test_fopen(void) {
   FILE *fp = fopen("path", "r");
+  clang_analyzer_eval(fp != NULL); // any-warning{{TRUE}} any-warning{{FALSE}}
+  fclose(fp); // \
+  // stream-warning{{Stream pointer might be NULL}} \
+  // stdfunc-warning{{should not be NULL}}
+}
+
+void test_fdopen(int fd) {
+  FILE *fp = fdopen(fd, "r");
   clang_analyzer_eval(fp != NULL); // any-warning{{TRUE}} any-warning{{FALSE}}
   fclose(fp); // \
   // stream-warning{{Stream pointer might be NULL}} \

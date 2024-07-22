@@ -22,6 +22,10 @@ vector double fd, fd2;
 
 vector long ll; // expected-error {{cannot use 'long' with '__vector'}}
 vector float ff; // expected-error {{cannot use 'float' with '__vector'}}
+vector long double ld; // expected-error {{cannot use 'long double' with '__vector'}}
+vector float _Complex cf; // expected-error {{cannot use '_Complex' with '__vector'}}
+vector double _Complex cd; // expected-error {{cannot use '_Complex' with '__vector'}}
+vector long double _Complex cld; // expected-error {{cannot use '_Complex' with '__vector'}}
 
 signed char sc_scalar;
 unsigned char uc_scalar;
@@ -53,6 +57,10 @@ __vector bool long long bl3;
 __vector double fd3;
 __vector long ll3; // expected-error {{cannot use 'long' with '__vector'}}
 __vector float ff3; // expected-error {{cannot use 'float' with '__vector'}}
+__vector long double ld3; // expected-error {{cannot use 'long double' with '__vector'}}
+__vector float _Complex cf3; // expected-error {{cannot use '_Complex' with '__vector'}}
+__vector double _Complex cd3; // expected-error {{cannot use '_Complex' with '__vector'}}
+__vector long double _Complex cld3; // expected-error {{cannot use '_Complex' with '__vector'}}
 
 // Likewise for __bool
 vector __bool char bc4;

@@ -2,6 +2,13 @@
 ;
 ; NVPTX produces a different order of the BBs
 ; XFAIL: target=nvptx{{.*}}
+; Both RISC-V and AMDGPU(GCN) deploy two VirtRegRewriter in their codegen
+; pipeline. This test prematurely stops at the first one, which doesn't cleanup
+; the virtual register map and cause an assertion failure. Ideally we can solve
+; this by teaching `-stop-after` how to stop at the last instance of a Pass,
+; but we're just marking XFAIL for these two targets for now.
+; XFAIL: target=riscv{{.*}}
+; XFAIL: target=amdgcn-{{.*}}
 
 ; Generated with "clang++ -g -O1 -S -emit-llvm"
 ;

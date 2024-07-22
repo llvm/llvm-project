@@ -18,6 +18,8 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -277,12 +279,14 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   MCSymbol *Sym2 = MC->createTempSymbol("post_label", false);
   MDNode *HAM = MDNode::getDistinct(Ctx, std::nullopt);
   MDNode *PCS = MDNode::getDistinct(Ctx, std::nullopt);
+  MDNode *MMRA = MMRAMetadata::getTagMD(Ctx, "foo", "bar");
 
   ASSERT_TRUE(MI->memoperands_empty());
   ASSERT_FALSE(MI->getPreInstrSymbol());
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_FALSE(MI->getHeapAllocMarker());
   ASSERT_FALSE(MI->getPCSections());
+  ASSERT_FALSE(MI->getMMRAMetadata());
 
   MI->setMemRefs(*MF, MMOs);
   ASSERT_TRUE(MI->memoperands().size() == 1);
@@ -290,6 +294,7 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_FALSE(MI->getHeapAllocMarker());
   ASSERT_FALSE(MI->getPCSections());
+  ASSERT_FALSE(MI->getMMRAMetadata());
 
   MI->setPreInstrSymbol(*MF, Sym1);
   ASSERT_TRUE(MI->memoperands().size() == 1);
@@ -297,6 +302,7 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_FALSE(MI->getHeapAllocMarker());
   ASSERT_FALSE(MI->getPCSections());
+  ASSERT_FALSE(MI->getMMRAMetadata());
 
   MI->setPostInstrSymbol(*MF, Sym2);
   ASSERT_TRUE(MI->memoperands().size() == 1);
@@ -304,6 +310,7 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   ASSERT_TRUE(MI->getPostInstrSymbol() == Sym2);
   ASSERT_FALSE(MI->getHeapAllocMarker());
   ASSERT_FALSE(MI->getPCSections());
+  ASSERT_FALSE(MI->getMMRAMetadata());
 
   MI->setHeapAllocMarker(*MF, HAM);
   ASSERT_TRUE(MI->memoperands().size() == 1);
@@ -311,6 +318,7 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   ASSERT_TRUE(MI->getPostInstrSymbol() == Sym2);
   ASSERT_TRUE(MI->getHeapAllocMarker() == HAM);
   ASSERT_FALSE(MI->getPCSections());
+  ASSERT_FALSE(MI->getMMRAMetadata());
 
   MI->setPCSections(*MF, PCS);
   ASSERT_TRUE(MI->memoperands().size() == 1);
@@ -318,6 +326,21 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   ASSERT_TRUE(MI->getPostInstrSymbol() == Sym2);
   ASSERT_TRUE(MI->getHeapAllocMarker() == HAM);
   ASSERT_TRUE(MI->getPCSections() == PCS);
+  ASSERT_FALSE(MI->getMMRAMetadata());
+
+  MI->setMMRAMetadata(*MF, MMRA);
+  ASSERT_TRUE(MI->memoperands().size() == 1);
+  ASSERT_TRUE(MI->getPreInstrSymbol() == Sym1);
+  ASSERT_TRUE(MI->getPostInstrSymbol() == Sym2);
+  ASSERT_TRUE(MI->getHeapAllocMarker() == HAM);
+  ASSERT_TRUE(MI->getPCSections() == PCS);
+  ASSERT_TRUE(MI->getMMRAMetadata() == MMRA);
+
+  // Check with nothing but MMRAs.
+  MachineInstr *MMRAMI = MF->CreateMachineInstr(MCID, DebugLoc());
+  ASSERT_FALSE(MMRAMI->getMMRAMetadata());
+  MMRAMI->setMMRAMetadata(*MF, MMRA);
+  ASSERT_TRUE(MMRAMI->getMMRAMetadata() == MMRA);
 }
 
 TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
@@ -338,11 +361,15 @@ TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
   MDNode *HAM = MDNode::getDistinct(Ctx, std::nullopt);
   MDNode *PCS = MDNode::getDistinct(Ctx, std::nullopt);
 
+  MDNode *MMRA1 = MMRAMetadata::getTagMD(Ctx, "foo", "bar");
+  MDNode *MMRA2 = MMRAMetadata::getTagMD(Ctx, "bar", "bux");
+
   MI->setMemRefs(*MF, MMOs);
   MI->setPreInstrSymbol(*MF, Sym1);
   MI->setPostInstrSymbol(*MF, Sym2);
   MI->setHeapAllocMarker(*MF, HAM);
   MI->setPCSections(*MF, PCS);
+  MI->setMMRAMetadata(*MF, MMRA1);
 
   MMOs.push_back(MMO);
 
@@ -352,6 +379,7 @@ TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
   ASSERT_TRUE(MI->getPostInstrSymbol() == Sym2);
   ASSERT_TRUE(MI->getHeapAllocMarker() == HAM);
   ASSERT_TRUE(MI->getPCSections() == PCS);
+  ASSERT_TRUE(MI->getMMRAMetadata() == MMRA1);
 
   MI->setPostInstrSymbol(*MF, Sym1);
   ASSERT_TRUE(MI->memoperands().size() == 2);
@@ -359,6 +387,15 @@ TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
   ASSERT_TRUE(MI->getPostInstrSymbol() == Sym1);
   ASSERT_TRUE(MI->getHeapAllocMarker() == HAM);
   ASSERT_TRUE(MI->getPCSections() == PCS);
+  ASSERT_TRUE(MI->getMMRAMetadata() == MMRA1);
+
+  MI->setMMRAMetadata(*MF, MMRA2);
+  ASSERT_TRUE(MI->memoperands().size() == 2);
+  ASSERT_TRUE(MI->getPreInstrSymbol() == Sym1);
+  ASSERT_TRUE(MI->getPostInstrSymbol() == Sym1);
+  ASSERT_TRUE(MI->getHeapAllocMarker() == HAM);
+  ASSERT_TRUE(MI->getPCSections() == PCS);
+  ASSERT_TRUE(MI->getMMRAMetadata() == MMRA2);
 }
 
 TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
@@ -380,11 +417,14 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   MDNode *HAM = MDNode::getDistinct(Ctx, std::nullopt);
   MDNode *PCS = MDNode::getDistinct(Ctx, std::nullopt);
 
+  MDNode *MMRA = MDTuple::get(Ctx, {});
+
   MI->setMemRefs(*MF, MMOs);
   MI->setPreInstrSymbol(*MF, Sym1);
   MI->setPostInstrSymbol(*MF, Sym2);
   MI->setHeapAllocMarker(*MF, HAM);
   MI->setPCSections(*MF, PCS);
+  MI->setMMRAMetadata(*MF, MMRA);
 
   MI->setPostInstrSymbol(*MF, nullptr);
   ASSERT_TRUE(MI->memoperands().size() == 2);
@@ -392,6 +432,7 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_TRUE(MI->getHeapAllocMarker() == HAM);
   ASSERT_TRUE(MI->getPCSections() == PCS);
+  ASSERT_TRUE(MI->getMMRAMetadata() == MMRA);
 
   MI->setHeapAllocMarker(*MF, nullptr);
   ASSERT_TRUE(MI->memoperands().size() == 2);
@@ -399,6 +440,7 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_FALSE(MI->getHeapAllocMarker());
   ASSERT_TRUE(MI->getPCSections() == PCS);
+  ASSERT_TRUE(MI->getMMRAMetadata() == MMRA);
 
   MI->setPCSections(*MF, nullptr);
   ASSERT_TRUE(MI->memoperands().size() == 2);
@@ -406,6 +448,7 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_FALSE(MI->getHeapAllocMarker());
   ASSERT_FALSE(MI->getPCSections());
+  ASSERT_TRUE(MI->getMMRAMetadata() == MMRA);
 
   MI->setPreInstrSymbol(*MF, nullptr);
   ASSERT_TRUE(MI->memoperands().size() == 2);
@@ -413,6 +456,7 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_FALSE(MI->getHeapAllocMarker());
   ASSERT_FALSE(MI->getPCSections());
+  ASSERT_TRUE(MI->getMMRAMetadata() == MMRA);
 
   MI->setMemRefs(*MF, {});
   ASSERT_TRUE(MI->memoperands_empty());
@@ -420,6 +464,15 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_FALSE(MI->getHeapAllocMarker());
   ASSERT_FALSE(MI->getPCSections());
+  ASSERT_TRUE(MI->getMMRAMetadata() == MMRA);
+
+  MI->setMMRAMetadata(*MF, nullptr);
+  ASSERT_TRUE(MI->memoperands_empty());
+  ASSERT_FALSE(MI->getPreInstrSymbol());
+  ASSERT_FALSE(MI->getPostInstrSymbol());
+  ASSERT_FALSE(MI->getHeapAllocMarker());
+  ASSERT_FALSE(MI->getPCSections());
+  ASSERT_FALSE(MI->getMMRAMetadata());
 }
 
 TEST(MachineInstrDebugValue, AddDebugValueOperand) {
@@ -530,7 +583,8 @@ TEST(MachineInstrTest, SpliceOperands) {
   EXPECT_EQ(MI->getOperand(8).getImm(), MachineOperand::CreateImm(4).getImm());
 
   // test tied operands
-  MCRegisterClass MRC{0, 0, 0, 0, 0, 0, 0, 0, /*Allocatable=*/true};
+  MCRegisterClass MRC{
+      0, 0, 0, 0, 0, 0, 0, 0, /*Allocatable=*/true, /*BaseClass=*/true};
   TargetRegisterClass RC{&MRC, 0, 0, {}, 0, 0, 0, 0, 0, 0, 0};
   // MachineRegisterInfo will be very upset if these registers aren't
   // allocatable.

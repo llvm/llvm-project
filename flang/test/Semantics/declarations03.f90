@@ -19,7 +19,7 @@ module m
   common /blk4/ w
   bind(c, name="cc") :: t2, /blk4/
 
-  !ERROR: The entity 'blk5' has multiple BIND names
+  !ERROR: The entity 'blk5' has multiple BIND names ('dd' and 'ee')
   common /blk5/ i
   bind(c, name="dd") :: /blk5/
   bind(c, name="ee") :: /blk5/
@@ -29,7 +29,7 @@ module m
   bind(c, name="ff") :: /blk6/
   bind(c, name="ff") :: /blk7/
 
-  !ERROR: The entity 's1' has multiple BIND names
+  !ERROR: The entity 's1' has multiple BIND names ('gg' and 'hh')
   integer :: s1
   bind(c, name="gg") :: s1
   !ERROR: BIND_C attribute was already specified on 's1'
@@ -40,12 +40,12 @@ module m
   bind(c, name="ii") :: s2
   bind(c, name="ii") :: s3
 
-  !ERROR: The entity 's4' has multiple BIND names
+  !ERROR: The entity 's4' has multiple BIND names ('ss1' and 'jj')
   integer, bind(c, name="ss1") :: s4
   !ERROR: BIND_C attribute was already specified on 's4'
   bind(c, name="jj") :: s4
 
-  !ERROR: The entity 's5' has multiple BIND names
+  !ERROR: The entity 's5' has multiple BIND names ('kk' and 'ss2')
   bind(c, name="kk") :: s5
   !ERROR: BIND_C attribute was already specified on 's5'
   integer, bind(c, name="ss2") :: s5
@@ -71,4 +71,9 @@ end module
 module b
   !ERROR: Two entities have the same global name 'int'
   integer, bind(c, name="int") :: i
+end module
+
+module c
+  bind(c, name = "AAA") a
+  integer aaa ! ensure no bogus error about multiple binding names
 end module

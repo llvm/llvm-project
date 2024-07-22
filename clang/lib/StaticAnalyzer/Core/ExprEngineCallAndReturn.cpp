@@ -846,6 +846,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
   const StackFrameContext *CallerSFC = CurLC->getStackFrame();
   switch (Call.getKind()) {
   case CE_Function:
+  case CE_CXXStaticOperator:
   case CE_Block:
     break;
   case CE_CXXMember:

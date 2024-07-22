@@ -140,26 +140,30 @@ entry:
   ret void
 }
 
-; TODO: We might still want to test other types, such as i128. Currently the
-; backend doesn't support them. Atomic expand only supports expansion to cas of
-; the same bitwidth, which means even after expansion, the back end still
-; doesn't support the instruction. Here we still put the tests. Remove the
-; comment once we have proper support, either from atomic expand or backend.
+; CHECK-LABEL: bitwise_i128
+define void @bitwise_i128(ptr %0, i128 %1) {
+entry:
+  ; ALL: __atomic_fetch_and_16
+  %2 = atomicrmw and ptr %0, i128 %1 monotonic, align 16
+  ; ALL: __atomic_fetch_or_16
+  %3 = atomicrmw or ptr %0, i128 %1 monotonic, align 16
+  ; ALL: __atomic_fetch_xor_16
+  %4 = atomicrmw xor ptr %0, i128 %1 monotonic, align 16
+  ; ALL: __atomic_exchange_16
+  %5 = atomicrmw xchg ptr %0, i128 %1 monotonic, align 16
+  ret void
+}
 
-; define void @bitwise_i128(ptr %0, i128 %1) {
-; entry:
-;   %2 = atomicrmw and ptr %0, i128 %1 monotonic, align 16
-;   %3 = atomicrmw or ptr %0, i128 %1 monotonic, align 16
-;   %4 = atomicrmw xor ptr %0, i128 %1 monotonic, align 16
-;   %5 = atomicrmw xchg ptr %0, i128 %1 monotonic, align 16
-;   ret void
-; }
-
-; define void @minmax_i128(ptr %0, i128 %1) {
-; entry:
-;   %2 = atomicrmw min ptr %0, i128 %1 monotonic, align 16
-;   %3 = atomicrmw max ptr %0, i128 %1 monotonic, align 16
-;   %4 = atomicrmw umin ptr %0, i128 %1 monotonic, align 16
-;   %5 = atomicrmw umax ptr %0, i128 %1 monotonic, align 16
-;   ret void
-; }
+; CHECK-LABEL: minmax_i128
+define void @minmax_i128(ptr %0, i128 %1) {
+entry:
+  ; ALL: __atomic_compare_exchange_16
+  %2 = atomicrmw min ptr %0, i128 %1 monotonic, align 16
+  ; ALL: __atomic_compare_exchange_16
+  %3 = atomicrmw max ptr %0, i128 %1 monotonic, align 16
+  ; ALL: __atomic_compare_exchange_16
+  %4 = atomicrmw umin ptr %0, i128 %1 monotonic, align 16
+  ; ALL: __atomic_compare_exchange_16
+  %5 = atomicrmw umax ptr %0, i128 %1 monotonic, align 16
+  ret void
+}

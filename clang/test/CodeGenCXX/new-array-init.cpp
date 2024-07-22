@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKCXX20
 // RUN: %clang_cc1 -std=c++11 -triple i386-unknown-unknown %s -emit-llvm -fsanitize=signed-integer-overflow -o - | FileCheck --check-prefix=SIO %s
 
 // CHECK: @[[ABC4:.*]] = {{.*}} constant [4 x i8] c"abc\00"
@@ -15,6 +16,19 @@ void fn(int n) {
   new int[n] { 1, 2, 3 };
 }
 
+#if __cplusplus >= 202002L
+// CHECKCXX20-LABEL: define{{.*}} void @_Z8fn_pareni
+void fn_paren(int n) {
+  // CHECKCXX20: icmp ult i{{32|64}} %{{[^ ]+}}, 3
+  // CHECKCXX20: store i32 1
+  // CHECKCXX20: store i32 2
+  // CHECKCXX20: store i32 3
+  // CHECKCXX20: sub {{.*}}, 12
+  // CHECKCXX20: call void @llvm.memset
+  new int[n](1, 2, 3);
+}
+#endif
+
 // CHECK-LABEL: define{{.*}} void @_Z11const_exactv
 void const_exact() {
   // CHECK-NOT: icmp ult i{{32|64}} %{{[^ ]+}}, 3
@@ -22,12 +36,30 @@ void const_exact() {
   new int[3] { 1, 2, 3 };
 }
 
+#if __cplusplus >= 202002L
+// CHECKCXX20-LABEL: define{{.*}} void @_Z17const_exact_parenv
+void const_exact_paren() {
+  // CHECKCXX20-NOT: icmp ult i{{32|64}} %{{[^ ]+}}, 3
+  // CHECKCXX20-NOT: icmp eq ptr
+  new int[3](1, 2, 3);
+}
+#endif
+
 // CHECK-LABEL: define{{.*}} void @_Z16const_sufficientv
 void const_sufficient() {
   // CHECK-NOT: icmp ult i{{32|64}} %{{[^ ]+}}, 3
   new int[4] { 1, 2, 3 };
   // CHECK: ret void
 }
+
+#if __cplusplus >= 202002L
+// CHECKCXX20-LABEL: define{{.*}} void @_Z22const_sufficient_parenv
+void const_sufficient_paren() {
+  // CHECKCXX20-NOT: icmp ult i{{32|64}} %{{[^ ]+}}, 3
+  new int[4](1, 2, 3);
+  // CHECKCXX20: ret void
+}
+#endif
 
 // CHECK-LABEL: define{{.*}} void @_Z22check_array_value_initv
 void check_array_value_init() {
@@ -46,7 +78,7 @@ void check_array_value_init() {
 
 // CHECK-LABEL: define{{.*}} void @_Z15string_nonconsti
 void string_nonconst(int n) {
-  // CHECK: icmp slt i{{32|64}} %{{[^ ]+}}, 4
+  // CHECK: icmp {{s|u}}lt i{{32|64}} %{{[^ ]+}}, 4
   // FIXME: Conditionally throw an exception rather than passing -1 to alloc function
   // CHECK: select
   // CHECK: %[[PTR:.*]] = call noalias noundef nonnull ptr @_Zna{{.}}(i{{32|64}}
@@ -57,6 +89,34 @@ void string_nonconst(int n) {
   new char[n] { "abc" };
 }
 
+#if __cplusplus >= 202002L
+// CHECKCXX20-LABEL: define{{.*}} void @_Z21string_nonconst_pareni
+void string_nonconst_paren(int n) {
+  // CHECKCXX20: icmp {{s|u}}lt i{{32|64}} %{{[^ ]+}}, 4
+  // FIXME: Conditionally throw an exception rather than passing -1 to alloc function
+  // CHECKCXX20: select
+  // CHECKCXX20: %[[PTR:.*]] = call noalias noundef nonnull ptr @_Zna{{.}}(i{{32|64}}
+  // CHECKCXX20: call void @llvm.memcpy{{.*}}(ptr align {{[0-9]+}} %[[PTR]], ptr align {{[0-9]+}} @[[ABC4]], i32 4,
+  // CHECKCXX20: %[[REST:.*]] = getelementptr inbounds i8, ptr %[[PTR]], i32 4
+  // CHECKCXX20: %[[RESTSIZE:.*]] = sub {{.*}}, 4
+  // CHECKCXX20: call void @llvm.memset{{.*}}(ptr align {{[0-9]+}} %[[REST]], i8 0, i{{32|64}} %[[RESTSIZE]],
+  new char[n]("abc");
+}
+
+// CHECKCXX20-LABEL: define{{.*}} void @_Z33string_nonconst_paren_extra_pareni
+void string_nonconst_paren_extra_paren(int n) {
+  // CHECKCXX20: icmp {{s|u}}lt i{{32|64}} %{{[^ ]+}}, 4
+  // FIXME: Conditionally throw an exception rather than passing -1 to alloc function
+  // CHECKCXX20: select
+  // CHECKCXX20: %[[PTR:.*]] = call noalias noundef nonnull ptr @_Zna{{.}}(i{{32|64}}
+  // CHECKCXX20: call void @llvm.memcpy{{.*}}(ptr align {{[0-9]+}} %[[PTR]], ptr align {{[0-9]+}} @[[ABC4]], i32 4,
+  // CHECKCXX20: %[[REST:.*]] = getelementptr inbounds i8, ptr %[[PTR]], i32 4
+  // CHECKCXX20: %[[RESTSIZE:.*]] = sub {{.*}}, 4
+  // CHECKCXX20: call void @llvm.memset{{.*}}(ptr align {{[0-9]+}} %[[REST]], i8 0, i{{32|64}} %[[RESTSIZE]],
+  new char[n](("abc"));
+}
+#endif
+
 // CHECK-LABEL: define{{.*}} void @_Z12string_exactv
 void string_exact() {
   // CHECK-NOT: icmp
@@ -65,6 +125,26 @@ void string_exact() {
   // CHECK-NOT: memset
   new char[4] { "abc" };
 }
+
+#if __cplusplus >= 202002L
+// CHECKCXX20-LABEL: define{{.*}} void @_Z18string_exact_parenv
+void string_exact_paren() {
+  // CHECKCXX20-NOT: icmp
+  // CHECKCXX20: %[[PTR:.*]] = call noalias noundef nonnull ptr @_Zna{{.}}(i{{32|64}} noundef 4)
+  // CHECKCXX20: call void @llvm.memcpy{{.*}}(ptr align {{[0-9]+}} %[[PTR]], ptr align {{[0-9]+}} @[[ABC4]], i32 4,
+  // CHECKCXX20-NOT: memset
+  new char[4]("abc");
+}
+
+// CHECKCXX20-LABEL: define{{.*}} void @_Z28string_exact_paren_extensionv
+void string_exact_paren_extension() {
+  // CHECKCXX20-NOT: icmp
+  // CHECKCXX20: %[[PTR:.*]] = call noalias noundef nonnull ptr @_Zna{{.}}(i{{32|64}} noundef 4)
+  // CHECKCXX20: call void @llvm.memcpy{{.*}}(ptr align {{[0-9]+}} %[[PTR]], ptr align {{[0-9]+}} @[[ABC4]], i32 4,
+  // CHECKCXX20-NOT: memset
+  new char[4](__extension__ "abc");
+}
+#endif
 
 // CHECK-LABEL: define{{.*}} void @_Z17string_sufficientv
 void string_sufficient() {
@@ -75,6 +155,18 @@ void string_sufficient() {
   // CHECK-NOT: memset
   new char[15] { "abc" };
 }
+
+#if __cplusplus >= 202002L
+// CHECKCXX20-LABEL: define{{.*}} void @_Z23string_sufficient_parenv
+void string_sufficient_paren() {
+  // CHECKCXX20-NOT: icmp
+  // CHECKCXX20: %[[PTR:.*]] = call noalias noundef nonnull ptr @_Zna{{.}}(i{{32|64}} noundef 15)
+  // FIXME: For very large arrays, it would be preferable to emit a small copy and a memset.
+  // CHECKCXX20: call void @llvm.memcpy{{.*}}(ptr align {{[0-9]+}} %[[PTR]], ptr align {{[0-9]+}} @[[ABC15]], i32 15,
+  // CHECKCXX20-NOT: memset
+  new char[15]("abc");
+}
+#endif
 
 // CHECK-LABEL: define{{.*}} void @_Z10aggr_exactv
 void aggr_exact() {

@@ -10,7 +10,7 @@
 @random = external global i1, align 4
 
 ;.
-; CHECK: @[[RANDOM:[a-zA-Z0-9_$"\\.-]+]] = external global i1, align 4
+; CHECK: @random = external global i1, align 4
 ;.
 define void @widget(ptr %arg1, float %arg2, i64 %idx1, i64 %idx2, i32 %limit) {
 ; CHECK: Function Attrs: nofree norecurse nounwind

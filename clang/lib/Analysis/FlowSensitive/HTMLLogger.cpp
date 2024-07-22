@@ -54,7 +54,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
+#include "clang/Analysis/FlowSensitive/AdornedCFG.h"
 #include "clang/Analysis/FlowSensitive/DebugSupport.h"
 #include "clang/Analysis/FlowSensitive/Logger.h"
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
@@ -95,7 +95,6 @@ public:
 
     switch (V.getKind()) {
     case Value::Kind::Integer:
-    case Value::Kind::Record:
     case Value::Kind::TopBool:
     case Value::Kind::AtomicBool:
     case Value::Kind::FormulaBool:
@@ -126,8 +125,9 @@ public:
       return;
 
     JOS.attribute("type", L.getType().getAsString());
-    if (auto *V = Env.getValue(L))
-      dump(*V);
+    if (!L.getType()->isRecordType())
+      if (auto *V = Env.getValue(L))
+        dump(*V);
 
     if (auto *RLoc = dyn_cast<RecordStorageLocation>(&L)) {
       for (const auto &Child : RLoc->children())
@@ -158,13 +158,17 @@ class HTMLLogger : public Logger {
 
   StreamFactory Streams;
   std::unique_ptr<llvm::raw_ostream> OS;
-  std::optional<llvm::json::OStream> JOS;
+  std::string JSON;
+  llvm::raw_string_ostream JStringStream{JSON};
+  llvm::json::OStream JOS{JStringStream, /*Indent=*/2};
 
-  const ControlFlowContext *CFG;
+  const AdornedCFG *ACFG;
   // Timeline of iterations of CFG block visitation.
   std::vector<Iteration> Iters;
   // Indexes  in `Iters` of the iterations for each block.
   llvm::DenseMap<const CFGBlock *, llvm::SmallVector<size_t>> BlockIters;
+  // For a given block ID, did the block converge (on the last iteration)?
+  llvm::BitVector BlockConverged;
   // The messages logged in the current context but not yet written.
   std::string ContextLogs;
   // The number of elements we have visited within the current CFG block.
@@ -172,13 +176,15 @@ class HTMLLogger : public Logger {
 
 public:
   explicit HTMLLogger(StreamFactory Streams) : Streams(std::move(Streams)) {}
-  void beginAnalysis(const ControlFlowContext &CFG,
+  void beginAnalysis(const AdornedCFG &ACFG,
                      TypeErasedDataflowAnalysis &A) override {
     OS = Streams();
-    this->CFG = &CFG;
+    this->ACFG = &ACFG;
     *OS << llvm::StringRef(HTMLLogger_html).split("<?INJECT?>").first;
 
-    const auto &D = CFG.getDecl();
+    BlockConverged.resize(ACFG.getCFG().getNumBlockIDs());
+
+    const auto &D = ACFG.getDecl();
     const auto &SM = A.getASTContext().getSourceManager();
     *OS << "<title>";
     if (const auto *ND = dyn_cast<NamedDecl>(&D))
@@ -191,37 +197,37 @@ public:
     *OS << "<script>" << HTMLLogger_js << "</script>\n";
 
     writeCode();
-    writeCFG();
-
-    *OS << "<script>var HTMLLoggerData = \n";
-    JOS.emplace(*OS, /*Indent=*/2);
-    JOS->objectBegin();
-    JOS->attributeBegin("states");
-    JOS->objectBegin();
+    JOS.objectBegin();
+    JOS.attributeBegin("states");
+    JOS.objectBegin();
   }
   // Between beginAnalysis() and endAnalysis() we write all the states for
   // particular analysis points into the `timeline` array.
   void endAnalysis() override {
-    JOS->objectEnd();
-    JOS->attributeEnd();
+    JOS.objectEnd();
+    JOS.attributeEnd();
 
-    JOS->attributeArray("timeline", [&] {
+    JOS.attributeArray("timeline", [&] {
       for (const auto &E : Iters) {
-        JOS->object([&] {
-          JOS->attribute("block", blockID(E.Block->getBlockID()));
-          JOS->attribute("iter", E.Iter);
-          JOS->attribute("post_visit", E.PostVisit);
-          JOS->attribute("converged", E.Converged);
+        JOS.object([&] {
+          JOS.attribute("block", blockID(E.Block->getBlockID()));
+          JOS.attribute("iter", E.Iter);
+          JOS.attribute("post_visit", E.PostVisit);
+          JOS.attribute("converged", E.Converged);
         });
       }
     });
-    JOS->attributeObject("cfg", [&] {
+    JOS.attributeObject("cfg", [&] {
       for (const auto &E : BlockIters)
         writeBlock(*E.first, E.second);
     });
 
-    JOS->objectEnd();
-    JOS.reset();
+    JOS.objectEnd();
+
+    writeCFG();
+
+    *OS << "<script>var HTMLLoggerData = \n";
+    *OS << JSON;
     *OS << ";\n</script>\n";
     *OS << llvm::StringRef(HTMLLogger_html).split("<?INJECT?>").second;
   }
@@ -231,6 +237,8 @@ public:
     unsigned IterNum = BIter.size() + 1;
     BIter.push_back(Iters.size());
     Iters.push_back({&B, IterNum, PostVisit, /*Converged=*/false});
+    if (!PostVisit)
+      BlockConverged[B.getBlockID()] = false;
     ElementIndex = 0;
   }
   void enterElement(const CFGElement &E) override {
@@ -261,11 +269,11 @@ public:
     unsigned Block = Iters.back().Block->getBlockID();
     unsigned Iter = Iters.back().Iter;
     bool PostVisit = Iters.back().PostVisit;
-    JOS->attributeObject(elementIterID(Block, Iter, ElementIndex), [&] {
-      JOS->attribute("block", blockID(Block));
-      JOS->attribute("iter", Iter);
-      JOS->attribute("post_visit", PostVisit);
-      JOS->attribute("element", ElementIndex);
+    JOS.attributeObject(elementIterID(Block, Iter, ElementIndex), [&] {
+      JOS.attribute("block", blockID(Block));
+      JOS.attribute("iter", Iter);
+      JOS.attribute("post_visit", PostVisit);
+      JOS.attribute("element", ElementIndex);
 
       // If this state immediately follows an Expr, show its built-in model.
       if (ElementIndex > 0) {
@@ -273,29 +281,33 @@ public:
             Iters.back().Block->Elements[ElementIndex - 1].getAs<CFGStmt>();
         if (const Expr *E = S ? llvm::dyn_cast<Expr>(S->getStmt()) : nullptr) {
           if (E->isPRValue()) {
-            if (auto *V = State.Env.getValue(*E))
-              JOS->attributeObject(
-                  "value", [&] { ModelDumper(*JOS, State.Env).dump(*V); });
+            if (!E->getType()->isRecordType())
+              if (auto *V = State.Env.getValue(*E))
+                JOS.attributeObject(
+                    "value", [&] { ModelDumper(JOS, State.Env).dump(*V); });
           } else {
             if (auto *Loc = State.Env.getStorageLocation(*E))
-              JOS->attributeObject(
-                  "value", [&] { ModelDumper(*JOS, State.Env).dump(*Loc); });
+              JOS.attributeObject(
+                  "value", [&] { ModelDumper(JOS, State.Env).dump(*Loc); });
           }
         }
       }
       if (!ContextLogs.empty()) {
-        JOS->attribute("logs", ContextLogs);
+        JOS.attribute("logs", ContextLogs);
         ContextLogs.clear();
       }
       {
         std::string BuiltinLattice;
         llvm::raw_string_ostream BuiltinLatticeS(BuiltinLattice);
         State.Env.dump(BuiltinLatticeS);
-        JOS->attribute("builtinLattice", BuiltinLattice);
+        JOS.attribute("builtinLattice", BuiltinLattice);
       }
     });
   }
-  void blockConverged() override { Iters.back().Converged = true; }
+  void blockConverged() override {
+    Iters.back().Converged = true;
+    BlockConverged[Iters.back().Block->getBlockID()] = true;
+  }
 
   void logText(llvm::StringRef S) override {
     ContextLogs.append(S.begin(), S.end());
@@ -307,23 +319,23 @@ private:
   // Currently this is just the list of elements in execution order.
   // FIXME: an AST dump would be a useful view, too.
   void writeBlock(const CFGBlock &B, llvm::ArrayRef<size_t> ItersForB) {
-    JOS->attributeObject(blockID(B.getBlockID()), [&] {
-      JOS->attributeArray("iters", [&] {
+    JOS.attributeObject(blockID(B.getBlockID()), [&] {
+      JOS.attributeArray("iters", [&] {
         for (size_t IterIdx : ItersForB) {
           const Iteration &Iter = Iters[IterIdx];
-          JOS->object([&] {
-            JOS->attribute("iter", Iter.Iter);
-            JOS->attribute("post_visit", Iter.PostVisit);
-            JOS->attribute("converged", Iter.Converged);
+          JOS.object([&] {
+            JOS.attribute("iter", Iter.Iter);
+            JOS.attribute("post_visit", Iter.PostVisit);
+            JOS.attribute("converged", Iter.Converged);
           });
         }
       });
-      JOS->attributeArray("elements", [&] {
+      JOS.attributeArray("elements", [&] {
         for (const auto &Elt : B.Elements) {
           std::string Dump;
           llvm::raw_string_ostream DumpS(Dump);
           Elt.dumpToStream(DumpS);
-          JOS->value(Dump);
+          JOS.value(Dump);
         }
       });
     });
@@ -334,7 +346,7 @@ private:
   // tokens are associated with, and even which BB element (so that clicking
   // can select the right element).
   void writeCode() {
-    const auto &AST = CFG->getDecl().getASTContext();
+    const auto &AST = ACFG->getDecl().getASTContext();
     bool Invalid = false;
 
     // Extract the source code from the original file.
@@ -342,7 +354,7 @@ private:
     // indentation to worry about), but we need the boundaries of particular
     // AST nodes and the printer doesn't provide this.
     auto Range = clang::Lexer::makeFileCharRange(
-        CharSourceRange::getTokenRange(CFG->getDecl().getSourceRange()),
+        CharSourceRange::getTokenRange(ACFG->getDecl().getSourceRange()),
         AST.getSourceManager(), AST.getLangOpts());
     if (Range.isInvalid())
       return;
@@ -408,7 +420,7 @@ private:
     // Construct one TokenInfo per character in a flat array.
     // This is inefficient (chars in a token all have the same info) but simple.
     std::vector<TokenInfo> State(Code.size());
-    for (const auto *Block : CFG->getCFG()) {
+    for (const auto *Block : ACFG->getCFG()) {
       unsigned EltIndex = 0;
       for (const auto& Elt : *Block) {
         ++EltIndex;
@@ -469,7 +481,7 @@ private:
   // out to `dot` to turn it into an SVG.
   void writeCFG() {
     *OS << "<template data-copy='cfg'>\n";
-    if (auto SVG = renderSVG(buildCFGDot(CFG->getCFG())))
+    if (auto SVG = renderSVG(buildCFGDot(ACFG->getCFG())))
       *OS << *SVG;
     else
       *OS << "Can't draw CFG: " << toString(SVG.takeError());
@@ -477,7 +489,7 @@ private:
   }
 
   // Produce a graphviz description of a CFG.
-  static std::string buildCFGDot(const clang::CFG &CFG) {
+  std::string buildCFGDot(const clang::CFG &CFG) {
     std::string Graph;
     llvm::raw_string_ostream GraphS(Graph);
     // Graphviz likes to add unhelpful tooltips everywhere, " " suppresses.
@@ -486,8 +498,15 @@ private:
       node[class=bb, shape=square, fontname="sans-serif", tooltip=" "]
       edge[tooltip = " "]
 )";
-    for (unsigned I = 0; I < CFG.getNumBlockIDs(); ++I)
-      GraphS << "  " << blockID(I) << " [id=" << blockID(I) << "]\n";
+    for (unsigned I = 0; I < CFG.getNumBlockIDs(); ++I) {
+      std::string Name = blockID(I);
+      // Rightwards arrow, vertical line
+      const char *ConvergenceMarker = (const char *)u8"\\n\u2192\u007c";
+      if (BlockConverged[I])
+        Name += ConvergenceMarker;
+      GraphS << "  " << blockID(I) << " [id=" << blockID(I) << " label=\""
+             << Name << "\"]\n";
+    }
     for (const auto *Block : CFG) {
       for (const auto &Succ : Block->succs()) {
         if (Succ.getReachableBlock())

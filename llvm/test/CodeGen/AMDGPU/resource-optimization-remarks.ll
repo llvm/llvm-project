@@ -113,16 +113,7 @@ define amdgpu_kernel void @test_kernel() !dbg !3 {
   ret void
 }
 
-; STDERR: remark: foo.cl:42:0: Function Name: test_func
-; STDERR-NEXT: remark: foo.cl:42:0:     SGPRs: 0
-; STDERR-NEXT: remark: foo.cl:42:0:     VGPRs: 0
-; STDERR-NEXT: remark: foo.cl:42:0:     AGPRs: 0
-; STDERR-NEXT: remark: foo.cl:42:0:     ScratchSize [bytes/lane]: 0
-; STDERR-NEXT: remark: foo.cl:42:0:     Dynamic Stack: False
-; STDERR-NEXT: remark: foo.cl:42:0:     Occupancy [waves/SIMD]: 0
-; STDERR-NEXT: remark: foo.cl:42:0:     SGPRs Spill: 0
-; STDERR-NEXT: remark: foo.cl:42:0:     VGPRs Spill: 0
-; STDERR-NOT: LDS Size
+; STDERR-NOT: test_func
 define void @test_func() !dbg !6 {
   call void asm sideeffect "; clobber v17", "~{v17}"()
   call void asm sideeffect "; clobber s11", "~{s11}"()
@@ -144,15 +135,7 @@ define amdgpu_kernel void @empty_kernel() !dbg !7 {
   ret void
 }
 
-; STDERR: remark: foo.cl:52:0: Function Name: empty_func
-; STDERR-NEXT: remark: foo.cl:52:0:     SGPRs: 0
-; STDERR-NEXT: remark: foo.cl:52:0:     VGPRs: 0
-; STDERR-NEXT: remark: foo.cl:52:0:     AGPRs: 0
-; STDERR-NEXT: remark: foo.cl:52:0:     ScratchSize [bytes/lane]: 0
-; STDERR-NEXT: remark: foo.cl:52:0:     Dynamic Stack: False
-; STDERR-NEXT: remark: foo.cl:52:0:     Occupancy [waves/SIMD]: 0
-; STDERR-NEXT: remark: foo.cl:52:0:     SGPRs Spill: 0
-; STDERR-NEXT: remark: foo.cl:52:0:     VGPRs Spill: 0
+; STDERR-NOT: empty_func
 define void @empty_func() !dbg !8 {
   ret void
 }
@@ -211,4 +194,4 @@ define amdgpu_kernel void @test_indirect_w_static_stack() !dbg !10 {
 !8 = distinct !DISubprogram(name: "empty_func", scope: !1, file: !1, type: !4, scopeLine: 52, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
 !9 = distinct !DISubprogram(name: "test_indirect_call", scope: !1, file: !1, type: !4, scopeLine: 64, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
 !10 = distinct !DISubprogram(name: "test_indirect_w_static_stack", scope: !1, file: !1, type: !4, scopeLine: 74, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
-!11 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!11 = !{i32 1, !"amdhsa_code_object_version", i32 500}

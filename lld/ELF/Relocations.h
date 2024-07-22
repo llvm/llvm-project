@@ -40,11 +40,14 @@ enum RelExpr {
   R_GOTPLT,
   R_GOTPLTREL,
   R_GOTREL,
+  R_GOTPLT_GOTREL,
+  R_GOTPLT_PC,
   R_NONE,
   R_PC,
   R_PLT,
   R_PLT_PC,
   R_PLT_GOTPLT,
+  R_PLT_GOTREL,
   R_RELAX_HINT,
   R_RELAX_GOT_PC,
   R_RELAX_GOT_PC_NOPIC,
@@ -84,6 +87,7 @@ enum RelExpr {
   R_AARCH64_PAGE_PC,
   R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC,
   R_AARCH64_TLSDESC_PAGE,
+  R_AARCH64_AUTH,
   R_ARM_PCA,
   R_ARM_SBREL,
   R_MIPS_GOTREL,
@@ -112,6 +116,7 @@ enum RelExpr {
   R_LOONGARCH_GOT,
   R_LOONGARCH_GOT_PAGE_PC,
   R_LOONGARCH_TLSGD_PAGE_PC,
+  R_LOONGARCH_TLSDESC_PAGE_PC,
 };
 
 // Architecture-neutral representation of relocation.
@@ -136,6 +141,7 @@ struct JumpInstrMod {
 // Call reportUndefinedSymbols() after calling scanRelocations() to emit
 // the diagnostics.
 template <class ELFT> void scanRelocations();
+template <class ELFT> void checkNoCrossRefs();
 void reportUndefinedSymbols();
 void postScanRelocations();
 void addGotEntry(Symbol &sym);

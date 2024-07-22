@@ -145,9 +145,9 @@ void VarInfo::setNum(Var::Num n) {
 /// mismatches.
 LLVM_ATTRIBUTE_UNUSED static llvm::SMLoc
 minSMLoc(AsmParser &parser, llvm::SMLoc sm1, llvm::SMLoc sm2) {
-  const auto loc1 = parser.getEncodedSourceLoc(sm1).dyn_cast<FileLineColLoc>();
+  const auto loc1 = dyn_cast<FileLineColLoc>(parser.getEncodedSourceLoc(sm1));
   assert(loc1 && "Could not get `FileLineColLoc` for first `SMLoc`");
-  const auto loc2 = parser.getEncodedSourceLoc(sm2).dyn_cast<FileLineColLoc>();
+  const auto loc2 = dyn_cast<FileLineColLoc>(parser.getEncodedSourceLoc(sm2));
   assert(loc2 && "Could not get `FileLineColLoc` for second `SMLoc`");
   if (loc1.getFilename() != loc2.getFilename())
     return SMLoc();

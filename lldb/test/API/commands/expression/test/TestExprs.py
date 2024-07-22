@@ -12,7 +12,7 @@ o test_expr_commands_can_handle_quotes:
 """
 
 
-import unittest2
+import unittest
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -46,7 +46,7 @@ class BasicExprCommandsTestCase(TestBase):
 
     # llvm.org/pr17135 <rdar://problem/14874559>
     # APFloat::toString does not identify the correct (i.e. least) precision.
-    @unittest2.expectedFailure
+    @unittest.expectedFailure
     def test_floating_point_expr_commands(self):
         self.build_and_run()
 
@@ -124,7 +124,7 @@ class BasicExprCommandsTestCase(TestBase):
         )
 
         # We should be stopped on the breakpoint with a hit count of 1.
-        self.assertEquals(breakpoint.GetHitCount(), 1, BREAKPOINT_HIT_ONCE)
+        self.assertEqual(breakpoint.GetHitCount(), 1, BREAKPOINT_HIT_ONCE)
 
         #
         # Use Python API to evaluate expressions while stopped in a stack frame.
@@ -163,21 +163,21 @@ class BasicExprCommandsTestCase(TestBase):
         self.DebugSBValue(val)
 
         callee_break = target.BreakpointCreateByName("a_function_to_call", None)
-        self.assertTrue(callee_break.GetNumLocations() > 0)
+        self.assertGreater(callee_break.GetNumLocations(), 0)
 
         # Make sure ignoring breakpoints works from the command line:
         self.expect(
             "expression -i true -- a_function_to_call()", substrs=["(int) $", " 1"]
         )
-        self.assertEquals(callee_break.GetHitCount(), 1)
+        self.assertEqual(callee_break.GetHitCount(), 1)
 
         # Now try ignoring breakpoints using the SB API's:
         options = lldb.SBExpressionOptions()
         options.SetIgnoreBreakpoints(True)
         value = frame.EvaluateExpression("a_function_to_call()", options)
         self.assertTrue(value.IsValid())
-        self.assertEquals(value.GetValueAsSigned(0), 2)
-        self.assertEquals(callee_break.GetHitCount(), 2)
+        self.assertEqual(value.GetValueAsSigned(0), 2)
+        self.assertEqual(callee_break.GetHitCount(), 2)
 
     # rdar://problem/8686536
     # CommandInterpreter::HandleCommand is stripping \'s from input for

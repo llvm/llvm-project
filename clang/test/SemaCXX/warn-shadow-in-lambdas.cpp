@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++14 -verify -fsyntax-only -Wshadow -D AVOID %s
-// RUN: %clang_cc1 -std=c++14 -verify -fsyntax-only -Wshadow -Wshadow-uncaptured-local %s
-// RUN: %clang_cc1 -std=c++14 -verify -fsyntax-only -Wshadow-all %s
+// RUN: %clang_cc1 -std=c++14 -verify=expected,cxx14 -fsyntax-only -Wshadow -D AVOID %s
+// RUN: %clang_cc1 -std=c++14 -verify=expected,cxx14 -fsyntax-only -Wshadow -Wshadow-uncaptured-local %s
+// RUN: %clang_cc1 -std=c++14 -verify=expected,cxx14 -fsyntax-only -Wshadow-all %s
 // RUN: %clang_cc1 -std=c++17 -verify -fsyntax-only -Wshadow-all %s
 // RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only -Wshadow-all %s
 
@@ -178,4 +178,90 @@ void f() {
   auto l5 = []<typename y>(y) { return 0; }; // No diagnostic
 #endif
 }
+}
+
+namespace GH71976 {
+#ifdef AVOID
+struct A {
+  int b = 5;
+  int foo() {
+    return [b = b]() { return b; }(); // no -Wshadow diagnostic, init-capture does not shadow b due to not capturing this
+  }
+};
+
+struct B {
+  int a;
+  void foo() {
+    auto b = [a = this->a] {}; // no -Wshadow diagnostic, init-capture does not shadow a due to not capturing his
+  }
+};
+
+struct C {
+  int b = 5;
+  int foo() {
+    return [a = b]() {
+      return [=, b = a]() { // no -Wshadow diagnostic, init-capture does not shadow b due to outer lambda
+        return b;
+      }();
+    }();
+  }
+};
+
+#else
+struct A {
+  int b = 5; // expected-note {{previous}}
+  int foo() {
+    return [b = b]() { return b; }(); // expected-warning {{declaration shadows a field}}
+  }
+};
+
+struct B {
+  int a; // expected-note {{previous}}
+  void foo() {
+    auto b = [a = this->a] {}; // expected-warning {{declaration shadows a field}}
+  }
+};
+
+struct C {
+  int b = 5; // expected-note {{previous}}
+  int foo() {
+    return [a = b]() {
+      return [=, b = a]() { // expected-warning {{declaration shadows a field}}
+        return b;
+      }();
+    }();
+  }
+};
+
+struct D {
+  int b = 5; // expected-note {{previous}}
+  int foo() {
+    return [b = b, this]() { return b; }(); // expected-warning {{declaration shadows a field}}
+  }
+};
+
+struct E {
+  int b = 5;
+  int foo() {
+    return [a = b]() { // expected-note {{previous}}
+      return [=, a = a]() { // expected-warning {{shadows a local}}
+        return a;
+      }();
+    }();
+  }
+};
+
+#endif
+
+struct S {
+    int a ;
+};
+
+int foo() {
+  auto [a] = S{0}; // expected-note {{previous}} \
+                   // cxx14-warning {{decomposition declarations are a C++17 extension}}
+  [a = a] () { // expected-warning {{declaration shadows a structured binding}}
+  }();
+}
+
 }

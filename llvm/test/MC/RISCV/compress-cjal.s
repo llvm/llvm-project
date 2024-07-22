@@ -11,7 +11,7 @@
 
 # c.jal is an rv32 only instruction.
 jal ra, 2046
-# CHECK-BYTES: fd 2f
+# CHECK-BYTES: 2ffd
 # CHECK-ALIASOBJ: jal 0x7fe
 # CHECK-ALIAS: jal 2046
 # CHECK-INST: c.jal 2046

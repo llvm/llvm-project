@@ -27,7 +27,10 @@
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/Symbol/Type.h"
+#include "lldb/Utility/Scalar.h"
+#include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
+#include "lldb/lldb-types.h"
 
 class PDBASTParser;
 
@@ -108,6 +111,8 @@ public:
 
   virtual std::vector<lldb_private::CompilerContext>
   DeclGetCompilerContext(void *opaque_decl);
+
+  virtual Scalar DeclGetConstantValue(void *opaque_decl) { return Scalar(); }
 
   virtual CompilerType GetTypeForDecl(void *opaque_decl) = 0;
 
@@ -204,6 +209,7 @@ public:
   // TypeSystems can support more than one language
   virtual bool SupportsLanguage(lldb::LanguageType language) = 0;
 
+  static bool SupportsLanguageStatic(lldb::LanguageType language);
   // Type Completion
 
   virtual bool GetCompleteType(lldb::opaque_compiler_type_t type) = 0;
@@ -215,6 +221,14 @@ public:
   // AST related queries
 
   virtual uint32_t GetPointerByteSize() = 0;
+
+  virtual unsigned GetPtrAuthKey(lldb::opaque_compiler_type_t type) = 0;
+
+  virtual unsigned
+  GetPtrAuthDiscriminator(lldb::opaque_compiler_type_t type) = 0;
+
+  virtual bool
+  GetPtrAuthAddressDiversity(lldb::opaque_compiler_type_t type) = 0;
 
   // Accessors
 
@@ -280,6 +294,9 @@ public:
 
   virtual CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type);
 
+  virtual CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
+                                          uint32_t payload);
+
   /// \param opaque_payload      The m_payload field of Type, which may
   /// carry TypeSystem-specific extra information.
   virtual CompilerType CreateTypedef(lldb::opaque_compiler_type_t type,
@@ -300,9 +317,10 @@ public:
 
   virtual lldb::Format GetFormat(lldb::opaque_compiler_type_t type) = 0;
 
-  virtual uint32_t GetNumChildren(lldb::opaque_compiler_type_t type,
-                                  bool omit_empty_base_classes,
-                                  const ExecutionContext *exe_ctx) = 0;
+  virtual llvm::Expected<uint32_t>
+  GetNumChildren(lldb::opaque_compiler_type_t type,
+                 bool omit_empty_base_classes,
+                 const ExecutionContext *exe_ctx) = 0;
 
   virtual CompilerType GetBuiltinTypeByName(ConstString name);
 
@@ -337,7 +355,12 @@ public:
   GetVirtualBaseClassAtIndex(lldb::opaque_compiler_type_t type, size_t idx,
                              uint32_t *bit_offset_ptr) = 0;
 
-  virtual CompilerType GetChildCompilerTypeAtIndex(
+  virtual CompilerDecl GetStaticFieldWithName(lldb::opaque_compiler_type_t type,
+                                              llvm::StringRef name) {
+    return CompilerDecl();
+  }
+
+  virtual llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
       bool transparent_pointers, bool omit_empty_base_classes,
       bool ignore_array_bounds, std::string &child_name,
@@ -361,6 +384,12 @@ public:
   virtual size_t GetIndexOfChildMemberWithName(
       lldb::opaque_compiler_type_t type, llvm::StringRef name,
       bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) = 0;
+
+  virtual CompilerType
+  GetDirectNestedTypeWithName(lldb::opaque_compiler_type_t type,
+                              llvm::StringRef name) {
+    return CompilerType();
+  }
 
   virtual bool IsTemplateType(lldb::opaque_compiler_type_t type);
 
@@ -466,12 +495,10 @@ public:
     return IsPointerOrReferenceType(type, nullptr);
   }
 
-  virtual UserExpression *
-  GetUserExpression(llvm::StringRef expr, llvm::StringRef prefix,
-                    lldb::LanguageType language,
-                    Expression::ResultType desired_type,
-                    const EvaluateExpressionOptions &options,
-                    ValueObject *ctx_obj) {
+  virtual UserExpression *GetUserExpression(
+      llvm::StringRef expr, llvm::StringRef prefix, SourceLanguage language,
+      Expression::ResultType desired_type,
+      const EvaluateExpressionOptions &options, ValueObject *ctx_obj) {
     return nullptr;
   }
 

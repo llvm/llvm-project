@@ -49,7 +49,7 @@ class LLVM_ArithmeticOpBase<Type type, string mnemonic,
 }
 class LLVM_IntArithmeticOp<string mnemonic, string instName,
                            list<Trait> traits = []> :
-    LLVM_ArithmeticOpBase<AnyInteger, mnemonic, instName, traits> {
+    LLVM_ArithmeticOpBase<AnySignlessInteger, mnemonic, instName, traits> {
   let arguments = commonArgs;
   string mlirBuilder = [{
     $res = $_builder.create<$_qualCppClassName>($_location, $lhs, $rhs);
@@ -57,19 +57,32 @@ class LLVM_IntArithmeticOp<string mnemonic, string instName,
 }
 class LLVM_IntArithmeticOpWithOverflowFlag<string mnemonic, string instName,
                                    list<Trait> traits = []> :
-    LLVM_ArithmeticOpBase<AnyInteger, mnemonic, instName,
+    LLVM_ArithmeticOpBase<AnySignlessInteger, mnemonic, instName,
     !listconcat([DeclareOpInterfaceMethods<IntegerOverflowFlagsInterface>], traits)> {
-  dag iofArg = (
-    ins DefaultValuedAttr<LLVM_IntegerOverflowFlagsAttr, "{}">:$overflowFlags);
+  dag iofArg = (ins EnumProperty<"IntegerOverflowFlags">:$overflowFlags);
   let arguments = !con(commonArgs, iofArg);
+
+  let builders = [
+    OpBuilder<(ins "Type":$type, "Value":$lhs, "Value":$rhs,
+                   "IntegerOverflowFlags":$overflowFlags), [{
+      $_state.getOrAddProperties<Properties>().overflowFlags = overflowFlags;
+      build($_builder, $_state, type, lhs, rhs);
+    }]>,
+    OpBuilder<(ins "Value":$lhs, "Value":$rhs,
+                   "IntegerOverflowFlags":$overflowFlags), [{
+      $_state.getOrAddProperties<Properties>().overflowFlags = overflowFlags;
+      build($_builder, $_state, lhs, rhs);
+    }]>
+  ];
+
   string mlirBuilder = [{
     auto op = $_builder.create<$_qualCppClassName>($_location, $lhs, $rhs);
-    moduleImport.setIntegerOverflowFlagsAttr(inst, op);
+    moduleImport.setIntegerOverflowFlags(inst, op);
     $res = op;
   }];
   let assemblyFormat = [{
-    $lhs `,` $rhs (`overflow` `` $overflowFlags^)?
-    custom<LLVMOpAttrs>(attr-dict) `:` type($res)
+    $lhs `,` $rhs `` custom<OverflowFlags>($overflowFlags)
+    `` custom<LLVMOpAttrs>(attr-dict) `:` type($res)
   }];
   string llvmBuilder =
     "$res = builder.Create" # instName #
@@ -143,9 +156,9 @@ class LLVM_ArithmeticCmpOp<string mnemonic, list<Trait> traits = []> :
 // Other integer operations.
 def LLVM_ICmpOp : LLVM_ArithmeticCmpOp<"icmp", [Pure]> {
   let arguments = (ins ICmpPredicate:$predicate,
-                   AnyTypeOf<[LLVM_ScalarOrVectorOf<AnyInteger>,
+                   AnyTypeOf<[LLVM_ScalarOrVectorOf<AnySignlessInteger>,
                               LLVM_ScalarOrVectorOf<LLVM_AnyPointer>]>:$lhs,
-                   AnyTypeOf<[LLVM_ScalarOrVectorOf<AnyInteger>,
+                   AnyTypeOf<[LLVM_ScalarOrVectorOf<AnySignlessInteger>,
                               LLVM_ScalarOrVectorOf<LLVM_AnyPointer>]>:$rhs);
   let hasCustomAssemblyFormat = 1;
   string llvmInstName = "ICmp";
@@ -204,7 +217,7 @@ def LLVM_AllocaOp : LLVM_Op<"alloca",
      DeclareOpInterfaceMethods<DestructurableAllocationOpInterface>,
      DeclareOpInterfaceMethods<GetResultPtrElementType>]>,
   LLVM_MemOpPatterns {
-  let arguments = (ins AnyInteger:$arraySize,
+  let arguments = (ins AnySignlessInteger:$arraySize,
                    OptionalAttr<I64Attr>:$alignment,
                    TypeAttr:$elem_type,
                    UnitAttr:$inalloca);
@@ -250,7 +263,7 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
     DeclareOpInterfaceMethods<GetResultPtrElementType>]> {
   let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$base,
-                   Variadic<LLVM_ScalarOrVectorOf<AnyInteger>>:$dynamicIndices,
+                   Variadic<LLVM_ScalarOrVectorOf<AnySignlessInteger>>:$dynamicIndices,
                    DenseI32ArrayAttr:$rawConstantIndices,
                    TypeAttr:$elem_type,
                    UnitAttr:$inbounds);
@@ -323,13 +336,15 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
 }
 
 def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
-    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+    [DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>]> {
   dag args = (ins LLVM_AnyPointer:$addr,
               OptionalAttr<I64Attr>:$alignment,
               UnitAttr:$volatile_,
               UnitAttr:$nontemporal,
+              UnitAttr:$invariant,
               DefaultValuedAttr<
                 AtomicOrdering, "AtomicOrdering::not_atomic">:$ordering,
               OptionalAttr<StrAttr>:$syncscope);
@@ -364,11 +379,16 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
   let assemblyFormat = [{
     (`volatile` $volatile_^)? $addr
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
+    (`invariant` $invariant^)?
     attr-dict `:` qualified(type($addr)) `->` type($res)
   }];
   string llvmBuilder = [{
     auto *inst = builder.CreateLoad($_resultType, $addr, $volatile_);
     $res = inst;
+    if ($invariant) {
+      llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), std::nullopt);
+      inst->setMetadata(llvm::LLVMContext::MD_invariant_load, metadata);
+    }
   }] # setOrderingCode
      # setSyncScopeCode
      # setAlignmentCode
@@ -381,13 +401,14 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     $res = $_builder.create<LLVM::LoadOp>($_location, $_resultType, $addr,
         alignment, loadInst->isVolatile(),
         loadInst->hasMetadata(llvm::LLVMContext::MD_nontemporal),
+        loadInst->hasMetadata(llvm::LLVMContext::MD_invariant_load),
         convertAtomicOrderingFromLLVM(loadInst->getOrdering()),
         getLLVMSyncScope(loadInst));
   }];
   let builders = [
     OpBuilder<(ins "Type":$type, "Value":$addr,
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
-      CArg<"bool", "false">:$isNonTemporal,
+      CArg<"bool", "false">:$isNonTemporal, CArg<"bool", "false">:$isInvariant,
       CArg<"AtomicOrdering", "AtomicOrdering::not_atomic">:$ordering,
       CArg<"StringRef", "StringRef()">:$syncscope)>
   ];
@@ -395,7 +416,8 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
 }
 
 def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
-    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+    [DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>]> {
   dag args = (ins LLVM_LoadableType:$value,
@@ -492,37 +514,37 @@ def LLVM_AddrSpaceCastOp : LLVM_CastOp<"addrspacecast", "AddrSpaceCast",
   let hasFolder = 1;
 }
 def LLVM_IntToPtrOp : LLVM_CastOp<"inttoptr", "IntToPtr",
-                                  LLVM_ScalarOrVectorOf<AnyInteger>,
+                                  LLVM_ScalarOrVectorOf<AnySignlessInteger>,
                                   LLVM_ScalarOrVectorOf<LLVM_AnyPointer>>;
 def LLVM_PtrToIntOp : LLVM_CastOp<"ptrtoint", "PtrToInt",
                                   LLVM_ScalarOrVectorOf<LLVM_AnyPointer>,
-                                  LLVM_ScalarOrVectorOf<AnyInteger>>;
+                                  LLVM_ScalarOrVectorOf<AnySignlessInteger>>;
 def LLVM_SExtOp : LLVM_CastOp<"sext", "SExt",
-                              LLVM_ScalarOrVectorOf<AnyInteger>,
-                              LLVM_ScalarOrVectorOf<AnyInteger>> {
+                              LLVM_ScalarOrVectorOf<AnySignlessInteger>,
+                              LLVM_ScalarOrVectorOf<AnySignlessInteger>> {
   let hasVerifier = 1;
 }
 def LLVM_ZExtOp : LLVM_CastOp<"zext", "ZExt",
-                              LLVM_ScalarOrVectorOf<AnyInteger>,
-                              LLVM_ScalarOrVectorOf<AnyInteger>> {
+                              LLVM_ScalarOrVectorOf<AnySignlessInteger>,
+                              LLVM_ScalarOrVectorOf<AnySignlessInteger>> {
   let hasFolder = 1;
   let hasVerifier = 1;
 }
 def LLVM_TruncOp : LLVM_CastOp<"trunc", "Trunc",
-                               LLVM_ScalarOrVectorOf<AnyInteger>,
-                               LLVM_ScalarOrVectorOf<AnyInteger>>;
+                               LLVM_ScalarOrVectorOf<AnySignlessInteger>,
+                               LLVM_ScalarOrVectorOf<AnySignlessInteger>>;
 def LLVM_SIToFPOp : LLVM_CastOp<"sitofp", "SIToFP",
-                                LLVM_ScalarOrVectorOf<AnyInteger>,
+                                LLVM_ScalarOrVectorOf<AnySignlessInteger>,
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
 def LLVM_UIToFPOp : LLVM_CastOp<"uitofp", "UIToFP",
-                                LLVM_ScalarOrVectorOf<AnyInteger>,
+                                LLVM_ScalarOrVectorOf<AnySignlessInteger>,
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
 def LLVM_FPToSIOp : LLVM_CastOp<"fptosi", "FPToSI",
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
-                                LLVM_ScalarOrVectorOf<AnyInteger>>;
+                                LLVM_ScalarOrVectorOf<AnySignlessInteger>>;
 def LLVM_FPToUIOp : LLVM_CastOp<"fptoui", "FPToUI",
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
-                                LLVM_ScalarOrVectorOf<AnyInteger>>;
+                                LLVM_ScalarOrVectorOf<AnySignlessInteger>>;
 def LLVM_FPExtOp : LLVM_CastOp<"fpext", "FPExt",
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
@@ -628,7 +650,8 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
                   DefaultValuedAttr<LLVM_FastmathFlagsAttr,
                                    "{}">:$fastmathFlags,
                   OptionalAttr<DenseI32ArrayAttr>:$branch_weights,
-                  DefaultValuedAttr<CConv, "CConv::C">:$CConv);
+                  DefaultValuedAttr<CConv, "CConv::C">:$CConv,
+                  DefaultValuedAttr<TailCallKind, "TailCallKind::None">:$TailCallKind);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs Optional<LLVM_Type>:$result);
@@ -664,7 +687,7 @@ def LLVM_ExtractElementOp : LLVM_Op<"extractelement", [Pure,
                    "LLVM::getVectorElementType($_self)">]> {
   let summary = "Extract an element from an LLVM vector.";
 
-  let arguments = (ins LLVM_AnyVector:$vector, AnyInteger:$position);
+  let arguments = (ins LLVM_AnyVector:$vector, AnySignlessInteger:$position);
   let results = (outs LLVM_Type:$res);
 
   let assemblyFormat = [{
@@ -726,7 +749,7 @@ def LLVM_InsertElementOp : LLVM_Op<"insertelement", [Pure,
   let summary = "Insert an element into an LLVM vector.";
 
   let arguments = (ins LLVM_AnyVector:$vector, LLVM_PrimitiveType:$value,
-                       AnyInteger:$position);
+                       AnySignlessInteger:$position);
   let results = (outs LLVM_AnyVector:$res);
 
   let builders = [LLVM_OneResultOpBuilder];
@@ -964,7 +987,7 @@ def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
      DeclareOpInterfaceMethods<BranchWeightOpInterface>,
      Pure]> {
   let arguments = (ins
-    AnyInteger:$value,
+    AnySignlessInteger:$value,
     Variadic<AnyType>:$defaultOperands,
     VariadicOfVariadic<AnyType, "case_operand_segments">:$caseOperands,
     OptionalAttr<AnyIntElementsAttr>:$case_values,
@@ -1030,7 +1053,7 @@ def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
 ////////////////////////////////////////////////////////////////////////////////
 
 def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
-    [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+    [Pure, ConstantLike, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let arguments = (ins FlatSymbolRefAttr:$global_name);
   let results = (outs LLVM_AnyPointer:$res);
 
@@ -1092,6 +1115,8 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
   }];
 
   let assemblyFormat = "$global_name attr-dict `:` qualified(type($res))";
+
+  let hasFolder = 1;
 }
 
 def LLVM_GlobalOp : LLVM_Op<"mlir.global",
@@ -1401,6 +1426,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     UnitAttr:$dso_local,
     DefaultValuedAttr<CConv, "CConv::C">:$CConv,
     OptionalAttr<SymbolRefAttr>:$comdat,
+    OptionalAttr<UnitAttr>:$convergent,
     OptionalAttr<FlatSymbolRefAttr>:$personality,
     OptionalAttr<StrAttr>:$garbageCollector,
     OptionalAttr<ArrayAttr>:$passthrough,
@@ -1413,12 +1439,31 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<UnitAttr>:$arm_locally_streaming,
     OptionalAttr<UnitAttr>:$arm_streaming_compatible,
     OptionalAttr<UnitAttr>:$arm_new_za,
+    OptionalAttr<UnitAttr>:$arm_in_za,
+    OptionalAttr<UnitAttr>:$arm_out_za,
+    OptionalAttr<UnitAttr>:$arm_inout_za,
+    OptionalAttr<UnitAttr>:$arm_preserves_za,
     OptionalAttr<StrAttr>:$section,
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
     OptionalAttr<I64Attr>:$alignment,
     OptionalAttr<LLVM_VScaleRangeAttr>:$vscale_range,
     OptionalAttr<FramePointerKindAttr>:$frame_pointer,
-    OptionalAttr<LLVM_TargetFeaturesAttr>:$target_features
+    OptionalAttr<StrAttr>:$target_cpu,
+    OptionalAttr<StrAttr>:$tune_cpu,
+    OptionalAttr<LLVM_TargetFeaturesAttr>:$target_features,
+    OptionalAttr<BoolAttr>:$unsafe_fp_math,
+    OptionalAttr<BoolAttr>:$no_infs_fp_math,
+    OptionalAttr<BoolAttr>:$no_nans_fp_math,
+    OptionalAttr<BoolAttr>:$approx_func_fp_math,
+    OptionalAttr<BoolAttr>:$no_signed_zeros_fp_math,
+    OptionalAttr<StrAttr>:$denormal_fp_math,
+    OptionalAttr<StrAttr>:$denormal_fp_math_f32,
+    OptionalAttr<StrAttr>:$fp_contract,
+    OptionalAttr<UnitAttr>:$no_inline,
+    OptionalAttr<UnitAttr>:$always_inline,
+    OptionalAttr<UnitAttr>:$no_unwind,
+    OptionalAttr<UnitAttr>:$will_return,
+    OptionalAttr<UnitAttr>:$optimize_none
   );
 
   let regions = (region AnyRegion:$body);
@@ -1439,7 +1484,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
   let extraClassDeclaration = [{
     // Add an entry block to an empty function, and set up the block arguments
     // to match the signature of the function.
-    Block *addEntryBlock();
+    Block *addEntryBlock(OpBuilder &builder);
 
     bool isVarArg() { return getFunctionType().isVarArg(); }
 
@@ -1456,6 +1501,15 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     /// Returns the callable region, which is the function body. If the function
     /// is external, returns null.
     Region *getCallableRegion();
+
+    /// Returns true if the `no_inline` attribute is set, false otherwise.
+    bool isNoInline() { return bool(getNoInlineAttr()); }
+
+    /// Returns true if the `always_inline` attribute is set, false otherwise.
+    bool isAlwaysInline() { return bool(getAlwaysInlineAttr()); }
+
+    /// Returns true if the `optimize_none` attribute is set, false otherwise.
+    bool isOptimizeNone() { return bool(getOptimizeNoneAttr()); }
   }];
 
   let hasCustomAssemblyFormat = 1;
@@ -1488,7 +1542,7 @@ def LLVM_NoneTokenOp
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 
-def LLVM_UndefOp : LLVM_Op<"mlir.undef", [Pure]>,
+def LLVM_UndefOp : LLVM_Op<"mlir.undef", [Pure, ConstantLike]>,
                    LLVM_Builder<"$res = llvm::UndefValue::get($_resultType);"> {
   let summary = "Creates an undefined value of LLVM dialect type.";
   let description = [{
@@ -1507,9 +1561,10 @@ def LLVM_UndefOp : LLVM_Op<"mlir.undef", [Pure]>,
   let results = (outs LLVM_Type:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "attr-dict `:` type($res)";
+  let hasFolder = 1;
 }
 
-def LLVM_PoisonOp : LLVM_Op<"mlir.poison", [Pure]>,
+def LLVM_PoisonOp : LLVM_Op<"mlir.poison", [Pure, ConstantLike]>,
                     LLVM_Builder<"$res = llvm::PoisonValue::get($_resultType);"> {
   let summary = "Creates a poison value of LLVM dialect type.";
   let description = [{
@@ -1529,10 +1584,11 @@ def LLVM_PoisonOp : LLVM_Op<"mlir.poison", [Pure]>,
   let results = (outs LLVM_Type:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "attr-dict `:` type($res)";
+  let hasFolder = 1;
 }
 
 def LLVM_ZeroOp
-    : LLVM_Op<"mlir.zero", [Pure]>,
+    : LLVM_Op<"mlir.zero", [Pure, ConstantLike]>,
       LLVM_Builder<"$res = llvm::Constant::getNullValue($_resultType);">
 {
   let summary = "Creates a zero-initialized value of LLVM dialect type.";
@@ -1554,6 +1610,7 @@ def LLVM_ZeroOp
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "attr-dict `:` type($res)";
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 def LLVM_ConstantOp
@@ -1630,7 +1687,7 @@ def LLVM_ConstantOp
 // Atomic operations.
 //
 
-def LLVM_AtomicRMWType : AnyTypeOf<[LLVM_AnyFloat, LLVM_AnyPointer, AnyInteger]>;
+def LLVM_AtomicRMWType : AnyTypeOf<[LLVM_AnyFloat, LLVM_AnyPointer, AnySignlessInteger]>;
 
 def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
       TypesMatchWith<"result #0 and operand #1 have the same type",
@@ -1679,7 +1736,7 @@ def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
   let hasVerifier = 1;
 }
 
-def LLVM_AtomicCmpXchgType : AnyTypeOf<[AnyInteger, LLVM_AnyPointer]>;
+def LLVM_AtomicCmpXchgType : AnyTypeOf<[AnySignlessInteger, LLVM_AnyPointer]>;
 
 def LLVM_AtomicCmpXchgOp : LLVM_MemAccessOpBase<"cmpxchg", [
       TypesMatchWith<"operand #1 and operand #2 have the same type",
@@ -1761,7 +1818,7 @@ def LLVM_FenceOp : LLVM_Op<"fence">, LLVM_MemOpPatterns {
   let hasVerifier = 1;
 }
 
-def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", []> {
+def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let description = [{
     The InlineAsmOp mirrors the underlying LLVM semantics with a notable
     exception: the embedded `asm_string` is not allowed to define or reference

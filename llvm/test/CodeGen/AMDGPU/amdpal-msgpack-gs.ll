@@ -5,7 +5,7 @@
 ; amdpal geometry shader: check for 0x2c8a (SPI_SHADER_PGM_RSRC1_GS) in pal metadata
 ; GCN-LABEL: {{^}}gs_amdpal:
 ; GCN: .amdgpu_pal_metadata
-; GCN: 0x2c8a (SPI_SHADER_PGM_RSRC1_GS)
+; GCN: '0x2c8a (SPI_SHADER_PGM_RSRC1_GS)'
 define amdgpu_gs half @gs_amdpal(half %arg0) {
   %add = fadd half %arg0, 1.0
   ret half %add

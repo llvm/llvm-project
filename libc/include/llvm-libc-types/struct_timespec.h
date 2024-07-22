@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_TIMESPEC_H__
-#define __LLVM_LIBC_TYPES_TIMESPEC_H__
+#ifndef LLVM_LIBC_TYPES_STRUCT_TIMESPEC_H
+#define LLVM_LIBC_TYPES_STRUCT_TIMESPEC_H
 
-#include <llvm-libc-types/time_t.h>
+#include "llvm-libc-types/time_t.h"
 
 struct timespec {
   time_t tv_sec; /* Seconds.  */
@@ -17,4 +17,4 @@ struct timespec {
   long tv_nsec; /* Nanoseconds.  */
 };
 
-#endif // __LLVM_LIBC_TYPES_TIMESPEC_H__
+#endif // LLVM_LIBC_TYPES_STRUCT_TIMESPEC_H

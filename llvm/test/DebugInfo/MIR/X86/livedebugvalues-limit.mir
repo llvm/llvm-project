@@ -72,7 +72,7 @@
   declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #3
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #4
+  declare void @llvm.stackprotector(ptr, ptr) #4
   
   attributes #0 = { alwaysinline nounwind ssp uwtable }
   attributes #2 = { nounwind ssp uwtable }

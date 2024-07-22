@@ -225,15 +225,11 @@ public:
   ///   invalidated. This should include any regions explicitly invalidated
   ///   even if they do not currently have bindings. Pass \c NULL if this
   ///   information will not be used.
-  virtual StoreRef invalidateRegions(Store store,
-                                  ArrayRef<SVal> Values,
-                                  const Expr *E, unsigned Count,
-                                  const LocationContext *LCtx,
-                                  const CallEvent *Call,
-                                  InvalidatedSymbols &IS,
-                                  RegionAndSymbolInvalidationTraits &ITraits,
-                                  InvalidatedRegions *InvalidatedTopLevel,
-                                  InvalidatedRegions *Invalidated) = 0;
+  virtual StoreRef invalidateRegions(
+      Store store, ArrayRef<SVal> Values, const Expr *Ex, unsigned Count,
+      const LocationContext *LCtx, const CallEvent *Call,
+      InvalidatedSymbols &IS, RegionAndSymbolInvalidationTraits &ITraits,
+      InvalidatedRegions *TopLevelRegions, InvalidatedRegions *Invalidated) = 0;
 
   /// enterStackFrame - Let the StoreManager to do something when execution
   /// engine is about to execute into a callee.

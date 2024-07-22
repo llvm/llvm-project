@@ -9,7 +9,7 @@
 define i16 @bitcast_v1f16_i16(<1 x half> %a) {
 ; CHECK-LABEL: bitcast_v1f16_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <1 x half> %a to i16
@@ -29,7 +29,7 @@ define half @bitcast_v1f16_f16(<1 x half> %a) {
 define i32 @bitcast_v2f16_i32(<2 x half> %a) {
 ; CHECK-LABEL: bitcast_v2f16_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <2 x half> %a to i32
@@ -39,7 +39,7 @@ define i32 @bitcast_v2f16_i32(<2 x half> %a) {
 define i32 @bitcast_v1f32_i32(<1 x float> %a) {
 ; CHECK-LABEL: bitcast_v1f32_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <1 x float> %a to i32
@@ -156,7 +156,7 @@ define double @bitcast_v1f64_f64(<1 x double> %a) {
 define <1 x half> @bitcast_i16_v1f16(i16 %a) {
 ; CHECK-LABEL: bitcast_i16_v1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
   %b = bitcast i16 %a to <1 x half>
@@ -166,7 +166,7 @@ define <1 x half> @bitcast_i16_v1f16(i16 %a) {
 define <2 x half> @bitcast_i32_v2f16(i32 %a) {
 ; CHECK-LABEL: bitcast_i32_v2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
   %b = bitcast i32 %a to <2 x half>
@@ -176,7 +176,7 @@ define <2 x half> @bitcast_i32_v2f16(i32 %a) {
 define <1 x float> @bitcast_i32_v1f32(i32 %a) {
 ; CHECK-LABEL: bitcast_i32_v1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
   %b = bitcast i32 %a to <1 x float>

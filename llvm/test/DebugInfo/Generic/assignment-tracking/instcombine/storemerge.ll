@@ -1,4 +1,5 @@
 ; RUN: opt %s -S -passes=instcombine -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=instcombine -o - | FileCheck %s
 
 ;; $ cat test.cpp
 ;; class a {
@@ -47,11 +48,11 @@
 ;; with the same DIAssignID attachments too.
 
 ; CHECK: if.then:
-; CHECK: call void @llvm.dbg.assign(metadata float %call2, metadata ![[var:[0-9]+]], metadata !DIExpression(), metadata ![[id:[0-9]+]], metadata ptr %p, metadata !DIExpression()), !dbg
+; CHECK: #dbg_assign(float %call2, ![[var:[0-9]+]], !DIExpression(), ![[id:[0-9]+]], ptr %p, !DIExpression(),
 ; CHECK: br label %for.inc
 
 ; CHECK: if.else:
-; CHECK: call void @llvm.dbg.assign(metadata float %call5, metadata ![[var]], metadata !DIExpression(), metadata ![[id]], metadata ptr %p, metadata !DIExpression()), !dbg
+; CHECK: #dbg_assign(float %call5, ![[var]], !DIExpression(), ![[id]], ptr %p, !DIExpression(),
 ; CHECK: br label %for.inc
 
 ; CHECK: for.inc:
@@ -59,11 +60,11 @@
 ; CHECK-NEXT: store float %storemerge, ptr %p, align 4{{.+}}!DIAssignID ![[id]]
 
 ; CHECK: if.then.1:
-; CHECK: call void @llvm.dbg.assign(metadata float %call2.1, metadata ![[var]], metadata !DIExpression(), metadata ![[id]], metadata ptr %p, metadata !DIExpression()), !dbg
+; CHECK: #dbg_assign(float %call2.1, ![[var]], !DIExpression(), ![[id]], ptr %p, !DIExpression(),
 ; CHECK: br label %for.inc.1
 
 ; CHECK: if.else.1:
-; CHECK: call void @llvm.dbg.assign(metadata float %call5.1, metadata ![[var]], metadata !DIExpression(), metadata ![[id]], metadata ptr %p, metadata !DIExpression()), !dbg
+; CHECK: #dbg_assign(float %call5.1, ![[var]], !DIExpression(), ![[id]], ptr %p, !DIExpression(),
 ; CHECK: br label %for.inc.1
 
 ; CHECK: for.inc.1:
@@ -71,11 +72,11 @@
 ; CHECK-NEXT: store float %storemerge1, ptr %p, align 4{{.+}}!DIAssignID ![[id]]
 
 ; CHECK: if.then.2:
-; CHECK: call void @llvm.dbg.assign(metadata float %call2.2, metadata ![[var]], metadata !DIExpression(), metadata ![[id]], metadata ptr %p, metadata !DIExpression()), !dbg
+; CHECK: #dbg_assign(float %call2.2, ![[var]], !DIExpression(), ![[id]], ptr %p, !DIExpression(),
 ; CHECK: br label %for.inc.2
 
 ; CHECK: if.else.2:
-; CHECK: call void @llvm.dbg.assign(metadata float %call5.2, metadata ![[var]], metadata !DIExpression(), metadata ![[id]], metadata ptr %p, metadata !DIExpression()), !dbg
+; CHECK: #dbg_assign(float %call5.2, ![[var]], !DIExpression(), ![[id]], ptr %p, !DIExpression(),
 ; CHECK:  br label %for.inc.2
 
 ; CHECK: for.inc.2:
@@ -94,7 +95,7 @@ entry:
   %p = alloca %class.a, align 4, !DIAssignID !49
   call void @llvm.dbg.assign(metadata i1 undef, metadata !48, metadata !DIExpression(), metadata !49, metadata ptr %p, metadata !DIExpression()), !dbg !50
   %0 = bitcast ptr %p to ptr, !dbg !51
-  call void @llvm.lifetime.start.p0i8(i64 4, ptr nonnull %0) #4, !dbg !51
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %0) #4, !dbg !51
   %n = getelementptr inbounds %class.j, ptr %this, i64 0, i32 3
   %l = getelementptr inbounds %class.j, ptr %this, i64 0, i32 1
   %ref.tmp.sroa.0.0..sroa_idx = getelementptr inbounds %class.a, ptr %p, i64 0, i32 0
@@ -158,19 +159,19 @@ if.else.2:                                        ; preds = %for.inc.1
 for.inc.2:                                        ; preds = %if.else.2, %if.then.2
   %k = getelementptr inbounds %class.j, ptr %this, i64 0, i32 0, !dbg !77
   call void @_ZN1g1hER1a(ptr %k, ptr nonnull align 4 dereferenceable(4) %p), !dbg !78
-  call void @llvm.lifetime.end.p0i8(i64 4, ptr nonnull %0) #4, !dbg !79
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %0) #4, !dbg !79
   ret void, !dbg !79
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 declare dso_local nonnull align 1 dereferenceable(1) ptr @_ZN1e1fEv(ptr) local_unnamed_addr #2
 
 declare dso_local float @_ZN1c1dEv(ptr) local_unnamed_addr #2
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 declare dso_local void @_ZN1g1hER1a(ptr, ptr nonnull align 4 dereferenceable(4)) local_unnamed_addr #2
 

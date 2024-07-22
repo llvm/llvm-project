@@ -15,7 +15,6 @@
 
 namespace llvm {
 
-class MCAsmLayout;
 class MCAssembler;
 class MCFixup;
 class MCFragment;
@@ -54,8 +53,7 @@ public:
   ///
   /// This routine is called by the assembler after layout and relaxation is
   /// complete.
-  virtual void executePostLayoutBinding(MCAssembler &Asm,
-                                        const MCAsmLayout &Layout) = 0;
+  virtual void executePostLayoutBinding(MCAssembler &Asm) {}
 
   /// Record a relocation entry.
   ///
@@ -63,8 +61,7 @@ public:
   /// post layout binding. The implementation is responsible for storing
   /// information about the relocation so that it can be emitted during
   /// writeObject().
-  virtual void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
-                                const MCFragment *Fragment,
+  virtual void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
                                 const MCFixup &Fixup, MCValue Target,
                                 uint64_t &FixedValue) = 0;
 
@@ -79,11 +76,6 @@ public:
                                           bool InSet) const;
 
   virtual bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                                      const MCSymbol &A,
-                                                      const MCSymbol &B,
-                                                      bool InSet) const;
-
-  virtual bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
                                                       const MCSymbol &SymA,
                                                       const MCFragment &FB,
                                                       bool InSet,
@@ -91,6 +83,9 @@ public:
 
   /// ELF only. Mark that we have seen GNU ABI usage (e.g. SHF_GNU_RETAIN).
   virtual void markGnuAbi() {}
+
+  /// ELF only, override the default ABIVersion in the ELF header.
+  virtual void setOverrideABIVersion(uint8_t ABIVersion) {}
 
   /// Tell the object writer to emit an address-significance table during
   /// writeObject(). If this function is not called, all symbols are treated as
@@ -118,7 +113,7 @@ public:
   /// This routine is called by the assembler after layout and relaxation is
   /// complete, fixups have been evaluated and applied, and relocations
   /// generated.
-  virtual uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) = 0;
+  virtual uint64_t writeObject(MCAssembler &Asm) = 0;
 
   /// @}
 };

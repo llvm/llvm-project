@@ -55,10 +55,6 @@ static cl::opt<bool>
     DisableHexagonMISched("disable-hexagon-misched", cl::Hidden,
                           cl::desc("Disable Hexagon MI Scheduling"));
 
-static cl::opt<bool> EnableSubregLiveness(
-    "hexagon-subreg-liveness", cl::Hidden, cl::init(true),
-    cl::desc("Enable subregister liveness tracking for Hexagon"));
-
 static cl::opt<bool> OverrideLongCalls(
     "hexagon-long-calls", cl::Hidden,
     cl::desc("If present, forces/disables the use of long calls"));
@@ -395,10 +391,11 @@ void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
         HII.getAddrMode(L0) != HexagonII::BaseImmOffset)
       continue;
     int64_t Offset0;
-    unsigned Size0;
+    LocationSize Size0 = 0;
     MachineOperand *BaseOp0 = HII.getBaseAndOffset(L0, Offset0, Size0);
     // Is the access size is longer than the L1 cache line, skip the check.
-    if (BaseOp0 == nullptr || !BaseOp0->isReg() || Size0 >= 32)
+    if (BaseOp0 == nullptr || !BaseOp0->isReg() || !Size0.hasValue() ||
+        Size0.getValue() >= 32)
       continue;
     // Scan only up to 32 instructions ahead (to avoid n^2 complexity).
     for (unsigned j = i+1, m = std::min(i+32, e); j != m; ++j) {
@@ -408,10 +405,10 @@ void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
           HII.getAddrMode(L1) != HexagonII::BaseImmOffset)
         continue;
       int64_t Offset1;
-      unsigned Size1;
+      LocationSize Size1 = 0;
       MachineOperand *BaseOp1 = HII.getBaseAndOffset(L1, Offset1, Size1);
-      if (BaseOp1 == nullptr || !BaseOp1->isReg() || Size1 >= 32 ||
-          BaseOp0->getReg() != BaseOp1->getReg())
+      if (BaseOp1 == nullptr || !BaseOp1->isReg() || !Size0.hasValue() ||
+          Size1.getValue() >= 32 || BaseOp0->getReg() != BaseOp1->getReg())
         continue;
       // Check bits 3 and 4 of the offset: if they differ, a bank conflict
       // is unlikely.
@@ -436,9 +433,9 @@ bool HexagonSubtarget::useAA() const {
 
 /// Perform target specific adjustments to the latency of a schedule
 /// dependency.
-void HexagonSubtarget::adjustSchedDependency(SUnit *Src, int SrcOpIdx,
-                                             SUnit *Dst, int DstOpIdx,
-                                             SDep &Dep) const {
+void HexagonSubtarget::adjustSchedDependency(
+    SUnit *Src, int SrcOpIdx, SUnit *Dst, int DstOpIdx, SDep &Dep,
+    const TargetSchedModel *SchedModel) const {
   if (!Src->isInstr() || !Dst->isInstr())
     return;
 
@@ -725,9 +722,7 @@ unsigned HexagonSubtarget::getL1PrefetchDistance() const {
   return 32;
 }
 
-bool HexagonSubtarget::enableSubRegLiveness() const {
-  return EnableSubregLiveness;
-}
+bool HexagonSubtarget::enableSubRegLiveness() const { return true; }
 
 Intrinsic::ID HexagonSubtarget::getIntrinsicId(unsigned Opc) const {
   struct Scalar {

@@ -372,7 +372,13 @@ public:
   /// given address where applicable.
   /// TODO: change input parameter from "uint64_t Address"
   ///       into "SectionedAddress Address"
-  DIEsForAddress getDIEsForAddress(uint64_t Address);
+  /// \param[in] CheckDWO If this is false then only search for address matches
+  ///            in the current context's DIEs. If this is true, then each
+  ///            DWARFUnit that has a DWO file will have the debug info in the
+  ///            DWO file searched as well. This allows for lookups to succeed
+  ///            by searching the split DWARF debug info when using the main
+  ///            executable's debug info.
+  DIEsForAddress getDIEsForAddress(uint64_t Address, bool CheckDWO = false);
 
   DILineInfo getLineInfoForAddress(
       object::SectionedAddress Address,
@@ -416,7 +422,7 @@ public:
     for (unsigned Size : DWARFContext::getSupportedAddressSizes())
       Stream << LS << Size;
     Stream << ')';
-    return make_error<StringError>(Stream.str(), EC);
+    return make_error<StringError>(Buffer, EC);
   }
 
   std::shared_ptr<DWARFContext> getDWOContext(StringRef AbsolutePath);

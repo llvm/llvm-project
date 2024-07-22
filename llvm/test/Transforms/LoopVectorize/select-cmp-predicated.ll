@@ -4,7 +4,7 @@
 define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1, ptr noalias nocapture readonly %src2, i64 %n) {
 ; CHECK-VF2IC1-LABEL: @pred_select_const_i32_from_icmp(
 ; CHECK-VF2IC1:       vector.body:
-; CHECK-VF2IC1:         [[VEC_PHI:%.*]] = phi <2 x i32> [ zeroinitializer, %vector.ph ], [ [[PREDPHI:%.*]], %pred.load.continue2 ]
+; CHECK-VF2IC1:         [[VEC_PHI:%.*]] = phi <2 x i1> [ zeroinitializer, %vector.ph ], [ [[PREDPHI:%.*]], %pred.load.continue2 ]
 ; CHECK-VF2IC1:         [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr {{%.*}}, align 4
 ; CHECK-VF2IC1-NEXT:    [[TMP4:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD]], <i32 35, i32 35>
 ; CHECK-VF2IC1-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
@@ -26,17 +26,17 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF2IC1:       pred.load.continue2:
 ; CHECK-VF2IC1-NEXT:    [[TMP15:%.*]] = phi <2 x i32> [ [[TMP9]], %pred.load.continue ], [ [[TMP14]], %pred.load.if1 ]
 ; CHECK-VF2IC1-NEXT:    [[TMP16:%.*]] = icmp eq <2 x i32> [[TMP15]], <i32 2, i32 2>
-; CHECK-VF2IC1-NEXT:    [[TMP17:%.*]] = select <2 x i1> [[TMP16]], <2 x i32> <i32 1, i32 1>, <2 x i32> [[VEC_PHI]]
-; CHECK-VF2IC1-NEXT:    [[TMP18:%.*]] = xor <2 x i1> [[TMP4]], <i1 true, i1 true>
-; CHECK-VF2IC1-NEXT:    [[PREDPHI]] = select <2 x i1> [[TMP4]], <2 x i32> [[TMP17]], <2 x i32> [[VEC_PHI]]
+; CHECK-VF2IC1-NEXT:    [[TMP17:%.*]] = or <2 x i1> [[VEC_PHI]], [[TMP16]]
+; CHECK-VF2IC1-NEXT:    [[PREDPHI]] = select <2 x i1> [[TMP4]], <2 x i1> [[TMP17]], <2 x i1> [[VEC_PHI]]
 ; CHECK-VF2IC1:         br i1 {{%.*}}, label %middle.block, label %vector.body
 ; CHECK-VF2IC1:       middle.block:
-; CHECK-VF2IC1-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne <2 x i32> [[PREDPHI]], zeroinitializer
-; CHECK-VF2IC1-NEXT:    [[TMP20:%.*]] = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[RDX_SELECT_CMP]])
-; CHECK-VF2IC1-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP20]], i32 1, i32 0
+; CHECK-VF2IC1-NEXT:    [[TMP20:%.*]] = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[PREDPHI]])
+; CHECK-VF2IC1-NEXT:    [[FR_TMP20:%.*]] = freeze i1 [[TMP20]]
+; CHECK-VF2IC1-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[FR_TMP20]], i32 1, i32 0
+; CHECK-VF2IC1-NEXT:    %cmp.n = icmp eq i64 %n, %n.vec
 ; CHECK-VF2IC1:       scalar.ph:
 ; CHECK-VF2IC1:         [[BC_RESUME_VAL:%.*]] = phi i64 [ {{%.*}}, %middle.block ], [ 0, %entry ]
-; CHECK-VF2IC1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, %entry ], [ [[RDX_SELECT]], %middle.block ]
+; CHECK-VF2IC1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_SELECT]], %middle.block ], [ 0, %entry ]
 ; CHECK-VF2IC1-NEXT:    br label %for.body
 ; CHECK-VF2IC1:       for.body:
 ; CHECK-VF2IC1:         [[R_012:%.*]] = phi i32 [ [[R_1:%.*]], %for.inc ], [ [[BC_MERGE_RDX]], %scalar.ph ]
@@ -56,8 +56,8 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ;
 ; CHECK-VF1IC2-LABEL: @pred_select_const_i32_from_icmp(
 ; CHECK-VF1IC2:       vector.body:
-; CHECK-VF1IC2:         [[VEC_PHI:%.*]] = phi i32 [ 0, %vector.ph ], [ [[PREDPHI:%.*]], %pred.load.continue3 ]
-; CHECK-VF1IC2-NEXT:    [[VEC_PHI2:%.*]] = phi i32 [ 0, %vector.ph ], [ [[PREDPHI5:%.*]], %pred.load.continue3 ]
+; CHECK-VF1IC2:         [[VEC_PHI:%.*]] = phi i1 [ false, %vector.ph ], [ [[PREDPHI:%.*]], %pred.load.continue3 ]
+; CHECK-VF1IC2-NEXT:    [[VEC_PHI2:%.*]] = phi i1 [ false, %vector.ph ], [ [[PREDPHI5:%.*]], %pred.load.continue3 ]
 ; CHECK-VF1IC2:         [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[SRC1:%.*]], i64 {{%.*}}
 ; CHECK-VF1IC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[SRC1]], i64 {{%.*}}
 ; CHECK-VF1IC2-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -80,20 +80,20 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF1IC2-NEXT:    [[TMP11:%.*]] = phi i32 [ poison, %pred.load.continue ], [ [[TMP10]], %pred.load.if2 ]
 ; CHECK-VF1IC2-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[TMP8]], 2
 ; CHECK-VF1IC2-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[TMP11]], 2
-; CHECK-VF1IC2-NEXT:    [[TMP14:%.*]] = select i1 [[TMP12]], i32 1, i32 [[VEC_PHI]]
-; CHECK-VF1IC2-NEXT:    [[TMP15:%.*]] = select i1 [[TMP13]], i32 1, i32 [[VEC_PHI2]]
-; CHECK-VF1IC2-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP4]], true
-; CHECK-VF1IC2-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP5]], true
-; CHECK-VF1IC2-NEXT:    [[PREDPHI]] = select i1 [[TMP4]], i32 [[TMP14]], i32 [[VEC_PHI]]
-; CHECK-VF1IC2-NEXT:    [[PREDPHI5]] = select i1 [[TMP5]], i32 [[TMP15]], i32 [[VEC_PHI2]]
+; CHECK-VF1IC2-NEXT:    [[TMP14:%.*]] = or i1 [[VEC_PHI]], [[TMP12]]
+; CHECK-VF1IC2-NEXT:    [[TMP15:%.*]] = or i1 [[VEC_PHI2]], [[TMP13]]
+; CHECK-VF1IC2-NEXT:    [[PREDPHI]] = select i1 [[TMP4]], i1 [[TMP14]], i1 [[VEC_PHI]]
+; CHECK-VF1IC2-NEXT:    [[PREDPHI5]] = select i1 [[TMP5]], i1 [[TMP15]], i1 [[VEC_PHI2]]
 ; CHECK-VF1IC2:         br i1 {{%.*}}, label %middle.block, label %vector.body
 ; CHECK-VF1IC2:       middle.block:
-; CHECK-VF1IC2-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i32 [[PREDPHI]], 0
-; CHECK-VF1IC2-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i32 [[PREDPHI]], i32 [[PREDPHI5]]
-; CHECK-VF1IC2:         br i1 {{%.*}}, label %for.end.loopexit, label %scalar.ph
+; CHECK-VF1IC2-NEXT:    [[OR:%.*]] = or i1 [[PREDPHI5]], [[PREDPHI]]
+; CHECK-VF1IC2-NEXT:    [[FR_OR:%.*]] = freeze i1 [[OR]]
+; CHECK-VF1IC2-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[FR_OR]], i32 1, i32 0
+; CHECK-VF1IC2-NEXT:    %cmp.n = icmp eq i64 %n, %n.vec
+; CHECK-VF1IC2:         br i1 %cmp.n, label %for.end.loopexit, label %scalar.ph
 ; CHECK-VF1IC2:       scalar.ph:
 ; CHECK-VF1IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ {{%.*}}, %middle.block ], [ 0, %entry ]
-; CHECK-VF1IC2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, %entry ], [ [[RDX_SELECT]], %middle.block ]
+; CHECK-VF1IC2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_SELECT]], %middle.block ], [ 0, %entry ]
 ; CHECK-VF1IC2-NEXT:    br label %for.body
 ; CHECK-VF1IC2:       for.body:
 ; CHECK-VF1IC2-NEXT:    [[I_013:%.*]] = phi i64 [ [[INC:%.*]], %for.inc ], [ [[BC_RESUME_VAL]], %scalar.ph ]

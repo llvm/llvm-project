@@ -117,7 +117,7 @@ void Sema::inferGslPointerAttribute(NamedDecl *ND,
   if (!Parent)
     return;
 
-  static llvm::StringSet<> Containers{
+  static const llvm::StringSet<> Containers{
       "array",
       "basic_string",
       "deque",
@@ -137,9 +137,9 @@ void Sema::inferGslPointerAttribute(NamedDecl *ND,
       "unordered_multimap",
   };
 
-  static llvm::StringSet<> Iterators{"iterator", "const_iterator",
-                                     "reverse_iterator",
-                                     "const_reverse_iterator"};
+  static const llvm::StringSet<> Iterators{"iterator", "const_iterator",
+                                           "reverse_iterator",
+                                           "const_reverse_iterator"};
 
   if (Parent->isInStdNamespace() && Iterators.count(ND->getName()) &&
       Containers.count(Parent->getName()))
@@ -165,7 +165,7 @@ void Sema::inferGslPointerAttribute(TypedefNameDecl *TD) {
 }
 
 void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
-  static llvm::StringSet<> StdOwners{
+  static const llvm::StringSet<> StdOwners{
       "any",
       "array",
       "basic_regex",
@@ -189,10 +189,11 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
       "unordered_multimap",
       "variant",
   };
-  static llvm::StringSet<> StdPointers{
+  static const llvm::StringSet<> StdPointers{
       "basic_string_view",
       "reference_wrapper",
       "regex_iterator",
+      "span",
   };
 
   if (!Record->getIdentifier())
@@ -213,6 +214,18 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
 
   // Handle nested classes that could be a gsl::Pointer.
   inferGslPointerAttribute(Record, Record);
+}
+
+void Sema::inferNullableClassAttribute(CXXRecordDecl *CRD) {
+  static const llvm::StringSet<> Nullable{
+      "auto_ptr",         "shared_ptr", "unique_ptr",         "exception_ptr",
+      "coroutine_handle", "function",   "move_only_function",
+  };
+
+  if (CRD->isInStdNamespace() && Nullable.count(CRD->getName()) &&
+      !CRD->hasAttr<TypeNullableAttr>())
+    for (Decl *Redecl : CRD->redecls())
+      Redecl->addAttr(TypeNullableAttr::CreateImplicit(Context));
 }
 
 void Sema::ActOnPragmaOptionsAlign(PragmaOptionsAlignKind Kind,
@@ -825,7 +838,7 @@ void Sema::ActOnPragmaUnused(const Token &IdTok, Scope *curScope,
 
   IdentifierInfo *Name = IdTok.getIdentifierInfo();
   LookupResult Lookup(*this, Name, IdTok.getLocation(), LookupOrdinaryName);
-  LookupParsedName(Lookup, curScope, nullptr, true);
+  LookupName(Lookup, curScope, /*AllowBuiltinCreation=*/true);
 
   if (Lookup.empty()) {
     Diag(PragmaLoc, diag::warn_pragma_unused_undeclared_var)
@@ -846,22 +859,6 @@ void Sema::ActOnPragmaUnused(const Token &IdTok, Scope *curScope,
 
   VD->addAttr(UnusedAttr::CreateImplicit(Context, IdTok.getLocation(),
                                          UnusedAttr::GNU_unused));
-}
-
-void Sema::AddCFAuditedAttribute(Decl *D) {
-  IdentifierInfo *Ident;
-  SourceLocation Loc;
-  std::tie(Ident, Loc) = PP.getPragmaARCCFCodeAuditedInfo();
-  if (!Loc.isValid()) return;
-
-  // Don't add a redundant or conflicting attribute.
-  if (D->hasAttr<CFAuditedTransferAttr>() ||
-      D->hasAttr<CFUnknownTransferAttr>())
-    return;
-
-  AttributeCommonInfo Info(Ident, SourceRange(Loc),
-                           AttributeCommonInfo::Form::Pragma());
-  D->addAttr(CFAuditedTransferAttr::CreateImplicit(Context, Info));
 }
 
 namespace {
@@ -1235,7 +1232,6 @@ void Sema::AddPushedVisibilityAttribute(Decl *D) {
   D->addAttr(VisibilityAttr::CreateImplicit(Context, type, loc));
 }
 
-/// FreeVisContext - Deallocate and null out VisContext.
 void Sema::FreeVisContext() {
   delete static_cast<VisStack*>(VisContext);
   VisContext = nullptr;

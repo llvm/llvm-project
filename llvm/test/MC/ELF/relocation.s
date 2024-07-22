@@ -4,7 +4,7 @@
 // Test that we produce the correct relocation.
 
 
-        .section	.pr23272,"aGw",@progbits,pr23272,comdat
+        .section	.pr23272,"awG",@progbits,pr23272,comdat
 	.globl pr23272
 pr23272:
 pr23272_2:

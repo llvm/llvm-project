@@ -191,14 +191,16 @@ module {
 
   // CHECK: llvm.func @test_ccs
   llvm.func @test_ccs() {
+    // CHECK-NEXT: %[[PTR:.*]] = llvm.mlir.addressof @cconv4 : !llvm.ptr
+    %ptr = llvm.mlir.addressof @cconv4 : !llvm.ptr
     // CHECK-NEXT: llvm.call        @cconv1() : () -> ()
     // CHECK-NEXT: llvm.call        @cconv2() : () -> ()
     // CHECK-NEXT: llvm.call fastcc @cconv3() : () -> ()
-    // CHECK-NEXT: llvm.call cc_10  @cconv4() : () -> ()
+    // CHECK-NEXT: llvm.call cc_10  %[[PTR]]() : !llvm.ptr, () -> ()
     llvm.call        @cconv1() : () -> ()
     llvm.call ccc    @cconv2() : () -> ()
     llvm.call fastcc @cconv3() : () -> ()
-    llvm.call cc_10  @cconv4() : () -> ()
+    llvm.call cc_10  %ptr() : !llvm.ptr, () -> ()
     llvm.return
   }
 
@@ -255,6 +257,74 @@ module {
   llvm.func @frame_pointer_roundtrip() attributes {frame_pointer = #llvm.framePointerKind<"non-leaf">} {
     llvm.return
   }
+
+  llvm.func @unsafe_fp_math_roundtrip() attributes {unsafe_fp_math = true} {
+    // CHECK: @unsafe_fp_math_roundtrip
+    // CHECK-SAME: attributes {unsafe_fp_math = true}
+    llvm.return
+  }
+
+  llvm.func @no_infs_fp_math_roundtrip() attributes {no_infs_fp_math = true} {
+    // CHECK: @no_infs_fp_math_roundtrip
+    // CHECK-SAME: attributes {no_infs_fp_math = true}
+    llvm.return
+  }
+
+  llvm.func @no_nans_fp_math_roundtrip() attributes {no_nans_fp_math = true} {
+    // CHECK: @no_nans_fp_math_roundtrip
+    // CHECK-SAME: attributes {no_nans_fp_math = true}
+    llvm.return
+  }
+
+  llvm.func @approx_func_fp_math_roundtrip() attributes {approx_func_fp_math = true} {
+    // CHECK: @approx_func_fp_math_roundtrip
+    // CHECK-SAME: attributes {approx_func_fp_math = true}
+    llvm.return
+  }
+
+  llvm.func @no_signed_zeros_fp_math_roundtrip() attributes {no_signed_zeros_fp_math = true} {
+    // CHECK: @no_signed_zeros_fp_math_roundtrip
+    // CHECK-SAME: attributes {no_signed_zeros_fp_math = true}
+    llvm.return
+  }
+
+  llvm.func @convergent_function() attributes {convergent} {
+    // CHECK: @convergent_function
+    // CHECK-SAME: attributes {convergent}
+    llvm.return
+  }
+
+  llvm.func @denormal_fp_math_roundtrip() attributes {denormal_fp_math = "preserve-sign"} {
+    // CHECK: @denormal_fp_math_roundtrip
+    // CHECK-SAME: attributes {denormal_fp_math = "preserve-sign"}
+    llvm.return
+  }
+
+  llvm.func @denormal_fp_math_f32_roundtrip() attributes {denormal_fp_math_f32 = "preserve-sign"} {
+    // CHECK: @denormal_fp_math_f32_roundtrip
+    // CHECK-SAME: attributes {denormal_fp_math_f32 = "preserve-sign"}
+    llvm.return
+  }
+
+  llvm.func @fp_contract_roundtrip() attributes {fp_contract = "fast"} {
+    // CHECK: @fp_contract_roundtrip
+    // CHECK-SAME: attributes {fp_contract = "fast"}
+    llvm.return
+  }
+
+  llvm.func @nounwind_function() attributes {no_unwind} {
+    // CHECK: @nounwind_function
+    // CHECK-SAME: attributes {no_unwind}
+    llvm.return
+  }
+
+  llvm.func @willreturn_function() attributes {will_return} {
+    // CHECK: @willreturn_function
+    // CHECK-SAME: attributes {will_return}
+    llvm.return
+  }
+
+
 }
 
 // -----

@@ -1,8 +1,8 @@
 // The VTable is not in a comdat but the inline methods are.
 // This doesn’t affect the vtable or the stubs we emit.
 
-// RUN: %clang_cc1 %s -triple=aarch64 -O1 -S -o - -emit-llvm -fexperimental-relative-c++-abi-vtables -fhalf-no-semantic-interposition | FileCheck %s
-// RUN: %clang_cc1 %s -triple=x86_64 -O1 -S -o - -emit-llvm -fexperimental-relative-c++-abi-vtables -fhalf-no-semantic-interposition | FileCheck %s
+// RUN: %clang_cc1 %s -triple=aarch64 -O1 -o - -emit-llvm -fexperimental-relative-c++-abi-vtables -fhalf-no-semantic-interposition | FileCheck %s
+// RUN: %clang_cc1 %s -triple=x86_64 -O1 -o - -emit-llvm -fexperimental-relative-c++-abi-vtables -fhalf-no-semantic-interposition | FileCheck %s
 
 // CHECK: $_ZTI1A.rtti_proxy = comdat any
 

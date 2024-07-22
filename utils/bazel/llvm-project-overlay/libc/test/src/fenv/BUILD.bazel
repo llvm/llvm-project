@@ -12,29 +12,45 @@ licenses(["notice"])
 
 libc_test(
     name = "exception_status_test",
-    srcs = ["exception_status_test.cpp"],
+    srcs = [
+        "exception_status_test.cpp",
+        "excepts.h",
+    ],
     libc_function_deps = [
         "//libc:feclearexcept",
         "//libc:feraiseexcept",
+        "//libc:fesetexcept",
         "//libc:fetestexcept",
     ],
     deps = [
         "//libc:__support_fputil_fenv_impl",
+        "//libc:hdr_fenv_macros",
+        "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
 
 libc_test(
     name = "rounding_mode_test",
-    srcs = ["rounding_mode_test.cpp"],
+    srcs = [
+        "excepts.h",
+        "rounding_mode_test.cpp",
+    ],
     libc_function_deps = [
         "//libc:fegetround",
         "//libc:fesetround",
+    ],
+    deps = [
+        "//libc:hdr_fenv_macros",
+        "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
 
 libc_test(
     name = "enabled_exceptions_test",
-    srcs = ["enabled_exceptions_test.cpp"],
+    srcs = [
+        "enabled_exceptions_test.cpp",
+        "excepts.h",
+    ],
     libc_function_deps = [
         "//libc:feclearexcept",
         "//libc:feraiseexcept",
@@ -45,13 +61,17 @@ libc_test(
         "//libc:__support_common",
         "//libc:__support_fputil_fenv_impl",
         "//libc:__support_macros_properties_architectures",
+        "//libc:hdr_fenv_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
 
 libc_test(
     name = "feholdexcept_test",
-    srcs = ["feholdexcept_test.cpp"],
+    srcs = [
+        "excepts.h",
+        "feholdexcept_test.cpp",
+    ],
     libc_function_deps = [
         "//libc:feholdexcept",
     ],
@@ -60,36 +80,53 @@ libc_test(
         "//libc:__support_common",
         "//libc:__support_fputil_fenv_impl",
         "//libc:__support_macros_properties_architectures",
+        "//libc:hdr_fenv_macros",
+        "//libc:types_fenv_t",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
 
 libc_test(
     name = "exception_flags_test",
-    srcs = ["exception_flags_test.cpp"],
+    srcs = [
+        "exception_flags_test.cpp",
+        "excepts.h",
+    ],
     libc_function_deps = [
         "//libc:fegetexceptflag",
         "//libc:fesetexceptflag",
+        "//libc:fetestexceptflag",
     ],
     deps = [
         "//libc:__support_fputil_fenv_impl",
+        "//libc:hdr_fenv_macros",
+        "//libc:types_fexcept_t",
+        "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
 
 libc_test(
     name = "feclearexcept_test",
-    srcs = ["feclearexcept_test.cpp"],
+    srcs = [
+        "excepts.h",
+        "feclearexcept_test.cpp",
+    ],
     libc_function_deps = [
         "//libc:feclearexcept",
     ],
     deps = [
         "//libc:__support_fputil_fenv_impl",
+        "//libc:hdr_fenv_macros",
+        "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
 
 libc_test(
     name = "feenableexcept_test",
-    srcs = ["feenableexcept_test.cpp"],
+    srcs = [
+        "excepts.h",
+        "feenableexcept_test.cpp",
+    ],
     libc_function_deps = [
         "//libc:fedisableexcept",
         "//libc:feenableexcept",
@@ -98,23 +135,34 @@ libc_test(
     deps = [
         "//libc:__support_common",
         "//libc:__support_macros_properties_architectures",
+        "//libc:hdr_fenv_macros",
+        "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
 
 libc_test(
     name = "feupdateenv_test",
-    srcs = ["feupdateenv_test.cpp"],
+    srcs = [
+        "excepts.h",
+        "feupdateenv_test.cpp",
+    ],
     libc_function_deps = [
         "//libc:feupdateenv",
     ],
     deps = [
         "//libc:__support_fputil_fenv_impl",
+        "//libc:hdr_fenv_macros",
+        "//libc:types_fenv_t",
+        "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
 
 libc_test(
     name = "getenv_and_setenv_test",
-    srcs = ["getenv_and_setenv_test.cpp"],
+    srcs = [
+        "excepts.h",
+        "getenv_and_setenv_test.cpp",
+    ],
     libc_function_deps = [
         "//libc:fegetenv",
         "//libc:fegetround",
@@ -123,5 +171,8 @@ libc_test(
     ],
     deps = [
         "//libc:__support_fputil_fenv_impl",
+        "//libc:hdr_fenv_macros",
+        "//libc:types_fenv_t",
+        "//libc/test/UnitTest:fp_test_helpers",
     ],
 )

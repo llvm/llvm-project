@@ -1,4 +1,5 @@
 # RUN: llc -verify-machineinstrs -run-pass regallocfast -mtriple s390x-ibm-linux -o - %s | FileCheck %s
+# RUN: llc -verify-machineinstrs -passes=regallocfast -mtriple s390x-ibm-linux -o - %s | FileCheck %s
 --- |
   
   @g_167 = external global [5 x i64], align 8

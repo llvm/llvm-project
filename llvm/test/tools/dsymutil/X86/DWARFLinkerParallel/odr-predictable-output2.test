@@ -1,9 +1,9 @@
-# RUN: dsymutil --linker=llvm -f -o %t1.o -oso-prepend-path=%p/../ -y %s
+# RUN: dsymutil --linker=parallel -f -o %t1.o -oso-prepend-path=%p/../ -y %s
 # RUN: llvm-dwarfdump --verify %t1.o | FileCheck -check-prefixes=VERIFY %s
-# RUN: dsymutil --linker=llvm -f -o %t2.o -oso-prepend-path=%p/../ -y %s
-# RUN: dsymutil --linker=llvm -f -o %t3.o -oso-prepend-path=%p/../ -y %s \
+# RUN: dsymutil --linker=parallel -f -o %t2.o -oso-prepend-path=%p/../ -y %s
+# RUN: dsymutil --linker=parallel -f -o %t3.o -oso-prepend-path=%p/../ -y %s \
 # RUN:   --num-threads 1
-# RUN: dsymutil --linker=llvm -f -o %t4.o -oso-prepend-path=%p/../ -y %s \
+# RUN: dsymutil --linker=parallel -f -o %t4.o -oso-prepend-path=%p/../ -y %s \
 # RUN:   --num-threads 3
 # ### Following comparision will fail if files do not match
 # RUN: diff %t1.o %t2.o

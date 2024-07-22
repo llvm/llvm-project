@@ -834,7 +834,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
     // Symbol was created as 'variable'; determine its real kind.
     Symbol->resetIsVariable();
 
-    if (Local.Name.equals("this")) {
+    if (Local.Name == "this") {
       Symbol->setIsParameter();
       Symbol->setIsArtificial();
     } else {
@@ -885,7 +885,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
     Symbol->resetIsVariable();
 
     // Check for the 'this' symbol.
-    if (Local.Name.equals("this")) {
+    if (Local.Name == "this") {
       Symbol->setIsArtificial();
       Symbol->setIsParameter();
     } else {
@@ -1429,7 +1429,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record, LocalSym &Local) {
 
     // Be sure the 'this' symbol is marked as 'compiler generated'.
     if (bool(Local.Flags & LocalSymFlags::IsCompilerGenerated) ||
-        Local.Name.equals("this")) {
+        Local.Name == "this") {
       Symbol->setIsArtificial();
       Symbol->setIsParameter();
     } else {
@@ -1669,7 +1669,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record, UDTSym &UDT) {
       Type->resetIncludeInPrint();
     else {
       StringRef RecordName = getRecordName(Types, UDT.Type);
-      if (UDT.Name.equals(RecordName))
+      if (UDT.Name == RecordName)
         Type->resetIncludeInPrint();
       Type->setType(LogicalVisitor->getElement(StreamTPI, UDT.Type));
     }
@@ -2740,7 +2740,7 @@ Error LVLogicalVisitor::visitKnownMember(CVMemberRecord &Record,
             getInnerComponent(NestedTypeName);
         // We have an already created nested type. Add it to the current scope
         // and update all its children if any.
-        if (OuterComponent.size() && OuterComponent.equals(RecordName)) {
+        if (OuterComponent.size() && OuterComponent == RecordName) {
           if (!NestedType->getIsScopedAlready()) {
             Scope->addElement(NestedType);
             NestedType->setIsScopedAlready();

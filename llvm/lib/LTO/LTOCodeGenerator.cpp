@@ -20,7 +20,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
-#include "llvm/CodeGen/ParallelCG.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/config.h"
 #include "llvm/IR/Constants.h"
@@ -409,18 +408,8 @@ bool LTOCodeGenerator::determineTarget() {
   SubtargetFeatures Features(join(Config.MAttrs, ""));
   Features.getDefaultSubtargetFeatures(Triple);
   FeatureStr = Features.getString();
-  // Set a default CPU for Darwin triples.
-  if (Config.CPU.empty() && Triple.isOSDarwin()) {
-    if (Triple.getArch() == llvm::Triple::x86_64)
-      Config.CPU = "core2";
-    else if (Triple.getArch() == llvm::Triple::x86)
-      Config.CPU = "yonah";
-    else if (Triple.isArm64e())
-      Config.CPU = "apple-a12";
-    else if (Triple.getArch() == llvm::Triple::aarch64 ||
-             Triple.getArch() == llvm::Triple::aarch64_32)
-      Config.CPU = "cyclone";
-  }
+  if (Config.CPU.empty())
+    Config.CPU = lto::getThinLTODefaultCPU(Triple);
 
   // If data-sections is not explicitly set or unset, set data-sections by
   // default to match the behaviour of lld and gold plugin.
@@ -581,6 +570,9 @@ void LTOCodeGenerator::finishOptimizationRemarks() {
 bool LTOCodeGenerator::optimize() {
   if (!this->determineTarget())
     return false;
+
+  // libLTO parses options late, so re-set them here.
+  Context.setDiscardValueNames(LTODiscardValueNames);
 
   auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
       Context, RemarksFilename, RemarksPasses, RemarksFormat,

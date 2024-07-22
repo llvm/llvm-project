@@ -1,4 +1,5 @@
 ; RUN: opt -loop-reduce -S %s | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -loop-reduce -S %s | FileCheck %s
 
 ;; This test ensures that no attempt is made to translate long SCEVs into
 ;; DIExpressions. Attempting the translation can use excessive resources and
@@ -36,7 +37,7 @@ for.body2.preheader:                              ; preds = %entry
 for.body2:                                        ; preds = %for.body2.preheader, %for.body2
   %0 = phi i32 [ %sub, %for.body2 ], [ %.pr, %for.body2.preheader ]
   %sub = sub nsw i32 %0, %mul.9, !dbg !40
-  ; CHECK: call void @llvm.dbg.value(metadata !DIArgList(i32 poison, i32 %mul.9), metadata ![[VAR_e:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_minus, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_LLVM_convert, 64, DW_ATE_signed, DW_OP_stack_value))
+  ; CHECK: #dbg_value(!DIArgList(i32 poison, i32 %mul.9), ![[VAR_e:[0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_minus, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_LLVM_convert, 64, DW_ATE_signed, DW_OP_stack_value),
   call void @llvm.dbg.value(metadata i32 %sub, metadata !20, metadata !DIExpression(DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_LLVM_convert, 64, DW_ATE_signed, DW_OP_stack_value)), !dbg !41
   %tobool.not = icmp eq i32 %sub, 0, !dbg !39
   br i1 %tobool.not, label %for.cond1.for.end3_crit_edge, label %for.body2, !dbg !39, !llvm.loop !42

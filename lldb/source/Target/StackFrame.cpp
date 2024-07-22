@@ -857,10 +857,11 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                   "\"(%s) %s\" is not an array type",
                   valobj_sp->GetTypeName().AsCString("<invalid type>"),
                   var_expr_path_strm.GetData());
-            } else if (
-                static_cast<uint32_t>(child_index) >=
-                synthetic
-                    ->GetNumChildren() /* synthetic does not have that many values */) {
+            } else if (static_cast<uint32_t>(child_index) >=
+                       synthetic
+                           ->GetNumChildrenIgnoringErrors() /* synthetic does
+                                                                not have that
+                                                                many values */) {
               valobj_sp->GetExpressionPath(var_expr_path_strm);
               error.SetErrorStringWithFormat(
                   "array index %ld is not valid for \"(%s) %s\"", child_index,
@@ -929,10 +930,9 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                 "\"(%s) %s\" is not an array type",
                 valobj_sp->GetTypeName().AsCString("<invalid type>"),
                 var_expr_path_strm.GetData());
-          } else if (
-              static_cast<uint32_t>(child_index) >=
-              synthetic
-                  ->GetNumChildren() /* synthetic does not have that many values */) {
+          } else if (static_cast<uint32_t>(child_index) >=
+                     synthetic->GetNumChildrenIgnoringErrors() /* synthetic
+                                     does not have that many values */) {
             valobj_sp->GetExpressionPath(var_expr_path_strm);
             error.SetErrorStringWithFormat(
                 "array index %ld is not valid for \"(%s) %s\"", child_index,
@@ -1091,24 +1091,19 @@ bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
 
       m_flags.Set(GOT_FRAME_BASE);
       ExecutionContext exe_ctx(shared_from_this());
-      Value expr_value;
       addr_t loclist_base_addr = LLDB_INVALID_ADDRESS;
       if (!m_sc.function->GetFrameBaseExpression().IsAlwaysValidSingleExpr())
         loclist_base_addr =
             m_sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(
                 exe_ctx.GetTargetPtr());
 
-      if (!m_sc.function->GetFrameBaseExpression().Evaluate(
-              &exe_ctx, nullptr, loclist_base_addr, nullptr, nullptr,
-              expr_value, &m_frame_base_error)) {
-        // We should really have an error if evaluate returns, but in case we
-        // don't, lets set the error to something at least.
-        if (m_frame_base_error.Success())
-          m_frame_base_error.SetErrorString(
-              "Evaluation of the frame base expression failed.");
-      } else {
-        m_frame_base = expr_value.ResolveValue(&exe_ctx);
-      }
+      llvm::Expected<Value> expr_value =
+          m_sc.function->GetFrameBaseExpression().Evaluate(
+              &exe_ctx, nullptr, loclist_base_addr, nullptr, nullptr);
+      if (!expr_value)
+        m_frame_base_error = expr_value.takeError();
+      else
+        m_frame_base = expr_value->ResolveValue(&exe_ctx);
     } else {
       m_frame_base_error.SetErrorString("No function in symbol context.");
     }
@@ -1203,26 +1198,23 @@ bool StackFrame::IsArtificial() const {
   return m_stack_frame_kind == StackFrame::Kind::Artificial;
 }
 
-lldb::LanguageType StackFrame::GetLanguage() {
+SourceLanguage StackFrame::GetLanguage() {
   CompileUnit *cu = GetSymbolContext(eSymbolContextCompUnit).comp_unit;
   if (cu)
     return cu->GetLanguage();
-  return lldb::eLanguageTypeUnknown;
+  return {};
 }
 
-lldb::LanguageType StackFrame::GuessLanguage() {
-  LanguageType lang_type = GetLanguage();
+SourceLanguage StackFrame::GuessLanguage() {
+  SourceLanguage lang_type = GetLanguage();
 
   if (lang_type == eLanguageTypeUnknown) {
-    SymbolContext sc = GetSymbolContext(eSymbolContextFunction
-                                        | eSymbolContextSymbol);
-    if (sc.function) {
-      lang_type = sc.function->GetMangled().GuessLanguage();
-    }
+    SymbolContext sc =
+        GetSymbolContext(eSymbolContextFunction | eSymbolContextSymbol);
+    if (sc.function)
+      lang_type = LanguageType(sc.function->GetMangled().GuessLanguage());
     else if (sc.symbol)
-    {
-      lang_type = sc.symbol->GetMangled().GuessLanguage();
-    }
+      lang_type = SourceLanguage(sc.symbol->GetMangled().GuessLanguage());
   }
 
   return lang_type;
@@ -1302,7 +1294,7 @@ GetBaseExplainingDereference(const Instruction::Operand &operand,
   }
   return std::make_pair(nullptr, 0);
 }
-}
+} // namespace
 
 lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
   TargetSP target_sp = CalculateTarget();
@@ -1397,7 +1389,8 @@ ValueObjectSP GetValueForOffset(StackFrame &frame, ValueObjectSP &parent,
     return parent;
   }
 
-  for (int ci = 0, ce = parent->GetNumChildren(); ci != ce; ++ci) {
+  for (int ci = 0, ce = parent->GetNumChildrenIgnoringErrors(); ci != ce;
+       ++ci) {
     ValueObjectSP child_sp = parent->GetChildAtIndex(ci);
 
     if (!child_sp) {
@@ -1799,7 +1792,6 @@ void StackFrame::DumpUsingSettingsFormat(Stream *strm, bool show_unique,
     return;
 
   ExecutionContext exe_ctx(shared_from_this());
-  StreamString s;
 
   const FormatEntity::Entry *frame_format = nullptr;
   Target *target = exe_ctx.GetTargetPtr();
@@ -1921,7 +1913,7 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
 
           size_t num_lines =
               target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
-                  m_sc.line_entry.file, start_line, m_sc.line_entry.column,
+                  m_sc.line_entry.GetFile(), start_line, m_sc.line_entry.column,
                   source_lines_before, source_lines_after, "->", &strm);
           if (num_lines != 0)
             have_source = true;

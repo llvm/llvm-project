@@ -3,6 +3,11 @@
 ; RUN:   -mtriple=x86_64-unknown-unknown %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg."
 
+;; Test with RemoveDIs non-intrinsic debug-info too.
+; RUN: llc -start-before=codegenprepare -stop-after=codegenprepare \
+; RUN:   -mtriple=x86_64-unknown-unknown %s -o - --try-experimental-debuginfo-iterators \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg."
+
 ;; Check that when CodeGenPrepare moves an address computation to a block it's
 ;; used in its dbg.assign uses are updated.
 ;;
@@ -21,10 +26,10 @@ next:
 ; updated, and the other should not.
 ; CHECK-LABEL: next:
 ; CHECK:       %[[CASTVAR:[0-9a-zA-Z]+]] = bitcast ptr %p to ptr
-; CHECK-NEXT:  dbg.assign(metadata ptr %arith, metadata ![[DIVAR:[0-9]+]],
+; CHECK-NEXT:  #dbg_assign(ptr %arith, ![[DIVAR:[0-9]+]],
 ; CHECK-NEXT:  %[[GEPVAR:[0-9a-zA-Z]+]] = getelementptr i8, ptr %[[CASTVAR]], i64 3
 ; CHECK-NEXT:  %loaded = load i8, ptr %[[GEPVAR]]
-; CHECK-NEXT:  dbg.assign(metadata ptr %[[GEPVAR]], metadata ![[DIVAR]],
+; CHECK-NEXT:  #dbg_assign(ptr %[[GEPVAR]], ![[DIVAR]],
   call void @llvm.dbg.assign(metadata ptr %arith, metadata !12, metadata !DIExpression(), metadata !21, metadata ptr undef, metadata !DIExpression()), !dbg !14
   %loaded = load i8, ptr %arith
   call void @llvm.dbg.assign(metadata ptr %arith, metadata !12, metadata !DIExpression(), metadata !21, metadata ptr undef, metadata !DIExpression()), !dbg !14

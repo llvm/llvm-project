@@ -63,10 +63,8 @@ __int128 aligned_int(void) {
 
 // CHECK: [[VAARG_ON_STACK]]
 // CHECK: [[STACK:%[a-z_0-9]+]] = load ptr, ptr @the_list
-// CHECK: [[STACKINT:%[a-z_0-9]+]] = ptrtoint ptr [[STACK]] to i64
-// CHECK: [[ALIGN_STACK:%[a-z_0-9]+]] = add i64 [[STACKINT]], 15
-// CHECK: [[ALIGNED_STACK_INT:%[a-z_0-9]+]] = and i64 [[ALIGN_STACK]], -16
-// CHECK: [[ALIGNED_STACK_PTR:%[a-z_0-9]+]] = inttoptr i64 [[ALIGNED_STACK_INT]] to ptr
+// CHECK: [[STACKINC:%[a-z_0-9]+]] = getelementptr inbounds i8, ptr [[STACK]], i32 15
+// CHECK: [[ALIGNED_STACK_PTR:%[a-z_0-9.]+]] = call ptr @llvm.ptrmask.p0.i64(ptr [[STACKINC]], i64 -16)
 // CHECK: [[NEW_STACK:%[a-z_0-9]+]] = getelementptr inbounds i8, ptr [[ALIGNED_STACK_PTR]], i64 16
 // CHECK: store ptr [[NEW_STACK]], ptr @the_list
 // CHECK: br label %[[VAARG_END]]
@@ -377,10 +375,8 @@ underaligned_int128 underaligned_int128_test(void) {
 
 // CHECK: [[VAARG_ON_STACK]]
 // CHECK: [[STACK:%[a-z_0-9]+]] = load ptr, ptr @the_list
-// CHECK: [[STACKINT:%[a-z_0-9]+]] = ptrtoint ptr [[STACK]] to i64
-// CHECK: [[ALIGN_STACK:%[a-z_0-9]+]] = add i64 [[STACKINT]], 15
-// CHECK: [[ALIGNED_STACK_INT:%[a-z_0-9]+]] = and i64 [[ALIGN_STACK]], -16
-// CHECK: [[ALIGNED_STACK_PTR:%[a-z_0-9]+]] = inttoptr i64 [[ALIGNED_STACK_INT]] to ptr
+// CHECK: [[STACKINC:%[a-z_0-9]+]] = getelementptr inbounds i8, ptr [[STACK]], i32 15
+// CHECK: [[ALIGNED_STACK_PTR:%[a-z_0-9.]+]] = call ptr @llvm.ptrmask.p0.i64(ptr [[STACKINC]], i64 -16)
 // CHECK: [[NEW_STACK:%[a-z_0-9]+]] = getelementptr inbounds i8, ptr [[ALIGNED_STACK_PTR]], i64 16
 // CHECK: store ptr [[NEW_STACK]], ptr @the_list
 // CHECK: br label %[[VAARG_END]]
@@ -414,10 +410,8 @@ overaligned_int128 overaligned_int128_test(void) {
 
 // CHECK: [[VAARG_ON_STACK]]
 // CHECK: [[STACK:%[a-z_0-9]+]] = load ptr, ptr @the_list
-// CHECK: [[STACKINT:%[a-z_0-9]+]] = ptrtoint ptr [[STACK]] to i64
-// CHECK: [[ALIGN_STACK:%[a-z_0-9]+]] = add i64 [[STACKINT]], 15
-// CHECK: [[ALIGNED_STACK_INT:%[a-z_0-9]+]] = and i64 [[ALIGN_STACK]], -16
-// CHECK: [[ALIGNED_STACK_PTR:%[a-z_0-9]+]] = inttoptr i64 [[ALIGNED_STACK_INT]] to ptr
+// CHECK: [[STACKINC:%[a-z_0-9]+]] = getelementptr inbounds i8, ptr [[STACK]], i32 15
+// CHECK: [[ALIGNED_STACK_PTR:%[a-z_0-9.]+]] = call ptr @llvm.ptrmask.p0.i64(ptr [[STACKINC]], i64 -16)
 // CHECK: [[NEW_STACK:%[a-z_0-9]+]] = getelementptr inbounds i8, ptr [[ALIGNED_STACK_PTR]], i64 16
 // CHECK: store ptr [[NEW_STACK]], ptr @the_list
 // CHECK: br label %[[VAARG_END]]
@@ -601,7 +595,7 @@ typedef struct __attribute__((aligned(32))) {
   __int128 val;
 } overaligned_int128_struct;
 overaligned_int128_struct overaligned_int128_struct_test(void) {
-// CHECK-LABEL: define{{.*}} void @overaligned_int128_struct_test(ptr noalias sret(%struct.overaligned_int128_struct) align 32 %agg.result)
+// CHECK-LABEL: define{{.*}} void @overaligned_int128_struct_test(ptr dead_on_unwind noalias writable sret(%struct.overaligned_int128_struct) align 32 %agg.result)
   return va_arg(the_list, overaligned_int128_struct);
 // CHECK: [[GR_OFFS:%[a-z_0-9]+]] = load i32, ptr getelementptr inbounds (%struct.__va_list, ptr @the_list, i32 0, i32 3)
 // CHECK: [[EARLY_ONSTACK:%[a-z_0-9]+]] = icmp sge i32 [[GR_OFFS]], 0
@@ -688,10 +682,8 @@ overaligned_int_struct_member overaligned_int_struct_member_test(void) {
 
 // CHECK: [[VAARG_ON_STACK]]
 // CHECK: [[STACK:%[a-z_0-9]+]] = load ptr, ptr @the_list
-// CHECK: [[STACKINT:%[a-z_0-9]+]] = ptrtoint ptr [[STACK]] to i64
-// CHECK: [[ALIGN_STACK:%[a-z_0-9]+]] = add i64 [[STACKINT]], 15
-// CHECK: [[ALIGNED_STACK_INT:%[a-z_0-9]+]] = and i64 [[ALIGN_STACK]], -16
-// CHECK: [[ALIGNED_STACK_PTR:%[a-z_0-9]+]] = inttoptr i64 [[ALIGNED_STACK_INT]] to ptr
+// CHECK: [[STACKINC:%[a-z_0-9]+]] = getelementptr inbounds i8, ptr [[STACK]], i32 15
+// CHECK: [[ALIGNED_STACK_PTR:%[a-z_0-9.]+]] = call ptr @llvm.ptrmask.p0.i64(ptr [[STACKINC]], i64 -16)
 // CHECK: [[NEW_STACK:%[a-z_0-9]+]] = getelementptr inbounds i8, ptr [[ALIGNED_STACK_PTR]], i64 16
 // CHECK: store ptr [[NEW_STACK]], ptr @the_list
 // CHECK: br label %[[VAARG_END]]
@@ -756,10 +748,8 @@ overaligned_long_long_struct_member overaligned_long_long_struct_member_test(voi
 
 // CHECK: [[VAARG_ON_STACK]]
 // CHECK: [[STACK:%[a-z_0-9]+]] = load ptr, ptr @the_list
-// CHECK: [[STACKINT:%[a-z_0-9]+]] = ptrtoint ptr [[STACK]] to i64
-// CHECK: [[ALIGN_STACK:%[a-z_0-9]+]] = add i64 [[STACKINT]], 15
-// CHECK: [[ALIGNED_STACK_INT:%[a-z_0-9]+]] = and i64 [[ALIGN_STACK]], -16
-// CHECK: [[ALIGNED_STACK_PTR:%[a-z_0-9]+]] = inttoptr i64 [[ALIGNED_STACK_INT]] to ptr
+// CHECK: [[STACKINC:%[a-z_0-9]+]] = getelementptr inbounds i8, ptr [[STACK]], i32 15
+// CHECK: [[ALIGNED_STACK_PTR:%[a-z_0-9.]+]] = call ptr @llvm.ptrmask.p0.i64(ptr [[STACKINC]], i64 -16)
 // CHECK: [[NEW_STACK:%[a-z_0-9]+]] = getelementptr inbounds i8, ptr [[ALIGNED_STACK_PTR]], i64 16
 // CHECK: store ptr [[NEW_STACK]], ptr @the_list
 // CHECK: br label %[[VAARG_END]]
@@ -804,7 +794,7 @@ typedef struct {
   __int128 val __attribute__((aligned(32)));
 } overaligned_int128_struct_member;
 overaligned_int128_struct_member overaligned_int128_struct_member_test(void) {
-// CHECK-LABEL: define{{.*}} void @overaligned_int128_struct_member_test(ptr noalias sret(%struct.overaligned_int128_struct_member) align 32 %agg.result)
+// CHECK-LABEL: define{{.*}} void @overaligned_int128_struct_member_test(ptr dead_on_unwind noalias writable sret(%struct.overaligned_int128_struct_member) align 32 %agg.result)
   return va_arg(the_list, overaligned_int128_struct_member);
 // CHECK: [[GR_OFFS:%[a-z_0-9]+]] = load i32, ptr getelementptr inbounds (%struct.__va_list, ptr @the_list, i32 0, i32 3)
 // CHECK: [[EARLY_ONSTACK:%[a-z_0-9]+]] = icmp sge i32 [[GR_OFFS]], 0
@@ -837,12 +827,13 @@ void check_start(int n, ...) {
   va_list the_list;
   va_start(the_list, n);
 // CHECK: [[THE_LIST:%[a-z_0-9]+]] = alloca %struct.__va_list
-// CHECK: call void @llvm.va_start(ptr [[THE_LIST]])
+// CHECK: call void @llvm.va_start.p0(ptr [[THE_LIST]])
 }
 
 typedef struct {} empty;
 empty empty_record_test(void) {
 // CHECK-LABEL: define{{.*}} void @empty_record_test()
+// CHECK: entry
+// CHECK-NEXT: ret void
   return va_arg(the_list, empty);
-// CHECK: [[GR_OFFS:%[a-z_0-9]+]] = load ptr, ptr @the_list
 }

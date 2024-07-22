@@ -26,9 +26,8 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
 
   SmallVector<LLVM::GlobalOp, 3> workgroupBuffers;
   workgroupBuffers.reserve(gpuFuncOp.getNumWorkgroupAttributions());
-  for (const auto &en : llvm::enumerate(gpuFuncOp.getWorkgroupAttributions())) {
-    BlockArgument attribution = en.value();
-
+  for (const auto [idx, attribution] :
+       llvm::enumerate(gpuFuncOp.getWorkgroupAttributions())) {
     auto type = dyn_cast<MemRefType>(attribution.getType());
     assert(type && type.hasStaticShape() && "unexpected type in attribution");
 
@@ -37,12 +36,12 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     auto elementType =
         cast<Type>(typeConverter->convertType(type.getElementType()));
     auto arrayType = LLVM::LLVMArrayType::get(elementType, numElements);
-    std::string name = std::string(
-        llvm::formatv("__wg_{0}_{1}", gpuFuncOp.getName(), en.index()));
+    std::string name =
+        std::string(llvm::formatv("__wg_{0}_{1}", gpuFuncOp.getName(), idx));
     uint64_t alignment = 0;
     if (auto alignAttr =
             dyn_cast_or_null<IntegerAttr>(gpuFuncOp.getWorkgroupAttributionAttr(
-                en.index(), LLVM::LLVMDialect::getAlignAttrName())))
+                idx, LLVM::LLVMDialect::getAlignAttrName())))
       alignment = alignAttr.getInt();
     auto globalOp = rewriter.create<LLVM::GlobalOp>(
         gpuFuncOp.getLoc(), arrayType, /*isConstant=*/false,
@@ -75,7 +74,9 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
         attr.getName() ==
             gpu::GPUFuncOp::getNumWorkgroupAttributionsAttrName() ||
         attr.getName() == gpuFuncOp.getWorkgroupAttribAttrsAttrName() ||
-        attr.getName() == gpuFuncOp.getPrivateAttribAttrsAttrName())
+        attr.getName() == gpuFuncOp.getPrivateAttribAttrsAttrName() ||
+        attr.getName() == gpuFuncOp.getKnownBlockSizeAttrName() ||
+        attr.getName() == gpuFuncOp.getKnownGridSizeAttrName())
       continue;
     if (attr.getName() == gpuFuncOp.getArgAttrsAttrName()) {
       argAttrs = gpuFuncOp.getArgAttrsAttr();
@@ -83,11 +84,30 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     }
     attributes.push_back(attr);
   }
+
+  DenseI32ArrayAttr knownBlockSize = gpuFuncOp.getKnownBlockSizeAttr();
+  DenseI32ArrayAttr knownGridSize = gpuFuncOp.getKnownGridSizeAttr();
+  // Ensure we don't lose information if the function is lowered before its
+  // surrounding context.
+  auto *gpuDialect = cast<gpu::GPUDialect>(gpuFuncOp->getDialect());
+  if (knownBlockSize)
+    attributes.emplace_back(gpuDialect->getKnownBlockSizeAttrHelper().getName(),
+                            knownBlockSize);
+  if (knownGridSize)
+    attributes.emplace_back(gpuDialect->getKnownGridSizeAttrHelper().getName(),
+                            knownGridSize);
+
   // Add a dialect specific kernel attribute in addition to GPU kernel
   // attribute. The former is necessary for further translation while the
   // latter is expected by gpu.launch_func.
-  if (gpuFuncOp.isKernel())
+  if (gpuFuncOp.isKernel()) {
     attributes.emplace_back(kernelAttributeName, rewriter.getUnitAttr());
+    // Set the dialect-specific block size attribute if there is one.
+    if (kernelBlockSizeAttributeName.has_value() && knownBlockSize) {
+      attributes.emplace_back(kernelBlockSizeAttributeName.value(),
+                              knownBlockSize);
+    }
+  }
   auto llvmFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
       gpuFuncOp.getLoc(), gpuFuncOp.getName(), funcType,
       LLVM::Linkage::External, /*dsoLocal=*/false, /*cconv=*/LLVM::CConv::C,
@@ -105,8 +125,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     rewriter.setInsertionPointToStart(&gpuFuncOp.front());
     unsigned numProperArguments = gpuFuncOp.getNumArguments();
 
-    for (const auto &en : llvm::enumerate(workgroupBuffers)) {
-      LLVM::GlobalOp global = en.value();
+    for (const auto [idx, global] : llvm::enumerate(workgroupBuffers)) {
       auto ptrType = LLVM::LLVMPointerType::get(rewriter.getContext(),
                                                 global.getAddrSpace());
       Value address = rewriter.create<LLVM::AddressOfOp>(
@@ -119,18 +138,18 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
       // existing memref infrastructure. This may use more registers than
       // otherwise necessary given that memref sizes are fixed, but we can try
       // and canonicalize that away later.
-      Value attribution = gpuFuncOp.getWorkgroupAttributions()[en.index()];
+      Value attribution = gpuFuncOp.getWorkgroupAttributions()[idx];
       auto type = cast<MemRefType>(attribution.getType());
       auto descr = MemRefDescriptor::fromStaticShape(
           rewriter, loc, *getTypeConverter(), type, memory);
-      signatureConversion.remapInput(numProperArguments + en.index(), descr);
+      signatureConversion.remapInput(numProperArguments + idx, descr);
     }
 
     // Rewrite private memory attributions to alloca'ed buffers.
     unsigned numWorkgroupAttributions = gpuFuncOp.getNumWorkgroupAttributions();
     auto int64Ty = IntegerType::get(rewriter.getContext(), 64);
-    for (const auto &en : llvm::enumerate(gpuFuncOp.getPrivateAttributions())) {
-      Value attribution = en.value();
+    for (const auto [idx, attribution] :
+         llvm::enumerate(gpuFuncOp.getPrivateAttributions())) {
       auto type = cast<MemRefType>(attribution.getType());
       assert(type && type.hasStaticShape() && "unexpected type in attribution");
 
@@ -145,14 +164,14 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
       uint64_t alignment = 0;
       if (auto alignAttr =
               dyn_cast_or_null<IntegerAttr>(gpuFuncOp.getPrivateAttributionAttr(
-                  en.index(), LLVM::LLVMDialect::getAlignAttrName())))
+                  idx, LLVM::LLVMDialect::getAlignAttrName())))
         alignment = alignAttr.getInt();
       Value allocated = rewriter.create<LLVM::AllocaOp>(
           gpuFuncOp.getLoc(), ptrType, elementType, numElements, alignment);
       auto descr = MemRefDescriptor::fromStaticShape(
           rewriter, loc, *getTypeConverter(), type, allocated);
       signatureConversion.remapInput(
-          numProperArguments + numWorkgroupAttributions + en.index(), descr);
+          numProperArguments + numWorkgroupAttributions + idx, descr);
     }
   }
 
@@ -163,49 +182,25 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
                                          &signatureConversion)))
     return failure();
 
-  // If bare memref pointers are being used, remap them back to memref
-  // descriptors This must be done after signature conversion to get rid of the
-  // unrealized casts.
-  if (getTypeConverter()->getOptions().useBarePtrCallConv) {
-    OpBuilder::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPointToStart(&llvmFuncOp.getBody().front());
-    for (const auto &en : llvm::enumerate(gpuFuncOp.getArgumentTypes())) {
-      auto memrefTy = dyn_cast<MemRefType>(en.value());
-      if (!memrefTy)
-        continue;
-      assert(memrefTy.hasStaticShape() &&
-             "Bare pointer convertion used with dynamically-shaped memrefs");
-      // Use a placeholder when replacing uses of the memref argument to prevent
-      // circular replacements.
-      auto remapping = signatureConversion.getInputMapping(en.index());
-      assert(remapping && remapping->size == 1 &&
-             "Type converter should produce 1-to-1 mapping for bare memrefs");
-      BlockArgument newArg =
-          llvmFuncOp.getBody().getArgument(remapping->inputNo);
-      auto placeholder = rewriter.create<LLVM::UndefOp>(
-          loc, getTypeConverter()->convertType(memrefTy));
-      rewriter.replaceUsesOfBlockArgument(newArg, placeholder);
-      Value desc = MemRefDescriptor::fromStaticShape(
-          rewriter, loc, *getTypeConverter(), memrefTy, newArg);
-      rewriter.replaceOp(placeholder, {desc});
-    }
-  }
-
   // Get memref type from function arguments and set the noalias to
   // pointer arguments.
-  for (const auto &en : llvm::enumerate(gpuFuncOp.getArgumentTypes())) {
-    auto memrefTy = en.value().dyn_cast<MemRefType>();
-    NamedAttrList argAttr = argAttrs
-                                ? argAttrs[en.index()].cast<DictionaryAttr>()
-                                : NamedAttrList();
-
+  for (const auto [idx, argTy] :
+       llvm::enumerate(gpuFuncOp.getArgumentTypes())) {
+    auto remapping = signatureConversion.getInputMapping(idx);
+    NamedAttrList argAttr =
+        argAttrs ? cast<DictionaryAttr>(argAttrs[idx]) : NamedAttrList();
+    auto copyAttribute = [&](StringRef attrName) {
+      Attribute attr = argAttr.erase(attrName);
+      if (!attr)
+        return;
+      for (size_t i = 0, e = remapping->size; i < e; ++i)
+        llvmFuncOp.setArgAttr(remapping->inputNo + i, attrName, attr);
+    };
     auto copyPointerAttribute = [&](StringRef attrName) {
       Attribute attr = argAttr.erase(attrName);
 
-      // This is a proxy for the bare pointer calling convention.
       if (!attr)
         return;
-      auto remapping = signatureConversion.getInputMapping(en.index());
       if (remapping->size > 1 &&
           attrName == LLVM::LLVMDialect::getNoAliasAttrName()) {
         emitWarning(llvmFuncOp.getLoc(),
@@ -213,9 +208,8 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
         return;
       }
       for (size_t i = 0, e = remapping->size; i < e; ++i) {
-        if (llvmFuncOp.getArgument(remapping->inputNo + i)
-                .getType()
-                .isa<LLVM::LLVMPointerType>()) {
+        if (isa<LLVM::LLVMPointerType>(
+                llvmFuncOp.getArgument(remapping->inputNo + i).getType())) {
           llvmFuncOp.setArgAttr(remapping->inputNo + i, attrName, attr);
         }
       }
@@ -224,10 +218,23 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     if (argAttr.empty())
       continue;
 
-    if (memrefTy) {
+    copyAttribute(LLVM::LLVMDialect::getReturnedAttrName());
+    copyAttribute(LLVM::LLVMDialect::getNoUndefAttrName());
+    copyAttribute(LLVM::LLVMDialect::getInRegAttrName());
+    bool lowersToPointer = false;
+    for (size_t i = 0, e = remapping->size; i < e; ++i) {
+      lowersToPointer |= isa<LLVM::LLVMPointerType>(
+          llvmFuncOp.getArgument(remapping->inputNo + i).getType());
+    }
+
+    if (lowersToPointer) {
       copyPointerAttribute(LLVM::LLVMDialect::getNoAliasAttrName());
+      copyPointerAttribute(LLVM::LLVMDialect::getNoCaptureAttrName());
+      copyPointerAttribute(LLVM::LLVMDialect::getNoFreeAttrName());
+      copyPointerAttribute(LLVM::LLVMDialect::getAlignAttrName());
       copyPointerAttribute(LLVM::LLVMDialect::getReadonlyAttrName());
       copyPointerAttribute(LLVM::LLVMDialect::getWriteOnlyAttrName());
+      copyPointerAttribute(LLVM::LLVMDialect::getReadnoneAttrName());
       copyPointerAttribute(LLVM::LLVMDialect::getNonNullAttrName());
       copyPointerAttribute(LLVM::LLVMDialect::getDereferenceableAttrName());
       copyPointerAttribute(
@@ -495,7 +502,8 @@ LogicalResult GPUPrintfOpToVPrintfLowering::matchAndRewrite(
                                       /*alignment=*/0);
   for (auto [index, arg] : llvm::enumerate(args)) {
     Value ptr = rewriter.create<LLVM::GEPOp>(
-        loc, ptrType, structType, tempAlloc, ArrayRef<LLVM::GEPArg>{0, index});
+        loc, ptrType, structType, tempAlloc,
+        ArrayRef<LLVM::GEPArg>{0, static_cast<int32_t>(index)});
     rewriter.create<LLVM::StoreOp>(loc, arg, ptr);
   }
   std::array<Value, 2> printfArgs = {stringStart, tempAlloc};
@@ -510,8 +518,7 @@ LogicalResult impl::scalarizeVectorOp(Operation *op, ValueRange operands,
                                       ConversionPatternRewriter &rewriter,
                                       const LLVMTypeConverter &converter) {
   TypeRange operandTypes(operands);
-  if (llvm::none_of(operandTypes,
-                    [](Type type) { return isa<VectorType>(type); })) {
+  if (llvm::none_of(operandTypes, llvm::IsaPred<VectorType>)) {
     return rewriter.notifyMatchFailure(op, "expected vector operand");
   }
   if (op->getNumRegions() != 0 || op->getNumSuccessors() != 0)
@@ -645,6 +652,62 @@ LogicalResult GPUDynamicSharedMemoryOpLowering::matchAndRewrite(
 
   // Step 5. Replace the op with memref descriptor
   rewriter.replaceOp(op, {memRefDescriptor});
+  return success();
+}
+
+LogicalResult GPUReturnOpLowering::matchAndRewrite(
+    gpu::ReturnOp op, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  Location loc = op.getLoc();
+  unsigned numArguments = op.getNumOperands();
+  SmallVector<Value, 4> updatedOperands;
+
+  bool useBarePtrCallConv = getTypeConverter()->getOptions().useBarePtrCallConv;
+  if (useBarePtrCallConv) {
+    // For the bare-ptr calling convention, extract the aligned pointer to
+    // be returned from the memref descriptor.
+    for (auto it : llvm::zip(op->getOperands(), adaptor.getOperands())) {
+      Type oldTy = std::get<0>(it).getType();
+      Value newOperand = std::get<1>(it);
+      if (isa<MemRefType>(oldTy) && getTypeConverter()->canConvertToBarePtr(
+                                        cast<BaseMemRefType>(oldTy))) {
+        MemRefDescriptor memrefDesc(newOperand);
+        newOperand = memrefDesc.allocatedPtr(rewriter, loc);
+      } else if (isa<UnrankedMemRefType>(oldTy)) {
+        // Unranked memref is not supported in the bare pointer calling
+        // convention.
+        return failure();
+      }
+      updatedOperands.push_back(newOperand);
+    }
+  } else {
+    updatedOperands = llvm::to_vector<4>(adaptor.getOperands());
+    (void)copyUnrankedDescriptors(rewriter, loc, op.getOperands().getTypes(),
+                                  updatedOperands,
+                                  /*toDynamic=*/true);
+  }
+
+  // If ReturnOp has 0 or 1 operand, create it and return immediately.
+  if (numArguments <= 1) {
+    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(
+        op, TypeRange(), updatedOperands, op->getAttrs());
+    return success();
+  }
+
+  // Otherwise, we need to pack the arguments into an LLVM struct type before
+  // returning.
+  auto packedType = getTypeConverter()->packFunctionResults(
+      op.getOperandTypes(), useBarePtrCallConv);
+  if (!packedType) {
+    return rewriter.notifyMatchFailure(op, "could not convert result types");
+  }
+
+  Value packed = rewriter.create<LLVM::UndefOp>(loc, packedType);
+  for (auto [idx, operand] : llvm::enumerate(updatedOperands)) {
+    packed = rewriter.create<LLVM::InsertValueOp>(loc, packed, operand, idx);
+  }
+  rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, TypeRange(), packed,
+                                              op->getAttrs());
   return success();
 }
 

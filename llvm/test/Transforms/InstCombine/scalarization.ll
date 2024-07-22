@@ -156,6 +156,34 @@ define i8 @extract_element_binop_splat_variable_index(<4 x i8> %x, i32 %y) {
   ret i8 %r
 }
 
+; We cannot move the extractelement before the sdiv here, because %z may be
+; out of range, making the divisor poison and resulting in immediate UB.
+define i8 @extract_element_binop_splat_variable_index_may_trap(<4 x i8> %x, <4 x i8> %y, i32 %z) {
+;
+; CHECK-LABEL: @extract_element_binop_splat_variable_index_may_trap(
+; CHECK-NEXT:    [[B:%.*]] = sdiv <4 x i8> <i8 42, i8 42, i8 42, i8 42>, [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i8> [[B]], i32 [[Z:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %b = sdiv <4 x i8> splat (i8 42), %y
+  %r = extractelement <4 x i8> %b, i32 %z
+  ret i8 %r
+}
+
+; Moving the extractelement first is fine here, because the index is known to
+; be valid, so we can't introduce additional poison.
+define i8 @extract_element_binop_constant_index_may_trap(<4 x i8> %x, <4 x i8> %y, i32 %z) {
+;
+; CHECK-LABEL: @extract_element_binop_constant_index_may_trap(
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i8> [[Y:%.*]], i64 3
+; CHECK-NEXT:    [[R:%.*]] = sdiv i8 42, [[TMP1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %b = sdiv <4 x i8> splat (i8 42), %y
+  %r = extractelement <4 x i8> %b, i32 3
+  ret i8 %r
+}
+
 define i8 @extract_element_binop_splat_with_undef_variable_index(<4 x i8> %x, i32 %y) {
 ;
 ; CHECK-LABEL: @extract_element_binop_splat_with_undef_variable_index(
@@ -339,6 +367,17 @@ define i1 @extractelt_vector_fcmp_constrhs_dynidx(<2 x float> %arg, i32 %idx) {
   %cmp = fcmp oeq <2 x float> %arg, zeroinitializer
   %ext = extractelement <2 x i1> %cmp, i32 %idx
   ret i1 %ext
+}
+
+define i1 @extractelt_vector_fcmp_copy_flags(<4 x float> %x) {
+; CHECK-LABEL: @extractelt_vector_fcmp_copy_flags(
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[X:%.*]], i64 2
+; CHECK-NEXT:    [[R:%.*]] = fcmp nsz arcp oeq float [[TMP1]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp = fcmp nsz arcp oeq <4 x float> %x, zeroinitializer
+  %r = extractelement <4 x i1> %cmp, i32 2
+  ret i1 %r
 }
 
 define i1 @extractelt_vector_fcmp_not_cheap_to_scalarize_multi_use(<2 x float> %arg0, <2 x float> %arg1, <2 x float> %arg2, i32 %idx) {

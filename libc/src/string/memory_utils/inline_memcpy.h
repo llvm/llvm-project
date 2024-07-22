@@ -38,14 +38,14 @@
 #error "Unsupported architecture"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
-LIBC_INLINE void inline_memcpy(void *__restrict dst, const void *__restrict src,
-                               size_t count) {
+[[gnu::flatten]] LIBC_INLINE void
+inline_memcpy(void *__restrict dst, const void *__restrict src, size_t count) {
   LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY(reinterpret_cast<Ptr>(dst),
                                       reinterpret_cast<CPtr>(src), count);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMCPY_H

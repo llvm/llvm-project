@@ -68,8 +68,8 @@ llvm.mlir.global internal constant @test([2.5, 7.4]) : !llvm.array<2 x f64>
 
 // -----
 
-// expected-error @below{{LLVM attribute 'noinline' does not expect a value}}
-llvm.func @passthrough_unexpected_value() attributes {passthrough = [["noinline", "42"]]}
+// expected-error @below{{LLVM attribute 'readonly' does not expect a value}}
+llvm.func @passthrough_unexpected_value() attributes {passthrough = [["readonly", "42"]]}
 
 // -----
 
@@ -261,9 +261,25 @@ llvm.func @masked_gather_intr_wrong_type(%ptrs : vector<7xf32>, %mask : vector<7
 
 // -----
 
+llvm.func @masked_gather_intr_wrong_type_scalable(%ptrs : !llvm.vec<7 x ptr>, %mask : vector<[7]xi1>) -> vector<[7]xf32> {
+  // expected-error @below{{expected operand #1 type to be '!llvm.vec<? x 7 x  ptr>'}}
+  %0 = llvm.intr.masked.gather %ptrs, %mask { alignment = 1: i32} : (!llvm.vec<7 x ptr>, vector<[7]xi1>) -> vector<[7]xf32>
+  llvm.return %0 : vector<[7]xf32>
+}
+
+// -----
+
 llvm.func @masked_scatter_intr_wrong_type(%vec : f32, %ptrs : !llvm.vec<7xptr>, %mask : vector<7xi1>) {
   // expected-error @below{{op operand #0 must be LLVM dialect-compatible vector type, but got 'f32'}}
   llvm.intr.masked.scatter %vec, %ptrs, %mask { alignment = 1: i32} : f32, vector<7xi1> into !llvm.vec<7xptr>
+  llvm.return
+}
+
+// -----
+
+llvm.func @masked_scatter_intr_wrong_type_scalable(%vec : vector<[7]xf32>, %ptrs : !llvm.vec<7xptr>, %mask : vector<[7]xi1>) {
+  // expected-error @below{{expected operand #2 type to be '!llvm.vec<? x 7 x  ptr>'}}
+  llvm.intr.masked.scatter %vec, %ptrs, %mask { alignment = 1: i32} : vector<[7]xf32>, vector<[7]xi1> into !llvm.vec<7xptr>
   llvm.return
 }
 
@@ -313,3 +329,55 @@ llvm.func @foo() {
   // expected-error @below{{must appear at the module level}}
   llvm.linker_options ["test"]
 }
+
+// -----
+
+module @does_not_exist {
+  // expected-error @below{{resource does not exist}}
+  llvm.mlir.global internal constant @constant(dense_resource<test0> : tensor<4xf32>) : !llvm.array<4 x f32>
+}
+
+// -----
+
+module @raw_data_does_not_match_element_type_size {
+  // expected-error @below{{raw data size does not match element type size}}
+  llvm.mlir.global internal constant @constant(dense_resource<test1> : tensor<5xf32>) : !llvm.array<4 x f32>
+}
+
+{-#
+  dialect_resources: {
+    builtin: {
+      test1: "0x0800000054A3B53ED6C0B33E55D1A2BDE5D2BB3E"
+    }
+  }
+#-}
+
+// -----
+
+module @does_not_exist {
+  // expected-error @below{{unsupported dense_resource type}}
+  llvm.mlir.global internal constant @constant(dense_resource<test1> : memref<4xf32>) : !llvm.array<4 x f32>
+}
+
+{-#
+  dialect_resources: {
+    builtin: {
+      test1: "0x0800000054A3B53ED6C0B33E55D1A2BDE5D2BB3E"
+    }
+  }
+#-}
+
+// -----
+
+module @no_known_conversion_innermost_eltype {
+  // expected-error @below{{no known conversion for innermost element type}}
+  llvm.mlir.global internal constant @constant(dense_resource<test0> : tensor<4xi4>) : !llvm.array<4 x i4>
+}
+
+{-#
+  dialect_resources: {
+    builtin: {
+      test1: "0x0800000054A3B53ED6C0B33E55D1A2BDE5D2BB3E"
+    }
+  }
+#-}

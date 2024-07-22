@@ -1,7 +1,7 @@
 // This test checks if internal linkage symbols get unique names with
 // -funique-internal-linkage-names option.
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -x c++ -S -emit-llvm -o - < %s | FileCheck %s --check-prefix=PLAIN
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -x c++  -S -emit-llvm -funique-internal-linkage-names -o - < %s | FileCheck %s --check-prefix=UNIQUE
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -x c++ -emit-llvm -o - < %s | FileCheck %s --check-prefix=PLAIN
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -x c++  -emit-llvm -funique-internal-linkage-names -o - < %s | FileCheck %s --check-prefix=UNIQUE
 
 static int glob;
 static int foo() {

@@ -93,7 +93,7 @@ define void @use_extern_overalign() #0 {
 define amdgpu_kernel void @module_0_kernel_normal_extern_normal(i32 %idx) {
 ; CHECK-LABEL: module_0_kernel_normal_extern_normal:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x0
+; CHECK-NEXT:    s_load_dword s0, s[6:7], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
@@ -113,22 +113,27 @@ define amdgpu_kernel void @module_0_kernel_normal_extern_normal(i32 %idx) {
 define amdgpu_kernel void @module_1_kernel_normal_extern_normal(i32 %idx) {
 ; CHECK-LABEL: module_1_kernel_normal_extern_normal:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_add_u32 s8, s8, s11
+; CHECK-NEXT:    s_add_u32 s10, s10, s15
 ; CHECK-NEXT:    s_mov_b32 s32, 0
-; CHECK-NEXT:    s_addc_u32 s9, s9, 0
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s8
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s9
-; CHECK-NEXT:    s_add_u32 s0, s0, s11
+; CHECK-NEXT:    s_addc_u32 s11, s11, 0
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
+; CHECK-NEXT:    s_add_u32 s0, s0, s15
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
-; CHECK-NEXT:    s_getpc_b64 s[8:9]
-; CHECK-NEXT:    s_add_u32 s8, s8, use_module@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s9, s9, use_module@gotpcrel32@hi+12
-; CHECK-NEXT:    s_load_dwordx2 s[10:11], s[8:9], 0x0
-; CHECK-NEXT:    s_load_dword s12, s[6:7], 0x0
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; CHECK-NEXT:    s_add_u32 s8, s6, 8
+; CHECK-NEXT:    s_addc_u32 s9, s7, 0
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, use_module@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, use_module@gotpcrel32@hi+12
+; CHECK-NEXT:    s_load_dwordx2 s[18:19], s[16:17], 0x0
+; CHECK-NEXT:    s_load_dword s15, s[6:7], 0x0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; CHECK-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[10:11]
-; CHECK-NEXT:    s_lshl_b32 s4, s12, 2
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[18:19]
+; CHECK-NEXT:    s_lshl_b32 s4, s15, 2
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 1
 ; CHECK-NEXT:    s_add_i32 s4, s4, 4
@@ -151,7 +156,7 @@ define amdgpu_kernel void @module_1_kernel_normal_extern_normal(i32 %idx) {
 define amdgpu_kernel void @module_0_kernel_overalign_extern_normal(i32 %idx) {
 ; CHECK-LABEL: module_0_kernel_overalign_extern_normal:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x0
+; CHECK-NEXT:    s_load_dword s0, s[6:7], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
@@ -171,22 +176,27 @@ define amdgpu_kernel void @module_0_kernel_overalign_extern_normal(i32 %idx) {
 define amdgpu_kernel void @module_1_kernel_overalign_extern_normal(i32 %idx) {
 ; CHECK-LABEL: module_1_kernel_overalign_extern_normal:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_add_u32 s8, s8, s11
+; CHECK-NEXT:    s_add_u32 s10, s10, s15
 ; CHECK-NEXT:    s_mov_b32 s32, 0
-; CHECK-NEXT:    s_addc_u32 s9, s9, 0
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s8
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s9
-; CHECK-NEXT:    s_add_u32 s0, s0, s11
+; CHECK-NEXT:    s_addc_u32 s11, s11, 0
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
+; CHECK-NEXT:    s_add_u32 s0, s0, s15
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
-; CHECK-NEXT:    s_getpc_b64 s[8:9]
-; CHECK-NEXT:    s_add_u32 s8, s8, use_module@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s9, s9, use_module@gotpcrel32@hi+12
-; CHECK-NEXT:    s_load_dwordx2 s[10:11], s[8:9], 0x0
-; CHECK-NEXT:    s_load_dword s12, s[6:7], 0x0
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; CHECK-NEXT:    s_add_u32 s8, s6, 8
+; CHECK-NEXT:    s_addc_u32 s9, s7, 0
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, use_module@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, use_module@gotpcrel32@hi+12
+; CHECK-NEXT:    s_load_dwordx2 s[18:19], s[16:17], 0x0
+; CHECK-NEXT:    s_load_dword s15, s[6:7], 0x0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; CHECK-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[10:11]
-; CHECK-NEXT:    s_lshl_b32 s4, s12, 2
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[18:19]
+; CHECK-NEXT:    s_lshl_b32 s4, s15, 2
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 1
 ; CHECK-NEXT:    s_add_i32 s4, s4, 8
@@ -209,7 +219,7 @@ define amdgpu_kernel void @module_1_kernel_overalign_extern_normal(i32 %idx) {
 define amdgpu_kernel void @module_0_kernel_normal_extern_overalign(i32 %idx) {
 ; CHECK-LABEL: module_0_kernel_normal_extern_overalign:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x0
+; CHECK-NEXT:    s_load_dword s0, s[6:7], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
@@ -229,22 +239,27 @@ define amdgpu_kernel void @module_0_kernel_normal_extern_overalign(i32 %idx) {
 define amdgpu_kernel void @module_1_kernel_normal_extern_overalign(i32 %idx) {
 ; CHECK-LABEL: module_1_kernel_normal_extern_overalign:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_add_u32 s8, s8, s11
+; CHECK-NEXT:    s_add_u32 s10, s10, s15
 ; CHECK-NEXT:    s_mov_b32 s32, 0
-; CHECK-NEXT:    s_addc_u32 s9, s9, 0
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s8
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s9
-; CHECK-NEXT:    s_add_u32 s0, s0, s11
+; CHECK-NEXT:    s_addc_u32 s11, s11, 0
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
+; CHECK-NEXT:    s_add_u32 s0, s0, s15
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
-; CHECK-NEXT:    s_getpc_b64 s[8:9]
-; CHECK-NEXT:    s_add_u32 s8, s8, use_module@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s9, s9, use_module@gotpcrel32@hi+12
-; CHECK-NEXT:    s_load_dwordx2 s[10:11], s[8:9], 0x0
-; CHECK-NEXT:    s_load_dword s12, s[6:7], 0x0
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; CHECK-NEXT:    s_add_u32 s8, s6, 8
+; CHECK-NEXT:    s_addc_u32 s9, s7, 0
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, use_module@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, use_module@gotpcrel32@hi+12
+; CHECK-NEXT:    s_load_dwordx2 s[18:19], s[16:17], 0x0
+; CHECK-NEXT:    s_load_dword s15, s[6:7], 0x0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; CHECK-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[10:11]
-; CHECK-NEXT:    s_lshl_b32 s4, s12, 2
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[18:19]
+; CHECK-NEXT:    s_lshl_b32 s4, s15, 2
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 1
 ; CHECK-NEXT:    s_add_i32 s4, s4, 8
@@ -267,7 +282,7 @@ define amdgpu_kernel void @module_1_kernel_normal_extern_overalign(i32 %idx) {
 define amdgpu_kernel void @module_0_kernel_overalign_extern_overalign(i32 %idx) {
 ; CHECK-LABEL: module_0_kernel_overalign_extern_overalign:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x0
+; CHECK-NEXT:    s_load_dword s0, s[6:7], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
@@ -287,22 +302,27 @@ define amdgpu_kernel void @module_0_kernel_overalign_extern_overalign(i32 %idx) 
 define amdgpu_kernel void @module_1_kernel_overalign_extern_overalign(i32 %idx) {
 ; CHECK-LABEL: module_1_kernel_overalign_extern_overalign:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_add_u32 s8, s8, s11
+; CHECK-NEXT:    s_add_u32 s10, s10, s15
 ; CHECK-NEXT:    s_mov_b32 s32, 0
-; CHECK-NEXT:    s_addc_u32 s9, s9, 0
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s8
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s9
-; CHECK-NEXT:    s_add_u32 s0, s0, s11
+; CHECK-NEXT:    s_addc_u32 s11, s11, 0
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
+; CHECK-NEXT:    s_add_u32 s0, s0, s15
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
-; CHECK-NEXT:    s_getpc_b64 s[8:9]
-; CHECK-NEXT:    s_add_u32 s8, s8, use_module@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s9, s9, use_module@gotpcrel32@hi+12
-; CHECK-NEXT:    s_load_dwordx2 s[10:11], s[8:9], 0x0
-; CHECK-NEXT:    s_load_dword s12, s[6:7], 0x0
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; CHECK-NEXT:    s_add_u32 s8, s6, 8
+; CHECK-NEXT:    s_addc_u32 s9, s7, 0
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, use_module@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, use_module@gotpcrel32@hi+12
+; CHECK-NEXT:    s_load_dwordx2 s[18:19], s[16:17], 0x0
+; CHECK-NEXT:    s_load_dword s15, s[6:7], 0x0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; CHECK-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[10:11]
-; CHECK-NEXT:    s_lshl_b32 s4, s12, 2
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[18:19]
+; CHECK-NEXT:    s_lshl_b32 s4, s15, 2
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 1
 ; CHECK-NEXT:    s_add_i32 s4, s4, 8
@@ -332,24 +352,29 @@ define amdgpu_kernel void @module_1_kernel_overalign_extern_overalign(i32 %idx) 
 define amdgpu_kernel void @module_0_kernel_normal_indirect_extern_normal(i32 %idx) {
 ; CHECK-LABEL: module_0_kernel_normal_indirect_extern_normal:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_add_u32 s8, s8, s11
+; CHECK-NEXT:    s_add_u32 s10, s10, s15
 ; CHECK-NEXT:    s_mov_b32 s32, 0
-; CHECK-NEXT:    s_addc_u32 s9, s9, 0
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s8
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s9
-; CHECK-NEXT:    s_add_u32 s0, s0, s11
+; CHECK-NEXT:    s_addc_u32 s11, s11, 0
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
+; CHECK-NEXT:    s_add_u32 s0, s0, s15
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; CHECK-NEXT:    s_add_u32 s8, s6, 8
+; CHECK-NEXT:    s_addc_u32 s9, s7, 0
 ; CHECK-NEXT:    s_getpc_b64 s[6:7]
 ; CHECK-NEXT:    s_add_u32 s6, s6, use_extern_normal@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s7, s7, use_extern_normal@gotpcrel32@hi+12
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_load_dwordx2 s[8:9], s[6:7], 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 2
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
+; CHECK-NEXT:    v_mov_b32_e32 v4, 2
 ; CHECK-NEXT:    s_mov_b32 s15, 0
-; CHECK-NEXT:    ds_write_b16 v0, v1
+; CHECK-NEXT:    v_or3_b32 v31, v0, v1, v2
+; CHECK-NEXT:    ds_write_b16 v3, v4
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[8:9]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; CHECK-NEXT:    s_endpgm
   store i16 2, ptr addrspace(3) @kernel_normal
 
@@ -360,32 +385,37 @@ define amdgpu_kernel void @module_0_kernel_normal_indirect_extern_normal(i32 %id
 define amdgpu_kernel void @module_1_kernel_normal_indirect_extern_normal(i32 %idx) {
 ; CHECK-LABEL: module_1_kernel_normal_indirect_extern_normal:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_add_u32 s8, s8, s11
+; CHECK-NEXT:    s_add_u32 s10, s10, s15
 ; CHECK-NEXT:    s_mov_b32 s32, 0
-; CHECK-NEXT:    s_addc_u32 s9, s9, 0
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s8
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s9
-; CHECK-NEXT:    s_add_u32 s0, s0, s11
+; CHECK-NEXT:    s_addc_u32 s11, s11, 0
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
+; CHECK-NEXT:    s_add_u32 s0, s0, s15
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[4:5]
-; CHECK-NEXT:    s_getpc_b64 s[4:5]
-; CHECK-NEXT:    s_add_u32 s4, s4, use_module@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s5, s5, use_module@gotpcrel32@hi+12
-; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; CHECK-NEXT:    s_add_u32 s8, s6, 8
+; CHECK-NEXT:    s_addc_u32 s9, s7, 0
+; CHECK-NEXT:    s_getpc_b64 s[6:7]
+; CHECK-NEXT:    s_add_u32 s6, s6, use_module@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s7, s7, use_module@gotpcrel32@hi+12
+; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; CHECK-NEXT:    s_mov_b32 s15, 4
+; CHECK-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; CHECK-NEXT:    s_getpc_b64 s[4:5]
-; CHECK-NEXT:    s_add_u32 s4, s4, use_extern_normal@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s5, s5, use_extern_normal@gotpcrel32@hi+12
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; CHECK-NEXT:    s_getpc_b64 s[6:7]
+; CHECK-NEXT:    s_add_u32 s6, s6, use_extern_normal@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s7, s7, use_extern_normal@gotpcrel32@hi+12
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 2
-; CHECK-NEXT:    s_mov_b32 s15, 4
 ; CHECK-NEXT:    ds_write_b16 v0, v1
 ; CHECK-NEXT:    ds_write_b16 v0, v2 offset:2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; CHECK-NEXT:    s_endpgm
   call void @use_module()
   store i16 1, ptr addrspace(3) @module_variable
@@ -399,24 +429,29 @@ define amdgpu_kernel void @module_1_kernel_normal_indirect_extern_normal(i32 %id
 define amdgpu_kernel void @module_0_kernel_overalign_indirect_extern_normal(i32 %idx) {
 ; CHECK-LABEL: module_0_kernel_overalign_indirect_extern_normal:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_add_u32 s8, s8, s11
+; CHECK-NEXT:    s_add_u32 s10, s10, s15
 ; CHECK-NEXT:    s_mov_b32 s32, 0
-; CHECK-NEXT:    s_addc_u32 s9, s9, 0
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s8
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s9
-; CHECK-NEXT:    s_add_u32 s0, s0, s11
+; CHECK-NEXT:    s_addc_u32 s11, s11, 0
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
+; CHECK-NEXT:    s_add_u32 s0, s0, s15
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; CHECK-NEXT:    s_add_u32 s8, s6, 8
+; CHECK-NEXT:    s_addc_u32 s9, s7, 0
 ; CHECK-NEXT:    s_getpc_b64 s[6:7]
 ; CHECK-NEXT:    s_add_u32 s6, s6, use_extern_normal@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s7, s7, use_extern_normal@gotpcrel32@hi+12
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_load_dwordx2 s[8:9], s[6:7], 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 2
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
+; CHECK-NEXT:    v_mov_b32_e32 v4, 2
 ; CHECK-NEXT:    s_mov_b32 s15, 2
-; CHECK-NEXT:    ds_write_b16 v0, v1
+; CHECK-NEXT:    v_or3_b32 v31, v0, v1, v2
+; CHECK-NEXT:    ds_write_b16 v3, v4
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[8:9]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; CHECK-NEXT:    s_endpgm
   store i16 2, ptr addrspace(3) @kernel_overalign
 
@@ -427,32 +462,37 @@ define amdgpu_kernel void @module_0_kernel_overalign_indirect_extern_normal(i32 
 define amdgpu_kernel void @module_1_kernel_overalign_indirect_extern_normal(i32 %idx) {
 ; CHECK-LABEL: module_1_kernel_overalign_indirect_extern_normal:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_add_u32 s8, s8, s11
+; CHECK-NEXT:    s_add_u32 s10, s10, s15
 ; CHECK-NEXT:    s_mov_b32 s32, 0
-; CHECK-NEXT:    s_addc_u32 s9, s9, 0
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s8
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s9
-; CHECK-NEXT:    s_add_u32 s0, s0, s11
+; CHECK-NEXT:    s_addc_u32 s11, s11, 0
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
+; CHECK-NEXT:    s_add_u32 s0, s0, s15
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[4:5]
-; CHECK-NEXT:    s_getpc_b64 s[4:5]
-; CHECK-NEXT:    s_add_u32 s4, s4, use_module@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s5, s5, use_module@gotpcrel32@hi+12
-; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; CHECK-NEXT:    s_add_u32 s8, s6, 8
+; CHECK-NEXT:    s_addc_u32 s9, s7, 0
+; CHECK-NEXT:    s_getpc_b64 s[6:7]
+; CHECK-NEXT:    s_add_u32 s6, s6, use_module@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s7, s7, use_module@gotpcrel32@hi+12
+; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; CHECK-NEXT:    s_mov_b32 s15, 6
+; CHECK-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; CHECK-NEXT:    s_getpc_b64 s[4:5]
-; CHECK-NEXT:    s_add_u32 s4, s4, use_extern_normal@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s5, s5, use_extern_normal@gotpcrel32@hi+12
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; CHECK-NEXT:    s_getpc_b64 s[6:7]
+; CHECK-NEXT:    s_add_u32 s6, s6, use_extern_normal@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s7, s7, use_extern_normal@gotpcrel32@hi+12
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 2
-; CHECK-NEXT:    s_mov_b32 s15, 6
 ; CHECK-NEXT:    ds_write_b16 v0, v1
 ; CHECK-NEXT:    ds_write_b16 v0, v2 offset:4
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; CHECK-NEXT:    s_endpgm
   call void @use_module()
   store i16 1, ptr addrspace(3) @module_variable
@@ -466,24 +506,29 @@ define amdgpu_kernel void @module_1_kernel_overalign_indirect_extern_normal(i32 
 define amdgpu_kernel void @module_0_kernel_normal_indirect_extern_overalign(i32 %idx) {
 ; CHECK-LABEL: module_0_kernel_normal_indirect_extern_overalign:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_add_u32 s8, s8, s11
+; CHECK-NEXT:    s_add_u32 s10, s10, s15
 ; CHECK-NEXT:    s_mov_b32 s32, 0
-; CHECK-NEXT:    s_addc_u32 s9, s9, 0
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s8
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s9
-; CHECK-NEXT:    s_add_u32 s0, s0, s11
+; CHECK-NEXT:    s_addc_u32 s11, s11, 0
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
+; CHECK-NEXT:    s_add_u32 s0, s0, s15
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; CHECK-NEXT:    s_add_u32 s8, s6, 8
+; CHECK-NEXT:    s_addc_u32 s9, s7, 0
 ; CHECK-NEXT:    s_getpc_b64 s[6:7]
 ; CHECK-NEXT:    s_add_u32 s6, s6, use_extern_overalign@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s7, s7, use_extern_overalign@gotpcrel32@hi+12
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_load_dwordx2 s[8:9], s[6:7], 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 2
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
+; CHECK-NEXT:    v_mov_b32_e32 v4, 2
 ; CHECK-NEXT:    s_mov_b32 s15, 1
-; CHECK-NEXT:    ds_write_b16 v0, v1
+; CHECK-NEXT:    v_or3_b32 v31, v0, v1, v2
+; CHECK-NEXT:    ds_write_b16 v3, v4
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[8:9]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; CHECK-NEXT:    s_endpgm
   store i16 2, ptr addrspace(3) @kernel_normal
 
@@ -494,32 +539,37 @@ define amdgpu_kernel void @module_0_kernel_normal_indirect_extern_overalign(i32 
 define amdgpu_kernel void @module_1_kernel_normal_indirect_extern_overalign(i32 %idx) {
 ; CHECK-LABEL: module_1_kernel_normal_indirect_extern_overalign:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_add_u32 s8, s8, s11
+; CHECK-NEXT:    s_add_u32 s10, s10, s15
 ; CHECK-NEXT:    s_mov_b32 s32, 0
-; CHECK-NEXT:    s_addc_u32 s9, s9, 0
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s8
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s9
-; CHECK-NEXT:    s_add_u32 s0, s0, s11
+; CHECK-NEXT:    s_addc_u32 s11, s11, 0
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
+; CHECK-NEXT:    s_add_u32 s0, s0, s15
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[4:5]
-; CHECK-NEXT:    s_getpc_b64 s[4:5]
-; CHECK-NEXT:    s_add_u32 s4, s4, use_module@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s5, s5, use_module@gotpcrel32@hi+12
-; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; CHECK-NEXT:    s_add_u32 s8, s6, 8
+; CHECK-NEXT:    s_addc_u32 s9, s7, 0
+; CHECK-NEXT:    s_getpc_b64 s[6:7]
+; CHECK-NEXT:    s_add_u32 s6, s6, use_module@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s7, s7, use_module@gotpcrel32@hi+12
+; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; CHECK-NEXT:    s_mov_b32 s15, 5
+; CHECK-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; CHECK-NEXT:    s_getpc_b64 s[4:5]
-; CHECK-NEXT:    s_add_u32 s4, s4, use_extern_overalign@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s5, s5, use_extern_overalign@gotpcrel32@hi+12
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; CHECK-NEXT:    s_getpc_b64 s[6:7]
+; CHECK-NEXT:    s_add_u32 s6, s6, use_extern_overalign@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s7, s7, use_extern_overalign@gotpcrel32@hi+12
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 2
-; CHECK-NEXT:    s_mov_b32 s15, 5
 ; CHECK-NEXT:    ds_write_b16 v0, v1
 ; CHECK-NEXT:    ds_write_b16 v0, v2 offset:2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; CHECK-NEXT:    s_endpgm
   call void @use_module()
   store i16 1, ptr addrspace(3) @module_variable
@@ -533,24 +583,29 @@ define amdgpu_kernel void @module_1_kernel_normal_indirect_extern_overalign(i32 
 define amdgpu_kernel void @module_0_kernel_overalign_indirect_extern_overalign(i32 %idx) {
 ; CHECK-LABEL: module_0_kernel_overalign_indirect_extern_overalign:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_add_u32 s8, s8, s11
+; CHECK-NEXT:    s_add_u32 s10, s10, s15
 ; CHECK-NEXT:    s_mov_b32 s32, 0
-; CHECK-NEXT:    s_addc_u32 s9, s9, 0
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s8
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s9
-; CHECK-NEXT:    s_add_u32 s0, s0, s11
+; CHECK-NEXT:    s_addc_u32 s11, s11, 0
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
+; CHECK-NEXT:    s_add_u32 s0, s0, s15
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; CHECK-NEXT:    s_add_u32 s8, s6, 8
+; CHECK-NEXT:    s_addc_u32 s9, s7, 0
 ; CHECK-NEXT:    s_getpc_b64 s[6:7]
 ; CHECK-NEXT:    s_add_u32 s6, s6, use_extern_overalign@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s7, s7, use_extern_overalign@gotpcrel32@hi+12
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_load_dwordx2 s[8:9], s[6:7], 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 2
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
+; CHECK-NEXT:    v_mov_b32_e32 v4, 2
 ; CHECK-NEXT:    s_mov_b32 s15, 3
-; CHECK-NEXT:    ds_write_b16 v0, v1
+; CHECK-NEXT:    v_or3_b32 v31, v0, v1, v2
+; CHECK-NEXT:    ds_write_b16 v3, v4
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[8:9]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; CHECK-NEXT:    s_endpgm
   store i16 2, ptr addrspace(3) @kernel_overalign
 
@@ -561,32 +616,37 @@ define amdgpu_kernel void @module_0_kernel_overalign_indirect_extern_overalign(i
 define amdgpu_kernel void @module_1_kernel_overalign_indirect_extern_overalign(i32 %idx) {
 ; CHECK-LABEL: module_1_kernel_overalign_indirect_extern_overalign:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_add_u32 s8, s8, s11
+; CHECK-NEXT:    s_add_u32 s10, s10, s15
 ; CHECK-NEXT:    s_mov_b32 s32, 0
-; CHECK-NEXT:    s_addc_u32 s9, s9, 0
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s8
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s9
-; CHECK-NEXT:    s_add_u32 s0, s0, s11
+; CHECK-NEXT:    s_addc_u32 s11, s11, 0
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
+; CHECK-NEXT:    s_add_u32 s0, s0, s15
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[4:5]
-; CHECK-NEXT:    s_getpc_b64 s[4:5]
-; CHECK-NEXT:    s_add_u32 s4, s4, use_module@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s5, s5, use_module@gotpcrel32@hi+12
-; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; CHECK-NEXT:    s_add_u32 s8, s6, 8
+; CHECK-NEXT:    s_addc_u32 s9, s7, 0
+; CHECK-NEXT:    s_getpc_b64 s[6:7]
+; CHECK-NEXT:    s_add_u32 s6, s6, use_module@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s7, s7, use_module@gotpcrel32@hi+12
+; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; CHECK-NEXT:    s_mov_b32 s15, 7
+; CHECK-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; CHECK-NEXT:    s_getpc_b64 s[4:5]
-; CHECK-NEXT:    s_add_u32 s4, s4, use_extern_overalign@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s5, s5, use_extern_overalign@gotpcrel32@hi+12
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; CHECK-NEXT:    s_getpc_b64 s[6:7]
+; CHECK-NEXT:    s_add_u32 s6, s6, use_extern_overalign@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s7, s7, use_extern_overalign@gotpcrel32@hi+12
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 2
-; CHECK-NEXT:    s_mov_b32 s15, 7
 ; CHECK-NEXT:    ds_write_b16 v0, v1
 ; CHECK-NEXT:    ds_write_b16 v0, v2 offset:4
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; CHECK-NEXT:    s_endpgm
   call void @use_module()
   store i16 1, ptr addrspace(3) @module_variable
@@ -599,3 +659,6 @@ define amdgpu_kernel void @module_1_kernel_overalign_indirect_extern_overalign(i
 
 
 attributes #0 = { noinline }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

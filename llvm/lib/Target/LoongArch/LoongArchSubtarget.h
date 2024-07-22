@@ -31,20 +31,16 @@ class StringRef;
 
 class LoongArchSubtarget : public LoongArchGenSubtargetInfo {
   virtual void anchor();
-  bool HasLA32 = false;
-  bool HasLA64 = false;
-  bool HasBasicF = false;
-  bool HasBasicD = false;
-  bool HasExtLSX = false;
-  bool HasExtLASX = false;
-  bool HasExtLVZ = false;
-  bool HasExtLBT = false;
-  bool HasLaGlobalWithPcrel = false;
-  bool HasLaGlobalWithAbs = false;
-  bool HasLaLocalWithAbs = false;
-  bool HasUAL = false;
-  bool HasLinkerRelax = false;
+
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
+  bool ATTRIBUTE = DEFAULT;
+#include "LoongArchGenSubtargetInfo.inc"
+
   unsigned GRLen = 32;
+  // TODO: The default value is empirical and conservative. Override the
+  // default in initializeProperties once we support optimizing for more
+  // uarches.
+  uint8_t MaxInterleaveFactor = 2;
   MVT GRLenVT = MVT::i32;
   LoongArchABI::ABI TargetABI = LoongArchABI::ABI_Unknown;
   LoongArchFrameLowering FrameLowering;
@@ -90,25 +86,25 @@ public:
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
   }
+
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
+  bool GETTER() const { return ATTRIBUTE; }
+#include "LoongArchGenSubtargetInfo.inc"
+
   bool is64Bit() const { return HasLA64; }
-  bool hasBasicF() const { return HasBasicF; }
-  bool hasBasicD() const { return HasBasicD; }
-  bool hasExtLSX() const { return HasExtLSX; }
-  bool hasExtLASX() const { return HasExtLASX; }
-  bool hasExtLVZ() const { return HasExtLVZ; }
-  bool hasExtLBT() const { return HasExtLBT; }
-  bool hasLaGlobalWithPcrel() const { return HasLaGlobalWithPcrel; }
-  bool hasLaGlobalWithAbs() const { return HasLaGlobalWithAbs; }
-  bool hasLaLocalWithAbs() const { return HasLaLocalWithAbs; }
-  bool hasUAL() const { return HasUAL; }
-  bool hasLinkerRelax() const { return HasLinkerRelax; }
   MVT getGRLenVT() const { return GRLenVT; }
   unsigned getGRLen() const { return GRLen; }
   LoongArchABI::ABI getTargetABI() const { return TargetABI; }
+  bool isSoftFPABI() const {
+    return TargetABI == LoongArchABI::ABI_LP64S ||
+           TargetABI == LoongArchABI::ABI_ILP32S;
+  }
   bool isXRaySupported() const override { return is64Bit(); }
   Align getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
   Align getPrefLoopAlignment() const { return PrefLoopAlignment; }
   unsigned getMaxBytesForAlignment() const { return MaxBytesForAlignment; }
+  unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
+  bool enableMachineScheduler() const override { return true; }
 };
 } // end namespace llvm
 

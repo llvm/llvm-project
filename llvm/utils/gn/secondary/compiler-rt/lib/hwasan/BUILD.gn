@@ -59,9 +59,6 @@ source_set("sources") {
     "hwasan_report.h",
     "hwasan_setjmp_aarch64.S",
     "hwasan_setjmp_riscv64.S",
-    "hwasan_setjmp_x86_64.S",
-    "hwasan_tag_mismatch_aarch64.S",
-    "hwasan_tag_mismatch_riscv64.S",
     "hwasan_thread.cpp",
     "hwasan_thread.h",
     "hwasan_thread_list.cpp",
@@ -121,7 +118,7 @@ shared_library("hwasan_shared") {
 
 static_library("hwasan_preinit") {
   output_dir = crt_current_out_dir
-  output_name = "clang_rt.${hwasan_name}_preinit$crt_current_target_suffix"
+  output_name = "clang_rt.${hwasan_name}-preinit$crt_current_target_suffix"
   complete_static_lib = true
   configs -= [
     "//llvm/utils/gn/build:llvm_code",

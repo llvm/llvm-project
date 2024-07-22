@@ -10,12 +10,14 @@
 #define LLD_ELF_LINKER_SCRIPT_H
 
 #include "Config.h"
+#include "InputSection.h"
 #include "Writer.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include <cstddef>
@@ -254,6 +256,16 @@ struct InsertCommand {
   StringRef where;
 };
 
+// A NOCROSSREFS/NOCROSSREFS_TO command that prohibits references between
+// certain output sections.
+struct NoCrossRefCommand {
+  SmallVector<StringRef, 0> outputSections;
+
+  // When true, this describes a NOCROSSREFS_TO command that probits references
+  // to the first output section from any of the other sections.
+  bool toFirst = false;
+};
+
 struct PhdrsCommand {
   StringRef name;
   unsigned type = llvm::ELF::PT_NULL;
@@ -286,7 +298,8 @@ class LinkerScript final {
 
   SmallVector<InputSectionBase *, 0>
   computeInputSections(const InputSectionDescription *,
-                       ArrayRef<InputSectionBase *>);
+                       ArrayRef<InputSectionBase *>,
+                       const OutputSection &outCmd);
 
   SmallVector<InputSectionBase *, 0> createInputSectionList(OutputSection &cmd);
 
@@ -297,7 +310,7 @@ class LinkerScript final {
   std::pair<MemoryRegion *, MemoryRegion *>
   findMemoryRegion(OutputSection *sec, MemoryRegion *hint);
 
-  void assignOffsets(OutputSection *sec);
+  bool assignOffsets(OutputSection *sec);
 
   // This captures the local AddressState and makes it accessible
   // deliberately. This is needed as there are some cases where we cannot just
@@ -331,13 +344,13 @@ public:
   bool needsInterpSection();
 
   bool shouldKeep(InputSectionBase *s);
-  const Defined *assignAddresses();
+  std::pair<const OutputSection *, const Defined *> assignAddresses();
+  bool spillSections();
+  void erasePotentialSpillSections();
   void allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs);
   void processSectionCommands();
   void processSymbolAssignments();
   void declareSymbols();
-
-  bool isDiscarded(const OutputSection *sec) const;
 
   // Used to handle INSERT AFTER statements.
   void processInsertCommands();
@@ -345,8 +358,25 @@ public:
   // Describe memory region usage.
   void printMemoryUsage(raw_ostream &os);
 
+  // Record a pending error during an assignAddresses invocation.
+  // assignAddresses is executed more than once. Therefore, lld::error should be
+  // avoided to not report duplicate errors.
+  void recordError(const Twine &msg);
+
   // Check backward location counter assignment and memory region/LMA overflows.
   void checkFinalScriptConditions() const;
+
+  // Add symbols that are referenced in the linker script to the symbol table.
+  // Symbols referenced in a PROVIDE command are only added to the symbol table
+  // if the PROVIDE command actually provides the symbol.
+  // It also adds the symbols referenced by the used PROVIDE symbols to the
+  // linker script referenced symbols list.
+  void addScriptReferencedSymbolsToSymTable();
+
+  // Returns true if the PROVIDE symbol should be added to the link.
+  // A PROVIDE symbol is added to the link only if it satisfies an
+  // undefined reference.
+  static bool shouldAddProvideSym(StringRef symName);
 
   // SECTIONS command list.
   SmallVector<SectionCommand *, 0> sectionCommands;
@@ -358,7 +388,7 @@ public:
   bool seenDataAlign = false;
   bool seenRelroEnd = false;
   bool errorOnMissingSection = false;
-  std::string backwardDotErr;
+  SmallVector<SmallString<0>, 0> recordedErrors;
 
   // List of section patterns specified with KEEP commands. They will
   // be kept even if they are unused and --gc-sections is specified.
@@ -377,11 +407,36 @@ public:
   // OutputSections specified by OVERWRITE_SECTIONS.
   SmallVector<OutputDesc *, 0> overwriteSections;
 
+  // NOCROSSREFS(_TO) commands.
+  SmallVector<NoCrossRefCommand, 0> noCrossRefs;
+
   // Sections that will be warned/errored by --orphan-handling.
   SmallVector<const InputSectionBase *, 0> orphanSections;
+
+  // Stores the mapping: PROVIDE symbol -> symbols referred in the PROVIDE
+  // expression. For example, if the PROVIDE command is:
+  //
+  // PROVIDE(v = a + b + c);
+  //
+  // then provideMap should contain the mapping: 'v' -> ['a', 'b', 'c']
+  llvm::MapVector<StringRef, SmallVector<StringRef, 0>> provideMap;
+
+  // List of potential spill locations (PotentialSpillSection) for an input
+  // section.
+  struct PotentialSpillList {
+    // Never nullptr.
+    PotentialSpillSection *head;
+    PotentialSpillSection *tail;
+  };
+  llvm::DenseMap<InputSectionBase *, PotentialSpillList> potentialSpillLists;
 };
 
-LLVM_LIBRARY_VISIBILITY extern std::unique_ptr<LinkerScript> script;
+struct ScriptWrapper {
+  LinkerScript s;
+  LinkerScript *operator->() { return &s; }
+};
+
+LLVM_LIBRARY_VISIBILITY extern ScriptWrapper script;
 
 } // end namespace lld::elf
 

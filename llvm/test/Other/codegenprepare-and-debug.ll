@@ -1,4 +1,4 @@
-; RUN: opt -codegenprepare -S < %s | FileCheck %s
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -S < %s | FileCheck %s
 ; RUN: opt -strip-debug -codegenprepare -S < %s | FileCheck %s
 ; REQUIRES: x86-registered-target
 

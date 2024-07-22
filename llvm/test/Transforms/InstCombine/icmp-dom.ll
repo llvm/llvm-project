@@ -403,3 +403,134 @@ truelabel:
 falselabel:
   ret i8 0
 }
+
+define i1 @and_mask1_eq(i32 %conv) {
+; CHECK-LABEL: @and_mask1_eq(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[CONV:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %and = and i32 %conv, 1
+  %cmp = icmp eq i32 %and, 0
+  br i1 %cmp, label %then, label %else
+
+then:
+  ret i1 0
+
+else:
+  %and1 = and i32 %conv, 3
+  %cmp1 = icmp eq i32 %and1, 0
+  ret i1 %cmp1
+}
+
+define i1 @and_mask1_ne(i32 %conv) {
+; CHECK-LABEL: @and_mask1_ne(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[CONV:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %and = and i32 %conv, 1
+  %cmp = icmp eq i32 %and, 0
+  br i1 %cmp, label %then, label %else
+
+then:
+  ret i1 0
+
+else:
+  %and1 = and i32 %conv, 3
+  %cmp1 = icmp ne i32 %and1, 0
+  ret i1 %cmp1
+}
+
+define i1 @and_mask2(i32 %conv) {
+; CHECK-LABEL: @and_mask2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[CONV:%.*]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       else:
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[CONV]], 3
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[AND1]], 0
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+entry:
+  %and = and i32 %conv, 4
+  %cmp = icmp eq i32 %and, 0
+  br i1 %cmp, label %then, label %else
+
+then:
+  ret i1 0
+
+else:
+  %and1 = and i32 %conv, 3
+  %cmp1 = icmp eq i32 %and1, 0
+  ret i1 %cmp1
+}
+
+; TODO: %cmp1 can be folded into false.
+
+define i1 @and_mask3(i32 %conv) {
+; CHECK-LABEL: @and_mask3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[CONV:%.*]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       else:
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[CONV]], 7
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[AND1]], 0
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+entry:
+  %and = and i32 %conv, 3
+  %cmp = icmp eq i32 %and, 0
+  br i1 %cmp, label %then, label %else
+
+then:
+  ret i1 0
+
+else:
+  %and1 = and i32 %conv, 7
+  %cmp1 = icmp eq i32 %and1, 0
+  ret i1 %cmp1
+}
+
+define i1 @and_mask4(i32 %conv) {
+; CHECK-LABEL: @and_mask4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[CONV:%.*]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %and = and i32 %conv, 4
+  %cmp = icmp eq i32 %and, 0
+  br i1 %cmp, label %then, label %else
+
+then:
+  ret i1 0
+
+else:
+  %and1 = and i32 %conv, 7
+  %cmp1 = icmp eq i32 %and1, 0
+  ret i1 %cmp1
+}

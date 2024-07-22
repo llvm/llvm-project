@@ -35,6 +35,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemAlloc.h"
 #include "llvm/Support/type_traits.h"
 #include <cstring>
@@ -160,8 +161,7 @@ protected:
     // provide three pointers worth of storage here.
     // This is mutable as an inlined `const unique_function<void() const>` may
     // still modify its own mutable members.
-    mutable std::aligned_storage_t<InlineStorageSize, alignof(void *)>
-        InlineStorage;
+    alignas(void *) mutable std::byte InlineStorage[InlineStorageSize];
   } StorageUnion;
 
   // A compressed pointer to either our dispatching callback or our table of
@@ -317,8 +317,10 @@ protected:
     // Clear the old callback and inline flag to get back to as-if-null.
     RHS.CallbackAndInlineFlag = {};
 
-#ifndef NDEBUG
-    // In debug builds, we also scribble across the rest of the storage.
+#if !defined(NDEBUG) && !LLVM_ADDRESS_SANITIZER_BUILD
+    // In debug builds without ASan, we also scribble across the rest of the
+    // storage. Scribbling under AddressSanitizer (ASan) is disabled to prevent
+    // overwriting poisoned objects (e.g., annotated short strings).
     memset(RHS.getInlineStorage(), 0xAD, InlineStorageSize);
 #endif
   }

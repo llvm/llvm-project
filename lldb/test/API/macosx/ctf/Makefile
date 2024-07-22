@@ -4,7 +4,7 @@ MAKE_DSYM := YES
 ifeq "$(COMPRESS_CTF)" "YES"
 	COMPRESS := -c
 else
-	 COMPRESS :=
+	COMPRESS :=
 endif
 
 all: a.out a.ctf

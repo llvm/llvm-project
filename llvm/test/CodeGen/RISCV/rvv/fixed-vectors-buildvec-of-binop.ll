@@ -567,13 +567,14 @@ define <8 x i32> @add_constant_rhs_8xi32_partial(<8 x i32> %vin, i32 %a, i32 %b,
 ; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 5
 ; CHECK-NEXT:    vmv.s.x v10, a2
+; CHECK-NEXT:    lui a0, %hi(.LCPI19_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI19_0)
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vle32.v v12, (a0)
 ; CHECK-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 6
 ; CHECK-NEXT:    vmv.s.x v10, a3
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    lui a0, %hi(.LCPI19_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI19_0)
-; CHECK-NEXT:    vle32.v v12, (a0)
 ; CHECK-NEXT:    vslideup.vi v8, v10, 7
 ; CHECK-NEXT:    vadd.vv v8, v8, v12
 ; CHECK-NEXT:    ret
@@ -587,4 +588,40 @@ define <8 x i32> @add_constant_rhs_8xi32_partial(<8 x i32> %vin, i32 %a, i32 %b,
   %v2 = insertelement <8 x i32> %v1, i32 %e2, i32 6
   %v3 = insertelement <8 x i32> %v2, i32 %e3, i32 7
   ret <8 x i32> %v3
+}
+
+; Here we can not pull the ashr through into the vector domain due to
+; the truncate semantics of the build_vector.  Doing so would
+; truncate before the ashr instead of after it, so if %a or %b
+; is e.g. UINT32_MAX+1 we get different result.
+define <2 x i32> @build_vec_of_trunc_op(i64 %a, i64 %b) {
+; RV32-LABEL: build_vec_of_trunc_op:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    slli a1, a1, 31
+; RV32-NEXT:    srli a0, a0, 1
+; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    slli a3, a3, 31
+; RV32-NEXT:    srli a2, a2, 1
+; RV32-NEXT:    or a2, a2, a3
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vmv.v.x v8, a0
+; RV32-NEXT:    vslide1down.vx v8, v8, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: build_vec_of_trunc_op:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    srli a0, a0, 1
+; RV64-NEXT:    srli a1, a1, 1
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    vmv.v.x v8, a0
+; RV64-NEXT:    vslide1down.vx v8, v8, a1
+; RV64-NEXT:    ret
+entry:
+  %conv11.i = ashr i64 %a, 1
+  %conv11.2 = ashr i64 %b, 1
+  %0 = trunc i64 %conv11.i to i32
+  %1 = trunc i64 %conv11.2 to i32
+  %2 = insertelement <2 x i32> zeroinitializer, i32 %0, i64 0
+  %3 = insertelement <2 x i32> %2, i32 %1, i64 1
+  ret <2 x i32> %3
 }

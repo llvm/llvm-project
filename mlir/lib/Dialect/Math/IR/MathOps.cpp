@@ -60,6 +60,60 @@ OpFoldResult math::AcosOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// AcoshOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::AcoshOp::fold(FoldAdaptor adaptor) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(acosh(a.convertToDouble()));
+        case 32:
+          return APFloat(acoshf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// AsinOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::AsinOp::fold(FoldAdaptor adaptor) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(asin(a.convertToDouble()));
+        case 32:
+          return APFloat(asinf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// AsinhOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::AsinhOp::fold(FoldAdaptor adaptor) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(asinh(a.convertToDouble()));
+        case 32:
+          return APFloat(asinhf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
 // AtanOp folder
 //===----------------------------------------------------------------------===//
 
@@ -71,6 +125,24 @@ OpFoldResult math::AtanOp::fold(FoldAdaptor adaptor) {
           return APFloat(atan(a.convertToDouble()));
         case 32:
           return APFloat(atanf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// AtanhOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::AtanhOp::fold(FoldAdaptor adaptor) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(atanh(a.convertToDouble()));
+        case 32:
+          return APFloat(atanhf(a.convertToFloat()));
         default:
           return {};
         }
@@ -174,6 +246,24 @@ OpFoldResult math::SinOp::fold(FoldAdaptor adaptor) {
           return APFloat(sin(a.convertToDouble()));
         case 32:
           return APFloat(sinf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// SinhOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::SinhOp::fold(FoldAdaptor adaptor) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(sinh(a.convertToDouble()));
+        case 32:
+          return APFloat(sinhf(a.convertToFloat()));
         default:
           return {};
         }

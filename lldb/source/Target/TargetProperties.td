@@ -95,7 +95,7 @@ let Definition = "target" in {
   def MaxChildrenDepth: Property<"max-children-depth", "UInt64">,
     DefaultUnsignedValue<0xFFFFFFFF>,
     Desc<"Maximum depth to expand children.">;
-  def MaxSummaryLength: Property<"max-string-summary-length", "SInt64">,
+  def MaxSummaryLength: Property<"max-string-summary-length", "UInt64">,
     DefaultUnsignedValue<1024>,
     Desc<"Maximum number of characters to show when using %s in summary strings.">;
   def MaxMemReadSize: Property<"max-memory-read-size", "SInt64">,
@@ -310,4 +310,10 @@ let Definition = "thread" in {
   def MaxBacktraceDepth: Property<"max-backtrace-depth", "UInt64">,
     DefaultUnsignedValue<600000>,
     Desc<"Maximum number of frames to backtrace.">;
+}
+
+let Definition = "language" in {
+  def EnableFilterForLineBreakpoints: Property<"enable-filter-for-line-breakpoints", "Boolean">,
+    DefaultTrue,
+    Desc<"If true, allow Language plugins to filter locations when setting breakpoints by line number or regex.">;
 }

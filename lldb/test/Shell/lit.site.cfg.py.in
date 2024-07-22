@@ -26,6 +26,7 @@ config.lldb_enable_lua = @LLDB_ENABLE_LUA@
 config.lldb_build_directory = "@LLDB_TEST_BUILD_DIRECTORY@"
 config.have_lldb_server = @LLDB_TOOL_LLDB_SERVER_BUILD@
 config.lldb_system_debugserver = @LLDB_USE_SYSTEM_DEBUGSERVER@
+config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 # The shell tests use their own module caches.
 config.lldb_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_LLDB@", "lldb-shell")
 config.clang_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_CLANG@", "lldb-shell")

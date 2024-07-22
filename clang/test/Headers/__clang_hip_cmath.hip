@@ -61,13 +61,13 @@ extern "C" __device__ float test_fabs_f32(float x) {
 
 // DEFAULT-LABEL: @test_sin_f32(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I_I:%.*]] = tail call contract noundef float @__ocml_sin_f32(float noundef [[X:%.*]]) #[[ATTR8:[0-9]+]]
-// DEFAULT-NEXT:    ret float [[CALL_I_I]]
+// DEFAULT-NEXT:    [[CALL_I1:%.*]] = tail call contract noundef float @__ocml_sin_f32(float noundef [[X:%.*]]) #[[ATTR8:[0-9]+]]
+// DEFAULT-NEXT:    ret float [[CALL_I1]]
 //
 // FINITEONLY-LABEL: @test_sin_f32(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) float @__ocml_sin_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR8:[0-9]+]]
-// FINITEONLY-NEXT:    ret float [[CALL_I_I]]
+// FINITEONLY-NEXT:    [[CALL_I1:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) float @__ocml_sin_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR8:[0-9]+]]
+// FINITEONLY-NEXT:    ret float [[CALL_I1]]
 //
 extern "C" __device__ float test_sin_f32(float x) {
   return sin(x);
@@ -75,13 +75,13 @@ extern "C" __device__ float test_sin_f32(float x) {
 
 // DEFAULT-LABEL: @test_cos_f32(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I_I:%.*]] = tail call contract noundef float @__ocml_cos_f32(float noundef [[X:%.*]]) #[[ATTR8]]
-// DEFAULT-NEXT:    ret float [[CALL_I_I]]
+// DEFAULT-NEXT:    [[CALL_I1:%.*]] = tail call contract noundef float @__ocml_cos_f32(float noundef [[X:%.*]]) #[[ATTR8]]
+// DEFAULT-NEXT:    ret float [[CALL_I1]]
 //
 // FINITEONLY-LABEL: @test_cos_f32(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) float @__ocml_cos_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR8]]
-// FINITEONLY-NEXT:    ret float [[CALL_I_I]]
+// FINITEONLY-NEXT:    [[CALL_I1:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) float @__ocml_cos_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR8]]
+// FINITEONLY-NEXT:    ret float [[CALL_I1]]
 //
 extern "C" __device__ float test_cos_f32(float x) {
   return cos(x);

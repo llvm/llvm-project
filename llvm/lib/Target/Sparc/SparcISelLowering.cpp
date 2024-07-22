@@ -13,6 +13,7 @@
 
 #include "SparcISelLowering.h"
 #include "MCTargetDesc/SparcMCExpr.h"
+#include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "SparcMachineFunctionInfo.h"
 #include "SparcRegisterInfo.h"
 #include "SparcTargetMachine.h"
@@ -28,6 +29,7 @@
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -636,8 +638,7 @@ SDValue SparcTargetLowering::LowerFormalArguments_64(
   // The argument array begins at %fp+BIAS+128, after the register save area.
   const unsigned ArgArea = 128;
 
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-    CCValAssign &VA = ArgLocs[i];
+  for (const CCValAssign &VA : ArgLocs) {
     if (VA.isRegLoc()) {
       // This argument is passed in a register.
       // All integer register arguments are promoted by the caller to i64.
@@ -729,6 +730,30 @@ SDValue SparcTargetLowering::LowerFormalArguments_64(
   return Chain;
 }
 
+// Check whether any of the argument registers are reserved
+static bool isAnyArgRegReserved(const SparcRegisterInfo *TRI,
+                                const MachineFunction &MF) {
+  // The register window design means that outgoing parameters at O*
+  // will appear in the callee as I*.
+  // Be conservative and check both sides of the register names.
+  bool Outgoing =
+      llvm::any_of(SP::GPROutgoingArgRegClass, [TRI, &MF](MCPhysReg r) {
+        return TRI->isReservedReg(MF, r);
+      });
+  bool Incoming =
+      llvm::any_of(SP::GPRIncomingArgRegClass, [TRI, &MF](MCPhysReg r) {
+        return TRI->isReservedReg(MF, r);
+      });
+  return Outgoing || Incoming;
+}
+
+static void emitReservedArgRegCallError(const MachineFunction &MF) {
+  const Function &F = MF.getFunction();
+  F.getContext().diagnose(DiagnosticInfoUnsupported{
+      F, ("SPARC doesn't support"
+          " function calls if any of the argument registers is reserved.")});
+}
+
 SDValue
 SparcTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                SmallVectorImpl<SDValue> &InVals) const {
@@ -805,6 +830,7 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   bool &isTailCall                      = CLI.IsTailCall;
   CallingConv::ID CallConv              = CLI.CallConv;
   bool isVarArg                         = CLI.IsVarArg;
+  MachineFunction &MF = DAG.getMachineFunction();
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -842,8 +868,8 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
       Chain = DAG.getMemcpy(Chain, dl, FIPtr, Arg, SizeNode, Alignment,
                             false,        // isVolatile,
                             (Size <= 32), // AlwaysInline if size <= 32,
-                            false,        // isTailCall
-                            MachinePointerInfo(), MachinePointerInfo());
+                            /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
+                            MachinePointerInfo());
       ByValArgs.push_back(FIPtr);
     }
     else {
@@ -1055,6 +1081,10 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
       ((hasReturnsTwice)
            ? TRI->getRTCallPreservedMask(CallConv)
            : TRI->getCallPreservedMask(DAG.getMachineFunction(), CallConv));
+
+  if (isAnyArgRegReserved(TRI, MF))
+    emitReservedArgRegCallError(MF);
+
   assert(Mask && "Missing call preserved mask for calling convention");
   Ops.push_back(DAG.getRegisterMask(Mask));
 
@@ -1125,6 +1155,13 @@ Register SparcTargetLowering::getRegisterByName(const char* RegName, LLT VT,
     .Case("g4", SP::G4).Case("g5", SP::G5).Case("g6", SP::G6).Case("g7", SP::G7)
     .Default(0);
 
+  // If we're directly referencing register names
+  // (e.g in GCC C extension `register int r asm("g1");`),
+  // make sure that said register is in the reserve list.
+  const SparcRegisterInfo *TRI = Subtarget->getRegisterInfo();
+  if (!TRI->isReservedReg(MF, Reg))
+    Reg = 0;
+
   if (Reg)
     return Reg;
 
@@ -1141,8 +1178,7 @@ Register SparcTargetLowering::getRegisterByName(const char* RegName, LLT VT,
 // AnalyzeCallOperands().
 static void fixupVariableFloatArgs(SmallVectorImpl<CCValAssign> &ArgLocs,
                                    ArrayRef<ISD::OutputArg> Outs) {
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-    CCValAssign &VA = ArgLocs[i];
+  for (CCValAssign &VA : ArgLocs) {
     MVT ValTy = VA.getLocVT();
     // FIXME: What about f32 arguments? C promotes them to f64 when calling
     // varargs functions.
@@ -1189,6 +1225,7 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
   SDLoc DL = CLI.DL;
   SDValue Chain = CLI.Chain;
   auto PtrVT = getPointerTy(DAG.getDataLayout());
+  MachineFunction &MF = DAG.getMachineFunction();
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -1372,6 +1409,10 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
       ((hasReturnsTwice) ? TRI->getRTCallPreservedMask(CLI.CallConv)
                          : TRI->getCallPreservedMask(DAG.getMachineFunction(),
                                                      CLI.CallConv));
+
+  if (isAnyArgRegReserved(TRI, MF))
+    emitReservedArgRegCallError(MF);
+
   assert(Mask && "Missing call preserved mask for calling convention");
   Ops.push_back(DAG.getRegisterMask(Mask));
 
@@ -1721,9 +1762,14 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   // Atomics are supported on SparcV9. 32-bit atomics are also
   // supported by some Leon SparcV8 variants. Otherwise, atomics
   // are unsupported.
-  if (Subtarget->isV9())
-    setMaxAtomicSizeInBitsSupported(64);
-  else if (Subtarget->hasLeonCasa())
+  if (Subtarget->isV9()) {
+    // TODO: we _ought_ to be able to support 64-bit atomics on 32-bit sparcv9,
+    // but it hasn't been implemented in the backend yet.
+    if (Subtarget->is64Bit())
+      setMaxAtomicSizeInBitsSupported(64);
+    else
+      setMaxAtomicSizeInBitsSupported(32);
+  } else if (Subtarget->hasLeonCasa())
     setMaxAtomicSizeInBitsSupported(32);
   else
     setMaxAtomicSizeInBitsSupported(0);
@@ -1744,17 +1790,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ATOMIC_LOAD, MVT::i64, Custom);
     setOperationAction(ISD::ATOMIC_STORE, MVT::i64, Custom);
   }
-
-  if (!Subtarget->is64Bit()) {
-    // These libcalls are not available in 32-bit.
-    setLibcallName(RTLIB::MULO_I64, nullptr);
-    setLibcallName(RTLIB::MUL_I128, nullptr);
-    setLibcallName(RTLIB::SHL_I128, nullptr);
-    setLibcallName(RTLIB::SRL_I128, nullptr);
-    setLibcallName(RTLIB::SRA_I128, nullptr);
-  }
-
-  setLibcallName(RTLIB::MULO_I128, nullptr);
 
   if (!Subtarget->isV9()) {
     // SparcV8 does not have FNEGD and FABSD.
@@ -2050,7 +2085,7 @@ static void LookThroughSetCC(SDValue &LHS, SDValue &RHS,
          LHS.getOperand(3).getOpcode() == SPISD::CMPFCC_V9))) &&
       isOneConstant(LHS.getOperand(0)) && isNullConstant(LHS.getOperand(1))) {
     SDValue CMPCC = LHS.getOperand(3);
-    SPCC = cast<ConstantSDNode>(LHS.getOperand(2))->getZExtValue();
+    SPCC = LHS.getConstantOperandVal(2);
     LHS = CMPCC.getOperand(0);
     RHS = CMPCC.getOperand(1);
   }
@@ -3186,7 +3221,7 @@ static SDValue LowerATOMIC_LOAD_STORE(SDValue Op, SelectionDAG &DAG) {
 
 SDValue SparcTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                      SelectionDAG &DAG) const {
-  unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned IntNo = Op.getConstantOperandVal(0);
   SDLoc dl(Op);
   switch (IntNo) {
   default: return SDValue();    // Don't custom lower most intrinsics.

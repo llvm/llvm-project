@@ -152,7 +152,13 @@ RT_API_ATTRS std::size_t Descriptor::Elements() const {
 }
 
 RT_API_ATTRS int Descriptor::Allocate() {
-  std::size_t byteSize{Elements() * ElementBytes()};
+  std::size_t elementBytes{ElementBytes()};
+  if (static_cast<std::int64_t>(elementBytes) < 0) {
+    // F'2023 7.4.4.2 p5: "If the character length parameter value evaluates
+    // to a negative value, the length of character entities declared is zero."
+    elementBytes = raw_.elem_len = 0;
+  }
+  std::size_t byteSize{Elements() * elementBytes};
   // Zero size allocation is possible in Fortran and the resulting
   // descriptor must be allocated/associated. Since std::malloc(0)
   // result is implementation defined, always allocate at least one byte.
@@ -162,6 +168,11 @@ RT_API_ATTRS int Descriptor::Allocate() {
   }
   // TODO: image synchronization
   raw_.base_addr = p;
+  SetByteStrides();
+  return 0;
+}
+
+RT_API_ATTRS void Descriptor::SetByteStrides() {
   if (int dims{rank()}) {
     std::size_t stride{ElementBytes()};
     for (int j{0}; j < dims; ++j) {
@@ -170,7 +181,6 @@ RT_API_ATTRS int Descriptor::Allocate() {
       stride *= dimension.Extent();
     }
   }
-  return 0;
 }
 
 RT_API_ATTRS int Descriptor::Destroy(
@@ -189,7 +199,16 @@ RT_API_ATTRS int Descriptor::Destroy(
   }
 }
 
-RT_API_ATTRS int Descriptor::Deallocate() { return ISO::CFI_deallocate(&raw_); }
+RT_API_ATTRS int Descriptor::Deallocate() {
+  ISO::CFI_cdesc_t &descriptor{raw()};
+  if (!descriptor.base_addr) {
+    return CFI_ERROR_BASE_ADDR_NULL;
+  } else {
+    std::free(descriptor.base_addr);
+    descriptor.base_addr = nullptr;
+    return CFI_SUCCESS;
+  }
+}
 
 RT_API_ATTRS bool Descriptor::DecrementSubscripts(
     SubscriptValue *subscript, const int *permutation) const {

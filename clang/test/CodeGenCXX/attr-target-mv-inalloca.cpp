@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++11 -triple i686-windows-msvc -emit-llvm %s -o - | FileCheck %s --check-prefix=WINDOWS
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-windows-msvc -emit-llvm %s -o - | FileCheck %s --check-prefix=WINDOWS64
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-pc-linux -emit-llvm %s -o - | FileCheck %s --check-prefix=LINUX
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-macos -emit-llvm %s -o - | FileCheck %s --check-prefix=DARWIN
 
 struct Foo {
   Foo();
@@ -15,6 +17,9 @@ void usage() {
   Foo f;
   bar(f);
 }
+
+// DARWIN-NOT: inalloca(
+// LINUX-NOT: inalloca(
 
 // WINDOWS: define dso_local noundef i32 @"?bar@@YAHUFoo@@@Z"(ptr inalloca(<{ %struct.Foo }>) %0)
 // WINDOWS: %[[O:[0-9a-zA-Z]+]] = getelementptr inbounds <{ %struct.Foo }>, ptr %0, i32 0, i32 0

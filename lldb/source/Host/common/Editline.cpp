@@ -31,20 +31,6 @@
 using namespace lldb_private;
 using namespace lldb_private::line_editor;
 
-// Workaround for what looks like an OS X-specific issue, but other platforms
-// may benefit from something similar if issues arise.  The libedit library
-// doesn't explicitly initialize the curses termcap library, which it gets away
-// with until TERM is set to VT100 where it stumbles over an implementation
-// assumption that may not exist on other platforms.  The setupterm() function
-// would normally require headers that don't work gracefully in this context,
-// so the function declaration has been hoisted here.
-#if defined(__APPLE__)
-extern "C" {
-int setupterm(char *term, int fildes, int *errret);
-}
-#define USE_SETUPTERM_WORKAROUND
-#endif
-
 // Editline uses careful cursor management to achieve the illusion of editing a
 // multi-line block of text with a single line editor.  Preserving this
 // illusion requires fairly careful management of cursor state.  Read and
@@ -978,8 +964,14 @@ void Editline::DisplayCompletions(
       break;
 
     fprintf(editline.m_output_file, "More (Y/n/a): ");
-    char reply = 'n';
-    int got_char = el_getc(editline.m_editline, &reply);
+    // The type for the output and the type for the parameter are different,
+    // to allow interoperability with older versions of libedit. The container
+    // for the reply must be as wide as what our implementation is using,
+    // but libedit may use a narrower type depending on the build
+    // configuration.
+    EditLineGetCharType reply = L'n';
+    int got_char = el_wgetc(editline.m_editline,
+                            reinterpret_cast<EditLineCharType *>(&reply));
     // Check for a ^C or other interruption.
     if (editline.m_editor_status == EditorStatus::Interrupted) {
       editline.m_editor_status = EditorStatus::Editing;
@@ -1023,8 +1015,11 @@ unsigned char Editline::TabCommand(int ch) {
     case CompletionMode::Normal: {
       std::string to_add = completion.GetCompletion();
       // Terminate the current argument with a quote if it started with a quote.
-      if (!request.GetParsedLine().empty() && request.GetParsedArg().IsQuoted())
+      Args &parsedLine = request.GetParsedLine();
+      if (!parsedLine.empty() && request.GetCursorIndex() < parsedLine.size() &&
+          request.GetParsedArg().IsQuoted()) {
         to_add.push_back(request.GetParsedArg().GetQuoteChar());
+      }
       to_add.push_back(' ');
       el_deletestr(m_editline, request.GetCursorArgumentPrefix().size());
       el_insertstr(m_editline, to_add.c_str());
@@ -1393,35 +1388,6 @@ Editline::Editline(const char *editline_name, FILE *input_file,
   // Get a shared history instance
   m_editor_name = (editline_name == nullptr) ? "lldb-tmp" : editline_name;
   m_history_sp = EditlineHistory::GetHistory(m_editor_name);
-
-#ifdef USE_SETUPTERM_WORKAROUND
-  if (m_output_file) {
-    const int term_fd = fileno(m_output_file);
-    if (term_fd != -1) {
-      static std::recursive_mutex *g_init_terminal_fds_mutex_ptr = nullptr;
-      static std::set<int> *g_init_terminal_fds_ptr = nullptr;
-      static llvm::once_flag g_once_flag;
-      llvm::call_once(g_once_flag, [&]() {
-        g_init_terminal_fds_mutex_ptr =
-            new std::recursive_mutex(); // NOTE: Leak to avoid C++ destructor
-                                        // chain issues
-        g_init_terminal_fds_ptr = new std::set<int>(); // NOTE: Leak to avoid
-                                                       // C++ destructor chain
-                                                       // issues
-      });
-
-      // We must make sure to initialize the terminal a given file descriptor
-      // only once. If we do this multiple times, we start leaking memory.
-      std::lock_guard<std::recursive_mutex> guard(
-          *g_init_terminal_fds_mutex_ptr);
-      if (g_init_terminal_fds_ptr->find(term_fd) ==
-          g_init_terminal_fds_ptr->end()) {
-        g_init_terminal_fds_ptr->insert(term_fd);
-        setupterm((char *)0, term_fd, (int *)0);
-      }
-    }
-  }
-#endif
 }
 
 Editline::~Editline() {
@@ -1588,6 +1554,7 @@ bool Editline::GetLines(int first_line_number, StringList &lines,
 void Editline::PrintAsync(Stream *stream, const char *s, size_t len) {
   std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
   if (m_editor_status == EditorStatus::Editing) {
+    SaveEditedLine();
     MoveCursor(CursorLocation::EditingCursor, CursorLocation::BlockStart);
     fprintf(m_output_file, ANSI_CLEAR_BELOW);
   }

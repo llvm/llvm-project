@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-xnack -verify-machineinstrs -enable-misched=0 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=-xnack -verify-machineinstrs -enable-misched=0 < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}sample_contig_nsa:
 ; GCN-DAG: image_sample_c_l v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}],

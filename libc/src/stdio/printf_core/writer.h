@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_WRITER_H
 
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/string/memory_utils/inline_memcpy.h"
@@ -17,7 +18,7 @@
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 struct WriteBuffer {
@@ -45,7 +46,7 @@ struct WriteBuffer {
   // write as much of new_str to the buffer as it can. The current position in
   // the buffer will be reset iff stream_writer is called. Calling this with an
   // empty string will flush the buffer if relevant.
-  int overflow_write(cpp::string_view new_str) {
+  LIBC_INLINE int overflow_write(cpp::string_view new_str) {
     // If there is a stream_writer, write the contents of the buffer, then
     // new_str, then clear the buffer.
     if (stream_writer != nullptr) {
@@ -134,6 +135,6 @@ public:
 };
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_WRITER_H

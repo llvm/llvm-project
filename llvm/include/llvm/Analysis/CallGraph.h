@@ -322,6 +322,8 @@ public:
   explicit CallGraphPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 /// Printer pass for the summarized \c CallGraphAnalysis results.
@@ -333,6 +335,8 @@ public:
   explicit CallGraphSCCsPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 /// The \c ModulePass which wraps up a \c CallGraph and the logic to

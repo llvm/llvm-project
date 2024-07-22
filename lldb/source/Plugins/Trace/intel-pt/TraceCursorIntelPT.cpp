@@ -35,7 +35,7 @@ void TraceCursorIntelPT::Next() {
 void TraceCursorIntelPT::ClearTimingRangesIfInvalid() {
   if (m_tsc_range_calculated) {
     if (!m_tsc_range || m_pos < 0 || !m_tsc_range->InRange(m_pos)) {
-      m_tsc_range = None;
+      m_tsc_range = std::nullopt;
       m_tsc_range_calculated = false;
     }
   }
@@ -43,7 +43,7 @@ void TraceCursorIntelPT::ClearTimingRangesIfInvalid() {
   if (m_nanoseconds_range_calculated) {
     if (!m_nanoseconds_range || m_pos < 0 ||
         !m_nanoseconds_range->InRange(m_pos)) {
-      m_nanoseconds_range = None;
+      m_nanoseconds_range = std::nullopt;
       m_nanoseconds_range_calculated = false;
     }
   }

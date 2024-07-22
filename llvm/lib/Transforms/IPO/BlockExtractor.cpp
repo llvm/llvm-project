@@ -142,9 +142,8 @@ bool BlockExtractor::runOnModule(Module &M) {
       report_fatal_error("Invalid function name specified in the input file",
                          /*GenCrashDiag=*/false);
     for (const auto &BBInfo : BInfo.second) {
-      auto Res = llvm::find_if(*F, [&](const BasicBlock &BB) {
-        return BB.getName().equals(BBInfo);
-      });
+      auto Res = llvm::find_if(
+          *F, [&](const BasicBlock &BB) { return BB.getName() == BBInfo; });
       if (Res == F->end())
         report_fatal_error("Invalid block name specified in the input file",
                            /*GenCrashDiag=*/false);

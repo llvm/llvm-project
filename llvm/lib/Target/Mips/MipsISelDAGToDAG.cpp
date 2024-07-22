@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/IR/CFG.h"
@@ -31,6 +32,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
@@ -47,11 +49,11 @@ using namespace llvm;
 // instructions for SelectionDAG operations.
 //===----------------------------------------------------------------------===//
 
-void MipsDAGToDAGISel::getAnalysisUsage(AnalysisUsage &AU) const {
+void MipsDAGToDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   // There are multiple MipsDAGToDAGISel instances added to the pass pipeline.
   // We need to preserve StackProtector for the next one.
   AU.addPreserved<StackProtector>();
-  SelectionDAGISel::getAnalysisUsage(AU);
+  SelectionDAGISelLegacy::getAnalysisUsage(AU);
 }
 
 bool MipsDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
@@ -324,6 +326,28 @@ bool MipsDAGToDAGISel::SelectInlineAsmMemoryOperand(
   return true;
 }
 
-char MipsDAGToDAGISel::ID = 0;
+bool MipsDAGToDAGISel::isUnneededShiftMask(SDNode *N,
+                                           unsigned ShAmtBits) const {
+  assert(N->getOpcode() == ISD::AND && "Unexpected opcode");
 
-INITIALIZE_PASS(MipsDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+  const APInt &RHS = N->getConstantOperandAPInt(1);
+  if (RHS.countr_one() >= ShAmtBits) {
+    LLVM_DEBUG(
+        dbgs()
+        << DEBUG_TYPE
+        << " Need optimize 'and & shl/srl/sra' and operand value bits is "
+        << RHS.countr_one() << "\n");
+    return true;
+  }
+
+  KnownBits Known = CurDAG->computeKnownBits(N->getOperand(0));
+  return (Known.Zero | RHS).countr_one() >= ShAmtBits;
+}
+
+char MipsDAGToDAGISelLegacy::ID = 0;
+
+MipsDAGToDAGISelLegacy::MipsDAGToDAGISelLegacy(
+    std::unique_ptr<SelectionDAGISel> S)
+    : SelectionDAGISelLegacy(ID, std::move(S)) {}
+
+INITIALIZE_PASS(MipsDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)

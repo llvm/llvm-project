@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy -std=c++20 %s misc-coroutine-hostile-raii %t \
 // RUN:   -config="{CheckOptions: {\
 // RUN:             misc-coroutine-hostile-raii.RAIITypesList: 'my::Mutex; ::my::other::Mutex', \
-// RUN:             misc-coroutine-hostile-raii.AllowedAwaitablesList: 'safe::awaitable; ::my::other::awaitable' \
+// RUN:             misc-coroutine-hostile-raii.AllowedAwaitablesList: 'safe::awaitable; ::transformable::awaitable' \
 // RUN:             }}"
 
 namespace std {
@@ -136,6 +136,9 @@ ReturnObject scopedLockableTest() {
     absl::Mutex no_warning_5;
 }
 
+// ================================================================================
+// Safe awaitable
+// ================================================================================
 namespace safe {
   struct awaitable {
   bool await_ready() noexcept { return false; }
@@ -150,6 +153,32 @@ ReturnObject RAIISafeSuspendTest() {
   co_await other{};
 } 
 
+// ================================================================================
+// Safe transformable awaitable
+// ================================================================================
+struct transformable { struct awaitable{}; };
+using alias_transformable_awaitable = transformable::awaitable;
+struct UseTransformAwaitable {
+  struct promise_type {
+    UseTransformAwaitable get_return_object() { return {}; }
+    std::suspend_always initial_suspend() { return {}; }
+    std::suspend_always final_suspend() noexcept { return {}; }
+    void unhandled_exception() {}
+    std::suspend_always await_transform(transformable::awaitable) { return {}; }
+  };
+};
+
+auto retAwaitable() { return transformable::awaitable{}; }
+UseTransformAwaitable RAIISafeSuspendTest2() {
+  absl::Mutex a;
+  co_await retAwaitable();
+  co_await transformable::awaitable{};
+  co_await alias_transformable_awaitable{};
+}
+
+// ================================================================================
+// Lambdas
+// ================================================================================
 void lambda() {
   absl::Mutex no_warning;
   auto lambda = []() -> ReturnObject {
@@ -164,6 +193,9 @@ void lambda() {
   absl::Mutex no_warning_2;
 }
 
+// ================================================================================
+// Denylisted RAII
+// ================================================================================
 template<class T>
 ReturnObject raii_in_template(){
   T a;

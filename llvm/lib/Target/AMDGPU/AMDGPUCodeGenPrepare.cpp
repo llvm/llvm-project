@@ -99,6 +99,7 @@ class AMDGPUCodeGenPrepareImpl
     : public InstVisitor<AMDGPUCodeGenPrepareImpl, bool> {
 public:
   const GCNSubtarget *ST = nullptr;
+  const AMDGPUTargetMachine *TM = nullptr;
   const TargetLibraryInfo *TLInfo = nullptr;
   AssumptionCache *AC = nullptr;
   DominatorTree *DT = nullptr;
@@ -310,6 +311,7 @@ public:
   bool visitICmpInst(ICmpInst &I);
   bool visitSelectInst(SelectInst &I);
   bool visitPHINode(PHINode &I);
+  bool visitAddrSpaceCastInst(AddrSpaceCastInst &I);
 
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool visitBitreverseIntrinsicInst(IntrinsicInst &I);
@@ -1213,7 +1215,10 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24(IRBuilder<> &Builder,
                                                 BinaryOperator &I, Value *Num,
                                                 Value *Den, bool IsDiv,
                                                 bool IsSigned) const {
-  int DivBits = getDivNumBits(I, Num, Den, 9, IsSigned);
+  unsigned SSBits = Num->getType()->getScalarSizeInBits();
+  // If Num bits <= 24, assume 0 signbits.
+  unsigned AtLeast = (SSBits <= 24) ? 0 : (SSBits - 24 + IsSigned);
+  int DivBits = getDivNumBits(I, Num, Den, AtLeast, IsSigned);
   if (DivBits == -1)
     return nullptr;
   return expandDivRem24Impl(Builder, I, Num, Den, DivBits, IsDiv, IsSigned);
@@ -1385,13 +1390,13 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem32(IRBuilder<> &Builder,
   Type *I32Ty = Builder.getInt32Ty();
   Type *F32Ty = Builder.getFloatTy();
 
-  if (Ty->getScalarSizeInBits() < 32) {
+  if (Ty->getScalarSizeInBits() != 32) {
     if (IsSigned) {
-      X = Builder.CreateSExt(X, I32Ty);
-      Y = Builder.CreateSExt(Y, I32Ty);
+      X = Builder.CreateSExtOrTrunc(X, I32Ty);
+      Y = Builder.CreateSExtOrTrunc(Y, I32Ty);
     } else {
-      X = Builder.CreateZExt(X, I32Ty);
-      Y = Builder.CreateZExt(Y, I32Ty);
+      X = Builder.CreateZExtOrTrunc(X, I32Ty);
+      Y = Builder.CreateZExtOrTrunc(Y, I32Ty);
     }
   }
 
@@ -1482,10 +1487,10 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem32(IRBuilder<> &Builder,
   if (IsSigned) {
     Res = Builder.CreateXor(Res, Sign);
     Res = Builder.CreateSub(Res, Sign);
+    Res = Builder.CreateSExtOrTrunc(Res, Ty);
+  } else {
+    Res = Builder.CreateZExtOrTrunc(Res, Ty);
   }
-
-  Res = Builder.CreateTrunc(Res, Ty);
-
   return Res;
 }
 
@@ -1588,6 +1593,9 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
             Div64ToExpand.push_back(cast<BinaryOperator>(NewElt));
           }
         }
+
+        if (auto *NewEltI = dyn_cast<Instruction>(NewElt))
+          NewEltI->copyIRFlags(&I);
 
         NewDiv = Builder.CreateInsertElement(NewDiv, NewElt, N);
       }
@@ -1744,7 +1752,7 @@ static bool isInterestingPHIIncomingValue(const Value *V) {
     // Non constant index/out of bounds index -> folding is unlikely.
     // The latter is more of a sanity check because canonical IR should just
     // have replaced those with poison.
-    if (!Idx || Idx->getSExtValue() >= FVT->getNumElements())
+    if (!Idx || Idx->getZExtValue() >= FVT->getNumElements())
       return false;
 
     const auto *VecSrc = IE->getOperand(0);
@@ -1756,7 +1764,7 @@ static bool isInterestingPHIIncomingValue(const Value *V) {
       return false;
 
     CurVal = VecSrc;
-    EltsCovered.set(Idx->getSExtValue());
+    EltsCovered.set(Idx->getZExtValue());
 
     // All elements covered.
     if (EltsCovered.all())
@@ -1982,7 +1990,7 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   for (VectorSlice &S : Slices) {
     // We need to reset the build on each iteration, because getSlicedVal may
     // have inserted something into I's BB.
-    B.SetInsertPoint(I.getParent()->getFirstNonPHI());
+    B.SetInsertPoint(I.getParent()->getFirstNonPHIIt());
     S.NewPHI = B.CreatePHI(S.Ty, I.getNumIncomingValues());
 
     for (const auto &[Idx, BB] : enumerate(I.blocks())) {
@@ -2006,6 +2014,82 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   }
 
   I.replaceAllUsesWith(Vec);
+  I.eraseFromParent();
+  return true;
+}
+
+/// \param V  Value to check
+/// \param DL DataLayout
+/// \param TM TargetMachine (TODO: remove once DL contains nullptr values)
+/// \param AS Target Address Space
+/// \return true if \p V cannot be the null value of \p AS, false otherwise.
+static bool isPtrKnownNeverNull(const Value *V, const DataLayout &DL,
+                                const AMDGPUTargetMachine &TM, unsigned AS) {
+  // Pointer cannot be null if it's a block address, GV or alloca.
+  // NOTE: We don't support extern_weak, but if we did, we'd need to check for
+  // it as the symbol could be null in such cases.
+  if (isa<BlockAddress>(V) || isa<GlobalValue>(V) || isa<AllocaInst>(V))
+    return true;
+
+  // Check nonnull arguments.
+  if (const auto *Arg = dyn_cast<Argument>(V); Arg && Arg->hasNonNullAttr())
+    return true;
+
+  // getUnderlyingObject may have looked through another addrspacecast, although
+  // the optimizable situations most likely folded out by now.
+  if (AS != cast<PointerType>(V->getType())->getAddressSpace())
+    return false;
+
+  // TODO: Calls that return nonnull?
+
+  // For all other things, use KnownBits.
+  // We either use 0 or all bits set to indicate null, so check whether the
+  // value can be zero or all ones.
+  //
+  // TODO: Use ValueTracking's isKnownNeverNull if it becomes aware that some
+  // address spaces have non-zero null values.
+  auto SrcPtrKB = computeKnownBits(V, DL);
+  const auto NullVal = TM.getNullPointerValue(AS);
+
+  assert(SrcPtrKB.getBitWidth() == DL.getPointerSizeInBits(AS));
+  assert((NullVal == 0 || NullVal == -1) &&
+         "don't know how to check for this null value!");
+  return NullVal ? !SrcPtrKB.getMaxValue().isAllOnes() : SrcPtrKB.isNonZero();
+}
+
+bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
+  // Intrinsic doesn't support vectors, also it seems that it's often difficult
+  // to prove that a vector cannot have any nulls in it so it's unclear if it's
+  // worth supporting.
+  if (I.getType()->isVectorTy())
+    return false;
+
+  // Check if this can be lowered to a amdgcn.addrspacecast.nonnull.
+  // This is only worthwhile for casts from/to priv/local to flat.
+  const unsigned SrcAS = I.getSrcAddressSpace();
+  const unsigned DstAS = I.getDestAddressSpace();
+
+  bool CanLower = false;
+  if (SrcAS == AMDGPUAS::FLAT_ADDRESS)
+    CanLower = (DstAS == AMDGPUAS::LOCAL_ADDRESS ||
+                DstAS == AMDGPUAS::PRIVATE_ADDRESS);
+  else if (DstAS == AMDGPUAS::FLAT_ADDRESS)
+    CanLower = (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
+                SrcAS == AMDGPUAS::PRIVATE_ADDRESS);
+  if (!CanLower)
+    return false;
+
+  SmallVector<const Value *, 4> WorkList;
+  getUnderlyingObjects(I.getOperand(0), WorkList);
+  if (!all_of(WorkList, [&](const Value *V) {
+        return isPtrKnownNeverNull(V, *DL, *TM, SrcAS);
+      }))
+    return false;
+
+  IRBuilder<> B(&I);
+  auto *Intrin = B.CreateIntrinsic(
+      I.getType(), Intrinsic::amdgcn_addrspacecast_nonnull, {I.getOperand(0)});
+  I.replaceAllUsesWith(Intrin);
   I.eraseFromParent();
   return true;
 }
@@ -2095,7 +2179,8 @@ bool AMDGPUCodeGenPrepareImpl::visitMinNum(IntrinsicInst &I) {
 
   // Match pattern for fract intrinsic in contexts where the nan check has been
   // optimized out (and hope the knowledge the source can't be nan wasn't lost).
-  if (!I.hasNoNaNs() && !isKnownNeverNaN(FractArg, *DL, TLInfo))
+  if (!I.hasNoNaNs() &&
+      !isKnownNeverNaN(FractArg, /*Depth=*/0, SimplifyQuery(*DL, TLInfo)))
     return false;
 
   IRBuilder<> Builder(&I);
@@ -2192,6 +2277,7 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
     return false;
 
   const AMDGPUTargetMachine &TM = TPC->getTM<AMDGPUTargetMachine>();
+  Impl.TM = &TM;
   Impl.TLInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   Impl.ST = &TM.getSubtarget<GCNSubtarget>(F);
   Impl.AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
@@ -2210,6 +2296,7 @@ PreservedAnalyses AMDGPUCodeGenPreparePass::run(Function &F,
   AMDGPUCodeGenPrepareImpl Impl;
   Impl.Mod = F.getParent();
   Impl.DL = &Impl.Mod->getDataLayout();
+  Impl.TM = static_cast<const AMDGPUTargetMachine *>(&TM);
   Impl.TLInfo = &FAM.getResult<TargetLibraryAnalysis>(F);
   Impl.ST = &TM.getSubtarget<GCNSubtarget>(F);
   Impl.AC = &FAM.getResult<AssumptionAnalysis>(F);

@@ -935,17 +935,13 @@ TEST(ExternalIOTests, BigUnitNumbers) {
         IONAME(CheckUnitNumberInRange64)(unit64Bad, true), IostatUnitOverflow);
     EXPECT_EQ(
         IONAME(CheckUnitNumberInRange64)(unit64Bad2, true), IostatUnitOverflow);
-    EXPECT_EQ(
-        IONAME(CheckUnitNumberInRange64)(unit64Bad, true), IostatUnitOverflow);
-    EXPECT_EQ(
-        IONAME(CheckUnitNumberInRange64)(unit64Bad2, true), IostatUnitOverflow);
     constexpr std::size_t n{80};
     char expectedMsg[n + 1];
     expectedMsg[n] = '\0';
     std::snprintf(expectedMsg, n, "UNIT number %jd is out of range",
         static_cast<std::intmax_t>(unit64Bad));
     EXPECT_DEATH(
-        IONAME(CheckUnitNumberInRange64)(2147483648, false), expectedMsg);
+        IONAME(CheckUnitNumberInRange64)(unit64Bad, false), expectedMsg);
     for (auto i{std::strlen(expectedMsg)}; i < n; ++i) {
       expectedMsg[i] = ' ';
     }

@@ -51,7 +51,7 @@ stack:
   - { id: 1, name: foxtrot, type: default, offset: 0, size: 16, alignment: 16,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 2, name: india, type: default, offset: 0, size: 16, alignment: 16,
+  - { id: 2, name: india, type: spill-slot, offset: 0, size: 16, alignment: 16,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '',
       debug-info-location: '' }

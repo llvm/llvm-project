@@ -110,6 +110,7 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/BlockCoverageInference.h"
 #include "llvm/Transforms/Instrumentation/CFGMST.h"
+#include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/MisExpect.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -119,6 +120,7 @@
 #include <memory>
 #include <numeric>
 #include <optional>
+#include <stack>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -318,6 +320,8 @@ static cl::opt<unsigned> PGOFunctionCriticalEdgeThreshold(
     cl::desc("Do not instrument functions with the number of critical edges "
              " greater than this threshold."));
 
+extern cl::opt<unsigned> MaxNumVTableAnnotations;
+
 namespace llvm {
 // Command line option to turn on CFG dot dump after profile annotation.
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -pgo-view-counts
@@ -327,11 +331,26 @@ extern cl::opt<PGOViewCountsType> PGOViewCounts;
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
 extern cl::opt<std::string> ViewBlockFreqFuncName;
 
+// Command line option to enable vtable value profiling. Defined in
+// ProfileData/InstrProf.cpp: -enable-vtable-value-profiling=
+extern cl::opt<bool> EnableVTableValueProfiling;
+extern cl::opt<bool> EnableVTableProfileUse;
+extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 } // namespace llvm
 
-static cl::opt<bool>
-    PGOOldCFGHashing("pgo-instr-old-cfg-hashing", cl::init(false), cl::Hidden,
-                     cl::desc("Use the old CFG function hashing"));
+bool shouldInstrumentEntryBB() {
+  return PGOInstrumentEntry ||
+         PGOCtxProfLoweringPass::isContextualIRPGOEnabled();
+}
+
+// FIXME(mtrofin): re-enable this for ctx profiling, for non-indirect calls. Ctx
+// profiling implicitly captures indirect call cases, but not other values.
+// Supporting other values is relatively straight-forward - just another counter
+// range within the context.
+bool isValueProfilingDisabled() {
+  return DisableValueProfiling ||
+         PGOCtxProfLoweringPass::isContextualIRPGOEnabled();
+}
 
 // Return a string describing the branch condition that can be
 // used in static branch probability heuristics:
@@ -379,9 +398,9 @@ static GlobalVariable *createIRLevelProfileFlagVar(Module &M, bool IsCS) {
   uint64_t ProfileVersion = (INSTR_PROF_RAW_VERSION | VARIANT_MASK_IR_PROF);
   if (IsCS)
     ProfileVersion |= VARIANT_MASK_CSIR_PROF;
-  if (PGOInstrumentEntry)
+  if (shouldInstrumentEntryBB())
     ProfileVersion |= VARIANT_MASK_INSTR_ENTRY;
-  if (DebugInfoCorrelate)
+  if (DebugInfoCorrelate || ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO)
     ProfileVersion |= VARIANT_MASK_DBG_CORRELATE;
   if (PGOFunctionEntryCoverage)
     ProfileVersion |=
@@ -584,6 +603,8 @@ public:
       NumOfPGOMemIntrinsics += ValueSites[IPVK_MemOPSize].size();
       NumOfPGOBB += MST.bbInfoSize();
       ValueSites[IPVK_IndirectCallTarget] = VPC.get(IPVK_IndirectCallTarget);
+      if (EnableVTableValueProfiling)
+        ValueSites[IPVK_VTableTarget] = VPC.get(IPVK_VTableTarget);
     } else {
       NumOfCSPGOSelectInsts += SIVisitor.getNumOfSelectInsts();
       NumOfCSPGOMemIntrinsics += ValueSites[IPVK_MemOPSize].size();
@@ -620,9 +641,7 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
   std::vector<uint8_t> Indexes;
   JamCRC JC;
   for (auto &BB : F) {
-    const Instruction *TI = BB.getTerminator();
-    for (unsigned I = 0, E = TI->getNumSuccessors(); I != E; ++I) {
-      BasicBlock *Succ = TI->getSuccessor(I);
+    for (BasicBlock *Succ : successors(&BB)) {
       auto BI = findBBInfo(Succ);
       if (BI == nullptr)
         continue;
@@ -634,33 +653,24 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
   JC.update(Indexes);
 
   JamCRC JCH;
-  if (PGOOldCFGHashing) {
-    // Hash format for context sensitive profile. Reserve 4 bits for other
-    // information.
-    FunctionHash = (uint64_t)SIVisitor.getNumOfSelectInsts() << 56 |
-                   (uint64_t)ValueSites[IPVK_IndirectCallTarget].size() << 48 |
-                   //(uint64_t)ValueSites[IPVK_MemOPSize].size() << 40 |
-                   (uint64_t)MST.numEdges() << 32 | JC.getCRC();
+  // The higher 32 bits.
+  auto updateJCH = [&JCH](uint64_t Num) {
+    uint8_t Data[8];
+    support::endian::write64le(Data, Num);
+    JCH.update(Data);
+  };
+  updateJCH((uint64_t)SIVisitor.getNumOfSelectInsts());
+  updateJCH((uint64_t)ValueSites[IPVK_IndirectCallTarget].size());
+  updateJCH((uint64_t)ValueSites[IPVK_MemOPSize].size());
+  if (BCI) {
+    updateJCH(BCI->getInstrumentedBlocksHash());
   } else {
-    // The higher 32 bits.
-    auto updateJCH = [&JCH](uint64_t Num) {
-      uint8_t Data[8];
-      support::endian::write64le(Data, Num);
-      JCH.update(Data);
-    };
-    updateJCH((uint64_t)SIVisitor.getNumOfSelectInsts());
-    updateJCH((uint64_t)ValueSites[IPVK_IndirectCallTarget].size());
-    updateJCH((uint64_t)ValueSites[IPVK_MemOPSize].size());
-    if (BCI) {
-      updateJCH(BCI->getInstrumentedBlocksHash());
-    } else {
-      updateJCH((uint64_t)MST.numEdges());
-    }
-
-    // Hash format for context sensitive profile. Reserve 4 bits for other
-    // information.
-    FunctionHash = (((uint64_t)JCH.getCRC()) << 28) + JC.getCRC();
+    updateJCH((uint64_t)MST.numEdges());
   }
+
+  // Hash format for context sensitive profile. Reserve 4 bits for other
+  // information.
+  FunctionHash = (((uint64_t)JCH.getCRC()) << 28) + JC.getCRC();
 
   // Reserve bit 60-63 for other information purpose.
   FunctionHash &= 0x0FFFFFFFFFFFFFFF;
@@ -670,12 +680,10 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
                     << " CRC = " << JC.getCRC()
                     << ", Selects = " << SIVisitor.getNumOfSelectInsts()
                     << ", Edges = " << MST.numEdges() << ", ICSites = "
-                    << ValueSites[IPVK_IndirectCallTarget].size());
-  if (!PGOOldCFGHashing) {
-    LLVM_DEBUG(dbgs() << ", Memops = " << ValueSites[IPVK_MemOPSize].size()
-                      << ", High32 CRC = " << JCH.getCRC());
-  }
-  LLVM_DEBUG(dbgs() << ", Hash = " << FunctionHash << "\n";);
+                    << ValueSites[IPVK_IndirectCallTarget].size()
+                    << ", Memops = " << ValueSites[IPVK_MemOPSize].size()
+                    << ", High32 CRC = " << JCH.getCRC()
+                    << ", Hash = " << FunctionHash << "\n";);
 
   if (PGOTraceFuncHash != "-" && F.getName().contains(PGOTraceFuncHash))
     dbgs() << "Funcname=" << F.getName() << ", Hash=" << FunctionHash
@@ -872,7 +880,7 @@ static void instrumentOneFunc(
   }
 
   FuncPGOInstrumentation<PGOEdge, PGOBBInfo> FuncInfo(
-      F, TLI, ComdatMembers, true, BPI, BFI, IsCS, PGOInstrumentEntry,
+      F, TLI, ComdatMembers, true, BPI, BFI, IsCS, shouldInstrumentEntryBB(),
       PGOBlockCoverage);
 
   auto Name = FuncInfo.FuncNameVar;
@@ -893,6 +901,43 @@ static void instrumentOneFunc(
   FuncInfo.getInstrumentBBs(InstrumentBBs);
   unsigned NumCounters =
       InstrumentBBs.size() + FuncInfo.SIVisitor.getNumOfSelectInsts();
+
+  if (PGOCtxProfLoweringPass::isContextualIRPGOEnabled()) {
+    auto *CSIntrinsic =
+        Intrinsic::getDeclaration(M, Intrinsic::instrprof_callsite);
+    // We want to count the instrumentable callsites, then instrument them. This
+    // is because the llvm.instrprof.callsite intrinsic has an argument (like
+    // the other instrprof intrinsics) capturing the total number of
+    // instrumented objects (counters, or callsites, in this case). In this
+    // case, we want that value so we can readily pass it to the compiler-rt
+    // APIs that may have to allocate memory based on the nr of callsites.
+    // The traversal logic is the same for both counting and instrumentation,
+    // just needs to be done in succession.
+    auto Visit = [&](llvm::function_ref<void(CallBase * CB)> Visitor) {
+      for (auto &BB : F)
+        for (auto &Instr : BB)
+          if (auto *CS = dyn_cast<CallBase>(&Instr)) {
+            if ((CS->getCalledFunction() &&
+                 CS->getCalledFunction()->isIntrinsic()) ||
+                dyn_cast<InlineAsm>(CS->getCalledOperand()))
+              continue;
+            Visitor(CS);
+          }
+    };
+    // First, count callsites.
+    uint32_t TotalNrCallsites = 0;
+    Visit([&TotalNrCallsites](auto *) { ++TotalNrCallsites; });
+
+    // Now instrument.
+    uint32_t CallsiteIndex = 0;
+    Visit([&](auto *CB) {
+      IRBuilder<> Builder(CB);
+      Builder.CreateCall(CSIntrinsic,
+                         {Name, CFGHash, Builder.getInt32(TotalNrCallsites),
+                          Builder.getInt32(CallsiteIndex++),
+                          CB->getCalledOperand()});
+    });
+  }
 
   uint32_t I = 0;
   if (PGOTemporalInstrumentation) {
@@ -925,7 +970,7 @@ static void instrumentOneFunc(
                                        FuncInfo.FunctionHash);
   assert(I == NumCounters);
 
-  if (DisableValueProfiling)
+  if (isValueProfilingDisabled())
     return;
 
   NumOfPGOICall += FuncInfo.ValueSites[IPVK_IndirectCallTarget].size();
@@ -936,7 +981,7 @@ static void instrumentOneFunc(
   // on the instrumentation call based on the funclet coloring.
   DenseMap<BasicBlock *, ColorVector> BlockColors;
   if (F.hasPersonalityFn() &&
-      isFuncletEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
+      isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
     BlockColors = colorEHFunclets(F);
 
   // For each VP Kind, walk the VP candidates and instrument each one.
@@ -977,21 +1022,16 @@ namespace {
 struct PGOUseEdge : public PGOEdge {
   using PGOEdge::PGOEdge;
 
-  bool CountValid = false;
-  uint64_t CountValue = 0;
+  std::optional<uint64_t> Count;
 
   // Set edge count value
-  void setEdgeCount(uint64_t Value) {
-    CountValue = Value;
-    CountValid = true;
-  }
+  void setEdgeCount(uint64_t Value) { Count = Value; }
 
   // Return the information string for this object.
   std::string infoString() const {
-    if (!CountValid)
+    if (!Count)
       return PGOEdge::infoString();
-    return (Twine(PGOEdge::infoString()) + "  Count=" + Twine(CountValue))
-        .str();
+    return (Twine(PGOEdge::infoString()) + "  Count=" + Twine(*Count)).str();
   }
 };
 
@@ -999,27 +1039,22 @@ using DirectEdges = SmallVector<PGOUseEdge *, 2>;
 
 // This class stores the auxiliary information for each BB.
 struct PGOUseBBInfo : public PGOBBInfo {
-  uint64_t CountValue = 0;
-  bool CountValid;
+  std::optional<uint64_t> Count;
   int32_t UnknownCountInEdge = 0;
   int32_t UnknownCountOutEdge = 0;
   DirectEdges InEdges;
   DirectEdges OutEdges;
 
-  PGOUseBBInfo(unsigned IX) : PGOBBInfo(IX), CountValid(false) {}
+  PGOUseBBInfo(unsigned IX) : PGOBBInfo(IX) {}
 
   // Set the profile count value for this BB.
-  void setBBInfoCount(uint64_t Value) {
-    CountValue = Value;
-    CountValid = true;
-  }
+  void setBBInfoCount(uint64_t Value) { Count = Value; }
 
   // Return the information string of this object.
   std::string infoString() const {
-    if (!CountValid)
+    if (!Count)
       return PGOBBInfo::infoString();
-    return (Twine(PGOBBInfo::infoString()) + "  Count=" + Twine(CountValue))
-        .str();
+    return (Twine(PGOBBInfo::infoString()) + "  Count=" + Twine(*Count)).str();
   }
 
   // Add an OutEdge and update the edge count.
@@ -1043,7 +1078,8 @@ static uint64_t sumEdgeCount(const ArrayRef<PGOUseEdge *> Edges) {
   for (const auto &E : Edges) {
     if (E->Removed)
       continue;
-    Total += E->CountValue;
+    if (E->Count)
+      Total += *E->Count;
   }
   return Total;
 }
@@ -1232,17 +1268,17 @@ bool PGOUseFunc::setInstrumentedCounts(
 
     // If only one out-edge, the edge profile count should be the same as BB
     // profile count.
-    if (SrcInfo.CountValid && SrcInfo.OutEdges.size() == 1)
-      setEdgeCount(E.get(), SrcInfo.CountValue);
+    if (SrcInfo.Count && SrcInfo.OutEdges.size() == 1)
+      setEdgeCount(E.get(), *SrcInfo.Count);
     else {
       const BasicBlock *DestBB = E->DestBB;
       PGOUseBBInfo &DestInfo = getBBInfo(DestBB);
       // If only one in-edge, the edge profile count should be the same as BB
       // profile count.
-      if (DestInfo.CountValid && DestInfo.InEdges.size() == 1)
-        setEdgeCount(E.get(), DestInfo.CountValue);
+      if (DestInfo.Count && DestInfo.InEdges.size() == 1)
+        setEdgeCount(E.get(), *DestInfo.Count);
     }
-    if (E->CountValid)
+    if (E->Count)
       continue;
     // E's count should have been set from profile. If not, this meenas E skips
     // the instrumentation. We set the count to 0.
@@ -1255,7 +1291,7 @@ bool PGOUseFunc::setInstrumentedCounts(
 // unknown edge in Edges vector.
 void PGOUseFunc::setEdgeCount(DirectEdges &Edges, uint64_t Value) {
   for (auto &E : Edges) {
-    if (E->CountValid)
+    if (E->Count)
       continue;
     E->setEdgeCount(Value);
 
@@ -1387,6 +1423,7 @@ void PGOUseFunc::populateCoverage(IndexedInstrProfReader *PGOReader) {
     handleInstrProfError(std::move(Err), MismatchedFuncSum);
     return;
   }
+  IsCS ? NumOfCSPGOFunc++ : NumOfPGOFunc++;
 
   std::vector<uint64_t> &CountsFromProfile = Result.get().Counts;
   DenseMap<const BasicBlock *, bool> Coverage;
@@ -1441,7 +1478,8 @@ void PGOUseFunc::populateCoverage(IndexedInstrProfReader *PGOReader) {
     for (auto *Succ : successors(&BB))
       Weights.push_back((Coverage[Succ] || !Coverage[&BB]) ? 1 : 0);
     if (Weights.size() >= 2)
-      llvm::setBranchWeights(*BB.getTerminator(), Weights);
+      llvm::setBranchWeights(*BB.getTerminator(), Weights,
+                             /*IsExpected=*/false);
   }
 
   unsigned NumCorruptCoverage = 0;
@@ -1497,38 +1535,36 @@ void PGOUseFunc::populateCounters() {
     // For efficient traversal, it's better to start from the end as most
     // of the instrumented edges are at the end.
     for (auto &BB : reverse(F)) {
-      PGOUseBBInfo *Count = findBBInfo(&BB);
-      if (Count == nullptr)
+      PGOUseBBInfo *UseBBInfo = findBBInfo(&BB);
+      if (UseBBInfo == nullptr)
         continue;
-      if (!Count->CountValid) {
-        if (Count->UnknownCountOutEdge == 0) {
-          Count->CountValue = sumEdgeCount(Count->OutEdges);
-          Count->CountValid = true;
+      if (!UseBBInfo->Count) {
+        if (UseBBInfo->UnknownCountOutEdge == 0) {
+          UseBBInfo->Count = sumEdgeCount(UseBBInfo->OutEdges);
           Changes = true;
-        } else if (Count->UnknownCountInEdge == 0) {
-          Count->CountValue = sumEdgeCount(Count->InEdges);
-          Count->CountValid = true;
+        } else if (UseBBInfo->UnknownCountInEdge == 0) {
+          UseBBInfo->Count = sumEdgeCount(UseBBInfo->InEdges);
           Changes = true;
         }
       }
-      if (Count->CountValid) {
-        if (Count->UnknownCountOutEdge == 1) {
+      if (UseBBInfo->Count) {
+        if (UseBBInfo->UnknownCountOutEdge == 1) {
           uint64_t Total = 0;
-          uint64_t OutSum = sumEdgeCount(Count->OutEdges);
+          uint64_t OutSum = sumEdgeCount(UseBBInfo->OutEdges);
           // If the one of the successor block can early terminate (no-return),
           // we can end up with situation where out edge sum count is larger as
           // the source BB's count is collected by a post-dominated block.
-          if (Count->CountValue > OutSum)
-            Total = Count->CountValue - OutSum;
-          setEdgeCount(Count->OutEdges, Total);
+          if (*UseBBInfo->Count > OutSum)
+            Total = *UseBBInfo->Count - OutSum;
+          setEdgeCount(UseBBInfo->OutEdges, Total);
           Changes = true;
         }
-        if (Count->UnknownCountInEdge == 1) {
+        if (UseBBInfo->UnknownCountInEdge == 1) {
           uint64_t Total = 0;
-          uint64_t InSum = sumEdgeCount(Count->InEdges);
-          if (Count->CountValue > InSum)
-            Total = Count->CountValue - InSum;
-          setEdgeCount(Count->InEdges, Total);
+          uint64_t InSum = sumEdgeCount(UseBBInfo->InEdges);
+          if (*UseBBInfo->Count > InSum)
+            Total = *UseBBInfo->Count - InSum;
+          setEdgeCount(UseBBInfo->InEdges, Total);
           Changes = true;
         }
       }
@@ -1543,16 +1579,16 @@ void PGOUseFunc::populateCounters() {
     auto BI = findBBInfo(&BB);
     if (BI == nullptr)
       continue;
-    assert(BI->CountValid && "BB count is not valid");
+    assert(BI->Count && "BB count is not valid");
   }
 #endif
-  uint64_t FuncEntryCount = getBBInfo(&*F.begin()).CountValue;
+  uint64_t FuncEntryCount = *getBBInfo(&*F.begin()).Count;
   uint64_t FuncMaxCount = FuncEntryCount;
   for (auto &BB : F) {
     auto BI = findBBInfo(&BB);
     if (BI == nullptr)
       continue;
-    FuncMaxCount = std::max(FuncMaxCount, BI->CountValue);
+    FuncMaxCount = std::max(FuncMaxCount, *BI->Count);
   }
 
   // Fix the obviously inconsistent entry count.
@@ -1582,11 +1618,11 @@ void PGOUseFunc::setBranchWeights() {
           isa<CallBrInst>(TI)))
       continue;
 
-    if (getBBInfo(&BB).CountValue == 0)
+    const PGOUseBBInfo &BBCountInfo = getBBInfo(&BB);
+    if (!*BBCountInfo.Count)
       continue;
 
     // We have a non-zero Branch BB.
-    const PGOUseBBInfo &BBCountInfo = getBBInfo(&BB);
     unsigned Size = BBCountInfo.OutEdges.size();
     SmallVector<uint64_t, 2> EdgeCounts(Size, 0);
     uint64_t MaxCount = 0;
@@ -1597,7 +1633,7 @@ void PGOUseFunc::setBranchWeights() {
       if (DestBB == nullptr)
         continue;
       unsigned SuccNum = GetSuccessorNumber(SrcBB, DestBB);
-      uint64_t EdgeCount = E->CountValue;
+      uint64_t EdgeCount = *E->Count;
       if (EdgeCount > MaxCount)
         MaxCount = EdgeCount;
       EdgeCounts[SuccNum] = EdgeCount;
@@ -1638,7 +1674,7 @@ void PGOUseFunc::annotateIrrLoopHeaderWeights() {
     if (BFI->isIrrLoopHeader(&BB) || isIndirectBrTarget(&BB)) {
       Instruction *TI = BB.getTerminator();
       const PGOUseBBInfo &BBCountInfo = getBBInfo(&BB);
-      setIrrLoopHeaderMetadata(M, TI, BBCountInfo.CountValue);
+      setIrrLoopHeaderMetadata(M, TI, *BBCountInfo.Count);
     }
   }
 }
@@ -1665,7 +1701,7 @@ void SelectInstVisitor::annotateOneSelectInst(SelectInst &SI) {
   uint64_t TotalCount = 0;
   auto BI = UseFunc->findBBInfo(SI.getParent());
   if (BI != nullptr)
-    TotalCount = BI->CountValue;
+    TotalCount = *BI->Count;
   // False Count
   SCounts[1] = (TotalCount > SCounts[0] ? TotalCount - SCounts[0] : 0);
   uint64_t MaxCount = std::max(SCounts[0], SCounts[1]);
@@ -1695,9 +1731,17 @@ void SelectInstVisitor::visitSelectInst(SelectInst &SI) {
   llvm_unreachable("Unknown visiting mode");
 }
 
+static uint32_t getMaxNumAnnotations(InstrProfValueKind ValueProfKind) {
+  if (ValueProfKind == IPVK_MemOPSize)
+    return MaxNumMemOPAnnotations;
+  if (ValueProfKind == llvm::IPVK_VTableTarget)
+    return MaxNumVTableAnnotations;
+  return MaxNumAnnotations;
+}
+
 // Traverse all valuesites and annotate the instructions for all value kind.
 void PGOUseFunc::annotateValueSites() {
-  if (DisableValueProfiling)
+  if (isValueProfilingDisabled())
     return;
 
   // Create the PGOFuncName meta data.
@@ -1729,10 +1773,10 @@ void PGOUseFunc::annotateValueSites(uint32_t Kind) {
     LLVM_DEBUG(dbgs() << "Read one value site profile (kind = " << Kind
                       << "): Index = " << ValueSiteIndex << " out of "
                       << NumValueSites << "\n");
-    annotateValueSite(*M, *I.AnnotatedInst, ProfileRecord,
-                      static_cast<InstrProfValueKind>(Kind), ValueSiteIndex,
-                      Kind == IPVK_MemOPSize ? MaxNumMemOPAnnotations
-                                             : MaxNumAnnotations);
+    annotateValueSite(
+        *M, *I.AnnotatedInst, ProfileRecord,
+        static_cast<InstrProfValueKind>(Kind), ValueSiteIndex,
+        getMaxNumAnnotations(static_cast<InstrProfValueKind>(Kind)));
     ValueSiteIndex++;
   }
 }
@@ -1800,8 +1844,17 @@ static bool InstrumentAllFunctions(
     function_ref<BlockFrequencyInfo *(Function &)> LookupBFI, bool IsCS) {
   // For the context-sensitve instrumentation, we should have a separated pass
   // (before LTO/ThinLTO linking) to create these variables.
-  if (!IsCS)
+  if (!IsCS && !PGOCtxProfLoweringPass::isContextualIRPGOEnabled())
     createIRLevelProfileFlagVar(M, /*IsCS=*/false);
+
+  Triple TT(M.getTargetTriple());
+  LLVMContext &Ctx = M.getContext();
+  if (!TT.isOSBinFormatELF() && EnableVTableValueProfiling)
+    Ctx.diagnose(DiagnosticInfoPGOProfile(
+        M.getName().data(),
+        Twine("VTable value profiling is presently not "
+              "supported for non-ELF object formats"),
+        DS_Warning));
   std::unordered_multimap<Comdat *, GlobalValue *> ComdatMembers;
   collectComdatMembers(M, ComdatMembers);
 
@@ -1866,7 +1919,7 @@ static void fixFuncEntryCount(PGOUseFunc &Func, LoopInfo &LI,
     if (!Func.findBBInfo(&BBI))
       continue;
     auto BFICount = NBFI.getBlockProfileCount(&BBI);
-    CountValue = Func.getBBInfo(&BBI).CountValue;
+    CountValue = *Func.getBBInfo(&BBI).Count;
     BFICountValue = *BFICount;
     SumCount.add(APFloat(CountValue * 1.0), APFloat::rmNearestTiesToEven);
     SumBFICount.add(APFloat(BFICountValue * 1.0), APFloat::rmNearestTiesToEven);
@@ -1882,7 +1935,7 @@ static void fixFuncEntryCount(PGOUseFunc &Func, LoopInfo &LI,
   if (Scale < 1.001 && Scale > 0.999)
     return;
 
-  uint64_t FuncEntryCount = Func.getBBInfo(&*F.begin()).CountValue;
+  uint64_t FuncEntryCount = *Func.getBBInfo(&*F.begin()).Count;
   uint64_t NewEntryCount = 0.5 + FuncEntryCount * Scale;
   if (NewEntryCount == 0)
     NewEntryCount = 1;
@@ -1912,8 +1965,7 @@ static void verifyFuncBFI(PGOUseFunc &Func, LoopInfo &LI,
     uint64_t CountValue = 0;
     uint64_t BFICountValue = 0;
 
-    if (Func.getBBInfo(&BBI).CountValid)
-      CountValue = Func.getBBInfo(&BBI).CountValue;
+    CountValue = Func.getBBInfo(&BBI).Count.value_or(CountValue);
 
     BBNum++;
     if (CountValue)
@@ -2013,6 +2065,16 @@ static bool annotateAllFunctions(
     return false;
   }
 
+  if (EnableVTableProfileUse) {
+    for (GlobalVariable &G : M.globals()) {
+      if (!G.hasName() || !G.hasMetadata(LLVMContext::MD_type))
+        continue;
+
+      // Create the PGOFuncName meta data.
+      createPGONameMetadata(G, getPGOName(G, false /* InLTO*/));
+    }
+  }
+
   // Add the profile summary (read from the header of the indexed summary) here
   // so that we can use it below when reading counters (which checks if the
   // function should be marked with a cold or inlinehint attribute).
@@ -2031,6 +2093,8 @@ static bool annotateAllFunctions(
   bool InstrumentFuncEntry = PGOReader->instrEntryBBEnabled();
   if (PGOInstrumentEntry.getNumOccurrences() > 0)
     InstrumentFuncEntry = PGOInstrumentEntry;
+  InstrumentFuncEntry |= PGOCtxProfLoweringPass::isContextualIRPGOEnabled();
+
   bool HasSingleByteCoverage = PGOReader->hasSingleByteCoverage();
   for (auto &F : M) {
     if (skipPGOUse(F))
@@ -2084,7 +2148,7 @@ static bool annotateAllFunctions(
       HotFunctions.push_back(&F);
     if (PGOViewCounts != PGOVCT_None &&
         (ViewBlockFreqFuncName.empty() ||
-         F.getName().equals(ViewBlockFreqFuncName))) {
+         F.getName() == ViewBlockFreqFuncName)) {
       LoopInfo LI{DominatorTree(F)};
       std::unique_ptr<BranchProbabilityInfo> NewBPI =
           std::make_unique<BranchProbabilityInfo>(F, LI);
@@ -2099,7 +2163,7 @@ static bool annotateAllFunctions(
     }
     if (PGOViewRawCounts != PGOVCT_None &&
         (ViewBlockFreqFuncName.empty() ||
-         F.getName().equals(ViewBlockFreqFuncName))) {
+         F.getName() == ViewBlockFreqFuncName)) {
       if (PGOViewRawCounts == PGOVCT_Graph)
         if (ViewBlockFreqFuncName.empty())
           WriteGraph(&Func, Twine("PGORawCounts_") + Func.getFunc().getName());
@@ -2186,7 +2250,6 @@ PreservedAnalyses PGOInstrumentationUse::run(Module &M,
   };
 
   auto *PSI = &MAM.getResult<ProfileSummaryAnalysis>(M);
-
   if (!annotateAllFunctions(M, ProfileFileName, ProfileRemappingFileName, *FS,
                             LookupTLI, LookupBPI, LookupBFI, PSI, IsCS))
     return PreservedAnalyses::all();
@@ -2201,7 +2264,7 @@ static std::string getSimpleNodeName(const BasicBlock *Node) {
   std::string SimpleNodeName;
   raw_string_ostream OS(SimpleNodeName);
   Node->printAsOperand(OS, false);
-  return OS.str();
+  return SimpleNodeName;
 }
 
 void llvm::setProfMetadata(Module *M, Instruction *TI,
@@ -2219,7 +2282,7 @@ void llvm::setProfMetadata(Module *M, Instruction *TI,
 
   misexpect::checkExpectAnnotations(*TI, Weights, /*IsFrontend=*/false);
 
-  setBranchWeights(*TI, Weights);
+  setBranchWeights(*TI, Weights, /*IsExpected=*/false);
   if (EmitBranchProbability) {
     std::string BrCondStr = getBranchCondString(TI);
     if (BrCondStr.empty())
@@ -2295,8 +2358,8 @@ template <> struct DOTGraphTraits<PGOUseFunc *> : DefaultDOTGraphTraits {
     OS << getSimpleNodeName(Node) << ":\\l";
     PGOUseBBInfo *BI = Graph->findBBInfo(Node);
     OS << "Count : ";
-    if (BI && BI->CountValid)
-      OS << BI->CountValue << "\\l";
+    if (BI && BI->Count)
+      OS << *BI->Count << "\\l";
     else
       OS << "Unknown\\l";
 

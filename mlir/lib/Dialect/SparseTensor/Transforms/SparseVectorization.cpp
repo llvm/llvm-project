@@ -316,6 +316,12 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
     if (auto load = cast.getDefiningOp<arith::AddIOp>()) {
       Value inv = load.getOperand(0);
       Value idx = load.getOperand(1);
+      // Swap non-invariant.
+      if (!isInvariantValue(inv, block)) {
+        inv = idx;
+        idx = load.getOperand(0);
+      }
+      // Inspect.
       if (isInvariantValue(inv, block)) {
         if (auto arg = llvm::dyn_cast<BlockArgument>(idx)) {
           if (isInvariantArg(arg, block) || !innermost)
@@ -375,18 +381,7 @@ static bool vectorizeExpr(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
       if (codegen) {
         VectorType vtp = vectorType(vl, arg.getType());
         Value veci = rewriter.create<vector::BroadcastOp>(loc, vtp, arg);
-        Value incr;
-        if (vl.enableVLAVectorization) {
-          Type stepvty = vectorType(vl, rewriter.getI64Type());
-          Value stepv = rewriter.create<LLVM::StepVectorOp>(loc, stepvty);
-          incr = rewriter.create<arith::IndexCastOp>(loc, vtp, stepv);
-        } else {
-          SmallVector<APInt> integers;
-          for (unsigned i = 0, l = vl.vectorLength; i < l; i++)
-            integers.push_back(APInt(/*width=*/64, i));
-          auto values = DenseElementsAttr::get(vtp, integers);
-          incr = rewriter.create<arith::ConstantOp>(loc, vtp, values);
-        }
+        Value incr = rewriter.create<vector::StepOp>(loc, vtp);
         vexp = rewriter.create<arith::AddIOp>(loc, veci, incr);
       }
       return true;
@@ -545,7 +540,7 @@ static bool vectorizeStmt(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
           forOp->getAttr(LoopEmitter::getLoopEmitterLoopAttrName()));
       rewriter.setInsertionPointToStart(forOpNew.getBody());
     } else {
-      rewriter.updateRootInPlace(forOp, [&]() { forOp.setStep(step); });
+      rewriter.modifyOpInPlace(forOp, [&]() { forOp.setStep(step); });
       rewriter.setInsertionPoint(yield);
     }
     vmask = genVectorMask(rewriter, loc, vl, forOp.getInductionVar(),

@@ -15,7 +15,7 @@
 # CHECK-INST: lr.w t0, (t1)
 lr.w t0, (t1)
 
-# CHECK-INST: c.addi a3, -32
+# CHECK-INST: c.addi a3, -0x20
 c.addi a3, -32
 
 # CHECK-INST: fmadd.d fa0, fa1, fa2, fa3, dyn
@@ -24,7 +24,7 @@ fmadd.d f10, f11, f12, f13, dyn
 # CHECK-INST: fmadd.s fa0, fa1, fa2, fa3, dyn
 fmadd.s f10, f11, f12, f13, dyn
 
-# CHECK-INST: addi ra, sp, 2
+# CHECK-INST: addi ra, sp, 0x2
 addi ra, sp, 2
 
 # CHECK-INST: mul a4, ra, s0

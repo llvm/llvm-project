@@ -122,7 +122,29 @@ bool mapSecondary(const Options &Options, uptr CommitBase, uptr CommitSize,
   Flags |= MAP_RESIZABLE;
   Flags |= MAP_ALLOWNOMEM;
 
-  const uptr MaxUnusedCacheBytes = MaxUnusedCachePages * getPageSizeCached();
+  const uptr PageSize = getPageSizeCached();
+  if (SCUDO_TRUSTY) {
+    /*
+     * On Trusty we need AllocPos to be usable for shared memory, which cannot
+     * cross multiple mappings. This means we need to split around AllocPos
+     * and not over it. We can only do this if the address is page-aligned.
+     */
+    const uptr TaggedSize = AllocPos - CommitBase;
+    if (useMemoryTagging<Config>(Options) && isAligned(TaggedSize, PageSize)) {
+      DCHECK_GT(TaggedSize, 0);
+      return MemMap.remap(CommitBase, TaggedSize, "scudo:secondary",
+                          MAP_MEMTAG | Flags) &&
+             MemMap.remap(AllocPos, CommitSize - TaggedSize, "scudo:secondary",
+                          Flags);
+    } else {
+      const uptr RemapFlags =
+          (useMemoryTagging<Config>(Options) ? MAP_MEMTAG : 0) | Flags;
+      return MemMap.remap(CommitBase, CommitSize, "scudo:secondary",
+                          RemapFlags);
+    }
+  }
+
+  const uptr MaxUnusedCacheBytes = MaxUnusedCachePages * PageSize;
   if (useMemoryTagging<Config>(Options) && CommitSize > MaxUnusedCacheBytes) {
     const uptr UntaggedPos = Max(AllocPos, CommitBase + MaxUnusedCacheBytes);
     return MemMap.remap(CommitBase, UntaggedPos - CommitBase, "scudo:secondary",
@@ -151,18 +173,18 @@ public:
 
 template <typename Config> class MapAllocatorCache {
 public:
-  using CacheConfig = typename Config::Secondary::Cache;
-
   void getStats(ScopedString *Str) {
     ScopedLock L(Mutex);
     uptr Integral;
     uptr Fractional;
     computePercentage(SuccessfulRetrieves, CallsToRetrieve, &Integral,
                       &Fractional);
-    Str->append("Stats: MapAllocatorCache: EntriesCount: %d, "
-                "MaxEntriesCount: %u, MaxEntrySize: %zu\n",
-                EntriesCount, atomic_load_relaxed(&MaxEntriesCount),
-                atomic_load_relaxed(&MaxEntrySize));
+    const s32 Interval = atomic_load_relaxed(&ReleaseToOsIntervalMs);
+    Str->append(
+        "Stats: MapAllocatorCache: EntriesCount: %d, "
+        "MaxEntriesCount: %u, MaxEntrySize: %zu, ReleaseToOsIntervalMs = %d\n",
+        EntriesCount, atomic_load_relaxed(&MaxEntriesCount),
+        atomic_load_relaxed(&MaxEntrySize), Interval >= 0 ? Interval : -1);
     Str->append("Stats: CacheRetrievalStats: SuccessRate: %u/%u "
                 "(%zu.%02zu%%)\n",
                 SuccessfulRetrieves, CallsToRetrieve, Integral, Fractional);
@@ -177,16 +199,19 @@ public:
   }
 
   // Ensure the default maximum specified fits the array.
-  static_assert(CacheConfig::DefaultMaxEntriesCount <=
-                    CacheConfig::EntriesArraySize,
+  static_assert(Config::getDefaultMaxEntriesCount() <=
+                    Config::getEntriesArraySize(),
                 "");
 
   void init(s32 ReleaseToOsInterval) NO_THREAD_SAFETY_ANALYSIS {
     DCHECK_EQ(EntriesCount, 0U);
     setOption(Option::MaxCacheEntriesCount,
-              static_cast<sptr>(CacheConfig::DefaultMaxEntriesCount));
+              static_cast<sptr>(Config::getDefaultMaxEntriesCount()));
     setOption(Option::MaxCacheEntrySize,
-              static_cast<sptr>(CacheConfig::DefaultMaxEntrySize));
+              static_cast<sptr>(Config::getDefaultMaxEntrySize()));
+    // The default value in the cache config has the higher priority.
+    if (Config::getDefaultReleaseToOsIntervalMs() != INT32_MIN)
+      ReleaseToOsInterval = Config::getDefaultReleaseToOsIntervalMs();
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
   }
 
@@ -231,9 +256,9 @@ public:
         // just unmap it.
         break;
       }
-      if (CacheConfig::QuarantineSize && useMemoryTagging<Config>(Options)) {
+      if (Config::getQuarantineSize() && useMemoryTagging<Config>(Options)) {
         QuarantinePos =
-            (QuarantinePos + 1) % Max(CacheConfig::QuarantineSize, 1u);
+            (QuarantinePos + 1) % Max(Config::getQuarantineSize(), 1u);
         if (!Quarantine[QuarantinePos].isValid()) {
           Quarantine[QuarantinePos] = Entry;
           return;
@@ -360,16 +385,17 @@ public:
   bool setOption(Option O, sptr Value) {
     if (O == Option::ReleaseInterval) {
       const s32 Interval = Max(
-          Min(static_cast<s32>(Value), CacheConfig::MaxReleaseToOsIntervalMs),
-          CacheConfig::MinReleaseToOsIntervalMs);
+          Min(static_cast<s32>(Value), Config::getMaxReleaseToOsIntervalMs()),
+          Config::getMinReleaseToOsIntervalMs());
       atomic_store_relaxed(&ReleaseToOsIntervalMs, Interval);
       return true;
     }
     if (O == Option::MaxCacheEntriesCount) {
-      const u32 MaxCount = static_cast<u32>(Value);
-      if (MaxCount > CacheConfig::EntriesArraySize)
+      if (Value < 0)
         return false;
-      atomic_store_relaxed(&MaxEntriesCount, MaxCount);
+      atomic_store_relaxed(
+          &MaxEntriesCount,
+          Min<u32>(static_cast<u32>(Value), Config::getEntriesArraySize()));
       return true;
     }
     if (O == Option::MaxCacheEntrySize) {
@@ -384,7 +410,7 @@ public:
 
   void disableMemoryTagging() EXCLUDES(Mutex) {
     ScopedLock L(Mutex);
-    for (u32 I = 0; I != CacheConfig::QuarantineSize; ++I) {
+    for (u32 I = 0; I != Config::getQuarantineSize(); ++I) {
       if (Quarantine[I].isValid()) {
         MemMapT &MemMap = Quarantine[I].MemMap;
         MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
@@ -409,11 +435,11 @@ public:
 
 private:
   void empty() {
-    MemMapT MapInfo[CacheConfig::EntriesArraySize];
+    MemMapT MapInfo[Config::getEntriesArraySize()];
     uptr N = 0;
     {
       ScopedLock L(Mutex);
-      for (uptr I = 0; I < CacheConfig::EntriesArraySize; I++) {
+      for (uptr I = 0; I < Config::getEntriesArraySize(); I++) {
         if (!Entries[I].isValid())
           continue;
         MapInfo[N] = Entries[I].MemMap;
@@ -446,9 +472,9 @@ private:
     if (!EntriesCount || OldestTime == 0 || OldestTime > Time)
       return;
     OldestTime = 0;
-    for (uptr I = 0; I < CacheConfig::QuarantineSize; I++)
+    for (uptr I = 0; I < Config::getQuarantineSize(); I++)
       releaseIfOlderThan(Quarantine[I], Time);
-    for (uptr I = 0; I < CacheConfig::EntriesArraySize; I++)
+    for (uptr I = 0; I < Config::getEntriesArraySize(); I++)
       releaseIfOlderThan(Entries[I], Time);
   }
 
@@ -463,8 +489,8 @@ private:
   u32 CallsToRetrieve GUARDED_BY(Mutex) = 0;
   u32 SuccessfulRetrieves GUARDED_BY(Mutex) = 0;
 
-  CachedBlock Entries[CacheConfig::EntriesArraySize] GUARDED_BY(Mutex) = {};
-  NonZeroLengthArray<CachedBlock, CacheConfig::QuarantineSize>
+  CachedBlock Entries[Config::getEntriesArraySize()] GUARDED_BY(Mutex) = {};
+  NonZeroLengthArray<CachedBlock, Config::getQuarantineSize()>
       Quarantine GUARDED_BY(Mutex) = {};
 };
 
@@ -533,7 +559,7 @@ public:
   void getStats(ScopedString *Str);
 
 private:
-  typename Config::Secondary::template CacheT<Config> Cache;
+  typename Config::template CacheT<typename Config::CacheConfig> Cache;
 
   mutable HybridMutex Mutex;
   DoublyLinkedList<LargeBlock::Header> InUseBlocks GUARDED_BY(Mutex);

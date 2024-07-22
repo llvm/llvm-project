@@ -244,7 +244,7 @@ private:
                             SynthesizedFilenameTok.getEndLoc())
               .toCharRange(SM),
           File, "SearchPath", "RelPath",
-          /*Imported=*/nullptr, Inc.FileKind);
+          /*SuggestedModule=*/nullptr, /*ModuleImported=*/false, Inc.FileKind);
       if (File)
         Delegate->FileSkipped(*File, SynthesizedFilenameTok, Inc.FileKind);
     }
@@ -360,7 +360,8 @@ void applyWarningOptions(llvm::ArrayRef<std::string> ExtraArgs,
   }
 }
 
-std::vector<Diag> getIncludeCleanerDiags(ParsedAST &AST, llvm::StringRef Code) {
+std::vector<Diag> getIncludeCleanerDiags(ParsedAST &AST, llvm::StringRef Code,
+                                         const ThreadsafeFS &TFS) {
   auto &Cfg = Config::current();
   if (Cfg.Diagnostics.SuppressAll)
     return {};
@@ -372,12 +373,13 @@ std::vector<Diag> getIncludeCleanerDiags(ParsedAST &AST, llvm::StringRef Code) {
       Cfg.Diagnostics.UnusedIncludes == Config::IncludesPolicy::None;
   if (SuppressMissing && SuppressUnused)
     return {};
-  auto Findings = computeIncludeCleanerFindings(AST);
+  auto Findings = computeIncludeCleanerFindings(
+      AST, Cfg.Diagnostics.Includes.AnalyzeAngledIncludes);
   if (SuppressMissing)
     Findings.MissingIncludes.clear();
   if (SuppressUnused)
     Findings.UnusedIncludes.clear();
-  return issueIncludeCleanerDiagnostics(AST, Code, Findings,
+  return issueIncludeCleanerDiagnostics(AST, Code, Findings, TFS,
                                         Cfg.Diagnostics.Includes.IgnoreHeader);
 }
 
@@ -444,6 +446,12 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
           L->sawDiagnostic(D, Diag);
       });
 
+  // Adjust header search options to load the built module files recorded
+  // in RequiredModules.
+  if (Preamble && Preamble->RequiredModules)
+    Preamble->RequiredModules->adjustHeaderSearchOptions(
+        CI->getHeaderSearchOpts());
+
   std::optional<PreamblePatch> Patch;
   // We might use an ignoring diagnostic consumer if they are going to be
   // dropped later on to not pay for extra latency by processing them.
@@ -457,6 +465,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
       std::move(CI), PreamblePCH,
       llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents, Filename), VFS,
       *DiagConsumer);
+
   if (!Clang) {
     // The last diagnostic contains information about the reason of this
     // failure.
@@ -625,7 +634,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     // (e.g. incomplete type) and attach include insertion fixes to diagnostics.
     if (Inputs.Index && !BuildDir.getError()) {
       auto Style =
-          getFormatStyleForFile(Filename, Inputs.Contents, *Inputs.TFS);
+          getFormatStyleForFile(Filename, Inputs.Contents, *Inputs.TFS, false);
       auto Inserter = std::make_shared<IncludeInserter>(
           Filename, Inputs.Contents, Style, BuildDir.get(),
           &Clang->getPreprocessor().getHeaderSearchInfo());
@@ -653,6 +662,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   }
 
   IncludeStructure Includes;
+  include_cleaner::PragmaIncludes PI;
   // If we are using a preamble, copy existing includes.
   if (Preamble) {
     Includes = Preamble->Includes;
@@ -660,11 +670,15 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     // Replay the preamble includes so that clang-tidy checks can see them.
     ReplayPreamble::attach(Patch->preambleIncludes(), *Clang,
                            Patch->modifiedBounds());
+    PI = *Preamble->Pragmas;
   }
   // Important: collectIncludeStructure is registered *after* ReplayPreamble!
   // Otherwise we would collect the replayed includes again...
   // (We can't *just* use the replayed includes, they don't have Resolved path).
   Includes.collect(*Clang);
+  // Same for pragma-includes, we're already inheriting preamble includes, so we
+  // should only receive callbacks for non-preamble mainfile includes.
+  PI.record(*Clang);
   // Copy over the macros in the preamble region of the main file, and combine
   // with non-preamble macros below.
   MainFileMacros Macros;
@@ -735,8 +749,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   ParsedAST Result(Filename, Inputs.Version, std::move(Preamble),
                    std::move(Clang), std::move(Action), std::move(Tokens),
                    std::move(Macros), std::move(Marks), std::move(ParsedDecls),
-                   std::move(Diags), std::move(Includes));
-  llvm::move(getIncludeCleanerDiags(Result, Inputs.Contents),
+                   std::move(Diags), std::move(Includes), std::move(PI));
+  llvm::move(getIncludeCleanerDiags(Result, Inputs.Contents, *Inputs.TFS),
              std::back_inserter(Result.Diags));
   return std::move(Result);
 }
@@ -828,23 +842,21 @@ ParsedAST::ParsedAST(PathRef TUPath, llvm::StringRef Version,
                      syntax::TokenBuffer Tokens, MainFileMacros Macros,
                      std::vector<PragmaMark> Marks,
                      std::vector<Decl *> LocalTopLevelDecls,
-                     std::vector<Diag> Diags, IncludeStructure Includes)
+                     std::vector<Diag> Diags, IncludeStructure Includes,
+                     include_cleaner::PragmaIncludes PI)
     : TUPath(TUPath), Version(Version), Preamble(std::move(Preamble)),
       Clang(std::move(Clang)), Action(std::move(Action)),
       Tokens(std::move(Tokens)), Macros(std::move(Macros)),
       Marks(std::move(Marks)), Diags(std::move(Diags)),
       LocalTopLevelDecls(std::move(LocalTopLevelDecls)),
-      Includes(std::move(Includes)) {
-  Resolver = std::make_unique<HeuristicResolver>(getASTContext());
+      Includes(std::move(Includes)), PI(std::move(PI)),
+      Resolver(std::make_unique<HeuristicResolver>(getASTContext())) {
   assert(this->Clang);
   assert(this->Action);
 }
 
-std::shared_ptr<const include_cleaner::PragmaIncludes>
-ParsedAST::getPragmaIncludes() const {
-  if (!Preamble)
-    return nullptr;
-  return Preamble->Pragmas;
+const include_cleaner::PragmaIncludes &ParsedAST::getPragmaIncludes() const {
+  return PI;
 }
 
 std::optional<llvm::StringRef> ParsedAST::preambleVersion() const {

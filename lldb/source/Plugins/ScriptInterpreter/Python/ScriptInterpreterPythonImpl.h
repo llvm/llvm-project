@@ -78,32 +78,7 @@ public:
   CreateScriptCommandObject(const char *class_name) override;
 
   StructuredData::ObjectSP
-  CreateScriptedThreadPlan(const char *class_name,
-                           const StructuredDataImpl &args_data,
-                           std::string &error_str,
-                           lldb::ThreadPlanSP thread_plan) override;
-
-  StructuredData::ObjectSP
   CreateStructuredDataFromScriptObject(ScriptObject obj) override;
-
-  bool ScriptedThreadPlanExplainsStop(StructuredData::ObjectSP implementor_sp,
-                                      Event *event,
-                                      bool &script_error) override;
-
-  bool ScriptedThreadPlanShouldStop(StructuredData::ObjectSP implementor_sp,
-                                    Event *event, bool &script_error) override;
-
-  bool ScriptedThreadPlanIsStale(StructuredData::ObjectSP implementor_sp,
-                                 bool &script_error) override;
-
-  lldb::StateType
-  ScriptedThreadPlanGetRunState(StructuredData::ObjectSP implementor_sp,
-                                bool &script_error) override;
-
-  bool
-  ScriptedThreadPlanGetStopDescription(StructuredData::ObjectSP implementor_sp,
-                                lldb_private::Stream *s,
-                                bool &script_error) override;
 
   StructuredData::GenericSP
   CreateScriptedBreakpointResolver(const char *class_name,
@@ -135,6 +110,9 @@ public:
   lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() override;
 
   lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
+
+  lldb::ScriptedThreadPlanInterfaceSP
+  CreateScriptedThreadPlanInterface() override;
 
   lldb::OperatingSystemInterfaceSP CreateOperatingSystemInterface() override;
 
@@ -182,6 +160,16 @@ public:
       lldb_private::CommandReturnObject &cmd_retobj, Status &error,
       const lldb_private::ExecutionContext &exe_ctx) override;
 
+  bool RunScriptBasedParsedCommand(
+      StructuredData::GenericSP impl_obj_sp, Args &args,
+      ScriptedCommandSynchronicity synchronicity,
+      lldb_private::CommandReturnObject &cmd_retobj, Status &error,
+      const lldb_private::ExecutionContext &exe_ctx) override;
+
+  std::optional<std::string>
+  GetRepeatCommandForScriptedCommand(StructuredData::GenericSP impl_obj_sp,
+                                     Args &args) override;
+
   Status GenerateFunction(const char *signature, const StringList &input,
                           bool is_callback) override;
 
@@ -212,6 +200,20 @@ public:
 
   bool GetLongHelpForCommandObject(StructuredData::GenericSP cmd_obj_sp,
                                    std::string &dest) override;
+                                   
+  StructuredData::ObjectSP
+  GetOptionsForCommandObject(StructuredData::GenericSP cmd_obj_sp) override;
+
+  StructuredData::ObjectSP
+  GetArgumentsForCommandObject(StructuredData::GenericSP cmd_obj_sp) override;
+
+  bool SetOptionValueForCommandObject(StructuredData::GenericSP cmd_obj_sp,
+                                      ExecutionContext *exe_ctx,
+                                      llvm::StringRef long_option, 
+                                      llvm::StringRef value) override;
+
+  void OptionParsingStartedForCommandObject(
+      StructuredData::GenericSP cmd_obj_sp) override;
 
   bool CheckObjectExists(const char *name) override {
     if (!name || !name[0])

@@ -206,6 +206,12 @@ libc++ specific options
 
   Toggle the installation of the libc++ headers.
 
+.. option:: LIBCXX_INSTALL_MODULES:BOOL
+
+  **Default**: ``ON``
+
+  Toggle the installation of the experimental libc++ module sources.
+
 .. option:: LIBCXX_ENABLE_SHARED:BOOL
 
   **Default**: ``ON``
@@ -337,7 +343,7 @@ ABI Library Specific Options
 
 .. option:: LIBCXXABI_USE_LLVM_UNWINDER:BOOL
 
-  **Default**: ``OFF``
+  **Default**: ``ON``
 
   Build and use the LLVM unwinder. Note: This option can only be used when
   libc++abi is the C++ ABI library used.
@@ -393,21 +399,14 @@ libc++ Feature Options
   since the primary use of ``check-cxx-benchmarks`` is to get test and sanitizer coverage, not to
   get accurate measurements.
 
-.. option:: LIBCXX_BENCHMARK_NATIVE_STDLIB:STRING
+.. option:: LIBCXX_ASSERTION_HANDLER_FILE:PATH
 
-  **Default**:: ``""``
+  **Default**:: ``"${CMAKE_CURRENT_SOURCE_DIR}/vendor/llvm/default_assertion_handler.in"``
 
-  **Values**:: ``libc++``, ``libstdc++``
-
-  Build the libc++ benchmark tests and Google Benchmark library against the
-  specified standard library on the platform. On Linux this can be used to
-  compare libc++ to libstdc++ by building the benchmark tests against both
-  standard libraries.
-
-.. option:: LIBCXX_BENCHMARK_NATIVE_GCC_TOOLCHAIN:STRING
-
-  Use the specified GCC toolchain and standard library when building the native
-  stdlib benchmark tests.
+  Specify the path to a header that contains a custom implementation of the
+  assertion handler that gets invoked when a hardening assertion fails. If
+  provided, this header will be included by the library, replacing the
+  default assertion handler.
 
 
 libc++ ABI Feature Options
@@ -473,6 +472,40 @@ LLVM-specific options
   others.
 
 
+.. _assertion-handler:
+
+Overriding the default assertion handler
+========================================
+
+When the library wants to terminate due to a hardening assertion failure, the
+program is aborted by invoking a trap instruction (or in debug mode, by
+a special verbose termination function that prints an error message and calls
+``std::abort()``). This is done to minimize the code size impact of enabling
+hardening in the library. However, vendors can also override that mechanism at
+CMake configuration time.
+
+Under the hood, a hardening assertion will invoke the
+``_LIBCPP_ASSERTION_HANDLER`` macro upon failure. A vendor may provide a header
+that contains a custom definition of this macro and specify the path to the
+header via the ``LIBCXX_ASSERTION_HANDLER_FILE`` CMake variable. If provided,
+this header will be included by the library and replace the default
+implementation. The header must not include any standard library headers
+(directly or transitively) because doing so will almost always create a circular
+dependency. The ``_LIBCPP_ASSERTION_HANDLER(message)`` macro takes a single
+parameter that contains an error message explaining the hardening failure and
+some details about the source location that triggered it.
+
+When a hardening assertion fails, it means that the program is about to invoke
+library undefined behavior. For this reason, the custom assertion handler is
+generally expected to terminate the program. If a custom assertion handler
+decides to avoid doing so (e.g. it chooses to log and continue instead), it does
+so at its own risk -- this approach should only be used in non-production builds
+and with an understanding of potential consequences. Furthermore, the custom
+assertion handler should not throw any exceptions as it may be invoked from
+standard library functions that are marked ``noexcept`` (so throwing will result
+in ``std::terminate`` being called).
+
+
 Using Alternate ABI libraries
 =============================
 
@@ -520,6 +553,7 @@ We can now run CMake:
   $ cmake -G Ninja -S runtimes -B build       \
     -DLLVM_ENABLE_RUNTIMES="libcxx"           \
     -DLIBCXX_CXX_ABI=libstdc++                \
+    -DLIBCXXABI_USE_LLVM_UNWINDER=OFF         \
     -DLIBCXX_CXX_ABI_INCLUDE_PATHS="/usr/include/c++/4.7/;/usr/include/c++/4.7/x86_64-linux-gnu/"
   $ ninja -C build install-cxx
 
@@ -546,6 +580,8 @@ We can now run CMake like:
   $ cmake -G Ninja -S runtimes -B build                               \
           -DLLVM_ENABLE_RUNTIMES="libcxx"                             \
           -DLIBCXX_CXX_ABI=libcxxrt                                   \
+          -DLIBCXX_ENABLE_NEW_DELETE_DEFINITIONS=ON                   \
+          -DLIBCXXABI_USE_LLVM_UNWINDER=OFF                           \
           -DLIBCXX_CXX_ABI_INCLUDE_PATHS=path/to/libcxxrt-sources/src
   $ ninja -C build install-cxx
 

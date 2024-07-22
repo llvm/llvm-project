@@ -197,7 +197,7 @@ OptTable::suggestValueCompletions(StringRef Option, StringRef Arg) const {
 
     std::vector<std::string> Result;
     for (StringRef Val : Candidates)
-      if (Val.starts_with(Arg) && Arg.compare(Val))
+      if (Val.starts_with(Arg) && Arg != Val)
         Result.push_back(std::string(Val));
     return Result;
   }
@@ -664,15 +664,24 @@ static void PrintHelpOptionList(raw_ostream &OS, StringRef Title,
   const unsigned InitialPad = 2;
   for (const OptionInfo &Opt : OptionHelp) {
     const std::string &Option = Opt.Name;
-    int Pad = OptionFieldWidth - int(Option.size());
+    int Pad = OptionFieldWidth + InitialPad;
+    int FirstLinePad = OptionFieldWidth - int(Option.size());
     OS.indent(InitialPad) << Option;
 
     // Break on long option names.
-    if (Pad < 0) {
+    if (FirstLinePad < 0) {
       OS << "\n";
-      Pad = OptionFieldWidth + InitialPad;
+      FirstLinePad = OptionFieldWidth + InitialPad;
+      Pad = FirstLinePad;
     }
-    OS.indent(Pad + 1) << Opt.HelpText << '\n';
+
+    SmallVector<StringRef> Lines;
+    Opt.HelpText.split(Lines, '\n');
+    assert(Lines.size() && "Expected at least the first line in the help text");
+    auto *LinesIt = Lines.begin();
+    OS.indent(FirstLinePad + 1) << *LinesIt << '\n';
+    while (Lines.end() != ++LinesIt)
+      OS.indent(Pad + 1) << *LinesIt << '\n';
   }
 }
 
@@ -701,7 +710,8 @@ void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
       OS, Usage, Title, ShowHidden, ShowAllAliases,
       [VisibilityMask](const Info &CandidateInfo) -> bool {
         return (CandidateInfo.Visibility & VisibilityMask) == 0;
-      });
+      },
+      VisibilityMask);
 }
 
 void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
@@ -717,13 +727,14 @@ void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
         if (CandidateInfo.Flags & FlagsToExclude)
           return true;
         return false;
-      });
+      },
+      Visibility(0));
 }
 
 void OptTable::internalPrintHelp(
     raw_ostream &OS, const char *Usage, const char *Title, bool ShowHidden,
-    bool ShowAllAliases,
-    std::function<bool(const Info &)> ExcludeOption) const {
+    bool ShowAllAliases, std::function<bool(const Info &)> ExcludeOption,
+    Visibility VisibilityMask) const {
   OS << "OVERVIEW: " << Title << "\n\n";
   OS << "USAGE: " << Usage << "\n\n";
 
@@ -745,11 +756,11 @@ void OptTable::internalPrintHelp(
 
     // If an alias doesn't have a help text, show a help text for the aliased
     // option instead.
-    const char *HelpText = getOptionHelpText(Id);
+    const char *HelpText = getOptionHelpText(Id, VisibilityMask);
     if (!HelpText && ShowAllAliases) {
       const Option Alias = getOption(Id).getAlias();
       if (Alias.isValid())
-        HelpText = getOptionHelpText(Alias.getID());
+        HelpText = getOptionHelpText(Alias.getID(), VisibilityMask);
     }
 
     if (HelpText && (strlen(HelpText) != 0)) {

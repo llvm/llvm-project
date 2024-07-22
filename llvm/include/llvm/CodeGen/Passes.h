@@ -44,7 +44,7 @@ namespace llvm {
   /// AtomicExpandPass - At IR level this pass replace atomic instructions with
   /// __atomic_* library calls, or target specific instruction which implement the
   /// same semantics in a way which better fits the target backend.
-  FunctionPass *createAtomicExpandPass();
+  FunctionPass *createAtomicExpandLegacyPass();
 
   /// createUnreachableBlockEliminationPass - The LLVM code generator does not
   /// work well with unreachable basic blocks (what live ranges make sense for a
@@ -93,9 +93,9 @@ namespace llvm {
   MachineFunctionPass *createResetMachineFunctionPass(bool EmitFallbackDiag,
                                                       bool AbortOnFailedISel);
 
-  /// createCodeGenPreparePass - Transform the code to expose more pattern
+  /// createCodeGenPrepareLegacyPass - Transform the code to expose more pattern
   /// matching during instruction selection.
-  FunctionPass *createCodeGenPreparePass();
+  FunctionPass *createCodeGenPrepareLegacyPass();
 
   /// This pass implements generation of target-specific intrinsics to support
   /// handling of complex number arithmetic
@@ -196,24 +196,29 @@ namespace llvm {
   /// This pass reads flow sensitive profile.
   extern char &MIRProfileLoaderPassID;
 
+  // This pass gives undef values a Pseudo Instruction definition for
+  // Instructions to ensure early-clobber is followed when using the greedy
+  // register allocator.
+  extern char &InitUndefID;
+
   /// FastRegisterAllocation Pass - This pass register allocates as fast as
   /// possible. It is best suited for debug code where live ranges are short.
   ///
   FunctionPass *createFastRegisterAllocator();
-  FunctionPass *createFastRegisterAllocator(RegClassFilterFunc F,
+  FunctionPass *createFastRegisterAllocator(RegAllocFilterFunc F,
                                             bool ClearVirtRegs);
 
   /// BasicRegisterAllocation Pass - This pass implements a degenerate global
   /// register allocator using the basic regalloc framework.
   ///
   FunctionPass *createBasicRegisterAllocator();
-  FunctionPass *createBasicRegisterAllocator(RegClassFilterFunc F);
+  FunctionPass *createBasicRegisterAllocator(RegAllocFilterFunc F);
 
   /// Greedy register allocation pass - This pass implements a global register
   /// allocator for optimized builds.
   ///
   FunctionPass *createGreedyRegisterAllocator();
-  FunctionPass *createGreedyRegisterAllocator(RegClassFilterFunc F);
+  FunctionPass *createGreedyRegisterAllocator(RegAllocFilterFunc F);
 
   /// PBQPRegisterAllocation Pass - This pass implements the Partitioned Boolean
   /// Quadratic Prograaming (PBQP) based register allocator.

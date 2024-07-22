@@ -10,13 +10,13 @@
 // CHECK-NEXT:    [[VA:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[V:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[FMT]], ptr [[FMT_ADDR]], align 4
-// CHECK-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[VA]])
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARGP_CUR]], align 4
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[V]], align 4
-// CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
+// CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[VA]])
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[V]], align 4
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
@@ -38,7 +38,7 @@ int test_i32(char *fmt, ...) {
 // CHECK-NEXT:    [[VA:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[V:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    store ptr [[FMT]], ptr [[FMT_ADDR]], align 4
-// CHECK-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[VA]])
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 7
 // CHECK-NEXT:    [[ARGP_CUR_ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr [[TMP0]], i32 -8)
@@ -46,7 +46,7 @@ int test_i32(char *fmt, ...) {
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[ARGP_CUR_ALIGNED]], align 8
 // CHECK-NEXT:    store i64 [[TMP1]], ptr [[V]], align 8
-// CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
+// CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[VA]])
 // CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[V]], align 8
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
@@ -68,18 +68,18 @@ struct S {
 };
 
 // CHECK-LABEL: define {{[^@]+}}@test_struct
-// CHECK-SAME: (ptr noalias sret([[STRUCT_S:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr noundef [[FMT:%.*]], ...) #[[ATTR0]] {
+// CHECK-SAME: (ptr dead_on_unwind noalias writable sret([[STRUCT_S:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr noundef [[FMT:%.*]], ...) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[FMT_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[VA:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    store ptr [[FMT]], ptr [[FMT_ADDR]], align 4
-// CHECK-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[VA]])
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGP_CUR]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_RESULT]], ptr align 4 [[TMP0]], i32 12, i1 false)
-// CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
+// CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[VA]])
 // CHECK-NEXT:    ret void
 //
 struct S test_struct(char *fmt, ...) {
@@ -96,13 +96,13 @@ struct S test_struct(char *fmt, ...) {
 struct Z {};
 
 // CHECK-LABEL: define {{[^@]+}}@test_empty_struct
-// CHECK-SAME: (ptr noalias sret([[STRUCT_S:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr noundef [[FMT:%.*]], ...) #[[ATTR0]] {
+// CHECK-SAME: (ptr dead_on_unwind noalias writable sret([[STRUCT_S:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr noundef [[FMT:%.*]], ...) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[FMT_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[VA:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[U:%.*]] = alloca [[STRUCT_Z:%.*]], align 1
 // CHECK-NEXT:    store ptr [[FMT]], ptr [[FMT_ADDR]], align 4
-// CHECK-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[VA]])
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 0
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
@@ -112,7 +112,7 @@ struct Z {};
 // CHECK-NEXT:    store ptr [[ARGP_NEXT2]], ptr [[VA]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGP_CUR1]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_RESULT]], ptr align 4 [[TMP0]], i32 12, i1 false)
-// CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
+// CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[VA]])
 // CHECK-NEXT:    ret void
 //
 struct S test_empty_struct(char *fmt, ...) {

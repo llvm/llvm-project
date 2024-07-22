@@ -136,7 +136,8 @@ RValue EmitDevicePrintfCallExpr(const CallExpr *E, CodeGenFunction *CGF,
                                 llvm::Function *Decl, bool WithSizeArg) {
   CodeGenModule &CGM = CGF->CGM;
   CGBuilderTy &Builder = CGF->Builder;
-  assert(E->getBuiltinCallee() == Builtin::BIprintf);
+  assert(E->getBuiltinCallee() == Builtin::BIprintf ||
+         E->getBuiltinCallee() == Builtin::BI__builtin_printf);
   assert(E->getNumArgs() >= 1); // printf always has at least one arg.
 
   // Uses the same format as nvptx for the argument packing, but also passes
@@ -178,7 +179,9 @@ RValue CodeGenFunction::EmitNVPTXDevicePrintfCallExpr(const CallExpr *E) {
 }
 
 RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
-  assert(getTarget().getTriple().getArch() == llvm::Triple::amdgcn);
+  assert(getTarget().getTriple().isAMDGCN() ||
+         (getTarget().getTriple().isSPIRV() &&
+          getTarget().getTriple().getVendor() == llvm::Triple::AMD));
   assert(E->getBuiltinCallee() == Builtin::BIprintf ||
          E->getBuiltinCallee() == Builtin::BI__builtin_printf);
   assert(E->getNumArgs() >= 1); // printf always has at least one arg.

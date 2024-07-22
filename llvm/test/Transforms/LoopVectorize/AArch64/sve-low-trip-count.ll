@@ -6,8 +6,6 @@ define void @trip7_i64(ptr noalias nocapture noundef %dst, ptr noalias nocapture
 ; CHECK-LABEL: @trip7_i64(
 ; CHECK:         = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    = mul i64
-; CHECK:         = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    = mul i64
 ; CHECK:         [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[VF:%.*]] = mul i64 [[VSCALE]], 2
 ; CHECK:       vector.body:

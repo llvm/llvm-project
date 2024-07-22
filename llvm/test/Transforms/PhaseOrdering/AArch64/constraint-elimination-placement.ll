@@ -5,7 +5,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-macosx"
 
 define i1 @test_order_1(ptr %this, ptr noalias %other, i1 %tobool9.not, i32 %call) {
-; CHECK-LABEL: define i1 @test_order_1(
+; CHECK-LABEL: define noundef i1 @test_order_1(
 ; CHECK-SAME: ptr nocapture writeonly [[THIS:%.*]], ptr noalias [[OTHER:%.*]], i1 [[TOBOOL9_NOT:%.*]], i32 [[CALL:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[TOBOOL9_NOT]], label [[EXIT:%.*]], label [[FOR_COND_PREHEADER:%.*]]
@@ -100,19 +100,19 @@ define void @test2(ptr %this) #0 {
 ; CHECK-NEXT:    [[CALL2_I_I:%.*]] = load i64, ptr inttoptr (i64 8 to ptr), align 8
 ; CHECK-NEXT:    [[COND_I_I:%.*]] = select i1 [[CALL1_I_I]], i64 [[CALL2_I_I]], i64 0
 ; CHECK-NEXT:    switch i64 [[COND_I_I]], label [[COMMON_RET:%.*]] [
-; CHECK-NEXT:    i64 11, label [[IF_END_I:%.*]]
-; CHECK-NEXT:    i64 13, label [[TEST2_FN2_EXIT12:%.*]]
-; CHECK-NEXT:    i64 17, label [[IF_END_I31:%.*]]
+; CHECK-NEXT:      i64 11, label [[IF_END_I:%.*]]
+; CHECK-NEXT:      i64 13, label [[TEST2_FN2_EXIT12:%.*]]
+; CHECK-NEXT:      i64 17, label [[IF_END_I31:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.end.i:
-; CHECK-NEXT:    [[CALL8_I_I:%.*]] = tail call fastcc i32 @test2_fn6()
+; CHECK-NEXT:    [[CALL8_I_I:%.*]] = tail call fastcc noundef i32 @test2_fn6()
 ; CHECK-NEXT:    [[TRUNC_I_I:%.*]] = trunc i32 [[CALL8_I_I]] to i8
 ; CHECK-NEXT:    [[CALL1_I1_I:%.*]] = tail call i1 @test2_fn4(i8 [[TRUNC_I_I]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[CALL1_I1_I]], true
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       test2_fn2.exit12:
-; CHECK-NEXT:    [[CALL8_I_I8:%.*]] = tail call fastcc i32 @test2_fn6()
+; CHECK-NEXT:    [[CALL8_I_I8:%.*]] = tail call fastcc noundef i32 @test2_fn6()
 ; CHECK-NEXT:    [[TRUNC_I_I9:%.*]] = trunc i32 [[CALL8_I_I8]] to i8
 ; CHECK-NEXT:    [[CALL1_I1_I10:%.*]] = tail call i1 @test2_fn4(i8 [[TRUNC_I_I9]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[CALL1_I1_I10]], true
@@ -125,11 +125,11 @@ define void @test2(ptr %this) #0 {
 ; CHECK-NEXT:    store i8 0, ptr [[THIS]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       if.end.i31:
-; CHECK-NEXT:    [[DOTPRE:%.*]] = tail call fastcc i32 @test2_fn6()
-; CHECK-NEXT:    [[DOTPRE38:%.*]] = trunc i32 [[DOTPRE]] to i8
-; CHECK-NEXT:    [[DOTPRE39:%.*]] = tail call i1 @test2_fn4(i8 [[DOTPRE38]])
-; CHECK-NEXT:    [[DOTPRE40:%.*]] = xor i1 [[DOTPRE39]], true
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[DOTPRE40]])
+; CHECK-NEXT:    [[CALL8_I_I32:%.*]] = tail call fastcc noundef i32 @test2_fn6()
+; CHECK-NEXT:    [[TRUNC_I_I33:%.*]] = trunc i32 [[CALL8_I_I32]] to i8
+; CHECK-NEXT:    [[CALL1_I1_I34:%.*]] = tail call i1 @test2_fn4(i8 [[TRUNC_I_I33]])
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[CALL1_I1_I34]], true
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
@@ -152,7 +152,7 @@ if.else21:                                        ; preds = %entry
 }
 
 define i1 @test2_fn2(ptr %__rhs) #0 {
-; CHECK-LABEL: define i1 @test2_fn2(
+; CHECK-LABEL: define noundef i1 @test2_fn2(
 ; CHECK-SAME: ptr nocapture readonly [[__RHS:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[__RHS]])
@@ -162,7 +162,7 @@ define i1 @test2_fn2(ptr %__rhs) #0 {
 ; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i64 [[CALL]], [[COND_I]]
 ; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[IF_END:%.*]], label [[CLEANUP:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[CALL8_I:%.*]] = tail call fastcc i32 @test2_fn6()
+; CHECK-NEXT:    [[CALL8_I:%.*]] = tail call fastcc noundef i32 @test2_fn6()
 ; CHECK-NEXT:    [[TRUNC_I:%.*]] = trunc i32 [[CALL8_I]] to i8
 ; CHECK-NEXT:    [[CALL1_I1:%.*]] = tail call i1 @test2_fn4(i8 [[TRUNC_I]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[CALL1_I1]], true
@@ -231,7 +231,7 @@ entry:
 }
 
 define internal i32 @test2_fn6() {
-; CHECK-LABEL: define internal fastcc i32 @test2_fn6(
+; CHECK-LABEL: define internal fastcc noundef i32 @test2_fn6(
 ; CHECK-SAME: ) unnamed_addr #[[ATTR5]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i32 0

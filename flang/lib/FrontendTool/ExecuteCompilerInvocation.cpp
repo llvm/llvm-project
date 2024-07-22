@@ -59,6 +59,8 @@ createFrontendAction(CompilerInstance &ci) {
     return std::make_unique<DebugUnparseNoSemaAction>();
   case DebugUnparseWithSymbols:
     return std::make_unique<DebugUnparseWithSymbolsAction>();
+  case DebugUnparseWithModules:
+    return std::make_unique<DebugUnparseWithModulesAction>();
   case DebugDumpSymbols:
     return std::make_unique<DebugDumpSymbolsAction>();
   case DebugDumpParseTree:

@@ -323,11 +323,7 @@ void TextOutputSection::finalize() {
       thunkInfo.isec =
           makeSyntheticInputSection(isec->getSegName(), isec->getName());
       thunkInfo.isec->parent = this;
-
-      // This code runs after dead code removal. Need to set the `live` bit
-      // on the thunk isec so that asserts that check that only live sections
-      // get written are happy.
-      thunkInfo.isec->live = true;
+      assert(thunkInfo.isec->live);
 
       StringRef thunkName = saver().save(funcSym->getName() + ".thunk." +
                                          std::to_string(thunkInfo.sequence++));

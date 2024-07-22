@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -S -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s
 
 // Make sure global variable for ctors exist for lib profile.
 // CHECK:@llvm.global_ctors

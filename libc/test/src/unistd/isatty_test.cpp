@@ -21,7 +21,7 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 TEST(LlvmLibcIsATTYTest, StdInOutTests) {
   // If stdin is connected to a terminal, assume that all of the standard i/o
   // fds are.
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   if (LIBC_NAMESPACE::isatty(0)) {
     EXPECT_THAT(LIBC_NAMESPACE::isatty(0), Succeeds(1)); // stdin
     EXPECT_THAT(LIBC_NAMESPACE::isatty(1), Succeeds(1)); // stdout
@@ -34,26 +34,28 @@ TEST(LlvmLibcIsATTYTest, StdInOutTests) {
 }
 
 TEST(LlvmLibcIsATTYTest, BadFdTest) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   EXPECT_THAT(LIBC_NAMESPACE::isatty(-1), Fails(EBADF, 0)); // invalid fd
 }
 
 TEST(LlvmLibcIsATTYTest, DevTTYTest) {
-  constexpr const char *TTY_FILE = "/dev/tty";
-  libc_errno = 0;
+  constexpr const char *FILENAME = "/dev/tty";
+  auto TTY_FILE = libc_make_test_file_path(FILENAME);
+  LIBC_NAMESPACE::libc_errno = 0;
   int fd = LIBC_NAMESPACE::open(TTY_FILE, O_RDONLY);
   if (fd > 0) {
-    ASSERT_EQ(libc_errno, 0);
+    ASSERT_ERRNO_SUCCESS();
     EXPECT_THAT(LIBC_NAMESPACE::isatty(fd), Succeeds(1));
     ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
   }
 }
 
 TEST(LlvmLibcIsATTYTest, FileTest) {
-  constexpr const char *TEST_FILE = "testdata/isatty.test";
-  libc_errno = 0;
+  constexpr const char *FILENAME = "isatty.test";
+  auto TEST_FILE = libc_make_test_file_path(FILENAME);
+  LIBC_NAMESPACE::libc_errno = 0;
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   EXPECT_THAT(LIBC_NAMESPACE::isatty(fd), Fails(ENOTTY, 0));
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));

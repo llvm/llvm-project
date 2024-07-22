@@ -60,7 +60,7 @@ bool NVPTXLowerAggrCopies::runOnFunction(Function &F) {
   SmallVector<LoadInst *, 4> AggrLoads;
   SmallVector<MemIntrinsic *, 4> MemCalls;
 
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   LLVMContext &Context = F.getParent()->getContext();
   const TargetTransformInfo &TTI =
       getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);

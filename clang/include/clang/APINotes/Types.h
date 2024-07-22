@@ -55,16 +55,20 @@ public:
   std::string UnavailableMsg;
 
   /// Whether this entity is marked unavailable.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Unavailable : 1;
 
   /// Whether this entity is marked unavailable in Swift.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UnavailableInSwift : 1;
 
 private:
   /// Whether SwiftPrivate was specified.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftPrivateSpecified : 1;
 
   /// Whether this entity is considered "private" to a Swift overlay.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftPrivate : 1;
 
 public:
@@ -188,25 +192,33 @@ inline bool operator!=(const CommonTypeInfo &LHS, const CommonTypeInfo &RHS) {
   return !(LHS == RHS);
 }
 
-/// Describes API notes data for an Objective-C class or protocol.
-class ObjCContextInfo : public CommonTypeInfo {
+/// Describes API notes data for an Objective-C class or protocol or a C++
+/// namespace.
+class ContextInfo : public CommonTypeInfo {
   /// Whether this class has a default nullability.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasDefaultNullability : 1;
 
   /// The default nullability.
+  LLVM_PREFERRED_TYPE(NullabilityKind)
   unsigned DefaultNullability : 2;
 
   /// Whether this class has designated initializers recorded.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasDesignatedInits : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftImportAsNonGenericSpecified : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftImportAsNonGeneric : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftObjCMembersSpecified : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftObjCMembers : 1;
 
 public:
-  ObjCContextInfo()
+  ContextInfo()
       : HasDefaultNullability(0), DefaultNullability(0), HasDesignatedInits(0),
         SwiftImportAsNonGenericSpecified(false), SwiftImportAsNonGeneric(false),
         SwiftObjCMembersSpecified(false), SwiftObjCMembers(false) {}
@@ -251,16 +263,9 @@ public:
     SwiftObjCMembers = Value.value_or(false);
   }
 
-  /// Strip off any information within the class information structure that is
-  /// module-local, such as 'audited' flags.
-  void stripModuleLocalInfo() {
-    HasDefaultNullability = false;
-    DefaultNullability = 0;
-  }
+  friend bool operator==(const ContextInfo &, const ContextInfo &);
 
-  friend bool operator==(const ObjCContextInfo &, const ObjCContextInfo &);
-
-  ObjCContextInfo &operator|=(const ObjCContextInfo &RHS) {
+  ContextInfo &operator|=(const ContextInfo &RHS) {
     // Merge inherited info.
     static_cast<CommonTypeInfo &>(*this) |= RHS;
 
@@ -283,7 +288,7 @@ public:
   LLVM_DUMP_METHOD void dump(llvm::raw_ostream &OS);
 };
 
-inline bool operator==(const ObjCContextInfo &LHS, const ObjCContextInfo &RHS) {
+inline bool operator==(const ContextInfo &LHS, const ContextInfo &RHS) {
   return static_cast<const CommonTypeInfo &>(LHS) == RHS &&
          LHS.getDefaultNullability() == RHS.getDefaultNullability() &&
          LHS.HasDesignatedInits == RHS.HasDesignatedInits &&
@@ -291,17 +296,19 @@ inline bool operator==(const ObjCContextInfo &LHS, const ObjCContextInfo &RHS) {
          LHS.getSwiftObjCMembers() == RHS.getSwiftObjCMembers();
 }
 
-inline bool operator!=(const ObjCContextInfo &LHS, const ObjCContextInfo &RHS) {
+inline bool operator!=(const ContextInfo &LHS, const ContextInfo &RHS) {
   return !(LHS == RHS);
 }
 
 /// API notes for a variable/property.
 class VariableInfo : public CommonEntityInfo {
   /// Whether this property has been audited for nullability.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NullabilityAudited : 1;
 
   /// The kind of nullability for this property. Only valid if the nullability
   /// has been audited.
+  LLVM_PREFERRED_TYPE(NullabilityKind)
   unsigned Nullable : 2;
 
   /// The C type of the variable, as a string.
@@ -352,7 +359,9 @@ inline bool operator!=(const VariableInfo &LHS, const VariableInfo &RHS) {
 
 /// Describes API notes data for an Objective-C property.
 class ObjCPropertyInfo : public VariableInfo {
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftImportAsAccessorsSpecified : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftImportAsAccessors : 1;
 
 public:
@@ -372,7 +381,7 @@ public:
   friend bool operator==(const ObjCPropertyInfo &, const ObjCPropertyInfo &);
 
   /// Merge class-wide information into the given property.
-  ObjCPropertyInfo &operator|=(const ObjCContextInfo &RHS) {
+  ObjCPropertyInfo &operator|=(const ContextInfo &RHS) {
     static_cast<CommonEntityInfo &>(*this) |= RHS;
 
     // Merge nullability.
@@ -409,9 +418,11 @@ inline bool operator!=(const ObjCPropertyInfo &LHS,
 /// Describes a function or method parameter.
 class ParamInfo : public VariableInfo {
   /// Whether noescape was specified.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NoEscapeSpecified : 1;
 
   /// Whether the this parameter has the 'noescape' attribute.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NoEscape : 1;
 
   /// A biased RetainCountConventionKind, where 0 means "unspecified".
@@ -488,6 +499,7 @@ public:
   // unknown nullability.
 
   /// Whether the signature has been audited with respect to nullability.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NullabilityAudited : 1;
 
   /// Number of types whose nullability is encoded with the NullabilityPayload.
@@ -597,16 +609,18 @@ inline bool operator!=(const FunctionInfo &LHS, const FunctionInfo &RHS) {
 class ObjCMethodInfo : public FunctionInfo {
 public:
   /// Whether this is a designated initializer of its class.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned DesignatedInit : 1;
 
   /// Whether this is a required initializer.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned RequiredInit : 1;
 
   ObjCMethodInfo() : DesignatedInit(false), RequiredInit(false) {}
 
   friend bool operator==(const ObjCMethodInfo &, const ObjCMethodInfo &);
 
-  ObjCMethodInfo &operator|=(const ObjCContextInfo &RHS) {
+  ObjCMethodInfo &operator|=(const ContextInfo &RHS) {
     // Merge Nullability.
     if (!NullabilityAudited) {
       if (auto Nullable = RHS.getDefaultNullability()) {
@@ -642,6 +656,12 @@ public:
   GlobalFunctionInfo() {}
 };
 
+/// Describes API notes data for a C++ method.
+class CXXMethodInfo : public FunctionInfo {
+public:
+  CXXMethodInfo() {}
+};
+
 /// Describes API notes data for an enumerator.
 class EnumConstantInfo : public CommonEntityInfo {
 public:
@@ -650,8 +670,15 @@ public:
 
 /// Describes API notes data for a tag.
 class TagInfo : public CommonTypeInfo {
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasFlagEnum : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFlagEnum : 1;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SwiftCopyableSpecified : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SwiftCopyable : 1;
 
 public:
   std::optional<std::string> SwiftImportAs;
@@ -660,7 +687,9 @@ public:
 
   std::optional<EnumExtensibilityKind> EnumExtensibility;
 
-  TagInfo() : HasFlagEnum(0), IsFlagEnum(0) {}
+  TagInfo()
+      : HasFlagEnum(0), IsFlagEnum(0), SwiftCopyableSpecified(false),
+        SwiftCopyable(false) {}
 
   std::optional<bool> isFlagEnum() const {
     if (HasFlagEnum)
@@ -670,6 +699,15 @@ public:
   void setFlagEnum(std::optional<bool> Value) {
     HasFlagEnum = Value.has_value();
     IsFlagEnum = Value.value_or(false);
+  }
+
+  std::optional<bool> isSwiftCopyable() const {
+    return SwiftCopyableSpecified ? std::optional<bool>(SwiftCopyable)
+                                  : std::nullopt;
+  }
+  void setSwiftCopyable(std::optional<bool> Value) {
+    SwiftCopyableSpecified = Value.has_value();
+    SwiftCopyable = Value.value_or(false);
   }
 
   TagInfo &operator|=(const TagInfo &RHS) {
@@ -688,6 +726,9 @@ public:
     if (!EnumExtensibility)
       EnumExtensibility = RHS.EnumExtensibility;
 
+    if (!SwiftCopyableSpecified)
+      setSwiftCopyable(RHS.isSwiftCopyable());
+
     return *this;
   }
 
@@ -702,6 +743,7 @@ inline bool operator==(const TagInfo &LHS, const TagInfo &RHS) {
          LHS.SwiftRetainOp == RHS.SwiftRetainOp &&
          LHS.SwiftReleaseOp == RHS.SwiftReleaseOp &&
          LHS.isFlagEnum() == RHS.isFlagEnum() &&
+         LHS.isSwiftCopyable() == RHS.isSwiftCopyable() &&
          LHS.EnumExtensibility == RHS.EnumExtensibility;
 }
 
@@ -753,6 +795,7 @@ enum class ContextKind : uint8_t {
   ObjCClass = 0,
   ObjCProtocol = 1,
   Namespace = 2,
+  Tag = 3,
 };
 
 struct Context {

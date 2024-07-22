@@ -33,7 +33,6 @@
 #  include "asan_premap_shadow.h"
 #  include "asan_thread.h"
 #  include "sanitizer_common/sanitizer_flags.h"
-#  include "sanitizer_common/sanitizer_freebsd.h"
 #  include "sanitizer_common/sanitizer_hash.h"
 #  include "sanitizer_common/sanitizer_libc.h"
 #  include "sanitizer_common/sanitizer_procmaps.h"
@@ -48,22 +47,12 @@
 
 #  if SANITIZER_ANDROID || SANITIZER_FREEBSD || SANITIZER_SOLARIS
 #    include <ucontext.h>
-extern "C" void *_DYNAMIC;
 #  elif SANITIZER_NETBSD
 #    include <link_elf.h>
 #    include <ucontext.h>
-extern Elf_Dyn _DYNAMIC;
 #  else
 #    include <link.h>
 #    include <sys/ucontext.h>
-extern ElfW(Dyn) _DYNAMIC[];
-#  endif
-
-// x86-64 FreeBSD 9.2 and older define 'ucontext_t' incorrectly in
-// 32-bit mode.
-#  if SANITIZER_FREEBSD && (SANITIZER_WORDSIZE == 32) && \
-      __FreeBSD_version <= 902001  // v9.2
-#    define ucontext_t xucontext_t
 #  endif
 
 typedef enum {
@@ -83,11 +72,6 @@ namespace __asan {
 void InitializePlatformInterceptors() {}
 void InitializePlatformExceptionHandlers() {}
 bool IsSystemHeapAddress(uptr addr) { return false; }
-
-void *AsanDoesNotSupportStaticLinkage() {
-  // This will fail to link with -static.
-  return &_DYNAMIC;
-}
 
 #  if ASAN_PREMAP_SHADOW
 uptr FindPremappedShadowStart(uptr shadow_size_bytes) {
@@ -109,7 +93,8 @@ uptr FindDynamicShadowStart() {
 #  endif
 
   return MapDynamicShadow(shadow_size_bytes, ASAN_SHADOW_SCALE,
-                          /*min_shadow_base_alignment*/ 0, kHighMemEnd);
+                          /*min_shadow_base_alignment*/ 0, kHighMemEnd,
+                          GetMmapGranularity());
 }
 
 void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
@@ -146,6 +131,11 @@ static int FindFirstDSOCallback(struct dl_phdr_info *info, size_t size,
   // detect this as well.
   if (!info->dlpi_name[0] ||
       internal_strncmp(info->dlpi_name, "linux-", sizeof("linux-") - 1) == 0)
+    return 0;
+#    endif
+#    if SANITIZER_FREEBSD
+  // Ignore vDSO.
+  if (internal_strcmp(info->dlpi_name, "[vdso]") == 0)
     return 0;
 #    endif
 

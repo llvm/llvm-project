@@ -315,7 +315,7 @@ int a1 = 0 == A<1>(); // Should not find 2 as the requires clause does not match
 
 namespace static_operators {
 // Verify no crash.
-struct X { 
+struct X {
   bool operator ==(X const&); // expected-note {{ambiguity is between a regular call}}
                               // expected-note@-1 {{mark 'operator==' as const or add a matching 'operator!=' to resolve the ambiguity}}
   static bool operator !=(X const&, X const&); // expected-error {{overloaded 'operator!=' cannot be a static member function}}
@@ -324,6 +324,124 @@ bool x = X() == X(); // expected-warning {{ambiguous}}
 }
 } // namespace P2468R2
 
+namespace GH53954{
+namespace friend_template_1 {
+struct P {
+  template <class T>
+  friend bool operator==(const P&, const T&) { return true; } // expected-note {{candidate}} \
+                              // expected-note {{ambiguous candidate function with reversed arguments}}
+};
+struct A : public P {};
+struct B : public P {};
+bool check(A a, B b) { return a == b; } // expected-warning {{use of overloaded operator '==' (with operand types 'A' and 'B') to be ambiguous}}
+}
+
+namespace friend_template_2 {
+struct P {
+  template <class T>
+  friend bool operator==(const T&, const P&) { return true; } // expected-note {{candidate}} \
+                                              // expected-note {{ambiguous candidate function with reversed arguments}}
+};
+struct A : public P {};
+struct B : public P {};
+bool check(A a, B b) { return a == b; } // expected-warning {{use of overloaded operator '==' (with operand types 'A' and 'B') to be ambiguous}}
+}
+
+namespace friend_template_class_template {
+template<class S>
+struct P {
+  template <class T>
+  friend bool operator==(const T&, const P&) { // expected-note 2 {{candidate}}
+    return true;
+  }
+};
+struct A : public P<int> {};
+struct B : public P<bool> {};
+bool check(A a, B b) { return a == b; } // expected-warning {{ambiguous}}
+}
+
+namespace friend_template_fixme {
+// FIXME(GH70210): This should not rewrite operator== and definitely not a hard error.
+struct P {
+  template <class T>
+  friend bool operator==(const T &, const P &) { return true; } // expected-note 2 {{candidate}}
+  template <class T>
+  friend bool operator!=(const T &, const P &) { return true; } // expected-note {{candidate}}
+};
+struct A : public P {};
+struct B : public P {};
+bool check(A a, B b) { return a != b; } // expected-error{{ambiguous}}
+}
+
+namespace member_template_1 {
+struct P {
+  template<class S>
+  bool operator==(const S &) const; // expected-note {{candidate}} \
+                                    // expected-note {{ambiguous candidate function with reversed arguments}}
+};
+struct A : public P {};
+struct B : public P {};
+bool check(A a, B b) { return a == b; } // expected-warning {{use of overloaded operator '==' (with operand types 'A' and 'B') to be ambiguous}}
+} // namespace member_template
+
+namespace member_template_2{
+template <typename T>
+class Foo {
+ public:
+  template <typename U = T>
+  bool operator==(const Foo& other) const;
+};
+bool x = Foo<int>{} == Foo<int>{};
+} // namespace template_member_opeqeq
+
+namespace non_member_template_1 {
+struct P {};
+template<class S>
+bool operator==(const P&, const S &); // expected-note {{candidate}} \
+                                      // expected-note {{ambiguous candidate function with reversed arguments}}
+
+struct A : public P {};
+struct B : public P {};
+bool check(A a, B b) { return a == b; } // expected-warning {{use of overloaded operator '==' (with operand types 'A' and 'B') to be ambiguous}}
+
+template<class S> bool operator!=(const P&, const S &);
+bool fine(A a, B b) { return a == b; } // Ok. Found a matching operator!=.
+} // namespace non_member_template_1
+
+namespace non_member_template_2 {
+struct P {};
+template<class S>
+bool operator==(const S&, const P&); // expected-note {{candidate}} \
+                                     // expected-note {{ambiguous candidate function with reversed arguments}}
+
+struct A : public P {};
+struct B : public P {};
+bool check(A a, B b) { return a == b; } // expected-warning {{use of overloaded operator '==' (with operand types 'A' and 'B') to be ambiguous}}
+} // namespace non_member_template_2
+
+namespace class_and_member_template {
+template <class T>
+struct S {
+    template <typename OtherT>
+    bool operator==(const OtherT &rhs); // expected-note {{candidate}} \
+                                        // expected-note {{reversed arguments}}
+};
+struct A : S<int> {};
+struct B : S<bool> {};
+bool x = A{} == B{}; // expected-warning {{ambiguous}}
+} // namespace class_and_member_template
+
+namespace ambiguous_case {
+template <class T>
+struct Foo {};
+template <class T, class U> bool operator==(Foo<U>, Foo<T*>); // expected-note{{candidate}}
+template <class T, class U> bool operator==(Foo<T*>, Foo<U>); // expected-note{{candidate}}
+
+void test() {
+    Foo<int*>() == Foo<int*>(); // expected-error{{ambiguous}}
+}
+} // namespace ambiguous_case
+} // namespace
 namespace ADL_GH68901{
 namespace test1 {
 namespace A {
@@ -356,7 +474,7 @@ namespace ns {
 template <class T> struct A {};
 template <class T> struct B : A<T> {};
 
-template <class T> bool operator==(B<T>, A<T>); // expected-note {{candidate template ignored: could not match 'B' against 'A'}}
+template <class T> bool operator==(B<T>, A<T>); // expected-note {{candidate template ignored: could not match 'B' against 'ns::A'}}
 template <class T> bool operator!=(B<T>, A<T>);
 }
 
@@ -391,7 +509,7 @@ using B::operator==;
 bool a = 0 == A::S();  // expected-error {{invalid operands to binary expression}}
 }
 
-} //namespace ADL_GH68901
+} // namespace ADL_GH68901
 
 namespace function_scope_operator_eqeq {
 // For non-members, we always lookup for matching operator!= in the namespace scope of

@@ -102,7 +102,7 @@ protected:
     EXPECT_EQ(line, entry.line);
     EXPECT_EQ(address, entry.range.GetBaseAddress());
 
-    EXPECT_TRUE(FileSpecMatchesAsBaseOrFull(spec, entry.file));
+    EXPECT_TRUE(FileSpecMatchesAsBaseOrFull(spec, entry.GetFile()));
   }
 
   bool ContainsCompileUnit(const SymbolContextList &sc_list,
@@ -527,7 +527,6 @@ TEST_F(SymbolFilePDBTests, TestTypedefs) {
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(module->GetSymbolFile());
   llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
-  TypeMap results;
 
   const char *TypedefsToCheck[] = {"ClassTypedef", "NSClassTypedef",
                                    "FuncPointerTypedef",
@@ -579,15 +578,15 @@ TEST_F(SymbolFilePDBTests, TestMaxMatches) {
       static_cast<SymbolFilePDB *>(module->GetSymbolFile());
 
   // Make a type query object we can use for all types and for one type
-  TypeQuery query("ClassTypedef");
+  TypeQuery query("NestedClass");
   {
     // Find all types that match
     TypeResults query_results;
     symfile->FindTypes(query, query_results);
     TypeMap &results = query_results.GetTypeMap();
-    EXPECT_GT(results.GetSize(), 1u);
+    // We expect to find Class::NestedClass and ClassTypedef::NestedClass.
+    EXPECT_EQ(results.GetSize(), 2u);
   }
-
   {
     // Find a single type that matches
     query.SetFindOne(true);

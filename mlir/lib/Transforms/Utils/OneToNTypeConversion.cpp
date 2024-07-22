@@ -8,6 +8,7 @@
 
 #include "mlir/Transforms/OneToNTypeConversion.h"
 
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallSet.h"
 
@@ -93,7 +94,7 @@ enum class CastKind {
   // cast becomes a target materialization.)
   Target
 };
-}
+} // namespace
 
 /// Mapping of enum values to string values.
 StringRef getCastKindName(CastKind kind) {
@@ -113,6 +114,11 @@ static const char *const castKindAttrName =
 /// result types. Returns the result values of the cast.
 static ValueRange buildUnrealizedCast(OpBuilder &builder, TypeRange resultTypes,
                                       ValueRange inputs, CastKind kind) {
+  // Special case: 1-to-N conversion with N = 0. No need to build an
+  // UnrealizedConversionCastOp because the op will always be dead.
+  if (resultTypes.empty())
+    return ValueRange();
+
   // Create cast.
   Location loc = builder.getUnknownLoc();
   if (!inputs.empty())
@@ -387,8 +393,7 @@ applyPartialOneToNConversion(Operation *op, OneToNTypeConverter &typeConverter,
         // Argument materialization.
         assert(castKind == getCastKindName(CastKind::Argument) &&
                "unexpected value of cast kind attribute");
-        assert(llvm::all_of(operands,
-                            [&](Value v) { return isa<BlockArgument>(v); }));
+        assert(llvm::all_of(operands, llvm::IsaPred<BlockArgument>));
         maybeResult = typeConverter.materializeArgumentConversion(
             rewriter, castOp->getLoc(), resultTypes.front(),
             castOp.getOperands());
@@ -408,4 +413,62 @@ applyPartialOneToNConversion(Operation *op, OneToNTypeConverter &typeConverter,
   return success();
 }
 
+namespace {
+class FunctionOpInterfaceSignatureConversion : public OneToNConversionPattern {
+public:
+  FunctionOpInterfaceSignatureConversion(StringRef functionLikeOpName,
+                                         MLIRContext *ctx,
+                                         TypeConverter &converter)
+      : OneToNConversionPattern(converter, functionLikeOpName, /*benefit=*/1,
+                                ctx) {}
+
+  LogicalResult matchAndRewrite(Operation *op, OneToNPatternRewriter &rewriter,
+                                const OneToNTypeMapping &operandMapping,
+                                const OneToNTypeMapping &resultMapping,
+                                ValueRange convertedOperands) const override {
+    auto funcOp = cast<FunctionOpInterface>(op);
+    auto *typeConverter = getTypeConverter<OneToNTypeConverter>();
+
+    // Construct mapping for function arguments.
+    OneToNTypeMapping argumentMapping(funcOp.getArgumentTypes());
+    if (failed(typeConverter->computeTypeMapping(funcOp.getArgumentTypes(),
+                                                 argumentMapping)))
+      return failure();
+
+    // Construct mapping for function results.
+    OneToNTypeMapping funcResultMapping(funcOp.getResultTypes());
+    if (failed(typeConverter->computeTypeMapping(funcOp.getResultTypes(),
+                                                 funcResultMapping)))
+      return failure();
+
+    // Nothing to do if the op doesn't have any non-identity conversions for its
+    // operands or results.
+    if (!argumentMapping.hasNonIdentityConversion() &&
+        !funcResultMapping.hasNonIdentityConversion())
+      return failure();
+
+    // Update the function signature in-place.
+    auto newType = FunctionType::get(rewriter.getContext(),
+                                     argumentMapping.getConvertedTypes(),
+                                     funcResultMapping.getConvertedTypes());
+    rewriter.modifyOpInPlace(op, [&] { funcOp.setType(newType); });
+
+    // Update block signatures.
+    if (!funcOp.isExternal()) {
+      Region *region = &funcOp.getFunctionBody();
+      Block *block = &region->front();
+      rewriter.applySignatureConversion(block, argumentMapping);
+    }
+
+    return success();
+  }
+};
+} // namespace
+
+void populateOneToNFunctionOpInterfaceTypeConversionPattern(
+    StringRef functionLikeOpName, TypeConverter &converter,
+    RewritePatternSet &patterns) {
+  patterns.add<FunctionOpInterfaceSignatureConversion>(
+      functionLikeOpName, patterns.getContext(), converter);
+}
 } // namespace mlir

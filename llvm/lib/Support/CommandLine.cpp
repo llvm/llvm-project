@@ -164,16 +164,31 @@ public:
   // This collects the different subcommands that have been registered.
   SmallPtrSet<SubCommand *, 4> RegisteredSubCommands;
 
-  CommandLineParser() {
-    registerSubCommand(&SubCommand::getTopLevel());
-    registerSubCommand(&SubCommand::getAll());
-  }
+  CommandLineParser() { registerSubCommand(&SubCommand::getTopLevel()); }
 
   void ResetAllOptionOccurrences();
 
   bool ParseCommandLineOptions(int argc, const char *const *argv,
                                StringRef Overview, raw_ostream *Errs = nullptr,
                                bool LongOptionsUseDoubleDash = false);
+
+  void forEachSubCommand(Option &Opt, function_ref<void(SubCommand &)> Action) {
+    if (Opt.Subs.empty()) {
+      Action(SubCommand::getTopLevel());
+      return;
+    }
+    if (Opt.Subs.size() == 1 && *Opt.Subs.begin() == &SubCommand::getAll()) {
+      for (auto *SC : RegisteredSubCommands)
+        Action(*SC);
+      Action(SubCommand::getAll());
+      return;
+    }
+    for (auto *SC : Opt.Subs) {
+      assert(SC != &SubCommand::getAll() &&
+             "SubCommand::getAll() should not be used with other subcommands");
+      Action(*SC);
+    }
+  }
 
   void addLiteralOption(Option &Opt, SubCommand *SC, StringRef Name) {
     if (Opt.hasArgStr())
@@ -183,25 +198,11 @@ public:
              << "' registered more than once!\n";
       report_fatal_error("inconsistency in registered CommandLine options");
     }
-
-    // If we're adding this to all sub-commands, add it to the ones that have
-    // already been registered.
-    if (SC == &SubCommand::getAll()) {
-      for (auto *Sub : RegisteredSubCommands) {
-        if (SC == Sub)
-          continue;
-        addLiteralOption(Opt, Sub, Name);
-      }
-    }
   }
 
   void addLiteralOption(Option &Opt, StringRef Name) {
-    if (Opt.Subs.empty())
-      addLiteralOption(Opt, &SubCommand::getTopLevel(), Name);
-    else {
-      for (auto *SC : Opt.Subs)
-        addLiteralOption(Opt, SC, Name);
-    }
+    forEachSubCommand(
+        Opt, [&](SubCommand &SC) { addLiteralOption(Opt, &SC, Name); });
   }
 
   void addOption(Option *O, SubCommand *SC) {
@@ -238,16 +239,6 @@ public:
     // linked LLVM distribution.
     if (HadErrors)
       report_fatal_error("inconsistency in registered CommandLine options");
-
-    // If we're adding this to all sub-commands, add it to the ones that have
-    // already been registered.
-    if (SC == &SubCommand::getAll()) {
-      for (auto *Sub : RegisteredSubCommands) {
-        if (SC == Sub)
-          continue;
-        addOption(O, Sub);
-      }
-    }
   }
 
   void addOption(Option *O, bool ProcessDefaultOption = false) {
@@ -255,13 +246,7 @@ public:
       DefaultOptions.push_back(O);
       return;
     }
-
-    if (O->Subs.empty()) {
-      addOption(O, &SubCommand::getTopLevel());
-    } else {
-      for (auto *SC : O->Subs)
-        addOption(O, SC);
-    }
+    forEachSubCommand(*O, [&](SubCommand &SC) { addOption(O, &SC); });
   }
 
   void removeOption(Option *O, SubCommand *SC) {
@@ -298,17 +283,7 @@ public:
   }
 
   void removeOption(Option *O) {
-    if (O->Subs.empty())
-      removeOption(O, &SubCommand::getTopLevel());
-    else {
-      if (O->isInAllSubCommands()) {
-        for (auto *SC : RegisteredSubCommands)
-          removeOption(O, SC);
-      } else {
-        for (auto *SC : O->Subs)
-          removeOption(O, SC);
-      }
-    }
+    forEachSubCommand(*O, [&](SubCommand &SC) { removeOption(O, &SC); });
   }
 
   bool hasOptions(const SubCommand &Sub) const {
@@ -344,17 +319,8 @@ public:
   }
 
   void updateArgStr(Option *O, StringRef NewName) {
-    if (O->Subs.empty())
-      updateArgStr(O, NewName, &SubCommand::getTopLevel());
-    else {
-      if (O->isInAllSubCommands()) {
-        for (auto *SC : RegisteredSubCommands)
-          updateArgStr(O, NewName, SC);
-      } else {
-        for (auto *SC : O->Subs)
-          updateArgStr(O, NewName, SC);
-      }
-    }
+    forEachSubCommand(*O,
+                      [&](SubCommand &SC) { updateArgStr(O, NewName, &SC); });
   }
 
   void printOptionValues();
@@ -380,15 +346,15 @@ public:
 
     // For all options that have been registered for all subcommands, add the
     // option to this subcommand now.
-    if (sub != &SubCommand::getAll()) {
-      for (auto &E : SubCommand::getAll().OptionsMap) {
-        Option *O = E.second;
-        if ((O->isPositional() || O->isSink() || O->isConsumeAfter()) ||
-            O->hasArgStr())
-          addOption(O, sub);
-        else
-          addLiteralOption(*O, sub, E.first());
-      }
+    assert(sub != &SubCommand::getAll() &&
+           "SubCommand::getAll() should not be registered");
+    for (auto &E : SubCommand::getAll().OptionsMap) {
+      Option *O = E.second;
+      if ((O->isPositional() || O->isSink() || O->isConsumeAfter()) ||
+          O->hasArgStr())
+        addOption(O, sub);
+      else
+        addLiteralOption(*O, sub, E.first());
     }
   }
 
@@ -416,7 +382,6 @@ public:
     SubCommand::getTopLevel().reset();
     SubCommand::getAll().reset();
     registerSubCommand(&SubCommand::getTopLevel());
-    registerSubCommand(&SubCommand::getAll());
 
     DefaultOptions.clear();
   }
@@ -457,7 +422,7 @@ void Option::removeArgument() { GlobalParser->removeOption(this); }
 void Option::setArgStr(StringRef S) {
   if (FullyInitialized)
     GlobalParser->updateArgStr(this, S);
-  assert((S.empty() || S[0] != '-') && "Option can't start with '-");
+  assert(!S.starts_with("-") && "Option can't start with '-");
   ArgStr = S;
   if (ArgStr.size() == 1)
     setMiscFlag(Grouping);
@@ -490,10 +455,10 @@ void OptionCategory::registerCategory() {
 // initialization because it is referenced from cl::opt constructors, which run
 // dynamically in an arbitrary order.
 LLVM_REQUIRE_CONSTANT_INITIALIZATION
-ManagedStatic<SubCommand> llvm::cl::TopLevelSubCommand;
+static ManagedStatic<SubCommand> TopLevelSubCommand;
 
 // A special subcommand that can be used to put an option into all subcommands.
-ManagedStatic<SubCommand> llvm::cl::AllSubCommands;
+static ManagedStatic<SubCommand> AllSubCommands;
 
 SubCommand &SubCommand::getTopLevel() { return *TopLevelSubCommand; }
 
@@ -564,12 +529,12 @@ SubCommand *CommandLineParser::LookupSubCommand(StringRef Name,
   // Find a subcommand with the edit distance == 1.
   SubCommand *NearestMatch = nullptr;
   for (auto *S : RegisteredSubCommands) {
-    if (S == &SubCommand::getAll())
-      continue;
+    assert(S != &SubCommand::getAll() &&
+           "SubCommand::getAll() is not expected in RegisteredSubCommands");
     if (S->getName().empty())
       continue;
 
-    if (StringRef(S->getName()) == StringRef(Name))
+    if (S->getName() == Name)
       return S;
 
     if (!NearestMatch && S->getName().edit_distance(Name) < 2)
@@ -1665,10 +1630,8 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
       // otherwise feed it to the eating positional.
       ArgName = StringRef(argv[i] + 1);
       // Eat second dash.
-      if (!ArgName.empty() && ArgName[0] == '-') {
+      if (ArgName.consume_front("-"))
         HaveDoubleDash = true;
-        ArgName = ArgName.substr(1);
-      }
 
       Handler = LookupLongOption(*ChosenSubCommand, ArgName, Value,
                                  LongOptionsUseDoubleDash, HaveDoubleDash);
@@ -1679,10 +1642,8 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
     } else { // We start with a '-', must be an argument.
       ArgName = StringRef(argv[i] + 1);
       // Eat second dash.
-      if (!ArgName.empty() && ArgName[0] == '-') {
+      if (ArgName.consume_front("-"))
         HaveDoubleDash = true;
-        ArgName = ArgName.substr(1);
-      }
 
       Handler = LookupLongOption(*ChosenSubCommand, ArgName, Value,
                                  LongOptionsUseDoubleDash, HaveDoubleDash);
@@ -1772,9 +1733,9 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   } else if (!ConsumeAfterOpt) {
     // Positional args have already been handled if ConsumeAfter is specified.
     unsigned ValNo = 0, NumVals = static_cast<unsigned>(PositionalVals.size());
-    for (size_t i = 0, e = PositionalOpts.size(); i != e; ++i) {
-      if (RequiresValue(PositionalOpts[i])) {
-        ProvidePositionalOption(PositionalOpts[i], PositionalVals[ValNo].first,
+    for (Option *Opt : PositionalOpts) {
+      if (RequiresValue(Opt)) {
+        ProvidePositionalOption(Opt, PositionalVals[ValNo].first,
                                 PositionalVals[ValNo].second);
         ValNo++;
         --NumPositionalRequired; // We fulfilled our duty...
@@ -1784,16 +1745,15 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
       // do not give it values that others need.  'Done' controls whether the
       // option even _WANTS_ any more.
       //
-      bool Done = PositionalOpts[i]->getNumOccurrencesFlag() == cl::Required;
+      bool Done = Opt->getNumOccurrencesFlag() == cl::Required;
       while (NumVals - ValNo > NumPositionalRequired && !Done) {
-        switch (PositionalOpts[i]->getNumOccurrencesFlag()) {
+        switch (Opt->getNumOccurrencesFlag()) {
         case cl::Optional:
           Done = true; // Optional arguments want _at most_ one value
           [[fallthrough]];
         case cl::ZeroOrMore: // Zero or more will take all they can get...
         case cl::OneOrMore:  // One or more will take all they can get...
-          ProvidePositionalOption(PositionalOpts[i],
-                                  PositionalVals[ValNo].first,
+          ProvidePositionalOption(Opt, PositionalVals[ValNo].first,
                                   PositionalVals[ValNo].second);
           ValNo++;
           break;
@@ -1806,11 +1766,10 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   } else {
     assert(ConsumeAfterOpt && NumPositionalRequired <= PositionalVals.size());
     unsigned ValNo = 0;
-    for (size_t J = 0, E = PositionalOpts.size(); J != E; ++J)
-      if (RequiresValue(PositionalOpts[J])) {
-        ErrorParsing |= ProvidePositionalOption(PositionalOpts[J],
-                                                PositionalVals[ValNo].first,
-                                                PositionalVals[ValNo].second);
+    for (Option *Opt : PositionalOpts)
+      if (RequiresValue(Opt)) {
+        ErrorParsing |= ProvidePositionalOption(
+            Opt, PositionalVals[ValNo].first, PositionalVals[ValNo].second);
         ValNo++;
       }
 
@@ -2506,8 +2465,7 @@ protected:
     for (OptionCategory *Category : SortedCategories) {
       // Hide empty categories for --help, but show for --help-hidden.
       const auto &CategoryOptions = CategorizedOptions[Category];
-      bool IsEmptyCategory = CategoryOptions.empty();
-      if (!ShowHidden && IsEmptyCategory)
+      if (CategoryOptions.empty())
         continue;
 
       // Print category information.
@@ -2520,12 +2478,6 @@ protected:
       else
         outs() << "\n";
 
-      // When using --help-hidden explicitly state if the category has no
-      // options associated with it.
-      if (IsEmptyCategory) {
-        outs() << "  This option category has no options.\n";
-        continue;
-      }
       // Loop over the options in the category and print.
       for (const Option *Opt : CategoryOptions)
         Opt->printOptionInfo(MaxArgLen);
@@ -2778,6 +2730,52 @@ void cl::PrintHelpMessage(bool Hidden, bool Categorized) {
     CommonOptions->UncategorizedHiddenPrinter.printHelp();
   else
     CommonOptions->CategorizedHiddenPrinter.printHelp();
+}
+
+ArrayRef<StringRef> cl::getCompilerBuildConfig() {
+  static const StringRef Config[] = {
+      // Placeholder to ensure the array always has elements, since it's an
+      // error to have a zero-sized array. Slice this off before returning.
+      "",
+  // Actual compiler build config feature list:
+#if LLVM_IS_DEBUG_BUILD
+      "+unoptimized",
+#endif
+#ifndef NDEBUG
+      "+assertions",
+#endif
+#ifdef EXPENSIVE_CHECKS
+      "+expensive-checks",
+#endif
+#if __has_feature(address_sanitizer)
+      "+asan",
+#endif
+#if __has_feature(dataflow_sanitizer)
+      "+dfsan",
+#endif
+#if __has_feature(hwaddress_sanitizer)
+      "+hwasan",
+#endif
+#if __has_feature(memory_sanitizer)
+      "+msan",
+#endif
+#if __has_feature(thread_sanitizer)
+      "+tsan",
+#endif
+#if __has_feature(undefined_behavior_sanitizer)
+      "+ubsan",
+#endif
+  };
+  return ArrayRef(Config).drop_front(1);
+}
+
+// Utility function for printing the build config.
+void cl::printBuildConfig(raw_ostream &OS) {
+#if LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG
+  OS << "Build config: ";
+  llvm::interleaveComma(cl::getCompilerBuildConfig(), OS);
+  OS << '\n';
+#endif
 }
 
 /// Utility function for printing version number.

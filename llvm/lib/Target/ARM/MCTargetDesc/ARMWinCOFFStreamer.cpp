@@ -66,15 +66,13 @@ void ARMWinCOFFStreamer::finishImpl() {
 }
 }
 
-MCStreamer *llvm::createARMWinCOFFStreamer(
-    MCContext &Context, std::unique_ptr<MCAsmBackend> &&MAB,
-    std::unique_ptr<MCObjectWriter> &&OW,
-    std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll,
-    bool IncrementalLinkerCompatible) {
-  auto *S = new ARMWinCOFFStreamer(Context, std::move(MAB), std::move(Emitter),
-                                   std::move(OW));
-  S->getAssembler().setIncrementalLinkerCompatible(IncrementalLinkerCompatible);
-  return S;
+MCStreamer *
+llvm::createARMWinCOFFStreamer(MCContext &Context,
+                               std::unique_ptr<MCAsmBackend> &&MAB,
+                               std::unique_ptr<MCObjectWriter> &&OW,
+                               std::unique_ptr<MCCodeEmitter> &&Emitter) {
+  return new ARMWinCOFFStreamer(Context, std::move(MAB), std::move(Emitter),
+                                std::move(OW));
 }
 
 namespace {

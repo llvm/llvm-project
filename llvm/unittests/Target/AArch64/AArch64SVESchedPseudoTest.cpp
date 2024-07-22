@@ -107,6 +107,14 @@ TEST(AArch64SVESchedPseudoTesta510, IsCorrect) {
   runSVEPseudoTestForCPU("cortex-a510");
 }
 
+TEST(AArch64SVESchedPseudoTestn1, IsCorrect) {
+  runSVEPseudoTestForCPU("neoverse-n2");
+}
+
+TEST(AArch64SVESchedPseudoTestv1, IsCorrect) {
+  runSVEPseudoTestForCPU("neoverse-v1");
+}
+
 TEST(AArch64SVESchedPseudoTestv2, IsCorrect) {
   runSVEPseudoTestForCPU("neoverse-v2");
 }

@@ -53,7 +53,7 @@ using namespace lldb_private;
 const char *SBThread::GetBroadcasterClassName() {
   LLDB_INSTRUMENT();
 
-  return Thread::GetStaticBroadcasterClass().AsCString();
+  return ConstString(Thread::GetStaticBroadcasterClass()).AsCString();
 }
 
 // Constructors
@@ -722,7 +722,7 @@ void SBThread::StepInstruction(bool step_over, SBError &error) {
   Thread *thread = exe_ctx.GetThreadPtr();
   Status new_plan_status;
   ThreadPlanSP new_plan_sp(thread->QueueThreadPlanForStepSingleInstruction(
-      step_over, true, true, new_plan_status));
+      step_over, false, true, new_plan_status));
 
   if (new_plan_status.Success())
     error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
@@ -819,7 +819,7 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
       step_file_spec = sb_file_spec.ref();
     } else {
       if (frame_sc.line_entry.IsValid())
-        step_file_spec = frame_sc.line_entry.file;
+        step_file_spec = frame_sc.line_entry.GetFile();
       else {
         sb_error.SetErrorString("invalid file argument or no file for frame");
         return sb_error;

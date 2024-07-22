@@ -131,9 +131,9 @@ void simplifyConstraints(llvm::SetVector<const Formula *> &Constraints,
     for (const auto *Constraint : Constraints) {
       const Formula &NewConstraint =
           substitute(*Constraint, Substitutions, arena);
-      if (&NewConstraint == &arena.makeLiteral(true))
+      if (NewConstraint.isLiteral(true))
         continue;
-      if (&NewConstraint == &arena.makeLiteral(false)) {
+      if (NewConstraint.isLiteral(false)) {
         contradiction();
         return;
       }

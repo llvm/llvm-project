@@ -1,5 +1,5 @@
 ; RUN: llc < %s -asm-verbose=0 -mtriple=arm64-eabi -mattr=+bf16 | FileCheck %s
-; RUN: llc < %s -asm-verbose=0 -mtriple=aarch64-eabi -mattr=+bf16 | FileCheck %s
+; RUN: llc < %s -asm-verbose=0 -mtriple=aarch64 -mattr=+bf16 | FileCheck %s
 
 ; test argument passing and simple load/store
 

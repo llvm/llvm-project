@@ -24,7 +24,10 @@ const uint16_t VERSION_MAJOR = 0;
 /// API notes file minor version number.
 ///
 /// When the format changes IN ANY WAY, this number should be incremented.
-const uint16_t VERSION_MINOR = 25; // SwiftImportAs
+const uint16_t VERSION_MINOR = 27; // SingleDeclTableKey
+
+const uint8_t kSwiftCopyable = 1;
+const uint8_t kSwiftNonCopyable = 2;
 
 using IdentifierID = llvm::PointerEmbeddedInt<unsigned, 31>;
 using IdentifierIDField = llvm::BCVBR<16>;
@@ -59,6 +62,10 @@ enum BlockID {
   /// (class name, selector, is_instance_method) tuples to information
   /// about the method.
   OBJC_METHOD_BLOCK_ID,
+
+  /// The C++ method data block, which maps C++ (context id, method name) pairs
+  /// to information about the method.
+  CXX_METHOD_BLOCK_ID,
 
   /// The Objective-C selector data block, which maps Objective-C
   /// selector names (# of pieces, identifier IDs) to the selector ID
@@ -129,26 +136,26 @@ using IdentifierDataLayout = llvm::BCRecordLayout<
     >;
 } // namespace identifier_block
 
-namespace objc_context_block {
+namespace context_block {
 enum {
-  OBJC_CONTEXT_ID_DATA = 1,
-  OBJC_CONTEXT_INFO_DATA = 2,
+  CONTEXT_ID_DATA = 1,
+  CONTEXT_INFO_DATA = 2,
 };
 
-using ObjCContextIDLayout =
-    llvm::BCRecordLayout<OBJC_CONTEXT_ID_DATA, // record ID
+using ContextIDLayout =
+    llvm::BCRecordLayout<CONTEXT_ID_DATA, // record ID
                          llvm::BCVBR<16>, // table offset within the blob (see
                                           // below)
                          llvm::BCBlob // map from ObjC class names/protocol (as
                                       // IDs) to context IDs
                          >;
 
-using ObjCContextInfoLayout = llvm::BCRecordLayout<
-    OBJC_CONTEXT_INFO_DATA, // record ID
-    llvm::BCVBR<16>,        // table offset within the blob (see below)
-    llvm::BCBlob            // map from ObjC context IDs to context information.
+using ContextInfoLayout = llvm::BCRecordLayout<
+    CONTEXT_INFO_DATA, // record ID
+    llvm::BCVBR<16>,   // table offset within the blob (see below)
+    llvm::BCBlob       // map from ObjC context IDs to context information.
     >;
-} // namespace objc_context_block
+} // namespace context_block
 
 namespace objc_property_block {
 enum {
@@ -177,6 +184,20 @@ using ObjCMethodDataLayout =
                                       // method information
                          >;
 } // namespace objc_method_block
+
+namespace cxx_method_block {
+enum {
+  CXX_METHOD_DATA = 1,
+};
+
+using CXXMethodDataLayout =
+    llvm::BCRecordLayout<CXX_METHOD_DATA, // record ID
+                         llvm::BCVBR<16>, // table offset within the blob (see
+                                          // below)
+                         llvm::BCBlob     // map from C++ (context id, name)
+                                          // tuples to C++ method information
+                         >;
+} // namespace cxx_method_block
 
 namespace objc_selector_block {
 enum {
@@ -266,11 +287,16 @@ struct ContextTableKey {
       : parentContextID(parentContextID), contextKind(contextKind),
         contextID(contextID) {}
 
-  ContextTableKey(std::optional<Context> context, IdentifierID nameID)
-      : parentContextID(context ? context->id.Value : (uint32_t)-1),
-        contextKind(context ? static_cast<uint8_t>(context->kind)
-                            : static_cast<uint8_t>(-1)),
-        contextID(nameID) {}
+  ContextTableKey(std::optional<ContextID> ParentContextID, ContextKind Kind,
+                  uint32_t ContextID)
+      : parentContextID(ParentContextID ? ParentContextID->Value : -1),
+        contextKind(static_cast<uint8_t>(Kind)), contextID(ContextID) {}
+
+  ContextTableKey(std::optional<Context> ParentContext, ContextKind Kind,
+                  uint32_t ContextID)
+      : ContextTableKey(ParentContext ? std::make_optional(ParentContext->id)
+                                      : std::nullopt,
+                        Kind, ContextID) {}
 
   llvm::hash_code hashValue() const {
     return llvm::hash_value(
@@ -281,6 +307,32 @@ struct ContextTableKey {
 inline bool operator==(const ContextTableKey &lhs, const ContextTableKey &rhs) {
   return lhs.parentContextID == rhs.parentContextID &&
          lhs.contextKind == rhs.contextKind && lhs.contextID == rhs.contextID;
+}
+
+/// A stored Objective-C or C++ declaration, represented by the ID of its parent
+/// context, and the name of the declaration.
+struct SingleDeclTableKey {
+  uint32_t parentContextID;
+  uint32_t nameID;
+
+  SingleDeclTableKey() : parentContextID(-1), nameID(-1) {}
+
+  SingleDeclTableKey(uint32_t ParentContextID, uint32_t NameID)
+      : parentContextID(ParentContextID), nameID(NameID) {}
+
+  SingleDeclTableKey(std::optional<Context> ParentCtx, IdentifierID NameID)
+      : parentContextID(ParentCtx ? ParentCtx->id.Value
+                                  : static_cast<uint32_t>(-1)),
+        nameID(NameID) {}
+
+  llvm::hash_code hashValue() const {
+    return llvm::hash_value(std::make_pair(parentContextID, nameID));
+  }
+};
+
+inline bool operator==(const SingleDeclTableKey &lhs,
+                       const SingleDeclTableKey &rhs) {
+  return lhs.parentContextID == rhs.parentContextID && lhs.nameID == rhs.nameID;
 }
 
 } // namespace api_notes
@@ -338,6 +390,29 @@ template <> struct DenseMapInfo<clang::api_notes::ContextTableKey> {
     return lhs == rhs;
   }
 };
+
+template <> struct DenseMapInfo<clang::api_notes::SingleDeclTableKey> {
+  static inline clang::api_notes::SingleDeclTableKey getEmptyKey() {
+    return clang::api_notes::SingleDeclTableKey();
+  }
+
+  static inline clang::api_notes::SingleDeclTableKey getTombstoneKey() {
+    return clang::api_notes::SingleDeclTableKey{
+        DenseMapInfo<uint32_t>::getTombstoneKey(),
+        DenseMapInfo<uint32_t>::getTombstoneKey()};
+  }
+
+  static unsigned
+  getHashValue(const clang::api_notes::SingleDeclTableKey &value) {
+    return value.hashValue();
+  }
+
+  static bool isEqual(const clang::api_notes::SingleDeclTableKey &lhs,
+                      const clang::api_notes::SingleDeclTableKey &rhs) {
+    return lhs == rhs;
+  }
+};
+
 } // namespace llvm
 
 #endif

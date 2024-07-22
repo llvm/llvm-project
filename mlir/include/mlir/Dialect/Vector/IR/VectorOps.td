@@ -87,8 +87,8 @@ def Vector_ContractionOp :
     An optional kind attribute may be used to specify the combining function
     between the intermediate result and accumulator argument of rank K. This
     attribute can take the values `add`/`mul`/`minsi`/`minui`/`maxsi`/`maxui`
-    /`and`/`or`/`xor` for integers, and `add`/`mul`/`minf`/`maxf`/`minimumf`
-    /`maximumf` for floats. The default is `add`.
+    /`and`/`or`/`xor` for integers, and `add`/`mul`/`minnumf`/`maxnumf`
+    /`minimumf`/`maximumf` for floats. The default is `add`.
 
     Example:
 
@@ -150,7 +150,7 @@ def Vector_ContractionOp :
     #contraction_trait = {
       indexing_maps = #contraction_accesses,
       iterator_types = ["reduction"],
-      kind = #vector.kind<maxf>
+      kind = #vector.kind<maxnumf>
     }
     %6 = vector.contract #contraction_trait %0, %1, %2
       : vector<10xf32>, vector<10xf32> into f32
@@ -234,8 +234,8 @@ def Vector_ReductionOp :
   let description = [{
     Reduces an 1-D vector "horizontally" into a scalar using the given
     operation: `add`/`mul`/`minsi`/`minui`/`maxsi`/`maxui`/`and`/`or`/`xor` for
-    integers, and `add`/`mul`/`minf`/`maxf`/`minimumf`/`maximumf` for floats.
-    Reductions also allow an optional fused accumulator.
+    integers, and `add`/`mul`/`minnumf`/`maxnumf`/`minimumf`/`maximumf` for
+    floats. Reductions also allow an optional fused accumulator.
 
     Note that these operations are restricted to 1-D vectors to remain
     close to the corresponding LLVM intrinsics:
@@ -292,7 +292,7 @@ def Vector_MultiDimReductionOp :
   let description = [{
     Reduces an n-D vector into an (n-k)-D vector (or a scalar when k == n)
     using the given operation: `add`/`mul`/`minsi`/`minui`/`maxsi`/`maxui`
-    /`and`/`or`/`xor` for integers, and `add`/`mul`/`minf`/`maxf`/`minimumf`
+    /`and`/`or`/`xor` for integers, and `add`/`mul`/`minnumf`/`maxnumf`/`minimumf`
     /`maximumf` for floats.
     Takes an initial accumulator operand.
 
@@ -300,9 +300,9 @@ def Vector_MultiDimReductionOp :
 
     ```mlir
     %1 = vector.multi_reduction <add>, %0, %acc0 [1, 3] :
-      vector<4x8x16x32xf32> into vector<4x16xf32>
+      vector<4x8x16x32xf32> to vector<4x16xf32>
     %2 = vector.multi_reduction <add>, %1, %acc1 [0, 1] :
-      vector<4x16xf32> into f32
+      vector<4x16xf32> to f32
     ```
   }];
   let builders = [
@@ -420,7 +420,7 @@ def Vector_ShuffleOp :
      PredOpTrait<"second operand v2 and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 1>>,
      InferTypeOpAdaptor]>,
-     Arguments<(ins AnyVectorOfAnyRank:$v1, AnyVectorOfAnyRank:$v2,
+     Arguments<(ins AnyFixedVector:$v1, AnyFixedVector:$v2,
                     I64ArrayAttr:$mask)>,
      Results<(outs AnyVector:$vector)> {
   let summary = "shuffle operation";
@@ -443,6 +443,8 @@ def Vector_ShuffleOp :
     * numbering the input vector indices left to right across the operands, all
       mask values must be within range, viz. given two k-D operands v1 and v2
       above, all mask values are in the range [0,s_1+t_1)
+
+    Note, scalable vectors are not supported.
 
     Example:
 
@@ -477,6 +479,150 @@ def Vector_ShuffleOp :
   let hasVerifier = 1;
   let hasCanonicalizer = 1;
 }
+
+def ResultIsDoubleSourceVectorType : TypesMatchWith<
+    "type of 'result' is double the width of the inputs",
+    "lhs", "result",
+    [{
+      [&]() -> ::mlir::VectorType {
+        auto vectorType = ::llvm::cast<::mlir::VectorType>($_self);
+        ::mlir::VectorType::Builder builder(vectorType);
+        if (vectorType.getRank() == 0) {
+          static constexpr int64_t v2xTyShape[] = {2};
+          return builder.setShape(v2xTyShape);
+        }
+        auto lastDim = vectorType.getRank() - 1;
+        return builder.setDim(lastDim, vectorType.getDimSize(lastDim) * 2);
+      }()
+    }]>;
+
+def Vector_InterleaveOp :
+  Vector_Op<"interleave", [Pure, AllTypesMatch<["lhs", "rhs"]>,
+    ResultIsDoubleSourceVectorType]> {
+  let summary = "constructs a vector by interleaving two input vectors";
+  let description = [{
+    The interleave operation constructs a new vector by interleaving the
+    elements from the trailing (or final) dimension of two input vectors,
+    returning a new vector where the trailing dimension is twice the size.
+
+    Note that for the n-D case this differs from the interleaving possible with
+    `vector.shuffle`, which would only operate on the leading dimension.
+
+    Another key difference is this operation supports scalable vectors, though
+    currently a general LLVM lowering is limited to the case where only the
+    trailing dimension is scalable.
+
+    Example:
+    ```mlir
+    %a = arith.constant dense<[0, 1]> : vector<2xi32>
+    %b = arith.constant dense<[2, 3]> : vector<2xi32>
+    // The value of `%0` is `[0, 2, 1, 3]`.
+    %0 = vector.interleave %a, %b : vector<2xi32> -> vector<4xi32>
+
+    // Examples showing allowed input and result types.
+    %1 = vector.interleave %c, %d : vector<f16> -> vector<2xf16>
+    %2 = vector.interleave %e, %f : vector<6x3xf32> -> vector<6x6xf32>
+    %3 = vector.interleave %g, %h : vector<[4]xi32> -> vector<[8]xi32>
+    %4 = vector.interleave %i, %j : vector<2x4x[2]xf64> -> vector<2x4x[4]xf64>
+    ```
+  }];
+
+  let arguments = (ins AnyVectorOfAnyRank:$lhs, AnyVectorOfAnyRank:$rhs);
+  let results = (outs AnyVector:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs  attr-dict `:` type($lhs) `->` type($result)
+  }];
+
+  let extraClassDeclaration = [{
+    VectorType getSourceVectorType() {
+      return ::llvm::cast<VectorType>(getLhs().getType());
+    }
+    VectorType getResultVectorType() {
+      return ::llvm::cast<VectorType>(getResult().getType());
+    }
+  }];
+}
+
+class ResultIsHalfSourceVectorType<string result> : TypesMatchWith<
+  "the trailing dimension of the results is half the width of source trailing dimension",
+  "source", result,
+  [{
+    [&]() -> ::mlir::VectorType {
+      auto vectorType = ::llvm::cast<mlir::VectorType>($_self);
+      ::mlir::VectorType::Builder builder(vectorType);
+      auto lastDim = vectorType.getRank() - 1;
+      auto newDimSize = vectorType.getDimSize(lastDim) / 2;;
+      if (newDimSize <= 0)
+         return vectorType; // (invalid input type)
+      return builder.setDim(lastDim, newDimSize);
+    }()
+  }]
+>;
+
+def SourceVectorEvenElementCount : PredOpTrait<
+  "the trailing dimension of the source vector has an even number of elements",
+  CPred<[{
+    [&](){
+      auto srcVec = getSourceVectorType();
+      return srcVec.getDimSize(srcVec.getRank() - 1) % 2 == 0;
+    }()
+  }]>
+>;
+
+def Vector_DeinterleaveOp :
+  Vector_Op<"deinterleave", [Pure,
+    SourceVectorEvenElementCount,
+    ResultIsHalfSourceVectorType<"res1">,
+    AllTypesMatch<["res1", "res2"]>
+    ]> {
+      let summary = "constructs two vectors by deinterleaving an input vector";
+      let description = [{
+        The deinterleave operation constructs two vectors from a single input
+        vector. The first result vector contains the elements from even indexes
+        of the input, and the second contains elements from odd indexes. This is
+        the inverse of a `vector.interleave` operation.
+
+        Each output's trailing dimension is half of the size of the input
+        vector's trailing dimension. This operation requires the input vector
+        to have a rank > 0 and an even number of elements in its trailing
+        dimension.
+
+        The operation supports scalable vectors.
+
+        Example:
+        ```mlir
+        %0, %1 = vector.deinterleave %a
+                   : vector<8xi8> -> vector<4xi8>
+        %2, %3 = vector.deinterleave %b
+                   : vector<2x8xi8> -> vector<2x4xi8>
+        %4, %5 = vector.deinterleave %c
+                   : vector<2x8x4xi8> -> vector<2x8x2xi8>
+        %6, %7 = vector.deinterleave %d
+                   : vector<[8]xf32> -> vector<[4]xf32>
+        %8, %9 = vector.deinterleave %e
+                   : vector<2x[6]xf64> -> vector<2x[3]xf64>
+        %10, %11 = vector.deinterleave %f
+                   : vector<2x4x[6]xf64> -> vector<2x4x[3]xf64>
+        ```
+      }];
+
+      let arguments = (ins AnyVector:$source);
+      let results = (outs AnyVector:$res1, AnyVector:$res2);
+
+      let assemblyFormat = [{
+        $source attr-dict `:` type($source) `->` type($res1)
+      }];
+
+      let extraClassDeclaration = [{
+        VectorType getSourceVectorType() {
+          return ::llvm::cast<VectorType>(getSource().getType());
+        }
+        VectorType getResultVectorType() {
+          return ::llvm::cast<VectorType>(getRes1().getType());
+        }
+      }];
+    }
 
 def Vector_ExtractElementOp :
   Vector_Op<"extractelement", [Pure,
@@ -534,6 +680,10 @@ def Vector_ExtractOp :
     Takes an n-D vector and a k-D position and extracts the (n-k)-D vector at
     the proper position. Degenerates to an element type if n-k is zero.
 
+    Dynamic indices must be greater or equal to zero and less than the size of
+    the corresponding dimension. The result is undefined if any index is
+    out-of-bounds.
+
     Example:
 
     ```mlir
@@ -574,10 +724,9 @@ def Vector_ExtractOp :
       return getStaticPosition().size();
     }
 
+    /// Return "true" if the op has at least one dynamic position.
     bool hasDynamicPosition() {
-      auto dynPos = getDynamicPosition();
-      return std::any_of(dynPos.begin(), dynPos.end(),
-                         [](Value operand) { return operand != nullptr; });
+      return !getDynamicPosition().empty();
     }
   }];
 
@@ -621,6 +770,41 @@ def Vector_FMAOp :
   let extraClassDeclaration = [{
     VectorType getVectorType() { return ::llvm::cast<VectorType>(getLhs().getType()); }
   }];
+}
+
+def Vector_FromElementsOp : Vector_Op<"from_elements", [
+    Pure,
+    TypesMatchWith<"operand types match result element type",
+                   "result", "elements", "SmallVector<Type>("
+                   "::llvm::cast<VectorType>($_self).getNumElements(), "
+                   "::llvm::cast<VectorType>($_self).getElementType())">]> {
+  let summary = "operation that defines a vector from scalar elements";
+  let description = [{
+    This operation defines a vector from one or multiple scalar elements. The
+    number of elements must match the number of elements in the result type.
+    All elements must have the same type, which must match the element type of
+    the result vector type.
+
+    `elements` are a flattened version of the result vector in row-major order.
+
+    Example:
+
+    ```mlir
+    // %f1
+    %0 = vector.from_elements %f1 : vector<f32>
+    // [%f1, %f2]
+    %1 = vector.from_elements %f1, %f2 : vector<2xf32>
+    // [[%f1, %f2, %f3], [%f4, %f5, %f6]]
+    %2 = vector.from_elements %f1, %f2, %f3, %f4, %f5, %f6 : vector<2x3xf32>
+    // [[[%f1, %f2]], [[%f3, %f4]], [[%f5, %f6]]]
+    %3 = vector.from_elements %f1, %f2, %f3, %f4, %f5, %f6 : vector<3x1x2xf32>
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$elements);
+  let results = (outs AnyVectorOfAnyRank:$result);
+  let assemblyFormat = "$elements attr-dict `:` type($result)";
+  let hasCanonicalizer = 1;
 }
 
 def Vector_InsertElementOp :
@@ -681,6 +865,10 @@ def Vector_InsertOp :
     Takes an n-D source vector, an (n+k)-D destination vector and a k-D position
     and inserts the n-D source into the (n+k)-D destination at the proper
     position. Degenerates to a scalar or a 0-d vector source type when n = 0.
+
+    Dynamic indices must be greater or equal to zero and less than the size of
+    the corresponding dimension. The result is undefined if any index is
+    out-of-bounds.
 
     Example:
 
@@ -942,7 +1130,8 @@ def Vector_OuterProductOp :
 
     An optional kind attribute may be specified to be: `add`/`mul`/`minsi`
     /`minui`/`maxsi`/`maxui`/`and`/`or`/`xor` for integers, and `add`/`mul`
-    /`minf`/`maxf`/`minimumf`/`maximumf` for floats. The default is `add`.
+    /`minnumf`/`maxnumf`/`minimumf`/`maximumf` for floats. The default is
+    `add`.
 
     Example:
 
@@ -954,7 +1143,7 @@ def Vector_OuterProductOp :
       vector<4xf32>, vector<8xf32>, vector<4x8xf32>
     return %3: vector<4x8xf32>
 
-    %4 = vector.outerproduct %0, %1, %2 {kind = #vector.kind<maxf>}:
+    %4 = vector.outerproduct %0, %1, %2 {kind = #vector.kind<maxnumf>}:
       vector<4xf32>, vector<8xf32>, vector<4x8xf32>
     return %3: vector<4x8xf32>
 
@@ -1120,7 +1309,6 @@ def Vector_ExtractStridedSliceOp :
     attribute and extracts the n-D subvector at the proper offset.
 
     At the moment strides must contain only 1s.
-    // TODO: support non-1 strides.
 
     Returns an n-D vector where the first k-D dimensions match the `sizes`
     attribute. The returned subvector contains the elements starting at offset
@@ -1175,7 +1363,7 @@ def Vector_TransferReadOp :
                    AffineMapAttr:$permutation_map,
                    AnyType:$padding,
                    Optional<VectorOf<[I1]>>:$mask,
-                   OptionalAttr<BoolArrayAttr>:$in_bounds)>,
+                   BoolArrayAttr:$in_bounds)>,
     Results<(outs AnyVectorOfAnyRank:$vector)> {
 
   let summary = "Reads a supervector from memory into an SSA vector value.";
@@ -1213,16 +1401,19 @@ def Vector_TransferReadOp :
     permutation or broadcasting. Elements whose corresponding mask element is
     `0` are masked out and replaced with `padding`.
 
-    An optional boolean array attribute `in_bounds` specifies for every vector
-    dimension if the transfer is guaranteed to be within the source bounds. If
-    specified, the `in_bounds` array length has to be equal to the vector rank.
-    If set to "false", accesses (including the starting point) may run
+    For every vector dimension, the boolean array attribute `in_bounds`
+    specifies if the transfer is guaranteed to be within the source bounds. If
+    set to "false", accesses (including the starting point) may run
     out-of-bounds along the respective vector dimension as the index increases.
-    Broadcast dimensions must always be in-bounds. In absence of the attribute,
-    accesses along all vector dimensions (except for broadcasts) may run
-    out-of-bounds. A `vector.transfer_read` can be lowered to a simple load if
-    all dimensions are specified to be within bounds and no `mask` was
-    specified. Note that non-vector dimensions *must* always be in-bounds.
+    Non-vector and broadcast dimensions *must* always be in-bounds. The
+    `in_bounds` array length has to be equal to the vector rank. This attribute
+    has a default value: `false` (i.e. "out-of-bounds"). When skipped in the
+    textual IR, the default value is assumed. Similarly, the OP printer will
+    omit this attribute when all dimensions are out-of-bounds (i.e. the default
+    value is used).
+
+    A `vector.transfer_read` can be lowered to a simple load if all dimensions
+    are specified to be within bounds and no `mask` was specified.
 
     This operation is called 'read' by opposition to 'load' because the
     super-vector granularity is generally not representable with a single
@@ -1262,7 +1453,7 @@ def Vector_TransferReadOp :
           // Update the temporary gathered slice with the individual element
           %slice = memref.load %tmp : memref<vector<3x4x5xf32>> -> vector<3x4x5xf32>
           %updated = vector.insert %a, %slice[%i, %j, %k] : f32 into vector<3x4x5xf32>
-          memref.store %updated, %temp : memref<vector<3x4x5xf32>>
+          memref.store %updated, %tmp : memref<vector<3x4x5xf32>>
     }}}
     // At this point we gathered the elements from the original
     // memref into the desired vector layout, stored in the `%tmp` allocation.
@@ -1285,7 +1476,7 @@ def Vector_TransferReadOp :
         %slice = memref.load %tmp : memref<vector<3x4x5xf32>> -> vector<3x4x5xf32>
         // Here we only store to the first element in dimension one
         %updated = vector.insert %a, %slice[%i, 0, %k] : f32 into vector<3x4x5xf32>
-        memref.store %updated, %temp : memref<vector<3x4x5xf32>>
+        memref.store %updated, %tmp : memref<vector<3x4x5xf32>>
     }}
     // At this point we gathered the elements from the original
     // memref into the desired vector layout, stored in the `%tmp` allocation.
@@ -1419,7 +1610,7 @@ def Vector_TransferWriteOp :
                    Variadic<Index>:$indices,
                    AffineMapAttr:$permutation_map,
                    Optional<VectorOf<[I1]>>:$mask,
-                   OptionalAttr<BoolArrayAttr>:$in_bounds)>,
+                   BoolArrayAttr:$in_bounds)>,
     Results<(outs Optional<AnyRankedTensor>:$result)> {
 
   let summary = "The vector.transfer_write op writes a supervector to memory.";
@@ -1455,15 +1646,19 @@ def Vector_TransferWriteOp :
     any permutation. Elements whose corresponding mask element is `0` are
     masked out.
 
-    An optional boolean array attribute `in_bounds` specifies for every vector
-    dimension if the transfer is guaranteed to be within the source bounds. If
-    specified, the `in_bounds` array length has to be equal to the vector rank.
-    If set to "false", accesses (including the starting point) may run
+    For every vector dimension, the boolean array attribute `in_bounds`
+    specifies if the transfer is guaranteed to be within the source bounds. If
+    set to "false", accesses (including the starting point) may run
     out-of-bounds along the respective vector dimension as the index increases.
-    In absence of the attribute, accesses along all vector dimensions may run
-    out-of-bounds. A `vector.transfer_write` can be lowered to a simple store if
-    all dimensions are specified to be within bounds and no `mask` was
-    specified. Note that non-vector dimensions *must* always be in-bounds.
+    Non-vector and broadcast dimensions *must* always be in-bounds. The
+    `in_bounds` array length has to be equal to the vector rank. This attribute
+    has a default value: `false` (i.e. "out-of-bounds"). When skipped in the
+    textual IR, the default value is assumed. Similarly, the OP printer will
+    omit this attribute when all dimensions are out-of-bounds (i.e. the default
+    value is used).
+
+     A `vector.transfer_write` can be lowered to a simple store if all
+     dimensions are specified to be within bounds and no `mask` was specified.
 
     This operation is called 'write' by opposition to 'store' because the
     super-vector granularity is generally not representable with a single
@@ -1581,22 +1776,27 @@ def Vector_LoadOp : Vector_Op<"load"> {
     vector. If the memref element type is vector, it should match the result
     vector type.
 
-    Example 1: 1-D vector load on a scalar memref.
+    Example: 0-D vector load on a scalar memref.
+    ```mlir
+    %result = vector.load %base[%i, %j] : memref<100x100xf32>, vector<f32>
+    ```
+
+    Example: 1-D vector load on a scalar memref.
     ```mlir
     %result = vector.load %base[%i, %j] : memref<100x100xf32>, vector<8xf32>
     ```
 
-    Example 2: 1-D vector load on a vector memref.
+    Example: 1-D vector load on a vector memref.
     ```mlir
     %result = vector.load %memref[%i, %j] : memref<200x100xvector<8xf32>>, vector<8xf32>
     ```
 
-    Example 3:  2-D vector load on a scalar memref.
+    Example:  2-D vector load on a scalar memref.
     ```mlir
     %result = vector.load %memref[%i, %j] : memref<200x100xf32>, vector<4x8xf32>
     ```
 
-    Example 4:  2-D vector load on a vector memref.
+    Example:  2-D vector load on a vector memref.
     ```mlir
     %result = vector.load %memref[%i, %j] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
     ```
@@ -1607,12 +1807,12 @@ def Vector_LoadOp : Vector_Op<"load"> {
     loaded out of bounds. Not all targets may support out-of-bounds vector
     loads.
 
-    Example 5:  Potential out-of-bound vector load.
+    Example:  Potential out-of-bound vector load.
     ```mlir
     %result = vector.load %memref[%index] : memref<?xf32>, vector<8xf32>
     ```
 
-    Example 6:  Explicit out-of-bound vector load.
+    Example:  Explicit out-of-bound vector load.
     ```mlir
     %result = vector.load %memref[%c0] : memref<7xf32>, vector<8xf32>
     ```
@@ -1620,8 +1820,9 @@ def Vector_LoadOp : Vector_Op<"load"> {
 
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
       [MemRead]>:$base,
-      Variadic<Index>:$indices);
-  let results = (outs AnyVector:$result);
+      Variadic<Index>:$indices,
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal);
+  let results = (outs AnyVectorOfAnyRank:$result);
 
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -1659,22 +1860,27 @@ def Vector_StoreOp : Vector_Op<"store"> {
     to store. If the memref element type is vector, it should match the type
     of the value to store.
 
-    Example 1: 1-D vector store on a scalar memref.
+    Example: 0-D vector store on a scalar memref.
+    ```mlir
+    vector.store %valueToStore, %memref[%i, %j] : memref<200x100xf32>, vector<f32>
+    ```
+
+    Example: 1-D vector store on a scalar memref.
     ```mlir
     vector.store %valueToStore, %memref[%i, %j] : memref<200x100xf32>, vector<8xf32>
     ```
 
-    Example 2: 1-D vector store on a vector memref.
+    Example: 1-D vector store on a vector memref.
     ```mlir
     vector.store %valueToStore, %memref[%i, %j] : memref<200x100xvector<8xf32>>, vector<8xf32>
     ```
 
-    Example 3:  2-D vector store on a scalar memref.
+    Example:  2-D vector store on a scalar memref.
     ```mlir
     vector.store %valueToStore, %memref[%i, %j] : memref<200x100xf32>, vector<4x8xf32>
     ```
 
-    Example 4:  2-D vector store on a vector memref.
+    Example:  2-D vector store on a vector memref.
     ```mlir
     vector.store %valueToStore, %memref[%i, %j] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
     ```
@@ -1684,21 +1890,24 @@ def Vector_StoreOp : Vector_Op<"store"> {
     target-specific. No assumptions should be made on the memory written out of
     bounds. Not all targets may support out-of-bounds vector stores.
 
-    Example 5:  Potential out-of-bounds vector store.
+    Example:  Potential out-of-bounds vector store.
     ```mlir
     vector.store %valueToStore, %memref[%index] : memref<?xf32>, vector<8xf32>
     ```
 
-    Example 6:  Explicit out-of-bounds vector store.
+    Example:  Explicit out-of-bounds vector store.
     ```mlir
     vector.store %valueToStore, %memref[%c0] : memref<7xf32>, vector<8xf32>
     ```
   }];
 
-  let arguments = (ins AnyVector:$valueToStore,
+  let arguments = (ins
+      AnyVectorOfAnyRank:$valueToStore,
       Arg<AnyMemRef, "the reference to store to",
       [MemWrite]>:$base,
-      Variadic<Index>:$indices);
+      Variadic<Index>:$indices,
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal
+  );
 
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -2483,6 +2692,7 @@ def Vector_TransposeOp :
 
 def Vector_PrintOp :
   Vector_Op<"print", [
+    MemoryEffects<[MemWrite]>,
     PredOpTrait<
       "`source` or `punctuation` are not set when printing strings",
       CPred<"!getStringLiteral() || (!getSource() && getPunctuation() == PrintPunctuation::NewLine)">
@@ -2731,7 +2941,8 @@ def Vector_SplatOp : Vector_Op<"splat", [
 //       call to the function. For that, it might be useful to have a
 //       'vector.scale.global' and a 'vector.scale.local' operation.
 def VectorScaleOp : Vector_Op<"vscale",
-                 [Pure]> {
+  [Pure, DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]
+> {
   let summary = "Load vector scale size";
   let description = [{
     The `vscale` op returns the scale of the scalable vectors, a positive
@@ -2747,6 +2958,13 @@ def VectorScaleOp : Vector_Op<"vscale",
   }];
   let results = (outs Index:$res);
   let assemblyFormat = "attr-dict";
+
+  let extraClassDefinition = [{
+    void $cppClass::getAsmResultNames(
+        ::llvm::function_ref<void(mlir::Value, mlir::StringRef)> setNameFn) {
+      setNameFn(getResult(), "vscale");
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -2769,9 +2987,9 @@ def Vector_ScanOp :
     Performs an inclusive/exclusive scan on an n-D vector along a single
     dimension returning an n-D result vector using the given
     operation (`add`/`mul`/`minsi`/`minui`/`maxsi`/`maxui`/`and`/`or`/`xor` for
-    integers, and `add`/`mul`/`minf`/`maxf`/`minimumf`/`maximumf` for floats),
-    and a specified value for the initial value. The operator returns the
-    result of scan as well as the result of the last reduction in the scan.
+    integers, and `add`/`mul`/`minnumf`/`maxnumf`/`minimumf`/`maximumf` for
+    floats), and a specified value for the initial value. The operator returns
+    the result of scan as well as the result of the last reduction in the scan.
 
     Example:
 
@@ -2804,6 +3022,31 @@ def Vector_ScanOp :
     "$kind `,` $source `,` $initial_value attr-dict `:` "
     "type($source) `,` type($initial_value) ";
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// VectorStepOp
+//===----------------------------------------------------------------------===//
+
+def Vector_StepOp : Vector_Op<"step", [Pure]> {
+  let summary = "A linear sequence of values from 0 to N";
+  let description = [{
+    A `step` operation produces an index vector, i.e. a 1-D vector of values of
+    index type that represents a linear sequence from 0 to N-1, where N is the
+    number of elements in the `result` vector.
+
+    Supports fixed-width and scalable vectors.
+
+    Examples:
+
+    ```mlir
+    %0 = vector.step : vector<4xindex> ; [0, 1, 2, 3]
+    %1 = vector.step : vector<[4]xindex> ; [0, 1, .., <vscale * 4 - 1>]
+    ```
+  }];
+  let hasFolder = 1;
+  let results = (outs VectorOfRankAndType<[1], [Index]>:$result);
+  let assemblyFormat = "attr-dict `:` type($result)";
 }
 
 def Vector_YieldOp : Vector_Op<"yield", [

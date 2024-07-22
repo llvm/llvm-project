@@ -184,6 +184,15 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
   return object_file_sp;
 }
 
+bool ObjectFile::IsObjectFile(lldb_private::FileSpec file_spec) {
+  DataBufferSP data_sp;
+  offset_t data_offset = 0;
+  ModuleSP module_sp = std::make_shared<Module>(file_spec);
+  return static_cast<bool>(ObjectFile::FindPlugin(
+      module_sp, &file_spec, 0, FileSystem::Instance().GetByteSize(file_spec),
+      data_sp, data_offset));
+}
+
 size_t ObjectFile::GetModuleSpecifications(const FileSpec &file,
                                            lldb::offset_t file_offset,
                                            lldb::offset_t file_size,
@@ -607,15 +616,15 @@ lldb::SymbolType
 ObjectFile::GetSymbolTypeFromName(llvm::StringRef name,
                                   lldb::SymbolType symbol_type_hint) {
   if (!name.empty()) {
-    if (name.startswith("_OBJC_")) {
+    if (name.starts_with("_OBJC_")) {
       // ObjC
-      if (name.startswith("_OBJC_CLASS_$_"))
+      if (name.starts_with("_OBJC_CLASS_$_"))
         return lldb::eSymbolTypeObjCClass;
-      if (name.startswith("_OBJC_METACLASS_$_"))
+      if (name.starts_with("_OBJC_METACLASS_$_"))
         return lldb::eSymbolTypeObjCMetaClass;
-      if (name.startswith("_OBJC_IVAR_$_"))
+      if (name.starts_with("_OBJC_IVAR_$_"))
         return lldb::eSymbolTypeObjCIVar;
-    } else if (name.startswith(".objc_class_name_")) {
+    } else if (name.starts_with(".objc_class_name_")) {
       // ObjC v1
       return lldb::eSymbolTypeObjCClass;
     }

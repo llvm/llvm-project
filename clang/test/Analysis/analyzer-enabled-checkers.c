@@ -42,12 +42,14 @@
 // CHECK-NEXT: security.insecureAPI.mktemp
 // CHECK-NEXT: security.insecureAPI.vfork
 // CHECK-NEXT: unix.API
+// CHECK-NEXT: unix.BlockInCriticalSection
 // CHECK-NEXT: unix.cstring.CStringModeling
 // CHECK-NEXT: unix.DynamicMemoryModeling
 // CHECK-NEXT: unix.Errno
 // CHECK-NEXT: unix.Malloc
 // CHECK-NEXT: unix.MallocSizeof
 // CHECK-NEXT: unix.MismatchedDeallocator
+// CHECK-NEXT: unix.Stream
 // CHECK-NEXT: unix.StdCLibraryFunctions
 // CHECK-NEXT: unix.Vfork
 // CHECK-NEXT: unix.cstring.BadSizeArg

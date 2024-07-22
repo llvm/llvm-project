@@ -147,8 +147,7 @@ LayoutOverrideSource::LayoutOverrideSource(StringRef Filename) {
 
         // Skip over this offset, the following comma, and any spaces.
         LineStr = LineStr.substr(1);
-        while (!LineStr.empty() && isWhitespace(LineStr[0]))
-          LineStr = LineStr.substr(1);
+        LineStr = LineStr.drop_while(isWhitespace);
       }
     }
 
@@ -163,8 +162,7 @@ LayoutOverrideSource::LayoutOverrideSource(StringRef Filename) {
 
         // Skip over this offset, the following comma, and any spaces.
         LineStr = LineStr.substr(1);
-        while (!LineStr.empty() && isWhitespace(LineStr[0]))
-          LineStr = LineStr.substr(1);
+        LineStr = LineStr.drop_while(isWhitespace);
       }
       continue;
     }
@@ -180,8 +178,7 @@ LayoutOverrideSource::LayoutOverrideSource(StringRef Filename) {
 
         // Skip over this offset, the following comma, and any spaces.
         LineStr = LineStr.substr(1);
-        while (!LineStr.empty() && isWhitespace(LineStr[0]))
-          LineStr = LineStr.substr(1);
+        LineStr = LineStr.drop_while(isWhitespace);
       }
     }
   }

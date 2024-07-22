@@ -9,7 +9,7 @@
 // However, not all of them should result in the check.
 // So here, we *only* check which should and which should not result in checks.
 
-// CHECK-DAG: @[[LINE_500_UNSIGNED_TRUNCATION:.*]] = {{.*}}, i32 500, i32 10 }, {{.*}}, {{.*}}, i8 1 }
+// CHECK-DAG: @[[LINE_500_UNSIGNED_TRUNCATION:.*]] = {{.*}}, i32 500, i32 10 }, {{.*}}, {{.*}}, i8 1, i32 0 }
 
 // CHECK-LABEL: @convert_unsigned_int_to_unsigned_int
 unsigned int convert_unsigned_int_to_unsigned_int(unsigned int x) {

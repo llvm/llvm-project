@@ -1098,6 +1098,11 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_ldexpl:
     Changed |= setWillReturn(F);
     break;
+  case LibFunc_remquo:
+  case LibFunc_remquof:
+  case LibFunc_remquol:
+    Changed |= setDoesNotCapture(F, 2);
+    [[fallthrough]];
   case LibFunc_abs:
   case LibFunc_acos:
   case LibFunc_acosf:
@@ -1137,6 +1142,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_cosl:
   case LibFunc_cospi:
   case LibFunc_cospif:
+  case LibFunc_erf:
+  case LibFunc_erff:
+  case LibFunc_erfl:
   case LibFunc_exp:
   case LibFunc_expf:
   case LibFunc_expl:
@@ -1192,6 +1200,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_pow:
   case LibFunc_powf:
   case LibFunc_powl:
+  case LibFunc_remainder:
+  case LibFunc_remainderf:
+  case LibFunc_remainderl:
   case LibFunc_rint:
   case LibFunc_rintf:
   case LibFunc_rintl:
@@ -1252,7 +1263,7 @@ static void setRetExtAttr(Function &F,
 }
 
 // Modeled after X86TargetLowering::markLibCallAttributes.
-static void markRegisterParameterAttributes(Function *F) {
+void llvm::markRegisterParameterAttributes(Function *F) {
   if (!F->arg_size() || F->isVarArg())
     return;
 

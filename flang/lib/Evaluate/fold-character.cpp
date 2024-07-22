@@ -58,10 +58,13 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
     return FoldElementalIntrinsic<T, IntT>(context, std::move(funcRef),
         ScalarFunc<T, IntT>([&](const Scalar<IntT> &i) {
           if (i.IsNegative() || i.BGE(Scalar<IntT>{0}.IBSET(8 * KIND))) {
-            context.messages().Say(
-                "%s(I=%jd) is out of range for CHARACTER(KIND=%d)"_warn_en_US,
-                parser::ToUpperCaseLetters(name),
-                static_cast<std::intmax_t>(i.ToInt64()), KIND);
+            if (context.languageFeatures().ShouldWarn(
+                    common::UsageWarning::FoldingValueChecks)) {
+              context.messages().Say(
+                  "%s(I=%jd) is out of range for CHARACTER(KIND=%d)"_warn_en_US,
+                  parser::ToUpperCaseLetters(name),
+                  static_cast<std::intmax_t>(i.ToInt64()), KIND);
+            }
           }
           return CharacterUtils<KIND>::CHAR(i.ToUInt64());
         }));
@@ -84,7 +87,7 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
   } else if (name == "minval") {
     // Collating sequences correspond to positive integers (3.31)
-    SingleCharType most{0x7fffffff >> (8 * (4 - KIND))};
+    auto most{static_cast<SingleCharType>(0xffffffff >> (8 * (4 - KIND)))};
     if (auto identity{Identity<T>(
             StringType{most}, GetConstantLength(context, funcRef, 0))}) {
       return FoldMaxvalMinval<T>(
@@ -103,9 +106,12 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
             static_cast<std::intmax_t>(n));
       } else if (static_cast<double>(n) * str.size() >
           (1 << 20)) { // sanity limit of 1MiB
-        context.messages().Say(
-            "Result of REPEAT() is too large to compute at compilation time (%g characters)"_port_en_US,
-            static_cast<double>(n) * str.size());
+        if (context.languageFeatures().ShouldWarn(
+                common::UsageWarning::FoldingLimit)) {
+          context.messages().Say(
+              "Result of REPEAT() is too large to compute at compilation time (%g characters)"_port_en_US,
+              static_cast<double>(n) * str.size());
+        }
       } else {
         return Expr<T>{Constant<T>{CharacterUtils<KIND>::REPEAT(str, n)}};
       }

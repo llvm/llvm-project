@@ -18,7 +18,7 @@ struct Foo bar1[] = {
   1, 2,
   1, 2,
   1
-}; // expected-warning@-1 {{missing field 'b' initializer}}
+}; // expected-warning {{missing field 'b' initializer}}
 
 struct Foo bar2[] = { {}, {}, {} };
 

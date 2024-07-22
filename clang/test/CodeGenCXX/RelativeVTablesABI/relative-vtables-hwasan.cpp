@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -S -o - -emit-llvm -fsanitize=hwaddress | FileCheck %s
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -o - -emit-llvm -fsanitize=hwaddress | FileCheck %s
 
 /// The usual vtable will have default visibility. In this case, the actual
 /// vtable is hidden and the alias is made public. With hwasan enabled, we want

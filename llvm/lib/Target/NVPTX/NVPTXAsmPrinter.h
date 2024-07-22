@@ -27,6 +27,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/MCExpr.h"
@@ -174,7 +175,7 @@ private:
   void printModuleLevelGV(const GlobalVariable *GVar, raw_ostream &O,
                           bool processDemoted, const NVPTXSubtarget &STI);
   void emitGlobals(const Module &M);
-  void emitGlobalAlias(const Module &M, const GlobalAlias &GA);
+  void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
   void emitHeader(Module &M, raw_ostream &O, const NVPTXSubtarget &STI);
   void emitKernelFunctionDirectives(const Function &F, raw_ostream &O) const;
   void emitVirtualRegister(unsigned int vr, raw_ostream &);
@@ -222,6 +223,8 @@ private:
   void emitLinkageDirective(const GlobalValue *V, raw_ostream &O);
   void emitDeclarations(const Module &, raw_ostream &O);
   void emitDeclaration(const Function *, raw_ostream &O);
+  void emitAliasDeclaration(const GlobalAlias *, raw_ostream &O);
+  void emitDeclarationWithName(const Function *, MCSymbol *, raw_ostream &O);
   void emitDemotedVars(const Function *, raw_ostream &);
 
   bool lowerImageHandleOperand(const MachineInstr *MI, unsigned OpNo,
@@ -252,7 +255,7 @@ public:
   bool runOnMachineFunction(MachineFunction &F) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     AsmPrinter::getAnalysisUsage(AU);
   }
 

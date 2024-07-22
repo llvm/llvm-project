@@ -17,6 +17,7 @@ unittest("ASTTests") {
   ]
   sources = [
     "ASTContextParentMapTest.cpp",
+    "ASTDumperTest.cpp",
     "ASTExprTest.cpp",
     "ASTImporterFixtures.cpp",
     "ASTImporterGenericRedeclTest.cpp",
@@ -31,12 +32,14 @@ unittest("ASTTests") {
     "CommentLexer.cpp",
     "CommentParser.cpp",
     "CommentTextTest.cpp",
+    "ConceptPrinterTest.cpp",
     "DataCollectionTest.cpp",
     "DeclPrinterTest.cpp",
     "DeclTest.cpp",
     "EvaluateAsRValueTest.cpp",
     "ExternalASTSourceTest.cpp",
     "NamedDeclPrinterTest.cpp",
+    "ProfilingTest.cpp",
     "RandstructTest.cpp",
     "RecursiveASTVisitorTest.cpp",
     "SizelessTypesTest.cpp",

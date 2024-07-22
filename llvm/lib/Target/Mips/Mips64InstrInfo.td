@@ -75,18 +75,18 @@ def assertzext_lt_i32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
 // Instructions specific format
 //===----------------------------------------------------------------------===//
 let usesCustomInserter = 1 in {
-  def ATOMIC_LOAD_ADD_I64  : Atomic2Ops<atomic_load_add_64, GPR64>;
-  def ATOMIC_LOAD_SUB_I64  : Atomic2Ops<atomic_load_sub_64, GPR64>;
-  def ATOMIC_LOAD_AND_I64  : Atomic2Ops<atomic_load_and_64, GPR64>;
-  def ATOMIC_LOAD_OR_I64   : Atomic2Ops<atomic_load_or_64, GPR64>;
-  def ATOMIC_LOAD_XOR_I64  : Atomic2Ops<atomic_load_xor_64, GPR64>;
-  def ATOMIC_LOAD_NAND_I64 : Atomic2Ops<atomic_load_nand_64, GPR64>;
-  def ATOMIC_SWAP_I64      : Atomic2Ops<atomic_swap_64, GPR64>;
-  def ATOMIC_CMP_SWAP_I64  : AtomicCmpSwap<atomic_cmp_swap_64, GPR64>;
-  def ATOMIC_LOAD_MIN_I64  : Atomic2Ops<atomic_load_min_64, GPR64>;
-  def ATOMIC_LOAD_MAX_I64  : Atomic2Ops<atomic_load_max_64, GPR64>;
-  def ATOMIC_LOAD_UMIN_I64 : Atomic2Ops<atomic_load_umin_64, GPR64>;
-  def ATOMIC_LOAD_UMAX_I64 : Atomic2Ops<atomic_load_umax_64, GPR64>;
+  def ATOMIC_LOAD_ADD_I64  : Atomic2Ops<atomic_load_add_i64, GPR64>;
+  def ATOMIC_LOAD_SUB_I64  : Atomic2Ops<atomic_load_sub_i64, GPR64>;
+  def ATOMIC_LOAD_AND_I64  : Atomic2Ops<atomic_load_and_i64, GPR64>;
+  def ATOMIC_LOAD_OR_I64   : Atomic2Ops<atomic_load_or_i64, GPR64>;
+  def ATOMIC_LOAD_XOR_I64  : Atomic2Ops<atomic_load_xor_i64, GPR64>;
+  def ATOMIC_LOAD_NAND_I64 : Atomic2Ops<atomic_load_nand_i64, GPR64>;
+  def ATOMIC_SWAP_I64      : Atomic2Ops<atomic_swap_i64, GPR64>;
+  def ATOMIC_CMP_SWAP_I64  : AtomicCmpSwap<atomic_cmp_swap_i64, GPR64>;
+  def ATOMIC_LOAD_MIN_I64  : Atomic2Ops<atomic_load_min_i64, GPR64>;
+  def ATOMIC_LOAD_MAX_I64  : Atomic2Ops<atomic_load_max_i64, GPR64>;
+  def ATOMIC_LOAD_UMIN_I64 : Atomic2Ops<atomic_load_umin_i64, GPR64>;
+  def ATOMIC_LOAD_UMAX_I64 : Atomic2Ops<atomic_load_umax_i64, GPR64>;
 }
 
 def ATOMIC_LOAD_ADD_I64_POSTRA  : Atomic2OpsPostRA<GPR64>;
@@ -164,20 +164,20 @@ def NOR64  : LogicNOR<"nor", GPR64Opnd>, ADD_FM<0, 0x27>, GPR_64;
 
 /// Shift Instructions
 let AdditionalPredicates = [NotInMicroMips] in {
-  def DSLL : shift_rotate_imm<"dsll", uimm6, GPR64Opnd, II_DSLL, shl,
+  def DSLL : shift_rotate_imm<"dsll", uimm6, GPR64Opnd, II_DSLL, mshl_64,
                               immZExt6>,
              SRA_FM<0x38, 0>, ISA_MIPS3;
-  def DSRL : shift_rotate_imm<"dsrl", uimm6, GPR64Opnd, II_DSRL, srl,
+  def DSRL : shift_rotate_imm<"dsrl", uimm6, GPR64Opnd, II_DSRL, msrl_64,
                               immZExt6>,
              SRA_FM<0x3a, 0>, ISA_MIPS3;
-  def DSRA : shift_rotate_imm<"dsra", uimm6, GPR64Opnd, II_DSRA, sra,
+  def DSRA : shift_rotate_imm<"dsra", uimm6, GPR64Opnd, II_DSRA, msra_64,
                               immZExt6>,
              SRA_FM<0x3b, 0>, ISA_MIPS3;
-  def DSLLV  : shift_rotate_reg<"dsllv", GPR64Opnd, II_DSLLV, shl>,
+  def DSLLV  : shift_rotate_reg<"dsllv", GPR64Opnd, II_DSLLV, mshl_64>,
                SRLV_FM<0x14, 0>, ISA_MIPS3;
-  def DSRAV  : shift_rotate_reg<"dsrav", GPR64Opnd, II_DSRAV, sra>,
+  def DSRAV  : shift_rotate_reg<"dsrav", GPR64Opnd, II_DSRAV, msra_64>,
                SRLV_FM<0x17, 0>, ISA_MIPS3;
-  def DSRLV  : shift_rotate_reg<"dsrlv", GPR64Opnd, II_DSRLV, srl>,
+  def DSRLV  : shift_rotate_reg<"dsrlv", GPR64Opnd, II_DSRLV, msrl_64>,
                SRLV_FM<0x16, 0>, ISA_MIPS3;
   def DSLL32 : shift_rotate_imm<"dsll32", uimm5, GPR64Opnd, II_DSLL32>,
                SRA_FM<0x3c, 0>, ISA_MIPS3;

@@ -657,8 +657,14 @@ TARGET_BUILTIN(__builtin_lasx_xvfsqrt_d, "V4dV4d", "nc", "lasx")
 TARGET_BUILTIN(__builtin_lasx_xvfrecip_s, "V8fV8f", "nc", "lasx")
 TARGET_BUILTIN(__builtin_lasx_xvfrecip_d, "V4dV4d", "nc", "lasx")
 
+TARGET_BUILTIN(__builtin_lasx_xvfrecipe_s, "V8fV8f", "nc", "lasx,frecipe")
+TARGET_BUILTIN(__builtin_lasx_xvfrecipe_d, "V4dV4d", "nc", "lasx,frecipe")
+
 TARGET_BUILTIN(__builtin_lasx_xvfrsqrt_s, "V8fV8f", "nc", "lasx")
 TARGET_BUILTIN(__builtin_lasx_xvfrsqrt_d, "V4dV4d", "nc", "lasx")
+
+TARGET_BUILTIN(__builtin_lasx_xvfrsqrte_s, "V8fV8f", "nc", "lasx,frecipe")
+TARGET_BUILTIN(__builtin_lasx_xvfrsqrte_d, "V4dV4d", "nc", "lasx,frecipe")
 
 TARGET_BUILTIN(__builtin_lasx_xvfcvtl_s_h, "V8fV16s", "nc", "lasx")
 TARGET_BUILTIN(__builtin_lasx_xvfcvth_s_h, "V8fV16s", "nc", "lasx")

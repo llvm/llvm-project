@@ -41,8 +41,9 @@ module attributes {transform.with_named_sequence} {
       padding_dimensions=[0, 1, 2],
       pack_paddings=[1, 1, 0]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.op<"bufferization.materialize_in_destination">)
+    %p = transform.num_associations %copy_back : (!transform.op<"bufferization.materialize_in_destination">) -> !transform.param<i64>
     // expected-remark @below {{1}}
-    transform.test_print_number_of_associated_payload_ir_ops %copy_back : !transform.op<"bufferization.materialize_in_destination">
+    transform.debug.emit_param_as_remark %p : !transform.param<i64>
     transform.yield
   }
 }
@@ -72,12 +73,47 @@ func.func @pad_to_multiple(%arg0: tensor<24x12xf32>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %padded, %pad, %copy_back = transform.structured.pad %0 {
+    %padded, %pad, %copy_back = transform.structured.pad %0 pad_to_multiple_of [2, 2, 1] {
       padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
       padding_dimensions=[0, 1, 2],
-      pad_to_multiple_of=[2, 2, 1],
       pack_paddings=[1, 1, 0]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+#map = affine_map<()[s0] -> (-s0 + 12, 7)>
+
+// CHECK-LABEL: @parametrized_pad_to_multiple
+func.func @parametrized_pad_to_multiple(%arg0: tensor<24x12xf32>,
+                                        %arg1: tensor<12x25xf32>,
+                                        %arg2: tensor<24x25xf32>,
+                                        %iv0 : index, %iv1 : index, %iv2 : index) -> tensor<24x25xf32> {
+  %0 = affine.min #map()[%iv2]
+  %1 = tensor.extract_slice %arg0[%iv0, %iv2] [4, %0] [1, 1] : tensor<24x12xf32> to tensor<4x?xf32>
+  %2 = tensor.extract_slice %arg1[%iv2, %iv1] [%0, 5] [1, 1] : tensor<12x25xf32> to tensor<?x5xf32>
+  %3 = tensor.extract_slice %arg2[%iv0, %iv1] [4, 5] [1, 1] : tensor<24x25xf32> to tensor<4x5xf32>
+
+  //      CHECK: linalg.matmul
+  // CHECK-SAME:     ins(%{{.*}}, %{{.*}} : tensor<4x7xf32>, tensor<7x6xf32>)
+  // CHECK-SAME:     outs(%{{.*}} : tensor<4x6xf32>)
+  %4 = linalg.matmul ins(%1, %2 : tensor<4x?xf32>, tensor<?x5xf32>) outs(%3 : tensor<4x5xf32>) -> tensor<4x5xf32>
+  %5 = tensor.insert_slice %4 into %arg2[%iv0, %iv1] [4, 5] [1, 1] : tensor<4x5xf32> into tensor<24x25xf32>
+  func.return %5 : tensor<24x25xf32>
+}
+
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %c2 = transform.param.constant 2 : i64 -> !transform.param<i64>
+    %padded, %pad, %copy_back = transform.structured.pad %0 pad_to_multiple_of [%c2, 2, 1] {
+      padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
+      padding_dimensions=[0, 1, 2],
+      pack_paddings=[1, 1, 0]
+    } : (!transform.any_op, !transform.param<i64>) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
 }

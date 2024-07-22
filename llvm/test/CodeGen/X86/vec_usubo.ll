@@ -1145,16 +1145,12 @@ define <4 x i32> @usubo_v4i1(<4 x i1> %a0, <4 x i1> %a1, ptr %p2) nounwind {
 ;
 ; AVX512-LABEL: usubo_v4i1:
 ; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpxor %xmm1, %xmm0, %xmm2
+; AVX512-NEXT:    vpslld $31, %xmm2, %xmm2
+; AVX512-NEXT:    vptestmd %xmm2, %xmm2, %k0
+; AVX512-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX512-NEXT:    vptestmd %xmm0, %xmm0, %k0
-; AVX512-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX512-NEXT:    vptestmd %xmm1, %xmm1, %k1
-; AVX512-NEXT:    kxorw %k1, %k0, %k0
-; AVX512-NEXT:    vptestnmd %xmm0, %xmm0, %k1 {%k1}
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
-; AVX512-NEXT:    kshiftlw $12, %k0, %k0
-; AVX512-NEXT:    kshiftrw $12, %k0, %k0
+; AVX512-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    movb %al, (%rdi)
 ; AVX512-NEXT:    retq

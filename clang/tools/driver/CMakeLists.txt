@@ -31,6 +31,9 @@ add_clang_tool(clang
 
   DEPENDS
   intrinsics_gen
+  # These generated headers are included transitively.
+  ARMTargetParserTableGen
+  AArch64TargetParserTableGen
   ${support_plugins}
   GENERATE_DRIVER
   )
@@ -103,10 +106,10 @@ if (APPLE)
 endif()
 
 if(CLANG_ORDER_FILE AND
-    (LLVM_LINKER_IS_LD64 OR LLVM_LINKER_IS_GOLD OR LLVM_LINKER_IS_LLD))
+    (LLVM_LINKER_IS_APPLE OR LLVM_LINKER_IS_GOLD OR LLVM_LINKER_IS_LLD))
   include(LLVMCheckLinkerFlag)
 
-  if (LLVM_LINKER_IS_LD64 OR (LLVM_LINKER_IS_LLD AND APPLE))
+  if (LLVM_LINKER_IS_APPLE OR (LLVM_LINKER_IS_LLD AND APPLE))
     set(LINKER_ORDER_FILE_OPTION "-Wl,-order_file,${CLANG_ORDER_FILE}")
   elseif (LLVM_LINKER_IS_GOLD)
     set(LINKER_ORDER_FILE_OPTION "-Wl,--section-ordering-file,${CLANG_ORDER_FILE}")

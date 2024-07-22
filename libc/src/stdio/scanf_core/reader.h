@@ -10,9 +10,10 @@
 #define LLVM_LIBC_SRC_STDIO_SCANF_CORE_READER_H
 
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
 
 using StreamGetc = int (*)(void *);
@@ -38,10 +39,11 @@ class Reader {
 
 public:
   // TODO: Set buff_len with a proper constant
-  Reader(ReadBuffer *string_buffer) : rb(string_buffer) {}
+  LIBC_INLINE Reader(ReadBuffer *string_buffer) : rb(string_buffer) {}
 
-  Reader(void *stream, StreamGetc stream_getc_in, StreamUngetc stream_ungetc_in,
-         ReadBuffer *stream_buffer = nullptr)
+  LIBC_INLINE Reader(void *stream, StreamGetc stream_getc_in,
+                     StreamUngetc stream_ungetc_in,
+                     ReadBuffer *stream_buffer = nullptr)
       : rb(stream_buffer), input_stream(stream), stream_getc(stream_getc_in),
         stream_ungetc(stream_ungetc_in) {}
 
@@ -63,10 +65,10 @@ public:
   // this is a file reader, else c is ignored.
   void ungetc(char c);
 
-  size_t chars_read() { return cur_chars_read; }
+  LIBC_INLINE size_t chars_read() { return cur_chars_read; }
 };
 
 } // namespace scanf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_SCANF_CORE_READER_H

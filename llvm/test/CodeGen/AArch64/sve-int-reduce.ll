@@ -188,6 +188,94 @@ define i64 @uaddv_nxv2i64(<vscale x 2 x i64> %a) {
   ret i64 %res
 }
 
+define i32 @uaddv_nxv16i8_nxv16i32(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: uaddv_nxv16i8_nxv16i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    uaddv d0, p0, z0.b
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
+  %1 = zext <vscale x 16 x i8> %a to <vscale x 16 x i32>
+  %2 = call i32 @llvm.vector.reduce.add.nxv16i32(<vscale x 16 x i32> %1)
+  ret i32 %2
+}
+
+define i64 @uaddv_nxv16i16_nxv16i64(<vscale x 16 x i16> %a) {
+; CHECK-LABEL: uaddv_nxv16i16_nxv16i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    uaddv d1, p0, z1.h
+; CHECK-NEXT:    uaddv d0, p0, z0.h
+; CHECK-NEXT:    fmov x8, d1
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    add x0, x9, x8
+; CHECK-NEXT:    ret
+  %1 = zext <vscale x 16 x i16> %a to <vscale x 16 x i64>
+  %2 = call i64 @llvm.vector.reduce.add.nxv16i64(<vscale x 16 x i64> %1)
+  ret i64 %2
+}
+
+define i32 @uaddv_nxv16i16_nxv16i32(<vscale x 32 x i16> %a) {
+; CHECK-LABEL: uaddv_nxv16i16_nxv16i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    uaddv d3, p0, z3.h
+; CHECK-NEXT:    uaddv d2, p0, z2.h
+; CHECK-NEXT:    uaddv d1, p0, z1.h
+; CHECK-NEXT:    uaddv d0, p0, z0.h
+; CHECK-NEXT:    fmov w8, s3
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    fmov w10, s1
+; CHECK-NEXT:    fmov w11, s0
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    add w9, w11, w10
+; CHECK-NEXT:    add w0, w9, w8
+; CHECK-NEXT:    ret
+  %1 = zext <vscale x 32 x i16> %a to <vscale x 32 x i32>
+  %2 = call i32 @llvm.vector.reduce.add.nxv32i64(<vscale x 32 x i32> %1)
+  ret i32 %2
+}
+
+define i32 @saddv_nxv16i8_nxv16i32(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: saddv_nxv16i8_nxv16i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    saddv d0, p0, z0.b
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
+  %1 = sext <vscale x 16 x i8> %a to <vscale x 16 x i32>
+  %2 = call i32 @llvm.vector.reduce.add.nxv16i32(<vscale x 16 x i32> %1)
+  ret i32 %2
+}
+
+define i32 @uaddv_nxv32i16_nxv32i32(ptr %a) {
+; CHECK-LABEL: uaddv_nxv32i16_nxv32i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0, #3, mul vl]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ld1h { z2.h }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1h { z3.h }, p0/z, [x0]
+; CHECK-NEXT:    uaddv d0, p0, z0.h
+; CHECK-NEXT:    uaddv d1, p0, z1.h
+; CHECK-NEXT:    uaddv d2, p0, z2.h
+; CHECK-NEXT:    uaddv d3, p0, z3.h
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    fmov w10, s2
+; CHECK-NEXT:    fmov w11, s3
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    add w9, w11, w10
+; CHECK-NEXT:    add w0, w9, w8
+; CHECK-NEXT:    ret
+  %1 = load <vscale x 32 x i16>, ptr %a, align 16
+  %2 = zext <vscale x 32 x i16> %1 to <vscale x 32 x i32>
+  %3 = call i32 @llvm.vector.reduce.add.nxv32i32(<vscale x 32 x i32> %2)
+  ret i32 %3
+}
+
 ; UMINV
 
 define i8 @umin_nxv16i8(<vscale x 16 x i8> %a) {
@@ -378,29 +466,29 @@ declare i8 @llvm.vector.reduce.smin.nxv10i8(<vscale x 10 x i8>)
 define i8 @smin_nxv10i8(<vscale x 10 x i8> %a) {
 ; CHECK-LABEL: smin_nxv10i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.h, z0.b
-; CHECK-NEXT:    mov z1.d, #127 // =0x7f
+; CHECK-NEXT:    uunpkhi z1.h, z0.b
+; CHECK-NEXT:    mov z3.d, #127 // =0x7f
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    uunpklo z3.s, z2.h
-; CHECK-NEXT:    uunpkhi z2.s, z2.h
-; CHECK-NEXT:    uunpklo z3.d, z3.s
-; CHECK-NEXT:    uzp1 z3.s, z3.s, z1.s
-; CHECK-NEXT:    uzp1 z2.h, z3.h, z2.h
-; CHECK-NEXT:    uzp1 z2.b, z0.b, z2.b
-; CHECK-NEXT:    uunpkhi z2.h, z2.b
-; CHECK-NEXT:    uunpkhi z3.s, z2.h
-; CHECK-NEXT:    uunpklo z2.s, z2.h
-; CHECK-NEXT:    uunpkhi z3.d, z3.s
-; CHECK-NEXT:    uzp1 z3.s, z1.s, z3.s
-; CHECK-NEXT:    uzp1 z2.h, z2.h, z3.h
-; CHECK-NEXT:    uzp1 z2.b, z0.b, z2.b
-; CHECK-NEXT:    uunpkhi z2.h, z2.b
-; CHECK-NEXT:    uunpkhi z3.s, z2.h
-; CHECK-NEXT:    uunpklo z2.s, z2.h
-; CHECK-NEXT:    uunpklo z3.d, z3.s
-; CHECK-NEXT:    uzp1 z1.s, z3.s, z1.s
+; CHECK-NEXT:    uunpklo z2.s, z1.h
+; CHECK-NEXT:    uunpkhi z1.s, z1.h
+; CHECK-NEXT:    uunpklo z2.d, z2.s
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z3.s
 ; CHECK-NEXT:    uzp1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    uzp1 z1.b, z0.b, z1.b
+; CHECK-NEXT:    uunpkhi z1.h, z1.b
+; CHECK-NEXT:    uunpkhi z2.s, z1.h
+; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    uunpkhi z2.d, z2.s
+; CHECK-NEXT:    uzp1 z2.s, z3.s, z2.s
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h
+; CHECK-NEXT:    uzp1 z1.b, z0.b, z1.b
+; CHECK-NEXT:    uunpkhi z1.h, z1.b
+; CHECK-NEXT:    uunpkhi z2.s, z1.h
+; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    uunpklo z2.d, z2.s
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z3.s
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
 ; CHECK-NEXT:    sminv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
@@ -414,12 +502,12 @@ declare i8 @llvm.vector.reduce.add.nxv12i8(<vscale x 12 x i8>)
 define i8 @uaddv_nxv12i8(<vscale x 12 x i8> %a) {
 ; CHECK-LABEL: uaddv_nxv12i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.h, z0.b
-; CHECK-NEXT:    mov z1.s, #0 // =0x0
+; CHECK-NEXT:    uunpkhi z1.h, z0.b
+; CHECK-NEXT:    mov z2.s, #0 // =0x0
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    uunpklo z2.s, z2.h
-; CHECK-NEXT:    uzp1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
 ; CHECK-NEXT:    uaddv d0, p0, z0.b
 ; CHECK-NEXT:    fmov x0, d0
@@ -434,15 +522,15 @@ declare i8 @llvm.vector.reduce.umax.nxv14i8(<vscale x 14 x i8>)
 define i8 @umax_nxv14i8(<vscale x 14 x i8> %a) {
 ; CHECK-LABEL: umax_nxv14i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.h, z0.b
-; CHECK-NEXT:    mov z1.d, #0 // =0x0
+; CHECK-NEXT:    uunpkhi z1.h, z0.b
+; CHECK-NEXT:    mov z3.d, #0 // =0x0
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    uunpkhi z3.s, z2.h
-; CHECK-NEXT:    uunpklo z2.s, z2.h
-; CHECK-NEXT:    uunpklo z3.d, z3.s
-; CHECK-NEXT:    uzp1 z1.s, z3.s, z1.s
-; CHECK-NEXT:    uzp1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    uunpkhi z2.s, z1.h
+; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    uunpklo z2.d, z2.s
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z3.s
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
 ; CHECK-NEXT:    umaxv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0

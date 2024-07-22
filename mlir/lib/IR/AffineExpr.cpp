@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cstdint>
+#include <limits>
 #include <utility>
 
 #include "AffineExprDetail.h"
@@ -13,35 +15,55 @@
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/Support/MathExtras.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/MathExtras.h"
 #include <numeric>
 #include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;
 
+using llvm::divideCeilSigned;
+using llvm::divideFloorSigned;
+using llvm::divideSignedWouldOverflow;
+using llvm::mod;
+
 MLIRContext *AffineExpr::getContext() const { return expr->context; }
 
 AffineExprKind AffineExpr::getKind() const { return expr->kind; }
 
-/// Walk all of the AffineExprs in this subgraph in postorder.
-void AffineExpr::walk(std::function<void(AffineExpr)> callback) const {
-  struct AffineExprWalker : public AffineExprVisitor<AffineExprWalker> {
-    std::function<void(AffineExpr)> callback;
+/// Walk all of the AffineExprs in `e` in postorder. This is a private factory
+/// method to help handle lambda walk functions. Users should use the regular
+/// (non-static) `walk` method.
+template <typename WalkRetTy>
+WalkRetTy mlir::AffineExpr::walk(AffineExpr e,
+                                 function_ref<WalkRetTy(AffineExpr)> callback) {
+  struct AffineExprWalker
+      : public AffineExprVisitor<AffineExprWalker, WalkRetTy> {
+    function_ref<WalkRetTy(AffineExpr)> callback;
 
-    AffineExprWalker(std::function<void(AffineExpr)> callback)
-        : callback(std::move(callback)) {}
+    AffineExprWalker(function_ref<WalkRetTy(AffineExpr)> callback)
+        : callback(callback) {}
 
-    void visitAffineBinaryOpExpr(AffineBinaryOpExpr expr) { callback(expr); }
-    void visitConstantExpr(AffineConstantExpr expr) { callback(expr); }
-    void visitDimExpr(AffineDimExpr expr) { callback(expr); }
-    void visitSymbolExpr(AffineSymbolExpr expr) { callback(expr); }
+    WalkRetTy visitAffineBinaryOpExpr(AffineBinaryOpExpr expr) {
+      return callback(expr);
+    }
+    WalkRetTy visitConstantExpr(AffineConstantExpr expr) {
+      return callback(expr);
+    }
+    WalkRetTy visitDimExpr(AffineDimExpr expr) { return callback(expr); }
+    WalkRetTy visitSymbolExpr(AffineSymbolExpr expr) { return callback(expr); }
   };
 
-  AffineExprWalker(std::move(callback)).walkPostOrder(*this);
+  return AffineExprWalker(callback).walkPostOrder(e);
 }
+// Explicitly instantiate for the two supported return types.
+template void mlir::AffineExpr::walk(AffineExpr e,
+                                     function_ref<void(AffineExpr)> callback);
+template WalkResult
+mlir::AffineExpr::walk(AffineExpr e,
+                       function_ref<WalkResult(AffineExpr)> callback);
 
 // Dispatch affine expression construction based on kind.
 AffineExpr mlir::getAffineBinaryOpExpr(AffineExprKind kind, AffineExpr lhs,
@@ -626,10 +648,14 @@ mlir::getAffineConstantExprs(ArrayRef<int64_t> constants,
 static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   auto lhsConst = dyn_cast<AffineConstantExpr>(lhs);
   auto rhsConst = dyn_cast<AffineConstantExpr>(rhs);
-  // Fold if both LHS, RHS are a constant.
-  if (lhsConst && rhsConst)
-    return getAffineConstantExpr(lhsConst.getValue() + rhsConst.getValue(),
-                                 lhs.getContext());
+  // Fold if both LHS, RHS are a constant and the sum does not overflow.
+  if (lhsConst && rhsConst) {
+    int64_t sum;
+    if (llvm::AddOverflow(lhsConst.getValue(), rhsConst.getValue(), sum)) {
+      return nullptr;
+    }
+    return getAffineConstantExpr(sum, lhs.getContext());
+  }
 
   // Canonicalize so that only the RHS is a constant. (4 + d0 becomes d0 + 4).
   // If only one of them is a symbolic expressions, make it the RHS.
@@ -725,8 +751,10 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   }
 
   // Process lrhs, which is 'expr floordiv c'.
+  // expr + (expr // c * -c) = expr % c
   AffineBinaryOpExpr lrBinOpExpr = dyn_cast<AffineBinaryOpExpr>(lrhs);
-  if (!lrBinOpExpr || lrBinOpExpr.getKind() != AffineExprKind::FloorDiv)
+  if (!lrBinOpExpr || rhs.getKind() != AffineExprKind::Mul ||
+      lrBinOpExpr.getKind() != AffineExprKind::FloorDiv)
     return nullptr;
 
   llrhs = lrBinOpExpr.getLHS();
@@ -755,11 +783,16 @@ static AffineExpr simplifyMul(AffineExpr lhs, AffineExpr rhs) {
   auto lhsConst = dyn_cast<AffineConstantExpr>(lhs);
   auto rhsConst = dyn_cast<AffineConstantExpr>(rhs);
 
-  if (lhsConst && rhsConst)
-    return getAffineConstantExpr(lhsConst.getValue() * rhsConst.getValue(),
-                                 lhs.getContext());
+  if (lhsConst && rhsConst) {
+    int64_t product;
+    if (llvm::MulOverflow(lhsConst.getValue(), rhsConst.getValue(), product)) {
+      return nullptr;
+    }
+    return getAffineConstantExpr(product, lhs.getContext());
+  }
 
-  assert(lhs.isSymbolicOrConstant() || rhs.isSymbolicOrConstant());
+  if (!lhs.isSymbolicOrConstant() && !rhs.isSymbolicOrConstant())
+    return nullptr;
 
   // Canonicalize the mul expression so that the constant/symbolic term is the
   // RHS. If both the lhs and rhs are symbolic, swap them if the lhs is a
@@ -825,25 +858,28 @@ static AffineExpr simplifyFloorDiv(AffineExpr lhs, AffineExpr rhs) {
   auto lhsConst = dyn_cast<AffineConstantExpr>(lhs);
   auto rhsConst = dyn_cast<AffineConstantExpr>(rhs);
 
-  // mlir floordiv by zero or negative numbers is undefined and preserved as is.
-  if (!rhsConst || rhsConst.getValue() < 1)
+  if (!rhsConst || rhsConst.getValue() == 0)
     return nullptr;
 
-  if (lhsConst)
+  if (lhsConst) {
+    if (divideSignedWouldOverflow(lhsConst.getValue(), rhsConst.getValue()))
+      return nullptr;
     return getAffineConstantExpr(
-        floorDiv(lhsConst.getValue(), rhsConst.getValue()), lhs.getContext());
+        divideFloorSigned(lhsConst.getValue(), rhsConst.getValue()),
+        lhs.getContext());
+  }
 
   // Fold floordiv of a multiply with a constant that is a multiple of the
   // divisor. Eg: (i * 128) floordiv 64 = i * 2.
   if (rhsConst == 1)
     return lhs;
 
-  // Simplify (expr * const) floordiv divConst when expr is known to be a
-  // multiple of divConst.
+  // Simplify `(expr * lrhs) floordiv rhsConst` when `lrhs` is known to be a
+  // multiple of `rhsConst`.
   auto lBin = dyn_cast<AffineBinaryOpExpr>(lhs);
   if (lBin && lBin.getKind() == AffineExprKind::Mul) {
     if (auto lrhs = dyn_cast<AffineConstantExpr>(lBin.getRHS())) {
-      // rhsConst is known to be a positive constant.
+      // `rhsConst` is known to be a nonzero constant.
       if (lrhs.getValue() % rhsConst.getValue() == 0)
         return lBin.getLHS() * (lrhs.getValue() / rhsConst.getValue());
     }
@@ -854,7 +890,7 @@ static AffineExpr simplifyFloorDiv(AffineExpr lhs, AffineExpr rhs) {
   if (lBin && lBin.getKind() == AffineExprKind::Add) {
     int64_t llhsDiv = lBin.getLHS().getLargestKnownDivisor();
     int64_t lrhsDiv = lBin.getRHS().getLargestKnownDivisor();
-    // rhsConst is known to be a positive constant.
+    // rhsConst is known to be a nonzero constant.
     if (llhsDiv % rhsConst.getValue() == 0 ||
         lrhsDiv % rhsConst.getValue() == 0)
       return lBin.getLHS().floorDiv(rhsConst.getValue()) +
@@ -881,24 +917,28 @@ static AffineExpr simplifyCeilDiv(AffineExpr lhs, AffineExpr rhs) {
   auto lhsConst = dyn_cast<AffineConstantExpr>(lhs);
   auto rhsConst = dyn_cast<AffineConstantExpr>(rhs);
 
-  if (!rhsConst || rhsConst.getValue() < 1)
+  if (!rhsConst || rhsConst.getValue() == 0)
     return nullptr;
 
-  if (lhsConst)
+  if (lhsConst) {
+    if (divideSignedWouldOverflow(lhsConst.getValue(), rhsConst.getValue()))
+      return nullptr;
     return getAffineConstantExpr(
-        ceilDiv(lhsConst.getValue(), rhsConst.getValue()), lhs.getContext());
+        divideCeilSigned(lhsConst.getValue(), rhsConst.getValue()),
+        lhs.getContext());
+  }
 
   // Fold ceildiv of a multiply with a constant that is a multiple of the
   // divisor. Eg: (i * 128) ceildiv 64 = i * 2.
   if (rhsConst.getValue() == 1)
     return lhs;
 
-  // Simplify (expr * const) ceildiv divConst when const is known to be a
-  // multiple of divConst.
+  // Simplify `(expr * lrhs) ceildiv rhsConst` when `lrhs` is known to be a
+  // multiple of `rhsConst`.
   auto lBin = dyn_cast<AffineBinaryOpExpr>(lhs);
   if (lBin && lBin.getKind() == AffineExprKind::Mul) {
     if (auto lrhs = dyn_cast<AffineConstantExpr>(lBin.getRHS())) {
-      // rhsConst is known to be a positive constant.
+      // `rhsConst` is known to be a nonzero constant.
       if (lrhs.getValue() % rhsConst.getValue() == 0)
         return lBin.getLHS() * (lrhs.getValue() / rhsConst.getValue());
     }
@@ -928,9 +968,11 @@ static AffineExpr simplifyMod(AffineExpr lhs, AffineExpr rhs) {
   if (!rhsConst || rhsConst.getValue() < 1)
     return nullptr;
 
-  if (lhsConst)
+  if (lhsConst) {
+    // mod never overflows.
     return getAffineConstantExpr(mod(lhsConst.getValue(), rhsConst.getValue()),
                                  lhs.getContext());
+  }
 
   // Fold modulo of an expression that is known to be a multiple of a constant
   // to zero if that constant is a multiple of the modulo factor. Eg: (i * 128)
@@ -1226,20 +1268,20 @@ LogicalResult SimpleAffineExprFlattener::visitMulExpr(AffineBinaryOpExpr expr) {
   // variable in place of the product; the affine expression
   // corresponding to the quantifier is added to `localExprs`.
   if (!isa<AffineConstantExpr>(expr.getRHS())) {
+    SmallVector<int64_t, 8> mulLhs(lhs);
     MLIRContext *context = expr.getContext();
     AffineExpr a = getAffineExprFromFlatForm(lhs, numDims, numSymbols,
                                              localExprs, context);
     AffineExpr b = getAffineExprFromFlatForm(rhs, numDims, numSymbols,
                                              localExprs, context);
-    addLocalVariableSemiAffine(a * b, lhs, lhs.size());
-    return success();
+    return addLocalVariableSemiAffine(mulLhs, rhs, a * b, lhs, lhs.size());
   }
 
   // Get the RHS constant.
-  auto rhsConst = rhs[getConstantIndex()];
-  for (unsigned i = 0, e = lhs.size(); i < e; i++) {
-    lhs[i] *= rhsConst;
-  }
+  int64_t rhsConst = rhs[getConstantIndex()];
+  for (int64_t &lhsElt : lhs)
+    lhsElt *= rhsConst;
+
   return success();
 }
 
@@ -1279,13 +1321,13 @@ LogicalResult SimpleAffineExprFlattener::visitModExpr(AffineBinaryOpExpr expr) {
   // variable in place of the modulo value, and the affine expression
   // corresponding to the quantifier is added to `localExprs`.
   if (!isa<AffineConstantExpr>(expr.getRHS())) {
+    SmallVector<int64_t, 8> modLhs(lhs);
     AffineExpr dividendExpr = getAffineExprFromFlatForm(
         lhs, numDims, numSymbols, localExprs, context);
     AffineExpr divisorExpr = getAffineExprFromFlatForm(rhs, numDims, numSymbols,
                                                        localExprs, context);
     AffineExpr modExpr = dividendExpr % divisorExpr;
-    addLocalVariableSemiAffine(modExpr, lhs, lhs.size());
-    return success();
+    return addLocalVariableSemiAffine(modLhs, rhs, modExpr, lhs, lhs.size());
   }
 
   int64_t rhsConst = rhs[getConstantIndex()];
@@ -1308,12 +1350,12 @@ LogicalResult SimpleAffineExprFlattener::visitModExpr(AffineBinaryOpExpr expr) {
   // the GCD of expr and c.
   SmallVector<int64_t, 8> floorDividend(lhs);
   uint64_t gcd = rhsConst;
-  for (unsigned i = 0, e = lhs.size(); i < e; i++)
-    gcd = std::gcd(gcd, (uint64_t)std::abs(lhs[i]));
+  for (int64_t lhsElt : lhs)
+    gcd = std::gcd(gcd, (uint64_t)std::abs(lhsElt));
   // Simplify the numerator and the denominator.
   if (gcd != 1) {
-    for (unsigned i = 0, e = floorDividend.size(); i < e; i++)
-      floorDividend[i] = floorDividend[i] / static_cast<int64_t>(gcd);
+    for (int64_t &floorDividendElt : floorDividend)
+      floorDividendElt = floorDividendElt / static_cast<int64_t>(gcd);
   }
   int64_t floorDivisor = rhsConst / static_cast<int64_t>(gcd);
 
@@ -1369,19 +1411,22 @@ SimpleAffineExprFlattener::visitConstantExpr(AffineConstantExpr expr) {
   return success();
 }
 
-void SimpleAffineExprFlattener::addLocalVariableSemiAffine(
-    AffineExpr expr, SmallVectorImpl<int64_t> &result,
-    unsigned long resultSize) {
+LogicalResult SimpleAffineExprFlattener::addLocalVariableSemiAffine(
+    ArrayRef<int64_t> lhs, ArrayRef<int64_t> rhs, AffineExpr localExpr,
+    SmallVectorImpl<int64_t> &result, unsigned long resultSize) {
   assert(result.size() == resultSize &&
          "`result` vector passed is not of correct size");
   int loc;
-  if ((loc = findLocalId(expr)) == -1)
-    addLocalIdSemiAffine(expr);
+  if ((loc = findLocalId(localExpr)) == -1) {
+    if (failed(addLocalIdSemiAffine(lhs, rhs, localExpr)))
+      return failure();
+  }
   std::fill(result.begin(), result.end(), 0);
   if (loc == -1)
     result[getLocalVarStartIndex() + numLocals - 1] = 1;
   else
     result[getLocalVarStartIndex() + loc] = 1;
+  return success();
 }
 
 // t = expr floordiv c   <=> t = q, c * q <= expr <= c * q + c - 1
@@ -1410,13 +1455,13 @@ LogicalResult SimpleAffineExprFlattener::visitDivExpr(AffineBinaryOpExpr expr,
   // variable in place of the quotient, and the affine expression corresponding
   // to the quantifier is added to `localExprs`.
   if (!isa<AffineConstantExpr>(expr.getRHS())) {
+    SmallVector<int64_t, 8> divLhs(lhs);
     AffineExpr a = getAffineExprFromFlatForm(lhs, numDims, numSymbols,
                                              localExprs, context);
     AffineExpr b = getAffineExprFromFlatForm(rhs, numDims, numSymbols,
                                              localExprs, context);
     AffineExpr divExpr = isCeil ? a.ceilDiv(b) : a.floorDiv(b);
-    addLocalVariableSemiAffine(divExpr, lhs, lhs.size());
-    return success();
+    return addLocalVariableSemiAffine(divLhs, rhs, divExpr, lhs, lhs.size());
   }
 
   // This is a pure affine expr; the RHS is a positive constant.
@@ -1427,12 +1472,12 @@ LogicalResult SimpleAffineExprFlattener::visitDivExpr(AffineBinaryOpExpr expr,
   // Simplify the floordiv, ceildiv if possible by canceling out the greatest
   // common divisors of the numerator and denominator.
   uint64_t gcd = std::abs(rhsConst);
-  for (unsigned i = 0, e = lhs.size(); i < e; i++)
-    gcd = std::gcd(gcd, (uint64_t)std::abs(lhs[i]));
+  for (int64_t lhsElt : lhs)
+    gcd = std::gcd(gcd, (uint64_t)std::abs(lhsElt));
   // Simplify the numerator and the denominator.
   if (gcd != 1) {
-    for (unsigned i = 0, e = lhs.size(); i < e; i++)
-      lhs[i] = lhs[i] / static_cast<int64_t>(gcd);
+    for (int64_t &lhsElt : lhs)
+      lhsElt = lhsElt / static_cast<int64_t>(gcd);
   }
   int64_t divisor = rhsConst / static_cast<int64_t>(gcd);
   // If the divisor becomes 1, the updated LHS is the result. (The
@@ -1487,11 +1532,14 @@ void SimpleAffineExprFlattener::addLocalFloorDivId(ArrayRef<int64_t> dividend,
   // dividend and divisor are not used here; an override of this method uses it.
 }
 
-void SimpleAffineExprFlattener::addLocalIdSemiAffine(AffineExpr localExpr) {
+LogicalResult SimpleAffineExprFlattener::addLocalIdSemiAffine(
+    ArrayRef<int64_t> lhs, ArrayRef<int64_t> rhs, AffineExpr localExpr) {
   for (SmallVector<int64_t, 8> &subExpr : operandExprStack)
     subExpr.insert(subExpr.begin() + getLocalVarStartIndex() + numLocals, 0);
   localExprs.push_back(localExpr);
   ++numLocals;
+  // lhs and rhs are not used here; an override of this method uses them.
+  return success();
 }
 
 int SimpleAffineExprFlattener::findLocalId(AffineExpr localExpr) {
@@ -1548,7 +1596,7 @@ std::optional<int64_t> mlir::getBoundForAffineExpr(
                                 constLowerBounds, constUpperBounds, isUpper);
       if (!bound)
         return std::nullopt;
-      return mlir::floorDiv(*bound, rhsConst.getValue());
+      return divideFloorSigned(*bound, rhsConst.getValue());
     }
     if (binOpExpr.getKind() == AffineExprKind::CeilDiv) {
       auto rhsConst = dyn_cast<AffineConstantExpr>(binOpExpr.getRHS());
@@ -1558,7 +1606,7 @@ std::optional<int64_t> mlir::getBoundForAffineExpr(
                                   constLowerBounds, constUpperBounds, isUpper);
         if (!bound)
           return std::nullopt;
-        return mlir::ceilDiv(*bound, rhsConst.getValue());
+        return divideCeilSigned(*bound, rhsConst.getValue());
       }
       return std::nullopt;
     }
@@ -1576,7 +1624,8 @@ std::optional<int64_t> mlir::getBoundForAffineExpr(
             getBoundForAffineExpr(binOpExpr.getLHS(), numDims, numSymbols,
                                   constLowerBounds, constUpperBounds, isUpper);
         if (ub && lb &&
-            floorDiv(*lb, rhsConstVal) == floorDiv(*ub, rhsConstVal))
+            divideFloorSigned(*lb, rhsConstVal) ==
+                divideFloorSigned(*ub, rhsConstVal))
           return isUpper ? mod(*ub, rhsConstVal) : mod(*lb, rhsConstVal);
         return isUpper ? rhsConstVal - 1 : 0;
       }

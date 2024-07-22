@@ -4,7 +4,7 @@ modernize-deprecated-headers
 ============================
 
 Some headers from C library were deprecated in C++ and are no longer welcome in
-C++ codebases. Some have no effect in C++. For more details refer to the C++ 14
+C++ codebases. Some have no effect in C++. For more details refer to the C++14
 Standard [depr.c.headers] section.
 
 This check replaces C standard library headers with their C++ alternatives and

@@ -17,8 +17,8 @@
 #include "GISelWorkList.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
@@ -33,6 +33,7 @@ class BlockFrequencyInfo;
 class GISelKnownBits;
 class MachineFunction;
 class MachineInstr;
+class MachineIRBuilder;
 class MachineOperand;
 class MachineOptimizationRemarkEmitter;
 class MachineOptimizationRemarkMissed;
@@ -247,6 +248,24 @@ MachineInstr *getDefIgnoringCopies(Register Reg,
 /// Also walks through hints such as G_ASSERT_ZEXT.
 Register getSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI);
 
+/// Helper function to split a wide generic register into bitwise blocks with
+/// the given Type (which implies the number of blocks needed). The generic
+/// registers created are appended to Ops, starting at bit 0 of Reg.
+void extractParts(Register Reg, LLT Ty, int NumParts,
+                  SmallVectorImpl<Register> &VRegs,
+                  MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI);
+
+/// Version which handles irregular splits.
+bool extractParts(Register Reg, LLT RegTy, LLT MainTy, LLT &LeftoverTy,
+                  SmallVectorImpl<Register> &VRegs,
+                  SmallVectorImpl<Register> &LeftoverVRegs,
+                  MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI);
+
+/// Version which handles irregular sub-vector splits.
+void extractVectorParts(Register Reg, unsigned NumElts,
+                        SmallVectorImpl<Register> &VRegs,
+                        MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI);
+
 // Templated variant of getOpcodeDef returning a MachineInstr derived T.
 /// See if Reg is defined by an single def instruction of type T
 /// Also try to do trivial folding if it's a COPY with
@@ -289,10 +308,16 @@ std::optional<APFloat> ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy,
                                               Register Src,
                                               const MachineRegisterInfo &MRI);
 
-/// Tries to constant fold a G_CTLZ operation on \p Src. If \p Src is a vector
-/// then it tries to do an element-wise constant fold.
+/// Tries to constant fold a counting-zero operation (G_CTLZ or G_CTTZ) on \p
+/// Src. If \p Src is a vector then it tries to do an element-wise constant
+/// fold.
 std::optional<SmallVector<unsigned>>
-ConstantFoldCTLZ(Register Src, const MachineRegisterInfo &MRI);
+ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
+                       std::function<unsigned(APInt)> CB);
+
+std::optional<SmallVector<APInt>>
+ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
+                 const MachineRegisterInfo &MRI);
 
 /// Test if the given value is known to have exactly one bit set. This differs
 /// from computeKnownBits in that it doesn't necessarily determine which bit is
@@ -324,10 +349,13 @@ Register getFunctionLiveInPhysReg(MachineFunction &MF,
                                   const TargetRegisterClass &RC,
                                   const DebugLoc &DL, LLT RegTy = LLT());
 
-/// Return the least common multiple type of \p OrigTy and \p TargetTy, by changing the
-/// number of vector elements or scalar bitwidth. The intent is a
+/// Return the least common multiple type of \p OrigTy and \p TargetTy, by
+/// changing the number of vector elements or scalar bitwidth. The intent is a
 /// G_MERGE_VALUES, G_BUILD_VECTOR, or G_CONCAT_VECTORS can be constructed from
-/// \p OrigTy elements, and unmerged into \p TargetTy
+/// \p OrigTy elements, and unmerged into \p TargetTy. It is an error to call
+/// this function where one argument is a fixed vector and the other is a
+/// scalable vector, since it is illegal to build a G_{MERGE|UNMERGE}_VALUES
+/// between fixed and scalable vectors.
 LLVM_READNONE
 LLT getLCMType(LLT OrigTy, LLT TargetTy);
 
@@ -346,7 +374,10 @@ LLT getCoverTy(LLT OrigTy, LLT TargetTy);
 /// If these are vectors with different element types, this will try to produce
 /// a vector with a compatible total size, but the element type of \p OrigTy. If
 /// this can't be satisfied, this will produce a scalar smaller than the
-/// original vector elements.
+/// original vector elements. It is an error to call this function where
+/// one argument is a fixed vector and the other is a scalable vector, since it
+/// is illegal to build a G_{MERGE|UNMERGE}_VALUES between fixed and scalable
+/// vectors.
 ///
 /// In the worst case, this returns LLT::scalar(1)
 LLVM_READNONE
@@ -523,6 +554,40 @@ void eraseInstr(MachineInstr &MI, MachineRegisterInfo &MRI,
 /// Assuming the instruction \p MI is going to be deleted, attempt to salvage
 /// debug users of \p MI by writing the effect of \p MI in a DIExpression.
 void salvageDebugInfo(const MachineRegisterInfo &MRI, MachineInstr &MI);
+
+/// Returns whether opcode \p Opc is a pre-isel generic floating-point opcode,
+/// having only floating-point operands.
+bool isPreISelGenericFloatingPointOpcode(unsigned Opc);
+
+/// Returns true if \p Reg can create undef or poison from non-undef &
+/// non-poison operands. \p ConsiderFlagsAndMetadata controls whether poison
+/// producing flags and metadata on the instruction are considered. This can be
+/// used to see if the instruction could still introduce undef or poison even
+/// without poison generating flags and metadata which might be on the
+/// instruction.
+bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
+                            bool ConsiderFlagsAndMetadata = true);
+
+/// Returns true if \p Reg can create poison from non-poison operands.
+bool canCreatePoison(Register Reg, const MachineRegisterInfo &MRI,
+                     bool ConsiderFlagsAndMetadata = true);
+
+/// Returns true if \p Reg cannot be poison and undef.
+bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
+                                      const MachineRegisterInfo &MRI,
+                                      unsigned Depth = 0);
+
+/// Returns true if \p Reg cannot be poison, but may be undef.
+bool isGuaranteedNotToBePoison(Register Reg, const MachineRegisterInfo &MRI,
+                               unsigned Depth = 0);
+
+/// Returns true if \p Reg cannot be undef, but may be poison.
+bool isGuaranteedNotToBeUndef(Register Reg, const MachineRegisterInfo &MRI,
+                              unsigned Depth = 0);
+
+/// Get the type back from LLT. It won't be 100 percent accurate but returns an
+/// estimate of the type.
+Type *getTypeForLLT(LLT Ty, LLVMContext &C);
 
 } // End namespace llvm.
 #endif

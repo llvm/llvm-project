@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx902 -o - %s -run-pass si-form-memory-clauses -verify-machineinstrs | FileCheck -check-prefix=XNACK %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx902 -o - %s -run-pass si-form-memory-clauses -verify-machineinstrs | FileCheck -check-prefix=XNACK %s
 
 # The SIFormMemoryClauses pass must not form a clause (indicated by BUNDLE)
 # from the two adjacent smem instructions, because the first one has its

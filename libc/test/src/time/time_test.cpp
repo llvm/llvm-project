@@ -9,7 +9,6 @@
 #include "src/time/time_func.h"
 #include "test/UnitTest/Test.h"
 
-#include <limits.h>
 #include <time.h>
 
 TEST(LlvmLibcTimeTest, SmokeTest) {

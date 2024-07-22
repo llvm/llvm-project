@@ -9,7 +9,7 @@
 ; DBG-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; DBG-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; DBG-EMPTY:
-; DBG-NEXT: ph:
+; DBG-NEXT: ir-bb<entry>:
 ; DBG-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (1000 + (-1 * %start))
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
@@ -96,7 +96,6 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT:     Successor(s): pred.store.continue
 ; DBG-EMPTY:
 ; DBG-NEXT:     pred.store.continue:
-; DBG-NEXT:       PHI-PREDICATED-INSTRUCTION vp<{{.+}}> = ir<%l>
 ; DBG-NEXT:     No successors
 ; DBG-NEXT:   }
 ; DBG-NEXT:   Successor(s): cond.false.1
@@ -109,6 +108,14 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT: Successor(s): middle.block
 ; DBG-EMPTY:
 ; DBG-NEXT: middle.block:
+; DBG-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VEC_TC]]>
+; DBG-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
+; DBG-NEXT: Successor(s): ir-bb<exit>, scalar.ph
+; DBG-EMPTY:
+; DBG-NEXT: ir-bb<exit>:
+; DBG-NEXT: No successors
+; DBG-EMPTY:
+; DBG-NEXT: scalar.ph:
 ; DBG-NEXT: No successors
 ; DBG-NEXT: }
 
@@ -129,7 +136,6 @@ define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    br label %pred.store.continue
 ; CHECK:       pred.store.continue:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ poison, %vector.body ], [ [[TMP4]], %pred.store.if ]
 ; CHECK-NEXT:    br i1 [[INDUCTION3]], label %pred.store.if4, label %pred.store.continue5
 ; CHECK:       pred.store.if4:
 ; CHECK-NEXT:    [[INDUCTION5:%.*]] = add i64 [[INDEX]], 1
@@ -139,7 +145,6 @@ define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    br label %pred.store.continue5
 ; CHECK:       pred.store.continue5:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ poison, %pred.store.continue ], [ [[TMP7]], %pred.store.if4 ]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP9]], label %middle.block, label %vector.body
@@ -179,19 +184,20 @@ exit:
 ; DBG-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; DBG-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; DBG-EMPTY:
-; DBG-NEXT: ph:
+; DBG-NEXT: ir-bb<entry>:
 ; DBG-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 (1 smax %n) to i64)
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
+; DBG-NEXT:   SCALAR-CAST vp<[[CAST:%.+]]> = trunc ir<1> to i32
 ; DBG-NEXT: Successor(s): vector loop
 ; DBG-EMPTY:
 ; DBG-NEXT: <x1> vector loop: {
 ; DBG-NEXT:   vector.body:
 ; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; DBG-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<[[SCALAR_STEPS:.+]]>
-; DBG-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<0> + vp<[[CAN_IV]]> * ir<1> (truncated to i32)
-; DBG-NEXT:     vp<[[SCALAR_STEPS]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<1>
+; DBG-NEXT:     SCALAR-CAST vp<[[TRUNC_IV:%.+]]> = trunc vp<[[CAN_IV]]> to i32
+; DBG-NEXT:     vp<[[SCALAR_STEPS]]> = SCALAR-STEPS vp<[[TRUNC_IV]]>, vp<[[CAST]]>
 ; DBG-NEXT:     EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%for>, vp<[[SCALAR_STEPS]]>
 ; DBG-NEXT:     CLONE store vp<[[SPLICE]]>, ir<%dst>
 ; DBG-NEXT:     EMIT vp<[[IV_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
@@ -201,7 +207,19 @@ exit:
 ; DBG-NEXT: Successor(s): middle.block
 ; DBG-EMPTY:
 ; DBG-NEXT: middle.block:
+; DBG-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-from-end vp<[[SCALAR_STEPS]]>, ir<1>
+; DBG-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VEC_TC]]>
+; DBG-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
+; DBG-NEXT: Successor(s): ir-bb<exit>, scalar.ph
+; DBG-EMPTY:
+; DBG-NEXT: ir-bb<exit>:
 ; DBG-NEXT: No successors
+; DBG-EMPTY:
+; DBG-NEXT: scalar.ph:
+; DBG-NEXT:  EMIT vp<[[RESUME_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<0>
+; DBG-NEXT: No successors
+; DBG-EMPTY:
+; DBG-NEXT: Live-out i32 %for = vp<[[RESUME_P]]>
 ; DBG-NEXT: }
 
 define void @first_order_recurrence_using_induction(i32 %n, ptr %dst) {
@@ -310,3 +328,48 @@ loop:
 exit:
   ret void
 }
+
+define void @pr76986_trunc_sext_interleaving_only(i16 %arg, ptr noalias %src, ptr noalias %dst) {
+; CHECK-LABEL: define void @pr76986_trunc_sext_interleaving_only(
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr %src, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr %src, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = sext i8 [[TMP4]] to i32
+; CHECK-NEXT:    [[TMP7:%.*]] = sext i8 [[TMP5]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP6]] to i16
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[TMP7]] to i16
+; CHECK-NEXT:    [[TMP10:%.*]] = sdiv i16 [[TMP8]], %arg
+; CHECK-NEXT:    [[TMP11:%.*]] = sdiv i16 [[TMP9]], %arg
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr %dst, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i16, ptr %dst, i64 [[TMP1]]
+; CHECK-NEXT:    store i16 [[TMP10]], ptr [[TMP12]], align 2
+; CHECK-NEXT:    store i16 [[TMP11]], ptr [[TMP13]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 14934
+; CHECK-NEXT:    br i1 [[TMP14]], label %middle.block, label %vector.body
+;
+bb:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %bb ], [ %iv.next, %loop ]
+  %gep.src = getelementptr inbounds i8, ptr %src, i64 %iv
+  %l = load i8, ptr %gep.src
+  %sext = sext i8 %l to i32
+  %trunc = trunc i32 %sext to i16
+  %sdiv = sdiv i16 %trunc, %arg
+  %gep.dst = getelementptr inbounds i16, ptr %dst, i64 %iv
+  store i16 %sdiv, ptr %gep.dst
+  %iv.next = add i64 %iv, 1
+  %icmp = icmp ult i64 %iv, 14933
+  br i1 %icmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+

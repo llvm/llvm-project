@@ -23,21 +23,21 @@ define dso_local signext i32 @test_shrinkwrap_jump_table(ptr noundef %m) local_u
 ; CHECK-NEXT:    lw a1, 0(a1)
 ; CHECK-NEXT:    jr a1
 ; CHECK-NEXT:  .LBB0_2: # %sw.bb
-; CHECK-NEXT:    tail func1@plt
+; CHECK-NEXT:    tail func1
 ; CHECK-NEXT:  .LBB0_3: # %sw.bb7
-; CHECK-NEXT:    tail func5@plt
+; CHECK-NEXT:    tail func5
 ; CHECK-NEXT:  .LBB0_4: # %sw.bb3
-; CHECK-NEXT:    tail func3@plt
+; CHECK-NEXT:    tail func3
 ; CHECK-NEXT:  .LBB0_5: # %sw.bb5
-; CHECK-NEXT:    tail func4@plt
+; CHECK-NEXT:    tail func4
 ; CHECK-NEXT:  .LBB0_6: # %sw.bb1
-; CHECK-NEXT:    tail func2@plt
+; CHECK-NEXT:    tail func2
 ; CHECK-NEXT:  .LBB0_7: # %sw.default
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
-; CHECK-NEXT:    call default_func@plt
+; CHECK-NEXT:    call default_func
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16

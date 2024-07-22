@@ -6,7 +6,7 @@
 // CHECK: S128-
 // CHECK: i64:64:128
 // CHECK: f80:128:256
-// CHECK: p0:32:64:128
+// CHECK: p0:32:64:128:32
 // CHECK: p1:32:32:32:16
 module attributes {dlti.dl_spec = #dlti.dl_spec<
 #dlti.dl_entry<"dlti.endianness", "big">,

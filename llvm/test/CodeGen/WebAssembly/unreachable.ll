@@ -30,7 +30,6 @@ define void @trap_ret_void() {
 ; CHECK:         .functype trap_ret_void () -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    unreachable
-; CHECK-NEXT:    # fallthrough-return
 ; CHECK-NEXT:    end_function
   call void @llvm.trap()
   ret void
@@ -53,7 +52,6 @@ define void @trap_unreacheable() {
 ; CHECK-LABEL: trap_unreacheable:
 ; CHECK:         .functype trap_unreacheable () -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    unreachable
 ; CHECK-NEXT:    unreachable
 ; CHECK-NEXT:    end_function
   call void @llvm.trap()
@@ -93,4 +91,13 @@ define i32 @missing_ret_noreturn_unreachable() {
 ; CHECK-NEXT:    end_function
   call void @ext_never_return()
   unreachable
+}
+
+define i32 @no_crash_for_other_instruction_after_trap(ptr %p, i32 %b) {
+; CHECK-LABEL: no_crash_for_other_instruction_after_trap:
+; CHECK:      unreachable
+; CHECK-NEXT: end_function
+  %a = load i32, ptr %p
+  call void @llvm.trap()
+  ret i32 %a
 }

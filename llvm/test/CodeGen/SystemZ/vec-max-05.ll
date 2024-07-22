@@ -59,7 +59,8 @@ define double @f4(double %dummy, double %val) {
 ; Test a f64 constant compare/select resulting in maximum.
 define double @f5(double %dummy, double %val) {
 ; CHECK-LABEL: f5:
-; CHECK: ltdbr	%f0, %f2
+; CHECK: ltdbr	%f1, %f2
+; CHECK-NEXT: ldr %f0, %f2
 ; CHECK: br %r14
   %cmp = fcmp ugt double %val, 0.0
   %ret = select i1 %cmp, double %val, double 0.0

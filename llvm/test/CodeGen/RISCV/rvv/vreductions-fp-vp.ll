@@ -192,8 +192,8 @@ define half @vpreduce_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 
 ; ZVFH-NEXT:    vfmv.s.f v25, fa0
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; ZVFH-NEXT:    vfredusum.vs v25, v8, v25, v0.t
-; ZVFH-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; ZVFH-NEXT:    vmv1r.v v0, v24
+; ZVFH-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; ZVFH-NEXT:    vfredusum.vs v25, v16, v25, v0.t
 ; ZVFH-NEXT:    vfmv.f.s fa0, v25
 ; ZVFH-NEXT:    ret
@@ -203,7 +203,7 @@ define half @vpreduce_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 
 ; ZVFHMIN-NEXT:    csrr a3, vlenb
 ; ZVFHMIN-NEXT:    srli a1, a3, 1
 ; ZVFHMIN-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
-; ZVFHMIN-NEXT:    vslidedown.vx v1, v0, a1
+; ZVFHMIN-NEXT:    vslidedown.vx v7, v0, a1
 ; ZVFHMIN-NEXT:    slli a5, a3, 2
 ; ZVFHMIN-NEXT:    sub a1, a0, a5
 ; ZVFHMIN-NEXT:    sltu a2, a0, a1
@@ -228,7 +228,7 @@ define half @vpreduce_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 
 ; ZVFHMIN-NEXT:    and a5, a6, a5
 ; ZVFHMIN-NEXT:    srli a3, a3, 2
 ; ZVFHMIN-NEXT:    vsetvli a6, zero, e8, mf2, ta, ma
-; ZVFHMIN-NEXT:    vslidedown.vx v2, v0, a3
+; ZVFHMIN-NEXT:    vslidedown.vx v6, v0, a3
 ; ZVFHMIN-NEXT:    bltu a0, a4, .LBB6_6
 ; ZVFHMIN-NEXT:  # %bb.5:
 ; ZVFHMIN-NEXT:    mv a0, a4
@@ -247,8 +247,8 @@ define half @vpreduce_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 
 ; ZVFHMIN-NEXT:    vfmv.s.f v8, fa5
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v12
+; ZVFHMIN-NEXT:    vmv1r.v v0, v6
 ; ZVFHMIN-NEXT:    vsetvli zero, a5, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vmv1r.v v0, v2
 ; ZVFHMIN-NEXT:    vfredusum.vs v8, v24, v8, v0.t
 ; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa5, fa5
@@ -257,8 +257,8 @@ define half @vpreduce_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 
 ; ZVFHMIN-NEXT:    vfmv.s.f v8, fa5
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v16
+; ZVFHMIN-NEXT:    vmv1r.v v0, v7
 ; ZVFHMIN-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vmv1r.v v0, v1
 ; ZVFHMIN-NEXT:    vfredusum.vs v8, v24, v8, v0.t
 ; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa5, fa5
@@ -266,7 +266,7 @@ define half @vpreduce_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 
 ; ZVFHMIN-NEXT:    vsetivli zero, 1, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfmv.s.f v8, fa5
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; ZVFHMIN-NEXT:    vslidedown.vx v0, v1, a3
+; ZVFHMIN-NEXT:    vslidedown.vx v0, v7, a3
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v20
 ; ZVFHMIN-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
@@ -298,8 +298,8 @@ define half @vpreduce_ord_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscal
 ; ZVFH-NEXT:    vfmv.s.f v25, fa0
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; ZVFH-NEXT:    vfredosum.vs v25, v8, v25, v0.t
-; ZVFH-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; ZVFH-NEXT:    vmv1r.v v0, v24
+; ZVFH-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; ZVFH-NEXT:    vfredosum.vs v25, v16, v25, v0.t
 ; ZVFH-NEXT:    vfmv.f.s fa0, v25
 ; ZVFH-NEXT:    ret
@@ -309,7 +309,7 @@ define half @vpreduce_ord_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscal
 ; ZVFHMIN-NEXT:    csrr a3, vlenb
 ; ZVFHMIN-NEXT:    srli a1, a3, 1
 ; ZVFHMIN-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
-; ZVFHMIN-NEXT:    vslidedown.vx v1, v0, a1
+; ZVFHMIN-NEXT:    vslidedown.vx v7, v0, a1
 ; ZVFHMIN-NEXT:    slli a5, a3, 2
 ; ZVFHMIN-NEXT:    sub a1, a0, a5
 ; ZVFHMIN-NEXT:    sltu a2, a0, a1
@@ -334,7 +334,7 @@ define half @vpreduce_ord_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscal
 ; ZVFHMIN-NEXT:    and a5, a6, a5
 ; ZVFHMIN-NEXT:    srli a3, a3, 2
 ; ZVFHMIN-NEXT:    vsetvli a6, zero, e8, mf2, ta, ma
-; ZVFHMIN-NEXT:    vslidedown.vx v2, v0, a3
+; ZVFHMIN-NEXT:    vslidedown.vx v6, v0, a3
 ; ZVFHMIN-NEXT:    bltu a0, a4, .LBB7_6
 ; ZVFHMIN-NEXT:  # %bb.5:
 ; ZVFHMIN-NEXT:    mv a0, a4
@@ -353,8 +353,8 @@ define half @vpreduce_ord_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscal
 ; ZVFHMIN-NEXT:    vfmv.s.f v8, fa5
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v12
+; ZVFHMIN-NEXT:    vmv1r.v v0, v6
 ; ZVFHMIN-NEXT:    vsetvli zero, a5, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vmv1r.v v0, v2
 ; ZVFHMIN-NEXT:    vfredosum.vs v8, v24, v8, v0.t
 ; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa5, fa5
@@ -363,8 +363,8 @@ define half @vpreduce_ord_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscal
 ; ZVFHMIN-NEXT:    vfmv.s.f v8, fa5
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v16
+; ZVFHMIN-NEXT:    vmv1r.v v0, v7
 ; ZVFHMIN-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vmv1r.v v0, v1
 ; ZVFHMIN-NEXT:    vfredosum.vs v8, v24, v8, v0.t
 ; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa5, fa5
@@ -372,7 +372,7 @@ define half @vpreduce_ord_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscal
 ; ZVFHMIN-NEXT:    vsetivli zero, 1, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfmv.s.f v8, fa5
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; ZVFHMIN-NEXT:    vslidedown.vx v0, v1, a3
+; ZVFHMIN-NEXT:    vslidedown.vx v0, v7, a3
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v20
 ; ZVFHMIN-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
@@ -578,4 +578,126 @@ define double @vpreduce_ord_fadd_nxv4f64(double %s, <vscale x 4 x double> %v, <v
 ; CHECK-NEXT:    ret
   %r = call double @llvm.vp.reduce.fadd.nxv4f64(double %s, <vscale x 4 x double> %v, <vscale x 4 x i1> %m, i32 %evl)
   ret double %r
+}
+
+define float @vreduce_fminimum_nxv4f32(float %start, <vscale x 4 x float> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vreduce_fminimum_nxv4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v10, fa0
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vfredmin.vs v10, v8, v10, v0.t
+; CHECK-NEXT:    vmfne.vv v11, v8, v8, v0.t
+; CHECK-NEXT:    vcpop.m a0, v11, v0.t
+; CHECK-NEXT:    feq.s a1, fa0, fa0
+; CHECK-NEXT:    xori a1, a1, 1
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    beqz a0, .LBB22_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    lui a0, 523264
+; CHECK-NEXT:    fmv.w.x fa0, a0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB22_2:
+; CHECK-NEXT:    vfmv.f.s fa0, v10
+; CHECK-NEXT:    ret
+  %s = call float @llvm.vp.reduce.fminimum.nxv4f32(float %start, <vscale x 4 x float> %val, <vscale x 4 x i1> %m, i32 %evl)
+  ret float %s
+}
+
+define float @vreduce_fmaximum_nxv4f32(float %start, <vscale x 4 x float> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vreduce_fmaximum_nxv4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v10, fa0
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vfredmax.vs v10, v8, v10, v0.t
+; CHECK-NEXT:    vmfne.vv v11, v8, v8, v0.t
+; CHECK-NEXT:    vcpop.m a0, v11, v0.t
+; CHECK-NEXT:    feq.s a1, fa0, fa0
+; CHECK-NEXT:    xori a1, a1, 1
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    beqz a0, .LBB23_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    lui a0, 523264
+; CHECK-NEXT:    fmv.w.x fa0, a0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB23_2:
+; CHECK-NEXT:    vfmv.f.s fa0, v10
+; CHECK-NEXT:    ret
+  %s = call float @llvm.vp.reduce.fmaximum.nxv4f32(float %start, <vscale x 4 x float> %val, <vscale x 4 x i1> %m, i32 %evl)
+  ret float %s
+}
+
+define float @vreduce_fminimum_nnan_nxv4f32(float %start, <vscale x 4 x float> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vreduce_fminimum_nnan_nxv4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v10, fa0
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vfredmin.vs v10, v8, v10, v0.t
+; CHECK-NEXT:    vfmv.f.s fa0, v10
+; CHECK-NEXT:    ret
+  %s = call nnan float @llvm.vp.reduce.fminimum.nxv4f32(float %start, <vscale x 4 x float> %val, <vscale x 4 x i1> %m, i32 %evl)
+  ret float %s
+}
+
+define float @vreduce_fmaximum_nnan_nxv4f32(float %start, <vscale x 4 x float> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vreduce_fmaximum_nnan_nxv4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v10, fa0
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vfredmax.vs v10, v8, v10, v0.t
+; CHECK-NEXT:    vfmv.f.s fa0, v10
+; CHECK-NEXT:    ret
+  %s = call nnan float @llvm.vp.reduce.fmaximum.nxv4f32(float %start, <vscale x 4 x float> %val, <vscale x 4 x i1> %m, i32 %evl)
+  ret float %s
+}
+
+define float @vreduce_fminimum_v4f32(float %start, <4 x float> %val, <4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vreduce_fminimum_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vfredmin.vs v9, v8, v9, v0.t
+; CHECK-NEXT:    vmfne.vv v8, v8, v8, v0.t
+; CHECK-NEXT:    vcpop.m a0, v8, v0.t
+; CHECK-NEXT:    feq.s a1, fa0, fa0
+; CHECK-NEXT:    xori a1, a1, 1
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    beqz a0, .LBB26_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    lui a0, 523264
+; CHECK-NEXT:    fmv.w.x fa0, a0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB26_2:
+; CHECK-NEXT:    vfmv.f.s fa0, v9
+; CHECK-NEXT:    ret
+  %s = call float @llvm.vp.reduce.fminimum.v4f32(float %start, <4 x float> %val, <4 x i1> %m, i32 %evl)
+  ret float %s
+}
+
+define float @vreduce_fmaximum_v4f32(float %start, <4 x float> %val, <4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vreduce_fmaximum_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vfredmax.vs v9, v8, v9, v0.t
+; CHECK-NEXT:    vmfne.vv v8, v8, v8, v0.t
+; CHECK-NEXT:    vcpop.m a0, v8, v0.t
+; CHECK-NEXT:    feq.s a1, fa0, fa0
+; CHECK-NEXT:    xori a1, a1, 1
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    beqz a0, .LBB27_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    lui a0, 523264
+; CHECK-NEXT:    fmv.w.x fa0, a0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB27_2:
+; CHECK-NEXT:    vfmv.f.s fa0, v9
+; CHECK-NEXT:    ret
+  %s = call float @llvm.vp.reduce.fmaximum.v4f32(float %start, <4 x float> %val, <4 x i1> %m, i32 %evl)
+  ret float %s
 }

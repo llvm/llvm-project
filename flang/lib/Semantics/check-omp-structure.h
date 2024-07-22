@@ -42,6 +42,7 @@ static const OmpDirectiveSet noWaitClauseNotAllowedSet{
     Directive::OMPD_do_simd,
     Directive::OMPD_sections,
     Directive::OMPD_single,
+    Directive::OMPD_workshare,
 };
 } // namespace omp
 } // namespace llvm
@@ -162,8 +163,8 @@ private:
   void CheckDependArraySection(
       const common::Indirection<parser::ArrayElement> &, const parser::Name &);
   bool IsDataRefTypeParamInquiry(const parser::DataRef *dataRef);
-  void CheckIsVarPartOfAnotherVar(
-      const parser::CharBlock &source, const parser::OmpObjectList &objList);
+  void CheckIsVarPartOfAnotherVar(const parser::CharBlock &source,
+      const parser::OmpObjectList &objList, llvm::StringRef clause = "");
   void CheckThreadprivateOrDeclareTargetVar(
       const parser::OmpObjectList &objList);
   void CheckSymbolNames(
@@ -185,7 +186,7 @@ private:
 
   void CheckLoopItrVariableIsInt(const parser::OpenMPLoopConstruct &x);
   void CheckDoWhile(const parser::OpenMPLoopConstruct &x);
-  void CheckCycleConstraints(const parser::OpenMPLoopConstruct &x);
+  void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
   template <typename T, typename D> bool IsOperatorValid(const T &, const D &);
   void CheckAtomicMemoryOrderClause(
       const parser::OmpAtomicClauseList *, const parser::OmpAtomicClauseList *);
@@ -204,6 +205,7 @@ private:
   bool CheckIntrinsicOperator(
       const parser::DefinedOperator::IntrinsicOperator &);
   void CheckReductionTypeList(const parser::OmpClause::Reduction &);
+  void CheckReductionModifier(const parser::OmpClause::Reduction &);
   void CheckMasterNesting(const parser::OpenMPBlockConstruct &x);
   void ChecksOnOrderedAsBlock();
   void CheckBarrierNesting(const parser::OpenMPSimpleStandaloneConstruct &x);

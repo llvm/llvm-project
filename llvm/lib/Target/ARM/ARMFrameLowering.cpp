@@ -215,7 +215,7 @@ bool ARMFrameLowering::hasFP(const MachineFunction &MF) const {
 /// isFPReserved - Return true if the frame pointer register should be
 /// considered a reserved register on the scope of the specified function.
 bool ARMFrameLowering::isFPReserved(const MachineFunction &MF) const {
-  return hasFP(MF) || MF.getSubtarget<ARMSubtarget>().createAAPCSFrameChain();
+  return hasFP(MF) || MF.getTarget().Options.FramePointerIsReserved(MF);
 }
 
 /// hasReservedCallFrame - Under normal circumstances, when a frame pointer is
@@ -257,7 +257,8 @@ static int getArgumentStackToRestore(MachineFunction &MF,
   if (MBB.end() != MBBI) {
     unsigned RetOpcode = MBBI->getOpcode();
     IsTailCallReturn = RetOpcode == ARM::TCRETURNdi ||
-                       RetOpcode == ARM::TCRETURNri;
+                       RetOpcode == ARM::TCRETURNri ||
+                       RetOpcode == ARM::TCRETURNrinotr12;
   }
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
 
@@ -486,6 +487,7 @@ static MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
 
   case ARM::tBX_RET:
   case ARM::TCRETURNri:
+  case ARM::TCRETURNrinotr12:
     MIB = BuildMI(MF, DL, TII.get(ARM::SEH_Nop_Ret))
               .addImm(/*Wide=*/0)
               .setMIFlags(Flags);
@@ -733,8 +735,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   MachineBasicBlock::iterator MBBI = MBB.begin();
   MachineFrameInfo  &MFI = MF.getFrameInfo();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
-  MachineModuleInfo &MMI = MF.getMMI();
-  MCContext &Context = MMI.getContext();
+  MCContext &Context = MF.getContext();
   const TargetMachine &TM = MF.getTarget();
   const MCRegisterInfo *MRI = Context.getRegisterInfo();
   const ARMBaseRegisterInfo *RegInfo = STI.getRegisterInfo();
@@ -1615,7 +1616,9 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
   if (MBB.end() != MI) {
     DL = MI->getDebugLoc();
     unsigned RetOpcode = MI->getOpcode();
-    isTailCall = (RetOpcode == ARM::TCRETURNdi || RetOpcode == ARM::TCRETURNri);
+    isTailCall =
+        (RetOpcode == ARM::TCRETURNdi || RetOpcode == ARM::TCRETURNri ||
+         RetOpcode == ARM::TCRETURNrinotr12);
     isInterrupt =
         RetOpcode == ARM::SUBS_PC_LR || RetOpcode == ARM::t2SUBS_PC_LR;
     isTrap =
@@ -1645,9 +1648,6 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
         // Fold the return instruction into the LDM.
         DeleteRet = true;
         LdmOpc = AFI->isThumbFunction() ? ARM::t2LDMIA_RET : ARM::LDMIA_RET;
-        // We 'restore' LR into PC so it is not live out of the return block:
-        // Clear Restored bit.
-        Info.setRestored(false);
       }
 
       // If NoGap is true, pop consecutive registers and then leave the rest
@@ -1672,8 +1672,8 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
                                     .addReg(ARM::SP)
                                     .add(predOps(ARMCC::AL))
                                     .setMIFlags(MachineInstr::FrameDestroy);
-      for (unsigned i = 0, e = Regs.size(); i < e; ++i)
-        MIB.addReg(Regs[i], getDefRegState(true));
+      for (unsigned Reg : Regs)
+        MIB.addReg(Reg, getDefRegState(true));
       if (DeleteRet) {
         if (MI != MBB.end()) {
           MIB.copyImplicitOps(*MI);
@@ -1876,7 +1876,7 @@ skipAlignedDPRCS2Spills(MachineBasicBlock::iterator MI,
   case 1:
   case 2:
   case 4:
-    assert(MI->killsRegister(ARM::R4) && "Missed kill flag");
+    assert(MI->killsRegister(ARM::R4, /*TRI=*/nullptr) && "Missed kill flag");
     ++MI;
   }
   return MI;
@@ -2232,10 +2232,10 @@ bool ARMFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   return true;
 }
 
-static bool requiresAAPCSFrameRecord(const MachineFunction &MF) {
+bool ARMFrameLowering::requiresAAPCSFrameRecord(
+    const MachineFunction &MF) const {
   const auto &Subtarget = MF.getSubtarget<ARMSubtarget>();
-  return Subtarget.createAAPCSFrameChainLeaf() ||
-         (Subtarget.createAAPCSFrameChain() && MF.getFrameInfo().hasCalls());
+  return Subtarget.createAAPCSFrameChain() && hasFP(MF);
 }
 
 // Thumb1 may require a spill when storing to a frame index through FP (or any
@@ -2695,8 +2695,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
     const Align TargetAlign = getStackAlign();
     if (TargetAlign >= Align(8) && (NumGPRSpills & 1)) {
       if (CS1Spilled && !UnspilledCS1GPRs.empty()) {
-        for (unsigned i = 0, e = UnspilledCS1GPRs.size(); i != e; ++i) {
-          unsigned Reg = UnspilledCS1GPRs[i];
+        for (unsigned Reg : UnspilledCS1GPRs) {
           // Don't spill high register if the function is thumb.  In the case of
           // Windows on ARM, accept R11 (frame pointer)
           if (!AFI->isThumbFunction() ||
@@ -2783,6 +2782,36 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (ForceLRSpill)
     SavedRegs.set(ARM::LR);
   AFI->setLRIsSpilled(SavedRegs.test(ARM::LR));
+}
+
+void ARMFrameLowering::updateLRRestored(MachineFunction &MF) {
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  if (!MFI.isCalleeSavedInfoValid())
+    return;
+
+  // Check if all terminators do not implicitly use LR. Then we can 'restore' LR
+  // into PC so it is not live out of the return block: Clear the Restored bit
+  // in that case.
+  for (CalleeSavedInfo &Info : MFI.getCalleeSavedInfo()) {
+    if (Info.getReg() != ARM::LR)
+      continue;
+    if (all_of(MF, [](const MachineBasicBlock &MBB) {
+          return all_of(MBB.terminators(), [](const MachineInstr &Term) {
+            return !Term.isReturn() || Term.getOpcode() == ARM::LDMIA_RET ||
+                   Term.getOpcode() == ARM::t2LDMIA_RET ||
+                   Term.getOpcode() == ARM::tPOP_RET;
+          });
+        })) {
+      Info.setRestored(false);
+      break;
+    }
+  }
+}
+
+void ARMFrameLowering::processFunctionBeforeFrameFinalized(
+    MachineFunction &MF, RegScavenger *RS) const {
+  TargetFrameLowering::processFunctionBeforeFrameFinalized(MF, RS);
+  updateLRRestored(MF);
 }
 
 void ARMFrameLowering::getCalleeSaves(const MachineFunction &MF,
@@ -2965,8 +2994,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
     report_fatal_error("Segmented stacks not supported on this platform.");
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  MachineModuleInfo &MMI = MF.getMMI();
-  MCContext &Context = MMI.getContext();
+  MCContext &Context = MF.getContext();
   const MCRegisterInfo *MRI = Context.getRegisterInfo();
   const ARMBaseInstrInfo &TII =
       *static_cast<const ARMBaseInstrInfo *>(MF.getSubtarget().getInstrInfo());

@@ -1256,7 +1256,7 @@ HexagonTargetLowering::extractHvxSubvectorReg(SDValue OrigOp, SDValue VecV,
       SDValue IdxV, const SDLoc &dl, MVT ResTy, SelectionDAG &DAG) const {
   MVT VecTy = ty(VecV);
   unsigned HwLen = Subtarget.getVectorLength();
-  unsigned Idx = cast<ConstantSDNode>(IdxV.getNode())->getZExtValue();
+  unsigned Idx = IdxV.getNode()->getAsZExtVal();
   MVT ElemTy = VecTy.getVectorElementType();
   unsigned ElemWidth = ElemTy.getSizeInBits();
 
@@ -1299,7 +1299,7 @@ HexagonTargetLowering::extractHvxSubvectorPred(SDValue VecV, SDValue IdxV,
   MVT ByteTy = MVT::getVectorVT(MVT::i8, HwLen);
   SDValue ByteVec = DAG.getNode(HexagonISD::Q2V, dl, ByteTy, VecV);
   // IdxV is required to be a constant.
-  unsigned Idx = cast<ConstantSDNode>(IdxV.getNode())->getZExtValue();
+  unsigned Idx = IdxV.getNode()->getAsZExtVal();
 
   unsigned ResLen = ResTy.getVectorNumElements();
   unsigned BitBytes = HwLen / VecTy.getVectorNumElements();
@@ -1801,7 +1801,7 @@ HexagonTargetLowering::LowerHvxExtractSubvector(SDValue Op, SelectionDAG &DAG)
   MVT SrcTy = ty(SrcV);
   MVT DstTy = ty(Op);
   SDValue IdxV = Op.getOperand(1);
-  unsigned Idx = cast<ConstantSDNode>(IdxV.getNode())->getZExtValue();
+  unsigned Idx = IdxV.getNode()->getAsZExtVal();
   assert(Idx % DstTy.getVectorNumElements() == 0);
   (void)Idx;
   const SDLoc &dl(Op);
@@ -2127,7 +2127,7 @@ HexagonTargetLowering::LowerHvxFunnelShift(SDValue Op,
 SDValue
 HexagonTargetLowering::LowerHvxIntrinsic(SDValue Op, SelectionDAG &DAG) const {
   const SDLoc &dl(Op);
-  unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned IntNo = Op.getConstantOperandVal(0);
   SmallVector<SDValue> Ops(Op->ops().begin(), Op->ops().end());
 
   auto Swap = [&](SDValue P) {
@@ -2922,7 +2922,7 @@ SDValue
 HexagonTargetLowering::RemoveTLWrapper(SDValue Op, SelectionDAG &DAG) const {
   assert(Op.getOpcode() == HexagonISD::TL_EXTEND ||
          Op.getOpcode() == HexagonISD::TL_TRUNCATE);
-  unsigned Opc = cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue();
+  unsigned Opc = Op.getConstantOperandVal(2);
   return DAG.getNode(Opc, SDLoc(Op), ty(Op), Op.getOperand(0));
 }
 

@@ -7,12 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "CastingThroughVoidCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "llvm/ADT/StringSet.h"
 
 using namespace clang::ast_matchers;
 
@@ -27,7 +25,8 @@ void CastingThroughVoidCheck::registerMatchers(MatchFinder *Finder) {
           hasSourceExpression(
               explicitCastExpr(
                   hasSourceExpression(
-                      expr(hasType(qualType().bind("source_type")))),
+                      expr(hasType(qualType(unless(pointsTo(voidType())))
+                                       .bind("source_type")))),
                   hasDestinationType(
                       qualType(pointsTo(voidType())).bind("void_type")))
                   .bind("cast"))),

@@ -1,12 +1,12 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI  %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=r600 -mcpu=cypress < %s | FileCheck -enable-var-scope -check-prefix=EG %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI  %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=r600 -mcpu=cypress < %s | FileCheck -enable-var-scope -check-prefix=EG %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 define amdgpu_kernel void @trunc_i64_to_i32_store(ptr addrspace(1) %out, [8 x i32], i64 %in) {
 ; GCN-LABEL: {{^}}trunc_i64_to_i32_store:
-; GCN: s_load_dword [[SLOAD:s[0-9]+]], s[0:1],
+; GCN: s_load_dword [[SLOAD:s[0-9]+]], s[2:3],
 ; GCN: v_mov_b32_e32 [[VLOAD:v[0-9]+]], [[SLOAD]]
 ; SI: buffer_store_dword [[VLOAD]]
 ; VI: flat_store_dword v[{{[0-9:]+}}], [[VLOAD]]

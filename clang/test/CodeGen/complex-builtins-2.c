@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -w -S -o - -emit-llvm              %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -w -o - -emit-llvm %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -w -o - -emit-llvm -fmath-errno %s | FileCheck %s
 
 float _Complex test__builtin_conjf(float _Complex x) {
 // CHECK-LABEL: @test__builtin_conjf(

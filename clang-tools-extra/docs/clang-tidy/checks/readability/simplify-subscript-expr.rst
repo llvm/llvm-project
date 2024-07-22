@@ -20,4 +20,4 @@ Options
 .. option:: Types
 
    The list of type(s) that triggers this check. Default is
-   `::std::basic_string;::std::basic_string_view;::std::vector;::std::array`
+   `::std::basic_string;::std::basic_string_view;::std::vector;::std::array;::std::span`

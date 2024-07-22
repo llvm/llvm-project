@@ -127,6 +127,8 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   bool visitINSERT(MachineInstr &MI);
   bool visitINSviGPR(MachineInstr &MI, unsigned Opc);
   bool visitINSvi64lane(MachineInstr &MI);
+  bool visitFMOVDr(MachineInstr &MI);
+  bool visitCopy(MachineInstr &MI);
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
@@ -135,7 +137,7 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -670,6 +672,59 @@ bool AArch64MIPeepholeOpt::visitINSvi64lane(MachineInstr &MI) {
   return true;
 }
 
+bool AArch64MIPeepholeOpt::visitFMOVDr(MachineInstr &MI) {
+  // An FMOVDr sets the high 64-bits to zero implicitly, similar to ORR for GPR.
+  MachineInstr *Low64MI = MRI->getUniqueVRegDef(MI.getOperand(1).getReg());
+  if (!Low64MI || !is64bitDefwithZeroHigh64bit(Low64MI, MRI))
+    return false;
+
+  // Let's remove MIs for high 64-bits.
+  Register OldDef = MI.getOperand(0).getReg();
+  Register NewDef = MI.getOperand(1).getReg();
+  LLVM_DEBUG(dbgs() << "Removing: " << MI << "\n");
+  MRI->clearKillFlags(OldDef);
+  MRI->clearKillFlags(NewDef);
+  MRI->constrainRegClass(NewDef, MRI->getRegClass(OldDef));
+  MRI->replaceRegWith(OldDef, NewDef);
+  MI.eraseFromParent();
+
+  return true;
+}
+
+// Across a basic-block we might have in i32 extract from a value that only
+// operates on upper bits (for example a sxtw). We can replace the COPY with a
+// new version skipping the sxtw.
+bool AArch64MIPeepholeOpt::visitCopy(MachineInstr &MI) {
+  Register InputReg = MI.getOperand(1).getReg();
+  if (MI.getOperand(1).getSubReg() != AArch64::sub_32 ||
+      !MRI->hasOneNonDBGUse(InputReg))
+    return false;
+
+  MachineInstr *SrcMI = MRI->getUniqueVRegDef(InputReg);
+  SmallPtrSet<MachineInstr *, 4> DeadInstrs;
+  DeadInstrs.insert(SrcMI);
+  while (SrcMI && SrcMI->isFullCopy() &&
+         MRI->hasOneNonDBGUse(SrcMI->getOperand(1).getReg())) {
+    SrcMI = MRI->getUniqueVRegDef(SrcMI->getOperand(1).getReg());
+    DeadInstrs.insert(SrcMI);
+  }
+
+  if (!SrcMI || SrcMI->getOpcode() != AArch64::SBFMXri ||
+      SrcMI->getOperand(2).getImm() != 0 || SrcMI->getOperand(3).getImm() != 31)
+    return false;
+
+  Register SrcReg = SrcMI->getOperand(1).getReg();
+  MRI->constrainRegClass(SrcReg, MRI->getRegClass(InputReg));
+  LLVM_DEBUG(dbgs() << "Optimizing: " << MI);
+  MI.getOperand(1).setReg(SrcReg);
+  LLVM_DEBUG(dbgs() << "        to: " << MI);
+  for (auto *DeadMI : DeadInstrs) {
+    LLVM_DEBUG(dbgs() << "  Removing: " << *DeadMI);
+    DeadMI->eraseFromParent();
+  }
+  return true;
+}
+
 bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -677,7 +732,7 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
   TII = static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
   TRI = static_cast<const AArch64RegisterInfo *>(
       MF.getSubtarget().getRegisterInfo());
-  MLI = &getAnalysis<MachineLoopInfo>();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   MRI = &MF.getRegInfo();
 
   assert(MRI->isSSA() && "Expected to be run on SSA form!");
@@ -747,6 +802,12 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
         break;
       case AArch64::INSvi64lane:
         Changed |= visitINSvi64lane(MI);
+        break;
+      case AArch64::FMOVDr:
+        Changed |= visitFMOVDr(MI);
+        break;
+      case AArch64::COPY:
+        Changed |= visitCopy(MI);
         break;
       }
     }

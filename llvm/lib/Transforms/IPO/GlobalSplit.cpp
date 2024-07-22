@@ -47,27 +47,65 @@ static bool splitGlobal(GlobalVariable &GV) {
   if (!Init)
     return false;
 
-  // Verify that each user of the global is an inrange getelementptr constant.
-  // From this it follows that any loads from or stores to that global must use
-  // a pointer derived from an inrange getelementptr constant, which is
-  // sufficient to allow us to apply the splitting transform.
+  const DataLayout &DL = GV.getDataLayout();
+  const StructLayout *SL = DL.getStructLayout(Init->getType());
+  ArrayRef<TypeSize> MemberOffsets = SL->getMemberOffsets();
+  unsigned IndexWidth = DL.getIndexTypeSizeInBits(GV.getType());
+
+  // Verify that each user of the global is an inrange getelementptr constant,
+  // and collect information on how it relates to the global.
+  struct GEPInfo {
+    GEPOperator *GEP;
+    unsigned MemberIndex;
+    APInt MemberRelativeOffset;
+
+    GEPInfo(GEPOperator *GEP, unsigned MemberIndex, APInt MemberRelativeOffset)
+        : GEP(GEP), MemberIndex(MemberIndex),
+          MemberRelativeOffset(std::move(MemberRelativeOffset)) {}
+  };
+  SmallVector<GEPInfo> Infos;
   for (User *U : GV.users()) {
-    if (!isa<Constant>(U))
+    auto *GEP = dyn_cast<GEPOperator>(U);
+    if (!GEP)
       return false;
 
-    auto *GEP = dyn_cast<GEPOperator>(U);
-    if (!GEP || !GEP->getInRangeIndex() || *GEP->getInRangeIndex() != 1 ||
-        !isa<ConstantInt>(GEP->getOperand(1)) ||
-        !cast<ConstantInt>(GEP->getOperand(1))->isZero() ||
-        !isa<ConstantInt>(GEP->getOperand(2)))
+    std::optional<ConstantRange> InRange = GEP->getInRange();
+    if (!InRange)
       return false;
+
+    APInt Offset(IndexWidth, 0);
+    if (!GEP->accumulateConstantOffset(DL, Offset))
+      return false;
+
+    // Determine source-relative inrange.
+    ConstantRange SrcInRange = InRange->sextOrTrunc(IndexWidth).add(Offset);
+
+    // Check that the GEP offset is in the range (treating upper bound as
+    // inclusive here).
+    if (!SrcInRange.contains(Offset) && SrcInRange.getUpper() != Offset)
+      return false;
+
+    // Find which struct member the range corresponds to.
+    if (SrcInRange.getLower().uge(SL->getSizeInBytes()))
+      return false;
+
+    unsigned MemberIndex =
+        SL->getElementContainingOffset(SrcInRange.getLower().getZExtValue());
+    TypeSize MemberStart = MemberOffsets[MemberIndex];
+    TypeSize MemberEnd = MemberIndex == MemberOffsets.size() - 1
+                             ? SL->getSizeInBytes()
+                             : MemberOffsets[MemberIndex + 1];
+
+    // Verify that the range matches that struct member.
+    if (SrcInRange.getLower() != MemberStart ||
+        SrcInRange.getUpper() != MemberEnd)
+      return false;
+
+    Infos.emplace_back(GEP, MemberIndex, Offset - MemberStart);
   }
 
   SmallVector<MDNode *, 2> Types;
   GV.getMetadata(LLVMContext::MD_type, Types);
-
-  const DataLayout &DL = GV.getParent()->getDataLayout();
-  const StructLayout *SL = DL.getStructLayout(Init->getType());
 
   IntegerType *Int32Ty = Type::getInt32Ty(GV.getContext());
 
@@ -114,21 +152,13 @@ static bool splitGlobal(GlobalVariable &GV) {
       SplitGV->setVCallVisibilityMetadata(GV.getVCallVisibility());
   }
 
-  for (User *U : GV.users()) {
-    auto *GEP = cast<GEPOperator>(U);
-    unsigned I = cast<ConstantInt>(GEP->getOperand(2))->getZExtValue();
-    if (I >= SplitGlobals.size())
-      continue;
-
-    SmallVector<Value *, 4> Ops;
-    Ops.push_back(ConstantInt::get(Int32Ty, 0));
-    for (unsigned I = 3; I != GEP->getNumOperands(); ++I)
-      Ops.push_back(GEP->getOperand(I));
-
+  for (const GEPInfo &Info : Infos) {
+    assert(Info.MemberIndex < SplitGlobals.size() && "Invalid member");
     auto *NewGEP = ConstantExpr::getGetElementPtr(
-        SplitGlobals[I]->getInitializer()->getType(), SplitGlobals[I], Ops,
-        GEP->isInBounds());
-    GEP->replaceAllUsesWith(NewGEP);
+        Type::getInt8Ty(GV.getContext()), SplitGlobals[Info.MemberIndex],
+        ConstantInt::get(GV.getContext(), Info.MemberRelativeOffset),
+        Info.GEP->isInBounds());
+    Info.GEP->replaceAllUsesWith(NewGEP);
   }
 
   // Finally, remove the original global. Any remaining uses refer to invalid

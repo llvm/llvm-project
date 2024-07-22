@@ -13,6 +13,7 @@
 #ifndef LLVM_CODEGEN_MACHINEBASICBLOCK_H
 #define LLVM_CODEGEN_MACHINEBASICBLOCK_H
 
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/ilist.h"
@@ -42,6 +43,8 @@ class raw_ostream;
 class LiveIntervals;
 class TargetRegisterClass;
 class TargetRegisterInfo;
+template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
+using MachineFunctionAnalysisManager = AnalysisManager<MachineFunction>;
 
 // This structure uniquely identifies a basic block section.
 // Possible values are
@@ -74,10 +77,29 @@ private:
   MBBSectionID(SectionType T) : Type(T), Number(0) {}
 };
 
-// This structure represents the information for a basic block.
+template <> struct DenseMapInfo<MBBSectionID> {
+  using TypeInfo = DenseMapInfo<MBBSectionID::SectionType>;
+  using NumberInfo = DenseMapInfo<unsigned>;
+
+  static inline MBBSectionID getEmptyKey() {
+    return MBBSectionID(NumberInfo::getEmptyKey());
+  }
+  static inline MBBSectionID getTombstoneKey() {
+    return MBBSectionID(NumberInfo::getTombstoneKey());
+  }
+  static unsigned getHashValue(const MBBSectionID &SecID) {
+    return detail::combineHashValue(TypeInfo::getHashValue(SecID.Type),
+                                    NumberInfo::getHashValue(SecID.Number));
+  }
+  static bool isEqual(const MBBSectionID &LHS, const MBBSectionID &RHS) {
+    return LHS == RHS;
+  }
+};
+
+// This structure represents the information for a basic block pertaining to
+// the basic block sections profile.
 struct UniqueBBID {
   unsigned BaseID;
-  // sections profile).
   unsigned CloneID;
 };
 
@@ -111,6 +133,10 @@ public:
 
     RegisterMaskPair(MCPhysReg PhysReg, LaneBitmask LaneMask)
         : PhysReg(PhysReg), LaneMask(LaneMask) {}
+
+    bool operator==(const RegisterMaskPair &other) const {
+      return PhysReg == other.PhysReg && LaneMask == other.LaneMask;
+    }
   };
 
 private:
@@ -233,6 +259,9 @@ public:
   void clearBasicBlock() {
     BB = nullptr;
   }
+
+  /// Check if there is a name of corresponding LLVM basic block.
+  bool hasName() const;
 
   /// Return the name of the corresponding LLVM basic block, or an empty string.
   StringRef getName() const;
@@ -437,6 +466,10 @@ public:
   /// Clear live in list.
   void clearLiveIns();
 
+  /// Clear the live in list, and return the removed live in's in \p OldLiveIns.
+  /// Requires that the vector \p OldLiveIns is empty.
+  void clearLiveIns(std::vector<RegisterMaskPair> &OldLiveIns);
+
   /// Add PhysReg as live in to this block, and ensure that there is a copy of
   /// PhysReg to a virtual register of class RC. Return the virtual register
   /// that is a copy of the live in PhysReg.
@@ -472,6 +505,8 @@ public:
 
   /// Remove entry from the livein set and return iterator to the next.
   livein_iterator removeLiveIn(livein_iterator I);
+
+  const std::vector<RegisterMaskPair> &getLiveIns() const { return LiveIns; }
 
   class liveout_iterator {
   public:
@@ -644,12 +679,6 @@ public:
 
   /// Returns the section ID of this basic block.
   MBBSectionID getSectionID() const { return SectionID; }
-
-  /// Returns the unique section ID number of this basic block.
-  unsigned getSectionIDNum() const {
-    return ((unsigned)MBBSectionID::SectionType::Cold) -
-           ((unsigned)SectionID.Type) + SectionID.Number;
-  }
 
   /// Sets the fixed BBID of this basic block.
   void setBBID(const UniqueBBID &V) {
@@ -941,7 +970,16 @@ public:
   /// MachineLoopInfo, as applicable.
   MachineBasicBlock *
   SplitCriticalEdge(MachineBasicBlock *Succ, Pass &P,
-                    std::vector<SparseBitVector<>> *LiveInSets = nullptr);
+                    std::vector<SparseBitVector<>> *LiveInSets = nullptr) {
+    return SplitCriticalEdge(Succ, &P, nullptr, LiveInSets);
+  }
+
+  MachineBasicBlock *
+  SplitCriticalEdge(MachineBasicBlock *Succ,
+                    MachineFunctionAnalysisManager &MFAM,
+                    std::vector<SparseBitVector<>> *LiveInSets = nullptr) {
+    return SplitCriticalEdge(Succ, nullptr, &MFAM, LiveInSets);
+  }
 
   /// Check if the edge between this block and the given successor \p
   /// Succ, can be split. If this returns true a subsequent call to
@@ -1216,6 +1254,12 @@ private:
   /// unless you know what you're doing, because it doesn't update Pred's
   /// successors list. Use Pred->removeSuccessor instead.
   void removePredecessor(MachineBasicBlock *Pred);
+
+  // Helper method for new pass manager migration.
+  MachineBasicBlock *
+  SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P,
+                    MachineFunctionAnalysisManager *MFAM,
+                    std::vector<SparseBitVector<>> *LiveInSets);
 };
 
 raw_ostream& operator<<(raw_ostream &OS, const MachineBasicBlock &MBB);

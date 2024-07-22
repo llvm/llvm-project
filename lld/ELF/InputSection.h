@@ -9,6 +9,7 @@
 #ifndef LLD_ELF_INPUT_SECTION_H
 #define LLD_ELF_INPUT_SECTION_H
 
+#include "Config.h"
 #include "Relocations.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/LLVM.h"
@@ -47,18 +48,21 @@ template <class ELFT> struct RelsOrRelas {
 // sections.
 class SectionBase {
 public:
-  enum Kind { Regular, Synthetic, EHFrame, Merge, Output };
+  enum Kind { Regular, Synthetic, Spill, EHFrame, Merge, Output };
 
   Kind kind() const { return (Kind)sectionKind; }
 
+  LLVM_PREFERRED_TYPE(Kind)
   uint8_t sectionKind : 3;
 
   // The next two bit fields are only used by InputSectionBase, but we
   // put them here so the struct packs better.
 
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t bss : 1;
 
   // Set for sections that should not be folded by ICF.
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t keepUnique : 1;
 
   uint8_t partition = 1;
@@ -101,7 +105,23 @@ protected:
         link(link), info(info) {}
 };
 
-struct RISCVRelaxAux;
+struct SymbolAnchor {
+  uint64_t offset;
+  Defined *d;
+  bool end; // true for the anchor of st_value+st_size
+};
+
+struct RelaxAux {
+  // This records symbol start and end offsets which will be adjusted according
+  // to the nearest relocDeltas element.
+  SmallVector<SymbolAnchor, 0> anchors;
+  // For relocations[i], the actual offset is
+  //   r_offset - (i ? relocDeltas[i-1] : 0).
+  std::unique_ptr<uint32_t[]> relocDeltas;
+  // For relocations[i], the actual type is relocTypes[i].
+  std::unique_ptr<RelType[]> relocTypes;
+  SmallVector<uint32_t, 0> writes;
+};
 
 // This corresponds to a section of an input file.
 class InputSectionBase : public SectionBase {
@@ -117,9 +137,9 @@ public:
 
   static bool classof(const SectionBase *s) { return s->kind() != Output; }
 
-  // The file which contains this section. Its dynamic type is always
-  // ObjFile<ELFT>, but in order to avoid ELFT, we use InputFile as
-  // its static type.
+  // The file which contains this section. Its dynamic type is usually
+  // ObjFile<ELFT>, but may be an InputFile of InternalKind (for a synthetic
+  // section).
   InputFile *file;
 
   // Input sections are part of an output section. Special sections
@@ -131,8 +151,9 @@ public:
   // Section index of the relocation section if exists.
   uint32_t relSecIdx = 0;
 
+  // Getter when the dynamic type is ObjFile<ELFT>.
   template <class ELFT> ObjFile<ELFT> *getFile() const {
-    return cast_or_null<ObjFile<ELFT>>(file);
+    return cast<ObjFile<ELFT>>(file);
   }
 
   // Used by --optimize-bb-jumps and RISC-V linker relaxation temporarily to
@@ -225,9 +246,9 @@ public:
     // basic blocks.
     JumpInstrMod *jumpInstrMod = nullptr;
 
-    // Auxiliary information for RISC-V linker relaxation. RISC-V does not use
-    // jumpInstrMod.
-    RISCVRelaxAux *relaxAux;
+    // Auxiliary information for RISC-V and LoongArch linker relaxation.
+    // They do not use jumpInstrMod.
+    RelaxAux *relaxAux;
 
     // The compressed content size when `compressed` is true.
     size_t compressedSize;
@@ -264,6 +285,7 @@ struct SectionPiece {
       : inputOff(off), live(live), hash(hash >> 1) {}
 
   uint32_t inputOff;
+  LLVM_PREFERRED_TYPE(bool)
   uint32_t live : 1;
   uint32_t hash : 31;
   uint64_t outputOff = 0;
@@ -364,7 +386,8 @@ public:
 
   static bool classof(const SectionBase *s) {
     return s->kind() == SectionBase::Regular ||
-           s->kind() == SectionBase::Synthetic;
+           s->kind() == SectionBase::Synthetic ||
+           s->kind() == SectionBase::Spill;
   }
 
   // Write this section to a mmap'ed file, assuming Buf is pointing to
@@ -407,13 +430,33 @@ private:
   template <class ELFT> void copyShtGroup(uint8_t *buf);
 };
 
+// A marker for a potential spill location for another input section. This
+// broadly acts as if it were the original section until address assignment.
+// Then it is either replaced with the real input section or removed.
+class PotentialSpillSection : public InputSection {
+public:
+  // The containing input section description; used to quickly replace this stub
+  // with the actual section.
+  InputSectionDescription *isd;
+
+  // Next potential spill location for the same source input section.
+  PotentialSpillSection *next = nullptr;
+
+  PotentialSpillSection(const InputSectionBase &source,
+                        InputSectionDescription &isd);
+
+  static bool classof(const SectionBase *sec) {
+    return sec->kind() == InputSectionBase::Spill;
+  }
+};
+
 static_assert(sizeof(InputSection) <= 160, "InputSection is too big");
 
 class SyntheticSection : public InputSection {
 public:
   SyntheticSection(uint64_t flags, uint32_t type, uint32_t addralign,
                    StringRef name)
-      : InputSection(nullptr, flags, type, addralign, {}, name,
+      : InputSection(ctx.internalFile, flags, type, addralign, {}, name,
                      InputSectionBase::Synthetic) {}
 
   virtual ~SyntheticSection() = default;
@@ -429,6 +472,10 @@ public:
     return sec->kind() == InputSectionBase::Synthetic;
   }
 };
+
+inline bool isStaticRelSecType(uint32_t type) {
+  return type == llvm::ELF::SHT_RELA || type == llvm::ELF::SHT_REL;
+}
 
 inline bool isDebugSection(const InputSectionBase &sec) {
   return (sec.flags & llvm::ELF::SHF_ALLOC) == 0 &&

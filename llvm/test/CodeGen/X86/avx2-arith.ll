@@ -121,16 +121,14 @@ define <16 x i8> @mul_v16i8(<16 x i8> %i, <16 x i8> %j) nounwind readnone {
 define <32 x i8> @mul_v32i8(<32 x i8> %i, <32 x i8> %j) nounwind readnone {
 ; CHECK-LABEL: mul_v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpunpckhbw {{.*#+}} ymm2 = ymm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
-; CHECK-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
-; CHECK-NEXT:    vpmullw %ymm2, %ymm3, %ymm2
-; CHECK-NEXT:    vpbroadcastw {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; CHECK-NEXT:    vpand %ymm3, %ymm2, %ymm2
-; CHECK-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
-; CHECK-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
-; CHECK-NEXT:    vpmullw %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpand %ymm3, %ymm0, %ymm0
-; CHECK-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; CHECK-NEXT:    vpand %ymm1, %ymm2, %ymm3
+; CHECK-NEXT:    vpmaddubsw %ymm3, %ymm0, %ymm3
+; CHECK-NEXT:    vpand %ymm2, %ymm3, %ymm3
+; CHECK-NEXT:    vpandn %ymm1, %ymm2, %ymm1
+; CHECK-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpsllw $8, %ymm0, %ymm0
+; CHECK-NEXT:    vpor %ymm0, %ymm3, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %x = mul <32 x i8> %i, %j
   ret <32 x i8> %x
@@ -234,7 +232,7 @@ define <8 x i16> @mul_const8(<8 x i16> %x) {
 define <8 x i32> @mul_const9(<8 x i32> %x) {
 ; CHECK-LABEL: mul_const9:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm1 = [2,0,0,0]
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [2,0]
 ; CHECK-NEXT:    vpmulld %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %y = mul <8 x i32> %x, <i32 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>

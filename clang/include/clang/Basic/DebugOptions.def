@@ -68,6 +68,8 @@ BENIGN_DEBUGOPT(NoInlineLineTables, 1, 0) ///< Whether debug info should contain
                                           ///< inline line tables.
 
 DEBUGOPT(DebugStrictDwarf, 1, 1) ///< Whether or not to use strict DWARF info.
+DEBUGOPT(DebugOmitUnreferencedMethods, 1, 0) ///< Omit unreferenced member
+					     ///< functions in type debug info.
 
 /// Control the Assignment Tracking debug info feature.
 BENIGN_ENUM_DEBUGOPT(AssignmentTrackingMode, AssignmentTrackingOpts, 2,
@@ -128,6 +130,9 @@ DEBUGOPT(CodeViewCommandLine, 1, 0)
 
 /// Whether emit extra debug info for sample pgo profile collection.
 DEBUGOPT(DebugInfoForProfiling, 1, 0)
+
+/// Whether to emit DW_TAG_template_alias for template aliases.
+DEBUGOPT(DebugTemplateAlias, 1, 0)
 
 /// Whether to emit .debug_gnu_pubnames section instead of .debug_pubnames.
 DEBUGOPT(DebugNameTable, 2, 0)

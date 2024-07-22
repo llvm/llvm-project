@@ -28,6 +28,7 @@
 #include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/ROCDL/ROCDLToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/SPIRV/SPIRVToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/VCIX/VCIXToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/X86Vector/X86VectorToLLVMIRTranslation.h"
 
 namespace mlir {
@@ -48,6 +49,7 @@ static inline void registerAllToLLVMIRTranslations(DialectRegistry &registry) {
   registerOpenMPDialectTranslation(registry);
   registerROCDLDialectTranslation(registry);
   registerSPIRVDialectTranslation(registry);
+  registerVCIXDialectTranslation(registry);
   registerX86VectorDialectTranslation(registry);
 
   // Extension required for translating GPU offloading Ops.

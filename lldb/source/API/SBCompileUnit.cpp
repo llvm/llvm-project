@@ -171,7 +171,7 @@ uint32_t SBCompileUnit::FindSupportFileIndex(uint32_t start_idx,
   LLDB_INSTRUMENT_VA(this, start_idx, sb_file, full);
 
   if (m_opaque_ptr) {
-    const FileSpecList &support_files = m_opaque_ptr->GetSupportFiles();
+    const SupportFileList &support_files = m_opaque_ptr->GetSupportFiles();
     return support_files.FindFileIndex(start_idx, sb_file.ref(), full);
   }
   return 0;

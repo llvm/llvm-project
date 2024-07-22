@@ -61,7 +61,7 @@ Expected<std::string> python::As<std::string>(Expected<PythonObject> &&obj) {
   if (!obj)
     return obj.takeError();
   PyObject *str_obj = PyObject_Str(obj.get().get());
-  if (!obj)
+  if (!str_obj)
     return llvm::make_error<PythonException>();
   auto str = Take<PythonString>(str_obj);
   auto utf8 = str.AsUTF8();

@@ -110,11 +110,11 @@ define <2 x float> @fdiv_nnan_ninf_by_undef_v2f32(<2 x float> %x) {
   ret <2 x float> %fdiv
 }
 
-define <2 x float> @fdiv_nnan_ninf_by_zero_undef_v2f32(<2 x float> %x) {
-; CHECK-LABEL: @fdiv_nnan_ninf_by_zero_undef_v2f32(
+define <2 x float> @fdiv_nnan_ninf_by_zero_poison_v2f32(<2 x float> %x) {
+; CHECK-LABEL: @fdiv_nnan_ninf_by_zero_poison_v2f32(
 ; CHECK-NEXT:    ret <2 x float> poison
 ;
-  %fdiv = fdiv nnan ninf <2 x float> %x, <float 0.0, float undef>
+  %fdiv = fdiv nnan ninf <2 x float> %x, <float 0.0, float poison>
   ret <2 x float> %fdiv
 }
 

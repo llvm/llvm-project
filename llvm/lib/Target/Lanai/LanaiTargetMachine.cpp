@@ -37,7 +37,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLanaiTarget() {
   RegisterTargetMachine<LanaiTargetMachine> registered_target(
       getTheLanaiTarget());
   PassRegistry &PR = *PassRegistry::getPassRegistry();
-  initializeLanaiDAGToDAGISelPass(PR);
+  initializeLanaiDAGToDAGISelLegacyPass(PR);
 }
 
 static std::string computeDataLayout() {
@@ -93,6 +93,7 @@ public:
     return getTM<LanaiTargetMachine>();
   }
 
+  void addIRPasses() override;
   bool addInstSelector() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
@@ -102,6 +103,12 @@ public:
 TargetPassConfig *
 LanaiTargetMachine::createPassConfig(PassManagerBase &PassManager) {
   return new LanaiPassConfig(*this, &PassManager);
+}
+
+void LanaiPassConfig::addIRPasses() {
+  addPass(createAtomicExpandLegacyPass());
+
+  TargetPassConfig::addIRPasses();
 }
 
 // Install an instruction selector pass.

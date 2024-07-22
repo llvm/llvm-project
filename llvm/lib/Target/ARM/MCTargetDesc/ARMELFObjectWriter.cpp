@@ -16,6 +16,7 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Object/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -84,6 +85,14 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
   if (Kind >= FirstLiteralRelocationKind)
     return Kind - FirstLiteralRelocationKind;
   MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();
+  auto CheckFDPIC = [&](uint32_t Type) {
+    if (getOSABI() != ELF::ELFOSABI_ARM_FDPIC)
+      Ctx.reportError(Fixup.getLoc(),
+                      "relocation " +
+                          object::getELFRelocationTypeName(ELF::EM_ARM, Type) +
+                          " only supported in FDPIC mode");
+    return Type;
+  };
 
   if (IsPCRel) {
     switch (Fixup.getTargetKind()) {
@@ -240,6 +249,18 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       return ELF::R_ARM_TLS_LDM32;
     case MCSymbolRefExpr::VK_ARM_TLSDESCSEQ:
       return ELF::R_ARM_TLS_DESCSEQ;
+    case MCSymbolRefExpr::VK_FUNCDESC:
+      return CheckFDPIC(ELF::R_ARM_FUNCDESC);
+    case MCSymbolRefExpr::VK_GOTFUNCDESC:
+      return CheckFDPIC(ELF::R_ARM_GOTFUNCDESC);
+    case MCSymbolRefExpr::VK_GOTOFFFUNCDESC:
+      return CheckFDPIC(ELF::R_ARM_GOTOFFFUNCDESC);
+    case MCSymbolRefExpr::VK_TLSGD_FDPIC:
+      return CheckFDPIC(ELF::R_ARM_TLS_GD32_FDPIC);
+    case MCSymbolRefExpr::VK_TLSLDM_FDPIC:
+      return CheckFDPIC(ELF::R_ARM_TLS_LDM32_FDPIC);
+    case MCSymbolRefExpr::VK_GOTTPOFF_FDPIC:
+      return CheckFDPIC(ELF::R_ARM_TLS_IE32_FDPIC);
     }
   case ARM::fixup_arm_condbranch:
   case ARM::fixup_arm_uncondbranch:
@@ -307,8 +328,9 @@ void ARMELFObjectWriter::addTargetSectionFlags(MCContext &Ctx,
   // execute-only section in the object.
   MCSectionELF *TextSection =
       static_cast<MCSectionELF *>(Ctx.getObjectFileInfo()->getTextSection());
-  if (Sec.getKind().isExecuteOnly() && !TextSection->hasInstructions()) {
-    for (auto &F : TextSection->getFragmentList())
+  bool IsExecOnly = Sec.getFlags() & ELF::SHF_ARM_PURECODE;
+  if (IsExecOnly && !TextSection->hasInstructions()) {
+    for (auto &F : *TextSection)
       if (auto *DF = dyn_cast<MCDataFragment>(&F))
         if (!DF->getContents().empty())
           return;

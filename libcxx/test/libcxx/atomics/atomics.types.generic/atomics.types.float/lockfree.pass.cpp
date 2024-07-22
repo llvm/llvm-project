@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // XFAIL: !has-64-bit-atomics
-// UNSUPPORTED: !non-lockfree-atomics
 
 //   static constexpr bool is_always_lock_free = implementation-defined;
 //   bool is_lock_free() const volatile noexcept;

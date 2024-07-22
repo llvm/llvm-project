@@ -171,7 +171,7 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
   if (A->getOpcode() == AndN2)
     MaskValue = ~MaskValue;
 
-  if (!ReadsCond && A->registerDefIsDead(AMDGPU::SCC)) {
+  if (!ReadsCond && A->registerDefIsDead(AMDGPU::SCC, /*TRI=*/nullptr)) {
     if (!MI.killsRegister(CondReg, TRI)) {
       // Replace AND with MOV
       if (MaskValue == 0) {
@@ -235,7 +235,7 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
         TII->get(IsVCCZ ? AMDGPU::S_CBRANCH_EXECZ : AMDGPU::S_CBRANCH_EXECNZ));
   }
 
-  MI.removeOperand(MI.findRegisterUseOperandIdx(CondReg, false /*Kill*/, TRI));
+  MI.removeOperand(MI.findRegisterUseOperandIdx(CondReg, TRI, false /*Kill*/));
   MI.addImplicitDefUseOperands(*MBB.getParent());
 
   return true;
@@ -328,7 +328,7 @@ bool SIPreEmitPeephole::mustRetainExeczBranch(
 
       // These instructions are potentially expensive even if EXEC = 0.
       if (TII->isSMRD(MI) || TII->isVMEM(MI) || TII->isFLAT(MI) ||
-          TII->isDS(MI) || MI.getOpcode() == AMDGPU::S_WAITCNT)
+          TII->isDS(MI) || TII->isWaitcnt(MI.getOpcode()))
         return true;
 
       ++NumInstr;
@@ -397,8 +397,7 @@ bool SIPreEmitPeephole::runOnMachineFunction(MachineFunction &MF) {
     // and limit the distance to 20 instructions for compile time purposes.
     // Note: this needs to work on bundles as S_SET_GPR_IDX* instructions
     // may be bundled with the instructions they modify.
-    for (auto &MI :
-         make_early_inc_range(make_range(MBB.instr_begin(), MBB.instr_end()))) {
+    for (auto &MI : make_early_inc_range(MBB.instrs())) {
       if (Count == Threshold)
         SetGPRMI = nullptr;
       else

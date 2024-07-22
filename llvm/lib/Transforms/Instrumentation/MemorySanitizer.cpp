@@ -11,11 +11,11 @@
 /// reads.
 ///
 /// The algorithm of the tool is similar to Memcheck
-/// (http://goo.gl/QKbem). We associate a few shadow bits with every
-/// byte of the application memory, poison the shadow of the malloc-ed
-/// or alloca-ed memory, load the shadow bits on every memory read,
-/// propagate the shadow bits through some of the arithmetic
-/// instruction (including MOV), store the shadow bits on every memory
+/// (https://static.usenix.org/event/usenix05/tech/general/full_papers/seward/seward_html/usenix2005.html)
+/// We associate a few shadow bits with every byte of the application memory,
+/// poison the shadow of the malloc-ed or alloca-ed memory, load the shadow,
+/// bits on every memory read, propagate the shadow bits through some of the
+/// arithmetic instruction (including MOV), store the shadow bits on every memory
 /// write, report a bug on some other instructions (e.g. JMP) if the
 /// associated shadow is poisoned.
 ///
@@ -124,8 +124,9 @@
 ///      __msan_metadata_ptr_for_store_n(ptr, size);
 ///    Note that the sanitizer code has to deal with how shadow/origin pairs
 ///    returned by the these functions are represented in different ABIs. In
-///    the X86_64 ABI they are returned in RDX:RAX, and in the SystemZ ABI they
-///    are written to memory pointed to by a hidden parameter.
+///    the X86_64 ABI they are returned in RDX:RAX, in PowerPC64 they are
+///    returned in r3 and r4, and in the SystemZ ABI they are written to memory
+///    pointed to by a hidden parameter.
 ///  - TLS variables are stored in a single per-task struct. A call to a
 ///    function __msan_get_context_state() returning a pointer to that struct
 ///    is inserted into every instrumented function before the entry block;
@@ -139,7 +140,8 @@
 /// Also, KMSAN currently ignores uninitialized memory passed into inline asm
 /// calls, making sure we're on the safe side wrt. possible false positives.
 ///
-///  KernelMemorySanitizer only supports X86_64 and SystemZ at the moment.
+///  KernelMemorySanitizer only supports X86_64, SystemZ and PowerPC64 at the
+///  moment.
 ///
 //
 // FIXME: This sanitizer does not yet handle scalable vectors
@@ -152,6 +154,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -178,6 +181,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
@@ -211,6 +215,9 @@ using namespace llvm;
 
 DEBUG_COUNTER(DebugInsertCheck, "msan-insert-check",
               "Controls which checks to insert");
+
+DEBUG_COUNTER(DebugInstrumentInstruction, "msan-instrument-instruction",
+              "Controls which instruction to instrument");
 
 static const unsigned kOriginSize = 4;
 static const Align kMinOriginAlignment = Align(4);
@@ -284,9 +291,6 @@ static cl::opt<bool> ClHandleLifetimeIntrinsics(
 // passed into an assembly call. Note that this may cause false positives.
 // Because it's impossible to figure out the array sizes, we can only unpoison
 // the first sizeof(type) bytes for each type* pointer.
-// The instrumentation is only enabled in KMSAN builds, and only if
-// -msan-handle-asm-conservative is on. This is done because we may want to
-// quickly disable assembly instrumentation when it breaks.
 static cl::opt<bool> ClHandleAsmConservative(
     "msan-handle-asm-conservative",
     cl::desc("conservative handling of inline assembly"), cl::Hidden,
@@ -1043,8 +1047,8 @@ void MemorySanitizer::initializeModule(Module &M) {
   OriginTy = IRB.getInt32Ty();
   PtrTy = IRB.getPtrTy();
 
-  ColdCallWeights = MDBuilder(*C).createBranchWeights(1, 1000);
-  OriginStoreWeights = MDBuilder(*C).createBranchWeights(1, 1000);
+  ColdCallWeights = MDBuilder(*C).createUnlikelyBranchWeights();
+  OriginStoreWeights = MDBuilder(*C).createUnlikelyBranchWeights();
 
   if (!CompileKernel) {
     if (TrackOrigins)
@@ -1134,6 +1138,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   std::unique_ptr<VarArgHelper> VAHelper;
   const TargetLibraryInfo *TLI;
   Instruction *FnPrologueEnd;
+  SmallVector<Instruction *, 16> Instructions;
 
   // The following flags disable parts of MSan instrumentation based on
   // exclusion list contents and command-line options.
@@ -1214,7 +1219,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   Value *originToIntptr(IRBuilder<> &IRB, Value *Origin) {
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
     if (IntptrSize == kOriginSize)
       return Origin;
@@ -1226,7 +1231,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// Fill memory range with the given origin value.
   void paintOrigin(IRBuilder<> &IRB, Value *Origin, Value *OriginPtr,
                    TypeSize TS, Align Alignment) {
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     const Align IntptrAlignment = DL.getABITypeAlign(MS.IntptrTy);
     unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
     assert(IntptrAlignment >= kMinOriginAlignment);
@@ -1235,9 +1240,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Note: The loop based formation works for fixed length vectors too,
     // however we prefer to unroll and specialize alignment below.
     if (TS.isScalable()) {
-      Value *Size = IRB.CreateTypeSize(IRB.getInt32Ty(), TS);
-      Value *RoundUp = IRB.CreateAdd(Size, IRB.getInt32(kOriginSize - 1));
-      Value *End = IRB.CreateUDiv(RoundUp, IRB.getInt32(kOriginSize));
+      Value *Size = IRB.CreateTypeSize(MS.IntptrTy, TS);
+      Value *RoundUp =
+          IRB.CreateAdd(Size, ConstantInt::get(MS.IntptrTy, kOriginSize - 1));
+      Value *End =
+          IRB.CreateUDiv(RoundUp, ConstantInt::get(MS.IntptrTy, kOriginSize));
       auto [InsertPt, Index] =
         SplitBlockAndInsertSimpleForLoop(End, &*IRB.GetInsertPoint());
       IRB.SetInsertPoint(InsertPt);
@@ -1274,9 +1281,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void storeOrigin(IRBuilder<> &IRB, Value *Addr, Value *Shadow, Value *Origin,
                    Value *OriginPtr, Align Alignment) {
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     const Align OriginAlignment = std::max(kMinOriginAlignment, Alignment);
     TypeSize StoreSize = DL.getTypeStoreSize(Shadow->getType());
+    // ZExt cannot convert between vector and scalar
     Value *ConvertedShadow = convertShadowToScalar(Shadow, IRB);
     if (auto *ConstantShadow = dyn_cast<Constant>(ConvertedShadow)) {
       if (!ClCheckConstantShadow || ConstantShadow->isZeroValue()) {
@@ -1339,7 +1347,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
-  // Returns true if Debug Location curresponds to multiple warnings.
+  // Returns true if Debug Location corresponds to multiple warnings.
   bool shouldDisambiguateWarningLocation(const DebugLoc &DebugLoc) {
     if (MS.TrackOrigins < 2)
       return false;
@@ -1386,12 +1394,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void materializeOneCheck(IRBuilder<> &IRB, Value *ConvertedShadow,
                            Value *Origin) {
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     TypeSize TypeSizeInBits = DL.getTypeSizeInBits(ConvertedShadow->getType());
     unsigned SizeIndex = TypeSizeToSizeIndex(TypeSizeInBits);
     if (instrumentWithCalls(ConvertedShadow) &&
         SizeIndex < kNumberOfAccessSizes && !MS.CompileKernel) {
       FunctionCallee Fn = MS.MaybeWarningFn[SizeIndex];
+      // ZExt cannot convert between vector and scalar
+      ConvertedShadow = convertShadowToScalar(ConvertedShadow, IRB);
       Value *ConvertedShadow2 =
           IRB.CreateZExt(ConvertedShadow, IRB.getIntNTy(8 * (1 << SizeIndex)));
       CallBase *CB = IRB.CreateCall(
@@ -1413,7 +1423,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void materializeInstructionChecks(
       ArrayRef<ShadowOriginAndInsertPoint> InstructionChecks) {
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     // Disable combining in some cases. TrackOrigins checks each shadow to pick
     // correct origin.
     bool Combine = !MS.TrackOrigins;
@@ -1464,19 +1474,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void materializeChecks() {
-    llvm::stable_sort(InstrumentationList,
-                      [](const ShadowOriginAndInsertPoint &L,
-                         const ShadowOriginAndInsertPoint &R) {
-                        return L.OrigIns < R.OrigIns;
-                      });
+#ifndef NDEBUG
+    // For assert below.
+    SmallPtrSet<Instruction *, 16> Done;
+#endif
 
     for (auto I = InstrumentationList.begin();
          I != InstrumentationList.end();) {
-      auto J =
-          std::find_if(I + 1, InstrumentationList.end(),
-                       [L = I->OrigIns](const ShadowOriginAndInsertPoint &R) {
-                         return L != R.OrigIns;
-                       });
+      auto OrigIns = I->OrigIns;
+      // Checks are grouped by the original instruction. We call all
+      // `insertShadowCheck` for an instruction at once.
+      assert(Done.insert(OrigIns).second);
+      auto J = std::find_if(I + 1, InstrumentationList.end(),
+                            [OrigIns](const ShadowOriginAndInsertPoint &R) {
+                              return OrigIns != R.OrigIns;
+                            });
       // Process all checks of instruction at once.
       materializeInstructionChecks(ArrayRef<ShadowOriginAndInsertPoint>(I, J));
       I = J;
@@ -1516,6 +1528,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // For PHI nodes we create dummy shadow PHIs which will be finalized later.
     for (BasicBlock *BB : depth_first(FnPrologueEnd->getParent()))
       visit(*BB);
+
+    // `visit` above only collects instructions. Process them after iterating
+    // CFG to avoid requirement on CFG transformations.
+    for (Instruction *I : Instructions)
+      InstVisitor<MemorySanitizerVisitor>::visit(*I);
 
     // Finalize PHI nodes.
     for (PHINode *PN : ShadowPHINodes) {
@@ -1566,7 +1583,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // This may return weird-sized types like i1.
     if (IntegerType *IT = dyn_cast<IntegerType>(OrigTy))
       return IT;
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     if (VectorType *VT = dyn_cast<VectorType>(OrigTy)) {
       uint32_t EltSize = DL.getTypeSizeInBits(VT->getElementType());
       return VectorType::get(IntegerType::get(*MS.C, EltSize),
@@ -1762,7 +1779,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                                             Type *ShadowTy,
                                                             bool isStore) {
     Value *ShadowOriginPtrs;
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     TypeSize Size = DL.getTypeStoreSize(ShadowTy);
 
     FunctionCallee Getter = MS.getKmsanShadowOriginAccessFn(isStore, Size);
@@ -1950,10 +1967,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       Function *F = A->getParent();
       IRBuilder<> EntryIRB(FnPrologueEnd);
       unsigned ArgOffset = 0;
-      const DataLayout &DL = F->getParent()->getDataLayout();
+      const DataLayout &DL = F->getDataLayout();
       for (auto &FArg : F->args()) {
-        if (!FArg.getType()->isSized()) {
-          LLVM_DEBUG(dbgs() << "Arg is not sized\n");
+        if (!FArg.getType()->isSized() || FArg.getType()->isScalableTy()) {
+          LLVM_DEBUG(dbgs() << (FArg.getType()->isScalableTy()
+                                    ? "vscale not fully supported\n"
+                                    : "Arg is not sized\n"));
+          if (A == &FArg) {
+            ShadowPtr = getCleanShadow(V);
+            setOrigin(A, getCleanOrigin());
+            break;
+          }
           continue;
         }
 
@@ -2134,8 +2158,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     OrderingTable[(int)AtomicOrderingCABI::seq_cst] =
         (int)AtomicOrderingCABI::seq_cst;
 
-    return ConstantDataVector::get(IRB.getContext(),
-                                   ArrayRef(OrderingTable, NumOrderings));
+    return ConstantDataVector::get(IRB.getContext(), OrderingTable);
   }
 
   AtomicOrdering addAcquireOrdering(AtomicOrdering a) {
@@ -2169,8 +2192,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     OrderingTable[(int)AtomicOrderingCABI::seq_cst] =
         (int)AtomicOrderingCABI::seq_cst;
 
-    return ConstantDataVector::get(IRB.getContext(),
-                                   ArrayRef(OrderingTable, NumOrderings));
+    return ConstantDataVector::get(IRB.getContext(), OrderingTable);
   }
 
   // ------------------- Visitors.
@@ -2181,7 +2203,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Don't want to visit if we're in the prologue
     if (isInPrologue(I))
       return;
-    InstVisitor<MemorySanitizerVisitor>::visit(I);
+    if (!DebugCounter::shouldExecute(DebugInstrumentInstruction)) {
+      LLVM_DEBUG(dbgs() << "Skipping instruction: " << I << "\n");
+      // We still need to set the shadow and origin to clean values.
+      setShadow(&I, getCleanShadow(&I));
+      setOrigin(&I, getCleanOrigin());
+      return;
+    }
+
+    Instructions.push_back(&I);
   }
 
   /// Instrument LoadInst
@@ -2469,6 +2499,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         MSV->setOrigin(I, Origin);
       }
     }
+
+    /// Store the current combined value at the specified origin
+    /// location.
+    void DoneAndStoreOrigin(TypeSize TS, Value *OriginPtr) {
+      if (MSV->MS.TrackOrigins) {
+        assert(Origin);
+        MSV->paintOrigin(IRB, Origin, OriginPtr, TS, kMinOriginAlignment);
+      }
+    }
   };
 
   using ShadowAndOriginCombiner = Combiner<true>;
@@ -2498,6 +2537,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   Value *CreateShadowCast(IRBuilder<> &IRB, Value *V, Type *dstTy,
                           bool Signed = false) {
     Type *srcTy = V->getType();
+    if (srcTy == dstTy)
+      return V;
     size_t srcSizeInBits = VectorOrPrimitiveTypeSizeInBits(srcTy);
     size_t dstSizeInBits = VectorOrPrimitiveTypeSizeInBits(dstTy);
     if (srcSizeInBits > 1 && dstSizeInBits == 1)
@@ -3261,6 +3302,106 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  // Convert `Mask` into `<n x i1>`.
+  Constant *createDppMask(unsigned Width, unsigned Mask) {
+    SmallVector<Constant *, 4> R(Width);
+    for (auto &M : R) {
+      M = ConstantInt::getBool(F.getContext(), Mask & 1);
+      Mask >>= 1;
+    }
+    return ConstantVector::get(R);
+  }
+
+  // Calculate output shadow as array of booleans `<n x i1>`, assuming if any
+  // arg is poisoned, entire dot product is poisoned.
+  Value *findDppPoisonedOutput(IRBuilder<> &IRB, Value *S, unsigned SrcMask,
+                               unsigned DstMask) {
+    const unsigned Width =
+        cast<FixedVectorType>(S->getType())->getNumElements();
+
+    S = IRB.CreateSelect(createDppMask(Width, SrcMask), S,
+                         Constant::getNullValue(S->getType()));
+    Value *SElem = IRB.CreateOrReduce(S);
+    Value *IsClean = IRB.CreateIsNull(SElem, "_msdpp");
+    Value *DstMaskV = createDppMask(Width, DstMask);
+
+    return IRB.CreateSelect(
+        IsClean, Constant::getNullValue(DstMaskV->getType()), DstMaskV);
+  }
+
+  // See `Intel Intrinsics Guide` for `_dp_p*` instructions.
+  //
+  // 2 and 4 element versions produce single scalar of dot product, and then
+  // puts it into elements of output vector, selected by 4 lowest bits of the
+  // mask. Top 4 bits of the mask control which elements of input to use for dot
+  // product.
+  //
+  // 8 element version mask still has only 4 bit for input, and 4 bit for output
+  // mask. According to the spec it just operates as 4 element version on first
+  // 4 elements of inputs and output, and then on last 4 elements of inputs and
+  // output.
+  void handleDppIntrinsic(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+
+    Value *S0 = getShadow(&I, 0);
+    Value *S1 = getShadow(&I, 1);
+    Value *S = IRB.CreateOr(S0, S1);
+
+    const unsigned Width =
+        cast<FixedVectorType>(S->getType())->getNumElements();
+    assert(Width == 2 || Width == 4 || Width == 8);
+
+    const unsigned Mask = cast<ConstantInt>(I.getArgOperand(2))->getZExtValue();
+    const unsigned SrcMask = Mask >> 4;
+    const unsigned DstMask = Mask & 0xf;
+
+    // Calculate shadow as `<n x i1>`.
+    Value *SI1 = findDppPoisonedOutput(IRB, S, SrcMask, DstMask);
+    if (Width == 8) {
+      // First 4 elements of shadow are already calculated. `makeDppShadow`
+      // operats on 32 bit masks, so we can just shift masks, and repeat.
+      SI1 = IRB.CreateOr(
+          SI1, findDppPoisonedOutput(IRB, S, SrcMask << 4, DstMask << 4));
+    }
+    // Extend to real size of shadow, poisoning either all or none bits of an
+    // element.
+    S = IRB.CreateSExt(SI1, S->getType(), "_msdpp");
+
+    setShadow(&I, S);
+    setOriginForNaryOp(I);
+  }
+
+  Value *convertBlendvToSelectMask(IRBuilder<> &IRB, Value *C) {
+    C = CreateAppToShadowCast(IRB, C);
+    FixedVectorType *FVT = cast<FixedVectorType>(C->getType());
+    unsigned ElSize = FVT->getElementType()->getPrimitiveSizeInBits();
+    C = IRB.CreateAShr(C, ElSize - 1);
+    FVT = FixedVectorType::get(IRB.getInt1Ty(), FVT->getNumElements());
+    return IRB.CreateTrunc(C, FVT);
+  }
+
+  // `blendv(f, t, c)` is effectively `select(c[top_bit], t, f)`.
+  void handleBlendvIntrinsic(IntrinsicInst &I) {
+    Value *C = I.getOperand(2);
+    Value *T = I.getOperand(1);
+    Value *F = I.getOperand(0);
+
+    Value *Sc = getShadow(&I, 2);
+    Value *Oc = MS.TrackOrigins ? getOrigin(C) : nullptr;
+
+    {
+      IRBuilder<> IRB(&I);
+      // Extract top bit from condition and its shadow.
+      C = convertBlendvToSelectMask(IRB, C);
+      Sc = convertBlendvToSelectMask(IRB, Sc);
+
+      setShadow(C, Sc);
+      setOrigin(C, Oc);
+    }
+
+    handleSelectLikeInst(I, C, T, F);
+  }
+
   // Instrument sum-of-absolute-differences intrinsic.
   void handleVectorSadIntrinsic(IntrinsicInst &I) {
     const unsigned SignificantBitsPerResultElement = 16;
@@ -3548,7 +3689,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (!MS.TrackOrigins)
       return;
 
-    auto &DL = F.getParent()->getDataLayout();
+    auto &DL = F.getDataLayout();
     paintOrigin(IRB, getOrigin(V), OriginPtr,
                 DL.getTypeStoreSize(Shadow->getType()),
                 std::max(Alignment, kMinOriginAlignment));
@@ -3616,7 +3757,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  SmallVector<int, 8> getPclmulMask(unsigned Width, bool OddElements) {
+  static SmallVector<int, 8> getPclmulMask(unsigned Width, bool OddElements) {
     SmallVector<int, 8> Mask;
     for (unsigned X = OddElements ? 1 : 0; X < Width; X += 2) {
       Mask.append(2, X);
@@ -3718,8 +3859,95 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(&I, 0));
   }
 
+  void handleArithmeticWithOverflow(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *Shadow0 = getShadow(&I, 0);
+    Value *Shadow1 = getShadow(&I, 1);
+    Value *ShadowElt0 = IRB.CreateOr(Shadow0, Shadow1);
+    Value *ShadowElt1 =
+        IRB.CreateICmpNE(ShadowElt0, getCleanShadow(ShadowElt0));
+
+    Value *Shadow = PoisonValue::get(getShadowTy(&I));
+    Shadow = IRB.CreateInsertValue(Shadow, ShadowElt0, 0);
+    Shadow = IRB.CreateInsertValue(Shadow, ShadowElt1, 1);
+
+    setShadow(&I, Shadow);
+    setOriginForNaryOp(I);
+  }
+
+  /// Handle Arm NEON vector store intrinsics (vst{2,3,4}).
+  ///
+  /// Arm NEON vector store intrinsics have the output address (pointer) as the
+  /// last argument, with the initial arguments being the inputs. They return
+  /// void.
+  void handleNEONVectorStoreIntrinsic(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+
+    // Don't use getNumOperands() because it includes the callee
+    int numArgOperands = I.arg_size();
+    assert(numArgOperands >= 1);
+
+    // The last arg operand is the output
+    Value *Addr = I.getArgOperand(numArgOperands - 1);
+    assert(Addr->getType()->isPointerTy());
+
+    if (ClCheckAccessAddress)
+      insertShadowCheck(Addr, &I);
+
+    // Every arg operand, other than the last one, is an input vector
+    IntrinsicInst *ShadowI = cast<IntrinsicInst>(I.clone());
+    for (int i = 0; i < numArgOperands - 1; i++) {
+      assert(isa<FixedVectorType>(I.getArgOperand(i)->getType()));
+      ShadowI->setArgOperand(i, getShadow(&I, i));
+    }
+
+    // MSan's GetShadowTy assumes the LHS is the type we want the shadow for
+    // e.g., for:
+    //     [[TMP5:%.*]] = bitcast <16 x i8> [[TMP2]] to i128
+    // we know the type of the output (and its shadow) is <16 x i8>.
+    //
+    // Arm NEON VST is unusual because the last argument is the output address:
+    //     define void @st2_16b(<16 x i8> %A, <16 x i8> %B, ptr %P) {
+    //         call void @llvm.aarch64.neon.st2.v16i8.p0
+    //                   (<16 x i8> [[A]], <16 x i8> [[B]], ptr [[P]])
+    // and we have no type information about P's operand. We must manually
+    // compute the type (<16 x i8> x 2).
+    FixedVectorType *OutputVectorTy = FixedVectorType::get(
+        cast<FixedVectorType>(I.getArgOperand(0)->getType())->getElementType(),
+        cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements() *
+            (numArgOperands - 1));
+    Type *ShadowTy = getShadowTy(OutputVectorTy);
+    Value *ShadowPtr, *OriginPtr;
+    // AArch64 NEON does not need alignment (unless OS requires it)
+    std::tie(ShadowPtr, OriginPtr) =
+        getShadowOriginPtr(Addr, IRB, ShadowTy, Align(1), /*isStore*/ true);
+    ShadowI->setArgOperand(numArgOperands - 1, ShadowPtr);
+    ShadowI->insertAfter(&I);
+
+    if (MS.TrackOrigins) {
+      // TODO: if we modelled the vst* instruction more precisely, we could
+      // more accurately track the origins (e.g., if both inputs are
+      // uninitialized for vst2, we currently blame the second input, even
+      // though part of the output depends only on the first input).
+      OriginCombiner OC(this, IRB);
+      for (int i = 0; i < numArgOperands - 1; i++)
+        OC.Add(I.getArgOperand(i));
+
+      const DataLayout &DL = F.getDataLayout();
+      OC.DoneAndStoreOrigin(DL.getTypeStoreSize(OutputVectorTy), OriginPtr);
+    }
+  }
+
   void visitIntrinsicInst(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
+    case Intrinsic::uadd_with_overflow:
+    case Intrinsic::sadd_with_overflow:
+    case Intrinsic::usub_with_overflow:
+    case Intrinsic::ssub_with_overflow:
+    case Intrinsic::umul_with_overflow:
+    case Intrinsic::smul_with_overflow:
+      handleArithmeticWithOverflow(I);
+      break;
     case Intrinsic::abs:
       handleAbsIntrinsic(I);
       break;
@@ -3908,6 +4136,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleVectorPackIntrinsic(I);
       break;
 
+    case Intrinsic::x86_sse41_pblendvb:
+    case Intrinsic::x86_sse41_blendvpd:
+    case Intrinsic::x86_sse41_blendvps:
+    case Intrinsic::x86_avx_blendv_pd_256:
+    case Intrinsic::x86_avx_blendv_ps_256:
+    case Intrinsic::x86_avx2_pblendvb:
+      handleBlendvIntrinsic(I);
+      break;
+
+    case Intrinsic::x86_avx_dp_ps_256:
+    case Intrinsic::x86_sse41_dppd:
+    case Intrinsic::x86_sse41_dpps:
+      handleDppIntrinsic(I);
+      break;
+
     case Intrinsic::x86_mmx_packsswb:
     case Intrinsic::x86_mmx_packuswb:
       handleVectorPackIntrinsic(I, 16);
@@ -4034,6 +4277,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       setOrigin(&I, getCleanOrigin());
       break;
 
+    case Intrinsic::aarch64_neon_st2:
+    case Intrinsic::aarch64_neon_st3:
+    case Intrinsic::aarch64_neon_st4: {
+      handleNEONVectorStoreIntrinsic(I);
+      break;
+    }
+
     default:
       if (!handleUnknownIntrinsic(I))
         visitInstruction(I);
@@ -4103,7 +4353,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // do the usual thing: check argument shadow and mark all outputs as
       // clean. Note that any side effects of the inline asm that are not
       // immediately visible in its constraints are not handled.
-      if (ClHandleAsmConservative && MS.CompileKernel)
+      if (ClHandleAsmConservative)
         visitAsmInstruction(CB);
       else
         visitInstruction(CB);
@@ -4164,8 +4414,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         LLVM_DEBUG(dbgs() << "Arg " << i << " is not sized: " << CB << "\n");
         continue;
       }
+
+      if (A->getType()->isScalableTy()) {
+        LLVM_DEBUG(dbgs() << "Arg  " << i << " is vscale: " << CB << "\n");
+        // Handle as noundef, but don't reserve tls slots.
+        insertShadowCheck(A, &CB);
+        continue;
+      }
+
       unsigned Size = 0;
-      const DataLayout &DL = F.getParent()->getDataLayout();
+      const DataLayout &DL = F.getDataLayout();
 
       bool ByVal = CB.paramHasAttr(i, Attribute::ByVal);
       bool NoUndef = CB.paramHasAttr(i, Attribute::NoUndef);
@@ -4401,9 +4659,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (!InsPoint)
       InsPoint = &I;
     NextNodeIRBuilder IRB(InsPoint);
-    const DataLayout &DL = F.getParent()->getDataLayout();
-    uint64_t TypeSize = DL.getTypeAllocSize(I.getAllocatedType());
-    Value *Len = ConstantInt::get(MS.IntptrTy, TypeSize);
+    const DataLayout &DL = F.getDataLayout();
+    TypeSize TS = DL.getTypeAllocSize(I.getAllocatedType());
+    Value *Len = IRB.CreateTypeSize(MS.IntptrTy, TS);
     if (I.isArrayAllocation())
       Len = IRB.CreateMul(Len,
                           IRB.CreateZExtOrTrunc(I.getArraySize(), MS.IntptrTy));
@@ -4423,14 +4681,24 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void visitSelectInst(SelectInst &I) {
-    IRBuilder<> IRB(&I);
     // a = select b, c, d
     Value *B = I.getCondition();
     Value *C = I.getTrueValue();
     Value *D = I.getFalseValue();
+
+    handleSelectLikeInst(I, B, C, D);
+  }
+
+  void handleSelectLikeInst(Instruction &I, Value *B, Value *C, Value *D) {
+    IRBuilder<> IRB(&I);
+
     Value *Sb = getShadow(B);
     Value *Sc = getShadow(C);
     Value *Sd = getShadow(D);
+
+    Value *Ob = MS.TrackOrigins ? getOrigin(B) : nullptr;
+    Value *Oc = MS.TrackOrigins ? getOrigin(C) : nullptr;
+    Value *Od = MS.TrackOrigins ? getOrigin(D) : nullptr;
 
     // Result shadow if condition shadow is 0.
     Value *Sa0 = IRB.CreateSelect(B, Sc, Sd);
@@ -4464,10 +4732,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       }
       // a = select b, c, d
       // Oa = Sb ? Ob : (b ? Oc : Od)
-      setOrigin(
-          &I, IRB.CreateSelect(Sb, getOrigin(I.getCondition()),
-                               IRB.CreateSelect(B, getOrigin(I.getTrueValue()),
-                                                getOrigin(I.getFalseValue()))));
+      setOrigin(&I, IRB.CreateSelect(Sb, Ob, IRB.CreateSelect(B, Oc, Od)));
     }
   }
 
@@ -4555,9 +4820,23 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
     if (!ElemTy->isSized())
       return;
-    Value *SizeVal =
-      IRB.CreateTypeSize(MS.IntptrTy, DL.getTypeStoreSize(ElemTy));
-    IRB.CreateCall(MS.MsanInstrumentAsmStoreFn, {Operand, SizeVal});
+    auto Size = DL.getTypeStoreSize(ElemTy);
+    Value *SizeVal = IRB.CreateTypeSize(MS.IntptrTy, Size);
+    if (MS.CompileKernel) {
+      IRB.CreateCall(MS.MsanInstrumentAsmStoreFn, {Operand, SizeVal});
+    } else {
+      // ElemTy, derived from elementtype(), does not encode the alignment of
+      // the pointer. Conservatively assume that the shadow memory is unaligned.
+      // When Size is large, avoid StoreInst as it would expand to many
+      // instructions.
+      auto [ShadowPtr, _] =
+          getShadowOriginPtrUserspace(Operand, IRB, IRB.getInt8Ty(), Align(1));
+      if (Size <= 32)
+        IRB.CreateAlignedStore(getCleanShadow(ElemTy), ShadowPtr, Align(1));
+      else
+        IRB.CreateMemSet(ShadowPtr, ConstantInt::getNullValue(IRB.getInt8Ty()),
+                         SizeVal, Align(1));
+    }
   }
 
   /// Get the number of output arguments returned by pointers.
@@ -4602,7 +4881,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // The total number of asm() arguments in the source is nR+nO+nI, and the
     // corresponding CallInst has nO+nI+1 operands (the last operand is the
     // function to be called).
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     CallBase *CB = cast<CallBase>(&I);
     IRBuilder<> IRB(&I);
     InlineAsm *IA = cast<InlineAsm>(CB->getCalledOperand());
@@ -4790,7 +5069,7 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
     unsigned GpOffset = 0;
     unsigned FpOffset = AMD64GpEndOffset;
     unsigned OverflowOffset = AMD64FpEndOffset;
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
 
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
@@ -4918,8 +5197,7 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
 
     // Instrument va_start.
     // Copy va_list shadow from the backup copy of the TLS contents.
-    for (size_t i = 0, n = VAStartInstrumentationList.size(); i < n; i++) {
-      CallInst *OrigInst = VAStartInstrumentationList[i];
+    for (CallInst *OrigInst : VAStartInstrumentationList) {
       NextNodeIRBuilder IRB(OrigInst);
       Value *VAListTag = OrigInst->getArgOperand(0);
 
@@ -4977,7 +5255,7 @@ struct VarArgMIPS64Helper : public VarArgHelperBase {
 
   void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
     unsigned VAArgOffset = 0;
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     for (Value *A :
          llvm::drop_begin(CB.args(), CB.getFunctionType()->getNumParams())) {
       Triple TargetTriple(F.getParent()->getTargetTriple());
@@ -5028,8 +5306,7 @@ struct VarArgMIPS64Helper : public VarArgHelperBase {
 
     // Instrument va_start.
     // Copy va_list shadow from the backup copy of the TLS contents.
-    for (size_t i = 0, n = VAStartInstrumentationList.size(); i < n; i++) {
-      CallInst *OrigInst = VAStartInstrumentationList[i];
+    for (CallInst *OrigInst : VAStartInstrumentationList) {
       NextNodeIRBuilder IRB(OrigInst);
       Value *VAListTag = OrigInst->getArgOperand(0);
       Type *RegSaveAreaPtrTy = PointerType::getUnqual(*MS.C); // i64*
@@ -5108,7 +5385,7 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
     unsigned VrOffset = AArch64VrBegOffset;
     unsigned OverflowOffset = AArch64VAEndOffset;
 
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
       auto [AK, RegNum] = classifyArgument(A->getType());
@@ -5203,8 +5480,7 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
 
     // Instrument va_start, copy va_list shadow from the backup copy of
     // the TLS contents.
-    for (size_t i = 0, n = VAStartInstrumentationList.size(); i < n; i++) {
-      CallInst *OrigInst = VAStartInstrumentationList[i];
+    for (CallInst *OrigInst : VAStartInstrumentationList) {
       NextNodeIRBuilder IRB(OrigInst);
 
       Value *VAListTag = OrigInst->getArgOperand(0);
@@ -5253,8 +5529,8 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
                                  Align(8), /*isStore*/ true)
               .first;
 
-      Value *GrSrcPtr = IRB.CreateInBoundsGEP(IRB.getInt8Ty(), VAArgTLSCopy,
-                                              GrRegSaveAreaShadowPtrOff);
+      Value *GrSrcPtr =
+          IRB.CreateInBoundsPtrAdd(VAArgTLSCopy, GrRegSaveAreaShadowPtrOff);
       Value *GrCopySize = IRB.CreateSub(GrArgSize, GrRegSaveAreaShadowPtrOff);
 
       IRB.CreateMemCpy(GrRegSaveAreaShadowPtr, Align(8), GrSrcPtr, Align(8),
@@ -5269,10 +5545,9 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
                                  Align(8), /*isStore*/ true)
               .first;
 
-      Value *VrSrcPtr = IRB.CreateInBoundsGEP(
-          IRB.getInt8Ty(),
-          IRB.CreateInBoundsGEP(IRB.getInt8Ty(), VAArgTLSCopy,
-                                IRB.getInt32(AArch64VrBegOffset)),
+      Value *VrSrcPtr = IRB.CreateInBoundsPtrAdd(
+          IRB.CreateInBoundsPtrAdd(VAArgTLSCopy,
+                                   IRB.getInt32(AArch64VrBegOffset)),
           VrRegSaveAreaShadowPtrOff);
       Value *VrCopySize = IRB.CreateSub(VrArgSize, VrRegSaveAreaShadowPtrOff);
 
@@ -5285,8 +5560,8 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
                                  Align(16), /*isStore*/ true)
               .first;
 
-      Value *StackSrcPtr = IRB.CreateInBoundsGEP(
-          IRB.getInt8Ty(), VAArgTLSCopy, IRB.getInt32(AArch64VAEndOffset));
+      Value *StackSrcPtr = IRB.CreateInBoundsPtrAdd(
+          VAArgTLSCopy, IRB.getInt32(AArch64VAEndOffset));
 
       IRB.CreateMemCpy(StackSaveAreaShadowPtr, Align(16), StackSrcPtr,
                        Align(16), VAArgOverflowSize);
@@ -5320,7 +5595,7 @@ struct VarArgPowerPC64Helper : public VarArgHelperBase {
     else
       VAArgBase = 32;
     unsigned VAArgOffset = VAArgBase;
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
       bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
@@ -5415,8 +5690,7 @@ struct VarArgPowerPC64Helper : public VarArgHelperBase {
 
     // Instrument va_start.
     // Copy va_list shadow from the backup copy of the TLS contents.
-    for (size_t i = 0, n = VAStartInstrumentationList.size(); i < n; i++) {
-      CallInst *OrigInst = VAStartInstrumentationList[i];
+    for (CallInst *OrigInst : VAStartInstrumentationList) {
       NextNodeIRBuilder IRB(OrigInst);
       Value *VAListTag = OrigInst->getArgOperand(0);
       Type *RegSaveAreaPtrTy = PointerType::getUnqual(*MS.C); // i64*
@@ -5511,7 +5785,7 @@ struct VarArgSystemZHelper : public VarArgHelperBase {
     unsigned FpOffset = SystemZFpOffset;
     unsigned VrIndex = 0;
     unsigned OverflowOffset = SystemZOverflowOffset;
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
       // SystemZABIInfo does not produce ByVal parameters.
@@ -5712,9 +5986,7 @@ struct VarArgSystemZHelper : public VarArgHelperBase {
 
     // Instrument va_start.
     // Copy va_list shadow from the backup copy of the TLS contents.
-    for (size_t VaStartNo = 0, VaStartNum = VAStartInstrumentationList.size();
-         VaStartNo < VaStartNum; VaStartNo++) {
-      CallInst *OrigInst = VAStartInstrumentationList[VaStartNo];
+    for (CallInst *OrigInst : VAStartInstrumentationList) {
       NextNodeIRBuilder IRB(OrigInst);
       Value *VAListTag = OrigInst->getArgOperand(0);
       copyRegSaveArea(IRB, VAListTag);

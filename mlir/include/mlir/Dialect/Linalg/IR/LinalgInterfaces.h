@@ -28,6 +28,7 @@ namespace mlir {
 namespace linalg {
 class IteratorTypeAttr;
 class LinalgOp;
+class GenericOp;
 
 namespace detail {
 /// Implementation of the method that check if given operands
@@ -62,6 +63,8 @@ struct ContractionDimensions {
 /// `k`, indices are returned in sorted order.
 /// Returns a failure if any of `m`, `n` or `k` is empty.
 FailureOr<ContractionDimensions> inferContractionDims(LinalgOp linalgOp);
+FailureOr<ContractionDimensions>
+inferContractionDims(ArrayRef<AffineMap> indexingMaps);
 
 /// Checks whether `linalgOp` conforms to ContractionOpInterface.
 // TODO: embed within `isa<ContractionOpInterface>` if possible / natural.
@@ -112,6 +115,21 @@ bool isaConvolutionOpInterface(LinalgOp linalgOp);
 
 /// Checks whether `linalgOp` is semantically equivalent to a `linalg.copyOp`.
 bool isaCopyOpInterface(LinalgOp linalgOp);
+
+/// Checks whether a given `genericOp` is semantically equivalent to a single
+/// linalgelementwise unary op. e.g. linalg.exp.
+/// A linalg.generic body could be a series of unary elementwise ops e.g.
+/// `exp(neg(x))`, such as formed by linalg op fusion. Here we restrict it to
+/// detecting cases where body is is a single computation op.
+bool isaElemwiseSingleUnaryOpInterface(GenericOp genericOp);
+
+/// Checks whether `genericOp` is semantically equivalent to a single linalg
+/// elementwise binary op e.g. linalg.sub.
+bool isaElemwiseSingleBinaryOpInterface(GenericOp genericOp);
+
+/// Checks whether `genericOp` is semantically equivalent to a `linalg.fill`.
+/// Returns the scalar fill value if true.
+std::optional<Value> isaFillOpInterface(GenericOp genericOp);
 
 namespace detail {
 

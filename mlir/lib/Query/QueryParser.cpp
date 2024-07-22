@@ -16,10 +16,8 @@ namespace mlir::query {
 // is found before end, return StringRef(). begin is adjusted to exclude the
 // lexed region.
 llvm::StringRef QueryParser::lexWord() {
-  line = line.drop_while([](char c) {
-    // Don't trim newlines.
-    return llvm::StringRef(" \t\v\f\r").contains(c);
-  });
+  // Don't trim newlines.
+  line = line.ltrim(" \t\v\f\r");
 
   if (line.empty())
     // Even though the line is empty, it contains a pointer and
@@ -91,16 +89,13 @@ struct QueryParser::LexOrCompleteWord {
 
 QueryRef QueryParser::endQuery(QueryRef queryRef) {
   llvm::StringRef extra = line;
-  llvm::StringRef extraTrimmed = extra.drop_while(
-      [](char c) { return llvm::StringRef(" \t\v\f\r").contains(c); });
+  llvm::StringRef extraTrimmed = extra.ltrim(" \t\v\f\r");
 
-  if ((!extraTrimmed.empty() && extraTrimmed[0] == '\n') ||
-      (extraTrimmed.size() >= 2 && extraTrimmed[0] == '\r' &&
-       extraTrimmed[1] == '\n'))
+  if (extraTrimmed.starts_with('\n') || extraTrimmed.starts_with("\r\n"))
     queryRef->remainingContent = extra;
   else {
     llvm::StringRef trailingWord = lexWord();
-    if (!trailingWord.empty() && trailingWord.front() == '#') {
+    if (trailingWord.starts_with('#')) {
       line = line.drop_until([](char c) { return c == '\n'; });
       line = line.drop_while([](char c) { return c == '\n'; });
       return endQuery(queryRef);

@@ -12,6 +12,18 @@
 // RUN:     -fprebuilt-module-path=%t
 // RUN: %clang_cc1 -std=c++20 %t/use.cpp -fsyntax-only -verify -fprebuilt-module-path=%t
 
+// Test again with reduced BMI
+// RUN: rm -rf %t
+// RUN: mkdir %t
+// RUN: split-file %s %t
+//
+// RUN: %clang_cc1 -std=c++20 %t/base.cppm -emit-reduced-module-interface -o %t/package-base.pcm
+// RUN: %clang_cc1 -std=c++20 %t/child.cppm -emit-reduced-module-interface -o %t/package-child.pcm \
+// RUN:     -fprebuilt-module-path=%t
+// RUN: %clang_cc1 -std=c++20 %t/package.cppm -emit-reduced-module-interface -o %t/package.pcm \
+// RUN:     -fprebuilt-module-path=%t
+// RUN: %clang_cc1 -std=c++20 %t/use.cpp -fsyntax-only -verify -fprebuilt-module-path=%t
+
 //--- base.cppm
 export module package:base;
 

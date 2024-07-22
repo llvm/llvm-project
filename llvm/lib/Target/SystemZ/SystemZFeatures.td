@@ -37,6 +37,11 @@ def FeatureBackChain : SystemZFeature<
   "Store the address of the caller's frame into the callee's stack frame"
 >;
 
+def FeatureUnalignedSymbols : SystemZFeature<
+  "unaligned-symbols", "UnalignedSymbols", (all_of FeatureUnalignedSymbols),
+  "Don't apply the ABI minimum alignment to external symbols."
+>;
+
 //===----------------------------------------------------------------------===//
 //
 // New features added in the Ninth Edition of the z/Architecture
@@ -241,6 +246,11 @@ def FeatureInsertReferenceBitsMultiple : SystemZFeature<
   "Assume that the insert-reference-bits-multiple facility is installed"
 >;
 
+def FeatureTestPendingExternalInterruption : SystemZFeature<
+  "test-pending-external-interruption", "TestPendingExternalInterruption", (all_of FeatureTestPendingExternalInterruption),
+  "Assume that the test-pending-external-interruption facility is installed"
+>;
+
 def Arch12NewFeatures : SystemZFeatureList<[
     FeatureMiscellaneousExtensions2,
     FeatureGuardedStorage,
@@ -248,7 +258,8 @@ def Arch12NewFeatures : SystemZFeatureList<[
     FeatureMessageSecurityAssist8,
     FeatureVectorEnhancements1,
     FeatureVectorPackedDecimal,
-    FeatureInsertReferenceBitsMultiple
+    FeatureInsertReferenceBitsMultiple,
+    FeatureTestPendingExternalInterruption
 ]>;
 
 //===----------------------------------------------------------------------===//

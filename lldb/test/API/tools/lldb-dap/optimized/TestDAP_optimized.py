@@ -3,15 +3,14 @@ Test lldb-dap variables/stackTrace request for optimized code
 """
 
 import dap_server
+import lldbdap_testcase
+from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-import lldbdap_testcase
 
 
 class TestDAP_optimized(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
-    @skipIfRemote
     def test_stack_frame_name(self):
         """Test optimized frame has special name suffix."""
         program = self.getBuildArtifact("a.out")
@@ -30,7 +29,6 @@ class TestDAP_optimized(lldbdap_testcase.DAPTestCaseBase):
         self.assertTrue(parent_frame["name"].endswith(" [opt]"))
 
     @skipIfWindows
-    @skipIfRemote
     def test_optimized_variable(self):
         """Test optimized variable value contains error."""
         program = self.getBuildArtifact("a.out")
@@ -47,3 +45,8 @@ class TestDAP_optimized(lldbdap_testcase.DAPTestCaseBase):
         optimized_variable = self.dap_server.get_local_variable("argc")
 
         self.assertTrue(optimized_variable["value"].startswith("<error:"))
+        error_msg = optimized_variable["$__lldb_extensions"]["error"]
+        self.assertTrue(
+            ("could not evaluate DW_OP_entry_value: no parent function" in error_msg)
+            or ("variable not available" in error_msg)
+        )

@@ -1233,8 +1233,12 @@ define double @fneg_f64_bitcast_build_vector_v4bf16_to_f64(bfloat %elt0, bfloat 
 ; GFX7-LABEL: fneg_f64_bitcast_build_vector_v4bf16_to_f64:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_mul_f32_e32 v3, 1.0, v3
+; GFX7-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
+; GFX7-NEXT:    v_mul_f32_e32 v2, 1.0, v2
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX7-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; GFX7-NEXT:    v_alignbit_b32 v2, v3, v2, 16
 ; GFX7-NEXT:    v_alignbit_b32 v0, v1, v0, 16
 ; GFX7-NEXT:    v_xor_b32_e32 v1, 0x80000000, v2
@@ -1243,17 +1247,17 @@ define double @fneg_f64_bitcast_build_vector_v4bf16_to_f64(bfloat %elt0, bfloat 
 ; GFX9-LABEL: fneg_f64_bitcast_build_vector_v4bf16_to_f64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s4, 0x3020706
-; GFX9-NEXT:    v_perm_b32 v2, v2, v3, s4
-; GFX9-NEXT:    v_perm_b32 v0, v0, v1, s4
+; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-NEXT:    v_perm_b32 v2, v3, v2, s4
+; GFX9-NEXT:    v_perm_b32 v0, v1, v0, s4
 ; GFX9-NEXT:    v_xor_b32_e32 v1, 0x80000000, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: fneg_f64_bitcast_build_vector_v4bf16_to_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_perm_b32 v2, v2, v3, 0x3020706
-; GFX11-NEXT:    v_perm_b32 v0, v0, v1, 0x3020706
+; GFX11-NEXT:    v_perm_b32 v2, v3, v2, 0x5040100
+; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -1471,11 +1475,11 @@ define { double, double } @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_fo
 define amdgpu_kernel void @multiple_uses_fneg_select_f64(double %x, double %y, i1 %z, ptr addrspace(1) %dst) {
 ; GFX7-LABEL: multiple_uses_fneg_select_f64:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_load_dword s6, s[4:5], 0x4
-; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x6
+; GFX7-NEXT:    s_load_dword s8, s[6:7], 0x4
+; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x6
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    s_bitcmp1_b32 s6, 0
+; GFX7-NEXT:    s_bitcmp1_b32 s8, 0
 ; GFX7-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GFX7-NEXT:    s_and_b64 s[6:7], vcc, exec
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s3
@@ -1493,12 +1497,12 @@ define amdgpu_kernel void @multiple_uses_fneg_select_f64(double %x, double %y, i
 ;
 ; GFX9-LABEL: multiple_uses_fneg_select_f64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s6, s[4:5], 0x10
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX9-NEXT:    s_load_dword s8, s[6:7], 0x10
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x18
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x18
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_bitcmp1_b32 s6, 0
+; GFX9-NEXT:    s_bitcmp1_b32 s8, 0
 ; GFX9-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GFX9-NEXT:    s_and_b64 s[6:7], vcc, exec
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s3
@@ -1515,13 +1519,13 @@ define amdgpu_kernel void @multiple_uses_fneg_select_f64(double %x, double %y, i
 ; GFX11-LABEL: multiple_uses_fneg_select_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x2
-; GFX11-NEXT:    s_load_b128 s[4:7], s[0:1], 0x0
-; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x10
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x18
+; GFX11-NEXT:    s_load_b128 s[4:7], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b32 s8, s[2:3], 0x10
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x18
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s5
-; GFX11-NEXT:    s_bitcmp1_b32 s2, 0
+; GFX11-NEXT:    s_bitcmp1_b32 s8, 0
 ; GFX11-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, s7, v0, vcc_lo
@@ -1545,7 +1549,7 @@ define amdgpu_kernel void @multiple_uses_fneg_select_f64(double %x, double %y, i
 define amdgpu_kernel void @fnge_select_f32_multi_use_regression(float %.i2369) {
 ; GCN-LABEL: fnge_select_f32_multi_use_regression:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    s_load_dword s0, s[4:5], 0x0
+; GCN-NEXT:    s_load_dword s0, s[6:7], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_nlt_f32_e64 s[0:1], s0, 0
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
@@ -1558,7 +1562,7 @@ define amdgpu_kernel void @fnge_select_f32_multi_use_regression(float %.i2369) {
 ;
 ; GFX11-LABEL: fnge_select_f32_multi_use_regression:
 ; GFX11:       ; %bb.0: ; %.entry
-; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_nlt_f32_e64 s0, s0, 0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)

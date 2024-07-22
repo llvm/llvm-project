@@ -200,10 +200,11 @@ void MachineFunction::init() {
   // explicitly asked us not to.
   bool CanRealignSP = STI->getFrameLowering()->isStackRealignable() &&
                       !F.hasFnAttribute("no-realign-stack");
+  bool ForceRealignSP = F.hasFnAttribute(Attribute::StackAlignment) ||
+                        F.hasFnAttribute("stackrealign");
   FrameInfo = new (Allocator) MachineFrameInfo(
       getFnStackAlignment(STI, F), /*StackRealignable=*/CanRealignSP,
-      /*ForcedRealign=*/CanRealignSP &&
-          F.hasFnAttribute(Attribute::StackAlignment));
+      /*ForcedRealign=*/ForceRealignSP && CanRealignSP);
 
   setUnsafeStackSize(F, *FrameInfo);
 
@@ -306,7 +307,7 @@ void MachineFunction::clear() {
 }
 
 const DataLayout &MachineFunction::getDataLayout() const {
-  return F.getParent()->getDataLayout();
+  return F.getDataLayout();
 }
 
 /// Get the JumpTableInfo for this function.
@@ -467,6 +468,7 @@ MachineFunction::CreateMachineBasicBlock(const BasicBlock *BB,
   // `-basic-block-sections=list` to allow robust mapping of profiles to basic
   // blocks.
   if (Target.getBBSectionsType() == BasicBlockSection::Labels ||
+      Target.Options.BBAddrMap ||
       Target.getBBSectionsType() == BasicBlockSection::List)
     MBB->setBBID(BBID.has_value() ? *BBID : UniqueBBID{NextBBID++, 0});
   return MBB;
@@ -483,13 +485,17 @@ void MachineFunction::deleteMachineBasicBlock(MachineBasicBlock *MBB) {
 }
 
 MachineMemOperand *MachineFunction::getMachineMemOperand(
-    MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, uint64_t s,
-    Align base_alignment, const AAMDNodes &AAInfo, const MDNode *Ranges,
+    MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LocationSize Size,
+    Align BaseAlignment, const AAMDNodes &AAInfo, const MDNode *Ranges,
     SyncScope::ID SSID, AtomicOrdering Ordering,
     AtomicOrdering FailureOrdering) {
+  assert((!Size.hasValue() ||
+          Size.getValue().getKnownMinValue() != ~UINT64_C(0)) &&
+         "Unexpected an unknown size to be represented using "
+         "LocationSize::beforeOrAfter()");
   return new (Allocator)
-      MachineMemOperand(PtrInfo, f, s, base_alignment, AAInfo, Ranges,
-                        SSID, Ordering, FailureOrdering);
+      MachineMemOperand(PtrInfo, F, Size, BaseAlignment, AAInfo, Ranges, SSID,
+                        Ordering, FailureOrdering);
 }
 
 MachineMemOperand *MachineFunction::getMachineMemOperand(
@@ -502,8 +508,14 @@ MachineMemOperand *MachineFunction::getMachineMemOperand(
                         Ordering, FailureOrdering);
 }
 
-MachineMemOperand *MachineFunction::getMachineMemOperand(
-    const MachineMemOperand *MMO, const MachinePointerInfo &PtrInfo, uint64_t Size) {
+MachineMemOperand *
+MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
+                                      const MachinePointerInfo &PtrInfo,
+                                      LocationSize Size) {
+  assert((!Size.hasValue() ||
+          Size.getValue().getKnownMinValue() != ~UINT64_C(0)) &&
+         "Unexpected an unknown size to be represented using "
+         "LocationSize::beforeOrAfter()");
   return new (Allocator)
       MachineMemOperand(PtrInfo, MMO->getFlags(), Size, MMO->getBaseAlign(),
                         AAMDNodes(), nullptr, MMO->getSyncScopeID(),
@@ -562,10 +574,10 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
 MachineInstr::ExtraInfo *MachineFunction::createMIExtraInfo(
     ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol,
     MCSymbol *PostInstrSymbol, MDNode *HeapAllocMarker, MDNode *PCSections,
-    uint32_t CFIType) {
+    uint32_t CFIType, MDNode *MMRAs) {
   return MachineInstr::ExtraInfo::create(Allocator, MMOs, PreInstrSymbol,
                                          PostInstrSymbol, HeapAllocMarker,
-                                         PCSections, CFIType);
+                                         PCSections, CFIType, MMRAs);
 }
 
 const char *MachineFunction::createExternalSymbolName(StringRef Name) {

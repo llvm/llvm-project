@@ -30,13 +30,13 @@ def print_chunk(lines, prefix, pass_name):
 is_dump = False
 cur = []
 for line in sys.stdin:
-    if line.startswith("*** IR Dump Before "):
+    if "*** IR Dump Before " in line:
         if len(cur) != 0:
             print_chunk(cur, "before", pass_name)
             cur = []
         cur.append("; " + line)
         pass_name = get_pass_name(line, "Before")
-    elif line.startswith("*** IR Dump After "):
+    elif "*** IR Dump After " in line:
         if len(cur) != 0:
             print_chunk(cur, "after", pass_name)
             cur = []

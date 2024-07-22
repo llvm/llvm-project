@@ -13,6 +13,7 @@
 #include "InputFiles.h"
 #include "OutputSections.h"
 #include "OutputSegment.h"
+#include "SymbolTable.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/Demangle/Demangle.h"
@@ -67,6 +68,10 @@ std::string toString(wasm::Symbol::Kind kind) {
     return "SectionKind";
   case wasm::Symbol::OutputSectionKind:
     return "OutputSectionKind";
+  case wasm::Symbol::SharedFunctionKind:
+    return "SharedFunctionKind";
+  case wasm::Symbol::SharedDataKind:
+    return "SharedDataKind";
   }
   llvm_unreachable("invalid symbol kind");
 }
@@ -95,8 +100,6 @@ GlobalSymbol *WasmSym::tlsSize;
 GlobalSymbol *WasmSym::tlsAlign;
 UndefinedGlobal *WasmSym::tableBase;
 DefinedData *WasmSym::definedTableBase;
-UndefinedGlobal *WasmSym::tableBase32;
-DefinedData *WasmSym::definedTableBase32;
 UndefinedGlobal *WasmSym::memoryBase;
 DefinedData *WasmSym::definedMemoryBase;
 TableSymbol *WasmSym::indirectFunctionTable;
@@ -222,11 +225,12 @@ void Symbol::setHidden(bool isHidden) {
 }
 
 bool Symbol::isImported() const {
-  return isUndefined() && (importName.has_value() || forceImport);
+  return isShared() ||
+         (isUndefined() && (importName.has_value() || forceImport));
 }
 
 bool Symbol::isExported() const {
-  if (!isDefined() || isLocal())
+  if (!isDefined() || isShared() || isLocal())
     return false;
 
   // Shared libraries must export all weakly defined symbols
@@ -425,20 +429,15 @@ const OutputSectionSymbol *SectionSymbol::getOutputSectionSymbol() const {
   return section->outputSec->sectionSym;
 }
 
-void LazySymbol::fetch() { cast<ArchiveFile>(file)->addMember(&archiveSymbol); }
+void LazySymbol::extract() {
+  if (file->lazy) {
+    file->lazy = false;
+    symtab->addFile(file, name);
+  }
+}
 
 void LazySymbol::setWeak() {
   flags |= (flags & ~WASM_SYMBOL_BINDING_MASK) | WASM_SYMBOL_BINDING_WEAK;
-}
-
-MemoryBufferRef LazySymbol::getMemberBuffer() {
-  Archive::Child c =
-      CHECK(archiveSymbol.getMember(),
-            "could not get the member for symbol " + toString(*this));
-
-  return CHECK(c.getMemoryBufferRef(),
-               "could not get the buffer for the member defining symbol " +
-                   toString(*this));
 }
 
 void printTraceSymbolUndefined(StringRef name, const InputFile* file) {

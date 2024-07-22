@@ -5,6 +5,7 @@ RUN: llvm-mc -filetype=obj -triple=arm64-windows arm64-func-sym.s -o arm64-func-
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64ec-func-sym.s -o arm64ec-func-sym.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64ec-func-sym2.s -o arm64ec-func-sym2.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows data-sec.s -o data-sec.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows data-sec2.s -o data-sec2.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows empty-sec.s -o arm64ec-empty-sec.obj
 RUN: llvm-mc -filetype=obj -triple=x86_64-windows x86_64-func-sym.s -o x86_64-func-sym.obj
 RUN: llvm-mc -filetype=obj -triple=x86_64-windows empty-sec.s -o x86_64-empty-sec.obj
@@ -119,8 +120,8 @@ DISASMM-NEXT: 18000200d: c3                           retq
 
 Merging data sections into code sections causes data to be separated from the code when sorting chunks.
 
-RUN: lld-link -out:testdm.dll -machine:arm64ec arm64ec-func-sym.obj x86_64-func-sym.obj \
-RUN:          data-sec.obj loadconfig-arm64ec.obj -dll -noentry -merge:.testdata=.text -merge:.rdata=test
+RUN: lld-link -out:testdm.dll -machine:arm64ec arm64ec-func-sym.obj x86_64-func-sym.obj data-sec.obj \
+RUN:          data-sec2.obj loadconfig-arm64ec.obj -dll -noentry -merge:.testdata=.text -merge:.rdata=test
 
 RUN: llvm-readobj --coff-load-config testdm.dll | FileCheck -check-prefix=CODEMAPDM %s
 CODEMAPDM:      CodeMap [
@@ -135,6 +136,8 @@ DISASMDM:      Disassembly of section .text:
 DISASMDM-EMPTY:
 DISASMDM-NEXT: 0000000180001000 <.text>:
 DISASMDM-NEXT: 180001000: 00000001     udf     #0x1
+DISASMDM-NEXT: 180001004: 00000000     udf     #0x0
+DISASMDM-NEXT: 180001008: 00000002     udf     #0x2
 DISASMDM-NEXT:                 ...
 DISASMDM-NEXT: 180002000: 52800040     mov     w0, #0x2
 DISASMDM-NEXT: 180002004: d65f03c0     ret
@@ -253,6 +256,10 @@ x86_64_func_sym2:
 #--- data-sec.s
     .section .testdata, "rd"
     .xword 1
+
+#--- data-sec2.s
+    .section .testdata, "rd"
+    .xword 2
 
 #--- empty-sec.s
     .section .empty1, "xr"

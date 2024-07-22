@@ -20,6 +20,7 @@ guidelines and the resulting code should behave predictably even in unexpected
 situations.
 
 #. Follow the standards.
+    #. If there is no standard, first ask yourself if this implementation is necessary (are there users who need this functionality?). If it truly is, then match existing implementations. Creating competing designs just causes confusion (see the history of qsort_r).
 #. Avoid giving an incorrect answer.
     #. In general, correct answer > correct answer (wrong format) > no answer > crash the program >>>>>>> incorrect answer.
     #. The C library is called frequently in performance critical situations, and so can't afford to do thorough error checking and correction.
@@ -61,7 +62,7 @@ Often the standard will imply an intended behavior through what it states is und
 
 Ignoring Bug-For-Bug Compatibility
 ----------------------------------
-Any long running implementations will have bugs and deviations from the standard. Hyrum's Law states that “all observable behaviors of your system will be depended on by somebody” which includes these bugs. An example of a long-standing bug is glibc's scanf float parsing behavior. The behavior is specifically defined in the standard, but it isn't adhered to by all libc implementations. There is a longstanding bug in glibc where it incorrectly parses the string 100er and this caused the C standard to add that specific example to the definition for scanf. The intended behavior is for scanf, when parsing a float, to parse the longest possibly valid prefix and then accept it if and only if that complete parsed value is a float. In the case of 100er the longest possibly valid prefix is 100e but the float parsed from that string is only 100. Since there is no number after the e it shouldn't be included in the float, so scanf should return a parsing error. For LLVM's libc it was decided to follow the standard, even though glibc's version is slightly simpler to implement and this edge case is rare. Following the standard must be the first priority, since that's the goal of the library.
+Any long running implementations will have bugs and deviations from the standard. Hyrum's Law states that “all observable behaviors of your system will be depended on by somebody” which includes these bugs. An example of a long-standing bug is glibc's scanf float parsing behavior. The behavior is specifically defined in the standard, but it isn't adhered to by all libc implementations. There is a longstanding bug in glibc where it incorrectly parses the string 100er and this caused the C standard to add that specific example to the definition for scanf. The intended behavior is for scanf, when parsing a float, to parse the longest possibly valid prefix and then accept it if and only if that complete parsed value is a float. In the case of 100er the longest possibly valid prefix is 100e but the float parsed from that string is only 100. Since there is no number after the e it shouldn't be included in the float, so scanf should return a parsing error. For LLVM's libc it was decided to follow the standard, even though glibc's version is slightly simpler to implement and this edge case is rare. Following the standard must be the first priority, since that's the goal of the library. If there is no standard, then matching another implementation (even bug-for-bug) may be necessary, but before you implement an unstandardized function first consider if anyone will actually use it at all.
 
 Design Decisions
 ================
@@ -69,3 +70,49 @@ Design Decisions
 Resizable Tables for hsearch
 ----------------------------
 The POSIX.1 standard does not delineate the behavior consequent to invoking hsearch or hdestroy without prior initialization of the hash table via hcreate. Furthermore, the standard does not specify the outcomes of successive invocations of hsearch absent intervening hdestroy calls. Libraries such as MUSL and Glibc do not apply checks to these scenarios, potentially leading to memory corruption or leakage. Conversely, FreeBSD's libc and Bionic automatically initialize the hash table to a minimal size if it is found uninitialized, and proceeding to destroy the table only if initialization has occurred. This approach also avoids redundant table allocation if an initialized hash table is already present. Given that the hash table starts with a minimal size, resizing becomes necessary to accommodate additional user insertions. LLVM's libc mirrors the approach of FreeBSD's libc and Bionic, owing to its enhanced robustness and user-friendliness. Notably, such resizing behavior itself aligns with POSIX.1 standards, which explicitly permit implementations to modify the capacity of the hash table.
+
+Path without Leading Slashs in shm_open
+----------------------------------------
+POSIX.1 leaves that when the name of a shared memory object does not begin with a slash, the behavior is implementation defined. In such cases, the shm_open in LLVM libc is implemented to behave as if the name began with a slash.
+
+Handling of NULL arguments to the 's' format specifier
+------------------------------------------------------
+The C standard does not specify behavior for ``printf("%s", NULL)``. We will
+print the string literal ``(null)`` unless using the 
+``LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS`` option described in :ref:`printf 
+behavior<printf_behavior>`.
+
+Unknown Math Rounding Direction
+-------------------------------
+The C23 standard states that if the value of the ``rnd`` argument of the
+``fromfp``, ``ufromfp``, ``fromfpx`` and ``ufromfpx`` functions is not equal to
+the value of a math rounding direction macro, the direction of rounding is
+unspecified. LLVM's libc chooses to use the ``FP_INT_TONEAREST`` rounding
+direction in this case.
+
+Non-const Constant Return Values
+--------------------------------
+Some libc functions, like ``dlerror()``, return ``char *`` instead of ``const char *`` and then tell the caller they promise not to to modify this value. Any modification of this value is undefined behavior.
+
+Cached ``getpid/gettid``
+------------------------
+Since version ``2.25``, glibc removes its cache mechanism for ``getpid/gettid`` 
+(See the history section in https://man7.org/linux/man-pages/man2/getpid.2.html).
+LLVM's libc still implements the cache as it is useful for fast deadlock detection.
+The cache mechanism is also implemented in MUSL and bionic. The tid/pid cache can 
+be disabled by setting ``LIBC_CONF_ENABLE_TID_CACHE`` and ``LIBC_CONF_ENABLE_PID_CACHE``
+to ``false`` respectively.
+
+Unwrapped ``SYS_clone/SYS_fork/SYS_vfork``
+------------------------------------------
+It is highly discouraged to use unwrapped ``SYS_clone/SYS_fork/SYS_vfork``. 
+First, calling such syscalls without provided libc wrappers ignores 
+all the ``pthread_atfork`` entries as libc can no longer detect the ``fork``. 
+Second, libc relies on the ``fork/clone`` wrappers to correctly maintain cache for
+process id and thread id, and other important process-specific states such as the list 
+of robust mutexes. Third, even if the user is to call ``exec*`` functions immediately, 
+there can still be other unexpected issues. For instance, there can be signal handlers 
+inherited from parent process triggered inside the instruction window between ``fork`` 
+and ``exec*``. As libc failed to maintain its internal states correctly, even though the
+functions used inside the signal handlers are marked as ``async-signal-safe`` (such as
+``getpid``), they will still return wrong values or lead to other even worse situations.

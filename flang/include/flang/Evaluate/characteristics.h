@@ -45,17 +45,18 @@ namespace Fortran::evaluate::characteristics {
 using common::CopyableIndirection;
 
 // Are these procedures distinguishable for a generic name or FINAL?
-bool Distinguishable(const common::LanguageFeatureControl &, const Procedure &,
-    const Procedure &);
-// Are these procedures distinguishable for a generic operator or assignment?
-bool DistinguishableOpOrAssign(const common::LanguageFeatureControl &,
+std::optional<bool> Distinguishable(const common::LanguageFeatureControl &,
     const Procedure &, const Procedure &);
+// Are these procedures distinguishable for a generic operator or assignment?
+std::optional<bool> DistinguishableOpOrAssign(
+    const common::LanguageFeatureControl &, const Procedure &,
+    const Procedure &);
 
 // Shapes of function results and dummy arguments have to have
 // the same rank, the same deferred dimensions, and the same
 // values for explicit dimensions when constant.
-bool ShapesAreCompatible(
-    const Shape &, const Shape &, bool *possibleWarning = nullptr);
+bool ShapesAreCompatible(const std::optional<Shape> &,
+    const std::optional<Shape> &, bool *possibleWarning = nullptr);
 
 class TypeAndShape {
 public:
@@ -63,17 +64,17 @@ public:
       Attr, AssumedRank, AssumedShape, AssumedSize, DeferredShape, Coarray)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
 
-  explicit TypeAndShape(DynamicType t) : type_{t} { AcquireLEN(); }
-  TypeAndShape(DynamicType t, int rank) : type_{t}, shape_(rank) {
+  explicit TypeAndShape(DynamicType t) : type_{t}, shape_{Shape{}} {
+    AcquireLEN();
+  }
+  TypeAndShape(DynamicType t, int rank) : type_{t}, shape_{Shape(rank)} {
     AcquireLEN();
   }
   TypeAndShape(DynamicType t, Shape &&s) : type_{t}, shape_{std::move(s)} {
     AcquireLEN();
   }
   TypeAndShape(DynamicType t, std::optional<Shape> &&s) : type_{t} {
-    if (s) {
-      shape_ = std::move(*s);
-    }
+    shape_ = std::move(s);
     AcquireLEN();
   }
   DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(TypeAndShape)
@@ -171,11 +172,20 @@ public:
     LEN_ = std::move(len);
     return *this;
   }
-  const Shape &shape() const { return shape_; }
+  const std::optional<Shape> &shape() const { return shape_; }
   const Attrs &attrs() const { return attrs_; }
   int corank() const { return corank_; }
 
-  int Rank() const { return GetRank(shape_); }
+  // Return -1 for assumed-rank as a safety.
+  int Rank() const { return shape_ ? GetRank(*shape_) : -1; }
+
+  // Can sequence association apply to this argument?
+  bool CanBeSequenceAssociated() const {
+    constexpr Attrs notAssumedOrExplicitShape{
+        ~Attrs{Attr::AssumedSize, Attr::Coarray}};
+    return Rank() > 0 && (attrs() & notAssumedOrExplicitShape).none();
+  }
+
   bool IsCompatibleWith(parser::ContextualMessages &, const TypeAndShape &that,
       const char *thisIs = "pointer", const char *thatIs = "target",
       bool omitShapeConformanceCheck = false,
@@ -202,7 +212,7 @@ private:
 protected:
   DynamicType type_;
   std::optional<Expr<SubscriptInteger>> LEN_;
-  Shape shape_;
+  std::optional<Shape> shape_;
   Attrs attrs_;
   int corank_{0};
 };
@@ -227,7 +237,8 @@ struct DummyDataObject {
       std::optional<std::string> *warning = nullptr) const;
   static std::optional<DummyDataObject> Characterize(
       const semantics::Symbol &, FoldingContext &);
-  bool CanBePassedViaImplicitInterface() const;
+  bool CanBePassedViaImplicitInterface(std::string *whyNot = nullptr) const;
+  bool IsPassedByDescriptor(bool isBindC) const;
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
   TypeAndShape type;
@@ -248,7 +259,7 @@ struct DummyProcedure {
   bool operator!=(const DummyProcedure &that) const { return !(*this == that); }
   bool IsCompatibleWith(
       const DummyProcedure &, std::string *whyNot = nullptr) const;
-  bool CanBePassedViaImplicitInterface() const;
+  bool CanBePassedViaImplicitInterface(std::string *whyNot = nullptr) const;
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
   CopyableIndirection<Procedure> procedure;
@@ -282,7 +293,7 @@ struct DummyArgument {
   void SetOptional(bool = true);
   common::Intent GetIntent() const;
   void SetIntent(common::Intent);
-  bool CanBePassedViaImplicitInterface() const;
+  bool CanBePassedViaImplicitInterface(std::string *whyNot = nullptr) const;
   bool IsTypelessIntrinsicDummy() const;
   bool IsCompatibleWith(const DummyArgument &, std::string *whyNot = nullptr,
       std::optional<std::string> *warning = nullptr) const;
@@ -325,7 +336,7 @@ struct FunctionResult {
     return std::get_if<TypeAndShape>(&u);
   }
   void SetType(DynamicType t) { std::get<TypeAndShape>(u).set_type(t); }
-  bool CanBeReturnedViaImplicitInterface() const;
+  bool CanBeReturnedViaImplicitInterface(std::string *whyNot = nullptr) const;
   bool IsCompatibleWith(
       const FunctionResult &, std::string *whyNot = nullptr) const;
 
@@ -355,7 +366,7 @@ struct Procedure {
   static std::optional<Procedure> Characterize(
       const semantics::Symbol &, FoldingContext &);
   static std::optional<Procedure> Characterize(
-      const ProcedureDesignator &, FoldingContext &);
+      const ProcedureDesignator &, FoldingContext &, bool emitError);
   static std::optional<Procedure> Characterize(
       const ProcedureRef &, FoldingContext &);
   static std::optional<Procedure> Characterize(
@@ -376,11 +387,11 @@ struct Procedure {
   bool HasExplicitInterface() const {
     return !attrs.test(Attr::ImplicitInterface);
   }
-  int FindPassIndex(std::optional<parser::CharBlock>) const;
-  bool CanBeCalledViaImplicitInterface() const;
+  std::optional<int> FindPassIndex(std::optional<parser::CharBlock>) const;
+  bool CanBeCalledViaImplicitInterface(std::string *whyNot = nullptr) const;
   bool CanOverride(const Procedure &, std::optional<int> passIndex) const;
-  bool IsCompatibleWith(const Procedure &, std::string *whyNot = nullptr,
-      const SpecificIntrinsic * = nullptr,
+  bool IsCompatibleWith(const Procedure &, bool ignoreImplicitVsExplicit,
+      std::string *whyNot = nullptr, const SpecificIntrinsic * = nullptr,
       std::optional<std::string> *warning = nullptr) const;
 
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;

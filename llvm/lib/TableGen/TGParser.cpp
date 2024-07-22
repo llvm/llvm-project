@@ -1103,11 +1103,17 @@ RecTy *TGParser::ParseType() {
   case tgtok::Dag:
     Lex.Lex();
     return DagRecTy::get(Records);
-  case tgtok::Id:
+  case tgtok::Id: {
+    auto I = TypeAliases.find(Lex.getCurStrVal());
+    if (I != TypeAliases.end()) {
+      Lex.Lex();
+      return I->second;
+    }
     if (Record *R = ParseClassID())
       return RecordRecTy::get(R);
     TokError("unknown class name");
     return nullptr;
+  }
   case tgtok::Bits: {
     if (Lex.Lex() != tgtok::less) { // Eat 'bits'
       TokError("expected '<' after bits type");
@@ -3665,6 +3671,42 @@ bool TGParser::ParseDefset() {
   return false;
 }
 
+/// ParseDeftype - Parse a defvar statement.
+///
+///   Deftype ::= DEFTYPE Id '=' Type ';'
+///
+bool TGParser::ParseDeftype() {
+  assert(Lex.getCode() == tgtok::Deftype);
+  Lex.Lex(); // Eat the 'deftype' token
+
+  if (Lex.getCode() != tgtok::Id)
+    return TokError("expected identifier");
+
+  const std::string TypeName = Lex.getCurStrVal();
+  if (TypeAliases.count(TypeName) || Records.getClass(TypeName))
+    return TokError("type of this name '" + TypeName + "' already exists");
+
+  Lex.Lex();
+  if (!consume(tgtok::equal))
+    return TokError("expected '='");
+
+  SMLoc Loc = Lex.getLoc();
+  RecTy *Type = ParseType();
+  if (!Type)
+    return true;
+
+  if (Type->getRecTyKind() == RecTy::RecordRecTyKind)
+    return Error(Loc, "cannot define type alias for class type '" +
+                          Type->getAsString() + "'");
+
+  TypeAliases[TypeName] = Type;
+
+  if (!consume(tgtok::semi))
+    return TokError("expected ';'");
+
+  return false;
+}
+
 /// ParseDefvar - Parse a defvar statement.
 ///
 ///   Defvar ::= DEFVAR Id '=' Value ';'
@@ -3914,7 +3956,8 @@ bool TGParser::ParseClass() {
   if (Lex.getCode() != tgtok::Id)
     return TokError("expected class name after 'class' keyword");
 
-  Record *CurRec = Records.getClass(Lex.getCurStrVal());
+  const std::string &Name = Lex.getCurStrVal();
+  Record *CurRec = Records.getClass(Name);
   if (CurRec) {
     // If the body was previously defined, this is an error.
     if (!CurRec->getValues().empty() ||
@@ -3931,6 +3974,10 @@ bool TGParser::ParseClass() {
     CurRec = NewRec.get();
     Records.addClass(std::move(NewRec));
   }
+
+  if (TypeAliases.count(Name))
+    return TokError("there is already a defined type alias '" + Name + "'");
+
   Lex.Lex(); // eat the name.
 
   // A class definition introduces a new scope.
@@ -4265,6 +4312,7 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
 ///   Object ::= LETCommand '{' ObjectList '}'
 ///   Object ::= LETCommand Object
 ///   Object ::= Defset
+///   Object ::= Deftype
 ///   Object ::= Defvar
 ///   Object ::= Assert
 ///   Object ::= Dump
@@ -4276,6 +4324,8 @@ bool TGParser::ParseObject(MultiClass *MC) {
   case tgtok::Assert:  return ParseAssert(MC);
   case tgtok::Def:     return ParseDef(MC);
   case tgtok::Defm:    return ParseDefm(MC);
+  case tgtok::Deftype:
+    return ParseDeftype();
   case tgtok::Defvar:  return ParseDefvar();
   case tgtok::Dump:
     return ParseDump(MC);
@@ -4331,8 +4381,7 @@ bool TGParser::CheckTemplateArgValues(
     SmallVectorImpl<llvm::ArgumentInit *> &Values, SMLoc Loc, Record *ArgsRec) {
   ArrayRef<Init *> TArgs = ArgsRec->getTemplateArgs();
 
-  for (unsigned I = 0, E = Values.size(); I < E; ++I) {
-    auto *Value = Values[I];
+  for (llvm::ArgumentInit *&Value : Values) {
     Init *ArgName = nullptr;
     if (Value->isPositional())
       ArgName = TArgs[Value->getIndex()];
@@ -4348,7 +4397,7 @@ bool TGParser::CheckTemplateArgValues(
         assert((!isa<TypedInit>(CastValue) ||
                 cast<TypedInit>(CastValue)->getType()->typeIsA(ArgType)) &&
                "result of template arg value cast has wrong type");
-        Values[I] = Value->cloneWithValue(CastValue);
+        Value = Value->cloneWithValue(CastValue);
       } else {
         PrintFatalError(Loc, "Value specified for template argument '" +
                                  Arg->getNameInitAsString() + "' is of type " +

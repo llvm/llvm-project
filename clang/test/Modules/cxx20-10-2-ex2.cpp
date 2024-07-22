@@ -14,6 +14,18 @@
 // RUN: -fmodule-file=%t/std-10-2-ex2-c.pcm -fmodule-file=X=%t/X.pcm \
 // RUN: -pedantic-errors -verify -o  %t/M.pcm
 
+// Test again with reduced BMI.
+// RUN: %clang_cc1 -std=c++20 -emit-header-unit -I %t \
+// RUN: -xc++-user-header std-10-2-ex2-c.h -o %t/std-10-2-ex2-c.pcm
+
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/std-10-2-ex2-tu1.cpp \
+// RUN:  -o  %t/X.pcm
+
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/std-10-2-ex2-tu2.cpp \
+// RUN: -fmodule-file=%t/std-10-2-ex2-c.pcm -fmodule-file=X=%t/X.pcm \
+// RUN: -pedantic-errors -verify -o  %t/M.pcm
+
+
 //--- std-10-2-ex2-b.h
 int f();
 

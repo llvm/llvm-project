@@ -81,6 +81,33 @@ struct S2 {
 
 bool f5();
 bool f6(int);
+#if __cplusplus >= 201103L
+auto f7 = []{};
+auto f8 = [](){};
+
+void foo() {
+  bool b;
+  b = f7; // expected-warning {{address of lambda function pointer conversion operator will always evaluate to 'true'}}
+  b = f8; // expected-warning {{address of lambda function pointer conversion operator will always evaluate to 'true'}}
+  bool is_true = [](){ return true; };
+  // expected-warning@-1{{address of lambda function pointer conversion operator will always evaluate to 'true'}}
+}
+
+template <typename... Ts>
+static bool IsFalse(const Ts&...) { return false; }
+template <typename T>
+static bool IsFalse(const T& p) {
+  bool b;
+  b = f7; // expected-warning {{address of lambda function pointer conversion operator will always evaluate to 'true'}}
+  // Intentionally not warned on because p could be a lambda type in one
+  // instantiation, but a pointer type in another.
+  return p ? false : true;
+}
+
+bool use_instantiation() {
+  return IsFalse([]() { return 0; });
+}
+#endif
 
 void bar() {
   bool b;
@@ -186,6 +213,7 @@ namespace macros {
   }
 }
 
+#if __cplusplus < 201703L
 namespace Template {
   // FIXME: These cases should not warn.
   template<int *p> void f() { if (p) {} } // expected-warning 2{{will always evaluate to 'true'}} expected-cxx11-warning {{implicit conversion of nullptr}}
@@ -205,3 +233,4 @@ namespace Template {
 #endif
   template void h<d>();
 }
+#endif // __cplusplus < 201703L

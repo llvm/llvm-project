@@ -207,11 +207,11 @@ bool R600InstrInfo::mustBeLastInClause(unsigned Opcode) const {
 }
 
 bool R600InstrInfo::usesAddressRegister(MachineInstr &MI) const {
-  return MI.findRegisterUseOperandIdx(R600::AR_X, false, &RI) != -1;
+  return MI.findRegisterUseOperandIdx(R600::AR_X, &RI, false) != -1;
 }
 
 bool R600InstrInfo::definesAddressRegister(MachineInstr &MI) const {
-  return MI.findRegisterDefOperandIdx(R600::AR_X, false, false, &RI) != -1;
+  return MI.findRegisterDefOperandIdx(R600::AR_X, &RI, false, false) != -1;
 }
 
 bool R600InstrInfo::readsLDSSrcReg(const MachineInstr &MI) const {
@@ -326,11 +326,11 @@ R600InstrInfo::ExtractSrcs(MachineInstr &MI,
     Register Reg = Src.first->getReg();
     int Index = RI.getEncodingValue(Reg) & 0xff;
     if (Reg == R600::OQAP) {
-      Result.push_back(std::pair(Index, 0U));
+      Result.emplace_back(Index, 0U);
     }
     if (PV.contains(Reg)) {
       // 255 is used to tells its a PS/PV reg
-      Result.push_back(std::pair(255, 0U));
+      Result.emplace_back(255, 0U);
       continue;
     }
     if (Index > 127) {
@@ -339,7 +339,7 @@ R600InstrInfo::ExtractSrcs(MachineInstr &MI,
       continue;
     }
     unsigned Chan = RI.getHWRegChan(Reg);
-    Result.push_back(std::pair(Index, Chan));
+    Result.emplace_back(Index, Chan);
   }
   for (; i < 3; ++i)
     Result.push_back(DummyPair);
@@ -679,7 +679,8 @@ bool R600InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     if (LastOpc == R600::JUMP) {
       TBB = LastInst.getOperand(0).getMBB();
       return false;
-    } else if (LastOpc == R600::JUMP_COND) {
+    }
+    if (LastOpc == R600::JUMP_COND) {
       auto predSet = I;
       while (!isPredicateSetter(predSet->getOpcode())) {
         predSet = --I;
@@ -739,38 +740,36 @@ unsigned R600InstrInfo::insertBranch(MachineBasicBlock &MBB,
     if (Cond.empty()) {
       BuildMI(&MBB, DL, get(R600::JUMP)).addMBB(TBB);
       return 1;
-    } else {
-      MachineInstr *PredSet = findFirstPredicateSetterFrom(MBB, MBB.end());
-      assert(PredSet && "No previous predicate !");
-      addFlag(*PredSet, 0, MO_FLAG_PUSH);
-      PredSet->getOperand(2).setImm(Cond[1].getImm());
-
-      BuildMI(&MBB, DL, get(R600::JUMP_COND))
-             .addMBB(TBB)
-             .addReg(R600::PREDICATE_BIT, RegState::Kill);
-      MachineBasicBlock::iterator CfAlu = FindLastAluClause(MBB);
-      if (CfAlu == MBB.end())
-        return 1;
-      assert (CfAlu->getOpcode() == R600::CF_ALU);
-      CfAlu->setDesc(get(R600::CF_ALU_PUSH_BEFORE));
-      return 1;
     }
-  } else {
     MachineInstr *PredSet = findFirstPredicateSetterFrom(MBB, MBB.end());
     assert(PredSet && "No previous predicate !");
     addFlag(*PredSet, 0, MO_FLAG_PUSH);
     PredSet->getOperand(2).setImm(Cond[1].getImm());
+
     BuildMI(&MBB, DL, get(R600::JUMP_COND))
-            .addMBB(TBB)
-            .addReg(R600::PREDICATE_BIT, RegState::Kill);
-    BuildMI(&MBB, DL, get(R600::JUMP)).addMBB(FBB);
+        .addMBB(TBB)
+        .addReg(R600::PREDICATE_BIT, RegState::Kill);
     MachineBasicBlock::iterator CfAlu = FindLastAluClause(MBB);
     if (CfAlu == MBB.end())
-      return 2;
+      return 1;
     assert (CfAlu->getOpcode() == R600::CF_ALU);
     CfAlu->setDesc(get(R600::CF_ALU_PUSH_BEFORE));
-    return 2;
+    return 1;
   }
+  MachineInstr *PredSet = findFirstPredicateSetterFrom(MBB, MBB.end());
+  assert(PredSet && "No previous predicate !");
+  addFlag(*PredSet, 0, MO_FLAG_PUSH);
+  PredSet->getOperand(2).setImm(Cond[1].getImm());
+  BuildMI(&MBB, DL, get(R600::JUMP_COND))
+      .addMBB(TBB)
+      .addReg(R600::PREDICATE_BIT, RegState::Kill);
+  BuildMI(&MBB, DL, get(R600::JUMP)).addMBB(FBB);
+  MachineBasicBlock::iterator CfAlu = FindLastAluClause(MBB);
+  if (CfAlu == MBB.end())
+    return 2;
+  assert(CfAlu->getOpcode() == R600::CF_ALU);
+  CfAlu->setDesc(get(R600::CF_ALU_PUSH_BEFORE));
+  return 2;
 }
 
 unsigned R600InstrInfo::removeBranch(MachineBasicBlock &MBB,
@@ -853,20 +852,19 @@ bool R600InstrInfo::isPredicable(const MachineInstr &MI) const {
   // be predicated.  Until we have proper support for instruction clauses in the
   // backend, we will mark KILL* instructions as unpredicable.
 
-  if (MI.getOpcode() == R600::KILLGT) {
+  if (MI.getOpcode() == R600::KILLGT)
     return false;
-  } else if (MI.getOpcode() == R600::CF_ALU) {
+  if (MI.getOpcode() == R600::CF_ALU) {
     // If the clause start in the middle of MBB then the MBB has more
     // than a single clause, unable to predicate several clauses.
     if (MI.getParent()->begin() != MachineBasicBlock::const_iterator(MI))
       return false;
     // TODO: We don't support KC merging atm
     return MI.getOperand(3).getImm() == 0 && MI.getOperand(4).getImm() == 0;
-  } else if (isVector(MI)) {
-    return false;
-  } else {
-    return TargetInstrInfo::isPredicable(MI);
   }
+  if (isVector(MI))
+    return false;
+  return TargetInstrInfo::isPredicable(MI);
 }
 
 bool

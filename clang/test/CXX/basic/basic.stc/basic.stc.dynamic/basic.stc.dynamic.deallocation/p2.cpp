@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1z -fsized-deallocation -fexceptions -verify %s
+// RUN: %clang_cc1 -std=c++1z -fexceptions -verify %s
 
 using size_t = decltype(sizeof(0));
 

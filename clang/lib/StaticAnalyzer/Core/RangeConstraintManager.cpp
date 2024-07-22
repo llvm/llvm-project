@@ -2333,7 +2333,8 @@ inline ProgramStateRef EquivalenceClass::merge(RangeSet::Factory &F,
   //
   //        The moment we introduce symbolic casts, this restriction can be
   //        lifted.
-  if (getType() != Other.getType())
+  if (getType()->getCanonicalTypeUnqualified() !=
+      Other.getType()->getCanonicalTypeUnqualified())
     return State;
 
   SymbolSet Members = getClassMembers(State);
@@ -3038,7 +3039,7 @@ ProgramStateRef RangeConstraintManager::setRange(ProgramStateRef State,
 
 //===------------------------------------------------------------------------===
 // assumeSymX methods: protected interface for RangeConstraintManager.
-//===------------------------------------------------------------------------===/
+//===------------------------------------------------------------------------===
 
 // The syntax for ranges below is mathematical, using [x, y] for closed ranges
 // and (x, y) for open ranges. These ranges are modular, corresponding with
@@ -3270,6 +3271,10 @@ void RangeConstraintManager::printJson(raw_ostream &Out, ProgramStateRef State,
 void RangeConstraintManager::printValue(raw_ostream &Out, ProgramStateRef State,
                                         SymbolRef Sym) {
   const RangeSet RS = getRange(State, Sym);
+  if (RS.isEmpty()) {
+    Out << "<empty rangeset>";
+    return;
+  }
   Out << RS.getBitWidth() << (RS.isUnsigned() ? "u:" : "s:");
   RS.dump(Out);
 }
@@ -3278,7 +3283,7 @@ static std::string toString(const SymbolRef &Sym) {
   std::string S;
   llvm::raw_string_ostream O(S);
   Sym->dumpToStream(O);
-  return O.str();
+  return S;
 }
 
 void RangeConstraintManager::printConstraints(raw_ostream &Out,
@@ -3349,7 +3354,7 @@ static std::string toString(ProgramStateRef State, EquivalenceClass Class) {
     Out << "\"" << ClassMember << "\"";
   }
   Out << " ]";
-  return Out.str();
+  return Str;
 }
 
 void RangeConstraintManager::printEquivalenceClasses(raw_ostream &Out,

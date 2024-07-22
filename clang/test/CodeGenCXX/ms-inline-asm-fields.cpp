@@ -24,7 +24,7 @@ extern "C" int test_param_field(A p) {
 
 extern "C" int test_namespace_global() {
 // CHECK: define{{.*}} i32 @test_namespace_global()
-// CHECK: call i32 asm sideeffect inteldialect "mov eax, $1", "{{.*}}"(ptr elementtype(i32) getelementptr inbounds (%struct.A, ptr @_ZN4asdf8a_globalE, i32 0, i32 2, i32 1))
+// CHECK: call i32 asm sideeffect inteldialect "mov eax, $1", "{{.*}}"(ptr elementtype(i32) getelementptr inbounds (%"struct.A::B", ptr getelementptr inbounds (%struct.A, ptr @_ZN4asdf8a_globalE, i32 0, i32 2), i32 0, i32 1))
 // CHECK: ret i32
   __asm mov eax, asdf::a_global.a3.b2
 }

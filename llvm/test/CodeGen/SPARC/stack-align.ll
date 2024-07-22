@@ -1,6 +1,6 @@
 ; RUN: llc -march=sparc < %s | FileCheck %s --check-prefixes=CHECK,CHECK32
 ; RUN: llc -march=sparcv9 < %s | FileCheck %s --check-prefixes=CHECK,CHECK64
-declare void @stack_realign_helper(i32 %a, i32* %b)
+declare void @stack_realign_helper(i32 %a, ptr %b)
 
 ;; This is a function where we have a local variable of 64-byte
 ;; alignment.  We want to see that the stack is aligned (the initial
@@ -21,6 +21,6 @@ declare void @stack_realign_helper(i32 %a, i32* %b)
 define void @stack_realign(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g) {
 entry:
   %aligned = alloca i32, align 64
-  call void @stack_realign_helper(i32 %g, i32* %aligned)
+  call void @stack_realign_helper(i32 %g, ptr %aligned)
   ret void
 }

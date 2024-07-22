@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -emit-llvm -disable-llvm-passes -o - -hlsl-entry main %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -emit-llvm -disable-llvm-passes -o - -hlsl-entry main %s | FileCheck %s
 
 [numthreads(1,1,1)]
 void main(unsigned GI : SV_GroupIndex) {
@@ -10,7 +10,7 @@ void main(unsigned GI : SV_GroupIndex) {
 // semantic parameters and provides the expected void(void) signature that
 // drivers expect for entry points.
 
-//CHECK: define void @main() #[[ENTRY_ATTR:#]]{
+//CHECK: define void @main() #[[#ENTRY_ATTR:]] {
 //CHECK-NEXT: entry:
 //CHECK-NEXT:   %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
 //CHECK-NEXT:   call void @"?main@@YAXI@Z"(i32 %0)
@@ -19,4 +19,4 @@ void main(unsigned GI : SV_GroupIndex) {
 
 // Verify that the entry had the expected dx.shader attribute
 
-//CHECK: attributes #[[ENTRY_ATTR]] = { {{.*}}"dx.shader"="compute"{{.*}} }
+//CHECK: attributes #[[#ENTRY_ATTR]] = { {{.*}}"hlsl.shader"="compute"{{.*}} }

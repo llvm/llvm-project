@@ -253,7 +253,7 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
       if (!IncludeFunctionArguments &&
           ResultKind == CodeCompletionResult::RK_Declaration)
         TruncateSnippetAt.emplace(Snippet->size());
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case CodeCompletionString::CK_RightParen:
     case CodeCompletionString::CK_LeftBracket:
     case CodeCompletionString::CK_RightBracket:

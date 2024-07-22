@@ -88,10 +88,10 @@ define void @insert_4xi64(ptr %src, ptr %dst, i64 %in) nounwind {
 define void @insert_8xfloat(ptr %src, ptr %dst, float %in) nounwind {
 ; CHECK-LABEL: insert_8xfloat:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movfr2gr.s $a2, $fa0
-; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a2, 1
-; CHECK-NEXT:    xvst $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a0, 0
+; CHECK-NEXT:    movfr2gr.s $a0, $fa0
+; CHECK-NEXT:    xvinsgr2vr.w $xr1, $a0, 1
+; CHECK-NEXT:    xvst $xr1, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <8 x float>, ptr %src
   %v_new = insertelement <8 x float> %v, float %in, i32 1
@@ -102,10 +102,10 @@ define void @insert_8xfloat(ptr %src, ptr %dst, float %in) nounwind {
 define void @insert_4xdouble(ptr %src, ptr %dst, double %in) nounwind {
 ; CHECK-LABEL: insert_4xdouble:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movfr2gr.d $a2, $fa0
-; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvinsgr2vr.d $xr0, $a2, 1
-; CHECK-NEXT:    xvst $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a0, 0
+; CHECK-NEXT:    movfr2gr.d $a0, $fa0
+; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 1
+; CHECK-NEXT:    xvst $xr1, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <4 x double>, ptr %src
   %v_new = insertelement <4 x double> %v, double %in, i32 1

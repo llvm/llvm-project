@@ -15,9 +15,11 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUHSAMETADATASTREAMER_H
 #define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUHSAMETADATASTREAMER_H
 
+#include "Utils/AMDGPUDelayedMCExpr.h"
 #include "llvm/BinaryFormat/MsgPackDocument.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -61,8 +63,12 @@ protected:
                                msgpack::MapDocNode Kern) = 0;
 };
 
-class MetadataStreamerMsgPackV4 : public MetadataStreamer {
+class LLVM_EXTERNAL_VISIBILITY MetadataStreamerMsgPackV4
+    : public MetadataStreamer {
 protected:
+  std::unique_ptr<DelayedMCExprs> DelayedExprs =
+      std::make_unique<DelayedMCExprs>();
+
   std::unique_ptr<msgpack::Document> HSAMetadataDoc =
       std::make_unique<msgpack::Document>();
 
@@ -135,7 +141,7 @@ public:
                   const SIProgramInfo &ProgramInfo) override;
 };
 
-class MetadataStreamerMsgPackV5 final : public MetadataStreamerMsgPackV4 {
+class MetadataStreamerMsgPackV5 : public MetadataStreamerMsgPackV4 {
 protected:
   void emitVersion() override;
   void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
@@ -145,6 +151,15 @@ protected:
 public:
   MetadataStreamerMsgPackV5() = default;
   ~MetadataStreamerMsgPackV5() = default;
+};
+
+class MetadataStreamerMsgPackV6 final : public MetadataStreamerMsgPackV5 {
+protected:
+  void emitVersion() override;
+
+public:
+  MetadataStreamerMsgPackV6() = default;
+  ~MetadataStreamerMsgPackV6() = default;
 };
 
 } // end namespace HSAMD

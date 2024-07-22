@@ -29,12 +29,10 @@ namespace {
 /// Lowers LLVM IR (in DAG form) to AVR MC instructions (in DAG form).
 class AVRDAGToDAGISel : public SelectionDAGISel {
 public:
-  static char ID;
-
   AVRDAGToDAGISel() = delete;
 
   AVRDAGToDAGISel(AVRTargetMachine &TM, CodeGenOptLevel OptLevel)
-      : SelectionDAGISel(ID, TM, OptLevel), Subtarget(nullptr) {}
+      : SelectionDAGISel(TM, OptLevel), Subtarget(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -60,11 +58,19 @@ private:
   const AVRSubtarget *Subtarget;
 };
 
+class AVRDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  AVRDAGToDAGISelLegacy(AVRTargetMachine &TM, CodeGenOptLevel OptLevel)
+      : SelectionDAGISelLegacy(
+            ID, std::make_unique<AVRDAGToDAGISel>(TM, OptLevel)) {}
+};
+
 } // namespace
 
-char AVRDAGToDAGISel::ID = 0;
+char AVRDAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(AVRDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(AVRDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 bool AVRDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<AVRSubtarget>();
@@ -335,7 +341,7 @@ template <> bool AVRDAGToDAGISel::select<ISD::STORE>(SDNode *N) {
     return false;
   }
 
-  int CST = (int)cast<ConstantSDNode>(BasePtr.getOperand(1))->getZExtValue();
+  int CST = (int)BasePtr.getConstantOperandVal(1);
   SDValue Chain = ST->getChain();
   EVT VT = ST->getValue().getValueType();
   SDLoc DL(N);
@@ -586,5 +592,5 @@ bool AVRDAGToDAGISel::trySelect(SDNode *N) {
 
 FunctionPass *llvm::createAVRISelDag(AVRTargetMachine &TM,
                                      CodeGenOptLevel OptLevel) {
-  return new AVRDAGToDAGISel(TM, OptLevel);
+  return new AVRDAGToDAGISelLegacy(TM, OptLevel);
 }

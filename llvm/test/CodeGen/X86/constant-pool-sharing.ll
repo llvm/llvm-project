@@ -77,7 +77,7 @@ define void @store_repeated_constants(ptr %lo, ptr %hi) {
 ; SSE-LINUX:       # %bb.0:
 ; SSE-LINUX-NEXT:    xorps %xmm0, %xmm0
 ; SSE-LINUX-NEXT:    movaps %xmm0, 48(%rdi)
-; SSE-LINUX-NEXT:    movaps {{.*#+}} xmm1 = [18446744073709551615,0]
+; SSE-LINUX-NEXT:    movsd {{.*#+}} xmm1 = [18446744073709551615,0]
 ; SSE-LINUX-NEXT:    movaps %xmm1, 32(%rdi)
 ; SSE-LINUX-NEXT:    movaps %xmm1, 16(%rdi)
 ; SSE-LINUX-NEXT:    movaps %xmm1, (%rdi)
@@ -92,7 +92,7 @@ define void @store_repeated_constants(ptr %lo, ptr %hi) {
 ; SSE-MSVC:       # %bb.0:
 ; SSE-MSVC-NEXT:    xorps %xmm0, %xmm0
 ; SSE-MSVC-NEXT:    movaps %xmm0, 48(%rcx)
-; SSE-MSVC-NEXT:    movaps {{.*#+}} xmm1 = [18446744073709551615,0]
+; SSE-MSVC-NEXT:    movsd {{.*#+}} xmm1 = [18446744073709551615,0]
 ; SSE-MSVC-NEXT:    movaps %xmm1, 32(%rcx)
 ; SSE-MSVC-NEXT:    movaps %xmm1, 16(%rcx)
 ; SSE-MSVC-NEXT:    movaps %xmm1, (%rcx)

@@ -346,6 +346,8 @@ public:
 
   MachineFrameInfo(const MachineFrameInfo &) = delete;
 
+  bool isStackRealignable() const { return StackRealignable; }
+
   /// Return true if there are any stack objects in this function.
   bool hasStackObjects() const { return !Objects.empty(); }
 
@@ -603,6 +605,12 @@ public:
   /// Make sure the function is at least Align bytes aligned.
   void ensureMaxAlignment(Align Alignment);
 
+  /// Return true if stack realignment is forced by function attributes or if
+  /// the stack alignment.
+  bool shouldRealignStack() const {
+    return ForcedRealign || MaxAlignment > StackAlignment;
+  }
+
   /// Return true if this function adjusts the stack -- e.g.,
   /// when calling another function. This is only valid during and after
   /// prolog/epilog code insertion.
@@ -638,13 +646,17 @@ public:
   bool hasTailCall() const { return HasTailCall; }
   void setHasTailCall(bool V = true) { HasTailCall = V; }
 
-  /// Computes the maximum size of a callframe and the AdjustsStack property.
+  /// Computes the maximum size of a callframe.
   /// This only works for targets defining
   /// TargetInstrInfo::getCallFrameSetupOpcode(), getCallFrameDestroyOpcode(),
   /// and getFrameSize().
   /// This is usually computed by the prologue epilogue inserter but some
   /// targets may call this to compute it earlier.
-  void computeMaxCallFrameSize(const MachineFunction &MF);
+  /// If FrameSDOps is passed, the frame instructions in the MF will be
+  /// inserted into it.
+  void computeMaxCallFrameSize(
+      MachineFunction &MF,
+      std::vector<MachineBasicBlock::iterator> *FrameSDOps = nullptr);
 
   /// Return the maximum size of a call frame that must be
   /// allocated for an outgoing function call.  This is only available if
@@ -695,6 +707,13 @@ public:
     assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
     return Objects[ObjectIdx+NumFixedObjects].isAliased;
+  }
+
+  /// Set "maybe pointed to by an LLVM IR value" for an object.
+  void setIsAliasedObjectIndex(int ObjectIdx, bool IsAliased) {
+    assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
+           "Invalid Object Idx!");
+    Objects[ObjectIdx+NumFixedObjects].isAliased = IsAliased;
   }
 
   /// Returns true if the specified index corresponds to an immutable object.

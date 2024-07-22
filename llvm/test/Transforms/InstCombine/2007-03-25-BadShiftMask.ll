@@ -10,7 +10,7 @@ define i32 @main() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[U:%.*]] = alloca [[STRUCT__1ANON:%.*]], align 8
 ; CHECK-NEXT:    store double 0x7FF0000000000000, ptr [[U]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT__0ANON:%.*]], ptr [[U]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[U]], i64 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[TMP6]], 2146435072
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP0]], 2146435072

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -Wuninitialized -Wconditional-uninitialized -fsyntax-only -fblocks %s -verify
-// RUN: %clang_cc1 -fsyntax-only -Wuninitialized -Wconditional-uninitialized -ftrivial-auto-var-init=pattern -fsyntax-only -fblocks %s -verify
+// RUN: %clang_cc1 -Wuninitialized -Wconditional-uninitialized -fsyntax-only -fblocks %s -verify
+// RUN: %clang_cc1 -Wuninitialized -Wconditional-uninitialized -ftrivial-auto-var-init=pattern -fsyntax-only -fblocks %s -verify
 
 typedef __typeof(sizeof(int)) size_t;
 void *malloc(size_t);

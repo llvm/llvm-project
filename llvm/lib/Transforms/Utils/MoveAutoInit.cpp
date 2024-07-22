@@ -164,6 +164,9 @@ static bool runMoveAutoInit(Function &F, DominatorTree &DT, MemorySSA &MSSA) {
         if (TransitiveSuccessors.count(Pred))
           continue;
 
+        if (!DT.isReachableFromEntry(Pred))
+          continue;
+
         DominatingPredecessor =
             DominatingPredecessor
                 ? DT.findNearestCommonDominator(DominatingPredecessor, Pred)
@@ -178,9 +181,10 @@ static bool runMoveAutoInit(Function &F, DominatorTree &DT, MemorySSA &MSSA) {
 
     // CatchSwitchInst blocks can only have one instruction, so they are not
     // good candidates for insertion.
-    while (isa<CatchSwitchInst>(UsersDominator->getFirstInsertionPt())) {
+    while (isa<CatchSwitchInst>(UsersDominator->getFirstNonPHI())) {
       for (BasicBlock *Pred : predecessors(UsersDominator))
-        UsersDominator = DT.findNearestCommonDominator(UsersDominator, Pred);
+        if (DT.isReachableFromEntry(Pred))
+          UsersDominator = DT.findNearestCommonDominator(UsersDominator, Pred);
     }
 
     // We finally found a place where I can be moved while not introducing extra

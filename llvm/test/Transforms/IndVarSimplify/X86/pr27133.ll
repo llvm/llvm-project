@@ -11,7 +11,7 @@ define i32 @fn2() personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[INDVARS1:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    invoke void @fn1(i64 [[INDVARS_IV]])
-; CHECK-NEXT:    to label [[FOR_INC]] unwind label [[CATCH_DISPATCH:%.*]]
+; CHECK-NEXT:            to label [[FOR_INC]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       catch.dispatch:
 ; CHECK-NEXT:    [[C_0_LCSSA:%.*]] = phi i32 [ [[INDVARS1]], [[FOR_COND]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = catchswitch within none [label %catch] unwind to caller
@@ -21,7 +21,7 @@ define i32 @fn2() personality ptr @__CxxFrameHandler3 {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 [[C_0_LCSSA]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ;
 entry:

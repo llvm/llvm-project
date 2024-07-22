@@ -28,10 +28,12 @@ class AttachCancelTestCase(TestBase):
                 threading.Thread.__init__(self, daemon=True)
                 self.target = target
                 self.error = error
-                
+
             def run(self):
-                self.target.AttachToProcessWithName(lldb.SBListener(), "LLDB-No-Such-Process", True, self.error)
-                
+                self.target.AttachToProcessWithName(
+                    lldb.SBListener(), "LLDB-No-Such-Process", True, self.error
+                )
+
         error = lldb.SBError()
         thread = AttachThread(target, error)
         thread.start()
@@ -50,8 +52,7 @@ class AttachCancelTestCase(TestBase):
         # We don't want to stall if we can't interrupt, so join with a timeout:
         thread.join(60)
         if thread.is_alive():
-          self.fail("The attach thread is alive after timeout interval")
+            self.fail("The attach thread is alive after timeout interval")
 
         # Now check the error, should say the attach was interrupted:
         self.assertTrue(error.Fail(), "We succeeded in not attaching")
-

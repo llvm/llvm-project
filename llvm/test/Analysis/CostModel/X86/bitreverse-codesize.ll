@@ -40,23 +40,23 @@ define i64 @var_bitreverse_i64(i64 %a) {
 ; XOP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64 %bitreverse
 ;
 ; GFNISSE-LABEL: 'var_bitreverse_i64'
-; GFNISSE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %bitreverse = call i64 @llvm.bitreverse.i64(i64 %a)
+; GFNISSE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call i64 @llvm.bitreverse.i64(i64 %a)
 ; GFNISSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64 %bitreverse
 ;
 ; GFNIAVX-LABEL: 'var_bitreverse_i64'
-; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %bitreverse = call i64 @llvm.bitreverse.i64(i64 %a)
+; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call i64 @llvm.bitreverse.i64(i64 %a)
 ; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64 %bitreverse
 ;
 ; GFNIAVX2-LABEL: 'var_bitreverse_i64'
-; GFNIAVX2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %bitreverse = call i64 @llvm.bitreverse.i64(i64 %a)
+; GFNIAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call i64 @llvm.bitreverse.i64(i64 %a)
 ; GFNIAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64 %bitreverse
 ;
 ; GFNIAVX512F-LABEL: 'var_bitreverse_i64'
-; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %bitreverse = call i64 @llvm.bitreverse.i64(i64 %a)
+; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call i64 @llvm.bitreverse.i64(i64 %a)
 ; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64 %bitreverse
 ;
 ; GFNIAVX512BW-LABEL: 'var_bitreverse_i64'
-; GFNIAVX512BW-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %bitreverse = call i64 @llvm.bitreverse.i64(i64 %a)
+; GFNIAVX512BW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call i64 @llvm.bitreverse.i64(i64 %a)
 ; GFNIAVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64 %bitreverse
 ;
   %bitreverse = call i64 @llvm.bitreverse.i64(i64 %a)
@@ -77,23 +77,23 @@ define i32 @var_bitreverse_i32(i32 %a) {
 ; XOP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %bitreverse
 ;
 ; GFNISSE-LABEL: 'var_bitreverse_i32'
-; GFNISSE-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %bitreverse = call i32 @llvm.bitreverse.i32(i32 %a)
+; GFNISSE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call i32 @llvm.bitreverse.i32(i32 %a)
 ; GFNISSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %bitreverse
 ;
 ; GFNIAVX-LABEL: 'var_bitreverse_i32'
-; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %bitreverse = call i32 @llvm.bitreverse.i32(i32 %a)
+; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call i32 @llvm.bitreverse.i32(i32 %a)
 ; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %bitreverse
 ;
 ; GFNIAVX2-LABEL: 'var_bitreverse_i32'
-; GFNIAVX2-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %bitreverse = call i32 @llvm.bitreverse.i32(i32 %a)
+; GFNIAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call i32 @llvm.bitreverse.i32(i32 %a)
 ; GFNIAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %bitreverse
 ;
 ; GFNIAVX512F-LABEL: 'var_bitreverse_i32'
-; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %bitreverse = call i32 @llvm.bitreverse.i32(i32 %a)
+; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call i32 @llvm.bitreverse.i32(i32 %a)
 ; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %bitreverse
 ;
 ; GFNIAVX512BW-LABEL: 'var_bitreverse_i32'
-; GFNIAVX512BW-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %bitreverse = call i32 @llvm.bitreverse.i32(i32 %a)
+; GFNIAVX512BW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call i32 @llvm.bitreverse.i32(i32 %a)
 ; GFNIAVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %bitreverse
 ;
   %bitreverse = call i32 @llvm.bitreverse.i32(i32 %a)
@@ -114,23 +114,23 @@ define i16 @var_bitreverse_i16(i16 %a) {
 ; XOP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i16 %bitreverse
 ;
 ; GFNISSE-LABEL: 'var_bitreverse_i16'
-; GFNISSE-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
+; GFNISSE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
 ; GFNISSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i16 %bitreverse
 ;
 ; GFNIAVX-LABEL: 'var_bitreverse_i16'
-; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
+; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
 ; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i16 %bitreverse
 ;
 ; GFNIAVX2-LABEL: 'var_bitreverse_i16'
-; GFNIAVX2-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
+; GFNIAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
 ; GFNIAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i16 %bitreverse
 ;
 ; GFNIAVX512F-LABEL: 'var_bitreverse_i16'
-; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
+; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
 ; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i16 %bitreverse
 ;
 ; GFNIAVX512BW-LABEL: 'var_bitreverse_i16'
-; GFNIAVX512BW-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
+; GFNIAVX512BW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
 ; GFNIAVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i16 %bitreverse
 ;
   %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
@@ -151,23 +151,23 @@ define i8 @var_bitreverse_i8(i8 %a) {
 ; XOP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i8 %bitreverse
 ;
 ; GFNISSE-LABEL: 'var_bitreverse_i8'
-; GFNISSE-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
+; GFNISSE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
 ; GFNISSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i8 %bitreverse
 ;
 ; GFNIAVX-LABEL: 'var_bitreverse_i8'
-; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
+; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
 ; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i8 %bitreverse
 ;
 ; GFNIAVX2-LABEL: 'var_bitreverse_i8'
-; GFNIAVX2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
+; GFNIAVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
 ; GFNIAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i8 %bitreverse
 ;
 ; GFNIAVX512F-LABEL: 'var_bitreverse_i8'
-; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
+; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
 ; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i8 %bitreverse
 ;
 ; GFNIAVX512BW-LABEL: 'var_bitreverse_i8'
-; GFNIAVX512BW-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
+; GFNIAVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
 ; GFNIAVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i8 %bitreverse
 ;
   %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
@@ -270,7 +270,7 @@ define <4 x i64> @var_bitreverse_v4i64(<4 x i64> %a) {
 ; GFNISSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i64> %bitreverse
 ;
 ; GFNIAVX-LABEL: 'var_bitreverse_v4i64'
-; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %bitreverse = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> %a)
+; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bitreverse = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> %a)
 ; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i64> %bitreverse
 ;
 ; GFNIAVX2-LABEL: 'var_bitreverse_v4i64'
@@ -323,7 +323,7 @@ define <8 x i64> @var_bitreverse_v8i64(<8 x i64> %a) {
 ; GFNISSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %bitreverse
 ;
 ; GFNIAVX-LABEL: 'var_bitreverse_v8i64'
-; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %bitreverse = call <8 x i64> @llvm.bitreverse.v8i64(<8 x i64> %a)
+; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call <8 x i64> @llvm.bitreverse.v8i64(<8 x i64> %a)
 ; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %bitreverse
 ;
 ; GFNIAVX2-LABEL: 'var_bitreverse_v8i64'
@@ -331,7 +331,7 @@ define <8 x i64> @var_bitreverse_v8i64(<8 x i64> %a) {
 ; GFNIAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %bitreverse
 ;
 ; GFNIAVX512F-LABEL: 'var_bitreverse_v8i64'
-; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %bitreverse = call <8 x i64> @llvm.bitreverse.v8i64(<8 x i64> %a)
+; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bitreverse = call <8 x i64> @llvm.bitreverse.v8i64(<8 x i64> %a)
 ; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %bitreverse
 ;
 ; GFNIAVX512BW-LABEL: 'var_bitreverse_v8i64'
@@ -421,7 +421,7 @@ define <8 x i32> @var_bitreverse_v8i32(<8 x i32> %a) {
 ; GFNISSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %bitreverse
 ;
 ; GFNIAVX-LABEL: 'var_bitreverse_v8i32'
-; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %bitreverse = call <8 x i32> @llvm.bitreverse.v8i32(<8 x i32> %a)
+; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bitreverse = call <8 x i32> @llvm.bitreverse.v8i32(<8 x i32> %a)
 ; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %bitreverse
 ;
 ; GFNIAVX2-LABEL: 'var_bitreverse_v8i32'
@@ -474,7 +474,7 @@ define <16 x i32> @var_bitreverse_v16i32(<16 x i32> %a) {
 ; GFNISSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %bitreverse
 ;
 ; GFNIAVX-LABEL: 'var_bitreverse_v16i32'
-; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %bitreverse = call <16 x i32> @llvm.bitreverse.v16i32(<16 x i32> %a)
+; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call <16 x i32> @llvm.bitreverse.v16i32(<16 x i32> %a)
 ; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %bitreverse
 ;
 ; GFNIAVX2-LABEL: 'var_bitreverse_v16i32'
@@ -482,7 +482,7 @@ define <16 x i32> @var_bitreverse_v16i32(<16 x i32> %a) {
 ; GFNIAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %bitreverse
 ;
 ; GFNIAVX512F-LABEL: 'var_bitreverse_v16i32'
-; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %bitreverse = call <16 x i32> @llvm.bitreverse.v16i32(<16 x i32> %a)
+; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bitreverse = call <16 x i32> @llvm.bitreverse.v16i32(<16 x i32> %a)
 ; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %bitreverse
 ;
 ; GFNIAVX512BW-LABEL: 'var_bitreverse_v16i32'
@@ -572,7 +572,7 @@ define <16 x i16> @var_bitreverse_v16i16(<16 x i16> %a) {
 ; GFNISSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %bitreverse
 ;
 ; GFNIAVX-LABEL: 'var_bitreverse_v16i16'
-; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %bitreverse = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> %a)
+; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bitreverse = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> %a)
 ; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %bitreverse
 ;
 ; GFNIAVX2-LABEL: 'var_bitreverse_v16i16'
@@ -625,7 +625,7 @@ define <32 x i16> @var_bitreverse_v32i16(<32 x i16> %a) {
 ; GFNISSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %bitreverse
 ;
 ; GFNIAVX-LABEL: 'var_bitreverse_v32i16'
-; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %bitreverse = call <32 x i16> @llvm.bitreverse.v32i16(<32 x i16> %a)
+; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call <32 x i16> @llvm.bitreverse.v32i16(<32 x i16> %a)
 ; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %bitreverse
 ;
 ; GFNIAVX2-LABEL: 'var_bitreverse_v32i16'
@@ -633,7 +633,7 @@ define <32 x i16> @var_bitreverse_v32i16(<32 x i16> %a) {
 ; GFNIAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %bitreverse
 ;
 ; GFNIAVX512F-LABEL: 'var_bitreverse_v32i16'
-; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %bitreverse = call <32 x i16> @llvm.bitreverse.v32i16(<32 x i16> %a)
+; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bitreverse = call <32 x i16> @llvm.bitreverse.v32i16(<32 x i16> %a)
 ; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %bitreverse
 ;
 ; GFNIAVX512BW-LABEL: 'var_bitreverse_v32i16'
@@ -723,7 +723,7 @@ define <32 x i8> @var_bitreverse_v32i8(<32 x i8> %a) {
 ; GFNISSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i8> %bitreverse
 ;
 ; GFNIAVX-LABEL: 'var_bitreverse_v32i8'
-; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call <32 x i8> @llvm.bitreverse.v32i8(<32 x i8> %a)
+; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bitreverse = call <32 x i8> @llvm.bitreverse.v32i8(<32 x i8> %a)
 ; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i8> %bitreverse
 ;
 ; GFNIAVX2-LABEL: 'var_bitreverse_v32i8'
@@ -776,7 +776,7 @@ define <64 x i8> @var_bitreverse_v64i8(<64 x i8> %a) {
 ; GFNISSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %bitreverse
 ;
 ; GFNIAVX-LABEL: 'var_bitreverse_v64i8'
-; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %bitreverse = call <64 x i8> @llvm.bitreverse.v64i8(<64 x i8> %a)
+; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bitreverse = call <64 x i8> @llvm.bitreverse.v64i8(<64 x i8> %a)
 ; GFNIAVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %bitreverse
 ;
 ; GFNIAVX2-LABEL: 'var_bitreverse_v64i8'
@@ -784,7 +784,7 @@ define <64 x i8> @var_bitreverse_v64i8(<64 x i8> %a) {
 ; GFNIAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %bitreverse
 ;
 ; GFNIAVX512F-LABEL: 'var_bitreverse_v64i8'
-; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call <64 x i8> @llvm.bitreverse.v64i8(<64 x i8> %a)
+; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bitreverse = call <64 x i8> @llvm.bitreverse.v64i8(<64 x i8> %a)
 ; GFNIAVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %bitreverse
 ;
 ; GFNIAVX512BW-LABEL: 'var_bitreverse_v64i8'

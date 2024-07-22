@@ -19,11 +19,16 @@ class SessionSaveTestCase(TestBase):
             raw += res.GetError()
         return raw
 
-    @skipIfWindows
     @no_debug_info_test
     def test_session_save(self):
         raw = ""
         interpreter = self.dbg.GetCommandInterpreter()
+
+        # Make sure "save-transcript" is on, so that all the following setings
+        # and commands are saved into the trasncript. Note that this cannot be
+        # a part of the `settings`, because this command itself won't be saved
+        # into the transcript.
+        self.runCmd("settings set interpreter.save-transcript true")
 
         settings = [
             "settings set interpreter.echo-commands true",
@@ -47,7 +52,7 @@ class SessionSaveTestCase(TestBase):
             raw += self.raw_transcript_builder(cmd, res)
 
         self.assertTrue(interpreter.HasCommands())
-        self.assertTrue(len(raw) != 0)
+        self.assertNotEqual(len(raw), 0)
 
         # Check for error
         cmd = "session save /root/file"
@@ -55,8 +60,7 @@ class SessionSaveTestCase(TestBase):
         self.assertFalse(res.Succeeded())
         raw += self.raw_transcript_builder(cmd, res)
 
-        tf = tempfile.NamedTemporaryFile()
-        output_file = tf.name
+        output_file = self.getBuildArtifact('my-session')
 
         res = lldb.SBCommandReturnObject()
         interpreter.HandleCommand("session save " + output_file, res)
@@ -89,11 +93,16 @@ class SessionSaveTestCase(TestBase):
             for line in lines:
                 self.assertIn(line, content)
 
-    @skipIfWindows
     @no_debug_info_test
     def test_session_save_on_quit(self):
         raw = ""
         interpreter = self.dbg.GetCommandInterpreter()
+
+        # Make sure "save-transcript" is on, so that all the following setings
+        # and commands are saved into the trasncript. Note that this cannot be
+        # a part of the `settings`, because this command itself won't be saved
+        # into the transcript.
+        self.runCmd("settings set interpreter.save-transcript true")
 
         td = tempfile.TemporaryDirectory()
 

@@ -3,7 +3,7 @@
 // The tests here are similar to those in riscv32-toolchain.c, however
 // these tests need to create symlinks to test directory trees in order to
 // set up the environment and therefore shell support is required.
-// REQUIRES: shell, riscv-registered-target
+// REQUIRES: shell
 // UNSUPPORTED: system-windows
 
 // If there is no GCC install detected then the driver searches for executables
@@ -29,8 +29,8 @@
 // C-RV32-BAREMETAL-ILP32-NOGCC: "-internal-isystem" "{{.*}}/riscv32-nogcc/bin/../riscv32-unknown-elf/include"
 // C-RV32-BAREMETAL-ILP32-NOGCC: "{{.*}}/riscv32-nogcc/bin/riscv32-unknown-elf-ld"
 // C-RV32-BAREMETAL-ILP32-NOGCC: "{{.*}}/riscv32-nogcc/bin/../riscv32-unknown-elf/lib/crt0.o"
-// C-RV32-BAREMETAL-ILP32-NOGCC: "{{.*}}/riscv32-nogcc/{{.*}}/lib/clang_rt.crtbegin-riscv32.o"
+// C-RV32-BAREMETAL-ILP32-NOGCC: "{{.*}}/riscv32-nogcc/{{.*}}/riscv32-unknown-unknown-elf/clang_rt.crtbegin.o"
 // C-RV32-BAREMETAL-ILP32-NOGCC: "{{.*}}/riscv32-nogcc/bin/../riscv32-unknown-elf/lib"
 // C-RV32-BAREMETAL-ILP32-NOGCC: "--start-group" "-lc" "-lgloss" "--end-group"
-// C-RV32-BAREMETAL-ILP32-NOGCC: "{{.*}}/riscv32-nogcc/{{.*}}/lib/libclang_rt.builtins-riscv32.a"
-// C-RV32-BAREMETAL-ILP32-NOGCC: "{{.*}}/riscv32-nogcc/{{.*}}/lib/clang_rt.crtend-riscv32.o"
+// C-RV32-BAREMETAL-ILP32-NOGCC: "{{.*}}/riscv32-nogcc/{{.*}}/riscv32-unknown-unknown-elf/libclang_rt.builtins.a"
+// C-RV32-BAREMETAL-ILP32-NOGCC: "{{.*}}/riscv32-nogcc/{{.*}}/riscv32-unknown-unknown-elf/clang_rt.crtend.o"

@@ -1,4 +1,4 @@
-;RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s
+;RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s
 
 ; This test is for a bug in
 ; DAGCombiner::reduceBuildVecConvertToConvertBuildVec() where

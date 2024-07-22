@@ -5,6 +5,16 @@
 ; RUN:    -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
 
+; Repeat checks with experimental debginfo iterators.
+; RUN: llc %s -stop-before finalize-isel -o - \
+; RUN:    -try-experimental-debuginfo-iterators \
+; RUN:    -experimental-debug-variable-locations=false \
+; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE
+; RUN: llc %s -stop-before finalize-isel -o - \
+; RUN:    -try-experimental-debuginfo-iterators \
+; RUN:    -experimental-debug-variable-locations=true \
+; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
+
 ;--------------------------------------------------------------------
 ; This test case is basically generated from the following C code.
 ; Compiled with "--target=x86_64-apple-darwin -S -g -O3" to get debug
@@ -71,7 +81,7 @@ target triple = "x86_64-apple-macosx10.4.0"
 define i32 @test1() local_unnamed_addr #0 !dbg !17 {
 ; CHECK-LABEL: bb.0.entry1
 ; CHECK-NEXT:    DBG_VALUE 0, $noreg, ![[BAR1]], !DIExpression()
-; CHECK-NEXT:    [[REG1:%[0-9]+]]:gr64 = LEA64r 
+; CHECK-NEXT:    [[REG1:%[0-9]+]]:gr64 = LEA64r
 ; INSTRREF-SAME:    debug-instr-number 1
 ; INSTRREF-NEXT:  DBG_INSTR_REF ![[FOO1]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0)
 ; DBGVALUE-NEXT:  DBG_VALUE [[REG1]], $noreg, ![[FOO1]], !DIExpression()

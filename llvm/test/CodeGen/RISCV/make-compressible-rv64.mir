@@ -3,98 +3,98 @@
 # RUN:   -run-pass=riscv-make-compressible | FileCheck %s
 --- |
 
-  define void @store_common_value(i64* %a, i64* %b, i64* %c) #0 {
+  define void @store_common_value(ptr %a, ptr %b, ptr %c) #0 {
   entry:
-    store i64 0, i64* %a, align 8
-    store i64 0, i64* %b, align 8
-    store i64 0, i64* %c, align 8
+    store i64 0, ptr %a, align 8
+    store i64 0, ptr %b, align 8
+    store i64 0, ptr %c, align 8
     ret void
   }
 
-  define void @store_common_ptr(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64* %p) #0 {
+  define void @store_common_ptr(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, ptr %p) #0 {
   entry:
-    store volatile i64 1, i64* %p, align 8
-    store volatile i64 3, i64* %p, align 8
-    store volatile i64 5, i64* %p, align 8
+    store volatile i64 1, ptr %p, align 8
+    store volatile i64 3, ptr %p, align 8
+    store volatile i64 5, ptr %p, align 8
     ret void
   }
 
-  define void @store_common_ptr_self(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64* %p) #0 {
+  define void @store_common_ptr_self(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, ptr %p) #0 {
   entry:
-    %q = bitcast i64* %p to i64**
-    store volatile i64 1, i64* %p, align 8
-    store volatile i64 3, i64* %p, align 8
-    store volatile i64* %p, i64** %q, align 8
+    %q = bitcast ptr %p to ptr
+    store volatile i64 1, ptr %p, align 8
+    store volatile i64 3, ptr %p, align 8
+    store volatile ptr %p, ptr %q, align 8
     ret void
   }
 
-  define void @load_common_ptr(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64* %p) #0 {
+  define void @load_common_ptr(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, ptr %p) #0 {
   entry:
-    %g = load volatile i64, i64* %p, align 8
-    %h = load volatile i64, i64* %p, align 8
-    %i = load volatile i64, i64* %p, align 8
+    %g = load volatile i64, ptr %p, align 8
+    %h = load volatile i64, ptr %p, align 8
+    %i = load volatile i64, ptr %p, align 8
     ret void
   }
 
-  define void @store_large_offset(i64* %p) #0 {
+  define void @store_large_offset(ptr %p) #0 {
   entry:
-    %0 = getelementptr inbounds i64, i64* %p, i64 100
-    store volatile i64 1, i64* %0, align 8
-    %1 = getelementptr inbounds i64, i64* %p, i64 101
-    store volatile i64 3, i64* %1, align 8
-    %2 = getelementptr inbounds i64, i64* %p, i64 102
-    store volatile i64 5, i64* %2, align 8
-    %3 = getelementptr inbounds i64, i64* %p, i64 103
-    store volatile i64 7, i64* %3, align 8
+    %0 = getelementptr inbounds i64, ptr %p, i64 100
+    store volatile i64 1, ptr %0, align 8
+    %1 = getelementptr inbounds i64, ptr %p, i64 101
+    store volatile i64 3, ptr %1, align 8
+    %2 = getelementptr inbounds i64, ptr %p, i64 102
+    store volatile i64 5, ptr %2, align 8
+    %3 = getelementptr inbounds i64, ptr %p, i64 103
+    store volatile i64 7, ptr %3, align 8
     ret void
   }
 
-  define void @load_large_offset(i64* %p) #0 {
+  define void @load_large_offset(ptr %p) #0 {
   entry:
-    %0 = getelementptr inbounds i64, i64* %p, i64 100
-    %a = load volatile i64, i64* %0, align 8
-    %1 = getelementptr inbounds i64, i64* %p, i64 101
-    %b = load volatile i64, i64* %1, align 8
-    %2 = getelementptr inbounds i64, i64* %p, i64 102
-    %c = load volatile i64, i64* %2, align 8
-    %3 = getelementptr inbounds i64, i64* %p, i64 103
-    %d = load volatile i64, i64* %3, align 8
+    %0 = getelementptr inbounds i64, ptr %p, i64 100
+    %a = load volatile i64, ptr %0, align 8
+    %1 = getelementptr inbounds i64, ptr %p, i64 101
+    %b = load volatile i64, ptr %1, align 8
+    %2 = getelementptr inbounds i64, ptr %p, i64 102
+    %c = load volatile i64, ptr %2, align 8
+    %3 = getelementptr inbounds i64, ptr %p, i64 103
+    %d = load volatile i64, ptr %3, align 8
     ret void
   }
 
-  define void @store_common_value_no_opt(i64* %a) #0 {
+  define void @store_common_value_no_opt(ptr %a) #0 {
   entry:
-    store i64 0, i64* %a, align 8
+    store i64 0, ptr %a, align 8
     ret void
   }
 
-  define void @store_common_ptr_no_opt(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64* %p) #0 {
+  define void @store_common_ptr_no_opt(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, ptr %p) #0 {
   entry:
-    store volatile i64 1, i64* %p, align 8
+    store volatile i64 1, ptr %p, align 8
     ret void
   }
 
-  define void @load_common_ptr_no_opt(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64* %p) #0 {
+  define void @load_common_ptr_no_opt(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, ptr %p) #0 {
   entry:
-    %g = load volatile i64, i64* %p, align 8
+    %g = load volatile i64, ptr %p, align 8
     ret void
   }
 
-  define void @store_large_offset_no_opt(i64* %p) #0 {
+  define void @store_large_offset_no_opt(ptr %p) #0 {
   entry:
-    %0 = getelementptr inbounds i64, i64* %p, i64 100
-    store volatile i64 1, i64* %0, align 8
-    %1 = getelementptr inbounds i64, i64* %p, i64 101
-    store volatile i64 3, i64* %1, align 8
+    %0 = getelementptr inbounds i64, ptr %p, i64 100
+    store volatile i64 1, ptr %0, align 8
+    %1 = getelementptr inbounds i64, ptr %p, i64 101
+    store volatile i64 3, ptr %1, align 8
     ret void
   }
 
-  define void @load_large_offset_no_opt(i64* %p) #0 {
+  define void @load_large_offset_no_opt(ptr %p) #0 {
   entry:
-    %0 = getelementptr inbounds i64, i64* %p, i64 100
-    %a = load volatile i64, i64* %0, align 8
-    %1 = getelementptr inbounds i64, i64* %p, i64 101
-    %b = load volatile i64, i64* %1, align 8
+    %0 = getelementptr inbounds i64, ptr %p, i64 100
+    %a = load volatile i64, ptr %0, align 8
+    %1 = getelementptr inbounds i64, ptr %p, i64 101
+    %b = load volatile i64, ptr %1, align 8
     ret void
   }
 

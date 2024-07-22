@@ -64,6 +64,11 @@ To compile code with coverage enabled, pass ``-fprofile-instr-generate
 Note that linking together code with and without coverage instrumentation is
 supported. Uninstrumented code simply won't be accounted for in reports.
 
+To compile code with Modified Condition/Decision Coverage (MC/DC) enabled,
+pass ``-fcoverage-mcdc`` in addition to the clang options specified above.
+MC/DC is an advanced form of code coverage most applicable in the embedded
+space.
+
 Running the instrumented program
 ================================
 
@@ -211,6 +216,10 @@ region counts:
     |      4|    1|}
     ------------------
 
+If the application was instrumented for Modified Condition/Decision Coverage
+(MC/DC) using the clang option ``-fcoverage-mcdc``, an MC/DC subview can be
+enabled using ``--show-mcdc`` that will show detailed MC/DC information for
+each complex condition boolean expression containing at most six conditions.
 
 To generate a file-level summary of coverage statistics instead of a
 line-oriented report, try:
@@ -259,7 +268,7 @@ the exported data at a high level in the llvm-cov source code.
 Interpreting reports
 ====================
 
-There are five statistics tracked in a coverage summary:
+There are six statistics tracked in a coverage summary:
 
 * Function coverage is the percentage of functions which have been executed at
   least once. A function is considered to be executed if any of its
@@ -288,10 +297,28 @@ There are five statistics tracked in a coverage summary:
   that is comprised of two individual conditions, each of which evaluates to
   either true or false, producing four total branch outcomes.
 
-Of these five statistics, function coverage is usually the least granular while
-branch coverage is the most granular. 100% branch coverage for a function
-implies 100% region coverage for a function. The project-wide totals for each
-statistic are listed in the summary.
+* Modified Condition/Decision Coverage (MC/DC) is the percentage of individual
+  branch conditions that have been shown to independently affect the decision
+  outcome of the boolean expression they comprise. This is accomplished using
+  the analysis of executed control flow through the expression (i.e. test
+  vectors) to show that as a condition's outcome is varied between "true" and
+  false", the decision's outcome also varies between "true" and false", while
+  the outcome of all other conditions is held fixed (or they are masked out as
+  unevaluatable, as happens in languages whose logical operators have
+  short-circuit semantics).  MC/DC builds on top of branch coverage and
+  requires that all code blocks and all execution paths have been tested.  This
+  statistic is hidden by default in reports, but it can be enabled via the
+  ``-show-mcdc-summary`` option as long as code was also compiled using the
+  clang option ``-fcoverage-mcdc``.
+
+  * Boolean expressions that are only comprised of one condition (and therefore
+    have no logical operators) are not included in MC/DC analysis and are
+    trivially deducible using branch coverage.
+
+Of these six statistics, function coverage is usually the least granular while
+branch coverage (with MC/DC) is the most granular. 100% branch coverage for a
+function implies 100% region coverage for a function. The project-wide totals
+for each statistic are listed in the summary.
 
 Format compatibility guarantees
 ===============================
@@ -453,6 +480,42 @@ Branch coverage is tied directly to branch-generating conditions in the source
 code.  Users should not see hidden branches that aren't actually tied to the
 source code.
 
+MC/DC Instrumentation
+---------------------
+
+When instrumenting for Modified Condition/Decision Coverage (MC/DC) using the
+clang option ``-fcoverage-mcdc``, there are two hard limits.
+
+The maximum number of terms is limited to 32767, which is practical for
+handwritten expressions. To be more restrictive in order to enforce coding rules,
+use ``-Xclang -fmcdc-max-conditions=n``. Expressions with exceeded condition
+counts ``n`` will generate warnings and will be excluded in the MC/DC coverage.
+
+The number of test vectors (the maximum number of possible combinations of
+expressions) is limited to 2,147,483,646. In this case, approximately
+256MiB (==2GiB/8) is used to record test vectors.
+
+To reduce memory usage, users can limit the maximum number of test vectors per
+expression with ``-Xclang -fmcdc-max-test-vectors=m``.
+If the number of test vectors resulting from the analysis of an expression
+exceeds ``m``, a warning will be issued and the expression will be excluded
+from the MC/DC coverage.
+
+The number of test vectors ``m``, for ``n`` terms in an expression, can be
+``m <= 2^n`` in the theoretical worst case, but is usually much smaller.
+In simple cases, such as expressions consisting of a sequence of single
+operators, ``m == n+1``. For example, ``(a && b && c && d && e && f && g)``
+requires 8 test vectors.
+
+Expressions such as ``((a0 && b0) || (a1 && b1) || ...)`` can cause the
+number of test vectors to increase exponentially.
+
+Also, if a boolean expression is embedded in the nest of another boolean
+expression but separated by a non-logical operator, this is also not supported.
+For example, in ``x = (a && b && c && func(d && f))``, the ``d && f`` case
+starts a new boolean expression that is separated from the other conditions by
+the operator ``func()``.  When this is encountered, a warning will be generated
+and the boolean expression will not be instrumented.
 
 Switch statements
 -----------------

@@ -55,6 +55,17 @@ static cl::opt<unsigned> InlineCallPenaltyChangeSM(
     "inline-call-penalty-sm-change", cl::init(10), cl::Hidden,
     cl::desc("Penalty of inlining a call that requires a change to PSTATE.SM"));
 
+static cl::opt<bool> EnableOrLikeSelectOpt("enable-aarch64-or-like-select",
+                                           cl::init(true), cl::Hidden);
+
+static cl::opt<bool> EnableLSRCostOpt("enable-aarch64-lsr-cost-opt",
+                                      cl::init(true), cl::Hidden);
+
+// A complete guess as to a reasonable cost.
+static cl::opt<unsigned>
+    BaseHistCntCost("aarch64-base-histcnt-cost", cl::init(8), cl::Hidden,
+                    cl::desc("The cost of a histcnt instruction"));
+
 namespace {
 class TailFoldingOption {
   // These bitfields will only ever be set to something non-zero in operator=,
@@ -230,14 +241,20 @@ static bool hasPossibleIncompatibleOps(const Function *F) {
 
 bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
-  SMEAttrs CallerAttrs(*Caller);
-  SMEAttrs CalleeAttrs(*Callee);
-  if (CalleeAttrs.hasNewZABody())
+  SMEAttrs CallerAttrs(*Caller), CalleeAttrs(*Callee);
+
+  // When inlining, we should consider the body of the function, not the
+  // interface.
+  if (CalleeAttrs.hasStreamingBody()) {
+    CalleeAttrs.set(SMEAttrs::SM_Compatible, false);
+    CalleeAttrs.set(SMEAttrs::SM_Enabled, true);
+  }
+
+  if (CalleeAttrs.isNewZA())
     return false;
 
   if (CallerAttrs.requiresLazySave(CalleeAttrs) ||
-      CallerAttrs.requiresSMChange(CalleeAttrs,
-                                   /*BodyOverridesInterface=*/true)) {
+      CallerAttrs.requiresSMChange(CalleeAttrs)) {
     if (hasPossibleIncompatibleOps(Callee))
       return false;
   }
@@ -470,7 +487,7 @@ AArch64TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
       return TTI::TCC_Free;
     break;
   case Intrinsic::experimental_patchpoint_void:
-  case Intrinsic::experimental_patchpoint_i64:
+  case Intrinsic::experimental_patchpoint:
     if ((Idx < 4) || (Imm.getBitWidth() <= 64 && isInt<64>(Imm.getSExtValue())))
       return TTI::TCC_Free;
     break;
@@ -491,11 +508,44 @@ AArch64TTIImpl::getPopcntSupport(unsigned TyWidth) {
   return TTI::PSK_Software;
 }
 
+static bool isUnpackedVectorVT(EVT VecVT) {
+  return VecVT.isScalableVector() &&
+         VecVT.getSizeInBits().getKnownMinValue() < AArch64::SVEBitsPerBlock;
+}
+
+static InstructionCost getHistogramCost(const IntrinsicCostAttributes &ICA) {
+  Type *BucketPtrsTy = ICA.getArgTypes()[0]; // Type of vector of pointers
+  Type *EltTy = ICA.getArgTypes()[1];        // Type of bucket elements
+
+  // Only allow (32b and 64b) integers or pointers for now...
+  if ((!EltTy->isIntegerTy() && !EltTy->isPointerTy()) ||
+      (EltTy->getScalarSizeInBits() != 32 &&
+       EltTy->getScalarSizeInBits() != 64))
+    return InstructionCost::getInvalid();
+
+  // FIXME: Hacky check for legal vector types. We can promote smaller types
+  //        but we cannot legalize vectors via splitting for histcnt.
+  // FIXME: We should be able to generate histcnt for fixed-length vectors
+  //        using ptrue with a specific VL.
+  if (VectorType *VTy = dyn_cast<VectorType>(BucketPtrsTy))
+    if ((VTy->getElementCount().getKnownMinValue() != 2 &&
+         VTy->getElementCount().getKnownMinValue() != 4) ||
+        VTy->getPrimitiveSizeInBits().getKnownMinValue() > 128 ||
+        !VTy->isScalableTy())
+      return InstructionCost::getInvalid();
+
+  return InstructionCost(BaseHistCntCost);
+}
+
 InstructionCost
 AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                       TTI::TargetCostKind CostKind) {
   auto *RetTy = ICA.getReturnType();
   switch (ICA.getID()) {
+  case Intrinsic::experimental_vector_histogram_add:
+    if (!ST->hasSVE2())
+      return InstructionCost::getInvalid();
+    return getHistogramCost(ICA);
   case Intrinsic::umin:
   case Intrinsic::umax:
   case Intrinsic::smin:
@@ -558,6 +608,39 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       Cost += AddCost * (LT.first - 1);
     }
     return Cost;
+  }
+  case Intrinsic::vector_extract:
+  case Intrinsic::vector_insert: {
+    // If both the vector and subvector types are legal types and the index
+    // is 0, then this should be a no-op or simple operation; return a
+    // relatively low cost.
+
+    // If arguments aren't actually supplied, then we cannot determine the
+    // value of the index. We also want to skip predicate types.
+    if (ICA.getArgs().size() != ICA.getArgTypes().size() ||
+        ICA.getReturnType()->getScalarType()->isIntegerTy(1))
+      break;
+
+    LLVMContext &C = RetTy->getContext();
+    EVT VecVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
+    bool IsExtract = ICA.getID() == Intrinsic::vector_extract;
+    EVT SubVecVT = IsExtract ? getTLI()->getValueType(DL, RetTy)
+                             : getTLI()->getValueType(DL, ICA.getArgTypes()[1]);
+    // Skip this if either the vector or subvector types are unpacked
+    // SVE types; they may get lowered to stack stores and loads.
+    if (isUnpackedVectorVT(VecVT) || isUnpackedVectorVT(SubVecVT))
+      break;
+
+    TargetLoweringBase::LegalizeKind SubVecLK =
+        getTLI()->getTypeConversion(C, SubVecVT);
+    TargetLoweringBase::LegalizeKind VecLK =
+        getTLI()->getTypeConversion(C, VecVT);
+    const Value *Idx = IsExtract ? ICA.getArgs()[1] : ICA.getArgs()[2];
+    const ConstantInt *CIdx = cast<ConstantInt>(Idx);
+    if (SubVecLK.first == TargetLoweringBase::TypeLegal &&
+        VecLK.first == TargetLoweringBase::TypeLegal && CIdx->isZero())
+      return TTI::TCC_Free;
+    break;
   }
   case Intrinsic::bitreverse: {
     static const CostTblEntry BitreverseTbl[] = {
@@ -743,6 +826,27 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       break;
     return TyL.first + ExtraCost;
   }
+  case Intrinsic::get_active_lane_mask: {
+    auto *RetTy = dyn_cast<FixedVectorType>(ICA.getReturnType());
+    if (RetTy) {
+      EVT RetVT = getTLI()->getValueType(DL, RetTy);
+      EVT OpVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
+      if (!getTLI()->shouldExpandGetActiveLaneMask(RetVT, OpVT) &&
+          !getTLI()->isTypeLegal(RetVT)) {
+        // We don't have enough context at this point to determine if the mask
+        // is going to be kept live after the block, which will force the vXi1
+        // type to be expanded to legal vectors of integers, e.g. v4i1->v4i32.
+        // For now, we just assume the vectorizer created this intrinsic and
+        // the result will be the input for a PHI. In this case the cost will
+        // be extremely high for fixed-width vectors.
+        // NOTE: getScalarizationOverhead returns a cost that's far too
+        // pessimistic for the actual generated codegen. In reality there are
+        // two instructions generated per lane.
+        return RetTy->getNumElements() * 2;
+      }
+    }
+    break;
+  }
   default:
     break;
   }
@@ -914,6 +1018,43 @@ static bool isAllActivePredicate(Value *Pred) {
                          m_ConstantInt<AArch64SVEPredPattern::all>()));
 }
 
+// Erase unary operation where predicate has all inactive lanes
+static std::optional<Instruction *>
+instCombineSVENoActiveUnaryErase(InstCombiner &IC, IntrinsicInst &II,
+                                 int PredPos) {
+  if (match(II.getOperand(PredPos), m_ZeroInt())) {
+    return IC.eraseInstFromFunction(II);
+  }
+  return std::nullopt;
+}
+
+// Simplify unary operation where predicate has all inactive lanes by replacing
+// instruction with zeroed object
+static std::optional<Instruction *>
+instCombineSVENoActiveUnaryZero(InstCombiner &IC, IntrinsicInst &II) {
+  if (match(II.getOperand(0), m_ZeroInt())) {
+    Constant *Node;
+    Type *RetTy = II.getType();
+    if (RetTy->isStructTy()) {
+      auto StructT = cast<StructType>(RetTy);
+      auto VecT = StructT->getElementType(0);
+      SmallVector<llvm::Constant *, 4> ZerVec;
+      for (unsigned i = 0; i < StructT->getNumElements(); i++) {
+        ZerVec.push_back(VecT->isFPOrFPVectorTy() ? ConstantFP::get(VecT, 0.0)
+                                                  : ConstantInt::get(VecT, 0));
+      }
+      Node = ConstantStruct::get(StructT, ZerVec);
+    } else if (RetTy->isFPOrFPVectorTy())
+      Node = ConstantFP::get(RetTy, 0.0);
+    else
+      Node = ConstantInt::get(II.getType(), 0);
+
+    IC.replaceInstUsesWith(II, Node);
+    return IC.eraseInstFromFunction(II);
+  }
+  return std::nullopt;
+}
+
 static std::optional<Instruction *> instCombineSVESel(InstCombiner &IC,
                                                       IntrinsicInst &II) {
   // svsel(ptrue, x, y) => x
@@ -1082,7 +1223,7 @@ static std::optional<Instruction *> instCombineSVELast(InstCombiner &IC,
       auto *NewRHS =
           IC.Builder.CreateIntrinsic(IntrinsicID, {Vec->getType()}, {Pg, RHS});
       auto *NewBinOp = BinaryOperator::CreateWithCopiedFlags(
-          OpC, NewLHS, NewRHS, OldBinOp, OldBinOp->getName(), &II);
+          OpC, NewLHS, NewRHS, OldBinOp, OldBinOp->getName(), II.getIterator());
       return IC.replaceInstUsesWith(II, NewBinOp);
     }
   }
@@ -1327,6 +1468,10 @@ instCombineSVELD1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
   Value *PtrOp = II.getOperand(1);
   Type *VecTy = II.getType();
 
+  // Replace by zero constant when all lanes are inactive
+  if (auto II_NA = instCombineSVENoActiveUnaryZero(IC, II))
+    return II_NA;
+
   if (isAllActivePredicate(Pred)) {
     LoadInst *Load = IC.Builder.CreateLoad(VecTy, PtrOp);
     Load->copyMetadata(II);
@@ -1406,9 +1551,23 @@ static std::optional<Instruction *> instCombineSVEAllActive(IntrinsicInst &II,
   return &II;
 }
 
+// Simplify operations where predicate has all inactive lanes or try to replace
+// with _u form when all lanes are active
+static std::optional<Instruction *>
+instCombineSVEAllOrNoActive(InstCombiner &IC, IntrinsicInst &II,
+                            Intrinsic::ID IID) {
+  if (match(II.getOperand(0), m_ZeroInt())) {
+    //  llvm_ir, pred(0), op1, op2 - Spec says to return op1 when all lanes are
+    //  inactive for sv[func]_m
+    return IC.replaceInstUsesWith(II, II.getOperand(1));
+  }
+  return instCombineSVEAllActive(II, IID);
+}
+
 static std::optional<Instruction *> instCombineSVEVectorAdd(InstCombiner &IC,
                                                             IntrinsicInst &II) {
-  if (auto II_U = instCombineSVEAllActive(II, Intrinsic::aarch64_sve_add_u))
+  if (auto II_U =
+          instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_add_u))
     return II_U;
   if (auto MLA = instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul,
                                                    Intrinsic::aarch64_sve_mla>(
@@ -1423,7 +1582,8 @@ static std::optional<Instruction *> instCombineSVEVectorAdd(InstCombiner &IC,
 
 static std::optional<Instruction *>
 instCombineSVEVectorFAdd(InstCombiner &IC, IntrinsicInst &II) {
-  if (auto II_U = instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fadd_u))
+  if (auto II_U =
+          instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fadd_u))
     return II_U;
   if (auto FMLA =
           instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul,
@@ -1465,7 +1625,8 @@ instCombineSVEVectorFAddU(InstCombiner &IC, IntrinsicInst &II) {
 
 static std::optional<Instruction *>
 instCombineSVEVectorFSub(InstCombiner &IC, IntrinsicInst &II) {
-  if (auto II_U = instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fsub_u))
+  if (auto II_U =
+          instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fsub_u))
     return II_U;
   if (auto FMLS =
           instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul,
@@ -1507,7 +1668,8 @@ instCombineSVEVectorFSubU(InstCombiner &IC, IntrinsicInst &II) {
 
 static std::optional<Instruction *> instCombineSVEVectorSub(InstCombiner &IC,
                                                             IntrinsicInst &II) {
-  if (auto II_U = instCombineSVEAllActive(II, Intrinsic::aarch64_sve_sub_u))
+  if (auto II_U =
+          instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_sub_u))
     return II_U;
   if (auto MLS = instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul,
                                                    Intrinsic::aarch64_sve_mls>(
@@ -1522,11 +1684,6 @@ static std::optional<Instruction *> instCombineSVEVectorMul(InstCombiner &IC,
   auto *OpPredicate = II.getOperand(0);
   auto *OpMultiplicand = II.getOperand(1);
   auto *OpMultiplier = II.getOperand(2);
-
-  // Canonicalise a non _u intrinsic only.
-  if (II.getIntrinsicID() != IID)
-    if (auto II_U = instCombineSVEAllActive(II, IID))
-      return II_U;
 
   // Return true if a given instruction is a unit splat value, false otherwise.
   auto IsUnitSplat = [](auto *I) {
@@ -1609,6 +1766,36 @@ static std::optional<Instruction *> instCombineSVETBL(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, VectorSplat);
 }
 
+static std::optional<Instruction *> instCombineSVEUzp1(InstCombiner &IC,
+                                                       IntrinsicInst &II) {
+  Value *A, *B;
+  Type *RetTy = II.getType();
+  constexpr Intrinsic::ID FromSVB = Intrinsic::aarch64_sve_convert_from_svbool;
+  constexpr Intrinsic::ID ToSVB = Intrinsic::aarch64_sve_convert_to_svbool;
+
+  // uzp1(to_svbool(A), to_svbool(B)) --> <A, B>
+  // uzp1(from_svbool(to_svbool(A)), from_svbool(to_svbool(B))) --> <A, B>
+  if ((match(II.getArgOperand(0),
+             m_Intrinsic<FromSVB>(m_Intrinsic<ToSVB>(m_Value(A)))) &&
+       match(II.getArgOperand(1),
+             m_Intrinsic<FromSVB>(m_Intrinsic<ToSVB>(m_Value(B))))) ||
+      (match(II.getArgOperand(0), m_Intrinsic<ToSVB>(m_Value(A))) &&
+       match(II.getArgOperand(1), m_Intrinsic<ToSVB>(m_Value(B))))) {
+    auto *TyA = cast<ScalableVectorType>(A->getType());
+    if (TyA == B->getType() &&
+        RetTy == ScalableVectorType::getDoubleElementsVectorType(TyA)) {
+      auto *SubVec = IC.Builder.CreateInsertVector(
+          RetTy, PoisonValue::get(RetTy), A, IC.Builder.getInt64(0));
+      auto *ConcatVec = IC.Builder.CreateInsertVector(
+          RetTy, SubVec, B, IC.Builder.getInt64(TyA->getMinNumElements()));
+      ConcatVec->takeName(&II);
+      return IC.replaceInstUsesWith(II, ConcatVec);
+    }
+  }
+
+  return std::nullopt;
+}
+
 static std::optional<Instruction *> instCombineSVEZip(InstCombiner &IC,
                                                       IntrinsicInst &II) {
   // zip1(uzp1(A, B), uzp2(A, B)) --> A
@@ -1632,6 +1819,10 @@ instCombineLD1GatherIndex(InstCombiner &IC, IntrinsicInst &II) {
   Type *Ty = II.getType();
   Value *PassThru = ConstantAggregateZero::get(Ty);
 
+  // Replace by zero constant when all lanes are inactive
+  if (auto II_NA = instCombineSVENoActiveUnaryZero(IC, II))
+    return II_NA;
+
   // Contiguous gather => masked load.
   // (sve.ld1.gather.index Mask BasePtr (sve.index IndexBase 1))
   // => (masked.load (gep BasePtr IndexBase) Align Mask zeroinitializer)
@@ -1639,7 +1830,7 @@ instCombineLD1GatherIndex(InstCombiner &IC, IntrinsicInst &II) {
   if (match(Index, m_Intrinsic<Intrinsic::aarch64_sve_index>(
                        m_Value(IndexBase), m_SpecificInt(1)))) {
     Align Alignment =
-        BasePtr->getPointerAlignment(II.getModule()->getDataLayout());
+        BasePtr->getPointerAlignment(II.getDataLayout());
 
     Type *VecPtrTy = PointerType::getUnqual(Ty);
     Value *Ptr = IC.Builder.CreateGEP(cast<VectorType>(Ty)->getElementType(),
@@ -1669,7 +1860,7 @@ instCombineST1ScatterIndex(InstCombiner &IC, IntrinsicInst &II) {
   if (match(Index, m_Intrinsic<Intrinsic::aarch64_sve_index>(
                        m_Value(IndexBase), m_SpecificInt(1)))) {
     Align Alignment =
-        BasePtr->getPointerAlignment(II.getModule()->getDataLayout());
+        BasePtr->getPointerAlignment(II.getDataLayout());
 
     Value *Ptr = IC.Builder.CreateGEP(cast<VectorType>(Ty)->getElementType(),
                                       BasePtr, IndexBase);
@@ -1858,6 +2049,67 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   switch (IID) {
   default:
     break;
+
+  case Intrinsic::aarch64_sve_st1_scatter:
+  case Intrinsic::aarch64_sve_st1_scatter_scalar_offset:
+  case Intrinsic::aarch64_sve_st1_scatter_sxtw:
+  case Intrinsic::aarch64_sve_st1_scatter_sxtw_index:
+  case Intrinsic::aarch64_sve_st1_scatter_uxtw:
+  case Intrinsic::aarch64_sve_st1_scatter_uxtw_index:
+  case Intrinsic::aarch64_sve_st1dq:
+  case Intrinsic::aarch64_sve_st1q_scatter_index:
+  case Intrinsic::aarch64_sve_st1q_scatter_scalar_offset:
+  case Intrinsic::aarch64_sve_st1q_scatter_vector_offset:
+  case Intrinsic::aarch64_sve_st1wq:
+  case Intrinsic::aarch64_sve_stnt1:
+  case Intrinsic::aarch64_sve_stnt1_scatter:
+  case Intrinsic::aarch64_sve_stnt1_scatter_index:
+  case Intrinsic::aarch64_sve_stnt1_scatter_scalar_offset:
+  case Intrinsic::aarch64_sve_stnt1_scatter_uxtw:
+    return instCombineSVENoActiveUnaryErase(IC, II, 1);
+  case Intrinsic::aarch64_sve_st2:
+  case Intrinsic::aarch64_sve_st2q:
+    return instCombineSVENoActiveUnaryErase(IC, II, 2);
+  case Intrinsic::aarch64_sve_st3:
+  case Intrinsic::aarch64_sve_st3q:
+    return instCombineSVENoActiveUnaryErase(IC, II, 3);
+  case Intrinsic::aarch64_sve_st4:
+  case Intrinsic::aarch64_sve_st4q:
+    return instCombineSVENoActiveUnaryErase(IC, II, 4);
+  case Intrinsic::aarch64_sve_ld1_gather:
+  case Intrinsic::aarch64_sve_ld1_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_ld1_gather_sxtw:
+  case Intrinsic::aarch64_sve_ld1_gather_sxtw_index:
+  case Intrinsic::aarch64_sve_ld1_gather_uxtw:
+  case Intrinsic::aarch64_sve_ld1_gather_uxtw_index:
+  case Intrinsic::aarch64_sve_ld1q_gather_index:
+  case Intrinsic::aarch64_sve_ld1q_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_ld1q_gather_vector_offset:
+  case Intrinsic::aarch64_sve_ld1ro:
+  case Intrinsic::aarch64_sve_ld1rq:
+  case Intrinsic::aarch64_sve_ld1udq:
+  case Intrinsic::aarch64_sve_ld1uwq:
+  case Intrinsic::aarch64_sve_ld2_sret:
+  case Intrinsic::aarch64_sve_ld2q_sret:
+  case Intrinsic::aarch64_sve_ld3_sret:
+  case Intrinsic::aarch64_sve_ld3q_sret:
+  case Intrinsic::aarch64_sve_ld4_sret:
+  case Intrinsic::aarch64_sve_ld4q_sret:
+  case Intrinsic::aarch64_sve_ldff1:
+  case Intrinsic::aarch64_sve_ldff1_gather:
+  case Intrinsic::aarch64_sve_ldff1_gather_index:
+  case Intrinsic::aarch64_sve_ldff1_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_ldff1_gather_sxtw:
+  case Intrinsic::aarch64_sve_ldff1_gather_sxtw_index:
+  case Intrinsic::aarch64_sve_ldff1_gather_uxtw:
+  case Intrinsic::aarch64_sve_ldff1_gather_uxtw_index:
+  case Intrinsic::aarch64_sve_ldnf1:
+  case Intrinsic::aarch64_sve_ldnt1:
+  case Intrinsic::aarch64_sve_ldnt1_gather:
+  case Intrinsic::aarch64_sve_ldnt1_gather_index:
+  case Intrinsic::aarch64_sve_ldnt1_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_ldnt1_gather_uxtw:
+    return instCombineSVENoActiveUnaryZero(IC, II);
   case Intrinsic::aarch64_neon_fmaxnm:
   case Intrinsic::aarch64_neon_fminnm:
     return instCombineMaxMinNM(IC, II);
@@ -1891,34 +2143,38 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_ptest_last:
     return instCombineSVEPTest(IC, II);
   case Intrinsic::aarch64_sve_fabd:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fabd_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fabd_u);
   case Intrinsic::aarch64_sve_fadd:
     return instCombineSVEVectorFAdd(IC, II);
   case Intrinsic::aarch64_sve_fadd_u:
     return instCombineSVEVectorFAddU(IC, II);
   case Intrinsic::aarch64_sve_fdiv:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fdiv_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fdiv_u);
   case Intrinsic::aarch64_sve_fmax:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fmax_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmax_u);
   case Intrinsic::aarch64_sve_fmaxnm:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fmaxnm_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmaxnm_u);
   case Intrinsic::aarch64_sve_fmin:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fmin_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmin_u);
   case Intrinsic::aarch64_sve_fminnm:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fminnm_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fminnm_u);
   case Intrinsic::aarch64_sve_fmla:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fmla_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmla_u);
   case Intrinsic::aarch64_sve_fmls:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fmls_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmls_u);
   case Intrinsic::aarch64_sve_fmul:
+    if (auto II_U =
+            instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmul_u))
+      return II_U;
+    return instCombineSVEVectorMul(IC, II, Intrinsic::aarch64_sve_fmul_u);
   case Intrinsic::aarch64_sve_fmul_u:
     return instCombineSVEVectorMul(IC, II, Intrinsic::aarch64_sve_fmul_u);
   case Intrinsic::aarch64_sve_fmulx:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fmulx_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmulx_u);
   case Intrinsic::aarch64_sve_fnmla:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fnmla_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fnmla_u);
   case Intrinsic::aarch64_sve_fnmls:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fnmls_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fnmls_u);
   case Intrinsic::aarch64_sve_fsub:
     return instCombineSVEVectorFSub(IC, II);
   case Intrinsic::aarch64_sve_fsub_u:
@@ -1930,20 +2186,24 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                              Intrinsic::aarch64_sve_mla_u>(
         IC, II, true);
   case Intrinsic::aarch64_sve_mla:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_mla_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_mla_u);
   case Intrinsic::aarch64_sve_mls:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_mls_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_mls_u);
   case Intrinsic::aarch64_sve_mul:
+    if (auto II_U =
+            instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_mul_u))
+      return II_U;
+    return instCombineSVEVectorMul(IC, II, Intrinsic::aarch64_sve_mul_u);
   case Intrinsic::aarch64_sve_mul_u:
     return instCombineSVEVectorMul(IC, II, Intrinsic::aarch64_sve_mul_u);
   case Intrinsic::aarch64_sve_sabd:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_sabd_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_sabd_u);
   case Intrinsic::aarch64_sve_smax:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_smax_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_smax_u);
   case Intrinsic::aarch64_sve_smin:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_smin_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_smin_u);
   case Intrinsic::aarch64_sve_smulh:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_smulh_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_smulh_u);
   case Intrinsic::aarch64_sve_sub:
     return instCombineSVEVectorSub(IC, II);
   case Intrinsic::aarch64_sve_sub_u:
@@ -1951,31 +2211,31 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                              Intrinsic::aarch64_sve_mls_u>(
         IC, II, true);
   case Intrinsic::aarch64_sve_uabd:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_uabd_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_uabd_u);
   case Intrinsic::aarch64_sve_umax:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_umax_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_umax_u);
   case Intrinsic::aarch64_sve_umin:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_umin_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_umin_u);
   case Intrinsic::aarch64_sve_umulh:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_umulh_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_umulh_u);
   case Intrinsic::aarch64_sve_asr:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_asr_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_asr_u);
   case Intrinsic::aarch64_sve_lsl:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_lsl_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_lsl_u);
   case Intrinsic::aarch64_sve_lsr:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_lsr_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_lsr_u);
   case Intrinsic::aarch64_sve_and:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_and_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_and_u);
   case Intrinsic::aarch64_sve_bic:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_bic_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_bic_u);
   case Intrinsic::aarch64_sve_eor:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_eor_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_eor_u);
   case Intrinsic::aarch64_sve_orr:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_orr_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_orr_u);
   case Intrinsic::aarch64_sve_sqsub:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_sqsub_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_sqsub_u);
   case Intrinsic::aarch64_sve_uqsub:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_uqsub_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_uqsub_u);
   case Intrinsic::aarch64_sve_tbl:
     return instCombineSVETBL(IC, II);
   case Intrinsic::aarch64_sve_uunpkhi:
@@ -1983,6 +2243,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_sunpkhi:
   case Intrinsic::aarch64_sve_sunpklo:
     return instCombineSVEUnpack(IC, II);
+  case Intrinsic::aarch64_sve_uzp1:
+    return instCombineSVEUzp1(IC, II);
   case Intrinsic::aarch64_sve_zip1:
   case Intrinsic::aarch64_sve_zip2:
     return instCombineSVEZip(IC, II);
@@ -2039,19 +2301,20 @@ AArch64TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(64);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    if (!ST->isNeonAvailable() && !EnableFixedwidthAutovecInStreamingMode)
-      return TypeSize::getFixed(0);
-
-    if (ST->hasSVE())
+    if (ST->useSVEForFixedLengthVectors() &&
+        (ST->isSVEAvailable() || EnableFixedwidthAutovecInStreamingMode))
       return TypeSize::getFixed(
           std::max(ST->getMinSVEVectorSizeInBits(), 128u));
-
-    return TypeSize::getFixed(ST->hasNEON() ? 128 : 0);
+    else if (ST->isNeonAvailable())
+      return TypeSize::getFixed(128);
+    else
+      return TypeSize::getFixed(0);
   case TargetTransformInfo::RGK_ScalableVector:
-    if (!ST->isSVEAvailable() && !EnableScalableAutovecInStreamingMode)
+    if (ST->isSVEAvailable() || (ST->isSVEorStreamingSVEAvailable() &&
+                                 EnableScalableAutovecInStreamingMode))
+      return TypeSize::getScalable(128);
+    else
       return TypeSize::getScalable(0);
-
-    return TypeSize::getScalable(ST->hasSVE() ? 128 : 0);
   }
   llvm_unreachable("Unsupported register kind");
 }
@@ -2522,7 +2785,7 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     std::pair<InstructionCost, MVT> LT =
         getTypeLegalizationCost(WiderTy.getTypeForEVT(Dst->getContext()));
     unsigned NumElements = AArch64::SVEBitsPerBlock /
-                           LT.second.getVectorElementType().getSizeInBits();
+                           LT.second.getScalarSizeInBits();
     return AdjustCost(
         LT.first *
         getCastInstrCost(
@@ -2567,7 +2830,8 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       return AdjustCost(Entry->Cost);
 
   if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
-      CCH == TTI::CastContextHint::Masked && ST->hasSVEorSME() &&
+      CCH == TTI::CastContextHint::Masked &&
+      ST->isSVEorStreamingSVEAvailable() &&
       TLI->getTypeAction(Src->getContext(), SrcTy) ==
           TargetLowering::TypePromoteInteger &&
       TLI->getTypeAction(Dst->getContext(), DstTy) ==
@@ -2588,8 +2852,8 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   // The BasicTTIImpl version only deals with CCH==TTI::CastContextHint::Normal,
   // but we also want to include the TTI::CastContextHint::Masked case too.
   if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
-      CCH == TTI::CastContextHint::Masked && ST->hasSVEorSME() &&
-      TLI->isTypeLegal(DstTy))
+      CCH == TTI::CastContextHint::Masked &&
+      ST->isSVEorStreamingSVEAvailable() && TLI->isTypeLegal(DstTy))
     CCH = TTI::CastContextHint::Normal;
 
   return AdjustCost(
@@ -2911,6 +3175,13 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
 
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
                                          Op2Info);
+  case ISD::FREM:
+    // Pass nullptr as fmod/fmodf calls are emitted by the backend even when
+    // those functions are not declared in the module.
+    if (!Ty->isVectorTy())
+      return getCallInstrCost(/*Function*/ nullptr, Ty, {Ty, Ty}, CostKind);
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
+                                         Op2Info);
   }
 }
 
@@ -3057,11 +3328,16 @@ AArch64TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
   if (!LT.first.isValid())
     return InstructionCost::getInvalid();
 
+  // Return an invalid cost for element types that we are unable to lower.
+  auto *VT = cast<VectorType>(Src);
+  if (VT->getElementType()->isIntegerTy(1))
+    return InstructionCost::getInvalid();
+
   // The code-generator is currently not able to handle scalable vectors
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
   // it. This change will be removed when code-generation for these types is
   // sufficiently reliable.
-  if (cast<VectorType>(Src)->getElementCount() == ElementCount::getScalable(1))
+  if (VT->getElementCount() == ElementCount::getScalable(1))
     return InstructionCost::getInvalid();
 
   return LT.first;
@@ -3082,16 +3358,17 @@ InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
   if (!LT.first.isValid())
     return InstructionCost::getInvalid();
 
+  // Return an invalid cost for element types that we are unable to lower.
   if (!LT.second.isVector() ||
-      !isElementTypeLegalForScalableVector(VT->getElementType()))
+      !isElementTypeLegalForScalableVector(VT->getElementType()) ||
+      VT->getElementType()->isIntegerTy(1))
     return InstructionCost::getInvalid();
 
   // The code-generator is currently not able to handle scalable vectors
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
   // it. This change will be removed when code-generation for these types is
   // sufficiently reliable.
-  if (cast<VectorType>(DataTy)->getElementCount() ==
-      ElementCount::getScalable(1))
+  if (VT->getElementCount() == ElementCount::getScalable(1))
     return InstructionCost::getInvalid();
 
   ElementCount LegalVF = LT.second.getVectorElementCount();
@@ -3129,8 +3406,12 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
   // it. This change will be removed when code-generation for these types is
   // sufficiently reliable.
+  // We also only support full register predicate loads and stores.
   if (auto *VTy = dyn_cast<ScalableVectorType>(Ty))
-    if (VTy->getElementCount() == ElementCount::getScalable(1))
+    if (VTy->getElementCount() == ElementCount::getScalable(1) ||
+        (VTy->getElementType()->isIntegerTy(1) &&
+         !VTy->getElementCount().isKnownMultipleOf(
+             ElementCount::getScalable(16))))
       return InstructionCost::getInvalid();
 
   // TODO: consider latency as well for TCK_SizeAndLatency.
@@ -3156,14 +3437,47 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
   if (Ty->isPtrOrPtrVectorTy())
     return LT.first;
 
-  // Check truncating stores and extending loads.
-  if (useNeonVector(Ty) &&
-      Ty->getScalarSizeInBits() != LT.second.getScalarSizeInBits()) {
-    // v4i8 types are lowered to scalar a load/store and sshll/xtn.
-    if (VT == MVT::v4i8)
-      return 2;
-    // Otherwise we need to scalarize.
-    return cast<FixedVectorType>(Ty)->getNumElements() * 2;
+  if (useNeonVector(Ty)) {
+    // Check truncating stores and extending loads.
+    if (Ty->getScalarSizeInBits() != LT.second.getScalarSizeInBits()) {
+      // v4i8 types are lowered to scalar a load/store and sshll/xtn.
+      if (VT == MVT::v4i8)
+        return 2;
+      // Otherwise we need to scalarize.
+      return cast<FixedVectorType>(Ty)->getNumElements() * 2;
+    }
+    EVT EltVT = VT.getVectorElementType();
+    unsigned EltSize = EltVT.getScalarSizeInBits();
+    if (!isPowerOf2_32(EltSize) || EltSize < 8 || EltSize > 64 ||
+        VT.getVectorNumElements() >= (128 / EltSize) || !Alignment ||
+        *Alignment != Align(1))
+      return LT.first;
+    // FIXME: v3i8 lowering currently is very inefficient, due to automatic
+    // widening to v4i8, which produces suboptimal results.
+    if (VT.getVectorNumElements() == 3 && EltVT == MVT::i8)
+      return LT.first;
+
+    // Check non-power-of-2 loads/stores for legal vector element types with
+    // NEON. Non-power-of-2 memory ops will get broken down to a set of
+    // operations on smaller power-of-2 ops, including ld1/st1.
+    LLVMContext &C = Ty->getContext();
+    InstructionCost Cost(0);
+    SmallVector<EVT> TypeWorklist;
+    TypeWorklist.push_back(VT);
+    while (!TypeWorklist.empty()) {
+      EVT CurrVT = TypeWorklist.pop_back_val();
+      unsigned CurrNumElements = CurrVT.getVectorNumElements();
+      if (isPowerOf2_32(CurrNumElements)) {
+        Cost += 1;
+        continue;
+      }
+
+      unsigned PrevPow2 = NextPowerOf2(CurrNumElements) / 2;
+      TypeWorklist.push_back(EVT::getVectorVT(C, EltVT, PrevPow2));
+      TypeWorklist.push_back(
+          EVT::getVectorVT(C, EltVT, CurrNumElements - PrevPow2));
+    }
+    return Cost;
   }
 
   return LT.first;
@@ -3676,18 +3990,38 @@ InstructionCost AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index) {
   return LegalizationCost * LT.first;
 }
 
-InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
-                                               VectorType *Tp,
-                                               ArrayRef<int> Mask,
-                                               TTI::TargetCostKind CostKind,
-                                               int Index, VectorType *SubTp,
-                                               ArrayRef<const Value *> Args) {
+InstructionCost AArch64TTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
+    TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
+    ArrayRef<const Value *> Args, const Instruction *CxtI) {
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
+
   // If we have a Mask, and the LT is being legalized somehow, split the Mask
   // into smaller vectors and sum the cost of each shuffle.
   if (!Mask.empty() && isa<FixedVectorType>(Tp) && LT.second.isVector() &&
       Tp->getScalarSizeInBits() == LT.second.getScalarSizeInBits() &&
       Mask.size() > LT.second.getVectorNumElements() && !Index && !SubTp) {
+
+    // Check for LD3/LD4 instructions, which are represented in llvm IR as
+    // deinterleaving-shuffle(load). The shuffle cost could potentially be free,
+    // but we model it with a cost of LT.first so that LD3/LD4 have a higher
+    // cost than just the load.
+    if (Args.size() >= 1 && isa<LoadInst>(Args[0]) &&
+        (ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 3) ||
+         ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 4)))
+      return std::max<InstructionCost>(1, LT.first / 4);
+
+    // Check for ST3/ST4 instructions, which are represented in llvm IR as
+    // store(interleaving-shuffle). The shuffle cost could potentially be free,
+    // but we model it with a cost of LT.first so that ST3/ST4 have a higher
+    // cost than just the store.
+    if (CxtI && CxtI->hasOneUse() && isa<StoreInst>(*CxtI->user_begin()) &&
+        (ShuffleVectorInst::isInterleaveMask(
+             Mask, 4, Tp->getElementCount().getKnownMinValue() * 2) ||
+         ShuffleVectorInst::isInterleaveMask(
+             Mask, 3, Tp->getElementCount().getKnownMinValue() * 2)))
+      return LT.first;
+
     unsigned TpNumElts = Mask.size();
     unsigned LTNumElts = LT.second.getVectorNumElements();
     unsigned NumVecs = (TpNumElts + LTNumElts - 1) / LTNumElts;
@@ -3735,7 +4069,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       if (NumSources <= 2)
         Cost += getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
                                                : TTI::SK_PermuteTwoSrc,
-                               NTp, NMask, CostKind, 0, nullptr, Args);
+                               NTp, NMask, CostKind, 0, nullptr, Args, CxtI);
       else if (any_of(enumerate(NMask), [&](const auto &ME) {
                  return ME.value() % LTNumElts == ME.index();
                }))
@@ -3747,6 +4081,10 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   }
 
   Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
+  // Treat extractsubvector as single op permutation.
+  bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
+  if (IsExtractSubvector && LT.second.isFixedLengthVector())
+    Kind = TTI::SK_PermuteSingleSrc;
 
   // Check for broadcast loads, which are supported by the LD1R instruction.
   // In terms of code-size, the shuffle vector is free when a load + dup get
@@ -3769,6 +4107,27 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       (Tp->getScalarSizeInBits() == 16 || Tp->getScalarSizeInBits() == 32) &&
       all_of(Mask, [](int E) { return E < 8; }))
     return getPerfectShuffleCost(Mask);
+
+  // Check for identity masks, which we can treat as free.
+  if (!Mask.empty() && LT.second.isFixedLengthVector() &&
+      (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
+      all_of(enumerate(Mask), [](const auto &M) {
+        return M.value() < 0 || M.value() == (int)M.index();
+      }))
+    return 0;
+
+  // Check for other shuffles that are not SK_ kinds but we have native
+  // instructions for, for example ZIP and UZP.
+  unsigned Unused;
+  if (LT.second.isFixedLengthVector() &&
+      LT.second.getVectorNumElements() == Mask.size() &&
+      (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
+      (isZIPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
+       isUZPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
+       // Check for non-zero lane splats
+       all_of(drop_begin(Mask),
+              [&Mask](int M) { return M < 0 || M == Mask[0]; })))
+    return 1;
 
   if (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Transpose ||
       Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc ||
@@ -3909,7 +4268,11 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
   }
 
-  return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
+  // Restore optimal kind.
+  if (IsExtractSubvector)
+    Kind = TTI::SK_ExtractSubvector;
+  return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args,
+                               CxtI);
 }
 
 static bool containsDecreasingPointers(Loop *TheLoop,
@@ -3974,7 +4337,7 @@ bool AArch64TTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) {
 
 InstructionCost
 AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                     int64_t BaseOffset, bool HasBaseReg,
+                                     StackOffset BaseOffset, bool HasBaseReg,
                                      int64_t Scale, unsigned AddrSpace) const {
   // Scaling factors are not free at all.
   // Operands                     | Rt Latency
@@ -3985,12 +4348,41 @@ AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
   // Rt, [Xn, Wm, <extend> #imm]  |
   TargetLoweringBase::AddrMode AM;
   AM.BaseGV = BaseGV;
-  AM.BaseOffs = BaseOffset;
+  AM.BaseOffs = BaseOffset.getFixed();
   AM.HasBaseReg = HasBaseReg;
   AM.Scale = Scale;
+  AM.ScalableOffset = BaseOffset.getScalable();
   if (getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace))
     // Scale represents reg2 * scale, thus account for 1 if
     // it is not equal to 0 or 1.
     return AM.Scale != 0 && AM.Scale != 1;
   return -1;
+}
+
+bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(const Instruction *I) {
+  // For the binary operators (e.g. or) we need to be more careful than
+  // selects, here we only transform them if they are already at a natural
+  // break point in the code - the end of a block with an unconditional
+  // terminator.
+  if (EnableOrLikeSelectOpt && I->getOpcode() == Instruction::Or &&
+      isa<BranchInst>(I->getNextNode()) &&
+      cast<BranchInst>(I->getNextNode())->isUnconditional())
+    return true;
+  return BaseT::shouldTreatInstructionLikeSelect(I);
+}
+
+bool AArch64TTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
+                                   const TargetTransformInfo::LSRCost &C2) {
+  // AArch64 specific here is adding the number of instructions to the
+  // comparison (though not as the first consideration, as some targets do)
+  // along with changing the priority of the base additions.
+  // TODO: Maybe a more nuanced tradeoff between instruction count
+  // and number of registers? To be investigated at a later date.
+  if (EnableLSRCostOpt)
+    return std::tie(C1.NumRegs, C1.Insns, C1.NumBaseAdds, C1.AddRecCost,
+                    C1.NumIVMuls, C1.ScaleCost, C1.ImmCost, C1.SetupCost) <
+           std::tie(C2.NumRegs, C2.Insns, C2.NumBaseAdds, C2.AddRecCost,
+                    C2.NumIVMuls, C2.ScaleCost, C2.ImmCost, C2.SetupCost);
+
+  return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
 }

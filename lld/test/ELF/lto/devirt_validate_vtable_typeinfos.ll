@@ -125,17 +125,17 @@
 
 ;; Index based WPD
 ; RUN: ld.lld %t1.o %t2_nortti.o -o %t8_index -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
-; RUN:   --lto-known-safe-vtables=_ZTV6Native -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
+; RUN:   --lto-known-safe-vtables='_ZTV6N*' -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
 ; RUN: llvm-dis %t1.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-IR
 
 ;; Hybrid WPD
 ; RUN: ld.lld %t1_hybrid.o %t2_nortti.o -o %t8_hybrid -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
-; RUN:   --lto-known-safe-vtables=_ZTV6Native -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
+; RUN:   --lto-known-safe-vtables='_ZTV6N*' -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
 ; RUN: llvm-dis %t1_hybrid.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-IR
 
 ;; Regular LTO WPD
 ; RUN: ld.lld %t1_regular.o %t2_nortti.o -o %t8_regular -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
-; RUN:   --lto-known-safe-vtables=_ZTV6Native -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
+; RUN:   --lto-known-safe-vtables='_ZTV6N*' -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
 ; RUN: llvm-dis %t8_regular.0.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-IR
 
 ;; Only check for definitions of vtables symbols, just having a reference does not allow a type to
@@ -183,7 +183,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ;; Prevent the vtables from being dead code eliminated.
 @llvm.used = appending global [3 x ptr] [ ptr @_ZTV1B, ptr @_ZTV1C, ptr @_ZTV1D ]
 
-; CHECK-COMMON-IR-LABEL: define dso_local i32 @_start
+; CHECK-COMMON-IR-LABEL: define dso_local {{(noundef )?}}i32 @_start
 define i32 @_start(ptr %obj, ptr %obj2, i32 %a) {
 entry:
   %vtable = load ptr, ptr %obj

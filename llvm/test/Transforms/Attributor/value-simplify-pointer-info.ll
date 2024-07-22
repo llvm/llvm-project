@@ -32,37 +32,37 @@
 @rec_storage = internal global i32 undef
 
 ;.
-; CHECK: @[[GLOBALBYTES:[a-zA-Z0-9_$"\\.-]+]] = global [1024 x i8] zeroinitializer, align 16
-; CHECK: @[[GINT1:[a-zA-Z0-9_$"\\.-]+]] = global i32 0, align 4
-; CHECK: @[[GINT2:[a-zA-Z0-9_$"\\.-]+]] = global i32 0, align 4
-; CHECK: @[[GSTATIC_INT1:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0, align 4
-; CHECK: @[[GSTATIC_INT2:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0, align 4
-; CHECK: @[[GSTATIC_INT3:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0, align 4
-; CHECK: @[[GSTATIC_UNDEF_INT1:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4
-; CHECK: @[[GSTATIC_UNDEF_INT2:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4
-; CHECK: @[[GI1:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4
-; CHECK: @[[GI2:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4
-; CHECK: @[[GS1:[a-zA-Z0-9_$"\\.-]+]] = internal global [[STRUCT_S:%.*]] undef, align 4
-; CHECK: @[[GS2:[a-zA-Z0-9_$"\\.-]+]] = internal global [[STRUCT_S:%.*]] zeroinitializer, align 4
-; CHECK: @[[VS1:[a-zA-Z0-9_$"\\.-]+]] = internal global [[STRUCT_S:%.*]] undef, align 4
-; CHECK: @[[VS2:[a-zA-Z0-9_$"\\.-]+]] = internal global [[STRUCT_S:%.*]] undef, align 4
-; CHECK: @[[GBYTES:[a-zA-Z0-9_$"\\.-]+]] = internal global [1024 x i8] zeroinitializer, align 16
-; CHECK: @[[FLAG0:[a-zA-Z0-9_$"\\.-]+]] = global i32 0, align 4
-; CHECK: @[[FLAG1:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4
-; CHECK: @[[FLAG2:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4
-; CHECK: @[[FLAG4:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4
-; CHECK: @[[FLAG3:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0, align 4
-; CHECK: @[[A1:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0
-; CHECK: @[[A2:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0
-; CHECK: @[[A3:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef
-; CHECK: @[[BYTES1:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef
-; CHECK: @[[BYTES2:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef
-; CHECK: @[[REC_STORAGE:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef
-; CHECK: @[[GLOBAL:[a-zA-Z0-9_$"\\.-]+]] = internal global [[STRUCT_STY:%.*]] zeroinitializer, align 8
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0, align 4
-; CHECK: @[[GC:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4
-; CHECK: @[[GRS:[a-zA-Z0-9_$"\\.-]+]] = internal thread_local global i32 undef
-; CHECK: @[[GRS2:[a-zA-Z0-9_$"\\.-]+]] = global i32 undef
+; CHECK: @globalBytes = global [1024 x i8] zeroinitializer, align 16
+; CHECK: @Gint1 = global i32 0, align 4
+; CHECK: @Gint2 = global i32 0, align 4
+; CHECK: @Gstatic_int1 = internal global i32 0, align 4
+; CHECK: @Gstatic_int2 = internal global i32 0, align 4
+; CHECK: @Gstatic_int3 = internal global i32 0, align 4
+; CHECK: @Gstatic_undef_int1 = internal global i32 undef, align 4
+; CHECK: @Gstatic_undef_int2 = internal global i32 undef, align 4
+; CHECK: @GI1 = internal global i32 undef, align 4
+; CHECK: @GI2 = internal global i32 undef, align 4
+; CHECK: @Gs1 = internal global %struct.S undef, align 4
+; CHECK: @Gs2 = internal global %struct.S zeroinitializer, align 4
+; CHECK: @Vs1 = internal global %struct.S undef, align 4
+; CHECK: @Vs2 = internal global %struct.S undef, align 4
+; CHECK: @GBytes = internal global [1024 x i8] zeroinitializer, align 16
+; CHECK: @Flag0 = global i32 0, align 4
+; CHECK: @Flag1 = internal global i32 undef, align 4
+; CHECK: @Flag2 = internal global i32 undef, align 4
+; CHECK: @Flag4 = internal global i32 undef, align 4
+; CHECK: @Flag3 = internal global i32 0, align 4
+; CHECK: @a1 = internal global i32 0
+; CHECK: @a2 = internal global i32 0
+; CHECK: @a3 = internal global i32 undef
+; CHECK: @bytes1 = internal global i32 undef
+; CHECK: @bytes2 = internal global i32 undef
+; CHECK: @rec_storage = internal global i32 undef
+; CHECK: @global = internal global %struct.STy zeroinitializer, align 8
+; CHECK: @G = internal global i32 0, align 4
+; CHECK: @GC = internal global i32 undef, align 4
+; CHECK: @GRS = internal thread_local global i32 undef
+; CHECK: @GRS2 = global i32 undef
 ;.
 define void @write_arg(ptr %p, i32 %v) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
@@ -787,7 +787,7 @@ define i32 @test_range_merge1() {
 ;
   store <2 x i32> <i32 1, i32 1>, ptr @Vs1
   store float 2.000000e+00, ptr getelementptr inbounds (%struct.S, ptr @Vs1, i64 0, i32 4)
-  %l0 = load i32, ptr getelementptr inbounds (%struct.S, ptr @Vs1, i64 0, i32 0)
+  %l0 = load i32, ptr @Vs1
   %l1 = load i32, ptr getelementptr inbounds (%struct.S, ptr @Vs1, i64 0, i32 1)
   %add = add i32 %l0, %l1
   ret i32 %add
@@ -814,7 +814,7 @@ define i32 @test_range_merge2() {
 ;
   store <2 x i32> <i32 3, i32 4>, ptr @Vs2
   store float 2.000000e+00, ptr getelementptr inbounds (%struct.S, ptr @Vs2, i64 0, i32 4)
-  %l0 = load i32, ptr getelementptr inbounds (%struct.S, ptr @Vs2, i64 0, i32 0)
+  %l0 = load i32, ptr @Vs2
   %l1 = load i32, ptr getelementptr inbounds (%struct.S, ptr @Vs2, i64 0, i32 1)
   %add = add i32 %l0, %l1
   ret i32 %add
@@ -2674,10 +2674,10 @@ define dso_local void @test_nested_memory(ptr %dst, ptr %src) {
 ; TUNIT-NEXT:    store ptr [[SRC]], ptr [[SRC2]], align 8
 ; TUNIT-NEXT:    store ptr [[CALL_H2S]], ptr getelementptr inbounds ([[STRUCT_STY]], ptr @global, i64 0, i32 2), align 8
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[LOCAL]], align 8
-; TUNIT-NEXT:    [[LOCAL_0_1:%.*]] = getelementptr [[STRUCT_STY]], ptr [[LOCAL]], i64 0, i32 1
-; TUNIT-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[LOCAL_0_1]], align 8
-; TUNIT-NEXT:    [[LOCAL_0_2:%.*]] = getelementptr [[STRUCT_STY]], ptr [[LOCAL]], i64 0, i32 2
-; TUNIT-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[LOCAL_0_2]], align 8
+; TUNIT-NEXT:    [[LOCAL_B8:%.*]] = getelementptr i8, ptr [[LOCAL]], i64 8
+; TUNIT-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[LOCAL_B8]], align 8
+; TUNIT-NEXT:    [[LOCAL_B16:%.*]] = getelementptr i8, ptr [[LOCAL]], i64 16
+; TUNIT-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[LOCAL_B16]], align 8
 ; TUNIT-NEXT:    call fastcc void @nested_memory_callee(ptr [[TMP0]], ptr [[TMP1]], ptr [[TMP2]]) #[[ATTR21:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
@@ -2714,10 +2714,10 @@ define internal fastcc void @nested_memory_callee(ptr nocapture readonly %S) nof
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[S_PRIV:%.*]] = alloca [[STRUCT_STY:%.*]], align 8
 ; TUNIT-NEXT:    store ptr [[TMP0]], ptr [[S_PRIV]], align 8
-; TUNIT-NEXT:    [[S_PRIV_0_1:%.*]] = getelementptr [[STRUCT_STY]], ptr [[S_PRIV]], i64 0, i32 1
-; TUNIT-NEXT:    store ptr [[TMP1]], ptr [[S_PRIV_0_1]], align 8
-; TUNIT-NEXT:    [[S_PRIV_0_2:%.*]] = getelementptr [[STRUCT_STY]], ptr [[S_PRIV]], i64 0, i32 2
-; TUNIT-NEXT:    store ptr [[TMP2]], ptr [[S_PRIV_0_2]], align 8
+; TUNIT-NEXT:    [[S_PRIV_B8:%.*]] = getelementptr i8, ptr [[S_PRIV]], i64 8
+; TUNIT-NEXT:    store ptr [[TMP1]], ptr [[S_PRIV_B8]], align 8
+; TUNIT-NEXT:    [[S_PRIV_B16:%.*]] = getelementptr i8, ptr [[S_PRIV]], i64 16
+; TUNIT-NEXT:    store ptr [[TMP2]], ptr [[S_PRIV_B16]], align 8
 ; TUNIT-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY]], ptr [[S_PRIV]], i64 0, i32 2
 ; TUNIT-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[INNER]], align 8
 ; TUNIT-NEXT:    [[INNER1:%.*]] = getelementptr inbounds [[STRUCT_STY]], ptr [[TMP3]], i64 0, i32 2
@@ -2736,10 +2736,10 @@ define internal fastcc void @nested_memory_callee(ptr nocapture readonly %S) nof
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[S_PRIV:%.*]] = alloca [[STRUCT_STY:%.*]], align 8
 ; CGSCC-NEXT:    store ptr [[TMP0]], ptr [[S_PRIV]], align 8
-; CGSCC-NEXT:    [[S_PRIV_0_1:%.*]] = getelementptr [[STRUCT_STY]], ptr [[S_PRIV]], i64 0, i32 1
-; CGSCC-NEXT:    store ptr [[TMP1]], ptr [[S_PRIV_0_1]], align 8
-; CGSCC-NEXT:    [[S_PRIV_0_2:%.*]] = getelementptr [[STRUCT_STY]], ptr [[S_PRIV]], i64 0, i32 2
-; CGSCC-NEXT:    store ptr [[TMP2]], ptr [[S_PRIV_0_2]], align 8
+; CGSCC-NEXT:    [[S_PRIV_B8:%.*]] = getelementptr i8, ptr [[S_PRIV]], i64 8
+; CGSCC-NEXT:    store ptr [[TMP1]], ptr [[S_PRIV_B8]], align 8
+; CGSCC-NEXT:    [[S_PRIV_B16:%.*]] = getelementptr i8, ptr [[S_PRIV]], i64 16
+; CGSCC-NEXT:    store ptr [[TMP2]], ptr [[S_PRIV_B16]], align 8
 ; CGSCC-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY]], ptr [[S_PRIV]], i64 0, i32 2
 ; CGSCC-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[INNER]], align 8
 ; CGSCC-NEXT:    [[INNER1:%.*]] = getelementptr inbounds [[STRUCT_STY]], ptr [[TMP3]], i64 0, i32 2
@@ -3289,67 +3289,67 @@ declare void @llvm.assume(i1 noundef)
 ;.
 ; TUNIT: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 ; TUNIT: [[META1:![0-9]+]] = !{i32 7, !"uwtable", i32 1}
-; TUNIT: [[META2:![0-9]+]] = !{!"clang version 13.0.0"}
-; TUNIT: [[TBAA3]] = !{!4, !4, i64 0}
-; TUNIT: [[META4:![0-9]+]] = !{!"int", !5, i64 0}
-; TUNIT: [[META5:![0-9]+]] = !{!"omnipotent char", !6, i64 0}
-; TUNIT: [[META6:![0-9]+]] = !{!"Simple C/C++ TBAA"}
-; TUNIT: [[TBAA7]] = !{!8, !9, i64 12}
-; TUNIT: [[META8:![0-9]+]] = !{!"S", !4, i64 0, !4, i64 4, !4, i64 8, !9, i64 12, !9, i64 16, !9, i64 20}
-; TUNIT: [[META9:![0-9]+]] = !{!"float", !5, i64 0}
-; TUNIT: [[TBAA10]] = !{!8, !9, i64 16}
-; TUNIT: [[TBAA11]] = !{!8, !9, i64 20}
-; TUNIT: [[TBAA12]] = !{!8, !4, i64 0}
-; TUNIT: [[TBAA13]] = !{!8, !4, i64 4}
-; TUNIT: [[TBAA14]] = !{!8, !4, i64 8}
-; TUNIT: [[LOOP15]] = distinct !{!15, !16}
-; TUNIT: [[META16:![0-9]+]] = !{!"llvm.loop.mustprogress"}
-; TUNIT: [[LOOP17]] = distinct !{!17, !16}
-; TUNIT: [[LOOP18]] = distinct !{!18, !16}
-; TUNIT: [[TBAA19]] = !{!5, !5, i64 0}
-; TUNIT: [[LOOP20]] = distinct !{!20, !16}
-; TUNIT: [[LOOP21]] = distinct !{!21, !16}
-; TUNIT: [[LOOP22]] = distinct !{!22, !16}
-; TUNIT: [[LOOP23]] = distinct !{!23, !16}
-; TUNIT: [[LOOP24]] = distinct !{!24, !16}
-; TUNIT: [[LOOP25]] = distinct !{!25, !16}
-; TUNIT: [[TBAA26]] = !{!9, !9, i64 0}
-; TUNIT: [[LOOP27]] = distinct !{!27, !16}
-; TUNIT: [[TBAA28]] = !{!29, !29, i64 0}
-; TUNIT: [[META29:![0-9]+]] = !{!"long long", !5, i64 0}
-; TUNIT: [[LOOP30]] = distinct !{!30, !16}
-; TUNIT: [[LOOP31]] = distinct !{!31, !16}
+; TUNIT: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+; TUNIT: [[TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
+; TUNIT: [[META4]] = !{!"int", [[META5:![0-9]+]], i64 0}
+; TUNIT: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
+; TUNIT: [[META6]] = !{!"Simple C/C++ TBAA"}
+; TUNIT: [[TBAA7]] = !{[[META8:![0-9]+]], [[META9:![0-9]+]], i64 12}
+; TUNIT: [[META8]] = !{!"S", [[META4]], i64 0, [[META4]], i64 4, [[META4]], i64 8, [[META9]], i64 12, [[META9]], i64 16, [[META9]], i64 20}
+; TUNIT: [[META9]] = !{!"float", [[META5]], i64 0}
+; TUNIT: [[TBAA10]] = !{[[META8]], [[META9]], i64 16}
+; TUNIT: [[TBAA11]] = !{[[META8]], [[META9]], i64 20}
+; TUNIT: [[TBAA12]] = !{[[META8]], [[META4]], i64 0}
+; TUNIT: [[TBAA13]] = !{[[META8]], [[META4]], i64 4}
+; TUNIT: [[TBAA14]] = !{[[META8]], [[META4]], i64 8}
+; TUNIT: [[LOOP15]] = distinct !{[[LOOP15]], [[META16:![0-9]+]]}
+; TUNIT: [[META16]] = !{!"llvm.loop.mustprogress"}
+; TUNIT: [[LOOP17]] = distinct !{[[LOOP17]], [[META16]]}
+; TUNIT: [[LOOP18]] = distinct !{[[LOOP18]], [[META16]]}
+; TUNIT: [[TBAA19]] = !{[[META5]], [[META5]], i64 0}
+; TUNIT: [[LOOP20]] = distinct !{[[LOOP20]], [[META16]]}
+; TUNIT: [[LOOP21]] = distinct !{[[LOOP21]], [[META16]]}
+; TUNIT: [[LOOP22]] = distinct !{[[LOOP22]], [[META16]]}
+; TUNIT: [[LOOP23]] = distinct !{[[LOOP23]], [[META16]]}
+; TUNIT: [[LOOP24]] = distinct !{[[LOOP24]], [[META16]]}
+; TUNIT: [[LOOP25]] = distinct !{[[LOOP25]], [[META16]]}
+; TUNIT: [[TBAA26]] = !{[[META9]], [[META9]], i64 0}
+; TUNIT: [[LOOP27]] = distinct !{[[LOOP27]], [[META16]]}
+; TUNIT: [[TBAA28]] = !{[[META29:![0-9]+]], [[META29]], i64 0}
+; TUNIT: [[META29]] = !{!"long long", [[META5]], i64 0}
+; TUNIT: [[LOOP30]] = distinct !{[[LOOP30]], [[META16]]}
+; TUNIT: [[LOOP31]] = distinct !{[[LOOP31]], [[META16]]}
 ;.
 ; CGSCC: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 ; CGSCC: [[META1:![0-9]+]] = !{i32 7, !"uwtable", i32 1}
-; CGSCC: [[META2:![0-9]+]] = !{!"clang version 13.0.0"}
-; CGSCC: [[TBAA3]] = !{!4, !4, i64 0}
-; CGSCC: [[META4:![0-9]+]] = !{!"int", !5, i64 0}
-; CGSCC: [[META5:![0-9]+]] = !{!"omnipotent char", !6, i64 0}
-; CGSCC: [[META6:![0-9]+]] = !{!"Simple C/C++ TBAA"}
-; CGSCC: [[TBAA7]] = !{!8, !9, i64 12}
-; CGSCC: [[META8:![0-9]+]] = !{!"S", !4, i64 0, !4, i64 4, !4, i64 8, !9, i64 12, !9, i64 16, !9, i64 20}
-; CGSCC: [[META9:![0-9]+]] = !{!"float", !5, i64 0}
-; CGSCC: [[TBAA10]] = !{!8, !9, i64 16}
-; CGSCC: [[TBAA11]] = !{!8, !9, i64 20}
-; CGSCC: [[TBAA12]] = !{!8, !4, i64 0}
-; CGSCC: [[TBAA13]] = !{!8, !4, i64 4}
-; CGSCC: [[TBAA14]] = !{!8, !4, i64 8}
-; CGSCC: [[TBAA15]] = !{!5, !5, i64 0}
-; CGSCC: [[LOOP16]] = distinct !{!16, !17}
-; CGSCC: [[META17:![0-9]+]] = !{!"llvm.loop.mustprogress"}
-; CGSCC: [[TBAA18]] = !{!9, !9, i64 0}
-; CGSCC: [[LOOP19]] = distinct !{!19, !17}
-; CGSCC: [[TBAA20]] = !{!21, !21, i64 0}
-; CGSCC: [[META21:![0-9]+]] = !{!"long long", !5, i64 0}
-; CGSCC: [[LOOP22]] = distinct !{!22, !17}
-; CGSCC: [[LOOP23]] = distinct !{!23, !17}
-; CGSCC: [[LOOP24]] = distinct !{!24, !17}
-; CGSCC: [[LOOP25]] = distinct !{!25, !17}
-; CGSCC: [[LOOP26]] = distinct !{!26, !17}
-; CGSCC: [[LOOP27]] = distinct !{!27, !17}
-; CGSCC: [[LOOP28]] = distinct !{!28, !17}
-; CGSCC: [[LOOP29]] = distinct !{!29, !17}
-; CGSCC: [[LOOP30]] = distinct !{!30, !17}
-; CGSCC: [[LOOP31]] = distinct !{!31, !17}
+; CGSCC: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+; CGSCC: [[TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
+; CGSCC: [[META4]] = !{!"int", [[META5:![0-9]+]], i64 0}
+; CGSCC: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
+; CGSCC: [[META6]] = !{!"Simple C/C++ TBAA"}
+; CGSCC: [[TBAA7]] = !{[[META8:![0-9]+]], [[META9:![0-9]+]], i64 12}
+; CGSCC: [[META8]] = !{!"S", [[META4]], i64 0, [[META4]], i64 4, [[META4]], i64 8, [[META9]], i64 12, [[META9]], i64 16, [[META9]], i64 20}
+; CGSCC: [[META9]] = !{!"float", [[META5]], i64 0}
+; CGSCC: [[TBAA10]] = !{[[META8]], [[META9]], i64 16}
+; CGSCC: [[TBAA11]] = !{[[META8]], [[META9]], i64 20}
+; CGSCC: [[TBAA12]] = !{[[META8]], [[META4]], i64 0}
+; CGSCC: [[TBAA13]] = !{[[META8]], [[META4]], i64 4}
+; CGSCC: [[TBAA14]] = !{[[META8]], [[META4]], i64 8}
+; CGSCC: [[TBAA15]] = !{[[META5]], [[META5]], i64 0}
+; CGSCC: [[LOOP16]] = distinct !{[[LOOP16]], [[META17:![0-9]+]]}
+; CGSCC: [[META17]] = !{!"llvm.loop.mustprogress"}
+; CGSCC: [[TBAA18]] = !{[[META9]], [[META9]], i64 0}
+; CGSCC: [[LOOP19]] = distinct !{[[LOOP19]], [[META17]]}
+; CGSCC: [[TBAA20]] = !{[[META21:![0-9]+]], [[META21]], i64 0}
+; CGSCC: [[META21]] = !{!"long long", [[META5]], i64 0}
+; CGSCC: [[LOOP22]] = distinct !{[[LOOP22]], [[META17]]}
+; CGSCC: [[LOOP23]] = distinct !{[[LOOP23]], [[META17]]}
+; CGSCC: [[LOOP24]] = distinct !{[[LOOP24]], [[META17]]}
+; CGSCC: [[LOOP25]] = distinct !{[[LOOP25]], [[META17]]}
+; CGSCC: [[LOOP26]] = distinct !{[[LOOP26]], [[META17]]}
+; CGSCC: [[LOOP27]] = distinct !{[[LOOP27]], [[META17]]}
+; CGSCC: [[LOOP28]] = distinct !{[[LOOP28]], [[META17]]}
+; CGSCC: [[LOOP29]] = distinct !{[[LOOP29]], [[META17]]}
+; CGSCC: [[LOOP30]] = distinct !{[[LOOP30]], [[META17]]}
+; CGSCC: [[LOOP31]] = distinct !{[[LOOP31]], [[META17]]}
 ;.

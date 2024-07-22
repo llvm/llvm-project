@@ -59,6 +59,7 @@
 #include <deque>
 #include <memory>
 #include <optional>
+#include <stack>
 #include <string>
 #include <utility>
 
@@ -113,6 +114,9 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
       // Pointer arithmetic: '*(x + 2)' -> 'x') etc.
       if (const Expr *Inner = peelOffPointerArithmetic(B)) {
         E = Inner;
+      } else if (B->isAssignmentOp()) {
+        // Follow LHS of assignments: '*p = 404' -> 'p'.
+        E = B->getLHS();
       } else {
         // Probably more arithmetic can be pattern-matched here,
         // but for now give up.
@@ -1238,7 +1242,7 @@ public:
   ///        changes to its value in a nested stackframe could be pruned, and
   ///        this visitor can prevent that without polluting the bugpath too
   ///        much.
-  StoreSiteFinder(bugreporter::TrackerRef ParentTracker, KnownSVal V,
+  StoreSiteFinder(bugreporter::TrackerRef ParentTracker, SVal V,
                   const MemRegion *R, TrackingOptions Options,
                   const StackFrameContext *OriginSFC = nullptr)
       : TrackingBugReporterVisitor(ParentTracker), R(R), V(V), Options(Options),
@@ -2539,9 +2543,9 @@ public:
         Report.addVisitor<UndefOrNullArgVisitor>(L->getRegion());
         Result.FoundSomethingToTrack = true;
 
-        if (auto KV = RVal.getAs<KnownSVal>())
+        if (!RVal.isUnknown())
           Result.combineWith(
-              getParentTracker().track(*KV, L->getRegion(), Opts, SFC));
+              getParentTracker().track(RVal, L->getRegion(), Opts, SFC));
       }
 
       const MemRegion *RegionRVal = RVal.getAsRegion();
@@ -2663,8 +2667,8 @@ Tracker::Result Tracker::track(const Expr *E, const ExplodedNode *N,
 
 Tracker::Result Tracker::track(SVal V, const MemRegion *R, TrackingOptions Opts,
                                const StackFrameContext *Origin) {
-  if (auto KV = V.getAs<KnownSVal>()) {
-    Report.addVisitor<StoreSiteFinder>(this, *KV, R, Opts, Origin);
+  if (!V.isUnknown()) {
+    Report.addVisitor<StoreSiteFinder>(this, V, R, Opts, Origin);
     return {true};
   }
   return {};
@@ -2692,7 +2696,7 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
       .FoundSomethingToTrack;
 }
 
-void bugreporter::trackStoredValue(KnownSVal V, const MemRegion *R,
+void bugreporter::trackStoredValue(SVal V, const MemRegion *R,
                                    PathSensitiveBugReport &Report,
                                    TrackingOptions Opts,
                                    const StackFrameContext *Origin) {
@@ -2883,6 +2887,16 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond, BugReporterContext &BRC,
   // previous program state we assuming the newly seen constraint information.
   // If we cannot evaluate the condition (and the constraints are the same)
   // the analyzer has no information about the value and just assuming it.
+  // FIXME: This logic is not entirely correct, because e.g. in code like
+  //   void f(unsigned arg) {
+  //     if (arg >= 0) {
+  //       // ...
+  //     }
+  //   }
+  // it will say that the "arg >= 0" check is _assuming_ something new because
+  // the constraint that "$arg >= 0" is 1 was added to the list of known
+  // constraints. However, the unsigned value is always >= 0 so semantically
+  // this is not a "real" assumption.
   bool IsAssuming =
       !BRC.getStateManager().haveEqualConstraints(CurrentState, PrevState) ||
       CurrentState->getSVal(Cond, LCtx).isUnknownOrUndef();
@@ -3431,82 +3445,6 @@ UndefOrNullArgVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
     }
   }
   return nullptr;
-}
-
-//===----------------------------------------------------------------------===//
-// Implementation of FalsePositiveRefutationBRVisitor.
-//===----------------------------------------------------------------------===//
-
-FalsePositiveRefutationBRVisitor::FalsePositiveRefutationBRVisitor()
-    : Constraints(ConstraintMap::Factory().getEmptyMap()) {}
-
-void FalsePositiveRefutationBRVisitor::finalizeVisitor(
-    BugReporterContext &BRC, const ExplodedNode *EndPathNode,
-    PathSensitiveBugReport &BR) {
-  // Collect new constraints
-  addConstraints(EndPathNode, /*OverwriteConstraintsOnExistingSyms=*/true);
-
-  // Create a refutation manager
-  llvm::SMTSolverRef RefutationSolver = llvm::CreateZ3Solver();
-  ASTContext &Ctx = BRC.getASTContext();
-
-  // Add constraints to the solver
-  for (const auto &I : Constraints) {
-    const SymbolRef Sym = I.first;
-    auto RangeIt = I.second.begin();
-
-    llvm::SMTExprRef SMTConstraints = SMTConv::getRangeExpr(
-        RefutationSolver, Ctx, Sym, RangeIt->From(), RangeIt->To(),
-        /*InRange=*/true);
-    while ((++RangeIt) != I.second.end()) {
-      SMTConstraints = RefutationSolver->mkOr(
-          SMTConstraints, SMTConv::getRangeExpr(RefutationSolver, Ctx, Sym,
-                                                RangeIt->From(), RangeIt->To(),
-                                                /*InRange=*/true));
-    }
-
-    RefutationSolver->addConstraint(SMTConstraints);
-  }
-
-  // And check for satisfiability
-  std::optional<bool> IsSAT = RefutationSolver->check();
-  if (!IsSAT)
-    return;
-
-  if (!*IsSAT)
-    BR.markInvalid("Infeasible constraints", EndPathNode->getLocationContext());
-}
-
-void FalsePositiveRefutationBRVisitor::addConstraints(
-    const ExplodedNode *N, bool OverwriteConstraintsOnExistingSyms) {
-  // Collect new constraints
-  ConstraintMap NewCs = getConstraintMap(N->getState());
-  ConstraintMap::Factory &CF = N->getState()->get_context<ConstraintMap>();
-
-  // Add constraints if we don't have them yet
-  for (auto const &C : NewCs) {
-    const SymbolRef &Sym = C.first;
-    if (!Constraints.contains(Sym)) {
-      // This symbol is new, just add the constraint.
-      Constraints = CF.add(Constraints, Sym, C.second);
-    } else if (OverwriteConstraintsOnExistingSyms) {
-      // Overwrite the associated constraint of the Symbol.
-      Constraints = CF.remove(Constraints, Sym);
-      Constraints = CF.add(Constraints, Sym, C.second);
-    }
-  }
-}
-
-PathDiagnosticPieceRef FalsePositiveRefutationBRVisitor::VisitNode(
-    const ExplodedNode *N, BugReporterContext &, PathSensitiveBugReport &) {
-  addConstraints(N, /*OverwriteConstraintsOnExistingSyms=*/false);
-  return nullptr;
-}
-
-void FalsePositiveRefutationBRVisitor::Profile(
-    llvm::FoldingSetNodeID &ID) const {
-  static int Tag = 0;
-  ID.AddPointer(&Tag);
 }
 
 //===----------------------------------------------------------------------===//

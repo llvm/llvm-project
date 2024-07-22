@@ -92,7 +92,7 @@ TEST_F(HTTPClientServerTest, Hello) {
   Expected<unsigned> PortOrErr = Server.bind();
   EXPECT_THAT_EXPECTED(PortOrErr, Succeeded());
   unsigned Port = *PortOrErr;
-  ThreadPool Pool(hardware_concurrency(1));
+  DefaultThreadPool Pool(hardware_concurrency(1));
   Pool.async([&]() { EXPECT_THAT_ERROR(Server.listen(), Succeeded()); });
   std::string Url = "http://localhost:" + utostr(Port);
   HTTPRequest Request(Url);
@@ -116,7 +116,7 @@ TEST_F(HTTPClientServerTest, LambdaHandlerHello) {
   Expected<unsigned> PortOrErr = Server.bind();
   EXPECT_THAT_EXPECTED(PortOrErr, Succeeded());
   unsigned Port = *PortOrErr;
-  ThreadPool Pool(hardware_concurrency(1));
+  DefaultThreadPool Pool(hardware_concurrency(1));
   Pool.async([&]() { EXPECT_THAT_ERROR(Server.listen(), Succeeded()); });
   std::string Url = "http://localhost:" + utostr(Port);
   HTTPRequest Request(Url);
@@ -135,7 +135,7 @@ TEST_F(HTTPClientServerTest, StreamingHello) {
   Expected<unsigned> PortOrErr = Server.bind();
   EXPECT_THAT_EXPECTED(PortOrErr, Succeeded());
   unsigned Port = *PortOrErr;
-  ThreadPool Pool(hardware_concurrency(1));
+  DefaultThreadPool Pool(hardware_concurrency(1));
   Pool.async([&]() { EXPECT_THAT_ERROR(Server.listen(), Succeeded()); });
   std::string Url = "http://localhost:" + utostr(Port);
   HTTPRequest Request(Url);
@@ -167,7 +167,7 @@ TEST_F(HTTPClientServerTest, StreamingFileResponse) {
   Expected<unsigned> PortOrErr = Server.bind();
   EXPECT_THAT_EXPECTED(PortOrErr, Succeeded());
   unsigned Port = *PortOrErr;
-  ThreadPool Pool(hardware_concurrency(1));
+  DefaultThreadPool Pool(hardware_concurrency(1));
   Pool.async([&]() { EXPECT_THAT_ERROR(Server.listen(), Succeeded()); });
   std::string Url = "http://localhost:" + utostr(Port);
   HTTPRequest Request(Url);
@@ -203,7 +203,7 @@ TEST_F(HTTPClientServerTest, StreamingMissingFileResponse) {
   Expected<unsigned> PortOrErr = Server.bind();
   EXPECT_THAT_EXPECTED(PortOrErr, Succeeded());
   unsigned Port = *PortOrErr;
-  ThreadPool Pool(hardware_concurrency(1));
+  DefaultThreadPool Pool(hardware_concurrency(1));
   Pool.async([&]() { EXPECT_THAT_ERROR(Server.listen(), Succeeded()); });
   std::string Url = "http://localhost:" + utostr(Port);
   HTTPRequest Request(Url);
@@ -220,7 +220,7 @@ TEST_F(HTTPClientServerTest, ClientTimeout) {
   Expected<unsigned> PortOrErr = Server.bind();
   EXPECT_THAT_EXPECTED(PortOrErr, Succeeded());
   unsigned Port = *PortOrErr;
-  ThreadPool Pool(hardware_concurrency(1));
+  DefaultThreadPool Pool(hardware_concurrency(1));
   Pool.async([&]() { EXPECT_THAT_ERROR(Server.listen(), Succeeded()); });
   std::string Url = "http://localhost:" + utostr(Port);
   HTTPClient Client;
@@ -257,7 +257,7 @@ TEST_F(HTTPClientServerTest, PathMatching) {
   Expected<unsigned> PortOrErr = Server.bind();
   EXPECT_THAT_EXPECTED(PortOrErr, Succeeded());
   unsigned Port = *PortOrErr;
-  ThreadPool Pool(hardware_concurrency(1));
+  DefaultThreadPool Pool(hardware_concurrency(1));
   Pool.async([&]() { EXPECT_THAT_ERROR(Server.listen(), Succeeded()); });
   std::string Url = "http://localhost:" + utostr(Port) + "/abc/1/2";
   HTTPRequest Request(Url);
@@ -289,7 +289,7 @@ TEST_F(HTTPClientServerTest, FirstPathMatched) {
   Expected<unsigned> PortOrErr = Server.bind();
   EXPECT_THAT_EXPECTED(PortOrErr, Succeeded());
   unsigned Port = *PortOrErr;
-  ThreadPool Pool(hardware_concurrency(1));
+  DefaultThreadPool Pool(hardware_concurrency(1));
   Pool.async([&]() { EXPECT_THAT_ERROR(Server.listen(), Succeeded()); });
   std::string Url = "http://localhost:" + utostr(Port) + "/abc/1/2";
   HTTPRequest Request(Url);

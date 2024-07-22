@@ -59,7 +59,7 @@ define i32 @constant_array_index_test() {
 ; CHECK-LABEL: @constant_array_index_test(
 ; CHECK-NEXT:    [[ARRAY1:%.*]] = alloca [100 x i32], align 4
 ; CHECK-NEXT:    call void @external(ptr nonnull [[ARRAY1]])
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[ARRAY1]], i64 6
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[ARRAY1]], i64 24
 ; CHECK-NEXT:    store i32 1, ptr [[P2]], align 4
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -80,12 +80,12 @@ define i32 @constant_array_index_test() {
 ; they cannot alias.
 define i32 @gep_distance_test(ptr %A) {
 ; NO_ASSUME-LABEL: @gep_distance_test(
-; NO_ASSUME-NEXT:    [[B:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 2
+; NO_ASSUME-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 8
 ; NO_ASSUME-NEXT:    store i32 7, ptr [[B]], align 4
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
 ; USE_ASSUME-LABEL: @gep_distance_test(
-; USE_ASSUME-NEXT:    [[B:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 2
+; USE_ASSUME-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 8
 ; USE_ASSUME-NEXT:    store i32 7, ptr [[B]], align 4
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i64 4), "nonnull"(ptr [[A]]), "align"(ptr [[A]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret i32 0

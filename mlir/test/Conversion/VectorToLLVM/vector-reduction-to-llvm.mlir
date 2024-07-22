@@ -81,6 +81,25 @@ func.func @masked_reduce_add_f32(%arg0: vector<16xf32>, %mask : vector<16xi1>) -
 
 // -----
 
+func.func @masked_reduce_add_f32_scalable(%arg0: vector<[16]xf32>, %mask : vector<[16]xi1>) -> f32 {
+  %0 = vector.mask %mask { vector.reduction <add>, %arg0 : vector<[16]xf32> into f32 } : vector<[16]xi1> -> f32
+  return %0 : f32
+}
+
+// CHECK-LABEL:   func.func @masked_reduce_add_f32_scalable(
+// CHECK-SAME:                              %[[INPUT:.*]]: vector<[16]xf32>,
+// CHECK-SAME:                              %[[MASK:.*]]: vector<[16]xi1>) -> f32 {
+// CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(0.000000e+00 : f32) : f32
+// CHECK:           %[[VL_BASE:.*]] = llvm.mlir.constant(16 : i32) : i32
+// CHECK:           %[[VSCALE:.*]] = "llvm.intr.vscale"() : () -> i64
+// CHECK:           %[[CAST_IDX:.*]] = builtin.unrealized_conversion_cast %[[VSCALE]] : i64 to index
+// CHECK:           %[[CAST_I32:.*]] = arith.index_cast %[[CAST_IDX]] : index to i32
+// CHECK:           %[[VL_MUL:.*]] = arith.muli %[[VL_BASE]], %[[CAST_I32]] : i32
+// CHECK:           "llvm.intr.vp.reduce.fadd"(%[[NEUTRAL]], %[[INPUT]], %[[MASK]], %[[VL_MUL]]) : (f32, vector<[16]xf32>, vector<[16]xi1>, i32) -> f32
+
+
+// -----
+
 func.func @masked_reduce_mul_f32(%arg0: vector<16xf32>, %mask : vector<16xi1>) -> f32 {
   %0 = vector.mask %mask { vector.reduction <mul>, %arg0 : vector<16xf32> into f32 } : vector<16xi1> -> f32
   return %0 : f32
@@ -97,7 +116,7 @@ func.func @masked_reduce_mul_f32(%arg0: vector<16xf32>, %mask : vector<16xi1>) -
 // -----
 
 func.func @masked_reduce_minf_f32(%arg0: vector<16xf32>, %mask : vector<16xi1>) -> f32 {
-  %0 = vector.mask %mask { vector.reduction <minf>, %arg0 : vector<16xf32> into f32 } : vector<16xi1> -> f32
+  %0 = vector.mask %mask { vector.reduction <minnumf>, %arg0 : vector<16xf32> into f32 } : vector<16xi1> -> f32
   return %0 : f32
 }
 
@@ -110,8 +129,26 @@ func.func @masked_reduce_minf_f32(%arg0: vector<16xf32>, %mask : vector<16xi1>) 
 
 // -----
 
+func.func @masked_reduce_minf_f32_scalable(%arg0: vector<[16]xf32>, %mask : vector<[16]xi1>) -> f32 {
+  %0 = vector.mask %mask { vector.reduction <minnumf>, %arg0 : vector<[16]xf32> into f32 } : vector<[16]xi1> -> f32
+  return %0 : f32
+}
+
+// CHECK-LABEL:   func.func @masked_reduce_minf_f32_scalable(
+// CHECK-SAME:                                      %[[INPUT:.*]]: vector<[16]xf32>,
+// CHECK-SAME:                                      %[[MASK:.*]]: vector<[16]xi1>) -> f32 {
+// CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(0xFFC00000 : f32) : f32
+// CHECK:           %[[VL_BASE:.*]] = llvm.mlir.constant(16 : i32) : i32
+// CHECK:           %[[VSCALE:.*]] = "llvm.intr.vscale"() : () -> i64
+// CHECK:           %[[CAST_IDX:.*]] = builtin.unrealized_conversion_cast %[[VSCALE]] : i64 to index
+// CHECK:           %[[CAST_I32:.*]] = arith.index_cast %[[CAST_IDX]] : index to i32
+// CHECK:           %[[VL_MUL:.*]] = arith.muli %[[VL_BASE]], %[[CAST_I32]] : i32
+// CHECK:           "llvm.intr.vp.reduce.fmin"(%[[NEUTRAL]], %[[INPUT]], %[[MASK]], %[[VL_MUL]]) : (f32, vector<[16]xf32>, vector<[16]xi1>, i32) -> f32
+
+// -----
+
 func.func @masked_reduce_maxf_f32(%arg0: vector<16xf32>, %mask : vector<16xi1>) -> f32 {
-  %0 = vector.mask %mask { vector.reduction <maxf>, %arg0 : vector<16xf32> into f32 } : vector<16xi1> -> f32
+  %0 = vector.mask %mask { vector.reduction <maxnumf>, %arg0 : vector<16xf32> into f32 } : vector<16xi1> -> f32
   return %0 : f32
 }
 
@@ -169,6 +206,25 @@ func.func @masked_reduce_add_i8(%arg0: vector<32xi8>, %mask : vector<32xi1>) -> 
 
 // -----
 
+func.func @masked_reduce_add_i8_scalable(%arg0: vector<[32]xi8>, %mask : vector<[32]xi1>) -> i8 {
+  %0 = vector.mask %mask { vector.reduction <add>, %arg0 : vector<[32]xi8> into i8 } : vector<[32]xi1> -> i8
+  return %0 : i8
+}
+
+// CHECK-LABEL:   func.func @masked_reduce_add_i8_scalable(
+// CHECK-SAME:                             %[[INPUT:.*]]: vector<[32]xi8>,
+// CHECK-SAME:                             %[[MASK:.*]]: vector<[32]xi1>) -> i8 {
+// CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(0 : i8) : i8
+// CHECK:           %[[VL_BASE:.*]] = llvm.mlir.constant(32 : i32) : i32
+// CHECK:           %[[VSCALE:.*]] = "llvm.intr.vscale"() : () -> i64
+// CHECK:           %[[CAST_IDX:.*]] = builtin.unrealized_conversion_cast %[[VSCALE]] : i64 to index
+// CHECK:           %[[CAST_I32:.*]] = arith.index_cast %[[CAST_IDX]] : index to i32
+// CHECK:           %[[VL_MUL:.*]] = arith.muli %[[VL_BASE]], %[[CAST_I32]] : i32
+// CHECK:           "llvm.intr.vp.reduce.add"(%[[NEUTRAL]], %[[INPUT]], %[[MASK]], %[[VL_MUL]]) : (i8, vector<[32]xi8>, vector<[32]xi1>, i32) -> i8
+
+
+// -----
+
 func.func @masked_reduce_mul_i8(%arg0: vector<32xi8>, %mask : vector<32xi1>) -> i8 {
   %0 = vector.mask %mask { vector.reduction <mul>, %arg0 : vector<32xi8> into i8 } : vector<32xi1> -> i8
   return %0 : i8
@@ -194,6 +250,24 @@ func.func @masked_reduce_minui_i8(%arg0: vector<32xi8>, %mask : vector<32xi1>) -
 // CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(-1 : i8) : i8
 // CHECK:           %[[VL:.*]] = llvm.mlir.constant(32 : i32) : i32
 // CHECK:           "llvm.intr.vp.reduce.umin"(%[[NEUTRAL]], %[[INPUT]], %[[MASK]], %[[VL]]) : (i8, vector<32xi8>, vector<32xi1>, i32) -> i8
+
+// -----
+
+func.func @masked_reduce_minui_i8_scalable(%arg0: vector<[32]xi8>, %mask : vector<[32]xi1>) -> i8 {
+  %0 = vector.mask %mask { vector.reduction <minui>, %arg0 : vector<[32]xi8> into i8 } : vector<[32]xi1> -> i8
+  return %0 : i8
+}
+
+// CHECK-LABEL:   func.func @masked_reduce_minui_i8_scalable(
+// CHECK-SAME:                               %[[INPUT:.*]]: vector<[32]xi8>,
+// CHECK-SAME:                               %[[MASK:.*]]: vector<[32]xi1>) -> i8 {
+// CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(-1 : i8) : i8
+// CHECK:           %[[VL_BASE:.*]] = llvm.mlir.constant(32 : i32) : i32
+// CHECK:           %[[VSCALE:.*]] = "llvm.intr.vscale"() : () -> i64
+// CHECK:           %[[CAST_IDX:.*]] = builtin.unrealized_conversion_cast %[[VSCALE]] : i64 to index
+// CHECK:           %[[CAST_I32:.*]] = arith.index_cast %[[CAST_IDX]] : index to i32
+// CHECK:           %[[VL_MUL:.*]] = arith.muli %[[VL_BASE]], %[[CAST_I32]] : i32
+// CHECK:           "llvm.intr.vp.reduce.umin"(%[[NEUTRAL]], %[[INPUT]], %[[MASK]], %[[VL_MUL]]) : (i8, vector<[32]xi8>, vector<[32]xi1>, i32) -> i8
 
 // -----
 
@@ -239,6 +313,24 @@ func.func @masked_reduce_maxsi_i8(%arg0: vector<32xi8>, %mask : vector<32xi1>) -
 
 // -----
 
+func.func @masked_reduce_maxsi_i8_scalable(%arg0: vector<[32]xi8>, %mask : vector<[32]xi1>) -> i8 {
+  %0 = vector.mask %mask { vector.reduction <maxsi>, %arg0 : vector<[32]xi8> into i8 } : vector<[32]xi1> -> i8
+  return %0 : i8
+}
+
+// CHECK-LABEL:   func.func @masked_reduce_maxsi_i8_scalable(
+// CHECK-SAME:                               %[[INPUT:.*]]: vector<[32]xi8>,
+// CHECK-SAME:                               %[[MASK:.*]]: vector<[32]xi1>) -> i8 {
+// CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(-128 : i8) : i8
+// CHECK:           %[[VL_BASE:.*]] = llvm.mlir.constant(32 : i32) : i32
+// CHECK:           %[[VSCALE:.*]] = "llvm.intr.vscale"() : () -> i64
+// CHECK:           %[[CAST_IDX:.*]] = builtin.unrealized_conversion_cast %[[VSCALE]] : i64 to index
+// CHECK:           %[[CAST_I32:.*]] = arith.index_cast %[[CAST_IDX]] : index to i32
+// CHECK:           %[[VL_MUL:.*]] = arith.muli %[[VL_BASE]], %[[CAST_I32]] : i32
+// CHECK:           "llvm.intr.vp.reduce.smax"(%[[NEUTRAL]], %[[INPUT]], %[[MASK]], %[[VL_MUL]]) : (i8, vector<[32]xi8>, vector<[32]xi1>, i32) -> i8
+
+// -----
+
 func.func @masked_reduce_or_i8(%arg0: vector<32xi8>, %mask : vector<32xi1>) -> i8 {
   %0 = vector.mask %mask { vector.reduction <or>, %arg0 : vector<32xi8> into i8 } : vector<32xi1> -> i8
   return %0 : i8
@@ -279,5 +371,23 @@ func.func @masked_reduce_xor_i8(%arg0: vector<32xi8>, %mask : vector<32xi1>) -> 
 // CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(0 : i8) : i8
 // CHECK:           %[[VL:.*]] = llvm.mlir.constant(32 : i32) : i32
 // CHECK:           "llvm.intr.vp.reduce.xor"(%[[NEUTRAL]], %[[INPUT]], %[[MASK]], %[[VL]]) : (i8, vector<32xi8>, vector<32xi1>, i32) -> i8
+
+// -----
+
+func.func @masked_reduce_xor_i8_scalable(%arg0: vector<[32]xi8>, %mask : vector<[32]xi1>) -> i8 {
+  %0 = vector.mask %mask { vector.reduction <xor>, %arg0 : vector<[32]xi8> into i8 } : vector<[32]xi1> -> i8
+  return %0 : i8
+}
+
+// CHECK-LABEL:   func.func @masked_reduce_xor_i8_scalable(
+// CHECK-SAME:                             %[[INPUT:.*]]: vector<[32]xi8>,
+// CHECK-SAME:                             %[[MASK:.*]]: vector<[32]xi1>) -> i8 {
+// CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(0 : i8) : i8
+// CHECK:           %[[VL_BASE:.*]] = llvm.mlir.constant(32 : i32) : i32
+// CHECK:           %[[VSCALE:.*]] = "llvm.intr.vscale"() : () -> i64
+// CHECK:           %[[CAST_IDX:.*]] = builtin.unrealized_conversion_cast %[[VSCALE]] : i64 to index
+// CHECK:           %[[CAST_I32:.*]] = arith.index_cast %[[CAST_IDX]] : index to i32
+// CHECK:           %[[VL_MUL:.*]] = arith.muli %[[VL_BASE]], %[[CAST_I32]] : i32
+// CHECK:           "llvm.intr.vp.reduce.xor"(%[[NEUTRAL]], %[[INPUT]], %[[MASK]], %[[VL_MUL]]) : (i8, vector<[32]xi8>, vector<[32]xi1>, i32) -> i8
 
 

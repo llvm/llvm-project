@@ -121,7 +121,7 @@ entry:
 ; WITHVNDS-NEXT: .ref __llvm_prf_vnds[RW]
 
 ; WITHVNDS-OBJ:      SYMBOL TABLE:
-; WITHVNDS-OBJ-NEXT: 00000000      df *DEBUG*	00000000 <stdin>
+; WITHVNDS-OBJ-NEXT: 00000000      df *DEBUG*	00000000 .file
 ; WITHVNDS-OBJ-NEXT: 00000000 l       .text	00000008 
 ; WITHVNDS-OBJ-NEXT: 00000000 g     F .text (csect: ) 	00000000 .main
 ; WITHVNDS-OBJ-NEXT: 00000008 l       .text	00000006 __llvm_prf_names

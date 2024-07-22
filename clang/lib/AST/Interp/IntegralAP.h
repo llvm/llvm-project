@@ -61,7 +61,7 @@ public:
 
   IntegralAP(APInt V) : V(V) {}
   /// Arbitrary value for uninitialized variables.
-  IntegralAP() : IntegralAP(-1, 1024) {}
+  IntegralAP() : IntegralAP(-1, 3) {}
 
   IntegralAP operator-() const { return IntegralAP(-V); }
   IntegralAP operator-(const IntegralAP &Other) const {
@@ -133,7 +133,7 @@ public:
     else
       return APSInt(V.zext(Bits), !Signed);
   }
-  APValue toAPValue() const { return APValue(toAPSInt()); }
+  APValue toAPValue(const ASTContext &) const { return APValue(toAPSInt()); }
 
   bool isZero() const { return V.isZero(); }
   bool isPositive() const { return V.isNonNegative(); }
@@ -154,7 +154,10 @@ public:
   }
 
   IntegralAP truncate(unsigned BitWidth) const {
-    return IntegralAP(V.trunc(BitWidth));
+    if constexpr (Signed)
+      return IntegralAP(V.trunc(BitWidth).sextOrTrunc(this->bitWidth()));
+    else
+      return IntegralAP(V.trunc(BitWidth).zextOrTrunc(this->bitWidth()));
   }
 
   IntegralAP<false> toUnsigned() const {
@@ -204,14 +207,18 @@ public:
   }
 
   static bool rem(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
-    // FIXME: Implement.
-    assert(false);
+    if constexpr (Signed)
+      *R = IntegralAP(A.V.srem(B.V));
+    else
+      *R = IntegralAP(A.V.urem(B.V));
     return false;
   }
 
   static bool div(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
-    // FIXME: Implement.
-    assert(false);
+    if constexpr (Signed)
+      *R = IntegralAP(A.V.sdiv(B.V));
+    else
+      *R = IntegralAP(A.V.udiv(B.V));
     return false;
   }
 
@@ -259,6 +266,31 @@ public:
       *R = IntegralAP(A.V.lshr(ShiftAmount));
   }
 
+  // === Serialization support ===
+  size_t bytesToSerialize() const {
+    // 4 bytes for the BitWidth followed by N bytes for the actual APInt.
+    return sizeof(uint32_t) + (V.getBitWidth() / CHAR_BIT);
+  }
+
+  void serialize(std::byte *Buff) const {
+    assert(V.getBitWidth() < std::numeric_limits<uint8_t>::max());
+    uint32_t BitWidth = V.getBitWidth();
+
+    std::memcpy(Buff, &BitWidth, sizeof(uint32_t));
+    llvm::StoreIntToMemory(V, (uint8_t *)(Buff + sizeof(uint32_t)),
+                           BitWidth / CHAR_BIT);
+  }
+
+  static IntegralAP<Signed> deserialize(const std::byte *Buff) {
+    uint32_t BitWidth;
+    std::memcpy(&BitWidth, Buff, sizeof(uint32_t));
+    IntegralAP<Signed> Val(APInt(BitWidth, 0ull, !Signed));
+
+    llvm::LoadIntFromMemory(Val.V, (const uint8_t *)Buff + sizeof(uint32_t),
+                            BitWidth / CHAR_BIT);
+    return Val;
+  }
+
 private:
   template <template <typename T> class Op>
   static bool CheckAddSubMulUB(const IntegralAP &A, const IntegralAP &B,
@@ -283,6 +315,11 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      IntegralAP<Signed> I) {
   I.print(OS);
   return OS;
+}
+
+template <bool Signed>
+IntegralAP<Signed> getSwappedBytes(IntegralAP<Signed> F) {
+  return F;
 }
 
 } // namespace interp

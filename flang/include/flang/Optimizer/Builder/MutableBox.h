@@ -150,7 +150,8 @@ void syncMutableBoxFromIRBox(fir::FirOpBuilder &builder, mlir::Location loc,
 fir::ExtendedValue genMutableBoxRead(fir::FirOpBuilder &builder,
                                      mlir::Location loc,
                                      const fir::MutableBoxValue &box,
-                                     bool mayBePolymorphic = true);
+                                     bool mayBePolymorphic = true,
+                                     bool preserveLowerBounds = true);
 
 /// Returns the fir.ref<fir.box<T>> of a MutableBoxValue filled with the current
 /// association / allocation properties. If the fir.ref<fir.box> already exists

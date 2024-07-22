@@ -21,7 +21,6 @@
 #  include "sanitizer_common.h"
 #  include "sanitizer_file.h"
 #  include "sanitizer_flags.h"
-#  include "sanitizer_freebsd.h"
 #  include "sanitizer_getauxval.h"
 #  include "sanitizer_glibc_version.h"
 #  include "sanitizer_linux.h"
@@ -46,7 +45,6 @@
 #  endif
 
 #  if SANITIZER_FREEBSD
-#    include <osreldate.h>
 #    include <pthread_np.h>
 #    include <sys/auxv.h>
 #    include <sys/sysctl.h>
@@ -56,6 +54,8 @@
 #    undef MAP_NORESERVE
 #    define MAP_NORESERVE 0
 extern const Elf_Auxinfo *__elf_aux_vector;
+extern "C" int __sys_sigaction(int signum, const struct sigaction *act,
+                               struct sigaction *oldact);
 #  endif
 
 #  if SANITIZER_NETBSD
@@ -95,12 +95,22 @@ SANITIZER_WEAK_ATTRIBUTE int real_sigaction(int signum, const void *act,
                                             void *oldact);
 
 int internal_sigaction(int signum, const void *act, void *oldact) {
-#  if !SANITIZER_GO
+#  if SANITIZER_FREEBSD
+  // On FreeBSD, call the sigaction syscall directly (part of libsys in FreeBSD
+  // 15) since the libc version goes via a global interposing table. Due to
+  // library initialization order the table can be relocated after the call to
+  // InitializeDeadlySignals() which then crashes when dereferencing the
+  // uninitialized pointer in libc.
+  return __sys_sigaction(signum, (const struct sigaction *)act,
+                         (struct sigaction *)oldact);
+#  else
+#    if !SANITIZER_GO
   if (&real_sigaction)
     return real_sigaction(signum, act, oldact);
-#  endif
+#    endif
   return sigaction(signum, (const struct sigaction *)act,
                    (struct sigaction *)oldact);
+#  endif
 }
 
 void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
@@ -139,6 +149,19 @@ void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
       stacksize = kMaxThreadStackSize;
     *stack_top = segment.end;
     *stack_bottom = segment.end - stacksize;
+
+    uptr maxAddr = GetMaxUserVirtualAddress();
+    // Edge case: the stack mapping on some systems may be off-by-one e.g.,
+    //     fffffffdf000-1000000000000 rw-p 00000000 00:00 0 [stack]
+    // instead of:
+    //     fffffffdf000- ffffffffffff
+    // The out-of-range stack_top can result in an invalid shadow address
+    // calculation, since those usually assume the parameters are in range.
+    if (*stack_top == maxAddr + 1)
+      *stack_top = maxAddr;
+    else
+      CHECK_LE(*stack_top, maxAddr);
+
     return;
   }
   uptr stacksize = 0;
@@ -629,11 +652,7 @@ void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
 
 #  if !SANITIZER_FREEBSD
 typedef ElfW(Phdr) Elf_Phdr;
-#  elif SANITIZER_WORDSIZE == 32 && __FreeBSD_version <= 902001  // v9.2
-#    define Elf_Phdr XElf32_Phdr
-#    define dl_phdr_info xdl_phdr_info
-#    define dl_iterate_phdr(c, b) xdl_iterate_phdr((c), (b))
-#  endif  // !SANITIZER_FREEBSD
+#  endif
 
 struct DlIteratePhdrData {
   InternalMmapVectorNoCtor<LoadedModule> *modules;
@@ -989,9 +1008,8 @@ void UnmapFromTo(uptr from, uptr to) {
 }
 
 uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
-                      uptr min_shadow_base_alignment,
-                      UNUSED uptr &high_mem_end) {
-  const uptr granularity = GetMmapGranularity();
+                      uptr min_shadow_base_alignment, UNUSED uptr &high_mem_end,
+                      uptr granularity) {
   const uptr alignment =
       Max<uptr>(granularity << shadow_scale, 1ULL << min_shadow_base_alignment);
   const uptr left_padding =

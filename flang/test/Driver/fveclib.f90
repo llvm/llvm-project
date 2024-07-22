@@ -5,6 +5,7 @@
 ! RUN: %flang -### -c -fveclib=Darwin_libsystem_m %s 2>&1 | FileCheck -check-prefix CHECK-DARWIN_LIBSYSTEM_M %s
 ! RUN: %flang -### -c --target=aarch64-none-none -fveclib=SLEEF %s 2>&1 | FileCheck -check-prefix CHECK-SLEEF %s
 ! RUN: %flang -### -c --target=aarch64-none-none -fveclib=ArmPL %s 2>&1 | FileCheck -check-prefix CHECK-ARMPL %s
+! RUN: %flang -### -c --target=aarch64-apple-darwin -fveclib=none %s 2>&1 | FileCheck -check-prefix CHECK-NOLIB-DARWIN %s
 ! RUN: not %flang -c -fveclib=something %s 2>&1 | FileCheck -check-prefix CHECK-INVALID %s
 
 ! CHECK-NOLIB: "-fveclib=none"
@@ -14,6 +15,7 @@
 ! CHECK-DARWIN_LIBSYSTEM_M: "-fveclib=Darwin_libsystem_m"
 ! CHECK-SLEEF: "-fveclib=SLEEF"
 ! CHECK-ARMPL: "-fveclib=ArmPL"
+! CHECK-NOLIB-DARWIN: "-fveclib=none"
 
 ! CHECK-INVALID: error: invalid value 'something' in '-fveclib=something'
 

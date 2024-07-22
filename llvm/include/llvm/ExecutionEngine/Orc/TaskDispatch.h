@@ -23,6 +23,7 @@
 
 #if LLVM_ENABLE_THREADS
 #include <condition_variable>
+#include <deque>
 #include <mutex>
 #include <thread>
 #endif
@@ -114,6 +115,9 @@ public:
 
 class DynamicThreadPoolTaskDispatcher : public TaskDispatcher {
 public:
+  DynamicThreadPoolTaskDispatcher(
+      std::optional<size_t> MaxMaterializationThreads)
+      : MaxMaterializationThreads(MaxMaterializationThreads) {}
   void dispatch(std::unique_ptr<Task> T) override;
   void shutdown() override;
 private:
@@ -121,6 +125,10 @@ private:
   bool Running = true;
   size_t Outstanding = 0;
   std::condition_variable OutstandingCV;
+
+  std::optional<size_t> MaxMaterializationThreads;
+  size_t NumMaterializationThreads = 0;
+  std::deque<std::unique_ptr<Task>> MaterializationTaskQueue;
 };
 
 #endif // LLVM_ENABLE_THREADS

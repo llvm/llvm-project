@@ -1,0 +1,10 @@
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX12 %s
+
+---
+name: gds
+body: |
+  bb.0:
+    ; GFX12: *** Bad machine code: GDS is not supported on this subtarget ***
+    ; GFX12: - instruction: DS_ADD_U32 %0:vgpr_32, %1:vgpr_32, 0, 1, implicit $m0, implicit $exec :: (load store acq_rel (s32), addrspace 2)
+    DS_ADD_U32 %0:vgpr_32, %2:vgpr_32, 0, 1, implicit $m0, implicit $exec :: (load store acq_rel (s32), addrspace 2)
+...

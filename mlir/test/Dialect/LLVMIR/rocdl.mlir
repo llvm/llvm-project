@@ -35,6 +35,18 @@ func.func @rocdl.barrier() {
   llvm.return
 }
 
+func.func @rocdl.sched_barrier() {
+  // CHECK: rocdl.sched.barrier
+  rocdl.sched.barrier 0
+  llvm.return
+}
+
+func.func @rocdl.setprio() {
+  // CHECK: rocdl.s.setprio
+  rocdl.s.setprio 0
+  llvm.return
+}
+
 func.func @rocdl.xdlops(%arg0 : f32, %arg1 : f32,
                    %arg2 : vector<32xf32>, %arg3 : i32,
                    %arg4 : vector<16xf32>, %arg5 : vector<4xf32>,
@@ -261,30 +273,6 @@ llvm.func @rocdl.raw.ptr.buffer.i32(%rsrc : !llvm.ptr<8>,
 
 // -----
 
-// Tests for deprecated buffer ops.
-
-llvm.func @rocdl.mubuf(%rsrc : vector<4xi32>, %vindex : i32,
-                       %offset : i32, %glc : i1,
-                       %slc : i1, %vdata1 : vector<1xf32>,
-                       %vdata2 : vector<2xf32>, %vdata4 : vector<4xf32>) {
-  // CHECK-LABEL: rocdl.mubuf
-  // CHECK: %{{.*}} = rocdl.buffer.load %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : vector<1xf32>
-  %r1 = rocdl.buffer.load %rsrc, %vindex, %offset, %glc, %slc : vector<1xf32>
-  // CHECK: %{{.*}} = rocdl.buffer.load %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : vector<2xf32>
-  %r2 = rocdl.buffer.load %rsrc, %vindex, %offset, %glc, %slc : vector<2xf32>
-  // CHECK: %{{.*}} = rocdl.buffer.load %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : vector<4xf32>
-  %r4 = rocdl.buffer.load %rsrc, %vindex, %offset, %glc, %slc : vector<4xf32>
-
-  // CHECK: rocdl.buffer.store %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : vector<1xf32>
-  rocdl.buffer.store %vdata1, %rsrc, %vindex, %offset, %glc, %slc : vector<1xf32>
-  // CHECK: rocdl.buffer.store %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : vector<2xf32>
-  rocdl.buffer.store %vdata2, %rsrc, %vindex, %offset, %glc, %slc : vector<2xf32>
-  // CHECK: rocdl.buffer.store %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : vector<4xf32>
-  rocdl.buffer.store %vdata4, %rsrc, %vindex, %offset, %glc, %slc : vector<4xf32>
-
-  llvm.return
-}
-
 llvm.func @rocdl.raw.buffer.f32(%rsrc : vector<4xi32>,
                        %offset : i32, %soffset : i32,
                        %aux : i32, %vdata1 : f32,
@@ -351,6 +339,19 @@ llvm.func @rocdl_8bit_floats(%source: i32, %stoch: i32) -> i32 {
   llvm.return %source5 : i32
 }
 
+llvm.func @rocdl.waitcnt() {
+  // CHECK-LABEL: rocdl.waitcnt
+  // CHECK: rocdl.waitcnt 0
+  rocdl.waitcnt 0
+  llvm.return
+}
+
+llvm.func @rocdl.s.barrier() {
+  // CHECK-LABEL: rocdl.s.barrier
+  // CHECK: rocdl.s.barrier
+  rocdl.s.barrier
+  llvm.return
+}
 // -----
 
 // expected-error@below {{attribute attached to unexpected op}}

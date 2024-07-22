@@ -44,8 +44,8 @@ struct DecomposeTensorConcatOp : public OpRewritePattern<ConcatOp> {
       return failure();
 
     int64_t dim = concatOp.getDim();
-    Value dimValue = rewriter.createOrFold<arith::ConstantOp>(
-        loc, rewriter.getIndexAttr(dim));
+    Value dimValue =
+        rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(dim));
 
     int64_t rank = concatOp.getResultType().getRank();
     SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));

@@ -9,7 +9,6 @@
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
 
-// XFAIL: LIBCXX-AIX-FIXME
 // XFAIL: LIBCXX-FREEBSD-FIXME
 
 // REQUIRES: locale.zh_CN.UTF-8
@@ -156,28 +155,34 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative one, showbase
-            std::string v = currency_symbol + "-0.01";
-            typedef cpp17_input_iterator<const char*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                false, ios, err, ex);
-            assert(base(iter) == v.data() + v.size());
-            assert(err == std::ios_base::eofbit);
-            assert(ex == -1);
+#ifdef _AIX
+          std::string v = "-" + currency_symbol + "0.01";
+#else
+          std::string v = currency_symbol + "-0.01";
+#endif
+          typedef cpp17_input_iterator<const char*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), false, ios, err, ex);
+          assert(base(iter) == v.data() + v.size());
+          assert(err == std::ios_base::eofbit);
+          assert(ex == -1);
         }
         {   // negative one, showbase
-            std::string v = currency_symbol + "-0.01";
-            std::showbase(ios);
-            typedef cpp17_input_iterator<const char*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                false, ios, err, ex);
-            assert(base(iter) == v.data() + v.size());
-            assert(err == std::ios_base::eofbit);
-            assert(ex == -1);
-            std::noshowbase(ios);
+#ifdef _AIX
+          std::string v = "-" + currency_symbol + "0.01";
+#else
+          std::string v = currency_symbol + "-0.01";
+#endif
+          std::showbase(ios);
+          typedef cpp17_input_iterator<const char*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), false, ios, err, ex);
+          assert(base(iter) == v.data() + v.size());
+          assert(err == std::ios_base::eofbit);
+          assert(ex == -1);
+          std::noshowbase(ios);
         }
         {   // positive, showbase
             std::string v = currency_symbol + "1,234,567.89";
@@ -204,17 +209,20 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative, showbase
-            std::string v = currency_symbol + "-1,234,567.89";
-            std::showbase(ios);
-            typedef cpp17_input_iterator<const char*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                false, ios, err, ex);
-            assert(base(iter) == v.data() + v.size());
-            assert(err == std::ios_base::eofbit);
-            assert(ex == -123456789);
-            std::noshowbase(ios);
+#ifdef _AIX
+          std::string v = "-" + currency_symbol + "1,234,567.89";
+#else
+          std::string v = currency_symbol + "-1,234,567.89";
+#endif
+          std::showbase(ios);
+          typedef cpp17_input_iterator<const char*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), false, ios, err, ex);
+          assert(base(iter) == v.data() + v.size());
+          assert(err == std::ios_base::eofbit);
+          assert(ex == -123456789);
+          std::noshowbase(ios);
         }
         {   // negative, showbase
             std::string v = "CNY -1,234,567.89";
@@ -322,8 +330,8 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative one, showbase
-#ifdef TEST_HAS_GLIBC
-            std::string v = "-" + currency_name + "0.01";
+#if defined(TEST_HAS_GLIBC) || defined(_AIX)
+          std::string v = "-" + currency_name + "0.01";
 #else
             std::string v = currency_name + "-0.01";
 #endif
@@ -337,8 +345,8 @@ int main(int, char**)
             assert(ex == -1);
         }
         {   // negative one, showbase
-#ifdef TEST_HAS_GLIBC
-            std::string v = "-" + currency_name + "0.01";
+#if defined(TEST_HAS_GLIBC) || defined(_AIX)
+          std::string v = "-" + currency_name + "0.01";
 #else
             std::string v = currency_name + "-0.01";
 #endif
@@ -378,8 +386,8 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative, showbase
-#ifdef TEST_HAS_GLIBC
-            std::string v = "-" + currency_name + "1,234,567.89";
+#if defined(TEST_HAS_GLIBC) || defined(_AIX)
+          std::string v = "-" + currency_name + "1,234,567.89";
 #else
             std::string v = currency_name + "-1,234,567.89";
 #endif
@@ -507,28 +515,34 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative one, showbase
-            std::wstring v = w_currency_symbol + L"-0.01";
-            typedef cpp17_input_iterator<const wchar_t*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                false, ios, err, ex);
-            assert(base(iter) == v.data() + v.size());
-            assert(err == std::ios_base::eofbit);
-            assert(ex == -1);
+#  ifdef _AIX
+          std::wstring v = L"-" + w_currency_symbol + L"0.01";
+#  else
+          std::wstring v = w_currency_symbol + L"-0.01";
+#  endif
+          typedef cpp17_input_iterator<const wchar_t*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), false, ios, err, ex);
+          assert(base(iter) == v.data() + v.size());
+          assert(err == std::ios_base::eofbit);
+          assert(ex == -1);
         }
         {   // negative one, showbase
-            std::wstring v = w_currency_symbol + L"-0.01";
-            std::showbase(ios);
-            typedef cpp17_input_iterator<const wchar_t*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                false, ios, err, ex);
-            assert(base(iter) == v.data() + v.size());
-            assert(err == std::ios_base::eofbit);
-            assert(ex == -1);
-            std::noshowbase(ios);
+#  ifdef _AIX
+          std::wstring v = L"-" + w_currency_symbol + L"0.01";
+#  else
+          std::wstring v = w_currency_symbol + L"-0.01";
+#  endif
+          std::showbase(ios);
+          typedef cpp17_input_iterator<const wchar_t*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), false, ios, err, ex);
+          assert(base(iter) == v.data() + v.size());
+          assert(err == std::ios_base::eofbit);
+          assert(ex == -1);
+          std::noshowbase(ios);
         }
         {   // positive, showbase
             std::wstring v = w_currency_symbol + L"1,234,567.89";
@@ -555,17 +569,20 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative, showbase
-            std::wstring v = w_currency_symbol + L"-1,234,567.89";
-            std::showbase(ios);
-            typedef cpp17_input_iterator<const wchar_t*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                false, ios, err, ex);
-            assert(base(iter) == v.data() + v.size());
-            assert(err == std::ios_base::eofbit);
-            assert(ex == -123456789);
-            std::noshowbase(ios);
+#  ifdef _AIX
+          std::wstring v = L"-" + w_currency_symbol + L"1,234,567.89";
+#  else
+          std::wstring v = w_currency_symbol + L"-1,234,567.89";
+#  endif
+          std::showbase(ios);
+          typedef cpp17_input_iterator<const wchar_t*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), false, ios, err, ex);
+          assert(base(iter) == v.data() + v.size());
+          assert(err == std::ios_base::eofbit);
+          assert(ex == -123456789);
+          std::noshowbase(ios);
         }
         {   // negative, showbase
             std::wstring v = L"CNY -1,234,567.89";
@@ -673,36 +690,34 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative one, showbase
-#ifdef TEST_HAS_GLIBC
-            std::wstring v = L"-" + w_currency_name + L"0.01";
-#else
-            std::wstring v = w_currency_name + L"-0.01";
-#endif
-            typedef cpp17_input_iterator<const wchar_t*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                true, ios, err, ex);
-            assert(base(iter) == v.data() + v.size());
-            assert(err == std::ios_base::eofbit);
-            assert(ex == -1);
+#  if defined(TEST_HAS_GLIBC) || defined(_AIX)
+          std::wstring v = L"-" + w_currency_name + L"0.01";
+#  else
+          std::wstring v = w_currency_name + L"-0.01";
+#  endif
+          typedef cpp17_input_iterator<const wchar_t*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), true, ios, err, ex);
+          assert(base(iter) == v.data() + v.size());
+          assert(err == std::ios_base::eofbit);
+          assert(ex == -1);
         }
         {   // negative one, showbase
-#ifdef TEST_HAS_GLIBC
-            std::wstring v = L"-" + w_currency_name + L"0.01";
-#else
-            std::wstring v = w_currency_name + L"-0.01";
-#endif
-            std::showbase(ios);
-            typedef cpp17_input_iterator<const wchar_t*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                true, ios, err, ex);
-            assert(base(iter) == v.data() + v.size());
-            assert(err == std::ios_base::eofbit);
-            assert(ex == -1);
-            std::noshowbase(ios);
+#  if defined(TEST_HAS_GLIBC) || defined(_AIX)
+          std::wstring v = L"-" + w_currency_name + L"0.01";
+#  else
+          std::wstring v = w_currency_name + L"-0.01";
+#  endif
+          std::showbase(ios);
+          typedef cpp17_input_iterator<const wchar_t*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), true, ios, err, ex);
+          assert(base(iter) == v.data() + v.size());
+          assert(err == std::ios_base::eofbit);
+          assert(ex == -1);
+          std::noshowbase(ios);
         }
         {   // positive, showbase
             std::wstring v = w_currency_name + L"1,234,567.89";
@@ -729,21 +744,20 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative, showbase
-#ifdef TEST_HAS_GLIBC
-            std::wstring v = L"-" + w_currency_name + L"1,234,567.89";
-#else
-            std::wstring v = w_currency_name + L"-1,234,567.89";
-#endif
-            std::showbase(ios);
-            typedef cpp17_input_iterator<const wchar_t*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                true, ios, err, ex);
-            assert(base(iter) == v.data() + v.size());
-            assert(err == std::ios_base::eofbit);
-            assert(ex == -123456789);
-            std::noshowbase(ios);
+#  if defined(TEST_HAS_GLIBC) || defined(_AIX)
+          std::wstring v = L"-" + w_currency_name + L"1,234,567.89";
+#  else
+          std::wstring v = w_currency_name + L"-1,234,567.89";
+#  endif
+          std::showbase(ios);
+          typedef cpp17_input_iterator<const wchar_t*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), true, ios, err, ex);
+          assert(base(iter) == v.data() + v.size());
+          assert(err == std::ios_base::eofbit);
+          assert(ex == -123456789);
+          std::noshowbase(ios);
         }
         {   // negative, showbase
             std::wstring v = w_currency_symbol + L"-1,234,567.89";

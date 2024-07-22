@@ -485,31 +485,31 @@ memoryIsNotModifiedBetween(Instruction *FirstI, Instruction *SecondI,
 static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
                               uint64_t OldOffsetInBits, uint64_t OldSizeInBits,
                               uint64_t NewSizeInBits, bool IsOverwriteEnd) {
-  const DataLayout &DL = Inst->getModule()->getDataLayout();
+  const DataLayout &DL = Inst->getDataLayout();
   uint64_t DeadSliceSizeInBits = OldSizeInBits - NewSizeInBits;
   uint64_t DeadSliceOffsetInBits =
       OldOffsetInBits + (IsOverwriteEnd ? NewSizeInBits : 0);
-  auto SetDeadFragExpr = [](DbgAssignIntrinsic *DAI,
+  auto SetDeadFragExpr = [](auto *Assign,
                             DIExpression::FragmentInfo DeadFragment) {
     // createFragmentExpression expects an offset relative to the existing
     // fragment offset if there is one.
     uint64_t RelativeOffset = DeadFragment.OffsetInBits -
-                              DAI->getExpression()
+                              Assign->getExpression()
                                   ->getFragmentInfo()
                                   .value_or(DIExpression::FragmentInfo(0, 0))
                                   .OffsetInBits;
     if (auto NewExpr = DIExpression::createFragmentExpression(
-            DAI->getExpression(), RelativeOffset, DeadFragment.SizeInBits)) {
-      DAI->setExpression(*NewExpr);
+            Assign->getExpression(), RelativeOffset, DeadFragment.SizeInBits)) {
+      Assign->setExpression(*NewExpr);
       return;
     }
     // Failed to create a fragment expression for this so discard the value,
     // making this a kill location.
     auto *Expr = *DIExpression::createFragmentExpression(
-        DIExpression::get(DAI->getContext(), std::nullopt),
+        DIExpression::get(Assign->getContext(), std::nullopt),
         DeadFragment.OffsetInBits, DeadFragment.SizeInBits);
-    DAI->setExpression(Expr);
-    DAI->setKillLocation();
+    Assign->setExpression(Expr);
+    Assign->setKillLocation();
   };
 
   // A DIAssignID to use so that the inserted dbg.assign intrinsics do not
@@ -527,32 +527,36 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
   // returned by getAssignmentMarkers so save a copy of the markers to iterate
   // over.
   auto LinkedRange = at::getAssignmentMarkers(Inst);
+  SmallVector<DbgVariableRecord *> LinkedDVRAssigns =
+      at::getDVRAssignmentMarkers(Inst);
   SmallVector<DbgAssignIntrinsic *> Linked(LinkedRange.begin(),
                                            LinkedRange.end());
-  for (auto *DAI : Linked) {
+  auto InsertAssignForOverlap = [&](auto *Assign) {
     std::optional<DIExpression::FragmentInfo> NewFragment;
     if (!at::calculateFragmentIntersect(DL, OriginalDest, DeadSliceOffsetInBits,
-                                        DeadSliceSizeInBits, DAI,
+                                        DeadSliceSizeInBits, Assign,
                                         NewFragment) ||
         !NewFragment) {
       // We couldn't calculate the intersecting fragment for some reason. Be
       // cautious and unlink the whole assignment from the store.
-      DAI->setKillAddress();
-      DAI->setAssignId(GetDeadLink());
-      continue;
+      Assign->setKillAddress();
+      Assign->setAssignId(GetDeadLink());
+      return;
     }
     // No intersect.
     if (NewFragment->SizeInBits == 0)
-      continue;
+      return;
 
     // Fragments overlap: insert a new dbg.assign for this dead part.
-    auto *NewAssign = cast<DbgAssignIntrinsic>(DAI->clone());
-    NewAssign->insertAfter(DAI);
+    auto *NewAssign = static_cast<decltype(Assign)>(Assign->clone());
+    NewAssign->insertAfter(Assign);
     NewAssign->setAssignId(GetDeadLink());
     if (NewFragment)
       SetDeadFragExpr(NewAssign, *NewFragment);
     NewAssign->setKillAddress();
-  }
+  };
+  for_each(Linked, InsertAssignForOverlap);
+  for_each(LinkedDVRAssigns, InsertAssignForOverlap);
 }
 
 static bool tryToSplitMiddle(Instruction *DeadI,
@@ -723,7 +727,8 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
     Value *Indices[1] = {
         ConstantInt::get(DeadWriteLength->getType(), ToRemoveSize)};
     Instruction *NewDestGEP = GetElementPtrInst::CreateInBounds(
-        Type::getInt8Ty(DeadIntrinsic->getContext()), OrigDest, Indices, "", DeadI);
+        Type::getInt8Ty(DeadIntrinsic->getContext()), OrigDest, Indices, "",
+        DeadI->getIterator());
     NewDestGEP->setDebugLoc(DeadIntrinsic->getDebugLoc());
     DeadIntrinsic->setDest(NewDestGEP);
   }
@@ -947,6 +952,9 @@ struct DSEState {
   // no longer be captured.
   bool ShouldIterateEndOfFunctionDSE;
 
+  /// Dead instructions to be removed at the end of DSE.
+  SmallVector<Instruction *> ToRemove;
+
   // Class contains self-reference, make sure it's not copied/moved.
   DSEState(const DSEState &) = delete;
   DSEState &operator=(const DSEState &) = delete;
@@ -955,7 +963,7 @@ struct DSEState {
            PostDominatorTree &PDT, const TargetLibraryInfo &TLI,
            const LoopInfo &LI, const TargetTransformInfo &TTI)
       : F(F), AA(AA), EI(DT, &LI), BatchAA(AA, &EI), MSSA(MSSA), DT(DT),
-        PDT(PDT), TLI(TLI), DL(F.getParent()->getDataLayout()), LI(LI),
+        PDT(PDT), TLI(TLI), DL(F.getDataLayout()), LI(LI),
         TTI(TTI) {
     // Collect blocks with throwing instructions not modeled in MemorySSA and
     // alloc-like objects.
@@ -987,6 +995,16 @@ struct DSEState {
       return isa<UnreachableInst>(E->getTerminator());
     });
   }
+
+  static void pushMemUses(MemoryAccess *Acc,
+                          SmallVectorImpl<MemoryAccess *> &WorkList,
+                          SmallPtrSetImpl<MemoryAccess *> &Visited) {
+    for (Use &U : Acc->uses()) {
+      auto *MA = cast<MemoryAccess>(U.getUser());
+      if (Visited.insert(MA).second)
+        WorkList.push_back(MA);
+    }
+  };
 
   LocationSize strengthenLocationSize(const Instruction *I,
                                       LocationSize Size) const {
@@ -1243,26 +1261,14 @@ struct DSEState {
   }
 
   /// Returns true if \p Def is not read before returning from the function.
-  bool isWriteAtEndOfFunction(MemoryDef *Def) {
+  bool isWriteAtEndOfFunction(MemoryDef *Def, const MemoryLocation &DefLoc) {
     LLVM_DEBUG(dbgs() << "  Check if def " << *Def << " ("
                       << *Def->getMemoryInst()
                       << ") is at the end the function \n");
-
-    auto MaybeLoc = getLocForWrite(Def->getMemoryInst());
-    if (!MaybeLoc) {
-      LLVM_DEBUG(dbgs() << "  ... could not get location for write.\n");
-      return false;
-    }
-
     SmallVector<MemoryAccess *, 4> WorkList;
     SmallPtrSet<MemoryAccess *, 8> Visited;
-    auto PushMemUses = [&WorkList, &Visited](MemoryAccess *Acc) {
-      if (!Visited.insert(Acc).second)
-        return;
-      for (Use &U : Acc->uses())
-        WorkList.push_back(cast<MemoryAccess>(U.getUser()));
-    };
-    PushMemUses(Def);
+
+    pushMemUses(Def, WorkList, Visited);
     for (unsigned I = 0; I < WorkList.size(); I++) {
       if (WorkList.size() >= MemorySSAScanLimit) {
         LLVM_DEBUG(dbgs() << "  ... hit exploration limit.\n");
@@ -1274,22 +1280,22 @@ struct DSEState {
         // AliasAnalysis does not account for loops. Limit elimination to
         // candidates for which we can guarantee they always store to the same
         // memory location.
-        if (!isGuaranteedLoopInvariant(MaybeLoc->Ptr))
+        if (!isGuaranteedLoopInvariant(DefLoc.Ptr))
           return false;
 
-        PushMemUses(cast<MemoryPhi>(UseAccess));
+        pushMemUses(cast<MemoryPhi>(UseAccess), WorkList, Visited);
         continue;
       }
       // TODO: Checking for aliasing is expensive. Consider reducing the amount
       // of times this is called and/or caching it.
       Instruction *UseInst = cast<MemoryUseOrDef>(UseAccess)->getMemoryInst();
-      if (isReadClobber(*MaybeLoc, UseInst)) {
+      if (isReadClobber(DefLoc, UseInst)) {
         LLVM_DEBUG(dbgs() << "  ... hit read clobber " << *UseInst << ".\n");
         return false;
       }
 
       if (MemoryDef *UseDef = dyn_cast<MemoryDef>(UseAccess))
-        PushMemUses(UseDef);
+        pushMemUses(UseDef, WorkList, Visited);
     }
     return true;
   }
@@ -1591,12 +1597,9 @@ struct DSEState {
     LLVM_DEBUG(dbgs() << "  Checking for reads of " << *MaybeDeadAccess << " ("
                       << *MaybeDeadI << ")\n");
 
-    SmallSetVector<MemoryAccess *, 32> WorkList;
-    auto PushMemUses = [&WorkList](MemoryAccess *Acc) {
-      for (Use &U : Acc->uses())
-        WorkList.insert(cast<MemoryAccess>(U.getUser()));
-    };
-    PushMemUses(MaybeDeadAccess);
+    SmallVector<MemoryAccess *, 32> WorkList;
+    SmallPtrSet<MemoryAccess *, 32> Visited;
+    pushMemUses(MaybeDeadAccess, WorkList, Visited);
 
     // Check if DeadDef may be read.
     for (unsigned I = 0; I < WorkList.size(); I++) {
@@ -1620,7 +1623,7 @@ struct DSEState {
           continue;
         }
         LLVM_DEBUG(dbgs() << "\n    ... adding PHI uses\n");
-        PushMemUses(UseAccess);
+        pushMemUses(UseAccess, WorkList, Visited);
         continue;
       }
 
@@ -1645,7 +1648,7 @@ struct DSEState {
 
       if (isNoopIntrinsic(cast<MemoryUseOrDef>(UseAccess)->getMemoryInst())) {
         LLVM_DEBUG(dbgs() << "    ... adding uses of intrinsic\n");
-        PushMemUses(UseAccess);
+        pushMemUses(UseAccess, WorkList, Visited);
         continue;
       }
 
@@ -1704,7 +1707,7 @@ struct DSEState {
             return std::nullopt;
           }
         } else
-          PushMemUses(UseDef);
+          pushMemUses(UseDef, WorkList, Visited);
       }
     }
 
@@ -1783,8 +1786,11 @@ struct DSEState {
     return {MaybeDeadAccess};
   }
 
-  // Delete dead memory defs
-  void deleteDeadInstruction(Instruction *SI) {
+  /// Delete dead memory defs and recursively add their operands to ToRemove if
+  /// they became dead.
+  void
+  deleteDeadInstruction(Instruction *SI,
+                        SmallPtrSetImpl<MemoryAccess *> *Deleted = nullptr) {
     MemorySSAUpdater Updater(&MSSA);
     SmallVector<Instruction *, 32> NowDeadInsts;
     NowDeadInsts.push_back(SI);
@@ -1799,9 +1805,14 @@ struct DSEState {
       salvageKnowledge(DeadInst);
 
       // Remove the Instruction from MSSA.
-      if (MemoryAccess *MA = MSSA.getMemoryAccess(DeadInst)) {
-        if (MemoryDef *MD = dyn_cast<MemoryDef>(MA)) {
+      MemoryAccess *MA = MSSA.getMemoryAccess(DeadInst);
+      bool IsMemDef = MA && isa<MemoryDef>(MA);
+      if (MA) {
+        if (IsMemDef) {
+          auto *MD = cast<MemoryDef>(MA);
           SkipStores.insert(MD);
+          if (Deleted)
+            Deleted->insert(MD);
           if (auto *SI = dyn_cast<StoreInst>(MD->getMemoryInst())) {
             if (SI->getValueOperand()->getType()->isPointerTy()) {
               const Value *UO = getUnderlyingObject(SI->getValueOperand());
@@ -1821,13 +1832,21 @@ struct DSEState {
       // Remove its operands
       for (Use &O : DeadInst->operands())
         if (Instruction *OpI = dyn_cast<Instruction>(O)) {
-          O = nullptr;
+          O.set(PoisonValue::get(O->getType()));
           if (isInstructionTriviallyDead(OpI, &TLI))
             NowDeadInsts.push_back(OpI);
         }
 
       EI.removeInstruction(DeadInst);
-      DeadInst->eraseFromParent();
+      // Remove memory defs directly if they don't produce results, but only
+      // queue other dead instructions for later removal. They may have been
+      // used as memory locations that have been cached by BatchAA. Removing
+      // them here may lead to newly created instructions to be allocated at the
+      // same address, yielding stale cache entries.
+      if (IsMemDef && DeadInst->getType()->isVoidTy())
+        DeadInst->eraseFromParent();
+      else
+        ToRemove.push_back(DeadInst);
     }
   }
 
@@ -1891,8 +1910,11 @@ struct DSEState {
 
         Instruction *DefI = Def->getMemoryInst();
         auto DefLoc = getLocForWrite(DefI);
-        if (!DefLoc || !isRemovable(DefI))
+        if (!DefLoc || !isRemovable(DefI)) {
+          LLVM_DEBUG(dbgs() << "  ... could not get location for write or "
+                               "instruction not removable.\n");
           continue;
+        }
 
         // NOTE: Currently eliminating writes at the end of a function is
         // limited to MemoryDefs with a single underlying object, to save
@@ -1903,7 +1925,7 @@ struct DSEState {
         if (!isInvisibleToCallerAfterRet(UO))
           continue;
 
-        if (isWriteAtEndOfFunction(Def)) {
+        if (isWriteAtEndOfFunction(Def, *DefLoc)) {
           // See through pointer-to-pointer bitcasts
           LLVM_DEBUG(dbgs() << "   ... MemoryDef is not accessed until the end "
                                "of the function\n");
@@ -1983,16 +2005,67 @@ struct DSEState {
                               Malloc->getArgOperand(0), IRB, TLI);
     if (!Calloc)
       return false;
+
     MemorySSAUpdater Updater(&MSSA);
     auto *NewAccess =
       Updater.createMemoryAccessAfter(cast<Instruction>(Calloc), nullptr,
                                       MallocDef);
     auto *NewAccessMD = cast<MemoryDef>(NewAccess);
     Updater.insertDef(NewAccessMD, /*RenameUses=*/true);
-    Updater.removeMemoryAccess(Malloc);
     Malloc->replaceAllUsesWith(Calloc);
-    Malloc->eraseFromParent();
+    deleteDeadInstruction(Malloc);
     return true;
+  }
+
+  // Check if there is a dominating condition, that implies that the value
+  // being stored in a ptr is already present in the ptr.
+  bool dominatingConditionImpliesValue(MemoryDef *Def) {
+    auto *StoreI = cast<StoreInst>(Def->getMemoryInst());
+    BasicBlock *StoreBB = StoreI->getParent();
+    Value *StorePtr = StoreI->getPointerOperand();
+    Value *StoreVal = StoreI->getValueOperand();
+
+    DomTreeNode *IDom = DT.getNode(StoreBB)->getIDom();
+    if (!IDom)
+      return false;
+
+    auto *BI = dyn_cast<BranchInst>(IDom->getBlock()->getTerminator());
+    if (!BI || !BI->isConditional())
+      return false;
+
+    // In case both blocks are the same, it is not possible to determine
+    // if optimization is possible. (We would not want to optimize a store
+    // in the FalseBB if condition is true and vice versa.)
+    if (BI->getSuccessor(0) == BI->getSuccessor(1))
+      return false;
+
+    Instruction *ICmpL;
+    ICmpInst::Predicate Pred;
+    if (!match(BI->getCondition(),
+               m_c_ICmp(Pred,
+                        m_CombineAnd(m_Load(m_Specific(StorePtr)),
+                                     m_Instruction(ICmpL)),
+                        m_Specific(StoreVal))) ||
+        !ICmpInst::isEquality(Pred))
+      return false;
+
+    // In case the else blocks also branches to the if block or the other way
+    // around it is not possible to determine if the optimization is possible.
+    if (Pred == ICmpInst::ICMP_EQ &&
+        !DT.dominates(BasicBlockEdge(BI->getParent(), BI->getSuccessor(0)),
+                      StoreBB))
+      return false;
+
+    if (Pred == ICmpInst::ICMP_NE &&
+        !DT.dominates(BasicBlockEdge(BI->getParent(), BI->getSuccessor(1)),
+                      StoreBB))
+      return false;
+
+    MemoryAccess *LoadAcc = MSSA.getMemoryAccess(ICmpL);
+    MemoryAccess *ClobAcc =
+        MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(Def, BatchAA);
+
+    return MSSA.dominates(ClobAcc, LoadAcc);
   }
 
   /// \returns true if \p Def is a no-op store, either because it
@@ -2024,6 +2097,9 @@ struct DSEState {
 
     if (!Store)
       return false;
+
+    if (dominatingConditionImpliesValue(Def))
+      return true;
 
     if (auto *LoadI = dyn_cast<LoadInst>(Store->getOperand(0))) {
       if (LoadI->getPointerOperand() == Store->getOperand(1)) {
@@ -2128,10 +2204,12 @@ struct DSEState {
         if (auto *MemSetI = dyn_cast<MemSetInst>(UpperInst)) {
           if (auto *SI = dyn_cast<StoreInst>(DefInst)) {
             // MemSetInst must have a write location.
-            MemoryLocation UpperLoc = *getLocForWrite(UpperInst);
+            auto UpperLoc = getLocForWrite(UpperInst);
+            if (!UpperLoc)
+              return false;
             int64_t InstWriteOffset = 0;
             int64_t DepWriteOffset = 0;
-            auto OR = isOverwrite(UpperInst, DefInst, UpperLoc, *MaybeDefLoc,
+            auto OR = isOverwrite(UpperInst, DefInst, *UpperLoc, *MaybeDefLoc,
                                   InstWriteOffset, DepWriteOffset);
             Value *StoredByte = isBytewiseValue(SI->getValueOperand(), DL);
             return StoredByte && StoredByte == MemSetI->getOperand(1) &&
@@ -2191,7 +2269,12 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
     unsigned WalkerStepLimit = MemorySSAUpwardsStepLimit;
     unsigned PartialLimit = MemorySSAPartialStoreLimit;
     // Worklist of MemoryAccesses that may be killed by KillingDef.
-    SetVector<MemoryAccess *> ToCheck;
+    SmallSetVector<MemoryAccess *, 8> ToCheck;
+    // Track MemoryAccesses that have been deleted in the loop below, so we can
+    // skip them. Don't use SkipStores for this, which may contain reused
+    // MemoryAccess addresses.
+    SmallPtrSet<MemoryAccess *, 8> Deleted;
+    [[maybe_unused]] unsigned OrigNumSkipStores = State.SkipStores.size();
     ToCheck.insert(KillingDef->getDefiningAccess());
 
     bool Shortend = false;
@@ -2199,7 +2282,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
     // Check if MemoryAccesses in the worklist are killed by KillingDef.
     for (unsigned I = 0; I < ToCheck.size(); I++) {
       MemoryAccess *Current = ToCheck[I];
-      if (State.SkipStores.count(Current))
+      if (Deleted.contains(Current))
         continue;
 
       std::optional<MemoryAccess *> MaybeDeadAccess = State.getDomMemoryDef(
@@ -2246,7 +2329,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
           continue;
         LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: " << *DeadI
                           << "\n  KILLER: " << *KillingI << '\n');
-        State.deleteDeadInstruction(DeadI);
+        State.deleteDeadInstruction(DeadI, &Deleted);
         ++NumFastStores;
         MadeChange = true;
       } else {
@@ -2283,7 +2366,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
               Shortend = true;
               // Remove killing store and remove any outstanding overlap
               // intervals for the updated store.
-              State.deleteDeadInstruction(KillingSI);
+              State.deleteDeadInstruction(KillingSI, &Deleted);
               auto I = State.IOLs.find(DeadSI->getParent());
               if (I != State.IOLs.end())
                 I->second.erase(DeadSI);
@@ -2295,12 +2378,15 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
         if (OR == OW_Complete) {
           LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: " << *DeadI
                             << "\n  KILLER: " << *KillingI << '\n');
-          State.deleteDeadInstruction(DeadI);
+          State.deleteDeadInstruction(DeadI, &Deleted);
           ++NumFastStores;
           MadeChange = true;
         }
       }
     }
+
+    assert(State.SkipStores.size() - OrigNumSkipStores == Deleted.size() &&
+           "SkipStores and Deleted out of sync?");
 
     // Check if the store is a no-op.
     if (!Shortend && State.storeIsNoop(KillingDef, KillingUndObj)) {
@@ -2328,6 +2414,12 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
 
   MadeChange |= State.eliminateRedundantStoresOfExistingValues();
   MadeChange |= State.eliminateDeadWritesAtEndOfFunction();
+
+  while (!State.ToRemove.empty()) {
+    Instruction *DeadInst = State.ToRemove.pop_back_val();
+    DeadInst->eraseFromParent();
+  }
+
   return MadeChange;
 }
 } // end anonymous namespace

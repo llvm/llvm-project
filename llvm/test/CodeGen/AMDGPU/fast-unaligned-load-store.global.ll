@@ -4,6 +4,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+unaligned-access-mode < %s | FileCheck --check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+unaligned-access-mode < %s | FileCheck --check-prefix=GFX10 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+unaligned-access-mode < %s | FileCheck --check-prefix=GFX11 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+unaligned-access-mode < %s | FileCheck --check-prefix=GFX12 %s
 
 ; Should not merge this to a dword load
 define i32 @global_load_2xi16_align2(ptr addrspace(1) %p) #0 {
@@ -47,6 +48,17 @@ define i32 @global_load_2xi16_align2(ptr addrspace(1) %p) #0 {
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: global_load_2xi16_align2:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %gep.p = getelementptr i16, ptr addrspace(1) %p, i64 1
   %p.0 = load i16, ptr addrspace(1) %p, align 2
   %p.1 = load i16, ptr addrspace(1) %gep.p, align 2
@@ -61,7 +73,7 @@ define i32 @global_load_2xi16_align2(ptr addrspace(1) %p) #0 {
 define amdgpu_kernel void @global_store_2xi16_align2(ptr addrspace(1) %p, ptr addrspace(1) %r) #0 {
 ; GFX7-ALIGNED-LABEL: global_store_2xi16_align2:
 ; GFX7-ALIGNED:       ; %bb.0:
-; GFX7-ALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
+; GFX7-ALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x2
 ; GFX7-ALIGNED-NEXT:    v_mov_b32_e32 v2, 1
 ; GFX7-ALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-ALIGNED-NEXT:    v_mov_b32_e32 v0, s0
@@ -77,7 +89,7 @@ define amdgpu_kernel void @global_store_2xi16_align2(ptr addrspace(1) %p, ptr ad
 ;
 ; GFX7-UNALIGNED-LABEL: global_store_2xi16_align2:
 ; GFX7-UNALIGNED:       ; %bb.0:
-; GFX7-UNALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
+; GFX7-UNALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x2
 ; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v2, 0x20001
 ; GFX7-UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v0, s0
@@ -87,7 +99,7 @@ define amdgpu_kernel void @global_store_2xi16_align2(ptr addrspace(1) %p, ptr ad
 ;
 ; GFX9-LABEL: global_store_2xi16_align2:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x8
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x20001
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -96,7 +108,7 @@ define amdgpu_kernel void @global_store_2xi16_align2(ptr addrspace(1) %p, ptr ad
 ;
 ; GFX10-LABEL: global_store_2xi16_align2:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x8
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0x20001
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -105,13 +117,23 @@ define amdgpu_kernel void @global_store_2xi16_align2(ptr addrspace(1) %p, ptr ad
 ;
 ; GFX11-LABEL: global_store_2xi16_align2:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x8
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x20001
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_store_2xi16_align2:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[2:3], 0x8
+; GFX12-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x20001
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
   %gep.r = getelementptr i16, ptr addrspace(1) %r, i64 1
   store i16 1, ptr addrspace(1) %r, align 2
   store i16 2, ptr addrspace(1) %gep.r, align 2
@@ -172,6 +194,17 @@ define i32 @global_load_2xi16_align1(ptr addrspace(1) %p) #0 {
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: global_load_2xi16_align1:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %gep.p = getelementptr i16, ptr addrspace(1) %p, i64 1
   %p.0 = load i16, ptr addrspace(1) %p, align 1
   %p.1 = load i16, ptr addrspace(1) %gep.p, align 1
@@ -186,7 +219,7 @@ define i32 @global_load_2xi16_align1(ptr addrspace(1) %p) #0 {
 define amdgpu_kernel void @global_store_2xi16_align1(ptr addrspace(1) %p, ptr addrspace(1) %r) #0 {
 ; GFX7-ALIGNED-LABEL: global_store_2xi16_align1:
 ; GFX7-ALIGNED:       ; %bb.0:
-; GFX7-ALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
+; GFX7-ALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x2
 ; GFX7-ALIGNED-NEXT:    v_mov_b32_e32 v2, 1
 ; GFX7-ALIGNED-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX7-ALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
@@ -213,7 +246,7 @@ define amdgpu_kernel void @global_store_2xi16_align1(ptr addrspace(1) %p, ptr ad
 ;
 ; GFX7-UNALIGNED-LABEL: global_store_2xi16_align1:
 ; GFX7-UNALIGNED:       ; %bb.0:
-; GFX7-UNALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
+; GFX7-UNALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x2
 ; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v2, 0x20001
 ; GFX7-UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v0, s0
@@ -223,7 +256,7 @@ define amdgpu_kernel void @global_store_2xi16_align1(ptr addrspace(1) %p, ptr ad
 ;
 ; GFX9-LABEL: global_store_2xi16_align1:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x8
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x20001
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -232,7 +265,7 @@ define amdgpu_kernel void @global_store_2xi16_align1(ptr addrspace(1) %p, ptr ad
 ;
 ; GFX10-LABEL: global_store_2xi16_align1:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x8
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0x20001
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -241,13 +274,23 @@ define amdgpu_kernel void @global_store_2xi16_align1(ptr addrspace(1) %p, ptr ad
 ;
 ; GFX11-LABEL: global_store_2xi16_align1:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x8
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x20001
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_store_2xi16_align1:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[2:3], 0x8
+; GFX12-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x20001
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
   %gep.r = getelementptr i16, ptr addrspace(1) %r, i64 1
   store i16 1, ptr addrspace(1) %r, align 1
   store i16 2, ptr addrspace(1) %gep.r, align 1
@@ -290,6 +333,17 @@ define i32 @global_load_2xi16_align4(ptr addrspace(1) %p) #0 {
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: global_load_2xi16_align4:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %gep.p = getelementptr i16, ptr addrspace(1) %p, i64 1
   %p.0 = load i16, ptr addrspace(1) %p, align 4
   %p.1 = load i16, ptr addrspace(1) %gep.p, align 2
@@ -304,7 +358,7 @@ define i32 @global_load_2xi16_align4(ptr addrspace(1) %p) #0 {
 define amdgpu_kernel void @global_store_2xi16_align4(ptr addrspace(1) %p, ptr addrspace(1) %r) #0 {
 ; GFX7-ALIGNED-LABEL: global_store_2xi16_align4:
 ; GFX7-ALIGNED:       ; %bb.0:
-; GFX7-ALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
+; GFX7-ALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x2
 ; GFX7-ALIGNED-NEXT:    v_mov_b32_e32 v2, 0x20001
 ; GFX7-ALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-ALIGNED-NEXT:    v_mov_b32_e32 v0, s0
@@ -314,7 +368,7 @@ define amdgpu_kernel void @global_store_2xi16_align4(ptr addrspace(1) %p, ptr ad
 ;
 ; GFX7-UNALIGNED-LABEL: global_store_2xi16_align4:
 ; GFX7-UNALIGNED:       ; %bb.0:
-; GFX7-UNALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
+; GFX7-UNALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x2
 ; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v2, 0x20001
 ; GFX7-UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v0, s0
@@ -324,7 +378,7 @@ define amdgpu_kernel void @global_store_2xi16_align4(ptr addrspace(1) %p, ptr ad
 ;
 ; GFX9-LABEL: global_store_2xi16_align4:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x8
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x20001
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -333,7 +387,7 @@ define amdgpu_kernel void @global_store_2xi16_align4(ptr addrspace(1) %p, ptr ad
 ;
 ; GFX10-LABEL: global_store_2xi16_align4:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x8
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0x20001
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -342,13 +396,23 @@ define amdgpu_kernel void @global_store_2xi16_align4(ptr addrspace(1) %p, ptr ad
 ;
 ; GFX11-LABEL: global_store_2xi16_align4:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x8
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x20001
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_store_2xi16_align4:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[2:3], 0x8
+; GFX12-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x20001
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
   %gep.r = getelementptr i16, ptr addrspace(1) %r, i64 1
   store i16 1, ptr addrspace(1) %r, align 4
   store i16 2, ptr addrspace(1) %gep.r, align 2

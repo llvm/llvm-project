@@ -203,7 +203,7 @@ void RVVType::initBuiltinStr() {
     }
     break;
   case ScalarTypeKind::BFloat:
-    BuiltinStr += "b";
+    BuiltinStr += "y";
     break;
   default:
     llvm_unreachable("ScalarType is invalid!");
@@ -978,8 +978,7 @@ RVVIntrinsic::RVVIntrinsic(
     bool HasMaskedOffOperand, bool HasVL, PolicyScheme Scheme,
     bool SupportOverloading, bool HasBuiltinAlias, StringRef ManualCodegen,
     const RVVTypes &OutInTypes, const std::vector<int64_t> &NewIntrinsicTypes,
-    const std::vector<StringRef> &RequiredFeatures, unsigned NF,
-    Policy NewPolicyAttrs, bool HasFRMRoundModeOp)
+    unsigned NF, Policy NewPolicyAttrs, bool HasFRMRoundModeOp)
     : IRName(IRName), IsMasked(IsMasked),
       HasMaskedOffOperand(HasMaskedOffOperand), HasVL(HasVL), Scheme(Scheme),
       SupportOverloading(SupportOverloading), HasBuiltinAlias(HasBuiltinAlias),
@@ -1150,11 +1149,6 @@ void RVVIntrinsic::updateNamesAndPolicy(
     OverloadedName += suffix;
   };
 
-  // This follows the naming guideline under riscv-c-api-doc to add the
-  // `__riscv_` suffix for all RVV intrinsics.
-  Name = "__riscv_" + Name;
-  OverloadedName = "__riscv_" + OverloadedName;
-
   if (HasFRMRoundModeOp) {
     Name += "_rm";
     BuiltinName += "_rm";
@@ -1217,7 +1211,7 @@ raw_ostream &operator<<(raw_ostream &OS, const RVVIntrinsicRecord &Record) {
   OS << (int)Record.PrototypeLength << ",";
   OS << (int)Record.SuffixLength << ",";
   OS << (int)Record.OverloadedSuffixSize << ",";
-  OS << (int)Record.RequiredExtensions << ",";
+  OS << Record.RequiredExtensions << ",";
   OS << (int)Record.TypeRangeMask << ",";
   OS << (int)Record.Log2LMULMask << ",";
   OS << (int)Record.NF << ",";

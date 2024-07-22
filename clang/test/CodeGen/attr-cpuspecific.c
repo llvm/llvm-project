@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LINUX
+// RUN: %clang_cc1 -triple x86_64-apple-macos -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LINUX
 // RUN: %clang_cc1 -triple x86_64-windows-pc -fms-compatibility -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WINDOWS
 
 #ifdef _WIN64
@@ -74,8 +75,8 @@ void TwoVersions(void);
 // LINUX: define weak_odr ptr @TwoVersions.resolver()
 // LINUX: call void @__cpu_indicator_init
 // LINUX: %[[FEAT_INIT:.+]] = load i32, ptr getelementptr inbounds ({ i32, i32, i32, [1 x i32] }, ptr @__cpu_model, i32 0, i32 3, i32 0), align 4
-// LINUX: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 59754495
-// LINUX: %[[FEAT_CHECK:.+]] = icmp eq i32 %[[FEAT_JOIN]], 59754495
+// LINUX: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 9422847
+// LINUX: %[[FEAT_CHECK:.+]] = icmp eq i32 %[[FEAT_JOIN]], 9422847
 // LINUX: ret ptr @TwoVersions.Z
 // LINUX: ret ptr @TwoVersions.S
 // LINUX: call void @llvm.trap
@@ -84,8 +85,8 @@ void TwoVersions(void);
 // WINDOWS: define weak_odr dso_local void @TwoVersions() comdat
 // WINDOWS: call void @__cpu_indicator_init()
 // WINDOWS: %[[FEAT_INIT:.+]] = load i32, ptr getelementptr inbounds ({ i32, i32, i32, [1 x i32] }, ptr @__cpu_model, i32 0, i32 3, i32 0), align 4
-// WINDOWS: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 59754495
-// WINDOWS: %[[FEAT_CHECK:.+]] = icmp eq i32 %[[FEAT_JOIN]], 59754495
+// WINDOWS: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 9422847
+// WINDOWS: %[[FEAT_CHECK:.+]] = icmp eq i32 %[[FEAT_JOIN]], 9422847
 // WINDOWS: call void @TwoVersions.Z()
 // WINDOWS-NEXT: ret void
 // WINDOWS: call void @TwoVersions.S()
@@ -353,7 +354,7 @@ void OrderDispatchUsageSpecific(void) {}
 
 // CHECK: attributes #[[S]] = {{.*}}"target-features"="+avx,+cmov,+crc32,+cx16,+cx8,+f16c,+fsgsbase,+fxsr,+mmx,+pclmul,+popcnt,+rdrnd,+sahf,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt"
 // CHECK-SAME: "tune-cpu"="ivybridge"
-// CHECK: attributes #[[K]] = {{.*}}"target-features"="+adx,+aes,+avx,+avx2,+avx512cd,+avx512er,+avx512f,+avx512pf,+bmi,+bmi2,+cmov,+crc32,+cx16,+cx8,+evex512,+f16c,+fma,+fsgsbase,+fxsr,+invpcid,+lzcnt,+mmx,+movbe,+pclmul,+popcnt,+prefetchwt1,+prfchw,+rdrnd,+rdseed,+sahf,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt"
+// CHECK: attributes #[[K]] = {{.*}}"target-features"="+adx,+aes,+avx,+avx2,+avx512cd,+avx512f,+bmi,+bmi2,+cmov,+crc32,+cx16,+cx8,+evex512,+f16c,+fma,+fsgsbase,+fxsr,+invpcid,+lzcnt,+mmx,+movbe,+pclmul,+popcnt,+prfchw,+rdrnd,+rdseed,+sahf,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt"
 // CHECK-SAME: "tune-cpu"="knl"
 // CHECK: attributes #[[O]] = {{.*}}"target-features"="+cmov,+cx16,+cx8,+fxsr,+mmx,+movbe,+sahf,+sse,+sse2,+sse3,+ssse3,+x87"
 // CHECK-SAME: "tune-cpu"="atom"

@@ -4,8 +4,8 @@
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
-  define void @cmpxchg_i32(i64* %addr) { ret void }
-  define void @cmpxchg_i64(i64* %addr) { ret void }
+  define void @cmpxchg_i32(ptr %addr) { ret void }
+  define void @cmpxchg_i64(ptr %addr) { ret void }
 ...
 
 ---

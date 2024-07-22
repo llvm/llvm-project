@@ -16,7 +16,6 @@
 #include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Duration.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -25,16 +24,10 @@
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/Threading.h"
 #include <algorithm>
 #include <cerrno>
 #include <cstdio>
 #include <sys/stat.h>
-
-#ifndef _WIN32
-#include <sys/socket.h>
-#include <sys/un.h>
-#endif // _WIN32
 
 // <fcntl.h> may provide O_BINARY.
 #if defined(HAVE_FCNTL_H)
@@ -66,13 +59,6 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Windows/WindowsSupport.h"
-// winsock2.h must be included before afunix.h. Briefly turn off clang-format to
-// avoid error.
-// clang-format off
-#include <winsock2.h>
-#include <afunix.h>
-// clang-format on
-#include <io.h>
 #endif
 
 using namespace llvm;
@@ -235,7 +221,7 @@ void raw_ostream::flush_nonempty() {
   assert(OutBufCur > OutBufStart && "Invalid call to flush_nonempty.");
   size_t Length = OutBufCur - OutBufStart;
   OutBufCur = OutBufStart;
-  flush_tied_then_write(OutBufStart, Length);
+  write_impl(OutBufStart, Length);
 }
 
 raw_ostream &raw_ostream::write(unsigned char C) {
@@ -243,7 +229,7 @@ raw_ostream &raw_ostream::write(unsigned char C) {
   if (LLVM_UNLIKELY(OutBufCur >= OutBufEnd)) {
     if (LLVM_UNLIKELY(!OutBufStart)) {
       if (BufferMode == BufferKind::Unbuffered) {
-        flush_tied_then_write(reinterpret_cast<char *>(&C), 1);
+        write_impl(reinterpret_cast<char *>(&C), 1);
         return *this;
       }
       // Set up a buffer and start over.
@@ -263,7 +249,7 @@ raw_ostream &raw_ostream::write(const char *Ptr, size_t Size) {
   if (LLVM_UNLIKELY(size_t(OutBufEnd - OutBufCur) < Size)) {
     if (LLVM_UNLIKELY(!OutBufStart)) {
       if (BufferMode == BufferKind::Unbuffered) {
-        flush_tied_then_write(Ptr, Size);
+        write_impl(Ptr, Size);
         return *this;
       }
       // Set up a buffer and start over.
@@ -279,7 +265,7 @@ raw_ostream &raw_ostream::write(const char *Ptr, size_t Size) {
     if (LLVM_UNLIKELY(OutBufCur == OutBufStart)) {
       assert(NumBytes != 0 && "undefined behavior");
       size_t BytesToWrite = Size - (Size % NumBytes);
-      flush_tied_then_write(Ptr, BytesToWrite);
+      write_impl(Ptr, BytesToWrite);
       size_t BytesRemaining = Size - BytesToWrite;
       if (BytesRemaining > size_t(OutBufEnd - OutBufCur)) {
         // Too much left over to copy into our buffer.
@@ -318,12 +304,6 @@ void raw_ostream::copy_to_buffer(const char *Ptr, size_t Size) {
   }
 
   OutBufCur += Size;
-}
-
-void raw_ostream::flush_tied_then_write(const char *Ptr, size_t Size) {
-  if (TiedStream)
-    TiedStream->flush();
-  write_impl(Ptr, Size);
 }
 
 // Formatted output.
@@ -659,7 +639,7 @@ raw_fd_ostream::raw_fd_ostream(int fd, bool shouldClose, bool unbuffered,
   // Check if this is a console device. This is not equivalent to isatty.
   IsWindowsConsole =
       ::GetFileType((HANDLE)::_get_osfhandle(fd)) == FILE_TYPE_CHAR;
-#endif // _WIN32
+#endif
 
   // Get the starting position.
   off_t loc = ::lseek(FD, 0, SEEK_CUR);
@@ -756,6 +736,9 @@ static bool write_console_impl(int FD, StringRef Data) {
 #endif
 
 void raw_fd_ostream::write_impl(const char *Ptr, size_t Size) {
+  if (TiedStream)
+    TiedStream->flush();
+
   assert(FD >= 0 && "File already closed.");
   pos += Size;
 
@@ -808,7 +791,7 @@ void raw_fd_ostream::write_impl(const char *Ptr, size_t Size) {
       }
 #endif
       // Otherwise it's a non-recoverable error. Note it and quit.
-      error_detected(std::error_code(errno, std::generic_category()));
+      error_detected(errnoAsErrorCode());
       break;
     }
 
@@ -838,7 +821,7 @@ uint64_t raw_fd_ostream::seek(uint64_t off) {
   pos = ::lseek(FD, off, SEEK_SET);
 #endif
   if (pos == (uint64_t)-1)
-    error_detected(std::error_code(errno, std::generic_category()));
+    error_detected(errnoAsErrorCode());
   return pos;
 }
 
@@ -920,7 +903,7 @@ raw_fd_ostream &llvm::outs() {
 }
 
 raw_fd_ostream &llvm::errs() {
-  // Set standard error to be unbuffered and tied to outs() by default.
+  // Set standard error to be unbuffered.
 #ifdef __MVS__
   std::error_code EC = enableAutoConversion(STDERR_FILENO);
   assert(!EC);
@@ -960,152 +943,13 @@ ssize_t raw_fd_stream::read(char *Ptr, size_t Size) {
   if (Ret >= 0)
     inc_pos(Ret);
   else
-    error_detected(std::error_code(errno, std::generic_category()));
+    error_detected(errnoAsErrorCode());
   return Ret;
 }
 
 bool raw_fd_stream::classof(const raw_ostream *OS) {
   return OS->get_kind() == OStreamKind::OK_FDStream;
 }
-
-//===----------------------------------------------------------------------===//
-//  raw_socket_stream
-//===----------------------------------------------------------------------===//
-
-#ifdef _WIN32
-WSABalancer::WSABalancer() {
-  WSADATA WsaData;
-  ::memset(&WsaData, 0, sizeof(WsaData));
-  if (WSAStartup(MAKEWORD(2, 2), &WsaData) != 0) {
-    llvm::report_fatal_error("WSAStartup failed");
-  }
-}
-
-WSABalancer::~WSABalancer() { WSACleanup(); }
-
-#endif // _WIN32
-
-static std::error_code getLastSocketErrorCode() {
-#ifdef _WIN32
-  return std::error_code(::WSAGetLastError(), std::system_category());
-#else
-  return std::error_code(errno, std::system_category());
-#endif
-}
-
-ListeningSocket::ListeningSocket(int SocketFD, StringRef SocketPath)
-    : FD(SocketFD), SocketPath(SocketPath) {}
-
-ListeningSocket::ListeningSocket(ListeningSocket &&LS)
-    : FD(LS.FD), SocketPath(LS.SocketPath) {
-  LS.FD = -1;
-}
-
-Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
-                                                      int MaxBacklog) {
-
-#ifdef _WIN32
-  WSABalancer _;
-  SOCKET MaybeWinsocket = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (MaybeWinsocket == INVALID_SOCKET) {
-#else
-  int MaybeWinsocket = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (MaybeWinsocket == -1) {
-#endif
-    return llvm::make_error<StringError>(getLastSocketErrorCode(),
-                                         "socket create failed");
-  }
-
-  struct sockaddr_un Addr;
-  memset(&Addr, 0, sizeof(Addr));
-  Addr.sun_family = AF_UNIX;
-  strncpy(Addr.sun_path, SocketPath.str().c_str(), sizeof(Addr.sun_path) - 1);
-
-  if (bind(MaybeWinsocket, (struct sockaddr *)&Addr, sizeof(Addr)) == -1) {
-    std::error_code Err = getLastSocketErrorCode();
-    if (Err == std::errc::address_in_use)
-      ::close(MaybeWinsocket);
-    return llvm::make_error<StringError>(Err, "Bind error");
-  }
-  if (listen(MaybeWinsocket, MaxBacklog) == -1) {
-    return llvm::make_error<StringError>(getLastSocketErrorCode(),
-                                         "Listen error");
-  }
-  int UnixSocket;
-#ifdef _WIN32
-  UnixSocket = _open_osfhandle(MaybeWinsocket, 0);
-#else
-  UnixSocket = MaybeWinsocket;
-#endif // _WIN32
-  return ListeningSocket{UnixSocket, SocketPath};
-}
-
-Expected<std::unique_ptr<raw_socket_stream>> ListeningSocket::accept() {
-  int AcceptFD;
-#ifdef _WIN32
-  SOCKET WinServerSock = _get_osfhandle(FD);
-  SOCKET WinAcceptSock = ::accept(WinServerSock, NULL, NULL);
-  AcceptFD = _open_osfhandle(WinAcceptSock, 0);
-#else
-  AcceptFD = ::accept(FD, NULL, NULL);
-#endif //_WIN32
-  if (AcceptFD == -1)
-    return llvm::make_error<StringError>(getLastSocketErrorCode(),
-                                         "Accept failed");
-  return std::make_unique<raw_socket_stream>(AcceptFD);
-}
-
-ListeningSocket::~ListeningSocket() {
-  if (FD == -1)
-    return;
-  ::close(FD);
-  unlink(SocketPath.c_str());
-}
-
-static Expected<int> GetSocketFD(StringRef SocketPath) {
-#ifdef _WIN32
-  SOCKET MaybeWinsocket = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (MaybeWinsocket == INVALID_SOCKET) {
-#else
-  int MaybeWinsocket = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (MaybeWinsocket == -1) {
-#endif // _WIN32
-    return llvm::make_error<StringError>(getLastSocketErrorCode(),
-                                         "Create socket failed");
-  }
-
-  struct sockaddr_un Addr;
-  memset(&Addr, 0, sizeof(Addr));
-  Addr.sun_family = AF_UNIX;
-  strncpy(Addr.sun_path, SocketPath.str().c_str(), sizeof(Addr.sun_path) - 1);
-
-  int status = connect(MaybeWinsocket, (struct sockaddr *)&Addr, sizeof(Addr));
-  if (status == -1) {
-    return llvm::make_error<StringError>(getLastSocketErrorCode(),
-                                         "Connect socket failed");
-  }
-#ifdef _WIN32
-  return _open_osfhandle(MaybeWinsocket, 0);
-#else
-  return MaybeWinsocket;
-#endif // _WIN32
-}
-
-raw_socket_stream::raw_socket_stream(int SocketFD)
-    : raw_fd_stream(SocketFD, true) {}
-
-Expected<std::unique_ptr<raw_socket_stream>>
-raw_socket_stream::createConnectedUnix(StringRef SocketPath) {
-#ifdef _WIN32
-  WSABalancer _;
-#endif // _WIN32
-  Expected<int> FD = GetSocketFD(SocketPath);
-  if (!FD)
-    return FD.takeError();
-  return std::make_unique<raw_socket_stream>(*FD);
-}
-
-raw_socket_stream::~raw_socket_stream() {}
 
 //===----------------------------------------------------------------------===//
 //  raw_string_ostream
@@ -1128,6 +972,10 @@ void raw_svector_ostream::write_impl(const char *Ptr, size_t Size) {
 void raw_svector_ostream::pwrite_impl(const char *Ptr, size_t Size,
                                       uint64_t Offset) {
   memcpy(OS.data() + Offset, Ptr, Size);
+}
+
+bool raw_svector_ostream::classof(const raw_ostream *OS) {
+  return OS->get_kind() == OStreamKind::OK_SVecStream;
 }
 
 //===----------------------------------------------------------------------===//

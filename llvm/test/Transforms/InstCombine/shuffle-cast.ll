@@ -9,7 +9,7 @@ define <4 x i16> @trunc_little_endian(<4 x i32> %x) {
 ;
 ; BE-LABEL: @trunc_little_endian(
 ; BE-NEXT:    [[B:%.*]] = bitcast <4 x i32> [[X:%.*]] to <8 x i16>
-; BE-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; BE-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; BE-NEXT:    ret <4 x i16> [[R]]
 ;
   %b = bitcast <4 x i32> %x to <8 x i16>
@@ -20,7 +20,7 @@ define <4 x i16> @trunc_little_endian(<4 x i32> %x) {
 define <4 x i16> @trunc_big_endian(<4 x i32> %x) {
 ; LE-LABEL: @trunc_big_endian(
 ; LE-NEXT:    [[B:%.*]] = bitcast <4 x i32> [[X:%.*]] to <8 x i16>
-; LE-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; LE-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; LE-NEXT:    ret <4 x i16> [[R]]
 ;
 ; BE-LABEL: @trunc_big_endian(
@@ -46,7 +46,7 @@ define <2 x i16> @trunc_little_endian_extra_use(<2 x i64> %x) {
 ; BE-LABEL: @trunc_little_endian_extra_use(
 ; BE-NEXT:    [[B:%.*]] = bitcast <2 x i64> [[X:%.*]] to <8 x i16>
 ; BE-NEXT:    call void @use_v8i16(<8 x i16> [[B]])
-; BE-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> undef, <2 x i32> <i32 0, i32 4>
+; BE-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> poison, <2 x i32> <i32 0, i32 4>
 ; BE-NEXT:    ret <2 x i16> [[R]]
 ;
   %b = bitcast <2 x i64> %x to <8 x i16>
@@ -63,7 +63,7 @@ define <4 x i11> @trunc_big_endian_extra_use(<4 x i33> %x) {
 ; LE-LABEL: @trunc_big_endian_extra_use(
 ; LE-NEXT:    [[B:%.*]] = bitcast <4 x i33> [[X:%.*]] to <12 x i11>
 ; LE-NEXT:    call void @use_v12i11(<12 x i11> [[B]])
-; LE-NEXT:    [[R:%.*]] = shufflevector <12 x i11> [[B]], <12 x i11> undef, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
+; LE-NEXT:    [[R:%.*]] = shufflevector <12 x i11> [[B]], <12 x i11> poison, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
 ; LE-NEXT:    ret <4 x i11> [[R]]
 ;
 ; BE-LABEL: @trunc_big_endian_extra_use(
@@ -81,7 +81,7 @@ define <4 x i11> @trunc_big_endian_extra_use(<4 x i33> %x) {
 define <4 x i16> @wrong_cast1(i128 %x) {
 ; ANY-LABEL: @wrong_cast1(
 ; ANY-NEXT:    [[B:%.*]] = bitcast i128 [[X:%.*]] to <8 x i16>
-; ANY-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; ANY-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; ANY-NEXT:    ret <4 x i16> [[R]]
 ;
   %b = bitcast i128 %x to <8 x i16>
@@ -92,7 +92,7 @@ define <4 x i16> @wrong_cast1(i128 %x) {
 define <4 x i16> @wrong_cast2(<4 x float> %x) {
 ; ANY-LABEL: @wrong_cast2(
 ; ANY-NEXT:    [[B:%.*]] = bitcast <4 x float> [[X:%.*]] to <8 x i16>
-; ANY-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; ANY-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; ANY-NEXT:    ret <4 x i16> [[R]]
 ;
   %b = bitcast <4 x float> %x to <8 x i16>
@@ -103,7 +103,7 @@ define <4 x i16> @wrong_cast2(<4 x float> %x) {
 define <4 x half> @wrong_cast3(<4 x i32> %x) {
 ; ANY-LABEL: @wrong_cast3(
 ; ANY-NEXT:    [[B:%.*]] = bitcast <4 x i32> [[X:%.*]] to <8 x half>
-; ANY-NEXT:    [[R:%.*]] = shufflevector <8 x half> [[B]], <8 x half> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; ANY-NEXT:    [[R:%.*]] = shufflevector <8 x half> [[B]], <8 x half> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; ANY-NEXT:    ret <4 x half> [[R]]
 ;
   %b = bitcast <4 x i32> %x to <8 x half>
@@ -114,7 +114,7 @@ define <4 x half> @wrong_cast3(<4 x i32> %x) {
 define <2 x i16> @wrong_shuffle(<4 x i32> %x) {
 ; ANY-LABEL: @wrong_shuffle(
 ; ANY-NEXT:    [[B:%.*]] = bitcast <4 x i32> [[X:%.*]] to <8 x i16>
-; ANY-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> undef, <2 x i32> <i32 0, i32 2>
+; ANY-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> poison, <2 x i32> <i32 0, i32 2>
 ; ANY-NEXT:    ret <2 x i16> [[R]]
 ;
   %b = bitcast <4 x i32> %x to <8 x i16>

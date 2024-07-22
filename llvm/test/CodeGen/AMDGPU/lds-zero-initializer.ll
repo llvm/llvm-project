@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -stop-after=amdgpu-isel -verify-machineinstrs -o - %s | FileCheck -check-prefixes=GCN,GFX8 %s
-; RUN: llc -march=amdgcn -mcpu=tonga -stop-after=amdgpu-isel  -verify-machineinstrs -o - %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -stop-after=amdgpu-isel -verify-machineinstrs -o - %s | FileCheck -check-prefixes=GCN,GFX8 %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -stop-after=amdgpu-isel  -verify-machineinstrs -o - %s | FileCheck -check-prefixes=GCN,GFX9 %s
 
-; RUN: not llc -march=amdgcn -mcpu=tahiti < %s 2>&1 | FileCheck %s
-; RUN: not llc -march=amdgcn -mcpu=tonga  < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgcn -mcpu=tahiti < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgcn -mcpu=tonga  < %s 2>&1 | FileCheck %s
 
 ; CHECK: error: lds: unsupported initializer for address space
 
@@ -11,8 +11,8 @@
 define amdgpu_kernel void @load_zeroinit_lds_global(ptr addrspace(1) %out, i1 %p) {
   ; GCN-LABEL: name: load_zeroinit_lds_global
   ; GCN: bb.0 (%ir-block.0):
-  ; GCN:   liveins: $sgpr0_sgpr1
-  ; GCN:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GCN:   liveins: $sgpr2_sgpr3
+  ; GCN:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr2_sgpr3
   ; GFX8:  [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 9, 0
   ; GFX9:  [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0
   ; GFX8:  [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1

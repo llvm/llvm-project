@@ -107,13 +107,13 @@ int main(void) {
 // CHECK: define dso_local noundef ppc_fp128 @_Z10func_vaargiz(i32 noundef signext %n, ...)
 // CHECK: entry:
 // CHECK:   store i32 %n, ptr %n.addr, align 4
-// CHECK:   call void @llvm.va_start(ptr %ap)
+// CHECK:   call void @llvm.va_start.p0(ptr %ap)
 // CHECK:   %argp.cur = load ptr, ptr %ap, align 8
 // CHECK:   %argp.next = getelementptr inbounds i8, ptr %argp.cur, i64 16
 // CHECK:   store ptr %argp.next, ptr %ap, align 8
 // CHECK:   %0 = load ppc_fp128, ptr %argp.cur, align 8
 // CHECK:   store ppc_fp128 %0, ptr %r, align 16
-// CHECK:   call void @llvm.va_end(ptr %ap)
+// CHECK:   call void @llvm.va_end.p0(ptr %ap)
 // CHECK:   %1 = load ppc_fp128, ptr %r, align 16
 // CHECK:   ret ppc_fp128 %1
 // CHECK: }

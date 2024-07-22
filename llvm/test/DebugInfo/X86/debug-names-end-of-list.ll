@@ -6,8 +6,10 @@
 
 ; CHECK:   .section .debug_names,"",@progbits
 ; CHECK: .Lnames_entries0:
-; CHECK:   .byte 0    # End of list: int
-; CHECK:   .byte 0    # End of list: foo
+; CHECK:   .byte 0
+; CHECK-NEXT:   # End of list: int
+; CHECK:   .byte 0
+; CHECK-NEXT:   # End of list: foo
 
 @foo = common dso_local global i32 0, align 4, !dbg !5
 

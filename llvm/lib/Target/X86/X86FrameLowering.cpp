@@ -28,6 +28,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -465,8 +466,7 @@ void X86FrameLowering::emitCalleeSavedFrameMovesFullCFA(
     emitCalleeSavedFrameMoves(MBB, MBBI, DebugLoc{}, true);
     return;
   }
-  const MachineModuleInfo &MMI = MF.getMMI();
-  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
   const Register FramePtr = TRI->getFrameRegister(MF);
   const Register MachineFramePtr =
       STI.isTarget64BitILP32() ? Register(getX86SubSuperRegister(FramePtr, 64))
@@ -484,8 +484,7 @@ void X86FrameLowering::emitCalleeSavedFrameMoves(
     const DebugLoc &DL, bool IsPrologue) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  MachineModuleInfo &MMI = MF.getMMI();
-  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
 
   // Add callee saved registers to move list.
@@ -885,8 +884,7 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
   }
 
   // Update Live In information
-  recomputeLiveIns(*testMBB);
-  recomputeLiveIns(*tailMBB);
+  fullyRecomputeLiveIns({tailMBB, testMBB});
 }
 
 void X86FrameLowering::emitStackProbeInlineWindowsCoreCLR64(
@@ -1378,10 +1376,7 @@ void X86FrameLowering::BuildStackAlignAND(MachineBasicBlock &MBB,
         footMBB->addSuccessor(&MBB);
       }
 
-      recomputeLiveIns(*headMBB);
-      recomputeLiveIns(*bodyMBB);
-      recomputeLiveIns(*footMBB);
-      recomputeLiveIns(MBB);
+      fullyRecomputeLiveIns({footMBB, bodyMBB, headMBB, &MBB});
     }
   } else {
     MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(AndOp), Reg)
@@ -1413,6 +1408,34 @@ bool X86FrameLowering::isWin64Prologue(const MachineFunction &MF) const {
 
 bool X86FrameLowering::needsDwarfCFI(const MachineFunction &MF) const {
   return !isWin64Prologue(MF) && MF.needsFrameMoves();
+}
+
+/// Return true if an opcode is part of the REP group of instructions
+static bool isOpcodeRep(unsigned Opcode) {
+  switch (Opcode) {
+  case X86::REPNE_PREFIX:
+  case X86::REP_MOVSB_32:
+  case X86::REP_MOVSB_64:
+  case X86::REP_MOVSD_32:
+  case X86::REP_MOVSD_64:
+  case X86::REP_MOVSQ_32:
+  case X86::REP_MOVSQ_64:
+  case X86::REP_MOVSW_32:
+  case X86::REP_MOVSW_64:
+  case X86::REP_PREFIX:
+  case X86::REP_STOSB_32:
+  case X86::REP_STOSB_64:
+  case X86::REP_STOSD_32:
+  case X86::REP_STOSD_64:
+  case X86::REP_STOSQ_32:
+  case X86::REP_STOSQ_64:
+  case X86::REP_STOSW_32:
+  case X86::REP_STOSW_64:
+    return true;
+  default:
+    break;
+  }
+  return false;
 }
 
 /// emitPrologue - Push callee-saved registers onto the stack, which
@@ -1507,7 +1530,6 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   MachineBasicBlock::iterator MBBI = MBB.begin();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const Function &Fn = MF.getFunction();
-  MachineModuleInfo &MMI = MF.getMMI();
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   uint64_t MaxAlign = calculateMaxStackAlign(MF); // Desired stack alignment.
   uint64_t StackSize = MFI.getStackSize(); // Number of bytes to allocate.
@@ -1522,8 +1544,8 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   bool IsWin64Prologue = isWin64Prologue(MF);
   bool NeedsWin64CFI = IsWin64Prologue && Fn.needsUnwindTableEntry();
   // FIXME: Emit FPO data for EH funclets.
-  bool NeedsWinFPO =
-      !IsFunclet && STI.isTargetWin32() && MMI.getModule()->getCodeViewFlag();
+  bool NeedsWinFPO = !IsFunclet && STI.isTargetWin32() &&
+                     MF.getFunction().getParent()->getCodeViewFlag();
   bool NeedsWinCFI = NeedsWin64CFI || NeedsWinFPO;
   bool NeedsDwarfCFI = needsDwarfCFI(MF);
   Register FramePtr = TRI->getFrameRegister(MF);
@@ -1602,6 +1624,9 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       [[fallthrough]];
 
     case SwiftAsyncFramePointerMode::Always:
+      assert(
+          !IsWin64Prologue &&
+          "win64 prologue does not set the bit 60 in the saved frame pointer");
       BuildMI(MBB, MBBI, DL, TII.get(X86::BTS64ri8), MachineFramePtr)
           .addUse(MachineFramePtr)
           .addImm(60)
@@ -1744,6 +1769,8 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
 
     if (!IsFunclet) {
       if (X86FI->hasSwiftAsyncContext()) {
+        assert(!IsWin64Prologue &&
+               "win64 prologue does not store async context right below rbp");
         const auto &Attrs = MF.getFunction().getAttributes();
 
         // Before we update the live frame pointer we have to ensure there's a
@@ -2067,7 +2094,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
 
     if (NeedsWinCFI) {
       int FI;
-      if (unsigned Reg = TII.isStoreToStackSlot(FrameInstr, FI)) {
+      if (Register Reg = TII.isStoreToStackSlot(FrameInstr, FI)) {
         if (X86::FR64RegClass.contains(Reg)) {
           int Offset;
           Register IgnoredFrameReg;
@@ -2186,13 +2213,44 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   // flag (DF in EFLAGS register). Clear this flag by creating "cld" instruction
   // in each prologue of interrupt handler function.
   //
-  // FIXME: Create "cld" instruction only in these cases:
+  // Create "cld" instruction only in these cases:
   // 1. The interrupt handling function uses any of the "rep" instructions.
   // 2. Interrupt handling function calls another function.
+  // 3. If there are any inline asm blocks, as we do not know what they do
   //
-  if (Fn.getCallingConv() == CallingConv::X86_INTR)
-    BuildMI(MBB, MBBI, DL, TII.get(X86::CLD))
-        .setMIFlag(MachineInstr::FrameSetup);
+  // TODO: We should also emit cld if we detect the use of std, but as of now,
+  // the compiler does not even emit that instruction or even define it, so in
+  // practice, this would only happen with inline asm, which we cover anyway.
+  if (Fn.getCallingConv() == CallingConv::X86_INTR) {
+    bool NeedsCLD = false;
+
+    for (const MachineBasicBlock &B : MF) {
+      for (const MachineInstr &MI : B) {
+        if (MI.isCall()) {
+          NeedsCLD = true;
+          break;
+        }
+
+        if (isOpcodeRep(MI.getOpcode())) {
+          NeedsCLD = true;
+          break;
+        }
+
+        if (MI.isInlineAsm()) {
+          // TODO: Parse asm for rep instructions or call sites?
+          // For now, let's play it safe and emit a cld instruction
+          // just in case.
+          NeedsCLD = true;
+          break;
+        }
+      }
+    }
+
+    if (NeedsCLD) {
+      BuildMI(MBB, MBBI, DL, TII.get(X86::CLD))
+          .setMIFlag(MachineInstr::FrameSetup);
+    }
+  }
 
   // At this point we know if the function has WinCFI or not.
   MF.setHasWinCFI(HasWinCFI);
@@ -2534,7 +2592,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   // Emit tilerelease for AMX kernel.
-  if (X86FI->hasVirtualTileReg())
+  if (X86FI->getAMXProgModel() == AMXProgModelEnum::ManagedRA)
     BuildMI(MBB, Terminator, DL, TII.get(X86::TILERELEASE));
 }
 
@@ -3462,7 +3520,7 @@ void X86FrameLowering::adjustForHiPEPrologue(
 
   // HiPE-specific values
   NamedMDNode *HiPELiteralsMD =
-      MF.getMMI().getModule()->getNamedMetadata("hipe.literals");
+      MF.getFunction().getParent()->getNamedMetadata("hipe.literals");
   if (!HiPELiteralsMD)
     report_fatal_error(
         "Can't generate HiPE prologue without runtime parameters");
@@ -3821,8 +3879,7 @@ bool X86FrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   // If we may need to emit frameless compact unwind information, give
   // up as this is currently broken: PR25614.
   bool CompactUnwind =
-      MF.getMMI().getContext().getObjectFileInfo()->getCompactUnwindSection() !=
-      nullptr;
+      MF.getContext().getObjectFileInfo()->getCompactUnwindSection() != nullptr;
   return (MF.getFunction().hasFnAttribute(Attribute::NoUnwind) || hasFP(MF) ||
           !CompactUnwind) &&
          // The lowering of segmented stack and HiPE only support entry

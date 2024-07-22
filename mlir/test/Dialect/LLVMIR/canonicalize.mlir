@@ -8,6 +8,8 @@ llvm.func @fold_icmp_eq(%arg0 : i32) -> i1 {
   llvm.return %0 : i1
 }
 
+// -----
+
 // CHECK-LABEL: @fold_icmp_ne
 llvm.func @fold_icmp_ne(%arg0 : vector<2xi32>) -> vector<2xi1> {
   // CHECK: %[[C0:.*]] = llvm.mlir.constant(dense<false> : vector<2xi1>) : vector<2xi1>
@@ -15,6 +17,8 @@ llvm.func @fold_icmp_ne(%arg0 : vector<2xi32>) -> vector<2xi1> {
   // CHECK: llvm.return %[[C0]]
   llvm.return %0 : vector<2xi1>
 }
+
+// -----
 
 // CHECK-LABEL: @fold_icmp_alloca
 llvm.func @fold_icmp_alloca() -> i1 {
@@ -83,16 +87,18 @@ llvm.func @fold_unrelated_extractvalue(%arr: !llvm.array<4 x f32>) -> f32 {
 // -----
 
 // CHECK-LABEL: fold_bitcast
-// CHECK-SAME: %[[a0:arg[0-9]+]]
-// CHECK-NEXT: llvm.return %[[a0]]
+// CHECK-SAME: %[[ARG:[[:alnum:]]+]]
+// CHECK-NEXT: llvm.return %[[ARG]]
 llvm.func @fold_bitcast(%x : !llvm.ptr) -> !llvm.ptr {
   %c = llvm.bitcast %x : !llvm.ptr to !llvm.ptr
   llvm.return %c : !llvm.ptr
 }
 
+// -----
+
 // CHECK-LABEL: fold_bitcast2
-// CHECK-SAME: %[[a0:arg[0-9]+]]
-// CHECK-NEXT: llvm.return %[[a0]]
+// CHECK-SAME: %[[ARG:[[:alnum:]]+]]
+// CHECK-NEXT: llvm.return %[[ARG]]
 llvm.func @fold_bitcast2(%x : i32) -> i32 {
   %c = llvm.bitcast %x : i32 to f32
   %d = llvm.bitcast %c : f32 to i32
@@ -101,17 +107,31 @@ llvm.func @fold_bitcast2(%x : i32) -> i32 {
 
 // -----
 
+// CHECK-LABEL: fold_bitcast_chain
+// CHECK-SAME: %[[ARG:[[:alnum:]]+]]
+llvm.func @fold_bitcast_chain(%x : i32) -> vector<2xi16> {
+  %c = llvm.bitcast %x : i32 to f32
+  %d = llvm.bitcast %c : f32 to vector<2xi16>
+  // CHECK: %[[BITCAST:.*]] = llvm.bitcast %[[ARG]] : i32 to vector<2xi16>
+  // CHECK: llvm.return %[[BITCAST]]
+  llvm.return %d : vector<2xi16>
+}
+
+// -----
+
 // CHECK-LABEL: fold_addrcast
-// CHECK-SAME: %[[a0:arg[0-9]+]]
-// CHECK-NEXT: llvm.return %[[a0]]
+// CHECK-SAME: %[[ARG:[[:alnum:]]+]]
+// CHECK-NEXT: llvm.return %[[ARG]]
 llvm.func @fold_addrcast(%x : !llvm.ptr) -> !llvm.ptr {
   %c = llvm.addrspacecast %x : !llvm.ptr to !llvm.ptr
   llvm.return %c : !llvm.ptr
 }
 
+// -----
+
 // CHECK-LABEL: fold_addrcast2
-// CHECK-SAME: %[[a0:arg[0-9]+]]
-// CHECK-NEXT: llvm.return %[[a0]]
+// CHECK-SAME: %[[ARG:[[:alnum:]]+]]
+// CHECK-NEXT: llvm.return %[[ARG]]
 llvm.func @fold_addrcast2(%x : !llvm.ptr) -> !llvm.ptr {
   %c = llvm.addrspacecast %x : !llvm.ptr to !llvm.ptr<5>
   %d = llvm.addrspacecast %c : !llvm.ptr<5> to !llvm.ptr
@@ -120,18 +140,32 @@ llvm.func @fold_addrcast2(%x : !llvm.ptr) -> !llvm.ptr {
 
 // -----
 
+// CHECK-LABEL: fold_addrcast_chain
+// CHECK-SAME: %[[ARG:[[:alnum:]]+]]
+llvm.func @fold_addrcast_chain(%x : !llvm.ptr) -> !llvm.ptr<2> {
+  %c = llvm.addrspacecast %x : !llvm.ptr to !llvm.ptr<1>
+  %d = llvm.addrspacecast %c : !llvm.ptr<1> to !llvm.ptr<2>
+  // CHECK: %[[ADDRCAST:.*]] = llvm.addrspacecast %[[ARG]] : !llvm.ptr to !llvm.ptr<2>
+  // CHECK: llvm.return %[[ADDRCAST]]
+  llvm.return %d : !llvm.ptr<2>
+}
+
+// -----
+
 // CHECK-LABEL: fold_gep
-// CHECK-SAME: %[[a0:arg[0-9]+]]
-// CHECK-NEXT: llvm.return %[[a0]]
+// CHECK-SAME: %[[ARG:[[:alnum:]]+]]
+// CHECK-NEXT: llvm.return %[[ARG]]
 llvm.func @fold_gep(%x : !llvm.ptr) -> !llvm.ptr {
   %c0 = arith.constant 0 : i32
   %c = llvm.getelementptr %x[%c0] : (!llvm.ptr, i32) -> !llvm.ptr, i8
   llvm.return %c : !llvm.ptr
 }
 
+// -----
+
 // CHECK-LABEL: fold_gep_neg
-// CHECK-SAME: %[[a0:arg[0-9]+]]
-// CHECK-NEXT: %[[RES:.*]] = llvm.getelementptr inbounds %[[a0]][0, 1]
+// CHECK-SAME: %[[ARG:[[:alnum:]]+]]
+// CHECK-NEXT: %[[RES:.*]] = llvm.getelementptr inbounds %[[ARG]][0, 1]
 // CHECK-NEXT: llvm.return %[[RES]]
 llvm.func @fold_gep_neg(%x : !llvm.ptr) -> !llvm.ptr {
   %c0 = arith.constant 0 : i32
@@ -139,9 +173,11 @@ llvm.func @fold_gep_neg(%x : !llvm.ptr) -> !llvm.ptr {
   llvm.return %0 : !llvm.ptr
 }
 
+// -----
+
 // CHECK-LABEL: fold_gep_canon
-// CHECK-SAME: %[[a0:arg[0-9]+]]
-// CHECK-NEXT: %[[RES:.*]] = llvm.getelementptr %[[a0]][2]
+// CHECK-SAME: %[[ARG:[[:alnum:]]+]]
+// CHECK-NEXT: %[[RES:.*]] = llvm.getelementptr %[[ARG]][2]
 // CHECK-NEXT: llvm.return %[[RES]]
 llvm.func @fold_gep_canon(%x : !llvm.ptr) -> !llvm.ptr {
   %c2 = arith.constant 2 : i32
@@ -175,6 +211,8 @@ llvm.func @load_dce(%x : !llvm.ptr) {
   llvm.return
 }
 
+// -----
+
 llvm.mlir.global external @fp() : !llvm.ptr
 
 // CHECK-LABEL: addr_dce
@@ -183,6 +221,8 @@ llvm.func @addr_dce(%x : !llvm.ptr) {
   %0 = llvm.mlir.addressof @fp : !llvm.ptr
   llvm.return
 }
+
+// -----
 
 // CHECK-LABEL: alloca_dce
 // CHECK-NEXT: llvm.return
@@ -206,5 +246,16 @@ llvm.func @volatile_load(%x : !llvm.ptr) {
   // But not unordered!
   // CHECK-NOT: llvm.load %{{.*}} atomic unordered
   %3 = llvm.load %x  atomic unordered { alignment = 1 } : !llvm.ptr -> i8
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: func @inline_asm_side_effects
+llvm.func @inline_asm_side_effects(%x : i32) {
+  // CHECK-NOT: llvm.inline_asm "pure inline asm"
+  llvm.inline_asm "pure inline asm", "r" %x : (i32) -> ()
+  // CHECK: llvm.inline_asm has_side_effects "inline asm with side effects"
+  llvm.inline_asm has_side_effects "inline asm with side effects", "r" %x : (i32) -> ()
   llvm.return
 }

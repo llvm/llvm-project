@@ -1,6 +1,6 @@
 ! Test passing mismatching rank arguments to unlimited polymorphic
 ! dummy with IGNORE_TKR(R).
-! RUN: bbc -emit-hlfir -polymorphic-type -o - -I nowhere %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - -I nowhere %s 2>&1 | FileCheck %s
 
 module m
   interface
@@ -49,7 +49,7 @@ subroutine test_logical_assumed_shape_array(x)
 end subroutine test_logical_assumed_shape_array
 ! CHECK-LABEL:   func.func @_QPtest_logical_assumed_shape_array(
 ! CHECK-SAME:                                                   %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "x"}) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_logical_assumed_shape_arrayEx"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_logical_assumed_shape_arrayEx"} : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.rebox %[[VAL_1]]#0 : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.class<!fir.array<?xnone>>
 ! CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.class<!fir.array<?xnone>>) -> !fir.class<none>
 ! CHECK:           fir.call @_QPcallee(%[[VAL_3]]) fastmath<contract> : (!fir.class<none>) -> ()
@@ -63,10 +63,10 @@ subroutine test_real_2d_pointer(x)
 end subroutine test_real_2d_pointer
 ! CHECK-LABEL:   func.func @_QPtest_real_2d_pointer(
 ! CHECK-SAME:                                       %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>> {fir.bindc_name = "x"}) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_real_2d_pointerEx"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_real_2d_pointerEx"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
-! CHECK:           %[[VAL_3:.*]] = fir.rebox %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.array<?x?xf32>>>) -> !fir.class<!fir.ptr<!fir.array<?x?xnone>>>
-! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.class<!fir.ptr<!fir.array<?x?xnone>>>) -> !fir.class<none>
+! CHECK:           %[[VAL_3:.*]] = fir.rebox %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.array<?x?xf32>>>) -> !fir.class<!fir.array<?x?xnone>>
+! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.class<!fir.array<?x?xnone>>) -> !fir.class<none>
 ! CHECK:           fir.call @_QPcallee(%[[VAL_4]]) fastmath<contract> : (!fir.class<none>) -> ()
 ! CHECK:           return
 ! CHECK:         }
@@ -78,7 +78,7 @@ subroutine test_up_assumed_shape_1d_array(x)
 end subroutine test_up_assumed_shape_1d_array
 ! CHECK-LABEL:   func.func @_QPtest_up_assumed_shape_1d_array(
 ! CHECK-SAME:                                                 %[[VAL_0:.*]]: !fir.class<!fir.array<?xnone>> {fir.bindc_name = "x"}) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_up_assumed_shape_1d_arrayEx"} : (!fir.class<!fir.array<?xnone>>) -> (!fir.class<!fir.array<?xnone>>, !fir.class<!fir.array<?xnone>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_up_assumed_shape_1d_arrayEx"} : (!fir.class<!fir.array<?xnone>>, !fir.dscope) -> (!fir.class<!fir.array<?xnone>>, !fir.class<!fir.array<?xnone>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.class<!fir.array<?xnone>>) -> !fir.class<none>
 ! CHECK:           fir.call @_QPcallee(%[[VAL_2]]) fastmath<contract> : (!fir.class<none>) -> ()
 ! CHECK:           return
@@ -102,8 +102,9 @@ end subroutine test_derived_explicit_shape_array
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_5]] : (!fir.box<!fir.array<10x!fir.type<_QFtest_derived_explicit_shape_arrayTt1{a:!fir.box<!fir.heap<f32>>}>>>) -> !fir.box<none>
 ! CHECK:           %[[VAL_10:.*]] = fir.call @_FortranAInitialize(%[[VAL_8]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32) -> none
 ! CHECK:           %[[VAL_11:.*]] = fir.embox %[[VAL_3]]#0(%[[VAL_2]]) : (!fir.ref<!fir.array<10x!fir.type<_QFtest_derived_explicit_shape_arrayTt1{a:!fir.box<!fir.heap<f32>>}>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.type<_QFtest_derived_explicit_shape_arrayTt1{a:!fir.box<!fir.heap<f32>>}>>>
-! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.box<!fir.array<10x!fir.type<_QFtest_derived_explicit_shape_arrayTt1{a:!fir.box<!fir.heap<f32>>}>>>) -> !fir.class<none>
-! CHECK:           fir.call @_QPcallee(%[[VAL_12]]) fastmath<contract> : (!fir.class<none>) -> ()
+! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.box<!fir.array<10x!fir.type<_QFtest_derived_explicit_shape_arrayTt1{a:!fir.box<!fir.heap<f32>>}>>>) -> !fir.class<!fir.array<10xnone>>
+! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_12]] : (!fir.class<!fir.array<10xnone>>) -> !fir.class<none>
+! CHECK:           fir.call @_QPcallee(%[[VAL_13]]) fastmath<contract> : (!fir.class<none>) -> ()
 ! CHECK:           return
 ! CHECK:         }
 
@@ -114,10 +115,10 @@ subroutine test_up_allocatable_2d_array(x)
 end subroutine test_up_allocatable_2d_array
 ! CHECK-LABEL:   func.func @_QPtest_up_allocatable_2d_array(
 ! CHECK-SAME:                                               %[[VAL_0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>> {fir.bindc_name = "x"}) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_up_allocatable_2d_arrayEx"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_up_allocatable_2d_arrayEx"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>
-! CHECK:           %[[VAL_3:.*]] = fir.rebox %[[VAL_2]] : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.class<!fir.heap<!fir.array<?x?xnone>>>
-! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.class<none>
+! CHECK:           %[[VAL_3:.*]] = fir.rebox %[[VAL_2]] : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.class<!fir.array<?x?xnone>>
+! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.class<!fir.array<?x?xnone>>) -> !fir.class<none>
 ! CHECK:           fir.call @_QPcallee(%[[VAL_4]]) fastmath<contract> : (!fir.class<none>) -> ()
 ! CHECK:           return
 ! CHECK:         }
@@ -129,10 +130,10 @@ subroutine test_up_pointer_1d_array(x)
 end subroutine test_up_pointer_1d_array
 ! CHECK-LABEL:   func.func @_QPtest_up_pointer_1d_array(
 ! CHECK-SAME:                                           %[[VAL_0:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>> {fir.bindc_name = "x"}) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_up_pointer_1d_arrayEx"} : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_up_pointer_1d_arrayEx"} : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>
-! CHECK:           %[[VAL_3:.*]] = fir.rebox %[[VAL_2]] : (!fir.class<!fir.ptr<!fir.array<?xnone>>>) -> !fir.class<!fir.ptr<!fir.array<?xnone>>>
-! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.class<!fir.ptr<!fir.array<?xnone>>>) -> !fir.class<none>
+! CHECK:           %[[VAL_3:.*]] = fir.rebox %[[VAL_2]] : (!fir.class<!fir.ptr<!fir.array<?xnone>>>) -> !fir.class<!fir.array<?xnone>>
+! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.class<!fir.array<?xnone>>) -> !fir.class<none>
 ! CHECK:           fir.call @_QPcallee(%[[VAL_4]]) fastmath<contract> : (!fir.class<none>) -> ()
 ! CHECK:           return
 ! CHECK:         }

@@ -13,6 +13,10 @@
 ; CHECK-NOT: DICompileUnit{{.*}} globals:
 ; CHECK-NOT: DICompileUnit{{.*}} imports:
 
+;; Repeat test in RemoveDIs debug-info mode to check that bitcode is loaded and
+;; converted correctly.
+; RUN: llvm-lto -thinlto-action=import %t2.bc -thinlto-index=%t.index.bc -o - --try-experimental-debuginfo-iterators | llvm-dis -o - | FileCheck %s
+
 ; ModuleID = 'debuginfo-cu-import.c'
 source_filename = "debuginfo-cu-import.c"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

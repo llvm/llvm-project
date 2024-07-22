@@ -80,10 +80,10 @@ cc_library(
         "//llvm:Analysis",
         "//llvm:BinaryFormat",
         "//llvm:CodeGen",
+        "//llvm:DWARFLinker",
         "//llvm:DWP",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",
-        "//llvm:DWARFLinker",
         "//llvm:JITLink",
         "//llvm:MC",
         "//llvm:MCDisassembler",
@@ -133,6 +133,13 @@ cc_library(
 )
 
 cc_library(
+    name = "ProfileHeaders",
+    hdrs = glob(["include/bolt/Profile/*.h"]),
+    includes = ["include"],
+    visibility = ["//visibility:private"],
+)
+
+cc_library(
     name = "Profile",
     srcs = glob([
         "lib/Profile/*.cpp",
@@ -167,7 +174,10 @@ cc_library(
     ]),
     hdrs = glob([
         "include/bolt/Passes/*.h",
-    ]),
+    ]) + [
+        # To avoid circular dependency on "Profile".
+        "include/bolt/Profile/BoltAddressTranslation.h",
+    ],
     includes = ["include"],
     deps = [
         ":Core",
@@ -221,8 +231,6 @@ cc_library(
     srcs = glob([
         "lib/Target/AArch64/*.cpp",
     ]),
-    hdrs = glob([
-    ]),
     includes = ["include"],
     deps = [
         ":Core",
@@ -257,6 +265,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":ProfileHeaders",
         ":Utils",
         "//llvm:Analysis",
         "//llvm:BinaryFormat",

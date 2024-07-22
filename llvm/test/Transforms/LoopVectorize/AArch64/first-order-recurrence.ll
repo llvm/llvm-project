@@ -22,8 +22,8 @@ define i32 @PR33613(ptr %b, double %j, i32 %d) #0 {
 ; CHECK-VF4UF2-LABEL: @PR33613
 ; CHECK-VF4UF2: vector.body
 ; CHECK-VF4UF2: %[[VEC_RECUR:.*]] = phi <vscale x 4 x double> [ {{.*}}, %vector.ph ], [ {{.*}}, %vector.body ]
-; CHECK-VF4UF2: %[[SPLICE1:.*]] = call <vscale x 4 x double> @llvm.experimental.vector.splice.nxv4f64(<vscale x 4 x double> %[[VEC_RECUR]], <vscale x 4 x double> {{.*}}, i32 -1)
-; CHECK-VF4UF2-NEXT: %[[SPLICE2:.*]] = call <vscale x 4 x double> @llvm.experimental.vector.splice.nxv4f64(<vscale x 4 x double> %{{.*}}, <vscale x 4 x double> %{{.*}}, i32 -1)
+; CHECK-VF4UF2: %[[SPLICE1:.*]] = call <vscale x 4 x double> @llvm.vector.splice.nxv4f64(<vscale x 4 x double> %[[VEC_RECUR]], <vscale x 4 x double> {{.*}}, i32 -1)
+; CHECK-VF4UF2-NEXT: %[[SPLICE2:.*]] = call <vscale x 4 x double> @llvm.vector.splice.nxv4f64(<vscale x 4 x double> %{{.*}}, <vscale x 4 x double> %{{.*}}, i32 -1)
 ; CHECK-VF4UF2-NOT: insertelement <vscale x 4 x double>
 ; CHECK-VF4UF2: middle.block
 entry:
@@ -71,7 +71,7 @@ define void @PR34711(ptr %a, ptr %b, ptr %c, i64 %n) #0 {
 ; CHECK-VF4UF1: vector.body
 ; CHECK-VF4UF1: %[[VEC_RECUR:.*]] = phi <vscale x 4 x i16> [ %vector.recur.init, %vector.ph ], [ %[[MGATHER:.*]], %vector.body ]
 ; CHECK-VF4UF1: %[[MGATHER]] = call <vscale x 4 x i16> @llvm.masked.gather.nxv4i16.nxv4p0(<vscale x 4 x ptr> {{.*}}, i32 2, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i16> poison)
-; CHECK-VF4UF1-NEXT: %[[SPLICE:.*]] = call <vscale x 4 x i16> @llvm.experimental.vector.splice.nxv4i16(<vscale x 4 x i16> %[[VEC_RECUR]], <vscale x 4 x i16> %[[MGATHER]], i32 -1)
+; CHECK-VF4UF1-NEXT: %[[SPLICE:.*]] = call <vscale x 4 x i16> @llvm.vector.splice.nxv4i16(<vscale x 4 x i16> %[[VEC_RECUR]], <vscale x 4 x i16> %[[MGATHER]], i32 -1)
 ; CHECK-VF4UF1-NEXT: %[[SXT1:.*]] = sext <vscale x 4 x i16> %[[SPLICE]] to <vscale x 4 x i32>
 ; CHECK-VF4UF1-NEXT: %[[SXT2:.*]] = sext <vscale x 4 x i16> %[[MGATHER]] to <vscale x 4 x i32>
 ; CHECK-VF4UF1-NEXT: mul nsw <vscale x 4 x i32> %[[SXT2]], %[[SXT1]]

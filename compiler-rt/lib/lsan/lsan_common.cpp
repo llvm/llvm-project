@@ -108,7 +108,7 @@ class LeakSuppressionContext {
   void PrintMatchedSuppressions();
 };
 
-ALIGNED(64) static char suppression_placeholder[sizeof(LeakSuppressionContext)];
+alignas(64) static char suppression_placeholder[sizeof(LeakSuppressionContext)];
 static LeakSuppressionContext *suppression_ctx = nullptr;
 static const char kSuppressionLeak[] = "leak";
 static const char *kSuppressionTypes[] = {kSuppressionLeak};
@@ -155,14 +155,15 @@ Suppression *LeakSuppressionContext::GetSuppressionForAddr(uptr addr) {
     return s;
 
   // Suppress by file or function name.
-  SymbolizedStack *frames = Symbolizer::GetOrInit()->SymbolizePC(addr);
-  for (SymbolizedStack *cur = frames; cur; cur = cur->next) {
+  SymbolizedStackHolder symbolized_stack(
+      Symbolizer::GetOrInit()->SymbolizePC(addr));
+  const SymbolizedStack *frames = symbolized_stack.get();
+  for (const SymbolizedStack *cur = frames; cur; cur = cur->next) {
     if (context.Match(cur->info.function, kSuppressionLeak, &s) ||
         context.Match(cur->info.file, kSuppressionLeak, &s)) {
       break;
     }
   }
-  frames->ClearAll();
   return s;
 }
 

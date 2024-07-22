@@ -324,7 +324,7 @@ class ProcessAPITestCase(TestBase):
 
         if self.TraceOn():
             print("process state:", state_type_to_str(process.GetState()))
-        self.assertTrue(process.GetState() != lldb.eStateConnected)
+        self.assertNotEqual(process.GetState(), lldb.eStateConnected)
 
         error = lldb.SBError()
         success = process.RemoteLaunch(

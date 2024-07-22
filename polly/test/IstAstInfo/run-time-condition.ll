@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=print<polly-ast>' -disable-output < %s | FileCheck %s
 
 ; for (i = 0; i < 1024; i++)
 ;   A[i] = B[i];

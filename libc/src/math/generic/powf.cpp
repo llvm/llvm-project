@@ -19,6 +19,7 @@
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/FPUtil/sqrt.h" // Speedup for powf(x, 1/2) = sqrtf(x)
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include "exp10f_impl.h" // Speedup for powf(10, y) = exp10f(y)
@@ -26,7 +27,7 @@
 
 #include <errno.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using fputil::DoubleDouble;
 using fputil::TripleDouble;
@@ -387,26 +388,24 @@ static constexpr DoubleDouble LOG2_R2_DD[] = {
 };
 
 LIBC_INLINE bool is_odd_integer(float x) {
-  using FloatProp = typename fputil::FloatProperties<float>;
+  using FPBits = typename fputil::FPBits<float>;
   uint32_t x_u = cpp::bit_cast<uint32_t>(x);
-  int32_t x_e = static_cast<int32_t>((x_u & FloatProp::EXPONENT_MASK) >>
-                                     FloatProp::MANTISSA_WIDTH);
-  int32_t lsb = cpp::countr_zero(x_u | FloatProp::EXPONENT_MASK);
+  int32_t x_e =
+      static_cast<int32_t>((x_u & FPBits::EXP_MASK) >> FPBits::FRACTION_LEN);
+  int32_t lsb = cpp::countr_zero(x_u | FPBits::EXP_MASK);
   constexpr int32_t UNIT_EXPONENT =
-      FloatProp::EXPONENT_BIAS +
-      static_cast<int32_t>(FloatProp::MANTISSA_WIDTH);
+      FPBits::EXP_BIAS + static_cast<int32_t>(FPBits::FRACTION_LEN);
   return (x_e + lsb == UNIT_EXPONENT);
 }
 
 LIBC_INLINE bool is_integer(float x) {
-  using FloatProp = typename fputil::FloatProperties<float>;
+  using FPBits = typename fputil::FPBits<float>;
   uint32_t x_u = cpp::bit_cast<uint32_t>(x);
-  int32_t x_e = static_cast<int32_t>((x_u & FloatProp::EXPONENT_MASK) >>
-                                     FloatProp::MANTISSA_WIDTH);
-  int32_t lsb = cpp::countr_zero(x_u | FloatProp::EXPONENT_MASK);
+  int32_t x_e =
+      static_cast<int32_t>((x_u & FPBits::EXP_MASK) >> FPBits::FRACTION_LEN);
+  int32_t lsb = cpp::countr_zero(x_u | FPBits::EXP_MASK);
   constexpr int32_t UNIT_EXPONENT =
-      FloatProp::EXPONENT_BIAS +
-      static_cast<int32_t>(FloatProp::MANTISSA_WIDTH);
+      FPBits::EXP_BIAS + static_cast<int32_t>(FPBits::FRACTION_LEN);
   return (x_e + lsb >= UNIT_EXPONENT);
 }
 
@@ -426,7 +425,7 @@ LIBC_INLINE bool larger_exponent(double a, double b) {
 double powf_double_double(int idx_x, double dx, double y6, double lo6_hi,
                           const DoubleDouble &exp2_hi_mid) {
   using DoubleBits = typename fputil::FPBits<double>;
-  using DoubleProp = typename fputil::FloatProperties<double>;
+
   // Perform a second range reduction step:
   //   idx2 = round(2^14 * (dx  + 2^-8)) = round ( dx * 2^14 + 2^6)
   //   dx2 = (1 + dx) * r2 - 1
@@ -498,11 +497,11 @@ double powf_double_double(int idx_x, double dx, double y6, double lo6_hi,
   // Round to odd.
   uint64_t r_bits = cpp::bit_cast<uint64_t>(r.hi);
   if (LIBC_UNLIKELY(((r_bits & 0xfff'ffff) == 0) && (r.lo != 0.0))) {
-    bool hi_sign = DoubleBits(r.hi).get_sign();
-    bool lo_sign = DoubleBits(r.lo).get_sign();
+    Sign hi_sign = DoubleBits(r.hi).sign();
+    Sign lo_sign = DoubleBits(r.lo).sign();
     if (hi_sign == lo_sign) {
       ++r_bits;
-    } else if ((r_bits & DoubleProp::MANTISSA_MASK) > 0) {
+    } else if ((r_bits & DoubleBits::FRACTION_MASK) > 0) {
       --r_bits;
     }
   }
@@ -514,14 +513,14 @@ double powf_double_double(int idx_x, double dx, double y6, double lo6_hi,
 
 LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   using FloatBits = typename fputil::FPBits<float>;
-  using FloatProp = typename fputil::FloatProperties<float>;
-  using DoubleProp = typename fputil::FloatProperties<double>;
+  using DoubleBits = typename fputil::FPBits<double>;
+
   FloatBits xbits(x), ybits(y);
 
   uint32_t x_u = xbits.uintval();
-  uint32_t x_abs = x_u & FloatProp::EXP_MANT_MASK;
+  uint32_t x_abs = xbits.abs().uintval();
   uint32_t y_u = ybits.uintval();
-  uint32_t y_abs = y_u & FloatProp::EXP_MANT_MASK;
+  uint32_t y_abs = ybits.abs().uintval();
 
   ///////// BEGIN - Check exceptional cases ////////////////////////////////////
 
@@ -530,7 +529,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   // So if |y| > 151 * 2^24, and x is finite:
   //   |y * log2(x)| = 0 or > 151.
   // Hence x^y will either overflow or underflow if x is not zero.
-  if (LIBC_UNLIKELY((y_abs & 0x007f'ffff) == 0) || (y_abs > 0x4f170000)) {
+  if (LIBC_UNLIKELY((y_abs & 0x0007'ffff) == 0) || (y_abs > 0x4f170000)) {
     // Exceptional exponents.
     switch (y_abs) {
     case 0x0000'0000: { // y = +-0.0f
@@ -549,21 +548,22 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
         // pow(+-0, -Inf) = +inf and raise FE_DIVBYZERO
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_DIVBYZERO);
-        return FloatBits::inf();
+        return FloatBits::inf().get_val();
       }
       // pow (|x| < 1, -inf) = +inf
       // pow (|x| < 1, +inf) = 0.0f
       // pow (|x| > 1, -inf) = 0.0f
       // pow (|x| > 1, +inf) = +inf
-      return ((x_abs < 0x3f80'0000) == (y_u == 0xff80'0000)) ? FloatBits::inf()
-                                                             : 0.0f;
+      return ((x_abs < 0x3f80'0000) == (y_u == 0xff80'0000))
+                 ? FloatBits::inf().get_val()
+                 : 0.0f;
     }
     default:
       // Speed up for common exponents
       switch (y_u) {
       case 0x3f00'0000: // y = 0.5f
         // pow(x, 1/2) = sqrt(x)
-        return fputil::sqrt(x);
+        return fputil::sqrt<float>(x);
       case 0x3f80'0000: // y = 1.0f
         return x;
       case 0x4000'0000: // y = 2.0f
@@ -572,6 +572,26 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
         // TODO: Enable special case speed-up for x^(-1/2) when rsqrt is ready.
         // case 0xbf00'0000:  // pow(x, -1/2) = rsqrt(x)
         //   return rsqrt(x);
+      }
+      if (is_integer(y) && (y_u > 0x4000'0000) && (y_u <= 0x41c0'0000)) {
+        // Check for exact cases when 2 < y < 25 and y is an integer.
+        int msb =
+            (x_abs == 0) ? (FloatBits::TOTAL_LEN - 2) : cpp::countl_zero(x_abs);
+        msb = (msb > FloatBits::EXP_LEN) ? msb : FloatBits::EXP_LEN;
+        int lsb = (x_abs == 0) ? 0 : cpp::countr_zero(x_abs);
+        lsb = (lsb > FloatBits::FRACTION_LEN) ? FloatBits::FRACTION_LEN : lsb;
+        int extra_bits = FloatBits::TOTAL_LEN - 2 - lsb - msb;
+        int iter = static_cast<int>(y);
+
+        if (extra_bits * iter <= FloatBits::FRACTION_LEN + 2) {
+          // The result is either exact or exactly half-way.
+          // But it is exactly representable in double precision.
+          double x_d = static_cast<double>(x);
+          double result = x_d;
+          for (int i = 1; i < iter; ++i)
+            result *= x_d;
+          return static_cast<float>(result);
+        }
       }
       if (y_abs > 0x4f17'0000) {
         if (y_abs > 0x7f80'0000) {
@@ -586,12 +606,12 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
         // x^y will be overflow / underflow in single precision.  Set y to a
         // large enough exponent but not too large, so that the computations
         // won't be overflow in double precision.
-        y = cpp::bit_cast<float>((y_u & FloatProp::SIGN_MASK) + 0x4f800000U);
+        y = cpp::bit_cast<float>((y_u & FloatBits::SIGN_MASK) + 0x4f800000U);
       }
     }
   }
 
-  int ex = -FloatBits::EXPONENT_BIAS;
+  int ex = -FloatBits::EXP_BIAS;
   uint64_t sign = 0;
 
   // y is finite and non-zero.
@@ -609,28 +629,28 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
       return generic::exp10f(y);
     }
 
-    bool x_sign = x_u >= FloatProp::SIGN_MASK;
+    const bool x_is_neg = x_u >= FloatBits::SIGN_MASK;
 
     switch (x_abs) {
     case 0x0000'0000: { // x = +-0.0f
-      bool x_sign = (x_u >= FloatProp::SIGN_MASK);
-      bool out_sign = x_sign && is_odd_integer(FloatBits(y_u).get_val());
+      const bool out_is_neg =
+          x_is_neg && is_odd_integer(FloatBits(y_u).get_val());
       if (y_u > 0x8000'0000U) {
         // pow(0, negative number) = inf
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_DIVBYZERO);
-        return FloatBits::inf(out_sign);
+        return FloatBits::inf(out_is_neg ? Sign::NEG : Sign::POS).get_val();
       }
       // pow(0, positive number) = 0
-      return out_sign ? -0.0f : 0.0f;
+      return out_is_neg ? -0.0f : 0.0f;
     }
     case 0x7f80'0000: { // x = +-Inf
-      bool x_sign = (x_u >= FloatProp::SIGN_MASK);
-      bool out_sign = x_sign && is_odd_integer(FloatBits(y_u).get_val());
-      if (y_u >= FloatProp::SIGN_MASK) {
-        return out_sign ? -0.0f : 0.0f;
+      const bool out_is_neg =
+          x_is_neg && is_odd_integer(FloatBits(y_u).get_val());
+      if (y_u >= FloatBits::SIGN_MASK) {
+        return out_is_neg ? -0.0f : 0.0f;
       }
-      return FloatBits::inf(out_sign);
+      return FloatBits::inf(out_is_neg ? Sign::NEG : Sign::POS).get_val();
     }
     }
 
@@ -647,7 +667,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
     }
 
     // x is finite and negative, and y is a finite integer.
-    if (x_sign) {
+    if (x_is_neg) {
       if (is_integer(y)) {
         x = -x;
         if (is_odd_integer(y)) {
@@ -658,7 +678,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
         // pow( negative, non-integer ) = NaN
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_INVALID);
-        return FloatBits::build_quiet_nan(0);
+        return FloatBits::quiet_nan().get_val();
       }
     }
   }
@@ -671,11 +691,11 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   x_u = FloatBits(x).uintval();
 
   // Extract exponent field of x.
-  ex += (x_u >> FloatProp::MANTISSA_WIDTH);
+  ex += (x_u >> FloatBits::FRACTION_LEN);
   double e_x = static_cast<double>(ex);
   // Use the highest 7 fractional bits of m_x as the index for look up tables.
-  uint32_t x_mant = x_u & FloatProp::MANTISSA_MASK;
-  int idx_x = static_cast<int>(x_mant >> (FloatProp::MANTISSA_WIDTH - 7));
+  uint32_t x_mant = x_u & FloatBits::FRACTION_MASK;
+  int idx_x = static_cast<int>(x_mant >> (FloatBits::FRACTION_LEN - 7));
   // Add the hidden bit to the mantissa.
   // 1 <= m_x < 2
   float m_x = cpp::bit_cast<float>(x_mant | 0x3f800000);
@@ -776,7 +796,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   int idx_y = hm_i & 0x3f;
 
   // 2^hi
-  int64_t exp_hi_i = (hm_i >> 6) << DoubleProp::MANTISSA_WIDTH;
+  int64_t exp_hi_i = (hm_i >> 6) << DoubleBits::FRACTION_LEN;
   // 2^mid
   int64_t exp_mid_i = cpp::bit_cast<uint64_t>(EXP2_MID1[idx_y].hi);
   // (-1)^sign * 2^hi * 2^mid
@@ -835,7 +855,6 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   return static_cast<float>(
              powf_double_double(idx_x, dx, y6, lo6_hi, exp2_hi_mid_dd)) +
          0.0f;
-  // return static_cast<float>(r);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

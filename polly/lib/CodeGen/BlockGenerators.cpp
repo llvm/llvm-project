@@ -81,7 +81,7 @@ Value *BlockGenerator::trySynthesizeNewValue(ScopStmt &Stmt, Value *Old,
   VTV.insert(GlobalMap.begin(), GlobalMap.end());
 
   Scop &S = *Stmt.getParent();
-  const DataLayout &DL = S.getFunction().getParent()->getDataLayout();
+  const DataLayout &DL = S.getFunction().getDataLayout();
   auto IP = Builder.GetInsertPoint();
 
   assert(IP != Builder.GetInsertBlock()->end() &&
@@ -492,7 +492,7 @@ Value *BlockGenerator::getOrCreateAlloca(const ScopArrayInfo *Array) {
   else
     NameExt = ".s2a";
 
-  const DataLayout &DL = Builder.GetInsertBlock()->getModule()->getDataLayout();
+  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
 
   Addr =
       new AllocaInst(Ty, DL.getAllocaAddrSpace(), nullptr,
@@ -1234,7 +1234,7 @@ PHINode *RegionGenerator::buildExitPHI(MemoryAccess *MA, LoopToScevMapT &LTS,
 
   PHINode *NewPHI = PHINode::Create(OrigPHI->getType(), Incoming.size(),
                                     "polly." + OrigPHI->getName(),
-                                    NewSubregionExit->getFirstNonPHI());
+                                    NewSubregionExit->getFirstNonPHIIt());
 
   // Add the incoming values to the PHI.
   for (auto &Pair : Incoming) {

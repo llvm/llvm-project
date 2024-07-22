@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "lldb/API/SBAttachInfo.h"
@@ -155,17 +156,23 @@ struct DAP {
   std::unique_ptr<std::ofstream> log;
   llvm::StringMap<SourceBreakpointMap> source_breakpoints;
   FunctionBreakpointMap function_breakpoints;
-  std::vector<ExceptionBreakpoint> exception_breakpoints;
+  std::optional<std::vector<ExceptionBreakpoint>> exception_breakpoints;
+  llvm::once_flag init_exception_breakpoints_flag;
+  std::vector<std::string> pre_init_commands;
   std::vector<std::string> init_commands;
   std::vector<std::string> pre_run_commands;
+  std::vector<std::string> post_run_commands;
   std::vector<std::string> exit_commands;
   std::vector<std::string> stop_commands;
   std::vector<std::string> terminate_commands;
+  // Map step in target id to list of function targets that user can choose.
+  llvm::DenseMap<lldb::addr_t, std::string> step_in_targets;
   // A copy of the last LaunchRequest or AttachRequest so we can reuse its
   // arguments if we get a RestartRequest.
   std::optional<llvm::json::Object> last_launch_or_attach_request;
   lldb::tid_t focus_tid;
-  std::atomic<bool> sent_terminated_event;
+  bool disconnecting = false;
+  llvm::once_flag terminated_event_flag;
   bool stop_at_entry;
   bool is_attach;
   bool enable_auto_variable_summaries;
@@ -188,7 +195,6 @@ struct DAP {
   StartDebuggingRequestHandler start_debugging_request_handler;
   ReplModeRequestHandler repl_mode_request_handler;
   ReplMode repl_mode;
-  bool auto_repl_mode_collision_warning;
   std::string command_escape_prefix = "`";
   lldb::SBFormat frame_format;
   lldb::SBFormat thread_format;
@@ -224,14 +230,27 @@ struct DAP {
 
   llvm::json::Value CreateTopLevelScopes();
 
-  ExpressionContext DetectExpressionContext(lldb::SBFrame &frame,
-                                            std::string &text);
+  void PopulateExceptionBreakpoints();
 
-  void RunLLDBCommands(llvm::StringRef prefix,
-                       const std::vector<std::string> &commands);
+  /// \return
+  ///   Attempt to determine if an expression is a variable expression or
+  ///   lldb command using a hueristic based on the first term of the
+  ///   expression.
+  ExpressionContext DetectExpressionContext(lldb::SBFrame frame,
+                                            std::string &expression);
 
-  void RunInitCommands();
-  void RunPreRunCommands();
+  /// \return
+  ///   \b false if a fatal error was found while executing these commands,
+  ///   according to the rules of \a LLDBUtils::RunLLDBCommands.
+  bool RunLLDBCommands(llvm::StringRef prefix,
+                       llvm::ArrayRef<std::string> commands);
+
+  llvm::Error RunAttachCommands(llvm::ArrayRef<std::string> attach_commands);
+  llvm::Error RunLaunchCommands(llvm::ArrayRef<std::string> launch_commands);
+  llvm::Error RunPreInitCommands();
+  llvm::Error RunInitCommands();
+  llvm::Error RunPreRunCommands();
+  void RunPostRunCommands();
   void RunStopCommands();
   void RunExitCommands();
   void RunTerminateCommands();

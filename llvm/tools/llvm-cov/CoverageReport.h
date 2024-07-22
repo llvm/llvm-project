@@ -20,7 +20,7 @@
 
 namespace llvm {
 
-class ThreadPool;
+class ThreadPoolInterface;
 
 /// Displays the code coverage report.
 class CoverageReport {
@@ -104,7 +104,7 @@ protected:
   /// For calling CoverageReport::prepareSingleFileReport asynchronously
   /// in prepareSubDirectoryReports(). It's not intended to be modified by
   /// generateSubDirectoryReport().
-  ThreadPool *TPool;
+  ThreadPoolInterface *TPool;
 
   /// One report level may correspond to multiple directory levels as we omit
   /// directories which have only one subentry. So we use this Stack to track

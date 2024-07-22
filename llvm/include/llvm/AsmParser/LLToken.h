@@ -36,6 +36,7 @@ enum Kind {
   exclaim, // !
   bar,     // |
   colon,   // :
+  hash,    // #
 
   kw_vscale,
   kw_x,
@@ -108,6 +109,7 @@ enum Kind {
   kw_fast,
   kw_nuw,
   kw_nsw,
+  kw_nusw,
   kw_exact,
   kw_disjoint,
   kw_inbounds,
@@ -145,6 +147,7 @@ enum Kind {
   kw_aarch64_vector_pcs,
   kw_aarch64_sve_vector_pcs,
   kw_aarch64_sme_preservemost_from_x0,
+  kw_aarch64_sme_preservemost_from_x1,
   kw_aarch64_sme_preservemost_from_x2,
   kw_msp430_intrcc,
   kw_avr_intrcc,
@@ -160,6 +163,7 @@ enum Kind {
   kw_swifttailcc,
   kw_preserve_mostcc,
   kw_preserve_allcc,
+  kw_preserve_nonecc,
   kw_ghccc,
   kw_x86_intrcc,
   kw_hhvmcc,
@@ -179,6 +183,7 @@ enum Kind {
   kw_tailcc,
   kw_m68k_rtdcc,
   kw_graalcc,
+  kw_riscv_vector_cc,
 
   // Attributes:
   kw_attributes,
@@ -342,6 +347,7 @@ enum Kind {
   kw_blockaddress,
   kw_dso_local_equivalent,
   kw_no_cfi,
+  kw_ptrauth,
 
   kw_freeze,
 
@@ -367,6 +373,9 @@ enum Kind {
   kw_live,
   kw_dsoLocal,
   kw_canAutoHide,
+  kw_importType,
+  kw_definition,
+  kw_declaration,
   kw_function,
   kw_insts,
   kw_funcFlags,
@@ -478,6 +487,7 @@ enum Kind {
   DISPFlag,         // DISPFlagFoo
   DwarfMacinfo,     // DW_MACINFO_foo
   ChecksumKind,     // CSK_foo
+  DbgRecordType,    // dbg_foo
 
   // Type valued tokens (TyVal).
   Type,

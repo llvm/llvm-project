@@ -17,10 +17,7 @@ class FrameVariableResponseBench(BenchBase):
 
     @benchmarks_test
     @no_debug_info_test
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr22274: need a pexpect replacement for windows",
-    )
+    @add_test_categories(["pexpect"])
     def test_startup_delay(self):
         """Test response time for the 'frame variable' command."""
         print()

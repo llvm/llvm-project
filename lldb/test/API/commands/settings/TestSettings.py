@@ -2,7 +2,6 @@
 Test lldb settings command.
 """
 
-
 import json
 import os
 import re
@@ -151,14 +150,22 @@ class SettingsCommandTestCase(TestBase):
         self.expect(
             "settings show term-width",
             SETTING_MSG("term-width"),
-            startstr="term-width (int) = 70",
+            startstr="term-width (unsigned) = 70",
         )
 
         # The overall display should also reflect the new setting.
         self.expect(
             "settings show",
             SETTING_MSG("term-width"),
-            substrs=["term-width (int) = 70"],
+            substrs=["term-width (unsigned) = 70"],
+        )
+
+        self.dbg.SetTerminalWidth(60)
+
+        self.expect(
+            "settings show",
+            SETTING_MSG("term-width"),
+            substrs=["term-width (unsigned) = 60"],
         )
 
     # rdar://problem/10712130
@@ -593,7 +600,7 @@ class SettingsCommandTestCase(TestBase):
         self.expect(
             "settings show term-width",
             SETTING_MSG("term-width"),
-            startstr="term-width (int) = 60",
+            startstr="term-width (unsigned) = 60",
         )
         self.runCmd("settings clear term-width", check=False)
         # string
@@ -946,7 +953,7 @@ class SettingsCommandTestCase(TestBase):
 
         # Test OptionValueFileSpec
         self.verify_setting_value_json(
-            "platform.module-cache-directory", self.get_process_working_directory()
+            "platform.module-cache-directory", self.getBuildDir()
         )
 
         # Test OptionValueArray

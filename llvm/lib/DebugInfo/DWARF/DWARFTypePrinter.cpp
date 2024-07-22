@@ -181,8 +181,7 @@ DWARFTypePrinter::appendUnqualifiedNameBefore(DWARFDie D,
     Word = true;
     StringRef Name = NamePtr;
     static constexpr StringRef MangledPrefix = "_STN|";
-    if (Name.starts_with(MangledPrefix)) {
-      Name = Name.drop_front(MangledPrefix.size());
+    if (Name.consume_front(MangledPrefix)) {
       auto Separator = Name.find('|');
       assert(Separator != StringRef::npos);
       StringRef BaseName = Name.substr(0, Separator);
@@ -252,6 +251,21 @@ void DWARFTypePrinter::appendUnqualifiedNameAfter(
       optionsVec.push_back("isa-pointer");
     if (getValOrNull(DW_AT_LLVM_ptrauth_authenticates_null_values))
       optionsVec.push_back("authenticates-null-values");
+    if (auto AuthenticationMode =
+            D.find(DW_AT_LLVM_ptrauth_authentication_mode)) {
+      switch (*AuthenticationMode->getAsUnsignedConstant()) {
+      case 0:
+      case 1:
+        optionsVec.push_back("strip");
+        break;
+      case 2:
+        optionsVec.push_back("sign-and-strip");
+        break;
+      default:
+        // Default authentication policy
+        break;
+      }
+    }
     std::string options;
     for (const auto *option : optionsVec) {
       if (options.size())
@@ -337,10 +351,11 @@ bool DWARFTypePrinter::appendTemplateParameters(DWARFDie D,
         OS << std::to_string(*V->getAsSignedConstant());
         continue;
       }
-      // /Maybe/ we could do pointer type parameters, looking for the
+      // /Maybe/ we could do pointer/reference type parameters, looking for the
       // symbol in the ELF symbol table to get back to the variable...
       // but probably not worth it.
-      if (T.getTag() == DW_TAG_pointer_type)
+      if (T.getTag() == DW_TAG_pointer_type ||
+          T.getTag() == DW_TAG_reference_type)
         continue;
       const char *RawName = dwarf::toString(T.find(DW_AT_name), nullptr);
       assert(RawName);
@@ -616,6 +631,9 @@ void DWARFTypePrinter::appendSubroutineNameAfter(
       break;
     case CallingConvention::DW_CC_LLVM_PreserveAll:
       OS << " __attribute__((preserve_all))";
+      break;
+    case CallingConvention::DW_CC_LLVM_PreserveNone:
+      OS << " __attribute__((preserve_none))";
       break;
     case CallingConvention::DW_CC_LLVM_X86RegCall:
       OS << " __attribute__((regcall))";

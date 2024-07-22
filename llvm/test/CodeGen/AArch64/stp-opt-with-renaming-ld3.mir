@@ -1,6 +1,6 @@
 # RUN: llc -run-pass=aarch64-ldst-opt -mtriple=arm64-apple-iphoneos -aarch64-load-store-renaming=true -o - -verify-machineinstrs %s | FileCheck %s
 --- |
-  define void @test_ld3(<8 x i8>* %a1) {
+  define void @test_ld3(ptr %a1) {
   entry:
     %s1 = alloca i64
     ret void

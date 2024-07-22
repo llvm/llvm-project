@@ -36,7 +36,7 @@ define void @test_constant_v4f32_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [2.0000004731118679E+0,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -78,7 +78,7 @@ define void @test_constant_v2i64_align1(ptr %dst) nounwind {
 ;
 ; SSE4A-LABEL: test_constant_v2i64_align1:
 ; SSE4A:       # %bb.0:
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [4.9406564584124654E-324,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
 ; SSE4A-NEXT:    xorl %eax, %eax
 ; SSE4A-NEXT:    movntiq %rax, (%rdi)
@@ -124,7 +124,7 @@ define void @test_constant_v4i32_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [2.1219957909652723E-314,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -168,7 +168,7 @@ define void @test_constant_v8i16_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [4.1720559249406128E-309,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -212,7 +212,7 @@ define void @test_constant_v16i8_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [7.9499288951273625E-275,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -278,11 +278,11 @@ define void @test_constant_v8f32_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-0.0E+0,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 24(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-5.1200036668777466E+2,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 16(%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -340,13 +340,13 @@ define void @test_constant_v4i64_align1(ptr %dst) nounwind {
 ;
 ; SSE4A-LABEL: test_constant_v4i64_align1:
 ; SSE4A:       # %bb.0:
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
 ; SSE4A-NEXT:    xorl %eax, %eax
 ; SSE4A-NEXT:    movntiq %rax, (%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 24(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 16(%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -406,11 +406,11 @@ define void @test_constant_v8i32_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 24(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 16(%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -470,11 +470,11 @@ define void @test_constant_v16i16_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 24(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 16(%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -534,11 +534,11 @@ define void @test_constant_v32i8_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-3.826728214441238E+279,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 24(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-1.6485712323024388E+202,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 16(%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -803,19 +803,19 @@ define void @test_constant_v16f32_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-0.0E+0,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 24(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-5.1200036668777466E+2,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 16(%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 40(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-1.3107209417724609E+5,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 32(%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 56(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-2.0971535092773438E+6,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 48(%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -905,21 +905,21 @@ define void @test_constant_v8i64_align1(ptr %dst) nounwind {
 ;
 ; SSE4A-LABEL: test_constant_v8i64_align1:
 ; SSE4A:       # %bb.0:
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
 ; SSE4A-NEXT:    xorl %eax, %eax
 ; SSE4A-NEXT:    movntiq %rax, (%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 24(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 16(%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 40(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 32(%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 56(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 48(%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -1011,19 +1011,19 @@ define void @test_constant_v16i32_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 24(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 16(%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 40(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 32(%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 56(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 48(%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -1115,19 +1115,19 @@ define void @test_constant_v32i16_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 24(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 16(%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 40(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-1.6853227412070812E+308,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 32(%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 56(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-1.2358925997317751E+308,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 48(%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -1219,19 +1219,19 @@ define void @test_constant_v64i8_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-3.826728214441238E+279,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 24(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-1.6485712323024388E+202,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 16(%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 40(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-7.1020783099933495E+124,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 32(%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 56(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-3.0595730451167367E+47,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 48(%rdi)
 ; SSE4A-NEXT:    retq
 ;

@@ -5,9 +5,9 @@
 
 # RUN: llvm-dwarfutil --no-odr %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
 
-# RUN: llvm-dwarfutil --no-odr --linker apple %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
+# RUN: llvm-dwarfutil --no-odr --linker classic %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
 
-# RUN: llvm-dwarfutil --no-odr --linker llvm %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
+# RUN: llvm-dwarfutil --no-odr --linker parallel %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
 
 # RUN: llvm-dwarfutil --no-odr --garbage-collection %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
 
@@ -15,11 +15,11 @@
 
 # RUN: llvm-dwarfutil --no-odr --garbage-collection --no-garbage-collection %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-NOGC
 
-# RUN: llvm-dwarfutil --no-odr --linker llvm --garbage-collection --no-garbage-collection %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-NOGC
+# RUN: llvm-dwarfutil --no-odr --linker parallel --garbage-collection --no-garbage-collection %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-NOGC
 
 # RUN: llvm-dwarfutil --no-odr %t.o --tombstone=universal - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
 
-# RUN: llvm-dwarfutil --no-odr --linker llvm %t.o --tombstone=universal - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
+# RUN: llvm-dwarfutil --no-odr --linker parallel %t.o --tombstone=universal - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
 
 # CHECK: DW_TAG_compile_unit
 # CHECK: DW_AT_name{{.*}}"CU1"

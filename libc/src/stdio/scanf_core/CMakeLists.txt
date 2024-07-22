@@ -1,8 +1,26 @@
+if(LIBC_CONF_SCANF_DISABLE_FLOAT)
+  list(APPEND scanf_config_copts "-DLIBC_COPT_SCANF_DISABLE_FLOAT")
+endif()
+if(LIBC_CONF_SCANF_DISABLE_INDEX_MODE)
+  list(APPEND scanf_config_copts "-DLIBC_COPT_SCANF_DISABLE_INDEX_MODE")
+endif()
+if(scanf_config_copts)
+  list(PREPEND scanf_config_copts "COMPILE_OPTIONS")
+endif()
+
+add_header_library(
+  scanf_config
+  HDRS
+    scanf_config.h
+  ${scanf_config_copts}
+)
+
 add_header_library(
   core_structs
   HDRS
     core_structs.h
   DEPENDS
+    .scanf_config
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.bitset
     libc.src.__support.FPUtil.fp_bits
@@ -75,7 +93,7 @@ add_object_library(
 )
 
 if(NOT (TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD)
-  # Not all platforms have a file implementation. If file is unvailable, and a 
+  # Not all platforms have a file implementation. If file is unvailable, and a
   # full build is requested, then we must skip all file based printf sections.
   return()
 endif()

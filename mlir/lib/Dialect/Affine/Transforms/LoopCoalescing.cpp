@@ -39,9 +39,9 @@ struct LoopCoalescingPass
     func::FuncOp func = getOperation();
     func.walk<WalkOrder::PreOrder>([](Operation *op) {
       if (auto scfForOp = dyn_cast<scf::ForOp>(op))
-        (void)coalescePerfectlyNestedLoops(scfForOp);
+        (void)coalescePerfectlyNestedSCFForLoops(scfForOp);
       else if (auto affineForOp = dyn_cast<AffineForOp>(op))
-        (void)coalescePerfectlyNestedLoops(affineForOp);
+        (void)coalescePerfectlyNestedAffineLoops(affineForOp);
     });
   }
 };

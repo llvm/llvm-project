@@ -11,21 +11,25 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, chmod, (const char *path, mode_t mode)) {
 #ifdef SYS_chmod
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_chmod, path, mode);
+#elif defined(SYS_fchmodat2)
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_fchmodat2, AT_FDCWD, path,
+                                              mode, 0, AT_SYMLINK_NOFOLLOW);
 #elif defined(SYS_fchmodat)
   int ret =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_fchmodat, AT_FDCWD, path, mode);
+      LIBC_NAMESPACE::syscall_impl<int>(SYS_fchmodat, AT_FDCWD, path, mode, 0);
 #else
-#error "chmod and fchmodat syscalls not available."
+#error "chmod, fchmodat and fchmodat2 syscalls not available."
 #endif
 
   if (ret < 0) {
@@ -35,4 +39,4 @@ LLVM_LIBC_FUNCTION(int, chmod, (const char *path, mode_t mode)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

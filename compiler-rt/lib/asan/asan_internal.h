@@ -80,7 +80,6 @@ void ReplaceSystemMalloc();
 
 // asan_linux.cpp / asan_mac.cpp / asan_win.cpp
 uptr FindDynamicShadowStart();
-void *AsanDoesNotSupportStaticLinkage();
 void AsanCheckDynamicRTPrereqs();
 void AsanCheckIncompatibleRT();
 

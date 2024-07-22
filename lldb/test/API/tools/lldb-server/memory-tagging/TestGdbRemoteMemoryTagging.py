@@ -84,7 +84,7 @@ class TestGdbRemoteMemoryTagging(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipUnlessArch("aarch64")
     @skipUnlessPlatform(["linux"])
     @skipUnlessAArch64MTELinuxCompiler
-    def test_qMemTags_packets(self):
+    def test_tag_read_qMemTags_packets(self):
         """Test that qMemTags packets are parsed correctly and/or rejected."""
         buf_address, page_size = self.prep_memtags_test()
 
@@ -154,7 +154,7 @@ class TestGdbRemoteMemoryTagging(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipUnlessArch("aarch64")
     @skipUnlessPlatform(["linux"])
     @skipUnlessAArch64MTELinuxCompiler
-    def test_QMemTags_packets(self):
+    def test_tag_write_QMemTags_packets(self):
         """Test that QMemTags packets are parsed correctly and/or rejected."""
         buf_address, page_size = self.prep_memtags_test()
 
@@ -170,7 +170,7 @@ class TestGdbRemoteMemoryTagging(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.check_tag_write("{:x},20".format(buf_address), "E03")
         # Missing data
         self.check_tag_write("{:x},20:1".format(buf_address), "E03")
-        # Zero length write must still include seperator after type
+        # Zero length write must still include separator after type
         self.check_tag_write("{:x},0:1".format(buf_address), "E03")
         # Empty address
         self.check_tag_write(",10:1:01", "E03")

@@ -111,6 +111,7 @@ between compilers or compiler versions. A common example of this
 is matching stack frame addresses. In this case regular expressions
 can be used to match the differing bits of output. For example:
 
+<!-- {% raw %} -->
 ```c++
 int ExternInt;
 struct Point { int x, y, z; };
@@ -127,6 +128,7 @@ extern "C" void test_store_point() {
     // CHECK: ret
 }
 ```
+<!-- {% endraw %} -->
 
 ## Current Requirements and Limitations
 

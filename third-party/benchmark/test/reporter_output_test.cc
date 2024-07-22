@@ -17,7 +17,7 @@ static int AddContextCases() {
   AddCases(TC_ConsoleErr,
            {
                {"^%int-%int-%intT%int:%int:%int[-+]%int:%int$", MR_Default},
-               {"Running .*/reporter_output_test(\\.exe)?$", MR_Next},
+               {"Running .*(/|\\\\)reporter_output_test(\\.exe)?$", MR_Next},
                {"Run on \\(%int X %float MHz CPU s?\\)", MR_Next},
            });
   AddCases(TC_JSONOut,
@@ -55,6 +55,9 @@ static int AddContextCases() {
              {{"Load Average: (%float, ){0,2}%float$", MR_Next}});
   }
   AddCases(TC_JSONOut, {{"\"load_avg\": \\[(%float,?){0,3}],$", MR_Next}});
+  AddCases(TC_JSONOut, {{"\"library_version\": \".*\",$", MR_Next}});
+  AddCases(TC_JSONOut, {{"\"library_build_type\": \".*\",$", MR_Next}});
+  AddCases(TC_JSONOut, {{"\"json_schema_version\": 1$", MR_Next}});
   return 0;
 }
 int dummy_register = AddContextCases();
@@ -93,7 +96,8 @@ ADD_CASES(TC_CSVOut, {{"^\"BM_basic\",%csv_report$"}});
 void BM_bytes_per_second(benchmark::State& state) {
   for (auto _ : state) {
     // This test requires a non-zero CPU time to avoid divide-by-zero
-    benchmark::DoNotOptimize(state.iterations());
+    auto iterations = double(state.iterations()) * double(state.iterations());
+    benchmark::DoNotOptimize(iterations);
   }
   state.SetBytesProcessed(1);
 }
@@ -124,7 +128,8 @@ ADD_CASES(TC_CSVOut, {{"^\"BM_bytes_per_second\",%csv_bytes_report$"}});
 void BM_items_per_second(benchmark::State& state) {
   for (auto _ : state) {
     // This test requires a non-zero CPU time to avoid divide-by-zero
-    benchmark::DoNotOptimize(state.iterations());
+    auto iterations = double(state.iterations()) * double(state.iterations());
+    benchmark::DoNotOptimize(iterations);
   }
   state.SetItemsProcessed(1);
 }
@@ -318,7 +323,7 @@ ADD_CASES(TC_JSONOut, {{"\"name\": \"BM_no_arg_name/3\",$"},
 ADD_CASES(TC_CSVOut, {{"^\"BM_no_arg_name/3\",%csv_report$"}});
 
 // ========================================================================= //
-// ------------------------ Testing Arg Name Output ----------------------- //
+// ------------------------ Testing Arg Name Output ------------------------ //
 // ========================================================================= //
 
 void BM_arg_name(benchmark::State& state) {
@@ -404,7 +409,8 @@ ADD_CASES(TC_ConsoleOut, {{"^BM_BigArgs/1073741824 %console_report$"},
 void BM_Complexity_O1(benchmark::State& state) {
   for (auto _ : state) {
     // This test requires a non-zero CPU time to avoid divide-by-zero
-    benchmark::DoNotOptimize(state.iterations());
+    auto iterations = double(state.iterations()) * double(state.iterations());
+    benchmark::DoNotOptimize(iterations);
   }
   state.SetComplexityN(state.range(0));
 }
@@ -1085,7 +1091,7 @@ ADD_CASES(TC_CSVOut, {{"^\"BM_UserPercentStats/iterations:5/repeats:3/"
                       {"^\"BM_UserPercentStats/iterations:5/repeats:3/"
                        "manual_time_stddev\",%csv_report$"},
                       {"^\"BM_UserPercentStats/iterations:5/repeats:3/"
-                       "manual_time_\",%csv_report$"}});
+                       "manual_time_\",%csv_cv_report$"}});
 
 // ========================================================================= //
 // ------------------------- Testing StrEscape JSON ------------------------ //

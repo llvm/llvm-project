@@ -50,14 +50,19 @@ public:
   /// Casting utility functions. These are deprecated and will be removed,
   /// please prefer using the `llvm` namespace variants instead.
   template <typename... Tys>
+  [[deprecated("Use mlir::isa<U>() instead")]]
   bool isa() const;
   template <typename... Tys>
+  [[deprecated("Use mlir::isa_and_nonnull<U>() instead")]]
   bool isa_and_nonnull() const;
   template <typename U>
+  [[deprecated("Use mlir::dyn_cast<U>() instead")]]
   U dyn_cast() const;
   template <typename U>
+  [[deprecated("Use mlir::dyn_cast_or_null<U>() instead")]]
   U dyn_cast_or_null() const;
   template <typename U>
+  [[deprecated("Use mlir::cast<U>() instead")]]
   U cast() const;
 
   /// Return a unique identifier for the concrete attribute type. This is used
@@ -77,6 +82,10 @@ public:
   void print(raw_ostream &os, bool elideType = false) const;
   void print(raw_ostream &os, AsmState &state, bool elideType = false) const;
   void dump() const;
+
+  /// Print the attribute without dialect wrapping.
+  void printStripped(raw_ostream &os) const;
+  void printStripped(raw_ostream &os, AsmState &state) const;
 
   /// Get an opaque pointer to the attribute.
   const void *getAsOpaquePointer() const { return impl; }

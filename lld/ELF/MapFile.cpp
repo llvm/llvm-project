@@ -121,7 +121,7 @@ static void printEhFrame(raw_ostream &os, const EhFrameSection *sec) {
     if (!pieces.empty()) {
       EhSectionPiece &last = pieces.back();
       if (last.sec == p.sec && last.inputOff + last.size == p.inputOff &&
-          last.outputOff + last.size == p.outputOff) {
+          last.outputOff + last.size == (unsigned)p.outputOff) {
         last.size += p.size;
         return;
       }

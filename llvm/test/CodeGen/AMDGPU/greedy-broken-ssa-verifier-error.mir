@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs -run-pass=greedy -stress-regalloc=2 %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs -run-pass=greedy -stress-regalloc=2 %s -o - | FileCheck -check-prefix=GCN %s
 
 # Make sure there's no verifier error after register allocation
 # introduces vreg defs when the MIR parser infers SSA.

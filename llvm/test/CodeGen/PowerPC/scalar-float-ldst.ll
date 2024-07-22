@@ -7271,3 +7271,61 @@ entry:
   store double %conv, ptr inttoptr (i64 1000000000000 to ptr), align 4096
   ret void
 }
+
+define dso_local void @st_reversed_float_from_i8(ptr %ptr) {
+; CHECK-P10-LABEL: st_reversed_float_from_i8:
+; CHECK-P10:       # %bb.0: # %entry
+; CHECK-P10-NEXT:    li r4, 8
+; CHECK-P10-NEXT:    lxsibzx f0, 0, r3
+; CHECK-P10-NEXT:    xxspltidp vs2, -1023410176
+; CHECK-P10-NEXT:    lxsibzx f1, r3, r4
+; CHECK-P10-NEXT:    xscvuxdsp f0, f0
+; CHECK-P10-NEXT:    xscvuxdsp f1, f1
+; CHECK-P10-NEXT:    xsaddsp f0, f0, f2
+; CHECK-P10-NEXT:    xsaddsp f1, f1, f2
+; CHECK-P10-NEXT:    stfs f0, 8(r3)
+; CHECK-P10-NEXT:    stfs f1, 0(r3)
+; CHECK-P10-NEXT:    blr
+;
+; CHECK-P9-LABEL: st_reversed_float_from_i8:
+; CHECK-P9:       # %bb.0: # %entry
+; CHECK-P9-NEXT:    li r4, 8
+; CHECK-P9-NEXT:    lxsibzx f0, 0, r3
+; CHECK-P9-NEXT:    lxsibzx f1, r3, r4
+; CHECK-P9-NEXT:    addis r4, r2, .LCPI300_0@toc@ha
+; CHECK-P9-NEXT:    lfs f2, .LCPI300_0@toc@l(r4)
+; CHECK-P9-NEXT:    xscvuxdsp f0, f0
+; CHECK-P9-NEXT:    xscvuxdsp f1, f1
+; CHECK-P9-NEXT:    xsaddsp f0, f0, f2
+; CHECK-P9-NEXT:    xsaddsp f1, f1, f2
+; CHECK-P9-NEXT:    stfs f0, 8(r3)
+; CHECK-P9-NEXT:    stfs f1, 0(r3)
+; CHECK-P9-NEXT:    blr
+;
+; CHECK-P8-LABEL: st_reversed_float_from_i8:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    lbz r4, 0(r3)
+; CHECK-P8-NEXT:    lbz r5, 8(r3)
+; CHECK-P8-NEXT:    mtfprwz f0, r4
+; CHECK-P8-NEXT:    mtfprwz f1, r5
+; CHECK-P8-NEXT:    addis r4, r2, .LCPI300_0@toc@ha
+; CHECK-P8-NEXT:    lfs f2, .LCPI300_0@toc@l(r4)
+; CHECK-P8-NEXT:    xscvuxdsp f0, f0
+; CHECK-P8-NEXT:    xscvuxdsp f1, f1
+; CHECK-P8-NEXT:    xsaddsp f0, f0, f2
+; CHECK-P8-NEXT:    xsaddsp f1, f1, f2
+; CHECK-P8-NEXT:    stfs f1, 0(r3)
+; CHECK-P8-NEXT:    stfs f0, 8(r3)
+; CHECK-P8-NEXT:    blr
+entry:
+  %idx = getelementptr inbounds i8, ptr %ptr, i64 8
+  %i0 = load i8, ptr %ptr, align 1
+  %i1 = load i8, ptr %idx, align 1
+  %f0 = uitofp i8 %i0 to float
+  %f1 = uitofp i8 %i1 to float
+  %a0 = fadd float %f0, -1.280000e+02
+  %a1 = fadd float %f1, -1.280000e+02
+  store float %a1, ptr %ptr, align 8
+  store float %a0, ptr %idx, align 8
+  ret void
+}

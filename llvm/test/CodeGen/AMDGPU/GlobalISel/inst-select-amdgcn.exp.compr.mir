@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s
-# RUN: not llc -march=amdgcn -mcpu=gfx1100 -run-pass=instruction-select -verify-machineinstrs -global-isel -global-isel-abort=0 %s -o - 2>&1 | FileCheck --check-prefix=ERR %s
+# RUN: llc -mtriple=amdgcn -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s
+# RUN: not llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=instruction-select -verify-machineinstrs -global-isel -global-isel-abort=0 %s -o - 2>&1 | FileCheck --check-prefix=ERR %s
 
 # ERR: error: <unknown>:0:0: in function exp0 void (): intrinsic not supported on subtarget
 

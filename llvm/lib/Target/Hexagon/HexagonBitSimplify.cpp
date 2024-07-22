@@ -219,8 +219,8 @@ namespace {
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineDominatorTree>();
-      AU.addPreserved<MachineDominatorTree>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
+      AU.addPreserved<MachineDominatorTreeWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -285,7 +285,7 @@ char HexagonBitSimplify::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonBitSimplify, "hexagon-bit-simplify",
       "Hexagon bit simplification", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(HexagonBitSimplify, "hexagon-bit-simplify",
       "Hexagon bit simplification", false, false)
 
@@ -1002,7 +1002,7 @@ namespace {
 bool DeadCodeElimination::isDead(unsigned R) const {
   for (const MachineOperand &MO : MRI.use_operands(R)) {
     const MachineInstr *UseI = MO.getParent();
-    if (UseI->isDebugValue())
+    if (UseI->isDebugInstr())
       continue;
     if (UseI->isPHI()) {
       assert(!UseI->getOperand(0).getSubReg());
@@ -1056,8 +1056,8 @@ bool DeadCodeElimination::runOnNode(MachineDomTreeNode *N) {
       continue;
 
     B->erase(MI);
-    for (unsigned i = 0, n = Regs.size(); i != n; ++i)
-      MRI.markUsesInDebugValueAsUndef(Regs[i]);
+    for (unsigned Reg : Regs)
+      MRI.markUsesInDebugValueAsUndef(Reg);
     Changed = true;
   }
 
@@ -1957,7 +1957,8 @@ bool BitSimplification::genStoreUpperHalf(MachineInstr *MI) {
     return false;
   const BitTracker::RegisterCell &RC = BT.lookup(RS.Reg);
   RegHalf H;
-  if (!matchHalf(0, RC, 0, H))
+  unsigned B = (RS.Sub == Hexagon::isub_hi) ? 32 : 0;
+  if (!matchHalf(0, RC, B, H))
     return false;
   if (H.Low)
     return false;
@@ -2799,7 +2800,7 @@ bool HexagonBitSimplify::runOnMachineFunction(MachineFunction &MF) {
   auto &HRI = *HST.getRegisterInfo();
   auto &HII = *HST.getInstrInfo();
 
-  MDT = &getAnalysis<MachineDominatorTree>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   bool Changed;
 

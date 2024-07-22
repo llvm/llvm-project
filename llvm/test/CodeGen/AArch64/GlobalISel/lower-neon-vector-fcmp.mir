@@ -321,18 +321,15 @@ body:             |
   bb.0:
     liveins: $q0, $q1
 
-    ; Should be inverted. Needs two compares.
 
     ; CHECK-LABEL: name: uno_zero
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK-NEXT: [[FCMGEZ:%[0-9]+]]:_(<2 x s64>) = G_FCMGEZ %lhs
-    ; CHECK-NEXT: [[FCMLTZ:%[0-9]+]]:_(<2 x s64>) = G_FCMLTZ %lhs
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[FCMLTZ]], [[FCMGEZ]]
+    ; CHECK-NEXT: [[FCMEQ:%[0-9]+]]:_(<2 x s64>) = G_FCMEQ %lhs, %lhs(<2 x s64>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[OR]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[FCMEQ]], [[BUILD_VECTOR]]
     ; CHECK-NEXT: $q0 = COPY [[XOR]](<2 x s64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0

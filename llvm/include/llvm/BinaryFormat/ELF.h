@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <cstring>
+#include <type_traits>
 
 namespace llvm {
 namespace ELF {
@@ -356,11 +357,13 @@ enum {
   ELFOSABI_AROS = 15,          // AROS
   ELFOSABI_FENIXOS = 16,       // FenixOS
   ELFOSABI_CLOUDABI = 17,      // Nuxi CloudABI
+  ELFOSABI_CUDA = 51,          // NVIDIA CUDA architecture.
   ELFOSABI_FIRST_ARCH = 64,    // First architecture-specific OS ABI
   ELFOSABI_AMDGPU_HSA = 64,    // AMD HSA runtime
   ELFOSABI_AMDGPU_PAL = 65,    // AMD PAL runtime
   ELFOSABI_AMDGPU_MESA3D = 66, // AMD GCN GPUs (GFX6+) for MESA runtime
   ELFOSABI_ARM = 97,           // ARM
+  ELFOSABI_ARM_FDPIC = 65,     // ARM FDPIC
   ELFOSABI_C6000_ELFABI = 64,  // Bare-metal TMS320C6000
   ELFOSABI_C6000_LINUX = 65,   // Linux TMS320C6000
   ELFOSABI_STANDALONE = 255,   // Standalone (embedded) application
@@ -374,7 +377,8 @@ enum {
   ELFABIVERSION_AMDGPU_HSA_V2 = 0,
   ELFABIVERSION_AMDGPU_HSA_V3 = 1,
   ELFABIVERSION_AMDGPU_HSA_V4 = 2,
-  ELFABIVERSION_AMDGPU_HSA_V5 = 3
+  ELFABIVERSION_AMDGPU_HSA_V5 = 3,
+  ELFABIVERSION_AMDGPU_HSA_V6 = 4,
 };
 
 #define ELF_RELOC(name, value) name = value,
@@ -739,58 +743,69 @@ enum : unsigned {
 
   // AMDGCN-based processors.
   // clang-format off
-  EF_AMDGPU_MACH_AMDGCN_GFX600        = 0x020,
-  EF_AMDGPU_MACH_AMDGCN_GFX601        = 0x021,
-  EF_AMDGPU_MACH_AMDGCN_GFX700        = 0x022,
-  EF_AMDGPU_MACH_AMDGCN_GFX701        = 0x023,
-  EF_AMDGPU_MACH_AMDGCN_GFX702        = 0x024,
-  EF_AMDGPU_MACH_AMDGCN_GFX703        = 0x025,
-  EF_AMDGPU_MACH_AMDGCN_GFX704        = 0x026,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X27 = 0x027,
-  EF_AMDGPU_MACH_AMDGCN_GFX801        = 0x028,
-  EF_AMDGPU_MACH_AMDGCN_GFX802        = 0x029,
-  EF_AMDGPU_MACH_AMDGCN_GFX803        = 0x02a,
-  EF_AMDGPU_MACH_AMDGCN_GFX810        = 0x02b,
-  EF_AMDGPU_MACH_AMDGCN_GFX900        = 0x02c,
-  EF_AMDGPU_MACH_AMDGCN_GFX902        = 0x02d,
-  EF_AMDGPU_MACH_AMDGCN_GFX904        = 0x02e,
-  EF_AMDGPU_MACH_AMDGCN_GFX906        = 0x02f,
-  EF_AMDGPU_MACH_AMDGCN_GFX908        = 0x030,
-  EF_AMDGPU_MACH_AMDGCN_GFX909        = 0x031,
-  EF_AMDGPU_MACH_AMDGCN_GFX90C        = 0x032,
-  EF_AMDGPU_MACH_AMDGCN_GFX1010       = 0x033,
-  EF_AMDGPU_MACH_AMDGCN_GFX1011       = 0x034,
-  EF_AMDGPU_MACH_AMDGCN_GFX1012       = 0x035,
-  EF_AMDGPU_MACH_AMDGCN_GFX1030       = 0x036,
-  EF_AMDGPU_MACH_AMDGCN_GFX1031       = 0x037,
-  EF_AMDGPU_MACH_AMDGCN_GFX1032       = 0x038,
-  EF_AMDGPU_MACH_AMDGCN_GFX1033       = 0x039,
-  EF_AMDGPU_MACH_AMDGCN_GFX602        = 0x03a,
-  EF_AMDGPU_MACH_AMDGCN_GFX705        = 0x03b,
-  EF_AMDGPU_MACH_AMDGCN_GFX805        = 0x03c,
-  EF_AMDGPU_MACH_AMDGCN_GFX1035       = 0x03d,
-  EF_AMDGPU_MACH_AMDGCN_GFX1034       = 0x03e,
-  EF_AMDGPU_MACH_AMDGCN_GFX90A        = 0x03f,
-  EF_AMDGPU_MACH_AMDGCN_GFX940        = 0x040,
-  EF_AMDGPU_MACH_AMDGCN_GFX1100       = 0x041,
-  EF_AMDGPU_MACH_AMDGCN_GFX1013       = 0x042,
-  EF_AMDGPU_MACH_AMDGCN_GFX1150       = 0x043,
-  EF_AMDGPU_MACH_AMDGCN_GFX1103       = 0x044,
-  EF_AMDGPU_MACH_AMDGCN_GFX1036       = 0x045,
-  EF_AMDGPU_MACH_AMDGCN_GFX1101       = 0x046,
-  EF_AMDGPU_MACH_AMDGCN_GFX1102       = 0x047,
-  EF_AMDGPU_MACH_AMDGCN_GFX1200       = 0x048,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X49 = 0x049,
-  EF_AMDGPU_MACH_AMDGCN_GFX1151       = 0x04a,
-  EF_AMDGPU_MACH_AMDGCN_GFX941        = 0x04b,
-  EF_AMDGPU_MACH_AMDGCN_GFX942        = 0x04c,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D = 0x04d,
-  EF_AMDGPU_MACH_AMDGCN_GFX1201       = 0x04e,
+  EF_AMDGPU_MACH_AMDGCN_GFX600          = 0x020,
+  EF_AMDGPU_MACH_AMDGCN_GFX601          = 0x021,
+  EF_AMDGPU_MACH_AMDGCN_GFX700          = 0x022,
+  EF_AMDGPU_MACH_AMDGCN_GFX701          = 0x023,
+  EF_AMDGPU_MACH_AMDGCN_GFX702          = 0x024,
+  EF_AMDGPU_MACH_AMDGCN_GFX703          = 0x025,
+  EF_AMDGPU_MACH_AMDGCN_GFX704          = 0x026,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X27   = 0x027,
+  EF_AMDGPU_MACH_AMDGCN_GFX801          = 0x028,
+  EF_AMDGPU_MACH_AMDGCN_GFX802          = 0x029,
+  EF_AMDGPU_MACH_AMDGCN_GFX803          = 0x02a,
+  EF_AMDGPU_MACH_AMDGCN_GFX810          = 0x02b,
+  EF_AMDGPU_MACH_AMDGCN_GFX900          = 0x02c,
+  EF_AMDGPU_MACH_AMDGCN_GFX902          = 0x02d,
+  EF_AMDGPU_MACH_AMDGCN_GFX904          = 0x02e,
+  EF_AMDGPU_MACH_AMDGCN_GFX906          = 0x02f,
+  EF_AMDGPU_MACH_AMDGCN_GFX908          = 0x030,
+  EF_AMDGPU_MACH_AMDGCN_GFX909          = 0x031,
+  EF_AMDGPU_MACH_AMDGCN_GFX90C          = 0x032,
+  EF_AMDGPU_MACH_AMDGCN_GFX1010         = 0x033,
+  EF_AMDGPU_MACH_AMDGCN_GFX1011         = 0x034,
+  EF_AMDGPU_MACH_AMDGCN_GFX1012         = 0x035,
+  EF_AMDGPU_MACH_AMDGCN_GFX1030         = 0x036,
+  EF_AMDGPU_MACH_AMDGCN_GFX1031         = 0x037,
+  EF_AMDGPU_MACH_AMDGCN_GFX1032         = 0x038,
+  EF_AMDGPU_MACH_AMDGCN_GFX1033         = 0x039,
+  EF_AMDGPU_MACH_AMDGCN_GFX602          = 0x03a,
+  EF_AMDGPU_MACH_AMDGCN_GFX705          = 0x03b,
+  EF_AMDGPU_MACH_AMDGCN_GFX805          = 0x03c,
+  EF_AMDGPU_MACH_AMDGCN_GFX1035         = 0x03d,
+  EF_AMDGPU_MACH_AMDGCN_GFX1034         = 0x03e,
+  EF_AMDGPU_MACH_AMDGCN_GFX90A          = 0x03f,
+  EF_AMDGPU_MACH_AMDGCN_GFX940          = 0x040,
+  EF_AMDGPU_MACH_AMDGCN_GFX1100         = 0x041,
+  EF_AMDGPU_MACH_AMDGCN_GFX1013         = 0x042,
+  EF_AMDGPU_MACH_AMDGCN_GFX1150         = 0x043,
+  EF_AMDGPU_MACH_AMDGCN_GFX1103         = 0x044,
+  EF_AMDGPU_MACH_AMDGCN_GFX1036         = 0x045,
+  EF_AMDGPU_MACH_AMDGCN_GFX1101         = 0x046,
+  EF_AMDGPU_MACH_AMDGCN_GFX1102         = 0x047,
+  EF_AMDGPU_MACH_AMDGCN_GFX1200         = 0x048,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X49   = 0x049,
+  EF_AMDGPU_MACH_AMDGCN_GFX1151         = 0x04a,
+  EF_AMDGPU_MACH_AMDGCN_GFX941          = 0x04b,
+  EF_AMDGPU_MACH_AMDGCN_GFX942          = 0x04c,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D   = 0x04d,
+  EF_AMDGPU_MACH_AMDGCN_GFX1201         = 0x04e,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4F   = 0x04f,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X50   = 0x050,
+  EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC    = 0x051,
+  EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC = 0x052,
+  EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC = 0x053,
+  EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC   = 0x054,
+  EF_AMDGPU_MACH_AMDGCN_GFX1152         = 0x055,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X56   = 0x056,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X57   = 0x057,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X58   = 0x058,
+  EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC   = 0x059,
   // clang-format on
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
-  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX1201,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC,
 
   // Indicates if the "xnack" target feature is enabled for all code contained
   // in the object.
@@ -839,11 +854,60 @@ enum : unsigned {
   EF_AMDGPU_FEATURE_SRAMECC_OFF_V4 = 0x800,
   // SRAMECC is on.
   EF_AMDGPU_FEATURE_SRAMECC_ON_V4 = 0xc00,
+
+  // Generic target versioning. This is contained in the list byte of EFLAGS.
+  EF_AMDGPU_GENERIC_VERSION = 0xff000000,
+  EF_AMDGPU_GENERIC_VERSION_OFFSET = 24,
+  EF_AMDGPU_GENERIC_VERSION_MIN = 1,
+  EF_AMDGPU_GENERIC_VERSION_MAX = 0xff,
 };
 
 // ELF Relocation types for AMDGPU
 enum {
 #include "ELFRelocs/AMDGPU.def"
+};
+
+// NVPTX specific e_flags.
+enum : unsigned {
+  // Processor selection mask for EF_CUDA_SM* values.
+  EF_CUDA_SM = 0xff,
+
+  // SM based processor values.
+  EF_CUDA_SM20 = 0x14,
+  EF_CUDA_SM21 = 0x15,
+  EF_CUDA_SM30 = 0x1e,
+  EF_CUDA_SM32 = 0x20,
+  EF_CUDA_SM35 = 0x23,
+  EF_CUDA_SM37 = 0x25,
+  EF_CUDA_SM50 = 0x32,
+  EF_CUDA_SM52 = 0x34,
+  EF_CUDA_SM53 = 0x35,
+  EF_CUDA_SM60 = 0x3c,
+  EF_CUDA_SM61 = 0x3d,
+  EF_CUDA_SM62 = 0x3e,
+  EF_CUDA_SM70 = 0x46,
+  EF_CUDA_SM72 = 0x48,
+  EF_CUDA_SM75 = 0x4b,
+  EF_CUDA_SM80 = 0x50,
+  EF_CUDA_SM86 = 0x56,
+  EF_CUDA_SM87 = 0x57,
+  EF_CUDA_SM89 = 0x59,
+  // The sm_90a variant uses the same machine flag.
+  EF_CUDA_SM90 = 0x5a,
+
+  // Unified texture binding is enabled.
+  EF_CUDA_TEXMODE_UNIFIED = 0x100,
+  // Independent texture binding is enabled.
+  EF_CUDA_TEXMODE_INDEPENDANT = 0x200,
+  // The target is using 64-bit addressing.
+  EF_CUDA_64BIT_ADDRESS = 0x400,
+  // Set when using the sm_90a processor.
+  EF_CUDA_ACCELERATORS = 0x800,
+  // Undocumented software feature.
+  EF_CUDA_SW_FLAG_V2 = 0x1000,
+
+  // Virtual processor selection mask for EF_CUDA_VIRTUAL_SM* values.
+  EF_CUDA_VIRTUAL_SM = 0xff0000,
 };
 
 // ELF Relocation types for BPF
@@ -1019,7 +1083,10 @@ enum : unsigned {
   SHT_SYMTAB_SHNDX = 18,  // Indices for SHN_XINDEX entries.
   // Experimental support for SHT_RELR sections. For details, see proposal
   // at https://groups.google.com/forum/#!topic/generic-abi/bX460iggiKg
-  SHT_RELR = 19,         // Relocation entries; only offsets.
+  SHT_RELR = 19, // Relocation entries; only offsets.
+  // TODO: Experimental CREL relocations. LLVM will change the value and
+  // break compatibility in the future.
+  SHT_CREL = 0x40000014,
   SHT_LOOS = 0x60000000, // Lowest operating system-specific type.
   // Android packed relocation section types.
   // https://android.googlesource.com/platform/bionic/+/6f12bfece5dcc01325e0abba56a46b1bcf991c69/tools/relocation_packer/src/elf_file.cc#37
@@ -1081,6 +1148,8 @@ enum : unsigned {
   SHT_RISCV_ATTRIBUTES = 0x70000003U,
 
   SHT_CSKY_ATTRIBUTES = 0x70000001U,
+
+  SHT_HEXAGON_ATTRIBUTES = 0x70000003U,
 
   SHT_HIPROC = 0x7fffffff, // Highest processor arch-specific type.
   SHT_LOUSER = 0x80000000, // Lowest type reserved for applications.
@@ -1362,6 +1431,14 @@ struct Elf64_Rela {
   }
 };
 
+// In-memory representation of CREL. The serialized representation uses LEB128.
+template <bool Is64> struct Elf_Crel {
+  std::conditional_t<Is64, uint64_t, uint32_t> r_offset;
+  uint32_t r_symidx;
+  uint32_t r_type;
+  std::conditional_t<Is64, int64_t, int32_t> r_addend;
+};
+
 // Relocation entry without explicit addend or info (relative relocations only).
 typedef Elf64_Xword Elf64_Relr; // offset/bitmap for relative relocations
 
@@ -1418,6 +1495,7 @@ enum {
   PT_OPENBSD_RANDOMIZE = 0x65a3dbe6, // Fill with random data.
   PT_OPENBSD_WXNEEDED = 0x65a3dbe7,  // Program does W^X violations.
   PT_OPENBSD_NOBTCFI = 0x65a3dbe8,   // Do not enforce branch target CFI.
+  PT_OPENBSD_SYSCALLS = 0x65a3dbe9,  // System call sites.
   PT_OPENBSD_BOOTDATA = 0x65a41be6,  // Section for boot arguments.
 
   // ARM program header types.
@@ -1650,11 +1728,6 @@ enum {
   NT_ANDROID_TYPE_MEMTAG = 4,
 };
 
-// ARM note types.
-enum {
-  NT_ARM_TYPE_PAUTH_ABI_TAG = 1,
-};
-
 // Memory tagging values used in NT_ANDROID_TYPE_MEMTAG notes.
 enum {
   // Enumeration to determine the tagging mode. In Android-land, 'SYNC' means
@@ -1678,6 +1751,7 @@ enum : unsigned {
   GNU_PROPERTY_STACK_SIZE = 1,
   GNU_PROPERTY_NO_COPY_ON_PROTECTED = 2,
   GNU_PROPERTY_AARCH64_FEATURE_1_AND = 0xc0000000,
+  GNU_PROPERTY_AARCH64_FEATURE_PAUTH = 0xc0000001,
   GNU_PROPERTY_X86_FEATURE_1_AND = 0xc0000002,
 
   GNU_PROPERTY_X86_UINT32_OR_LO = 0xc0008000,
@@ -1694,6 +1768,26 @@ enum : unsigned {
   GNU_PROPERTY_AARCH64_FEATURE_1_BTI = 1 << 0,
   GNU_PROPERTY_AARCH64_FEATURE_1_PAC = 1 << 1,
   GNU_PROPERTY_AARCH64_FEATURE_1_GCS = 1 << 2,
+};
+
+// aarch64 PAuth platforms.
+enum : unsigned {
+  AARCH64_PAUTH_PLATFORM_INVALID = 0x0,
+  AARCH64_PAUTH_PLATFORM_BAREMETAL = 0x1,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX = 0x10000002,
+};
+
+// Bit positions of version flags for AARCH64_PAUTH_PLATFORM_LLVM_LINUX.
+enum : unsigned {
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INTRINSICS = 0,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_CALLS = 1,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_RETURNS = 2,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_AUTHTRAPS = 3,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRADDRDISCR = 4,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRTYPEDISCR = 5,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI = 6,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST =
+      AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI,
 };
 
 // x86 processor feature bits.
@@ -1855,11 +1949,20 @@ enum {
   ELFCOMPRESS_HIPROC = 0x7fffffff  // End of processor-specific.
 };
 
+constexpr unsigned CREL_HDR_ADDEND = 4;
+
 /// Convert an architecture name into ELF's e_machine value.
 uint16_t convertArchNameToEMachine(StringRef Arch);
 
 /// Convert an ELF's e_machine value into an architecture name.
 StringRef convertEMachineToArchName(uint16_t EMachine);
+
+// Convert a lowercase string identifier into an OSABI value.
+uint8_t convertNameToOSABI(StringRef Name);
+
+// Convert an OSABI value into a string that identifies the OS- or ABI-
+// specific ELF extension.
+StringRef convertOSABIToName(uint8_t OSABI);
 
 } // end namespace ELF
 } // end namespace llvm

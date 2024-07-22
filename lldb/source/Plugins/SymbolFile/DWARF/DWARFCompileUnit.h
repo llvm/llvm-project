@@ -32,7 +32,7 @@ public:
 
 private:
   DWARFCompileUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
-                   const DWARFUnitHeader &header,
+                   const llvm::DWARFUnitHeader &header,
                    const llvm::DWARFAbbreviationDeclarationSet &abbrevs,
                    DIERef::Section section, bool is_dwo)
       : DWARFUnit(dwarf, uid, header, abbrevs, section, is_dwo) {}

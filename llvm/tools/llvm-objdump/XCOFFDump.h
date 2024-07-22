@@ -33,6 +33,7 @@ std::string getXCOFFSymbolDescription(const SymbolInfoTy &SymbolInfo,
 
 Error getXCOFFRelocationValueString(const object::XCOFFObjectFile &Obj,
                                     const object::RelocationRef &RelRef,
+                                    bool SymbolDescription,
                                     llvm::SmallVectorImpl<char> &Result);
 
 void dumpTracebackTable(ArrayRef<uint8_t> Bytes, uint64_t Address,
