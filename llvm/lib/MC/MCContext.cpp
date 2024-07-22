@@ -357,6 +357,11 @@ MCSymbol *MCContext::createNamedTempSymbol() {
   return createNamedTempSymbol("tmp");
 }
 
+MCSymbol *MCContext::createLocalSymbol(StringRef Name) {
+  MCSymbolTableEntry &NameEntry = getSymbolTableEntry(Name);
+  return createSymbolImpl(&NameEntry, /*IsTemporary=*/false);
+}
+
 unsigned MCContext::NextInstance(unsigned LocalLabelVal) {
   MCLabel *&Label = Instances[LocalLabelVal];
   if (!Label)
