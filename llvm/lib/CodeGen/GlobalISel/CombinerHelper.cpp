@@ -5211,9 +5211,8 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
 
   if (MI.getFlag(MachineInstr::MIFlag::IsExact)) {
     // Collect all magic values from the build vector.
-    bool Matched = matchUnaryPredicate(MRI, RHS, BuildExactUDIVPattern);
-    (void)Matched;
-    assert(Matched && "Expected unary predicate match to succeed");
+    if (!matchUnaryPredicate(MRI, RHS, BuildExactUDIVPattern))
+      llvm_unreachable("Expected unary predicate match to succeed");
 
     Register Shift, Factor;
     if (Ty.isVector()) {
