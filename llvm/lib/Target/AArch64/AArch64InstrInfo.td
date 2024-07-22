@@ -1794,7 +1794,7 @@ let Predicates = [HasPAuth] in {
                Sched<[WriteI, ReadI]> {
     let isReMaterializable = 1;
     let isCodeGenOnly = 1;
-    let Size = 40; // 12 fixed + 28 variable, for pointer offset, and discriminator
+    let Size = 48; // 12 fixed + 36 variable, for pointer offset, and discriminator
     let Defs = [X16,X17];
   }
 
