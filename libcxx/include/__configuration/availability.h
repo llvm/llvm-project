@@ -353,13 +353,6 @@
 #define _LIBCPP_AVAILABILITY_HAS_BAD_EXPECTED_ACCESS_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_19
 #define _LIBCPP_AVAILABILITY_BAD_EXPECTED_ACCESS_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_19_ATTRIBUTE
 
-// This determines whether std::filesystem::directory_entry caches all the properties
-// it contains, which improves the performance when accessing a directory entry.
-// Code in the headers like filesystem::directory_entry's implementation needs to
-// know whether the dylib populated the cache or not.
-#define _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY _LIBCPP_INTRODUCED_IN_LLVM_19
-#define _LIBCPP_AVAILABILITY_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY _LIBCPP_INTRODUCED_IN_LLVM_19_ATTRIBUTE
-
 // Define availability attributes that depend on _LIBCPP_HAS_NO_EXCEPTIONS.
 // Those are defined in terms of the availability attributes above, and
 // should not be vendor-specific.
