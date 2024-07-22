@@ -2596,7 +2596,15 @@ void MachineBlockPlacement::rotateLoopWithProfile(
 /// otherwise, collect all blocks in the loop.
 MachineBlockPlacement::BlockFilterSet
 MachineBlockPlacement::collectLoopBlockSet(const MachineLoop &L) {
-  BlockFilterSet LoopBlockSet;
+  // Collect the blocks in a set ordered by block number, as this gives the same
+  // order as they appear in the function.
+  struct MBBCompare {
+    bool operator()(const MachineBasicBlock *X,
+                    const MachineBasicBlock *Y) const {
+      return X->getNumber() < Y->getNumber();
+    }
+  };
+  std::set<const MachineBasicBlock *, MBBCompare> LoopBlockSet;
 
   // Filter cold blocks off from LoopBlockSet when profile data is available.
   // Collect the sum of frequencies of incoming edges to the loop header from
@@ -2614,23 +2622,25 @@ MachineBlockPlacement::collectLoopBlockSet(const MachineLoop &L) {
         LoopFreq += MBFI->getBlockFreq(LoopPred) *
                     MBPI->getEdgeProbability(LoopPred, L.getHeader());
 
-    for (auto &MBB : *F) {
-      if (LoopBlockSet.count(&MBB) || !L.contains(&MBB))
+    for (MachineBasicBlock *LoopBB : L.getBlocks()) {
+      if (LoopBlockSet.count(LoopBB))
         continue;
-      auto Freq = MBFI->getBlockFreq(&MBB).getFrequency();
+      auto Freq = MBFI->getBlockFreq(LoopBB).getFrequency();
       if (Freq == 0 || LoopFreq.getFrequency() / Freq > LoopToColdBlockRatio)
         continue;
-      BlockChain *Chain = BlockToChain[&MBB];
+      BlockChain *Chain = BlockToChain[LoopBB];
       for (MachineBasicBlock *ChainBB : *Chain)
         LoopBlockSet.insert(ChainBB);
     }
-  } else {
-    for (auto &MBB : *F)
-      if (L.contains(&MBB))
-        LoopBlockSet.insert(&MBB);
-  }
+  } else
+    LoopBlockSet.insert(L.block_begin(), L.block_end());
 
-  return LoopBlockSet;
+  // Copy the blocks into a BlockFilterSet, as iterating it is faster than
+  // std::set. We will only remove blocks and never insert them, which will
+  // preserve the ordering.
+  BlockFilterSet Ret;
+  Ret.insert(LoopBlockSet.begin(), LoopBlockSet.end());
+  return Ret;
 }
 
 /// Forms basic block chains from the natural loop structures.
