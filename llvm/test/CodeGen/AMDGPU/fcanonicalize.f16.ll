@@ -169,35 +169,6 @@ define amdgpu_kernel void @s_test_canonicalize_var_f16(ptr addrspace(1) %out, i1
   ret void
 }
 
-define half @s_test_canonicalize_arg(half %x) #1 {
-; VI-LABEL: s_test_canonicalize_arg:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-LABEL: s_test_canonicalize_arg:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; CI-LABEL: s_test_canonicalize_arg:
-; CI:       ; %bb.0:
-; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; CI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: s_test_canonicalize_arg:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %canonicalized = call half @llvm.canonicalize.f16(half %x)
-  ret half %canonicalized
-}
-
 define <2 x half> @v_test_canonicalize_build_vector_v2f16(half %lo, half %hi) #1 {
 ; VI-LABEL: v_test_canonicalize_build_vector_v2f16:
 ; VI:       ; %bb.0:

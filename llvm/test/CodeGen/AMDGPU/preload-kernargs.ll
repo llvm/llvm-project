@@ -23,7 +23,6 @@ define amdgpu_kernel void @ptr1_i8(ptr addrspace(1) %out, i8 %arg0) #0 {
 ; GFX940-NO-PRELOAD-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
 ; GFX940-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-1-LABEL: ptr1_i8:
 ; GFX940-PRELOAD-1:       ; %bb.0:
 ; GFX940-PRELOAD-1-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -36,9 +35,6 @@ define amdgpu_kernel void @ptr1_i8(ptr addrspace(1) %out, i8 %arg0) #0 {
 ; GFX940-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-2-LABEL: ptr1_i8:
-=======
-; GFX940-PRELOAD-2-LABEL: ptr1_i8_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-2:       ; %bb.0:
 ; GFX940-PRELOAD-2-NEXT:    s_load_dword s4, s[0:1], 0x8
 ; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
@@ -49,7 +45,6 @@ define amdgpu_kernel void @ptr1_i8(ptr addrspace(1) %out, i8 %arg0) #0 {
 ; GFX940-PRELOAD-2-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
 ; GFX940-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-4-LABEL: ptr1_i8:
 ; GFX940-PRELOAD-4:       ; %bb.0:
 ; GFX940-PRELOAD-4-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -62,9 +57,6 @@ define amdgpu_kernel void @ptr1_i8(ptr addrspace(1) %out, i8 %arg0) #0 {
 ; GFX940-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-8-LABEL: ptr1_i8:
-=======
-; GFX940-PRELOAD-8-LABEL: ptr1_i8_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-8:       ; %bb.0:
 ; GFX940-PRELOAD-8-NEXT:    s_load_dword s4, s[0:1], 0x8
 ; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
@@ -86,7 +78,6 @@ define amdgpu_kernel void @ptr1_i8(ptr addrspace(1) %out, i8 %arg0) #0 {
 ; GFX90a-NO-PRELOAD-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-1-LABEL: ptr1_i8:
 ; GFX90a-PRELOAD-1:       ; %bb.0:
 ; GFX90a-PRELOAD-1-NEXT:    s_load_dword s2, s[4:5], 0x8
@@ -99,9 +90,6 @@ define amdgpu_kernel void @ptr1_i8(ptr addrspace(1) %out, i8 %arg0) #0 {
 ; GFX90a-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-2-LABEL: ptr1_i8:
-=======
-; GFX90a-PRELOAD-2-LABEL: ptr1_i8_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-2:       ; %bb.0:
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -112,7 +100,6 @@ define amdgpu_kernel void @ptr1_i8(ptr addrspace(1) %out, i8 %arg0) #0 {
 ; GFX90a-PRELOAD-2-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90a-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-4-LABEL: ptr1_i8:
 ; GFX90a-PRELOAD-4:       ; %bb.0:
 ; GFX90a-PRELOAD-4-NEXT:    s_load_dword s2, s[4:5], 0x8
@@ -125,9 +112,6 @@ define amdgpu_kernel void @ptr1_i8(ptr addrspace(1) %out, i8 %arg0) #0 {
 ; GFX90a-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-8-LABEL: ptr1_i8:
-=======
-; GFX90a-PRELOAD-8-LABEL: ptr1_i8_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-8:       ; %bb.0:
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -154,7 +138,6 @@ define amdgpu_kernel void @ptr1_i8_zext_arg(ptr addrspace(1) %out, i8 zeroext %a
 ; GFX940-NO-PRELOAD-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
 ; GFX940-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-1-LABEL: ptr1_i8_zext_arg:
 ; GFX940-PRELOAD-1:       ; %bb.0:
 ; GFX940-PRELOAD-1-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -167,9 +150,6 @@ define amdgpu_kernel void @ptr1_i8_zext_arg(ptr addrspace(1) %out, i8 zeroext %a
 ; GFX940-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-2-LABEL: ptr1_i8_zext_arg:
-=======
-; GFX940-PRELOAD-2-LABEL: ptr1_i8_zext_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-2:       ; %bb.0:
 ; GFX940-PRELOAD-2-NEXT:    s_load_dword s4, s[0:1], 0x8
 ; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
@@ -180,7 +160,6 @@ define amdgpu_kernel void @ptr1_i8_zext_arg(ptr addrspace(1) %out, i8 zeroext %a
 ; GFX940-PRELOAD-2-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
 ; GFX940-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-4-LABEL: ptr1_i8_zext_arg:
 ; GFX940-PRELOAD-4:       ; %bb.0:
 ; GFX940-PRELOAD-4-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -193,9 +172,6 @@ define amdgpu_kernel void @ptr1_i8_zext_arg(ptr addrspace(1) %out, i8 zeroext %a
 ; GFX940-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-8-LABEL: ptr1_i8_zext_arg:
-=======
-; GFX940-PRELOAD-8-LABEL: ptr1_i8_zext_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-8:       ; %bb.0:
 ; GFX940-PRELOAD-8-NEXT:    s_load_dword s4, s[0:1], 0x8
 ; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
@@ -217,7 +193,6 @@ define amdgpu_kernel void @ptr1_i8_zext_arg(ptr addrspace(1) %out, i8 zeroext %a
 ; GFX90a-NO-PRELOAD-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-1-LABEL: ptr1_i8_zext_arg:
 ; GFX90a-PRELOAD-1:       ; %bb.0:
 ; GFX90a-PRELOAD-1-NEXT:    s_load_dword s2, s[4:5], 0x8
@@ -230,9 +205,6 @@ define amdgpu_kernel void @ptr1_i8_zext_arg(ptr addrspace(1) %out, i8 zeroext %a
 ; GFX90a-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-2-LABEL: ptr1_i8_zext_arg:
-=======
-; GFX90a-PRELOAD-2-LABEL: ptr1_i8_zext_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-2:       ; %bb.0:
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -243,7 +215,6 @@ define amdgpu_kernel void @ptr1_i8_zext_arg(ptr addrspace(1) %out, i8 zeroext %a
 ; GFX90a-PRELOAD-2-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90a-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-4-LABEL: ptr1_i8_zext_arg:
 ; GFX90a-PRELOAD-4:       ; %bb.0:
 ; GFX90a-PRELOAD-4-NEXT:    s_load_dword s2, s[4:5], 0x8
@@ -256,9 +227,6 @@ define amdgpu_kernel void @ptr1_i8_zext_arg(ptr addrspace(1) %out, i8 zeroext %a
 ; GFX90a-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-8-LABEL: ptr1_i8_zext_arg:
-=======
-; GFX90a-PRELOAD-8-LABEL: ptr1_i8_zext_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-8:       ; %bb.0:
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -285,7 +253,6 @@ define amdgpu_kernel void @ptr1_i16_preload_arg(ptr addrspace(1) %out, i16 %arg0
 ; GFX940-NO-PRELOAD-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
 ; GFX940-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-1-LABEL: ptr1_i16_preload_arg:
 ; GFX940-PRELOAD-1:       ; %bb.0:
 ; GFX940-PRELOAD-1-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -298,9 +265,6 @@ define amdgpu_kernel void @ptr1_i16_preload_arg(ptr addrspace(1) %out, i16 %arg0
 ; GFX940-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-2-LABEL: ptr1_i16_preload_arg:
-=======
-; GFX940-PRELOAD-2-LABEL: ptr1_i16_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-2:       ; %bb.0:
 ; GFX940-PRELOAD-2-NEXT:    s_load_dword s4, s[0:1], 0x8
 ; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
@@ -311,7 +275,6 @@ define amdgpu_kernel void @ptr1_i16_preload_arg(ptr addrspace(1) %out, i16 %arg0
 ; GFX940-PRELOAD-2-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
 ; GFX940-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-4-LABEL: ptr1_i16_preload_arg:
 ; GFX940-PRELOAD-4:       ; %bb.0:
 ; GFX940-PRELOAD-4-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -324,9 +287,6 @@ define amdgpu_kernel void @ptr1_i16_preload_arg(ptr addrspace(1) %out, i16 %arg0
 ; GFX940-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-8-LABEL: ptr1_i16_preload_arg:
-=======
-; GFX940-PRELOAD-8-LABEL: ptr1_i16_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-8:       ; %bb.0:
 ; GFX940-PRELOAD-8-NEXT:    s_load_dword s4, s[0:1], 0x8
 ; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
@@ -348,7 +308,6 @@ define amdgpu_kernel void @ptr1_i16_preload_arg(ptr addrspace(1) %out, i16 %arg0
 ; GFX90a-NO-PRELOAD-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-1-LABEL: ptr1_i16_preload_arg:
 ; GFX90a-PRELOAD-1:       ; %bb.0:
 ; GFX90a-PRELOAD-1-NEXT:    s_load_dword s2, s[4:5], 0x8
@@ -361,9 +320,6 @@ define amdgpu_kernel void @ptr1_i16_preload_arg(ptr addrspace(1) %out, i16 %arg0
 ; GFX90a-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-2-LABEL: ptr1_i16_preload_arg:
-=======
-; GFX90a-PRELOAD-2-LABEL: ptr1_i16_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-2:       ; %bb.0:
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -374,7 +330,6 @@ define amdgpu_kernel void @ptr1_i16_preload_arg(ptr addrspace(1) %out, i16 %arg0
 ; GFX90a-PRELOAD-2-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90a-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-4-LABEL: ptr1_i16_preload_arg:
 ; GFX90a-PRELOAD-4:       ; %bb.0:
 ; GFX90a-PRELOAD-4-NEXT:    s_load_dword s2, s[4:5], 0x8
@@ -387,9 +342,6 @@ define amdgpu_kernel void @ptr1_i16_preload_arg(ptr addrspace(1) %out, i16 %arg0
 ; GFX90a-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-8-LABEL: ptr1_i16_preload_arg:
-=======
-; GFX90a-PRELOAD-8-LABEL: ptr1_i16_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-8:       ; %bb.0:
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -415,7 +367,6 @@ define amdgpu_kernel void @ptr1_i32_preload_arg(ptr addrspace(1) %out, i32 %arg0
 ; GFX940-NO-PRELOAD-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
 ; GFX940-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-1-LABEL: ptr1_i32_preload_arg:
 ; GFX940-PRELOAD-1:       ; %bb.0:
 ; GFX940-PRELOAD-1-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -427,9 +378,6 @@ define amdgpu_kernel void @ptr1_i32_preload_arg(ptr addrspace(1) %out, i32 %arg0
 ; GFX940-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-2-LABEL: ptr1_i32_preload_arg:
-=======
-; GFX940-PRELOAD-2-LABEL: ptr1_i32_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-2:       ; %bb.0:
 ; GFX940-PRELOAD-2-NEXT:    s_load_dword s4, s[0:1], 0x8
 ; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
@@ -439,7 +387,6 @@ define amdgpu_kernel void @ptr1_i32_preload_arg(ptr addrspace(1) %out, i32 %arg0
 ; GFX940-PRELOAD-2-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
 ; GFX940-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-4-LABEL: ptr1_i32_preload_arg:
 ; GFX940-PRELOAD-4:       ; %bb.0:
 ; GFX940-PRELOAD-4-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -451,9 +398,6 @@ define amdgpu_kernel void @ptr1_i32_preload_arg(ptr addrspace(1) %out, i32 %arg0
 ; GFX940-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-8-LABEL: ptr1_i32_preload_arg:
-=======
-; GFX940-PRELOAD-8-LABEL: ptr1_i32_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-8:       ; %bb.0:
 ; GFX940-PRELOAD-8-NEXT:    s_load_dword s4, s[0:1], 0x8
 ; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
@@ -473,7 +417,6 @@ define amdgpu_kernel void @ptr1_i32_preload_arg(ptr addrspace(1) %out, i32 %arg0
 ; GFX90a-NO-PRELOAD-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-1-LABEL: ptr1_i32_preload_arg:
 ; GFX90a-PRELOAD-1:       ; %bb.0:
 ; GFX90a-PRELOAD-1-NEXT:    s_load_dword s2, s[4:5], 0x8
@@ -485,9 +428,6 @@ define amdgpu_kernel void @ptr1_i32_preload_arg(ptr addrspace(1) %out, i32 %arg0
 ; GFX90a-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-2-LABEL: ptr1_i32_preload_arg:
-=======
-; GFX90a-PRELOAD-2-LABEL: ptr1_i32_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-2:       ; %bb.0:
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -497,7 +437,6 @@ define amdgpu_kernel void @ptr1_i32_preload_arg(ptr addrspace(1) %out, i32 %arg0
 ; GFX90a-PRELOAD-2-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90a-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-4-LABEL: ptr1_i32_preload_arg:
 ; GFX90a-PRELOAD-4:       ; %bb.0:
 ; GFX90a-PRELOAD-4-NEXT:    s_load_dword s2, s[4:5], 0x8
@@ -509,9 +448,6 @@ define amdgpu_kernel void @ptr1_i32_preload_arg(ptr addrspace(1) %out, i32 %arg0
 ; GFX90a-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-8-LABEL: ptr1_i32_preload_arg:
-=======
-; GFX90a-PRELOAD-8-LABEL: ptr1_i32_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-8:       ; %bb.0:
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -538,7 +474,6 @@ define amdgpu_kernel void @i32_ptr1_i32_preload_arg(i32 %arg0, ptr addrspace(1) 
 ; GFX940-NO-PRELOAD-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
 ; GFX940-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-1-LABEL: i32_ptr1_i32_preload_arg:
 ; GFX940-PRELOAD-1:       ; %bb.0:
 ; GFX940-PRELOAD-1-NEXT:    s_load_dword s4, s[0:1], 0x10
@@ -552,9 +487,6 @@ define amdgpu_kernel void @i32_ptr1_i32_preload_arg(i32 %arg0, ptr addrspace(1) 
 ; GFX940-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-2-LABEL: i32_ptr1_i32_preload_arg:
-=======
-; GFX940-PRELOAD-2-LABEL: i32_ptr1_i32_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-2:       ; %bb.0:
 ; GFX940-PRELOAD-2-NEXT:    s_load_dword s4, s[0:1], 0x10
 ; GFX940-PRELOAD-2-NEXT:    s_load_dword s5, s[0:1], 0x0
@@ -566,7 +498,6 @@ define amdgpu_kernel void @i32_ptr1_i32_preload_arg(i32 %arg0, ptr addrspace(1) 
 ; GFX940-PRELOAD-2-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
 ; GFX940-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-4-LABEL: i32_ptr1_i32_preload_arg:
 ; GFX940-PRELOAD-4:       ; %bb.0:
 ; GFX940-PRELOAD-4-NEXT:    s_load_dword s4, s[0:1], 0x10
@@ -580,9 +511,6 @@ define amdgpu_kernel void @i32_ptr1_i32_preload_arg(i32 %arg0, ptr addrspace(1) 
 ; GFX940-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-8-LABEL: i32_ptr1_i32_preload_arg:
-=======
-; GFX940-PRELOAD-8-LABEL: i32_ptr1_i32_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-8:       ; %bb.0:
 ; GFX940-PRELOAD-8-NEXT:    s_load_dword s4, s[0:1], 0x10
 ; GFX940-PRELOAD-8-NEXT:    s_load_dword s5, s[0:1], 0x0
@@ -606,7 +534,6 @@ define amdgpu_kernel void @i32_ptr1_i32_preload_arg(i32 %arg0, ptr addrspace(1) 
 ; GFX90a-NO-PRELOAD-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-1-LABEL: i32_ptr1_i32_preload_arg:
 ; GFX90a-PRELOAD-1:       ; %bb.0:
 ; GFX90a-PRELOAD-1-NEXT:    s_load_dword s2, s[4:5], 0x10
@@ -620,9 +547,6 @@ define amdgpu_kernel void @i32_ptr1_i32_preload_arg(i32 %arg0, ptr addrspace(1) 
 ; GFX90a-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-2-LABEL: i32_ptr1_i32_preload_arg:
-=======
-; GFX90a-PRELOAD-2-LABEL: i32_ptr1_i32_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-2:       ; %bb.0:
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dword s2, s[4:5], 0x10
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dword s3, s[4:5], 0x0
@@ -634,7 +558,6 @@ define amdgpu_kernel void @i32_ptr1_i32_preload_arg(i32 %arg0, ptr addrspace(1) 
 ; GFX90a-PRELOAD-2-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90a-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-4-LABEL: i32_ptr1_i32_preload_arg:
 ; GFX90a-PRELOAD-4:       ; %bb.0:
 ; GFX90a-PRELOAD-4-NEXT:    s_load_dword s2, s[4:5], 0x10
@@ -648,9 +571,6 @@ define amdgpu_kernel void @i32_ptr1_i32_preload_arg(i32 %arg0, ptr addrspace(1) 
 ; GFX90a-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-8-LABEL: i32_ptr1_i32_preload_arg:
-=======
-; GFX90a-PRELOAD-8-LABEL: i32_ptr1_i32_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-8:       ; %bb.0:
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dword s2, s[4:5], 0x10
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dword s3, s[4:5], 0x0
@@ -680,7 +600,6 @@ define amdgpu_kernel void @ptr1_i16_i16_preload_arg(ptr addrspace(1) %out, i16 %
 ; GFX940-NO-PRELOAD-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
 ; GFX940-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-1-LABEL: ptr1_i16_i16_preload_arg:
 ; GFX940-PRELOAD-1:       ; %bb.0:
 ; GFX940-PRELOAD-1-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -695,9 +614,6 @@ define amdgpu_kernel void @ptr1_i16_i16_preload_arg(ptr addrspace(1) %out, i16 %
 ; GFX940-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-2-LABEL: ptr1_i16_i16_preload_arg:
-=======
-; GFX940-PRELOAD-2-LABEL: ptr1_i16_i16_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-2:       ; %bb.0:
 ; GFX940-PRELOAD-2-NEXT:    s_load_dword s4, s[0:1], 0x8
 ; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
@@ -710,7 +626,6 @@ define amdgpu_kernel void @ptr1_i16_i16_preload_arg(ptr addrspace(1) %out, i16 %
 ; GFX940-PRELOAD-2-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
 ; GFX940-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-4-LABEL: ptr1_i16_i16_preload_arg:
 ; GFX940-PRELOAD-4:       ; %bb.0:
 ; GFX940-PRELOAD-4-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -725,9 +640,6 @@ define amdgpu_kernel void @ptr1_i16_i16_preload_arg(ptr addrspace(1) %out, i16 %
 ; GFX940-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-8-LABEL: ptr1_i16_i16_preload_arg:
-=======
-; GFX940-PRELOAD-8-LABEL: ptr1_i16_i16_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-8:       ; %bb.0:
 ; GFX940-PRELOAD-8-NEXT:    s_load_dword s4, s[0:1], 0x8
 ; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
@@ -753,7 +665,6 @@ define amdgpu_kernel void @ptr1_i16_i16_preload_arg(ptr addrspace(1) %out, i16 %
 ; GFX90a-NO-PRELOAD-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-1-LABEL: ptr1_i16_i16_preload_arg:
 ; GFX90a-PRELOAD-1:       ; %bb.0:
 ; GFX90a-PRELOAD-1-NEXT:    s_load_dword s2, s[4:5], 0x8
@@ -768,9 +679,6 @@ define amdgpu_kernel void @ptr1_i16_i16_preload_arg(ptr addrspace(1) %out, i16 %
 ; GFX90a-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-2-LABEL: ptr1_i16_i16_preload_arg:
-=======
-; GFX90a-PRELOAD-2-LABEL: ptr1_i16_i16_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-2:       ; %bb.0:
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -783,7 +691,6 @@ define amdgpu_kernel void @ptr1_i16_i16_preload_arg(ptr addrspace(1) %out, i16 %
 ; GFX90a-PRELOAD-2-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90a-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-4-LABEL: ptr1_i16_i16_preload_arg:
 ; GFX90a-PRELOAD-4:       ; %bb.0:
 ; GFX90a-PRELOAD-4-NEXT:    s_load_dword s2, s[4:5], 0x8
@@ -798,9 +705,6 @@ define amdgpu_kernel void @ptr1_i16_i16_preload_arg(ptr addrspace(1) %out, i16 %
 ; GFX90a-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-8-LABEL: ptr1_i16_i16_preload_arg:
-=======
-; GFX90a-PRELOAD-8-LABEL: ptr1_i16_i16_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-8:       ; %bb.0:
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -830,7 +734,6 @@ define amdgpu_kernel void @ptr1_v2i8_preload_arg(ptr addrspace(1) %out, <2 x i8>
 ; GFX940-NO-PRELOAD-NEXT:    global_store_short v0, v1, s[2:3] sc0 sc1
 ; GFX940-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-1-LABEL: ptr1_v2i8_preload_arg:
 ; GFX940-PRELOAD-1:       ; %bb.0:
 ; GFX940-PRELOAD-1-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -842,9 +745,6 @@ define amdgpu_kernel void @ptr1_v2i8_preload_arg(ptr addrspace(1) %out, <2 x i8>
 ; GFX940-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-2-LABEL: ptr1_v2i8_preload_arg:
-=======
-; GFX940-PRELOAD-2-LABEL: ptr1_v2i8_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-2:       ; %bb.0:
 ; GFX940-PRELOAD-2-NEXT:    s_load_dword s4, s[0:1], 0x8
 ; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
@@ -854,7 +754,6 @@ define amdgpu_kernel void @ptr1_v2i8_preload_arg(ptr addrspace(1) %out, <2 x i8>
 ; GFX940-PRELOAD-2-NEXT:    global_store_short v0, v1, s[2:3] sc0 sc1
 ; GFX940-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-4-LABEL: ptr1_v2i8_preload_arg:
 ; GFX940-PRELOAD-4:       ; %bb.0:
 ; GFX940-PRELOAD-4-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -866,9 +765,6 @@ define amdgpu_kernel void @ptr1_v2i8_preload_arg(ptr addrspace(1) %out, <2 x i8>
 ; GFX940-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-8-LABEL: ptr1_v2i8_preload_arg:
-=======
-; GFX940-PRELOAD-8-LABEL: ptr1_v2i8_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-8:       ; %bb.0:
 ; GFX940-PRELOAD-8-NEXT:    s_load_dword s4, s[0:1], 0x8
 ; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
@@ -888,7 +784,6 @@ define amdgpu_kernel void @ptr1_v2i8_preload_arg(ptr addrspace(1) %out, <2 x i8>
 ; GFX90a-NO-PRELOAD-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-1-LABEL: ptr1_v2i8_preload_arg:
 ; GFX90a-PRELOAD-1:       ; %bb.0:
 ; GFX90a-PRELOAD-1-NEXT:    s_load_dword s2, s[4:5], 0x8
@@ -900,9 +795,6 @@ define amdgpu_kernel void @ptr1_v2i8_preload_arg(ptr addrspace(1) %out, <2 x i8>
 ; GFX90a-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-2-LABEL: ptr1_v2i8_preload_arg:
-=======
-; GFX90a-PRELOAD-2-LABEL: ptr1_v2i8_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-2:       ; %bb.0:
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -912,7 +804,6 @@ define amdgpu_kernel void @ptr1_v2i8_preload_arg(ptr addrspace(1) %out, <2 x i8>
 ; GFX90a-PRELOAD-2-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX90a-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-4-LABEL: ptr1_v2i8_preload_arg:
 ; GFX90a-PRELOAD-4:       ; %bb.0:
 ; GFX90a-PRELOAD-4-NEXT:    s_load_dword s2, s[4:5], 0x8
@@ -924,9 +815,6 @@ define amdgpu_kernel void @ptr1_v2i8_preload_arg(ptr addrspace(1) %out, <2 x i8>
 ; GFX90a-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-8-LABEL: ptr1_v2i8_preload_arg:
-=======
-; GFX90a-PRELOAD-8-LABEL: ptr1_v2i8_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-8:       ; %bb.0:
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -955,7 +843,6 @@ define amdgpu_kernel void @byref_preload_arg(ptr addrspace(1) %out, ptr addrspac
 ; GFX940-NO-PRELOAD-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-1-LABEL: byref_preload_arg:
 ; GFX940-PRELOAD-1:       ; %bb.0:
 ; GFX940-PRELOAD-1-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x100
@@ -971,9 +858,6 @@ define amdgpu_kernel void @byref_preload_arg(ptr addrspace(1) %out, ptr addrspac
 ; GFX940-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-2-LABEL: byref_preload_arg:
-=======
-; GFX940-PRELOAD-2-LABEL: byref_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-2:       ; %bb.0:
 ; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x100
 ; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
@@ -987,7 +871,6 @@ define amdgpu_kernel void @byref_preload_arg(ptr addrspace(1) %out, ptr addrspac
 ; GFX940-PRELOAD-2-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-4-LABEL: byref_preload_arg:
 ; GFX940-PRELOAD-4:       ; %bb.0:
 ; GFX940-PRELOAD-4-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x100
@@ -1003,9 +886,6 @@ define amdgpu_kernel void @byref_preload_arg(ptr addrspace(1) %out, ptr addrspac
 ; GFX940-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-8-LABEL: byref_preload_arg:
-=======
-; GFX940-PRELOAD-8-LABEL: byref_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-8:       ; %bb.0:
 ; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x100
 ; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
@@ -1033,7 +913,6 @@ define amdgpu_kernel void @byref_preload_arg(ptr addrspace(1) %out, ptr addrspac
 ; GFX90a-NO-PRELOAD-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-1-LABEL: byref_preload_arg:
 ; GFX90a-PRELOAD-1:       ; %bb.0:
 ; GFX90a-PRELOAD-1-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x100
@@ -1049,9 +928,6 @@ define amdgpu_kernel void @byref_preload_arg(ptr addrspace(1) %out, ptr addrspac
 ; GFX90a-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-2-LABEL: byref_preload_arg:
-=======
-; GFX90a-PRELOAD-2-LABEL: byref_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-2:       ; %bb.0:
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x100
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x0
@@ -1065,7 +941,6 @@ define amdgpu_kernel void @byref_preload_arg(ptr addrspace(1) %out, ptr addrspac
 ; GFX90a-PRELOAD-2-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90a-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-4-LABEL: byref_preload_arg:
 ; GFX90a-PRELOAD-4:       ; %bb.0:
 ; GFX90a-PRELOAD-4-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x100
@@ -1081,9 +956,6 @@ define amdgpu_kernel void @byref_preload_arg(ptr addrspace(1) %out, ptr addrspac
 ; GFX90a-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-8-LABEL: byref_preload_arg:
-=======
-; GFX90a-PRELOAD-8-LABEL: byref_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-8:       ; %bb.0:
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x100
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x0
@@ -1123,7 +995,6 @@ define amdgpu_kernel void @v8i32_arg(ptr addrspace(1) nocapture %out, <8 x i32> 
 ; GFX940-NO-PRELOAD-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
 ; GFX940-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-1-LABEL: v8i32_arg:
 ; GFX940-PRELOAD-1:       ; %bb.0:
 ; GFX940-PRELOAD-1-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x20
@@ -1144,9 +1015,6 @@ define amdgpu_kernel void @v8i32_arg(ptr addrspace(1) nocapture %out, <8 x i32> 
 ; GFX940-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-2-LABEL: v8i32_arg:
-=======
-; GFX940-PRELOAD-2-LABEL: v8i32_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-2:       ; %bb.0:
 ; GFX940-PRELOAD-2-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x20
 ; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v4, 0
@@ -1165,7 +1033,6 @@ define amdgpu_kernel void @v8i32_arg(ptr addrspace(1) nocapture %out, <8 x i32> 
 ; GFX940-PRELOAD-2-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
 ; GFX940-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-4-LABEL: v8i32_arg:
 ; GFX940-PRELOAD-4:       ; %bb.0:
 ; GFX940-PRELOAD-4-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x20
@@ -1186,9 +1053,6 @@ define amdgpu_kernel void @v8i32_arg(ptr addrspace(1) nocapture %out, <8 x i32> 
 ; GFX940-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-8-LABEL: v8i32_arg:
-=======
-; GFX940-PRELOAD-8-LABEL: v8i32_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-8:       ; %bb.0:
 ; GFX940-PRELOAD-8-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x20
 ; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v4, 0
@@ -1226,7 +1090,6 @@ define amdgpu_kernel void @v8i32_arg(ptr addrspace(1) nocapture %out, <8 x i32> 
 ; GFX90a-NO-PRELOAD-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-1-LABEL: v8i32_arg:
 ; GFX90a-PRELOAD-1:       ; %bb.0:
 ; GFX90a-PRELOAD-1-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x20
@@ -1247,9 +1110,6 @@ define amdgpu_kernel void @v8i32_arg(ptr addrspace(1) nocapture %out, <8 x i32> 
 ; GFX90a-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-2-LABEL: v8i32_arg:
-=======
-; GFX90a-PRELOAD-2-LABEL: v8i32_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-2:       ; %bb.0:
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x20
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1268,7 +1128,6 @@ define amdgpu_kernel void @v8i32_arg(ptr addrspace(1) nocapture %out, <8 x i32> 
 ; GFX90a-PRELOAD-2-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX90a-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-4-LABEL: v8i32_arg:
 ; GFX90a-PRELOAD-4:       ; %bb.0:
 ; GFX90a-PRELOAD-4-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x20
@@ -1289,9 +1148,6 @@ define amdgpu_kernel void @v8i32_arg(ptr addrspace(1) nocapture %out, <8 x i32> 
 ; GFX90a-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-8-LABEL: v8i32_arg:
-=======
-; GFX90a-PRELOAD-8-LABEL: v8i32_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-8:       ; %bb.0:
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x20
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -1325,7 +1181,6 @@ define amdgpu_kernel void @v3i16_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX940-NO-PRELOAD-NEXT:    global_store_dword v0, v2, s[0:1] sc0 sc1
 ; GFX940-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-1-LABEL: v3i16_preload_arg:
 ; GFX940-PRELOAD-1:       ; %bb.0:
 ; GFX940-PRELOAD-1-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
@@ -1338,9 +1193,6 @@ define amdgpu_kernel void @v3i16_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX940-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-2-LABEL: v3i16_preload_arg:
-=======
-; GFX940-PRELOAD-2-LABEL: v3i16_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-2:       ; %bb.0:
 ; GFX940-PRELOAD-2-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
@@ -1351,7 +1203,6 @@ define amdgpu_kernel void @v3i16_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX940-PRELOAD-2-NEXT:    global_store_dword v0, v2, s[0:1] sc0 sc1
 ; GFX940-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-4-LABEL: v3i16_preload_arg:
 ; GFX940-PRELOAD-4:       ; %bb.0:
 ; GFX940-PRELOAD-4-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
@@ -1364,9 +1215,6 @@ define amdgpu_kernel void @v3i16_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX940-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-8-LABEL: v3i16_preload_arg:
-=======
-; GFX940-PRELOAD-8-LABEL: v3i16_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-8:       ; %bb.0:
 ; GFX940-PRELOAD-8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
@@ -1388,7 +1236,6 @@ define amdgpu_kernel void @v3i16_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX90a-NO-PRELOAD-NEXT:    global_store_dword v0, v2, s[0:1]
 ; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-1-LABEL: v3i16_preload_arg:
 ; GFX90a-PRELOAD-1:       ; %bb.0:
 ; GFX90a-PRELOAD-1-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1401,9 +1248,6 @@ define amdgpu_kernel void @v3i16_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX90a-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-2-LABEL: v3i16_preload_arg:
-=======
-; GFX90a-PRELOAD-2-LABEL: v3i16_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-2:       ; %bb.0:
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
@@ -1414,7 +1258,6 @@ define amdgpu_kernel void @v3i16_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX90a-PRELOAD-2-NEXT:    global_store_dword v0, v2, s[0:1]
 ; GFX90a-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-4-LABEL: v3i16_preload_arg:
 ; GFX90a-PRELOAD-4:       ; %bb.0:
 ; GFX90a-PRELOAD-4-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1427,9 +1270,6 @@ define amdgpu_kernel void @v3i16_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX90a-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-8-LABEL: v3i16_preload_arg:
-=======
-; GFX90a-PRELOAD-8-LABEL: v3i16_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-8:       ; %bb.0:
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
@@ -1456,7 +1296,6 @@ define amdgpu_kernel void @v3i32_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX940-NO-PRELOAD-NEXT:    global_store_dwordx3 v3, v[0:2], s[2:3] sc0 sc1
 ; GFX940-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-1-LABEL: v3i32_preload_arg:
 ; GFX940-PRELOAD-1:       ; %bb.0:
 ; GFX940-PRELOAD-1-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
@@ -1470,9 +1309,6 @@ define amdgpu_kernel void @v3i32_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX940-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-2-LABEL: v3i32_preload_arg:
-=======
-; GFX940-PRELOAD-2-LABEL: v3i32_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-2:       ; %bb.0:
 ; GFX940-PRELOAD-2-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
 ; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
@@ -1484,7 +1320,6 @@ define amdgpu_kernel void @v3i32_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX940-PRELOAD-2-NEXT:    global_store_dwordx3 v3, v[0:2], s[2:3] sc0 sc1
 ; GFX940-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-4-LABEL: v3i32_preload_arg:
 ; GFX940-PRELOAD-4:       ; %bb.0:
 ; GFX940-PRELOAD-4-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
@@ -1498,9 +1333,6 @@ define amdgpu_kernel void @v3i32_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX940-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-8-LABEL: v3i32_preload_arg:
-=======
-; GFX940-PRELOAD-8-LABEL: v3i32_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-8:       ; %bb.0:
 ; GFX940-PRELOAD-8-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
 ; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
@@ -1524,7 +1356,6 @@ define amdgpu_kernel void @v3i32_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX90a-NO-PRELOAD-NEXT:    global_store_dwordx3 v3, v[0:2], s[6:7]
 ; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-1-LABEL: v3i32_preload_arg:
 ; GFX90a-PRELOAD-1:       ; %bb.0:
 ; GFX90a-PRELOAD-1-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
@@ -1538,9 +1369,6 @@ define amdgpu_kernel void @v3i32_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX90a-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-2-LABEL: v3i32_preload_arg:
-=======
-; GFX90a-PRELOAD-2-LABEL: v3i32_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-2:       ; %bb.0:
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
@@ -1552,7 +1380,6 @@ define amdgpu_kernel void @v3i32_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX90a-PRELOAD-2-NEXT:    global_store_dwordx3 v3, v[0:2], s[6:7]
 ; GFX90a-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-4-LABEL: v3i32_preload_arg:
 ; GFX90a-PRELOAD-4:       ; %bb.0:
 ; GFX90a-PRELOAD-4-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
@@ -1566,9 +1393,6 @@ define amdgpu_kernel void @v3i32_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX90a-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-8-LABEL: v3i32_preload_arg:
-=======
-; GFX90a-PRELOAD-8-LABEL: v3i32_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-8:       ; %bb.0:
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
@@ -1596,7 +1420,6 @@ define amdgpu_kernel void @v3f32_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX940-NO-PRELOAD-NEXT:    global_store_dwordx3 v3, v[0:2], s[2:3] sc0 sc1
 ; GFX940-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-1-LABEL: v3f32_preload_arg:
 ; GFX940-PRELOAD-1:       ; %bb.0:
 ; GFX940-PRELOAD-1-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
@@ -1610,9 +1433,6 @@ define amdgpu_kernel void @v3f32_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX940-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-2-LABEL: v3f32_preload_arg:
-=======
-; GFX940-PRELOAD-2-LABEL: v3f32_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-2:       ; %bb.0:
 ; GFX940-PRELOAD-2-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
 ; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
@@ -1624,7 +1444,6 @@ define amdgpu_kernel void @v3f32_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX940-PRELOAD-2-NEXT:    global_store_dwordx3 v3, v[0:2], s[2:3] sc0 sc1
 ; GFX940-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-4-LABEL: v3f32_preload_arg:
 ; GFX940-PRELOAD-4:       ; %bb.0:
 ; GFX940-PRELOAD-4-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
@@ -1638,9 +1457,6 @@ define amdgpu_kernel void @v3f32_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX940-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-8-LABEL: v3f32_preload_arg:
-=======
-; GFX940-PRELOAD-8-LABEL: v3f32_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-8:       ; %bb.0:
 ; GFX940-PRELOAD-8-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
 ; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
@@ -1664,7 +1480,6 @@ define amdgpu_kernel void @v3f32_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX90a-NO-PRELOAD-NEXT:    global_store_dwordx3 v3, v[0:2], s[6:7]
 ; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-1-LABEL: v3f32_preload_arg:
 ; GFX90a-PRELOAD-1:       ; %bb.0:
 ; GFX90a-PRELOAD-1-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
@@ -1678,9 +1493,6 @@ define amdgpu_kernel void @v3f32_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX90a-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-2-LABEL: v3f32_preload_arg:
-=======
-; GFX90a-PRELOAD-2-LABEL: v3f32_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-2:       ; %bb.0:
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
@@ -1692,7 +1504,6 @@ define amdgpu_kernel void @v3f32_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX90a-PRELOAD-2-NEXT:    global_store_dwordx3 v3, v[0:2], s[6:7]
 ; GFX90a-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-4-LABEL: v3f32_preload_arg:
 ; GFX90a-PRELOAD-4:       ; %bb.0:
 ; GFX90a-PRELOAD-4-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
@@ -1706,9 +1517,6 @@ define amdgpu_kernel void @v3f32_preload_arg(ptr addrspace(1) nocapture %out, <3
 ; GFX90a-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-8-LABEL: v3f32_preload_arg:
-=======
-; GFX90a-PRELOAD-8-LABEL: v3f32_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-8:       ; %bb.0:
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
@@ -1735,7 +1543,6 @@ define amdgpu_kernel void @v5i8_preload_arg(ptr addrspace(1) nocapture %out, <5 
 ; GFX940-NO-PRELOAD-NEXT:    global_store_dword v0, v2, s[0:1] sc0 sc1
 ; GFX940-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-1-LABEL: v5i8_preload_arg:
 ; GFX940-PRELOAD-1:       ; %bb.0:
 ; GFX940-PRELOAD-1-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
@@ -1748,9 +1555,6 @@ define amdgpu_kernel void @v5i8_preload_arg(ptr addrspace(1) nocapture %out, <5 
 ; GFX940-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-2-LABEL: v5i8_preload_arg:
-=======
-; GFX940-PRELOAD-2-LABEL: v5i8_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-2:       ; %bb.0:
 ; GFX940-PRELOAD-2-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
@@ -1761,7 +1565,6 @@ define amdgpu_kernel void @v5i8_preload_arg(ptr addrspace(1) nocapture %out, <5 
 ; GFX940-PRELOAD-2-NEXT:    global_store_dword v0, v2, s[0:1] sc0 sc1
 ; GFX940-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-4-LABEL: v5i8_preload_arg:
 ; GFX940-PRELOAD-4:       ; %bb.0:
 ; GFX940-PRELOAD-4-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
@@ -1774,9 +1577,6 @@ define amdgpu_kernel void @v5i8_preload_arg(ptr addrspace(1) nocapture %out, <5 
 ; GFX940-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-8-LABEL: v5i8_preload_arg:
-=======
-; GFX940-PRELOAD-8-LABEL: v5i8_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-8:       ; %bb.0:
 ; GFX940-PRELOAD-8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
@@ -1798,7 +1598,6 @@ define amdgpu_kernel void @v5i8_preload_arg(ptr addrspace(1) nocapture %out, <5 
 ; GFX90a-NO-PRELOAD-NEXT:    global_store_dword v0, v2, s[0:1]
 ; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-1-LABEL: v5i8_preload_arg:
 ; GFX90a-PRELOAD-1:       ; %bb.0:
 ; GFX90a-PRELOAD-1-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1811,9 +1610,6 @@ define amdgpu_kernel void @v5i8_preload_arg(ptr addrspace(1) nocapture %out, <5 
 ; GFX90a-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-2-LABEL: v5i8_preload_arg:
-=======
-; GFX90a-PRELOAD-2-LABEL: v5i8_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-2:       ; %bb.0:
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
@@ -1824,7 +1620,6 @@ define amdgpu_kernel void @v5i8_preload_arg(ptr addrspace(1) nocapture %out, <5 
 ; GFX90a-PRELOAD-2-NEXT:    global_store_dword v0, v2, s[0:1]
 ; GFX90a-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-4-LABEL: v5i8_preload_arg:
 ; GFX90a-PRELOAD-4:       ; %bb.0:
 ; GFX90a-PRELOAD-4-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1837,9 +1632,6 @@ define amdgpu_kernel void @v5i8_preload_arg(ptr addrspace(1) nocapture %out, <5 
 ; GFX90a-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-8-LABEL: v5i8_preload_arg:
-=======
-; GFX90a-PRELOAD-8-LABEL: v5i8_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-8:       ; %bb.0:
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
@@ -1876,7 +1668,6 @@ define amdgpu_kernel void @v5f64_arg(ptr addrspace(1) nocapture %out, <5 x doubl
 ; GFX940-NO-PRELOAD-NEXT:    global_store_dwordx4 v4, v[0:3], s[12:13] sc0 sc1
 ; GFX940-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-1-LABEL: v5f64_arg:
 ; GFX940-PRELOAD-1:       ; %bb.0:
 ; GFX940-PRELOAD-1-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x60
@@ -1900,9 +1691,6 @@ define amdgpu_kernel void @v5f64_arg(ptr addrspace(1) nocapture %out, <5 x doubl
 ; GFX940-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-2-LABEL: v5f64_arg:
-=======
-; GFX940-PRELOAD-2-LABEL: v5f64_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-2:       ; %bb.0:
 ; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x60
 ; GFX940-PRELOAD-2-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x40
@@ -1924,7 +1712,6 @@ define amdgpu_kernel void @v5f64_arg(ptr addrspace(1) nocapture %out, <5 x doubl
 ; GFX940-PRELOAD-2-NEXT:    global_store_dwordx4 v4, v[0:3], s[12:13] sc0 sc1
 ; GFX940-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-4-LABEL: v5f64_arg:
 ; GFX940-PRELOAD-4:       ; %bb.0:
 ; GFX940-PRELOAD-4-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x60
@@ -1948,9 +1735,6 @@ define amdgpu_kernel void @v5f64_arg(ptr addrspace(1) nocapture %out, <5 x doubl
 ; GFX940-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-8-LABEL: v5f64_arg:
-=======
-; GFX940-PRELOAD-8-LABEL: v5f64_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-8:       ; %bb.0:
 ; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x60
 ; GFX940-PRELOAD-8-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x40
@@ -1994,7 +1778,6 @@ define amdgpu_kernel void @v5f64_arg(ptr addrspace(1) nocapture %out, <5 x doubl
 ; GFX90a-NO-PRELOAD-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
 ; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-1-LABEL: v5f64_arg:
 ; GFX90a-PRELOAD-1:       ; %bb.0:
 ; GFX90a-PRELOAD-1-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x60
@@ -2018,9 +1801,6 @@ define amdgpu_kernel void @v5f64_arg(ptr addrspace(1) nocapture %out, <5 x doubl
 ; GFX90a-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-2-LABEL: v5f64_arg:
-=======
-; GFX90a-PRELOAD-2-LABEL: v5f64_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-2:       ; %bb.0:
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x60
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x40
@@ -2042,7 +1822,6 @@ define amdgpu_kernel void @v5f64_arg(ptr addrspace(1) nocapture %out, <5 x doubl
 ; GFX90a-PRELOAD-2-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
 ; GFX90a-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-4-LABEL: v5f64_arg:
 ; GFX90a-PRELOAD-4:       ; %bb.0:
 ; GFX90a-PRELOAD-4-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x60
@@ -2066,9 +1845,6 @@ define amdgpu_kernel void @v5f64_arg(ptr addrspace(1) nocapture %out, <5 x doubl
 ; GFX90a-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-8-LABEL: v5f64_arg:
-=======
-; GFX90a-PRELOAD-8-LABEL: v5f64_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-8:       ; %bb.0:
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x60
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x40
@@ -2103,7 +1879,6 @@ define amdgpu_kernel void @v8i8_preload_arg(ptr addrspace(1) %out, <8 x i8> %in)
 ; GFX940-NO-PRELOAD-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1] sc0 sc1
 ; GFX940-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-1-LABEL: v8i8_preload_arg:
 ; GFX940-PRELOAD-1:       ; %bb.0:
 ; GFX940-PRELOAD-1-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
@@ -2114,9 +1889,6 @@ define amdgpu_kernel void @v8i8_preload_arg(ptr addrspace(1) %out, <8 x i8> %in)
 ; GFX940-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-2-LABEL: v8i8_preload_arg:
-=======
-; GFX940-PRELOAD-2-LABEL: v8i8_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-2:       ; %bb.0:
 ; GFX940-PRELOAD-2-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, 0
@@ -2125,7 +1897,6 @@ define amdgpu_kernel void @v8i8_preload_arg(ptr addrspace(1) %out, <8 x i8> %in)
 ; GFX940-PRELOAD-2-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1] sc0 sc1
 ; GFX940-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX940-PRELOAD-4-LABEL: v8i8_preload_arg:
 ; GFX940-PRELOAD-4:       ; %bb.0:
 ; GFX940-PRELOAD-4-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
@@ -2136,9 +1907,6 @@ define amdgpu_kernel void @v8i8_preload_arg(ptr addrspace(1) %out, <8 x i8> %in)
 ; GFX940-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX940-PRELOAD-8-LABEL: v8i8_preload_arg:
-=======
-; GFX940-PRELOAD-8-LABEL: v8i8_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX940-PRELOAD-8:       ; %bb.0:
 ; GFX940-PRELOAD-8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, 0
@@ -2156,7 +1924,6 @@ define amdgpu_kernel void @v8i8_preload_arg(ptr addrspace(1) %out, <8 x i8> %in)
 ; GFX90a-NO-PRELOAD-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-1-LABEL: v8i8_preload_arg:
 ; GFX90a-PRELOAD-1:       ; %bb.0:
 ; GFX90a-PRELOAD-1-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2167,9 +1934,6 @@ define amdgpu_kernel void @v8i8_preload_arg(ptr addrspace(1) %out, <8 x i8> %in)
 ; GFX90a-PRELOAD-1-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-2-LABEL: v8i8_preload_arg:
-=======
-; GFX90a-PRELOAD-2-LABEL: v8i8_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-2:       ; %bb.0:
 ; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, 0
@@ -2178,7 +1942,6 @@ define amdgpu_kernel void @v8i8_preload_arg(ptr addrspace(1) %out, <8 x i8> %in)
 ; GFX90a-PRELOAD-2-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX90a-PRELOAD-2-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX90a-PRELOAD-4-LABEL: v8i8_preload_arg:
 ; GFX90a-PRELOAD-4:       ; %bb.0:
 ; GFX90a-PRELOAD-4-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -2189,9 +1952,6 @@ define amdgpu_kernel void @v8i8_preload_arg(ptr addrspace(1) %out, <8 x i8> %in)
 ; GFX90a-PRELOAD-4-NEXT:    s_endpgm
 ;
 ; GFX90a-PRELOAD-8-LABEL: v8i8_preload_arg:
-=======
-; GFX90a-PRELOAD-8-LABEL: v8i8_kernel_preload_arg:
->>>>>>> 07b01b6e8852 (rebase to main)
 ; GFX90a-PRELOAD-8:       ; %bb.0:
 ; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, 0
@@ -2411,1102 +2171,4 @@ define amdgpu_kernel void @f64_kernel_preload_arg(ptr addrspace(1) %out, double 
   ret void
 }
 
-<<<<<<< HEAD
 attributes #0 = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
-=======
-define amdgpu_kernel void @half_kernel_preload_arg(ptr addrspace(1) %out, half %in) #0 {
-; GFX940-NO-PRELOAD-LABEL: half_kernel_preload_arg:
-; GFX940-NO-PRELOAD:       ; %bb.0:
-; GFX940-NO-PRELOAD-NEXT:    s_load_dword s4, s[0:1], 0x8
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s4
-; GFX940-NO-PRELOAD-NEXT:    global_store_short v0, v1, s[2:3] sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-2-LABEL: half_kernel_preload_arg:
-; GFX940-PRELOAD-2:       ; %bb.0:
-; GFX940-PRELOAD-2-NEXT:    s_load_dword s4, s[0:1], 0x8
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s4
-; GFX940-PRELOAD-2-NEXT:    global_store_short v0, v1, s[2:3] sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-8-LABEL: half_kernel_preload_arg:
-; GFX940-PRELOAD-8:       ; %bb.0:
-; GFX940-PRELOAD-8-NEXT:    s_load_dword s4, s[0:1], 0x8
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s4
-; GFX940-PRELOAD-8-NEXT:    global_store_short v0, v1, s[2:3] sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    s_endpgm
-;
-; GFX90a-NO-PRELOAD-LABEL: half_kernel_preload_arg:
-; GFX90a-NO-PRELOAD:       ; %bb.0:
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dword s2, s[4:5], 0x8
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s2
-; GFX90a-NO-PRELOAD-NEXT:    global_store_short v0, v1, s[0:1]
-; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-2-LABEL: half_kernel_preload_arg:
-; GFX90a-PRELOAD-2:       ; %bb.0:
-; GFX90a-PRELOAD-2-NEXT:    s_load_dword s2, s[4:5], 0x8
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s2
-; GFX90a-PRELOAD-2-NEXT:    global_store_short v0, v1, s[0:1]
-; GFX90a-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-8-LABEL: half_kernel_preload_arg:
-; GFX90a-PRELOAD-8:       ; %bb.0:
-; GFX90a-PRELOAD-8-NEXT:    s_load_dword s2, s[4:5], 0x8
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s2
-; GFX90a-PRELOAD-8-NEXT:    global_store_short v0, v1, s[0:1]
-; GFX90a-PRELOAD-8-NEXT:    s_endpgm
-  store half %in, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @bfloat_kernel_preload_arg(ptr addrspace(1) %out, bfloat %in) #0 {
-; GFX940-NO-PRELOAD-LABEL: bfloat_kernel_preload_arg:
-; GFX940-NO-PRELOAD:       ; %bb.0:
-; GFX940-NO-PRELOAD-NEXT:    s_load_dword s4, s[0:1], 0x8
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s4
-; GFX940-NO-PRELOAD-NEXT:    global_store_short v0, v1, s[2:3] sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-2-LABEL: bfloat_kernel_preload_arg:
-; GFX940-PRELOAD-2:       ; %bb.0:
-; GFX940-PRELOAD-2-NEXT:    s_load_dword s4, s[0:1], 0x8
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s4
-; GFX940-PRELOAD-2-NEXT:    global_store_short v0, v1, s[2:3] sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-8-LABEL: bfloat_kernel_preload_arg:
-; GFX940-PRELOAD-8:       ; %bb.0:
-; GFX940-PRELOAD-8-NEXT:    s_load_dword s4, s[0:1], 0x8
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s4
-; GFX940-PRELOAD-8-NEXT:    global_store_short v0, v1, s[2:3] sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    s_endpgm
-;
-; GFX90a-NO-PRELOAD-LABEL: bfloat_kernel_preload_arg:
-; GFX90a-NO-PRELOAD:       ; %bb.0:
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dword s2, s[4:5], 0x8
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s2
-; GFX90a-NO-PRELOAD-NEXT:    global_store_short v0, v1, s[0:1]
-; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-2-LABEL: bfloat_kernel_preload_arg:
-; GFX90a-PRELOAD-2:       ; %bb.0:
-; GFX90a-PRELOAD-2-NEXT:    s_load_dword s2, s[4:5], 0x8
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s2
-; GFX90a-PRELOAD-2-NEXT:    global_store_short v0, v1, s[0:1]
-; GFX90a-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-8-LABEL: bfloat_kernel_preload_arg:
-; GFX90a-PRELOAD-8:       ; %bb.0:
-; GFX90a-PRELOAD-8-NEXT:    s_load_dword s2, s[4:5], 0x8
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s2
-; GFX90a-PRELOAD-8-NEXT:    global_store_short v0, v1, s[0:1]
-; GFX90a-PRELOAD-8-NEXT:    s_endpgm
-  store bfloat %in, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @v2bfloat_kernel_preload_arg(ptr addrspace(1) %out, <2 x bfloat> %in) #0 {
-; GFX940-NO-PRELOAD-LABEL: v2bfloat_kernel_preload_arg:
-; GFX940-NO-PRELOAD:       ; %bb.0:
-; GFX940-NO-PRELOAD-NEXT:    s_load_dword s4, s[0:1], 0x8
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s4
-; GFX940-NO-PRELOAD-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-2-LABEL: v2bfloat_kernel_preload_arg:
-; GFX940-PRELOAD-2:       ; %bb.0:
-; GFX940-PRELOAD-2-NEXT:    s_load_dword s4, s[0:1], 0x8
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s4
-; GFX940-PRELOAD-2-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-8-LABEL: v2bfloat_kernel_preload_arg:
-; GFX940-PRELOAD-8:       ; %bb.0:
-; GFX940-PRELOAD-8-NEXT:    s_load_dword s4, s[0:1], 0x8
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s4
-; GFX940-PRELOAD-8-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    s_endpgm
-;
-; GFX90a-NO-PRELOAD-LABEL: v2bfloat_kernel_preload_arg:
-; GFX90a-NO-PRELOAD:       ; %bb.0:
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dword s2, s[4:5], 0x8
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s2
-; GFX90a-NO-PRELOAD-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-2-LABEL: v2bfloat_kernel_preload_arg:
-; GFX90a-PRELOAD-2:       ; %bb.0:
-; GFX90a-PRELOAD-2-NEXT:    s_load_dword s2, s[4:5], 0x8
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s2
-; GFX90a-PRELOAD-2-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX90a-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-8-LABEL: v2bfloat_kernel_preload_arg:
-; GFX90a-PRELOAD-8:       ; %bb.0:
-; GFX90a-PRELOAD-8-NEXT:    s_load_dword s2, s[4:5], 0x8
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s2
-; GFX90a-PRELOAD-8-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX90a-PRELOAD-8-NEXT:    s_endpgm
-  store <2 x bfloat> %in, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @v3bfloat_kernel_preload_arg(ptr addrspace(1) %out, <3 x bfloat> %in) #0 {
-; GFX940-NO-PRELOAD-LABEL: v3bfloat_kernel_preload_arg:
-; GFX940-NO-PRELOAD:       ; %bb.0:
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s3
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v2, s2
-; GFX940-NO-PRELOAD-NEXT:    global_store_short v0, v1, s[0:1] offset:4 sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    global_store_dword v0, v2, s[0:1] sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-2-LABEL: v3bfloat_kernel_preload_arg:
-; GFX940-PRELOAD-2:       ; %bb.0:
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s3
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, s2
-; GFX940-PRELOAD-2-NEXT:    global_store_short v0, v1, s[0:1] offset:4 sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    global_store_dword v0, v2, s[0:1] sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-8-LABEL: v3bfloat_kernel_preload_arg:
-; GFX940-PRELOAD-8:       ; %bb.0:
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s3
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, s2
-; GFX940-PRELOAD-8-NEXT:    global_store_short v0, v1, s[0:1] offset:4 sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    global_store_dword v0, v2, s[0:1] sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    s_endpgm
-;
-; GFX90a-NO-PRELOAD-LABEL: v3bfloat_kernel_preload_arg:
-; GFX90a-NO-PRELOAD:       ; %bb.0:
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s3
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v2, s2
-; GFX90a-NO-PRELOAD-NEXT:    global_store_short v0, v1, s[0:1] offset:4
-; GFX90a-NO-PRELOAD-NEXT:    global_store_dword v0, v2, s[0:1]
-; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-2-LABEL: v3bfloat_kernel_preload_arg:
-; GFX90a-PRELOAD-2:       ; %bb.0:
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s3
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, s2
-; GFX90a-PRELOAD-2-NEXT:    global_store_short v0, v1, s[0:1] offset:4
-; GFX90a-PRELOAD-2-NEXT:    global_store_dword v0, v2, s[0:1]
-; GFX90a-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-8-LABEL: v3bfloat_kernel_preload_arg:
-; GFX90a-PRELOAD-8:       ; %bb.0:
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s3
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, s2
-; GFX90a-PRELOAD-8-NEXT:    global_store_short v0, v1, s[0:1] offset:4
-; GFX90a-PRELOAD-8-NEXT:    global_store_dword v0, v2, s[0:1]
-; GFX90a-PRELOAD-8-NEXT:    s_endpgm
-  store <3 x bfloat> %in, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @v6bfloat_kernel_preload_arg(ptr addrspace(1) %out, <6 x bfloat> %in) #0 {
-; GFX940-NO-PRELOAD-LABEL: v6bfloat_kernel_preload_arg:
-; GFX940-NO-PRELOAD:       ; %bb.0:
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v3, 0
-; GFX940-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, s4
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s5
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v2, s6
-; GFX940-NO-PRELOAD-NEXT:    global_store_dwordx3 v3, v[0:2], s[2:3] sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-2-LABEL: v6bfloat_kernel_preload_arg:
-; GFX940-PRELOAD-2:       ; %bb.0:
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v3, 0
-; GFX940-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, s4
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s5
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, s6
-; GFX940-PRELOAD-2-NEXT:    global_store_dwordx3 v3, v[0:2], s[2:3] sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-8-LABEL: v6bfloat_kernel_preload_arg:
-; GFX940-PRELOAD-8:       ; %bb.0:
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v3, 0
-; GFX940-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, s4
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s5
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, s6
-; GFX940-PRELOAD-8-NEXT:    global_store_dwordx3 v3, v[0:2], s[2:3] sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    s_endpgm
-;
-; GFX90a-NO-PRELOAD-LABEL: v6bfloat_kernel_preload_arg:
-; GFX90a-NO-PRELOAD:       ; %bb.0:
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v3, 0
-; GFX90a-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, s0
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s1
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v2, s2
-; GFX90a-NO-PRELOAD-NEXT:    global_store_dwordx3 v3, v[0:2], s[6:7]
-; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-2-LABEL: v6bfloat_kernel_preload_arg:
-; GFX90a-PRELOAD-2:       ; %bb.0:
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v3, 0
-; GFX90a-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, s0
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s1
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, s2
-; GFX90a-PRELOAD-2-NEXT:    global_store_dwordx3 v3, v[0:2], s[6:7]
-; GFX90a-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-8-LABEL: v6bfloat_kernel_preload_arg:
-; GFX90a-PRELOAD-8:       ; %bb.0:
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v3, 0
-; GFX90a-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, s0
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s1
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, s2
-; GFX90a-PRELOAD-8-NEXT:    global_store_dwordx3 v3, v[0:2], s[6:7]
-; GFX90a-PRELOAD-8-NEXT:    s_endpgm
-  store <6 x bfloat> %in, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @half_v7bfloat_kernel_preload_arg(ptr addrspace(1) %out, half %in, <7 x bfloat> %in2, ptr addrspace(1) %out2) #0 {
-; GFX940-NO-PRELOAD-LABEL: half_v7bfloat_kernel_preload_arg:
-; GFX940-NO-PRELOAD:       ; %bb.0:
-; GFX940-NO-PRELOAD-NEXT:    s_load_dword s10, s[0:1], 0x8
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x20
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v3, 0
-; GFX940-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, s10
-; GFX940-NO-PRELOAD-NEXT:    global_store_short v3, v0, s[2:3] sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, s7
-; GFX940-NO-PRELOAD-NEXT:    global_store_short v3, v0, s[8:9] offset:12 sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v2, s6
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, s4
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s5
-; GFX940-NO-PRELOAD-NEXT:    global_store_dwordx3 v3, v[0:2], s[8:9] sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-2-LABEL: half_v7bfloat_kernel_preload_arg:
-; GFX940-PRELOAD-2:       ; %bb.0:
-; GFX940-PRELOAD-2-NEXT:    s_load_dword s10, s[0:1], 0x8
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x20
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v3, 0
-; GFX940-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, s10
-; GFX940-PRELOAD-2-NEXT:    global_store_short v3, v0, s[2:3] sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, s7
-; GFX940-PRELOAD-2-NEXT:    global_store_short v3, v0, s[8:9] offset:12 sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, s6
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, s4
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s5
-; GFX940-PRELOAD-2-NEXT:    global_store_dwordx3 v3, v[0:2], s[8:9] sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-8-LABEL: half_v7bfloat_kernel_preload_arg:
-; GFX940-PRELOAD-8:       ; %bb.0:
-; GFX940-PRELOAD-8-NEXT:    s_load_dword s10, s[0:1], 0x8
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x20
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v3, 0
-; GFX940-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, s10
-; GFX940-PRELOAD-8-NEXT:    global_store_short v3, v0, s[2:3] sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, s7
-; GFX940-PRELOAD-8-NEXT:    global_store_short v3, v0, s[8:9] offset:12 sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, s6
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, s4
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s5
-; GFX940-PRELOAD-8-NEXT:    global_store_dwordx3 v3, v[0:2], s[8:9] sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    s_endpgm
-;
-; GFX90a-NO-PRELOAD-LABEL: half_v7bfloat_kernel_preload_arg:
-; GFX90a-NO-PRELOAD:       ; %bb.0:
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dword s10, s[4:5], 0x8
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x20
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v3, 0
-; GFX90a-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, s10
-; GFX90a-NO-PRELOAD-NEXT:    global_store_short v3, v0, s[6:7]
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, s3
-; GFX90a-NO-PRELOAD-NEXT:    global_store_short v3, v0, s[8:9] offset:12
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v2, s2
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, s0
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s1
-; GFX90a-NO-PRELOAD-NEXT:    global_store_dwordx3 v3, v[0:2], s[8:9]
-; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-2-LABEL: half_v7bfloat_kernel_preload_arg:
-; GFX90a-PRELOAD-2:       ; %bb.0:
-; GFX90a-PRELOAD-2-NEXT:    s_load_dword s10, s[4:5], 0x8
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x20
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v3, 0
-; GFX90a-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, s10
-; GFX90a-PRELOAD-2-NEXT:    global_store_short v3, v0, s[6:7]
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, s3
-; GFX90a-PRELOAD-2-NEXT:    global_store_short v3, v0, s[8:9] offset:12
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, s2
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, s0
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s1
-; GFX90a-PRELOAD-2-NEXT:    global_store_dwordx3 v3, v[0:2], s[8:9]
-; GFX90a-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-8-LABEL: half_v7bfloat_kernel_preload_arg:
-; GFX90a-PRELOAD-8:       ; %bb.0:
-; GFX90a-PRELOAD-8-NEXT:    s_load_dword s10, s[4:5], 0x8
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x20
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v3, 0
-; GFX90a-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, s10
-; GFX90a-PRELOAD-8-NEXT:    global_store_short v3, v0, s[6:7]
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, s3
-; GFX90a-PRELOAD-8-NEXT:    global_store_short v3, v0, s[8:9] offset:12
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, s2
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, s0
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s1
-; GFX90a-PRELOAD-8-NEXT:    global_store_dwordx3 v3, v[0:2], s[8:9]
-; GFX90a-PRELOAD-8-NEXT:    s_endpgm
-  store half %in, ptr addrspace(1) %out
-  store <7 x bfloat> %in2, ptr addrspace(1) %out2
-  ret void
-}
-
-define amdgpu_kernel void @i1_kernel_preload_arg(ptr addrspace(1) %out, i1 %in) #0 {
-; GFX940-NO-PRELOAD-LABEL: i1_kernel_preload_arg:
-; GFX940-NO-PRELOAD:       ; %bb.0:
-; GFX940-NO-PRELOAD-NEXT:    s_load_dword s4, s[0:1], 0x8
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NO-PRELOAD-NEXT:    s_and_b32 s0, s4, 1
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s0
-; GFX940-NO-PRELOAD-NEXT:    global_store_byte v0, v1, s[2:3] sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-2-LABEL: i1_kernel_preload_arg:
-; GFX940-PRELOAD-2:       ; %bb.0:
-; GFX940-PRELOAD-2-NEXT:    s_load_dword s4, s[0:1], 0x8
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-2-NEXT:    s_and_b32 s0, s4, 1
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s0
-; GFX940-PRELOAD-2-NEXT:    global_store_byte v0, v1, s[2:3] sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-8-LABEL: i1_kernel_preload_arg:
-; GFX940-PRELOAD-8:       ; %bb.0:
-; GFX940-PRELOAD-8-NEXT:    s_load_dword s4, s[0:1], 0x8
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-8-NEXT:    s_and_b32 s0, s4, 1
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s0
-; GFX940-PRELOAD-8-NEXT:    global_store_byte v0, v1, s[2:3] sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    s_endpgm
-;
-; GFX90a-NO-PRELOAD-LABEL: i1_kernel_preload_arg:
-; GFX90a-NO-PRELOAD:       ; %bb.0:
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dword s2, s[4:5], 0x8
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NO-PRELOAD-NEXT:    s_and_b32 s2, s2, 1
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s2
-; GFX90a-NO-PRELOAD-NEXT:    global_store_byte v0, v1, s[0:1]
-; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-2-LABEL: i1_kernel_preload_arg:
-; GFX90a-PRELOAD-2:       ; %bb.0:
-; GFX90a-PRELOAD-2-NEXT:    s_load_dword s2, s[4:5], 0x8
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-2-NEXT:    s_and_b32 s2, s2, 1
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s2
-; GFX90a-PRELOAD-2-NEXT:    global_store_byte v0, v1, s[0:1]
-; GFX90a-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-8-LABEL: i1_kernel_preload_arg:
-; GFX90a-PRELOAD-8:       ; %bb.0:
-; GFX90a-PRELOAD-8-NEXT:    s_load_dword s2, s[4:5], 0x8
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-8-NEXT:    s_and_b32 s2, s2, 1
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s2
-; GFX90a-PRELOAD-8-NEXT:    global_store_byte v0, v1, s[0:1]
-; GFX90a-PRELOAD-8-NEXT:    s_endpgm
-  store i1 %in, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @fp128_kernel_preload_arg(ptr addrspace(1) %out, fp128 %in) #0 {
-; GFX940-NO-PRELOAD-LABEL: fp128_kernel_preload_arg:
-; GFX940-NO-PRELOAD:       ; %bb.0:
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v4, 0
-; GFX940-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b64_e32 v[2:3], s[6:7]
-; GFX940-NO-PRELOAD-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3] sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-2-LABEL: fp128_kernel_preload_arg:
-; GFX940-PRELOAD-2:       ; %bb.0:
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v4, 0
-; GFX940-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-2-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
-; GFX940-PRELOAD-2-NEXT:    v_mov_b64_e32 v[2:3], s[6:7]
-; GFX940-PRELOAD-2-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3] sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-8-LABEL: fp128_kernel_preload_arg:
-; GFX940-PRELOAD-8:       ; %bb.0:
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v4, 0
-; GFX940-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-8-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
-; GFX940-PRELOAD-8-NEXT:    v_mov_b64_e32 v[2:3], s[6:7]
-; GFX940-PRELOAD-8-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3] sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    s_endpgm
-;
-; GFX90a-NO-PRELOAD-LABEL: fp128_kernel_preload_arg:
-; GFX90a-NO-PRELOAD:       ; %bb.0:
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v4, 0
-; GFX90a-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NO-PRELOAD-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90a-NO-PRELOAD-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90a-NO-PRELOAD-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
-; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-2-LABEL: fp128_kernel_preload_arg:
-; GFX90a-PRELOAD-2:       ; %bb.0:
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v4, 0
-; GFX90a-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-2-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90a-PRELOAD-2-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90a-PRELOAD-2-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
-; GFX90a-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-8-LABEL: fp128_kernel_preload_arg:
-; GFX90a-PRELOAD-8:       ; %bb.0:
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v4, 0
-; GFX90a-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-8-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90a-PRELOAD-8-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90a-PRELOAD-8-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
-; GFX90a-PRELOAD-8-NEXT:    s_endpgm
-  store fp128 %in, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @v7i8_kernel_preload_arg(ptr addrspace(1) %out, <7 x i8> %in) #0 {
-; GFX940-NO-PRELOAD-LABEL: v7i8_kernel_preload_arg:
-; GFX940-NO-PRELOAD:       ; %bb.0:
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s3
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v2, s2
-; GFX940-NO-PRELOAD-NEXT:    global_store_byte_d16_hi v0, v1, s[0:1] offset:6 sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    global_store_short v0, v1, s[0:1] offset:4 sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    global_store_dword v0, v2, s[0:1] sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-2-LABEL: v7i8_kernel_preload_arg:
-; GFX940-PRELOAD-2:       ; %bb.0:
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s3
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, s2
-; GFX940-PRELOAD-2-NEXT:    global_store_byte_d16_hi v0, v1, s[0:1] offset:6 sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    global_store_short v0, v1, s[0:1] offset:4 sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    global_store_dword v0, v2, s[0:1] sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-8-LABEL: v7i8_kernel_preload_arg:
-; GFX940-PRELOAD-8:       ; %bb.0:
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s3
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, s2
-; GFX940-PRELOAD-8-NEXT:    global_store_byte_d16_hi v0, v1, s[0:1] offset:6 sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    global_store_short v0, v1, s[0:1] offset:4 sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    global_store_dword v0, v2, s[0:1] sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    s_endpgm
-;
-; GFX90a-NO-PRELOAD-LABEL: v7i8_kernel_preload_arg:
-; GFX90a-NO-PRELOAD:       ; %bb.0:
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s3
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v2, s2
-; GFX90a-NO-PRELOAD-NEXT:    global_store_byte_d16_hi v0, v1, s[0:1] offset:6
-; GFX90a-NO-PRELOAD-NEXT:    global_store_short v0, v1, s[0:1] offset:4
-; GFX90a-NO-PRELOAD-NEXT:    global_store_dword v0, v2, s[0:1]
-; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-2-LABEL: v7i8_kernel_preload_arg:
-; GFX90a-PRELOAD-2:       ; %bb.0:
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s3
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, s2
-; GFX90a-PRELOAD-2-NEXT:    global_store_byte_d16_hi v0, v1, s[0:1] offset:6
-; GFX90a-PRELOAD-2-NEXT:    global_store_short v0, v1, s[0:1] offset:4
-; GFX90a-PRELOAD-2-NEXT:    global_store_dword v0, v2, s[0:1]
-; GFX90a-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-8-LABEL: v7i8_kernel_preload_arg:
-; GFX90a-PRELOAD-8:       ; %bb.0:
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s3
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, s2
-; GFX90a-PRELOAD-8-NEXT:    global_store_byte_d16_hi v0, v1, s[0:1] offset:6
-; GFX90a-PRELOAD-8-NEXT:    global_store_short v0, v1, s[0:1] offset:4
-; GFX90a-PRELOAD-8-NEXT:    global_store_dword v0, v2, s[0:1]
-; GFX90a-PRELOAD-8-NEXT:    s_endpgm
-  store <7 x i8> %in, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @v7half_kernel_preload_arg(ptr addrspace(1) %out, <7 x half> %in) #0 {
-; GFX940-NO-PRELOAD-LABEL: v7half_kernel_preload_arg:
-; GFX940-NO-PRELOAD:       ; %bb.0:
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v3, 0
-; GFX940-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s7
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v2, s6
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, s4
-; GFX940-NO-PRELOAD-NEXT:    global_store_short v3, v1, s[2:3] offset:12 sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s5
-; GFX940-NO-PRELOAD-NEXT:    global_store_dwordx3 v3, v[0:2], s[2:3] sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-2-LABEL: v7half_kernel_preload_arg:
-; GFX940-PRELOAD-2:       ; %bb.0:
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v3, 0
-; GFX940-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s7
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, s6
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, s4
-; GFX940-PRELOAD-2-NEXT:    global_store_short v3, v1, s[2:3] offset:12 sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s5
-; GFX940-PRELOAD-2-NEXT:    global_store_dwordx3 v3, v[0:2], s[2:3] sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-8-LABEL: v7half_kernel_preload_arg:
-; GFX940-PRELOAD-8:       ; %bb.0:
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v3, 0
-; GFX940-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s7
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, s6
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, s4
-; GFX940-PRELOAD-8-NEXT:    global_store_short v3, v1, s[2:3] offset:12 sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s5
-; GFX940-PRELOAD-8-NEXT:    global_store_dwordx3 v3, v[0:2], s[2:3] sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    s_endpgm
-;
-; GFX90a-NO-PRELOAD-LABEL: v7half_kernel_preload_arg:
-; GFX90a-NO-PRELOAD:       ; %bb.0:
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v3, 0
-; GFX90a-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s3
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v2, s2
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, s0
-; GFX90a-NO-PRELOAD-NEXT:    global_store_short v3, v1, s[6:7] offset:12
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s1
-; GFX90a-NO-PRELOAD-NEXT:    global_store_dwordx3 v3, v[0:2], s[6:7]
-; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-2-LABEL: v7half_kernel_preload_arg:
-; GFX90a-PRELOAD-2:       ; %bb.0:
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v3, 0
-; GFX90a-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s3
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, s2
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, s0
-; GFX90a-PRELOAD-2-NEXT:    global_store_short v3, v1, s[6:7] offset:12
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s1
-; GFX90a-PRELOAD-2-NEXT:    global_store_dwordx3 v3, v[0:2], s[6:7]
-; GFX90a-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-8-LABEL: v7half_kernel_preload_arg:
-; GFX90a-PRELOAD-8:       ; %bb.0:
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v3, 0
-; GFX90a-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s3
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, s2
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, s0
-; GFX90a-PRELOAD-8-NEXT:    global_store_short v3, v1, s[6:7] offset:12
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s1
-; GFX90a-PRELOAD-8-NEXT:    global_store_dwordx3 v3, v[0:2], s[6:7]
-; GFX90a-PRELOAD-8-NEXT:    s_endpgm
-  store <7 x half> %in, ptr addrspace(1) %out
-  ret void
-}
-
-; Test when previous argument was not dword aligned.
-define amdgpu_kernel void @i16_i32_kernel_preload_arg(ptr addrspace(1) %out, i16 %in, i32 %in2, ptr addrspace(1) %out2) #0 {
-; GFX940-NO-PRELOAD-LABEL: i16_i32_kernel_preload_arg:
-; GFX940-NO-PRELOAD:       ; %bb.0:
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x0
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x10
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s6
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v2, s7
-; GFX940-NO-PRELOAD-NEXT:    global_store_short v0, v1, s[4:5] sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    global_store_dword v0, v2, s[2:3] sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-2-LABEL: i16_i32_kernel_preload_arg:
-; GFX940-PRELOAD-2:       ; %bb.0:
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x0
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x10
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s6
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, s7
-; GFX940-PRELOAD-2-NEXT:    global_store_short v0, v1, s[4:5] sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    global_store_dword v0, v2, s[2:3] sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-8-LABEL: i16_i32_kernel_preload_arg:
-; GFX940-PRELOAD-8:       ; %bb.0:
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x0
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x10
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s6
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, s7
-; GFX940-PRELOAD-8-NEXT:    global_store_short v0, v1, s[4:5] sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    global_store_dword v0, v2, s[2:3] sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    s_endpgm
-;
-; GFX90a-NO-PRELOAD-LABEL: i16_i32_kernel_preload_arg:
-; GFX90a-NO-PRELOAD:       ; %bb.0:
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s2
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v2, s3
-; GFX90a-NO-PRELOAD-NEXT:    global_store_short v0, v1, s[0:1]
-; GFX90a-NO-PRELOAD-NEXT:    global_store_dword v0, v2, s[6:7]
-; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-2-LABEL: i16_i32_kernel_preload_arg:
-; GFX90a-PRELOAD-2:       ; %bb.0:
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s2
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, s3
-; GFX90a-PRELOAD-2-NEXT:    global_store_short v0, v1, s[0:1]
-; GFX90a-PRELOAD-2-NEXT:    global_store_dword v0, v2, s[6:7]
-; GFX90a-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-8-LABEL: i16_i32_kernel_preload_arg:
-; GFX90a-PRELOAD-8:       ; %bb.0:
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s2
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, s3
-; GFX90a-PRELOAD-8-NEXT:    global_store_short v0, v1, s[0:1]
-; GFX90a-PRELOAD-8-NEXT:    global_store_dword v0, v2, s[6:7]
-; GFX90a-PRELOAD-8-NEXT:    s_endpgm
-  store i16 %in, ptr addrspace(1) %out
-  store i32 %in2, ptr addrspace(1) %out2
-  ret void
-}
-
-define amdgpu_kernel void @i16_v3i32_kernel_preload_arg(ptr addrspace(1) %out, i16 %in, <3 x i32> %in2, ptr addrspace(1) %out2) #0 {
-; GFX940-NO-PRELOAD-LABEL: i16_v3i32_kernel_preload_arg:
-; GFX940-NO-PRELOAD:       ; %bb.0:
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NO-PRELOAD-NEXT:    s_load_dword s7, s[0:1], 0x8
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x20
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v3, 0
-; GFX940-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v4, s7
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, s4
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s5
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v2, s6
-; GFX940-NO-PRELOAD-NEXT:    global_store_short v3, v4, s[2:3] sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    global_store_dwordx3 v3, v[0:2], s[8:9] sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-2-LABEL: i16_v3i32_kernel_preload_arg:
-; GFX940-PRELOAD-2:       ; %bb.0:
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-2-NEXT:    s_load_dword s7, s[0:1], 0x8
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x20
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v3, 0
-; GFX940-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v4, s7
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, s4
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s5
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, s6
-; GFX940-PRELOAD-2-NEXT:    global_store_short v3, v4, s[2:3] sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    global_store_dwordx3 v3, v[0:2], s[8:9] sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-8-LABEL: i16_v3i32_kernel_preload_arg:
-; GFX940-PRELOAD-8:       ; %bb.0:
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-8-NEXT:    s_load_dword s7, s[0:1], 0x8
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x20
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v3, 0
-; GFX940-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v4, s7
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, s4
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s5
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, s6
-; GFX940-PRELOAD-8-NEXT:    global_store_short v3, v4, s[2:3] sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    global_store_dwordx3 v3, v[0:2], s[8:9] sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    s_endpgm
-;
-; GFX90a-NO-PRELOAD-LABEL: i16_v3i32_kernel_preload_arg:
-; GFX90a-NO-PRELOAD:       ; %bb.0:
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
-; GFX90a-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dword s3, s[4:5], 0x8
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x20
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v3, 0
-; GFX90a-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v4, s3
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, s0
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s1
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v2, s2
-; GFX90a-NO-PRELOAD-NEXT:    global_store_short v3, v4, s[6:7]
-; GFX90a-NO-PRELOAD-NEXT:    global_store_dwordx3 v3, v[0:2], s[8:9]
-; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-2-LABEL: i16_v3i32_kernel_preload_arg:
-; GFX90a-PRELOAD-2:       ; %bb.0:
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
-; GFX90a-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-2-NEXT:    s_load_dword s3, s[4:5], 0x8
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x20
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v3, 0
-; GFX90a-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v4, s3
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, s0
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s1
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, s2
-; GFX90a-PRELOAD-2-NEXT:    global_store_short v3, v4, s[6:7]
-; GFX90a-PRELOAD-2-NEXT:    global_store_dwordx3 v3, v[0:2], s[8:9]
-; GFX90a-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-8-LABEL: i16_v3i32_kernel_preload_arg:
-; GFX90a-PRELOAD-8:       ; %bb.0:
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
-; GFX90a-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-8-NEXT:    s_load_dword s3, s[4:5], 0x8
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x20
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v3, 0
-; GFX90a-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v4, s3
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, s0
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s1
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, s2
-; GFX90a-PRELOAD-8-NEXT:    global_store_short v3, v4, s[6:7]
-; GFX90a-PRELOAD-8-NEXT:    global_store_dwordx3 v3, v[0:2], s[8:9]
-; GFX90a-PRELOAD-8-NEXT:    s_endpgm
-  store i16 %in, ptr addrspace(1) %out
-  store <3 x i32> %in2, ptr addrspace(1) %out2
-  ret void
-}
-
-define amdgpu_kernel void @i16_i16_kernel_preload_arg(ptr addrspace(1) %out, i16 %in, i16 %in2, ptr addrspace(1) %out2) #0 {
-; GFX940-NO-PRELOAD-LABEL: i16_i16_kernel_preload_arg:
-; GFX940-NO-PRELOAD:       ; %bb.0:
-; GFX940-NO-PRELOAD-NEXT:    s_load_dword s6, s[0:1], 0x8
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x10
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s6
-; GFX940-NO-PRELOAD-NEXT:    global_store_short v0, v1, s[2:3] sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    global_store_short_d16_hi v0, v1, s[4:5] sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-2-LABEL: i16_i16_kernel_preload_arg:
-; GFX940-PRELOAD-2:       ; %bb.0:
-; GFX940-PRELOAD-2-NEXT:    s_load_dword s6, s[0:1], 0x8
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x10
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s6
-; GFX940-PRELOAD-2-NEXT:    global_store_short v0, v1, s[2:3] sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    global_store_short_d16_hi v0, v1, s[4:5] sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-8-LABEL: i16_i16_kernel_preload_arg:
-; GFX940-PRELOAD-8:       ; %bb.0:
-; GFX940-PRELOAD-8-NEXT:    s_load_dword s6, s[0:1], 0x8
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x10
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s6
-; GFX940-PRELOAD-8-NEXT:    global_store_short v0, v1, s[2:3] sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    global_store_short_d16_hi v0, v1, s[4:5] sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    s_endpgm
-;
-; GFX90a-NO-PRELOAD-LABEL: i16_i16_kernel_preload_arg:
-; GFX90a-NO-PRELOAD:       ; %bb.0:
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dword s6, s[4:5], 0x8
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x10
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s6
-; GFX90a-NO-PRELOAD-NEXT:    global_store_short v0, v1, s[0:1]
-; GFX90a-NO-PRELOAD-NEXT:    global_store_short_d16_hi v0, v1, s[2:3]
-; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-2-LABEL: i16_i16_kernel_preload_arg:
-; GFX90a-PRELOAD-2:       ; %bb.0:
-; GFX90a-PRELOAD-2-NEXT:    s_load_dword s6, s[4:5], 0x8
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x10
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s6
-; GFX90a-PRELOAD-2-NEXT:    global_store_short v0, v1, s[0:1]
-; GFX90a-PRELOAD-2-NEXT:    global_store_short_d16_hi v0, v1, s[2:3]
-; GFX90a-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-8-LABEL: i16_i16_kernel_preload_arg:
-; GFX90a-PRELOAD-8:       ; %bb.0:
-; GFX90a-PRELOAD-8-NEXT:    s_load_dword s6, s[4:5], 0x8
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x10
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s6
-; GFX90a-PRELOAD-8-NEXT:    global_store_short v0, v1, s[0:1]
-; GFX90a-PRELOAD-8-NEXT:    global_store_short_d16_hi v0, v1, s[2:3]
-; GFX90a-PRELOAD-8-NEXT:    s_endpgm
-  store i16 %in, ptr addrspace(1) %out
-  store i16 %in2, ptr addrspace(1) %out2
-  ret void
-}
-
-define amdgpu_kernel void @i16_v2i8_kernel_preload_arg(ptr addrspace(1) %out, i16 %in, <2 x i8> %in2, ptr addrspace(1) %out2) #0 {
-; GFX940-NO-PRELOAD-LABEL: i16_v2i8_kernel_preload_arg:
-; GFX940-NO-PRELOAD:       ; %bb.0:
-; GFX940-NO-PRELOAD-NEXT:    s_load_dword s6, s[0:1], 0x8
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x10
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s6
-; GFX940-NO-PRELOAD-NEXT:    global_store_short v0, v1, s[2:3] sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    global_store_short_d16_hi v0, v1, s[4:5] sc0 sc1
-; GFX940-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-2-LABEL: i16_v2i8_kernel_preload_arg:
-; GFX940-PRELOAD-2:       ; %bb.0:
-; GFX940-PRELOAD-2-NEXT:    s_load_dword s6, s[0:1], 0x8
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x10
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s6
-; GFX940-PRELOAD-2-NEXT:    global_store_short v0, v1, s[2:3] sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    global_store_short_d16_hi v0, v1, s[4:5] sc0 sc1
-; GFX940-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX940-PRELOAD-8-LABEL: i16_v2i8_kernel_preload_arg:
-; GFX940-PRELOAD-8:       ; %bb.0:
-; GFX940-PRELOAD-8-NEXT:    s_load_dword s6, s[0:1], 0x8
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x10
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s6
-; GFX940-PRELOAD-8-NEXT:    global_store_short v0, v1, s[2:3] sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    global_store_short_d16_hi v0, v1, s[4:5] sc0 sc1
-; GFX940-PRELOAD-8-NEXT:    s_endpgm
-;
-; GFX90a-NO-PRELOAD-LABEL: i16_v2i8_kernel_preload_arg:
-; GFX90a-NO-PRELOAD:       ; %bb.0:
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dword s6, s[4:5], 0x8
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x10
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s6
-; GFX90a-NO-PRELOAD-NEXT:    global_store_short v0, v1, s[0:1]
-; GFX90a-NO-PRELOAD-NEXT:    global_store_short_d16_hi v0, v1, s[2:3]
-; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-2-LABEL: i16_v2i8_kernel_preload_arg:
-; GFX90a-PRELOAD-2:       ; %bb.0:
-; GFX90a-PRELOAD-2-NEXT:    s_load_dword s6, s[4:5], 0x8
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x10
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s6
-; GFX90a-PRELOAD-2-NEXT:    global_store_short v0, v1, s[0:1]
-; GFX90a-PRELOAD-2-NEXT:    global_store_short_d16_hi v0, v1, s[2:3]
-; GFX90a-PRELOAD-2-NEXT:    s_endpgm
-;
-; GFX90a-PRELOAD-8-LABEL: i16_v2i8_kernel_preload_arg:
-; GFX90a-PRELOAD-8:       ; %bb.0:
-; GFX90a-PRELOAD-8-NEXT:    s_load_dword s6, s[4:5], 0x8
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x10
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s6
-; GFX90a-PRELOAD-8-NEXT:    global_store_short v0, v1, s[0:1]
-; GFX90a-PRELOAD-8-NEXT:    global_store_short_d16_hi v0, v1, s[2:3]
-; GFX90a-PRELOAD-8-NEXT:    s_endpgm
-  store i16 %in, ptr addrspace(1) %out
-  store <2 x i8> %in2, ptr addrspace(1) %out2
-  ret void
-}
-
-attributes #0 = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
->>>>>>> 07b01b6e8852 (rebase to main)
