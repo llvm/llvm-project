@@ -473,4 +473,32 @@ TEST_F(EnvironmentTest, Stmt) {
   Env.getResultObjectLocation(*Init);
 }
 
+// This is a crash repro.
+TEST_F(EnvironmentTest, LambdaCapturingThisInFieldInitializer) {
+  using namespace ast_matchers;
+  std::string Code = R"cc(
+      struct S {
+        int f{[this]() { return 1; }()};
+      };
+    )cc";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++11"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto *LambdaCallOperator = selectFirst<CXXMethodDecl>(
+      "method", match(cxxMethodDecl(hasName("operator()"),
+                                    ofClass(cxxRecordDecl(isLambda())))
+                          .bind("method"),
+                      Context));
+
+  Environment Env(DAContext, *LambdaCallOperator);
+  // Don't crash when initializing.
+  Env.initialize();
+  // And initialize the captured `this` pointee.
+  ASSERT_NE(nullptr, Env.getThisPointeeStorageLocation());
+}
+
 } // namespace
