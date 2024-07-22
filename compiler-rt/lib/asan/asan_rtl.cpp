@@ -36,6 +36,9 @@
 uptr __asan_shadow_memory_dynamic_address;  // Global interface symbol.
 int __asan_option_detect_stack_use_after_return;  // Global interface symbol.
 uptr *__asan_test_only_reported_buggy_pointer;  // Used only for testing asan.
+bool __asan_is_dormant = true;
+
+void __asan_set_dormant(int dormancy) { __asan_is_dormant = dormancy; }
 
 namespace __asan {
 

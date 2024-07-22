@@ -184,6 +184,9 @@ extern "C" {
   SANITIZER_INTERFACE_ATTRIBUTE
   void __asan_set_error_report_callback(void (*callback)(const char*));
 
+  SANITIZER_INTERFACE_ATTRIBUTE
+  void __asan_set_dormant(int dormancy);
+
   SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
   void __asan_on_error();
 
@@ -201,6 +204,9 @@ extern "C" {
 
   SANITIZER_INTERFACE_ATTRIBUTE
   extern uptr *__asan_test_only_reported_buggy_pointer;
+
+  SANITIZER_INTERFACE_ATTRIBUTE
+  extern bool __asan_is_dormant;
 
   SANITIZER_INTERFACE_ATTRIBUTE void __asan_load1(uptr p);
   SANITIZER_INTERFACE_ATTRIBUTE void __asan_load2(uptr p);

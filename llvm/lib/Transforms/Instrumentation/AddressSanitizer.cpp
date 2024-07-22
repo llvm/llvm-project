@@ -178,6 +178,8 @@ const char kAMDGPUAddressPrivateName[] = "llvm.amdgcn.is.private";
 const char kAMDGPUBallotName[] = "llvm.amdgcn.ballot.i64";
 const char kAMDGPUUnreachableName[] = "llvm.amdgcn.unreachable";
 
+const char kAsanDormancyVarName[] = "__asan_is_dormant";
+
 // Accesses sizes are powers of two: 1, 2, 4, 8, 16.
 static const size_t kNumberOfAccessSizes = 5;
 
@@ -451,6 +453,10 @@ static cl::opt<int> ClDebugMin("asan-debug-min", cl::desc("Debug min inst"),
 
 static cl::opt<int> ClDebugMax("asan-debug-max", cl::desc("Debug max inst"),
                                cl::Hidden, cl::init(-1));
+
+static cl::opt<bool> CLAsanDormant("asan-dormant",
+                                   cl::desc("Makes asan dormant"), cl::Hidden,
+                                   cl::init(false));
 
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
@@ -852,6 +858,7 @@ private:
 
   FunctionCallee AsanMemmove, AsanMemcpy, AsanMemset;
   Value *LocalDynamicShadow = nullptr;
+  Constant *DormantAsanFlag;
   const StackSafetyGlobalInfo *SSGI;
   DenseMap<const AllocaInst *, bool> ProcessedAllocas;
 
@@ -1584,6 +1591,12 @@ bool AddressSanitizer::GlobalIsLinkerInitialized(GlobalVariable *G) {
 void AddressSanitizer::instrumentPointerComparisonOrSubtraction(
     Instruction *I, RuntimeCallInserter &RTCI) {
   IRBuilder<> IRB(I);
+
+  if (CLAsanDormant)
+    IRB.SetInsertPoint(SplitBlockAndInsertIfThen(
+        IRB.CreateNot(IRB.CreateLoad(IRB.getInt1Ty(), DormantAsanFlag)), I,
+        false));
+
   FunctionCallee F = isa<ICmpInst>(I) ? AsanPtrCmpFunction : AsanPtrSubFunction;
   Value *Param[2] = {I->getOperand(0), I->getOperand(1)};
   for (Value *&i : Param) {
@@ -1598,9 +1611,19 @@ static void doInstrumentAddress(AddressSanitizer *Pass, Instruction *I,
                                 MaybeAlign Alignment, unsigned Granularity,
                                 TypeSize TypeStoreSize, bool IsWrite,
                                 Value *SizeArgument, bool UseCalls,
-                                uint32_t Exp, RuntimeCallInserter &RTCI) {
+                                uint32_t Exp, RuntimeCallInserter &RTCI,
+                                Value *DormantAsanFlag) {
   // Instrument a 1-, 2-, 4-, 8-, or 16- byte access with one check
   // if the data is properly aligned.
+
+  Instruction *InsertPoint = InsertBefore;
+  if (CLAsanDormant) {
+    InstrumentationIRBuilder IRB(InsertPoint);
+    InsertPoint = SplitBlockAndInsertIfThen(
+        IRB.CreateNot(IRB.CreateLoad(IRB.getInt1Ty(), DormantAsanFlag)),
+        InsertBefore, false);
+  }
+
   if (!TypeStoreSize.isScalable()) {
     const auto FixedSize = TypeStoreSize.getFixedValue();
     switch (FixedSize) {
@@ -1611,12 +1634,12 @@ static void doInstrumentAddress(AddressSanitizer *Pass, Instruction *I,
     case 128:
       if (!Alignment || *Alignment >= Granularity ||
           *Alignment >= FixedSize / 8)
-        return Pass->instrumentAddress(I, InsertBefore, Addr, Alignment,
+        return Pass->instrumentAddress(I, InsertPoint, Addr, Alignment,
                                        FixedSize, IsWrite, nullptr, UseCalls,
                                        Exp, RTCI);
     }
   }
-  Pass->instrumentUnusualSizeOrAlignment(I, InsertBefore, Addr, TypeStoreSize,
+  Pass->instrumentUnusualSizeOrAlignment(I, InsertPoint, Addr, TypeStoreSize,
                                          IsWrite, nullptr, UseCalls, Exp, RTCI);
 }
 
@@ -1632,6 +1655,14 @@ void AddressSanitizer::instrumentMaskedLoadOrStore(
 
   IRBuilder IB(I);
   Instruction *LoopInsertBefore = I;
+
+  if (CLAsanDormant) {
+    LoopInsertBefore = SplitBlockAndInsertIfThen(
+        IB.CreateNot(IB.CreateLoad(IB.getInt1Ty(), DormantAsanFlag)),
+        LoopInsertBefore, false);
+    IB.SetInsertPoint(LoopInsertBefore);
+  }
+
   if (EVL) {
     // The end argument of SplitBlockAndInsertForLane is assumed bigger
     // than zero, so we should check whether EVL is zero here.
@@ -1682,7 +1713,7 @@ void AddressSanitizer::instrumentMaskedLoadOrStore(
     }
     doInstrumentAddress(Pass, I, &*IRB.GetInsertPoint(), InstrumentedAddress,
                         Alignment, Granularity, ElemTypeSize, IsWrite,
-                        SizeArgument, UseCalls, Exp, RTCI);
+                        SizeArgument, UseCalls, Exp, RTCI, DormantAsanFlag);
   });
 }
 
@@ -1739,7 +1770,7 @@ void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
   } else {
     doInstrumentAddress(this, O.getInsn(), O.getInsn(), Addr, O.Alignment,
                         Granularity, O.TypeStoreSize, O.IsWrite, nullptr,
-                        UseCalls, Exp, RTCI);
+                        UseCalls, Exp, RTCI, DormantAsanFlag);
   }
 }
 
@@ -1851,6 +1882,11 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
   }
 
   InstrumentationIRBuilder IRB(InsertBefore);
+  if (CLAsanDormant)
+    IRB.SetInsertPoint(SplitBlockAndInsertIfThen(
+        IRB.CreateNot(IRB.CreateLoad(IRB.getInt1Ty(), DormantAsanFlag)),
+        InsertBefore, false));
+
   size_t AccessSizeIndex = TypeStoreSizeToSizeIndex(TypeStoreSize);
 
   if (UseCalls && ClOptimizeCallbacks) {
@@ -2860,6 +2896,8 @@ void AddressSanitizer::initializeCallbacks(Module &M, const TargetLibraryInfo *T
       M.getOrInsertFunction(kAMDGPUAddressSharedName, IRB.getInt1Ty(), PtrTy);
   AMDGPUAddressPrivate =
       M.getOrInsertFunction(kAMDGPUAddressPrivateName, IRB.getInt1Ty(), PtrTy);
+
+  DormantAsanFlag = M.getOrInsertGlobal(kAsanDormancyVarName, IRB.getInt1Ty());
 }
 
 bool AddressSanitizer::maybeInsertAsanInitAtFunctionEntry(Function &F) {
