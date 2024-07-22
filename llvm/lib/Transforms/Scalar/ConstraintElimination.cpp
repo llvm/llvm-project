@@ -1704,7 +1704,7 @@ static void dryRunAddFact(CmpInst::Predicate Pred, Value *A, Value *B,
     // We abuse the Value2Index map by storing a map of Value -> size of
     // decompose(Value).Vars. We do this to avoid wastefully calling decompose
     // on chains we have already seen.
-    auto &DecompSizes = Info.getValue2Index(IsSigned);
+    auto &DecompSizes = Info.getValue2Index(true);
     const auto &DL = Info.getDataLayout();
 
     auto GetDecompSize = [&DL, &DecompSizes, IsSigned](Value *V) {
@@ -1777,8 +1777,17 @@ dryRun(Function &F, DominatorTree &DT, LoopInfo &LI, ScalarEvolution &SE) {
   // EstimatedRowsA corresponds to SignedCS, and EstimatedRowsB corresponds to
   // UnsignedCS.
   unsigned EstimatedRowsA = 0, EstimatedRowsB = 1;
-  unsigned EstimatedColumns = 1;
+  unsigned EstimatedColumns = F.arg_end() - F.arg_begin() + 1;
   ConstraintInfo Info(F.getDataLayout(), {});
+
+  // We abuse the Value2Index map by storing a map of Value -> size of
+  // decompose(Value).Vars. We do this to avoid wastefully calling decompose
+  // on chains we have already seen.
+  //
+  // Function arguments don't decompose into anything non-trivial.
+  auto &DecompSizes = Info.getValue2Index(true);
+  for (Value &A : F.args())
+    DecompSizes.insert({&A, 1});
 
   // First, collect conditions implied by branches and blocks with their
   // Dominator DFS in and out numbers.
