@@ -440,6 +440,13 @@ Non-comprehensive list of changes in this release
   pointers, enabling more powerful alias analysis when accessing pointer types.
   The new behavior can be enabled using ``-fpointer-tbaa``.
 
+- The ``__atomic_always_lock_free`` and ``__atomic_is_lock_free``
+  builtins may now return true if the pointer argument is a
+  compile-time constant (e.g. ``(void*)4``), and constant pointer is
+  sufficiently-aligned for the access requested. Previously, only the
+  type of the pointer was taken into account. This improves
+  compatibility with GCC's libstdc++.
+
 New Compiler Flags
 ------------------
 - ``-fsanitize=implicit-bitfield-conversion`` checks implicit truncation and
