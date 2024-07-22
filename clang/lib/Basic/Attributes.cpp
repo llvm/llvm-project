@@ -153,6 +153,40 @@ std::string AttributeCommonInfo::getNormalizedFullName() const {
       normalizeName(getAttrName(), getScopeName(), getSyntax()));
 }
 
+static StringRef getSyntaxName(AttributeCommonInfo::Syntax SyntaxUsed) {
+  switch (SyntaxUsed) {
+  case AttributeCommonInfo::AS_GNU:
+    return "GNU";
+  case AttributeCommonInfo::AS_CXX11:
+    return "CXX11";
+  case AttributeCommonInfo::AS_C23:
+    return "C23";
+  case AttributeCommonInfo::AS_Declspec:
+    return "Declspec";
+  case AttributeCommonInfo::AS_Microsoft:
+    return "Microsoft";
+  case AttributeCommonInfo::AS_Keyword:
+    return "Keyword";
+  case AttributeCommonInfo::AS_Pragma:
+    return "Pragma";
+  case AttributeCommonInfo::AS_ContextSensitiveKeyword:
+    return "ContextSensitiveKeyword";
+  case AttributeCommonInfo::AS_HLSLAnnotation:
+    return "HLSLAnnotation";
+  case AttributeCommonInfo::AS_Implicit:
+    return "Implicit";
+  }
+}
+
+std::string AttributeCommonInfo::getNormalizedFullNameWithSyntax(
+    const IdentifierInfo *Name, const IdentifierInfo *ScopeName,
+    Syntax SyntaxUsed) {
+  std::string FullName = getSyntaxName(SyntaxUsed).str();
+  FullName += "::";
+  return FullName +=
+         static_cast<std::string>(normalizeName(Name, ScopeName, SyntaxUsed));
+}
+
 unsigned AttributeCommonInfo::calculateAttributeSpellingListIndex() const {
   // Both variables will be used in tablegen generated
   // attribute spell list index matching code.
