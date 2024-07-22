@@ -72,6 +72,31 @@ func.func @qcast_per_layer_scalar_unsigned_bounds(%arg0: f32) -> !qalias {
 
 // -----
 
+// CHECK-LABEL: @qcast_per_layer_0d
+// CHECK-SAME: %[[ARG_0:.*]]: tensor<f32>
+
+// CHECK-DAG: %[[SCALE:.*]] = arith.constant 2.000000e+00 : f32
+// CHECK-DAG: %[[ZERO_POINT:.*]] = arith.constant 10 : i8
+
+// CHECK: %[[SCALE_TENSOR:.*]] = tensor.splat %[[SCALE]] : tensor<f32>
+// CHECK: %[[SCALED:.*]] = arith.divf %[[ARG_0]], %[[SCALE_TENSOR]] : tensor<f32>
+
+// CHECK: %[[ZERO_POINT_TENSOR:.*]] = tensor.splat %[[ZERO_POINT]] : tensor<i8>
+// CHECK: %[[ZERO_POINT_FLOAT:.*]] = arith.sitofp %[[ZERO_POINT_TENSOR]] : tensor<i8> to tensor<f32>
+// CHECK: %[[STORED_FLOAT:.*]] = arith.addf %[[SCALED]], %[[ZERO_POINT_FLOAT]] : tensor<f32>
+// CHECK: %[[STORED_INT:.*]] = arith.fptosi %[[STORED_FLOAT]] : tensor<f32> to tensor<i8>
+
+// CHECK: %[[STORED_QUANT:.*]] = quant.scast %[[STORED_INT]] : tensor<i8> to tensor<!quant.uniform<i8:f32, 2.000000e+00:10>>
+// CHECK: return %[[STORED_QUANT]] : tensor<!quant.uniform<i8:f32, 2.000000e+00:10>>
+
+!qalias = !quant.uniform<i8:f32, 2.0:10>
+func.func @qcast_per_layer_0d(%arg0: tensor<f32>) -> tensor<!qalias> {
+  %0 = quant.qcast %arg0 : tensor<f32> to tensor<!qalias>
+  return %0 : tensor<!qalias>
+}
+
+// -----
+
 // CHECK-LABEL: @qcast_per_layer_ranked
 // CHECK-SAME: %[[ARG_0:.*]]: tensor<3x?x5xf32>
 
@@ -95,31 +120,6 @@ func.func @qcast_per_layer_scalar_unsigned_bounds(%arg0: f32) -> !qalias {
 func.func @qcast_per_layer_ranked(%arg0: tensor<3x?x5xf32>) -> tensor<3x?x5x!qalias> {
   %0 = quant.qcast %arg0 : tensor<3x?x5xf32> to tensor<3x?x5x!qalias>
   return %0 : tensor<3x?x5x!qalias>
-}
-
-// -----
-
-// CHECK-LABEL: @qcast_per_layer_0d
-// CHECK-SAME: %[[ARG_0:.*]]: tensor<f32>
-
-// CHECK-DAG: %[[SCALE:.*]] = arith.constant 2.000000e+00 : f32
-// CHECK-DAG: %[[ZERO_POINT:.*]] = arith.constant 10 : i8
-
-// CHECK: %[[SCALE_TENSOR:.*]] = tensor.splat %[[SCALE]] : tensor<f32>
-// CHECK: %[[SCALED:.*]] = arith.divf %[[ARG_0]], %[[SCALE_TENSOR]] : tensor<f32>
-
-// CHECK: %[[ZERO_POINT_TENSOR:.*]] = tensor.splat %[[ZERO_POINT]] : tensor<i8>
-// CHECK: %[[ZERO_POINT_FLOAT:.*]] = arith.sitofp %[[ZERO_POINT_TENSOR]] : tensor<i8> to tensor<f32>
-// CHECK: %[[STORED_FLOAT:.*]] = arith.addf %[[SCALED]], %[[ZERO_POINT_FLOAT]] : tensor<f32>
-// CHECK: %[[STORED_INT:.*]] = arith.fptosi %[[STORED_FLOAT]] : tensor<f32> to tensor<i8>
-
-// CHECK: %[[STORED_QUANT:.*]] = quant.scast %[[STORED_INT]] : tensor<i8> to tensor<!quant.uniform<i8:f32, 2.000000e+00:10>>
-// CHECK: return %[[STORED_QUANT]] : tensor<!quant.uniform<i8:f32, 2.000000e+00:10>>
-
-!qalias = !quant.uniform<i8:f32, 2.0:10>
-func.func @qcast_per_layer_0d(%arg0: tensor<f32>) -> tensor<!qalias> {
-  %0 = quant.qcast %arg0 : tensor<f32> to tensor<!qalias>
-  return %0 : tensor<!qalias>
 }
 
 // -----
@@ -303,5 +303,50 @@ func.func @qcast_per_channel_ranked_bounds(%arg0: tensor<4x2x5xf32>) -> tensor<4
 func.func @qcast_per_channel_unranked(%arg0: tensor<*xf32>) -> tensor<*x!qalias> {
   %0 = "quant.qcast"(%arg0) : (tensor<*xf32>) -> tensor<*x!qalias>
   return %0 : tensor<*x!qalias>
+}
+
+// -----
+
+// CHECK-LABEL: @dcast_per_layer_scalar
+// CHECK-SAME: %[[ARG_0:.*]]: !quant.uniform
+
+// CHECK: %[[STORED_INT:.*]] = quant.scast %[[ARG_0]] : !quant.uniform<i8:f32, 2.000000e+00:10> to i8
+
+// CHECK: %[[SCALE:.*]] = arith.constant 2.000000e+00 : f32
+// CHECK: %[[ZERO_POINT:.*]] = arith.constant 10 : i8
+// CHECK: %[[STORED_FLOAT:.*]] = arith.sitofp %[[STORED_INT]] : i8 to f32
+// CHECK: %[[ZERO_POINT_FLOAT:.*]] = arith.sitofp %[[ZERO_POINT]] : i8 to f32
+
+// CHECK: %[[SCALED:.*]] = arith.subf %[[STORED_FLOAT]], %[[ZERO_POINT_FLOAT]] : f32
+// CHECK: %[[EXPRESSED:.*]] = arith.mulf %[[SCALED]], %[[SCALE]] : f32
+// CHECK: return %[[EXPRESSED]] : f32
+
+!qalias = !quant.uniform<i8:f32, 2.0:10>
+func.func @dcast_per_layer_scalar(%arg0: !qalias) -> f32 {
+  %0 = quant.dcast %arg0 : !qalias to f32
+  return %0 : f32
+}
+
+// -----
+
+// CHECK-LABEL: @dcast_per_layer_scalar_unsigned
+// CHECK-SAME: %[[ARG_0:.*]]: !quant.uniform
+
+// CHECK: %[[STORED_INT:.*]] = quant.scast %[[ARG_0]] : !quant.uniform<u8:f32, 2.000000e+00:10> to i8
+
+// CHECK: %[[SCALE:.*]] = arith.constant 2.000000e+00 : f32
+// CHECK: %[[ZERO_POINT:.*]] = arith.constant 10 : i8
+
+// CHECK: %[[STORED_FLOAT:.*]] = arith.uitofp %[[STORED_INT]] : i8 to f32
+// CHECK: %[[ZERO_POINT_FLOAT:.*]] = arith.uitofp %[[ZERO_POINT]] : i8 to f32
+
+// CHECK: %[[SCALED:.*]] = arith.subf %[[STORED_FLOAT]], %[[ZERO_POINT_FLOAT]] : f32
+// CHECK: %[[EXPRESSED:.*]] = arith.mulf %[[SCALED]], %[[SCALE]] : f32
+// CHECK: return %[[EXPRESSED]] : f32
+
+!qalias = !quant.uniform<u8:f32, 2.0:10>
+func.func @dcast_per_layer_scalar_unsigned(%arg0: !qalias) -> f32 {
+  %0 = quant.dcast %arg0 : !qalias to f32
+  return %0 : f32
 }
 
