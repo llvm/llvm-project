@@ -963,8 +963,7 @@ struct DSEState {
            PostDominatorTree &PDT, const TargetLibraryInfo &TLI,
            const LoopInfo &LI, const TargetTransformInfo &TTI)
       : F(F), AA(AA), EI(DT, &LI), BatchAA(AA, &EI), MSSA(MSSA), DT(DT),
-        PDT(PDT), TLI(TLI), DL(F.getDataLayout()), LI(LI),
-        TTI(TTI) {
+        PDT(PDT), TLI(TLI), DL(F.getDataLayout()), LI(LI), TTI(TTI) {
     // Collect blocks with throwing instructions not modeled in MemorySSA and
     // alloc-like objects.
     unsigned PO = 0;
