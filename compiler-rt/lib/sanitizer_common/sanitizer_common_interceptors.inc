@@ -1251,6 +1251,7 @@ INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, prctl, option, arg2, arg3, arg4, arg5);
   static const int PR_SET_NAME = 15;
+  static const int PR_GET_NAME = 16;
   static const int PR_SET_VMA = 0x53564d41;
   static const int PR_SCHED_CORE = 62;
   static const int PR_SCHED_CORE_GET = 0;
@@ -1264,7 +1265,11 @@ INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
     internal_strncpy(buff, (char *)arg2, 15);
     buff[15] = 0;
     COMMON_INTERCEPTOR_SET_THREAD_NAME(ctx, buff);
-  } else if (res != -1 && option == PR_SCHED_CORE && arg2 == PR_SCHED_CORE_GET) {
+  } else if (res == 0 && option == PR_GET_NAME) {
+    char *name = (char *)arg2;
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, name, internal_strlen(name) + 1);
+  } else if (res != -1 && option == PR_SCHED_CORE &&
+             arg2 == PR_SCHED_CORE_GET) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (u64*)(arg5), sizeof(u64));
   }
   return res;
@@ -6331,7 +6336,7 @@ INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
 
       const char *SelfFName = DladdrSelfFName();
       VPrintf(1, "dlopen interceptor: DladdrSelfFName: %p %s\n",
-              (void *)SelfFName, SelfFName);
+              (const void *)SelfFName, SelfFName);
 
       if (SelfFName && internal_strcmp(SelfFName, filename) == 0) {
         // It's possible they copied the string from dladdr, so
@@ -10259,6 +10264,38 @@ INTERCEPTOR(int, cpuset_getaffinity, int level, int which, __int64_t id, SIZE_T 
 #define INIT_CPUSET_GETAFFINITY
 #endif
 
+#if SANITIZER_INTERCEPT_PREADV2
+INTERCEPTOR(SSIZE_T, preadv2, int fd, __sanitizer_iovec *iov, int iovcnt,
+            OFF_T offset, int flags) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, preadv2, fd, iov, iovcnt, offset, flags);
+  COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
+  SSIZE_T res = REAL(preadv2)(fd, iov, iovcnt, offset, flags);
+  if (res > 0) write_iovec(ctx, iov, iovcnt, res);
+  if (res >= 0 && fd >= 0) COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
+  return res;
+}
+#define INIT_PREADV2 COMMON_INTERCEPT_FUNCTION(preadv2)
+#else
+#define INIT_PREADV2
+#endif
+
+#if SANITIZER_INTERCEPT_PWRITEV2
+INTERCEPTOR(SSIZE_T, pwritev2, int fd, __sanitizer_iovec *iov, int iovcnt,
+            OFF_T offset, int flags) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, pwritev2, fd, iov, iovcnt, offset, flags);
+  COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
+  if (fd >= 0) COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd);
+  SSIZE_T res = REAL(pwritev2)(fd, iov, iovcnt, offset, flags);
+  if (res > 0) read_iovec(ctx, iov, iovcnt, res);
+  return res;
+}
+#define INIT_PWRITEV2 COMMON_INTERCEPT_FUNCTION(pwritev2)
+#else
+#define INIT_PWRITEV2
+#endif
+
 #include "sanitizer_common_interceptors_netbsd_compat.inc"
 
 namespace __sanitizer {
@@ -10578,6 +10615,8 @@ static void InitializeCommonInterceptors() {
   INIT___XUNAME;
   INIT_ARGP_PARSE;
   INIT_CPUSET_GETAFFINITY;
+  INIT_PREADV2;
+  INIT_PWRITEV2;
 
   INIT___PRINTF_CHK;
 }

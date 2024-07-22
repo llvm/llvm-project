@@ -118,6 +118,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  math_function_macros
+  HDR
+    math-function-macros.h
+)
+
+add_macro_header(
   offsetof_macro
   HDR
     offsetof-macro.h

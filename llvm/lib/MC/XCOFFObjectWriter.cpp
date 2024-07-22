@@ -596,6 +596,9 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
     const MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(&S);
     const MCSectionXCOFF *ContainingCsect = getContainingCsect(XSym);
 
+    if (ContainingCsect->isDwarfSect())
+      continue;
+
     if (XSym->getVisibilityType() != XCOFF::SYM_V_UNSPECIFIED)
       HasVisibility = true;
 
@@ -825,8 +828,6 @@ uint64_t XCOFFObjectWriter::writeObject(MCAssembler &Asm) {
   // We always emit a timestamp of 0 for reproducibility, so ensure incremental
   // linking is not enabled, in case, like with Windows COFF, such a timestamp
   // is incompatible with incremental linking of XCOFF.
-  if (Asm.isIncrementalLinkerCompatible())
-    report_fatal_error("Incremental linking not supported for XCOFF.");
 
   finalizeSectionInfo();
   uint64_t StartOffset = W.OS.tell();
@@ -1385,11 +1386,10 @@ void XCOFFObjectWriter::addExceptionEntry(
 unsigned XCOFFObjectWriter::getExceptionSectionSize() {
   unsigned EntryNum = 0;
 
-  for (auto it = ExceptionSection.ExceptionTable.begin();
-       it != ExceptionSection.ExceptionTable.end(); ++it)
+  for (const auto &TableEntry : ExceptionSection.ExceptionTable)
     // The size() gets +1 to account for the initial entry containing the
     // symbol table index.
-    EntryNum += it->second.Entries.size() + 1;
+    EntryNum += TableEntry.second.Entries.size() + 1;
 
   return EntryNum * (is64Bit() ? XCOFF::ExceptionSectionEntrySize64
                                : XCOFF::ExceptionSectionEntrySize32);
@@ -1397,11 +1397,10 @@ unsigned XCOFFObjectWriter::getExceptionSectionSize() {
 
 unsigned XCOFFObjectWriter::getExceptionOffset(const MCSymbol *Symbol) {
   unsigned EntryNum = 0;
-  for (auto it = ExceptionSection.ExceptionTable.begin();
-       it != ExceptionSection.ExceptionTable.end(); ++it) {
-    if (Symbol == it->second.FunctionSymbol)
+  for (const auto &TableEntry : ExceptionSection.ExceptionTable) {
+    if (Symbol == TableEntry.second.FunctionSymbol)
       break;
-    EntryNum += it->second.Entries.size() + 1;
+    EntryNum += TableEntry.second.Entries.size() + 1;
   }
   return EntryNum * (is64Bit() ? XCOFF::ExceptionSectionEntrySize64
                                : XCOFF::ExceptionSectionEntrySize32);
@@ -1667,17 +1666,16 @@ void XCOFFObjectWriter::writeSectionForDwarfSectionEntry(
 void XCOFFObjectWriter::writeSectionForExceptionSectionEntry(
     const MCAssembler &Asm, ExceptionSectionEntry &ExceptionEntry,
     uint64_t &CurrentAddressLocation) {
-  for (auto it = ExceptionEntry.ExceptionTable.begin();
-       it != ExceptionEntry.ExceptionTable.end(); it++) {
+  for (const auto &TableEntry : ExceptionEntry.ExceptionTable) {
     // For every symbol that has exception entries, you must start the entries
     // with an initial symbol table index entry
-    W.write<uint32_t>(SymbolIndexMap[it->second.FunctionSymbol]);
+    W.write<uint32_t>(SymbolIndexMap[TableEntry.second.FunctionSymbol]);
     if (is64Bit()) {
       // 4-byte padding on 64-bit.
       W.OS.write_zeros(4);
     }
     W.OS.write_zeros(2);
-    for (auto &TrapEntry : it->second.Entries) {
+    for (auto &TrapEntry : TableEntry.second.Entries) {
       writeWord(TrapEntry.TrapAddress);
       W.write<uint8_t>(TrapEntry.Lang);
       W.write<uint8_t>(TrapEntry.Reason);

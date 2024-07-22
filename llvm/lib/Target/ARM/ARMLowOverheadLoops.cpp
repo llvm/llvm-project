@@ -484,7 +484,7 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.setPreservesCFG();
-      AU.addRequired<MachineLoopInfo>();
+      AU.addRequired<MachineLoopInfoWrapperPass>();
       AU.addRequired<ReachingDefAnalysis>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
@@ -1295,7 +1295,7 @@ bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
   LLVM_DEBUG(dbgs() << "ARM Loops on " << MF->getName() << " ------------- \n");
 
-  MLI = &getAnalysis<MachineLoopInfo>();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   RDA = &getAnalysis<ReachingDefAnalysis>();
   MF->getProperties().set(MachineFunctionProperties::Property::TracksLiveness);
   MRI = &MF->getRegInfo();

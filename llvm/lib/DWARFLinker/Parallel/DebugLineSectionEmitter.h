@@ -359,6 +359,7 @@ private:
         Section.emitIntVal(dwarf::DW_LNE_set_discriminator, 1);
         encodeULEB128(Discriminator, Section.OS);
       }
+      Discriminator = 0;
 
       if (Isa != Row.Isa) {
         Isa = Row.Isa;

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGOpenMPRuntime.h"
+#include "ABIInfoImpl.h"
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
 #include "CGRecordLayout.h"
@@ -4258,14 +4259,18 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
     // Include number of iterations, if any.
 
     if (const auto *IE = cast_or_null<OMPIteratorExpr>(D.IteratorExpr)) {
+      llvm::Value *ClauseIteratorSpace =
+          llvm::ConstantInt::get(CGF.IntPtrTy, 1);
       for (unsigned I = 0, E = IE->numOfIterators(); I < E; ++I) {
         llvm::Value *Sz = CGF.EmitScalarExpr(IE->getHelper(I).Upper);
         Sz = CGF.Builder.CreateIntCast(Sz, CGF.IntPtrTy, /*isSigned=*/false);
-        llvm::Value *NumClauseDeps = CGF.Builder.CreateNUWMul(
-            Sz, llvm::ConstantInt::get(CGF.IntPtrTy, D.DepExprs.size()));
-        NumOfRegularWithIterators =
-            CGF.Builder.CreateNUWAdd(NumOfRegularWithIterators, NumClauseDeps);
+        ClauseIteratorSpace = CGF.Builder.CreateNUWMul(Sz, ClauseIteratorSpace);
       }
+      llvm::Value *NumClauseDeps = CGF.Builder.CreateNUWMul(
+          ClauseIteratorSpace,
+          llvm::ConstantInt::get(CGF.IntPtrTy, D.DepExprs.size()));
+      NumOfRegularWithIterators =
+          CGF.Builder.CreateNUWAdd(NumOfRegularWithIterators, NumClauseDeps);
       HasRegularWithIterators = true;
       continue;
     }
@@ -7729,12 +7734,15 @@ private:
     for (const auto &I : RD->bases()) {
       if (I.isVirtual())
         continue;
-      const auto *Base = I.getType()->getAsCXXRecordDecl();
+
+      QualType BaseTy = I.getType();
+      const auto *Base = BaseTy->getAsCXXRecordDecl();
       // Ignore empty bases.
-      if (Base->isEmpty() || CGF.getContext()
-                                 .getASTRecordLayout(Base)
-                                 .getNonVirtualSize()
-                                 .isZero())
+      if (isEmptyRecordForLayout(CGF.getContext(), BaseTy) ||
+          CGF.getContext()
+              .getASTRecordLayout(Base)
+              .getNonVirtualSize()
+              .isZero())
         continue;
 
       unsigned FieldIndex = RL.getNonVirtualBaseLLVMFieldNo(Base);
@@ -7742,10 +7750,12 @@ private:
     }
     // Fill in virtual bases.
     for (const auto &I : RD->vbases()) {
-      const auto *Base = I.getType()->getAsCXXRecordDecl();
+      QualType BaseTy = I.getType();
       // Ignore empty bases.
-      if (Base->isEmpty())
+      if (isEmptyRecordForLayout(CGF.getContext(), BaseTy))
         continue;
+
+      const auto *Base = BaseTy->getAsCXXRecordDecl();
       unsigned FieldIndex = RL.getVirtualBaseIndex(Base);
       if (RecordLayout[FieldIndex])
         continue;
@@ -7756,7 +7766,8 @@ private:
     for (const auto *Field : RD->fields()) {
       // Fill in non-bitfields. (Bitfields always use a zero pattern, which we
       // will fill in later.)
-      if (!Field->isBitField() && !Field->isZeroSize(CGF.getContext())) {
+      if (!Field->isBitField() &&
+          !isEmptyFieldForLayout(CGF.getContext(), Field)) {
         unsigned FieldIndex = RL.getLLVMFieldNo(Field);
         RecordLayout[FieldIndex] = Field;
       }

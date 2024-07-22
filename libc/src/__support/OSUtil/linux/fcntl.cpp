@@ -9,17 +9,20 @@
 #include "src/__support/OSUtil/fcntl.h"
 
 #include "hdr/fcntl_macros.h"
+#include "hdr/types/off_t.h"
 #include "hdr/types/struct_f_owner_ex.h"
 #include "hdr/types/struct_flock.h"
 #include "hdr/types/struct_flock64.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
 #include <stdarg.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE::internal {
+namespace LIBC_NAMESPACE_DECL {
+namespace internal {
 
 int fcntl(int fd, int cmd, void *arg) {
 #if SYS_fcntl
@@ -83,17 +86,32 @@ int fcntl(int fd, int cmd, void *arg) {
     libc_errno = -ret;
     return -1;
   }
-  // The general case
-  default: {
-    int retVal = LIBC_NAMESPACE::syscall_impl<int>(
-        FCNTL_SYSCALL_ID, fd, cmd, reinterpret_cast<void *>(arg));
-    if (retVal >= 0) {
-      return retVal;
-    }
-    libc_errno = -retVal;
-    return -1;
+#ifdef SYS_fcntl64
+  case F_GETLK: {
+    if constexpr (FCNTL_SYSCALL_ID == SYS_fcntl64)
+      return fcntl(fd, F_GETLK64, arg);
+    break;
   }
+  case F_SETLK: {
+    if constexpr (FCNTL_SYSCALL_ID == SYS_fcntl64)
+      return fcntl(fd, F_SETLK64, arg);
+    break;
   }
+  case F_SETLKW: {
+    if constexpr (FCNTL_SYSCALL_ID == SYS_fcntl64)
+      return fcntl(fd, F_SETLKW64, arg);
+    break;
+  }
+#endif
+  }
+  int retVal = LIBC_NAMESPACE::syscall_impl<int>(FCNTL_SYSCALL_ID, fd, cmd,
+                                                 reinterpret_cast<void *>(arg));
+  if (retVal >= 0) {
+    return retVal;
+  }
+  libc_errno = -retVal;
+  return -1;
 }
 
-} // namespace LIBC_NAMESPACE::internal
+} // namespace internal
+} // namespace LIBC_NAMESPACE_DECL

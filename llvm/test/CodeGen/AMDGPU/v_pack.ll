@@ -7,7 +7,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 define amdgpu_kernel void @v_pack_b32_v2f16(ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
 ; GCN-LABEL: v_pack_b32_v2f16:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_ushort v1, v0, s[0:1] glc dlc
@@ -24,7 +24,7 @@ define amdgpu_kernel void @v_pack_b32_v2f16(ptr addrspace(1) %in0, ptr addrspace
 ;
 ; GISEL-LABEL: v_pack_b32_v2f16:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    global_load_ushort v1, v0, s[0:1] glc dlc
@@ -56,7 +56,7 @@ define amdgpu_kernel void @v_pack_b32_v2f16(ptr addrspace(1) %in0, ptr addrspace
 define amdgpu_kernel void @v_pack_b32_v2f16_sub(ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
 ; GCN-LABEL: v_pack_b32_v2f16_sub:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_ushort v1, v0, s[0:1] glc dlc
@@ -73,7 +73,7 @@ define amdgpu_kernel void @v_pack_b32_v2f16_sub(ptr addrspace(1) %in0, ptr addrs
 ;
 ; GISEL-LABEL: v_pack_b32_v2f16_sub:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    global_load_ushort v1, v0, s[0:1] glc dlc
@@ -105,7 +105,7 @@ define amdgpu_kernel void @v_pack_b32_v2f16_sub(ptr addrspace(1) %in0, ptr addrs
 define amdgpu_kernel void @fptrunc(
 ; GCN-LABEL: fptrunc:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_mov_b32 s7, 0x31016000
 ; GCN-NEXT:    s_mov_b32 s10, s6
@@ -125,7 +125,7 @@ define amdgpu_kernel void @fptrunc(
 ;
 ; GISEL-LABEL: fptrunc:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -147,7 +147,7 @@ define amdgpu_kernel void @fptrunc(
 define amdgpu_kernel void @v_pack_b32.fabs(ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
 ; GCN-LABEL: v_pack_b32.fabs:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_ushort v1, v0, s[0:1] glc dlc
@@ -164,7 +164,7 @@ define amdgpu_kernel void @v_pack_b32.fabs(ptr addrspace(1) %in0, ptr addrspace(
 ;
 ; GISEL-LABEL: v_pack_b32.fabs:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    global_load_ushort v1, v0, s[0:1] glc dlc
@@ -198,7 +198,7 @@ define amdgpu_kernel void @v_pack_b32.fabs(ptr addrspace(1) %in0, ptr addrspace(
 define amdgpu_kernel void @v_pack_b32.fneg(ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
 ; GCN-LABEL: v_pack_b32.fneg:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_ushort v1, v0, s[0:1] glc dlc
@@ -215,7 +215,7 @@ define amdgpu_kernel void @v_pack_b32.fneg(ptr addrspace(1) %in0, ptr addrspace(
 ;
 ; GISEL-LABEL: v_pack_b32.fneg:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    global_load_ushort v1, v0, s[0:1] glc dlc

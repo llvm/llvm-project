@@ -4587,6 +4587,18 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     switch (IntNo) {
     default:
       break;
+    case Intrinsic::aarch64_gcsss: {
+      SDLoc DL(Node);
+      SDValue Chain = Node->getOperand(0);
+      SDValue Val = Node->getOperand(2);
+      SDValue Zero = CurDAG->getCopyFromReg(Chain, DL, AArch64::XZR, MVT::i64);
+      SDNode *SS1 =
+          CurDAG->getMachineNode(AArch64::GCSSS1, DL, MVT::Other, Val, Chain);
+      SDNode *SS2 = CurDAG->getMachineNode(AArch64::GCSSS2, DL, MVT::i64,
+                                           MVT::Other, Zero, SDValue(SS1, 0));
+      ReplaceNode(Node, SS2);
+      return;
+    }
     case Intrinsic::aarch64_ldaxp:
     case Intrinsic::aarch64_ldxp: {
       unsigned Op =

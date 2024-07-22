@@ -40,6 +40,7 @@
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMPAssume.h"
@@ -4405,6 +4406,8 @@ void SemaOpenMP::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind,
   case OMPD_section:
   case OMPD_tile:
   case OMPD_unroll:
+  case OMPD_reverse:
+  case OMPD_interchange:
     break;
   default:
     processCapturedRegions(SemaRef, DKind, CurScope,
@@ -4797,6 +4800,12 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     ShouldBeInTeamsRegion,
     ShouldBeInLoopSimdRegion,
   } Recommend = NoRecommend;
+
+  SmallVector<OpenMPDirectiveKind, 4> LeafOrComposite;
+  ArrayRef<OpenMPDirectiveKind> ParentLOC =
+      getLeafOrCompositeConstructs(ParentRegion, LeafOrComposite);
+  OpenMPDirectiveKind EnclosingConstruct = ParentLOC.back();
+
   if (SemaRef.LangOpts.OpenMP >= 51 && Stack->isParentOrderConcurrent() &&
       CurrentRegion != OMPD_simd && CurrentRegion != OMPD_loop &&
       CurrentRegion != OMPD_parallel &&
@@ -4828,7 +4837,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
         << (SemaRef.LangOpts.OpenMP >= 50 ? 1 : 0);
     return CurrentRegion != OMPD_simd;
   }
-  if (ParentRegion == OMPD_atomic) {
+  if (EnclosingConstruct == OMPD_atomic) {
     // OpenMP [2.16, Nesting of Regions]
     // OpenMP constructs may not be nested inside an atomic region.
     SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_atomic);
@@ -4839,8 +4848,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     // Orphaned section directives are prohibited. That is, the section
     // directives must appear within the sections construct and must not be
     // encountered elsewhere in the sections region.
-    if (ParentRegion != OMPD_sections &&
-        ParentRegion != OMPD_parallel_sections) {
+    if (EnclosingConstruct != OMPD_sections) {
       SemaRef.Diag(StartLoc, diag::err_omp_orphaned_section_directive)
           << (ParentRegion != OMPD_unknown)
           << getOpenMPDirectiveName(ParentRegion);
@@ -4861,7 +4869,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
   if (SemaRef.LangOpts.OpenMP >= 50 && CurrentRegion == OMPD_loop &&
       (BindKind == OMPC_BIND_parallel || BindKind == OMPC_BIND_teams) &&
       (isOpenMPWorksharingDirective(ParentRegion) ||
-       ParentRegion == OMPD_loop)) {
+       EnclosingConstruct == OMPD_loop)) {
     int ErrorMsgNumber = (BindKind == OMPC_BIND_parallel) ? 1 : 4;
     SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region)
         << true << getOpenMPDirectiveName(ParentRegion) << ErrorMsgNumber
@@ -4881,27 +4889,17 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     // construct-type-clause is not taskgroup must be closely nested inside an
     // OpenMP construct that matches the type specified in
     // construct-type-clause.
-    NestingProhibited =
-        !((CancelRegion == OMPD_parallel &&
-           (ParentRegion == OMPD_parallel ||
-            ParentRegion == OMPD_target_parallel)) ||
-          (CancelRegion == OMPD_for &&
-           (ParentRegion == OMPD_for || ParentRegion == OMPD_parallel_for ||
-            ParentRegion == OMPD_target_parallel_for ||
-            ParentRegion == OMPD_distribute_parallel_for ||
-            ParentRegion == OMPD_teams_distribute_parallel_for ||
-            ParentRegion == OMPD_target_teams_distribute_parallel_for)) ||
-          (CancelRegion == OMPD_taskgroup &&
-           (ParentRegion == OMPD_task ||
-            (SemaRef.getLangOpts().OpenMP >= 50 &&
-             (ParentRegion == OMPD_taskloop ||
-              ParentRegion == OMPD_master_taskloop ||
-              ParentRegion == OMPD_masked_taskloop ||
-              ParentRegion == OMPD_parallel_masked_taskloop ||
-              ParentRegion == OMPD_parallel_master_taskloop)))) ||
-          (CancelRegion == OMPD_sections &&
-           (ParentRegion == OMPD_section || ParentRegion == OMPD_sections ||
-            ParentRegion == OMPD_parallel_sections)));
+    ArrayRef<OpenMPDirectiveKind> Leafs = getLeafConstructsOrSelf(ParentRegion);
+    if (CancelRegion == OMPD_taskgroup) {
+      NestingProhibited = EnclosingConstruct != OMPD_task &&
+                          (SemaRef.getLangOpts().OpenMP < 50 ||
+                           EnclosingConstruct != OMPD_taskloop);
+    } else if (CancelRegion == OMPD_sections) {
+      NestingProhibited = EnclosingConstruct != OMPD_section &&
+                          EnclosingConstruct != OMPD_sections;
+    } else {
+      NestingProhibited = CancelRegion != Leafs.back();
+    }
     OrphanSeen = ParentRegion == OMPD_unknown;
   } else if (CurrentRegion == OMPD_master || CurrentRegion == OMPD_masked) {
     // OpenMP 5.1 [2.22, Nesting of Regions]
@@ -4942,13 +4940,12 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     // OpenMP 5.1 [2.22, Nesting of Regions]
     // A barrier region may not be closely nested inside a worksharing, loop,
     // task, taskloop, critical, ordered, atomic, or masked region.
-    NestingProhibited =
-        isOpenMPWorksharingDirective(ParentRegion) ||
-        isOpenMPGenericLoopDirective(ParentRegion) ||
-        isOpenMPTaskingDirective(ParentRegion) || ParentRegion == OMPD_master ||
-        ParentRegion == OMPD_masked || ParentRegion == OMPD_parallel_master ||
-        ParentRegion == OMPD_parallel_masked || ParentRegion == OMPD_critical ||
-        ParentRegion == OMPD_ordered;
+    NestingProhibited = isOpenMPWorksharingDirective(ParentRegion) ||
+                        isOpenMPGenericLoopDirective(ParentRegion) ||
+                        isOpenMPTaskingDirective(ParentRegion) ||
+                        llvm::is_contained({OMPD_masked, OMPD_master,
+                                            OMPD_critical, OMPD_ordered},
+                                           EnclosingConstruct);
   } else if (isOpenMPWorksharingDirective(CurrentRegion) &&
              !isOpenMPParallelDirective(CurrentRegion) &&
              !isOpenMPTeamsDirective(CurrentRegion)) {
@@ -4956,13 +4953,12 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     // A loop region that binds to a parallel region or a worksharing region
     // may not be closely nested inside a worksharing, loop, task, taskloop,
     // critical, ordered, atomic, or masked region.
-    NestingProhibited =
-        isOpenMPWorksharingDirective(ParentRegion) ||
-        isOpenMPGenericLoopDirective(ParentRegion) ||
-        isOpenMPTaskingDirective(ParentRegion) || ParentRegion == OMPD_master ||
-        ParentRegion == OMPD_masked || ParentRegion == OMPD_parallel_master ||
-        ParentRegion == OMPD_parallel_masked || ParentRegion == OMPD_critical ||
-        ParentRegion == OMPD_ordered;
+    NestingProhibited = isOpenMPWorksharingDirective(ParentRegion) ||
+                        isOpenMPGenericLoopDirective(ParentRegion) ||
+                        isOpenMPTaskingDirective(ParentRegion) ||
+                        llvm::is_contained({OMPD_masked, OMPD_master,
+                                            OMPD_critical, OMPD_ordered},
+                                           EnclosingConstruct);
     Recommend = ShouldBeInParallelRegion;
   } else if (CurrentRegion == OMPD_ordered) {
     // OpenMP [2.16, Nesting of Regions]
@@ -4973,7 +4969,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     // OpenMP [2.8.1,simd Construct, Restrictions]
     // An ordered construct with the simd clause is the only OpenMP construct
     // that can appear in the simd region.
-    NestingProhibited = ParentRegion == OMPD_critical ||
+    NestingProhibited = EnclosingConstruct == OMPD_critical ||
                         isOpenMPTaskingDirective(ParentRegion) ||
                         !(isOpenMPSimdDirective(ParentRegion) ||
                           Stack->isParentOrderedRegion());
@@ -4983,26 +4979,28 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     // If specified, a teams construct must be contained within a target
     // construct.
     NestingProhibited =
-        (SemaRef.LangOpts.OpenMP <= 45 && ParentRegion != OMPD_target) ||
-        (SemaRef.LangOpts.OpenMP >= 50 && ParentRegion != OMPD_unknown &&
-         ParentRegion != OMPD_target);
+        (SemaRef.LangOpts.OpenMP <= 45 && EnclosingConstruct != OMPD_target) ||
+        (SemaRef.LangOpts.OpenMP >= 50 && EnclosingConstruct != OMPD_unknown &&
+         EnclosingConstruct != OMPD_target);
     OrphanSeen = ParentRegion == OMPD_unknown;
     Recommend = ShouldBeInTargetRegion;
   } else if (CurrentRegion == OMPD_scan) {
-    // OpenMP [2.16, Nesting of Regions]
-    // If specified, a teams construct must be contained within a target
-    // construct.
-    NestingProhibited =
-        SemaRef.LangOpts.OpenMP < 50 ||
-        (ParentRegion != OMPD_simd && ParentRegion != OMPD_for &&
-         ParentRegion != OMPD_for_simd && ParentRegion != OMPD_parallel_for &&
-         ParentRegion != OMPD_parallel_for_simd);
+    if (SemaRef.LangOpts.OpenMP >= 50) {
+      // OpenMP spec 5.0 and 5.1 require scan to be directly enclosed by for,
+      // simd, or for simd. This has to take into account combined directives.
+      // In 5.2 this seems to be implied by the fact that the specified
+      // separated constructs are do, for, and simd.
+      NestingProhibited = !llvm::is_contained(
+          {OMPD_for, OMPD_simd, OMPD_for_simd}, EnclosingConstruct);
+    } else {
+      NestingProhibited = true;
+    }
     OrphanSeen = ParentRegion == OMPD_unknown;
     Recommend = ShouldBeInLoopSimdRegion;
   }
   if (!NestingProhibited && !isOpenMPTargetExecutionDirective(CurrentRegion) &&
       !isOpenMPTargetDataManagementDirective(CurrentRegion) &&
-      (ParentRegion == OMPD_teams || ParentRegion == OMPD_target_teams)) {
+      EnclosingConstruct == OMPD_teams) {
     // OpenMP [5.1, 2.22, Nesting of Regions]
     // distribute, distribute simd, distribute parallel worksharing-loop,
     // distribute parallel worksharing-loop SIMD, loop, parallel regions,
@@ -5024,17 +5022,15 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     // If the bind clause is present on the loop construct and binding is
     // teams then the corresponding loop region must be strictly nested inside
     // a teams region.
-    NestingProhibited = BindKind == OMPC_BIND_teams &&
-                        ParentRegion != OMPD_teams &&
-                        ParentRegion != OMPD_target_teams;
+    NestingProhibited =
+        BindKind == OMPC_BIND_teams && EnclosingConstruct != OMPD_teams;
     Recommend = ShouldBeInTeamsRegion;
   }
   if (!NestingProhibited && isOpenMPNestingDistributeDirective(CurrentRegion)) {
     // OpenMP 4.5 [2.17 Nesting of Regions]
     // The region associated with the distribute construct must be strictly
     // nested inside a teams region
-    NestingProhibited =
-        (ParentRegion != OMPD_teams && ParentRegion != OMPD_target_teams);
+    NestingProhibited = EnclosingConstruct != OMPD_teams;
     Recommend = ShouldBeInTeamsRegion;
   }
   if (!NestingProhibited &&
@@ -6172,14 +6168,14 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
               DMC->getDefaultmapModifierLoc();
     }
     for (unsigned VC = 0; VC < DefaultmapKindNum; ++VC) {
-      auto Kind = static_cast<OpenMPDefaultmapClauseKind>(VC);
+      auto K = static_cast<OpenMPDefaultmapClauseKind>(VC);
       for (unsigned I = 0; I < OMPC_MAP_delete; ++I) {
-        ArrayRef<Expr *> ImplicitMap = DSAChecker.getImplicitMap(
-            Kind, static_cast<OpenMPMapClauseKind>(I));
+        ArrayRef<Expr *> ImplicitMap =
+            DSAChecker.getImplicitMap(K, static_cast<OpenMPMapClauseKind>(I));
         ImplicitMaps[VC][I].append(ImplicitMap.begin(), ImplicitMap.end());
       }
       ArrayRef<OpenMPMapModifierKind> ImplicitModifier =
-          DSAChecker.getImplicitMapModifier(Kind);
+          DSAChecker.getImplicitMapModifier(K);
       ImplicitMapModifiers[VC].append(ImplicitModifier.begin(),
                                       ImplicitModifier.end());
       std::fill_n(std::back_inserter(ImplicitMapModifiersLoc[VC]),
@@ -6253,10 +6249,10 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
           continue;
         CXXScopeSpec MapperIdScopeSpec;
         DeclarationNameInfo MapperId;
-        auto Kind = static_cast<OpenMPMapClauseKind>(ClauseKindCnt);
+        auto K = static_cast<OpenMPMapClauseKind>(ClauseKindCnt);
         if (OMPClause *Implicit = ActOnOpenMPMapClause(
                 nullptr, ImplicitMapModifiers[I], ImplicitMapModifiersLoc[I],
-                MapperIdScopeSpec, MapperId, Kind, /*IsMapTypeImplicit=*/true,
+                MapperIdScopeSpec, MapperId, K, /*IsMapTypeImplicit=*/true,
                 SourceLocation(), SourceLocation(), ImplicitMap,
                 OMPVarListLocTy())) {
           ClausesWithImplicit.emplace_back(Implicit);
@@ -6290,6 +6286,15 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
   case OMPD_unroll:
     Res = ActOnOpenMPUnrollDirective(ClausesWithImplicit, AStmt, StartLoc,
                                      EndLoc);
+    break;
+  case OMPD_reverse:
+    assert(ClausesWithImplicit.empty() &&
+           "reverse directive does not support any clauses");
+    Res = ActOnOpenMPReverseDirective(AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_interchange:
+    Res = ActOnOpenMPInterchangeDirective(ClausesWithImplicit, AStmt, StartLoc,
+                                          EndLoc);
     break;
   case OMPD_for:
     Res = ActOnOpenMPForDirective(ClausesWithImplicit, AStmt, StartLoc, EndLoc,
@@ -9051,84 +9056,82 @@ void SemaOpenMP::ActOnOpenMPLoopInitialization(SourceLocation ForLoc,
   assert(getLangOpts().OpenMP && "OpenMP is not active.");
   assert(Init && "Expected loop in canonical form.");
   unsigned AssociatedLoops = DSAStack->getAssociatedLoops();
-  if (AssociatedLoops > 0 &&
-      isOpenMPLoopDirective(DSAStack->getCurrentDirective())) {
-    DSAStack->loopStart();
-    OpenMPIterationSpaceChecker ISC(SemaRef, /*SupportsNonRectangular=*/true,
-                                    *DSAStack, ForLoc);
-    if (!ISC.checkAndSetInit(Init, /*EmitDiags=*/false)) {
-      if (ValueDecl *D = ISC.getLoopDecl()) {
-        auto *VD = dyn_cast<VarDecl>(D);
-        DeclRefExpr *PrivateRef = nullptr;
-        if (!VD) {
-          if (VarDecl *Private = isOpenMPCapturedDecl(D)) {
-            VD = Private;
-          } else {
-            PrivateRef = buildCapture(SemaRef, D, ISC.getLoopDeclRefExpr(),
-                                      /*WithInit=*/false);
-            VD = cast<VarDecl>(PrivateRef->getDecl());
-          }
-        }
-        DSAStack->addLoopControlVariable(D, VD);
-        const Decl *LD = DSAStack->getPossiblyLoopCounter();
-        if (LD != D->getCanonicalDecl()) {
-          DSAStack->resetPossibleLoopCounter();
-          if (auto *Var = dyn_cast_or_null<VarDecl>(LD))
-            SemaRef.MarkDeclarationsReferencedInExpr(buildDeclRefExpr(
-                SemaRef, const_cast<VarDecl *>(Var),
-                Var->getType().getNonLValueExprType(getASTContext()), ForLoc,
-                /*RefersToCapture=*/true));
-        }
-        OpenMPDirectiveKind DKind = DSAStack->getCurrentDirective();
-        // OpenMP [2.14.1.1, Data-sharing Attribute Rules for Variables
-        // Referenced in a Construct, C/C++]. The loop iteration variable in the
-        // associated for-loop of a simd construct with just one associated
-        // for-loop may be listed in a linear clause with a constant-linear-step
-        // that is the increment of the associated for-loop. The loop iteration
-        // variable(s) in the associated for-loop(s) of a for or parallel for
-        // construct may be listed in a private or lastprivate clause.
-        DSAStackTy::DSAVarData DVar =
-            DSAStack->getTopDSA(D, /*FromParent=*/false);
-        // If LoopVarRefExpr is nullptr it means the corresponding loop variable
-        // is declared in the loop and it is predetermined as a private.
-        Expr *LoopDeclRefExpr = ISC.getLoopDeclRefExpr();
-        OpenMPClauseKind PredeterminedCKind =
-            isOpenMPSimdDirective(DKind)
-                ? (DSAStack->hasMutipleLoops() ? OMPC_lastprivate : OMPC_linear)
-                : OMPC_private;
-        if (((isOpenMPSimdDirective(DKind) && DVar.CKind != OMPC_unknown &&
-              DVar.CKind != PredeterminedCKind && DVar.RefExpr &&
-              (getLangOpts().OpenMP <= 45 || (DVar.CKind != OMPC_lastprivate &&
-                                              DVar.CKind != OMPC_private))) ||
-             ((isOpenMPWorksharingDirective(DKind) || DKind == OMPD_taskloop ||
-               DKind == OMPD_master_taskloop || DKind == OMPD_masked_taskloop ||
-               DKind == OMPD_parallel_master_taskloop ||
-               DKind == OMPD_parallel_masked_taskloop ||
-               isOpenMPDistributeDirective(DKind)) &&
-              !isOpenMPSimdDirective(DKind) && DVar.CKind != OMPC_unknown &&
-              DVar.CKind != OMPC_private && DVar.CKind != OMPC_lastprivate)) &&
-            (DVar.CKind != OMPC_private || DVar.RefExpr)) {
-          Diag(Init->getBeginLoc(), diag::err_omp_loop_var_dsa)
-              << getOpenMPClauseName(DVar.CKind)
-              << getOpenMPDirectiveName(DKind)
-              << getOpenMPClauseName(PredeterminedCKind);
-          if (DVar.RefExpr == nullptr)
-            DVar.CKind = PredeterminedCKind;
-          reportOriginalDsa(SemaRef, DSAStack, D, DVar,
-                            /*IsLoopIterVar=*/true);
-        } else if (LoopDeclRefExpr) {
-          // Make the loop iteration variable private (for worksharing
-          // constructs), linear (for simd directives with the only one
-          // associated loop) or lastprivate (for simd directives with several
-          // collapsed or ordered loops).
-          if (DVar.CKind == OMPC_unknown)
-            DSAStack->addDSA(D, LoopDeclRefExpr, PredeterminedCKind,
-                             PrivateRef);
+  OpenMPDirectiveKind DKind = DSAStack->getCurrentDirective();
+  if (AssociatedLoops == 0 || !isOpenMPLoopDirective(DKind))
+    return;
+
+  DSAStack->loopStart();
+  OpenMPIterationSpaceChecker ISC(SemaRef, /*SupportsNonRectangular=*/true,
+                                  *DSAStack, ForLoc);
+  if (!ISC.checkAndSetInit(Init, /*EmitDiags=*/false)) {
+    if (ValueDecl *D = ISC.getLoopDecl()) {
+      auto *VD = dyn_cast<VarDecl>(D);
+      DeclRefExpr *PrivateRef = nullptr;
+      if (!VD) {
+        if (VarDecl *Private = isOpenMPCapturedDecl(D)) {
+          VD = Private;
+        } else {
+          PrivateRef = buildCapture(SemaRef, D, ISC.getLoopDeclRefExpr(),
+                                    /*WithInit=*/false);
+          VD = cast<VarDecl>(PrivateRef->getDecl());
         }
       }
+      DSAStack->addLoopControlVariable(D, VD);
+      const Decl *LD = DSAStack->getPossiblyLoopCounter();
+      if (LD != D->getCanonicalDecl()) {
+        DSAStack->resetPossibleLoopCounter();
+        if (auto *Var = dyn_cast_or_null<VarDecl>(LD))
+          SemaRef.MarkDeclarationsReferencedInExpr(buildDeclRefExpr(
+              SemaRef, const_cast<VarDecl *>(Var),
+              Var->getType().getNonLValueExprType(getASTContext()), ForLoc,
+              /*RefersToCapture=*/true));
+      }
+      // OpenMP [2.14.1.1, Data-sharing Attribute Rules for Variables
+      // Referenced in a Construct, C/C++]. The loop iteration variable in the
+      // associated for-loop of a simd construct with just one associated
+      // for-loop may be listed in a linear clause with a constant-linear-step
+      // that is the increment of the associated for-loop. The loop iteration
+      // variable(s) in the associated for-loop(s) of a for or parallel for
+      // construct may be listed in a private or lastprivate clause.
+      DSAStackTy::DSAVarData DVar =
+          DSAStack->getTopDSA(D, /*FromParent=*/false);
+      // If LoopVarRefExpr is nullptr it means the corresponding loop variable
+      // is declared in the loop and it is predetermined as a private.
+      Expr *LoopDeclRefExpr = ISC.getLoopDeclRefExpr();
+      OpenMPClauseKind PredeterminedCKind =
+          isOpenMPSimdDirective(DKind)
+              ? (DSAStack->hasMutipleLoops() ? OMPC_lastprivate : OMPC_linear)
+              : OMPC_private;
+      auto IsOpenMPTaskloopDirective = [](OpenMPDirectiveKind DK) {
+        return getLeafConstructsOrSelf(DK).back() == OMPD_taskloop;
+      };
+      if (((isOpenMPSimdDirective(DKind) && DVar.CKind != OMPC_unknown &&
+            DVar.CKind != PredeterminedCKind && DVar.RefExpr &&
+            (getLangOpts().OpenMP <= 45 ||
+             (DVar.CKind != OMPC_lastprivate && DVar.CKind != OMPC_private))) ||
+           ((isOpenMPWorksharingDirective(DKind) ||
+             IsOpenMPTaskloopDirective(DKind) ||
+             isOpenMPDistributeDirective(DKind)) &&
+            !isOpenMPSimdDirective(DKind) && DVar.CKind != OMPC_unknown &&
+            DVar.CKind != OMPC_private && DVar.CKind != OMPC_lastprivate)) &&
+          (DVar.CKind != OMPC_private || DVar.RefExpr)) {
+        Diag(Init->getBeginLoc(), diag::err_omp_loop_var_dsa)
+            << getOpenMPClauseName(DVar.CKind) << getOpenMPDirectiveName(DKind)
+            << getOpenMPClauseName(PredeterminedCKind);
+        if (DVar.RefExpr == nullptr)
+          DVar.CKind = PredeterminedCKind;
+        reportOriginalDsa(SemaRef, DSAStack, D, DVar, /*IsLoopIterVar=*/true);
+      } else if (LoopDeclRefExpr) {
+        // Make the loop iteration variable private (for worksharing
+        // constructs), linear (for simd directives with the only one
+        // associated loop) or lastprivate (for simd directives with several
+        // collapsed or ordered loops).
+        if (DVar.CKind == OMPC_unknown)
+          DSAStack->addDSA(D, LoopDeclRefExpr, PredeterminedCKind, PrivateRef);
+      }
     }
-    DSAStack->setAssociatedLoops(AssociatedLoops - 1);
   }
+  DSAStack->setAssociatedLoops(AssociatedLoops - 1);
 }
 
 namespace {
@@ -14049,6 +14052,10 @@ bool SemaOpenMP::checkTransformableLoopNest(
           DependentPreInits = Dir->getPreInits();
         else if (auto *Dir = dyn_cast<OMPUnrollDirective>(Transform))
           DependentPreInits = Dir->getPreInits();
+        else if (auto *Dir = dyn_cast<OMPReverseDirective>(Transform))
+          DependentPreInits = Dir->getPreInits();
+        else if (auto *Dir = dyn_cast<OMPInterchangeDirective>(Transform))
+          DependentPreInits = Dir->getPreInits();
         else
           llvm_unreachable("Unhandled loop transformation");
 
@@ -14667,6 +14674,345 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
                                     buildPreInits(Context, PreInits));
 }
 
+StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
+                                                   SourceLocation StartLoc,
+                                                   SourceLocation EndLoc) {
+  ASTContext &Context = getASTContext();
+  Scope *CurScope = SemaRef.getCurScope();
+
+  // Empty statement should only be possible if there already was an error.
+  if (!AStmt)
+    return StmtError();
+
+  constexpr unsigned NumLoops = 1;
+  Stmt *Body = nullptr;
+  SmallVector<OMPLoopBasedDirective::HelperExprs, NumLoops> LoopHelpers(
+      NumLoops);
+  SmallVector<SmallVector<Stmt *, 0>, NumLoops + 1> OriginalInits;
+  if (!checkTransformableLoopNest(OMPD_reverse, AStmt, NumLoops, LoopHelpers,
+                                  Body, OriginalInits))
+    return StmtError();
+
+  // Delay applying the transformation to when template is completely
+  // instantiated.
+  if (SemaRef.CurContext->isDependentContext())
+    return OMPReverseDirective::Create(Context, StartLoc, EndLoc, AStmt,
+                                       nullptr, nullptr);
+
+  assert(LoopHelpers.size() == NumLoops &&
+         "Expecting a single-dimensional loop iteration space");
+  assert(OriginalInits.size() == NumLoops &&
+         "Expecting a single-dimensional loop iteration space");
+  OMPLoopBasedDirective::HelperExprs &LoopHelper = LoopHelpers.front();
+
+  // Find the loop statement.
+  Stmt *LoopStmt = nullptr;
+  collectLoopStmts(AStmt, {LoopStmt});
+
+  // Determine the PreInit declarations.
+  SmallVector<Stmt *> PreInits;
+  addLoopPreInits(Context, LoopHelper, LoopStmt, OriginalInits[0], PreInits);
+
+  auto *IterationVarRef = cast<DeclRefExpr>(LoopHelper.IterationVarRef);
+  QualType IVTy = IterationVarRef->getType();
+  uint64_t IVWidth = Context.getTypeSize(IVTy);
+  auto *OrigVar = cast<DeclRefExpr>(LoopHelper.Counters.front());
+
+  // Iteration variable SourceLocations.
+  SourceLocation OrigVarLoc = OrigVar->getExprLoc();
+  SourceLocation OrigVarLocBegin = OrigVar->getBeginLoc();
+  SourceLocation OrigVarLocEnd = OrigVar->getEndLoc();
+
+  // Locations pointing to the transformation.
+  SourceLocation TransformLoc = StartLoc;
+  SourceLocation TransformLocBegin = StartLoc;
+  SourceLocation TransformLocEnd = EndLoc;
+
+  // Internal variable names.
+  std::string OrigVarName = OrigVar->getNameInfo().getAsString();
+  SmallString<64> ForwardIVName(".forward.iv.");
+  ForwardIVName += OrigVarName;
+  SmallString<64> ReversedIVName(".reversed.iv.");
+  ReversedIVName += OrigVarName;
+
+  // LoopHelper.Updates will read the logical iteration number from
+  // LoopHelper.IterationVarRef, compute the value of the user loop counter of
+  // that logical iteration from it, then assign it to the user loop counter
+  // variable. We cannot directly use LoopHelper.IterationVarRef as the
+  // induction variable of the generated loop because it may cause an underflow:
+  // \code{.c}
+  //   for (unsigned i = 0; i < n; ++i)
+  //     body(i);
+  // \endcode
+  //
+  // Naive reversal:
+  // \code{.c}
+  //   for (unsigned i = n-1; i >= 0; --i)
+  //     body(i);
+  // \endcode
+  //
+  // Instead, we introduce a new iteration variable representing the logical
+  // iteration counter of the original loop, convert it to the logical iteration
+  // number of the reversed loop, then let LoopHelper.Updates compute the user's
+  // loop iteration variable from it.
+  // \code{.cpp}
+  //   for (auto .forward.iv = 0; .forward.iv < n; ++.forward.iv) {
+  //     auto .reversed.iv = n - .forward.iv - 1;
+  //     i = (.reversed.iv + 0) * 1;                // LoopHelper.Updates
+  //     body(i);                                   // Body
+  //   }
+  // \endcode
+
+  // Subexpressions with more than one use. One of the constraints of an AST is
+  // that every node object must appear at most once, hence we define a lambda
+  // that creates a new AST node at every use.
+  CaptureVars CopyTransformer(SemaRef);
+  auto MakeNumIterations = [&CopyTransformer, &LoopHelper]() -> Expr * {
+    return AssertSuccess(
+        CopyTransformer.TransformExpr(LoopHelper.NumIterations));
+  };
+
+  // Create the iteration variable for the forward loop (from 0 to n-1).
+  VarDecl *ForwardIVDecl =
+      buildVarDecl(SemaRef, {}, IVTy, ForwardIVName, nullptr, OrigVar);
+  auto MakeForwardRef = [&SemaRef = this->SemaRef, ForwardIVDecl, IVTy,
+                         OrigVarLoc]() {
+    return buildDeclRefExpr(SemaRef, ForwardIVDecl, IVTy, OrigVarLoc);
+  };
+
+  // Iteration variable for the reversed induction variable (from n-1 downto 0):
+  // Reuse the iteration variable created by checkOpenMPLoop.
+  auto *ReversedIVDecl = cast<VarDecl>(IterationVarRef->getDecl());
+  ReversedIVDecl->setDeclName(
+      &SemaRef.PP.getIdentifierTable().get(ReversedIVName));
+
+  // For init-statement:
+  // \code{.cpp}
+  //   auto .forward.iv = 0;
+  // \endcode
+  auto *Zero = IntegerLiteral::Create(Context, llvm::APInt::getZero(IVWidth),
+                                      ForwardIVDecl->getType(), OrigVarLoc);
+  SemaRef.AddInitializerToDecl(ForwardIVDecl, Zero, /*DirectInit=*/false);
+  StmtResult Init = new (Context)
+      DeclStmt(DeclGroupRef(ForwardIVDecl), OrigVarLocBegin, OrigVarLocEnd);
+  if (!Init.isUsable())
+    return StmtError();
+
+  // Forward iv cond-expression:
+  // \code{.cpp}
+  //   .forward.iv < MakeNumIterations()
+  // \endcode
+  ExprResult Cond =
+      SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
+                         MakeForwardRef(), MakeNumIterations());
+  if (!Cond.isUsable())
+    return StmtError();
+
+  // Forward incr-statement:
+  // \code{.c}
+  //   ++.forward.iv
+  // \endcode
+  ExprResult Incr = SemaRef.BuildUnaryOp(CurScope, LoopHelper.Inc->getExprLoc(),
+                                         UO_PreInc, MakeForwardRef());
+  if (!Incr.isUsable())
+    return StmtError();
+
+  // Reverse the forward-iv:
+  // \code{.cpp}
+  //   auto .reversed.iv = MakeNumIterations() - 1 - .forward.iv
+  // \endcode
+  auto *One = IntegerLiteral::Create(Context, llvm::APInt(IVWidth, 1), IVTy,
+                                     TransformLoc);
+  ExprResult Minus = SemaRef.BuildBinOp(CurScope, TransformLoc, BO_Sub,
+                                        MakeNumIterations(), One);
+  if (!Minus.isUsable())
+    return StmtError();
+  Minus = SemaRef.BuildBinOp(CurScope, TransformLoc, BO_Sub, Minus.get(),
+                             MakeForwardRef());
+  if (!Minus.isUsable())
+    return StmtError();
+  StmtResult InitReversed = new (Context) DeclStmt(
+      DeclGroupRef(ReversedIVDecl), TransformLocBegin, TransformLocEnd);
+  if (!InitReversed.isUsable())
+    return StmtError();
+  SemaRef.AddInitializerToDecl(ReversedIVDecl, Minus.get(),
+                               /*DirectInit=*/false);
+
+  // The new loop body.
+  SmallVector<Stmt *, 4> BodyStmts;
+  BodyStmts.reserve(LoopHelper.Updates.size() + 2 +
+                    (isa<CXXForRangeStmt>(LoopStmt) ? 1 : 0));
+  BodyStmts.push_back(InitReversed.get());
+  llvm::append_range(BodyStmts, LoopHelper.Updates);
+  if (auto *CXXRangeFor = dyn_cast<CXXForRangeStmt>(LoopStmt))
+    BodyStmts.push_back(CXXRangeFor->getLoopVarStmt());
+  BodyStmts.push_back(Body);
+  auto *ReversedBody =
+      CompoundStmt::Create(Context, BodyStmts, FPOptionsOverride(),
+                           Body->getBeginLoc(), Body->getEndLoc());
+
+  // Finally create the reversed For-statement.
+  auto *ReversedFor = new (Context)
+      ForStmt(Context, Init.get(), Cond.get(), nullptr, Incr.get(),
+              ReversedBody, LoopHelper.Init->getBeginLoc(),
+              LoopHelper.Init->getBeginLoc(), LoopHelper.Inc->getEndLoc());
+  return OMPReverseDirective::Create(Context, StartLoc, EndLoc, AStmt,
+                                     ReversedFor,
+                                     buildPreInits(Context, PreInits));
+}
+
+StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
+    ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+    SourceLocation EndLoc) {
+  ASTContext &Context = getASTContext();
+  DeclContext *CurContext = SemaRef.CurContext;
+  Scope *CurScope = SemaRef.getCurScope();
+
+  // Empty statement should only be possible if there already was an error.
+  if (!AStmt)
+    return StmtError();
+
+  // interchange without permutation clause swaps two loops.
+  constexpr size_t NumLoops = 2;
+
+  // Verify and diagnose loop nest.
+  SmallVector<OMPLoopBasedDirective::HelperExprs, 4> LoopHelpers(NumLoops);
+  Stmt *Body = nullptr;
+  SmallVector<SmallVector<Stmt *, 0>, 2> OriginalInits;
+  if (!checkTransformableLoopNest(OMPD_interchange, AStmt, NumLoops,
+                                  LoopHelpers, Body, OriginalInits))
+    return StmtError();
+
+  // Delay interchange to when template is completely instantiated.
+  if (CurContext->isDependentContext())
+    return OMPInterchangeDirective::Create(Context, StartLoc, EndLoc, Clauses,
+                                           NumLoops, AStmt, nullptr, nullptr);
+
+  assert(LoopHelpers.size() == NumLoops &&
+         "Expecting loop iteration space dimensionaly to match number of "
+         "affected loops");
+  assert(OriginalInits.size() == NumLoops &&
+         "Expecting loop iteration space dimensionaly to match number of "
+         "affected loops");
+
+  // Decode the permutation clause.
+  constexpr uint64_t Permutation[] = {1, 0};
+
+  // Find the affected loops.
+  SmallVector<Stmt *> LoopStmts(NumLoops, nullptr);
+  collectLoopStmts(AStmt, LoopStmts);
+
+  // Collect pre-init statements on the order before the permuation.
+  SmallVector<Stmt *> PreInits;
+  for (auto I : llvm::seq<int>(NumLoops)) {
+    OMPLoopBasedDirective::HelperExprs &LoopHelper = LoopHelpers[I];
+
+    assert(LoopHelper.Counters.size() == 1 &&
+           "Single-dimensional loop iteration space expected");
+    auto *OrigCntVar = cast<DeclRefExpr>(LoopHelper.Counters.front());
+
+    std::string OrigVarName = OrigCntVar->getNameInfo().getAsString();
+    addLoopPreInits(Context, LoopHelper, LoopStmts[I], OriginalInits[I],
+                    PreInits);
+  }
+
+  SmallVector<VarDecl *> PermutedIndVars(NumLoops);
+  CaptureVars CopyTransformer(SemaRef);
+
+  // Create the permuted loops from the inside to the outside of the
+  // interchanged loop nest. Body of the innermost new loop is the original
+  // innermost body.
+  Stmt *Inner = Body;
+  for (auto TargetIdx : llvm::reverse(llvm::seq<int>(NumLoops))) {
+    // Get the original loop that belongs to this new position.
+    uint64_t SourceIdx = Permutation[TargetIdx];
+    OMPLoopBasedDirective::HelperExprs &SourceHelper = LoopHelpers[SourceIdx];
+    Stmt *SourceLoopStmt = LoopStmts[SourceIdx];
+    assert(SourceHelper.Counters.size() == 1 &&
+           "Single-dimensional loop iteration space expected");
+    auto *OrigCntVar = cast<DeclRefExpr>(SourceHelper.Counters.front());
+
+    // Normalized loop counter variable: From 0 to n-1, always an integer type.
+    DeclRefExpr *IterVarRef = cast<DeclRefExpr>(SourceHelper.IterationVarRef);
+    QualType IVTy = IterVarRef->getType();
+    assert(IVTy->isIntegerType() &&
+           "Expected the logical iteration counter to be an integer");
+
+    std::string OrigVarName = OrigCntVar->getNameInfo().getAsString();
+    SourceLocation OrigVarLoc = IterVarRef->getExprLoc();
+
+    // Make a copy of the NumIterations expression for each use: By the AST
+    // constraints, every expression object in a DeclContext must be unique.
+    auto MakeNumIterations = [&CopyTransformer, &SourceHelper]() -> Expr * {
+      return AssertSuccess(
+          CopyTransformer.TransformExpr(SourceHelper.NumIterations));
+    };
+
+    // Iteration variable for the permuted loop. Reuse the one from
+    // checkOpenMPLoop which will also be used to update the original loop
+    // variable.
+    SmallString<64> PermutedCntName(".permuted_");
+    PermutedCntName.append({llvm::utostr(TargetIdx), ".iv.", OrigVarName});
+    auto *PermutedCntDecl = cast<VarDecl>(IterVarRef->getDecl());
+    PermutedCntDecl->setDeclName(
+        &SemaRef.PP.getIdentifierTable().get(PermutedCntName));
+    PermutedIndVars[TargetIdx] = PermutedCntDecl;
+    auto MakePermutedRef = [this, PermutedCntDecl, IVTy, OrigVarLoc]() {
+      return buildDeclRefExpr(SemaRef, PermutedCntDecl, IVTy, OrigVarLoc);
+    };
+
+    // For init-statement:
+    // \code
+    //   auto .permuted_{target}.iv = 0
+    // \endcode
+    ExprResult Zero = SemaRef.ActOnIntegerConstant(OrigVarLoc, 0);
+    if (!Zero.isUsable())
+      return StmtError();
+    SemaRef.AddInitializerToDecl(PermutedCntDecl, Zero.get(),
+                                 /*DirectInit=*/false);
+    StmtResult InitStmt = new (Context)
+        DeclStmt(DeclGroupRef(PermutedCntDecl), OrigCntVar->getBeginLoc(),
+                 OrigCntVar->getEndLoc());
+    if (!InitStmt.isUsable())
+      return StmtError();
+
+    // For cond-expression:
+    // \code
+    //   .permuted_{target}.iv < MakeNumIterations()
+    // \endcode
+    ExprResult CondExpr =
+        SemaRef.BuildBinOp(CurScope, SourceHelper.Cond->getExprLoc(), BO_LT,
+                           MakePermutedRef(), MakeNumIterations());
+    if (!CondExpr.isUsable())
+      return StmtError();
+
+    // For incr-statement:
+    // \code
+    //   ++.tile.iv
+    // \endcode
+    ExprResult IncrStmt = SemaRef.BuildUnaryOp(
+        CurScope, SourceHelper.Inc->getExprLoc(), UO_PreInc, MakePermutedRef());
+    if (!IncrStmt.isUsable())
+      return StmtError();
+
+    SmallVector<Stmt *, 4> BodyParts(SourceHelper.Updates.begin(),
+                                     SourceHelper.Updates.end());
+    if (auto *SourceCXXFor = dyn_cast<CXXForRangeStmt>(SourceLoopStmt))
+      BodyParts.push_back(SourceCXXFor->getLoopVarStmt());
+    BodyParts.push_back(Inner);
+    Inner = CompoundStmt::Create(Context, BodyParts, FPOptionsOverride(),
+                                 Inner->getBeginLoc(), Inner->getEndLoc());
+    Inner = new (Context) ForStmt(
+        Context, InitStmt.get(), CondExpr.get(), nullptr, IncrStmt.get(), Inner,
+        SourceHelper.Init->getBeginLoc(), SourceHelper.Init->getBeginLoc(),
+        SourceHelper.Inc->getEndLoc());
+  }
+
+  return OMPInterchangeDirective::Create(Context, StartLoc, EndLoc, Clauses,
+                                         NumLoops, AStmt, Inner,
+                                         buildPreInits(Context, PreInits));
+}
+
 OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
                                                    Expr *Expr,
                                                    SourceLocation StartLoc,
@@ -14815,948 +15161,116 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
 static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     OpenMPDirectiveKind DKind, OpenMPClauseKind CKind, unsigned OpenMPVersion,
     OpenMPDirectiveKind NameModifier = OMPD_unknown) {
-  OpenMPDirectiveKind CaptureRegion = OMPD_unknown;
+  assert(isAllowedClauseForDirective(DKind, CKind, OpenMPVersion) &&
+         "Invalid directive with CKind-clause");
+
+  // Invalid modifier will be diagnosed separately, just return OMPD_unknown.
+  if (NameModifier != OMPD_unknown &&
+      !isAllowedClauseForDirective(NameModifier, CKind, OpenMPVersion))
+    return OMPD_unknown;
+
+  ArrayRef<OpenMPDirectiveKind> Leafs = getLeafConstructsOrSelf(DKind);
+
+  // [5.2:341:24-30]
+  // If the clauses have expressions on them, such as for various clauses where
+  // the argument of the clause is an expression, or lower-bound, length, or
+  // stride expressions inside array sections (or subscript and stride
+  // expressions in subscript-triplet for Fortran), or linear-step or alignment
+  // expressions, the expressions are evaluated immediately before the construct
+  // to which the clause has been split or duplicated per the above rules
+  // (therefore inside of the outer leaf constructs). However, the expressions
+  // inside the num_teams and thread_limit clauses are always evaluated before
+  // the outermost leaf construct.
+
+  // Process special cases first.
   switch (CKind) {
   case OMPC_if:
     switch (DKind) {
-    case OMPD_target_parallel_for_simd:
-      if (OpenMPVersion >= 50 &&
-          (NameModifier == OMPD_unknown || NameModifier == OMPD_simd)) {
-        CaptureRegion = OMPD_parallel;
-        break;
-      }
-      [[fallthrough]];
-    case OMPD_target_parallel:
-    case OMPD_target_parallel_for:
-    case OMPD_target_parallel_loop:
-      // If this clause applies to the nested 'parallel' region, capture within
-      // the 'target' region, otherwise do not capture.
-      if (NameModifier == OMPD_unknown || NameModifier == OMPD_parallel)
-        CaptureRegion = OMPD_target;
-      break;
     case OMPD_teams_loop:
     case OMPD_target_teams_loop:
       // For [target] teams loop, assume capture region is 'teams' so it's
       // available for codegen later to use if/when necessary.
-      CaptureRegion = OMPD_teams;
-      break;
-    case OMPD_target_teams_distribute_parallel_for_simd:
-      if (OpenMPVersion >= 50 &&
-          (NameModifier == OMPD_unknown || NameModifier == OMPD_simd)) {
-        CaptureRegion = OMPD_parallel;
-        break;
-      }
-      [[fallthrough]];
-    case OMPD_target_teams_distribute_parallel_for:
-      // If this clause applies to the nested 'parallel' region, capture within
-      // the 'teams' region, otherwise do not capture.
-      if (NameModifier == OMPD_unknown || NameModifier == OMPD_parallel)
-        CaptureRegion = OMPD_teams;
-      break;
-    case OMPD_teams_distribute_parallel_for_simd:
-      if (OpenMPVersion >= 50 &&
-          (NameModifier == OMPD_unknown || NameModifier == OMPD_simd)) {
-        CaptureRegion = OMPD_parallel;
-        break;
-      }
-      [[fallthrough]];
-    case OMPD_teams_distribute_parallel_for:
-      CaptureRegion = OMPD_teams;
-      break;
+      return OMPD_teams;
     case OMPD_target_update:
     case OMPD_target_enter_data:
     case OMPD_target_exit_data:
-      CaptureRegion = OMPD_task;
-      break;
-    case OMPD_parallel_masked_taskloop:
-      if (NameModifier == OMPD_unknown || NameModifier == OMPD_taskloop)
-        CaptureRegion = OMPD_parallel;
-      break;
-    case OMPD_parallel_master_taskloop:
-      if (NameModifier == OMPD_unknown || NameModifier == OMPD_taskloop)
-        CaptureRegion = OMPD_parallel;
-      break;
-    case OMPD_parallel_masked_taskloop_simd:
-      if ((OpenMPVersion <= 45 && NameModifier == OMPD_unknown) ||
-          NameModifier == OMPD_taskloop) {
-        CaptureRegion = OMPD_parallel;
-        break;
-      }
-      if (OpenMPVersion <= 45)
-        break;
-      if (NameModifier == OMPD_unknown || NameModifier == OMPD_simd)
-        CaptureRegion = OMPD_taskloop;
-      break;
-    case OMPD_parallel_master_taskloop_simd:
-      if ((OpenMPVersion <= 45 && NameModifier == OMPD_unknown) ||
-          NameModifier == OMPD_taskloop) {
-        CaptureRegion = OMPD_parallel;
-        break;
-      }
-      if (OpenMPVersion <= 45)
-        break;
-      if (NameModifier == OMPD_unknown || NameModifier == OMPD_simd)
-        CaptureRegion = OMPD_taskloop;
-      break;
-    case OMPD_parallel_for_simd:
-      if (OpenMPVersion <= 45)
-        break;
-      if (NameModifier == OMPD_unknown || NameModifier == OMPD_simd)
-        CaptureRegion = OMPD_parallel;
-      break;
-    case OMPD_taskloop_simd:
-    case OMPD_master_taskloop_simd:
-    case OMPD_masked_taskloop_simd:
-      if (OpenMPVersion <= 45)
-        break;
-      if (NameModifier == OMPD_unknown || NameModifier == OMPD_simd)
-        CaptureRegion = OMPD_taskloop;
-      break;
-    case OMPD_distribute_parallel_for_simd:
-      if (OpenMPVersion <= 45)
-        break;
-      if (NameModifier == OMPD_unknown || NameModifier == OMPD_simd)
-        CaptureRegion = OMPD_parallel;
-      break;
-    case OMPD_target_simd:
-      if (OpenMPVersion >= 50 &&
-          (NameModifier == OMPD_unknown || NameModifier == OMPD_simd))
-        CaptureRegion = OMPD_target;
-      break;
-    case OMPD_teams_distribute_simd:
-    case OMPD_target_teams_distribute_simd:
-      if (OpenMPVersion >= 50 &&
-          (NameModifier == OMPD_unknown || NameModifier == OMPD_simd))
-        CaptureRegion = OMPD_teams;
-      break;
-    case OMPD_cancel:
-    case OMPD_parallel:
-    case OMPD_parallel_master:
-    case OMPD_parallel_masked:
-    case OMPD_parallel_sections:
-    case OMPD_parallel_for:
-    case OMPD_parallel_loop:
-    case OMPD_target:
-    case OMPD_target_teams:
-    case OMPD_target_teams_distribute:
-    case OMPD_distribute_parallel_for:
-    case OMPD_task:
-    case OMPD_taskloop:
-    case OMPD_master_taskloop:
-    case OMPD_masked_taskloop:
-    case OMPD_target_data:
-    case OMPD_simd:
-    case OMPD_for_simd:
-    case OMPD_distribute_simd:
-      // Do not capture if-clause expressions.
-      break;
-    case OMPD_threadprivate:
-    case OMPD_allocate:
-    case OMPD_taskyield:
-    case OMPD_error:
-    case OMPD_barrier:
-    case OMPD_taskwait:
-    case OMPD_cancellation_point:
-    case OMPD_flush:
-    case OMPD_depobj:
-    case OMPD_scan:
-    case OMPD_declare_reduction:
-    case OMPD_declare_mapper:
-    case OMPD_declare_simd:
-    case OMPD_declare_variant:
-    case OMPD_begin_declare_variant:
-    case OMPD_end_declare_variant:
-    case OMPD_declare_target:
-    case OMPD_end_declare_target:
-    case OMPD_loop:
-    case OMPD_teams:
-    case OMPD_tile:
-    case OMPD_unroll:
-    case OMPD_for:
-    case OMPD_sections:
-    case OMPD_section:
-    case OMPD_single:
-    case OMPD_master:
-    case OMPD_masked:
-    case OMPD_critical:
-    case OMPD_taskgroup:
-    case OMPD_distribute:
-    case OMPD_ordered:
-    case OMPD_atomic:
-    case OMPD_teams_distribute:
-    case OMPD_requires:
-    case OMPD_metadirective:
-      llvm_unreachable("Unexpected OpenMP directive with if-clause");
-    case OMPD_unknown:
+      return OMPD_task;
     default:
-      llvm_unreachable("Unknown OpenMP directive");
-    }
-    break;
-  case OMPC_num_threads:
-    switch (DKind) {
-    case OMPD_target_parallel:
-    case OMPD_target_parallel_for:
-    case OMPD_target_parallel_for_simd:
-    case OMPD_target_parallel_loop:
-      CaptureRegion = OMPD_target;
       break;
-    case OMPD_teams_distribute_parallel_for:
-    case OMPD_teams_distribute_parallel_for_simd:
-    case OMPD_target_teams_distribute_parallel_for:
-    case OMPD_target_teams_distribute_parallel_for_simd:
-      CaptureRegion = OMPD_teams;
-      break;
-    case OMPD_parallel:
-    case OMPD_parallel_master:
-    case OMPD_parallel_masked:
-    case OMPD_parallel_sections:
-    case OMPD_parallel_for:
-    case OMPD_parallel_for_simd:
-    case OMPD_parallel_loop:
-    case OMPD_distribute_parallel_for:
-    case OMPD_distribute_parallel_for_simd:
-    case OMPD_parallel_master_taskloop:
-    case OMPD_parallel_masked_taskloop:
-    case OMPD_parallel_master_taskloop_simd:
-    case OMPD_parallel_masked_taskloop_simd:
-      // Do not capture num_threads-clause expressions.
-      break;
-    case OMPD_target_data:
-    case OMPD_target_enter_data:
-    case OMPD_target_exit_data:
-    case OMPD_target_update:
-    case OMPD_target:
-    case OMPD_target_simd:
-    case OMPD_target_teams:
-    case OMPD_target_teams_distribute:
-    case OMPD_target_teams_distribute_simd:
-    case OMPD_cancel:
-    case OMPD_task:
-    case OMPD_taskloop:
-    case OMPD_taskloop_simd:
-    case OMPD_master_taskloop:
-    case OMPD_masked_taskloop:
-    case OMPD_master_taskloop_simd:
-    case OMPD_masked_taskloop_simd:
-    case OMPD_threadprivate:
-    case OMPD_allocate:
-    case OMPD_taskyield:
-    case OMPD_error:
-    case OMPD_barrier:
-    case OMPD_taskwait:
-    case OMPD_cancellation_point:
-    case OMPD_flush:
-    case OMPD_depobj:
-    case OMPD_scan:
-    case OMPD_declare_reduction:
-    case OMPD_declare_mapper:
-    case OMPD_declare_simd:
-    case OMPD_declare_variant:
-    case OMPD_begin_declare_variant:
-    case OMPD_end_declare_variant:
-    case OMPD_declare_target:
-    case OMPD_end_declare_target:
-    case OMPD_loop:
-    case OMPD_teams_loop:
-    case OMPD_target_teams_loop:
-    case OMPD_teams:
-    case OMPD_simd:
-    case OMPD_tile:
-    case OMPD_unroll:
-    case OMPD_for:
-    case OMPD_for_simd:
-    case OMPD_sections:
-    case OMPD_section:
-    case OMPD_single:
-    case OMPD_master:
-    case OMPD_masked:
-    case OMPD_critical:
-    case OMPD_taskgroup:
-    case OMPD_distribute:
-    case OMPD_ordered:
-    case OMPD_atomic:
-    case OMPD_distribute_simd:
-    case OMPD_teams_distribute:
-    case OMPD_teams_distribute_simd:
-    case OMPD_requires:
-    case OMPD_metadirective:
-      llvm_unreachable("Unexpected OpenMP directive with num_threads-clause");
-    case OMPD_unknown:
-    default:
-      llvm_unreachable("Unknown OpenMP directive");
     }
     break;
   case OMPC_num_teams:
-    switch (DKind) {
-    case OMPD_target_teams:
-    case OMPD_target_teams_distribute:
-    case OMPD_target_teams_distribute_simd:
-    case OMPD_target_teams_distribute_parallel_for:
-    case OMPD_target_teams_distribute_parallel_for_simd:
-    case OMPD_target_teams_loop:
-      CaptureRegion = OMPD_target;
-      break;
-    case OMPD_teams_distribute_parallel_for:
-    case OMPD_teams_distribute_parallel_for_simd:
-    case OMPD_teams:
-    case OMPD_teams_distribute:
-    case OMPD_teams_distribute_simd:
-    case OMPD_teams_loop:
-      // Do not capture num_teams-clause expressions.
-      break;
-    case OMPD_distribute_parallel_for:
-    case OMPD_distribute_parallel_for_simd:
-    case OMPD_task:
-    case OMPD_taskloop:
-    case OMPD_taskloop_simd:
-    case OMPD_master_taskloop:
-    case OMPD_masked_taskloop:
-    case OMPD_master_taskloop_simd:
-    case OMPD_masked_taskloop_simd:
-    case OMPD_parallel_master_taskloop:
-    case OMPD_parallel_masked_taskloop:
-    case OMPD_parallel_master_taskloop_simd:
-    case OMPD_parallel_masked_taskloop_simd:
-    case OMPD_target_data:
-    case OMPD_target_enter_data:
-    case OMPD_target_exit_data:
-    case OMPD_target_update:
-    case OMPD_cancel:
-    case OMPD_parallel:
-    case OMPD_parallel_master:
-    case OMPD_parallel_masked:
-    case OMPD_parallel_sections:
-    case OMPD_parallel_for:
-    case OMPD_parallel_for_simd:
-    case OMPD_parallel_loop:
-    case OMPD_target:
-    case OMPD_target_simd:
-    case OMPD_target_parallel:
-    case OMPD_target_parallel_for:
-    case OMPD_target_parallel_for_simd:
-    case OMPD_target_parallel_loop:
-    case OMPD_threadprivate:
-    case OMPD_allocate:
-    case OMPD_taskyield:
-    case OMPD_error:
-    case OMPD_barrier:
-    case OMPD_taskwait:
-    case OMPD_cancellation_point:
-    case OMPD_flush:
-    case OMPD_depobj:
-    case OMPD_scan:
-    case OMPD_declare_reduction:
-    case OMPD_declare_mapper:
-    case OMPD_declare_simd:
-    case OMPD_declare_variant:
-    case OMPD_begin_declare_variant:
-    case OMPD_end_declare_variant:
-    case OMPD_declare_target:
-    case OMPD_end_declare_target:
-    case OMPD_loop:
-    case OMPD_simd:
-    case OMPD_tile:
-    case OMPD_unroll:
-    case OMPD_for:
-    case OMPD_for_simd:
-    case OMPD_sections:
-    case OMPD_section:
-    case OMPD_single:
-    case OMPD_master:
-    case OMPD_masked:
-    case OMPD_critical:
-    case OMPD_taskgroup:
-    case OMPD_distribute:
-    case OMPD_ordered:
-    case OMPD_atomic:
-    case OMPD_distribute_simd:
-    case OMPD_requires:
-    case OMPD_metadirective:
-      llvm_unreachable("Unexpected OpenMP directive with num_teams-clause");
-    case OMPD_unknown:
-    default:
-      llvm_unreachable("Unknown OpenMP directive");
-    }
-    break;
   case OMPC_thread_limit:
-    switch (DKind) {
-    case OMPD_target:
-    case OMPD_target_teams:
-    case OMPD_target_teams_distribute:
-    case OMPD_target_teams_distribute_simd:
-    case OMPD_target_teams_distribute_parallel_for:
-    case OMPD_target_teams_distribute_parallel_for_simd:
-    case OMPD_target_teams_loop:
-    case OMPD_target_simd:
-    case OMPD_target_parallel:
-    case OMPD_target_parallel_for:
-    case OMPD_target_parallel_for_simd:
-    case OMPD_target_parallel_loop:
-      CaptureRegion = OMPD_target;
-      break;
-    case OMPD_teams_distribute_parallel_for:
-    case OMPD_teams_distribute_parallel_for_simd:
-    case OMPD_teams:
-    case OMPD_teams_distribute:
-    case OMPD_teams_distribute_simd:
-    case OMPD_teams_loop:
-      // Do not capture thread_limit-clause expressions.
-      break;
-    case OMPD_distribute_parallel_for:
-    case OMPD_distribute_parallel_for_simd:
-    case OMPD_task:
-    case OMPD_taskloop:
-    case OMPD_taskloop_simd:
-    case OMPD_master_taskloop:
-    case OMPD_masked_taskloop:
-    case OMPD_master_taskloop_simd:
-    case OMPD_masked_taskloop_simd:
-    case OMPD_parallel_master_taskloop:
-    case OMPD_parallel_masked_taskloop:
-    case OMPD_parallel_master_taskloop_simd:
-    case OMPD_parallel_masked_taskloop_simd:
-    case OMPD_target_data:
-    case OMPD_target_enter_data:
-    case OMPD_target_exit_data:
-    case OMPD_target_update:
-    case OMPD_cancel:
-    case OMPD_parallel:
-    case OMPD_parallel_master:
-    case OMPD_parallel_masked:
-    case OMPD_parallel_sections:
-    case OMPD_parallel_for:
-    case OMPD_parallel_for_simd:
-    case OMPD_parallel_loop:
-    case OMPD_threadprivate:
-    case OMPD_allocate:
-    case OMPD_taskyield:
-    case OMPD_error:
-    case OMPD_barrier:
-    case OMPD_taskwait:
-    case OMPD_cancellation_point:
-    case OMPD_flush:
-    case OMPD_depobj:
-    case OMPD_scan:
-    case OMPD_declare_reduction:
-    case OMPD_declare_mapper:
-    case OMPD_declare_simd:
-    case OMPD_declare_variant:
-    case OMPD_begin_declare_variant:
-    case OMPD_end_declare_variant:
-    case OMPD_declare_target:
-    case OMPD_end_declare_target:
-    case OMPD_loop:
-    case OMPD_simd:
-    case OMPD_tile:
-    case OMPD_unroll:
-    case OMPD_for:
-    case OMPD_for_simd:
-    case OMPD_sections:
-    case OMPD_section:
-    case OMPD_single:
-    case OMPD_master:
-    case OMPD_masked:
-    case OMPD_critical:
-    case OMPD_taskgroup:
-    case OMPD_distribute:
-    case OMPD_ordered:
-    case OMPD_atomic:
-    case OMPD_distribute_simd:
-    case OMPD_requires:
-    case OMPD_metadirective:
-      llvm_unreachable("Unexpected OpenMP directive with thread_limit-clause");
-    case OMPD_unknown:
-    default:
-      llvm_unreachable("Unknown OpenMP directive");
-    }
-    break;
-  case OMPC_schedule:
-    switch (DKind) {
-    case OMPD_parallel_for:
-    case OMPD_parallel_for_simd:
-    case OMPD_distribute_parallel_for:
-    case OMPD_distribute_parallel_for_simd:
-    case OMPD_teams_distribute_parallel_for:
-    case OMPD_teams_distribute_parallel_for_simd:
-    case OMPD_target_parallel_for:
-    case OMPD_target_parallel_for_simd:
-    case OMPD_target_teams_distribute_parallel_for:
-    case OMPD_target_teams_distribute_parallel_for_simd:
-      CaptureRegion = OMPD_parallel;
-      break;
-    case OMPD_for:
-    case OMPD_for_simd:
-      // Do not capture schedule-clause expressions.
-      break;
-    case OMPD_task:
-    case OMPD_taskloop:
-    case OMPD_taskloop_simd:
-    case OMPD_master_taskloop:
-    case OMPD_masked_taskloop:
-    case OMPD_master_taskloop_simd:
-    case OMPD_masked_taskloop_simd:
-    case OMPD_parallel_master_taskloop:
-    case OMPD_parallel_masked_taskloop:
-    case OMPD_parallel_master_taskloop_simd:
-    case OMPD_parallel_masked_taskloop_simd:
-    case OMPD_target_data:
-    case OMPD_target_enter_data:
-    case OMPD_target_exit_data:
-    case OMPD_target_update:
-    case OMPD_teams:
-    case OMPD_teams_distribute:
-    case OMPD_teams_distribute_simd:
-    case OMPD_target_teams_distribute:
-    case OMPD_target_teams_distribute_simd:
-    case OMPD_target:
-    case OMPD_target_simd:
-    case OMPD_target_parallel:
-    case OMPD_cancel:
-    case OMPD_parallel:
-    case OMPD_parallel_master:
-    case OMPD_parallel_masked:
-    case OMPD_parallel_sections:
-    case OMPD_threadprivate:
-    case OMPD_allocate:
-    case OMPD_taskyield:
-    case OMPD_error:
-    case OMPD_barrier:
-    case OMPD_taskwait:
-    case OMPD_cancellation_point:
-    case OMPD_flush:
-    case OMPD_depobj:
-    case OMPD_scan:
-    case OMPD_declare_reduction:
-    case OMPD_declare_mapper:
-    case OMPD_declare_simd:
-    case OMPD_declare_variant:
-    case OMPD_begin_declare_variant:
-    case OMPD_end_declare_variant:
-    case OMPD_declare_target:
-    case OMPD_end_declare_target:
-    case OMPD_loop:
-    case OMPD_teams_loop:
-    case OMPD_target_teams_loop:
-    case OMPD_parallel_loop:
-    case OMPD_target_parallel_loop:
-    case OMPD_simd:
-    case OMPD_tile:
-    case OMPD_unroll:
-    case OMPD_sections:
-    case OMPD_section:
-    case OMPD_single:
-    case OMPD_master:
-    case OMPD_masked:
-    case OMPD_critical:
-    case OMPD_taskgroup:
-    case OMPD_distribute:
-    case OMPD_ordered:
-    case OMPD_atomic:
-    case OMPD_distribute_simd:
-    case OMPD_target_teams:
-    case OMPD_requires:
-    case OMPD_metadirective:
-      llvm_unreachable("Unexpected OpenMP directive with schedule clause");
-    case OMPD_unknown:
-    default:
-      llvm_unreachable("Unknown OpenMP directive");
-    }
-    break;
-  case OMPC_dist_schedule:
-    switch (DKind) {
-    case OMPD_teams_distribute_parallel_for:
-    case OMPD_teams_distribute_parallel_for_simd:
-    case OMPD_teams_distribute:
-    case OMPD_teams_distribute_simd:
-    case OMPD_target_teams_distribute_parallel_for:
-    case OMPD_target_teams_distribute_parallel_for_simd:
-    case OMPD_target_teams_distribute:
-    case OMPD_target_teams_distribute_simd:
-      CaptureRegion = OMPD_teams;
-      break;
-    case OMPD_distribute_parallel_for:
-    case OMPD_distribute_parallel_for_simd:
-    case OMPD_distribute:
-    case OMPD_distribute_simd:
-      // Do not capture dist_schedule-clause expressions.
-      break;
-    case OMPD_parallel_for:
-    case OMPD_parallel_for_simd:
-    case OMPD_target_parallel_for_simd:
-    case OMPD_target_parallel_for:
-    case OMPD_task:
-    case OMPD_taskloop:
-    case OMPD_taskloop_simd:
-    case OMPD_master_taskloop:
-    case OMPD_masked_taskloop:
-    case OMPD_master_taskloop_simd:
-    case OMPD_masked_taskloop_simd:
-    case OMPD_parallel_master_taskloop:
-    case OMPD_parallel_masked_taskloop:
-    case OMPD_parallel_master_taskloop_simd:
-    case OMPD_parallel_masked_taskloop_simd:
-    case OMPD_target_data:
-    case OMPD_target_enter_data:
-    case OMPD_target_exit_data:
-    case OMPD_target_update:
-    case OMPD_teams:
-    case OMPD_target:
-    case OMPD_target_simd:
-    case OMPD_target_parallel:
-    case OMPD_cancel:
-    case OMPD_parallel:
-    case OMPD_parallel_master:
-    case OMPD_parallel_masked:
-    case OMPD_parallel_sections:
-    case OMPD_threadprivate:
-    case OMPD_allocate:
-    case OMPD_taskyield:
-    case OMPD_error:
-    case OMPD_barrier:
-    case OMPD_taskwait:
-    case OMPD_cancellation_point:
-    case OMPD_flush:
-    case OMPD_depobj:
-    case OMPD_scan:
-    case OMPD_declare_reduction:
-    case OMPD_declare_mapper:
-    case OMPD_declare_simd:
-    case OMPD_declare_variant:
-    case OMPD_begin_declare_variant:
-    case OMPD_end_declare_variant:
-    case OMPD_declare_target:
-    case OMPD_end_declare_target:
-    case OMPD_loop:
-    case OMPD_teams_loop:
-    case OMPD_target_teams_loop:
-    case OMPD_parallel_loop:
-    case OMPD_target_parallel_loop:
-    case OMPD_simd:
-    case OMPD_tile:
-    case OMPD_unroll:
-    case OMPD_for:
-    case OMPD_for_simd:
-    case OMPD_sections:
-    case OMPD_section:
-    case OMPD_single:
-    case OMPD_master:
-    case OMPD_masked:
-    case OMPD_critical:
-    case OMPD_taskgroup:
-    case OMPD_ordered:
-    case OMPD_atomic:
-    case OMPD_target_teams:
-    case OMPD_requires:
-    case OMPD_metadirective:
-      llvm_unreachable("Unexpected OpenMP directive with dist_schedule clause");
-    case OMPD_unknown:
-    default:
-      llvm_unreachable("Unknown OpenMP directive");
-    }
-    break;
   case OMPC_ompx_dyn_cgroup_mem:
-    switch (DKind) {
-    case OMPD_target:
-    case OMPD_target_simd:
-    case OMPD_target_teams:
-    case OMPD_target_parallel:
-    case OMPD_target_teams_distribute:
-    case OMPD_target_teams_distribute_simd:
-    case OMPD_target_parallel_for:
-    case OMPD_target_parallel_for_simd:
-    case OMPD_target_parallel_loop:
-    case OMPD_target_teams_distribute_parallel_for:
-    case OMPD_target_teams_distribute_parallel_for_simd:
-    case OMPD_target_teams_loop:
-      CaptureRegion = OMPD_target;
-      break;
-    default:
-      llvm_unreachable("Unknown OpenMP directive");
-    }
+    if (Leafs[0] == OMPD_target)
+      return OMPD_target;
     break;
   case OMPC_device:
-    switch (DKind) {
-    case OMPD_target_update:
-    case OMPD_target_enter_data:
-    case OMPD_target_exit_data:
-    case OMPD_target:
-    case OMPD_target_simd:
-    case OMPD_target_teams:
-    case OMPD_target_parallel:
-    case OMPD_target_teams_distribute:
-    case OMPD_target_teams_distribute_simd:
-    case OMPD_target_parallel_for:
-    case OMPD_target_parallel_for_simd:
-    case OMPD_target_parallel_loop:
-    case OMPD_target_teams_distribute_parallel_for:
-    case OMPD_target_teams_distribute_parallel_for_simd:
-    case OMPD_target_teams_loop:
-    case OMPD_dispatch:
-      CaptureRegion = OMPD_task;
-      break;
-    case OMPD_target_data:
-    case OMPD_interop:
-      // Do not capture device-clause expressions.
-      break;
-    case OMPD_teams_distribute_parallel_for:
-    case OMPD_teams_distribute_parallel_for_simd:
-    case OMPD_teams:
-    case OMPD_teams_distribute:
-    case OMPD_teams_distribute_simd:
-    case OMPD_distribute_parallel_for:
-    case OMPD_distribute_parallel_for_simd:
-    case OMPD_task:
-    case OMPD_taskloop:
-    case OMPD_taskloop_simd:
-    case OMPD_master_taskloop:
-    case OMPD_masked_taskloop:
-    case OMPD_master_taskloop_simd:
-    case OMPD_masked_taskloop_simd:
-    case OMPD_parallel_master_taskloop:
-    case OMPD_parallel_masked_taskloop:
-    case OMPD_parallel_master_taskloop_simd:
-    case OMPD_parallel_masked_taskloop_simd:
-    case OMPD_cancel:
-    case OMPD_parallel:
-    case OMPD_parallel_master:
-    case OMPD_parallel_masked:
-    case OMPD_parallel_sections:
-    case OMPD_parallel_for:
-    case OMPD_parallel_for_simd:
-    case OMPD_threadprivate:
-    case OMPD_allocate:
-    case OMPD_taskyield:
-    case OMPD_error:
-    case OMPD_barrier:
-    case OMPD_taskwait:
-    case OMPD_cancellation_point:
-    case OMPD_flush:
-    case OMPD_depobj:
-    case OMPD_scan:
-    case OMPD_declare_reduction:
-    case OMPD_declare_mapper:
-    case OMPD_declare_simd:
-    case OMPD_declare_variant:
-    case OMPD_begin_declare_variant:
-    case OMPD_end_declare_variant:
-    case OMPD_declare_target:
-    case OMPD_end_declare_target:
-    case OMPD_loop:
-    case OMPD_teams_loop:
-    case OMPD_parallel_loop:
-    case OMPD_simd:
-    case OMPD_tile:
-    case OMPD_unroll:
-    case OMPD_for:
-    case OMPD_for_simd:
-    case OMPD_sections:
-    case OMPD_section:
-    case OMPD_single:
-    case OMPD_master:
-    case OMPD_masked:
-    case OMPD_critical:
-    case OMPD_taskgroup:
-    case OMPD_distribute:
-    case OMPD_ordered:
-    case OMPD_atomic:
-    case OMPD_distribute_simd:
-    case OMPD_requires:
-    case OMPD_metadirective:
-      llvm_unreachable("Unexpected OpenMP directive with device-clause");
-    case OMPD_unknown:
-    default:
-      llvm_unreachable("Unknown OpenMP directive");
-    }
-    break;
-  case OMPC_grainsize:
-  case OMPC_num_tasks:
-  case OMPC_final:
-  case OMPC_priority:
-    switch (DKind) {
-    case OMPD_task:
-    case OMPD_taskloop:
-    case OMPD_taskloop_simd:
-    case OMPD_master_taskloop:
-    case OMPD_masked_taskloop:
-    case OMPD_master_taskloop_simd:
-    case OMPD_masked_taskloop_simd:
-      break;
-    case OMPD_parallel_masked_taskloop:
-    case OMPD_parallel_masked_taskloop_simd:
-    case OMPD_parallel_master_taskloop:
-    case OMPD_parallel_master_taskloop_simd:
-      CaptureRegion = OMPD_parallel;
-      break;
-    case OMPD_target_update:
-    case OMPD_target_enter_data:
-    case OMPD_target_exit_data:
-    case OMPD_target:
-    case OMPD_target_simd:
-    case OMPD_target_teams:
-    case OMPD_target_parallel:
-    case OMPD_target_teams_distribute:
-    case OMPD_target_teams_distribute_simd:
-    case OMPD_target_parallel_for:
-    case OMPD_target_parallel_for_simd:
-    case OMPD_target_teams_distribute_parallel_for:
-    case OMPD_target_teams_distribute_parallel_for_simd:
-    case OMPD_target_data:
-    case OMPD_teams_distribute_parallel_for:
-    case OMPD_teams_distribute_parallel_for_simd:
-    case OMPD_teams:
-    case OMPD_teams_distribute:
-    case OMPD_teams_distribute_simd:
-    case OMPD_distribute_parallel_for:
-    case OMPD_distribute_parallel_for_simd:
-    case OMPD_cancel:
-    case OMPD_parallel:
-    case OMPD_parallel_master:
-    case OMPD_parallel_masked:
-    case OMPD_parallel_sections:
-    case OMPD_parallel_for:
-    case OMPD_parallel_for_simd:
-    case OMPD_threadprivate:
-    case OMPD_allocate:
-    case OMPD_taskyield:
-    case OMPD_error:
-    case OMPD_barrier:
-    case OMPD_taskwait:
-    case OMPD_cancellation_point:
-    case OMPD_flush:
-    case OMPD_depobj:
-    case OMPD_scan:
-    case OMPD_declare_reduction:
-    case OMPD_declare_mapper:
-    case OMPD_declare_simd:
-    case OMPD_declare_variant:
-    case OMPD_begin_declare_variant:
-    case OMPD_end_declare_variant:
-    case OMPD_declare_target:
-    case OMPD_end_declare_target:
-    case OMPD_loop:
-    case OMPD_teams_loop:
-    case OMPD_target_teams_loop:
-    case OMPD_parallel_loop:
-    case OMPD_target_parallel_loop:
-    case OMPD_simd:
-    case OMPD_tile:
-    case OMPD_unroll:
-    case OMPD_for:
-    case OMPD_for_simd:
-    case OMPD_sections:
-    case OMPD_section:
-    case OMPD_single:
-    case OMPD_master:
-    case OMPD_masked:
-    case OMPD_critical:
-    case OMPD_taskgroup:
-    case OMPD_distribute:
-    case OMPD_ordered:
-    case OMPD_atomic:
-    case OMPD_distribute_simd:
-    case OMPD_requires:
-    case OMPD_metadirective:
-      llvm_unreachable("Unexpected OpenMP directive with grainsize-clause");
-    case OMPD_unknown:
-    default:
-      llvm_unreachable("Unknown OpenMP directive");
-    }
+    if (Leafs[0] == OMPD_target ||
+        llvm::is_contained({OMPD_dispatch, OMPD_target_update,
+                            OMPD_target_enter_data, OMPD_target_exit_data},
+                           DKind))
+      return OMPD_task;
     break;
   case OMPC_novariants:
   case OMPC_nocontext:
-    switch (DKind) {
-    case OMPD_dispatch:
-      CaptureRegion = OMPD_task;
-      break;
-    default:
-      llvm_unreachable("Unexpected OpenMP directive");
-    }
-    break;
-  case OMPC_filter:
-    // Do not capture filter-clause expressions.
+    if (DKind == OMPD_dispatch)
+      return OMPD_task;
     break;
   case OMPC_when:
-    if (DKind == OMPD_metadirective) {
-      CaptureRegion = OMPD_metadirective;
-    } else if (DKind == OMPD_unknown) {
-      llvm_unreachable("Unknown OpenMP directive");
-    } else {
-      llvm_unreachable("Unexpected OpenMP directive with when clause");
-    }
+    if (DKind == OMPD_metadirective)
+      return OMPD_metadirective;
     break;
-  case OMPC_firstprivate:
-  case OMPC_lastprivate:
-  case OMPC_reduction:
-  case OMPC_task_reduction:
-  case OMPC_in_reduction:
-  case OMPC_linear:
-  case OMPC_default:
-  case OMPC_proc_bind:
-  case OMPC_safelen:
-  case OMPC_simdlen:
-  case OMPC_sizes:
-  case OMPC_allocator:
-  case OMPC_collapse:
-  case OMPC_private:
-  case OMPC_shared:
-  case OMPC_aligned:
-  case OMPC_copyin:
-  case OMPC_copyprivate:
-  case OMPC_ordered:
-  case OMPC_nowait:
-  case OMPC_untied:
-  case OMPC_mergeable:
-  case OMPC_threadprivate:
-  case OMPC_allocate:
-  case OMPC_flush:
-  case OMPC_depobj:
-  case OMPC_read:
-  case OMPC_write:
-  case OMPC_update:
-  case OMPC_capture:
-  case OMPC_compare:
-  case OMPC_seq_cst:
-  case OMPC_acq_rel:
-  case OMPC_acquire:
-  case OMPC_release:
-  case OMPC_relaxed:
-  case OMPC_depend:
-  case OMPC_threads:
-  case OMPC_simd:
-  case OMPC_map:
-  case OMPC_nogroup:
-  case OMPC_hint:
-  case OMPC_defaultmap:
-  case OMPC_unknown:
-  case OMPC_uniform:
-  case OMPC_to:
-  case OMPC_from:
-  case OMPC_use_device_ptr:
-  case OMPC_use_device_addr:
-  case OMPC_is_device_ptr:
-  case OMPC_unified_address:
-  case OMPC_unified_shared_memory:
-  case OMPC_reverse_offload:
-  case OMPC_dynamic_allocators:
-  case OMPC_atomic_default_mem_order:
-  case OMPC_device_type:
-  case OMPC_match:
-  case OMPC_nontemporal:
-  case OMPC_order:
-  case OMPC_at:
-  case OMPC_severity:
-  case OMPC_message:
-  case OMPC_destroy:
-  case OMPC_detach:
-  case OMPC_inclusive:
-  case OMPC_exclusive:
-  case OMPC_uses_allocators:
-  case OMPC_affinity:
-  case OMPC_bind:
+  case OMPC_filter:
+    return OMPD_unknown;
   default:
-    llvm_unreachable("Unexpected OpenMP clause.");
+    break;
   }
-  return CaptureRegion;
+
+  // If none of the special cases above applied, and DKind is a capturing
+  // directive, find the innermost enclosing leaf construct that allows the
+  // clause, and returns the corresponding capture region.
+
+  auto GetEnclosingRegion = [&](int EndIdx, OpenMPClauseKind Clause) {
+    // Find the index in "Leafs" of the last leaf that allows the given
+    // clause. The search will only include indexes [0, EndIdx).
+    // EndIdx may be set to the index of the NameModifier, if present.
+    int InnermostIdx = [&]() {
+      for (int I = EndIdx - 1; I >= 0; --I) {
+        if (isAllowedClauseForDirective(Leafs[I], Clause, OpenMPVersion))
+          return I;
+      }
+      return -1;
+    }();
+
+    // Find the nearest enclosing capture region.
+    SmallVector<OpenMPDirectiveKind, 2> Regions;
+    for (int I = InnermostIdx - 1; I >= 0; --I) {
+      if (!isOpenMPCapturingDirective(Leafs[I]))
+        continue;
+      Regions.clear();
+      getOpenMPCaptureRegions(Regions, Leafs[I]);
+      if (Regions[0] != OMPD_unknown)
+        return Regions.back();
+    }
+    return OMPD_unknown;
+  };
+
+  if (isOpenMPCapturingDirective(DKind)) {
+    auto GetLeafIndex = [&](OpenMPDirectiveKind Dir) {
+      for (int I = 0, E = Leafs.size(); I != E; ++I) {
+        if (Leafs[I] == Dir)
+          return I + 1;
+      }
+      return 0;
+    };
+
+    int End = NameModifier == OMPD_unknown ? Leafs.size()
+                                           : GetLeafIndex(NameModifier);
+    return GetEnclosingRegion(End, CKind);
+  }
+
+  return OMPD_unknown;
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPIfClause(

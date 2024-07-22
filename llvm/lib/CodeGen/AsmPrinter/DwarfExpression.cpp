@@ -552,9 +552,13 @@ bool DwarfExpression::addExpression(
       unsigned SizeInBits = Op->getArg(1);
       unsigned BitOffset = Op->getArg(0);
 
-      // If we have a memory location then dereference to get the value
-      if (isMemoryLocation())
-        emitOp(dwarf::DW_OP_deref);
+      // If we have a memory location then dereference to get the value, though
+      // we have to make sure we don't dereference any bytes past the end of the
+      // object.
+      if (isMemoryLocation()) {
+        emitOp(dwarf::DW_OP_deref_size);
+        emitUnsigned(alignTo(BitOffset + SizeInBits, 8) / 8);
+      }
 
       // Extract the bits by a shift left (to shift out the bits after what we
       // want to extract) followed by shift right (to shift the bits to position

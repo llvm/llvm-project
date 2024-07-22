@@ -262,6 +262,7 @@ add_libc_unittest(
     libc.include.unistd
     libc.src.errno.errno
     libc.src.unistd.readlink
+    libc.src.string.string_utils
     libc.src.unistd.symlink
     libc.src.unistd.unlink
     libc.src.__support.CPP.string_view
@@ -279,6 +280,7 @@ add_libc_unittest(
     libc.include.unistd
     libc.src.errno.errno
     libc.src.unistd.readlinkat
+    libc.src.string.string_utils
     libc.src.unistd.symlink
     libc.src.unistd.unlink
     libc.src.__support.CPP.string_view
@@ -374,6 +376,16 @@ add_libc_unittest(
     getpid_test.cpp
   DEPENDS
     libc.src.unistd.getpid
+)
+
+add_libc_unittest(
+  gettid_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    gettid_test.cpp
+  DEPENDS
+    libc.src.unistd.gettid
 )
 
 add_libc_unittest(

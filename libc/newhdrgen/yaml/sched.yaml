@@ -77,7 +77,8 @@ functions:
     standards: 
       - POSIX 
     return_type: int
-    arguments: []
+    arguments: 
+      - type: void
   - name: __sched_getcpucount
     standards: 
       - llvm_libc_ext

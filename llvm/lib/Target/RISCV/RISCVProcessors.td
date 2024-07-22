@@ -231,7 +231,8 @@ def SIFIVE_X280 : RISCVProcessorModel<"sifive-x280", SiFive7Model,
                                        FeatureStdExtZbb],
                                       [TuneSiFive7,
                                        FeaturePostRAScheduler,
-                                       TuneDLenFactor2]>;
+                                       TuneDLenFactor2,
+                                       TuneOptimizedZeroStrideLoad]>;
 
 def SIFIVE_P450 : RISCVProcessorModel<"sifive-p450", SiFiveP400Model,
                                       [Feature64Bit,

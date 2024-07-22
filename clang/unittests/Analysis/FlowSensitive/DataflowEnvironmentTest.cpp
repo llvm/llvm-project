@@ -21,6 +21,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
+#include <string>
 
 namespace {
 
@@ -405,6 +406,42 @@ TEST_F(EnvironmentTest,
               Contains(Member));
 }
 
+// This is a repro of a failure case seen in the wild.
+TEST_F(EnvironmentTest, CXXDefaultInitExprResultObjIsWrappedExprResultObj) {
+  using namespace ast_matchers;
+
+  std::string Code = R"cc(
+      struct Inner {};
+
+      struct S {
+        S() {}
+
+        Inner i = {};
+      };
+  )cc";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++11"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto Results =
+      match(cxxConstructorDecl(
+                hasAnyConstructorInitializer(cxxCtorInitializer(
+                    withInitializer(expr().bind("default_init_expr")))))
+                .bind("ctor"),
+            Context);
+  const auto *Constructor = selectFirst<CXXConstructorDecl>("ctor", Results);
+  const auto *DefaultInit =
+      selectFirst<CXXDefaultInitExpr>("default_init_expr", Results);
+
+  Environment Env(DAContext, *Constructor);
+  Env.initialize();
+  EXPECT_EQ(&Env.getResultObjectLocation(*DefaultInit),
+            &Env.getResultObjectLocation(*DefaultInit->getExpr()));
+}
+
 TEST_F(EnvironmentTest, Stmt) {
   using namespace ast_matchers;
 
@@ -434,6 +471,34 @@ TEST_F(EnvironmentTest, Stmt) {
   Env.initialize();
   // And don't crash when retrieving the result object location.
   Env.getResultObjectLocation(*Init);
+}
+
+// This is a crash repro.
+TEST_F(EnvironmentTest, LambdaCapturingThisInFieldInitializer) {
+  using namespace ast_matchers;
+  std::string Code = R"cc(
+      struct S {
+        int f{[this]() { return 1; }()};
+      };
+    )cc";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++11"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto *LambdaCallOperator = selectFirst<CXXMethodDecl>(
+      "method", match(cxxMethodDecl(hasName("operator()"),
+                                    ofClass(cxxRecordDecl(isLambda())))
+                          .bind("method"),
+                      Context));
+
+  Environment Env(DAContext, *LambdaCallOperator);
+  // Don't crash when initializing.
+  Env.initialize();
+  // And initialize the captured `this` pointee.
+  ASSERT_NE(nullptr, Env.getThisPointeeStorageLocation());
 }
 
 } // namespace

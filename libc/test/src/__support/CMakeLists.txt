@@ -1,20 +1,20 @@
 add_custom_target(libc-support-tests)
 
-add_libc_test(
-  block_test
-  SUITE
-    libc-support-tests
-  SRCS
-    block_test.cpp
-  DEPENDS
-    libc.src.__support.CPP.array
-    libc.src.__support.CPP.bit
-    libc.src.__support.CPP.span
-    libc.src.__support.block
-    libc.src.string.memcpy
-)
-
 if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+  add_libc_test(
+    block_test
+    SUITE
+      libc-support-tests
+    SRCS
+      block_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.array
+      libc.src.__support.CPP.bit
+      libc.src.__support.CPP.span
+      libc.src.__support.block
+      libc.src.string.memcpy
+  )
+
   add_libc_test(
     freelist_test
     SUITE
@@ -131,18 +131,15 @@ add_libc_test(
     libc.src.__support.uint128
 )
 
-# NVPTX does not support varargs currently.
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-  add_libc_test(
-    arg_list_test
-    SUITE
-      libc-support-tests
-    SRCS
-      arg_list_test.cpp
-    DEPENDS
-      libc.src.__support.arg_list
-  )
-endif()
+add_libc_test(
+  arg_list_test
+  SUITE
+    libc-support-tests
+  SRCS
+    arg_list_test.cpp
+  DEPENDS
+    libc.src.__support.arg_list
+)
 
 if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_libc_test(
@@ -203,6 +200,8 @@ add_libc_test(
     libc.src.stdlib.rand
     libc.src.stdlib.srand
     libc.src.string.memset
+  COMPILE_OPTIONS
+    -O3
   UNIT_TEST_ONLY
     # Aligned Allocation is not supported in hermetic builds.
 )

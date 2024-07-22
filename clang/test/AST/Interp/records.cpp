@@ -495,7 +495,7 @@ namespace DeclRefs {
   static_assert(b.a.m == 100, "");
   static_assert(b.a.f == 100, "");
 
-  constexpr B b2;
+  constexpr B b2{};
   static_assert(b2.a.m == 100, "");
   static_assert(b2.a.f == 100, "");
   static_assert(b2.a.f == 101, ""); // both-error {{failed}} \
@@ -1499,4 +1499,41 @@ namespace LocalWithThisPtrInit {
     return *s.p;
   }
   static_assert(foo() == 2, "");
+}
+
+namespace OnePastEndAndBack {
+  struct Base {
+    constexpr Base() {}
+    int n = 0;
+  };
+
+  constexpr Base a;
+  constexpr const Base *c = &a + 1;
+  constexpr const Base *d = c - 1;
+  static_assert(d == &a, "");
+}
+
+namespace BitSet {
+  class Bitset {
+    unsigned Bit = 0;
+
+  public:
+    constexpr Bitset() {
+      int Init[2] = {1,2};
+      for (auto I : Init)
+        set(I);
+    }
+    constexpr void set(unsigned I) {
+      this->Bit++;
+      this->Bit = 1u << 1;
+    }
+  };
+
+  struct ArchInfo {
+    Bitset DefaultExts;
+  };
+
+  constexpr ArchInfo ARMV8A = {
+    Bitset()
+  };
 }

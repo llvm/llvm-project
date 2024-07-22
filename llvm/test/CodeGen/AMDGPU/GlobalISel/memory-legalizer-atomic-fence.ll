@@ -10,7 +10,7 @@
 ; Note: we use MIR test checks + stop after legalizer to prevent
 ; tests from being optimized out.
 
-define amdgpu_kernel void @system_one_as_acquire() {
+define amdgpu_kernel void @system_one_as_acquire() #0 {
   ; GFX6-LABEL: name: system_one_as_acquire
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_WAITCNT_soft 3952
@@ -59,7 +59,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @system_one_as_release() {
+define amdgpu_kernel void @system_one_as_release() #0 {
   ; GFX6-LABEL: name: system_one_as_release
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_WAITCNT_soft 3952
@@ -98,7 +98,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @system_one_as_acq_rel() {
+define amdgpu_kernel void @system_one_as_acq_rel() #0 {
   ; GFX6-LABEL: name: system_one_as_acq_rel
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_WAITCNT_soft 3952
@@ -147,7 +147,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @system_one_as_seq_cst() {
+define amdgpu_kernel void @system_one_as_seq_cst() #0 {
   ; GFX6-LABEL: name: system_one_as_seq_cst
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_WAITCNT_soft 3952
@@ -196,7 +196,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @singlethread_one_as_acquire() {
+define amdgpu_kernel void @singlethread_one_as_acquire() #0 {
   ; GFX6-LABEL: name: singlethread_one_as_acquire
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_ENDPGM 0
@@ -225,7 +225,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @singlethread_one_as_release() {
+define amdgpu_kernel void @singlethread_one_as_release() #0 {
   ; GFX6-LABEL: name: singlethread_one_as_release
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_ENDPGM 0
@@ -254,7 +254,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @singlethread_one_as_acq_rel() {
+define amdgpu_kernel void @singlethread_one_as_acq_rel() #0 {
   ; GFX6-LABEL: name: singlethread_one_as_acq_rel
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_ENDPGM 0
@@ -283,7 +283,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @singlethread_one_as_seq_cst() {
+define amdgpu_kernel void @singlethread_one_as_seq_cst() #0 {
   ; GFX6-LABEL: name: singlethread_one_as_seq_cst
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_ENDPGM 0
@@ -312,7 +312,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @agent_one_as_acquire() {
+define amdgpu_kernel void @agent_one_as_acquire() #0 {
   ; GFX6-LABEL: name: agent_one_as_acquire
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_WAITCNT_soft 3952
@@ -361,7 +361,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @agent_one_as_release() {
+define amdgpu_kernel void @agent_one_as_release() #0 {
   ; GFX6-LABEL: name: agent_one_as_release
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_WAITCNT_soft 3952
@@ -400,7 +400,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @agent_one_as_acq_rel() {
+define amdgpu_kernel void @agent_one_as_acq_rel() #0 {
   ; GFX6-LABEL: name: agent_one_as_acq_rel
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_WAITCNT_soft 3952
@@ -449,7 +449,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @agent_one_as_seq_cst() {
+define amdgpu_kernel void @agent_one_as_seq_cst() #0 {
   ; GFX6-LABEL: name: agent_one_as_seq_cst
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_WAITCNT_soft 3952
@@ -498,7 +498,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @workgroup_one_as_acquire() {
+define amdgpu_kernel void @workgroup_one_as_acquire() #0 {
   ; GFX6-LABEL: name: workgroup_one_as_acquire
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_ENDPGM 0
@@ -533,7 +533,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @workgroup_one_as_release() {
+define amdgpu_kernel void @workgroup_one_as_release() #0 {
   ; GFX6-LABEL: name: workgroup_one_as_release
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_ENDPGM 0
@@ -566,7 +566,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @workgroup_one_as_acq_rel() {
+define amdgpu_kernel void @workgroup_one_as_acq_rel() #0 {
   ; GFX6-LABEL: name: workgroup_one_as_acq_rel
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_ENDPGM 0
@@ -601,7 +601,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @workgroup_one_as_seq_cst() {
+define amdgpu_kernel void @workgroup_one_as_seq_cst() #0 {
   ; GFX6-LABEL: name: workgroup_one_as_seq_cst
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_ENDPGM 0
@@ -636,7 +636,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @wavefront_one_as_acquire() {
+define amdgpu_kernel void @wavefront_one_as_acquire() #0 {
   ; GFX6-LABEL: name: wavefront_one_as_acquire
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_ENDPGM 0
@@ -665,7 +665,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @wavefront_one_as_release() {
+define amdgpu_kernel void @wavefront_one_as_release() #0 {
   ; GFX6-LABEL: name: wavefront_one_as_release
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_ENDPGM 0
@@ -694,7 +694,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @wavefront_one_as_acq_rel() {
+define amdgpu_kernel void @wavefront_one_as_acq_rel() #0 {
   ; GFX6-LABEL: name: wavefront_one_as_acq_rel
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_ENDPGM 0
@@ -723,7 +723,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @wavefront_one_as_seq_cst() {
+define amdgpu_kernel void @wavefront_one_as_seq_cst() #0 {
   ; GFX6-LABEL: name: wavefront_one_as_seq_cst
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_ENDPGM 0
@@ -752,7 +752,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @system_acquire() {
+define amdgpu_kernel void @system_acquire() #0 {
   ; GFX6-LABEL: name: system_acquire
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_WAITCNT_soft 112
@@ -801,7 +801,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @system_release() {
+define amdgpu_kernel void @system_release() #0 {
   ; GFX6-LABEL: name: system_release
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_WAITCNT_soft 112
@@ -840,7 +840,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @system_acq_rel() {
+define amdgpu_kernel void @system_acq_rel() #0 {
   ; GFX6-LABEL: name: system_acq_rel
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_WAITCNT_soft 112
@@ -889,7 +889,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @system_seq_cst() {
+define amdgpu_kernel void @system_seq_cst() #0 {
   ; GFX6-LABEL: name: system_seq_cst
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_WAITCNT_soft 112
@@ -938,7 +938,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @singlethread_acquire() {
+define amdgpu_kernel void @singlethread_acquire() #0 {
   ; GFX6-LABEL: name: singlethread_acquire
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_ENDPGM 0
@@ -967,7 +967,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @singlethread_release() {
+define amdgpu_kernel void @singlethread_release() #0 {
   ; GFX6-LABEL: name: singlethread_release
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_ENDPGM 0
@@ -996,7 +996,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @singlethread_acq_rel() {
+define amdgpu_kernel void @singlethread_acq_rel() #0 {
   ; GFX6-LABEL: name: singlethread_acq_rel
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_ENDPGM 0
@@ -1025,7 +1025,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @singlethread_seq_cst() {
+define amdgpu_kernel void @singlethread_seq_cst() #0 {
   ; GFX6-LABEL: name: singlethread_seq_cst
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_ENDPGM 0
@@ -1054,7 +1054,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @agent_acquire() {
+define amdgpu_kernel void @agent_acquire() #0 {
   ; GFX6-LABEL: name: agent_acquire
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_WAITCNT_soft 112
@@ -1103,7 +1103,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @agent_release() {
+define amdgpu_kernel void @agent_release() #0 {
   ; GFX6-LABEL: name: agent_release
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_WAITCNT_soft 112
@@ -1142,7 +1142,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @agent_acq_rel() {
+define amdgpu_kernel void @agent_acq_rel() #0 {
   ; GFX6-LABEL: name: agent_acq_rel
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_WAITCNT_soft 112
@@ -1191,7 +1191,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @agent_seq_cst() {
+define amdgpu_kernel void @agent_seq_cst() #0 {
   ; GFX6-LABEL: name: agent_seq_cst
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_WAITCNT_soft 112
@@ -1240,7 +1240,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @workgroup_acquire() {
+define amdgpu_kernel void @workgroup_acquire() #0 {
   ; GFX6-LABEL: name: workgroup_acquire
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_WAITCNT_soft 127
@@ -1279,7 +1279,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @workgroup_release() {
+define amdgpu_kernel void @workgroup_release() #0 {
   ; GFX6-LABEL: name: workgroup_release
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_WAITCNT_soft 127
@@ -1316,7 +1316,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @workgroup_acq_rel() {
+define amdgpu_kernel void @workgroup_acq_rel() #0 {
   ; GFX6-LABEL: name: workgroup_acq_rel
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_WAITCNT_soft 127
@@ -1355,7 +1355,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @workgroup_seq_cst() {
+define amdgpu_kernel void @workgroup_seq_cst() #0 {
   ; GFX6-LABEL: name: workgroup_seq_cst
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_WAITCNT_soft 127
@@ -1394,7 +1394,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @wavefront_acquire() {
+define amdgpu_kernel void @wavefront_acquire() #0 {
   ; GFX6-LABEL: name: wavefront_acquire
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_ENDPGM 0
@@ -1423,7 +1423,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @wavefront_release() {
+define amdgpu_kernel void @wavefront_release() #0 {
   ; GFX6-LABEL: name: wavefront_release
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_ENDPGM 0
@@ -1452,7 +1452,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @wavefront_acq_rel() {
+define amdgpu_kernel void @wavefront_acq_rel() #0 {
   ; GFX6-LABEL: name: wavefront_acq_rel
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_ENDPGM 0
@@ -1481,7 +1481,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @wavefront_seq_cst() {
+define amdgpu_kernel void @wavefront_seq_cst() #0 {
   ; GFX6-LABEL: name: wavefront_seq_cst
   ; GFX6: bb.0.entry:
   ; GFX6-NEXT:   S_ENDPGM 0
@@ -1509,3 +1509,5 @@ entry:
   fence syncscope("wavefront") seq_cst
   ret void
 }
+
+attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

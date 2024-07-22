@@ -408,46 +408,31 @@ ELFFile<ELFT>::getCrelHeader(ArrayRef<uint8_t> Content) const {
 template <class ELFT>
 Expected<typename ELFFile<ELFT>::RelsOrRelas>
 ELFFile<ELFT>::decodeCrel(ArrayRef<uint8_t> Content) const {
-  DataExtractor Data(Content, isLE(), sizeof(typename ELFT::Addr));
-  DataExtractor::Cursor Cur(0);
-  const uint64_t Hdr = Data.getULEB128(Cur);
-  const size_t Count = Hdr / 8;
-  const size_t FlagBits = Hdr & ELF::CREL_HDR_ADDEND ? 3 : 2;
-  const size_t Shift = Hdr % ELF::CREL_HDR_ADDEND;
   std::vector<Elf_Rel> Rels;
   std::vector<Elf_Rela> Relas;
-  if (Hdr & ELF::CREL_HDR_ADDEND)
-    Relas.resize(Count);
-  else
-    Rels.resize(Count);
-  typename ELFT::uint Offset = 0, Addend = 0;
-  uint32_t SymIdx = 0, Type = 0;
-  for (size_t I = 0; I != Count; ++I) {
-    // The delta offset and flags member may be larger than uint64_t. Special
-    // case the first byte (2 or 3 flag bits; the rest are offset bits). Other
-    // ULEB128 bytes encode the remaining delta offset bits.
-    const uint8_t B = Data.getU8(Cur);
-    Offset += B >> FlagBits;
-    if (B >= 0x80)
-      Offset += (Data.getULEB128(Cur) << (7 - FlagBits)) - (0x80 >> FlagBits);
-    // Delta symidx/type/addend members (SLEB128).
-    if (B & 1)
-      SymIdx += Data.getSLEB128(Cur);
-    if (B & 2)
-      Type += Data.getSLEB128(Cur);
-    if (B & 4 & Hdr)
-      Addend += Data.getSLEB128(Cur);
-    if (Hdr & ELF::CREL_HDR_ADDEND) {
-      Relas[I].r_offset = Offset << Shift;
-      Relas[I].setSymbolAndType(SymIdx, Type, false);
-      Relas[I].r_addend = Addend;
-    } else {
-      Rels[I].r_offset = Offset << Shift;
-      Rels[I].setSymbolAndType(SymIdx, Type, false);
-    }
-  }
-  if (!Cur)
-    return std::move(Cur.takeError());
+  size_t I = 0;
+  bool HasAddend;
+  Error Err = object::decodeCrel<ELFT::Is64Bits>(
+      Content,
+      [&](uint64_t Count, bool HasA) {
+        HasAddend = HasA;
+        if (HasAddend)
+          Relas.resize(Count);
+        else
+          Rels.resize(Count);
+      },
+      [&](Elf_Crel Crel) {
+        if (HasAddend) {
+          Relas[I].r_offset = Crel.r_offset;
+          Relas[I].setSymbolAndType(Crel.r_symidx, Crel.r_type, false);
+          Relas[I++].r_addend = Crel.r_addend;
+        } else {
+          Rels[I].r_offset = Crel.r_offset;
+          Rels[I++].setSymbolAndType(Crel.r_symidx, Crel.r_type, false);
+        }
+      });
+  if (Err)
+    return std::move(Err);
   return std::make_pair(std::move(Rels), std::move(Relas));
 }
 

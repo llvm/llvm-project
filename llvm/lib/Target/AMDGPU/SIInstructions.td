@@ -212,9 +212,17 @@ def EXIT_STRICT_WQM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
 }
 
 let usesCustomInserter = 1 in {
-def S_INVERSE_BALLOT_U32 : SPseudoInstSI <(outs SReg_32:$sdst), (ins SSrc_b32:$mask)>;
+let WaveSizePredicate = isWave32 in
+def S_INVERSE_BALLOT_U32 : SPseudoInstSI<
+  (outs SReg_32:$sdst), (ins SSrc_b32:$mask),
+  [(set i1:$sdst, (int_amdgcn_inverse_ballot i32:$mask))]
+>;
 
-def S_INVERSE_BALLOT_U64 : SPseudoInstSI <(outs SReg_64:$sdst), (ins SSrc_b64:$mask)>;
+let WaveSizePredicate = isWave64 in
+def S_INVERSE_BALLOT_U64 : SPseudoInstSI<
+  (outs SReg_64:$sdst), (ins SSrc_b64:$mask),
+  [(set i1:$sdst, (int_amdgcn_inverse_ballot i64:$mask))]
+>;
 } // End usesCustomInserter = 1
 
 // Pseudo instructions used for @llvm.fptrunc.round upward
@@ -3942,6 +3950,14 @@ def G_AMDGPU_INTRIN_IMAGE_LOAD_D16 : AMDGPUGenericInstruction {
   let mayLoad = 1;
 
   // FIXME: Use separate opcode for atomics.
+  let mayStore = 1;
+}
+
+def G_AMDGPU_INTRIN_IMAGE_LOAD_NORET : AMDGPUGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins unknown:$intrin, variable_ops);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
   let mayStore = 1;
 }
 
