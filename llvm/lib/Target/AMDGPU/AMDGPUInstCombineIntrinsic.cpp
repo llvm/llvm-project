@@ -1059,17 +1059,20 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     return IC.replaceOperand(II, 0, UndefValue::get(VDstIn->getType()));
   }
-  case Intrinsic::amdgcn_permlane64:
-    // A constant value is trivially uniform.
-    if (Constant *C = dyn_cast<Constant>(II.getArgOperand(0))) {
-      return IC.replaceInstUsesWith(II, C);
+  case Intrinsic::amdgcn_permlane64: {
+    UniformityInfo &UI = IC.getUniformityInfo();
+    Value *Src = II.getOperand(0);
+    if (UI.isUniform(Src)) {
+      return IC.replaceInstUsesWith(II, Src);
     }
     break;
+  }
   case Intrinsic::amdgcn_readfirstlane:
   case Intrinsic::amdgcn_readlane: {
-    // A constant value is trivially uniform.
-    if (Constant *C = dyn_cast<Constant>(II.getArgOperand(0))) {
-      return IC.replaceInstUsesWith(II, C);
+    UniformityInfo &UI = IC.getUniformityInfo();
+    Value *Srcv = II.getOperand(0);
+    if (UI.isUniform(Srcv)) {
+      return IC.replaceInstUsesWith(II, Srcv);
     }
 
     // The rest of these may not be safe if the exec may not be the same between

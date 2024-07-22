@@ -86,8 +86,7 @@ define amdgpu_kernel void @readlane_undef(ptr addrspace(1) %out) {
 
 define amdgpu_kernel void @readlane_sgpr(ptr addrspace(1) %out, i32 %src0, i32 %src1) {
 ; GFX-LABEL: @readlane_sgpr(
-; GFX-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[SRC0:%.*]], i32 [[SRC1:%.*]])
-; GFX-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
+; GFX-NEXT:    store i32 [[SRC0:%.*]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; GFX-NEXT:    ret void
 ;
   %v = call i32 @llvm.amdgcn.readlane(i32 %src0, i32 %src1)
@@ -156,8 +155,7 @@ define amdgpu_kernel void @readfirstlane_undef(ptr addrspace(1) %out) {
 
 define amdgpu_kernel void @readfirstlane_sgpr(ptr addrspace(1) %out, i32 %src0) {
 ; GFX-LABEL: @readfirstlane_sgpr(
-; GFX-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[SRC0:%.*]])
-; GFX-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
+; GFX-NEXT:    store i32 [[SRC0:%.*]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; GFX-NEXT:    ret void
 ;
   %v = call i32 @llvm.amdgcn.readfirstlane(i32 %src0)
