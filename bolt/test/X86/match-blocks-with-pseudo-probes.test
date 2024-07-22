@@ -53,10 +53,10 @@ functions:
     exec:                   1
     nblocks:                6
     guid:                   0xDB956436E78DD5FA
-    pseudo_probe_desc_hash: 15822663052811949562    #lookup in code in a second
+    pseudo_probe_desc_hash: 4294967295    #lookup in code in a second
     blocks:
       - bid:             1
         hash:            0x0000000000000001
         insns:           1
         succ:            [ { bid: 3, cnt: 1} ]
-        pseudo_probes: [ { guid: 0xDB956436E78DD5FA, id: 0, type: 0 } ]
+        pseudo_probes: [ { guid: 0xDB956436E78DD5FA, id: 1, type: 0 } ]

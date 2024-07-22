@@ -313,7 +313,7 @@ private:
       return nullptr;
 
     uint64_t Index = BlockPseudoProbes[0]->Index;
-    assert(Index < Blocks.size() && "Invalid pseudo probe index");
+    assert(Index <= Blocks.size() && "Invalid pseudo probe index");
 
     auto It = IndexToBinaryPseudoProbes.find(Index);
     assert(It != IndexToBinaryPseudoProbes.end() &&
