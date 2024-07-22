@@ -163,6 +163,11 @@ std::error_code Memory::releaseMappedMemory(MemoryBlock &M) {
 
 std::error_code Memory::protectMappedMemory(const MemoryBlock &M,
                                             unsigned Flags) {
+#if defined(__wasi__)
+  // Wasm does not allow making memory read-only or executable.
+  return std::error_code(ENOSYS, std::generic_category());
+#endif
+
   static const Align PageSize = Align(Process::getPageSizeEstimate());
   if (M.Address == nullptr || M.AllocatedSize == 0)
     return std::error_code();

@@ -273,9 +273,19 @@ static bool printMarkupStackTrace(StringRef Argv0, void **StackTrace, int Depth,
 }
 
 // Include the platform-specific parts of this class.
-#ifdef LLVM_ON_UNIX
+#if defined(__wasi__)
+// WASI does not have signals.
+void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr,
+                                 void *Cookie) {}
+void llvm::sys::RunInterruptHandlers() {}
+void sys::CleanupOnSignal(uintptr_t Context) {}
+bool llvm::sys::RemoveFileOnSignal(StringRef Filename, std::string *ErrMsg) {
+  return false;
+}
+void llvm::sys::DontRemoveFileOnSignal(StringRef Filename) {}
+void llvm::sys::DisableSystemDialogsOnCrash() {}
+#elif defined(LLVM_ON_UNIX)
 #include "Unix/Signals.inc"
-#endif
-#ifdef _WIN32
+#elif defined(_WIN32)
 #include "Windows/Signals.inc"
 #endif
