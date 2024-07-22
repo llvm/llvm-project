@@ -3597,7 +3597,7 @@ void Parser::injectEmbedTokens() {
     I += 2;
   }
   PP.EnterTokenStream(std::move(Toks), /*DisableMacroExpansion=*/true,
-                      /*IsReinject=*/false);
+                      /*IsReinject=*/true);
   ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
 }
 
