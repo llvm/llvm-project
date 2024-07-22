@@ -56,12 +56,12 @@ define void @caller_indirect_tail(i32 %a) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    beqz a0, .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lui a0, %hi(callee_indirect2)
-; CHECK-NEXT:    addi t1, a0, %lo(callee_indirect2)
+; CHECK-NEXT:    lui t1, %hi(callee_indirect2)
+; CHECK-NEXT:    addi t1, t1, %lo(callee_indirect2)
 ; CHECK-NEXT:    jr t1
 ; CHECK-NEXT:  .LBB3_2:
-; CHECK-NEXT:    lui a0, %hi(callee_indirect1)
-; CHECK-NEXT:    addi t1, a0, %lo(callee_indirect1)
+; CHECK-NEXT:    lui t1, %hi(callee_indirect1)
+; CHECK-NEXT:    addi t1, t1, %lo(callee_indirect1)
 ; CHECK-NEXT:    jr t1
 
 

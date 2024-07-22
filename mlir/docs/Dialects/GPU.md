@@ -12,7 +12,34 @@ manipulations to launch a GPU kernel and provide a simple path towards GPU
 execution from MLIR. It may be targeted, for example, by DSLs using MLIR. The
 dialect uses `gpu` as its canonical prefix.
 
+This dialect also abstracts away primitives commonly available in GPU code, such
+as with `gpu.thread_id` (an operation that returns the ID of threads within
+a thread block/workgroup along a given dimension). While the compilation
+pipelines documented below expect such code to live inside a `gpu.module` and
+`gpu.func`, these intrinsic wrappers may be used outside of this context.
+
+Intrinsic-wrapping operations should not expect that they have a parent of type
+`gpu.func`. However, operations that deal in compiling and launching GPU functions,
+like `gpu.launch_func` or `gpu.binary` may assume that the dialect's full layering
+is being used.
+
 [TOC]
+
+## GPU address spaces
+
+The GPU dialect exposes the `gpu.address_space` attribute, which currently has
+three values: `global`, `workgroup`, and `private`.
+
+These address spaces represent the types of buffer commonly seen in GPU compilation.
+`global` memory is memory that resides in the GPU's global memory. `workgroup`
+memory is a limited, per-workgroup resource: all threads in a workgroup/thread
+block access the same values in `workgroup` memory. Finally, `private` memory is
+used to represent `alloca`-like buffers that are private to a single thread/workitem.
+
+These address spaces may be used as the `memorySpace` attribute on `memref` values.
+The `gpu.module`/`gpu.func` compilation pipeline will lower such memory space
+usages to the correct address spaces on target platforms. Memory attributions should be
+created with the correct memory space on the memref.
 
 ## Memory attribution
 
@@ -37,9 +64,6 @@ complex lifetime analysis following the principles of MLIR that promote
 structure and representing analysis results in the IR.
 
 ## GPU Compilation
-### Deprecation notice
-The `--gpu-to-(cubin|hsaco)` passes will be deprecated in a future release.
-
 ### Compilation overview
 The compilation process in the GPU dialect has two main stages: GPU module
 serialization and offloading operations translation. Together these stages can
@@ -60,6 +84,15 @@ mlir-translate example-nvvm.mlir        \
   --mlir-to-llvmir                      \ # Obtain the translated LLVM IR.
   -o example.ll
 ```
+
+This compilation process expects all GPU code to live in a `gpu.module` and
+expects all kernels to be `gpu.func` operations. Non-kernel functions, like
+device library calls, may be defined using `func.func` or other non-GPU dialect
+operations. This permits downstream systems to use these wrappers without
+requiring them to use the GPU dialect's function operations, which might not include
+information those systems want to have as intrinsic values on their functions.
+Additionally, this allows for using `func.func` for device-side library functions
+in `gpu.module`s.
 
 ### Default NVVM Compilation Pipeline: gpu-lower-to-nvvm-pipeline
 
@@ -85,9 +118,9 @@ within GPU code execution:
 func.func @main() {
     %c2 = arith.constant 2 : index
     %c1 = arith.constant 1 : index
-    gpu.launch 
-        blocks(%0, %1, %2) in (%3 = %c1, %4 = %c1, %5 = %c1) 
-        threads(%6, %7, %8) in (%9 = %c2, %10 = %c1, %11 = %c1) { 
+    gpu.launch
+        blocks(%0, %1, %2) in (%3 = %c1, %4 = %c1, %5 = %c1)
+        threads(%6, %7, %8) in (%9 = %c2, %10 = %c1, %11 = %c1) {
         gpu.printf "Hello from %d\n" %6 : index
         gpu.terminator
     }

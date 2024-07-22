@@ -64,7 +64,7 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   return OFFLOAD_SUCCESS;
 }
 
-DeviceTy::DeviceTy(PluginAdaptorTy *RTL, int32_t DeviceID, int32_t RTLDeviceID)
+DeviceTy::DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID)
     : DeviceID(DeviceID), RTL(RTL), RTLDeviceID(RTLDeviceID),
       MappingInfo(*this) {}
 
@@ -77,15 +77,7 @@ DeviceTy::~DeviceTy() {
 }
 
 llvm::Error DeviceTy::init() {
-  // Make call to init_requires if it exists for this plugin.
-  int32_t Ret = 0;
-  Ret = RTL->init_requires(PM->getRequirements());
-  if (Ret != OFFLOAD_SUCCESS)
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        "Failed to initialize requirements for device %d\n", DeviceID);
-
-  Ret = RTL->init_device(RTLDeviceID);
+  int32_t Ret = RTL->init_device(RTLDeviceID);
   if (Ret != OFFLOAD_SUCCESS)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Failed to initialize device %d\n",
@@ -192,7 +184,6 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
           RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
   if (!AsyncInfo) {
-    assert(RTL->data_exchange && "RTL->data_exchange is nullptr");
     return RTL->data_exchange(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr,
                               Size);
   }
@@ -286,5 +277,7 @@ void DeviceTy::dumpOffloadEntries() {
 }
 
 bool DeviceTy::useAutoZeroCopy() {
+  if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY)
+    return false;
   return RTL->use_auto_zero_copy(RTLDeviceID);
 }

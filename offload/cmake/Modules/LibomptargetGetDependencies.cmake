@@ -1,19 +1,8 @@
-#
-#//===----------------------------------------------------------------------===//
-#//
-#// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-#// See https://llvm.org/LICENSE.txt for license information.
-#// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-#//
-#//===----------------------------------------------------------------------===//
-#
-
 # Try to detect in the system several dependencies required by the different
 # components of libomptarget. These are the dependencies we have:
 #
 # libffi : required to launch target kernels given function and argument
 #          pointers.
-# CUDA : required to control offloading to NVIDIA GPUs.
 
 include (FindPackageHandleStandardArgs)
 
@@ -52,13 +41,6 @@ endif()
 ################################################################################
 find_package(FFI QUIET)
 set(LIBOMPTARGET_DEP_LIBFFI_FOUND ${FFI_FOUND})
-
-################################################################################
-# Looking for CUDA...
-################################################################################
-
-find_package(CUDAToolkit QUIET)
-set(LIBOMPTARGET_DEP_CUDA_FOUND ${CUDAToolkit_FOUND})
 
 ################################################################################
 # Looking for NVIDIA GPUs...

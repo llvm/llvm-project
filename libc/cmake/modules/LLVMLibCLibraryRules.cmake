@@ -132,6 +132,9 @@ function(add_gpu_entrypoint_library target_name base_target_name)
     )
     add_custom_target(${dep}.__gpubin__ DEPENDS ${dep}
                       "${CMAKE_CURRENT_BINARY_DIR}/binary/${name}.gpubin")
+    if(TARGET clang-offload-packager)
+      add_dependencies(${dep}.__gpubin__ clang-offload-packager)
+    endif()
 
     # CMake does not permit setting the name on object files. In order to have
     # human readable names we create an empty stub file with the entrypoint
@@ -209,6 +212,9 @@ function(add_bitcode_entrypoint_library target_name base_target_name)
   )
   add_custom_target(${target_name} DEPENDS ${output} ${all_deps})
   set_target_properties(${target_name} PROPERTIES TARGET_OBJECT ${output})
+  if(TARGET llvm-link)
+    add_dependencies(${target_name} llvm-link)
+  endif()
 endfunction(add_bitcode_entrypoint_library)
 
 # A rule to build a library from a collection of entrypoint objects.

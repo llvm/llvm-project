@@ -16,6 +16,9 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaSwift.h"
+#include <stack>
 
 using namespace clang;
 
@@ -268,7 +271,8 @@ static void ProcessAPINotes(Sema &S, Decl *D,
               ASTAllocateString(S.Context, Info.UnavailableMsg),
               /*Strict=*/false,
               /*Replacement=*/StringRef(),
-              /*Priority=*/Sema::AP_Explicit);
+              /*Priority=*/Sema::AP_Explicit,
+              /*Environment=*/nullptr);
         },
         [](const Decl *D) {
           return llvm::find_if(D->attrs(), [](const Attr *next) -> bool {
@@ -301,8 +305,8 @@ static void ProcessAPINotes(Sema &S, Decl *D,
                         SourceLocation(), nullptr, nullptr, nullptr,
                         ParsedAttr::Form::GNU());
 
-          if (!S.DiagnoseSwiftName(D, Info.SwiftName, D->getLocation(), *SNA,
-                                   /*IsAsync=*/false))
+          if (!S.Swift().DiagnoseName(D, Info.SwiftName, D->getLocation(), *SNA,
+                                      /*IsAsync=*/false))
             return nullptr;
 
           return new (S.Context)
@@ -372,7 +376,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
       if (auto Var = dyn_cast<VarDecl>(D)) {
         // Make adjustments to parameter types.
         if (isa<ParmVarDecl>(Var)) {
-          Type = S.AdjustParameterTypeForObjCAutoRefCount(
+          Type = S.ObjC().AdjustParameterTypeForObjCAutoRefCount(
               Type, D->getLocation(), TypeInfo);
           Type = S.Context.getAdjustedParameterType(Type);
         }
@@ -542,6 +546,13 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
                   Metadata);
 }
 
+/// Process API notes for a C++ method.
+static void ProcessAPINotes(Sema &S, CXXMethodDecl *Method,
+                            const api_notes::CXXMethodInfo &Info,
+                            VersionedInfoMetadata Metadata) {
+  ProcessAPINotes(S, (FunctionOrMethod)Method, Info, Metadata);
+}
+
 /// Process API notes for a global function.
 static void ProcessAPINotes(Sema &S, FunctionDecl *D,
                             const api_notes::GlobalFunctionInfo &Info,
@@ -670,7 +681,7 @@ static void ProcessAPINotes(Sema &S, TypedefNameDecl *D,
 
 /// Process API notes for an Objective-C class or protocol.
 static void ProcessAPINotes(Sema &S, ObjCContainerDecl *D,
-                            const api_notes::ObjCContextInfo &Info,
+                            const api_notes::ContextInfo &Info,
                             VersionedInfoMetadata Metadata) {
   // Handle common type information.
   ProcessAPINotes(S, D, static_cast<const api_notes::CommonTypeInfo &>(Info),
@@ -679,7 +690,7 @@ static void ProcessAPINotes(Sema &S, ObjCContainerDecl *D,
 
 /// Process API notes for an Objective-C class.
 static void ProcessAPINotes(Sema &S, ObjCInterfaceDecl *D,
-                            const api_notes::ObjCContextInfo &Info,
+                            const api_notes::ContextInfo &Info,
                             VersionedInfoMetadata Metadata) {
   if (auto AsNonGeneric = Info.getSwiftImportAsNonGeneric()) {
     handleAPINotedAttribute<SwiftImportAsNonGenericAttr>(
@@ -778,13 +789,9 @@ void Sema::ProcessAPINotes(Decl *D) {
   if (!D)
     return;
 
-  // Globals.
-  if (D->getDeclContext()->isFileContext() ||
-      D->getDeclContext()->isNamespace() ||
-      D->getDeclContext()->isExternCContext() ||
-      D->getDeclContext()->isExternCXXContext()) {
-    std::optional<api_notes::Context> APINotesContext;
-    if (auto NamespaceContext = dyn_cast<NamespaceDecl>(D->getDeclContext())) {
+  auto GetNamespaceContext =
+      [&](DeclContext *DC) -> std::optional<api_notes::Context> {
+    if (auto NamespaceContext = dyn_cast<NamespaceDecl>(DC)) {
       for (auto Reader :
            APINotes.findAPINotes(NamespaceContext->getLocation())) {
         // Retrieve the context ID for the parent namespace of the decl.
@@ -807,11 +814,20 @@ void Sema::ProcessAPINotes(Decl *D) {
             break;
         }
         if (NamespaceID)
-          APINotesContext = api_notes::Context(
-              *NamespaceID, api_notes::ContextKind::Namespace);
+          return api_notes::Context(*NamespaceID,
+                                    api_notes::ContextKind::Namespace);
       }
     }
+    return std::nullopt;
+  };
 
+  // Globals.
+  if (D->getDeclContext()->isFileContext() ||
+      D->getDeclContext()->isNamespace() ||
+      D->getDeclContext()->isExternCContext() ||
+      D->getDeclContext()->isExternCXXContext()) {
+    std::optional<api_notes::Context> APINotesContext =
+        GetNamespaceContext(D->getDeclContext());
     // Global variables.
     if (auto VD = dyn_cast<VarDecl>(D)) {
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
@@ -995,6 +1011,26 @@ void Sema::ProcessAPINotes(Decl *D) {
       }
 
       return;
+    }
+  }
+
+  if (auto CXXRecord = dyn_cast<CXXRecordDecl>(D->getDeclContext())) {
+    auto GetRecordContext = [&](api_notes::APINotesReader *Reader)
+        -> std::optional<api_notes::ContextID> {
+      auto ParentContext = GetNamespaceContext(CXXRecord->getDeclContext());
+      if (auto Found = Reader->lookupTagID(CXXRecord->getName(), ParentContext))
+        return *Found;
+
+      return std::nullopt;
+    };
+
+    if (auto CXXMethod = dyn_cast<CXXMethodDecl>(D)) {
+      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+        if (auto Context = GetRecordContext(Reader)) {
+          auto Info = Reader->lookupCXXMethod(*Context, CXXMethod->getName());
+          ProcessVersionedAPINotes(*this, CXXMethod, Info);
+        }
+      }
     }
   }
 }

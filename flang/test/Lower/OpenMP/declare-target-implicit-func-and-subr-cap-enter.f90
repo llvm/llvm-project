@@ -105,7 +105,7 @@ end function target_function_test_host
 !! -----
 
 ! DEVICE-LABEL: func.func @_QPimplicitly_captured_with_dev_type_recursive
-! DEVICE-SAME: {{.*}}attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>{{.*}}}
+! DEVICE-SAME: {{.*}}attributes {fir.func_recursive, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>{{.*}}}
 recursive function implicitly_captured_with_dev_type_recursive(increment) result(k)
 !$omp declare target enter(implicitly_captured_with_dev_type_recursive) device_type(host)
    integer :: increment, k
@@ -174,7 +174,7 @@ program mb
 end program
 
 ! DEVICE-LABEL: func.func @_QPimplicitly_captured_recursive
-! DEVICE-SAME: {{.*}}attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (enter)>{{.*}}}
+! DEVICE-SAME: {{.*}}attributes {fir.func_recursive, omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (enter)>{{.*}}}
 recursive subroutine implicitly_captured_recursive(increment)
    integer :: increment
    if (increment == 10) then

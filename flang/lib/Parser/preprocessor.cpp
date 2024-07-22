@@ -12,6 +12,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cinttypes>
@@ -289,6 +290,7 @@ void Preprocessor::DefineStandardMacros() {
   // The values of these predefined macros depend on their invocation sites.
   Define("__FILE__"s, "__FILE__"s);
   Define("__LINE__"s, "__LINE__"s);
+  Define("__TIMESTAMP__"s, "__TIMESTAMP__"s);
 }
 
 void Preprocessor::Define(const std::string &macro, const std::string &value) {
@@ -377,6 +379,19 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
           llvm::raw_string_ostream ss{buf};
           ss << allSources_.GetLineNumber(prescanner.GetCurrentProvenance());
           repl = ss.str();
+        } else if (name == "__TIMESTAMP__") {
+          auto path{allSources_.GetPath(
+              prescanner.GetCurrentProvenance(), /*topLevel=*/true)};
+          llvm::sys::fs::file_status status;
+          repl = "??? ??? ?? ??:??:?? ????";
+          if (!llvm::sys::fs::status(path, status)) {
+            auto modTime{llvm::sys::toTimeT(status.getLastModificationTime())};
+            if (std::string time{std::asctime(std::localtime(&modTime))};
+                time.size() > 1 && time[time.size() - 1] == '\n') {
+              time.erase(time.size() - 1); // clip terminal '\n'
+              repl = "\""s + time + '"';
+            }
+          }
         }
         if (!repl.empty()) {
           ProvenanceRange insert{allSources_.AddCompilerInsertion(repl)};
@@ -749,17 +764,18 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
     }
     std::string buf;
     llvm::raw_string_ostream error{buf};
-    const SourceFile *included{
-        allSources_.Open(include, error, std::move(prependPath))};
-    if (!included) {
+    if (const SourceFile *
+        included{allSources_.Open(include, error, std::move(prependPath))}) {
+      if (included->bytes() > 0) {
+        ProvenanceRange fileRange{
+            allSources_.AddIncludedFile(*included, dir.GetProvenanceRange())};
+        Prescanner{prescanner, /*isNestedInIncludeDirective=*/true}
+            .set_encoding(included->encoding())
+            .Prescan(fileRange);
+      }
+    } else {
       prescanner.Say(dir.GetTokenProvenanceRange(j), "#include: %s"_err_en_US,
           error.str());
-    } else if (included->bytes() > 0) {
-      ProvenanceRange fileRange{
-          allSources_.AddIncludedFile(*included, dir.GetProvenanceRange())};
-      Prescanner{prescanner}
-          .set_encoding(included->encoding())
-          .Prescan(fileRange);
     }
   } else {
     prescanner.Say(dir.GetTokenProvenanceRange(dirOffset),

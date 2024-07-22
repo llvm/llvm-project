@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "X86ISelDAGToDAG.h"
 #include "X86.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86RegisterInfo.h"
@@ -25,6 +26,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -169,12 +171,10 @@ namespace {
     bool IndirectTlsSegRefs;
 
   public:
-    static char ID;
-
     X86DAGToDAGISel() = delete;
 
     explicit X86DAGToDAGISel(X86TargetMachine &tm, CodeGenOptLevel OptLevel)
-        : SelectionDAGISel(ID, tm, OptLevel), Subtarget(nullptr),
+        : SelectionDAGISel(tm, OptLevel), Subtarget(nullptr),
           OptForMinSize(false), IndirectTlsSegRefs(false) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override {
@@ -187,9 +187,7 @@ namespace {
       OptForMinSize = MF.getFunction().hasMinSize();
       assert((!OptForMinSize || MF.getFunction().hasOptSize()) &&
              "OptForMinSize implies OptForSize");
-
-      SelectionDAGISel::runOnMachineFunction(MF);
-      return true;
+      return SelectionDAGISel::runOnMachineFunction(MF);
     }
 
     void emitFunctionEntryCode() override;
@@ -577,11 +575,20 @@ namespace {
     bool hasNoSignFlagUses(SDValue Flags) const;
     bool hasNoCarryFlagUses(SDValue Flags) const;
   };
+
+  class X86DAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+  public:
+    static char ID;
+    explicit X86DAGToDAGISelLegacy(X86TargetMachine &tm,
+                                   CodeGenOptLevel OptLevel)
+        : SelectionDAGISelLegacy(
+              ID, std::make_unique<X86DAGToDAGISel>(tm, OptLevel)) {}
+  };
 }
 
-char X86DAGToDAGISel::ID = 0;
+char X86DAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(X86DAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(X86DAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 // Returns true if this masked compare can be implemented legally with this
 // type.
@@ -915,7 +922,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       if (Imm == EndbrImm || isEndbrImm64(Imm)) {
         // Check that the cf-protection-branch is enabled.
         Metadata *CFProtectionBranch =
-          MF->getMMI().getModule()->getModuleFlag("cf-protection-branch");
+            MF->getFunction().getParent()->getModuleFlag(
+                "cf-protection-branch");
         if (CFProtectionBranch || IndirectBranchTracking) {
           SDLoc dl(N);
           SDValue Complement = CurDAG->getConstant(~Imm, dl, VT, false, true);
@@ -1549,124 +1557,166 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
       continue;
     }
 
-    // Look for a TESTrr+ANDrr pattern where both operands of the test are
-    // the same. Rewrite to remove the AND.
     unsigned Opc = N->getMachineOpcode();
-    if ((Opc == X86::TEST8rr || Opc == X86::TEST16rr ||
-         Opc == X86::TEST32rr || Opc == X86::TEST64rr) &&
-        N->getOperand(0) == N->getOperand(1) &&
-        N->getOperand(0)->hasNUsesOfValue(2, N->getOperand(0).getResNo()) &&
-        N->getOperand(0).isMachineOpcode()) {
+    switch (Opc) {
+    default:
+      continue;
+    // ANDrr/rm + TESTrr+ -> TESTrr/TESTmr
+    case X86::TEST8rr:
+    case X86::TEST16rr:
+    case X86::TEST32rr:
+    case X86::TEST64rr:
+    // ANDrr/rm + CTESTrr -> CTESTrr/CTESTmr
+    case X86::CTEST8rr:
+    case X86::CTEST16rr:
+    case X86::CTEST32rr:
+    case X86::CTEST64rr: {
+      auto &Op0 = N->getOperand(0);
+      if (Op0 != N->getOperand(1) || !Op0->hasNUsesOfValue(2, Op0.getResNo()) ||
+          !Op0.isMachineOpcode())
+        continue;
       SDValue And = N->getOperand(0);
-      unsigned N0Opc = And.getMachineOpcode();
-      if ((N0Opc == X86::AND8rr || N0Opc == X86::AND16rr ||
-           N0Opc == X86::AND32rr || N0Opc == X86::AND64rr) &&
-          !And->hasAnyUseOfValue(1)) {
-        MachineSDNode *Test = CurDAG->getMachineNode(Opc, SDLoc(N),
-                                                     MVT::i32,
-                                                     And.getOperand(0),
-                                                     And.getOperand(1));
-        ReplaceUses(N, Test);
-        MadeChange = true;
+#define CASE_ND(OP)                                                            \
+  case X86::OP:                                                                \
+  case X86::OP##_ND:
+      switch (And.getMachineOpcode()) {
+      default:
         continue;
-      }
-      if ((N0Opc == X86::AND8rm || N0Opc == X86::AND16rm ||
-           N0Opc == X86::AND32rm || N0Opc == X86::AND64rm) &&
-          !And->hasAnyUseOfValue(1)) {
-        unsigned NewOpc;
-        switch (N0Opc) {
-        case X86::AND8rm:  NewOpc = X86::TEST8mr; break;
-        case X86::AND16rm: NewOpc = X86::TEST16mr; break;
-        case X86::AND32rm: NewOpc = X86::TEST32mr; break;
-        case X86::AND64rm: NewOpc = X86::TEST64mr; break;
+        CASE_ND(AND8rr)
+        CASE_ND(AND16rr)
+        CASE_ND(AND32rr)
+        CASE_ND(AND64rr) {
+          if (And->hasAnyUseOfValue(1))
+            continue;
+          SmallVector<SDValue> Ops(N->op_values());
+          Ops[0] = And.getOperand(0);
+          Ops[1] = And.getOperand(1);
+          MachineSDNode *Test =
+              CurDAG->getMachineNode(Opc, SDLoc(N), MVT::i32, Ops);
+          ReplaceUses(N, Test);
+          MadeChange = true;
+          continue;
         }
+        CASE_ND(AND8rm)
+        CASE_ND(AND16rm)
+        CASE_ND(AND32rm)
+        CASE_ND(AND64rm) {
+          if (And->hasAnyUseOfValue(1))
+            continue;
+          unsigned NewOpc;
+          bool IsCTESTCC = X86::isCTESTCC(Opc);
+#define FROM_TO(A, B)                                                          \
+  CASE_ND(A) NewOpc = IsCTESTCC ? X86::C##B : X86::B;                          \
+  break;
+          switch (And.getMachineOpcode()) {
+            FROM_TO(AND8rm, TEST8mr);
+            FROM_TO(AND16rm, TEST16mr);
+            FROM_TO(AND32rm, TEST32mr);
+            FROM_TO(AND64rm, TEST64mr);
+          }
+#undef FROM_TO
+#undef CASE_ND
+          // Need to swap the memory and register operand.
+          SmallVector<SDValue> Ops = {And.getOperand(1), And.getOperand(2),
+                                      And.getOperand(3), And.getOperand(4),
+                                      And.getOperand(5), And.getOperand(0)};
+          // CC, Cflags.
+          if (IsCTESTCC) {
+            Ops.push_back(N->getOperand(2));
+            Ops.push_back(N->getOperand(3));
+          }
+          // Chain of memory load
+          Ops.push_back(And.getOperand(6));
+          // Glue
+          if (IsCTESTCC)
+            Ops.push_back(N->getOperand(4));
 
-        // Need to swap the memory and register operand.
-        SDValue Ops[] = { And.getOperand(1),
-                          And.getOperand(2),
-                          And.getOperand(3),
-                          And.getOperand(4),
-                          And.getOperand(5),
-                          And.getOperand(0),
-                          And.getOperand(6)  /* Chain */ };
-        MachineSDNode *Test = CurDAG->getMachineNode(NewOpc, SDLoc(N),
-                                                     MVT::i32, MVT::Other, Ops);
-        CurDAG->setNodeMemRefs(
-            Test, cast<MachineSDNode>(And.getNode())->memoperands());
-        ReplaceUses(And.getValue(2), SDValue(Test, 1));
-        ReplaceUses(SDValue(N, 0), SDValue(Test, 0));
-        MadeChange = true;
-        continue;
+          MachineSDNode *Test = CurDAG->getMachineNode(
+              NewOpc, SDLoc(N), MVT::i32, MVT::Other, Ops);
+          CurDAG->setNodeMemRefs(
+              Test, cast<MachineSDNode>(And.getNode())->memoperands());
+          ReplaceUses(And.getValue(2), SDValue(Test, 1));
+          ReplaceUses(SDValue(N, 0), SDValue(Test, 0));
+          MadeChange = true;
+          continue;
+        }
       }
     }
-
     // Look for a KAND+KORTEST and turn it into KTEST if only the zero flag is
     // used. We're doing this late so we can prefer to fold the AND into masked
     // comparisons. Doing that can be better for the live range of the mask
     // register.
-    if ((Opc == X86::KORTESTBrr || Opc == X86::KORTESTWrr ||
-         Opc == X86::KORTESTDrr || Opc == X86::KORTESTQrr) &&
-        N->getOperand(0) == N->getOperand(1) &&
-        N->isOnlyUserOf(N->getOperand(0).getNode()) &&
-        N->getOperand(0).isMachineOpcode() &&
-        onlyUsesZeroFlag(SDValue(N, 0))) {
-      SDValue And = N->getOperand(0);
-      unsigned N0Opc = And.getMachineOpcode();
+    case X86::KORTESTBrr:
+    case X86::KORTESTWrr:
+    case X86::KORTESTDrr:
+    case X86::KORTESTQrr: {
+      SDValue Op0 = N->getOperand(0);
+      if (Op0 != N->getOperand(1) || !N->isOnlyUserOf(Op0.getNode()) ||
+          !Op0.isMachineOpcode() || !onlyUsesZeroFlag(SDValue(N, 0)))
+        continue;
+#define CASE(A)                                                                \
+  case X86::A:                                                                 \
+    break;
+      switch (Op0.getMachineOpcode()) {
+      default:
+        continue;
+        CASE(KANDBrr)
+        CASE(KANDWrr)
+        CASE(KANDDrr)
+        CASE(KANDQrr)
+      }
+      unsigned NewOpc;
+#define FROM_TO(A, B)                                                          \
+  case X86::A:                                                                 \
+    NewOpc = X86::B;                                                           \
+    break;
+      switch (Opc) {
+        FROM_TO(KORTESTBrr, KTESTBrr)
+        FROM_TO(KORTESTWrr, KTESTWrr)
+        FROM_TO(KORTESTDrr, KTESTDrr)
+        FROM_TO(KORTESTQrr, KTESTQrr)
+      }
       // KANDW is legal with AVX512F, but KTESTW requires AVX512DQ. The other
       // KAND instructions and KTEST use the same ISA feature.
-      if (N0Opc == X86::KANDBrr ||
-          (N0Opc == X86::KANDWrr && Subtarget->hasDQI()) ||
-          N0Opc == X86::KANDDrr || N0Opc == X86::KANDQrr) {
-        unsigned NewOpc;
-        switch (Opc) {
-        default: llvm_unreachable("Unexpected opcode!");
-        case X86::KORTESTBrr: NewOpc = X86::KTESTBrr; break;
-        case X86::KORTESTWrr: NewOpc = X86::KTESTWrr; break;
-        case X86::KORTESTDrr: NewOpc = X86::KTESTDrr; break;
-        case X86::KORTESTQrr: NewOpc = X86::KTESTQrr; break;
-        }
-        MachineSDNode *KTest = CurDAG->getMachineNode(NewOpc, SDLoc(N),
-                                                      MVT::i32,
-                                                      And.getOperand(0),
-                                                      And.getOperand(1));
-        ReplaceUses(N, KTest);
-        MadeChange = true;
+      if (NewOpc == X86::KTESTWrr && !Subtarget->hasDQI())
         continue;
-      }
+#undef FROM_TO
+      MachineSDNode *KTest = CurDAG->getMachineNode(
+          NewOpc, SDLoc(N), MVT::i32, Op0.getOperand(0), Op0.getOperand(1));
+      ReplaceUses(N, KTest);
+      MadeChange = true;
+      continue;
     }
-
     // Attempt to remove vectors moves that were inserted to zero upper bits.
-    if (Opc != TargetOpcode::SUBREG_TO_REG)
-      continue;
+    case TargetOpcode::SUBREG_TO_REG: {
+      unsigned SubRegIdx = N->getConstantOperandVal(2);
+      if (SubRegIdx != X86::sub_xmm && SubRegIdx != X86::sub_ymm)
+        continue;
 
-    unsigned SubRegIdx = N->getConstantOperandVal(2);
-    if (SubRegIdx != X86::sub_xmm && SubRegIdx != X86::sub_ymm)
-      continue;
+      SDValue Move = N->getOperand(1);
+      if (!Move.isMachineOpcode())
+        continue;
 
-    SDValue Move = N->getOperand(1);
-    if (!Move.isMachineOpcode())
-      continue;
-
-    // Make sure its one of the move opcodes we recognize.
-    switch (Move.getMachineOpcode()) {
-    default:
-      continue;
-    case X86::VMOVAPDrr:       case X86::VMOVUPDrr:
-    case X86::VMOVAPSrr:       case X86::VMOVUPSrr:
-    case X86::VMOVDQArr:       case X86::VMOVDQUrr:
-    case X86::VMOVAPDYrr:      case X86::VMOVUPDYrr:
-    case X86::VMOVAPSYrr:      case X86::VMOVUPSYrr:
-    case X86::VMOVDQAYrr:      case X86::VMOVDQUYrr:
-    case X86::VMOVAPDZ128rr:   case X86::VMOVUPDZ128rr:
-    case X86::VMOVAPSZ128rr:   case X86::VMOVUPSZ128rr:
-    case X86::VMOVDQA32Z128rr: case X86::VMOVDQU32Z128rr:
-    case X86::VMOVDQA64Z128rr: case X86::VMOVDQU64Z128rr:
-    case X86::VMOVAPDZ256rr:   case X86::VMOVUPDZ256rr:
-    case X86::VMOVAPSZ256rr:   case X86::VMOVUPSZ256rr:
-    case X86::VMOVDQA32Z256rr: case X86::VMOVDQU32Z256rr:
-    case X86::VMOVDQA64Z256rr: case X86::VMOVDQU64Z256rr:
-      break;
-    }
+      // Make sure its one of the move opcodes we recognize.
+      switch (Move.getMachineOpcode()) {
+      default:
+        continue;
+        CASE(VMOVAPDrr)       CASE(VMOVUPDrr)
+        CASE(VMOVAPSrr)       CASE(VMOVUPSrr)
+        CASE(VMOVDQArr)       CASE(VMOVDQUrr)
+        CASE(VMOVAPDYrr)      CASE(VMOVUPDYrr)
+        CASE(VMOVAPSYrr)      CASE(VMOVUPSYrr)
+        CASE(VMOVDQAYrr)      CASE(VMOVDQUYrr)
+        CASE(VMOVAPDZ128rr)   CASE(VMOVUPDZ128rr)
+        CASE(VMOVAPSZ128rr)   CASE(VMOVUPSZ128rr)
+        CASE(VMOVDQA32Z128rr) CASE(VMOVDQU32Z128rr)
+        CASE(VMOVDQA64Z128rr) CASE(VMOVDQU64Z128rr)
+        CASE(VMOVAPDZ256rr)   CASE(VMOVUPDZ256rr)
+        CASE(VMOVAPSZ256rr)   CASE(VMOVUPSZ256rr)
+        CASE(VMOVDQA32Z256rr) CASE(VMOVDQU32Z256rr)
+        CASE(VMOVDQA64Z256rr) CASE(VMOVDQU64Z256rr)
+      }
+#undef CASE
 
     SDValue In = Move.getOperand(0);
     if (!In.isMachineOpcode() ||
@@ -1685,6 +1735,8 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
     // move.
     CurDAG->UpdateNodeOperands(N, N->getOperand(0), In, N->getOperand(2));
     MadeChange = true;
+    }
+    }
   }
 
   if (MadeChange)
@@ -2694,7 +2746,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
         Src = Src.getOperand(0);
       }
 
-    if (Src.getOpcode() == ISD::SHL && Src.hasOneUse()) {
+    if (Src.getOpcode() == ISD::SHL && Src.hasOneUse() && N->hasOneUse()) {
       // Give up if the shift is not a valid scale factor [1,2,3].
       SDValue ShlSrc = Src.getOperand(0);
       SDValue ShlAmt = Src.getOperand(1);
@@ -5070,6 +5122,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::x86_tileloaddt164_internal: {
       if (!Subtarget->hasAMXTILE())
         break;
+      auto *MFI =
+          CurDAG->getMachineFunction().getInfo<X86MachineFunctionInfo>();
+      MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
       unsigned Opc = IntNo == Intrinsic::x86_tileloadd64_internal
                          ? X86::PTILELOADDV
                          : X86::PTILELOADDT1V;
@@ -5151,6 +5206,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       break;
     }
     case Intrinsic::x86_tilestored64_internal: {
+      auto *MFI =
+          CurDAG->getMachineFunction().getInfo<X86MachineFunctionInfo>();
+      MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
       unsigned Opc = X86::PTILESTOREDV;
       // _tile_stored_internal(row, col, buf, STRIDE, c)
       SDValue Base = Node->getOperand(4);
@@ -5178,6 +5236,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::x86_tilestored64: {
       if (!Subtarget->hasAMXTILE())
         break;
+      auto *MFI =
+          CurDAG->getMachineFunction().getInfo<X86MachineFunctionInfo>();
+      MFI->setAMXProgModel(AMXProgModelEnum::DirectReg);
       unsigned Opc;
       switch (IntNo) {
       default: llvm_unreachable("Unexpected intrinsic!");
@@ -6549,9 +6610,13 @@ bool X86DAGToDAGISel::SelectInlineAsmMemoryOperand(
   return false;
 }
 
+X86ISelDAGToDAGPass::X86ISelDAGToDAGPass(X86TargetMachine &TM)
+    : SelectionDAGISelPass(
+          std::make_unique<X86DAGToDAGISel>(TM, TM.getOptLevel())) {}
+
 /// This pass converts a legalized DAG into a X86-specific DAG,
 /// ready for instruction scheduling.
 FunctionPass *llvm::createX86ISelDag(X86TargetMachine &TM,
                                      CodeGenOptLevel OptLevel) {
-  return new X86DAGToDAGISel(TM, OptLevel);
+  return new X86DAGToDAGISelLegacy(TM, OptLevel);
 }

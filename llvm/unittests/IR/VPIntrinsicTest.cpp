@@ -27,7 +27,8 @@ namespace {
 static const char *ReductionIntOpcodes[] = {
     "add", "mul", "and", "or", "xor", "smin", "smax", "umin", "umax"};
 
-static const char *ReductionFPOpcodes[] = {"fadd", "fmul", "fmin", "fmax"};
+static const char *ReductionFPOpcodes[] = {"fadd", "fmul",     "fmin",
+                                           "fmax", "fminimum", "fmaximum"};
 
 class VPIntrinsicTest : public testing::Test {
 protected:
@@ -106,6 +107,8 @@ protected:
            "@llvm.experimental.vp.strided.load.v8i32.p1i32.i32(i32 "
            "addrspace(1)*, i32, <8 x i1>, i32) ";
     Str << " declare <8 x i32> @llvm.vp.gather.v8i32.v8p0i32(<8 x i32*>, <8 x "
+           "i1>, i32) ";
+    Str << " declare <8 x i32> @llvm.experimental.vp.splat.v8i32(i32, <8 x "
            "i1>, i32) ";
 
     for (const char *ReductionOpcode : ReductionIntOpcodes)

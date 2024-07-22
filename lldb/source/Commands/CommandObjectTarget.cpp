@@ -784,7 +784,8 @@ public:
 
     options.SetRootValueObjectName(root_name);
 
-    valobj_sp->Dump(s, options);
+    if (llvm::Error error = valobj_sp->Dump(s, options))
+      s << "error: " << toString(std::move(error));
   }
 
   static size_t GetVariableCallback(void *baton, const char *name,
@@ -4251,7 +4252,7 @@ public:
     m_option_group.Append(&m_current_stack_option, LLDB_OPT_SET_2,
                           LLDB_OPT_SET_2);
     m_option_group.Finalize();
-    AddSimpleArgumentList(eArgTypeShlibName);
+    AddSimpleArgumentList(eArgTypeFilename);
   }
 
   ~CommandObjectTargetSymbolsAdd() override = default;

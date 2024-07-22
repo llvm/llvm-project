@@ -3,12 +3,10 @@
 void func() {
   int i, j;
 
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented, clause ignored}}
   #pragma acc parallel wait
   {}
 
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented, clause ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
   #pragma acc parallel wait clause-list
   {}
 
@@ -17,12 +15,10 @@ void func() {
   #pragma acc parallel wait (
       {}
 
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented, clause ignored}}
   #pragma acc parallel wait ()
       {}
 
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented, clause ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
   #pragma acc parallel wait () clause-list
       {}
 
@@ -61,12 +57,10 @@ void func() {
   #pragma acc parallel wait (queues:
     {}
 
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented, clause ignored}}
   #pragma acc parallel wait (queues:)
     {}
 
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented, clause ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
   #pragma acc parallel wait (queues:) clause-list
     {}
 
@@ -75,12 +69,10 @@ void func() {
   #pragma acc parallel wait (devnum: i + j:queues:
     {}
 
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented, clause ignored}}
   #pragma acc parallel wait (devnum: i + j:queues:)
     {}
 
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented, clause ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
   #pragma acc parallel wait (devnum: i + j:queues:) clause-list
     {}
 
@@ -108,13 +100,11 @@ void func() {
   #pragma acc parallel wait(i, j, 1+1, 3.3
     {}
 
-  // expected-error@+2{{OpenACC clause 'wait' requires expression of integer type ('double' invalid)}}
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented, clause ignored}}
+  // expected-error@+1{{OpenACC clause 'wait' requires expression of integer type ('double' invalid)}}
   #pragma acc parallel wait(i, j, 1+1, 3.3)
     {}
-  // expected-error@+3{{OpenACC clause 'wait' requires expression of integer type ('double' invalid)}}
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented, clause ignored}}
+  // expected-error@+2{{OpenACC clause 'wait' requires expression of integer type ('double' invalid)}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
   #pragma acc parallel wait(i, j, 1+1, 3.3) clause-list
     {}
 
@@ -146,14 +136,12 @@ void func() {
   #pragma acc parallel wait(queues:i, j, 1+1, 3.3,
     {}
 
-  // expected-error@+2{{OpenACC clause 'wait' requires expression of integer type ('double' invalid)}}
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented, clause ignored}}
+  // expected-error@+1{{OpenACC clause 'wait' requires expression of integer type ('double' invalid)}}
   #pragma acc parallel wait(queues:i, j, 1+1, 3.3)
     {}
 
-  // expected-error@+3{{OpenACC clause 'wait' requires expression of integer type ('double' invalid)}}
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented, clause ignored}}
+  // expected-error@+2{{OpenACC clause 'wait' requires expression of integer type ('double' invalid)}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
   #pragma acc parallel wait(queues:i, j, 1+1, 3.3) clause-list
     {}
 
@@ -162,13 +150,11 @@ void func() {
   // expected-note@+1{{to match this '('}}
   #pragma acc parallel wait(devnum:3:i, j, 1+1, 3.3
     {}
-  // expected-error@+2{{OpenACC clause 'wait' requires expression of integer type ('double' invalid)}}
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented, clause ignored}}
+  // expected-error@+1{{OpenACC clause 'wait' requires expression of integer type ('double' invalid)}}
   #pragma acc parallel wait(devnum:3:i, j, 1+1, 3.3)
     {}
-  // expected-error@+3{{OpenACC clause 'wait' requires expression of integer type ('double' invalid)}}
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented, clause ignored}}
+  // expected-error@+2{{OpenACC clause 'wait' requires expression of integer type ('double' invalid)}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
   #pragma acc parallel wait(devnum:3:i, j, 1+1, 3.3) clause-list
     {}
 
@@ -177,13 +163,11 @@ void func() {
   // expected-note@+1{{to match this '('}}
   #pragma acc parallel wait(devnum:3:queues:i, j, 1+1, 3.3
     {}
-  // expected-error@+2{{OpenACC clause 'wait' requires expression of integer type ('double' invalid)}}
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented, clause ignored}}
+  // expected-error@+1{{OpenACC clause 'wait' requires expression of integer type ('double' invalid)}}
   #pragma acc parallel wait(devnum:3:queues:i, j, 1+1, 3.3)
     {}
-  // expected-error@+3{{OpenACC clause 'wait' requires expression of integer type ('double' invalid)}}
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented, clause ignored}}
+  // expected-error@+2{{OpenACC clause 'wait' requires expression of integer type ('double' invalid)}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
   #pragma acc parallel wait(devnum:3:queues:i, j, 1+1, 3.3) clause-list
     {}
 }

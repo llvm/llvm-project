@@ -75,6 +75,7 @@ Clang-Tidy Checks
    :doc:`android-cloexec-pipe2 <android/cloexec-pipe2>`, "Yes"
    :doc:`android-cloexec-socket <android/cloexec-socket>`, "Yes"
    :doc:`android-comparison-in-temp-failure-retry <android/comparison-in-temp-failure-retry>`,
+   :doc:`boost-use-ranges <boost/use-ranges>`, "Yes"
    :doc:`boost-use-to-string <boost/use-to-string>`, "Yes"
    :doc:`bugprone-argument-comment <bugprone/argument-comment>`, "Yes"
    :doc:`bugprone-assert-side-effect <bugprone/assert-side-effect>`,
@@ -117,6 +118,7 @@ Clang-Tidy Checks
    :doc:`bugprone-not-null-terminated-result <bugprone/not-null-terminated-result>`, "Yes"
    :doc:`bugprone-optional-value-conversion <bugprone/optional-value-conversion>`, "Yes"
    :doc:`bugprone-parent-virtual-call <bugprone/parent-virtual-call>`, "Yes"
+   :doc:`bugprone-pointer-arithmetic-on-polymorphic-object <bugprone/pointer-arithmetic-on-polymorphic-object>`,
    :doc:`bugprone-posix-return <bugprone/posix-return>`, "Yes"
    :doc:`bugprone-redundant-branch-condition <bugprone/redundant-branch-condition>`, "Yes"
    :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"
@@ -267,6 +269,7 @@ Clang-Tidy Checks
    :doc:`misc-unused-parameters <misc/unused-parameters>`, "Yes"
    :doc:`misc-unused-using-decls <misc/unused-using-decls>`, "Yes"
    :doc:`misc-use-anonymous-namespace <misc/use-anonymous-namespace>`,
+   :doc:`misc-use-internal-linkage <misc/use-internal-linkage>`, "Yes"
    :doc:`modernize-avoid-bind <modernize/avoid-bind>`, "Yes"
    :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,
    :doc:`modernize-concat-nested-namespaces <modernize/concat-nested-namespaces>`, "Yes"
@@ -299,7 +302,9 @@ Clang-Tidy Checks
    :doc:`modernize-use-noexcept <modernize/use-noexcept>`, "Yes"
    :doc:`modernize-use-nullptr <modernize/use-nullptr>`, "Yes"
    :doc:`modernize-use-override <modernize/use-override>`, "Yes"
+   :doc:`modernize-use-ranges <modernize/use-ranges>`, "Yes"
    :doc:`modernize-use-starts-ends-with <modernize/use-starts-ends-with>`, "Yes"
+   :doc:`modernize-use-std-format <modernize/use-std-format>`, "Yes"
    :doc:`modernize-use-std-numbers <modernize/use-std-numbers>`, "Yes"
    :doc:`modernize-use-std-print <modernize/use-std-print>`, "Yes"
    :doc:`modernize-use-trailing-return-type <modernize/use-trailing-return-type>`, "Yes"
@@ -404,6 +409,7 @@ Check aliases
    :doc:`bugprone-narrowing-conversions <bugprone/narrowing-conversions>`, :doc:`cppcoreguidelines-narrowing-conversions <cppcoreguidelines/narrowing-conversions>`,
    :doc:`cert-con36-c <cert/con36-c>`, :doc:`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>`,
    :doc:`cert-con54-cpp <cert/con54-cpp>`, :doc:`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>`,
+   :doc:`cert-ctr56-cpp <cert/ctr56-cpp>`, :doc:`bugprone-pointer-arithmetic-on-polymorphic-object <bugprone/pointer-arithmetic-on-polymorphic-object>`,
    :doc:`cert-dcl03-c <cert/dcl03-c>`, :doc:`misc-static-assert <misc/static-assert>`, "Yes"
    :doc:`cert-dcl16-c <cert/dcl16-c>`, :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
    :doc:`cert-dcl37-c <cert/dcl37-c>`, :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"
@@ -441,8 +447,9 @@ Check aliases
    :doc:`clang-analyzer-core.uninitialized.CapturedBlockVariable <clang-analyzer/core.uninitialized.CapturedBlockVariable>`, `Clang Static Analyzer core.uninitialized.CapturedBlockVariable <https://clang.llvm.org/docs/analyzer/checkers.html#core-uninitialized-capturedblockvariable>`_,
    :doc:`clang-analyzer-core.uninitialized.NewArraySize <clang-analyzer/core.uninitialized.NewArraySize>`, `Clang Static Analyzer core.uninitialized.NewArraySize <https://clang.llvm.org/docs/analyzer/checkers.html#core-uninitialized-newarraysize>`_,
    :doc:`clang-analyzer-core.uninitialized.UndefReturn <clang-analyzer/core.uninitialized.UndefReturn>`, `Clang Static Analyzer core.uninitialized.UndefReturn <https://clang.llvm.org/docs/analyzer/checkers.html#core-uninitialized-undefreturn>`_,
+   :doc:`clang-analyzer-cplusplus.ArrayDelete <clang-analyzer/cplusplus.ArrayDelete>`, `Clang Static Analyzer cplusplus.ArrayDelete <https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-arraydelete>`_,
    :doc:`clang-analyzer-cplusplus.InnerPointer <clang-analyzer/cplusplus.InnerPointer>`, `Clang Static Analyzer cplusplus.InnerPointer <https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-innerpointer>`_,
-   :doc:`clang-analyzer-cplusplus.Move <clang-analyzer/cplusplus.Move>`, Clang Static Analyzer cplusplus.Move,
+   :doc:`clang-analyzer-cplusplus.Move <clang-analyzer/cplusplus.Move>`, `Clang Static Analyzer cplusplus.Move <https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-move>`_,
    :doc:`clang-analyzer-cplusplus.NewDelete <clang-analyzer/cplusplus.NewDelete>`, `Clang Static Analyzer cplusplus.NewDelete <https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-newdelete>`_,
    :doc:`clang-analyzer-cplusplus.NewDeleteLeaks <clang-analyzer/cplusplus.NewDeleteLeaks>`, `Clang Static Analyzer cplusplus.NewDeleteLeaks <https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-newdeleteleaks>`_,
    :doc:`clang-analyzer-cplusplus.PlacementNew <clang-analyzer/cplusplus.PlacementNew>`, `Clang Static Analyzer cplusplus.PlacementNew <https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-placementnew>`_,
@@ -465,6 +472,7 @@ Check aliases
    :doc:`clang-analyzer-optin.performance.GCDAntipattern <clang-analyzer/optin.performance.GCDAntipattern>`, `Clang Static Analyzer optin.performance.GCDAntipattern <https://clang.llvm.org/docs/analyzer/checkers.html#optin-performance-gcdantipattern>`_,
    :doc:`clang-analyzer-optin.performance.Padding <clang-analyzer/optin.performance.Padding>`, `Clang Static Analyzer optin.performance.Padding <https://clang.llvm.org/docs/analyzer/checkers.html#optin-performance-padding>`_,
    :doc:`clang-analyzer-optin.portability.UnixAPI <clang-analyzer/optin.portability.UnixAPI>`, `Clang Static Analyzer optin.portability.UnixAPI <https://clang.llvm.org/docs/analyzer/checkers.html#optin-portability-unixapi>`_,
+   :doc:`clang-analyzer-optin.taint.TaintedAlloc <clang-analyzer/optin.taint.TaintedAlloc>`, `Clang Static Analyzer optin.taint.TaintedAlloc <https://clang.llvm.org/docs/analyzer/checkers.html#optin-taint-taintedalloc>`_,
    :doc:`clang-analyzer-osx.API <clang-analyzer/osx.API>`, `Clang Static Analyzer osx.API <https://clang.llvm.org/docs/analyzer/checkers.html#osx-api>`_,
    :doc:`clang-analyzer-osx.MIG <clang-analyzer/osx.MIG>`, Clang Static Analyzer osx.MIG,
    :doc:`clang-analyzer-osx.NumberObjectConversion <clang-analyzer/osx.NumberObjectConversion>`, `Clang Static Analyzer osx.NumberObjectConversion <https://clang.llvm.org/docs/analyzer/checkers.html#osx-numberobjectconversion>`_,
@@ -495,6 +503,8 @@ Check aliases
    :doc:`clang-analyzer-osx.coreFoundation.containers.OutOfBounds <clang-analyzer/osx.coreFoundation.containers.OutOfBounds>`, `Clang Static Analyzer osx.coreFoundation.containers.OutOfBounds <https://clang.llvm.org/docs/analyzer/checkers.html#osx-corefoundation-containers-outofbounds>`_,
    :doc:`clang-analyzer-osx.coreFoundation.containers.PointerSizedValues <clang-analyzer/osx.coreFoundation.containers.PointerSizedValues>`, `Clang Static Analyzer osx.coreFoundation.containers.PointerSizedValues <https://clang.llvm.org/docs/analyzer/checkers.html#osx-corefoundation-containers-pointersizedvalues>`_,
    :doc:`clang-analyzer-security.FloatLoopCounter <clang-analyzer/security.FloatLoopCounter>`, `Clang Static Analyzer security.FloatLoopCounter <https://clang.llvm.org/docs/analyzer/checkers.html#security-floatloopcounter>`_,
+   :doc:`clang-analyzer-security.PutenvStackArray <clang-analyzer/security.PutenvStackArray>`, Clang Static Analyzer security.PutenvStackArray,
+   :doc:`clang-analyzer-security.SetgidSetuidOrder <clang-analyzer/security.SetgidSetuidOrder>`, Clang Static Analyzer security.SetgidSetuidOrder,
    :doc:`clang-analyzer-security.cert.env.InvalidPtr <clang-analyzer/security.cert.env.InvalidPtr>`, `Clang Static Analyzer security.cert.env.InvalidPtr <https://clang.llvm.org/docs/analyzer/checkers.html#security-cert-env-invalidptr>`_,
    :doc:`clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling <clang-analyzer/security.insecureAPI.DeprecatedOrUnsafeBufferHandling>`, `Clang Static Analyzer security.insecureAPI.DeprecatedOrUnsafeBufferHandling <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-deprecatedorunsafebufferhandling>`_,
    :doc:`clang-analyzer-security.insecureAPI.UncheckedReturn <clang-analyzer/security.insecureAPI.UncheckedReturn>`, `Clang Static Analyzer security.insecureAPI.UncheckedReturn <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-uncheckedreturn>`_,
@@ -510,11 +520,13 @@ Check aliases
    :doc:`clang-analyzer-security.insecureAPI.strcpy <clang-analyzer/security.insecureAPI.strcpy>`, `Clang Static Analyzer security.insecureAPI.strcpy <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-strcpy>`_,
    :doc:`clang-analyzer-security.insecureAPI.vfork <clang-analyzer/security.insecureAPI.vfork>`, `Clang Static Analyzer security.insecureAPI.vfork <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-vfork>`_,
    :doc:`clang-analyzer-unix.API <clang-analyzer/unix.API>`, `Clang Static Analyzer unix.API <https://clang.llvm.org/docs/analyzer/checkers.html#unix-api>`_,
+   :doc:`clang-analyzer-unix.BlockInCriticalSection <clang-analyzer/unix.BlockInCriticalSection>`, `Clang Static Analyzer unix.BlockInCriticalSection <https://clang.llvm.org/docs/analyzer/checkers.html#unix-blockincriticalsection>`_,
    :doc:`clang-analyzer-unix.Errno <clang-analyzer/unix.Errno>`, `Clang Static Analyzer unix.Errno <https://clang.llvm.org/docs/analyzer/checkers.html#unix-errno>`_,
    :doc:`clang-analyzer-unix.Malloc <clang-analyzer/unix.Malloc>`, `Clang Static Analyzer unix.Malloc <https://clang.llvm.org/docs/analyzer/checkers.html#unix-malloc>`_,
    :doc:`clang-analyzer-unix.MallocSizeof <clang-analyzer/unix.MallocSizeof>`, `Clang Static Analyzer unix.MallocSizeof <https://clang.llvm.org/docs/analyzer/checkers.html#unix-mallocsizeof>`_,
    :doc:`clang-analyzer-unix.MismatchedDeallocator <clang-analyzer/unix.MismatchedDeallocator>`, `Clang Static Analyzer unix.MismatchedDeallocator <https://clang.llvm.org/docs/analyzer/checkers.html#unix-mismatcheddeallocator>`_,
    :doc:`clang-analyzer-unix.StdCLibraryFunctions <clang-analyzer/unix.StdCLibraryFunctions>`, `Clang Static Analyzer unix.StdCLibraryFunctions <https://clang.llvm.org/docs/analyzer/checkers.html#unix-stdclibraryfunctions>`_,
+   :doc:`clang-analyzer-unix.Stream <clang-analyzer/unix.Stream>`, `Clang Static Analyzer unix.Stream <https://clang.llvm.org/docs/analyzer/checkers.html#unix-stream>`_,
    :doc:`clang-analyzer-unix.Vfork <clang-analyzer/unix.Vfork>`, `Clang Static Analyzer unix.Vfork <https://clang.llvm.org/docs/analyzer/checkers.html#unix-vfork>`_,
    :doc:`clang-analyzer-unix.cstring.BadSizeArg <clang-analyzer/unix.cstring.BadSizeArg>`, `Clang Static Analyzer unix.cstring.BadSizeArg <https://clang.llvm.org/docs/analyzer/checkers.html#unix-cstring-badsizearg>`_,
    :doc:`clang-analyzer-unix.cstring.NullArg <clang-analyzer/unix.cstring.NullArg>`, `Clang Static Analyzer unix.cstring.NullArg <https://clang.llvm.org/docs/analyzer/checkers.html#unix-cstring-nullarg>`_,

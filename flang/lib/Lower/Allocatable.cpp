@@ -24,6 +24,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
@@ -349,10 +350,10 @@ private:
   void visitAllocateOptions() {
     for (const auto &allocOption :
          std::get<std::list<Fortran::parser::AllocOpt>>(stmt.t))
-      std::visit(
+      Fortran::common::visit(
           Fortran::common::visitors{
               [&](const Fortran::parser::StatOrErrmsg &statOrErr) {
-                std::visit(
+                Fortran::common::visit(
                     Fortran::common::visitors{
                         [&](const Fortran::parser::StatVariable &statVar) {
                           statExpr = Fortran::semantics::GetExpr(statVar);
@@ -729,9 +730,9 @@ private:
                               ErrorManager &errorManager,
                               const Fortran::semantics::Symbol &sym) {
     Fortran::lower::StatementContext stmtCtx;
-    fir::CUDADataAttributeAttr cudaAttr =
-        Fortran::lower::translateSymbolCUDADataAttribute(builder.getContext(),
-                                                         sym);
+    cuf::DataAttributeAttr cudaAttr =
+        Fortran::lower::translateSymbolCUFDataAttribute(builder.getContext(),
+                                                        sym);
     mlir::Value errmsg = errMsgExpr ? errorManager.errMsgAddr : nullptr;
     mlir::Value stream =
         streamExpr
@@ -746,7 +747,7 @@ private:
     // Keep return type the same as a standard AllocatableAllocate call.
     mlir::Type retTy = fir::runtime::getModel<int>()(builder.getContext());
     return builder
-        .create<fir::CUDAAllocateOp>(
+        .create<cuf::AllocateOp>(
             loc, retTy, box.getAddr(), errmsg, stream, pinned, source, cudaAttr,
             errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr)
         .getResult();
@@ -804,9 +805,9 @@ static mlir::Value genCudaDeallocate(fir::FirOpBuilder &builder,
                                      const fir::MutableBoxValue &box,
                                      ErrorManager &errorManager,
                                      const Fortran::semantics::Symbol &sym) {
-  fir::CUDADataAttributeAttr cudaAttr =
-      Fortran::lower::translateSymbolCUDADataAttribute(builder.getContext(),
-                                                       sym);
+  cuf::DataAttributeAttr cudaAttr =
+      Fortran::lower::translateSymbolCUFDataAttribute(builder.getContext(),
+                                                      sym);
   mlir::Value errmsg =
       mlir::isa<fir::AbsentOp>(errorManager.errMsgAddr.getDefiningOp())
           ? nullptr
@@ -815,7 +816,7 @@ static mlir::Value genCudaDeallocate(fir::FirOpBuilder &builder,
   // Keep return type the same as a standard AllocatableAllocate call.
   mlir::Type retTy = fir::runtime::getModel<int>()(builder.getContext());
   return builder
-      .create<fir::CUDADeallocateOp>(
+      .create<cuf::DeallocateOp>(
           loc, retTy, box.getAddr(), errmsg, cudaAttr,
           errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr)
       .getResult();
@@ -830,7 +831,7 @@ genDeallocate(fir::FirOpBuilder &builder,
               const Fortran::semantics::Symbol *symbol = nullptr) {
   bool isCudaSymbol = symbol && Fortran::semantics::HasCUDAAttr(*symbol);
   // Deallocate intrinsic types inline.
-  if (!box.isDerived() && !box.isPolymorphic() &&
+  if (!box.isDerived() && !box.isPolymorphic() && !box.hasAssumedRank() &&
       !box.isUnlimitedPolymorphic() && !errorManager.hasStatSpec() &&
       !useAllocateRuntime && !box.isPointer() && !isCudaSymbol) {
     // Pointers must use PointerDeallocate so that their deallocations
@@ -897,15 +898,16 @@ void Fortran::lower::genDeallocateStmt(
   const Fortran::lower::SomeExpr *errMsgExpr = nullptr;
   for (const Fortran::parser::StatOrErrmsg &statOrErr :
        std::get<std::list<Fortran::parser::StatOrErrmsg>>(stmt.t))
-    std::visit(Fortran::common::visitors{
-                   [&](const Fortran::parser::StatVariable &statVar) {
-                     statExpr = Fortran::semantics::GetExpr(statVar);
-                   },
-                   [&](const Fortran::parser::MsgVariable &errMsgVar) {
-                     errMsgExpr = Fortran::semantics::GetExpr(errMsgVar);
-                   },
-               },
-               statOrErr.u);
+    Fortran::common::visit(
+        Fortran::common::visitors{
+            [&](const Fortran::parser::StatVariable &statVar) {
+              statExpr = Fortran::semantics::GetExpr(statVar);
+            },
+            [&](const Fortran::parser::MsgVariable &errMsgVar) {
+              errMsgExpr = Fortran::semantics::GetExpr(errMsgVar);
+            },
+        },
+        statOrErr.u);
   ErrorManager errorManager;
   errorManager.init(converter, loc, statExpr, errMsgExpr);
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
@@ -1102,14 +1104,14 @@ void Fortran::lower::associateMutableBox(
 bool Fortran::lower::isWholeAllocatable(const Fortran::lower::SomeExpr &expr) {
   if (const Fortran::semantics::Symbol *sym =
           Fortran::evaluate::UnwrapWholeSymbolOrComponentDataRef(expr))
-    return Fortran::semantics::IsAllocatable(*sym);
+    return Fortran::semantics::IsAllocatable(sym->GetUltimate());
   return false;
 }
 
 bool Fortran::lower::isWholePointer(const Fortran::lower::SomeExpr &expr) {
   if (const Fortran::semantics::Symbol *sym =
           Fortran::evaluate::UnwrapWholeSymbolOrComponentDataRef(expr))
-    return Fortran::semantics::IsPointer(*sym);
+    return Fortran::semantics::IsPointer(sym->GetUltimate());
   return false;
 }
 

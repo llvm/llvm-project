@@ -41,13 +41,33 @@
 #include "clang/Sema/RISCVIntrinsicManager.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaAMDGPU.h"
+#include "clang/Sema/SemaARM.h"
+#include "clang/Sema/SemaAVR.h"
+#include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/Sema/SemaHexagon.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaLoongArch.h"
+#include "clang/Sema/SemaM68k.h"
+#include "clang/Sema/SemaMIPS.h"
+#include "clang/Sema/SemaMSP430.h"
+#include "clang/Sema/SemaNVPTX.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenACC.h"
+#include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaPPC.h"
+#include "clang/Sema/SemaPseudoObject.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/SemaSYCL.h"
+#include "clang/Sema/SemaSwift.h"
+#include "clang/Sema/SemaSystemZ.h"
+#include "clang/Sema/SemaWasm.h"
+#include "clang/Sema/SemaX86.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "clang/Sema/TemplateInstCallback.h"
 #include "clang/Sema/TypoCorrection.h"
@@ -201,11 +221,32 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       LateTemplateParser(nullptr), LateTemplateParserCleanup(nullptr),
       OpaqueParser(nullptr), CurContext(nullptr), ExternalSource(nullptr),
       CurScope(nullptr), Ident_super(nullptr),
+      AMDGPUPtr(std::make_unique<SemaAMDGPU>(*this)),
+      ARMPtr(std::make_unique<SemaARM>(*this)),
+      AVRPtr(std::make_unique<SemaAVR>(*this)),
+      BPFPtr(std::make_unique<SemaBPF>(*this)),
+      CodeCompletionPtr(
+          std::make_unique<SemaCodeCompletion>(*this, CodeCompleter)),
       CUDAPtr(std::make_unique<SemaCUDA>(*this)),
       HLSLPtr(std::make_unique<SemaHLSL>(*this)),
+      HexagonPtr(std::make_unique<SemaHexagon>(*this)),
+      LoongArchPtr(std::make_unique<SemaLoongArch>(*this)),
+      M68kPtr(std::make_unique<SemaM68k>(*this)),
+      MIPSPtr(std::make_unique<SemaMIPS>(*this)),
+      MSP430Ptr(std::make_unique<SemaMSP430>(*this)),
+      NVPTXPtr(std::make_unique<SemaNVPTX>(*this)),
+      ObjCPtr(std::make_unique<SemaObjC>(*this)),
       OpenACCPtr(std::make_unique<SemaOpenACC>(*this)),
+      OpenCLPtr(std::make_unique<SemaOpenCL>(*this)),
       OpenMPPtr(std::make_unique<SemaOpenMP>(*this)),
+      PPCPtr(std::make_unique<SemaPPC>(*this)),
+      PseudoObjectPtr(std::make_unique<SemaPseudoObject>(*this)),
+      RISCVPtr(std::make_unique<SemaRISCV>(*this)),
       SYCLPtr(std::make_unique<SemaSYCL>(*this)),
+      SwiftPtr(std::make_unique<SemaSwift>(*this)),
+      SystemZPtr(std::make_unique<SemaSystemZ>(*this)),
+      WasmPtr(std::make_unique<SemaWasm>(*this)),
+      X86Ptr(std::make_unique<SemaX86>(*this)),
       MSPointerToMemberRepresentationMethod(
           LangOpts.getMSPointerToMemberRepresentationMethod()),
       MSStructPragmaOn(false), VtorDispStack(LangOpts.getVtorDispMode()),
@@ -223,21 +264,16 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       TyposCorrected(0), IsBuildingRecoveryCallExpr(false), NumSFINAEErrors(0),
       AccessCheckingSFINAE(false), CurrentInstantiationScope(nullptr),
       InNonInstantiationSFINAEContext(false), NonInstantiationEntries(0),
-      ArgumentPackSubstitutionIndex(-1), SatisfactionCache(Context),
-      NSNumberDecl(nullptr), NSValueDecl(nullptr), NSStringDecl(nullptr),
-      StringWithUTF8StringMethod(nullptr),
-      ValueWithBytesObjCTypeMethod(nullptr), NSArrayDecl(nullptr),
-      ArrayWithObjectsMethod(nullptr), NSDictionaryDecl(nullptr),
-      DictionaryWithObjectsMethod(nullptr), CodeCompleter(CodeCompleter) {
+      ArgumentPackSubstitutionIndex(-1), SatisfactionCache(Context) {
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
 
   LoadedExternalKnownNamespaces = false;
   for (unsigned I = 0; I != NSAPI::NumNSNumberLiteralMethods; ++I)
-    NSNumberLiteralMethods[I] = nullptr;
+    ObjC().NSNumberLiteralMethods[I] = nullptr;
 
   if (getLangOpts().ObjC)
-    NSAPIObj.reset(new NSAPI(Context));
+    ObjC().NSAPIObj.reset(new NSAPI(Context));
 
   if (getLangOpts().CPlusPlus)
     FieldCollector.reset(new CXXFieldCollector());
@@ -433,7 +469,9 @@ void Sema::Initialize() {
 #include "clang/Basic/OpenCLExtensionTypes.def"
   }
 
-  if (Context.getTargetInfo().hasAArch64SVETypes()) {
+  if (Context.getTargetInfo().hasAArch64SVETypes() ||
+      (Context.getAuxTargetInfo() &&
+       Context.getAuxTargetInfo()->hasAArch64SVETypes())) {
 #define SVE_TYPE(Name, Id, SingletonId) \
     addImplicitTypedef(Name, Context.SingletonId);
 #include "clang/Basic/AArch64SVEACLETypes.def"
@@ -459,6 +497,14 @@ void Sema::Initialize() {
 #define WASM_TYPE(Name, Id, SingletonId)                                       \
   addImplicitTypedef(Name, Context.SingletonId);
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+  }
+
+  if (Context.getTargetInfo().getTriple().isAMDGPU() ||
+      (Context.getAuxTargetInfo() &&
+       Context.getAuxTargetInfo()->getTriple().isAMDGPU())) {
+#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+  addImplicitTypedef(Name, Context.SingletonId);
+#include "clang/Basic/AMDGPUTypes.def"
   }
 
   if (Context.getTargetInfo().hasBuiltinMSVaList()) {
@@ -522,10 +568,6 @@ void Sema::runWithSufficientStackSpace(SourceLocation Loc,
   clang::runWithSufficientStackSpace([&] { warnStackExhausted(Loc); }, Fn);
 }
 
-/// makeUnavailableInSystemHeader - There is an error in the current
-/// context.  If we're still in a system header, and we can plausibly
-/// make the relevant declaration unavailable instead of erroring, do
-/// so and return true.
 bool Sema::makeUnavailableInSystemHeader(SourceLocation loc,
                                       UnavailableAttr::ImplicitReason reason) {
   // If we're not in a function, it's an error.
@@ -551,11 +593,6 @@ ASTMutationListener *Sema::getASTMutationListener() const {
   return getASTConsumer().GetASTMutationListener();
 }
 
-///Registers an external source. If an external source already exists,
-/// creates a multiplex external source and appends to it.
-///
-///\param[in] E - A non-null external sema source.
-///
 void Sema::addExternalSource(ExternalSemaSource *E) {
   assert(E && "Cannot use with NULL ptr");
 
@@ -570,7 +607,6 @@ void Sema::addExternalSource(ExternalSemaSource *E) {
     ExternalSource = new MultiplexExternalSemaSource(ExternalSource.get(), E);
 }
 
-/// Print out statistics about the semantic analysis.
 void Sema::PrintStats() const {
   llvm::errs() << "\n*** Semantic Analysis Stats:\n";
   llvm::errs() << NumSFINAEErrors << " SFINAE diagnostics trapped.\n";
@@ -592,6 +628,19 @@ void Sema::diagnoseNullableToNonnullConversion(QualType DstType,
     return;
 
   Diag(Loc, diag::warn_nullability_lost) << SrcType << DstType;
+}
+
+// Generate diagnostics when adding or removing effects in a type conversion.
+void Sema::diagnoseFunctionEffectConversion(QualType DstType, QualType SrcType,
+                                            SourceLocation Loc) {
+  const auto SrcFX = FunctionEffectsRef::get(SrcType);
+  const auto DstFX = FunctionEffectsRef::get(DstType);
+  if (SrcFX != DstFX) {
+    for (const auto &Diff : FunctionEffectDifferences(SrcFX, DstFX)) {
+      if (Diff.shouldDiagnoseConversion(SrcType, SrcFX, DstType, DstFX))
+        Diag(Loc, diag::warn_invalid_add_func_effects) << Diff.effectName();
+    }
+  }
 }
 
 void Sema::diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E) {
@@ -671,6 +720,9 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
 
   diagnoseNullableToNonnullConversion(Ty, E->getType(), E->getBeginLoc());
   diagnoseZeroToNullptrConversion(Kind, E);
+  if (Context.hasAnyFunctionEffects() && !isCast(CCK) &&
+      Kind != CK_NullToPointer && Kind != CK_NullToMemberPointer)
+    diagnoseFunctionEffectConversion(Ty, E->getType(), E->getBeginLoc());
 
   QualType ExprTy = Context.getCanonicalType(E->getType());
   QualType TypeTy = Context.getCanonicalType(Ty);
@@ -722,8 +774,6 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
                                   CurFPFeatureOverrides());
 }
 
-/// ScalarTypeToBooleanCastKind - Returns the cast kind corresponding
-/// to the conversion from scalar type ScalarTy to the Boolean type.
 CastKind Sema::ScalarTypeToBooleanCastKind(QualType ScalarTy) {
   switch (ScalarTy->getScalarTypeKind()) {
   case Type::STK_Bool: return CK_NoOp;
@@ -1040,9 +1090,6 @@ void Sema::emitAndClearUnusedLocalTypedefWarnings() {
   UnusedLocalTypedefNameCandidates.clear();
 }
 
-/// This is called before the very first declaration in the translation unit
-/// is parsed. Note that the ASTContext may have already injected some
-/// declarations.
 void Sema::ActOnStartOfTranslationUnit() {
   if (getLangOpts().CPlusPlusModules &&
       getLangOpts().getCompilingModule() == LangOptions::CMK_HeaderUnit)
@@ -1114,9 +1161,6 @@ void Sema::ActOnEndOfTranslationUnitFragment(TUFragmentKind Kind) {
   DelayedTypos.clear();
 }
 
-/// ActOnEndOfTranslationUnit - This is called at the very end of the
-/// translation unit when EOF is reached and all but the top-level scope is
-/// popped.
 void Sema::ActOnEndOfTranslationUnit() {
   assert(DelayedDiagnostics.getCurrentPool() == nullptr
          && "reached end of translation unit with a pool attached?");
@@ -1129,7 +1173,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   // Complete translation units and modules define vtables and perform implicit
   // instantiations. PCH files do not.
   if (TUKind != TU_Prefix) {
-    DiagnoseUseOfUnimplementedSelectors();
+    ObjC().DiagnoseUseOfUnimplementedSelectors();
 
     ActOnEndOfTranslationUnitFragment(
         !ModuleScopes.empty() && ModuleScopes.back().Module->Kind ==
@@ -1351,6 +1395,10 @@ void Sema::ActOnEndOfTranslationUnit() {
     Consumer.CompleteExternalDeclaration(D);
   }
 
+  if (LangOpts.HLSL)
+    HLSL().DiagnoseAvailabilityViolations(
+        getASTContext().getTranslationUnitDecl());
+
   // If there were errors, disable 'unused' warnings since they will mostly be
   // noise. Don't warn for a use from a module: either we should warn on all
   // file-scope declarations in modules or not at all, but whether the
@@ -1408,7 +1456,7 @@ void Sema::ActOnEndOfTranslationUnit() {
         SourceRange DiagRange = DiagD->getLocation();
         if (const auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(DiagD)) {
           if (const ASTTemplateArgumentListInfo *ASTTAL =
-                  VTSD->getTemplateArgsInfo())
+                  VTSD->getTemplateArgsAsWritten())
             DiagRange.setEnd(ASTTAL->RAngleLoc);
         }
         if (DiagD->isReferenced()) {
@@ -2049,16 +2097,21 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
     if (TI.hasRISCVVTypes() && Ty->isRVVSizelessBuiltinType() && FD) {
       llvm::StringMap<bool> CallerFeatureMap;
       Context.getFunctionFeatureMap(CallerFeatureMap, FD);
-      checkRVVTypeSupport(Ty, Loc, D, CallerFeatureMap);
+      RISCV().checkRVVTypeSupport(Ty, Loc, D, CallerFeatureMap);
     }
 
     // Don't allow SVE types in functions without a SVE target.
-    if (Ty->isSVESizelessBuiltinType() && FD && FD->hasBody()) {
+    if (Ty->isSVESizelessBuiltinType() && FD) {
       llvm::StringMap<bool> CallerFeatureMap;
       Context.getFunctionFeatureMap(CallerFeatureMap, FD);
-      if (!Builtin::evaluateRequiredTargetFeatures("sve", CallerFeatureMap) &&
-          !Builtin::evaluateRequiredTargetFeatures("sme", CallerFeatureMap))
-        Diag(D->getLocation(), diag::err_sve_vector_in_non_sve_target) << Ty;
+      if (!Builtin::evaluateRequiredTargetFeatures("sve", CallerFeatureMap)) {
+        if (!Builtin::evaluateRequiredTargetFeatures("sme", CallerFeatureMap))
+          Diag(Loc, diag::err_sve_vector_in_non_sve_target) << Ty;
+        else if (!IsArmStreamingFunction(FD,
+                                         /*IncludeLocallyStreaming=*/true)) {
+          Diag(Loc, diag::err_sve_vector_in_non_streaming_function) << Ty;
+        }
+      }
     }
   };
 
@@ -2072,10 +2125,6 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
     CheckType(FNPTy->getReturnType(), /*IsRetTy=*/true);
 }
 
-/// Looks through the macro-expansion chain for the given
-/// location, looking for a macro expansion with the given name.
-/// If one is found, returns true and sets the location to that
-/// expansion loc.
 bool Sema::findMacroSpelling(SourceLocation &locref, StringRef name) {
   SourceLocation loc = locref;
   if (!loc.isMacroID()) return false;
@@ -2093,17 +2142,6 @@ bool Sema::findMacroSpelling(SourceLocation &locref, StringRef name) {
   return false;
 }
 
-/// Determines the active Scope associated with the given declaration
-/// context.
-///
-/// This routine maps a declaration context to the active Scope object that
-/// represents that declaration context in the parser. It is typically used
-/// from "scope-less" code (e.g., template instantiation, lazy creation of
-/// declarations) that injects a name for name-lookup purposes and, therefore,
-/// must update the Scope.
-///
-/// \returns The scope corresponding to the given declaraion context, or NULL
-/// if no such scope is open.
 Scope *Sema::getScopeForContext(DeclContext *Ctx) {
 
   if (!Ctx)
@@ -2234,13 +2272,6 @@ static void markEscapingByrefs(const FunctionScopeInfo &FSI, Sema &S) {
   }
 }
 
-/// Pop a function (or block or lambda or captured region) scope from the stack.
-///
-/// \param WP The warning policy to use for CFG-based warnings, or null if such
-///        warnings should not be produced.
-/// \param D The declaration corresponding to this function scope, if producing
-///        CFG-based warnings.
-/// \param BlockType The type of the block expression, if D is a BlockDecl.
 Sema::PoppedFunctionScopePtr
 Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
                            const Decl *D, QualType BlockType) {
@@ -2287,8 +2318,6 @@ void Sema::PopCompoundScope() {
   CurFunction->CompoundScopes.pop_back();
 }
 
-/// Determine whether any errors occurred within this function/method/
-/// block.
 bool Sema::hasAnyUnrecoverableErrorsInThisFunction() const {
   return getCurFunction()->hasUnrecoverableErrorOccurred();
 }
@@ -2439,17 +2468,6 @@ void ExternalSemaSource::ReadUndefinedButUsed(
 void ExternalSemaSource::ReadMismatchingDeleteExpressions(llvm::MapVector<
     FieldDecl *, llvm::SmallVector<std::pair<SourceLocation, bool>, 4>> &) {}
 
-/// Figure out if an expression could be turned into a call.
-///
-/// Use this when trying to recover from an error where the programmer may have
-/// written just the name of a function instead of actually calling it.
-///
-/// \param E - The expression to examine.
-/// \param ZeroArgCallReturnTy - If the expression can be turned into a call
-///  with no arguments, this parameter is set to the type returned by such a
-///  call; otherwise, it is set to an empty QualType.
-/// \param OverloadSet - If the expression is an overloaded function
-///  name, this parameter is populated with the decls of the various overloads.
 bool Sema::tryExprAsCall(Expr &E, QualType &ZeroArgCallReturnTy,
                          UnresolvedSetImpl &OverloadSet) {
   ZeroArgCallReturnTy = QualType();
@@ -2458,7 +2476,7 @@ bool Sema::tryExprAsCall(Expr &E, QualType &ZeroArgCallReturnTy,
   const OverloadExpr *Overloads = nullptr;
   bool IsMemExpr = false;
   if (E.getType() == Context.OverloadTy) {
-    OverloadExpr::FindResult FR = OverloadExpr::find(const_cast<Expr*>(&E));
+    OverloadExpr::FindResult FR = OverloadExpr::find(&E);
 
     // Ignore overloads that are pointer-to-member constants.
     if (FR.HasFormOfMemberPointer)
@@ -2742,4 +2760,154 @@ bool Sema::isDeclaratorFunctionLike(Declarator &D) {
     return false;
   });
   return Result;
+}
+
+FunctionEffectDifferences::FunctionEffectDifferences(
+    const FunctionEffectsRef &Old, const FunctionEffectsRef &New) {
+
+  FunctionEffectsRef::iterator POld = Old.begin();
+  FunctionEffectsRef::iterator OldEnd = Old.end();
+  FunctionEffectsRef::iterator PNew = New.begin();
+  FunctionEffectsRef::iterator NewEnd = New.end();
+
+  while (true) {
+    int cmp = 0;
+    if (POld == OldEnd) {
+      if (PNew == NewEnd)
+        break;
+      cmp = 1;
+    } else if (PNew == NewEnd)
+      cmp = -1;
+    else {
+      FunctionEffectWithCondition Old = *POld;
+      FunctionEffectWithCondition New = *PNew;
+      if (Old.Effect.kind() < New.Effect.kind())
+        cmp = -1;
+      else if (New.Effect.kind() < Old.Effect.kind())
+        cmp = 1;
+      else {
+        cmp = 0;
+        if (Old.Cond.getCondition() != New.Cond.getCondition()) {
+          // FIXME: Cases where the expressions are equivalent but
+          // don't have the same identity.
+          push_back(FunctionEffectDiff{
+              Old.Effect.kind(), FunctionEffectDiff::Kind::ConditionMismatch,
+              Old, New});
+        }
+      }
+    }
+
+    if (cmp < 0) {
+      // removal
+      FunctionEffectWithCondition Old = *POld;
+      push_back(FunctionEffectDiff{
+          Old.Effect.kind(), FunctionEffectDiff::Kind::Removed, Old, {}});
+      ++POld;
+    } else if (cmp > 0) {
+      // addition
+      FunctionEffectWithCondition New = *PNew;
+      push_back(FunctionEffectDiff{
+          New.Effect.kind(), FunctionEffectDiff::Kind::Added, {}, New});
+      ++PNew;
+    } else {
+      ++POld;
+      ++PNew;
+    }
+  }
+}
+
+bool FunctionEffectDiff::shouldDiagnoseConversion(
+    QualType SrcType, const FunctionEffectsRef &SrcFX, QualType DstType,
+    const FunctionEffectsRef &DstFX) const {
+
+  switch (EffectKind) {
+  case FunctionEffect::Kind::NonAllocating:
+    // nonallocating can't be added (spoofed) during a conversion, unless we
+    // have nonblocking.
+    if (DiffKind == Kind::Added) {
+      for (const auto &CFE : SrcFX) {
+        if (CFE.Effect.kind() == FunctionEffect::Kind::NonBlocking)
+          return false;
+      }
+    }
+    [[fallthrough]];
+  case FunctionEffect::Kind::NonBlocking:
+    // nonblocking can't be added (spoofed) during a conversion.
+    switch (DiffKind) {
+    case Kind::Added:
+      return true;
+    case Kind::Removed:
+      return false;
+    case Kind::ConditionMismatch:
+      // FIXME: Condition mismatches are too coarse right now -- expressions
+      // which are equivalent but don't have the same identity are detected as
+      // mismatches. We're going to diagnose those anyhow until expression
+      // matching is better.
+      return true;
+    }
+  case FunctionEffect::Kind::Blocking:
+  case FunctionEffect::Kind::Allocating:
+    return false;
+  case FunctionEffect::Kind::None:
+    break;
+  }
+  llvm_unreachable("unknown effect kind");
+}
+
+bool FunctionEffectDiff::shouldDiagnoseRedeclaration(
+    const FunctionDecl &OldFunction, const FunctionEffectsRef &OldFX,
+    const FunctionDecl &NewFunction, const FunctionEffectsRef &NewFX) const {
+  switch (EffectKind) {
+  case FunctionEffect::Kind::NonAllocating:
+  case FunctionEffect::Kind::NonBlocking:
+    // nonblocking/nonallocating can't be removed in a redeclaration.
+    switch (DiffKind) {
+    case Kind::Added:
+      return false; // No diagnostic.
+    case Kind::Removed:
+      return true; // Issue diagnostic.
+    case Kind::ConditionMismatch:
+      // All these forms of mismatches are diagnosed.
+      return true;
+    }
+  case FunctionEffect::Kind::Blocking:
+  case FunctionEffect::Kind::Allocating:
+    return false;
+  case FunctionEffect::Kind::None:
+    break;
+  }
+  llvm_unreachable("unknown effect kind");
+}
+
+FunctionEffectDiff::OverrideResult
+FunctionEffectDiff::shouldDiagnoseMethodOverride(
+    const CXXMethodDecl &OldMethod, const FunctionEffectsRef &OldFX,
+    const CXXMethodDecl &NewMethod, const FunctionEffectsRef &NewFX) const {
+  switch (EffectKind) {
+  case FunctionEffect::Kind::NonAllocating:
+  case FunctionEffect::Kind::NonBlocking:
+    switch (DiffKind) {
+
+    // If added on an override, that's fine and not diagnosed.
+    case Kind::Added:
+      return OverrideResult::NoAction;
+
+    // If missing from an override (removed), propagate from base to derived.
+    case Kind::Removed:
+      return OverrideResult::Merge;
+
+    // If there's a mismatch involving the effect's polarity or condition,
+    // issue a warning.
+    case Kind::ConditionMismatch:
+      return OverrideResult::Warn;
+    }
+
+  case FunctionEffect::Kind::Blocking:
+  case FunctionEffect::Kind::Allocating:
+    return OverrideResult::NoAction;
+
+  case FunctionEffect::Kind::None:
+    break;
+  }
+  llvm_unreachable("unknown effect kind");
 }

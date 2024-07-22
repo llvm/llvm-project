@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=armv8r-eabi -mcpu=cortex-r52 | FileCheck %s --check-prefix=CHECK --check-prefix=USEAA
+; RUN: llc < %s -mtriple=armv8r-eabi -mcpu=cortex-r52plus | FileCheck %s --check-prefix=CHECK --check-prefix=USEAA
 ; RUN: llc < %s -mtriple=armv7m-eabi -mcpu=cortex-m4 | FileCheck %s --check-prefix=CHECK --check-prefix=USEAA
 ; RUN: llc < %s -mtriple=armv8m-eabi -mcpu=cortex-m33 | FileCheck %s --check-prefix=CHECK --check-prefix=USEAA
 ; RUN: llc < %s -mtriple=armv8r-eabi -mcpu=generic | FileCheck %s --check-prefix=CHECK --check-prefix=USEAA

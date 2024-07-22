@@ -26,7 +26,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_extension(datasizeof)
+#if __has_keyword(__datasizeof) || __has_extension(datasizeof)
 template <class _Tp>
 inline const size_t __datasizeof_v = __datasizeof(_Tp);
 #else
@@ -54,6 +54,7 @@ struct _FirstPaddingByte<_Tp, true> {
 // the use as an extension.
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Winvalid-offsetof")
+_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Winvalid-offsetof")
 template <class _Tp>
 inline const size_t __datasizeof_v = offsetof(_FirstPaddingByte<_Tp>, __first_padding_byte_);
 _LIBCPP_DIAGNOSTIC_POP

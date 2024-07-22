@@ -32,7 +32,7 @@ define void @_Z3foov() local_unnamed_addr #0 !dbg !6 {
   %7 = load i32, ptr %6, align 4, !dbg !17, !tbaa !15
   %8 = add nsw i32 %7, %5, !dbg !17
 ;PSEUDO_PROBE-COUNT-5: call void @llvm.pseudoprobe(i64 6699318081062747564, i64 2, i32 0, i64 -1), !dbg ![[#PROBE:]]
-;DBG_VALUE: call void @llvm.dbg.declare{{.*}}!dbg ![[DBG:[0-9]*]]
+;DBG_VALUE: #dbg_declare{{.*}} ![[DBG:[0-9]*]]
   call void @llvm.dbg.declare(metadata i32 %8, metadata !22, metadata !DIExpression()), !dbg !17
   store i32 %8, ptr %6, align 4, !dbg !17, !tbaa !15
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !18

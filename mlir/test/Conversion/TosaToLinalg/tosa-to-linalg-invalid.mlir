@@ -27,3 +27,12 @@ func.func @unranked_add(%arg0 : tensor<10x10xf32> , %arg1 : tensor<10x10xf32>, %
   %2 = tosa.reshape %0 {new_shape = array<i64: 10, 10>} : (tensor<*xf32>) -> tensor<10x10xf32>
   return %2 : tensor<10x10xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @rfft2d_with_non_float_type
+func.func @rfft2d_with_non_float_type(%arg0 : tensor<1x1x1xi32>) -> (tensor<1x1x1xi32>, tensor<1x1x1xi32>) {
+  // expected-error@+1 {{failed to legalize operation 'tosa.rfft2d'}}
+  %real, %imag = tosa.rfft2d %arg0 : (tensor<1x1x1xi32>) -> (tensor<1x1x1xi32>, tensor<1x1x1xi32>)
+  return %real, %imag : tensor<1x1x1xi32>, tensor<1x1x1xi32>
+}

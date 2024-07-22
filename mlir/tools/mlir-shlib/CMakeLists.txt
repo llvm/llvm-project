@@ -34,6 +34,7 @@ if(LLVM_BUILD_LLVM_DYLIB)
   add_mlir_library(
     MLIR
     SHARED
+    EXCLUDE_FROM_LIBMLIR
     ${INSTALL_WITH_TOOLCHAIN}
     mlir-shlib.cpp
     ${_OBJECTS}

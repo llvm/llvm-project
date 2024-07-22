@@ -278,8 +278,8 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
     // attached debug-info records.
     for (Instruction &II : *BB) {
       RemapInstruction(&II, VMap, RemapFlag, TypeMapper, Materializer);
-      RemapDbgVariableRecordRange(II.getModule(), II.getDbgRecordRange(), VMap,
-                                  RemapFlag, TypeMapper, Materializer);
+      RemapDbgRecordRange(II.getModule(), II.getDbgRecordRange(), VMap,
+                          RemapFlag, TypeMapper, Materializer);
     }
 
   // Only update !llvm.dbg.cu for DifferentModule (not CloneModule). In the
@@ -535,7 +535,7 @@ void PruningFunctionCloner::CloneBlock(
       // this stage, thus instruction simplification is performed after
       // processing phi-nodes.
       if (Value *V = ConstantFoldInstruction(
-              NewInst, BB->getModule()->getDataLayout())) {
+              NewInst, BB->getDataLayout())) {
         if (isInstructionTriviallyDead(NewInst)) {
           VMap[&*II] = V;
           NewInst->eraseFromParent();
@@ -818,18 +818,11 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 
   // As phi-nodes have been now remapped, allow incremental simplification of
   // newly-cloned instructions.
-  const DataLayout &DL = NewFunc->getParent()->getDataLayout();
+  const DataLayout &DL = NewFunc->getDataLayout();
   for (const auto &BB : *OldFunc) {
     for (const auto &I : BB) {
       auto *NewI = dyn_cast_or_null<Instruction>(VMap.lookup(&I));
       if (!NewI)
-        continue;
-
-      // Skip over non-intrinsic callsites, we don't want to remove any nodes
-      // from the CGSCC.
-      CallBase *CB = dyn_cast<CallBase>(NewI);
-      if (CB && CB->getCalledFunction() &&
-          !CB->getCalledFunction()->isIntrinsic())
         continue;
 
       if (Value *V = simplifyInstruction(NewI, DL)) {
@@ -867,10 +860,10 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
   Function::iterator Begin = cast<BasicBlock>(VMap[StartingBB])->getIterator();
   for (BasicBlock &BB : make_range(Begin, NewFunc->end())) {
     for (Instruction &I : BB) {
-      RemapDbgVariableRecordRange(I.getModule(), I.getDbgRecordRange(), VMap,
-                                  ModuleLevelChanges ? RF_None
-                                                     : RF_NoModuleLevelChanges,
-                                  TypeMapper, Materializer);
+      RemapDbgRecordRange(I.getModule(), I.getDbgRecordRange(), VMap,
+                          ModuleLevelChanges ? RF_None
+                                             : RF_NoModuleLevelChanges,
+                          TypeMapper, Materializer);
     }
   }
 
@@ -969,9 +962,8 @@ void llvm::remapInstructionsInBlocks(ArrayRef<BasicBlock *> Blocks,
   // Rewrite the code to refer to itself.
   for (auto *BB : Blocks) {
     for (auto &Inst : *BB) {
-      RemapDbgVariableRecordRange(
-          Inst.getModule(), Inst.getDbgRecordRange(), VMap,
-          RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+      RemapDbgRecordRange(Inst.getModule(), Inst.getDbgRecordRange(), VMap,
+                          RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
       RemapInstruction(&Inst, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
     }

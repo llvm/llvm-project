@@ -80,15 +80,15 @@ func.func @main() {
   // CHECK-NEXT: nse = 9
   // CHECK-NEXT: dim = ( 1, 3, 3, 1 )
   // CHECK-NEXT: lvl = ( 1, 3, 3, 1 )
-  // CHECK-NEXT: pos[0] : ( 0, 1
-  // CHECK-NEXT: crd[0] : ( 0
-  // CHECK-NEXT: pos[1] : ( 0, 3
-  // CHECK-NEXT: crd[1] : ( 0, 1, 2
-  // CHECK-NEXT: pos[2] : ( 0, 3, 6, 9
-  // CHECK-NEXT: crd[2] : ( 0, 1, 2, 0, 1, 2, 0, 1, 2
-  // CHECK-NEXT: pos[3] : ( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
-  // CHECK-NEXT: crd[3] : ( 0, 0, 0, 0, 0, 0, 0, 0, 0
-  // CHECK-NEXT: values : ( 6, 6, 6, 6, 6, 6, 6, 6, 6
+  // CHECK-NEXT: pos[0] : ( 0, 1 )
+  // CHECK-NEXT: crd[0] : ( 0 )
+  // CHECK-NEXT: pos[1] : ( 0, 3 )
+  // CHECK-NEXT: crd[1] : ( 0, 1, 2 )
+  // CHECK-NEXT: pos[2] : ( 0, 3, 6, 9 )
+  // CHECK-NEXT: crd[2] : ( 0, 1, 2, 0, 1, 2, 0, 1, 2 )
+  // CHECK-NEXT: pos[3] : ( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 )
+  // CHECK-NEXT: crd[3] : ( 0, 0, 0, 0, 0, 0, 0, 0, 0 )
+  // CHECK-NEXT: values : ( 6, 6, 6, 6, 6, 6, 6, 6, 6 )
   // CHECK-NEXT: ----
   //
   sparse_tensor.print %CCCC_ret : tensor<1x3x3x1xf32, #CCCC>

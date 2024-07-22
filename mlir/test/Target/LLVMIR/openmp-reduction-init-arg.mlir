@@ -24,7 +24,7 @@ module {
   %87 = llvm.alloca %86 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> : (i64) -> !llvm.ptr
 // test multiple reduction variables to ensure they don't intefere with eachother
 // when inlining the reduction init region multiple times
-    omp.parallel byref reduction(@add_reduction_byref_box_Uxf64 %84 -> %arg3 : !llvm.ptr, @add_reduction_byref_box_Uxf64 %87 -> %arg4 : !llvm.ptr) {
+    omp.parallel reduction(byref @add_reduction_byref_box_Uxf64 %84 -> %arg3 : !llvm.ptr, byref @add_reduction_byref_box_Uxf64 %87 -> %arg4 : !llvm.ptr) {
       omp.terminator
     }
     llvm.return
@@ -59,13 +59,15 @@ module {
 // CHECK:         %[[VAL_17:.*]] = load i32, ptr %[[VAL_18:.*]], align 4
 // CHECK:         store i32 %[[VAL_17]], ptr %[[VAL_16]], align 4
 // CHECK:         %[[VAL_19:.*]] = load i32, ptr %[[VAL_16]], align 4
-// CHECK:         %[[VAL_20:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[VAL_13]], align 8
 // CHECK:         %[[VAL_21:.*]] = alloca ptr, align 8
+// CHECK:         %[[VAL_23:.*]] = alloca ptr, align 8
+// CHECK:         %[[VAL_24:.*]] = alloca [2 x ptr], align 8
+// CHECK:         br label %[[INIT_LABEL:.*]]
+// CHECK: [[INIT_LABEL]]:
+// CHECK:         %[[VAL_20:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[VAL_13]], align 8
 // CHECK:         store ptr %[[VAL_13]], ptr %[[VAL_21]], align 8
 // CHECK:         %[[VAL_22:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[VAL_15]], align 8
-// CHECK:         %[[VAL_23:.*]] = alloca ptr, align 8
 // CHECK:         store ptr %[[VAL_15]], ptr %[[VAL_23]], align 8
-// CHECK:         %[[VAL_24:.*]] = alloca [2 x ptr], align 8
 // CHECK:         br label %[[VAL_25:.*]]
 // CHECK:       omp.par.region:                                   ; preds = %[[VAL_26:.*]]
 // CHECK:         br label %[[VAL_27:.*]]

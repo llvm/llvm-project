@@ -144,7 +144,7 @@ subroutine test_nested_foralls()
     ! ifoo and ibar could depend on x since it is a module
     ! variable use associated. The calls in the control value
     ! computation cannot be hoisted from the outer forall
-    ! even when they do not depend on outer forall indicies.
+    ! even when they do not depend on outer forall indices.
     forall (integer(8)::j=jfoo():jbar())
       x(i, j) = x(j, i)
     end forall
