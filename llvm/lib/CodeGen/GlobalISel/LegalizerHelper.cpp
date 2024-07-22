@@ -1069,8 +1069,11 @@ LegalizerHelper::createFCMPLibcall(MachineIRBuilder &MIRBuilder,
 
     const auto [UnoLibcall, UnoPred] = getFCMPLibcallDesc(CmpInst::FCMP_UNO);
     const auto Uno = BuildLibcall(UnoLibcall, UnoPred);
+    if (Oeq && Uno) 
+      MIRBuilder.buildCopy(DstReg, MIRBuilder.buildOr(PredTy, Oeq, Uno));
+    else
+      return UnableToLegalize;
 
-    MIRBuilder.buildCopy(DstReg, MIRBuilder.buildOr(PredTy, Oeq, Uno));
     break;
   }
   case CmpInst::FCMP_ONE: {
@@ -1109,9 +1112,11 @@ LegalizerHelper::createFCMPLibcall(MachineIRBuilder &MIRBuilder,
     //                            Op1, Op2));
     const auto [InversedLibcall, InversedPred] =
         getFCMPLibcallDesc(CmpInst::getInversePredicate(Cond));
-    MIRBuilder.buildCopy(
-        DstReg, BuildLibcall(InversedLibcall,
-                             CmpInst::getInversePredicate(InversedPred)));
+    if (const auto Reg = BuildLibcall(
+            InversedLibcall, CmpInst::getInversePredicate(InversedPred)))
+      MIRBuilder.buildCopy(DstReg, Reg);
+    else
+      return UnableToLegalize;
     break;
   }
   default:
