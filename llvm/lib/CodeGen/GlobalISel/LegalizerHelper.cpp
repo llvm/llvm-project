@@ -1019,30 +1019,30 @@ LegalizerHelper::createFCMPLibcall(MachineIRBuilder &MIRBuilder,
 
   Type *OpType = getFloatTypeForLLT(Ctx, OpLLT);
 
-  // Libcall always return i32
-  constexpr LLT I32LLT = LLT::scalar(32);
-  constexpr LLT PredTy = LLT::scalar(1);
-
+  // DstReg type is s32
   const Register DstReg = Cmp->getReg(0);
-  const Register Op1 = Cmp->getLHSReg();
-  const Register Op2 = Cmp->getRHSReg();
   const auto Cond = Cmp->getCond();
 
-  // Generates a libcall followed by ICMP
-  const auto BuildLibcall = [&](const RTLIB::Libcall Libcall,
-                                const CmpInst::Predicate ICmpPred) -> Register {
-    Register Temp = MRI.createGenericVirtualRegister(I32LLT);
+  // Reference:
+  // https://gcc.gnu.org/onlinedocs/gccint/Soft-float-library-routines.html#Comparison-functions-1
+  // Generates a libcall followed by ICMP.
+  const auto BuildLibcall =
+      [&](const RTLIB::Libcall Libcall, const CmpInst::Predicate ICmpPred,
+          const DstOp &Res = LLT::scalar(32)) -> Register {
+    // FCMP libcall always returns an i32, and needs an ICMP with #0.
+    constexpr LLT TempLLT = LLT::scalar(32);
+    Register Temp = MRI.createGenericVirtualRegister(TempLLT);
     // Generate libcall, holding result in Temp
-    const auto Status =
-        createLibcall(MIRBuilder, Libcall, {Temp, Type::getInt32Ty(Ctx), 0},
-                      {{Op1, OpType, 0}, {Op2, OpType, 1}}, LocObserver, &MI);
+    const auto Status = createLibcall(
+        MIRBuilder, Libcall, {Temp, Type::getInt32Ty(Ctx), 0},
+        {{Cmp->getLHSReg(), OpType, 0}, {Cmp->getRHSReg(), OpType, 1}},
+        LocObserver, &MI);
     if (!Status)
       return {};
 
-    // FCMP libcall always returns an i32, we need to compare it with #0 to get
-    // the final result.
+    // Compare temp with #0 to get the final result.
     return MIRBuilder
-        .buildICmp(ICmpPred, PredTy, Temp, MIRBuilder.buildConstant(I32LLT, 0))
+        .buildICmp(ICmpPred, Res, Temp, MIRBuilder.buildConstant(TempLLT, 0))
         .getReg(0);
   };
 
@@ -1050,8 +1050,7 @@ LegalizerHelper::createFCMPLibcall(MachineIRBuilder &MIRBuilder,
   if (const auto [Libcall, ICmpPred] = getFCMPLibcallDesc(Cond);
       Libcall != RTLIB::UNKNOWN_LIBCALL &&
       ICmpPred != CmpInst::BAD_ICMP_PREDICATE) {
-    if (const auto Res = BuildLibcall(Libcall, ICmpPred)) {
-      MIRBuilder.buildCopy(DstReg, Res);
+    if (BuildLibcall(Libcall, ICmpPred, DstReg)) {
       return Legalized;
     }
     return UnableToLegalize;
@@ -1069,8 +1068,8 @@ LegalizerHelper::createFCMPLibcall(MachineIRBuilder &MIRBuilder,
 
     const auto [UnoLibcall, UnoPred] = getFCMPLibcallDesc(CmpInst::FCMP_UNO);
     const auto Uno = BuildLibcall(UnoLibcall, UnoPred);
-    if (Oeq && Uno) 
-      MIRBuilder.buildCopy(DstReg, MIRBuilder.buildOr(PredTy, Oeq, Uno));
+    if (Oeq && Uno)
+      MIRBuilder.buildOr(DstReg, Oeq, Uno);
     else
       return UnableToLegalize;
 
@@ -1092,7 +1091,7 @@ LegalizerHelper::createFCMPLibcall(MachineIRBuilder &MIRBuilder,
         BuildLibcall(UnoLibcall, CmpInst::getInversePredicate(UnoPred));
 
     if (NotOeq && NotUno)
-      MIRBuilder.buildCopy(DstReg, MIRBuilder.buildAnd(PredTy, NotOeq, NotUno));
+      MIRBuilder.buildAnd(DstReg, NotOeq, NotUno);
     else
       return UnableToLegalize;
 
@@ -1112,10 +1111,8 @@ LegalizerHelper::createFCMPLibcall(MachineIRBuilder &MIRBuilder,
     //                            Op1, Op2));
     const auto [InversedLibcall, InversedPred] =
         getFCMPLibcallDesc(CmpInst::getInversePredicate(Cond));
-    if (const auto Reg = BuildLibcall(
-            InversedLibcall, CmpInst::getInversePredicate(InversedPred)))
-      MIRBuilder.buildCopy(DstReg, Reg);
-    else
+    if (!BuildLibcall(InversedLibcall,
+                      CmpInst::getInversePredicate(InversedPred), DstReg))
       return UnableToLegalize;
     break;
   }
