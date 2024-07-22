@@ -26,7 +26,8 @@ AST_MATCHER_P(QualType, possiblyPackExpansionOf,
 }
 
 AST_MATCHER_P(ParmVarDecl, isForwardingReferenceType,
-              ast_matchers::internal::Matcher<RValueReferenceType>, InnerMatcher) {
+              ast_matchers::internal::Matcher<RValueReferenceType>,
+              InnerMatcher) {
   ast_matchers::internal::Matcher<QualType> Inner = possiblyPackExpansionOf(
       qualType(rValueReferenceType(InnerMatcher),
                references(templateTypeParmType(
@@ -130,17 +131,13 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
       unless(anyOf(hasAncestor(typeLoc()),
                    hasAncestor(expr(hasUnevaluatedContext())))));
 
-  auto StaticCast = Options.get("IgnoreStaticCasts", false)
-                        ? cxxStaticCastExpr(hasDestinationType(
-        lValueReferenceType(
-            pointee(
-                type(equalsBoundNode("qtype"))
-            )
-        )
-    ),
-                                            hasSourceExpression(
-                              declRefExpr(to(equalsBoundNode("param")))))
-                        : cxxStaticCastExpr(unless(anything()));
+  auto StaticCast =
+      Options.get("IgnoreStaticCasts", false)
+          ? cxxStaticCastExpr(
+                hasDestinationType(lValueReferenceType(
+                    pointee(type(equalsBoundNode("qtype"))))),
+                hasSourceExpression(declRefExpr(to(equalsBoundNode("param")))))
+          : cxxStaticCastExpr(unless(anything()));
 
   Finder->addMatcher(
       parmVarDecl(
