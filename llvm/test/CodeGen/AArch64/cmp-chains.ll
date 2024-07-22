@@ -501,3 +501,213 @@ entry:
   %land.ext = zext i1 %0 to i32
   ret i32 %land.ext
 }
+
+define i32 @and_ult_eq_s0s1_or(i32 %s0a, i32 %s1a, i32 %s2, i32 %s3) {
+; SDISEL-LABEL: and_ult_eq_s0s1_or:
+; SDISEL:       // %bb.0: // %entry
+; SDISEL-NEXT:    orr w9, w0, #0x1
+; SDISEL-NEXT:    orr w8, w1, #0x1
+; SDISEL-NEXT:    cmp w2, w3
+; SDISEL-NEXT:    neg w9, w9
+; SDISEL-NEXT:    ccmp w9, w8, #2, eq
+; SDISEL-NEXT:    mov w8, #20 // =0x14
+; SDISEL-NEXT:    mov w9, #10 // =0xa
+; SDISEL-NEXT:    csel w0, w9, w8, lo
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: and_ult_eq_s0s1_or:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    orr w8, w0, #0x1
+; GISEL-NEXT:    orr w9, w1, #0x1
+; GISEL-NEXT:    cmp w2, w3
+; GISEL-NEXT:    neg w8, w8
+; GISEL-NEXT:    mov w10, #20 // =0x14
+; GISEL-NEXT:    mov w11, #10 // =0xa
+; GISEL-NEXT:    ccmp w8, w9, #2, eq
+; GISEL-NEXT:    csel w0, w11, w10, lo
+; GISEL-NEXT:    ret
+entry:
+  %a1 = or i32 %s0a, 1
+  %s1 = or i32 %s1a, 1
+  %s0 = sub i32 0, %a1
+  %c0 = icmp ult i32 %s0, %s1
+  %c1 = icmp eq i32 %s2, %s3
+  %a = and i1 %c0, %c1
+  %r = select i1 %a, i32 10, i32 20
+  ret i32 %r
+}
+
+define i32 @and_ult_gt_s0s1_or(i32 %s0a, i32 %s1a, i32 %s2, i32 %s3) {
+; SDISEL-LABEL: and_ult_gt_s0s1_or:
+; SDISEL:       // %bb.0: // %entry
+; SDISEL-NEXT:    orr w9, w0, #0x1
+; SDISEL-NEXT:    orr w8, w1, #0x1
+; SDISEL-NEXT:    cmp w2, w3
+; SDISEL-NEXT:    neg w9, w9
+; SDISEL-NEXT:    ccmp w9, w8, #2, hi
+; SDISEL-NEXT:    mov w8, #20 // =0x14
+; SDISEL-NEXT:    mov w9, #10 // =0xa
+; SDISEL-NEXT:    csel w0, w9, w8, lo
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: and_ult_gt_s0s1_or:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    orr w8, w0, #0x1
+; GISEL-NEXT:    orr w9, w1, #0x1
+; GISEL-NEXT:    cmp w2, w3
+; GISEL-NEXT:    neg w8, w8
+; GISEL-NEXT:    mov w10, #20 // =0x14
+; GISEL-NEXT:    mov w11, #10 // =0xa
+; GISEL-NEXT:    ccmp w8, w9, #2, hi
+; GISEL-NEXT:    csel w0, w11, w10, lo
+; GISEL-NEXT:    ret
+entry:
+  %a1 = or i32 %s0a, 1
+  %s1 = or i32 %s1a, 1
+  %s0 = sub i32 0, %a1
+  %c0 = icmp ult i32 %s0, %s1
+  %c1 = icmp ugt i32 %s2, %s3
+  %a = and i1 %c0, %c1
+  %r = select i1 %a, i32 10, i32 20
+  ret i32 %r
+}
+
+define i32 @and_ult_sgt_s0s1_or(i32 %s0a, i32 %s1a, i32 %s2, i32 %s3) {
+; SDISEL-LABEL: and_ult_sgt_s0s1_or:
+; SDISEL:       // %bb.0: // %entry
+; SDISEL-NEXT:    orr w9, w0, #0x1
+; SDISEL-NEXT:    orr w8, w1, #0x1
+; SDISEL-NEXT:    cmp w2, w3
+; SDISEL-NEXT:    neg w9, w9
+; SDISEL-NEXT:    ccmp w9, w8, #2, gt
+; SDISEL-NEXT:    mov w8, #20 // =0x14
+; SDISEL-NEXT:    mov w9, #10 // =0xa
+; SDISEL-NEXT:    csel w0, w9, w8, lo
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: and_ult_sgt_s0s1_or:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    orr w8, w0, #0x1
+; GISEL-NEXT:    orr w9, w1, #0x1
+; GISEL-NEXT:    cmp w2, w3
+; GISEL-NEXT:    neg w8, w8
+; GISEL-NEXT:    mov w10, #20 // =0x14
+; GISEL-NEXT:    mov w11, #10 // =0xa
+; GISEL-NEXT:    ccmp w8, w9, #2, gt
+; GISEL-NEXT:    csel w0, w11, w10, lo
+; GISEL-NEXT:    ret
+entry:
+  %a1 = or i32 %s0a, 1
+  %s1 = or i32 %s1a, 1
+  %s0 = sub i32 0, %a1
+  %c0 = icmp ult i32 %s0, %s1
+  %c1 = icmp sgt i32 %s2, %s3
+  %a = and i1 %c0, %c1
+  %r = select i1 %a, i32 10, i32 20
+  ret i32 %r
+}
+
+define i32 @and_ult_slt_s0s1_or(i32 %s0a, i32 %s1a, i32 %s2, i32 %s3) {
+; SDISEL-LABEL: and_ult_slt_s0s1_or:
+; SDISEL:       // %bb.0: // %entry
+; SDISEL-NEXT:    orr w9, w0, #0x1
+; SDISEL-NEXT:    orr w8, w1, #0x1
+; SDISEL-NEXT:    cmp w2, w3
+; SDISEL-NEXT:    neg w9, w9
+; SDISEL-NEXT:    ccmp w9, w8, #2, lt
+; SDISEL-NEXT:    mov w8, #20 // =0x14
+; SDISEL-NEXT:    mov w9, #10 // =0xa
+; SDISEL-NEXT:    csel w0, w9, w8, lo
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: and_ult_slt_s0s1_or:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    orr w8, w0, #0x1
+; GISEL-NEXT:    orr w9, w1, #0x1
+; GISEL-NEXT:    cmp w2, w3
+; GISEL-NEXT:    neg w8, w8
+; GISEL-NEXT:    mov w10, #20 // =0x14
+; GISEL-NEXT:    mov w11, #10 // =0xa
+; GISEL-NEXT:    ccmp w8, w9, #2, lt
+; GISEL-NEXT:    csel w0, w11, w10, lo
+; GISEL-NEXT:    ret
+entry:
+  %a1 = or i32 %s0a, 1
+  %s1 = or i32 %s1a, 1
+  %s0 = sub i32 0, %a1
+  %c0 = icmp ult i32 %s0, %s1
+  %c1 = icmp slt i32 %s2, %s3
+  %a = and i1 %c0, %c1
+  %r = select i1 %a, i32 10, i32 20
+  ret i32 %r
+}
+
+define i32 @and_ult_ne_s0s1_or(i32 %s0a, i32 %s1a, i32 %s2, i32 %s3) {
+; SDISEL-LABEL: and_ult_ne_s0s1_or:
+; SDISEL:       // %bb.0: // %entry
+; SDISEL-NEXT:    orr w9, w0, #0x1
+; SDISEL-NEXT:    orr w8, w1, #0x1
+; SDISEL-NEXT:    cmp w2, w3
+; SDISEL-NEXT:    neg w9, w9
+; SDISEL-NEXT:    ccmp w9, w8, #2, ne
+; SDISEL-NEXT:    mov w8, #20 // =0x14
+; SDISEL-NEXT:    mov w9, #10 // =0xa
+; SDISEL-NEXT:    csel w0, w9, w8, lo
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: and_ult_ne_s0s1_or:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    orr w8, w0, #0x1
+; GISEL-NEXT:    orr w9, w1, #0x1
+; GISEL-NEXT:    cmp w2, w3
+; GISEL-NEXT:    neg w8, w8
+; GISEL-NEXT:    mov w10, #20 // =0x14
+; GISEL-NEXT:    mov w11, #10 // =0xa
+; GISEL-NEXT:    ccmp w8, w9, #2, ne
+; GISEL-NEXT:    csel w0, w11, w10, lo
+; GISEL-NEXT:    ret
+entry:
+  %a1 = or i32 %s0a, 1
+  %s1 = or i32 %s1a, 1
+  %s0 = sub i32 0, %a1
+  %c0 = icmp ult i32 %s0, %s1
+  %c1 = icmp ne i32 %s2, %s3
+  %a = and i1 %c0, %c1
+  %r = select i1 %a, i32 10, i32 20
+  ret i32 %r
+}
+
+define i32 @and_ult_ult_s0s1_or(i32 %s0a, i32 %s1a, i32 %s2, i32 %s3) {
+; SDISEL-LABEL: and_ult_ult_s0s1_or:
+; SDISEL:       // %bb.0: // %entry
+; SDISEL-NEXT:    orr w9, w0, #0x1
+; SDISEL-NEXT:    orr w8, w1, #0x1
+; SDISEL-NEXT:    cmp w2, w3
+; SDISEL-NEXT:    neg w9, w9
+; SDISEL-NEXT:    ccmp w9, w8, #2, lo
+; SDISEL-NEXT:    mov w8, #20 // =0x14
+; SDISEL-NEXT:    mov w9, #10 // =0xa
+; SDISEL-NEXT:    csel w0, w9, w8, lo
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: and_ult_ult_s0s1_or:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    orr w8, w0, #0x1
+; GISEL-NEXT:    orr w9, w1, #0x1
+; GISEL-NEXT:    cmp w2, w3
+; GISEL-NEXT:    neg w8, w8
+; GISEL-NEXT:    mov w10, #20 // =0x14
+; GISEL-NEXT:    mov w11, #10 // =0xa
+; GISEL-NEXT:    ccmp w8, w9, #2, lo
+; GISEL-NEXT:    csel w0, w11, w10, lo
+; GISEL-NEXT:    ret
+entry:
+  %a1 = or i32 %s0a, 1
+  %s1 = or i32 %s1a, 1
+  %s0 = sub i32 0, %a1
+  %c0 = icmp ult i32 %s0, %s1
+  %c1 = icmp ult i32 %s2, %s3
+  %a = and i1 %c0, %c1
+  %r = select i1 %a, i32 10, i32 20
+  ret i32 %r
+}
