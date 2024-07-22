@@ -553,18 +553,6 @@ AffineMap AffineMap::dropResults(const llvm::SmallBitVector &positions) const {
   return AffineMap::get(getNumDims(), getNumSymbols(), exprs, getContext());
 }
 
-AffineMap AffineMap::dropZeros() {
-  auto exprs = llvm::to_vector<4>(getResults());
-  SmallVector<AffineExpr, 8> newExprs;
-
-  for (auto expr : getResults()) {
-    auto constExpr = dyn_cast<AffineConstantExpr>(expr);
-    if (!constExpr)
-      newExprs.push_back(expr);
-  }
-  return AffineMap::get(getNumDims(), getNumSymbols(), newExprs, getContext());
-}
-
 AffineMap AffineMap::compose(AffineMap map) const {
   assert(getNumDims() == map.getNumResults() && "Number of results mismatch");
   // Prepare `map` by concatenating the symbols and rewriting its exprs.
@@ -604,7 +592,7 @@ SmallVector<int64_t, 4> AffineMap::compose(ArrayRef<int64_t> values) const {
   return res;
 }
 
-size_t AffineMap::numOfZeroResults() const {
+size_t AffineMap::getNumOfZeroResults() const {
   size_t res = 0;
   for (auto expr : getResults()) {
     auto constExpr = dyn_cast<AffineConstantExpr>(expr);
@@ -613,6 +601,18 @@ size_t AffineMap::numOfZeroResults() const {
   }
 
   return res;
+}
+
+AffineMap AffineMap::dropZeroResults() {
+  auto exprs = llvm::to_vector(getResults());
+  SmallVector<AffineExpr> newExprs;
+
+  for (auto expr : getResults()) {
+    auto constExpr = dyn_cast<AffineConstantExpr>(expr);
+    if (!constExpr || constExpr.getValue() != 0)
+      newExprs.push_back(expr);
+  }
+  return AffineMap::get(getNumDims(), getNumSymbols(), newExprs, getContext());
 }
 
 bool AffineMap::isProjectedPermutation(bool allowZeroInResults) const {

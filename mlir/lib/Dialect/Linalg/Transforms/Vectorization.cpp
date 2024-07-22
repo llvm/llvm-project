@@ -476,7 +476,8 @@ static AffineMap reindexIndexingMap(AffineMap map) {
   assert(map.isProjectedPermutation(/*allowZeroInResults=*/true) &&
          "expected projected permutation");
   auto res = compressUnusedDims(map);
-  assert(res.getNumDims() == (res.getNumResults() - res.numOfZeroResults()) &&
+  assert(res.getNumDims() ==
+             (res.getNumResults() - res.getNumOfZeroResults()) &&
          "expected reindexed map with same number of dims and results");
   return res;
 }
@@ -651,7 +652,7 @@ static Value buildVectorWrite(RewriterBase &rewriter, Value value,
   //    vector<1x16x16xty>
   // rather than:
   //    vector<1x16x16x0xty>
-  auto opOperantMapWithoutZeros = opOperandMap.dropZeros();
+  AffineMap opOperantMapWithoutZeros = opOperandMap.dropZeroResults();
   write =
       state.maskOperation(rewriter, write, linalgOp, opOperantMapWithoutZeros);
 
