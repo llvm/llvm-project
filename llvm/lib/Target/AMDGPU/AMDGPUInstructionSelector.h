@@ -103,7 +103,6 @@ private:
   bool selectG_MERGE_VALUES(MachineInstr &I) const;
   bool selectG_UNMERGE_VALUES(MachineInstr &I) const;
   bool selectG_BUILD_VECTOR(MachineInstr &I) const;
-  bool selectG_PTR_ADD(MachineInstr &I) const;
   bool selectG_IMPLICIT_DEF(MachineInstr &I) const;
   bool selectG_INSERT(MachineInstr &I) const;
   bool selectG_SBFX_UBFX(MachineInstr &I) const;
@@ -113,7 +112,6 @@ private:
   bool selectDivScale(MachineInstr &MI) const;
   bool selectIntrinsicCmp(MachineInstr &MI) const;
   bool selectBallot(MachineInstr &I) const;
-  bool selectInverseBallot(MachineInstr &I) const;
   bool selectRelocConstant(MachineInstr &I) const;
   bool selectGroupStaticSize(MachineInstr &I) const;
   bool selectReturnAddress(MachineInstr &I) const;

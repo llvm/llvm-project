@@ -43,7 +43,7 @@ typedef unsigned ID;
 
 // Choose ';' as the delimiter. ':' was used once but it doesn't work well for
 // Objective-C functions which commonly have :'s in their names.
-inline constexpr char kGlobalIdentifierDelimiter = ';';
+inline constexpr char GlobalIdentifierDelimiter = ';';
 
 class GlobalValue : public Constant {
 public:

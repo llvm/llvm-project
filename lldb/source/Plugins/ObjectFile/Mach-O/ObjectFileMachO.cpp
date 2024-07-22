@@ -6159,10 +6159,6 @@ Section *ObjectFileMachO::GetMachHeaderSection() {
 bool ObjectFileMachO::SectionIsLoadable(const Section *section) {
   if (!section)
     return false;
-  const bool is_dsym = (m_header.filetype == MH_DSYM);
-  if (section->GetFileSize() == 0 && !is_dsym &&
-      section->GetName() != GetSegmentNameDATA())
-    return false;
   if (section->IsThreadSpecific())
     return false;
   if (GetModule().get() != section->GetModule().get())
@@ -6202,6 +6198,7 @@ lldb::addr_t ObjectFileMachO::CalculateSectionLoadAddressForMemoryImage(
 
 bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
                                      bool value_is_offset) {
+  Log *log(GetLog(LLDBLog::DynamicLoader));
   ModuleSP module_sp = GetModule();
   if (!module_sp)
     return false;
@@ -6217,17 +6214,33 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
   // malformed.
   const bool warn_multiple = true;
 
+  if (log) {
+    StreamString logmsg;
+    logmsg << "ObjectFileMachO::SetLoadAddress ";
+    if (GetFileSpec())
+      logmsg << "path='" << GetFileSpec().GetPath() << "' ";
+    if (GetUUID()) {
+      logmsg << "uuid=" << GetUUID().GetAsString();
+    }
+    LLDB_LOGF(log, "%s", logmsg.GetData());
+  }
   if (value_is_offset) {
     // "value" is an offset to apply to each top level segment
     for (size_t sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
       // Iterate through the object file sections to find all of the
       // sections that size on disk (to avoid __PAGEZERO) and load them
       SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
-      if (SectionIsLoadable(section_sp.get()))
+      if (SectionIsLoadable(section_sp.get())) {
+        LLDB_LOGF(log,
+                  "ObjectFileMachO::SetLoadAddress segment '%s' load addr is "
+                  "0x%" PRIx64,
+                  section_sp->GetName().AsCString(),
+                  section_sp->GetFileAddress() + value);
         if (target.GetSectionLoadList().SetSectionLoadAddress(
                 section_sp, section_sp->GetFileAddress() + value,
                 warn_multiple))
           ++num_loaded_sections;
+      }
     }
   } else {
     // "value" is the new base address of the mach_header, adjust each
@@ -6242,6 +6255,10 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
             CalculateSectionLoadAddressForMemoryImage(
                 value, mach_header_section, section_sp.get());
         if (section_load_addr != LLDB_INVALID_ADDRESS) {
+          LLDB_LOGF(log,
+                    "ObjectFileMachO::SetLoadAddress segment '%s' load addr is "
+                    "0x%" PRIx64,
+                    section_sp->GetName().AsCString(), section_load_addr);
           if (target.GetSectionLoadList().SetSectionLoadAddress(
                   section_sp, section_load_addr, warn_multiple))
             ++num_loaded_sections;
@@ -6502,14 +6519,15 @@ struct page_object {
 };
 
 bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
-                               const FileSpec &outfile,
-                               lldb::SaveCoreStyle &core_style, Status &error) {
-  if (!process_sp)
-    return false;
-
-  // Default on macOS is to create a dirty-memory-only corefile.
+                               const lldb_private::SaveCoreOptions &options,
+                               Status &error) {
+  auto core_style = options.GetStyle();
   if (core_style == SaveCoreStyle::eSaveCoreUnspecified)
     core_style = SaveCoreStyle::eSaveCoreDirtyOnly;
+  // The FileSpec and Process are already checked in PluginManager::SaveCore.
+  assert(options.GetOutputFile().has_value());
+  assert(process_sp);
+  const FileSpec outfile = options.GetOutputFile().value();
 
   Target &target = process_sp->GetTarget();
   const ArchSpec target_arch = target.GetArchitecture();

@@ -1465,6 +1465,9 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
   case MCCFIInstruction::OpEscape:
     Streamer.emitBytes(Instr.getValues());
     return;
+  case MCCFIInstruction::OpLabel:
+    Streamer.emitLabel(Instr.getCfiLabel(), Instr.getLoc());
+    return;
   }
   llvm_unreachable("Unhandled case in switch");
 }

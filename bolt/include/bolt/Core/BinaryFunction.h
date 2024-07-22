@@ -416,6 +416,9 @@ private:
   /// different parameters by every pass.
   mutable uint64_t Hash{0};
 
+  /// Function GUID assigned externally.
+  uint64_t GUID{0};
+
   /// For PLT functions it contains a symbol associated with a function
   /// reference. It is nullptr for non-PLT functions.
   const MCSymbol *PLTSymbol{nullptr};
@@ -834,10 +837,6 @@ public:
   /// Find the loops in the CFG of the function and store information about
   /// them.
   void calculateLoopInfo();
-
-  /// Calculate missed macro-fusion opportunities and update BinaryContext
-  /// stats.
-  void calculateMacroOpFusionStats();
 
   /// Returns if BinaryDominatorTree has been constructed for this function.
   bool hasDomTree() const { return BDT != nullptr; }
@@ -2259,6 +2258,11 @@ public:
 
   /// Returns the last computed hash value of the function.
   size_t getHash() const { return Hash; }
+
+  /// Returns the function GUID.
+  uint64_t getGUID() const { return GUID; }
+
+  void setGUID(uint64_t Id) { GUID = Id; }
 
   using OperandHashFuncTy =
       function_ref<typename std::string(const MCOperand &)>;

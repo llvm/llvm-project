@@ -1443,7 +1443,11 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::shrink_to_fit() _NOE
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
       allocator_type& __a = this->__alloc();
       __split_buffer<value_type, allocator_type&> __v(size(), size(), __a);
-      __swap_out_circular_buffer(__v);
+      // The Standard mandates shrink_to_fit() does not increase the capacity.
+      // With equal capacity keep the existing buffer. This avoids extra work
+      // due to swapping the elements.
+      if (__v.capacity() < capacity())
+        __swap_out_circular_buffer(__v);
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     } catch (...) {
     }
@@ -2903,7 +2907,7 @@ template <class _Tp, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI constexpr __synth_three_way_result<_Tp>
 operator<=>(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __y) {
   return std::lexicographical_compare_three_way(
-      __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way<_Tp, _Tp>);
+      __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
 }
 
 #endif // _LIBCPP_STD_VER <= 17

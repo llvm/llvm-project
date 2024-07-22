@@ -291,7 +291,7 @@ PreservedAnalyses HardwareLoopsPass::run(Function &F,
 }
 
 bool HardwareLoopsImpl::run(Function &F) {
-  LLVMContext &Ctx = F.getParent()->getContext();
+  LLVMContext &Ctx = F.getContext();
   for (Loop *L : LI)
     if (L->isOutermost())
       TryConvertLoop(L, Ctx);

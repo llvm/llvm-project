@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -77,12 +78,10 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
 
   // Emit the ArchExtKind enum
   OS << "#ifdef EMIT_ARCHEXTKIND_ENUM\n"
-     << "enum ArchExtKind : unsigned {\n"
-     << "  AEK_NONE = 1,\n";
+     << "enum ArchExtKind : unsigned {\n";
   for (const Record *Rec : SortedExtensions) {
     auto AEK = Rec->getValueAsString("ArchExtKindSpelling").upper();
-    if (AEK != "AEK_NONE")
-      OS << "  " << AEK << ",\n";
+    OS << "  " << AEK << ",\n";
   }
   OS << "  AEK_NUM_EXTENSIONS\n"
      << "};\n"
@@ -107,7 +106,6 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
     OS << ", \"-" << Rec->getValueAsString("Name") << "\""; // negfeature
     OS << "},\n";
   };
-  OS << "  {\"none\", {}, AArch64::AEK_NONE, {}, {}, {}, {} },\n";
   OS << "};\n"
      << "#undef EMIT_EXTENSIONS\n"
      << "#endif // EMIT_EXTENSIONS\n"
@@ -217,6 +215,36 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
 
   OS << "#undef EMIT_ARCHITECTURES\n"
      << "#endif // EMIT_ARCHITECTURES\n"
+     << "\n";
+
+  // Emit CPU Aliases
+  OS << "#ifdef EMIT_CPU_ALIAS\n"
+     << "inline constexpr Alias CpuAliases[] = {\n";
+
+  llvm::StringSet<> Processors;
+  for (const Record *Rec : RK.getAllDerivedDefinitions("ProcessorModel"))
+    Processors.insert(Rec->getValueAsString("Name"));
+
+  llvm::StringSet<> Aliases;
+  for (const Record *Rec : RK.getAllDerivedDefinitions("ProcessorAlias")) {
+    auto Name = Rec->getValueAsString("Name");
+    auto Alias = Rec->getValueAsString("Alias");
+    if (!Processors.contains(Alias))
+      PrintFatalError(
+          Rec, "Alias '" + Name + "' references a non-existent ProcessorModel '" + Alias + "'");
+    if (Processors.contains(Name))
+      PrintFatalError(
+          Rec, "Alias '" + Name + "' duplicates an existing ProcessorModel");
+    if (!Aliases.insert(Name).second)
+      PrintFatalError(
+          Rec, "Alias '" + Name + "' duplicates an existing ProcessorAlias");
+
+    OS << llvm::formatv(R"(  { "{0}", "{1}" },)", Name, Alias) << '\n';
+  }
+
+  OS << "};\n"
+     << "#undef EMIT_CPU_ALIAS\n"
+     << "#endif // EMIT_CPU_ALIAS\n"
      << "\n";
 
   // Emit CPU information

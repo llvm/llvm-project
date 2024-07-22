@@ -8,4 +8,4 @@
 
 # PREAGG: B X:0 #main# 1 0
 
-# CHECK: BOLT-INFO: inferred profile for 1 (100.00% of profiled, 100.00% of stale) functions responsible for -nan% samples (0 out of 0)
+# CHECK: BOLT-INFO: inferred profile for 1 (100.00% of profiled, 100.00% of stale) functions

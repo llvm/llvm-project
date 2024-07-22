@@ -29,7 +29,7 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i64> [[TMP4]], <i64 5, i64 5, i64 5, i64 5>, !dbg [[DBG25:![0-9]+]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0, !dbg [[DBG26:![0-9]+]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[FOR_COND_CLEANUP32]], label [[FOR_COND5_PREHEADER1]], !dbg [[DBG26]]
-; CHECK:       for.cond.cleanup32:
+; CHECK:       vector.latch:
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nuw nsw <4 x i64> [[VEC_IND]], <i64 1, i64 1, i64 1, i64 1>, !dbg [[DBG27:![0-9]+]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <4 x i64> [[TMP7]], <i64 23, i64 23, i64 23, i64 23>, !dbg [[DBG28:![0-9]+]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

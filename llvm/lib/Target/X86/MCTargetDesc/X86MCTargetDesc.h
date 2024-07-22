@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCTARGETDESC_H
 #define LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCTARGETDESC_H
 
+#include "llvm/ADT/SmallVector.h"
 #include <memory>
 #include <string>
 
@@ -93,6 +94,9 @@ MCSubtargetInfo *createX86MCSubtargetInfo(const Triple &TT, StringRef CPU,
 
 void emitInstruction(MCObjectStreamer &, const MCInst &Inst,
                      const MCSubtargetInfo &STI);
+
+void emitPrefix(MCCodeEmitter &MCE, const MCInst &MI, SmallVectorImpl<char> &CB,
+                const MCSubtargetInfo &STI);
 }
 
 MCCodeEmitter *createX86MCCodeEmitter(const MCInstrInfo &MCII,
@@ -110,8 +114,7 @@ MCAsmBackend *createX86_64AsmBackend(const Target &T,
 /// Implements X86-only directives for assembly emission.
 MCTargetStreamer *createX86AsmTargetStreamer(MCStreamer &S,
                                              formatted_raw_ostream &OS,
-                                             MCInstPrinter *InstPrinter,
-                                             bool IsVerboseAsm);
+                                             MCInstPrinter *InstPrinter);
 
 /// Implements X86-only directives for object files.
 MCTargetStreamer *createX86ObjectTargetStreamer(MCStreamer &S,
@@ -124,8 +127,7 @@ MCTargetStreamer *createX86ObjectTargetStreamer(MCStreamer &S,
 MCStreamer *createX86WinCOFFStreamer(MCContext &C,
                                      std::unique_ptr<MCAsmBackend> &&AB,
                                      std::unique_ptr<MCObjectWriter> &&OW,
-                                     std::unique_ptr<MCCodeEmitter> &&CE,
-                                     bool IncrementalLinkerCompatible);
+                                     std::unique_ptr<MCCodeEmitter> &&CE);
 
 MCStreamer *createX86ELFStreamer(const Triple &T, MCContext &Context,
                                  std::unique_ptr<MCAsmBackend> &&MAB,

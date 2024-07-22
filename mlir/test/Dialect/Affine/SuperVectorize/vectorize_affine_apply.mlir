@@ -141,7 +141,7 @@ func.func @affine_map_with_expr_2(%arg0: memref<8x12x16xf32>, %arg1: memref<8x24
 // CHECK-NEXT:       %[[S1:.*]] = affine.apply #[[$MAP_ID4]](%[[ARG3]], %[[ARG4]], %[[I0]])
 // CHECK-NEXT:       %[[S2:.*]] = affine.apply #[[$MAP_ID5]](%[[ARG3]], %[[ARG4]], %[[I0]])
 // CHECK-NEXT:       %[[CST:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK-NEXT:       %[[S3:.*]] = vector.transfer_read %[[ARG0]][%[[S0]], %[[S1]], %[[S2]]], %[[CST]] {permutation_map = #[[$MAP_ID6]]} : memref<8x12x16xf32>, vector<8xf32>
+// CHECK-NEXT:       %[[S3:.*]] = vector.transfer_read %[[ARG0]][%[[S0]], %[[S1]], %[[S2]]], %[[CST]] {in_bounds = [true], permutation_map = #[[$MAP_ID6]]} : memref<8x12x16xf32>, vector<8xf32>
 // CHECK-NEXT:       vector.transfer_write %[[S3]], %[[ARG1]][%[[ARG3]], %[[ARG4]], %[[ARG5]]] : vector<8xf32>, memref<8x24x48xf32>
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }

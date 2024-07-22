@@ -187,13 +187,18 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
       PreInits = Tile->getPreInits();
     } else if (const auto *Unroll = dyn_cast<OMPUnrollDirective>(&S)) {
       PreInits = Unroll->getPreInits();
+    } else if (const auto *Reverse = dyn_cast<OMPReverseDirective>(&S)) {
+      PreInits = Reverse->getPreInits();
+    } else if (const auto *Interchange =
+                   dyn_cast<OMPInterchangeDirective>(&S)) {
+      PreInits = Interchange->getPreInits();
     } else {
       llvm_unreachable("Unknown loop-based directive kind.");
     }
     if (PreInits) {
       // CompoundStmts and DeclStmts are used as lists of PreInit statements and
       // declarations. Since declarations must be visible in the the following
-      // that they initialize, unpack the ComboundStmt they are nested in.
+      // that they initialize, unpack the CompoundStmt they are nested in.
       SmallVector<const Stmt *> PreInitStmts;
       if (auto *PreInitCompound = dyn_cast<CompoundStmt>(PreInits))
         llvm::append_range(PreInitStmts, PreInitCompound->body());
@@ -1411,7 +1416,7 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
     case OMPD_end_declare_variant:
     case OMPD_unknown:
     default:
-      llvm_unreachable("Enexpected directive with task reductions.");
+      llvm_unreachable("Unexpected directive with task reductions.");
     }
 
     const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(TaskRedRef)->getDecl());
@@ -1766,7 +1771,7 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
 
     using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
 
-    // The cleanup callback that finalizes all variabels at the given location,
+    // The cleanup callback that finalizes all variables at the given location,
     // thus calls destructors etc.
     auto FiniCB = [this](InsertPointTy IP) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
@@ -2762,6 +2767,19 @@ void CodeGenFunction::EmitOMPTileDirective(const OMPTileDirective &S) {
   EmitStmt(S.getTransformedStmt());
 }
 
+void CodeGenFunction::EmitOMPReverseDirective(const OMPReverseDirective &S) {
+  // Emit the de-sugared statement.
+  OMPTransformDirectiveScopeRAII ReverseScope(*this, &S);
+  EmitStmt(S.getTransformedStmt());
+}
+
+void CodeGenFunction::EmitOMPInterchangeDirective(
+    const OMPInterchangeDirective &S) {
+  // Emit the de-sugared statement.
+  OMPTransformDirectiveScopeRAII InterchangeScope(*this, &S);
+  EmitStmt(S.getTransformedStmt());
+}
+
 void CodeGenFunction::EmitOMPUnrollDirective(const OMPUnrollDirective &S) {
   bool UseOMPIRBuilder = CGM.getLangOpts().OpenMPIRBuilder;
 
@@ -2985,12 +3003,14 @@ void CodeGenFunction::EmitOMPForOuterLoop(
   // run-sched-var ICV. If the ICV is set to auto, the schedule is
   // implementation defined
   //
+  // __kmpc_dispatch_init();
   // while(__kmpc_dispatch_next(&LB, &UB)) {
   //   idx = LB;
   //   while (idx <= UB) { BODY; ++idx;
   //   __kmpc_dispatch_fini_(4|8)[u](); // For ordered loops only.
   //   } // inner loop
   // }
+  // __kmpc_dispatch_deinit();
   //
   // OpenMP [2.7.1, Loop Construct, Description, table 2-1]
   // When schedule(static, chunk_size) is specified, iterations are divided into
@@ -3044,6 +3064,9 @@ void CodeGenFunction::EmitOMPForOuterLoop(
   OuterLoopArgs.DKind = LoopArgs.DKind;
   EmitOMPOuterLoop(DynamicOrOrdered, IsMonotonic, S, LoopScope, OuterLoopArgs,
                    emitOMPLoopBodyWithStopPoint, CodeGenOrdered);
+  if (DynamicOrOrdered) {
+    RT.emitForDispatchDeinit(*this, S.getBeginLoc());
+  }
 }
 
 static void emitEmptyOrdered(CodeGenFunction &, SourceLocation Loc,
@@ -6506,7 +6529,7 @@ static void emitOMPAtomicCompareExpr(
   }
 
   if (FailAO == llvm::AtomicOrdering::NotAtomic) {
-    // fail clause was not mentionend on the
+    // fail clause was not mentioned on the
     // "#pragma omp atomic compare" construct.
     CGF.Builder.restoreIP(OMPBuilder.createAtomicCompare(
         CGF.Builder, XOpVal, VOpVal, ROpVal, EVal, DVal, AO, Op, IsXBinopExpr,
@@ -6550,7 +6573,7 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
 }
 
 void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
-  llvm::AtomicOrdering AO = llvm::AtomicOrdering::Monotonic;
+  llvm::AtomicOrdering AO = CGM.getOpenMPRuntime().getDefaultMemoryOrdering();
   // Fail Memory Clause Ordering.
   llvm::AtomicOrdering FailAO = llvm::AtomicOrdering::NotAtomic;
   bool MemOrderingSpecified = false;
@@ -7920,7 +7943,7 @@ void CodeGenFunction::EmitOMPGenericLoopDirective(
 
 void CodeGenFunction::EmitOMPParallelGenericLoopDirective(
     const OMPLoopDirective &S) {
-  // Emit combined directive as if its consituent constructs are 'parallel'
+  // Emit combined directive as if its constituent constructs are 'parallel'
   // and 'for'.
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
     Action.Enter(CGF);

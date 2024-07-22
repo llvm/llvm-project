@@ -89,10 +89,14 @@ StringRef AArch64::getArchExtFeature(StringRef ArchExt) {
 
 void AArch64::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
   for (const auto &C : CpuInfos)
-      Values.push_back(C.Name);
+    Values.push_back(C.Name);
 
   for (const auto &Alias : CpuAliases)
-    Values.push_back(Alias.AltName);
+    // The apple-latest alias is backend only, do not expose it to clang's -mcpu.
+    if (Alias.AltName != "apple-latest")
+      Values.push_back(Alias.AltName);
+
+  llvm::sort(Values);
 }
 
 bool AArch64::isX18ReservedByDefault(const Triple &TT) {

@@ -184,6 +184,11 @@ public:
   /// Get the definition register of the loaded value.
   Register getDstReg() const { return getOperand(0).getReg(); }
 
+  /// Returns the Ranges that describes the dereference.
+  const MDNode *getRanges() const {
+    return getMMO().getRanges();
+  }
+
   static bool classof(const MachineInstr *MI) {
     switch (MI->getOpcode()) {
     case TargetOpcode::G_LOAD:
