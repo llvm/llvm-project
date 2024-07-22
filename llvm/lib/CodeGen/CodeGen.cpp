@@ -132,7 +132,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeStripDebugMachineModulePass(Registry);
   initializeTailDuplicatePass(Registry);
   initializeTargetPassConfigPass(Registry);
-  initializeTwoAddressInstructionPassPass(Registry);
+  initializeTwoAddressInstructionLegacyPassPass(Registry);
   initializeTypePromotionLegacyPass(Registry);
   initializeUnpackMachineBundlesPass(Registry);
   initializeUnreachableBlockElimLegacyPassPass(Registry);
