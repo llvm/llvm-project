@@ -1135,8 +1135,13 @@ struct TestHypot3 {
           return {1e20f, 1e16f};
         else if constexpr (std::is_same_v<Real, double>)
           return {1e300, 1e287};
-        else // long double
-          return {1e4000l, 1e3985l};
+        else { // long double
+#  if __DBL_MAX_EXP__ == __LDBL_MAX_EXP__
+          return {1e300l, 1e287l}; // 64-bit
+#  else
+          return {1e4000l, 1e3985l}; // 80- or 128-bit
+#  endif
+        }
       }();
       check(elem, abs_tol);
     }
@@ -1147,8 +1152,13 @@ struct TestHypot3 {
           return {1e-20f, 1e-24f};
         else if constexpr (std::is_same_v<Real, double>)
           return {1e-287, 1e-300};
-        else // long double
-          return {1e-3985l, 1e-4000l};
+        else { // long double
+#  if __DBL_MAX_EXP__ == __LDBL_MAX_EXP__
+          return {1e-287l, 1e-300l}; // 64-bit
+#  else
+          return {1e-3985l, 1e-4000l}; // 80- or 128-bit
+#  endif
+        }
       }();
       check(elem, abs_tol);
     }
