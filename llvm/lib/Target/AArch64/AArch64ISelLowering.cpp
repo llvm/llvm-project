@@ -10754,9 +10754,9 @@ SDValue AArch64TargetLowering::LowerBR_JT(SDValue Op,
 }
 
 SDValue AArch64TargetLowering::LowerBRIND(SDValue Op, SelectionDAG &DAG) const {
-  MachineFunction &MF = DAG.getMachineFunction();
+  const MachineFunction &MF = DAG.getMachineFunction();
   std::optional<uint16_t> BADisc =
-      Subtarget->getPtrAuthBlockAddressDiscriminator(MF.getFunction());
+      Subtarget->getPtrAuthBlockAddressDiscriminatorIfEnabled(MF.getFunction());
   if (!BADisc)
     return SDValue();
 
@@ -10796,7 +10796,8 @@ SDValue AArch64TargetLowering::LowerBlockAddress(SDValue Op,
   const BlockAddress *BA = BAN->getBlockAddress();
 
   if (std::optional<uint16_t> BADisc =
-          Subtarget->getPtrAuthBlockAddressDiscriminator(*BA->getFunction())) {
+          Subtarget->getPtrAuthBlockAddressDiscriminatorIfEnabled(
+              *BA->getFunction())) {
     SDLoc DL(Op);
 
     // This isn't cheap, but BRIND is rare.

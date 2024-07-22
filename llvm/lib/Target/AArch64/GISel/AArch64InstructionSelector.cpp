@@ -2552,8 +2552,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     return selectCompareBranch(I, MF, MRI);
 
   case TargetOpcode::G_BRINDIRECT: {
+    const Function &Fn = MF.getFunction();
     if (std::optional<uint16_t> BADisc =
-            STI.getPtrAuthBlockAddressDiscriminator(MF.getFunction())) {
+            STI.getPtrAuthBlockAddressDiscriminatorIfEnabled(Fn)) {
       auto MI = MIB.buildInstr(AArch64::BRA, {}, {I.getOperand(0).getReg()});
       MI.addImm(AArch64PACKey::IA);
       MI.addImm(*BADisc);
@@ -3477,7 +3478,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_BLOCK_ADDR: {
     Function *BAFn = I.getOperand(1).getBlockAddress()->getFunction();
     if (std::optional<uint16_t> BADisc =
-            STI.getPtrAuthBlockAddressDiscriminator(*BAFn)) {
+            STI.getPtrAuthBlockAddressDiscriminatorIfEnabled(*BAFn)) {
       MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X16}, {});
       MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X17}, {});
       MIB.buildInstr(AArch64::MOVaddrPAC)

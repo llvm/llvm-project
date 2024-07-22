@@ -1937,10 +1937,9 @@ AArch64AsmPrinter::lowerBlockAddressConstant(const BlockAddress &BA) {
   const Function &Fn = *BA.getFunction();
 
   if (std::optional<uint16_t> BADisc =
-          STI->getPtrAuthBlockAddressDiscriminator(Fn))
+          STI->getPtrAuthBlockAddressDiscriminatorIfEnabled(Fn))
     return AArch64AuthMCExpr::create(BAE, *BADisc, AArch64PACKey::IA,
-                                     /* HasAddressDiversity= */ false,
-                                     OutContext);
+                                     /*HasAddressDiversity=*/false, OutContext);
 
   return BAE;
 }

@@ -575,7 +575,8 @@ AArch64Subtarget::getAuthenticatedLRCheckMethod() const {
   return AArch64PAuth::AuthCheckMethod::None;
 }
 
-std::optional<uint16_t> AArch64Subtarget::getPtrAuthBlockAddressDiscriminator(
+std::optional<uint16_t>
+AArch64Subtarget::getPtrAuthBlockAddressDiscriminatorIfEnabled(
     const Function &ParentFn) const {
   if (!ParentFn.hasFnAttribute("ptrauth-indirect-gotos"))
     return std::nullopt;
