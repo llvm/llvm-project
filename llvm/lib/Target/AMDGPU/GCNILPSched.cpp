@@ -359,4 +359,4 @@ std::vector<const SUnit*> makeGCNILPScheduler(ArrayRef<const SUnit*> BotRoots,
   GCNILPScheduler S;
   return S.schedule(BotRoots, DAG);
 }
-}
+} // namespace llvm
