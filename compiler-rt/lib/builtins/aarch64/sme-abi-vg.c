@@ -28,22 +28,3 @@ __attribute__((constructor(90))) static void get_aarch64_cpu_features(void) {
 
   __init_cpu_features();
 }
-
-__attribute__((target("sve"))) long
-__arm_get_current_vg(void) __arm_streaming_compatible {
-  struct SME_STATE State = __arm_sme_state();
-  unsigned long long features =
-      __atomic_load_n(&__aarch64_cpu_features.features, __ATOMIC_RELAXED);
-  bool HasSVE = features & (1ULL << FEAT_SVE);
-
-  if (!HasSVE && !__aarch64_has_sme_and_tpidr2_el0)
-    return 0;
-
-  if (HasSVE || (State.PSTATE & 1)) {
-    long vl;
-    __asm__ __volatile__("cntd %0" : "=r"(vl));
-    return vl;
-  }
-
-  return 0;
-}

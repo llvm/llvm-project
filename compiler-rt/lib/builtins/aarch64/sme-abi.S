@@ -12,11 +12,15 @@
 #if !defined(__APPLE__)
 #define TPIDR2_SYMBOL SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)
 #define TPIDR2_SYMBOL_OFFSET :lo12:SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)
+#define CPU_FEATS_SYMBOL :got:SYMBOL_NAME(__aarch64_cpu_features)
+#define CPU_FEATS_SYMBOL_OFFSET :got_lo12:SYMBOL_NAME(__aarch64_cpu_features)
 #else
 // MachO requires @page/@pageoff directives because the global is defined
 // in a different file. Otherwise this file may fail to build.
 #define TPIDR2_SYMBOL SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)@page
 #define TPIDR2_SYMBOL_OFFSET SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)@pageoff
+#define CPU_FEATS_SYMBOL :got:SYMBOL_NAME(__aarch64_cpu_features)@page
+#define CPU_FEATS_SYMBOL_OFFSET :got_lo12:SYMBOL_NAME(__aarch64_cpu_features)@pageoff
 #endif
 
 .arch armv9-a+sme
@@ -179,6 +183,48 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_za_disable)
 0:
   ret
 END_COMPILERRT_OUTLINE_FUNCTION(__arm_za_disable)
+
+DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_get_current_vg)
+  .variant_pcs __arm_get_current_vg
+  BTI_C
+  mov x0, xzr
+
+  stp     x29, x30, [sp, #-16]!
+  .cfi_def_cfa_offset 16
+  mov     x29, sp
+  .cfi_def_cfa w29, 16
+  .cfi_offset w30, -8
+  .cfi_offset w29, -16
+  mov     x17, x1
+  bl      __arm_sme_state
+  mov     x1, x17
+  adrp    x16, CPU_FEATS_SYMBOL
+  ldr     x16, [x16, CPU_FEATS_SYMBOL_OFFSET]
+  ldr     x16, [x16]
+  tbnz    w16, #30, 0f
+  adrp    x17, TPIDR2_SYMBOL
+  ldrb    w17, [x17, TPIDR2_SYMBOL_OFFSET]
+  cbz     w17, 1f
+0:
+  and     x16, x16, #0x40000000
+  bfxil   x16, x0, #0, #1
+  cbz     x16, 1f
+  cntd    x0
+  .cfi_def_cfa wsp, 16
+  ldp     x29, x30, [sp], #16
+  .cfi_def_cfa_offset 0
+  .cfi_restore w30
+  .cfi_restore w29
+  ret
+1:
+  mov     x0, xzr
+  .cfi_def_cfa wsp, 16
+  ldp     x29, x30, [sp], #16
+  .cfi_def_cfa_offset 0
+  .cfi_restore w30
+  .cfi_restore w29
+  ret
+END_COMPILERRT_OUTLINE_FUNCTION(__arm_get_current_vg)
 
 NO_EXEC_STACK_DIRECTIVE
 
