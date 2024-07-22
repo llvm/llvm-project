@@ -4713,14 +4713,13 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (Right.is(TT_OverloadedOperatorLParen))
       return spaceRequiredBeforeParens(Right);
     // Function declaration or definition
-    if (Line.MightBeFunctionDecl && (Left.is(TT_FunctionDeclarationName))) {
-      if (Line.mightBeFunctionDefinition()) {
-        return Style.SpaceBeforeParensOptions.AfterFunctionDefinitionName ||
-               spaceRequiredBeforeParens(Right);
-      } else {
-        return Style.SpaceBeforeParensOptions.AfterFunctionDeclarationName ||
-               spaceRequiredBeforeParens(Right);
-      }
+    if (Line.MightBeFunctionDecl && Right.is(TT_FunctionDeclarationLParen)) {
+      if (spaceRequiredBeforeParens(Right))
+        return true;
+      const auto &Options = Style.SpaceBeforeParensOptions;
+      return Line.mightBeFunctionDefinition()
+                 ? Options.AfterFunctionDefinitionName
+                 : Options.AfterFunctionDeclarationName;
     }
     // Lambda
     if (Line.Type != LT_PreprocessorDirective && Left.is(tok::r_square) &&
