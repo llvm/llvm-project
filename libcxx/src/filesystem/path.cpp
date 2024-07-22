@@ -267,7 +267,7 @@ path path::lexically_relative(const path& base) const {
   // Find the first mismatching element
   auto PP     = PathParser::CreateBegin(__pn_);
   auto PPBase = PathParser::CreateBegin(base.__pn_);
-  while (PP && PPBase && PP.State_ == PPBase.State_ && *PP == *PPBase) {
+  while (PP && PPBase && PP.State_ == PPBase.State_ && (*PP == *PPBase || PP.inRootDir())) {
     ++PP;
     ++PPBase;
   }
