@@ -8434,122 +8434,133 @@ static void addUsersInExitBlock(
   if (!ExitBB || !ExitBB->getSinglePredecessor() || !ExitingBB)
     return;
 
-  // Introduce VPUsers modeling the exit values.
-  for (PHINode &ExitPhi : ExitBB->phis()) {
-    Value *IncomingValue =
-        ExitPhi.getIncomingValueForBlock(ExitingBB);
-    VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue, Plan);
-    // Exit values for inductions are computed and updated outside of VPlan and
-    // independent of induction recipes.
-    // TODO: Compute induction exit values in VPlan, use VPLiveOuts to update
-    // live-outs.
-    if ((isa<VPWidenIntOrFpInductionRecipe>(V) &&
-         !cast<VPWidenIntOrFpInductionRecipe>(V)->getTruncInst()) ||
-        isa<VPWidenPointerInductionRecipe>(V) ||
-        (isa<Instruction>(IncomingValue) &&
-         any_of(IncomingValue->users(), [&Inductions](User *U) {
-           auto *P = dyn_cast<PHINode>(U);
-           return P && Inductions.contains(P);
-         })))
+  auto *MiddleBlock = Plan.getVectorLoopRegion()->getSingleSuccessor();
+  for (VPIRBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPIRBasicBlock>(
+           vp_depth_first_shallow(MiddleBlock))) {
+    if (VPBB->getIRBasicBlock() != ExitBB)
       continue;
 
-    auto MiddleVPBB =
-        cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
-    VPBuilder B(MiddleVPBB);
-    if (auto *Terminator = MiddleVPBB->getTerminator()) {
-      auto *Condition = dyn_cast<VPInstruction>(Terminator->getOperand(0));
-      assert((!Condition || Condition->getParent() == MiddleVPBB) &&
-             "Condition expected in MiddleVPBB");
-      B.setInsertPoint(Condition ? Condition : Terminator);
-    }
+    for (auto &R : *VPBB) {
+      auto *IR = dyn_cast<VPIRInstruction>(&R);
+      if (!IR)
+        continue;
+      auto *ExitPhi = dyn_cast<PHINode>(&IR->getInstruction());
+      if (!ExitPhi)
+        break;
+      Value *IncomingValue = ExitPhi->getIncomingValueForBlock(ExitingBB);
+      VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue, Plan);
+      // Exit values for inductions are computed and updated outside of VPlan
+      // and independent of induction recipes.
+      // TODO: Compute induction exit values in VPlan, use VPLiveOuts to update
+      // live-outs.
+      if ((isa<VPWidenIntOrFpInductionRecipe>(V) &&
+           !cast<VPWidenIntOrFpInductionRecipe>(V)->getTruncInst()) ||
+          isa<VPWidenPointerInductionRecipe>(V) ||
+          (isa<Instruction>(IncomingValue) &&
+           any_of(IncomingValue->users(), [&Inductions](User *U) {
+             auto *P = dyn_cast<PHINode>(U);
+             return P && Inductions.contains(P);
+           })))
+        continue;
 
-    VPValue *Ext;
-    if (auto *FOR = dyn_cast_or_null<VPFirstOrderRecurrencePHIRecipe>(
-            V->getDefiningRecipe())) {
-      // This is the second phase of vectorizing first-order recurrences. An
-      // overview of the transformation is described below. Suppose we have the
-      // following loop with some use after the loop of the last a[i-1],
-      //
-      //   for (int i = 0; i < n; ++i) {
-      //     t = a[i - 1];
-      //     b[i] = a[i] - t;
-      //   }
-      //   use t;
-      //
-      // There is a first-order recurrence on "a". For this loop, the shorthand
-      // scalar IR looks like:
-      //
-      //   scalar.ph:
-      //     s_init = a[-1]
-      //     br scalar.body
-      //
-      //   scalar.body:
-      //     i = phi [0, scalar.ph], [i+1, scalar.body]
-      //     s1 = phi [s_init, scalar.ph], [s2, scalar.body]
-      //     s2 = a[i]
-      //     b[i] = s2 - s1
-      //     br cond, scalar.body, exit.block
-      //
-      //   exit.block:
-      //     use = lcssa.phi [s1, scalar.body]
-      //
-      // In this example, s1 is a recurrence because it's value depends on the
-      // previous iteration. In the first phase of vectorization, we created a
-      // vector phi v1 for s1. We now complete the vectorization and produce the
-      // shorthand vector IR shown below (for VF = 4, UF = 1).
-      //
-      //   vector.ph:
-      //     v_init = vector(..., ..., ..., a[-1])
-      //     br vector.body
-      //
-      //   vector.body
-      //     i = phi [0, vector.ph], [i+4, vector.body]
-      //     v1 = phi [v_init, vector.ph], [v2, vector.body]
-      //     v2 = a[i, i+1, i+2, i+3];
-      //     v3 = vector(v1(3), v2(0, 1, 2))
-      //     b[i, i+1, i+2, i+3] = v2 - v3
-      //     br cond, vector.body, middle.block
-      //
-      //   middle.block:
-      //     s_penultimate = v2(2) = v3(3)
-      //     s_resume = v2(3)
-      //     br cond, scalar.ph, exit.block
-      //
-      //   scalar.ph:
-      //     s_init' = phi [s_resume, middle.block], [s_init, otherwise]
-      //     br scalar.body
-      //
-      //   scalar.body:
-      //     i = phi [0, scalar.ph], [i+1, scalar.body]
-      //     s1 = phi [s_init', scalar.ph], [s2, scalar.body]
-      //     s2 = a[i]
-      //     b[i] = s2 - s1
-      //     br cond, scalar.body, exit.block
-      //
-      //   exit.block:
-      //     lo = lcssa.phi [s1, scalar.body], [s.penultimate, middle.block]
-      //
-      // After execution completes the vector loop, we extract the next value of
-      // the recurrence (x) to use as the initial value in the scalar loop. This
-      // is modeled by ExtractFromEnd.
-      //
-      // Extract the penultimate value of the recurrence and update VPLiveOut
-      // users of the recurrence splice. Note that the extract of the final
-      // value used to resume in the scalar loop is created earlier during VPlan
-      // construction.
-      Ext =
-          B.createNaryOp(VPInstruction::ExtractFromEnd,
-                         {FOR->getBackedgeValue(),
-                          Plan.getOrAddLiveIn(ConstantInt::get(
-                              IntegerType::get(ExitBB->getContext(), 32), 2))},
-                         {}, "vector.recur.extract.for.phi");
-    } else {
-      Ext = B.createNaryOp(
-          VPInstruction::ExtractFromEnd,
-          {V, Plan.getOrAddLiveIn(ConstantInt::get(
-                  IntegerType::get(ExitBB->getContext(), 32), 1))});
+      auto MiddleVPBB =
+          cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
+      VPBuilder B(MiddleVPBB);
+      if (auto *Terminator = MiddleVPBB->getTerminator()) {
+        auto *Condition = dyn_cast<VPInstruction>(Terminator->getOperand(0));
+        assert((!Condition || Condition->getParent() == MiddleVPBB) &&
+               "Condition expected in MiddleVPBB");
+        B.setInsertPoint(Condition ? Condition : Terminator);
+      }
+
+      VPValue *Ext;
+      if (auto *FOR = dyn_cast_or_null<VPFirstOrderRecurrencePHIRecipe>(
+              V->getDefiningRecipe())) {
+        // This is the second phase of vectorizing first-order recurrences. An
+        // overview of the transformation is described below. Suppose we have
+        // the following loop with some use after the loop of the last a[i-1],
+        //
+        //   for (int i = 0; i < n; ++i) {
+        //     t = a[i - 1];
+        //     b[i] = a[i] - t;
+        //   }
+        //   use t;
+        //
+        // There is a first-order recurrence on "a". For this loop, the
+        // shorthand scalar IR looks like:
+        //
+        //   scalar.ph:
+        //     s_init = a[-1]
+        //     br scalar.body
+        //
+        //   scalar.body:
+        //     i = phi [0, scalar.ph], [i+1, scalar.body]
+        //     s1 = phi [s_init, scalar.ph], [s2, scalar.body]
+        //     s2 = a[i]
+        //     b[i] = s2 - s1
+        //     br cond, scalar.body, exit.block
+        //
+        //   exit.block:
+        //     use = lcssa.phi [s1, scalar.body]
+        //
+        // In this example, s1 is a recurrence because it's value depends on the
+        // previous iteration. In the first phase of vectorization, we created a
+        // vector phi v1 for s1. We now complete the vectorization and produce
+        // the shorthand vector IR shown below (for VF = 4, UF = 1).
+        //
+        //   vector.ph:
+        //     v_init = vector(..., ..., ..., a[-1])
+        //     br vector.body
+        //
+        //   vector.body
+        //     i = phi [0, vector.ph], [i+4, vector.body]
+        //     v1 = phi [v_init, vector.ph], [v2, vector.body]
+        //     v2 = a[i, i+1, i+2, i+3];
+        //     v3 = vector(v1(3), v2(0, 1, 2))
+        //     b[i, i+1, i+2, i+3] = v2 - v3
+        //     br cond, vector.body, middle.block
+        //
+        //   middle.block:
+        //     s_penultimate = v2(2) = v3(3)
+        //     s_resume = v2(3)
+        //     br cond, scalar.ph, exit.block
+        //
+        //   scalar.ph:
+        //     s_init' = phi [s_resume, middle.block], [s_init, otherwise]
+        //     br scalar.body
+        //
+        //   scalar.body:
+        //     i = phi [0, scalar.ph], [i+1, scalar.body]
+        //     s1 = phi [s_init', scalar.ph], [s2, scalar.body]
+        //     s2 = a[i]
+        //     b[i] = s2 - s1
+        //     br cond, scalar.body, exit.block
+        //
+        //   exit.block:
+        //     lo = lcssa.phi [s1, scalar.body], [s.penultimate, middle.block]
+        //
+        // After execution completes the vector loop, we extract the next value
+        // of the recurrence (x) to use as the initial value in the scalar loop.
+        // This is modeled by ExtractFromEnd.
+        //
+        // Extract the penultimate value of the recurrence and update VPLiveOut
+        // users of the recurrence splice. Note that the extract of the final
+        // value used to resume in the scalar loop is created earlier during
+        // VPlan construction.
+        Ext = B.createNaryOp(
+            VPInstruction::ExtractFromEnd,
+            {FOR->getBackedgeValue(),
+             Plan.getOrAddLiveIn(ConstantInt::get(
+                 IntegerType::get(ExitBB->getContext(), 32), 2))},
+            {}, "vector.recur.extract.for.phi");
+      } else {
+        Ext = B.createNaryOp(
+            VPInstruction::ExtractFromEnd,
+            {V, Plan.getOrAddLiveIn(ConstantInt::get(
+                    IntegerType::get(ExitBB->getContext(), 32), 1))});
+      }
+      IR->addOperand(Ext);
     }
-    Plan.addLiveOut(&ExitPhi, Ext);
   }
 }
 
@@ -10156,7 +10167,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         // directly in VPlan.
         EpilogILV.setTripCount(MainILV.getTripCount());
         for (auto &R : make_early_inc_range(*BestEpiPlan.getPreheader())) {
-          auto *ExpandR = cast<VPExpandSCEVRecipe>(&R);
+          auto *ExpandR = dyn_cast<VPExpandSCEVRecipe>(&R);
+          if (!ExpandR)
+            continue;
           auto *ExpandedVal = BestEpiPlan.getOrAddLiveIn(
               ExpandedSCEVs.find(ExpandR->getSCEV())->second);
           ExpandR->replaceAllUsesWith(ExpandedVal);
