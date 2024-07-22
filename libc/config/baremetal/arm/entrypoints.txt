@@ -236,6 +236,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.canonicalize
     libc.src.math.canonicalizef
     libc.src.math.canonicalizel
+    libc.src.math.cbrt
     libc.src.math.cbrtf
     libc.src.math.ceil
     libc.src.math.ceilf
