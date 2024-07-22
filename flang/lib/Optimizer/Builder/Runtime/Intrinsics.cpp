@@ -199,6 +199,24 @@ void fir::runtime::genRandomSeed(fir::FirOpBuilder &builder, mlir::Location loc,
   builder.create<fir::CallOp>(loc, func, args);
 }
 
+/// generate rename runtime call
+void fir::runtime::genRename(fir::FirOpBuilder &builder, mlir::Location loc,
+                             mlir::Value path1, mlir::Value path2,
+                             mlir::Value status) {
+  auto runtimeFunc =
+      fir::runtime::getRuntimeFunc<mkRTKey(Rename)>(loc, builder);
+  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(4));
+
+  llvm::SmallVector<mlir::Value> args =
+      fir::runtime::createArguments(builder, loc, runtimeFuncTy, path1, path2,
+                                    status, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, runtimeFunc, args);
+}
+
 /// generate runtime call to transfer intrinsic with no size argument
 void fir::runtime::genTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
                                mlir::Value resultBox, mlir::Value sourceBox,
