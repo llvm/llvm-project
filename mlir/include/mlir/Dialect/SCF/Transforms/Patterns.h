@@ -16,6 +16,7 @@
 namespace mlir {
 
 class ConversionTarget;
+class SCFRotateWhileLoopPassOptions;
 class TypeConverter;
 
 namespace scf {
@@ -85,6 +86,10 @@ void populateSCFForLoopCanonicalizationPatterns(RewritePatternSet &patterns);
 ///  * `after` block containing arith.addi
 void populateUpliftWhileToForPatterns(RewritePatternSet &patterns);
 
+/// Populate patterns to rotate `scf.while` ops, constructing `do-while` loops
+/// from `while` loops.
+void populateSCFRotateWhileLoopPatterns(
+    RewritePatternSet &patterns, const SCFRotateWhileLoopPassOptions &options);
 } // namespace scf
 } // namespace mlir
 

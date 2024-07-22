@@ -138,7 +138,6 @@ void registerTestRecursiveTypesPass();
 void registerTestSCFUpliftWhileToFor();
 void registerTestSCFUtilsPass();
 void registerTestSCFWhileOpBuilderPass();
-void registerTestSCFWrapInZeroTripCheckPasses();
 void registerTestShapeMappingPass();
 void registerTestSliceAnalysisPass();
 void registerTestTensorCopyInsertionPass();
@@ -270,7 +269,6 @@ void registerTestPasses() {
   mlir::test::registerTestSCFUpliftWhileToFor();
   mlir::test::registerTestSCFUtilsPass();
   mlir::test::registerTestSCFWhileOpBuilderPass();
-  mlir::test::registerTestSCFWrapInZeroTripCheckPasses();
   mlir::test::registerTestShapeMappingPass();
   mlir::test::registerTestSliceAnalysisPass();
   mlir::test::registerTestTensorCopyInsertionPass();
