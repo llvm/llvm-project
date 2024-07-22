@@ -1793,4 +1793,5 @@ let Predicates = [HasVInstructionsI64, IsRV64] in {
 } // Predicates = [HasVInstructionsI64, IsRV64]
 
 include "RISCVInstrInfoZvfbf.td"
+include "RISCVInstrInfoZvinsert.td"
 include "RISCVInstrInfoVPseudos.td"
