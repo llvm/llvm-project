@@ -557,8 +557,8 @@ end:
 ; GFX8: exp param0 [[Y]], [[X]], [[Z0]], [[W0]]{{$}}
 ; GFX8-NEXT: exp param1 [[Y]], [[X]], [[Z1]], [[W1]] done{{$}}
 
-; GFX10-DAG: v_mov_b32_e32 [[X:v[0-9]+]], s2
-; GFX10-DAG: v_mov_b32_e32 [[Y:v[0-9]+]], s3
+; GFX10-DAG: v_mov_b32_e32 [[X:v[0-9]+]], s0
+; GFX10-DAG: v_mov_b32_e32 [[Y:v[0-9]+]], s1
 ; GFX10-DAG: v_add_f32_e{{32|64}} [[Z0:v[0-9]+]]
 ; GFX10-DAG: v_sub_f32_e{{32|64}} [[Z1:v[0-9]+]]
 ; GFX10: exp param0 [[X]], [[Y]], [[Z0]], [[W0]]{{$}}
