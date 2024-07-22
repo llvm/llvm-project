@@ -1032,7 +1032,7 @@ LegalizerHelper::createFCMPLibcall(MachineIRBuilder &MIRBuilder,
   const auto BuildLibcall = [&](const RTLIB::Libcall Libcall,
                                 const CmpInst::Predicate ICmpPred) -> Register {
     Register Temp = MRI.createGenericVirtualRegister(I32LLT);
-    // Generate libcall, storing result into Temp
+    // Generate libcall, holding result in Temp
     const auto Status =
         createLibcall(MIRBuilder, Libcall, {Temp, Type::getInt32Ty(Ctx), 0},
                       {{Op1, OpType, 0}, {Op2, OpType, 1}}, LocObserver, &MI);
@@ -1078,7 +1078,7 @@ LegalizerHelper::createFCMPLibcall(MachineIRBuilder &MIRBuilder,
     // Convert into (!FCMP_OEQ && !FCMP_UNO).
 
     // We inverse the predicate instead of generating a NOT
-    // to save one instruciton.
+    // to save one instruction.
     // On AArch64 isel can even select two cmp into a single ccmp.
     const auto [OeqLibcall, OeqPred] = getFCMPLibcallDesc(CmpInst::FCMP_OEQ);
     const auto NotOeq =
