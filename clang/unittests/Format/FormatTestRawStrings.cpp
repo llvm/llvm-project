@@ -642,8 +642,8 @@ auto S=R"pb(item_1:1)pb"+R"pb(item_2:2)pb"+R"pb(item_3:3)pb";
 
   expect_eq(R"test(
 auto S = (count < 3)
-             ? R"pb(item_1: 1)pb"
-             : R"pb(item_2: 2)pb";
+         ? R"pb(item_1: 1)pb"
+         : R"pb(item_2: 2)pb";
 )test",
             format(R"test(
 auto S=(count<3)?R"pb(item_1:1)pb":R"pb(item_2:2)pb";
@@ -651,10 +651,9 @@ auto S=(count<3)?R"pb(item_1:1)pb":R"pb(item_2:2)pb";
                    getRawStringPbStyleWithColumns(40)));
 
   expect_eq(R"test(
-auto S =
-    (count < 3)
-        ? R"pb(item_1: 1, item_2: 2)pb"
-        : R"pb(item_3: 3)pb";
+auto S = (count < 3)
+         ? R"pb(item_1: 1, item_2: 2)pb"
+         : R"pb(item_3: 3)pb";
 )test",
             format(R"test(
 auto S=(count<3)?R"pb(item_1:1,item_2:2)pb":R"pb(item_3:3)pb";
@@ -664,8 +663,8 @@ auto S=(count<3)?R"pb(item_1:1,item_2:2)pb":R"pb(item_3:3)pb";
   expect_eq(R"test(
 auto S =
     (count < 3)
-        ? R"pb(item_1: 1)pb"
-        : R"pb(item_2: 2, item_3: 3)pb";
+    ? R"pb(item_1: 1)pb"
+    : R"pb(item_2: 2, item_3: 3)pb";
 )test",
             format(R"test(
 auto S=(count<3)?R"pb(item_1:1)pb":R"pb(item_2:2,item_3:3)pb";

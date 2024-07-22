@@ -1347,8 +1347,14 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       //    * always un-indent by the operator when
       //    BreakBeforeTernaryOperators=true
       unsigned Indent = CurrentState.Indent;
-      if (Style.AlignOperands != FormatStyle::OAS_DontAlign)
+      if (Style.AlignOperands != FormatStyle::OAS_DontAlign &&
+          !Style.BreakBeforeTernaryOperators) {
         Indent -= Style.ContinuationIndentWidth;
+      }
+      if (Style.BreakBeforeTernaryOperators &&
+          CurrentState.IsChainedConditional) {
+        Indent -= 2;
+      }
       if (Style.BreakBeforeTernaryOperators && CurrentState.UnindentOperator)
         Indent -= 2;
       return Indent;
@@ -1773,7 +1779,8 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
         !CurrentState.IsWrappedConditional) {
       NewParenState.IsChainedConditional = true;
       NewParenState.UnindentOperator = State.Stack.back().UnindentOperator;
-    } else if (PrecedenceLevel == prec::Conditional ||
+    } else if ((PrecedenceLevel == prec::Conditional &&
+                !Style.BreakBeforeTernaryOperators) ||
                (!SkipFirstExtraIndent && PrecedenceLevel > prec::Assignment &&
                 !Current.isTrailingComment())) {
       NewParenState.Indent += Style.ContinuationIndentWidth;
