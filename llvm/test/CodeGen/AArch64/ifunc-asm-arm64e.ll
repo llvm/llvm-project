@@ -59,7 +59,7 @@ entry:
 @weak_ifunc = weak ifunc i32 (i32), ptr @the_resolver
 ; CHECK-NOT:       .weak_reference _weak_ifunc.lazy_pointer
 ; CHECK:       _weak_ifunc.lazy_pointer:
-; CHECK:           .weak_reference _weak_ifunc
+; CHECK:           .weak_reference _weak_ifunc{{$}}
 ; CHECK:       _weak_ifunc:
 ; CHECK-NOT:       .weak_reference _weak_ifunc.stub_helper
 ; CHECK:       _weak_ifunc.stub_helper:

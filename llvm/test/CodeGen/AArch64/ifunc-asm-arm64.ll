@@ -64,7 +64,7 @@ entry:
 ; ELF:             .type weak_ifunc,@gnu_indirect_function
 ; MACHO-NOT:       .weak_reference _weak_ifunc.lazy_pointer
 ; MACHO:       _weak_ifunc.lazy_pointer:
-; MACHO:           .weak_reference _weak_ifunc
+; MACHO:           .weak_reference _weak_ifunc{{$}}
 ; MACHO:       _weak_ifunc:
 ; MACHO-NOT:       .weak_reference _weak_ifunc.stub_helper
 ; MACHO:       _weak_ifunc.stub_helper:
