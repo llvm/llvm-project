@@ -5,7 +5,7 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %t/main.s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
 # RUN: llvm-bolt %t.exe -o %t.out --data %t/yaml -v=2 \
-# RUN:   --print-cfg --funcs=main --profile-ignore-hash=0 2>&1 | FileCheck %s
+# RUN:   --print-cfg --funcs=main --profile-ignore-hash=0 --infer-stale-profile 2>&1 | FileCheck %s
 
 # CHECK: BOLT-INFO: matched 0 functions with similar names
 
@@ -47,23 +47,16 @@ header:
   dfs-order:       false
   hash-func:       xxh3
 functions:
-  - name:            main
-    fid:             0
-    hash:            0x0000000000000001
-    exec:            1
-    nblocks:         6
+  - name:                   main
+    fid:                    0
+    hash:                   0x0000000000000001
+    exec:                   1
+    nblocks:                6
+    guid:                   0xDB956436E78DD5FA
+    pseudo_probe_desc_hash: 15822663052811949562    #lookup in code in a second
     blocks:
       - bid:             1
         hash:            0x0000000000000001
         insns:           1
         succ:            [ { bid: 3, cnt: 1} ]
-  - name:            foo
-    fid:             1
-    hash:            0x0000000000000002
-    exec:            1
-    nblocks:         6
-    blocks:
-      - bid:             1
-        hash:            0x0000000000000002
-        insns:           1
-        succ:            [ { bid: 3, cnt: 1} ]
+        pseudo_probes: [ { guid: 0xDB956436E78DD5FA, id: 0, type: 0 } ]

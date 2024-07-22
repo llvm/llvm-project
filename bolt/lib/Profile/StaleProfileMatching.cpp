@@ -195,11 +195,15 @@ public:
   void init(const std::vector<FlowBlock *> &Blocks,
             const std::vector<BlendedBlockHash> &Hashes,
             const std::vector<uint64_t> &CallHashes,
-            std::optional<uint64_t> YamlBFGUID) {
+            const std::unordered_map<uint64_t,
+                                     std::vector<const MCDecodedPseudoProbe *>>
+                IndexToBinaryPseudoProbes,
+            const std::unordered_map<const MCDecodedPseudoProbe *, FlowBlock *>
+                BinaryPseudoProbeToBlock,
+            const uint64_t YamlBFGUID) {
     assert(Blocks.size() == Hashes.size() &&
            Hashes.size() == CallHashes.size() &&
            "incorrect matcher initialization");
-
     for (size_t I = 0; I < Blocks.size(); I++) {
       FlowBlock *Block = Blocks[I];
       uint16_t OpHash = Hashes[I].OpcodeHash;
@@ -209,6 +213,8 @@ public:
             std::make_pair(Hashes[I], Block));
       this->Blocks.push_back(Block);
     }
+    this->IndexToBinaryPseudoProbes = IndexToBinaryPseudoProbes;
+    this->BinaryPseudoProbeToBlock = BinaryPseudoProbeToBlock;
     this->YamlBFGUID = YamlBFGUID;
   }
 
@@ -234,10 +240,14 @@ private:
   using HashBlockPairType = std::pair<BlendedBlockHash, FlowBlock *>;
   std::unordered_map<uint16_t, std::vector<HashBlockPairType>> OpHashToBlocks;
   std::unordered_map<uint64_t, std::vector<HashBlockPairType>> CallHashToBlocks;
-  std::vector<FlowBlock *> Blocks;
+  std::unordered_map<uint64_t, std::vector<const MCDecodedPseudoProbe *>>
+      IndexToBinaryPseudoProbes;
+  std::unordered_map<const MCDecodedPseudoProbe *, FlowBlock *>
+      BinaryPseudoProbeToBlock;
+  std::vector<const FlowBlock *> Blocks;
   // If the pseudo probe checksums of the profiled and binary functions are
   // equal, then the YamlBF's GUID is defined and used to match blocks.
-  std::optional<uint64_t> YamlBFGUID;
+  uint64_t YamlBFGUID;
 
   // Uses OpcodeHash to find the most similar block for a given hash.
   const FlowBlock *matchWithOpcodes(BlendedBlockHash BlendedHash) const {
@@ -284,7 +294,7 @@ private:
     // Searches for the pseudo probe attached to the matched function's block,
     // ignoring pseudo probes attached to function calls and inlined functions'
     // blocks.
-    outs() << "match with pseudo probes\n";
+    std::vector<const yaml::bolt::PseudoProbeInfo *> BlockPseudoProbes;
     for (const auto &PseudoProbe : PseudoProbes) {
       // Ensures that pseudo probe information belongs to the appropriate
       // function and not an inlined function.
@@ -293,11 +303,30 @@ private:
       // Skips pseudo probes attached to function calls.
       if (PseudoProbe.Type != static_cast<uint8_t>(PseudoProbeType::Block))
         continue;
-      assert(PseudoProbe.Index < Blocks.size() &&
-             "pseudo probe index out of range");
-      return Blocks[PseudoProbe.Index];
+
+      BlockPseudoProbes.push_back(&PseudoProbe);
     }
-    return nullptr;
+
+    // Returns nullptr if there is not a 1:1 mapping of the yaml block pseudo
+    // probe and binary pseudo probe.
+    if (BlockPseudoProbes.size() == 0 || BlockPseudoProbes.size() > 1)
+      return nullptr;
+
+    uint64_t Index = BlockPseudoProbes[0]->Index;
+    assert(Index < Blocks.size() && "Invalid pseudo probe index");
+
+    auto It = IndexToBinaryPseudoProbes.find(Index);
+    assert(It != IndexToBinaryPseudoProbes.end() &&
+           "All blocks should have a pseudo probe");
+    if (It->second.size() > 1)
+      return nullptr;
+
+    const MCDecodedPseudoProbe *BinaryPseudoProbe = It->second[0];
+    auto BinaryPseudoProbeIt = BinaryPseudoProbeToBlock.find(BinaryPseudoProbe);
+    assert(BinaryPseudoProbeIt != BinaryPseudoProbeToBlock.end() &&
+           "All binary pseudo probes should belong a binary basic block");
+
+    return BinaryPseudoProbeIt->second;
   }
 };
 
@@ -491,6 +520,11 @@ size_t matchWeightsByHashes(
   std::vector<uint64_t> CallHashes;
   std::vector<FlowBlock *> Blocks;
   std::vector<BlendedBlockHash> BlendedHashes;
+  std::unordered_map<uint64_t, std::vector<const MCDecodedPseudoProbe *>>
+      IndexToBinaryPseudoProbes;
+  std::unordered_map<const MCDecodedPseudoProbe *, FlowBlock *>
+      BinaryPseudoProbeToBlock;
+  const MCPseudoProbeDecoder *PseudoProbeDecoder = BC.getPseudoProbeDecoder();
   for (uint64_t I = 0; I < BlockOrder.size(); I++) {
     const BinaryBasicBlock *BB = BlockOrder[I];
     assert(BB->getHash() != 0 && "empty hash of BinaryBasicBlock");
@@ -510,9 +544,27 @@ size_t matchWeightsByHashes(
     Blocks.push_back(&Func.Blocks[I + 1]);
     BlendedBlockHash BlendedHash(BB->getHash());
     BlendedHashes.push_back(BlendedHash);
+    if (PseudoProbeDecoder) {
+      const AddressProbesMap &ProbeMap =
+          PseudoProbeDecoder->getAddress2ProbesMap();
+      const uint64_t FuncAddr = BF.getAddress();
+      const std::pair<uint64_t, uint64_t> &BlockRange =
+          BB->getInputAddressRange();
+      const auto &BlockProbes =
+          llvm::make_range(ProbeMap.lower_bound(FuncAddr + BlockRange.first),
+                           ProbeMap.lower_bound(FuncAddr + BlockRange.second));
+      for (const auto &[_, Probes] : BlockProbes) {
+        for (const MCDecodedPseudoProbe &Probe : Probes) {
+          IndexToBinaryPseudoProbes[Probe.getIndex()].push_back(&Probe);
+          BinaryPseudoProbeToBlock[&Probe] = Blocks[I];
+        }
+      }
+    }
+
     LLVM_DEBUG(dbgs() << "BB with index " << I << " has hash = "
                       << Twine::utohexstr(BB->getHash()) << "\n");
   }
+
   uint64_t BFPseudoProbeDescHash = 0;
   if (BF.hasPseudoProbe()) {
     const MCPseudoProbeDecoder *PseudoProbeDecoder = BC.getPseudoProbeDecoder();
@@ -521,14 +573,15 @@ size_t matchWeightsByHashes(
     BFPseudoProbeDescHash =
         PseudoProbeDecoder->getFuncDescForGUID(BF.getGUID())->FuncHash;
   }
-  bool MatchWithPseudoProbes =
-      BFPseudoProbeDescHash && YamlBF.PseudoProbeDescHash
-          ? BFPseudoProbeDescHash == YamlBF.PseudoProbeDescHash
-          : false;
+  uint64_t YamlBFGUID =
+      BFPseudoProbeDescHash && YamlBF.PseudoProbeDescHash &&
+              BFPseudoProbeDescHash == YamlBF.PseudoProbeDescHash
+          ? static_cast<uint64_t>(YamlBF.GUID)
+          : 0;
+
   StaleMatcher Matcher;
-  Matcher.init(Blocks, BlendedHashes, CallHashes,
-               MatchWithPseudoProbes ? std::make_optional(YamlBF.GUID)
-                                     : std::nullopt);
+  Matcher.init(Blocks, BlendedHashes, CallHashes, IndexToBinaryPseudoProbes,
+               BinaryPseudoProbeToBlock, YamlBFGUID);
 
   // Index in yaml profile => corresponding (matched) block
   DenseMap<uint64_t, const FlowBlock *> MatchedBlocks;
