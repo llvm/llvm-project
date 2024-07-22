@@ -2511,28 +2511,18 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
   }
 
   SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
-  if (Tok.isNot(tok::annot_module_name)) {
-    Diag(Tok, diag::err_module_expected_ident) << /*IsImport=*/false;
-    SkipUntil(tok::semi, StopBeforeMatch);
-    return nullptr;
-  }
-
-  auto *Info = Tok.getAnnotationValueAs<ModuleNameInfo *>();
-  ConsumeAnnotationToken();
-  if (ParseModuleName(ModuleLoc, Info->getModuleName(), Path,
-                      /*IsImport=*/false))
+  if (ParseModuleName(ModuleLoc, Path, /*IsImport*/ false))
     return nullptr;
 
   // Parse the optional module-partition.
   SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Partition;
-  if (Info->hasPartitionName()) {
-    SourceLocation ColonLoc = Info->getColonToken().getLocation();
+  if (Tok.is(tok::colon)) {
+    SourceLocation ColonLoc = ConsumeToken();
     if (!getLangOpts().CPlusPlusModules)
       Diag(ColonLoc, diag::err_unsupported_module_partition)
           << SourceRange(ColonLoc, Partition.back().second);
     // Recover by ignoring the partition name.
-    else if (ParseModuleName(ModuleLoc, Info->getPartitionName(), Partition,
-                             /*IsImport=*/false))
+    else if (ParseModuleName(ModuleLoc, Partition, /*IsImport*/ false))
       return nullptr;
   }
 
@@ -2591,32 +2581,18 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     // This is a header import that the preprocessor mapped to a module import.
     HeaderUnit = reinterpret_cast<Module *>(Tok.getAnnotationValue());
     ConsumeAnnotationToken();
-  } else {
-    if (Tok.isNot(tok::annot_module_name)) {
-      if (Tok.is(tok::code_completion)) {
-        cutOffParsing();
-        Actions.CodeCompletion().CodeCompleteModuleImport(ImportLoc, Path);
-        return nullptr;
-      }
-      Diag(Tok, diag::err_module_expected_ident) << /*IsImport=*/true;
-      SkipUntil(tok::semi, StopBeforeMatch);
+  } else if (Tok.is(tok::colon)) {
+    SourceLocation ColonLoc = ConsumeToken();
+    if (!getLangOpts().CPlusPlusModules)
+      Diag(ColonLoc, diag::err_unsupported_module_partition)
+          << SourceRange(ColonLoc, Path.back().second);
+    // Recover by leaving partition empty.
+    else if (ParseModuleName(ColonLoc, Path, /*IsImport*/ true))
       return nullptr;
-    }
-    auto *Info = Tok.getAnnotationValueAs<ModuleNameInfo *>();
-    ConsumeAnnotationToken();
-    if (Info->hasPartitionName()) {
-      SourceLocation ColonLoc = Info->getColonToken().getLocation();
-      if (!getLangOpts().CPlusPlusModules)
-        Diag(ColonLoc, diag::err_unsupported_module_partition)
-            << SourceRange(ColonLoc, Path.back().second);
-      // Recover by leaving partition empty.
-      else if (ParseModuleName(ColonLoc, Info->getPartitionName(), Path,
-                               /*IsImport=*/true))
-        return nullptr;
-      else
-        IsPartition = true;
-    } else if (ParseModuleName(ImportLoc, Info->getModuleName(), Path,
-                               /*IsImport=*/true))
+    else
+      IsPartition = true;
+  } else {
+    if (ParseModuleName(ImportLoc, Path, /*IsImport*/ true))
       return nullptr;
   }
 
@@ -2713,31 +2689,32 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
 ///         module-name-qualifier:
 ///           module-name-qualifier[opt] identifier '.'
 bool Parser::ParseModuleName(
-    SourceLocation UseLoc, ArrayRef<Token> ModuleName,
+    SourceLocation UseLoc,
     SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path,
     bool IsImport) {
-  ModuleNameInfo::getModuleIdPath(ModuleName, Path);
-  // Eg. import A.B.
-  if (ModuleName.back().isNot(tok::identifier)) {
-    if (Tok.is(tok::code_completion)) {
-      cutOffParsing();
-      Actions.CodeCompletion().CodeCompleteModuleImport(UseLoc, Path);
+  // Parse the module path.
+  while (true) {
+    if (!Tok.is(tok::identifier)) {
+      if (Tok.is(tok::code_completion)) {
+        cutOffParsing();
+        Actions.CodeCompletion().CodeCompleteModuleImport(UseLoc, Path);
+        return true;
+      }
+
+      Diag(Tok, diag::err_module_expected_ident) << IsImport;
+      SkipUntil(tok::semi);
       return true;
     }
-    Diag(ModuleName.back(), diag::err_module_expected_ident) << IsImport;
-    SkipUntil(tok::semi, StopBeforeMatch);
-    return true;
-  }
 
-  // [cpp.module]/p2: where the pp-tokens (if any) shall not begin with a (
-  // preprocessing token [...]
-  //
-  // Skip unitl ';' to recovery.
-  if (getLangOpts().CPlusPlusModules && Tok.is(tok::l_paren)) {
-    SkipUntil(tok::semi, StopBeforeMatch);
-    return true;
+    // Record this part of the module path.
+    Path.push_back(std::make_pair(Tok.getIdentifierInfo(), Tok.getLocation()));
+    ConsumeToken();
+
+    if (Tok.isNot(tok::period))
+      return false;
+
+    ConsumeToken();
   }
-  return false;
 }
 
 /// Try recover parser when module annotation appears where it must not

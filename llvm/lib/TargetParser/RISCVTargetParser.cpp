@@ -128,6 +128,33 @@ void getFeaturesForCPU(StringRef CPU,
     else
       EnabledFeatures.push_back(F.substr(1));
 }
+
+namespace RISCVExtensionBitmaskTable {
+#define GET_RISCVExtensionBitmaskTable_IMPL
+#include "llvm/TargetParser/RISCVTargetParserDef.inc"
+
+} // namespace RISCVExtensionBitmaskTable
+
+namespace {
+struct LessExtName {
+  bool operator()(const RISCVExtensionBitmaskTable::RISCVExtensionBitmask &LHS,
+                  StringRef RHS) {
+    return StringRef(LHS.Name) < RHS;
+  }
+};
+} // namespace
+
+static RISCVExtensionBitmaskTable::RISCVExtensionBitmask
+getExtensionBitmask(StringRef ExtName) {
+  ArrayRef<RISCVExtensionBitmaskTable::RISCVExtensionBitmask> ExtBitmasks =
+      RISCVExtensionBitmaskTable::ExtensionBitmask;
+  auto *I = llvm::lower_bound(ExtBitmasks, ExtName, LessExtName());
+
+  if (I != ExtBitmasks.end() && ExtName.equals_insensitive(I->Name))
+    return *I;
+
+  return RISCVExtensionBitmaskTable::RISCVExtensionBitmask();
+}
 } // namespace RISCV
 
 namespace RISCVVType {
