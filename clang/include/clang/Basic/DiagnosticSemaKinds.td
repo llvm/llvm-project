@@ -3492,7 +3492,7 @@ def err_attr_tlsmodel_arg : Error<"tls_model must be \"global-dynamic\", "
 
 def err_attr_codemodel_arg : Error<"code model '%0' is not supported on this target">;
 
-def err_aix_attr_unsupported_tls_model : Error<"TLS model '%0' is not yet supported on AIX">;
+def err_aix_attr_unsupported : Error<"%0 attribute is not yet supported on AIX">;
 
 def err_tls_var_aligned_over_maximum : Error<
   "alignment (%0) of thread-local variable %1 is greater than the maximum supported "
