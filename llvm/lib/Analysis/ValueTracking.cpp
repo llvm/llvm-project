@@ -6625,9 +6625,6 @@ const Value *llvm::getUnderlyingObjectAggressive(const Value *V) {
     P = First ? FirstObject : getUnderlyingObject(P);
     First = false;
 
-    if (!FirstObject)
-      FirstObject = P;
-
     if (!Visited.insert(P).second)
       continue;
 
