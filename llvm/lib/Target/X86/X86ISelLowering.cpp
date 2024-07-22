@@ -35882,7 +35882,7 @@ X86TargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
     MIB.addMBB(restoreMBB);
   MIB.setMemRefs(MMOs);
 
-  if (MF->getMMI().getModule()->getModuleFlag("cf-protection-return")) {
+  if (MF->getFunction().getParent()->getModuleFlag("cf-protection-return")) {
     emitSetJmpShadowStackFix(MI, thisMBB);
   }
 
@@ -36158,7 +36158,7 @@ X86TargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
   MachineBasicBlock *thisMBB = MBB;
 
   // When CET and shadow stack is enabled, we need to fix the Shadow Stack.
-  if (MF->getMMI().getModule()->getModuleFlag("cf-protection-return")) {
+  if (MF->getFunction().getParent()->getModuleFlag("cf-protection-return")) {
     thisMBB = emitLongJmpShadowStackFix(MI, thisMBB);
   }
 
@@ -57981,7 +57981,7 @@ SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc &dl,
                                                   SDValue Value, SDValue Addr,
                                                   int JTI,
                                                   SelectionDAG &DAG) const {
-  const Module *M = DAG.getMachineFunction().getMMI().getModule();
+  const Module *M = DAG.getMachineFunction().getFunction().getParent();
   Metadata *IsCFProtectionSupported = M->getModuleFlag("cf-protection-branch");
   if (IsCFProtectionSupported) {
     // In case control-flow branch protection is enabled, we need to add

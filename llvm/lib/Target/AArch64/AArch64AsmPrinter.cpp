@@ -1728,8 +1728,7 @@ void AArch64AsmPrinter::LowerLOADauthptrstatic(const MachineInstr &MI) {
     assert(GAOp.getOffset() == 0 &&
            "non-zero offset for $auth_ptr$ stub slots is not supported");
     const MCSymbol *GASym = TM.getSymbol(GAOp.getGlobal());
-    AuthPtrStubSym =
-        TLOF.getAuthPtrSlotSymbol(TM, &MF->getMMI(), GASym, Key, Disc);
+    AuthPtrStubSym = TLOF.getAuthPtrSlotSymbol(TM, MMI, GASym, Key, Disc);
   } else {
     assert(TM.getTargetTriple().isOSBinFormatMachO() &&
            "LOADauthptrstatic is implemented only for MachO/ELF");
@@ -1740,8 +1739,7 @@ void AArch64AsmPrinter::LowerLOADauthptrstatic(const MachineInstr &MI) {
     assert(GAOp.getOffset() == 0 &&
            "non-zero offset for $auth_ptr$ stub slots is not supported");
     const MCSymbol *GASym = TM.getSymbol(GAOp.getGlobal());
-    AuthPtrStubSym =
-        TLOF.getAuthPtrSlotSymbol(TM, &MF->getMMI(), GASym, Key, Disc);
+    AuthPtrStubSym = TLOF.getAuthPtrSlotSymbol(TM, MMI, GASym, Key, Disc);
   }
 
   MachineOperand StubMOHi =

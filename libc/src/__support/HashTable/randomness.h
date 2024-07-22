@@ -36,7 +36,7 @@ LIBC_INLINE uint64_t next_random_seed() {
     entropy[1] = reinterpret_cast<uint64_t>(&state);
 #if defined(LIBC_HASHTABLE_USE_GETRANDOM)
     int errno_backup = libc_errno;
-    ssize_t count = sizeof(entropy);
+    size_t count = sizeof(entropy);
     uint8_t *buffer = reinterpret_cast<uint8_t *>(entropy);
     while (count > 0) {
       ssize_t len = getrandom(buffer, count, 0);

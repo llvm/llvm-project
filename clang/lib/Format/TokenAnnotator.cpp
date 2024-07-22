@@ -372,10 +372,6 @@ private:
                OpeningParen.Previous->is(tok::kw__Generic)) {
       Contexts.back().ContextType = Context::C11GenericSelection;
       Contexts.back().IsExpression = true;
-    } else if (Line.InPPDirective &&
-               (!OpeningParen.Previous ||
-                OpeningParen.Previous->isNot(tok::identifier))) {
-      Contexts.back().IsExpression = true;
     } else if (Contexts[Contexts.size() - 2].CaretFound) {
       // This is the parameter list of an ObjC block.
       Contexts.back().IsExpression = false;
@@ -388,7 +384,20 @@ private:
                OpeningParen.Previous->MatchingParen->isOneOf(
                    TT_ObjCBlockLParen, TT_FunctionTypeLParen)) {
       Contexts.back().IsExpression = false;
-    } else if (!Line.MustBeDeclaration && !Line.InPPDirective) {
+    } else if (Line.InPPDirective) {
+      auto IsExpr = [&OpeningParen] {
+        const auto *Tok = OpeningParen.Previous;
+        if (!Tok || Tok->isNot(tok::identifier))
+          return true;
+        Tok = Tok->Previous;
+        while (Tok && Tok->endsSequence(tok::coloncolon, tok::identifier)) {
+          assert(Tok->Previous);
+          Tok = Tok->Previous->Previous;
+        }
+        return !Tok || !Tok->Tok.getIdentifierInfo();
+      };
+      Contexts.back().IsExpression = IsExpr();
+    } else if (!Line.MustBeDeclaration) {
       bool IsForOrCatch =
           OpeningParen.Previous &&
           OpeningParen.Previous->isOneOf(tok::kw_for, tok::kw_catch);
