@@ -123,7 +123,8 @@ func.func @transfer_read_dims_mismatch_non_contiguous_non_zero_indices(
 // CHECK: #[[$MAP:.+]] = affine_map<()[s0] -> (s0 * 2)>
 
 // CHECK-LABEL:  func.func @transfer_read_dims_mismatch_non_contiguous_non_zero_indices(
-// CHECK:         %[[COLLAPSE:.+]] = memref.collapse_shape %{{.*}} {{\[}}[0], [1], [2, 3]] : memref<1x3x3x2xf32, strided<[40, 10, 2, 1], offset: ?>> into memref<1x3x6xf32, strided<[40, 10, 1], offset: ?>>
+// CHECK:         %[[COLLAPSE:.+]] = memref.collapse_shape %{{.*}} {{\[}}[0], [1], [2, 3]]
+// CHECK-SAME:      : memref<1x3x3x2xf32, strided<[40, 10, 2, 1], offset: ?>> into memref<1x3x6xf32, strided<[40, 10, 1], offset: ?>>
 // CHECK:         %[[APPLY:.*]] = affine.apply #[[$MAP]]()
 
 // CHECK-128B-LABEL: func @transfer_read_dims_mismatch_non_contiguous_non_zero_indices(
@@ -131,8 +132,8 @@ func.func @transfer_read_dims_mismatch_non_contiguous_non_zero_indices(
 
 // -----
 
-/// The leading dynamic shapes don't affect whether this example is flattenable
-/// or not. Indeed, those dynamic shapes are not candidates for flattening anyway.
+// The leading dynamic shapes don't affect whether this example is flattenable
+// or not. Indeed, those dynamic shapes are not candidates for flattening anyway.
 
 func.func @transfer_read_leading_dynamic_dims(
     %arg : memref<?x?x8x4xi8, strided<[?, 32, 4, 1], offset: ?>>,
@@ -148,16 +149,16 @@ func.func @transfer_read_leading_dynamic_dims(
 
 // CHECK-LABEL: func @transfer_read_leading_dynamic_dims
 // CHECK-SAME:    %[[ARG0:.+]]: memref<?x?x8x4xi8, {{.+}}>, %[[ARG1:.+]]: index, %[[ARG2:.+]]: index
-// CHECK:       %[[C0_I8:.+]] = arith.constant 0 : i8
-// CHECK:       %[[C0:.+]] = arith.constant 0 : index
-// CHECK:       %[[COLLAPSED:.+]] = memref.collapse_shape %[[ARG0]] {{\[}}[0], [1], [2, 3]{{\]}}
-// CHECK-SAME:    : memref<?x?x8x4xi8, {{.+}}> into memref<?x?x32xi8, {{.+}}>
-// CHECK:       %[[VEC1D:.+]] = vector.transfer_read %[[COLLAPSED]]
+// CHECK:         %[[C0_I8:.+]] = arith.constant 0 : i8
+// CHECK:         %[[C0:.+]] = arith.constant 0 : index
+// CHECK:         %[[COLLAPSED:.+]] = memref.collapse_shape %[[ARG0]] {{\[}}[0], [1], [2, 3]{{\]}}
+// CHECK-SAME:      : memref<?x?x8x4xi8, {{.+}}> into memref<?x?x32xi8, {{.+}}>
+// CHECK:         %[[VEC1D:.+]] = vector.transfer_read %[[COLLAPSED]]
 // CHECK-SAME:    [%[[ARG1]], %[[ARG2]], %[[C0]]], %[[C0_I8]]
 // CHECK-SAME:    {in_bounds = [true]}
-// CHECK-SAME:    : memref<?x?x32xi8, {{.+}}>, vector<32xi8>
-// CHECK:       %[[VEC2D:.+]] = vector.shape_cast %[[VEC1D]] : vector<32xi8> to vector<8x4xi8>
-// CHECK:       return %[[VEC2D]] : vector<8x4xi8>
+// CHECK-SAME:      : memref<?x?x32xi8, {{.+}}>, vector<32xi8>
+// CHECK:         %[[VEC2D:.+]] = vector.shape_cast %[[VEC1D]] : vector<32xi8> to vector<8x4xi8>
+// CHECK:         return %[[VEC2D]] : vector<8x4xi8>
 
 // CHECK-128B-LABEL: func @transfer_read_leading_dynamic_dims
 //       CHECK-128B:   memref.collapse_shape
@@ -377,8 +378,8 @@ func.func @transfer_write_dims_mismatch_non_contiguous_non_zero_indices(
 
 // -----
 
-/// The leading dynamic shapes don't affect whether this example is flattenable
-/// or not. Indeed, those dynamic shapes are not candidates for flattening anyway.
+// The leading dynamic shapes don't affect whether this example is flattenable
+// or not. Indeed, those dynamic shapes are not candidates for flattening anyway.
 
 func.func @transfer_write_leading_dynamic_dims(
     %vec : vector<8x4xi8>,
@@ -393,15 +394,15 @@ func.func @transfer_write_leading_dynamic_dims(
 }
 
 // CHECK-LABEL: func @transfer_write_leading_dynamic_dims
-// CHECK-SAME:  %[[ARG0:.+]]: vector<8x4xi8>, %[[ARG1:.+]]: memref<?x?x8x4xi8, {{.+}}>, %[[ARG2:.+]]: index, %[[ARG3:.+]]: index
-// CHECK:       %[[C0:.+]] = arith.constant 0 : index
-// CHECK:       %[[COLLAPSED:.+]] = memref.collapse_shape %[[ARG1]] {{\[}}[0], [1], [2, 3]{{\]}}
-// CHECK-SAME:    : memref<?x?x8x4xi8, {{.+}}> into memref<?x?x32xi8, {{.+}}>
-// CHECK:       %[[VEC1D:.+]] = vector.shape_cast %[[ARG0]] : vector<8x4xi8> to vector<32xi8>
-// CHECK:       vector.transfer_write %[[VEC1D]], %[[COLLAPSED]]
-// CHECK-SAME:    [%[[ARG2]], %[[ARG3]], %[[C0]]]
-// CHECK-SAME:    {in_bounds = [true]}
-// CHECK-SAME:    : vector<32xi8>, memref<?x?x32xi8, {{.+}}>
+// CHECK-SAME:    %[[ARG0:.+]]: vector<8x4xi8>, %[[ARG1:.+]]: memref<?x?x8x4xi8, {{.+}}>, %[[ARG2:.+]]: index, %[[ARG3:.+]]: index
+// CHECK:         %[[C0:.+]] = arith.constant 0 : index
+// CHECK:         %[[COLLAPSED:.+]] = memref.collapse_shape %[[ARG1]] {{\[}}[0], [1], [2, 3]{{\]}}
+// CHECK-SAME:      : memref<?x?x8x4xi8, {{.+}}> into memref<?x?x32xi8, {{.+}}>
+// CHECK:         %[[VEC1D:.+]] = vector.shape_cast %[[ARG0]] : vector<8x4xi8> to vector<32xi8>
+// CHECK:         vector.transfer_write %[[VEC1D]], %[[COLLAPSED]]
+// CHECK-SAME:      [%[[ARG2]], %[[ARG3]], %[[C0]]]
+// CHECK-SAME:      {in_bounds = [true]}
+// CHECK-SAME:      : vector<32xi8>, memref<?x?x32xi8, {{.+}}>
 
 // CHECK-128B-LABEL: func @transfer_write_leading_dynamic_dims
 //       CHECK-128B:   memref.collapse_shape
