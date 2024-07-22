@@ -2232,7 +2232,7 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   OutStreamer->emitLabel(LazyPointer);
   emitVisibility(LazyPointer, GI.getVisibility());
   const MCSymbolRefExpr *Init = MCSymbolRefExpr::create(StubHelper, OutContext);
-  OutStreamer->emitValue(emitMachOIfuncLazyPointerInit(Init), 8);
+  OutStreamer->emitValue(emitMachOIfuncLazyPointerInit(GI, Init), 8);
 
   OutStreamer->switchSection(OutContext.getObjectFileInfo()->getTextSection());
 

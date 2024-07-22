@@ -596,7 +596,8 @@ public:
   }
 
   virtual const MCExpr *
-  emitMachOIfuncLazyPointerInit(const MCSymbolRefExpr *Init) {
+  emitMachOIfuncLazyPointerInit(const GlobalIFunc &GI,
+                                const MCSymbolRefExpr *Init) {
     return Init;
   }
 
