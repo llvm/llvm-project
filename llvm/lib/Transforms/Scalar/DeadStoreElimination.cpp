@@ -1844,20 +1844,39 @@ struct DSEState {
     return MadeChange;
   }
 
-  /// If we have a zero initializing memset following a call to malloc,
+  /// If we have a zero initializing memset/store following a call to malloc,
   /// try folding it into a call to calloc.
   bool tryFoldIntoCalloc(MemoryDef *Def, const Value *DefUO) {
     Instruction *DefI = Def->getMemoryInst();
-    MemSetInst *MemSet = dyn_cast<MemSetInst>(DefI);
-    if (!MemSet)
-      // TODO: Could handle zero store to small allocation as well.
+    Constant *StoredConstant;
+    Value *PtrToStore;
+
+    auto *Malloc = const_cast<CallInst *>(dyn_cast<CallInst>(DefUO));
+
+    if (!Malloc)
       return false;
-    Constant *StoredConstant = dyn_cast<Constant>(MemSet->getValue());
+
+    if (MemSetInst *MemSet = dyn_cast<MemSetInst>(DefI)) {
+      StoredConstant = dyn_cast<Constant>(MemSet->getValue());
+      PtrToStore = MemSet->getArgOperand(0);
+      if (Malloc->getOperand(0) != MemSet->getLength())
+        return false;
+    } else if (StoreInst *SI = dyn_cast<StoreInst>(DefI)) {
+      StoredConstant = dyn_cast<Constant>(SI->getValueOperand());
+      PtrToStore = SI->getPointerOperand();
+      if (SI->getAccessType()->isScalableTy())
+        return false;
+      uint64_t StoreSize = DL.getTypeStoreSize(SI->getAccessType());
+      if (!match(Malloc->getOperand(0), m_SpecificInt(StoreSize)))
+        return false;
+    } else
+      return false;
+
     if (!StoredConstant || !StoredConstant->isNullValue())
       return false;
 
     if (!isRemovable(DefI))
-      // The memset might be volatile..
+      // The memset/store might be volatile..
       return false;
 
     if (F.hasFnAttribute(Attribute::SanitizeMemory) ||
@@ -1865,9 +1884,7 @@ struct DSEState {
         F.hasFnAttribute(Attribute::SanitizeHWAddress) ||
         F.getName() == "calloc")
       return false;
-    auto *Malloc = const_cast<CallInst *>(dyn_cast<CallInst>(DefUO));
-    if (!Malloc)
-      return false;
+
     auto *InnerCallee = Malloc->getCalledFunction();
     if (!InnerCallee)
       return false;
@@ -1880,30 +1897,27 @@ struct DSEState {
     if (!MallocDef)
       return false;
 
-    auto shouldCreateCalloc = [](CallInst *Malloc, CallInst *Memset) {
+    auto shouldCreateCalloc = [](CallInst *Malloc, Instruction *DefI,
+                                 Value *Ptr) {
       // Check for br(icmp ptr, null), truebb, falsebb) pattern at the end
       // of malloc block
-      auto *MallocBB = Malloc->getParent(),
-        *MemsetBB = Memset->getParent();
-      if (MallocBB == MemsetBB)
+      auto *MallocBB = Malloc->getParent(), *DefBB = DefI->getParent();
+      if (MallocBB == DefBB)
         return true;
-      auto *Ptr = Memset->getArgOperand(0);
       auto *TI = MallocBB->getTerminator();
       ICmpInst::Predicate Pred;
       BasicBlock *TrueBB, *FalseBB;
       if (!match(TI, m_Br(m_ICmp(Pred, m_Specific(Ptr), m_Zero()), TrueBB,
                           FalseBB)))
         return false;
-      if (Pred != ICmpInst::ICMP_EQ || MemsetBB != FalseBB)
+      if (Pred != ICmpInst::ICMP_EQ || DefBB != FalseBB)
         return false;
       return true;
     };
 
-    if (Malloc->getOperand(0) != MemSet->getLength())
-      return false;
-    if (!shouldCreateCalloc(Malloc, MemSet) ||
-        !DT.dominates(Malloc, MemSet) ||
-        !memoryIsNotModifiedBetween(Malloc, MemSet, BatchAA, DL, &DT))
+    if (!shouldCreateCalloc(Malloc, DefI, PtrToStore) ||
+        !DT.dominates(Malloc, DefI) ||
+        !memoryIsNotModifiedBetween(Malloc, DefI, BatchAA, DL, &DT))
       return false;
     IRBuilder<> IRB(Malloc);
     Type *SizeTTy = Malloc->getArgOperand(0)->getType();
@@ -1913,9 +1927,8 @@ struct DSEState {
       return false;
 
     MemorySSAUpdater Updater(&MSSA);
-    auto *NewAccess =
-      Updater.createMemoryAccessAfter(cast<Instruction>(Calloc), nullptr,
-                                      MallocDef);
+    auto *NewAccess = Updater.createMemoryAccessAfter(cast<Instruction>(Calloc),
+                                                      nullptr, MallocDef);
     auto *NewAccessMD = cast<MemoryDef>(NewAccess);
     Updater.insertDef(NewAccessMD, /*RenameUses=*/true);
     Malloc->replaceAllUsesWith(Calloc);
@@ -2300,9 +2313,9 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
       continue;
     }
 
-    // Can we form a calloc from a memset/malloc pair?
+    // Can we form a calloc from a memset/malloc or store/malloc pair?
     if (!Shortend && State.tryFoldIntoCalloc(KillingDef, KillingUndObj)) {
-      LLVM_DEBUG(dbgs() << "DSE: Remove memset after forming calloc:\n"
+      LLVM_DEBUG(dbgs() << "DSE: Remove memset/store after forming calloc:\n"
                         << "  DEAD: " << *KillingI << '\n');
       State.deleteDeadInstruction(KillingI);
       MadeChange = true;
