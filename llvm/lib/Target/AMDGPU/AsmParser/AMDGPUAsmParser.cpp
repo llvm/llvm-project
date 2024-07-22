@@ -3868,7 +3868,8 @@ bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst,
   int DMaskIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::dmask);
   int TFEIdx   = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::tfe);
 
-  assert(VDataIdx != -1);
+  if (VDataIdx == -1 && isGFX10Plus()) // no return image_sample
+    return true;
 
   if ((DMaskIdx == -1 || TFEIdx == -1) && isGFX10_AEncoding()) // intersect_ray
     return true;
