@@ -236,9 +236,9 @@ extern "C" {
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] _AS_PTR(void, AllocationKind::LOCAL)
     ompx_new_local(_AS_PTR(void, AllocationKind::LOCAL) Start, uint64_t Length,
-                   int64_t AllocationId, uint32_t Slot, int64_t SourceId) {
+                   int64_t AllocationId, int64_t SourceId) {
   return AllocationTracker<AllocationKind::LOCAL>::create(
-      Start, Length, AllocationId, Slot, SourceId);
+      Start, Length, AllocationId, 0, SourceId);
 }
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] _AS_PTR(void, AllocationKind::GLOBAL)
@@ -261,7 +261,7 @@ ompx_new(void *Start, uint64_t Length, int64_t AllocationId, uint32_t Slot,
          int64_t SourceId) {
   if (REAL_PTR_IS_LOCAL(Start))
     return (void *)ompx_new_local((_AS_PTR(void, AllocationKind::LOCAL))Start,
-                                  Length, AllocationId, Slot, SourceId);
+                                  Length, AllocationId, SourceId);
   return (void *)ompx_new_global((_AS_PTR(void, AllocationKind::GLOBAL))Start,
                                  Length, AllocationId, Slot, SourceId);
 }
