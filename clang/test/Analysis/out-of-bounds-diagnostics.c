@@ -29,8 +29,7 @@ int getIndex(void) {
 
 void gh86959(void) {
   // Previously code like this produced many almost-identical bug reports that
-  // only differed in the byte offset value (which was reported by the checker
-  // at that time). Verify that now we only see one report.
+  // only differed in the offset value. Verify that now we only see one report.
 
   // expected-note@+1 {{Entering loop body}}
   while (rng())
