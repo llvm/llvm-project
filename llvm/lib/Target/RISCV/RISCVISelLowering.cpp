@@ -18418,6 +18418,15 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   // Select_FPRX_ (rs1, rs2, imm, rs4, (Select_FPRX_ rs1, rs2, imm, rs4, rs5))
   // is checked here and handled by a separate function -
   // EmitLoweredCascadedSelect.
+
+  auto Next = next_nodbg(MI.getIterator(), BB->instr_end());
+  if ((MI.getOpcode() != RISCV::Select_GPR_Using_CC_GPR &&
+       MI.getOpcode() != RISCV::Select_GPR_Using_CC_Imm) &&
+      Next != BB->end() && Next->getOpcode() == MI.getOpcode() &&
+      Next->getOperand(5).getReg() == MI.getOperand(0).getReg() &&
+      Next->getOperand(5).isKill())
+    return EmitLoweredCascadedSelect(MI, *Next, BB, Subtarget);
+
   Register LHS = MI.getOperand(1).getReg();
   Register RHS;
   if (MI.getOperand(2).isReg())
@@ -18429,15 +18438,6 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   SelectDests.insert(MI.getOperand(0).getReg());
 
   MachineInstr *LastSelectPseudo = &MI;
-  auto Next = next_nodbg(MI.getIterator(), BB->instr_end());
-  if ((MI.getOpcode() != RISCV::Select_GPR_Using_CC_GPR &&
-       MI.getOpcode() != RISCV::Select_GPR_Using_CC_Imm) &&
-      Next != BB->end() && Next->getOpcode() == MI.getOpcode() &&
-      Next->getOperand(5).getReg() == MI.getOperand(0).getReg() &&
-      Next->getOperand(5).isKill()) {
-    return EmitLoweredCascadedSelect(MI, *Next, BB, Subtarget);
-  }
-
   for (auto E = BB->end(), SequenceMBBI = MachineBasicBlock::iterator(MI);
        SequenceMBBI != E; ++SequenceMBBI) {
     if (SequenceMBBI->isDebugInstr())
@@ -18479,7 +18479,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   F->insert(I, TailMBB);
 
   // Set the call frame size on entry to the new basic blocks.
-  unsigned CallFrameSize = TII.getCallFrameSizeAt(MI);
+  unsigned CallFrameSize = TII.getCallFrameSizeAt(*LastSelectPseudo);
   IfFalseMBB->setCallFrameSize(CallFrameSize);
   TailMBB->setCallFrameSize(CallFrameSize);
 

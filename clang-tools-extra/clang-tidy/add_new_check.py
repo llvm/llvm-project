@@ -552,8 +552,8 @@ def update_checks_list(clang_tidy_path):
                 f.write('   :header: "Name", "Offers fixes"\n\n')
                 f.writelines(checks)
                 # and the aliases
-                f.write("\n\n")
-                f.write(".. csv-table:: Aliases..\n")
+                f.write("\nCheck aliases\n-------------\n\n")
+                f.write(".. csv-table::\n")
                 f.write('   :header: "Name", "Redirect", "Offers fixes"\n\n')
                 f.writelines(checks_alias)
                 break
