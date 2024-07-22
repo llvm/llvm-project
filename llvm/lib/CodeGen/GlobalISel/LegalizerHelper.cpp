@@ -7289,13 +7289,13 @@ LegalizerHelper::lowerThreewayCompare(MachineInstr &MI) {
 
   auto One = MIRBuilder.buildConstant(DstTy, 1);
   auto Zero = MIRBuilder.buildConstant(DstTy, 0);
-  auto MinusOne = MIRBuilder.buildConstant(DstTy, -1);
-
-  auto IsLT = MIRBuilder.buildICmp(LTPredicate, CmpTy, Cmp->getLHSReg(),
-                                   Cmp->getRHSReg());
   auto IsGT = MIRBuilder.buildICmp(GTPredicate, CmpTy, Cmp->getLHSReg(),
                                    Cmp->getRHSReg());
   auto SelectZeroOrOne = MIRBuilder.buildSelect(DstTy, IsGT, One, Zero);
+
+  auto MinusOne = MIRBuilder.buildConstant(DstTy, -1);
+  auto IsLT = MIRBuilder.buildICmp(LTPredicate, CmpTy, Cmp->getLHSReg(),
+                                   Cmp->getRHSReg());
   MIRBuilder.buildSelect(Dst, IsLT, MinusOne, SelectZeroOrOne);
 
   MI.eraseFromParent();
