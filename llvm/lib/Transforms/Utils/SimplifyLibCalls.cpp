@@ -3046,8 +3046,9 @@ Value *LibCallSimplifier::optimizeRemquo(CallInst *CI, IRBuilderBase &B) {
   if (Status != APFloat::opOK && Status != APFloat::opInexact)
     return nullptr;
 
-  B.CreateAlignedStore(ConstantInt::get(B.getIntNTy(IntBW), QuotInt.getExtValue()),
-                       CI->getArgOperand(2), CI->getParamAlign(2));
+  B.CreateAlignedStore(
+      ConstantInt::get(B.getIntNTy(IntBW), QuotInt.getExtValue()),
+      CI->getArgOperand(2), CI->getParamAlign(2));
   return ConstantFP::get(CI->getType(), Rem);
 }
 
