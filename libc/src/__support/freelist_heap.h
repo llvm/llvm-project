@@ -53,8 +53,7 @@ public:
   constexpr FreeListHeap() : begin_(&_end), end_(&__llvm_libc_heap_limit) {}
 
   constexpr FreeListHeap(span<cpp::byte> region)
-      : begin_(region.begin()), end_(region.end()) {
-  }
+      : begin_(region.begin()), end_(region.end()) {}
 
   void *allocate(size_t size);
   void *aligned_allocate(size_t alignment, size_t size);
