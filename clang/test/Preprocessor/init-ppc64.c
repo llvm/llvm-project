@@ -649,6 +649,8 @@
 // PPCPOWER11:#define _ARCH_PWR7 1
 // PPCPOWER11:#define _ARCH_PWR8 1
 // PPCPOWER11:#define _ARCH_PWR9 1
+// PPCPOWER11:#define __MMA__ 1
+// PPCPOWER11:#define __PCREL__ 1
 // PPCPOWER11-NOT:#define __ROP_PROTECT__ 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu future -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCFUTURE %s
