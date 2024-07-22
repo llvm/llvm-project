@@ -2,27 +2,33 @@
 
 ; RUN: llc -mtriple arm64e-apple-darwin \
 ; RUN:   -aarch64-enable-collect-loh=false \
+; RUN:   -aarch64-min-jump-table-entries=1 -aarch64-enable-atomic-cfg-tidy=0 \
 ; RUN:   -o - %s | FileCheck %s --check-prefix=MACHO
 
 ; RUN: llc -mtriple arm64e-apple-darwin \
 ; RUN:   -fast-isel \
 ; RUN:   -aarch64-enable-collect-loh=false \
+; RUN:   -aarch64-min-jump-table-entries=1 -aarch64-enable-atomic-cfg-tidy=0 \
 ; RUN:   -o - %s | FileCheck %s --check-prefix=MACHO
 
 ; RUN: llc -mtriple arm64e-apple-darwin \
 ; RUN:   -global-isel -global-isel-abort=1 -verify-machineinstrs \
 ; RUN:   -aarch64-enable-collect-loh=false \
+; RUN:   -aarch64-min-jump-table-entries=1 -aarch64-enable-atomic-cfg-tidy=0 \
 ; RUN:   -o - %s | FileCheck %s --check-prefix=MACHO
 
 ; RUN: llc -mtriple aarch64-elf -mattr=+pauth \
+; RUN:   -aarch64-min-jump-table-entries=1 -aarch64-enable-atomic-cfg-tidy=0 \
 ; RUN:   -o - %s | FileCheck %s --check-prefix=ELF
 
 ; RUN: llc -mtriple aarch64-elf -mattr=+pauth \
 ; RUN:   -fast-isel \
+; RUN:   -aarch64-min-jump-table-entries=1 -aarch64-enable-atomic-cfg-tidy=0 \
 ; RUN:   -o - %s | FileCheck %s --check-prefix=ELF
 
 ; RUN: llc -mtriple aarch64-elf -mattr=+pauth \
 ; RUN:   -global-isel -global-isel-abort=1 -verify-machineinstrs \
+; RUN:   -aarch64-min-jump-table-entries=1 -aarch64-enable-atomic-cfg-tidy=0 \
 ; RUN:   -o - %s | FileCheck %s --check-prefix=ELF
 
 ;; The discriminator is the same for all blockaddresses in the function.
@@ -46,7 +52,7 @@ define i32 @test_indirectbr() #0 {
 ; MACHO-NEXT:    mov x17, #34947 ; =0x8883
 ; MACHO-NEXT:    braa x0, x17
 ; MACHO-NEXT:  Ltmp0: ; Block address taken
-; MACHO-NEXT:  LBB0_1: ; %common.ret
+; MACHO-NEXT:  LBB0_1: ; %bb1
 ; MACHO-NEXT:    mov w0, #1 ; =0x1
 ; MACHO-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; MACHO-NEXT:    ret
@@ -73,7 +79,7 @@ define i32 @test_indirectbr() #0 {
 ; ELF-NEXT:    mov x17, #34947 // =0x8883
 ; ELF-NEXT:    braa x0, x17
 ; ELF-NEXT:  .Ltmp0: // Block address taken
-; ELF-NEXT:  .LBB0_1: // %common.ret
+; ELF-NEXT:  .LBB0_1: // %bb1
 ; ELF-NEXT:    mov w0, #1 // =0x1
 ; ELF-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; ELF-NEXT:    ret
@@ -135,7 +141,7 @@ define i32 @test_indirectbr_2() #0 {
 ; MACHO-NEXT:    mov x17, #40224 ; =0x9d20
 ; MACHO-NEXT:    braa x0, x17
 ; MACHO-NEXT:  Ltmp2: ; Block address taken
-; MACHO-NEXT:  LBB2_1: ; %common.ret
+; MACHO-NEXT:  LBB2_1: ; %bb1
 ; MACHO-NEXT:    mov w0, #1 ; =0x1
 ; MACHO-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; MACHO-NEXT:    ret
@@ -162,7 +168,7 @@ define i32 @test_indirectbr_2() #0 {
 ; ELF-NEXT:    mov x17, #40224 // =0x9d20
 ; ELF-NEXT:    braa x0, x17
 ; ELF-NEXT:  .Ltmp2: // Block address taken
-; ELF-NEXT:  .LBB2_1: // %common.ret
+; ELF-NEXT:  .LBB2_1: // %bb1
 ; ELF-NEXT:    mov w0, #1 // =0x1
 ; ELF-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; ELF-NEXT:    ret
@@ -182,8 +188,40 @@ bb2:
   ret i32 2
 }
 
-; MACHO-LABEL: .section __DATA,__const
-; MACHO-NEXT:  .globl _test_indirectbr_array
+;; Check we don't interfere with jump-table BRIND lowering.
+
+; MACHO-LABEL: test_jumptable:
+; MACHO:        adrp x9, LJTI3_0@PAGE
+; MACHO-NEXT:   add x9, x9, LJTI3_0@PAGEOFF
+; MACHO-NEXT:   adr x10, LBB3_2
+; MACHO-NEXT:   ldrb w11, [x9, x8]
+; MACHO-NEXT:   add x10, x10, x11, lsl #2
+; MACHO-NEXT:   br x10
+
+; ELF-LABEL: test_jumptable:
+; ELF:        adrp x9, .LJTI3_0
+; ELF-NEXT:   add x9, x9, :lo12:.LJTI3_0
+; ELF-NEXT:   adr x10, .LBB3_2
+; ELF-NEXT:   ldrb w11, [x9, x8]
+; ELF-NEXT:   add x10, x10, x11, lsl #2
+; ELF-NEXT:   br x10
+define i32 @test_jumptable(i32 %in) #0 {
+  switch i32 %in, label %def [
+    i32 0, label %lbl1
+    i32 1, label %lbl2
+  ]
+
+def:
+  ret i32 0
+
+lbl1:
+  ret i32 1
+
+lbl2:
+  ret i32 2
+}
+
+; MACHO-LABEL: .globl _test_indirectbr_array
 ; MACHO-NEXT:  .p2align 4
 ; MACHO-NEXT:  _test_indirectbr_array:
 ; MACHO-NEXT:   .quad Ltmp0@AUTH(ia,34947)
@@ -191,8 +229,7 @@ bb2:
 ; MACHO-NEXT:   .quad Ltmp2@AUTH(ia,40224)
 ; MACHO-NEXT:   .quad Ltmp3@AUTH(ia,40224)
 
-; ELF-LABEL: .section .rodata,"a",@progbits
-; ELF-NEXT:  .globl test_indirectbr_array
+; ELF-LABEL: .globl test_indirectbr_array
 ; ELF-NEXT:  .p2align 4, 0x0
 ; ELF-NEXT:  test_indirectbr_array:
 ; ELF-NEXT:   .xword .Ltmp0@AUTH(ia,34947)
