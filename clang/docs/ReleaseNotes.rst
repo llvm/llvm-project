@@ -758,6 +758,16 @@ Improvements to Clang's diagnostics
 
      UsingWithAttr<int> objUsingWA; // warning: 'UsingWithAttr' is deprecated
 
+- Some template related diagnostics have been improved.
+
+  .. code-block:: c++
+    
+     void foo() { template <typename> int i; } // error: templates can only be declared in namespace or class scope
+
+     struct S {
+      template <typename> int i; // error: non-static data member 'i' cannot be declared as a template
+     };
+
 Improvements to Clang's time-trace
 ----------------------------------
 
