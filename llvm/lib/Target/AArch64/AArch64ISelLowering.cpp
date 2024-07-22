@@ -19163,8 +19163,7 @@ static SDValue performConcatVectorsCombine(SDNode *N,
     //     ushr    v0.8h, v0.8h, #4
     //
     // This optimization reduces instruction count.
-    if (N00Opc == AArch64ISD::VLSHR &&
-        N10Opc == AArch64ISD::VLSHR &&
+    if (N00Opc == AArch64ISD::VLSHR && N10Opc == AArch64ISD::VLSHR &&
         N00->getOperand(1) == N10->getOperand(1)) {
 
       SDValue N000 = N00->getOperand(0);
@@ -19173,8 +19172,7 @@ static SDValue performConcatVectorsCombine(SDNode *N,
                N101ConstVal = N10->getConstantOperandVal(1),
                NScalarSize = N->getValueType(0).getScalarSizeInBits();
 
-      if (N001ConstVal == N101ConstVal &&
-          N001ConstVal > NScalarSize) {
+      if (N001ConstVal == N101ConstVal && N001ConstVal > NScalarSize) {
 
         SDValue Uzp = DAG.getNode(AArch64ISD::UZP2, dl, VT, N000, N100);
         SDValue NewShiftConstant =
