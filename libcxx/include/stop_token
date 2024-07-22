@@ -35,9 +35,12 @@ namespace std {
 
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 
-#  include <__stop_token/stop_callback.h>
-#  include <__stop_token/stop_source.h>
-#  include <__stop_token/stop_token.h>
+#  if _LIBCPP_STD_VER >= 20
+#    include <__stop_token/stop_callback.h>
+#    include <__stop_token/stop_source.h>
+#    include <__stop_token/stop_token.h>
+#  endif
+
 #  include <version>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

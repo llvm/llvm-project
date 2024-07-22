@@ -2226,6 +2226,12 @@ public:
     return OptLevel >= CodeGenOptLevel::Aggressive ? 4 : 2;
   }
 
+  /// Returns the target-specific default value for tail merging.
+  /// This value will be used if the tail-merge-size argument is not provided.
+  virtual unsigned getTailMergeSize(const MachineFunction &MF) const {
+    return 3;
+  }
+
   /// Returns the callee operand from the given \p MI.
   virtual const MachineOperand &getCalleeOperand(const MachineInstr &MI) const {
     return MI.getOperand(0);

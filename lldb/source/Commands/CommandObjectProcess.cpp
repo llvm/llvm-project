@@ -1273,13 +1273,13 @@ public:
 
       switch (short_option) {
       case 'p':
-        m_requested_plugin_name = option_arg.str();
+        error = m_core_dump_options.SetPluginName(option_arg.data());
         break;
       case 's':
-        m_requested_save_core_style =
+        m_core_dump_options.SetStyle(
             (lldb::SaveCoreStyle)OptionArgParser::ToOptionEnum(
                 option_arg, GetDefinitions()[option_idx].enum_values,
-                eSaveCoreUnspecified, error);
+                eSaveCoreUnspecified, error));
         break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -1289,13 +1289,11 @@ public:
     }
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
-      m_requested_save_core_style = eSaveCoreUnspecified;
-      m_requested_plugin_name.clear();
+      m_core_dump_options.Clear();
     }
 
     // Instance variables to hold the values for command options.
-    SaveCoreStyle m_requested_save_core_style = eSaveCoreUnspecified;
-    std::string m_requested_plugin_name;
+    SaveCoreOptions m_core_dump_options;
   };
 
 protected:
@@ -1305,13 +1303,14 @@ protected:
       if (command.GetArgumentCount() == 1) {
         FileSpec output_file(command.GetArgumentAtIndex(0));
         FileSystem::Instance().Resolve(output_file);
-        SaveCoreStyle corefile_style = m_options.m_requested_save_core_style;
-        Status error =
-            PluginManager::SaveCore(process_sp, output_file, corefile_style,
-                                    m_options.m_requested_plugin_name);
+        auto &core_dump_options = m_options.m_core_dump_options;
+        core_dump_options.SetOutputFile(output_file);
+        Status error = PluginManager::SaveCore(process_sp, core_dump_options);
         if (error.Success()) {
-          if (corefile_style == SaveCoreStyle::eSaveCoreDirtyOnly ||
-              corefile_style == SaveCoreStyle::eSaveCoreStackOnly) {
+          if (core_dump_options.GetStyle() ==
+                  SaveCoreStyle::eSaveCoreDirtyOnly ||
+              core_dump_options.GetStyle() ==
+                  SaveCoreStyle::eSaveCoreStackOnly) {
             result.AppendMessageWithFormat(
                 "\nModified-memory or stack-memory only corefile "
                 "created.  This corefile may \n"

@@ -48,6 +48,10 @@ Major New Features
 Improvements to clangd
 ----------------------
 
+- Introduced exmperimental support for C++20 Modules. The experimental support can
+  be enabled by `-experimental-modules-support` option. It is in an early development
+  stage and may not perform efficiently in real-world scenarios.
+
 Inlay hints
 ^^^^^^^^^^^
 
@@ -446,7 +450,8 @@ Changes in existing checks
   <clang-tidy/checks/performance/unnecessary-value-param>` check
   detecting more cases for template functions including lambdas with ``auto``.
   E.g., ``std::sort(a.begin(), a.end(), [](auto x, auto y) { return a > b; });``
-  will be detected for expensive to copy types.
+  will be detected for expensive to copy types. Fixed false positives for
+  dependent call expressions.
 
 - Improved :doc:`readability-avoid-return-with-void-value
   <clang-tidy/checks/readability/avoid-return-with-void-value>` check by adding

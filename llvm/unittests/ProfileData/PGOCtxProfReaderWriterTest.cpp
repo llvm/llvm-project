@@ -115,6 +115,15 @@ TEST_F(PGOCtxProfRWTest, RoundTrip) {
     EXPECT_EQ(Ctxes.size(), 2U);
     for (auto &[G, R] : roots())
       checkSame(*R, Ctxes.find(G)->second);
+
+    DenseSet<GlobalValue::GUID> Guids;
+    Ctxes.at(1U).getContainedGuids(Guids);
+    EXPECT_THAT(Guids,
+                testing::WhenSorted(testing::ElementsAre(1U, 2U, 4U, 5U)));
+
+    Guids.clear();
+    Ctxes.at(3U).getContainedGuids(Guids);
+    EXPECT_THAT(Guids, testing::ElementsAre(3U));
   }
 }
 

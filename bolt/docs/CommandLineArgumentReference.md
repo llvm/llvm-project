@@ -113,11 +113,6 @@
 
   Prints out offsets for abbrev and debug_info of Skeleton CUs that get patched.
 
-- `--deterministic-debuginfo`
-
-  Disables parallel execution of tasks that may produce nondeterministic debug
-  info
-
 - `--dot-tooltip-code`
 
   Add basic block instructions as tool tips on nodes
@@ -685,6 +680,10 @@
   Threshold (in percent) for selecting functions to process in lite mode. Higher
   threshold means fewer functions to process. E.g threshold of 90 means only top
   10 percent of functions with profile will be processed.
+
+- `--match-with-call-graph`
+
+  Match functions with call graph
 
 - `--memcpy1-spec=<func1,func2:cs1:cs2,func3:cs1,...>`
 

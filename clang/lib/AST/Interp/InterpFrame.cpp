@@ -227,6 +227,7 @@ Pointer InterpFrame::getParamPointer(unsigned Off) {
   size_t BlockSize = sizeof(Block) + Desc.second->getAllocSize();
   auto Memory = std::make_unique<char[]>(BlockSize);
   auto *B = new (Memory.get()) Block(S.Ctx.getEvalID(), Desc.second);
+  B->invokeCtor();
 
   // Copy the initial value.
   TYPE_SWITCH(Desc.first, new (B->data()) T(stackRef<T>(Off)));
