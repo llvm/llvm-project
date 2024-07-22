@@ -151,10 +151,7 @@ void Benchmark::run_benchmarks() {
       all_results.reset();
 
     gpu::sync_threads();
-    if (!b->flags ||
-        ((b->flags & BenchmarkFlags::SINGLE_THREADED) && id == 0) ||
-        ((b->flags & BenchmarkFlags::SINGLE_WAVE) &&
-         id < gpu::get_lane_size())) {
+    if (b->num_threads == static_cast<uint32_t>(-1) || id < b->num_threads) {
       auto current_result = b->run();
       all_results.update(current_result);
     }

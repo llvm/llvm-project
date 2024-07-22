@@ -646,7 +646,7 @@ public:
   MCSectionXCOFF *getXCOFFSection(
       StringRef Section, SectionKind K,
       std::optional<XCOFF::CsectProperties> CsectProp = std::nullopt,
-      bool MultiSymbolsAllowed = false, const char *BeginSymName = nullptr,
+      bool MultiSymbolsAllowed = false,
       std::optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSubtypeFlags =
           std::nullopt);
 
