@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_STRTOLD_H
 #define LLVM_LIBC_SRC_STDLIB_STRTOLD_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 long double strtold(const char *__restrict str, char **__restrict str_end);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDLIB_STRTOLD_H

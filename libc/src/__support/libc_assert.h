@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_LIBC_ASSERT_H
 #define LLVM_LIBC_SRC___SUPPORT_LIBC_ASSERT_H
 
-#include "src/__support/macros/config.h"
 #ifdef LIBC_COPT_USE_C_ASSERT
 
 // The build is configured to just use the public <assert.h> API
@@ -26,7 +25,7 @@
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 // This is intended to be removed in a future patch to use a similar design to
 // below, but it's necessary for the external assert.
@@ -44,7 +43,7 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
   write_to_stderr("'\n");
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #ifdef LIBC_ASSERT
 #error "Unexpected: LIBC_ASSERT macro already defined"

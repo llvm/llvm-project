@@ -8,13 +8,12 @@
 
 #include "src/threads/cnd_broadcast.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/threads/CndVar.h"
 
 // TODO: https://github.com/llvm/llvm-project/issues/92968
 #include <threads.h> // cnd_t, thrd_error, thrd_success
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 static_assert(sizeof(CndVar) == sizeof(cnd_t));
 
@@ -24,4 +23,4 @@ LLVM_LIBC_FUNCTION(int, cnd_broadcast, (cnd_t * cond)) {
   return thrd_success;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
