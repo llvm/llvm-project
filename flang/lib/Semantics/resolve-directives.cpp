@@ -2555,10 +2555,11 @@ void ResolveOmpTopLevelParts(
 }
 
 static bool IsSymbolInCommonBlock(const Symbol &symbol) {
-  // If there are many symbols in common blocks, going through them all can be
-  // slow. A possible optimization is to add an OmpInCommonBlock flag to
-  // Symbol, to make it possible to quickly test if a given symbol is in a
-  // common block.
+  // TODO Improve the performance of this predicate function.
+  //      Going through all symbols sequentially, in all common blocks, can be
+  //      slow when there are many symbols. A possible optimization is to add
+  //      an OmpInCommonBlock flag to Symbol, to make it possible to quickly
+  //      test if a given symbol is in a common block.
   for (const auto &cb : symbol.owner().commonBlocks()) {
     if (IsCommonBlockContaining(cb.second.get(), symbol)) {
       return true;
