@@ -16,7 +16,7 @@ define half @trunc(fp128 %a) unnamed_addr {
 ; P8-NEXT:    std r0, 48(r1)
 ; P8-NEXT:    .cfi_def_cfa_offset 32
 ; P8-NEXT:    .cfi_offset lr, 16
-; P8-NEXT:    bl __trunctfhf2
+; P8-NEXT:    bl __trunckfhf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    clrldi r3, r3, 48
 ; P8-NEXT:    bl __gnu_h2f_ieee
@@ -43,7 +43,7 @@ define half @trunc(fp128 %a) unnamed_addr {
 ; SOFT-NEXT:    std r0, 48(r1)
 ; SOFT-NEXT:    .cfi_def_cfa_offset 32
 ; SOFT-NEXT:    .cfi_offset lr, 16
-; SOFT-NEXT:    bl __trunctfhf2
+; SOFT-NEXT:    bl __trunckfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    clrldi r3, r3, 48
 ; SOFT-NEXT:    bl __gnu_h2f_ieee
