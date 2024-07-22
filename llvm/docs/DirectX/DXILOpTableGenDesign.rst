@@ -218,12 +218,12 @@ Various operation memory access and boolean attributes such as ``ReadNone``,
   def IsWave : DXILOpAttributes;
   ...
 
-Constrained Specification
-=========================
+Versioned Property Specification
+================================
 
 DXIL Operation properties such as valid overload types, shader stages and
 attributes are predicated on DXIL version. These are represented as list of
-versioned constraints.
+versioned properties.
 
 Overload Type Specification
 ---------------------------
@@ -313,12 +313,12 @@ Following is an example specification of valid attributes for ``DXIL1_0``.
 
 A null list of ``attributes`` signifies no operation attributes.
 
-Interpretation of Multiple Constraint Specification
----------------------------------------------------
+Interpretation of Multiple Versioned Properties
+-----------------------------------------------
 
-Each of the constraints states that the specified overload type, stage or
+Each of the versioned properties states that the specified overload type, stage or
 attribute records are valid for the predicated DXIL version. Only
-the constraints corresponding to latest minimal DXIL version is applicable.
+the properties corresponding to latest minimal DXIL version are applicable.
 Note as in the above example, any overload types, stages or attributes,
 that remain valid in a later DXIL version need to be specified in full.
 For example, consider the following specification of valid overload types:
@@ -334,8 +334,8 @@ It specifies that the overload types ``halfTy`` and ``floatTy`` are valid for DX
 version 1.0 and later. It also specifies that  ``doubleTy`` is additionally supported
 in DXIL version 1.2 and later.
 
-This provides the flexibility to specify constraints independent
-of others in the list.
+This provides the flexibility to specify properties independent of other
+versioned specifications in the list.
 
 
 DXIL Operation Specification Examples
