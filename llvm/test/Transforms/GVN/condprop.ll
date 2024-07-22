@@ -813,7 +813,7 @@ define void @select_same_obj(i1 %c, ptr %p, i64 %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[EXIT:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @use_ptr(ptr [[P]])
-; CHECK-NEXT:    call void @use_ptr(ptr [[P3]])
+; CHECK-NEXT:    call void @use_ptr(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -902,7 +902,7 @@ define void @phi_same_obj(i1 %c, ptr %p, i64 %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF2:%.*]], label [[EXIT:%.*]]
 ; CHECK:       if2:
 ; CHECK-NEXT:    call void @use_ptr(ptr [[P]])
-; CHECK-NEXT:    call void @use_ptr(ptr [[P3]])
+; CHECK-NEXT:    call void @use_ptr(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -975,7 +975,7 @@ define void @phi_same_obj_cycle(i1 %c, ptr %p, i64 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P_IV]], [[P]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       if:
-; CHECK-NEXT:    call void @use_ptr(ptr [[P_IV]])
+; CHECK-NEXT:    call void @use_ptr(ptr [[P]])
 ; CHECK-NEXT:    call void @use_ptr(ptr [[P]])
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:

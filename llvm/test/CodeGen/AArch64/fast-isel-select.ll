@@ -500,22 +500,11 @@ define float @select_icmp_sle(i32 %x, i32 %y, float %a, float %b) {
 
 ; Test peephole optimizations for select.
 define zeroext i1 @select_opt1(i1 zeroext %c, i1 zeroext %a) {
-; CHECK-SDAGISEL-LABEL: select_opt1:
-; CHECK-SDAGISEL:       ; %bb.0:
-; CHECK-SDAGISEL-NEXT:    orr w0, w0, w1
-; CHECK-SDAGISEL-NEXT:    ret
-;
-; CHECK-FASTISEL-LABEL: select_opt1:
-; CHECK-FASTISEL:       ; %bb.0:
-; CHECK-FASTISEL-NEXT:    orr w8, w0, w1
-; CHECK-FASTISEL-NEXT:    and w0, w8, #0x1
-; CHECK-FASTISEL-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: select_opt1:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    orr w8, w0, w1
-; CHECK-GISEL-NEXT:    and w0, w8, #0x1
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: select_opt1:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    orr w8, w0, w1
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
   %1 = select i1 %c, i1 true, i1 %a
   ret i1 %1
 }
@@ -523,8 +512,8 @@ define zeroext i1 @select_opt1(i1 zeroext %c, i1 zeroext %a) {
 define zeroext i1 @select_opt2(i1 zeroext %c, i1 zeroext %a) {
 ; CHECK-SDAGISEL-LABEL: select_opt2:
 ; CHECK-SDAGISEL:       ; %bb.0:
-; CHECK-SDAGISEL-NEXT:    eor w8, w0, #0x1
-; CHECK-SDAGISEL-NEXT:    orr w0, w8, w1
+; CHECK-SDAGISEL-NEXT:    orn w8, w1, w0
+; CHECK-SDAGISEL-NEXT:    and w0, w8, #0x1
 ; CHECK-SDAGISEL-NEXT:    ret
 ;
 ; CHECK-FASTISEL-LABEL: select_opt2:
@@ -547,7 +536,8 @@ define zeroext i1 @select_opt2(i1 zeroext %c, i1 zeroext %a) {
 define zeroext i1 @select_opt3(i1 zeroext %c, i1 zeroext %a) {
 ; CHECK-SDAGISEL-LABEL: select_opt3:
 ; CHECK-SDAGISEL:       ; %bb.0:
-; CHECK-SDAGISEL-NEXT:    bic w0, w1, w0
+; CHECK-SDAGISEL-NEXT:    eor w8, w0, #0x1
+; CHECK-SDAGISEL-NEXT:    and w0, w8, w1
 ; CHECK-SDAGISEL-NEXT:    ret
 ;
 ; CHECK-FASTISEL-LABEL: select_opt3:

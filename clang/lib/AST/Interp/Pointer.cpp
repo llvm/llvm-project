@@ -149,6 +149,10 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   CharUnits Offset = CharUnits::Zero();
 
   auto getFieldOffset = [&](const FieldDecl *FD) -> CharUnits {
+    // This shouldn't happen, but if it does, don't crash inside
+    // getASTRecordLayout.
+    if (FD->getParent()->isInvalidDecl())
+      return CharUnits::Zero();
     const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(FD->getParent());
     unsigned FieldIndex = FD->getFieldIndex();
     return ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex));
