@@ -106,13 +106,13 @@ properties are specified as fields of the ``DXILOp`` class as described below.
    Empty list, ``[]`` represents an operation with no arguments.
 
 8. Valid operation overload types predicated on DXIL version are specified as
-   a list of ``VersionedOverloads`` records. Representation of ``VersionedOverloads``
+   a list of ``Overloads`` records. Representation of ``Overloads``
    class is described in a later section.
 9.  Valid shader stages predicated on DXIL version are specified as a list of
-    ``VersionedStages`` records. Representation of ``VersionedStages`` class is
+    ``Stages`` records. Representation of ``Stages`` class is
     described in a later section.
 10. Various attributes of the DXIL Operation are represented as a ``list`` of
-    ``VersionedAttributes`` class records. Representation of ``VersionedAttributes``
+    ``Attributes`` class records. Representation of ``Attributes``
     class is described in a later section.
 
 Types specific to DXIL
@@ -145,19 +145,19 @@ TableGen representations of its properties described above.
      Intrinsic LLVMIntrinsic = ?;
 
      // Result type of the op.
-     LLVMType> result;
+     LLVMType result;
 
      // List of argument types of the op. Default to 0 arguments.
      list<LLVMType> arguments = [];
 
      // List of valid overload types predicated by DXIL version
-     list<VersionedOverloads> overloads;
+     list<Overloads> overloads;
 
      // List of valid shader stages predicated by DXIL version
-    list<VersionedStages> stages;
+    list<Stages> stages;
 
      // List of valid attributes predicated by DXIL version
-     list<VersionedAttributes> versioned_attributes = [];
+     list<Attributes> attributes = [];
    }
 
 Version Specification
@@ -233,7 +233,7 @@ overloads predicated on DXIL version as list of records of the following class
 
 .. code-block::
 
-   class VersionedOverloads<Version minver, list<LLVMType> ols> {
+   class Overloads<Version minver, list<LLVMType> ols> {
      Version dxil_version = minver;
      list<LLVMType> overload_types = ols;
    }
@@ -244,8 +244,8 @@ Following is an example specification of valid overload types for ``DXIL1_0`` an
 .. code-block::
 
    overloads = [
-                 VersionedOverloads<DXIL1_0, [halfTy, floatTy]>,
-                 VersionedOverloads<DXIL1_2, [halfTy, floatTy, doubleTy]>
+                 Overloads<DXIL1_0, [halfTy, floatTy]>,
+                 Overloads<DXIL1_2, [halfTy, floatTy, doubleTy]>
                ];
 
 An empty list signifies that the operation supports no overload types.
@@ -259,7 +259,7 @@ stages predicated on DXIL version as list of records of the following class
 
 .. code-block::
 
-   class VersionedStages<Version minver, list<DXILShaderStage> sts> {
+   class Stages<Version minver, list<DXILShaderStage> sts> {
      Version dxil_version = minver;
      list<DXILShaderStage> shader_stages = sts;
    }
@@ -270,10 +270,10 @@ Following is an example specification of valid stages for ``DXIL1_0``,
 .. code-block::
 
    stages = [
-             VersionedStages<DXIL1_0, [compute, pixel]>,
-             VersionedStages<DXIL1_2, [compute, pixel, mesh]>,
-             VersionedStages<DXIL1_4, [all_stages]>,
-             VersionedStages<DXIL1_6, [removed]>
+             Stages<DXIL1_0, [compute, pixel]>,
+             Stages<DXIL1_2, [compute, pixel, mesh]>,
+             Stages<DXIL1_4, [all_stages]>,
+             Stages<DXIL1_6, [removed]>
             ];
 
 The following two pseudo stage records in addition to standard shader stages
@@ -289,7 +289,7 @@ is supported in all DXIL versions and all stages it is required to be specified 
 
 .. code-block::
 
-   stages = [VersionedStages<DXIL1_0, [all_stages]>];
+   stages = [Stages<DXIL1_0, [all_stages]>];
 
 
 Attribute Specification
@@ -300,7 +300,7 @@ attributes predicated on DXIL version as list of records of the following class
 
 .. code-block::
 
-  class VersionedAttributes<MinVersion minver, list<DXILAttribute> attrs> {
+  class Attributes<MinVersion minver, list<DXILAttribute> attrs> {
     MinVersion dxil_version = ver;
     list<DXILAttribute> attributes = attrs;
   }
@@ -309,7 +309,7 @@ Following is an example specification of valid attributes for ``DXIL1_0``.
 
 .. code-block::
 
-   attributes = [VersionedAttributes<DXIL1_0, [ReadNone]];
+   attributes = [Attributes<DXIL1_0, [ReadNone]];
 
 A null list of ``attributes`` signifies no operation attributes.
 
@@ -326,8 +326,8 @@ For example, consider the following specification of valid overload types:
 .. code-block::
 
    overloads = [
-                VersionedOverloads<DXIL1_0, [halfTy, floatTy]>,
-                VersionedOverloads<DXIL1_2, [halfTy, floatTy, doubleTy]>
+                Overloads<DXIL1_0, [halfTy, floatTy]>,
+                Overloads<DXIL1_2, [halfTy, floatTy, doubleTy]>
                ];
 
 It specifies that the overload types ``halfTy`` and ``floatTy`` are valid for DXIL
@@ -353,9 +353,9 @@ and has valid overload types predicated on DXIL version.
     let LLVMIntrinsic = int_sin;
     let result = overloadTy;
     let arguments = [overloadTy];
-    let overloads = [VersionedOverloads<DXIL1_0, [halfTy, floatTy]>];
-    let stages = [VersionedStages<DXIL1_0, [all_stages]>];
-    let attributes = [VersionedAttributes<DXIL1_0, [ReadNone]>];
+    let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+    let stages = [Stages<DXIL1_0, [all_stages]>];
+    let attributes = [Attributes<DXIL1_0, [ReadNone]>];
   }
 
 ``FlattenedThreadIdInGroup`` - an operation with no arguments, no
@@ -368,8 +368,8 @@ overload types, and valid stages and attributes predicated by DXIL Version.
               "group (SV_GroupIndex)";
     let LLVMIntrinsic = int_dx_flattened_thread_id_in_group;
     let result = i32Ty;
-    let stages = [VersionedStages<DXIL1_0, [compute, mesh, amplification, node]>];
-    let attributes = [VersionedAttributes<DXIL1_0, [ReadNone]>];
+    let stages = [Stages<DXIL1_0, [compute, mesh, amplification, node]>];
+    let attributes = [Attributes<DXIL1_0, [ReadNone]>];
    }
 
 ``RawBufferStore`` - an operation with ``void`` return type, valid overload types
@@ -383,12 +383,12 @@ predicated by DXIL Version and valid in all DXIL versions and stages.
      let arguments = [dxil_resource_ty, i32Ty, i32Ty, overloadTy,
                       overloadTy, overloadTy, overloadTy, i8Ty, i32Ty];
      let overloads = [
-                      VersionedOverloads<DXIL1_2, [halfTy, floatTy, i16Ty, i32Ty]>,
-                      VersionedOverloads<DXIL1_3>,[halfTy, floatTy, doubleTy,
+                      Overloads<DXIL1_2, [halfTy, floatTy, i16Ty, i32Ty]>,
+                      Overloads<DXIL1_3>,[halfTy, floatTy, doubleTy,
                                                    i16Ty, i32Ty, i64Ty]>
                      ];
-      let stages = [VersionedStages<DXIL1_2, all_stages>];
-      let attributes = [VersionedAttributes<DXIL1_0, [ReadOnly]>];
+      let stages = [Stages<DXIL1_2, all_stages>];
+      let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
    }
 
 ``DerivCoarseX`` - an operation with no overload types and stages predicated
@@ -402,10 +402,10 @@ by DXIL Version.
     let result = overloadTy;
     let arguments = [overloadTy];
     let stages = [
-                   Versioned<DXIL1_0, [library, pixel]>,
-                   Versioned<DXIL1_6, [library, pixel, amplification, compute, mesh]>
+                   Stages<DXIL1_0, [library, pixel]>,
+                   Stages<DXIL1_6, [library, pixel, amplification, compute, mesh]>
                  ];
-    let attributes = [VersionedAttributes<DXIL1_0, [ReadNone]>];
+    let attributes = [Attributes<DXIL1_0, [ReadNone]>];
    }
 
 ``CreateHandle`` - an operation with no overload types, no associated ``LLVMIntrinsic``
@@ -418,10 +418,10 @@ and stages predicated  by DXIL Version.
      let result = i32Ty;
      let arguments = [i8Ty, i32Ty, i32Ty, i1Ty];
      let stages = [
-                   Versioned<DXIL1_0, [all_stages]>,
-                   Versioned<DXIL1_6, [removed]
+                   Stages<DXIL1_0, [all_stages]>,
+                   Stages<DXIL1_6, [removed]
                   ];
-     let attributes = [VersionedAttributes<DXIL1_0, [ReadOnly]>];
+     let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
    }
 
 ``Sample`` - an operation with valid overload types, stages and attributes
@@ -435,12 +435,12 @@ predicated by DXIL version.
      let result = resRetF32Ty;
      let arguments = [handleTy, handleTy, floatTy, floatTy, floatTy, floatTy,
                       i32Ty, i32Ty, i32Ty, floatTy];
-     let overloads = [Versioned<DXIL1_0, [halfTy, floatTy, i16Ty, i32Ty]>];
+     let overloads = [Overloads<DXIL1_0, [halfTy, floatTy, i16Ty, i32Ty]>];
      let stages = [
-                   Versioned<DXIL1_0, [library, pixel]>,
-                   Versioned<DXIL1_6, [library, pixel, amplification, compute, mesh]>
+                   Stages<DXIL1_0, [library, pixel]>,
+                   Stages<DXIL1_6, [library, pixel, amplification, compute, mesh]>
                   ];
-     let attributes = [VersionedAttributes<DXIL1_0, [ReadOnly]>];
+     let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
    }
 
 Summary
