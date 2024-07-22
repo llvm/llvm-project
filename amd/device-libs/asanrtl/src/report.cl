@@ -88,14 +88,14 @@ ASAN_ERROR(store, 16,1)
 
 #define ASAN_ERROR_N(type, is_write)                         \
 USED NO_INLINE NO_SANITIZE_ADDR                              \
-void __asan_ ## type ## _n(uptr addr, uptr size) {           \
+void __asan_ ## type ## N(uptr addr, uptr size) {           \
     uptr caller_pc = GET_CALLER_PC();                        \
     if (__asan_region_is_poisoned(addr, size)) {             \
         REPORT_IMPL(caller_pc, addr, is_write, size, false)  \
     }                                                        \
 }                                                            \
 USED NO_INLINE NO_SANITIZE_ADDR                              \
-void __asan_ ## type ## _n_noabort(uptr addr, uptr size) {   \
+void __asan_ ## type ## N_noabort(uptr addr, uptr size) {   \
     uptr caller_pc = GET_CALLER_PC();                        \
     if (__asan_region_is_poisoned(addr, size)) {             \
         REPORT_IMPL(caller_pc, addr, is_write, size, true)   \
