@@ -1023,7 +1023,7 @@ std::string RISCVISAInfo::getTargetFeatureForExtension(StringRef Ext) {
 
 struct RISCVExtBit {
   const StringRef ext;
-  uint64_t bitpos;
+  uint8_t bitpos;
 };
 
 /// Maps extensions with assigned bit positions within group 0 of
