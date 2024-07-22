@@ -740,8 +740,6 @@ bool RISCVLegalizerInfo::legalizeLoadStore(MachineInstr &MI,
     MIB.buildStore(MI.getOperand(0), PtrReg, *NewMMO);
   }
 
-  MI.eraseFromParent();
-
   return true;
 }
 
