@@ -5363,6 +5363,17 @@ def : Pat<(v4i16 (trunc (smax (smin (v4i32 V128:$Vn), (v4i32 VImm7FFF)),
                               (v4i32 VImm8000)))),
           (SQXTNv4i16 V128:$Vn)>;
 
+// concat_vectors(Vd, trunc(umin(X, 255))) -> UQXTRN(Vd, Vn)
+def : Pat<(v16i8 (concat_vectors
+                 (v8i8 V64:$Vd),
+                 (v8i8 (trunc (umin (v8i16 V128:$Vn), (v8i16 VImmFF)))))),
+          (UQXTNv16i8 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+// concat_vectors(Vd, trunc(umin(X, 65535))) -> UQXTRN(Vd, Vn)
+def : Pat<(v8i16 (concat_vectors
+                 (v4i16 V64:$Vd),
+                 (v4i16 (trunc (umin (v4i32 V128:$Vn), (v4i32 VImmFFFF)))))),
+          (UQXTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+
 // concat_vectors(Vd, trunc(smin(smax Vm, -128), 127) ~> SQXTN2(Vd, Vn)
 // with reversed min/max
 def : Pat<(v16i8 (concat_vectors
@@ -6084,6 +6095,34 @@ def : Pat<(f16 (any_sint_to_fp (i32 (any_fp_to_sint f16:$Rn)))),
 def : Pat<(f16 (any_uint_to_fp (i32 (any_fp_to_uint f16:$Rn)))),
           (UCVTFv1i16 (f16 (FCVTZUv1f16 f16:$Rn)))>;
 }
+
+// int -> float conversion of value in lane 0 of simd vector should use 
+// correct cvtf variant to avoid costly fpr <-> gpr register transfers.
+def : Pat<(f32 (sint_to_fp (i32 (vector_extract (v4i32 FPR128:$Rn), (i64 0))))),
+          (SCVTFv1i32 (i32 (EXTRACT_SUBREG (v4i32 FPR128:$Rn), ssub)))>;
+
+def : Pat<(f32 (uint_to_fp (i32 (vector_extract (v4i32 FPR128:$Rn), (i64 0))))),
+          (UCVTFv1i32 (i32 (EXTRACT_SUBREG (v4i32 FPR128:$Rn), ssub)))>;
+
+def : Pat<(f64 (sint_to_fp (i64 (vector_extract (v2i64 FPR128:$Rn), (i64 0))))),
+          (SCVTFv1i64 (i64 (EXTRACT_SUBREG (v2i64 FPR128:$Rn), dsub)))>;
+
+def : Pat<(f64 (uint_to_fp (i64 (vector_extract (v2i64 FPR128:$Rn), (i64 0))))),
+          (UCVTFv1i64 (i64 (EXTRACT_SUBREG (v2i64 FPR128:$Rn), dsub)))>;
+
+// fp16: integer extraction from vector must be at least 32-bits to be legal.
+// Actual extraction result is then an in-reg sign-extension of lower 16-bits.
+let Predicates = [HasNEONandIsStreamingSafe, HasFullFP16] in {
+def : Pat<(f16 (sint_to_fp (i32 (sext_inreg (i32 (vector_extract 
+                (v8i16 FPR128:$Rn), (i64 0))), i16)))), 
+          (SCVTFv1i16 (f16 (EXTRACT_SUBREG (v8i16 FPR128:$Rn), hsub)))>;
+
+// unsigned 32-bit extracted element is truncated to 16-bits using AND
+def : Pat<(f16 (uint_to_fp (i32 (and (i32 (vector_extract 
+                (v8i16 FPR128:$Rn), (i64 0))), (i32 65535))))),
+          (UCVTFv1i16 (f16 (EXTRACT_SUBREG (v8i16 FPR128:$Rn), hsub)))>;
+}
+
 // If an integer is about to be converted to a floating point value,
 // just load it on the floating point unit.
 // Here are the patterns for 8 and 16-bits to float.

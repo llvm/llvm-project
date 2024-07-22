@@ -16,7 +16,6 @@ from gpu_headers import GpuHeaderFile as GpuHeader
 from class_implementation.classes.macro import Macro
 from class_implementation.classes.type import Type
 from class_implementation.classes.function import Function
-from class_implementation.classes.include import Include
 from class_implementation.classes.enumeration import Enumeration
 from class_implementation.classes.object import Object
 
@@ -102,9 +101,6 @@ def yaml_to_classes(yaml_data, header_class, entry_points=None):
         header.add_object(
             Object(object_data["object_name"], object_data["object_type"])
         )
-
-    for include_data in yaml_data.get("includes", []):
-        header.add_include(Include(include_data))
 
     return header
 

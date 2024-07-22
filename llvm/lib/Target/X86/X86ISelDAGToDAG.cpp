@@ -922,7 +922,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       if (Imm == EndbrImm || isEndbrImm64(Imm)) {
         // Check that the cf-protection-branch is enabled.
         Metadata *CFProtectionBranch =
-          MF->getMMI().getModule()->getModuleFlag("cf-protection-branch");
+            MF->getFunction().getParent()->getModuleFlag(
+                "cf-protection-branch");
         if (CFProtectionBranch || IndirectBranchTracking) {
           SDLoc dl(N);
           SDValue Complement = CurDAG->getConstant(~Imm, dl, VT, false, true);

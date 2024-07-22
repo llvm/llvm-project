@@ -6148,7 +6148,7 @@ IntrinsicLibrary::genScan(mlir::Type resultType,
 fir::ExtendedValue
 IntrinsicLibrary::genSecond(std::optional<mlir::Type> resultType,
                             mlir::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 1 && !resultType || args.empty() && resultType);
+  assert((args.size() == 1 && !resultType) || (args.empty() && resultType));
 
   fir::ExtendedValue result;
 
@@ -6161,7 +6161,7 @@ IntrinsicLibrary::genSecond(std::optional<mlir::Type> resultType,
   genCpuTime(subroutineArgs);
 
   if (resultType)
-    return result;
+    return builder.create<fir::LoadOp>(loc, fir::getBase(result));
   return {};
 }
 

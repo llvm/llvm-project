@@ -1,8 +1,8 @@
 Standard,Algorithm,Assignee,CL,Status
 C++20,all C++20 algorithms,N/A,N/A,✅
-C++23,`find_last <https://wg21.link/P1223R5>`_,Unassigned,No patch yet,Not started
-C++23,`find_last_if <https://wg21.link/P1223R5>`_,Unassigned,No patch yet,Not started
-C++23,`find_last_if_not <https://wg21.link/P1223R5>`_,Unassigned,No patch yet,Not started
+C++23,`find_last <https://wg21.link/P1223R5>`_,Nicole Mazzuca,`#99312 <https://github.com/llvm/llvm-project/pull/99312>`_,Complete
+C++23,`find_last_if <https://wg21.link/P1223R5>`_,Nicole Mazzuca,`#99312 <https://github.com/llvm/llvm-project/pull/99312>`_,Complete
+C++23,`find_last_if_not <https://wg21.link/P1223R5>`_,Nicole Mazzuca,`#99312 <https://github.com/llvm/llvm-project/pull/99312>`_,Complete
 C++23,`starts_with <https://wg21.link/P1659R3>`_,Zijun Zhao,`D150735 <https://llvm.org/D150735>`_,Complete
 C++23,`ends_with <https://wg21.link/P1659R3>`_,Zijun Zhao, `D150831 <https://llvm.org/D150831>`_,Complete
 C++23,`shift_left <https://wg21.link/p2440r1>`_,Unassigned,No patch yet,Not started
