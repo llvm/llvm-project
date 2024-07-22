@@ -269,6 +269,13 @@ void SANITIZER_CDECL __asan_set_death_callback(void (*callback)(void));
 void SANITIZER_CDECL
 __asan_set_error_report_callback(void (*callback)(const char *));
 
+/// Sets whether ASan should be dormant or not. If 0 is passed, ASan resumes
+/// checking memory accesses for errors. If a non-0 value is passed, these
+/// checks will be skipped.
+///
+/// \param dormancy A boolean to control if ASan is dormant or not.
+void SANITIZER_CDECL __asan_set_dormant(int dormancy);
+
 /// User-provided callback on ASan errors.
 ///
 /// You can provide a function that would be called immediately when ASan
