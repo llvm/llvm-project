@@ -49,13 +49,19 @@ enum PrimType : unsigned;
 class Block final {
 public:
   /// Creates a new block.
-  Block(const std::optional<unsigned> &DeclID, const Descriptor *Desc,
-        bool IsStatic = false, bool IsExtern = false)
-      : DeclID(DeclID), IsStatic(IsStatic), IsExtern(IsExtern), Desc(Desc) {}
+  Block(unsigned EvalID, const std::optional<unsigned> &DeclID,
+        const Descriptor *Desc, bool IsStatic = false, bool IsExtern = false)
+      : EvalID(EvalID), DeclID(DeclID), IsStatic(IsStatic), IsExtern(IsExtern),
+        IsDynamic(false), Desc(Desc) {
+    assert(Desc);
+  }
 
-  Block(const Descriptor *Desc, bool IsStatic = false, bool IsExtern = false)
-      : DeclID((unsigned)-1), IsStatic(IsStatic), IsExtern(IsExtern),
-        Desc(Desc) {}
+  Block(unsigned EvalID, const Descriptor *Desc, bool IsStatic = false,
+        bool IsExtern = false)
+      : EvalID(EvalID), DeclID((unsigned)-1), IsStatic(IsStatic),
+        IsExtern(IsExtern), IsDynamic(false), Desc(Desc) {
+    assert(Desc);
+  }
 
   /// Returns the block's descriptor.
   const Descriptor *getDescriptor() const { return Desc; }
@@ -67,11 +73,16 @@ public:
   bool isStatic() const { return IsStatic; }
   /// Checks if the block is temporary.
   bool isTemporary() const { return Desc->IsTemporary; }
+  bool isDynamic() const { return IsDynamic; }
   /// Returns the size of the block.
   unsigned getSize() const { return Desc->getAllocSize(); }
   /// Returns the declaration ID.
   std::optional<unsigned> getDeclID() const { return DeclID; }
+  /// Returns whether the data of this block has been initialized via
+  /// invoking the Ctor func.
   bool isInitialized() const { return IsInitialized; }
+  /// The Evaluation ID this block was created in.
+  unsigned getEvalID() const { return EvalID; }
 
   /// Returns a pointer to the stored data.
   /// You are allowed to read Desc->getSize() bytes from this address.
@@ -95,15 +106,9 @@ public:
     return reinterpret_cast<const std::byte *>(this) + sizeof(Block);
   }
 
-  /// Returns a view over the data.
-  template <typename T>
-  T &deref() { return *reinterpret_cast<T *>(data()); }
-  template <typename T> const T &deref() const {
-    return *reinterpret_cast<const T *>(data());
-  }
-
   /// Invokes the constructor.
   void invokeCtor() {
+    assert(!IsInitialized);
     std::memset(rawData(), 0, Desc->getAllocSize());
     if (Desc->CtorFn)
       Desc->CtorFn(this, data(), Desc->IsConst, Desc->IsMutable,
@@ -113,18 +118,27 @@ public:
 
   /// Invokes the Destructor.
   void invokeDtor() {
+    assert(IsInitialized);
     if (Desc->DtorFn)
       Desc->DtorFn(this, data(), Desc);
     IsInitialized = false;
   }
 
-protected:
+  void dump() const { dump(llvm::errs()); }
+  void dump(llvm::raw_ostream &OS) const;
+
+private:
   friend class Pointer;
   friend class DeadBlock;
   friend class InterpState;
+  friend class DynamicAllocator;
 
-  Block(const Descriptor *Desc, bool IsExtern, bool IsStatic, bool IsDead)
-      : IsStatic(IsStatic), IsExtern(IsExtern), IsDead(true), Desc(Desc) {}
+  Block(unsigned EvalID, const Descriptor *Desc, bool IsExtern, bool IsStatic,
+        bool IsDead)
+      : EvalID(EvalID), IsStatic(IsStatic), IsExtern(IsExtern), IsDead(true),
+        IsDynamic(false), Desc(Desc) {
+    assert(Desc);
+  }
 
   /// Deletes a dead block at the end of its lifetime.
   void cleanup();
@@ -137,6 +151,7 @@ protected:
   bool hasPointer(const Pointer *P) const;
 #endif
 
+  const unsigned EvalID = ~0u;
   /// Start of the chain of pointers.
   Pointer *Pointers = nullptr;
   /// Unique identifier of the declaration.
@@ -151,6 +166,9 @@ protected:
   /// Flag indicating if the block contents have been initialized
   /// via invokeCtor.
   bool IsInitialized = false;
+  /// Flag indicating if this block has been allocated via dynamic
+  /// memory allocation (e.g. malloc).
+  bool IsDynamic = false;
   /// Pointer to the stack slot descriptor.
   const Descriptor *Desc;
 };

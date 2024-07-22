@@ -1,4 +1,6 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! REQUIRES: openmp_runtime
+
+! RUN: %python %S/../test_errors.py %s %flang %openmp_flags
 ! OpenMP version 5.0.0
 ! 2.8.1 sections construct
 ! The code enclosed in a sections construct must be a structured block.

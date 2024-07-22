@@ -2133,7 +2133,8 @@ bool X86FastISel::X86FastEmitCMoveSelect(MVT RetVT, const Instruction *I) {
     return false;
 
   const TargetRegisterInfo &TRI = *Subtarget->getRegisterInfo();
-  unsigned Opc = X86::getCMovOpcode(TRI.getRegSizeInBits(*RC)/8);
+  unsigned Opc = X86::getCMovOpcode(TRI.getRegSizeInBits(*RC) / 8, false,
+                                    Subtarget->hasNDD());
   Register ResultReg = fastEmitInst_rri(Opc, RC, RHSReg, LHSReg, CC);
   updateValueMap(I, ResultReg);
   return true;
@@ -2230,7 +2231,7 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
     unsigned CmpOpcode =
       (RetVT == MVT::f32) ? X86::VCMPSSrri : X86::VCMPSDrri;
     unsigned BlendOpcode =
-      (RetVT == MVT::f32) ? X86::VBLENDVPSrr : X86::VBLENDVPDrr;
+      (RetVT == MVT::f32) ? X86::VBLENDVPSrrr : X86::VBLENDVPDrrr;
 
     Register CmpReg = fastEmitInst_rri(CmpOpcode, RC, CmpLHSReg, CmpRHSReg,
                                        CC);

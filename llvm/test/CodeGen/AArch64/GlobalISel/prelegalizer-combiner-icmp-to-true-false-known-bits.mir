@@ -534,18 +534,20 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: vector_true
     ; CHECK: liveins: $x0
-    ; CHECK: %cst:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-    ; CHECK: %cmp:_(<2 x s1>) = G_BUILD_VECTOR [[C]](s1), [[C]](s1)
-    ; CHECK: %extract:_(s1) = G_EXTRACT_VECTOR_ELT %cmp(<2 x s1>), %cst(s32)
-    ; CHECK: %extract_ext:_(s32) = G_ZEXT %extract(s1)
-    ; CHECK: $w0 = COPY %extract_ext(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %cst64:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: %cmp:_(<2 x s1>) = G_BUILD_VECTOR [[C]](s1), [[C]](s1)
+    ; CHECK-NEXT: %extract:_(s1) = G_EXTRACT_VECTOR_ELT %cmp(<2 x s1>), %cst64(s64)
+    ; CHECK-NEXT: %extract_ext:_(s32) = G_ZEXT %extract(s1)
+    ; CHECK-NEXT: $w0 = COPY %extract_ext(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
     %cst:_(s32) = G_CONSTANT i32 1
+    %cst64:_(s64) = G_CONSTANT i64 1
     %bv:_(<2 x s32>) = G_BUILD_VECTOR %cst, %cst
     %cmp:_(<2 x s1>) = G_ICMP intpred(eq), %bv(<2 x s32>), %bv
-    %extract:_(s1) = G_EXTRACT_VECTOR_ELT %cmp(<2 x s1>), %cst(s32)
+    %extract:_(s1) = G_EXTRACT_VECTOR_ELT %cmp(<2 x s1>), %cst64(s64)
     %extract_ext:_(s32) = G_ZEXT %extract(s1)
     $w0 = COPY %extract_ext(s32)
     RET_ReallyLR implicit $w0
@@ -559,18 +561,20 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: vector_false
     ; CHECK: liveins: $x0
-    ; CHECK: %cst:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-    ; CHECK: %cmp:_(<2 x s1>) = G_BUILD_VECTOR [[C]](s1), [[C]](s1)
-    ; CHECK: %extract:_(s1) = G_EXTRACT_VECTOR_ELT %cmp(<2 x s1>), %cst(s32)
-    ; CHECK: %extract_ext:_(s32) = G_ZEXT %extract(s1)
-    ; CHECK: $w0 = COPY %extract_ext(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %cst64:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: %cmp:_(<2 x s1>) = G_BUILD_VECTOR [[C]](s1), [[C]](s1)
+    ; CHECK-NEXT: %extract:_(s1) = G_EXTRACT_VECTOR_ELT %cmp(<2 x s1>), %cst64(s64)
+    ; CHECK-NEXT: %extract_ext:_(s32) = G_ZEXT %extract(s1)
+    ; CHECK-NEXT: $w0 = COPY %extract_ext(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
     %cst:_(s32) = G_CONSTANT i32 1
+    %cst64:_(s64) = G_CONSTANT i64 1
     %bv:_(<2 x s32>) = G_BUILD_VECTOR %cst, %cst
     %cmp:_(<2 x s1>) = G_ICMP intpred(ne), %bv(<2 x s32>), %bv
-    %extract:_(s1) = G_EXTRACT_VECTOR_ELT %cmp(<2 x s1>), %cst(s32)
+    %extract:_(s1) = G_EXTRACT_VECTOR_ELT %cmp(<2 x s1>), %cst64(s64)
     %extract_ext:_(s32) = G_ZEXT %extract(s1)
     $w0 = COPY %extract_ext(s32)
     RET_ReallyLR implicit $w0

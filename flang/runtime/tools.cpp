@@ -175,7 +175,7 @@ RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from) {
 
 RT_API_ATTRS char *EnsureNullTerminated(
     char *str, std::size_t length, Terminator &terminator) {
-  if (std::memchr(str, '\0', length) == nullptr) {
+  if (runtime::memchr(str, '\0', length) == nullptr) {
     char *newCmd{(char *)AllocateMemoryOrCrash(terminator, length + 1)};
     std::memcpy(newCmd, str, length);
     newCmd[length] = '\0';
@@ -237,6 +237,35 @@ template <int KIND> struct FitsInIntegerKind {
     }
   }
 };
+
+// Utility: establishes & allocates the result array for a partial
+// reduction (i.e., one with DIM=).
+RT_API_ATTRS void CreatePartialReductionResult(Descriptor &result,
+    const Descriptor &x, std::size_t resultElementSize, int dim,
+    Terminator &terminator, const char *intrinsic, TypeCode typeCode) {
+  int xRank{x.rank()};
+  if (dim < 1 || dim > xRank) {
+    terminator.Crash(
+        "%s: bad DIM=%d for ARRAY with rank %d", intrinsic, dim, xRank);
+  }
+  int zeroBasedDim{dim - 1};
+  SubscriptValue resultExtent[maxRank];
+  for (int j{0}; j < zeroBasedDim; ++j) {
+    resultExtent[j] = x.GetDimension(j).Extent();
+  }
+  for (int j{zeroBasedDim + 1}; j < xRank; ++j) {
+    resultExtent[j - 1] = x.GetDimension(j).Extent();
+  }
+  result.Establish(typeCode, resultElementSize, nullptr, xRank - 1,
+      resultExtent, CFI_attribute_allocatable);
+  for (int j{0}; j + 1 < xRank; ++j) {
+    result.GetDimension(j).SetBounds(1, resultExtent[j]);
+  }
+  if (int stat{result.Allocate()}) {
+    terminator.Crash(
+        "%s: could not allocate memory for result; STAT=%d", intrinsic, stat);
+  }
+}
 
 RT_OFFLOAD_API_GROUP_END
 } // namespace Fortran::runtime

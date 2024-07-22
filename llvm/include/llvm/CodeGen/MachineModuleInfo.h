@@ -58,12 +58,20 @@ public:
   using StubValueTy = PointerIntPair<MCSymbol *, 1, bool>;
   using SymbolListTy = std::vector<std::pair<MCSymbol *, StubValueTy>>;
 
+  /// A variant of SymbolListTy where the stub is a generalized MCExpr.
+  using ExprStubListTy = std::vector<std::pair<MCSymbol *, const MCExpr *>>;
+
   virtual ~MachineModuleInfoImpl();
 
 protected:
   /// Return the entries from a DenseMap in a deterministic sorted orer.
   /// Clears the map.
   static SymbolListTy getSortedStubs(DenseMap<MCSymbol*, StubValueTy>&);
+
+  /// Return the entries from a DenseMap in a deterministic sorted orer.
+  /// Clears the map.
+  static ExprStubListTy
+  getSortedExprStubs(DenseMap<MCSymbol *, const MCExpr *> &);
 };
 
 //===----------------------------------------------------------------------===//
@@ -147,10 +155,14 @@ public:
 
   /// Returns the MachineFunction constructed for the IR function \p F.
   /// Creates a new MachineFunction if none exists yet.
+  /// NOTE: New pass manager clients shall not use this method to get
+  /// the `MachineFunction`, use `MachineFunctionAnalysis` instead.
   MachineFunction &getOrCreateMachineFunction(Function &F);
 
   /// \brief Returns the MachineFunction associated to IR function \p F if there
   /// is one, otherwise nullptr.
+  /// NOTE: New pass manager clients shall not use this method to get
+  /// the `MachineFunction`, use `MachineFunctionAnalysis` instead.
   MachineFunction *getMachineFunction(const Function &F) const;
 
   /// Delete the MachineFunction \p MF and reset the link in the IR Function to

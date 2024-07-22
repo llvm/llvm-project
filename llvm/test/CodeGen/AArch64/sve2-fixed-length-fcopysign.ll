@@ -376,9 +376,9 @@ define void @test_copysign_v4f32_v4f64(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    mvni v1.4s, #128, lsl #24
 ; CHECK-NEXT:    ldr q2, [x0]
-; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
-; CHECK-NEXT:    fcvt z0.s, p1/m, z0.d
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvt z0.s, p0/m, z0.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    bit v0.16b, v2.16b, v1.16b
 ; CHECK-NEXT:    str q0, [x0]
@@ -429,12 +429,12 @@ define void @test_copysign_v4f64_v4f32(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ;
 ; CHECK_EXTEND_ROUND-LABEL: test_copysign_v4f64_v4f32:
 ; CHECK_EXTEND_ROUND:       // %bb.0:
-; CHECK_EXTEND_ROUND-NEXT:    ptrue p0.d, vl4
 ; CHECK_EXTEND_ROUND-NEXT:    ldr q0, [x1]
+; CHECK_EXTEND_ROUND-NEXT:    ptrue p0.d, vl4
 ; CHECK_EXTEND_ROUND-NEXT:    mov z1.d, #0x7fffffffffffffff
 ; CHECK_EXTEND_ROUND-NEXT:    uunpklo z0.d, z0.s
-; CHECK_EXTEND_ROUND-NEXT:    fcvt z0.d, p0/m, z0.s
 ; CHECK_EXTEND_ROUND-NEXT:    ld1d { z2.d }, p0/z, [x0]
+; CHECK_EXTEND_ROUND-NEXT:    fcvt z0.d, p0/m, z0.s
 ; CHECK_EXTEND_ROUND-NEXT:    bsl z2.d, z2.d, z0.d, z1.d
 ; CHECK_EXTEND_ROUND-NEXT:    st1d { z2.d }, p0, [x0]
 ; CHECK_EXTEND_ROUND-NEXT:    ret
@@ -472,9 +472,9 @@ define void @test_copysign_v4f16_v4f64(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    mvni v1.4h, #128, lsl #8
 ; CHECK-NEXT:    ldr d2, [x0]
-; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
-; CHECK-NEXT:    fcvt z0.h, p1/m, z0.d
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvt z0.h, p0/m, z0.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    bit v0.8b, v2.8b, v1.8b
@@ -499,9 +499,9 @@ define void @test_copysign_v8f16_v8f32(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    mvni v1.8h, #128, lsl #8
 ; CHECK-NEXT:    ldr q2, [x0]
-; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x1]
-; CHECK-NEXT:    fcvt z0.h, p1/m, z0.s
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcvt z0.h, p0/m, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    bit v0.16b, v2.16b, v1.16b
 ; CHECK-NEXT:    str q0, [x0]

@@ -31,12 +31,17 @@ private:
     void *ptr;
 };
 
+// The use of operator new in the current module unit is only in the non-inline
+// function definitions. So it may be optimized out.
+using ::operator new;
+
 //--- Use.cpp
 // expected-no-diagnostics
 import A;
 void bar(int *);
 void foo(void *ptr) {
-    A<int>(nullptr); // Good. It should be OK to construct A.
-    void *p = ::operator new(sizeof(int), ptr); // Bad. The function shouldn't be visible here.
+    A<int> a(nullptr); // Good. It should be OK to construct A.
+    B b(nullptr);
+    void *p = ::operator new(sizeof(int), ptr); // Bad. The placement allocation in module A is not visible.
     void *q = new (ptr) int(43); // Good. We don't call the placement allocation function directly.
 }

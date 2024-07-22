@@ -1,8 +1,8 @@
-# This checks for an issue with internal calls and BAT (BOLT address
-# translation). BAT needs to map every output block back to an input
-# block, but passes that introduce new blocks (such as validate
-# internal calls) might create new blocks without a mapping to an
-# input block.
+## This checks for an issue with internal calls and BAT (BOLT address
+## translation). BAT needs to map every output block back to an input
+## block, but passes that introduce new blocks (such as validate
+## internal calls) might create new blocks without a mapping to an
+## input block.
 
 # REQUIRES: x86_64-linux,bolt-runtime
 

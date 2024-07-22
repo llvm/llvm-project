@@ -48,6 +48,11 @@ std::optional<uint64_t> getConstantTripCount(AffineForOp forOp);
 /// this method is thus able to determine non-trivial divisors.
 uint64_t getLargestDivisorOfTripCount(AffineForOp forOp);
 
+/// Checks if an affine read or write operation depends on `forOp`'s IV, i.e.,
+/// if the memory access is invariant on `forOp`.
+template <typename LoadOrStoreOp>
+bool isInvariantAccess(LoadOrStoreOp memOp, AffineForOp forOp);
+
 /// Given an induction variable `iv` of type AffineForOp and `indices` of type
 /// IndexType, returns the set of `indices` that are independent of `iv`.
 ///
@@ -103,6 +108,16 @@ bool isVectorizableLoopBody(AffineForOp loop, int *memRefDim,
 // TODO: extend this to check for memory-based dependence violation when we have
 // the support.
 bool isOpwiseShiftValid(AffineForOp forOp, ArrayRef<uint64_t> shifts);
+
+/// Checks whether hyper-rectangular loop tiling of the nest represented by
+/// `loops` is valid. The validity condition is from Irigoin and Triolet,
+/// which states that two tiles cannot depend on each other. We simplify such
+/// condition to just checking whether there is any negative dependence
+/// direction, since we have the prior knowledge that the tiling results will be
+/// hyper-rectangles, which are scheduled in the lexicographically increasing
+/// order on the vector of loop indices. This function will return failure when
+/// any dependence component is negative along any of `loops`.
+bool isTilingValid(ArrayRef<AffineForOp> loops);
 
 } // namespace affine
 } // namespace mlir

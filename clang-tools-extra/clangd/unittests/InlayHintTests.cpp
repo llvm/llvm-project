@@ -25,7 +25,7 @@ namespace clangd {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &Stream,
                               const InlayHint &Hint) {
-  return Stream << Hint.label << "@" << Hint.range;
+  return Stream << Hint.joinLabels() << "@" << Hint.range;
 }
 
 namespace {
@@ -57,10 +57,11 @@ struct ExpectedHint {
 
 MATCHER_P2(HintMatcher, Expected, Code, llvm::to_string(Expected)) {
   llvm::StringRef ExpectedView(Expected.Label);
-  if (arg.label != ExpectedView.trim(" ") ||
+  std::string ResultLabel = arg.joinLabels();
+  if (ResultLabel != ExpectedView.trim(" ") ||
       arg.paddingLeft != ExpectedView.starts_with(" ") ||
       arg.paddingRight != ExpectedView.ends_with(" ")) {
-    *result_listener << "label is '" << arg.label << "'";
+    *result_listener << "label is '" << ResultLabel << "'";
     return false;
   }
   if (arg.range != Code.range(Expected.RangeName)) {
@@ -72,7 +73,7 @@ MATCHER_P2(HintMatcher, Expected, Code, llvm::to_string(Expected)) {
   return true;
 }
 
-MATCHER_P(labelIs, Label, "") { return arg.label == Label; }
+MATCHER_P(labelIs, Label, "") { return arg.joinLabels() == Label; }
 
 Config noHintsConfig() {
   Config C;
@@ -944,7 +945,7 @@ TEST(ParameterHints, ConstructorStdInitList) {
   // Do not show hints for std::initializer_list constructors.
   assertParameterHints(R"cpp(
     namespace std {
-      template <typename> class initializer_list {};
+      template <typename E> class initializer_list { const E *a, *b; };
     }
     struct S {
       S(std::initializer_list<int> param);

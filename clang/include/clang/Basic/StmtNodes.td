@@ -71,7 +71,7 @@ def OffsetOfExpr : StmtNode<Expr>;
 def UnaryExprOrTypeTraitExpr : StmtNode<Expr>;
 def ArraySubscriptExpr : StmtNode<Expr>;
 def MatrixSubscriptExpr : StmtNode<Expr>;
-def OMPArraySectionExpr : StmtNode<Expr>;
+def ArraySectionExpr : StmtNode<Expr>;
 def OMPIteratorExpr : StmtNode<Expr>;
 def CallExpr : StmtNode<Expr>;
 def MemberExpr : StmtNode<Expr>;
@@ -204,6 +204,7 @@ def OpaqueValueExpr : StmtNode<Expr>;
 def TypoExpr : StmtNode<Expr>;
 def RecoveryExpr : StmtNode<Expr>;
 def BuiltinBitCastExpr : StmtNode<ExplicitCastExpr>;
+def EmbedExpr : StmtNode<Expr>;
 
 // Microsoft Extensions.
 def MSPropertyRefExpr : StmtNode<Expr>;
@@ -229,6 +230,8 @@ def OMPSimdDirective : StmtNode<OMPLoopDirective>;
 def OMPLoopTransformationDirective : StmtNode<OMPLoopBasedDirective, 1>;
 def OMPTileDirective : StmtNode<OMPLoopTransformationDirective>;
 def OMPUnrollDirective : StmtNode<OMPLoopTransformationDirective>;
+def OMPReverseDirective : StmtNode<OMPLoopTransformationDirective>;
+def OMPInterchangeDirective : StmtNode<OMPLoopTransformationDirective>;
 def OMPForDirective : StmtNode<OMPLoopDirective>;
 def OMPForSimdDirective : StmtNode<OMPLoopDirective>;
 def OMPSectionsDirective : StmtNode<OMPExecutableDirective>;
@@ -302,3 +305,4 @@ def OpenACCConstructStmt : StmtNode<Stmt, /*abstract=*/1>;
 def OpenACCAssociatedStmtConstruct
     : StmtNode<OpenACCConstructStmt, /*abstract=*/1>;
 def OpenACCComputeConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
+def OpenACCLoopConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;

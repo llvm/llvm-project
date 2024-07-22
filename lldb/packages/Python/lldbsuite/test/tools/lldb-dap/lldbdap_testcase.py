@@ -3,6 +3,8 @@ import time
 
 import dap_server
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbplatformutil
+import lldbgdbserverutils
 
 
 class DAPTestCaseBase(TestBase):
@@ -195,8 +197,10 @@ class DAPTestCaseBase(TestBase):
     def get_console(self, timeout=0.0):
         return self.dap_server.get_output("console", timeout=timeout)
 
-    def collect_console(self, duration):
-        return self.dap_server.collect_output("console", duration=duration)
+    def collect_console(self, timeout_secs, pattern=None):
+        return self.dap_server.collect_output(
+            "console", timeout_secs=timeout_secs, pattern=pattern
+        )
 
     def get_local_as_int(self, name, threadId=None):
         value = self.dap_server.get_local_variable_value(name, threadId=threadId)
@@ -218,8 +222,8 @@ class DAPTestCaseBase(TestBase):
         """Set a top level global variable only."""
         return self.dap_server.request_setVariable(2, name, str(value), id=id)
 
-    def stepIn(self, threadId=None, waitForStop=True):
-        self.dap_server.request_stepIn(threadId=threadId)
+    def stepIn(self, threadId=None, targetId=None, waitForStop=True):
+        self.dap_server.request_stepIn(threadId=threadId, targetId=targetId)
         if waitForStop:
             return self.dap_server.wait_for_stopped()
         return None
@@ -297,6 +301,8 @@ class DAPTestCaseBase(TestBase):
         sourceMap=None,
         sourceInitFile=False,
         expectFailure=False,
+        gdbRemotePort=None,
+        gdbRemoteHostname=None,
     ):
         """Build the default Makefile target, create the DAP debug adaptor,
         and attach to the process.
@@ -327,6 +333,8 @@ class DAPTestCaseBase(TestBase):
             coreFile=coreFile,
             postRunCommands=postRunCommands,
             sourceMap=sourceMap,
+            gdbRemotePort=gdbRemotePort,
+            gdbRemoteHostname=gdbRemoteHostname,
         )
         if expectFailure:
             return response
@@ -483,3 +491,18 @@ class DAPTestCaseBase(TestBase):
             launchCommands=launchCommands,
             expectFailure=expectFailure,
         )
+
+    def getBuiltinDebugServerTool(self):
+        # Tries to find simulation/lldb-server/gdbserver tool path.
+        server_tool = None
+        if lldbplatformutil.getPlatform() == "linux":
+            server_tool = lldbgdbserverutils.get_lldb_server_exe()
+            if server_tool is None:
+                self.dap_server.request_disconnect(terminateDebuggee=True)
+                self.assertIsNotNone(server_tool, "lldb-server not found.")
+        elif lldbplatformutil.getPlatform() == "macosx":
+            server_tool = lldbgdbserverutils.get_debugserver_exe()
+            if server_tool is None:
+                self.dap_server.request_disconnect(terminateDebuggee=True)
+                self.assertIsNotNone(server_tool, "debugserver not found.")
+        return server_tool

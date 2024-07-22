@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -polly-invariant-load-hoisting=true -S < %s | FileCheck %s
 ;
 ;    int f(int *A, int *B) {
 ;      // Possible aliasing between A and B but if not then *B would be

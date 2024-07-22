@@ -74,7 +74,7 @@ public:
   HexagonVectorCombine(Function &F_, AliasAnalysis &AA_, AssumptionCache &AC_,
                        DominatorTree &DT_, ScalarEvolution &SE_,
                        TargetLibraryInfo &TLI_, const TargetMachine &TM_)
-      : F(F_), DL(F.getParent()->getDataLayout()), AA(AA_), AC(AC_), DT(DT_),
+      : F(F_), DL(F.getDataLayout()), AA(AA_), AC(AC_), DT(DT_),
         SE(SE_), TLI(TLI_),
         HST(static_cast<const HexagonSubtarget &>(*TM_.getSubtargetImpl(F))) {}
 
@@ -1411,9 +1411,9 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
   // Return the element with the maximum alignment from Range,
   // where GetValue obtains the value to compare from an element.
   auto getMaxOf = [](auto Range, auto GetValue) {
-    return *std::max_element(
-        Range.begin(), Range.end(),
-        [&GetValue](auto &A, auto &B) { return GetValue(A) < GetValue(B); });
+    return *llvm::max_element(Range, [&GetValue](auto &A, auto &B) {
+      return GetValue(A) < GetValue(B);
+    });
   };
 
   const AddrList &BaseInfos = AddrGroups.at(Move.Base);

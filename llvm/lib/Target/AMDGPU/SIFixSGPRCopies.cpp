@@ -124,7 +124,7 @@ class SIFixSGPRCopies : public MachineFunctionPass {
   SmallVector<MachineInstr*, 4> RegSequences;
   SmallVector<MachineInstr*, 4> PHINodes;
   SmallVector<MachineInstr*, 4> S2VCopies;
-  unsigned NextVGPRToSGPRCopyID;
+  unsigned NextVGPRToSGPRCopyID = 0;
   MapVector<unsigned, V2SCopyInfo> V2SCopies;
   DenseMap<MachineInstr *, SetVector<unsigned>> SiblingPenalty;
 
@@ -135,7 +135,7 @@ public:
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
 
-  SIFixSGPRCopies() : MachineFunctionPass(ID), NextVGPRToSGPRCopyID(0) {}
+  SIFixSGPRCopies() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   void fixSCCCopies(MachineFunction &MF);
@@ -162,8 +162,8 @@ public:
   StringRef getPassName() const override { return "SI Fix SGPR copies"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -173,7 +173,7 @@ public:
 
 INITIALIZE_PASS_BEGIN(SIFixSGPRCopies, DEBUG_TYPE,
                      "SI Fix SGPR copies", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(SIFixSGPRCopies, DEBUG_TYPE,
                      "SI Fix SGPR copies", false, false)
 
@@ -456,7 +456,8 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
           (!MO.isImm() && !MO.isReg()) || (MO.isImm() && Imm)) {
         Imm = nullptr;
         break;
-      } else if (MO.isImm())
+      }
+      if (MO.isImm())
         Imm = &MO;
     }
     if (Imm)
@@ -611,13 +612,10 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TRI = ST.getRegisterInfo();
   TII = ST.getInstrInfo();
-  MDT = &getAnalysis<MachineDominatorTree>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
-
-  for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
-                                                  BI != BE; ++BI) {
-    MachineBasicBlock *MBB = &*BI;
-    for (MachineBasicBlock::iterator I = MBB->begin(), E = MBB->end(); I != E;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
          ++I) {
       MachineInstr &MI = *I;
 
@@ -666,7 +664,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
               Register NewDst = MRI->createVirtualRegister(DestRC);
               MachineBasicBlock *BlockToInsertCopy =
                   MI.isPHI() ? MI.getOperand(MO.getOperandNo() + 1).getMBB()
-                             : MBB;
+                             : &MBB;
               MachineBasicBlock::iterator PointToInsertCopy =
                   MI.isPHI() ? BlockToInsertCopy->getFirstInstrTerminator() : I;
 
@@ -947,8 +945,9 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
         (Inst->isCopy() && Inst->getOperand(0).getReg() == AMDGPU::SCC)) {
       auto I = Inst->getIterator();
       auto E = Inst->getParent()->end();
-      while (++I != E && !I->findRegisterDefOperand(AMDGPU::SCC)) {
-        if (I->readsRegister(AMDGPU::SCC))
+      while (++I != E &&
+             !I->findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr)) {
+        if (I->readsRegister(AMDGPU::SCC, /*TRI=*/nullptr))
           Users.push_back(&*I);
       }
     } else if (Inst->getNumExplicitDefs() != 0) {
@@ -973,9 +972,8 @@ bool SIFixSGPRCopies::needToBeConvertedToVALU(V2SCopyInfo *Info) {
     Info->Score = 0;
     return true;
   }
-  Info->Siblings = SiblingPenalty[*std::max_element(
-      Info->SChain.begin(), Info->SChain.end(),
-      [&](MachineInstr *A, MachineInstr *B) -> bool {
+  Info->Siblings = SiblingPenalty[*llvm::max_element(
+      Info->SChain, [&](MachineInstr *A, MachineInstr *B) -> bool {
         return SiblingPenalty[A].size() < SiblingPenalty[B].size();
       })];
   Info->Siblings.remove_if([&](unsigned ID) { return ID == Info->ID; });
@@ -1096,10 +1094,8 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
 
 void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
   bool IsWave32 = MF.getSubtarget<GCNSubtarget>().isWave32();
-  for (MachineFunction::iterator BI = MF.begin(), BE = MF.end(); BI != BE;
-       ++BI) {
-    MachineBasicBlock *MBB = &*BI;
-    for (MachineBasicBlock::iterator I = MBB->begin(), E = MBB->end(); I != E;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
          ++I) {
       MachineInstr &MI = *I;
       // May already have been lowered.

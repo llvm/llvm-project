@@ -4,7 +4,7 @@
 // RUN:   -arm-sme-vector-legalization -canonicalize -cse \
 // RUN:   -convert-vector-to-arm-sme -arm-sme-outer-product-fusion \
 // RUN:   -allocate-arm-sme-tiles -convert-arm-sme-to-scf \
-// RUN:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za only-if-required-by-ops" \
+// RUN:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za if-required-by-ops" \
 // RUN:   -convert-vector-to-scf=full-unroll -convert-arm-sme-to-llvm \
 // RUN:   -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd \
@@ -84,7 +84,7 @@ module attributes {transform.with_named_sequence} {
     // Step 1: Tile for size [8] x [8] (unrolled by 4), which corresponds to
     // (2 x SVLs) x (2 x SVLs), where SVLs is the number of 32-bit elements in a
     // vector of SVL bits. This uses all four 32-bit SME virtual tiles.
-    %tiled_linalg_op, %loop_i, %loop_j, %loop_k = transform.structured.tile_using_for %matmul[[8], [8], 4]
+    %tiled_linalg_op, %loop_i, %loop_j, %loop_k = transform.structured.tile_using_for %matmul tile_sizes [[8], [8], 4]
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.op<"scf.for">, !transform.op<"scf.for">)
 
     // Step 2: Vectorize.

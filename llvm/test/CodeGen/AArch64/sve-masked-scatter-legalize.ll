@@ -9,26 +9,26 @@ target triple = "aarch64-linux-gnu"
 define void @masked_scatter_nxv16i8(<vscale x 16 x i8> %data, ptr %base, <vscale x 16 x i8> %offsets, <vscale x 16 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_scatter_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    sunpklo z2.h, z1.b
 ; CHECK-NEXT:    uunpklo z4.h, z0.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    sunpkhi z1.h, z1.b
 ; CHECK-NEXT:    uunpkhi z0.h, z0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpklo p2.h, p1.b
+; CHECK-NEXT:    punpkhi p1.h, p1.b
 ; CHECK-NEXT:    sunpklo z3.s, z2.h
 ; CHECK-NEXT:    uunpklo z5.s, z4.h
 ; CHECK-NEXT:    sunpkhi z2.s, z2.h
-; CHECK-NEXT:    punpklo p2.h, p1.b
-; CHECK-NEXT:    punpkhi p1.h, p1.b
 ; CHECK-NEXT:    st1b { z5.s }, p2, [x0, z3.s, sxtw]
 ; CHECK-NEXT:    uunpkhi z3.s, z4.h
 ; CHECK-NEXT:    st1b { z3.s }, p1, [x0, z2.s, sxtw]
-; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    sunpklo z2.s, z1.h
-; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uunpklo z3.s, z0.h
 ; CHECK-NEXT:    sunpkhi z1.s, z1.h
 ; CHECK-NEXT:    uunpkhi z0.s, z0.h
+; CHECK-NEXT:    punpklo p1.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    st1b { z3.s }, p1, [x0, z2.s, sxtw]
 ; CHECK-NEXT:    st1b { z0.s }, p0, [x0, z1.s, sxtw]
 ; CHECK-NEXT:    ret
@@ -40,12 +40,12 @@ define void @masked_scatter_nxv16i8(<vscale x 16 x i8> %data, ptr %base, <vscale
 define void @masked_scatter_nxv8i16(<vscale x 8 x i16> %data, ptr %base, <vscale x 8 x i16> %offsets, <vscale x 8 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_scatter_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    sunpklo z2.s, z1.h
 ; CHECK-NEXT:    uunpklo z3.s, z0.h
-; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    sunpkhi z1.s, z1.h
 ; CHECK-NEXT:    uunpkhi z0.s, z0.h
+; CHECK-NEXT:    punpklo p1.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    st1h { z3.s }, p1, [x0, z2.s, sxtw #1]
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0, z1.s, sxtw #1]
 ; CHECK-NEXT:    ret
@@ -57,12 +57,12 @@ define void @masked_scatter_nxv8i16(<vscale x 8 x i16> %data, ptr %base, <vscale
 define void @masked_scatter_nxv8bf16(<vscale x 8 x bfloat> %data, ptr %base, <vscale x 8 x i16> %offsets, <vscale x 8 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_scatter_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    sunpklo z2.s, z1.h
 ; CHECK-NEXT:    uunpklo z3.s, z0.h
-; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    sunpkhi z1.s, z1.h
 ; CHECK-NEXT:    uunpkhi z0.s, z0.h
+; CHECK-NEXT:    punpklo p1.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    st1h { z3.s }, p1, [x0, z2.s, sxtw #1]
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0, z1.s, sxtw #1]
 ; CHECK-NEXT:    ret

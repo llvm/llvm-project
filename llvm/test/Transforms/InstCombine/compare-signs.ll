@@ -61,29 +61,29 @@ define <2 x i32> @test3vec(<2 x i32> %a, <2 x i32> %b) nounwind readnone {
   ret <2 x i32> %t3
 }
 
-define <2 x i32> @test3vec_undef1(<2 x i32> %a, <2 x i32> %b) nounwind readnone {
-; CHECK-LABEL: @test3vec_undef1(
+define <2 x i32> @test3vec_poison1(<2 x i32> %a, <2 x i32> %b) nounwind readnone {
+; CHECK-LABEL: @test3vec_poison1(
 ; CHECK-NEXT:    [[T2_UNSHIFTED:%.*]] = xor <2 x i32> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = icmp ult <2 x i32> [[T2_UNSHIFTED]], <i32 16777216, i32 16777216>
 ; CHECK-NEXT:    [[T3:%.*]] = zext <2 x i1> [[T2]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[T3]]
 ;
-  %t0 = lshr <2 x i32> %a, <i32 24, i32 undef>
+  %t0 = lshr <2 x i32> %a, <i32 24, i32 poison>
   %t1 = lshr <2 x i32> %b, <i32 24, i32 24>
   %t2 = icmp eq <2 x i32> %t0, %t1
   %t3 = zext <2 x i1> %t2 to <2 x i32>
   ret <2 x i32> %t3
 }
 
-define <2 x i32> @test3vec_undef2(<2 x i32> %a, <2 x i32> %b) nounwind readnone {
-; CHECK-LABEL: @test3vec_undef2(
+define <2 x i32> @test3vec_poison2(<2 x i32> %a, <2 x i32> %b) nounwind readnone {
+; CHECK-LABEL: @test3vec_poison2(
 ; CHECK-NEXT:    [[T2_UNSHIFTED:%.*]] = xor <2 x i32> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = icmp ult <2 x i32> [[T2_UNSHIFTED]], <i32 131072, i32 131072>
 ; CHECK-NEXT:    [[T3:%.*]] = zext <2 x i1> [[T2]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[T3]]
 ;
-  %t0 = lshr <2 x i32> %a, <i32 undef, i32 17>
-  %t1 = lshr <2 x i32> %b, <i32 undef, i32 17>
+  %t0 = lshr <2 x i32> %a, <i32 poison, i32 17>
+  %t1 = lshr <2 x i32> %b, <i32 poison, i32 17>
   %t2 = icmp eq <2 x i32> %t0, %t1
   %t3 = zext <2 x i1> %t2 to <2 x i32>
   ret <2 x i32> %t3
@@ -223,7 +223,7 @@ define <2 x i1> @shift_trunc_signbit_test_vec_uses(<2 x i17> %x, ptr %p1, ptr %p
 ; CHECK-LABEL: @shift_trunc_signbit_test_vec_uses(
 ; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i17> [[X:%.*]], <i17 4, i17 4>
 ; CHECK-NEXT:    store <2 x i17> [[SH]], ptr [[P1:%.*]], align 8
-; CHECK-NEXT:    [[TR:%.*]] = trunc <2 x i17> [[SH]] to <2 x i13>
+; CHECK-NEXT:    [[TR:%.*]] = trunc nuw <2 x i17> [[SH]] to <2 x i13>
 ; CHECK-NEXT:    store <2 x i13> [[TR]], ptr [[P2:%.*]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i17> [[X]], <i17 -1, i17 -1>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
@@ -255,7 +255,7 @@ define i1 @shift_trunc_wrong_shift(i32 %x) {
 define i1 @shift_trunc_wrong_cmp(i32 %x) {
 ; CHECK-LABEL: @shift_trunc_wrong_cmp(
 ; CHECK-NEXT:    [[SH:%.*]] = lshr i32 [[X:%.*]], 24
-; CHECK-NEXT:    [[TR:%.*]] = trunc i32 [[SH]] to i8
+; CHECK-NEXT:    [[TR:%.*]] = trunc nuw i32 [[SH]] to i8
 ; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[TR]], 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;

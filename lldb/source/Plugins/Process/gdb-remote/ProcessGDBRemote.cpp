@@ -448,20 +448,20 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
         DynamicRegisterInfo::Register reg_info;
 
         while (response.GetNameColonValue(name, value)) {
-          if (name.equals("name")) {
+          if (name == "name") {
             reg_info.name.SetString(value);
-          } else if (name.equals("alt-name")) {
+          } else if (name == "alt-name") {
             reg_info.alt_name.SetString(value);
-          } else if (name.equals("bitsize")) {
+          } else if (name == "bitsize") {
             if (!value.getAsInteger(0, reg_info.byte_size))
               reg_info.byte_size /= CHAR_BIT;
-          } else if (name.equals("offset")) {
+          } else if (name == "offset") {
             value.getAsInteger(0, reg_info.byte_offset);
-          } else if (name.equals("encoding")) {
+          } else if (name == "encoding") {
             const Encoding encoding = Args::StringToEncoding(value);
             if (encoding != eEncodingInvalid)
               reg_info.encoding = encoding;
-          } else if (name.equals("format")) {
+          } else if (name == "format") {
             if (!OptionArgParser::ToFormat(value.str().c_str(), reg_info.format, nullptr)
                     .Success())
               reg_info.format =
@@ -480,17 +480,17 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
                       .Case("vector-uint64", eFormatVectorOfUInt64)
                       .Case("vector-uint128", eFormatVectorOfUInt128)
                       .Default(eFormatInvalid);
-          } else if (name.equals("set")) {
+          } else if (name == "set") {
             reg_info.set_name.SetString(value);
-          } else if (name.equals("gcc") || name.equals("ehframe")) {
+          } else if (name == "gcc" || name == "ehframe") {
             value.getAsInteger(0, reg_info.regnum_ehframe);
-          } else if (name.equals("dwarf")) {
+          } else if (name == "dwarf") {
             value.getAsInteger(0, reg_info.regnum_dwarf);
-          } else if (name.equals("generic")) {
+          } else if (name == "generic") {
             reg_info.regnum_generic = Args::StringToGenericRegister(value);
-          } else if (name.equals("container-regs")) {
+          } else if (name == "container-regs") {
             SplitCommaSeparatedRegisterNumberString(value, reg_info.value_regs, 16);
-          } else if (name.equals("invalidate-regs")) {
+          } else if (name == "invalidate-regs") {
             SplitCommaSeparatedRegisterNumberString(value, reg_info.invalidate_regs, 16);
           }
         }
@@ -900,7 +900,7 @@ void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
   }
 
   AddressableBits addressable_bits = m_gdb_comm.GetAddressableBits();
-  addressable_bits.SetProcessMasks(*this);
+  SetAddressableBitMasks(addressable_bits);
 
   if (process_arch.IsValid()) {
     const ArchSpec &target_arch = GetTarget().GetArchitecture();
@@ -2337,7 +2337,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
       }
     }
 
-    addressable_bits.SetProcessMasks(*this);
+    SetAddressableBitMasks(addressable_bits);
 
     ThreadSP thread_sp = SetThreadStopInfo(
         tid, expedited_register_map, signo, thread_name, reason, description,
@@ -4179,21 +4179,134 @@ struct GdbServerTargetInfo {
   RegisterSetMap reg_set_map;
 };
 
-static std::vector<RegisterFlags::Field> ParseFlagsFields(XMLNode flags_node,
-                                                          unsigned size) {
+static FieldEnum::Enumerators ParseEnumEvalues(const XMLNode &enum_node) {
+  Log *log(GetLog(GDBRLog::Process));
+  // We will use the last instance of each value. Also we preserve the order
+  // of declaration in the XML, as it may not be numerical.
+  // For example, hardware may intially release with two states that softwware
+  // can read from a register field:
+  // 0 = startup, 1 = running
+  // If in a future hardware release, the designers added a pre-startup state:
+  // 0 = startup, 1 = running, 2 = pre-startup
+  // Now it makes more sense to list them in this logical order as opposed to
+  // numerical order:
+  // 2 = pre-startup, 1 = startup, 0 = startup
+  // This only matters for "register info" but let's trust what the server
+  // chose regardless.
+  std::map<uint64_t, FieldEnum::Enumerator> enumerators;
+
+  enum_node.ForEachChildElementWithName(
+      "evalue", [&enumerators, &log](const XMLNode &enumerator_node) {
+        std::optional<llvm::StringRef> name;
+        std::optional<uint64_t> value;
+
+        enumerator_node.ForEachAttribute(
+            [&name, &value, &log](const llvm::StringRef &attr_name,
+                                  const llvm::StringRef &attr_value) {
+              if (attr_name == "name") {
+                if (attr_value.size())
+                  name = attr_value;
+                else
+                  LLDB_LOG(log, "ProcessGDBRemote::ParseEnumEvalues "
+                                "Ignoring empty name in evalue");
+              } else if (attr_name == "value") {
+                uint64_t parsed_value = 0;
+                if (llvm::to_integer(attr_value, parsed_value))
+                  value = parsed_value;
+                else
+                  LLDB_LOG(log,
+                           "ProcessGDBRemote::ParseEnumEvalues "
+                           "Invalid value \"{0}\" in "
+                           "evalue",
+                           attr_value.data());
+              } else
+                LLDB_LOG(log,
+                         "ProcessGDBRemote::ParseEnumEvalues Ignoring "
+                         "unknown attribute "
+                         "\"{0}\" in evalue",
+                         attr_name.data());
+
+              // Keep walking attributes.
+              return true;
+            });
+
+        if (value && name)
+          enumerators.insert_or_assign(
+              *value, FieldEnum::Enumerator(*value, name->str()));
+
+        // Find all evalue elements.
+        return true;
+      });
+
+  FieldEnum::Enumerators final_enumerators;
+  for (auto [_, enumerator] : enumerators)
+    final_enumerators.push_back(enumerator);
+
+  return final_enumerators;
+}
+
+static void
+ParseEnums(XMLNode feature_node,
+           llvm::StringMap<std::unique_ptr<FieldEnum>> &registers_enum_types) {
+  Log *log(GetLog(GDBRLog::Process));
+
+  // The top level element is "<enum...".
+  feature_node.ForEachChildElementWithName(
+      "enum", [log, &registers_enum_types](const XMLNode &enum_node) {
+        std::string id;
+
+        enum_node.ForEachAttribute([&id](const llvm::StringRef &attr_name,
+                                         const llvm::StringRef &attr_value) {
+          if (attr_name == "id")
+            id = attr_value;
+
+          // There is also a "size" attribute that is supposed to be the size in
+          // bytes of the register this applies to. However:
+          // * LLDB doesn't need this information.
+          // * It  is difficult to verify because you have to wait until the
+          //   enum is applied to a field.
+          //
+          // So we will emit this attribute in XML for GDB's sake, but will not
+          // bother ingesting it.
+
+          // Walk all attributes.
+          return true;
+        });
+
+        if (!id.empty()) {
+          FieldEnum::Enumerators enumerators = ParseEnumEvalues(enum_node);
+          if (!enumerators.empty()) {
+            LLDB_LOG(log,
+                     "ProcessGDBRemote::ParseEnums Found enum type \"{0}\"",
+                     id);
+            registers_enum_types.insert_or_assign(
+                id, std::make_unique<FieldEnum>(id, enumerators));
+          }
+        }
+
+        // Find all <enum> elements.
+        return true;
+      });
+}
+
+static std::vector<RegisterFlags::Field> ParseFlagsFields(
+    XMLNode flags_node, unsigned size,
+    const llvm::StringMap<std::unique_ptr<FieldEnum>> &registers_enum_types) {
   Log *log(GetLog(GDBRLog::Process));
   const unsigned max_start_bit = size * 8 - 1;
 
   // Process the fields of this set of flags.
   std::vector<RegisterFlags::Field> fields;
-  flags_node.ForEachChildElementWithName("field", [&fields, max_start_bit,
-                                                   &log](const XMLNode
-                                                             &field_node) {
+  flags_node.ForEachChildElementWithName("field", [&fields, max_start_bit, &log,
+                                                   &registers_enum_types](
+                                                      const XMLNode
+                                                          &field_node) {
     std::optional<llvm::StringRef> name;
     std::optional<unsigned> start;
     std::optional<unsigned> end;
+    std::optional<llvm::StringRef> type;
 
-    field_node.ForEachAttribute([&name, &start, &end, max_start_bit,
+    field_node.ForEachAttribute([&name, &start, &end, &type, max_start_bit,
                                  &log](const llvm::StringRef &attr_name,
                                        const llvm::StringRef &attr_value) {
       // Note that XML in general requires that each of these attributes only
@@ -4240,8 +4353,7 @@ static std::vector<RegisterFlags::Field> ParseFlagsFields(XMLNode flags_node,
                    attr_value.data());
         }
       } else if (attr_name == "type") {
-        // Type is a known attribute but we do not currently use it and it is
-        // not required.
+        type = attr_value;
       } else {
         LLDB_LOG(
             log,
@@ -4254,14 +4366,55 @@ static std::vector<RegisterFlags::Field> ParseFlagsFields(XMLNode flags_node,
     });
 
     if (name && start && end) {
-      if (*start > *end) {
+      if (*start > *end)
         LLDB_LOG(
             log,
             "ProcessGDBRemote::ParseFlagsFields Start {0} > end {1} in field "
             "\"{2}\", ignoring",
             *start, *end, name->data());
-      } else {
-        fields.push_back(RegisterFlags::Field(name->str(), *start, *end));
+      else {
+        if (RegisterFlags::Field::GetSizeInBits(*start, *end) > 64)
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseFlagsFields Ignoring field \"{2}\" "
+                   "that has "
+                   "size > 64 bits, this is not supported",
+                   name->data());
+        else {
+          // A field's type may be set to the name of an enum type.
+          const FieldEnum *enum_type = nullptr;
+          if (type && !type->empty()) {
+            auto found = registers_enum_types.find(*type);
+            if (found != registers_enum_types.end()) {
+              enum_type = found->second.get();
+
+              // No enumerator can exceed the range of the field itself.
+              uint64_t max_value =
+                  RegisterFlags::Field::GetMaxValue(*start, *end);
+              for (const auto &enumerator : enum_type->GetEnumerators()) {
+                if (enumerator.m_value > max_value) {
+                  enum_type = nullptr;
+                  LLDB_LOG(
+                      log,
+                      "ProcessGDBRemote::ParseFlagsFields In enum \"{0}\" "
+                      "evalue \"{1}\" with value {2} exceeds the maximum value "
+                      "of field \"{3}\" ({4}), ignoring enum",
+                      type->data(), enumerator.m_name, enumerator.m_value,
+                      name->data(), max_value);
+                  break;
+                }
+              }
+            } else {
+              LLDB_LOG(log,
+                       "ProcessGDBRemote::ParseFlagsFields Could not find type "
+                       "\"{0}\" "
+                       "for field \"{1}\", ignoring",
+                       type->data(), name->data());
+            }
+          }
+
+          fields.push_back(
+              RegisterFlags::Field(name->str(), *start, *end, enum_type));
+        }
       }
     }
 
@@ -4272,12 +4425,14 @@ static std::vector<RegisterFlags::Field> ParseFlagsFields(XMLNode flags_node,
 
 void ParseFlags(
     XMLNode feature_node,
-    llvm::StringMap<std::unique_ptr<RegisterFlags>> &registers_flags_types) {
+    llvm::StringMap<std::unique_ptr<RegisterFlags>> &registers_flags_types,
+    const llvm::StringMap<std::unique_ptr<FieldEnum>> &registers_enum_types) {
   Log *log(GetLog(GDBRLog::Process));
 
   feature_node.ForEachChildElementWithName(
       "flags",
-      [&log, &registers_flags_types](const XMLNode &flags_node) -> bool {
+      [&log, &registers_flags_types,
+       &registers_enum_types](const XMLNode &flags_node) -> bool {
         LLDB_LOG(log, "ProcessGDBRemote::ParseFlags Found flags node \"{0}\"",
                  flags_node.GetAttributeValue("id").c_str());
 
@@ -4310,7 +4465,7 @@ void ParseFlags(
         if (id && size) {
           // Process the fields of this set of flags.
           std::vector<RegisterFlags::Field> fields =
-              ParseFlagsFields(flags_node, *size);
+              ParseFlagsFields(flags_node, *size, registers_enum_types);
           if (fields.size()) {
             // Sort so that the fields with the MSBs are first.
             std::sort(fields.rbegin(), fields.rend());
@@ -4375,15 +4530,21 @@ void ParseFlags(
 bool ParseRegisters(
     XMLNode feature_node, GdbServerTargetInfo &target_info,
     std::vector<DynamicRegisterInfo::Register> &registers,
-    llvm::StringMap<std::unique_ptr<RegisterFlags>> &registers_flags_types) {
+    llvm::StringMap<std::unique_ptr<RegisterFlags>> &registers_flags_types,
+    llvm::StringMap<std::unique_ptr<FieldEnum>> &registers_enum_types) {
   if (!feature_node)
     return false;
 
   Log *log(GetLog(GDBRLog::Process));
 
-  ParseFlags(feature_node, registers_flags_types);
+  // Enums first because they are referenced by fields in the flags.
+  ParseEnums(feature_node, registers_enum_types);
+  for (const auto &enum_type : registers_enum_types)
+    enum_type.second->DumpToLog(log);
+
+  ParseFlags(feature_node, registers_flags_types, registers_enum_types);
   for (const auto &flags : registers_flags_types)
-    flags.second->log(log);
+    flags.second->DumpToLog(log);
 
   feature_node.ForEachChildElementWithName(
       "reg",
@@ -4643,7 +4804,7 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
     if (arch_to_use.IsValid()) {
       for (auto &feature_node : feature_nodes) {
         ParseRegisters(feature_node, target_info, registers,
-                       m_registers_flags_types);
+                       m_registers_flags_types, m_registers_enum_types);
       }
 
       for (const auto &include : target_info.includes) {
@@ -4708,16 +4869,19 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
   if (!m_gdb_comm.GetQXferFeaturesReadSupported())
     return false;
 
-  // This holds register flags information for the whole of target.xml.
+  // These hold register type information for the whole of target.xml.
   // target.xml may include further documents that
   // GetGDBServerRegisterInfoXMLAndProcess will recurse to fetch and process.
   // That's why we clear the cache here, and not in
   // GetGDBServerRegisterInfoXMLAndProcess. To prevent it being cleared on every
   // include read.
   m_registers_flags_types.clear();
+  m_registers_enum_types.clear();
   std::vector<DynamicRegisterInfo::Register> registers;
   if (GetGDBServerRegisterInfoXMLAndProcess(arch_to_use, "target.xml",
-                                            registers))
+                                            registers) &&
+      // Target XML is not required to include register information.
+      !registers.empty())
     AddRemoteRegisters(registers, arch_to_use);
 
   return m_register_info_sp->GetNumRegisters() > 0;
@@ -5082,7 +5246,7 @@ std::string ProcessGDBRemote::HarmonizeThreadIdsForProfileData(
       llvm::StringRef usec_name, usec_value;
       uint32_t input_file_pos = profileDataExtractor.GetFilePos();
       if (profileDataExtractor.GetNameColonValue(usec_name, usec_value)) {
-        if (usec_name.equals("thread_used_usec")) {
+        if (usec_name == "thread_used_usec") {
           has_used_usec = true;
           usec_value.getAsInteger(0, curr_used_usec);
         } else {

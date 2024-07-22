@@ -25,6 +25,7 @@ typedef Empty EmptyArMB[1][2];
 typedef int Int;
 typedef Int IntAr[10];
 typedef Int IntArNB[];
+typedef Int IntArZero[0];
 class Statics { static int priv; static NonPOD np; };
 union EmptyUnion {};
 union IncompleteUnion; // expected-note {{forward declaration of 'IncompleteUnion'}}
@@ -685,6 +686,7 @@ void is_array()
 {
   static_assert(__is_array(IntAr));
   static_assert(__is_array(IntArNB));
+  static_assert(!__is_array(IntArZero));
   static_assert(__is_array(UnionAr));
 
   static_assert(!__is_array(void));
@@ -714,6 +716,7 @@ void is_array()
 void is_bounded_array(int n) {
   static_assert(__is_bounded_array(IntAr));
   static_assert(!__is_bounded_array(IntArNB));
+  static_assert(!__is_bounded_array(IntArZero));
   static_assert(__is_bounded_array(UnionAr));
 
   static_assert(!__is_bounded_array(void));
@@ -740,12 +743,13 @@ void is_bounded_array(int n) {
   static_assert(!__is_bounded_array(cvoid *));
 
   int t32[n];
-  (void)__is_bounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported for '__is_bounded_array'}}
+  (void)__is_bounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported in '__is_bounded_array'}}
 }
 
 void is_unbounded_array(int n) {
   static_assert(!__is_unbounded_array(IntAr));
   static_assert(__is_unbounded_array(IntArNB));
+  static_assert(!__is_unbounded_array(IntArZero));
   static_assert(!__is_unbounded_array(UnionAr));
 
   static_assert(!__is_unbounded_array(void));
@@ -772,7 +776,7 @@ void is_unbounded_array(int n) {
   static_assert(!__is_unbounded_array(cvoid *));
 
   int t32[n];
-  (void)__is_unbounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported for '__is_unbounded_array'}}
+  (void)__is_unbounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported in '__is_unbounded_array'}}
 }
 
 void is_referenceable() {
@@ -1622,7 +1626,7 @@ enum class EnumClassLayout {};
 enum EnumForward : int;
 enum class EnumClassForward;
 
-struct CStructIncomplete;
+struct CStructIncomplete; // #CStructIncomplete
 
 struct CStructNested {
   int a;
@@ -1719,94 +1723,214 @@ struct StructWithAnonUnion3 {
   } u;
 };
 
+struct CStructWithArrayAtTheEnd {
+  int a;
+  int b[4];
+};
+
+struct CStructWithFMA {
+  int c;
+  int d[];
+};
+
+struct CStructWithFMA2 {
+  int e;
+  int f[];
+};
 
 void is_layout_compatible(int n)
 {
-  static_assert(__is_layout_compatible(void, void), "");
-  static_assert(!__is_layout_compatible(void, int), "");
-  static_assert(__is_layout_compatible(void, const void), "");
-  static_assert(__is_layout_compatible(void, volatile void), "");
-  static_assert(__is_layout_compatible(const int, volatile int), "");
-  static_assert(__is_layout_compatible(int, int), "");
-  static_assert(__is_layout_compatible(int, const int), "");
-  static_assert(__is_layout_compatible(int, volatile int), "");
-  static_assert(__is_layout_compatible(const int, volatile int), "");
-  static_assert(__is_layout_compatible(int *, int * __restrict), "");
+  static_assert(__is_layout_compatible(void, void));
+  static_assert(!__is_layout_compatible(void, int));
+  static_assert(__is_layout_compatible(void, const void));
+  static_assert(__is_layout_compatible(void, volatile void));
+  static_assert(__is_layout_compatible(const void, volatile void));
+  static_assert(__is_layout_compatible(int, int));
+  static_assert(__is_layout_compatible(int, const int));
+  static_assert(__is_layout_compatible(int, volatile int));
+  static_assert(__is_layout_compatible(const int, volatile int));
+  static_assert(__is_layout_compatible(int *, int * __restrict));
   // Note: atomic qualification matters for layout compatibility.
-  static_assert(!__is_layout_compatible(int, _Atomic int), "");
-  static_assert(__is_layout_compatible(_Atomic(int), _Atomic int), "");
-  static_assert(!__is_layout_compatible(int, unsigned int), "");
-  static_assert(!__is_layout_compatible(char, unsigned char), "");
-  static_assert(!__is_layout_compatible(char, signed char), "");
-  static_assert(!__is_layout_compatible(unsigned char, signed char), "");
-  static_assert(__is_layout_compatible(int[], int[]), "");
-  static_assert(__is_layout_compatible(int[2], int[2]), "");
-  static_assert(!__is_layout_compatible(int[n], int[2]), ""); // FIXME: VLAs should be rejected
-  static_assert(!__is_layout_compatible(int[n], int[n]), ""); // FIXME: VLAs should be rejected
-  static_assert(__is_layout_compatible(int&, int&), "");
-  static_assert(!__is_layout_compatible(int&, char&), "");
-  static_assert(__is_layout_compatible(void(int), void(int)), "");
-  static_assert(!__is_layout_compatible(void(int), void(char)), "");
-  static_assert(__is_layout_compatible(void(&)(int), void(&)(int)), "");
-  static_assert(!__is_layout_compatible(void(&)(int), void(&)(char)), "");
-  static_assert(__is_layout_compatible(void(*)(int), void(*)(int)), "");
-  static_assert(!__is_layout_compatible(void(*)(int), void(*)(char)), "");
+  static_assert(!__is_layout_compatible(int, _Atomic int));
+  static_assert(__is_layout_compatible(_Atomic(int), _Atomic int));
+  static_assert(!__is_layout_compatible(int, unsigned int));
+  static_assert(!__is_layout_compatible(char, unsigned char));
+  static_assert(!__is_layout_compatible(char, signed char));
+  static_assert(!__is_layout_compatible(unsigned char, signed char));
+  static_assert(__is_layout_compatible(int[], int[]));
+  static_assert(__is_layout_compatible(int[2], int[2]));
+  static_assert(!__is_layout_compatible(int[n], int[2]));
+  // expected-error@-1 {{variable length arrays are not supported in '__is_layout_compatible'}}
+  static_assert(!__is_layout_compatible(int[n], int[n]));
+  // expected-error@-1 {{variable length arrays are not supported in '__is_layout_compatible'}}
+  // expected-error@-2 {{variable length arrays are not supported in '__is_layout_compatible'}}
+  static_assert(__is_layout_compatible(int&, int&));
+  static_assert(!__is_layout_compatible(int&, char&));
+  static_assert(__is_layout_compatible(void(int), void(int)));
+  static_assert(!__is_layout_compatible(void(int), void(char)));
+  static_assert(__is_layout_compatible(void(&)(int), void(&)(int)));
+  static_assert(!__is_layout_compatible(void(&)(int), void(&)(char)));
+  static_assert(__is_layout_compatible(void(*)(int), void(*)(int)));
+  static_assert(!__is_layout_compatible(void(*)(int), void(*)(char)));
   using function_type = void();
   using function_type2 = void(char);
-  static_assert(__is_layout_compatible(const function_type, const function_type), "");
+  static_assert(__is_layout_compatible(const function_type, const function_type));
   // expected-warning@-1 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
   // expected-warning@-2 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
-  static_assert(__is_layout_compatible(function_type, const function_type), "");
+  static_assert(__is_layout_compatible(function_type, const function_type));
   // expected-warning@-1 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
-  static_assert(!__is_layout_compatible(const function_type, const function_type2), "");
+  static_assert(!__is_layout_compatible(const function_type, const function_type2));
   // expected-warning@-1 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
   // expected-warning@-2 {{'const' qualifier on function type 'function_type2' (aka 'void (char)') has no effect}}
-  static_assert(__is_layout_compatible(CStruct, CStruct2), "");
-  static_assert(__is_layout_compatible(CStruct, const CStruct2), "");
-  static_assert(__is_layout_compatible(CStruct, volatile CStruct2), "");
-  static_assert(__is_layout_compatible(const CStruct, volatile CStruct2), "");
-  static_assert(__is_layout_compatible(CEmptyStruct, CEmptyStruct2), "");
-  static_assert(__is_layout_compatible(CppEmptyStruct, CppEmptyStruct2), "");
-  static_assert(__is_layout_compatible(CppStructStandard, CppStructStandard2), "");
-  static_assert(!__is_layout_compatible(CppStructNonStandardByBase, CppStructNonStandardByBase2), "");
-  static_assert(!__is_layout_compatible(CppStructNonStandardByVirt, CppStructNonStandardByVirt2), "");
-  static_assert(!__is_layout_compatible(CppStructNonStandardByMemb, CppStructNonStandardByMemb2), "");
-  static_assert(!__is_layout_compatible(CppStructNonStandardByProt, CppStructNonStandardByProt2), "");
-  static_assert(!__is_layout_compatible(CppStructNonStandardByVirtBase, CppStructNonStandardByVirtBase2), "");
-  static_assert(!__is_layout_compatible(CppStructNonStandardBySameBase, CppStructNonStandardBySameBase2), "");
-  static_assert(!__is_layout_compatible(CppStructNonStandardBy2ndVirtBase, CppStructNonStandardBy2ndVirtBase2), "");
-  static_assert(__is_layout_compatible(CStruct, CStructWithQualifiers), "");
-  static_assert(__is_layout_compatible(CStruct, CStructNoUniqueAddress) != bool(__has_cpp_attribute(no_unique_address)), "");
-  static_assert(__is_layout_compatible(CStructNoUniqueAddress, CStructNoUniqueAddress2) != bool(__has_cpp_attribute(no_unique_address)), "");
-  static_assert(__is_layout_compatible(CStruct, CStructAlignment), "");
-  static_assert(!__is_layout_compatible(CStruct, CStructAlignedMembers), "");
-  static_assert(__is_layout_compatible(UnionNoOveralignedMembers, UnionWithOveralignedMembers), "");
-  static_assert(__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds), "");
-  static_assert(__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds2), "");
-  static_assert(!__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds3), "");
-  static_assert(!__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds4), "");
-  static_assert(__is_layout_compatible(int CStruct2::*, int CStruct2::*), "");
-  static_assert(!__is_layout_compatible(int CStruct2::*, char CStruct2::*), "");
-  static_assert(__is_layout_compatible(void(CStruct2::*)(int), void(CStruct2::*)(int)), "");
-  static_assert(!__is_layout_compatible(void(CStruct2::*)(int), void(CStruct2::*)(char)), "");
-  static_assert(__is_layout_compatible(CStructNested, CStructNested2), "");
-  static_assert(__is_layout_compatible(UnionLayout, UnionLayout), "");
-  static_assert(!__is_layout_compatible(UnionLayout, UnionLayout2), "");
-  static_assert(!__is_layout_compatible(UnionLayout, UnionLayout3), "");
-  static_assert(!__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion2), "");
-  static_assert(!__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion3), "");
-  static_assert(__is_layout_compatible(EnumLayout, EnumClassLayout), "");
-  static_assert(__is_layout_compatible(EnumForward, EnumForward), "");
-  static_assert(__is_layout_compatible(EnumForward, EnumClassForward), "");
-  // Layout compatibility for enums might be relaxed in the future. See https://github.com/cplusplus/CWG/issues/39#issuecomment-1184791364
-  static_assert(!__is_layout_compatible(EnumLayout, int), "");
-  static_assert(!__is_layout_compatible(EnumClassLayout, int), "");
-  static_assert(!__is_layout_compatible(EnumForward, int), "");
-  static_assert(!__is_layout_compatible(EnumClassForward, int), "");
-  // FIXME: the following should be rejected (array of unknown bound and void are the only allowed incomplete types)
-  static_assert(__is_layout_compatible(CStructIncomplete, CStructIncomplete), ""); 
-  static_assert(!__is_layout_compatible(CStruct, CStructIncomplete), "");
-  static_assert(__is_layout_compatible(CStructIncomplete[2], CStructIncomplete[2]), "");
+  static_assert(__is_layout_compatible(CStruct, CStruct2));
+  static_assert(__is_layout_compatible(CStruct, const CStruct2));
+  static_assert(__is_layout_compatible(CStruct, volatile CStruct2));
+  static_assert(__is_layout_compatible(const CStruct, volatile CStruct2));
+  static_assert(__is_layout_compatible(CEmptyStruct, CEmptyStruct2));
+  static_assert(__is_layout_compatible(CppEmptyStruct, CppEmptyStruct2));
+  static_assert(__is_layout_compatible(CppStructStandard, CppStructStandard2));
+  static_assert(!__is_layout_compatible(CppStructNonStandardByBase, CppStructNonStandardByBase2));
+  static_assert(!__is_layout_compatible(CppStructNonStandardByVirt, CppStructNonStandardByVirt2));
+  static_assert(!__is_layout_compatible(CppStructNonStandardByMemb, CppStructNonStandardByMemb2));
+  static_assert(!__is_layout_compatible(CppStructNonStandardByProt, CppStructNonStandardByProt2));
+  static_assert(!__is_layout_compatible(CppStructNonStandardByVirtBase, CppStructNonStandardByVirtBase2));
+  static_assert(!__is_layout_compatible(CppStructNonStandardBySameBase, CppStructNonStandardBySameBase2));
+  static_assert(!__is_layout_compatible(CppStructNonStandardBy2ndVirtBase, CppStructNonStandardBy2ndVirtBase2));
+  static_assert(__is_layout_compatible(CStruct, CStructWithQualifiers));
+  static_assert(__is_layout_compatible(CStruct, CStructNoUniqueAddress) != bool(__has_cpp_attribute(no_unique_address)));
+  static_assert(__is_layout_compatible(CStructNoUniqueAddress, CStructNoUniqueAddress2) != bool(__has_cpp_attribute(no_unique_address)));
+  static_assert(__is_layout_compatible(CStruct, CStructAlignment));
+  static_assert(!__is_layout_compatible(CStruct, CStructAlignedMembers));
+  static_assert(__is_layout_compatible(UnionNoOveralignedMembers, UnionWithOveralignedMembers));
+  static_assert(__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds));
+  static_assert(__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds2));
+  static_assert(!__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds3));
+  static_assert(!__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds4));
+  static_assert(__is_layout_compatible(int CStruct2::*, int CStruct2::*));
+  static_assert(!__is_layout_compatible(int CStruct2::*, char CStruct2::*));
+  static_assert(__is_layout_compatible(void(CStruct2::*)(int), void(CStruct2::*)(int)));
+  static_assert(!__is_layout_compatible(void(CStruct2::*)(int), void(CStruct2::*)(char)));
+  static_assert(__is_layout_compatible(CStructNested, CStructNested2));
+  static_assert(__is_layout_compatible(UnionLayout, UnionLayout));
+  static_assert(!__is_layout_compatible(UnionLayout, UnionLayout2));
+  static_assert(!__is_layout_compatible(UnionLayout, UnionLayout3));
+  static_assert(!__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion2));
+  static_assert(!__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion3));
+  static_assert(__is_layout_compatible(EnumLayout, EnumClassLayout));
+  static_assert(__is_layout_compatible(EnumForward, EnumForward));
+  static_assert(__is_layout_compatible(EnumForward, EnumClassForward));
+  static_assert(__is_layout_compatible(CStructIncomplete, CStructIncomplete));
+  // expected-error@-1 {{incomplete type 'CStructIncomplete' where a complete type is required}}
+  //   expected-note@#CStructIncomplete {{forward declaration of 'CStructIncomplete'}}
+  // expected-error@-3 {{incomplete type 'CStructIncomplete' where a complete type is required}}
+  //   expected-note@#CStructIncomplete {{forward declaration of 'CStructIncomplete'}}
+  static_assert(!__is_layout_compatible(CStruct, CStructIncomplete));
+  // expected-error@-1 {{incomplete type 'CStructIncomplete' where a complete type is required}}
+  //   expected-note@#CStructIncomplete {{forward declaration of 'CStructIncomplete'}}
+  static_assert(__is_layout_compatible(CStructIncomplete[2], CStructIncomplete[2]));
+  // expected-error@-1 {{incomplete type 'CStructIncomplete[2]' where a complete type is required}}
+  //   expected-note@#CStructIncomplete {{forward declaration of 'CStructIncomplete'}}
+  // expected-error@-3 {{incomplete type 'CStructIncomplete[2]' where a complete type is required}}
+  //   expected-note@#CStructIncomplete {{forward declaration of 'CStructIncomplete'}}
+  static_assert(__is_layout_compatible(CStructIncomplete[], CStructIncomplete[]));
+  static_assert(!__is_layout_compatible(CStructWithArrayAtTheEnd, CStructWithFMA));
+  static_assert(__is_layout_compatible(CStructWithFMA, CStructWithFMA));
+  static_assert(__is_layout_compatible(CStructWithFMA, CStructWithFMA2));
+  // Layout compatibility rules for enums might be relaxed in the future. See https://github.com/cplusplus/CWG/issues/39#issuecomment-1184791364
+  static_assert(!__is_layout_compatible(EnumLayout, int));
+  static_assert(!__is_layout_compatible(EnumClassLayout, int));
+  static_assert(!__is_layout_compatible(EnumForward, int));
+  static_assert(!__is_layout_compatible(EnumClassForward, int));
+}
+
+namespace IPIBO {
+struct Base {};
+struct Base2 {};
+struct Base3 : Base {};
+struct Base3Virtual : virtual Base {};
+struct Derived : Base {};
+struct DerivedIndirect : Base3 {};
+struct DerivedMultiple : Base, Base2 {};
+struct DerivedAmbiguous : Base, Base3 {};
+/* expected-warning@-1 {{direct base 'Base' is inaccessible due to ambiguity:
+    struct IPIBO::DerivedAmbiguous -> Base
+    struct IPIBO::DerivedAmbiguous -> Base3 -> Base}} */
+struct DerivedPrivate : private Base {};
+struct DerivedVirtual : virtual Base {};
+
+union Union {};
+union UnionIncomplete;
+struct StructIncomplete; // #StructIncomplete
+
+void is_pointer_interconvertible_base_of(int n)
+{
+  static_assert(__is_pointer_interconvertible_base_of(Base, Derived));
+  static_assert(!__is_pointer_interconvertible_base_of(Base2, Derived));
+  static_assert(__is_pointer_interconvertible_base_of(Base, DerivedIndirect));
+  static_assert(__is_pointer_interconvertible_base_of(Base, DerivedMultiple));
+  static_assert(__is_pointer_interconvertible_base_of(Base2, DerivedMultiple));
+  static_assert(!__is_pointer_interconvertible_base_of(Base3, DerivedMultiple));
+  static_assert(!__is_pointer_interconvertible_base_of(Base, DerivedAmbiguous));
+  static_assert(__is_pointer_interconvertible_base_of(Base, DerivedPrivate));
+  static_assert(!__is_pointer_interconvertible_base_of(Base, DerivedVirtual));
+  static_assert(!__is_pointer_interconvertible_base_of(Union, Union));
+  static_assert(!__is_pointer_interconvertible_base_of(UnionIncomplete, UnionIncomplete));
+  static_assert(__is_pointer_interconvertible_base_of(StructIncomplete, StructIncomplete));
+  static_assert(__is_pointer_interconvertible_base_of(StructIncomplete, const StructIncomplete));
+  static_assert(__is_pointer_interconvertible_base_of(StructIncomplete, volatile StructIncomplete));
+  static_assert(__is_pointer_interconvertible_base_of(const StructIncomplete, volatile StructIncomplete));
+  static_assert(!__is_pointer_interconvertible_base_of(StructIncomplete, Derived));
+  static_assert(!__is_pointer_interconvertible_base_of(Base, StructIncomplete));
+  // expected-error@-1 {{incomplete type 'StructIncomplete' where a complete type is required}}
+  //   expected-note@#StructIncomplete {{forward declaration of 'IPIBO::StructIncomplete'}}
+  static_assert(!__is_pointer_interconvertible_base_of(CStruct2, CppStructNonStandardByBase2));
+  static_assert(!__is_pointer_interconvertible_base_of(void, void));
+  static_assert(!__is_pointer_interconvertible_base_of(void, int));
+  static_assert(!__is_pointer_interconvertible_base_of(void, const void));
+  static_assert(!__is_pointer_interconvertible_base_of(void, volatile void));
+  static_assert(!__is_pointer_interconvertible_base_of(const void, volatile void));
+  static_assert(!__is_pointer_interconvertible_base_of(int, int));
+  static_assert(!__is_pointer_interconvertible_base_of(int, const int));
+  static_assert(!__is_pointer_interconvertible_base_of(int, volatile int));
+  static_assert(!__is_pointer_interconvertible_base_of(const int, volatile int));
+  static_assert(!__is_pointer_interconvertible_base_of(int *, int * __restrict));
+  static_assert(!__is_pointer_interconvertible_base_of(int, _Atomic int));
+  static_assert(!__is_pointer_interconvertible_base_of(_Atomic(int), _Atomic int));
+  static_assert(!__is_pointer_interconvertible_base_of(int, unsigned int));
+  static_assert(!__is_pointer_interconvertible_base_of(char, unsigned char));
+  static_assert(!__is_pointer_interconvertible_base_of(char, signed char));
+  static_assert(!__is_pointer_interconvertible_base_of(unsigned char, signed char));
+  using function_type = void();
+  using function_type2 = void(char);
+  static_assert(!__is_pointer_interconvertible_base_of(const function_type, const function_type));
+  // expected-warning@-1 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
+  // expected-warning@-2 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
+  static_assert(!__is_pointer_interconvertible_base_of(function_type, const function_type));
+  // expected-warning@-1 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
+  static_assert(!__is_pointer_interconvertible_base_of(const function_type, const function_type2));
+  // expected-warning@-1 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
+  // expected-warning@-2 {{'const' qualifier on function type 'function_type2' (aka 'void (char)') has no effect}}
+  static_assert(!__is_pointer_interconvertible_base_of(int CStruct2::*, int CStruct2::*));
+  static_assert(!__is_pointer_interconvertible_base_of(int CStruct2::*, char CStruct2::*));
+  static_assert(!__is_pointer_interconvertible_base_of(void(CStruct2::*)(int), void(CStruct2::*)(int)));
+  static_assert(!__is_pointer_interconvertible_base_of(void(CStruct2::*)(int), void(CStruct2::*)(char)));
+  static_assert(!__is_pointer_interconvertible_base_of(int[], int[]));
+  static_assert(!__is_pointer_interconvertible_base_of(int[], double[]));
+  static_assert(!__is_pointer_interconvertible_base_of(int[2], int[2]));
+  static_assert(!__is_pointer_interconvertible_base_of(int[n], int[2]));
+  // expected-error@-1 {{variable length arrays are not supported in '__is_pointer_interconvertible_base_of'}}
+  static_assert(!__is_pointer_interconvertible_base_of(int[n], int[n]));
+  // expected-error@-1 {{variable length arrays are not supported in '__is_pointer_interconvertible_base_of'}}
+  // expected-error@-2 {{variable length arrays are not supported in '__is_pointer_interconvertible_base_of'}}
+  static_assert(!__is_pointer_interconvertible_base_of(int&, int&));
+  static_assert(!__is_pointer_interconvertible_base_of(int&, char&));
+  static_assert(!__is_pointer_interconvertible_base_of(void(int), void(int)));
+  static_assert(!__is_pointer_interconvertible_base_of(void(int), void(char)));
+  static_assert(!__is_pointer_interconvertible_base_of(void(&)(int), void(&)(int)));
+  static_assert(!__is_pointer_interconvertible_base_of(void(&)(int), void(&)(char)));
+  static_assert(!__is_pointer_interconvertible_base_of(void(*)(int), void(*)(int)));
+  static_assert(!__is_pointer_interconvertible_base_of(void(*)(int), void(*)(char)));
+}
 }
 
 void is_signed()
@@ -2389,6 +2513,20 @@ void is_convertible()
   static_assert(__is_convertible(FloatWrapper, IntWrapper));
   static_assert(__is_convertible(FloatWrapper, float));
   static_assert(__is_convertible(float, FloatWrapper));
+  static_assert(__is_convertible(IntWrapper, IntWrapper&&));
+  static_assert(__is_convertible(IntWrapper, const IntWrapper&));
+  static_assert(__is_convertible(IntWrapper, int&&));
+  static_assert(__is_convertible(IntWrapper, const int&));
+  static_assert(__is_convertible(int, IntWrapper&&));
+  static_assert(__is_convertible(int, const IntWrapper&));
+  static_assert(__is_convertible(IntWrapper, FloatWrapper&&));
+  static_assert(__is_convertible(IntWrapper, const FloatWrapper&));
+  static_assert(__is_convertible(FloatWrapper, IntWrapper&&));
+  static_assert(__is_convertible(FloatWrapper, const IntWrapper&&));
+  static_assert(__is_convertible(FloatWrapper, float&&));
+  static_assert(__is_convertible(FloatWrapper, const float&));
+  static_assert(__is_convertible(float, FloatWrapper&&));
+  static_assert(__is_convertible(float, const FloatWrapper&));
 }
 
 void is_nothrow_convertible()
@@ -2401,6 +2539,20 @@ void is_nothrow_convertible()
   static_assert(!__is_nothrow_convertible(FloatWrapper, IntWrapper));
   static_assert(!__is_nothrow_convertible(FloatWrapper, float));
   static_assert(__is_nothrow_convertible(float, FloatWrapper));
+  static_assert(__is_nothrow_convertible(IntWrapper, IntWrapper&&));
+  static_assert(__is_nothrow_convertible(IntWrapper, const IntWrapper&));
+  static_assert(__is_nothrow_convertible(IntWrapper, int&&));
+  static_assert(__is_nothrow_convertible(IntWrapper, const int&));
+  static_assert(!__is_nothrow_convertible(int, IntWrapper&&));
+  static_assert(!__is_nothrow_convertible(int, const IntWrapper&));
+  static_assert(!__is_nothrow_convertible(IntWrapper, FloatWrapper&&));
+  static_assert(!__is_nothrow_convertible(IntWrapper, const FloatWrapper&));
+  static_assert(!__is_nothrow_convertible(FloatWrapper, IntWrapper&&));
+  static_assert(!__is_nothrow_convertible(FloatWrapper, const IntWrapper&));
+  static_assert(!__is_nothrow_convertible(FloatWrapper, float&&));
+  static_assert(!__is_nothrow_convertible(FloatWrapper, const float&));
+  static_assert(__is_nothrow_convertible(float, FloatWrapper&&));
+  static_assert(__is_nothrow_convertible(float, const FloatWrapper&));
 }
 
 struct FromInt { FromInt(int); };
@@ -2760,6 +2912,12 @@ struct ConvertsToRef {
   operator RefType() const { return static_cast<RefType>(obj); }
   mutable T obj = 42;
 };
+template <class T, class RefType = T &>
+class ConvertsToRefPrivate {
+  operator RefType() const { return static_cast<RefType>(obj); }
+  mutable T obj = 42;
+};
+
 
 void reference_binds_to_temporary_checks() {
   static_assert(!(__reference_binds_to_temporary(int &, int &)));
@@ -2789,12 +2947,25 @@ void reference_binds_to_temporary_checks() {
 
   static_assert((__is_constructible(int const &, LongRef)));
   static_assert((__reference_binds_to_temporary(int const &, LongRef)));
+  static_assert(!__reference_binds_to_temporary(int const &, ConvertsToRefPrivate<long, long &>));
+
 
   // Test that it doesn't accept non-reference types as input.
   static_assert(!(__reference_binds_to_temporary(int, long)));
 
   static_assert((__reference_binds_to_temporary(const int &, long)));
 }
+
+
+struct ExplicitConversionRvalueRef {
+    operator int();
+    explicit operator int&&();
+};
+
+struct ExplicitConversionRef {
+    operator int();
+    explicit operator int&();
+};
 
 void reference_constructs_from_temporary_checks() {
   static_assert(!__reference_constructs_from_temporary(int &, int &));
@@ -2825,6 +2996,8 @@ void reference_constructs_from_temporary_checks() {
 
   static_assert(__is_constructible(int const &, LongRef));
   static_assert(__reference_constructs_from_temporary(int const &, LongRef));
+  static_assert(!__reference_constructs_from_temporary(int const &, ConvertsToRefPrivate<long, long &>));
+
 
   // Test that it doesn't accept non-reference types as input.
   static_assert(!__reference_constructs_from_temporary(int, long));
@@ -2839,6 +3012,65 @@ void reference_constructs_from_temporary_checks() {
   static_assert(!__reference_constructs_from_temporary(const int&, int&&));
   static_assert(__reference_constructs_from_temporary(int&&, long&&));
   static_assert(__reference_constructs_from_temporary(int&&, long));
+
+
+  static_assert(!__reference_constructs_from_temporary(int&, ExplicitConversionRef));
+  static_assert(!__reference_constructs_from_temporary(const int&, ExplicitConversionRef));
+  static_assert(!__reference_constructs_from_temporary(int&&, ExplicitConversionRvalueRef));
+
+
+}
+
+void reference_converts_from_temporary_checks() {
+  static_assert(!__reference_converts_from_temporary(int &, int &));
+  static_assert(!__reference_converts_from_temporary(int &, int &&));
+
+  static_assert(!__reference_converts_from_temporary(int const &, int &));
+  static_assert(!__reference_converts_from_temporary(int const &, int const &));
+  static_assert(!__reference_converts_from_temporary(int const &, int &&));
+
+  static_assert(!__reference_converts_from_temporary(int &, long &)); // doesn't construct
+
+  static_assert(__reference_converts_from_temporary(int const &, long &));
+  static_assert(__reference_converts_from_temporary(int const &, long &&));
+  static_assert(__reference_converts_from_temporary(int &&, long &));
+
+  using LRef = ConvertsToRef<int, int &>;
+  using RRef = ConvertsToRef<int, int &&>;
+  using CLRef = ConvertsToRef<int, const int &>;
+  using LongRef = ConvertsToRef<long, long &>;
+  static_assert(__is_constructible(int &, LRef));
+  static_assert(!__reference_converts_from_temporary(int &, LRef));
+
+  static_assert(__is_constructible(int &&, RRef));
+  static_assert(!__reference_converts_from_temporary(int &&, RRef));
+
+  static_assert(__is_constructible(int const &, CLRef));
+  static_assert(!__reference_converts_from_temporary(int &&, CLRef));
+
+  static_assert(__is_constructible(int const &, LongRef));
+  static_assert(__reference_converts_from_temporary(int const &, LongRef));
+  static_assert(!__reference_converts_from_temporary(int const &, ConvertsToRefPrivate<long, long &>));
+
+
+  // Test that it doesn't accept non-reference types as input.
+  static_assert(!__reference_converts_from_temporary(int, long));
+
+  static_assert(__reference_converts_from_temporary(const int &, long));
+
+  // Additional checks
+  static_assert(__reference_converts_from_temporary(POD const&, Derives));
+  static_assert(__reference_converts_from_temporary(int&&, int));
+  static_assert(__reference_converts_from_temporary(const int&, int));
+  static_assert(!__reference_converts_from_temporary(int&&, int&&));
+  static_assert(!__reference_converts_from_temporary(const int&, int&&));
+  static_assert(__reference_converts_from_temporary(int&&, long&&));
+  static_assert(__reference_converts_from_temporary(int&&, long));
+
+  static_assert(!__reference_converts_from_temporary(int&, ExplicitConversionRef));
+  static_assert(__reference_converts_from_temporary(const int&, ExplicitConversionRef));
+  static_assert(__reference_converts_from_temporary(int&&, ExplicitConversionRvalueRef));
+
 }
 
 void array_rank() {
@@ -3273,6 +3505,17 @@ static_assert(__has_unique_object_representations(_BitInt(8)), "BitInt:");
 static_assert(!__has_unique_object_representations(_BitInt(127)), "BitInt:");
 static_assert(__has_unique_object_representations(_BitInt(128)), "BitInt:");
 
+namespace GH95311 {
+
+template <int>
+class Foo {
+  int x;
+};
+static_assert(__has_unique_object_representations(Foo<0>[]));
+class Bar; // expected-note {{forward declaration of 'GH95311::Bar'}}
+static_assert(__has_unique_object_representations(Bar[])); // expected-error {{incomplete type}}
+
+}
 
 namespace PR46209 {
   // Foo has both a trivial assignment operator and a non-trivial one.
@@ -3340,6 +3583,8 @@ namespace is_trivially_relocatable {
 static_assert(!__is_trivially_relocatable(void));
 static_assert(__is_trivially_relocatable(int));
 static_assert(__is_trivially_relocatable(int[]));
+static_assert(__is_trivially_relocatable(const int));
+static_assert(__is_trivially_relocatable(volatile int));
 
 enum Enum {};
 static_assert(__is_trivially_relocatable(Enum));
@@ -3351,7 +3596,28 @@ static_assert(__is_trivially_relocatable(Union[]));
 
 struct Trivial {};
 static_assert(__is_trivially_relocatable(Trivial));
+static_assert(__is_trivially_relocatable(const Trivial));
+static_assert(__is_trivially_relocatable(volatile Trivial));
+
 static_assert(__is_trivially_relocatable(Trivial[]));
+static_assert(__is_trivially_relocatable(const Trivial[]));
+static_assert(__is_trivially_relocatable(volatile Trivial[]));
+
+static_assert(__is_trivially_relocatable(int[10]));
+static_assert(__is_trivially_relocatable(const int[10]));
+static_assert(__is_trivially_relocatable(volatile int[10]));
+
+static_assert(__is_trivially_relocatable(int[10][10]));
+static_assert(__is_trivially_relocatable(const int[10][10]));
+static_assert(__is_trivially_relocatable(volatile int[10][10]));
+
+static_assert(__is_trivially_relocatable(int[]));
+static_assert(__is_trivially_relocatable(const int[]));
+static_assert(__is_trivially_relocatable(volatile int[]));
+
+static_assert(__is_trivially_relocatable(int[][10]));
+static_assert(__is_trivially_relocatable(const int[][10]));
+static_assert(__is_trivially_relocatable(volatile int[][10]));
 
 struct Incomplete; // expected-note {{forward declaration of 'is_trivially_relocatable::Incomplete'}}
 bool unused = __is_trivially_relocatable(Incomplete); // expected-error {{incomplete type}}
@@ -3361,6 +3627,8 @@ struct NontrivialDtor {
 };
 static_assert(!__is_trivially_relocatable(NontrivialDtor));
 static_assert(!__is_trivially_relocatable(NontrivialDtor[]));
+static_assert(!__is_trivially_relocatable(const NontrivialDtor));
+static_assert(!__is_trivially_relocatable(volatile NontrivialDtor));
 
 struct NontrivialCopyCtor {
   NontrivialCopyCtor(const NontrivialCopyCtor&) {}
@@ -3379,12 +3647,16 @@ struct [[clang::trivial_abi]] TrivialAbiNontrivialDtor {
 };
 static_assert(__is_trivially_relocatable(TrivialAbiNontrivialDtor));
 static_assert(__is_trivially_relocatable(TrivialAbiNontrivialDtor[]));
+static_assert(__is_trivially_relocatable(const TrivialAbiNontrivialDtor));
+static_assert(__is_trivially_relocatable(volatile TrivialAbiNontrivialDtor));
 
 struct [[clang::trivial_abi]] TrivialAbiNontrivialCopyCtor {
   TrivialAbiNontrivialCopyCtor(const TrivialAbiNontrivialCopyCtor&) {}
 };
 static_assert(__is_trivially_relocatable(TrivialAbiNontrivialCopyCtor));
 static_assert(__is_trivially_relocatable(TrivialAbiNontrivialCopyCtor[]));
+static_assert(__is_trivially_relocatable(const TrivialAbiNontrivialCopyCtor));
+static_assert(__is_trivially_relocatable(volatile TrivialAbiNontrivialCopyCtor));
 
 // A more complete set of tests for the behavior of trivial_abi can be found in
 // clang/test/SemaCXX/attr-trivial-abi.cpp
@@ -3393,6 +3665,8 @@ struct [[clang::trivial_abi]] TrivialAbiNontrivialMoveCtor {
 };
 static_assert(__is_trivially_relocatable(TrivialAbiNontrivialMoveCtor));
 static_assert(__is_trivially_relocatable(TrivialAbiNontrivialMoveCtor[]));
+static_assert(__is_trivially_relocatable(const TrivialAbiNontrivialMoveCtor));
+static_assert(__is_trivially_relocatable(volatile TrivialAbiNontrivialMoveCtor));
 
 } // namespace is_trivially_relocatable
 
@@ -3413,6 +3687,12 @@ struct NonTriviallyEqualityComparableNoComparator {
   int j;
 };
 static_assert(!__is_trivially_equality_comparable(NonTriviallyEqualityComparableNoComparator));
+
+struct NonTriviallyEqualityComparableConvertibleToBuiltin {
+  int i;
+  operator unsigned() const;
+};
+static_assert(!__is_trivially_equality_comparable(NonTriviallyEqualityComparableConvertibleToBuiltin));
 
 struct NonTriviallyEqualityComparableNonDefaultedComparator {
   int i;
@@ -3622,7 +3902,50 @@ struct NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2 {
 
   bool operator==(const NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2&) const = default;
 };
+
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2));
+
+template<bool B>
+struct MaybeTriviallyEqualityComparable {
+    int i;
+    bool operator==(const MaybeTriviallyEqualityComparable&) const requires B = default;
+    bool operator==(const MaybeTriviallyEqualityComparable& rhs) const { return (i % 3) == (rhs.i % 3); }
+};
+static_assert(__is_trivially_equality_comparable(MaybeTriviallyEqualityComparable<true>));
+static_assert(!__is_trivially_equality_comparable(MaybeTriviallyEqualityComparable<false>));
+
+struct NotTriviallyEqualityComparableMoreConstrainedExternalOp {
+  int i;
+  bool operator==(const NotTriviallyEqualityComparableMoreConstrainedExternalOp&) const = default;
+};
+
+bool operator==(const NotTriviallyEqualityComparableMoreConstrainedExternalOp&,
+                const NotTriviallyEqualityComparableMoreConstrainedExternalOp&) __attribute__((enable_if(true, ""))) {}
+
+static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableMoreConstrainedExternalOp));
+
+struct TriviallyEqualityComparableExternalDefaultedOp {
+  int i;
+  friend bool operator==(TriviallyEqualityComparableExternalDefaultedOp, TriviallyEqualityComparableExternalDefaultedOp);
+};
+bool operator==(TriviallyEqualityComparableExternalDefaultedOp, TriviallyEqualityComparableExternalDefaultedOp) = default;
+
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableExternalDefaultedOp));
+
+struct EqualityComparableBase {
+  bool operator==(const EqualityComparableBase&) const = default;
+};
+
+struct ComparingBaseOnly : EqualityComparableBase {
+  int j_ = 0;
+};
+static_assert(!__is_trivially_equality_comparable(ComparingBaseOnly));
+
+template <class>
+class Template {};
+
+// Make sure we don't crash when instantiating a type
+static_assert(!__is_trivially_equality_comparable(Template<Template<int>>));
 
 namespace hidden_friend {
 

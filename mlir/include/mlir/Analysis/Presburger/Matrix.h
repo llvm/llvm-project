@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This is a simple 2D matrix class that supports reading, writing, resizing,
-// swapping rows, and swapping columns. It can hold integers (MPInt) or rational
-// numbers (Fraction).
+// swapping rows, and swapping columns. It can hold integers (DynamicAPInt) or
+// rational numbers (Fraction).
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,15 +16,16 @@
 #define MLIR_ANALYSIS_PRESBURGER_MATRIX_H
 
 #include "mlir/Analysis/Presburger/Fraction.h"
-#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include <bitset>
 #include <cassert>
 
 namespace mlir {
 namespace presburger {
+using llvm::ArrayRef;
+using llvm::MutableArrayRef;
+using llvm::raw_ostream;
+using llvm::SmallVector;
 
 /// This is a class to represent a resizable matrix.
 ///
@@ -34,13 +35,13 @@ namespace presburger {
 /// (i, j) is stored at data[i*nReservedColumns + j]. The reserved but unused
 /// columns always have all zero values. The reserved rows are just reserved
 /// space in the underlying SmallVector's capacity.
-/// This class only works for the types MPInt and Fraction, since the method
-/// implementations are in the Matrix.cpp file. Only these two types have
+/// This class only works for the types DynamicAPInt and Fraction, since the
+/// method implementations are in the Matrix.cpp file. Only these two types have
 /// been explicitly instantiated there.
 template <typename T>
 class Matrix {
-  static_assert(std::is_same_v<T, MPInt> || std::is_same_v<T, Fraction>,
-                "T must be MPInt or Fraction.");
+  static_assert(std::is_same_v<T, DynamicAPInt> || std::is_same_v<T, Fraction>,
+                "T must be DynamicAPInt or Fraction.");
 
 public:
   Matrix() = delete;
@@ -244,16 +245,19 @@ protected:
   SmallVector<T, 16> data;
 };
 
+extern template class Matrix<DynamicAPInt>;
+extern template class Matrix<Fraction>;
+
 // An inherited class for integer matrices, with no new data attributes.
 // This is only used for the matrix-related methods which apply only
 // to integers (hermite normal form computation and row normalisation).
-class IntMatrix : public Matrix<MPInt> {
+class IntMatrix : public Matrix<DynamicAPInt> {
 public:
   IntMatrix(unsigned rows, unsigned columns, unsigned reservedRows = 0,
             unsigned reservedColumns = 0)
-      : Matrix<MPInt>(rows, columns, reservedRows, reservedColumns){};
+      : Matrix<DynamicAPInt>(rows, columns, reservedRows, reservedColumns) {}
 
-  IntMatrix(Matrix<MPInt> m) : Matrix<MPInt>(std::move(m)){};
+  IntMatrix(Matrix<DynamicAPInt> m) : Matrix<DynamicAPInt>(std::move(m)) {}
 
   /// Return the identity matrix of the specified dimension.
   static IntMatrix identity(unsigned dimension);
@@ -272,10 +276,10 @@ public:
 
   /// Divide the first `nCols` of the specified row by their GCD.
   /// Returns the GCD of the first `nCols` of the specified row.
-  MPInt normalizeRow(unsigned row, unsigned nCols);
+  DynamicAPInt normalizeRow(unsigned row, unsigned nCols);
   /// Divide the columns of the specified row by their GCD.
   /// Returns the GCD of the columns of the specified row.
-  MPInt normalizeRow(unsigned row);
+  DynamicAPInt normalizeRow(unsigned row);
 
   // Compute the determinant of the matrix (cubic time).
   // Stores the integer inverse of the matrix in the pointer
@@ -284,7 +288,7 @@ public:
   // For a matrix M, the integer inverse is the matrix M' such that
   // M x M' = M'  M = det(M) x I.
   // Assert-fails if the matrix is not square.
-  MPInt determinant(IntMatrix *inverse = nullptr) const;
+  DynamicAPInt determinant(IntMatrix *inverse = nullptr) const;
 };
 
 // An inherited class for rational matrices, with no new data attributes.

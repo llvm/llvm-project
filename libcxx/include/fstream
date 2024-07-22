@@ -78,8 +78,8 @@ public:
     basic_ifstream();
     explicit basic_ifstream(const char* s, ios_base::openmode mode = ios_base::in);
     explicit basic_ifstream(const string& s, ios_base::openmode mode = ios_base::in);
-    explicit basic_ifstream(const filesystem::path& p,
-                            ios_base::openmode mode = ios_base::in); // C++17
+    template<class T>
+    explicit basic_ifstream(const T& s, ios_base::openmode mode = ios_base::in); // Since C++17
     basic_ifstream(basic_ifstream&& rhs);
 
     basic_ifstream& operator=(basic_ifstream&& rhs);
@@ -117,8 +117,8 @@ public:
     basic_ofstream();
     explicit basic_ofstream(const char* s, ios_base::openmode mode = ios_base::out);
     explicit basic_ofstream(const string& s, ios_base::openmode mode = ios_base::out);
-    explicit basic_ofstream(const filesystem::path& p,
-                            ios_base::openmode mode = ios_base::out); // C++17
+    template<class T>
+    explicit basic_ofstream(const T& s, ios_base::openmode mode = ios_base::out); // Since C++17
     basic_ofstream(basic_ofstream&& rhs);
 
     basic_ofstream& operator=(basic_ofstream&& rhs);
@@ -158,8 +158,8 @@ public:
     basic_fstream();
     explicit basic_fstream(const char* s, ios_base::openmode mode = ios_base::in|ios_base::out);
     explicit basic_fstream(const string& s, ios_base::openmode mode = ios_base::in|ios_base::out);
-    explicit basic_fstream(const filesystem::path& p,
-                           ios_base::openmode mode = ios_base::in|ios_base::out); C++17
+    template<class T>
+    explicit basic_fstream(const T& s, ios_base::openmode mode = ios_base::in | ios_base::out); // Since C++17
     basic_fstream(basic_fstream&& rhs);
 
     basic_fstream& operator=(basic_fstream&& rhs);
@@ -188,10 +188,11 @@ typedef basic_fstream<wchar_t> wfstream;
 
 #include <__algorithm/max.h>
 #include <__assert>
-#include <__availability>
 #include <__config>
 #include <__fwd/fstream.h>
 #include <__locale>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_same.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <__utility/unreachable.h>
@@ -308,6 +309,43 @@ private:
   state_type __st_;
   state_type __st_last_;
   ios_base::openmode __om_;
+  // There have been no file operations yet, which allows setting unbuffered
+  // I/O mode.
+  static const ios_base::openmode __no_io_operations = ios_base::trunc;
+  // Unbuffered I/O mode has been requested.
+  static const ios_base::openmode __use_unbuffered_io = ios_base::ate;
+  // Used to track the currently used mode and track whether the output should
+  // be unbuffered.
+  // [filebuf.virtuals]/12
+  //   If setbuf(0, 0) is called on a stream before any I/O has occurred on
+  //   that stream, the stream becomes unbuffered. Otherwise the results are
+  //   implementation-defined.
+  // This allows calling setbuf(0, 0)
+  // - before opening a file,
+  // - after opening a file, before
+  //   - a read
+  //   - a write
+  //   - a seek.
+  // Note that opening a file with ios_base::ate does a seek operation.
+  // Normally underflow, overflow, and sync change this flag to ios_base::in,
+  // ios_base_out, or 0.
+  //
+  // The ios_base::trunc and ios_base::ate flags are not used in __cm_. They
+  // are used to track the state of the unbuffered request. For readability
+  // they have the aliases __no_io_operations and __use_unbuffered_io
+  // respectively.
+  //
+  // The __no_io_operations and __use_unbuffered_io flags are used in the
+  // following way:
+  // - __no_io_operations is set upon construction to indicate the unbuffered
+  //   state can be set.
+  // - When requesting unbuffered output:
+  //   - If the file is open it sets the mode.
+  //   - Else places a request by adding the __use_unbuffered_io flag.
+  // - When a file is opened it checks whether both __no_io_operations and
+  //   __use_unbuffered_io are set. If so switches to unbuffered mode.
+  // - All file I/O operations change the mode effectively clearing the
+  //   __no_io_operations and __use_unbuffered_io flags.
   ios_base::openmode __cm_;
   bool __owns_eb_;
   bool __owns_ib_;
@@ -327,7 +365,13 @@ private:
       return nullptr;
 
     __om_ = __mode;
+    if (__cm_ == (__no_io_operations | __use_unbuffered_io)) {
+      std::setbuf(__file_, nullptr);
+      __cm_ = 0;
+    }
+
     if (__mode & ios_base::ate) {
+      __cm_ = 0;
       if (fseek(__file_, 0, SEEK_END)) {
         fclose(__file_);
         __file_ = nullptr;
@@ -336,6 +380,20 @@ private:
     }
 
     return this;
+  }
+
+  // If the file is already open, switch to unbuffered mode. Otherwise, record
+  // the request to use unbuffered mode so that we use that mode when we
+  // eventually open the file.
+  _LIBCPP_HIDE_FROM_ABI void __request_unbuffered_mode(char_type* __s, streamsize __n) {
+    if (__cm_ == __no_io_operations && __s == nullptr && __n == 0) {
+      if (__file_) {
+        std::setbuf(__file_, nullptr);
+        __cm_ = 0;
+      } else {
+        __cm_ = __no_io_operations | __use_unbuffered_io;
+      }
+    }
   }
 };
 
@@ -352,7 +410,7 @@ basic_filebuf<_CharT, _Traits>::basic_filebuf()
       __st_(),
       __st_last_(),
       __om_(0),
-      __cm_(0),
+      __cm_(__no_io_operations),
       __owns_eb_(false),
       __owns_ib_(false),
       __always_noconv_(false) {
@@ -810,6 +868,7 @@ template <class _CharT, class _Traits>
 basic_streambuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::setbuf(char_type* __s, streamsize __n) {
   this->setg(nullptr, nullptr, nullptr);
   this->setp(nullptr, nullptr);
+  __request_unbuffered_mode(__s, __n);
   if (__owns_eb_)
     delete[] __extbuf_;
   if (__owns_ib_)
@@ -1043,8 +1102,9 @@ public:
 #  endif
   _LIBCPP_HIDE_FROM_ABI explicit basic_ifstream(const string& __s, ios_base::openmode __mode = ios_base::in);
 #  if _LIBCPP_STD_VER >= 17
-  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_HIDE_FROM_ABI explicit basic_ifstream(
-      const filesystem::path& __p, ios_base::openmode __mode = ios_base::in)
+  template <class _Tp, class = enable_if_t<is_same_v<_Tp, filesystem::path>>>
+  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY
+      _LIBCPP_HIDE_FROM_ABI explicit basic_ifstream(const _Tp& __p, ios_base::openmode __mode = ios_base::in)
       : basic_ifstream(__p.c_str(), __mode) {}
 #  endif // _LIBCPP_STD_VER >= 17
   _LIBCPP_HIDE_FROM_ABI basic_ifstream(basic_ifstream&& __rhs);
@@ -1197,8 +1257,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit basic_ofstream(const string& __s, ios_base::openmode __mode = ios_base::out);
 
 #  if _LIBCPP_STD_VER >= 17
-  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_HIDE_FROM_ABI explicit basic_ofstream(
-      const filesystem::path& __p, ios_base::openmode __mode = ios_base::out)
+  template <class _Tp, class = enable_if_t<is_same_v<_Tp, filesystem::path>>>
+  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY
+      _LIBCPP_HIDE_FROM_ABI explicit basic_ofstream(const _Tp& __p, ios_base::openmode __mode = ios_base::out)
       : basic_ofstream(__p.c_str(), __mode) {}
 #  endif // _LIBCPP_STD_VER >= 17
 
@@ -1356,8 +1417,9 @@ public:
                                                ios_base::openmode __mode = ios_base::in | ios_base::out);
 
 #  if _LIBCPP_STD_VER >= 17
+  template <class _Tp, class = enable_if_t<is_same_v<_Tp, filesystem::path>>>
   _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_HIDE_FROM_ABI explicit basic_fstream(
-      const filesystem::path& __p, ios_base::openmode __mode = ios_base::in | ios_base::out)
+      const _Tp& __p, ios_base::openmode __mode = ios_base::in | ios_base::out)
       : basic_fstream(__p.c_str(), __mode) {}
 #  endif // _LIBCPP_STD_VER >= 17
 

@@ -72,26 +72,31 @@ public:
                                                    SVal) const;
 
   CallDescriptionMap<NoItParamFn> NoIterParamFunctions = {
-      {{{"clear"}, 0}, &ContainerModeling::handleClear},
-      {{{"assign"}, 2}, &ContainerModeling::handleAssign},
-      {{{"push_back"}, 1}, &ContainerModeling::handlePushBack},
-      {{{"emplace_back"}, 1}, &ContainerModeling::handlePushBack},
-      {{{"pop_back"}, 0}, &ContainerModeling::handlePopBack},
-      {{{"push_front"}, 1}, &ContainerModeling::handlePushFront},
-      {{{"emplace_front"}, 1}, &ContainerModeling::handlePushFront},
-      {{{"pop_front"}, 0}, &ContainerModeling::handlePopFront},
+      {{CDM::CXXMethod, {"clear"}, 0}, &ContainerModeling::handleClear},
+      {{CDM::CXXMethod, {"assign"}, 2}, &ContainerModeling::handleAssign},
+      {{CDM::CXXMethod, {"push_back"}, 1}, &ContainerModeling::handlePushBack},
+      {{CDM::CXXMethod, {"emplace_back"}, 1},
+       &ContainerModeling::handlePushBack},
+      {{CDM::CXXMethod, {"pop_back"}, 0}, &ContainerModeling::handlePopBack},
+      {{CDM::CXXMethod, {"push_front"}, 1},
+       &ContainerModeling::handlePushFront},
+      {{CDM::CXXMethod, {"emplace_front"}, 1},
+       &ContainerModeling::handlePushFront},
+      {{CDM::CXXMethod, {"pop_front"}, 0}, &ContainerModeling::handlePopFront},
   };
 
   CallDescriptionMap<OneItParamFn> OneIterParamFunctions = {
-      {{{"insert"}, 2}, &ContainerModeling::handleInsert},
-      {{{"emplace"}, 2}, &ContainerModeling::handleInsert},
-      {{{"erase"}, 1}, &ContainerModeling::handleErase},
-      {{{"erase_after"}, 1}, &ContainerModeling::handleEraseAfter},
+      {{CDM::CXXMethod, {"insert"}, 2}, &ContainerModeling::handleInsert},
+      {{CDM::CXXMethod, {"emplace"}, 2}, &ContainerModeling::handleInsert},
+      {{CDM::CXXMethod, {"erase"}, 1}, &ContainerModeling::handleErase},
+      {{CDM::CXXMethod, {"erase_after"}, 1},
+       &ContainerModeling::handleEraseAfter},
   };
 
   CallDescriptionMap<TwoItParamFn> TwoIterParamFunctions = {
-      {{{"erase"}, 2}, &ContainerModeling::handleErase},
-      {{{"erase_after"}, 2}, &ContainerModeling::handleEraseAfter},
+      {{CDM::CXXMethod, {"erase"}, 2}, &ContainerModeling::handleErase},
+      {{CDM::CXXMethod, {"erase_after"}, 2},
+       &ContainerModeling::handleEraseAfter},
   };
 };
 
@@ -768,6 +773,10 @@ const CXXRecordDecl *getCXXRecordDecl(ProgramStateRef State,
   auto Type = TI.getType();
   if (const auto *RefT = Type->getAs<ReferenceType>()) {
     Type = RefT->getPointeeType();
+  }
+
+  if (const auto *PtrT = Type->getAs<PointerType>()) {
+    Type = PtrT->getPointeeType();
   }
 
   return Type->getUnqualifiedDesugaredType()->getAsCXXRecordDecl();

@@ -68,7 +68,7 @@ def _si1Attr(x, context):
 
 
 @register_attribute_builder("SI8Attr")
-def _i8Attr(x, context):
+def _si8Attr(x, context):
     return IntegerAttr.get(IntegerType.get_signed(8, context=context), x)
 
 
@@ -93,7 +93,7 @@ def _ui1Attr(x, context):
 
 
 @register_attribute_builder("UI8Attr")
-def _i8Attr(x, context):
+def _ui8Attr(x, context):
     return IntegerAttr.get(IntegerType.get_unsigned(8, context=context), x)
 
 
@@ -274,7 +274,7 @@ try:
     @register_attribute_builder("F64ElementsAttr")
     def _f64ElementsAttr(x, context):
         return DenseElementsAttr.get(
-            np.array(x, dtype=np.int64),
+            np.array(x, dtype=np.float64),
             type=F64Type.get(context=context),
             context=context,
         )

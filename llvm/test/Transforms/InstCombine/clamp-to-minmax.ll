@@ -472,7 +472,7 @@ define float @ui32_clamp_and_cast_to_float(i32 %x) {
 ; CHECK-LABEL: @ui32_clamp_and_cast_to_float(
 ; CHECK-NEXT:    [[LO_CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[MIN1:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 255)
-; CHECK-NEXT:    [[MIN:%.*]] = uitofp i32 [[MIN1]] to float
+; CHECK-NEXT:    [[MIN:%.*]] = uitofp nneg i32 [[MIN1]] to float
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[LO_CMP]], float 1.000000e+00, float [[MIN]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -488,7 +488,7 @@ define float @ui64_clamp_and_cast_to_float(i64 %x) {
 ; CHECK-LABEL: @ui64_clamp_and_cast_to_float(
 ; CHECK-NEXT:    [[LO_CMP:%.*]] = icmp eq i64 [[X:%.*]], 0
 ; CHECK-NEXT:    [[MIN1:%.*]] = call i64 @llvm.umin.i64(i64 [[X]], i64 255)
-; CHECK-NEXT:    [[MIN:%.*]] = uitofp i64 [[MIN1]] to float
+; CHECK-NEXT:    [[MIN:%.*]] = uitofp nneg i64 [[MIN1]] to float
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[LO_CMP]], float 1.000000e+00, float [[MIN]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -504,7 +504,7 @@ define float @mixed_clamp_to_float_1(i32 %x) {
 ; CHECK-LABEL: @mixed_clamp_to_float_1(
 ; CHECK-NEXT:    [[SI_MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 255)
 ; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.smax.i32(i32 [[SI_MIN]], i32 1)
-; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[R1]] to float
+; CHECK-NEXT:    [[R:%.*]] = uitofp nneg i32 [[R1]] to float
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %si_min_cmp = icmp sgt i32 %x, 255
@@ -539,7 +539,7 @@ define float @mixed_clamp_to_float_2(i32 %x) {
 ; CHECK-LABEL: @mixed_clamp_to_float_2(
 ; CHECK-NEXT:    [[SI_MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 255)
 ; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.smax.i32(i32 [[SI_MIN]], i32 1)
-; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[R1]] to float
+; CHECK-NEXT:    [[R:%.*]] = uitofp nneg i32 [[R1]] to float
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %si_min_cmp = icmp sgt i32 %x, 255
@@ -572,7 +572,7 @@ define <2 x float> @mixed_clamp_to_float_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @mixed_clamp_to_float_vec(
 ; CHECK-NEXT:    [[SI_MIN:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[X:%.*]], <2 x i32> <i32 255, i32 255>)
 ; CHECK-NEXT:    [[R1:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[SI_MIN]], <2 x i32> <i32 1, i32 1>)
-; CHECK-NEXT:    [[R:%.*]] = sitofp <2 x i32> [[R1]] to <2 x float>
+; CHECK-NEXT:    [[R:%.*]] = uitofp nneg <2 x i32> [[R1]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %si_min_cmp = icmp sgt <2 x i32> %x, <i32 255, i32 255>

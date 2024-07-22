@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_FCNTL_H
 #define LLVM_LIBC_FCNTL_H
 
-#include <__llvm-libc-common.h>
-#include <llvm-libc-macros/fcntl-macros.h>
+#include "__llvm-libc-common.h"
+#include "llvm-libc-macros/fcntl-macros.h"
 
 %%public_api()
 

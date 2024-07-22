@@ -56,7 +56,7 @@ struct DXILProgram {
   std::optional<std::vector<llvm::yaml::Hex8>> DXIL;
 };
 
-#define SHADER_FEATURE_FLAG(Num, Val, Str) bool Val = false;
+#define SHADER_FEATURE_FLAG(Num, DxilModuleNum, Val, Str) bool Val = false;
 struct ShaderFeatureFlags {
   ShaderFeatureFlags() = default;
   ShaderFeatureFlags(uint64_t FlagData);
@@ -107,7 +107,7 @@ struct PSVInfo {
   // the format.
   uint32_t Version;
 
-  dxbc::PSV::v2::RuntimeInfo Info;
+  dxbc::PSV::v3::RuntimeInfo Info;
   uint32_t ResourceStride;
   SmallVector<ResourceBindInfo> Resources;
   SmallVector<SignatureElement> SigInputElements;
@@ -121,12 +121,15 @@ struct PSVInfo {
   MaskVector InputPatchMap;
   MaskVector PatchOutputMap;
 
+  StringRef EntryName;
+
   void mapInfoForVersion(yaml::IO &IO);
 
   PSVInfo();
   PSVInfo(const dxbc::PSV::v0::RuntimeInfo *P, uint16_t Stage);
   PSVInfo(const dxbc::PSV::v1::RuntimeInfo *P);
   PSVInfo(const dxbc::PSV::v2::RuntimeInfo *P);
+  PSVInfo(const dxbc::PSV::v3::RuntimeInfo *P, StringRef StringTable);
 };
 
 struct SignatureParameter {

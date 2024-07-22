@@ -86,7 +86,7 @@ static cl::opt<bool>
 static bool isSmallDataSection(StringRef Sec) {
   // sectionName is either ".sdata" or ".sbss". Looking for an exact match
   // obviates the need for checks for section names such as ".sdatafoo".
-  if (Sec.equals(".sdata") || Sec.equals(".sbss") || Sec.equals(".scommon"))
+  if (Sec == ".sdata" || Sec == ".sbss" || Sec == ".scommon")
     return true;
   // If either ".sdata." or ".sbss." is a substring of the section name
   // then put the symbol in small data.
@@ -254,7 +254,7 @@ bool HexagonTargetObjectFile::isGlobalInSmallSection(const GlobalObject *GO,
     }
   }
 
-  unsigned Size = GVar->getParent()->getDataLayout().getTypeAllocSize(GType);
+  unsigned Size = GVar->getDataLayout().getTypeAllocSize(GType);
   if (Size == 0) {
     LLVM_DEBUG(dbgs() << "no, has size 0\n");
     return false;
@@ -317,7 +317,7 @@ unsigned HexagonTargetObjectFile::getSmallestAddressableSize(const Type *Ty,
   case Type::FloatTyID:
   case Type::DoubleTyID:
   case Type::IntegerTyID: {
-    const DataLayout &DL = GV->getParent()->getDataLayout();
+    const DataLayout &DL = GV->getDataLayout();
     // It is unfortunate that DL's function take non-const Type*.
     return DL.getTypeAllocSize(const_cast<Type*>(Ty));
   }

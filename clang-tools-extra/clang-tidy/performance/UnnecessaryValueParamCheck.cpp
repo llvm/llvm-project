@@ -75,7 +75,7 @@ void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
           functionDecl(hasBody(stmt()), isDefinition(), unless(isImplicit()),
                        unless(cxxMethodDecl(anyOf(isOverride(), isFinal()))),
                        has(typeLoc(forEach(ExpensiveValueParamDecl))),
-                       unless(isInstantiated()), decl().bind("functionDecl"))),
+                       decl().bind("functionDecl"))),
       this);
 }
 
@@ -85,10 +85,10 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
 
   TraversalKindScope RAII(*Result.Context, TK_AsIs);
 
-  FunctionParmMutationAnalyzer &Analyzer =
-      MutationAnalyzers.try_emplace(Function, *Function, *Result.Context)
-          .first->second;
-  if (Analyzer.isMutated(Param))
+  FunctionParmMutationAnalyzer *Analyzer =
+      FunctionParmMutationAnalyzer::getFunctionParmMutationAnalyzer(
+          *Function, *Result.Context, MutationAnalyzerCache);
+  if (Analyzer->isMutated(Param))
     return;
 
   const bool IsConstQualified =
@@ -133,12 +133,11 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
   // 2. the function is virtual as it might break overrides
   // 3. the function is referenced outside of a call expression within the
   //    compilation unit as the signature change could introduce build errors.
-  // 4. the function is a primary template or an explicit template
-  // specialization.
+  // 4. the function is an explicit template/ specialization.
   const auto *Method = llvm::dyn_cast<CXXMethodDecl>(Function);
   if (Param->getBeginLoc().isMacroID() || (Method && Method->isVirtual()) ||
       isReferencedOutsideOfCallExpr(*Function, *Result.Context) ||
-      (Function->getTemplatedKind() != FunctionDecl::TK_NonTemplate))
+      Function->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
     return;
   for (const auto *FunctionDecl = Function; FunctionDecl != nullptr;
        FunctionDecl = FunctionDecl->getPreviousDecl()) {
@@ -169,7 +168,7 @@ void UnnecessaryValueParamCheck::storeOptions(
 }
 
 void UnnecessaryValueParamCheck::onEndOfTranslationUnit() {
-  MutationAnalyzers.clear();
+  MutationAnalyzerCache.clear();
 }
 
 void UnnecessaryValueParamCheck::handleMoveFix(const ParmVarDecl &Var,

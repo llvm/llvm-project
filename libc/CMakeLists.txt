@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "libc")
 
 # Include LLVM's cmake policies.
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
@@ -38,6 +39,8 @@ set(LIBC_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 set(LIBC_ENABLE_USE_BY_CLANG OFF CACHE BOOL "Whether or not to place libc in a build directory findable by a just built clang")
 
+set(LIBC_KERNEL_HEADERS "/usr/include" CACHE STRING "Path to Linux kernel headers")
+
 # Defining a global namespace to enclose all libc functions.
 set(default_namespace "__llvm_libc")
 if(LLVM_VERSION_MAJOR)
@@ -46,6 +49,10 @@ endif()
 set(LIBC_NAMESPACE ${default_namespace}
   CACHE STRING "The namespace to use to enclose internal implementations. Must start with '__llvm_libc'."
 )
+
+
+add_subdirectory(newhdrgen)
+
 
 if(LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD)
   if(NOT LIBC_HDRGEN_EXE)
@@ -60,6 +67,13 @@ if(LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD)
     message(STATUS "Will use ${LIBC_HDRGEN_EXE} for libc header generation.")
   endif()
 endif()
+# We will build the GPU utilities if we are not doing a runtimes build.
+option(LIBC_BUILD_GPU_LOADER "Always build the GPU loader utilities" OFF)
+if(LIBC_BUILD_GPU_LOADER OR (LLVM_LIBC_GPU_BUILD AND NOT LLVM_RUNTIMES_BUILD))
+  add_subdirectory(utils/gpu)
+endif()
+
+option(LIBC_USE_NEW_HEADER_GEN "Generate header files using new headergen instead of the old one" OFF)
 
 set(NEED_LIBC_HDRGEN FALSE)
 if(NOT LLVM_RUNTIMES_BUILD)
@@ -79,11 +93,6 @@ if(LIBC_HDRGEN_ONLY OR NEED_LIBC_HDRGEN)
   # When libc is build as part of the runtimes/bootstrap build's CMake run, we
   # only need to build the host tools to build the libc. So, we just do enough
   # to build libc-hdrgen and return.
-
-  # Always make the RPC server availible to other projects for GPU mode.
-  if(LLVM_LIBC_GPU_BUILD)
-    add_subdirectory(utils/gpu/server)
-  endif()
   return()
 endif()
 unset(NEED_LIBC_HDRGEN)
@@ -135,7 +144,6 @@ option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc"
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 
-option(LIBC_GPU_BUILD "Build libc for the GPU. All CPU build options will be ignored." OFF)
 set(LIBC_TARGET_TRIPLE "" CACHE STRING "The target triple for the libc build.")
 
 option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
@@ -382,6 +390,7 @@ endforeach()
 
 add_subdirectory(include)
 add_subdirectory(config)
+add_subdirectory(hdr)
 add_subdirectory(src)
 add_subdirectory(utils)
 
@@ -400,9 +409,7 @@ if(LLVM_INCLUDE_TESTS)
   add_subdirectory(fuzzing)
 endif()
 
-if(LIBC_INCLUDE_BENCHMARKS)
-  add_subdirectory(benchmarks)
-endif()
+add_subdirectory(benchmarks)
 
 if (LIBC_INCLUDE_DOCS)
   add_subdirectory(docs)

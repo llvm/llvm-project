@@ -13,12 +13,12 @@
 #include "tools.h"
 #include "flang/Runtime/descriptor.h"
 #include <cstdlib>
+#include <errno.h>
 #include <future>
 #include <limits>
+
 #ifdef _WIN32
-#define LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
+#include "flang/Common/windows-include.h"
 #else
 #include <signal.h>
 #include <sys/wait.h>
@@ -34,13 +34,16 @@ namespace Fortran::runtime {
 // and the processor does not support asynchronous execution. Otherwise it is
 // assigned the value 0
 enum CMD_STAT {
-  ASYNC_NO_SUPPORT_ERR = -2,
-  NO_SUPPORT_ERR = -1,
-  CMD_EXECUTED = 0,
-  FORK_ERR = 1,
-  EXECL_ERR = 2,
-  INVALID_CL_ERR = 3,
-  SIGNAL_ERR = 4
+  ASYNC_NO_SUPPORT_ERR = -2, // system returns -1 with ENOENT
+  NO_SUPPORT_ERR = -1, // Linux setsid() returns -1
+  CMD_EXECUTED = 0, // command executed with no error
+  FORK_ERR = 1, // Linux fork() returns < 0
+  EXECL_ERR = 2, // system returns -1 with other errno
+  COMMAND_EXECUTION_ERR = 3, // exit code 1
+  COMMAND_CANNOT_EXECUTE_ERR = 4, // Linux exit code 126
+  COMMAND_NOT_FOUND_ERR = 5, // Linux exit code 127
+  INVALID_CL_ERR = 6, // cover all other non-zero exit code
+  SIGNAL_ERR = 7
 };
 
 // Override CopyCharsToDescriptor in tools.h, pass string directly
@@ -64,24 +67,50 @@ void CheckAndStoreIntToDescriptor(
 
 // If a condition occurs that would assign a nonzero value to CMDSTAT but
 // the CMDSTAT variable is not present, error termination is initiated.
-int TerminationCheck(int status, const Descriptor *cmdstat,
+std::int64_t TerminationCheck(std::int64_t status, const Descriptor *cmdstat,
     const Descriptor *cmdmsg, Terminator &terminator) {
+  // On both Windows and Linux, errno is set when system returns -1.
   if (status == -1) {
-    if (!cmdstat) {
-      terminator.Crash("Execution error with system status code: %d", status);
+    // On Windows, ENOENT means the command interpreter can't be found.
+    // On Linux, system calls execl with filepath "/bin/sh", ENOENT means the
+    // file pathname does not exist.
+    if (errno == ENOENT) {
+      if (!cmdstat) {
+        terminator.Crash("Command line execution is not supported, system "
+                         "returns -1 with errno ENOENT.");
+      } else {
+        StoreIntToDescriptor(cmdstat, NO_SUPPORT_ERR, terminator);
+        CheckAndCopyCharsToDescriptor(cmdmsg,
+            "Command line execution is not supported, system returns -1 with "
+            "errno ENOENT.");
+      }
     } else {
-      StoreIntToDescriptor(cmdstat, EXECL_ERR, terminator);
-      CheckAndCopyCharsToDescriptor(cmdmsg, "Execution error");
+      char err_buffer[30];
+      char msg[]{"Execution error with system status code: -1, errno: "};
+#ifdef _WIN32
+      if (strerror_s(err_buffer, sizeof(err_buffer), errno) != 0)
+#else
+      if (strerror_r(errno, err_buffer, sizeof(err_buffer)) != 0)
+#endif
+        terminator.Crash("errno to char msg failed.");
+      char *newMsg{static_cast<char *>(AllocateMemoryOrCrash(
+          terminator, std::strlen(msg) + std::strlen(err_buffer) + 1))};
+      std::strcat(newMsg, err_buffer);
+
+      if (!cmdstat) {
+        terminator.Crash(newMsg);
+      } else {
+        StoreIntToDescriptor(cmdstat, EXECL_ERR, terminator);
+        CheckAndCopyCharsToDescriptor(cmdmsg, newMsg);
+      }
+      FreeMemory(newMsg);
     }
   }
+
 #ifdef _WIN32
   // On WIN32 API std::system returns exit status directly
-  int exitStatusVal{status};
-  if (exitStatusVal == 1) {
-#else
-  int exitStatusVal{WEXITSTATUS(status)};
-  if (exitStatusVal == 127 || exitStatusVal == 126) {
-#endif
+  std::int64_t exitStatusVal{status};
+  if (exitStatusVal != 0) {
     if (!cmdstat) {
       terminator.Crash(
           "Invalid command quit with exit status code: %d", exitStatusVal);
@@ -90,23 +119,62 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
       CheckAndCopyCharsToDescriptor(cmdmsg, "Invalid command line");
     }
   }
-#if defined(WIFSIGNALED) && defined(WTERMSIG)
-  if (WIFSIGNALED(status)) {
+#else
+  std::int64_t exitStatusVal{WEXITSTATUS(status)};
+  if (exitStatusVal == 1) {
     if (!cmdstat) {
-      terminator.Crash("killed by signal: %d", WTERMSIG(status));
+      terminator.Crash("Command line execution failed with exit code: 1.");
     } else {
-      StoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
-      CheckAndCopyCharsToDescriptor(cmdmsg, "killed by signal");
+      StoreIntToDescriptor(cmdstat, COMMAND_EXECUTION_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(
+          cmdmsg, "Command line execution failed with exit code: 1.");
+    }
+  } else if (exitStatusVal == 126) {
+    if (!cmdstat) {
+      terminator.Crash("Command cannot be executed with exit code: 126.");
+    } else {
+      StoreIntToDescriptor(cmdstat, COMMAND_CANNOT_EXECUTE_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(
+          cmdmsg, "Command cannot be executed with exit code: 126.");
+    }
+  } else if (exitStatusVal == 127) {
+    if (!cmdstat) {
+      terminator.Crash("Command not found with exit code: 127.");
+    } else {
+      StoreIntToDescriptor(cmdstat, COMMAND_NOT_FOUND_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(
+          cmdmsg, "Command not found with exit code: 127.");
+    }
+    // capture all other nonzero exit code
+  } else if (exitStatusVal != 0) {
+    if (!cmdstat) {
+      terminator.Crash(
+          "Invalid command quit with exit status code: %d", exitStatusVal);
+    } else {
+      StoreIntToDescriptor(cmdstat, INVALID_CL_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(cmdmsg, "Invalid command line");
     }
   }
 #endif
+
+#if defined(WIFSIGNALED) && defined(WTERMSIG)
+  if (WIFSIGNALED(status)) {
+    if (!cmdstat) {
+      terminator.Crash("Killed by signal: %d", WTERMSIG(status));
+    } else {
+      StoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(cmdmsg, "Killed by signal");
+    }
+  }
+#endif
+
 #if defined(WIFSTOPPED) && defined(WSTOPSIG)
   if (WIFSTOPPED(status)) {
     if (!cmdstat) {
-      terminator.Crash("stopped by signal: %d", WSTOPSIG(status));
+      terminator.Crash("Stopped by signal: %d", WSTOPSIG(status));
     } else {
       StoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
-      CheckAndCopyCharsToDescriptor(cmdmsg, "stopped by signal");
+      CheckAndCopyCharsToDescriptor(cmdmsg, "Stopped by signal");
     }
   }
 #endif
@@ -136,8 +204,9 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
 
   if (wait) {
     // either wait is not specified or wait is true: synchronous mode
-    int status{std::system(newCmd)};
-    int exitStatusVal{TerminationCheck(status, cmdstat, cmdmsg, terminator)};
+    std::int64_t status{std::system(newCmd)};
+    std::int64_t exitStatusVal{
+        TerminationCheck(status, cmdstat, cmdmsg, terminator)};
     // If sync, assigned processor-dependent exit status. Otherwise unchanged
     CheckAndStoreIntToDescriptor(exitstat, exitStatusVal, terminator);
   } else {
@@ -175,7 +244,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
         terminator.Crash(
             "CreateProcess failed with error code: %lu.", GetLastError());
       } else {
-        StoreIntToDescriptor(cmdstat, (uint32_t)GetLastError(), terminator);
+        StoreIntToDescriptor(cmdstat, ASYNC_NO_SUPPORT_ERR, terminator);
         CheckAndCopyCharsToDescriptor(cmdmsg, "CreateProcess failed.");
       }
     }
@@ -203,7 +272,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
         }
         exit(EXIT_FAILURE);
       }
-      int status{std::system(newCmd)};
+      std::int64_t status{std::system(newCmd)};
       TerminationCheck(status, cmdstat, cmdmsg, terminator);
       exit(status);
     }

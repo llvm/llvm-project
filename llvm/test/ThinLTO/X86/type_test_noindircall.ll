@@ -38,8 +38,8 @@ target triple = "x86_64-grtev4-linux-gnu"
 define internal void @_ZN12_GLOBAL__N_18RealFileD2Ev(ptr %this) unnamed_addr #0 align 2 {
 entry:
 ; CHECK-IR: store
-  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN12_GLOBAL__N_18RealFileE, i64 0, inrange i32 0, i64 2), ptr %this, align 8
-  %0 = tail call i1 @llvm.type.test(ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN12_GLOBAL__N_18RealFileE, i64 0, inrange i32 0, i64 2), metadata !"4$09c6cc733fc6accb91e5d7b87cb48f2d")
+  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN12_GLOBAL__N_18RealFileE, i64 0, i32 0, i64 2), ptr %this, align 8
+  %0 = tail call i1 @llvm.type.test(ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN12_GLOBAL__N_18RealFileE, i64 0, i32 0, i64 2), metadata !"4$09c6cc733fc6accb91e5d7b87cb48f2d")
   tail call void @llvm.assume(i1 %0)
 ; CHECK-IR-NEXT: ret void
   ret void

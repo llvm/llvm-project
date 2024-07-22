@@ -37,7 +37,7 @@ class PPCTTIImpl : public BasicTTIImplBase<PPCTTIImpl> {
 
 public:
   explicit PPCTTIImpl(const PPCTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
   std::optional<Instruction *> instCombineIntrinsic(InstCombiner & IC,
@@ -106,13 +106,14 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
+      ArrayRef<const Value *> Args = std::nullopt,
       const Instruction *CxtI = nullptr);
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
                                  Type *SubTp,
-                                 ArrayRef<const Value *> Args = std::nullopt);
+                                 ArrayRef<const Value *> Args = std::nullopt,
+                                 const Instruction *CxtI = nullptr);
   InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                    TTI::CastContextHint CCH,
                                    TTI::TargetCostKind CostKind,

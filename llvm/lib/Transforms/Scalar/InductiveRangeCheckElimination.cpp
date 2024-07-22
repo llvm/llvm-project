@@ -279,6 +279,9 @@ bool InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
   Value *LHS = ICI->getOperand(0);
   Value *RHS = ICI->getOperand(1);
 
+  if (!LHS->getType()->isIntegerTy())
+    return false;
+
   // Canonicalize to the `Index Pred Invariant` comparison
   if (IsLoopInvariant(LHS)) {
     std::swap(LHS, RHS);

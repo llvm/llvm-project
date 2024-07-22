@@ -12,23 +12,23 @@
 --- |
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux"
-  
+
   @b = dso_local local_unnamed_addr global i32 0, align 4, !dbg !0
   @a = dso_local local_unnamed_addr global i32 0, align 4, !dbg !5
-  
+
   define dso_local i32 @c() local_unnamed_addr !dbg !13 {
   entry:
     ret i32 0, !dbg !36
   }
-  
+
   declare void @llvm.dbg.declare(metadata, metadata, metadata)
-  
+
   declare void @llvm.dbg.value(metadata, metadata, metadata)
-  
+
   !llvm.dbg.cu = !{!2}
   !llvm.module.flags = !{!8, !9, !10, !11}
   !llvm.ident = !{!12}
-  
+
   !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
   !1 = distinct !DIGlobalVariable(name: "b", scope: !2, file: !3, line: 1, type: !7, isLocal: false, isDefinition: true)
   !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 14.0.0 (git@github.com:llvm/llvm-project 1b09d0c42b42be219dd0984e0714d68b4a36cd3e)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: !4, splitDebugInlining: false, nameTableKind: None)
@@ -79,7 +79,7 @@ frameInfo:
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
-  
+
     DBG_PHI $fp0, 3
     DBG_INSTR_REF !17, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(3, 0), debug-location !30
     $eax = MOV32ri 0

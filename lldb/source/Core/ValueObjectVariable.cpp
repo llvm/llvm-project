@@ -99,7 +99,8 @@ ValueObjectVariable::CalculateNumChildren(uint32_t max) {
   CompilerType type(GetCompilerType());
 
   if (!type.IsValid())
-    return 0;
+    return llvm::make_error<llvm::StringError>("invalid type",
+                                               llvm::inconvertibleErrorCode());
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
   const bool omit_empty_base_classes = true;
@@ -163,8 +164,11 @@ bool ValueObjectVariable::UpdateValue() {
                 target);
     }
     Value old_value(m_value);
-    if (expr_list.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr, nullptr,
-                           nullptr, m_value, &m_error)) {
+    llvm::Expected<Value> maybe_value = expr_list.Evaluate(
+        &exe_ctx, nullptr, loclist_base_load_addr, nullptr, nullptr);
+
+    if (maybe_value) {
+      m_value = *maybe_value;
       m_resolved_value = m_value;
       m_value.SetContext(Value::ContextType::Variable, variable);
 
@@ -245,6 +249,7 @@ bool ValueObjectVariable::UpdateValue() {
 
       SetValueIsValid(m_error.Success());
     } else {
+      m_error = maybe_value.takeError();
       // could not find location, won't allow editing
       m_resolved_value.SetContext(Value::ContextType::Invalid, nullptr);
     }

@@ -17,6 +17,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Target/TargetMachine.h"
 #include <string>
 
@@ -117,7 +118,7 @@ void CtorDtorRunner::add(iterator_range<CtorDtorIterator> CtorDtors) {
 
   MangleAndInterner Mangle(
       JD.getExecutionSession(),
-      (*CtorDtors.begin()).Func->getParent()->getDataLayout());
+      (*CtorDtors.begin()).Func->getDataLayout());
 
   for (auto CtorDtor : CtorDtors) {
     assert(CtorDtor.Func && CtorDtor.Func->hasName() &&
@@ -422,6 +423,7 @@ Error StaticLibraryDefinitionGenerator::buildObjectFilesMap() {
   DenseMap<uint64_t, MemoryBufferRef> MemoryBuffers;
   DenseSet<uint64_t> Visited;
   DenseSet<uint64_t> Excluded;
+  StringSaver FileNames(ObjFileNameStorage);
   for (auto &S : Archive->symbols()) {
     StringRef SymName = S.getName();
     auto Member = S.getMember();
@@ -438,7 +440,17 @@ Error StaticLibraryDefinitionGenerator::buildObjectFilesMap() {
         Excluded.insert(DataOffset);
         continue;
       }
-      MemoryBuffers[DataOffset] = (*Child)->getMemoryBufferRef();
+
+      // Give members of the archive a name that contains the archive path so
+      // that they can be differentiated from a member with the same name in a
+      // different archive. This also ensure initializer symbols names will be
+      // unique within a JITDylib.
+      StringRef FullName = FileNames.save(Archive->getFileName() + "(" +
+                                          (*Child)->getFileName() + ")");
+      MemoryBufferRef MemBuffer((*Child)->getMemoryBufferRef().getBuffer(),
+                                FullName);
+
+      MemoryBuffers[DataOffset] = MemBuffer;
     }
     if (!Excluded.count(DataOffset))
       ObjectFilesMap[L.getExecutionSession().intern(SymName)] =
@@ -545,7 +557,7 @@ DLLImportDefinitionGenerator::getTargetPointerSize(const Triple &TT) {
 }
 
 Expected<llvm::endianness>
-DLLImportDefinitionGenerator::getTargetEndianness(const Triple &TT) {
+DLLImportDefinitionGenerator::getEndianness(const Triple &TT) {
   switch (TT.getArch()) {
   case Triple::x86_64:
     return llvm::endianness::little;
@@ -562,7 +574,7 @@ DLLImportDefinitionGenerator::createStubsGraph(const SymbolMap &Resolved) {
   auto PointerSize = getTargetPointerSize(TT);
   if (!PointerSize)
     return PointerSize.takeError();
-  auto Endianness = getTargetEndianness(TT);
+  auto Endianness = getEndianness(TT);
   if (!Endianness)
     return Endianness.takeError();
 

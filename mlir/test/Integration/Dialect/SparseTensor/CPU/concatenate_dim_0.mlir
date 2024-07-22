@@ -111,11 +111,11 @@ module {
     // CHECK-NEXT: nse = 18
     // CHECK-NEXT: dim = ( 9, 4 )
     // CHECK-NEXT: lvl = ( 9, 4 )
-    // CHECK-NEXT: pos[0] : ( 0, 9,
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3, 4, 5, 6, 7, 8,
-    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 6, 7, 10, 12, 13, 16, 18,
-    // CHECK-NEXT: crd[1] : ( 0, 2, 1, 0, 2, 3, 1, 0, 1, 2, 2, 3, 1, 0, 1, 2, 0, 1,
-    // CHECK-NEXT: values : ( 1, 3, 2, 1, 1, 1, 0.5, 1, 5, 2, 1.5, 1, 3.5, 1, 5, 2, 1, 0.5,
+    // CHECK-NEXT: pos[0] : ( 0, 9 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3, 4, 5, 6, 7, 8 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 6, 7, 10, 12, 13, 16, 18 )
+    // CHECK-NEXT: crd[1] : ( 0, 2, 1, 0, 2, 3, 1, 0, 1, 2, 2, 3, 1, 0, 1, 2, 0, 1 )
+    // CHECK-NEXT: values : ( 1, 3, 2, 1, 1, 1, 0.5, 1, 5, 2, 1.5, 1, 3.5, 1, 5, 2, 1, 0.5 )
     // CHECK-NEXT: ----
     //
     %0 = call @concat_sparse_sparse(%sm24cc, %sm34cd, %sm44dc)
@@ -142,11 +142,11 @@ module {
     // CHECK-NEXT: nse = 18
     // CHECK-NEXT: dim = ( 9, 4 )
     // CHECK-NEXT: lvl = ( 9, 4 )
-    // CHECK-NEXT: pos[0] : ( 0, 9,
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3, 4, 5, 6, 7, 8,
-    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 6, 7, 10, 12, 13, 16, 18,
-    // CHECK-NEXT: crd[1] : ( 0, 2, 1, 0, 2, 3, 1, 0, 1, 2, 2, 3, 1, 0, 1, 2, 0, 1,
-    // CHECK-NEXT: values : ( 1, 3, 2, 1, 1, 1, 0.5, 1, 5, 2, 1.5, 1, 3.5, 1, 5, 2, 1, 0.5,
+    // CHECK-NEXT: pos[0] : ( 0, 9 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3, 4, 5, 6, 7, 8 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 6, 7, 10, 12, 13, 16, 18 )
+    // CHECK-NEXT: crd[1] : ( 0, 2, 1, 0, 2, 3, 1, 0, 1, 2, 2, 3, 1, 0, 1, 2, 0, 1 )
+    // CHECK-NEXT: values : ( 1, 3, 2, 1, 1, 1, 0.5, 1, 5, 2, 1.5, 1, 3.5, 1, 5, 2, 1, 0.5 )
     // CHECK-NEXT: ----
     //
     %2 = call @concat_mix_sparse(%m24, %sm34cd, %sm44dc)

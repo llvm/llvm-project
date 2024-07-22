@@ -88,8 +88,6 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned DSP : 1;
   LLVM_PREFERRED_TYPE(bool)
-  unsigned Unaligned : 1;
-  LLVM_PREFERRED_TYPE(bool)
   unsigned DotProd : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasMatMul : 1;
@@ -227,6 +225,10 @@ public:
   bool hasBitIntType() const override { return true; }
 
   const char *getBFloat16Mangling() const override { return "u6__bf16"; };
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(getTriple().isArch64Bit() ? 256 : 64, 64);
+  }
 };
 
 class LLVM_LIBRARY_VISIBILITY ARMleTargetInfo : public ARMTargetInfo {

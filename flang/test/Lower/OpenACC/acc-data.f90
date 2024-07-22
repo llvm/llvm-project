@@ -155,11 +155,13 @@ subroutine acc_data
 ! CHECK: acc.data dataOperands(%{{.*}}) {
 ! CHECK: } attributes {asyncOnly = [#acc.device_type<none>]}
 
-  !$acc data present(a) async(1)
+  !$acc data copy(a) async(1)
   !$acc end data
 
-! CHECK: acc.data async(%{{.*}} : i32) dataOperands(%{{.*}}) {
+! CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) async(%[[ASYNC:.*]] : i32) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_copy>, name = "a"}
+! CHECK: acc.data async(%[[ASYNC]] : i32) dataOperands(%[[COPYIN]] : !fir.ref<!fir.array<10x10xf32>>) {
 ! CHECK: }{{$}}
+! CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) async(%[[ASYNC]] : i32) to varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "a"}
 
   !$acc data present(a) wait
   !$acc end data

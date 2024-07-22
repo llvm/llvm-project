@@ -93,8 +93,9 @@ define i64 @th_addsl_2_extra_sext(i32 %x, i32 %y, i32 %z) {
 define i64 @addmul6(i64 %a, i64 %b) {
 ; RV64I-LABEL: addmul6:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a2, 6
-; RV64I-NEXT:    mul a0, a0, a2
+; RV64I-NEXT:    slli a2, a0, 1
+; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    sub a0, a0, a2
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -129,8 +130,9 @@ define i64 @addmul10(i64 %a, i64 %b) {
 define i64 @addmul12(i64 %a, i64 %b) {
 ; RV64I-LABEL: addmul12:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a2, 12
-; RV64I-NEXT:    mul a0, a0, a2
+; RV64I-NEXT:    slli a2, a0, 2
+; RV64I-NEXT:    slli a0, a0, 4
+; RV64I-NEXT:    sub a0, a0, a2
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -183,8 +185,9 @@ define i64 @addmul20(i64 %a, i64 %b) {
 define i64 @addmul24(i64 %a, i64 %b) {
 ; RV64I-LABEL: addmul24:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a2, 24
-; RV64I-NEXT:    mul a0, a0, a2
+; RV64I-NEXT:    slli a2, a0, 3
+; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    sub a0, a0, a2
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -252,11 +255,189 @@ define i64 @addmul72(i64 %a, i64 %b) {
   ret i64 %d
 }
 
+define i64 @mul11(i64 %a) {
+; RV64I-LABEL: mul11:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 11
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBA-LABEL: mul11:
+; RV64XTHEADBA:       # %bb.0:
+; RV64XTHEADBA-NEXT:    th.addsl a1, a0, a0, 2
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a1, 1
+; RV64XTHEADBA-NEXT:    ret
+  %c = mul i64 %a, 11
+  ret i64 %c
+}
+
+define i64 @mul19(i64 %a) {
+; RV64I-LABEL: mul19:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 19
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBA-LABEL: mul19:
+; RV64XTHEADBA:       # %bb.0:
+; RV64XTHEADBA-NEXT:    th.addsl a1, a0, a0, 3
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a1, 1
+; RV64XTHEADBA-NEXT:    ret
+  %c = mul i64 %a, 19
+  ret i64 %c
+}
+
+define i64 @mul13(i64 %a) {
+; RV64I-LABEL: mul13:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 13
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBA-LABEL: mul13:
+; RV64XTHEADBA:       # %bb.0:
+; RV64XTHEADBA-NEXT:    th.addsl a1, a0, a0, 1
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a1, 2
+; RV64XTHEADBA-NEXT:    ret
+  %c = mul i64 %a, 13
+  ret i64 %c
+}
+
+define i64 @mul21(i64 %a) {
+; RV64I-LABEL: mul21:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 21
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBA-LABEL: mul21:
+; RV64XTHEADBA:       # %bb.0:
+; RV64XTHEADBA-NEXT:    th.addsl a1, a0, a0, 2
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a1, 2
+; RV64XTHEADBA-NEXT:    ret
+  %c = mul i64 %a, 21
+  ret i64 %c
+}
+
+define i64 @mul37(i64 %a) {
+; RV64I-LABEL: mul37:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 37
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBA-LABEL: mul37:
+; RV64XTHEADBA:       # %bb.0:
+; RV64XTHEADBA-NEXT:    th.addsl a1, a0, a0, 3
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a1, 2
+; RV64XTHEADBA-NEXT:    ret
+  %c = mul i64 %a, 37
+  ret i64 %c
+}
+
+define i64 @mul25(i64 %a) {
+; RV64I-LABEL: mul25:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 25
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBA-LABEL: mul25:
+; RV64XTHEADBA:       # %bb.0:
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a0, 2
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a0, 2
+; RV64XTHEADBA-NEXT:    ret
+  %c = mul i64 %a, 25
+  ret i64 %c
+}
+
+define i64 @mul41(i64 %a) {
+; RV64I-LABEL: mul41:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 41
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBA-LABEL: mul41:
+; RV64XTHEADBA:       # %bb.0:
+; RV64XTHEADBA-NEXT:    th.addsl a1, a0, a0, 2
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a1, 3
+; RV64XTHEADBA-NEXT:    ret
+  %c = mul i64 %a, 41
+  ret i64 %c
+}
+
+define i64 @mul73(i64 %a) {
+; RV64I-LABEL: mul73:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 73
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBA-LABEL: mul73:
+; RV64XTHEADBA:       # %bb.0:
+; RV64XTHEADBA-NEXT:    th.addsl a1, a0, a0, 3
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a1, 3
+; RV64XTHEADBA-NEXT:    ret
+  %c = mul i64 %a, 73
+  ret i64 %c
+}
+
+define i64 @mul27(i64 %a) {
+; RV64I-LABEL: mul27:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 27
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBA-LABEL: mul27:
+; RV64XTHEADBA:       # %bb.0:
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a0, 1
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a0, 3
+; RV64XTHEADBA-NEXT:    ret
+  %c = mul i64 %a, 27
+  ret i64 %c
+}
+
+define i64 @mul45(i64 %a) {
+; RV64I-LABEL: mul45:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 45
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBA-LABEL: mul45:
+; RV64XTHEADBA:       # %bb.0:
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a0, 2
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a0, 3
+; RV64XTHEADBA-NEXT:    ret
+  %c = mul i64 %a, 45
+  ret i64 %c
+}
+
+define i64 @mul81(i64 %a) {
+; RV64I-LABEL: mul81:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 81
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBA-LABEL: mul81:
+; RV64XTHEADBA:       # %bb.0:
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a0, 3
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a0, 3
+; RV64XTHEADBA-NEXT:    ret
+  %c = mul i64 %a, 81
+  ret i64 %c
+}
+
+
 define i64 @mul96(i64 %a) {
 ; RV64I-LABEL: mul96:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, 96
-; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    slli a1, a0, 5
+; RV64I-NEXT:    slli a0, a0, 7
+; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64XTHEADBA-LABEL: mul96:
@@ -265,6 +446,23 @@ define i64 @mul96(i64 %a) {
 ; RV64XTHEADBA-NEXT:    slli a0, a0, 5
 ; RV64XTHEADBA-NEXT:    ret
   %c = mul i64 %a, 96
+  ret i64 %c
+}
+
+define i64 @mul137(i64 %a) {
+; RV64I-LABEL: mul137:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 137
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBA-LABEL: mul137:
+; RV64XTHEADBA:       # %bb.0:
+; RV64XTHEADBA-NEXT:    th.addsl a1, a0, a0, 3
+; RV64XTHEADBA-NEXT:    slli a0, a0, 7
+; RV64XTHEADBA-NEXT:    add a0, a0, a1
+; RV64XTHEADBA-NEXT:    ret
+  %c = mul i64 %a, 137
   ret i64 %c
 }
 

@@ -10,11 +10,12 @@
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(bool, stdc_has_single_bit_ull, (unsigned long long value)) {
   return cpp::has_single_bit(value);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

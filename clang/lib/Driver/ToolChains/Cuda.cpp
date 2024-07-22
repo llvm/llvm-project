@@ -82,6 +82,10 @@ CudaVersion getCudaVersion(uint32_t raw_version) {
     return CudaVersion::CUDA_122;
   if (raw_version < 12040)
     return CudaVersion::CUDA_123;
+  if (raw_version < 12050)
+    return CudaVersion::CUDA_124;
+  if (raw_version < 12060)
+    return CudaVersion::CUDA_125;
   return CudaVersion::NEW;
 }
 
@@ -219,13 +223,13 @@ CudaInstallationDetector::CudaInstallationDetector(
       // CUDA-9+ uses single libdevice file for all GPU variants.
       std::string FilePath = LibDevicePath + "/libdevice.10.bc";
       if (FS.exists(FilePath)) {
-        for (int Arch = (int)CudaArch::SM_30, E = (int)CudaArch::LAST; Arch < E;
-             ++Arch) {
-          CudaArch GpuArch = static_cast<CudaArch>(Arch);
-          if (!IsNVIDIAGpuArch(GpuArch))
+        for (int Arch = (int)OffloadArch::SM_30, E = (int)OffloadArch::LAST;
+             Arch < E; ++Arch) {
+          OffloadArch OA = static_cast<OffloadArch>(Arch);
+          if (!IsNVIDIAOffloadArch(OA))
             continue;
-          std::string GpuArchName(CudaArchToString(GpuArch));
-          LibDeviceMap[GpuArchName] = FilePath;
+          std::string OffloadArchName(OffloadArchToString(OA));
+          LibDeviceMap[OffloadArchName] = FilePath;
         }
       }
     } else {
@@ -308,17 +312,17 @@ void CudaInstallationDetector::AddCudaIncludeArgs(
 }
 
 void CudaInstallationDetector::CheckCudaVersionSupportsArch(
-    CudaArch Arch) const {
-  if (Arch == CudaArch::UNKNOWN || Version == CudaVersion::UNKNOWN ||
+    OffloadArch Arch) const {
+  if (Arch == OffloadArch::UNKNOWN || Version == CudaVersion::UNKNOWN ||
       ArchsWithBadVersion[(int)Arch])
     return;
 
-  auto MinVersion = MinVersionForCudaArch(Arch);
-  auto MaxVersion = MaxVersionForCudaArch(Arch);
+  auto MinVersion = MinVersionForOffloadArch(Arch);
+  auto MaxVersion = MaxVersionForOffloadArch(Arch);
   if (Version < MinVersion || Version > MaxVersion) {
     ArchsWithBadVersion[(int)Arch] = true;
     D.Diag(diag::err_drv_cuda_version_unsupported)
-        << CudaArchToString(Arch) << CudaVersionToString(MinVersion)
+        << OffloadArchToString(Arch) << CudaVersionToString(MinVersion)
         << CudaVersionToString(MaxVersion) << InstallPath
         << CudaVersionToString(Version);
   }
@@ -397,8 +401,8 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Obtain architecture from the action.
-  CudaArch gpu_arch = StringToCudaArch(GPUArchName);
-  assert(gpu_arch != CudaArch::UNKNOWN &&
+  OffloadArch gpu_arch = StringToOffloadArch(GPUArchName);
+  assert(gpu_arch != OffloadArch::UNKNOWN &&
          "Device action expected to have an architecture.");
 
   // Check that our installation's ptxas supports gpu_arch.
@@ -453,7 +457,7 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-v");
 
   CmdArgs.push_back("--gpu-name");
-  CmdArgs.push_back(Args.MakeArgString(CudaArchToString(gpu_arch)));
+  CmdArgs.push_back(Args.MakeArgString(OffloadArchToString(gpu_arch)));
   CmdArgs.push_back("--output-file");
   std::string OutputFileName = TC.getInputFilename(Output);
 
@@ -549,7 +553,7 @@ void NVPTX::FatBinary::ConstructJob(Compilation &C, const JobAction &JA,
     const char *gpu_arch_str = A->getOffloadingArch();
     assert(gpu_arch_str &&
            "Device action expected to have associated a GPU architecture!");
-    CudaArch gpu_arch = StringToCudaArch(gpu_arch_str);
+    OffloadArch gpu_arch = StringToOffloadArch(gpu_arch_str);
 
     if (II.getType() == types::TY_PP_Asm &&
         !shouldIncludePTX(Args, gpu_arch_str))
@@ -557,7 +561,7 @@ void NVPTX::FatBinary::ConstructJob(Compilation &C, const JobAction &JA,
     // We need to pass an Arch of the form "sm_XX" for cubin files and
     // "compute_XX" for ptx.
     const char *Arch = (II.getType() == types::TY_PP_Asm)
-                           ? CudaArchToVirtualArchString(gpu_arch)
+                           ? OffloadArchToVirtualArchString(gpu_arch)
                            : gpu_arch_str;
     CmdArgs.push_back(
         Args.MakeArgString(llvm::Twine("--image=profile=") + Arch +
@@ -688,6 +692,8 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case CudaVersion::CUDA_##CUDA_VER:                                           \
     PtxFeature = "+ptx" #PTX_VER;                                              \
     break;
+    CASE_CUDA_VERSION(125, 85);
+    CASE_CUDA_VERSION(124, 84);
     CASE_CUDA_VERSION(123, 83);
     CASE_CUDA_VERSION(122, 82);
     CASE_CUDA_VERSION(121, 81);
@@ -750,10 +756,12 @@ NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     if (!llvm::is_contained(*DAL, A))
       DAL->append(A);
 
-  // TODO: We should accept 'generic' as a valid architecture.
   if (!DAL->hasArg(options::OPT_march_EQ) && OffloadKind != Action::OFK_None) {
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
-                      CudaArchToString(CudaArch::CudaDefault));
+                      OffloadArchToString(OffloadArch::CudaDefault));
+  } else if (DAL->getLastArgValue(options::OPT_march_EQ) == "generic" &&
+             OffloadKind == Action::OFK_None) {
+    DAL->eraseArg(options::OPT_march_EQ);
   } else if (DAL->getLastArgValue(options::OPT_march_EQ) == "native") {
     auto GPUsOrErr = getSystemGPUArchs(Args);
     if (!GPUsOrErr) {
@@ -818,7 +826,7 @@ NVPTXToolChain::getSystemGPUArchs(const ArgList &Args) const {
   else
     Program = GetProgramPath("nvptx-arch");
 
-  auto StdoutOrErr = executeToolChainProgram(Program);
+  auto StdoutOrErr = executeToolChainProgram(Program, /*SecondsToWait=*/10);
   if (!StdoutOrErr)
     return StdoutOrErr.takeError();
 
@@ -930,7 +938,7 @@ void CudaToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
       !DriverArgs.hasArg(options::OPT_no_cuda_version_check)) {
     StringRef Arch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
     assert(!Arch.empty() && "Must have an explicit GPU arch.");
-    CudaInstallation.CheckCudaVersionSupportsArch(StringToCudaArch(Arch));
+    CudaInstallation.CheckCudaVersionSupportsArch(StringToOffloadArch(Arch));
   }
   CudaInstallation.AddCudaIncludeArgs(DriverArgs, CC1Args);
 }
@@ -976,7 +984,7 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
               llvm::formatv("{0}", llvm::fmt_consume(ArchsOrErr.takeError()));
           getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
               << llvm::Triple::getArchTypeName(getArch()) << ErrMsg << "-march";
-          Arch = CudaArchToString(CudaArch::CudaDefault);
+          Arch = OffloadArchToString(OffloadArch::CudaDefault);
         } else {
           Arch = Args.MakeArgString(ArchsOrErr->front());
         }
@@ -988,7 +996,10 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   }
 
   for (Arg *A : Args) {
-    DAL->append(A);
+    // Make sure flags are not duplicated.
+    if (!llvm::is_contained(*DAL, A)) {
+      DAL->append(A);
+    }
   }
 
   if (!BoundArch.empty()) {

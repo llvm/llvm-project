@@ -15,8 +15,8 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/RISCVAttributes.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -631,8 +631,8 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
       continue;
     case R_RELAX_TLS_GD_TO_LE:
       // See the comment in handleTlsRelocation. For TLSDESC=>IE,
-      // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12,CALL} also reach here. If isToIe is
-      // true, this is actually TLSDESC=>IE optimization.
+      // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12,CALL} also reach here. If isToLe is
+      // false, this is actually TLSDESC=>IE optimization.
       if (rel.type == R_RISCV_TLSDESC_HI20) {
         tlsdescVal = val;
         isToLe = true;
@@ -1057,7 +1057,7 @@ public:
 };
 } // namespace
 
-static void mergeArch(RISCVISAInfo::OrderedExtensionMap &mergedExts,
+static void mergeArch(RISCVISAUtils::OrderedExtensionMap &mergedExts,
                       unsigned &mergedXlen, const InputSectionBase *sec,
                       StringRef s) {
   auto maybeInfo = RISCVISAInfo::parseNormalizedArchString(s);
@@ -1074,20 +1074,107 @@ static void mergeArch(RISCVISAInfo::OrderedExtensionMap &mergedExts,
     mergedXlen = info.getXLen();
   } else {
     for (const auto &ext : info.getExtensions()) {
-      if (auto it = mergedExts.find(ext.first); it != mergedExts.end()) {
-        if (std::tie(it->second.Major, it->second.Minor) >=
+      auto p = mergedExts.insert(ext);
+      if (!p.second) {
+        if (std::tie(p.first->second.Major, p.first->second.Minor) <
             std::tie(ext.second.Major, ext.second.Minor))
-          continue;
+          p.first->second = ext.second;
       }
-      mergedExts[ext.first] = ext.second;
     }
   }
 }
 
+static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
+                        const InputSectionBase *oldSection,
+                        const InputSectionBase *newSection,
+                        RISCVAttrs::RISCVAtomicAbiTag oldTag,
+                        RISCVAttrs::RISCVAtomicAbiTag newTag) {
+  using RISCVAttrs::RISCVAtomicAbiTag;
+  // Same tags stay the same, and UNKNOWN is compatible with anything
+  if (oldTag == newTag || newTag == RISCVAtomicAbiTag::UNKNOWN)
+    return;
+
+  auto reportAbiError = [&]() {
+    errorOrWarn("atomic abi mismatch for " + oldSection->name + "\n>>> " +
+                toString(oldSection) +
+                ": atomic_abi=" + Twine(static_cast<unsigned>(oldTag)) +
+                "\n>>> " + toString(newSection) +
+                ": atomic_abi=" + Twine(static_cast<unsigned>(newTag)));
+  };
+
+  auto reportUnknownAbiError = [](const InputSectionBase *section,
+                                  RISCVAtomicAbiTag tag) {
+    switch (tag) {
+    case RISCVAtomicAbiTag::UNKNOWN:
+    case RISCVAtomicAbiTag::A6C:
+    case RISCVAtomicAbiTag::A6S:
+    case RISCVAtomicAbiTag::A7:
+      return;
+    };
+    errorOrWarn("unknown atomic abi for " + section->name + "\n>>> " +
+                toString(section) +
+                ": atomic_abi=" + Twine(static_cast<unsigned>(tag)));
+  };
+  switch (oldTag) {
+  case RISCVAtomicAbiTag::UNKNOWN:
+    it->getSecond() = static_cast<unsigned>(newTag);
+    return;
+  case RISCVAtomicAbiTag::A6C:
+    switch (newTag) {
+    case RISCVAtomicAbiTag::A6S:
+      it->getSecond() = static_cast<unsigned>(RISCVAtomicAbiTag::A6C);
+      return;
+    case RISCVAtomicAbiTag::A7:
+      reportAbiError();
+      return;
+    case RISCVAttrs::RISCVAtomicAbiTag::UNKNOWN:
+    case RISCVAttrs::RISCVAtomicAbiTag::A6C:
+      return;
+    };
+    break;
+
+  case RISCVAtomicAbiTag::A6S:
+    switch (newTag) {
+    case RISCVAtomicAbiTag::A6C:
+      it->getSecond() = static_cast<unsigned>(RISCVAtomicAbiTag::A6C);
+      return;
+    case RISCVAtomicAbiTag::A7:
+      it->getSecond() = static_cast<unsigned>(RISCVAtomicAbiTag::A7);
+      return;
+    case RISCVAttrs::RISCVAtomicAbiTag::UNKNOWN:
+    case RISCVAttrs::RISCVAtomicAbiTag::A6S:
+      return;
+    };
+    break;
+
+  case RISCVAtomicAbiTag::A7:
+    switch (newTag) {
+    case RISCVAtomicAbiTag::A6S:
+      it->getSecond() = static_cast<unsigned>(RISCVAtomicAbiTag::A7);
+      return;
+    case RISCVAtomicAbiTag::A6C:
+      reportAbiError();
+      return;
+    case RISCVAttrs::RISCVAtomicAbiTag::UNKNOWN:
+    case RISCVAttrs::RISCVAtomicAbiTag::A7:
+      return;
+    };
+    break;
+  };
+
+  // If we get here, then we have an invalid tag, so report it.
+  // Putting these checks at the end allows us to only do these checks when we
+  // need to, since this is expected to be a rare occurrence.
+  reportUnknownAbiError(oldSection, oldTag);
+  reportUnknownAbiError(newSection, newTag);
+}
+
 static RISCVAttributesSection *
 mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
-  RISCVISAInfo::OrderedExtensionMap exts;
+  using RISCVAttrs::RISCVAtomicAbiTag;
+  RISCVISAUtils::OrderedExtensionMap exts;
   const InputSectionBase *firstStackAlign = nullptr;
+  const InputSectionBase *firstAtomicAbi = nullptr;
   unsigned firstStackAlignValue = 0, xlen = 0;
   bool hasArch = false;
 
@@ -1134,6 +1221,18 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
       case RISCVAttrs::PRIV_SPEC_MINOR:
       case RISCVAttrs::PRIV_SPEC_REVISION:
         break;
+
+      case RISCVAttrs::AttrType::ATOMIC_ABI:
+        if (auto i = parser.getAttributeValue(tag.attr)) {
+          auto r = merged.intAttr.try_emplace(tag.attr, *i);
+          if (r.second)
+            firstAtomicAbi = sec;
+          else
+            mergeAtomic(r.first, firstAtomicAbi, sec,
+                        static_cast<RISCVAtomicAbiTag>(r.first->getSecond()),
+                        static_cast<RISCVAtomicAbiTag>(*i));
+        }
+        continue;
       }
 
       // Fallback for deprecated priv_spec* and other unknown attributes: retain
@@ -1155,9 +1254,8 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
     }
   }
 
-  if (hasArch) {
-    if (auto result = RISCVISAInfo::postProcessAndChecking(
-            std::make_unique<RISCVISAInfo>(xlen, exts))) {
+  if (hasArch && xlen != 0) {
+    if (auto result = RISCVISAInfo::createFromExtMap(xlen, exts)) {
       merged.strAttr.try_emplace(RISCVAttrs::ARCH,
                                  saver().save((*result)->toString()));
     } else {

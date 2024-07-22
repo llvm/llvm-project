@@ -72,7 +72,7 @@ NamedDecl *LookupNamed(Sema &S, llvm::StringRef Name,
                        const DeclContext *Within) {
   DeclarationName DName = &S.Context.Idents.get(Name);
   LookupResult R(S, DName, SourceLocation(), Sema::LookupOrdinaryName,
-                 Sema::ForVisibleRedeclaration);
+                 RedeclarationKind::ForVisibleRedeclaration);
 
   R.suppressDiagnostics();
 

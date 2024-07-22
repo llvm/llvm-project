@@ -1,7 +1,14 @@
+//===- bolt/unittest/Core/BinaryContext.cpp -------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "bolt/Core/BinaryContext.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gtest/gtest.h"
 
@@ -40,8 +47,8 @@ protected:
 
   void initializeBOLT() {
     BC = cantFail(BinaryContext::createBinaryContext(
-        ObjFile.get(), true, DWARFContext::create(*ObjFile.get()),
-        {llvm::outs(), llvm::errs()}));
+        ObjFile->makeTriple(), ObjFile->getFileName(), nullptr, true,
+        DWARFContext::create(*ObjFile.get()), {llvm::outs(), llvm::errs()}));
     ASSERT_FALSE(!BC);
   }
 

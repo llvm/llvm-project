@@ -64,7 +64,7 @@ bool Builtin::Context::isBuiltinFunc(llvm::StringRef FuncName) {
   bool InStdNamespace = FuncName.consume_front("std-");
   for (unsigned i = Builtin::NotBuiltin + 1; i != Builtin::FirstTSBuiltin;
        ++i) {
-    if (FuncName.equals(BuiltinInfo[i].Name) &&
+    if (FuncName == BuiltinInfo[i].Name &&
         (bool)strchr(BuiltinInfo[i].Attributes, 'z') == InStdNamespace)
       return strchr(BuiltinInfo[i].Attributes, 'f') != nullptr;
   }
@@ -118,6 +118,9 @@ static bool builtinIsSupported(const Builtin::Info &BuiltinInfo,
     return false;
   /* CPlusPlus Unsupported */
   if (!LangOpts.CPlusPlus && BuiltinInfo.Langs == CXX_LANG)
+    return false;
+  /* consteval Unsupported */
+  if (!LangOpts.CPlusPlus20 && strchr(BuiltinInfo.Attributes, 'G') != nullptr)
     return false;
   return true;
 }

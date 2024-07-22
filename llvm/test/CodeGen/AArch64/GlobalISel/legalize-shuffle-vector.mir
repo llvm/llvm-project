@@ -312,9 +312,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[DEF]](s32)
-    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[DEF]](s32)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<4 x s32>)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[UV]](s32)
+    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[UV]](s32)
     ; CHECK-NEXT: [[SHUF:%[0-9]+]]:_(<4 x s32>) = G_SHUFFLE_VECTOR [[BUILD_VECTOR]](<4 x s32>), [[BUILD_VECTOR1]], shufflemask(0, 1, 5, 6)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[SHUF]](<4 x s32>), [[C]](s64)

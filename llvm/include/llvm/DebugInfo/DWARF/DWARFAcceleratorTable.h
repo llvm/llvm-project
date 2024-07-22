@@ -64,6 +64,14 @@ public:
       return std::nullopt;
     }
 
+    /// Returns the type signature of the Type Unit associated with this
+    /// Accelerator Entry or std::nullopt if the Type Unit offset is not
+    /// recorded in this Accelerator Entry.
+    virtual std::optional<uint64_t> getForeignTUTypeSignature() const {
+      // Default return for accelerator tables that don't support type units.
+      return std::nullopt;
+    }
+
     /// Returns the Tag of the Debug Info Entry associated with this
     /// Accelerator Entry or std::nullopt if the Tag is not recorded in this
     /// Accelerator Entry.
@@ -433,9 +441,16 @@ public:
     Entry(const NameIndex &NameIdx, const Abbrev &Abbr);
 
   public:
+    const NameIndex *getNameIndex() const { return NameIdx; }
     std::optional<uint64_t> getCUOffset() const override;
     std::optional<uint64_t> getLocalTUOffset() const override;
+    std::optional<uint64_t> getForeignTUTypeSignature() const override;
     std::optional<dwarf::Tag> getTag() const override { return tag(); }
+
+    // Special function that will return the related CU offset needed type 
+    // units. This gets used to find the .dwo file that originated the entries
+    // for a given type unit.
+    std::optional<uint64_t> getRelatedCUOffset() const;
 
     /// Returns the Index into the Compilation Unit list of the owning Name
     /// Index or std::nullopt if this Accelerator Entry does not have an
@@ -447,6 +462,11 @@ public:
     /// DW_IDX_compile_unit attribute, unless there is a DW_IDX_type_unit
     /// attribute.
     std::optional<uint64_t> getCUIndex() const;
+
+    /// Similar functionality to getCUIndex() but without the DW_IDX_type_unit
+    /// restriction. This allows us to get the associated a compilation unit
+    /// index for an entry that is a type unit.
+    std::optional<uint64_t> getRelatedCUIndex() const;
 
     /// Returns the Index into the Local Type Unit list of the owning Name
     /// Index or std::nullopt if this Accelerator Entry does not have an
@@ -604,6 +624,12 @@ public:
   public:
     NameIndex(const DWARFDebugNames &Section, uint64_t Base)
         : Section(Section), Base(Base) {}
+
+    /// Returns Hdr field
+    Header getHeader() const { return Hdr; }
+
+    /// Returns Offsets field
+    DWARFDebugNamesOffsets getOffsets() const { return Offsets; }
 
     /// Reads offset of compilation unit CU. CU is 0-based.
     uint64_t getCUOffset(uint32_t CU) const;
@@ -801,9 +827,11 @@ public:
 
 /// Calculates the starting offsets for various sections within the
 /// .debug_names section.
-void findDebugNamesOffsets(DWARFDebugNames::DWARFDebugNamesOffsets &Offsets,
-                           uint64_t HdrSize, const dwarf::DwarfFormat Format,
-                           const DWARFDebugNames::Header &Hdr);
+namespace dwarf {
+DWARFDebugNames::DWARFDebugNamesOffsets
+findDebugNamesOffsets(uint64_t EndOfHeaderOffset,
+                      const DWARFDebugNames::Header &Hdr);
+}
 
 /// If `Name` is the name of a templated function that includes template
 /// parameters, returns a substring of `Name` containing no template

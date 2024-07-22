@@ -159,18 +159,6 @@ void MCXCOFFStreamer::emitInstToData(const MCInst &Inst,
   DF->getContents().append(Code.begin(), Code.end());
 }
 
-MCStreamer *llvm::createXCOFFStreamer(MCContext &Context,
-                                      std::unique_ptr<MCAsmBackend> &&MAB,
-                                      std::unique_ptr<MCObjectWriter> &&OW,
-                                      std::unique_ptr<MCCodeEmitter> &&CE,
-                                      bool RelaxAll) {
-  MCXCOFFStreamer *S = new MCXCOFFStreamer(Context, std::move(MAB),
-                                           std::move(OW), std::move(CE));
-  if (RelaxAll)
-    S->getAssembler().setRelaxAll(true);
-  return S;
-}
-
 void MCXCOFFStreamer::emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym,
                                                  uint64_t Size,
                                                  MCSymbol *CsectSym,

@@ -299,7 +299,9 @@ bool Watchpoint::DumpSnapshots(Stream *s, const char *prefix) const {
             .SetHideRootType(true)
             .SetHideRootName(true)
             .SetHideName(true);
-        m_old_value_sp->Dump(strm, options);
+        if (llvm::Error error = m_old_value_sp->Dump(strm, options))
+          strm << "error: " << toString(std::move(error));
+
         if (strm.GetData())
           values_ss.Printf("old value: %s", strm.GetData());
       }
@@ -322,7 +324,9 @@ bool Watchpoint::DumpSnapshots(Stream *s, const char *prefix) const {
             .SetHideRootType(true)
             .SetHideRootName(true)
             .SetHideName(true);
-        m_new_value_sp->Dump(strm, options);
+        if (llvm::Error error = m_new_value_sp->Dump(strm, options))
+          strm << "error: " << toString(std::move(error));
+
         if (strm.GetData())
           values_ss.Printf("new value: %s", strm.GetData());
       }
@@ -460,9 +464,8 @@ void Watchpoint::SetCondition(const char *condition) {
     // Pass nullptr for expr_prefix (no translation-unit level definitions).
     Status error;
     m_condition_up.reset(m_target.GetUserExpressionForLanguage(
-        condition, llvm::StringRef(), lldb::eLanguageTypeUnknown,
-        UserExpression::eResultTypeAny, EvaluateExpressionOptions(), nullptr,
-        error));
+        condition, {}, {}, UserExpression::eResultTypeAny,
+        EvaluateExpressionOptions(), nullptr, error));
     if (error.Fail()) {
       // FIXME: Log something...
       m_condition_up.reset();

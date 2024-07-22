@@ -15,14 +15,16 @@ declare void @start_thread(ptr)
 define i32 @f() {
 entry:
   ; Set @ip to point to x[1] for thread 1.
-  store ptr getelementptr inbounds ([100 x i32], ptr @x, i64 0, i64 1), ptr @ip, align 8
+  %p = call ptr @llvm.threadlocal.address(ptr @x)
+  %addr = getelementptr inbounds [100 x i32], ptr %p, i64 0, i64 1
+  store ptr %addr, ptr @ip, align 8
 
   ; Run g on a new thread.
   tail call void @start_thread(ptr @g) nounwind
   tail call void @wait() nounwind
 
   ; Reset x[1] for thread 1.
-  store i32 0, ptr getelementptr inbounds ([100 x i32], ptr @x, i64 0, i64 1), align 4
+  store i32 0, ptr %addr, align 4
 
   ; Read the value of @ip, which now points at x[1] for thread 2.
   %0 = load ptr, ptr @ip, align 8
@@ -39,10 +41,12 @@ entry:
 define internal void @g() nounwind uwtable {
 entry:
   ; Set @ip to point to x[1] for thread 2.
-  store ptr getelementptr inbounds ([100 x i32], ptr @x, i64 0, i64 1), ptr @ip, align 8
+  %p = call ptr @llvm.threadlocal.address(ptr @x)
+  %addr = getelementptr inbounds [100 x i32], ptr %p, i64 0, i64 1
+  store ptr %addr, ptr @ip, align 8
 
   ; Store 50 in x[1] for thread 2.
-  store i32 50, ptr getelementptr inbounds ([100 x i32], ptr @x, i64 0, i64 1), align 4
+  store i32 50, ptr %addr, align 4
 
   tail call void @signal() nounwind
   ret void

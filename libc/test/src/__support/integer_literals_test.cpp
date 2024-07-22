@@ -133,3 +133,24 @@ TEST(LlvmLibcIntegerLiteralTest, u256) {
       U256_MAX,
       0xFFFFFFFF'FFFFFFFF'FFFFFFFF'FFFFFFFF'FFFFFFFF'FFFFFFFF'FFFFFFFF'FFFFFFFF_u256);
 }
+
+TEST(LlvmLibcIntegerLiteralTest, parse_bigint) {
+  using T = LIBC_NAMESPACE::Int<128>;
+  struct {
+    const char *str;
+    T expected;
+  } constexpr TEST_CASES[] = {
+      {"0", 0}, {"-1", -1}, {"+1", 1}, {"-0xFF", -255}, {"-0b11", -3},
+  };
+  for (auto tc : TEST_CASES) {
+    T actual = LIBC_NAMESPACE::parse_bigint<T>(tc.str);
+    EXPECT_EQ(actual, tc.expected);
+  }
+}
+
+TEST(LlvmLibcIntegerLiteralTest, parse_bigint_invalid) {
+  using T = LIBC_NAMESPACE::Int<128>;
+  const T expected; // default construction
+  EXPECT_EQ(LIBC_NAMESPACE::parse_bigint<T>(nullptr), expected);
+  EXPECT_EQ(LIBC_NAMESPACE::parse_bigint<T>(""), expected);
+}

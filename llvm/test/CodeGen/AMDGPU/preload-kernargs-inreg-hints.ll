@@ -157,27 +157,27 @@ define amdgpu_kernel void @test_preload_hint_kernel_1_call_func(ptr %0) #0 {
 
 define amdgpu_kernel void @test_preload_hint_kernel_1_call_intrinsic(i16 %0) #0 {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_hint_kernel_1_call_intrinsic
-; NO-PRELOAD-SAME: (i16 [[TMP0:%.*]]) #[[ATTR2]] {
+; NO-PRELOAD-SAME: (i16 [[TMP0:%.*]]) #[[ATTR3:[0-9]+]] {
 ; NO-PRELOAD-NEXT:    call void @llvm.amdgcn.set.prio(i16 [[TMP0]])
 ; NO-PRELOAD-NEXT:    ret void
 ;
 ; PRELOAD-1-LABEL: define {{[^@]+}}@test_preload_hint_kernel_1_call_intrinsic
-; PRELOAD-1-SAME: (i16 inreg [[TMP0:%.*]]) #[[ATTR2]] {
+; PRELOAD-1-SAME: (i16 inreg [[TMP0:%.*]]) #[[ATTR3:[0-9]+]] {
 ; PRELOAD-1-NEXT:    call void @llvm.amdgcn.set.prio(i16 [[TMP0]])
 ; PRELOAD-1-NEXT:    ret void
 ;
 ; PRELOAD-3-LABEL: define {{[^@]+}}@test_preload_hint_kernel_1_call_intrinsic
-; PRELOAD-3-SAME: (i16 inreg [[TMP0:%.*]]) #[[ATTR2]] {
+; PRELOAD-3-SAME: (i16 inreg [[TMP0:%.*]]) #[[ATTR3:[0-9]+]] {
 ; PRELOAD-3-NEXT:    call void @llvm.amdgcn.set.prio(i16 [[TMP0]])
 ; PRELOAD-3-NEXT:    ret void
 ;
 ; PRELOAD-16-LABEL: define {{[^@]+}}@test_preload_hint_kernel_1_call_intrinsic
-; PRELOAD-16-SAME: (i16 inreg [[TMP0:%.*]]) #[[ATTR2]] {
+; PRELOAD-16-SAME: (i16 inreg [[TMP0:%.*]]) #[[ATTR3:[0-9]+]] {
 ; PRELOAD-16-NEXT:    call void @llvm.amdgcn.set.prio(i16 [[TMP0]])
 ; PRELOAD-16-NEXT:    ret void
 ;
 ; PRELOAD-20-LABEL: define {{[^@]+}}@test_preload_hint_kernel_1_call_intrinsic
-; PRELOAD-20-SAME: (i16 inreg [[TMP0:%.*]]) #[[ATTR2]] {
+; PRELOAD-20-SAME: (i16 inreg [[TMP0:%.*]]) #[[ATTR3:[0-9]+]] {
 ; PRELOAD-20-NEXT:    call void @llvm.amdgcn.set.prio(i16 [[TMP0]])
 ; PRELOAD-20-NEXT:    ret void
 ;
@@ -235,23 +235,23 @@ define amdgpu_kernel void @test_preload_hint_kernel_2_preexisting(i32 inreg %0, 
 
 define amdgpu_kernel void @test_preload_hint_kernel_incompatible_attributes(ptr addrspace(4) byref(i32) %0, ptr nest %1) {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_hint_kernel_incompatible_attributes
-; NO-PRELOAD-SAME: (ptr addrspace(4) byref(i32) [[TMP0:%.*]], ptr nest [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
+; NO-PRELOAD-SAME: (ptr addrspace(4) byref(i32) [[TMP0:%.*]], ptr nest [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
 ; NO-PRELOAD-NEXT:    ret void
 ;
 ; PRELOAD-1-LABEL: define {{[^@]+}}@test_preload_hint_kernel_incompatible_attributes
-; PRELOAD-1-SAME: (ptr addrspace(4) byref(i32) [[TMP0:%.*]], ptr nest [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
+; PRELOAD-1-SAME: (ptr addrspace(4) byref(i32) [[TMP0:%.*]], ptr nest [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
 ; PRELOAD-1-NEXT:    ret void
 ;
 ; PRELOAD-3-LABEL: define {{[^@]+}}@test_preload_hint_kernel_incompatible_attributes
-; PRELOAD-3-SAME: (ptr addrspace(4) byref(i32) [[TMP0:%.*]], ptr nest [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
+; PRELOAD-3-SAME: (ptr addrspace(4) byref(i32) [[TMP0:%.*]], ptr nest [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
 ; PRELOAD-3-NEXT:    ret void
 ;
 ; PRELOAD-16-LABEL: define {{[^@]+}}@test_preload_hint_kernel_incompatible_attributes
-; PRELOAD-16-SAME: (ptr addrspace(4) byref(i32) [[TMP0:%.*]], ptr nest [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
+; PRELOAD-16-SAME: (ptr addrspace(4) byref(i32) [[TMP0:%.*]], ptr nest [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
 ; PRELOAD-16-NEXT:    ret void
 ;
 ; PRELOAD-20-LABEL: define {{[^@]+}}@test_preload_hint_kernel_incompatible_attributes
-; PRELOAD-20-SAME: (ptr addrspace(4) byref(i32) [[TMP0:%.*]], ptr nest [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
+; PRELOAD-20-SAME: (ptr addrspace(4) byref(i32) [[TMP0:%.*]], ptr nest [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
 ; PRELOAD-20-NEXT:    ret void
 ;
   ret void

@@ -38,19 +38,6 @@ extern cl::opt<bool> PreserveBlocksAlignment;
 cl::opt<bool> AlignBlocks("align-blocks", cl::desc("align basic blocks"),
                           cl::cat(BoltOptCategory));
 
-cl::opt<MacroFusionType>
-AlignMacroOpFusion("align-macro-fusion",
-  cl::desc("fix instruction alignment for macro-fusion (x86 relocation mode)"),
-  cl::init(MFT_HOT),
-  cl::values(clEnumValN(MFT_NONE, "none",
-               "do not insert alignment no-ops for macro-fusion"),
-             clEnumValN(MFT_HOT, "hot",
-               "only insert alignment no-ops on hot execution paths (default)"),
-             clEnumValN(MFT_ALL, "all",
-               "always align instructions to allow macro-fusion")),
-  cl::ZeroOrMore,
-  cl::cat(BoltRelocCategory));
-
 static cl::list<std::string>
 BreakFunctionNames("break-funcs",
   cl::CommaSeparated,
@@ -194,6 +181,7 @@ private:
 
 void BinaryEmitter::emitAll(StringRef OrgSecPrefix) {
   Streamer.initSections(false, *BC.STI);
+  Streamer.setUseAssemblerInfoForParsing(false);
 
   if (opts::UpdateDebugSections && BC.isELF()) {
     // Force the emission of debug line info into allocatable section to ensure
@@ -226,6 +214,7 @@ void BinaryEmitter::emitAll(StringRef OrgSecPrefix) {
   // TODO Enable for Mach-O once BinaryContext::getDataSection supports it.
   if (BC.isELF())
     AddressMap::emit(Streamer, BC);
+  Streamer.setUseAssemblerInfoForParsing(true);
 }
 
 void BinaryEmitter::emitFunctions() {
@@ -451,20 +440,7 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         Streamer.emitLabel(EntrySymbol);
     }
 
-    // Check if special alignment for macro-fusion is needed.
-    bool MayNeedMacroFusionAlignment =
-        (opts::AlignMacroOpFusion == MFT_ALL) ||
-        (opts::AlignMacroOpFusion == MFT_HOT && BB->getKnownExecutionCount());
-    BinaryBasicBlock::const_iterator MacroFusionPair;
-    if (MayNeedMacroFusionAlignment) {
-      MacroFusionPair = BB->getMacroOpFusionPair();
-      if (MacroFusionPair == BB->end())
-        MayNeedMacroFusionAlignment = false;
-    }
-
     SMLoc LastLocSeen;
-    // Remember if the last instruction emitted was a prefix.
-    bool LastIsPrefix = false;
     for (auto I = BB->begin(), E = BB->end(); I != E; ++I) {
       MCInst &Instr = *I;
 
@@ -475,16 +451,6 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
       if (BC.MIB->isCFI(Instr)) {
         emitCFIInstruction(*BF.getCFIFor(Instr));
         continue;
-      }
-
-      // Handle macro-fusion alignment. If we emitted a prefix as
-      // the last instruction, we should've already emitted the associated
-      // alignment hint, so don't emit it twice.
-      if (MayNeedMacroFusionAlignment && !LastIsPrefix &&
-          I == MacroFusionPair) {
-        // This assumes the second instruction in the macro-op pair will get
-        // assigned to its own MCRelaxableFragment. Since all JCC instructions
-        // are relaxable, we should be safe.
       }
 
       if (!EmitCodeOnly) {
@@ -512,7 +478,7 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
 
       // Emit sized NOPs via MCAsmBackend::writeNopData() interface on x86.
       // This is a workaround for invalid NOPs handling by asm/disasm layer.
-      if (BC.MIB->isNoop(Instr) && BC.isX86()) {
+      if (BC.isX86() && BC.MIB->isNoop(Instr)) {
         if (std::optional<uint32_t> Size = BC.MIB->getSize(Instr)) {
           SmallString<15> Code;
           raw_svector_ostream VecOS(Code);
@@ -523,7 +489,6 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
       }
 
       Streamer.emitInstruction(Instr, *BC.STI);
-      LastIsPrefix = BC.MIB->isPrefix(Instr);
     }
   }
 
@@ -813,7 +778,9 @@ void BinaryEmitter::emitJumpTable(const JumpTable &JT, MCSection *HotSection,
   // determining its destination.
   std::map<MCSymbol *, uint64_t> LabelCounts;
   if (opts::JumpTables > JTS_SPLIT && !JT.Counts.empty()) {
-    MCSymbol *CurrentLabel = JT.Labels.at(0);
+    auto It = JT.Labels.find(0);
+    assert(It != JT.Labels.end());
+    MCSymbol *CurrentLabel = It->second;
     uint64_t CurrentLabelCount = 0;
     for (unsigned Index = 0; Index < JT.Entries.size(); ++Index) {
       auto LI = JT.Labels.find(Index * JT.EntrySize);

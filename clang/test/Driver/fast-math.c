@@ -7,324 +7,308 @@
 // Both of them use gcc driver for as.
 //
 // RUN: %clang -### -fno-honor-infinities -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-INFS %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NINF,NO-NNAN,NO-FINITE-ONLY %s
 // infinites [sic] is a supported alternative spelling of infinities.
 // RUN: %clang -### -fno-honor-infinites -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-INFS %s
-// CHECK-NO-INFS: "-cc1"
-// CHECK-NO-INFS: "-menable-no-infs"
+// RUN:   | FileCheck --check-prefixes=CHECK,NINF,NO-NNAN,NO-FINITE-ONLY %s
 //
 // RUN: %clang -### -fno-fast-math -fno-honor-infinities -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-FAST-MATH-NO-INFS %s
-// CHECK-NO-FAST-MATH-NO-INFS: "-cc1"
-// CHECK-NO-FAST-MATH-NO-INFS: "-menable-no-infs"
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NINF,NO-NNAN,NO-FINITE-ONLY %s
 //
 // RUN: %clang -### -fno-honor-infinities -fno-fast-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-INFS-NO-FAST-MATH %s
-// CHECK-NO-INFS-NO-FAST-MATH: "-cc1"
-// CHECK-NO-INFS-NO-FAST-MATH-NOT: "-menable-no-infs"
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NO-NINF,NO-NNAN,NO-FINITE-ONLY %s
 //
 // RUN: %clang -### -fno-signed-zeros -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-SIGNED-ZEROS %s
-// CHECK-NO-SIGNED-ZEROS: "-cc1"
-// CHECK-NO-SIGNED-ZEROS: "-fno-signed-zeros"
+// RUN:   | FileCheck --check-prefixes=CHECK,NSZ,NOROUNDING %s
 //
 // RUN: %clang -### -fno-fast-math -fno-signed-zeros -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-FAST-MATH-NO-SIGNED-ZEROS %s
-// CHECK-NO-FAST-MATH-NO-SIGNED-ZEROS: "-cc1"
-// CHECK-NO-FAST-MATH-NO-SIGNED-ZEROS: "-fno-signed-zeros"
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NSZ %s
 //
 // RUN: %clang -### -fno-signed-zeros -fno-fast-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-SIGNED-ZEROS-NO-FAST-MATH %s
-// CHECK-NO-SIGNED-ZEROS-NO-FAST-MATH: "-cc1"
-// CHECK-NO-SIGNED-ZEROS-NO-FAST-MATH-NOT: "-fno-signed-zeros"
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NO-NSZ,NOROUNDING %s
 //
 // RUN: %clang -### -freciprocal-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-RECIPROCAL-MATH %s
-// CHECK-RECIPROCAL-MATH: "-cc1"
-// CHECK-RECIPROCAL-MATH: "-freciprocal-math"
+// RUN:   | FileCheck --check-prefixes=CHECK,ARCP,NOROUNDING %s
 //
 // RUN: %clang -### -fno-fast-math -freciprocal-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-FAST-MATH-RECIPROCAL-MATH %s
-// CHECK-NO-FAST-MATH-RECIPROCAL-MATH: "-cc1"
-// CHECK-NO-FAST-MATH-RECIPROCAL-MATH: "-freciprocal-math"
+// RUN:   | FileCheck --check-prefixes=CHECK,ARCP,NOROUNDING %s
 //
 // RUN: %clang -### -freciprocal-math -fno-fast-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-RECIPROCAL-MATH-NO-FAST-MATH %s
-// CHECK-RECIPROCAL-MATH-NO-FAST-MATH: "-cc1"
-// CHECK-RECIPROCAL-MATH-NO-FAST-MATH-NOT: "-freciprocal-math"
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-ARCP,NOROUNDING %s
 //
 // RUN: %clang -### -fno-honor-nans -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-NANS %s
-// CHECK-NO-NANS: "-cc1"
-// CHECK-NO-NANS: "-menable-no-nans"
+// RUN:   | FileCheck --check-prefixes=CHECK,NNAN,NO-NINF,NO-FINITE-ONLY,NOROUNDING %s
 //
 // RUN: %clang -### -fno-fast-math -fno-honor-nans -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-FAST-MATH-NO-NANS %s
-// CHECK-NO-FAST-MATH-NO-NANS: "-cc1"
-// CHECK-NO-FAST-MATH-NO-NANS: "-menable-no-nans"
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NNAN,NO-NINF,NO-FINITE-ONLY,NOROUNDING %s
 //
 // RUN: %clang -### -fno-honor-nans -fno-fast-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-NANS-NO-FAST-MATH %s
-// CHECK-NO-NANS-NO-FAST-MATH: "-cc1"
-// CHECK-NO-NANS-NO-FAST-MATH-NOT: "-menable-no-nans"
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NO-NNAN,NO-NINF,NO-FINITE-ONLY,NOROUNDING %s
 //
 // RUN: %clang -### -ffast-math -fno-approx-func -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-FAST-MATH-NO-APPROX-FUNC %s
-// CHECK-FAST-MATH-NO-APPROX-FUNC:     "-cc1"
-// CHECK-FAST-MATH-NO-APPROX-FUNC:     "-menable-no-infs"
-// CHECK-FAST-MATH-NO-APPROX-FUNC:     "-menable-no-nans"
-// CHECK-FAST-MATH-NO-APPROX-FUNC:     "-fno-signed-zeros"
-// CHECK-FAST-MATH-NO-APPROX-FUNC:     "-mreassociate"
-// CHECK-FAST-MATH-NO-APPROX-FUNC:     "-freciprocal-math"
-// CHECK-FAST-MATH-NO-APPROX-FUNC:     "-ffp-contract=fast"
-// CHECK-FAST-MATH-NO-APPROX-FUNC-NOT: "-ffast-math"
-// CHECK-FAST-MATH-NO-APPROX-FUNC-NOT: "-fapprox-func"
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NINF,NNAN,FINITE-ONLY,NSZ,ARCP,NO-AFN,NO-ERRNO,NOROUNDING %s
 //
 // RUN: %clang -### -fno-approx-func -ffast-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-APPROX-FUNC-FAST-MATH %s
-// CHECK-NO-APPROX-FUNC-FAST-MATH: "-cc1"
-// CHECK-NO-APPROX-FUNC-FAST-MATH: "-ffast-math"
+// RUN:   | FileCheck --check-prefixes=CHECK,FAST,NINF,NNAN,FINITE-ONLY,NSZ,ARCP,AFN,NO-ERRNO,NOROUNDING %s
 //
 // RUN: %clang -### -fapprox-func -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-APPROX-FUNC %s
-// CHECK-APPROX-FUNC: "-cc1"
-// CHECK-APPROX-FUNC: "-fapprox-func"
+// RUN:   | FileCheck --check-prefixes=CHECK,AFN %s
 //
 // RUN: %clang -### -fno-fast-math -fapprox-func -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-FAST-MATH-APPROX-FUNC %s
-// CHECK-NO-FAST-MATH-APPROX-FUNC: "-cc1"
-// CHECK-NO-FAST-MATH-APPROX-FUNC: "-fapprox-func"
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,AFN,NOROUNDING %s
 //
 // RUN: %clang -### -fapprox-func -fno-fast-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-APPROX-FUNC-NO-FAST-MATH %s
-// CHECK-APPROX-FUNC-NO-FAST-MATH: "-cc1"
-// CHECK-APPROX-FUNC-NO-FAST-MATH-NOT: "-fapprox-func"
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NO-AFN %s
 //
 // RUN: %clang -### -fmath-errno -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-MATH-ERRNO %s
-// CHECK-MATH-ERRNO: "-cc1"
-// CHECK-MATH-ERRNO: "-fmath-errno"
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,ERRNO %s
 //
 // RUN: %clang -### -fmath-errno -fno-math-errno -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
-// CHECK-NO-MATH-ERRNO: "-cc1"
-// CHECK-NO-MATH-ERRNO-NOT: "-fmath-errno"
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
 //
 // Target defaults for -fmath-errno (reusing the above checks).
-// RUN: %clang -### -target i686-unknown-linux -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-MATH-ERRNO %s
+// RUN: %clang -### --target=i686-unknown-linux -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefixes=CHECK,ERRNO %s
 // RUN: %clang -### -target i686-apple-darwin -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
-// RUN: %clang -### -target x86_64-unknown-freebsd -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
-// RUN: %clang -### -target x86_64-unknown-netbsd -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
-// RUN: %clang -### -target x86_64-unknown-openbsd -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
+// RUN: %clang -### --target=x86_64-unknown-freebsd -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
+// RUN: %clang -### --target=x86_64-unknown-netbsd -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
+// RUN: %clang -### --target=x86_64-unknown-openbsd -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
 // RUN: %clang -### --target=x86_64-unknown-haiku -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
-// RUN: %clang -### -target x86_64-unknown-dragonfly -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
-// RUN: %clang -### -target x86_64-fuchsia -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
-// RUN: %clang -### -target x86_64-linux-android -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
-// RUN: %clang -### -target x86_64-linux-musl -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
+// RUN: %clang -### --target=x86_64-unknown-dragonfly -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
+// RUN: %clang -### --target=x86_64-fuchsia -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
+// RUN: %clang -### --target=x86_64-linux-android -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
+// RUN: %clang -### --target=x86_64-linux-musl -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -nogpuinc -nogpulib -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
-// RUN: %clang -### -target amdgcn-amd-amdpal -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
-// RUN: %clang -### -target amdgcn-mesa-mesa3d -c %s 2>&1   \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
+// RUN: %clang -### --target=amdgcn-amd-amdpal -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
+// RUN: %clang -### --target=amdgcn-mesa-mesa3d -c %s 2>&1   \
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
 //
 // Check that -ffast-math disables -fmath-errno, and -fno-fast-math merely
 // preserves the target default. Also check various flag set operations between
 // the two flags. (Resuses above checks.)
 // RUN: %clang -### -ffast-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
 // RUN: %clang -### -fmath-errno -ffast-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
 // RUN: %clang -### -ffast-math -fmath-errno -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-MATH-ERRNO %s
-// RUN: %clang -### -target i686-unknown-linux -fno-fast-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-MATH-ERRNO %s
-// RUN: %clang -### -target i686-unknown-linux -fno-math-errno -fno-fast-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-MATH-ERRNO %s
+// RUN:   | FileCheck --check-prefixes=CHECK,ERRNO %s
+// RUN: %clang -### --target=i686-unknown-linux -fno-fast-math -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefixes=CHECK,ERRNO %s
+// RUN: %clang -### --target=i686-unknown-linux -fno-math-errno -fno-fast-math -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefixes=CHECK,ERRNO %s
 // RUN: %clang -### -target i686-apple-darwin -fno-fast-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
 // RUN: %clang -### -target i686-apple-darwin -fno-math-errno -fno-fast-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
 // RUN: %clang -### -fno-fast-math -fno-math-errno -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
 //
 // RUN: %clang -### -fno-math-errno -fassociative-math -freciprocal-math \
 // RUN:     -fno-signed-zeros -fno-trapping-math -fapprox-func -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-UNSAFE-MATH %s
-// CHECK-UNSAFE-MATH: "-cc1"
-// CHECK-UNSAFE-MATH: "-funsafe-math-optimizations"
-// CHECK-UNSAFE-MATH: "-mreassociate"
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO,UNSAFE,ARCP,NSZ,NO-TRAPPING,REASSOC %s
 //
 // RUN: %clang -### -fno-fast-math -fno-math-errno -fassociative-math -freciprocal-math \
 // RUN:     -fno-signed-zeros -fno-trapping-math -fapprox-func -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-FAST-MATH-UNSAFE-MATH %s
-// CHECK-NO-FAST-MATH-UNSAFE-MATH: "-cc1"
-// CHECK-NO-FAST-MATH-UNSAFE-MATH: "-funsafe-math-optimizations"
-// CHECK-NO-FAST-MATH-UNSAFE-MATH: "-mreassociate"
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO,UNSAFE,ARCP,NSZ,NO-TRAPPING,REASSOC %s
 
 // The 2nd -fno-fast-math overrides -fassociative-math.
 
 // RUN: %clang -### -fno-fast-math -fno-math-errno -fassociative-math -freciprocal-math \
 // RUN:     -fno-fast-math -fno-signed-zeros -fno-trapping-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-UNSAFE-MATH-NO-FAST-MATH %s
-// CHECK-UNSAFE-MATH-NO-FAST-MATH: "-cc1"
-// CHECK-UNSAFE-MATH-NO-FAST-MATH-NOT: "-funsafe-math-optimizations"
-// CHECK-UNSAFE-MATH-NO-FAST-MATH-NOT: "-mreassociate"
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-UNSAFE,NO-REASSOC,NO-ARCP,NSZ,NO-TRAPPING %s
 //
 // Check that various umbrella flags also enable these frontend options.
 // RUN: %clang -### -ffast-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-INFS %s
-// RUN: %clang -### -ffast-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-NANS %s
-// RUN: %clang -### -ffast-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-UNSAFE-MATH %s
+// RUN:   | FileCheck --check-prefixes=CHECK,FAST,NINF,NNAN,FINITE-ONLY,REASSOC,NSZ,ARCP,AFN,CONTRACT-FAST,NO-ERRNO,NOROUNDING %s
 // RUN: %clang -### -ffinite-math-only -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-INFS %s
-// RUN: %clang -### -ffinite-math-only -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-NANS %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NINF,NNAN,FINITE-ONLY %s
 // RUN: %clang -### -funsafe-math-optimizations -fno-math-errno -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-UNSAFE-MATH %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NO-NNAN,NO-NINF,NO-FINITE-ONLY,REASSOC,NSZ,ARCP,AFN,CONTRACT-FAST,NO-ERRNO,NOROUNDING %s
 //
 // One umbrella flag is *really* weird and also changes the semantics of the
 // program by adding a special preprocessor macro. Check that the frontend flag
 // modeling this semantic change is provided. Also check that the flag is not
 // present if any of the optimizations are disabled.
-// RUN: %clang -### -ffast-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-FAST-MATH %s
 // RUN: %clang -### -fno-fast-math -ffast-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-FAST-MATH %s
+// RUN:   | FileCheck --check-prefixes=CHECK,FAST,NINF,NNAN,FINITE-ONLY,REASSOC,NSZ,ARCP,AFN,CONTRACT-FAST,NO-ERRNO,NOROUNDING %s
 // RUN: %clang -### -funsafe-math-optimizations -ffinite-math-only \
 // RUN:     -fno-math-errno -ffp-contract=fast -fno-rounding-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-FAST-MATH %s
+// RUN:   | FileCheck --check-prefixes=CHECK,FAST,NINF,NNAN,FINITE-ONLY,NSZ,ARCP,AFN,CONTRACT-FAST,NO-ERRNO,NOROUNDING %s
 // RUN: %clang -### -fno-honor-infinities -fno-honor-nans -fno-math-errno \
 // RUN:     -fassociative-math -freciprocal-math -fno-signed-zeros -fapprox-func \
 // RUN:     -fno-trapping-math -ffp-contract=fast -fno-rounding-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-FAST-MATH %s
-// CHECK-FAST-MATH: "-cc1"
-// CHECK-FAST-MATH: "-ffast-math"
-// CHECK-FAST-MATH: "-ffinite-math-only"
+// RUN:   | FileCheck --check-prefixes=CHECK,FAST,NINF,NNAN,FINITE-ONLY,NSZ,ARCP,AFN,CONTRACT-FAST,NO-ERRNO,NOROUNDING %s
 //
 // RUN: %clang -### -ffast-math -fno-fast-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-FAST-MATH %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NO-NINF,NO-NNAN,NO-FINITE-ONLY,NO-REASSOC,NO-NSZ,NO-ARCP,NO-AFN,NOROUNDING %s
 // RUN: %clang -### -ffast-math -fno-finite-math-only -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-FAST-MATH %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NO-NINF,NO-NNAN,NO-FINITE-ONLY,REASSOC,NSZ,ARCP,AFN,CONTRACT-FAST,NOROUNDING %s
+
+// FIXME: This case leaves nnan and ninf. That seems wrong!
 // RUN: %clang -### -ffast-math -fno-unsafe-math-optimizations -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-FAST-MATH %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NINF,NNAN,FINITE-ONLY,NO-REASSOC,NO-NSZ,NO-ARCP,NO-AFN,NOROUNDING,NO-TRAPPING %s
 // RUN: %clang -### -ffast-math -fmath-errno -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-FAST-MATH %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NINF,NNAN,FINITE-ONLY,REASSOC,NSZ,ARCP,AFN,CONTRACT-FAST,ERRNO,NOROUNDING %s
 // RUN: %clang -### -ffast-math -fno-associative-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-FAST-MATH --check-prefix=CHECK-ASSOC-MATH %s
-// CHECK-NO-FAST-MATH: "-cc1"
-// CHECK-NO-FAST-MATH-NOT: "-ffast-math"
-// CHECK-ASSOC-MATH-NOT: "-mreassociate"
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NINF,NNAN,FINITE-ONLY,NO-REASSOC,NSZ,ARCP,AFN,CONTRACT-FAST,NO-ERRNO,NOROUNDING %s
 //
 // Check various means of disabling these flags, including disabling them after
 // they've been enabled via an umbrella flag.
 // RUN: %clang -### -fno-honor-infinities -fhonor-infinities -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-NO-INFS %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-NINF,NO-NNAN,NO-FINITE-ONLY %s
 // RUN: %clang -### -ffinite-math-only -fhonor-infinities -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-NO-INFS %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-NINF,NNAN,NO-FINITE-ONLY %s
 // RUN: %clang -### -ffinite-math-only -fno-finite-math-only -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-NO-INFS %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-NINF,NO-NNAN,NO-FINITE-ONLY %s
 // RUN: %clang -### -ffast-math -fhonor-infinities -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-NO-INFS %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NO-NINF,NNAN,NO-FINITE-ONLY,REASSOC,NSZ,ARCP,AFN,CONTRACT-FAST,NO-ERRNO,NOROUNDING %s
 // RUN: %clang -### -ffast-math -fno-finite-math-only -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-NO-INFS %s
-// CHECK-NO-NO-INFS: "-cc1"
-// CHECK-NO-NO-INFS-NOT: "-menable-no-infs"
-// CHECK-NO-NO-INFS-NOT: "-ffinite-math-only"
-// CHECK-NO-NO-INFS: "-o"
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NO-NINF,NO-NNAN,NO-FINITE-ONLY,REASSOC,NSZ,ARCP,AFN,CONTRACT-FAST,NO-ERRNO,NOROUNDING %s
 //
 // RUN: %clang -### -fno-honor-nans -fhonor-nans -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-NO-NANS %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-NINF,NO-NNAN,NO-FINITE-ONLY %s
 // RUN: %clang -### -ffinite-math-only -fhonor-nans -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-NO-NANS %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NINF,NO-NNAN,NO-FINITE-ONLY %s
 // RUN: %clang -### -ffinite-math-only -fno-finite-math-only -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-NO-NANS %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-NINF,NO-NNAN,NO-FINITE-ONLY %s
 // RUN: %clang -### -ffast-math -fhonor-nans -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-NO-NANS %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NINF,NO-NNAN,NO-FINITE-ONLY %s
 // RUN: %clang -### -ffast-math -fno-finite-math-only -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-NO-NANS %s
-// CHECK-NO-NO-NANS: "-cc1"
-// CHECK-NO-NO-NANS-NOT: "-menable-no-nans"
-// CHECK-NO-NO-NANS-NOT: "-ffinite-math-only"
-// CHECK-NO-NO-NANS: "-o"
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-NINF,NO-NNAN,NO-FINITE-ONLY %s
 
 // A later inverted option overrides an earlier option.
 
 // RUN: %clang -### -fassociative-math -freciprocal-math -fno-signed-zeros \
 // RUN:     -fno-trapping-math -fno-associative-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-REASSOC,ARCP,NSZ,NO-TRAPPING %s
 
-// RUN: %clang -### -funsafe-math-optimizations -fno-associative-math -c %s \
-// RUN:   2>&1 | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
+// RUN: %clang -### -funsafe-math-optimizations -fno-associative-math -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-UNSAFE,NO-REASSOC,ARCP,NSZ,AFN %s
 
-// RUN: %clang -### -funsafe-math-optimizations -fno-reciprocal-math -c %s \
-// RUN:   2>&1 | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
+// RUN: %clang -### -funsafe-math-optimizations -fno-reciprocal-math -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-UNSAFE,REASSOC,NO-ARCP,NSZ,AFN %s
+
+// reassoc requires nsz
 // RUN: %clang -### -funsafe-math-optimizations -fsigned-zeros -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-UNSAFE,NO-REASSOC,ARCP,NO-NSZ,AFN %s
+
+// FIXME: Shouldn't trapping math disable all unsafe math?
 // RUN: %clang -### -funsafe-math-optimizations -ftrapping-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-UNSAFE,ARCP,NSZ,AFN,TRAPPING %s
+
 // RUN: %clang -### -funsafe-math-optimizations -fno-unsafe-math-optimizations \
 // RUN:     -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-UNSAFE,NO-REASSOC,NO-ARCP,NO-NSZ,NO-AFN,NO-TRAPPING %s
 // RUN: %clang -### -ffast-math -fno-associative-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-UNSAFE,NO-REASSOC,ARCP,NSZ,AFN %s
 
 // RUN: %clang -### -ffast-math -fno-reciprocal-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NO-UNSAFE,NNAN,NINF,FINITE-ONLY,REASSOC,NO-ARCP,CONTRACT-FAST,NSZ,AFN %s
+
+// reassoc requires nsz
 // RUN: %clang -### -ffast-math -fsigned-zeros -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NO-UNSAFE,NNAN,NINF,FINITE-ONLY,NO-REASSOC,ARCP,CONTRACT-FAST,NO-NSZ,AFN %s
+
+// FIXME: Shouldn't trapping math disable unsafe math?
 // RUN: %clang -### -ffast-math -ftrapping-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NO-UNSAFE,ARCP,NSZ,AFN,TRAPPING %s
+
 // RUN: %clang -### -ffast-math -fno-unsafe-math-optimizations -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
-
-// CHECK-NO-UNSAFE-MATH: "-cc1"
-// CHECK-NO-UNSAFE-MATH-NOT: "-funsafe-math-optimizations"
-// CHECK-NO_UNSAFE-MATH-NOT: "-mreassociate"
-// CHECK-NO-UNSAFE-MATH: "-o"
-
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-FAST,NO-UNSAFE,NO-ARCP,NO-NSZ,NO-AFN,NO-TRAPPING %s
 
 // Reassociate is allowed because it does not require reciprocal-math.
 
 // RUN: %clang -### -fassociative-math -freciprocal-math -fno-signed-zeros \
 // RUN:     -fno-trapping-math -fno-reciprocal-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-REASSOC-NO-UNSAFE-MATH %s
-
-// CHECK-REASSOC-NO-UNSAFE-MATH: "-cc1"
-// CHECK-REASSOC-NO_UNSAFE-MATH-NOT: "-funsafe-math-optimizations"
-// CHECK-REASSOC-NO_UNSAFE-MATH: "-mreassociate"
-// CHECK-REASSOC-NO-UNSAFE-MATH-NOT: "-funsafe-math-optimizations"
-// CHECK-REASSOC-NO-UNSAFE-MATH: "-o"
+// RUN:   | FileCheck --check-prefixes=CHECK,REASSOC,NO-ARCP,NSZ,NO-TRAPPING %s
 
 
 // In these runs, reassociate is not allowed because both no-signed-zeros and no-trapping-math are required.
 
 // RUN: %clang -### -fassociative-math -freciprocal-math -fno-signed-zeros \
 // RUN:     -fno-trapping-math -fsigned-zeros -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-REASSOC-NO-UNSAFE-MATH %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-REASSOC,ARCP,NO-NSZ,NO-TRAPPING %s
 
 // RUN: %clang -### -fassociative-math -freciprocal-math -fno-signed-zeros \
 // RUN:     -fno-trapping-math -ftrapping-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-REASSOC-NO-UNSAFE-MATH %s
+// RUN:   | FileCheck --check-prefixes=CHECK,NO-REASSOC,ARCP,NSZ,TRAPPING %s
 
-// CHECK-NO-REASSOC-NO-UNSAFE-MATH: "-cc1"
-// CHECK-NO-REASSOC-NO_UNSAFE-MATH-NOT: "-funsafe-math-optimizations"
-// CHECK-NO-REASSOC-NO_UNSAFE-MATH-NOT: "-mreassociate"
-// CHECK-NO-REASSOC-NO_UNSAFE-MATH-NOT: "-funsafe-math-optimizations"
-// CHECK-NO-REASSOC-NO-UNSAFE-MATH: "-o"
+// The checks below allow stringing together prefixes to select the expected
+// set of cc1 options for any combination of floating-point options.
+// This is based on the assumption that the order of the flags when rendered
+// is stable, so the negative checks only need to appear where the option would
+// appear if used.
+
+// start marker
+// CHECK: "-cc1"
+
+// NO-NINF-NOT:         "-menable-no-infs"
+// NINF-SAME:           "-menable-no-infs"
+
+// NO-NNAN-NOT:         "-menable-no-nans"
+// NNAN-SAME:           "-menable-no-nans"
+
+// NO-AFN-NOT:          "-fapprox-func"
+// AFN-SAME:            "-fapprox-func"
+
+// NO-ERRNO-NOT:        "-fmath-errno"
+// ERRNO-SAME:          "-fmath-errno"
+
+// NO-UNSAFE-NOT:       "-funsafe-math-optimizations"
+// UNSAFE-SAME:         "-funsafe-math-optimizations"
+
+// NO-NSZ-NOT:          "-fno-signed-zeros"
+// NSZ-SAME:            "-fno-signed-zeros"
+
+// NO-REASSOC-NOT:      "-mreassociate"
+// REASSOC-SAME:        "-mreassociate"
+
+// NO-ARCP-NOT:         "-freciprocal-math"
+// ARCP-SAME:           "-freciprocal-math"
+
+// NO-DENORM-NOT:       "-fdenormal-fp-math"
+// DENORM-IEEE-SAME:    "-fdenormal-fp-math=ieee,ieee"
+// DENORM-PS-SAME:      "-fdenormal-fp-math=preserve-sign,preserve-sign"
+// DENORM-PZ-SAME:      "-fdenormal-fp-math=positive-zero,positive-zero"
+
+// NO-CONTRACT-NOT:     "-ffp-contract"
+// CONTRACT-OFF-SAME:   "-ffp-contract=off"
+// CONTRACT-ON-SAME:    "-ffp-contract=on"
+// CONTRACT-FAST-SAME:  "-ffp-contract=fast"
+
+// This one is odd because -frounding-math is the default
+// NO-NOROUNDING-NOT:   "-fno-rounding-math"
+// NOROUNDING-SAME:     "-fno-rounding-math"
+
+// NO-TRAPPING-NOT:     "-ffp-exception-behavior=strict"
+// NO-TRAPPING-NOT:     "-ffp-exception-behavior=maytrap"
+// TRAPPING-SAME:       "-ffp-exception-behavior=strict"
+
+// NO-FAST-NOT:         "-ffast-math"
+// FAST-SAME:           "-ffast-math"
+
+// NO-FINITE-ONLY-NOT:  "-ffinite-math-only"
+// FINITE-ONLY-SAME:    "-ffinite-math-only"
+
+// NO-CX-RANGE-NOT:     "-complex-range"
+// CX-RANGE-FULL-SAME:  "-complex-range=full"
+// CX-RANGE-PROMO-SAME: "-complex-range=promoted"
+// CX-RANGE-IMPRO-SAME: "-complex-range=improved"
+// CX-RANGE-BASIC-SAME: "-complex-range=basic"
+
+// end marker
+// CHECK-SAME: "-o"
 
 
 // This isn't fast-math, but the option is handled in the same place as other FP params.

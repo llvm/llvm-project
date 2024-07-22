@@ -1,6 +1,6 @@
 ; REQUIRES: x86_64-linux
 ; REQUIRES: asserts
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-matching.prof --salvage-stale-profile -S --debug-only=sample-profile,sample-profile-impl 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-matching.prof --salvage-stale-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl 2>&1 | FileCheck %s
 
 ; The profiled source code:
 
@@ -48,6 +48,8 @@
 ;    }
 ;  }
 
+; Verify not running profile matching for checksum matched function.
+; CHECK-NOT: Run stale profile matching for bar
 
 ; CHECK: Run stale profile matching for main
 
@@ -84,7 +86,7 @@
 ; CHECK:    3:  call void @llvm.pseudoprobe(i64 6699318081062747564, i64 3, i32 0, i64 -1), !dbg ![[#]] - weight: 13 - factor: 1.00)
 ; CHECK:    6:  %call1.i5 = call i32 @bar(i32 noundef %add.i4), !dbg ![[#]] - weight: 13 - factor: 1.00)
 ; CHECK:    4:  call void @llvm.pseudoprobe(i64 6699318081062747564, i64 4, i32 0, i64 -1), !dbg ![[#]] - weight: 112 - factor: 1.00)
-; CHECK:    14:  %call2 = call i32 @bar(i32 noundef %3), !dbg ![[#]] - weight: 124 - factor: 1.00)
+; CHECK:    14: %call2 = call i32 @bar(i32 noundef %3), !dbg ![[#]] - weight: 124 - factor: 1.00)
 ; CHECK:    8:  call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 8, i32 0, i64 -1), !dbg ![[#]] - weight: 0 - factor: 1.00)
 ; CHECK:    1:  call void @llvm.pseudoprobe(i64 6699318081062747564, i64 1, i32 0, i64 -1), !dbg ![[#]] - weight: 117 - factor: 1.00)
 ; CHECK:    2:  call void @llvm.pseudoprobe(i64 6699318081062747564, i64 2, i32 0, i64 -1), !dbg ![[#]] - weight: 104 - factor: 1.00)

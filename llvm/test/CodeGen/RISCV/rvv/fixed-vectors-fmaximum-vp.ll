@@ -76,9 +76,7 @@ define <2 x half> @vfmax_vv_v2f16_unmasked(<2 x half> %va, <2 x half> %vb, i32 z
 ; ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9
 ; ZVFHMIN-NEXT:    ret
-  %head = insertelement <2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
-  %v = call <2 x half> @llvm.vp.maximum.v2f16(<2 x half> %va, <2 x half> %vb, <2 x i1> %m, i32 %evl)
+  %v = call <2 x half> @llvm.vp.maximum.v2f16(<2 x half> %va, <2 x half> %vb, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x half> %v
 }
 
@@ -150,9 +148,7 @@ define <4 x half> @vfmax_vv_v4f16_unmasked(<4 x half> %va, <4 x half> %vb, i32 z
 ; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9
 ; ZVFHMIN-NEXT:    ret
-  %head = insertelement <4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
-  %v = call <4 x half> @llvm.vp.maximum.v4f16(<4 x half> %va, <4 x half> %vb, <4 x i1> %m, i32 %evl)
+  %v = call <4 x half> @llvm.vp.maximum.v4f16(<4 x half> %va, <4 x half> %vb, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x half> %v
 }
 
@@ -181,8 +177,8 @@ define <8 x half> @vfmax_vv_v8f16(<8 x half> %va, <8 x half> %vb, <8 x i1> %m, i
 ; ZVFHMIN-NEXT:    vmfeq.vv v8, v12, v12, v0.t
 ; ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v14, v9
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vmv1r.v v0, v8
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vmerge.vvm v16, v12, v14, v0
 ; ZVFHMIN-NEXT:    vmv1r.v v0, v10
 ; ZVFHMIN-NEXT:    vmfeq.vv v8, v14, v14, v0.t
@@ -226,9 +222,7 @@ define <8 x half> @vfmax_vv_v8f16_unmasked(<8 x half> %va, <8 x half> %vb, i32 z
 ; ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v10
 ; ZVFHMIN-NEXT:    ret
-  %head = insertelement <8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
-  %v = call <8 x half> @llvm.vp.maximum.v8f16(<8 x half> %va, <8 x half> %vb, <8 x i1> %m, i32 %evl)
+  %v = call <8 x half> @llvm.vp.maximum.v8f16(<8 x half> %va, <8 x half> %vb, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x half> %v
 }
 
@@ -259,8 +253,8 @@ define <16 x half> @vfmax_vv_v16f16(<16 x half> %va, <16 x half> %vb, <16 x i1> 
 ; ZVFHMIN-NEXT:    vmfeq.vv v8, v16, v16, v0.t
 ; ZVFHMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v20, v10
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmv1r.v v0, v8
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmerge.vvm v24, v16, v20, v0
 ; ZVFHMIN-NEXT:    vmv1r.v v0, v12
 ; ZVFHMIN-NEXT:    vmfeq.vv v8, v20, v20, v0.t
@@ -304,9 +298,7 @@ define <16 x half> @vfmax_vv_v16f16_unmasked(<16 x half> %va, <16 x half> %vb, i
 ; ZVFHMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v12
 ; ZVFHMIN-NEXT:    ret
-  %head = insertelement <16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
-  %v = call <16 x half> @llvm.vp.maximum.v16f16(<16 x half> %va, <16 x half> %vb, <16 x i1> %m, i32 %evl)
+  %v = call <16 x half> @llvm.vp.maximum.v16f16(<16 x half> %va, <16 x half> %vb, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x half> %v
 }
 
@@ -340,9 +332,7 @@ define <2 x float> @vfmax_vv_v2f32_unmasked(<2 x float> %va, <2 x float> %vb, i3
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; CHECK-NEXT:    vfmax.vv v8, v8, v11
 ; CHECK-NEXT:    ret
-  %head = insertelement <2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
-  %v = call <2 x float> @llvm.vp.maximum.v2f32(<2 x float> %va, <2 x float> %vb, <2 x i1> %m, i32 %evl)
+  %v = call <2 x float> @llvm.vp.maximum.v2f32(<2 x float> %va, <2 x float> %vb, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x float> %v
 }
 
@@ -376,9 +366,7 @@ define <4 x float> @vfmax_vv_v4f32_unmasked(<4 x float> %va, <4 x float> %vb, i3
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; CHECK-NEXT:    vfmax.vv v8, v8, v11
 ; CHECK-NEXT:    ret
-  %head = insertelement <4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
-  %v = call <4 x float> @llvm.vp.maximum.v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> %m, i32 %evl)
+  %v = call <4 x float> @llvm.vp.maximum.v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x float> %v
 }
 
@@ -414,9 +402,7 @@ define <8 x float> @vfmax_vv_v8f32_unmasked(<8 x float> %va, <8 x float> %vb, i3
 ; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; CHECK-NEXT:    vfmax.vv v8, v8, v14
 ; CHECK-NEXT:    ret
-  %head = insertelement <8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
-  %v = call <8 x float> @llvm.vp.maximum.v8f32(<8 x float> %va, <8 x float> %vb, <8 x i1> %m, i32 %evl)
+  %v = call <8 x float> @llvm.vp.maximum.v8f32(<8 x float> %va, <8 x float> %vb, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x float> %v
 }
 
@@ -452,9 +438,7 @@ define <16 x float> @vfmax_vv_v16f32_unmasked(<16 x float> %va, <16 x float> %vb
 ; CHECK-NEXT:    vmerge.vvm v8, v12, v8, v0
 ; CHECK-NEXT:    vfmax.vv v8, v8, v20
 ; CHECK-NEXT:    ret
-  %head = insertelement <16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
-  %v = call <16 x float> @llvm.vp.maximum.v16f32(<16 x float> %va, <16 x float> %vb, <16 x i1> %m, i32 %evl)
+  %v = call <16 x float> @llvm.vp.maximum.v16f32(<16 x float> %va, <16 x float> %vb, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x float> %v
 }
 
@@ -488,9 +472,7 @@ define <2 x double> @vfmax_vv_v2f64_unmasked(<2 x double> %va, <2 x double> %vb,
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; CHECK-NEXT:    vfmax.vv v8, v8, v11
 ; CHECK-NEXT:    ret
-  %head = insertelement <2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
-  %v = call <2 x double> @llvm.vp.maximum.v2f64(<2 x double> %va, <2 x double> %vb, <2 x i1> %m, i32 %evl)
+  %v = call <2 x double> @llvm.vp.maximum.v2f64(<2 x double> %va, <2 x double> %vb, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x double> %v
 }
 
@@ -526,9 +508,7 @@ define <4 x double> @vfmax_vv_v4f64_unmasked(<4 x double> %va, <4 x double> %vb,
 ; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; CHECK-NEXT:    vfmax.vv v8, v8, v14
 ; CHECK-NEXT:    ret
-  %head = insertelement <4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
-  %v = call <4 x double> @llvm.vp.maximum.v4f64(<4 x double> %va, <4 x double> %vb, <4 x i1> %m, i32 %evl)
+  %v = call <4 x double> @llvm.vp.maximum.v4f64(<4 x double> %va, <4 x double> %vb, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x double> %v
 }
 
@@ -564,9 +544,7 @@ define <8 x double> @vfmax_vv_v8f64_unmasked(<8 x double> %va, <8 x double> %vb,
 ; CHECK-NEXT:    vmerge.vvm v8, v12, v8, v0
 ; CHECK-NEXT:    vfmax.vv v8, v8, v20
 ; CHECK-NEXT:    ret
-  %head = insertelement <8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
-  %v = call <8 x double> @llvm.vp.maximum.v8f64(<8 x double> %va, <8 x double> %vb, <8 x i1> %m, i32 %evl)
+  %v = call <8 x double> @llvm.vp.maximum.v8f64(<8 x double> %va, <8 x double> %vb, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x double> %v
 }
 
@@ -615,9 +593,7 @@ define <16 x double> @vfmax_vv_v16f64_unmasked(<16 x double> %va, <16 x double> 
 ; CHECK-NEXT:    vmerge.vvm v8, v16, v8, v0
 ; CHECK-NEXT:    vfmax.vv v8, v8, v24
 ; CHECK-NEXT:    ret
-  %head = insertelement <16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
-  %v = call <16 x double> @llvm.vp.maximum.v16f64(<16 x double> %va, <16 x double> %vb, <16 x i1> %m, i32 %evl)
+  %v = call <16 x double> @llvm.vp.maximum.v16f64(<16 x double> %va, <16 x double> %vb, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x double> %v
 }
 
@@ -632,7 +608,6 @@ define <32 x double> @vfmax_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32 
 ; CHECK-NEXT:    slli a1, a1, 5
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 32 * vlenb
-; CHECK-NEXT:    vmv1r.v v6, v0
 ; CHECK-NEXT:    addi a1, a0, 128
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a1)
@@ -642,28 +617,28 @@ define <32 x double> @vfmax_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32 
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
 ; CHECK-NEXT:    vs8r.v v24, (a1) # Unknown-size Folded Spill
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v7, v0, 2
-; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    li a1, 16
+; CHECK-NEXT:    vmv1r.v v6, v0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    li a1, 16
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
+; CHECK-NEXT:    vslidedown.vi v7, v0, 2
 ; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    bltu a2, a1, .LBB24_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:  .LBB24_2:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v6
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vmfeq.vv v26, v8, v8, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v26
 ; CHECK-NEXT:    csrr a0, vlenb
@@ -690,13 +665,13 @@ define <32 x double> @vfmax_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32 
 ; CHECK-NEXT:    sltu a1, a2, a0
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a0, a1, a0
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v7
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vmfeq.vv v25, v16, v16, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    csrr a0, vlenb
@@ -783,9 +758,9 @@ define <32 x double> @vfmax_vv_v32f64_unmasked(<32 x double> %va, <32 x double> 
 ; CHECK-NEXT:    sltu a1, a2, a0
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vmfeq.vv v0, v16, v16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
@@ -808,8 +783,6 @@ define <32 x double> @vfmax_vv_v32f64_unmasked(<32 x double> %va, <32 x double> 
 ; CHECK-NEXT:    add sp, sp, a0
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
-  %head = insertelement <32 x i1> poison, i1 true, i32 0
-  %m = shufflevector <32 x i1> %head, <32 x i1> poison, <32 x i32> zeroinitializer
-  %v = call <32 x double> @llvm.vp.maximum.v32f64(<32 x double> %va, <32 x double> %vb, <32 x i1> %m, i32 %evl)
+  %v = call <32 x double> @llvm.vp.maximum.v32f64(<32 x double> %va, <32 x double> %vb, <32 x i1> splat (i1 true), i32 %evl)
   ret <32 x double> %v
 }

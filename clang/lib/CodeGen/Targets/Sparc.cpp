@@ -111,8 +111,8 @@ public:
 private:
   ABIArgInfo classifyType(QualType RetTy, unsigned SizeLimit) const;
   void computeInfo(CGFunctionInfo &FI) const override;
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 
   // Coercion type builder for structs passed in registers. The coercion type
   // serves two purposes:
@@ -263,7 +263,11 @@ SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit) const {
 
   CoerceBuilder CB(getVMContext(), getDataLayout());
   CB.addStruct(0, StrTy);
-  CB.pad(llvm::alignTo(CB.DL.getTypeSizeInBits(StrTy), 64));
+  // All structs, even empty ones, should take up a register argument slot,
+  // so pin the minimum struct size to one bit.
+  CB.pad(llvm::alignTo(
+      std::max(CB.DL.getTypeSizeInBits(StrTy).getKnownMinValue(), uint64_t(1)),
+      64));
 
   // Try to use the original type for coercion.
   llvm::Type *CoerceTy = CB.isUsableType(StrTy) ? StrTy : CB.getType();
@@ -274,8 +278,8 @@ SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit) const {
     return ABIArgInfo::getDirect(CoerceTy);
 }
 
-Address SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                  QualType Ty) const {
+RValue SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                 QualType Ty, AggValueSlot Slot) const {
   ABIArgInfo AI = classifyType(Ty, 16 * 8);
   llvm::Type *ArgTy = CGT.ConvertType(Ty);
   if (AI.canHaveCoerceToType() && !AI.getCoerceToType())
@@ -321,14 +325,15 @@ Address SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     break;
 
   case ABIArgInfo::Ignore:
-    return Address(llvm::UndefValue::get(ArgPtrTy), ArgTy, TypeInfo.Align);
+    return Slot.asRValue();
   }
 
   // Update VAList.
   Address NextPtr = Builder.CreateConstInBoundsByteGEP(Addr, Stride, "ap.next");
-  Builder.CreateStore(NextPtr.getPointer(), VAListAddr);
+  Builder.CreateStore(NextPtr.emitRawPointer(CGF), VAListAddr);
 
-  return ArgAddr.withElementType(ArgTy);
+  return CGF.EmitLoadOfAnyValue(
+      CGF.MakeAddrLValue(ArgAddr.withElementType(ArgTy), Ty), Slot);
 }
 
 void SparcV9ABIInfo::computeInfo(CGFunctionInfo &FI) const {

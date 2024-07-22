@@ -1,5 +1,5 @@
 // REQUIRES: arm-registered-target
-// RUN: %clang_cc1 -S -emit-llvm -triple armv7a-apple-darwin -target-feature +neon %s -o /dev/null
+// RUN: %clang_cc1 -emit-llvm -triple armv7a-apple-darwin -target-feature +neon %s -o /dev/null
 typedef unsigned short uint16_t;
 typedef __attribute__((neon_vector_type(8))) uint16_t uint16x8_t;
 

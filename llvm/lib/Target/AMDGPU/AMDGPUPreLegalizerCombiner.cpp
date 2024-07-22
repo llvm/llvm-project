@@ -182,8 +182,6 @@ void AMDGPUPreLegalizerCombinerImpl::applyClampI64ToI16(
          LLT::scalar(64));
   const LLT S32 = LLT::scalar(32);
 
-  B.setInstrAndDebugLoc(MI);
-
   auto Unmerge = B.buildUnmerge(S32, Src);
 
   assert(MI.getOpcode() != AMDGPU::G_AMDGPU_CVT_PK_I16_I32);
@@ -240,8 +238,8 @@ void AMDGPUPreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<GISelKnownBitsAnalysis>();
   AU.addPreserved<GISelKnownBitsAnalysis>();
   if (!IsOptNone) {
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
   }
 
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
@@ -274,7 +272,8 @@ bool AMDGPUPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
 
   const GCNSubtarget &STI = MF.getSubtarget<GCNSubtarget>();
   MachineDominatorTree *MDT =
-      IsOptNone ? nullptr : &getAnalysis<MachineDominatorTree>();
+      IsOptNone ? nullptr
+                : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      nullptr, EnableOpt, F.hasOptSize(), F.hasMinSize());
   AMDGPUPreLegalizerCombinerImpl Impl(MF, CInfo, TPC, *KB, CSEInfo, RuleConfig,

@@ -13,7 +13,6 @@ def SiFiveP400Model : SchedMachineModel {
   let MicroOpBufferSize = 56; // Max micro-ops that can be buffered.
   let LoadLatency = 4;        // Cycles for loads to access the cache.
   let MispredictPenalty = 9;  // Extra cycles for a mispredicted branch.
-  let PostRAScheduler = true;
   let UnsupportedFeatures = [HasStdExtZbkb, HasStdExtZbkc, HasStdExtZbkx,
                              HasStdExtZcmt, HasStdExtZknd, HasStdExtZkne,
                              HasStdExtZknh, HasStdExtZksed, HasStdExtZksh,
@@ -109,6 +108,7 @@ def : WriteRes<WriteCTZ, [SiFiveP400IntArith]>;
 def : WriteRes<WriteCTZ32, [SiFiveP400IntArith]>;
 
 def : WriteRes<WriteORCB, [SiFiveP400IntArith]>;
+def : WriteRes<WriteIMinMax, [SiFiveP400IntArith]>;
 
 def : WriteRes<WriteREV8, [SiFiveP400IntArith]>;
 
@@ -140,7 +140,7 @@ def : WriteRes<WriteLDW, [SiFiveP400Load]>;
 def : WriteRes<WriteLDD, [SiFiveP400Load]>;
 }
 
-let Latency = 6 in {
+let Latency = 5 in {
 def : WriteRes<WriteFLD16, [SiFiveP400Load]>;
 def : WriteRes<WriteFLD32, [SiFiveP400Load]>;
 def : WriteRes<WriteFLD64, [SiFiveP400Load]>;
@@ -349,6 +349,7 @@ def : ReadAdvance<ReadCTZ32, 0>;
 def : ReadAdvance<ReadCPOP, 0>;
 def : ReadAdvance<ReadCPOP32, 0>;
 def : ReadAdvance<ReadORCB, 0>;
+def : ReadAdvance<ReadIMinMax, 0>;
 def : ReadAdvance<ReadREV8, 0>;
 def : ReadAdvance<ReadSHXADD, 0>;
 def : ReadAdvance<ReadSHXADD32, 0>;
@@ -364,4 +365,6 @@ defm : UnsupportedSchedZbkx;
 defm : UnsupportedSchedSFB;
 defm : UnsupportedSchedZfa;
 defm : UnsupportedSchedV;
+defm : UnsupportedSchedXsfvcp;
+defm : UnsupportedSchedZvk;
 }

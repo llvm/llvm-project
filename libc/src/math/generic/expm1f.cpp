@@ -17,12 +17,13 @@
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
 #include <errno.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -104,7 +105,7 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
         // intermediate results as it is more efficient than using an emulated
         // version of FMA.
 #if defined(LIBC_TARGET_CPU_HAS_FMA)
-      return fputil::fma(x, x, x);
+      return fputil::fma<float>(x, x, x);
 #else
       double xd = x;
       return static_cast<float>(fputil::multiply_add(xd, xd, xd));
@@ -170,4 +171,4 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
   return static_cast<float>(fputil::multiply_add(exp_hi_mid, exp_lo, -1.0));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

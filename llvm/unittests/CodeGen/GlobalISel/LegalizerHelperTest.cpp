@@ -610,10 +610,10 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTLZZeroUndef) {
   auto CheckStr = R"(
   CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
   CHECK: [[Zext:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
-  CHECK: [[CtlzZu:%[0-9]+]]:_(s16) = G_CTLZ_ZERO_UNDEF [[Zext]]
   CHECK: [[Cst8:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-  CHECK: [[Sub:%[0-9]+]]:_(s16) = G_SUB [[CtlzZu]]:_, [[Cst8]]:_
-  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC [[Sub]]
+  CHECK: [[Shl:%[0-9]+]]:_(s16) = G_SHL [[Zext]]:_, [[Cst8]]:_
+  CHECK: [[CtlzZu:%[0-9]+]]:_(s16) = G_CTLZ_ZERO_UNDEF [[Shl]]
+  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC [[CtlzZu]]
   )";
 
   // Check
@@ -1556,12 +1556,12 @@ TEST_F(AArch64GISelMITest, FewerElementsPhi) {
   CHECK: [[PHI0:%[0-9]+]]:_(<2 x s32>) = G_PHI [[INITVAL_E01]]:_(<2 x s32>), %bb.0, [[MIDVAL_E01]]:_(<2 x s32>), %bb.1
   CHECK: [[PHI1:%[0-9]+]]:_(<2 x s32>) = G_PHI [[INITVAL_E23]]:_(<2 x s32>), %bb.0, [[MIDVAL_E23]]:_(<2 x s32>), %bb.1
   CHECK: [[PHI2:%[0-9]+]]:_(s32) = G_PHI [[INITVAL_E4]]:_(s32), %bb.0, [[MIDVAL_E4]]:_(s32), %bb.1
-  CHECK: [[UNMERGE0:%[0-9]+]]:_(s32), [[UNMERGE1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[PHI0]]:_(<2 x s32>)
-  CHECK: [[UNMERGE2:%[0-9]+]]:_(s32), [[UNMERGE3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[PHI1]]:_(<2 x s32>)
-  CHECK: [[BV:%[0-9]+]]:_(<5 x s32>) = G_BUILD_VECTOR [[UNMERGE0]]:_(s32), [[UNMERGE1]]:_(s32), [[UNMERGE2]]:_(s32), [[UNMERGE3]]:_(s32), [[PHI2]]:_(s32)
 
   CHECK: [[OTHER_PHI:%[0-9]+]]:_(s64) = G_PHI
 
+  CHECK: [[UNMERGE0:%[0-9]+]]:_(s32), [[UNMERGE1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[PHI0]]:_(<2 x s32>)
+  CHECK: [[UNMERGE2:%[0-9]+]]:_(s32), [[UNMERGE3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[PHI1]]:_(<2 x s32>)
+  CHECK: [[BV:%[0-9]+]]:_(<5 x s32>) = G_BUILD_VECTOR [[UNMERGE0]]:_(s32), [[UNMERGE1]]:_(s32), [[UNMERGE2]]:_(s32), [[UNMERGE3]]:_(s32), [[PHI2]]:_(s32)
   CHECK: [[USE_OP:%[0-9]+]]:_(<5 x s32>) = G_AND [[BV]]:_, [[BV]]:_
   )";
 

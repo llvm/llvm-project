@@ -95,8 +95,8 @@
 // RUN:     | FileCheck %s -check-prefix=CHECK-SAFESTACK
 // CHECK-SAFESTACK: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-SAFESTACK: "-fsanitize=safe-stack"
-// CHECK-SAFESTACK: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}arm-liteos-ohos{{/|\\\\}}libclang_rt.safestack.a"
 // CHECK-SAFESTACK: "__safestack_init"
+// CHECK-SAFESTACK: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}arm-liteos-ohos{{/|\\\\}}libclang_rt.safestack.a"
 
 // RUN: %clang %s -### --target=arm-liteos \
 // RUN:     -fsanitize=address 2>&1 \
@@ -230,7 +230,6 @@
 
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=arm64-linux-ohos -pthread \
-// RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/ohos_native_tree/sysroot \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-OHOS-PTHREAD %s

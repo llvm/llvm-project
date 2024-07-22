@@ -12,6 +12,7 @@
 #include "Function.h"
 #include "InterpStack.h"
 #include "InterpState.h"
+#include "MemberPointer.h"
 #include "Pointer.h"
 #include "PrimType.h"
 #include "Program.h"
@@ -36,7 +37,8 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func,
   Locals = std::make_unique<char[]>(FrameSize);
   for (auto &Scope : Func->scopes()) {
     for (auto &Local : Scope.locals()) {
-      Block *B = new (localBlock(Local.Offset)) Block(Local.Desc);
+      Block *B =
+          new (localBlock(Local.Offset)) Block(S.Ctx.getEvalID(), Local.Desc);
       B->invokeCtor();
       new (localInlineDesc(Local.Offset)) InlineDescriptor(Local.Desc);
     }
@@ -152,13 +154,25 @@ void print(llvm::raw_ostream &OS, const Pointer &P, ASTContext &Ctx,
 }
 
 void InterpFrame::describe(llvm::raw_ostream &OS) const {
+  // We create frames for builtin functions as well, but we can't reliably
+  // diagnose them. The 'in call to' diagnostics for them add no value to the
+  // user _and_ it doesn't generally work since the argument types don't always
+  // match the function prototype. Just ignore them.
+  // Similarly, for lambda static invokers, we would just print __invoke().
+  if (const auto *F = getFunction();
+      F && (F->isBuiltin() || F->isLambdaStaticInvoker()))
+    return;
+
   const FunctionDecl *F = getCallee();
   if (const auto *M = dyn_cast<CXXMethodDecl>(F);
       M && M->isInstance() && !isa<CXXConstructorDecl>(F)) {
     print(OS, This, S.getCtx(), S.getCtx().getRecordType(M->getParent()));
     OS << "->";
   }
-  OS << *F << "(";
+
+  F->getNameForDiagnostic(OS, S.getCtx().getPrintingPolicy(),
+                          /*Qualified=*/false);
+  OS << '(';
   unsigned Off = 0;
 
   Off += Func->hasRVO() ? primSize(PT_Ptr) : 0;
@@ -184,12 +198,17 @@ Frame *InterpFrame::getCaller() const {
 }
 
 SourceRange InterpFrame::getCallRange() const {
-  if (!Caller->Func)
-    return S.getRange(nullptr, {});
+  if (!Caller->Func) {
+    if (SourceRange NullRange = S.getRange(nullptr, {}); NullRange.isValid())
+      return NullRange;
+    return S.EvalLocation;
+  }
   return S.getRange(Caller->Func, RetPC - sizeof(uintptr_t));
 }
 
 const FunctionDecl *InterpFrame::getCallee() const {
+  if (!Func)
+    return nullptr;
   return Func->getDecl();
 }
 
@@ -200,16 +219,15 @@ Pointer InterpFrame::getLocalPointer(unsigned Offset) const {
 
 Pointer InterpFrame::getParamPointer(unsigned Off) {
   // Return the block if it was created previously.
-  auto Pt = Params.find(Off);
-  if (Pt != Params.end()) {
+  if (auto Pt = Params.find(Off); Pt != Params.end())
     return Pointer(reinterpret_cast<Block *>(Pt->second.get()));
-  }
 
   // Allocate memory to store the parameter and the block metadata.
   const auto &Desc = Func->getParamDescriptor(Off);
   size_t BlockSize = sizeof(Block) + Desc.second->getAllocSize();
   auto Memory = std::make_unique<char[]>(BlockSize);
-  auto *B = new (Memory.get()) Block(Desc.second);
+  auto *B = new (Memory.get()) Block(S.Ctx.getEvalID(), Desc.second);
+  B->invokeCtor();
 
   // Copy the initial value.
   TYPE_SWITCH(Desc.first, new (B->data()) T(stackRef<T>(Off)));

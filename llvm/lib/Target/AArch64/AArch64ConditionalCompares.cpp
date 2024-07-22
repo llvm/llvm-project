@@ -299,7 +299,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
   if (I == MBB->end())
     return nullptr;
   // The terminator must be controlled by the flags.
-  if (!I->readsRegister(AArch64::NZCV)) {
+  if (!I->readsRegister(AArch64::NZCV, /*TRI=*/nullptr)) {
     switch (I->getOpcode()) {
     case AArch64::CBZW:
     case AArch64::CBZX:
@@ -794,8 +794,8 @@ char AArch64ConditionalCompares::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AArch64ConditionalCompares, "aarch64-ccmp",
                       "AArch64 CCMP Pass", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineTraceMetrics)
 INITIALIZE_PASS_END(AArch64ConditionalCompares, "aarch64-ccmp",
                     "AArch64 CCMP Pass", false, false)
@@ -805,11 +805,11 @@ FunctionPass *llvm::createAArch64ConditionalCompares() {
 }
 
 void AArch64ConditionalCompares::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MachineBranchProbabilityInfo>();
-  AU.addRequired<MachineDominatorTree>();
-  AU.addPreserved<MachineDominatorTree>();
-  AU.addRequired<MachineLoopInfo>();
-  AU.addPreserved<MachineLoopInfo>();
+  AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addPreserved<MachineLoopInfoWrapperPass>();
   AU.addRequired<MachineTraceMetrics>();
   AU.addPreserved<MachineTraceMetrics>();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -933,9 +933,9 @@ bool AArch64ConditionalCompares::runOnMachineFunction(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
   SchedModel = MF.getSubtarget().getSchedModel();
   MRI = &MF.getRegInfo();
-  DomTree = &getAnalysis<MachineDominatorTree>();
-  Loops = &getAnalysis<MachineLoopInfo>();
-  MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
+  DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   Traces = &getAnalysis<MachineTraceMetrics>();
   MinInstr = nullptr;
   MinSize = MF.getFunction().hasMinSize();

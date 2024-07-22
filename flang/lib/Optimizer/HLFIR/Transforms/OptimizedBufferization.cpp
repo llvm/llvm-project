@@ -89,7 +89,7 @@ private:
 public:
   using mlir::OpRewritePattern<hlfir::ElementalOp>::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::ElementalOp elemental,
                   mlir::PatternRewriter &rewriter) const override;
 };
@@ -249,7 +249,7 @@ static bool areIdenticalOrDisjointSlices(mlir::Value ref1, mlir::Value ref2) {
     auto isPositiveConstant = [](mlir::Value v) -> bool {
       if (auto conOp =
               mlir::dyn_cast<mlir::arith::ConstantOp>(v.getDefiningOp()))
-        if (auto iattr = conOp.getValue().dyn_cast<mlir::IntegerAttr>())
+        if (auto iattr = mlir::dyn_cast<mlir::IntegerAttr>(conOp.getValue()))
           return iattr.getInt() > 0;
       return false;
     };
@@ -465,7 +465,7 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   return match;
 }
 
-mlir::LogicalResult ElementalAssignBufferization::matchAndRewrite(
+llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
     hlfir::ElementalOp elemental, mlir::PatternRewriter &rewriter) const {
   std::optional<MatchInfo> match = findMatch(elemental);
   if (!match)
@@ -519,12 +519,12 @@ private:
 public:
   using mlir::OpRewritePattern<hlfir::AssignOp>::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::AssignOp assign,
                   mlir::PatternRewriter &rewriter) const override;
 };
 
-mlir::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
+llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
     hlfir::AssignOp assign, mlir::PatternRewriter &rewriter) const {
   // Since RHS is a scalar and LHS is an array, LHS must be allocated
   // in a conforming Fortran program, and LHS cannot be reallocated
@@ -587,12 +587,12 @@ private:
 public:
   using mlir::OpRewritePattern<hlfir::AssignOp>::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::AssignOp assign,
                   mlir::PatternRewriter &rewriter) const override;
 };
 
-mlir::LogicalResult VariableAssignBufferization::matchAndRewrite(
+llvm::LogicalResult VariableAssignBufferization::matchAndRewrite(
     hlfir::AssignOp assign, mlir::PatternRewriter &rewriter) const {
   if (assign.isAllocatableAssignment())
     return rewriter.notifyMatchFailure(assign, "AssignOp may imply allocation");
@@ -601,7 +601,7 @@ mlir::LogicalResult VariableAssignBufferization::matchAndRewrite(
   // TODO: ExprType check is here to avoid conflicts with
   // ElementalAssignBufferization pattern. We need to combine
   // these matchers into a single one that applies to AssignOp.
-  if (rhs.getType().isa<hlfir::ExprType>())
+  if (mlir::isa<hlfir::ExprType>(rhs.getType()))
     return rewriter.notifyMatchFailure(assign, "RHS is not in memory");
 
   if (!rhs.isArray())
@@ -716,7 +716,7 @@ class ReductionElementalConversion : public mlir::OpRewritePattern<Op> {
 public:
   using mlir::OpRewritePattern<Op>::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(Op op, mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = op.getLoc();
     hlfir::ElementalOp elemental =
@@ -817,7 +817,7 @@ class MinMaxlocElementalConversion : public mlir::OpRewritePattern<Op> {
 public:
   using mlir::OpRewritePattern<Op>::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(Op mloc, mlir::PatternRewriter &rewriter) const override {
     if (!mloc.getMask() || mloc.getDim() || mloc.getBack())
       return rewriter.notifyMatchFailure(mloc,
@@ -834,7 +834,7 @@ public:
 
     unsigned rank = mlir::cast<hlfir::ExprType>(mloc.getType()).getShape()[0];
     mlir::Type arrayType = array.getType();
-    if (!arrayType.isa<fir::BoxType>())
+    if (!mlir::isa<fir::BoxType>(arrayType))
       return rewriter.notifyMatchFailure(
           mloc, "Currently requires a boxed type input");
     mlir::Type elementType = hlfir::getFortranElementType(arrayType);
@@ -850,7 +850,7 @@ public:
 
     auto init = [isMax](fir::FirOpBuilder builder, mlir::Location loc,
                         mlir::Type elementType) {
-      if (auto ty = elementType.dyn_cast<mlir::FloatType>()) {
+      if (auto ty = mlir::dyn_cast<mlir::FloatType>(elementType)) {
         const llvm::fltSemantics &sem = ty.getFloatSemantics();
         llvm::APFloat limit = llvm::APFloat::getInf(sem, /*Negative=*/isMax);
         return builder.createRealConstant(loc, elementType, limit);
@@ -901,7 +901,7 @@ public:
 
       // Compare with the max reduction value
       mlir::Value cmp;
-      if (elementType.isa<mlir::FloatType>()) {
+      if (mlir::isa<mlir::FloatType>(elementType)) {
         // For FP reductions we want the first smallest value to be used, that
         // is not NaN. A OGL/OLT condition will usually work for this unless all
         // the values are Nan or Inf. This follows the same logic as
@@ -918,7 +918,7 @@ public:
             loc, mlir::arith::CmpFPredicate::OEQ, elem, elem);
         cmpNan = builder.create<mlir::arith::AndIOp>(loc, cmpNan, cmpNan2);
         cmp = builder.create<mlir::arith::OrIOp>(loc, cmp, cmpNan);
-      } else if (elementType.isa<mlir::IntegerType>()) {
+      } else if (mlir::isa<mlir::IntegerType>(elementType)) {
         cmp = builder.create<mlir::arith::CmpIOp>(
             loc,
             isMax ? mlir::arith::CmpIPredicate::sgt
@@ -1038,12 +1038,12 @@ class OptimizedBufferizationPass
           OptimizedBufferizationPass> {
 public:
   void runOnOperation() override {
-    mlir::func::FuncOp func = getOperation();
     mlir::MLIRContext *context = &getContext();
 
     mlir::GreedyRewriteConfig config;
     // Prevent the pattern driver from merging blocks
-    config.enableRegionSimplification = false;
+    config.enableRegionSimplification =
+        mlir::GreedySimplifyRegionLevel::Disabled;
 
     mlir::RewritePatternSet patterns(context);
     // TODO: right now the patterns are non-conflicting,
@@ -1062,15 +1062,11 @@ public:
     patterns.insert<MinMaxlocElementalConversion<hlfir::MaxlocOp>>(context);
 
     if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
-            func, std::move(patterns), config))) {
-      mlir::emitError(func.getLoc(),
+            getOperation(), std::move(patterns), config))) {
+      mlir::emitError(getOperation()->getLoc(),
                       "failure in HLFIR optimized bufferization");
       signalPassFailure();
     }
   }
 };
 } // namespace
-
-std::unique_ptr<mlir::Pass> hlfir::createOptimizedBufferizationPass() {
-  return std::make_unique<OptimizedBufferizationPass>();
-}

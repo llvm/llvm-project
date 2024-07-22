@@ -32,7 +32,7 @@ namespace ref_counted {
   void consume_ref_counted(Ref<RefCountable>) {}
 
   void foo() {
-    consume_refcntbl(provide_ref_counted().get());
+    consume_refcntbl(provide_ref_counted().ptr());
     // no warning
   }
 }
@@ -313,6 +313,17 @@ namespace default_arg {
   }
 }
 
+namespace cxx_member_func {
+  Ref<RefCountable> provideProtected();
+  void foo() {
+    provide()->trivial();
+    provide()->method();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    provideProtected()->method();
+    (provideProtected())->method();
+  };
+}
+
 namespace cxx_member_operator_call {
   // The hidden this-pointer argument without a corresponding parameter caused couple bugs in parameter <-> argument attribution.
   struct Foo {
@@ -331,5 +342,26 @@ namespace cxx_member_operator_call {
     // expected-warning@-1{{Call argument for parameter 'bad' is uncounted and unsafe}}
     f(global);
     // expected-warning@-1{{Call argument for parameter 'bad' is uncounted and unsafe}}
+  }
+}
+
+namespace call_with_ptr_on_ref {
+  Ref<RefCountable> provideProtected();
+  void bar(RefCountable* bad);
+  bool baz();
+  void foo(bool v) {
+    bar(v ? nullptr : provideProtected().ptr());
+    bar(baz() ? provideProtected().ptr() : nullptr);
+    bar(v ? provide() : provideProtected().ptr());
+    // expected-warning@-1{{Call argument for parameter 'bad' is uncounted and unsafe}}
+    bar(v ? provideProtected().ptr() : provide());
+    // expected-warning@-1{{Call argument for parameter 'bad' is uncounted and unsafe}}
+  }
+}
+
+namespace call_with_explicit_temporary_obj {
+  void foo() {
+    Ref { *provide() }->method();
+    RefPtr { provide() }->method();
   }
 }

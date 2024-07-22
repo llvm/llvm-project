@@ -26,18 +26,18 @@
 
 ;; Alloca for var.a and associated dbg.assign:
 ; CHECK: %var.sroa.0 = alloca i32, align 4, !DIAssignID ![[id_1:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[var:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata ![[id_1]], metadata ptr %var.sroa.0, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i1 undef, ![[var:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 32, 32), ![[id_1]], ptr %var.sroa.0, !DIExpression(),
 
 ;; Alloca for var.b and associated dbg.assign:
 ; CHECK-NEXT: %var.sroa.1 = alloca i32, align 4, !DIAssignID ![[id_2:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[var]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32), metadata ![[id_2]], metadata ptr %var.sroa.1, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i1 undef, ![[var]], !DIExpression(DW_OP_LLVM_fragment, 64, 32), ![[id_2]], ptr %var.sroa.1, !DIExpression(),
 
 ;; Store to var.b (split from store to var) and associated dbg.assigns. The
 ;; dbg.assign for the fragment covering the (pre-split) assignment to var.a
 ;; should not be linked to the store.
 ; CHECK: store i32 %[[v:.*]], ptr %var.sroa.1,{{.*}}!DIAssignID ![[id_3:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %{{.*var\.sroa\.0.*}}, metadata ![[var]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata ![[id_4:[0-9]+]], metadata ptr %var.sroa.0, metadata !DIExpression())
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %[[v]], metadata ![[var]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32), metadata ![[id_3]], metadata ptr %var.sroa.1, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i32 %{{.*var\.sroa\.0.*}}, ![[var]], !DIExpression(DW_OP_LLVM_fragment, 32, 32), ![[id_4:[0-9]+]], ptr %var.sroa.0, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(i32 %[[v]], ![[var]], !DIExpression(DW_OP_LLVM_fragment, 64, 32), ![[id_3]], ptr %var.sroa.1, !DIExpression(),
 
 ; CHECK-DAG: ![[id_1]] = distinct !DIAssignID()
 ; CHECK-DAG: ![[id_2]] = distinct !DIAssignID()

@@ -6,8 +6,8 @@
 #if __cplusplus > 201402L
 namespace ClassTemplateParamNotForwardingRef {
   // This is not a forwarding reference.
-  template<typename T> struct A { // expected-note {{candidate}}
-    A(T&&); // expected-note {{expects an rvalue}}
+  template<typename T> struct A { // expected-note {{candidate}} expected-note {{implicit deduction guide}}
+    A(T&&); // expected-note {{expects an rvalue}} expected-note {{implicit deduction guide}}
   };
   int n;
   A a = n; // expected-error {{no viable constructor or deduction guide}}
@@ -75,10 +75,12 @@ namespace std_example {
   int n3 = g(i); // expected-error{{no matching function for call to 'g'}}
 
 #if __cplusplus > 201402L
-  template<class T> struct A { // expected-note {{candidate}}
+  template<class T> struct A { // expected-note {{candidate}} expected-note {{implicit deduction guide}}
     template<class U>
-    A(T &&, U &&, int *); // expected-note {{[with T = int, U = int] not viable: expects an rvalue}}
-    A(T &&, int *);       // expected-note {{requires 2}}
+    A(T &&, U &&, int *); // expected-note {{[with T = int, U = int] not viable: expects an rvalue}} \
+                          // expected-note {{implicit deduction guide declared as 'template <class T, class U> A(T &&, U &&, int *) -> A<T>'}}
+    A(T &&, int *);       // expected-note {{requires 2}} \
+                          // expected-note {{implicit deduction guide declared as 'template <class T> A(T &&, int *) -> A<T>'}}
   };
   template<class T> A(T &&, int *) -> A<T>; // expected-note {{requires 2}}
 

@@ -4,7 +4,7 @@
 
 define noundef i32 @foo() {
 ; CHECK: %0:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg :: (load (s64) from got)
-; CHECK: %1:gr32 = MOV32rm %0, 1, $noreg, 0, $fs :: (load (s32) from %ir.0)
+; CHECK: %1:gr32 = MOV32rm %0, 1, $noreg, 0, $fs :: (dereferenceable load (s32) from %ir.0)
 ; CHECK: %2:gr32 = nsw INC32r %1, implicit-def dead $eflags
 ; CHECK: MOV32mr %0, 1, $noreg, 0, $fs, %2 :: (store (s32) into %ir.0)
 ; CHECK: $eax = COPY %2
@@ -22,7 +22,7 @@ entry:
 @j =  thread_local addrspace(1) global  ptr addrspace(0) @i, align 4
 define noundef i32 @bar() {
 ; CHECK: %0:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gottpoff) @j, $noreg :: (load (s64) from got)
-; CHECK: %1:gr32 = MOV32rm %0, 1, $noreg, 0, $fs :: (load (s32) from %ir.0, addrspace 1)
+; CHECK: %1:gr32 = MOV32rm %0, 1, $noreg, 0, $fs :: (dereferenceable load (s32) from %ir.0, addrspace 1)
 ; CHECK: %2:gr32 = nsw INC32r %1, implicit-def dead $eflags
 ; CHECK: MOV32mr %0, 1, $noreg, 0, $fs, %2 :: (store (s32) into %ir.0, addrspace 1)
 ; CHECK: $eax = COPY %2

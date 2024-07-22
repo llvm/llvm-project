@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -fcxx-exceptions %s
-// RUN: %clang_cc1 -fsyntax-only -ast-dump -ast-dump-filter test -std=c++11 -fcxx-exceptions %s | FileCheck %s
+// RUN: %clang_cc1 -ast-dump -ast-dump-filter test -std=c++11 -fcxx-exceptions %s | FileCheck %s
 // expected-no-diagnostics
 
 class testClass1 {

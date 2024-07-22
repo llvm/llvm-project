@@ -17,3 +17,5 @@ be acted upon and the effect is as if it was an asynchronous cancellation.
 This check corresponds to the CERT C Coding Standard rule
 `POS47-C. Do not use threads that can be canceled asynchronously
 <https://wiki.sei.cmu.edu/confluence/display/c/POS47-C.+Do+not+use+threads+that+can+be+canceled+asynchronously>`_.
+
+`cert-pos47-c` redirects here as an alias of this check.

@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -183,7 +184,7 @@ static MachineFunction &createFrameHelperMachineFunction(Module *M,
   MF.getProperties().reset(MachineFunctionProperties::Property::TracksLiveness);
   MF.getProperties().reset(MachineFunctionProperties::Property::IsSSA);
   MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
-  MF.getRegInfo().freezeReservedRegs(MF);
+  MF.getRegInfo().freezeReservedRegs();
 
   // Create entry block.
   BasicBlock *EntryBB = BasicBlock::Create(C, "entry", F);

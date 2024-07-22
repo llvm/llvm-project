@@ -9,27 +9,27 @@
 
 export {
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-  using ::wctrans_t;
-  using ::wctype_t;
-  using ::wint_t;
+  using ::wctrans_t _LIBCPP_USING_IF_EXISTS;
+  using ::wctype_t _LIBCPP_USING_IF_EXISTS;
+  using ::wint_t _LIBCPP_USING_IF_EXISTS;
 
-  using ::iswalnum;
-  using ::iswalpha;
-  using ::iswblank;
-  using ::iswcntrl;
-  using ::iswctype;
-  using ::iswdigit;
-  using ::iswgraph;
-  using ::iswlower;
-  using ::iswprint;
-  using ::iswpunct;
-  using ::iswspace;
-  using ::iswupper;
-  using ::iswxdigit;
-  using ::towctrans;
-  using ::towlower;
-  using ::towupper;
-  using ::wctrans;
-  using ::wctype;
+  using ::iswalnum _LIBCPP_USING_IF_EXISTS;
+  using ::iswalpha _LIBCPP_USING_IF_EXISTS;
+  using ::iswblank _LIBCPP_USING_IF_EXISTS;
+  using ::iswcntrl _LIBCPP_USING_IF_EXISTS;
+  using ::iswctype _LIBCPP_USING_IF_EXISTS;
+  using ::iswdigit _LIBCPP_USING_IF_EXISTS;
+  using ::iswgraph _LIBCPP_USING_IF_EXISTS;
+  using ::iswlower _LIBCPP_USING_IF_EXISTS;
+  using ::iswprint _LIBCPP_USING_IF_EXISTS;
+  using ::iswpunct _LIBCPP_USING_IF_EXISTS;
+  using ::iswspace _LIBCPP_USING_IF_EXISTS;
+  using ::iswupper _LIBCPP_USING_IF_EXISTS;
+  using ::iswxdigit _LIBCPP_USING_IF_EXISTS;
+  using ::towctrans _LIBCPP_USING_IF_EXISTS;
+  using ::towlower _LIBCPP_USING_IF_EXISTS;
+  using ::towupper _LIBCPP_USING_IF_EXISTS;
+  using ::wctrans _LIBCPP_USING_IF_EXISTS;
+  using ::wctype _LIBCPP_USING_IF_EXISTS;
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 } // export

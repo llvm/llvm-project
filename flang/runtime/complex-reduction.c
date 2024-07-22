@@ -155,3 +155,41 @@ ADAPT_REDUCTION(DotProductComplex10, long_double_Complex_t,
 ADAPT_REDUCTION(DotProductComplex16, CFloat128ComplexType, CppComplexFloat128,
     CMPLXF128, DOT_PRODUCT_ARGS, DOT_PRODUCT_ARG_NAMES)
 #endif
+
+/* REDUCE() */
+#define RARGS REDUCE_ARGS(float_Complex_t, float_Complex_t_ref_op)
+ADAPT_REDUCTION(ReduceComplex4Ref, float_Complex_t, CppComplexFloat, CMPLXF,
+    RARGS, REDUCE_ARG_NAMES)
+#undef RARGS
+#define RARGS REDUCE_ARGS(float_Complex_t, float_Complex_t_value_op)
+ADAPT_REDUCTION(ReduceComplex4Value, float_Complex_t, CppComplexFloat, CMPLXF,
+    RARGS, REDUCE_ARG_NAMES)
+#undef RARGS
+#define RARGS REDUCE_ARGS(double_Complex_t, double_Complex_t_ref_op)
+ADAPT_REDUCTION(ReduceComplex8Ref, double_Complex_t, CppComplexDouble, CMPLX,
+    RARGS, REDUCE_ARG_NAMES)
+#undef RARGS
+#define RARGS REDUCE_ARGS(double_Complex_t, double_Complex_t_value_op)
+ADAPT_REDUCTION(ReduceComplex8Value, double_Complex_t, CppComplexDouble, CMPLX,
+    RARGS, REDUCE_ARG_NAMES)
+#undef RARGS
+#if LDBL_MANT_DIG == 64
+#define RARGS REDUCE_ARGS(long_double_Complex_t, long_double_Complex_t_ref_op)
+ADAPT_REDUCTION(ReduceComplex10Ref, long_double_Complex_t, CppComplexLongDouble,
+    CMPLXL, RARGS, REDUCE_ARG_NAMES)
+#undef RARGS
+#define RARGS REDUCE_ARGS(long_double_Complex_t, long_double_Complex_t_value_op)
+ADAPT_REDUCTION(ReduceComplex10Value, long_double_Complex_t,
+    CppComplexLongDouble, CMPLXL, RARGS, REDUCE_ARG_NAMES)
+#undef RARGS
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#define RARGS REDUCE_ARGS(CFloat128ComplexType, CFloat128ComplexType_ref_op)
+ADAPT_REDUCTION(ReduceComplex16Ref, CFloat128ComplexType, CppComplexFloat128,
+    CMPLXF128, RARGS, REDUCE_ARG_NAMES)
+#undef RARGS
+#define RARGS REDUCE_ARGS(CFloat128ComplexType, CFloat128ComplexType_value_op)
+ADAPT_REDUCTION(ReduceComplex16Value, CFloat128ComplexType, CppComplexFloat128,
+    CMPLXF128, RARGS, REDUCE_ARG_NAMES)
+#undef RARGS
+#endif

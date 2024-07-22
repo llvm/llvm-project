@@ -1,0 +1,83 @@
+; RUN: rm -rf %t && mkdir %t && cd %t
+
+; Generate indexed profiles from text profiles
+RUN: llvm-profdata merge --keep-vtable-symbols %S/Inputs/vtable-value-prof.proftext -o indexed.profdata
+
+; Show indexed profiles
+RUN: llvm-profdata show --function=main --ic-targets --show-vtables indexed.profdata | FileCheck %s --check-prefix=INDEXED
+
+; Show text profiles
+RUN: llvm-profdata show --function=main --ic-targets --show-vtables --text %S/Inputs/vtable-value-prof.proftext | FileCheck %s --check-prefix=ICTEXT
+
+; Convert indexed profiles to its textual output and show it.
+RUN: llvm-profdata merge --keep-vtable-symbols --text -o text-from-indexed.proftext indexed.profdata
+RUN: llvm-profdata show --function=main --ic-targets --show-vtables text-from-indexed.proftext | FileCheck %s --check-prefix=INDEXED
+RUN: llvm-profdata show --function=main --ic-targets --show-vtables --text text-from-indexed.proftext | FileCheck %s --check-prefix=ICTEXT
+
+INDEXED:      Counters:
+INDEXED-NEXT:   main:
+INDEXED-NEXT:     Hash: 0x0f9a16fe6d398548
+INDEXED-NEXT:     Counters: 2
+INDEXED-NEXT:     Indirect Call Site Count: 2
+INDEXED-NEXT:     Number of instrumented vtables: 2
+INDEXED-NEXT:     Indirect Target Results:
+INDEXED-NEXT:         [  0, {{.*}}vtable_prof.cc;_ZN12_GLOBAL__N_18Derived25func1Eii,        750 ] (75.00%)
+INDEXED-NEXT:         [  0, _ZN8Derived15func1Eii,        250 ] (25.00%)
+INDEXED-NEXT:         [  1, {{.*}}vtable_prof.cc;_ZN12_GLOBAL__N_18Derived25func2Eii,        750 ] (75.00%)
+INDEXED-NEXT:         [  1, _ZN8Derived15func2Eii,        250 ] (25.00%)
+INDEXED-NEXT:     VTable Results:
+INDEXED-NEXT:         [  0, {{.*}}vtable_prof.cc;_ZTVN12_GLOBAL__N_18Derived2E,        750 ] (75.00%)
+INDEXED-NEXT:         [  0, _ZTV8Derived1,        250 ] (25.00%)
+INDEXED-NEXT:         [  1, {{.*}}vtable_prof.cc;_ZTVN12_GLOBAL__N_18Derived2E,        750 ] (75.00%)
+INDEXED-NEXT:         [  1, _ZTV8Derived1,        250 ] (25.00%)
+INDEXED-NEXT: Instrumentation level: IR  entry_first = 0
+INDEXED-NEXT: Functions shown: 1
+INDEXED-NEXT: Total functions: 6
+INDEXED-NEXT: Maximum function count: 1000
+INDEXED-NEXT: Maximum internal block count: 250
+INDEXED-NEXT: Statistics for indirect call sites profile:
+INDEXED-NEXT:   Total number of sites: 2
+INDEXED-NEXT:   Total number of sites with values: 2
+INDEXED-NEXT:   Total number of profiled values: 4
+INDEXED-NEXT:   Value sites histogram:
+INDEXED-NEXT:       NumTargets, SiteCount
+INDEXED-NEXT:       2, 2
+INDEXED-NEXT: Statistics for vtable profile:
+INDEXED-NEXT:   Total number of sites: 2
+INDEXED-NEXT:   Total number of sites with values: 2
+INDEXED-NEXT:   Total number of profiled values: 4
+INDEXED-NEXT:   Value sites histogram:
+INDEXED-NEXT:       NumTargets, SiteCount
+INDEXED-NEXT:       2, 2
+
+ICTEXT: :ir
+ICTEXT: main
+ICTEXT: # Func Hash:
+ICTEXT: 1124236338992350536
+ICTEXT: # Num Counters:
+ICTEXT: 2
+ICTEXT: # Counter Values:
+ICTEXT: 1000
+ICTEXT: 1
+ICTEXT: # Num Value Kinds:
+ICTEXT: 2
+ICTEXT: # ValueKind = IPVK_IndirectCallTarget:
+ICTEXT: 0
+ICTEXT: # NumValueSites:
+ICTEXT: 2
+ICTEXT: 2
+ICTEXT: {{.*}}vtable_prof.cc;_ZN12_GLOBAL__N_18Derived25func1Eii:750
+ICTEXT: _ZN8Derived15func1Eii:250
+ICTEXT: 2
+ICTEXT: {{.*}}vtable_prof.cc;_ZN12_GLOBAL__N_18Derived25func2Eii:750
+ICTEXT: _ZN8Derived15func2Eii:250
+ICTEXT: # ValueKind = IPVK_VTableTarget:
+ICTEXT: 2
+ICTEXT: # NumValueSites:
+ICTEXT: 2
+ICTEXT: 2
+ICTEXT: {{.*}}vtable_prof.cc;_ZTVN12_GLOBAL__N_18Derived2E:750
+ICTEXT: _ZTV8Derived1:250
+ICTEXT: 2
+ICTEXT: {{.*}}vtable_prof.cc;_ZTVN12_GLOBAL__N_18Derived2E:750
+ICTEXT: _ZTV8Derived1:250

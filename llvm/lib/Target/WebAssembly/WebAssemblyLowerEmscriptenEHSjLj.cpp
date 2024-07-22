@@ -129,27 +129,23 @@
 ///
 /// If there are calls to setjmp()
 ///
-/// 2) In the function entry that calls setjmp, initialize setjmpTable and
-///    sejmpTableSize as follows:
-///      setjmpTableSize = 4;
-///      setjmpTable = (int *) malloc(40);
-///      setjmpTable[0] = 0;
-///    setjmpTable and setjmpTableSize are used to call saveSetjmp() function in
-///    Emscripten compiler-rt.
+/// 2) In the function entry that calls setjmp, initialize
+///    functionInvocationId as follows:
+///
+///    functionInvocationId = alloca(4)
+///
+///    Note: the alloca size is not important as this pointer is
+///    merely used for pointer comparisions.
 ///
 /// 3) Lower
 ///      setjmp(env)
 ///    into
-///      setjmpTable = saveSetjmp(env, label, setjmpTable, setjmpTableSize);
-///      setjmpTableSize = getTempRet0();
-///    For each dynamic setjmp call, setjmpTable stores its ID (a number which
-///    is incrementally assigned from 0) and its label (a unique number that
-///    represents each callsite of setjmp). When we need more entries in
-///    setjmpTable, it is reallocated in saveSetjmp() in Emscripten's
-///    compiler-rt and it will return the new table address, and assign the new
-///    table size in setTempRet0(). saveSetjmp also stores the setjmp's ID into
-///    the buffer 'env'. A BB with setjmp is split into two after setjmp call in
-///    order to make the post-setjmp BB the possible destination of longjmp BB.
+///      __wasm_setjmp(env, label, functionInvocationId)
+///
+///    __wasm_setjmp records the necessary info (the label and
+///    functionInvocationId) to the "env".
+///    A BB with setjmp is split into two after setjmp call in order to
+///    make the post-setjmp BB the possible destination of longjmp BB.
 ///
 /// 4) Lower every call that might longjmp into
 ///      __THREW__ = 0;
@@ -158,8 +154,7 @@
 ///      __THREW__ = 0;
 ///      %__threwValue.val = __threwValue;
 ///      if (%__THREW__.val != 0 & %__threwValue.val != 0) {
-///        %label = testSetjmp(mem[%__THREW__.val], setjmpTable,
-///                            setjmpTableSize);
+///        %label = __wasm_setjmp_test(%__THREW__.val, functionInvocationId);
 ///        if (%label == 0)
 ///          emscripten_longjmp(%__THREW__.val, %__threwValue.val);
 ///        setTempRet0(%__threwValue.val);
@@ -173,16 +168,16 @@
 ///        ...
 ///        default: goto splitted next BB
 ///      }
-///    testSetjmp examines setjmpTable to see if there is a matching setjmp
-///    call. After calling an invoke wrapper, if a longjmp occurred, __THREW__
-///    will be the address of matching jmp_buf buffer and __threwValue be the
-///    second argument to longjmp. mem[%__THREW__.val] is a setjmp ID that is
-///    stored in saveSetjmp. testSetjmp returns a setjmp label, a unique ID to
-///    each setjmp callsite. Label 0 means this longjmp buffer does not
-///    correspond to one of the setjmp callsites in this function, so in this
-///    case we just chain the longjmp to the caller. Label -1 means no longjmp
-///    occurred. Otherwise we jump to the right post-setjmp BB based on the
-///    label.
+///
+///    __wasm_setjmp_test examines the jmp buf to see if it was for a matching
+///    setjmp call. After calling an invoke wrapper, if a longjmp occurred,
+///    __THREW__ will be the address of matching jmp_buf buffer and
+///    __threwValue be the second argument to longjmp.
+///    __wasm_setjmp_test returns a setjmp label, a unique ID to each setjmp
+///    callsite. Label 0 means this longjmp buffer does not correspond to one
+///    of the setjmp callsites in this function, so in this case we just chain
+///    the longjmp to the caller. Label -1 means no longjmp occurred.
+///    Otherwise we jump to the right post-setjmp BB based on the label.
 ///
 /// * Wasm setjmp / longjmp handling
 /// This mode still uses some Emscripten library functions but not JavaScript's
@@ -199,45 +194,44 @@
 /// If there are calls to setjmp()
 ///
 /// 2) and 3): The same as 2) and 3) in Emscripten SjLj.
-/// (setjmpTable/setjmpTableSize initialization + setjmp callsite
-/// transformation)
+/// (functionInvocationId initialization + setjmp callsite transformation)
 ///
 /// 4) Create a catchpad with a wasm.catch() intrinsic, which returns the value
-/// thrown by __wasm_longjmp function. In Emscripten library, we have this
-/// struct:
+/// thrown by __wasm_longjmp function. In the runtime library, we have an
+/// equivalent of the following struct:
 ///
 /// struct __WasmLongjmpArgs {
 ///   void *env;
 ///   int val;
 /// };
-/// struct __WasmLongjmpArgs __wasm_longjmp_args;
 ///
-/// The thrown value here is a pointer to __wasm_longjmp_args struct object. We
-/// use this struct to transfer two values by throwing a single value. Wasm
-/// throw and catch instructions are capable of throwing and catching multiple
-/// values, but it also requires multivalue support that is currently not very
-/// reliable.
+/// The thrown value here is a pointer to the struct. We use this struct to
+/// transfer two values by throwing a single value. Wasm throw and catch
+/// instructions are capable of throwing and catching multiple values, but
+/// it also requires multivalue support that is currently not very reliable.
 /// TODO Switch to throwing and catching two values without using the struct
 ///
 /// All longjmpable function calls will be converted to an invoke that will
 /// unwind to this catchpad in case a longjmp occurs. Within the catchpad, we
-/// test the thrown values using testSetjmp function as we do for Emscripten
-/// SjLj. The main difference is, in Emscripten SjLj, we need to transform every
-/// longjmpable callsite into a sequence of code including testSetjmp() call; in
-/// Wasm SjLj we do the testing in only one place, in this catchpad.
+/// test the thrown values using __wasm_setjmp_test function as we do for
+/// Emscripten SjLj. The main difference is, in Emscripten SjLj, we need to
+/// transform every longjmpable callsite into a sequence of code including
+/// __wasm_setjmp_test() call; in Wasm SjLj we do the testing in only one
+/// place, in this catchpad.
 ///
-/// After testing calling testSetjmp(), if the longjmp does not correspond to
-/// one of the setjmps within the current function, it rethrows the longjmp
-/// by calling __wasm_longjmp(). If it corresponds to one of setjmps in the
-/// function, we jump to the beginning of the function, which contains a switch
-/// to each post-setjmp BB. Again, in Emscripten SjLj, this switch is added for
-/// every longjmpable callsite; in Wasm SjLj we do this only once at the top of
-/// the function. (after setjmpTable/setjmpTableSize initialization)
+/// After testing calling __wasm_setjmp_test(), if the longjmp does not
+/// correspond to one of the setjmps within the current function, it rethrows
+/// the longjmp by calling __wasm_longjmp(). If it corresponds to one of
+/// setjmps in the function, we jump to the beginning of the function, which
+/// contains a switch to each post-setjmp BB. Again, in Emscripten SjLj, this
+/// switch is added for every longjmpable callsite; in Wasm SjLj we do this
+/// only once at the top of the function. (after functionInvocationId
+/// initialization)
 ///
 /// The below is the pseudocode for what we have described
 ///
 /// entry:
-///   Initialize setjmpTable and setjmpTableSize
+///   Initialize functionInvocationId
 ///
 /// setjmp.dispatch:
 ///    switch %label {
@@ -260,7 +254,7 @@
 ///   %longjmp.args = wasm.catch() ;; struct __WasmLongjmpArgs
 ///   %env = load 'env' field from __WasmLongjmpArgs
 ///   %val = load 'val' field from __WasmLongjmpArgs
-///   %label = testSetjmp(mem[%env], setjmpTable, setjmpTableSize);
+///   %label = __wasm_setjmp_test(%env, functionInvocationId);
 ///   if (%label == 0)
 ///     __wasm_longjmp(%env, %val)
 ///   catchret to %setjmp.dispatch
@@ -277,6 +271,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -309,8 +304,8 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   Function *ResumeF = nullptr;            // __resumeException() (Emscripten)
   Function *EHTypeIDF = nullptr;          // llvm.eh.typeid.for() (intrinsic)
   Function *EmLongjmpF = nullptr;         // emscripten_longjmp() (Emscripten)
-  Function *SaveSetjmpF = nullptr;        // saveSetjmp() (Emscripten)
-  Function *TestSetjmpF = nullptr;        // testSetjmp() (Emscripten)
+  Function *WasmSetjmpF = nullptr;        // __wasm_setjmp() (Emscripten)
+  Function *WasmSetjmpTestF = nullptr;    // __wasm_setjmp_test() (Emscripten)
   Function *WasmLongjmpF = nullptr;       // __wasm_longjmp() (Emscripten)
   Function *CatchF = nullptr;             // wasm.catch() (intrinsic)
 
@@ -335,18 +330,17 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   bool runEHOnFunction(Function &F);
   bool runSjLjOnFunction(Function &F);
   void handleLongjmpableCallsForEmscriptenSjLj(
-      Function &F, InstVector &SetjmpTableInsts,
-      InstVector &SetjmpTableSizeInsts,
+      Function &F, Instruction *FunctionInvocationId,
       SmallVectorImpl<PHINode *> &SetjmpRetPHIs);
   void
-  handleLongjmpableCallsForWasmSjLj(Function &F, InstVector &SetjmpTableInsts,
-                                    InstVector &SetjmpTableSizeInsts,
+  handleLongjmpableCallsForWasmSjLj(Function &F,
+                                    Instruction *FunctionInvocationId,
                                     SmallVectorImpl<PHINode *> &SetjmpRetPHIs);
   Function *getFindMatchingCatch(Module &M, unsigned NumClauses);
 
   Value *wrapInvoke(CallBase *CI);
   void wrapTestSetjmp(BasicBlock *BB, DebugLoc DL, Value *Threw,
-                      Value *SetjmpTable, Value *SetjmpTableSize, Value *&Label,
+                      Value *FunctionInvocationId, Value *&Label,
                       Value *&LongjmpResult, BasicBlock *&CallEmLongjmpBB,
                       PHINode *&CallEmLongjmpBBThrewPHI,
                       PHINode *&CallEmLongjmpBBThrewValuePHI,
@@ -618,7 +612,7 @@ static bool canLongjmp(const Value *Callee) {
 
   // There are functions in Emscripten's JS glue code or compiler-rt
   if (CalleeName == "__resumeException" || CalleeName == "llvm_eh_typeid_for" ||
-      CalleeName == "saveSetjmp" || CalleeName == "testSetjmp" ||
+      CalleeName == "__wasm_setjmp" || CalleeName == "__wasm_setjmp_test" ||
       CalleeName == "getTempRet0" || CalleeName == "setTempRet0")
     return false;
 
@@ -687,11 +681,12 @@ static bool isEmAsmCall(const Value *Callee) {
          CalleeName == "emscripten_asm_const_async_on_main_thread";
 }
 
-// Generate testSetjmp function call seqence with preamble and postamble.
-// The code this generates is equivalent to the following JavaScript code:
+// Generate __wasm_setjmp_test function call seqence with preamble and
+// postamble. The code this generates is equivalent to the following
+// JavaScript code:
 // %__threwValue.val = __threwValue;
 // if (%__THREW__.val != 0 & %__threwValue.val != 0) {
-//   %label = testSetjmp(mem[%__THREW__.val], setjmpTable, setjmpTableSize);
+//   %label = __wasm_setjmp_test(%__THREW__.val, functionInvocationId);
 //   if (%label == 0)
 //     emscripten_longjmp(%__THREW__.val, %__threwValue.val);
 //   setTempRet0(%__threwValue.val);
@@ -703,10 +698,10 @@ static bool isEmAsmCall(const Value *Callee) {
 // As output parameters. returns %label, %longjmp_result, and the BB the last
 // instruction (%longjmp_result = ...) is in.
 void WebAssemblyLowerEmscriptenEHSjLj::wrapTestSetjmp(
-    BasicBlock *BB, DebugLoc DL, Value *Threw, Value *SetjmpTable,
-    Value *SetjmpTableSize, Value *&Label, Value *&LongjmpResult,
-    BasicBlock *&CallEmLongjmpBB, PHINode *&CallEmLongjmpBBThrewPHI,
-    PHINode *&CallEmLongjmpBBThrewValuePHI, BasicBlock *&EndBB) {
+    BasicBlock *BB, DebugLoc DL, Value *Threw, Value *FunctionInvocationId,
+    Value *&Label, Value *&LongjmpResult, BasicBlock *&CallEmLongjmpBB,
+    PHINode *&CallEmLongjmpBBThrewPHI, PHINode *&CallEmLongjmpBBThrewValuePHI,
+    BasicBlock *&EndBB) {
   Function *F = BB->getParent();
   Module *M = F->getParent();
   LLVMContext &C = M->getContext();
@@ -743,16 +738,14 @@ void WebAssemblyLowerEmscriptenEHSjLj::wrapTestSetjmp(
     CallEmLongjmpBBThrewValuePHI->addIncoming(ThrewValue, ThenBB1);
   }
 
-  // %label = testSetjmp(mem[%__THREW__.val], setjmpTable, setjmpTableSize);
+  // %label = __wasm_setjmp_test(%__THREW__.val, functionInvocationId);
   // if (%label == 0)
   IRB.SetInsertPoint(ThenBB1);
   BasicBlock *EndBB2 = BasicBlock::Create(C, "if.end2", F);
   Value *ThrewPtr =
       IRB.CreateIntToPtr(Threw, getAddrPtrType(M), Threw->getName() + ".p");
-  Value *LoadedThrew = IRB.CreateLoad(getAddrIntType(M), ThrewPtr,
-                                      ThrewPtr->getName() + ".loaded");
-  Value *ThenLabel = IRB.CreateCall(
-      TestSetjmpF, {LoadedThrew, SetjmpTable, SetjmpTableSize}, "label");
+  Value *ThenLabel = IRB.CreateCall(WasmSetjmpTestF,
+                                    {ThrewPtr, FunctionInvocationId}, "label");
   Value *Cmp2 = IRB.CreateICmpEQ(ThenLabel, IRB.getInt32(0));
   IRB.CreateCondBr(Cmp2, CallEmLongjmpBB, EndBB2);
 
@@ -1007,17 +1000,17 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
       Type *Int8PtrTy = IRB.getPtrTy();
       Type *Int32PtrTy = IRB.getPtrTy();
       Type *Int32Ty = IRB.getInt32Ty();
-      // Register saveSetjmp function
+
+      // Register __wasm_setjmp function
       FunctionType *SetjmpFTy = SetjmpF->getFunctionType();
       FunctionType *FTy = FunctionType::get(
-          Int32PtrTy,
-          {SetjmpFTy->getParamType(0), Int32Ty, Int32PtrTy, Int32Ty}, false);
-      SaveSetjmpF = getEmscriptenFunction(FTy, "saveSetjmp", &M);
+          IRB.getVoidTy(), {SetjmpFTy->getParamType(0), Int32Ty, Int32PtrTy},
+          false);
+      WasmSetjmpF = getEmscriptenFunction(FTy, "__wasm_setjmp", &M);
 
-      // Register testSetjmp function
-      FTy = FunctionType::get(Int32Ty,
-                              {getAddrIntType(&M), Int32PtrTy, Int32Ty}, false);
-      TestSetjmpF = getEmscriptenFunction(FTy, "testSetjmp", &M);
+      // Register __wasm_setjmp_test function
+      FTy = FunctionType::get(Int32Ty, {Int32PtrTy, Int32PtrTy}, false);
+      WasmSetjmpTestF = getEmscriptenFunction(FTy, "__wasm_setjmp_test", &M);
 
       // wasm.catch() will be lowered down to wasm 'catch' instruction in
       // instruction selection.
@@ -1063,7 +1056,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
     if (V && V->use_empty())
       V->eraseFromParent();
   for (auto *V : {GetTempRet0F, SetTempRet0F, ResumeF, EHTypeIDF, EmLongjmpF,
-                  SaveSetjmpF, TestSetjmpF, WasmLongjmpF, CatchF})
+                  WasmSetjmpF, WasmSetjmpTestF, WasmLongjmpF, CatchF})
     if (V && V->use_empty())
       V->eraseFromParent();
 
@@ -1268,42 +1261,20 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   LLVMContext &C = F.getContext();
   IRBuilder<> IRB(C);
   SmallVector<Instruction *, 64> ToErase;
-  // Vector of %setjmpTable values
-  SmallVector<Instruction *, 4> SetjmpTableInsts;
-  // Vector of %setjmpTableSize values
-  SmallVector<Instruction *, 4> SetjmpTableSizeInsts;
 
   // Setjmp preparation
 
-  // This instruction effectively means %setjmpTableSize = 4.
-  // We create this as an instruction intentionally, and we don't want to fold
-  // this instruction to a constant 4, because this value will be used in
-  // SSAUpdater.AddAvailableValue(...) later.
   BasicBlock *Entry = &F.getEntryBlock();
   DebugLoc FirstDL = getOrCreateDebugLoc(&*Entry->begin(), F.getSubprogram());
   SplitBlock(Entry, &*Entry->getFirstInsertionPt());
 
-  BinaryOperator *SetjmpTableSize =
-      BinaryOperator::Create(Instruction::Add, IRB.getInt32(4), IRB.getInt32(0),
-                             "setjmpTableSize", Entry->getTerminator());
-  SetjmpTableSize->setDebugLoc(FirstDL);
-  // setjmpTable = (int *) malloc(40);
-  Type *IntPtrTy = getAddrIntType(&M);
-  Constant *size = ConstantInt::get(IntPtrTy, 40);
-  IRB.SetInsertPoint(SetjmpTableSize);
-  auto *SetjmpTable = IRB.CreateMalloc(IntPtrTy, IRB.getInt32Ty(), size,
-                                       nullptr, nullptr, "setjmpTable");
-  SetjmpTable->setDebugLoc(FirstDL);
-  // CallInst::CreateMalloc may return a bitcast instruction if the result types
-  // mismatch. We need to set the debug loc for the original call too.
-  auto *MallocCall = SetjmpTable->stripPointerCasts();
-  if (auto *MallocCallI = dyn_cast<Instruction>(MallocCall)) {
-    MallocCallI->setDebugLoc(FirstDL);
-  }
-  // setjmpTable[0] = 0;
-  IRB.CreateStore(IRB.getInt32(0), SetjmpTable);
-  SetjmpTableInsts.push_back(SetjmpTable);
-  SetjmpTableSizeInsts.push_back(SetjmpTableSize);
+  IRB.SetInsertPoint(Entry->getTerminator()->getIterator());
+  // This alloca'ed pointer is used by the runtime to identify function
+  // invocations. It's just for pointer comparisons. It will never be
+  // dereferenced.
+  Instruction *FunctionInvocationId =
+      IRB.CreateAlloca(IRB.getInt32Ty(), nullptr, "functionInvocationId");
+  FunctionInvocationId->setDebugLoc(FirstDL);
 
   // Setjmp transformation
   SmallVector<PHINode *, 4> SetjmpRetPHIs;
@@ -1350,91 +1321,21 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
     // 0, because index 0 means the longjmp is not ours to handle.
     IRB.SetInsertPoint(CI);
     Value *Args[] = {CI->getArgOperand(0), IRB.getInt32(SetjmpRetPHIs.size()),
-                     SetjmpTable, SetjmpTableSize};
-    Instruction *NewSetjmpTable =
-        IRB.CreateCall(SaveSetjmpF, Args, "setjmpTable");
-    Instruction *NewSetjmpTableSize =
-        IRB.CreateCall(GetTempRet0F, std::nullopt, "setjmpTableSize");
-    SetjmpTableInsts.push_back(NewSetjmpTable);
-    SetjmpTableSizeInsts.push_back(NewSetjmpTableSize);
+                     FunctionInvocationId};
+    IRB.CreateCall(WasmSetjmpF, Args);
     ToErase.push_back(CI);
   }
 
   // Handle longjmpable calls.
   if (EnableEmSjLj)
-    handleLongjmpableCallsForEmscriptenSjLj(
-        F, SetjmpTableInsts, SetjmpTableSizeInsts, SetjmpRetPHIs);
+    handleLongjmpableCallsForEmscriptenSjLj(F, FunctionInvocationId,
+                                            SetjmpRetPHIs);
   else // EnableWasmSjLj
-    handleLongjmpableCallsForWasmSjLj(F, SetjmpTableInsts, SetjmpTableSizeInsts,
-                                      SetjmpRetPHIs);
+    handleLongjmpableCallsForWasmSjLj(F, FunctionInvocationId, SetjmpRetPHIs);
 
   // Erase everything we no longer need in this function
   for (Instruction *I : ToErase)
     I->eraseFromParent();
-
-  // Free setjmpTable buffer before each return instruction + function-exiting
-  // call
-  SmallVector<Instruction *, 16> ExitingInsts;
-  for (BasicBlock &BB : F) {
-    Instruction *TI = BB.getTerminator();
-    if (isa<ReturnInst>(TI))
-      ExitingInsts.push_back(TI);
-    // Any 'call' instruction with 'noreturn' attribute exits the function at
-    // this point. If this throws but unwinds to another EH pad within this
-    // function instead of exiting, this would have been an 'invoke', which
-    // happens if we use Wasm EH or Wasm SjLJ.
-    for (auto &I : BB) {
-      if (auto *CI = dyn_cast<CallInst>(&I)) {
-        bool IsNoReturn = CI->hasFnAttr(Attribute::NoReturn);
-        if (Function *CalleeF = CI->getCalledFunction())
-          IsNoReturn |= CalleeF->hasFnAttribute(Attribute::NoReturn);
-        if (IsNoReturn)
-          ExitingInsts.push_back(&I);
-      }
-    }
-  }
-  for (auto *I : ExitingInsts) {
-    DebugLoc DL = getOrCreateDebugLoc(I, F.getSubprogram());
-    // If this existing instruction is a call within a catchpad, we should add
-    // it as "funclet" to the operand bundle of 'free' call
-    SmallVector<OperandBundleDef, 1> Bundles;
-    if (auto *CB = dyn_cast<CallBase>(I))
-      if (auto Bundle = CB->getOperandBundle(LLVMContext::OB_funclet))
-        Bundles.push_back(OperandBundleDef(*Bundle));
-    IRB.SetInsertPoint(I);
-    auto *Free = IRB.CreateFree(SetjmpTable, Bundles);
-    Free->setDebugLoc(DL);
-  }
-
-  // Every call to saveSetjmp can change setjmpTable and setjmpTableSize
-  // (when buffer reallocation occurs)
-  // entry:
-  //   setjmpTableSize = 4;
-  //   setjmpTable = (int *) malloc(40);
-  //   setjmpTable[0] = 0;
-  // ...
-  // somebb:
-  //   setjmpTable = saveSetjmp(env, label, setjmpTable, setjmpTableSize);
-  //   setjmpTableSize = getTempRet0();
-  // So we need to make sure the SSA for these variables is valid so that every
-  // saveSetjmp and testSetjmp calls have the correct arguments.
-  SSAUpdater SetjmpTableSSA;
-  SSAUpdater SetjmpTableSizeSSA;
-  SetjmpTableSSA.Initialize(PointerType::get(C, 0), "setjmpTable");
-  SetjmpTableSizeSSA.Initialize(Type::getInt32Ty(C), "setjmpTableSize");
-  for (Instruction *I : SetjmpTableInsts)
-    SetjmpTableSSA.AddAvailableValue(I->getParent(), I);
-  for (Instruction *I : SetjmpTableSizeInsts)
-    SetjmpTableSizeSSA.AddAvailableValue(I->getParent(), I);
-
-  for (auto &U : make_early_inc_range(SetjmpTable->uses()))
-    if (auto *I = dyn_cast<Instruction>(U.getUser()))
-      if (I->getParent() != Entry)
-        SetjmpTableSSA.RewriteUse(U);
-  for (auto &U : make_early_inc_range(SetjmpTableSize->uses()))
-    if (auto *I = dyn_cast<Instruction>(U.getUser()))
-      if (I->getParent() != Entry)
-        SetjmpTableSizeSSA.RewriteUse(U);
 
   // Finally, our modifications to the cfg can break dominance of SSA variables.
   // For example, in this code,
@@ -1454,20 +1355,12 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
 // setjmp. Refer to 4) of "Emscripten setjmp/longjmp handling" section in the
 // comments at top of the file for details.
 void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForEmscriptenSjLj(
-    Function &F, InstVector &SetjmpTableInsts, InstVector &SetjmpTableSizeInsts,
+    Function &F, Instruction *FunctionInvocationId,
     SmallVectorImpl<PHINode *> &SetjmpRetPHIs) {
   Module &M = *F.getParent();
   LLVMContext &C = F.getContext();
   IRBuilder<> IRB(C);
   SmallVector<Instruction *, 64> ToErase;
-
-  // We need to pass setjmpTable and setjmpTableSize to testSetjmp function.
-  // These values are defined in the beginning of the function and also in each
-  // setjmp callsite, but we don't know which values we should use at this
-  // point. So here we arbitraily use the ones defined in the beginning of the
-  // function, and SSAUpdater will later update them to the correct values.
-  Instruction *SetjmpTable = *SetjmpTableInsts.begin();
-  Instruction *SetjmpTableSize = *SetjmpTableSizeInsts.begin();
 
   // call.em.longjmp BB that will be shared within the function.
   BasicBlock *CallEmLongjmpBB = nullptr;
@@ -1601,7 +1494,7 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForEmscriptenSjLj(
 
           IRB.SetInsertPoint(NormalBB);
           IRB.CreateBr(Tail);
-          BB = NormalBB; // New insertion point to insert testSetjmp()
+          BB = NormalBB; // New insertion point to insert __wasm_setjmp_test()
         }
       }
 
@@ -1610,16 +1503,15 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForEmscriptenSjLj(
       // right setjmp-tail if so
       ToErase.push_back(BB->getTerminator());
 
-      // Generate a function call to testSetjmp function and preamble/postamble
-      // code to figure out (1) whether longjmp occurred (2) if longjmp
-      // occurred, which setjmp it corresponds to
+      // Generate a function call to __wasm_setjmp_test function and
+      // preamble/postamble code to figure out (1) whether longjmp
+      // occurred (2) if longjmp occurred, which setjmp it corresponds to
       Value *Label = nullptr;
       Value *LongjmpResult = nullptr;
       BasicBlock *EndBB = nullptr;
-      wrapTestSetjmp(BB, CI->getDebugLoc(), Threw, SetjmpTable, SetjmpTableSize,
-                     Label, LongjmpResult, CallEmLongjmpBB,
-                     CallEmLongjmpBBThrewPHI, CallEmLongjmpBBThrewValuePHI,
-                     EndBB);
+      wrapTestSetjmp(BB, CI->getDebugLoc(), Threw, FunctionInvocationId, Label,
+                     LongjmpResult, CallEmLongjmpBB, CallEmLongjmpBBThrewPHI,
+                     CallEmLongjmpBBThrewValuePHI, EndBB);
       assert(Label && LongjmpResult && EndBB);
 
       // Create switch instruction
@@ -1658,7 +1550,7 @@ static BasicBlock *getCleanupRetUnwindDest(const CleanupPadInst *CPI) {
 // BBs. Refer to 4) of "Wasm setjmp/longjmp handling" section in the comments at
 // top of the file for details.
 void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
-    Function &F, InstVector &SetjmpTableInsts, InstVector &SetjmpTableSizeInsts,
+    Function &F, Instruction *FunctionInvocationId,
     SmallVectorImpl<PHINode *> &SetjmpRetPHIs) {
   Module &M = *F.getParent();
   LLVMContext &C = F.getContext();
@@ -1682,18 +1574,13 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
   DebugLoc FirstDL = getOrCreateDebugLoc(&*Entry->begin(), F.getSubprogram());
   IRB.SetCurrentDebugLocation(FirstDL);
 
-  // Arbitrarily use the ones defined in the beginning of the function.
-  // SSAUpdater will later update them to the correct values.
-  Instruction *SetjmpTable = *SetjmpTableInsts.begin();
-  Instruction *SetjmpTableSize = *SetjmpTableSizeInsts.begin();
-
   // Add setjmp.dispatch BB right after the entry block. Because we have
-  // initialized setjmpTable/setjmpTableSize in the entry block and split the
+  // initialized functionInvocationId in the entry block and split the
   // rest into another BB, here 'OrigEntry' is the function's original entry
   // block before the transformation.
   //
   // entry:
-  //   setjmpTable / setjmpTableSize initialization
+  //   functionInvocationId initialization
   // setjmp.dispatch:
   //   switch will be inserted here later
   // entry.split: (OrigEntry)
@@ -1731,17 +1618,15 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
   // int val = __wasm_longjmp_args.val;
   Instruction *Val = IRB.CreateLoad(IRB.getInt32Ty(), ValField, "val");
 
-  // %label = testSetjmp(mem[%env], setjmpTable, setjmpTableSize);
+  // %label = __wasm_setjmp_test(%env, functionInvocatinoId);
   // if (%label == 0)
   //   __wasm_longjmp(%env, %val)
   // catchret to %setjmp.dispatch
   BasicBlock *ThenBB = BasicBlock::Create(C, "if.then", &F);
   BasicBlock *EndBB = BasicBlock::Create(C, "if.end", &F);
   Value *EnvP = IRB.CreateBitCast(Env, getAddrPtrType(&M), "env.p");
-  Value *SetjmpID = IRB.CreateLoad(getAddrIntType(&M), EnvP, "setjmp.id");
-  Value *Label =
-      IRB.CreateCall(TestSetjmpF, {SetjmpID, SetjmpTable, SetjmpTableSize},
-                     OperandBundleDef("funclet", CatchPad), "label");
+  Value *Label = IRB.CreateCall(WasmSetjmpTestF, {EnvP, FunctionInvocationId},
+                                OperandBundleDef("funclet", CatchPad), "label");
   Value *Cmp = IRB.CreateICmpEQ(Label, IRB.getInt32(0));
   IRB.CreateCondBr(Cmp, ThenBB, EndBB);
 

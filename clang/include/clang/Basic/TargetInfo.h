@@ -24,6 +24,7 @@
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallSet.h"
@@ -39,6 +40,7 @@
 #include <cassert>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -94,6 +96,10 @@ struct TransferrableTargetInfo {
   unsigned char LongWidth, LongAlign;
   unsigned char LongLongWidth, LongLongAlign;
   unsigned char Int128Align;
+
+  // This is an optional parameter for targets that
+  // don't use 'LongLongAlign' for '_BitInt' max alignment
+  std::optional<unsigned> BitIntMaxAlign;
 
   // Fixed point bit widths
   unsigned char ShortAccumWidth, ShortAccumAlign;
@@ -265,6 +271,9 @@ protected:
 
   LLVM_PREFERRED_TYPE(bool)
   unsigned AllowAMDGPUUnsafeFPAtomics : 1;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasUnalignedAccess : 1;
 
   unsigned ARMCDECoprocMask : 8;
 
@@ -512,6 +521,22 @@ public:
 
   /// getInt128Align() - Returns the alignment of Int128.
   unsigned getInt128Align() const { return Int128Align; }
+
+  /// getBitIntMaxAlign() - Returns the maximum possible alignment of
+  /// '_BitInt' and 'unsigned _BitInt'.
+  unsigned getBitIntMaxAlign() const {
+    return BitIntMaxAlign.value_or(LongLongAlign);
+  }
+
+  /// getBitIntAlign/Width - Return aligned size of '_BitInt' and
+  /// 'unsigned _BitInt' for this target, in bits.
+  unsigned getBitIntWidth(unsigned NumBits) const {
+    return llvm::alignTo(NumBits, getBitIntAlign(NumBits));
+  }
+  unsigned getBitIntAlign(unsigned NumBits) const {
+    return std::clamp<unsigned>(llvm::PowerOf2Ceil(NumBits), getCharWidth(),
+                                getBitIntMaxAlign());
+  }
 
   /// getShortAccumWidth/Align - Return the size of 'signed short _Accum' and
   /// 'unsigned short _Accum' for this target, in bits.
@@ -856,6 +881,18 @@ public:
     // width, we can introduce a new variable for this if/when some target wants
     // it.
     return PointerWidth;
+  }
+
+  /// Return true iff unaligned accesses are a single instruction (rather than
+  /// a synthesized sequence).
+  bool hasUnalignedAccess() const { return HasUnalignedAccess; }
+
+  /// Return true iff unaligned accesses are cheap. This affects placement and
+  /// size of bitfield loads/stores. (Not the ABI-mandated placement of
+  /// the bitfields themselves.)
+  bool hasCheapUnalignedBitFieldAccess() const {
+    // Simply forward to the unaligned access getter.
+    return hasUnalignedAccess();
   }
 
   /// \brief Returns the default value of the __USER_LABEL_PREFIX__ macro,
@@ -1363,19 +1400,13 @@ public:
     return true;
   }
 
-  /// For given feature return dependent ones.
-  virtual StringRef getFeatureDependencies(StringRef Feature) const {
-    return StringRef();
-  }
-
-  struct BranchProtectionInfo {
+  class BranchProtectionInfo {
+  public:
     LangOptions::SignReturnAddressScopeKind SignReturnAddr;
     LangOptions::SignReturnAddressKeyKind SignKey;
     bool BranchTargetEnforcement;
     bool BranchProtectionPAuthLR;
     bool GuardedControlStack;
-
-    BranchProtectionInfo() = default;
 
     const char *getSignReturnAddrStr() const {
       switch (SignReturnAddr) {
@@ -1397,6 +1428,27 @@ public:
         return "b_key";
       }
       llvm_unreachable("Unexpected SignReturnAddressKeyKind");
+    }
+
+    BranchProtectionInfo()
+        : SignReturnAddr(LangOptions::SignReturnAddressScopeKind::None),
+          SignKey(LangOptions::SignReturnAddressKeyKind::AKey),
+          BranchTargetEnforcement(false), BranchProtectionPAuthLR(false),
+          GuardedControlStack(false) {}
+
+    BranchProtectionInfo(const LangOptions &LangOpts) {
+      SignReturnAddr =
+          LangOpts.hasSignReturnAddress()
+              ? (LangOpts.isSignReturnAddressScopeAll()
+                     ? LangOptions::SignReturnAddressScopeKind::All
+                     : LangOptions::SignReturnAddressScopeKind::NonLeaf)
+              : LangOptions::SignReturnAddressScopeKind::None;
+      SignKey = LangOpts.isSignReturnAddressWithAKey()
+                    ? LangOptions::SignReturnAddressKeyKind::AKey
+                    : LangOptions::SignReturnAddressKeyKind::BKey;
+      BranchTargetEnforcement = LangOpts.BranchTargetEnforcement;
+      BranchProtectionPAuthLR = LangOpts.BranchProtectionPAuthLR;
+      GuardedControlStack = LangOpts.GuardedControlStack;
     }
   };
 
@@ -1570,6 +1622,11 @@ public:
       return toTargetAddressSpace(AS);
     return getAddressSpaceMap()[(unsigned)AS];
   }
+
+  /// Determine whether the given pointer-authentication key is valid.
+  ///
+  /// The value has been coerced to type 'int'.
+  virtual bool validatePointerAuthKey(const llvm::APSInt &value) const;
 
   /// Map from the address space field in builtin description strings to the
   /// language address space.
@@ -1770,6 +1827,15 @@ public:
 
   /// Whether to support HIP image/texture API's.
   virtual bool hasHIPImageSupport() const { return true; }
+
+  /// The first value in the pair is the minimum offset between two objects to
+  /// avoid false sharing (destructive interference). The second value in the
+  /// pair is maximum size of contiguous memory to promote true sharing
+  /// (constructive interference). Neither of these values are considered part
+  /// of the ABI and can be changed by targets at any time.
+  virtual std::pair<unsigned, unsigned> hardwareInterferenceSizes() const {
+    return std::make_pair(64, 64);
+  }
 
 protected:
   /// Copy type and layout related info.

@@ -92,10 +92,10 @@ namespace {
       MachineFunctionPass::getAnalysisUsage(AU);
       AU.addRequired<AAResultsWrapperPass>();
       AU.addPreservedID(MachineLoopInfoID);
-      AU.addRequired<MachineDominatorTree>();
-      AU.addPreserved<MachineDominatorTree>();
-      AU.addRequired<MachineBlockFrequencyInfo>();
-      AU.addPreserved<MachineBlockFrequencyInfo>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
+      AU.addPreserved<MachineDominatorTreeWrapperPass>();
+      AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+      AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     }
 
     MachineFunctionProperties getRequiredProperties() const override {
@@ -166,7 +166,7 @@ char &llvm::MachineCSEID = MachineCSE::ID;
 
 INITIALIZE_PASS_BEGIN(MachineCSE, DEBUG_TYPE,
                       "Machine Common Subexpression Elimination", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(MachineCSE, DEBUG_TYPE,
                     "Machine Common Subexpression Elimination", false, false)
@@ -184,7 +184,7 @@ bool MachineCSE::PerformTrivialCopyPropagation(MachineInstr *MI,
       continue;
     bool OnlyOneUse = MRI->hasOneNonDBGUse(Reg);
     MachineInstr *DefMI = MRI->getVRegDef(Reg);
-    if (!DefMI->isCopy())
+    if (!DefMI || !DefMI->isCopy())
       continue;
     Register SrcReg = DefMI->getOperand(1).getReg();
     if (!SrcReg.isVirtual())
@@ -709,7 +709,7 @@ bool MachineCSE::ProcessBlockCSE(MachineBasicBlock *MBB) {
         for (MachineBasicBlock::iterator II = CSMI, IE = &MI; II != IE; ++II)
           for (auto ImplicitDef : ImplicitDefs)
             if (MachineOperand *MO = II->findRegisterUseOperand(
-                    ImplicitDef, /*isKill=*/true, TRI))
+                    ImplicitDef, TRI, /*isKill=*/true))
               MO->setIsKill(false);
       } else {
         // If the instructions aren't in the same BB, bail out and clear the
@@ -943,8 +943,8 @@ bool MachineCSE::runOnMachineFunction(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
   MRI = &MF.getRegInfo();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  DT = &getAnalysis<MachineDominatorTree>();
-  MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+  DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   LookAheadLimit = TII->getMachineCSELookAheadLimit();
   bool ChangedPRE, ChangedCSE;
   ChangedPRE = PerformSimplePRE(DT);

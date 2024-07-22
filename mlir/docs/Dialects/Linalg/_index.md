@@ -279,7 +279,7 @@ loops but previous experience shows that the abstraction generalizes.
 
 A `linalg.generic` op has a compute payload that is fully generic thanks to the
 use of
-[Regions](https://github.com/llvm/llvm-project/blob/58265ad42a90ae8905be6a447cb42e53529a54a0/mlir/docs/LangRef.md#regions).
+[Regions](https://github.com/llvm/llvm-project/blob/58265ad42a90ae8905be6a447cb42e53529a54a0/mlir/docs/LangRef.md/#regions).
 
 The region takes as arguments the scalar elemental types of the tensor or buffer
 operands of the `linalg.generic`. For flexibility and ability to match library

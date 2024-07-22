@@ -112,7 +112,7 @@ SBDebugger &SBDebugger::operator=(const SBDebugger &rhs) {
 const char *SBDebugger::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
-  return Debugger::GetStaticBroadcasterClass().AsCString();
+  return ConstString(Debugger::GetStaticBroadcasterClass()).AsCString();
 }
 
 const char *SBDebugger::GetProgressFromEvent(const lldb::SBEvent &event,
@@ -1695,6 +1695,26 @@ void SBDebugger::SetDestroyCallback(
   }
 }
 
+lldb::callback_token_t
+SBDebugger::AddDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback,
+                               void *baton) {
+  LLDB_INSTRUMENT_VA(this, destroy_callback, baton);
+
+  if (m_opaque_sp)
+    return m_opaque_sp->AddDestroyCallback(destroy_callback, baton);
+
+  return LLDB_INVALID_CALLBACK_TOKEN;
+}
+
+bool SBDebugger::RemoveDestroyCallback(lldb::callback_token_t token) {
+  LLDB_INSTRUMENT_VA(this, token);
+
+  if (m_opaque_sp)
+    return m_opaque_sp->RemoveDestroyCallback(token);
+
+  return false;
+}
+
 SBTrace
 SBDebugger::LoadTraceFromFile(SBError &error,
                               const SBFileSpec &trace_description_file) {
@@ -1721,4 +1741,8 @@ bool SBDebugger::InterruptRequested()   {
   if (m_opaque_sp)
     return m_opaque_sp->InterruptRequested();
   return false;
+}
+
+bool SBDebugger::SupportsLanguage(lldb::LanguageType language) {
+  return TypeSystem::SupportsLanguageStatic(language);
 }

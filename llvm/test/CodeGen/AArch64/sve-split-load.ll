@@ -93,8 +93,8 @@ define <vscale x 32 x i16> @masked_load_split_32i16(ptr %a, <vscale x 32 x i1> %
 ; CHECK-NEXT:    punpklo p2.h, p0.b
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    punpklo p3.h, p1.b
-; CHECK-NEXT:    punpkhi p1.h, p1.b
 ; CHECK-NEXT:    ld1h { z0.h }, p2/z, [x0]
+; CHECK-NEXT:    punpkhi p1.h, p1.b
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    ld1h { z2.h }, p3/z, [x0, #2, mul vl]
 ; CHECK-NEXT:    ld1h { z3.h }, p1/z, [x0, #3, mul vl]
@@ -123,8 +123,8 @@ define <vscale x 8 x i64> @masked_load_split_8i64(ptr %a, <vscale x 8 x i1> %pg)
 ; CHECK-NEXT:    punpklo p2.h, p1.b
 ; CHECK-NEXT:    punpkhi p1.h, p1.b
 ; CHECK-NEXT:    punpklo p3.h, p0.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    ld1d { z0.d }, p2/z, [x0]
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    ld1d { z1.d }, p1/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    ld1d { z2.d }, p3/z, [x0, #2, mul vl]
 ; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x0, #3, mul vl]

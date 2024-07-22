@@ -46,12 +46,10 @@ define float @fminnum32_intrinsic(float %x, float %y) {
 define float @fminnum32_nsz_intrinsic(float %x, float %y) {
 ; ARMV7-LABEL: fminnum32_nsz_intrinsic:
 ; ARMV7:       @ %bb.0:
-; ARMV7-NEXT:    vmov s0, r0
-; ARMV7-NEXT:    vmov s2, r1
-; ARMV7-NEXT:    vcmp.f32 s0, s2
-; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
-; ARMV7-NEXT:    vmovlt.f32 s2, s0
-; ARMV7-NEXT:    vmov r0, s2
+; ARMV7-NEXT:    vmov s0, r1
+; ARMV7-NEXT:    vmov s2, r0
+; ARMV7-NEXT:    vmin.f32 d0, d1, d0
+; ARMV7-NEXT:    vmov r0, s0
 ; ARMV7-NEXT:    bx lr
 ;
 ; ARMV8-LABEL: fminnum32_nsz_intrinsic:
@@ -78,9 +76,7 @@ define float @fminnum32_non_zero_intrinsic(float %x) {
 ; ARMV7:       @ %bb.0:
 ; ARMV7-NEXT:    vmov.f32 s0, #-1.000000e+00
 ; ARMV7-NEXT:    vmov s2, r0
-; ARMV7-NEXT:    vcmp.f32 s2, s0
-; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
-; ARMV7-NEXT:    vmovlt.f32 s0, s2
+; ARMV7-NEXT:    vmin.f32 d0, d1, d0
 ; ARMV7-NEXT:    vmov r0, s0
 ; ARMV7-NEXT:    bx lr
 ;
@@ -136,12 +132,10 @@ define float @fmaxnum32_intrinsic(float %x, float %y) {
 define float @fmaxnum32_nsz_intrinsic(float %x, float %y) {
 ; ARMV7-LABEL: fmaxnum32_nsz_intrinsic:
 ; ARMV7:       @ %bb.0:
-; ARMV7-NEXT:    vmov s0, r0
-; ARMV7-NEXT:    vmov s2, r1
-; ARMV7-NEXT:    vcmp.f32 s0, s2
-; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
-; ARMV7-NEXT:    vmovgt.f32 s2, s0
-; ARMV7-NEXT:    vmov r0, s2
+; ARMV7-NEXT:    vmov s0, r1
+; ARMV7-NEXT:    vmov s2, r0
+; ARMV7-NEXT:    vmax.f32 d0, d1, d0
+; ARMV7-NEXT:    vmov r0, s0
 ; ARMV7-NEXT:    bx lr
 ;
 ; ARMV8-LABEL: fmaxnum32_nsz_intrinsic:
@@ -210,9 +204,7 @@ define float @fmaxnum32_non_zero_intrinsic(float %x) {
 ; ARMV7:       @ %bb.0:
 ; ARMV7-NEXT:    vmov.f32 s0, #1.000000e+00
 ; ARMV7-NEXT:    vmov s2, r0
-; ARMV7-NEXT:    vcmp.f32 s2, s0
-; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
-; ARMV7-NEXT:    vmovgt.f32 s0, s2
+; ARMV7-NEXT:    vmax.f32 d0, d1, d0
 ; ARMV7-NEXT:    vmov r0, s0
 ; ARMV7-NEXT:    bx lr
 ;

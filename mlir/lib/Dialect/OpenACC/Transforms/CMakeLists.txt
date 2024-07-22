@@ -9,7 +9,7 @@ add_mlir_dialect_library(MLIROpenACCTransforms
   MLIROpenACCOpsIncGen
   MLIROpenACCEnumsIncGen
   MLIROpenACCAttributesIncGen
-  MLIROpenACCOpsInterfacesIncGen
+  MLIROpenACCMPOpsInterfacesIncGen
   MLIROpenACCTypeInterfacesIncGen
 
   LINK_LIBS PUBLIC

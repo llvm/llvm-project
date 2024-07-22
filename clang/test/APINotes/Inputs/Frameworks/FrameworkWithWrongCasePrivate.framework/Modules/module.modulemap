@@ -1,0 +1,5 @@
+framework module FrameworkWithWrongCasePrivate {
+  umbrella header "FrameworkWithWrongCasePrivate.h"
+  export *
+  module * { export * }
+}

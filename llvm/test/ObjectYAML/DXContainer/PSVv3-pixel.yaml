@@ -1,0 +1,99 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       2
+Parts:
+  - Name:            PSV0
+    Size:            144
+    PSVInfo:
+      Version:         3
+      ShaderStage:     0
+      DepthOutput:     7
+      SampleFrequency: 96
+      MinimumWaveLaneCount: 0
+      MaximumWaveLaneCount: 4294967295
+      UsesViewID:      0
+      SigInputVectors: 0
+      SigOutputVectors: [ 8, 16, 32, 64 ]
+      NumThreadsX:     512
+      NumThreadsY:     1024
+      NumThreadsZ:     2048
+      EntryName: PSEntry
+      ResourceStride:       24
+      Resources:
+        - Type:            1
+          Space:           2
+          LowerBound:      3
+          UpperBound:      4
+          Kind:            5
+          Flags:           6
+        - Type:            128
+          Space:           32768
+          LowerBound:      8388608
+          UpperBound:      2147483648
+          Kind:            65535
+          Flags:           16776960
+      SigInputElements: []
+      SigOutputElements: []
+      SigPatchOrPrimElements: []
+      InputOutputMap:
+        - [  ]
+        - [  ]
+        - [  ]
+        - [  ]
+  - Name:            DXIL
+    Size:            24
+    Program:
+      MajorVersion:    6
+      MinorVersion:    0
+      ShaderKind:      0
+      Size:            6
+      DXILMajorVersion: 0
+      DXILMinorVersion: 1
+      DXILSize:        0
+...
+
+# CHECK: Name:            PSV0
+# CHECK: PSVInfo:
+# CHECK-NEXT: Version:         3
+# CHECK-NEXT: ShaderStage:     0
+# CHECK-NEXT: DepthOutput:     7
+# CHECK-NEXT: SampleFrequency: 96
+# CHECK-NEXT: MinimumWaveLaneCount: 0
+# CHECK-NEXT: MaximumWaveLaneCount: 4294967295
+# CHECK-NEXT: UsesViewID:      0
+# CHECK-NEXT: SigInputVectors: 0
+# CHECK-NEXT: SigOutputVectors: [ 8, 16, 32, 64 ]
+# CHECK-NEXT: NumThreadsX:     512
+# CHECK-NEXT: NumThreadsY:     1024
+# CHECK-NEXT: NumThreadsZ:     2048
+# CHECK-NEXT: EntryName: PSEntry
+# CHECK-NEXT: ResourceStride: 24
+# CHECK-NEXT: Resources:
+# CHECK-NEXT: - Type:            1
+# CHECK-NEXT: Space:           2
+# CHECK-NEXT: LowerBound:      3
+# CHECK-NEXT: UpperBound:      4
+# CHECK-NEXT: Kind:            5
+# CHECK-NEXT: Flags:           6
+# CHECK-NEXT: - Type:            128
+# CHECK-NEXT: Space:           32768
+# CHECK-NEXT: LowerBound:      8388608
+# CHECK-NEXT: UpperBound:      2147483648
+# CHECK-NEXT: Kind:            65535
+# CHECK-NEXT: Flags:           16776960
+# CHECK-NEXT: SigInputElements: []
+# CHECK-NEXT: SigOutputElements: []
+# CHECK-NEXT: SigPatchOrPrimElements: []
+# CHECK-NEXT: InputOutputMap:
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT: Name

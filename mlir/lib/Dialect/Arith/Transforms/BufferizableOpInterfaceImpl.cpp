@@ -26,7 +26,7 @@ struct ConstantOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto constantOp = cast<arith::ConstantOp>(op);
-    auto type = constantOp.getType().dyn_cast<RankedTensorType>();
+    auto type = dyn_cast<RankedTensorType>(constantOp.getType());
 
     // Only ranked tensors are supported.
     if (!type)

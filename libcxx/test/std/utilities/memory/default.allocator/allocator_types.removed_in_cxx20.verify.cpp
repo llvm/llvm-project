@@ -39,6 +39,6 @@ void check()
 
 void f() {
     check<char>();
-    check<char const>();
+    check<int>();
     check<void>();
 }

@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1030 -S \
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1030 \
 // RUN:   -emit-llvm -cl-std=CL2.0 -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1030 -S \
 // RUN:   -cl-std=CL2.0 -o - %s | FileCheck -check-prefix=ISA %s

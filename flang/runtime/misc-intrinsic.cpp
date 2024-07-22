@@ -9,16 +9,17 @@
 #include "flang/Runtime/misc-intrinsic.h"
 #include "terminator.h"
 #include "tools.h"
+#include "flang/Common/optional.h"
 #include "flang/Runtime/descriptor.h"
 #include <algorithm>
+#include <cstdio>
 #include <cstring>
-#include <optional>
 
 namespace Fortran::runtime {
 
 static RT_API_ATTRS void TransferImpl(Descriptor &result,
     const Descriptor &source, const Descriptor &mold, const char *sourceFile,
-    int line, std::optional<std::int64_t> resultExtent) {
+    int line, Fortran::common::optional<std::int64_t> resultExtent) {
   int rank{resultExtent.has_value() ? 1 : 0};
   std::size_t elementBytes{mold.ElementBytes()};
   result.Establish(mold.type(), elementBytes, nullptr, rank, nullptr,
@@ -55,9 +56,42 @@ static RT_API_ATTRS void TransferImpl(Descriptor &result,
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
+void RTDEF(Rename)(const Descriptor &path1, const Descriptor &path2,
+    const Descriptor *status, const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+#if !defined(RT_DEVICE_COMPILATION)
+  char *pathSrc{EnsureNullTerminated(
+      path1.OffsetElement(), path1.ElementBytes(), terminator)};
+  char *pathDst{EnsureNullTerminated(
+      path2.OffsetElement(), path2.ElementBytes(), terminator)};
+
+  // We simply call rename(2) from POSIX
+  int result{rename(pathSrc, pathDst)};
+  if (status) {
+    // When an error has happened,
+    int errorCode{0}; // Assume success
+    if (result != 0) {
+      // The rename operation has failed, so return the error code as status.
+      errorCode = errno;
+    }
+    StoreIntToDescriptor(status, errorCode, terminator);
+  }
+
+  // Deallocate memory if EnsureNullTerminated dynamically allocated memory
+  if (pathSrc != path1.OffsetElement()) {
+    FreeMemory(pathSrc);
+  }
+  if (pathDst != path2.OffsetElement()) {
+    FreeMemory(pathDst);
+  }
+#else // !defined(RT_DEVICE_COMPILATION)
+  terminator.Crash("RENAME intrinsic is only supported on host devices");
+#endif // !defined(RT_DEVICE_COMPILATION)
+}
+
 void RTDEF(Transfer)(Descriptor &result, const Descriptor &source,
     const Descriptor &mold, const char *sourceFile, int line) {
-  std::optional<std::int64_t> elements;
+  Fortran::common::optional<std::int64_t> elements;
   if (mold.rank() > 0) {
     if (std::size_t sourceElementBytes{
             source.Elements() * source.ElementBytes()}) {

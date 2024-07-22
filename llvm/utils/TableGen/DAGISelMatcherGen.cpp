@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenDAGPatterns.h"
-#include "CodeGenInstruction.h"
-#include "CodeGenRegisters.h"
-#include "CodeGenTarget.h"
-#include "DAGISelMatcher.h"
-#include "InfoByHwMode.h"
-#include "SDNodeProperties.h"
+#include "Basic/SDNodeProperties.h"
+#include "Common/CodeGenDAGPatterns.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenRegisters.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/DAGISelMatcher.h"
+#include "Common/InfoByHwMode.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/TableGen/Error.h"
@@ -235,7 +235,7 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode &N) {
     if (N.hasName())
       return;
     // An unnamed ValueType as in (sext_inreg GPR:$foo, i8).
-    return AddMatcher(new CheckValueTypeMatcher(LeafRec->getName()));
+    return AddMatcher(new CheckValueTypeMatcher(llvm::getValueType(LeafRec)));
   }
 
   if ( // Handle register references.  Nothing to do here, they always match.

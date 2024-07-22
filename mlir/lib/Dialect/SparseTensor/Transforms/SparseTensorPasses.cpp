@@ -26,6 +26,7 @@ namespace mlir {
 #define GEN_PASS_DEF_SPARSEREINTERPRETMAP
 #define GEN_PASS_DEF_PRESPARSIFICATIONREWRITE
 #define GEN_PASS_DEF_SPARSIFICATIONPASS
+#define GEN_PASS_DEF_LOWERSPARSEITERATIONTOSCF
 #define GEN_PASS_DEF_LOWERSPARSEOPSTOFOREACH
 #define GEN_PASS_DEF_LOWERFOREACHTOSCF
 #define GEN_PASS_DEF_SPARSETENSORCONVERSIONPASS
@@ -50,11 +51,12 @@ namespace {
 struct SparseAssembler : public impl::SparseAssemblerBase<SparseAssembler> {
   SparseAssembler() = default;
   SparseAssembler(const SparseAssembler &pass) = default;
+  SparseAssembler(bool dO) { directOut = dO; }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    populateSparseAssembler(patterns);
+    populateSparseAssembler(patterns, directOut);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
@@ -153,6 +155,29 @@ struct LowerForeachToSCFPass
     RewritePatternSet patterns(ctx);
     populateLowerForeachToSCFPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
+struct LowerSparseIterationToSCFPass
+    : public impl::LowerSparseIterationToSCFBase<
+          LowerSparseIterationToSCFPass> {
+  LowerSparseIterationToSCFPass() = default;
+  LowerSparseIterationToSCFPass(const LowerSparseIterationToSCFPass &) =
+      default;
+
+  void runOnOperation() override {
+    auto *ctx = &getContext();
+    RewritePatternSet patterns(ctx);
+    SparseIterationTypeConverter converter;
+    ConversionTarget target(*ctx);
+
+    // The actual conversion.
+    target.addIllegalOp<ExtractIterSpaceOp, IterateOp>();
+    populateLowerSparseIterationToSCFPatterns(converter, patterns);
+
+    if (failed(applyPartialOneToNConversion(getOperation(), converter,
+                                            std::move(patterns))))
+      signalPassFailure();
   }
 };
 
@@ -274,7 +299,7 @@ struct SparseTensorCodegenPass
         });
     // The following operations and dialects may be introduced by the
     // codegen rules, and are therefore marked as legal.
-    target.addLegalOp<linalg::FillOp>();
+    target.addLegalOp<linalg::FillOp, linalg::YieldOp>();
     target.addLegalDialect<
         arith::ArithDialect, bufferization::BufferizationDialect,
         complex::ComplexDialect, memref::MemRefDialect, scf::SCFDialect>();
@@ -436,6 +461,10 @@ mlir::createLowerSparseOpsToForeachPass(bool enableRT, bool enableConvert) {
 
 std::unique_ptr<Pass> mlir::createLowerForeachToSCFPass() {
   return std::make_unique<LowerForeachToSCFPass>();
+}
+
+std::unique_ptr<Pass> mlir::createLowerSparseIterationToSCFPass() {
+  return std::make_unique<LowerSparseIterationToSCFPass>();
 }
 
 std::unique_ptr<Pass> mlir::createSparseTensorConversionPass() {

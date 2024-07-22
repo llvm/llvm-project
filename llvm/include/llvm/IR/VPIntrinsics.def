@@ -174,10 +174,10 @@ HELPER_REGISTER_BINARY_INT_VP(vp_add, VP_ADD, Add, ADD)
 HELPER_REGISTER_BINARY_INT_VP(vp_and, VP_AND, And, AND)
 
 // llvm.vp.ashr(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_INT_VP(vp_ashr, VP_ASHR, AShr, SRA)
+HELPER_REGISTER_BINARY_INT_VP(vp_ashr, VP_SRA, AShr, SRA)
 
 // llvm.vp.lshr(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_INT_VP(vp_lshr, VP_LSHR, LShr, SRL)
+HELPER_REGISTER_BINARY_INT_VP(vp_lshr, VP_SRL, LShr, SRL)
 
 // llvm.vp.mul(x,y,mask,vlen)
 HELPER_REGISTER_BINARY_INT_VP(vp_mul, VP_MUL, Mul, MUL)
@@ -281,6 +281,15 @@ END_REGISTER_VP_SDNODE(VP_CTTZ)
 BEGIN_REGISTER_VP_SDNODE(VP_CTTZ_ZERO_UNDEF, -1, vp_cttz_zero_undef, 1, 2)
 END_REGISTER_VP_SDNODE(VP_CTTZ_ZERO_UNDEF)
 END_REGISTER_VP_INTRINSIC(vp_cttz)
+
+// llvm.vp.cttz.elts(x,is_zero_poison,mask,vl)
+BEGIN_REGISTER_VP_INTRINSIC(vp_cttz_elts, 2, 3)
+VP_PROPERTY_NO_FUNCTIONAL
+BEGIN_REGISTER_VP_SDNODE(VP_CTTZ_ELTS, 0, vp_cttz_elts, 1, 2)
+END_REGISTER_VP_SDNODE(VP_CTTZ_ELTS)
+BEGIN_REGISTER_VP_SDNODE(VP_CTTZ_ELTS_ZERO_UNDEF, 0, vp_cttz_elts_zero_undef, 1, 2)
+END_REGISTER_VP_SDNODE(VP_CTTZ_ELTS_ZERO_UNDEF)
+END_REGISTER_VP_INTRINSIC(vp_cttz_elts)
 
 // llvm.vp.fshl(x,y,z,mask,vlen)
 BEGIN_REGISTER_VP(vp_fshl, 3, 4, VP_FSHL, -1)
@@ -692,6 +701,14 @@ HELPER_REGISTER_REDUCTION_VP(vp_reduce_fmax, VP_REDUCE_FMAX,
 HELPER_REGISTER_REDUCTION_VP(vp_reduce_fmin, VP_REDUCE_FMIN,
                              vector_reduce_fmin)
 
+// llvm.vp.reduce.fmaximum(start,x,mask,vlen)
+HELPER_REGISTER_REDUCTION_VP(vp_reduce_fmaximum, VP_REDUCE_FMAXIMUM,
+                             vector_reduce_fmaximum)
+
+// llvm.vp.reduce.fminimum(start,x,mask,vlen)
+HELPER_REGISTER_REDUCTION_VP(vp_reduce_fminimum, VP_REDUCE_FMINIMUM,
+                             vector_reduce_fminimum)
+
 #undef HELPER_REGISTER_REDUCTION_VP
 
 // Specialized helper macro for VP reductions as above but with two forms:
@@ -759,6 +776,13 @@ VP_PROPERTY_NO_FUNCTIONAL
 END_REGISTER_VP(experimental_vp_reverse, EXPERIMENTAL_VP_REVERSE)
 
 ///// } Shuffles
+
+// llvm.vp.splat(val,mask,vlen)
+BEGIN_REGISTER_VP_INTRINSIC(experimental_vp_splat, 1, 2)
+BEGIN_REGISTER_VP_SDNODE(EXPERIMENTAL_VP_SPLAT, -1, experimental_vp_splat, 1, 2)
+VP_PROPERTY_NO_FUNCTIONAL
+HELPER_MAP_VPID_TO_VPSD(experimental_vp_splat, EXPERIMENTAL_VP_SPLAT)
+END_REGISTER_VP(experimental_vp_splat, EXPERIMENTAL_VP_SPLAT)
 
 #undef BEGIN_REGISTER_VP
 #undef BEGIN_REGISTER_VP_INTRINSIC

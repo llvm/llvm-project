@@ -23,7 +23,7 @@ vfma.f32 d16, d18, d17
 
 @ ARM: vfma.f32 q2, q4, q0 @ encoding: [0x50,0x4c,0x08,0xf2]
 @ THUMB: vfma.f32	q2, q4, q0 @ encoding: [0x08,0xef,0x50,0x4c]
-@ THUMB_V7EM-ERRORS: error: invalid instruction
+@ THUMB_V7EM-ERRORS: error: instruction requires: mve.fp
 @ THUMB_V7EM-ERRORS-NEXT: vfma.f32 q2, q4, q0
 vfma.f32 q2, q4, q0
 
@@ -57,7 +57,7 @@ vfms.f32 d16, d18, d17
 
 @ ARM: vfms.f32 q2, q4, q0 @ encoding: [0x50,0x4c,0x28,0xf2]
 @ THUMB: vfms.f32	q2, q4, q0 @ encoding: [0x28,0xef,0x50,0x4c]
-@ THUMB_V7EM-ERRORS: error: invalid instruction
+@ THUMB_V7EM-ERRORS: error: instruction requires: mve.fp
 @ THUMB_V7EM-ERRORS-NEXT: vfms.f32 q2, q4, q0
 vfms.f32 q2, q4, q0
 

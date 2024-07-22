@@ -95,8 +95,10 @@ class BreakpointOptionsTestCase(TestBase):
         self.expect(
             "breakpoint list -v",
             "Verbose breakpoint list contains mangled names",
+            # The demangled function name is system-dependent, e.g.
+            # 'int ns::func(void)' on Windows and 'ns::func()' on Linux.
             substrs=[
-                "function = ns::func",
+                f"function = {function.GetName()}",
                 f"mangled function = {function.GetMangledName()}",
             ],
         )

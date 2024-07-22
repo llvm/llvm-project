@@ -103,7 +103,7 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
       }
     } else if (const auto *ME = dyn_cast<MemberExpr>(E)) {
       if (!ME->isArrow()) {
-        assert(ME->getBase()->getType()->isRecordType());
+        assert(ME->getBase()->getType()->getAsRecordDecl());
         if (const auto *Field = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
           if (!Field->isBitField() && !Field->getType()->isReferenceType()) {
             E = ME->getBase();
@@ -264,11 +264,14 @@ namespace {
 }
 
 QualType Expr::getEnumCoercedType(const ASTContext &Ctx) const {
-  if (isa<EnumType>(this->getType()))
-    return this->getType();
-  else if (const auto *ECD = this->getEnumConstantDecl())
-    return Ctx.getTypeDeclType(cast<EnumDecl>(ECD->getDeclContext()));
-  return this->getType();
+  if (isa<EnumType>(getType()))
+    return getType();
+  if (const auto *ECD = getEnumConstantDecl()) {
+    const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
+    if (ED->isCompleteDefinition())
+      return Ctx.getTypeDeclType(ED);
+  }
+  return getType();
 }
 
 SourceLocation Expr::getExprLoc() const {
@@ -673,7 +676,8 @@ StringRef PredefinedExpr::getIdentKindName(PredefinedIdentKind IK) {
 // FIXME: Maybe this should use DeclPrinter with a special "print predefined
 // expr" policy instead.
 std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
-                                        const Decl *CurrentDecl) {
+                                        const Decl *CurrentDecl,
+                                        bool ForceElaboratedPrinting) {
   ASTContext &Context = CurrentDecl->getASTContext();
 
   if (IK == PredefinedIdentKind::FuncDName) {
@@ -721,10 +725,21 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     return std::string(Out.str());
   }
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(CurrentDecl)) {
-    if (IK != PredefinedIdentKind::PrettyFunction &&
+    const auto &LO = Context.getLangOpts();
+    bool IsFuncOrFunctionInNonMSVCCompatEnv =
+        ((IK == PredefinedIdentKind::Func ||
+          IK == PredefinedIdentKind ::Function) &&
+         !LO.MSVCCompat);
+    bool IsLFunctionInMSVCCommpatEnv =
+        IK == PredefinedIdentKind::LFunction && LO.MSVCCompat;
+    bool IsFuncOrFunctionOrLFunctionOrFuncDName =
+        IK != PredefinedIdentKind::PrettyFunction &&
         IK != PredefinedIdentKind::PrettyFunctionNoVirtual &&
         IK != PredefinedIdentKind::FuncSig &&
-        IK != PredefinedIdentKind::LFuncSig)
+        IK != PredefinedIdentKind::LFuncSig;
+    if ((ForceElaboratedPrinting &&
+         (IsFuncOrFunctionInNonMSVCCompatEnv || IsLFunctionInMSVCCommpatEnv)) ||
+        (!ForceElaboratedPrinting && IsFuncOrFunctionOrLFunctionOrFuncDName))
       return FD->getNameAsString();
 
     SmallString<256> Name;
@@ -752,6 +767,8 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     PrintingPolicy Policy(Context.getLangOpts());
     PrettyCallbacks PrettyCB(Context.getLangOpts());
     Policy.Callbacks = &PrettyCB;
+    if (IK == PredefinedIdentKind::Function && ForceElaboratedPrinting)
+      Policy.SuppressTagKeyword = !LO.MSVCCompat;
     std::string Proto;
     llvm::raw_string_ostream POut(Proto);
 
@@ -778,6 +795,12 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     }
 
     FD->printQualifiedName(POut, Policy);
+
+    if (IK == PredefinedIdentKind::Function) {
+      POut.flush();
+      Out << Proto;
+      return std::string(Name);
+    }
 
     POut << "(";
     if (FT) {
@@ -814,7 +837,7 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     typedef SmallVector<const ClassTemplateSpecializationDecl *, 8> SpecsTy;
     SpecsTy Specs;
     const DeclContext *Ctx = FD->getDeclContext();
-    while (Ctx && isa<NamedDecl>(Ctx)) {
+    while (isa_and_nonnull<NamedDecl>(Ctx)) {
       const ClassTemplateSpecializationDecl *Spec
                                = dyn_cast<ClassTemplateSpecializationDecl>(Ctx);
       if (Spec && !Spec->isExplicitSpecialization())
@@ -1689,8 +1712,11 @@ UnaryExprOrTypeTraitExpr::UnaryExprOrTypeTraitExpr(
 }
 
 MemberExpr::MemberExpr(Expr *Base, bool IsArrow, SourceLocation OperatorLoc,
-                       ValueDecl *MemberDecl,
-                       const DeclarationNameInfo &NameInfo, QualType T,
+                       NestedNameSpecifierLoc QualifierLoc,
+                       SourceLocation TemplateKWLoc, ValueDecl *MemberDecl,
+                       DeclAccessPair FoundDecl,
+                       const DeclarationNameInfo &NameInfo,
+                       const TemplateArgumentListInfo *TemplateArgs, QualType T,
                        ExprValueKind VK, ExprObjectKind OK,
                        NonOdrUseReason NOUR)
     : Expr(MemberExprClass, T, VK, OK), Base(Base), MemberDecl(MemberDecl),
@@ -1698,11 +1724,30 @@ MemberExpr::MemberExpr(Expr *Base, bool IsArrow, SourceLocation OperatorLoc,
   assert(!NameInfo.getName() ||
          MemberDecl->getDeclName() == NameInfo.getName());
   MemberExprBits.IsArrow = IsArrow;
-  MemberExprBits.HasQualifierOrFoundDecl = false;
-  MemberExprBits.HasTemplateKWAndArgsInfo = false;
+  MemberExprBits.HasQualifier = QualifierLoc.hasQualifier();
+  MemberExprBits.HasFoundDecl =
+      FoundDecl.getDecl() != MemberDecl ||
+      FoundDecl.getAccess() != MemberDecl->getAccess();
+  MemberExprBits.HasTemplateKWAndArgsInfo =
+      TemplateArgs || TemplateKWLoc.isValid();
   MemberExprBits.HadMultipleCandidates = false;
   MemberExprBits.NonOdrUseReason = NOUR;
   MemberExprBits.OperatorLoc = OperatorLoc;
+
+  if (hasQualifier())
+    new (getTrailingObjects<NestedNameSpecifierLoc>())
+        NestedNameSpecifierLoc(QualifierLoc);
+  if (hasFoundDecl())
+    *getTrailingObjects<DeclAccessPair>() = FoundDecl;
+  if (TemplateArgs) {
+    auto Deps = TemplateArgumentDependence::None;
+    getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
+        TemplateKWLoc, *TemplateArgs, getTrailingObjects<TemplateArgumentLoc>(),
+        Deps);
+  } else if (TemplateKWLoc.isValid()) {
+    getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
+        TemplateKWLoc);
+  }
   setDependence(computeDependence(this));
 }
 
@@ -1712,48 +1757,20 @@ MemberExpr *MemberExpr::Create(
     ValueDecl *MemberDecl, DeclAccessPair FoundDecl,
     DeclarationNameInfo NameInfo, const TemplateArgumentListInfo *TemplateArgs,
     QualType T, ExprValueKind VK, ExprObjectKind OK, NonOdrUseReason NOUR) {
-  bool HasQualOrFound = QualifierLoc || FoundDecl.getDecl() != MemberDecl ||
-                        FoundDecl.getAccess() != MemberDecl->getAccess();
+  bool HasQualifier = QualifierLoc.hasQualifier();
+  bool HasFoundDecl = FoundDecl.getDecl() != MemberDecl ||
+                      FoundDecl.getAccess() != MemberDecl->getAccess();
   bool HasTemplateKWAndArgsInfo = TemplateArgs || TemplateKWLoc.isValid();
   std::size_t Size =
-      totalSizeToAlloc<MemberExprNameQualifier, ASTTemplateKWAndArgsInfo,
-                       TemplateArgumentLoc>(
-          HasQualOrFound ? 1 : 0, HasTemplateKWAndArgsInfo ? 1 : 0,
+      totalSizeToAlloc<NestedNameSpecifierLoc, DeclAccessPair,
+                       ASTTemplateKWAndArgsInfo, TemplateArgumentLoc>(
+          HasQualifier, HasFoundDecl, HasTemplateKWAndArgsInfo,
           TemplateArgs ? TemplateArgs->size() : 0);
 
   void *Mem = C.Allocate(Size, alignof(MemberExpr));
-  MemberExpr *E = new (Mem) MemberExpr(Base, IsArrow, OperatorLoc, MemberDecl,
-                                       NameInfo, T, VK, OK, NOUR);
-
-  if (HasQualOrFound) {
-    E->MemberExprBits.HasQualifierOrFoundDecl = true;
-
-    MemberExprNameQualifier *NQ =
-        E->getTrailingObjects<MemberExprNameQualifier>();
-    NQ->QualifierLoc = QualifierLoc;
-    NQ->FoundDecl = FoundDecl;
-  }
-
-  E->MemberExprBits.HasTemplateKWAndArgsInfo =
-      TemplateArgs || TemplateKWLoc.isValid();
-
-  // FIXME: remove remaining dependence computation to computeDependence().
-  auto Deps = E->getDependence();
-  if (TemplateArgs) {
-    auto TemplateArgDeps = TemplateArgumentDependence::None;
-    E->getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
-        TemplateKWLoc, *TemplateArgs,
-        E->getTrailingObjects<TemplateArgumentLoc>(), TemplateArgDeps);
-    for (const TemplateArgumentLoc &ArgLoc : TemplateArgs->arguments()) {
-      Deps |= toExprDependence(ArgLoc.getArgument().getDependence());
-    }
-  } else if (TemplateKWLoc.isValid()) {
-    E->getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
-        TemplateKWLoc);
-  }
-  E->setDependence(Deps);
-
-  return E;
+  return new (Mem) MemberExpr(Base, IsArrow, OperatorLoc, QualifierLoc,
+                              TemplateKWLoc, MemberDecl, FoundDecl, NameInfo,
+                              TemplateArgs, T, VK, OK, NOUR);
 }
 
 MemberExpr *MemberExpr::CreateEmpty(const ASTContext &Context,
@@ -1762,12 +1779,11 @@ MemberExpr *MemberExpr::CreateEmpty(const ASTContext &Context,
                                     unsigned NumTemplateArgs) {
   assert((!NumTemplateArgs || HasTemplateKWAndArgsInfo) &&
          "template args but no template arg info?");
-  bool HasQualOrFound = HasQualifier || HasFoundDecl;
   std::size_t Size =
-      totalSizeToAlloc<MemberExprNameQualifier, ASTTemplateKWAndArgsInfo,
-                       TemplateArgumentLoc>(HasQualOrFound ? 1 : 0,
-                                            HasTemplateKWAndArgsInfo ? 1 : 0,
-                                            NumTemplateArgs);
+      totalSizeToAlloc<NestedNameSpecifierLoc, DeclAccessPair,
+                       ASTTemplateKWAndArgsInfo, TemplateArgumentLoc>(
+          HasQualifier, HasFoundDecl, HasTemplateKWAndArgsInfo,
+          NumTemplateArgs);
   void *Mem = Context.Allocate(Size, alignof(MemberExpr));
   return new (Mem) MemberExpr(EmptyShell());
 }
@@ -1925,6 +1941,7 @@ bool CastExpr::CastConsistency() const {
   case CK_UserDefinedConversion:    // operator bool()
   case CK_BuiltinFnToFnPtr:
   case CK_FixedPointToBoolean:
+  case CK_HLSLArrayRValue:
   CheckNoBasePath:
     assert(path_empty() && "Cast kind should not have a base path!");
     break;
@@ -2027,7 +2044,7 @@ const FieldDecl *CastExpr::getTargetFieldForToUnionCast(const RecordDecl *RD,
   for (Field = RD->field_begin(), FieldEnd = RD->field_end();
        Field != FieldEnd; ++Field) {
     if (Ctx.hasSameUnqualifiedType(Field->getType(), OpType) &&
-        !Field->isUnnamedBitfield()) {
+        !Field->isUnnamedBitField()) {
       return *Field;
     }
   }
@@ -2354,6 +2371,17 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
   }
   }
   llvm_unreachable("unhandled case");
+}
+
+EmbedExpr::EmbedExpr(const ASTContext &Ctx, SourceLocation Loc,
+                     EmbedDataStorage *Data, unsigned Begin,
+                     unsigned NumOfElements)
+    : Expr(EmbedExprClass, Ctx.IntTy, VK_PRValue, OK_Ordinary),
+      EmbedKeywordLoc(Loc), Ctx(&Ctx), Data(Data), Begin(Begin),
+      NumOfElements(NumOfElements) {
+  setDependence(ExprDependence::None);
+  FakeChildNode = IntegerLiteral::Create(
+      Ctx, llvm::APInt::getZero(Ctx.getTypeSize(getType())), getType(), Loc);
 }
 
 InitListExpr::InitListExpr(const ASTContext &C, SourceLocation lbraceloc,
@@ -3050,7 +3078,7 @@ Expr *Expr::IgnoreParenCasts() {
 
 Expr *Expr::IgnoreConversionOperatorSingleStep() {
   if (auto *MCE = dyn_cast<CXXMemberCallExpr>(this)) {
-    if (MCE->getMethodDecl() && isa<CXXConversionDecl>(MCE->getMethodDecl()))
+    if (isa_and_nonnull<CXXConversionDecl>(MCE->getMethodDecl()))
       return MCE->getImplicitObjectArgument();
   }
   return this;
@@ -3376,7 +3404,7 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
           continue;
 
         // Don't emit anonymous bitfields, they just affect layout.
-        if (Field->isUnnamedBitfield())
+        if (Field->isUnnamedBitField())
           continue;
 
         if (ElementNo < ILE->getNumInits()) {
@@ -3598,15 +3626,14 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case CXXUuidofExprClass:
   case OpaqueValueExprClass:
   case SourceLocExprClass:
+  case EmbedExprClass:
   case ConceptSpecializationExprClass:
   case RequiresExprClass:
   case SYCLUniqueStableNameExprClass:
+  case PackIndexingExprClass:
     // These never have a side-effect.
     return false;
 
-  case PackIndexingExprClass:
-    return cast<PackIndexingExpr>(this)->getSelectedExpr()->HasSideEffects(
-        Ctx, IncludePossibleEffects);
   case ConstantExprClass:
     // FIXME: Move this into the "return false;" block above.
     return cast<ConstantExpr>(this)->getSubExpr()->HasSideEffects(
@@ -3663,7 +3690,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case ParenExprClass:
   case ArraySubscriptExprClass:
   case MatrixSubscriptExprClass:
-  case OMPArraySectionExprClass:
+  case ArraySectionExprClass:
   case OMPArrayShapingExprClass:
   case OMPIteratorExprClass:
   case MemberExprClass:
@@ -3754,10 +3781,18 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
     break;
   }
 
-  case CXXTypeidExprClass:
-    // typeid might throw if its subexpression is potentially-evaluated, so has
-    // side-effects in that case whether or not its subexpression does.
-    return cast<CXXTypeidExpr>(this)->isPotentiallyEvaluated();
+  case CXXTypeidExprClass: {
+    const auto *TE = cast<CXXTypeidExpr>(this);
+    if (!TE->isPotentiallyEvaluated())
+      return false;
+
+    // If this type id expression can throw because of a null pointer, that is a
+    // side-effect independent of if the operand has a side-effect
+    if (IncludePossibleEffects && TE->hasNullCheck())
+      return true;
+
+    break;
+  }
 
   case CXXConstructExprClass:
   case CXXTemporaryObjectExprClass: {
@@ -3876,9 +3911,14 @@ namespace {
     }
 
     void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *E) {
-      if (E->getTemporary()->getDestructor()->isTrivial()) {
-        Inherited::VisitStmt(E);
-        return;
+      // Destructor of the temporary might be null if destructor declaration
+      // is not valid.
+      if (const CXXDestructorDecl *DtorDecl =
+              E->getTemporary()->getDestructor()) {
+        if (DtorDecl->isTrivial()) {
+          Inherited::VisitStmt(E);
+          return;
+        }
       }
 
       NonTrivial = true;
@@ -4601,8 +4641,17 @@ SourceRange DesignatedInitExpr::getDesignatorsSourceRange() const {
 SourceLocation DesignatedInitExpr::getBeginLoc() const {
   auto *DIE = const_cast<DesignatedInitExpr *>(this);
   Designator &First = *DIE->getDesignator(0);
-  if (First.isFieldDesignator())
-    return GNUSyntax ? First.getFieldLoc() : First.getDotLoc();
+  if (First.isFieldDesignator()) {
+    // Skip past implicit designators for anonymous structs/unions, since
+    // these do not have valid source locations.
+    for (unsigned int i = 0; i < DIE->size(); i++) {
+      Designator &Des = *DIE->getDesignator(i);
+      SourceLocation retval = GNUSyntax ? Des.getFieldLoc() : Des.getDotLoc();
+      if (!retval.isValid())
+        continue;
+      return retval;
+    }
+  }
   return First.getLBracketLoc();
 }
 
@@ -5034,9 +5083,9 @@ QualType AtomicExpr::getValueType() const {
   return T;
 }
 
-QualType OMPArraySectionExpr::getBaseOriginalType(const Expr *Base) {
+QualType ArraySectionExpr::getBaseOriginalType(const Expr *Base) {
   unsigned ArraySectionCount = 0;
-  while (auto *OASE = dyn_cast<OMPArraySectionExpr>(Base->IgnoreParens())) {
+  while (auto *OASE = dyn_cast<ArraySectionExpr>(Base->IgnoreParens())) {
     Base = OASE->getBase();
     ++ArraySectionCount;
   }

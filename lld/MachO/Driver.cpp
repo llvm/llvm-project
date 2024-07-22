@@ -270,6 +270,20 @@ struct ArchiveFileInfo {
 
 static DenseMap<StringRef, ArchiveFileInfo> loadedArchives;
 
+static void saveThinArchiveToRepro(ArchiveFile const *file) {
+  assert(tar && file->getArchive().isThin());
+
+  Error e = Error::success();
+  for (const object::Archive::Child &c : file->getArchive().children(e)) {
+    MemoryBufferRef mb = CHECK(c.getMemoryBufferRef(),
+                               toString(file) + ": failed to get buffer");
+    tar->append(relativeToRoot(CHECK(c.getFullName(), file)), mb.getBuffer());
+  }
+  if (e)
+    error(toString(file) +
+          ": Archive::children failed: " + toString(std::move(e)));
+}
+
 static InputFile *addFile(StringRef path, LoadType loadType,
                           bool isLazy = false, bool isExplicit = true,
                           bool isBundleLoader = false,
@@ -301,6 +315,9 @@ static InputFile *addFile(StringRef path, LoadType loadType,
       if (!archive->isEmpty() && !archive->hasSymbolTable())
         error(path + ": archive has no index; run ranlib to add one");
       file = make<ArchiveFile>(std::move(archive), isForceHidden);
+
+      if (tar && file->getArchive().isThin())
+        saveThinArchiveToRepro(file);
     } else {
       file = entry->second.file;
       // Command-line loads take precedence. If file is previously loaded via
@@ -330,9 +347,13 @@ static InputFile *addFile(StringRef path, LoadType loadType,
               reason = "-all_load";
               break;
           }
-          if (Error e = file->fetch(c, reason))
-            error(toString(file) + ": " + reason +
-                  " failed to load archive member: " + toString(std::move(e)));
+          if (Error e = file->fetch(c, reason)) {
+            if (config->warnThinArchiveMissingMembers)
+              warn(toString(file) + ": " + reason +
+                   " failed to load archive member: " + toString(std::move(e)));
+            else
+              llvm::consumeError(std::move(e));
+          }
         }
         if (e)
           error(toString(file) +
@@ -349,7 +370,18 @@ static InputFile *addFile(StringRef path, LoadType loadType,
         Error e = Error::success();
         for (const object::Archive::Child &c : file->getArchive().children(e)) {
           Expected<MemoryBufferRef> mb = c.getMemoryBufferRef();
-          if (!mb || !hasObjCSection(*mb))
+          if (!mb) {
+            // We used to create broken repro tarballs that only included those
+            // object files from thin archives that ended up being used.
+            if (config->warnThinArchiveMissingMembers)
+              warn(toString(file) + ": -ObjC failed to open archive member: " +
+                   toString(mb.takeError()));
+            else
+              llvm::consumeError(mb.takeError());
+            continue;
+          }
+
+          if (!hasObjCSection(*mb))
             continue;
           if (Error e = file->fetch(c, "-ObjC"))
             error(toString(file) + ": -ObjC failed to load archive member: " +
@@ -612,7 +644,7 @@ static void replaceCommonSymbols() {
     if (!osec)
       osec = ConcatOutputSection::getOrCreateForInput(isec);
     isec->parent = osec;
-    inputSections.push_back(isec);
+    addInputSection(isec);
 
     // FIXME: CommonSymbol should store isReferencedDynamically, noDeadStrip
     // and pass them on here.
@@ -1086,6 +1118,22 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
   return isRequested;
 }
 
+static bool shouldEmitRelativeMethodLists(const InputArgList &args) {
+  const Arg *arg = args.getLastArg(OPT_objc_relative_method_lists,
+                                   OPT_no_objc_relative_method_lists);
+  if (arg && arg->getOption().getID() == OPT_objc_relative_method_lists)
+    return true;
+  if (arg && arg->getOption().getID() == OPT_no_objc_relative_method_lists)
+    return false;
+
+  // TODO: If no flag is specified, don't default to false, but instead:
+  //   - default false on   <   ios14
+  //   - default true  on   >=  ios14
+  // For now, until this feature is confirmed stable, default to false if no
+  // flag is explicitly specified
+  return false;
+}
+
 void SymbolPatterns::clear() {
   literals.clear();
   globs.clear();
@@ -1146,6 +1194,8 @@ static void createFiles(const InputArgList &args) {
   // This loop should be reserved for options whose exact ordering matters.
   // Other options should be handled via filtered() and/or getLastArg().
   bool isLazy = false;
+  // If we've processed an opening --start-lib, without a matching --end-lib
+  bool inLib = false;
   for (const Arg *arg : args) {
     const Option &opt = arg->getOption();
     warnIfDeprecatedOption(opt);
@@ -1203,13 +1253,16 @@ static void createFiles(const InputArgList &args) {
                    LoadType::CommandLine);
       break;
     case OPT_start_lib:
-      if (isLazy)
+      if (inLib)
         error("nested --start-lib");
-      isLazy = true;
+      inLib = true;
+      if (!config->allLoad)
+        isLazy = true;
       break;
     case OPT_end_lib:
-      if (!isLazy)
+      if (!inLib)
         error("stray --end-lib");
+      inLib = false;
       isLazy = false;
       break;
     default:
@@ -1220,53 +1273,21 @@ static void createFiles(const InputArgList &args) {
 
 static void gatherInputSections() {
   TimeTraceScope timeScope("Gathering input sections");
-  int inputOrder = 0;
   for (const InputFile *file : inputFiles) {
     for (const Section *section : file->sections) {
       // Compact unwind entries require special handling elsewhere. (In
       // contrast, EH frames are handled like regular ConcatInputSections.)
       if (section->name == section_names::compactUnwind)
         continue;
-      ConcatOutputSection *osec = nullptr;
-      for (const Subsection &subsection : section->subsections) {
-        if (auto *isec = dyn_cast<ConcatInputSection>(subsection.isec)) {
-          if (isec->isCoalescedWeak())
-            continue;
-          if (config->emitInitOffsets &&
-              sectionType(isec->getFlags()) == S_MOD_INIT_FUNC_POINTERS) {
-            in.initOffsets->addInput(isec);
-            continue;
-          }
-          isec->outSecOff = inputOrder++;
-          if (!osec)
-            osec = ConcatOutputSection::getOrCreateForInput(isec);
-          isec->parent = osec;
-          inputSections.push_back(isec);
-        } else if (auto *isec =
-                       dyn_cast<CStringInputSection>(subsection.isec)) {
-          if (isec->getName() == section_names::objcMethname) {
-            if (in.objcMethnameSection->inputOrder == UnspecifiedInputOrder)
-              in.objcMethnameSection->inputOrder = inputOrder++;
-            in.objcMethnameSection->addInput(isec);
-          } else {
-            if (in.cStringSection->inputOrder == UnspecifiedInputOrder)
-              in.cStringSection->inputOrder = inputOrder++;
-            in.cStringSection->addInput(isec);
-          }
-        } else if (auto *isec =
-                       dyn_cast<WordLiteralInputSection>(subsection.isec)) {
-          if (in.wordLiteralSection->inputOrder == UnspecifiedInputOrder)
-            in.wordLiteralSection->inputOrder = inputOrder++;
-          in.wordLiteralSection->addInput(isec);
-        } else {
-          llvm_unreachable("unexpected input section kind");
-        }
-      }
+      // Addrsig sections contain metadata only needed at link time.
+      if (section->name == section_names::addrSig)
+        continue;
+      for (const Subsection &subsection : section->subsections)
+        addInputSection(subsection.isec);
     }
     if (!file->objCImageInfo.empty())
       in.objCImageInfo->addFile(file);
   }
-  assert(inputOrder <= UnspecifiedInputOrder);
 }
 
 static void foldIdenticalLiterals() {
@@ -1407,6 +1428,25 @@ static void handleExplicitExports() {
   }
 }
 
+static void eraseInitializerSymbols() {
+  for (ConcatInputSection *isec : in.initOffsets->inputs())
+    for (Defined *sym : isec->symbols)
+      sym->used = false;
+}
+
+static SmallVector<StringRef, 0> getRuntimePaths(opt::InputArgList &args) {
+  SmallVector<StringRef, 0> vals;
+  DenseSet<StringRef> seen;
+  for (const Arg *arg : args.filtered(OPT_rpath)) {
+    StringRef val = arg->getValue();
+    if (seen.insert(val).second)
+      vals.push_back(val);
+    else if (config->warnDuplicateRpath)
+      warn("duplicate -rpath '" + val + "' ignored [--warn-duplicate-rpath]");
+  }
+  return vals;
+}
+
 namespace lld {
 namespace macho {
 bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
@@ -1422,12 +1462,14 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     concatOutputSections.clear();
     inputFiles.clear();
     inputSections.clear();
+    inputSectionsOrder = 0;
     loadedArchives.clear();
     loadedObjectFrameworks.clear();
     missingAutolinkWarnings.clear();
     syntheticSections.clear();
     thunkMap.clear();
     unprocessedLCLinkerOptions.clear();
+    ObjCSelRefsHelper::cleanup();
 
     firstTLVDataSection = nullptr;
     tar = nullptr;
@@ -1437,6 +1479,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     resetOutputSegments();
     resetWriter();
     InputFile::resetIdCount();
+
+    objc::doCleanup();
   };
 
   ctx->e.logName = args::getFilenameWithoutExe(argsArr[0]);
@@ -1522,7 +1566,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       StringRef sep = sys::path::get_separator();
       // real_path removes trailing slashes as part of the normalization, but
       // these are meaningful for our text based stripping
-      if (config->osoPrefix.equals(".") || config->osoPrefix.ends_with(sep))
+      if (config->osoPrefix == "." || config->osoPrefix.ends_with(sep))
         expanded += sep;
       config->osoPrefix = saver().save(expanded.str());
     }
@@ -1643,7 +1687,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     error("--thinlto-prefix-replace=old_dir;new_dir;obj_dir must be used with "
           "--thinlto-index-only=");
   }
-  config->runtimePaths = args::getStrings(args, OPT_rpath);
+  config->warnDuplicateRpath =
+      args.hasFlag(OPT_warn_duplicate_rpath, OPT_no_warn_duplicate_rpath, true);
+  config->runtimePaths = getRuntimePaths(args);
   config->allLoad = args.hasFlag(OPT_all_load, OPT_noall_load, false);
   config->archMultiple = args.hasArg(OPT_arch_multiple);
   config->applicationExtension = args.hasFlag(
@@ -1661,7 +1707,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->emitChainedFixups = shouldEmitChainedFixups(args);
   config->emitInitOffsets =
       config->emitChainedFixups || args.hasArg(OPT_init_offsets);
+  config->emitRelativeMethodLists = shouldEmitRelativeMethodLists(args);
   config->icfLevel = getICFLevel(args);
+  config->keepICFStabs = args.hasArg(OPT_keep_icf_stabs);
   config->dedupStrings =
       args.hasFlag(OPT_deduplicate_strings, OPT_no_deduplicate_strings, true);
   config->deadStripDuplicates = args.hasArg(OPT_dead_strip_duplicates);
@@ -1683,6 +1731,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->csProfilePath = args.getLastArgValue(OPT_cs_profile_path);
   config->pgoWarnMismatch =
       args.hasFlag(OPT_pgo_warn_mismatch, OPT_no_pgo_warn_mismatch, true);
+  config->warnThinArchiveMissingMembers =
+      args.hasFlag(OPT_warn_thin_archive_missing_members,
+                   OPT_no_warn_thin_archive_missing_members, true);
   config->generateUuid = !args.hasArg(OPT_no_uuid);
 
   for (const Arg *arg : args.filtered(OPT_alias)) {
@@ -1979,8 +2030,21 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     if (config->deadStrip)
       markLive();
 
+    // Ensure that no symbols point inside __mod_init_func sections if they are
+    // removed due to -init_offsets. This must run after dead stripping.
+    if (config->emitInitOffsets)
+      eraseInitializerSymbols();
+
+    // Categories are not subject to dead-strip. The __objc_catlist section is
+    // marked as NO_DEAD_STRIP and that propagates into all category data.
     if (args.hasArg(OPT_check_category_conflicts))
       objc::checkCategories();
+
+    // Category merging uses "->live = false" to erase old category data, so
+    // it has to run after dead-stripping (markLive).
+    if (args.hasFlag(OPT_objc_category_merging, OPT_no_objc_category_merging,
+                     false))
+      objc::mergeCategories();
 
     // ICF assumes that all literals have been folded already, so we must run
     // foldIdenticalLiterals before foldIdenticalSections.

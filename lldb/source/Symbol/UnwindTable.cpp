@@ -84,6 +84,51 @@ void UnwindTable::Initialize() {
   }
 }
 
+void UnwindTable::Update() {
+  if (!m_initialized)
+    return Initialize();
+
+  std::lock_guard<std::mutex> guard(m_mutex);
+
+  ObjectFile *object_file = m_module.GetObjectFile();
+  if (!object_file)
+    return;
+
+  if (!m_object_file_unwind_up)
+    m_object_file_unwind_up = object_file->CreateCallFrameInfo();
+
+  SectionList *sl = m_module.GetSectionList();
+  if (!sl)
+    return;
+
+  SectionSP sect = sl->FindSectionByType(eSectionTypeEHFrame, true);
+  if (!m_eh_frame_up && sect) {
+    m_eh_frame_up = std::make_unique<DWARFCallFrameInfo>(
+        *object_file, sect, DWARFCallFrameInfo::EH);
+  }
+
+  sect = sl->FindSectionByType(eSectionTypeDWARFDebugFrame, true);
+  if (!m_debug_frame_up && sect) {
+    m_debug_frame_up = std::make_unique<DWARFCallFrameInfo>(
+        *object_file, sect, DWARFCallFrameInfo::DWARF);
+  }
+
+  sect = sl->FindSectionByType(eSectionTypeCompactUnwind, true);
+  if (!m_compact_unwind_up && sect) {
+    m_compact_unwind_up =
+        std::make_unique<CompactUnwindInfo>(*object_file, sect);
+  }
+
+  sect = sl->FindSectionByType(eSectionTypeARMexidx, true);
+  if (!m_arm_unwind_up && sect) {
+    SectionSP sect_extab = sl->FindSectionByType(eSectionTypeARMextab, true);
+    if (sect_extab.get()) {
+      m_arm_unwind_up =
+          std::make_unique<ArmUnwindInfo>(*object_file, sect, sect_extab);
+    }
+  }
+}
+
 UnwindTable::~UnwindTable() = default;
 
 std::optional<AddressRange>

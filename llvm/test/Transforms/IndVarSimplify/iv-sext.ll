@@ -99,7 +99,7 @@ define void @t(ptr %pval1, ptr %peakWeight, ptr %nrgReducePeakrate, i32 %bandEdg
 ; CHECK-NEXT:    [[VAL35_LCSSA:%.*]] = phi float [ [[VAL35]], [[BB5]] ]
 ; CHECK-NEXT:    [[VAL31_LCSSA_WIDE:%.*]] = phi i64 [ [[INDVARS_IV_NEXT]], [[BB5]] ]
 ; CHECK-NEXT:    [[VAL30_LCSSA:%.*]] = phi float [ [[VAL30]], [[BB5]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[VAL31_LCSSA_WIDE]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc nsw i64 [[VAL31_LCSSA_WIDE]] to i32
 ; CHECK-NEXT:    br label [[BB7]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    [[DISTERBHI_2_LCSSA]] = phi float [ [[VAL30_LCSSA]], [[BB5_BB7_CRIT_EDGE]] ], [ [[DISTERBHI_0_PH]], [[BB5_PREHEADER]] ]

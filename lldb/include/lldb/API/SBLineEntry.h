@@ -29,6 +29,9 @@ public:
 
   lldb::SBAddress GetEndAddress() const;
 
+  lldb::SBAddress
+  GetSameLineContiguousAddressRangeEnd(bool include_inlined_functions) const;
+
   explicit operator bool() const;
 
   bool IsValid() const;

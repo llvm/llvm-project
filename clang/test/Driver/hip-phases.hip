@@ -4,9 +4,6 @@
 // - Host/device-only compilation;
 // - User-requested final phase - binary or assembly.
 
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-//
 // Test single gpu architecture with complete compilation.
 //
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
@@ -648,3 +645,15 @@
 // LTO-NEXT: 14: offload, "host-hip (x86_64-unknown-linux-gnu)" {2}, "device-hip (x86_64-unknown-linux-gnu)" {13}, ir
 // LTO-NEXT: 15: backend, {14}, assembler, (host-hip)
 // LTO-NEXT: 16: assembler, {15}, object, (host-hip)
+
+//
+// Test the new driver when not bundling
+//
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-new-driver -ccc-print-phases \
+// RUN:        --offload-device-only --offload-arch=gfx90a -emit-llvm -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix=DEVICE-ONLY %s
+//      DEVICE-ONLY: 0: input, "[[INPUT:.+]]", hip, (device-hip, gfx90a)
+// DEVICE-ONLY-NEXT: 1: preprocessor, {0}, hip-cpp-output, (device-hip, gfx90a)
+// DEVICE-ONLY-NEXT: 2: compiler, {1}, ir, (device-hip, gfx90a)
+// DEVICE-ONLY-NEXT: 3: backend, {2}, ir, (device-hip, gfx90a)
+// DEVICE-ONLY-NEXT: 4: offload, "device-hip (amdgcn-amd-amdhsa:gfx90a)" {3}, none

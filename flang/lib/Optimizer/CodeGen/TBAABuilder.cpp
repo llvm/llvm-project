@@ -52,6 +52,38 @@ TBAABuilder::TBAABuilder(MLIRContext *context, bool applyTBAA,
                          bool forceUnifiedTree)
     : enableTBAA(applyTBAA && !disableTBAA),
       trees(/*separatePerFunction=*/perFunctionTBAATrees && !forceUnifiedTree) {
+  // TODO: the TBAA tags created here are rooted in the root scope
+  // of the enclosing function. This does not work best with MLIR inlining.
+  // A better approach is to root them according to the scopes they belong to
+  // and that were used by AddAliasTagsPass to create TBAA tags before
+  // the CodeGen. For example:
+  //   subroutine caller(a, b, ptr)
+  //     real, target :: a(:), b(:)
+  //     integer, pointer :: ptr(:)
+  //     call callee(a, b, ptr)
+  //   end
+  //   subroutine callee(a, b, ptr)
+  //     real :: a(:), b(:)
+  //     integer, pointer :: ptr(:)
+  //     do i=...
+  //       a(ptr(i)) = b(ptr(i))
+  //     end do
+  //   end
+  //
+  // When callee is inlined, the dummy arguments 'a' and 'b' will
+  // be rooted in TBAA tree corresponding to the `call callee` call site,
+  // saying that the references to 'a' and 'b' cannot alias each other.
+  // These tags will be created by AddAliasTagsPass, but it will not be able
+  // to create any tags for 'ptr' references.
+  // During the CodeGen, we create 'any data access' tags for the
+  // 'ptr' acceses. If they are rooted within the root scope of `caller`,
+  // they end up in a different TBAA tree with the 'a' and 'b' access
+  // tags, so 'ptr', 'a' and 'b' references MayAlias. Moreover,
+  // the box access of 'ptr' will also be in a different TBAA tree
+  // with 'a' and 'b' tags, meaning they can also alias.
+  // This will prevent LLVM vectorization even with memory conflict checks.
+  // It seems that we'd better move all TBAA tags assignment to
+  // AddAliasTagsPass, which can at least rely on the dummy arguments scopes.
   if (!enableTBAA)
     return;
 }
@@ -120,7 +152,7 @@ void TBAABuilder::attachTBAATag(AliasAnalysisOpInterface op, Type baseFIRType,
     // with both data and descriptor accesses.
     // Conservatively set any-access tag if there is any descriptor member.
     tbaaTagSym = getAnyAccessTag(func);
-  } else if (baseFIRType.isa<fir::BaseBoxType>()) {
+  } else if (mlir::isa<fir::BaseBoxType>(baseFIRType)) {
     tbaaTagSym = getBoxAccessTag(baseFIRType, accessFIRType, gep, func);
   } else {
     tbaaTagSym = getDataAccessTag(baseFIRType, accessFIRType, gep, func);

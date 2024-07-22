@@ -1,6 +1,6 @@
 // DEFINE: %{compile} =  mlir-opt %s \
 // DEFINE:    -transform-interpreter -test-transform-dialect-erase-schedule \
-// DEFINE:    -one-shot-bufferize -func-bufferize -cse -canonicalize -convert-vector-to-scf -arm-sve-legalize-vector-storage \
+// DEFINE:    -one-shot-bufferize="bufferize-function-boundaries" -buffer-deallocation-pipeline -cse -canonicalize -convert-vector-to-scf -arm-sve-legalize-vector-storage \
 // DEFINE:    -convert-vector-to-llvm="enable-arm-sve" -test-lower-to-llvm -o %t
 // DEFINE: %{entry_point} = matmul_f32
 // DEFINE: %{run} = %mcr_aarch64_cmd %t -e %{entry_point} -entry-point-result=void --march=aarch64 --mattr="+sve"\
@@ -96,7 +96,7 @@ module attributes {transform.with_named_sequence} {
       : (!transform.op<"func.func">) -> !transform.any_op
 
     // Step 1: Tile
-    %tiled_matmul, %loops:3 = transform.structured.tile_using_for %matmul [2, [4], 1]
+    %tiled_matmul, %loops:3 = transform.structured.tile_using_for %matmul tile_sizes [2, [4], 1]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
 
     // Step 2: Vectorize

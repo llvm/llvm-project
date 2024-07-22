@@ -9,6 +9,7 @@
 #ifndef LLDB_CORE_PROGRESS_H
 #define LLDB_CORE_PROGRESS_H
 
+#include "lldb/Host/Alarm.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/StringMap.h"
@@ -41,8 +42,8 @@ namespace lldb_private {
 ///                                    uint64_t total,
 ///                                    void *baton);
 ///
-/// This callback will always initially be called with "completed" set to zero
-/// and "total" set to the total amount specified in the contructor. This is
+/// This callback will always initially be called with \a completed set to zero
+/// and \a total set to the total amount specified in the constructor. This is
 /// considered the progress start event. As Progress::Increment() is called,
 /// the callback will be called as long as the Progress::m_completed has not
 /// yet exceeded the Progress::m_total. When the callback is called with
@@ -51,7 +52,7 @@ namespace lldb_private {
 /// Progress::m_total, then this is considered a progress update event.
 ///
 /// This callback will be called in the destructor if Progress::m_completed is
-/// not equal to Progress::m_total with the "completed" set to
+/// not equal to Progress::m_total with the \a completed set to
 /// Progress::m_total. This ensures we always send a progress completed update
 /// even if the user does not.
 
@@ -61,12 +62,16 @@ public:
   ///
   /// The constructor will create a unique progress reporting object and
   /// immediately send out a progress update by calling the installed callback
-  /// with completed set to zero out of the specified total.
+  /// with \a completed set to zero out of the specified total.
   ///
   /// @param [in] title The title of this progress activity.
   ///
   /// @param [in] details Specific information about what the progress report
-  /// is currently working on.
+  /// is currently working on. Although not required, if the progress report is
+  /// updated with Progress::Increment() then this field will be overwritten
+  /// with the new set of details passed into that function, and the details
+  /// passed initially will act as an "item 0" for the total set of
+  /// items being reported on.
   ///
   /// @param [in] total The total units of work to be done if specified, if
   /// set to std::nullopt then an indeterminate progress indicator should be
@@ -81,11 +86,11 @@ public:
   /// Destroy the progress object.
   ///
   /// If the progress has not yet sent a completion update, the destructor
-  /// will send out a notification where the completed == m_total. This ensures
-  /// that we always send out a progress complete notification.
+  /// will send out a notification where the \a completed == m_total. This
+  /// ensures that we always send out a progress complete notification.
   ~Progress();
 
-  /// Increment the progress and send a notification to the intalled callback.
+  /// Increment the progress and send a notification to the installed callback.
   ///
   /// If incrementing ends up exceeding m_total, m_completed will be updated
   /// to match m_total and no subsequent progress notifications will be sent.
@@ -146,9 +151,12 @@ public:
   void Increment(const Progress::ProgressData &);
   void Decrement(const Progress::ProgressData &);
 
+  static void Initialize();
+  static void Terminate();
+  static bool Enabled();
   static ProgressManager &Instance();
 
-private:
+protected:
   enum class EventType {
     Begin,
     End,
@@ -156,9 +164,32 @@ private:
   static void ReportProgress(const Progress::ProgressData &progress_data,
                              EventType type);
 
-  llvm::StringMap<std::pair<uint64_t, Progress::ProgressData>>
-      m_progress_category_map;
-  std::mutex m_progress_map_mutex;
+  static std::optional<ProgressManager> &InstanceImpl();
+
+  /// Helper function for reporting progress when the alarm in the corresponding
+  /// entry in the map expires.
+  void Expire(llvm::StringRef key);
+
+  /// Entry used for bookkeeping.
+  struct Entry {
+    /// Reference count used for overlapping events.
+    uint64_t refcount = 0;
+
+    /// Data used to emit progress events.
+    Progress::ProgressData data;
+
+    /// Alarm handle used when the refcount reaches zero.
+    Alarm::Handle handle = Alarm::INVALID_HANDLE;
+  };
+
+  /// Map used for bookkeeping.
+  llvm::StringMap<Entry> m_entries;
+
+  /// Mutex to provide the map.
+  std::mutex m_entries_mutex;
+
+  /// Alarm instance to coalesce progress events.
+  Alarm m_alarm;
 };
 
 } // namespace lldb_private

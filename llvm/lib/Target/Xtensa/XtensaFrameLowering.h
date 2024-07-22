@@ -14,10 +14,15 @@
 namespace llvm {
 class XtensaTargetMachine;
 class XtensaSubtarget;
+class XtensaInstrInfo;
+class XtensaRegisterInfo;
 
 class XtensaFrameLowering : public TargetFrameLowering {
+  const XtensaInstrInfo &TII;
+  const XtensaRegisterInfo *TRI;
+
 public:
-  XtensaFrameLowering();
+  XtensaFrameLowering(const XtensaSubtarget &STI);
 
   bool hasFP(const MachineFunction &MF) const override;
 
@@ -25,6 +30,26 @@ public:
   /// the function.
   void emitPrologue(MachineFunction &, MachineBasicBlock &) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
+
+  MachineBasicBlock::iterator
+  eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator I) const override;
+
+  bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator MI,
+                                 ArrayRef<CalleeSavedInfo> CSI,
+                                 const TargetRegisterInfo *TRI) const override;
+  bool
+  restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI,
+                              MutableArrayRef<CalleeSavedInfo> CSI,
+                              const TargetRegisterInfo *TRI) const override;
+
+  void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
+                            RegScavenger *RS) const override;
+
+  void processFunctionBeforeFrameFinalized(MachineFunction &MF,
+                                           RegScavenger *RS) const override;
 };
 
 } // namespace llvm
