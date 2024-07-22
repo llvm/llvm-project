@@ -592,7 +592,8 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
     // input order).
     sortByPositionThenCommandLine(sizeAfterPrevSort, ret.size());
   } else {
-    SectionClassDesc *scd = script->sectionClasses.lookup(cmd->classRef);
+    SectionClassDesc *scd =
+        script->sectionClasses.lookup(CachedHashStringRef(cmd->classRef));
     if (!scd) {
       errorOrWarn("undefined section class '" + cmd->classRef + "'");
       return ret;
@@ -758,8 +759,9 @@ void LinkerScript::processSectionCommands() {
         isd->sectionBases =
             computeInputSections(isd, ctx.inputSections, sc->sc);
         for (InputSectionBase *s : isd->sectionBases) {
-          // Section classes with --enable-non-contiguous-regions may contain
-          // parented classes; spills for these are generated on reference.
+          // A section class containing a section with different parent isn't
+          // necessarily an error due to --enable-non-contiguous-regions. Such
+          // sections all become potential spills when the class is referenced.
           if (!s->parent)
             s->parent = &sc->sc;
         }
@@ -833,8 +835,8 @@ void LinkerScript::processSymbolAssignments() {
   for (SectionCommand *cmd : sectionCommands) {
     if (auto *assign = dyn_cast<SymbolAssignment>(cmd))
       addSymbol(assign);
-    else if (auto *od = dyn_cast<OutputDesc>(cmd))
-      for (SectionCommand *subCmd : od->osec.commands)
+    else if (auto *osd = dyn_cast<OutputDesc>(cmd))
+      for (SectionCommand *subCmd : osd->osec.commands)
         if (auto *assign = dyn_cast<SymbolAssignment>(subCmd))
           addSymbol(assign);
   }
@@ -1531,10 +1533,10 @@ bool LinkerScript::spillSections() {
 
   bool spilled = false;
   for (SectionCommand *cmd : reverse(sectionCommands)) {
-    auto *od = dyn_cast<OutputDesc>(cmd);
-    if (!od)
+    auto *osd = dyn_cast<OutputDesc>(cmd);
+    if (!osd)
       continue;
-    OutputSection *osec = &od->osec;
+    OutputSection *osec = &osd->osec;
     if (!osec->memRegion)
       continue;
 

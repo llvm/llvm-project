@@ -143,9 +143,9 @@ struct OutputDesc final : SectionCommand {
   }
 };
 
-// A list of input sections that can be referenced in output descriptions.
-// Multiple references allow sections to spill from one output section to the
-// next.
+// This represents a CLASS(class_name) { ... } that can be referenced by output
+// section descriptions. If referenced more than once, the sections can be
+// spilled to the next reference like --enable-non-contiguous-regions.
 struct SectionClass final : public SectionBase {
   SmallVector<InputSectionDescription *, 0> commands;
   bool assigned = false;

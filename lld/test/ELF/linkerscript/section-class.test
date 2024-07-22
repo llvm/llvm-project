@@ -32,7 +32,7 @@
 
 #--- matching.lds
 ## CLASS definitions match sections in linker script order. The sections may be
-## placed in a different order. Classes may derive from one another. Class # #
+## placed in a different order. Classes may derive from one another. Class
 ## references can be restricted by INPUT_SECTION_FLAGS. Classes can be referenced
 ## in /DISCARD/ and INSERT.
 SECTIONS {
@@ -40,30 +40,29 @@ SECTIONS {
   CLASS(cd) { *(.rodata.c) *(.rodata.d) }
   CLASS(ef) { *(SORT_BY_ALIGNMENT(.rodata.e .rodata.f)) }
   CLASS(g) { *(.rodata.g) }
-  CLASS(h) { *(.rodata.h) }
+  CLASS("h)") { *(.rodata.h) }
   .rodata : {
     *(.rodata.*)
     INPUT_SECTION_FLAGS(SHF_EXECINSTR) CLASS( cd)
-    CLASS(a)
-    CLASS(ef )
+    CLASS(a)CLASS(ef )
   }
   OVERLAY : { .rodata.d { INPUT_SECTION_FLAGS(!SHF_EXECINSTR) CLASS(cd) } }
   /DISCARD/ : { CLASS(g) }
 }
 
 SECTIONS {
-  .rodata.h : { CLASS(h) }
+  .rodata.h : { CLASS("h)") }
 } INSERT AFTER .rodata;
 
 # RUN: ld.lld -T matching.lds matching.o -o matching
-# RUN: llvm-readobj -x .rodata -x .rodata.d -x .rodata.h matching |\
+# RUN: llvm-objdump -s matching |\
 # RUN:   FileCheck %s --check-prefix=MATCHING
 # MATCHING:      .rodata
-# MATCHING-NEXT: 020301cc 0605
+# MATCHING-NEXT: 020301cc 0605 ......{{$}}
 # MATCHING:      .rodata.h
-# MATCHING-NEXT: 08
+# MATCHING-NEXT: 08 .{{$}}
 # MATCHING:      .rodata.d
-# MATCHING-NEXT: 04
+# MATCHING-NEXT: 04 .{{$}}
 
 #--- already-defined.lds
 ## A section class has more than one description.
@@ -79,16 +78,23 @@ SECTIONS {
 
 # ALREADY-DEFINED: error: already-defined.lds:4: section class 'a' already defined
 
-#--- missing-filename-pattern.lds
+#--- missing-filename-pattern-1.lds
 ## A filename pattern is missing in a section class description.
 SECTIONS {
   CLASS(a) { (.rodata.a) }
 }
+#--- missing-filename-pattern-2.lds
+## A filename pattern is missing in a section class description.
+SECTIONS {
+  CLASS(a) { .rodata.a) }
+}
 
-# RUN: not ld.lld -T missing-filename-pattern.lds matching.o 2>&1 | \
+# RUN: not ld.lld -T missing-filename-pattern-1.lds matching.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=MISSING-FILENAME-PATTERN --implicit-check-not=error:
+# RUN: not ld.lld -T missing-filename-pattern-2.lds matching.o 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=MISSING-FILENAME-PATTERN --implicit-check-not=error:
 
-# MISSING-FILENAME-PATTERN: error: missing-filename-pattern.lds:3: expected filename pattern
+# MISSING-FILENAME-PATTERN: error: missing-filename-pattern-{{[1-2]}}.lds:3: expected filename pattern
 
 #--- multiple-class-names.lds
 ## More than one class is mentioned in a reference.
@@ -102,6 +108,17 @@ SECTIONS {
 # RUN:   FileCheck %s --check-prefix=MULTIPLE-CLASS-NAMES --implicit-check-not=error:
 
 # MULTIPLE-CLASS-NAMES: error: multiple-class-names.lds:5: ) expected, but got b
+
+#--- undefined.lds
+## A section class is referenced but never defined
+SECTIONS {
+  .rodata : { CLASS(a) }
+}
+
+# RUN: not ld.lld -T undefined.lds matching.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=UNDEFINED --implicit-check-not=error:
+
+# UNDEFINED: error: undefined section class 'a'
 
 #--- referenced-before-defined.lds
 ## The content of section classes is demanded before its definition is processed.
@@ -119,8 +136,7 @@ SECTIONS {
 # REFERENCED-BEFORE-DEFINED-WARN: warning: section class 'a' referenced by '.rodata' before class definition
 
 #--- unreferenced.lds
-## An input section is bound to a section class but is not referenced by at
-## least one output section.
+## An input section is bound to a section class but is not referenced.
 SECTIONS {
   CLASS(a) { *(.rodata.*) }
 }
@@ -362,9 +378,9 @@ SECTIONS {
 }
 
 # RUN: ld.lld -T link-order.lds link-order.o -o link-order
-# RUN: llvm-readobj -x .order link-order | FileCheck %s --check-prefix=LINK-ORDER
+# RUN: llvm-objdump -s link-order | FileCheck %s --check-prefix=LINK-ORDER
 
-# LINK-ORDER: 020301
+# LINK-ORDER: 020301 ...{{$}}
 
 #--- from-insert.lds
 ## A section might spill from INSERT.

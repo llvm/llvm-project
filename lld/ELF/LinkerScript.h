@@ -81,7 +81,7 @@ enum SectionsCommandKind {
   OutputSectionKind,
   InputSectionKind,
   ByteKind, // BYTE(expr), SHORT(expr), LONG(expr) or QUAD(expr)
-  ClassKind,
+  ClassKind, // CLASS(class_name)
 };
 
 struct SectionCommand {
@@ -203,7 +203,7 @@ public:
   InputSectionDescription(StringRef filePattern, uint64_t withFlags = 0,
                           uint64_t withoutFlags = 0, StringRef classRef = {})
       : SectionCommand(InputSectionKind), filePat(filePattern),
-        withFlags(withFlags), withoutFlags(withoutFlags), classRef(classRef) {
+        classRef(classRef), withFlags(withFlags), withoutFlags(withoutFlags) {
     assert((filePattern.empty() || classRef.empty()) &&
            "file pattern and class reference are mutually exclusive");
   }
@@ -217,6 +217,10 @@ public:
   // Input sections that matches at least one of SectionPatterns
   // will be associated with this InputSectionDescription.
   SmallVector<SectionPattern, 0> sectionPatterns;
+
+  // If present, input section matching uses class membership instead of file
+  // and section patterns (mutually exclusive).
+  StringRef classRef;
 
   // Includes InputSections and MergeInputSections. Used temporarily during
   // assignment of input sections to output sections.
@@ -234,10 +238,6 @@ public:
   // SectionPatterns can be filtered with the INPUT_SECTION_FLAGS command.
   uint64_t withFlags;
   uint64_t withoutFlags;
-
-  // If present, input section matching uses class membership instead of file
-  // and section patterns (mutually exclusive).
-  StringRef classRef;
 };
 
 // Represents BYTE(), SHORT(), LONG(), or QUAD().
@@ -442,7 +442,7 @@ public:
   // Named lists of input sections that can be collectively referenced in output
   // section descriptions. Multiple references allow for sections to spill from
   // one output section to another.
-  llvm::StringMap<SectionClassDesc *> sectionClasses;
+  llvm::DenseMap<llvm::CachedHashStringRef, SectionClassDesc *> sectionClasses;
 };
 
 struct ScriptWrapper {
