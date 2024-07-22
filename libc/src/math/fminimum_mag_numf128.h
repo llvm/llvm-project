@@ -10,13 +10,12 @@
 #ifndef LLVM_LIBC_SRC_MATH_FMINIMUM_MAG_NUMF128_H
 #define LLVM_LIBC_SRC_MATH_FMINIMUM_MAG_NUMF128_H
 
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 float128 fminimum_mag_numf128(float128 x, float128 y);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_FMINIMUM_MAG_NUMF128_H

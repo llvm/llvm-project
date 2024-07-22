@@ -8,10 +8,9 @@
 
 #include "src/time/mktime.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/time/time_utils.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 using LIBC_NAMESPACE::time_utils::TimeConstants;
 
@@ -113,4 +112,4 @@ LLVM_LIBC_FUNCTION(time_t, mktime, (struct tm * tm_out)) {
   return static_cast<time_t>(seconds);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

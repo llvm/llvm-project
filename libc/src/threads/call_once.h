@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_THREADS_CALL_ONCE_H
 #define LLVM_LIBC_SRC_THREADS_CALL_ONCE_H
 
-#include "src/__support/macros/config.h"
 #include <threads.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 void call_once(once_flag *flag, __call_once_func_t func);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_THREADS_CALL_ONCE_H

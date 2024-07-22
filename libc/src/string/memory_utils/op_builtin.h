@@ -16,11 +16,9 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_BUILTIN_H
 
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/utils.h"
 
-namespace LIBC_NAMESPACE_DECL {
-namespace builtin {
+namespace LIBC_NAMESPACE::builtin {
 
 ///////////////////////////////////////////////////////////////////////////////
 // Memcpy
@@ -153,7 +151,6 @@ template <size_t Size> struct Memcmp {
   }
 };
 
-} // namespace builtin
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE::builtin
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_BUILTIN_H

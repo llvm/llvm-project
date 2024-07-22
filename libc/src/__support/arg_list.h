@@ -10,13 +10,12 @@
 #define LLVM_LIBC_SRC___SUPPORT_ARG_LIST_H
 
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 class ArgList {
@@ -100,6 +99,6 @@ public:
 };
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_ARG_LIST_H

@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_STRING_BZERO_H
 #define LLVM_LIBC_SRC_STRING_BZERO_H
 
-#include "src/__support/macros/config.h"
 #include <stddef.h> // size_t
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 void bzero(void *ptr, size_t count);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_BZERO_H
