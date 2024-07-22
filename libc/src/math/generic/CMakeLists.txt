@@ -399,7 +399,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
   FLAGS
     MISC_MATH_BASIC_OPS_OPT
 )
@@ -413,7 +413,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
   FLAGS
     MISC_MATH_BASIC_OPS_OPT
 )
@@ -427,7 +427,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
