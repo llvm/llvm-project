@@ -119,7 +119,7 @@
 // ANNOTATE: !{!"VP", i32 2
 
 // When vtable value profiles exist, pgo-instr-use pass will not annotate them
-// if `-max-num-vtable-annotaitons` is set to zero.
+// if `-icp-max-num-vtables` is set to zero.
 // RUN: %clangxx -m64 -fprofile-use=test.profdata -fuse-ld=lld -O2 \
 // RUN:   -mllvm -icp-max-num-vtables=0 -mllvm -print-after=pgo-instr-use \
 // RUN:   -mllvm -filter-print-funcs=main -mllvm -print-module-scope %s 2>&1 | \

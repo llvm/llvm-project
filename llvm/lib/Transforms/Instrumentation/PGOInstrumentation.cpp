@@ -1768,6 +1768,7 @@ void PGOUseFunc::annotateValueSites(uint32_t Kind) {
   // indirect call sites into account so it doesn't hash the number of
   // instrumented vtables; as a side effect it makes it easier to enable
   // profiling and profile use in two steps if needed.
+  // TODO: Remove this if/when -enable-vtable-value-profiling is on by default.
   if (NumValueSites > 0 && Kind == IPVK_VTableTarget &&
       NumValueSites != FuncInfo.ValueSites[IPVK_VTableTarget].size() &&
       MaxNumVTableAnnotations != 0)
