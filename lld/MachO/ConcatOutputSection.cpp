@@ -128,7 +128,7 @@ bool TextOutputSection::needsThunks() const {
   for (ConcatInputSection *isec : inputs)
     isecAddr = alignToPowerOf2(isecAddr, isec->align) + isec->getSize();
   // Other sections besides __text might be small enough to pass this
-  // test but nevertheless need thunks for calling into oher sections.
+  // test but nevertheless need thunks for calling into ohter sections.
   // An imperfect heuristic to use in this case is that if a section
   // we've already processed in this segment needs thunks, so do the
   // rest.

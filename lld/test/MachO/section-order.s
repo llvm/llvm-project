@@ -1,3 +1,4 @@
+# REQUIRES: x86
 ## Check that section ordering follows from input file ordering.
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/1.s -o %t/1.o
