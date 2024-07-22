@@ -1326,6 +1326,10 @@ Crash and bug fixes
 - Z3 crosschecking (aka. Z3 refutation) is now bounded, and can't consume
   more total time than the eymbolic execution itself. (#GH97298)
 
+- ``std::addressof``, ``std::as_const``, ``std::forward``,
+  ``std::forward_like``, ``std::move``, ``std::move_if_noexcept``, are now
+  modeled just like their builtin counterpart. (#GH94193)
+
 Improvements
 ^^^^^^^^^^^^
 
