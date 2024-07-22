@@ -5886,9 +5886,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
   // If the current function is a virtual function pointer thunk, avoid copying
   // the return value of the musttail call to a temporary.
-  if (IsVirtualFunctionPointerThunk)
+  if (IsVirtualFunctionPointerThunk) {
     Ret = RValue::get(CI);
-  else
+  } else {
     Ret = [&] {
       switch (RetAI.getKind()) {
       case ABIArgInfo::CoerceAndExpand: {
@@ -6006,6 +6006,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
       llvm_unreachable("Unhandled ABIArgInfo::Kind");
     }();
+  }
 
   // Emit the assume_aligned check on the return value.
   if (Ret.isScalar() && TargetDecl) {

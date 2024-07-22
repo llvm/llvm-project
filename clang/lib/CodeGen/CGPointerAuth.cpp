@@ -367,7 +367,7 @@ llvm::Constant *CodeGenModule::getFunctionPointer(GlobalDecl GD,
 
 CGPointerAuthInfo CodeGenModule::getMemberFunctionPointerAuthInfo(QualType FT) {
   assert(FT->getAs<MemberPointerType>() && "MemberPointerType expected");
-  auto &Schema = getCodeGenOpts().PointerAuth.CXXMemberFunctionPointers;
+  const auto &Schema = getCodeGenOpts().PointerAuth.CXXMemberFunctionPointers;
   if (!Schema)
     return CGPointerAuthInfo();
 

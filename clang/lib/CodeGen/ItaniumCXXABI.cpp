@@ -881,7 +881,7 @@ llvm::Value *ItaniumCXXABI::EmitMemberDataPointerAddress(
 static llvm::Constant *pointerAuthResignConstant(
     llvm::Value *Ptr, const CGPointerAuthInfo &CurAuthInfo,
     const CGPointerAuthInfo &NewAuthInfo, CodeGenModule &CGM) {
-  auto *CPA = dyn_cast<llvm::ConstantPtrAuth>(Ptr);
+  const auto *CPA = dyn_cast<llvm::ConstantPtrAuth>(Ptr);
 
   if (!CPA)
     return nullptr;
