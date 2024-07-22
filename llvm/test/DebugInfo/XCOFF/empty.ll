@@ -79,7 +79,7 @@ entry:
 ; ASM32-NEXT:                                          # -- End function
 ; ASM32-NEXT:  L..sec_end0:
 ; ASM32:               .dwsect 0x60000
-; ASM32-NEXT:  L...dwabrev:
+; ASM32-NEXT:  .dwabrev:
 ; ASM32-NEXT:          .byte   1                               # Abbreviation Code
 ; ASM32-NEXT:          .byte   17                              # DW_TAG_compile_unit
 ; ASM32-NEXT:          .byte   1                               # DW_CHILDREN_yes
@@ -135,10 +135,10 @@ entry:
 ; ASM32-NEXT:          .byte   0                               # EOM(2)
 ; ASM32-NEXT:          .byte   0                               # EOM(3)
 ; ASM32:               .dwsect 0x10000
-; ASM32-NEXT:  L...dwinfo:
+; ASM32-NEXT:  .dwinfo:
 ; ASM32-NEXT:  L..cu_begin0:
 ; ASM32-NEXT:          .vbyte  2, 4                            # DWARF version number
-; ASM32-NEXT:          .vbyte  4, L...dwabrev                  # Offset Into Abbrev. Section
+; ASM32-NEXT:          .vbyte  4, .dwabrev                  # Offset Into Abbrev. Section
 ; ASM32-NEXT:          .byte   4                               # Address Size (in bytes)
 ; ASM32-NEXT:          .byte   1                               # Abbrev [1] 0xb:0x38 DW_TAG_compile_unit
 ; ASM32-NEXT:          .vbyte  4, L..info_string0              # DW_AT_producer
@@ -166,7 +166,7 @@ entry:
 ; ASM32-NEXT:          .byte   0                               # End Of Children Mark
 ; ASM32-NEXT:  L..debug_info_end0:
 ; ASM32:               .dwsect 0x70000
-; ASM32-NEXT:  L...dwstr:
+; ASM32-NEXT:  .dwstr:
 ; ASM32-NEXT:  L..info_string0:
 ; ASM32-NEXT:          .string "clang version 12.0.0"          # string offset=0
 ; ASM32-NEXT:  L..info_string1:
@@ -179,7 +179,7 @@ entry:
 ; ASM32-NEXT:          .string "int"                           # string offset=36
 ; ASM32-NEXT:          .toc
 ; ASM32:               .dwsect 0x20000
-; ASM32-NEXT:  L...dwline:
+; ASM32-NEXT:  .dwline:
 ; ASM32-NEXT:  L..debug_line_0:
 ; ASM32-NEXT:  .set L..line_table_start0, L..debug_line_0-4
 ; ASM32-NEXT:          .vbyte  2, 4
@@ -281,7 +281,7 @@ entry:
 ; ASM64-NEXT:                                          # -- End function
 ; ASM64-NEXT:  L..sec_end0:
 ; ASM64:               .dwsect 0x60000
-; ASM64-NEXT:  L...dwabrev:
+; ASM64-NEXT:  .dwabrev:
 ; ASM64-NEXT:          .byte   1                               # Abbreviation Code
 ; ASM64-NEXT:          .byte   17                              # DW_TAG_compile_unit
 ; ASM64-NEXT:          .byte   1                               # DW_CHILDREN_yes
@@ -337,10 +337,10 @@ entry:
 ; ASM64-NEXT:          .byte   0                               # EOM(2)
 ; ASM64-NEXT:          .byte   0                               # EOM(3)
 ; ASM64:               .dwsect 0x10000
-; ASM64-NEXT:  L...dwinfo:
+; ASM64-NEXT:  .dwinfo:
 ; ASM64-NEXT:  L..cu_begin0:
 ; ASM64-NEXT:          .vbyte  2, 4                            # DWARF version number
-; ASM64-NEXT:          .vbyte  8, L...dwabrev                  # Offset Into Abbrev. Section
+; ASM64-NEXT:          .vbyte  8, .dwabrev                  # Offset Into Abbrev. Section
 ; ASM64-NEXT:          .byte   8                               # Address Size (in bytes)
 ; ASM64-NEXT:          .byte   1                               # Abbrev [1] 0x17:0x58 DW_TAG_compile_unit
 ; ASM64-NEXT:          .vbyte  8, L..info_string0              # DW_AT_producer
@@ -368,7 +368,7 @@ entry:
 ; ASM64-NEXT:          .byte   0                               # End Of Children Mark
 ; ASM64-NEXT:  L..debug_info_end0:
 ; ASM64:               .dwsect 0x70000
-; ASM64-NEXT:  L...dwstr:
+; ASM64-NEXT:  .dwstr:
 ; ASM64-NEXT:  L..info_string0:
 ; ASM64-NEXT:          .string "clang version 12.0.0"          # string offset=0
 ; ASM64-NEXT:  L..info_string1:
@@ -381,7 +381,7 @@ entry:
 ; ASM64-NEXT:          .string "int"                           # string offset=36
 ; ASM64-NEXT:         .toc
 ; ASM64:               .dwsect 0x20000
-; ASM64-NEXT:  L...dwline:
+; ASM64-NEXT:  .dwline:
 ; ASM64-NEXT:  L..debug_line_0:
 ; ASM64-NEXT:  .set L..line_table_start0, L..debug_line_0-12
 ; ASM64-NEXT:          .vbyte  2, 4
