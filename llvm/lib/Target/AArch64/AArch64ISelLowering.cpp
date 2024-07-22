@@ -27640,20 +27640,6 @@ SDValue AArch64TargetLowering::LowerReductionToSVE(unsigned Opcode,
     VecOp = convertToScalableVector(DAG, ContainerVT, VecOp);
   }
 
-  // Lower VECREDUCE_ADD of nxv2i1-nxv16i1 to CNTP rather than UADDV.
-  if (ScalarOp.getOpcode() == ISD::VECREDUCE_ADD &&
-      VecOp.getOpcode() == ISD::ZERO_EXTEND) {
-    SDValue BoolVec = VecOp.getOperand(0);
-    if (BoolVec.getValueType().getVectorElementType() == MVT::i1) {
-      // CNTP(BoolVec & BoolVec) <=> CNTP(BoolVec & PTRUE)
-      SDValue CntpOp = DAG.getNode(
-          ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
-          DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64),
-          BoolVec, BoolVec);
-      return DAG.getAnyExtOrTrunc(CntpOp, DL, ScalarOp.getValueType());
-    }
-  }
-
   // UADDV always returns an i64 result.
   EVT ResVT = (Opcode == AArch64ISD::UADDV_PRED) ? MVT::i64 :
                                                    SrcVT.getVectorElementType();
