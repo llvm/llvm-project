@@ -3344,6 +3344,10 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
         *this, /*PointOfInstantiation=*/TemplateLoc,
         /*Entity=*/AliasTemplate,
         /*TemplateArgs=*/TemplateArgLists.getInnermost());
+
+    // Diagnose uses of this alias.
+    (void)DiagnoseUseOfDecl(AliasTemplate, TemplateLoc);
+
     if (Inst.isInvalid())
       return QualType();
 
