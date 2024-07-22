@@ -10754,6 +10754,15 @@ SDValue AArch64TargetLowering::LowerBR_JT(SDValue Op,
 }
 
 SDValue AArch64TargetLowering::LowerBRIND(SDValue Op, SelectionDAG &DAG) const {
+  SDValue Chain = Op.getOperand(0);
+  SDValue Dest = Op.getOperand(1);
+
+  // BR_JT is lowered to BRIND, but the later lowering is specific to indirectbr
+  // Skip over the jump-table BRINDs, where the destination is JumpTableDest32.
+  if (Dest->isMachineOpcode() &&
+      Dest->getMachineOpcode() == AArch64::JumpTableDest32)
+    return SDValue();
+
   const MachineFunction &MF = DAG.getMachineFunction();
   std::optional<uint16_t> BADisc =
       Subtarget->getPtrAuthBlockAddressDiscriminatorIfEnabled(MF.getFunction());
@@ -10761,8 +10770,6 @@ SDValue AArch64TargetLowering::LowerBRIND(SDValue Op, SelectionDAG &DAG) const {
     return SDValue();
 
   SDLoc DL(Op);
-  SDValue Chain = Op.getOperand(0);
-  SDValue Dest = Op.getOperand(1);
 
   SDValue Disc = DAG.getTargetConstant(*BADisc, DL, MVT::i64);
   SDValue Key = DAG.getTargetConstant(AArch64PACKey::IA, DL, MVT::i32);
