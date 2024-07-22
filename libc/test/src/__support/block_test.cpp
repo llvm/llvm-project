@@ -8,6 +8,7 @@
 #include <stddef.h>
 
 #include "src/__support/CPP/array.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/block.h"
 #include "src/string/memcpy.h"
@@ -36,6 +37,7 @@ using SmallOffsetBlock = LIBC_NAMESPACE::Block<uint16_t>;
   template <typename BlockType> void LlvmLibcBlockTest##TestCase::RunTest()
 
 using LIBC_NAMESPACE::cpp::array;
+using LIBC_NAMESPACE::cpp::bit_ceil;
 using LIBC_NAMESPACE::cpp::byte;
 using LIBC_NAMESPACE::cpp::span;
 
@@ -566,4 +568,199 @@ TEST_FOR_EACH_BLOCK_TYPE(CanGetConstBlockFromUsableSpace) {
   const void *ptr = block1->usable_space();
   const BlockType *block2 = BlockType::from_usable_space(ptr);
   EXPECT_EQ(block1, block2);
+}
+
+TEST_FOR_EACH_BLOCK_TYPE(CanAllocate) {
+  constexpr size_t kN = 1024;
+
+  // Ensure we can allocate everything up to the block size within this block.
+  for (size_t i = 0; i < kN - BlockType::BLOCK_OVERHEAD; ++i) {
+    alignas(BlockType::ALIGNMENT) array<byte, kN> bytes{};
+    auto result = BlockType::init(bytes);
+    ASSERT_TRUE(result.has_value());
+    BlockType *block = *result;
+
+    constexpr size_t ALIGN = 1; // Effectively ignores alignment.
+    EXPECT_TRUE(block->can_allocate(ALIGN, i));
+
+    // For each can_allocate, we should be able to do a successful call to
+    // allocate.
+    auto info = BlockType::allocate(block, ALIGN, i);
+    EXPECT_NE(info.block, static_cast<BlockType *>(nullptr));
+  }
+
+  alignas(BlockType::ALIGNMENT) array<byte, kN> bytes{};
+  auto result = BlockType::init(bytes);
+  ASSERT_TRUE(result.has_value());
+  BlockType *block = *result;
+
+  // Given a block of size kN (assuming it's also a power of two), we should be
+  // able to allocate a block within it that's aligned to half its size. This is
+  // because regardless of where the buffer is located, we can always find a
+  // starting location within it that meets this alignment.
+  EXPECT_TRUE(block->can_allocate(kN / 2, 1));
+  auto info = BlockType::allocate(block, kN / 2, 1);
+  EXPECT_NE(info.block, static_cast<BlockType *>(nullptr));
+}
+
+TEST_FOR_EACH_BLOCK_TYPE(AllocateAlreadyAligned) {
+  constexpr size_t kN = 1024;
+
+  alignas(BlockType::ALIGNMENT) array<byte, kN> bytes{};
+  auto result = BlockType::init(bytes);
+  ASSERT_TRUE(result.has_value());
+  BlockType *block = *result;
+
+  // This should result in no new blocks.
+  constexpr size_t kAlignment = BlockType::ALIGNMENT;
+  constexpr size_t kExpectedSize = BlockType::ALIGNMENT;
+  EXPECT_TRUE(block->can_allocate(kAlignment, kExpectedSize));
+
+  auto [aligned_block, prev, next] =
+      BlockType::allocate(block, BlockType::ALIGNMENT, kExpectedSize);
+
+  // Since this is already aligned, there should be no previous block.
+  EXPECT_EQ(prev, static_cast<BlockType *>(nullptr));
+
+  // Ensure we the block is aligned and the size we expect.
+  EXPECT_NE(aligned_block, static_cast<BlockType *>(nullptr));
+  EXPECT_TRUE(aligned_block->is_usable_space_aligned(BlockType::ALIGNMENT));
+  EXPECT_EQ(aligned_block->inner_size(), kExpectedSize);
+
+  // Check the next block.
+  EXPECT_NE(next, static_cast<BlockType *>(nullptr));
+  EXPECT_EQ(aligned_block->next(), next);
+  EXPECT_EQ(next->next(), static_cast<BlockType *>(nullptr));
+  EXPECT_EQ(reinterpret_cast<byte *>(next) + next->outer_size(),
+            bytes.data() + bytes.size());
+}
+
+TEST_FOR_EACH_BLOCK_TYPE(AllocateNeedsAlignment) {
+  constexpr size_t kN = 1024;
+
+  alignas(kN) array<byte, kN> bytes{};
+  auto result = BlockType::init(bytes);
+  ASSERT_TRUE(result.has_value());
+  BlockType *block = *result;
+
+  // Ensure first the usable_data is only aligned to the block alignment.
+  ASSERT_EQ(block->usable_space(), bytes.data() + BlockType::BLOCK_OVERHEAD);
+  ASSERT_EQ(block->prev(), static_cast<BlockType *>(nullptr));
+
+  // Now pick an alignment such that the usable space is not already aligned to
+  // it. We want to explicitly test that the block will split into one before
+  // it.
+  constexpr size_t kAlignment = bit_ceil(BlockType::BLOCK_OVERHEAD) * 8;
+  ASSERT_FALSE(block->is_usable_space_aligned(kAlignment));
+
+  constexpr size_t kSize = 10;
+  EXPECT_TRUE(block->can_allocate(kAlignment, kSize));
+
+  auto [aligned_block, prev, next] =
+      BlockType::allocate(block, kAlignment, kSize);
+
+  // Check the previous block was created appropriately. Since this block is the
+  // first block, a new one should be made before this.
+  EXPECT_NE(prev, static_cast<BlockType *>(nullptr));
+  EXPECT_EQ(aligned_block->prev(), prev);
+  EXPECT_EQ(prev->next(), aligned_block);
+  EXPECT_EQ(prev->outer_size(), reinterpret_cast<uintptr_t>(aligned_block) -
+                                    reinterpret_cast<uintptr_t>(prev));
+
+  // Ensure we the block is aligned and the size we expect.
+  EXPECT_NE(next, static_cast<BlockType *>(nullptr));
+  EXPECT_TRUE(aligned_block->is_usable_space_aligned(kAlignment));
+
+  // Check the next block.
+  EXPECT_NE(next, static_cast<BlockType *>(nullptr));
+  EXPECT_EQ(aligned_block->next(), next);
+  EXPECT_EQ(next->next(), static_cast<BlockType *>(nullptr));
+  EXPECT_EQ(reinterpret_cast<byte *>(next) + next->outer_size(), &*bytes.end());
+}
+
+TEST_FOR_EACH_BLOCK_TYPE(PreviousBlockMergedIfNotFirst) {
+  constexpr size_t kN = 1024;
+
+  alignas(kN) array<byte, kN> bytes{};
+  auto result = BlockType::init(bytes);
+  ASSERT_TRUE(result.has_value());
+  BlockType *block = *result;
+
+  // Split the block roughly halfway and work on the second half.
+  auto result2 = BlockType::split(block, kN / 2);
+  ASSERT_TRUE(result2.has_value());
+  BlockType *newblock = *result2;
+  ASSERT_EQ(newblock->prev(), block);
+  size_t old_prev_size = block->outer_size();
+
+  // Now pick an alignment such that the usable space is not already aligned to
+  // it. We want to explicitly test that the block will split into one before
+  // it.
+  constexpr size_t kAlignment = bit_ceil(BlockType::BLOCK_OVERHEAD) * 8;
+  ASSERT_FALSE(newblock->is_usable_space_aligned(kAlignment));
+
+  // Ensure we can allocate in the new block.
+  constexpr size_t kSize = BlockType::ALIGNMENT;
+  EXPECT_TRUE(newblock->can_allocate(kAlignment, kSize));
+
+  auto [aligned_block, prev, next] =
+      BlockType::allocate(newblock, kAlignment, kSize);
+
+  // Now there should be no new previous block. Instead, the padding we did
+  // create should be merged into the original previous block.
+  EXPECT_EQ(prev, static_cast<BlockType *>(nullptr));
+  EXPECT_EQ(aligned_block->prev(), block);
+  EXPECT_EQ(block->next(), aligned_block);
+  EXPECT_GT(block->outer_size(), old_prev_size);
+}
+
+TEST_FOR_EACH_BLOCK_TYPE(CanRemergeBlockAllocations) {
+  // Finally to ensure we made the split blocks correctly via allocate. We
+  // should be able to reconstruct the original block from the blocklets.
+  //
+  // This is the same setup as with the `AllocateNeedsAlignment` test case.
+  constexpr size_t kN = 1024;
+
+  alignas(kN) array<byte, kN> bytes{};
+  auto result = BlockType::init(bytes);
+  ASSERT_TRUE(result.has_value());
+  BlockType *block = *result;
+
+  // Ensure first the usable_data is only aligned to the block alignment.
+  ASSERT_EQ(block->usable_space(), bytes.data() + BlockType::BLOCK_OVERHEAD);
+  ASSERT_EQ(block->prev(), static_cast<BlockType *>(nullptr));
+
+  // Now pick an alignment such that the usable space is not already aligned to
+  // it. We want to explicitly test that the block will split into one before
+  // it.
+  constexpr size_t kAlignment = bit_ceil(BlockType::BLOCK_OVERHEAD) * 8;
+  ASSERT_FALSE(block->is_usable_space_aligned(kAlignment));
+
+  constexpr size_t kSize = BlockType::ALIGNMENT;
+  EXPECT_TRUE(block->can_allocate(kAlignment, kSize));
+
+  auto [aligned_block, prev, next] =
+      BlockType::allocate(block, kAlignment, kSize);
+
+  // Check we have the appropriate blocks.
+  ASSERT_NE(prev, static_cast<BlockType *>(nullptr));
+  ASSERT_FALSE(prev->last());
+  ASSERT_EQ(aligned_block->prev(), prev);
+  EXPECT_NE(next, static_cast<BlockType *>(nullptr));
+  EXPECT_NE(next, static_cast<BlockType *>(nullptr));
+  EXPECT_EQ(aligned_block->next(), next);
+  EXPECT_EQ(next->next(), static_cast<BlockType *>(nullptr));
+  ASSERT_TRUE(next->last());
+
+  // Now check for successful merges.
+  EXPECT_TRUE(BlockType::merge_next(prev));
+  EXPECT_EQ(prev->next(), next);
+  EXPECT_TRUE(BlockType::merge_next(prev));
+  EXPECT_EQ(prev->next(), static_cast<BlockType *>(nullptr));
+  EXPECT_TRUE(prev->last());
+
+  // We should have the original buffer.
+  EXPECT_EQ(reinterpret_cast<byte *>(prev), &*bytes.begin());
+  EXPECT_EQ(prev->outer_size(), bytes.size());
+  EXPECT_EQ(reinterpret_cast<byte *>(prev) + prev->outer_size(), &*bytes.end());
 }

@@ -13,7 +13,6 @@
 #include "LoongArchAsmBackend.h"
 #include "LoongArchFixupKinds.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
@@ -299,21 +298,21 @@ getRelocPairForSize(unsigned Size) {
   }
 }
 
-std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(MCLEBFragment &LF,
-                                                       MCAsmLayout &Layout,
+std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(const MCAssembler &Asm,
+                                                       MCLEBFragment &LF,
                                                        int64_t &Value) const {
   const MCExpr &Expr = LF.getValue();
-  if (LF.isSigned() || !Expr.evaluateKnownAbsolute(Value, Layout))
+  if (LF.isSigned() || !Expr.evaluateKnownAbsolute(Value, Asm))
     return std::make_pair(false, false);
   LF.getFixups().push_back(
       MCFixup::create(0, &Expr, FK_Data_leb128, Expr.getLoc()));
   return std::make_pair(true, true);
 }
 
-bool LoongArchAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
-                                             MCAsmLayout &Layout,
+bool LoongArchAsmBackend::relaxDwarfLineAddr(const MCAssembler &Asm,
+                                             MCDwarfLineAddrFragment &DF,
                                              bool &WasRelaxed) const {
-  MCContext &C = Layout.getAssembler().getContext();
+  MCContext &C = Asm.getContext();
 
   int64_t LineDelta = DF.getLineDelta();
   const MCExpr &AddrDelta = DF.getAddrDelta();
@@ -322,9 +321,9 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
   size_t OldSize = Data.size();
 
   int64_t Value;
-  if (AddrDelta.evaluateAsAbsolute(Value, Layout))
+  if (AddrDelta.evaluateAsAbsolute(Value, Asm))
     return false;
-  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Layout);
+  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Asm);
   assert(IsAbsolute && "CFA with invalid expression");
   (void)IsAbsolute;
 
@@ -378,8 +377,8 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
   return true;
 }
 
-bool LoongArchAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
-                                        MCAsmLayout &Layout,
+bool LoongArchAsmBackend::relaxDwarfCFA(const MCAssembler &Asm,
+                                        MCDwarfCallFrameFragment &DF,
                                         bool &WasRelaxed) const {
   const MCExpr &AddrDelta = DF.getAddrDelta();
   SmallVectorImpl<char> &Data = DF.getContents();
@@ -387,9 +386,9 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
   size_t OldSize = Data.size();
 
   int64_t Value;
-  if (AddrDelta.evaluateAsAbsolute(Value, Layout))
+  if (AddrDelta.evaluateAsAbsolute(Value, Asm))
     return false;
-  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Layout);
+  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Asm);
   assert(IsAbsolute && "CFA with invalid expression");
   (void)IsAbsolute;
 
@@ -397,10 +396,8 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
   Fixups.clear();
   raw_svector_ostream OS(Data);
 
-  assert(
-      Layout.getAssembler().getContext().getAsmInfo()->getMinInstAlignment() ==
-          1 &&
-      "expected 1-byte alignment");
+  assert(Asm.getContext().getAsmInfo()->getMinInstAlignment() == 1 &&
+         "expected 1-byte alignment");
   if (Value == 0) {
     WasRelaxed = OldSize != Data.size();
     return true;

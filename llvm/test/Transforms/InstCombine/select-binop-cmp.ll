@@ -571,7 +571,10 @@ define <2 x i8> @select_xor_icmp_vec_bad(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) 
 
 define <2 x i32> @vec_select_no_equivalence(<2 x i32> %x) {
 ; CHECK-LABEL: @vec_select_no_equivalence(
-; CHECK-NEXT:    ret <2 x i32> [[X:%.*]]
+; CHECK-NEXT:    [[X10:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq <2 x i32> [[X]], zeroinitializer
+; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[COND]], <2 x i32> [[X10]], <2 x i32> [[X]]
+; CHECK-NEXT:    ret <2 x i32> [[S]]
 ;
   %x10 = shufflevector <2 x i32> %x, <2 x i32> undef, <2 x i32> <i32 1, i32 0>
   %cond = icmp eq <2 x i32> %x, zeroinitializer
@@ -1308,6 +1311,19 @@ define i32 @select_replace_call_speculatable(i32 %x, i32 %y) {
 ;
   %c = icmp eq i32 %x, 0
   %call = call i32 @call_speculatable(i32 %x, i32 %x)
+  %s = select i1 %c, i32 %call, i32 %y
+  ret i32 %s
+}
+
+define i32 @select_replace_call_speculatable_intrinsic(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_replace_call_speculatable_intrinsic(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.smax.i32(i32 [[Y:%.*]], i32 0)
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[CALL]], i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %c = icmp eq i32 %x, 0
+  %call = call i32 @llvm.smax.i32(i32 %x, i32 %y)
   %s = select i1 %c, i32 %call, i32 %y
   ret i32 %s
 }

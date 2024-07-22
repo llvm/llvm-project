@@ -37,7 +37,7 @@ public:
   CallOpRewriter(mlir::MLIRContext *ctx, const mlir::DominanceInfo &_di)
       : OpRewritePattern(ctx), di(_di) {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::CallOp callOp,
                   mlir::PatternRewriter &rewriter) const override {
     LLVM_DEBUG(llvm::dbgs() << "Processing call op: " << callOp << "\n");

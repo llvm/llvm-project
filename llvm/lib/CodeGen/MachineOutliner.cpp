@@ -804,8 +804,7 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
     Mg.getNameWithPrefix(MangledNameStream, F, false);
 
     DISubprogram *OutlinedSP = DB.createFunction(
-        Unit /* Context */, F->getName(), StringRef(MangledNameStream.str()),
-        Unit /* File */,
+        Unit /* Context */, F->getName(), StringRef(Dummy), Unit /* File */,
         0 /* Line 0 is reserved for compiler-generated code. */,
         DB.createSubroutineType(
             DB.getOrCreateTypeArray(std::nullopt)), /* void type */

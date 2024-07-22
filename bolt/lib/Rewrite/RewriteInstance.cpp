@@ -40,7 +40,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCStreamer.h"
@@ -76,7 +75,6 @@ extern cl::opt<bool> X86AlignBranchWithin32BBoundaries;
 
 namespace opts {
 
-extern cl::opt<MacroFusionType> AlignMacroOpFusion;
 extern cl::list<std::string> HotTextMoveSections;
 extern cl::opt<bool> Hugify;
 extern cl::opt<bool> Instrument;
@@ -671,6 +669,7 @@ Error RewriteInstance::run() {
         opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML) {
       selectFunctionsToProcess();
       disassembleFunctions();
+      processMetadataPreCFG();
       buildFunctionsCFG();
     }
     processProfileData();
@@ -888,7 +887,7 @@ void RewriteInstance::discoverFileObjects() {
     if (SymName == "__hot_start" || SymName == "__hot_end")
       continue;
 
-    FileSymRefs[SymbolAddress] = Symbol;
+    FileSymRefs.emplace(SymbolAddress, Symbol);
 
     // Skip section symbols that will be registered by disassemblePLT().
     if (SymbolType == SymbolRef::ST_Debug) {
@@ -1054,7 +1053,9 @@ void RewriteInstance::discoverFileObjects() {
 
         // Remove the symbol from FileSymRefs so that we can skip it from
         // in the future.
-        auto SI = FileSymRefs.find(SymbolAddress);
+        auto SI = llvm::find_if(
+            llvm::make_range(FileSymRefs.equal_range(SymbolAddress)),
+            [&](auto SymIt) { return SymIt.second == Symbol; });
         assert(SI != FileSymRefs.end() && "symbol expected to be present");
         assert(SI->second == Symbol && "wrong symbol found");
         FileSymRefs.erase(SI);
@@ -1262,6 +1263,7 @@ void RewriteInstance::discoverFileObjects() {
 
   registerFragments();
   FileSymbols.clear();
+  FileSymRefs.clear();
 
   discoverBOLTReserved();
 }
@@ -1431,11 +1433,17 @@ void RewriteInstance::registerFragments() {
   // of the last local symbol.
   ELFSymbolRef LocalSymEnd = ELF64LEFile->toSymbolRef(SymTab, SymTab->sh_info);
 
-  for (auto &[ParentName, BF] : AmbiguousFragments) {
+  for (auto &Fragment : AmbiguousFragments) {
+    const StringRef &ParentName = Fragment.first;
+    BinaryFunction *BF = Fragment.second;
     const uint64_t Address = BF->getAddress();
 
     // Get fragment's own symbol
-    const auto SymIt = FileSymRefs.find(Address);
+    const auto SymIt = llvm::find_if(
+        llvm::make_range(FileSymRefs.equal_range(Address)), [&](auto SI) {
+          StringRef Name = cantFail(SI.second.getName());
+          return Name.contains(ParentName);
+        });
     if (SymIt == FileSymRefs.end()) {
       BC->errs()
           << "BOLT-ERROR: symbol lookup failed for function at address 0x"
@@ -1970,12 +1978,6 @@ void RewriteInstance::adjustCommandLineOptions() {
   if (RuntimeLibrary *RtLibrary = BC->getRuntimeLibrary())
     RtLibrary->adjustCommandLineOptions(*BC);
 
-  if (opts::AlignMacroOpFusion != MFT_NONE && !BC->isX86()) {
-    BC->outs()
-        << "BOLT-INFO: disabling -align-macro-fusion on non-x86 platform\n";
-    opts::AlignMacroOpFusion = MFT_NONE;
-  }
-
   if (BC->isX86() && BC->MAB->allowAutoPadding()) {
     if (!BC->HasRelocations) {
       BC->errs()
@@ -1986,13 +1988,6 @@ void RewriteInstance::adjustCommandLineOptions() {
     BC->outs()
         << "BOLT-WARNING: using mitigation for Intel JCC erratum, layout "
            "may take several minutes\n";
-    opts::AlignMacroOpFusion = MFT_NONE;
-  }
-
-  if (opts::AlignMacroOpFusion != MFT_NONE && !BC->HasRelocations) {
-    BC->outs() << "BOLT-INFO: disabling -align-macro-fusion in non-relocation "
-                  "mode\n";
-    opts::AlignMacroOpFusion = MFT_NONE;
   }
 
   if (opts::SplitEH && !BC->HasRelocations) {
@@ -2012,14 +2007,6 @@ void RewriteInstance::adjustCommandLineOptions() {
     BC->outs() << "BOLT-INFO: enabling strict relocation mode for aggregation "
                   "purposes\n";
     opts::StrictMode = true;
-  }
-
-  if (BC->isX86() && BC->HasRelocations &&
-      opts::AlignMacroOpFusion == MFT_HOT && !ProfileReader) {
-    BC->outs()
-        << "BOLT-INFO: enabling -align-macro-fusion=all since no profile "
-           "was specified\n";
-    opts::AlignMacroOpFusion = MFT_ALL;
   }
 
   if (!BC->HasRelocations &&
@@ -3508,9 +3495,8 @@ void RewriteInstance::emitAndLink() {
   updateOutputValues(*Linker);
 
   if (opts::UpdateDebugSections) {
-    MCAsmLayout FinalLayout(
-        static_cast<MCObjectStreamer *>(Streamer.get())->getAssembler());
-    DebugInfoRewriter->updateLineTableOffsets(FinalLayout);
+    DebugInfoRewriter->updateLineTableOffsets(
+        static_cast<MCObjectStreamer &>(*Streamer).getAssembler());
   }
 
   if (RuntimeLibrary *RtLibrary = BC->getRuntimeLibrary())

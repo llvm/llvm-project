@@ -175,8 +175,12 @@ X86_FEATURE_COMPAT(AVX512BF16,      "avx512bf16",            34)
 X86_FEATURE_COMPAT(AVX512VP2INTERSECT, "avx512vp2intersect", 35)
 // Below Features has some missings comparing to gcc, it's because gcc has some
 // not one-to-one mapped in llvm.
-X86_FEATURE_COMPAT(3DNOW,           "3dnow",                  0)
-X86_FEATURE       (3DNOWA,          "3dnowa")
+
+// FIXME: dummy features were added to keep the numeric values of later features
+// stable. Since the values need to be ABI stable, they should be changed to
+// have explicitly assigned values, and then these dummy features removed.
+X86_FEATURE       (DUMMYFEATURE1,   "__dummyfeature1")
+X86_FEATURE       (DUMMYFEATURE2,   "__dummyfeature2")
 X86_FEATURE_COMPAT(ADX,             "adx",                    0)
 X86_FEATURE       (64BIT,           "64bit")
 X86_FEATURE_COMPAT(CLDEMOTE,        "cldemote",               0)

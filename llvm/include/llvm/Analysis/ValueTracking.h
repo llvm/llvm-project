@@ -100,6 +100,12 @@ KnownBits analyzeKnownBitsFromAndXorOr(const Operator *I,
                                        const KnownBits &KnownRHS,
                                        unsigned Depth, const SimplifyQuery &SQ);
 
+/// Adjust \p Known for the given select \p Arm to include information from the
+/// select \p Cond.
+void adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond, Value *Arm,
+                                 bool Invert, unsigned Depth,
+                                 const SimplifyQuery &Q);
+
 /// Return true if LHS and RHS have no common bits set.
 bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
                          const WithCache<const Value *> &RHSCache,
@@ -270,6 +276,8 @@ struct KnownFPClass {
     return (KnownFPClasses & Mask) == fcNone;
   }
 
+  bool isKnownAlways(FPClassTest Mask) const { return isKnownNever(~Mask); }
+
   bool isUnknown() const {
     return KnownFPClasses == fcAllFlags && !SignBit;
   }
@@ -278,6 +286,9 @@ struct KnownFPClass {
   bool isKnownNeverNaN() const {
     return isKnownNever(fcNan);
   }
+
+  /// Return true if it's known this must always be a nan.
+  bool isKnownAlwaysNaN() const { return isKnownAlways(fcNan); }
 
   /// Return true if it's known this can never be an infinity.
   bool isKnownNeverInfinity() const {
@@ -515,22 +526,34 @@ inline KnownFPClass computeKnownFPClass(
 }
 
 /// Wrapper to account for known fast math flags at the use instruction.
-inline KnownFPClass computeKnownFPClass(const Value *V, FastMathFlags FMF,
-                                        FPClassTest InterestedClasses,
-                                        unsigned Depth,
-                                        const SimplifyQuery &SQ) {
+inline KnownFPClass
+computeKnownFPClass(const Value *V, const APInt &DemandedElts,
+                    FastMathFlags FMF, FPClassTest InterestedClasses,
+                    unsigned Depth, const SimplifyQuery &SQ) {
   if (FMF.noNaNs())
     InterestedClasses &= ~fcNan;
   if (FMF.noInfs())
     InterestedClasses &= ~fcInf;
 
-  KnownFPClass Result = computeKnownFPClass(V, InterestedClasses, Depth, SQ);
+  KnownFPClass Result =
+      computeKnownFPClass(V, DemandedElts, InterestedClasses, Depth, SQ);
 
   if (FMF.noNaNs())
     Result.KnownFPClasses &= ~fcNan;
   if (FMF.noInfs())
     Result.KnownFPClasses &= ~fcInf;
   return Result;
+}
+
+inline KnownFPClass computeKnownFPClass(const Value *V, FastMathFlags FMF,
+                                        FPClassTest InterestedClasses,
+                                        unsigned Depth,
+                                        const SimplifyQuery &SQ) {
+  auto *FVTy = dyn_cast<FixedVectorType>(V->getType());
+  APInt DemandedElts =
+      FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
+  return computeKnownFPClass(V, DemandedElts, FMF, InterestedClasses, Depth,
+                             SQ);
 }
 
 /// Return true if we can prove that the specified FP value is never equal to
@@ -799,15 +822,25 @@ bool isSafeToSpeculativelyExecute(const Instruction *I,
                                   const Instruction *CtxI = nullptr,
                                   AssumptionCache *AC = nullptr,
                                   const DominatorTree *DT = nullptr,
-                                  const TargetLibraryInfo *TLI = nullptr);
+                                  const TargetLibraryInfo *TLI = nullptr,
+                                  bool UseVariableInfo = true);
 
-inline bool
-isSafeToSpeculativelyExecute(const Instruction *I, BasicBlock::iterator CtxI,
-                             AssumptionCache *AC = nullptr,
-                             const DominatorTree *DT = nullptr,
-                             const TargetLibraryInfo *TLI = nullptr) {
+inline bool isSafeToSpeculativelyExecute(const Instruction *I,
+                                         BasicBlock::iterator CtxI,
+                                         AssumptionCache *AC = nullptr,
+                                         const DominatorTree *DT = nullptr,
+                                         const TargetLibraryInfo *TLI = nullptr,
+                                         bool UseVariableInfo = true) {
   // Take an iterator, and unwrap it into an Instruction *.
-  return isSafeToSpeculativelyExecute(I, &*CtxI, AC, DT, TLI);
+  return isSafeToSpeculativelyExecute(I, &*CtxI, AC, DT, TLI, UseVariableInfo);
+}
+
+/// Don't use information from its non-constant operands. This helper is used
+/// when its operands are going to be replaced.
+inline bool
+isSafeToSpeculativelyExecuteWithVariableReplaced(const Instruction *I) {
+  return isSafeToSpeculativelyExecute(I, nullptr, nullptr, nullptr, nullptr,
+                                      /*UseVariableInfo=*/false);
 }
 
 /// This returns the same result as isSafeToSpeculativelyExecute if Opcode is
@@ -830,7 +863,7 @@ isSafeToSpeculativelyExecute(const Instruction *I, BasicBlock::iterator CtxI,
 bool isSafeToSpeculativelyExecuteWithOpcode(
     unsigned Opcode, const Instruction *Inst, const Instruction *CtxI = nullptr,
     AssumptionCache *AC = nullptr, const DominatorTree *DT = nullptr,
-    const TargetLibraryInfo *TLI = nullptr);
+    const TargetLibraryInfo *TLI = nullptr, bool UseVariableInfo = true);
 
 /// Returns true if the result or effects of the given instructions \p I
 /// depend values not reachable through the def use graph.

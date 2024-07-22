@@ -287,6 +287,44 @@ module {
     // CHECK-SAME: attributes {no_signed_zeros_fp_math = true}
     llvm.return
   }
+
+  llvm.func @convergent_function() attributes {convergent} {
+    // CHECK: @convergent_function
+    // CHECK-SAME: attributes {convergent}
+    llvm.return
+  }
+
+  llvm.func @denormal_fp_math_roundtrip() attributes {denormal_fp_math = "preserve-sign"} {
+    // CHECK: @denormal_fp_math_roundtrip
+    // CHECK-SAME: attributes {denormal_fp_math = "preserve-sign"}
+    llvm.return
+  }
+
+  llvm.func @denormal_fp_math_f32_roundtrip() attributes {denormal_fp_math_f32 = "preserve-sign"} {
+    // CHECK: @denormal_fp_math_f32_roundtrip
+    // CHECK-SAME: attributes {denormal_fp_math_f32 = "preserve-sign"}
+    llvm.return
+  }
+
+  llvm.func @fp_contract_roundtrip() attributes {fp_contract = "fast"} {
+    // CHECK: @fp_contract_roundtrip
+    // CHECK-SAME: attributes {fp_contract = "fast"}
+    llvm.return
+  }
+
+  llvm.func @nounwind_function() attributes {no_unwind} {
+    // CHECK: @nounwind_function
+    // CHECK-SAME: attributes {no_unwind}
+    llvm.return
+  }
+
+  llvm.func @willreturn_function() attributes {will_return} {
+    // CHECK: @willreturn_function
+    // CHECK-SAME: attributes {will_return}
+    llvm.return
+  }
+
+
 }
 
 // -----

@@ -12,7 +12,6 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -545,37 +544,29 @@ void MCTargetExpr::anchor() {}
 /* *** */
 
 bool MCExpr::evaluateAsAbsolute(int64_t &Res) const {
-  return evaluateAsAbsolute(Res, nullptr, nullptr, nullptr, false);
-}
-
-bool MCExpr::evaluateAsAbsolute(int64_t &Res,
-                                const MCAsmLayout &Layout) const {
-  return evaluateAsAbsolute(Res, &Layout.getAssembler(), &Layout, nullptr, false);
+  return evaluateAsAbsolute(Res, nullptr, nullptr, false);
 }
 
 bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm,
                                 const SectionAddrMap &Addrs) const {
   // Setting InSet causes us to absolutize differences across sections and that
   // is what the MachO writer uses Addrs for.
-  return evaluateAsAbsolute(Res, &Asm, Asm.getLayout(), &Addrs, true);
+  return evaluateAsAbsolute(Res, &Asm, &Addrs, true);
 }
 
 bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm) const {
-  return evaluateAsAbsolute(Res, &Asm, nullptr, nullptr, false);
+  return evaluateAsAbsolute(Res, &Asm, nullptr, false);
 }
 
 bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm) const {
-  return evaluateAsAbsolute(Res, Asm, nullptr, nullptr, false);
+  return evaluateAsAbsolute(Res, Asm, nullptr, false);
 }
 
-bool MCExpr::evaluateKnownAbsolute(int64_t &Res,
-                                   const MCAsmLayout &Layout) const {
-  return evaluateAsAbsolute(Res, &Layout.getAssembler(), &Layout, nullptr,
-                            true);
+bool MCExpr::evaluateKnownAbsolute(int64_t &Res, const MCAssembler &Asm) const {
+  return evaluateAsAbsolute(Res, &Asm, nullptr, true);
 }
 
 bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
-                                const MCAsmLayout *Layout,
                                 const SectionAddrMap *Addrs, bool InSet) const {
   MCValue Value;
 
@@ -634,7 +625,7 @@ static void AttemptToFoldSymbolOffsetDifference(
   // separated by a linker-relaxable instruction. If the section contains
   // instructions and InSet is false (not expressions in directive like
   // .size/.fill), disable the fast path.
-  const MCAsmLayout *Layout = Asm->getLayout();
+  bool Layout = Asm->hasLayout();
   if (Layout && (InSet || !SecA.hasInstructions() ||
                  !(Asm->getContext().getTargetTriple().isRISCV() ||
                    Asm->getContext().getTargetTriple().isLoongArch()))) {
@@ -646,8 +637,8 @@ static void AttemptToFoldSymbolOffsetDifference(
     }
 
     // Eagerly evaluate when layout is finalized.
-    Addend += Layout->getSymbolOffset(A->getSymbol()) -
-              Layout->getSymbolOffset(B->getSymbol());
+    Addend += Asm->getSymbolOffset(A->getSymbol()) -
+              Asm->getSymbolOffset(B->getSymbol());
     if (Addrs && (&SecA != &SecB))
       Addend += (Addrs->lookup(&SecA) - Addrs->lookup(&SecB));
 
@@ -795,11 +786,9 @@ static bool evaluateSymbolicAdd(const MCAssembler *Asm,
   return true;
 }
 
-bool MCExpr::evaluateAsRelocatable(MCValue &Res,
-                                   const MCAsmLayout *Layout,
+bool MCExpr::evaluateAsRelocatable(MCValue &Res, const MCAssembler *Asm,
                                    const MCFixup *Fixup) const {
-  MCAssembler *Assembler = Layout ? &Layout->getAssembler() : nullptr;
-  return evaluateAsRelocatableImpl(Res, Assembler, Fixup, nullptr, false);
+  return evaluateAsRelocatableImpl(Res, Asm, Fixup, nullptr, false);
 }
 
 bool MCExpr::evaluateAsValue(MCValue &Res, const MCAssembler &Asm) const {
@@ -827,11 +816,9 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                        const SectionAddrMap *Addrs,
                                        bool InSet) const {
   ++stats::MCExprEvaluate;
-  MCAsmLayout *Layout = Asm ? Asm->getLayout() : nullptr;
   switch (getKind()) {
   case Target:
-    return cast<MCTargetExpr>(this)->evaluateAsRelocatableImpl(Res, Layout,
-                                                               Fixup);
+    return cast<MCTargetExpr>(this)->evaluateAsRelocatableImpl(Res, Asm, Fixup);
 
   case Constant:
     Res = MCValue::get(cast<MCConstantExpr>(this)->getValue());
@@ -841,6 +828,7 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(this);
     const MCSymbol &Sym = SRE->getSymbol();
     const auto Kind = SRE->getKind();
+    bool Layout = Asm && Asm->hasLayout();
 
     // Evaluate recursively if this is a variable.
     if (Sym.isVariable() && (Kind == MCSymbolRefExpr::VK_None || Layout) &&

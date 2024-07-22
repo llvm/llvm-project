@@ -1456,6 +1456,43 @@ static Value *simplifyReductionOperand(Value *Arg, bool CanReorderLanes) {
   return UsedIndices.all() ? V : nullptr;
 }
 
+/// Fold an unsigned minimum of trailing or leading zero bits counts:
+///   umin(cttz(CtOp, ZeroUndef), ConstOp) --> cttz(CtOp | (1 << ConstOp))
+///   umin(ctlz(CtOp, ZeroUndef), ConstOp) --> ctlz(CtOp | (SignedMin
+///                                              >> ConstOp))
+template <Intrinsic::ID IntrID>
+static Value *
+foldMinimumOverTrailingOrLeadingZeroCount(Value *I0, Value *I1,
+                                          const DataLayout &DL,
+                                          InstCombiner::BuilderTy &Builder) {
+  static_assert(IntrID == Intrinsic::cttz || IntrID == Intrinsic::ctlz,
+                "This helper only supports cttz and ctlz intrinsics");
+
+  Value *CtOp;
+  Value *ZeroUndef;
+  if (!match(I0,
+             m_OneUse(m_Intrinsic<IntrID>(m_Value(CtOp), m_Value(ZeroUndef)))))
+    return nullptr;
+
+  unsigned BitWidth = I1->getType()->getScalarSizeInBits();
+  auto LessBitWidth = [BitWidth](auto &C) { return C.ult(BitWidth); };
+  if (!match(I1, m_CheckedInt(LessBitWidth)))
+    // We have a constant >= BitWidth (which can be handled by CVP)
+    // or a non-splat vector with elements < and >= BitWidth
+    return nullptr;
+
+  Type *Ty = I1->getType();
+  Constant *NewConst = ConstantFoldBinaryOpOperands(
+      IntrID == Intrinsic::cttz ? Instruction::Shl : Instruction::LShr,
+      IntrID == Intrinsic::cttz
+          ? ConstantInt::get(Ty, 1)
+          : ConstantInt::get(Ty, APInt::getSignedMinValue(BitWidth)),
+      cast<Constant>(I1), DL);
+  return Builder.CreateBinaryIntrinsic(
+      IntrID, Builder.CreateOr(CtOp, NewConst),
+      ConstantInt::getTrue(ZeroUndef->getType()));
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -1661,6 +1698,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Cmp = Builder.CreateICmpNE(I0, Zero);
       return CastInst::Create(Instruction::ZExt, Cmp, II->getType());
     }
+    // umin(cttz(x), const) --> cttz(x | (1 << const))
+    if (Value *FoldedCttz =
+            foldMinimumOverTrailingOrLeadingZeroCount<Intrinsic::cttz>(
+                I0, I1, DL, Builder))
+      return replaceInstUsesWith(*II, FoldedCttz);
+    // umin(ctlz(x), const) --> ctlz(x | (SignedMin >> const))
+    if (Value *FoldedCtlz =
+            foldMinimumOverTrailingOrLeadingZeroCount<Intrinsic::ctlz>(
+                I0, I1, DL, Builder))
+      return replaceInstUsesWith(*II, FoldedCtlz);
     [[fallthrough]];
   }
   case Intrinsic::umax: {
@@ -2641,6 +2688,31 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return BinaryOperator::CreateFMulFMF(Src, Select, II);
     }
 
+    // ldexp(x, c ? exp : 0) -> c ? ldexp(x, exp) : x
+    // ldexp(x, c ? 0 : exp) -> c ? x : ldexp(x, exp)
+    ///
+    // TODO: If we cared, should insert a canonicalize for x
+    Value *SelectCond, *SelectLHS, *SelectRHS;
+    if (match(II->getArgOperand(1),
+              m_OneUse(m_Select(m_Value(SelectCond), m_Value(SelectLHS),
+                                m_Value(SelectRHS))))) {
+      Value *NewLdexp = nullptr;
+      Value *Select = nullptr;
+      if (match(SelectRHS, m_ZeroInt())) {
+        NewLdexp = Builder.CreateLdexp(Src, SelectLHS);
+        Select = Builder.CreateSelect(SelectCond, NewLdexp, Src);
+      } else if (match(SelectLHS, m_ZeroInt())) {
+        NewLdexp = Builder.CreateLdexp(Src, SelectRHS);
+        Select = Builder.CreateSelect(SelectCond, Src, NewLdexp);
+      }
+
+      if (NewLdexp) {
+        Select->takeName(II);
+        cast<Instruction>(NewLdexp)->copyFastMathFlags(II);
+        return replaceInstUsesWith(*II, Select);
+      }
+    }
+
     break;
   }
   case Intrinsic::ptrauth_auth:
@@ -3358,8 +3430,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
-        if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
-          if (FTy->getElementType() == Builder.getInt1Ty()) {
+        if (auto *VTy = dyn_cast<VectorType>(Vect->getType()))
+          if (VTy->getElementType() == Builder.getInt1Ty()) {
             Value *Res = Builder.CreateAddReduce(Vect);
             if (Arg != Vect)
               Res = Builder.CreateCast(cast<CastInst>(Arg)->getOpcode(), Res,
@@ -3388,8 +3460,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
-        if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
-          if (FTy->getElementType() == Builder.getInt1Ty()) {
+        if (auto *VTy = dyn_cast<VectorType>(Vect->getType()))
+          if (VTy->getElementType() == Builder.getInt1Ty()) {
             Value *Res = Builder.CreateAndReduce(Vect);
             if (Res->getType() != II->getType())
               Res = Builder.CreateZExt(Res, II->getType());
@@ -3419,8 +3491,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
-        if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
-          if (FTy->getElementType() == Builder.getInt1Ty()) {
+        if (auto *VTy = dyn_cast<VectorType>(Vect->getType()))
+          if (VTy->getElementType() == Builder.getInt1Ty()) {
             Value *Res = IID == Intrinsic::vector_reduce_umin
                              ? Builder.CreateAndReduce(Vect)
                              : Builder.CreateOrReduce(Vect);
@@ -3461,8 +3533,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
-        if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
-          if (FTy->getElementType() == Builder.getInt1Ty()) {
+        if (auto *VTy = dyn_cast<VectorType>(Vect->getType()))
+          if (VTy->getElementType() == Builder.getInt1Ty()) {
             Instruction::CastOps ExtOpc = Instruction::CastOps::CastOpsEnd;
             if (Arg != Vect)
               ExtOpc = cast<CastInst>(Arg)->getOpcode();

@@ -187,6 +187,11 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
       PreInits = Tile->getPreInits();
     } else if (const auto *Unroll = dyn_cast<OMPUnrollDirective>(&S)) {
       PreInits = Unroll->getPreInits();
+    } else if (const auto *Reverse = dyn_cast<OMPReverseDirective>(&S)) {
+      PreInits = Reverse->getPreInits();
+    } else if (const auto *Interchange =
+                   dyn_cast<OMPInterchangeDirective>(&S)) {
+      PreInits = Interchange->getPreInits();
     } else {
       llvm_unreachable("Unknown loop-based directive kind.");
     }
@@ -2762,6 +2767,19 @@ void CodeGenFunction::EmitOMPTileDirective(const OMPTileDirective &S) {
   EmitStmt(S.getTransformedStmt());
 }
 
+void CodeGenFunction::EmitOMPReverseDirective(const OMPReverseDirective &S) {
+  // Emit the de-sugared statement.
+  OMPTransformDirectiveScopeRAII ReverseScope(*this, &S);
+  EmitStmt(S.getTransformedStmt());
+}
+
+void CodeGenFunction::EmitOMPInterchangeDirective(
+    const OMPInterchangeDirective &S) {
+  // Emit the de-sugared statement.
+  OMPTransformDirectiveScopeRAII InterchangeScope(*this, &S);
+  EmitStmt(S.getTransformedStmt());
+}
+
 void CodeGenFunction::EmitOMPUnrollDirective(const OMPUnrollDirective &S) {
   bool UseOMPIRBuilder = CGM.getLangOpts().OpenMPIRBuilder;
 
@@ -2985,12 +3003,14 @@ void CodeGenFunction::EmitOMPForOuterLoop(
   // run-sched-var ICV. If the ICV is set to auto, the schedule is
   // implementation defined
   //
+  // __kmpc_dispatch_init();
   // while(__kmpc_dispatch_next(&LB, &UB)) {
   //   idx = LB;
   //   while (idx <= UB) { BODY; ++idx;
   //   __kmpc_dispatch_fini_(4|8)[u](); // For ordered loops only.
   //   } // inner loop
   // }
+  // __kmpc_dispatch_deinit();
   //
   // OpenMP [2.7.1, Loop Construct, Description, table 2-1]
   // When schedule(static, chunk_size) is specified, iterations are divided into
@@ -3044,6 +3064,9 @@ void CodeGenFunction::EmitOMPForOuterLoop(
   OuterLoopArgs.DKind = LoopArgs.DKind;
   EmitOMPOuterLoop(DynamicOrOrdered, IsMonotonic, S, LoopScope, OuterLoopArgs,
                    emitOMPLoopBodyWithStopPoint, CodeGenOrdered);
+  if (DynamicOrOrdered) {
+    RT.emitForDispatchDeinit(*this, S.getBeginLoc());
+  }
 }
 
 static void emitEmptyOrdered(CodeGenFunction &, SourceLocation Loc,
@@ -6550,7 +6573,7 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
 }
 
 void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
-  llvm::AtomicOrdering AO = llvm::AtomicOrdering::Monotonic;
+  llvm::AtomicOrdering AO = CGM.getOpenMPRuntime().getDefaultMemoryOrdering();
   // Fail Memory Clause Ordering.
   llvm::AtomicOrdering FailAO = llvm::AtomicOrdering::NotAtomic;
   bool MemOrderingSpecified = false;

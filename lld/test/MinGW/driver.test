@@ -268,6 +268,8 @@ APPCONTAINER: -appcontainer
 RUN: ld.lld -m i386pep --version 2>&1 | FileCheck -check-prefix=VERSION %s
 RUN: ld.lld -m i386pep -v 2>&1 | FileCheck -check-prefix=VERSION %s
 RUN: not ld.lld -m i386pep -v xyz 2>&1 | FileCheck -check-prefix=VERSION %s
+# This literal string is required for compatibility with older Meson versions,
+# see https://github.com/mesonbuild/meson/pull/13383.
 VERSION: LLD {{.*}} (compatible with GNU linkers)
 
 RUN: ld.lld -m i386pep --help 2>&1 | FileCheck -check-prefix=HELP %s

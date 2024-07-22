@@ -4679,10 +4679,22 @@ struct FormatStyle {
   ///   # Should be declared this way:
   ///   SpacesInParens: Custom
   ///   SpacesInParensOptions:
+  ///     ExceptDoubleParentheses: false
   ///     InConditionalStatements: true
   ///     Other: true
   /// \endcode
   struct SpacesInParensCustom {
+    /// Override any of the following options to prevent addition of space
+    /// when both opening and closing parentheses use multiple parentheses.
+    /// \code
+    ///   true:
+    ///   __attribute__(( noreturn ))
+    ///   __decltype__(( x ))
+    ///   if (( a = b ))
+    /// \endcode
+    ///  false:
+    ///    Uses the applicable option.
+    bool ExceptDoubleParentheses;
     /// Put a space in parentheses only inside conditional statements
     /// (``for/if/while/switch...``).
     /// \code
@@ -4693,8 +4705,9 @@ struct FormatStyle {
     bool InConditionalStatements;
     /// Put a space in C style casts.
     /// \code
-    ///    true:                                  false:
-    ///    x = ( int32 )y                 vs.     x = (int32)y
+    ///   true:                                  false:
+    ///   x = ( int32 )y                  vs.    x = (int32)y
+    ///   y = (( int (*)(int) )foo)(x);          y = ((int (*)(int))foo)(x);
     /// \endcode
     bool InCStyleCasts;
     /// Insert a space in empty parentheses, i.e. ``()``.
@@ -4710,23 +4723,26 @@ struct FormatStyle {
     bool InEmptyParentheses;
     /// Put a space in parentheses not covered by preceding options.
     /// \code
-    ///    true:                                  false:
-    ///    t f( Deleted & ) & = delete;   vs.     t f(Deleted &) & = delete;
+    ///   true:                                 false:
+    ///   t f( Deleted & ) & = delete;    vs.   t f(Deleted &) & = delete;
     /// \endcode
     bool Other;
 
     SpacesInParensCustom()
-        : InConditionalStatements(false), InCStyleCasts(false),
-          InEmptyParentheses(false), Other(false) {}
+        : ExceptDoubleParentheses(false), InConditionalStatements(false),
+          InCStyleCasts(false), InEmptyParentheses(false), Other(false) {}
 
-    SpacesInParensCustom(bool InConditionalStatements, bool InCStyleCasts,
+    SpacesInParensCustom(bool ExceptDoubleParentheses,
+                         bool InConditionalStatements, bool InCStyleCasts,
                          bool InEmptyParentheses, bool Other)
-        : InConditionalStatements(InConditionalStatements),
+        : ExceptDoubleParentheses(ExceptDoubleParentheses),
+          InConditionalStatements(InConditionalStatements),
           InCStyleCasts(InCStyleCasts), InEmptyParentheses(InEmptyParentheses),
           Other(Other) {}
 
     bool operator==(const SpacesInParensCustom &R) const {
-      return InConditionalStatements == R.InConditionalStatements &&
+      return ExceptDoubleParentheses == R.ExceptDoubleParentheses &&
+             InConditionalStatements == R.InConditionalStatements &&
              InCStyleCasts == R.InCStyleCasts &&
              InEmptyParentheses == R.InEmptyParentheses && Other == R.Other;
     }
@@ -4744,6 +4760,7 @@ struct FormatStyle {
   ///   # Example of usage:
   ///   SpacesInParens: Custom
   ///   SpacesInParensOptions:
+  ///     ExceptDoubleParentheses: false
   ///     InConditionalStatements: true
   ///     InEmptyParentheses: true
   /// \endcode

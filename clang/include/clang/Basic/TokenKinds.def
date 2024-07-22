@@ -165,6 +165,9 @@ TOK(raw_identifier)      // Used only in raw lexing mode.
 // C99 6.4.4.2: Floating Constants
 TOK(numeric_constant)    // 0x123
 
+// Directly holds numerical value. Used to process C23 #embed.
+TOK(binary_data)
+
 // C99 6.4.4: Character Constants
 TOK(char_constant)       // 'a'
 TOK(wide_char_constant)  // L'b'
@@ -331,6 +334,11 @@ KEYWORD(_Atomic                     , KEYALL|KEYNOOPENCL)
 KEYWORD(_Bool                       , KEYNOCXX)
 KEYWORD(_Complex                    , KEYALL)
 KEYWORD(_Generic                    , KEYALL)
+// Note, C2y removed support for _Imaginary; we retain it as a keyword because
+// 1) it's a reserved identifier, so we're allowed to steal it, 2) there's no
+// good way to specify a keyword in earlier but not later language modes within
+// this file, 3) this allows us to provide a better diagnostic in case a user
+// does use the keyword.
 KEYWORD(_Imaginary                  , KEYALL)
 KEYWORD(_Noreturn                   , KEYALL)
 KEYWORD(_Static_assert              , KEYALL)

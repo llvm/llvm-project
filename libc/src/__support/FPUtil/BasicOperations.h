@@ -11,14 +11,15 @@
 
 #include "FEnvImpl.h"
 #include "FPBits.h"
+#include "dyadic_float.h"
 
-#include "FEnvImpl.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/uint128.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
@@ -268,12 +269,21 @@ totalordermag(T x, T y) {
 template <typename T>
 LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> getpayload(T x) {
   using FPBits = FPBits<T>;
+  using StorageType = typename FPBits::StorageType;
   FPBits x_bits(x);
 
   if (!x_bits.is_nan())
     return T(-1.0);
 
-  return T(x_bits.uintval() & (FPBits::FRACTION_MASK >> 1));
+  StorageType payload = x_bits.uintval() & (FPBits::FRACTION_MASK >> 1);
+
+  if constexpr (is_big_int_v<StorageType>) {
+    DyadicFloat<FPBits::STORAGE_LEN> payload_dfloat(Sign::POS, 0, payload);
+
+    return static_cast<T>(payload_dfloat);
+  } else {
+    return static_cast<T>(payload);
+  }
 }
 
 template <bool IsSignaling, typename T>
@@ -308,6 +318,6 @@ setpayload(T &res, T pl) {
 }
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_BASICOPERATIONS_H

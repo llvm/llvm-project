@@ -6471,6 +6471,10 @@ FunctionCallee OpenMPIRBuilder::createDispatchFiniFunction(unsigned IVSize,
   return getOrCreateRuntimeFunction(M, Name);
 }
 
+FunctionCallee OpenMPIRBuilder::createDispatchDeinitFunction() {
+  return getOrCreateRuntimeFunction(M, omp::OMPRTL___kmpc_dispatch_deinit);
+}
+
 static Function *createOutlinedFunction(
     OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder, StringRef FuncName,
     SmallVectorImpl<Value *> &Inputs,

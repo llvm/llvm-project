@@ -764,6 +764,7 @@ module std_private_algorithm_ranges_find_end                             [system
 module std_private_algorithm_ranges_find_first_of                        [system] { header "__algorithm/ranges_find_first_of.h" }
 module std_private_algorithm_ranges_find_if                              [system] { header "__algorithm/ranges_find_if.h" }
 module std_private_algorithm_ranges_find_if_not                          [system] { header "__algorithm/ranges_find_if_not.h" }
+module std_private_algorithm_ranges_find_last                            [system] { header "__algorithm/ranges_find_last.h" }
 module std_private_algorithm_ranges_for_each                             [system] {
   header "__algorithm/ranges_for_each.h"
   export std_private_algorithm_in_fun_result
@@ -1081,7 +1082,10 @@ module std_private_charconv_tables                  [system] { header "__charcon
 module std_private_charconv_to_chars                [system] { header "__charconv/to_chars.h" }
 module std_private_charconv_to_chars_base_10        [system] { header "__charconv/to_chars_base_10.h" }
 module std_private_charconv_to_chars_floating_point [system] { header "__charconv/to_chars_floating_point.h" }
-module std_private_charconv_to_chars_integral       [system] { header "__charconv/to_chars_integral.h" }
+module std_private_charconv_to_chars_integral       [system] {
+  header "__charconv/to_chars_integral.h"
+  export std_private_charconv_traits
+}
 module std_private_charconv_to_chars_result         [system] {
   header "__charconv/to_chars_result.h"
   export *
@@ -1130,6 +1134,7 @@ module std_private_chrono_steady_clock           [system] {
 }
 module std_private_chrono_time_zone              [system] {
   header "__chrono/time_zone.h"
+  export std_private_memory_unique_ptr
 }
 module std_private_chrono_time_zone_link         [system] {
   header "__chrono/time_zone_link.h"
@@ -1480,6 +1485,7 @@ module std_private_math_modulo                          [system] { header "__mat
 module std_private_math_remainder                       [system] { header "__math/remainder.h" }
 module std_private_math_roots                           [system] { header "__math/roots.h" }
 module std_private_math_rounding_functions              [system] { header "__math/rounding_functions.h" }
+module std_private_math_special_functions               [system] { header "__math/special_functions.h" }
 module std_private_math_traits                          [system] { header "__math/traits.h" }
 module std_private_math_trigonometric_functions         [system] { header "__math/trigonometric_functions.h" }
 
@@ -1517,6 +1523,8 @@ module std_private_memory_concepts                        [system] {
 module std_private_memory_construct_at                    [system] { header "__memory/construct_at.h" }
 module std_private_memory_destruct_n                      [system] { header "__memory/destruct_n.h" }
 module std_private_memory_fwd                             [system] { header "__fwd/memory.h" }
+module std_private_memory_inout_ptr                       [system] { header "__memory/inout_ptr.h" }
+module std_private_memory_out_ptr                         [system] { header "__memory/out_ptr.h" }
 module std_private_memory_pointer_traits                  [system] { header "__memory/pointer_traits.h" }
 module std_private_memory_ranges_construct_at             [system] { header "__memory/ranges_construct_at.h" }
 module std_private_memory_ranges_uninitialized_algorithms [system] {
@@ -1840,6 +1848,7 @@ module std_private_thread_thread               [system] {
 module std_private_thread_timed_backoff_policy [system] { header "__thread/timed_backoff_policy.h" }
 
 module std_private_tuple_find_index             [system] { header "__tuple/find_index.h" }
+module std_private_tuple_ignore                 [system] { header "__tuple/ignore.h" }
 module std_private_tuple_make_tuple_types       [system] { header "__tuple/make_tuple_types.h" }
 module std_private_tuple_tuple_like_no_subrange [system] {
   header "__tuple/tuple_like_no_subrange.h"
@@ -1923,7 +1932,10 @@ module std_private_type_traits_is_array                                  [system
 module std_private_type_traits_is_assignable                             [system] { header "__type_traits/is_assignable.h" }
 module std_private_type_traits_is_base_of                                [system] { header "__type_traits/is_base_of.h" }
 module std_private_type_traits_is_bounded_array                          [system] { header "__type_traits/is_bounded_array.h" }
-module std_private_type_traits_is_callable                               [system] { header "__type_traits/is_callable.h" }
+module std_private_type_traits_is_callable                               [system] {
+  header "__type_traits/is_callable.h"
+  export std_private_type_traits_integral_constant
+}
 module std_private_type_traits_is_char_like_type                         [system] { header "__type_traits/is_char_like_type.h" }
 module std_private_type_traits_is_class                                  [system] { header "__type_traits/is_class.h" }
 module std_private_type_traits_is_compound                               [system] { header "__type_traits/is_compound.h" }
@@ -1958,11 +1970,12 @@ module std_private_type_traits_is_final                                  [system
 module std_private_type_traits_is_floating_point                         [system] { header "__type_traits/is_floating_point.h" }
 module std_private_type_traits_is_function                               [system] { header "__type_traits/is_function.h" }
 module std_private_type_traits_is_fundamental                            [system] { header "__type_traits/is_fundamental.h" }
-module std_private_type_traits_is_implicitly_default_constructible       [system] { header "__type_traits/is_implicitly_default_constructible.h" }
+module std_private_type_traits_is_implicitly_default_constructible       [system] {
+  header "__type_traits/is_implicitly_default_constructible.h"
+  export std_private_type_traits_integral_constant
+}
 module std_private_type_traits_is_integral                               [system] { header "__type_traits/is_integral.h" }
 module std_private_type_traits_is_literal_type                           [system] { header "__type_traits/is_literal_type.h" }
-module std_private_type_traits_is_member_function_pointer                [system] { header "__type_traits/is_member_function_pointer.h" }
-module std_private_type_traits_is_member_object_pointer                  [system] { header "__type_traits/is_member_object_pointer.h" }
 module std_private_type_traits_is_member_pointer                         [system] { header "__type_traits/is_member_pointer.h" }
 module std_private_type_traits_is_nothrow_assignable                     [system] { header "__type_traits/is_nothrow_assignable.h" }
 module std_private_type_traits_is_nothrow_constructible                  [system] {
@@ -2000,7 +2013,6 @@ module std_private_type_traits_is_scalar                                 [system
   header "__type_traits/is_scalar.h"
   export std_private_type_traits_is_null_pointer
 }
-module std_private_type_traits_is_scoped_enum                            [system] { header "__type_traits/is_scoped_enum.h" }
 module std_private_type_traits_is_signed                                 [system] { header "__type_traits/is_signed.h" }
 module std_private_type_traits_is_signed_integer                         [system] { header "__type_traits/is_signed_integer.h" }
 module std_private_type_traits_is_specialization                         [system] { header "__type_traits/is_specialization.h" }

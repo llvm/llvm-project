@@ -273,3 +273,18 @@ lu52i.d $t1, $t1, %desc64_hi12(foo)
 # RELOC: R_LARCH_TLS_DESC64_HI12 foo 0x0
 # INSTR: lu52i.d $t1, $t1, %desc64_hi12(foo)
 # FIXUP: fixup A - offset: 0, value: %desc64_hi12(foo), kind: FK_NONE
+
+lu12i.w $t1, %le_hi20_r(foo)
+# RELOC: R_LARCH_TLS_LE_HI20_R foo 0x0
+# INSTR: lu12i.w $t1, %le_hi20_r(foo)
+# FIXUP: fixup A - offset: 0, value: %le_hi20_r(foo), kind: FK_NONE
+
+add.d $t1, $t2, $tp, %le_add_r(foo)
+# RELOC: R_LARCH_TLS_LE_ADD_R foo 0x0
+# INSTR: add.d $t1, $t2, $tp, %le_add_r(foo)
+# FIXUP: fixup A - offset: 0, value: %le_add_r(foo), kind: FK_NONE
+
+addi.d $t1, $a2, %le_lo12_r(foo)
+# RELOC: R_LARCH_TLS_LE_LO12_R foo 0x0
+# INSTR: addi.d $t1, $a2, %le_lo12_r(foo)
+# FIXUP: fixup A - offset: 0, value: %le_lo12_r(foo), kind: FK_NONE

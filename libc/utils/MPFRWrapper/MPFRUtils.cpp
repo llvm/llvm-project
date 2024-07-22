@@ -14,18 +14,16 @@
 #include "src/__support/CPP/stringstream.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
-#include "test/UnitTest/FPMatcher.h"
 
-#include "hdr/math_macros.h"
-#include <memory>
 #include <stdint.h>
 
 #include "mpfr_inc.h"
 
 template <typename T> using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 namespace mpfr {
 
@@ -188,6 +186,12 @@ public:
     return result;
   }
 
+  MPFRNumber add(const MPFRNumber &b) const {
+    MPFRNumber result(*this);
+    mpfr_add(result.value, value, b.value, mpfr_rounding);
+    return result;
+  }
+
   MPFRNumber asin() const {
     MPFRNumber result(*this);
     mpfr_asin(result.value, value, mpfr_rounding);
@@ -218,6 +222,12 @@ public:
     return result;
   }
 
+  MPFRNumber cbrt() const {
+    MPFRNumber result(*this);
+    mpfr_cbrt(result.value, value, mpfr_rounding);
+    return result;
+  }
+
   MPFRNumber ceil() const {
     MPFRNumber result(*this);
     mpfr_ceil(result.value, value);
@@ -234,6 +244,39 @@ public:
     MPFRNumber result(*this);
     mpfr_cosh(result.value, value, mpfr_rounding);
     return result;
+  }
+
+  MPFRNumber cospi() const {
+    MPFRNumber result(*this);
+
+#if MPFR_VERSION_MAJOR > 4 ||                                                  \
+    (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
+    mpfr_cospi(result.value, value, mpfr_rounding);
+    return result;
+#else
+    MPFRNumber value_frac(*this);
+    mpfr_frac(value_frac.value, value, MPFR_RNDN);
+
+    if (mpfr_cmp_si(value_frac.value, 0.0) == 0) {
+      mpz_t integer_part;
+      mpz_init(integer_part);
+      mpfr_get_z(integer_part, value, MPFR_RNDN);
+
+      if (mpz_tstbit(integer_part, 0)) {
+        mpfr_set_si(result.value, -1.0, MPFR_RNDN); // odd
+      } else {
+        mpfr_set_si(result.value, 1.0, MPFR_RNDN); // even
+      }
+      return result;
+    }
+
+    MPFRNumber value_pi(0.0, 1280);
+    mpfr_const_pi(value_pi.value, MPFR_RNDN);
+    mpfr_mul(value_pi.value, value_pi.value, value, MPFR_RNDN);
+    mpfr_cos(result.value, value_pi.value, mpfr_rounding);
+
+    return result;
+#endif
   }
 
   MPFRNumber erf() const {
@@ -437,6 +480,23 @@ public:
     return result;
   }
 
+  MPFRNumber sinpi() const {
+    MPFRNumber result(*this);
+
+#if MPFR_VERSION_MAJOR > 4 ||                                                  \
+    (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
+
+    mpfr_sinpi(result.value, value, mpfr_rounding);
+#else
+    MPFRNumber value_pi(0.0, 1280);
+    mpfr_const_pi(value_pi.value, MPFR_RNDN);
+    mpfr_mul(value_pi.value, value_pi.value, value, MPFR_RNDN);
+    mpfr_sin(result.value, value_pi.value, mpfr_rounding);
+#endif
+
+    return result;
+  }
+
   MPFRNumber sinh() const {
     MPFRNumber result(*this);
     mpfr_sinh(result.value, value, mpfr_rounding);
@@ -446,6 +506,12 @@ public:
   MPFRNumber sqrt() const {
     MPFRNumber result(*this);
     mpfr_sqrt(result.value, value, mpfr_rounding);
+    return result;
+  }
+
+  MPFRNumber sub(const MPFRNumber &b) const {
+    MPFRNumber result(*this);
+    mpfr_sub(result.value, value, b.value, mpfr_rounding);
     return result;
   }
 
@@ -470,6 +536,12 @@ public:
   MPFRNumber fma(const MPFRNumber &b, const MPFRNumber &c) {
     MPFRNumber result(*this);
     mpfr_fma(result.value, value, b.value, c.value, mpfr_rounding);
+    return result;
+  }
+
+  MPFRNumber mul(const MPFRNumber &b) {
+    MPFRNumber result(*this);
+    mpfr_mul(result.value, value, b.value, mpfr_rounding);
     return result;
   }
 
@@ -637,12 +709,16 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.atan();
   case Operation::Atanh:
     return mpfrInput.atanh();
+  case Operation::Cbrt:
+    return mpfrInput.cbrt();
   case Operation::Ceil:
     return mpfrInput.ceil();
   case Operation::Cos:
     return mpfrInput.cos();
   case Operation::Cosh:
     return mpfrInput.cosh();
+  case Operation::Cospi:
+    return mpfrInput.cospi();
   case Operation::Erf:
     return mpfrInput.erf();
   case Operation::Exp:
@@ -677,6 +753,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.roundeven();
   case Operation::Sin:
     return mpfrInput.sin();
+  case Operation::Sinpi:
+    return mpfrInput.sinpi();
   case Operation::Sinh:
     return mpfrInput.sinh();
   case Operation::Sqrt:
@@ -712,6 +790,8 @@ binary_operation_one_output(Operation op, InputType x, InputType y,
   MPFRNumber inputX(x, precision, rounding);
   MPFRNumber inputY(y, precision, rounding);
   switch (op) {
+  case Operation::Add:
+    return inputX.add(inputY);
   case Operation::Atan2:
     return inputX.atan2(inputY);
   case Operation::Div:
@@ -720,8 +800,12 @@ binary_operation_one_output(Operation op, InputType x, InputType y,
     return inputX.fmod(inputY);
   case Operation::Hypot:
     return inputX.hypot(inputY);
+  case Operation::Mul:
+    return inputX.mul(inputY);
   case Operation::Pow:
     return inputX.pow(inputY);
+  case Operation::Sub:
+    return inputX.sub(inputY);
   default:
     __builtin_unreachable();
   }
@@ -803,6 +887,16 @@ template void explain_unary_operation_single_output_error(Operation op,
                                                           long double,
                                                           long double, double,
                                                           RoundingMode);
+template void explain_unary_operation_single_output_error(Operation op, double,
+                                                          float, double,
+                                                          RoundingMode);
+template void explain_unary_operation_single_output_error(Operation op,
+                                                          long double, float,
+                                                          double, RoundingMode);
+template void explain_unary_operation_single_output_error(Operation op,
+                                                          long double, double,
+                                                          double, RoundingMode);
+
 #ifdef LIBC_TYPES_HAS_FLOAT16
 template void explain_unary_operation_single_output_error(Operation op, float16,
                                                           float16, double,
@@ -930,7 +1024,13 @@ template void
 explain_binary_operation_one_output_error(Operation, const BinaryInput<float> &,
                                           float, double, RoundingMode);
 template void explain_binary_operation_one_output_error(
+    Operation, const BinaryInput<double> &, float, double, RoundingMode);
+template void explain_binary_operation_one_output_error(
     Operation, const BinaryInput<double> &, double, double, RoundingMode);
+template void explain_binary_operation_one_output_error(
+    Operation, const BinaryInput<long double> &, float, double, RoundingMode);
+template void explain_binary_operation_one_output_error(
+    Operation, const BinaryInput<long double> &, double, double, RoundingMode);
 template void
 explain_binary_operation_one_output_error(Operation,
                                           const BinaryInput<long double> &,
@@ -1015,6 +1115,14 @@ template bool compare_unary_operation_single_output(Operation, double, double,
                                                     double, RoundingMode);
 template bool compare_unary_operation_single_output(Operation, long double,
                                                     long double, double,
+                                                    RoundingMode);
+template bool compare_unary_operation_single_output(Operation, double, float,
+                                                    double, RoundingMode);
+template bool compare_unary_operation_single_output(Operation, long double,
+                                                    float, double,
+                                                    RoundingMode);
+template bool compare_unary_operation_single_output(Operation, long double,
+                                                    double, double,
                                                     RoundingMode);
 #ifdef LIBC_TYPES_HAS_FLOAT16
 template bool compare_unary_operation_single_output(Operation, float16, float16,
@@ -1109,7 +1217,17 @@ template bool compare_binary_operation_one_output(Operation,
                                                   double, double, RoundingMode);
 template bool
 compare_binary_operation_one_output(Operation, const BinaryInput<long double> &,
+                                    float, double, RoundingMode);
+template bool
+compare_binary_operation_one_output(Operation, const BinaryInput<long double> &,
+                                    double, double, RoundingMode);
+template bool
+compare_binary_operation_one_output(Operation, const BinaryInput<long double> &,
                                     long double, double, RoundingMode);
+
+template bool compare_binary_operation_one_output(Operation,
+                                                  const BinaryInput<double> &,
+                                                  float, double, RoundingMode);
 #ifdef LIBC_TYPES_HAS_FLOAT16
 template bool compare_binary_operation_one_output(Operation,
                                                   const BinaryInput<float16> &,
@@ -1209,4 +1327,4 @@ template float16 round<float16>(float16, RoundingMode);
 
 } // namespace mpfr
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

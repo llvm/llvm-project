@@ -28,7 +28,7 @@
 // RUN:   -o "type lookup IntegerType" \
 // RUN:   -o "type lookup FloatType" \
 // RUN:   -o "type lookup CustomType" \
-// RUN:   -b %t | FileCheck %s --check-prefix=NODWP
+// RUN:   -b %t | FileCheck %s --check-prefix=NODWP --match-full-lines
 // NODWP: (lldb) type lookup IntegerType
 // NODWP-DAG: int
 // NODWP-DAG: unsigned int

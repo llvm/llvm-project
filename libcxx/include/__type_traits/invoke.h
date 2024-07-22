@@ -17,8 +17,7 @@
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_base_of.h>
 #include <__type_traits/is_core_convertible.h>
-#include <__type_traits/is_member_function_pointer.h>
-#include <__type_traits/is_member_object_pointer.h>
+#include <__type_traits/is_member_pointer.h>
 #include <__type_traits/is_reference_wrapper.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_void.h>
