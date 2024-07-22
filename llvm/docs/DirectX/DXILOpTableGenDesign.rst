@@ -292,7 +292,6 @@ is supported in all DXIL versions and all stages it is required to be specified 
    stages = [VersionedStages<DXIL1_0, [all_stages]>];
 
 
-
 Attribute Specification
 -----------------------
 
@@ -314,11 +313,27 @@ Following is an example specification of valid attributes for ``DXIL1_0``.
 
 A null list of ``attributes`` signifies no operation attributes.
 
+Interpretation of Multiple Constraint Specification
+---------------------------------------------------
+
 Each of the constraints states that the specified overload type, stage or
 attribute records are valid for the predicated DXIL version. Only
 the constraints corresponding to latest minimal DXIL version is applicable.
 Note as in the above example, any overload types, stages or attributes,
 that remain valid in a later DXIL version need to be specified in full.
+For example, consider the following specification of valid overload types:
+
+.. code-block::
+
+   overloads = [
+                VersionedOverloads<DXIL1_0, [halfTy, floatTy]>,
+                VersionedOverloads<DXIL1_2, [halfTy, floatTy, doubleTy]>
+               ];
+
+It specifies that the overload types ``halfTy`` and ``floatTy`` are valid for DXIL
+version 1.0 and later. It also specifies that  ``doubleTy`` is additionally supported
+in DXIL version 1.2 and later.
+
 This provides the flexibility to specify constraints independent
 of others in the list.
 
