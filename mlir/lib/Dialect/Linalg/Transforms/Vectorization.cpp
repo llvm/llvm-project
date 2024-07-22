@@ -2005,30 +2005,30 @@ vectorizeScalableVectorPrecondition(Operation *op,
   }
 
   switch (iterators.back()) {
-    case utils::IteratorType::reduction: {
-      // Check 3. above is met.
-      if (iterators.size() != inputVectorSizes.size()) {
-        LDBG("Non-trailing reduction dim requested for scalable "
-             "vectorization\n");
-        return failure();
-      }
-      if (isa<linalg::MatmulOp>(op) ||
-          isa<linalg::MatmulTransposeAOp>(op)) {
-        LDBG("Scalable vectorization of the reduction dim in Matmul-like ops "
-             "is not supported\n");
-        return failure();
-      }
-      break;
+  case utils::IteratorType::reduction: {
+    // Check 3. above is met.
+    if (iterators.size() != inputVectorSizes.size()) {
+      LDBG("Non-trailing reduction dim requested for scalable "
+           "vectorization\n");
+      return failure();
     }
-    case utils::IteratorType::parallel: {
-      // Check 1. and 2. above are met.
-      if (seenParalell) {
-        LDBG("Inner parallel dim not requested for scalable "
-             "vectorization\n");
-        return failure();
-      }
-      break;
+    if (isa<linalg::MatmulOp>(op) ||
+        isa<linalg::MatmulTransposeAOp>(op)) {
+      LDBG("Scalable vectorization of the reduction dim in Matmul-like ops "
+           "is not supported\n");
+      return failure();
     }
+    break;
+  }
+  case utils::IteratorType::parallel: {
+    // Check 1. and 2. above are met.
+    if (seenParalell) {
+      LDBG("Inner parallel dim not requested for scalable "
+           "vectorization\n");
+      return failure();
+    }
+    break;
+  }
   }
 
   // If present, check the 2nd scalable dim. ATM, only Matmul-like Ops are
