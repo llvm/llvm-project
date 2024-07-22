@@ -33,6 +33,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+extern "C" int *__llvm_libc_errno();
+
 struct Errno {
   void operator=(int);
   operator int();
