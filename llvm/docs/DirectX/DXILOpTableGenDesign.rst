@@ -145,7 +145,7 @@ TableGen representations of its properties described above.
      Intrinsic LLVMIntrinsic = ?;
 
      // Result type of the op.
-     list<LLVMType> result = [];
+     LLVMType> result;
 
      // List of argument types of the op. Default to 0 arguments.
      list<LLVMType> arguments = [];
