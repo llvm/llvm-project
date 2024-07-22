@@ -1,7 +1,6 @@
 header: search.h
 macros: []
 types:
-  - type_name: size_t
   - type_name: struct_hsearch_data
   - type_name: ENTRY
   - type_name: ACTION

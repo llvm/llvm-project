@@ -501,6 +501,17 @@ AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
       markSuperRegs(Reserved, AArch64::GPR32commonRegClass.getRegister(i));
   }
 
+  if (MF.getSubtarget<AArch64Subtarget>().isLRReservedForRA()) {
+    // In order to prevent the register allocator from using LR, we need to
+    // mark it as reserved. However we don't want to keep it reserved throughout
+    // the pipeline since it prevents other infrastructure from reasoning about
+    // it's liveness. We use the NoVRegs property instead of IsSSA because
+    // IsSSA is removed before VirtRegRewriter runs.
+    if (!MF.getProperties().hasProperty(
+            MachineFunctionProperties::Property::NoVRegs))
+      markSuperRegs(Reserved, AArch64::LR);
+  }
+
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }
@@ -600,7 +611,8 @@ bool AArch64RegisterInfo::isArgumentRegister(const MachineFunction &MF,
                                              MCRegister Reg) const {
   CallingConv::ID CC = MF.getFunction().getCallingConv();
   const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
-  bool IsVarArg = STI.isCallingConvWin64(MF.getFunction().getCallingConv());
+  bool IsVarArg = STI.isCallingConvWin64(MF.getFunction().getCallingConv(),
+                                         MF.getFunction().isVarArg());
 
   auto HasReg = [](ArrayRef<MCRegister> RegList, MCRegister Reg) {
     return llvm::is_contained(RegList, Reg);
@@ -612,7 +624,9 @@ bool AArch64RegisterInfo::isArgumentRegister(const MachineFunction &MF,
   case CallingConv::GHC:
     return HasReg(CC_AArch64_GHC_ArgRegs, Reg);
   case CallingConv::PreserveNone:
-    return HasReg(CC_AArch64_Preserve_None_ArgRegs, Reg);
+    if (!MF.getFunction().isVarArg())
+      return HasReg(CC_AArch64_Preserve_None_ArgRegs, Reg);
+    [[fallthrough]];
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::PreserveMost:

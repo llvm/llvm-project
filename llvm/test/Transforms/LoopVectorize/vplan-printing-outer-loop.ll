@@ -32,9 +32,9 @@ define void @foo(i64 %n) {
 ; CHECK-NEXT:       EMIT branch-on-cond ir<%inner.ec>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT:  }
-; CHECK-NEXT:  Successor(s): outer.latch
+; CHECK-NEXT:  Successor(s): vector.latch
 ; CHECK-EMPTY:
-; CHECK-NEXT:   outer.latch:
+; CHECK-NEXT:   vector.latch:
 ; CHECK-NEXT:     EMIT ir<%outer.iv.next> = add ir<%outer.iv>, ir<1>
 ; CHECK-NEXT:     EMIT ir<%outer.ec> = icmp ir<%outer.iv.next>, ir<8>
 ; CHECK-NEXT:     EMIT branch-on-cond ir<%outer.ec>

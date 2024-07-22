@@ -1466,7 +1466,8 @@ define amdgpu_ps void @atomic_global_store_saddr_i32_zext_vgpr(ptr addrspace(1) 
 ;
 ; GFX12-LABEL: atomic_global_store_saddr_i32_zext_vgpr:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    global_store_b32 v0, v1, s[2:3]
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    global_store_b32 v0, v1, s[2:3] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
@@ -1491,7 +1492,8 @@ define amdgpu_ps void @atomic_global_store_saddr_i32_zext_vgpr_offset_neg128(ptr
 ;
 ; GFX12-LABEL: atomic_global_store_saddr_i32_zext_vgpr_offset_neg128:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    global_store_b32 v0, v1, s[2:3] offset:-128
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    global_store_b32 v0, v1, s[2:3] offset:-128 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
@@ -1517,7 +1519,8 @@ define amdgpu_ps void @atomic_global_store_saddr_i64_zext_vgpr(ptr addrspace(1) 
 ;
 ; GFX12-LABEL: atomic_global_store_saddr_i64_zext_vgpr:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    global_store_b64 v0, v[1:2], s[2:3]
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    global_store_b64 v0, v[1:2], s[2:3] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
@@ -1542,7 +1545,8 @@ define amdgpu_ps void @atomic_global_store_saddr_i64_zext_vgpr_offset_neg128(ptr
 ;
 ; GFX12-LABEL: atomic_global_store_saddr_i64_zext_vgpr_offset_neg128:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    global_store_b64 v0, v[1:2], s[2:3] offset:-128
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    global_store_b64 v0, v[1:2], s[2:3] offset:-128 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm

@@ -109,8 +109,11 @@ RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
   return Cost;
 }
 
-InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
-                                            TTI::TargetCostKind CostKind) {
+static InstructionCost getIntImmCostImpl(const DataLayout &DL,
+                                         const RISCVSubtarget *ST,
+                                         const APInt &Imm, Type *Ty,
+                                         TTI::TargetCostKind CostKind,
+                                         bool FreeZeroes) {
   assert(Ty->isIntegerTy() &&
          "getIntImmCost can only estimate cost of materialising integers");
 
@@ -119,8 +122,13 @@ InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
     return TTI::TCC_Free;
 
   // Otherwise, we check how many instructions it will take to materialise.
-  const DataLayout &DL = getDataLayout();
-  return RISCVMatInt::getIntMatCost(Imm, DL.getTypeSizeInBits(Ty), *getST());
+  return RISCVMatInt::getIntMatCost(Imm, DL.getTypeSizeInBits(Ty), *ST,
+                                    /*CompressionCost=*/false, FreeZeroes);
+}
+
+InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
+                                            TTI::TargetCostKind CostKind) {
+  return getIntImmCostImpl(getDataLayout(), getST(), Imm, Ty, CostKind, false);
 }
 
 // Look for patterns of shift followed by AND that can be turned into a pair of
@@ -172,11 +180,24 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // split up large offsets in GEP into better parts than ConstantHoisting
     // can.
     return TTI::TCC_Free;
-  case Instruction::Store:
-    // If the address is a constant, use the materialization cost.
-    if (Idx == 1)
-      return getIntImmCost(Imm, Ty, CostKind);
-    return TTI::TCC_Free;
+  case Instruction::Store: {
+    // Use the materialization cost regardless of if it's the address or the
+    // value that is constant, except for if the store is misaligned and
+    // misaligned accesses are not legal (experience shows constant hoisting
+    // can sometimes be harmful in such cases).
+    if (Idx == 1 || !Inst)
+      return getIntImmCostImpl(getDataLayout(), getST(), Imm, Ty, CostKind,
+                               /*FreeZeroes=*/true);
+
+    StoreInst *ST = cast<StoreInst>(Inst);
+    if (!getTLI()->allowsMemoryAccessForAlignment(
+            Ty->getContext(), DL, getTLI()->getValueType(DL, Ty),
+            ST->getPointerAddressSpace(), ST->getAlign()))
+      return TTI::TCC_Free;
+
+    return getIntImmCostImpl(getDataLayout(), getST(), Imm, Ty, CostKind,
+                             /*FreeZeroes=*/true);
+  }
   case Instruction::Load:
     // If the address is a constant, use the materialization cost.
     return getIntImmCost(Imm, Ty, CostKind);
@@ -1667,7 +1688,6 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                          Args, CxtI);
 
-
   auto getConstantMatCost =
     [&](unsigned Operand, TTI::OperandValueInfo OpInfo) -> InstructionCost {
     if (OpInfo.isUniform() && TLI->canSplatOperand(Opcode, Operand))
@@ -1739,8 +1759,14 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
                                                            Op1Info, Op2Info,
                                                            Args, CxtI);
   }
-  return ConstantMatCost +
-         LT.first * getRISCVInstructionCost(Op, LT.second, CostKind);
+
+  InstructionCost InstrCost = getRISCVInstructionCost(Op, LT.second, CostKind);
+  // We use BasicTTIImpl to calculate scalar costs, which assumes floating point
+  // ops are twice as expensive as integer ops. Do the same for vectors so
+  // scalar floating point ops aren't cheaper than their vector equivalents.
+  if (Ty->isFPOrFPVectorTy())
+    InstrCost *= 2;
+  return ConstantMatCost + LT.first * InstrCost;
 }
 
 // TODO: Deduplicate from TargetTransformInfoImplCRTPBase.
