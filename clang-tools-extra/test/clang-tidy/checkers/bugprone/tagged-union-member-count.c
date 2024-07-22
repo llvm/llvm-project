@@ -55,13 +55,13 @@ struct maybeTaggedUnion3 { // No warnings expected.
   };
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
 struct TaggedUnionStructWithPredefinedTagAndPredefinedUnion {
   enum Tags3 Tag;
   union union4 Data;
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
 struct TaggedUnionStructWithPredefinedTagAndInlineUnion {
   enum Tags3 Tag;
   union {
@@ -75,7 +75,7 @@ struct TaggedUnionStructWithPredefinedTagAndInlineUnion {
   } Data;
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
 struct TaggedUnionStructWithInlineTagAndPredefinedUnion { 
   enum {
     TaggedUnion7tag1,
@@ -85,7 +85,7 @@ struct TaggedUnionStructWithInlineTagAndPredefinedUnion {
   union union4 Data;
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
 struct TaggedUnionStructWithInlineTagAndInlineUnion { 
   enum {
     TaggedUnion8tag1,
@@ -103,14 +103,14 @@ struct TaggedUnionStructWithInlineTagAndInlineUnion {
   } Data;
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
 struct TaggedUnionStructNesting { 
   enum Tags3 Tag;
   union {
     float F;
     int I;
     long L;
-    // CHECK-MESSAGES: :[[@LINE+1]]:12: warning: Tagged union has more data members (4) than tags (3)
+    // CHECK-MESSAGES: :[[@LINE+1]]:12: warning: tagged union has more data members (4) than tags (3)
     struct innerdecl { 
       enum Tags3 Tag;
       union union4 Data;
@@ -118,31 +118,8 @@ struct TaggedUnionStructNesting {
   } Data;
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)
-struct CountingEnumCaseInsensitivityTest1 { 
-  enum {
-    node_type_loop,
-    node_type_branch,
-    node_type_function,
-    node_type_count,
-  } Kind;
-  union union4 Data;
-};
-
-// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)
-struct CountingEnumCaseInsensitivityTest2 { 
-  enum {
-    NODE_TYPE_LOOP,
-    NODE_TYPE_BRANCH,
-    NODE_TYPE_FUNCTION,
-    NODE_TYPE_COUNT,
-  } Kind;
-  union union4 Data;
-};
-
-// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
 struct TaggedUnionStructWithTypedefedTagAndTypedefedUnion { 
   tags3 Tag;
   union4 Data;
 }; 
-

@@ -1,12 +1,12 @@
 // RUN: %check_clang_tidy -std=c++98-or-later %s bugprone-tagged-union-member-count %t \
 // RUN:   -config='{CheckOptions: { \
-// RUN:     bugprone-tagged-union-member-count.StrictModeIsEnabled: 0, \
-// RUN:     bugprone-tagged-union-member-count.CountingEnumHeuristicIsEnabled: 1, \
+// RUN:     bugprone-tagged-union-member-count.StrictMode: false, \
+// RUN:     bugprone-tagged-union-member-count.EnableCountingEnumHeuristic: true, \
 // RUN:     bugprone-tagged-union-member-count.CountingEnumSuffixes: "count", \
 // RUN:     bugprone-tagged-union-member-count.CountingEnumPrefixes: "last", \
 // RUN:  }}' --
 
-// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (3) than tags (2)
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (3) than tags (2)
 struct IncorrectBecauseHeuristicIsEnabledPrefixCase {
   enum {
     tags1,
@@ -34,7 +34,7 @@ struct CorrectBecauseHeuristicIsEnabledPrefixCase { // No warnings expected
   } Data;
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (3) than tags (2)
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (3) than tags (2)
 struct IncorrectBecauseHeuristicIsEnabledSuffixCase {
   enum {
     tags1,
@@ -60,4 +60,33 @@ struct CorrectBecauseHeuristicIsEnabledSuffixCase { // No warnings expected
     int B;
     int C;
   } Data;
+};
+
+union Union4 {
+  short *Shorts;
+  double *Doubles;
+  int *Ints;
+  float *Floats;
+};
+
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
+struct CountingEnumCaseInsensitivityTest1 { 
+  enum {
+    node_type_loop,
+    node_type_branch,
+    node_type_function,
+    node_type_count,
+  } Kind;
+  union Union4 Data;
+};
+
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
+struct CountingEnumCaseInsensitivityTest2 { 
+  enum {
+    NODE_TYPE_LOOP,
+    NODE_TYPE_BRANCH,
+    NODE_TYPE_FUNCTION,
+    NODE_TYPE_COUNT,
+  } Kind;
+  union Union4 Data;
 };

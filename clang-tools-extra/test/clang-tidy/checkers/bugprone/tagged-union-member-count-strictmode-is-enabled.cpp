@@ -1,9 +1,9 @@
 // RUN: %check_clang_tidy -std=c++98-or-later %s bugprone-tagged-union-member-count %t \
 // RUN:   -config='{CheckOptions: { \
-// RUN:     bugprone-tagged-union-member-count.StrictModeIsEnabled: 1, \
+// RUN:     bugprone-tagged-union-member-count.StrictMode: true, \
 // RUN:  }}' --
 
-// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has fewer data members (2) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has fewer data members (2) than tags (3)
 struct IncorrectBecauseStrictmodeIsEnabled {
   enum {
     tags1,
@@ -28,4 +28,3 @@ struct Correct { // No warnings expected
     int C;
   } Data;
 };
-

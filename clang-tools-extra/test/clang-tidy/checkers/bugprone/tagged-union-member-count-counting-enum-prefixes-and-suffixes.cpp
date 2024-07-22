@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy -std=c++98-or-later %s bugprone-tagged-union-member-count %t \
 // RUN:   -config='{CheckOptions: { \
-// RUN:     bugprone-tagged-union-member-count.StrictModeIsEnabled: 0, \
-// RUN:     bugprone-tagged-union-member-count.CountingEnumHeuristicIsEnabled: 1, \
+// RUN:     bugprone-tagged-union-member-count.StrictMode: false, \
+// RUN:     bugprone-tagged-union-member-count.EnableCountingEnumHeuristic: true, \
 // RUN:     bugprone-tagged-union-member-count.CountingEnumSuffixes: "count", \
 // RUN:     bugprone-tagged-union-member-count.CountingEnumPrefixes: "last", \
 // RUN:  }}' --
@@ -31,7 +31,7 @@ struct TaggedUnionPrefixAndSuffixMatch {
   Union4 Data;
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (3) than tags (2)
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (3) than tags (2)
 struct TaggedUnionOnlyPrefixMatch {
   enum { 
     prefixtag1,
@@ -41,7 +41,7 @@ struct TaggedUnionOnlyPrefixMatch {
   Union3 Data;
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (3) than tags (2)
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (3) than tags (2)
 struct TaggedUnionOnlySuffixMatch {
   enum {
     suffixtag1,
@@ -50,4 +50,3 @@ struct TaggedUnionOnlySuffixMatch {
   } Kind;
   Union3 Data;
 };
-

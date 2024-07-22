@@ -26,23 +26,17 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  static constexpr char StrictModeIsEnabledOptionName[] = "StrictModeIsEnabled";
-  static constexpr char CountingEnumHeuristicIsEnabledOptionName[] =
-      "CountingEnumHeuristicIsEnabled";
-  static constexpr char CountingEnumPrefixesOptionName[] =
-      "CountingEnumPrefixes";
-  static constexpr char CountingEnumSuffixesOptionName[] =
-      "CountingEnumSuffixes";
-
-  const bool StrictModeIsEnabled;
-  const bool CountingEnumHeuristicIsEnabled;
+  const bool StrictMode;
+  const bool EnableCountingEnumHeuristic;
   const StringRef RawCountingEnumPrefixes;
   const StringRef RawCountingEnumSuffixes;
   std::vector<StringRef> ParsedCountingEnumPrefixes;
   std::vector<StringRef> ParsedCountingEnumSuffixes;
+  const bool CountingEnumPrefixesSet;
+  const bool CountingEnumSuffixesSet;
 
-  size_t getNumberOfValidEnumValues(const EnumDecl *ed) const noexcept;
-  bool isCountingEnumLikeName(StringRef name) const noexcept;
+  size_t getNumberOfValidEnumValues(const EnumDecl *Ed) const noexcept;
+  bool isCountingEnumLikeName(StringRef Name) const noexcept;
 };
 
 } // namespace clang::tidy::bugprone

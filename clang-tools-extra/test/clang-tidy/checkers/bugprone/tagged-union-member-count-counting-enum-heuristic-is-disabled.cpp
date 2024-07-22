@@ -1,12 +1,10 @@
 // RUN: %check_clang_tidy -std=c++98-or-later %s bugprone-tagged-union-member-count %t \
 // RUN:   -config='{CheckOptions: { \
-// RUN:       bugprone-tagged-union-member-count.StrictModeIsEnabled: 1, \
-// RUN:       bugprone-tagged-union-member-count.CountingEnumHeuristicIsEnabled: 0, \
-// RUN:       bugprone-tagged-union-member-count.CountingEnumSuffixes: "count", \
-// RUN:       bugprone-tagged-union-member-count.CountingEnumPrefixes: "last", \
+// RUN:       bugprone-tagged-union-member-count.StrictMode: true, \
+// RUN:       bugprone-tagged-union-member-count.EnableCountingEnumHeuristic: false, \
 // RUN:   }}' --
 
-// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has fewer data members (3) than tags (4)
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has fewer data members (3) than tags (4)
 struct IncorrectBecauseHeuristicIsDisabledPrefixCase {
   enum {
     tags11,
@@ -36,7 +34,7 @@ struct CorrectBecauseHeuristicIsDisabledPrefixCase { // No warnings expected
   } Data;
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has fewer data members (3) than tags (4)
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has fewer data members (3) than tags (4)
 struct IncorrectBecauseHeuristicIsDisabledSuffixCase {
   enum {
     tags11,
@@ -65,4 +63,3 @@ struct CorrectBecauseHeuristicIsDisabledSuffixCase { // No warnings expected
     long D;
   } Data;
 };
-

@@ -4,14 +4,14 @@ typedef enum Tags3 {
   tags3_1,
   tags3_2,
   tags3_3,
-} tags3;
+} Tags3;
 
 typedef enum Tags4 {
   tags4_1,
   tags4_2,
   tags4_3,
   tags4_4,
-} tags4;
+} Tags4;
 
 enum class Classtags3 {
   classtags3_1,
@@ -29,14 +29,14 @@ typedef union Union3 {
   short *Shorts;
   int *Ints;
   float *Floats;
-} union3;
+} Union3;
 
 typedef union Union4 {
   short *Shorts;
   double *Doubles;
   int *Ints;
   float *Floats;
-} union4;
+} Union4;
 
 // It is not obvious which enum is the tag for the union.
 class MaybeTaggedUnion1 { // No warnings expected.
@@ -67,13 +67,13 @@ class MaybeTaggedUnion3 { // No warnings expected.
   };
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: tagged union has more data members (4) than tags (3)
 class TaggedUnionClassPredefinedTagAndPredefinedUnion {
   enum Tags3 Tag;
     union Union4 Data;
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: tagged union has more data members (4) than tags (3)
 class TaggedUnionClassPredefinedTagAndInlineUnion {
   enum Tags3 Tag;
     union {
@@ -87,7 +87,7 @@ class TaggedUnionClassPredefinedTagAndInlineUnion {
     } Data;
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: tagged union has more data members (4) than tags (3)
 class TaggedUnionClassInlineTagAndPredefinedUnion { 
   enum {
     tag1,
@@ -97,7 +97,7 @@ class TaggedUnionClassInlineTagAndPredefinedUnion {
   union Union4 Data;
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: tagged union has more data members (4) than tags (3)
 class TaggedUnionClassInlineTagAndInlineUnion { 
   enum {
     tag1,
@@ -115,14 +115,14 @@ class TaggedUnionClassInlineTagAndInlineUnion {
   } Data;
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: tagged union has more data members (4) than tags (3)
 class TaggedUnionClassWithNestedTaggedUnionClass { 
   enum Tags3 Tag;
   union {
     float F;
     int I;
     long L;
-    // CHECK-MESSAGES: :[[@LINE+1]]:11: warning: Tagged union has more data members (4) than tags (3)
+    // CHECK-MESSAGES: :[[@LINE+1]]:11: warning: tagged union has more data members (4) than tags (3)
     class Innerdecl { 
       enum Tags3 Tag;
       union Union4 Data;
@@ -130,39 +130,39 @@ class TaggedUnionClassWithNestedTaggedUnionClass {
   } Data;
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: tagged union has more data members (4) than tags (3)
 class TaggedUnionClassWithTypedefedTag { 
-  tags3 Tag;
-  union4 Data;
+  Tags3 Tag;
+  Union4 Data;
 }; 
 
-// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
 struct TaggedUnionStructWithEnumClass { 
   enum Classtags3 Tag;
-  union4 Data;
+  Union4 Data;
 }; 
 
-// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: tagged union has more data members (4) than tags (3)
 class TaggedUnionClasswithEnumClass { 
   enum Classtags3 Tag;
-  union4 Data;
+  Union4 Data;
 }; 
 
-// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
 struct TaggedUnionStructWithTypedEnum {
   Typedtags3 Tag;
-  union4 Data;
+  Union4 Data;
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: tagged union has more data members (4) than tags (3)
 class TaggedUnionClassWithTypedEnum {
   Typedtags3 Tag;
-  union4 Data;
+  Union4 Data;
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
 struct AnonymousTaggedUnionStruct {
-  tags3 Tag;
+  Tags3 Tag;
   union {
     char A;
     short B;
@@ -171,9 +171,9 @@ struct AnonymousTaggedUnionStruct {
   };
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: tagged union has more data members (4) than tags (3)
 class TaggedUnionClassWithAnonymousUnion {
-  tags3 Tag;
+  Tags3 Tag;
   union {
     char A;
     short B;
@@ -197,13 +197,13 @@ union Union4 {
   float *Floats;
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
 struct TaggedUnionStructInNamespace {
   Tags3 Tags;
   Union4 Data;
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: tagged union has more data members (4) than tags (3)
 class TaggedUnionClassInNamespace {
   Tags3 Tags;
   Union4 Data;
@@ -211,20 +211,20 @@ class TaggedUnionClassInNamespace {
 
 } // namespace testnamespace
 
-// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
 struct TaggedUnionStructWithNamespacedTagAndUnion {
   testnamespace::Tags3 Tags;
   testnamespace::Union4 Data;
 };
 
-// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: Tagged union has more data members (4) than tags (3)
+// CHECK-MESSAGES: :[[@LINE+1]]:7: warning: tagged union has more data members (4) than tags (3)
 class TaggedUnionClassWithNamespacedTagAndUnion {
   testnamespace::Tags3 Tags;
   testnamespace::Union4 Data;
 };
 
-// CHECK-MESSAGES: :[[@LINE+2]]:8: warning: Tagged union has more data members (4) than tags (3)
-template <typename Union, typename Tag>
+// CHECK-MESSAGES: :[[@LINE+2]]:8: warning: tagged union has more data members (4) than tags (3)
+template <typename Tag, typename Union>
 struct TemplatedStructWithNamespacedTagAndUnion {
   Tag Kind;
   Union Data;
@@ -232,8 +232,8 @@ struct TemplatedStructWithNamespacedTagAndUnion {
 
 TemplatedStructWithNamespacedTagAndUnion<testnamespace::Union4, testnamespace::Tags3> TemplatedStruct3;
 
-// CHECK-MESSAGES: :[[@LINE+2]]:7: warning: Tagged union has more data members (4) than tags (3)
-template <typename Union, typename Tag>
+// CHECK-MESSAGES: :[[@LINE+2]]:7: warning: tagged union has more data members (4) than tags (3)
+template <typename Tag, typename Union>
 class TemplatedClassWithNamespacedTagAndUnion {
   Tag Kind;
   Union Data;
@@ -241,22 +241,56 @@ class TemplatedClassWithNamespacedTagAndUnion {
 
 TemplatedClassWithNamespacedTagAndUnion<testnamespace::Union4, testnamespace::Tags3> TemplatedClass3;
 
-// CHECK-MESSAGES: :[[@LINE+2]]:8: warning: Tagged union has more data members (4) than tags (3)
-template <typename Union, typename Tag>
+// CHECK-MESSAGES: :[[@LINE+2]]:8: warning: tagged union has more data members (4) than tags (3)
+template <typename Tag, typename Union>
 struct TemplatedStruct {
   Tag Kind;
   Union Data;
 };
 
-TemplatedStruct<union3, tags3> TemplatedStruct1; // No warning expected
-TemplatedStruct<union4, tags3> TemplatedStruct2;
+TemplatedStruct<Tags3, Union3> TemplatedStruct1; // No warning expected
+TemplatedStruct<Tags3, Union4> TemplatedStruct2;
 
-// CHECK-MESSAGES: :[[@LINE+2]]:7: warning: Tagged union has more data members (4) than tags (3)
-template <typename Union, typename Tag>
+// CHECK-MESSAGES: :[[@LINE+2]]:7: warning: tagged union has more data members (4) than tags (3)
+template <typename Tag, typename Union>
 class TemplatedClass {
   Tag Kind;
   Union Data;
 };
 
-TemplatedClass<union3, tags3> TemplatedClass1; // No warning expected
-TemplatedClass<union4, tags3> TemplatedClass2;
+TemplatedClass<Tags3, Union3> TemplatedClass1; // No warning expected
+TemplatedClass<Tags3, Union4> TemplatedClass2;
+
+// CHECK-MESSAGES: :[[@LINE+2]]:8: warning: tagged union has more data members (4) than tags (3)
+template <typename T>
+struct TemplatedStructButTaggedUnionPartIsNotTemplated {
+  Tags3 Kind;
+  Union4 Data;
+  T SomethingElse;
+};
+
+// CHECK-MESSAGES: :[[@LINE+2]]:7: warning: tagged union has more data members (4) than tags (3)
+template <typename T>
+class TemplatedClassButTaggedUnionPartIsNotTemplated {
+  Tags3 Kind;
+  Union4 Data;
+  T SomethingElse;
+};
+
+#define DECLARE_TAGGED_UNION_STRUCT(Tag, Union, Name)\
+struct Name {\
+  Tag Kind;\
+  Union Data;\
+}
+
+// CHECK-MESSAGES: :[[@LINE+1]]:44: warning: tagged union has more data members (4) than tags (3)
+DECLARE_TAGGED_UNION_STRUCT(Tags3, Union4, TaggedUnionStructFromMacro);
+
+#define DECLARE_TAGGED_UNION_CLASS(Tag, Union, Name)\
+class Name {\
+  Tag Kind;\
+  Union Data;\
+}
+
+// CHECK-MESSAGES: :[[@LINE+1]]:43: warning: tagged union has more data members (4) than tags (3)
+DECLARE_TAGGED_UNION_CLASS(Tags3, Union4, TaggedUnionClassFromMacro);
