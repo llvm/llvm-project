@@ -493,8 +493,7 @@ int WindowScheduler::calculateStallCycle(unsigned Offset, int MaxCycle) {
     for (auto &Succ : SU->Succs) {
       if (Succ.isWeak() || Succ.getSUnit() == &TripleDAG->ExitSU)
         continue;
-      // If the expected cycle does not exceed loop initiation interval, no
-      // check is needed.
+      // If the expected cycle does not exceed CurrentII, no check is needed.
       if (DefCycle + (int)Succ.getLatency() <= CurrentII)
         continue;
       // If the cycle of the scheduled MI A is less than that of the scheduled
