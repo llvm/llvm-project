@@ -13,6 +13,7 @@ declare ptr @llvm.objc.retainAutoreleasedReturnValue(ptr)
 declare ptr @llvm.objc.retain(ptr)
 declare void @llvm.objc.enumerationMutation(ptr)
 declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
+declare void @llvm.memset.inline.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 declare ptr @objc_msgSend(ptr, ptr, ...) nonlazybind
 declare void @use(ptr)
 declare void @llvm.objc.release(ptr)
@@ -35,6 +36,67 @@ entry:
   %items.ptr = alloca [16 x ptr], align 8
   %0 = call ptr @llvm.objc.retain(ptr %a) nounwind
   call void @llvm.memset.p0.i64(ptr align 8 %state.ptr, i8 0, i64 64, i1 false)
+  %1 = call ptr @llvm.objc.retain(ptr %0) nounwind
+  %tmp2 = load ptr, ptr @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
+  %call = call i64 @objc_msgSend(ptr %1, ptr %tmp2, ptr %state.ptr, ptr %items.ptr, i64 16)
+  %iszero = icmp eq i64 %call, 0
+  br i1 %iszero, label %forcoll.empty, label %forcoll.loopinit
+
+forcoll.loopinit:
+  %mutationsptr.ptr = getelementptr inbounds %struct.__objcFastEnumerationState, ptr %state.ptr, i64 0, i32 2
+  %mutationsptr = load ptr, ptr %mutationsptr.ptr, align 8
+  %forcoll.initial-mutations = load i64, ptr %mutationsptr, align 8
+  %stateitems.ptr = getelementptr inbounds %struct.__objcFastEnumerationState, ptr %state.ptr, i64 0, i32 1
+  br label %forcoll.loopbody.outer
+
+forcoll.loopbody.outer:
+  %forcoll.count.ph = phi i64 [ %call, %forcoll.loopinit ], [ %call6, %forcoll.refetch ]
+  %tmp7 = icmp ugt i64 %forcoll.count.ph, 1
+  %umax = select i1 %tmp7, i64 %forcoll.count.ph, i64 1
+  br label %forcoll.loopbody
+
+forcoll.loopbody:
+  %forcoll.index = phi i64 [ 0, %forcoll.loopbody.outer ], [ %4, %forcoll.notmutated ]
+  %mutationsptr3 = load ptr, ptr %mutationsptr.ptr, align 8
+  %statemutations = load i64, ptr %mutationsptr3, align 8
+  %2 = icmp eq i64 %statemutations, %forcoll.initial-mutations
+  br i1 %2, label %forcoll.notmutated, label %forcoll.mutated
+
+forcoll.mutated:
+  call void @llvm.objc.enumerationMutation(ptr %1)
+  br label %forcoll.notmutated
+
+forcoll.notmutated:
+  %stateitems = load ptr, ptr %stateitems.ptr, align 8
+  %currentitem.ptr = getelementptr ptr, ptr %stateitems, i64 %forcoll.index
+  %3 = load ptr, ptr %currentitem.ptr, align 8
+  call void @use(ptr %3)
+  %4 = add i64 %forcoll.index, 1
+  %exitcond = icmp eq i64 %4, %umax
+  br i1 %exitcond, label %forcoll.refetch, label %forcoll.loopbody
+
+forcoll.refetch:
+  %tmp5 = load ptr, ptr @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
+  %call6 = call i64 @objc_msgSend(ptr %1, ptr %tmp5, ptr %state.ptr, ptr %items.ptr, i64 16)
+  %5 = icmp eq i64 %call6, 0
+  br i1 %5, label %forcoll.empty, label %forcoll.loopbody.outer
+
+forcoll.empty:
+  call void @llvm.objc.release(ptr %1) nounwind
+  call void @llvm.objc.release(ptr %0) nounwind, !clang.imprecise_release !0
+  ret void
+}
+
+; CHECK-LABEL: define void @test1(
+; CHECK: call ptr @llvm.objc.retain
+; CHECK-NOT: @llvm.objc.retain
+; CHECK: }
+define void @test1(ptr %a) nounwind {
+entry:
+  %state.ptr = alloca %struct.__objcFastEnumerationState, align 8
+  %items.ptr = alloca [16 x ptr], align 8
+  %0 = call ptr @llvm.objc.retain(ptr %a) nounwind
+  call void @llvm.memset.inline.p0.i64(ptr align 8 %state.ptr, i8 0, i64 64, i1 false)
   %1 = call ptr @llvm.objc.retain(ptr %0) nounwind
   %tmp2 = load ptr, ptr @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
   %call = call i64 @objc_msgSend(ptr %1, ptr %tmp2, ptr %state.ptr, ptr %items.ptr, i64 16)
