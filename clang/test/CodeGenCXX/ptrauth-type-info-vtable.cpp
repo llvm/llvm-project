@@ -39,7 +39,7 @@ namespace std {
 
       virtual void test_method();
   };
-}
+} // namespace std
 
 static_assert(__has_feature(ptrauth_type_info_vtable_pointer_discrimination) == ENABLE_TID, "incorrect feature state");
 
