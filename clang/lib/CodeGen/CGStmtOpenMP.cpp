@@ -3932,7 +3932,7 @@ static bool isForSupportedByOpenMPIRBuilder(const OMPLoopDirective &S,
   if (HasCancel)
     return false;
   for (OMPClause *C : S.clauses()) {
-    if (isa<OMPNowaitClause>(C) || isa<OMPBindClause>(C))
+    if (isa<OMPNowaitClause, OMPBindClause>(C))
       continue;
 
     if (auto *SC = dyn_cast<OMPScheduleClause>(C)) {
