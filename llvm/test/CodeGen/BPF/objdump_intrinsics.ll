@@ -31,10 +31,10 @@ define i32 @ld_h(ptr %ctx, ptr %ctx2, i32 %foo) #0 {
   %5 = trunc i64 %4 to i32
   ret i32 %5
 ; CHECK-LABEL: ld_h:
-; CHECK-EL: r0 = *(u16 *)skb[r
 ; CHECK-EL: r0 = *(u16 *)skb[123]
-; CHECK-EB: r0 = *(u16 *)skb[r
+; CHECK-EL: r0 = *(u16 *)skb[r
 ; CHECK-EB: r0 = *(u16 *)skb[123]
+; CHECK-EB: r0 = *(u16 *)skb[r
 }
 
 declare i64 @llvm.bpf.load.half(ptr, i64) #1
@@ -48,10 +48,10 @@ define i32 @ld_w(ptr %ctx, ptr %ctx2, i32 %foo) #0 {
   %5 = trunc i64 %4 to i32
   ret i32 %5
 ; CHECK-LABEL: ld_w:
-; CHECK-EL: r0 = *(u32 *)skb[r
 ; CHECK-EL: r0 = *(u32 *)skb[123]
-; CHECK-EB: r0 = *(u32 *)skb[r
+; CHECK-EL: r0 = *(u32 *)skb[r
 ; CHECK-EB: r0 = *(u32 *)skb[123]
+; CHECK-EB: r0 = *(u32 *)skb[r
 }
 
 declare i64 @llvm.bpf.load.word(ptr, i64) #1
