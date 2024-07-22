@@ -566,6 +566,10 @@ Address Address::getResignedAddress(const CGPointerAuthInfo &NewInfo,
                  /*Offset=*/nullptr, isKnownNonNull());
 }
 
+llvm::Value *Address::emitRawPointerSlow(CodeGenFunction &CGF) const {
+  return CGF.getAsNaturalPointerTo(*this, QualType());
+}
+
 llvm::Value *LValue::getPointer(CodeGenFunction &CGF) const {
   assert(isSimple());
   return emitResignedPointer(getType(), CGF);

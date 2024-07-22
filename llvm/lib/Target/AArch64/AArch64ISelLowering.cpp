@@ -732,10 +732,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   for (auto Op : {ISD::FREM,         ISD::FPOW,          ISD::FPOWI,
                   ISD::FCOS,         ISD::FSIN,          ISD::FSINCOS,
+                  ISD::FACOS,        ISD::FASIN,         ISD::FATAN,
+                  ISD::FCOSH,        ISD::FSINH,         ISD::FTANH,
                   ISD::FTAN,         ISD::FEXP,          ISD::FEXP2,
                   ISD::FEXP10,       ISD::FLOG,          ISD::FLOG2,
                   ISD::FLOG10,       ISD::STRICT_FREM,   ISD::STRICT_FPOW,
                   ISD::STRICT_FPOWI, ISD::STRICT_FCOS,   ISD::STRICT_FSIN,
+                  ISD::STRICT_FACOS, ISD::STRICT_FASIN,  ISD::STRICT_FATAN,
+                  ISD::STRICT_FCOSH, ISD::STRICT_FSINH,  ISD::STRICT_FTANH,
                   ISD::STRICT_FEXP,  ISD::STRICT_FEXP2,  ISD::STRICT_FLOG,
                   ISD::STRICT_FLOG2, ISD::STRICT_FLOG10, ISD::STRICT_FTAN}) {
     setOperationAction(Op, MVT::f16, Promote);
@@ -1176,6 +1180,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
           ISD::FNEG,              ISD::FABS,           ISD::FCEIL,
           ISD::FSQRT,             ISD::FFLOOR,         ISD::FNEARBYINT,
           ISD::FSIN,              ISD::FCOS,           ISD::FTAN,
+          ISD::FASIN,             ISD::FACOS,          ISD::FATAN,
+          ISD::FSINH,             ISD::FCOSH,          ISD::FTANH,
           ISD::FPOW,              ISD::FLOG,           ISD::FLOG2,          
           ISD::FLOG10,            ISD::FEXP,           ISD::FEXP2,
           ISD::FEXP10,            ISD::FRINT,          ISD::FROUND,
@@ -1615,6 +1621,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FSIN, VT, Expand);
       setOperationAction(ISD::FSINCOS, VT, Expand);
       setOperationAction(ISD::FTAN, VT, Expand);
+      setOperationAction(ISD::FACOS, VT, Expand);
+      setOperationAction(ISD::FASIN, VT, Expand);
+      setOperationAction(ISD::FATAN, VT, Expand);
+      setOperationAction(ISD::FCOSH, VT, Expand);
+      setOperationAction(ISD::FSINH, VT, Expand);
+      setOperationAction(ISD::FTANH, VT, Expand);
       setOperationAction(ISD::FEXP, VT, Expand);
       setOperationAction(ISD::FEXP2, VT, Expand);
       setOperationAction(ISD::FEXP10, VT, Expand);
@@ -1822,6 +1834,12 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
     setOperationAction(ISD::FSIN, VT, Expand);
     setOperationAction(ISD::FCOS, VT, Expand);
     setOperationAction(ISD::FTAN, VT, Expand);
+    setOperationAction(ISD::FASIN, VT, Expand);
+    setOperationAction(ISD::FACOS, VT, Expand);
+    setOperationAction(ISD::FATAN, VT, Expand);
+    setOperationAction(ISD::FSINH, VT, Expand);
+    setOperationAction(ISD::FCOSH, VT, Expand);
+    setOperationAction(ISD::FTANH, VT, Expand);
     setOperationAction(ISD::FPOW, VT, Expand);
     setOperationAction(ISD::FLOG, VT, Expand);
     setOperationAction(ISD::FLOG2, VT, Expand);
@@ -3385,6 +3403,11 @@ static bool isLegalArithImmed(uint64_t C) {
   return IsLegal;
 }
 
+static bool cannotBeIntMin(SDValue CheckedVal, SelectionDAG &DAG) {
+  KnownBits KnownSrc = DAG.computeKnownBits(CheckedVal);
+  return !KnownSrc.getSignedMinValue().isMinSignedValue();
+}
+
 // Can a (CMP op1, (sub 0, op2) be turned into a CMN instruction on
 // the grounds that "op1 - (-op2) == op1 + op2" ? Not always, the C and V flags
 // can be set differently by this operation. It comes down to whether
@@ -3392,12 +3415,14 @@ static bool isLegalArithImmed(uint64_t C) {
 // everything is fine. If not then the optimization is wrong. Thus general
 // comparisons are only valid if op2 != 0.
 //
-// So, finally, the only LLVM-native comparisons that don't mention C and V
-// are SETEQ and SETNE. They're the only ones we can safely use CMN for in
-// the absence of information about op2.
-static bool isCMN(SDValue Op, ISD::CondCode CC) {
+// So, finally, the only LLVM-native comparisons that don't mention C or V
+// are the ones that aren't unsigned comparisons. They're the only ones we can
+// safely use CMN for in the absence of information about op2.
+static bool isCMN(SDValue Op, ISD::CondCode CC, SelectionDAG &DAG) {
   return Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0)) &&
-         (CC == ISD::SETEQ || CC == ISD::SETNE);
+         (isIntEqualitySetCC(CC) ||
+          (isUnsignedIntSetCC(CC) && DAG.isKnownNeverZero(Op.getOperand(1))) ||
+          (isSignedIntSetCC(CC) && cannotBeIntMin(Op.getOperand(1), DAG)));
 }
 
 static SDValue emitStrictFPComparison(SDValue LHS, SDValue RHS, const SDLoc &dl,
@@ -3442,11 +3467,12 @@ static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   // register to WZR/XZR if it ends up being unused.
   unsigned Opcode = AArch64ISD::SUBS;
 
-  if (isCMN(RHS, CC)) {
+  if (isCMN(RHS, CC, DAG)) {
     // Can we combine a (CMP op1, (sub 0, op2) into a CMN instruction ?
     Opcode = AArch64ISD::ADDS;
     RHS = RHS.getOperand(1);
-  } else if (isCMN(LHS, CC)) {
+  } else if (LHS.getOpcode() == ISD::SUB && isNullConstant(LHS.getOperand(0)) &&
+             isIntEqualitySetCC(CC)) {
     // As we are looking for EQ/NE compares, the operands can be commuted ; can
     // we combine a (CMP (sub 0, op1), op2) into a CMN instruction ?
     Opcode = AArch64ISD::ADDS;
@@ -3548,13 +3574,15 @@ static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
       Opcode = AArch64ISD::CCMN;
       RHS = DAG.getConstant(Imm.abs(), DL, Const->getValueType(0));
     }
-  } else if (RHS.getOpcode() == ISD::SUB) {
-    SDValue SubOp0 = RHS.getOperand(0);
-    if (isNullConstant(SubOp0) && (CC == ISD::SETEQ || CC == ISD::SETNE)) {
-      // See emitComparison() on why we can only do this for SETEQ and SETNE.
-      Opcode = AArch64ISD::CCMN;
-      RHS = RHS.getOperand(1);
-    }
+  } else if (isCMN(RHS, CC, DAG)) {
+    Opcode = AArch64ISD::CCMN;
+    RHS = RHS.getOperand(1);
+  } else if (LHS.getOpcode() == ISD::SUB && isNullConstant(LHS.getOperand(0)) &&
+             isIntEqualitySetCC(CC)) {
+    // As we are looking for EQ/NE compares, the operands can be commuted ; can
+    // we combine a (CCMP (sub 0, op1), op2) into a CCMN instruction ?
+    Opcode = AArch64ISD::CCMN;
+    LHS = LHS.getOperand(1);
   }
   if (Opcode == 0)
     Opcode = AArch64ISD::CCMP;
@@ -3872,8 +3900,8 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   //    cmp     w12, w11, lsl #1
   if (!isa<ConstantSDNode>(RHS) ||
       !isLegalArithImmed(RHS->getAsAPIntVal().abs().getZExtValue())) {
-    bool LHSIsCMN = isCMN(LHS, CC);
-    bool RHSIsCMN = isCMN(RHS, CC);
+    bool LHSIsCMN = isCMN(LHS, CC, DAG);
+    bool RHSIsCMN = isCMN(RHS, CC, DAG);
     SDValue TheLHS = LHSIsCMN ? LHS.getOperand(1) : LHS;
     SDValue TheRHS = RHSIsCMN ? RHS.getOperand(1) : RHS;
 
@@ -3886,7 +3914,7 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
 
   SDValue Cmp;
   AArch64CC::CondCode AArch64CC;
-  if ((CC == ISD::SETEQ || CC == ISD::SETNE) && isa<ConstantSDNode>(RHS)) {
+  if (isIntEqualitySetCC(CC) && isa<ConstantSDNode>(RHS)) {
     const ConstantSDNode *RHSC = cast<ConstantSDNode>(RHS);
 
     // The imm operand of ADDS is an unsigned immediate, in the range 0 to 4095.
@@ -7091,7 +7119,13 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::GHC:
     return CC_AArch64_GHC;
   case CallingConv::PreserveNone:
-    return CC_AArch64_Preserve_None;
+    // The VarArg implementation makes assumptions about register
+    // argument passing that do not hold for preserve_none, so we
+    // instead fall back to C argument passing.
+    // The non-vararg case is handled in the CC function itself.
+    if (!IsVarArg)
+      return CC_AArch64_Preserve_None;
+    [[fallthrough]];
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::PreserveMost:
@@ -7164,7 +7198,8 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   MachineFunction &MF = DAG.getMachineFunction();
   const Function &F = MF.getFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  bool IsWin64 = Subtarget->isCallingConvWin64(F.getCallingConv());
+  bool IsWin64 =
+      Subtarget->isCallingConvWin64(F.getCallingConv(), F.isVarArg());
   bool StackViaX4 = CallConv == CallingConv::ARM64EC_Thunk_X64 ||
                     (isVarArg && Subtarget->isWindowsArm64EC());
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
@@ -7616,7 +7651,9 @@ void AArch64TargetLowering::saveVarArgRegisters(CCState &CCInfo,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   auto PtrVT = getPointerTy(DAG.getDataLayout());
-  bool IsWin64 = Subtarget->isCallingConvWin64(MF.getFunction().getCallingConv());
+  Function &F = MF.getFunction();
+  bool IsWin64 =
+      Subtarget->isCallingConvWin64(F.getCallingConv(), F.isVarArg());
 
   SmallVector<SDValue, 8> MemOps;
 
@@ -7787,6 +7824,21 @@ static bool mayTailCallThisCC(CallingConv::ID CC) {
   }
 }
 
+/// Return true if the call convention supports varargs
+/// Currently only those that pass varargs like the C
+/// calling convention does are eligible
+/// Calling conventions listed in this function must also
+/// be properly handled in AArch64Subtarget::isCallingConvWin64
+static bool callConvSupportsVarArgs(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::C:
+  case CallingConv::PreserveNone:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static void analyzeCallOperands(const AArch64TargetLowering &TLI,
                                 const AArch64Subtarget *Subtarget,
                                 const TargetLowering::CallLoweringInfo &CLI,
@@ -7795,7 +7847,7 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
   CallingConv::ID CalleeCC = CLI.CallConv;
   bool IsVarArg = CLI.IsVarArg;
   const SmallVector<ISD::OutputArg, 32> &Outs = CLI.Outs;
-  bool IsCalleeWin64 = Subtarget->isCallingConvWin64(CalleeCC);
+  bool IsCalleeWin64 = Subtarget->isCallingConvWin64(CalleeCC, IsVarArg);
 
   // For Arm64EC thunks, allocate 32 extra bytes at the bottom of the stack
   // for the shadow store.
@@ -7923,8 +7975,8 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
 
   // I want anyone implementing a new calling convention to think long and hard
   // about this assert.
-  assert((!IsVarArg || CalleeCC == CallingConv::C) &&
-         "Unexpected variadic calling convention");
+  if (IsVarArg && !callConvSupportsVarArgs(CalleeCC))
+    report_fatal_error("Unsupported variadic calling convention");
 
   LLVMContext &C = *DAG.getContext();
   // Check that the call results are passed in the same way.
@@ -10854,8 +10906,9 @@ SDValue AArch64TargetLowering::LowerAAPCS_VASTART(SDValue Op,
 SDValue AArch64TargetLowering::LowerVASTART(SDValue Op,
                                             SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
+  Function &F = MF.getFunction();
 
-  if (Subtarget->isCallingConvWin64(MF.getFunction().getCallingConv()))
+  if (Subtarget->isCallingConvWin64(F.getCallingConv(), F.isVarArg()))
     return LowerWin64_VASTART(Op, DAG);
   else if (Subtarget->isTargetDarwin())
     return LowerDarwin_VASTART(Op, DAG);

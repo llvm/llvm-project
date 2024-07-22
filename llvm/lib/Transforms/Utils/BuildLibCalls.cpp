@@ -1098,6 +1098,11 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_ldexpl:
     Changed |= setWillReturn(F);
     break;
+  case LibFunc_remquo:
+  case LibFunc_remquof:
+  case LibFunc_remquol:
+    Changed |= setDoesNotCapture(F, 2);
+    [[fallthrough]];
   case LibFunc_abs:
   case LibFunc_acos:
   case LibFunc_acosf:

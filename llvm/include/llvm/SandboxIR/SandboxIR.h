@@ -59,6 +59,7 @@
 #define LLVM_SANDBOXIR_SANDBOXIR_H
 
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/SandboxIR/Tracker.h"
@@ -74,6 +75,8 @@ class BasicBlock;
 class Context;
 class Function;
 class Instruction;
+class LoadInst;
+class StoreInst;
 class User;
 class Value;
 
@@ -170,9 +173,11 @@ protected:
   /// order.
   llvm::Value *Val = nullptr;
 
-  friend class Context; // For getting `Val`.
-  friend class User;    // For getting `Val`.
-  friend class Use;     // For getting `Val`.
+  friend class Context;   // For getting `Val`.
+  friend class User;      // For getting `Val`.
+  friend class Use;       // For getting `Val`.
+  friend class LoadInst;  // For getting `Val`.
+  friend class StoreInst; // For getting `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -262,11 +267,14 @@ public:
                          llvm::function_ref<bool(const Use &)> ShouldReplace);
   void replaceAllUsesWith(Value *Other);
 
+  /// \Returns the LLVM IR name of the bottom-most LLVM value.
+  StringRef getName() const { return Val->getName(); }
+
 #ifndef NDEBUG
   /// Should crash if there is something wrong with the instruction.
   virtual void verify() const = 0;
-  /// Returns the name in the form 'SB<number>.' like 'SB1.'
-  std::string getName() const;
+  /// Returns the unique id in the form 'SB<number>.' like 'SB1.'
+  std::string getUid() const;
   virtual void dumpCommonHeader(raw_ostream &OS) const;
   void dumpCommonFooter(raw_ostream &OS) const;
   void dumpCommonPrefix(raw_ostream &OS) const;
@@ -489,6 +497,8 @@ protected:
   /// A SandboxIR Instruction may map to multiple LLVM IR Instruction. This
   /// returns its topmost LLVM IR instruction.
   llvm::Instruction *getTopmostLLVMInstruction() const;
+  friend class LoadInst;  // For getTopmostLLVMInstruction().
+  friend class StoreInst; // For getTopmostLLVMInstruction().
 
   /// \Returns the LLVM IR Instructions that this SandboxIR maps to in program
   /// order.
@@ -547,6 +557,82 @@ public:
                                  const sandboxir::Instruction &SBI) {
     SBI.dump(OS);
     return OS;
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
+class LoadInst final : public Instruction {
+  /// Use LoadInst::create() instead of calling the constructor.
+  LoadInst(llvm::LoadInst *LI, Context &Ctx)
+      : Instruction(ClassID::Load, Opcode::Load, LI, Ctx) {}
+  friend Context; // for LoadInst()
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+
+public:
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+  static LoadInst *create(Type *Ty, Value *Ptr, MaybeAlign Align,
+                          Instruction *InsertBefore, Context &Ctx,
+                          const Twine &Name = "");
+  static LoadInst *create(Type *Ty, Value *Ptr, MaybeAlign Align,
+                          BasicBlock *InsertAtEnd, Context &Ctx,
+                          const Twine &Name = "");
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From);
+  Value *getPointerOperand() const;
+  Align getAlign() const { return cast<llvm::LoadInst>(Val)->getAlign(); }
+  bool isUnordered() const { return cast<llvm::LoadInst>(Val)->isUnordered(); }
+  bool isSimple() const { return cast<llvm::LoadInst>(Val)->isSimple(); }
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::LoadInst>(Val) && "Expected LoadInst!");
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
+class StoreInst final : public Instruction {
+  /// Use StoreInst::create().
+  StoreInst(llvm::StoreInst *SI, Context &Ctx)
+      : Instruction(ClassID::Store, Opcode::Store, SI, Ctx) {}
+  friend Context; // for StoreInst()
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+
+public:
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+  static StoreInst *create(Value *V, Value *Ptr, MaybeAlign Align,
+                           Instruction *InsertBefore, Context &Ctx);
+  static StoreInst *create(Value *V, Value *Ptr, MaybeAlign Align,
+                           BasicBlock *InsertAtEnd, Context &Ctx);
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From);
+  Value *getValueOperand() const;
+  Value *getPointerOperand() const;
+  Align getAlign() const { return cast<llvm::StoreInst>(Val)->getAlign(); }
+  bool isSimple() const { return cast<llvm::StoreInst>(Val)->isSimple(); }
+  bool isUnordered() const { return cast<llvm::StoreInst>(Val)->isUnordered(); }
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::StoreInst>(Val) && "Expected StoreInst!");
   }
   void dump(raw_ostream &OS) const override;
   LLVM_DUMP_METHOD void dump() const override;
@@ -683,8 +769,18 @@ protected:
 
   friend class BasicBlock; // For getOrCreateValue().
 
+  IRBuilder<ConstantFolder> LLVMIRBuilder;
+  auto &getLLVMIRBuilder() { return LLVMIRBuilder; }
+
+  LoadInst *createLoadInst(llvm::LoadInst *LI);
+  friend LoadInst; // For createLoadInst()
+  StoreInst *createStoreInst(llvm::StoreInst *SI);
+  friend StoreInst; // For createStoreInst()
+
 public:
-  Context(LLVMContext &LLVMCtx) : LLVMCtx(LLVMCtx), IRTracker(*this) {}
+  Context(LLVMContext &LLVMCtx)
+      : LLVMCtx(LLVMCtx), IRTracker(*this),
+        LLVMIRBuilder(LLVMCtx, ConstantFolder()) {}
 
   Tracker &getTracker() { return IRTracker; }
   /// Convenience function for `getTracker().save()`

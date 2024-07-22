@@ -209,7 +209,7 @@ static const unsigned AliasedCheckLimit = 10;
 
 // Limit of the number of uses for potentially transformed instructions/values,
 // used in checks to avoid compile-time explode.
-static constexpr int UsesLimit = 8;
+static constexpr int UsesLimit = 64;
 
 // Another limit for the alias checks: The maximum distance between load/store
 // instructions where alias checks are done.
@@ -9699,7 +9699,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           CanonicalType = CanonicalType->getWithNewType(IntegerType::get(
               CanonicalType->getContext(),
               DL->getTypeSizeInBits(CanonicalType->getScalarType())));
-        IntrinsicCostAttributes CostAttrs(MinMaxID, VecTy, {VecTy, VecTy});
+        IntrinsicCostAttributes CostAttrs(MinMaxID, CanonicalType,
+                                          {CanonicalType, CanonicalType});
         InstructionCost IntrinsicCost =
             TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
         // If the selects are the only uses of the compares, they will be
@@ -15529,7 +15530,23 @@ void BoUpSLP::computeMinimumValueSizes() {
     // Check if the root is trunc and the next node is gather/buildvector, then
     // keep trunc in scalars, which is free in most cases.
     if (E.isGather() && IsTruncRoot && E.UserTreeIndices.size() == 1 &&
-        E.Idx > (IsStoreOrInsertElt ? 2 : 1)) {
+        E.Idx > (IsStoreOrInsertElt ? 2 : 1) &&
+        all_of(E.Scalars, [&](Value *V) {
+          return V->hasOneUse() || isa<Constant>(V) ||
+                 (!V->hasNUsesOrMore(UsesLimit) &&
+                  none_of(V->users(), [&](User *U) {
+                    const TreeEntry *TE = getTreeEntry(U);
+                    const TreeEntry *UserTE = E.UserTreeIndices.back().UserTE;
+                    if (TE == UserTE || !TE)
+                      return false;
+                    unsigned UserTESz = DL->getTypeSizeInBits(
+                        UserTE->Scalars.front()->getType());
+                    auto It = MinBWs.find(TE);
+                    if (It != MinBWs.end() && It->second.first > UserTESz)
+                      return true;
+                    return DL->getTypeSizeInBits(U->getType()) > UserTESz;
+                  }));
+        })) {
       ToDemote.push_back(E.Idx);
       const TreeEntry *UserTE = E.UserTreeIndices.back().UserTE;
       auto It = MinBWs.find(UserTE);

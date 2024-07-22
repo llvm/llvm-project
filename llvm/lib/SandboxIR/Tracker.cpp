@@ -124,6 +124,30 @@ void RemoveFromParent::dump() const {
 }
 #endif
 
+MoveInstr::MoveInstr(Instruction *MovedI, Tracker &Tracker)
+    : IRChangeBase(Tracker), MovedI(MovedI) {
+  if (auto *NextI = MovedI->getNextNode())
+    NextInstrOrBB = NextI;
+  else
+    NextInstrOrBB = MovedI->getParent();
+}
+
+void MoveInstr::revert() {
+  if (auto *NextI = NextInstrOrBB.dyn_cast<Instruction *>()) {
+    MovedI->moveBefore(NextI);
+  } else {
+    auto *BB = NextInstrOrBB.get<BasicBlock *>();
+    MovedI->moveBefore(*BB, BB->end());
+  }
+}
+
+#ifndef NDEBUG
+void MoveInstr::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
 void Tracker::track(std::unique_ptr<IRChangeBase> &&Change) {
   assert(State == TrackerState::Record && "The tracker should be tracking!");
   Changes.push_back(std::move(Change));

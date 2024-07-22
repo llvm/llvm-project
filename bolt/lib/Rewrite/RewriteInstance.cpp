@@ -669,6 +669,7 @@ Error RewriteInstance::run() {
         opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML) {
       selectFunctionsToProcess();
       disassembleFunctions();
+      processMetadataPreCFG();
       buildFunctionsCFG();
     }
     processProfileData();

@@ -520,6 +520,9 @@ BENIGN_LANGOPT(CheckNew, 1, 0, "Do not assume C++ operator new may not return NU
 BENIGN_LANGOPT(CheckConstexprFunctionBodies, 1, 1,
                "Emit diagnostics for a constexpr function body that can never "
                "be used in a constant expression.")
+
+LANGOPT(BoundsSafety, 1, 0, "Bounds safety extension for C")
+
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT
 #undef BENIGN_LANGOPT

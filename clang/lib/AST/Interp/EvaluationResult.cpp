@@ -21,9 +21,9 @@ APValue EvaluationResult::toAPValue() const {
   case LValue:
     // Either a pointer or a function pointer.
     if (const auto *P = std::get_if<Pointer>(&Value))
-      return P->toAPValue();
+      return P->toAPValue(Ctx->getASTContext());
     else if (const auto *FP = std::get_if<FunctionPointer>(&Value))
-      return FP->toAPValue();
+      return FP->toAPValue(Ctx->getASTContext());
     else
       llvm_unreachable("Unhandled LValue type");
     break;
@@ -46,7 +46,7 @@ std::optional<APValue> EvaluationResult::toRValue() const {
   if (const auto *P = std::get_if<Pointer>(&Value))
     return P->toRValue(*Ctx, getSourceType());
   else if (const auto *FP = std::get_if<FunctionPointer>(&Value)) // Nope
-    return FP->toAPValue();
+    return FP->toAPValue(Ctx->getASTContext());
   llvm_unreachable("Unhandled lvalue kind");
 }
 

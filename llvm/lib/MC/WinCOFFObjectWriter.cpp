@@ -119,10 +119,9 @@ public:
 
   SmallVector<COFFSymbol *, 1> OffsetSymbols;
 };
+} // namespace
 
-class WinCOFFObjectWriter;
-
-class WinCOFFWriter {
+class llvm::WinCOFFWriter {
   WinCOFFObjectWriter &OWriter;
   support::endian::Writer W;
 
@@ -196,41 +195,19 @@ private:
   void assignFileOffsets(MCAssembler &Asm);
 };
 
-class WinCOFFObjectWriter : public MCObjectWriter {
-  friend class WinCOFFWriter;
-
-  std::unique_ptr<MCWinCOFFObjectTargetWriter> TargetObjectWriter;
-  std::unique_ptr<WinCOFFWriter> ObjWriter, DwoWriter;
-
-public:
-  WinCOFFObjectWriter(std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW,
-                      raw_pwrite_stream &OS)
-      : TargetObjectWriter(std::move(MOTW)),
-        ObjWriter(std::make_unique<WinCOFFWriter>(*this, OS,
-                                                  WinCOFFWriter::AllSections)) {
-  }
-  WinCOFFObjectWriter(std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW,
-                      raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS)
-      : TargetObjectWriter(std::move(MOTW)),
-        ObjWriter(std::make_unique<WinCOFFWriter>(*this, OS,
-                                                  WinCOFFWriter::NonDwoOnly)),
-        DwoWriter(std::make_unique<WinCOFFWriter>(*this, DwoOS,
-                                                  WinCOFFWriter::DwoOnly)) {}
-
-  // MCObjectWriter interface implementation.
-  void reset() override;
-  void executePostLayoutBinding(MCAssembler &Asm) override;
-  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                              const MCSymbol &SymA,
-                                              const MCFragment &FB, bool InSet,
-                                              bool IsPCRel) const override;
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override;
-  uint64_t writeObject(MCAssembler &Asm) override;
-};
-
-} // end anonymous namespace
+WinCOFFObjectWriter::WinCOFFObjectWriter(
+    std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS)
+    : TargetObjectWriter(std::move(MOTW)),
+      ObjWriter(std::make_unique<WinCOFFWriter>(*this, OS,
+                                                WinCOFFWriter::AllSections)) {}
+WinCOFFObjectWriter::WinCOFFObjectWriter(
+    std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS,
+    raw_pwrite_stream &DwoOS)
+    : TargetObjectWriter(std::move(MOTW)),
+      ObjWriter(std::make_unique<WinCOFFWriter>(*this, OS,
+                                                WinCOFFWriter::NonDwoOnly)),
+      DwoWriter(std::make_unique<WinCOFFWriter>(*this, DwoOS,
+                                                WinCOFFWriter::DwoOnly)) {}
 
 static bool isDwoSection(const MCSection &Sec) {
   return Sec.getName().ends_with(".dwo");
@@ -1125,7 +1102,7 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
 
   // MS LINK expects to be able to use this timestamp to implement their
   // /INCREMENTAL feature.
-  if (Asm.isIncrementalLinkerCompatible()) {
+  if (OWriter.IncrementalLinkerCompatible) {
     Header.TimeDateStamp = getTime();
   } else {
     // Have deterministic output if /INCREMENTAL isn't needed. Also matches GNU.
@@ -1174,6 +1151,7 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
 // MCObjectWriter interface implementations
 
 void WinCOFFObjectWriter::reset() {
+  IncrementalLinkerCompatible = false;
   ObjWriter->reset();
   if (DwoWriter)
     DwoWriter->reset();

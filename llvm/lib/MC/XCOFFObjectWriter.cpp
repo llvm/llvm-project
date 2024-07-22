@@ -596,6 +596,9 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
     const MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(&S);
     const MCSectionXCOFF *ContainingCsect = getContainingCsect(XSym);
 
+    if (ContainingCsect->isDwarfSect())
+      continue;
+
     if (XSym->getVisibilityType() != XCOFF::SYM_V_UNSPECIFIED)
       HasVisibility = true;
 
@@ -825,8 +828,6 @@ uint64_t XCOFFObjectWriter::writeObject(MCAssembler &Asm) {
   // We always emit a timestamp of 0 for reproducibility, so ensure incremental
   // linking is not enabled, in case, like with Windows COFF, such a timestamp
   // is incompatible with incremental linking of XCOFF.
-  if (Asm.isIncrementalLinkerCompatible())
-    report_fatal_error("Incremental linking not supported for XCOFF.");
 
   finalizeSectionInfo();
   uint64_t StartOffset = W.OS.tell();
