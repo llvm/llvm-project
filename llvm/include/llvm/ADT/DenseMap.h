@@ -312,6 +312,22 @@ public:
       insert(*I);
   }
 
+  template <typename V>
+  std::pair<iterator, bool> insert_or_assign(const KeyT &Key, V &&Val) {
+    auto Ret = try_emplace(Key, std::forward<V>(Val));
+    if (!Ret.second)
+      Ret.first->second = std::forward<V>(Val);
+    return Ret;
+  }
+
+  template <typename V>
+  std::pair<iterator, bool> insert_or_assign(KeyT &&Key, V &&Val) {
+    auto Ret = try_emplace(std::move(Key), std::forward<V>(Val));
+    if (!Ret.second)
+      Ret.first->second = std::forward<V>(Val);
+    return Ret;
+  }
+
   /// Returns the value associated to the key in the map if it exists. If it
   /// does not exist, emplace a default value for the key and returns a
   /// reference to the newly created value.

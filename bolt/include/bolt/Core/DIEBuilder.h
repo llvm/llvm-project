@@ -135,13 +135,6 @@ private:
 
   /// Returns current state of the DIEBuilder
   State &getState() { return *BuilderState.get(); }
-  /// Resolve the reference in DIE, if target is not loaded into IR,
-  /// pre-allocate it. \p RefCU will be updated to the Unit specific by \p
-  /// RefValue.
-  DWARFDie resolveDIEReference(
-      const DWARFFormValue &RefValue,
-      const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
-      DWARFUnit *&RefCU, DWARFDebugInfoEntry &DwarfDebugInfoEntry);
 
   /// Resolve the reference in DIE, if target is not loaded into IR,
   /// pre-allocate it. \p RefCU will be updated to the Unit specific by \p
@@ -165,10 +158,9 @@ private:
       const DWARFFormValue &Val);
 
   /// Clone an attribute in reference format.
-  void cloneDieReferenceAttribute(
+  void cloneDieOffsetReferenceAttribute(
       DIE &Die, const DWARFUnit &U, const DWARFDie &InputDIE,
-      const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
-      const DWARFFormValue &Val);
+      const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec, uint64_t Ref);
 
   /// Clone an attribute in block format.
   void cloneBlockAttribute(
@@ -215,10 +207,9 @@ private:
   /// Along with current CU, and DIE being processed and the new DIE offset to
   /// be updated, it takes in Parents vector that can be empty if this DIE has
   /// no parents.
-  uint32_t
-  finalizeDIEs(DWARFUnit &CU, DIE &Die,
-               std::vector<std::optional<BOLTDWARF5AccelTableData *>> &Parents,
-               uint32_t &CurOffset);
+  uint32_t finalizeDIEs(DWARFUnit &CU, DIE &Die,
+                        std::optional<BOLTDWARF5AccelTableData *> Parent,
+                        uint32_t NumberParentsInChain, uint32_t &CurOffset);
 
   void registerUnit(DWARFUnit &DU, bool NeedSort);
 

@@ -19,6 +19,7 @@
 #include "X86.h"
 #include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
+#include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -71,6 +72,10 @@ FunctionPass *llvm::createX86LowerTileCopyPass() {
 }
 
 bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
+  X86MachineFunctionInfo *FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
+  if (FuncInfo->getAMXProgModel() != AMXProgModelEnum::ManagedRA)
+    return false;
+
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   const X86InstrInfo *TII = ST.getInstrInfo();
   const TargetRegisterInfo *TRI = ST.getRegisterInfo();
@@ -81,16 +86,6 @@ bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
-    // There won't be a tile copy if no tile register live in.
-    bool HasTileCopy = false;
-    for (const auto &LI : MBB.liveins()) {
-      if (TILERegs.test(LI.PhysReg)) {
-        HasTileCopy = true;
-        break;
-      }
-    }
-    if (!HasTileCopy)
-      continue;
     LiveRegUnits UsedRegs(*TRI);
     UsedRegs.addLiveOuts(MBB);
     for (MachineInstr &MI : llvm::make_early_inc_range(reverse(MBB))) {

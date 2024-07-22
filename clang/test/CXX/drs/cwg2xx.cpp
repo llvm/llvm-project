@@ -41,7 +41,7 @@ namespace cwg202 { // cwg202: 3.1
   template struct X<f>;
 }
 
-// FIXME (export) cwg204: no
+// cwg204: sup 820
 
 namespace cwg206 { // cwg206: yes
   struct S; // #cwg206-S
@@ -759,7 +759,7 @@ namespace cwg254 { // cwg254: 2.9
     typedef typename T::type type; // ok even if this is a typedef-name, because
                                    // it's not an elaborated-type-specifier
     typedef struct T::type foo;
-    // expected-error@-1 {{typedef 'type' cannot be referenced with a struct specifier}}
+    // expected-error@-1 {{typedef 'type' cannot be referenced with the 'struct' specifier}}
     //   expected-note@#cwg254-instantiation {{in instantiation of template class 'cwg254::A<cwg254::C>' requested here}}
     //   expected-note@#cwg254-C {{declared here}}
   };
@@ -1264,10 +1264,10 @@ namespace cwg298 { // cwg298: 3.1
 
   struct A a;
   struct B b;
-  // expected-error@-1 {{typedef 'B' cannot be referenced with a struct specifier}}
+  // expected-error@-1 {{typedef 'B' cannot be referenced with the 'struct' specifier}}
   //   expected-note@#cwg298-B {{declared here}}
   struct C c;
-  // expected-error@-1 {{typedef 'C' cannot be referenced with a struct specifier}}
+  // expected-error@-1 {{typedef 'C' cannot be referenced with the 'struct' specifier}}
   //   expected-note@#cwg298-C {{declared here}}
 
   B::B() {}

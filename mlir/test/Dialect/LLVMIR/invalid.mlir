@@ -1472,3 +1472,17 @@ func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !
   nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3,%crd0,%crd1,%crd2,%crd3]: !llvm.ptr<3>, !llvm.ptr  
   return
 }
+
+// -----
+
+// expected-error @below {{no_inline and always_inline attributes are incompatible}}
+llvm.func @alwaysinline_noinline() attributes { always_inline, no_inline } {
+  llvm.return
+}
+
+// -----
+
+// expected-error @below {{'llvm.func' op with optimize_none must also be no_inline}}
+llvm.func @optnone_requires_noinline() attributes { optimize_none } {
+  llvm.return
+}

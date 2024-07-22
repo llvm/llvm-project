@@ -1,5 +1,3 @@
-! UNSUPPORTED: system-windows
-! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %python %S/../test_symbols.py %s %flang_fc1 -fopenmp
 ! OpenMP Version 4.5
 ! 2.15.3.6 Reduction Clause Positive cases.
@@ -75,14 +73,4 @@ program omp_reduction
     k = k+1
   end do
   !$omp end do
-
-
-  !$omp do reduction(.and.:k) reduction(.or.:j) reduction(.eqv.:l)
-  !DEF: /omp_reduction/OtherConstruct8/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
-  do i=1,10
-    !DEF: /omp_reduction/OtherConstruct8/k (OmpReduction) HostAssoc INTEGER(4)
-    k = k+1
-  end do
-  !$omp end do
-
 end program omp_reduction

@@ -37,6 +37,10 @@ class LoongArchSubtarget : public LoongArchGenSubtargetInfo {
 #include "LoongArchGenSubtargetInfo.inc"
 
   unsigned GRLen = 32;
+  // TODO: The default value is empirical and conservative. Override the
+  // default in initializeProperties once we support optimizing for more
+  // uarches.
+  uint8_t MaxInterleaveFactor = 2;
   MVT GRLenVT = MVT::i32;
   LoongArchABI::ABI TargetABI = LoongArchABI::ABI_Unknown;
   LoongArchFrameLowering FrameLowering;
@@ -99,6 +103,7 @@ public:
   Align getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
   Align getPrefLoopAlignment() const { return PrefLoopAlignment; }
   unsigned getMaxBytesForAlignment() const { return MaxBytesForAlignment; }
+  unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
   bool enableMachineScheduler() const override { return true; }
 };
 } // end namespace llvm

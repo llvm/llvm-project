@@ -557,9 +557,9 @@ locale::locale(const locale& other, const locale& one, category c)
 
 string locale::name() const { return __locale_->name(); }
 
-void locale::__install_ctor(const locale& other, facet* f, long id) {
+void locale::__install_ctor(const locale& other, facet* f, long facet_id) {
   if (f)
-    __locale_ = new __imp(*other.__locale_, f, id);
+    __locale_ = new __imp(*other.__locale_, f, facet_id);
   else
     __locale_ = other.__locale_;
   __locale_->acquire();

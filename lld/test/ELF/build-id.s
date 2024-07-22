@@ -6,11 +6,12 @@
 # RUN: llvm-readobj -S %t2 | FileCheck -check-prefix=ALIGN %s
 
 # RUN: ld.lld --build-id %t -o %t2
-# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=DEFAULT %s
-# RUN: ld.lld --build-id=fast %t -o %t2
-# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=DEFAULT %s
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=SHA1 %s
 # RUN: ld.lld --build-id %t -o %t2 --threads=1
-# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=DEFAULT %s
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=SHA1 %s
+
+# RUN: ld.lld --build-id=fast %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=FAST %s
 
 # RUN: ld.lld --build-id=md5 %t -o %t2
 # RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=MD5 %s
@@ -41,7 +42,7 @@
 # RUN: ld.lld --build-id --build-id=none %t -o %t2
 # RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=NONE %s
 # RUN: ld.lld --build-id=none --build-id %t -o %t2
-# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=DEFAULT %s
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=SHA1 %s
 
 .globl _start
 _start:
@@ -62,10 +63,10 @@ _start:
 # ALIGN-NEXT: Info:
 # ALIGN-NEXT: AddressAlignment: 4
 
-# DEFAULT:      Contents of section .note.test:
-# DEFAULT:      Contents of section .note.gnu.build-id:
-# DEFAULT-NEXT: 04000000 08000000 03000000 474e5500  ............GNU.
-# DEFAULT-NEXT: 630bc2f5 a2584763
+# FAST:      Contents of section .note.test:
+# FAST:      Contents of section .note.gnu.build-id:
+# FAST-NEXT: 04000000 08000000 03000000 474e5500  ............GNU.
+# FAST-NEXT: 630bc2f5 a2584763
 
 # MD5:      Contents of section .note.gnu.build-id:
 # MD5-NEXT: 04000000 10000000 03000000 474e5500  ............GNU.

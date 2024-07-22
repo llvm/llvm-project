@@ -4,7 +4,7 @@
 # RUN:    -split-functions -reorder-blocks=ext-tsp -split-all-cold \
 # RUN:    -dyno-stats -icf=1 -use-gnu-stack
 
-# Check that an entry point is a cold symbol
+## Check that an entry point is a cold symbol
 # RUN: llvm-readelf -h %t.so > %t.log
 # RUN: llvm-nm %t.so >> %t.log
 # RUN: FileCheck %s --input-file %t.log

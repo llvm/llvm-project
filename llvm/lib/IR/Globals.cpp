@@ -121,6 +121,10 @@ bool GlobalValue::canBenefitFromLocalAlias() const {
          !isa<GlobalIFunc>(this) && !isDeduplicateComdat(getComdat());
 }
 
+const DataLayout &GlobalValue::getDataLayout() const {
+  return getParent()->getDataLayout();
+}
+
 void GlobalObject::setAlignment(MaybeAlign Align) {
   assert((!Align || *Align <= MaximumAlignment) &&
          "Alignment is greater than MaximumAlignment!");
@@ -165,7 +169,7 @@ std::string GlobalValue::getGlobalIdentifier(StringRef Name,
     else
       GlobalName += FileName;
 
-    GlobalName += kGlobalIdentifierDelimiter;
+    GlobalName += GlobalIdentifierDelimiter;
   }
   GlobalName += Name;
   return GlobalName;
@@ -334,6 +338,16 @@ bool GlobalObject::canIncreaseAlignment() const {
       (!Parent || Triple(Parent->getTargetTriple()).isOSBinFormatELF());
   if (isELF && !isDSOLocal())
     return false;
+
+  // GV with toc-data attribute is defined in a TOC entry. To mitigate TOC
+  // overflow, the alignment of such symbol should not be increased. Otherwise,
+  // padding is needed thus more TOC entries are wasted.
+  bool isXCOFF =
+      (!Parent || Triple(Parent->getTargetTriple()).isOSBinFormatXCOFF());
+  if (isXCOFF)
+    if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(this))
+      if (GV->hasAttribute("toc-data"))
+        return false;
 
   return true;
 }

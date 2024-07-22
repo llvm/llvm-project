@@ -22,7 +22,6 @@
 
 #include "mlir/IR/OwningOpRef.h"
 #include "mlir/Reducer/Tester.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ToolOutputFile.h"

@@ -2862,3 +2862,123 @@ define i1 @isnan_d_fpclass(half %x) {
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 3)  ; nan
   ret i1 %1
 }
+
+declare half @llvm.tan.f16(half)
+
+define half @tan_f16(half %a) nounwind {
+; RV32IZFH-LABEL: tan_f16:
+; RV32IZFH:       # %bb.0:
+; RV32IZFH-NEXT:    addi sp, sp, -16
+; RV32IZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV32IZFH-NEXT:    call tanf
+; RV32IZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV32IZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFH-NEXT:    addi sp, sp, 16
+; RV32IZFH-NEXT:    ret
+;
+; RV64IZFH-LABEL: tan_f16:
+; RV64IZFH:       # %bb.0:
+; RV64IZFH-NEXT:    addi sp, sp, -16
+; RV64IZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV64IZFH-NEXT:    call tanf
+; RV64IZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV64IZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFH-NEXT:    addi sp, sp, 16
+; RV64IZFH-NEXT:    ret
+;
+; RV32IZHINX-LABEL: tan_f16:
+; RV32IZHINX:       # %bb.0:
+; RV32IZHINX-NEXT:    addi sp, sp, -16
+; RV32IZHINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZHINX-NEXT:    fcvt.s.h a0, a0
+; RV32IZHINX-NEXT:    call tanf
+; RV32IZHINX-NEXT:    fcvt.h.s a0, a0
+; RV32IZHINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZHINX-NEXT:    addi sp, sp, 16
+; RV32IZHINX-NEXT:    ret
+;
+; RV64IZHINX-LABEL: tan_f16:
+; RV64IZHINX:       # %bb.0:
+; RV64IZHINX-NEXT:    addi sp, sp, -16
+; RV64IZHINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZHINX-NEXT:    fcvt.s.h a0, a0
+; RV64IZHINX-NEXT:    call tanf
+; RV64IZHINX-NEXT:    fcvt.h.s a0, a0
+; RV64IZHINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZHINX-NEXT:    addi sp, sp, 16
+; RV64IZHINX-NEXT:    ret
+;
+; RV32I-LABEL: tan_f16:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
+; RV32I-NEXT:    call __extendhfsf2
+; RV32I-NEXT:    call tanf
+; RV32I-NEXT:    call __truncsfhf2
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: tan_f16:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
+; RV64I-NEXT:    call __extendhfsf2
+; RV64I-NEXT:    call tanf
+; RV64I-NEXT:    call __truncsfhf2
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV32IZFHMIN-LABEL: tan_f16:
+; RV32IZFHMIN:       # %bb.0:
+; RV32IZFHMIN-NEXT:    addi sp, sp, -16
+; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
+; RV32IZFHMIN-NEXT:    call tanf
+; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
+; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFHMIN-NEXT:    addi sp, sp, 16
+; RV32IZFHMIN-NEXT:    ret
+;
+; RV64IZFHMIN-LABEL: tan_f16:
+; RV64IZFHMIN:       # %bb.0:
+; RV64IZFHMIN-NEXT:    addi sp, sp, -16
+; RV64IZFHMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
+; RV64IZFHMIN-NEXT:    call tanf
+; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
+; RV64IZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFHMIN-NEXT:    addi sp, sp, 16
+; RV64IZFHMIN-NEXT:    ret
+;
+; RV32IZHINXMIN-LABEL: tan_f16:
+; RV32IZHINXMIN:       # %bb.0:
+; RV32IZHINXMIN-NEXT:    addi sp, sp, -16
+; RV32IZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV32IZHINXMIN-NEXT:    call tanf
+; RV32IZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; RV32IZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZHINXMIN-NEXT:    addi sp, sp, 16
+; RV32IZHINXMIN-NEXT:    ret
+;
+; RV64IZHINXMIN-LABEL: tan_f16:
+; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    addi sp, sp, -16
+; RV64IZHINXMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV64IZHINXMIN-NEXT:    call tanf
+; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; RV64IZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZHINXMIN-NEXT:    addi sp, sp, 16
+; RV64IZHINXMIN-NEXT:    ret
+  %1 = call half @llvm.tan.f16(half %a)
+  ret half %1
+}

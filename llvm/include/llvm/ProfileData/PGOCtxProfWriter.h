@@ -60,7 +60,6 @@ enum PGOCtxProfileBlockIDs {
 /// example, value profiling would produce a new record with a new record ID,
 /// containing the profiled values (much like the counters)
 class PGOCtxProfileWriter final {
-  SmallVector<char, 1 << 20> Buff;
   BitstreamWriter Writer;
 
   void writeCounters(const ctx_profile::ContextNode &Node);
@@ -68,9 +67,9 @@ class PGOCtxProfileWriter final {
                  const ctx_profile::ContextNode &Node);
 
 public:
-  PGOCtxProfileWriter(raw_fd_stream &Out,
+  PGOCtxProfileWriter(raw_ostream &Out,
                       std::optional<unsigned> VersionOverride = std::nullopt)
-      : Writer(Buff, &Out, 0) {
+      : Writer(Out, 0) {
     Writer.EnterSubblock(PGOCtxProfileBlockIDs::ProfileMetadataBlockID,
                          CodeLen);
     const auto Version = VersionOverride ? *VersionOverride : CurrentVersion;

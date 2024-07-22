@@ -30,6 +30,9 @@ struct DriverOptions {
   /// \brief Path to input file lists (JSON).
   llvm::MachO::PathSeq FileLists;
 
+  /// \brief Path to input directory.
+  std::string InputDirectory;
+
   /// \brief Path to public umbrella header.
   std::string PublicUmbrellaHeader;
 
@@ -161,6 +164,8 @@ private:
   bool processXarchOption(llvm::opt::InputArgList &Args, arg_iterator Curr);
   bool processXplatformOption(llvm::opt::InputArgList &Args, arg_iterator Curr);
   bool processXprojectOption(llvm::opt::InputArgList &Args, arg_iterator Curr);
+  bool processOptionList(llvm::opt::InputArgList &Args,
+                         llvm::opt::OptTable *Table);
 
 public:
   /// The various options grouped together.

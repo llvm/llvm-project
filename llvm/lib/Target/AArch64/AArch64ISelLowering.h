@@ -58,7 +58,20 @@ enum NodeType : unsigned {
 
   CALL_BTI, // Function call followed by a BTI instruction.
 
+  // Function call, authenticating the callee value first:
+  // AUTH_CALL chain, callee, auth key #, int disc, addr disc, operands.
+  AUTH_CALL,
+  // AUTH_TC_RETURN chain, callee, fpdiff, auth key #, int disc, addr disc,
+  // operands.
+  AUTH_TC_RETURN,
+
+  // Authenticated variant of CALL_RVMARKER.
+  AUTH_CALL_RVMARKER,
+
   COALESCER_BARRIER,
+
+  VG_SAVE,
+  VG_RESTORE,
 
   SMSTART,
   SMSTOP,
@@ -444,6 +457,8 @@ enum NodeType : unsigned {
   // SME
   RDSVL,
   REVD_MERGE_PASSTHRU,
+  ALLOCATE_ZA_BUFFER,
+  INIT_TPIDR2OBJ,
 
   // Asserts that a function argument (i32) is zero-extended to i8 by
   // the caller
@@ -640,11 +655,14 @@ public:
                                   MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitFill(MachineInstr &MI, MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitZAInstr(unsigned Opc, unsigned BaseReg,
-                                 MachineInstr &MI, MachineBasicBlock *BB,
-                                 bool HasTile) const;
+                                 MachineInstr &MI, MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitZTInstr(MachineInstr &MI, MachineBasicBlock *BB,
                                  unsigned Opcode, bool Op0IsDef) const;
   MachineBasicBlock *EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const;
+  MachineBasicBlock *EmitInitTPIDR2Object(MachineInstr &MI,
+                                          MachineBasicBlock *BB) const;
+  MachineBasicBlock *EmitAllocateZABuffer(MachineInstr &MI,
+                                          MachineBasicBlock *BB) const;
 
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
@@ -889,6 +907,8 @@ public:
 
   bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
 
+  bool shouldExpandCmpUsingSelects() const override { return true; }
+
   bool isComplexDeinterleavingSupported() const override;
   bool isComplexDeinterleavingOperationSupported(
       ComplexDeinterleavingOperation Operation, Type *Ty) const override;
@@ -910,6 +930,8 @@ public:
   bool supportSwiftError() const override {
     return true;
   }
+
+  bool supportPtrAuthBundles() const override { return true; }
 
   bool supportKCFIBundles() const override { return true; }
 
@@ -1017,11 +1039,10 @@ private:
 
   void addTypeForNEON(MVT VT);
   void addTypeForFixedLengthSVE(MVT VT);
-  void addDRTypeForNEON(MVT VT);
-  void addQRTypeForNEON(MVT VT);
+  void addDRType(MVT VT);
+  void addQRType(MVT VT);
 
-  unsigned allocateLazySaveBuffer(SDValue &Chain, const SDLoc &DL,
-                                  SelectionDAG &DAG) const;
+  bool shouldExpandBuildVectorWithShuffles(EVT, unsigned) const override;
 
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool isVarArg,
@@ -1108,6 +1129,12 @@ private:
   SDValue LowerELFTLSDescCallSeq(SDValue SymAddr, const SDLoc &DL,
                                  SelectionDAG &DAG) const;
   SDValue LowerWindowsGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerPtrAuthGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerPtrAuthGlobalAddressStatically(SDValue TGA, SDLoc DL, EVT VT,
+                                              AArch64PACKey::ID Key,
+                                              SDValue Discriminator,
+                                              SDValue AddrDiscriminator,
+                                              SelectionDAG &DAG) const;
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;

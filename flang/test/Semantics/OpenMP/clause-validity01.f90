@@ -1,5 +1,3 @@
-! UNSUPPORTED: system-windows
-! Marking as unsupported due to suspected long runtime on Windows
 ! REQUIRES: openmp_runtime
 
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags %openmp_module_flag
@@ -175,6 +173,7 @@ use omp_lib
   outer: do i=0, 10
     inner: do j=1, 10
       exit
+      !ERROR: EXIT statement terminates associated loop of an OpenMP DO construct
       exit outer
       !ERROR: EXIT to construct 'outofparallel' outside of PARALLEL construct is not allowed
       !ERROR: EXIT to construct 'outofparallel' outside of DO construct is not allowed

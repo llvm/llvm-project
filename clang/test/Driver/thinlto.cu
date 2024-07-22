@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: nvptx-registered-target
-
 // -flto=thin causes a switch to llvm-bc object files.
 // RUN: %clangxx -ccc-print-phases --no-offload-new-driver -nocudainc -nocudalib -c %s -flto=thin 2> %t
 // RUN: FileCheck -check-prefix=CHECK-COMPILE-ACTIONS < %t %s

@@ -138,7 +138,7 @@ ConvergenceRegion::ConvergenceRegion(
     SmallPtrSet<BasicBlock *, 8> &&Blocks, SmallPtrSet<BasicBlock *, 2> &&Exits)
     : DT(DT), LI(LI), ConvergenceToken(ConvergenceToken), Entry(Entry),
       Exits(std::move(Exits)), Blocks(std::move(Blocks)) {
-  for (auto *BB : this->Exits)
+  for ([[maybe_unused]] auto *BB : this->Exits)
     assert(this->Blocks.count(BB) != 0);
   assert(this->Blocks.count(this->Entry) != 0);
 }

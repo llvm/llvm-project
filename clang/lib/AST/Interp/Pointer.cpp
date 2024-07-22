@@ -13,8 +13,10 @@
 #include "Function.h"
 #include "Integral.h"
 #include "InterpBlock.h"
+#include "MemberPointer.h"
 #include "PrimType.h"
 #include "Record.h"
+#include "clang/AST/RecordLayout.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -56,33 +58,34 @@ Pointer::~Pointer() {
   if (isIntegralPointer())
     return;
 
-  if (PointeeStorage.BS.Pointee) {
-    PointeeStorage.BS.Pointee->removePointer(this);
-    PointeeStorage.BS.Pointee->cleanup();
+  if (Block *Pointee = PointeeStorage.BS.Pointee) {
+    Pointee->removePointer(this);
+    Pointee->cleanup();
   }
 }
 
 void Pointer::operator=(const Pointer &P) {
-  if (!this->isIntegralPointer() || !P.isBlockPointer())
-    assert(P.StorageKind == StorageKind || (this->isZero() && P.isZero()));
-
+  // If the current storage type is Block, we need to remove
+  // this pointer from the block.
   bool WasBlockPointer = isBlockPointer();
-  StorageKind = P.StorageKind;
   if (StorageKind == Storage::Block) {
     Block *Old = PointeeStorage.BS.Pointee;
-    if (WasBlockPointer && PointeeStorage.BS.Pointee)
+    if (WasBlockPointer && Old) {
       PointeeStorage.BS.Pointee->removePointer(this);
+      Old->cleanup();
+    }
+  }
 
-    Offset = P.Offset;
+  StorageKind = P.StorageKind;
+  Offset = P.Offset;
+
+  if (P.isBlockPointer()) {
     PointeeStorage.BS = P.PointeeStorage.BS;
+    PointeeStorage.BS.Pointee = P.PointeeStorage.BS.Pointee;
 
     if (PointeeStorage.BS.Pointee)
       PointeeStorage.BS.Pointee->addPointer(this);
-
-    if (WasBlockPointer && Old)
-      Old->cleanup();
-
-  } else if (StorageKind == Storage::Int) {
+  } else if (P.isIntegralPointer()) {
     PointeeStorage.Int = P.PointeeStorage.Int;
   } else {
     assert(false && "Unhandled storage kind");
@@ -90,33 +93,34 @@ void Pointer::operator=(const Pointer &P) {
 }
 
 void Pointer::operator=(Pointer &&P) {
-  if (!this->isIntegralPointer() || !P.isBlockPointer())
-    assert(P.StorageKind == StorageKind || (this->isZero() && P.isZero()));
-
+  // If the current storage type is Block, we need to remove
+  // this pointer from the block.
   bool WasBlockPointer = isBlockPointer();
-  StorageKind = P.StorageKind;
   if (StorageKind == Storage::Block) {
     Block *Old = PointeeStorage.BS.Pointee;
-    if (WasBlockPointer && PointeeStorage.BS.Pointee)
+    if (WasBlockPointer && Old) {
       PointeeStorage.BS.Pointee->removePointer(this);
+      Old->cleanup();
+    }
+  }
 
-    Offset = P.Offset;
+  StorageKind = P.StorageKind;
+  Offset = P.Offset;
+
+  if (P.isBlockPointer()) {
     PointeeStorage.BS = P.PointeeStorage.BS;
+    PointeeStorage.BS.Pointee = P.PointeeStorage.BS.Pointee;
 
     if (PointeeStorage.BS.Pointee)
       PointeeStorage.BS.Pointee->addPointer(this);
-
-    if (WasBlockPointer && Old)
-      Old->cleanup();
-
-  } else if (StorageKind == Storage::Int) {
+  } else if (P.isIntegralPointer()) {
     PointeeStorage.Int = P.PointeeStorage.Int;
   } else {
     assert(false && "Unhandled storage kind");
   }
 }
 
-APValue Pointer::toAPValue() const {
+APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   llvm::SmallVector<APValue::LValuePathEntry, 5> Path;
 
   if (isZero())
@@ -138,19 +142,42 @@ APValue Pointer::toAPValue() const {
   else
     llvm_unreachable("Invalid allocation type");
 
-  if (isDummy() || isUnknownSizeArray() || Desc->asExpr())
+  if (isUnknownSizeArray() || Desc->asExpr())
     return APValue(Base, CharUnits::Zero(), Path,
-                   /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
+                   /*IsOnePastEnd=*/isOnePastEnd(), /*IsNullPtr=*/false);
 
-  // TODO: compute the offset into the object.
   CharUnits Offset = CharUnits::Zero();
-  bool IsOnePastEnd = isOnePastEnd();
+
+  auto getFieldOffset = [&](const FieldDecl *FD) -> CharUnits {
+    // This shouldn't happen, but if it does, don't crash inside
+    // getASTRecordLayout.
+    if (FD->getParent()->isInvalidDecl())
+      return CharUnits::Zero();
+    const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(FD->getParent());
+    unsigned FieldIndex = FD->getFieldIndex();
+    return ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex));
+  };
 
   // Build the path into the object.
   Pointer Ptr = *this;
   while (Ptr.isField() || Ptr.isArrayElement()) {
-    if (Ptr.isArrayElement()) {
-      Path.push_back(APValue::LValuePathEntry::ArrayIndex(Ptr.getIndex()));
+    if (Ptr.isArrayRoot()) {
+      Path.push_back(APValue::LValuePathEntry(
+          {Ptr.getFieldDesc()->asDecl(), /*IsVirtual=*/false}));
+
+      if (const auto *FD = dyn_cast<FieldDecl>(Ptr.getFieldDesc()->asDecl()))
+        Offset += getFieldOffset(FD);
+
+      Ptr = Ptr.getBase();
+    } else if (Ptr.isArrayElement()) {
+      unsigned Index;
+      if (Ptr.isOnePastEnd())
+        Index = Ptr.getArray().getNumElems();
+      else
+        Index = Ptr.getIndex();
+
+      Offset += (Index * ASTCtx.getTypeSizeInChars(Ptr.getType()));
+      Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
       Ptr = Ptr.getArray();
     } else {
       // TODO: figure out if base is virtual
@@ -161,11 +188,20 @@ APValue Pointer::toAPValue() const {
       if (const auto *BaseOrMember = Desc->asDecl()) {
         Path.push_back(APValue::LValuePathEntry({BaseOrMember, IsVirtual}));
         Ptr = Ptr.getBase();
+
+        if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember))
+          Offset += getFieldOffset(FD);
+
         continue;
       }
       llvm_unreachable("Invalid field type");
     }
   }
+
+  // FIXME(perf): We compute the lvalue path above, but we can't supply it
+  // for dummy pointers (that causes crashes later in CheckConstantExpression).
+  if (isDummy())
+    Path.clear();
 
   // We assemble the LValuePath starting from the innermost pointer to the
   // outermost one. SO in a.b.c, the first element in Path will refer to
@@ -173,12 +209,14 @@ APValue Pointer::toAPValue() const {
   // Just invert the order of the elements.
   std::reverse(Path.begin(), Path.end());
 
-  return APValue(Base, Offset, Path, IsOnePastEnd, /*IsNullPtr=*/false);
+  return APValue(Base, Offset, Path, /*IsOnePastEnd=*/isOnePastEnd(),
+                 /*IsNullPtr=*/false);
 }
 
 void Pointer::print(llvm::raw_ostream &OS) const {
   OS << PointeeStorage.BS.Pointee << " (";
   if (isBlockPointer()) {
+    const Block *B = PointeeStorage.BS.Pointee;
     OS << "Block) {";
 
     if (isRoot())
@@ -191,8 +229,8 @@ void Pointer::print(llvm::raw_ostream &OS) const {
     else
       OS << Offset << ", ";
 
-    if (PointeeStorage.BS.Pointee)
-      OS << PointeeStorage.BS.Pointee->getSize();
+    if (B)
+      OS << B->getSize();
     else
       OS << "nullptr";
   } else {
@@ -209,12 +247,18 @@ std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
   if (isIntegralPointer())
     return (Twine("&(") + Twine(asIntPointer().Value + Offset) + ")").str();
 
-  return toAPValue().getAsString(Ctx, getType());
+  return toAPValue(Ctx).getAsString(Ctx, getType());
 }
 
 bool Pointer::isInitialized() const {
   if (isIntegralPointer())
     return true;
+
+  if (isRoot() && PointeeStorage.BS.Base == sizeof(GlobalInlineDescriptor)) {
+    const GlobalInlineDescriptor &GD =
+        *reinterpret_cast<const GlobalInlineDescriptor *>(block()->rawData());
+    return GD.InitState == GlobalInitState::Initialized;
+  }
 
   assert(PointeeStorage.BS.Pointee &&
          "Cannot check if null pointer was initialized");
@@ -235,8 +279,11 @@ bool Pointer::isInitialized() const {
     return IM->second->isElementInitialized(getIndex());
   }
 
+  if (asBlockPointer().Base == 0)
+    return true;
+
   // Field has its bit in an inline descriptor.
-  return PointeeStorage.BS.Base == 0 || getInlineDesc()->IsInitialized;
+  return getInlineDesc()->IsInitialized;
 }
 
 void Pointer::initialize() const {
@@ -245,6 +292,13 @@ void Pointer::initialize() const {
 
   assert(PointeeStorage.BS.Pointee && "Cannot initialize null pointer");
   const Descriptor *Desc = getFieldDesc();
+
+  if (isRoot() && PointeeStorage.BS.Base == sizeof(GlobalInlineDescriptor)) {
+    GlobalInlineDescriptor &GD = *reinterpret_cast<GlobalInlineDescriptor *>(
+        asBlockPointer().Pointee->rawData());
+    GD.InitState = GlobalInitState::Initialized;
+    return;
+  }
 
   assert(Desc);
   if (Desc->isPrimitiveArray()) {
@@ -284,6 +338,10 @@ void Pointer::activate() const {
   // Field has its bit in an inline descriptor.
   assert(PointeeStorage.BS.Base != 0 &&
          "Only composite fields can be initialised");
+
+  if (isRoot() && PointeeStorage.BS.Base == sizeof(GlobalInlineDescriptor))
+    return;
+
   getInlineDesc()->IsActive = true;
 }
 
@@ -311,21 +369,25 @@ bool Pointer::hasSameArray(const Pointer &A, const Pointer &B) {
          A.getFieldDesc()->IsArray;
 }
 
-std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
+std::optional<APValue> Pointer::toRValue(const Context &Ctx,
+                                         QualType ResultType) const {
+  const ASTContext &ASTCtx = Ctx.getASTContext();
+  assert(!ResultType.isNull());
   // Method to recursively traverse composites.
   std::function<bool(QualType, const Pointer &, APValue &)> Composite;
-  Composite = [&Composite, &Ctx](QualType Ty, const Pointer &Ptr, APValue &R) {
+  Composite = [&Composite, &Ctx, &ASTCtx](QualType Ty, const Pointer &Ptr,
+                                          APValue &R) {
     if (const auto *AT = Ty->getAs<AtomicType>())
       Ty = AT->getValueType();
 
     // Invalid pointers.
-    if (Ptr.isDummy() || !Ptr.isLive() ||
-        (!Ptr.isUnknownSizeArray() && Ptr.isOnePastEnd()))
+    if (Ptr.isDummy() || !Ptr.isLive() || !Ptr.isBlockPointer() ||
+        Ptr.isPastEnd())
       return false;
 
     // Primitive values.
     if (std::optional<PrimType> T = Ctx.classify(Ty)) {
-      TYPE_SWITCH(*T, R = Ptr.deref<T>().toAPValue());
+      TYPE_SWITCH(*T, R = Ptr.deref<T>().toAPValue(ASTCtx));
       return true;
     }
 
@@ -342,10 +404,11 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
           QualType FieldTy = F.Decl->getType();
           if (FP.isActive()) {
             if (std::optional<PrimType> T = Ctx.classify(FieldTy)) {
-              TYPE_SWITCH(*T, Value = FP.deref<T>().toAPValue());
+              TYPE_SWITCH(*T, Value = FP.deref<T>().toAPValue(ASTCtx));
             } else {
               Ok &= Composite(FieldTy, FP, Value);
             }
+            ActiveField = FP.getFieldDesc()->asFieldDecl();
             break;
           }
         }
@@ -364,7 +427,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
           APValue &Value = R.getStructField(I);
 
           if (std::optional<PrimType> T = Ctx.classify(FieldTy)) {
-            TYPE_SWITCH(*T, Value = FP.deref<T>().toAPValue());
+            TYPE_SWITCH(*T, Value = FP.deref<T>().toAPValue(ASTCtx));
           } else {
             Ok &= Composite(FieldTy, FP, Value);
           }
@@ -402,7 +465,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
         APValue &Slot = R.getArrayInitializedElt(I);
         const Pointer &EP = Ptr.atIndex(I);
         if (std::optional<PrimType> T = Ctx.classify(ElemTy)) {
-          TYPE_SWITCH(*T, Slot = EP.deref<T>().toAPValue());
+          TYPE_SWITCH(*T, Slot = EP.deref<T>().toAPValue(ASTCtx));
         } else {
           Ok &= Composite(ElemTy, EP.narrow(), Slot);
         }
@@ -441,7 +504,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
       Values.reserve(VT->getNumElements());
       for (unsigned I = 0; I != VT->getNumElements(); ++I) {
         TYPE_SWITCH(ElemT, {
-          Values.push_back(Ptr.atIndex(I).deref<T>().toAPValue());
+          Values.push_back(Ptr.atIndex(I).deref<T>().toAPValue(ASTCtx));
         });
       }
 
@@ -453,12 +516,18 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
     llvm_unreachable("invalid value to return");
   };
 
-  if (isZero())
-    return APValue(static_cast<Expr *>(nullptr), CharUnits::Zero(), {}, false,
-                   true);
-
-  if (isDummy() || !isLive())
+  // Invalid to read from.
+  if (isDummy() || !isLive() || isPastEnd())
     return std::nullopt;
+
+  // We can return these as rvalues, but we can't deref() them.
+  if (isZero() || isIntegralPointer())
+    return toAPValue(ASTCtx);
+
+  // Just load primitive types.
+  if (std::optional<PrimType> T = Ctx.classify(ResultType)) {
+    TYPE_SWITCH(*T, return this->deref<T>().toAPValue(ASTCtx));
+  }
 
   // Return the composite type.
   APValue Result;

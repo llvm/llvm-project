@@ -1309,7 +1309,7 @@ static void lower(hlfir::OrderedAssignmentTreeOpInterface root,
 
 /// Shared rewrite entry point for all the ordered assignment tree root
 /// operations. It calls the scheduler and then apply the schedule.
-static mlir::LogicalResult rewrite(hlfir::OrderedAssignmentTreeOpInterface root,
+static llvm::LogicalResult rewrite(hlfir::OrderedAssignmentTreeOpInterface root,
                                    bool tryFusingAssignments,
                                    mlir::PatternRewriter &rewriter) {
   hlfir::Schedule schedule =
@@ -1337,7 +1337,7 @@ public:
   explicit ForallOpConversion(mlir::MLIRContext *ctx, bool tryFusingAssignments)
       : OpRewritePattern{ctx}, tryFusingAssignments{tryFusingAssignments} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::ForallOp forallOp,
                   mlir::PatternRewriter &rewriter) const override {
     auto root = mlir::cast<hlfir::OrderedAssignmentTreeOpInterface>(
@@ -1354,7 +1354,7 @@ public:
   explicit WhereOpConversion(mlir::MLIRContext *ctx, bool tryFusingAssignments)
       : OpRewritePattern{ctx}, tryFusingAssignments{tryFusingAssignments} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::WhereOp whereOp,
                   mlir::PatternRewriter &rewriter) const override {
     auto root = mlir::cast<hlfir::OrderedAssignmentTreeOpInterface>(
@@ -1370,7 +1370,7 @@ public:
   explicit RegionAssignConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::RegionAssignOp regionAssignOp,
                   mlir::PatternRewriter &rewriter) const override {
     auto root = mlir::cast<hlfir::OrderedAssignmentTreeOpInterface>(
@@ -1383,6 +1383,9 @@ class LowerHLFIROrderedAssignments
     : public hlfir::impl::LowerHLFIROrderedAssignmentsBase<
           LowerHLFIROrderedAssignments> {
 public:
+  using LowerHLFIROrderedAssignmentsBase<
+      LowerHLFIROrderedAssignments>::LowerHLFIROrderedAssignmentsBase;
+
   void runOnOperation() override {
     // Running on a ModuleOp because this pass may generate FuncOp declaration
     // for runtime calls. This could be a FuncOp pass otherwise.
@@ -1409,7 +1412,3 @@ public:
   }
 };
 } // namespace
-
-std::unique_ptr<mlir::Pass> hlfir::createLowerHLFIROrderedAssignmentsPass() {
-  return std::make_unique<LowerHLFIROrderedAssignments>();
-}

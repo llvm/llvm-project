@@ -224,8 +224,17 @@ public:
   matchAndRewrite(tosa::ReshapeOp reshape, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     auto loc = reshape.getLoc();
-    auto resultType = reshape.getResult().getType();
-    auto input = reshape.getInput1();
+    auto resultType = cast_if_present<ShapedType>(
+        getTypeConverter()->convertType(reshape.getType()));
+    if (!resultType) {
+      return rewriter.notifyMatchFailure(reshape.getLoc(),
+                                         "could not convert result type");
+    }
+    auto input = dyn_cast<TypedValue<TensorType>>(adaptor.getInput1());
+    if (!input) {
+      return rewriter.notifyMatchFailure(reshape.getLoc(),
+                                         "expected input type to be tensor");
+    }
     auto newShape = reshape.getNewShape();
 
     // Infer all intermediate types
@@ -288,12 +297,13 @@ public:
   }
 };
 
-class PadConverter : public OpRewritePattern<tosa::PadOp> {
+class PadConverter : public OpConversionPattern<tosa::PadOp> {
 public:
-  using OpRewritePattern<tosa::PadOp>::OpRewritePattern;
+  using OpConversionPattern::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(tosa::PadOp padOp,
-                                PatternRewriter &rewriter) const final {
+  LogicalResult
+  matchAndRewrite(tosa::PadOp padOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
     auto loc = padOp.getLoc();
     auto input = padOp.getInput1();
     auto padding = padOp.getPadding();
@@ -428,11 +438,8 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
 } // namespace
 
 void mlir::tosa::populateTosaToTensorConversionPatterns(
-    RewritePatternSet *patterns) {
-  patterns->add<
-    ConcatConverter,
-    PadConverter,
-    ReshapeConverter,
-    SliceConverter
-  >(patterns->getContext());
+    TypeConverter &converter, RewritePatternSet *patterns) {
+  patterns
+      ->add<ConcatConverter, PadConverter, ReshapeConverter, SliceConverter>(
+          converter, patterns->getContext());
 }

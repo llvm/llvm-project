@@ -116,21 +116,7 @@ public:
     return fir::isRecordWithTypeParameters(getFortranElementType());
   }
 
-  bool hasNonDefaultLowerBounds() const {
-    if (!isBoxAddressOrValue() || isScalar())
-      return false;
-    if (isMutableBox())
-      return true;
-    if (auto varIface = getIfVariableInterface()) {
-      if (auto shape = varIface.getShape()) {
-        auto shapeTy = shape.getType();
-        return mlir::isa<fir::ShiftType>(shapeTy) ||
-               mlir::isa<fir::ShapeShiftType>(shapeTy);
-      }
-      return false;
-    }
-    return true;
-  }
+  bool mayHaveNonDefaultLowerBounds() const;
 
   // Is this entity known to be contiguous at compile time?
   // Note that when this returns false, the entity may still
@@ -333,6 +319,9 @@ void genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
 /// a character entity.
 mlir::Value genCharLength(mlir::Location loc, fir::FirOpBuilder &builder,
                           Entity entity);
+
+mlir::Value genRank(mlir::Location loc, fir::FirOpBuilder &builder,
+                    Entity entity, mlir::Type resultType);
 
 /// Return the fir base, shape, and type parameters for a variable. Note that
 /// type parameters are only added if the entity is not a box and the type

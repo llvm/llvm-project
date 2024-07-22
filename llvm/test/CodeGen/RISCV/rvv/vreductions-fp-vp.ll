@@ -192,8 +192,8 @@ define half @vpreduce_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 
 ; ZVFH-NEXT:    vfmv.s.f v25, fa0
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; ZVFH-NEXT:    vfredusum.vs v25, v8, v25, v0.t
-; ZVFH-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; ZVFH-NEXT:    vmv1r.v v0, v24
+; ZVFH-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; ZVFH-NEXT:    vfredusum.vs v25, v16, v25, v0.t
 ; ZVFH-NEXT:    vfmv.f.s fa0, v25
 ; ZVFH-NEXT:    ret
@@ -247,8 +247,8 @@ define half @vpreduce_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 
 ; ZVFHMIN-NEXT:    vfmv.s.f v8, fa5
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v12
-; ZVFHMIN-NEXT:    vsetvli zero, a5, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vmv1r.v v0, v6
+; ZVFHMIN-NEXT:    vsetvli zero, a5, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfredusum.vs v8, v24, v8, v0.t
 ; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa5, fa5
@@ -257,8 +257,8 @@ define half @vpreduce_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 
 ; ZVFHMIN-NEXT:    vfmv.s.f v8, fa5
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v16
-; ZVFHMIN-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vmv1r.v v0, v7
+; ZVFHMIN-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfredusum.vs v8, v24, v8, v0.t
 ; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa5, fa5
@@ -298,8 +298,8 @@ define half @vpreduce_ord_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscal
 ; ZVFH-NEXT:    vfmv.s.f v25, fa0
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; ZVFH-NEXT:    vfredosum.vs v25, v8, v25, v0.t
-; ZVFH-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; ZVFH-NEXT:    vmv1r.v v0, v24
+; ZVFH-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; ZVFH-NEXT:    vfredosum.vs v25, v16, v25, v0.t
 ; ZVFH-NEXT:    vfmv.f.s fa0, v25
 ; ZVFH-NEXT:    ret
@@ -353,8 +353,8 @@ define half @vpreduce_ord_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscal
 ; ZVFHMIN-NEXT:    vfmv.s.f v8, fa5
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v12
-; ZVFHMIN-NEXT:    vsetvli zero, a5, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vmv1r.v v0, v6
+; ZVFHMIN-NEXT:    vsetvli zero, a5, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfredosum.vs v8, v24, v8, v0.t
 ; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa5, fa5
@@ -363,8 +363,8 @@ define half @vpreduce_ord_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscal
 ; ZVFHMIN-NEXT:    vfmv.s.f v8, fa5
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v16
-; ZVFHMIN-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vmv1r.v v0, v7
+; ZVFHMIN-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfredosum.vs v8, v24, v8, v0.t
 ; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa5, fa5

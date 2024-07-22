@@ -49,18 +49,18 @@ __global__ void ffp2(double *p) {
   // CHECK: atomicrmw fmin ptr {{.*}} monotonic
   // CHECK: atomicrmw fmax ptr {{.*}} syncscope("agent-one-as") monotonic
   // CHECK: atomicrmw fmin ptr {{.*}} syncscope("workgroup-one-as") monotonic
-  // SAFE: _Z4ffp2Pd
+  // SAFE-LABEL: @_Z4ffp2Pd
   // SAFE: global_atomic_cmpswap_b64
   // SAFE: global_atomic_cmpswap_b64
   // SAFE: global_atomic_cmpswap_b64
   // SAFE: global_atomic_cmpswap_b64
   // SAFE: global_atomic_cmpswap_b64
-  // UNSAFE: _Z4ffp2Pd
+  // UNSAFE-LABEL: @_Z4ffp2Pd
   // UNSAFE: global_atomic_cmpswap_x2
   // UNSAFE: global_atomic_cmpswap_x2
   // UNSAFE: global_atomic_cmpswap_x2
-  // UNSAFE: global_atomic_cmpswap_x2
-  // UNSAFE: global_atomic_cmpswap_x2
+  // UNSAFE: global_atomic_max_f64
+  // UNSAFE: global_atomic_min_f64
   __atomic_fetch_sub(p, 1.0, memory_order_relaxed);
   __atomic_fetch_max(p, 1.0, memory_order_relaxed);
   __atomic_fetch_min(p, 1.0, memory_order_relaxed);
@@ -76,18 +76,18 @@ __global__ void ffp3(long double *p) {
   // CHECK: atomicrmw fmin ptr {{.*}} monotonic
   // CHECK: atomicrmw fmax ptr {{.*}} syncscope("agent-one-as") monotonic
   // CHECK: atomicrmw fmin ptr {{.*}} syncscope("workgroup-one-as") monotonic
-  // SAFE: _Z4ffp3Pe
+  // SAFE-LABEL: @_Z4ffp3Pe
   // SAFE: global_atomic_cmpswap_b64
   // SAFE: global_atomic_cmpswap_b64
   // SAFE: global_atomic_cmpswap_b64
   // SAFE: global_atomic_cmpswap_b64
   // SAFE: global_atomic_cmpswap_b64
-  // UNSAFE: _Z4ffp3Pe
+  // UNSAFE-LABEL: @_Z4ffp3Pe
   // UNSAFE: global_atomic_cmpswap_x2
   // UNSAFE: global_atomic_cmpswap_x2
   // UNSAFE: global_atomic_cmpswap_x2
-  // UNSAFE: global_atomic_cmpswap_x2
-  // UNSAFE: global_atomic_cmpswap_x2
+  // UNSAFE: global_atomic_max_f64
+  // UNSAFE: global_atomic_min_f64
   __atomic_fetch_sub(p, 1.0L, memory_order_relaxed);
   __atomic_fetch_max(p, 1.0L, memory_order_relaxed);
   __atomic_fetch_min(p, 1.0L, memory_order_relaxed);

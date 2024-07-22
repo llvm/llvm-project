@@ -207,6 +207,61 @@ define i1 @gep13_no_null_opt(ptr %ptr) #0 {
   ret i1 %cmp
 }
 
+; We can prove this GEP is non-null because it is nuw.
+define i1 @gep_nuw_not_null(ptr %ptr) {
+; CHECK-LABEL: @gep_nuw_not_null(
+; CHECK-NEXT:    ret i1 false
+;
+  %x = getelementptr nuw i8, ptr %ptr, i32 1
+  %cmp = icmp eq ptr %x, null
+  ret i1 %cmp
+}
+
+; Unlike the inbounds case, this holds even if the null pointer is valid.
+define i1 @gep_nuw_null_pointer_valid(ptr %ptr) null_pointer_is_valid {
+; CHECK-LABEL: @gep_nuw_null_pointer_valid(
+; CHECK-NEXT:    ret i1 false
+;
+  %x = getelementptr nuw i8, ptr %ptr, i32 1
+  %cmp = icmp eq ptr %x, null
+  ret i1 %cmp
+}
+
+; If the base pointer is non-null, the offset doesn't matter.
+define i1 @gep_nuw_maybe_zero_offset(ptr nonnull %ptr, i32 %offset) {
+; CHECK-LABEL: @gep_nuw_maybe_zero_offset(
+; CHECK-NEXT:    ret i1 false
+;
+  %x = getelementptr nuw i8, ptr %ptr, i32 %offset
+  %cmp = icmp eq ptr %x, null
+  ret i1 %cmp
+}
+
+; We can not prove non-null if both the base pointer may be null and the
+; offset zero.
+define i1 @gep13_nuw_maybe_zero_offset(ptr %ptr, i32 %offset) {
+; CHECK-LABEL: @gep13_nuw_maybe_zero_offset(
+; CHECK-NEXT:    [[X:%.*]] = getelementptr nuw i8, ptr [[PTR:%.*]], i32 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[X]], null
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x = getelementptr nuw i8, ptr %ptr, i32 %offset
+  %cmp = icmp eq ptr %x, null
+  ret i1 %cmp
+}
+
+; For gep nusw we don't have any non-null information.
+define i1 @gep_nusw_may_be_null(ptr %ptr) {
+; CHECK-LABEL: @gep_nusw_may_be_null(
+; CHECK-NEXT:    [[X:%.*]] = getelementptr nusw i8, ptr [[PTR:%.*]], i32 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[X]], null
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x = getelementptr nusw i8, ptr %ptr, i32 1
+  %cmp = icmp eq ptr %x, null
+  ret i1 %cmp
+}
+
 define i1 @gep14(ptr %ptr) {
 ; CHECK-LABEL: @gep14(
 ; CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds { {}, i8 }, ptr [[PTR:%.*]], i32 0, i32 1
@@ -279,6 +334,114 @@ define i1 @gep17() {
   %gep2 = getelementptr inbounds [4 x i8], ptr %alloca, i32 0, i32 1
   %pti2 = ptrtoint ptr %gep2 to i32
   %cmp = icmp ugt i32 %pti1, %pti2
+  ret i1 %cmp
+}
+
+@extern_weak = extern_weak global i8
+
+define i1 @extern_weak_may_be_null() {
+; CHECK-LABEL: @extern_weak_may_be_null(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr @extern_weak, null
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp ne ptr @extern_weak, null
+  ret i1 %cmp
+}
+
+; Don't fold this. @A might really be allocated next to @B, in which case the
+; icmp should return true. It's not valid to *dereference* in @B from a pointer
+; based on @A, but icmp isn't a dereference.
+define i1 @globals_might_be_adjacent() {
+; CHECK-LABEL: @globals_might_be_adjacent(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr getelementptr inbounds (i32, ptr @A, i64 1), @B
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq ptr getelementptr inbounds (i32, ptr @A, i64 1), @B
+  ret i1 %cmp
+}
+
+define i1 @globals_might_be_adjacent2() {
+; CHECK-LABEL: @globals_might_be_adjacent2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr getelementptr inbounds (i64, ptr @A, i64 1), getelementptr inbounds (i64, ptr @B, i64 2)
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq ptr getelementptr inbounds (i64, ptr @A, i64 1), getelementptr inbounds (i64, ptr @B, i64 2)
+  ret i1 %cmp
+}
+
+@weak = weak global i32 0
+
+; An object with weak linkage cannot have it's identity determined at compile time.
+define i1 @weak_comparison() {
+; CHECK-LABEL: @weak_comparison(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr @weak, @A
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq ptr @weak, @A
+  ret i1 %cmp
+}
+
+@empty.1 = external global [0 x i8], align 1
+@empty.2 = external global [0 x i8], align 1
+
+; Empty globals might end up anywhere, even on top of another global.
+define i1 @empty_global_comparison() {
+; CHECK-LABEL: @empty_global_comparison(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr @empty.1, @empty.2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq ptr @empty.1, @empty.2
+  ret i1 %cmp
+}
+
+@unnamed.1 = unnamed_addr constant [5 x i8] c"asdf\00"
+@unnamed.2 = unnamed_addr constant [5 x i8] c"asdf\00"
+
+; Two unnamed_addr globals can share an address
+define i1 @unnamed_addr_comparison() {
+; CHECK-LABEL: @unnamed_addr_comparison(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr @unnamed.1, @unnamed.2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq ptr @unnamed.1, @unnamed.2
+  ret i1 %cmp
+}
+
+@addrspace3 = internal addrspace(3) global i32 undef
+
+define i1 @no.fold.addrspace.icmp.eq.gv.null() {
+; CHECK-LABEL: @no.fold.addrspace.icmp.eq.gv.null(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr addrspace(3) @addrspace3, null
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq ptr addrspace(3) @addrspace3, null
+  ret i1 %cmp
+}
+
+define i1 @no.fold.addrspace.icmp.eq.null.gv() {
+; CHECK-LABEL: @no.fold.addrspace.icmp.eq.null.gv(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr addrspace(3) null, @addrspace3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq ptr addrspace(3) null, @addrspace3
+  ret i1 %cmp
+}
+
+define i1 @no.fold.addrspace.icmp.ne.gv.null() {
+; CHECK-LABEL: @no.fold.addrspace.icmp.ne.gv.null(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr addrspace(3) @addrspace3, null
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp ne ptr addrspace(3) @addrspace3, null
+  ret i1 %cmp
+}
+
+define i1 @no.fold.addrspace.icmp.ne.null.gv() {
+; CHECK-LABEL: @no.fold.addrspace.icmp.ne.null.gv(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr addrspace(3) null, @addrspace3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp ne ptr addrspace(3) null, @addrspace3
   ret i1 %cmp
 }
 
@@ -3078,7 +3241,8 @@ define i1 @globals_inequal() {
 ; TODO: Never equal
 define i1 @globals_offset_inequal() {
 ; CHECK-LABEL: @globals_offset_inequal(
-; CHECK-NEXT:    ret i1 icmp ne (ptr getelementptr inbounds (i8, ptr @A, i32 1), ptr getelementptr inbounds (i8, ptr @B, i32 1))
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne ptr getelementptr inbounds (i8, ptr @A, i32 1), getelementptr inbounds (i8, ptr @B, i32 1)
+; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a.off = getelementptr i8, ptr @A, i32 1
   %b.off = getelementptr i8, ptr @B, i32 1
@@ -3100,7 +3264,8 @@ define i1 @test_byval_global_inequal(ptr byval(i32) %a) {
 
 define i1 @neg_global_alias() {
 ; CHECK-LABEL: @neg_global_alias(
-; CHECK-NEXT:    ret i1 icmp ne (ptr @A, ptr @A.alias)
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne ptr @A, @A.alias
+; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %res = icmp ne ptr @A, @A.alias
   ret i1 %res

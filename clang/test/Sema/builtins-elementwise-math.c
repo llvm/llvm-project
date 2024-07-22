@@ -315,6 +315,27 @@ void test_builtin_elementwise_ceil(int i, float f, double d, float4 v, int3 iv, 
   // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
 }
 
+void test_builtin_elementwise_acos(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
+
+  struct Foo s = __builtin_elementwise_acos(f);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'float'}}
+
+  i = __builtin_elementwise_acos();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  i = __builtin_elementwise_acos(i);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'int')}}
+
+  i = __builtin_elementwise_acos(f, f);
+  // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
+
+  u = __builtin_elementwise_acos(u);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned int')}}
+
+  uv = __builtin_elementwise_acos(uv);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
+}
+
 void test_builtin_elementwise_cos(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
 
   struct Foo s = __builtin_elementwise_cos(f);
@@ -333,6 +354,27 @@ void test_builtin_elementwise_cos(int i, float f, double d, float4 v, int3 iv, u
   // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned int')}}
 
   uv = __builtin_elementwise_cos(uv);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
+}
+
+void test_builtin_elementwise_cosh(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
+
+  struct Foo s = __builtin_elementwise_cosh(f);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'float'}}
+
+  i = __builtin_elementwise_cosh();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  i = __builtin_elementwise_cosh(i);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'int')}}
+
+  i = __builtin_elementwise_cosh(f, f);
+  // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
+
+  u = __builtin_elementwise_cosh(u);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned int')}}
+
+  uv = __builtin_elementwise_cosh(uv);
   // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
 }
 
@@ -584,6 +626,27 @@ void test_builtin_elementwise_nearbyint(int i, float f, double d, float4 v, int3
   // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was '_Complex float')}}
 }
 
+void test_builtin_elementwise_asin(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
+
+  struct Foo s = __builtin_elementwise_asin(f);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'float'}}
+
+  i = __builtin_elementwise_asin();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  i = __builtin_elementwise_asin(i);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'int')}}
+
+  i = __builtin_elementwise_asin(f, f);
+  // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
+
+  u = __builtin_elementwise_asin(u);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned int')}}
+
+  uv = __builtin_elementwise_asin(uv);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
+}
+
 void test_builtin_elementwise_sin(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
 
   struct Foo s = __builtin_elementwise_sin(f);
@@ -602,6 +665,27 @@ void test_builtin_elementwise_sin(int i, float f, double d, float4 v, int3 iv, u
   // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned int')}}
 
   uv = __builtin_elementwise_sin(uv);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
+}
+
+void test_builtin_elementwise_sinh(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
+
+  struct Foo s = __builtin_elementwise_sinh(f);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'float'}}
+
+  i = __builtin_elementwise_sinh();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  i = __builtin_elementwise_sinh(i);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'int')}}
+
+  i = __builtin_elementwise_sinh(f, f);
+  // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
+
+  u = __builtin_elementwise_sinh(u);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned int')}}
+
+  uv = __builtin_elementwise_sinh(uv);
   // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
 }
 
@@ -626,6 +710,27 @@ void test_builtin_elementwise_sqrt(int i, float f, double d, float4 v, int3 iv, 
   // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
 }
 
+void test_builtin_elementwise_atan(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
+
+  struct Foo s = __builtin_elementwise_atan(f);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'float'}}
+
+  i = __builtin_elementwise_atan();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  i = __builtin_elementwise_atan(i);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'int')}}
+
+  i = __builtin_elementwise_atan(f, f);
+  // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
+
+  u = __builtin_elementwise_atan(u);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned int')}}
+
+  uv = __builtin_elementwise_atan(uv);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
+}
+
 void test_builtin_elementwise_tan(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
 
   struct Foo s = __builtin_elementwise_tan(f);
@@ -644,6 +749,27 @@ void test_builtin_elementwise_tan(int i, float f, double d, float4 v, int3 iv, u
   // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned int')}}
 
   uv = __builtin_elementwise_tan(uv);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
+}
+
+void test_builtin_elementwise_tanh(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
+
+  struct Foo s = __builtin_elementwise_tanh(f);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'float'}}
+
+  i = __builtin_elementwise_tanh();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  i = __builtin_elementwise_tanh(i);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'int')}}
+
+  i = __builtin_elementwise_tanh(f, f);
+  // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
+
+  u = __builtin_elementwise_tanh(u);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned int')}}
+
+  uv = __builtin_elementwise_tanh(uv);
   // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
 }
 

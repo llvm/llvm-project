@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly '-passes=print<polly-optree>' -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Forward an operand tree consisting of a speculatable instruction (%add)
 ; and a load (%val).

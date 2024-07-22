@@ -332,7 +332,7 @@ bool PointerReplacer::collectUsersRecursive(Instruction &I) {
       Worklist.insert(SI);
       if (!collectUsersRecursive(*SI))
         return false;
-    } else if (isa<GetElementPtrInst, BitCastInst>(Inst)) {
+    } else if (isa<GetElementPtrInst>(Inst)) {
       Worklist.insert(Inst);
       if (!collectUsersRecursive(*Inst))
         return false;
@@ -391,21 +391,17 @@ void PointerReplacer::replace(Instruction *I) {
         GetElementPtrInst::Create(GEP->getSourceElementType(), V, Indices);
     IC.InsertNewInstWith(NewI, GEP->getIterator());
     NewI->takeName(GEP);
-    NewI->setIsInBounds(GEP->isInBounds());
+    NewI->setNoWrapFlags(GEP->getNoWrapFlags());
     WorkMap[GEP] = NewI;
-  } else if (auto *BC = dyn_cast<BitCastInst>(I)) {
-    auto *V = getReplacement(BC->getOperand(0));
-    assert(V && "Operand not replaced");
-    auto *NewT = PointerType::get(BC->getType()->getContext(),
-                                  V->getType()->getPointerAddressSpace());
-    auto *NewI = new BitCastInst(V, NewT);
-    IC.InsertNewInstWith(NewI, BC->getIterator());
-    NewI->takeName(BC);
-    WorkMap[BC] = NewI;
   } else if (auto *SI = dyn_cast<SelectInst>(I)) {
-    auto *NewSI = SelectInst::Create(
-        SI->getCondition(), getReplacement(SI->getTrueValue()),
-        getReplacement(SI->getFalseValue()), SI->getName(), nullptr, SI);
+    Value *TrueValue = SI->getTrueValue();
+    Value *FalseValue = SI->getFalseValue();
+    if (Value *Replacement = getReplacement(TrueValue))
+      TrueValue = Replacement;
+    if (Value *Replacement = getReplacement(FalseValue))
+      FalseValue = Replacement;
+    auto *NewSI = SelectInst::Create(SI->getCondition(), TrueValue, FalseValue,
+                                     SI->getName(), nullptr, SI);
     IC.InsertNewInstWith(NewSI, SI->getIterator());
     NewSI->takeName(SI);
     WorkMap[SI] = NewSI;

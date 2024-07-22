@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-delicm -pass-remarks-missed=polly-delicm -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-delicm>' -pass-remarks-missed=polly-delicm -disable-output < %s 2>&1 | FileCheck %s
 ;
 ;    void func(double *A) {
 ;      for (int j = 0; j < 2; j += 1) { /* outer */

@@ -4,13 +4,8 @@
 define void @test_invar_dependence_before_positive_strided_access_1(ptr %a) {
 ; CHECK-LABEL: 'test_invar_dependence_before_positive_strided_access_1'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l = load i32, ptr %a, align 4 ->
-; CHECK-NEXT:            store i32 %l, ptr %gep, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
@@ -39,13 +34,8 @@ exit:
 define void @test_invar_dependence_before_positive_strided_access_2(ptr %a) {
 ; CHECK-LABEL: 'test_invar_dependence_before_positive_strided_access_2'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l = load i32, ptr %gep, align 4 ->
-; CHECK-NEXT:            store i32 %l, ptr %a, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
@@ -144,13 +134,8 @@ exit:
 define void @test_invar_dependence_before_positive_strided_access_1_different_access_sizes(ptr %a) {
 ; CHECK-LABEL: 'test_invar_dependence_before_positive_strided_access_1_different_access_sizes'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l = load i32, ptr %a, align 4 ->
-; CHECK-NEXT:            store i8 %t, ptr %gep, align 1
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
@@ -216,13 +201,8 @@ exit:
 define void @test_invar_dependence_before_negative_strided_access_1(ptr %a) {
 ; CHECK-LABEL: 'test_invar_dependence_before_negative_strided_access_1'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l = load i32, ptr %a, align 4 ->
-; CHECK-NEXT:            store i32 %l, ptr %gep, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
@@ -251,13 +231,8 @@ exit:
 define void @test_invar_dependence_before_negative_strided_access_2(ptr %a) {
 ; CHECK-LABEL: 'test_invar_dependence_before_negative_strided_access_2'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l = load i32, ptr %gep, align 4 ->
-; CHECK-NEXT:            store i32 %l, ptr %a, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
@@ -357,13 +332,8 @@ exit:
 define void @test_both_invar_before_1(ptr %a) {
 ; CHECK-LABEL: 'test_both_invar_before_1'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l = load i32, ptr %a, align 4 ->
-; CHECK-NEXT:            store i32 %l, ptr %gep.off, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
@@ -391,13 +361,8 @@ exit:
 define void @test_both_invar_before_2(ptr %a) {
 ; CHECK-LABEL: 'test_both_invar_before_2'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l = load i32, ptr %gep.off, align 4 ->
-; CHECK-NEXT:            store i32 %l, ptr %a, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
@@ -758,13 +723,8 @@ exit:
 define void @test_invar_vector_dependence_before_positive_strided_access_1(ptr %a) {
 ; CHECK-LABEL: 'test_invar_vector_dependence_before_positive_strided_access_1'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l = load <4 x i8>, ptr %a, align 4 ->
-; CHECK-NEXT:            store i32 0, ptr %gep, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:

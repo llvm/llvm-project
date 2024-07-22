@@ -43,7 +43,7 @@ protected:
     return sort(Code, GetCodeRange(Code), FileName, ExpectedNumRanges);
   }
 
-  unsigned newCursor(llvm::StringRef Code, unsigned Cursor) {
+  unsigned newCursor(StringRef Code, unsigned Cursor) {
     sortIncludes(FmtStyle, Code, GetCodeRange(Code), "input.cpp", &Cursor);
     return Cursor;
   }
@@ -644,7 +644,7 @@ TEST_F(SortIncludesTest, SupportOptionalCaseSensitiveSorting) {
                     "#include \"A/b.h\"",
                     "a.h"));
 
-  Style.IncludeBlocks = clang::tooling::IncludeStyle::IBS_Regroup;
+  Style.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
   Style.IncludeCategories = {
       {"^\"", 1, 0, false}, {"^<.*\\.h>$", 2, 0, false}, {"^<", 3, 0, false}};
 
@@ -694,7 +694,7 @@ TEST_F(SortIncludesTest, SupportCaseInsensitiveMatching) {
 }
 
 TEST_F(SortIncludesTest, SupportOptionalCaseSensitiveMachting) {
-  Style.IncludeBlocks = clang::tooling::IncludeStyle::IBS_Regroup;
+  Style.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
   Style.IncludeCategories = {{"^\"", 1, 0, false},
                              {"^<.*\\.h>$", 2, 0, false},
                              {"^<Q[A-Z][^\\.]*>", 3, 0, false},
@@ -1453,6 +1453,15 @@ TEST_F(SortIncludesTest, DisableRawStringLiteralSorting) {
                     "test.cxx", 0));
 
 #undef X
+}
+
+TEST_F(SortIncludesTest, BlockCommentedOutIncludes) {
+  StringRef Code{"/* #include \"foo.h\"\n"
+                 "#include \"bar.h\" */\n"
+                 "#include <chrono>"};
+
+  FmtStyle = getGoogleStyle(FormatStyle::LK_Cpp);
+  verifyFormat(Code, sort(Code, "input.cpp", 0));
 }
 
 } // end namespace

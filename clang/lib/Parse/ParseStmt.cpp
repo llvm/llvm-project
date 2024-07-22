@@ -114,18 +114,21 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
   // here because we don't want to allow arbitrary orderings.
   ParsedAttributes CXX11Attrs(AttrFactory);
   MaybeParseCXX11Attributes(CXX11Attrs, /*MightBeObjCMessageSend*/ true);
-  ParsedAttributes GNUAttrs(AttrFactory);
+  ParsedAttributes GNUOrMSAttrs(AttrFactory);
   if (getLangOpts().OpenCL)
-    MaybeParseGNUAttributes(GNUAttrs);
+    MaybeParseGNUAttributes(GNUOrMSAttrs);
+
+  if (getLangOpts().HLSL)
+    MaybeParseMicrosoftAttributes(GNUOrMSAttrs);
 
   StmtResult Res = ParseStatementOrDeclarationAfterAttributes(
-      Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, GNUAttrs);
+      Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, GNUOrMSAttrs);
   MaybeDestroyTemplateIds();
 
   // Attributes that are left should all go on the statement, so concatenate the
   // two lists.
   ParsedAttributes Attrs(AttrFactory);
-  takeAndConcatenateAttrs(CXX11Attrs, GNUAttrs, Attrs);
+  takeAndConcatenateAttrs(CXX11Attrs, GNUOrMSAttrs, Attrs);
 
   assert((Attrs.empty() || Res.isInvalid() || Res.isUsable()) &&
          "attributes on empty statement");
@@ -239,7 +242,15 @@ Retry:
     auto IsStmtAttr = [](ParsedAttr &Attr) { return Attr.isStmtAttr(); };
     bool AllAttrsAreStmtAttrs = llvm::all_of(CXX11Attrs, IsStmtAttr) &&
                                 llvm::all_of(GNUAttrs, IsStmtAttr);
-    if (((GNUAttributeLoc.isValid() && !(HaveAttrs && AllAttrsAreStmtAttrs)) ||
+    // In C, the grammar production for statement (C23 6.8.1p1) does not allow
+    // for declarations, which is different from C++ (C++23 [stmt.pre]p1). So
+    // in C++, we always allow a declaration, but in C we need to check whether
+    // we're in a statement context that allows declarations. e.g., in C, the
+    // following is invalid: if (1) int x;
+    if ((getLangOpts().CPlusPlus || getLangOpts().MicrosoftExt ||
+         (StmtCtx & ParsedStmtContext::AllowDeclarationsInC) !=
+             ParsedStmtContext()) &&
+        ((GNUAttributeLoc.isValid() && !(HaveAttrs && AllAttrsAreStmtAttrs)) ||
          isDeclarationStatement())) {
       SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
       DeclGroupPtrTy Decl;
@@ -563,11 +574,8 @@ StmtResult Parser::ParseExprStatement(ParsedStmtContext StmtCtx) {
   }
 
   Token *CurTok = nullptr;
-  // If the semicolon is missing at the end of REPL input, consider if
-  // we want to do value printing. Note this is only enabled in C++ mode
-  // since part of the implementation requires C++ language features.
   // Note we shouldn't eat the token since the callback needs it.
-  if (Tok.is(tok::annot_repl_input_end) && Actions.getLangOpts().CPlusPlus)
+  if (Tok.is(tok::annot_repl_input_end))
     CurTok = &Tok;
   else
     // Otherwise, eat the semicolon.

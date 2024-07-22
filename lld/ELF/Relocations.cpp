@@ -492,7 +492,8 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
 
   // The ABI says that the paired relocation is used only for REL.
   // See p. 4-17 at ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-  if (RelTy::IsRela)
+  // This generalises to relocation types with implicit addends.
+  if (RelTy::HasAddend)
     return 0;
 
   RelType type = rel.getType(config->isMips64EL);
@@ -1303,6 +1304,18 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
 
   if (config->emachine == EM_MIPS)
     return handleMipsTlsRelocation(type, sym, c, offset, addend, expr);
+
+  // LoongArch does not yet implement transition from TLSDESC to LE/IE, so
+  // generate TLSDESC dynamic relocation for the dynamic linker to handle.
+  if (config->emachine == EM_LOONGARCH &&
+      oneof<R_LOONGARCH_TLSDESC_PAGE_PC, R_TLSDESC, R_TLSDESC_CALL>(expr)) {
+    if (expr != R_TLSDESC_CALL) {
+      sym.setFlags(NEEDS_TLSDESC);
+      c.addReloc({expr, type, offset, addend, &sym});
+    }
+    return 1;
+  }
+
   bool isRISCV = config->emachine == EM_RISCV;
 
   if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
@@ -1386,8 +1399,8 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
     // depending on the symbol being locally defined or not.
     //
     // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference a non-preemptible
-    // label, so the LE optimization will be categorized as
-    // R_RELAX_TLS_GD_TO_LE. We fix the categorization in RISCV::relocateAlloc.
+    // label, so TLSDESC=>IE will be categorized as R_RELAX_TLS_GD_TO_LE. We fix
+    // the categorization in RISCV::relocateAlloc.
     if (sym.isPreemptible) {
       sym.setFlags(NEEDS_TLSGD_TO_IE);
       c.addReloc({target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_IE), type,
@@ -1442,7 +1455,7 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
     return;
 
   RelExpr expr = target->getRelExpr(type, sym, sec->content().data() + offset);
-  int64_t addend = RelTy::IsRela
+  int64_t addend = RelTy::HasAddend
                        ? getAddend<ELFT>(rel)
                        : target->getImplicitAddend(
                              sec->content().data() + rel.r_offset, type);
@@ -2354,7 +2367,65 @@ void elf::hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections) {
       });
 }
 
+static bool matchesRefTo(const NoCrossRefCommand &cmd, StringRef osec) {
+  if (cmd.toFirst)
+    return cmd.outputSections[0] == osec;
+  return llvm::is_contained(cmd.outputSections, osec);
+}
+
+template <class ELFT, class Rels>
+static void scanCrossRefs(const NoCrossRefCommand &cmd, OutputSection *osec,
+                          InputSection *sec, Rels rels) {
+  for (const auto &r : rels) {
+    Symbol &sym = sec->file->getSymbol(r.getSymbol(config->isMips64EL));
+    // A legal cross-reference is when the destination output section is
+    // nullptr, osec for a self-reference, or a section that is described by the
+    // NOCROSSREFS/NOCROSSREFS_TO command.
+    auto *dstOsec = sym.getOutputSection();
+    if (!dstOsec || dstOsec == osec || !matchesRefTo(cmd, dstOsec->name))
+      continue;
+
+    std::string toSymName;
+    if (!sym.isSection())
+      toSymName = toString(sym);
+    else if (auto *d = dyn_cast<Defined>(&sym))
+      toSymName = d->section->name;
+    errorOrWarn(sec->getLocation(r.r_offset) +
+                ": prohibited cross reference from '" + osec->name + "' to '" +
+                toSymName + "' in '" + dstOsec->name + "'");
+  }
+}
+
+// For each output section described by at least one NOCROSSREFS(_TO) command,
+// scan relocations from its input sections for prohibited cross references.
+template <class ELFT> void elf::checkNoCrossRefs() {
+  for (OutputSection *osec : outputSections) {
+    for (const NoCrossRefCommand &noxref : script->noCrossRefs) {
+      if (!llvm::is_contained(noxref.outputSections, osec->name) ||
+          (noxref.toFirst && noxref.outputSections[0] == osec->name))
+        continue;
+      for (SectionCommand *cmd : osec->commands) {
+        auto *isd = dyn_cast<InputSectionDescription>(cmd);
+        if (!isd)
+          continue;
+        parallelForEach(isd->sections, [&](InputSection *sec) {
+          const RelsOrRelas<ELFT> rels = sec->template relsOrRelas<ELFT>();
+          if (rels.areRelocsRel())
+            scanCrossRefs<ELFT>(noxref, osec, sec, rels.rels);
+          else
+            scanCrossRefs<ELFT>(noxref, osec, sec, rels.relas);
+        });
+      }
+    }
+  }
+}
+
 template void elf::scanRelocations<ELF32LE>();
 template void elf::scanRelocations<ELF32BE>();
 template void elf::scanRelocations<ELF64LE>();
 template void elf::scanRelocations<ELF64BE>();
+
+template void elf::checkNoCrossRefs<ELF32LE>();
+template void elf::checkNoCrossRefs<ELF32BE>();
+template void elf::checkNoCrossRefs<ELF64LE>();
+template void elf::checkNoCrossRefs<ELF64BE>();

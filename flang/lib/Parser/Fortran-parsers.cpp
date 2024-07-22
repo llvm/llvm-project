@@ -735,7 +735,8 @@ TYPE_PARSER(construct<AccessSpec>("PUBLIC" >> pure(AccessSpec::Kind::Public)) ||
 //        BIND ( C [, NAME = scalar-default-char-constant-expr] )
 // R1528 proc-language-binding-spec -> language-binding-spec
 TYPE_PARSER(construct<LanguageBindingSpec>(
-    "BIND ( C" >> maybe(", NAME =" >> scalarDefaultCharConstantExpr) / ")"))
+    "BIND ( C" >> maybe(", NAME =" >> scalarDefaultCharConstantExpr),
+    (", CDEFINED" >> pure(true) || pure(false)) / ")"))
 
 // R809 coarray-spec -> deferred-coshape-spec-list | explicit-coshape-spec
 // N.B. Bracketed here rather than around references, for consistency with
@@ -1276,10 +1277,13 @@ constexpr auto loopCount{
 constexpr auto assumeAligned{"ASSUME_ALIGNED" >>
     optionalList(construct<CompilerDirective::AssumeAligned>(
         indirect(designator), ":"_tok >> digitString64))};
+constexpr auto vectorAlways{
+    "VECTOR ALWAYS" >> construct<CompilerDirective::VectorAlways>()};
 TYPE_PARSER(beginDirective >> "DIR$ "_tok >>
     sourced((construct<CompilerDirective>(ignore_tkr) ||
                 construct<CompilerDirective>(loopCount) ||
                 construct<CompilerDirective>(assumeAligned) ||
+                construct<CompilerDirective>(vectorAlways) ||
                 construct<CompilerDirective>(
                     many(construct<CompilerDirective::NameValue>(
                         name, maybe(("="_tok || ":"_tok) >> digitString64))))) /
@@ -1300,10 +1304,16 @@ TYPE_PARSER(extension<LanguageFeature::CUDA>(construct<CUDAAttributesStmt>(
     defaulted(
         maybe("::"_tok) >> nonemptyList("expected names"_err_en_US, name)))))
 
-// Subtle: the name includes the surrounding slashes, which avoids
+// Subtle: A structure's name includes the surrounding slashes, which avoids
 // clashes with other uses of the name in the same scope.
-TYPE_PARSER(construct<StructureStmt>(
-    "STRUCTURE" >> maybe(sourced("/" >> name / "/")), optionalList(entityDecl)))
+constexpr auto structureName{maybe(sourced("/" >> name / "/"))};
+
+// Note that Parser<StructureStmt>{} has a mandatory list of entity-decls
+// and is used only by NestedStructureStmt{}.Parse() in user-state.cpp.
+TYPE_PARSER(construct<StructureStmt>("STRUCTURE" >> structureName,
+    localRecovery(
+        "entity declarations are required on a nested structure"_err_en_US,
+        nonemptyList(entityDecl), ok)))
 
 constexpr auto nestedStructureDef{
     CONTEXT_PARSER("nested STRUCTURE definition"_en_US,
@@ -1319,7 +1329,9 @@ TYPE_PARSER(construct<StructureField>(statement(StructureComponents{})) ||
 TYPE_CONTEXT_PARSER("STRUCTURE definition"_en_US,
     extension<LanguageFeature::DECStructures>(
         "nonstandard usage: STRUCTURE"_port_en_US,
-        construct<StructureDef>(statement(Parser<StructureStmt>{}),
+        construct<StructureDef>(
+            statement(construct<StructureStmt>(
+                "STRUCTURE" >> structureName, optionalList(entityDecl))),
             many(Parser<StructureField>{}),
             statement(construct<StructureDef::EndStructureStmt>(
                 "END STRUCTURE"_tok)))))

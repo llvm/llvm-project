@@ -9,6 +9,7 @@
 #include "RedundantStrcatCallsCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include <deque>
 
 using namespace clang::ast_matchers;
 

@@ -18,7 +18,7 @@
 
 #include <stdint.h>
 
-template <typename T>
+template <typename T, typename U = int>
 class LdExpTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using NormalFloat = LIBC_NAMESPACE::fputil::NormalFloat<T>;
@@ -31,14 +31,25 @@ class LdExpTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   const T nan = FPBits::quiet_nan().get_val();
 
   // A normalized mantissa to be used with tests.
-  static constexpr StorageType MANTISSA = NormalFloat::ONE + 0x1234;
+  static constexpr StorageType MANTISSA = NormalFloat::ONE + 0x123;
 
 public:
-  typedef T (*LdExpFunc)(T, int);
+  typedef T (*LdExpFunc)(T, U);
 
   void testSpecialNumbers(LdExpFunc func) {
-    int exp_array[5] = {-INT_MAX - 1, -10, 0, 10, INT_MAX};
+    int exp_array[5] = {INT_MIN, -10, 0, 10, INT_MAX};
     for (int exp : exp_array) {
+      ASSERT_FP_EQ(zero, func(zero, exp));
+      ASSERT_FP_EQ(neg_zero, func(neg_zero, exp));
+      ASSERT_FP_EQ(inf, func(inf, exp));
+      ASSERT_FP_EQ(neg_inf, func(neg_inf, exp));
+      ASSERT_FP_EQ(nan, func(nan, exp));
+    }
+
+    if constexpr (sizeof(U) < sizeof(long) || sizeof(long) == sizeof(int))
+      return;
+    long long_exp_array[4] = {LONG_MIN, INT_MIN - 1L, INT_MAX + 1L, LONG_MAX};
+    for (long exp : long_exp_array) {
       ASSERT_FP_EQ(zero, func(zero, exp));
       ASSERT_FP_EQ(neg_zero, func(neg_zero, exp));
       ASSERT_FP_EQ(inf, func(inf, exp));
@@ -60,7 +71,7 @@ public:
 
   void testOverflow(LdExpFunc func) {
     NormalFloat x(Sign::POS, FPBits::MAX_BIASED_EXPONENT - 10,
-                  NormalFloat::ONE + 0xF00BA);
+                  NormalFloat::ONE + 0xFB);
     for (int32_t exp = 10; exp < 100; ++exp) {
       ASSERT_FP_EQ(inf, func(T(x), exp));
       ASSERT_FP_EQ(neg_inf, func(-T(x), exp));
@@ -95,10 +106,10 @@ public:
 
   void testNormalOperation(LdExpFunc func) {
     T val_array[] = {// Normal numbers
-                     NormalFloat(Sign::POS, 100, MANTISSA),
-                     NormalFloat(Sign::POS, -100, MANTISSA),
-                     NormalFloat(Sign::NEG, 100, MANTISSA),
-                     NormalFloat(Sign::NEG, -100, MANTISSA),
+                     NormalFloat(Sign::POS, 10, MANTISSA),
+                     NormalFloat(Sign::POS, -10, MANTISSA),
+                     NormalFloat(Sign::NEG, 10, MANTISSA),
+                     NormalFloat(Sign::NEG, -10, MANTISSA),
                      // Subnormal numbers
                      NormalFloat(Sign::POS, -FPBits::EXP_BIAS, MANTISSA),
                      NormalFloat(Sign::NEG, -FPBits::EXP_BIAS, MANTISSA)};
@@ -114,8 +125,8 @@ public:
         NormalFloat two_to_exp = NormalFloat(static_cast<T>(1.L));
         two_to_exp = two_to_exp.mul2(exp);
 
-        ASSERT_FP_EQ(func(x, exp), x * two_to_exp);
-        ASSERT_FP_EQ(func(x, -exp), x / two_to_exp);
+        ASSERT_FP_EQ(func(x, exp), x * static_cast<T>(two_to_exp));
+        ASSERT_FP_EQ(func(x, -exp), x / static_cast<T>(two_to_exp));
       }
     }
 

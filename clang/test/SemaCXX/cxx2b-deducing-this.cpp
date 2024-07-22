@@ -893,3 +893,69 @@ void g() {
   a * lval;
 }
 }
+
+namespace P2797 {
+struct C {
+  void c(this const C&);    // #first
+  void c() &;               // #second
+  static void c(int = 0);   // #third
+
+  void d() {
+    c();                // expected-error {{call to member function 'c' is ambiguous}}
+                        // expected-note@#first {{candidate function}}
+                        // expected-note@#second {{candidate function}}
+                        // expected-note@#third {{candidate function}}
+
+    (C::c)();           // expected-error {{call to member function 'c' is ambiguous}}
+                        // expected-note@#first {{candidate function}}
+                        // expected-note@#second {{candidate function}}
+                        // expected-note@#third {{candidate function}}
+
+    (&(C::c))();        // expected-error {{cannot create a non-constant pointer to member function}}
+    (&C::c)(C{});
+    (&C::c)(*this);     // expected-error {{call to non-static member function without an object argument}}
+    (&C::c)();
+  }
+};
+}
+
+namespace GH85992 {
+namespace N {
+struct A {
+  int f(this A);
+};
+
+int f(A);
+}
+
+struct S {
+  int (S::*x)(this int); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+  int (*y)(this int); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+  int (***z)(this int); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+
+  int f(this S);
+  int ((g))(this S);
+  friend int h(this S); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+  int h(int x, int (*)(this S)); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+
+  struct T {
+    int f(this T);
+  };
+
+  friend int T::f(this T);
+  friend int N::A::f(this N::A);
+  friend int N::f(this N::A); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+  int friend func(this T); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+};
+
+using T = int (*)(this int); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+using U = int (S::*)(this int); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+int h(this int); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+
+int S::f(this S) { return 1; }
+
+namespace a {
+void f();
+};
+void a::f(this auto) {} // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+}

@@ -92,9 +92,21 @@ add_macro_header(
 )
 
 add_macro_header(
+  float16_macros
+  HDR
+    float16-macros.h
+)
+
+add_macro_header(
   limits_macros
   HDR
     limits-macros.h
+)
+
+add_macro_header(
+  link_macros
+  HDR
+    link-macros.h
 )
 
 add_macro_header(
@@ -103,6 +115,12 @@ add_macro_header(
     math-macros.h
   DEPENDS
     .limits_macros
+)
+
+add_macro_header(
+  math_function_macros
+  HDR
+    math-function-macros.h
 )
 
 add_macro_header(
@@ -264,4 +282,10 @@ add_macro_header(
   stdckdint_macros
   HDR
     stdckdint-macros.h
+)
+
+add_macro_header(
+  dlfcn_macros
+  HDR
+    dlfcn-macros.h
 )

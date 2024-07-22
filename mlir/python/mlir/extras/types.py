@@ -68,7 +68,7 @@ f64 = lambda: F64Type.get()
 bf16 = lambda: BF16Type.get()
 
 f8E5M2 = lambda: Float8E5M2Type.get()
-f8E4M3 = lambda: Float8E4M3FNType.get()
+f8E4M3FN = lambda: Float8E4M3FNType.get()
 f8E4M3B11FNUZ = lambda: Float8E4M3B11FNUZType.get()
 
 none = lambda: NoneType.get()

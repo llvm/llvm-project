@@ -764,7 +764,7 @@ bool PartialInlinerImpl::shouldPartialInline(
     });
     return false;
   }
-  const DataLayout &DL = Caller->getParent()->getDataLayout();
+  const DataLayout &DL = Caller->getDataLayout();
 
   // The savings of eliminating the call:
   int NonWeightedSavings = getCallsiteCost(CalleeTTI, CB, DL);
@@ -804,7 +804,7 @@ InstructionCost
 PartialInlinerImpl::computeBBInlineCost(BasicBlock *BB,
                                         TargetTransformInfo *TTI) {
   InstructionCost InlineCost = 0;
-  const DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
+  const DataLayout &DL = BB->getDataLayout();
   int InstrCost = InlineConstants::getInstrCost();
   for (Instruction &I : BB->instructionsWithoutDebug()) {
     // Skip free instructions.
