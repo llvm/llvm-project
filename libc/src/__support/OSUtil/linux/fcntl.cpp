@@ -86,17 +86,31 @@ int fcntl(int fd, int cmd, void *arg) {
     libc_errno = -ret;
     return -1;
   }
-  // The general case
-  default: {
-    int retVal = LIBC_NAMESPACE::syscall_impl<int>(
-        FCNTL_SYSCALL_ID, fd, cmd, reinterpret_cast<void *>(arg));
-    if (retVal >= 0) {
-      return retVal;
-    }
-    libc_errno = -retVal;
-    return -1;
+#ifdef SYS_fcntl64
+  case F_GETLK: {
+    if constexpr (FCNTL_SYSCALL_ID == SYS_fcntl64)
+      return fcntl(fd, F_GETLK64, arg);
+    break;
   }
+  case F_SETLK: {
+    if constexpr (FCNTL_SYSCALL_ID == SYS_fcntl64)
+      return fcntl(fd, F_SETLK64, arg);
+    break;
   }
+  case F_SETLKW: {
+    if constexpr (FCNTL_SYSCALL_ID == SYS_fcntl64)
+      return fcntl(fd, F_SETLKW64, arg);
+    break;
+  }
+#endif
+  }
+  int retVal = LIBC_NAMESPACE::syscall_impl<int>(FCNTL_SYSCALL_ID, fd, cmd,
+                                                 reinterpret_cast<void *>(arg));
+  if (retVal >= 0) {
+    return retVal;
+  }
+  libc_errno = -retVal;
+  return -1;
 }
 
 } // namespace internal
