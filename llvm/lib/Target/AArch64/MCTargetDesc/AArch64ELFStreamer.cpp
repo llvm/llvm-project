@@ -271,8 +271,7 @@ private:
   }
 
   void emitMappingSymbol(StringRef Name) {
-    auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
-        Name + "." + Twine(MappingSymbolCounter++)));
+    auto *Symbol = cast<MCSymbolELF>(getContext().createLocalSymbol(Name));
     emitLabel(Symbol);
     Symbol->setType(ELF::STT_NOTYPE);
     Symbol->setBinding(ELF::STB_LOCAL);
