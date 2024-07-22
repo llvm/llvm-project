@@ -427,6 +427,8 @@ struct DPMACCInstructionInfo {
 #define GET_getMFMA_F8F6F4_WithSize_DECL
 #define GET_getMFMA_F8F6F4_WithSize_IMPL
 #define GET_isMFMA_F8F6F4Table_IMPL
+#define GET_isCvtScaleF32_F32F16ToF8F4Table_IMPL
+
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMTBUFBaseOpcode(unsigned Opc) {

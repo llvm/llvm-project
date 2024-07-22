@@ -2068,6 +2068,23 @@ multiclass VOP3_Real_BITOP3_gfx9<bits<10> op, string AsmName, bit isSingle = 0> 
     }
   }
 }
+
+// Opsel encoding and creates entries in CvtScaleF32_F32F16ToF8F4_Table
+multiclass VOP3OpSel_CvtScaleF32_Real_gfx9_hz<bits<10> op> {
+  def _vi : VOP3_Real<!cast<VOP_Pseudo>(NAME#"_e64"), SIEncodingFamily.VI>,
+            VOP3OpSel_gfx9 <op, !cast<VOP_Pseudo>(NAME#"_e64").Pfl>,
+            CvtScaleF32_F32F16ToF8F4_Table<!cast<Instruction>(NAME#"_e64")>;
+}
+
+// Opsel encoding and creates entries in CvtScaleF32_F32F16ToF8F4_Table
+multiclass VOP3OpSel_CvtScaleF32_Real_gfx9_hz_forced_opsel2<bits<10> op> {
+  def _vi : VOP3_Real<!cast<VOP_Pseudo>(NAME#"_e64"), SIEncodingFamily.VI>,
+            VOP3OpSel_gfx9 <op, !cast<VOP_Pseudo>(NAME#"_e64").Pfl>,
+            CvtScaleF32_F32F16ToF8F4_Table<!cast<Instruction>(NAME#"_e64")> {
+    let Inst{13} = src2_modifiers{2}; // op_sel(2)
+  }
+}
+
 } // End AssemblerPredicate = isGFX9Only, DecoderNamespace = "GFX9"
 
 defm V_MAD_U64_U32      : VOP3be_Real_vi <0x1E8>;
@@ -2217,41 +2234,41 @@ defm V_MAXIMUM3_F32 : VOP3_Real_vi <0x2a9>;
 defm V_BITOP3_B16         : VOP3_Real_BITOP3_gfx9<0x233, "v_bitop3_b16">;
 defm V_BITOP3_B32         : VOP3_Real_BITOP3_gfx9<0x234, "v_bitop3_b32">;
 let OtherPredicates = [HasFP8ConversionScaleInsts] in {
-defm V_CVT_SCALEF32_SR_FP8_BF16 : VOP3OpSel_Real_gfx9<0x246>;
-defm V_CVT_SCALEF32_SR_FP8_F16 : VOP3OpSel_Real_gfx9<0x242>;
-defm V_CVT_SCALEF32_SR_FP8_F32 : VOP3OpSel_Real_gfx9<0x237>;
+defm V_CVT_SCALEF32_SR_FP8_BF16 : VOP3OpSel_CvtScaleF32_Real_gfx9_hz<0x246>;
+defm V_CVT_SCALEF32_SR_FP8_F16 : VOP3OpSel_CvtScaleF32_Real_gfx9_hz<0x242>;
+defm V_CVT_SCALEF32_SR_FP8_F32 : VOP3OpSel_CvtScaleF32_Real_gfx9_hz<0x237>;
 defm V_CVT_SCALEF32_F16_FP8 : VOP3OpSel_Real_gfx9 <0x24a>;
 defm V_CVT_SCALEF32_F32_FP8 : VOP3OpSel_Real_gfx9 <0x23b>;
-defm V_CVT_SCALEF32_PK_FP8_F32 : VOP3OpSel_Real_gfx9 <0x235>;
+defm V_CVT_SCALEF32_PK_FP8_F32 : VOP3OpSel_CvtScaleF32_Real_gfx9_hz <0x235>;
 defm V_CVT_SCALEF32_PK_F32_FP8 : VOP3OpSel_Real_gfx9 <0x239>;
-defm V_CVT_SCALEF32_PK_FP8_F16 : VOP3OpSel_Real_gfx9 <0x240>;
-defm V_CVT_SCALEF32_PK_FP8_BF16: VOP3OpSel_Real_gfx9 <0x244>;
+defm V_CVT_SCALEF32_PK_FP8_F16 : VOP3OpSel_CvtScaleF32_Real_gfx9_hz <0x240>;
+defm V_CVT_SCALEF32_PK_FP8_BF16: VOP3OpSel_CvtScaleF32_Real_gfx9_hz <0x244>;
 defm V_CVT_SCALEF32_PK_F16_FP8  : VOP3OpSel_Real_gfx9<0x248>;
 defm V_CVT_SCALEF32_PK_BF16_FP8 : VOP3OpSel_Real_gfx9<0x269>;
 }
 let OtherPredicates = [HasBF8ConversionScaleInsts] in {
-defm V_CVT_SCALEF32_SR_BF8_BF16 : VOP3OpSel_Real_gfx9<0x247>;
-defm V_CVT_SCALEF32_SR_BF8_F16 : VOP3OpSel_Real_gfx9<0x243>;
-defm V_CVT_SCALEF32_SR_BF8_F32 : VOP3OpSel_Real_gfx9<0x238>;
+defm V_CVT_SCALEF32_SR_BF8_BF16 : VOP3OpSel_CvtScaleF32_Real_gfx9_hz<0x247>;
+defm V_CVT_SCALEF32_SR_BF8_F16 : VOP3OpSel_CvtScaleF32_Real_gfx9_hz<0x243>;
+defm V_CVT_SCALEF32_SR_BF8_F32 : VOP3OpSel_CvtScaleF32_Real_gfx9_hz<0x238>;
 defm V_CVT_SCALEF32_F16_BF8 : VOP3OpSel_Real_gfx9 <0x24b>;
 defm V_CVT_SCALEF32_F32_BF8 : VOP3OpSel_Real_gfx9 <0x23c>;
-defm V_CVT_SCALEF32_PK_BF8_F32 : VOP3OpSel_Real_gfx9 <0x236>;
+defm V_CVT_SCALEF32_PK_BF8_F32 : VOP3OpSel_CvtScaleF32_Real_gfx9_hz <0x236>;
 defm V_CVT_SCALEF32_PK_F32_BF8 : VOP3OpSel_Real_gfx9 <0x23a>;
-defm V_CVT_SCALEF32_PK_BF8_F16 : VOP3OpSel_Real_gfx9 <0x241>;
-defm V_CVT_SCALEF32_PK_BF8_BF16: VOP3OpSel_Real_gfx9 <0x245>;
+defm V_CVT_SCALEF32_PK_BF8_F16 : VOP3OpSel_CvtScaleF32_Real_gfx9_hz <0x241>;
+defm V_CVT_SCALEF32_PK_BF8_BF16: VOP3OpSel_CvtScaleF32_Real_gfx9_hz <0x245>;
 defm V_CVT_SCALEF32_PK_F16_BF8  : VOP3OpSel_Real_gfx9<0x249>;
 defm V_CVT_SCALEF32_PK_BF16_BF8 : VOP3OpSel_Real_gfx9<0x26a>;
 }
 let OtherPredicates = [HasFP4ConversionScaleInsts] in {
 defm V_CVT_SCALEF32_PK_F32_FP4 : VOP3OpSel_Real_gfx9 <0x23f>;
-defm V_CVT_SCALEF32_PK_FP4_F32 : VOP3OpSel_Real_gfx9 <0x23d>;
+defm V_CVT_SCALEF32_PK_FP4_F32 : VOP3OpSel_CvtScaleF32_Real_gfx9_hz <0x23d>;
 defm V_CVT_SCALEF32_PK_F16_FP4 : VOP3OpSel_Real_gfx9 <0x250>;
 defm V_CVT_SCALEF32_PK_BF16_FP4 : VOP3OpSel_Real_gfx9 <0x251>;
-defm V_CVT_SCALEF32_PK_FP4_F16 : VOP3OpSel_Real_gfx9_forced_opsel2 <0x24c>;
-defm V_CVT_SCALEF32_PK_FP4_BF16: VOP3OpSel_Real_gfx9_forced_opsel2 <0x24d>;
-defm V_CVT_SCALEF32_SR_PK_FP4_F16:  VOP3OpSel_Real_gfx9 <0x24e>;
-defm V_CVT_SCALEF32_SR_PK_FP4_BF16: VOP3OpSel_Real_gfx9 <0x24f>;
-defm V_CVT_SCALEF32_SR_PK_FP4_F32:  VOP3OpSel_Real_gfx9 <0x23e>;
+defm V_CVT_SCALEF32_PK_FP4_F16 : VOP3OpSel_CvtScaleF32_Real_gfx9_hz_forced_opsel2 <0x24c>;
+defm V_CVT_SCALEF32_PK_FP4_BF16: VOP3OpSel_CvtScaleF32_Real_gfx9_hz_forced_opsel2 <0x24d>;
+defm V_CVT_SCALEF32_SR_PK_FP4_F16:  VOP3OpSel_CvtScaleF32_Real_gfx9_hz <0x24e>;
+defm V_CVT_SCALEF32_SR_PK_FP4_BF16: VOP3OpSel_CvtScaleF32_Real_gfx9_hz <0x24f>;
+defm V_CVT_SCALEF32_SR_PK_FP4_F32:  VOP3OpSel_CvtScaleF32_Real_gfx9_hz <0x23e>;
 }
 let OtherPredicates = [HasFP6BF6ConversionScaleInsts] in {
 defm V_CVT_SCALEF32_PK32_F32_FP6 : VOP3_Real_gfx9<0x256, "v_cvt_scalef32_pk32_f32_fp6">;
