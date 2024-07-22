@@ -77,6 +77,16 @@
       "doc": "Default size for the constinit freelist buffer used for the freelist malloc implementation (default 1o 1GB)."
     }
   },
+  "unistd": {
+    "LIBC_CONF_ENABLE_TID_CACHE": {
+      "value": true,
+      "doc": "Enable caching mechanism for gettid to avoid syscall (only effective in fullbuild mode, default to true). Please refer to Undefined Behavior documentation for implications."
+    },
+    "LIBC_CONF_ENABLE_PID_CACHE": {
+      "value": true,
+      "doc": "Enable caching mechanism for getpid to avoid syscall (default to true). Please refer to Undefined Behavior documentation for implications."
+    }
+  },
   "math": {
     "LIBC_CONF_MATH_OPTIMIZATIONS": {
       "value": 0,

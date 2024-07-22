@@ -204,6 +204,14 @@ floating_point fmin (arithmetic x, arithmetic y);
 float          fminf(float x, float y);
 long double    fminl(long double x, long double y);
 
+double         hermite(unsigned n, double x);                    // C++17
+float          hermite(unsigned n, float x);                     // C++17
+long double    hermite(unsigned n, long double x);               // C++17
+float          hermitef(unsigned n, float x);                    // C++17
+long double    hermitel(unsigned n, long double x);              // C++17
+template <class Integer>
+double         hermite(unsigned n, Integer x);                   // C++17
+
 floating_point hypot (arithmetic x, arithmetic y);
 float          hypotf(float x, float y);
 long double    hypotl(long double x, long double y);
@@ -315,6 +323,7 @@ constexpr long double lerp(long double a, long double b, long double t) noexcept
 #include <limits>
 #include <version>
 
+#include <__math/special_functions.h>
 #include <math.h>
 
 #ifndef _LIBCPP_MATH_H

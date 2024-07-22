@@ -66,11 +66,10 @@ bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   CodeEmitter.reset(TM.getTarget().createMCCodeEmitter(
       *Subtarget->getInstrInfo(), MF.getContext()));
 
-  EmitFPOData =
-      Subtarget->isTargetWin32() && MF.getMMI().getModule()->getCodeViewFlag();
+  const Module *M = MF.getFunction().getParent();
+  EmitFPOData = Subtarget->isTargetWin32() && M->getCodeViewFlag();
 
-  IndCSPrefix =
-      MF.getMMI().getModule()->getModuleFlag("indirect_branch_cs_prefix");
+  IndCSPrefix = M->getModuleFlag("indirect_branch_cs_prefix");
 
   SetupMachineFunction(MF);
 
