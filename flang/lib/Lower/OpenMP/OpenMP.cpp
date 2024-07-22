@@ -1067,6 +1067,15 @@ genLoopNestClauses(lower::AbstractConverter &converter,
   clauseOps.loopInclusiveAttr = converter.getFirOpBuilder().getUnitAttr();
 }
 
+static void genMaskedClauses(lower::AbstractConverter &converter,
+                             semantics::SemanticsContext &semaCtx,
+                             lower::StatementContext &stmtCtx,
+                             const List<Clause> &clauses, mlir::Location loc,
+                             mlir::omp::MaskedClauseOps &clauseOps) {
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processFilter(stmtCtx, clauseOps);
+}
+
 static void
 genOrderedRegionClauses(lower::AbstractConverter &converter,
                         semantics::SemanticsContext &semaCtx,
@@ -1374,6 +1383,21 @@ genLoopNestOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           .setClauses(&item->clauses)
           .setDataSharingProcessor(&dsp)
           .setGenRegionEntryCb(ivCallback),
+      queue, item, clauseOps);
+}
+
+static mlir::omp::MaskedOp
+genMaskedOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
+            semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+            mlir::Location loc, const ConstructQueue &queue,
+            ConstructQueue::iterator item) {
+  lower::StatementContext stmtCtx;
+  mlir::omp::MaskedClauseOps clauseOps;
+  genMaskedClauses(converter, semaCtx, stmtCtx, item->clauses, loc, clauseOps);
+
+  return genOpWithBody<mlir::omp::MaskedOp>(
+      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+                        llvm::omp::Directive::OMPD_masked),
       queue, item, clauseOps);
 }
 
@@ -2136,8 +2160,10 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
                     *loopDsp);
     break;
   case llvm::omp::Directive::OMPD_loop:
-  case llvm::omp::Directive::OMPD_masked:
     TODO(loc, "Unhandled directive " + llvm::omp::getOpenMPDirectiveName(dir));
+    break;
+  case llvm::omp::Directive::OMPD_masked:
+    genMaskedOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_master:
     genMasterOp(converter, symTable, semaCtx, eval, loc, queue, item);
@@ -2478,6 +2504,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         !std::holds_alternative<clause::Copyprivate>(clause.u) &&
         !std::holds_alternative<clause::Default>(clause.u) &&
         !std::holds_alternative<clause::Depend>(clause.u) &&
+        !std::holds_alternative<clause::Filter>(clause.u) &&
         !std::holds_alternative<clause::Final>(clause.u) &&
         !std::holds_alternative<clause::Firstprivate>(clause.u) &&
         !std::holds_alternative<clause::HasDeviceAddr>(clause.u) &&
