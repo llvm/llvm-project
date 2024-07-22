@@ -75,6 +75,18 @@ entry:
   ret float %call
 }
 
+define float @remquo_f32_nzero_y(ptr %quo) {
+; CHECK-LABEL: define float @remquo_f32_nzero_y(
+; CHECK-SAME: ptr [[QUO:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @remquof(float -5.000000e+00, float -0.000000e+00, ptr [[QUO]])
+; CHECK-NEXT:    ret float [[CALL]]
+;
+entry:
+  %call = call float @remquof(float -5.000000e+00, float -0.000000e+00, ptr %quo)
+  ret float %call
+}
+
 define float @remquo_f32_nan_x(ptr %quo) {
 ; CHECK-LABEL: define float @remquo_f32_nan_x(
 ; CHECK-SAME: ptr [[QUO:%.*]]) {
@@ -96,6 +108,30 @@ define float @remquo_f32_nan_y(ptr %quo) {
 ;
 entry:
   %call = call float @remquof(float 1.000000e+00, float 0x7FF8000000000000, ptr %quo)
+  ret float %call
+}
+
+define float @remquo_f32_strictfp(ptr %quo) strictfp {
+; CHECK-LABEL: define float @remquo_f32_strictfp(
+; CHECK-SAME: ptr [[QUO:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @remquof(float -5.000000e+00, float 3.000000e+00, ptr [[QUO]]) #[[ATTR0]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+entry:
+  %call = call float @remquof(float -5.000000e+00, float 3.000000e+00, ptr %quo) strictfp
+  ret float %call
+}
+
+define float @remquo_f32_zero_y_strictfp(ptr %quo) strictfp {
+; CHECK-LABEL: define float @remquo_f32_zero_y_strictfp(
+; CHECK-SAME: ptr [[QUO:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @remquof(float -5.000000e+00, float 0.000000e+00, ptr [[QUO]]) #[[ATTR0]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+entry:
+  %call = call float @remquof(float -5.000000e+00, float 0.000000e+00, ptr %quo) strictfp
   ret float %call
 }
 
