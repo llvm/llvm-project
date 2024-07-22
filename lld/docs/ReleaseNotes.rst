@@ -102,6 +102,11 @@ MinGW Improvements
 MachO Improvements
 ------------------
 
+* Chained fixups are now enabled by default when targeting macOS 13.0,
+  iOS 13.4, tvOS 14.0, watchOS 7.0, and visionOS 1.0 or later.
+  They can be disabled with the `-no_fixup_chains` flag.
+  (`#99255 <https://github.com/llvm/llvm-project/pull/99255>`_)
+
 WebAssembly Improvements
 ------------------------
 
