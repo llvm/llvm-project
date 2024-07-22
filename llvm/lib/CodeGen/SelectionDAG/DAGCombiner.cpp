@@ -6047,10 +6047,10 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
   }
 
   // logic_op (truncate x), (truncate y) --> truncate (logic_op x, y)
-  // 
-  // For targets that are particulaly senesitve to register pressure it's preferable to
-  // increase the number of truncate instructions in order to decrease the bit 
-  // width of the logic_op.
+  //
+  // For targets that are particulaly senesitve to register pressure it's
+  // preferable to increase the number of truncate instructions in order to
+  // decrease the bit width of the logic_op.
   if (HandOpcode == ISD::TRUNCATE && !TLI.shouldReduceRegisterPressure()) {
     // If both operands have other uses, this transform would create extra
     // instructions without eliminating anything.
@@ -15881,7 +15881,8 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     case ISD::AND:
     case ISD::OR:
     case ISD::XOR:
-      if (!(N0.hasOneUse() && VT.isScalarInteger() && TLI.isTruncateFree(SrcVT, VT)))
+      if (!(N0.hasOneUse() && VT.isScalarInteger() &&
+            TLI.isTruncateFree(SrcVT, VT)))
         break;
       if (LegalOperations && !TLI.isOperationLegal(N0.getOpcode(), VT))
         break;
