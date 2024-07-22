@@ -3025,9 +3025,6 @@ Value *LibCallSimplifier::optimizeRemquo(CallInst *CI, IRBuilderBase &B) {
       !match(CI->getArgOperand(1), m_APFloat(Y)))
     return nullptr;
 
-  if (X->isNaN() || Y->isNaN() || X->isInfinity() || Y->isZero())
-    return nullptr;
-
   APFloat::opStatus Status;
   APFloat Quot = *X;
   Status = Quot.divide(*Y, APFloat::rmNearestTiesToEven);
