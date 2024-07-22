@@ -204,12 +204,10 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
   // This unsets all extension bitmask bits.
 
   // Init vendor extension
-  __riscv_vendor_feature_bits.length = 0;
   __riscv_vendor_feature_bits.vendorID = Hwprobes[2].value;
 
   // Init standard extension
   // TODO: Maybe Extension implied generate from tablegen?
-  __riscv_feature_bits.length = RISCV_FEATURE_BITS_LENGTH;
 
   unsigned long long features[RISCV_FEATURE_BITS_LENGTH];
   int i;
@@ -277,10 +275,20 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
 
 static int FeaturesBitCached = 0;
 
-void __init_riscv_feature_bits() {
+void __init_riscv_feature_bits() CONSTRUCTOR_ATTRIBUTE;
+
+// A constructor function that is sets __riscv_feature_bits, and
+// __riscv_vendor_feature_bits to the right values.  This needs to run
+// only once.  This constructor is given the highest priority and it should
+// run before constructors without the priority set.  However, it still runs
+// after ifunc initializers and needs to be called explicitly there.
+void CONSTRUCTOR_ATTRIBUTE __init_riscv_feature_bits() {
 
   if (FeaturesBitCached)
     return;
+
+  __riscv_feature_bits.length = RISCV_FEATURE_BITS_LENGTH;
+  __riscv_vendor_feature_bits.length = RISCV_VENDOR_FEATURE_BITS_LENGTH;
 
 #if defined(__linux__)
   struct riscv_hwprobe Hwprobes[] = {
