@@ -58,7 +58,8 @@ C++ Specific Potentially Breaking Changes
   versions of clang. The deprecation warning for the negative spelling can be
   disabled with `-Wno-deprecated-no-relaxed-template-template-args`.
 
-- Clang now rejects pointer to member from parenthesized expression in unevaluated context such as ``decltype(&(foo::bar))``. (#GH40906).
+- Clang no longer tries to form pointer-to-members from qualified and parenthesized unevaluated expressions
+  such as ``decltype(&(foo::bar))``. (#GH40906).
 
 - Clang now performs semantic analysis for unary operators with dependent operands
   that are known to be of non-class non-enumeration type prior to instantiation.
@@ -749,6 +750,9 @@ Improvements to Clang's time-trace
 
 - Clang now specifies that using ``auto`` in a lambda parameter is a C++14 extension when
   appropriate. (`#46059: <https://github.com/llvm/llvm-project/issues/46059>`_).
+
+- Clang now adds source file infomation for template instantiations as ``event["args"]["filename"]``. This
+  added behind an option ``-ftime-trace-verbose``. This is expected to increase the size of trace by 2-3 times.
 
 Improvements to Coverage Mapping
 --------------------------------

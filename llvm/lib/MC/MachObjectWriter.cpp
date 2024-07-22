@@ -55,6 +55,11 @@ void MachObjectWriter::reset() {
   LocalSymbolData.clear();
   ExternalSymbolData.clear();
   UndefinedSymbolData.clear();
+  LOHContainer.reset();
+  VersionInfo.Major = 0;
+  VersionInfo.SDKVersion = VersionTuple();
+  TargetVariantVersionInfo.Major = 0;
+  TargetVariantVersionInfo.SDKVersion = VersionTuple();
   MCObjectWriter::reset();
 }
 
@@ -376,7 +381,7 @@ const MCSymbol &MachObjectWriter::findAliasedSymbol(const MCSymbol &Sym) const {
 
 void MachObjectWriter::writeNlist(MachSymbolData &MSD, const MCAssembler &Asm) {
   const MCSymbol *Symbol = MSD.Symbol;
-  const MCSymbol &Data = *Symbol;
+  const auto &Data = cast<MCSymbolMachO>(*Symbol);
   const MCSymbol *AliasedSymbol = &findAliasedSymbol(*Symbol);
   uint8_t SectionIndex = MSD.SectionIndex;
   uint8_t Type = 0;
@@ -802,7 +807,6 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   }
 
   unsigned NumSections = Asm.end() - Asm.begin();
-  const MCAssembler::VersionInfoType &VersionInfo = Asm.getVersionInfo();
 
   // The section data starts after the header, the segment load command (and
   // section headers) and the symbol table.
@@ -820,9 +824,6 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
       LoadCommandsSize += sizeof(MachO::version_min_command);
   }
 
-  const MCAssembler::VersionInfoType &TargetVariantVersionInfo =
-      Asm.getDarwinTargetVariantVersionInfo();
-
   // Add the target variant version info load command size, if used.
   if (TargetVariantVersionInfo.Major != 0) {
     ++NumLoadCommands;
@@ -839,7 +840,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   }
 
   // Add the loh load command size, if used.
-  uint64_t LOHRawSize = Asm.getLOHContainer().getEmitSize(Asm, *this);
+  uint64_t LOHRawSize = LOHContainer.getEmitSize(Asm, *this);
   uint64_t LOHSize = alignTo(LOHRawSize, is64Bit() ? 8 : 4);
   if (LOHSize) {
     ++NumLoadCommands;
@@ -927,7 +928,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
 
   // Write out the deployment target information, if it's available.
   auto EmitDeploymentTargetVersion =
-      [&](const MCAssembler::VersionInfoType &VersionInfo) {
+      [&](const VersionInfoType &VersionInfo) {
         auto EncodeVersion = [](VersionTuple V) -> uint32_t {
           assert(!V.empty() && "empty version");
           unsigned Update = V.getSubminor().value_or(0);
@@ -1063,7 +1064,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
 #ifndef NDEBUG
     unsigned Start = W.OS.tell();
 #endif
-    Asm.getLOHContainer().emit(Asm, *this);
+    LOHContainer.emit(Asm, *this);
     // Pad to a multiple of the pointer size.
     W.OS.write_zeros(
         offsetToAlignment(LOHRawSize, is64Bit() ? Align(8) : Align(4)));

@@ -74,24 +74,26 @@ struct BenchmarkResult {
   clock_t total_time = 0;
 };
 
-enum BenchmarkFlags { SINGLE_THREADED = 0x1, SINGLE_WAVE = 0x2 };
-
 BenchmarkResult benchmark(const BenchmarkOptions &options,
                           cpp::function<uint64_t(void)> wrapper_func);
 
 class Benchmark {
   const cpp::function<uint64_t(void)> func;
-  const cpp::string_view name;
-  const uint8_t flags;
+  const cpp::string_view suite_name;
+  const cpp::string_view test_name;
+  const uint32_t num_threads;
 
 public:
-  Benchmark(cpp::function<uint64_t(void)> func, char const *name, uint8_t flags)
-      : func(func), name(name), flags(flags) {
+  Benchmark(cpp::function<uint64_t(void)> func, char const *suite_name,
+            char const *test_name, uint32_t num_threads)
+      : func(func), suite_name(suite_name), test_name(test_name),
+        num_threads(num_threads) {
     add_benchmark(this);
   }
 
   static void run_benchmarks();
-  const cpp::string_view get_name() const { return name; }
+  const cpp::string_view get_suite_name() const { return suite_name; }
+  const cpp::string_view get_test_name() const { return test_name; }
 
 protected:
   static void add_benchmark(Benchmark *benchmark);
@@ -105,18 +107,21 @@ private:
 } // namespace benchmarks
 } // namespace LIBC_NAMESPACE_DECL
 
+// Passing -1 indicates the benchmark should be run with as many threads as
+// allocated by the user in the benchmark's CMake.
 #define BENCHMARK(SuiteName, TestName, Func)                                   \
   LIBC_NAMESPACE::benchmarks::Benchmark SuiteName##_##TestName##_Instance(     \
-      Func, #SuiteName "." #TestName, 0)
+      Func, #SuiteName, #TestName, -1)
+
+#define BENCHMARK_N_THREADS(SuiteName, TestName, Func, NumThreads)             \
+  LIBC_NAMESPACE::benchmarks::Benchmark SuiteName##_##TestName##_Instance(     \
+      Func, #SuiteName, #TestName, NumThreads)
 
 #define SINGLE_THREADED_BENCHMARK(SuiteName, TestName, Func)                   \
-  LIBC_NAMESPACE::benchmarks::Benchmark SuiteName##_##TestName##_Instance(     \
-      Func, #SuiteName "." #TestName,                                          \
-      LIBC_NAMESPACE::benchmarks::BenchmarkFlags::SINGLE_THREADED)
+  BENCHMARK_N_THREADS(SuiteName, TestName, Func, 1)
 
 #define SINGLE_WAVE_BENCHMARK(SuiteName, TestName, Func)                       \
-  LIBC_NAMESPACE::benchmarks::Benchmark SuiteName##_##TestName##_Instance(     \
-      Func, #SuiteName "." #TestName,                                          \
-      LIBC_NAMESPACE::benchmarks::BenchmarkFlags::SINGLE_WAVE)
+  BENCHMARK_N_THREADS(SuiteName, TestName, Func,                               \
+                      LIBC_NAMESPACE::gpu::get_lane_size())
 
 #endif

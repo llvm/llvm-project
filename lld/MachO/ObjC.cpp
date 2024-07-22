@@ -1303,12 +1303,16 @@ void ObjcCategoryMerger::eraseMergedCategories() {
         continue;
 
       eraseISec(catInfo.catBodyIsec);
-      // We can't erase 'catLayout.nameOffset' for Swift categories because the
-      // name will be referenced for generating relative offsets
-      // See usages of 'l_.str.11.SimpleClass' in objc-category-merging-swift.s
+
+      // We can't erase 'catLayout.nameOffset' for either Swift or ObjC
+      //   categories because the name will sometimes also be used for other
+      //   purposes.
+      // For Swift, see usages of 'l_.str.11.SimpleClass' in
+      //   objc-category-merging-swift.s
+      // For ObjC, see usages of 'l_OBJC_CLASS_NAME_.1' in
+      //   objc-category-merging-erase-objc-name-test.s
       // TODO: handle the above in a smarter way
-      if (catInfo.sourceLanguage != SourceLanguage::Swift)
-        tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec, catLayout.nameOffset);
+
       tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec,
                                   catLayout.instanceMethodsOffset);
       tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec,

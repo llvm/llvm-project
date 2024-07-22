@@ -2675,6 +2675,10 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
       !checkValueWidth(TruncInputValue2, ExtType2))
     return SDValue();
 
+  if (TruncInputValue1->getValueType(0) != TruncInputValue2->getValueType(0) ||
+      AndNode->getValueType(0) != TruncInputValue1->getValueType(0))
+    return SDValue();
+
   if ((ExtType2 != ISD::ZEXTLOAD) &&
       ((ExtType2 != ISD::SEXTLOAD) && (ExtType1 != ISD::SEXTLOAD)))
     return SDValue();

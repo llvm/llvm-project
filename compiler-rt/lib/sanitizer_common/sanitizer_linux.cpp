@@ -2121,7 +2121,8 @@ bool SignalContext::IsTrueFaultingAddress() const {
 UNUSED
 static const char *RegNumToRegName(int reg) {
   switch (reg) {
-#  if defined(__x86_64__)
+#  if SANITIZER_LINUX
+#    if defined(__x86_64__)
     case REG_RAX:
       return "rax";
     case REG_RBX:
@@ -2154,7 +2155,7 @@ static const char *RegNumToRegName(int reg) {
       return "r14";
     case REG_R15:
       return "r15";
-#  elif defined(__i386__)
+#    elif defined(__i386__)
     case REG_EAX:
       return "eax";
     case REG_EBX:
@@ -2171,6 +2172,7 @@ static const char *RegNumToRegName(int reg) {
       return "ebp";
     case REG_ESP:
       return "esp";
+#    endif
 #  endif
     default:
       return NULL;
@@ -2178,22 +2180,24 @@ static const char *RegNumToRegName(int reg) {
   return NULL;
 }
 
+#  if SANITIZER_LINUX
 UNUSED
 static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
   const char *RegName = RegNumToRegName(RegNum);
-#  if defined(__x86_64__)
+#    if defined(__x86_64__)
   Printf("%s%s = 0x%016llx  ", internal_strlen(RegName) == 2 ? " " : "",
          RegName, ctx->uc_mcontext.gregs[RegNum]);
-#  elif defined(__i386__)
+#    elif defined(__i386__)
   Printf("%s = 0x%08x  ", RegName, ctx->uc_mcontext.gregs[RegNum]);
-#  else
+#    else
   (void)RegName;
-#  endif
+#    endif
 }
+#  endif
 
 void SignalContext::DumpAllRegisters(void *context) {
-#  if SANITIZER_LINUX
   ucontext_t *ucontext = (ucontext_t *)context;
+#  if SANITIZER_LINUX
 #    if defined(__x86_64__)
   Report("Register values:\n");
   DumpSingleReg(ucontext, REG_RAX);
@@ -2232,8 +2236,47 @@ void SignalContext::DumpAllRegisters(void *context) {
   DumpSingleReg(ucontext, REG_EBP);
   DumpSingleReg(ucontext, REG_ESP);
   Printf("\n");
-#    endif
+#    else
   (void)ucontext;
+#    endif
+#  elif SANITIZER_FREEBSD
+#    if defined(__x86_64__)
+  Report("Register values:\n");
+  Printf("rax = 0x%016llx  ", ucontext->uc_mcontext.mc_rax);
+  Printf("rbx = 0x%016llx  ", ucontext->uc_mcontext.mc_rbx);
+  Printf("rcx = 0x%016llx  ", ucontext->uc_mcontext.mc_rcx);
+  Printf("rdx = 0x%016llx  ", ucontext->uc_mcontext.mc_rdx);
+  Printf("\n");
+  Printf("rdi = 0x%016llx  ", ucontext->uc_mcontext.mc_rdi);
+  Printf("rsi = 0x%016llx  ", ucontext->uc_mcontext.mc_rsi);
+  Printf("rbp = 0x%016llx  ", ucontext->uc_mcontext.mc_rbp);
+  Printf("rsp = 0x%016llx  ", ucontext->uc_mcontext.mc_rsp);
+  Printf("\n");
+  Printf(" r8 = 0x%016llx  ", ucontext->uc_mcontext.mc_r8);
+  Printf(" r9 = 0x%016llx  ", ucontext->uc_mcontext.mc_r9);
+  Printf("r10 = 0x%016llx  ", ucontext->uc_mcontext.mc_r10);
+  Printf("r11 = 0x%016llx  ", ucontext->uc_mcontext.mc_r11);
+  Printf("\n");
+  Printf("r12 = 0x%016llx  ", ucontext->uc_mcontext.mc_r12);
+  Printf("r13 = 0x%016llx  ", ucontext->uc_mcontext.mc_r13);
+  Printf("r14 = 0x%016llx  ", ucontext->uc_mcontext.mc_r14);
+  Printf("r15 = 0x%016llx  ", ucontext->uc_mcontext.mc_r15);
+  Printf("\n");
+#    elif defined(__i386__)
+  Report("Register values:\n");
+  Printf("eax = 0x%08x  ", ucontext->uc_mcontext.mc_eax);
+  Printf("ebx = 0x%08x  ", ucontext->uc_mcontext.mc_ebx);
+  Printf("ecx = 0x%08x  ", ucontext->uc_mcontext.mc_ecx);
+  Printf("edx = 0x%08x  ", ucontext->uc_mcontext.mc_edx);
+  Printf("\n");
+  Printf("edi = 0x%08x  ", ucontext->uc_mcontext.mc_edi);
+  Printf("esi = 0x%08x  ", ucontext->uc_mcontext.mc_esi);
+  Printf("ebp = 0x%08x  ", ucontext->uc_mcontext.mc_ebp);
+  Printf("esp = 0x%08x  ", ucontext->uc_mcontext.mc_esp);
+  Printf("\n");
+#    else
+  (void)ucontext;
+#    endif
 #  endif
   // FIXME: Implement this for other OSes and architectures.
 }

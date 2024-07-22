@@ -934,7 +934,7 @@ getKnownBitsFromAndXorOr(const Operator *I, const APInt &DemandedElts,
     // Demanded) == (xor(x, x-1) & Demanded). Extend the xor pattern
     // to use arbitrary C if xor(x, x-C) as the same as xor(x, x-1).
     if (HasKnownOne &&
-        match(I, m_c_Xor(m_Value(X), m_c_Add(m_Deferred(X), m_AllOnes())))) {
+        match(I, m_c_Xor(m_Value(X), m_Add(m_Deferred(X), m_AllOnes())))) {
       const KnownBits &XBits = I->getOperand(0) == X ? KnownLHS : KnownRHS;
       KnownOut = XBits.blsmsk();
     }
@@ -6620,6 +6620,48 @@ void llvm::getUnderlyingObjects(const Value *V,
   } while (!Worklist.empty());
 }
 
+const Value *llvm::getUnderlyingObjectAggressive(const Value *V) {
+  const unsigned MaxVisited = 8;
+
+  SmallPtrSet<const Value *, 8> Visited;
+  SmallVector<const Value *, 8> Worklist;
+  Worklist.push_back(V);
+  const Value *Object = nullptr;
+  // Used as fallback if we can't find a common underlying object through
+  // recursion.
+  bool First = true;
+  const Value *FirstObject = getUnderlyingObject(V);
+  do {
+    const Value *P = Worklist.pop_back_val();
+    P = First ? FirstObject : getUnderlyingObject(P);
+    First = false;
+
+    if (!Visited.insert(P).second)
+      continue;
+
+    if (Visited.size() == MaxVisited)
+      return FirstObject;
+
+    if (auto *SI = dyn_cast<SelectInst>(P)) {
+      Worklist.push_back(SI->getTrueValue());
+      Worklist.push_back(SI->getFalseValue());
+      continue;
+    }
+
+    if (auto *PN = dyn_cast<PHINode>(P)) {
+      append_range(Worklist, PN->incoming_values());
+      continue;
+    }
+
+    if (!Object)
+      Object = P;
+    else if (Object != P)
+      return FirstObject;
+  } while (!Worklist.empty());
+
+  return Object;
+}
+
 /// This is the function that does the work of looking through basic
 /// ptrtoint+arithmetic+inttoptr sequences.
 static const Value *getUnderlyingObjectFromInt(const Value *V) {
@@ -6771,15 +6813,16 @@ bool llvm::isSafeToSpeculativelyExecute(const Instruction *Inst,
                                         const Instruction *CtxI,
                                         AssumptionCache *AC,
                                         const DominatorTree *DT,
-                                        const TargetLibraryInfo *TLI) {
+                                        const TargetLibraryInfo *TLI,
+                                        bool UseVariableInfo) {
   return isSafeToSpeculativelyExecuteWithOpcode(Inst->getOpcode(), Inst, CtxI,
-                                                AC, DT, TLI);
+                                                AC, DT, TLI, UseVariableInfo);
 }
 
 bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     unsigned Opcode, const Instruction *Inst, const Instruction *CtxI,
-    AssumptionCache *AC, const DominatorTree *DT,
-    const TargetLibraryInfo *TLI) {
+    AssumptionCache *AC, const DominatorTree *DT, const TargetLibraryInfo *TLI,
+    bool UseVariableInfo) {
 #ifndef NDEBUG
   if (Inst->getOpcode() != Opcode) {
     // Check that the operands are actually compatible with the Opcode override.
@@ -6831,6 +6874,9 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     return false;
   }
   case Instruction::Load: {
+    if (!UseVariableInfo)
+      return false;
+
     const LoadInst *LI = dyn_cast<LoadInst>(Inst);
     if (!LI)
       return false;

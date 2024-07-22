@@ -39,8 +39,9 @@ namespace interp {
 using APSInt = llvm::APSInt;
 
 /// Convert a value to an APValue.
-template <typename T> bool ReturnValue(const T &V, APValue &R) {
-  R = V.toAPValue();
+template <typename T>
+bool ReturnValue(const InterpState &S, const T &V, APValue &R) {
+  R = V.toAPValue(S.getCtx());
   return true;
 }
 
@@ -286,7 +287,7 @@ bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
   } else {
     delete S.Current;
     S.Current = nullptr;
-    if (!ReturnValue<T>(Ret, Result))
+    if (!ReturnValue<T>(S, Ret, Result))
       return false;
   }
   return true;
@@ -1318,7 +1319,7 @@ bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
   const Pointer &Ptr = S.P.getGlobal(I);
 
   const T Value = S.Stk.peek<T>();
-  APValue APV = Value.toAPValue();
+  APValue APV = Value.toAPValue(S.getCtx());
   APValue *Cached = Temp->getOrCreateValue(true);
   *Cached = APV;
 
@@ -2733,6 +2734,15 @@ inline bool InvalidDeclRef(InterpState &S, CodePtr OpPC,
                            const DeclRefExpr *DR) {
   assert(DR);
   return CheckDeclRef(S, OpPC, DR);
+}
+
+inline bool SizelessVectorElementSize(InterpState &S, CodePtr OpPC) {
+  if (S.inConstantContext()) {
+    const SourceRange &ArgRange = S.Current->getRange(OpPC);
+    const Expr *E = S.Current->getExpr(OpPC);
+    S.CCEDiag(E, diag::note_constexpr_non_const_vectorelements) << ArgRange;
+  }
+  return false;
 }
 
 inline bool Assume(InterpState &S, CodePtr OpPC) {
