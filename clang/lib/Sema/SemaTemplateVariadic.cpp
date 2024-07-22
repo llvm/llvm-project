@@ -732,7 +732,7 @@ bool Sema::CheckParameterPacksForExpansion(
       llvm::PointerUnion<Decl *, DeclArgumentPack *> *Instantiation =
           CurrentInstantiationScope->findInstantiationOf(
               ParmPack.first.get<NamedDecl *>());
-      if (Instantiation->is<DeclArgumentPack *>()) {
+      if (Instantiation && Instantiation->is<DeclArgumentPack *>()) {
         // We could expand this function parameter pack.
         NewPackSize = Instantiation->get<DeclArgumentPack *>()->size();
       } else {
@@ -850,7 +850,7 @@ std::optional<unsigned> Sema::getNumArgumentsInExpansion(
         llvm::PointerUnion<Decl *, DeclArgumentPack *> *Instantiation =
             CurrentInstantiationScope->findInstantiationOf(
                 Unexpanded[I].first.get<NamedDecl *>());
-        if (Instantiation->is<Decl *>())
+        if (Instantiation && Instantiation->is<Decl *>())
           // The pattern refers to an unexpanded pack. We're not ready to expand
           // this pack yet.
           return std::nullopt;
