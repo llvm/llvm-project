@@ -2467,9 +2467,9 @@ private:
         Current.setType(TT_CastRParen);
       if (Current.MatchingParen && Current.Next &&
           !Current.Next->isBinaryOperator() &&
-          !Current.Next->isOneOf(tok::semi, tok::colon, tok::l_brace,
-                                 tok::comma, tok::period, tok::arrow,
-                                 tok::coloncolon, tok::kw_noexcept)) {
+          !Current.Next->isOneOf(
+              tok::semi, tok::colon, tok::l_brace, tok::l_paren, tok::comma,
+              tok::period, tok::arrow, tok::coloncolon, tok::kw_noexcept)) {
         if (FormatToken *AfterParen = Current.MatchingParen->Next;
             AfterParen && AfterParen->isNot(tok::caret)) {
           // Make sure this isn't the return type of an Obj-C block declaration.
@@ -2625,8 +2625,10 @@ private:
       return false;
 
     // int a or auto a.
-    if (PreviousNotConst->isOneOf(tok::identifier, tok::kw_auto))
+    if (PreviousNotConst->isOneOf(tok::identifier, tok::kw_auto) &&
+        PreviousNotConst->isNot(TT_StatementAttributeLikeMacro)) {
       return true;
+    }
 
     // *a or &a or &&a.
     if (PreviousNotConst->is(TT_PointerOrReference))

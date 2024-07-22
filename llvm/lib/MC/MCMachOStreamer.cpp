@@ -118,7 +118,7 @@ public:
   }
 
   void emitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) override {
-    getAssembler().getLOHContainer().addDirective(Kind, Args);
+    getWriter().getLOHContainer().addDirective(Kind, Args);
   }
   void emitCGProfileEntry(const MCSymbolRefExpr *From,
                           const MCSymbolRefExpr *To, uint64_t Count) override {
@@ -151,12 +151,13 @@ void MCMachOStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
 
 void MCMachOStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
                                           MCSymbol *EHSymbol) {
+  auto *Sym = cast<MCSymbolMachO>(Symbol);
   getAssembler().registerSymbol(*Symbol);
   if (Symbol->isExternal())
     emitSymbolAttribute(EHSymbol, MCSA_Global);
-  if (cast<MCSymbolMachO>(Symbol)->isWeakDefinition())
+  if (Sym->isWeakDefinition())
     emitSymbolAttribute(EHSymbol, MCSA_WeakDefinition);
-  if (Symbol->isPrivateExtern())
+  if (Sym->isPrivateExtern())
     emitSymbolAttribute(EHSymbol, MCSA_PrivateExtern);
 }
 
@@ -251,21 +252,21 @@ void MCMachOStreamer::emitDataRegion(MCDataRegionType Kind) {
 void MCMachOStreamer::emitVersionMin(MCVersionMinType Kind, unsigned Major,
                                      unsigned Minor, unsigned Update,
                                      VersionTuple SDKVersion) {
-  getAssembler().setVersionMin(Kind, Major, Minor, Update, SDKVersion);
+  getWriter().setVersionMin(Kind, Major, Minor, Update, SDKVersion);
 }
 
 void MCMachOStreamer::emitBuildVersion(unsigned Platform, unsigned Major,
                                        unsigned Minor, unsigned Update,
                                        VersionTuple SDKVersion) {
-  getAssembler().setBuildVersion((MachO::PlatformType)Platform, Major, Minor,
-                                 Update, SDKVersion);
+  getWriter().setBuildVersion((MachO::PlatformType)Platform, Major, Minor,
+                              Update, SDKVersion);
 }
 
 void MCMachOStreamer::emitDarwinTargetVariantBuildVersion(
     unsigned Platform, unsigned Major, unsigned Minor, unsigned Update,
     VersionTuple SDKVersion) {
-  getAssembler().setDarwinTargetVariantBuildVersion(
-      (MachO::PlatformType)Platform, Major, Minor, Update, SDKVersion);
+  getWriter().setTargetVariantBuildVersion((MachO::PlatformType)Platform, Major,
+                                           Minor, Update, SDKVersion);
 }
 
 void MCMachOStreamer::emitThumbFunc(MCSymbol *Symbol) {
