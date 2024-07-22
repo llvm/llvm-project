@@ -3670,8 +3670,10 @@ bool DwarfDebug::alwaysUseRanges(const DwarfCompileUnit &CU) const {
 }
 
 void DwarfDebug::beginCodeAlignment(const MachineBasicBlock &MBB) {
-  auto *SP = MBB.getParent()->getFunction().getSubprogram();
+  if (MBB.getAlignment() == Align(1))
+    return;
 
+  auto *SP = MBB.getParent()->getFunction().getSubprogram();
   bool NoDebug =
       !SP || SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug;
 
