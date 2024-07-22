@@ -1505,8 +1505,9 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
 
   // LoopSink (and other loop passes since the last simplifyCFG) might have
   // resulted in single-entry-single-exit or empty blocks. Clean up the CFG.
-  OptimizePM.addPass(
-      SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
+  OptimizePM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
+                                         .convertSwitchRangeToICmp(true)
+                                         .speculateUnpredictables(true)));
 
   // Add the core optimizing pipeline.
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(OptimizePM),
@@ -2024,9 +2025,10 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   LateFPM.addPass(DivRemPairsPass());
 
   // Delete basic blocks, which optimization passes may have killed.
-  LateFPM.addPass(SimplifyCFGPass(
-      SimplifyCFGOptions().convertSwitchRangeToICmp(true).hoistCommonInsts(
-          true)));
+  LateFPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
+                                      .convertSwitchRangeToICmp(true)
+                                      .hoistCommonInsts(true)
+                                      .speculateUnpredictables(true)));
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(LateFPM)));
 
   // Drop bodies of available eternally objects to improve GlobalDCE.

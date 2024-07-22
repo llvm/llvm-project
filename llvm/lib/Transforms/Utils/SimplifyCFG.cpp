@@ -3476,7 +3476,8 @@ static bool FoldCondBranchOnValueKnownInPredecessor(BranchInst *BI,
 /// Given a BB that starts with the specified two-entry PHI node,
 /// see if we can eliminate it.
 static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
-                                DomTreeUpdater *DTU, const DataLayout &DL) {
+                                DomTreeUpdater *DTU, const DataLayout &DL,
+                                bool SpeculateUnpredictables) {
   // Ok, this is a two entry PHI node.  Check to see if this is a simple "if
   // statement", which has a very simple dominance structure.  Basically, we
   // are trying to find the condition that is being branched on, which
@@ -3552,7 +3553,7 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   InstructionCost Cost = 0;
   InstructionCost Budget =
       TwoEntryPHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic;
-  if (IsUnpredictable)
+  if (SpeculateUnpredictables && IsUnpredictable)
     Budget += TTI.getBranchMispredictPenalty();
 
   bool Changed = false;
@@ -7818,7 +7819,8 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
     // eliminate it, do so now.
     if (auto *PN = dyn_cast<PHINode>(BB->begin()))
       if (PN->getNumIncomingValues() == 2)
-        if (FoldTwoEntryPHINode(PN, TTI, DTU, DL))
+        if (FoldTwoEntryPHINode(PN, TTI, DTU, DL,
+                                Options.SpeculateUnpredictables))
           return true;
   }
 
