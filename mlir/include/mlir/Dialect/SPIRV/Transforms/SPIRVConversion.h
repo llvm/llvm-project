@@ -189,6 +189,17 @@ Value getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
                           MemRefType baseType, Value basePtr,
                           ValueRange indices, Location loc, OpBuilder &builder);
 
+int getComputeVectorSize(int64_t size);
+
+// GetNativeVectorShape implementation for reduction ops.
+SmallVector<int64_t> getNativeVectorShapeImpl(vector::ReductionOp op);
+
+// GetNativeVectorShape implementation for transpose ops.
+SmallVector<int64_t> getNativeVectorShapeImpl(vector::TransposeOp op);
+
+// For general ops.
+std::optional<SmallVector<int64_t>> getNativeVectorShape(Operation *op);
+
 } // namespace spirv
 } // namespace mlir
 

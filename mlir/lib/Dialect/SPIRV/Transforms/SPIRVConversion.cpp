@@ -46,14 +46,6 @@ namespace {
 // Utility functions
 //===----------------------------------------------------------------------===//
 
-static int getComputeVectorSize(int64_t size) {
-  for (int i : {4, 3, 2}) {
-    if (size % i == 0)
-      return i;
-  }
-  return 1;
-}
-
 static std::optional<SmallVector<int64_t>> getTargetShape(VectorType vecType) {
   LLVM_DEBUG(llvm::dbgs() << "Get target shape\n");
   if (vecType.isScalable()) {
@@ -62,8 +54,8 @@ static std::optional<SmallVector<int64_t>> getTargetShape(VectorType vecType) {
     return std::nullopt;
   }
   SmallVector<int64_t> unrollShape = llvm::to_vector<4>(vecType.getShape());
-  std::optional<SmallVector<int64_t>> targetShape =
-      SmallVector<int64_t>(1, getComputeVectorSize(vecType.getShape().back()));
+  std::optional<SmallVector<int64_t>> targetShape = SmallVector<int64_t>(
+      1, mlir::spirv::getComputeVectorSize(vecType.getShape().back()));
   if (!targetShape) {
     LLVM_DEBUG(llvm::dbgs() << "--no unrolling target shape defined\n");
     return std::nullopt;
@@ -1289,6 +1281,53 @@ Value mlir::spirv::getElementPtr(const SPIRVTypeConverter &typeConverter,
 
   return getVulkanElementPtr(typeConverter, baseType, basePtr, indices, loc,
                              builder);
+}
+
+//===----------------------------------------------------------------------===//
+// Public functions for vector unrolling
+//===----------------------------------------------------------------------===//
+
+int mlir::spirv::getComputeVectorSize(int64_t size) {
+  for (int i : {4, 3, 2}) {
+    if (size % i == 0)
+      return i;
+  }
+  return 1;
+}
+
+SmallVector<int64_t>
+mlir::spirv::getNativeVectorShapeImpl(vector::ReductionOp op) {
+  VectorType srcVectorType = op.getSourceVectorType();
+  assert(srcVectorType.getRank() == 1); // Guaranteed by semantics
+  int64_t vectorSize =
+      mlir::spirv::getComputeVectorSize(srcVectorType.getDimSize(0));
+  return {vectorSize};
+}
+
+SmallVector<int64_t>
+mlir::spirv::getNativeVectorShapeImpl(vector::TransposeOp op) {
+  VectorType vectorType = op.getResultVectorType();
+  SmallVector<int64_t> nativeSize(vectorType.getRank(), 1);
+  nativeSize.back() =
+      mlir::spirv::getComputeVectorSize(vectorType.getShape().back());
+  return nativeSize;
+}
+
+std::optional<SmallVector<int64_t>>
+mlir::spirv::getNativeVectorShape(Operation *op) {
+  if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1) {
+    if (auto vecType = llvm::dyn_cast<VectorType>(op->getResultTypes()[0])) {
+      SmallVector<int64_t> nativeSize(vecType.getRank(), 1);
+      nativeSize.back() =
+          mlir::spirv::getComputeVectorSize(vecType.getShape().back());
+      return nativeSize;
+    }
+  }
+
+  return TypeSwitch<Operation *, std::optional<SmallVector<int64_t>>>(op)
+      .Case<vector::ReductionOp, vector::TransposeOp>(
+          [](auto typedOp) { return getNativeVectorShapeImpl(typedOp); })
+      .Default([](Operation *) { return std::nullopt; });
 }
 
 //===----------------------------------------------------------------------===//
