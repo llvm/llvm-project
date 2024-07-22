@@ -780,7 +780,7 @@ bool mlir::LLVM::isCompatibleOuterType(Type type) {
       LLVMFixedVectorType,
       LLVMScalableVectorType,
       LLVMTargetExtType,
-      LLVMVoidType,
+      LLVMVoidType
     >(type)) {
     // clang-format on
     return true;
@@ -842,7 +842,7 @@ static bool isCompatibleImpl(Type type, DenseSet<Type> &compatibleTypes) {
             LLVMMetadataType,
             LLVMPPCFP128Type,
             LLVMTokenType,
-            LLVMVoidType,
+            LLVMVoidType
           >([](Type) { return true; })
           // clang-format on
           .Default([](Type) { return false; });
