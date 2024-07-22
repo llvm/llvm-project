@@ -15877,7 +15877,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     case ISD::AND:
     case ISD::OR:
     case ISD::XOR:
-      if (!(N0.hasOneUse() && VT.isScalarInteger()))
+      if (!(N0.hasOneUse() && VT.isScalarInteger() && TLI.isTruncateFree(SrcVT, VT)))
         break;
       if (LegalOperations && !TLI.isOperationLegal(N0.getOpcode(), VT))
         break;
