@@ -83,13 +83,6 @@ static const char OpPrecedence[] = {
     3   // IC_GE
 };
 
-static bool ifCmpOrTestOpcode(std::string &Opcode) {
-  return Opcode == "cmp" || Opcode == "cmpb" || Opcode == "cmpw" ||
-         Opcode == "cmpl" || Opcode == "cmpq" || Opcode == "test" ||
-         Opcode == "testb" || Opcode == "testw" || Opcode == "testl" ||
-         Opcode == "testq";
-}
-
 class X86AsmParser : public MCTargetAsmParser {
   ParseInstructionInfo *InstInfo;
   bool Code16GCC;
@@ -103,7 +96,6 @@ class X86AsmParser : public MCTargetAsmParser {
     OpcodePrefix_VEX2,
     OpcodePrefix_VEX3,
     OpcodePrefix_EVEX,
-    OpcodePrefix_EVEX_CMP_TEST,
   };
 
   OpcodePrefix ForcedOpcodePrefix = OpcodePrefix_Default;
@@ -3210,7 +3202,6 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       if (getLexer().isNot(AsmToken::RCurly))
         return Error(Parser.getTok().getLoc(), "Expected '}'");
       Parser.Lex(); // Eat curly.
-      std::string Opcode = Parser.getTok().getString().lower();
 
       if (Prefix == "rex")
         ForcedOpcodePrefix = OpcodePrefix_REX;
@@ -3223,9 +3214,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       else if (Prefix == "vex3")
         ForcedOpcodePrefix = OpcodePrefix_VEX3;
       else if (Prefix == "evex")
-        ForcedOpcodePrefix = is64BitMode() && ifCmpOrTestOpcode(Opcode)
-                                 ? OpcodePrefix_EVEX_CMP_TEST
-                                 : OpcodePrefix_EVEX;
+        ForcedOpcodePrefix = OpcodePrefix_EVEX;
       else if (Prefix == "disp8")
         ForcedDispEncoding = DispEncoding_Disp8;
       else if (Prefix == "disp32")
@@ -3795,9 +3784,11 @@ bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
     Inst.setOpcode(X86::INT3);
     return true;
   }
+  // `{evex} cmp <>, <>` is alias of `ccmpt {dfv=of,sf,zf,cf} <>, <>`
 #define FROM_TO(FROM, TO)                                                      \
   case X86::FROM: {                                                            \
-    if (ForcedOpcodePrefix == OpcodePrefix_EVEX_CMP_TEST) {                    \
+    if (ForcedOpcodePrefix == OpcodePrefix_EVEX) {                             \
+      Inst.setFlags(~(X86::IP_USE_EVEX) & Inst.getFlags());                    \
       Inst.setOpcode(X86::TO);                                                 \
       Inst.addOperand(MCOperand::createImm(15));                               \
       Inst.addOperand(MCOperand::createImm(10));                               \
@@ -4193,7 +4184,6 @@ unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
 
   switch (ForcedOpcodePrefix) {
   case OpcodePrefix_Default:
-  case OpcodePrefix_EVEX_CMP_TEST:
     break;
   case OpcodePrefix_REX:
   case OpcodePrefix_REX2:
@@ -4207,7 +4197,10 @@ unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
       return Match_Unsupported;
     break;
   case OpcodePrefix_EVEX:
-    if ((TSFlags & X86II::EncodingMask) != X86II::EVEX)
+    if (is64BitMode() && (TSFlags & X86II::EncodingMask) != X86II::EVEX &&
+        !X86::isCMP(Opc) && !X86::isTEST(Opc))
+      return Match_Unsupported;
+    if (!is64BitMode() && (TSFlags & X86II::EncodingMask) != X86II::EVEX)
       return Match_Unsupported;
     break;
   }
