@@ -4,7 +4,7 @@
 define amdgpu_kernel void @vectorLoadCombine(ptr %in, ptr %out) {
 ; GCN-LABEL: vectorLoadCombine:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
@@ -37,7 +37,7 @@ entry:
 define amdgpu_kernel void @vectorLoadShuffle(ptr %in, ptr %out) {
 ; GCN-LABEL: vectorLoadShuffle:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1

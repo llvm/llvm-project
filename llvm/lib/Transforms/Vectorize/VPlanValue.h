@@ -341,6 +341,7 @@ public:
     VPExpandSCEVSC,
     VPInstructionSC,
     VPInterleaveSC,
+    VPReductionEVLSC,
     VPReductionSC,
     VPReplicateSC,
     VPScalarCastSC,

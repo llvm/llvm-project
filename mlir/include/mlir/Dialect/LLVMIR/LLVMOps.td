@@ -1449,6 +1449,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<LLVM_VScaleRangeAttr>:$vscale_range,
     OptionalAttr<FramePointerKindAttr>:$frame_pointer,
     OptionalAttr<StrAttr>:$target_cpu,
+    OptionalAttr<StrAttr>:$tune_cpu,
     OptionalAttr<LLVM_TargetFeaturesAttr>:$target_features,
     OptionalAttr<BoolAttr>:$unsafe_fp_math,
     OptionalAttr<BoolAttr>:$no_infs_fp_math,
@@ -1460,6 +1461,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<StrAttr>:$fp_contract,
     OptionalAttr<UnitAttr>:$no_inline,
     OptionalAttr<UnitAttr>:$always_inline,
+    OptionalAttr<UnitAttr>:$no_unwind,
+    OptionalAttr<UnitAttr>:$will_return,
     OptionalAttr<UnitAttr>:$optimize_none
   );
 

@@ -2428,9 +2428,12 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       // file's symbol table. If any of those library functions are defined in a
       // bitcode file in an archive member, we need to arrange to use LTO to
       // compile those archive members by adding them to the link beforehand.
-      if (!ctx.bitcodeFileInstances.empty())
-        for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
+      if (!ctx.bitcodeFileInstances.empty()) {
+        llvm::Triple TT(
+            ctx.bitcodeFileInstances.front()->obj->getTargetTriple());
+        for (auto *s : lto::LTO::getRuntimeLibcallSymbols(TT))
           ctx.symtab.addLibcall(s);
+      }
 
       // Windows specific -- if __load_config_used can be resolved, resolve it.
       if (ctx.symtab.findUnderscore("_load_config_used"))

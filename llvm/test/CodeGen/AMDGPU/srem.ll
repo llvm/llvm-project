@@ -7,7 +7,7 @@
 define amdgpu_kernel void @srem_i16_7(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: srem_i16_7:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_ushort v1, v0, s[2:3]
@@ -25,7 +25,7 @@ define amdgpu_kernel void @srem_i16_7(ptr addrspace(1) %out, ptr addrspace(1) %i
 ;
 ; TAHITI-LABEL: srem_i16_7:
 ; TAHITI:       ; %bb.0:
-; TAHITI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; TAHITI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; TAHITI-NEXT:    s_mov_b32 s7, 0xf000
 ; TAHITI-NEXT:    s_mov_b32 s6, -1
 ; TAHITI-NEXT:    s_mov_b32 s10, s6
@@ -49,7 +49,7 @@ define amdgpu_kernel void @srem_i16_7(ptr addrspace(1) %out, ptr addrspace(1) %i
 ;
 ; TONGA-LABEL: srem_i16_7:
 ; TONGA:       ; %bb.0:
-; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; TONGA-NEXT:    s_waitcnt lgkmcnt(0)
 ; TONGA-NEXT:    v_mov_b32_e32 v0, s2
 ; TONGA-NEXT:    v_mov_b32_e32 v1, s3
@@ -113,7 +113,7 @@ define amdgpu_kernel void @srem_i16_7(ptr addrspace(1) %out, ptr addrspace(1) %i
 define amdgpu_kernel void @srem_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: srem_i32:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx2 v[0:1], v2, s[2:3]
@@ -149,7 +149,7 @@ define amdgpu_kernel void @srem_i32(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ;
 ; TAHITI-LABEL: srem_i32:
 ; TAHITI:       ; %bb.0:
-; TAHITI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; TAHITI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; TAHITI-NEXT:    s_mov_b32 s7, 0xf000
 ; TAHITI-NEXT:    s_mov_b32 s6, -1
 ; TAHITI-NEXT:    s_mov_b32 s10, s6
@@ -192,7 +192,7 @@ define amdgpu_kernel void @srem_i32(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ;
 ; TONGA-LABEL: srem_i32:
 ; TONGA:       ; %bb.0:
-; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; TONGA-NEXT:    s_waitcnt lgkmcnt(0)
 ; TONGA-NEXT:    v_mov_b32_e32 v0, s2
 ; TONGA-NEXT:    v_mov_b32_e32 v1, s3
@@ -277,7 +277,7 @@ define amdgpu_kernel void @srem_i32(ptr addrspace(1) %out, ptr addrspace(1) %in)
 define amdgpu_kernel void @srem_i32_4(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: srem_i32_4:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dword v1, v0, s[2:3]
@@ -292,7 +292,7 @@ define amdgpu_kernel void @srem_i32_4(ptr addrspace(1) %out, ptr addrspace(1) %i
 ;
 ; TAHITI-LABEL: srem_i32_4:
 ; TAHITI:       ; %bb.0:
-; TAHITI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; TAHITI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; TAHITI-NEXT:    s_mov_b32 s7, 0xf000
 ; TAHITI-NEXT:    s_mov_b32 s6, -1
 ; TAHITI-NEXT:    s_mov_b32 s10, s6
@@ -314,7 +314,7 @@ define amdgpu_kernel void @srem_i32_4(ptr addrspace(1) %out, ptr addrspace(1) %i
 ;
 ; TONGA-LABEL: srem_i32_4:
 ; TONGA:       ; %bb.0:
-; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; TONGA-NEXT:    s_waitcnt lgkmcnt(0)
 ; TONGA-NEXT:    v_mov_b32_e32 v0, s2
 ; TONGA-NEXT:    v_mov_b32_e32 v1, s3
@@ -363,7 +363,7 @@ define amdgpu_kernel void @srem_i32_4(ptr addrspace(1) %out, ptr addrspace(1) %i
 define amdgpu_kernel void @srem_i32_7(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: srem_i32_7:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dword v1, v0, s[2:3]
@@ -381,7 +381,7 @@ define amdgpu_kernel void @srem_i32_7(ptr addrspace(1) %out, ptr addrspace(1) %i
 ;
 ; TAHITI-LABEL: srem_i32_7:
 ; TAHITI:       ; %bb.0:
-; TAHITI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; TAHITI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; TAHITI-NEXT:    s_mov_b32 s7, 0xf000
 ; TAHITI-NEXT:    s_mov_b32 s6, -1
 ; TAHITI-NEXT:    s_mov_b32 s10, s6
@@ -406,7 +406,7 @@ define amdgpu_kernel void @srem_i32_7(ptr addrspace(1) %out, ptr addrspace(1) %i
 ;
 ; TONGA-LABEL: srem_i32_7:
 ; TONGA:       ; %bb.0:
-; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; TONGA-NEXT:    s_waitcnt lgkmcnt(0)
 ; TONGA-NEXT:    v_mov_b32_e32 v0, s2
 ; TONGA-NEXT:    v_mov_b32_e32 v1, s3
@@ -459,7 +459,7 @@ define amdgpu_kernel void @srem_i32_7(ptr addrspace(1) %out, ptr addrspace(1) %i
 define amdgpu_kernel void @srem_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: srem_v2i32:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx4 v[0:3], v4, s[2:3]
@@ -521,7 +521,7 @@ define amdgpu_kernel void @srem_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ;
 ; TAHITI-LABEL: srem_v2i32:
 ; TAHITI:       ; %bb.0:
-; TAHITI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; TAHITI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
 ; TAHITI-NEXT:    s_mov_b32 s3, 0xf000
 ; TAHITI-NEXT:    s_mov_b32 s2, -1
 ; TAHITI-NEXT:    s_mov_b32 s10, s2
@@ -590,7 +590,7 @@ define amdgpu_kernel void @srem_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ;
 ; TONGA-LABEL: srem_v2i32:
 ; TONGA:       ; %bb.0:
-; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; TONGA-NEXT:    s_waitcnt lgkmcnt(0)
 ; TONGA-NEXT:    v_mov_b32_e32 v0, s2
 ; TONGA-NEXT:    v_mov_b32_e32 v1, s3
@@ -723,7 +723,7 @@ define amdgpu_kernel void @srem_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 define amdgpu_kernel void @srem_v2i32_4(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: srem_v2i32_4:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx2 v[0:1], v2, s[2:3]
@@ -747,7 +747,7 @@ define amdgpu_kernel void @srem_v2i32_4(ptr addrspace(1) %out, ptr addrspace(1) 
 ;
 ; TAHITI-LABEL: srem_v2i32_4:
 ; TAHITI:       ; %bb.0:
-; TAHITI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; TAHITI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; TAHITI-NEXT:    s_mov_b32 s7, 0xf000
 ; TAHITI-NEXT:    s_mov_b32 s6, -1
 ; TAHITI-NEXT:    s_mov_b32 s10, s6
@@ -778,7 +778,7 @@ define amdgpu_kernel void @srem_v2i32_4(ptr addrspace(1) %out, ptr addrspace(1) 
 ;
 ; TONGA-LABEL: srem_v2i32_4:
 ; TONGA:       ; %bb.0:
-; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; TONGA-NEXT:    s_waitcnt lgkmcnt(0)
 ; TONGA-NEXT:    v_mov_b32_e32 v0, s2
 ; TONGA-NEXT:    v_mov_b32_e32 v1, s3
@@ -842,7 +842,7 @@ define amdgpu_kernel void @srem_v2i32_4(ptr addrspace(1) %out, ptr addrspace(1) 
 define amdgpu_kernel void @srem_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: srem_v4i32:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx4 v[1:4], v0, s[2:3] offset:16
@@ -958,7 +958,7 @@ define amdgpu_kernel void @srem_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ;
 ; TAHITI-LABEL: srem_v4i32:
 ; TAHITI:       ; %bb.0:
-; TAHITI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; TAHITI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
 ; TAHITI-NEXT:    s_mov_b32 s3, 0xf000
 ; TAHITI-NEXT:    s_mov_b32 s2, -1
 ; TAHITI-NEXT:    s_mov_b32 s10, s2
@@ -1081,7 +1081,7 @@ define amdgpu_kernel void @srem_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ;
 ; TONGA-LABEL: srem_v4i32:
 ; TONGA:       ; %bb.0:
-; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; TONGA-NEXT:    s_waitcnt lgkmcnt(0)
 ; TONGA-NEXT:    s_add_u32 s4, s2, 16
 ; TONGA-NEXT:    s_addc_u32 s5, s3, 0
@@ -1317,7 +1317,7 @@ define amdgpu_kernel void @srem_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 define amdgpu_kernel void @srem_v4i32_4(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: srem_v4i32_4:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx4 v[0:3], v4, s[2:3]
@@ -1355,7 +1355,7 @@ define amdgpu_kernel void @srem_v4i32_4(ptr addrspace(1) %out, ptr addrspace(1) 
 ;
 ; TAHITI-LABEL: srem_v4i32_4:
 ; TAHITI:       ; %bb.0:
-; TAHITI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; TAHITI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
 ; TAHITI-NEXT:    s_mov_b32 s3, 0xf000
 ; TAHITI-NEXT:    s_mov_b32 s2, -1
 ; TAHITI-NEXT:    s_mov_b32 s10, s2
@@ -1400,7 +1400,7 @@ define amdgpu_kernel void @srem_v4i32_4(ptr addrspace(1) %out, ptr addrspace(1) 
 ;
 ; TONGA-LABEL: srem_v4i32_4:
 ; TONGA:       ; %bb.0:
-; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; TONGA-NEXT:    s_waitcnt lgkmcnt(0)
 ; TONGA-NEXT:    v_mov_b32_e32 v0, s2
 ; TONGA-NEXT:    v_mov_b32_e32 v1, s3
@@ -1491,7 +1491,7 @@ define amdgpu_kernel void @srem_v4i32_4(ptr addrspace(1) %out, ptr addrspace(1) 
 define amdgpu_kernel void @srem_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: srem_i64:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx4 v[0:3], v0, s[6:7]
@@ -1675,7 +1675,7 @@ define amdgpu_kernel void @srem_i64(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ;
 ; TAHITI-LABEL: srem_i64:
 ; TAHITI:       ; %bb.0:
-; TAHITI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; TAHITI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
 ; TAHITI-NEXT:    s_mov_b32 s3, 0xf000
 ; TAHITI-NEXT:    s_mov_b32 s2, -1
 ; TAHITI-NEXT:    v_mov_b32_e32 v4, 0
@@ -1836,7 +1836,7 @@ define amdgpu_kernel void @srem_i64(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ;
 ; TONGA-LABEL: srem_i64:
 ; TONGA:       ; %bb.0:
-; TONGA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; TONGA-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; TONGA-NEXT:    v_mov_b32_e32 v4, 0
 ; TONGA-NEXT:    s_waitcnt lgkmcnt(0)
 ; TONGA-NEXT:    v_mov_b32_e32 v0, s6
@@ -2589,7 +2589,7 @@ define amdgpu_kernel void @srem_i64(ptr addrspace(1) %out, ptr addrspace(1) %in)
 define amdgpu_kernel void @srem_i64_4(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: srem_i64_4:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx2 v[0:1], v2, s[2:3]
@@ -2606,7 +2606,7 @@ define amdgpu_kernel void @srem_i64_4(ptr addrspace(1) %out, ptr addrspace(1) %i
 ;
 ; TAHITI-LABEL: srem_i64_4:
 ; TAHITI:       ; %bb.0:
-; TAHITI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; TAHITI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; TAHITI-NEXT:    s_mov_b32 s7, 0xf000
 ; TAHITI-NEXT:    s_mov_b32 s6, -1
 ; TAHITI-NEXT:    s_mov_b32 s10, s6
@@ -2630,7 +2630,7 @@ define amdgpu_kernel void @srem_i64_4(ptr addrspace(1) %out, ptr addrspace(1) %i
 ;
 ; TONGA-LABEL: srem_i64_4:
 ; TONGA:       ; %bb.0:
-; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; TONGA-NEXT:    s_waitcnt lgkmcnt(0)
 ; TONGA-NEXT:    v_mov_b32_e32 v0, s2
 ; TONGA-NEXT:    v_mov_b32_e32 v1, s3
@@ -2684,7 +2684,7 @@ define amdgpu_kernel void @srem_i64_4(ptr addrspace(1) %out, ptr addrspace(1) %i
 define amdgpu_kernel void @srem_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: srem_v2i64:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v8, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx4 v[0:3], v8, s[6:7] offset:16
@@ -3039,7 +3039,7 @@ define amdgpu_kernel void @srem_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ;
 ; TAHITI-LABEL: srem_v2i64:
 ; TAHITI:       ; %bb.0:
-; TAHITI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; TAHITI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
 ; TAHITI-NEXT:    s_mov_b32 s3, 0xf000
 ; TAHITI-NEXT:    s_mov_b32 s2, -1
 ; TAHITI-NEXT:    v_mov_b32_e32 v8, 0
@@ -3346,7 +3346,7 @@ define amdgpu_kernel void @srem_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ;
 ; TONGA-LABEL: srem_v2i64:
 ; TONGA:       ; %bb.0:
-; TONGA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; TONGA-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; TONGA-NEXT:    v_mov_b32_e32 v8, 0
 ; TONGA-NEXT:    s_waitcnt lgkmcnt(0)
 ; TONGA-NEXT:    s_add_u32 s0, s6, 16
@@ -4733,7 +4733,7 @@ define amdgpu_kernel void @srem_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 define amdgpu_kernel void @srem_v2i64_4(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: srem_v2i64_4:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx4 v[0:3], v4, s[2:3]
@@ -4757,7 +4757,7 @@ define amdgpu_kernel void @srem_v2i64_4(ptr addrspace(1) %out, ptr addrspace(1) 
 ;
 ; TAHITI-LABEL: srem_v2i64_4:
 ; TAHITI:       ; %bb.0:
-; TAHITI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; TAHITI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; TAHITI-NEXT:    s_mov_b32 s7, 0xf000
 ; TAHITI-NEXT:    s_mov_b32 s6, -1
 ; TAHITI-NEXT:    s_mov_b32 s10, s6
@@ -4788,7 +4788,7 @@ define amdgpu_kernel void @srem_v2i64_4(ptr addrspace(1) %out, ptr addrspace(1) 
 ;
 ; TONGA-LABEL: srem_v2i64_4:
 ; TONGA:       ; %bb.0:
-; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; TONGA-NEXT:    s_waitcnt lgkmcnt(0)
 ; TONGA-NEXT:    v_mov_b32_e32 v0, s2
 ; TONGA-NEXT:    v_mov_b32_e32 v1, s3
@@ -4860,7 +4860,7 @@ define amdgpu_kernel void @srem_v2i64_4(ptr addrspace(1) %out, ptr addrspace(1) 
 define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: srem_v4i64:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v8, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx4 v[10:13], v8, s[6:7] offset:32
@@ -5486,7 +5486,7 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ;
 ; TAHITI-LABEL: srem_v4i64:
 ; TAHITI:       ; %bb.0:
-; TAHITI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; TAHITI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
 ; TAHITI-NEXT:    s_mov_b32 s3, 0xf000
 ; TAHITI-NEXT:    s_mov_b32 s2, -1
 ; TAHITI-NEXT:    v_mov_b32_e32 v8, 0
@@ -6088,7 +6088,7 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ;
 ; TONGA-LABEL: srem_v4i64:
 ; TONGA:       ; %bb.0:
-; TONGA-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; TONGA-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; TONGA-NEXT:    v_mov_b32_e32 v8, 0
 ; TONGA-NEXT:    s_waitcnt lgkmcnt(0)
 ; TONGA-NEXT:    s_add_u32 s0, s6, 48
@@ -8883,7 +8883,7 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 define amdgpu_kernel void @srem_v4i64_4(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: srem_v4i64_4:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v8, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx4 v[0:3], v8, s[2:3]
@@ -8924,7 +8924,7 @@ define amdgpu_kernel void @srem_v4i64_4(ptr addrspace(1) %out, ptr addrspace(1) 
 ;
 ; TAHITI-LABEL: srem_v4i64_4:
 ; TAHITI:       ; %bb.0:
-; TAHITI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; TAHITI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
 ; TAHITI-NEXT:    s_mov_b32 s3, 0xf000
 ; TAHITI-NEXT:    s_mov_b32 s2, -1
 ; TAHITI-NEXT:    s_mov_b32 s10, s2
@@ -8972,7 +8972,7 @@ define amdgpu_kernel void @srem_v4i64_4(ptr addrspace(1) %out, ptr addrspace(1) 
 ;
 ; TONGA-LABEL: srem_v4i64_4:
 ; TONGA:       ; %bb.0:
-; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; TONGA-NEXT:    s_waitcnt lgkmcnt(0)
 ; TONGA-NEXT:    v_mov_b32_e32 v0, s2
 ; TONGA-NEXT:    v_mov_b32_e32 v1, s3

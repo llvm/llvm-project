@@ -2367,10 +2367,7 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   std::unique_ptr<MCObjectWriter> OW = MAB->createObjectWriter(VecOS);
   std::unique_ptr<MCStreamer> Streamer(TheTarget->createMCObjectStreamer(
       *TheTriple, *LocalCtx, std::unique_ptr<MCAsmBackend>(MAB), std::move(OW),
-      std::unique_ptr<MCCodeEmitter>(MCEInstance.MCE.release()), *STI,
-      /*RelaxAll=*/false,
-      /*IncrementalLinkerCompatible=*/false,
-      /*DWARFMustBeAtTheEnd=*/false));
+      std::unique_ptr<MCCodeEmitter>(MCEInstance.MCE.release()), *STI));
 
   Streamer->initSections(false, *STI);
 
@@ -2521,6 +2518,16 @@ BinaryFunction *BinaryContext::getBinaryFunctionAtAddress(uint64_t Address) {
       return BF;
   }
   return nullptr;
+}
+
+/// Deregister JumpTable registered at a given \p Address and delete it.
+void BinaryContext::deleteJumpTable(uint64_t Address) {
+  assert(JumpTables.count(Address) && "Must have a jump table at address");
+  JumpTable *JT = JumpTables.at(Address);
+  for (BinaryFunction *Parent : JT->Parents)
+    Parent->JumpTables.erase(Address);
+  JumpTables.erase(Address);
+  delete JT;
 }
 
 DebugAddressRangesVector BinaryContext::translateModuleAddressRanges(

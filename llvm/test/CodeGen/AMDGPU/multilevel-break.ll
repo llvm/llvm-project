@@ -163,7 +163,7 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ;
 ; GCN-LABEL: multi_if_break_loop:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dword s2, s[0:1], 0x9
+; GCN-NEXT:    s_load_dword s2, s[2:3], 0x9
 ; GCN-NEXT:    s_mov_b64 s[0:1], 0
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)

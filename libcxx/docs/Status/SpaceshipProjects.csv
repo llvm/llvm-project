@@ -67,7 +67,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `[func.wrap.func] <https://wg21.link/func.wrap.func>`_
 | `[func.wrap.func.nullptr] <https://wg21.link/func.wrap.func.nullptr>`_",| remove ops `function <https://reviews.llvm.org/D152704>`_,None,Hristo Hristov,|Complete|
 | `[meta.unary.prop] <https://wg21.link/meta.unary.prop>`_,| replaced by `issue LWG3354 <https://wg21.link/LWG3354>`_,None,Unassigned,|Nothing To Do|
-| `[meta.trans.other] <https://wg21.link/meta.trans.other>`_,|,None,Unassigned,|Not Started|
+| `[meta.trans.other] <https://wg21.link/meta.trans.other>`_,| removed by `issue LWG3380 <https://wg21.link/LWG3380>`_,None,Unassigned,|Nothing To Do|
 "| `[type.index.overview] <https://wg21.link/type.index.overview>`_
 | `[type.index.members] <https://wg21.link/type.index.members>`_",| `type_index <https://reviews.llvm.org/D131357>`_,None,Adrian Vogelsgesang,|Complete|
 | `[charconv.syn] <https://wg21.link/charconv.syn>`_,| `to_chars_result <https://reviews.llvm.org/D112366>`_,None,Mark de Wever,|Complete|

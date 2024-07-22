@@ -33,6 +33,7 @@ template <class Emitter> class DestructorScope;
 template <class Emitter> class VariableScope;
 template <class Emitter> class DeclScope;
 template <class Emitter> class InitLinkScope;
+template <class Emitter> class InitStackScope;
 template <class Emitter> class OptionScope;
 template <class Emitter> class ArrayIndexScope;
 template <class Emitter> class SourceLocScope;
@@ -190,6 +191,8 @@ public:
   bool VisitObjCBoxedExpr(const ObjCBoxedExpr *E);
   bool VisitCXXStdInitializerListExpr(const CXXStdInitializerListExpr *E);
   bool VisitStmtExpr(const StmtExpr *E);
+  bool VisitCXXNewExpr(const CXXNewExpr *E);
+  bool VisitCXXDeleteExpr(const CXXDeleteExpr *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);
@@ -278,45 +281,6 @@ protected:
   /// Visits an expression and converts it to a boolean.
   bool visitBool(const Expr *E);
 
-  /// Visits an initializer for a local.
-  bool visitLocalInitializer(const Expr *Init, unsigned I) {
-    if (!this->emitGetPtrLocal(I, Init))
-      return false;
-
-    if (!visitInitializer(Init))
-      return false;
-
-    if (!this->emitFinishInit(Init))
-      return false;
-
-    return this->emitPopPtr(Init);
-  }
-
-  /// Visits an initializer for a global.
-  bool visitGlobalInitializer(const Expr *Init, unsigned I) {
-    if (!this->emitGetPtrGlobal(I, Init))
-      return false;
-
-    if (!visitInitializer(Init))
-      return false;
-
-    if (!this->emitFinishInit(Init))
-      return false;
-
-    return this->emitPopPtr(Init);
-  }
-
-  /// Visits a delegated initializer.
-  bool visitThisInitializer(const Expr *I) {
-    if (!this->emitThis(I))
-      return false;
-
-    if (!visitInitializer(I))
-      return false;
-
-    return this->emitFinishInitPop(I);
-  }
-
   bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *ArrayFiller,
                      const Expr *E);
   bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init);
@@ -335,6 +299,7 @@ private:
   friend class DestructorScope<Emitter>;
   friend class DeclScope<Emitter>;
   friend class InitLinkScope<Emitter>;
+  friend class InitStackScope<Emitter>;
   friend class OptionScope<Emitter>;
   friend class ArrayIndexScope<Emitter>;
   friend class SourceLocScope<Emitter>;
@@ -647,6 +612,20 @@ public:
 
 private:
   Compiler<Emitter> *Ctx;
+};
+
+template <class Emitter> class InitStackScope final {
+public:
+  InitStackScope(Compiler<Emitter> *Ctx, bool Active)
+      : Ctx(Ctx), OldValue(Ctx->InitStackActive) {
+    Ctx->InitStackActive = Active;
+  }
+
+  ~InitStackScope() { this->Ctx->InitStackActive = OldValue; }
+
+private:
+  Compiler<Emitter> *Ctx;
+  bool OldValue;
 };
 
 } // namespace interp

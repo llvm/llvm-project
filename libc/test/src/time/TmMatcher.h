@@ -11,9 +11,10 @@
 
 #include <time.h>
 
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 class StructTmMatcher : public Matcher<::tm> {
@@ -57,7 +58,7 @@ public:
 };
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #define EXPECT_TM_EQ(expected, actual)                                         \
   EXPECT_THAT((actual), LIBC_NAMESPACE::testing::StructTmMatcher((expected)))

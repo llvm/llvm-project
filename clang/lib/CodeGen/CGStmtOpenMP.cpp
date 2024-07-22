@@ -187,6 +187,11 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
       PreInits = Tile->getPreInits();
     } else if (const auto *Unroll = dyn_cast<OMPUnrollDirective>(&S)) {
       PreInits = Unroll->getPreInits();
+    } else if (const auto *Reverse = dyn_cast<OMPReverseDirective>(&S)) {
+      PreInits = Reverse->getPreInits();
+    } else if (const auto *Interchange =
+                   dyn_cast<OMPInterchangeDirective>(&S)) {
+      PreInits = Interchange->getPreInits();
     } else {
       llvm_unreachable("Unknown loop-based directive kind.");
     }
@@ -2759,6 +2764,19 @@ void CodeGenFunction::EmitOMPSimdDirective(const OMPSimdDirective &S) {
 void CodeGenFunction::EmitOMPTileDirective(const OMPTileDirective &S) {
   // Emit the de-sugared statement.
   OMPTransformDirectiveScopeRAII TileScope(*this, &S);
+  EmitStmt(S.getTransformedStmt());
+}
+
+void CodeGenFunction::EmitOMPReverseDirective(const OMPReverseDirective &S) {
+  // Emit the de-sugared statement.
+  OMPTransformDirectiveScopeRAII ReverseScope(*this, &S);
+  EmitStmt(S.getTransformedStmt());
+}
+
+void CodeGenFunction::EmitOMPInterchangeDirective(
+    const OMPInterchangeDirective &S) {
+  // Emit the de-sugared statement.
+  OMPTransformDirectiveScopeRAII InterchangeScope(*this, &S);
   EmitStmt(S.getTransformedStmt());
 }
 

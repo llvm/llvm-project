@@ -199,7 +199,7 @@ namespace {
       AU.addPreserved<MachineCycleInfoWrapperPass>();
       AU.addPreserved<MachineLoopInfoWrapperPass>();
       if (UseBlockFreqInfo)
-        AU.addRequired<MachineBlockFrequencyInfo>();
+        AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
       AU.addRequired<TargetPassConfig>();
     }
 
@@ -417,7 +417,7 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
       continue;
     }
 
-    if (Reg.isPhysical() &&
+    if (Reg.isPhysical() && MO.isUse() &&
         (MRI->isConstantPhysReg(Reg) || TII->isIgnorableUse(MO)))
       continue;
 
@@ -722,7 +722,9 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
   DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   PDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
   CI = &getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
-  MBFI = UseBlockFreqInfo ? &getAnalysis<MachineBlockFrequencyInfo>() : nullptr;
+  MBFI = UseBlockFreqInfo
+             ? &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI()
+             : nullptr;
   MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   RegClassInfo.runOnMachineFunction(MF);
@@ -959,7 +961,7 @@ bool MachineSinking::isLegalToBreakCriticalEdge(MachineInstr &MI,
                                                 MachineBasicBlock *ToBB,
                                                 bool BreakPHIEdge) {
   // Avoid breaking back edge. From == To means backedge for single BB cycle.
-  if (!SplitEdges || FromBB == ToBB)
+  if (!SplitEdges || FromBB == ToBB || !FromBB->isSuccessor(ToBB))
     return false;
 
   MachineCycle *FromCycle = CI->getCycle(FromBB);
