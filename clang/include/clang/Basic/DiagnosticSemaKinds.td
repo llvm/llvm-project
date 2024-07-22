@@ -3492,7 +3492,7 @@ def err_attr_tlsmodel_arg : Error<"tls_model must be \"global-dynamic\", "
 
 def err_attr_codemodel_arg : Error<"code model '%0' is not supported on this target">;
 
-def err_aix_attr_unsupported_tls_model : Error<"TLS model '%0' is not yet supported on AIX">;
+def err_aix_attr_unsupported : Error<"%0 attribute is not yet supported on AIX">;
 
 def err_tls_var_aligned_over_maximum : Error<
   "alignment (%0) of thread-local variable %1 is greater than the maximum supported "
@@ -6075,7 +6075,7 @@ def note_extern_c_global_conflict : Note<
 def note_extern_c_begins_here : Note<
   "extern \"C\" language linkage specification begins here">;
 def warn_weak_import : Warning <
-  "an already-declared variable is made a weak_import declaration %0">;
+  "%0 cannot be declared 'weak_import' because its definition has been provided">;
 def ext_static_non_static : Extension<
   "redeclaring non-static %0 as static is a Microsoft extension">,
   InGroup<MicrosoftRedeclareStatic>;
@@ -10124,6 +10124,9 @@ def warn_dangling_lifetime_pointer : Warning<
   "object backing the pointer "
   "will be destroyed at the end of the full-expression">,
   InGroup<DanglingGsl>;
+def warn_dangling_lifetime_pointer_assignment : Warning<"object backing the "
+  "pointer %0 will be destroyed at the end of the full-expression">,
+  InGroup<DanglingAssignmentGsl>, DefaultIgnore;
 def warn_new_dangling_initializer_list : Warning<
   "array backing "
   "%select{initializer list subobject of the allocated object|"

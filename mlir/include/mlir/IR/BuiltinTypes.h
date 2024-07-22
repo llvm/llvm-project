@@ -39,6 +39,11 @@ struct IntegerTypeStorage;
 struct TupleTypeStorage;
 } // namespace detail
 
+/// Type trait indicating that the type has value semantics.
+template <typename ConcreteType>
+class ValueSemantics
+    : public TypeTrait::TraitBase<ConcreteType, ValueSemantics> {};
+
 //===----------------------------------------------------------------------===//
 // FloatType
 //===----------------------------------------------------------------------===//

@@ -140,6 +140,7 @@ void registerTestSCFUtilsPass();
 void registerTestSCFWhileOpBuilderPass();
 void registerTestShapeMappingPass();
 void registerTestSliceAnalysisPass();
+void registerTestSPIRVFuncSignatureConversion();
 void registerTestTensorCopyInsertionPass();
 void registerTestTensorTransforms();
 void registerTestTopologicalSortAnalysisPass();
@@ -271,6 +272,7 @@ void registerTestPasses() {
   mlir::test::registerTestSCFWhileOpBuilderPass();
   mlir::test::registerTestShapeMappingPass();
   mlir::test::registerTestSliceAnalysisPass();
+  mlir::test::registerTestSPIRVFuncSignatureConversion();
   mlir::test::registerTestTensorCopyInsertionPass();
   mlir::test::registerTestTensorTransforms();
   mlir::test::registerTestTopologicalSortAnalysisPass();

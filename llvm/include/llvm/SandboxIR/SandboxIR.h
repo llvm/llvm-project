@@ -59,8 +59,10 @@
 #define LLVM_SANDBOXIR_SANDBOXIR_H
 
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/SandboxIR/Tracker.h"
 #include "llvm/SandboxIR/Use.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iterator>
@@ -73,10 +75,13 @@ class BasicBlock;
 class Context;
 class Function;
 class Instruction;
+class LoadInst;
+class StoreInst;
 class User;
 class Value;
 
-/// Returns the operand edge when dereferenced.
+/// Iterator for the `Use` edges of a User's operands.
+/// \Returns the operand `Use` when dereferenced.
 class OperandUseIterator {
   sandboxir::Use Use;
   /// Don't let the user create a non-empty OperandUseIterator.
@@ -103,7 +108,8 @@ public:
   }
 };
 
-/// Returns user edge when dereferenced.
+/// Iterator for the `Use` edges of a Value's users.
+/// \Returns a `Use` when dereferenced.
 class UserUseIterator {
   sandboxir::Use Use;
   /// Don't let the user create a non-empty UserUseIterator.
@@ -162,11 +168,16 @@ protected:
   unsigned UID;
 #endif
   /// The LLVM Value that corresponds to this SandboxIR Value.
-  /// NOTE: Some SBInstructions, like Packs, may include more than one value.
+  /// NOTE: Some sandboxir Instructions, like Packs, may include more than one
+  /// value and in these cases `Val` points to the last instruction in program
+  /// order.
   llvm::Value *Val = nullptr;
 
-  friend class Context; // For getting `Val`.
-  friend class User;    // For getting `Val`.
+  friend class Context;   // For getting `Val`.
+  friend class User;      // For getting `Val`.
+  friend class Use;       // For getting `Val`.
+  friend class LoadInst;  // For getting `Val`.
+  friend class StoreInst; // For getting `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -256,11 +267,14 @@ public:
                          llvm::function_ref<bool(const Use &)> ShouldReplace);
   void replaceAllUsesWith(Value *Other);
 
+  /// \Returns the LLVM IR name of the bottom-most LLVM value.
+  StringRef getName() const { return Val->getName(); }
+
 #ifndef NDEBUG
   /// Should crash if there is something wrong with the instruction.
   virtual void verify() const = 0;
-  /// Returns the name in the form 'SB<number>.' like 'SB1.'
-  std::string getName() const;
+  /// Returns the unique id in the form 'SB<number>.' like 'SB1.'
+  std::string getUid() const;
   virtual void dumpCommonHeader(raw_ostream &OS) const;
   void dumpCommonFooter(raw_ostream &OS) const;
   void dumpCommonPrefix(raw_ostream &OS) const;
@@ -300,6 +314,7 @@ public:
 #endif
 };
 
+/// A sandboxir::User has operands.
 class User : public Value {
 protected:
   User(ClassID ID, llvm::Value *V, Context &Ctx) : Value(ID, V, Ctx) {}
@@ -309,6 +324,9 @@ protected:
   /// match the underlying LLVM instruction. All others should use a different
   /// implementation.
   Use getOperandUseDefault(unsigned OpIdx, bool Verify) const;
+  /// \Returns the Use for the \p OpIdx'th operand. This is virtual to allow
+  /// instructions to deviate from the LLVM IR operands, which is a requirement
+  /// for sandboxir Instructions that consist of more than one LLVM Instruction.
   virtual Use getOperandUseInternal(unsigned OpIdx, bool Verify) const = 0;
   friend class OperandUseIterator; // for getOperandUseInternal()
 
@@ -414,7 +432,8 @@ public:
 #endif
 };
 
-/// The BasicBlock::iterator.
+/// Iterator for `Instruction`s in a `BasicBlock.
+/// \Returns an sandboxir::Instruction & when derereferenced.
 class BBIterator {
 public:
   using difference_type = std::ptrdiff_t;
@@ -456,7 +475,8 @@ public:
   pointer get() const { return getInstr(It); }
 };
 
-/// A sandboxir::User with operands and opcode.
+/// A sandboxir::User with operands, opcode and linked with previous/next
+/// instructions in an instruction list.
 class Instruction : public sandboxir::User {
 public:
   enum class Opcode {
@@ -477,10 +497,13 @@ protected:
   /// A SandboxIR Instruction may map to multiple LLVM IR Instruction. This
   /// returns its topmost LLVM IR instruction.
   llvm::Instruction *getTopmostLLVMInstruction() const;
+  friend class LoadInst;  // For getTopmostLLVMInstruction().
+  friend class StoreInst; // For getTopmostLLVMInstruction().
 
   /// \Returns the LLVM IR Instructions that this SandboxIR maps to in program
   /// order.
   virtual SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const = 0;
+  friend class EraseFromParent; // For getLLVMInstrs().
 
 public:
   static const char *getOpcodeName(Opcode Opc);
@@ -540,6 +563,82 @@ public:
 #endif
 };
 
+class LoadInst final : public Instruction {
+  /// Use LoadInst::create() instead of calling the constructor.
+  LoadInst(llvm::LoadInst *LI, Context &Ctx)
+      : Instruction(ClassID::Load, Opcode::Load, LI, Ctx) {}
+  friend Context; // for LoadInst()
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+
+public:
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+  static LoadInst *create(Type *Ty, Value *Ptr, MaybeAlign Align,
+                          Instruction *InsertBefore, Context &Ctx,
+                          const Twine &Name = "");
+  static LoadInst *create(Type *Ty, Value *Ptr, MaybeAlign Align,
+                          BasicBlock *InsertAtEnd, Context &Ctx,
+                          const Twine &Name = "");
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From);
+  Value *getPointerOperand() const;
+  Align getAlign() const { return cast<llvm::LoadInst>(Val)->getAlign(); }
+  bool isUnordered() const { return cast<llvm::LoadInst>(Val)->isUnordered(); }
+  bool isSimple() const { return cast<llvm::LoadInst>(Val)->isSimple(); }
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::LoadInst>(Val) && "Expected LoadInst!");
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
+class StoreInst final : public Instruction {
+  /// Use StoreInst::create().
+  StoreInst(llvm::StoreInst *SI, Context &Ctx)
+      : Instruction(ClassID::Store, Opcode::Store, SI, Ctx) {}
+  friend Context; // for StoreInst()
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+
+public:
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+  static StoreInst *create(Value *V, Value *Ptr, MaybeAlign Align,
+                           Instruction *InsertBefore, Context &Ctx);
+  static StoreInst *create(Value *V, Value *Ptr, MaybeAlign Align,
+                           BasicBlock *InsertAtEnd, Context &Ctx);
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From);
+  Value *getValueOperand() const;
+  Value *getPointerOperand() const;
+  Align getAlign() const { return cast<llvm::StoreInst>(Val)->getAlign(); }
+  bool isSimple() const { return cast<llvm::StoreInst>(Val)->isSimple(); }
+  bool isUnordered() const { return cast<llvm::StoreInst>(Val)->isUnordered(); }
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::StoreInst>(Val) && "Expected StoreInst!");
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
 /// An LLLVM Instruction that has no SandboxIR equivalent class gets mapped to
 /// an OpaqueInstr.
 class OpaqueInst : public sandboxir::Instruction {
@@ -577,6 +676,7 @@ public:
 #endif
 };
 
+/// Contains a list of sandboxir::Instruction's.
 class BasicBlock : public Value {
   /// Builds a graph that contains all values in \p BB in their original form
   /// i.e., no vectorization is taking place here.
@@ -630,6 +730,8 @@ public:
 class Context {
 protected:
   LLVMContext &LLVMCtx;
+  Tracker IRTracker;
+
   /// Maps LLVM Value to the corresponding sandboxir::Value. Owns all
   /// SandboxIR objects.
   DenseMap<llvm::Value *, std::unique_ptr<sandboxir::Value>>
@@ -643,9 +745,11 @@ protected:
   friend void Instruction::eraseFromParent(); // For detach().
   /// Take ownership of VPtr and store it in `LLVMValueToValueMap`.
   Value *registerValue(std::unique_ptr<Value> &&VPtr);
-
+  friend class EraseFromParent; // For registerValue().
+  /// This is the actual function that creates sandboxir values for \p V,
+  /// and among others handles all instruction types.
   Value *getOrCreateValueInternal(llvm::Value *V, llvm::User *U = nullptr);
-
+  /// Get or create a sandboxir::Argument for an existing LLVM IR \p LLVMArg.
   Argument *getOrCreateArgument(llvm::Argument *LLVMArg) {
     auto Pair = LLVMValueToValueMap.insert({LLVMArg, nullptr});
     auto It = Pair.first;
@@ -655,23 +759,44 @@ protected:
     }
     return cast<Argument>(It->second.get());
   }
-
+  /// Get or create a sandboxir::Value for an existing LLVM IR \p LLVMV.
   Value *getOrCreateValue(llvm::Value *LLVMV) {
     return getOrCreateValueInternal(LLVMV, 0);
   }
-
+  /// Create a sandboxir::BasicBlock for an existing LLVM IR \p BB. This will
+  /// also create all contents of the block.
   BasicBlock *createBasicBlock(llvm::BasicBlock *BB);
 
   friend class BasicBlock; // For getOrCreateValue().
 
+  IRBuilder<ConstantFolder> LLVMIRBuilder;
+  auto &getLLVMIRBuilder() { return LLVMIRBuilder; }
+
+  LoadInst *createLoadInst(llvm::LoadInst *LI);
+  friend LoadInst; // For createLoadInst()
+  StoreInst *createStoreInst(llvm::StoreInst *SI);
+  friend StoreInst; // For createStoreInst()
+
 public:
-  Context(LLVMContext &LLVMCtx) : LLVMCtx(LLVMCtx) {}
+  Context(LLVMContext &LLVMCtx)
+      : LLVMCtx(LLVMCtx), IRTracker(*this),
+        LLVMIRBuilder(LLVMCtx, ConstantFolder()) {}
+
+  Tracker &getTracker() { return IRTracker; }
+  /// Convenience function for `getTracker().save()`
+  void save() { IRTracker.save(); }
+  /// Convenience function for `getTracker().revert()`
+  void revert() { IRTracker.revert(); }
+  /// Convenience function for `getTracker().accept()`
+  void accept() { IRTracker.accept(); }
 
   sandboxir::Value *getValue(llvm::Value *V) const;
   const sandboxir::Value *getValue(const llvm::Value *V) const {
     return getValue(const_cast<llvm::Value *>(V));
   }
-
+  /// Create a sandboxir::Function for an existing LLVM IR \p F, including all
+  /// blocks and instructions.
+  /// This is the main API function for creating Sandbox IR.
   Function *createFunction(llvm::Function *F);
 
   /// \Returns the number of values registered with Context.

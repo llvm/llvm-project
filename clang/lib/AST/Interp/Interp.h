@@ -39,8 +39,9 @@ namespace interp {
 using APSInt = llvm::APSInt;
 
 /// Convert a value to an APValue.
-template <typename T> bool ReturnValue(const T &V, APValue &R) {
-  R = V.toAPValue();
+template <typename T>
+bool ReturnValue(const InterpState &S, const T &V, APValue &R) {
+  R = V.toAPValue(S.getCtx());
   return true;
 }
 
@@ -286,7 +287,7 @@ bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
   } else {
     delete S.Current;
     S.Current = nullptr;
-    if (!ReturnValue<T>(Ret, Result))
+    if (!ReturnValue<T>(S, Ret, Result))
       return false;
   }
   return true;
@@ -1318,7 +1319,7 @@ bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
   const Pointer &Ptr = S.P.getGlobal(I);
 
   const T Value = S.Stk.peek<T>();
-  APValue APV = Value.toAPValue();
+  APValue APV = Value.toAPValue(S.getCtx());
   APValue *Cached = Temp->getOrCreateValue(true);
   *Cached = APV;
 
@@ -2531,12 +2532,12 @@ inline bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
       if (!CheckInvoke(S, OpPC, ThisPtr))
         return false;
     }
-
-    if (S.checkingPotentialConstantExpression())
-      return false;
   }
 
   if (!CheckCallable(S, OpPC, Func))
+    return false;
+
+  if (Func->hasThisPointer() && S.checkingPotentialConstantExpression())
     return false;
 
   if (!CheckCallDepth(S, OpPC))
@@ -2735,6 +2736,15 @@ inline bool InvalidDeclRef(InterpState &S, CodePtr OpPC,
   return CheckDeclRef(S, OpPC, DR);
 }
 
+inline bool SizelessVectorElementSize(InterpState &S, CodePtr OpPC) {
+  if (S.inConstantContext()) {
+    const SourceRange &ArgRange = S.Current->getRange(OpPC);
+    const Expr *E = S.Current->getExpr(OpPC);
+    S.CCEDiag(E, diag::note_constexpr_non_const_vectorelements) << ArgRange;
+  }
+  return false;
+}
+
 inline bool Assume(InterpState &S, CodePtr OpPC) {
   const auto Val = S.Stk.pop<Boolean>();
 
@@ -2772,6 +2782,20 @@ inline bool CheckNonNullArg(InterpState &S, CodePtr OpPC) {
   S.CCEDiag(Loc, diag::note_non_null_attribute_failed);
 
   return false;
+}
+
+void diagnoseEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED,
+                       const APSInt &Value);
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool CheckEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED) {
+  assert(ED);
+  assert(!ED->isFixed());
+  const APSInt Val = S.Stk.peek<T>().toAPSInt();
+
+  if (S.inConstantContext())
+    diagnoseEnumValue(S, OpPC, ED, Val);
+  return true;
 }
 
 /// OldPtr -> Integer -> NewPtr.
@@ -2872,8 +2896,8 @@ inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
   return true;
 }
 
+bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B);
 static inline bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm) {
-
   if (!CheckDynamicMemoryAllocation(S, OpPC))
     return false;
 
@@ -2903,6 +2927,10 @@ static inline bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm) {
   }
   assert(Source);
   assert(BlockToDelete);
+
+  // Invoke destructors before deallocating the memory.
+  if (!RunDestructors(S, OpPC, BlockToDelete))
+    return false;
 
   DynamicAllocator &Allocator = S.getAllocator();
   bool WasArrayAlloc = Allocator.isArrayAllocation(Source);
