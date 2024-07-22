@@ -13,6 +13,7 @@
 
 #include "XtensaISelLowering.h"
 #include "XtensaConstantPoolValue.h"
+#include "XtensaMachineFunctionInfo.h"
 #include "XtensaSubtarget.h"
 #include "XtensaTargetMachine.h"
 #include "llvm/CodeGen/CallingConvLower.h"
@@ -21,6 +22,7 @@
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -97,6 +99,32 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   setCondCodeAction(ISD::SETLE, MVT::i32, Expand);
   setCondCodeAction(ISD::SETUGT, MVT::i32, Expand);
   setCondCodeAction(ISD::SETULE, MVT::i32, Expand);
+
+  setOperationAction(ISD::MUL, MVT::i32, Custom);
+  setOperationAction(ISD::MULHU, MVT::i32, Expand);
+  setOperationAction(ISD::MULHS, MVT::i32, Expand);
+  setOperationAction(ISD::SMUL_LOHI, MVT::i32, Expand);
+  setOperationAction(ISD::UMUL_LOHI, MVT::i32, Expand);
+
+  setOperationAction(ISD::SDIV, MVT::i32, Expand);
+  setOperationAction(ISD::UDIV, MVT::i32, Expand);
+  setOperationAction(ISD::SREM, MVT::i32, Expand);
+  setOperationAction(ISD::UREM, MVT::i32, Expand);
+  setOperationAction(ISD::SDIVREM, MVT::i32, Expand);
+  setOperationAction(ISD::UDIVREM, MVT::i32, Expand);
+
+  setOperationAction(ISD::SHL_PARTS, MVT::i32, Custom);
+  setOperationAction(ISD::SRA_PARTS, MVT::i32, Custom);
+  setOperationAction(ISD::SRL_PARTS, MVT::i32, Custom);
+
+  setOperationAction(ISD::BSWAP, MVT::i32, Expand);
+  setOperationAction(ISD::ROTL, MVT::i32, Expand);
+  setOperationAction(ISD::ROTR, MVT::i32, Expand);
+  setOperationAction(ISD::CTPOP, MVT::i32, Expand);
+  setOperationAction(ISD::CTTZ, MVT::i32, Expand);
+  setOperationAction(ISD::CTLZ, MVT::i32, Expand);
+  setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Expand);
+  setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Expand);
 
   // Implement custom stack allocations
   setOperationAction(ISD::DYNAMIC_STACKALLOC, PtrVT, Custom);
@@ -665,12 +693,30 @@ SDValue XtensaTargetLowering::getAddrPCRel(SDValue Op,
 SDValue XtensaTargetLowering::LowerConstantPool(ConstantPoolSDNode *CP,
                                                 SelectionDAG &DAG) const {
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  auto C = const_cast<Constant *>(CP->getConstVal());
+  auto T = const_cast<Type *>(CP->getType());
   SDValue Result;
-  if (!CP->isMachineConstantPoolEntry()) {
-    Result = DAG.getTargetConstantPool(CP->getConstVal(), PtrVT, CP->getAlign(),
-                                       CP->getOffset());
+
+  // Do not use constant pool for aggregate or vector constant types,
+  // in such cases create global variable, for example to store tabel
+  // when we lower CTTZ operation.
+  if (T->isAggregateType() || T->isVectorTy()) {
+    auto AFI = DAG.getMachineFunction().getInfo<XtensaFunctionInfo>();
+    auto M = const_cast<Module *>(
+        DAG.getMachineFunction().getFunction().getParent());
+    auto GV = new GlobalVariable(
+        *M, T, /*isConstant=*/true, GlobalVariable::InternalLinkage, C,
+        Twine(DAG.getDataLayout().getPrivateGlobalPrefix()) + "CP" +
+            Twine(DAG.getMachineFunction().getFunctionNumber()) + "_" +
+            Twine(AFI->createLabelUId()));
+    Result = DAG.getTargetConstantPool(GV, PtrVT, Align(4));
   } else {
-    report_fatal_error("This constantpool type is not supported yet");
+    if (!CP->isMachineConstantPoolEntry()) {
+      Result = DAG.getTargetConstantPool(CP->getConstVal(), PtrVT,
+                                         CP->getAlign(), CP->getOffset());
+    } else {
+      report_fatal_error("This constantpool type is not supported yet");
+    }
   }
 
   return getAddrPCRel(Result, DAG);
@@ -713,6 +759,131 @@ SDValue XtensaTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   return DAG.getMergeValues(Ops, DL);
 }
 
+SDValue XtensaTargetLowering::LowerShiftLeftParts(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT VT = MVT::i32;
+  SDValue Lo = Op.getOperand(0), Hi = Op.getOperand(1);
+  SDValue Shamt = Op.getOperand(2);
+
+  // if Shamt - register size < 0: // Shamt < register size
+  //   Lo = Lo << Shamt
+  //   Hi = (Hi << Shamt) | (Lo >>u (register size - Shamt))
+  // else:
+  //   Lo = 0
+  //   Hi = Lo << (Shamt - register size)
+
+  SDValue MinusRegisterSize = DAG.getConstant(-32, DL, VT);
+  SDValue ShamtMinusRegisterSize =
+      DAG.getNode(ISD::ADD, DL, VT, Shamt, MinusRegisterSize);
+
+  SDValue LoTrue = DAG.getNode(ISD::SHL, DL, VT, Lo, Shamt);
+
+  SDValue HiTrue = DAG.getNode(XtensaISD::SRCL, DL, VT, Hi, Lo, Shamt);
+
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+
+  SDValue HiFalse = DAG.getNode(ISD::SHL, DL, VT, Lo, ShamtMinusRegisterSize);
+
+  SDValue Cond = DAG.getSetCC(DL, VT, ShamtMinusRegisterSize, Zero, ISD::SETLT);
+
+  Lo = DAG.getNode(ISD::SELECT, DL, VT, Cond, LoTrue, Zero);
+
+  Hi = DAG.getNode(ISD::SELECT, DL, VT, Cond, HiTrue, HiFalse);
+
+  return DAG.getMergeValues({Lo, Hi}, DL);
+}
+
+SDValue XtensaTargetLowering::LowerShiftRightParts(SDValue Op,
+                                                   SelectionDAG &DAG,
+                                                   bool IsSRA) const {
+  SDLoc DL(Op);
+  SDValue Lo = Op.getOperand(0), Hi = Op.getOperand(1);
+  SDValue Shamt = Op.getOperand(2);
+  MVT VT = MVT::i32;
+
+  // SRA expansion:
+  //   if Shamt - register size < 0: // Shamt < register size
+  //     Lo = (Lo >>u Shamt) | (Hi << u (register size - Shamt))
+  //     Hi = Hi >>s Shamt
+  //   else:
+  //     Lo = Hi >>s (Shamt - register size);
+  //     Hi = Hi >>s (register size - 1)
+  //
+  // SRL expansion:
+  //   if Shamt - register size < 0: // Shamt < register size
+  //     Lo = (Lo >>u Shamt) | (Hi << u (register size - Shamt))
+  //     Hi = Hi >>u Shamt
+  //   else:
+  //     Lo = Hi >>u (Shamt - register size);
+  //     Hi = 0;
+
+  unsigned ShiftRightOp = IsSRA ? ISD::SRA : ISD::SRL;
+
+  SDValue MinusRegisterSize = DAG.getConstant(-32, DL, VT);
+  SDValue RegisterSizeMinus1 = DAG.getConstant(32 - 1, DL, VT);
+  SDValue ShamtMinusRegisterSize =
+      DAG.getNode(ISD::ADD, DL, VT, Shamt, MinusRegisterSize);
+
+  SDValue LoTrue = DAG.getNode(XtensaISD::SRCR, DL, VT, Hi, Lo, Shamt);
+
+  SDValue HiTrue = DAG.getNode(ShiftRightOp, DL, VT, Hi, Shamt);
+
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+
+  SDValue LoFalse =
+      DAG.getNode(ShiftRightOp, DL, VT, Hi, ShamtMinusRegisterSize);
+
+  SDValue HiFalse;
+
+  if (IsSRA) {
+    HiFalse = DAG.getNode(ShiftRightOp, DL, VT, Hi, RegisterSizeMinus1);
+  } else {
+    HiFalse = Zero;
+  }
+
+  SDValue Cond = DAG.getSetCC(DL, VT, ShamtMinusRegisterSize, Zero, ISD::SETLT);
+
+  Lo = DAG.getNode(ISD::SELECT, DL, VT, Cond, LoTrue, LoFalse);
+
+  Hi = DAG.getNode(ISD::SELECT, DL, VT, Cond, HiTrue, HiFalse);
+
+  SDValue Ops[2] = {Lo, Hi};
+  return DAG.getMergeValues(Ops, DL);
+}
+
+SDValue XtensaTargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
+  EVT VT = Op->getValueType(0);
+  SDLoc DL(Op);
+
+  if (VT != MVT::i32)
+    return SDValue();
+
+  ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op->getOperand(1));
+  if (!C)
+    return SDValue();
+
+  int64_t MulAmt = C->getSExtValue();
+  unsigned ShiftAmt = 0;
+
+  switch (MulAmt) {
+  case 2:
+    ShiftAmt = 1;
+    break;
+  case 4:
+    ShiftAmt = 2;
+    break;
+  case 8:
+    ShiftAmt = 3;
+    break;
+  default:
+    return SDValue();
+  }
+
+  return DAG.getNode(ISD::SHL, DL, VT, Op->getOperand(0),
+                     DAG.getConstant(ShiftAmt, DL, VT));
+}
+
 SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
                                              SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -728,6 +899,8 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
     return LowerJumpTable(Op, DAG);
   case ISD::ConstantPool:
     return LowerConstantPool(cast<ConstantPoolSDNode>(Op), DAG);
+  case ISD::MUL:
+    return LowerMUL(Op, DAG);
   case ISD::SELECT_CC:
     return LowerSELECT_CC(Op, DAG);
   case ISD::STACKSAVE:
@@ -736,6 +909,12 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
     return LowerSTACKRESTORE(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
+  case ISD::SHL_PARTS:
+    return LowerShiftLeftParts(Op, DAG);
+  case ISD::SRA_PARTS:
+    return LowerShiftRightParts(Op, DAG, true);
+  case ISD::SRL_PARTS:
+    return LowerShiftRightParts(Op, DAG, false);
   default:
     report_fatal_error("Unexpected node to lower");
   }
@@ -753,6 +932,10 @@ const char *XtensaTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "XtensaISD::RET";
   case XtensaISD::SELECT_CC:
     return "XtensaISD::SELECT_CC";
+  case XtensaISD::SRCL:
+    return "XtensaISD::SRCL";
+  case XtensaISD::SRCR:
+    return "XtensaISD::SRCR";
   }
   return nullptr;
 }
@@ -827,9 +1010,70 @@ XtensaTargetLowering::emitSelectCC(MachineInstr &MI,
 
 MachineBasicBlock *XtensaTargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *MBB) const {
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+
   switch (MI.getOpcode()) {
   case Xtensa::SELECT:
     return emitSelectCC(MI, MBB);
+  case Xtensa::SHL_P: {
+    MachineOperand &R = MI.getOperand(0);
+    MachineOperand &S = MI.getOperand(1);
+    MachineOperand &SA = MI.getOperand(2);
+
+    BuildMI(*MBB, MI, DL, TII.get(Xtensa::SSL)).addReg(SA.getReg());
+    BuildMI(*MBB, MI, DL, TII.get(Xtensa::SLL), R.getReg()).addReg(S.getReg());
+    MI.eraseFromParent();
+    return MBB;
+  }
+  case Xtensa::SRA_P: {
+    MachineOperand &R = MI.getOperand(0);
+    MachineOperand &T = MI.getOperand(1);
+    MachineOperand &SA = MI.getOperand(2);
+
+    BuildMI(*MBB, MI, DL, TII.get(Xtensa::SSR)).addReg(SA.getReg());
+    BuildMI(*MBB, MI, DL, TII.get(Xtensa::SRA), R.getReg()).addReg(T.getReg());
+    MI.eraseFromParent();
+    return MBB;
+  }
+  case Xtensa::SRL_P: {
+    MachineOperand &R = MI.getOperand(0);
+    MachineOperand &T = MI.getOperand(1);
+    MachineOperand &SA = MI.getOperand(2);
+
+    BuildMI(*MBB, MI, DL, TII.get(Xtensa::SSR)).addReg(SA.getReg());
+    BuildMI(*MBB, MI, DL, TII.get(Xtensa::SRL), R.getReg()).addReg(T.getReg());
+    MI.eraseFromParent();
+    return MBB;
+  }
+  case Xtensa::SRCL_P: {
+    MachineOperand &R = MI.getOperand(0);
+    MachineOperand &HI = MI.getOperand(1);
+    MachineOperand &LO = MI.getOperand(2);
+    MachineOperand &SA = MI.getOperand(3);
+
+    BuildMI(*MBB, MI, DL, TII.get(Xtensa::SSL)).addReg(SA.getReg());
+    BuildMI(*MBB, MI, DL, TII.get(Xtensa::SRC), R.getReg())
+        .addReg(HI.getReg())
+        .addReg(LO.getReg());
+    ;
+    MI.eraseFromParent();
+    return MBB;
+  }
+  case Xtensa::SRCR_P: {
+    MachineOperand &R = MI.getOperand(0);
+    MachineOperand &HI = MI.getOperand(1);
+    MachineOperand &LO = MI.getOperand(2);
+    MachineOperand &SA = MI.getOperand(3);
+
+    BuildMI(*MBB, MI, DL, TII.get(Xtensa::SSR)).addReg(SA.getReg());
+    BuildMI(*MBB, MI, DL, TII.get(Xtensa::SRC), R.getReg())
+        .addReg(HI.getReg())
+        .addReg(LO.getReg());
+    ;
+    MI.eraseFromParent();
+    return MBB;
+  }
   default:
     llvm_unreachable("Unexpected instr type to insert");
   }
