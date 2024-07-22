@@ -2576,8 +2576,8 @@ static void emitOMPSimdRegion(CodeGenFunction &CGF, const OMPLoopDirective &S,
   if (isOpenMPDistributeDirective(DKind) ||
       isOpenMPWorksharingDirective(DKind) || isOpenMPTaskLoopDirective(DKind) ||
       isOpenMPGenericLoopDirective(DKind)) {
-    EmitOMPHelperVar(CGF, cast<DeclRefExpr>(S.getLowerBoundVariable()));
-    EmitOMPHelperVar(CGF, cast<DeclRefExpr>(S.getUpperBoundVariable()));
+    (void)EmitOMPHelperVar(CGF, cast<DeclRefExpr>(S.getLowerBoundVariable()));
+    (void)EmitOMPHelperVar(CGF, cast<DeclRefExpr>(S.getUpperBoundVariable()));
   }
 
   OpenMPDirectiveKind EKind = getEffectiveDirectiveKind(S);
