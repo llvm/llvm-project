@@ -3,8 +3,11 @@
 // RUN:   FileCheck %s --check-prefix=CHECK-X86
 // RUN: %clang_cc1 -triple ppc64le-linux-gnu -emit-llvm -o - %s | FileCheck %s \
 // RUN:   --check-prefix=CHECK-PPC
-
-#ifndef __PPC__
+// RUN: %clang_cc1 -triple riscv32-linux-gnu -emit-llvm -o - %s | FileCheck %s \
+// RUN:   --check-prefix=CHECK-RV32
+// RUN: %clang_cc1 -triple riscv64-linux-gnu -emit-llvm -o - %s | FileCheck %s \
+// RUN:   --check-prefix=CHECK-RV64
+#ifdef __x86_64__
 
 // Test that we have the structure definition, the gep offsets, the name of the
 // global, the bit grab, and the icmp correct.
@@ -101,8 +104,10 @@ int v3() { return __builtin_cpu_supports("x86-64-v3"); }
 // CHECK-X86-NEXT:    ret i32 [[CONV]]
 //
 int v4() { return __builtin_cpu_supports("x86-64-v4"); }
-#else
-// CHECK-PPC-LABEL: define dso_local signext i32 @test(
+#endif
+
+#ifdef __PPC__
+// CHECK-PPC-LABEL: define dso_local signext i32 @test_ppc(
 // CHECK-PPC-SAME: i32 noundef signext [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-PPC-NEXT:  entry:
 // CHECK-PPC-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
@@ -149,7 +154,7 @@ int v4() { return __builtin_cpu_supports("x86-64-v4"); }
 // CHECK-PPC-NEXT:    [[TMP10:%.*]] = load i32, ptr [[RETVAL]], align 4
 // CHECK-PPC-NEXT:    ret i32 [[TMP10]]
 //
-int test(int a) {
+int test_ppc(int a) {
   if (__builtin_cpu_supports("arch_3_00")) // HWCAP2
     return a;
   else if (__builtin_cpu_supports("mmu"))  // HWCAP
@@ -157,5 +162,100 @@ int test(int a) {
   else if (__builtin_cpu_is("power7"))     // CPUID
     return a + a;
   return a + 5;
+}
+#endif
+
+#ifdef __riscv
+// CHECK-RV32-LABEL: define dso_local i32 @test_riscv(
+// CHECK-RV32-SAME: i32 noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-RV32-NEXT:  entry:
+// CHECK-RV32-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// CHECK-RV32-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// CHECK-RV32-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
+// CHECK-RV32-NEXT:    call void @__init_riscv_feature_bits()
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [1 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1
+// CHECK-RV32-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1
+// CHECK-RV32-NEXT:    br i1 [[TMP2]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+// CHECK-RV32:       if.then:
+// CHECK-RV32-NEXT:    store i32 3, ptr [[RETVAL]], align 4
+// CHECK-RV32-NEXT:    br label [[RETURN:%.*]]
+// CHECK-RV32:       if.else:
+// CHECK-RV32-NEXT:    [[TMP3:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [1 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
+// CHECK-RV32-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 4
+// CHECK-RV32-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[TMP4]], 4
+// CHECK-RV32-NEXT:    br i1 [[TMP5]], label [[IF_THEN1:%.*]], label [[IF_ELSE2:%.*]]
+// CHECK-RV32:       if.then1:
+// CHECK-RV32-NEXT:    store i32 7, ptr [[RETVAL]], align 4
+// CHECK-RV32-NEXT:    br label [[RETURN]]
+// CHECK-RV32:       if.else2:
+// CHECK-RV32-NEXT:    [[TMP6:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [1 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
+// CHECK-RV32-NEXT:    [[TMP7:%.*]] = and i64 [[TMP6]], 2097152
+// CHECK-RV32-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 2097152
+// CHECK-RV32-NEXT:    br i1 [[TMP8]], label [[IF_THEN3:%.*]], label [[IF_END:%.*]]
+// CHECK-RV32:       if.then3:
+// CHECK-RV32-NEXT:    store i32 11, ptr [[RETVAL]], align 4
+// CHECK-RV32-NEXT:    br label [[RETURN]]
+// CHECK-RV32:       if.end:
+// CHECK-RV32-NEXT:    br label [[IF_END4:%.*]]
+// CHECK-RV32:       if.end4:
+// CHECK-RV32-NEXT:    br label [[IF_END5:%.*]]
+// CHECK-RV32:       if.end5:
+// CHECK-RV32-NEXT:    store i32 0, ptr [[RETVAL]], align 4
+// CHECK-RV32-NEXT:    br label [[RETURN]]
+// CHECK-RV32:       return:
+// CHECK-RV32-NEXT:    [[TMP9:%.*]] = load i32, ptr [[RETVAL]], align 4
+// CHECK-RV32-NEXT:    ret i32 [[TMP9]]
+//
+// CHECK-RV64-LABEL: define dso_local signext i32 @test_riscv(
+// CHECK-RV64-SAME: i32 noundef signext [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// CHECK-RV64-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// CHECK-RV64-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
+// CHECK-RV64-NEXT:    call void @__init_riscv_feature_bits()
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [1 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1
+// CHECK-RV64-NEXT:    br i1 [[TMP2]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+// CHECK-RV64:       if.then:
+// CHECK-RV64-NEXT:    store i32 3, ptr [[RETVAL]], align 4
+// CHECK-RV64-NEXT:    br label [[RETURN:%.*]]
+// CHECK-RV64:       if.else:
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [1 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 4
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[TMP4]], 4
+// CHECK-RV64-NEXT:    br i1 [[TMP5]], label [[IF_THEN1:%.*]], label [[IF_ELSE2:%.*]]
+// CHECK-RV64:       if.then1:
+// CHECK-RV64-NEXT:    store i32 7, ptr [[RETVAL]], align 4
+// CHECK-RV64-NEXT:    br label [[RETURN]]
+// CHECK-RV64:       if.else2:
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [1 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = and i64 [[TMP6]], 2097152
+// CHECK-RV64-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 2097152
+// CHECK-RV64-NEXT:    br i1 [[TMP8]], label [[IF_THEN3:%.*]], label [[IF_END:%.*]]
+// CHECK-RV64:       if.then3:
+// CHECK-RV64-NEXT:    store i32 11, ptr [[RETVAL]], align 4
+// CHECK-RV64-NEXT:    br label [[RETURN]]
+// CHECK-RV64:       if.end:
+// CHECK-RV64-NEXT:    br label [[IF_END4:%.*]]
+// CHECK-RV64:       if.end4:
+// CHECK-RV64-NEXT:    br label [[IF_END5:%.*]]
+// CHECK-RV64:       if.end5:
+// CHECK-RV64-NEXT:    store i32 0, ptr [[RETVAL]], align 4
+// CHECK-RV64-NEXT:    br label [[RETURN]]
+// CHECK-RV64:       return:
+// CHECK-RV64-NEXT:    [[TMP9:%.*]] = load i32, ptr [[RETVAL]], align 4
+// CHECK-RV64-NEXT:    ret i32 [[TMP9]]
+//
+int test_riscv(int a) {
+  __builtin_cpu_init();
+  if (__builtin_cpu_supports("a"))
+    return 3;
+  else if (__builtin_cpu_supports("c"))
+    return 7;
+  else if (__builtin_cpu_supports("v"))
+    return 11;
+  return 0;
 }
 #endif
