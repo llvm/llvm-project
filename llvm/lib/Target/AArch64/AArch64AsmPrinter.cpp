@@ -2621,37 +2621,6 @@ void AArch64AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
                                    .addImm(2),
                                *STI);
 
-  if (TM.getTargetTriple().isArm64e()) {
-    //   autibsp
-    //   eor x17, lr, lr, lsl #1
-    //   tbz x17, #62, Lgoodsig
-    //   brk #0xc741
-    // Lgoodsig:
-
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::AUTIBSP), *STI);
-
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::EORXrs)
-                                     .addReg(AArch64::X17)
-                                     .addReg(AArch64::LR)
-                                     .addReg(AArch64::LR)
-                                     .addImm(1),
-                                 *STI);
-
-    MCContext &Ctx = OutStreamer->getContext();
-    MCSymbol *GoodSigSym = Ctx.createTempSymbol();
-    const MCExpr *GoodSig = MCSymbolRefExpr::create(GoodSigSym, Ctx);
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::TBZX)
-                                     .addReg(AArch64::X17)
-                                     .addImm(62)
-                                     .addExpr(GoodSig),
-                                 *STI);
-
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::BRK).addImm(0xc471),
-                                 *STI);
-
-    OutStreamer->emitLabel(GoodSigSym);
-  }
-
   OutStreamer->emitInstruction(MCInstBuilder(TM.getTargetTriple().isArm64e()
                                                  ? AArch64::BRAAZ
                                                  : AArch64::BR)

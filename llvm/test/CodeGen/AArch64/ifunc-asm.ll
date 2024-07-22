@@ -62,11 +62,6 @@ entry:
 ; MACHO-NEXT:      ldp     x3, x2, [sp], #16
 ; MACHO-NEXT:      ldp     x1, x0, [sp], #16
 ; MACHO-NEXT:      ldp     x29, x30, [sp], #16
-; PAUTH-NEXT:      autibsp
-; PAUTH-NEXT:      eor     x17, x30, x30, lsl #1
-; PAUTH-NEXT:      tbz     x17, #62, [[GOOD_SIG:Ltmp[0-9]+]]
-; PAUTH-NEXT:      brk     #0xc471
-; PAUTH-NEXT: [[GOOD_SIG]]:
 ; ARM64-NEXT:      br      x16
 ; PAUTH-NEXT:      braaz   x16
 
