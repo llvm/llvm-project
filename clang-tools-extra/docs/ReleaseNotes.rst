@@ -245,9 +245,9 @@ Changes in existing checks
   where source is already a ``void``` pointer, making middle ``void`` pointer
   casts bug-free.
 
-- Improved :doc:`exception-escape <clang-tidy/checks/bugprone/exception-escape>`
-  check to correctly detect exception handler of type ``CV void *`` as catching all 
-  ``CV`` compatible pointer types.
+- Improved :doc:`bugprone-exception-escape
+  <clang-tidy/checks/bugprone/exception-escape>`  check to correctly detect exception 
+  handler of type ``CV void *`` as catching all  ``CV`` compatible pointer types.
 
 - Improved :doc:`bugprone-forwarding-reference-overload
   <clang-tidy/checks/bugprone/forwarding-reference-overload>`
