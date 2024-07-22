@@ -228,7 +228,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.epoll.epoll_ctl
     libc.src.sys.epoll.epoll_pwait
     libc.src.sys.epoll.epoll_wait
-    libc.src.sys.epoll.epoll_pwait2
+    # TODO: Need to check if pwait2 is available before providing.
+    # https://github.com/llvm/llvm-project/issues/80060
+    # libc.src.sys.epoll.epoll_pwait2
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
