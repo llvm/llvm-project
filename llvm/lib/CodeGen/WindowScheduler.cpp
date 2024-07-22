@@ -315,7 +315,7 @@ void WindowScheduler::generateTripleMBB() {
       auto *NewMI = MF->CloneMachineInstr(MI);
       DenseMap<Register, Register> NewDefs;
       // New defines are updated.
-      for (auto MO : NewMI->all_defs())
+      for (const auto& MO : NewMI->all_defs())
         if (MO.isReg() && MO.getReg().isVirtual()) {
           Register NewDef =
               MRI->createVirtualRegister(MRI->getRegClass(MO.getReg()));
@@ -692,7 +692,7 @@ unsigned WindowScheduler::getOriStage(MachineInstr *OriMI, unsigned Offset) {
 Register WindowScheduler::getAntiRegister(MachineInstr *Phi) {
   assert(Phi->isPHI() && "Expecting PHI!");
   Register AntiReg;
-  for (auto MO : Phi->uses()) {
+  for (const auto& MO : Phi->uses()) {
     if (MO.isReg())
       AntiReg = MO.getReg();
     else if (MO.isMBB() && MO.getMBB() == MBB)
