@@ -52,7 +52,6 @@ If the compilation target is a shader library, only availability based on shader
 
 As a result, availability based on specific shader stage will only be diagnosed in code that is reachable from a shader entry point or library export function. It also means that function bodies might be scanned multiple time. When that happens, care should be taken not to produce duplicated diagnostics.
 
-========
 Examples
 ========
 
