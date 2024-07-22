@@ -1682,13 +1682,11 @@ static void dryRunAddFact(CmpInst::Predicate Pred, Value *A, Value *B,
                           ConstraintInfo &Info, unsigned &EstimatedRowsA,
                           unsigned &EstimatedRowsB,
                           unsigned &EstimatedColumns) {
+  // What follows is a simplified dry-run of Info.getConstraint and addFact.
   auto UpdateEstimate = [&Info, &EstimatedRowsA, &EstimatedRowsB,
                          &EstimatedColumns](CmpInst::Predicate Pred, Value *A,
                                             Value *B) {
-    // What follows is a simplified dry-run of Info.getConstraint and addFact.
-    unsigned NumNewVars = 0;
     bool IsSigned = false;
-
     switch (Pred) {
     case CmpInst::ICMP_UGT:
     case CmpInst::ICMP_UGE:
@@ -1703,35 +1701,41 @@ static void dryRunAddFact(CmpInst::Predicate Pred, Value *A, Value *B,
       return;
     }
 
-    SmallVector<ConditionTy, 4> Preconditions;
-    auto &Value2Index = Info.getValue2Index(IsSigned);
-    Value *AStrip = A->stripPointerCastsSameRepresentation();
-    Value *BStrip = B->stripPointerCastsSameRepresentation();
-    SmallVector<DecompEntry> AVars, BVars;
+    // We abuse the Value2Index map by storing a map of Value -> size of
+    // decompose(Value).Vars. We do this to avoid wastefully calling decompose
+    // on chains we have already seen.
+    auto &DecompSizes = Info.getValue2Index(IsSigned);
+    const auto &DL = Info.getDataLayout();
 
-    if (!Value2Index.contains(AStrip)) {
-      AVars =
-          decompose(AStrip, Preconditions, IsSigned, Info.getDataLayout()).Vars;
-      Value2Index.insert({AStrip, Value2Index.size() + 1});
-    }
-    if (!Value2Index.contains(BStrip)) {
-      BVars =
-          decompose(BStrip, Preconditions, IsSigned, Info.getDataLayout()).Vars;
-      Value2Index.insert({BStrip, Value2Index.size() + 1});
-    }
+    auto GetDecompSize = [&DL, &DecompSizes, IsSigned](Value *V) {
+      if (!DecompSizes.contains(V)) {
+        SmallVector<ConditionTy, 4> Preconditions;
+        auto Vars = decompose(V, Preconditions, IsSigned, DL).Vars;
+        for (const auto &[Idx, KV] : enumerate(Vars))
+          // decompose matches the passed Value against some pattern, and
+          // recursively calls itself on the matched inner values, merging
+          // results into the final chain. We conservatively estimate that any
+          // sub-chain in the decompose chain will have the length of the chain
+          // minus the index: the results of two sub-chains could be merged,
+          // leading to a conservative estimate. This is however, not a problem
+          // in practice, as these conservative estimates are anyway less than
+          // the the size of the total chain, and std::max on the estimated
+          // columns will ignore these smaller estiamtes.
+          DecompSizes.insert({KV.Variable, Vars.size() - Idx});
+        DecompSizes.insert({V, Vars.size()});
+      }
+      return DecompSizes.at(V);
+    };
 
-    for (const auto &KV : concat<DecompEntry>(AVars, BVars)) {
-      if (KV.Variable == AStrip || KV.Variable == BStrip ||
-          !Value2Index.contains(KV.Variable))
-        ++NumNewVars;
-    }
+    unsigned ASize = GetDecompSize(A->stripPointerCastsSameRepresentation());
+    unsigned BSize = GetDecompSize(B->stripPointerCastsSameRepresentation());
 
     if (IsSigned)
       ++EstimatedRowsA;
     else
       ++EstimatedRowsB;
 
-    EstimatedColumns = std::max(EstimatedColumns, NumNewVars + 2);
+    EstimatedColumns = std::max(EstimatedColumns, ASize + BSize + 2);
   };
 
   UpdateEstimate(Pred, A, B);
@@ -1764,7 +1768,7 @@ static void dryRunAddFact(CmpInst::Predicate Pred, Value *A, Value *B,
 }
 
 /// Performs a dry run of the transform, computing a conservative estimate of
-/// the total number of columns we need in the underlying storage.
+/// the total number of rows and columns we need in the underlying storage.
 static std::tuple<State, unsigned, unsigned>
 dryRun(Function &F, DominatorTree &DT, LoopInfo &LI, ScalarEvolution &SE) {
   DT.updateDFSNumbers();
