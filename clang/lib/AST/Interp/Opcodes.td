@@ -733,6 +733,8 @@ def InvalidDeclRef : Opcode {
   let Args = [ArgDeclRef];
 }
 
+def SizelessVectorElementSize : Opcode;
+
 def Assume : Opcode;
 
 def ArrayDecay : Opcode;

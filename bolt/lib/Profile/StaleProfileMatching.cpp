@@ -194,10 +194,12 @@ public:
   /// Initialize stale matcher.
   void init(const std::vector<FlowBlock *> &Blocks,
             const std::vector<BlendedBlockHash> &Hashes,
-            const std::vector<uint64_t> &CallHashes) {
+            const std::vector<uint64_t> &CallHashes,
+            std::optional<uint64_t> YamlBFGUID) {
     assert(Blocks.size() == Hashes.size() &&
            Hashes.size() == CallHashes.size() &&
            "incorrect matcher initialization");
+
     for (size_t I = 0; I < Blocks.size(); I++) {
       FlowBlock *Block = Blocks[I];
       uint16_t OpHash = Hashes[I].OpcodeHash;
@@ -205,14 +207,19 @@ public:
       if (CallHashes[I])
         CallHashToBlocks[CallHashes[I]].push_back(
             std::make_pair(Hashes[I], Block));
+      this->Blocks.push_back(Block);
     }
+    this->YamlBFGUID = YamlBFGUID;
   }
 
   /// Find the most similar block for a given hash.
-  const FlowBlock *matchBlock(BlendedBlockHash BlendedHash,
-                              uint64_t CallHash) const {
+  const FlowBlock *matchBlock(
+      BlendedBlockHash BlendedHash, uint64_t CallHash,
+      const std::vector<yaml::bolt::PseudoProbeInfo> &PseudoProbes) const {
     const FlowBlock *BestBlock = matchWithOpcodes(BlendedHash);
-    return BestBlock ? BestBlock : matchWithCalls(BlendedHash, CallHash);
+    BestBlock = BestBlock ? BestBlock : matchWithCalls(BlendedHash, CallHash);
+    return BestBlock || !YamlBFGUID ? BestBlock
+                                    : matchWithPseudoProbes(PseudoProbes);
   }
 
   /// Returns true if the two basic blocks (in the binary and in the profile)
@@ -227,6 +234,10 @@ private:
   using HashBlockPairType = std::pair<BlendedBlockHash, FlowBlock *>;
   std::unordered_map<uint16_t, std::vector<HashBlockPairType>> OpHashToBlocks;
   std::unordered_map<uint64_t, std::vector<HashBlockPairType>> CallHashToBlocks;
+  std::vector<FlowBlock *> Blocks;
+  // If the pseudo probe checksums of the profiled and binary functions are
+  // equal, then the YamlBF's GUID is defined and used to match blocks.
+  std::optional<uint64_t> YamlBFGUID;
 
   // Uses OpcodeHash to find the most similar block for a given hash.
   const FlowBlock *matchWithOpcodes(BlendedBlockHash BlendedHash) const {
@@ -265,6 +276,28 @@ private:
       }
     }
     return BestBlock;
+  }
+  // Uses pseudo probe information to attach the profile to the appropriate
+  // block.
+  const FlowBlock *matchWithPseudoProbes(
+      const std::vector<yaml::bolt::PseudoProbeInfo> &PseudoProbes) const {
+    // Searches for the pseudo probe attached to the matched function's block,
+    // ignoring pseudo probes attached to function calls and inlined functions'
+    // blocks.
+    outs() << "match with pseudo probes\n";
+    for (const auto &PseudoProbe : PseudoProbes) {
+      // Ensures that pseudo probe information belongs to the appropriate
+      // function and not an inlined function.
+      if (PseudoProbe.GUID != YamlBFGUID)
+        continue;
+      // Skips pseudo probes attached to function calls.
+      if (PseudoProbe.Type != static_cast<uint8_t>(PseudoProbeType::Block))
+        continue;
+      assert(PseudoProbe.Index < Blocks.size() &&
+             "pseudo probe index out of range");
+      return Blocks[PseudoProbe.Index];
+    }
+    return nullptr;
   }
 };
 
@@ -447,12 +480,11 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
 /// of the basic blocks in the binary, the count is "matched" to the block.
 /// Similarly, if both the source and the target of a count in the profile are
 /// matched to a jump in the binary, the count is recorded in CFG.
-size_t
-matchWeightsByHashes(BinaryContext &BC,
-                     const BinaryFunction::BasicBlockOrderType &BlockOrder,
-                     const yaml::bolt::BinaryFunctionProfile &YamlBF,
-                     FlowFunction &Func, HashFunction HashFunction,
-                     YAMLProfileReader::ProfileLookupMap &IdToYamlBF) {
+size_t matchWeightsByHashes(
+    BinaryContext &BC, const BinaryFunction::BasicBlockOrderType &BlockOrder,
+    const yaml::bolt::BinaryFunctionProfile &YamlBF, FlowFunction &Func,
+    HashFunction HashFunction, YAMLProfileReader::ProfileLookupMap &IdToYamlBF,
+    const BinaryFunction &BF) {
 
   assert(Func.Blocks.size() == BlockOrder.size() + 2);
 
@@ -481,8 +513,22 @@ matchWeightsByHashes(BinaryContext &BC,
     LLVM_DEBUG(dbgs() << "BB with index " << I << " has hash = "
                       << Twine::utohexstr(BB->getHash()) << "\n");
   }
+  uint64_t BFPseudoProbeDescHash = 0;
+  if (BF.hasPseudoProbe()) {
+    const MCPseudoProbeDecoder *PseudoProbeDecoder = BC.getPseudoProbeDecoder();
+    assert(PseudoProbeDecoder &&
+           "If BF has pseudo probe, BC should have a pseudo probe decoder");
+    BFPseudoProbeDescHash =
+        PseudoProbeDecoder->getFuncDescForGUID(BF.getGUID())->FuncHash;
+  }
+  bool MatchWithPseudoProbes =
+      BFPseudoProbeDescHash && YamlBF.PseudoProbeDescHash
+          ? BFPseudoProbeDescHash == YamlBF.PseudoProbeDescHash
+          : false;
   StaleMatcher Matcher;
-  Matcher.init(Blocks, BlendedHashes, CallHashes);
+  Matcher.init(Blocks, BlendedHashes, CallHashes,
+               MatchWithPseudoProbes ? std::make_optional(YamlBF.GUID)
+                                     : std::nullopt);
 
   // Index in yaml profile => corresponding (matched) block
   DenseMap<uint64_t, const FlowBlock *> MatchedBlocks;
@@ -502,7 +548,7 @@ matchWeightsByHashes(BinaryContext &BC,
       else
         llvm_unreachable("Unhandled HashFunction");
     }
-    MatchedBlock = Matcher.matchBlock(YamlHash, CallHash);
+    MatchedBlock = Matcher.matchBlock(YamlHash, CallHash, YamlBB.PseudoProbes);
     if (MatchedBlock == nullptr && YamlBB.Index == 0)
       MatchedBlock = Blocks[0];
     if (MatchedBlock != nullptr) {
@@ -828,7 +874,7 @@ bool YAMLProfileReader::inferStaleProfile(
   // Match as many block/jump counts from the stale profile as possible
   size_t MatchedBlocks =
       matchWeightsByHashes(BF.getBinaryContext(), BlockOrder, YamlBF, Func,
-                           YamlBP.Header.HashFunction, IdToYamLBF);
+                           YamlBP.Header.HashFunction, IdToYamLBF, BF);
 
   // Adjust the flow function by marking unreachable blocks Unlikely so that
   // they don't get any counts assigned.

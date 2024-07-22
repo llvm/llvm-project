@@ -1,0 +1,69 @@
+## Tests stale block matching with pseudo probes.
+
+# REQUIRES: system-linux
+# RUN: split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %t/main.s -o %t.o
+# RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
+# RUN: llvm-bolt %t.exe -o %t.out --data %t/yaml -v=2 \
+# RUN:   --print-cfg --funcs=main --profile-ignore-hash=0 2>&1 | FileCheck %s
+
+# CHECK: BOLT-INFO: matched 0 functions with similar names
+
+#--- main.s
+ .text
+  .globl  main                            # -- Begin function main
+  .p2align        4, 0x90
+  .type   main,@function
+main:                                   # @main
+# %bb.0:
+  pushq   %rbp
+  movq    %rsp, %rbp
+  movl    $0, -4(%rbp)
+  .pseudoprobe    15822663052811949562 1 0 0 main
+  xorl    %eax, %eax
+  popq    %rbp
+  retq
+.Lfunc_end0:
+  .size   main, .Lfunc_end0-main
+                                  # -- End function
+  .section        .pseudo_probe_desc,"",@progbits
+  .quad   -2624081020897602054
+  .quad   4294967295
+  .byte   4
+  .ascii  "main"
+  .ident  "clang version 17.0.6 (CentOS 17.0.6-5.el9)"
+  .section        ".note.GNU-stack","",@progbits
+  .addrsig
+
+#--- yaml
+---
+header:
+  profile-version: 1
+  binary-name:     'match-blocks-with-pseudo-probes.s.tmp.exe'
+  binary-build-id: '<unknown>'
+  profile-flags:   [ lbr ]
+  profile-origin:  branch profile reader
+  profile-events:  ''
+  dfs-order:       false
+  hash-func:       xxh3
+functions:
+  - name:            main
+    fid:             0
+    hash:            0x0000000000000001
+    exec:            1
+    nblocks:         6
+    blocks:
+      - bid:             1
+        hash:            0x0000000000000001
+        insns:           1
+        succ:            [ { bid: 3, cnt: 1} ]
+  - name:            foo
+    fid:             1
+    hash:            0x0000000000000002
+    exec:            1
+    nblocks:         6
+    blocks:
+      - bid:             1
+        hash:            0x0000000000000002
+        insns:           1
+        succ:            [ { bid: 3, cnt: 1} ]

@@ -180,10 +180,6 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsModulesImport : 1;
 
-  // True if this is the 'module' contextual keyword.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsModulesDecl : 1;
-
   // True if this is a mangled OpenMP variant name.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsMangledOpenMPVariantName : 1;
@@ -200,7 +196,7 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsFinal : 1;
 
-  // 21 bits left in a 64-bit word.
+  // 22 bits left in a 64-bit word.
 
   // Managed by the language front-end.
   void *FETokenInfo = nullptr;
@@ -216,8 +212,8 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
         IsCPPOperatorKeyword(false), NeedsHandleIdentifier(false),
         IsFromAST(false), ChangedAfterLoad(false), FEChangedAfterLoad(false),
         RevertedTokenID(false), OutOfDate(false), IsModulesImport(false),
-        IsModulesDecl(false), IsMangledOpenMPVariantName(false),
-        IsDeprecatedMacro(false), IsRestrictExpansion(false), IsFinal(false) {}
+        IsMangledOpenMPVariantName(false), IsDeprecatedMacro(false),
+        IsRestrictExpansion(false), IsFinal(false) {}
 
 public:
   IdentifierInfo(const IdentifierInfo &) = delete;
@@ -524,18 +520,6 @@ public:
       RecomputeNeedsHandleIdentifier();
   }
 
-  /// Determine whether this is the contextual keyword \c module.
-  bool isModulesDeclaration() const { return IsModulesDecl; }
-
-  /// Set whether this identifier is the contextual keyword \c module.
-  void setModulesDeclaration(bool I) {
-    IsModulesDecl = I;
-    if (I)
-      NeedsHandleIdentifier = true;
-    else
-      RecomputeNeedsHandleIdentifier();
-  }
-
   /// Determine whether this is the mangled name of an OpenMP variant.
   bool isMangledOpenMPVariantName() const { return IsMangledOpenMPVariantName; }
 
@@ -756,8 +740,6 @@ public:
     // If this is the 'import' contextual keyword, mark it as such.
     if (Name == "import")
       II->setModulesImport(true);
-    else if (Name == "module")
-      II->setModulesDeclaration(true);
 
     return *II;
   }
