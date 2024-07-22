@@ -50,7 +50,7 @@ class ompd_init(gdb.Command):
                     "No ompd_dll_locations symbol in execution, make sure to have an OMPD enabled OpenMP runtime"
                 )
 
-            while gdb.parse_and_eval("(char**)ompd_dll_locations") == False:
+            while not gdb.parse_and_eval("(char**)ompd_dll_locations"):
                 gdb.execute("tbreak ompd_dll_locations_valid")
                 gdb.execute("continue")
 
