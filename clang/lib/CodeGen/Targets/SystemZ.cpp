@@ -568,8 +568,8 @@ public:
     }
   }
 
-  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty, AggValueSlot Slot) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 };
 
 class ZOSXPLinkTargetCodeGenInfo : public TargetCodeGenInfo {
@@ -808,7 +808,7 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty,
 }
 
 RValue ZOSXPLinkABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                    QualType Ty, AggValueSlot Slot) const {
+                                   QualType Ty, AggValueSlot Slot) const {
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*indirect*/ false,
                           CGF.getContext().getTypeInfoInChars(Ty),
                           CGF.getPointerSize(),
