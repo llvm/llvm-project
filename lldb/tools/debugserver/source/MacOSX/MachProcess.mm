@@ -2846,9 +2846,12 @@ pid_t MachProcess::AttachForDebug(
     if (err.Success()) {
       m_flags |= eMachProcessFlagsAttached;
       // Sleep a bit to let the exception get received and set our process
-      // status
-      // to stopped.
-      ::usleep(250000);
+      // status to stopped.
+      int max_retry = 4;
+      do {
+        errno = 0;
+        usleep(250000); // If our 0.25 second sleep is interrupted, redo
+      } while (errno == EINTR && --max_retry > 0);
       DNBLog("[LaunchAttach] (%d) Done napping after ptrace(PT_ATTACHEXC)'ing",
              getpid());
       DNBLogThreadedIf(LOG_PROCESS, "successfully attached to pid %d", pid);
