@@ -310,10 +310,20 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   switch (Opc) {
   case TargetOpcode::G_LOAD: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    OpdsMapping[0] = GPRValueMapping;
-    OpdsMapping[1] = GPRValueMapping;
+    TypeSize Size = Ty.getSizeInBits();
+    if (Ty.isVector()) {
+      OpdsMapping[0] = getVRBValueMapping(Size.getKnownMinValue());
+      OpdsMapping[1] = getVRBValueMapping(Size.getKnownMinValue());
+    } else if (isPreISelGenericFloatingPointOpcode(Opc)) {
+      OpdsMapping[0] = getFPValueMapping(Size.getFixedValue());
+      OpdsMapping[1] = getFPValueMapping(Size.getFixedValue());
+    } else {
+      OpdsMapping[0] = GPRValueMapping;
+      OpdsMapping[1] = GPRValueMapping;
+    }
     // Use FPR64 for s64 loads on rv32.
-    if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
+    if (GPRSize == 32 && Ty.getSizeInBits().getKnownMinValue() == 64 &&
+        !Ty.isVector()) {
       assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
       OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
       break;
@@ -333,10 +343,21 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
   case TargetOpcode::G_STORE: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    OpdsMapping[0] = GPRValueMapping;
-    OpdsMapping[1] = GPRValueMapping;
+    TypeSize Size = Ty.getSizeInBits();
+    if (Ty.isVector()) {
+      OpdsMapping[0] = getVRBValueMapping(Size.getKnownMinValue());
+      OpdsMapping[1] = getVRBValueMapping(Size.getKnownMinValue());
+    } else if (isPreISelGenericFloatingPointOpcode(Opc)) {
+      OpdsMapping[0] = getFPValueMapping(Size.getFixedValue());
+      OpdsMapping[1] = getFPValueMapping(Size.getFixedValue());
+    } else {
+      OpdsMapping[0] = GPRValueMapping;
+      OpdsMapping[1] = GPRValueMapping;
+    }
+
     // Use FPR64 for s64 stores on rv32.
-    if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
+    if (GPRSize == 32 && Ty.getSizeInBits().getKnownMinValue() == 64 &&
+        !Ty.isVector()) {
       assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
       OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
       break;
