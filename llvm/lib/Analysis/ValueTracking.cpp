@@ -6615,10 +6615,15 @@ const Value *llvm::getUnderlyingObjectAggressive(const Value *V) {
   SmallPtrSet<const Value *, 8> Visited;
   SmallVector<const Value *, 8> Worklist;
   Worklist.push_back(V);
-  const Value *Object = nullptr, *FirstObject = nullptr;
+  const Value *Object = nullptr;
+  // Used as fallback if we can't find a common underlying object through
+  // recursion.
+  bool First = true;
+  const Value *FirstObject = getUnderlyingObject(V);
   do {
     const Value *P = Worklist.pop_back_val();
-    P = getUnderlyingObject(P);
+    P = First ? FirstObject : getUnderlyingObject(P);
+    First = false;
 
     if (!FirstObject)
       FirstObject = P;
