@@ -27,6 +27,7 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSymbolCOFF.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -45,7 +46,11 @@ MCWinCOFFStreamer::MCWinCOFFStreamer(MCContext &Context,
                                      std::unique_ptr<MCCodeEmitter> CE,
                                      std::unique_ptr<MCObjectWriter> OW)
     : MCObjectStreamer(Context, std::move(MAB), std::move(OW), std::move(CE)),
-      CurSymbol(nullptr) {}
+      CurSymbol(nullptr) {
+  auto *TO = Context.getTargetOptions();
+  if (TO && TO->MCIncrementalLinkerCompatible)
+    getAssembler().setIncrementalLinkerCompatible(true);
+}
 
 void MCWinCOFFStreamer::emitInstToData(const MCInst &Inst,
                                        const MCSubtargetInfo &STI) {
