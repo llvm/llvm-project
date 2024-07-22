@@ -297,10 +297,11 @@ OMPParallelDirective *OMPParallelDirective::CreateEmpty(const ASTContext &C,
                                                     /*NumChildren=*/1);
 }
 
-OMPSimdDirective *OMPSimdDirective::Create(
-    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
-    unsigned CollapsedNum, ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt,
-    const HelperExprs &Exprs) {
+OMPSimdDirective *
+OMPSimdDirective::Create(const ASTContext &C, SourceLocation StartLoc,
+                         SourceLocation EndLoc, unsigned CollapsedNum,
+                         ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt,
+                         const HelperExprs &Exprs) {
   auto *Dir = createDirective<OMPSimdDirective>(
       C, Clauses, AssociatedStmt, numLoopChildren(CollapsedNum, OMPD_simd),
       StartLoc, EndLoc, CollapsedNum);
@@ -1566,10 +1567,11 @@ OMPParallelMaskedTaskLoopSimdDirective::CreateEmpty(const ASTContext &C,
       CollapsedNum);
 }
 
-OMPDistributeDirective *OMPDistributeDirective::Create(
-    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
-    unsigned CollapsedNum, ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt,
-    const HelperExprs &Exprs) {
+OMPDistributeDirective *
+OMPDistributeDirective::Create(const ASTContext &C, SourceLocation StartLoc,
+                               SourceLocation EndLoc, unsigned CollapsedNum,
+                               ArrayRef<OMPClause *> Clauses,
+                               Stmt *AssociatedStmt, const HelperExprs &Exprs) {
   auto *Dir = createDirective<OMPDistributeDirective>(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_distribute), StartLoc, EndLoc,

@@ -1105,8 +1105,7 @@ bool CodeGenFunction::EmitOMPLastprivateClauseInit(
   llvm::DenseSet<const VarDecl *> AlreadyEmittedVars;
   for (const auto *C : D.getClausesOfKind<OMPLastprivateClause>()) {
     HasAtLeastOneLastprivate = true;
-    if (isOpenMPTaskLoopDirective(EKind) &&
-        !getLangOpts().OpenMPSimd)
+    if (isOpenMPTaskLoopDirective(EKind) && !getLangOpts().OpenMPSimd)
       break;
     const auto *IRef = C->varlist_begin();
     const auto *IDestRef = C->destination_exprs().begin();
@@ -3261,7 +3260,7 @@ emitInnerParallelForWhenCombined(CodeGenFunction &CGF,
                                  CodeGenFunction::JumpDest LoopExit) {
   OpenMPDirectiveKind EKind = getEffectiveDirectiveKind(S);
   auto &&CGInlinedWorksharingLoop = [&S, EKind](CodeGenFunction &CGF,
-                                               PrePostActionTy &Action) {
+                                                PrePostActionTy &Action) {
     Action.Enter(CGF);
     bool HasCancel = false;
     if (!isOpenMPSimdDirective(EKind)) {
@@ -4164,8 +4163,8 @@ void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
     CGOpenMPRuntime::StaticRTInput StaticInit(
         /*IVSize=*/32, /*IVSigned=*/true, /*Ordered=*/false, IL.getAddress(),
         LB.getAddress(), UB.getAddress(), ST.getAddress());
-    CGF.CGM.getOpenMPRuntime().emitForStaticInit(
-        CGF, S.getBeginLoc(), EKind, ScheduleKind, StaticInit);
+    CGF.CGM.getOpenMPRuntime().emitForStaticInit(CGF, S.getBeginLoc(), EKind,
+                                                 ScheduleKind, StaticInit);
     // UB = min(UB, GlobalUB);
     llvm::Value *UBVal = CGF.EmitLoadOfScalar(UB, S.getBeginLoc());
     llvm::Value *MinUBGlobalUB = CGF.Builder.CreateSelect(
@@ -5257,7 +5256,8 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
     BodyGen(CGF);
   };
   llvm::Function *OutlinedFn = CGM.getOpenMPRuntime().emitTaskOutlinedFunction(
-      S, *I, *PartId, *TaskT, EKind, CodeGen, /*Tied=*/true, Data.NumberOfParts);
+      S, *I, *PartId, *TaskT, EKind, CodeGen, /*Tied=*/true,
+      Data.NumberOfParts);
   llvm::APInt TrueOrFalse(32, S.hasClausesOfKind<OMPNowaitClause>() ? 1 : 0);
   IntegerLiteral IfCond(getContext(), TrueOrFalse,
                         getContext().getIntTypeForBitwidth(32, /*Signed=*/0),
@@ -7989,11 +7989,11 @@ void CodeGenFunction::EmitOMPGenericLoopDirective(
     BindKind = C->getBindKind();
 
   switch (BindKind) {
-  case OMPC_BIND_parallel:  // for
+  case OMPC_BIND_parallel: // for
     return emitOMPForDirective(S, *this, CGM, /*HasCancel=*/false);
-  case OMPC_BIND_teams:     // distribute
+  case OMPC_BIND_teams: // distribute
     return emitOMPDistributeDirective(S, *this, CGM);
-  case OMPC_BIND_thread:    // simd
+  case OMPC_BIND_thread: // simd
     return emitOMPSimdDirective(S, *this, CGM);
   case OMPC_BIND_unknown:
     break;
