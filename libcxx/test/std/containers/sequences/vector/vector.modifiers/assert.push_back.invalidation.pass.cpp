@@ -50,7 +50,7 @@ int main(int, char**) {
   TEST_LIBCPP_ASSERT_FAILURE(
       *(it + old_capacity), "__bounded_iter::operator*: Attempt to dereference an iterator at the end");
   // Unfortunately, the bounded iterator does not detect that it's been invalidated and will still allow attempts to
-  // dereference elements 0 to 4 (even though they refer to memory that's been reallocated).
+  // dereference elements 0 to 3 (even though they refer to memory that's been reallocated).
 
   return 0;
 }

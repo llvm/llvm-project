@@ -845,8 +845,8 @@ private:
     // through the bounded iterator without failing checks. The downside is that the bounded iterator won't catch
     // access that is logically out-of-bounds, i.e., goes beyond the size, but is still within the capacity. With the
     // current implementation, there is no connection between a bounded iterator and its associated container, so we
-    // don't have a way to update existing valid iterators when the container is resized, so we have to go with a more
-    // lax approach.
+    // don't have a way to update existing valid iterators when the container is resized and thus have to go with
+    // a laxer approach.
     return std::__make_bounded_iter(
         std::__wrap_iter<pointer>(__p),
         std::__wrap_iter<pointer>(this->__begin_),
