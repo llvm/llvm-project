@@ -28,51 +28,41 @@ using namespace ento;
 
 namespace {
 class MmapWriteExecChecker
-    : public Checker<check::BeginFunction, check::PreCall> {
+    : public Checker<check::ASTDecl<TranslationUnitDecl>, check::PreCall> {
   CallDescription MmapFn{CDM::CLibrary, {"mmap"}, 6};
   CallDescription MprotectFn{CDM::CLibrary, {"mprotect"}, 3};
   const BugType BT{this, "W^X check fails, Write Exec prot flags set",
                    "Security"};
 
-  mutable bool FlagsInitialized = false;
+  // Default values are used if definition of the flags is not found.
   mutable int ProtRead = 0x01;
   mutable int ProtWrite = 0x02;
   mutable int ProtExec = 0x04;
 
 public:
-  void checkBeginFunction(CheckerContext &C) const;
+  void checkASTDecl(const TranslationUnitDecl *TU, AnalysisManager &Mgr,
+                    BugReporter &BR) const;
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
-
-  int ProtExecOv;
-  int ProtReadOv;
 };
 }
 
-void MmapWriteExecChecker::checkBeginFunction(CheckerContext &C) const {
-  if (FlagsInitialized)
-    return;
-
-  FlagsInitialized = true;
-
-  const std::optional<int> FoundProtRead =
-          tryExpandAsInteger("PROT_READ", C.getPreprocessor());
+void MmapWriteExecChecker::checkASTDecl(const TranslationUnitDecl *TU,
+                                        AnalysisManager &Mgr,
+                                        BugReporter &BR) const {
+  Preprocessor &PP = Mgr.getPreprocessor();
+  const std::optional<int> FoundProtRead = tryExpandAsInteger("PROT_READ", PP);
   const std::optional<int> FoundProtWrite =
-          tryExpandAsInteger("PROT_WRITE", C.getPreprocessor());
-  const std::optional<int> FoundProtExec =
-          tryExpandAsInteger("PROT_EXEC", C.getPreprocessor());
+      tryExpandAsInteger("PROT_WRITE", PP);
+  const std::optional<int> FoundProtExec = tryExpandAsInteger("PROT_EXEC", PP);
   if (FoundProtRead && FoundProtWrite && FoundProtExec) {
     ProtRead = *FoundProtRead;
     ProtWrite = *FoundProtWrite;
     ProtExec = *FoundProtExec;
-  } else {
-    // FIXME: Are these useful?
-    ProtRead = ProtReadOv;
-    ProtExec = ProtExecOv;
   }
 }
 
 void MmapWriteExecChecker::checkPreCall(const CallEvent &Call,
-                                         CheckerContext &C) const {
+                                        CheckerContext &C) const {
   if (matchesAny(Call, MmapFn, MprotectFn)) {
     SVal ProtVal = Call.getArgSVal(2);
     auto ProtLoc = ProtVal.getAs<nonloc::ConcreteInt>();
@@ -97,17 +87,10 @@ void MmapWriteExecChecker::checkPreCall(const CallEvent &Call,
   }
 }
 
-void ento::registerMmapWriteExecChecker(CheckerManager &mgr) {
-  MmapWriteExecChecker *Mwec =
-      mgr.registerChecker<MmapWriteExecChecker>();
-  Mwec->ProtExecOv =
-    mgr.getAnalyzerOptions()
-      .getCheckerIntegerOption(Mwec, "MmapProtExec");
-  Mwec->ProtReadOv =
-    mgr.getAnalyzerOptions()
-      .getCheckerIntegerOption(Mwec, "MmapProtRead");
+void ento::registerMmapWriteExecChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<MmapWriteExecChecker>();
 }
 
-bool ento::shouldRegisterMmapWriteExecChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterMmapWriteExecChecker(const CheckerManager &) {
   return true;
 }
