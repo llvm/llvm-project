@@ -44,13 +44,12 @@ using namespace clang;
 // TemplateParameterList Implementation
 //===----------------------------------------------------------------------===//
 
-namespace {
 template <class TemplateParam>
-bool DefaultArgumentContainsUnexpandedPack(const TemplateParam &P) {
+static bool
+DefaultTemplateArgumentContainsUnexpandedPack(const TemplateParam &P) {
   return P.hasDefaultArgument() &&
          P.getDefaultArgument().getArgument().containsUnexpandedParameterPack();
 }
-} // namespace
 
 TemplateParameterList::TemplateParameterList(const ASTContext& C,
                                              SourceLocation TemplateLoc,
@@ -69,18 +68,18 @@ TemplateParameterList::TemplateParameterList(const ASTContext& C,
     bool IsPack = P->isTemplateParameterPack();
     if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(P)) {
       if (!IsPack && (NTTP->getType()->containsUnexpandedParameterPack() ||
-                      DefaultArgumentContainsUnexpandedPack(*NTTP)))
+                      DefaultTemplateArgumentContainsUnexpandedPack(*NTTP)))
         ContainsUnexpandedParameterPack = true;
       if (NTTP->hasPlaceholderTypeConstraint())
         HasConstrainedParameters = true;
     } else if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(P)) {
       if (!IsPack &&
           (TTP->getTemplateParameters()->containsUnexpandedParameterPack() ||
-           DefaultArgumentContainsUnexpandedPack(*TTP))) {
+           DefaultTemplateArgumentContainsUnexpandedPack(*TTP))) {
         ContainsUnexpandedParameterPack = true;
       }
     } else if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(P)) {
-      if (!IsPack && DefaultArgumentContainsUnexpandedPack(*TTP)) {
+      if (!IsPack && DefaultTemplateArgumentContainsUnexpandedPack(*TTP)) {
         ContainsUnexpandedParameterPack = true;
       } else if (const TypeConstraint *TC = TTP->getTypeConstraint();
                  TC && TC->getImmediatelyDeclaredConstraint()
