@@ -148,6 +148,7 @@ public:
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override {
     return false;
   }
+  bool HasNativeLLVMSupport() const override { return true; }
   bool isPICDefaultForced() const override { return false; }
   bool SupportsProfiling() const override { return false; }
   bool IsMathErrnoDefault() const override { return false; }
@@ -182,6 +183,9 @@ public:
   const llvm::Triple *getAuxTriple() const override {
     return &HostTC.getTriple();
   }
+
+  bool HasNativeLLVMSupport() const override { return false; }
+
   std::string getInputFilename(const InputInfo &Input) const override;
   llvm::opt::DerivedArgList *
   TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,

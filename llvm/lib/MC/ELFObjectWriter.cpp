@@ -198,58 +198,6 @@ public:
   void writeSection(uint32_t GroupSymbolIndex, uint64_t Offset, uint64_t Size,
                     const MCSectionELF &Section);
 };
-
-class ELFSingleObjectWriter : public ELFObjectWriter {
-  raw_pwrite_stream &OS;
-  bool IsLittleEndian;
-
-public:
-  ELFSingleObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
-                        raw_pwrite_stream &OS, bool IsLittleEndian)
-      : ELFObjectWriter(std::move(MOTW)), OS(OS),
-        IsLittleEndian(IsLittleEndian) {}
-
-  uint64_t writeObject(MCAssembler &Asm) override {
-    return ELFWriter(*this, OS, IsLittleEndian, ELFWriter::AllSections)
-        .writeObject(Asm);
-  }
-
-  friend struct ELFWriter;
-};
-
-class ELFDwoObjectWriter : public ELFObjectWriter {
-  raw_pwrite_stream &OS, &DwoOS;
-  bool IsLittleEndian;
-
-public:
-  ELFDwoObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
-                     raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS,
-                     bool IsLittleEndian)
-      : ELFObjectWriter(std::move(MOTW)), OS(OS), DwoOS(DwoOS),
-        IsLittleEndian(IsLittleEndian) {}
-
-  bool checkRelocation(MCContext &Ctx, SMLoc Loc, const MCSectionELF *From,
-                       const MCSectionELF *To) override {
-    if (isDwoSection(*From)) {
-      Ctx.reportError(Loc, "A dwo section may not contain relocations");
-      return false;
-    }
-    if (To && isDwoSection(*To)) {
-      Ctx.reportError(Loc, "A relocation may not refer to a dwo section");
-      return false;
-    }
-    return true;
-  }
-
-  uint64_t writeObject(MCAssembler &Asm) override {
-    uint64_t Size = ELFWriter(*this, OS, IsLittleEndian, ELFWriter::NonDwoOnly)
-                        .writeObject(Asm);
-    Size += ELFWriter(*this, DwoOS, IsLittleEndian, ELFWriter::DwoOnly)
-                .writeObject(Asm);
-    return Size;
-  }
-};
-
 } // end anonymous namespace
 
 uint64_t ELFWriter::align(Align Alignment) {
@@ -360,7 +308,7 @@ void ELFWriter::writeHeader(const MCAssembler &Asm) {
   WriteWord(0);                     // e_shoff = sec hdr table off in bytes
 
   // e_flags = whatever the target wants
-  W.write<uint32_t>(Asm.getELFHeaderEFlags());
+  W.write<uint32_t>(OWriter.getELFHeaderEFlags());
 
   // e_ehsize = ELF header size
   W.write<uint16_t>(is64Bit() ? sizeof(ELF::Elf64_Ehdr)
@@ -560,7 +508,7 @@ void ELFWriter::computeSymbolTable(MCAssembler &Asm,
   std::vector<ELFSymbolData> LocalSymbolData;
   std::vector<ELFSymbolData> ExternalSymbolData;
   MutableArrayRef<std::pair<std::string, size_t>> FileNames =
-      Asm.getFileNames();
+      OWriter.getFileNames();
   for (const std::pair<std::string, size_t> &F : FileNames)
     StrTabBuilder.add(F.first);
 
@@ -1156,11 +1104,23 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
   return W.OS.tell() - StartOffset;
 }
 
+ELFObjectWriter::ELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
+                                 raw_pwrite_stream &OS, bool IsLittleEndian)
+    : TargetObjectWriter(std::move(MOTW)), OS(OS),
+      IsLittleEndian(IsLittleEndian) {}
+ELFObjectWriter::ELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
+                                 raw_pwrite_stream &OS,
+                                 raw_pwrite_stream &DwoOS, bool IsLittleEndian)
+    : TargetObjectWriter(std::move(MOTW)), OS(OS), DwoOS(&DwoOS),
+      IsLittleEndian(IsLittleEndian) {}
+
 void ELFObjectWriter::reset() {
+  ELFHeaderEFlags = 0;
   SeenGnuAbi = false;
   OverrideABIVersion.reset();
   Relocations.clear();
   Renames.clear();
+  Symvers.clear();
   MCObjectWriter::reset();
 }
 
@@ -1171,7 +1131,7 @@ bool ELFObjectWriter::hasRelocationAddend() const {
 void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
   // The presence of symbol versions causes undefined symbols and
   // versions declared with @@@ to be renamed.
-  for (const MCAssembler::Symver &S : Asm.Symvers) {
+  for (const Symver &S : Symvers) {
     StringRef AliasName = S.Name;
     const auto &Symbol = cast<MCSymbolELF>(*S.Sym);
     size_t Pos = AliasName.find('@');
@@ -1355,6 +1315,22 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
   return false;
 }
 
+bool ELFObjectWriter::checkRelocation(MCContext &Ctx, SMLoc Loc,
+                                      const MCSectionELF *From,
+                                      const MCSectionELF *To) {
+  if (DwoOS) {
+    if (isDwoSection(*From)) {
+      Ctx.reportError(Loc, "A dwo section may not contain relocations");
+      return false;
+    }
+    if (To && isDwoSection(*To)) {
+      Ctx.reportError(Loc, "A relocation may not refer to a dwo section");
+      return false;
+    }
+  }
+  return true;
+}
+
 void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
                                        const MCFragment *Fragment,
                                        const MCFixup &Fixup, MCValue Target,
@@ -1471,17 +1447,13 @@ bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   return &SymA.getSection() == FB.getParent();
 }
 
-std::unique_ptr<MCObjectWriter>
-llvm::createELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
-                            raw_pwrite_stream &OS, bool IsLittleEndian) {
-  return std::make_unique<ELFSingleObjectWriter>(std::move(MOTW), OS,
-                                                  IsLittleEndian);
-}
-
-std::unique_ptr<MCObjectWriter>
-llvm::createELFDwoObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
-                               raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS,
-                               bool IsLittleEndian) {
-  return std::make_unique<ELFDwoObjectWriter>(std::move(MOTW), OS, DwoOS,
-                                               IsLittleEndian);
+uint64_t ELFObjectWriter::writeObject(MCAssembler &Asm) {
+  uint64_t Size =
+      ELFWriter(*this, OS, IsLittleEndian,
+                DwoOS ? ELFWriter::NonDwoOnly : ELFWriter::AllSections)
+          .writeObject(Asm);
+  if (DwoOS)
+    Size += ELFWriter(*this, *DwoOS, IsLittleEndian, ELFWriter::DwoOnly)
+                .writeObject(Asm);
+  return Size;
 }

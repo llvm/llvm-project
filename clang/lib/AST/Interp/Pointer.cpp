@@ -180,18 +180,30 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
       Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
       Ptr = Ptr.getArray();
     } else {
-      // TODO: figure out if base is virtual
       bool IsVirtual = false;
 
       // Create a path entry for the field.
       const Descriptor *Desc = Ptr.getFieldDesc();
       if (const auto *BaseOrMember = Desc->asDecl()) {
-        Path.push_back(APValue::LValuePathEntry({BaseOrMember, IsVirtual}));
-        Ptr = Ptr.getBase();
-
-        if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember))
+        if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember)) {
+          Ptr = Ptr.getBase();
           Offset += getFieldOffset(FD);
+        } else if (const auto *RD = dyn_cast<CXXRecordDecl>(BaseOrMember)) {
+          IsVirtual = Ptr.isVirtualBaseClass();
+          Ptr = Ptr.getBase();
+          const Record *BaseRecord = Ptr.getRecord();
 
+          const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(
+              cast<CXXRecordDecl>(BaseRecord->getDecl()));
+          if (IsVirtual)
+            Offset += Layout.getVBaseClassOffset(RD);
+          else
+            Offset += Layout.getBaseClassOffset(RD);
+
+        } else {
+          Ptr = Ptr.getBase();
+        }
+        Path.push_back(APValue::LValuePathEntry({BaseOrMember, IsVirtual}));
         continue;
       }
       llvm_unreachable("Invalid field type");
