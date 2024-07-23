@@ -91,18 +91,23 @@ define void @test_store_def(i64 %param0, i32 %param1, ptr %out) {
   ret void
 }
 
-define void @test_store_volatile_undef(ptr %out) {
+define void @test_store_volatile_undef(ptr %out, <8 x i32> %vec) {
 ; CHECK-LABEL: test_store_volatile_undef(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<7>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NEXT:    .reg .b32 %r<15>;
+; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [test_store_volatile_undef_param_0];
 ; CHECK-NEXT:    st.volatile.v4.u32 [%rd1+16], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    st.volatile.v2.u32 [%rd1+8], {%r5, %r6};
 ; CHECK-NEXT:    st.volatile.u64 [%rd1], %rd2;
+; CHECK-NEXT:    ld.param.v4.u32 {%r7, %r8, %r9, %r10}, [test_store_volatile_undef_param_1];
+; CHECK-NEXT:    ld.param.v4.u32 {%r11, %r12, %r13, %r14}, [test_store_volatile_undef_param_1+16];
+; CHECK-NEXT:    st.volatile.v4.u32 [%rd3], {%r11, %r12, %r13, %r14};
+; CHECK-NEXT:    st.volatile.v4.u32 [%rd4], {%r7, %r8, %r9, %r10};
 ; CHECK-NEXT:    ret;
   store volatile %struct.T undef, ptr %out
+  store volatile <8 x i32> %vec, <8 x i32>* poison
   ret void
 }
