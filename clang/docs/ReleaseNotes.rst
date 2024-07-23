@@ -294,6 +294,32 @@ Moved checkers
 Sanitizers
 ----------
 
+- Added the ``-fno-sanitize-overflow-idioms`` flag which disables integer
+  overflow and truncation sanitizer instrumentation for specific
+  overflow-dependent code patterns. The noise created by these idioms is a
+  large reason as to why large projects refuse to turn on arithmetic
+  sanitizers.
+
+  .. code-block:: c++
+
+     void negation_overflow() {
+       unsigned long foo = -1UL; // No longer causes a negation overflow warning
+       unsigned long bar = -2UL; // and so on...
+     }
+
+     void while_post_decrement() {
+       unsigned char count = 16;
+       while (count--) { /* ... */} // No longer causes unsigned-integer-overflow sanitizer to trip
+     }
+
+     int common_overflow_check_pattern(unsigned base, unsigned offset) {
+       if (base + offset < base) { /* ... */ } // The pattern of `a + b < a`, and other re-orderings, won't be instrumented
+     }
+
+  Note that the ``-fsanitize-overflow-idioms`` flag now also exists but has
+  virtually no function other than to disable an already present
+  ``-fno-sanitize-overflow-idioms``.
+
 Python Binding Changes
 ----------------------
 

@@ -312,6 +312,38 @@ This attribute may not be
 supported by other compilers, so consider using it together with
 ``#if defined(__clang__)``.
 
+Disabling instrumentation of common overflow idioms
+=====================================================
+
+There are certain overflow-dependent code patterns which produce a lot of noise
+for integer overflow/truncation sanitizers. To disable instrumentation for
+these common patterns one should use ``-fno-sanitize-overflow-idioms``. Its
+inverse ``-fsanitize-overflow-idioms`` also exists but has no function other
+than to disable an already present ``-fno-sanitize-overflow-idioms``.
+
+Currently, this option handles three pervasive overflow-dependent code idioms:
+
+.. code-block:: c++
+
+    unsigned long foo = -1UL; // No longer causes a negation overflow warning
+    unsigned long bar = -2UL; // and so on...
+
+.. code-block:: c++
+
+    unsigned char count = 16;
+    while (count--) { /* ... */ } // No longer causes unsigned-integer-overflow sanitizer to trip
+
+.. code-block:: c++
+
+    if (base + offset < base) { /* ... */ } // The pattern of `a + b < a`, and other re-orderings,
+                                            // won't be instrumented (same for signed types)
+
+Negated unsigned constants, post-decrements in a while loop condition and
+simple overflow checks are accepted and pervasive code patterns. Existing
+projects that enable more warnings or sanitizers may find that the compiler is
+too noisy. Now, they can use ``-fno-sanitize-overflow-idioms`` with no source
+modifications.
+
 Suppressing Errors in Recompiled Code (Ignorelist)
 --------------------------------------------------
 
