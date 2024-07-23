@@ -137,6 +137,7 @@ Bug Fixes to Attribute Support
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
+
 - Fix a crash when checking destructor reference with an invalid initializer. (#GH97230).
 
 Bug Fixes to AST Handling
