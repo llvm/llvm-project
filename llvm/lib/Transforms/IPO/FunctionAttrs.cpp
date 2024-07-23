@@ -118,7 +118,7 @@ static void addLocAccess(MemoryEffects &ME, const MemoryLocation &Loc,
   if (isNoModRef(MR))
     return;
 
-  const Value *UO = getUnderlyingObject(Loc.Ptr);
+  const Value *UO = getUnderlyingObjectAggressive(Loc.Ptr);
   assert(!isa<AllocaInst>(UO) &&
          "Should have been handled by getModRefInfoMask()");
   if (isa<Argument>(UO)) {

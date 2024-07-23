@@ -491,9 +491,9 @@ define void @test_scc_argmem_read_2(ptr %p) {
 }
 
 define i64 @select_same_obj(i1 %c, ptr %p, i64 %x) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; FNATTRS-LABEL: define i64 @select_same_obj
-; FNATTRS-SAME: (i1 [[C:%.*]], ptr nocapture readonly [[P:%.*]], i64 [[X:%.*]]) #[[ATTR3]] {
+; FNATTRS-SAME: (i1 [[C:%.*]], ptr nocapture readonly [[P:%.*]], i64 [[X:%.*]]) #[[ATTR1]] {
 ; FNATTRS-NEXT:  entry:
 ; FNATTRS-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 [[X]]
 ; FNATTRS-NEXT:    [[P3:%.*]] = select i1 [[C]], ptr [[P]], ptr [[P2]]
@@ -540,9 +540,9 @@ entry:
 }
 
 define i64 @phi_same_obj(i1 %c, ptr %p, i64 %x) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; FNATTRS-LABEL: define i64 @phi_same_obj
-; FNATTRS-SAME: (i1 [[C:%.*]], ptr nocapture readonly [[P:%.*]], i64 [[X:%.*]]) #[[ATTR3]] {
+; FNATTRS-SAME: (i1 [[C:%.*]], ptr nocapture readonly [[P:%.*]], i64 [[X:%.*]]) #[[ATTR1]] {
 ; FNATTRS-NEXT:  entry:
 ; FNATTRS-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 [[X]]
 ; FNATTRS-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[JOIN:%.*]]
