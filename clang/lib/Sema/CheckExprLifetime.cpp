@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CheckExprLifetime.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Sema/Initialization.h"
@@ -545,6 +546,13 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
   if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Init)) {
     if (Visit(Path, Local(MTE), RK))
       visitLocalsRetainedByInitializer(Path, MTE->getSubExpr(), Visit, true,
+                                       EnableLifetimeWarnings);
+  }
+
+  if (auto* M = dyn_cast<MemberExpr>(Init)) {
+    // Lifetime of a field is the lifetime of the base object.
+    if (isa<FieldDecl>(M->getMemberDecl()))
+      visitLocalsRetainedByInitializer(Path, M->getBase(), Visit, true,
                                        EnableLifetimeWarnings);
   }
 
