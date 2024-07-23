@@ -2404,6 +2404,9 @@ static bool CheckLiteralType(EvalInfo &Info, const Expr *E,
   if (!E->isPRValue() || E->getType()->isLiteralType(Info.Ctx))
     return true;
 
+  if (Info.getLangOpts().CPlusPlus23)
+    return true;
+
   // C++1y: A constant initializer for an object o [...] may also invoke
   // constexpr constructors for o and its subobjects even if those objects
   // are of non-literal class types.
