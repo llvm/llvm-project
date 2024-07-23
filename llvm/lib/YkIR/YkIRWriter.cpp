@@ -1611,6 +1611,7 @@ private:
   }
 
   void serialiseGlobal(GlobalVariable *G) {
+    assert(G->getType()->isPointerTy());
     OutStreamer.emitInt8(G->isThreadLocal());
     serialiseString(G->getName());
   }
