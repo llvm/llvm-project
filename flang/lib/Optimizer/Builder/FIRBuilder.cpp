@@ -1544,8 +1544,7 @@ mlir::Value fir::factory::genMaxWithZero(fir::FirOpBuilder &builder,
 static std::pair<mlir::Value, mlir::Type>
 genCPtrOrCFunptrFieldIndex(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Type cptrTy) {
-  assert(mlir::isa<fir::RecordType>(cptrTy));
-  auto recTy = mlir::dyn_cast<fir::RecordType>(cptrTy);
+  auto recTy = mlir::cast<fir::RecordType>(cptrTy);
   assert(recTy.getTypeList().size() == 1);
   auto addrFieldName = recTy.getTypeList()[0].first;
   mlir::Type addrFieldTy = recTy.getTypeList()[0].second;
