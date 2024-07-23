@@ -104,6 +104,9 @@ struct Impl : RecursiveASTVisitor<Impl> {
 
   bool dataTraverseStmtPre(Stmt *S) { return Visitor.dataTraverseStmtPre(S); }
   bool dataTraverseStmtPost(Stmt *S) { return Visitor.dataTraverseStmtPost(S); }
+  bool dataTraverseNode(Stmt *S, DataRecursionQueue *Queue) {
+    return Visitor.dataTraverseNode(S, Queue);
+  }
 
   /// Visit a node.
   bool VisitAttr(Attr *A) { return Visitor.VisitAttr(A); }
@@ -115,6 +118,15 @@ struct Impl : RecursiveASTVisitor<Impl> {
   /*#define ATTR_VISITOR_DECLS
   #include "clang/AST/AttrVisitor.inc"
   #undef ATTR_VISITOR_DECLS*/
+
+#define DEF_TRAVERSE_TMPL_INST(kind)                                           \
+  bool TraverseTemplateInstantiations(kind##TemplateDecl *D) {                 \
+    return Visitor.TraverseTemplateInstantiations(D);                          \
+  }
+  DEF_TRAVERSE_TMPL_INST(Class)
+  DEF_TRAVERSE_TMPL_INST(Var)
+  DEF_TRAVERSE_TMPL_INST(Function)
+#undef DEF_TRAVERSE_TMPL_INST
 
   // Declarations.
 #define ABSTRACT_DECL(DECL)
@@ -282,11 +294,26 @@ bool DynamicRecursiveASTVisitor::TraverseNestedNameSpecifierLoc(
       NNS);
 }
 
+bool DynamicRecursiveASTVisitor::dataTraverseNode(Stmt *S, DataRecursionQueue *Queue) {
+  return Impl(*this).RecursiveASTVisitor<Impl>::dataTraverseNode(S, Queue);
+}
+
 /*
 #define DYNAMIC_ATTR_VISITOR_IMPL
 #include "clang/AST/AttrVisitor.inc"
 #undef DYNAMIC_ATTR_VISITOR_IMPL
 */
+
+#define DEF_TRAVERSE_TMPL_INST(kind)                                           \
+  bool DynamicRecursiveASTVisitor::TraverseTemplateInstantiations(             \
+      kind##TemplateDecl *D) {                                                 \
+    return Impl(*this)                                                         \
+        .RecursiveASTVisitor<Impl>::TraverseTemplateInstantiations(D);         \
+  }
+DEF_TRAVERSE_TMPL_INST(Class)
+DEF_TRAVERSE_TMPL_INST(Var)
+DEF_TRAVERSE_TMPL_INST(Function)
+#undef DEF_TRAVERSE_TMPL_INST
 
 // Declare Traverse*() for and friends all concrete Decl classes.
 #define ABSTRACT_DECL(DECL)

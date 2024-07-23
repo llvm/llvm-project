@@ -19,7 +19,7 @@ class ASTContext;
 ///   - Visiting attributes
 ///   - Post-order traversal
 ///   - Overriding WalkUpFromX
-///   - Overriding dataTraverseStmtPre/Post()
+///   - Overriding getStmtChildren()
 ///
 /// \see RecursiveASTVisitor
 class DynamicRecursiveASTVisitor {
@@ -194,15 +194,24 @@ public:
   /// \returns false if the visitation was terminated early, true otherwise.
   virtual bool dataTraverseStmtPost(Stmt *S) { return true; }
 
+  virtual bool dataTraverseNode(Stmt *S, DataRecursionQueue *Queue = nullptr);
+
   /*// Declare Traverse*() and friends for attributes.
 #define DYNAMIC_ATTR_VISITOR_DECLS
 #include "clang/AST/AttrVisitor.inc"
 #undef DYNAMIC_ATTR_VISITOR_DECLS*/
 
+  // Not virtual for now because no-one overrides them.
+#define DEF_TRAVERSE_TMPL_INST(kind)                                           \
+  virtual bool TraverseTemplateInstantiations(kind##TemplateDecl *D);
+  DEF_TRAVERSE_TMPL_INST(Class)
+  DEF_TRAVERSE_TMPL_INST(Var)
+  DEF_TRAVERSE_TMPL_INST(Function)
+#undef DEF_TRAVERSE_TMPL_INST
+
   // Declare Traverse*() for and friends all concrete Decl classes.
 #define ABSTRACT_DECL(DECL)
-#define DECL(CLASS, BASE) \
-  virtual bool Traverse##CLASS##Decl(CLASS##Decl *D);
+#define DECL(CLASS, BASE) virtual bool Traverse##CLASS##Decl(CLASS##Decl *D);
 #include "clang/AST/DeclNodes.inc"
 
 #define DECL(CLASS, BASE)                                                      \
@@ -212,8 +221,7 @@ public:
 
   // Declare Traverse*() and friends for all concrete Stmt classes.
 #define ABSTRACT_STMT(STMT)
-#define STMT(CLASS, PARENT)                                                    \
-  virtual bool Traverse##CLASS(CLASS *S);
+#define STMT(CLASS, PARENT) virtual bool Traverse##CLASS(CLASS *S);
 #include "clang/AST/StmtNodes.inc"
 
 #define STMT(CLASS, PARENT)                                                    \
@@ -223,8 +231,7 @@ public:
 
   // Declare Traverse*() and friends for all concrete Type classes.
 #define ABSTRACT_TYPE(CLASS, BASE)
-#define TYPE(CLASS, BASE)                                                      \
-  virtual bool Traverse##CLASS##Type(CLASS##Type *T);
+#define TYPE(CLASS, BASE) virtual bool Traverse##CLASS##Type(CLASS##Type *T);
 #include "clang/AST/TypeNodes.inc"
 
 #define TYPE(CLASS, BASE)                                                      \
