@@ -49,7 +49,9 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include <algorithm>
+#include <bitset>
 #include <cassert>
+#include <map>
 #include <iterator>
 #include <utility>
 #include <vector>
@@ -394,12 +396,6 @@ struct PromoteMem2Reg {
   /// Whether the function has the no-signed-zeros-fp-math attribute set.
   bool NoSignedZeros = false;
 
-  /// Since this pass applies analysis to every alloca over the same CFG without
-  /// modifying it, we should cache basic block's predecessors and successors
-  /// because profiling shows a bottleneck materializing them.
-  DenseMap<const BasicBlock *, SmallVector<BasicBlock *>> PredecessorCache;
-  DenseMap<const BasicBlock *, SmallVector<BasicBlock *>> SuccessorCache;
-
 public:
   PromoteMem2Reg(ArrayRef<AllocaInst *> Allocas, DominatorTree &DT,
                  AssumptionCache *AC)
@@ -443,6 +439,315 @@ private:
       DVR->eraseFromParent();
     DVRAssignsToDelete.clear();
   }
+};
+
+/// This class computes live in and DF of allocas in batch. Because Mem2Reg pass
+/// is spending most of the time on traversing the CFG for these two analysis,
+/// it is necessary to reduce the amount of graph traversal. This can be done by
+/// gathering several allocas first and compute their live in and DF at once, so
+/// that if they share similar liveness range the number of total BB visits can
+/// be reduced.
+class VectorizedLivenessAnalysis {
+
+  // Max number of allocas per batch for each round of computation.
+  static constexpr size_t MaxAllocaNum = 64;
+
+  typedef std::bitset<MaxAllocaNum> AllocaState;
+  typedef std::vector<AllocaState> StateVector;
+
+  typedef unsigned BBNumberTy;
+
+  const PromoteMem2Reg *Mem2Reg;
+
+  // Alloca instructions in the order they are gathered.
+  llvm::SmallVector<AllocaInst*, MaxAllocaNum> Allocas;
+
+  // List of BBs in this function.
+  std::vector<BasicBlock *> BBList;
+
+  // CSR adjacency matrices for basic blocks, using their BB number as indices
+  // and values. They are precomputed since this pass does not modify CFG.
+  std::vector<llvm::SmallVector<BBNumberTy, 2>> Predecessors;
+  std::vector<llvm::SmallVector<BBNumberTy, 2>> Successors;
+
+  // Temporary storage for BB to be processed.
+  std::vector<BBNumberTy> Worklist;
+
+  // State vectors of each BB's state expected to be updated into one of the
+  // output vectors below on its turn when being popped from the worklist. It is
+  // an invariant that BlockUpdateStates[BN] != 0 iff Worklist contains BN.
+  StateVector BlockUpdateStates;
+
+  // State vectors of each BB's def, live-in, and DF for PHI nodes. It is
+  // indexed by the BB's assigned number. For each state vector, the i-th
+  // position corresponds to the i-th alloca. For example BlockDefStates[1][2]
+  // = true means BB1 has a def of Allocas[2].
+  StateVector BlockDefStates;
+  StateVector BlockLiveInStates;
+  StateVector BlockPhiStates;
+
+  // Compacted vector of BBs if its corresponding state is non-zero after each
+  // round of computation.
+  std::vector<BasicBlock *> CompactedBBList;
+
+  BBNumberTy GetBBNumber(const BasicBlock *BB) const {
+    return Mem2Reg->BBNumbers.at(BB);
+  }
+
+  BasicBlock *GetBB(BBNumberTy BN) {
+    return BBList[BN];
+  }
+
+  // Add a block and its state to be updated into the output to the worklist.
+  void AddToWorklist(BBNumberTy BN, const AllocaState &UpdateState) {
+    // If the update state is previously zero, it is a new block, add it to the
+    // worklist, otherwise it is already in the worklist, so we just need to
+    // merge the existing update state.
+    if (BlockUpdateStates[BN].none())
+      Worklist.push_back(BN);
+    BlockUpdateStates[BN] |= UpdateState;
+  }
+
+  // Compact the state vector in place, skipping all zero-valued states, and
+  // gather BB for non-zero states into CompactedBBList. This action destroys
+  // existing contents in the state vector.
+  void CompactResults(StateVector &States) {
+    CompactedBBList.clear();
+    for (size_t I = 0; I < States.size(); I++) {
+      if (States[I].any()) {
+        States[CompactedBBList.size()] = States[I];
+        CompactedBBList.push_back(BBList[I]);
+      }
+    }
+  }
+
+
+  /// This class provides an abstraction to iterate through a boolean matrix in
+  /// row-column order where Matrix[r, c] == true means the element
+  /// (RowTy[r], ColumnTy[c]) exists, and iteration skips non-existent element.
+  ///
+  /// The usage should be like this:
+  /// for (auto &[RowEltIt, ColRef] : MatrixRef) {
+  ///   auto &RowElt = *RowEltIt;
+  ///   for (auto &ColElt : ColRef) {
+  ///     doWork(RowElt, ColElt);
+  ///   }
+  /// }
+  ///
+  /// \param MatrixStorageTy The data type of the boolean matrix. It should
+  ///   support two levels of array subscription and returns a boolean
+  ///   indicating whether the element at this row and column exists.
+  /// \param RowTy The element type mapped to each row.
+  /// \param RowStorageTy The container type storing elements mapped to each
+  ///   row.
+  /// \param ColumnTy The element type mapped to each column.
+  /// \param ColumnStorageTy The container type storing elements mapped to each
+  ///   column. It should support array subscription.
+    template <typename MatrixStorageTy, typename RowTy, typename RowStorageTy, typename ColumnTy,  typename ColumnStorageTy, bool IsTransposed>
+  struct BooleanMatrixRef {
+    const MatrixStorageTy &Matrix;
+    const RowStorageTy &RowElements;
+    const ColumnStorageTy &ColumnElements;
+
+    struct ColumnIterator {
+      const MatrixStorageTy &Matrix;
+      const ColumnStorageTy &ColumnElements;
+      const size_t RowNum;
+      size_t ColNum;
+
+      ColumnIterator(const MatrixStorageTy &Matrix,
+                     const ColumnStorageTy &ColumnElements,
+                     const size_t RowNum,
+                     size_t ColNum) :
+            Matrix(Matrix), ColumnElements(ColumnElements), RowNum(RowNum), ColNum(ColNum) {}
+
+      bool operator!=(const ColumnIterator &Other) const {
+        assert(&Matrix == &Other.Matrix && &ColumnElements == &Other.ColumnElements && "Invalid comparison of iterators from two different containers");
+        return ColNum == Other.ColNum;
+      }
+
+      ColumnIterator& operator++() {
+        if constexpr (IsTransposed)
+          do {
+            ++ColNum;
+          } while(!Matrix[ColNum][RowNum]);
+        else
+          do {
+            ++ColNum;
+          } while(Matrix[RowNum][ColNum]);
+        return *this;
+      }
+
+      ColumnTy operator*() {
+        return ColumnElements[ColNum];
+      }
+    };
+
+    struct RowIterator {
+      const MatrixStorageTy &Matrix;
+      const ColumnStorageTy &ColumnElements;
+      typename RowStorageTy::const_iterator RowIt;
+      size_t RowNum;
+
+      RowIterator(const MatrixStorageTy &Matrix,
+                  const ColumnStorageTy &ColumnElements,
+                  const typename RowStorageTy::const_iterator &RowIt) :
+            Matrix(Matrix), ColumnElements(ColumnElements), RowIt(RowIt), RowNum(0) {}
+
+      bool operator!=(const RowIterator &Other) const {
+        assert(&Matrix == &Other.Matrix && "Invalid comparison of iterators from two different containers");
+        return RowIt != Other.RowIt;
+      }
+
+      RowIterator& operator++() {
+        ++RowIt;
+        ++RowNum;
+        return *this;
+      }
+
+      std::pair<typename RowStorageTy::const_iterator, llvm::iterator_range<ColumnIterator>> operator*() {
+        return std::make_pair(RowIt, llvm::make_range(ColumnIterator(Matrix, ColumnElements, RowNum, 0),
+                                                      ColumnIterator(Matrix, ColumnElements, RowNum, ColumnElements.size())
+                                          ));
+      }
+    };
+
+    BooleanMatrixRef(const MatrixStorageTy &Matrix, const RowStorageTy &RowElements, const ColumnStorageTy &ColElements) :
+          Matrix(Matrix), RowElements(RowElements), ColumnElements(ColElements) {
+    }
+
+    RowIterator begin() {
+      return RowIterator(Matrix, ColumnElements, RowElements.begin());
+    }
+
+    RowIterator end() {
+      return RowIterator(Matrix, ColumnElements, RowElements.end());
+    }
+  };
+/*
+  struct ResultTy {
+
+    struct ResultTyColumnIterator {
+      const ResultTy &Result;
+      const size_t AllocaIdx;
+      size_t Pos;
+
+      ResultTyColumnIterator(const ResultTy &Result, size_t AllocaIdx, size_t pos) : Result(Result), AllocaIdx(AllocaIdx), Pos(Pos) {}
+
+      bool operator!=(const ResultTyColumnIterator &Other) const {
+        return Pos != Other.Pos;
+      }
+
+      /// Iterate through the state vector until the AllocaIdx-th bit is set.
+      ResultTyColumnIterator& operator++() {
+
+        do {
+          Pos++;
+        } while (!Result.CompactedState[Pos].test(AllocaIdx));
+        return *this;
+      }
+
+      BasicBlock* operator*() {
+        return Result.CompactedBBList[Pos];
+      }
+    };
+
+    struct ResultTyRowIterator {
+      ResultTy &Result;
+      size_t AllocaIdx;
+
+      ResultTyRowIterator(ResultTy &Result, size_t AllocaIdx) : Result(Result), AllocaIdx(AllocaIdx) {}
+
+      bool operator!=(const ResultTyRowIterator &Other) const {
+        return AllocaIdx != Other.AllocaIdx;
+      }
+
+      ResultTyRowIterator& operator++() {
+        AllocaIdx++;
+        return *this;
+      }
+
+      std::pair<AllocaInst*, llvm::iterator_range<ResultTyColumnIterator>> operator*() {
+        return std::make_pair(Result.Allocas[AllocaIdx],
+                              llvm::iterator_range<ResultTyColumnIterator>(ResultTyColumnIterator(Result, AllocaIdx, 0),
+                                                                           ResultTyColumnIterator(Result, AllocaIdx, Result.CompactedBBList.size())));
+      }
+    };
+
+    const llvm::SmallVector<AllocaInst*, MaxAllocaNum> &Allocas;
+    const std::vector<BasicBlock *> &CompactedBBList;
+    const StateVector &CompactedState;
+
+    ResultTy(const llvm::SmallVector<AllocaInst*, MaxAllocaNum> &Allocas,
+             const std::vector<BasicBlock *> &CompactedBBList,
+             const StateVector &CompactedState)
+        : Allocas(Allocas), CompactedBBList(CompactedBBList), CompactedState(CompactedState) {
+    }
+
+    ResultTyRowIterator begin() {
+      return ResultTyRowIterator(*this, 0);
+    }
+
+    ResultTyRowIterator end() {
+      return ResultTyRowIterator(*this, Allocas.size());
+    }
+  };
+*/
+
+public:
+    typedef   BooleanMatrixRef<StateVector, AllocaInst*, decltype(Allocas),
+                             BasicBlock*, decltype(CompactedBBList), true> ResultTy;
+
+  VectorizedLivenessAnalysis(const PromoteMem2Reg *Mem2Reg) :
+        Mem2Reg(Mem2Reg),
+        BBList(Mem2Reg->BBNumbers.size()),
+        Predecessors(Mem2Reg->BBNumbers.size()),
+        Successors(Mem2Reg->BBNumbers.size()),
+        BlockUpdateStates(Mem2Reg->BBNumbers.size()),
+        BlockDefStates(Mem2Reg->BBNumbers.size()),
+        BlockLiveInStates(Mem2Reg->BBNumbers.size()),
+        BlockPhiStates(Mem2Reg->BBNumbers.size())
+  {
+    for (const auto &[BB, BN] : Mem2Reg->BBNumbers) {
+      BBList[BN] = BB;
+
+      for (const BasicBlock *Successor : successors(BB)) {
+        Successors[BN].push_back(GetBBNumber(Successor));
+      }
+
+      for (const BasicBlock *Predecessor : predecessors(BB)) {
+        Predecessors[BN].push_back(GetBBNumber(Predecessor));
+      }
+    }
+    Worklist.reserve(BBList.size());
+    CompactedBBList.reserve(BBList.size());
+  }
+
+  ~VectorizedLivenessAnalysis() {
+    assert(Worklist.size() == 0 && "Some nodes have not been processed.");
+    assert(llvm::all_of(BlockUpdateStates, [](const AllocaState &V){ return V.none(); }));
+  }
+
+  /// Clear allocas and their states for next round of computation.
+  void Clear() {
+    assert(Worklist.size() == 0 && "Some nodes have not been processed.");
+    assert(llvm::all_of(BlockUpdateStates, [](const AllocaState &V){ return V.none(); }));
+
+    Allocas.clear();
+    std::fill(BlockDefStates.begin(), BlockDefStates.end(), AllocaState());
+    std::fill(BlockLiveInStates.begin(), BlockLiveInStates.end(), AllocaState());
+    std::fill(BlockPhiStates.begin(), BlockPhiStates.end(), AllocaState());
+  }
+
+  /// Add an alloca to be processed, and perform some pre-processing to populate
+  /// Def and LiveIn according to its defs and uses.
+  /// Returns true if there are enough allocas to be processed. Currently we
+  /// just gather enough allocas to fill up the bit vector. This may be improve
+  /// by grouping allocas with similar liveness range in a batch.
+  bool GatherAlloca(AllocaInst *AI, const AllocaInfo &Info);
+
+  /// Calculate live in blocks and IDF on the current batch of allocas.
+  ResultTy Calculate();
 };
 
 } // end anonymous namespace
@@ -1052,14 +1357,10 @@ void PromoteMem2Reg::ComputeLiveInBlocks(
     if (!LiveInBlocks.insert(BB).second)
       continue;
 
-    auto &Predecessors = PredecessorCache[BB];
-    if (Predecessors.empty())
-      Predecessors = SmallVector<BasicBlock *>(predecessors(BB));
-
     // Since the value is live into BB, it is either defined in a predecessor or
     // live into it to.  Add the preds to the worklist unless they are a
     // defining block.
-    for (BasicBlock *P : Predecessors) {
+    for (BasicBlock *P : predecessors(BB)) {
       // The value is not live into a predecessor if it defines the value.
       if (DefBlocks.count(P))
         continue;
@@ -1068,6 +1369,109 @@ void PromoteMem2Reg::ComputeLiveInBlocks(
       LiveInBlockWorklist.push_back(P);
     }
   }
+}
+
+bool VectorizedLivenessAnalysis::GatherAlloca(AllocaInst *AI,
+                                              const AllocaInfo &Info) {
+  assert(Allocas.size() < MaxAllocaNum && "State vector is full, need to call Calculate().");
+  // Add new alloca to the current batch.
+  size_t Index = Allocas.size();
+  Allocas.push_back(AI);
+
+  // Populate def states.
+  for (BasicBlock* Def : Info.DefiningBlocks) {
+    BlockDefStates[GetBBNumber(Def)][Index] = true;
+  }
+
+  // Initialize the worklist to compute live-in blocks.
+  // To determine liveness, we must iterate through the predecessors of blocks
+  // where the def is live.  Blocks are added to the worklist if we need to
+  // check their predecessors.  Start with all the using blocks.
+  for (BasicBlock *Use : Info.UsingBlocks) {
+    BBNumberTy BN = GetBBNumber(Use);
+
+    // If the use block is not the def block, the use block is live-in. It is
+    // possible that a previous alloca lives in this block, so we should merge
+    // the update state of both allocas.
+    if (!BlockDefStates[BN][Index]) {
+      AddToWorklist(BN, AllocaState().set(Index));
+      break;
+    }
+
+    // If any of the using blocks is also a definition block, check to see if the
+    // definition occurs before or after the use.  If it happens before the use,
+    // the value isn't really live-in.
+    for (BasicBlock::iterator I = Use->begin();; ++I) {
+      if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
+        if (SI->getOperand(1) != AI)
+          continue;
+
+        // We found a store to the alloca before a load.  The alloca is not
+        // actually live-in here.
+        break;
+      }
+
+      if (LoadInst *LI = dyn_cast<LoadInst>(I))
+        // Okay, we found a load before a store to the alloca.  It is actually
+        // live into this block. Add it to the worklist.
+        if (LI->getOperand(0) == AI) {
+          AddToWorklist(BN, AllocaState().set(Index));
+          break;
+        }
+    }
+  }
+
+  return Allocas.size() == MaxAllocaNum;
+}
+
+VectorizedLivenessAnalysis::ResultTy VectorizedLivenessAnalysis::Calculate() {
+  // @TODO: Assign BB number in a way such that the BB deepest in the CFG gets
+  // the largest number, so that it is traverse first. This allows faster
+  // convergence to the fixed-point.
+
+  // Compute live-in blocks for every alloca.
+  // Now that we have a set of blocks where the phi is live-in, recursively add
+  // their predecessors until we find the full region the value is live. Each
+  // time a value is taken from the worklist to update the live-in state of its
+  // block, and if the state changes, it is propagated to its predecessors until
+  // a fixed point is reached.
+  while (!Worklist.empty()) {
+    // Take a BB from the worklist and get its state to be updated into the
+    // output.
+    BBNumberTy BN = Worklist.back();
+    Worklist.pop_back();
+    AllocaState State = BlockUpdateStates[BN];
+    BlockUpdateStates[BN].reset();
+
+    // Update the live-in state of this block. If the state after udpate is
+    // unchanged, we reached a fixed-point, there is no more new live-in info to
+    // be propagated to its predecessors.
+    AllocaState OldState = BlockLiveInStates[BN];
+    AllocaState NewState = (BlockLiveInStates[BN] |= State);
+    if (NewState == OldState)
+      continue;
+
+    // If a fixed-point is not reached, this is because either this block is
+    // visited for the first time, or there is a loop in the CFG that brings new
+    // live-in info back to this block. Either case, we add its predecessors to
+    // the worklist, minus the values defined in each of them.
+    for (BBNumberTy P : Predecessors[BN]) {
+      // The value is not live into a predecessor if it defines the value, so we
+      // only need to find which values are not defined in this block.
+      AllocaState UpdateState = NewState & ~BlockDefStates[P];
+      // If all values of this block is defined in predecessor P, then there is
+      // no value living in P.
+      if (UpdateState.none())
+        continue;
+
+      // Otherwise there are, add to the worklist.
+      AddToWorklist(P, UpdateState);
+    }
+  }
+
+  // Compact the results.
+  CompactResults(BlockLiveInStates);
+  return ResultTy(BlockLiveInStates, Allocas, CompactedBBList);
 }
 
 /// Queue a phi-node to be added to a basic-block for a specific Alloca.
