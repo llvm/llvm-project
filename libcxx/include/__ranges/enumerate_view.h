@@ -69,18 +69,18 @@ public:
   = default;
   _LIBCPP_HIDE_FROM_ABI constexpr explicit enumerate_view(_View __base) : __base_(std::move(__base)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin()
     requires(!__simple_view<_View>)
   {
     return __iterator<false>(ranges::begin(__base_), 0);
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
     requires __range_with_movable_references<const _View>
   {
     return __iterator<true>(ranges::begin(__base_), 0);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end()
     requires(!__simple_view<_View>)
   {
     if constexpr (common_range<_View> && sized_range<_View>)
@@ -88,7 +88,7 @@ public:
     else
       return __sentinel<false>(ranges::end(__base_));
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
     requires __range_with_movable_references<const _View>
   {
     if constexpr (common_range<const _View> && sized_range<const _View>)
@@ -97,23 +97,23 @@ public:
       return __sentinel<true>(ranges::end(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
     requires sized_range<_View>
   {
     return ranges::size(__base_);
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires sized_range<const _View>
   {
     return ranges::size(__base_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __base_;
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
 };
 
 template <class _Range>
