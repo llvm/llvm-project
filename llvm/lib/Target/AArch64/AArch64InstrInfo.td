@@ -276,6 +276,8 @@ def HasMatMulFP32    : Predicate<"Subtarget->hasMatMulFP32()">,
                        AssemblerPredicateWithAll<(all_of FeatureMatMulFP32), "f32mm">;
 def HasMatMulFP64    : Predicate<"Subtarget->hasMatMulFP64()">,
                        AssemblerPredicateWithAll<(all_of FeatureMatMulFP64), "f64mm">;
+def HasFPAC          : Predicate<"Subtarget->hasFPAC())">,
+                       AssemblerPredicateWithAll<(all_of FeatureFPAC), "fpac">;
 def HasXS            : Predicate<"Subtarget->hasXS()">,
                        AssemblerPredicateWithAll<(all_of FeatureXS), "xs">;
 def HasWFxT          : Predicate<"Subtarget->hasWFxT()">,
@@ -1821,6 +1823,37 @@ let Predicates = [HasPAuth] in {
   defm LDRAA  : AuthLoad<0, "ldraa", simm10Scaled>;
   defm LDRAB  : AuthLoad<1, "ldrab", simm10Scaled>;
 
+  // AUT pseudo.
+  // This directly manipulates x16/x17, which are the only registers the OS
+  // guarantees are safe to use for sensitive operations.
+  def AUT : Pseudo<(outs), (ins i32imm:$Key, i64imm:$Disc, GPR64noip:$AddrDisc),
+                   []>, Sched<[WriteI, ReadI]> {
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let Size = 32;
+    let Defs = [X16,X17,NZCV];
+    let Uses = [X16];
+  }
+
+  // AUT and re-PAC a value, using different keys/data.
+  // This directly manipulates x16/x17, which are the only registers the OS
+  // guarantees are safe to use for sensitive operations.
+  def AUTPAC
+      : Pseudo<(outs),
+               (ins i32imm:$AUTKey, i64imm:$AUTDisc, GPR64noip:$AUTAddrDisc,
+                    i32imm:$PACKey, i64imm:$PACDisc, GPR64noip:$PACAddrDisc),
+               []>, Sched<[WriteI, ReadI]> {
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let Size = 48;
+    let Defs = [X16,X17,NZCV];
+    let Uses = [X16];
+  }
+
   // Materialize a signed global address, with adrp+add and PAC.
   def MOVaddrPAC : Pseudo<(outs),
                           (ins i64imm:$Addr, i32imm:$Key,
@@ -1878,7 +1911,6 @@ let Predicates = [HasPAuth] in {
                                 tcGPR64:$AddrDisc),
               (AUTH_TCRETURN_BTI tcGPRx16x17:$dst, imm:$FPDiff, imm:$Key,
                                  imm:$Disc, tcGPR64:$AddrDisc)>;
-
 }
 
 // v9.5-A pointer authentication extensions
