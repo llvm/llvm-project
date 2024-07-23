@@ -360,7 +360,7 @@ void ELFWriter::writeHeader(const MCAssembler &Asm) {
   WriteWord(0);                     // e_shoff = sec hdr table off in bytes
 
   // e_flags = whatever the target wants
-  W.write<uint32_t>(Asm.getELFHeaderEFlags());
+  W.write<uint32_t>(OWriter.getELFHeaderEFlags());
 
   // e_ehsize = ELF header size
   W.write<uint16_t>(is64Bit() ? sizeof(ELF::Elf64_Ehdr)
@@ -560,7 +560,7 @@ void ELFWriter::computeSymbolTable(MCAssembler &Asm,
   std::vector<ELFSymbolData> LocalSymbolData;
   std::vector<ELFSymbolData> ExternalSymbolData;
   MutableArrayRef<std::pair<std::string, size_t>> FileNames =
-      Asm.getFileNames();
+      OWriter.getFileNames();
   for (const std::pair<std::string, size_t> &F : FileNames)
     StrTabBuilder.add(F.first);
 
@@ -1157,10 +1157,12 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
 }
 
 void ELFObjectWriter::reset() {
+  ELFHeaderEFlags = 0;
   SeenGnuAbi = false;
   OverrideABIVersion.reset();
   Relocations.clear();
   Renames.clear();
+  Symvers.clear();
   MCObjectWriter::reset();
 }
 
@@ -1171,7 +1173,7 @@ bool ELFObjectWriter::hasRelocationAddend() const {
 void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
   // The presence of symbol versions causes undefined symbols and
   // versions declared with @@@ to be renamed.
-  for (const MCAssembler::Symver &S : Asm.Symvers) {
+  for (const Symver &S : Symvers) {
     StringRef AliasName = S.Name;
     const auto &Symbol = cast<MCSymbolELF>(*S.Sym);
     size_t Pos = AliasName.find('@');

@@ -52,6 +52,7 @@ class MCValue;
 
 class MCAssembler {
 public:
+  friend class MCObjectWriter;
   using SectionListType = SmallVector<MCSection *, 0>;
   using const_iterator = pointee_iterator<SectionListType::const_iterator>;
 
@@ -70,14 +71,6 @@ private:
 
   SmallVector<const MCSymbol *, 0> Symbols;
 
-  /// The list of linker options to propagate into the object file.
-  std::vector<std::vector<std::string>> LinkerOptions;
-
-  /// List of declared file names
-  std::vector<std::pair<std::string, size_t>> FileNames;
-  // Optional compiler version.
-  std::string CompilerVersion;
-
   MCDwarfLineTableParams LTParams;
 
   /// The set of function symbols for which a .thumb_func directive has
@@ -93,13 +86,6 @@ private:
   ///
   /// By default it's 0, which means bundling is disabled.
   unsigned BundleAlignSize = 0;
-
-  /// ELF specific e_header flags
-  // It would be good if there were an MCELFAssembler class to hold this.
-  // ELF header flags are used both by the integrated and standalone assemblers.
-  // Access to the flags is necessary in cases where assembler directives affect
-  // which flags to be set.
-  unsigned ELFHeaderEFlags = 0;
 
   /// Evaluate a fixup to a relocatable expression and the value which should be
   /// placed into the fixup.
@@ -147,15 +133,6 @@ private:
   handleFixup(MCFragment &F, const MCFixup &Fixup, const MCSubtargetInfo *STI);
 
 public:
-  struct Symver {
-    SMLoc Loc;
-    const MCSymbol *Sym;
-    StringRef Name;
-    // True if .symver *, *@@@* or .symver *, *, remove.
-    bool KeepOriginalSym;
-  };
-  std::vector<Symver> Symvers;
-
   /// Construct a new assembler instance.
   //
   // FIXME: How are we going to parameterize this? Two obvious options are stay
@@ -200,10 +177,6 @@ public:
   /// Flag a function symbol as the target of a .thumb_func directive.
   void setIsThumbFunc(const MCSymbol *Func) { ThumbFuncs.insert(Func); }
 
-  /// ELF e_header flags
-  unsigned getELFHeaderEFlags() const { return ELFHeaderEFlags; }
-  void setELFHeaderEFlags(unsigned Flags) { ELFHeaderEFlags = Flags; }
-
   /// Reuse an assembler instance
   ///
   void reset();
@@ -213,8 +186,6 @@ public:
   MCAsmBackend *getBackendPtr() const { return Backend.get(); }
 
   MCCodeEmitter *getEmitterPtr() const { return Emitter.get(); }
-
-  MCObjectWriter *getWriterPtr() const { return Writer.get(); }
 
   MCAsmBackend &getBackend() const { return *Backend; }
 
@@ -260,47 +231,13 @@ public:
     return make_pointee_range(Symbols);
   }
 
-  /// @}
-  /// \name Linker Option List Access
-  /// @{
-
-  std::vector<std::vector<std::string>> &getLinkerOptions() {
-    return LinkerOptions;
-  }
-
-  struct CGProfileEntry {
-    const MCSymbolRefExpr *From;
-    const MCSymbolRefExpr *To;
-    uint64_t Count;
-  };
-  std::vector<CGProfileEntry> CGProfile;
-  /// @}
-  /// \name Backend Data Access
-  /// @{
-
   bool registerSection(MCSection &Section);
   bool registerSymbol(const MCSymbol &Symbol);
-
-  MutableArrayRef<std::pair<std::string, size_t>> getFileNames() {
-    return FileNames;
-  }
-
-  void addFileName(StringRef FileName) {
-    FileNames.emplace_back(std::string(FileName), Symbols.size());
-  }
-
-  void setCompilerVersion(std::string CompilerVers) {
-    if (CompilerVersion.empty())
-      CompilerVersion = std::move(CompilerVers);
-  }
-  StringRef getCompilerVersion() { return CompilerVersion; }
 
   /// Write the necessary bundle padding to \p OS.
   /// Expects a fragment \p F containing instructions and its size \p FSize.
   void writeFragmentPadding(raw_ostream &OS, const MCEncodedFragment &F,
                             uint64_t FSize) const;
-
-  /// @}
 
   void dump() const;
 };
