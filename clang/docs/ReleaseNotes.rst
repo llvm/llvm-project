@@ -746,6 +746,8 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses dangling assignments for pointer-like objects (annotated with `[[gsl::Pointer]]`) under `-Wdangling-assignment-gsl` (off by default)
   Fixes #GH63310.
 
+- Clang now has improved diagnostics for functions with explicit 'this' parameters. Fixes #GH97878
+
 Improvements to Clang's time-trace
 ----------------------------------
 
