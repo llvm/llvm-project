@@ -10,7 +10,6 @@
 
 // UNSUPPORTED: c++03
 
-#include <iterator>
 #include <string>
 
 #include "test_macros.h"
@@ -19,14 +18,6 @@
 
 template <class T>
 class small_pointer {
-public:
-  using value_type        = T;
-  using difference_type   = std::int16_t;
-  using pointer           = small_pointer;
-  using reference         = T&;
-  using iterator_category = std::random_access_iterator_tag;
-
-private:
   std::uint16_t offset;
 };
 

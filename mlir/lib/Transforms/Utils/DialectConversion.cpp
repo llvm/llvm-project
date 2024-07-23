@@ -293,9 +293,10 @@ public:
 /// original location.
 class EraseBlockRewrite : public BlockRewrite {
 public:
-  EraseBlockRewrite(ConversionPatternRewriterImpl &rewriterImpl, Block *block)
-      : BlockRewrite(Kind::EraseBlock, rewriterImpl, block),
-        region(block->getParent()), insertBeforeBlock(block->getNextNode()) {}
+  EraseBlockRewrite(ConversionPatternRewriterImpl &rewriterImpl, Block *block,
+                    Region *region, Block *insertBeforeBlock)
+      : BlockRewrite(Kind::EraseBlock, rewriterImpl, block), region(region),
+        insertBeforeBlock(insertBeforeBlock) {}
 
   static bool classof(const IRRewrite *rewrite) {
     return rewrite->getKind() == Kind::EraseBlock;
@@ -1439,7 +1440,9 @@ void ConversionPatternRewriterImpl::notifyOpReplaced(Operation *op,
 }
 
 void ConversionPatternRewriterImpl::notifyBlockIsBeingErased(Block *block) {
-  appendRewrite<EraseBlockRewrite>(block);
+  Region *region = block->getParent();
+  Block *origNextBlock = block->getNextNode();
+  appendRewrite<EraseBlockRewrite>(block, region, origNextBlock);
 }
 
 void ConversionPatternRewriterImpl::notifyBlockInserted(

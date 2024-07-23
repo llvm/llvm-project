@@ -8742,7 +8742,6 @@ TEST_F(FormatTest, FunctionAnnotations) {
                "    << abc;");
   verifyFormat("MACRO(abc)::function() // wrap\n"
                "    << abc;");
-  verifyFormat("FOO(bar)();", getLLVMStyleWithColumns(0));
 }
 
 TEST_F(FormatTest, BreaksDesireably) {

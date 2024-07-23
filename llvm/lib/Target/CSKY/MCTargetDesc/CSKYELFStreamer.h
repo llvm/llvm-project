@@ -99,6 +99,8 @@ public:
 };
 
 class CSKYELFStreamer : public MCELFStreamer {
+  int64_t MappingSymbolCounter = 0;
+
   void EmitMappingSymbol(StringRef Name);
 
 public:
@@ -136,6 +138,7 @@ public:
     MCELFStreamer::emitValueImpl(Value, Size, Loc);
   }
   void reset() override {
+    MappingSymbolCounter = 0;
     State = EMS_None;
     MCELFStreamer::reset();
   }

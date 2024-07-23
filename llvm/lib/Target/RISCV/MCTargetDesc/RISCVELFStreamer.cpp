@@ -87,10 +87,10 @@ void RISCVTargetELFStreamer::finishAttributeSection() {
 
 void RISCVTargetELFStreamer::finish() {
   RISCVTargetStreamer::finish();
-  ELFObjectWriter &W = getStreamer().getWriter();
+  MCAssembler &MCA = getStreamer().getAssembler();
   RISCVABI::ABI ABI = getTargetABI();
 
-  unsigned EFlags = W.getELFHeaderEFlags();
+  unsigned EFlags = MCA.getELFHeaderEFlags();
 
   if (hasRVC())
     EFlags |= ELF::EF_RISCV_RVC;
@@ -117,7 +117,7 @@ void RISCVTargetELFStreamer::finish() {
     llvm_unreachable("Improperly initialised target ABI");
   }
 
-  W.setELFHeaderEFlags(EFlags);
+  MCA.setELFHeaderEFlags(EFlags);
 }
 
 void RISCVTargetELFStreamer::reset() {
@@ -132,6 +132,7 @@ void RISCVTargetELFStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {
 void RISCVELFStreamer::reset() {
   static_cast<RISCVTargetStreamer *>(getTargetStreamer())->reset();
   MCELFStreamer::reset();
+  MappingSymbolCounter = 0;
   LastMappingSymbols.clear();
   LastEMS = EMS_None;
 }
@@ -151,7 +152,8 @@ void RISCVELFStreamer::emitInstructionsMappingSymbol() {
 }
 
 void RISCVELFStreamer::emitMappingSymbol(StringRef Name) {
-  auto *Symbol = cast<MCSymbolELF>(getContext().createLocalSymbol(Name));
+  auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
+      Name + "." + Twine(MappingSymbolCounter++)));
   emitLabel(Symbol);
   Symbol->setType(ELF::STT_NOTYPE);
   Symbol->setBinding(ELF::STB_LOCAL);

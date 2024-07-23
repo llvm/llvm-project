@@ -291,7 +291,8 @@ public:
   }
   HexagonTargetELFStreamer(MCStreamer &S, MCSubtargetInfo const &STI)
       : HexagonTargetStreamer(S) {
-    getStreamer().getWriter().setELFHeaderEFlags(Hexagon_MC::GetELFFlags(STI));
+    MCAssembler &MCA = getStreamer().getAssembler();
+    MCA.setELFHeaderEFlags(Hexagon_MC::GetELFFlags(STI));
   }
 
   void emitCommonSymbolSorted(MCSymbol *Symbol, uint64_t Size,

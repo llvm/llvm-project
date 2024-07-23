@@ -92,7 +92,6 @@ Using Clang Tools
    ClangFormatStyleOptions
    ClangFormattedStatus
    ClangLinkerWrapper
-   ClangNVLinkWrapper
    ClangOffloadBundler
    ClangOffloadPackager
    ClangRepl

@@ -11,5 +11,4 @@ add_llvm_component_library(LLVMCodeGenData
   LINK_COMPONENTS
   Core
   Support
-  Object
   )

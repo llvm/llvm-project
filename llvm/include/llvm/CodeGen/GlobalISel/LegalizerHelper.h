@@ -402,7 +402,6 @@ public:
 
   LegalizeResult lowerISFPCLASS(MachineInstr &MI);
 
-  LegalizeResult lowerThreewayCompare(MachineInstr &MI);
   LegalizeResult lowerMinMax(MachineInstr &MI);
   LegalizeResult lowerFCopySign(MachineInstr &MI);
   LegalizeResult lowerFMinNumMaxNum(MachineInstr &MI);

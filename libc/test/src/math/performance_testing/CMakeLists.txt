@@ -1,5 +1,5 @@
 add_library(
-  libc_diff_test_utils STATIC
+  libc_diff_test_utils
   Timer.cpp
   Timer.h
 )
@@ -95,9 +95,6 @@ add_header_library(
   single_input_single_output_diff
   HDRS
     SingleInputSingleOutputPerf.h
-  DEPENDS
-    libc.src.__support.CPP.algorithm
-    libc.src.__support.FPUtil.fp_bits
 )
 
 add_header_library(
@@ -105,7 +102,6 @@ add_header_library(
   HDRS
     BinaryOpSingleOutputPerf.h
   DEPENDS
-    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -405,19 +401,4 @@ add_perf_binary(
     -fno-builtin
   LINK_LIBRARIES
     LibcFPTestHelpers
-)
-
-add_perf_binary(
-  misc_basic_ops_perf
-  SRCS
-    misc_basic_ops_perf.cpp
-  DEPENDS
-    .binary_op_single_output_diff
-    .single_input_single_output_diff
-    libc.src.math.copysignf
-    libc.src.math.copysignf16
-    libc.src.math.fabsf
-    libc.src.math.fabsf16
-  COMPILE_OPTIONS
-    -fno-builtin
 )

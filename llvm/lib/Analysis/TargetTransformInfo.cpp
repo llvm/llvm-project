@@ -279,10 +279,6 @@ BranchProbability TargetTransformInfo::getPredictableBranchThreshold() const {
              : TTIImpl->getPredictableBranchThreshold();
 }
 
-InstructionCost TargetTransformInfo::getBranchMispredictPenalty() const {
-  return TTIImpl->getBranchMispredictPenalty();
-}
-
 bool TargetTransformInfo::hasBranchDivergence(const Function *F) const {
   return TTIImpl->hasBranchDivergence(F);
 }

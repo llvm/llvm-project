@@ -40,7 +40,6 @@ add_clang_unittest(ToolingTests
   RecursiveASTVisitorTests/CXXMethodDecl.cpp
   RecursiveASTVisitorTests/CXXOperatorCallExprTraverser.cpp
   RecursiveASTVisitorTests/DeclRefExpr.cpp
-  RecursiveASTVisitorTests/DeductionGuide.cpp
   RecursiveASTVisitorTests/ImplicitCtor.cpp
   RecursiveASTVisitorTests/ImplicitCtorInitializer.cpp
   RecursiveASTVisitorTests/InitListExprPostOrder.cpp

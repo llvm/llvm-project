@@ -11,8 +11,8 @@
 
 #include "FEnvImpl.h"
 #include "FPBits.h"
-#include "dyadic_float.h"
 
+#include "FEnvImpl.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
@@ -269,21 +269,12 @@ totalordermag(T x, T y) {
 template <typename T>
 LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> getpayload(T x) {
   using FPBits = FPBits<T>;
-  using StorageType = typename FPBits::StorageType;
   FPBits x_bits(x);
 
   if (!x_bits.is_nan())
     return T(-1.0);
 
-  StorageType payload = x_bits.uintval() & (FPBits::FRACTION_MASK >> 1);
-
-  if constexpr (is_big_int_v<StorageType>) {
-    DyadicFloat<FPBits::STORAGE_LEN> payload_dfloat(Sign::POS, 0, payload);
-
-    return static_cast<T>(payload_dfloat);
-  } else {
-    return static_cast<T>(payload);
-  }
+  return T(x_bits.uintval() & (FPBits::FRACTION_MASK >> 1));
 }
 
 template <bool IsSignaling, typename T>

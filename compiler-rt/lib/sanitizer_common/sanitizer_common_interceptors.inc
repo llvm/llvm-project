@@ -6336,7 +6336,7 @@ INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
 
       const char *SelfFName = DladdrSelfFName();
       VPrintf(1, "dlopen interceptor: DladdrSelfFName: %p %s\n",
-              (const void *)SelfFName, SelfFName);
+              (void *)SelfFName, SelfFName);
 
       if (SelfFName && internal_strcmp(SelfFName, filename) == 0) {
         // It's possible they copied the string from dladdr, so

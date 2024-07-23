@@ -729,10 +729,7 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
         else if (Machine == IMAGE_FILE_MACHINE_I386 &&
                  applyNameType(IMPORT_NAME_NOPREFIX, Name) == E.ImportName)
           NameType = IMPORT_NAME_NOPREFIX;
-        else if (isArm64EC(M)) {
-          NameType = IMPORT_NAME_EXPORTAS;
-          ExportName = E.ImportName;
-        } else if (Name == E.ImportName)
+        else if (Name == E.ImportName)
           NameType = IMPORT_NAME;
         else {
           Deferred D;

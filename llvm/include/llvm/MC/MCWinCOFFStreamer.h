@@ -22,7 +22,6 @@ class MCSection;
 class MCSubtargetInfo;
 class MCSymbol;
 class StringRef;
-class WinCOFFObjectWriter;
 class raw_pwrite_stream;
 
 class MCWinCOFFStreamer : public MCObjectStreamer {
@@ -36,8 +35,6 @@ public:
     CurSymbol = nullptr;
     MCObjectStreamer::reset();
   }
-
-  WinCOFFObjectWriter &getWriter();
 
   /// \name MCStreamer interface
   /// \{

@@ -524,21 +524,12 @@ void Environment::initialize() {
           assert(VarDecl != nullptr);
           setStorageLocation(*VarDecl, createObject(*VarDecl, nullptr));
         } else if (Capture.capturesThis()) {
-          if (auto *Ancestor = InitialTargetFunc->getNonClosureAncestor()) {
-            const auto *SurroundingMethodDecl = cast<CXXMethodDecl>(Ancestor);
-            QualType ThisPointeeType =
-                SurroundingMethodDecl->getFunctionObjectParameterType();
-            setThisPointeeStorageLocation(
-                cast<RecordStorageLocation>(createObject(ThisPointeeType)));
-          } else if (auto *FieldBeingInitialized =
-                         dyn_cast<FieldDecl>(Parent->getLambdaContextDecl())) {
-            // This is in a field initializer, rather than a method.
-            setThisPointeeStorageLocation(
-                cast<RecordStorageLocation>(createObject(QualType(
-                    FieldBeingInitialized->getParent()->getTypeForDecl(), 0))));
-          } else {
-            assert(false && "Unexpected this-capturing lambda context.");
-          }
+          const auto *SurroundingMethodDecl =
+              cast<CXXMethodDecl>(InitialTargetFunc->getNonClosureAncestor());
+          QualType ThisPointeeType =
+              SurroundingMethodDecl->getFunctionObjectParameterType();
+          setThisPointeeStorageLocation(
+              cast<RecordStorageLocation>(createObject(ThisPointeeType)));
         }
       }
     } else if (MethodDecl->isImplicitObjectMemberFunction()) {

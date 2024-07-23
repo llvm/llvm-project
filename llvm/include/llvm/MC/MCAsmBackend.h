@@ -217,9 +217,8 @@ public:
   virtual bool writeNopData(raw_ostream &OS, uint64_t Count,
                             const MCSubtargetInfo *STI) const = 0;
 
-  // Return true if fragment offsets have been adjusted and an extra layout
-  // iteration is needed.
-  virtual bool finishLayout(const MCAssembler &Asm) const { return false; }
+  /// Give backend an opportunity to finish layout after relaxation
+  virtual void finishLayout(MCAssembler const &Asm) const {}
 
   /// Handle any target-specific assembler flags. By default, do nothing.
   virtual void handleAssemblerFlag(MCAssemblerFlag Flag) {}

@@ -12,11 +12,6 @@ class RISCVExtension<string name, int major, int minor, string desc,
   bit Experimental = false;
 }
 
-class RISCVExtensionBitmask<bits<3> groupID, int bitPos> {
-  int GroupID = groupID;
-  int BitPos = bitPos;
-}
-
 class RISCVExperimentalExtension<string name, int major, int minor, string desc,
                                  list<RISCVExtension> implies = [],
                                  string fieldname = !subst("Feature", "Has", NAME),
@@ -28,8 +23,7 @@ class RISCVExperimentalExtension<string name, int major, int minor, string desc,
 
 def FeatureStdExtI
     : RISCVExtension<"i", 2, 1,
-                     "'I' (Base Integer Instruction Set)">,
-      RISCVExtensionBitmask<0, 8>;
+                     "'I' (Base Integer Instruction Set)">;
 
 def FeatureStdExtZicsr
     : RISCVExtension<"zicsr", 2, 0,
@@ -42,8 +36,7 @@ def FeatureStdExtZifencei
 def FeatureStdExtF
     : RISCVExtension<"f", 2, 2,
                      "'F' (Single-Precision Floating-Point)",
-                     [FeatureStdExtZicsr]>,
-      RISCVExtensionBitmask<0, 5>;
+                     [FeatureStdExtZicsr]>;
 
 def FeatureStdExtZidummy
     : RISCVExperimentalExtension<"zidummy", 0, 1,
@@ -178,10 +171,3 @@ def ROCKET : RISCVTuneProcessorModel<"rocket",
 // CHECK-NEXT: TUNE_PROC(ROCKET, "rocket")
 
 // CHECK: #undef TUNE_PROC
-
-// CHECK: #ifdef GET_RISCVExtensionBitmaskTable_IMPL
-// CHECK-NEXT: static const RISCVExtensionBitmask ExtensionBitmask[]={
-// CHECK-NEXT:     {"f", 0, 5ULL},
-// CHECK-NEXT:     {"i", 0, 8ULL},
-// CHECK-NEXT: };
-// CHECK-NEXT: #endif

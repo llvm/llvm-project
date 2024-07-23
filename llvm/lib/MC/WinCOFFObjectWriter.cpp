@@ -119,9 +119,10 @@ public:
 
   SmallVector<COFFSymbol *, 1> OffsetSymbols;
 };
-} // namespace
 
-class llvm::WinCOFFWriter {
+class WinCOFFObjectWriter;
+
+class WinCOFFWriter {
   WinCOFFObjectWriter &OWriter;
   support::endian::Writer W;
 
@@ -195,19 +196,41 @@ private:
   void assignFileOffsets(MCAssembler &Asm);
 };
 
-WinCOFFObjectWriter::WinCOFFObjectWriter(
-    std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS)
-    : TargetObjectWriter(std::move(MOTW)),
-      ObjWriter(std::make_unique<WinCOFFWriter>(*this, OS,
-                                                WinCOFFWriter::AllSections)) {}
-WinCOFFObjectWriter::WinCOFFObjectWriter(
-    std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS,
-    raw_pwrite_stream &DwoOS)
-    : TargetObjectWriter(std::move(MOTW)),
-      ObjWriter(std::make_unique<WinCOFFWriter>(*this, OS,
-                                                WinCOFFWriter::NonDwoOnly)),
-      DwoWriter(std::make_unique<WinCOFFWriter>(*this, DwoOS,
-                                                WinCOFFWriter::DwoOnly)) {}
+class WinCOFFObjectWriter : public MCObjectWriter {
+  friend class WinCOFFWriter;
+
+  std::unique_ptr<MCWinCOFFObjectTargetWriter> TargetObjectWriter;
+  std::unique_ptr<WinCOFFWriter> ObjWriter, DwoWriter;
+
+public:
+  WinCOFFObjectWriter(std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW,
+                      raw_pwrite_stream &OS)
+      : TargetObjectWriter(std::move(MOTW)),
+        ObjWriter(std::make_unique<WinCOFFWriter>(*this, OS,
+                                                  WinCOFFWriter::AllSections)) {
+  }
+  WinCOFFObjectWriter(std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW,
+                      raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS)
+      : TargetObjectWriter(std::move(MOTW)),
+        ObjWriter(std::make_unique<WinCOFFWriter>(*this, OS,
+                                                  WinCOFFWriter::NonDwoOnly)),
+        DwoWriter(std::make_unique<WinCOFFWriter>(*this, DwoOS,
+                                                  WinCOFFWriter::DwoOnly)) {}
+
+  // MCObjectWriter interface implementation.
+  void reset() override;
+  void executePostLayoutBinding(MCAssembler &Asm) override;
+  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
+                                              const MCSymbol &SymA,
+                                              const MCFragment &FB, bool InSet,
+                                              bool IsPCRel) const override;
+  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
+                        const MCFixup &Fixup, MCValue Target,
+                        uint64_t &FixedValue) override;
+  uint64_t writeObject(MCAssembler &Asm) override;
+};
+
+} // end anonymous namespace
 
 static bool isDwoSection(const MCSection &Sec) {
   return Sec.getName().ends_with(".dwo");
@@ -636,7 +659,7 @@ void WinCOFFWriter::writeSection(MCAssembler &Asm, const COFFSection &Sec) {
 
 // Create .file symbols.
 void WinCOFFWriter::createFileSymbols(MCAssembler &Asm) {
-  for (const std::pair<std::string, size_t> &It : OWriter.getFileNames()) {
+  for (const std::pair<std::string, size_t> &It : Asm.getFileNames()) {
     // round up to calculate the number of auxiliary symbols required
     const std::string &Name = It.first;
     unsigned SymbolSize = UseBigObj ? COFF::Symbol32Size : COFF::Symbol16Size;
@@ -1084,12 +1107,12 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
   }
 
   // Create the contents of the .llvm.call-graph-profile section.
-  if (Mode != DwoOnly && !OWriter.getCGProfile().empty()) {
+  if (Mode != DwoOnly && !Asm.CGProfile.empty()) {
     auto *Sec = Asm.getContext().getCOFFSection(
         ".llvm.call-graph-profile", COFF::IMAGE_SCN_LNK_REMOVE);
     auto *Frag = cast<MCDataFragment>(Sec->curFragList()->Head);
     raw_svector_ostream OS(Frag->getContents());
-    for (const auto &CGPE : OWriter.getCGProfile()) {
+    for (const MCAssembler::CGProfileEntry &CGPE : Asm.CGProfile) {
       uint32_t FromIndex = CGPE.From->getSymbol().getIndex();
       uint32_t ToIndex = CGPE.To->getSymbol().getIndex();
       support::endian::write(OS, FromIndex, W.Endian);
@@ -1102,7 +1125,7 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
 
   // MS LINK expects to be able to use this timestamp to implement their
   // /INCREMENTAL feature.
-  if (OWriter.IncrementalLinkerCompatible) {
+  if (Asm.isIncrementalLinkerCompatible()) {
     Header.TimeDateStamp = getTime();
   } else {
     // Have deterministic output if /INCREMENTAL isn't needed. Also matches GNU.
@@ -1151,7 +1174,6 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
 // MCObjectWriter interface implementations
 
 void WinCOFFObjectWriter::reset() {
-  IncrementalLinkerCompatible = false;
   ObjWriter->reset();
   if (DwoWriter)
     DwoWriter->reset();

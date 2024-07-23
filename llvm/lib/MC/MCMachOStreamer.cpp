@@ -118,12 +118,12 @@ public:
   }
 
   void emitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) override {
-    getWriter().getLOHContainer().addDirective(Kind, Args);
+    getAssembler().getLOHContainer().addDirective(Kind, Args);
   }
   void emitCGProfileEntry(const MCSymbolRefExpr *From,
                           const MCSymbolRefExpr *To, uint64_t Count) override {
     if (!From->getSymbol().isTemporary() && !To->getSymbol().isTemporary())
-      getWriter().getCGProfile().push_back({From, To, Count});
+      getAssembler().CGProfile.push_back({From, To, Count});
   }
 
   void finishImpl() override;
@@ -220,13 +220,13 @@ void MCMachOStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
   case MCAF_Code32: return; // Change parsing mode; no-op here.
   case MCAF_Code64: return; // Change parsing mode; no-op here.
   case MCAF_SubsectionsViaSymbols:
-    getWriter().setSubsectionsViaSymbols(true);
+    getAssembler().setSubsectionsViaSymbols(true);
     return;
   }
 }
 
 void MCMachOStreamer::emitLinkerOptions(ArrayRef<std::string> Options) {
-  getWriter().getLinkerOptions().push_back(Options);
+  getAssembler().getLinkerOptions().push_back(Options);
 }
 
 void MCMachOStreamer::emitDataRegion(MCDataRegionType Kind) {
@@ -252,21 +252,21 @@ void MCMachOStreamer::emitDataRegion(MCDataRegionType Kind) {
 void MCMachOStreamer::emitVersionMin(MCVersionMinType Kind, unsigned Major,
                                      unsigned Minor, unsigned Update,
                                      VersionTuple SDKVersion) {
-  getWriter().setVersionMin(Kind, Major, Minor, Update, SDKVersion);
+  getAssembler().setVersionMin(Kind, Major, Minor, Update, SDKVersion);
 }
 
 void MCMachOStreamer::emitBuildVersion(unsigned Platform, unsigned Major,
                                        unsigned Minor, unsigned Update,
                                        VersionTuple SDKVersion) {
-  getWriter().setBuildVersion((MachO::PlatformType)Platform, Major, Minor,
-                              Update, SDKVersion);
+  getAssembler().setBuildVersion((MachO::PlatformType)Platform, Major, Minor,
+                                 Update, SDKVersion);
 }
 
 void MCMachOStreamer::emitDarwinTargetVariantBuildVersion(
     unsigned Platform, unsigned Major, unsigned Minor, unsigned Update,
     VersionTuple SDKVersion) {
-  getWriter().setTargetVariantBuildVersion((MachO::PlatformType)Platform, Major,
-                                           Minor, Update, SDKVersion);
+  getAssembler().setDarwinTargetVariantBuildVersion(
+      (MachO::PlatformType)Platform, Major, Minor, Update, SDKVersion);
 }
 
 void MCMachOStreamer::emitThumbFunc(MCSymbol *Symbol) {
@@ -506,10 +506,9 @@ void MCMachOStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
 
 void MCMachOStreamer::finalizeCGProfile() {
   MCAssembler &Asm = getAssembler();
-  MCObjectWriter &W = getWriter();
-  if (W.getCGProfile().empty())
+  if (Asm.CGProfile.empty())
     return;
-  for (auto &E : W.getCGProfile()) {
+  for (MCAssembler::CGProfileEntry &E : Asm.CGProfile) {
     finalizeCGProfileEntry(E.From);
     finalizeCGProfileEntry(E.To);
   }
@@ -521,7 +520,7 @@ void MCMachOStreamer::finalizeCGProfile() {
   changeSection(CGProfileSection);
   // For each entry, reserve space for 2 32-bit indices and a 64-bit count.
   size_t SectionBytes =
-      W.getCGProfile().size() * (2 * sizeof(uint32_t) + sizeof(uint64_t));
+      Asm.CGProfile.size() * (2 * sizeof(uint32_t) + sizeof(uint64_t));
   cast<MCDataFragment>(*CGProfileSection->begin())
       .getContents()
       .resize(SectionBytes);

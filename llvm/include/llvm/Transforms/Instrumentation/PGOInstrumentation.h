@@ -43,14 +43,12 @@ class FileSystem;
 class PGOInstrumentationGenCreateVar
     : public PassInfoMixin<PGOInstrumentationGenCreateVar> {
 public:
-  PGOInstrumentationGenCreateVar(std::string CSInstrName = "",
-                                 bool Sampling = false)
-      : CSInstrName(CSInstrName), ProfileSampling(Sampling) {}
+  PGOInstrumentationGenCreateVar(std::string CSInstrName = "")
+      : CSInstrName(CSInstrName) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 
 private:
   std::string CSInstrName;
-  bool ProfileSampling;
 };
 
 /// The instrumentation (profile-instr-gen) pass for IR based PGO.

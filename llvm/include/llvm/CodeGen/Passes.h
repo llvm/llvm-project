@@ -205,20 +205,20 @@ namespace llvm {
   /// possible. It is best suited for debug code where live ranges are short.
   ///
   FunctionPass *createFastRegisterAllocator();
-  FunctionPass *createFastRegisterAllocator(RegAllocFilterFunc F,
+  FunctionPass *createFastRegisterAllocator(RegClassFilterFunc F,
                                             bool ClearVirtRegs);
 
   /// BasicRegisterAllocation Pass - This pass implements a degenerate global
   /// register allocator using the basic regalloc framework.
   ///
   FunctionPass *createBasicRegisterAllocator();
-  FunctionPass *createBasicRegisterAllocator(RegAllocFilterFunc F);
+  FunctionPass *createBasicRegisterAllocator(RegClassFilterFunc F);
 
   /// Greedy register allocation pass - This pass implements a global register
   /// allocator for optimized builds.
   ///
   FunctionPass *createGreedyRegisterAllocator();
-  FunctionPass *createGreedyRegisterAllocator(RegAllocFilterFunc F);
+  FunctionPass *createGreedyRegisterAllocator(RegClassFilterFunc F);
 
   /// PBQPRegisterAllocation Pass - This pass implements the Partitioned Boolean
   /// Quadratic Prograaming (PBQP) based register allocator.

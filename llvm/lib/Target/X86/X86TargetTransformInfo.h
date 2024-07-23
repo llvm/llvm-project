@@ -294,8 +294,6 @@ public:
   bool supportsEfficientVectorElementLoadStore() const;
   bool enableInterleavedAccessVectorization();
 
-  InstructionCost getBranchMispredictPenalty() const;
-
 private:
   bool supportsGather() const;
   InstructionCost getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,

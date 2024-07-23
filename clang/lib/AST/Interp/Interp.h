@@ -187,15 +187,10 @@ template <typename T>
 bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
   if (RHS.isZero()) {
     const auto *Op = cast<BinaryOperator>(S.Current->getExpr(OpPC));
-    if constexpr (std::is_same_v<T, Floating>) {
-      S.CCEDiag(Op, diag::note_expr_divide_by_zero)
-          << Op->getRHS()->getSourceRange();
-      return true;
-    }
-
     S.FFDiag(Op, diag::note_expr_divide_by_zero)
         << Op->getRHS()->getSourceRange();
-    return false;
+    if constexpr (!std::is_same_v<T, Floating>)
+      return false;
   }
 
   if (LHS.isSigned() && LHS.isMin() && RHS.isNegative() && RHS.isMinusOne()) {
@@ -2739,15 +2734,6 @@ inline bool InvalidDeclRef(InterpState &S, CodePtr OpPC,
                            const DeclRefExpr *DR) {
   assert(DR);
   return CheckDeclRef(S, OpPC, DR);
-}
-
-inline bool SizelessVectorElementSize(InterpState &S, CodePtr OpPC) {
-  if (S.inConstantContext()) {
-    const SourceRange &ArgRange = S.Current->getRange(OpPC);
-    const Expr *E = S.Current->getExpr(OpPC);
-    S.CCEDiag(E, diag::note_constexpr_non_const_vectorelements) << ArgRange;
-  }
-  return false;
 }
 
 inline bool Assume(InterpState &S, CodePtr OpPC) {

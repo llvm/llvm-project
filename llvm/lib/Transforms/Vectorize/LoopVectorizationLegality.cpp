@@ -261,20 +261,20 @@ void LoopVectorizeHints::getHintsFromMetadata() {
   assert(LoopID->getNumOperands() > 0 && "requires at least one operand");
   assert(LoopID->getOperand(0) == LoopID && "invalid loop id");
 
-  for (const MDOperand &MDO : llvm::drop_begin(LoopID->operands())) {
+  for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
     const MDString *S = nullptr;
     SmallVector<Metadata *, 4> Args;
 
     // The expected hint is either a MDString or a MDNode with the first
     // operand a MDString.
-    if (const MDNode *MD = dyn_cast<MDNode>(MDO)) {
+    if (const MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i))) {
       if (!MD || MD->getNumOperands() == 0)
         continue;
       S = dyn_cast<MDString>(MD->getOperand(0));
       for (unsigned i = 1, ie = MD->getNumOperands(); i < ie; ++i)
         Args.push_back(MD->getOperand(i));
     } else {
-      S = dyn_cast<MDString>(MDO);
+      S = dyn_cast<MDString>(LoopID->getOperand(i));
       assert(Args.size() == 0 && "too many arguments for MDString");
     }
 

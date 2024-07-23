@@ -55,12 +55,6 @@ void MachObjectWriter::reset() {
   LocalSymbolData.clear();
   ExternalSymbolData.clear();
   UndefinedSymbolData.clear();
-  LOHContainer.reset();
-  VersionInfo.Major = 0;
-  VersionInfo.SDKVersion = VersionTuple();
-  TargetVariantVersionInfo.Major = 0;
-  TargetVariantVersionInfo.SDKVersion = VersionTuple();
-  LinkerOptions.clear();
   MCObjectWriter::reset();
 }
 
@@ -744,7 +738,7 @@ bool MachObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
     if (!hasReliableSymbolDifference) {
       if (!SA.isInSection() || &SecA != &SecB ||
           (!SA.isTemporary() && FB.getAtom() != SA.getFragment()->getAtom() &&
-           SubsectionsViaSymbols))
+           Asm.getSubsectionsViaSymbols()))
         return false;
       return true;
     }
@@ -792,13 +786,13 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   computeSymbolTable(Asm, LocalSymbolData, ExternalSymbolData,
                      UndefinedSymbolData);
 
-  if (!CGProfile.empty()) {
+  if (!Asm.CGProfile.empty()) {
     MCSection *CGProfileSection = Asm.getContext().getMachOSection(
         "__LLVM", "__cg_profile", 0, SectionKind::getMetadata());
     auto &Frag = cast<MCDataFragment>(*CGProfileSection->begin());
     Frag.getContents().clear();
     raw_svector_ostream OS(Frag.getContents());
-    for (const MCObjectWriter::CGProfileEntry &CGPE : CGProfile) {
+    for (const MCAssembler::CGProfileEntry &CGPE : Asm.CGProfile) {
       uint32_t FromIndex = CGPE.From->getSymbol().getIndex();
       uint32_t ToIndex = CGPE.To->getSymbol().getIndex();
       support::endian::write(OS, FromIndex, W.Endian);
@@ -808,6 +802,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   }
 
   unsigned NumSections = Asm.end() - Asm.begin();
+  const MCAssembler::VersionInfoType &VersionInfo = Asm.getVersionInfo();
 
   // The section data starts after the header, the segment load command (and
   // section headers) and the symbol table.
@@ -825,6 +820,9 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
       LoadCommandsSize += sizeof(MachO::version_min_command);
   }
 
+  const MCAssembler::VersionInfoType &TargetVariantVersionInfo =
+      Asm.getDarwinTargetVariantVersionInfo();
+
   // Add the target variant version info load command size, if used.
   if (TargetVariantVersionInfo.Major != 0) {
     ++NumLoadCommands;
@@ -841,7 +839,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   }
 
   // Add the loh load command size, if used.
-  uint64_t LOHRawSize = LOHContainer.getEmitSize(Asm, *this);
+  uint64_t LOHRawSize = Asm.getLOHContainer().getEmitSize(Asm, *this);
   uint64_t LOHSize = alignTo(LOHRawSize, is64Bit() ? 8 : 4);
   if (LOHSize) {
     ++NumLoadCommands;
@@ -858,7 +856,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   }
 
   // Add the linker option load commands sizes.
-  for (const auto &Option : LinkerOptions) {
+  for (const auto &Option : Asm.getLinkerOptions()) {
     ++NumLoadCommands;
     LoadCommandsSize += ComputeLinkerOptionsLoadCommandSize(Option, is64Bit());
   }
@@ -894,7 +892,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
 
   // Write the prolog, starting with the header and load command...
   writeHeader(MachO::MH_OBJECT, NumLoadCommands, LoadCommandsSize,
-              SubsectionsViaSymbols);
+              Asm.getSubsectionsViaSymbols());
   uint32_t Prot =
       MachO::VM_PROT_READ | MachO::VM_PROT_WRITE | MachO::VM_PROT_EXECUTE;
   writeSegmentLoadCommand("", NumSections, 0, VMSize, SectionDataStart,
@@ -929,7 +927,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
 
   // Write out the deployment target information, if it's available.
   auto EmitDeploymentTargetVersion =
-      [&](const VersionInfoType &VersionInfo) {
+      [&](const MCAssembler::VersionInfoType &VersionInfo) {
         auto EncodeVersion = [](VersionTuple V) -> uint32_t {
           assert(!V.empty() && "empty version");
           unsigned Update = V.getSubminor().value_or(0);
@@ -1017,7 +1015,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   }
 
   // Write the linker options load commands.
-  for (const auto &Option : LinkerOptions)
+  for (const auto &Option : Asm.getLinkerOptions())
     writeLinkerOptionsLoadCommand(Option);
 
   // Write the actual section data.
@@ -1065,7 +1063,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
 #ifndef NDEBUG
     unsigned Start = W.OS.tell();
 #endif
-    LOHContainer.emit(Asm, *this);
+    Asm.getLOHContainer().emit(Asm, *this);
     // Pad to a multiple of the pointer size.
     W.OS.write_zeros(
         offsetToAlignment(LOHRawSize, is64Bit() ? Align(8) : Align(4)));

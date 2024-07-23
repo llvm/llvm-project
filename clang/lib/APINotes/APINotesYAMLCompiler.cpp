@@ -406,9 +406,6 @@ template <> struct ScalarEnumerationTraits<EnumConvenienceAliasKind> {
 } // namespace llvm
 
 namespace {
-struct Tag;
-typedef std::vector<Tag> TagsSeq;
-
 struct Tag {
   StringRef Name;
   AvailabilityItem Availability;
@@ -424,11 +421,9 @@ struct Tag {
   std::optional<EnumConvenienceAliasKind> EnumConvenienceKind;
   std::optional<bool> SwiftCopyable;
   FunctionsSeq Methods;
-
-  /// Tags that are declared within the current tag. Only the tags that have
-  /// corresponding API Notes will be listed.
-  TagsSeq Tags;
 };
+
+typedef std::vector<Tag> TagsSeq;
 } // namespace
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(Tag)
@@ -461,7 +456,6 @@ template <> struct MappingTraits<Tag> {
     IO.mapOptional("EnumKind", T.EnumConvenienceKind);
     IO.mapOptional("SwiftCopyable", T.SwiftCopyable);
     IO.mapOptional("Methods", T.Methods);
-    IO.mapOptional("Tags", T.Tags);
   }
 };
 } // namespace yaml
@@ -964,17 +958,12 @@ public:
     ContextInfo CI;
     auto TagCtxID = Writer.addContext(ParentContextID, T.Name, ContextKind::Tag,
                                       CI, SwiftVersion);
-    Context TagCtx(TagCtxID, ContextKind::Tag);
 
     for (const auto &CXXMethod : T.Methods) {
       CXXMethodInfo MI;
       convertFunction(CXXMethod, MI);
       Writer.addCXXMethod(TagCtxID, CXXMethod.Name, MI, SwiftVersion);
     }
-
-    // Convert nested tags.
-    for (const auto &Tag : T.Tags)
-      convertTagContext(TagCtx, Tag, SwiftVersion);
   }
 
   void convertTopLevelItems(std::optional<Context> Ctx,

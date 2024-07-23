@@ -13,12 +13,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(double, fabs, (double x)) {
-#ifdef __LIBC_MISC_MATH_BASIC_OPS_OPT
-  return __builtin_fabs(x);
-#else
-  return fputil::abs(x);
-#endif
-}
+LLVM_LIBC_FUNCTION(double, fabs, (double x)) { return fputil::abs(x); }
 
 } // namespace LIBC_NAMESPACE_DECL

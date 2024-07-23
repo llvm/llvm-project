@@ -149,10 +149,6 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   CharUnits Offset = CharUnits::Zero();
 
   auto getFieldOffset = [&](const FieldDecl *FD) -> CharUnits {
-    // This shouldn't happen, but if it does, don't crash inside
-    // getASTRecordLayout.
-    if (FD->getParent()->isInvalidDecl())
-      return CharUnits::Zero();
     const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(FD->getParent());
     unsigned FieldIndex = FD->getFieldIndex();
     return ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex));
@@ -180,30 +176,18 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
       Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
       Ptr = Ptr.getArray();
     } else {
+      // TODO: figure out if base is virtual
       bool IsVirtual = false;
 
       // Create a path entry for the field.
       const Descriptor *Desc = Ptr.getFieldDesc();
       if (const auto *BaseOrMember = Desc->asDecl()) {
-        if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember)) {
-          Ptr = Ptr.getBase();
-          Offset += getFieldOffset(FD);
-        } else if (const auto *RD = dyn_cast<CXXRecordDecl>(BaseOrMember)) {
-          IsVirtual = Ptr.isVirtualBaseClass();
-          Ptr = Ptr.getBase();
-          const Record *BaseRecord = Ptr.getRecord();
-
-          const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(
-              cast<CXXRecordDecl>(BaseRecord->getDecl()));
-          if (IsVirtual)
-            Offset += Layout.getVBaseClassOffset(RD);
-          else
-            Offset += Layout.getBaseClassOffset(RD);
-
-        } else {
-          Ptr = Ptr.getBase();
-        }
         Path.push_back(APValue::LValuePathEntry({BaseOrMember, IsVirtual}));
+        Ptr = Ptr.getBase();
+
+        if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember))
+          Offset += getFieldOffset(FD);
+
         continue;
       }
       llvm_unreachable("Invalid field type");

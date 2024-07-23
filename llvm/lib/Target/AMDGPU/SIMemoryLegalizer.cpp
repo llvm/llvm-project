@@ -217,7 +217,7 @@ public:
 
 class SIMemOpAccess final {
 private:
-  const AMDGPUMachineModuleInfo *MMI = nullptr;
+  AMDGPUMachineModuleInfo *MMI = nullptr;
 
   /// Reports unsupported message \p Msg for \p MI to LLVM context.
   void reportUnsupported(const MachineBasicBlock::iterator &MI,
@@ -241,7 +241,7 @@ private:
 public:
   /// Construct class to support accessing the machine memory operands
   /// of instructions in the machine function \p MF.
-  SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI);
+  SIMemOpAccess(MachineFunction &MF);
 
   /// \returns Load info if \p MI is a load operation, "std::nullopt" otherwise.
   std::optional<SIMemOpInfo>
@@ -806,8 +806,9 @@ SIAtomicAddrSpace SIMemOpAccess::toSIAtomicAddrSpace(unsigned AS) const {
   return SIAtomicAddrSpace::OTHER;
 }
 
-SIMemOpAccess::SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI_)
-    : MMI(&MMI_) {}
+SIMemOpAccess::SIMemOpAccess(MachineFunction &MF) {
+  MMI = &MF.getMMI().getObjFileInfo<AMDGPUMachineModuleInfo>();
+}
 
 std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     const MachineBasicBlock::iterator &MI) const {
@@ -2801,10 +2802,7 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
 bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
-  const MachineModuleInfo &MMI =
-      getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
-
-  SIMemOpAccess MOA(MMI.getObjFileInfo<AMDGPUMachineModuleInfo>());
+  SIMemOpAccess MOA(MF);
   CC = SICacheControl::create(MF.getSubtarget<GCNSubtarget>());
 
   for (auto &MBB : MF) {

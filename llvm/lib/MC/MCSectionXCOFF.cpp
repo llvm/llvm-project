@@ -124,7 +124,7 @@ void MCSectionXCOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   if (getKind().isMetadata() && isDwarfSect()) {
     OS << "\n\t.dwsect " << format("0x%" PRIx32, *getDwarfSubtypeFlags())
        << '\n';
-    OS << getName() << ':' << '\n';
+    OS << MAI.getPrivateLabelPrefix() << getName() << ':' << '\n';
     return;
   }
 

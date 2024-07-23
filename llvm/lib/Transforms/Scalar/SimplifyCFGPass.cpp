@@ -77,9 +77,6 @@ static cl::opt<bool> UserSinkCommonInsts(
     "sink-common-insts", cl::Hidden, cl::init(false),
     cl::desc("Sink common instructions (default = false)"));
 
-static cl::opt<bool> UserSpeculateUnpredictables(
-    "speculate-unpredictables", cl::Hidden, cl::init(false),
-    cl::desc("Speculate unpredictable branches (default = false)"));
 
 STATISTIC(NumSimpl, "Number of blocks simplified");
 
@@ -328,8 +325,6 @@ static void applyCommandLineOverridesToOptions(SimplifyCFGOptions &Options) {
     Options.HoistCommonInsts = UserHoistCommonInsts;
   if (UserSinkCommonInsts.getNumOccurrences())
     Options.SinkCommonInsts = UserSinkCommonInsts;
-  if (UserSpeculateUnpredictables.getNumOccurrences())
-    Options.SpeculateUnpredictables = UserSpeculateUnpredictables;
 }
 
 SimplifyCFGPass::SimplifyCFGPass() {
@@ -356,9 +351,7 @@ void SimplifyCFGPass::printPipeline(
   OS << (Options.HoistCommonInsts ? "" : "no-") << "hoist-common-insts;";
   OS << (Options.SinkCommonInsts ? "" : "no-") << "sink-common-insts;";
   OS << (Options.SpeculateBlocks ? "" : "no-") << "speculate-blocks;";
-  OS << (Options.SimplifyCondBranch ? "" : "no-") << "simplify-cond-branch;";
-  OS << (Options.SpeculateUnpredictables ? "" : "no-")
-     << "speculate-unpredictables";
+  OS << (Options.SimplifyCondBranch ? "" : "no-") << "simplify-cond-branch";
   OS << '>';
 }
 

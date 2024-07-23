@@ -4374,8 +4374,7 @@ public:
   RValue EmitCall(const CGFunctionInfo &CallInfo, const CGCallee &Callee,
                   ReturnValueSlot ReturnValue, const CallArgList &Args,
                   llvm::CallBase **callOrInvoke, bool IsMustTail,
-                  SourceLocation Loc,
-                  bool IsVirtualFunctionPointerThunk = false);
+                  SourceLocation Loc);
   RValue EmitCall(const CGFunctionInfo &CallInfo, const CGCallee &Callee,
                   ReturnValueSlot ReturnValue, const CallArgList &Args,
                   llvm::CallBase **callOrInvoke = nullptr,

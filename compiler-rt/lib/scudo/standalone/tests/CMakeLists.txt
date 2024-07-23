@@ -46,8 +46,11 @@ set(SCUDO_UNITTEST_LINK_FLAGS
   ${COMPILER_RT_UNWINDER_LINK_LIBS}
   ${SANITIZER_TEST_CXX_LIBRARIES})
 list(APPEND SCUDO_UNITTEST_LINK_FLAGS -pthread -no-pie)
-
-append_list_if(COMPILER_RT_HAS_LIBATOMIC -latomic SCUDO_UNITTEST_LINK_FLAGS)
+# Linking against libatomic is required with some compilers
+check_library_exists(atomic __atomic_load_8 "" COMPILER_RT_HAS_LIBATOMIC)
+if (COMPILER_RT_HAS_LIBATOMIC)
+  list(APPEND SCUDO_UNITTEST_LINK_FLAGS -latomic)
+endif()
 
 set(SCUDO_TEST_HEADERS
   scudo_unit_test.h

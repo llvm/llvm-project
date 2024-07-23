@@ -56,13 +56,14 @@ static unsigned getEFlagsForFeatureSet(const FeatureBitset &Features) {
 
 AVRELFStreamer::AVRELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI)
     : AVRTargetStreamer(S) {
-  ELFObjectWriter &W = getStreamer().getWriter();
-  unsigned EFlags = W.getELFHeaderEFlags();
+
+  MCAssembler &MCA = getStreamer().getAssembler();
+  unsigned EFlags = MCA.getELFHeaderEFlags();
 
   EFlags |= getEFlagsForFeatureSet(STI.getFeatureBits());
   EFlags |= ELF::EF_AVR_LINKRELAX_PREPARED;
 
-  W.setELFHeaderEFlags(EFlags);
+  MCA.setELFHeaderEFlags(EFlags);
 }
 
 } // end namespace llvm

@@ -893,9 +893,6 @@ template void explain_unary_operation_single_output_error(Operation op, double,
 template void explain_unary_operation_single_output_error(Operation op,
                                                           long double, float,
                                                           double, RoundingMode);
-template void explain_unary_operation_single_output_error(Operation op,
-                                                          long double, double,
-                                                          double, RoundingMode);
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 template void explain_unary_operation_single_output_error(Operation op, float16,
@@ -1120,9 +1117,6 @@ template bool compare_unary_operation_single_output(Operation, double, float,
                                                     double, RoundingMode);
 template bool compare_unary_operation_single_output(Operation, long double,
                                                     float, double,
-                                                    RoundingMode);
-template bool compare_unary_operation_single_output(Operation, long double,
-                                                    double, double,
                                                     RoundingMode);
 #ifdef LIBC_TYPES_HAS_FLOAT16
 template bool compare_unary_operation_single_output(Operation, float16, float16,

@@ -2576,12 +2576,16 @@ createSubstDiag(Sema &S, TemplateDeductionInfo &Info,
   } else {
     ErrorLoc = Info.getLocation();
   }
+  char *MessageBuf = new (S.Context) char[Message.size()];
+  std::copy(Message.begin(), Message.end(), MessageBuf);
   SmallString<128> Entity;
   llvm::raw_svector_ostream OS(Entity);
   Printer(OS);
-  const ASTContext &C = S.Context;
-  return new (C) concepts::Requirement::SubstitutionDiagnostic{
-      C.backupStr(Entity), ErrorLoc, C.backupStr(Message)};
+  char *EntityBuf = new (S.Context) char[Entity.size()];
+  std::copy(Entity.begin(), Entity.end(), EntityBuf);
+  return new (S.Context) concepts::Requirement::SubstitutionDiagnostic{
+      StringRef(EntityBuf, Entity.size()), ErrorLoc,
+      StringRef(MessageBuf, Message.size())};
 }
 
 concepts::Requirement::SubstitutionDiagnostic *
@@ -2590,9 +2594,10 @@ concepts::createSubstDiagAt(Sema &S, SourceLocation Location,
   SmallString<128> Entity;
   llvm::raw_svector_ostream OS(Entity);
   Printer(OS);
-  const ASTContext &C = S.Context;
-  return new (C) concepts::Requirement::SubstitutionDiagnostic{
-      /*SubstitutedEntity=*/C.backupStr(Entity),
+  char *EntityBuf = new (S.Context) char[Entity.size()];
+  llvm::copy(Entity, EntityBuf);
+  return new (S.Context) concepts::Requirement::SubstitutionDiagnostic{
+      /*SubstitutedEntity=*/StringRef(EntityBuf, Entity.size()),
       /*DiagLoc=*/Location, /*DiagMessage=*/StringRef()};
 }
 
@@ -2768,21 +2773,23 @@ TemplateInstantiator::TransformNestedRequirement(
     assert(!Trap.hasErrorOccurred() && "Substitution failures must be handled "
                                        "by CheckConstraintSatisfaction.");
   }
-  ASTContext &C = SemaRef.Context;
   if (TransConstraint.isUsable() &&
       TransConstraint.get()->isInstantiationDependent())
-    return new (C) concepts::NestedRequirement(TransConstraint.get());
+    return new (SemaRef.Context)
+        concepts::NestedRequirement(TransConstraint.get());
   if (TransConstraint.isInvalid() || !TransConstraint.get() ||
       Satisfaction.HasSubstitutionFailure()) {
     SmallString<128> Entity;
     llvm::raw_svector_ostream OS(Entity);
     Req->getConstraintExpr()->printPretty(OS, nullptr,
                                           SemaRef.getPrintingPolicy());
-    return new (C) concepts::NestedRequirement(
-        SemaRef.Context, C.backupStr(Entity), Satisfaction);
+    char *EntityBuf = new (SemaRef.Context) char[Entity.size()];
+    std::copy(Entity.begin(), Entity.end(), EntityBuf);
+    return new (SemaRef.Context) concepts::NestedRequirement(
+        SemaRef.Context, StringRef(EntityBuf, Entity.size()), Satisfaction);
   }
-  return new (C)
-      concepts::NestedRequirement(C, TransConstraint.get(), Satisfaction);
+  return new (SemaRef.Context) concepts::NestedRequirement(
+      SemaRef.Context, TransConstraint.get(), Satisfaction);
 }
 
 TypeSourceInfo *Sema::SubstType(TypeSourceInfo *T,
@@ -3419,16 +3426,11 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
     return true;
 
   llvm::TimeTraceScope TimeScope("InstantiateClass", [&]() {
-    llvm::TimeTraceMetadata M;
-    llvm::raw_string_ostream OS(M.Detail);
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
     Instantiation->getNameForDiagnostic(OS, getPrintingPolicy(),
                                         /*Qualified=*/true);
-    if (llvm::isTimeTraceVerbose()) {
-      auto Loc = SourceMgr.getExpansionLoc(Instantiation->getLocation());
-      M.File = SourceMgr.getFilename(Loc);
-      M.Line = SourceMgr.getExpansionLineNumber(Loc);
-    }
-    return M;
+    return Name;
   });
 
   Pattern = PatternDef;

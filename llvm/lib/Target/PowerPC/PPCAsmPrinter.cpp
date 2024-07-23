@@ -909,23 +909,6 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   // Lower multi-instruction pseudo operations.
   switch (MI->getOpcode()) {
   default: break;
-  case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
-    assert(!Subtarget->isAIXABI() &&
-           "AIX does not support patchable function entry!");
-    // PATCHABLE_FUNCTION_ENTER on little endian is for XRAY support which is
-    // handled in PPCLinuxAsmPrinter.
-    if (MAI->isLittleEndian())
-      return;
-    const Function &F = MF->getFunction();
-    unsigned Num = 0;
-    (void)F.getFnAttribute("patchable-function-entry")
-        .getValueAsString()
-        .getAsInteger(10, Num);
-    if (!Num)
-      return;
-    emitNops(Num);
-    return;
-  }
   case TargetOpcode::DBG_VALUE:
     llvm_unreachable("Should be handled target independently");
   case TargetOpcode::STACKMAP:
@@ -1797,7 +1780,7 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   switch (MI->getOpcode()) {
   default:
-    break;
+    return PPCAsmPrinter::emitInstruction(MI);
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
     // .begin:
     //   b .end # lis 0, FuncId[16..32]
@@ -1810,9 +1793,6 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     //
     // Update compiler-rt/lib/xray/xray_powerpc64.cc accordingly when number
     // of instructions change.
-    // XRAY is only supported on PPC Linux little endian.
-    if (!MAI->isLittleEndian())
-      break;
     MCSymbol *BeginOfSled = OutContext.createTempSymbol();
     MCSymbol *EndOfSled = OutContext.createTempSymbol();
     OutStreamer->emitLabel(BeginOfSled);
@@ -1854,7 +1834,7 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
       IsConditional = false;
     } else {
       EmitToStreamer(*OutStreamer, RetInst);
-      return;
+      break;
     }
 
     MCSymbol *FallthroughLabel;
@@ -1919,7 +1899,7 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (IsConditional)
       OutStreamer->emitLabel(FallthroughLabel);
     recordSled(BeginOfSled, *MI, SledKind::FUNCTION_EXIT, 2);
-    return;
+    break;
   }
   case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
     llvm_unreachable("PATCHABLE_FUNCTION_EXIT should never be emitted");
@@ -1929,7 +1909,6 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     llvm_unreachable("Tail call is handled in the normal case. See comments "
                      "around this assert.");
   }
-  return PPCAsmPrinter::emitInstruction(MI);
 }
 
 void PPCLinuxAsmPrinter::emitStartOfAsmFile(Module &M) {

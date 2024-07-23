@@ -262,13 +262,9 @@ void AddDebugInfoPass::runOnOperation() {
 
     mlir::StringAttr fullName =
         mlir::StringAttr::get(context, funcOp.getName());
-    mlir::Attribute attr = funcOp->getAttr(fir::getInternalFuncNameAttrName());
+    auto result = fir::NameUniquer::deconstruct(funcOp.getName());
     mlir::StringAttr funcName =
-        (attr) ? mlir::cast<mlir::StringAttr>(attr)
-               : mlir::StringAttr::get(context, funcOp.getName());
-
-    auto result = fir::NameUniquer::deconstruct(funcName);
-    funcName = mlir::StringAttr::get(context, result.second.name);
+        mlir::StringAttr::get(context, result.second.name);
 
     llvm::SmallVector<mlir::LLVM::DITypeAttr> types;
     fir::DebugTypeGenerator typeGen(module);

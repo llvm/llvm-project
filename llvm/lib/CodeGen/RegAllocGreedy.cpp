@@ -192,12 +192,14 @@ FunctionPass* llvm::createGreedyRegisterAllocator() {
   return new RAGreedy();
 }
 
-FunctionPass *llvm::createGreedyRegisterAllocator(RegAllocFilterFunc Ftor) {
+FunctionPass *llvm::createGreedyRegisterAllocator(RegClassFilterFunc Ftor) {
   return new RAGreedy(Ftor);
 }
 
-RAGreedy::RAGreedy(RegAllocFilterFunc F)
-    : MachineFunctionPass(ID), RegAllocBase(F) {}
+RAGreedy::RAGreedy(RegClassFilterFunc F):
+  MachineFunctionPass(ID),
+  RegAllocBase(F) {
+}
 
 void RAGreedy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
@@ -2304,7 +2306,7 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
     if (Reg.isPhysical())
       continue;
 
-    // This may be a skipped register.
+    // This may be a skipped class
     if (!VRM->hasPhys(Reg)) {
       assert(!shouldAllocateRegister(Reg) &&
              "We have an unallocated variable which should have been handled");

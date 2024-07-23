@@ -9566,15 +9566,10 @@ static SDValue getAddressForMemoryInput(SDValue Chain, const SDLoc &Location,
   // Otherwise, create a stack slot and emit a store to it before the asm.
   Type *Ty = OpVal->getType();
   auto &DL = DAG.getDataLayout();
-  TypeSize TySize = DL.getTypeAllocSize(Ty);
+  uint64_t TySize = DL.getTypeAllocSize(Ty);
   MachineFunction &MF = DAG.getMachineFunction();
-  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
-  int StackID = 0;
-  if (TySize.isScalable())
-    StackID = TFI->getStackIDForScalableVectors();
-  int SSFI = MF.getFrameInfo().CreateStackObject(TySize.getKnownMinValue(),
-                                                 DL.getPrefTypeAlign(Ty), false,
-                                                 nullptr, StackID);
+  int SSFI = MF.getFrameInfo().CreateStackObject(
+      TySize, DL.getPrefTypeAlign(Ty), false);
   SDValue StackSlot = DAG.getFrameIndex(SSFI, TLI.getFrameIndexTy(DL));
   Chain = DAG.getTruncStore(Chain, Location, OpInfo.CallOperand, StackSlot,
                             MachinePointerInfo::getFixedStack(MF, SSFI),

@@ -141,10 +141,7 @@ bool isStandardPointerConvertible(QualType From, QualType To) {
     if (RD->isCompleteDefinition() &&
         isBaseOf(From->getPointeeType().getTypePtr(),
                  To->getPointeeType().getTypePtr())) {
-      // If B is an inaccessible or ambiguous base class of D, a program
-      // that necessitates this conversion is ill-formed
-      return isUnambiguousPublicBaseClass(From->getPointeeType().getTypePtr(),
-                                          To->getPointeeType().getTypePtr());
+      return true;
     }
   }
 
@@ -378,7 +375,10 @@ bool ExceptionAnalyzer::ExceptionInfo::filterByCatch(
         isPointerOrPointerToMember(ExceptionCanTy->getTypePtr())) {
       // A standard pointer conversion not involving conversions to pointers to
       // private or protected or ambiguous classes ...
-      if (isStandardPointerConvertible(ExceptionCanTy, HandlerCanTy)) {
+      if (isStandardPointerConvertible(ExceptionCanTy, HandlerCanTy) &&
+          isUnambiguousPublicBaseClass(
+              ExceptionCanTy->getTypePtr()->getPointeeType().getTypePtr(),
+              HandlerCanTy->getTypePtr()->getPointeeType().getTypePtr())) {
         TypesToDelete.push_back(ExceptionTy);
       }
       // A function pointer conversion ...

@@ -676,10 +676,8 @@ std::unique_ptr<CSEConfigBase> X86PassConfig::getCSEConfig() const {
 }
 
 static bool onlyAllocateTileRegisters(const TargetRegisterInfo &TRI,
-                                      const MachineRegisterInfo &MRI,
-                                      const Register Reg) {
-  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
-  return static_cast<const X86RegisterInfo &>(TRI).isTileRegisterClass(RC);
+                                      const TargetRegisterClass &RC) {
+  return static_cast<const X86RegisterInfo &>(TRI).isTileRegisterClass(&RC);
 }
 
 bool X86PassConfig::addRegAssignAndRewriteOptimized() {

@@ -221,7 +221,6 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> MaxTokensHerePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensTotalPragmaHandler;
   std::unique_ptr<PragmaHandler> RISCVPragmaHandler;
-  std::unique_ptr<PragmaHandler> MCFuncPragmaHandler;
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
@@ -3877,7 +3876,7 @@ private:
   }
 
   bool ParseModuleName(
-      SourceLocation UseLoc,
+      SourceLocation UseLoc, ArrayRef<Token> ModuleName,
       SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path,
       bool IsImport);
 

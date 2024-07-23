@@ -11,7 +11,6 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCDirectives.h"
-#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCObjectStreamer.h"
 
 namespace llvm {
@@ -42,8 +41,6 @@ public:
     SeenIdent = false;
     MCObjectStreamer::reset();
   }
-
-  ELFObjectWriter &getWriter();
 
   /// \name MCStreamer Interface
   /// @{

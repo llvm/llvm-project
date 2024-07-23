@@ -1562,8 +1562,6 @@ StringRef sys::getHostCPUName() {
   switch (processor_id & 0xf000) {
   case 0xc000: // Loongson 64bit, 4-issue
     return "la464";
-  case 0xd000: // Loongson 64bit, 6-issue
-    return "la664";
   // TODO: Others.
   default:
     break;
@@ -2069,8 +2067,7 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["zvfhmin"] = ExtMask & (1ULL << 31); // RISCV_HWPROBE_EXT_ZVFHMIN
   Features["zfa"] = ExtMask & (1ULL << 32);     // RISCV_HWPROBE_EXT_ZFA
   Features["ztso"] = ExtMask & (1ULL << 33);    // RISCV_HWPROBE_EXT_ZTSO
-  // TODO: Re-enable zacas when it is marked non-experimental again.
-  // Features["zacas"] = ExtMask & (1ULL << 34);   // RISCV_HWPROBE_EXT_ZACAS
+  Features["zacas"] = ExtMask & (1ULL << 34);   // RISCV_HWPROBE_EXT_ZACAS
   Features["zicond"] = ExtMask & (1ULL << 35);  // RISCV_HWPROBE_EXT_ZICOND
   Features["zihintpause"] =
       ExtMask & (1ULL << 36); // RISCV_HWPROBE_EXT_ZIHINTPAUSE

@@ -1288,8 +1288,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_PREFETCH).custom();
 
-  getActionDefinitionsBuilder({G_SCMP, G_UCMP}).lower();
-
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }

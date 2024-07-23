@@ -10,9 +10,6 @@ void funcInNestedNamespace(int i);
 struct char_box {
   char c;
   void methodInNestedNamespace();
-  struct inner_char_box {
-    char c;
-  };
 };
 }
 

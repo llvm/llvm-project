@@ -3476,8 +3476,7 @@ static bool FoldCondBranchOnValueKnownInPredecessor(BranchInst *BI,
 /// Given a BB that starts with the specified two-entry PHI node,
 /// see if we can eliminate it.
 static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
-                                DomTreeUpdater *DTU, const DataLayout &DL,
-                                bool SpeculateUnpredictables) {
+                                DomTreeUpdater *DTU, const DataLayout &DL) {
   // Ok, this is a two entry PHI node.  Check to see if this is a simple "if
   // statement", which has a very simple dominance structure.  Basically, we
   // are trying to find the condition that is being branched on, which
@@ -3509,8 +3508,7 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // jump to one specific 'then' block (if we have two of them).
   // It isn't beneficial to speculatively execute the code
   // from the block that we know is predictably not entered.
-  bool IsUnpredictable = DomBI->getMetadata(LLVMContext::MD_unpredictable);
-  if (!IsUnpredictable) {
+  if (!DomBI->getMetadata(LLVMContext::MD_unpredictable)) {
     uint64_t TWeight, FWeight;
     if (extractBranchWeights(*DomBI, TWeight, FWeight) &&
         (TWeight + FWeight) != 0) {
@@ -3553,8 +3551,6 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   InstructionCost Cost = 0;
   InstructionCost Budget =
       TwoEntryPHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic;
-  if (SpeculateUnpredictables && IsUnpredictable)
-    Budget += TTI.getBranchMispredictPenalty();
 
   bool Changed = false;
   for (BasicBlock::iterator II = BB->begin(); isa<PHINode>(II);) {
@@ -3624,9 +3620,8 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
              [](BasicBlock *IfBlock) { return IfBlock->hasAddressTaken(); }))
     return Changed;
 
-  LLVM_DEBUG(dbgs() << "FOUND IF CONDITION!  " << *IfCond;
-             if (IsUnpredictable) dbgs() << " (unpredictable)";
-             dbgs() << "  T: " << IfTrue->getName()
+  LLVM_DEBUG(dbgs() << "FOUND IF CONDITION!  " << *IfCond
+                    << "  T: " << IfTrue->getName()
                     << "  F: " << IfFalse->getName() << "\n");
 
   // If we can still promote the PHI nodes after this gauntlet of tests,
@@ -7819,8 +7814,7 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
     // eliminate it, do so now.
     if (auto *PN = dyn_cast<PHINode>(BB->begin()))
       if (PN->getNumIncomingValues() == 2)
-        if (FoldTwoEntryPHINode(PN, TTI, DTU, DL,
-                                Options.SpeculateUnpredictables))
+        if (FoldTwoEntryPHINode(PN, TTI, DTU, DL))
           return true;
   }
 

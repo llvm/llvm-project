@@ -162,8 +162,7 @@ static void initField(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
 }
 
 static void initBase(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
-                     bool IsActive, const Descriptor *D, unsigned FieldOffset,
-                     bool IsVirtualBase) {
+                     bool IsActive, const Descriptor *D, unsigned FieldOffset) {
   assert(D);
   assert(D->ElemRecord);
 
@@ -173,14 +172,13 @@ static void initBase(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
   Desc->Desc = D;
   Desc->IsInitialized = D->IsArray;
   Desc->IsBase = true;
-  Desc->IsVirtualBase = IsVirtualBase;
   Desc->IsActive = IsActive && !IsUnion;
   Desc->IsConst = IsConst || D->IsConst;
   Desc->IsFieldMutable = IsMutable || D->IsMutable;
 
   for (const auto &V : D->ElemRecord->bases())
     initBase(B, Ptr + FieldOffset, IsConst, IsMutable, IsActive, V.Desc,
-             V.Offset, false);
+             V.Offset);
   for (const auto &F : D->ElemRecord->fields())
     initField(B, Ptr + FieldOffset, IsConst, IsMutable, IsActive, IsUnion,
               F.Desc, F.Offset);
@@ -189,11 +187,11 @@ static void initBase(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
 static void ctorRecord(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
                        bool IsActive, const Descriptor *D) {
   for (const auto &V : D->ElemRecord->bases())
-    initBase(B, Ptr, IsConst, IsMutable, IsActive, V.Desc, V.Offset, false);
+    initBase(B, Ptr, IsConst, IsMutable, IsActive, V.Desc, V.Offset);
   for (const auto &F : D->ElemRecord->fields())
     initField(B, Ptr, IsConst, IsMutable, IsActive, D->ElemRecord->isUnion(), F.Desc, F.Offset);
   for (const auto &V : D->ElemRecord->virtual_bases())
-    initBase(B, Ptr, IsConst, IsMutable, IsActive, V.Desc, V.Offset, true);
+    initBase(B, Ptr, IsConst, IsMutable, IsActive, V.Desc, V.Offset);
 }
 
 static void destroyField(Block *B, std::byte *Ptr, const Descriptor *D,

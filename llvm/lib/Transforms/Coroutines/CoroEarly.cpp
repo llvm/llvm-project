@@ -148,7 +148,6 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
     NoopCoro = new GlobalVariable(M, NoopCoroConst->getType(), /*isConstant=*/true,
                                 GlobalVariable::PrivateLinkage, NoopCoroConst,
                                 "NoopCoro.Frame.Const");
-    cast<GlobalVariable>(NoopCoro)->setNoSanitizeMetadata();
   }
 
   Builder.SetInsertPoint(II);

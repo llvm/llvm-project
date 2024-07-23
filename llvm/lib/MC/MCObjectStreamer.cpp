@@ -32,8 +32,8 @@ MCObjectStreamer::MCObjectStreamer(MCContext &Context,
       Assembler(std::make_unique<MCAssembler>(
           Context, std::move(TAB), std::move(Emitter), std::move(OW))),
       EmitEHFrame(true), EmitDebugFrame(false) {
-  assert(Assembler->getBackendPtr() && Assembler->getEmitterPtr());
-  setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
+  if (Assembler->getBackendPtr())
+    setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
   if (Context.getTargetOptions() && Context.getTargetOptions()->MCRelaxAll)
     Assembler->setRelaxAll(true);
 }
@@ -784,18 +784,15 @@ void MCObjectStreamer::emitNops(int64_t NumBytes, int64_t ControlledNopLength,
 }
 
 void MCObjectStreamer::emitFileDirective(StringRef Filename) {
-  MCAssembler &Asm = getAssembler();
-  Asm.getWriter().addFileName(Asm, Filename);
+  getAssembler().addFileName(Filename);
 }
 
 void MCObjectStreamer::emitFileDirective(StringRef Filename,
                                          StringRef CompilerVersion,
                                          StringRef TimeStamp,
                                          StringRef Description) {
-  MCObjectWriter &W = getAssembler().getWriter();
-  W.addFileName(getAssembler(), Filename);
-  if (CompilerVersion.size())
-    W.setCompilerVersion(CompilerVersion);
+  getAssembler().addFileName(Filename);
+  getAssembler().setCompilerVersion(CompilerVersion.str());
   // TODO: add TimeStamp and Description to .file symbol table entry
   // with the integrated assembler.
 }

@@ -37,7 +37,16 @@ static const int srcSigFracBits = 52;
 // srcBits - srcSigFracBits - 1
 static const int srcExpBits = 11;
 
-static inline int src_rep_t_clz_impl(src_rep_t a) { return __builtin_clzll(a); }
+static inline int src_rep_t_clz_impl(src_rep_t a) {
+#if defined __LP64__
+  return __builtin_clzl(a);
+#else
+  if (a & REP_C(0xffffffff00000000))
+    return clzsi(a >> 32);
+  else
+    return 32 + clzsi(a & REP_C(0xffffffff));
+#endif
+}
 #define src_rep_t_clz src_rep_t_clz_impl
 
 #elif defined SRC_80

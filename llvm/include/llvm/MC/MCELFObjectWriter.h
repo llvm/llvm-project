@@ -9,8 +9,6 @@
 #ifndef LLVM_MC_MCELFOBJECTWRITER_H
 #define LLVM_MC_MCELFOBJECTWRITER_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -18,8 +16,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdint>
-#include <memory>
-#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -29,7 +25,6 @@ class MCContext;
 class MCFixup;
 class MCSymbol;
 class MCSymbolELF;
-class MCTargetOptions;
 class MCValue;
 
 struct ELFRelocationEntry {
@@ -154,66 +149,20 @@ public:
   }
 };
 
-class ELFObjectWriter : public MCObjectWriter {
-  unsigned ELFHeaderEFlags = 0;
+/// Construct a new ELF writer instance.
+///
+/// \param MOTW - The target specific ELF writer subclass.
+/// \param OS - The stream to write to.
+/// \returns The constructed object writer.
+std::unique_ptr<MCObjectWriter>
+createELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
+                      raw_pwrite_stream &OS, bool IsLittleEndian);
 
-public:
-  std::unique_ptr<MCELFObjectTargetWriter> TargetObjectWriter;
-  raw_pwrite_stream &OS;
-  raw_pwrite_stream *DwoOS = nullptr;
+std::unique_ptr<MCObjectWriter>
+createELFDwoObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
+                         raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS,
+                         bool IsLittleEndian);
 
-  DenseMap<const MCSectionELF *, std::vector<ELFRelocationEntry>> Relocations;
-  DenseMap<const MCSymbolELF *, const MCSymbolELF *> Renames;
-  bool IsLittleEndian = false;
-  bool SeenGnuAbi = false;
-  std::optional<uint8_t> OverrideABIVersion;
-
-  struct Symver {
-    SMLoc Loc;
-    const MCSymbol *Sym;
-    StringRef Name;
-    // True if .symver *, *@@@* or .symver *, *, remove.
-    bool KeepOriginalSym;
-  };
-  SmallVector<Symver, 0> Symvers;
-
-  ELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
-                  raw_pwrite_stream &OS, bool IsLittleEndian);
-  ELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
-                  raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS,
-                  bool IsLittleEndian);
-
-  void reset() override;
-  void executePostLayoutBinding(MCAssembler &Asm) override;
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override;
-  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                              const MCSymbol &SymA,
-                                              const MCFragment &FB, bool InSet,
-                                              bool IsPCRel) const override;
-  uint64_t writeObject(MCAssembler &Asm) override;
-
-  bool hasRelocationAddend() const;
-  bool usesRela(const MCTargetOptions *TO, const MCSectionELF &Sec) const;
-
-  bool shouldRelocateWithSymbol(const MCAssembler &Asm, const MCValue &Val,
-                                const MCSymbolELF *Sym, uint64_t C,
-                                unsigned Type) const;
-
-  bool checkRelocation(MCContext &Ctx, SMLoc Loc, const MCSectionELF *From,
-                       const MCSectionELF *To);
-
-  unsigned getELFHeaderEFlags() const { return ELFHeaderEFlags; }
-  void setELFHeaderEFlags(unsigned Flags) { ELFHeaderEFlags = Flags; }
-
-  // Mark that we have seen GNU ABI usage (e.g. SHF_GNU_RETAIN, STB_GNU_UNIQUE).
-  void markGnuAbi() { SeenGnuAbi = true; }
-  bool seenGnuAbi() const { return SeenGnuAbi; }
-
-  // Override the default e_ident[EI_ABIVERSION] in the ELF header.
-  void setOverrideABIVersion(uint8_t V) { OverrideABIVersion = V; }
-};
 } // end namespace llvm
 
 #endif // LLVM_MC_MCELFOBJECTWRITER_H

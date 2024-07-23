@@ -33,8 +33,7 @@ int fcntl(int fd, int cmd, void *arg) {
 #error "fcntl and fcntl64 syscalls not available."
 #endif
 
-  int new_cmd = cmd;
-  switch (new_cmd) {
+  switch (cmd) {
   case F_OFD_SETLKW: {
     struct flock *flk = reinterpret_cast<struct flock *>(arg);
     // convert the struct to a flock64
@@ -45,8 +44,7 @@ int fcntl(int fd, int cmd, void *arg) {
     flk64.l_len = flk->l_len;
     flk64.l_pid = flk->l_pid;
     // create a syscall
-    return LIBC_NAMESPACE::syscall_impl<int>(FCNTL_SYSCALL_ID, fd, new_cmd,
-                                             &flk64);
+    return LIBC_NAMESPACE::syscall_impl<int>(FCNTL_SYSCALL_ID, fd, cmd, &flk64);
   }
   case F_OFD_GETLK:
   case F_OFD_SETLK: {
@@ -59,8 +57,8 @@ int fcntl(int fd, int cmd, void *arg) {
     flk64.l_len = flk->l_len;
     flk64.l_pid = flk->l_pid;
     // create a syscall
-    int retVal = LIBC_NAMESPACE::syscall_impl<int>(FCNTL_SYSCALL_ID, fd,
-                                                   new_cmd, &flk64);
+    int retVal =
+        LIBC_NAMESPACE::syscall_impl<int>(FCNTL_SYSCALL_ID, fd, cmd, &flk64);
     // On failure, return
     if (retVal == -1)
       return -1;
@@ -88,31 +86,17 @@ int fcntl(int fd, int cmd, void *arg) {
     libc_errno = -ret;
     return -1;
   }
-#ifdef SYS_fcntl64
-  case F_GETLK: {
-    if constexpr (FCNTL_SYSCALL_ID == SYS_fcntl64)
-      new_cmd = F_GETLK64;
-    break;
+  // The general case
+  default: {
+    int retVal = LIBC_NAMESPACE::syscall_impl<int>(
+        FCNTL_SYSCALL_ID, fd, cmd, reinterpret_cast<void *>(arg));
+    if (retVal >= 0) {
+      return retVal;
+    }
+    libc_errno = -retVal;
+    return -1;
   }
-  case F_SETLK: {
-    if constexpr (FCNTL_SYSCALL_ID == SYS_fcntl64)
-      new_cmd = F_SETLK64;
-    break;
   }
-  case F_SETLKW: {
-    if constexpr (FCNTL_SYSCALL_ID == SYS_fcntl64)
-      new_cmd = F_SETLKW64;
-    break;
-  }
-#endif
-  }
-  int retVal = LIBC_NAMESPACE::syscall_impl<int>(FCNTL_SYSCALL_ID, fd, new_cmd,
-                                                 reinterpret_cast<void *>(arg));
-  if (retVal >= 0) {
-    return retVal;
-  }
-  libc_errno = -retVal;
-  return -1;
 }
 
 } // namespace internal

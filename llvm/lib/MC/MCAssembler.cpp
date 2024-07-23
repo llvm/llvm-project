@@ -84,22 +84,38 @@ MCAssembler::MCAssembler(MCContext &Context,
                          std::unique_ptr<MCCodeEmitter> Emitter,
                          std::unique_ptr<MCObjectWriter> Writer)
     : Context(Context), Backend(std::move(Backend)),
-      Emitter(std::move(Emitter)), Writer(std::move(Writer)) {}
+      Emitter(std::move(Emitter)), Writer(std::move(Writer)) {
+  VersionInfo.Major = 0; // Major version == 0 for "none specified"
+  DarwinTargetVariantVersionInfo.Major = 0;
+}
+
+MCAssembler::~MCAssembler() = default;
 
 void MCAssembler::reset() {
   RelaxAll = false;
+  SubsectionsViaSymbols = false;
+  IncrementalLinkerCompatible = false;
   Sections.clear();
   Symbols.clear();
+  LinkerOptions.clear();
+  FileNames.clear();
   ThumbFuncs.clear();
   BundleAlignSize = 0;
+  ELFHeaderEFlags = 0;
+  LOHContainer.reset();
+  VersionInfo.Major = 0;
+  VersionInfo.SDKVersion = VersionTuple();
+  DarwinTargetVariantVersionInfo.Major = 0;
+  DarwinTargetVariantVersionInfo.SDKVersion = VersionTuple();
 
   // reset objects owned by us
   if (getBackendPtr())
     getBackendPtr()->reset();
   if (getEmitterPtr())
     getEmitterPtr()->reset();
-  if (Writer)
-    Writer->reset();
+  if (getWriterPtr())
+    getWriterPtr()->reset();
+  getLOHContainer().reset();
 }
 
 bool MCAssembler::registerSection(MCSection &Section) {
@@ -192,9 +208,9 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
       const MCSymbol &SA = A->getSymbol();
       if (A->getKind() != MCSymbolRefExpr::VK_None || SA.isUndefined()) {
         IsResolved = false;
-      } else {
+      } else if (auto *Writer = getWriterPtr()) {
         IsResolved = (FixupFlags & MCFixupKindInfo::FKF_Constant) ||
-                     getWriter().isSymbolRefDifferenceFullyResolvedImpl(
+                     Writer->isSymbolRefDifferenceFullyResolvedImpl(
                          *this, SA, *DF, false, true);
       }
     }
@@ -430,6 +446,28 @@ void MCAssembler::layoutBundle(MCFragment *Prev, MCFragment *F) const {
   if (auto *DF = dyn_cast_or_null<MCDataFragment>(Prev))
     if (DF->getContents().empty())
       DF->Offset = EF->Offset;
+}
+
+void MCAssembler::ensureValid(MCSection &Sec) const {
+  if (Sec.hasLayout())
+    return;
+  Sec.setHasLayout(true);
+  MCFragment *Prev = nullptr;
+  uint64_t Offset = 0;
+  for (MCFragment &F : Sec) {
+    F.Offset = Offset;
+    if (isBundlingEnabled() && F.hasInstructions()) {
+      layoutBundle(Prev, &F);
+      Offset = F.Offset;
+    }
+    Offset += computeFragmentSize(F);
+    Prev = &F;
+  }
+}
+
+uint64_t MCAssembler::getFragmentOffset(const MCFragment &F) const {
+  ensureValid(*F.getParent());
+  return F.Offset;
 }
 
 // Simple getSymbolOffset helper for the non-variable case.
@@ -916,20 +954,22 @@ void MCAssembler::layout() {
 
   // Layout until everything fits.
   this->HasLayout = true;
-  for (MCSection &Sec : *this)
-    layoutSection(Sec);
   while (layoutOnce()) {
+    if (getContext().hadError())
+      return;
+    // Size of fragments in one section can depend on the size of fragments in
+    // another. If any fragment has changed size, we have to re-layout (and
+    // as a result possibly further relax) all.
+    for (MCSection &Sec : *this)
+      Sec.setHasLayout(false);
   }
 
   DEBUG_WITH_TYPE("mc-dump", {
       errs() << "assembler backend - post-relaxation\n--\n";
       dump(); });
 
-  // Some targets might want to adjust fragment offsets. If so, perform another
-  // layout loop.
-  if (getBackend().finishLayout(*this))
-    for (MCSection &Sec : *this)
-      layoutSection(Sec);
+  // Finalize the layout, including fragment lowering.
+  getBackend().finishLayout(*this);
 
   DEBUG_WITH_TYPE("mc-dump", {
       errs() << "assembler backend - final-layout\n--\n";
@@ -1092,7 +1132,7 @@ bool MCAssembler::relaxLEB(MCLEBFragment &LF) {
   // Use evaluateKnownAbsolute for Mach-O as a hack: .subsections_via_symbols
   // requires that .uleb128 A-B is foldable where A and B reside in different
   // fragments. This is used by __gcc_except_table.
-  bool Abs = getWriter().getSubsectionsViaSymbols()
+  bool Abs = getSubsectionsViaSymbols()
                  ? LF.getValue().evaluateKnownAbsolute(Value, *this)
                  : LF.getValue().evaluateAsAbsolute(Value, *this);
   if (!Abs) {
@@ -1282,42 +1322,15 @@ bool MCAssembler::relaxFragment(MCFragment &F) {
   }
 }
 
-void MCAssembler::layoutSection(MCSection &Sec) {
-  MCFragment *Prev = nullptr;
-  uint64_t Offset = 0;
-  for (MCFragment &F : Sec) {
-    F.Offset = Offset;
-    if (LLVM_UNLIKELY(isBundlingEnabled())) {
-      if (F.hasInstructions()) {
-        layoutBundle(Prev, &F);
-        Offset = F.Offset;
-      }
-      Prev = &F;
-    }
-    Offset += computeFragmentSize(F);
-  }
-}
-
 bool MCAssembler::layoutOnce() {
   ++stats::RelaxationSteps;
 
-  // Size of fragments in one section can depend on the size of fragments in
-  // another. If any fragment has changed size, we have to re-layout (and
-  // as a result possibly further relax) all.
-  bool ChangedAny = false;
-  for (MCSection &Sec : *this) {
-    for (;;) {
-      bool Changed = false;
-      for (MCFragment &F : Sec)
-        if (relaxFragment(F))
-          Changed = true;
-      ChangedAny |= Changed;
-      if (!Changed)
-        break;
-      layoutSection(Sec);
-    }
-  }
-  return ChangedAny;
+  bool Changed = false;
+  for (MCSection &Sec : *this)
+    for (MCFragment &Frag : Sec)
+      if (relaxFragment(Frag))
+        Changed = true;
+  return Changed;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

@@ -31,15 +31,6 @@ class Builtin_Type<string name, string typeMnemonic, list<Trait> traits = [],
 }
 
 //===----------------------------------------------------------------------===//
-// Traits
-//===----------------------------------------------------------------------===//
-
-/// Type trait indicating that the type has value semantics.
-def ValueSemantics : NativeTypeTrait<"ValueSemantics"> {
-  let cppNamespace = "::mlir";
-}
-
-//===----------------------------------------------------------------------===//
 // ComplexType
 //===----------------------------------------------------------------------===//
 
@@ -103,25 +94,6 @@ def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2", "f8E5M2"> {
       * denormals when exponent is 0
 
     Described in: https://arxiv.org/abs/2209.05433
-  }];
-}
-
-//===----------------------------------------------------------------------===//
-// Float8E4M3Type
-
-def Builtin_Float8E4M3 : Builtin_FloatType<"Float8E4M3", "f8E4M3"> {
-  let summary = "8-bit floating point with 3 bit mantissa";
-  let description = [{
-    An 8-bit floating point type with 1 sign bit, 4 bits exponent and 3 bits
-    mantissa. This is not a standard type as defined by IEEE-754, but it
-    follows similar conventions with the following characteristics:
-
-      * bit encoding: S1E4M3
-      * exponent bias: 7
-      * infinities: supported with exponent set to all 1s and mantissa 0s
-      * NaNs: supported with exponent bits set to all 1s and mantissa of
-        (001, 010, 011, 100, 101, 110, 111)
-      * denormals when exponent is 0
   }];
 }
 
@@ -773,7 +745,7 @@ def Builtin_Opaque : Builtin_Type<"Opaque", "opaque"> {
 //===----------------------------------------------------------------------===//
 
 def Builtin_RankedTensor : Builtin_Type<"RankedTensor", "tensor", [
-    ShapedTypeInterface, ValueSemantics
+    ShapedTypeInterface
   ], "TensorType"> {
   let summary = "Multi-dimensional array with a fixed number of dimensions";
   let description = [{
@@ -1029,7 +1001,7 @@ def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", "unranked_memref", [
 //===----------------------------------------------------------------------===//
 
 def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", "unranked_tensor", [
-    ShapedTypeInterface, ValueSemantics
+    ShapedTypeInterface
   ], "TensorType"> {
   let summary = "Multi-dimensional array with unknown dimensions";
   let description = [{
@@ -1077,8 +1049,7 @@ def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", "unranked_tensor", [
 // VectorType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Vector : Builtin_Type<"Vector", "vector",
-    [ShapedTypeInterface, ValueSemantics], "Type"> {
+def Builtin_Vector : Builtin_Type<"Vector", "vector", [ShapedTypeInterface], "Type"> {
   let summary = "Multi-dimensional SIMD vector type";
   let description = [{
     Syntax:

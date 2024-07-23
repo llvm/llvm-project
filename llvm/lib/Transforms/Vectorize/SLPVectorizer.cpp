@@ -9699,8 +9699,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           CanonicalType = CanonicalType->getWithNewType(IntegerType::get(
               CanonicalType->getContext(),
               DL->getTypeSizeInBits(CanonicalType->getScalarType())));
-        IntrinsicCostAttributes CostAttrs(MinMaxID, CanonicalType,
-                                          {CanonicalType, CanonicalType});
+        IntrinsicCostAttributes CostAttrs(MinMaxID, VecTy, {VecTy, VecTy});
         InstructionCost IntrinsicCost =
             TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
         // If the selects are the only uses of the compares, they will be

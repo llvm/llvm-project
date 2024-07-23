@@ -455,51 +455,6 @@ void Instruction::dump() const {
 }
 #endif // NDEBUG
 
-Value *SelectInst::createCommon(Value *Cond, Value *True, Value *False,
-                                const Twine &Name, IRBuilder<> &Builder,
-                                Context &Ctx) {
-  llvm::Value *NewV =
-      Builder.CreateSelect(Cond->Val, True->Val, False->Val, Name);
-  if (auto *NewSI = dyn_cast<llvm::SelectInst>(NewV))
-    return Ctx.createSelectInst(NewSI);
-  assert(isa<llvm::Constant>(NewV) && "Expected constant");
-  return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
-}
-
-Value *SelectInst::create(Value *Cond, Value *True, Value *False,
-                          Instruction *InsertBefore, Context &Ctx,
-                          const Twine &Name) {
-  llvm::Instruction *BeforeIR = InsertBefore->getTopmostLLVMInstruction();
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(BeforeIR);
-  return createCommon(Cond, True, False, Name, Builder, Ctx);
-}
-
-Value *SelectInst::create(Value *Cond, Value *True, Value *False,
-                          BasicBlock *InsertAtEnd, Context &Ctx,
-                          const Twine &Name) {
-  auto *IRInsertAtEnd = cast<llvm::BasicBlock>(InsertAtEnd->Val);
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(IRInsertAtEnd);
-  return createCommon(Cond, True, False, Name, Builder, Ctx);
-}
-
-bool SelectInst::classof(const Value *From) {
-  return From->getSubclassID() == ClassID::Select;
-}
-
-#ifndef NDEBUG
-void SelectInst::dump(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-
-void SelectInst::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif // NDEBUG
-
 LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
                            Instruction *InsertBefore, Context &Ctx,
                            const Twine &Name) {
@@ -585,48 +540,6 @@ void StoreInst::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
-#endif // NDEBUG
-
-ReturnInst *ReturnInst::createCommon(Value *RetVal, IRBuilder<> &Builder,
-                                     Context &Ctx) {
-  llvm::ReturnInst *NewRI;
-  if (RetVal != nullptr)
-    NewRI = Builder.CreateRet(RetVal->Val);
-  else
-    NewRI = Builder.CreateRetVoid();
-  return Ctx.createReturnInst(NewRI);
-}
-
-ReturnInst *ReturnInst::create(Value *RetVal, Instruction *InsertBefore,
-                               Context &Ctx) {
-  llvm::Instruction *BeforeIR = InsertBefore->getTopmostLLVMInstruction();
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(BeforeIR);
-  return createCommon(RetVal, Builder, Ctx);
-}
-
-ReturnInst *ReturnInst::create(Value *RetVal, BasicBlock *InsertAtEnd,
-                               Context &Ctx) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
-  return createCommon(RetVal, Builder, Ctx);
-}
-
-Value *ReturnInst::getReturnValue() const {
-  auto *LLVMRetVal = cast<llvm::ReturnInst>(Val)->getReturnValue();
-  return LLVMRetVal != nullptr ? Ctx.getValue(LLVMRetVal) : nullptr;
-}
-
-#ifndef NDEBUG
-void ReturnInst::dump(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-
-void ReturnInst::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
 
 void OpaqueInst::dump(raw_ostream &OS) const {
   dumpCommonPrefix(OS);
@@ -637,15 +550,7 @@ void OpaqueInst::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
-#endif // NDEBUG
 
-Constant *Constant::createInt(Type *Ty, uint64_t V, Context &Ctx,
-                              bool IsSigned) {
-  llvm::Constant *LLVMC = llvm::ConstantInt::get(Ty, V, IsSigned);
-  return Ctx.getOrCreateConstant(LLVMC);
-}
-
-#ifndef NDEBUG
 void Constant::dump(raw_ostream &OS) const {
   dumpCommonPrefix(OS);
   dumpCommonSuffix(OS);
@@ -721,7 +626,7 @@ Value *Context::registerValue(std::unique_ptr<Value> &&VPtr) {
          "Can't register a user!");
   Value *V = VPtr.get();
   [[maybe_unused]] auto Pair =
-      LLVMValueToValueMap.insert({VPtr->Val, std::move(VPtr)});
+         LLVMValueToValueMap.insert({VPtr->Val, std::move(VPtr)});
   assert(Pair.second && "Already exists!");
   return V;
 }
@@ -753,11 +658,6 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
   assert(isa<llvm::Instruction>(LLVMV) && "Expected Instruction");
 
   switch (cast<llvm::Instruction>(LLVMV)->getOpcode()) {
-  case llvm::Instruction::Select: {
-    auto *LLVMSel = cast<llvm::SelectInst>(LLVMV);
-    It->second = std::unique_ptr<SelectInst>(new SelectInst(LLVMSel, *this));
-    return It->second.get();
-  }
   case llvm::Instruction::Load: {
     auto *LLVMLd = cast<llvm::LoadInst>(LLVMV);
     It->second = std::unique_ptr<LoadInst>(new LoadInst(LLVMLd, *this));
@@ -766,11 +666,6 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
   case llvm::Instruction::Store: {
     auto *LLVMSt = cast<llvm::StoreInst>(LLVMV);
     It->second = std::unique_ptr<StoreInst>(new StoreInst(LLVMSt, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::Ret: {
-    auto *LLVMRet = cast<llvm::ReturnInst>(LLVMV);
-    It->second = std::unique_ptr<ReturnInst>(new ReturnInst(LLVMRet, *this));
     return It->second.get();
   }
   default:
@@ -791,11 +686,6 @@ BasicBlock *Context::createBasicBlock(llvm::BasicBlock *LLVMBB) {
   return BB;
 }
 
-SelectInst *Context::createSelectInst(llvm::SelectInst *SI) {
-  auto NewPtr = std::unique_ptr<SelectInst>(new SelectInst(SI, *this));
-  return cast<SelectInst>(registerValue(std::move(NewPtr)));
-}
-
 LoadInst *Context::createLoadInst(llvm::LoadInst *LI) {
   auto NewPtr = std::unique_ptr<LoadInst>(new LoadInst(LI, *this));
   return cast<LoadInst>(registerValue(std::move(NewPtr)));
@@ -804,11 +694,6 @@ LoadInst *Context::createLoadInst(llvm::LoadInst *LI) {
 StoreInst *Context::createStoreInst(llvm::StoreInst *SI) {
   auto NewPtr = std::unique_ptr<StoreInst>(new StoreInst(SI, *this));
   return cast<StoreInst>(registerValue(std::move(NewPtr)));
-}
-
-ReturnInst *Context::createReturnInst(llvm::ReturnInst *I) {
-  auto NewPtr = std::unique_ptr<ReturnInst>(new ReturnInst(I, *this));
-  return cast<ReturnInst>(registerValue(std::move(NewPtr)));
 }
 
 Value *Context::getValue(llvm::Value *V) const {

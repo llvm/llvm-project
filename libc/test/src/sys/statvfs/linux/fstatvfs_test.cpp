@@ -9,16 +9,10 @@
 #include <linux/magic.h>
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
-#ifdef SYS_statfs64
-using StatFs = statfs64;
-#else
-using StatFs = statfs;
-#endif
-
 namespace LIBC_NAMESPACE_DECL {
-static int fstatfs(int fd, StatFs *buf) {
+static int fstatfs(int fd, struct statfs *buf) {
   using namespace statfs_utils;
-  if (cpp::optional<StatFs> result = linux_fstatfs(fd)) {
+  if (cpp::optional<LinuxStatFs> result = linux_fstatfs(fd)) {
     *buf = *result;
     return 0;
   }
@@ -35,7 +29,7 @@ struct PathFD {
 };
 
 TEST(LlvmLibcSysStatvfsTest, FstatfsBasic) {
-  StatFs buf;
+  struct statfs buf;
   ASSERT_THAT(LIBC_NAMESPACE::fstatfs(PathFD("/"), &buf), Succeeds());
   ASSERT_THAT(LIBC_NAMESPACE::fstatfs(PathFD("/proc"), &buf), Succeeds());
   ASSERT_EQ(buf.f_type, static_cast<decltype(buf.f_type)>(PROC_SUPER_MAGIC));
