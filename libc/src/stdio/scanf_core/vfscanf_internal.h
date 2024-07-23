@@ -11,14 +11,13 @@
 
 #include "src/__support/File/file.h"
 #include "src/__support/arg_list.h"
-#include "src/__support/macros/config.h"
 #include "src/stdio/scanf_core/reader.h"
 #include "src/stdio/scanf_core/scanf_main.h"
 
 #include "hdr/types/FILE.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 namespace internal {
 
@@ -86,6 +85,6 @@ LIBC_INLINE int vfscanf_internal(::FILE *__restrict stream,
   return retval;
 }
 } // namespace scanf_core
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_SCANF_CORE_VFSCANF_INTERNAL_H

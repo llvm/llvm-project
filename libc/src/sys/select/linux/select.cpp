@@ -13,13 +13,12 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
 #include <stddef.h>      // For size_t
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 struct pselect6_sigset_t {
   sigset_t *ss;
@@ -70,4 +69,4 @@ LLVM_LIBC_FUNCTION(int, select,
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

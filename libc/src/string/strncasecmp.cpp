@@ -10,10 +10,9 @@
 
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
-#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_strcmp.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, strncasecmp,
                    (const char *left, const char *right, size_t n)) {
@@ -24,4 +23,4 @@ LLVM_LIBC_FUNCTION(int, strncasecmp,
   return inline_strncmp(left, right, n, case_cmp);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
