@@ -39,6 +39,42 @@ func.func @cmpi_sge_i1(%v1 : i1, %v2 : i1) {
   return
 }
 
+func.func @cmpi_eq() {
+  // ------------------------------------------------
+  // Test i1
+  // ------------------------------------------------
+  %false_i1 = arith.constant 0 : i1
+  %true_i1 = arith.constant 1 : i1
+  %true_i1_n1 = arith.constant -1 : i1
+
+  // int values 1 and -1 represent the same bitvector
+  
+  // CHECK-LABEL: @cmpi_eq_i1
+  // CHECK-NEXT:  1
+  func.call @cmpi_eq_i1(%true_i1, %true_i1_n1) : (i1, i1) -> ()
+
+  // CHECK-LABEL: @cmpi_eq_i1
+  // CHECK-NEXT:  0
+  func.call @cmpi_eq_i1(%false_i1, %true_i1) : (i1, i1) -> ()
+
+  // CHECK-LABEL: @cmpi_eq_i1
+  // CHECK-NEXT:  0
+  func.call @cmpi_eq_i1(%true_i1, %false_i1) : (i1, i1) -> ()
+
+  // CHECK-LABEL: @cmpi_eq_i1
+  // CHECK-NEXT:  1
+  func.call @cmpi_eq_i1(%true_i1, %true_i1) : (i1, i1) -> ()
+
+  // CHECK-LABEL: @cmpi_eq_i1
+  // CHECK-NEXT:  1
+  func.call @cmpi_eq_i1(%false_i1, %false_i1) : (i1, i1) -> ()
+
+  // ------------------------------------------------
+  // TODO: Test i8, i16 etc..
+  // ------------------------------------------------
+  return
+}
+
 func.func @cmpi_signed() {
   // ------------------------------------------------
   // Test i1
@@ -48,10 +84,6 @@ func.func @cmpi_signed() {
   %true_i1_n1 = arith.constant -1 : i1
 
   // int values 1 and -1 represent the same bitvector
-  // CHECK-LABEL: @cmpi_eq_i1
-  // CHECK-NEXT:  1
-  func.call @cmpi_eq_i1(%true_i1, %true_i1_n1) : (i1, i1) -> ()
-
   // But, bitvector `1` is interpreted as int value -1 in signed comparison
 
   // CHECK-LABEL: @cmpi_sge_i1
@@ -117,6 +149,7 @@ func.func @cmpi_unsigned() {
 }
 
 func.func @entry() {
+  func.call @cmpi_eq() : () -> ()
   func.call @cmpi_signed() : () -> ()
   func.call @cmpi_unsigned() : () -> ()
   return
