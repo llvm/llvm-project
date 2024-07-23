@@ -3860,6 +3860,7 @@ public:
 class BinaryOperator : public Expr {
   enum { LHS, RHS, END_EXPR };
   Stmt *SubExprs[END_EXPR];
+  bool isOverflowIdiom;
 
 public:
   typedef BinaryOperatorKind Opcode;
@@ -4016,6 +4017,10 @@ public:
   }
   bool isShiftAssignOp() const {
     return isShiftAssignOp(getOpcode());
+  }
+
+  bool ignoreOverflowSanitizers() const {
+    return isOverflowIdiom;
   }
 
   /// Return true if a binary operator using the specified opcode and operands
