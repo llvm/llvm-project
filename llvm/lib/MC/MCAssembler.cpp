@@ -86,11 +86,8 @@ MCAssembler::MCAssembler(MCContext &Context,
     : Context(Context), Backend(std::move(Backend)),
       Emitter(std::move(Emitter)), Writer(std::move(Writer)) {}
 
-MCAssembler::~MCAssembler() = default;
-
 void MCAssembler::reset() {
   RelaxAll = false;
-  SubsectionsViaSymbols = false;
   Sections.clear();
   Symbols.clear();
   ThumbFuncs.clear();
@@ -1095,7 +1092,7 @@ bool MCAssembler::relaxLEB(MCLEBFragment &LF) {
   // Use evaluateKnownAbsolute for Mach-O as a hack: .subsections_via_symbols
   // requires that .uleb128 A-B is foldable where A and B reside in different
   // fragments. This is used by __gcc_except_table.
-  bool Abs = getSubsectionsViaSymbols()
+  bool Abs = getWriter().getSubsectionsViaSymbols()
                  ? LF.getValue().evaluateKnownAbsolute(Value, *this)
                  : LF.getValue().evaluateAsAbsolute(Value, *this);
   if (!Abs) {
