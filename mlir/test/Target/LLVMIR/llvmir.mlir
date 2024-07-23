@@ -2477,3 +2477,75 @@ llvm.func @willreturn() attributes { will_return } {
 
 // CHECK: #[[ATTRS]]
 // CHECK-SAME: willreturn
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @convergent_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @convergent_call() {
+  llvm.call @f() {convergent} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: convergent
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @nounwind_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @nounwind_call() {
+  llvm.call @f() {no_unwind} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: nounwind
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @willreturn_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @willreturn_call() {
+  llvm.call @f() {will_return} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: willreturn
+
+// -----
+
+llvm.func @fa()
+llvm.func @fb()
+llvm.func @fc()
+llvm.func @fd()
+
+// CHECK-LABEL: @mem_none_call
+// CHECK: call void @fa() #[[ATTRS_0:[0-9]+]]
+// CHECK: call void @fb() #[[ATTRS_1:[0-9]+]]
+// CHECK: call void @fc() #[[ATTRS_2:[0-9]+]]
+// CHECK: call void @fd() #[[ATTRS_3:[0-9]+]]
+llvm.func @mem_none_call() {
+  llvm.call @fa() {memory = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>} : () -> ()
+  llvm.call @fb() {memory = #llvm.memory_effects<other = read, argMem = none, inaccessibleMem = write>} : () -> ()
+  llvm.call @fc() {memory = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = write>} : () -> ()
+  llvm.call @fd() {memory = #llvm.memory_effects<other = readwrite, argMem = read, inaccessibleMem = readwrite>} : () -> ()
+  llvm.return
+
+}
+
+// CHECK: #[[ATTRS_0]]
+// CHECK-SAME: memory(none)
+// CHECK: #[[ATTRS_1]]
+// CHECK-SAME: memory(read, argmem: none, inaccessiblemem: write)
+// CHECK: #[[ATTRS_2]]
+// CHECK-SAME: memory(read, inaccessiblemem: write)
+// CHECK: #[[ATTRS_3]]
+// CHECK-SAME: memory(readwrite, argmem: read)
