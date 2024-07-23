@@ -8649,7 +8649,7 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
       Op.addRegOrImmWithFPInputModsOperands(Inst, 2);
     } else if (Op.isImmModifier()) {
       OptionalIdx[Op.getImmTy()] = I;
-    } else if (Op.isRegOrImm()) {
+    } else if (Op.isRegOrImm() || Op.isExpr()) {
       Op.addRegOrImmOperands(Inst, 1);
     } else {
       llvm_unreachable("unhandled operand type");
