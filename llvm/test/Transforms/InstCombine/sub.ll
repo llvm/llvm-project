@@ -2667,7 +2667,7 @@ define i32 @sub_infer_nuw_from_domcond(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_NOT]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i32 0
@@ -2688,13 +2688,7 @@ define i1 @sub_infer_nuw_from_domcond_fold1(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_NOT]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[EXT0:%.*]] = zext i32 [[Y]] to i64
-; CHECK-NEXT:    [[EXT1:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[EXT2:%.*]] = zext i32 [[SUB]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[EXT2]], [[EXT0]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[ADD]], [[EXT1]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -2719,8 +2713,8 @@ define i64 @sub_infer_nuw_from_domcond_fold2(i32 range(i32 0, 2147483648) %x, i3
 ; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_NOT]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[SUB]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i32 [[SUB]] to i64
 ; CHECK-NEXT:    ret i64 [[EXT]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i64 0
@@ -2743,9 +2737,7 @@ define i1 @sub_infer_nuw_from_domcond_fold3(i16 %xx, i32 range(i32 0, 12) %y) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SUB]], -1
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i1 false
 ;

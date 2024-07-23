@@ -2175,7 +2175,10 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
       Changed = true;
       I.setHasNoSignedWrap(true);
     }
-    if (!I.hasNoUnsignedWrap() && willNotOverflowUnsignedSub(Op0, Op1, I)) {
+    if (!I.hasNoUnsignedWrap() &&
+        (willNotOverflowUnsignedSub(Op0, Op1, I) ||
+         isImpliedByDomCondition(ICmpInst::ICMP_UGE, Op0, Op1, &I, DL)
+             .value_or(false))) {
       Changed = true;
       I.setHasNoUnsignedWrap(true);
     }
