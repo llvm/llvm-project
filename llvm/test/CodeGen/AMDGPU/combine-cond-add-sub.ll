@@ -665,17 +665,17 @@ define amdgpu_kernel void @sub_zext_setcc_commute(ptr addrspace(1) nocapture %ar
 ;
 ; GFX9-LABEL: sub_zext_setcc_commute:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX9-NEXT:    v_cmp_gt_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v3, v2, s[0:1]
+; GFX9-NEXT:    global_load_dword v3, v2, s[4:5]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_sub_u32_e32 v0, v0, v3
-; GFX9-NEXT:    v_add_u32_e32 v0, s2, v0
-; GFX9-NEXT:    v_subrev_u32_e32 v0, s3, v0
-; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
+; GFX9-NEXT:    v_add_u32_e32 v0, s6, v0
+; GFX9-NEXT:    v_subrev_u32_e32 v0, s7, v0
+; GFX9-NEXT:    global_store_dword v2, v0, s[4:5]
 ; GFX9-NEXT:    s_endpgm
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -714,17 +714,17 @@ define amdgpu_kernel void @sub_sext_setcc_commute(ptr addrspace(1) nocapture %ar
 ;
 ; GFX9-LABEL: sub_sext_setcc_commute:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX9-NEXT:    v_cmp_gt_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v3, v2, s[0:1]
+; GFX9-NEXT:    global_load_dword v3, v2, s[4:5]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_sub_u32_e32 v0, v0, v3
-; GFX9-NEXT:    v_add_u32_e32 v0, s2, v0
-; GFX9-NEXT:    v_subrev_u32_e32 v0, s3, v0
-; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
+; GFX9-NEXT:    v_add_u32_e32 v0, s6, v0
+; GFX9-NEXT:    v_subrev_u32_e32 v0, s7, v0
+; GFX9-NEXT:    global_store_dword v2, v0, s[4:5]
 ; GFX9-NEXT:    s_endpgm
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()

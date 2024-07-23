@@ -254,12 +254,14 @@ protected:
   bool HasVOPDInsts = false;
   bool HasVALUTransUseHazard = false;
   bool HasForceStoreSC0SC1 = false;
+  bool HasRequiredExportPriority = false;
   bool HasForceVALUThrottle = false;
   bool HasAshrPkInsts = false;
   bool HasMinimum3Maximum3F32 = false;
   bool HasMinimum3Maximum3F16 = false;
   bool HasMin3Max3PKF16 = false;
   bool HasMinimum3Maximum3PKF16 = false;
+
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
 
@@ -1354,6 +1356,8 @@ public:
   bool hasPseudoScalarTrans() const { return HasPseudoScalarTrans; }
 
   bool hasRestrictedSOffset() const { return HasRestrictedSOffset; }
+
+  bool hasRequiredExportPriority() const { return HasRequiredExportPriority; }
 
   /// \returns true if the target uses LOADcnt/SAMPLEcnt/BVHcnt, DScnt/KMcnt
   /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.

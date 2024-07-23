@@ -3,7 +3,7 @@
 // RUN:     misc-const-correctness.TransformValues: true, \
 // RUN:     misc-const-correctness.WarnPointersAsValues: false, \
 // RUN:     misc-const-correctness.TransformPointersAsValues: false \
-// RUN:   }}" -- -fno-delayed-template-parsing
+// RUN:   }}" -- -fno-delayed-template-parsing -fexceptions
 
 // ------- Provide test samples for primitive builtins ---------
 // - every 'p_*' variable is a 'potential_const_*' variable
