@@ -3484,8 +3484,8 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
   if (HasFillExpr && FillExpr != 0 && Section->isVirtualSection()) {
     ReturnVal |=
         Warning(FillExprLoc, "ignoring non-zero fill value in " +
-                                  Section->getVirtualSectionKind() + " section '" +
-                                  Section->getName() + "'");
+                                 Section->getVirtualSectionKind() +
+                                 " section '" + Section->getName() + "'");
     FillExpr = 0;
   }
 
