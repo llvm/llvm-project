@@ -803,14 +803,14 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     return !Tok.Previous->isOneOf(TT_CastRParen, tok::kw_for, tok::kw_while,
                                   tok::kw_switch);
   };
-  auto IsFunctionCallParen = [&](const FormatToken &Tok) {
+  auto IsFunctionCallParen = [](const FormatToken &Tok) {
     return Tok.is(tok::l_paren) && Tok.ParameterCount > 0 && Tok.Previous &&
            Tok.Previous->is(tok::identifier);
   };
-  const auto IsInTemplateString = [&](const FormatToken &Tok) {
+  const auto IsInTemplateString = [this](const FormatToken &Tok) {
     if (!Style.isJavaScript())
       return false;
-    for (const FormatToken *Prev = &Tok; Prev; Prev = Prev->Previous) {
+    for (const auto *Prev = &Tok; Prev; Prev = Prev->Previous) {
       if (Prev->is(TT_TemplateString) && Prev->opensScope())
         return true;
       if (Prev->is(TT_TemplateString) && Prev->closesScope())
