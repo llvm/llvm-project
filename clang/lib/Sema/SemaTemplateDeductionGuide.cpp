@@ -1032,6 +1032,10 @@ buildInheritedConstructorDeductionGuideType(
 
 // Build deduction guides for a type alias template from the given underlying
 // deduction guide F.
+// If F is synthesized from a base class (as an inherited constructor),
+// then the return type will be transformed using DerivedClassMapperType.
+// The resulting deduction guide is added to the DeducingTemplate argument,
+// defaulting to AliasTemplate.
 FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
     Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate,
     FunctionTemplateDecl *F, SourceLocation Loc,
@@ -1043,9 +1047,6 @@ FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
       Sema::InstantiatingTemplate::BuildingDeductionGuidesTag{});
   if (BuildingDeductionGuides.isInvalid())
     return nullptr;
-
-  if (!DeducingTemplate)
-    DeducingTemplate = AliasTemplate;
 
   auto &Context = SemaRef.Context;
   auto [Template, AliasRhsTemplateArgs] =
@@ -1213,6 +1214,8 @@ FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
 
     TypeSourceInfo *TSI = GG->getTypeSourceInfo();
     QualType ReturnType = FPrime->getReturnType();
+    if (!DeducingTemplate)
+      DeducingTemplate = AliasTemplate;
     if (DerivedClassMapperType)
       std::tie(TSI, ReturnType) = buildInheritedConstructorDeductionGuideType(
           SemaRef, DerivedClassMapperType, DeducingTemplate, TSI);
