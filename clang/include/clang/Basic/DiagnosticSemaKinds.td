@@ -949,6 +949,9 @@ def note_ptrauth_virtual_function_pointer_incomplete_arg_ret :
 def note_ptrauth_virtual_function_incomplete_arg_ret_type :
   Note<"%0 is incomplete">;
 
+def err_ptrauth_indirect_goto_addrlabel_arithmetic : Error<
+  "%select{subtraction|addition}0 of address-of-label expressions is not "
+  "supported with ptrauth indirect gotos">;
 
 /// main()
 // static main() is not an error in C, just in C++.

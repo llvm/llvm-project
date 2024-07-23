@@ -10,6 +10,7 @@
 #define LLVM_MC_MCELFOBJECTWRITER_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -154,12 +155,23 @@ public:
 };
 
 class ELFObjectWriter : public MCObjectWriter {
+  unsigned ELFHeaderEFlags = 0;
+
 public:
   std::unique_ptr<MCELFObjectTargetWriter> TargetObjectWriter;
   DenseMap<const MCSectionELF *, std::vector<ELFRelocationEntry>> Relocations;
   DenseMap<const MCSymbolELF *, const MCSymbolELF *> Renames;
   bool SeenGnuAbi = false;
   std::optional<uint8_t> OverrideABIVersion;
+
+  struct Symver {
+    SMLoc Loc;
+    const MCSymbol *Sym;
+    StringRef Name;
+    // True if .symver *, *@@@* or .symver *, *, remove.
+    bool KeepOriginalSym;
+  };
+  SmallVector<Symver, 0> Symvers;
 
   ELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW)
       : TargetObjectWriter(std::move(MOTW)) {}
@@ -186,6 +198,9 @@ public:
                                const MCSectionELF *To) {
     return true;
   }
+
+  unsigned getELFHeaderEFlags() const { return ELFHeaderEFlags; }
+  void setELFHeaderEFlags(unsigned Flags) { ELFHeaderEFlags = Flags; }
 
   // Mark that we have seen GNU ABI usage (e.g. SHF_GNU_RETAIN, STB_GNU_UNIQUE).
   void markGnuAbi() { SeenGnuAbi = true; }

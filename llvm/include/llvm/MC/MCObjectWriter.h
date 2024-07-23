@@ -32,8 +32,19 @@ class MCValue;
 /// should be emitted as part of writeObject().
 class MCObjectWriter {
 protected:
+  /// List of declared file names
+  SmallVector<std::pair<std::string, size_t>, 0> FileNames;
+  // XCOFF specific: Optional compiler version.
+  std::string CompilerVersion;
   std::vector<const MCSymbol *> AddrsigSyms;
   bool EmitAddrsigSection = false;
+
+  struct CGProfileEntry {
+    const MCSymbolRefExpr *From;
+    const MCSymbolRefExpr *To;
+    uint64_t Count;
+  };
+  SmallVector<CGProfileEntry, 0> CGProfile;
 
   MCObjectWriter() = default;
 
@@ -43,7 +54,7 @@ public:
   virtual ~MCObjectWriter();
 
   /// lifetime management
-  virtual void reset() {}
+  virtual void reset();
 
   /// \name High-Level API
   /// @{
@@ -81,6 +92,14 @@ public:
                                                       bool InSet,
                                                       bool IsPCRel) const;
 
+  MutableArrayRef<std::pair<std::string, size_t>> getFileNames() {
+    return FileNames;
+  }
+  void addFileName(MCAssembler &Asm, StringRef FileName);
+  void setCompilerVersion(StringRef CompilerVers) {
+    CompilerVersion = CompilerVers;
+  }
+
   /// Tell the object writer to emit an address-significance table during
   /// writeObject(). If this function is not called, all symbols are treated as
   /// address-significant.
@@ -93,6 +112,7 @@ public:
   void addAddrsigSymbol(const MCSymbol *Sym) { AddrsigSyms.push_back(Sym); }
 
   std::vector<const MCSymbol *> &getAddrsigSyms() { return AddrsigSyms; }
+  SmallVector<CGProfileEntry, 0> &getCGProfile() { return CGProfile; }
 
   /// Write the object file and returns the number of bytes written.
   ///
