@@ -400,6 +400,8 @@ VALUE_LANGOPT(TrivialAutoVarInitMaxSize, 32, 0,
              "stop trivial automatic variable initialization if var size exceeds the specified size (in bytes). Must be greater than 0.")
 ENUM_LANGOPT(SignedOverflowBehavior, SignedOverflowBehaviorTy, 2, SOB_Undefined,
              "signed integer overflow handling")
+LANGOPT(IgnoreNegationOverflow, 1, 0, "ignore overflow caused by negation")
+LANGOPT(SanitizeOverflowIdioms, 1, 1, "enable instrumentation for common overflow idioms")
 ENUM_LANGOPT(ThreadModel  , ThreadModelKind, 2, ThreadModelKind::POSIX, "Thread Model")
 
 BENIGN_LANGOPT(ArrowDepth, 32, 256,

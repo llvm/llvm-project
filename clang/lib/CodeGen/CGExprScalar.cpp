@@ -25,6 +25,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/TargetInfo.h"
@@ -195,13 +196,22 @@ static bool CanElideOverflowCheck(const ASTContext &Ctx, const BinOpInfo &Op) {
   if (!Op.mayHaveIntegerOverflow())
     return true;
 
+  const UnaryOperator *UO = dyn_cast<UnaryOperator>(Op.E);
+
+  if (UO && UO->getOpcode() == UO_Minus &&
+      Ctx.getLangOpts().IgnoreNegationOverflow)
+    return true;
+
   // If a unary op has a widened operand, the op cannot overflow.
-  if (const auto *UO = dyn_cast<UnaryOperator>(Op.E))
+  if (UO)
     return !UO->canOverflow();
 
   // We usually don't need overflow checks for binops with widened operands.
   // Multiplication with promoted unsigned operands is a special case.
   const auto *BO = cast<BinaryOperator>(Op.E);
+  if (BO->ignoreOverflowSanitizers())
+    return true;
+
   auto OptionalLHSTy = getUnwidenedIntegerType(Ctx, BO->getLHS());
   if (!OptionalLHSTy)
     return false;
@@ -2877,6 +2887,17 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
   } else if (type->isIntegerType()) {
     QualType promotedType;
     bool canPerformLossyDemotionCheck = false;
+
+    // Does this match the pattern of while(i--) {...}? If so, and if
+    // SanitizeOverflowIdioms is disabled, we don't want to enable sanitizer.
+    bool disableSanitizer =
+        (!isInc && !isPre &&
+         !CGF.getContext().getLangOpts().SanitizeOverflowIdioms &&
+         llvm::all_of(CGF.getContext().getParentMapContext().getParents(*E),
+                      [&](const DynTypedNode &Parent) -> bool {
+                        return Parent.get<WhileStmt>();
+                      }));
+
     if (CGF.getContext().isPromotableIntegerType(type)) {
       promotedType = CGF.getContext().getPromotedIntegerType(type);
       assert(promotedType != type && "Shouldn't promote to the same type.");
@@ -2936,7 +2957,8 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     } else if (E->canOverflow() && type->isSignedIntegerOrEnumerationType()) {
       value = EmitIncDecConsiderOverflowBehavior(E, value, isInc);
     } else if (E->canOverflow() && type->isUnsignedIntegerType() &&
-               CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) {
+               CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow) &&
+               !disableSanitizer) {
       value = EmitOverflowCheckedBinOp(createBinOpInfoFromIncDec(
           E, value, isInc, E->getFPFeaturesInEffect(CGF.getLangOpts())));
     } else {

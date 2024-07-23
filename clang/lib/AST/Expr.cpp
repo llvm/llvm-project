@@ -4759,6 +4759,54 @@ ParenListExpr *ParenListExpr::CreateEmpty(const ASTContext &Ctx,
   return new (Mem) ParenListExpr(EmptyShell(), NumExprs);
 }
 
+namespace {
+/// Certain overflow-dependent code idioms can have their integer overflow
+/// sanitization disabled. Check for the common pattern `if (a + b < a)` and
+/// return the resulting BinaryOperator responsible for the addition so we can
+/// elide overflow checks during codegen.
+static std::optional<BinaryOperator *> getOverflowIdiomBinOp(const BinaryOperator *E) {
+  Expr *Addition, *ComparedTo;
+  if (E->getOpcode() == BO_LT) {
+    Addition = E->getLHS();
+    ComparedTo = E->getRHS();
+  } else if (E->getOpcode() == BO_GT) {
+    Addition = E->getRHS();
+    ComparedTo = E->getLHS();
+  } else {
+    return {};
+  }
+
+  const Expr *AddLHS = nullptr, *AddRHS = nullptr;
+  BinaryOperator *BO = dyn_cast<BinaryOperator>(Addition);
+
+  if (BO && BO->getOpcode() == clang::BO_Add) {
+    // now store addends for lookup on other side of '>'
+    AddLHS = BO->getLHS();
+    AddRHS = BO->getRHS();
+  }
+
+  if (!AddLHS || !AddRHS)
+    return {};
+
+  const Decl *LHSDecl, *RHSDecl, *OtherDecl;
+
+  LHSDecl = AddLHS->IgnoreParenImpCasts()->getReferencedDeclOfCallee();
+  RHSDecl = AddRHS->IgnoreParenImpCasts()->getReferencedDeclOfCallee();
+  OtherDecl = ComparedTo->IgnoreParenImpCasts()->getReferencedDeclOfCallee();
+
+  if (!OtherDecl)
+    return {};
+
+  if (!LHSDecl && !RHSDecl)
+    return {};
+
+  if ((LHSDecl && LHSDecl == OtherDecl && LHSDecl != RHSDecl) ||
+      (RHSDecl && RHSDecl == OtherDecl && RHSDecl != LHSDecl))
+    return BO;
+  return {};
+}
+} // namespace
+
 BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
                                Opcode opc, QualType ResTy, ExprValueKind VK,
                                ExprObjectKind OK, SourceLocation opLoc,
@@ -4770,6 +4818,11 @@ BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
   BinaryOperatorBits.OpLoc = opLoc;
   SubExprs[LHS] = lhs;
   SubExprs[RHS] = rhs;
+  if (!Ctx.getLangOpts().SanitizeOverflowIdioms) {
+    std::optional<BinaryOperator*> Result = getOverflowIdiomBinOp(this);
+    if (Result.has_value())
+      Result.value()->isOverflowIdiom = true;
+  }
   BinaryOperatorBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
   if (hasStoredFPFeatures())
     setStoredFPFeatures(FPFeatures);

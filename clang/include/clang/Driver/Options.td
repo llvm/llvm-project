@@ -2558,6 +2558,16 @@ defm sanitize_stats : BoolOption<"f", "sanitize-stats",
           "Disable">,
   BothFlags<[], [ClangOption], " sanitizer statistics gathering.">>,
   Group<f_clang_Group>;
+defm sanitize_overflow_idioms : BoolFOption<"sanitize-overflow-idioms",
+  LangOpts<"SanitizeOverflowIdioms">, DefaultTrue,
+  PosFlag<SetTrue, [], [], "Enable">,
+  NegFlag<SetFalse, [], [], "Disable">,
+  BothFlags<[], [ClangOption], " the instrumentation of common overflow idioms">>;
+defm sanitize_negation_overflow : BoolFOption<"sanitize-negation-overflow",
+  LangOpts<"IgnoreNegationOverflow">, DefaultFalse,
+  PosFlag<SetFalse, [], [], "Enable">,
+  NegFlag<SetTrue, [], [], "Disable">,
+  BothFlags<[], [ClangOption], " integer overflow sanitizer instrumentation for negation">>;
 def fsanitize_thread_memory_access : Flag<["-"], "fsanitize-thread-memory-access">,
                                      Group<f_clang_Group>,
                                      HelpText<"Enable memory access instrumentation in ThreadSanitizer (default)">;
