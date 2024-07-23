@@ -11,4 +11,5 @@ add_llvm_tool(llvm-cgdata
 
   DEPENDS
   intrinsics_gen
+  GENERATE_DRIVER
   )
