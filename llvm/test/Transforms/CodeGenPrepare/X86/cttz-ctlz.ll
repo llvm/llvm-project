@@ -109,6 +109,175 @@ entry:
   ret i64 %z
 }
 
+define i8 @cttz_i8(i8 %A) {
+; SLOW-LABEL: @cttz_i8(
+; SLOW-NEXT:  entry:
+; SLOW-NEXT:    [[Z:%.*]] = call i8 @llvm.cttz.i8(i8 [[A:%.*]], i1 false)
+; SLOW-NEXT:    ret i8 [[Z]]
+;
+; FAST_TZ-LABEL: @cttz_i8(
+; FAST_TZ-NEXT:  entry:
+; FAST_TZ-NEXT:    [[Z:%.*]] = call i8 @llvm.cttz.i8(i8 [[A:%.*]], i1 false)
+; FAST_TZ-NEXT:    ret i8 [[Z]]
+;
+; FAST_LZ-LABEL: @cttz_i8(
+; FAST_LZ-NEXT:  entry:
+; FAST_LZ-NEXT:    [[Z:%.*]] = call i8 @llvm.cttz.i8(i8 [[A:%.*]], i1 false)
+; FAST_LZ-NEXT:    ret i8 [[Z]]
+;
+; DEBUGINFO-LABEL: @cttz_i8(
+; DEBUGINFO-NEXT:  entry:
+; DEBUGINFO-NEXT:    [[Z:%.*]] = call i8 @llvm.cttz.i8(i8 [[A:%.*]], i1 false), !dbg [[DBG22:![0-9]+]]
+; DEBUGINFO-NEXT:      #dbg_value(i8 [[Z]], [[META20:![0-9]+]], !DIExpression(), [[DBG22]])
+; DEBUGINFO-NEXT:    ret i8 [[Z]], !dbg [[DBG23:![0-9]+]]
+;
+  entry:
+  %z = call i8 @llvm.cttz.i8(i8 %A, i1 false)
+  ret i8 %z
+}
+
+define i8 @ctlz_i8(i8 %A) {
+; SLOW-LABEL: @ctlz_i8(
+; SLOW-NEXT:  entry:
+; SLOW-NEXT:    [[A_FR:%.*]] = freeze i8 [[A:%.*]]
+; SLOW-NEXT:    [[CMPZ:%.*]] = icmp eq i8 [[A_FR]], 0
+; SLOW-NEXT:    br i1 [[CMPZ]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
+; SLOW:       cond.false:
+; SLOW-NEXT:    [[Z:%.*]] = call i8 @llvm.ctlz.i8(i8 [[A_FR]], i1 true)
+; SLOW-NEXT:    br label [[COND_END]]
+; SLOW:       cond.end:
+; SLOW-NEXT:    [[CTZ:%.*]] = phi i8 [ 8, [[ENTRY:%.*]] ], [ [[Z]], [[COND_FALSE]] ]
+; SLOW-NEXT:    ret i8 [[CTZ]]
+;
+; FAST_TZ-LABEL: @ctlz_i8(
+; FAST_TZ-NEXT:  entry:
+; FAST_TZ-NEXT:    [[A_FR:%.*]] = freeze i8 [[A:%.*]]
+; FAST_TZ-NEXT:    [[CMPZ:%.*]] = icmp eq i8 [[A_FR]], 0
+; FAST_TZ-NEXT:    br i1 [[CMPZ]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
+; FAST_TZ:       cond.false:
+; FAST_TZ-NEXT:    [[Z:%.*]] = call i8 @llvm.ctlz.i8(i8 [[A_FR]], i1 true)
+; FAST_TZ-NEXT:    br label [[COND_END]]
+; FAST_TZ:       cond.end:
+; FAST_TZ-NEXT:    [[CTZ:%.*]] = phi i8 [ 8, [[ENTRY:%.*]] ], [ [[Z]], [[COND_FALSE]] ]
+; FAST_TZ-NEXT:    ret i8 [[CTZ]]
+;
+; FAST_LZ-LABEL: @ctlz_i8(
+; FAST_LZ-NEXT:  entry:
+; FAST_LZ-NEXT:    [[Z:%.*]] = call i8 @llvm.ctlz.i8(i8 [[A:%.*]], i1 false)
+; FAST_LZ-NEXT:    ret i8 [[Z]]
+;
+; DEBUGINFO-LABEL: @ctlz_i8(
+; DEBUGINFO-NEXT:  entry:
+; DEBUGINFO-NEXT:    [[A_FR:%.*]] = freeze i8 [[A:%.*]], !dbg [[DBG27:![0-9]+]]
+; DEBUGINFO-NEXT:    [[CMPZ:%.*]] = icmp eq i8 [[A_FR]], 0, !dbg [[DBG27]]
+; DEBUGINFO-NEXT:    br i1 [[CMPZ]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]], !dbg [[DBG27]]
+; DEBUGINFO:       cond.false:
+; DEBUGINFO-NEXT:    [[Z:%.*]] = call i8 @llvm.ctlz.i8(i8 [[A_FR]], i1 true), !dbg [[DBG27]]
+; DEBUGINFO-NEXT:    br label [[COND_END]], !dbg [[DBG28:![0-9]+]]
+; DEBUGINFO:       cond.end:
+; DEBUGINFO-NEXT:    [[CTZ:%.*]] = phi i8 [ 8, [[ENTRY:%.*]] ], [ [[Z]], [[COND_FALSE]] ], !dbg [[DBG28]]
+; DEBUGINFO-NEXT:      #dbg_value(i8 [[CTZ]], [[META26:![0-9]+]], !DIExpression(), [[DBG27]])
+; DEBUGINFO-NEXT:    ret i8 [[CTZ]], !dbg [[DBG28]]
+;
+  entry:
+  %z = call i8 @llvm.ctlz.i8(i8 %A, i1 false)
+  ret i8 %z
+}
+
+; As the operand will be promoted by the DAG legalizer, no despeculation when counting
+; ones.
+
+define i8 @ctto_i8_no_despeculation(i8 %A) {
+; SLOW-LABEL: @ctto_i8_no_despeculation(
+; SLOW-NEXT:  entry:
+; SLOW-NEXT:    [[A_NOT:%.*]] = xor i8 [[A:%.*]], -1
+; SLOW-NEXT:    [[Z:%.*]] = call i8 @llvm.cttz.i8(i8 [[A_NOT]], i1 false)
+; SLOW-NEXT:    ret i8 [[Z]]
+;
+; FAST_TZ-LABEL: @ctto_i8_no_despeculation(
+; FAST_TZ-NEXT:  entry:
+; FAST_TZ-NEXT:    [[A_NOT:%.*]] = xor i8 [[A:%.*]], -1
+; FAST_TZ-NEXT:    [[Z:%.*]] = call i8 @llvm.cttz.i8(i8 [[A_NOT]], i1 false)
+; FAST_TZ-NEXT:    ret i8 [[Z]]
+;
+; FAST_LZ-LABEL: @ctto_i8_no_despeculation(
+; FAST_LZ-NEXT:  entry:
+; FAST_LZ-NEXT:    [[A_NOT:%.*]] = xor i8 [[A:%.*]], -1
+; FAST_LZ-NEXT:    [[Z:%.*]] = call i8 @llvm.cttz.i8(i8 [[A_NOT]], i1 false)
+; FAST_LZ-NEXT:    ret i8 [[Z]]
+;
+; DEBUGINFO-LABEL: @ctto_i8_no_despeculation(
+; DEBUGINFO-NEXT:  entry:
+; DEBUGINFO-NEXT:    [[A_NOT:%.*]] = xor i8 [[A:%.*]], -1, !dbg [[DBG33:![0-9]+]]
+; DEBUGINFO-NEXT:      #dbg_value(i8 [[A_NOT]], [[META31:![0-9]+]], !DIExpression(), [[DBG33]])
+; DEBUGINFO-NEXT:    [[Z:%.*]] = call i8 @llvm.cttz.i8(i8 [[A_NOT]], i1 false), !dbg [[DBG34:![0-9]+]]
+; DEBUGINFO-NEXT:      #dbg_value(i8 [[Z]], [[META32:![0-9]+]], !DIExpression(), [[DBG34]])
+; DEBUGINFO-NEXT:    ret i8 [[Z]], !dbg [[DBG35:![0-9]+]]
+;
+  entry:
+  %A.not = xor i8 %A, -1
+  %z = call i8 @llvm.cttz.i8(i8 %A.not, i1 false)
+  ret i8 %z
+}
+
+; despeculation occurs because with CTLZ i8, the DAG legalization is Custom.
+
+define i8 @ctlo_i8(i8 %A) {
+; SLOW-LABEL: @ctlo_i8(
+; SLOW-NEXT:  entry:
+; SLOW-NEXT:    [[A_NOT:%.*]] = xor i8 [[A:%.*]], -1
+; SLOW-NEXT:    [[A_NOT_FR:%.*]] = freeze i8 [[A_NOT]]
+; SLOW-NEXT:    [[CMPZ:%.*]] = icmp eq i8 [[A_NOT_FR]], 0
+; SLOW-NEXT:    br i1 [[CMPZ]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
+; SLOW:       cond.false:
+; SLOW-NEXT:    [[Z:%.*]] = call i8 @llvm.ctlz.i8(i8 [[A_NOT_FR]], i1 true)
+; SLOW-NEXT:    br label [[COND_END]]
+; SLOW:       cond.end:
+; SLOW-NEXT:    [[CTZ:%.*]] = phi i8 [ 8, [[ENTRY:%.*]] ], [ [[Z]], [[COND_FALSE]] ]
+; SLOW-NEXT:    ret i8 [[CTZ]]
+;
+; FAST_TZ-LABEL: @ctlo_i8(
+; FAST_TZ-NEXT:  entry:
+; FAST_TZ-NEXT:    [[A_NOT:%.*]] = xor i8 [[A:%.*]], -1
+; FAST_TZ-NEXT:    [[A_NOT_FR:%.*]] = freeze i8 [[A_NOT]]
+; FAST_TZ-NEXT:    [[CMPZ:%.*]] = icmp eq i8 [[A_NOT_FR]], 0
+; FAST_TZ-NEXT:    br i1 [[CMPZ]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
+; FAST_TZ:       cond.false:
+; FAST_TZ-NEXT:    [[Z:%.*]] = call i8 @llvm.ctlz.i8(i8 [[A_NOT_FR]], i1 true)
+; FAST_TZ-NEXT:    br label [[COND_END]]
+; FAST_TZ:       cond.end:
+; FAST_TZ-NEXT:    [[CTZ:%.*]] = phi i8 [ 8, [[ENTRY:%.*]] ], [ [[Z]], [[COND_FALSE]] ]
+; FAST_TZ-NEXT:    ret i8 [[CTZ]]
+;
+; FAST_LZ-LABEL: @ctlo_i8(
+; FAST_LZ-NEXT:  entry:
+; FAST_LZ-NEXT:    [[A_NOT:%.*]] = xor i8 [[A:%.*]], -1
+; FAST_LZ-NEXT:    [[Z:%.*]] = call i8 @llvm.ctlz.i8(i8 [[A_NOT]], i1 false)
+; FAST_LZ-NEXT:    ret i8 [[Z]]
+;
+; DEBUGINFO-LABEL: @ctlo_i8(
+; DEBUGINFO-NEXT:  entry:
+; DEBUGINFO-NEXT:    [[A_NOT:%.*]] = xor i8 [[A:%.*]], -1, !dbg [[DBG40:![0-9]+]]
+; DEBUGINFO-NEXT:      #dbg_value(i8 [[A_NOT]], [[META38:![0-9]+]], !DIExpression(), [[DBG40]])
+; DEBUGINFO-NEXT:    [[A_NOT_FR:%.*]] = freeze i8 [[A_NOT]], !dbg [[DBG41:![0-9]+]]
+; DEBUGINFO-NEXT:    [[CMPZ:%.*]] = icmp eq i8 [[A_NOT_FR]], 0, !dbg [[DBG41]]
+; DEBUGINFO-NEXT:    br i1 [[CMPZ]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]], !dbg [[DBG41]]
+; DEBUGINFO:       cond.false:
+; DEBUGINFO-NEXT:    [[Z:%.*]] = call i8 @llvm.ctlz.i8(i8 [[A_NOT_FR]], i1 true), !dbg [[DBG41]]
+; DEBUGINFO-NEXT:    br label [[COND_END]], !dbg [[DBG42:![0-9]+]]
+; DEBUGINFO:       cond.end:
+; DEBUGINFO-NEXT:    [[CTZ:%.*]] = phi i8 [ 8, [[ENTRY:%.*]] ], [ [[Z]], [[COND_FALSE]] ], !dbg [[DBG42]]
+; DEBUGINFO-NEXT:      #dbg_value(i8 [[CTZ]], [[META39:![0-9]+]], !DIExpression(), [[DBG41]])
+; DEBUGINFO-NEXT:    ret i8 [[CTZ]], !dbg [[DBG42]]
+;
+  entry:
+  %A.not = xor i8 %A, -1
+  %z = call i8 @llvm.ctlz.i8(i8 %A.not, i1 false)
+  ret i8 %z
+}
+
 declare i64 @llvm.cttz.i64(i64, i1)
 declare i64 @llvm.ctlz.i64(i64, i1)
+declare i8 @llvm.cttz.i8(i8, i1)
+declare i8 @llvm.ctlz.i8(i8, i1)
 
