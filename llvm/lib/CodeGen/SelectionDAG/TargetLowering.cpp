@@ -9319,7 +9319,6 @@ SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
   assert((Opc == ISD::AVGFLOORS || Opc == ISD::AVGCEILS ||
           Opc == ISD::AVGFLOORU || Opc == ISD::AVGCEILU) &&
          "Unknown AVG node"); 
-  EVT SVT = VT.getScalarType();
 
   // If the operands are already extended, we can add+shift.
   bool IsExt =
@@ -9353,7 +9352,7 @@ SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
     }
   }
 
-  if (Opc == ISD::AVGFLOORU && SVT == MVT::i128) {
+  if (VT.isScalarInteger() && !isTypeLegal(VT)) {
     SDValue UAddWithOverflow = DAG.getNode(ISD::UADDO, dl, 
                                            DAG.getVTList(VT, MVT::i1), { RHS, LHS });
 
@@ -9361,15 +9360,15 @@ SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
     SDValue Overflow = UAddWithOverflow.getValue(1);
 
     // Right shift the sum by 1
-    SDValue One = DAG.getConstant(1, dl, VT);
+    SDValue One = DAG.getShiftAmountConstant(1, VT, dl);
     SDValue LShrVal = DAG.getNode(ISD::SRL, dl, VT, Sum, One);
     
     // Creating the select instruction
-    APInt SignMin = APInt::getSignedMinValue(VT.getSizeInBits());
-    SDValue SignMinVal = DAG.getConstant(SignMin, dl, VT);
-    SDValue ZeroOut = DAG.getConstant(0, dl, VT);
-
-    SDValue SelectVal = DAG.getSelect(dl, VT, Overflow, SignMinVal, ZeroOut);
+    SDValue ZeroOut = DAG.getConstant(0, dl, VT); 
+    SDValue ZeroExtOverflow = DAG.getNode(ISD::ZERO_EXTEND, dl, VT, Overflow);
+    SDValue OverflowShl = DAG.getNode(ISD::SHL, dl, VT, ZeroExtOverflow, 
+                                      DAG.getConstant(VT.getScalarSizeInBits() - 1, dl, VT)); 
+    SDValue SelectVal = DAG.getSelect(dl, VT, Overflow, OverflowShl, ZeroOut);
 
     return DAG.getNode(ISD::OR, dl, VT, LShrVal, SelectVal);
   }
