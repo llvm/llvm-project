@@ -276,7 +276,7 @@ struct __type_info_implementations {
 };
 
 #    if __has_cpp_attribute(_Clang::__ptrauth_vtable_pointer__)
-#      if __has_feature(ptrauth_type_info_discriminated_vtable_pointer)
+#      if __has_feature(ptrauth_type_info_vtable_pointer_discrimination)
 #        define _LIBCPP_TYPE_INFO_VTABLE_POINTER_AUTH                                                                  \
           [[_Clang::__ptrauth_vtable_pointer__(process_independent, address_discrimination, type_discrimination)]]
 #      else
