@@ -277,7 +277,7 @@ static int FeaturesBitCached = 0;
 
 void __init_riscv_feature_bits() CONSTRUCTOR_ATTRIBUTE;
 
-// A constructor function that is sets __riscv_feature_bits, and
+// A constructor function that sets __riscv_feature_bits, and
 // __riscv_vendor_feature_bits to the right values.  This needs to run
 // only once.  This constructor is given the highest priority and it should
 // run before constructors without the priority set.  However, it still runs
