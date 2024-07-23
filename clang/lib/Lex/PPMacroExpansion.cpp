@@ -329,20 +329,19 @@ void Preprocessor::RegisterBuiltinMacros() {
   Ident__DATE__ = RegisterBuiltinMacro("__DATE__");
   Ident__TIME__ = RegisterBuiltinMacro("__TIME__");
   Ident__COUNTER__ = RegisterBuiltinMacro("__COUNTER__");
-  Ident_Pragma  = RegisterBuiltinMacro("_Pragma");
+  Ident_Pragma = RegisterBuiltinMacro("_Pragma");
   Ident__FLT_EVAL_METHOD__ = RegisterBuiltinMacro("__FLT_EVAL_METHOD__");
 
   // C++ Standing Document Extensions.
   if (getLangOpts().CPlusPlus)
-    Ident__has_cpp_attribute =
-        RegisterBuiltinMacro("__has_cpp_attribute");
+    Ident__has_cpp_attribute = RegisterBuiltinMacro("__has_cpp_attribute");
   else
     Ident__has_cpp_attribute = nullptr;
 
   // GCC Extensions.
-  Ident__BASE_FILE__     = RegisterBuiltinMacro("__BASE_FILE__");
+  Ident__BASE_FILE__ = RegisterBuiltinMacro("__BASE_FILE__");
   Ident__INCLUDE_LEVEL__ = RegisterBuiltinMacro("__INCLUDE_LEVEL__");
-  Ident__TIMESTAMP__     = RegisterBuiltinMacro("__TIMESTAMP__");
+  Ident__TIMESTAMP__ = RegisterBuiltinMacro("__TIMESTAMP__");
 
   // Microsoft Extensions.
   if (getLangOpts().MicrosoftExt) {
@@ -354,13 +353,13 @@ void Preprocessor::RegisterBuiltinMacros() {
   }
 
   // Clang Extensions.
-  Ident__FILE_NAME__      = RegisterBuiltinMacro("__FILE_NAME__");
-  Ident__has_feature      = RegisterBuiltinMacro("__has_feature");
-  Ident__has_extension    = RegisterBuiltinMacro("__has_extension");
-  Ident__has_builtin      = RegisterBuiltinMacro("__has_builtin");
+  Ident__FILE_NAME__ = RegisterBuiltinMacro("__FILE_NAME__");
+  Ident__has_feature = RegisterBuiltinMacro("__has_feature");
+  Ident__has_extension = RegisterBuiltinMacro("__has_extension");
+  Ident__has_builtin = RegisterBuiltinMacro("__has_builtin");
   Ident__has_constexpr_builtin =
       RegisterBuiltinMacro("__has_constexpr_builtin");
-  Ident__has_attribute    = RegisterBuiltinMacro("__has_attribute");
+  Ident__has_attribute = RegisterBuiltinMacro("__has_attribute");
   if (!getLangOpts().CPlusPlus)
     Ident__has_c_attribute = RegisterBuiltinMacro("__has_c_attribute");
   else
@@ -368,22 +367,21 @@ void Preprocessor::RegisterBuiltinMacros() {
 
   Ident__has_declspec = RegisterBuiltinMacro("__has_declspec_attribute");
   Ident__has_embed = RegisterBuiltinMacro("__has_embed");
-  Ident__has_include      = RegisterBuiltinMacro("__has_include");
+  Ident__has_include = RegisterBuiltinMacro("__has_include");
   Ident__has_include_next = RegisterBuiltinMacro("__has_include_next");
-  Ident__has_warning      = RegisterBuiltinMacro("__has_warning");
-  Ident__is_identifier    = RegisterBuiltinMacro("__is_identifier");
-  Ident__is_target_arch   = RegisterBuiltinMacro("__is_target_arch");
+  Ident__has_warning = RegisterBuiltinMacro("__has_warning");
+  Ident__is_identifier = RegisterBuiltinMacro("__is_identifier");
+  Ident__is_target_arch = RegisterBuiltinMacro("__is_target_arch");
   Ident__is_target_vendor = RegisterBuiltinMacro("__is_target_vendor");
-  Ident__is_target_os     = RegisterBuiltinMacro("__is_target_os");
+  Ident__is_target_os = RegisterBuiltinMacro("__is_target_os");
   Ident__is_target_environment =
       RegisterBuiltinMacro("__is_target_environment");
-  Ident__is_target_variant_os =
-      RegisterBuiltinMacro("__is_target_variant_os");
+  Ident__is_target_variant_os = RegisterBuiltinMacro("__is_target_variant_os");
   Ident__is_target_variant_environment =
       RegisterBuiltinMacro("__is_target_variant_environment");
 
   // Modules.
-  Ident__building_module  = RegisterBuiltinMacro("__building_module");
+  Ident__building_module = RegisterBuiltinMacro("__building_module");
   if (!getLangOpts().CurrentModule.empty())
     Ident__MODULE__ = RegisterBuiltinMacro("__MODULE__");
   else

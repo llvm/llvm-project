@@ -2614,7 +2614,7 @@ private:
 
   /// RegisterBuiltinMacro - Register the specified identifier in the identifier
   /// table and mark it as a builtin macro to be expanded.
-  IdentifierInfo *RegisterBuiltinMacro(const char *Name){
+  IdentifierInfo *RegisterBuiltinMacro(const char *Name) {
     // Get the identifier.
     IdentifierInfo *Id = getIdentifierInfo(Name);
 
