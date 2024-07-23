@@ -9364,7 +9364,6 @@ SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
     SDValue LShrVal = DAG.getNode(ISD::SRL, dl, VT, Sum, One);
 
     // Creating the select instruction
-    SDValue ZeroOut = DAG.getConstant(0, dl, VT);
     SDValue ZeroExtOverflow = DAG.getNode(ISD::ANY_EXTEND, dl, VT, Overflow);
     SDValue OverflowShl =
         DAG.getNode(ISD::SHL, dl, VT, ZeroExtOverflow,
