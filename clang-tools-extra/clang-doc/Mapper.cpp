@@ -13,12 +13,17 @@
 #include "clang/Index/USRGeneration.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/TimeProfiler.h"
 
 namespace clang {
 namespace doc {
 
 void MapASTVisitor::HandleTranslationUnit(ASTContext &Context) {
+  if (CDCtx.FTimeTrace)
+    llvm::timeTraceProfilerInitialize(200, "clang-doc");
   TraverseDecl(Context.getTranslationUnitDecl());
+  if (CDCtx.FTimeTrace)
+    llvm::timeTraceProfilerFinishThread();
 }
 
 template <typename T> bool MapASTVisitor::mapDecl(const T *D) {
@@ -30,6 +35,7 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D) {
   if (D->getParentFunctionOrMethod())
     return true;
 
+  llvm::timeTraceProfilerBegin("Mapping declaration", "emit info from astnode");
   llvm::SmallString<128> USR;
   // If there is an error generating a USR for the decl, skip this decl.
   if (index::generateUSRForDecl(D, USR))
@@ -40,7 +46,10 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D) {
   auto I = serialize::emitInfo(D, getComment(D, D->getASTContext()),
                                getLine(D, D->getASTContext()), File,
                                IsFileInRootDir, CDCtx.PublicOnly);
+  llvm::timeTraceProfilerEnd();
 
+  llvm::timeTraceProfilerBegin("Mapping declaration",
+                               "serialized info into bitcode");
   // A null in place of I indicates that the serializer is skipping this decl
   // for some reason (e.g. we're only reporting public decls).
   if (I.first)
@@ -49,6 +58,7 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D) {
   if (I.second)
     CDCtx.ECtx->reportResult(llvm::toHex(llvm::toStringRef(I.second->USR)),
                              serialize::serialize(I.second));
+  llvm::timeTraceProfilerEnd();
   return true;
 }
 
