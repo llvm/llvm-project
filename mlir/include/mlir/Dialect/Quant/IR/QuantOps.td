@@ -98,7 +98,8 @@ def quant_QuantizeCastOp : quant_Op<"qcast", [
 
 def quant_StorageCastOp : quant_Op<"scast", [
     Pure,
-    quant_SameScalarOrTensorShape]> {
+    quant_SameScalarOrTensorShape,
+    quant_IntegerAndQuantizedCombination]> {
   let summary = "cast from or to a type based on the storage type and the corresponding quantized type";
   let description = [{
     A StorageCast `scast` represents a cast from or to a type based on the
@@ -122,7 +123,15 @@ def quant_StorageCastOp : quant_Op<"scast", [
   let arguments = (ins quant_IntegerOrQuantizedScalarOrTensor:$input);
   let results = (outs quant_IntegerOrQuantizedScalarOrTensor:$result);
   let assemblyFormat = "$input attr-dict `:` type($input) `to` type($result)";
+  let hasVerifier = 1;
   let hasFolder = 1;
+  let extraClassDeclaration = [{
+    /// Return the integer type used either in the input or the result.
+    IntegerType getIntegerType();
+    
+    /// Return the quantized type used either in the input or the result.
+    quant::QuantizedType getQuantizedType();
+  }];
 }
 
 #endif // QUANT_OPS

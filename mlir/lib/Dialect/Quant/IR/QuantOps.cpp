@@ -86,10 +86,8 @@ LogicalResult verifyQuantizationOp(Operation *op, QuantizedType quantizedType,
     return op->emitError(
         "expressed type in quantized type expected to match float type");
 
-  if (failed(verifyPerAxisQuantization(op, quantizedType, containerType)))
-    return failure();
-
-  return success();
+  // Veriy integrity of per-axis quantization information, if present.
+  return verifyPerAxisQuantization(op, quantizedType, containerType);
 }
 
 }  // namespace
@@ -129,20 +127,6 @@ QuantizedType DequantizeCastOp::getQuantizedType() {
 
 
 //===----------------------------------------------------------------------===//
-// StorageCastOp
-//===----------------------------------------------------------------------===//
-
-OpFoldResult StorageCastOp::fold(FoldAdaptor adaptor) {
-  // Matches x -> [scast -> scast] -> y, replacing the second scast with the
-  // value of x if the casts invert each other.
-  auto srcScastOp = getInput().getDefiningOp<StorageCastOp>();
-  if (!srcScastOp || srcScastOp.getInput().getType() != getType())
-    return OpFoldResult();
-  return srcScastOp.getInput();
-}
-
-
-//===----------------------------------------------------------------------===//
 // QuantizeCastOp
 //===----------------------------------------------------------------------===//
 
@@ -157,6 +141,51 @@ FloatType QuantizeCastOp::getFloatType() {
 
 QuantizedType QuantizeCastOp::getQuantizedType() {
   return cast<QuantizedType>(getElementTypeOrSelf(getResult().getType()));
+}
+
+
+//===----------------------------------------------------------------------===//
+// StorageCastOp
+//===----------------------------------------------------------------------===//
+
+IntegerType StorageCastOp::getIntegerType() {
+  auto inputScalarType = getElementTypeOrSelf(getInput().getType());
+  if (auto integerType = dyn_cast<IntegerType>(inputScalarType))
+    return integerType;
+
+  auto resultScalarType = getElementTypeOrSelf(getResult().getType());
+  return cast<IntegerType>(resultScalarType);
+}
+
+QuantizedType StorageCastOp::getQuantizedType() {
+  auto inputScalarType = getElementTypeOrSelf(getInput().getType());
+  if (auto quantizedType = dyn_cast<QuantizedType>(inputScalarType))
+    return quantizedType;
+
+  auto resultScalarType = getElementTypeOrSelf(getResult().getType());
+  return cast<QuantizedType>(resultScalarType);
+}
+
+OpFoldResult StorageCastOp::fold(FoldAdaptor adaptor) {
+  // Matches x -> [scast -> scast] -> y, replacing the second scast with the
+  // value of x if the casts invert each other.
+  auto srcScastOp = getInput().getDefiningOp<StorageCastOp>();
+  if (!srcScastOp || srcScastOp.getInput().getType() != getType())
+    return OpFoldResult();
+  return srcScastOp.getInput();
+}
+
+LogicalResult StorageCastOp::verify() {
+  auto quantizedType = getQuantizedType();
+  auto integerType = getIntegerType();
+  if (quantizedType.getStorageType() != integerType)
+    return emitError(
+        "storage type in quantized type expected to match integer type");
+
+  // Verify integrity of per-axis quantization information, if available. While
+  // the quantization type may appear in the input or the result, their tensor
+  // shapes are guaranteed to be identical at this point.
+  return verifyPerAxisQuantization(*this, quantizedType, getInput().getType());
 }
 
 

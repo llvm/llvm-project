@@ -36,19 +36,24 @@ def quant_QuantizedType :
 
 def quant_ScalarType :
     Type<Or<[
-      AnyInteger.predicate,
+      AnySignlessInteger.predicate,
       AnyFloat.predicate,
       quant_QuantizedType.predicate
-    ]>, "integer, float, or quantized scalar">;
+    ]>,
+    "signless integer, float, or quantized scalar">;
 
 def quant_IntegerOrQuantizedType :
-    Type<Or<[AnyInteger.predicate, quant_QuantizedType.predicate]>>;
+    Type<Or<[
+      AnySignlessInteger.predicate,
+      quant_QuantizedType.predicate
+    ]>,
+    "signless integer or quantized type">;
 
 def quant_FloatScalarOrTensor :
     quant_ScalarOrTensorOf<AnyFloat>;
 
 def quant_IntegerScalarOrTensor :
-    quant_ScalarOrTensorOf<AnyInteger>;
+    quant_ScalarOrTensorOf<AnySignlessInteger>;
 
 def quant_QuantizedScalarOrTensor :
     quant_ScalarOrTensorOf<quant_QuantizedType>;
@@ -77,6 +82,21 @@ def quant_SameScalarOrTensorShape :
           TypeIsPred<"input", AnyRankedTensor>,
           TypeIsPred<"result", AnyRankedTensor>,
           AllShapesMatch<["input", "result"]>.predicate
+        ]>
+      ]>
+    >;
+
+def quant_IntegerAndQuantizedCombination :
+    PredOpTrait<
+      "input must be integer and result must be quantized, or vice versa",
+      Or<[
+        And<[
+          TypeIsPred<"input", quant_QuantizedScalarOrTensor>,
+          TypeIsPred<"result", quant_IntegerScalarOrTensor>
+        ]>,
+        And<[
+          TypeIsPred<"input", quant_IntegerScalarOrTensor>,
+          TypeIsPred<"result", quant_QuantizedScalarOrTensor>
         ]>
       ]>
     >;
