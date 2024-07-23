@@ -3752,7 +3752,6 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
       }
       break;
     case SPF_FMAXNUM:
-      dbgs() << "ctopper " << SPR.NaNBehavior << "\n";
       switch (SPR.NaNBehavior) {
       case SPNB_NA: llvm_unreachable("No NaN behavior for FP op?");
       case SPNB_RETURNS_NAN: break;
