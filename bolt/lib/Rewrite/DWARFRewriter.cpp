@@ -623,7 +623,6 @@ void DWARFRewriter::updateDebugInfo() {
   llvm::DenseMap<uint64_t, uint64_t> LocListWritersIndexByCU;
   auto createRangeLocListAddressWriters = [&](DWARFUnit &CU) {
     std::lock_guard<std::mutex> Lock(AccessMutex);
-
     const uint16_t DwarfVersion = CU.getVersion();
     if (DwarfVersion >= 5) {
       auto AddrW = std::make_unique<DebugAddrWriterDwarf5>(
@@ -702,6 +701,11 @@ void DWARFRewriter::updateDebugInfo() {
                    GDBIndexSection);
   };
   auto processMainBinaryCU = [&](DWARFUnit &Unit, DIEBuilder &DIEBlder) {
+    std::optional<DWARFUnit *> SplitCU;
+    std::optional<uint64_t> RangesBase;
+    std::optional<uint64_t> DWOId = Unit.getDWOId();
+    if (DWOId)
+      SplitCU = BC.getDWOCU(*DWOId);
     DebugAddrWriter &AddressWriter =
         *AddressWritersByCU[Unit.getOffset()].get();
     if (Unit.getVersion() >= 5)
@@ -711,11 +715,6 @@ void DWARFRewriter::updateDebugInfo() {
                                : *LegacyRangesSectionWriter.get();
     DebugLocWriter &DebugLocWriter =
         *LocListWritersByCU[LocListWritersIndexByCU[Unit.getOffset()]].get();
-    std::optional<uint64_t> RangesBase;
-    std::optional<DWARFUnit *> SplitCU;
-    std::optional<uint64_t> DWOId = Unit.getDWOId();
-    if (DWOId)
-      SplitCU = BC.getDWOCU(*DWOId);
     if (Unit.getVersion() >= 5) {
       RangesBase = RangesSectionWriter.getSectionOffset() +
                    getDWARF5RngListLocListHeaderSize();
