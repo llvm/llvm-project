@@ -430,6 +430,20 @@ def G_FCMP : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Generic signed three-way comparison.
+def G_SCMP : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src1, type1:$src2);
+  let hasSideEffects = false;
+}
+
+// Generic unsigned three-way comparison.
+def G_UCMP : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src1, type1:$src2);
+  let hasSideEffects = false;
+}
+
 // Generic select
 def G_SELECT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
@@ -1545,6 +1559,13 @@ def G_SHUFFLE_VECTOR: GenericInstruction {
 def G_SPLAT_VECTOR: GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$val);
+  let hasSideEffects = false;
+}
+
+// Generic masked compress.
+def G_VECTOR_COMPRESS: GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$vec, type1:$mask, type0:$passthru);
   let hasSideEffects = false;
 }
 
