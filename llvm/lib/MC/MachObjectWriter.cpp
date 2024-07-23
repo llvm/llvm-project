@@ -60,6 +60,7 @@ void MachObjectWriter::reset() {
   VersionInfo.SDKVersion = VersionTuple();
   TargetVariantVersionInfo.Major = 0;
   TargetVariantVersionInfo.SDKVersion = VersionTuple();
+  LinkerOptions.clear();
   MCObjectWriter::reset();
 }
 
@@ -857,7 +858,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   }
 
   // Add the linker option load commands sizes.
-  for (const auto &Option : Asm.getLinkerOptions()) {
+  for (const auto &Option : LinkerOptions) {
     ++NumLoadCommands;
     LoadCommandsSize += ComputeLinkerOptionsLoadCommandSize(Option, is64Bit());
   }
@@ -1016,7 +1017,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   }
 
   // Write the linker options load commands.
-  for (const auto &Option : Asm.getLinkerOptions())
+  for (const auto &Option : LinkerOptions)
     writeLinkerOptionsLoadCommand(Option);
 
   // Write the actual section data.
