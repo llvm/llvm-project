@@ -6653,7 +6653,6 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
     TentativeParsingAction TPA(*this, /*Unannotated=*/true);
     bool EnteringContext = D.getContext() == DeclaratorContext::File ||
                            D.getContext() == DeclaratorContext::Member;
-
     CXXScopeSpec SS;
     SS.setTemplateParamLists(D.getTemplateParameterLists());
 

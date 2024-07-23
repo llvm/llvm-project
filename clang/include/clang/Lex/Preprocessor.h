@@ -1740,8 +1740,8 @@ public:
 
   /// True if EnableBacktrackAtThisPos() was called and
   /// caching of tokens is on.
-
   bool isBacktrackEnabled() const { return !BacktrackPositions.empty(); }
+
   bool isUnannotatedBacktrackEnabled() const {
     return !UnannotatedBacktrackTokens.empty();
   }
