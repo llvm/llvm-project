@@ -71,6 +71,7 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   void runOnOperation() override;
 
   void runOnOp(Operation *op);
+  void lowerUnaryOp(UnaryOp op);
   void lowerBinOp(BinOp op);
   void lowerComplexBinOp(ComplexBinOp op);
   void lowerThreeWayCmpOp(CmpThreeWayOp op);
@@ -345,6 +346,50 @@ void LoweringPreparePass::lowerVAArgOp(VAArgOp op) {
     op.erase();
   }
   return;
+}
+
+void LoweringPreparePass::lowerUnaryOp(UnaryOp op) {
+  auto ty = op.getType();
+  if (!mlir::isa<mlir::cir::ComplexType>(ty))
+    return;
+
+  auto loc = op.getLoc();
+  auto opKind = op.getKind();
+  assert((opKind == mlir::cir::UnaryOpKind::Plus ||
+          opKind == mlir::cir::UnaryOpKind::Minus ||
+          opKind == mlir::cir::UnaryOpKind::Not) &&
+         "invalid unary op kind on complex numbers");
+
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointAfter(op);
+
+  auto operand = op.getInput();
+
+  auto operandReal = builder.createComplexReal(loc, operand);
+  auto operandImag = builder.createComplexImag(loc, operand);
+
+  mlir::Value resultReal;
+  mlir::Value resultImag;
+  switch (opKind) {
+  case mlir::cir::UnaryOpKind::Plus:
+  case mlir::cir::UnaryOpKind::Minus:
+    resultReal = builder.createUnaryOp(loc, opKind, operandReal);
+    resultImag = builder.createUnaryOp(loc, opKind, operandImag);
+    break;
+
+  case mlir::cir::UnaryOpKind::Not:
+    resultReal = operandReal;
+    resultImag =
+        builder.createUnaryOp(loc, mlir::cir::UnaryOpKind::Minus, operandImag);
+    break;
+
+  default:
+    llvm_unreachable("unsupported complex unary op kind");
+  }
+
+  auto result = builder.createComplexCreate(loc, resultReal, resultImag);
+  op.replaceAllUsesWith(result);
+  op.erase();
 }
 
 void LoweringPreparePass::lowerBinOp(BinOp op) {
@@ -939,7 +984,9 @@ void LoweringPreparePass::lowerIterEndOp(IterEndOp op) {
 }
 
 void LoweringPreparePass::runOnOp(Operation *op) {
-  if (auto bin = dyn_cast<BinOp>(op)) {
+  if (auto unary = dyn_cast<UnaryOp>(op)) {
+    lowerUnaryOp(unary);
+  } else if (auto bin = dyn_cast<BinOp>(op)) {
     lowerBinOp(bin);
   } else if (auto complexBin = dyn_cast<ComplexBinOp>(op)) {
     lowerComplexBinOp(complexBin);
@@ -980,7 +1027,7 @@ void LoweringPreparePass::runOnOperation() {
   SmallVector<Operation *> opsToTransform;
 
   op->walk([&](Operation *op) {
-    if (isa<BinOp, ComplexBinOp, CmpThreeWayOp, VAArgOp, GlobalOp,
+    if (isa<UnaryOp, BinOp, ComplexBinOp, CmpThreeWayOp, VAArgOp, GlobalOp,
             DynamicCastOp, StdFindOp, IterEndOp, IterBeginOp, ArrayCtor,
             ArrayDtor, mlir::cir::FuncOp>(op))
       opsToTransform.push_back(op);
