@@ -1,7 +1,7 @@
 ; This checks that .debug_aranges is always generated for the SCE debugger
 ; tuning.
 
-; RUN: llc -mtriple=x86_64 -debugger-tune=sce -filetype=obj %s -o %t
+; RUN: llc -debugger-tune=sce -filetype=obj %s -o %t
 ; RUN: llvm-dwarfdump -debug-aranges %t | FileCheck %s
 
 ; CHECK:      .debug_aranges contents:
@@ -11,7 +11,9 @@
 ; IR generated and reduced from:
 ; $ cat foo.c
 ; int foo;
-; $ clang -g -S -emit-llvm foo.c -o foo.ll
+; $ clang --target=x86_64-linux-gnu -g -S -emit-llvm foo.c -o foo.ll
+
+target triple = "x86_64-unknown-linux-gnu"
 
 @foo = dso_local global i32 0, align 4, !dbg !0
 
