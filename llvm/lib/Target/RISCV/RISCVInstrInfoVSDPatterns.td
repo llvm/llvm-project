@@ -325,9 +325,7 @@ multiclass VPatIntegerSetCCSDNode_XI_Swappable<string instruction_name,
                                                CondCode cc, CondCode invcc,
                                                string kind,
                                                ComplexPattern SplatPatKind,
-                                               DAGOperand xop_kind>
-    : VPatIntegerSetCCSDNode_XI<instruction_name, cc, kind, SplatPatKind,
-                                xop_kind> {
+                                               DAGOperand xop_kind> {
   foreach vti = AllIntegerVectors in {
     defvar instruction = !cast<Instruction>(instruction_name#_#kind#_#vti.LMul.MX);
     let Predicates = GetVTypePredicates<vti>.Predicates in {
