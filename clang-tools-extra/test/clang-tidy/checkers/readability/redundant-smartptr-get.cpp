@@ -20,6 +20,47 @@ struct shared_ptr {
   explicit operator bool() const noexcept;
 };
 
+template <typename T>
+struct vector {
+  vector();
+  bool operator==(const vector<T>& other) const;
+  bool operator!=(const vector<T>& other) const;
+  unsigned long size() const;
+  bool empty() const;
+
+  // Basic iterator implementation for testing
+  struct iterator {
+    T* ptr;
+    iterator(T* p) : ptr(p) {}
+    T& operator*() { return *ptr; }
+    T* operator->() { return ptr; }
+    iterator& operator++() {
+      ++ptr;
+      return *this;
+    }
+    bool operator!=(const iterator& other) const { return ptr != other.ptr; }
+  };
+
+  iterator begin();
+  iterator end();
+
+  T* data;
+  unsigned long sz;
+};
+
+template <typename T>
+vector<T>::vector() : data(nullptr), sz(0) {}
+
+template <typename T>
+typename vector<T>::iterator vector<T>::begin() {
+  return iterator(data);
+}
+
+template <typename T>
+typename vector<T>::iterator vector<T>::end() {
+  return iterator(data + sz);
+}
+
 }  // namespace std
 
 struct Bar {
@@ -234,4 +275,35 @@ void Negative() {
   std::unique_ptr<int> x;
   if (MACRO(x) == nullptr)
     ;
+}
+
+void test_redundant_get() {
+  std::vector<std::shared_ptr<int>> v;
+  auto f = [](int) {};
+  for (auto i = v.begin(); i != v.end(); ++i) {
+    f(*i->get());
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: redundant get() call
+    // CHECK-FIXES: f(**i);
+  }
+}
+
+struct Inner {
+  int a;
+  int *getValue()  { return &a; }
+};
+
+struct Example {
+  Inner inner;
+  Inner* get() { return &inner; }
+  int *getValue()  { return inner.getValue(); }
+};
+
+void test_redundant_get_with_member() {
+  std::vector<std::shared_ptr<Example>> v;
+  auto f = [](int) {};
+  for (auto i = v.begin(); i != v.end(); ++i) {
+    f(*(*i).get()->get()->getValue());
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: redundant get() call
+    // CHECK-FIXES: f(**i->get()->getValue());
+ }
 }

@@ -104,6 +104,11 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`readability-simplify-boolean-expr
+  <clang-tidy/checks/readability/simplify-boolean-expr>` check to avoid to emit
+  warning for macro when IgnoreMacro option is enabled and improve messages
+  when auto-fix does not work.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
