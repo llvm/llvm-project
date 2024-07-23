@@ -755,8 +755,8 @@ void DWARFRewriter::updateDebugInfo() {
           opts::DwarfOutputPath.empty()
               ? std::nullopt
               : std::optional<std::string>(opts::DwarfOutputPath.c_str());
-      std::string DWOName = DIEBlder.updateDWONameCompDir(*StrOffstsWriter, *StrWriter, *CU,
-                                              DwarfOutputPath, std::nullopt);
+      std::string DWOName = DIEBlder.updateDWONameCompDir(
+          *StrOffstsWriter, *StrWriter, *CU, DwarfOutputPath, std::nullopt);
       processSplitCU(*CU, **SplitCU, DIEBlder, *TempRangesSectionWriter,
                      AddressWriter, DWOName, DwarfOutputPath);
     }
