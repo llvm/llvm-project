@@ -63,6 +63,9 @@ start:
   ret i128 %add
 }
 
+; the 'avgflooru_i128_negative` shouldn't combine because it's not
+; an avgflooru operation, which is what we're targeting 
+
 define i128 @avgflooru_i128_negative(i128 %x, i128 %y) {
 ; CHECK-LABEL: avgflooru_i128_negative:
 ; CHECK:       // %bb.0: // %start
@@ -79,6 +82,9 @@ start:
   %add = add i128 %xor, %and
   ret i128 %add
 }
+
+; This negative test case shouldn't work, i32 is already properly 
+; handled in terms of legalization, compared to the i128
 
 define i32 @avgflooru_i128_negative2(i32 %x, i32 %y) {
 ; CHECK-LABEL: avgflooru_i128_negative2:
