@@ -982,7 +982,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
         /*var_callee_type=*/nullptr, callee, args, /*fastmathFlags=*/nullptr,
         /*branch_weights=*/nullptr,
         /*CConv=*/nullptr, /*TailCallKind=*/nullptr,
-/*memory=*/nullptr,
+        /*memory=*/nullptr,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
@@ -1227,7 +1227,7 @@ void CallOp::print(OpAsmPrinter &p) {
   if (getCConv() != LLVM::CConv::C)
     p << stringifyCConv(getCConv()) << ' ';
 
-  if(getTailCallKind() != LLVM::TailCallKind::None)
+  if (getTailCallKind() != LLVM::TailCallKind::None)
     p << tailcallkind::stringifyTailCallKind(getTailCallKind()) << ' ';
 
   // Print the direct callee if present as a function attribute, or an indirect
