@@ -9313,8 +9313,8 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
 
   // If the subtract doesn't overflow then just use abs(sub())
   // NOTE: don't use frozen operands for value tracking.
-  bool IsNonNegative = DAG.SignBitIsZero(N->getOperand(0)) &&
-                       DAG.SignBitIsZero(N->getOperand(1));
+  bool IsNonNegative = DAG.SignBitIsZero(N->getOperand(1)) &&
+                       DAG.SignBitIsZero(N->getOperand(0));
 
   if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, N->getOperand(0),
                              N->getOperand(1)))
