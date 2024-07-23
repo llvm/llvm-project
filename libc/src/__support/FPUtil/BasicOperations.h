@@ -53,11 +53,9 @@ template <> LIBC_INLINE float16 max(float16 x, float16 y) {
   FPBits<float16> x_bits(x);
   FPBits<float16> y_bits(y);
 
-  // If x and y have different signs, then the one with the lesser uintval is
-  // positive (has the sign bit set to 0), and therefore the maximum.
-  if (x_bits.sign() != y_bits.sign())
-    return x_bits.uintval() < y_bits.uintval() ? x : y;
-  return ((x_bits.uintval() > y_bits.uintval()) == x_bits.is_pos()) ? x : y;
+  int16_t xi = static_cast<int16_t>(x_bits.uintval());
+  int16_t yi = static_cast<int16_t>(y_bits.uintval());
+  return ((xi > yi) != (xi < 0 && yi < 0)) ? x : y;
 }
 #endif
 
@@ -93,11 +91,9 @@ template <> LIBC_INLINE float16 min(float16 x, float16 y) {
   FPBits<float16> x_bits(x);
   FPBits<float16> y_bits(y);
 
-  // If x and y have different signs, then the one with the greater uintval is
-  // negative (has the sign bit set to 1), and therefore the minimum.
-  if (x_bits.sign() != y_bits.sign())
-    return x_bits.uintval() > y_bits.uintval() ? x : y;
-  return ((x_bits.uintval() < y_bits.uintval()) == x_bits.is_pos()) ? x : y;
+  int16_t xi = static_cast<int16_t>(x_bits.uintval());
+  int16_t yi = static_cast<int16_t>(y_bits.uintval());
+  return ((xi < yi) != (xi < 0 && yi < 0)) ? x : y;
 }
 #endif
 
