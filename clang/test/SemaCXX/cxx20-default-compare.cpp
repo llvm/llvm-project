@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -std=c++23 -verify -Wfloat-equal
+
 struct Foo {
   float val;
   bool operator==(const Foo &) const;
