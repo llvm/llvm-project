@@ -1131,6 +1131,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
        .scalarize(0)
        .lower();
 
+  getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
+      .clampScalar(0, S16, S64)
+      .scalarize(0)
+      .lower();
+
   getActionDefinitionsBuilder(G_INTRINSIC_FPTRUNC_ROUND)
       .customFor({S16, S32})
       .scalarize(0)
