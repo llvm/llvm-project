@@ -91,7 +91,7 @@ define void @test_store_def(i64 %param0, i32 %param1, ptr %out) {
   ret void
 }
 
-define void @test_store_volatile_undef(ptr %out, <8 x i32> %outVec) {
+define void @test_store_volatile_undef(ptr %out, <8 x i32> %vec) {
 ; CHECK-LABEL: test_store_volatile_undef(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<15>;
@@ -108,7 +108,7 @@ define void @test_store_volatile_undef(ptr %out, <8 x i32> %outVec) {
 ; CHECK-NEXT:    st.volatile.v4.u32 [%rd4], {%r7, %r8, %r9, %r10};
 ; CHECK-NEXT:    ret;
   store volatile %struct.T undef, ptr %out
-  store volatile <8 x i32> %outVec, ptr undef
+  store volatile <8 x i32> %vec, ptr undef
   ret void
 }
 
