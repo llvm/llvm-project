@@ -45,6 +45,7 @@ namespace opts {
 
 extern cl::opt<bool> TimeRewrite;
 extern cl::OptionCategory BoltOptCategory;
+extern cl::opt<unsigned> Verbosity;
 
 cl::opt<bool>
     InferStaleProfile("infer-stale-profile",
@@ -197,9 +198,9 @@ public:
             const std::vector<uint64_t> &CallHashes,
             const std::unordered_map<uint64_t,
                                      std::vector<const MCDecodedPseudoProbe *>>
-                IndexToBinaryPseudoProbes,
+                &IndexToBinaryPseudoProbes,
             const std::unordered_map<const MCDecodedPseudoProbe *, FlowBlock *>
-                BinaryPseudoProbeToBlock,
+                &BinaryPseudoProbeToBlock,
             const uint64_t YamlBFGUID) {
     assert(Blocks.size() == Hashes.size() &&
            Hashes.size() == CallHashes.size() &&
@@ -294,6 +295,9 @@ private:
     // Searches for the pseudo probe attached to the matched function's block,
     // ignoring pseudo probes attached to function calls and inlined functions'
     // blocks.
+    if (opts::Verbosity >= 2)
+      outs() << "BOLT-INFO: attempting to match block with pseudo probes\n";
+
     std::vector<const yaml::bolt::PseudoProbeInfo *> BlockPseudoProbes;
     for (const auto &PseudoProbe : PseudoProbes) {
       // Ensures that pseudo probe information belongs to the appropriate
@@ -306,26 +310,41 @@ private:
 
       BlockPseudoProbes.push_back(&PseudoProbe);
     }
-
     // Returns nullptr if there is not a 1:1 mapping of the yaml block pseudo
     // probe and binary pseudo probe.
-    if (BlockPseudoProbes.size() == 0 || BlockPseudoProbes.size() > 1)
+    if (BlockPseudoProbes.size() == 0) {
+      if (opts::Verbosity >= 2)
+        errs() << "BOLT-WARNING: no pseudo probes in profile block\n";
       return nullptr;
-
+    }
+    if (BlockPseudoProbes.size() > 1) {
+      if (opts::Verbosity >= 2)
+        errs() << "BOLT-WARNING: more than 1 pseudo probes in profile block\n";
+      return nullptr;
+    }
     uint64_t Index = BlockPseudoProbes[0]->Index;
-    assert(Index <= Blocks.size() && "Invalid pseudo probe index");
-
-    auto It = IndexToBinaryPseudoProbes.find(Index);
-    assert(It != IndexToBinaryPseudoProbes.end() &&
-           "All blocks should have a pseudo probe");
-    if (It->second.size() > 1)
+    if (Index > Blocks.size()) {
+      if (opts::Verbosity >= 2)
+        errs() << "BOLT-WARNING: invalid index block pseudo probe index\n";
       return nullptr;
-
+    }
+    auto It = IndexToBinaryPseudoProbes.find(Index);
+    if (It == IndexToBinaryPseudoProbes.end()) {
+      if (opts::Verbosity >= 2)
+        errs() << "BOLT-WARNING: no block pseudo probes found within binary "
+                  "block at index\n";
+      return nullptr;
+    }
+    if (It->second.size() > 1) {
+      if (opts::Verbosity >= 2)
+        errs() << "BOLT-WARNING: more than 1 block pseudo probes in binary "
+                  "block at index\n";
+      return nullptr;
+    }
     const MCDecodedPseudoProbe *BinaryPseudoProbe = It->second[0];
     auto BinaryPseudoProbeIt = BinaryPseudoProbeToBlock.find(BinaryPseudoProbe);
     assert(BinaryPseudoProbeIt != BinaryPseudoProbeToBlock.end() &&
            "All binary pseudo probes should belong a binary basic block");
-
     return BinaryPseudoProbeIt->second;
   }
 };
@@ -555,6 +574,10 @@ size_t matchWeightsByHashes(
                            ProbeMap.lower_bound(FuncAddr + BlockRange.second));
       for (const auto &[_, Probes] : BlockProbes) {
         for (const MCDecodedPseudoProbe &Probe : Probes) {
+          if (Probe.getInlineTreeNode()->hasInlineSite())
+            continue;
+          if (Probe.getType() != static_cast<uint8_t>(PseudoProbeType::Block))
+            continue;
           IndexToBinaryPseudoProbes[Probe.getIndex()].push_back(&Probe);
           BinaryPseudoProbeToBlock[&Probe] = Blocks[I];
         }
@@ -566,12 +589,13 @@ size_t matchWeightsByHashes(
   }
 
   uint64_t BFPseudoProbeDescHash = 0;
-  if (BF.hasPseudoProbe()) {
-    const MCPseudoProbeDecoder *PseudoProbeDecoder = BC.getPseudoProbeDecoder();
+  if (BF.getGUID() != 0) {
     assert(PseudoProbeDecoder &&
            "If BF has pseudo probe, BC should have a pseudo probe decoder");
-    BFPseudoProbeDescHash =
-        PseudoProbeDecoder->getFuncDescForGUID(BF.getGUID())->FuncHash;
+    auto &GUID2FuncDescMap = PseudoProbeDecoder->getGUID2FuncDescMap();
+    auto It = GUID2FuncDescMap.find(BF.getGUID());
+    if (It != GUID2FuncDescMap.end())
+      BFPseudoProbeDescHash = It->second.FuncHash;
   }
   uint64_t YamlBFGUID =
       BFPseudoProbeDescHash && YamlBF.PseudoProbeDescHash &&
