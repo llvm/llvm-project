@@ -3894,8 +3894,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = MI.getOperand(1).getReg();
     LLT SrcTy = MRI.getType(SrcReg);
-    auto Round = MIRBuilder.buildIntrinsicRoundeven(SrcTy, SrcReg);
-
+    auto Round = MIRBuilder.buildInstr(TargetOpcode::G_FRINT, {SrcTy}, {SrcReg});
     MIRBuilder.buildFPTOSI(DstReg, Round);
     MI.eraseFromParent();
     return Legalized;

@@ -4332,7 +4332,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     EVT ArgVT = Arg.getValueType();
     EVT ResVT = Node->getValueType(0);
     SDLoc dl(Node);
-    SDValue RoundNode = DAG.getNode(ISD::FROUNDEVEN, dl, ArgVT, Arg);
+    SDValue RoundNode = DAG.getNode(ISD::FRINT, dl, ArgVT, Arg);
     Results.push_back(DAG.getNode(ISD::FP_TO_SINT, dl, ResVT, RoundNode));
     break;
   }

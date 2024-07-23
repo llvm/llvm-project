@@ -794,7 +794,7 @@ void TargetLoweringBase::initActions() {
        ISD::FSINH, ISD::FTANH},
       {MVT::f32, MVT::f64, MVT::f128}, Expand);
 
-  // Unless the target expands, default LRINT to LibCall.
+  // FIXME: Query RuntimeLibCalls to make the decision.
   setOperationAction({ISD::LRINT, ISD::LLRINT}, {MVT::f32, MVT::f64, MVT::f128},
                      LibCall);
 
