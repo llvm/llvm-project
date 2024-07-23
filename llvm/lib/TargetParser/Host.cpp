@@ -150,6 +150,7 @@ StringRef sys::detail::getHostCPUNameForPowerPC(StringRef ProcCpuinfoContent) {
       .Case("POWER8NVL", "pwr8")
       .Case("POWER9", "pwr9")
       .Case("POWER10", "pwr10")
+      .Case("POWER11", "pwr11")
       // FIXME: If we get a simulator or machine with the capabilities of
       // mcpu=future, we should revisit this and add the name reported by the
       // simulator/machine.
@@ -1549,6 +1550,12 @@ StringRef sys::getHostCPUName() {
   case 0x40000:
 #endif
     return "pwr10";
+#ifdef POWER_11
+  case POWER_11:
+#else
+  case 0x80000:
+#endif
+    return "pwr11";
   default:
     return "generic";
   }
@@ -1562,6 +1569,8 @@ StringRef sys::getHostCPUName() {
   switch (processor_id & 0xf000) {
   case 0xc000: // Loongson 64bit, 4-issue
     return "la464";
+  case 0xd000: // Loongson 64bit, 6-issue
+    return "la664";
   // TODO: Others.
   default:
     break;
@@ -2067,7 +2076,8 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["zvfhmin"] = ExtMask & (1ULL << 31); // RISCV_HWPROBE_EXT_ZVFHMIN
   Features["zfa"] = ExtMask & (1ULL << 32);     // RISCV_HWPROBE_EXT_ZFA
   Features["ztso"] = ExtMask & (1ULL << 33);    // RISCV_HWPROBE_EXT_ZTSO
-  Features["zacas"] = ExtMask & (1ULL << 34);   // RISCV_HWPROBE_EXT_ZACAS
+  // TODO: Re-enable zacas when it is marked non-experimental again.
+  // Features["zacas"] = ExtMask & (1ULL << 34);   // RISCV_HWPROBE_EXT_ZACAS
   Features["zicond"] = ExtMask & (1ULL << 35);  // RISCV_HWPROBE_EXT_ZICOND
   Features["zihintpause"] =
       ExtMask & (1ULL << 36); // RISCV_HWPROBE_EXT_ZIHINTPAUSE

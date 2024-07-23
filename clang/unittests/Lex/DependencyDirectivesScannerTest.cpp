@@ -650,6 +650,17 @@ TEST(MinimizeSourceToDependencyDirectivesTest, AtImport) {
   EXPECT_STREQ("@import A.B;\n", Out.data());
 }
 
+TEST(MinimizeSourceToDependencyDirectivesTest, EmptyIncludesAndImports) {
+  SmallVector<char, 128> Out;
+
+  ASSERT_TRUE(minimizeSourceToDependencyDirectives("#import\n", Out));
+  ASSERT_TRUE(minimizeSourceToDependencyDirectives("#include\n", Out));
+  ASSERT_TRUE(minimizeSourceToDependencyDirectives("#ifdef A\n"
+                                                   "#import \n"
+                                                   "#endif\n",
+                                                   Out));
+}
+
 TEST(MinimizeSourceToDependencyDirectivesTest, AtImportFailures) {
   SmallVector<char, 128> Out;
 

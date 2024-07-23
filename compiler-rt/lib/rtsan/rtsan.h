@@ -14,6 +14,13 @@
 
 extern "C" {
 
+namespace __rtsan {
+
+extern bool rtsan_initialized;
+extern bool rtsan_init_is_running;
+
+} // namespace __rtsan
+
 // Initialise rtsan interceptors.
 // A call to this method is added to the preinit array on Linux systems.
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init();

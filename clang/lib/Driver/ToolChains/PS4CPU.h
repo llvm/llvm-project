@@ -179,7 +179,7 @@ public:
                         llvm::opt::ArgStringList &CmdArgs, const char *Prefix,
                         const char *Suffix) const override;
   const char *getProfileRTLibName() const override {
-    return "libclang_rt.profile-x86_64_nosubmission.a";
+    return "libclang_rt.profile_nosubmission.a";
   }
 
 protected:
