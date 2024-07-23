@@ -183,7 +183,7 @@ public:
     auto loc = tryOp.getLoc();
 
     // Empty scope: just remove it.
-    if (tryOp.getRegion().empty()) {
+    if (tryOp.getTryRegion().empty()) {
       rewriter.eraseOp(tryOp);
       return mlir::success();
     }
@@ -197,9 +197,9 @@ public:
     continueBlock = remainingOpsBlock;
 
     // Inline body region.
-    auto *beforeBody = &tryOp.getRegion().front();
-    auto *afterBody = &tryOp.getRegion().back();
-    rewriter.inlineRegionBefore(tryOp.getRegion(), continueBlock);
+    auto *beforeBody = &tryOp.getTryRegion().front();
+    auto *afterBody = &tryOp.getTryRegion().back();
+    rewriter.inlineRegionBefore(tryOp.getTryRegion(), continueBlock);
 
     // Branch into the body of the region.
     rewriter.setInsertionPointToEnd(currentBlock);
@@ -208,15 +208,11 @@ public:
     // Replace the tryOp return with a branch that jumps out of the body.
     rewriter.setInsertionPointToEnd(afterBody);
     auto yieldOp = cast<mlir::cir::YieldOp>(afterBody->getTerminator());
-    assert(yieldOp.getOperands().size() == 1 && "expect one exact value");
-    auto br = rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
-        yieldOp, yieldOp.getArgs(), continueBlock);
+    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(yieldOp, continueBlock);
 
-    // Replace the op with values return from the body region.
-    continueBlock->addArgument(br.getDestOperands()[0].getType(),
-                               tryOp.getLoc());
-    rewriter.replaceOp(tryOp, continueBlock->getArguments());
+    // TODO: handle the catch clauses and cir.try_call while here.
 
+    rewriter.eraseOp(tryOp);
     return mlir::success();
   }
 };
