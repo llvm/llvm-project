@@ -12,9 +12,9 @@ def verbose : Flag<["-"], "v">, HelpText<"Print verbose information">;
 def version : Flag<["--"], "version">,
   HelpText<"Display the version number and exit">;
 
-def cuda_path_EQ : Joined<["--"], "cuda-path=">,
+def cuda_path_EQ : Joined<["--"], "cuda-path=">, Flags<[WrapperOnlyOption]>,
   MetaVarName<"<dir>">, HelpText<"Set the system CUDA path">;
-def ptxas_path_EQ : Joined<["--"], "ptxas-path=">,
+def ptxas_path_EQ : Joined<["--"], "ptxas-path=">, Flags<[WrapperOnlyOption]>,
   MetaVarName<"<dir>">, HelpText<"Set the 'ptxas' path">;
 
 def o : JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
