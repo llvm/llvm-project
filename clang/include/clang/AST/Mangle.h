@@ -130,15 +130,15 @@ public:
   // FIXME: consider replacing raw_ostream & with something like SmallString &.
   void mangleName(GlobalDecl GD, raw_ostream &);
   virtual void mangleCXXName(GlobalDecl GD, raw_ostream &) = 0;
-  virtual void mangleThunk(const CXXMethodDecl *MD,
-                          const ThunkInfo &Thunk,
-                          raw_ostream &) = 0;
+  virtual void mangleThunk(const CXXMethodDecl *MD, const ThunkInfo &Thunk,
+                           bool ElideOverrideInfo, raw_ostream &) = 0;
   virtual void mangleCXXDtorThunk(const CXXDestructorDecl *DD, CXXDtorType Type,
-                                  const ThisAdjustment &ThisAdjustment,
-                                  raw_ostream &) = 0;
+                                  const ThunkInfo &Thunk,
+                                  bool ElideOverrideInfo, raw_ostream &) = 0;
   virtual void mangleReferenceTemporary(const VarDecl *D,
                                         unsigned ManglingNumber,
                                         raw_ostream &) = 0;
+  virtual void mangleCXXVTable(const CXXRecordDecl *RD, raw_ostream &) = 0;
   virtual void mangleCXXRTTI(QualType T, raw_ostream &) = 0;
   virtual void mangleCXXRTTIName(QualType T, raw_ostream &,
                                  bool NormalizeIntegers = false) = 0;
@@ -192,7 +192,6 @@ public:
                                 bool IsAux = false)
       : MangleContext(C, D, MK_Itanium, IsAux) {}
 
-  virtual void mangleCXXVTable(const CXXRecordDecl *RD, raw_ostream &) = 0;
   virtual void mangleCXXVTT(const CXXRecordDecl *RD, raw_ostream &) = 0;
   virtual void mangleCXXCtorVTable(const CXXRecordDecl *RD, int64_t Offset,
                                    const CXXRecordDecl *Type,

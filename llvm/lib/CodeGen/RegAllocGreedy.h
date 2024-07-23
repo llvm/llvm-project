@@ -281,7 +281,7 @@ private:
   bool ReverseLocalAssignment = false;
 
 public:
-  RAGreedy(const RegClassFilterFunc F = allocateAllRegClasses);
+  RAGreedy(const RegAllocFilterFunc F = nullptr);
 
   /// Return the pass name.
   StringRef getPassName() const override { return "Greedy Register Allocator"; }
@@ -425,7 +425,7 @@ private:
                ZeroCostFoldedReloads || Copies);
     }
 
-    void add(RAGreedyStats other) {
+    void add(const RAGreedyStats &other) {
       Reloads += other.Reloads;
       FoldedReloads += other.FoldedReloads;
       ZeroCostFoldedReloads += other.ZeroCostFoldedReloads;

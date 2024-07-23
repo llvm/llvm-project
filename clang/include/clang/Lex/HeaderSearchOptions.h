@@ -11,7 +11,6 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/CachedHashString.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/HashBuilder.h"
@@ -310,19 +309,10 @@ public:
   }
 };
 
-inline llvm::hash_code hash_value(const HeaderSearchOptions::Entry &E) {
-  return llvm::hash_combine(E.Path, E.Group, E.IsFramework, E.IgnoreSysRoot);
-}
-
 template <typename HasherT, llvm::endianness Endianness>
 inline void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                     const HeaderSearchOptions::Entry &E) {
   HBuilder.add(E.Path, E.Group, E.IsFramework, E.IgnoreSysRoot);
-}
-
-inline llvm::hash_code
-hash_value(const HeaderSearchOptions::SystemHeaderPrefix &SHP) {
-  return llvm::hash_combine(SHP.Prefix, SHP.IsSystemHeader);
 }
 
 template <typename HasherT, llvm::endianness Endianness>

@@ -209,8 +209,8 @@ namespace {
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineBlockFrequencyInfo>();
-      AU.addRequired<MachineBranchProbabilityInfo>();
+      AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+      AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
       AU.addRequired<ProfileSummaryInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
@@ -432,7 +432,7 @@ char IfConverter::ID = 0;
 char &llvm::IfConverterID = IfConverter::ID;
 
 INITIALIZE_PASS_BEGIN(IfConverter, DEBUG_TYPE, "If Converter", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_END(IfConverter, DEBUG_TYPE, "If Converter", false, false)
 
@@ -444,8 +444,9 @@ bool IfConverter::runOnMachineFunction(MachineFunction &MF) {
   TLI = ST.getTargetLowering();
   TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
-  MBFIWrapper MBFI(getAnalysis<MachineBlockFrequencyInfo>());
-  MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
+  MBFIWrapper MBFI(
+      getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI());
+  MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   ProfileSummaryInfo *PSI =
       &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   MRI = &MF.getRegInfo();

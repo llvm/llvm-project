@@ -64,12 +64,6 @@ ReservedRegsForRA("reserve-regs-for-regalloc", cl::desc("Reserve physical "
                   "Should only be used for testing register allocator."),
                   cl::CommaSeparated, cl::Hidden);
 
-static cl::opt<bool> ForceStreamingCompatibleSVE(
-    "force-streaming-compatible-sve",
-    cl::desc(
-        "Force the use of streaming-compatible SVE code for all functions"),
-    cl::Hidden);
-
 static cl::opt<AArch64PAuth::AuthCheckMethod>
     AuthenticatedLRCheckMethod("aarch64-authenticated-lr-check-method",
                                cl::Hidden,
@@ -159,9 +153,11 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case CortexA710:
   case CortexA715:
   case CortexA720:
+  case CortexA725:
   case CortexX2:
   case CortexX3:
   case CortexX4:
+  case CortexX925:
     PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
     PrefLoopAlignment = Align(32);
@@ -186,6 +182,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case AppleA15:
   case AppleA16:
   case AppleA17:
+  case AppleM4:
     CacheLineSize = 64;
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;
@@ -195,6 +192,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     case AppleA15:
     case AppleA16:
     case AppleA17:
+    case AppleM4:
       MaxInterleaveFactor = 4;
       break;
     default:
@@ -305,6 +303,13 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefLoopAlignment = Align(64);
     MaxInterleaveFactor = 4;
     break;
+  case Oryon:
+    CacheLineSize = 64;
+    PrefFunctionAlignment = Align(16);
+    MaxInterleaveFactor = 4;
+    PrefetchDistance = 128;
+    MinPrefetchStride = 1024;
+    break;
   }
 
   if (AArch64MinimumJumpTableEntries.getNumOccurrences() > 0 || !HasMinSize)
@@ -316,15 +321,14 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
                                    const TargetMachine &TM, bool LittleEndian,
                                    unsigned MinSVEVectorSizeInBitsOverride,
                                    unsigned MaxSVEVectorSizeInBitsOverride,
-                                   bool StreamingSVEMode,
-                                   bool StreamingCompatibleSVEMode,
+                                   bool IsStreaming, bool IsStreamingCompatible,
                                    bool HasMinSize)
     : AArch64GenSubtargetInfo(TT, CPU, TuneCPU, FS),
       ReserveXRegister(AArch64::GPR64commonRegClass.getNumRegs()),
       ReserveXRegisterForRA(AArch64::GPR64commonRegClass.getNumRegs()),
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
-      IsLittle(LittleEndian), StreamingSVEMode(StreamingSVEMode),
-      StreamingCompatibleSVEMode(StreamingCompatibleSVEMode),
+      IsLittle(LittleEndian), IsStreaming(IsStreaming),
+      IsStreamingCompatible(IsStreamingCompatible),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU, HasMinSize)),
@@ -546,20 +550,6 @@ void AArch64Subtarget::mirFileLoaded(MachineFunction &MF) const {
 }
 
 bool AArch64Subtarget::useAA() const { return UseAA; }
-
-bool AArch64Subtarget::isStreamingCompatible() const {
-  return StreamingCompatibleSVEMode || ForceStreamingCompatibleSVE;
-}
-
-bool AArch64Subtarget::isNeonAvailable() const {
-  return hasNEON() &&
-         (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
-}
-
-bool AArch64Subtarget::isSVEAvailable() const {
-  return hasSVE() &&
-         (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
-}
 
 // If return address signing is enabled, tail calls are emitted as follows:
 //

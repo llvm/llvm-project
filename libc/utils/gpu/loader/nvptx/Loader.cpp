@@ -29,16 +29,16 @@
 using namespace llvm;
 using namespace object;
 
-static void handle_error(CUresult err) {
+static void handle_error_impl(const char *file, int32_t line, CUresult err) {
   if (err == CUDA_SUCCESS)
     return;
 
   const char *err_str = nullptr;
   CUresult result = cuGetErrorString(err, &err_str);
   if (result != CUDA_SUCCESS)
-    fprintf(stderr, "Unknown Error\n");
+    fprintf(stderr, "%s:%d:0: Unknown Error\n", file, line);
   else
-    fprintf(stderr, "%s\n", err_str);
+    fprintf(stderr, "%s:%d:0: Error: %s\n", file, line, err_str);
   exit(1);
 }
 
@@ -152,10 +152,23 @@ Expected<void *> get_ctor_dtor_array(const void *image, const size_t size,
   return dev_memory;
 }
 
+void print_kernel_resources(CUmodule binary, const char *kernel_name) {
+  CUfunction function;
+  if (CUresult err = cuModuleGetFunction(&function, binary, kernel_name))
+    handle_error(err);
+  int num_regs;
+  if (CUresult err =
+          cuFuncGetAttribute(&num_regs, CU_FUNC_ATTRIBUTE_NUM_REGS, function))
+    handle_error(err);
+  printf("Executing kernel %s:\n", kernel_name);
+  printf("%6s registers: %d\n", kernel_name, num_regs);
+}
+
 template <typename args_t>
 CUresult launch_kernel(CUmodule binary, CUstream stream,
                        rpc_device_t rpc_device, const LaunchParameters &params,
-                       const char *kernel_name, args_t kernel_args) {
+                       const char *kernel_name, args_t kernel_args,
+                       bool print_resource_usage) {
   // look up the '_start' kernel in the loaded module.
   CUfunction function;
   if (CUresult err = cuModuleGetFunction(&function, binary, kernel_name))
@@ -208,6 +221,9 @@ CUresult launch_kernel(CUmodule binary, CUstream stream,
       },
       &memory_stream);
 
+  if (print_resource_usage)
+    print_kernel_resources(binary, kernel_name);
+
   // Call the kernel with the given arguments.
   if (CUresult err = cuLaunchKernel(
           function, params.num_blocks_x, params.num_blocks_y,
@@ -230,7 +246,7 @@ CUresult launch_kernel(CUmodule binary, CUstream stream,
 }
 
 int load(int argc, char **argv, char **envp, void *image, size_t size,
-         const LaunchParameters &params) {
+         const LaunchParameters &params, bool print_resource_usage) {
   if (CUresult err = cuInit(0))
     handle_error(err);
   // Obtain the first device found on the system.
@@ -323,14 +339,15 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
 
   LaunchParameters single_threaded_params = {1, 1, 1, 1, 1, 1};
   begin_args_t init_args = {argc, dev_argv, dev_envp};
-  if (CUresult err = launch_kernel(binary, stream, rpc_device,
-                                   single_threaded_params, "_begin", init_args))
+  if (CUresult err =
+          launch_kernel(binary, stream, rpc_device, single_threaded_params,
+                        "_begin", init_args, print_resource_usage))
     handle_error(err);
 
   start_args_t args = {argc, dev_argv, dev_envp,
                        reinterpret_cast<void *>(dev_ret)};
-  if (CUresult err =
-          launch_kernel(binary, stream, rpc_device, params, "_start", args))
+  if (CUresult err = launch_kernel(binary, stream, rpc_device, params, "_start",
+                                   args, print_resource_usage))
     handle_error(err);
 
   // Copy the return value back from the kernel and wait.
@@ -342,8 +359,9 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
     handle_error(err);
 
   end_args_t fini_args = {host_ret};
-  if (CUresult err = launch_kernel(binary, stream, rpc_device,
-                                   single_threaded_params, "_end", fini_args))
+  if (CUresult err =
+          launch_kernel(binary, stream, rpc_device, single_threaded_params,
+                        "_end", fini_args, print_resource_usage))
     handle_error(err);
 
   // Free the memory allocated for the device.

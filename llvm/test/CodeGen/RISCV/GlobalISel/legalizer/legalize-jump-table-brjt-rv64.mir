@@ -55,9 +55,8 @@ body:             |
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY]], 32
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
-  ; CHECK-NEXT:   [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[ASSERT_SEXT]], 32
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; CHECK-NEXT:   [[SUB:%[0-9]+]]:_(s64) = G_SUB [[SEXT_INREG]], [[C1]]
+  ; CHECK-NEXT:   [[SUB:%[0-9]+]]:_(s64) = G_SUB [[ASSERT_SEXT]], [[C1]]
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ugt), [[SUB]](s64), [[C]]
   ; CHECK-NEXT:   G_BRCOND [[ICMP]](s64), %bb.8
   ; CHECK-NEXT: {{  $}}

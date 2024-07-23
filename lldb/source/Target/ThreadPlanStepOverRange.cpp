@@ -220,8 +220,9 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
         StackFrameSP frame_sp = thread.GetStackFrameAtIndex(0);
         sc = frame_sp->GetSymbolContext(eSymbolContextEverything);
         if (sc.line_entry.IsValid()) {
-          if (*sc.line_entry.original_file_sp !=
-                  *m_addr_context.line_entry.original_file_sp &&
+          if (!sc.line_entry.original_file_sp->Equal(
+                  *m_addr_context.line_entry.original_file_sp,
+                  SupportFile::eEqualFileSpecAndChecksumIfSet) &&
               sc.comp_unit == m_addr_context.comp_unit &&
               sc.function == m_addr_context.function) {
             // Okay, find the next occurrence of this file in the line table:
@@ -244,8 +245,9 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
                   LineEntry prev_line_entry;
                   if (line_table->GetLineEntryAtIndex(entry_idx - 1,
                                                       prev_line_entry) &&
-                      *prev_line_entry.original_file_sp ==
-                          *line_entry.original_file_sp) {
+                      prev_line_entry.original_file_sp->Equal(
+                          *line_entry.original_file_sp,
+                          SupportFile::eEqualFileSpecAndChecksumIfSet)) {
                     SymbolContext prev_sc;
                     Address prev_address =
                         prev_line_entry.range.GetBaseAddress();
@@ -279,8 +281,9 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
                     if (next_line_function != m_addr_context.function)
                       break;
 
-                    if (*next_line_entry.original_file_sp ==
-                        *m_addr_context.line_entry.original_file_sp) {
+                    if (next_line_entry.original_file_sp->Equal(
+                            *m_addr_context.line_entry.original_file_sp,
+                            SupportFile::eEqualFileSpecAndChecksumIfSet)) {
                       const bool abort_other_plans = false;
                       const RunMode stop_other_threads = RunMode::eAllThreads;
                       lldb::addr_t cur_pc = thread.GetStackFrameAtIndex(0)
@@ -355,7 +358,7 @@ bool ThreadPlanStepOverRange::DoPlanExplainsStop(Event *event_ptr) {
       return_value = NextRangeBreakpointExplainsStop(stop_info_sp);
     } else {
       if (log)
-        log->PutCString("ThreadPlanStepInRange got asked if it explains the "
+        log->PutCString("ThreadPlanStepOverRange got asked if it explains the "
                         "stop for some reason other than step.");
       return_value = false;
     }

@@ -50,16 +50,11 @@ getTemplateSpecializationArgLocs(const NamedDecl &ND) {
     if (const ASTTemplateArgumentListInfo *Args =
             Func->getTemplateSpecializationArgsAsWritten())
       return Args->arguments();
-  } else if (auto *Cls =
-                 llvm::dyn_cast<ClassTemplatePartialSpecializationDecl>(&ND)) {
+  } else if (auto *Cls = llvm::dyn_cast<ClassTemplateSpecializationDecl>(&ND)) {
     if (auto *Args = Cls->getTemplateArgsAsWritten())
       return Args->arguments();
-  } else if (auto *Var =
-                 llvm::dyn_cast<VarTemplatePartialSpecializationDecl>(&ND)) {
-    if (auto *Args = Var->getTemplateArgsAsWritten())
-      return Args->arguments();
   } else if (auto *Var = llvm::dyn_cast<VarTemplateSpecializationDecl>(&ND)) {
-    if (auto *Args = Var->getTemplateArgsInfo())
+    if (auto *Args = Var->getTemplateArgsAsWritten())
       return Args->arguments();
   }
   // We return std::nullopt for ClassTemplateSpecializationDecls because it does
@@ -270,22 +265,10 @@ std::string printTemplateSpecializationArgs(const NamedDecl &ND) {
           getTemplateSpecializationArgLocs(ND)) {
     printTemplateArgumentList(OS, *Args, Policy);
   } else if (auto *Cls = llvm::dyn_cast<ClassTemplateSpecializationDecl>(&ND)) {
-    if (const TypeSourceInfo *TSI = Cls->getTypeAsWritten()) {
-      // ClassTemplateSpecializationDecls do not contain
-      // TemplateArgumentTypeLocs, they only have TemplateArgumentTypes. So we
-      // create a new argument location list from TypeSourceInfo.
-      auto STL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>();
-      llvm::SmallVector<TemplateArgumentLoc> ArgLocs;
-      ArgLocs.reserve(STL.getNumArgs());
-      for (unsigned I = 0; I < STL.getNumArgs(); ++I)
-        ArgLocs.push_back(STL.getArgLoc(I));
-      printTemplateArgumentList(OS, ArgLocs, Policy);
-    } else {
-      // FIXME: Fix cases when getTypeAsWritten returns null inside clang AST,
-      // e.g. friend decls. Currently we fallback to Template Arguments without
-      // location information.
-      printTemplateArgumentList(OS, Cls->getTemplateArgs().asArray(), Policy);
-    }
+    // FIXME: Fix cases when getTypeAsWritten returns null inside clang AST,
+    // e.g. friend decls. Currently we fallback to Template Arguments without
+    // location information.
+    printTemplateArgumentList(OS, Cls->getTemplateArgs().asArray(), Policy);
   }
   OS.flush();
   return TemplateArgs;
@@ -453,10 +436,12 @@ bool hasReservedScope(const DeclContext &DC) {
 }
 
 QualType declaredType(const TypeDecl *D) {
+  ASTContext &Context = D->getASTContext();
   if (const auto *CTSD = llvm::dyn_cast<ClassTemplateSpecializationDecl>(D))
-    if (const auto *TSI = CTSD->getTypeAsWritten())
-      return TSI->getType();
-  return D->getASTContext().getTypeDeclType(D);
+    if (const auto *Args = CTSD->getTemplateArgsAsWritten())
+      return Context.getTemplateSpecializationType(
+          TemplateName(CTSD->getSpecializedTemplate()), Args->arguments());
+  return Context.getTypeDeclType(D);
 }
 
 namespace {

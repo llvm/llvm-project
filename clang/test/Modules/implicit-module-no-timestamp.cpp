@@ -1,4 +1,3 @@
-// UNSUPPORTED: system-windows
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: cd %t

@@ -35,10 +35,10 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
-    AU.addRequired<MachineLoopInfo>();
-    AU.addPreserved<MachineLoopInfo>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -186,8 +186,7 @@ public:
     if (PredI != PredJ)
       return false;
     if (SUJ->isSucc(SUI)) {
-      for (unsigned i = 0, e = SUJ->Succs.size(); i < e; ++i) {
-        const SDep &Dep = SUJ->Succs[i];
+      for (const SDep &Dep : SUJ->Succs) {
         if (Dep.getSUnit() != SUI)
           continue;
         if (Dep.getKind() == SDep::Anti)
@@ -321,7 +320,7 @@ bool R600Packetizer::runOnMachineFunction(MachineFunction &Fn) {
   const R600Subtarget &ST = Fn.getSubtarget<R600Subtarget>();
   const R600InstrInfo *TII = ST.getInstrInfo();
 
-  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfo>();
+  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
 
   // Instantiate the packetizer.
   R600PacketizerList Packetizer(Fn, ST, MLI);

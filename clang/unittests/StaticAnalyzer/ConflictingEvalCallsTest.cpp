@@ -18,7 +18,7 @@ using namespace ento;
 
 namespace {
 class EvalCallBase : public Checker<eval::Call> {
-  const CallDescription Foo = {{"foo"}, 0};
+  const CallDescription Foo = {CDM::SimpleFunc, {"foo"}, 0};
 
 public:
   bool evalCall(const CallEvent &Call, CheckerContext &C) const {

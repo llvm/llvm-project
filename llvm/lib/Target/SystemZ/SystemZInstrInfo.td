@@ -111,11 +111,11 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
 // NOPs.  These are again variants of the conditional branches, with the
 // condition mask set to "never".  NOP_bare can't be an InstAlias since it
 // would need R0D hard coded which is not part of ADDR64BitRegClass.
-def NOP  : InstAlias<"nop\t$XBD", (BCAsm 0, bdxaddr12only:$XBD), 0>;
+def NOP : NeverCondBranchRX<"nop", 0x47>;
 let isAsmParserOnly = 1, hasNoSchedulingInfo = 1, M1 = 0, X2 = 0, B2 = 0, D2 = 0 in
   def NOP_bare  : InstRXb<0x47,(outs), (ins), "nop", []>;
-def NOPR : InstAlias<"nopr\t$R", (BCRAsm 0, GR64:$R), 0>;
-def NOPR_bare : InstAlias<"nopr", (BCRAsm 0, R0D), 0>;
+def NOPR : NeverCondBranchRR<"nopr", 0x07>;
+def NOPR_bare : InstAlias<"nopr", (NOPR R0D), 0>;
 
 // An alias of BRC 0, label
 def JNOP : InstAlias<"jnop\t$RI2", (BRCAsm 0, brtarget16:$RI2), 0>;
@@ -464,6 +464,8 @@ let isAsCheapAsAMove = 1, isMoveImm = 1, isReMaterializable = 1 in {
   def LLILF : UnaryRIL<"llilf", 0xC0F, bitconvert, GR64, imm64lf32>;
   def LLIHF : UnaryRIL<"llihf", 0xC0E, bitconvert, GR64, imm64hf32>;
 }
+def LLGFI : InstAlias<"llgfi\t$R1, $RI1", (LLILF GR64:$R1, imm64lf32:$RI1)>;
+def LLGHI : InstAlias<"llghi\t$R1, $RI1", (LLILL GR64:$R1, imm64ll16:$RI1)>;
 
 // Register loads.
 let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
@@ -973,6 +975,7 @@ let isAsCheapAsAMove = 1, isMoveImm = 1, isReMaterializable = 1 in {
   def IILF : UnaryRIL<"iilf", 0xC09, bitconvert, GR32, uimm32>;
   def IIHF : UnaryRIL<"iihf", 0xC08, bitconvert, GRH32, uimm32>;
 }
+def LFI : InstAlias<"lfi\t$R1, $RI1", (IILF GR32:$R1, uimm32:$RI1)>;
 def IILF64 : BinaryAliasRIL<insertlf, GR64, imm64lf32>;
 def IIHF64 : BinaryAliasRIL<inserthf, GR64, imm64hf32>;
 
@@ -1372,6 +1375,10 @@ let Predicates = [FeatureMiscellaneousExtensions3],
   let isCommutable = 1, CCValues = 0xC, CompareZeroCCMask = 0x8 in {
     def NORK : BinaryRRFa<"nork", 0xB976, nor, GR32, GR32, GR32>;
     def NOGRK : BinaryRRFa<"nogrk", 0xB966, nor, GR64, GR64, GR64>;
+    let isAsmParserOnly = 1 in {
+      def NOTR : UnaryRRFa<"notr", 0xB976, nor, GR32, GR32>;
+      def NOTGR : UnaryRRFa<"notgr", 0xB966, nor, GR64, GR64>;
+    }
   }
 
   // NXOR.
@@ -1526,13 +1533,17 @@ def RLLG : BinaryRSY<"rllg", 0xEB1C, shiftop<rotl>, GR64>;
 let Defs = [CC] in {
   let isCodeGenOnly = 1 in
     def RISBG32 : RotateSelectRIEf<"risbg", 0xEC55, GR32, GR32>;
-  let CCValues = 0xE, CompareZeroCCMask = 0xE in
+  let CCValues = 0xE, CompareZeroCCMask = 0xE in {
     def RISBG : RotateSelectRIEf<"risbg", 0xEC55, GR64, GR64>;
+    def RISBGZ : RotateSelectRIEf<"risbgz", 0xEC55, GR64, GR64, 0, 128>;
+  }
 }
 
 // On zEC12 we have a variant of RISBG that does not set CC.
-let Predicates = [FeatureMiscellaneousExtensions] in
+let Predicates = [FeatureMiscellaneousExtensions] in {
   def RISBGN : RotateSelectRIEf<"risbgn", 0xEC59, GR64, GR64>;
+  def RISBGNZ : RotateSelectRIEf<"risbgnz", 0xEC59, GR64, GR64, 0, 128>;
+}
 
 // Forms of RISBG that only affect one word of the destination register.
 // They do not set CC.
@@ -1733,16 +1744,16 @@ let hasSideEffects = 1 in
 def Serialize : Alias<2, (outs), (ins), []>;
 
 let Predicates = [FeatureInterlockedAccess1], Defs = [CC] in {
-  def LAA   : LoadAndOpRSY<"laa",   0xEBF8, atomic_load_add_32, GR32>;
-  def LAAG  : LoadAndOpRSY<"laag",  0xEBE8, atomic_load_add_64, GR64>;
+  def LAA   : LoadAndOpRSY<"laa",   0xEBF8, atomic_load_add_i32, GR32>;
+  def LAAG  : LoadAndOpRSY<"laag",  0xEBE8, atomic_load_add_i64, GR64>;
   def LAAL  : LoadAndOpRSY<"laal",  0xEBFA, null_frag, GR32>;
   def LAALG : LoadAndOpRSY<"laalg", 0xEBEA, null_frag, GR64>;
-  def LAN   : LoadAndOpRSY<"lan",   0xEBF4, atomic_load_and_32, GR32>;
-  def LANG  : LoadAndOpRSY<"lang",  0xEBE4, atomic_load_and_64, GR64>;
-  def LAO   : LoadAndOpRSY<"lao",   0xEBF6, atomic_load_or_32, GR32>;
-  def LAOG  : LoadAndOpRSY<"laog",  0xEBE6, atomic_load_or_64, GR64>;
-  def LAX   : LoadAndOpRSY<"lax",   0xEBF7, atomic_load_xor_32, GR32>;
-  def LAXG  : LoadAndOpRSY<"laxg",  0xEBE7, atomic_load_xor_64, GR64>;
+  def LAN   : LoadAndOpRSY<"lan",   0xEBF4, atomic_load_and_i32, GR32>;
+  def LANG  : LoadAndOpRSY<"lang",  0xEBE4, atomic_load_and_i64, GR64>;
+  def LAO   : LoadAndOpRSY<"lao",   0xEBF6, atomic_load_or_i32, GR32>;
+  def LAOG  : LoadAndOpRSY<"laog",  0xEBE6, atomic_load_or_i64, GR64>;
+  def LAX   : LoadAndOpRSY<"lax",   0xEBF7, atomic_load_xor_i32, GR32>;
+  def LAXG  : LoadAndOpRSY<"laxg",  0xEBE7, atomic_load_xor_i64, GR64>;
 }
 
 def ATOMIC_SWAPW   : AtomicLoadWBinaryReg<z_atomic_swapw>;
@@ -2330,6 +2341,8 @@ defm : BlockLoadStore<load, i64, MVCImm, NCImm, OCImm, XCImm, 7>;
 
 def JCT   : MnemonicAlias<"jct", "brct">;
 def JCTG  : MnemonicAlias<"jctg", "brctg">;
+def JC    : MnemonicAlias<"jc", "brc">;
+def JCTH  : MnemonicAlias<"jcth", "brcth">;
 def JAS   : MnemonicAlias<"jas", "bras">;
 def JASL  : MnemonicAlias<"jasl", "brasl">;
 def JXH   : MnemonicAlias<"jxh", "brxh">;

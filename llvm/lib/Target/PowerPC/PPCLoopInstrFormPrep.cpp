@@ -557,7 +557,7 @@ bool PPCLoopInstrFormPrep::rewriteLoadStoresForCommoningChains(
   BasicBlock *Header = L->getHeader();
   BasicBlock *LoopPredecessor = L->getLoopPredecessor();
 
-  SCEVExpander SCEVE(*SE, Header->getModule()->getDataLayout(),
+  SCEVExpander SCEVE(*SE, Header->getDataLayout(),
                      "loopprepare-chaincommon");
 
   for (unsigned ChainIdx = 0; ChainIdx < Bucket.ChainBases.size(); ++ChainIdx) {
@@ -1025,7 +1025,7 @@ bool PPCLoopInstrFormPrep::rewriteLoadStores(
     return MadeChange;
 
   BasicBlock *Header = L->getHeader();
-  SCEVExpander SCEVE(*SE, Header->getModule()->getDataLayout(),
+  SCEVExpander SCEVE(*SE, Header->getDataLayout(),
                      "loopprepare-formrewrite");
   if (!SCEVE.isSafeToExpand(BasePtrSCEV->getStart()))
     return MadeChange;

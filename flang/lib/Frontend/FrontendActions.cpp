@@ -43,6 +43,8 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/FileManager.h"
+#include "clang/Basic/FileSystemOptions.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -53,7 +55,9 @@
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/Linker/Linker.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
@@ -68,6 +72,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
+#include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <memory>
 #include <system_error>
@@ -292,7 +297,8 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getParsing().allCooked(), ci.getInvocation().getTargetOpts().triple,
       kindMap, ci.getInvocation().getLoweringOpts(),
       ci.getInvocation().getFrontendOpts().envDefaults,
-      ci.getInvocation().getFrontendOpts().features, targetMachine);
+      ci.getInvocation().getFrontendOpts().features, targetMachine,
+      ci.getInvocation().getTargetOpts().cpuToTuneFor);
 
   // Fetch module from lb, so we can set
   mlirModule = std::make_unique<mlir::ModuleOp>(lb.getModule());
@@ -474,6 +480,15 @@ void DebugUnparseWithSymbolsAction::executeAction() {
       llvm::outs(), parseTree, /*encoding=*/Fortran::parser::Encoding::UTF_8);
 
   // Report fatal semantic errors
+  reportFatalSemanticErrors();
+}
+
+void DebugUnparseWithModulesAction::executeAction() {
+  auto &parseTree{*getInstance().getParsing().parseTree()};
+  CompilerInstance &ci{getInstance()};
+  Fortran::semantics::UnparseWithModules(
+      llvm::outs(), ci.getSemantics().context(), parseTree,
+      /*encoding=*/Fortran::parser::Encoding::UTF_8);
   reportFatalSemanticErrors();
 }
 
@@ -809,6 +824,9 @@ void CodeGenAction::generateLLVMIR() {
     config.VScaleMax = vsr->second;
   }
 
+  if (ci.getInvocation().getLoweringOpts().getNSWOnLoopVarInc())
+    config.NSWOnLoopVarInc = true;
+
   // Create the pass pipeline
   fir::createMLIRToLLVMPassPipeline(pm, config, getCurrentFile());
   (void)mlir::applyPassManagerCLOptions(pm);
@@ -848,6 +866,17 @@ void CodeGenAction::generateLLVMIR() {
     if (opts.IsPIE)
       llvmModule->setPIELevel(
           static_cast<llvm::PIELevel::Level>(opts.PICLevel));
+  }
+
+  // Set mcmodel level LLVM module flags
+  std::optional<llvm::CodeModel::Model> cm = getCodeModel(opts.CodeModel);
+  if (cm.has_value()) {
+    const llvm::Triple triple(ci.getInvocation().getTargetOpts().triple);
+    llvmModule->setCodeModel(*cm);
+    if ((cm == llvm::CodeModel::Medium || cm == llvm::CodeModel::Large) &&
+        triple.getArch() == llvm::Triple::x86_64) {
+      llvmModule->setLargeDataThreshold(opts.LargeDataThreshold);
+    }
   }
 }
 
@@ -983,6 +1012,8 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   if (action == BackendActionTy::Backend_EmitBC)
     mpm.addPass(llvm::BitcodeWriterPass(os));
+  else if (action == BackendActionTy::Backend_EmitLL)
+    mpm.addPass(llvm::PrintModulePass(os));
 
   // Run the passes.
   mpm.run(*llvmModule, mam);
@@ -1134,6 +1165,54 @@ void CodeGenAction::embedOffloadObjects() {
   }
 }
 
+void CodeGenAction::linkBuiltinBCLibs() {
+  auto options = clang::FileSystemOptions();
+  clang::FileManager fileManager(options);
+  CompilerInstance &ci = this->getInstance();
+  const auto &cgOpts = ci.getInvocation().getCodeGenOpts();
+
+  std::vector<std::unique_ptr<llvm::Module>> modules;
+
+  // Load LLVM modules
+  for (llvm::StringRef bcLib : cgOpts.BuiltinBCLibs) {
+    auto BCBuf = fileManager.getBufferForFile(bcLib);
+    if (!BCBuf) {
+      auto diagID = ci.getDiagnostics().getCustomDiagID(
+          clang::DiagnosticsEngine::Error, "could not open '%0' for linking");
+      ci.getDiagnostics().Report(diagID) << bcLib;
+      return;
+    }
+
+    llvm::Expected<std::unique_ptr<llvm::Module>> ModuleOrErr =
+        getOwningLazyBitcodeModule(std::move(*BCBuf), *llvmCtx);
+    if (!ModuleOrErr) {
+      auto diagID = ci.getDiagnostics().getCustomDiagID(
+          clang::DiagnosticsEngine::Error, "error loading '%0' for linking");
+      ci.getDiagnostics().Report(diagID) << bcLib;
+      return;
+    }
+    modules.push_back(std::move(ModuleOrErr.get()));
+  }
+
+  // Link modules and internalize functions
+  for (auto &module : modules) {
+    bool Err;
+    Err = llvm::Linker::linkModules(
+        *llvmModule, std::move(module), llvm::Linker::Flags::LinkOnlyNeeded,
+        [](llvm::Module &M, const llvm::StringSet<> &GVS) {
+          llvm::internalizeModule(M, [&GVS](const llvm::GlobalValue &GV) {
+            return !GV.hasName() || (GVS.count(GV.getName()) == 0);
+          });
+        });
+    if (Err) {
+      auto diagID = ci.getDiagnostics().getCustomDiagID(
+          clang::DiagnosticsEngine::Error, "link error when linking '%0'");
+      ci.getDiagnostics().Report(diagID) << module->getSourceFileName();
+      return;
+    }
+  }
+}
+
 static void reportOptRecordError(llvm::Error e, clang::DiagnosticsEngine &diags,
                                  const CodeGenOptions &codeGenOpts) {
   handleAllErrors(
@@ -1213,6 +1292,7 @@ void CodeGenAction::executeAction() {
   // and the command-line target option if specified, or the default if not
   // given on the command-line).
   llvm::TargetMachine &targetMachine = ci.getTargetMachine();
+
   const std::string &theTriple = targetMachine.getTargetTriple().str();
 
   if (llvmModule->getTargetTriple() != theTriple) {
@@ -1224,6 +1304,10 @@ void CodeGenAction::executeAction() {
   // an assert for incompatible data layout when the code-generation happens.
   llvmModule->setTargetTriple(theTriple);
   llvmModule->setDataLayout(targetMachine.createDataLayout());
+
+  // Link in builtin bitcode libraries
+  if (!codeGenOpts.BuiltinBCLibs.empty())
+    linkBuiltinBCLibs();
 
   // Embed offload objects specified with -fembed-offload-object
   if (!codeGenOpts.OffloadObjects.empty())
@@ -1258,13 +1342,8 @@ void CodeGenAction::executeAction() {
   // Run LLVM's middle-end (i.e. the optimizer).
   runOptimizationPipeline(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
 
-  if (action == BackendActionTy::Backend_EmitLL) {
-    llvmModule->print(ci.isOutputStreamNull() ? *os : ci.getOutputStream(),
-                      /*AssemblyAnnotationWriter=*/nullptr);
-    return;
-  }
-
-  if (action == BackendActionTy::Backend_EmitBC) {
+  if (action == BackendActionTy::Backend_EmitLL ||
+      action == BackendActionTy::Backend_EmitBC) {
     // This action has effectively been completed in runOptimizationPipeline.
     return;
   }

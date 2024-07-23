@@ -86,7 +86,7 @@
 /// lookup the VarLoc in the VarLocMap. Rather than operate directly on machine
 /// locations, the dataflow analysis in this pass identifies locations by their
 /// indices in the VarLocMap, meaning all the variable locations in a block can
-/// be described by a sparse vector of VarLocMap indicies.
+/// be described by a sparse vector of VarLocMap indices.
 ///
 /// All the storage for the dataflow analysis is local to the ExtendRanges
 /// method and passed down to helper methods. "OutLocs" and "InLocs" record the

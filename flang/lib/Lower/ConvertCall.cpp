@@ -28,6 +28,7 @@
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/IR/IRMapping.h"
@@ -589,7 +590,7 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
           fir::getBase(converter.genExprValue(
               caller.getCallDescription().chevrons()[3], stmtCtx)));
 
-    builder.create<fir::CUDAKernelLaunch>(
+    builder.create<cuf::KernelLaunchOp>(
         loc, funcType.getResults(), funcSymbolAttr, grid_x, grid_y, grid_z,
         block_x, block_y, block_z, bytes, stream, operands);
     callNumResults = 0;
@@ -642,6 +643,9 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
     // Standard procedure call with fir.call.
     auto call = builder.create<fir::CallOp>(loc, funcType.getResults(),
                                             funcSymbolAttr, operands);
+    if (caller.characterize().IsBindC())
+      call.setIsBindC(true);
+
     callNumResults = call.getNumResults();
     if (callNumResults != 0)
       callResult = call.getResult(0);
@@ -916,9 +920,11 @@ namespace {
 struct CallCleanUp {
   struct CopyIn {
     void genCleanUp(mlir::Location loc, fir::FirOpBuilder &builder) {
-      builder.create<hlfir::CopyOutOp>(loc, copiedIn, wasCopied, copyBackVar);
+      builder.create<hlfir::CopyOutOp>(loc, tempBox, wasCopied, copyBackVar);
     }
-    mlir::Value copiedIn;
+    // address of the descriptor holding the temp if a temp was created.
+    mlir::Value tempBox;
+    // Boolean indicating if a copy was made or not.
     mlir::Value wasCopied;
     // copyBackVar may be null if copy back is not needed.
     mlir::Value copyBackVar;
@@ -931,7 +937,8 @@ struct CallCleanUp {
     mlir::Value mustFree;
   };
   void genCleanUp(mlir::Location loc, fir::FirOpBuilder &builder) {
-    std::visit([&](auto &c) { c.genCleanUp(loc, builder); }, cleanUp);
+    Fortran::common::visit([&](auto &c) { c.genCleanUp(loc, builder); },
+                           cleanUp);
   }
   std::variant<CopyIn, ExprAssociate> cleanUp;
 };
@@ -940,10 +947,10 @@ struct CallCleanUp {
 /// It holds the value to be passed in the call and any related
 /// clean-ups to be done after the call.
 struct PreparedDummyArgument {
-  void pushCopyInCleanUp(mlir::Value copiedIn, mlir::Value wasCopied,
+  void pushCopyInCleanUp(mlir::Value tempBox, mlir::Value wasCopied,
                          mlir::Value copyBackVar) {
     cleanups.emplace_back(
-        CallCleanUp{CallCleanUp::CopyIn{copiedIn, wasCopied, copyBackVar}});
+        CallCleanUp{CallCleanUp::CopyIn{tempBox, wasCopied, copyBackVar}});
   }
   void pushExprAssociateCleanUp(mlir::Value tempVar, mlir::Value wasCopied) {
     cleanups.emplace_back(
@@ -982,7 +989,6 @@ struct ConditionallyPreparedDummy {
     for (const CallCleanUp &c : preparedDummy.cleanups) {
       if (const auto *copyInCleanUp =
               std::get_if<CallCleanUp::CopyIn>(&c.cleanUp)) {
-        thenResultValues.push_back(copyInCleanUp->copiedIn);
         thenResultValues.push_back(copyInCleanUp->wasCopied);
         if (copyInCleanUp->copyBackVar)
           thenResultValues.push_back(copyInCleanUp->copyBackVar);
@@ -1037,8 +1043,10 @@ struct ConditionallyPreparedDummy {
         mlir::Value copyBackVar;
         if (copyInCleanUp->copyBackVar)
           copyBackVar = ifOp.getResults().back();
-        preparedDummy.pushCopyInCleanUp(ifOp.getResults()[1],
-                                        ifOp.getResults()[2], copyBackVar);
+        // tempBox is an hlfir.copy_in argument created outside of the
+        // fir.if region. It needs not to be threaded as a fir.if result.
+        preparedDummy.pushCopyInCleanUp(copyInCleanUp->tempBox,
+                                        ifOp.getResults()[1], copyBackVar);
       } else {
         preparedDummy.pushExprAssociateCleanUp(ifOp.getResults()[1],
                                                ifOp.getResults()[2]);
@@ -1081,11 +1089,8 @@ static hlfir::Entity fixProcedureDummyMismatch(mlir::Location loc,
 mlir::Value static getZeroLowerBounds(mlir::Location loc,
                                       fir::FirOpBuilder &builder,
                                       hlfir::Entity entity) {
-  // Assumed rank should not fall here, but better safe than sorry until
-  // implemented.
-  if (entity.isAssumedRank())
-    TODO(loc, "setting lower bounds of assumed rank to zero before passing it "
-              "to BIND(C) procedure");
+  assert(!entity.isAssumedRank() &&
+         "assumed-rank must use fir.rebox_assumed_rank");
   if (entity.getRank() < 1)
     return {};
   mlir::Value zero =
@@ -1202,25 +1207,52 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
         dummyTypeWithActualRank, actual.getFortranElementType(),
         actual.isPolymorphic());
 
+  PreparedDummyArgument preparedDummy;
+
+  // Helpers to generate hlfir.copy_in operation and register the related
+  // hlfir.copy_out creation.
+  auto genCopyIn = [&](hlfir::Entity var, bool doCopyOut) -> hlfir::Entity {
+    auto baseBoxTy = mlir::dyn_cast<fir::BaseBoxType>(var.getType());
+    assert(baseBoxTy && "expect non simply contiguous variables to be boxes");
+    // Create allocatable descriptor for the potential temporary.
+    mlir::Type tempBoxType = baseBoxTy.getBoxTypeWithNewAttr(
+        fir::BaseBoxType::Attribute::Allocatable);
+    mlir::Value tempBox = builder.createTemporary(loc, tempBoxType);
+    auto copyIn = builder.create<hlfir::CopyInOp>(
+        loc, var, tempBox, /*var_is_present=*/mlir::Value{});
+    // Register the copy-out after the call.
+    preparedDummy.pushCopyInCleanUp(copyIn.getTempBox(), copyIn.getWasCopied(),
+                                    doCopyOut ? copyIn.getVar()
+                                              : mlir::Value{});
+    return hlfir::Entity{copyIn.getCopiedIn()};
+  };
+
+  auto genSetDynamicTypeToDummyType = [&](hlfir::Entity var) -> hlfir::Entity {
+    fir::BaseBoxType boxType = fir::BoxType::get(
+        hlfir::getFortranElementOrSequenceType(dummyTypeWithActualRank));
+    if (actualIsAssumedRank)
+      return hlfir::Entity{builder.create<fir::ReboxAssumedRankOp>(
+          loc, boxType, var, fir::LowerBoundModifierAttribute::SetToOnes)};
+    // Use actual shape when creating descriptor with dummy type, the dummy
+    // shape may be unknown in case of sequence association.
+    mlir::Type actualTy =
+        hlfir::getFortranElementOrSequenceType(actual.getType());
+    boxType = boxType.getBoxTypeWithNewShape(actualTy);
+    return hlfir::Entity{builder.create<fir::ReboxOp>(loc, boxType, var,
+                                                      /*shape=*/mlir::Value{},
+                                                      /*slice=*/mlir::Value{})};
+  };
+
   // Step 2: prepare the storage for the dummy arguments, ensuring that it
   // matches the dummy requirements (e.g., must be contiguous or must be
   // a temporary).
-  PreparedDummyArgument preparedDummy;
   hlfir::Entity entity =
       hlfir::derefPointersAndAllocatables(loc, builder, actual);
   if (entity.isVariable()) {
-    if (mustSetDynamicTypeToDummyType) {
-      // Note: this is important to do this before any copy-in or copy so
-      // that the dummy is contiguous according to the dummy type.
-      if (actualIsAssumedRank)
-        TODO(loc, "passing polymorphic assumed-rank to non polymorphic dummy "
-                  "argument");
-      mlir::Type boxType = fir::BoxType::get(
-          hlfir::getFortranElementOrSequenceType(dummyTypeWithActualRank));
-      entity = hlfir::Entity{builder.create<fir::ReboxOp>(
-          loc, boxType, entity, /*shape=*/mlir::Value{},
-          /*slice=*/mlir::Value{})};
-    }
+    // Set dynamic type if needed before any copy-in or copy so that the dummy
+    // is contiguous according to the dummy type.
+    if (mustSetDynamicTypeToDummyType)
+      entity = genSetDynamicTypeToDummyType(entity);
     if (arg.hasValueAttribute() ||
         // Constant expressions might be lowered as variables with
         // 'parameter' attribute. Even though the constant expressions
@@ -1239,10 +1271,6 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       preparedDummy.pushExprAssociateCleanUp(associate);
     } else if (mustDoCopyInOut) {
       // Copy-in non contiguous variables.
-      assert(mlir::isa<fir::BaseBoxType>(entity.getType()) &&
-             "expect non simply contiguous variables to be boxes");
-      if (actualIsAssumedRank)
-        TODO(loc, "copy-in and copy-out of assumed-rank arguments");
       // TODO: for non-finalizable monomorphic derived type actual
       // arguments associated with INTENT(OUT) dummy arguments
       // we may avoid doing the copy and only allocate the temporary.
@@ -1250,13 +1278,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       // allocation for the temp in this case. We can communicate
       // this to the codegen via some CopyInOp flag.
       // This is a performance concern.
-      auto copyIn = builder.create<hlfir::CopyInOp>(
-          loc, entity, /*var_is_present=*/mlir::Value{});
-      entity = hlfir::Entity{copyIn.getCopiedIn()};
-      // Register the copy-out after the call.
-      preparedDummy.pushCopyInCleanUp(
-          copyIn.getCopiedIn(), copyIn.getWasCopied(),
-          arg.mayBeModifiedByCall() ? copyIn.getVar() : mlir::Value{});
+      entity = genCopyIn(entity, arg.mayBeModifiedByCall());
     }
   } else {
     const Fortran::lower::SomeExpr *expr = arg.entity->UnwrapExpr();
@@ -1269,28 +1291,15 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
         loc, builder, entity, storageType, "", byRefAttr);
     entity = hlfir::Entity{associate.getBase()};
     preparedDummy.pushExprAssociateCleanUp(associate);
+    // Rebox the actual argument to the dummy argument's type, and make sure
+    // that we pass a contiguous entity (i.e. make copy-in, if needed).
+    //
+    // TODO: this can probably be optimized by associating the expression with
+    // properly typed temporary, but this needs either a new operation or
+    // making the hlfir.associate more complex.
     if (mustSetDynamicTypeToDummyType) {
-      // Rebox the actual argument to the dummy argument's type, and make
-      // sure that we pass a contiguous entity (i.e. make copy-in,
-      // if needed).
-      //
-      // TODO: this can probably be optimized by associating the expression
-      // with properly typed temporary, but this needs either a new operation
-      // or making the hlfir.associate more complex.
-      assert(!actualIsAssumedRank && "only variables are assumed-rank");
-      mlir::Type boxType = fir::BoxType::get(
-          hlfir::getFortranElementOrSequenceType(dummyTypeWithActualRank));
-      entity = hlfir::Entity{builder.create<fir::ReboxOp>(
-          loc, boxType, entity, /*shape=*/mlir::Value{},
-          /*slice=*/mlir::Value{})};
-      auto copyIn = builder.create<hlfir::CopyInOp>(
-          loc, entity, /*var_is_present=*/mlir::Value{});
-      entity = hlfir::Entity{copyIn.getCopiedIn()};
-      // Note that the copy-out is not required, but the copy-in
-      // temporary must be deallocated if created.
-      preparedDummy.pushCopyInCleanUp(copyIn.getCopiedIn(),
-                                      copyIn.getWasCopied(),
-                                      /*copyBackVar=*/mlir::Value{});
+      entity = genSetDynamicTypeToDummyType(entity);
+      entity = genCopyIn(entity, /*doCopyOut=*/false);
     }
   }
 
@@ -1326,19 +1335,19 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     if (needToAddAddendum || actualBoxHasAllocatableOrPointerFlag ||
         needsZeroLowerBounds) {
       if (actualIsAssumedRank) {
-        if (needToAddAddendum)
-          TODO(loc, "passing intrinsic assumed-rank to unlimited polymorphic "
-                    "assumed-rank");
-        else
-          TODO(loc, "passing pointer or allocatable assumed-rank to non "
-                    "pointer non allocatable assumed-rank");
+        auto lbModifier = needsZeroLowerBounds
+                              ? fir::LowerBoundModifierAttribute::SetToZeroes
+                              : fir::LowerBoundModifierAttribute::SetToOnes;
+        entity = hlfir::Entity{builder.create<fir::ReboxAssumedRankOp>(
+            loc, dummyTypeWithActualRank, entity, lbModifier)};
+      } else {
+        mlir::Value shift{};
+        if (needsZeroLowerBounds)
+          shift = getZeroLowerBounds(loc, builder, entity);
+        entity = hlfir::Entity{builder.create<fir::ReboxOp>(
+            loc, dummyTypeWithActualRank, entity, /*shape=*/shift,
+            /*slice=*/mlir::Value{})};
       }
-      mlir::Value shift{};
-      if (needsZeroLowerBounds)
-        shift = getZeroLowerBounds(loc, builder, entity);
-      entity = hlfir::Entity{builder.create<fir::ReboxOp>(
-          loc, dummyTypeWithActualRank, entity, /*shape=*/shift,
-          /*slice=*/mlir::Value{})};
     }
     addr = entity;
   } else {
@@ -1453,21 +1462,16 @@ static PreparedDummyArgument prepareProcedurePointerActualArgument(
   return PreparedDummyArgument{tempBoxProc, /*cleanups=*/{}};
 }
 
-/// Lower calls to user procedures with actual arguments that have been
-/// pre-lowered but not yet prepared according to the interface.
-/// This can be called for elemental procedures, but only with scalar
-/// arguments: if there are array arguments, it must be provided with
-/// the array argument elements value and will return the corresponding
-/// scalar result value.
-static std::optional<hlfir::EntityWithAttributes>
-genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
-            Fortran::lower::CallerInterface &caller,
-            mlir::FunctionType callSiteType, CallContext &callContext) {
+/// Prepare arguments of calls to user procedures with actual arguments that
+/// have been pre-lowered but not yet prepared according to the interface.
+void prepareUserCallArguments(
+    Fortran::lower::PreparedActualArguments &loweredActuals,
+    Fortran::lower::CallerInterface &caller, mlir::FunctionType callSiteType,
+    CallContext &callContext, llvm::SmallVector<CallCleanUp> &callCleanUps) {
   using PassBy = Fortran::lower::CallerInterface::PassEntityBy;
   mlir::Location loc = callContext.loc;
   bool mustRemapActualToDummyDescriptors = false;
   fir::FirOpBuilder &builder = callContext.getBuilder();
-  llvm::SmallVector<CallCleanUp> callCleanUps;
   for (auto [preparedActual, arg] :
        llvm::zip(loweredActuals, caller.getPassedArguments())) {
     mlir::Type argTy = callSiteType.getInput(arg.firArgument);
@@ -1593,9 +1597,6 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
         if (dataTy.isAssumedRank()) {
           dataTy =
               dataTy.getBoxTypeWithNewShape(fir::getBase(actualExv).getType());
-          if (dataTy.isAssumedRank())
-            TODO(loc, "associating assumed-rank target to pointer assumed-rank "
-                      "argument");
         }
         mlir::Value irBox = builder.createTemporary(loc, dataTy);
         fir::MutableBoxValue ptrBox(irBox,
@@ -1625,11 +1626,30 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
     } break;
     }
   }
+
   // Handle cases where caller must allocate the result or a fir.box for it.
   if (mustRemapActualToDummyDescriptors)
     remapActualToDummyDescriptors(loc, callContext.converter,
                                   callContext.symMap, loweredActuals, caller,
                                   callContext.isBindcCall());
+}
+
+/// Lower calls to user procedures with actual arguments that have been
+/// pre-lowered but not yet prepared according to the interface.
+/// This can be called for elemental procedures, but only with scalar
+/// arguments: if there are array arguments, it must be provided with
+/// the array argument elements value and will return the corresponding
+/// scalar result value.
+static std::optional<hlfir::EntityWithAttributes>
+genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
+            Fortran::lower::CallerInterface &caller,
+            mlir::FunctionType callSiteType, CallContext &callContext) {
+  mlir::Location loc = callContext.loc;
+  llvm::SmallVector<CallCleanUp> callCleanUps;
+  fir::FirOpBuilder &builder = callContext.getBuilder();
+
+  prepareUserCallArguments(loweredActuals, caller, callSiteType, callContext,
+                           callCleanUps);
 
   // Prepare lowered arguments according to the interface
   // and map the lowered values to the dummy
@@ -1789,7 +1809,8 @@ static std::optional<hlfir::EntityWithAttributes> genCustomIntrinsicRefCore(
     if (loadArg && fir::conformsWithPassByRef(actual.getType())) {
       return hlfir::loadTrivialScalar(loc, builder, actual);
     }
-    return actual;
+    return Fortran::lower::translateToExtendedValue(loc, builder, actual,
+                                                    callContext.stmtCtx);
   };
   // helper to get the isPresent flag for a particular prepared argument
   auto isPresent = [&](std::size_t i) -> std::optional<mlir::Value> {
@@ -1820,7 +1841,7 @@ static std::optional<hlfir::EntityWithAttributes> genCustomIntrinsicRefCore(
 static std::optional<hlfir::EntityWithAttributes>
 genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
                     const Fortran::evaluate::SpecificIntrinsic *intrinsic,
-                    const fir::IntrinsicArgumentLoweringRules *argLowering,
+                    const fir::IntrinsicHandlerEntry &intrinsicEntry,
                     CallContext &callContext) {
   auto &converter = callContext.converter;
   if (intrinsic && Fortran::lower::intrinsicRequiresCustomOptionalHandling(
@@ -1835,6 +1856,8 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
   auto &stmtCtx = callContext.stmtCtx;
   fir::FirOpBuilder &builder = callContext.getBuilder();
   mlir::Location loc = callContext.loc;
+  const fir::IntrinsicArgumentLoweringRules *argLowering =
+      intrinsicEntry.getArgumentLoweringRules();
   for (auto arg : llvm::enumerate(loweredActuals)) {
     if (!arg.value()) {
       operands.emplace_back(fir::getAbsentIntrinsicArgument());
@@ -1970,7 +1993,7 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
   const std::string intrinsicName = callContext.getProcedureName();
   // Let the intrinsic library lower the intrinsic procedure call.
   auto [resultExv, mustBeFreed] = genIntrinsicCall(
-      builder, loc, intrinsicName, scalarResultType, operands, &converter);
+      builder, loc, intrinsicEntry, scalarResultType, operands, &converter);
   for (const hlfir::CleanupFunction &fn : cleanupFns)
     fn();
   if (!fir::getBase(resultExv))
@@ -1982,6 +2005,8 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
   // returns a null pointer variable that should not be transformed into a value
   // (what matters is the memory address).
   if (resultEntity.isVariable() && intrinsicName != "null") {
+    assert(!fir::isa_trivial(fir::unwrapRefType(resultEntity.getType())) &&
+           "expect intrinsic scalar results to not be in memory");
     hlfir::AsExprOp asExpr;
     // Character/Derived MERGE lowering returns one of its argument address
     // (this is the only intrinsic implemented in that way so far). The
@@ -2002,18 +2027,16 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
 static std::optional<hlfir::EntityWithAttributes> genHLFIRIntrinsicRefCore(
     Fortran::lower::PreparedActualArguments &loweredActuals,
     const Fortran::evaluate::SpecificIntrinsic *intrinsic,
-    const fir::IntrinsicArgumentLoweringRules *argLowering,
+    const fir::IntrinsicHandlerEntry &intrinsicEntry,
     CallContext &callContext) {
-  if (!useHlfirIntrinsicOps)
-    return genIntrinsicRefCore(loweredActuals, intrinsic, argLowering,
-                               callContext);
-
-  fir::FirOpBuilder &builder = callContext.getBuilder();
-  mlir::Location loc = callContext.loc;
-  const std::string intrinsicName = callContext.getProcedureName();
-
-  // transformational intrinsic ops always have a result type
-  if (callContext.resultType) {
+  // Try lowering transformational intrinsic ops to HLFIR ops if enabled
+  // (transformational always have a result type)
+  if (useHlfirIntrinsicOps && callContext.resultType) {
+    fir::FirOpBuilder &builder = callContext.getBuilder();
+    mlir::Location loc = callContext.loc;
+    const std::string intrinsicName = callContext.getProcedureName();
+    const fir::IntrinsicArgumentLoweringRules *argLowering =
+        intrinsicEntry.getArgumentLoweringRules();
     std::optional<hlfir::EntityWithAttributes> res =
         Fortran::lower::lowerHlfirIntrinsic(builder, loc, intrinsicName,
                                             loweredActuals, argLowering,
@@ -2023,7 +2046,7 @@ static std::optional<hlfir::EntityWithAttributes> genHLFIRIntrinsicRefCore(
   }
 
   // fallback to calling the intrinsic via fir.call
-  return genIntrinsicRefCore(loweredActuals, intrinsic, argLowering,
+  return genIntrinsicRefCore(loweredActuals, intrinsic, intrinsicEntry,
                              callContext);
 }
 
@@ -2203,8 +2226,45 @@ public:
   mlir::Value computeDynamicCharacterResultLength(
       Fortran::lower::PreparedActualArguments &loweredActuals,
       CallContext &callContext) {
-    TODO(callContext.loc,
-         "compute elemental function result length parameters in HLFIR");
+    fir::FirOpBuilder &builder = callContext.getBuilder();
+    mlir::Location loc = callContext.loc;
+    auto &converter = callContext.converter;
+    mlir::Type idxTy = builder.getIndexType();
+    llvm::SmallVector<CallCleanUp> callCleanUps;
+
+    prepareUserCallArguments(loweredActuals, caller, callSiteType, callContext,
+                             callCleanUps);
+
+    callContext.symMap.pushScope();
+
+    // Map prepared argument to dummy symbol to be able to lower spec expr.
+    for (const auto &arg : caller.getPassedArguments()) {
+      const Fortran::semantics::Symbol *sym = caller.getDummySymbol(arg);
+      assert(sym && "expect symbol for dummy argument");
+      auto input = caller.getInput(arg);
+      fir::ExtendedValue exv = Fortran::lower::translateToExtendedValue(
+          loc, builder, hlfir::Entity{input}, callContext.stmtCtx);
+      fir::FortranVariableOpInterface variableIface = hlfir::genDeclare(
+          loc, builder, exv, "dummy.tmp", fir::FortranVariableFlagsAttr{});
+      callContext.symMap.addVariableDefinition(*sym, variableIface);
+    }
+
+    auto lowerSpecExpr = [&](const auto &expr) -> mlir::Value {
+      mlir::Value convertExpr = builder.createConvert(
+          loc, idxTy,
+          fir::getBase(converter.genExprValue(expr, callContext.stmtCtx)));
+      return fir::factory::genMaxWithZero(builder, loc, convertExpr);
+    };
+
+    llvm::SmallVector<mlir::Value> lengths;
+    caller.walkResultLengths(
+        [&](const Fortran::lower::SomeExpr &e, bool isAssumedSizeExtent) {
+          assert(!isAssumedSizeExtent && "result cannot be assumed-size");
+          lengths.emplace_back(lowerSpecExpr(e));
+        });
+    callContext.symMap.popScope();
+    assert(lengths.size() == 1 && "expect 1 length parameter for the result");
+    return lengths[0];
   }
 
   mlir::Value getPolymorphicResultMold(
@@ -2245,13 +2305,13 @@ class ElementalIntrinsicCallBuilder
 public:
   ElementalIntrinsicCallBuilder(
       const Fortran::evaluate::SpecificIntrinsic *intrinsic,
-      const fir::IntrinsicArgumentLoweringRules *argLowering, bool isFunction)
-      : intrinsic{intrinsic}, argLowering{argLowering}, isFunction{isFunction} {
-  }
+      const fir::IntrinsicHandlerEntry &intrinsicEntry, bool isFunction)
+      : intrinsic{intrinsic}, intrinsicEntry{intrinsicEntry},
+        isFunction{isFunction} {}
   std::optional<hlfir::Entity>
   genElementalKernel(Fortran::lower::PreparedActualArguments &loweredActuals,
                      CallContext &callContext) {
-    return genHLFIRIntrinsicRefCore(loweredActuals, intrinsic, argLowering,
+    return genHLFIRIntrinsicRefCore(loweredActuals, intrinsic, intrinsicEntry,
                                     callContext);
   }
   // Elemental intrinsic functions cannot modify their arguments.
@@ -2305,7 +2365,7 @@ public:
 
 private:
   const Fortran::evaluate::SpecificIntrinsic *intrinsic;
-  const fir::IntrinsicArgumentLoweringRules *argLowering;
+  fir::IntrinsicHandlerEntry intrinsicEntry;
   const bool isFunction;
 };
 } // namespace
@@ -2378,11 +2438,16 @@ genCustomElementalIntrinsicRef(
       callContext.procRef, *intrinsic, callContext.resultType,
       prepareOptionalArg, prepareOtherArg, converter);
 
-  const fir::IntrinsicArgumentLoweringRules *argLowering =
-      fir::getIntrinsicArgumentLowering(callContext.getProcedureName());
+  std::optional<fir::IntrinsicHandlerEntry> intrinsicEntry =
+      fir::lookupIntrinsicHandler(callContext.getBuilder(),
+                                  callContext.getProcedureName(),
+                                  callContext.resultType);
+  assert(intrinsicEntry.has_value() &&
+         "intrinsic with custom handling for OPTIONAL arguments must have "
+         "lowering entries");
   // All of the custom intrinsic elementals with custom handling are pure
   // functions
-  return ElementalIntrinsicCallBuilder{intrinsic, argLowering,
+  return ElementalIntrinsicCallBuilder{intrinsic, *intrinsicEntry,
                                        /*isFunction=*/true}
       .genElementalCall(operands, /*isImpure=*/false, callContext);
 }
@@ -2435,8 +2500,9 @@ genCustomIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
                                          getActualFortranElementType());
       break;
     case fir::LowerIntrinsicArgAs::Inquired:
-      TODO(loc, "Inquired non-optional arg to intrinsic with custom handling");
-      return;
+      exv = Fortran::lower::translateToExtendedValue(loc, builder, actual,
+                                                     stmtCtx);
+      break;
     }
     if (!exv)
       llvm_unreachable("bad switch");
@@ -2458,21 +2524,15 @@ genCustomIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
 /// lowered as if it were an intrinsic module procedure (like C_LOC which is a
 /// procedure from intrinsic module iso_c_binding). Otherwise, \p intrinsic
 /// must not be null.
+
 static std::optional<hlfir::EntityWithAttributes>
 genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
+                const fir::IntrinsicHandlerEntry &intrinsicEntry,
                 CallContext &callContext) {
   mlir::Location loc = callContext.loc;
-  auto &converter = callContext.converter;
-  if (intrinsic && Fortran::lower::intrinsicRequiresCustomOptionalHandling(
-                       callContext.procRef, *intrinsic, converter)) {
-    if (callContext.isElementalProcWithArrayArgs())
-      return genCustomElementalIntrinsicRef(intrinsic, callContext);
-    return genCustomIntrinsicRef(intrinsic, callContext);
-  }
-
   Fortran::lower::PreparedActualArguments loweredActuals;
   const fir::IntrinsicArgumentLoweringRules *argLowering =
-      fir::getIntrinsicArgumentLowering(callContext.getProcedureName());
+      intrinsicEntry.getArgumentLoweringRules();
   for (const auto &arg : llvm::enumerate(callContext.procRef.arguments())) {
 
     if (!arg.value()) {
@@ -2522,12 +2582,12 @@ genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
   if (callContext.isElementalProcWithArrayArgs()) {
     // All intrinsic elemental functions are pure.
     const bool isFunction = callContext.resultType.has_value();
-    return ElementalIntrinsicCallBuilder{intrinsic, argLowering, isFunction}
+    return ElementalIntrinsicCallBuilder{intrinsic, intrinsicEntry, isFunction}
         .genElementalCall(loweredActuals, /*isImpure=*/!isFunction,
                           callContext);
   }
   std::optional<hlfir::EntityWithAttributes> result = genHLFIRIntrinsicRefCore(
-      loweredActuals, intrinsic, argLowering, callContext);
+      loweredActuals, intrinsic, intrinsicEntry, callContext);
   if (result && mlir::isa<hlfir::ExprType>(result->getType())) {
     fir::FirOpBuilder *bldr = &callContext.getBuilder();
     callContext.stmtCtx.attachCleanup(
@@ -2536,18 +2596,43 @@ genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
   return result;
 }
 
+static std::optional<hlfir::EntityWithAttributes>
+genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
+                CallContext &callContext) {
+  mlir::Location loc = callContext.loc;
+  auto &converter = callContext.converter;
+  if (intrinsic && Fortran::lower::intrinsicRequiresCustomOptionalHandling(
+                       callContext.procRef, *intrinsic, converter)) {
+    if (callContext.isElementalProcWithArrayArgs())
+      return genCustomElementalIntrinsicRef(intrinsic, callContext);
+    return genCustomIntrinsicRef(intrinsic, callContext);
+  }
+  std::optional<fir::IntrinsicHandlerEntry> intrinsicEntry =
+      fir::lookupIntrinsicHandler(callContext.getBuilder(),
+                                  callContext.getProcedureName(),
+                                  callContext.resultType);
+  if (!intrinsicEntry)
+    fir::crashOnMissingIntrinsic(loc, callContext.getProcedureName());
+  return genIntrinsicRef(intrinsic, *intrinsicEntry, callContext);
+}
+
 /// Main entry point to lower procedure references, regardless of what they are.
 static std::optional<hlfir::EntityWithAttributes>
 genProcedureRef(CallContext &callContext) {
   mlir::Location loc = callContext.loc;
+  fir::FirOpBuilder &builder = callContext.getBuilder();
   if (auto *intrinsic = callContext.procRef.proc().GetSpecificIntrinsic())
     return genIntrinsicRef(intrinsic, callContext);
-  // If it is an intrinsic module procedure reference - then treat as
-  // intrinsic unless it is bind(c) (since implementation is external from
-  // module).
+  // Intercept non BIND(C) module procedure reference that have lowering
+  // handlers defined for there name. Otherwise, lower them as user
+  // procedure calls and expect the implementation to be part of
+  // runtime libraries with the proper name mangling.
   if (Fortran::lower::isIntrinsicModuleProcRef(callContext.procRef) &&
       !callContext.isBindcCall())
-    return genIntrinsicRef(nullptr, callContext);
+    if (std::optional<fir::IntrinsicHandlerEntry> intrinsicEntry =
+            fir::lookupIntrinsicHandler(builder, callContext.getProcedureName(),
+                                        callContext.resultType))
+      return genIntrinsicRef(nullptr, *intrinsicEntry, callContext);
 
   if (callContext.isStatementFunctionCall())
     return genStmtFunctionRef(loc, callContext.converter, callContext.symMap,
@@ -2582,7 +2667,6 @@ genProcedureRef(CallContext &callContext) {
           // TYPE(*) cannot be ALLOCATABLE/POINTER (C709) so there is no
           // need to cover the case of passing an ALLOCATABLE/POINTER to an
           // OPTIONAL.
-          fir::FirOpBuilder &builder = callContext.getBuilder();
           isPresent =
               builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), actual)
                   .getResult();
@@ -2682,10 +2766,48 @@ bool Fortran::lower::isIntrinsicModuleProcRef(
   return module && module->attrs().test(Fortran::semantics::Attr::INTRINSIC);
 }
 
+static bool isInWhereMaskedExpression(fir::FirOpBuilder &builder) {
+  // The MASK of the outer WHERE is not masked itself.
+  mlir::Operation *op = builder.getRegion().getParentOp();
+  return op && op->getParentOfType<hlfir::WhereOp>();
+}
+
 std::optional<hlfir::EntityWithAttributes> Fortran::lower::convertCallToHLFIR(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     const evaluate::ProcedureRef &procRef, std::optional<mlir::Type> resultType,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
+  auto &builder = converter.getFirOpBuilder();
+  if (resultType && !procRef.IsElemental() &&
+      isInWhereMaskedExpression(builder) &&
+      !builder.getRegion().getParentOfType<hlfir::ExactlyOnceOp>()) {
+    // Non elemental calls inside a where-assignment-stmt must be executed
+    // exactly once without mask control. Lower them in a special region so that
+    // this can be enforced whenscheduling forall/where expression evaluations.
+    Fortran::lower::StatementContext localStmtCtx;
+    mlir::Type bogusType = builder.getIndexType();
+    auto exactlyOnce = builder.create<hlfir::ExactlyOnceOp>(loc, bogusType);
+    mlir::Block *block = builder.createBlock(&exactlyOnce.getBody());
+    builder.setInsertionPointToStart(block);
+    CallContext callContext(procRef, resultType, loc, converter, symMap,
+                            localStmtCtx);
+    std::optional<hlfir::EntityWithAttributes> res =
+        genProcedureRef(callContext);
+    assert(res.has_value() && "must be a function");
+    auto yield = builder.create<hlfir::YieldOp>(loc, *res);
+    Fortran::lower::genCleanUpInRegionIfAny(loc, builder, yield.getCleanup(),
+                                            localStmtCtx);
+    builder.setInsertionPointAfter(exactlyOnce);
+    exactlyOnce->getResult(0).setType(res->getType());
+    if (hlfir::isFortranValue(exactlyOnce.getResult()))
+      return hlfir::EntityWithAttributes{exactlyOnce.getResult()};
+    // Create hlfir.declare for the result to satisfy
+    // hlfir::EntityWithAttributes requirements.
+    auto [exv, cleanup] = hlfir::translateToExtendedValue(
+        loc, builder, hlfir::Entity{exactlyOnce});
+    assert(!cleanup && "resut is a variable");
+    return hlfir::genDeclare(loc, builder, exv, ".func.pointer.result",
+                             fir::FortranVariableFlagsAttr{});
+  }
   CallContext callContext(procRef, resultType, loc, converter, symMap, stmtCtx);
   return genProcedureRef(callContext);
 }

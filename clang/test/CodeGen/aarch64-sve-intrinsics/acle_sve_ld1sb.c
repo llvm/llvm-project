@@ -5,7 +5,15 @@
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -emit-llvm -o - %s | opt -S -passes=mem2reg,instcombine,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -S -disable-O0-optnone -Werror -o /dev/null %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -S -disable-O0-optnone -Werror -o /dev/null %s
+
 #include <arm_sve.h>
+
+#if defined __ARM_FEATURE_SME
+#define MODE_ATTR __arm_streaming
+#else
+#define MODE_ATTR
+#endif
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -28,7 +36,7 @@
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = sext <vscale x 8 x i8> [[TMP1]] to <vscale x 8 x i16>
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
 //
-svint16_t test_svld1sb_s16(svbool_t pg, const int8_t *base)
+svint16_t test_svld1sb_s16(svbool_t pg, const int8_t *base) MODE_ATTR
 {
   return svld1sb_s16(pg, base);
 }
@@ -47,7 +55,7 @@ svint16_t test_svld1sb_s16(svbool_t pg, const int8_t *base)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = sext <vscale x 4 x i8> [[TMP1]] to <vscale x 4 x i32>
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
 //
-svint32_t test_svld1sb_s32(svbool_t pg, const int8_t *base)
+svint32_t test_svld1sb_s32(svbool_t pg, const int8_t *base) MODE_ATTR
 {
   return svld1sb_s32(pg, base);
 }
@@ -66,7 +74,7 @@ svint32_t test_svld1sb_s32(svbool_t pg, const int8_t *base)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = sext <vscale x 2 x i8> [[TMP1]] to <vscale x 2 x i64>
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
 //
-svint64_t test_svld1sb_s64(svbool_t pg, const int8_t *base)
+svint64_t test_svld1sb_s64(svbool_t pg, const int8_t *base) MODE_ATTR
 {
   return svld1sb_s64(pg, base);
 }
@@ -85,7 +93,7 @@ svint64_t test_svld1sb_s64(svbool_t pg, const int8_t *base)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = sext <vscale x 8 x i8> [[TMP1]] to <vscale x 8 x i16>
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
 //
-svuint16_t test_svld1sb_u16(svbool_t pg, const int8_t *base)
+svuint16_t test_svld1sb_u16(svbool_t pg, const int8_t *base) MODE_ATTR
 {
   return svld1sb_u16(pg, base);
 }
@@ -104,7 +112,7 @@ svuint16_t test_svld1sb_u16(svbool_t pg, const int8_t *base)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = sext <vscale x 4 x i8> [[TMP1]] to <vscale x 4 x i32>
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
 //
-svuint32_t test_svld1sb_u32(svbool_t pg, const int8_t *base)
+svuint32_t test_svld1sb_u32(svbool_t pg, const int8_t *base) MODE_ATTR
 {
   return svld1sb_u32(pg, base);
 }
@@ -123,7 +131,7 @@ svuint32_t test_svld1sb_u32(svbool_t pg, const int8_t *base)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = sext <vscale x 2 x i8> [[TMP1]] to <vscale x 2 x i64>
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
 //
-svuint64_t test_svld1sb_u64(svbool_t pg, const int8_t *base)
+svuint64_t test_svld1sb_u64(svbool_t pg, const int8_t *base) MODE_ATTR
 {
   return svld1sb_u64(pg, base);
 }
@@ -150,7 +158,7 @@ svuint64_t test_svld1sb_u64(svbool_t pg, const int8_t *base)
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = sext <vscale x 8 x i8> [[TMP4]] to <vscale x 8 x i16>
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP5]]
 //
-svint16_t test_svld1sb_vnum_s16(svbool_t pg, const int8_t *base, int64_t vnum)
+svint16_t test_svld1sb_vnum_s16(svbool_t pg, const int8_t *base, int64_t vnum) MODE_ATTR
 {
   return svld1sb_vnum_s16(pg, base, vnum);
 }
@@ -177,7 +185,7 @@ svint16_t test_svld1sb_vnum_s16(svbool_t pg, const int8_t *base, int64_t vnum)
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = sext <vscale x 4 x i8> [[TMP4]] to <vscale x 4 x i32>
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP5]]
 //
-svint32_t test_svld1sb_vnum_s32(svbool_t pg, const int8_t *base, int64_t vnum)
+svint32_t test_svld1sb_vnum_s32(svbool_t pg, const int8_t *base, int64_t vnum) MODE_ATTR
 {
   return svld1sb_vnum_s32(pg, base, vnum);
 }
@@ -204,7 +212,7 @@ svint32_t test_svld1sb_vnum_s32(svbool_t pg, const int8_t *base, int64_t vnum)
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = sext <vscale x 2 x i8> [[TMP4]] to <vscale x 2 x i64>
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP5]]
 //
-svint64_t test_svld1sb_vnum_s64(svbool_t pg, const int8_t *base, int64_t vnum)
+svint64_t test_svld1sb_vnum_s64(svbool_t pg, const int8_t *base, int64_t vnum) MODE_ATTR
 {
   return svld1sb_vnum_s64(pg, base, vnum);
 }
@@ -231,7 +239,7 @@ svint64_t test_svld1sb_vnum_s64(svbool_t pg, const int8_t *base, int64_t vnum)
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = sext <vscale x 8 x i8> [[TMP4]] to <vscale x 8 x i16>
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP5]]
 //
-svuint16_t test_svld1sb_vnum_u16(svbool_t pg, const int8_t *base, int64_t vnum)
+svuint16_t test_svld1sb_vnum_u16(svbool_t pg, const int8_t *base, int64_t vnum) MODE_ATTR
 {
   return svld1sb_vnum_u16(pg, base, vnum);
 }
@@ -258,7 +266,7 @@ svuint16_t test_svld1sb_vnum_u16(svbool_t pg, const int8_t *base, int64_t vnum)
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = sext <vscale x 4 x i8> [[TMP4]] to <vscale x 4 x i32>
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP5]]
 //
-svuint32_t test_svld1sb_vnum_u32(svbool_t pg, const int8_t *base, int64_t vnum)
+svuint32_t test_svld1sb_vnum_u32(svbool_t pg, const int8_t *base, int64_t vnum) MODE_ATTR
 {
   return svld1sb_vnum_u32(pg, base, vnum);
 }
@@ -285,10 +293,12 @@ svuint32_t test_svld1sb_vnum_u32(svbool_t pg, const int8_t *base, int64_t vnum)
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = sext <vscale x 2 x i8> [[TMP4]] to <vscale x 2 x i64>
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP5]]
 //
-svuint64_t test_svld1sb_vnum_u64(svbool_t pg, const int8_t *base, int64_t vnum)
+svuint64_t test_svld1sb_vnum_u64(svbool_t pg, const int8_t *base, int64_t vnum) MODE_ATTR
 {
   return svld1sb_vnum_u64(pg, base, vnum);
 }
+
+#ifndef __ARM_FEATURE_SME 
 
 // CHECK-LABEL: @test_svld1sb_gather_u32base_s32(
 // CHECK-NEXT:  entry:
@@ -577,3 +587,5 @@ svuint32_t test_svld1sb_gather_u32base_offset_u32(svbool_t pg, svuint32_t bases,
 svuint64_t test_svld1sb_gather_u64base_offset_u64(svbool_t pg, svuint64_t bases, int64_t offset) {
   return SVE_ACLE_FUNC(svld1sb_gather, _u64base, _offset_u64, )(pg, bases, offset);
 }
+
+#endif

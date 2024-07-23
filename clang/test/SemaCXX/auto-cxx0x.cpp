@@ -12,7 +12,7 @@ thread_local auto x; // expected-error {{requires an initializer}}
 void g() {
   [](auto){}(0);
 #if __cplusplus == 201103L
-  // expected-error@-2 {{'auto' not allowed in lambda parameter}}
+  // expected-error@-2 {{'auto' not allowed in lambda parameter before C++14}}
 #endif
 }
 
@@ -20,6 +20,6 @@ void rdar47689465() {
   int x = 0;
   [](auto __attribute__((noderef)) *){}(&x);
 #if __cplusplus == 201103L
-  // expected-error@-2 {{'auto' not allowed in lambda parameter}}
+  // expected-error@-2 {{'auto' not allowed in lambda parameter before C++14}}
 #endif
 }

@@ -32,6 +32,7 @@ namespace llvm {
 
 class AssemblyAnnotationWriter;
 class CallInst;
+class DataLayout;
 class Function;
 class LandingPadInst;
 class LLVMContext;
@@ -59,7 +60,8 @@ class DbgMarker;
 class BasicBlock final : public Value, // Basic blocks are data objects also
                          public ilist_node_with_parent<BasicBlock, Function> {
 public:
-  using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>>;
+  using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>,
+                                       ilist_parent<BasicBlock>>;
   /// Flag recording whether or not this block stores debug-info in the form
   /// of intrinsic instructions (false) or non-instruction records (true).
   bool IsNewDbgInfoFormat;
@@ -172,10 +174,11 @@ public:
   friend BasicBlock::iterator Instruction::eraseFromParent();
   friend BasicBlock::iterator Instruction::insertInto(BasicBlock *BB,
                                                       BasicBlock::iterator It);
-  friend class llvm::SymbolTableListTraits<llvm::Instruction,
-                                           ilist_iterator_bits<true>>;
+  friend class llvm::SymbolTableListTraits<
+      llvm::Instruction, ilist_iterator_bits<true>, ilist_parent<BasicBlock>>;
   friend class llvm::ilist_node_with_parent<llvm::Instruction, llvm::BasicBlock,
-                                            ilist_iterator_bits<true>>;
+                                            ilist_iterator_bits<true>,
+                                            ilist_parent<BasicBlock>>;
 
   // Friendly methods that need to access us for the maintenence of
   // debug-info attachments.
@@ -215,6 +218,11 @@ public:
     return const_cast<Module *>(
                             static_cast<const BasicBlock *>(this)->getModule());
   }
+
+  /// Get the data layout of the module this basic block belongs to.
+  ///
+  /// Requires the basic block to have a parent module.
+  const DataLayout &getDataLayout() const;
 
   /// Returns the terminator instruction if the block is well formed or null
   /// if the block is not well formed.

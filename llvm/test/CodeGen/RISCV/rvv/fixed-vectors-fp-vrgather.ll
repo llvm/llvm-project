@@ -5,9 +5,9 @@
 define void @gather_const_v8f16(ptr %x) {
 ; CHECK-LABEL: gather_const_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, a0, 10
+; CHECK-NEXT:    flh fa5, 10(a0)
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vlse16.v v8, (a1), zero
+; CHECK-NEXT:    vfmv.v.f v8, fa5
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, ptr %x
@@ -21,9 +21,9 @@ define void @gather_const_v8f16(ptr %x) {
 define void @gather_const_v4f32(ptr %x) {
 ; CHECK-LABEL: gather_const_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, a0, 8
+; CHECK-NEXT:    flw fa5, 8(a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vlse32.v v8, (a1), zero
+; CHECK-NEXT:    vfmv.v.f v8, fa5
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, ptr %x
@@ -37,8 +37,9 @@ define void @gather_const_v4f32(ptr %x) {
 define void @gather_const_v2f64(ptr %x) {
 ; CHECK-LABEL: gather_const_v2f64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    fld fa5, 0(a0)
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vlse64.v v8, (a0), zero
+; CHECK-NEXT:    vfmv.v.f v8, fa5
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, ptr %x
@@ -52,10 +53,10 @@ define void @gather_const_v2f64(ptr %x) {
 define void @gather_const_v64f16(ptr %x) {
 ; CHECK-LABEL: gather_const_v64f16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    flh fa5, 94(a0)
 ; CHECK-NEXT:    li a1, 64
-; CHECK-NEXT:    addi a2, a0, 94
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
-; CHECK-NEXT:    vlse16.v v8, (a2), zero
+; CHECK-NEXT:    vfmv.v.f v8, fa5
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <64 x half>, ptr %x
@@ -69,10 +70,10 @@ define void @gather_const_v64f16(ptr %x) {
 define void @gather_const_v32f32(ptr %x) {
 ; CHECK-LABEL: gather_const_v32f32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    flw fa5, 68(a0)
 ; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    addi a2, a0, 68
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; CHECK-NEXT:    vlse32.v v8, (a2), zero
+; CHECK-NEXT:    vfmv.v.f v8, fa5
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <32 x float>, ptr %x
@@ -86,9 +87,9 @@ define void @gather_const_v32f32(ptr %x) {
 define void @gather_const_v16f64(ptr %x) {
 ; CHECK-LABEL: gather_const_v16f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, a0, 80
+; CHECK-NEXT:    fld fa5, 80(a0)
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; CHECK-NEXT:    vlse64.v v8, (a1), zero
+; CHECK-NEXT:    vfmv.v.f v8, fa5
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x double>, ptr %x

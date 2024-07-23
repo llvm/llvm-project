@@ -1,7 +1,7 @@
-; RUN: opt %loadPolly -polly-analyze-read-only-scalars=false -polly-codegen \
+; RUN: opt %loadNPMPolly -polly-analyze-read-only-scalars=false -passes=polly-codegen \
 ; RUN:     \
 ; RUN:     -S < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-analyze-read-only-scalars=true -polly-codegen \
+; RUN: opt %loadNPMPolly -polly-analyze-read-only-scalars=true -passes=polly-codegen \
 ; RUN:     \
 ; RUN:     -S < %s | FileCheck %s -check-prefix=SCALAR
 

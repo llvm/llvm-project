@@ -202,9 +202,9 @@ define void @tail_merge_switch(i32 %v) {
 ; CHECK-LABEL: @tail_merge_switch(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[V:%.*]], label [[RET:%.*]] [
-; CHECK-NEXT:    i32 0, label [[A1:%.*]]
-; CHECK-NEXT:    i32 13, label [[A2:%.*]]
-; CHECK-NEXT:    i32 42, label [[A3:%.*]]
+; CHECK-NEXT:      i32 0, label [[A1:%.*]]
+; CHECK-NEXT:      i32 13, label [[A2:%.*]]
+; CHECK-NEXT:      i32 42, label [[A3:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       a1:
 ; CHECK-NEXT:    call void @assert_fail_1(i32 0)
@@ -325,8 +325,8 @@ define void @dont_merge_lifetimes(i32 %c1, i32 %c2) {
 ; CHECK-NEXT:    [[X:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[Y:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    switch i32 [[C1:%.*]], label [[IF_END9:%.*]] [
-; CHECK-NEXT:    i32 13, label [[IF_THEN:%.*]]
-; CHECK-NEXT:    i32 42, label [[IF_THEN3:%.*]]
+; CHECK-NEXT:      i32 13, label [[IF_THEN:%.*]]
+; CHECK-NEXT:      i32 42, label [[IF_THEN3:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[X]])
@@ -445,17 +445,17 @@ cont3:
 define void @strip_dbg_value(i32 %c) {
 ; CHECK-LABEL: @strip_dbg_value(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[C:%.*]], metadata [[META5:![0-9]+]], metadata !DIExpression()), !dbg [[DBG7:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(i32 [[C:%.*]], [[META5:![0-9]+]], !DIExpression(), [[META7:![0-9]+]])
 ; CHECK-NEXT:    switch i32 [[C]], label [[SW_EPILOG:%.*]] [
-; CHECK-NEXT:    i32 13, label [[SW_BB:%.*]]
-; CHECK-NEXT:    i32 42, label [[SW_BB1:%.*]]
+; CHECK-NEXT:      i32 13, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i32 42, label [[SW_BB1:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 55, metadata [[META5]], metadata !DIExpression()), !dbg [[DBG7]]
+; CHECK-NEXT:      #dbg_value(i32 55, [[META5]], !DIExpression(), [[META7]])
 ; CHECK-NEXT:    tail call void @abort()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       sw.bb1:
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 67, metadata [[META5]], metadata !DIExpression()), !dbg [[DBG7]]
+; CHECK-NEXT:      #dbg_value(i32 67, [[META5]], !DIExpression(), [[META7]])
 ; CHECK-NEXT:    tail call void @abort()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       sw.epilog:
@@ -485,21 +485,21 @@ sw.epilog:                                        ; preds = %entry
 define void @dead_phi_and_dbg(i32 %c) {
 ; CHECK-LABEL: @dead_phi_and_dbg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[C:%.*]], metadata [[META5]], metadata !DIExpression()), !dbg [[DBG7]]
+; CHECK-NEXT:      #dbg_value(i32 [[C:%.*]], [[META5]], !DIExpression(), [[META7]])
 ; CHECK-NEXT:    switch i32 [[C]], label [[SW_EPILOG:%.*]] [
-; CHECK-NEXT:    i32 13, label [[SW_BB:%.*]]
-; CHECK-NEXT:    i32 42, label [[SW_BB1:%.*]]
-; CHECK-NEXT:    i32 53, label [[SW_BB2:%.*]]
+; CHECK-NEXT:      i32 13, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i32 42, label [[SW_BB1:%.*]]
+; CHECK-NEXT:      i32 53, label [[SW_BB2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    [[C_1:%.*]] = phi i32 [ 55, [[ENTRY:%.*]] ], [ 67, [[SW_BB1]] ]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[C_1]], metadata [[META5]], metadata !DIExpression()), !dbg [[DBG7]]
+; CHECK-NEXT:      #dbg_value(i32 [[C_1]], [[META5]], !DIExpression(), [[META7]])
 ; CHECK-NEXT:    tail call void @abort()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       sw.bb1:
 ; CHECK-NEXT:    br label [[SW_BB]]
 ; CHECK:       sw.bb2:
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 84, metadata [[META5]], metadata !DIExpression()), !dbg [[DBG7]]
+; CHECK-NEXT:      #dbg_value(i32 84, [[META5]], !DIExpression(), [[META7]])
 ; CHECK-NEXT:    tail call void @abort()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       sw.epilog:

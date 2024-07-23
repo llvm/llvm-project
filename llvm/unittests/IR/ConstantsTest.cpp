@@ -56,11 +56,11 @@ TEST(ConstantsTest, Integer_i1) {
 
   // @h = constant i1 shl(i1 1 , i1 1)  ; poison
   // @h = constant i1 poison
-  EXPECT_EQ(Poison, ConstantExpr::getShl(One, One));
+  EXPECT_EQ(Poison, ConstantFoldBinaryInstruction(Instruction::Shl, One, One));
 
   // @i = constant i1 shl(i1 1 , i1 0)
   // @i = constant i1 true
-  EXPECT_EQ(One, ConstantExpr::getShl(One, Zero));
+  EXPECT_EQ(One, ConstantFoldBinaryInstruction(Instruction::Shl, One, Zero));
 
   // @n = constant i1 mul(i1 -1, i1 1)
   // @n = constant i1 true
@@ -216,13 +216,6 @@ TEST(ConstantsTest, AsInstructionsTest) {
   CHECK(ConstantExpr::getSub(P0, P0), "sub i32 " P0STR ", " P0STR);
   CHECK(ConstantExpr::getMul(P0, P0), "mul i32 " P0STR ", " P0STR);
   CHECK(ConstantExpr::getXor(P0, P0), "xor i32 " P0STR ", " P0STR);
-  CHECK(ConstantExpr::getShl(P0, P0), "shl i32 " P0STR ", " P0STR);
-  CHECK(ConstantExpr::getShl(P0, P0, true), "shl nuw i32 " P0STR ", " P0STR);
-  CHECK(ConstantExpr::getShl(P0, P0, false, true),
-        "shl nsw i32 " P0STR ", " P0STR);
-
-  CHECK(ConstantExpr::getICmp(CmpInst::ICMP_EQ, P0, P4),
-        "icmp eq i32 " P0STR ", " P4STR);
 
   std::vector<Constant *> V;
   V.push_back(One);

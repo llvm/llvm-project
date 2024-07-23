@@ -466,14 +466,14 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
         ConsumeAnyToken();
     } else if (HasUnparsed) {
       assert(Param->hasInheritedDefaultArg());
-      const FunctionDecl *Old;
+      FunctionDecl *Old;
       if (const auto *FunTmpl = dyn_cast<FunctionTemplateDecl>(LM.Method))
         Old =
             cast<FunctionDecl>(FunTmpl->getTemplatedDecl())->getPreviousDecl();
       else
         Old = cast<FunctionDecl>(LM.Method)->getPreviousDecl();
       if (Old) {
-        ParmVarDecl *OldParam = const_cast<ParmVarDecl*>(Old->getParamDecl(I));
+        ParmVarDecl *OldParam = Old->getParamDecl(I);
         assert(!OldParam->hasUnparsedDefaultArg());
         if (OldParam->hasUninstantiatedDefaultArg())
           Param->setUninstantiatedDefaultArg(
@@ -511,11 +511,28 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
     //   and the end of the function-definition, member-declarator, or
     //   declarator.
     CXXMethodDecl *Method;
+    FunctionDecl *FunctionToPush;
     if (FunctionTemplateDecl *FunTmpl
           = dyn_cast<FunctionTemplateDecl>(LM.Method))
-      Method = dyn_cast<CXXMethodDecl>(FunTmpl->getTemplatedDecl());
+      FunctionToPush = FunTmpl->getTemplatedDecl();
     else
-      Method = dyn_cast<CXXMethodDecl>(LM.Method);
+      FunctionToPush = cast<FunctionDecl>(LM.Method);
+    Method = dyn_cast<CXXMethodDecl>(FunctionToPush);
+
+    // Push a function scope so that tryCaptureVariable() can properly visit
+    // function scopes involving function parameters that are referenced inside
+    // the noexcept specifier e.g. through a lambda expression.
+    // Example:
+    // struct X {
+    //   void ICE(int val) noexcept(noexcept([val]{}));
+    // };
+    // Setup the CurScope to match the function DeclContext - we have such
+    // assumption in IsInFnTryBlockHandler().
+    ParseScope FnScope(this, Scope::FnScope);
+    Sema::ContextRAII FnContext(Actions, FunctionToPush,
+                                /*NewThisContext=*/false);
+    Sema::FunctionScopeRAII PopFnContext(Actions);
+    Actions.PushFunctionScope();
 
     Sema::CXXThisScopeRAII ThisScope(
         Actions, Method ? Method->getParent() : nullptr,

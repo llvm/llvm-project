@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: nvptx-registered-target
-
 // -flto causes a switch to llvm-bc object files.
 // RUN: %clangxx --target=x86_64-unknown-linux-gnu --no-offload-new-driver -nocudainc -nocudalib -ccc-print-phases -c %s -flto 2> %t
 // RUN: FileCheck -check-prefix=CHECK-COMPILE-ACTIONS < %t %s

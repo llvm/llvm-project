@@ -85,9 +85,9 @@ void test_builtins(double d, float f, long double ld) {
   double atan_ = atan(d);
   long double atanl_ = atanl(ld);
   float atanf_ = atanf(f);
-// CHECK-NO: declare double @atan(double noundef) [[NUW_RN:#[0-9]+]]
-// CHECK-NO: declare x86_fp80 @atanl(x86_fp80 noundef) [[NUW_RN]]
-// CHECK-NO: declare float @atanf(float noundef) [[NUW_RN]]
+// CHECK-NO: declare double @llvm.atan.f64(double) [[NUW_RNI:#[0-9]+]]
+// CHECK-NO: declare x86_fp80 @llvm.atan.f80(x86_fp80) [[NUW_RNI]]
+// CHECK-NO: declare float @llvm.atan.f32(float) [[NUW_RNI]]
 // CHECK-YES: declare double @atan(double noundef) [[NUW:#[0-9]+]]
 // CHECK-YES: declare x86_fp80 @atanl(x86_fp80 noundef) [[NUW]]
 // CHECK-YES: declare float @atanf(float noundef) [[NUW]]
@@ -95,7 +95,7 @@ void test_builtins(double d, float f, long double ld) {
   double atan2_ = atan2(d, 2);
   long double atan2l_ = atan2l(ld, ld);
   float atan2f_ = atan2f(f, f);
-// CHECK-NO: declare double @atan2(double noundef, double noundef) [[NUW_RN]]
+// CHECK-NO: declare double @atan2(double noundef, double noundef) [[NUW_RN:#[0-9]+]]
 // CHECK-NO: declare x86_fp80 @atan2l(x86_fp80 noundef, x86_fp80 noundef) [[NUW_RN]]
 // CHECK-NO: declare float @atan2f(float noundef, float noundef) [[NUW_RN]]
 // CHECK-YES: declare double @atan2(double noundef, double noundef) [[NUW]]

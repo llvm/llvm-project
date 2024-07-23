@@ -34,7 +34,7 @@ end program
 ! CHECK:           %[[VAL_2:.*]] = fir.address_of(@_QFEr) : !fir.ref<i32>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFEr"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_4:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+! CHECK:             %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 ! CHECK:             %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_6:.*]] = arith.constant 0 : i32
 ! CHECK:             %[[VAL_7:.*]] = arith.constant 10 : i32

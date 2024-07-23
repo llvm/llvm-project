@@ -7,13 +7,24 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -global-isel=1 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
 
 define amdgpu_kernel void @workgroup_ids_kernel() {
-; GFX9-LABEL: workgroup_ids_kernel:
-; GFX9:       ; %bb.0: ; %.entry
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    v_mov_b32_e32 v2, s2
-; GFX9-NEXT:    buffer_store_dwordx3 v[0:2], off, s[0:3], 0
-; GFX9-NEXT:    s_endpgm
+; GFX9-SDAG-LABEL: workgroup_ids_kernel:
+; GFX9-SDAG:       ; %bb.0: ; %.entry
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, s6
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s7
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, s8
+; GFX9-SDAG-NEXT:    buffer_store_dwordx3 v[0:2], off, s[0:3], 0
+; GFX9-SDAG-NEXT:    s_endpgm
+;
+; GFX9-GISEL-LABEL: workgroup_ids_kernel:
+; GFX9-GISEL:       ; %bb.0: ; %.entry
+; GFX9-GISEL-NEXT:    s_mov_b32 s0, s6
+; GFX9-GISEL-NEXT:    s_mov_b32 s1, s7
+; GFX9-GISEL-NEXT:    s_mov_b32 s2, s8
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-GISEL-NEXT:    buffer_store_dwordx3 v[0:2], off, s[0:3], 0
+; GFX9-GISEL-NEXT:    s_endpgm
 ;
 ; GFX9ARCH-SDAG-LABEL: workgroup_ids_kernel:
 ; GFX9ARCH-SDAG:       ; %bb.0: ; %.entry
@@ -76,7 +87,7 @@ define amdgpu_kernel void @caller() {
 ; GFX9-SDAG-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
 ; GFX9-SDAG-NEXT:    s_mov_b32 s38, -1
 ; GFX9-SDAG-NEXT:    s_mov_b32 s39, 0xe00000
-; GFX9-SDAG-NEXT:    s_add_u32 s36, s36, s7
+; GFX9-SDAG-NEXT:    s_add_u32 s36, s36, s9
 ; GFX9-SDAG-NEXT:    s_addc_u32 s37, s37, 0
 ; GFX9-SDAG-NEXT:    s_add_u32 s8, s2, 36
 ; GFX9-SDAG-NEXT:    s_addc_u32 s9, s3, 0
@@ -104,7 +115,7 @@ define amdgpu_kernel void @caller() {
 ; GFX9-GISEL-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
 ; GFX9-GISEL-NEXT:    s_mov_b32 s38, -1
 ; GFX9-GISEL-NEXT:    s_mov_b32 s39, 0xe00000
-; GFX9-GISEL-NEXT:    s_add_u32 s36, s36, s7
+; GFX9-GISEL-NEXT:    s_add_u32 s36, s36, s9
 ; GFX9-GISEL-NEXT:    s_addc_u32 s37, s37, 0
 ; GFX9-GISEL-NEXT:    s_add_u32 s8, s2, 36
 ; GFX9-GISEL-NEXT:    s_addc_u32 s9, s3, 0

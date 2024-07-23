@@ -418,6 +418,13 @@ private:
   // Loop Sequence Stack, stores the universal index for the current loop
   // sequence. and a list of tid level that the loop sequence traverse.
   std::vector<std::pair<Value, std::vector<TensorLevel>>> loopSeqStack;
+
+  //
+  // EXPERIMENTAL:
+  // Fields for generating sparse-iterator-based loop.
+  //
+
+  std::vector<std::vector<Value>> spIterVals;
 };
 
 } // namespace sparse_tensor

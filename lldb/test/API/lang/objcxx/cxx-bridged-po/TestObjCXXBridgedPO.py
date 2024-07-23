@@ -7,7 +7,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestObjCXXBridgedPO(TestBase):
     @skipIfDarwinEmbedded
     @skipIf(macos_version=[">=", "13.0"])
-    def test_bridged_type_po(self):
+    def test_bridged_type_po_old(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.mm")

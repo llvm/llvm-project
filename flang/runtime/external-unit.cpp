@@ -58,19 +58,24 @@ ExternalFileUnit *ExternalFileUnit::LookUpOrCreate(
 
 ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
     Direction dir, Fortran::common::optional<bool> isUnformatted,
-    const Terminator &terminator) {
-  // Make sure that the returned anonymous unit has been opened
+    IoErrorHandler &handler) {
+  // Make sure that the returned anonymous unit has been opened,
   // not just created in the unitMap.
   CriticalSection critical{createOpenLock};
   bool exists{false};
-  ExternalFileUnit *result{
-      GetUnitMap().LookUpOrCreate(unit, terminator, exists)};
+  ExternalFileUnit *result{GetUnitMap().LookUpOrCreate(unit, handler, exists)};
   if (result && !exists) {
-    IoErrorHandler handler{terminator};
-    result->OpenAnonymousUnit(
-        dir == Direction::Input ? OpenStatus::Unknown : OpenStatus::Replace,
-        Action::ReadWrite, Position::Rewind, Convert::Unknown, handler);
-    result->isUnformatted = isUnformatted;
+    if (!result->OpenAnonymousUnit(
+            dir == Direction::Input ? OpenStatus::Unknown : OpenStatus::Replace,
+            Action::ReadWrite, Position::Rewind, Convert::Unknown, handler)) {
+      // fort.N isn't a writable file
+      if (ExternalFileUnit * closed{LookUpForClose(result->unitNumber())}) {
+        closed->DestroyClosed();
+      }
+      result = nullptr;
+    } else {
+      result->isUnformatted = isUnformatted;
+    }
   }
   return result;
 }
@@ -143,6 +148,9 @@ bool ExternalFileUnit::OpenUnit(Fortran::common::optional<OpenStatus> status,
   }
   set_path(std::move(newPath), newPathLength);
   Open(status.value_or(OpenStatus::Unknown), action, position, handler);
+  if (handler.InError()) {
+    return impliedClose;
+  }
   auto totalBytes{knownSize()};
   if (access == Access::Direct) {
     if (!openRecl) {
@@ -182,7 +190,7 @@ bool ExternalFileUnit::OpenUnit(Fortran::common::optional<OpenStatus> status,
   return impliedClose;
 }
 
-void ExternalFileUnit::OpenAnonymousUnit(
+bool ExternalFileUnit::OpenAnonymousUnit(
     Fortran::common::optional<OpenStatus> status,
     Fortran::common::optional<Action> action, Position position,
     Convert convert, IoErrorHandler &handler) {
@@ -192,6 +200,7 @@ void ExternalFileUnit::OpenAnonymousUnit(
   std::snprintf(path.get(), pathMaxLen, "fort.%d", unitNumber_);
   OpenUnit(status, action, position, std::move(path), std::strlen(path.get()),
       convert, handler);
+  return IsConnected();
 }
 
 void ExternalFileUnit::CloseUnit(CloseStatus status, IoErrorHandler &handler) {
@@ -214,6 +223,13 @@ Iostat ExternalFileUnit::SetDirection(Direction direction) {
     }
   } else {
     if (mayWrite()) {
+      if (direction_ == Direction::Input) {
+        // Don't retain any input data from previous record, like a
+        // variable-length unformatted record footer, in the frame,
+        // since we're going start writing frames.
+        frameOffsetInFile_ += recordOffsetInFrame_;
+        recordOffsetInFrame_ = 0;
+      }
       direction_ = Direction::Output;
       return IostatOk;
     } else {
@@ -332,5 +348,4 @@ bool ExternalFileUnit::Wait(int id) {
 }
 
 } // namespace Fortran::runtime::io
-
 #endif // !defined(RT_USE_PSEUDO_FILE_UNIT)

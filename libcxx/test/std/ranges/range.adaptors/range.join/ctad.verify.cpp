@@ -27,5 +27,5 @@ struct Range {
 
 void testExplicitCTAD() {
   Range<Range<int>> r;
-  std::ranges::join_view v = r; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'join_view'}}
+  std::ranges::join_view v = r; // expected-error-re {{no viable constructor or deduction guide for deduction of template arguments of '{{(std::ranges::)?}}join_view'}}
 }

@@ -635,7 +635,7 @@ def LLVM_VaEndOp : LLVM_ZeroResultIntrOp<"vaend", [0]>,
 // Exception handling intrinsics.
 //
 
-def LLVM_EhTypeidForOp : LLVM_OneResultIntrOp<"eh.typeid.for"> {
+def LLVM_EhTypeidForOp : LLVM_OneResultIntrOp<"eh.typeid.for", [], [0]> {
     let arguments = (ins LLVM_AnyPointer:$type_info);
     let assemblyFormat = "$type_info attr-dict `:` functional-type(operands, results)";
 }
@@ -900,6 +900,8 @@ def LLVM_masked_gather : LLVM_OneResultIntrOp<"masked.gather"> {
       $_resultType, $ptrs, $mask, $pass_thru, $_int_attr($alignment));
   }];
   list<int> llvmArgIndices = [0, 2, 3, 1];
+
+  let hasVerifier = 1;
 }
 
 /// Create a call to Masked Scatter intrinsic.
@@ -919,6 +921,8 @@ def LLVM_masked_scatter : LLVM_ZeroResultIntrOp<"masked.scatter"> {
       $value, $ptrs, $mask, $_int_attr($alignment));
   }];
   list<int> llvmArgIndices = [0, 1, 3, 2];
+
+  let hasVerifier = 1;
 }
 
 /// Create a call to Masked Expand Load intrinsic.
@@ -1073,6 +1077,12 @@ def LLVM_vector_interleave2
                        "getVectorElementType($res.getType())">]>>,
         ]>,
         Arguments<(ins LLVM_AnyVector:$vec1, LLVM_AnyVector:$vec2)>;
+
+def LLVM_vector_deinterleave2
+    : LLVM_OneResultIntrOp<"vector.deinterleave2",
+        /*overloadedResults=*/[], /*overloadedOperands=*/[0],
+        /*traits=*/[Pure]>,
+        Arguments<(ins LLVM_AnyVector:$vec)>;
 
 //
 // LLVM Vector Predication operations.

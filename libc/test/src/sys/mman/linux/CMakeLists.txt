@@ -138,6 +138,7 @@ add_libc_unittest(
     libc.include.sys_mman
     libc.include.sys_syscall
     libc.src.errno.errno
+    libc.src.fcntl.fcntl
     libc.src.sys.mman.shm_open
     libc.src.sys.mman.shm_unlink
     libc.src.sys.mman.mmap

@@ -57,18 +57,26 @@ define i32 @ashr_exact_keep(i32 %a, i32 %b) {
   ret i32 %op
 }
 
-; CHECK-LABEL: @getelementptr_inbounds_drop(
+; CHECK-LABEL: @getelementptr_inbounds_nuw_drop_both(
 ; INTERESTING: getelementptr
 ; RESULT: getelementptr i32, ptr %a, i64 %b
-define ptr @getelementptr_inbounds_drop(ptr %a, i64 %b) {
-  %op = getelementptr inbounds i32, ptr %a, i64 %b
+define ptr @getelementptr_inbounds_nuw_drop_both(ptr %a, i64 %b) {
+  %op = getelementptr inbounds nuw i32, ptr %a, i64 %b
   ret ptr %op
 }
 
-; CHECK-LABEL: @getelementptr_inbounds_keep(
+; CHECK-LABEL: @getelementptr_inbounds_keep_only_inbounds(
 ; INTERESTING: inbounds
 ; RESULT: getelementptr inbounds i32, ptr %a, i64 %b
-define ptr @getelementptr_inbounds_keep(ptr %a, i64 %b) {
+define ptr @getelementptr_inbounds_keep_only_inbounds(ptr %a, i64 %b) {
+  %op = getelementptr inbounds nuw i32, ptr %a, i64 %b
+  ret ptr %op
+}
+
+; CHECK-LABEL: @getelementptr_inbounds_relax_to_nusw(
+; INTERESTING: getelementptr {{inbounds|nusw}}
+; RESULT: getelementptr nusw i32, ptr %a, i64 %b
+define ptr @getelementptr_inbounds_relax_to_nusw(ptr %a, i64 %b) {
   %op = getelementptr inbounds i32, ptr %a, i64 %b
   ret ptr %op
 }

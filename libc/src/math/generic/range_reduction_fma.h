@@ -12,9 +12,9 @@
 #include "src/__support/FPUtil/FMA.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/nearest_integer.h"
-#include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace fma {
 
@@ -33,8 +33,8 @@ static constexpr double THIRTYTWO_OVER_PI[5] = {
 //   k = round(x * 32 / pi) and y = (x * 32 / pi) - k.
 LIBC_INLINE int64_t small_range_reduction(double x, double &y) {
   double kd = fputil::nearest_integer(x * THIRTYTWO_OVER_PI[0]);
-  y = fputil::fma(x, THIRTYTWO_OVER_PI[0], -kd);
-  y = fputil::fma(x, THIRTYTWO_OVER_PI[1], y);
+  y = fputil::fma<double>(x, THIRTYTWO_OVER_PI[0], -kd);
+  y = fputil::fma<double>(x, THIRTYTWO_OVER_PI[1], y);
   return static_cast<int64_t>(kd);
 }
 
@@ -54,12 +54,13 @@ LIBC_INLINE int64_t large_range_reduction(double x, int x_exp, double &y) {
     prod_hi.set_uintval(prod_hi.uintval() &
                         ((x_exp < 55) ? (~0xfffULL) : (~0ULL))); // |x| < 2^55
     double k_hi = fputil::nearest_integer(prod_hi.get_val());
-    double truncated_prod = fputil::fma(x, THIRTYTWO_OVER_PI[0], -k_hi);
-    double prod_lo = fputil::fma(x, THIRTYTWO_OVER_PI[1], truncated_prod);
+    double truncated_prod = fputil::fma<double>(x, THIRTYTWO_OVER_PI[0], -k_hi);
+    double prod_lo =
+        fputil::fma<double>(x, THIRTYTWO_OVER_PI[1], truncated_prod);
     double k_lo = fputil::nearest_integer(prod_lo);
-    y = fputil::fma(x, THIRTYTWO_OVER_PI[1], truncated_prod - k_lo);
-    y = fputil::fma(x, THIRTYTWO_OVER_PI[2], y);
-    y = fputil::fma(x, THIRTYTWO_OVER_PI[3], y);
+    y = fputil::fma<double>(x, THIRTYTWO_OVER_PI[1], truncated_prod - k_lo);
+    y = fputil::fma<double>(x, THIRTYTWO_OVER_PI[2], y);
+    y = fputil::fma<double>(x, THIRTYTWO_OVER_PI[3], y);
 
     return static_cast<int64_t>(k_lo);
   }
@@ -74,18 +75,18 @@ LIBC_INLINE int64_t large_range_reduction(double x, int x_exp, double &y) {
   prod_hi.set_uintval(prod_hi.uintval() &
                       ((x_exp < 110) ? (~0xfffULL) : (~0ULL))); // |x| < 2^110
   double k_hi = fputil::nearest_integer(prod_hi.get_val());
-  double truncated_prod = fputil::fma(x, THIRTYTWO_OVER_PI[1], -k_hi);
-  double prod_lo = fputil::fma(x, THIRTYTWO_OVER_PI[2], truncated_prod);
+  double truncated_prod = fputil::fma<double>(x, THIRTYTWO_OVER_PI[1], -k_hi);
+  double prod_lo = fputil::fma<double>(x, THIRTYTWO_OVER_PI[2], truncated_prod);
   double k_lo = fputil::nearest_integer(prod_lo);
-  y = fputil::fma(x, THIRTYTWO_OVER_PI[2], truncated_prod - k_lo);
-  y = fputil::fma(x, THIRTYTWO_OVER_PI[3], y);
-  y = fputil::fma(x, THIRTYTWO_OVER_PI[4], y);
+  y = fputil::fma<double>(x, THIRTYTWO_OVER_PI[2], truncated_prod - k_lo);
+  y = fputil::fma<double>(x, THIRTYTWO_OVER_PI[3], y);
+  y = fputil::fma<double>(x, THIRTYTWO_OVER_PI[4], y);
 
   return static_cast<int64_t>(k_lo);
 }
 
 } // namespace fma
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_RANGE_REDUCTION_FMA_H

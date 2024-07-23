@@ -46,7 +46,7 @@ using namespace llvm;
 namespace llvm {
 cl::opt<unsigned> MaxDevirtIterations("max-devirt-iterations", cl::ReallyHidden,
                                       cl::init(4));
-}
+} // namespace llvm
 
 STATISTIC(MaxSCCIterations, "Maximum CGSCCPassMgr iterations on one SCC");
 

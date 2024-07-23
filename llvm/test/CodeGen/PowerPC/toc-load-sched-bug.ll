@@ -328,7 +328,8 @@ _ZN4llvm12SMDiagnosticaSEOS0_.exit:               ; preds = %_ZN4llvm12SMDiagnos
 if.then.i.i.i45:                                  ; preds = %_ZN4llvm12SMDiagnosticaSEOS0_.exit
   %_M_refcount.i.i.i = getelementptr inbounds i8, ptr %8, i64 -8
   %28 = bitcast ptr %_M_refcount.i.i.i to ptr
-  br i1 icmp ne (ptr @__pthread_key_create, ptr null), label %if.then.i.i.i.i, label %if.else.i.i.i.i
+  %cmp = icmp ne ptr @__pthread_key_create, null
+  br i1 %cmp, label %if.then.i.i.i.i, label %if.else.i.i.i.i
 
 if.then.i.i.i.i:                                  ; preds = %if.then.i.i.i45
   %.atomicdst.i.i.i.i.i.0..atomicdst.i.i.i.i.0..atomicdst.i.i.i.0..atomicdst.i.i.0..atomicdst.i.0..sroa_cast = bitcast ptr %.atomicdst.i.i.i.i.i to ptr
@@ -368,7 +369,8 @@ _ZNSsD1Ev.exit:                                   ; preds = %_ZN4llvm12SMDiagnos
 if.then.i.i.i52:                                  ; preds = %_ZNSsD1Ev.exit
   %_M_refcount.i.i.i51 = getelementptr inbounds i8, ptr %32, i64 -8
   %34 = bitcast ptr %_M_refcount.i.i.i51 to ptr
-  br i1 icmp ne (ptr @__pthread_key_create, ptr null), label %if.then.i.i.i.i55, label %if.else.i.i.i.i57
+  %cmp2 = icmp ne ptr @__pthread_key_create, null
+  br i1 %cmp2, label %if.then.i.i.i.i55, label %if.else.i.i.i.i57
 
 if.then.i.i.i.i55:                                ; preds = %if.then.i.i.i52
   %.atomicdst.i.i.i.i.i46.0..atomicdst.i.i.i.i.0..atomicdst.i.i.i.0..atomicdst.i.i.0..atomicdst.i.0..sroa_cast = bitcast ptr %.atomicdst.i.i.i.i.i46 to ptr

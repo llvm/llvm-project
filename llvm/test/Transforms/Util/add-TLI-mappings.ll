@@ -274,19 +274,19 @@ attributes #0 = { nounwind readnone }
 ; ARMPL-SAME:    _ZGVsMxvl4_modff(armpl_svmodf_f32_x)" }
 ; ARMPL:      attributes #[[SIN]] = { "vector-function-abi-variant"=
 ; ARMPL-SAME:    "_ZGV_LLVM_N2v_sin(armpl_vsinq_f64),
-; ARMPL-SAME     _ZGVsMxv_sin(armpl_svsin_f64_x)" }
+; ARMPL-SAME:    _ZGVsMxv_sin(armpl_svsin_f64_x)" }
 ; ARMPL:      attributes #[[SINCOS]] = { "vector-function-abi-variant"=
 ; ARMPL-SAME:    "_ZGV_LLVM_N2vl8l8_sincos(armpl_vsincosq_f64),
-; ARMPL-SAME:   _ZGVsMxvl8l8_sincos(armpl_svsincos_f64_x)" }
+; ARMPL-SAME:    _ZGVsMxvl8l8_sincos(armpl_svsincos_f64_x)" }
 ; ARMPL:      attributes #[[SINCOSF]] = { "vector-function-abi-variant"=
 ; ARMPL-SAME:    "_ZGV_LLVM_N4vl4l4_sincosf(armpl_vsincosq_f32),
 ; ARMPL-SAME:    _ZGVsMxvl4l4_sincosf(armpl_svsincos_f32_x)" }
 ; ARMPL:      attributes #[[SINCOSPI]] = { "vector-function-abi-variant"=
 ; ARMPL-SAME:    "_ZGV_LLVM_N2vl8l8_sincospi(armpl_vsincospiq_f64),
-; ARMPL-SAME:   _ZGVsMxvl8l8_sincospi(armpl_svsincospi_f64_x)" }
+; ARMPL-SAME:    _ZGVsMxvl8l8_sincospi(armpl_svsincospi_f64_x)" }
 ; ARMPL:      attributes #[[SINCOSPIF]] = { "vector-function-abi-variant"=
 ; ARMPL-SAME:    "_ZGV_LLVM_N4vl4l4_sincospif(armpl_vsincospiq_f32),
 ; ARMPL-SAME:    _ZGVsMxvl4l4_sincospif(armpl_svsincospi_f32_x)" }
 ; ARMPL:      attributes #[[LOG10]] = { "vector-function-abi-variant"=
 ; ARMPL-SAME:    "_ZGV_LLVM_N4v_llvm.log10.f32(armpl_vlog10q_f32),
-; ARMPL-SAME     _ZGVsMxv_llvm.log10.f32(armpl_svlog10_f32_x)" }
+; ARMPL-SAME:    _ZGVsMxv_llvm.log10.f32(armpl_svlog10_f32_x)" }

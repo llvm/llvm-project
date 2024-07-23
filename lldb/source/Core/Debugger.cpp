@@ -743,9 +743,22 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
 }
 
 void Debugger::HandleDestroyCallback() {
-  if (m_destroy_callback) {
-    m_destroy_callback(GetID(), m_destroy_callback_baton);
-    m_destroy_callback = nullptr;
+  const lldb::user_id_t user_id = GetID();
+  // Invoke and remove all the callbacks in an FIFO order. Callbacks which are
+  // added during this loop will be appended, invoked and then removed last.
+  // Callbacks which are removed during this loop will not be invoked.
+  while (true) {
+    DestroyCallbackInfo callback_info;
+    {
+      std::lock_guard<std::mutex> guard(m_destroy_callback_mutex);
+      if (m_destroy_callbacks.empty())
+        break;
+      // Pop the first item in the list
+      callback_info = m_destroy_callbacks.front();
+      m_destroy_callbacks.erase(m_destroy_callbacks.begin());
+    }
+    // Call the destroy callback with user id and baton
+    callback_info.callback(user_id, callback_info.baton);
   }
 }
 
@@ -1427,8 +1440,30 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
 
 void Debugger::SetDestroyCallback(
     lldb_private::DebuggerDestroyCallback destroy_callback, void *baton) {
-  m_destroy_callback = destroy_callback;
-  m_destroy_callback_baton = baton;
+  std::lock_guard<std::mutex> guard(m_destroy_callback_mutex);
+  m_destroy_callbacks.clear();
+  const lldb::callback_token_t token = m_destroy_callback_next_token++;
+  m_destroy_callbacks.emplace_back(token, destroy_callback, baton);
+}
+
+lldb::callback_token_t Debugger::AddDestroyCallback(
+    lldb_private::DebuggerDestroyCallback destroy_callback, void *baton) {
+  std::lock_guard<std::mutex> guard(m_destroy_callback_mutex);
+  const lldb::callback_token_t token = m_destroy_callback_next_token++;
+  m_destroy_callbacks.emplace_back(token, destroy_callback, baton);
+  return token;
+}
+
+bool Debugger::RemoveDestroyCallback(lldb::callback_token_t token) {
+  std::lock_guard<std::mutex> guard(m_destroy_callback_mutex);
+  for (auto it = m_destroy_callbacks.begin(); it != m_destroy_callbacks.end();
+       ++it) {
+    if (it->token == token) {
+      m_destroy_callbacks.erase(it);
+      return true;
+    }
+  }
+  return false;
 }
 
 static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
