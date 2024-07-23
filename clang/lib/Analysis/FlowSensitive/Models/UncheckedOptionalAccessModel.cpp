@@ -38,10 +38,22 @@
 namespace clang {
 namespace dataflow {
 
-static bool isTopLevelNamespaceWithName(const NamespaceDecl &NS,
-                                        llvm::StringRef Name) {
-  return NS.getDeclName().isIdentifier() && NS.getName() == Name &&
-         NS.getParent() != nullptr && NS.getParent()->isTranslationUnit();
+template <class... NameTypes>
+static bool hasNestedNamespace(const NamespaceDecl &NS, llvm::StringRef Name,
+                               NameTypes... Names) {
+  if (!(NS.getDeclName().isIdentifier() && NS.getName() == Name &&
+        NS.getParent() != nullptr))
+    return false;
+
+  if constexpr (sizeof...(NameTypes) > 0) {
+    if (NS.getParent()->isTranslationUnit())
+      return false;
+    if (const auto *NextNS = dyn_cast_or_null<NamespaceDecl>(NS.getParent()))
+      return hasNestedNamespace(*NextNS, Names...);
+    return false;
+  } else {
+    return NS.getParent()->isTranslationUnit();
+  }
 }
 
 static bool hasOptionalClassName(const CXXRecordDecl &RD) {
@@ -50,15 +62,21 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
 
   if (RD.getName() == "optional") {
     if (const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext()))
-      return N->isStdNamespace() || isTopLevelNamespaceWithName(*N, "absl");
+      return N->isStdNamespace() || hasNestedNamespace(*N, "absl") ||
+             hasNestedNamespace(*N, "bsl");
     return false;
   }
 
   if (RD.getName() == "Optional") {
     // Check whether namespace is "::base" or "::folly".
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
-    return N != nullptr && (isTopLevelNamespaceWithName(*N, "base") ||
-                            isTopLevelNamespaceWithName(*N, "folly"));
+    return N != nullptr &&
+           (hasNestedNamespace(*N, "base") || hasNestedNamespace(*N, "folly"));
+  }
+
+  if (RD.getName() == "NullableValue") {
+    const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
+    return N != nullptr && hasNestedNamespace(*N, "bdlb", "BloombergLP");
   }
 
   return false;
@@ -195,22 +213,25 @@ auto isOptionalOperatorCallWithName(
 }
 
 auto isMakeOptionalCall() {
-  return callExpr(callee(functionDecl(hasAnyName(
-                      "std::make_optional", "base::make_optional",
-                      "absl::make_optional", "folly::make_optional"))),
-                  hasOptionalType());
+  return callExpr(
+      callee(functionDecl(hasAnyName(
+          "std::make_optional", "base::make_optional", "absl::make_optional",
+          "folly::make_optional", "bsl::make_optional"))),
+      hasOptionalType());
 }
 
 auto nulloptTypeDecl() {
   return namedDecl(hasAnyName("std::nullopt_t", "absl::nullopt_t",
-                              "base::nullopt_t", "folly::None"));
+                              "base::nullopt_t", "folly::None",
+                              "bsl::nullopt_t"));
 }
 
 auto hasNulloptType() { return hasType(nulloptTypeDecl()); }
 
 auto inPlaceClass() {
   return recordDecl(hasAnyName("std::in_place_t", "absl::in_place_t",
-                               "base::in_place_t", "folly::in_place_t"));
+                               "base::in_place_t", "folly::in_place_t",
+                               "bsl::in_place_t"));
 }
 
 auto isOptionalNulloptConstructor() {
@@ -412,6 +433,15 @@ void transferOptionalHasValueCall(const CXXMemberCallExpr *CallExpr,
   if (auto *HasValueVal = getHasValue(
           State.Env, getImplicitObjectLocation(*CallExpr, State.Env))) {
     State.Env.setValue(*CallExpr, *HasValueVal);
+  }
+}
+
+void transferOptionalIsNullCall(const CXXMemberCallExpr *CallExpr,
+                                const MatchFinder::MatchResult &,
+                                LatticeTransferState &State) {
+  if (auto *HasValueVal = getHasValue(
+          State.Env, getImplicitObjectLocation(*CallExpr, State.Env))) {
+    State.Env.setValue(*CallExpr, State.Env.makeNot(*HasValueVal));
   }
 }
 
@@ -783,6 +813,12 @@ auto buildTransferMatchSwitch() {
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           isOptionalMemberCallWithNameMatcher(hasName("operator bool")),
           transferOptionalHasValueCall)
+
+      // NullableValue::isNull
+      // Only NullableValue has isNull
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isOptionalMemberCallWithNameMatcher(hasAnyName("isNull")),
+          transferOptionalIsNullCall)
 
       // optional::emplace
       .CaseOfCFGStmt<CXXMemberCallExpr>(
