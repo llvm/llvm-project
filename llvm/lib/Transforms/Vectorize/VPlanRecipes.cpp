@@ -194,9 +194,6 @@ bool VPRecipeBase::mayHaveSideEffects() const {
 
 void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
   VPValue *ExitValue = getOperand(0);
-  auto Lane = vputils::isUniformAfterVectorization(ExitValue)
-                  ? VPLane::getFirstLane()
-                  : VPLane::getLastLaneForVF(State.VF);
   VPBasicBlock *MiddleVPBB =
       cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
   VPRecipeBase *ExitingRecipe = ExitValue->getDefiningRecipe();
@@ -207,10 +204,7 @@ void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
                        ? MiddleVPBB
                        : ExitingVPBB;
   BasicBlock *PredBB = State.CFG.VPBB2IRBB[PredVPBB];
-  // Set insertion point in PredBB in case an extract needs to be generated.
-  // TODO: Model extracts explicitly.
-  State.Builder.SetInsertPoint(PredBB, PredBB->getFirstNonPHIIt());
-  Value *V = State.get(ExitValue, VPIteration(State.UF - 1, Lane));
+  Value *V = State.get(ExitValue, VPIteration(0, 0));
   if (Phi->getBasicBlockIndex(PredBB) != -1)
     Phi->setIncomingValueForBlock(PredBB, V);
   else

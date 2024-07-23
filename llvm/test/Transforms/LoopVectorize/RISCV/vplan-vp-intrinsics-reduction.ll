@@ -55,6 +55,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-EMPTY:
 ; IF-EVL-INLOOP-NEXT: middle.block:
 ; IF-EVL-INLOOP-NEXT:   EMIT vp<[[RDX:%.+]]> = compute-reduction-result ir<[[RDX_PHI]]>, ir<[[ADD]]>
+; IF-EVL-INLOOP-NEXT:   EMIT vp<[[RDX_EX:%.+]]> = extract-from-end vp<[[RDX]]>, ir<1>
 ; IF-EVL-INLOOP-NEXT:   EMIT branch-on-cond ir<true>
 ; IF-EVL-INLOOP-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; IF-EVL-INLOOP-EMPTY:
@@ -64,7 +65,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT: scalar.ph:
 ; IF-EVL-INLOOP-NEXT: No successors
 ; IF-EVL-INLOOP-EMPTY:
-; IF-EVL-INLOOP-NEXT: Live-out i32 %add.lcssa = vp<[[RDX]]>
+; IF-EVL-INLOOP-NEXT: Live-out i32 %add.lcssa = vp<[[RDX_EX]]>
 ; IF-EVL-INLOOP-NEXT: }
 ;
 
@@ -93,6 +94,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-OUTLOOP-EMPTY:
 ; NO-VP-OUTLOOP-NEXT: middle.block:
 ; NO-VP-OUTLOOP-NEXT:   EMIT vp<[[RDX:%.+]]> = compute-reduction-result ir<[[RDX_PHI]]>, ir<[[ADD]]>
+; NO-VP-OUTLOOP-NEXT:   EMIT vp<[[RDX_EX:%.+]]> = extract-from-end vp<[[RDX]]>, ir<1>
 ; NO-VP-OUTLOOP-NEXT:   EMIT vp<[[BOC:%.+]]> = icmp eq ir<%n>, vp<[[VTC]]>
 ; NO-VP-OUTLOOP-NEXT:   EMIT branch-on-cond vp<[[BOC]]>
 ; NO-VP-OUTLOOP-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
@@ -103,7 +105,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-OUTLOOP-NEXT: scalar.ph:
 ; NO-VP-OUTLOOP-NEXT: No successors
 ; NO-VP-OUTLOOP-EMPTY:
-; NO-VP-OUTLOOP-NEXT: Live-out i32 %add.lcssa = vp<[[RDX]]>
+; NO-VP-OUTLOOP-NEXT: Live-out i32 %add.lcssa = vp<[[RDX_EX]]>
 ; NO-VP-OUTLOOP-NEXT: }
 ;
 
@@ -132,6 +134,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-INLOOP-EMPTY:
 ; NO-VP-INLOOP-NEXT: middle.block:
 ; NO-VP-INLOOP-NEXT:   EMIT vp<[[RDX:%.+]]> = compute-reduction-result ir<[[RDX_PHI]]>, ir<[[ADD]]>
+; NO-VP-INLOOP-NEXT:   EMIT vp<[[RDX_EX:%.+]]> = extract-from-end vp<[[RDX]]>, ir<1>
 ; NO-VP-INLOOP-NEXT:   EMIT vp<[[BOC:%.+]]> = icmp eq ir<%n>, vp<[[VTC]]>
 ; NO-VP-INLOOP-NEXT:   EMIT branch-on-cond vp<[[BOC]]>
 ; NO-VP-INLOOP-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
@@ -142,7 +145,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-INLOOP-NEXT: scalar.ph:
 ; NO-VP-INLOOP-NEXT: No successors
 ; NO-VP-INLOOP-EMPTY:
-; NO-VP-INLOOP-NEXT: Live-out i32 %add.lcssa = vp<[[RDX]]>
+; NO-VP-INLOOP-NEXT: Live-out i32 %add.lcssa = vp<[[RDX_EX]]>
 ; NO-VP-INLOOP-NEXT: }
 ;
 entry:

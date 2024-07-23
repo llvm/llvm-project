@@ -154,6 +154,7 @@ define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[RED_RES:%.+]]> = compute-reduction-result ir<%red>, ir<%red.next>
+; CHECK-NEXT:   EMIT vp<[[RED_EX:%.+]]> = extract-from-end vp<[[RED_RES]]>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<%n>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
@@ -164,7 +165,7 @@ define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: Live-out float %red.next.lcssa = vp<[[RED_RES]]>
+; CHECK-NEXT: Live-out float %red.next.lcssa = vp<[[RED_EX]]>
 ; CHECK-NEXT: }
 ;
 entry:
@@ -435,6 +436,7 @@ define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[RED_RES:%.+]]> = compute-reduction-result ir<%sum.07>, ir<[[MULADD]]>
+; CHECK-NEXT:   EMIT vp<[[RED_EX:%.+]]> = extract-from-end vp<[[RED_RES]]>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<%n>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
@@ -445,7 +447,7 @@ define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: Live-out float %muladd.lcssa = vp<[[RED_RES]]>
+; CHECK-NEXT: Live-out float %muladd.lcssa = vp<[[RED_EX]]>
 ; CHECK-NEXT:}
 
 entry:
@@ -654,6 +656,7 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
+; CHECK-NEXT:   EMIT vp<[[EXIT:%.+]]> = extract-from-end ir<%add>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
@@ -664,7 +667,7 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: Live-out i32 %lcssa = ir<%add>
+; CHECK-NEXT: Live-out i32 %lcssa = vp<[[EXIT]]>
 ; CHECK-NEXT: }
 ;
 entry:
@@ -1036,8 +1039,8 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT:   EMIT vp<[[RESUME_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<22>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT:   Live-out i16 %for.1.lcssa = vp<[[FOR_RESULT]]>
 ; CHECK-NEXT:   Live-out i16 %for.1 = vp<[[RESUME_P]]>
+; CHECK-NEXT:   Live-out i16 %for.1.lcssa = vp<[[FOR_RESULT]]>
 ; CHECK-NEXT: }
 ;
 entry:
