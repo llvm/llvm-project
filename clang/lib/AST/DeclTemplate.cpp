@@ -68,20 +68,16 @@ TemplateParameterList::TemplateParameterList(const ASTContext& C,
 
     bool IsPack = P->isTemplateParameterPack();
     if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(P)) {
-      if (!IsPack) {
-        if (NTTP->getType()->containsUnexpandedParameterPack())
-          ContainsUnexpandedParameterPack = true;
-        else if (DefaultArgumentContainsUnexpandedPack(*NTTP))
-          ContainsUnexpandedParameterPack = true;
-      }
+      if (!IsPack && (NTTP->getType()->containsUnexpandedParameterPack() ||
+                      DefaultArgumentContainsUnexpandedPack(*NTTP)))
+        ContainsUnexpandedParameterPack = true;
       if (NTTP->hasPlaceholderTypeConstraint())
         HasConstrainedParameters = true;
     } else if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(P)) {
-      if (!IsPack) {
-        if (TTP->getTemplateParameters()->containsUnexpandedParameterPack())
-          ContainsUnexpandedParameterPack = true;
-        else if (DefaultArgumentContainsUnexpandedPack(*TTP))
-          ContainsUnexpandedParameterPack = true;
+      if (!IsPack &&
+          (TTP->getTemplateParameters()->containsUnexpandedParameterPack() ||
+           DefaultArgumentContainsUnexpandedPack(*TTP))) {
+        ContainsUnexpandedParameterPack = true;
       }
     } else if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(P)) {
       if (!IsPack && DefaultArgumentContainsUnexpandedPack(*TTP)) {
