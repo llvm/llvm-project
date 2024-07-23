@@ -1551,7 +1551,7 @@ ASTNodeImporter::VisitCountAttributedType(const CountAttributedType *T) {
   Expr *CountExpr = importChecked(Err, T->getCountExpr());
 
   SmallVector<TypeCoupledDeclRefInfo, 1> CoupledDecls;
-  for (auto TI : T->dependent_decls()) {
+  for (const TypeCoupledDeclRefInfo &TI : T->dependent_decls()) {
     Expected<ValueDecl *> ToDeclOrErr = import(TI.getDecl());
     if (!ToDeclOrErr)
       return ToDeclOrErr.takeError();

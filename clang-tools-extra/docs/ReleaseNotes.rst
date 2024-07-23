@@ -48,6 +48,10 @@ Major New Features
 Improvements to clangd
 ----------------------
 
+- Introduced exmperimental support for C++20 Modules. The experimental support can
+  be enabled by `-experimental-modules-support` option. It is in an early development
+  stage and may not perform efficiently in real-world scenarios.
+
 Inlay hints
 ^^^^^^^^^^^
 
@@ -112,6 +116,8 @@ Improvements to clang-tidy
 - Improved :program:`run-clang-tidy.py` script. Added argument `-source-filter`
   to filter source files from the compilation database, via a RegEx. In a
   similar fashion to what `-header-filter` does for header files.
+  Added progress indicator with a number of processed files and the runtime of
+  each invocation after completion.
 
 - Improved :program:`check_clang_tidy.py` script. Added argument `-export-fixes`
   to aid in clang-tidy and test development.
@@ -240,6 +246,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/casting-through-void>` check by ignoring casts
   where source is already a ``void``` pointer, making middle ``void`` pointer
   casts bug-free.
+
+- Improved :doc:`bugprone-exception-escape
+  <clang-tidy/checks/bugprone/exception-escape>`  check to correctly detect exception 
+  handler of type ``CV void *`` as catching all  ``CV`` compatible pointer types.
 
 - Improved :doc:`bugprone-forwarding-reference-overload
   <clang-tidy/checks/bugprone/forwarding-reference-overload>`
@@ -446,7 +456,8 @@ Changes in existing checks
   <clang-tidy/checks/performance/unnecessary-value-param>` check
   detecting more cases for template functions including lambdas with ``auto``.
   E.g., ``std::sort(a.begin(), a.end(), [](auto x, auto y) { return a > b; });``
-  will be detected for expensive to copy types.
+  will be detected for expensive to copy types. Fixed false positives for
+  dependent call expressions.
 
 - Improved :doc:`readability-avoid-return-with-void-value
   <clang-tidy/checks/readability/avoid-return-with-void-value>` check by adding

@@ -2452,3 +2452,25 @@ llvm.func @convergent() attributes { convergent } {
 
 // CHECK: #[[ATTRS]]
 // CHECK-SAME: convergent
+
+// -----
+
+// CHECK-LABEL: @nounwind
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @nounwind() attributes { no_unwind } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: nounwind
+
+// -----
+
+// CHECK-LABEL: @willreturn
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @willreturn() attributes { will_return } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: willreturn

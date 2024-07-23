@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CheckExprLifetime.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CXXInheritance.h"
@@ -1863,7 +1864,7 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
     // we need to not alter FromFn, or else even an innocuous cast
     // like dropping effects will fail. In C++ however we do want to
     // alter FromFn (because of the way PerformImplicitConversion works).
-    if (getLangOpts().CPlusPlus) {
+    if (Context.hasAnyFunctionEffects() && getLangOpts().CPlusPlus) {
       FromFPT = cast<FunctionProtoType>(FromFn); // in case FromFn changed above
 
       // Transparently add/drop effects; here we are concerned with
@@ -14714,10 +14715,12 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
                                 FnDecl))
           return ExprError();
 
-        // Check for a self move.
-        if (Op == OO_Equal)
+        if (Op == OO_Equal) {
+          // Check for a self move.
           DiagnoseSelfMove(Args[0], Args[1], OpLoc);
-
+          // lifetime check.
+          checkExprLifetime(*this, AssignedEntity{Args[0]}, Args[1]);
+        }
         if (ImplicitThis) {
           QualType ThisType = Context.getPointerType(ImplicitThis->getType());
           QualType ThisTypeFromDecl = Context.getPointerType(

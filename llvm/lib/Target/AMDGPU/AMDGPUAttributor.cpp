@@ -24,7 +24,7 @@
 
 namespace llvm {
 void initializeCycleInfoWrapperPassPass(PassRegistry &);
-}
+} // namespace llvm
 
 using namespace llvm;
 

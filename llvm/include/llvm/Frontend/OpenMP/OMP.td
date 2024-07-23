@@ -735,6 +735,10 @@ def OMP_For : Directive<"for"> {
   let association = AS_Loop;
   let category = CA_Executable;
 }
+def OMP_Interchange : Directive<"interchange"> {
+  let association = AS_Loop;
+  let category = CA_Executable;
+}
 def OMP_interop : Directive<"interop"> {
   let allowedClauses = [
     VersionedClause<OMPC_Depend>,
@@ -836,6 +840,10 @@ def OMP_Requires : Directive<"requires"> {
   ];
   let association = AS_None;
   let category = CA_Informational;
+}
+def OMP_Reverse : Directive<"reverse"> {
+  let association = AS_Loop;
+  let category = CA_Executable;
 }
 def OMP_Scan : Directive<"scan"> {
   let allowedClauses = [

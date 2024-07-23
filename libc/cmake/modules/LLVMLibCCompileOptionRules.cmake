@@ -6,6 +6,7 @@ function(_get_compile_options_from_flags output_var)
   endif()
   check_flag(ADD_ROUND_OPT_FLAG ${ROUND_OPT_FLAG} ${ARGN})
   check_flag(ADD_EXPLICIT_SIMD_OPT_FLAG ${EXPLICIT_SIMD_OPT_FLAG} ${ARGN})
+  check_flag(ADD_MISC_MATH_BASIC_OPS_OPT_FLAG ${MISC_MATH_BASIC_OPS_OPT_FLAG} ${ARGN})
 
   if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
     if(ADD_FMA_FLAG)
@@ -37,6 +38,9 @@ function(_get_compile_options_from_flags output_var)
     if(ADD_EXPLICIT_SIMD_OPT_FLAG)
       list(APPEND compile_options "-D__LIBC_EXPLICIT_SIMD_OPT")
     endif()
+    if(ADD_MISC_MATH_BASIC_OPS_OPT_FLAG)
+      list(APPEND compile_options "-D__LIBC_MISC_MATH_BASIC_OPS_OPT")
+    endif()
   elseif(MSVC)
     if(ADD_FMA_FLAG)
       list(APPEND compile_options "/arch:AVX2")
@@ -49,10 +53,21 @@ function(_get_compile_options_from_flags output_var)
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction(_get_compile_options_from_flags)
 
+function(_get_compile_options_from_config output_var)
+  set(config_options "")
+
+  if(LIBC_CONF_QSORT_IMPL)
+    list(APPEND config_options "-DLIBC_QSORT_IMPL=${LIBC_CONF_QSORT_IMPL}")
+  endif()
+
+  set(${output_var} ${config_options} PARENT_SCOPE)
+endfunction(_get_compile_options_from_config)
+
 function(_get_common_compile_options output_var flags)
   _get_compile_options_from_flags(compile_flags ${flags})
+  _get_compile_options_from_config(config_flags)
 
-  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags})
+  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags} ${config_flags})
 
   if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
@@ -77,7 +92,11 @@ function(_get_common_compile_options output_var flags)
          (LIBC_CC_SUPPORTS_NOSTDLIBINC OR COMPILER_RESOURCE_DIR))
         # We use -idirafter to avoid preempting libc's own headers in case the
         # directory (e.g. /usr/include) contains other headers.
-        list(APPEND compile_options "-idirafter${LIBC_KERNEL_HEADERS}")
+        if(CMAKE_CROSSCOMPILING)
+          list(APPEND compile_options "-idirafter=${LIBC_KERNEL_HEADERS}")
+        else()
+          list(APPEND compile_options "-idirafter${LIBC_KERNEL_HEADERS}")
+        endif()
       endif()
     endif()
 

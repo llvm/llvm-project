@@ -3430,8 +3430,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
-        if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
-          if (FTy->getElementType() == Builder.getInt1Ty()) {
+        if (auto *VTy = dyn_cast<VectorType>(Vect->getType()))
+          if (VTy->getElementType() == Builder.getInt1Ty()) {
             Value *Res = Builder.CreateAddReduce(Vect);
             if (Arg != Vect)
               Res = Builder.CreateCast(cast<CastInst>(Arg)->getOpcode(), Res,
@@ -3460,8 +3460,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
-        if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
-          if (FTy->getElementType() == Builder.getInt1Ty()) {
+        if (auto *VTy = dyn_cast<VectorType>(Vect->getType()))
+          if (VTy->getElementType() == Builder.getInt1Ty()) {
             Value *Res = Builder.CreateAndReduce(Vect);
             if (Res->getType() != II->getType())
               Res = Builder.CreateZExt(Res, II->getType());
@@ -3491,8 +3491,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
-        if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
-          if (FTy->getElementType() == Builder.getInt1Ty()) {
+        if (auto *VTy = dyn_cast<VectorType>(Vect->getType()))
+          if (VTy->getElementType() == Builder.getInt1Ty()) {
             Value *Res = IID == Intrinsic::vector_reduce_umin
                              ? Builder.CreateAndReduce(Vect)
                              : Builder.CreateOrReduce(Vect);
@@ -3533,8 +3533,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
-        if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
-          if (FTy->getElementType() == Builder.getInt1Ty()) {
+        if (auto *VTy = dyn_cast<VectorType>(Vect->getType()))
+          if (VTy->getElementType() == Builder.getInt1Ty()) {
             Instruction::CastOps ExtOpc = Instruction::CastOps::CastOpsEnd;
             if (Arg != Vect)
               ExtOpc = cast<CastInst>(Arg)->getOpcode();

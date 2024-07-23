@@ -40,7 +40,7 @@ public:
     return Func->getDecl()->isWeak();
   }
 
-  APValue toAPValue() const {
+  APValue toAPValue(const ASTContext &) const {
     if (!Func)
       return APValue(static_cast<Expr *>(nullptr), CharUnits::Zero(), {},
                      /*OnePastTheEnd=*/false, /*IsNull=*/true);
@@ -69,7 +69,7 @@ public:
     if (!Func)
       return "nullptr";
 
-    return toAPValue().getAsString(Ctx, Func->getDecl()->getType());
+    return toAPValue(Ctx).getAsString(Ctx, Func->getDecl()->getType());
   }
 
   uint64_t getIntegerRepresentation() const {

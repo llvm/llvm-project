@@ -51,6 +51,8 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.OSUtil.osutil
     .exit_handler
+    .at_quick_exit
+    .atexit
 )
 
 add_entrypoint_object(
@@ -258,9 +260,13 @@ add_entrypoint_object(
 add_header_library(
   qsort_util
   HDRS
+    qsort_data.h
     qsort_util.h
+    heap_sort.h
+    quick_sort.h
   DEPENDS
     libc.include.stdlib
+    libc.src.__support.CPP.cstddef
 )
 
 add_entrypoint_object(
@@ -458,15 +464,11 @@ add_entrypoint_object(
 
 # TODO: Move all exit functions to linux specific 
 
-if (TARGET libc.src.__support.threads.mutex)
-add_object_library(
+if(TARGET libc.src.__support.threads.mutex)
+add_header_library(
   exit_handler
-  SRCS
-    exit_handler.cpp
   HDRS
     exit_handler.h
-  CXX_STANDARD
-    20 # For constinit 
   DEPENDS
     libc.src.__support.CPP.mutex
     libc.src.__support.CPP.new
@@ -483,6 +485,8 @@ add_entrypoint_object(
     atexit.cpp
   HDRS
     atexit.h
+  CXX_STANDARD
+    20 # For constinit 
   DEPENDS
     .exit_handler
 )
@@ -493,8 +497,11 @@ add_entrypoint_object(
     at_quick_exit.cpp
   HDRS
     at_quick_exit.h
+  CXX_STANDARD
+    20 # For constinit 
   DEPENDS
     .exit_handler
+    .atexit
 )
 
 list(APPEND exit_deps

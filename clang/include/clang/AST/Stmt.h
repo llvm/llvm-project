@@ -460,10 +460,10 @@ protected:
     unsigned : NumExprBits;
 
     static_assert(
-        llvm::APFloat::S_MaxSemantics < 16,
-        "Too many Semantics enum values to fit in bitfield of size 4");
+        llvm::APFloat::S_MaxSemantics < 32,
+        "Too many Semantics enum values to fit in bitfield of size 5");
     LLVM_PREFERRED_TYPE(llvm::APFloat::Semantics)
-    unsigned Semantics : 4; // Provides semantics for APFloat construction
+    unsigned Semantics : 5; // Provides semantics for APFloat construction
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsExact : 1;
   };
@@ -1656,6 +1656,11 @@ public:
   FPOptionsOverride getStoredFPFeatures() const {
     assert(hasStoredFPFeatures());
     return *getTrailingObjects<FPOptionsOverride>();
+  }
+
+  /// Get the store FPOptionsOverride or default if not stored.
+  FPOptionsOverride getStoredFPFeaturesOrDefault() const {
+    return hasStoredFPFeatures() ? getStoredFPFeatures() : FPOptionsOverride();
   }
 
   using body_iterator = Stmt **;
