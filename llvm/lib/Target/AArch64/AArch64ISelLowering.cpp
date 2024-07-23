@@ -13292,7 +13292,7 @@ SDValue AArch64TargetLowering::LowerDUPQLane(SDValue Op,
   if (VT.getSizeInBits().getKnownMinValue() != AArch64::SVEBitsPerBlock)
     return SDValue();
 
-  // The DUPQ operation is indepedent of element type so normalise to i64s.
+  // The DUPQ operation is independent of element type so normalise to i64s.
   SDValue Idx128 = Op.getOperand(2);
 
   // DUPQ can be used when idx is in range.
