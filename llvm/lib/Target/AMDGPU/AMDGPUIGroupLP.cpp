@@ -311,7 +311,7 @@ class PipelineSolver {
   uint64_t BranchesExplored = 0;
 
   // The direction in which we process the candidate SchedGroups per SU
-  bool IsBottomUp = 1;
+  bool IsBottomUp = true;
 
   // Update indices to fit next conflicting instruction
   void advancePosition();
@@ -365,7 +365,7 @@ public:
 
   PipelineSolver(DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
                  DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
-                 ScheduleDAGMI *DAG, bool IsBottomUp = 1)
+                 ScheduleDAGMI *DAG, bool IsBottomUp = true)
       : DAG(DAG), SyncedInstrs(SyncedInstrs),
         SyncedSchedGroups(SyncedSchedGroups), IsBottomUp(IsBottomUp) {
 
@@ -858,7 +858,7 @@ public:
   virtual bool shouldApplyStrategy(ScheduleDAGInstrs *DAG,
                                    AMDGPU::SchedulingPhase Phase) = 0;
 
-  bool IsBottomUp = 1;
+  bool IsBottomUp = true;
 
   IGLPStrategy(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
       : DAG(DAG), TII(TII) {}
@@ -881,7 +881,7 @@ public:
 
   MFMASmallGemmOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
       : IGLPStrategy(DAG, TII) {
-    IsBottomUp = 1;
+    IsBottomUp = true;
   }
 };
 
@@ -1350,7 +1350,7 @@ public:
 
   MFMAExpInterleaveOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
       : IGLPStrategy(DAG, TII) {
-    IsBottomUp = 0;
+    IsBottomUp = false;
   }
 };
 
@@ -2061,7 +2061,7 @@ public:
 
   MFMASmallGemmSingleWaveOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
       : IGLPStrategy(DAG, TII) {
-    IsBottomUp = 0;
+    IsBottomUp = false;
   }
 };
 
@@ -2371,7 +2371,7 @@ public:
   // created SchedGroup first, and will consider that as the ultimate
   // predecessor group when linking. TOP_DOWN instead links and processes the
   // first created SchedGroup first.
-  bool IsBottomUp = 1;
+  bool IsBottomUp = true;
 
   // The scheduling phase this application of IGLP corresponds with.
   AMDGPU::SchedulingPhase Phase = AMDGPU::SchedulingPhase::Initial;
