@@ -830,7 +830,7 @@ void TargetLoweringBase::initActions() {
                       ISD::FROUNDEVEN, ISD::FTAN,  ISD::FACOS,  ISD::FASIN,
                       ISD::FATAN,      ISD::FCOSH, ISD::FSINH,  ISD::FTANH},
                      {MVT::f32, MVT::f64, MVT::f128}, Expand);
-    
+
   // FIXME: Query RuntimeLibCalls to make the decision.
   setOperationAction({ISD::LRINT, ISD::LLRINT, ISD::LROUND, ISD::LLROUND},
                      {MVT::f32, MVT::f64, MVT::f128}, LibCall);
