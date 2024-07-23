@@ -94,7 +94,6 @@
 // WARN16: warning: overriding '-ffp-model=strict' option with '-fassociative-math' [-Woverriding-option]
 // WARN16: warning: overriding '-ffp-model=strict' option with '-ffp-contract=on' [-Woverriding-option]
 
-
 // RUN: %clang -### -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOROUND %s
 // CHECK-NOROUND: "-cc1"
