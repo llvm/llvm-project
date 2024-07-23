@@ -94,7 +94,6 @@ void MCAssembler::reset() {
   Sections.clear();
   Symbols.clear();
   LinkerOptions.clear();
-  FileNames.clear();
   ThumbFuncs.clear();
   BundleAlignSize = 0;
 

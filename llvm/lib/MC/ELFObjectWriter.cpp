@@ -560,7 +560,7 @@ void ELFWriter::computeSymbolTable(MCAssembler &Asm,
   std::vector<ELFSymbolData> LocalSymbolData;
   std::vector<ELFSymbolData> ExternalSymbolData;
   MutableArrayRef<std::pair<std::string, size_t>> FileNames =
-      Asm.getFileNames();
+      OWriter.getFileNames();
   for (const std::pair<std::string, size_t> &F : FileNames)
     StrTabBuilder.add(F.first);
 
