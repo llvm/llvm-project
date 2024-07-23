@@ -7179,7 +7179,7 @@ objdump::getMachODSymObject(const MachOObjectFile *MachOOF, StringRef Filename,
     DSYMBuf = std::move(BufOrErr.get());
 
     Expected<std::unique_ptr<Binary>> BinaryOrErr =
-        createBinary(DSYMBuf.get()->getMemBufferRef());
+        createBinary(DSYMBuf->getMemBufferRef());
     if (!BinaryOrErr) {
       reportError(BinaryOrErr.takeError(), DSYMPath);
       return nullptr;

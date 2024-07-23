@@ -642,6 +642,7 @@ Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
     Type *NewPtrTy = getPtrOrVecOfPtrsWithNewAS(I->getType(), AS);
     auto *NewI = new AddrSpaceCastInst(I, NewPtrTy);
     NewI->insertAfter(I);
+    NewI->setDebugLoc(I->getDebugLoc());
     return NewI;
   }
 

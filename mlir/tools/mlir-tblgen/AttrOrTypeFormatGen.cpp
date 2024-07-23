@@ -423,9 +423,11 @@ void DefFormat::genVariableParser(ParameterElement *el, FmtContext &ctx,
         Dialect dialect(dialectInit->getDef());
         auto cppNamespace = dialect.getCppNamespace();
         std::string name = dialect.getCppClassName();
-        dialectLoading = ("\nodsParser.getContext()->getOrLoadDialect<" +
-                          cppNamespace + "::" + name + ">();")
-                             .str();
+        if (name != "BuiltinDialect" || cppNamespace != "::mlir") {
+          dialectLoading = ("\nodsParser.getContext()->getOrLoadDialect<" +
+                            cppNamespace + "::" + name + ">();")
+                               .str();
+        }
       }
     }
   }

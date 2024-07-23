@@ -366,6 +366,9 @@ public:
 
   bool tryIndexedLoad(SDNode *N);
 
+  void SelectPtrauthAuth(SDNode *N);
+  void SelectPtrauthResign(SDNode *N);
+
   bool trySelectStackSlotTagP(SDNode *N);
   void SelectTagP(SDNode *N);
 
@@ -1479,6 +1482,96 @@ void AArch64DAGToDAGISel::SelectTable(SDNode *N, unsigned NumVecs, unsigned Opc,
   Ops.push_back(RegSeq);
   Ops.push_back(N->getOperand(NumVecs + ExtOff + 1));
   ReplaceNode(N, CurDAG->getMachineNode(Opc, dl, VT, Ops));
+}
+
+static std::tuple<SDValue, SDValue>
+extractPtrauthBlendDiscriminators(SDValue Disc, SelectionDAG *DAG) {
+  SDLoc DL(Disc);
+  SDValue AddrDisc;
+  SDValue ConstDisc;
+
+  // If this is a blend, remember the constant and address discriminators.
+  // Otherwise, it's either a constant discriminator, or a non-blended
+  // address discriminator.
+  if (Disc->getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+      Disc->getConstantOperandVal(0) == Intrinsic::ptrauth_blend) {
+    AddrDisc = Disc->getOperand(1);
+    ConstDisc = Disc->getOperand(2);
+  } else {
+    ConstDisc = Disc;
+  }
+
+  // If the constant discriminator (either the blend RHS, or the entire
+  // discriminator value) isn't a 16-bit constant, bail out, and let the
+  // discriminator be computed separately.
+  auto *ConstDiscN = dyn_cast<ConstantSDNode>(ConstDisc);
+  if (!ConstDiscN || !isUInt<16>(ConstDiscN->getZExtValue()))
+    return std::make_tuple(DAG->getTargetConstant(0, DL, MVT::i64), Disc);
+
+  // If there's no address discriminator, use XZR directly.
+  if (!AddrDisc)
+    AddrDisc = DAG->getRegister(AArch64::XZR, MVT::i64);
+
+  return std::make_tuple(
+      DAG->getTargetConstant(ConstDiscN->getZExtValue(), DL, MVT::i64),
+      AddrDisc);
+}
+
+void AArch64DAGToDAGISel::SelectPtrauthAuth(SDNode *N) {
+  SDLoc DL(N);
+  // IntrinsicID is operand #0
+  SDValue Val = N->getOperand(1);
+  SDValue AUTKey = N->getOperand(2);
+  SDValue AUTDisc = N->getOperand(3);
+
+  unsigned AUTKeyC = cast<ConstantSDNode>(AUTKey)->getZExtValue();
+  AUTKey = CurDAG->getTargetConstant(AUTKeyC, DL, MVT::i64);
+
+  SDValue AUTAddrDisc, AUTConstDisc;
+  std::tie(AUTConstDisc, AUTAddrDisc) =
+      extractPtrauthBlendDiscriminators(AUTDisc, CurDAG);
+
+  SDValue X16Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
+                                         AArch64::X16, Val, SDValue());
+  SDValue Ops[] = {AUTKey, AUTConstDisc, AUTAddrDisc, X16Copy.getValue(1)};
+
+  SDNode *AUT = CurDAG->getMachineNode(AArch64::AUT, DL, MVT::i64, Ops);
+  ReplaceNode(N, AUT);
+  return;
+}
+
+void AArch64DAGToDAGISel::SelectPtrauthResign(SDNode *N) {
+  SDLoc DL(N);
+  // IntrinsicID is operand #0
+  SDValue Val = N->getOperand(1);
+  SDValue AUTKey = N->getOperand(2);
+  SDValue AUTDisc = N->getOperand(3);
+  SDValue PACKey = N->getOperand(4);
+  SDValue PACDisc = N->getOperand(5);
+
+  unsigned AUTKeyC = cast<ConstantSDNode>(AUTKey)->getZExtValue();
+  unsigned PACKeyC = cast<ConstantSDNode>(PACKey)->getZExtValue();
+
+  AUTKey = CurDAG->getTargetConstant(AUTKeyC, DL, MVT::i64);
+  PACKey = CurDAG->getTargetConstant(PACKeyC, DL, MVT::i64);
+
+  SDValue AUTAddrDisc, AUTConstDisc;
+  std::tie(AUTConstDisc, AUTAddrDisc) =
+      extractPtrauthBlendDiscriminators(AUTDisc, CurDAG);
+
+  SDValue PACAddrDisc, PACConstDisc;
+  std::tie(PACConstDisc, PACAddrDisc) =
+      extractPtrauthBlendDiscriminators(PACDisc, CurDAG);
+
+  SDValue X16Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
+                                         AArch64::X16, Val, SDValue());
+
+  SDValue Ops[] = {AUTKey,       AUTConstDisc, AUTAddrDisc,        PACKey,
+                   PACConstDisc, PACAddrDisc,  X16Copy.getValue(1)};
+
+  SDNode *AUTPAC = CurDAG->getMachineNode(AArch64::AUTPAC, DL, MVT::i64, Ops);
+  ReplaceNode(N, AUTPAC);
+  return;
 }
 
 bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
@@ -4587,6 +4680,18 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     switch (IntNo) {
     default:
       break;
+    case Intrinsic::aarch64_gcsss: {
+      SDLoc DL(Node);
+      SDValue Chain = Node->getOperand(0);
+      SDValue Val = Node->getOperand(2);
+      SDValue Zero = CurDAG->getCopyFromReg(Chain, DL, AArch64::XZR, MVT::i64);
+      SDNode *SS1 =
+          CurDAG->getMachineNode(AArch64::GCSSS1, DL, MVT::Other, Val, Chain);
+      SDNode *SS2 = CurDAG->getMachineNode(AArch64::GCSSS2, DL, MVT::i64,
+                                           MVT::Other, Zero, SDValue(SS1, 0));
+      ReplaceNode(Node, SS2);
+      return;
+    }
     case Intrinsic::aarch64_ldaxp:
     case Intrinsic::aarch64_ldxp: {
       unsigned Op =
@@ -5425,6 +5530,15 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::aarch64_tagp:
       SelectTagP(Node);
       return;
+
+    case Intrinsic::ptrauth_auth:
+      SelectPtrauthAuth(Node);
+      return;
+
+    case Intrinsic::ptrauth_resign:
+      SelectPtrauthResign(Node);
+      return;
+
     case Intrinsic::aarch64_neon_tbl2:
       SelectTable(Node, 2,
                   VT == MVT::v8i8 ? AArch64::TBLv8i8Two : AArch64::TBLv16i8Two,

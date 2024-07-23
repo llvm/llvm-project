@@ -5,7 +5,7 @@
 define amdgpu_kernel void @test_fmin_legacy_uge_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: test_fmin_legacy_uge_f64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, 0
 ; SI-NEXT:    s_mov_b32 s11, s7
@@ -26,7 +26,7 @@ define amdgpu_kernel void @test_fmin_legacy_uge_f64(ptr addrspace(1) %out, ptr a
 ;
 ; VI-LABEL: test_fmin_legacy_uge_f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
@@ -57,7 +57,7 @@ define amdgpu_kernel void @test_fmin_legacy_uge_f64(ptr addrspace(1) %out, ptr a
 define amdgpu_kernel void @test_fmin_legacy_ugt_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: test_fmin_legacy_ugt_f64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, 0
 ; SI-NEXT:    s_mov_b32 s11, s7
@@ -78,7 +78,7 @@ define amdgpu_kernel void @test_fmin_legacy_ugt_f64(ptr addrspace(1) %out, ptr a
 ;
 ; VI-LABEL: test_fmin_legacy_ugt_f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
@@ -109,7 +109,7 @@ define amdgpu_kernel void @test_fmin_legacy_ugt_f64(ptr addrspace(1) %out, ptr a
 define amdgpu_kernel void @test_fmin_legacy_ule_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: test_fmin_legacy_ule_f64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, 0
 ; SI-NEXT:    s_mov_b32 s11, s7
@@ -130,7 +130,7 @@ define amdgpu_kernel void @test_fmin_legacy_ule_f64(ptr addrspace(1) %out, ptr a
 ;
 ; VI-LABEL: test_fmin_legacy_ule_f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
@@ -161,7 +161,7 @@ define amdgpu_kernel void @test_fmin_legacy_ule_f64(ptr addrspace(1) %out, ptr a
 define amdgpu_kernel void @test_fmin_legacy_ult_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: test_fmin_legacy_ult_f64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, 0
 ; SI-NEXT:    s_mov_b32 s11, s7
@@ -182,7 +182,7 @@ define amdgpu_kernel void @test_fmin_legacy_ult_f64(ptr addrspace(1) %out, ptr a
 ;
 ; VI-LABEL: test_fmin_legacy_ult_f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
@@ -213,7 +213,7 @@ define amdgpu_kernel void @test_fmin_legacy_ult_f64(ptr addrspace(1) %out, ptr a
 define amdgpu_kernel void @test_fmin_legacy_oge_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: test_fmin_legacy_oge_f64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, 0
 ; SI-NEXT:    s_mov_b32 s11, s7
@@ -234,7 +234,7 @@ define amdgpu_kernel void @test_fmin_legacy_oge_f64(ptr addrspace(1) %out, ptr a
 ;
 ; VI-LABEL: test_fmin_legacy_oge_f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
@@ -265,7 +265,7 @@ define amdgpu_kernel void @test_fmin_legacy_oge_f64(ptr addrspace(1) %out, ptr a
 define amdgpu_kernel void @test_fmin_legacy_ogt_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: test_fmin_legacy_ogt_f64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, 0
 ; SI-NEXT:    s_mov_b32 s11, s7
@@ -286,7 +286,7 @@ define amdgpu_kernel void @test_fmin_legacy_ogt_f64(ptr addrspace(1) %out, ptr a
 ;
 ; VI-LABEL: test_fmin_legacy_ogt_f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
@@ -317,7 +317,7 @@ define amdgpu_kernel void @test_fmin_legacy_ogt_f64(ptr addrspace(1) %out, ptr a
 define amdgpu_kernel void @test_fmin_legacy_ole_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: test_fmin_legacy_ole_f64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, 0
 ; SI-NEXT:    s_mov_b32 s11, s7
@@ -338,7 +338,7 @@ define amdgpu_kernel void @test_fmin_legacy_ole_f64(ptr addrspace(1) %out, ptr a
 ;
 ; VI-LABEL: test_fmin_legacy_ole_f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
@@ -369,7 +369,7 @@ define amdgpu_kernel void @test_fmin_legacy_ole_f64(ptr addrspace(1) %out, ptr a
 define amdgpu_kernel void @test_fmin_legacy_olt_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: test_fmin_legacy_olt_f64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, 0
 ; SI-NEXT:    s_mov_b32 s11, s7
@@ -390,7 +390,7 @@ define amdgpu_kernel void @test_fmin_legacy_olt_f64(ptr addrspace(1) %out, ptr a
 ;
 ; VI-LABEL: test_fmin_legacy_olt_f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s3

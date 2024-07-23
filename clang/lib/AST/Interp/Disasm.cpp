@@ -325,8 +325,11 @@ LLVM_DUMP_METHOD void Record::dump(llvm::raw_ostream &OS, unsigned Indentation,
 LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   {
     ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_BLUE, true});
-    OS << "Block " << (const void *)this << "\n";
+    OS << "Block " << (const void *)this;
   }
+  OS << " (";
+  Desc->dump(OS);
+  OS << ")\n";
   unsigned NPointers = 0;
   for (const Pointer *P = Pointers; P; P = P->Next) {
     ++NPointers;
@@ -363,9 +366,9 @@ LLVM_DUMP_METHOD void EvaluationResult::dump() const {
 
     OS << "LValue: ";
     if (const auto *P = std::get_if<Pointer>(&Value))
-      P->toAPValue().printPretty(OS, ASTCtx, SourceType);
+      P->toAPValue(ASTCtx).printPretty(OS, ASTCtx, SourceType);
     else if (const auto *FP = std::get_if<FunctionPointer>(&Value)) // Nope
-      FP->toAPValue().printPretty(OS, ASTCtx, SourceType);
+      FP->toAPValue(ASTCtx).printPretty(OS, ASTCtx, SourceType);
     OS << "\n";
     break;
   }

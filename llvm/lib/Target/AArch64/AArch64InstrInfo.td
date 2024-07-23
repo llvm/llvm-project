@@ -276,6 +276,8 @@ def HasMatMulFP32    : Predicate<"Subtarget->hasMatMulFP32()">,
                        AssemblerPredicateWithAll<(all_of FeatureMatMulFP32), "f32mm">;
 def HasMatMulFP64    : Predicate<"Subtarget->hasMatMulFP64()">,
                        AssemblerPredicateWithAll<(all_of FeatureMatMulFP64), "f64mm">;
+def HasFPAC          : Predicate<"Subtarget->hasFPAC())">,
+                       AssemblerPredicateWithAll<(all_of FeatureFPAC), "fpac">;
 def HasXS            : Predicate<"Subtarget->hasXS()">,
                        AssemblerPredicateWithAll<(all_of FeatureXS), "xs">;
 def HasWFxT          : Predicate<"Subtarget->hasWFxT()">,
@@ -1143,6 +1145,33 @@ def JumpTableDest8 : Pseudo<(outs GPR64:$dst, GPR64sp:$scratch),
                      Sched<[]>;
 }
 
+// A hardened but more expensive version of jump-table dispatch.
+// This combines the target address computation (otherwise done using the
+// JumpTableDest pseudos above) with the branch itself (otherwise done using
+// a plain BR) in a single non-attackable sequence.
+//
+// We take the final entry index as an operand to allow isel freedom. This does
+// mean that the index can be attacker-controlled.  To address that, we also do
+// limited checking of the offset, mainly ensuring it still points within the
+// jump-table array.  When it doesn't, this branches to the first entry.
+// We might want to trap instead.
+//
+// This is intended for use in conjunction with ptrauth for other code pointers,
+// to avoid signing jump-table entries and turning them into pointers.
+//
+// Entry index is passed in x16.  Clobbers x16/x17/nzcv.
+let isNotDuplicable = 1 in
+def BR_JumpTable : Pseudo<(outs), (ins i32imm:$jti), []>, Sched<[]> {
+  let isBranch = 1;
+  let isTerminator = 1;
+  let isIndirectBranch = 1;
+  let isBarrier = 1;
+  let isNotDuplicable = 1;
+  let Defs = [X16,X17,NZCV];
+  let Uses = [X16];
+  let Size = 44; // 28 fixed + 16 variable, for table size materialization
+}
+
 // Space-consuming pseudo to aid testing of placement and reachability
 // algorithms. Immediate operand is the number of bytes this "instruction"
 // occupies; register operands can be used to enforce dependency and constrain
@@ -1267,23 +1296,34 @@ class GCSRtIn<bits<3> op1, bits<3> op2, string mnemonic,
   let Inst{15-8} = 0b01110111;
   let Inst{7-5} = op2;
   let Predicates = [HasGCS];
+  let hasSideEffects = 1;
 }
 
+let mayStore = 1, mayLoad = 1 in
 def GCSSS1   : GCSRtIn<0b011, 0b010, "gcsss1">;
+let mayStore = 1 in
 def GCSPUSHM : GCSRtIn<0b011, 0b000, "gcspushm">;
 
 class GCSRtOut<bits<3> op1, bits<3> op2, string mnemonic,
             list<dag> pattern = []>
-    : RtSystemI<1, (outs GPR64:$Rt), (ins), mnemonic, "\t$Rt", pattern> {
+    : RtSystemI<1, (outs GPR64:$Rt), (ins GPR64:$src), mnemonic, "\t$Rt", pattern> {
   let Inst{20-19} = 0b01;
   let Inst{18-16} = op1;
   let Inst{15-8} = 0b01110111;
   let Inst{7-5} = op2;
   let Predicates = [HasGCS];
+  let hasSideEffects = 1;
+  // The input register is unchanged when GCS is disabled, so we need it as
+  // both an input and output operand.
+  let Constraints = "$src = $Rt";
 }
 
+let mayStore = 1, mayLoad = 1 in
 def GCSSS2  : GCSRtOut<0b011, 0b011, "gcsss2">;
-def GCSPOPM : GCSRtOut<0b011, 0b001, "gcspopm">;
+// FIXME: mayStore = 1 only needed to match the intrinsic definition
+let mayStore = 1, mayLoad = 1 in
+def GCSPOPM : GCSRtOut<0b011, 0b001, "gcspopm",
+                       [(set GPR64:$Rt, (int_aarch64_gcspopm GPR64:$src))]>;
 def GCSPOPM_NoOp : InstAlias<"gcspopm", (GCSPOPM XZR)>, Requires<[HasGCS]>; // Rt defaults to XZR if absent
 
 def GCSB_DSYNC_disable : InstAlias<"gcsb\tdsync", (HINT 19), 0>;
@@ -1292,7 +1332,8 @@ def GCSB_DSYNC         : InstAlias<"gcsb\tdsync", (HINT 19), 1>, Requires<[HasGC
 def : TokenAlias<"DSYNC", "dsync">;
 
 let Uses = [X16], Defs = [X16], CRm = 0b0101 in {
-  def CHKFEAT   : SystemNoOperands<0b000, "hint\t#40">;
+  def CHKFEAT   : SystemNoOperands<0b000, "hint\t#40",
+                                   [(set X16, (int_aarch64_chkfeat X16))]>;
 }
 def : InstAlias<"chkfeat\tx16", (CHKFEAT), 0>;
 def : InstAlias<"chkfeat\tx16", (CHKFEAT), 1>, Requires<[HasCHK]>;
@@ -1310,7 +1351,6 @@ class GCSSt<string mnemonic, bits<3> op>
 }
 def GCSSTR  : GCSSt<"gcsstr",  0b000>;
 def GCSSTTR : GCSSt<"gcssttr", 0b001>;
-
 
 // ARMv8.2-A Dot Product
 let Predicates = [HasDotProd] in {
@@ -1755,6 +1795,24 @@ let Predicates = [HasPAuth] in {
     let Uses = [SP];
   }
 
+  // BRA pseudo, generalized version of BRAA/BRAB/Z.
+  // This directly manipulates x16/x17, which are the only registers the OS
+  // guarantees are safe to use for sensitive operations.
+  def BRA : Pseudo<(outs), (ins GPR64noip:$Rn, i32imm:$Key, i64imm:$Disc,
+                                GPR64noip:$AddrDisc), []>, Sched<[]> {
+    let isCodeGenOnly = 1;
+    let hasNoSchedulingInfo = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let isBranch = 1;
+    let isTerminator = 1;
+    let isBarrier = 1;
+    let isIndirectBranch = 1;
+    let Size = 12; // 4 fixed + 8 variable, to compute discriminator.
+    let Defs = [X17];
+  }
+
   let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
     def RETAA   : AuthReturn<0b010, 0, "retaa">;
     def RETAB   : AuthReturn<0b010, 1, "retab">;
@@ -1764,6 +1822,37 @@ let Predicates = [HasPAuth] in {
 
   defm LDRAA  : AuthLoad<0, "ldraa", simm10Scaled>;
   defm LDRAB  : AuthLoad<1, "ldrab", simm10Scaled>;
+
+  // AUT pseudo.
+  // This directly manipulates x16/x17, which are the only registers the OS
+  // guarantees are safe to use for sensitive operations.
+  def AUT : Pseudo<(outs), (ins i32imm:$Key, i64imm:$Disc, GPR64noip:$AddrDisc),
+                   []>, Sched<[WriteI, ReadI]> {
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let Size = 32;
+    let Defs = [X16,X17,NZCV];
+    let Uses = [X16];
+  }
+
+  // AUT and re-PAC a value, using different keys/data.
+  // This directly manipulates x16/x17, which are the only registers the OS
+  // guarantees are safe to use for sensitive operations.
+  def AUTPAC
+      : Pseudo<(outs),
+               (ins i32imm:$AUTKey, i64imm:$AUTDisc, GPR64noip:$AUTAddrDisc,
+                    i32imm:$PACKey, i64imm:$PACDisc, GPR64noip:$PACAddrDisc),
+               []>, Sched<[WriteI, ReadI]> {
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let Size = 48;
+    let Defs = [X16,X17,NZCV];
+    let Uses = [X16];
+  }
 
   // Materialize a signed global address, with adrp+add and PAC.
   def MOVaddrPAC : Pseudo<(outs),
@@ -1822,7 +1911,6 @@ let Predicates = [HasPAuth] in {
                                 tcGPR64:$AddrDisc),
               (AUTH_TCRETURN_BTI tcGPRx16x17:$dst, imm:$FPDiff, imm:$Key,
                                  imm:$Disc, tcGPR64:$AddrDisc)>;
-
 }
 
 // v9.5-A pointer authentication extensions
@@ -1845,8 +1933,8 @@ let Predicates = [HasPAuthLR] in {
     def AUTIASPPCi : SignAuthPCRel<0b00, "autiasppc">;
     def AUTIBSPPCi : SignAuthPCRel<0b01, "autibsppc">;
     //                              opcode2, opcode,   asm
-    def AUTIASPPCr : SignAuthOneReg<0b00001, 0b100100, "autiasppc">;
-    def AUTIBSPPCr : SignAuthOneReg<0b00001, 0b100101, "autibsppc">;
+    def AUTIASPPCr : SignAuthOneReg<0b00001, 0b100100, "autiasppcr">;
+    def AUTIBSPPCr : SignAuthOneReg<0b00001, 0b100101, "autibsppcr">;
     //                                  opcode2, opcode,   asm
     def PACIA171615 : SignAuthFixedRegs<0b00001, 0b100010, "pacia171615">;
     def PACIB171615 : SignAuthFixedRegs<0b00001, 0b100011, "pacib171615">;
@@ -1859,8 +1947,8 @@ let Predicates = [HasPAuthLR] in {
     def RETAASPPCi : SignAuthReturnPCRel<0b000, 0b11111, "retaasppc">;
     def RETABSPPCi : SignAuthReturnPCRel<0b001, 0b11111, "retabsppc">;
     //                                 op3,      asm
-    def RETAASPPCr : SignAuthReturnReg<0b000010, "retaasppc">;
-    def RETABSPPCr : SignAuthReturnReg<0b000011, "retabsppc">;
+    def RETAASPPCr : SignAuthReturnReg<0b000010, "retaasppcr">;
+    def RETABSPPCr : SignAuthReturnReg<0b000011, "retabsppcr">;
   }
   def : InstAlias<"pacm", (PACM), 1>;
 }
@@ -2689,6 +2777,11 @@ def : InstAlias<"tst $src1, $src2$sh",
 def : Pat<(not GPR32:$Wm), (ORNWrr WZR, GPR32:$Wm)>;
 def : Pat<(not GPR64:$Xm), (ORNXrr XZR, GPR64:$Xm)>;
 
+// Emit (and 0xFFFFFFFF) as a ORRWrr move which may be eliminated.
+let AddedComplexity = 6 in
+def : Pat<(i64 (and GPR64:$Rn, 0xffffffff)),
+          (SUBREG_TO_REG (i64 0), (ORRWrr WZR, (EXTRACT_SUBREG GPR64:$Rn, sub_32)), sub_32)>;
+
 
 //===----------------------------------------------------------------------===//
 // One operand data processing instructions.
@@ -3111,7 +3204,8 @@ def BRK   : ExceptionGeneration<0b001, 0b00, "brk",
 def DCPS1 : ExceptionGeneration<0b101, 0b01, "dcps1">;
 def DCPS2 : ExceptionGeneration<0b101, 0b10, "dcps2">;
 def DCPS3 : ExceptionGeneration<0b101, 0b11, "dcps3">, Requires<[HasEL3]>;
-def HLT   : ExceptionGeneration<0b010, 0b00, "hlt">;
+def HLT   : ExceptionGeneration<0b010, 0b00, "hlt",
+                                [(int_aarch64_hlt timm32_0_65535:$imm)]>;
 def HVC   : ExceptionGeneration<0b000, 0b10, "hvc">;
 def SMC   : ExceptionGeneration<0b000, 0b11, "smc">, Requires<[HasEL3]>;
 def SVC   : ExceptionGeneration<0b000, 0b01, "svc">;
@@ -5346,6 +5440,17 @@ def : Pat<(v4i16 (trunc (smax (smin (v4i32 V128:$Vn), (v4i32 VImm7FFF)),
                               (v4i32 VImm8000)))),
           (SQXTNv4i16 V128:$Vn)>;
 
+// concat_vectors(Vd, trunc(umin(X, 255))) -> UQXTRN(Vd, Vn)
+def : Pat<(v16i8 (concat_vectors
+                 (v8i8 V64:$Vd),
+                 (v8i8 (trunc (umin (v8i16 V128:$Vn), (v8i16 VImmFF)))))),
+          (UQXTNv16i8 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+// concat_vectors(Vd, trunc(umin(X, 65535))) -> UQXTRN(Vd, Vn)
+def : Pat<(v8i16 (concat_vectors
+                 (v4i16 V64:$Vd),
+                 (v4i16 (trunc (umin (v4i32 V128:$Vn), (v4i32 VImmFFFF)))))),
+          (UQXTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+
 // concat_vectors(Vd, trunc(smin(smax Vm, -128), 127) ~> SQXTN2(Vd, Vn)
 // with reversed min/max
 def : Pat<(v16i8 (concat_vectors
@@ -6067,6 +6172,34 @@ def : Pat<(f16 (any_sint_to_fp (i32 (any_fp_to_sint f16:$Rn)))),
 def : Pat<(f16 (any_uint_to_fp (i32 (any_fp_to_uint f16:$Rn)))),
           (UCVTFv1i16 (f16 (FCVTZUv1f16 f16:$Rn)))>;
 }
+
+// int -> float conversion of value in lane 0 of simd vector should use 
+// correct cvtf variant to avoid costly fpr <-> gpr register transfers.
+def : Pat<(f32 (sint_to_fp (i32 (vector_extract (v4i32 FPR128:$Rn), (i64 0))))),
+          (SCVTFv1i32 (i32 (EXTRACT_SUBREG (v4i32 FPR128:$Rn), ssub)))>;
+
+def : Pat<(f32 (uint_to_fp (i32 (vector_extract (v4i32 FPR128:$Rn), (i64 0))))),
+          (UCVTFv1i32 (i32 (EXTRACT_SUBREG (v4i32 FPR128:$Rn), ssub)))>;
+
+def : Pat<(f64 (sint_to_fp (i64 (vector_extract (v2i64 FPR128:$Rn), (i64 0))))),
+          (SCVTFv1i64 (i64 (EXTRACT_SUBREG (v2i64 FPR128:$Rn), dsub)))>;
+
+def : Pat<(f64 (uint_to_fp (i64 (vector_extract (v2i64 FPR128:$Rn), (i64 0))))),
+          (UCVTFv1i64 (i64 (EXTRACT_SUBREG (v2i64 FPR128:$Rn), dsub)))>;
+
+// fp16: integer extraction from vector must be at least 32-bits to be legal.
+// Actual extraction result is then an in-reg sign-extension of lower 16-bits.
+let Predicates = [HasNEONandIsStreamingSafe, HasFullFP16] in {
+def : Pat<(f16 (sint_to_fp (i32 (sext_inreg (i32 (vector_extract 
+                (v8i16 FPR128:$Rn), (i64 0))), i16)))), 
+          (SCVTFv1i16 (f16 (EXTRACT_SUBREG (v8i16 FPR128:$Rn), hsub)))>;
+
+// unsigned 32-bit extracted element is truncated to 16-bits using AND
+def : Pat<(f16 (uint_to_fp (i32 (and (i32 (vector_extract 
+                (v8i16 FPR128:$Rn), (i64 0))), (i32 65535))))),
+          (UCVTFv1i16 (f16 (EXTRACT_SUBREG (v8i16 FPR128:$Rn), hsub)))>;
+}
+
 // If an integer is about to be converted to a floating point value,
 // just load it on the floating point unit.
 // Here are the patterns for 8 and 16-bits to float.

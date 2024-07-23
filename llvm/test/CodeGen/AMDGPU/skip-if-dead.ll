@@ -1697,7 +1697,7 @@ live:
 
 export:
   %proxy = phi float [ undef, %kill ], [ %scale, %live ]
-  call void @llvm.amdgcn.exp.f32(i32 immarg 0, i32 immarg 15, float %proxy, float %proxy, float %proxy, float %proxy, i1 immarg true, i1 immarg true) #3
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %proxy, float %proxy, float %proxy, float %proxy, i1 true, i1 true) #3
   ret void
 }
 
@@ -1907,7 +1907,7 @@ latch:
 ._crit_edge:
   %tmp = phi i32 [ -1, %.entry ], [ %ctr.next, %latch ]
   %out = bitcast i32 %tmp to float
-  call void @llvm.amdgcn.exp.f32(i32 immarg 0, i32 immarg 15, float %out, float %out, float undef, float undef, i1 immarg true, i1 immarg true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %out, float %out, float undef, float undef, i1 true, i1 true)
   ret void
 }
 

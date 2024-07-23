@@ -12,4 +12,4 @@ register read fpsr
 # CHECK-NEXT:      = (QC = 0, IDC = 0, IXC = 0, UFC = 0, OFC = 0, DZC = 0, IOC = 0)
 register read fpcr
 # CHECK:      fpcr = 0x02000000
-# CHECK-NEXT:      = (AHP = 0, DN = 1, FZ = 0, RMode = 0, IDE = 0, IXE = 0, UFE = 0, OFE = 0, DZE = 0, IOE = 0)
+# CHECK-NEXT:      = (AHP = 0, DN = 1, FZ = 0, RMode = RN, IDE = 0, IXE = 0, UFE = 0, OFE = 0, DZE = 0, IOE = 0)
