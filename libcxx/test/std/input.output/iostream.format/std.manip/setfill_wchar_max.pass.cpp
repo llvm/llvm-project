@@ -15,8 +15,8 @@
 // version 2 implementation fixes the problem.
 
 // XFAIL: target={{.*}}-windows{{.*}} && libcpp-abi-version=1
-// XFAIL: target=armv{{7|8}}l-linux-gnueabihf && libcpp-abi-version=1
-// XFAIL: target=aarch64-linux-gnu && libcpp-abi-version=1
+// XFAIL: target=armv{{7|8}}l{{.*}}-linux-gnueabihf && libcpp-abi-version=1
+// XFAIL: target=aarch64{{.*}}-linux-gnu && libcpp-abi-version=1
 
 #include <iomanip>
 #include <ostream>
