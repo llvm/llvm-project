@@ -174,6 +174,11 @@ static cl::opt<std::string> WorkloadDefinitions(
              "}"),
     cl::Hidden);
 
+static cl::opt<bool> ImportAssumeUniqueLocal(
+    "import-assume-unique-local", cl::init(false),
+    cl::description("assume local-linkage global variables have unique names"),
+    cl::Hidden);
+
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
 }
@@ -367,6 +372,8 @@ class GlobalsImporter final {
       // was not distinguishing path.
       auto LocalNotInModule =
           [&](const GlobalValueSummary *RefSummary) -> bool {
+        if (ImportAssumeUniqueLocal)
+          return false;
         return GlobalValue::isLocalLinkage(RefSummary->linkage()) &&
                RefSummary->modulePath() != Summary.modulePath();
       };
