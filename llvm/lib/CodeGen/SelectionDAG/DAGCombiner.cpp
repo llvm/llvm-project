@@ -6047,11 +6047,7 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
   }
 
   // logic_op (truncate x), (truncate y) --> truncate (logic_op x, y)
-  //
-  // For targets that are particulaly senesitve to register pressure (e.g. GPUs)
-  // it's preferable to increase the number of truncate instructions in order to
-  // decrease the bit width of the logic_op.
-  if (HandOpcode == ISD::TRUNCATE && !TLI.shouldReduceRegisterPressure()) {
+  if (HandOpcode == ISD::TRUNCATE) {
     // If both operands have other uses, this transform would create extra
     // instructions without eliminating anything.
     if (!N0.hasOneUse() && !N1.hasOneUse())
@@ -6063,9 +6059,14 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
     if (LegalOperations && !TLI.isOperationLegal(LogicOpcode, XVT))
       return SDValue();
     // Be extra careful sinking truncate. If it's free, there's no benefit in
-    // widening a binop. Also, don't create a logic op on an illegal type.
+    // widening a binop.
     if (TLI.isZExtFree(VT, XVT) && TLI.isTruncateFree(XVT, VT))
       return SDValue();
+    // Prevent an infinite loop if the target preferts the inverse 
+    // transformation.
+    if (TLI.isNarrowingProfitable(XVT, VT))
+      return SDValue();
+    // Don't create a logic op on an illegal type.
     if (!TLI.isTypeLegal(XVT))
       return SDValue();
     SDValue Logic = DAG.getNode(LogicOpcode, DL, XVT, X, Y);
@@ -15873,7 +15874,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     break;
   }
 
-  if (TLI.shouldReduceRegisterPressure()) {
+  if (TLI.isNarrowingProfitable(SrcVT, VT)) {
     switch (N0.getOpcode()) {
     case ISD::ADD:
     case ISD::SUB:
@@ -15881,8 +15882,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     case ISD::AND:
     case ISD::OR:
     case ISD::XOR:
-      if (!(N0.hasOneUse() && VT.isScalarInteger() &&
-            TLI.isTruncateFree(SrcVT, VT)))
+      if (!(N0.hasOneUse() && VT.isScalarInteger()))
         break;
       if (LegalOperations && !TLI.isOperationLegal(N0.getOpcode(), VT))
         break;

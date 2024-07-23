@@ -162,14 +162,12 @@ public:
            DstTy->getPrimitiveSizeInBits() == 32;
   }
 
-  bool isTruncateFree(EVT FromVT, EVT ToVT) const override {
+  bool isNarrowingProfitable(EVT SrcVT, EVT DestVT) const override {
     // Truncating 64-bit to 32-bit is free in SASS.
-    if (!(FromVT.isScalarInteger() && ToVT.isScalarInteger()))
+    if (!(SrcVT.isScalarInteger() && DestVT.isScalarInteger()))
       return false;
-    return FromVT.getFixedSizeInBits() == 64 && ToVT.getFixedSizeInBits() == 32;
+    return SrcVT.getFixedSizeInBits() == 64 && DestVT.getFixedSizeInBits() == 32;
   }
-
-  bool shouldReduceRegisterPressure() const override { return true; }
 
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Ctx,
                          EVT VT) const override {
