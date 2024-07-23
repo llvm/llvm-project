@@ -87,10 +87,10 @@ void RISCVTargetELFStreamer::finishAttributeSection() {
 
 void RISCVTargetELFStreamer::finish() {
   RISCVTargetStreamer::finish();
-  MCAssembler &MCA = getStreamer().getAssembler();
+  ELFObjectWriter &W = getStreamer().getWriter();
   RISCVABI::ABI ABI = getTargetABI();
 
-  unsigned EFlags = MCA.getELFHeaderEFlags();
+  unsigned EFlags = W.getELFHeaderEFlags();
 
   if (hasRVC())
     EFlags |= ELF::EF_RISCV_RVC;
@@ -117,7 +117,7 @@ void RISCVTargetELFStreamer::finish() {
     llvm_unreachable("Improperly initialised target ABI");
   }
 
-  MCA.setELFHeaderEFlags(EFlags);
+  W.setELFHeaderEFlags(EFlags);
 }
 
 void RISCVTargetELFStreamer::reset() {
