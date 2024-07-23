@@ -44,14 +44,13 @@ using namespace clang;
 // TemplateParameterList Implementation
 //===----------------------------------------------------------------------===//
 
-
 namespace {
-template<class TemplateParam>
-bool DefaultArgumentContainsUnexpandedPack(const TemplateParam& P) {
+template <class TemplateParam>
+bool DefaultArgumentContainsUnexpandedPack(const TemplateParam &P) {
   return P.hasDefaultArgument() &&
          P.getDefaultArgument().getArgument().containsUnexpandedParameterPack();
 }
-}
+} // namespace
 
 TemplateParameterList::TemplateParameterList(const ASTContext& C,
                                              SourceLocation TemplateLoc,
