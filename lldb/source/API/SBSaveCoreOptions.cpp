@@ -75,6 +75,26 @@ lldb::SaveCoreStyle SBSaveCoreOptions::GetStyle() const {
   return m_opaque_up->GetStyle();
 }
 
+void SBSaveCoreOptions::AddThread(lldb::tid_t tid) {
+  m_opaque_up->AddThread(tid);
+}
+
+bool SBSaveCoreOptions::RemoveThread(lldb::tid_t tid) {
+  return m_opaque_up->RemoveThread(tid);
+}
+
+uint32_t SBSaveCoreOptions::GetNumThreads() const {
+  return m_opaque_up->GetNumThreads();
+}
+
+lldb::tid_t SBSaveCoreOptions::GetThreadAtIndex(uint32_t idx,
+                                                SBError &error) const {
+  int64_t tid = m_opaque_up->GetThreadAtIndex(idx);
+  if (tid == -1)
+    error.SetErrorString("Invalid index");
+  return 0;
+}
+
 void SBSaveCoreOptions::Clear() {
   LLDB_INSTRUMENT_VA(this);
   m_opaque_up->Clear();

@@ -46,8 +46,56 @@ SaveCoreOptions::GetOutputFile() const {
   return m_file;
 }
 
+void SaveCoreOptions::AddThread(lldb::tid_t tid) {
+  if (m_threads_to_save.count(tid) == 0)
+    m_threads_to_save.emplace(tid);
+}
+
+bool SaveCoreOptions::RemoveThread(lldb::tid_t tid) {
+  if (m_threads_to_save.count(tid) == 0) {
+    m_threads_to_save.erase(tid);
+    return true;
+  }
+
+  return false;
+}
+
+size_t SaveCoreOptions::GetNumThreads() const {
+  return m_threads_to_save.size();
+}
+
+int64_t SaveCoreOptions::GetThreadAtIndex(size_t index) const {
+  auto iter = m_threads_to_save.begin();
+  while (index >= 0 && iter != m_threads_to_save.end()) {
+    if (index == 0)
+      return *iter;
+    index--;
+    iter++;
+  }
+
+  return -1;
+}
+
+bool SaveCoreOptions::ShouldSaveThread(lldb::tid_t tid) const {
+  return m_threads_to_save.count(tid) > 0;
+}
+
+Status SaveCoreOptions::EnsureValidConfiguration() const {
+  Status error;
+  std::string error_str;
+  if (!m_threads_to_save.empty() && GetStyle() == lldb::eSaveCoreFull) {
+    error_str += "Cannot save a full core with a subset of threads\n";
+  }
+
+  if (!error_str.empty())
+    error.SetErrorString(error_str);
+
+  return error;
+}
+
 void SaveCoreOptions::Clear() {
   m_file = std::nullopt;
   m_plugin_name = std::nullopt;
   m_style = std::nullopt;
+  m_threads_to_save.clear();
 }

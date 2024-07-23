@@ -6668,6 +6668,18 @@ Status Process::CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
   return Status(); // Success!
 }
 
+ThreadCollection::ThreadIterable
+Process::CalculateCoreFileThreadList(SaveCoreOptions &core_options) {
+  ThreadCollection thread_list;
+  for (const auto &thread : m_thread_list.Threads()) {
+    if (core_options.ShouldSaveThread(thread->GetID())) {
+      thread_list.AddThread(thread);
+    }
+  }
+
+  return thread_list.Threads();
+}
+
 void Process::SetAddressableBitMasks(AddressableBits bit_masks) {
   uint32_t low_memory_addr_bits = bit_masks.GetLowmemAddressableBits();
   uint32_t high_memory_addr_bits = bit_masks.GetHighmemAddressableBits();

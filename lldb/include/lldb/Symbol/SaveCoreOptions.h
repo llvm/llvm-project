@@ -14,6 +14,7 @@
 #include "lldb/lldb-types.h"
 
 #include <optional>
+#include <set>
 #include <string>
 
 namespace lldb_private {
@@ -32,12 +33,21 @@ public:
   void SetOutputFile(lldb_private::FileSpec file);
   const std::optional<lldb_private::FileSpec> GetOutputFile() const;
 
+  void AddThread(lldb::tid_t tid);
+  bool RemoveThread(lldb::tid_t tid);
+  size_t GetNumThreads() const;
+  int64_t GetThreadAtIndex(size_t index) const;
+  bool ShouldSaveThread(lldb::tid_t tid) const;
+
+  Status EnsureValidConfiguration() const;
+
   void Clear();
 
 private:
   std::optional<std::string> m_plugin_name;
   std::optional<lldb_private::FileSpec> m_file;
   std::optional<lldb::SaveCoreStyle> m_style;
+  std::set<lldb::tid_t> m_threads_to_save;
 };
 } // namespace lldb_private
 

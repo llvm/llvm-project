@@ -53,6 +53,30 @@ public:
   /// \return The output file spec.
   SBFileSpec GetOutputFile() const;
 
+  /// Add a thread to save in the core file.
+  ///
+  /// \param thread_id The thread ID to save.
+  void AddThread(lldb::tid_t thread_id);
+
+  /// Remove a thread from the list of threads to save.
+  ///
+  /// \param thread_id The thread ID to remove.
+  /// \return True if the thread was removed, false if it was not in the list.
+  bool RemoveThread(lldb::tid_t thread_id);
+
+  /// Get the number of threads to save. If this list is empty all threads will
+  /// be saved.
+  ///
+  /// \return The number of threads to save.
+  uint32_t GetNumThreads() const;
+
+  /// Get the thread ID at the given index.
+  ///
+  /// \param[in] index The index of the thread ID to get.
+  /// \return The thread ID at the given index, or an error
+  /// if there is no thread at the index.
+  lldb::tid_t GetThreadAtIndex(uint32_t index, SBError &error) const;
+
   /// Reset all options.
   void Clear();
 

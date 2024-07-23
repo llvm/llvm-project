@@ -741,6 +741,11 @@ public:
   Status CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
                                      CoreFileMemoryRanges &ranges);
 
+  /// Helper function for Process::SaveCore(...) that calculates the thread list
+  /// based upon options set within a given \a core_options object.
+  ThreadCollection::ThreadIterable
+  CalculateCoreFileThreadList(SaveCoreOptions &core_options);
+
 protected:
   virtual JITLoaderList &GetJITLoaders();
 
