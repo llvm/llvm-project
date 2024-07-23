@@ -13,7 +13,7 @@
 // RUN: opt %t/openmp-amdgcn-amd-amdhsa.bc -o %t/openmp-amdgcn-amd-amdhsa.bc \
 // RUN:     -passes=forceattrs -force-remove-attribute=f:noinline
 // RUN: clang-offload-packager -o %t/openmp-x86_64-unknown-linux-gnu.out \
-// RUN:     --image=file=%t/openmp-amdgcn-amd-amdhsa.bc,triple=amdgcn-amd-amdhsa
+// RUN:     --image=file=%t/openmp-amdgcn-amd-amdhsa.bc,arch=gfx90a,triple=amdgcn-amd-amdhsa
 // RUN: %clang -cc1 -S -o %t/host-x86_64-unknown-linux-gnu.s \
 // RUN:     -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
 // RUN:     -fembed-offload-object=%t/openmp-x86_64-unknown-linux-gnu.out \
