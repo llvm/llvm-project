@@ -192,13 +192,13 @@ ScriptLexer::Token ScriptLexer::getOperatorToken(StringRef s) {
   case EOF:
     return createToken(Tok::Eof, 0);
   case '(':
-    return createToken(Tok::BracektBegin, 1);
+    return createToken(Tok::LeftParenthesis, 1);
   case ')':
-    return createToken(Tok::BracektEnd, 1);
+    return createToken(Tok::RightParenthesis, 1);
   case '{':
-    return createToken(Tok::CurlyBegin, 1);
+    return createToken(Tok::LeftCurlyBracket, 1);
   case '}':
-    return createToken(Tok::CurlyEnd, 1);
+    return createToken(Tok::RightCurlyBracket, 1);
   case ';':
     return createToken(Tok::Semicolon, 1);
   case ',':
@@ -258,21 +258,21 @@ ScriptLexer::Token ScriptLexer::getOperatorToken(StringRef s) {
       if (s[1] == '=')
         return createToken(Tok::AndAssign, 2);
       if (s[1] == '&')
-        return createToken(Tok::AndGate, 2);
+        return createToken(Tok::LogicalAnd, 2);
     }
-    return createToken(Tok::Bitwise, 1);
+    return createToken(Tok::BitwiseAnd, 1);
   case '^':
     if (s.size() > 1 && s[1] == '=')
       return createToken(Tok::XorAssign, 2);
-    return createToken(Tok::Xor, 1);
+    return createToken(Tok::BitwiseXor, 1);
   case '|':
     if (s.size() > 1) {
       if (s[1] == '=')
         return createToken(Tok::OrAssign, 2);
       if (s[1] == '|')
-        return createToken(Tok::OrGate, 2);
+        return createToken(Tok::LogicalOr, 2);
     }
-    return createToken(Tok::Or, 1);
+    return createToken(Tok::BitwiseOr, 1);
   case '.':
     return createToken(Tok::Dot, 1);
   case '_':

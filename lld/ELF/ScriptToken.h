@@ -123,28 +123,28 @@ enum class Tok {
   DecimalM, // end with M/m
 
   // Symbol tokens
-  CurlyBegin,   // {
-  CurlyEnd,     // }
-  BracektBegin, // (
-  BracektEnd,   // )
-  Comma,        // ,
-  Semicolon,    // ;
-  Colon,        // :
-  Asterisk,     // *
-  Question,     // ?
-  Excalamation, // !
-  Backslash,    // "\"
-  Slash,        // /
-  Percent,      // %
-  Greater,      // >
-  Less,         // <
-  Minus,        // -
-  Plus,         // +
-  Bitwise,      // &
-  Xor,          // ^
-  Or,           // |
-  Underscore,   // _
-  Dot,          // .
+  LeftCurlyBracket,  // {
+  RightCurlyBracket, // }
+  LeftParenthesis,   // (
+  RightParenthesis,  // )
+  Comma,             // ,
+  Semicolon,         // ;
+  Colon,             // :
+  Asterisk,          // *
+  Question,          // ?
+  Excalamation,      // !
+  Backslash,         // "\"
+  Slash,             // /
+  Percent,           // %
+  Greater,           // >
+  Less,              // <
+  Minus,             // -
+  Plus,              // +
+  BitwiseAnd,        // &
+  BitwiseXor,        // ^
+  BitwiseOr,         // |
+  Underscore,        // _
+  Dot,               // .
   Quote, // Quoted token. Note that double-quote characters are parts of a token
   // because, in a glob match context, only unquoted tokens are interpreted as
   // glob patterns. Double-quoted tokens are literal patterns in that context.
@@ -168,8 +168,8 @@ enum class Tok {
   LessEqual,    // <=
   LeftShift,    // <<
   RightShift,   // >>
-  AndGate,      // &&
-  OrGate        // ||
+  LogicalAnd,   // &&
+  LogicalOr     // ||
 };
 } // namespace elf
 } // namespace lld

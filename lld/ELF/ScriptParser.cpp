@@ -233,7 +233,7 @@ void ScriptParser::readVersionScriptCommand() {
 
   while (!atEOF() && !errorCount() && peek() != "}") {
     ScriptLexer::Token verTok = next();
-    if (verTok.kind == Tok::CurlyBegin) {
+    if (verTok.kind == Tok::LeftCurlyBracket) {
       setError("anonymous version definition is used in "
                "combination with other version definitions");
       return;
@@ -786,12 +786,14 @@ SmallVector<SectionPattern, 0> ScriptParser::readInputSectionsList() {
     // Break if the next token is ), EXCLUDE_FILE, or SORT*.
     while (!errorCount() && peekSortKind() == SortSectionPolicy::Default) {
       ScriptLexer::Token tok = peek();
-      if (tok.kind == Tok::BracektEnd || tok.kind == Tok::ExcludeFile)
+      if (tok.kind == Tok::RightParenthesis || tok.kind == Tok::ExcludeFile)
         break;
       // Detect common mistakes when certain non-wildcard meta characters are
       // used without a closing ')'.
-      if (tok.kind == Tok::CurlyBegin || tok.kind == Tok::CurlyEnd ||
-          tok.kind == Tok::BracektBegin || tok.kind == Tok::BracektEnd) {
+      if (tok.kind == Tok::LeftCurlyBracket ||
+          tok.kind == Tok::RightCurlyBracket ||
+          tok.kind == Tok::LeftParenthesis ||
+          tok.kind == Tok::RightParenthesis) {
         skip();
         setError("section pattern is expected");
         break;
