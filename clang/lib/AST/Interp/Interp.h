@@ -2811,6 +2811,13 @@ inline bool DecayPtr(InterpState &S, CodePtr OpPC) {
   using ToT = typename PrimConv<TOut>::T;
 
   const FromT &OldPtr = S.Stk.pop<FromT>();
+
+  if constexpr (std::is_same_v<FromT, FunctionPointer> &&
+                std::is_same_v<ToT, Pointer>) {
+    S.Stk.push<Pointer>(OldPtr.getFunction());
+    return true;
+  }
+
   S.Stk.push<ToT>(ToT(OldPtr.getIntegerRepresentation(), nullptr));
   return true;
 }

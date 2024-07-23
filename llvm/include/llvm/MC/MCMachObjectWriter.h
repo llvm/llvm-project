@@ -83,7 +83,7 @@ public:
   /// @}
 };
 
-class MachObjectWriter : public MCObjectWriter {
+class MachObjectWriter final : public MCObjectWriter {
 public:
   struct DataRegionData {
     MachO::DataRegionType Kind;

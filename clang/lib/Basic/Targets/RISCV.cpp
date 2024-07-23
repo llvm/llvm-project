@@ -479,3 +479,9 @@ RISCVTargetInfo::checkCallingConvention(CallingConv CC) const {
     return CCCR_OK;
   }
 }
+
+bool RISCVTargetInfo::validateCpuSupports(StringRef Feature) const {
+  // Only allow extensions we have a known bit position for in the
+  // __riscv_feature_bits structure.
+  return -1 != llvm::RISCVISAInfo::getRISCVFeaturesBitPosition(Feature);
+}
