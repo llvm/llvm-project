@@ -1947,7 +1947,8 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureWaitXcnt,
    FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF64FlatInsts,
-   FeatureFlatBufferGlobalAtomicFaddF64Inst
+   FeatureFlatBufferGlobalAtomicFaddF64Inst,
+   FeatureMemoryAtomicFAddF32DenormalSupport
 ]>;
 
 def FeatureISAVersion12_11 : FeatureSet<
