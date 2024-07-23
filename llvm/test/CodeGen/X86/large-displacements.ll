@@ -5,19 +5,20 @@
 ; an incorrectly written assertion for 64-bit offsets when compiling for 32-bit X86.
 
 define i32 @main() #0 {
-; ERR-i686: error: <unknown>:0:0: requesting 64-bit offset in 32-bit immediate
+; ERR-i686: error: <unknown>:0:0: Requesting 64-bit offset in 32-bit immediate
 ;
 ; x86_64-LABEL: main:
 ; x86_64:       # %bb.0: # %entry
-; x86_64-NEXT:    movl $4294967176, %eax # imm = 0xFFFFFF88
+; x86_64-NEXT:    movl $4294967192, %eax # imm = 0xFFFFFF98
 ; x86_64-NEXT:    subq %rax, %rsp
-; x86_64-NEXT:    .cfi_def_cfa_offset 4294967184
-; x86_64-NEXT:    movb $32, -1073741994(%rsp)
-; x86_64-NEXT:    movb $33, 2147483478(%rsp)
-; x86_64-NEXT:    movb $34, 1073741654(%rsp)
-; x86_64-NEXT:    movb $35, -170(%rsp)
+; x86_64-NEXT:    .cfi_def_cfa_offset 4294967200
+; x86_64-NEXT:    movabsq $3221225318, %rax # imm = 0xBFFFFF66
+; x86_64-NEXT:    movb $32, (%rsp,%rax)
+; x86_64-NEXT:    movb $33, 2147483494(%rsp)
+; x86_64-NEXT:    movb $34, 1073741670(%rsp)
+; x86_64-NEXT:    movb $35, -154(%rsp)
 ; x86_64-NEXT:    xorl %eax, %eax
-; x86_64-NEXT:    movl $4294967176, %ecx # imm = 0xFFFFFF88
+; x86_64-NEXT:    movl $4294967192, %ecx # imm = 0xFFFFFF98
 ; x86_64-NEXT:    addq %rcx, %rsp
 ; x86_64-NEXT:    .cfi_def_cfa_offset 8
 ; x86_64-NEXT:    retq
@@ -41,19 +42,20 @@ entry:
 }
 
 define i32 @0() #0 {
-; ERR-i686: error: <unknown>:0:0: requesting 64-bit offset in 32-bit immediate
+; ERR-i686: error: <unknown>:0:0: Requesting 64-bit offset in 32-bit immediate
 ;
 ; x86_64-LABEL: __unnamed_1:
 ; x86_64:       # %bb.0: # %entry
-; x86_64-NEXT:    movl $4294967176, %eax # imm = 0xFFFFFF88
+; x86_64-NEXT:    movl $4294967192, %eax # imm = 0xFFFFFF98
 ; x86_64-NEXT:    subq %rax, %rsp
-; x86_64-NEXT:    .cfi_def_cfa_offset 4294967184
-; x86_64-NEXT:    movb $32, -1073741994(%rsp)
-; x86_64-NEXT:    movb $33, 2147483478(%rsp)
-; x86_64-NEXT:    movb $34, 1073741654(%rsp)
-; x86_64-NEXT:    movb $35, -170(%rsp)
+; x86_64-NEXT:    .cfi_def_cfa_offset 4294967200
+; x86_64-NEXT:    movabsq $3221225318, %rax # imm = 0xBFFFFF66
+; x86_64-NEXT:    movb $32, (%rsp,%rax)
+; x86_64-NEXT:    movb $33, 2147483494(%rsp)
+; x86_64-NEXT:    movb $34, 1073741670(%rsp)
+; x86_64-NEXT:    movb $35, -154(%rsp)
 ; x86_64-NEXT:    xorl %eax, %eax
-; x86_64-NEXT:    movl $4294967176, %ecx # imm = 0xFFFFFF88
+; x86_64-NEXT:    movl $4294967192, %ecx # imm = 0xFFFFFF98
 ; x86_64-NEXT:    addq %rcx, %rsp
 ; x86_64-NEXT:    .cfi_def_cfa_offset 8
 ; x86_64-NEXT:    retq
