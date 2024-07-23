@@ -85,6 +85,7 @@
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SipHash.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -509,6 +510,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SELECT_CC, MVT::f64, Custom);
   setOperationAction(ISD::BR_JT, MVT::Other, Custom);
   setOperationAction(ISD::JumpTable, MVT::i64, Custom);
+  setOperationAction(ISD::BRIND, MVT::Other, Custom);
   setOperationAction(ISD::SETCCCARRY, MVT::i64, Custom);
 
   setOperationAction(ISD::PtrAuthGlobalAddress, MVT::i64, Custom);
@@ -6721,6 +6723,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerJumpTable(Op, DAG);
   case ISD::BR_JT:
     return LowerBR_JT(Op, DAG);
+  case ISD::BRIND:
+    return LowerBRIND(Op, DAG);
   case ISD::ConstantPool:
     return LowerConstantPool(Op, DAG);
   case ISD::BlockAddress:
@@ -10773,6 +10777,33 @@ SDValue AArch64TargetLowering::LowerBR_JT(SDValue Op,
   return DAG.getNode(ISD::BRIND, DL, MVT::Other, JTInfo, SDValue(Dest, 0));
 }
 
+SDValue AArch64TargetLowering::LowerBRIND(SDValue Op, SelectionDAG &DAG) const {
+  SDValue Chain = Op.getOperand(0);
+  SDValue Dest = Op.getOperand(1);
+
+  // BR_JT is lowered to BRIND, but the later lowering is specific to indirectbr
+  // Skip over the jump-table BRINDs, where the destination is JumpTableDest32.
+  if (Dest->isMachineOpcode() &&
+      Dest->getMachineOpcode() == AArch64::JumpTableDest32)
+    return SDValue();
+
+  const MachineFunction &MF = DAG.getMachineFunction();
+  std::optional<uint16_t> BADisc =
+      Subtarget->getPtrAuthBlockAddressDiscriminatorIfEnabled(MF.getFunction());
+  if (!BADisc)
+    return SDValue();
+
+  SDLoc DL(Op);
+
+  SDValue Disc = DAG.getTargetConstant(*BADisc, DL, MVT::i64);
+  SDValue Key = DAG.getTargetConstant(AArch64PACKey::IA, DL, MVT::i32);
+  SDValue AddrDisc = DAG.getRegister(AArch64::XZR, MVT::i64);
+
+  SDNode *BrA = DAG.getMachineNode(AArch64::BRA, DL, MVT::Other,
+                                   {Dest, Key, Disc, AddrDisc, Chain});
+  return SDValue(BrA, 0);
+}
+
 SDValue AArch64TargetLowering::LowerConstantPool(SDValue Op,
                                                  SelectionDAG &DAG) const {
   ConstantPoolSDNode *CP = cast<ConstantPoolSDNode>(Op);
@@ -10792,15 +10823,37 @@ SDValue AArch64TargetLowering::LowerConstantPool(SDValue Op,
 
 SDValue AArch64TargetLowering::LowerBlockAddress(SDValue Op,
                                                SelectionDAG &DAG) const {
-  BlockAddressSDNode *BA = cast<BlockAddressSDNode>(Op);
+  BlockAddressSDNode *BAN = cast<BlockAddressSDNode>(Op);
+  const BlockAddress *BA = BAN->getBlockAddress();
+
+  if (std::optional<uint16_t> BADisc =
+          Subtarget->getPtrAuthBlockAddressDiscriminatorIfEnabled(
+              *BA->getFunction())) {
+    SDLoc DL(Op);
+
+    // This isn't cheap, but BRIND is rare.
+    SDValue TargetBA = DAG.getTargetBlockAddress(BA, BAN->getValueType(0));
+
+    SDValue Disc = DAG.getTargetConstant(*BADisc, DL, MVT::i64);
+
+    SDValue Key = DAG.getTargetConstant(AArch64PACKey::IA, DL, MVT::i32);
+    SDValue AddrDisc = DAG.getRegister(AArch64::XZR, MVT::i64);
+
+    SDNode *MOV =
+        DAG.getMachineNode(AArch64::MOVaddrPAC, DL, {MVT::Other, MVT::Glue},
+                           {TargetBA, Key, AddrDisc, Disc});
+    return DAG.getCopyFromReg(SDValue(MOV, 0), DL, AArch64::X16, MVT::i64,
+                              SDValue(MOV, 1));
+  }
+
   CodeModel::Model CM = getTargetMachine().getCodeModel();
   if (CM == CodeModel::Large && !Subtarget->isTargetMachO()) {
     if (!getTargetMachine().isPositionIndependent())
-      return getAddrLarge(BA, DAG);
+      return getAddrLarge(BAN, DAG);
   } else if (CM == CodeModel::Tiny) {
-    return getAddrTiny(BA, DAG);
+    return getAddrTiny(BAN, DAG);
   }
-  return getAddr(BA, DAG);
+  return getAddr(BAN, DAG);
 }
 
 SDValue AArch64TargetLowering::LowerDarwin_VASTART(SDValue Op,

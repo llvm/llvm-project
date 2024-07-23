@@ -1793,6 +1793,24 @@ let Predicates = [HasPAuth] in {
     let Uses = [SP];
   }
 
+  // BRA pseudo, generalized version of BRAA/BRAB/Z.
+  // This directly manipulates x16/x17, which are the only registers the OS
+  // guarantees are safe to use for sensitive operations.
+  def BRA : Pseudo<(outs), (ins GPR64noip:$Rn, i32imm:$Key, i64imm:$Disc,
+                                GPR64noip:$AddrDisc), []>, Sched<[]> {
+    let isCodeGenOnly = 1;
+    let hasNoSchedulingInfo = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let isBranch = 1;
+    let isTerminator = 1;
+    let isBarrier = 1;
+    let isIndirectBranch = 1;
+    let Size = 12; // 4 fixed + 8 variable, to compute discriminator.
+    let Defs = [X17];
+  }
+
   let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
     def RETAA   : AuthReturn<0b010, 0, "retaa">;
     def RETAB   : AuthReturn<0b010, 1, "retab">;

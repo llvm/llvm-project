@@ -93,6 +93,8 @@ public:
 
   const MCExpr *lowerConstantPtrAuth(const ConstantPtrAuth &CPA) override;
 
+  const MCExpr *lowerBlockAddressConstant(const BlockAddress &BA) override;
+
   void emitStartOfAsmFile(Module &M) override;
   void emitJumpTableInfo() override;
   std::tuple<const MCSymbol *, uint64_t, const MCSymbol *,
@@ -130,7 +132,7 @@ public:
 
   void emitSled(const MachineInstr &MI, SledKind Kind);
 
-  // Emit the sequence for BLRA (authenticate + branch).
+  // Emit the sequence for BRA/BLRA (authenticate + branch/call).
   void emitPtrauthBranch(const MachineInstr *MI);
   // Emit the sequence to compute a discriminator into x17, or reuse AddrDisc.
   unsigned emitPtrauthDiscriminator(uint16_t Disc, unsigned AddrDisc,
@@ -1760,6 +1762,7 @@ unsigned AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
 
 void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
   unsigned InstsEmitted = 0;
+  bool IsCall = MI->getOpcode() == AArch64::BLRA;
   unsigned BrTarget = MI->getOperand(0).getReg();
 
   auto Key = (AArch64PACKey::ID)MI->getOperand(1).getImm();
@@ -1776,10 +1779,17 @@ void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
   bool IsZeroDisc = DiscReg == AArch64::XZR;
 
   unsigned Opc;
-  if (Key == AArch64PACKey::IA)
-    Opc = IsZeroDisc ? AArch64::BLRAAZ : AArch64::BLRAA;
-  else
-    Opc = IsZeroDisc ? AArch64::BLRABZ : AArch64::BLRAB;
+  if (IsCall) {
+    if (Key == AArch64PACKey::IA)
+      Opc = IsZeroDisc ? AArch64::BLRAAZ : AArch64::BLRAA;
+    else
+      Opc = IsZeroDisc ? AArch64::BLRABZ : AArch64::BLRAB;
+  } else {
+    if (Key == AArch64PACKey::IA)
+      Opc = IsZeroDisc ? AArch64::BRAAZ : AArch64::BRAA;
+    else
+      Opc = IsZeroDisc ? AArch64::BRABZ : AArch64::BRAB;
+  }
 
   MCInst BRInst;
   BRInst.setOpcode(Opc);
@@ -2056,6 +2066,19 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
   assert(STI->getInstrInfo()->getInstSizeInBytes(MI) >= InstsEmitted * 4);
 }
 
+const MCExpr *
+AArch64AsmPrinter::lowerBlockAddressConstant(const BlockAddress &BA) {
+  const MCExpr *BAE = AsmPrinter::lowerBlockAddressConstant(BA);
+  const Function &Fn = *BA.getFunction();
+
+  if (std::optional<uint16_t> BADisc =
+          STI->getPtrAuthBlockAddressDiscriminatorIfEnabled(Fn))
+    return AArch64AuthMCExpr::create(BAE, *BADisc, AArch64PACKey::IA,
+                                     /*HasAddressDiversity=*/false, OutContext);
+
+  return BAE;
+}
+
 // Simple pseudo-instructions have their lowering (with expansion to real
 // instructions) auto-generated.
 #include "AArch64GenMCPseudoLowering.inc"
@@ -2200,6 +2223,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     LowerMOVaddrPAC(*MI);
     return;
 
+  case AArch64::BRA:
   case AArch64::BLRA:
     emitPtrauthBranch(MI);
     return;
