@@ -1479,7 +1479,7 @@ static bool BuiltinSEHScopeCheck(Sema &SemaRef, CallExpr *TheCall,
 
 // In OpenCL, __builtin_alloca_* should return a pointer to address space
 // that corresponds to the stack address space i.e private address space.
-static bool builtinAllocaAddrSpace(Sema &S, CallExpr *TheCall) {
+static void builtinAllocaAddrSpace(Sema &S, CallExpr *TheCall) {
   QualType RT = TheCall->getType();
   assert((RT->isPointerType() && !(RT->getPointeeType().hasAddressSpace())) &&
          "__builtin_alloca has invalid address space");
@@ -1487,8 +1487,6 @@ static bool builtinAllocaAddrSpace(Sema &S, CallExpr *TheCall) {
   RT = RT->getPointeeType();
   RT = S.Context.getAddrSpaceQualType(RT, LangAS::opencl_private);
   TheCall->setType(S.Context.getPointerType(RT));
-
-  return false;
 }
 
 namespace {
@@ -2225,8 +2223,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     Diag(TheCall->getBeginLoc(), diag::warn_alloca)
         << TheCall->getDirectCallee();
     if (getLangOpts().OpenCL) {
-      if (builtinAllocaAddrSpace(*this, TheCall))
-        return ExprError();
+      builtinAllocaAddrSpace(*this, TheCall);
     }
     break;
   case Builtin::BI__arithmetic_fence:
