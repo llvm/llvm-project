@@ -255,7 +255,7 @@ private:
   std::vector<const FlowBlock *> Blocks;
   // If the pseudo probe checksums of the profiled and binary functions are
   // equal, then the YamlBF's GUID is defined and used to match blocks.
-  uint64_t YamlBFGUID;
+  uint64_t YamlBFGUID{0};
 
   // Uses OpcodeHash to find the most similar block for a given hash.
   const FlowBlock *matchWithOpcodes(BlendedBlockHash BlendedHash) const {
@@ -321,30 +321,30 @@ private:
     // Returns nullptr if there is not a 1:1 mapping of the yaml block pseudo
     // probe and binary pseudo probe.
     if (BlockPseudoProbes.size() == 0) {
-      if (opts::Verbosity >= 2)
+      if (opts::Verbosity >= 3)
         errs() << "BOLT-WARNING: no pseudo probes in profile block\n";
       return nullptr;
     }
     if (BlockPseudoProbes.size() > 1) {
-      if (opts::Verbosity >= 2)
+      if (opts::Verbosity >= 3)
         errs() << "BOLT-WARNING: more than 1 pseudo probes in profile block\n";
       return nullptr;
     }
     uint64_t Index = BlockPseudoProbes[0]->Index;
     if (Index > Blocks.size()) {
-      if (opts::Verbosity >= 2)
+      if (opts::Verbosity >= 3)
         errs() << "BOLT-WARNING: invalid index block pseudo probe index\n";
       return nullptr;
     }
     auto It = IndexToBinaryPseudoProbes.find(Index);
     if (It == IndexToBinaryPseudoProbes.end()) {
-      if (opts::Verbosity >= 2)
+      if (opts::Verbosity >= 3)
         errs() << "BOLT-WARNING: no block pseudo probes found within binary "
                   "block at index\n";
       return nullptr;
     }
     if (It->second.size() > 1) {
-      if (opts::Verbosity >= 2)
+      if (opts::Verbosity >= 3)
         errs() << "BOLT-WARNING: more than 1 block pseudo probes in binary "
                   "block at index\n";
       return nullptr;
