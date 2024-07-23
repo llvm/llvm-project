@@ -288,7 +288,7 @@ ScriptLexer::Token ScriptLexer::getOperatorToken(StringRef s) {
   case '9':
     return createToken(Kind::Decimal, 1);
   default:
-    return createToken(Kind::Identifier, 1);
+    return {Kind::Identifier, s};
   }
 }
 
@@ -424,10 +424,7 @@ std::vector<ScriptLexer::Token> ScriptLexer::tokenizeExpr(StringRef s) {
       ret.push_back(getOperatorToken(s.substr(e)));
       s = s.substr(e + 2);
     } else {
-      llvm::errs() << "s.substr(e) is " << s.substr(e, 1);
       ret.push_back(getOperatorToken(s.substr(e, 1)));
-      llvm::errs() << ", token.kind == "
-                   << static_cast<unsigned int>(ret.back().kind) << "\n";
       s = s.substr(e + 1);
     }
   }
@@ -444,9 +441,6 @@ std::vector<ScriptLexer::Token> ScriptLexer::tokenizeExpr(StringRef s) {
 //
 // This function may split the current token into multiple tokens.
 void ScriptLexer::maybeSplitExpr() {
-  if (!inExpr || errorCount() || atEOF())
-    return;
-
   std::vector<Token> v = tokenizeExpr(tokens[pos].val);
   if (v.size() == 1)
     return;
@@ -455,14 +449,14 @@ void ScriptLexer::maybeSplitExpr() {
 }
 
 ScriptLexer::Token ScriptLexer::next() {
-  maybeSplitExpr();
-
   if (errorCount())
     return {Kind::Error, ""};
   if (atEOF()) {
     setError("unexpected EOF");
     return {Kind::Eof, ""};
   }
+  if (inExpr)
+    maybeSplitExpr();
   return tokens[pos++];
 }
 
