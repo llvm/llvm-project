@@ -902,6 +902,15 @@ define <2 x half> @fma_negone_vec(<2 x half> %x, <2 x half> %y) {
   ret <2 x half> %sub
 }
 
+define <2 x half> @fma_negone_vec_partial_undef(<2 x half> %x, <2 x half> %y) {
+; CHECK-LABEL: @fma_negone_vec_partial_undef(
+; CHECK-NEXT:    [[SUB:%.*]] = call <2 x half> @llvm.fma.v2f16(<2 x half> [[X:%.*]], <2 x half> <half undef, half 0xHBC00>, <2 x half> [[Y:%.*]])
+; CHECK-NEXT:    ret <2 x half> [[SUB]]
+;
+  %sub = call <2 x half> @llvm.fma.v2f16(<2 x half> %x, <2 x half> <half undef, half -1.0>, <2 x half> %y)
+  ret <2 x half> %sub
+}
+
 ; negative tests
 
 define half @fma_non_negone(half %x, half %y) {
