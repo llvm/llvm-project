@@ -1175,7 +1175,6 @@ void TargetLoweringBase::initActions() {
        ISD::FSINH, ISD::FTANH},
       {MVT::f32, MVT::f64, MVT::f128}, Expand);
 
-  // Unless the target expands, default LROUND to LibCall.
   setOperationAction({ISD::LROUND, ISD::LLROUND},
                      {MVT::f32, MVT::f64, MVT::f128}, LibCall);
 
