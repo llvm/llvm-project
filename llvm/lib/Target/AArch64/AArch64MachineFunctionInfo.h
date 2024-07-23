@@ -109,6 +109,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// registers.
   unsigned VarArgsFPRSize = 0;
 
+  /// The stack slots used to add space between FPR and GPR accesses when using
+  /// hazard padding. StackHazardCSRSlotIndex is added between GPR and FPR CSRs.
+  /// StackHazardSlotIndex is added between (sorted) stack objects.
+  int StackHazardSlotIndex = std::numeric_limits<int>::max();
+  int StackHazardCSRSlotIndex = std::numeric_limits<int>::max();
+
   /// True if this function has a subset of CSRs that is handled explicitly via
   /// copies.
   bool IsSplitCSR = false;
@@ -346,6 +352,13 @@ public:
         MaxOffset = std::max<int64_t>(Offset + ObjSize, MaxOffset);
       }
 
+      if (StackHazardCSRSlotIndex != std::numeric_limits<int>::max()) {
+        int64_t Offset = MFI.getObjectOffset(StackHazardCSRSlotIndex);
+        int64_t ObjSize = MFI.getObjectSize(StackHazardCSRSlotIndex);
+        MinOffset = std::min<int64_t>(Offset, MinOffset);
+        MaxOffset = std::max<int64_t>(Offset + ObjSize, MaxOffset);
+      }
+
       unsigned Size = alignTo(MaxOffset - MinOffset, 16);
       assert((!HasCalleeSavedStackSize || getCalleeSavedStackSize() == Size) &&
              "Invalid size calculated for callee saves");
@@ -402,6 +415,20 @@ public:
 
   unsigned getVarArgsFPRSize() const { return VarArgsFPRSize; }
   void setVarArgsFPRSize(unsigned Size) { VarArgsFPRSize = Size; }
+
+  bool hasStackHazardSlotIndex() const {
+    return StackHazardSlotIndex != std::numeric_limits<int>::max();
+  }
+  int getStackHazardSlotIndex() const { return StackHazardSlotIndex; }
+  void setStackHazardSlotIndex(int Index) {
+    assert(StackHazardSlotIndex == std::numeric_limits<int>::max());
+    StackHazardSlotIndex = Index;
+  }
+  int getStackHazardCSRSlotIndex() const { return StackHazardCSRSlotIndex; }
+  void setStackHazardCSRSlotIndex(int Index) {
+    assert(StackHazardCSRSlotIndex == std::numeric_limits<int>::max());
+    StackHazardCSRSlotIndex = Index;
+  }
 
   unsigned getSRetReturnReg() const { return SRetReturnReg; }
   void setSRetReturnReg(unsigned Reg) { SRetReturnReg = Reg; }
