@@ -256,10 +256,10 @@ body:             |
     renamable $vgpr0, renamable $vgpr1 = V_PERMLANE32_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
 ...
 
+
 ---
 # GCN-LABEL: name: test_cvt_scalef32_sr_fp8_bf16_hazard
 # GCN:      V_CVT_SCALEF32_SR_FP8_BF16_e64
-# GCN:      V_NOP_e32
 # GCN:      GLOBAL_STORE_DWORD
 name:            test_cvt_scalef32_sr_fp8_bf16_hazard
 body:             |
@@ -275,7 +275,6 @@ body:             |
 ---
 # GCN-LABEL: name: test_cvt_scalef32_sr_fp8_f16_hazard
 # GCN:      V_CVT_SCALEF32_SR_FP8_F16_e64
-# GCN:      V_NOP_e32
 # GCN:      GLOBAL_STORE_DWORD
 name:            test_cvt_scalef32_sr_fp8_f16_hazard
 body:             |
@@ -291,7 +290,7 @@ body:             |
 ---
 # GCN-LABEL: name: test_cvt_scalef32_sr_fp8_f32_hazard
 # GCN:      V_CVT_SCALEF32_SR_FP8_F32_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      V_ADD_U32_e32
 name:            test_cvt_scalef32_sr_fp8_f32_hazard
 body:             |
@@ -308,7 +307,7 @@ body:             |
 ---
 # GCN-LABEL: test_cvt_scalef32_pk_fp8_f32_hazard
 # GCN:      V_CVT_SCALEF32_PK_FP8_F32_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      V_PK_ADD_U16
 name:            test_cvt_scalef32_pk_fp8_f32_hazard
 body:             |
@@ -325,7 +324,7 @@ body:             |
 ---
 # GCN-LABEL: test_cvt_scalef32_pk_fp8_f16_hazard
 # GCN:      V_CVT_SCALEF32_PK_FP8_F16_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      V_PK_ADD_U16
 name:            test_cvt_scalef32_pk_fp8_f16_hazard
 body:             |
@@ -340,7 +339,7 @@ body:             |
 ---
 # GCN-LABEL: test_cvt_scalef32_pk_fp8_bf16_hazard
 # GCN:      V_CVT_SCALEF32_SR_BF8_BF16_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      V_ADD_U32_e32
 name:            test_cvt_scalef32_pk_fp8_bf16_hazard
 body:             |
@@ -357,7 +356,7 @@ body:             |
 ---
 # GCN-LABEL: test_cvt_scalef32_sr_bf8_f16_hazard
 # GCN:      V_CVT_SCALEF32_SR_BF8_F16_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      V_ADD_U32_e32
 name:            test_cvt_scalef32_sr_bf8_f16_hazard
 body:             |
@@ -374,7 +373,7 @@ body:             |
 ---
 # GCN-LABEL: test_cvt_scalef32_sr_bf8_f32_hazard
 # GCN:      V_CVT_SCALEF32_SR_BF8_F32_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      V_ADD_U32_e32
 name:            test_cvt_scalef32_sr_bf8_f32_hazard
 body:             |
@@ -391,7 +390,7 @@ body:             |
 ---
 # GCN-LABEL: test_cvt_scalef32_pk_bf8_f32_hazard
 # GCN:      V_CVT_SCALEF32_PK_BF8_F32_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      V_PK_ADD_U16
 name:            test_cvt_scalef32_pk_bf8_f32_hazard
 body:             |
@@ -408,7 +407,7 @@ body:             |
 ---
 # GCN-LABEL: test_cvt_scalef32_pk_bf8_f16_hazard
 # GCN:      V_CVT_SCALEF32_PK_BF8_F16_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      V_PK_ADD_U16
 name:            test_cvt_scalef32_pk_bf8_f16_hazard
 body:             |
@@ -423,7 +422,7 @@ body:             |
 ---
 # GCN-LABEL: test_cvt_scalef32_pk_bf8_bf16_hazard
 # GCN:      V_CVT_SCALEF32_PK_BF8_BF16_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      V_PK_ADD_U16
 name:            test_cvt_scalef32_pk_bf8_bf16_hazard
 body:             |
@@ -438,7 +437,7 @@ body:             |
 ---
 # GCN-LABEL: test_cvt_scale_fp4_f32_hazard
 # GCN:      V_CVT_SCALEF32_PK_FP4_F32_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      V_ADD_U32_e32
 name:            test_cvt_scale_fp4_f32_hazard
 body:             |
@@ -455,7 +454,7 @@ body:             |
 ---
 # GCN-LABEL: test_scalef32_sr_pk_fp4_f16_hazard
 # GCN:      V_CVT_SCALEF32_SR_PK_FP4_F16_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      V_ADD_U32_e32
 name:            test_scalef32_sr_pk_fp4_f16_hazard
 body:             |
@@ -472,7 +471,7 @@ body:             |
 ---
 # GCN-LABEL: test_scalef32_sr_pk_fp4_bf16_hazard
 # GCN:      V_CVT_SCALEF32_SR_PK_FP4_BF16_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      V_ADD_U32_e32
 name:            test_scalef32_sr_pk_fp4_bf16_hazard
 body:             |
@@ -489,7 +488,7 @@ body:             |
 ---
 # GCN-LABEL: test_scalef32_sr_pk_fp4_f32_hazard
 # GCN:      V_CVT_SCALEF32_SR_PK_FP4_F32_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      V_ADD_U32_e32
 name:            test_scalef32_sr_pk_fp4_f32_hazard
 body:             |
@@ -506,7 +505,7 @@ body:             |
 ---
 # GCN-LABEL: test_cvt_scalef32_fp4_f16_hazard
 # GCN:      V_CVT_SCALEF32_PK_FP4_F16_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      V_ADD_U32_e32
 name:            test_cvt_scalef32_fp4_f16_hazard
 body:             |
@@ -521,7 +520,7 @@ body:             |
 ---
 # GCN-LABEL: test_cvt_scalef32_fp4_bf16_hazard
 # GCN:      V_CVT_SCALEF32_PK_FP4_BF16_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      V_ADD_U32_e32
 name:            test_cvt_scalef32_fp4_bf16_hazard
 body:             |
@@ -536,7 +535,7 @@ body:             |
 ---
 # GCN-LABEL: test_cvt_scalef32_hazard_skipping_over_meta_instr
 # GCN:      V_CVT_SCALEF32_SR_BF8_F16_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      V_ADD_U32_e32
 name:            test_cvt_scalef32_hazard_skipping_over_meta_instr
 body:             |
@@ -554,7 +553,7 @@ body:             |
 ---
 # GCN-LABEL: test_cvt_f16_to_fp4_to_f16_hazard
 # GCN:      V_CVT_SCALEF32_PK_FP4_F16_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      V_CVT_SCALEF32_PK_F16_FP4_e64
 # GCN:      S_SETPC_B64_return
 name:            test_cvt_f16_to_fp4_to_f16_hazard
@@ -570,7 +569,7 @@ body:             |
 ---
 # GCN-LABEL: test_cvt_scalef32_hazard_pseudo
 # GCN:      V_CVT_SCALEF32_SR_BF8_F16_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      V_ADD_U32_e32
 name:            test_cvt_scalef32_hazard_pseudo
 body:             |
@@ -588,7 +587,6 @@ body:             |
 ---
 # GCN-LABEL: test_call_consuming_cvt_scalef32_hazard
 # GCN:      V_CVT_SCALEF32_PK_FP4_F16_e64
-# GCN:      V_NOP_e32
 # GCN:      SI_CALL
 name:            test_call_consuming_cvt_scalef32_hazard
 body:             |
@@ -608,7 +606,7 @@ body:             |
 ---
 # GCN-LABEL: test_cvt_scalef32_inlineasm_hazard
 # GCN:      V_CVT_SCALEF32_PK_FP4_F16_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      INLINEASM
 name:            test_cvt_scalef32_inlineasm_hazard
 body:             |
@@ -623,9 +621,9 @@ body:             |
 ---
 # GCN-LABEL: test_cvt_scale_cvt_scale_hazard
 # GCN:      V_CVT_SCALEF32_PK_FP4_F16_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      V_CVT_SCALEF32_SR_PK_FP4_F16_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      S_SETPC_B64_return
 name:            test_cvt_scale_cvt_scale_hazard
 body:             |
@@ -641,7 +639,7 @@ body:             |
 ---
 # GCN-LABEL: test_cvt_scale_cvt_scale_waw_hazard
 # GCN:      V_CVT_SCALEF32_PK_FP4_F16_e64
-# GCN:      V_NOP_e32
+# GCN:      S_NOP 0
 # GCN:      V_CVT_SCALEF32_SR_PK_FP4_F16_e64
 # GCN:      S_SETPC_B64_return
 name:            test_cvt_scale_cvt_scale_waw_hazard
