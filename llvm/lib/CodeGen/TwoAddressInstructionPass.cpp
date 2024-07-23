@@ -80,6 +80,13 @@ EnableRescheduling("twoaddr-reschedule",
                    cl::desc("Coalesce copies by rescheduling (default=true)"),
                    cl::init(true), cl::Hidden);
 
+// Limit the number of rescheduling visits to dependent instructions.
+// FIXME: Arbitrary limit to reduce compile time cost.
+static cl::opt<unsigned>
+    MaxVisits("twoaddr-reschedule-visit-limit", cl::Hidden, cl::init(10),
+              cl::desc("Maximum number of rescheduling visits to dependent "
+                       "instructions (0 = no limit)"));
+
 // Limit the number of dataflow edges to traverse when evaluating the benefit
 // of commuting operands.
 static cl::opt<unsigned> MaxDataFlowEdge(
@@ -994,7 +1001,7 @@ bool TwoAddressInstructionImpl::rescheduleMIBelowKill(
     // Debug or pseudo instructions cannot be counted against the limit.
     if (OtherMI.isDebugOrPseudoInstr())
       continue;
-    if (NumVisited > 10)  // FIXME: Arbitrary limit to reduce compile time cost.
+    if (MaxVisits && NumVisited > MaxVisits)
       return false;
     ++NumVisited;
     if (OtherMI.hasUnmodeledSideEffects() || OtherMI.isCall() ||
@@ -1167,7 +1174,7 @@ bool TwoAddressInstructionImpl::rescheduleKillAboveMI(
     // Debug or pseudo instructions cannot be counted against the limit.
     if (OtherMI.isDebugOrPseudoInstr())
       continue;
-    if (NumVisited > 10)  // FIXME: Arbitrary limit to reduce compile time cost.
+    if (MaxVisits && NumVisited > MaxVisits)
       return false;
     ++NumVisited;
     if (OtherMI.hasUnmodeledSideEffects() || OtherMI.isCall() ||
