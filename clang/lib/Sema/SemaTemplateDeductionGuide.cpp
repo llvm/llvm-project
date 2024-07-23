@@ -1513,10 +1513,11 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
   TSTL.setRAngleLoc(Template->getTemplateParameters()->getRAngleLoc());
   TSTL.setTemplateKeywordLoc(Template->getBeginLoc());
   for (unsigned I = 0, C = SubstArgs.size(); I < C; ++I)
-    TSTL.setArgLocInfo(I,
-                       TemplateArgumentLocInfo(Context.getTrivialTypeSourceInfo(
-                           SubstArgs[I].getAsType(),
-                           TemplateTPL->getParam(I)->getLocation())));
+    TSTL.setArgLocInfo(I, SemaRef
+                              .getTrivialTemplateArgumentLoc(
+                                  SubstArgs[I], QualType(),
+                                  TemplateTPL->getParam(I)->getBeginLoc())
+                              .getLocInfo());
 
   const auto &MapperTypedefII = Context.Idents.get("type");
   TypeSourceInfo *MapperTypedefTSI =

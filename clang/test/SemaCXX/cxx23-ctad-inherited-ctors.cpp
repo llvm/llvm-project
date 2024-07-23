@@ -256,3 +256,16 @@ namespace test8 {
 
   SpecializedBase sb2('a'); // expected-note {{in instantiation of template class 'test8::SpecializedBase<char>' requested here}}
 }
+
+namespace test9 {
+  template <typename U, typename ...T> struct B {
+    B(U, T...);
+  };
+
+  template <typename U, typename ...T> struct C : public B<U, T...> {
+    using B<U, T...>::B;
+  };
+
+  C c('1', 2, 3, 4, 5);
+  static_assert(__is_same(C<char, int, int, int, int>, decltype(c)));
+}
