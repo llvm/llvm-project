@@ -592,6 +592,9 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Clang now emits an error instead of a warning for ``-Wundefined-internal``
+  when compiling with `-pedantic-errors` to conform to the C standard
+
 - Clang now applies syntax highlighting to the code snippets it
   prints.
 
