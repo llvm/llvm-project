@@ -87,6 +87,20 @@ Improvements and New Features
 - ``std::ignore``\s ``const __ignore_t& operator=(_Tp&&) const`` was changed to
   ``const __ignore_type& operator=(const _Tp&) const noexcept`` for all language versions.
 
+- Vendors can now configure the ABI so that ``string`` and ``vector`` will use bounded iterators when hardening is
+  enabled. Note that checks for iterator invalidation are currently not supported -- any accesses made through an
+  invalidated bounded iterator will still result in undefined behavior (bounded iterators follow the normal invalidation
+  rules of the associated container). ``string`` bounded iterators use the logical size of the container (``index
+  < str.size()``) whereas ``vector`` bounded iterators use the "physical" size of the container (``index
+  < vec.capacity()``) which is a less strict check; refer to the implementation for further details.
+
+  Bounded iterators can be enabled via the ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING`` ABI macro for ``string`` and via
+  the ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR`` ABI macro for ``vector``; note that checks will only be performed if
+  the hardening mode is set to ``fast`` or above (i.e., no checking is performed in the unchecked mode, even if bounded
+  iterators are enabled in the ABI configuration).
+
+  Note: bounded iterators currently are not supported for ``vector<bool>``.
+
 Deprecations and Removals
 -------------------------
 

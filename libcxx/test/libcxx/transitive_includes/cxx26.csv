@@ -83,6 +83,9 @@ chrono string_view
 chrono vector
 chrono version
 cinttypes cstdint
+cmath cstddef
+cmath cstdint
+cmath initializer_list
 cmath limits
 cmath version
 codecvt cctype

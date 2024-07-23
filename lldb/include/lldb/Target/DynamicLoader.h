@@ -9,8 +9,8 @@
 #ifndef LLDB_TARGET_DYNAMICLOADER_H
 #define LLDB_TARGET_DYNAMICLOADER_H
 
+#include "lldb/Core/Address.h"
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Symbol/Symbol.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UUID.h"
@@ -25,6 +25,7 @@ namespace lldb_private {
 class ModuleList;
 class Process;
 class SectionList;
+class Symbol;
 class SymbolContext;
 class SymbolContextList;
 class Thread;
@@ -329,10 +330,10 @@ public:
   /// safe to call certain APIs or SPIs.
   virtual bool IsFullyInitialized() { return true; }
 
-  /// Return the `start` function \b symbol in the dynamic loader module.
-  /// This is the symbol the process will begin executing with
+  /// Return the `start` \b address in the dynamic loader module.
+  /// This is the address the process will begin executing with
   /// `process launch --stop-at-entry`.
-  virtual std::optional<lldb_private::Symbol> GetStartSymbol() {
+  virtual std::optional<lldb_private::Address> GetStartAddress() {
     return std::nullopt;
   }
 
