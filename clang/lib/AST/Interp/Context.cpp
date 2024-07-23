@@ -31,6 +31,9 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   if (!Func || !Func->hasBody())
     Func = Compiler<ByteCodeEmitter>(*this, *P).compileFunc(FD);
 
+  if (!Func)
+    return false;
+
   APValue DummyResult;
   if (!Run(Parent, Func, DummyResult))
     return false;
@@ -39,6 +42,7 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
 }
 
 bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
+  ++EvalID;
   bool Recursing = !Stk.empty();
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
@@ -65,6 +69,7 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
 }
 
 bool Context::evaluate(State &Parent, const Expr *E, APValue &Result) {
+  ++EvalID;
   bool Recursing = !Stk.empty();
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
@@ -90,6 +95,7 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result) {
 
 bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
                                     APValue &Result) {
+  ++EvalID;
   bool Recursing = !Stk.empty();
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 

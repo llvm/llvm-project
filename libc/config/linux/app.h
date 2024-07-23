@@ -9,11 +9,12 @@
 #ifndef LLVM_LIBC_CONFIG_LINUX_APP_H
 #define LLVM_LIBC_CONFIG_LINUX_APP_H
 
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Data structure to capture properties of the linux/ELF TLS image.
 struct TLSImage {
@@ -104,6 +105,6 @@ void cleanup_tls(uintptr_t tls_addr, uintptr_t tls_size);
 // Set the thread pointer for the current thread.
 bool set_thread_ptr(uintptr_t val);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_CONFIG_LINUX_APP_H

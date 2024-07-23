@@ -9,6 +9,7 @@
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/OSUtil/syscall.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/raw_mutex.h"
 #include "src/__support/threads/linux/rwlock.h"
 #include "src/__support/threads/sleep.h"
@@ -41,14 +42,16 @@
 #include <pthread.h>
 #include <time.h>
 
-namespace LIBC_NAMESPACE::rwlock {
+namespace LIBC_NAMESPACE_DECL {
+namespace rwlock {
 class RwLockTester {
 public:
   static constexpr int full_reader_state() {
     return (~0) & (~RwState::PENDING_MASK) & (~RwState::ACTIVE_WRITER_BIT);
   }
 };
-} // namespace LIBC_NAMESPACE::rwlock
+} // namespace rwlock
+} // namespace LIBC_NAMESPACE_DECL
 
 static void smoke_test() {
   pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;

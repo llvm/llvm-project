@@ -198,7 +198,7 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
   auto ScopStats = S.getStatistics();
   ScopsProcessed++;
 
-  auto &DL = S.getFunction().getParent()->getDataLayout();
+  auto &DL = S.getFunction().getDataLayout();
   Region *R = &S.getRegion();
   assert(!R->isTopLevelRegion() && "Top level regions are not supported");
 
@@ -328,7 +328,7 @@ public:
     LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-    DL = &S.getFunction().getParent()->getDataLayout();
+    DL = &S.getFunction().getDataLayout();
     RI = &getAnalysis<RegionInfoPass>().getRegionInfo();
     return generateCode(S, *AI, *LI, *DT, *SE, *RI);
   }

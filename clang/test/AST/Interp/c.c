@@ -293,3 +293,11 @@ void SuperSpecialFunc(void) {
 const int SuperSpecialCase = 10;
 _Static_assert((sizeof(SuperSpecialCase) == 12 && SuperSpecialCase == 3) || SuperSpecialCase == 10, ""); // pedantic-warning {{GNU extension}}
 }
+
+
+void T1(void) {
+  static int *y[1] = {({ static int _x = 20; (void*)0;})}; // all-error {{initializer element is not a compile-time constant}} \
+                                                           // pedantic-warning {{use of GNU statement expression extension}}
+}
+
+

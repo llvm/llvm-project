@@ -50,6 +50,8 @@ class AMDGPULateCodeGenPrepare
   AssumptionCache *AC = nullptr;
   UniformityInfo *UA = nullptr;
 
+  SmallVector<WeakTrackingVH, 8> DeadInsts;
+
 public:
   static char ID;
 
@@ -92,8 +94,6 @@ private:
   Type *ConvertToScalar;
   /// The set of visited Instructions
   SmallPtrSet<Instruction *, 4> Visited;
-  /// The set of Instructions to be deleted
-  SmallPtrSet<Instruction *, 4> DeadInstrs;
   /// Map of Value -> Converted Value
   ValueToValueMap ValMap;
   /// Map of containing conversions from Optimal Type -> Original Type per BB.
@@ -115,10 +115,8 @@ public:
   /// Check for problematic PHI nodes or cross-bb values based on the value
   /// defined by \p I, and coerce to legal types if necessary. For problematic
   /// PHI node, we coerce all incoming values in a single invocation.
-  bool optimizeLiveType(Instruction *I);
-
-  /// Remove all instructions that have become dead (i.e. all the re-typed PHIs)
-  void removeDeadInstrs();
+  bool optimizeLiveType(Instruction *I,
+                        SmallVectorImpl<WeakTrackingVH> &DeadInsts);
 
   // Whether or not the type should be replaced to avoid inefficient
   // legalization code
@@ -163,8 +161,6 @@ bool AMDGPULateCodeGenPrepare::runOnFunction(Function &F) {
   const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
   const TargetMachine &TM = TPC.getTM<TargetMachine>();
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-  if (ST.hasScalarSubwordLoads())
-    return false;
 
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   UA = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
@@ -180,13 +176,15 @@ bool AMDGPULateCodeGenPrepare::runOnFunction(Function &F) {
 
   bool Changed = false;
 
-  for (auto &BB : F)
-    for (Instruction &I : make_early_inc_range(BB)) {
-      Changed |= visit(I);
-      Changed |= LRO.optimizeLiveType(&I);
+  bool HasScalarSubwordLoads = ST.hasScalarSubwordLoads();
+
+  for (auto &BB : reverse(F))
+    for (Instruction &I : make_early_inc_range(reverse(BB))) {
+      Changed |= !HasScalarSubwordLoads && visit(I);
+      Changed |= LRO.optimizeLiveType(&I, DeadInsts);
     }
 
-  LRO.removeDeadInstrs();
+  RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadInsts);
   return Changed;
 }
 
@@ -276,7 +274,8 @@ Value *LiveRegOptimizer::convertFromOptType(Type *ConvertType, Instruction *V,
   return Builder.CreateShuffleVector(Converted, ShuffleMask);
 }
 
-bool LiveRegOptimizer::optimizeLiveType(Instruction *I) {
+bool LiveRegOptimizer::optimizeLiveType(
+    Instruction *I, SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
   SmallVector<Instruction *, 4> Worklist;
   SmallPtrSet<PHINode *, 4> PhiNodes;
   SmallPtrSet<Instruction *, 4> Defs;
@@ -361,28 +360,65 @@ bool LiveRegOptimizer::optimizeLiveType(Instruction *I) {
         Type *NewType = calculateConvertType(Phi->getType());
         NewPhi->addIncoming(ConstantInt::get(NewType, 0, false),
                             Phi->getIncomingBlock(I));
-      } else if (ValMap.contains(IncVal))
+      } else if (ValMap.contains(IncVal) && ValMap[IncVal])
         NewPhi->addIncoming(ValMap[IncVal], Phi->getIncomingBlock(I));
       else
         MissingIncVal = true;
     }
-    DeadInstrs.insert(MissingIncVal ? cast<Instruction>(ValMap[Phi]) : Phi);
+    if (MissingIncVal) {
+      Value *DeadVal = ValMap[Phi];
+      // The coercion chain of the PHI is broken. Delete the Phi
+      // from the ValMap and any connected / user Phis.
+      SmallVector<Value *, 4> PHIWorklist;
+      SmallPtrSet<Value *, 4> VisitedPhis;
+      PHIWorklist.push_back(DeadVal);
+      while (!PHIWorklist.empty()) {
+        Value *NextDeadValue = PHIWorklist.pop_back_val();
+        VisitedPhis.insert(NextDeadValue);
+        auto OriginalPhi =
+            std::find_if(PhiNodes.begin(), PhiNodes.end(),
+                         [this, &NextDeadValue](PHINode *CandPhi) {
+                           return ValMap[CandPhi] == NextDeadValue;
+                         });
+        // This PHI may have already been removed from maps when
+        // unwinding a previous Phi
+        if (OriginalPhi != PhiNodes.end())
+          ValMap.erase(*OriginalPhi);
+
+        DeadInsts.emplace_back(cast<Instruction>(NextDeadValue));
+
+        for (User *U : NextDeadValue->users()) {
+          if (!VisitedPhis.contains(cast<PHINode>(U)))
+            PHIWorklist.push_back(U);
+        }
+      }
+    } else {
+      DeadInsts.emplace_back(cast<Instruction>(Phi));
+    }
   }
   // Coerce back to the original type and replace the uses.
   for (Instruction *U : Uses) {
     // Replace all converted operands for a use.
     for (auto [OpIdx, Op] : enumerate(U->operands())) {
-      if (ValMap.contains(Op)) {
+      if (ValMap.contains(Op) && ValMap[Op]) {
         Value *NewVal = nullptr;
         if (BBUseValMap.contains(U->getParent()) &&
             BBUseValMap[U->getParent()].contains(ValMap[Op]))
           NewVal = BBUseValMap[U->getParent()][ValMap[Op]];
         else {
           BasicBlock::iterator InsertPt = U->getParent()->getFirstNonPHIIt();
-          NewVal =
-              convertFromOptType(Op->getType(), cast<Instruction>(ValMap[Op]),
-                                 InsertPt, U->getParent());
-          BBUseValMap[U->getParent()][ValMap[Op]] = NewVal;
+          // We may pick up ops that were previously converted for users in
+          // other blocks. If there is an originally typed definition of the Op
+          // already in this block, simply reuse it.
+          if (isa<Instruction>(Op) && !isa<PHINode>(Op) &&
+              U->getParent() == cast<Instruction>(Op)->getParent()) {
+            NewVal = Op;
+          } else {
+            NewVal =
+                convertFromOptType(Op->getType(), cast<Instruction>(ValMap[Op]),
+                                   InsertPt, U->getParent());
+            BBUseValMap[U->getParent()][ValMap[Op]] = NewVal;
+          }
         }
         assert(NewVal);
         U->setOperand(OpIdx, NewVal);
@@ -391,14 +427,6 @@ bool LiveRegOptimizer::optimizeLiveType(Instruction *I) {
   }
 
   return true;
-}
-
-void LiveRegOptimizer::removeDeadInstrs() {
-  // Remove instrs that have been marked dead after type-coercion.
-  for (auto *I : DeadInstrs) {
-    I->replaceAllUsesWith(PoisonValue::get(I->getType()));
-    I->eraseFromParent();
-  }
 }
 
 bool AMDGPULateCodeGenPrepare::canWidenScalarExtLoad(LoadInst &LI) const {
@@ -472,7 +500,7 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   auto *NewVal = IRB.CreateBitCast(
       IRB.CreateTrunc(IRB.CreateLShr(NewLd, ShAmt), IntNTy), LI.getType());
   LI.replaceAllUsesWith(NewVal);
-  RecursivelyDeleteTriviallyDeadInstructions(&LI);
+  DeadInsts.emplace_back(&LI);
 
   return true;
 }

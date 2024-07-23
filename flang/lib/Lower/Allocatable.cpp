@@ -1104,14 +1104,14 @@ void Fortran::lower::associateMutableBox(
 bool Fortran::lower::isWholeAllocatable(const Fortran::lower::SomeExpr &expr) {
   if (const Fortran::semantics::Symbol *sym =
           Fortran::evaluate::UnwrapWholeSymbolOrComponentDataRef(expr))
-    return Fortran::semantics::IsAllocatable(*sym);
+    return Fortran::semantics::IsAllocatable(sym->GetUltimate());
   return false;
 }
 
 bool Fortran::lower::isWholePointer(const Fortran::lower::SomeExpr &expr) {
   if (const Fortran::semantics::Symbol *sym =
           Fortran::evaluate::UnwrapWholeSymbolOrComponentDataRef(expr))
-    return Fortran::semantics::IsPointer(*sym);
+    return Fortran::semantics::IsPointer(sym->GetUltimate());
   return false;
 }
 

@@ -21,4 +21,18 @@ add_object_library(
     libc.hdr.types.struct_flock
     libc.hdr.types.struct_flock64
     libc.hdr.types.struct_f_owner_ex
+    libc.hdr.types.off_t
+)
+
+add_object_library(
+  pid
+  SRCS
+    pid.cpp
+  HDRS
+    ../pid.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.hdr.types.pid_t
+    libc.include.sys_syscall
 )

@@ -297,7 +297,8 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getParsing().allCooked(), ci.getInvocation().getTargetOpts().triple,
       kindMap, ci.getInvocation().getLoweringOpts(),
       ci.getInvocation().getFrontendOpts().envDefaults,
-      ci.getInvocation().getFrontendOpts().features, targetMachine);
+      ci.getInvocation().getFrontendOpts().features, targetMachine,
+      ci.getInvocation().getTargetOpts().cpuToTuneFor);
 
   // Fetch module from lb, so we can set
   mlirModule = std::make_unique<mlir::ModuleOp>(lb.getModule());
@@ -866,6 +867,17 @@ void CodeGenAction::generateLLVMIR() {
       llvmModule->setPIELevel(
           static_cast<llvm::PIELevel::Level>(opts.PICLevel));
   }
+
+  // Set mcmodel level LLVM module flags
+  std::optional<llvm::CodeModel::Model> cm = getCodeModel(opts.CodeModel);
+  if (cm.has_value()) {
+    const llvm::Triple triple(ci.getInvocation().getTargetOpts().triple);
+    llvmModule->setCodeModel(*cm);
+    if ((cm == llvm::CodeModel::Medium || cm == llvm::CodeModel::Large) &&
+        triple.getArch() == llvm::Triple::x86_64) {
+      llvmModule->setLargeDataThreshold(opts.LargeDataThreshold);
+    }
+  }
 }
 
 static std::unique_ptr<llvm::raw_pwrite_stream>
@@ -1280,6 +1292,7 @@ void CodeGenAction::executeAction() {
   // and the command-line target option if specified, or the default if not
   // given on the command-line).
   llvm::TargetMachine &targetMachine = ci.getTargetMachine();
+
   const std::string &theTriple = targetMachine.getTargetTriple().str();
 
   if (llvmModule->getTargetTriple() != theTriple) {
