@@ -325,7 +325,7 @@ mlir::convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
         rewriter.getContext(),
         {LLVM::ModRefInfo::NoModRef, LLVM::ModRefInfo::NoModRef,
          LLVM::ModRefInfo::NoModRef});
-    newFuncOp.setMemoryAttr(memoryAttr);
+    newFuncOp.setMemoryEffectsAttr(memoryAttr);
   }
 
   // Propagate argument/result attributes to all converted arguments/result
