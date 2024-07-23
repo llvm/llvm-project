@@ -296,7 +296,6 @@ class XCOFFObjectWriter : public MCObjectWriter {
   uint64_t SymbolTableOffset = 0;
   uint16_t SectionCount = 0;
   uint32_t PaddingsBeforeDwarf = 0;
-  std::vector<std::pair<std::string, size_t>> FileNames;
   bool HasVisibility = false;
 
   support::endian::Writer W;
@@ -638,7 +637,6 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
   if (CISI && nameShouldBeInStringTable(CISI->Name))
     Strings.add(CISI->Name);
 
-  FileNames = Asm.getFileNames();
   // Emit ".file" as the source file name when there is no file name.
   if (FileNames.empty())
     FileNames.emplace_back(".file", 0);
@@ -651,7 +649,7 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
   // the AUX_FILE auxiliary entry.
   if (nameShouldBeInStringTable(".file"))
     Strings.add(".file");
-  StringRef Vers = Asm.getCompilerVersion();
+  StringRef Vers = CompilerVersion;
   if (auxFileSymNameShouldBeInStringTable(Vers))
     Strings.add(Vers);
 
@@ -1161,7 +1159,7 @@ void XCOFFObjectWriter::writeRelocations() {
 
 void XCOFFObjectWriter::writeSymbolTable(MCAssembler &Asm) {
   // Write C_FILE symbols.
-  StringRef Vers = Asm.getCompilerVersion();
+  StringRef Vers = CompilerVersion;
 
   for (const std::pair<std::string, size_t> &F : FileNames) {
     // The n_name of a C_FILE symbol is the source file's name when no auxiliary
@@ -1417,7 +1415,7 @@ void XCOFFObjectWriter::assignAddressesAndIndices(MCAssembler &Asm) {
   // The symbol table starts with all the C_FILE symbols. Each C_FILE symbol
   // requires 1 or 2 auxiliary entries.
   uint32_t SymbolTableIndex =
-      (2 + (Asm.getCompilerVersion().empty() ? 0 : 1)) * FileNames.size();
+      (2 + (CompilerVersion.empty() ? 0 : 1)) * FileNames.size();
 
   if (CInfoSymSection.Entry)
     SymbolTableIndex++;

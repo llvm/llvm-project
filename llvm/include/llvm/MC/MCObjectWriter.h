@@ -32,6 +32,10 @@ class MCValue;
 /// should be emitted as part of writeObject().
 class MCObjectWriter {
 protected:
+  /// List of declared file names
+  SmallVector<std::pair<std::string, size_t>, 0> FileNames;
+  // XCOFF specific: Optional compiler version.
+  std::string CompilerVersion;
   std::vector<const MCSymbol *> AddrsigSyms;
   bool EmitAddrsigSection = false;
 
@@ -43,7 +47,7 @@ public:
   virtual ~MCObjectWriter();
 
   /// lifetime management
-  virtual void reset() {}
+  virtual void reset();
 
   /// \name High-Level API
   /// @{
@@ -80,6 +84,14 @@ public:
                                                       const MCFragment &FB,
                                                       bool InSet,
                                                       bool IsPCRel) const;
+
+  MutableArrayRef<std::pair<std::string, size_t>> getFileNames() {
+    return FileNames;
+  }
+  void addFileName(MCAssembler &Asm, StringRef FileName);
+  void setCompilerVersion(StringRef CompilerVers) {
+    CompilerVersion = CompilerVers;
+  }
 
   /// Tell the object writer to emit an address-significance table during
   /// writeObject(). If this function is not called, all symbols are treated as

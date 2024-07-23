@@ -636,7 +636,7 @@ void WinCOFFWriter::writeSection(MCAssembler &Asm, const COFFSection &Sec) {
 
 // Create .file symbols.
 void WinCOFFWriter::createFileSymbols(MCAssembler &Asm) {
-  for (const std::pair<std::string, size_t> &It : Asm.getFileNames()) {
+  for (const std::pair<std::string, size_t> &It : OWriter.getFileNames()) {
     // round up to calculate the number of auxiliary symbols required
     const std::string &Name = It.first;
     unsigned SymbolSize = UseBigObj ? COFF::Symbol32Size : COFF::Symbol16Size;
