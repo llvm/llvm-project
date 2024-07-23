@@ -106,6 +106,11 @@ using cpp::optional;
 ///                       cause greater overhead.
 template <typename OffsetType = uintptr_t, size_t kAlign = alignof(OffsetType)>
 class Block {
+  // Masks for the contents of the next_ field.
+  static constexpr size_t USED_MASK = 1 << 0;
+  static constexpr size_t LAST_MASK = 1 << 1;
+  static constexpr size_t SIZE_MASK = ~(USED_MASK | LAST_MASK);
+
 public:
   using offset_type = OffsetType;
   static_assert(cpp::is_unsigned_v<offset_type>,
@@ -138,7 +143,7 @@ public:
   }
 
   /// @returns The total size of the block in bytes, including the header.
-  size_t outer_size() const { return next_ & ~3u; }
+  size_t outer_size() const { return next_ & SIZE_MASK; }
 
   /// @returns The number of usable bytes inside the block.
   size_t inner_size() const { return outer_size() - BLOCK_OVERHEAD; }
@@ -215,7 +220,7 @@ public:
   /// Indicates whether the block is in use.
   ///
   /// @returns `true` if the block is in use or `false` if not.
-  bool used() const { return next_ & 1; }
+  bool used() const { return next_ & USED_MASK; }
 
   /// Indicates whether this block is the last block or not (i.e. whether
   /// `next()` points to a valid block or not). This is needed because
@@ -223,19 +228,19 @@ public:
   /// block there or not.
   ///
   /// @returns `true` is this is the last block or `false` if not.
-  bool last() const { return next_ & 2; }
+  bool last() const { return next_ & LAST_MASK; }
 
   /// Marks this block as in use.
-  void mark_used() { next_ |= 1; }
+  void mark_used() { next_ |= USED_MASK; }
 
   /// Marks this block as free.
-  void mark_free() { next_ &= ~1u; }
+  void mark_free() { next_ &= ~USED_MASK; }
 
   /// Marks this block as the last one in the chain.
-  constexpr void mark_last() { next_ |= 2; }
+  constexpr void mark_last() { next_ |= LAST_MASK; }
 
   /// Clears the last bit from this block.
-  void clear_last() { next_ &= ~2u; }
+  void clear_last() { next_ &= ~LAST_MASK; }
 
   /// @brief Checks if a block is valid.
   ///
