@@ -652,7 +652,12 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
                                    "{}">:$fastmathFlags,
                   OptionalAttr<DenseI32ArrayAttr>:$branch_weights,
                   DefaultValuedAttr<CConv, "CConv::C">:$CConv,
-                  DefaultValuedAttr<TailCallKind, "TailCallKind::None">:$TailCallKind);
+                  DefaultValuedAttr<TailCallKind, "TailCallKind::None">:$TailCallKind,
+                  OptionalAttr<LLVM_MemoryEffectsAttr>:$memory,
+                  OptionalAttr<UnitAttr>:$convergent,
+                  OptionalAttr<UnitAttr>:$no_unwind,
+                  OptionalAttr<UnitAttr>:$will_return
+                  );
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs Optional<LLVM_Type>:$result);
