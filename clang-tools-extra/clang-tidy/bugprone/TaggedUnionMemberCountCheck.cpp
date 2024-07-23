@@ -38,7 +38,8 @@ TaggedUnionMemberCountCheck::TaggedUnionMemberCountCheck(
       CountingEnumPrefixesSet(
           Options.get(CountingEnumPrefixesOptionName).has_value()),
       CountingEnumSuffixesSet(
-          Options.get(CountingEnumSuffixesOptionName).has_value()) {
+          Options.get(CountingEnumSuffixesOptionName).has_value()),
+      CountingEnumConstantDecl(nullptr) {
   if (!EnableCountingEnumHeuristic) {
     if (CountingEnumPrefixesSet)
       configurationDiag("%0: Counting enum heuristic is disabled but "
@@ -112,7 +113,7 @@ bool TaggedUnionMemberCountCheck::isCountingEnumLikeName(
 }
 
 size_t TaggedUnionMemberCountCheck::getNumberOfValidEnumValues(
-    const EnumDecl *Ed) const noexcept {
+    const EnumDecl *Ed) noexcept {
   bool FoundMax = false;
   llvm::APSInt MaxTagValue;
   llvm::SmallSet<llvm::APSInt, 32> EnumValues;
@@ -132,7 +133,7 @@ size_t TaggedUnionMemberCountCheck::getNumberOfValidEnumValues(
   //    constant.
   // The 'ce' prefix is a shorthand for 'counting enum'.
   size_t CeCount = 0;
-  bool IsLast = false;
+  bool CeIsLast = false;
   llvm::APSInt CeValue = llvm::APSInt::get(0);
 
   for (const auto &Enumerator : Ed->enumerators()) {
@@ -149,18 +150,22 @@ size_t TaggedUnionMemberCountCheck::getNumberOfValidEnumValues(
 
     if (EnableCountingEnumHeuristic) {
       if (isCountingEnumLikeName(Enumerator->getName())) {
-        IsLast = true;
+        CeIsLast = true;
         CeValue = Val;
         CeCount += 1;
+        CountingEnumConstantDecl = Enumerator;
       } else {
-        IsLast = false;
+        CeIsLast = false;
       }
     }
   }
 
   size_t ValidValuesCount = EnumValues.size();
-  if (CeCount == 1 && IsLast && CeValue == MaxTagValue)
+  if (CeCount == 1 && CeIsLast && CeValue == MaxTagValue) {
     ValidValuesCount -= 1;
+  } else {
+    CountingEnumConstantDecl = nullptr;
+  }
 
   return ValidValuesCount;
 }
@@ -187,7 +192,6 @@ void TaggedUnionMemberCountCheck::check(
     const size_t UnionMemberCount = llvm::range_size(UnionDef->fields());
     const size_t TagCount = getNumberOfValidEnumValues(EnumDef);
 
-    // FIXME: Maybe a emit a note when a counter enum constant was found.
     if (UnionMemberCount > TagCount) {
       diag(Root->getLocation(),
            "tagged union has more data members (%0) than tags (%1)!")
@@ -196,6 +200,13 @@ void TaggedUnionMemberCountCheck::check(
       diag(Root->getLocation(),
            "tagged union has fewer data members (%0) than tags (%1)!")
           << UnionMemberCount << TagCount;
+    }
+
+    if (CountingEnumConstantDecl) {
+      diag(CountingEnumConstantDecl->getLocation(),
+           "assuming that this constant is just an auxiliary value and not "
+           "used for indicating a valid union data member",
+           DiagnosticIDs::Note);
     }
   }
 }

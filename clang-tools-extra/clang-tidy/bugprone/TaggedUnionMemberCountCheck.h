@@ -34,8 +34,9 @@ private:
   std::vector<StringRef> ParsedCountingEnumSuffixes;
   const bool CountingEnumPrefixesSet;
   const bool CountingEnumSuffixesSet;
+  EnumConstantDecl *CountingEnumConstantDecl;
 
-  size_t getNumberOfValidEnumValues(const EnumDecl *Ed) const noexcept;
+  size_t getNumberOfValidEnumValues(const EnumDecl *Ed) noexcept;
   bool isCountingEnumLikeName(StringRef Name) const noexcept;
 };
 
