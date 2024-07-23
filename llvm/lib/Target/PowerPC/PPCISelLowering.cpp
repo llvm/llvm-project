@@ -1469,6 +1469,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   case PPC::DIR_PWR8:
   case PPC::DIR_PWR9:
   case PPC::DIR_PWR10:
+  case PPC::DIR_PWR11:
   case PPC::DIR_PWR_FUTURE:
     setPrefLoopAlignment(Align(16));
     setPrefFunctionAlignment(Align(16));
@@ -5559,7 +5560,7 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
       // C-linkage name. A Qualname is returned here because an external
       // function entry point is a csect with XTY_ER property.
       const auto getExternalFunctionEntryPointSymbol = [&](StringRef SymName) {
-        auto &Context = DAG.getMachineFunction().getMMI().getContext();
+        auto &Context = DAG.getMachineFunction().getContext();
         MCSectionXCOFF *Sec = Context.getXCOFFSection(
             (Twine(".") + Twine(SymName)).str(), SectionKind::getMetadata(),
             XCOFF::CsectProperties(XCOFF::XMC_PR, XCOFF::XTY_ER));
@@ -16664,6 +16665,7 @@ Align PPCTargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
   case PPC::DIR_PWR8:
   case PPC::DIR_PWR9:
   case PPC::DIR_PWR10:
+  case PPC::DIR_PWR11:
   case PPC::DIR_PWR_FUTURE: {
     if (!ML)
       break;
@@ -18046,6 +18048,7 @@ SDValue PPCTargetLowering::combineMUL(SDNode *N, DAGCombinerInfo &DCI) const {
       return true;
     case PPC::DIR_PWR9:
     case PPC::DIR_PWR10:
+    case PPC::DIR_PWR11:
     case PPC::DIR_PWR_FUTURE:
       //  type        mul     add    shl
       // scalar        5       2      2

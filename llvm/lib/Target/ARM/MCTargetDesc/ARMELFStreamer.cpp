@@ -114,15 +114,14 @@ class ARMTargetAsmStreamer : public ARMTargetStreamer {
 
 public:
   ARMTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS,
-                       MCInstPrinter &InstPrinter, bool VerboseAsm);
+                       MCInstPrinter &InstPrinter);
 };
 
 ARMTargetAsmStreamer::ARMTargetAsmStreamer(MCStreamer &S,
                                            formatted_raw_ostream &OS,
-                                           MCInstPrinter &InstPrinter,
-                                           bool VerboseAsm)
+                                           MCInstPrinter &InstPrinter)
     : ARMTargetStreamer(S), OS(OS), InstPrinter(InstPrinter),
-      IsVerboseAsm(VerboseAsm) {}
+      IsVerboseAsm(S.isVerboseAsm()) {}
 
 void ARMTargetAsmStreamer::emitFnStart() { OS << "\t.fnstart\n"; }
 void ARMTargetAsmStreamer::emitFnEnd() { OS << "\t.fnend\n"; }
@@ -1129,7 +1128,7 @@ void ARMELFStreamer::reset() {
   // MCELFStreamer clear's the assembler's e_flags. However, for
   // arm we manually set the ABI version on streamer creation, so
   // do the same here
-  getAssembler().setELFHeaderEFlags(ELF::EF_ARM_EABI_VER5);
+  getWriter().setELFHeaderEFlags(ELF::EF_ARM_EABI_VER5);
 }
 
 inline void ARMELFStreamer::SwitchToEHSection(StringRef Prefix,
@@ -1462,9 +1461,8 @@ namespace llvm {
 
 MCTargetStreamer *createARMTargetAsmStreamer(MCStreamer &S,
                                              formatted_raw_ostream &OS,
-                                             MCInstPrinter *InstPrint,
-                                             bool isVerboseAsm) {
-  return new ARMTargetAsmStreamer(S, OS, *InstPrint, isVerboseAsm);
+                                             MCInstPrinter *InstPrint) {
+  return new ARMTargetAsmStreamer(S, OS, *InstPrint);
 }
 
 MCTargetStreamer *createARMNullTargetStreamer(MCStreamer &S) {
@@ -1486,7 +1484,7 @@ MCELFStreamer *createARMELFStreamer(MCContext &Context,
   // FIXME: This should eventually end up somewhere else where more
   // intelligent flag decisions can be made. For now we are just maintaining
   // the status quo for ARM and setting EF_ARM_EABI_VER5 as the default.
-  S->getAssembler().setELFHeaderEFlags(ELF::EF_ARM_EABI_VER5);
+  S->getWriter().setELFHeaderEFlags(ELF::EF_ARM_EABI_VER5);
 
   return S;
 }

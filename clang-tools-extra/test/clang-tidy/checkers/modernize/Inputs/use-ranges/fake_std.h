@@ -106,6 +106,9 @@ bool equal(InputIt1 first1, InputIt1 last1,
 template <class ForwardIt, class T>
 void iota(ForwardIt first, ForwardIt last, T value);
 
+template <class ForwardIt>
+ForwardIt rotate(ForwardIt first, ForwardIt middle, ForwardIt last);
+
 } // namespace std
 
 #endif // USE_RANGES_FAKE_STD_H

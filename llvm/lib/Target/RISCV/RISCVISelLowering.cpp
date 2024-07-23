@@ -14503,10 +14503,21 @@ struct NodeExtensionHelper {
     // widening opcode by splatting to smaller element size.
     unsigned EltBits = VT.getScalarSizeInBits();
     unsigned ScalarBits = Op.getValueSizeInBits();
-    // Make sure we're getting all element bits from the scalar register.
-    // FIXME: Support implicit sign extension of vmv.v.x?
-    if (ScalarBits < EltBits)
+    // If we're not getting all bits from the element, we need special handling.
+    if (ScalarBits < EltBits) {
+      // This should only occur on RV32.
+      assert(Opc == RISCVISD::VMV_V_X_VL && EltBits == 64 && ScalarBits == 32 &&
+             !Subtarget.is64Bit() && "Unexpected splat");
+      // vmv.v.x sign extends narrow inputs.
+      SupportsSExt = true;
+
+      // If the input is positive, then sign extend is also zero extend.
+      if (DAG.SignBitIsZero(Op))
+        SupportsZExt = true;
+
+      EnforceOneUse = false;
       return;
+    }
 
     unsigned NarrowSize = EltBits / 2;
     // If the narrow type cannot be expressed with a legal VMV,
@@ -14987,8 +14998,8 @@ static SDValue combineBinOp_VLToVWBinOp_VL(SDNode *N,
     if (!NodeExtensionHelper::isSupportedRoot(Root, Subtarget))
       return SDValue();
 
-    NodeExtensionHelper LHS(N, 0, DAG, Subtarget);
-    NodeExtensionHelper RHS(N, 1, DAG, Subtarget);
+    NodeExtensionHelper LHS(Root, 0, DAG, Subtarget);
+    NodeExtensionHelper RHS(Root, 1, DAG, Subtarget);
     auto AppendUsersIfNeeded = [&Worklist,
                                 &Inserted](const NodeExtensionHelper &Op) {
       if (Op.needToPromoteOtherUsers()) {
@@ -15005,18 +15016,18 @@ static SDValue combineBinOp_VLToVWBinOp_VL(SDNode *N,
       return SDValue();
 
     SmallVector<NodeExtensionHelper::CombineToTry> FoldingStrategies =
-        NodeExtensionHelper::getSupportedFoldings(N);
+        NodeExtensionHelper::getSupportedFoldings(Root);
 
     assert(!FoldingStrategies.empty() && "Nothing to be folded");
     bool Matched = false;
     for (int Attempt = 0;
-         (Attempt != 1 + NodeExtensionHelper::isCommutative(N)) && !Matched;
+         (Attempt != 1 + NodeExtensionHelper::isCommutative(Root)) && !Matched;
          ++Attempt) {
 
       for (NodeExtensionHelper::CombineToTry FoldingStrategy :
            FoldingStrategies) {
         std::optional<CombineResult> Res =
-            FoldingStrategy(N, LHS, RHS, DAG, Subtarget);
+            FoldingStrategy(Root, LHS, RHS, DAG, Subtarget);
         if (Res) {
           Matched = true;
           CombinesToApply.push_back(*Res);
@@ -18407,6 +18418,15 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   // Select_FPRX_ (rs1, rs2, imm, rs4, (Select_FPRX_ rs1, rs2, imm, rs4, rs5))
   // is checked here and handled by a separate function -
   // EmitLoweredCascadedSelect.
+
+  auto Next = next_nodbg(MI.getIterator(), BB->instr_end());
+  if ((MI.getOpcode() != RISCV::Select_GPR_Using_CC_GPR &&
+       MI.getOpcode() != RISCV::Select_GPR_Using_CC_Imm) &&
+      Next != BB->end() && Next->getOpcode() == MI.getOpcode() &&
+      Next->getOperand(5).getReg() == MI.getOperand(0).getReg() &&
+      Next->getOperand(5).isKill())
+    return EmitLoweredCascadedSelect(MI, *Next, BB, Subtarget);
+
   Register LHS = MI.getOperand(1).getReg();
   Register RHS;
   if (MI.getOperand(2).isReg())
@@ -18418,15 +18438,6 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   SelectDests.insert(MI.getOperand(0).getReg());
 
   MachineInstr *LastSelectPseudo = &MI;
-  auto Next = next_nodbg(MI.getIterator(), BB->instr_end());
-  if ((MI.getOpcode() != RISCV::Select_GPR_Using_CC_GPR &&
-       MI.getOpcode() != RISCV::Select_GPR_Using_CC_Imm) &&
-      Next != BB->end() && Next->getOpcode() == MI.getOpcode() &&
-      Next->getOperand(5).getReg() == MI.getOperand(0).getReg() &&
-      Next->getOperand(5).isKill()) {
-    return EmitLoweredCascadedSelect(MI, *Next, BB, Subtarget);
-  }
-
   for (auto E = BB->end(), SequenceMBBI = MachineBasicBlock::iterator(MI);
        SequenceMBBI != E; ++SequenceMBBI) {
     if (SequenceMBBI->isDebugInstr())
@@ -18466,6 +18477,11 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
 
   F->insert(I, IfFalseMBB);
   F->insert(I, TailMBB);
+
+  // Set the call frame size on entry to the new basic blocks.
+  unsigned CallFrameSize = TII.getCallFrameSizeAt(*LastSelectPseudo);
+  IfFalseMBB->setCallFrameSize(CallFrameSize);
+  TailMBB->setCallFrameSize(CallFrameSize);
 
   // Transfer debug instructions associated with the selects to TailMBB.
   for (MachineInstr *DebugInstr : SelectDebugValues) {

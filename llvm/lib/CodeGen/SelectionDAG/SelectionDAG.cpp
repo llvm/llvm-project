@@ -4705,14 +4705,18 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       return 1;  // Early out.
     Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
     return std::min(Tmp, Tmp2);
+  case ISD::SSUBO_CARRY:
+  case ISD::USUBO_CARRY:
+    // sub_carry(x,x,c) -> 0/-1 (sext carry)
+    if (Op.getResNo() == 0 && Op.getOperand(0) == Op.getOperand(1))
+      return VTBits;
+    [[fallthrough]];
   case ISD::SADDO:
   case ISD::UADDO:
   case ISD::SADDO_CARRY:
   case ISD::UADDO_CARRY:
   case ISD::SSUBO:
   case ISD::USUBO:
-  case ISD::SSUBO_CARRY:
-  case ISD::USUBO_CARRY:
   case ISD::SMULO:
   case ISD::UMULO:
     if (Op.getResNo() != 1)
@@ -7556,6 +7560,22 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N1.getValueType() == VT)
       return N1;
     break;
+  case ISD::VECTOR_COMPRESS: {
+    [[maybe_unused]] EVT VecVT = N1.getValueType();
+    [[maybe_unused]] EVT MaskVT = N2.getValueType();
+    [[maybe_unused]] EVT PassthruVT = N3.getValueType();
+    assert(VT == VecVT && "Vector and result type don't match.");
+    assert(VecVT.isVector() && MaskVT.isVector() && PassthruVT.isVector() &&
+           "All inputs must be vectors.");
+    assert(VecVT == PassthruVT && "Vector and passthru types don't match.");
+    assert(VecVT.getVectorElementCount() == MaskVT.getVectorElementCount() &&
+           "Vector and mask must have same number of elements.");
+
+    if (N1.isUndef() || N2.isUndef())
+      return N3;
+
+    break;
+  }
   }
 
   // Memoize node if it doesn't produce a glue result.

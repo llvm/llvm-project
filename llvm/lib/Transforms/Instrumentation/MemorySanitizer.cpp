@@ -11,11 +11,11 @@
 /// reads.
 ///
 /// The algorithm of the tool is similar to Memcheck
-/// (http://goo.gl/QKbem). We associate a few shadow bits with every
-/// byte of the application memory, poison the shadow of the malloc-ed
-/// or alloca-ed memory, load the shadow bits on every memory read,
-/// propagate the shadow bits through some of the arithmetic
-/// instruction (including MOV), store the shadow bits on every memory
+/// (https://static.usenix.org/event/usenix05/tech/general/full_papers/seward/seward_html/usenix2005.html)
+/// We associate a few shadow bits with every byte of the application memory,
+/// poison the shadow of the malloc-ed or alloca-ed memory, load the shadow,
+/// bits on every memory read, propagate the shadow bits through some of the
+/// arithmetic instruction (including MOV), store the shadow bits on every memory
 /// write, report a bug on some other instructions (e.g. JMP) if the
 /// associated shadow is poisoned.
 ///
@@ -181,6 +181,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
@@ -2498,6 +2499,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         MSV->setOrigin(I, Origin);
       }
     }
+
+    /// Store the current combined value at the specified origin
+    /// location.
+    void DoneAndStoreOrigin(TypeSize TS, Value *OriginPtr) {
+      if (MSV->MS.TrackOrigins) {
+        assert(Origin);
+        MSV->paintOrigin(IRB, Origin, OriginPtr, TS, kMinOriginAlignment);
+      }
+    }
   };
 
   using ShadowAndOriginCombiner = Combiner<true>;
@@ -3865,6 +3875,69 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  /// Handle Arm NEON vector store intrinsics (vst{2,3,4}).
+  ///
+  /// Arm NEON vector store intrinsics have the output address (pointer) as the
+  /// last argument, with the initial arguments being the inputs. They return
+  /// void.
+  void handleNEONVectorStoreIntrinsic(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+
+    // Don't use getNumOperands() because it includes the callee
+    int numArgOperands = I.arg_size();
+    assert(numArgOperands >= 1);
+
+    // The last arg operand is the output
+    Value *Addr = I.getArgOperand(numArgOperands - 1);
+    assert(Addr->getType()->isPointerTy());
+
+    if (ClCheckAccessAddress)
+      insertShadowCheck(Addr, &I);
+
+    // Every arg operand, other than the last one, is an input vector
+    IntrinsicInst *ShadowI = cast<IntrinsicInst>(I.clone());
+    for (int i = 0; i < numArgOperands - 1; i++) {
+      assert(isa<FixedVectorType>(I.getArgOperand(i)->getType()));
+      ShadowI->setArgOperand(i, getShadow(&I, i));
+    }
+
+    // MSan's GetShadowTy assumes the LHS is the type we want the shadow for
+    // e.g., for:
+    //     [[TMP5:%.*]] = bitcast <16 x i8> [[TMP2]] to i128
+    // we know the type of the output (and its shadow) is <16 x i8>.
+    //
+    // Arm NEON VST is unusual because the last argument is the output address:
+    //     define void @st2_16b(<16 x i8> %A, <16 x i8> %B, ptr %P) {
+    //         call void @llvm.aarch64.neon.st2.v16i8.p0
+    //                   (<16 x i8> [[A]], <16 x i8> [[B]], ptr [[P]])
+    // and we have no type information about P's operand. We must manually
+    // compute the type (<16 x i8> x 2).
+    FixedVectorType *OutputVectorTy = FixedVectorType::get(
+        cast<FixedVectorType>(I.getArgOperand(0)->getType())->getElementType(),
+        cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements() *
+            (numArgOperands - 1));
+    Type *ShadowTy = getShadowTy(OutputVectorTy);
+    Value *ShadowPtr, *OriginPtr;
+    // AArch64 NEON does not need alignment (unless OS requires it)
+    std::tie(ShadowPtr, OriginPtr) =
+        getShadowOriginPtr(Addr, IRB, ShadowTy, Align(1), /*isStore*/ true);
+    ShadowI->setArgOperand(numArgOperands - 1, ShadowPtr);
+    ShadowI->insertAfter(&I);
+
+    if (MS.TrackOrigins) {
+      // TODO: if we modelled the vst* instruction more precisely, we could
+      // more accurately track the origins (e.g., if both inputs are
+      // uninitialized for vst2, we currently blame the second input, even
+      // though part of the output depends only on the first input).
+      OriginCombiner OC(this, IRB);
+      for (int i = 0; i < numArgOperands - 1; i++)
+        OC.Add(I.getArgOperand(i));
+
+      const DataLayout &DL = F.getDataLayout();
+      OC.DoneAndStoreOrigin(DL.getTypeStoreSize(OutputVectorTy), OriginPtr);
+    }
+  }
+
   void visitIntrinsicInst(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
     case Intrinsic::uadd_with_overflow:
@@ -4203,6 +4276,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       setShadow(&I, getCleanShadow(&I));
       setOrigin(&I, getCleanOrigin());
       break;
+
+    case Intrinsic::aarch64_neon_st2:
+    case Intrinsic::aarch64_neon_st3:
+    case Intrinsic::aarch64_neon_st4: {
+      handleNEONVectorStoreIntrinsic(I);
+      break;
+    }
 
     default:
       if (!handleUnknownIntrinsic(I))
