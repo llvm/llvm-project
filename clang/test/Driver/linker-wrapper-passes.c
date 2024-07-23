@@ -1,5 +1,9 @@
 // Check various clang-linker-wrapper pass options after -offload-opt.
 
+// REQUIRES: llvm-plugins, llvm-examples
+// REQUIRES: x86-registered-target
+// REQUIRES: amdgpu-registered-target
+
 // Setup.
 // RUN: mkdir -p %t
 // RUN: %clang -cc1 -emit-llvm-bc -o %t/host-x86_64-unknown-linux-gnu.bc \
