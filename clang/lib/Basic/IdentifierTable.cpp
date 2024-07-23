@@ -322,8 +322,9 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
   if (LangOpts.IEEE128)
     AddKeyword("__ieee128", tok::kw___float128, KEYALL, LangOpts, *this);
 
-  // Add the 'import' contextual keyword.
+  // Add the 'import' and 'module' contextual keyword.
   get("import").setModulesImport(true);
+  get("module").setModulesDeclaration(true);
 }
 
 /// Checks if the specified token kind represents a keyword in the
