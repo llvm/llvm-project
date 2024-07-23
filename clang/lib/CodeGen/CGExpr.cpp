@@ -1076,7 +1076,12 @@ static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
   const CGRecordLayout &Layout = CGF.CGM.getTypes().getCGRecordLayout(RD);
   int64_t FieldNo = -1;
   for (const FieldDecl *FD : RD->fields()) {
-    FieldNo = Layout.getLLVMFieldNo(FD);
+    if (!Layout.containsFieldDecl(FD))
+      // This could happen if the field has a struct type that's empty. I don't
+      // know why either.
+      continue;
+
+    FieldNo = Layout.containsFieldDecl(FD);
     if (FD == Field) {
       Indices.emplace_back(std::make_pair(RD, CGF.Builder.getInt32(FieldNo)));
       return true;
