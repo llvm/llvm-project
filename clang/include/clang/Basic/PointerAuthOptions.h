@@ -25,6 +25,11 @@ namespace clang {
 
 constexpr unsigned PointerAuthKeyNone = -1;
 
+/// Constant discriminator for std::type_info vtable pointers: 0xB1EA/45546
+/// The value is ptrauth_string_discriminator("_ZTVSt9type_info"), i.e.,
+/// the vtable type discriminator for classes derived from std::type_info.
+constexpr uint16_t StdTypeInfoVTablePointerConstantDiscrimination = 0xB1EA;
+
 class PointerAuthSchema {
 public:
   enum class Kind : unsigned {
@@ -178,6 +183,9 @@ struct PointerAuthOptions {
 
   /// The ABI for variadic C++ virtual function pointers.
   PointerAuthSchema CXXVirtualVariadicFunctionPointers;
+
+  /// The ABI for C++ member function pointers.
+  PointerAuthSchema CXXMemberFunctionPointers;
 };
 
 } // end namespace clang

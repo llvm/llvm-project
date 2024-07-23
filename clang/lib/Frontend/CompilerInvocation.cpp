@@ -1488,12 +1488,21 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
         Key::ASDA, LangOpts.PointerAuthVTPtrAddressDiscrimination,
         LangOpts.PointerAuthVTPtrTypeDiscrimination ? Discrimination::Type
                                                     : Discrimination::None);
-    Opts.CXXTypeInfoVTablePointer =
-        PointerAuthSchema(Key::ASDA, false, Discrimination::None);
+
+    if (LangOpts.PointerAuthTypeInfoVTPtrDiscrimination)
+      Opts.CXXTypeInfoVTablePointer =
+          PointerAuthSchema(Key::ASDA, true, Discrimination::Constant,
+                            StdTypeInfoVTablePointerConstantDiscrimination);
+    else
+      Opts.CXXTypeInfoVTablePointer =
+          PointerAuthSchema(Key::ASDA, false, Discrimination::None);
+
     Opts.CXXVTTVTablePointers =
         PointerAuthSchema(Key::ASDA, false, Discrimination::None);
     Opts.CXXVirtualFunctionPointers = Opts.CXXVirtualVariadicFunctionPointers =
         PointerAuthSchema(Key::ASIA, true, Discrimination::Decl);
+    Opts.CXXMemberFunctionPointers =
+        PointerAuthSchema(Key::ASIA, false, Discrimination::Type);
   }
   Opts.IndirectGotos = LangOpts.PointerAuthIndirectGotos;
 }
@@ -3414,6 +3423,9 @@ static void GeneratePointerAuthArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_fptrauth_vtable_pointer_address_discrimination);
   if (Opts.PointerAuthVTPtrTypeDiscrimination)
     GenerateArg(Consumer, OPT_fptrauth_vtable_pointer_type_discrimination);
+  if (Opts.PointerAuthTypeInfoVTPtrDiscrimination)
+    GenerateArg(Consumer, OPT_fptrauth_type_info_vtable_pointer_discrimination);
+
   if (Opts.PointerAuthInitFini)
     GenerateArg(Consumer, OPT_fptrauth_init_fini);
   if (Opts.PointerAuthFunctionTypeDiscrimination)
@@ -3431,6 +3443,9 @@ static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
       Args.hasArg(OPT_fptrauth_vtable_pointer_address_discrimination);
   Opts.PointerAuthVTPtrTypeDiscrimination =
       Args.hasArg(OPT_fptrauth_vtable_pointer_type_discrimination);
+  Opts.PointerAuthTypeInfoVTPtrDiscrimination =
+      Args.hasArg(OPT_fptrauth_type_info_vtable_pointer_discrimination);
+
   Opts.PointerAuthInitFini = Args.hasArg(OPT_fptrauth_init_fini);
   Opts.PointerAuthFunctionTypeDiscrimination =
       Args.hasArg(OPT_fptrauth_function_pointer_type_discrimination);

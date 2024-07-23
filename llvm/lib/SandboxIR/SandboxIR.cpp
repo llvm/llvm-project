@@ -540,6 +540,48 @@ void StoreInst::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
+#endif // NDEBUG
+
+ReturnInst *ReturnInst::createCommon(Value *RetVal, IRBuilder<> &Builder,
+                                     Context &Ctx) {
+  llvm::ReturnInst *NewRI;
+  if (RetVal != nullptr)
+    NewRI = Builder.CreateRet(RetVal->Val);
+  else
+    NewRI = Builder.CreateRetVoid();
+  return Ctx.createReturnInst(NewRI);
+}
+
+ReturnInst *ReturnInst::create(Value *RetVal, Instruction *InsertBefore,
+                               Context &Ctx) {
+  llvm::Instruction *BeforeIR = InsertBefore->getTopmostLLVMInstruction();
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(BeforeIR);
+  return createCommon(RetVal, Builder, Ctx);
+}
+
+ReturnInst *ReturnInst::create(Value *RetVal, BasicBlock *InsertAtEnd,
+                               Context &Ctx) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
+  return createCommon(RetVal, Builder, Ctx);
+}
+
+Value *ReturnInst::getReturnValue() const {
+  auto *LLVMRetVal = cast<llvm::ReturnInst>(Val)->getReturnValue();
+  return LLVMRetVal != nullptr ? Ctx.getValue(LLVMRetVal) : nullptr;
+}
+
+#ifndef NDEBUG
+void ReturnInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void ReturnInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
 
 void OpaqueInst::dump(raw_ostream &OS) const {
   dumpCommonPrefix(OS);
@@ -626,7 +668,7 @@ Value *Context::registerValue(std::unique_ptr<Value> &&VPtr) {
          "Can't register a user!");
   Value *V = VPtr.get();
   [[maybe_unused]] auto Pair =
-         LLVMValueToValueMap.insert({VPtr->Val, std::move(VPtr)});
+      LLVMValueToValueMap.insert({VPtr->Val, std::move(VPtr)});
   assert(Pair.second && "Already exists!");
   return V;
 }
@@ -668,6 +710,11 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     It->second = std::unique_ptr<StoreInst>(new StoreInst(LLVMSt, *this));
     return It->second.get();
   }
+  case llvm::Instruction::Ret: {
+    auto *LLVMRet = cast<llvm::ReturnInst>(LLVMV);
+    It->second = std::unique_ptr<ReturnInst>(new ReturnInst(LLVMRet, *this));
+    return It->second.get();
+  }
   default:
     break;
   }
@@ -694,6 +741,11 @@ LoadInst *Context::createLoadInst(llvm::LoadInst *LI) {
 StoreInst *Context::createStoreInst(llvm::StoreInst *SI) {
   auto NewPtr = std::unique_ptr<StoreInst>(new StoreInst(SI, *this));
   return cast<StoreInst>(registerValue(std::move(NewPtr)));
+}
+
+ReturnInst *Context::createReturnInst(llvm::ReturnInst *I) {
+  auto NewPtr = std::unique_ptr<ReturnInst>(new ReturnInst(I, *this));
+  return cast<ReturnInst>(registerValue(std::move(NewPtr)));
 }
 
 Value *Context::getValue(llvm::Value *V) const {
