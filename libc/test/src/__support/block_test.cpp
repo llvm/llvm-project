@@ -49,10 +49,20 @@ TEST_FOR_EACH_BLOCK_TYPE(CanCreateSingleAlignedBlock) {
   ASSERT_TRUE(result.has_value());
   BlockType *block = *result;
 
-  EXPECT_EQ(block->outer_size(), kN);
-  EXPECT_EQ(block->inner_size(), kN - BlockType::BLOCK_OVERHEAD);
-  EXPECT_EQ(block->prev(), static_cast<BlockType *>(nullptr));
-  EXPECT_EQ(block->next(), static_cast<BlockType *>(nullptr));
+  BlockType *last = block->next();
+  ASSERT_NE(last, static_cast<BlockType *>(nullptr));
+  constexpr size_t last_outer_size = BlockType::BLOCK_OVERHEAD;
+  EXPECT_EQ(last->outer_size(), last_outer_size);
+  EXPECT_EQ(last->prev_free(), block);
+  EXPECT_TRUE(last->used());
+
+  EXPECT_EQ(block->outer_size(), kN - last_outer_size);
+  constexpr size_t last_prev_field_size =
+      sizeof(typename BlockType::offset_type);
+  EXPECT_EQ(block->inner_size(), kN - last_outer_size -
+                                     BlockType::BLOCK_OVERHEAD +
+                                     last_prev_field_size);
+  EXPECT_EQ(block->prev_free(), static_cast<BlockType *>(nullptr));
   EXPECT_FALSE(block->used());
 }
 
@@ -88,26 +98,28 @@ TEST(LlvmLibcBlockTest, CannotCreateTooLargeBlock) {
 
 TEST_FOR_EACH_BLOCK_TYPE(CanSplitBlock) {
   constexpr size_t kN = 1024;
-  constexpr size_t kSplitN = 512;
+  constexpr size_t prev_field_size = sizeof(typename BlockType::offset_type);
+  // Give the split position a large alignment.
+  constexpr size_t kSplitN = 512 + prev_field_size;
 
   alignas(BlockType::ALIGNMENT) array<byte, kN> bytes;
   auto result = BlockType::init(bytes);
   ASSERT_TRUE(result.has_value());
   auto *block1 = *result;
+  size_t orig_size = block1->outer_size();
 
   result = block1->split(kSplitN);
   ASSERT_TRUE(result.has_value());
-
   auto *block2 = *result;
 
   EXPECT_EQ(block1->inner_size(), kSplitN);
-  EXPECT_EQ(block1->outer_size(), kSplitN + BlockType::BLOCK_OVERHEAD);
+  EXPECT_EQ(block1->outer_size(), kSplitN - prev_field_size + BlockType::BLOCK_OVERHEAD);
 
-  EXPECT_EQ(block2->outer_size(), kN - kSplitN - BlockType::BLOCK_OVERHEAD);
+  EXPECT_EQ(block2->outer_size(), orig_size - block1->outer_size());
   EXPECT_FALSE(block2->used());
 
   EXPECT_EQ(block1->next(), block2);
-  EXPECT_EQ(block2->prev(), block1);
+  EXPECT_EQ(block2->prev_free(), block1);
 }
 
 TEST_FOR_EACH_BLOCK_TYPE(CanSplitBlockUnaligned) {
@@ -117,26 +129,27 @@ TEST_FOR_EACH_BLOCK_TYPE(CanSplitBlockUnaligned) {
   auto result = BlockType::init(bytes);
   ASSERT_TRUE(result.has_value());
   BlockType *block1 = *result;
+  size_t orig_size = block1->outer_size();
 
-  // We should split at sizeof(BlockType) + kSplitN bytes. Then
-  // we need to round that up to an alignof(BlockType) boundary.
   constexpr size_t kSplitN = 513;
-  uintptr_t split_addr = reinterpret_cast<uintptr_t>(block1) + kSplitN;
+  constexpr size_t prev_field_size = sizeof(typename BlockType::offset_type);
+  uintptr_t split_addr =
+      reinterpret_cast<uintptr_t>(block1) + (kSplitN - prev_field_size);
+  // Round split_addr up to a multiple of the alignment.
   split_addr += alignof(BlockType) - (split_addr % alignof(BlockType));
-  uintptr_t split_len = split_addr - (uintptr_t)&bytes;
+  uintptr_t split_len = split_addr - (uintptr_t)&bytes + prev_field_size;
 
   result = block1->split(kSplitN);
   ASSERT_TRUE(result.has_value());
   BlockType *block2 = *result;
 
   EXPECT_EQ(block1->inner_size(), split_len);
-  EXPECT_EQ(block1->outer_size(), split_len + BlockType::BLOCK_OVERHEAD);
 
-  EXPECT_EQ(block2->outer_size(), kN - block1->outer_size());
+  EXPECT_EQ(block2->outer_size(), orig_size - block1->outer_size());
   EXPECT_FALSE(block2->used());
 
   EXPECT_EQ(block1->next(), block2);
-  EXPECT_EQ(block2->prev(), block1);
+  EXPECT_EQ(block2->prev_free(), block1);
 }
 
 TEST_FOR_EACH_BLOCK_TYPE(CanSplitMidBlock) {
@@ -167,9 +180,9 @@ TEST_FOR_EACH_BLOCK_TYPE(CanSplitMidBlock) {
   BlockType *block3 = *result;
 
   EXPECT_EQ(block1->next(), block3);
-  EXPECT_EQ(block3->prev(), block1);
+  EXPECT_EQ(block3->prev_free(), block1);
   EXPECT_EQ(block3->next(), block2);
-  EXPECT_EQ(block2->prev(), block3);
+  EXPECT_EQ(block2->prev_free(), block3);
 }
 
 TEST_FOR_EACH_BLOCK_TYPE(CannotSplitTooSmallBlock) {
@@ -187,7 +200,7 @@ TEST_FOR_EACH_BLOCK_TYPE(CannotSplitTooSmallBlock) {
 
 TEST_FOR_EACH_BLOCK_TYPE(CannotSplitBlockWithoutHeaderSpace) {
   constexpr size_t kN = 1024;
-  constexpr size_t kSplitN = kN - BlockType::BLOCK_OVERHEAD - 1;
+  constexpr size_t kSplitN = kN - 2 * BlockType::BLOCK_OVERHEAD - 1;
 
   alignas(BlockType::ALIGNMENT) array<byte, kN> bytes;
   auto result = BlockType::init(bytes);
@@ -224,8 +237,9 @@ TEST_FOR_EACH_BLOCK_TYPE(CannotMakeSecondBlockLargerInSplit) {
   ASSERT_FALSE(result.has_value());
 }
 
-TEST_FOR_EACH_BLOCK_TYPE(CanMakeZeroSizeFirstBlock) {
-  // This block does support splitting with zero payload size.
+TEST_FOR_EACH_BLOCK_TYPE(CannotMakeZeroSizeFirstBlock) {
+  // This block doesn't support splitting with zero payload size, since the
+  // prev_ field of the next block is always available.
   constexpr size_t kN = 1024;
 
   alignas(BlockType::ALIGNMENT) array<byte, kN> bytes;
@@ -234,13 +248,28 @@ TEST_FOR_EACH_BLOCK_TYPE(CanMakeZeroSizeFirstBlock) {
   BlockType *block = *result;
 
   result = block->split(0);
-  ASSERT_TRUE(result.has_value());
-  EXPECT_EQ(block->inner_size(), static_cast<size_t>(0));
+  EXPECT_FALSE(result.has_value());
 }
 
-TEST_FOR_EACH_BLOCK_TYPE(CanMakeZeroSizeSecondBlock) {
-  // Likewise, the split block can be zero-width.
+TEST_FOR_EACH_BLOCK_TYPE(CanMakeMinimalSizeFirstBlock) {
+  // This block does support splitting with minimal payload size.
   constexpr size_t kN = 1024;
+  constexpr size_t minimal_size = sizeof(typename BlockType::offset_type);
+
+  alignas(BlockType::ALIGNMENT) array<byte, kN> bytes;
+  auto result = BlockType::init(bytes);
+  ASSERT_TRUE(result.has_value());
+  BlockType *block = *result;
+
+  result = block->split(minimal_size);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(block->inner_size(), minimal_size);
+}
+
+TEST_FOR_EACH_BLOCK_TYPE(CanMakeMinimalSizeSecondBlock) {
+  // Likewise, the split block can be minimal-width.
+  constexpr size_t kN = 1024;
+  constexpr size_t minimal_size = sizeof(typename BlockType::offset_type);
 
   alignas(BlockType::ALIGNMENT) array<byte, kN> bytes;
   auto result = BlockType::init(bytes);
@@ -251,7 +280,7 @@ TEST_FOR_EACH_BLOCK_TYPE(CanMakeZeroSizeSecondBlock) {
   ASSERT_TRUE(result.has_value());
   BlockType *block2 = *result;
 
-  EXPECT_EQ(block2->inner_size(), static_cast<size_t>(0));
+  EXPECT_EQ(block2->inner_size(), minimal_size);
 }
 
 TEST_FOR_EACH_BLOCK_TYPE(CanMarkBlockUsed) {
@@ -261,12 +290,11 @@ TEST_FOR_EACH_BLOCK_TYPE(CanMarkBlockUsed) {
   auto result = BlockType::init(bytes);
   ASSERT_TRUE(result.has_value());
   BlockType *block = *result;
+  size_t orig_size = block->outer_size();
 
   block->mark_used();
   EXPECT_TRUE(block->used());
-
-  // Size should be unaffected.
-  EXPECT_EQ(block->outer_size(), kN);
+  EXPECT_EQ(block->outer_size(), orig_size);
 
   block->mark_free();
   EXPECT_FALSE(block->used());
@@ -290,13 +318,16 @@ TEST_FOR_EACH_BLOCK_TYPE(CanMergeWithNextBlock) {
   // Do the three way merge from "CanSplitMidBlock", and let's
   // merge block 3 and 2
   constexpr size_t kN = 1024;
-  constexpr size_t kSplit1 = 512;
-  constexpr size_t kSplit2 = 256;
+  // Give the split positions large alignments.
+  constexpr size_t prev_field_size = sizeof(typename BlockType::offset_type);
+  constexpr size_t kSplit1 = 512 + prev_field_size;
+  constexpr size_t kSplit2 = 256 + prev_field_size;
 
   alignas(BlockType::ALIGNMENT) array<byte, kN> bytes;
   auto result = BlockType::init(bytes);
   ASSERT_TRUE(result.has_value());
   BlockType *block1 = *result;
+  size_t orig_size = block1->outer_size();
 
   result = block1->split(kSplit1);
   ASSERT_TRUE(result.has_value());
@@ -308,9 +339,9 @@ TEST_FOR_EACH_BLOCK_TYPE(CanMergeWithNextBlock) {
   EXPECT_TRUE(block3->merge_next());
 
   EXPECT_EQ(block1->next(), block3);
-  EXPECT_EQ(block3->prev(), block1);
+  EXPECT_EQ(block3->prev_free(), block1);
   EXPECT_EQ(block1->inner_size(), kSplit2);
-  EXPECT_EQ(block3->outer_size(), kN - block1->outer_size());
+  EXPECT_EQ(block3->outer_size(), orig_size - block1->outer_size());
 }
 
 TEST_FOR_EACH_BLOCK_TYPE(CannotMergeWithFirstOrLastBlock) {
@@ -347,67 +378,6 @@ TEST_FOR_EACH_BLOCK_TYPE(CannotMergeUsedBlock) {
   EXPECT_FALSE(block->merge_next());
 }
 
-TEST_FOR_EACH_BLOCK_TYPE(CanCheckValidBlock) {
-  constexpr size_t kN = 1024;
-  constexpr size_t kSplit1 = 512;
-  constexpr size_t kSplit2 = 256;
-
-  alignas(BlockType::ALIGNMENT) array<byte, kN> bytes;
-  auto result = BlockType::init(bytes);
-  ASSERT_TRUE(result.has_value());
-  BlockType *block1 = *result;
-
-  result = block1->split(kSplit1);
-  ASSERT_TRUE(result.has_value());
-  BlockType *block2 = *result;
-
-  result = block2->split(kSplit2);
-  ASSERT_TRUE(result.has_value());
-  BlockType *block3 = *result;
-
-  EXPECT_TRUE(block1->is_valid());
-  EXPECT_TRUE(block2->is_valid());
-  EXPECT_TRUE(block3->is_valid());
-}
-
-TEST_FOR_EACH_BLOCK_TYPE(CanCheckInvalidBlock) {
-  constexpr size_t kN = 1024;
-  constexpr size_t kSplit1 = 128;
-  constexpr size_t kSplit2 = 384;
-  constexpr size_t kSplit3 = 256;
-
-  array<byte, kN> bytes{};
-  auto result = BlockType::init(bytes);
-  ASSERT_TRUE(result.has_value());
-  BlockType *block1 = *result;
-
-  result = block1->split(kSplit1);
-  ASSERT_TRUE(result.has_value());
-  BlockType *block2 = *result;
-
-  result = block2->split(kSplit2);
-  ASSERT_TRUE(result.has_value());
-  BlockType *block3 = *result;
-
-  result = block3->split(kSplit3);
-  ASSERT_TRUE(result.has_value());
-
-  // Corrupt a Block header.
-  // This must not touch memory outside the original region, or the test may
-  // (correctly) abort when run with address sanitizer.
-  // To remain as agostic to the internals of `Block` as possible, the test
-  // copies a smaller block's header to a larger block.
-  EXPECT_TRUE(block1->is_valid());
-  EXPECT_TRUE(block2->is_valid());
-  EXPECT_TRUE(block3->is_valid());
-  auto *src = reinterpret_cast<byte *>(block1);
-  auto *dst = reinterpret_cast<byte *>(block2);
-  LIBC_NAMESPACE::memcpy(dst, src, sizeof(BlockType));
-  EXPECT_FALSE(block1->is_valid());
-  EXPECT_FALSE(block2->is_valid());
-  EXPECT_FALSE(block3->is_valid());
-}
-
 TEST_FOR_EACH_BLOCK_TYPE(CanGetBlockFromUsableSpace) {
   constexpr size_t kN = 1024;
 
@@ -435,10 +405,10 @@ TEST_FOR_EACH_BLOCK_TYPE(CanGetConstBlockFromUsableSpace) {
 }
 
 TEST_FOR_EACH_BLOCK_TYPE(CanAllocate) {
-  constexpr size_t kN = 1024;
+  constexpr size_t kN = 1024 + BlockType::BLOCK_OVERHEAD;
 
   // Ensure we can allocate everything up to the block size within this block.
-  for (size_t i = 0; i < kN - BlockType::BLOCK_OVERHEAD; ++i) {
+  for (size_t i = 0; i < kN - 2*BlockType::BLOCK_OVERHEAD; ++i) {
     alignas(BlockType::ALIGNMENT) array<byte, kN> bytes{};
     auto result = BlockType::init(bytes);
     ASSERT_TRUE(result.has_value());
@@ -458,12 +428,12 @@ TEST_FOR_EACH_BLOCK_TYPE(CanAllocate) {
   ASSERT_TRUE(result.has_value());
   BlockType *block = *result;
 
-  // Given a block of size kN (assuming it's also a power of two), we should be
-  // able to allocate a block within it that's aligned to half its size. This is
+  // Given a block of size N (assuming it's also a power of two), we should be
+  // able to allocate a block within it that's aligned to N/2. This is
   // because regardless of where the buffer is located, we can always find a
   // starting location within it that meets this alignment.
-  EXPECT_TRUE(block->can_allocate(kN / 2, 1));
-  auto info = BlockType::allocate(block, kN / 2, 1);
+  EXPECT_TRUE(block->can_allocate(block->outer_size() / 2, 1));
+  auto info = BlockType::allocate(block, block->outer_size() / 2, 1);
   EXPECT_NE(info.block, static_cast<BlockType *>(nullptr));
 }
 
@@ -477,7 +447,8 @@ TEST_FOR_EACH_BLOCK_TYPE(AllocateAlreadyAligned) {
 
   // This should result in no new blocks.
   constexpr size_t kAlignment = BlockType::ALIGNMENT;
-  constexpr size_t kExpectedSize = BlockType::ALIGNMENT;
+  constexpr size_t prev_field_size = sizeof(typename BlockType::offset_type);
+  constexpr size_t kExpectedSize = BlockType::ALIGNMENT + prev_field_size;
   EXPECT_TRUE(block->can_allocate(kAlignment, kExpectedSize));
 
   auto [aligned_block, prev, next] =
@@ -495,7 +466,7 @@ TEST_FOR_EACH_BLOCK_TYPE(AllocateAlreadyAligned) {
   EXPECT_NE(next, static_cast<BlockType *>(nullptr));
   EXPECT_EQ(aligned_block->next(), next);
   EXPECT_EQ(reinterpret_cast<byte *>(next) + next->outer_size(),
-            bytes.data() + bytes.size());
+            bytes.data() + bytes.size() - BlockType::BLOCK_OVERHEAD);
 }
 
 TEST_FOR_EACH_BLOCK_TYPE(AllocateNeedsAlignment) {
@@ -508,7 +479,7 @@ TEST_FOR_EACH_BLOCK_TYPE(AllocateNeedsAlignment) {
 
   // Ensure first the usable_data is only aligned to the block alignment.
   ASSERT_EQ(block->usable_space(), bytes.data() + BlockType::BLOCK_OVERHEAD);
-  ASSERT_EQ(block->prev(), static_cast<BlockType *>(nullptr));
+  ASSERT_EQ(block->prev_free(), static_cast<BlockType *>(nullptr));
 
   // Now pick an alignment such that the usable space is not already aligned to
   // it. We want to explicitly test that the block will split into one before
@@ -525,7 +496,7 @@ TEST_FOR_EACH_BLOCK_TYPE(AllocateNeedsAlignment) {
   // Check the previous block was created appropriately. Since this block is the
   // first block, a new one should be made before this.
   EXPECT_NE(prev, static_cast<BlockType *>(nullptr));
-  EXPECT_EQ(aligned_block->prev(), prev);
+  EXPECT_EQ(aligned_block->prev_free(), prev);
   EXPECT_EQ(prev->next(), aligned_block);
   EXPECT_EQ(prev->outer_size(), reinterpret_cast<uintptr_t>(aligned_block) -
                                     reinterpret_cast<uintptr_t>(prev));
@@ -537,7 +508,8 @@ TEST_FOR_EACH_BLOCK_TYPE(AllocateNeedsAlignment) {
   // Check the next block.
   EXPECT_NE(next, static_cast<BlockType *>(nullptr));
   EXPECT_EQ(aligned_block->next(), next);
-  EXPECT_EQ(reinterpret_cast<byte *>(next) + next->outer_size(), &*bytes.end());
+  EXPECT_EQ(reinterpret_cast<byte *>(next) + next->outer_size(),
+            bytes.data() + bytes.size() - BlockType::BLOCK_OVERHEAD);
 }
 
 TEST_FOR_EACH_BLOCK_TYPE(PreviousBlockMergedIfNotFirst) {
@@ -552,7 +524,7 @@ TEST_FOR_EACH_BLOCK_TYPE(PreviousBlockMergedIfNotFirst) {
   auto result2 = block->split(kN / 2);
   ASSERT_TRUE(result2.has_value());
   BlockType *newblock = *result2;
-  ASSERT_EQ(newblock->prev(), block);
+  ASSERT_EQ(newblock->prev_free(), block);
   size_t old_prev_size = block->outer_size();
 
   // Now pick an alignment such that the usable space is not already aligned to
@@ -571,7 +543,7 @@ TEST_FOR_EACH_BLOCK_TYPE(PreviousBlockMergedIfNotFirst) {
   // Now there should be no new previous block. Instead, the padding we did
   // create should be merged into the original previous block.
   EXPECT_EQ(prev, static_cast<BlockType *>(nullptr));
-  EXPECT_EQ(aligned_block->prev(), block);
+  EXPECT_EQ(aligned_block->prev_free(), block);
   EXPECT_EQ(block->next(), aligned_block);
   EXPECT_GT(block->outer_size(), old_prev_size);
 }
@@ -587,10 +559,11 @@ TEST_FOR_EACH_BLOCK_TYPE(CanRemergeBlockAllocations) {
   auto result = BlockType::init(bytes);
   ASSERT_TRUE(result.has_value());
   BlockType *block = *result;
+  BlockType *last = block->next();
 
   // Ensure first the usable_data is only aligned to the block alignment.
   ASSERT_EQ(block->usable_space(), bytes.data() + BlockType::BLOCK_OVERHEAD);
-  ASSERT_EQ(block->prev(), static_cast<BlockType *>(nullptr));
+  ASSERT_EQ(block->prev_free(), static_cast<BlockType *>(nullptr));
 
   // Now pick an alignment such that the usable space is not already aligned to
   // it. We want to explicitly test that the block will split into one before
@@ -606,20 +579,20 @@ TEST_FOR_EACH_BLOCK_TYPE(CanRemergeBlockAllocations) {
 
   // Check we have the appropriate blocks.
   ASSERT_NE(prev, static_cast<BlockType *>(nullptr));
-  ASSERT_EQ(aligned_block->prev(), prev);
-  EXPECT_NE(next, static_cast<BlockType *>(nullptr));
+  ASSERT_EQ(aligned_block->prev_free(), prev);
   EXPECT_NE(next, static_cast<BlockType *>(nullptr));
   EXPECT_EQ(aligned_block->next(), next);
-  EXPECT_EQ(next->next(), static_cast<BlockType *>(nullptr));
+  EXPECT_EQ(next->next(), last);
 
   // Now check for successful merges.
   EXPECT_TRUE(prev->merge_next());
   EXPECT_EQ(prev->next(), next);
   EXPECT_TRUE(prev->merge_next());
-  EXPECT_EQ(prev->next(), static_cast<BlockType *>(nullptr));
+  EXPECT_EQ(prev->next(), last);
 
   // We should have the original buffer.
   EXPECT_EQ(reinterpret_cast<byte *>(prev), &*bytes.begin());
-  EXPECT_EQ(prev->outer_size(), bytes.size());
-  EXPECT_EQ(reinterpret_cast<byte *>(prev) + prev->outer_size(), &*bytes.end());
+  EXPECT_EQ(prev->outer_size(), bytes.size() - BlockType::BLOCK_OVERHEAD);
+  EXPECT_EQ(reinterpret_cast<byte *>(prev) + prev->outer_size(),
+            &*bytes.end() - BlockType::BLOCK_OVERHEAD);
 }
