@@ -1299,8 +1299,8 @@ static void EmitPersonality(MCStreamer &streamer, const MCSymbol &symbol,
 namespace {
 
 class FrameEmitterImpl {
-  int CFAOffset = 0;
-  int InitialCFAOffset = 0;
+  int64_t CFAOffset = 0;
+  int64_t InitialCFAOffset = 0;
   bool IsEH;
   MCObjectStreamer &Streamer;
 
@@ -1414,7 +1414,7 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     if (!IsEH)
       Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
 
-    int Offset = Instr.getOffset();
+    int64_t Offset = Instr.getOffset();
     if (IsRelative)
       Offset -= CFAOffset;
     Offset = Offset / dataAlignmentFactor;
@@ -1464,6 +1464,9 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
 
   case MCCFIInstruction::OpEscape:
     Streamer.emitBytes(Instr.getValues());
+    return;
+  case MCCFIInstruction::OpLabel:
+    Streamer.emitLabel(Instr.getCfiLabel(), Instr.getLoc());
     return;
   }
   llvm_unreachable("Unhandled case in switch");

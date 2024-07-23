@@ -166,6 +166,9 @@ struct APFloatBase {
     // This format's exponent bias is 16, instead of the 15 (2 ** (5 - 1) - 1)
     // that IEEE precedent would imply.
     S_Float8E5M2FNUZ,
+    // 8-bit floating point number following IEEE-754 conventions with bit
+    // layout S1E4M3.
+    S_Float8E4M3,
     // 8-bit floating point number mostly following IEEE-754 conventions with
     // bit layout S1E4M3 as described in https://arxiv.org/abs/2209.05433.
     // Unlike IEEE-754 types, there are no infinity values, and NaN is
@@ -217,6 +220,7 @@ struct APFloatBase {
   static const fltSemantics &PPCDoubleDouble() LLVM_READNONE;
   static const fltSemantics &Float8E5M2() LLVM_READNONE;
   static const fltSemantics &Float8E5M2FNUZ() LLVM_READNONE;
+  static const fltSemantics &Float8E4M3() LLVM_READNONE;
   static const fltSemantics &Float8E4M3FN() LLVM_READNONE;
   static const fltSemantics &Float8E4M3FNUZ() LLVM_READNONE;
   static const fltSemantics &Float8E4M3B11FNUZ() LLVM_READNONE;
@@ -638,6 +642,7 @@ private:
   APInt convertPPCDoubleDoubleAPFloatToAPInt() const;
   APInt convertFloat8E5M2APFloatToAPInt() const;
   APInt convertFloat8E5M2FNUZAPFloatToAPInt() const;
+  APInt convertFloat8E4M3APFloatToAPInt() const;
   APInt convertFloat8E4M3FNAPFloatToAPInt() const;
   APInt convertFloat8E4M3FNUZAPFloatToAPInt() const;
   APInt convertFloat8E4M3B11FNUZAPFloatToAPInt() const;
@@ -656,6 +661,7 @@ private:
   void initFromPPCDoubleDoubleAPInt(const APInt &api);
   void initFromFloat8E5M2APInt(const APInt &api);
   void initFromFloat8E5M2FNUZAPInt(const APInt &api);
+  void initFromFloat8E4M3APInt(const APInt &api);
   void initFromFloat8E4M3FNAPInt(const APInt &api);
   void initFromFloat8E4M3FNUZAPInt(const APInt &api);
   void initFromFloat8E4M3B11FNUZAPInt(const APInt &api);

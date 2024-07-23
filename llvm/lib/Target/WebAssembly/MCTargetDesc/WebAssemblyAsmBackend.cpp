@@ -52,13 +52,6 @@ public:
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
 
-  // No instruction requires relaxation
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
-    return false;
-  }
-
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 };

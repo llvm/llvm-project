@@ -17,7 +17,6 @@
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Pass/AnalysisManager.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace mlir {

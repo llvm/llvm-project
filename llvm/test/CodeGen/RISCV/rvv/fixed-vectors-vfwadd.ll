@@ -663,3 +663,31 @@ define <16 x double> @vfwadd_wf_v16f32(ptr %x, float %y) {
   %e = fadd <16 x double> %d, %a
   ret <16 x double> %e
 }
+
+define <2 x float> @vfwadd_vf2_v2f32(<2 x half> %x, half %y) {
+; CHECK-LABEL: vfwadd_vf2_v2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vfwadd.vf v9, v8, fa0
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %a = fpext <2 x half> %x to <2 x float>
+  %b = fpext half %y to float
+  %c = insertelement <2 x float> poison, float %b, i32 0
+  %d = shufflevector <2 x float> %c, <2 x float> poison, <2 x i32> zeroinitializer
+  %e = fadd <2 x float> %a, %d
+  ret <2 x float> %e
+}
+
+define <2 x float> @vfwadd_wf2_v2f32(<2 x float> %x, half %y) {
+; CHECK-LABEL: vfwadd_wf2_v2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vfwadd.wf v8, v8, fa0
+; CHECK-NEXT:    ret
+  %b = fpext half %y to float
+  %c = insertelement <2 x float> poison, float %b, i32 0
+  %d = shufflevector <2 x float> %c, <2 x float> poison, <2 x i32> zeroinitializer
+  %e = fadd <2 x float> %x, %d
+  ret <2 x float> %e
+}

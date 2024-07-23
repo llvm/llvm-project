@@ -221,6 +221,7 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> MaxTokensHerePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensTotalPragmaHandler;
   std::unique_ptr<PragmaHandler> RISCVPragmaHandler;
+  std::unique_ptr<PragmaHandler> MCFuncPragmaHandler;
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
@@ -1877,6 +1878,10 @@ private:
     UnaryExprOnly,
     PrimaryExprOnly
   };
+
+  bool isRevertibleTypeTrait(const IdentifierInfo *Id,
+                             clang::tok::TokenKind *Kind = nullptr);
+
   ExprResult ParseCastExpression(CastParseKind ParseKind,
                                  bool isAddressOfOperand,
                                  bool &NotCastExpr,
@@ -2123,7 +2128,7 @@ private:
   };
   ExprResult ParseInitializerWithPotentialDesignator(DesignatorCompletionInfo);
   ExprResult createEmbedExpr();
-  void ExpandEmbedDirective(SmallVectorImpl<Expr *> &Exprs);
+  void injectEmbedTokens();
 
   //===--------------------------------------------------------------------===//
   // clang Expressions
@@ -3017,11 +3022,12 @@ private:
       const IdentifierInfo *EnclosingScope = nullptr);
 
   void MaybeParseHLSLAnnotations(Declarator &D,
-                                 SourceLocation *EndLoc = nullptr) {
+                                 SourceLocation *EndLoc = nullptr,
+                                 bool CouldBeBitField = false) {
     assert(getLangOpts().HLSL && "MaybeParseHLSLAnnotations is for HLSL only");
     if (Tok.is(tok::colon)) {
       ParsedAttributes Attrs(AttrFactory);
-      ParseHLSLAnnotations(Attrs, EndLoc);
+      ParseHLSLAnnotations(Attrs, EndLoc, CouldBeBitField);
       D.takeAttributes(Attrs);
     }
   }
@@ -3029,12 +3035,13 @@ private:
   void MaybeParseHLSLAnnotations(ParsedAttributes &Attrs,
                                  SourceLocation *EndLoc = nullptr) {
     assert(getLangOpts().HLSL && "MaybeParseHLSLAnnotations is for HLSL only");
-    if (getLangOpts().HLSL && Tok.is(tok::colon))
+    if (Tok.is(tok::colon))
       ParseHLSLAnnotations(Attrs, EndLoc);
   }
 
   void ParseHLSLAnnotations(ParsedAttributes &Attrs,
-                            SourceLocation *EndLoc = nullptr);
+                            SourceLocation *EndLoc = nullptr,
+                            bool CouldBeBitField = false);
   Decl *ParseHLSLBuffer(SourceLocation &DeclEnd);
 
   void MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs) {
@@ -3828,7 +3835,6 @@ private:
   AnnotateTemplateIdTokenAsType(CXXScopeSpec &SS,
                                 ImplicitTypenameContext AllowImplicitTypename,
                                 bool IsClassName = false);
-  void ExpandEmbedIntoTemplateArgList(TemplateArgList &TemplateArgs);
   bool ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
                                  TemplateTy Template, SourceLocation OpenLoc);
   ParsedTemplateArgument ParseTemplateTemplateArgument();

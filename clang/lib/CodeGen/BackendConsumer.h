@@ -107,12 +107,12 @@ public:
   void HandleTagDeclDefinition(TagDecl *D) override;
   void HandleTagDeclRequiredDefinition(const TagDecl *D) override;
   void CompleteTentativeDefinition(VarDecl *D) override;
-  void CompleteExternalDeclaration(VarDecl *D) override;
+  void CompleteExternalDeclaration(DeclaratorDecl *D) override;
   void AssignInheritanceModel(CXXRecordDecl *RD) override;
   void HandleVTable(CXXRecordDecl *RD) override;
 
   // Links each entry in LinkModules into our module.  Returns true on error.
-  bool LinkInModules(llvm::Module *M, bool ShouldLinkFiles = true);
+  bool LinkInModules(llvm::Module *M);
 
   /// Get the best possible source location to represent a diagnostic that
   /// may have associated debug info.

@@ -3977,7 +3977,10 @@ standard library ``<stdarg.h>`` header:
 
 * ``__builtin_va_list``
 
-A predefined typedef for the target-specific ``va_list`` type.
+A predefined typedef for the target-specific ``va_list`` type. It is undefined
+behavior to use a byte-wise copy of this type produced by calling ``memcpy``,
+``memmove``, or similar. Valid explicit copies are only produced by calling
+``va_copy`` or ``__builtin_va_copy``.
 
 * ``void __builtin_va_start(__builtin_va_list list, <parameter-name>)``
 

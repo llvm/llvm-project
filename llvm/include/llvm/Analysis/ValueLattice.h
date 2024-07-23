@@ -281,6 +281,21 @@ public:
     return std::nullopt;
   }
 
+  ConstantRange asConstantRange(unsigned BW, bool UndefAllowed = false) const {
+    if (isConstantRange(UndefAllowed))
+      return getConstantRange();
+    if (isConstant())
+      return getConstant()->toConstantRange();
+    if (isUnknown())
+      return ConstantRange::getEmpty(BW);
+    return ConstantRange::getFull(BW);
+  }
+
+  ConstantRange asConstantRange(Type *Ty, bool UndefAllowed = false) const {
+    assert(Ty->isIntOrIntVectorTy() && "Must be integer type");
+    return asConstantRange(Ty->getScalarSizeInBits(), UndefAllowed);
+  }
+
   bool markOverdefined() {
     if (isOverdefined())
       return false;
@@ -372,7 +387,9 @@ public:
       return true;
     }
 
-    assert(isUnknown() || isUndef());
+    assert(isUnknown() || isUndef() || isConstant());
+    assert((!isConstant() || NewR.contains(getConstant()->toConstantRange())) &&
+           "Constant must be subset of new range");
 
     NumRangeExtensions = 0;
     Tag = NewTag;
@@ -414,6 +431,16 @@ public:
         return false;
       if (RHS.isUndef())
         return false;
+      // If the constant is a vector of integers, try to treat it as a range.
+      if (getConstant()->getType()->isVectorTy() &&
+          getConstant()->getType()->getScalarType()->isIntegerTy()) {
+        ConstantRange L = getConstant()->toConstantRange();
+        ConstantRange NewR = L.unionWith(
+            RHS.asConstantRange(L.getBitWidth(), /*UndefAllowed=*/true));
+        return markConstantRange(
+            std::move(NewR),
+            Opts.setMayIncludeUndef(RHS.isConstantRangeIncludingUndef()));
+      }
       markOverdefined();
       return true;
     }
@@ -432,14 +459,9 @@ public:
       return OldTag != Tag;
     }
 
-    if (!RHS.isConstantRange()) {
-      // We can get here if we've encountered a constantexpr of integer type
-      // and merge it with a constantrange.
-      markOverdefined();
-      return true;
-    }
-
-    ConstantRange NewR = getConstantRange().unionWith(RHS.getConstantRange());
+    const ConstantRange &L = getConstantRange();
+    ConstantRange NewR = L.unionWith(
+        RHS.asConstantRange(L.getBitWidth(), /*UndefAllowed=*/true));
     return markConstantRange(
         std::move(NewR),
         Opts.setMayIncludeUndef(RHS.isConstantRangeIncludingUndef()));

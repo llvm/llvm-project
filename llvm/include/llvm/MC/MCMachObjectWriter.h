@@ -12,11 +12,14 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/VersionTuple.h"
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -73,7 +76,6 @@ public:
   /// @{
 
   virtual void recordRelocation(MachObjectWriter *Writer, MCAssembler &Asm,
-                                const MCAsmLayout &Layout,
                                 const MCFragment *Fragment,
                                 const MCFixup &Fixup, MCValue Target,
                                 uint64_t &FixedValue) = 0;
@@ -82,6 +84,29 @@ public:
 };
 
 class MachObjectWriter : public MCObjectWriter {
+public:
+  struct DataRegionData {
+    MachO::DataRegionType Kind;
+    MCSymbol *Start;
+    MCSymbol *End;
+  };
+
+  // A Major version of 0 indicates that no version information was supplied
+  // and so the corresponding load command should not be emitted.
+  using VersionInfoType = struct {
+    bool EmitBuildVersion;
+    union {
+      MCVersionMinType Type;        ///< Used when EmitBuildVersion==false.
+      MachO::PlatformType Platform; ///< Used when EmitBuildVersion==true.
+    } TypeOrPlatform;
+    unsigned Major;
+    unsigned Minor;
+    unsigned Update;
+    /// An optional version of the SDK that was used to build the source.
+    VersionTuple SDKVersion;
+  };
+
+private:
   /// Helper struct for containing some precomputed information on symbols.
   struct MachSymbolData {
     const MCSymbol *Symbol;
@@ -90,6 +115,11 @@ class MachObjectWriter : public MCObjectWriter {
 
     // Support lexicographic sorting.
     bool operator<(const MachSymbolData &RHS) const;
+  };
+
+  struct IndirectSymbolData {
+    MCSymbol *Symbol;
+    MCSection *Section;
   };
 
   /// The target specific Mach-O writer instance.
@@ -106,9 +136,16 @@ class MachObjectWriter : public MCObjectWriter {
   };
 
   DenseMap<const MCSection *, std::vector<RelAndSymbol>> Relocations;
+  std::vector<IndirectSymbolData> IndirectSymbols;
   DenseMap<const MCSection *, unsigned> IndirectSymBase;
 
+  std::vector<DataRegionData> DataRegions;
+
   SectionAddrMap SectionAddress;
+
+  // List of sections in layout order. Virtual sections are after non-virtual
+  // sections.
+  SmallVector<MCSection *, 0> SectionOrder;
 
   /// @}
   /// \name Symbol Table Data
@@ -120,6 +157,15 @@ class MachObjectWriter : public MCObjectWriter {
   std::vector<MachSymbolData> UndefinedSymbolData;
 
   /// @}
+
+  // Used to communicate Linker Optimization Hint information.
+  MCLOHContainer LOHContainer;
+
+  VersionInfoType VersionInfo{};
+  VersionInfoType TargetVariantVersionInfo{};
+
+  // The list of linker options for LC_LINKER_OPTION.
+  std::vector<std::vector<std::string>> LinkerOptions;
 
   MachSymbolData *findSymbolData(const MCSymbol &Sym);
 
@@ -150,19 +196,65 @@ public:
 
   bool isFixupKindPCRel(const MCAssembler &Asm, unsigned Kind);
 
+  std::vector<IndirectSymbolData> &getIndirectSymbols() {
+    return IndirectSymbols;
+  }
+  std::vector<DataRegionData> &getDataRegions() { return DataRegions; }
+  const llvm::SmallVectorImpl<MCSection *> &getSectionOrder() const {
+    return SectionOrder;
+  }
   SectionAddrMap &getSectionAddressMap() { return SectionAddress; }
+  MCLOHContainer &getLOHContainer() { return LOHContainer; }
 
   uint64_t getSectionAddress(const MCSection *Sec) const {
     return SectionAddress.lookup(Sec);
   }
-  uint64_t getSymbolAddress(const MCSymbol &S, const MCAsmLayout &Layout) const;
+  uint64_t getSymbolAddress(const MCSymbol &S, const MCAssembler &Asm) const;
 
-  uint64_t getFragmentAddress(const MCFragment *Fragment,
-                              const MCAsmLayout &Layout) const;
+  uint64_t getFragmentAddress(const MCAssembler &Asm,
+                              const MCFragment *Fragment) const;
 
-  uint64_t getPaddingSize(const MCSection *SD, const MCAsmLayout &Layout) const;
+  uint64_t getPaddingSize(const MCAssembler &Asm, const MCSection *SD) const;
+
+  const MCSymbol *getAtom(const MCSymbol &S) const;
 
   bool doesSymbolRequireExternRelocation(const MCSymbol &S);
+
+  /// Mach-O deployment target version information.
+  void setVersionMin(MCVersionMinType Type, unsigned Major, unsigned Minor,
+                     unsigned Update,
+                     VersionTuple SDKVersion = VersionTuple()) {
+    VersionInfo.EmitBuildVersion = false;
+    VersionInfo.TypeOrPlatform.Type = Type;
+    VersionInfo.Major = Major;
+    VersionInfo.Minor = Minor;
+    VersionInfo.Update = Update;
+    VersionInfo.SDKVersion = SDKVersion;
+  }
+  void setBuildVersion(MachO::PlatformType Platform, unsigned Major,
+                       unsigned Minor, unsigned Update,
+                       VersionTuple SDKVersion = VersionTuple()) {
+    VersionInfo.EmitBuildVersion = true;
+    VersionInfo.TypeOrPlatform.Platform = Platform;
+    VersionInfo.Major = Major;
+    VersionInfo.Minor = Minor;
+    VersionInfo.Update = Update;
+    VersionInfo.SDKVersion = SDKVersion;
+  }
+  void setTargetVariantBuildVersion(MachO::PlatformType Platform,
+                                    unsigned Major, unsigned Minor,
+                                    unsigned Update, VersionTuple SDKVersion) {
+    TargetVariantVersionInfo.EmitBuildVersion = true;
+    TargetVariantVersionInfo.TypeOrPlatform.Platform = Platform;
+    TargetVariantVersionInfo.Major = Major;
+    TargetVariantVersionInfo.Minor = Minor;
+    TargetVariantVersionInfo.Update = Update;
+    TargetVariantVersionInfo.SDKVersion = SDKVersion;
+  }
+
+  std::vector<std::vector<std::string>> &getLinkerOptions() {
+    return LinkerOptions;
+  }
 
   /// @}
 
@@ -190,7 +282,7 @@ public:
                                uint64_t SectionDataSize, uint32_t MaxProt,
                                uint32_t InitProt);
 
-  void writeSection(const MCAsmLayout &Layout, const MCSection &Sec,
+  void writeSection(const MCAssembler &Asm, const MCSection &Sec,
                     uint64_t VMAddr, uint64_t FileOffset, unsigned Flags,
                     uint64_t RelocationsStart, unsigned NumRelocations);
 
@@ -204,7 +296,7 @@ public:
       uint32_t FirstUndefinedSymbol, uint32_t NumUndefinedSymbols,
       uint32_t IndirectSymbolOffset, uint32_t NumIndirectSymbols);
 
-  void writeNlist(MachSymbolData &MSD, const MCAsmLayout &Layout);
+  void writeNlist(MachSymbolData &MSD, const MCAssembler &Asm);
 
   void writeLinkeditLoadCommand(uint32_t Type, uint32_t DataOffset,
                                 uint32_t DataSize);
@@ -236,9 +328,9 @@ public:
     Relocations[Sec].push_back(P);
   }
 
-  void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
-                        const MCFragment *Fragment, const MCFixup &Fixup,
-                        MCValue Target, uint64_t &FixedValue) override;
+  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
+                        const MCFixup &Fixup, MCValue Target,
+                        uint64_t &FixedValue) override;
 
   void bindIndirectSymbols(MCAssembler &Asm);
 
@@ -248,16 +340,9 @@ public:
                           std::vector<MachSymbolData> &ExternalSymbolData,
                           std::vector<MachSymbolData> &UndefinedSymbolData);
 
-  void computeSectionAddresses(const MCAssembler &Asm,
-                               const MCAsmLayout &Layout);
+  void computeSectionAddresses(const MCAssembler &Asm);
 
-  void executePostLayoutBinding(MCAssembler &Asm,
-                                const MCAsmLayout &Layout) override;
-
-  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                              const MCSymbol &A,
-                                              const MCSymbol &B,
-                                              bool InSet) const override;
+  void executePostLayoutBinding(MCAssembler &Asm) override;
 
   bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
                                               const MCSymbol &SymA,
@@ -266,7 +351,7 @@ public:
 
   void populateAddrSigSection(MCAssembler &Asm);
 
-  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
+  uint64_t writeObject(MCAssembler &Asm) override;
 };
 
 /// Construct a new Mach-O writer instance.

@@ -49,7 +49,7 @@ class MachinePostDominatorTree : public PostDomTreeBase<MachineBasicBlock> {
 public:
   MachinePostDominatorTree() = default;
 
-  MachinePostDominatorTree(MachineFunction &MF) { recalculate(MF); }
+  explicit MachinePostDominatorTree(MachineFunction &MF) { recalculate(MF); }
 
   /// Handle invalidation explicitly.
   bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
@@ -81,9 +81,10 @@ class MachinePostDominatorTreePrinterPass
   raw_ostream &OS;
 
 public:
-  MachinePostDominatorTreePrinterPass(raw_ostream &OS) : OS(OS) {}
+  explicit MachinePostDominatorTreePrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
 };
 
 class MachinePostDominatorTreeWrapperPass : public MachineFunctionPass {

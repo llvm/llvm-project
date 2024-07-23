@@ -332,6 +332,16 @@ bool ClauseProcessor::processDistSchedule(
   return false;
 }
 
+bool ClauseProcessor::processFilter(lower::StatementContext &stmtCtx,
+                                    mlir::omp::FilterClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Filter>()) {
+    result.filteredThreadIdVar =
+        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processFinal(lower::StatementContext &stmtCtx,
                                    mlir::omp::FinalClauseOps &result) const {
   const parser::CharBlock *source = nullptr;
@@ -1027,7 +1037,8 @@ bool ClauseProcessor::processReduction(
 
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
-        llvm::copy(reduceVarByRef, std::back_inserter(result.reduceVarByRef));
+        llvm::copy(reduceVarByRef,
+                   std::back_inserter(result.reductionVarsByRef));
         llvm::copy(reductionDeclSymbols,
                    std::back_inserter(result.reductionDeclSymbols));
 
@@ -1040,14 +1051,6 @@ bool ClauseProcessor::processReduction(
 
         if (outReductionSyms)
           llvm::copy(reductionSyms, std::back_inserter(*outReductionSyms));
-      });
-}
-
-bool ClauseProcessor::processSectionsReduction(
-    mlir::Location currentLocation, mlir::omp::ReductionClauseOps &) const {
-  return findRepeatableClause<omp::clause::Reduction>(
-      [&](const omp::clause::Reduction &, const parser::CharBlock &) {
-        TODO(currentLocation, "OMPC_Reduction");
       });
 }
 
@@ -1072,7 +1075,7 @@ bool ClauseProcessor::processEnter(
 }
 
 bool ClauseProcessor::processUseDeviceAddr(
-    mlir::omp::UseDeviceClauseOps &result,
+    mlir::omp::UseDeviceAddrClauseOps &result,
     llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
     llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
     llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const {
@@ -1084,7 +1087,7 @@ bool ClauseProcessor::processUseDeviceAddr(
 }
 
 bool ClauseProcessor::processUseDevicePtr(
-    mlir::omp::UseDeviceClauseOps &result,
+    mlir::omp::UseDevicePtrClauseOps &result,
     llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
     llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
     llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const {

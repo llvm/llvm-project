@@ -161,6 +161,8 @@ static cl::opt<bool>
                                      "context in this module's profiles"),
                             cl::Hidden, cl::init(false));
 
+extern cl::opt<bool> MemProfReportHintedSizes;
+
 // Instrumentation statistics
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
@@ -652,7 +654,7 @@ bool MemProfiler::instrumentFunction(Function &F) {
       std::optional<InterestingMemoryAccess> Access =
           isInterestingMemoryAccess(Inst);
       if (Access)
-        instrumentMop(Inst, F.getParent()->getDataLayout(), *Access);
+        instrumentMop(Inst, F.getDataLayout(), *Access);
       else
         instrumentMemIntrinsic(cast<MemIntrinsic>(Inst));
     }
@@ -712,7 +714,12 @@ static AllocationType addCallStack(CallStackTrie &AllocTrie,
   auto AllocType = getAllocType(AllocInfo->Info.getTotalLifetimeAccessDensity(),
                                 AllocInfo->Info.getAllocCount(),
                                 AllocInfo->Info.getTotalLifetime());
-  AllocTrie.addCallStack(AllocType, StackIds);
+  uint64_t TotalSize = 0;
+  if (MemProfReportHintedSizes) {
+    TotalSize = AllocInfo->Info.getTotalSize();
+    assert(TotalSize);
+  }
+  AllocTrie.addCallStack(AllocType, StackIds, TotalSize);
   return AllocType;
 }
 

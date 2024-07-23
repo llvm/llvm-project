@@ -63,7 +63,7 @@ std::optional<Expr<SubscriptInteger>> DynamicTypeWithLength::LEN() const {
 }
 
 static std::optional<DynamicTypeWithLength> AnalyzeTypeSpec(
-    const std::optional<parser::TypeSpec> &spec) {
+    const std::optional<parser::TypeSpec> &spec, FoldingContext &context) {
   if (spec) {
     if (const semantics::DeclTypeSpec *typeSpec{spec->declTypeSpec}) {
       // Name resolution sets TypeSpec::declTypeSpec only when it's valid
@@ -80,7 +80,13 @@ static std::optional<DynamicTypeWithLength> AnalyzeTypeSpec(
             const semantics::ParamValue &len{cts.length()};
             // N.B. CHARACTER(LEN=*) is allowed in type-specs in ALLOCATE() &
             // type guards, but not in array constructors.
-            return DynamicTypeWithLength{DynamicType{kind, len}};
+            DynamicTypeWithLength type{DynamicType{kind, len}};
+            if (auto lenExpr{type.LEN()}) {
+              type.length = Fold(context,
+                  AsExpr(Extremum<SubscriptInteger>{Ordering::Greater,
+                      Expr<SubscriptInteger>{0}, std::move(*lenExpr)}));
+            }
+            return type;
           } else {
             return DynamicTypeWithLength{DynamicType{category, kind}};
           }
@@ -141,7 +147,7 @@ public:
   }
   void Analyze(const parser::Variable &);
   void Analyze(const parser::ActualArgSpec &, bool isSubroutine);
-  void ConvertBOZ(std::optional<DynamicType> &thisType, std::size_t i,
+  void ConvertBOZ(std::optional<DynamicType> *thisType, std::size_t,
       std::optional<DynamicType> otherType);
 
   bool IsIntrinsicRelational(
@@ -523,7 +529,7 @@ static std::optional<parser::Substring> FixMisparsedSubstringDataRef(
                   parser::GetLastName(arrElement.base).symbol}) {
             const Symbol &ultimate{symbol->GetUltimate()};
             if (const semantics::DeclTypeSpec *type{ultimate.GetType()}) {
-              if (!ultimate.IsObjectArray() &&
+              if (ultimate.Rank() == 0 &&
                   type->category() == semantics::DeclTypeSpec::Character) {
                 // The ambiguous S(j:k) was parsed as an array section
                 // reference, but it's now clear that it's a substring.
@@ -1584,7 +1590,8 @@ private:
   std::optional<Expr<SubscriptInteger>> LengthIfGood() const {
     if (type_) {
       auto len{type_->LEN()};
-      if (len && IsConstantExpr(*len) && !ContainsAnyImpliedDoIndex(*len)) {
+      if (explicitType_ ||
+          (len && IsConstantExpr(*len) && !ContainsAnyImpliedDoIndex(*len))) {
         return len;
       }
     }
@@ -1939,7 +1946,8 @@ MaybeExpr ArrayConstructorContext::ToExpr() {
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayConstructor &array) {
   const parser::AcSpec &acSpec{array.v};
-  ArrayConstructorContext acContext{*this, AnalyzeTypeSpec(acSpec.type)};
+  ArrayConstructorContext acContext{
+      *this, AnalyzeTypeSpec(acSpec.type, GetFoldingContext())};
   for (const parser::AcValue &value : acSpec.values) {
     acContext.Add(value);
   }
@@ -3573,8 +3581,8 @@ MaybeExpr RelationHelper(ExpressionAnalyzer &context, RelationalOperator opr,
   if (!analyzer.fatalErrors()) {
     std::optional<DynamicType> leftType{analyzer.GetType(0)};
     std::optional<DynamicType> rightType{analyzer.GetType(1)};
-    analyzer.ConvertBOZ(leftType, 0, rightType);
-    analyzer.ConvertBOZ(rightType, 1, leftType);
+    analyzer.ConvertBOZ(&leftType, 0, rightType);
+    analyzer.ConvertBOZ(&rightType, 1, leftType);
     if (leftType && rightType &&
         analyzer.IsIntrinsicRelational(opr, *leftType, *rightType)) {
       analyzer.CheckForNullPointer("as a relational operand");
@@ -4488,9 +4496,22 @@ std::optional<ProcedureRef> ArgumentAnalyzer::TryDefinedAssignment() {
     // allocatable (the explicit conversion would prevent the propagation of the
     // right hand side if it is a variable). Lowering will deal with the
     // conversion in this case.
-    if (lhsType && rhsType &&
-        (!IsAllocatableDesignator(lhs) || context_.inWhereBody())) {
-      AddAssignmentConversion(*lhsType, *rhsType);
+    if (lhsType) {
+      if (rhsType) {
+        if (!IsAllocatableDesignator(lhs) || context_.inWhereBody()) {
+          AddAssignmentConversion(*lhsType, *rhsType);
+        }
+      } else {
+        if (lhsType->category() == TypeCategory::Integer ||
+            lhsType->category() == TypeCategory::Real) {
+          ConvertBOZ(nullptr, 1, lhsType);
+        }
+        if (IsBOZLiteral(1)) {
+          context_.Say(
+              "Right-hand side of this assignment may not be BOZ"_err_en_US);
+          fatalErrors_ = true;
+        }
+      }
     }
     if (!fatalErrors_) {
       CheckAssignmentConformance();
@@ -4512,6 +4533,8 @@ std::optional<ProcedureRef> ArgumentAnalyzer::TryDefinedAssignment() {
         !OkLogicalIntegerAssignment(lhsType->category(), rhsType->category())) {
       SayNoMatch("ASSIGNMENT(=)", true);
     }
+  } else if (!fatalErrors_) {
+    CheckAssignmentConformance();
   }
   return std::nullopt;
 }
@@ -4719,7 +4742,7 @@ int ArgumentAnalyzer::GetRank(std::size_t i) const {
 // otherType.  If it's REAL convert to REAL, otherwise convert to INTEGER.
 // Note that IBM supports comparing BOZ literals to CHARACTER operands.  That
 // is not currently supported.
-void ArgumentAnalyzer::ConvertBOZ(std::optional<DynamicType> &thisType,
+void ArgumentAnalyzer::ConvertBOZ(std::optional<DynamicType> *thisType,
     std::size_t i, std::optional<DynamicType> otherType) {
   if (IsBOZLiteral(i)) {
     Expr<SomeType> &&argExpr{MoveExpr(i)};
@@ -4729,13 +4752,17 @@ void ArgumentAnalyzer::ConvertBOZ(std::optional<DynamicType> &thisType,
       MaybeExpr realExpr{
           ConvertToKind<TypeCategory::Real>(kind, std::move(*boz))};
       actuals_[i] = std::move(*realExpr);
-      thisType.emplace(TypeCategory::Real, kind);
+      if (thisType) {
+        thisType->emplace(TypeCategory::Real, kind);
+      }
     } else {
       int kind{context_.context().GetDefaultKind(TypeCategory::Integer)};
       MaybeExpr intExpr{
           ConvertToKind<TypeCategory::Integer>(kind, std::move(*boz))};
       actuals_[i] = std::move(*intExpr);
-      thisType.emplace(TypeCategory::Integer, kind);
+      if (thisType) {
+        thisType->emplace(TypeCategory::Integer, kind);
+      }
     }
   }
 }

@@ -111,7 +111,7 @@ class X86TTIImpl : public BasicTTIImplBase<X86TTIImpl> {
 
 public:
   explicit X86TTIImpl(const X86TargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
   /// \name Scalar TTI Implementations
@@ -293,6 +293,8 @@ public:
   bool prefersVectorizedAddressing() const;
   bool supportsEfficientVectorElementLoadStore() const;
   bool enableInterleavedAccessVectorization();
+
+  InstructionCost getBranchMispredictPenalty() const;
 
 private:
   bool supportsGather() const;

@@ -26,7 +26,6 @@ namespace mlir {
 
 class LLVMTypeConverter;
 class Location;
-struct LogicalResult;
 class ModuleOp;
 class Operation;
 class RewritePatternSet;

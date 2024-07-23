@@ -95,7 +95,7 @@ static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
 }
 
 AMDGPUTTIImpl::AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
-    : BaseT(TM, F.getParent()->getDataLayout()),
+    : BaseT(TM, F.getDataLayout()),
       TargetTriple(TM->getTargetTriple()),
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()) {}
@@ -144,7 +144,7 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 
   unsigned MaxBoost = std::max(ThresholdPrivate, ThresholdLocal);
   for (const BasicBlock *BB : L->getBlocks()) {
-    const DataLayout &DL = BB->getModule()->getDataLayout();
+    const DataLayout &DL = BB->getDataLayout();
     unsigned LocalGEPsSeen = 0;
 
     if (llvm::any_of(L->getSubLoops(), [BB](const Loop* SubLoop) {
@@ -292,7 +292,7 @@ const FeatureBitset GCNTTIImpl::InlineFeatureIgnoreList = {
     AMDGPU::FeatureFastFMAF32, AMDGPU::HalfRate64Ops};
 
 GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
-    : BaseT(TM, F.getParent()->getDataLayout()),
+    : BaseT(TM, F.getDataLayout()),
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()), CommonTTI(TM, F),
       IsGraphics(AMDGPU::isGraphics(F.getCallingConv())) {
@@ -501,9 +501,7 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
                                        MemIntrinsicInfo &Info) const {
   switch (Inst->getIntrinsicID()) {
   case Intrinsic::amdgcn_ds_ordered_add:
-  case Intrinsic::amdgcn_ds_ordered_swap:
-  case Intrinsic::amdgcn_ds_fmin:
-  case Intrinsic::amdgcn_ds_fmax: {
+  case Intrinsic::amdgcn_ds_ordered_swap: {
     auto *Ordering = dyn_cast<ConstantInt>(Inst->getArgOperand(2));
     auto *Volatile = dyn_cast<ConstantInt>(Inst->getArgOperand(4));
     if (!Ordering || !Volatile)
@@ -849,7 +847,7 @@ bool GCNTTIImpl::isInlineAsmSourceOfDivergence(
   if (Indices.size() > 1)
     return true;
 
-  const DataLayout &DL = CI->getModule()->getDataLayout();
+  const DataLayout &DL = CI->getDataLayout();
   const SIRegisterInfo *TRI = ST->getRegisterInfo();
   TargetLowering::AsmOperandInfoVector TargetConstraints =
       TLI->ParseConstraints(DL, ST->getRegisterInfo(), *CI);
@@ -980,7 +978,7 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   if (match(V, m_c_And(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
                        m_Value(Mask)))) {
     const Function *F = cast<Instruction>(V)->getFunction();
-    const DataLayout &DL = F->getParent()->getDataLayout();
+    const DataLayout &DL = F->getDataLayout();
     return computeKnownBits(Mask, DL).countMinTrailingZeros() >=
                ST->getWavefrontSizeLog2() &&
            ST->getMaxWorkitemID(*F, 1) == 0 && ST->getMaxWorkitemID(*F, 2) == 0;
@@ -1018,8 +1016,6 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
 bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                             Intrinsic::ID IID) const {
   switch (IID) {
-  case Intrinsic::amdgcn_ds_fmin:
-  case Intrinsic::amdgcn_ds_fmax:
   case Intrinsic::amdgcn_is_shared:
   case Intrinsic::amdgcn_is_private:
   case Intrinsic::amdgcn_flat_atomic_fadd:
@@ -1039,20 +1035,6 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
                                                     Value *NewV) const {
   auto IntrID = II->getIntrinsicID();
   switch (IntrID) {
-  case Intrinsic::amdgcn_ds_fmin:
-  case Intrinsic::amdgcn_ds_fmax: {
-    const ConstantInt *IsVolatile = cast<ConstantInt>(II->getArgOperand(4));
-    if (!IsVolatile->isZero())
-      return nullptr;
-    Module *M = II->getParent()->getParent()->getParent();
-    Type *DestTy = II->getType();
-    Type *SrcTy = NewV->getType();
-    Function *NewDecl =
-        Intrinsic::getDeclaration(M, II->getIntrinsicID(), {DestTy, SrcTy});
-    II->setArgOperand(0, NewV);
-    II->setCalledFunction(NewDecl);
-    return II;
-  }
   case Intrinsic::amdgcn_is_shared:
   case Intrinsic::amdgcn_is_private: {
     unsigned TrueAS = IntrID == Intrinsic::amdgcn_is_shared ?

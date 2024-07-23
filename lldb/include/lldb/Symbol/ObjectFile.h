@@ -178,6 +178,7 @@ public:
                                         lldb::offset_t file_offset,
                                         lldb::offset_t file_size,
                                         lldb_private::ModuleSpecList &specs);
+  static bool IsObjectFile(lldb_private::FileSpec file_spec);
   /// Split a path into a file path with object name.
   ///
   /// For paths like "/tmp/foo.a(bar.o)" we often need to split a path up into

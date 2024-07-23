@@ -402,7 +402,7 @@ ScopedReport::~ScopedReport() {
     Die();
 }
 
-ALIGNED(64) static char suppression_placeholder[sizeof(SuppressionContext)];
+alignas(64) static char suppression_placeholder[sizeof(SuppressionContext)];
 static SuppressionContext *suppression_ctx = nullptr;
 static const char kVptrCheck[] = "vptr_check";
 static const char *kSuppressionTypes[] = {

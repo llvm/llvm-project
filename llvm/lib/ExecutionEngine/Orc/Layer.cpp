@@ -200,9 +200,8 @@ BasicObjectLayerMaterializationUnit::Create(ObjectLayer &L,
   if (!ObjInterface)
     return ObjInterface.takeError();
 
-  return std::unique_ptr<BasicObjectLayerMaterializationUnit>(
-      new BasicObjectLayerMaterializationUnit(L, std::move(O),
-                                              std::move(*ObjInterface)));
+  return std::make_unique<BasicObjectLayerMaterializationUnit>(
+      L, std::move(O), std::move(*ObjInterface));
 }
 
 BasicObjectLayerMaterializationUnit::BasicObjectLayerMaterializationUnit(

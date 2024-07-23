@@ -951,6 +951,21 @@ define i64 @test41(i32 %a) {
   ret i64 %sub
 }
 
+define i64 @test41_multiuse_constants_cancel(i32 %a) {
+; CHECK-LABEL: @test41_multiuse_constants_cancel(
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[ADD]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = zext i32 [[A]] to i64
+; CHECK-NEXT:    [[EXTRAUSE:%.*]] = add nuw nsw i64 [[ZEXT]], [[SUB]]
+; CHECK-NEXT:    ret i64 [[EXTRAUSE]]
+;
+  %add = add nuw i32 %a, 1
+  %zext = zext i32 %add to i64
+  %sub = add i64 %zext, -1
+  %extrause = add i64 %zext, %sub
+  ret i64 %extrause
+}
+
 ; (add (zext (add nuw X, C2)), C) --> (zext (add nuw X, C2 + C))
 
 define <2 x i64> @test41vec(<2 x i32> %a) {
@@ -1435,15 +1450,28 @@ define i32 @and31_add_sexts(i1 %x, i1 %y) {
   ret i32 %r
 }
 
-; Negative test - extra use
-
 define i32 @lshr_add_use_sexts(i1 %x, i1 %y, ptr %p) {
 ; CHECK-LABEL: @lshr_add_use_sexts(
+; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    store i32 [[YS]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xs = sext i1 %x to i32
+  %ys = sext i1 %y to i32
+  store i32 %ys, ptr %p
+  %sub = add i32 %xs, %ys
+  %r = lshr i32 %sub, 31
+  ret i32 %r
+}
+
+define i32 @lshr_add_use_sexts_2(i1 %x, i1 %y, ptr %p) {
+; CHECK-LABEL: @lshr_add_use_sexts_2(
 ; CHECK-NEXT:    [[XS:%.*]] = sext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    store i32 [[XS]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[XS]], [[YS]]
-; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[SUB]], 31
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xs = sext i1 %x to i32
@@ -1456,18 +1484,20 @@ define i32 @lshr_add_use_sexts(i1 %x, i1 %y, ptr %p) {
 
 ; Negative test - extra use
 
-define i32 @lshr_add_use2_sexts(i1 %x, i1 %y, ptr %p) {
-; CHECK-LABEL: @lshr_add_use2_sexts(
+declare void @use_sexts(i32, i32)
+
+define i32 @lshr_add_use_sexts_both(i1 %x, i1 %y) {
+; CHECK-LABEL: @lshr_add_use_sexts_both(
 ; CHECK-NEXT:    [[XS:%.*]] = sext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
-; CHECK-NEXT:    store i32 [[YS]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    call void @use_sexts(i32 [[XS]], i32 [[YS]])
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[XS]], [[YS]]
 ; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[SUB]], 31
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xs = sext i1 %x to i32
   %ys = sext i1 %y to i32
-  store i32 %ys, ptr %p
+  call void @use_sexts(i32 %xs, i32 %ys)
   %sub = add i32 %xs, %ys
   %r = lshr i32 %sub, 31
   ret i32 %r

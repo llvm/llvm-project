@@ -117,7 +117,7 @@ private:
   bool foldShuffleOfShuffles(Instruction &I);
   bool foldShuffleToIdentity(Instruction &I);
   bool foldShuffleFromReductions(Instruction &I);
-  bool foldTruncFromReductions(Instruction &I);
+  bool foldCastFromReductions(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
 
   void replaceValue(Value &Old, Value &New) {
@@ -1491,8 +1491,7 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
 bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   Value *V0, *V1;
   ArrayRef<int> OldMask;
-  if (!match(&I, m_Shuffle(m_OneUse(m_Value(V0)), m_OneUse(m_Value(V1)),
-                           m_Mask(OldMask))))
+  if (!match(&I, m_Shuffle(m_Value(V0), m_Value(V1), m_Mask(OldMask))))
     return false;
 
   auto *C0 = dyn_cast<CastInst>(V0);
@@ -1551,11 +1550,13 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   // Try to replace a castop with a shuffle if the shuffle is not costly.
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
-  InstructionCost OldCost =
+  InstructionCost CostC0 =
       TTI.getCastInstrCost(C0->getOpcode(), CastDstTy, CastSrcTy,
-                           TTI::CastContextHint::None, CostKind) +
+                           TTI::CastContextHint::None, CostKind);
+  InstructionCost CostC1 =
       TTI.getCastInstrCost(C1->getOpcode(), CastDstTy, CastSrcTy,
                            TTI::CastContextHint::None, CostKind);
+  InstructionCost OldCost = CostC0 + CostC1;
   OldCost +=
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, CastDstTy,
                          OldMask, CostKind, 0, nullptr, std::nullopt, &I);
@@ -1564,6 +1565,10 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
       TargetTransformInfo::SK_PermuteTwoSrc, CastSrcTy, NewMask, CostKind);
   NewCost += TTI.getCastInstrCost(Opcode, ShuffleDstTy, NewShuffleDstTy,
                                   TTI::CastContextHint::None, CostKind);
+  if (!C0->hasOneUse())
+    NewCost += CostC0;
+  if (!C1->hasOneUse())
+    NewCost += CostC1;
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two casts: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
@@ -1854,13 +1859,19 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
     if (!FrontU)
       return false;
 
+    // Helper to peek through bitcasts to the same value.
+    auto IsEquiv = [&](Value *X, Value *Y) {
+      return X->getType() == Y->getType() &&
+             peekThroughBitcasts(X) == peekThroughBitcasts(Y);
+    };
+
     // Look for an identity value.
     if (FrontLane == 0 &&
         cast<FixedVectorType>(FrontU->get()->getType())->getNumElements() ==
             Ty->getNumElements() &&
-        all_of(drop_begin(enumerate(Item)), [Item](const auto &E) {
+        all_of(drop_begin(enumerate(Item)), [IsEquiv, Item](const auto &E) {
           Value *FrontV = Item.front().first->get();
-          return !E.value().first || (E.value().first->get() == FrontV &&
+          return !E.value().first || (IsEquiv(E.value().first->get(), FrontV) &&
                                       E.value().second == (int)E.index());
         })) {
       IdentityLeafs.insert(FrontU);
@@ -1901,8 +1912,13 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
           if (auto *CI = dyn_cast<CmpInst>(V))
             if (CI->getPredicate() != cast<CmpInst>(FrontV)->getPredicate())
               return false;
+          if (auto *CI = dyn_cast<CastInst>(V))
+            if (CI->getSrcTy() != cast<CastInst>(FrontV)->getSrcTy())
+              return false;
           if (auto *SI = dyn_cast<SelectInst>(V))
-            if (!isa<VectorType>(SI->getOperand(0)->getType()))
+            if (!isa<VectorType>(SI->getOperand(0)->getType()) ||
+                SI->getOperand(0)->getType() !=
+                    cast<SelectInst>(FrontV)->getOperand(0)->getType())
               return false;
           if (isa<CallInst>(V) && !isa<IntrinsicInst>(V))
             return false;
@@ -1923,6 +1939,15 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
       } else if (isa<UnaryOperator, TruncInst, ZExtInst, SExtInst>(FrontU)) {
         Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
         continue;
+      } else if (auto *BitCast = dyn_cast<BitCastInst>(FrontU)) {
+        // TODO: Handle vector widening/narrowing bitcasts.
+        auto *DstTy = dyn_cast<FixedVectorType>(BitCast->getDestTy());
+        auto *SrcTy = dyn_cast<FixedVectorType>(BitCast->getSrcTy());
+        if (DstTy && SrcTy &&
+            SrcTy->getNumElements() == DstTy->getNumElements()) {
+          Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
+          continue;
+        }
       } else if (isa<SelectInst>(FrontU)) {
         Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
         Worklist.push_back(generateInstLaneVectorFromOperand(Item, 1));
@@ -2088,15 +2113,20 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
 
 /// Determine if its more efficient to fold:
 ///   reduce(trunc(x)) -> trunc(reduce(x)).
-bool VectorCombine::foldTruncFromReductions(Instruction &I) {
+///   reduce(sext(x))  -> sext(reduce(x)).
+///   reduce(zext(x))  -> zext(reduce(x)).
+bool VectorCombine::foldCastFromReductions(Instruction &I) {
   auto *II = dyn_cast<IntrinsicInst>(&I);
   if (!II)
     return false;
 
+  bool TruncOnly = false;
   Intrinsic::ID IID = II->getIntrinsicID();
   switch (IID) {
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_mul:
+    TruncOnly = true;
+    break;
   case Intrinsic::vector_reduce_and:
   case Intrinsic::vector_reduce_or:
   case Intrinsic::vector_reduce_xor:
@@ -2108,35 +2138,37 @@ bool VectorCombine::foldTruncFromReductions(Instruction &I) {
   unsigned ReductionOpc = getArithmeticReductionInstruction(IID);
   Value *ReductionSrc = I.getOperand(0);
 
-  Value *TruncSrc;
-  if (!match(ReductionSrc, m_OneUse(m_Trunc(m_Value(TruncSrc)))))
+  Value *Src;
+  if (!match(ReductionSrc, m_OneUse(m_Trunc(m_Value(Src)))) &&
+      (TruncOnly || !match(ReductionSrc, m_OneUse(m_ZExtOrSExt(m_Value(Src))))))
     return false;
 
-  auto *TruncSrcTy = cast<VectorType>(TruncSrc->getType());
+  auto CastOpc =
+      (Instruction::CastOps)cast<Instruction>(ReductionSrc)->getOpcode();
+
+  auto *SrcTy = cast<VectorType>(Src->getType());
   auto *ReductionSrcTy = cast<VectorType>(ReductionSrc->getType());
   Type *ResultTy = I.getType();
 
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost OldCost = TTI.getArithmeticReductionCost(
       ReductionOpc, ReductionSrcTy, std::nullopt, CostKind);
-  if (auto *Trunc = dyn_cast<CastInst>(ReductionSrc))
-    OldCost +=
-        TTI.getCastInstrCost(Instruction::Trunc, ReductionSrcTy, TruncSrcTy,
-                             TTI::CastContextHint::None, CostKind, Trunc);
+  OldCost += TTI.getCastInstrCost(CastOpc, ReductionSrcTy, SrcTy,
+                                  TTI::CastContextHint::None, CostKind,
+                                  cast<CastInst>(ReductionSrc));
   InstructionCost NewCost =
-      TTI.getArithmeticReductionCost(ReductionOpc, TruncSrcTy, std::nullopt,
+      TTI.getArithmeticReductionCost(ReductionOpc, SrcTy, std::nullopt,
                                      CostKind) +
-      TTI.getCastInstrCost(Instruction::Trunc, ResultTy,
-                           ReductionSrcTy->getScalarType(),
+      TTI.getCastInstrCost(CastOpc, ResultTy, ReductionSrcTy->getScalarType(),
                            TTI::CastContextHint::None, CostKind);
 
   if (OldCost <= NewCost || !NewCost.isValid())
     return false;
 
-  Value *NewReduction = Builder.CreateIntrinsic(
-      TruncSrcTy->getScalarType(), II->getIntrinsicID(), {TruncSrc});
-  Value *NewTruncation = Builder.CreateTrunc(NewReduction, ResultTy);
-  replaceValue(I, *NewTruncation);
+  Value *NewReduction = Builder.CreateIntrinsic(SrcTy->getScalarType(),
+                                                II->getIntrinsicID(), {Src});
+  Value *NewCast = Builder.CreateCast(CastOpc, NewReduction, ResultTy);
+  replaceValue(I, *NewCast);
   return true;
 }
 
@@ -2534,7 +2566,7 @@ bool VectorCombine::run() {
       switch (Opcode) {
       case Instruction::Call:
         MadeChange |= foldShuffleFromReductions(I);
-        MadeChange |= foldTruncFromReductions(I);
+        MadeChange |= foldCastFromReductions(I);
         break;
       case Instruction::ICmp:
       case Instruction::FCmp:
@@ -2584,7 +2616,7 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
   TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
   DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   AAResults &AA = FAM.getResult<AAManager>(F);
-  const DataLayout *DL = &F.getParent()->getDataLayout();
+  const DataLayout *DL = &F.getDataLayout();
   VectorCombine Combiner(F, TTI, DT, AA, AC, DL, TryEarlyFoldsOnly);
   if (!Combiner.run())
     return PreservedAnalyses::all();

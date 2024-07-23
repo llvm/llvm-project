@@ -907,6 +907,8 @@ public:
 
   bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
 
+  bool shouldExpandCmpUsingSelects() const override { return true; }
+
   bool isComplexDeinterleavingSupported() const override;
   bool isComplexDeinterleavingOperationSupported(
       ComplexDeinterleavingOperation Operation, Type *Ty) const override;
@@ -1127,6 +1129,12 @@ private:
   SDValue LowerELFTLSDescCallSeq(SDValue SymAddr, const SDLoc &DL,
                                  SelectionDAG &DAG) const;
   SDValue LowerWindowsGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerPtrAuthGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerPtrAuthGlobalAddressStatically(SDValue TGA, SDLoc DL, EVT VT,
+                                              AArch64PACKey::ID Key,
+                                              SDValue Discriminator,
+                                              SDValue AddrDiscriminator,
+                                              SelectionDAG &DAG) const;
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
@@ -1137,6 +1145,7 @@ private:
                          SelectionDAG &DAG) const;
   SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerBRIND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerAAPCS_VASTART(SDValue Op, SelectionDAG &DAG) const;

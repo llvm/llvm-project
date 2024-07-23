@@ -725,23 +725,23 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
                                      "mutually exclusive regions\n");
           continue;
         }
-      }
 
-      // Two equivalent operands of the same op are not conflicting if the op
-      // bufferizes to element-wise access. I.e., all loads at a position happen
-      // before all stores to the same position.
-      if (conflictingWritingOp == readingOp) {
-        if (auto bufferizableOp = options.dynCastBufferizableOp(readingOp)) {
-          if (bufferizableOp.bufferizesToElementwiseAccess(
-                  state, {uRead, uConflictingWrite})) {
-            if (hasEquivalentValueInReverseUseDefChain(
-                    state, uRead->get(), uConflictingWrite->get()) ||
-                hasEquivalentValueInReverseUseDefChain(
-                    state, uConflictingWrite->get(), uRead->get())) {
-              LLVM_DEBUG(
-                  llvm::dbgs()
-                  << "  no conflict: op bufferizes to element-wise access\n");
-              continue;
+        // Two equivalent operands of the same op are not conflicting if the op
+        // bufferizes to element-wise access. I.e., all loads at a position
+        // happen before all stores to the same position.
+        if (conflictingWritingOp == readingOp) {
+          if (auto bufferizableOp = options.dynCastBufferizableOp(readingOp)) {
+            if (bufferizableOp.bufferizesToElementwiseAccess(
+                    state, {uRead, uConflictingWrite})) {
+              if (hasEquivalentValueInReverseUseDefChain(
+                      state, uRead->get(), uConflictingWrite->get()) ||
+                  hasEquivalentValueInReverseUseDefChain(
+                      state, uConflictingWrite->get(), uRead->get())) {
+                LLVM_DEBUG(
+                    llvm::dbgs()
+                    << "  no conflict: op bufferizes to element-wise access\n");
+                continue;
+              }
             }
           }
         }
