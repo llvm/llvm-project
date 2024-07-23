@@ -3037,7 +3037,7 @@ void Darwin::addClangTargetOptions(
                                 options::OPT_fno_define_target_os_macros))
     CC1Args.push_back("-fdefine-target-os-macros");
 
-  // Limit modulemap search on sufficiently recent SDKs.
+  // Disable subdirectory modulemap search on sufficiently recent SDKs.
   if (SDKInfo &&
       !DriverArgs.hasFlag(options::OPT_fmodulemap_allow_subdirectory_search,
                           options::OPT_fno_modulemap_allow_subdirectory_search,
