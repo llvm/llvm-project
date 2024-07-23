@@ -1833,6 +1833,8 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
   EXPECT_TRUE(Tokens[10]->ClosesRequiresClause);
+  // FIXME:
+  // EXPECT_TOKEN(Tokens[11], tok::l_paren, TT_LambdaDefinitionLParen);
   EXPECT_TOKEN(Tokens[15], tok::l_brace, TT_LambdaLBrace);
 
   Tokens = annotate("[] <typename T> requires Bar<T> (T &&t) {}");
@@ -1841,6 +1843,8 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
   EXPECT_TRUE(Tokens[10]->ClosesRequiresClause);
+  // FIXME:
+  // EXPECT_TOKEN(Tokens[11], tok::l_paren, TT_LambdaDefinitionLParen);
   EXPECT_TOKEN(Tokens[13], tok::ampamp, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[16], tok::l_brace, TT_LambdaLBrace);
 
@@ -1850,6 +1854,8 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
   EXPECT_TRUE(Tokens[15]->ClosesRequiresClause);
+  // FIXME:
+  // EXPECT_TOKEN(Tokens[16], tok::l_paren, TT_LambdaDefinitionLParen);
   EXPECT_TOKEN(Tokens[20], tok::l_brace, TT_LambdaLBrace);
 
   Tokens = annotate("[] <typename T> requires true (T&& t) {}");
@@ -1858,6 +1864,8 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
   EXPECT_TRUE(Tokens[7]->ClosesRequiresClause);
+  // FIXME:
+  // EXPECT_TOKEN(Tokens[8], tok::l_paren, TT_LambdaDefinitionLParen);
   EXPECT_TOKEN(Tokens[10], tok::ampamp, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_LambdaLBrace);
 
@@ -1892,6 +1900,8 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
   EXPECT_TRUE(Tokens[10]->ClosesRequiresClause);
+  // FIXME:
+  // EXPECT_TOKEN(Tokens[11], tok::l_paren, TT_LambdaDefinitionLParen);
   EXPECT_TOKEN(Tokens[15], tok::kw_requires, TT_RequiresClause);
   EXPECT_TRUE(Tokens[19]->ClosesRequiresClause);
   EXPECT_TOKEN(Tokens[20], tok::l_brace, TT_LambdaLBrace);
@@ -1936,6 +1946,8 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[7], tok::greater, TT_TemplateCloser);
   EXPECT_TOKEN(Tokens[8], tok::kw_requires, TT_RequiresClause);
+  // FIXME:
+  // EXPECT_TOKEN(Tokens[13], tok::l_paren, TT_LambdaDefinitionLParen);
   EXPECT_TOKEN(Tokens[17], tok::l_brace, TT_LambdaLBrace);
 }
 
