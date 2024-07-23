@@ -59,7 +59,6 @@ struct ConvertToSPIRVPass final
     }
 
     if (runVectorUnrolling) {
-
       // Fold transpose ops if possible as we cannot unroll it later.
       {
         RewritePatternSet patterns(context);

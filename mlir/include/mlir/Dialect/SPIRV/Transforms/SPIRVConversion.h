@@ -189,6 +189,8 @@ Value getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
                           MemRefType baseType, Value basePtr,
                           ValueRange indices, Location loc, OpBuilder &builder);
 
+// Find the largest factor of size among {2,3,4} for the lowest dimension of
+// the target shape.
 int getComputeVectorSize(int64_t size);
 
 // GetNativeVectorShape implementation for reduction ops.
