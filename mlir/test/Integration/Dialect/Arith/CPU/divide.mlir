@@ -39,12 +39,29 @@ func.func @divsi() {
   // ------------------------------------------------
   %c68 = arith.constant 68 : i8
   %cn97 = arith.constant -97 : i8
+  %c0 = arith.constant 0 : i8
+  %c1 = arith.constant 1 : i8
 
   // divsi should round towards zero (rather than -infinity)
   // divsi -97 68 = -1
   // CHECK-LABEL: @divsi_i8
   // CHECK-NEXT:  -1
   func.call @divsi_i8(%cn97, %c68) : (i8, i8) -> ()
+
+  // divsi x x == 1
+  // CHECK-LABEL: @divsi_i8
+  // CHECK-NEXT:  1
+  func.call @divsi_i8(%c68, %c68) : (i8, i8) -> ()
+
+  // divsi x 1 == x
+  // CHECK-LABEL: @divsi_i8
+  // CHECK-NEXT:  -97
+  func.call @divsi_i8(%cn97, %c1) : (i8, i8) -> ()
+
+  // divsi 0 x == 0
+  // CHECK-LABEL: @divsi_i8
+  // CHECK-NEXT:  0
+  func.call @divsi_i8(%c0, %cn97) : (i8, i8) -> ()
 
   // ------------------------------------------------
   // Test i1
@@ -55,6 +72,10 @@ func.func @divsi() {
   // CHECK-LABEL: @divsi_i1
   // CHECK-NEXT:  1
   func.call @divsi_i1(%true, %true) : (i1, i1) -> ()
+
+  // CHECK-LABEL: @divsi_i1
+  // CHECK-NEXT:  0
+  func.call @divsi_i1(%false, %true) : (i1, i1) -> ()
 
   // ------------------------------------------------
   // TODO: i16, i32 etc
@@ -68,11 +89,24 @@ func.func @remsi() {
   // ------------------------------------------------
   %cn1 = arith.constant -1 : i8
   %i8_min_p1 = arith.constant -127 : i8
+  %i8_min = arith.constant -128 : i8
+  %c0 = arith.constant 0 : i8
+  %c1 = arith.constant 1 : i8
   
   // remsi minIntPlus1 -1 = remsi -2^(w-1) -1 = 0
   // CHECK-LABEL: @remsi_i8
   // CHECK-NEXT:  0
   func.call @remsi_i8(%i8_min_p1, %cn1) : (i8, i8) -> ()
+
+  // remsi 0 minInt == 0 
+  // CHECK-LABEL: @remsi_i8
+  // CHECK-NEXT:  0
+  func.call @remsi_i8(%c0, %i8_min_p1) : (i8, i8) -> ()
+
+  // forall x. remsi x 1 == 0
+  // CHECK-LABEL: @remsi_i8
+  // CHECK-NEXT:  0
+  func.call @remsi_i8(%c0, %c1) : (i8, i8) -> ()
 
   // ------------------------------------------------
   // TODO: i1, i16 etc
@@ -86,12 +120,30 @@ func.func @ceildivsi() {
   // ------------------------------------------------
   %c7 = arith.constant 7 : i8
   %i8_min = arith.constant -128 : i8
+  %c0 = arith.constant 0 : i8
+  %c1 = arith.constant 1 : i8
+  %cn1 = arith.constant -1 : i8
 
   // ceildivsi should keep signs
   // forall w, y. (w > 0, y > 0) => -2^w `ceildiv` y : i_w < 0
   // CHECK-LABEL: @ceildivsi_i8
   // CHECK-NEXT:  -18
   func.call @ceildivsi_i8(%i8_min, %c7) : (i8, i8) -> ()
+
+  // forall x. x / -1 == -x
+  // CHECK-LABEL: @ceildivsi_i8
+  // CHECK-NEXT:  -1
+  func.call @ceildivsi_i8(%c1, %cn1) : (i8, i8) -> ()
+
+  // forall x. x / 1 == x
+  // CHECK-LABEL: @ceildivsi_i8
+  // CHECK-NEXT:  1
+  func.call @ceildivsi_i8(%c1, %c1) : (i8, i8) -> ()
+
+  // 0 / x == 0
+  // CHECK-LABEL: @ceildivsi_i8
+  // CHECK-NEXT:  0
+  func.call @ceildivsi_i8(%c0, %c1) : (i8, i8) -> ()
 
   // ------------------------------------------------
   // TODO: i1, i16 etc
