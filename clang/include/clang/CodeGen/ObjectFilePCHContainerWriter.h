@@ -1,4 +1,4 @@
-//===-- CodeGen/ObjectFilePCHContainerOperations.h - ------------*- C++ -*-===//
+//===-- CodeGen/ObjectFilePCHContainerWriter.h ------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -29,14 +29,6 @@ class ObjectFilePCHContainerWriter : public PCHContainerWriter {
                               std::shared_ptr<PCHBuffer> Buffer) const override;
 };
 
-/// A PCHContainerReader implementation that uses LLVM to
-/// wraps Clang modules inside a COFF, ELF, or Mach-O container.
-class ObjectFilePCHContainerReader : public PCHContainerReader {
-  ArrayRef<StringRef> getFormats() const override;
-
-  /// Returns the serialized AST inside the PCH container Buffer.
-  StringRef ExtractPCH(llvm::MemoryBufferRef Buffer) const override;
-};
 }
 
 #endif
