@@ -926,24 +926,138 @@ define <512 x i8> @buildvec_vid_v512i8_indices_overflow() vscale_range(16, 1024)
 }
 
 define <512 x i8> @buildvec_not_vid_v512i8_indices_overflow_1() vscale_range(16, 1024) {
-; CHECK-LABEL: buildvec_not_vid_v512i8_indices_overflow_1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 512
-; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vsrl.vi v8, v8, 8
-; CHECK-NEXT:    ret
+; RV32-LABEL: buildvec_not_vid_v512i8_indices_overflow_1:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a0, 512
+; RV32-NEXT:    vsetivli zero, 16, e32, mf2, ta, ma
+; RV32-NEXT:    vid.v v8
+; RV32-NEXT:    vsrl.vi v8, v8, 3
+; RV32-NEXT:    vadd.vi v0, v8, -1
+; RV32-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; RV32-NEXT:    vmv.v.i v8, 1
+; RV32-NEXT:    vmerge.vim v8, v8, 0, v0
+; RV32-NEXT:    ret
+;
+; RV64V-LABEL: buildvec_not_vid_v512i8_indices_overflow_1:
+; RV64V:       # %bb.0:
+; RV64V-NEXT:    li a0, 512
+; RV64V-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
+; RV64V-NEXT:    vid.v v8
+; RV64V-NEXT:    vsrl.vi v8, v8, 2
+; RV64V-NEXT:    vadd.vi v0, v8, -1
+; RV64V-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; RV64V-NEXT:    vmv.v.i v8, 1
+; RV64V-NEXT:    vmerge.vim v8, v8, 0, v0
+; RV64V-NEXT:    ret
+;
+; RV64ZVE32-LABEL: buildvec_not_vid_v512i8_indices_overflow_1:
+; RV64ZVE32:       # %bb.0:
+; RV64ZVE32-NEXT:    li a0, 512
+; RV64ZVE32-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
+; RV64ZVE32-NEXT:    vid.v v8
+; RV64ZVE32-NEXT:    vsrl.vi v8, v8, 3
+; RV64ZVE32-NEXT:    vadd.vi v0, v8, -1
+; RV64ZVE32-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; RV64ZVE32-NEXT:    vmv.v.i v8, 1
+; RV64ZVE32-NEXT:    vmerge.vim v8, v8, 0, v0
+; RV64ZVE32-NEXT:    ret
   ret <512 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
 }
 
 define <512 x i8> @buildvec_not_vid_v512i8_indices_overflow_2() vscale_range(16, 1024) {
-; CHECK-LABEL: buildvec_not_vid_v512i8_indices_overflow_2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 512
-; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vsrl.vi v8, v8, 7
-; CHECK-NEXT:    ret
+; RV32-LABEL: buildvec_not_vid_v512i8_indices_overflow_2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 16, e32, mf2, ta, ma
+; RV32-NEXT:    vmv.v.i v0, 15
+; RV32-NEXT:    vmv.v.i v9, 0
+; RV32-NEXT:    vmerge.vim v10, v9, -1, v0
+; RV32-NEXT:    li a0, 512
+; RV32-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; RV32-NEXT:    vmv.v.i v12, 3
+; RV32-NEXT:    li a1, 240
+; RV32-NEXT:    vsetvli zero, zero, e16, m8, ta, ma
+; RV32-NEXT:    vmv.s.x v8, a1
+; RV32-NEXT:    vmv1r.v v0, v10
+; RV32-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
+; RV32-NEXT:    vmerge.vim v12, v12, 0, v0
+; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vsetivli zero, 16, e32, mf2, ta, ma
+; RV32-NEXT:    vmerge.vim v10, v9, -1, v0
+; RV32-NEXT:    li a1, 15
+; RV32-NEXT:    slli a1, a1, 8
+; RV32-NEXT:    vmv.s.x v8, a1
+; RV32-NEXT:    vmv1r.v v0, v10
+; RV32-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; RV32-NEXT:    vmerge.vim v12, v12, 1, v0
+; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vsetivli zero, 16, e32, mf2, ta, ma
+; RV32-NEXT:    vmerge.vim v8, v9, -1, v0
+; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; RV32-NEXT:    vmerge.vim v8, v12, 2, v0
+; RV32-NEXT:    ret
+;
+; RV64V-LABEL: buildvec_not_vid_v512i8_indices_overflow_2:
+; RV64V:       # %bb.0:
+; RV64V-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
+; RV64V-NEXT:    vmv.v.i v0, 3
+; RV64V-NEXT:    vmv.v.i v9, 0
+; RV64V-NEXT:    vmerge.vim v10, v9, -1, v0
+; RV64V-NEXT:    li a0, 512
+; RV64V-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; RV64V-NEXT:    vmv.v.i v12, 3
+; RV64V-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; RV64V-NEXT:    vmv.v.i v8, 12
+; RV64V-NEXT:    vmv1r.v v0, v10
+; RV64V-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; RV64V-NEXT:    vmerge.vim v12, v12, 0, v0
+; RV64V-NEXT:    vmv1r.v v0, v8
+; RV64V-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
+; RV64V-NEXT:    vmerge.vim v10, v9, -1, v0
+; RV64V-NEXT:    li a1, 48
+; RV64V-NEXT:    vmv.s.x v8, a1
+; RV64V-NEXT:    vmv.v.v v0, v10
+; RV64V-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; RV64V-NEXT:    vmerge.vim v12, v12, 1, v0
+; RV64V-NEXT:    vmv1r.v v0, v8
+; RV64V-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
+; RV64V-NEXT:    vmerge.vim v8, v9, -1, v0
+; RV64V-NEXT:    vmv.v.v v0, v8
+; RV64V-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; RV64V-NEXT:    vmerge.vim v8, v12, 2, v0
+; RV64V-NEXT:    ret
+;
+; RV64ZVE32-LABEL: buildvec_not_vid_v512i8_indices_overflow_2:
+; RV64ZVE32:       # %bb.0:
+; RV64ZVE32-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
+; RV64ZVE32-NEXT:    vmv.v.i v0, 15
+; RV64ZVE32-NEXT:    vmv.v.i v9, 0
+; RV64ZVE32-NEXT:    vmerge.vim v10, v9, -1, v0
+; RV64ZVE32-NEXT:    li a0, 512
+; RV64ZVE32-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; RV64ZVE32-NEXT:    vmv.v.i v12, 3
+; RV64ZVE32-NEXT:    li a1, 240
+; RV64ZVE32-NEXT:    vsetvli zero, zero, e16, m8, ta, ma
+; RV64ZVE32-NEXT:    vmv.s.x v8, a1
+; RV64ZVE32-NEXT:    vmv1r.v v0, v10
+; RV64ZVE32-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
+; RV64ZVE32-NEXT:    vmerge.vim v12, v12, 0, v0
+; RV64ZVE32-NEXT:    vmv1r.v v0, v8
+; RV64ZVE32-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
+; RV64ZVE32-NEXT:    vmerge.vim v10, v9, -1, v0
+; RV64ZVE32-NEXT:    li a1, 15
+; RV64ZVE32-NEXT:    slli a1, a1, 8
+; RV64ZVE32-NEXT:    vmv.s.x v8, a1
+; RV64ZVE32-NEXT:    vmv.v.v v0, v10
+; RV64ZVE32-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; RV64ZVE32-NEXT:    vmerge.vim v12, v12, 1, v0
+; RV64ZVE32-NEXT:    vmv1r.v v0, v8
+; RV64ZVE32-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
+; RV64ZVE32-NEXT:    vmerge.vim v8, v9, -1, v0
+; RV64ZVE32-NEXT:    vmv.v.v v0, v8
+; RV64ZVE32-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; RV64ZVE32-NEXT:    vmerge.vim v8, v12, 2, v0
+; RV64ZVE32-NEXT:    ret
   ret <512 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
 }
 
