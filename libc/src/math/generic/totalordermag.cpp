@@ -13,8 +13,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, totalordermag,
-                   (const double *x, const double *y)) {
+LLVM_LIBC_FUNCTION(int, totalordermag, (const double *x, const double *y)) {
   return static_cast<int>(fputil::totalordermag(*x, *y));
 }
 
