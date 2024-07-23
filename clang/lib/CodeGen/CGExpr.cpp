@@ -1081,7 +1081,7 @@ static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
       // know why either.
       continue;
 
-    FieldNo = Layout.containsFieldDecl(FD);
+    FieldNo = Layout.getLLVMFieldNo(FD);
     if (FD == Field) {
       Indices.emplace_back(std::make_pair(RD, CGF.Builder.getInt32(FieldNo)));
       return true;
