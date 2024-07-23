@@ -86,26 +86,20 @@ MCAssembler::MCAssembler(MCContext &Context,
     : Context(Context), Backend(std::move(Backend)),
       Emitter(std::move(Emitter)), Writer(std::move(Writer)) {}
 
-MCAssembler::~MCAssembler() = default;
-
 void MCAssembler::reset() {
   RelaxAll = false;
-  SubsectionsViaSymbols = false;
   Sections.clear();
   Symbols.clear();
-  LinkerOptions.clear();
-  FileNames.clear();
   ThumbFuncs.clear();
   BundleAlignSize = 0;
-  ELFHeaderEFlags = 0;
 
   // reset objects owned by us
   if (getBackendPtr())
     getBackendPtr()->reset();
   if (getEmitterPtr())
     getEmitterPtr()->reset();
-  if (getWriterPtr())
-    getWriterPtr()->reset();
+  if (Writer)
+    Writer->reset();
 }
 
 bool MCAssembler::registerSection(MCSection &Section) {
@@ -198,9 +192,9 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
       const MCSymbol &SA = A->getSymbol();
       if (A->getKind() != MCSymbolRefExpr::VK_None || SA.isUndefined()) {
         IsResolved = false;
-      } else if (auto *Writer = getWriterPtr()) {
+      } else {
         IsResolved = (FixupFlags & MCFixupKindInfo::FKF_Constant) ||
-                     Writer->isSymbolRefDifferenceFullyResolvedImpl(
+                     getWriter().isSymbolRefDifferenceFullyResolvedImpl(
                          *this, SA, *DF, false, true);
       }
     }
@@ -1098,7 +1092,7 @@ bool MCAssembler::relaxLEB(MCLEBFragment &LF) {
   // Use evaluateKnownAbsolute for Mach-O as a hack: .subsections_via_symbols
   // requires that .uleb128 A-B is foldable where A and B reside in different
   // fragments. This is used by __gcc_except_table.
-  bool Abs = getSubsectionsViaSymbols()
+  bool Abs = getWriter().getSubsectionsViaSymbols()
                  ? LF.getValue().evaluateKnownAbsolute(Value, *this)
                  : LF.getValue().evaluateAsAbsolute(Value, *this);
   if (!Abs) {

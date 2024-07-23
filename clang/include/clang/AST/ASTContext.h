@@ -738,6 +738,12 @@ public:
   }
   void Deallocate(void *Ptr) const {}
 
+  llvm::StringRef backupStr(llvm::StringRef S) const {
+    char *Buf = new (*this) char[S.size()];
+    std::copy(S.begin(), S.end(), Buf);
+    return llvm::StringRef(Buf, S.size());
+  }
+
   /// Allocates a \c DeclListNode or returns one from the \c ListNodeFreeList
   /// pool.
   DeclListNode *AllocateDeclListNode(clang::NamedDecl *ND) {
@@ -1287,7 +1293,7 @@ public:
   getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD);
 
   /// Return the "other" type-specific discriminator for the given type.
-  uint16_t getPointerAuthTypeDiscriminator(QualType T) const;
+  uint16_t getPointerAuthTypeDiscriminator(QualType T);
 
   /// Apply Objective-C protocol qualifiers to the given type.
   /// \param allowOnPointerType specifies if we can apply protocol
