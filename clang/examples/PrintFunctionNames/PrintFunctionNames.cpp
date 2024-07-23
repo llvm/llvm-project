@@ -14,7 +14,7 @@
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/Support/raw_ostream.h"
@@ -52,11 +52,12 @@ public:
     // The advantage of doing this in HandleTranslationUnit() is that all
     // codegen (when using -add-plugin) is completely finished and this can't
     // affect the compiler output.
-    struct Visitor : public RecursiveASTVisitor<Visitor> {
+    struct Visitor : DynamicRecursiveASTVisitor {
       const std::set<std::string> &ParsedTemplates;
       Visitor(const std::set<std::string> &ParsedTemplates)
           : ParsedTemplates(ParsedTemplates) {}
-      bool VisitFunctionDecl(FunctionDecl *FD) {
+
+      bool VisitFunctionDecl(FunctionDecl *FD) override {
         if (FD->isLateTemplateParsed() &&
             ParsedTemplates.count(FD->getNameAsString()))
           LateParsedDecls.insert(FD);

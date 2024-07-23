@@ -70,10 +70,9 @@ CXXRecordDecl's.
 
 ::
 
-      class FindNamedClassVisitor
-        : public RecursiveASTVisitor<FindNamedClassVisitor> {
+      class FindNamedClassVisitor : public DynamicRecursiveASTVisitor {
       public:
-        bool VisitCXXRecordDecl(CXXRecordDecl *Declaration) {
+        bool VisitCXXRecordDecl(CXXRecordDecl *Declaration) override {
           // For debugging, dumping the AST nodes will show which nodes are already
           // being visited.
           Declaration->dump();
@@ -91,7 +90,7 @@ can check for a specific qualified name:
 
 ::
 
-      bool VisitCXXRecordDecl(CXXRecordDecl *Declaration) {
+      bool VisitCXXRecordDecl(CXXRecordDecl *Declaration) override {
         if (Declaration->getQualifiedNameAsString() == "n::m::C")
           Declaration->dump();
         return true;
@@ -122,7 +121,7 @@ locations:
 
 ::
 
-      bool VisitCXXRecordDecl(CXXRecordDecl *Declaration) {
+      bool VisitCXXRecordDecl(CXXRecordDecl *Declaration) override {
         if (Declaration->getQualifiedNameAsString() == "n::m::C") {
           // getFullLoc uses the ASTContext's SourceManager to resolve the source
           // location and break it up into its line and column parts.
@@ -143,20 +142,20 @@ Now we can combine all of the above into a small example program:
 ::
 
       #include "clang/AST/ASTConsumer.h"
-      #include "clang/AST/RecursiveASTVisitor.h"
+      #include "clang/AST/DynamicRecursiveASTVisitor.h"
+      #include "clang/AST/DeclCXX.h"
       #include "clang/Frontend/CompilerInstance.h"
       #include "clang/Frontend/FrontendAction.h"
       #include "clang/Tooling/Tooling.h"
 
       using namespace clang;
 
-      class FindNamedClassVisitor
-        : public RecursiveASTVisitor<FindNamedClassVisitor> {
+      class FindNamedClassVisitor : public DynamicRecursiveASTVisitor {
       public:
         explicit FindNamedClassVisitor(ASTContext *Context)
           : Context(Context) {}
 
-        bool VisitCXXRecordDecl(CXXRecordDecl *Declaration) {
+        bool VisitCXXRecordDecl(CXXRecordDecl *Declaration) override {
           if (Declaration->getQualifiedNameAsString() == "n::m::C") {
             FullSourceLoc FullLocation = Context->getFullLoc(Declaration->getBeginLoc());
             if (FullLocation.isValid())

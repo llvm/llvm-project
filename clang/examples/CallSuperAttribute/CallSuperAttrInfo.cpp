@@ -25,7 +25,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
@@ -41,13 +41,14 @@ bool isMarkedAsCallSuper(const CXXMethodDecl *D) {
   return MarkedMethods.contains(D);
 }
 
-class MethodUsageVisitor : public RecursiveASTVisitor<MethodUsageVisitor> {
+class MethodUsageVisitor : public DynamicRecursiveASTVisitor {
 public:
   bool IsOverriddenUsed = false;
   explicit MethodUsageVisitor(
       llvm::SmallPtrSet<const CXXMethodDecl *, 16> &MustCalledMethods)
       : MustCalledMethods(MustCalledMethods) {}
-  bool VisitCallExpr(CallExpr *CallExpr) {
+
+  bool VisitCallExpr(CallExpr *CallExpr) override {
     const CXXMethodDecl *Callee = nullptr;
     for (const auto &MustCalled : MustCalledMethods) {
       if (CallExpr->getCalleeDecl() == MustCalled) {
@@ -67,7 +68,7 @@ private:
   llvm::SmallPtrSet<const CXXMethodDecl *, 16> &MustCalledMethods;
 };
 
-class CallSuperVisitor : public RecursiveASTVisitor<CallSuperVisitor> {
+class CallSuperVisitor : public DynamicRecursiveASTVisitor {
 public:
   CallSuperVisitor(DiagnosticsEngine &Diags) : Diags(Diags) {
     WarningSuperNotCalled = Diags.getCustomDiagID(
@@ -77,7 +78,8 @@ public:
     NotePreviousCallSuperDeclaration = Diags.getCustomDiagID(
         DiagnosticsEngine::Note, "function marked 'call_super' here");
   }
-  bool VisitCXXMethodDecl(CXXMethodDecl *MethodDecl) {
+
+  bool VisitCXXMethodDecl(CXXMethodDecl *MethodDecl) override {
     if (MethodDecl->isThisDeclarationADefinition() && MethodDecl->hasBody()) {
       // First find out which overridden methods are marked as 'call_super'
       llvm::SmallPtrSet<const CXXMethodDecl *, 16> OverriddenMarkedMethods;

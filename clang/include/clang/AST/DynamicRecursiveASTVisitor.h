@@ -24,6 +24,7 @@ class ASTContext;
 /// \see RecursiveASTVisitor
 class DynamicRecursiveASTVisitor {
 public:
+  // FIXME: I think we can just get rid of the Queue entirely.
   using DataRecursionQueue =
       SmallVectorImpl<llvm::PointerIntPair<Stmt *, 1, bool>>;
 
@@ -114,6 +115,8 @@ public:
   ///
   /// \returns false if the visitation was terminated early, true
   /// otherwise (including when the argument is nullptr).
+  ///
+  // FIXME: I think we can just get rid of the Queue entirely.
   virtual bool TraverseStmt(Stmt *S, DataRecursionQueue *Queue = nullptr);
 
   /// Recursively visit a template argument and dispatch to the
@@ -194,6 +197,7 @@ public:
   /// \returns false if the visitation was terminated early, true otherwise.
   virtual bool dataTraverseStmtPost(Stmt *S) { return true; }
 
+  // FIXME: I think we can just get rid of the Queue entirely.
   virtual bool dataTraverseNode(Stmt *S, DataRecursionQueue *Queue = nullptr);
 
   /*// Declare Traverse*() and friends for attributes.
