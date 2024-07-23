@@ -1519,10 +1519,20 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
         "BOLT-INFO: inference found an exact match for %.2f%% of basic blocks"
         " (%zu out of %zu stale) responsible for %.2f%% samples"
         " (%zu out of %zu stale)\n",
-        100.0 * BC.Stats.NumMatchedBlocks / BC.Stats.NumStaleBlocks,
-        BC.Stats.NumMatchedBlocks, BC.Stats.NumStaleBlocks,
-        100.0 * BC.Stats.MatchedSampleCount / BC.Stats.StaleSampleCount,
-        BC.Stats.MatchedSampleCount, BC.Stats.StaleSampleCount);
+        100.0 * BC.Stats.NumExactMatchedBlocks / BC.Stats.NumStaleBlocks,
+        BC.Stats.NumExactMatchedBlocks, BC.Stats.NumStaleBlocks,
+        100.0 * BC.Stats.ExactMatchedSampleCount / BC.Stats.StaleSampleCount,
+        BC.Stats.ExactMatchedSampleCount, BC.Stats.StaleSampleCount);
+    BC.outs() << format(
+        "BOLT-INFO: inference found a pseudo probe match for %.2f%% of basic "
+        "blocks"
+        " (%zu out of %zu stale) responsible for %.2f%% samples"
+        " (%zu out of %zu stale)\n",
+        100.0 * BC.Stats.NumPseudoProbeMatchedBlocks / BC.Stats.NumStaleBlocks,
+        BC.Stats.NumPseudoProbeMatchedBlocks, BC.Stats.NumStaleBlocks,
+        100.0 * BC.Stats.PseudoProbeMatchedSampleCount /
+            BC.Stats.StaleSampleCount,
+        BC.Stats.PseudoProbeMatchedSampleCount, BC.Stats.StaleSampleCount);
   }
 
   if (const uint64_t NumUnusedObjects = BC.getNumUnusedProfiledObjects()) {

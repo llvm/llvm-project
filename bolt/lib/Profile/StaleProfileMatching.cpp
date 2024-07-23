@@ -220,13 +220,14 @@ public:
   }
 
   /// Find the most similar block for a given hash.
-  const FlowBlock *matchBlock(
-      BlendedBlockHash BlendedHash, uint64_t CallHash,
-      const std::vector<yaml::bolt::PseudoProbeInfo> &PseudoProbes) const {
+  const FlowBlock *
+  matchBlock(BlendedBlockHash BlendedHash, uint64_t CallHash,
+             const std::vector<yaml::bolt::PseudoProbeInfo> &PseudoProbes) {
     const FlowBlock *BestBlock = matchWithOpcodes(BlendedHash);
     BestBlock = BestBlock ? BestBlock : matchWithCalls(BlendedHash, CallHash);
-    return BestBlock || !YamlBFGUID ? BestBlock
-                                    : matchWithPseudoProbes(PseudoProbes);
+    return BestBlock || !YamlBFGUID
+               ? BestBlock
+               : matchWithPseudoProbes(BlendedHash, PseudoProbes);
   }
 
   /// Returns true if the two basic blocks (in the binary and in the profile)
@@ -237,6 +238,11 @@ public:
     return Hash1.InstrHash == Hash2.InstrHash;
   }
 
+  bool isPseudoProbeMatch(BlendedBlockHash YamlBBHash) {
+    return MatchedWithPseudoProbes.find(YamlBBHash.combine()) !=
+           MatchedWithPseudoProbes.end();
+  }
+
 private:
   using HashBlockPairType = std::pair<BlendedBlockHash, FlowBlock *>;
   std::unordered_map<uint16_t, std::vector<HashBlockPairType>> OpHashToBlocks;
@@ -245,6 +251,7 @@ private:
       IndexToBinaryPseudoProbes;
   std::unordered_map<const MCDecodedPseudoProbe *, FlowBlock *>
       BinaryPseudoProbeToBlock;
+  std::unordered_set<uint64_t> MatchedWithPseudoProbes;
   std::vector<const FlowBlock *> Blocks;
   // If the pseudo probe checksums of the profiled and binary functions are
   // equal, then the YamlBF's GUID is defined and used to match blocks.
@@ -291,7 +298,8 @@ private:
   // Uses pseudo probe information to attach the profile to the appropriate
   // block.
   const FlowBlock *matchWithPseudoProbes(
-      const std::vector<yaml::bolt::PseudoProbeInfo> &PseudoProbes) const {
+      BlendedBlockHash BlendedHash,
+      const std::vector<yaml::bolt::PseudoProbeInfo> &PseudoProbes) {
     // Searches for the pseudo probe attached to the matched function's block,
     // ignoring pseudo probes attached to function calls and inlined functions'
     // blocks.
@@ -345,6 +353,8 @@ private:
     auto BinaryPseudoProbeIt = BinaryPseudoProbeToBlock.find(BinaryPseudoProbe);
     assert(BinaryPseudoProbeIt != BinaryPseudoProbeToBlock.end() &&
            "All binary pseudo probes should belong a binary basic block");
+
+    MatchedWithPseudoProbes.insert(BlendedHash.combine());
     return BinaryPseudoProbeIt->second;
   }
 };
@@ -639,9 +649,13 @@ size_t matchWeightsByHashes(
                         << "\n");
       // Update matching stats accounting for the matched block.
       if (Matcher.isHighConfidenceMatch(BinHash, YamlHash)) {
-        ++BC.Stats.NumMatchedBlocks;
-        BC.Stats.MatchedSampleCount += YamlBB.ExecCount;
+        ++BC.Stats.NumExactMatchedBlocks;
+        BC.Stats.ExactMatchedSampleCount += YamlBB.ExecCount;
         LLVM_DEBUG(dbgs() << "  exact match\n");
+      } else if (Matcher.isPseudoProbeMatch(YamlHash)) {
+        ++BC.Stats.NumPseudoProbeMatchedBlocks;
+        BC.Stats.PseudoProbeMatchedSampleCount += YamlBB.ExecCount;
+        LLVM_DEBUG(dbgs() << "  pseudo probe match\n");
       } else {
         LLVM_DEBUG(dbgs() << "  loose match\n");
       }
