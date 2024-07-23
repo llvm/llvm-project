@@ -230,7 +230,8 @@ const common = {
   integer_type : $ =>
       token(seq(choice('si', 'ui', 'i'), /[1-9]/, repeat(/[0-9]/))),
   float_type : $ => token(
-      choice('f16', 'f32', 'f64', 'f80', 'f128', 'bf16', 'f8E4M3FN', 'f8E5M2')),
+      choice('f16', 'f32', 'f64', 'f80', 'f128', 'bf16', 'f8E4M3FN', 'f8E4M3',
+             'f8E5M2')),
   index_type : $ => token('index'),
   none_type : $ => token('none'),
   complex_type : $ => seq(token('complex'), '<', $._prim_type, '>'),

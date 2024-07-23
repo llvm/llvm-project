@@ -209,7 +209,7 @@ static const unsigned AliasedCheckLimit = 10;
 
 // Limit of the number of uses for potentially transformed instructions/values,
 // used in checks to avoid compile-time explode.
-static constexpr int UsesLimit = 8;
+static constexpr int UsesLimit = 64;
 
 // Another limit for the alias checks: The maximum distance between load/store
 // instructions where alias checks are done.
@@ -5892,6 +5892,8 @@ void BoUpSLP::buildExternalUses(
           }
         }
 
+        if (U && Scalar->hasNUsesOrMore(UsesLimit))
+          U = nullptr;
         int FoundLane = Entry->findLaneForValue(Scalar);
         LLVM_DEBUG(dbgs() << "SLP: Need to extract:" << *UserInst
                           << " from lane " << FoundLane << " from " << *Scalar
@@ -9697,7 +9699,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           CanonicalType = CanonicalType->getWithNewType(IntegerType::get(
               CanonicalType->getContext(),
               DL->getTypeSizeInBits(CanonicalType->getScalarType())));
-        IntrinsicCostAttributes CostAttrs(MinMaxID, VecTy, {VecTy, VecTy});
+        IntrinsicCostAttributes CostAttrs(MinMaxID, CanonicalType,
+                                          {CanonicalType, CanonicalType});
         InstructionCost IntrinsicCost =
             TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
         // If the selects are the only uses of the compares, they will be
@@ -11850,8 +11853,7 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
   Value *castToScalarTyElem(Value *V,
                             std::optional<bool> IsSigned = std::nullopt) {
     auto *VecTy = cast<VectorType>(V->getType());
-    assert(getNumElements(ScalarTy) < getNumElements(VecTy) &&
-           (getNumElements(VecTy) % getNumElements(ScalarTy) == 0));
+    assert(getNumElements(VecTy) % getNumElements(ScalarTy) == 0);
     if (VecTy->getElementType() == ScalarTy->getScalarType())
       return V;
     return Builder.CreateIntCast(
@@ -13498,7 +13500,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         }
         ScalarArg = CEI->getArgOperand(I);
         if (cast<VectorType>(OpVec->getType())->getElementType() !=
-                ScalarArg->getType() &&
+                ScalarArg->getType()->getScalarType() &&
             It == MinBWs.end()) {
           auto *CastTy =
               getWidenedType(ScalarArg->getType(), VecTy->getNumElements());
@@ -13940,6 +13942,7 @@ Value *BoUpSLP::vectorizeTree(
       if (!ScalarsWithNullptrUser.insert(Scalar).second)
         continue;
       assert((ExternallyUsedValues.count(Scalar) ||
+              Scalar->hasNUsesOrMore(UsesLimit) ||
               any_of(Scalar->users(),
                      [&](llvm::User *U) {
                        if (ExternalUsesAsGEPs.contains(U))
@@ -15522,8 +15525,41 @@ void BoUpSLP::computeMinimumValueSizes() {
   auto ComputeMaxBitWidth = [&](const TreeEntry &E, bool IsTopRoot,
                                 bool IsProfitableToDemoteRoot, unsigned Opcode,
                                 unsigned Limit, bool IsTruncRoot,
-                                bool IsSignedCmp) {
+                                bool IsSignedCmp) -> unsigned {
     ToDemote.clear();
+    // Check if the root is trunc and the next node is gather/buildvector, then
+    // keep trunc in scalars, which is free in most cases.
+    if (E.isGather() && IsTruncRoot && E.UserTreeIndices.size() == 1 &&
+        E.Idx > (IsStoreOrInsertElt ? 2 : 1) &&
+        all_of(E.Scalars, [&](Value *V) {
+          return V->hasOneUse() || isa<Constant>(V) ||
+                 (!V->hasNUsesOrMore(UsesLimit) &&
+                  none_of(V->users(), [&](User *U) {
+                    const TreeEntry *TE = getTreeEntry(U);
+                    const TreeEntry *UserTE = E.UserTreeIndices.back().UserTE;
+                    if (TE == UserTE || !TE)
+                      return false;
+                    unsigned UserTESz = DL->getTypeSizeInBits(
+                        UserTE->Scalars.front()->getType());
+                    auto It = MinBWs.find(TE);
+                    if (It != MinBWs.end() && It->second.first > UserTESz)
+                      return true;
+                    return DL->getTypeSizeInBits(U->getType()) > UserTESz;
+                  }));
+        })) {
+      ToDemote.push_back(E.Idx);
+      const TreeEntry *UserTE = E.UserTreeIndices.back().UserTE;
+      auto It = MinBWs.find(UserTE);
+      if (It != MinBWs.end())
+        return It->second.first;
+      unsigned MaxBitWidth =
+          DL->getTypeSizeInBits(UserTE->Scalars.front()->getType());
+      MaxBitWidth = bit_ceil(MaxBitWidth);
+      if (MaxBitWidth < 8 && MaxBitWidth > 1)
+        MaxBitWidth = 8;
+      return MaxBitWidth;
+    }
+
     unsigned VF = E.getVectorFactor();
     auto *TreeRootIT = dyn_cast<IntegerType>(E.Scalars.front()->getType());
     if (!TreeRootIT || !Opcode)

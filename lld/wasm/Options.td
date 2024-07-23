@@ -58,7 +58,7 @@ def compress_relocations: F<"compress-relocations">,
   HelpText<"Compress the relocation targets in the code section.">;
 
 defm demangle: B<"demangle",
-    "Demangle symbol names",
+    "Demangle symbol names (default)",
     "Do not demangle symbol names">;
 
 def emit_relocs: F<"emit-relocs">, HelpText<"Generate relocations in output">;
@@ -79,15 +79,16 @@ def entry: S<"entry">, MetaVarName<"<entry>">,
 defm error_limit:
   EEq<"error-limit", "Maximum number of errors to emit before stopping (0 = no limit)">;
 
-def fatal_warnings: F<"fatal-warnings">,
-  HelpText<"Treat warnings as errors">;
+defm fatal_warnings: B<"fatal-warnings",
+    "Treat warnings as errors",
+    "Do not treat warnings as errors (default)">;
 
 defm gc_sections: B<"gc-sections",
-    "Enable garbage collection of unused sections",
+    "Enable garbage collection of unused sections (defualt)",
     "Disable garbage collection of unused sections">;
 
 defm merge_data_segments: BB<"merge-data-segments",
-    "Enable merging data segments",
+    "Enable merging data segments (default)",
     "Disable merging data segments">;
 
 def help: F<"help">, HelpText<"Print option help">;
@@ -104,8 +105,6 @@ defm mllvm: Eq<"mllvm", "Additional arguments to forward to LLVM's option proces
 
 defm Map: Eq<"Map", "Print a link map to the specified file">;
 
-def no_fatal_warnings: F<"no-fatal-warnings">;
-
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 
@@ -117,7 +116,7 @@ defm pie: B<"pie",
 
 defm print_gc_sections: B<"print-gc-sections",
     "List removed unused sections",
-    "Do not list removed unused sections">;
+    "Do not list removed unused sections (default)">;
 
 def print_map: F<"print-map">,
   HelpText<"Print a link map to the standard output">;

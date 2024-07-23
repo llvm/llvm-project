@@ -476,7 +476,80 @@ constexpr Sp ss[] = {Sp{new int{154}}}; // both-error {{must be initialized by a
                                         // both-note {{pointer to heap-allocated object}} \
                                         // both-note {{allocation performed here}}
 
+namespace DeleteRunsDtors {
+  struct InnerFoo {
+    int *mem;
+    constexpr ~InnerFoo() {
+      delete mem;
+    }
+  };
 
+  struct Foo {
+    int *a;
+    InnerFoo IF;
+
+    constexpr Foo() {
+      a = new int(13);
+      IF.mem = new int(100);
+    }
+    constexpr ~Foo() { delete a; }
+  };
+
+  constexpr int abc() {
+    Foo *F = new Foo();
+    int n = *F->a;
+    delete F;
+
+    return n;
+  }
+  static_assert(abc() == 13);
+
+  constexpr int abc2() {
+    Foo *f = new Foo[3];
+
+    delete[] f;
+
+    return 1;
+  }
+  static_assert(abc2() == 1);
+}
+
+/// FIXME: There is a slight difference in diagnostics here, because we don't
+/// create a new frame when we delete record fields or bases at all.
+namespace FaultyDtorCalledByDelete {
+  struct InnerFoo {
+    int *mem;
+    constexpr ~InnerFoo() {
+      if (mem) {
+        (void)(1/0); // both-warning {{division by zero is undefined}} \
+                     // both-note {{division by zero}}
+      }
+      delete mem;
+    }
+  };
+
+  struct Foo {
+    int *a;
+    InnerFoo IF;
+
+    constexpr Foo() {
+      a = new int(13);
+      IF.mem = new int(100);
+    }
+    constexpr ~Foo() { delete a; }
+  };
+
+  constexpr int abc() {
+    Foo *F = new Foo();
+    int n = *F->a;
+    delete F; // both-note {{in call to}} \
+              // ref-note {{in call to}}
+
+    return n;
+  }
+  static_assert(abc() == 13); // both-error {{not an integral constant expression}} \
+                              // both-note {{in call to 'abc()'}}
+}
 
 
 #else
@@ -487,4 +560,9 @@ constexpr int a() { // both-error {{never produces a constant expression}}
 }
 static_assert(a() == 1, ""); // both-error {{not an integral constant expression}} \
                              // both-note {{in call to 'a()'}}
+
+
+static_assert(true ? *new int : 4, ""); // both-error {{expression is not an integral constant expression}} \
+                                        // both-note {{read of uninitialized object is not allowed in a constant expression}}
+
 #endif

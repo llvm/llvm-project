@@ -141,6 +141,16 @@ public:
                                                  ObjCSelectorRef Selector,
                                                  bool IsInstanceMethod);
 
+  /// Look for information regarding the given C++ method in the given C++ tag
+  /// context.
+  ///
+  /// \param CtxID The ID that references the parent context, i.e. a C++ tag.
+  /// \param Name The name of the C++ method we're looking for.
+  ///
+  /// \returns Information about the method, if known.
+  VersionedInfo<CXXMethodInfo> lookupCXXMethod(ContextID CtxID,
+                                               llvm::StringRef Name);
+
   /// Look for information regarding the given global variable.
   ///
   /// \param Name The name of the global variable.
@@ -165,6 +175,17 @@ public:
   ///
   /// \returns information about the enumerator, if known.
   VersionedInfo<EnumConstantInfo> lookupEnumConstant(llvm::StringRef Name);
+
+  /// Look for the context ID of the given C++ tag.
+  ///
+  /// \param Name The name of the tag we're looking for.
+  /// \param ParentCtx The context in which this tag is declared, e.g. a C++
+  /// namespace.
+  ///
+  /// \returns The ID, if known.
+  std::optional<ContextID>
+  lookupTagID(llvm::StringRef Name,
+              std::optional<Context> ParentCtx = std::nullopt);
 
   /// Look for information regarding the given tag
   /// (struct/union/enum/C++ class).

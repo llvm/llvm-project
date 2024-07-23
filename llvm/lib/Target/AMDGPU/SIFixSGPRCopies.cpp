@@ -456,7 +456,8 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
           (!MO.isImm() && !MO.isReg()) || (MO.isImm() && Imm)) {
         Imm = nullptr;
         break;
-      } else if (MO.isImm())
+      }
+      if (MO.isImm())
         Imm = &MO;
     }
     if (Imm)

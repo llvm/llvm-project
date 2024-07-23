@@ -218,7 +218,7 @@ void CheckChild2CondCodeMatcher::printImpl(raw_ostream &OS,
 }
 
 void CheckValueTypeMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
-  OS.indent(indent) << "CheckValueType MVT::" << TypeName << '\n';
+  OS.indent(indent) << "CheckValueType " << getEnumName(VT) << '\n';
 }
 
 void CheckComplexPatMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
@@ -409,7 +409,7 @@ bool CheckChildIntegerMatcher::isContradictoryImpl(const Matcher *M) const {
 
 bool CheckValueTypeMatcher::isContradictoryImpl(const Matcher *M) const {
   if (const CheckValueTypeMatcher *CVT = dyn_cast<CheckValueTypeMatcher>(M))
-    return CVT->getTypeName() != getTypeName();
+    return CVT->getVT() != getVT();
   return false;
 }
 

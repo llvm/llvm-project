@@ -469,7 +469,9 @@ void Sema::Initialize() {
 #include "clang/Basic/OpenCLExtensionTypes.def"
   }
 
-  if (Context.getTargetInfo().hasAArch64SVETypes()) {
+  if (Context.getTargetInfo().hasAArch64SVETypes() ||
+      (Context.getAuxTargetInfo() &&
+       Context.getAuxTargetInfo()->hasAArch64SVETypes())) {
 #define SVE_TYPE(Name, Id, SingletonId) \
     addImplicitTypedef(Name, Context.SingletonId);
 #include "clang/Basic/AArch64SVEACLETypes.def"
@@ -718,8 +720,8 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
 
   diagnoseNullableToNonnullConversion(Ty, E->getType(), E->getBeginLoc());
   diagnoseZeroToNullptrConversion(Kind, E);
-  if (!isCast(CCK) && Kind != CK_NullToPointer &&
-      Kind != CK_NullToMemberPointer)
+  if (Context.hasAnyFunctionEffects() && !isCast(CCK) &&
+      Kind != CK_NullToPointer && Kind != CK_NullToMemberPointer)
     diagnoseFunctionEffectConversion(Ty, E->getType(), E->getBeginLoc());
 
   QualType ExprTy = Context.getCanonicalType(E->getType());

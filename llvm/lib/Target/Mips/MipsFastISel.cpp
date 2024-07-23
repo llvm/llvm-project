@@ -1763,8 +1763,8 @@ bool MipsFastISel::selectRet(const Instruction *I) {
     RetRegs.push_back(VA.getLocReg());
   }
   MachineInstrBuilder MIB = emitInst(Mips::RetRA);
-  for (unsigned i = 0, e = RetRegs.size(); i != e; ++i)
-    MIB.addReg(RetRegs[i], RegState::Implicit);
+  for (unsigned Reg : RetRegs)
+    MIB.addReg(Reg, RegState::Implicit);
   return true;
 }
 

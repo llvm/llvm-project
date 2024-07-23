@@ -2019,7 +2019,7 @@ canInitializeArrayWithEmbedDataString(ArrayRef<Expr *> ExprList,
   if (InitType->isArrayType()) {
     const ArrayType *InitArrayType = InitType->getAsArrayTypeUnsafe();
     QualType InitElementTy = InitArrayType->getElementType();
-    QualType EmbedExprElementTy = EE->getType();
+    QualType EmbedExprElementTy = EE->getDataStringLiteral()->getType();
     const bool TypesMatch =
         Context.typesAreCompatible(InitElementTy, EmbedExprElementTy) ||
         (InitElementTy->isCharType() && EmbedExprElementTy->isCharType());
@@ -5624,7 +5624,7 @@ static void TryOrBuildParenListInitialization(
           << SE->getSourceRange();
       return;
     } else {
-      assert(isa<IncompleteArrayType>(Entity.getType()));
+      assert(Entity.getType()->isIncompleteArrayType());
       ArrayLength = Args.size();
     }
     EntityIndexToProcess = ArrayLength;
