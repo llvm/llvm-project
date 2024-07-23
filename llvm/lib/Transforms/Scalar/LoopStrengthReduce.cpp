@@ -947,7 +947,8 @@ static Immediate ExtractImmediate(const SCEV *&S, ScalarEvolution &SE) {
                            SCEV::FlagAnyWrap);
     return Result;
   } else if (EnableVScaleImmediates)
-    if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(S))
+    if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(S);
+        M && M->getNumOperands() == 2)
       if (const SCEVConstant *C = dyn_cast<SCEVConstant>(M->getOperand(0)))
         if (isa<SCEVVScale>(M->getOperand(1))) {
           S = SE.getConstant(M->getType(), 0);
