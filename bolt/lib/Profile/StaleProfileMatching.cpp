@@ -198,9 +198,9 @@ public:
             const std::vector<uint64_t> &CallHashes,
             const std::unordered_map<uint64_t,
                                      std::vector<const MCDecodedPseudoProbe *>>
-                &IndexToBinaryPseudoProbes,
+                &IndexToBBPseudoProbes,
             const std::unordered_map<const MCDecodedPseudoProbe *, FlowBlock *>
-                &BinaryPseudoProbeToBlock,
+                &BBPseudoProbeToBlock,
             const uint64_t YamlBFGUID) {
     assert(Blocks.size() == Hashes.size() &&
            Hashes.size() == CallHashes.size() &&
@@ -214,8 +214,8 @@ public:
             std::make_pair(Hashes[I], Block));
       this->Blocks.push_back(Block);
     }
-    this->IndexToBinaryPseudoProbes = IndexToBinaryPseudoProbes;
-    this->BinaryPseudoProbeToBlock = BinaryPseudoProbeToBlock;
+    this->IndexToBBPseudoProbes = IndexToBBPseudoProbes;
+    this->BBPseudoProbeToBlock = BBPseudoProbeToBlock;
     this->YamlBFGUID = YamlBFGUID;
   }
 
@@ -259,9 +259,9 @@ private:
   std::unordered_map<uint16_t, std::vector<HashBlockPairType>> OpHashToBlocks;
   std::unordered_map<uint64_t, std::vector<HashBlockPairType>> CallHashToBlocks;
   std::unordered_map<uint64_t, std::vector<const MCDecodedPseudoProbe *>>
-      IndexToBinaryPseudoProbes;
+      IndexToBBPseudoProbes;
   std::unordered_map<const MCDecodedPseudoProbe *, FlowBlock *>
-      BinaryPseudoProbeToBlock;
+      BBPseudoProbeToBlock;
   std::unordered_set<uint64_t> MatchedWithPseudoProbes;
   std::vector<const FlowBlock *> Blocks;
   uint64_t YamlBFGUID{0};
@@ -346,8 +346,8 @@ private:
         errs() << "BOLT-WARNING: invalid index block pseudo probe index\n";
       return nullptr;
     }
-    auto It = IndexToBinaryPseudoProbes.find(Index);
-    if (It == IndexToBinaryPseudoProbes.end()) {
+    auto It = IndexToBBPseudoProbes.find(Index);
+    if (It == IndexToBBPseudoProbes.end()) {
       if (opts::Verbosity >= 3)
         errs() << "BOLT-WARNING: no block pseudo probes found within binary "
                   "block at index\n";
@@ -360,8 +360,8 @@ private:
       return nullptr;
     }
     const MCDecodedPseudoProbe *BinaryPseudoProbe = It->second[0];
-    auto BinaryPseudoProbeIt = BinaryPseudoProbeToBlock.find(BinaryPseudoProbe);
-    assert(BinaryPseudoProbeIt != BinaryPseudoProbeToBlock.end() &&
+    auto BinaryPseudoProbeIt = BBPseudoProbeToBlock.find(BinaryPseudoProbe);
+    assert(BinaryPseudoProbeIt != BBPseudoProbeToBlock.end() &&
            "All binary pseudo probes should belong a binary basic block");
 
     MatchedWithPseudoProbes.insert(BlendedHash.combine());
@@ -560,9 +560,9 @@ size_t matchWeightsByHashes(
   std::vector<FlowBlock *> Blocks;
   std::vector<BlendedBlockHash> BlendedHashes;
   std::unordered_map<uint64_t, std::vector<const MCDecodedPseudoProbe *>>
-      IndexToBinaryPseudoProbes;
+      IndexToBBPseudoProbes;
   std::unordered_map<const MCDecodedPseudoProbe *, FlowBlock *>
-      BinaryPseudoProbeToBlock;
+      BBPseudoProbeToBlock;
   const MCPseudoProbeDecoder *PseudoProbeDecoder = BC.getPseudoProbeDecoder();
   for (uint64_t I = 0; I < BlockOrder.size(); I++) {
     const BinaryBasicBlock *BB = BlockOrder[I];
@@ -598,8 +598,8 @@ size_t matchWeightsByHashes(
             continue;
           if (Probe.getType() != static_cast<uint8_t>(PseudoProbeType::Block))
             continue;
-          IndexToBinaryPseudoProbes[Probe.getIndex()].push_back(&Probe);
-          BinaryPseudoProbeToBlock[&Probe] = Blocks[I];
+          IndexToBBPseudoProbes[Probe.getIndex()].push_back(&Probe);
+          BBPseudoProbeToBlock[&Probe] = Blocks[I];
         }
       }
     }
@@ -624,8 +624,8 @@ size_t matchWeightsByHashes(
           : 0;
 
   StaleMatcher Matcher;
-  Matcher.init(Blocks, BlendedHashes, CallHashes, IndexToBinaryPseudoProbes,
-               BinaryPseudoProbeToBlock, YamlBFGUID);
+  Matcher.init(Blocks, BlendedHashes, CallHashes, IndexToBBPseudoProbes,
+               BBPseudoProbeToBlock, YamlBFGUID);
 
   // Index in yaml profile => corresponding (matched) block
   DenseMap<uint64_t, const FlowBlock *> MatchedBlocks;
@@ -683,8 +683,7 @@ size_t matchWeightsByHashes(
   }
 
   if (opts::Verbosity >= 2) {
-    outs() << "BOLT-INFO: "
-           << Matcher.getNumBlocksMatchedWithPseudoProbes()
+    outs() << "BOLT-INFO: " << Matcher.getNumBlocksMatchedWithPseudoProbes()
            << " blocks matched with pseudo probes\n"
            << "BOLT-INFO: " << Matcher.getNumBlocksMatchedWithOpcodes()
            << " blocks matched with opcodes\n";
