@@ -796,16 +796,17 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
       CapturedStmtInfo &&
       "CapturedStmtInfo should be set when generating the captured function");
   const CapturedDecl *CD = S.getCapturedDecl();
+
   // Build the argument list.
-  // AMDGCN does not generate wrapper kernels properly, fails to launch kernel.
-  bool NeedWrapperFunction = !CGM.getTriple().isAMDGCN() &&
-      (getDebugInfo() && CGM.getCodeGenOpts().hasReducedDebugInfo());
-  FunctionArgList Args;
-  llvm::MapVector<const Decl *, std::pair<const VarDecl *, Address>> LocalAddrs;
-  llvm::DenseMap<const Decl *, std::pair<const Expr *, llvm::Value *>> VLASizes;
+  FunctionArgList Args, WrapperArgs;
+  llvm::MapVector<const Decl *, std::pair<const VarDecl *, Address>> LocalAddrs,
+      WrapperLocalAddrs;
+  llvm::DenseMap<const Decl *, std::pair<const Expr *, llvm::Value *>> VLASizes,
+      WrapperVLASizes;
   SmallString<256> Buffer;
   llvm::raw_svector_ostream Out(Buffer);
   Out << CapturedStmtInfo->getHelperName();
+
   bool isKernel = (Out.str().find("__omp_offloading_") != std::string::npos);
 
   // For host codegen, we need to determine now whether Xteam reduction is used
@@ -834,22 +835,40 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
     }
   }
 
-  if (NeedWrapperFunction)
+  // AMDGCN does not generate wrapper kernels properly, fails to launch kernel.
+  // Xteam reduction does not use wrapper kernels.
+  bool NeedWrapperFunction =
+      !CGM.getTriple().isAMDGCN() && !isXteamKernel &&
+      (getDebugInfo() && CGM.getCodeGenOpts().hasReducedDebugInfo());
+
+  CodeGenFunction WrapperCGF(CGM, /*suppressNewContext=*/true);
+  llvm::Function *WrapperF = nullptr;
+  if (NeedWrapperFunction) {
+    // Emit the final kernel early to allow attributes to be added by the
+    // OpenMPI-IR-Builder.
+    FunctionOptions WrapperFO(&S, /*UIntPtrCastRequired=*/true,
+                              /*RegisterCastedArgsOnly=*/true,
+                              CapturedStmtInfo->getHelperName(), Loc);
+    WrapperCGF.CapturedStmtInfo = CapturedStmtInfo;
+    WrapperF = emitOutlinedFunctionPrologue(WrapperCGF, D, Args, LocalAddrs,
+                                            VLASizes, WrapperCGF.CXXThisValue,
+                                            WrapperFO, isKernel, isXteamKernel);
     Out << "_debug__";
+  }
   FunctionOptions FO(&S, !NeedWrapperFunction, /*RegisterCastedArgsOnly=*/false,
                      Out.str(), Loc);
-  llvm::Function *F =
-      emitOutlinedFunctionPrologue(*this, D, Args, LocalAddrs, VLASizes,
-                                   CXXThisValue, FO, isKernel, isXteamKernel);
+  llvm::Function *F = emitOutlinedFunctionPrologue(
+      *this, D, WrapperArgs, WrapperLocalAddrs, WrapperVLASizes, CXXThisValue,
+      FO, isKernel, isXteamKernel);
   CodeGenFunction::OMPPrivateScope LocalScope(*this);
-  for (const auto &LocalAddrPair : LocalAddrs) {
+  for (const auto &LocalAddrPair : WrapperLocalAddrs) {
     if (LocalAddrPair.second.first) {
       LocalScope.addPrivate(LocalAddrPair.second.first,
                             LocalAddrPair.second.second);
     }
   }
   (void)LocalScope.Privatize();
-  for (const auto &VLASizePair : VLASizes)
+  for (const auto &VLASizePair : WrapperVLASizes)
     VLASizeMap[VLASizePair.second.first] = VLASizePair.second.second;
   PGO.assignRegionCounters(GlobalDecl(CD), F);
 
@@ -861,16 +880,16 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
       EmitOptKernel(
           D, FStmt,
           llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP, Loc,
-          /*Args=*/nullptr);
+          /*WrapperArgs=*/nullptr);
     else
       EmitOptKernel(
           D, FStmt,
           llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP,
-          Loc, /*Args=*/nullptr);
+          Loc, /*WrapperArgs=*/nullptr);
   } else if (CGM.getLangOpts().OpenMPIsTargetDevice && isXteamKernel) {
     EmitOptKernel(D, FStmt,
                   llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_XTEAM_RED,
-                  Loc, &Args);
+                  Loc, &WrapperArgs);
   } else {
     CapturedStmtInfo->EmitBody(*this, CD->getBody());
   }
@@ -880,22 +899,9 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
   if (!NeedWrapperFunction)
     return F;
 
-  FunctionOptions WrapperFO(&S, /*UIntPtrCastRequired=*/true,
-                            /*RegisterCastedArgsOnly=*/true,
-                            CapturedStmtInfo->getHelperName(), Loc);
-  CodeGenFunction WrapperCGF(CGM, /*suppressNewContext=*/true);
-  WrapperCGF.CapturedStmtInfo = CapturedStmtInfo;
-  Args.clear();
-  LocalAddrs.clear();
-  VLASizes.clear();
-  SmallString<256> Buffer2;
-  llvm::raw_svector_ostream Out2(Buffer2);
-  Out2 << CapturedStmtInfo->getHelperName();
-  isKernel = (Out2.str().find("__omp_offloading_") != std::string::npos);
-
-  llvm::Function *WrapperF = emitOutlinedFunctionPrologue(
-      WrapperCGF, D, Args, LocalAddrs, VLASizes, WrapperCGF.CXXThisValue,
-      WrapperFO, isKernel, isXteamKernel);
+  // Reverse the order.
+  WrapperF->removeFromParent();
+  F->getParent()->getFunctionList().insertAfter(F->getIterator(), WrapperF);
 
   llvm::SmallVector<llvm::Value *, 4> CallArgs;
   auto *PI = F->arg_begin();

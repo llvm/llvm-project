@@ -6030,7 +6030,17 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
   Constant *MayUseNestedParallelismVal = ConstantInt::getSigned(Int8, true);
   Constant *DebugIndentionLevelVal = ConstantInt::getSigned(Int16, 0);
 
-  Function *Kernel = Builder.GetInsertBlock()->getParent();
+  Function *DebugKernelWrapper = Builder.GetInsertBlock()->getParent();
+  Function *Kernel = DebugKernelWrapper;
+
+  // We need to strip the debug prefix to get the correct kernel name.
+  StringRef KernelName = Kernel->getName();
+  const std::string DebugPrefix = "_debug__";
+  if (KernelName.ends_with(DebugPrefix)) {
+    KernelName = KernelName.drop_back(DebugPrefix.length());
+    Kernel = M.getFunction(KernelName);
+    assert(Kernel && "Expected the real kernel to exist");
+  }
 
   // Manifest the launch configuration in the metadata matching the kernel
   // environment.
@@ -6054,12 +6064,6 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
   Constant *MaxTeams = ConstantInt::getSigned(Int32, MaxTeamsVal);
   Constant *ReductionDataSize = ConstantInt::getSigned(Int32, 0);
   Constant *ReductionBufferLength = ConstantInt::getSigned(Int32, 0);
-
-  // We need to strip the debug prefix to get the correct kernel name.
-  StringRef KernelName = Kernel->getName();
-  const std::string DebugPrefix = "_debug__";
-  if (KernelName.ends_with(DebugPrefix))
-    KernelName = KernelName.drop_back(DebugPrefix.length());
 
   Function *Fn = getOrCreateRuntimeFunctionPtr(
       omp::RuntimeFunction::OMPRTL___kmpc_target_init);
@@ -6113,7 +6117,7 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
           ? KernelEnvironmentGV
           : ConstantExpr::getAddrSpaceCast(KernelEnvironmentGV,
                                            KernelEnvironmentPtr);
-  Value *KernelLaunchEnvironment = Kernel->getArg(0);
+  Value *KernelLaunchEnvironment = DebugKernelWrapper->getArg(0);
   CallInst *ThreadKind =
       Builder.CreateCall(Fn, {KernelEnvironment, KernelLaunchEnvironment});
 
