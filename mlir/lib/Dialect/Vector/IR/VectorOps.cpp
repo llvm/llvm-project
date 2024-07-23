@@ -4134,6 +4134,7 @@ static LogicalResult foldTransferInBoundsAttribute(TransferOp op) {
   bool changed = false;
   SmallVector<bool, 4> newInBounds;
   newInBounds.reserve(op.getTransferRank());
+  SmallVector<unsigned> nonBcastDims;
   for (unsigned i = 0; i < op.getTransferRank(); ++i) {
     // 1. Already marked as in-bounds, nothing to see here.
     if (op.isDimInBounds(i)) {
@@ -4148,15 +4149,27 @@ static LogicalResult foldTransferInBoundsAttribute(TransferOp op) {
       // 2.a Non-broadcast dim
       inBounds = isInBounds(op, /*resultIdx=*/i,
                             /*indicesIdx=*/dimExpr.getPosition());
-    } else {
-      // 2.b Broadcast dim
-      inBounds = true;
+      // 2.b Broadcast dims are handled after processing non-bcast dims
+      // FIXME: constant expr != 0 are not broadcasts - should such
+      // constants be allowed at all?
+      nonBcastDims.push_back(i);
     }
 
     newInBounds.push_back(inBounds);
     // We commit the pattern if it is "more inbounds".
     changed |= inBounds;
   }
+
+  // Handle broadcast dims: if all non-broadcast dims are "in
+  // bounds", then all bcast dims should be "in bounds" as well.
+  bool allNonBcastDimsInBounds = llvm::all_of(
+      nonBcastDims, [&newInBounds](unsigned idx) { return newInBounds[idx]; });
+  if (allNonBcastDimsInBounds)
+    llvm::for_each(permutationMap.getBroadcastDims(), [&](unsigned idx) {
+      changed |= !newInBounds[idx];
+      newInBounds[idx] = true;
+    });
+
   if (!changed)
     return failure();
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
