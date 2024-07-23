@@ -1,4 +1,4 @@
-# REQUIRES: shell
+# REQUIRES: shell, aarch64-registered-target
 # UNSUPPORTED: system-windows
 
 # Test merge a single object file into a cgdata
