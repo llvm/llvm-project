@@ -2638,8 +2638,7 @@ MachineBlockPlacement::collectLoopBlockSet(const MachineLoop &L) {
   // Copy the blocks into a BlockFilterSet, as iterating it is faster than
   // std::set. We will only remove blocks and never insert them, which will
   // preserve the ordering.
-  BlockFilterSet Ret;
-  Ret.insert(LoopBlockSet.begin(), LoopBlockSet.end());
+  BlockFilterSet Ret(LoopBlockSet.begin(), LoopBlockSet.end());
   return Ret;
 }
 
