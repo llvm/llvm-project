@@ -161,12 +161,25 @@ class SM_Discard_Pseudo <string opName, OffsetMode offsets>
   let has_soffset = offsets.HasSOffset;
 }
 
+multiclass SM_Load_Pseudos<string op, RegisterClass baseClass,
+                           RegisterClass dstClass, OffsetMode offsets> {
+  defvar opName = !tolower(op);
+  def "" : SM_Load_Pseudo <opName, baseClass, dstClass, offsets>;
+
+  // The constrained multi-dword load equivalents with early clobber flag at
+  // the dst operands. They are needed only for codegen and there is no need
+  // for their real opcodes.
+  if !gt(dstClass.RegTypes[0].Size, 32) then
+    let Constraints = "@earlyclobber $sdst",
+        PseudoInstr = op # offsets.Variant in
+      def "" # _ec : SM_Load_Pseudo <opName, baseClass, dstClass, offsets>;
+}
+
 multiclass SM_Pseudo_Loads<RegisterClass baseClass,
                            RegisterClass dstClass> {
-  defvar opName = !tolower(NAME);
-  def _IMM : SM_Load_Pseudo <opName, baseClass, dstClass, IMM_Offset>;
-  def _SGPR : SM_Load_Pseudo <opName, baseClass, dstClass, SGPR_Offset>;
-  def _SGPR_IMM : SM_Load_Pseudo <opName, baseClass, dstClass, SGPR_IMM_Offset>;
+  defm _IMM : SM_Load_Pseudos <NAME, baseClass, dstClass, IMM_Offset>;
+  defm _SGPR : SM_Load_Pseudos <NAME, baseClass, dstClass, SGPR_Offset>;
+  defm _SGPR_IMM : SM_Load_Pseudos <NAME, baseClass, dstClass, SGPR_IMM_Offset>;
 }
 
 multiclass SM_Pseudo_Stores<RegisterClass baseClass,
