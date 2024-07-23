@@ -61,7 +61,7 @@ For the example below, the ``WaveActiveCountBits`` API function became available
 The availability of ``ddx`` function depends on a shader stage. It is available for pixel shaders in shader model 2.1 and higher, for compute, mesh and amplification shaders in shader model 6.6 and higher. For any other shader stages it is not available.
 
 Compute shader example
-======================
+----------------------
 
 .. code-block:: c++
 
@@ -93,7 +93,7 @@ With strict diagnostic mode, in addition to the 2 errors above Clang will also e
    <>:7:13: error: 'WaveActiveCountBits' is only available on Shader Model 6.5 or newer
 
 Shader library example
-======================
+----------------------
 
 .. code-block:: c++
 
