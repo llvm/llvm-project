@@ -314,7 +314,7 @@ void MCELFStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
 void MCELFStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
                                            StringRef Name,
                                            bool KeepOriginalSym) {
-  getAssembler().Symvers.push_back(MCAssembler::Symver{
+  getWriter().Symvers.push_back(ELFObjectWriter::Symver{
       getStartTokLoc(), OriginalSym, Name, KeepOriginalSym});
 }
 

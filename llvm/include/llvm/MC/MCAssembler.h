@@ -140,15 +140,6 @@ private:
   handleFixup(MCFragment &F, const MCFixup &Fixup, const MCSubtargetInfo *STI);
 
 public:
-  struct Symver {
-    SMLoc Loc;
-    const MCSymbol *Sym;
-    StringRef Name;
-    // True if .symver *, *@@@* or .symver *, *, remove.
-    bool KeepOriginalSym;
-  };
-  std::vector<Symver> Symvers;
-
   /// Construct a new assembler instance.
   //
   // FIXME: How are we going to parameterize this? Two obvious options are stay
