@@ -3881,6 +3881,17 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerFMad(MI);
   case TargetOpcode::G_FFLOOR:
     return lowerFFloor(MI);
+  case TargetOpcode::G_LROUND:
+  case TargetOpcode::G_LLROUND: {
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(1).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
+    auto Round = MIRBuilder.buildInstr(TargetOpcode::G_INTRINSIC_ROUND, {SrcTy},
+                                       {SrcReg});
+    MIRBuilder.buildFPTOSI(DstReg, Round);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case TargetOpcode::G_INTRINSIC_ROUND:
     return lowerIntrinsicRound(MI);
   case TargetOpcode::G_FRINT: {
