@@ -1812,11 +1812,10 @@ bool Parser::isMissingTemplateKeywordBeforeScope() {
   else
     PP.EnterToken(Tok, /*IsReinject=*/true);
 
-  SourceLocation EndLoc = Tok.getLocation();
-  Tok.setLocation(StartLoc);
   Tok.setKind(tok::annot_primary_expr);
   setExprAnnotation(Tok, Result);
-  Tok.setAnnotationEndLoc(EndLoc);
+  Tok.setAnnotationEndLoc(Tok.getLocation());
+  Tok.setLocation(StartLoc);
   PP.AnnotateCachedTokens(Tok);
   return Result.isInvalid();
 }
