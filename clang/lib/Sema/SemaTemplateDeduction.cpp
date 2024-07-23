@@ -688,10 +688,7 @@ DeduceTemplateSpecArguments(Sema &S, TemplateParameterList *TemplateParams,
 
   // FIXME: To preserve sugar, the TST needs to carry sugared resolved
   // arguments.
-  ArrayRef<TemplateArgument> PResolved =
-      TP->getCanonicalTypeInternal()
-          ->castAs<TemplateSpecializationType>()
-          ->template_arguments();
+  ArrayRef<TemplateArgument> PResolved = TP->template_arguments();
 
   QualType UA = A;
   std::optional<NestedNameSpecifier *> NNS;
@@ -951,10 +948,12 @@ private:
 
     // Skip over the pack elements that were expanded into separate arguments.
     // If we partially expanded, this is the number of partial arguments.
-    if (IsPartiallyExpanded)
+    if (IsPartiallyExpanded)  {
       PackElements += NumPartialPackArgs;
-    else if (IsExpanded)
+    } else if (IsExpanded) {
+      assert(FixedNumExpansions.has_value());
       PackElements += *FixedNumExpansions;
+    }
 
     for (auto &Pack : Packs) {
       if (Info.PendingDeducedPacks.size() > Pack.Index)
