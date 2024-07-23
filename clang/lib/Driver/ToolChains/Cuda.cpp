@@ -625,6 +625,8 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
                   C.getDriver().getLTOMode() == LTOK_Thin);
 
+  addGPULibraries(getToolChain(), Args, CmdArgs);
+
   // Add paths for the default clang library path.
   SmallString<256> DefaultLibPath =
       llvm::sys::path::parent_path(TC.getDriver().Dir);
