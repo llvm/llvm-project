@@ -88,6 +88,11 @@ AST_MATCHER(VarDecl, hasIdentifier) {
 
 } // namespace
 
+MissingStdForwardCheck::MissingStdForwardCheck(StringRef Name,
+                                               ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IgnoreStaticCasts(Options.get("IgnoreStaticCasts", false)) {}
+
 void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
   auto RefToParmImplicit = allOf(
       equalsBoundNode("var"), hasInitializer(ignoringParenImpCasts(
@@ -132,7 +137,7 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
                    hasAncestor(expr(hasUnevaluatedContext())))));
 
   auto StaticCast =
-      Options.get("IgnoreStaticCasts", false)
+      IgnoreStaticCasts
           ? cxxStaticCastExpr(
                 hasDestinationType(lValueReferenceType(
                     pointee(type(equalsBoundNode("qtype"))))),
