@@ -24,7 +24,9 @@
 namespace mlir {
 namespace quant {
 
+class QuantizedType;
 class UniformQuantizedType;
+class UniformQuantizedPerAxisType;
 
 } // namespace quant
 } // namespace mlir

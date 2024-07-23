@@ -28,7 +28,9 @@ class quant_Op<string mnemonic, list<Trait> traits> :
 // Quantization casts
 //===----------------------------------------------------------------------===//
 
-def quant_DequantizeCastOp : quant_Op<"dcast", [Pure]> {
+def quant_DequantizeCastOp : quant_Op<"dcast", [
+    Pure,
+    quant_SameScalarOrTensorShape]> {
   let summary = "convert back from a quantized to quantizable (expressed) type operation";
   let description = [{
     A DequantizeCast op `dcast` represents the inverse of a `qcast`,
@@ -42,12 +44,22 @@ def quant_DequantizeCastOp : quant_Op<"dcast", [Pure]> {
     all operands to ops that must operate with the expressed type (typically
     math ops prior to lowering to target-specific, quantized kernels).
   }];
-  let arguments = (ins quant_RealValueType:$input);
-  let results = (outs quant_RealValueType:$result);
+  let arguments = (ins quant_QuantizedScalarOrTensor:$input);
+  let results = (outs quant_FloatScalarOrTensor:$result);
   let assemblyFormat = "$input attr-dict `:` type($input) `to` type($result)";
+  let hasVerifier = 1;
+  let extraClassDeclaration = [{
+    /// Return the float type of the scalar or tensor result.
+    FloatType getFloatType();
+    
+    /// Return the quantized type of the scalar or tensor input.
+    quant::QuantizedType getQuantizedType();
+  }];
 }
 
-def quant_QuantizeCastOp : quant_Op<"qcast", [Pure]> {
+def quant_QuantizeCastOp : quant_Op<"qcast", [
+    Pure,
+    quant_SameScalarOrTensorShape]> {
   let summary = "convert a quantizable type to a quantized type";
   let description = [{
     A QuantizeCast `qcast` represents a potential type shift from a quantizable
@@ -71,12 +83,22 @@ def quant_QuantizeCastOp : quant_Op<"qcast", [Pure]> {
     it is legal to use a quantized representation (but is not known to be
     acceptable).
   }];
-  let arguments = (ins quant_RealValueType:$input);
-  let results = (outs quant_RealValueType:$result);
+  let arguments = (ins quant_FloatScalarOrTensor:$input);
+  let results = (outs quant_QuantizedScalarOrTensor:$result);
   let assemblyFormat = "$input attr-dict `:` type($input) `to` type($result)";
+  let hasVerifier = 1;
+  let extraClassDeclaration = [{
+    /// Return the float type of the scalar or tensor input.
+    FloatType getFloatType();
+    
+    /// Return the quantized type of the scalar or tensor result.
+    quant::QuantizedType getQuantizedType();
+  }];
 }
 
-def quant_StorageCastOp : quant_Op<"scast", [Pure]> {
+def quant_StorageCastOp : quant_Op<"scast", [
+    Pure,
+    quant_SameScalarOrTensorShape]> {
   let summary = "cast from or to a type based on the storage type and the corresponding quantized type";
   let description = [{
     A StorageCast `scast` represents a cast from or to a type based on the
@@ -97,8 +119,8 @@ def quant_StorageCastOp : quant_Op<"scast", [Pure]> {
     vector<4xi8> -> vector<4x!quant<"uniform[i8:f32]{1.0}">>
     ```
   }];
-  let arguments = (ins quant_RealOrStorageValueType:$input);
-  let results = (outs quant_RealOrStorageValueType:$result);
+  let arguments = (ins quant_IntegerOrQuantizedScalarOrTensor:$input);
+  let results = (outs quant_IntegerOrQuantizedScalarOrTensor:$result);
   let assemblyFormat = "$input attr-dict `:` type($input) `to` type($result)";
   let hasFolder = 1;
 }

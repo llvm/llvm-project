@@ -22,53 +22,63 @@ def Quant_Dialect : Dialect {
   let useDefaultTypePrinterParser = 1;
 }
 
+
 //===----------------------------------------------------------------------===//
-// Quantization type definitions
+// Type definitions
 //===----------------------------------------------------------------------===//
 
-class quant_TypedPrimitiveOrContainer<Type etype> :
-    Type<Or<[etype.predicate,
-                TensorOf<[etype]>.predicate,
-                VectorOf<[etype]>.predicate]>,
-         "primitive/tensor/vector of " # etype.summary>;
+class quant_ScalarOrTensorOf<Type etype> :
+    Type<Or<[etype.predicate, TensorOf<[etype]>.predicate]>,
+         "scalar or tensor of " # etype.summary>;
 
-// An implementation of QuantizedType.
 def quant_QuantizedType :
-    Type<CPred<"::llvm::isa<mlir::quant::QuantizedType>($_self)">, "QuantizedType">;
+    Type<CPred<"::llvm::isa<mlir::quant::QuantizedType>($_self)">, "quantized type">;
 
-// A primitive type that can represent a real value. This is either a
-// floating point value or a quantized type.
-def quant_RealPrimitiveType :
-    Type<Or<[AnyFloat.predicate, quant_QuantizedType.predicate]>,
-    "real valued primitive (float or quantized type)">;
+def quant_ScalarType :
+    Type<Or<[
+      AnyInteger.predicate,
+      AnyFloat.predicate,
+      quant_QuantizedType.predicate
+    ]>, "integer, float, or quantized scalar">;
 
-// A primitive type that can represent a storage value. This is either an
-// integer or quantized type.
-def quant_StoragePrimitiveType :
-    Type<Or<[AnySignlessInteger.predicate, quant_QuantizedType.predicate]>,
-    "quantized storage primitive (integer or quantized type)">;
+def quant_IntegerOrQuantizedType :
+    Type<Or<[AnyInteger.predicate, quant_QuantizedType.predicate]>>;
 
-// A primitive or container of RealPrimitiveType.
-def quant_RealValueType :
-    quant_TypedPrimitiveOrContainer<quant_RealPrimitiveType>;
+def quant_FloatScalarOrTensor :
+    quant_ScalarOrTensorOf<AnyFloat>;
 
-// A primitive or container of StoragePrimitiveType.
-def quant_StorageValueType :
-    quant_TypedPrimitiveOrContainer<quant_StoragePrimitiveType>;
+def quant_IntegerScalarOrTensor :
+    quant_ScalarOrTensorOf<AnyInteger>;
 
-// Either a real valued or storage primitive or container type.
-def quant_RealOrStorageValueType :
-    Type<Or<[quant_RealValueType.predicate, quant_StorageValueType.predicate]>,
-    "real valued or storage primitive or container type">;
+def quant_QuantizedScalarOrTensor :
+    quant_ScalarOrTensorOf<quant_QuantizedType>;
 
-// An implementation of UniformQuantizedType.
-def quant_UniformQuantizedType :
-    DialectType<Quant_Dialect,
-                CPred<"::llvm::isa<UniformQuantizedType>($_self)">,
-                "UniformQuantizedType">;
+def quant_IntegerOrQuantizedScalarOrTensor :
+    quant_ScalarOrTensorOf<quant_IntegerOrQuantizedType>;
 
-// Predicate for detecting a container or primitive of UniformQuantizedType.
-def quant_UniformQuantizedValueType :
-    quant_TypedPrimitiveOrContainer<quant_UniformQuantizedType>;
+
+//===----------------------------------------------------------------------===//
+// Traits
+//===----------------------------------------------------------------------===//
+
+def quant_SameScalarOrTensorShape :
+    PredOpTrait<
+      "input and result are both scalars or both tensors with matching shape",
+      Or<[
+        And<[
+          TypeIsPred<"input", quant_ScalarType>,
+          TypeIsPred<"result", quant_ScalarType>
+        ]>,
+        And<[
+          TypeIsPred<"input", AnyUnrankedTensor>,
+          TypeIsPred<"result", AnyUnrankedTensor>
+        ]>,
+        And<[
+          TypeIsPred<"input", AnyRankedTensor>,
+          TypeIsPred<"result", AnyRankedTensor>,
+          AllShapesMatch<["input", "result"]>.predicate
+        ]>
+      ]>
+    >;
 
 #endif // QUANT_BASE
