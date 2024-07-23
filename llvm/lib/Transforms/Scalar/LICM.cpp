@@ -113,8 +113,6 @@ STATISTIC(NumFPAssociationsHoisted, "Number of invariant FP expressions "
 STATISTIC(NumIntAssociationsHoisted,
           "Number of invariant int expressions "
           "reassociated and hoisted out of the loop");
-STATISTIC(NumBOAssociationsHoisted, "Number of invariant BinaryOp expressions "
-                                    "reassociated and hoisted out of the loop");
 
 /// Memory promotion is enabled by default.
 static cl::opt<bool>
@@ -2781,60 +2779,6 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
   return true;
 }
 
-/// Reassociate general associative binary expressions of the form
-///
-/// 1. "(LV op C1) op C2" ==> "LV op (C1 op C2)"
-///
-/// where op is an associative binary op, LV is a loop variant, and C1 and C2
-/// are loop invariants that we want to hoist.
-///
-/// TODO: This can be extended to more cases such as
-/// 2. "C1 op (C2 op LV)" ==> "(C1 op C2) op LV"
-/// 3. "(C1 op LV) op C2" ==> "LV op (C1 op C2)" if op is commutative
-/// 4. "C1 op (LV op C2)" ==> "(C1 op C2) op LV" if op is commutative
-static bool hoistBOAssociation(Instruction &I, Loop &L,
-                               ICFLoopSafetyInfo &SafetyInfo,
-                               MemorySSAUpdater &MSSAU, AssumptionCache *AC,
-                               DominatorTree *DT) {
-  BinaryOperator *BO = dyn_cast<BinaryOperator>(&I);
-  if (!BO || !BO->isAssociative())
-    return false;
-
-  Instruction::BinaryOps Opcode = BO->getOpcode();
-  BinaryOperator *Op0 = dyn_cast<BinaryOperator>(BO->getOperand(0));
-
-  // Transform: "(LV op C1) op C2" ==> "LV op (C1 op C2)"
-  if (Op0 && Op0->getOpcode() == Opcode) {
-    Value *LV = Op0->getOperand(0);
-    Value *C1 = Op0->getOperand(1);
-    Value *C2 = BO->getOperand(1);
-
-    if (L.isLoopInvariant(LV) || !L.isLoopInvariant(C1) ||
-        !L.isLoopInvariant(C2))
-      return false;
-
-    auto *Preheader = L.getLoopPreheader();
-    assert(Preheader && "Loop is not in simplify form?");
-    IRBuilder<> Builder(Preheader->getTerminator());
-    Value *Inv = Builder.CreateBinOp(Opcode, C1, C2, "invariant.op");
-
-    auto *NewBO =
-        BinaryOperator::Create(Opcode, LV, Inv, BO->getName() + ".reass", BO);
-    NewBO->copyIRFlags(BO);
-    BO->replaceAllUsesWith(NewBO);
-    eraseInstruction(*BO, SafetyInfo, MSSAU);
-
-    // Note: (LV op C1) might not be erased if it has more uses than the one we
-    //       just replaced.
-    if (Op0->use_empty())
-      eraseInstruction(*Op0, SafetyInfo, MSSAU);
-
-    return true;
-  }
-
-  return false;
-}
-
 static bool hoistArithmetics(Instruction &I, Loop &L,
                              ICFLoopSafetyInfo &SafetyInfo,
                              MemorySSAUpdater &MSSAU, AssumptionCache *AC,
@@ -2869,12 +2813,6 @@ static bool hoistArithmetics(Instruction &I, Loop &L,
       ++NumIntAssociationsHoisted;
     else
       ++NumFPAssociationsHoisted;
-    return true;
-  }
-
-  if (hoistBOAssociation(I, L, SafetyInfo, MSSAU, AC, DT)) {
-    ++NumHoisted;
-    ++NumBOAssociationsHoisted;
     return true;
   }
 
