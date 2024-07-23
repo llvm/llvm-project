@@ -45,6 +45,14 @@ using namespace clang;
 //===----------------------------------------------------------------------===//
 
 
+namespace {
+template<class TemplateParam>
+bool DefaultArgumentContainsUnexpandedPack(const TemplateParam& P) {
+  return P.hasDefaultArgument() &&
+         P.getDefaultArgument().getArgument().containsUnexpandedParameterPack();
+}
+}
+
 TemplateParameterList::TemplateParameterList(const ASTContext& C,
                                              SourceLocation TemplateLoc,
                                              SourceLocation LAngleLoc,
@@ -64,10 +72,7 @@ TemplateParameterList::TemplateParameterList(const ASTContext& C,
       if (!IsPack) {
         if (NTTP->getType()->containsUnexpandedParameterPack())
           ContainsUnexpandedParameterPack = true;
-        else if (NTTP->hasDefaultArgument() &&
-                 NTTP->getDefaultArgument()
-                     .getArgument()
-                     .containsUnexpandedParameterPack())
+        else if (DefaultArgumentContainsUnexpandedPack(*NTTP))
           ContainsUnexpandedParameterPack = true;
       }
       if (NTTP->hasPlaceholderTypeConstraint())
@@ -76,17 +81,11 @@ TemplateParameterList::TemplateParameterList(const ASTContext& C,
       if (!IsPack) {
         if (TTP->getTemplateParameters()->containsUnexpandedParameterPack())
           ContainsUnexpandedParameterPack = true;
-        else if (TTP->hasDefaultArgument() &&
-                 TTP->getDefaultArgument()
-                     .getArgument()
-                     .containsUnexpandedParameterPack())
+        else if (DefaultArgumentContainsUnexpandedPack(*TTP))
           ContainsUnexpandedParameterPack = true;
       }
     } else if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(P)) {
-      if (!IsPack && TTP->hasDefaultArgument() &&
-          TTP->getDefaultArgument()
-              .getArgument()
-              .containsUnexpandedParameterPack()) {
+      if (!IsPack && DefaultArgumentContainsUnexpandedPack(*TTP)) {
         ContainsUnexpandedParameterPack = true;
       } else if (const TypeConstraint *TC = TTP->getTypeConstraint();
                  TC && TC->getImmediatelyDeclaredConstraint()
