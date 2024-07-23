@@ -4,10 +4,10 @@
 
 ; CHECK-FRAMELAYOUT-LABEL: Function: csr_d8_allocnxv4i32i32f64
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-8], Type: Spill, Align: 8, Size: 8
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-16], Type: Variable, Align: 16, Size: 16
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-16], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-20], Type: Variable, Align: 4, Size: 4
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-32], Type: Variable, Align: 8, Size: 8
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-16], Type: Variable, Align: 16, Size: vscale x 16
 
 define i32 @csr_d8_allocnxv4i32i32f64(double %d) "aarch64_pstate_sm_compatible" {
 ; CHECK-LABEL: csr_d8_allocnxv4i32i32f64:
@@ -46,11 +46,11 @@ entry:
 
 ; CHECK-FRAMELAYOUT-LABEL: Function: csr_d8_allocnxv4i32i32f64_fp
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-8], Type: Spill, Align: 8, Size: 8
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-16], Type: Variable, Align: 16, Size: 16
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-16], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-20], Type: Variable, Align: 4, Size: 4
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-32], Type: Spill, Align: 16, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-40], Type: Variable, Align: 8, Size: 8
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-16], Type: Variable, Align: 16, Size: vscale x 16
 
 define i32 @csr_d8_allocnxv4i32i32f64_fp(double %d) "aarch64_pstate_sm_compatible" "frame-pointer"="all" {
 ; CHECK-LABEL: csr_d8_allocnxv4i32i32f64_fp:
@@ -92,11 +92,11 @@ entry:
 
 ; CHECK-FRAMELAYOUT-LABEL: Function: svecc_z8_allocnxv4i32i32f64_fp
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-8], Type: Spill, Align: 8, Size: 8
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-16], Type: Spill, Align: 16, Size: 16
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-16], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-20], Type: Variable, Align: 4, Size: 4
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-32], Type: Variable, Align: 16, Size: 16
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-32], Type: Variable, Align: 8, Size: 8
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-16], Type: Spill, Align: 16, Size: vscale x 16
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-32], Type: Variable, Align: 16, Size: vscale x 16
 
 define i32 @svecc_z8_allocnxv4i32i32f64_fp(double %d, <vscale x 4 x i32> %v) "aarch64_pstate_sm_compatible" "frame-pointer"="all" {
 ; CHECK-LABEL: svecc_z8_allocnxv4i32i32f64_fp:

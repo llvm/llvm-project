@@ -3147,6 +3147,9 @@ struct ArangeSpan {
 // Emit a debug aranges section, containing a CU lookup for any
 // address we can tie back to a CU.
 void DwarfDebug::emitDebugARanges() {
+  if (ArangeLabels.empty())
+    return;
+
   // Provides a unique id per text section.
   MapVector<MCSection *, SmallVector<SymbolCU, 8>> SectionMap;
 
@@ -3169,8 +3172,7 @@ void DwarfDebug::emitDebugARanges() {
   for (auto &I : SectionMap) {
     MCSection *Section = I.first;
     SmallVector<SymbolCU, 8> &List = I.second;
-    if (List.size() < 1)
-      continue;
+    assert(!List.empty());
 
     // If we have no section (e.g. common), just write out
     // individual spans for each symbol.
