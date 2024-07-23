@@ -803,20 +803,6 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     return !Tok.Previous->isOneOf(TT_CastRParen, tok::kw_for, tok::kw_while,
                                   tok::kw_switch);
   };
-  auto IsLambdaParameterList = [](const FormatToken *Tok) {
-    // adapted from TokenAnnotator.cpp:isLambdaParameterList()
-    // Skip <...> if present.
-    if (Tok->Previous && Tok->Previous->is(tok::greater) &&
-        Tok->Previous->MatchingParen &&
-        Tok->Previous->MatchingParen->is(TT_TemplateOpener)) {
-      Tok = Tok->Previous->MatchingParen;
-    }
-
-    // Check for `[...]`.
-    return Tok->Previous && Tok->Previous->is(tok::r_square) &&
-           Tok->Previous->MatchingParen &&
-           Tok->Previous->MatchingParen->is(TT_LambdaLSquare);
-  };
   auto IsFunctionCallParen = [&](const FormatToken &Tok) {
     return Tok.is(tok::l_paren) && Tok.ParameterCount > 0 && Tok.Previous &&
            Tok.Previous->is(tok::identifier);
@@ -838,9 +824,9 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     const auto *Next = Tok.Next;
     if (Tok.FakeLParens.size() > 0 && Tok.FakeLParens.back() > prec::Unknown)
       return true;
-    if (Previous &&
-        (Previous->is(TT_FunctionDeclarationLParen) ||
-         IsFunctionCallParen(*Previous) || IsLambdaParameterList(Previous))) {
+    if (Previous && (Previous->is(TT_FunctionDeclarationLParen) ||
+                     IsFunctionCallParen(*Previous) ||
+                     Previous->is(TT_LambdaDefinitionLParen))) {
       return !IsOpeningBracket(Tok) && Next && !Next->isMemberAccess() &&
              !IsInTemplateString(Tok) &&
              !Next->is(TT_FunctionDeclarationLParen) &&
