@@ -5,10 +5,10 @@ define i32 @test(i4 %0) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: i4 [[TMP0:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i8 0 to i4
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i8 0 to i4
-; CHECK-NEXT:    [[ADD_R:%.*]] = or i4 [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[ADD_R14:%.*]] = or i4 0, [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i4> <i4 poison, i4 0>, i4 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i4> zeroinitializer, [[TMP1]]
+; CHECK-NEXT:    [[ADD_R:%.*]] = extractelement <2 x i4> [[TMP2]], i32 0
+; CHECK-NEXT:    [[ADD_R14:%.*]] = extractelement <2 x i4> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i4 [[ADD_R]], [[ADD_R14]]
 ; CHECK-NEXT:    ret i32 0
 ;
