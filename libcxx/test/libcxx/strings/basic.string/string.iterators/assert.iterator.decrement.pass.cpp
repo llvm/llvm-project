@@ -8,12 +8,13 @@
 
 // <string>
 
-// Dereference non-dereferenceable iterator.
+// Decrement iterator prior to begin.
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
+// REQUIRES: has-unix-headers, libcpp-has-abi-bounded-iterators-in-string
+// UNSUPPORTED: libcpp-hardening-mode=none, c++03
 
 #include <string>
+#include <cassert>
 
 #include "check_assertion.h"
 #include "min_allocator.h"
@@ -22,7 +23,9 @@ template <class C>
 void test() {
   C c(1, '\0');
   typename C::iterator i = c.end();
-  TEST_LIBCPP_ASSERT_FAILURE(*i, "Attempted to dereference a non-dereferenceable iterator");
+  --i;
+  assert(i == c.begin());
+  TEST_LIBCPP_ASSERT_FAILURE(--i, "__bounded_iter::operator--: Attempt to rewind an iterator past the start");
 }
 
 int main(int, char**) {
