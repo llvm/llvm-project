@@ -376,6 +376,9 @@ bool PPCFrameLowering::needsFP(const MachineFunction &MF) const {
   if (MF.getFunction().hasFnAttribute(Attribute::Naked))
     return false;
 
+  if (Subtarget.isAIXABI() && Subtarget.getRegisterInfo()->hasBasePointer(MF))
+    return true;
+
   return MF.getTarget().Options.DisableFramePointerElim(MF) ||
          MFI.hasVarSizedObjects() || MFI.hasStackMap() || MFI.hasPatchPoint() ||
          MF.exposesReturnsTwice() ||
