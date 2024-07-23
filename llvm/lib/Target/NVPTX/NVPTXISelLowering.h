@@ -166,7 +166,8 @@ public:
     // Truncating 64-bit to 32-bit is free in SASS.
     if (!(SrcVT.isScalarInteger() && DestVT.isScalarInteger()))
       return false;
-    return SrcVT.getFixedSizeInBits() == 64 && DestVT.getFixedSizeInBits() == 32;
+    return SrcVT.getFixedSizeInBits() == 64 &&
+           DestVT.getFixedSizeInBits() == 32;
   }
 
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Ctx,
