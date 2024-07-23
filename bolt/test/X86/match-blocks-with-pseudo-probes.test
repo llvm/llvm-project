@@ -7,7 +7,7 @@
 # RUN: llvm-bolt %t.exe -o %t.out --data %t/yaml -v=2 \
 # RUN:   --print-cfg --funcs=main --profile-ignore-hash=0 --infer-stale-profile 2>&1 | FileCheck %s
 
-# CHECK: BOLT-INFO: matched 0 functions with similar names
+# CHECK: BOLT-INFO: inference found a pseudo probe match for 100.00% of basic blocks (1 out of 1 stale) responsible for -nan% samples (0 out of 0 stale)
 
 #--- main.s
  .text

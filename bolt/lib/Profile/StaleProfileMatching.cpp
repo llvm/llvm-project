@@ -684,9 +684,9 @@ size_t matchWeightsByHashes(
 
   if (opts::Verbosity >= 2) {
     outs() << "BOLT-INFO: "
-           << StaleMatcher.getNumBlocksMatchedWithPseudoProbes()
+           << Matcher.getNumBlocksMatchedWithPseudoProbes()
            << " blocks matched with pseudo probes\n"
-           << "BOLT-INFO: " << StaleMatcher.getNumBlocksMatchedWithOpcodes()
+           << "BOLT-INFO: " << Matcher.getNumBlocksMatchedWithOpcodes()
            << " blocks matched with opcodes\n";
   }
 
