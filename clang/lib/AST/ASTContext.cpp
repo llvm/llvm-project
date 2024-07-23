@@ -12451,8 +12451,7 @@ void ASTContext::forEachMultiversionedFunctionVersion(
   for (auto *CurDecl :
        FD->getDeclContext()->getRedeclContext()->lookup(FD->getDeclName())) {
     FunctionDecl *CurFD = CurDecl->getAsFunction()->getMostRecentDecl();
-    if (CurFD && hasSameType(CurFD->getType(), FD->getType()) &&
-        !SeenDecls.contains(CurFD)) {
+    if (CurFD && areFMVCompatible(CurFD, FD) && !SeenDecls.contains(CurFD)) {
       SeenDecls.insert(CurFD);
       Pred(CurFD);
     }
