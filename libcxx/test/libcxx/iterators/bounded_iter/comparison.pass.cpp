@@ -61,13 +61,9 @@ TEST_CONSTEXPR_CXX14 bool tests() {
   }
 
 #if TEST_STD_VER >= 20
-  if constexpr (requires(std::__bounded_iter<Iter> const iter) {
-                  { iter <=> iter } -> std::same_as<std::strong_ordering>;
-                }) {
-    // P1614
-    std::same_as<std::strong_ordering> decltype(auto) r1 = iter1 <=> iter2;
-    assert(r1 == std::strong_ordering::less);
-  }
+  // P1614
+  std::same_as<std::strong_ordering> decltype(auto) r1 = iter1 <=> iter2;
+  assert(r1 == std::strong_ordering::less);
 #endif
 
   return true;

@@ -22,14 +22,13 @@
 #include "test_macros.h"
 
 template <class T>
-TEST_CONSTEXPR void test_type() {
-#
-
+constexpr void test_type() {
   using C = std::span<T>;
   typename C::iterator ii1{}, ii2{};
   typename C::iterator ii4 = ii1;
   // TODO Test against C++23 after implementing
-  // P2278R4 cbegin should always return a constant iterator
+  //  P2278R4 cbegin should always return a constant iterator
+  // The means adjusting the #ifdef to guard against C++23.
 #ifdef __cpp_lib_ranges_as_const
   typename C::const_iterator cii{};
 #endif
@@ -77,7 +76,7 @@ TEST_CONSTEXPR void test_type() {
 #endif
 }
 
-TEST_CONSTEXPR bool test() {
+constexpr bool test() {
   test_type<char>();
   test_type<int>();
   test_type<std::string>();
