@@ -159,6 +159,9 @@ public:
 };
 
 struct PointerAuthOptions {
+  /// Do indirect goto label addresses need to be authenticated?
+  bool IndirectGotos = false;
+
   /// The ABI for C function pointers.
   PointerAuthSchema FunctionPointers;
 
@@ -180,6 +183,9 @@ struct PointerAuthOptions {
 
   /// The ABI for variadic C++ virtual function pointers.
   PointerAuthSchema CXXVirtualVariadicFunctionPointers;
+
+  /// The ABI for C++ member function pointers.
+  PointerAuthSchema CXXMemberFunctionPointers;
 };
 
 } // end namespace clang
