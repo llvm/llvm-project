@@ -87,30 +87,51 @@ define amdgpu_kernel void @max_size_small_static_memmove_caller0(ptr addrspace(1
 ;
 ; ALL-LABEL: @max_size_small_static_memmove_caller0(
 ; ALL-NEXT:    [[COMPARE_SRC_DST:%.*]] = icmp ult ptr addrspace(1) [[SRC:%.*]], [[DST:%.*]]
-; ALL-NEXT:    [[COMPARE_N_TO_0:%.*]] = icmp eq i64 1024, 0
-; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[COPY_BACKWARDS:%.*]], label [[COPY_FORWARD:%.*]]
-; ALL:       copy_backwards:
-; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE:%.*]], label [[COPY_BACKWARDS_LOOP:%.*]]
-; ALL:       copy_backwards_loop:
-; ALL-NEXT:    [[TMP1:%.*]] = phi i64 [ [[INDEX_PTR:%.*]], [[COPY_BACKWARDS_LOOP]] ], [ 1024, [[COPY_BACKWARDS]] ]
-; ALL-NEXT:    [[INDEX_PTR]] = sub i64 [[TMP1]], 1
-; ALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[MEMMOVE_COPY_BACKWARDS:%.*]], label [[MEMMOVE_COPY_FORWARD:%.*]]
+; ALL:       memmove_copy_backwards:
+; ALL-NEXT:    br i1 true, label [[MEMMOVE_BWD_MIDDLE:%.*]], label [[MEMMOVE_BWD_RESIDUAL_LOOP:%.*]]
+; ALL:       memmove_bwd_residual_loop:
+; ALL-NEXT:    [[TMP1:%.*]] = phi i64 [ [[BWD_RESIDUAL_INDEX:%.*]], [[MEMMOVE_BWD_RESIDUAL_LOOP]] ], [ 1024, [[MEMMOVE_COPY_BACKWARDS]] ]
+; ALL-NEXT:    [[BWD_RESIDUAL_INDEX]] = sub i64 [[TMP1]], 1
+; ALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[BWD_RESIDUAL_INDEX]]
 ; ALL-NEXT:    [[ELEMENT:%.*]] = load i8, ptr addrspace(1) [[TMP2]], align 1
-; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[BWD_RESIDUAL_INDEX]]
 ; ALL-NEXT:    store i8 [[ELEMENT]], ptr addrspace(1) [[TMP3]], align 1
-; ALL-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_PTR]], 0
-; ALL-NEXT:    br i1 [[TMP4]], label [[MEMMOVE_DONE]], label [[COPY_BACKWARDS_LOOP]]
-; ALL:       copy_forward:
-; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP:%.*]]
-; ALL:       copy_forward_loop:
-; ALL-NEXT:    [[INDEX_PTR1:%.*]] = phi i64 [ [[INDEX_INCREMENT:%.*]], [[COPY_FORWARD_LOOP]] ], [ 0, [[COPY_FORWARD]] ]
-; ALL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[INDEX_PTR1]]
-; ALL-NEXT:    [[ELEMENT2:%.*]] = load i8, ptr addrspace(1) [[TMP5]], align 1
-; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[INDEX_PTR1]]
-; ALL-NEXT:    store i8 [[ELEMENT2]], ptr addrspace(1) [[TMP6]], align 1
-; ALL-NEXT:    [[INDEX_INCREMENT]] = add i64 [[INDEX_PTR1]], 1
-; ALL-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_INCREMENT]], 1024
-; ALL-NEXT:    br i1 [[TMP7]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP]]
+; ALL-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[BWD_RESIDUAL_INDEX]], 1024
+; ALL-NEXT:    br i1 [[TMP4]], label [[MEMMOVE_BWD_MIDDLE]], label [[MEMMOVE_BWD_RESIDUAL_LOOP]]
+; ALL:       memmove_bwd_middle:
+; ALL-NEXT:    br i1 false, label [[MEMMOVE_DONE:%.*]], label [[MEMMOVE_BWD_MAIN_LOOP:%.*]]
+; ALL:       memmove_bwd_main_loop:
+; ALL-NEXT:    [[TMP5:%.*]] = phi i64 [ [[BWD_MAIN_INDEX:%.*]], [[MEMMOVE_BWD_MAIN_LOOP]] ], [ 64, [[MEMMOVE_BWD_MIDDLE]] ]
+; ALL-NEXT:    [[BWD_MAIN_INDEX]] = sub i64 [[TMP5]], 1
+; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[BWD_MAIN_INDEX]]
+; ALL-NEXT:    [[ELEMENT1:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP6]], align 1
+; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST]], i64 [[BWD_MAIN_INDEX]]
+; ALL-NEXT:    store <4 x i32> [[ELEMENT1]], ptr addrspace(1) [[TMP7]], align 1
+; ALL-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[BWD_MAIN_INDEX]], 0
+; ALL-NEXT:    br i1 [[TMP8]], label [[MEMMOVE_DONE]], label [[MEMMOVE_BWD_MAIN_LOOP]]
+; ALL:       memmove_copy_forward:
+; ALL-NEXT:    br i1 false, label [[MEMMOVE_FWD_MIDDLE:%.*]], label [[MEMMOVE_FWD_MAIN_LOOP:%.*]]
+; ALL:       memmove_fwd_main_loop:
+; ALL-NEXT:    [[FWD_MAIN_INDEX:%.*]] = phi i64 [ [[TMP11:%.*]], [[MEMMOVE_FWD_MAIN_LOOP]] ], [ 0, [[MEMMOVE_COPY_FORWARD]] ]
+; ALL-NEXT:    [[TMP9:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[FWD_MAIN_INDEX]]
+; ALL-NEXT:    [[ELEMENT2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP9]], align 1
+; ALL-NEXT:    [[TMP10:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST]], i64 [[FWD_MAIN_INDEX]]
+; ALL-NEXT:    store <4 x i32> [[ELEMENT2]], ptr addrspace(1) [[TMP10]], align 1
+; ALL-NEXT:    [[TMP11]] = add i64 [[FWD_MAIN_INDEX]], 1
+; ALL-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[TMP11]], 64
+; ALL-NEXT:    br i1 [[TMP12]], label [[MEMMOVE_FWD_MIDDLE]], label [[MEMMOVE_FWD_MAIN_LOOP]]
+; ALL:       memmove_fwd_middle:
+; ALL-NEXT:    br i1 true, label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_RESIDUAL_LOOP:%.*]]
+; ALL:       memmove_fwd_residual_loop:
+; ALL-NEXT:    [[FWD_RESIDUAL_INDEX:%.*]] = phi i64 [ [[TMP15:%.*]], [[MEMMOVE_FWD_RESIDUAL_LOOP]] ], [ 1024, [[MEMMOVE_FWD_MIDDLE]] ]
+; ALL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[FWD_RESIDUAL_INDEX]]
+; ALL-NEXT:    [[ELEMENT3:%.*]] = load i8, ptr addrspace(1) [[TMP13]], align 1
+; ALL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[FWD_RESIDUAL_INDEX]]
+; ALL-NEXT:    store i8 [[ELEMENT3]], ptr addrspace(1) [[TMP14]], align 1
+; ALL-NEXT:    [[TMP15]] = add i64 [[FWD_RESIDUAL_INDEX]], 1
+; ALL-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[TMP15]], 1024
+; ALL-NEXT:    br i1 [[TMP16]], label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_RESIDUAL_LOOP]]
 ; ALL:       memmove_done:
 ; ALL-NEXT:    ret void
 ;
@@ -121,30 +142,51 @@ define amdgpu_kernel void @max_size_small_static_memmove_caller0(ptr addrspace(1
 define amdgpu_kernel void @min_size_large_static_memmove_caller0(ptr addrspace(1) %dst, ptr addrspace(1) %src) #0 {
 ; OPT-LABEL: @min_size_large_static_memmove_caller0(
 ; OPT-NEXT:    [[COMPARE_SRC_DST:%.*]] = icmp ult ptr addrspace(1) [[SRC:%.*]], [[DST:%.*]]
-; OPT-NEXT:    [[COMPARE_N_TO_0:%.*]] = icmp eq i64 1025, 0
-; OPT-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[COPY_BACKWARDS:%.*]], label [[COPY_FORWARD:%.*]]
-; OPT:       copy_backwards:
-; OPT-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE:%.*]], label [[COPY_BACKWARDS_LOOP:%.*]]
-; OPT:       copy_backwards_loop:
-; OPT-NEXT:    [[TMP1:%.*]] = phi i64 [ [[INDEX_PTR:%.*]], [[COPY_BACKWARDS_LOOP]] ], [ 1025, [[COPY_BACKWARDS]] ]
-; OPT-NEXT:    [[INDEX_PTR]] = sub i64 [[TMP1]], 1
-; OPT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[INDEX_PTR]]
+; OPT-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[MEMMOVE_COPY_BACKWARDS:%.*]], label [[MEMMOVE_COPY_FORWARD:%.*]]
+; OPT:       memmove_copy_backwards:
+; OPT-NEXT:    br i1 false, label [[MEMMOVE_BWD_MIDDLE:%.*]], label [[MEMMOVE_BWD_RESIDUAL_LOOP:%.*]]
+; OPT:       memmove_bwd_residual_loop:
+; OPT-NEXT:    [[TMP1:%.*]] = phi i64 [ [[BWD_RESIDUAL_INDEX:%.*]], [[MEMMOVE_BWD_RESIDUAL_LOOP]] ], [ 1025, [[MEMMOVE_COPY_BACKWARDS]] ]
+; OPT-NEXT:    [[BWD_RESIDUAL_INDEX]] = sub i64 [[TMP1]], 1
+; OPT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[BWD_RESIDUAL_INDEX]]
 ; OPT-NEXT:    [[ELEMENT:%.*]] = load i8, ptr addrspace(1) [[TMP2]], align 1
-; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[INDEX_PTR]]
+; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[BWD_RESIDUAL_INDEX]]
 ; OPT-NEXT:    store i8 [[ELEMENT]], ptr addrspace(1) [[TMP3]], align 1
-; OPT-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_PTR]], 0
-; OPT-NEXT:    br i1 [[TMP4]], label [[MEMMOVE_DONE]], label [[COPY_BACKWARDS_LOOP]]
-; OPT:       copy_forward:
-; OPT-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP:%.*]]
-; OPT:       copy_forward_loop:
-; OPT-NEXT:    [[INDEX_PTR1:%.*]] = phi i64 [ [[INDEX_INCREMENT:%.*]], [[COPY_FORWARD_LOOP]] ], [ 0, [[COPY_FORWARD]] ]
-; OPT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[INDEX_PTR1]]
-; OPT-NEXT:    [[ELEMENT2:%.*]] = load i8, ptr addrspace(1) [[TMP5]], align 1
-; OPT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[INDEX_PTR1]]
-; OPT-NEXT:    store i8 [[ELEMENT2]], ptr addrspace(1) [[TMP6]], align 1
-; OPT-NEXT:    [[INDEX_INCREMENT]] = add i64 [[INDEX_PTR1]], 1
-; OPT-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_INCREMENT]], 1025
-; OPT-NEXT:    br i1 [[TMP7]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP]]
+; OPT-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[BWD_RESIDUAL_INDEX]], 1024
+; OPT-NEXT:    br i1 [[TMP4]], label [[MEMMOVE_BWD_MIDDLE]], label [[MEMMOVE_BWD_RESIDUAL_LOOP]]
+; OPT:       memmove_bwd_middle:
+; OPT-NEXT:    br i1 false, label [[MEMMOVE_DONE:%.*]], label [[MEMMOVE_BWD_MAIN_LOOP:%.*]]
+; OPT:       memmove_bwd_main_loop:
+; OPT-NEXT:    [[TMP5:%.*]] = phi i64 [ [[BWD_MAIN_INDEX:%.*]], [[MEMMOVE_BWD_MAIN_LOOP]] ], [ 64, [[MEMMOVE_BWD_MIDDLE]] ]
+; OPT-NEXT:    [[BWD_MAIN_INDEX]] = sub i64 [[TMP5]], 1
+; OPT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[BWD_MAIN_INDEX]]
+; OPT-NEXT:    [[ELEMENT1:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP6]], align 1
+; OPT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST]], i64 [[BWD_MAIN_INDEX]]
+; OPT-NEXT:    store <4 x i32> [[ELEMENT1]], ptr addrspace(1) [[TMP7]], align 1
+; OPT-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[BWD_MAIN_INDEX]], 0
+; OPT-NEXT:    br i1 [[TMP8]], label [[MEMMOVE_DONE]], label [[MEMMOVE_BWD_MAIN_LOOP]]
+; OPT:       memmove_copy_forward:
+; OPT-NEXT:    br i1 false, label [[MEMMOVE_FWD_MIDDLE:%.*]], label [[MEMMOVE_FWD_MAIN_LOOP:%.*]]
+; OPT:       memmove_fwd_main_loop:
+; OPT-NEXT:    [[FWD_MAIN_INDEX:%.*]] = phi i64 [ [[TMP11:%.*]], [[MEMMOVE_FWD_MAIN_LOOP]] ], [ 0, [[MEMMOVE_COPY_FORWARD]] ]
+; OPT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[FWD_MAIN_INDEX]]
+; OPT-NEXT:    [[ELEMENT2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP9]], align 1
+; OPT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST]], i64 [[FWD_MAIN_INDEX]]
+; OPT-NEXT:    store <4 x i32> [[ELEMENT2]], ptr addrspace(1) [[TMP10]], align 1
+; OPT-NEXT:    [[TMP11]] = add i64 [[FWD_MAIN_INDEX]], 1
+; OPT-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[TMP11]], 64
+; OPT-NEXT:    br i1 [[TMP12]], label [[MEMMOVE_FWD_MIDDLE]], label [[MEMMOVE_FWD_MAIN_LOOP]]
+; OPT:       memmove_fwd_middle:
+; OPT-NEXT:    br i1 false, label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_RESIDUAL_LOOP:%.*]]
+; OPT:       memmove_fwd_residual_loop:
+; OPT-NEXT:    [[FWD_RESIDUAL_INDEX:%.*]] = phi i64 [ [[TMP15:%.*]], [[MEMMOVE_FWD_RESIDUAL_LOOP]] ], [ 1024, [[MEMMOVE_FWD_MIDDLE]] ]
+; OPT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[FWD_RESIDUAL_INDEX]]
+; OPT-NEXT:    [[ELEMENT3:%.*]] = load i8, ptr addrspace(1) [[TMP13]], align 1
+; OPT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[FWD_RESIDUAL_INDEX]]
+; OPT-NEXT:    store i8 [[ELEMENT3]], ptr addrspace(1) [[TMP14]], align 1
+; OPT-NEXT:    [[TMP15]] = add i64 [[FWD_RESIDUAL_INDEX]], 1
+; OPT-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[TMP15]], 1025
+; OPT-NEXT:    br i1 [[TMP16]], label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_RESIDUAL_LOOP]]
 ; OPT:       memmove_done:
 ; OPT-NEXT:    ret void
 ;
@@ -1333,30 +1375,51 @@ define amdgpu_kernel void @memmove_flat_align1_global_align1(ptr %dst, ptr addrs
 ; ALL-LABEL: @memmove_flat_align1_global_align1(
 ; ALL-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(1) [[SRC:%.*]] to ptr
 ; ALL-NEXT:    [[COMPARE_SRC_DST:%.*]] = icmp ult ptr [[TMP1]], [[DST:%.*]]
-; ALL-NEXT:    [[COMPARE_N_TO_0:%.*]] = icmp eq i64 256, 0
-; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[COPY_BACKWARDS:%.*]], label [[COPY_FORWARD:%.*]]
-; ALL:       copy_backwards:
-; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE:%.*]], label [[COPY_BACKWARDS_LOOP:%.*]]
-; ALL:       copy_backwards_loop:
-; ALL-NEXT:    [[TMP2:%.*]] = phi i64 [ [[INDEX_PTR:%.*]], [[COPY_BACKWARDS_LOOP]] ], [ 256, [[COPY_BACKWARDS]] ]
-; ALL-NEXT:    [[INDEX_PTR]] = sub i64 [[TMP2]], 1
-; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[MEMMOVE_COPY_BACKWARDS:%.*]], label [[MEMMOVE_COPY_FORWARD:%.*]]
+; ALL:       memmove_copy_backwards:
+; ALL-NEXT:    br i1 true, label [[MEMMOVE_BWD_MIDDLE:%.*]], label [[MEMMOVE_BWD_RESIDUAL_LOOP:%.*]]
+; ALL:       memmove_bwd_residual_loop:
+; ALL-NEXT:    [[TMP2:%.*]] = phi i64 [ [[BWD_RESIDUAL_INDEX:%.*]], [[MEMMOVE_BWD_RESIDUAL_LOOP]] ], [ 256, [[MEMMOVE_COPY_BACKWARDS]] ]
+; ALL-NEXT:    [[BWD_RESIDUAL_INDEX]] = sub i64 [[TMP2]], 1
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[BWD_RESIDUAL_INDEX]]
 ; ALL-NEXT:    [[ELEMENT:%.*]] = load i8, ptr [[TMP3]], align 1
-; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[BWD_RESIDUAL_INDEX]]
 ; ALL-NEXT:    store i8 [[ELEMENT]], ptr [[TMP4]], align 1
-; ALL-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_PTR]], 0
-; ALL-NEXT:    br i1 [[TMP5]], label [[MEMMOVE_DONE]], label [[COPY_BACKWARDS_LOOP]]
-; ALL:       copy_forward:
-; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP:%.*]]
-; ALL:       copy_forward_loop:
-; ALL-NEXT:    [[INDEX_PTR1:%.*]] = phi i64 [ [[INDEX_INCREMENT:%.*]], [[COPY_FORWARD_LOOP]] ], [ 0, [[COPY_FORWARD]] ]
-; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[INDEX_PTR1]]
-; ALL-NEXT:    [[ELEMENT2:%.*]] = load i8, ptr [[TMP6]], align 1
-; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX_PTR1]]
-; ALL-NEXT:    store i8 [[ELEMENT2]], ptr [[TMP7]], align 1
-; ALL-NEXT:    [[INDEX_INCREMENT]] = add i64 [[INDEX_PTR1]], 1
-; ALL-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_INCREMENT]], 256
-; ALL-NEXT:    br i1 [[TMP8]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP]]
+; ALL-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[BWD_RESIDUAL_INDEX]], 256
+; ALL-NEXT:    br i1 [[TMP5]], label [[MEMMOVE_BWD_MIDDLE]], label [[MEMMOVE_BWD_RESIDUAL_LOOP]]
+; ALL:       memmove_bwd_middle:
+; ALL-NEXT:    br i1 false, label [[MEMMOVE_DONE:%.*]], label [[MEMMOVE_BWD_MAIN_LOOP:%.*]]
+; ALL:       memmove_bwd_main_loop:
+; ALL-NEXT:    [[TMP6:%.*]] = phi i64 [ [[BWD_MAIN_INDEX:%.*]], [[MEMMOVE_BWD_MAIN_LOOP]] ], [ 16, [[MEMMOVE_BWD_MIDDLE]] ]
+; ALL-NEXT:    [[BWD_MAIN_INDEX]] = sub i64 [[TMP6]], 1
+; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <4 x i32>, ptr [[TMP1]], i64 [[BWD_MAIN_INDEX]]
+; ALL-NEXT:    [[ELEMENT1:%.*]] = load <4 x i32>, ptr [[TMP7]], align 1
+; ALL-NEXT:    [[TMP8:%.*]] = getelementptr inbounds <4 x i32>, ptr [[DST]], i64 [[BWD_MAIN_INDEX]]
+; ALL-NEXT:    store <4 x i32> [[ELEMENT1]], ptr [[TMP8]], align 1
+; ALL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[BWD_MAIN_INDEX]], 0
+; ALL-NEXT:    br i1 [[TMP9]], label [[MEMMOVE_DONE]], label [[MEMMOVE_BWD_MAIN_LOOP]]
+; ALL:       memmove_copy_forward:
+; ALL-NEXT:    br i1 false, label [[MEMMOVE_FWD_MIDDLE:%.*]], label [[MEMMOVE_FWD_MAIN_LOOP:%.*]]
+; ALL:       memmove_fwd_main_loop:
+; ALL-NEXT:    [[FWD_MAIN_INDEX:%.*]] = phi i64 [ [[TMP12:%.*]], [[MEMMOVE_FWD_MAIN_LOOP]] ], [ 0, [[MEMMOVE_COPY_FORWARD]] ]
+; ALL-NEXT:    [[TMP10:%.*]] = getelementptr inbounds <4 x i32>, ptr [[TMP1]], i64 [[FWD_MAIN_INDEX]]
+; ALL-NEXT:    [[ELEMENT2:%.*]] = load <4 x i32>, ptr [[TMP10]], align 1
+; ALL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds <4 x i32>, ptr [[DST]], i64 [[FWD_MAIN_INDEX]]
+; ALL-NEXT:    store <4 x i32> [[ELEMENT2]], ptr [[TMP11]], align 1
+; ALL-NEXT:    [[TMP12]] = add i64 [[FWD_MAIN_INDEX]], 1
+; ALL-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[TMP12]], 16
+; ALL-NEXT:    br i1 [[TMP13]], label [[MEMMOVE_FWD_MIDDLE]], label [[MEMMOVE_FWD_MAIN_LOOP]]
+; ALL:       memmove_fwd_middle:
+; ALL-NEXT:    br i1 true, label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_RESIDUAL_LOOP:%.*]]
+; ALL:       memmove_fwd_residual_loop:
+; ALL-NEXT:    [[FWD_RESIDUAL_INDEX:%.*]] = phi i64 [ [[TMP16:%.*]], [[MEMMOVE_FWD_RESIDUAL_LOOP]] ], [ 256, [[MEMMOVE_FWD_MIDDLE]] ]
+; ALL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[FWD_RESIDUAL_INDEX]]
+; ALL-NEXT:    [[ELEMENT3:%.*]] = load i8, ptr [[TMP14]], align 1
+; ALL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[FWD_RESIDUAL_INDEX]]
+; ALL-NEXT:    store i8 [[ELEMENT3]], ptr [[TMP15]], align 1
+; ALL-NEXT:    [[TMP16]] = add i64 [[FWD_RESIDUAL_INDEX]], 1
+; ALL-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[TMP16]], 256
+; ALL-NEXT:    br i1 [[TMP17]], label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_RESIDUAL_LOOP]]
 ; ALL:       memmove_done:
 ; ALL-NEXT:    ret void
 ;
@@ -1372,30 +1435,51 @@ define amdgpu_kernel void @memmove_global_align1_flat_align1(ptr addrspace(1) %d
 ; ALL-LABEL: @memmove_global_align1_flat_align1(
 ; ALL-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(1) [[DST:%.*]] to ptr
 ; ALL-NEXT:    [[COMPARE_SRC_DST:%.*]] = icmp ult ptr [[SRC:%.*]], [[TMP1]]
-; ALL-NEXT:    [[COMPARE_N_TO_0:%.*]] = icmp eq i64 256, 0
-; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[COPY_BACKWARDS:%.*]], label [[COPY_FORWARD:%.*]]
-; ALL:       copy_backwards:
-; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE:%.*]], label [[COPY_BACKWARDS_LOOP:%.*]]
-; ALL:       copy_backwards_loop:
-; ALL-NEXT:    [[TMP2:%.*]] = phi i64 [ [[INDEX_PTR:%.*]], [[COPY_BACKWARDS_LOOP]] ], [ 256, [[COPY_BACKWARDS]] ]
-; ALL-NEXT:    [[INDEX_PTR]] = sub i64 [[TMP2]], 1
-; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[MEMMOVE_COPY_BACKWARDS:%.*]], label [[MEMMOVE_COPY_FORWARD:%.*]]
+; ALL:       memmove_copy_backwards:
+; ALL-NEXT:    br i1 true, label [[MEMMOVE_BWD_MIDDLE:%.*]], label [[MEMMOVE_BWD_RESIDUAL_LOOP:%.*]]
+; ALL:       memmove_bwd_residual_loop:
+; ALL-NEXT:    [[TMP2:%.*]] = phi i64 [ [[BWD_RESIDUAL_INDEX:%.*]], [[MEMMOVE_BWD_RESIDUAL_LOOP]] ], [ 256, [[MEMMOVE_COPY_BACKWARDS]] ]
+; ALL-NEXT:    [[BWD_RESIDUAL_INDEX]] = sub i64 [[TMP2]], 1
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[BWD_RESIDUAL_INDEX]]
 ; ALL-NEXT:    [[ELEMENT:%.*]] = load i8, ptr [[TMP3]], align 1
-; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[BWD_RESIDUAL_INDEX]]
 ; ALL-NEXT:    store i8 [[ELEMENT]], ptr [[TMP4]], align 1
-; ALL-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_PTR]], 0
-; ALL-NEXT:    br i1 [[TMP5]], label [[MEMMOVE_DONE]], label [[COPY_BACKWARDS_LOOP]]
-; ALL:       copy_forward:
-; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP:%.*]]
-; ALL:       copy_forward_loop:
-; ALL-NEXT:    [[INDEX_PTR1:%.*]] = phi i64 [ [[INDEX_INCREMENT:%.*]], [[COPY_FORWARD_LOOP]] ], [ 0, [[COPY_FORWARD]] ]
-; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[INDEX_PTR1]]
-; ALL-NEXT:    [[ELEMENT2:%.*]] = load i8, ptr [[TMP6]], align 1
-; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[INDEX_PTR1]]
-; ALL-NEXT:    store i8 [[ELEMENT2]], ptr [[TMP7]], align 1
-; ALL-NEXT:    [[INDEX_INCREMENT]] = add i64 [[INDEX_PTR1]], 1
-; ALL-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_INCREMENT]], 256
-; ALL-NEXT:    br i1 [[TMP8]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP]]
+; ALL-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[BWD_RESIDUAL_INDEX]], 256
+; ALL-NEXT:    br i1 [[TMP5]], label [[MEMMOVE_BWD_MIDDLE]], label [[MEMMOVE_BWD_RESIDUAL_LOOP]]
+; ALL:       memmove_bwd_middle:
+; ALL-NEXT:    br i1 false, label [[MEMMOVE_DONE:%.*]], label [[MEMMOVE_BWD_MAIN_LOOP:%.*]]
+; ALL:       memmove_bwd_main_loop:
+; ALL-NEXT:    [[TMP6:%.*]] = phi i64 [ [[BWD_MAIN_INDEX:%.*]], [[MEMMOVE_BWD_MAIN_LOOP]] ], [ 16, [[MEMMOVE_BWD_MIDDLE]] ]
+; ALL-NEXT:    [[BWD_MAIN_INDEX]] = sub i64 [[TMP6]], 1
+; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <4 x i32>, ptr [[SRC]], i64 [[BWD_MAIN_INDEX]]
+; ALL-NEXT:    [[ELEMENT1:%.*]] = load <4 x i32>, ptr [[TMP7]], align 1
+; ALL-NEXT:    [[TMP8:%.*]] = getelementptr inbounds <4 x i32>, ptr [[TMP1]], i64 [[BWD_MAIN_INDEX]]
+; ALL-NEXT:    store <4 x i32> [[ELEMENT1]], ptr [[TMP8]], align 1
+; ALL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[BWD_MAIN_INDEX]], 0
+; ALL-NEXT:    br i1 [[TMP9]], label [[MEMMOVE_DONE]], label [[MEMMOVE_BWD_MAIN_LOOP]]
+; ALL:       memmove_copy_forward:
+; ALL-NEXT:    br i1 false, label [[MEMMOVE_FWD_MIDDLE:%.*]], label [[MEMMOVE_FWD_MAIN_LOOP:%.*]]
+; ALL:       memmove_fwd_main_loop:
+; ALL-NEXT:    [[FWD_MAIN_INDEX:%.*]] = phi i64 [ [[TMP12:%.*]], [[MEMMOVE_FWD_MAIN_LOOP]] ], [ 0, [[MEMMOVE_COPY_FORWARD]] ]
+; ALL-NEXT:    [[TMP10:%.*]] = getelementptr inbounds <4 x i32>, ptr [[SRC]], i64 [[FWD_MAIN_INDEX]]
+; ALL-NEXT:    [[ELEMENT2:%.*]] = load <4 x i32>, ptr [[TMP10]], align 1
+; ALL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds <4 x i32>, ptr [[TMP1]], i64 [[FWD_MAIN_INDEX]]
+; ALL-NEXT:    store <4 x i32> [[ELEMENT2]], ptr [[TMP11]], align 1
+; ALL-NEXT:    [[TMP12]] = add i64 [[FWD_MAIN_INDEX]], 1
+; ALL-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[TMP12]], 16
+; ALL-NEXT:    br i1 [[TMP13]], label [[MEMMOVE_FWD_MIDDLE]], label [[MEMMOVE_FWD_MAIN_LOOP]]
+; ALL:       memmove_fwd_middle:
+; ALL-NEXT:    br i1 true, label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_RESIDUAL_LOOP:%.*]]
+; ALL:       memmove_fwd_residual_loop:
+; ALL-NEXT:    [[FWD_RESIDUAL_INDEX:%.*]] = phi i64 [ [[TMP16:%.*]], [[MEMMOVE_FWD_RESIDUAL_LOOP]] ], [ 256, [[MEMMOVE_FWD_MIDDLE]] ]
+; ALL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[FWD_RESIDUAL_INDEX]]
+; ALL-NEXT:    [[ELEMENT3:%.*]] = load i8, ptr [[TMP14]], align 1
+; ALL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[FWD_RESIDUAL_INDEX]]
+; ALL-NEXT:    store i8 [[ELEMENT3]], ptr [[TMP15]], align 1
+; ALL-NEXT:    [[TMP16]] = add i64 [[FWD_RESIDUAL_INDEX]], 1
+; ALL-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[TMP16]], 256
+; ALL-NEXT:    br i1 [[TMP17]], label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_RESIDUAL_LOOP]]
 ; ALL:       memmove_done:
 ; ALL-NEXT:    ret void
 ;
@@ -1411,30 +1495,51 @@ define amdgpu_kernel void @memmove_flat_align1_private_align1(ptr %dst, ptr addr
 ; ALL-LABEL: @memmove_flat_align1_private_align1(
 ; ALL-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(5) [[SRC:%.*]] to ptr
 ; ALL-NEXT:    [[COMPARE_SRC_DST:%.*]] = icmp ult ptr [[TMP1]], [[DST:%.*]]
-; ALL-NEXT:    [[COMPARE_N_TO_0:%.*]] = icmp eq i64 256, 0
-; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[COPY_BACKWARDS:%.*]], label [[COPY_FORWARD:%.*]]
-; ALL:       copy_backwards:
-; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE:%.*]], label [[COPY_BACKWARDS_LOOP:%.*]]
-; ALL:       copy_backwards_loop:
-; ALL-NEXT:    [[TMP2:%.*]] = phi i64 [ [[INDEX_PTR:%.*]], [[COPY_BACKWARDS_LOOP]] ], [ 256, [[COPY_BACKWARDS]] ]
-; ALL-NEXT:    [[INDEX_PTR]] = sub i64 [[TMP2]], 1
-; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[MEMMOVE_COPY_BACKWARDS:%.*]], label [[MEMMOVE_COPY_FORWARD:%.*]]
+; ALL:       memmove_copy_backwards:
+; ALL-NEXT:    br i1 true, label [[MEMMOVE_BWD_MIDDLE:%.*]], label [[MEMMOVE_BWD_RESIDUAL_LOOP:%.*]]
+; ALL:       memmove_bwd_residual_loop:
+; ALL-NEXT:    [[TMP2:%.*]] = phi i64 [ [[BWD_RESIDUAL_INDEX:%.*]], [[MEMMOVE_BWD_RESIDUAL_LOOP]] ], [ 256, [[MEMMOVE_COPY_BACKWARDS]] ]
+; ALL-NEXT:    [[BWD_RESIDUAL_INDEX]] = sub i64 [[TMP2]], 1
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[BWD_RESIDUAL_INDEX]]
 ; ALL-NEXT:    [[ELEMENT:%.*]] = load i8, ptr [[TMP3]], align 1
-; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[BWD_RESIDUAL_INDEX]]
 ; ALL-NEXT:    store i8 [[ELEMENT]], ptr [[TMP4]], align 1
-; ALL-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_PTR]], 0
-; ALL-NEXT:    br i1 [[TMP5]], label [[MEMMOVE_DONE]], label [[COPY_BACKWARDS_LOOP]]
-; ALL:       copy_forward:
-; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP:%.*]]
-; ALL:       copy_forward_loop:
-; ALL-NEXT:    [[INDEX_PTR1:%.*]] = phi i64 [ [[INDEX_INCREMENT:%.*]], [[COPY_FORWARD_LOOP]] ], [ 0, [[COPY_FORWARD]] ]
-; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[INDEX_PTR1]]
-; ALL-NEXT:    [[ELEMENT2:%.*]] = load i8, ptr [[TMP6]], align 1
-; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX_PTR1]]
-; ALL-NEXT:    store i8 [[ELEMENT2]], ptr [[TMP7]], align 1
-; ALL-NEXT:    [[INDEX_INCREMENT]] = add i64 [[INDEX_PTR1]], 1
-; ALL-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_INCREMENT]], 256
-; ALL-NEXT:    br i1 [[TMP8]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP]]
+; ALL-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[BWD_RESIDUAL_INDEX]], 256
+; ALL-NEXT:    br i1 [[TMP5]], label [[MEMMOVE_BWD_MIDDLE]], label [[MEMMOVE_BWD_RESIDUAL_LOOP]]
+; ALL:       memmove_bwd_middle:
+; ALL-NEXT:    br i1 false, label [[MEMMOVE_DONE:%.*]], label [[MEMMOVE_BWD_MAIN_LOOP:%.*]]
+; ALL:       memmove_bwd_main_loop:
+; ALL-NEXT:    [[TMP6:%.*]] = phi i64 [ [[BWD_MAIN_INDEX:%.*]], [[MEMMOVE_BWD_MAIN_LOOP]] ], [ 16, [[MEMMOVE_BWD_MIDDLE]] ]
+; ALL-NEXT:    [[BWD_MAIN_INDEX]] = sub i64 [[TMP6]], 1
+; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <4 x i32>, ptr [[TMP1]], i64 [[BWD_MAIN_INDEX]]
+; ALL-NEXT:    [[ELEMENT1:%.*]] = load <4 x i32>, ptr [[TMP7]], align 1
+; ALL-NEXT:    [[TMP8:%.*]] = getelementptr inbounds <4 x i32>, ptr [[DST]], i64 [[BWD_MAIN_INDEX]]
+; ALL-NEXT:    store <4 x i32> [[ELEMENT1]], ptr [[TMP8]], align 1
+; ALL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[BWD_MAIN_INDEX]], 0
+; ALL-NEXT:    br i1 [[TMP9]], label [[MEMMOVE_DONE]], label [[MEMMOVE_BWD_MAIN_LOOP]]
+; ALL:       memmove_copy_forward:
+; ALL-NEXT:    br i1 false, label [[MEMMOVE_FWD_MIDDLE:%.*]], label [[MEMMOVE_FWD_MAIN_LOOP:%.*]]
+; ALL:       memmove_fwd_main_loop:
+; ALL-NEXT:    [[FWD_MAIN_INDEX:%.*]] = phi i64 [ [[TMP12:%.*]], [[MEMMOVE_FWD_MAIN_LOOP]] ], [ 0, [[MEMMOVE_COPY_FORWARD]] ]
+; ALL-NEXT:    [[TMP10:%.*]] = getelementptr inbounds <4 x i32>, ptr [[TMP1]], i64 [[FWD_MAIN_INDEX]]
+; ALL-NEXT:    [[ELEMENT2:%.*]] = load <4 x i32>, ptr [[TMP10]], align 1
+; ALL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds <4 x i32>, ptr [[DST]], i64 [[FWD_MAIN_INDEX]]
+; ALL-NEXT:    store <4 x i32> [[ELEMENT2]], ptr [[TMP11]], align 1
+; ALL-NEXT:    [[TMP12]] = add i64 [[FWD_MAIN_INDEX]], 1
+; ALL-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[TMP12]], 16
+; ALL-NEXT:    br i1 [[TMP13]], label [[MEMMOVE_FWD_MIDDLE]], label [[MEMMOVE_FWD_MAIN_LOOP]]
+; ALL:       memmove_fwd_middle:
+; ALL-NEXT:    br i1 true, label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_RESIDUAL_LOOP:%.*]]
+; ALL:       memmove_fwd_residual_loop:
+; ALL-NEXT:    [[FWD_RESIDUAL_INDEX:%.*]] = phi i64 [ [[TMP16:%.*]], [[MEMMOVE_FWD_RESIDUAL_LOOP]] ], [ 256, [[MEMMOVE_FWD_MIDDLE]] ]
+; ALL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[FWD_RESIDUAL_INDEX]]
+; ALL-NEXT:    [[ELEMENT3:%.*]] = load i8, ptr [[TMP14]], align 1
+; ALL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[FWD_RESIDUAL_INDEX]]
+; ALL-NEXT:    store i8 [[ELEMENT3]], ptr [[TMP15]], align 1
+; ALL-NEXT:    [[TMP16]] = add i64 [[FWD_RESIDUAL_INDEX]], 1
+; ALL-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[TMP16]], 256
+; ALL-NEXT:    br i1 [[TMP17]], label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_RESIDUAL_LOOP]]
 ; ALL:       memmove_done:
 ; ALL-NEXT:    ret void
 ;
@@ -1450,30 +1555,51 @@ define amdgpu_kernel void @memmove_private_align1_flat_align1(ptr addrspace(5) %
 ; ALL-LABEL: @memmove_private_align1_flat_align1(
 ; ALL-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(5) [[DST:%.*]] to ptr
 ; ALL-NEXT:    [[COMPARE_SRC_DST:%.*]] = icmp ult ptr [[SRC:%.*]], [[TMP1]]
-; ALL-NEXT:    [[COMPARE_N_TO_0:%.*]] = icmp eq i64 256, 0
-; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[COPY_BACKWARDS:%.*]], label [[COPY_FORWARD:%.*]]
-; ALL:       copy_backwards:
-; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE:%.*]], label [[COPY_BACKWARDS_LOOP:%.*]]
-; ALL:       copy_backwards_loop:
-; ALL-NEXT:    [[TMP2:%.*]] = phi i64 [ [[INDEX_PTR:%.*]], [[COPY_BACKWARDS_LOOP]] ], [ 256, [[COPY_BACKWARDS]] ]
-; ALL-NEXT:    [[INDEX_PTR]] = sub i64 [[TMP2]], 1
-; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[MEMMOVE_COPY_BACKWARDS:%.*]], label [[MEMMOVE_COPY_FORWARD:%.*]]
+; ALL:       memmove_copy_backwards:
+; ALL-NEXT:    br i1 true, label [[MEMMOVE_BWD_MIDDLE:%.*]], label [[MEMMOVE_BWD_RESIDUAL_LOOP:%.*]]
+; ALL:       memmove_bwd_residual_loop:
+; ALL-NEXT:    [[TMP2:%.*]] = phi i64 [ [[BWD_RESIDUAL_INDEX:%.*]], [[MEMMOVE_BWD_RESIDUAL_LOOP]] ], [ 256, [[MEMMOVE_COPY_BACKWARDS]] ]
+; ALL-NEXT:    [[BWD_RESIDUAL_INDEX]] = sub i64 [[TMP2]], 1
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[BWD_RESIDUAL_INDEX]]
 ; ALL-NEXT:    [[ELEMENT:%.*]] = load i8, ptr [[TMP3]], align 1
-; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[BWD_RESIDUAL_INDEX]]
 ; ALL-NEXT:    store i8 [[ELEMENT]], ptr [[TMP4]], align 1
-; ALL-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_PTR]], 0
-; ALL-NEXT:    br i1 [[TMP5]], label [[MEMMOVE_DONE]], label [[COPY_BACKWARDS_LOOP]]
-; ALL:       copy_forward:
-; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP:%.*]]
-; ALL:       copy_forward_loop:
-; ALL-NEXT:    [[INDEX_PTR1:%.*]] = phi i64 [ [[INDEX_INCREMENT:%.*]], [[COPY_FORWARD_LOOP]] ], [ 0, [[COPY_FORWARD]] ]
-; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[INDEX_PTR1]]
-; ALL-NEXT:    [[ELEMENT2:%.*]] = load i8, ptr [[TMP6]], align 1
-; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[INDEX_PTR1]]
-; ALL-NEXT:    store i8 [[ELEMENT2]], ptr [[TMP7]], align 1
-; ALL-NEXT:    [[INDEX_INCREMENT]] = add i64 [[INDEX_PTR1]], 1
-; ALL-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_INCREMENT]], 256
-; ALL-NEXT:    br i1 [[TMP8]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP]]
+; ALL-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[BWD_RESIDUAL_INDEX]], 256
+; ALL-NEXT:    br i1 [[TMP5]], label [[MEMMOVE_BWD_MIDDLE]], label [[MEMMOVE_BWD_RESIDUAL_LOOP]]
+; ALL:       memmove_bwd_middle:
+; ALL-NEXT:    br i1 false, label [[MEMMOVE_DONE:%.*]], label [[MEMMOVE_BWD_MAIN_LOOP:%.*]]
+; ALL:       memmove_bwd_main_loop:
+; ALL-NEXT:    [[TMP6:%.*]] = phi i64 [ [[BWD_MAIN_INDEX:%.*]], [[MEMMOVE_BWD_MAIN_LOOP]] ], [ 16, [[MEMMOVE_BWD_MIDDLE]] ]
+; ALL-NEXT:    [[BWD_MAIN_INDEX]] = sub i64 [[TMP6]], 1
+; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <4 x i32>, ptr [[SRC]], i64 [[BWD_MAIN_INDEX]]
+; ALL-NEXT:    [[ELEMENT1:%.*]] = load <4 x i32>, ptr [[TMP7]], align 1
+; ALL-NEXT:    [[TMP8:%.*]] = getelementptr inbounds <4 x i32>, ptr [[TMP1]], i64 [[BWD_MAIN_INDEX]]
+; ALL-NEXT:    store <4 x i32> [[ELEMENT1]], ptr [[TMP8]], align 1
+; ALL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[BWD_MAIN_INDEX]], 0
+; ALL-NEXT:    br i1 [[TMP9]], label [[MEMMOVE_DONE]], label [[MEMMOVE_BWD_MAIN_LOOP]]
+; ALL:       memmove_copy_forward:
+; ALL-NEXT:    br i1 false, label [[MEMMOVE_FWD_MIDDLE:%.*]], label [[MEMMOVE_FWD_MAIN_LOOP:%.*]]
+; ALL:       memmove_fwd_main_loop:
+; ALL-NEXT:    [[FWD_MAIN_INDEX:%.*]] = phi i64 [ [[TMP12:%.*]], [[MEMMOVE_FWD_MAIN_LOOP]] ], [ 0, [[MEMMOVE_COPY_FORWARD]] ]
+; ALL-NEXT:    [[TMP10:%.*]] = getelementptr inbounds <4 x i32>, ptr [[SRC]], i64 [[FWD_MAIN_INDEX]]
+; ALL-NEXT:    [[ELEMENT2:%.*]] = load <4 x i32>, ptr [[TMP10]], align 1
+; ALL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds <4 x i32>, ptr [[TMP1]], i64 [[FWD_MAIN_INDEX]]
+; ALL-NEXT:    store <4 x i32> [[ELEMENT2]], ptr [[TMP11]], align 1
+; ALL-NEXT:    [[TMP12]] = add i64 [[FWD_MAIN_INDEX]], 1
+; ALL-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[TMP12]], 16
+; ALL-NEXT:    br i1 [[TMP13]], label [[MEMMOVE_FWD_MIDDLE]], label [[MEMMOVE_FWD_MAIN_LOOP]]
+; ALL:       memmove_fwd_middle:
+; ALL-NEXT:    br i1 true, label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_RESIDUAL_LOOP:%.*]]
+; ALL:       memmove_fwd_residual_loop:
+; ALL-NEXT:    [[FWD_RESIDUAL_INDEX:%.*]] = phi i64 [ [[TMP16:%.*]], [[MEMMOVE_FWD_RESIDUAL_LOOP]] ], [ 256, [[MEMMOVE_FWD_MIDDLE]] ]
+; ALL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[FWD_RESIDUAL_INDEX]]
+; ALL-NEXT:    [[ELEMENT3:%.*]] = load i8, ptr [[TMP14]], align 1
+; ALL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[FWD_RESIDUAL_INDEX]]
+; ALL-NEXT:    store i8 [[ELEMENT3]], ptr [[TMP15]], align 1
+; ALL-NEXT:    [[TMP16]] = add i64 [[FWD_RESIDUAL_INDEX]], 1
+; ALL-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[TMP16]], 256
+; ALL-NEXT:    br i1 [[TMP17]], label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_RESIDUAL_LOOP]]
 ; ALL:       memmove_done:
 ; ALL-NEXT:    ret void
 ;
@@ -1783,30 +1909,51 @@ define amdgpu_kernel void @memmove_volatile(ptr addrspace(1) %dst, ptr addrspace
 ;
 ; ALL-LABEL: @memmove_volatile(
 ; ALL-NEXT:    [[COMPARE_SRC_DST:%.*]] = icmp ult ptr addrspace(1) [[SRC:%.*]], [[DST:%.*]]
-; ALL-NEXT:    [[COMPARE_N_TO_0:%.*]] = icmp eq i64 64, 0
-; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[COPY_BACKWARDS:%.*]], label [[COPY_FORWARD:%.*]]
-; ALL:       copy_backwards:
-; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE:%.*]], label [[COPY_BACKWARDS_LOOP:%.*]]
-; ALL:       copy_backwards_loop:
-; ALL-NEXT:    [[TMP1:%.*]] = phi i64 [ [[INDEX_PTR:%.*]], [[COPY_BACKWARDS_LOOP]] ], [ 64, [[COPY_BACKWARDS]] ]
-; ALL-NEXT:    [[INDEX_PTR]] = sub i64 [[TMP1]], 1
-; ALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[MEMMOVE_COPY_BACKWARDS:%.*]], label [[MEMMOVE_COPY_FORWARD:%.*]]
+; ALL:       memmove_copy_backwards:
+; ALL-NEXT:    br i1 true, label [[MEMMOVE_BWD_MIDDLE:%.*]], label [[MEMMOVE_BWD_RESIDUAL_LOOP:%.*]]
+; ALL:       memmove_bwd_residual_loop:
+; ALL-NEXT:    [[TMP1:%.*]] = phi i64 [ [[BWD_RESIDUAL_INDEX:%.*]], [[MEMMOVE_BWD_RESIDUAL_LOOP]] ], [ 64, [[MEMMOVE_COPY_BACKWARDS]] ]
+; ALL-NEXT:    [[BWD_RESIDUAL_INDEX]] = sub i64 [[TMP1]], 1
+; ALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[BWD_RESIDUAL_INDEX]]
 ; ALL-NEXT:    [[ELEMENT:%.*]] = load volatile i8, ptr addrspace(1) [[TMP2]], align 1
-; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[BWD_RESIDUAL_INDEX]]
 ; ALL-NEXT:    store volatile i8 [[ELEMENT]], ptr addrspace(1) [[TMP3]], align 1
-; ALL-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_PTR]], 0
-; ALL-NEXT:    br i1 [[TMP4]], label [[MEMMOVE_DONE]], label [[COPY_BACKWARDS_LOOP]]
-; ALL:       copy_forward:
-; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP:%.*]]
-; ALL:       copy_forward_loop:
-; ALL-NEXT:    [[INDEX_PTR1:%.*]] = phi i64 [ [[INDEX_INCREMENT:%.*]], [[COPY_FORWARD_LOOP]] ], [ 0, [[COPY_FORWARD]] ]
-; ALL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[INDEX_PTR1]]
-; ALL-NEXT:    [[ELEMENT2:%.*]] = load volatile i8, ptr addrspace(1) [[TMP5]], align 1
-; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[INDEX_PTR1]]
-; ALL-NEXT:    store volatile i8 [[ELEMENT2]], ptr addrspace(1) [[TMP6]], align 1
-; ALL-NEXT:    [[INDEX_INCREMENT]] = add i64 [[INDEX_PTR1]], 1
-; ALL-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_INCREMENT]], 64
-; ALL-NEXT:    br i1 [[TMP7]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP]]
+; ALL-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[BWD_RESIDUAL_INDEX]], 64
+; ALL-NEXT:    br i1 [[TMP4]], label [[MEMMOVE_BWD_MIDDLE]], label [[MEMMOVE_BWD_RESIDUAL_LOOP]]
+; ALL:       memmove_bwd_middle:
+; ALL-NEXT:    br i1 false, label [[MEMMOVE_DONE:%.*]], label [[MEMMOVE_BWD_MAIN_LOOP:%.*]]
+; ALL:       memmove_bwd_main_loop:
+; ALL-NEXT:    [[TMP5:%.*]] = phi i64 [ [[BWD_MAIN_INDEX:%.*]], [[MEMMOVE_BWD_MAIN_LOOP]] ], [ 4, [[MEMMOVE_BWD_MIDDLE]] ]
+; ALL-NEXT:    [[BWD_MAIN_INDEX]] = sub i64 [[TMP5]], 1
+; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[BWD_MAIN_INDEX]]
+; ALL-NEXT:    [[ELEMENT1:%.*]] = load volatile <4 x i32>, ptr addrspace(1) [[TMP6]], align 1
+; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST]], i64 [[BWD_MAIN_INDEX]]
+; ALL-NEXT:    store volatile <4 x i32> [[ELEMENT1]], ptr addrspace(1) [[TMP7]], align 1
+; ALL-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[BWD_MAIN_INDEX]], 0
+; ALL-NEXT:    br i1 [[TMP8]], label [[MEMMOVE_DONE]], label [[MEMMOVE_BWD_MAIN_LOOP]]
+; ALL:       memmove_copy_forward:
+; ALL-NEXT:    br i1 false, label [[MEMMOVE_FWD_MIDDLE:%.*]], label [[MEMMOVE_FWD_MAIN_LOOP:%.*]]
+; ALL:       memmove_fwd_main_loop:
+; ALL-NEXT:    [[FWD_MAIN_INDEX:%.*]] = phi i64 [ [[TMP11:%.*]], [[MEMMOVE_FWD_MAIN_LOOP]] ], [ 0, [[MEMMOVE_COPY_FORWARD]] ]
+; ALL-NEXT:    [[TMP9:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[FWD_MAIN_INDEX]]
+; ALL-NEXT:    [[ELEMENT2:%.*]] = load volatile <4 x i32>, ptr addrspace(1) [[TMP9]], align 1
+; ALL-NEXT:    [[TMP10:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST]], i64 [[FWD_MAIN_INDEX]]
+; ALL-NEXT:    store volatile <4 x i32> [[ELEMENT2]], ptr addrspace(1) [[TMP10]], align 1
+; ALL-NEXT:    [[TMP11]] = add i64 [[FWD_MAIN_INDEX]], 1
+; ALL-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[TMP11]], 4
+; ALL-NEXT:    br i1 [[TMP12]], label [[MEMMOVE_FWD_MIDDLE]], label [[MEMMOVE_FWD_MAIN_LOOP]]
+; ALL:       memmove_fwd_middle:
+; ALL-NEXT:    br i1 true, label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_RESIDUAL_LOOP:%.*]]
+; ALL:       memmove_fwd_residual_loop:
+; ALL-NEXT:    [[FWD_RESIDUAL_INDEX:%.*]] = phi i64 [ [[TMP15:%.*]], [[MEMMOVE_FWD_RESIDUAL_LOOP]] ], [ 64, [[MEMMOVE_FWD_MIDDLE]] ]
+; ALL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[FWD_RESIDUAL_INDEX]]
+; ALL-NEXT:    [[ELEMENT3:%.*]] = load volatile i8, ptr addrspace(1) [[TMP13]], align 1
+; ALL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[FWD_RESIDUAL_INDEX]]
+; ALL-NEXT:    store volatile i8 [[ELEMENT3]], ptr addrspace(1) [[TMP14]], align 1
+; ALL-NEXT:    [[TMP15]] = add i64 [[FWD_RESIDUAL_INDEX]], 1
+; ALL-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[TMP15]], 64
+; ALL-NEXT:    br i1 [[TMP16]], label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_RESIDUAL_LOOP]]
 ; ALL:       memmove_done:
 ; ALL-NEXT:    ret void
 ;
