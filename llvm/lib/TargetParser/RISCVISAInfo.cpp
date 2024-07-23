@@ -1022,14 +1022,14 @@ std::string RISCVISAInfo::getTargetFeatureForExtension(StringRef Ext) {
 }
 
 struct RISCVExtBit {
-  const StringRef ext;
+  const StringLiteral ext;
   uint8_t bitpos;
 };
 
 /// Maps extensions with assigned bit positions within group 0 of
 /// __riscv_features_bits to their respective bit position.  At the
 /// moment all extensions are within group 0.
-static RISCVExtBit RISCVGroup0BitPositions[] = {
+constexpr static RISCVExtBit RISCVGroup0BitPositions[] = {
     {"a", 0},          {"c", 2},
     {"d", 3},          {"f", 5},
     {"i", 8},          {"m", 12},

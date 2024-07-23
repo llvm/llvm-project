@@ -24,7 +24,7 @@
 #endif
 
 #if !__has_builtin(__builtin_cpu_supports)
-# if defined(X86) || defined(RISCV)
-#   error "X86/RISCV should have __builtin_cpu_supports"
+# if defined(ARM) || defined(X86) || defined(RISCV)
+#   error "ARM/X86/RISCV should have __builtin_cpu_supports"
 # endif
 #endif
