@@ -39,7 +39,6 @@ TaggedUnionMemberCountCheck::TaggedUnionMemberCountCheck(
           Options.get(CountingEnumPrefixesOptionName).has_value()),
       CountingEnumSuffixesSet(
           Options.get(CountingEnumSuffixesOptionName).has_value()) {
-  // TODO: Create test case for this diagnostic
   if (!EnableCountingEnumHeuristic) {
     if (CountingEnumPrefixesSet)
       configurationDiag("%0: Counting enum heuristic is disabled but "
