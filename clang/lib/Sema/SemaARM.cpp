@@ -315,40 +315,6 @@ bool SemaARM::BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
   return false;
 }
 
-// Get the valid immediate range for the specified NEON type code.
-static unsigned RFT(unsigned t, bool shift = false, bool ForceQuad = false) {
-  NeonTypeFlags Type(t);
-  int IsQuad = ForceQuad ? true : Type.isQuad();
-  switch (Type.getEltType()) {
-  case NeonTypeFlags::Int8:
-  case NeonTypeFlags::Poly8:
-    return shift ? 7 : (8 << IsQuad) - 1;
-  case NeonTypeFlags::Int16:
-  case NeonTypeFlags::Poly16:
-    return shift ? 15 : (4 << IsQuad) - 1;
-  case NeonTypeFlags::Int32:
-    return shift ? 31 : (2 << IsQuad) - 1;
-  case NeonTypeFlags::Int64:
-  case NeonTypeFlags::Poly64:
-    return shift ? 63 : (1 << IsQuad) - 1;
-  case NeonTypeFlags::Poly128:
-    return shift ? 127 : (1 << IsQuad) - 1;
-  case NeonTypeFlags::Float16:
-    assert(!shift && "cannot shift float types!");
-    return (4 << IsQuad) - 1;
-  case NeonTypeFlags::Float32:
-    assert(!shift && "cannot shift float types!");
-    return (2 << IsQuad) - 1;
-  case NeonTypeFlags::Float64:
-    assert(!shift && "cannot shift float types!");
-    return (1 << IsQuad) - 1;
-  case NeonTypeFlags::BFloat16:
-    assert(!shift && "cannot shift float types!");
-    return (4 << IsQuad) - 1;
-  }
-  llvm_unreachable("Invalid NeonTypeFlag!");
-}
-
 /// getNeonEltType - Return the QualType corresponding to the elements of
 /// the vector type specified by the NeonTypeFlags.  This is used to check
 /// the pointer arguments for Neon load/store intrinsics.
@@ -404,6 +370,62 @@ enum ArmSMEState : unsigned {
   ArmZT0Mask = 0b11 << 2
 };
 
+bool SemaARM::ParseNeonImmChecks(CallExpr *TheCall, SmallVector<std::tuple<int, int, int>, 2> 
+                                &ImmChecks, int OverloadType = -1) {
+  int ArgIdx, CheckTy, ElementType;
+  bool hasError = false;
+
+  for (auto &I : ImmChecks) {
+    std::tie(ArgIdx, CheckTy, ElementType) = I;
+
+    NeonTypeFlags Type = (OverloadType != -1) ? 
+                          NeonTypeFlags(OverloadType) : NeonTypeFlags(ElementType); 
+          
+    switch((ArmImmCheckType)CheckTy) {
+      case ArmImmCheckType::ImmCheck0_3:
+        hasError |= SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0, 3);
+        break;
+      case ArmImmCheckType::ImmCheck0_63:
+        hasError |= SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0, 63);
+        break;
+      case ArmImmCheckType::ImmCheck0_7:
+        hasError |= SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0, 7);
+        break;
+      case ArmImmCheckType::ImmCheck1_16:
+        hasError |= SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 1, 16);
+        break;
+      case ArmImmCheckType::ImmCheck1_32:
+        hasError |= SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 1, 32);
+        break;
+      case ArmImmCheckType::ImmCheck1_64:
+        hasError |= SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 1, 64);
+        break;
+      case ArmImmCheckType::ImmCheckLaneIndex:
+        hasError |= SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0,  (64 << Type.isQuad()) / 
+                                                    Type.getEltSizeInBits() - 1);
+        break; 
+      case ArmImmCheckType::ImmCheckLaneQIndex:    // force to use quad
+        hasError |= SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0, 
+                                                    (128/Type.getEltSizeInBits()) - 1);
+        break;
+      case ArmImmCheckType::ImmCheckShiftLeft:
+        hasError |= SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0, 
+                                                    Type.getEltSizeInBits() - 1);
+        break;
+      case ArmImmCheckType::ImmCheckShiftRight:
+        hasError |= SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 
+                                                    1, Type.getEltSizeInBits());
+        break;
+      default:
+        llvm_unreachable("Invalid Neon immediate range typeflag!");
+        break;
+    }
+  }
+
+  return hasError;
+}
+
+
 bool SemaARM::ParseSVEImmChecks(
     CallExpr *TheCall, SmallVector<std::tuple<int, int, int>, 3> &ImmChecks) {
   // Perform all the immediate checks for this builtin call.
@@ -433,76 +455,76 @@ bool SemaARM::ParseSVEImmChecks(
       return false;
     };
 
-    switch ((SVETypeFlags::ImmCheckType)CheckTy) {
-    case SVETypeFlags::ImmCheck0_31:
+    switch ((ArmImmCheckType)CheckTy) {
+    case ArmImmCheckType::ImmCheck0_31:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, 31))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheck0_13:
+    case ArmImmCheckType::ImmCheck0_13:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, 13))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheck1_16:
+    case ArmImmCheckType::ImmCheck1_16:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 1, 16))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheck0_7:
+    case ArmImmCheckType::ImmCheck0_7:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, 7))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheck1_1:
+    case ArmImmCheckType::ImmCheck1_1:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 1, 1))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheck1_3:
+    case ArmImmCheckType::ImmCheck1_3:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 1, 3))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheck1_7:
+    case ArmImmCheckType::ImmCheck1_7:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 1, 7))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheckExtract:
+    case ArmImmCheckType::ImmCheckExtract:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0,
                                           (2048 / ElementSizeInBits) - 1))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheckShiftRight:
+    case ArmImmCheckType::ImmCheckShiftRight:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 1,
                                           ElementSizeInBits))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheckShiftRightNarrow:
+    case ArmImmCheckType::ImmCheckShiftRightNarrow:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 1,
                                           ElementSizeInBits / 2))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheckShiftLeft:
+    case ArmImmCheckType::ImmCheckShiftLeft:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0,
                                           ElementSizeInBits - 1))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheckLaneIndex:
+    case ArmImmCheckType::ImmCheckLaneIndex:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0,
                                           (128 / (1 * ElementSizeInBits)) - 1))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheckLaneIndexCompRotate:
+    case ArmImmCheckType::ImmCheckLaneIndexCompRotate:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0,
                                           (128 / (2 * ElementSizeInBits)) - 1))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheckLaneIndexDot:
+    case ArmImmCheckType::ImmCheckLaneIndexDot:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0,
                                           (128 / (4 * ElementSizeInBits)) - 1))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheckComplexRot90_270:
+    case ArmImmCheckType::ImmCheckComplexRot90_270:
       if (CheckImmediateInSet([](int64_t V) { return V == 90 || V == 270; },
                               diag::err_rotation_argument_to_cadd))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheckComplexRotAll90:
+    case ArmImmCheckType::ImmCheckComplexRotAll90:
       if (CheckImmediateInSet(
               [](int64_t V) {
                 return V == 0 || V == 90 || V == 180 || V == 270;
@@ -510,34 +532,37 @@ bool SemaARM::ParseSVEImmChecks(
               diag::err_rotation_argument_to_cmla))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheck0_1:
+    case ArmImmCheckType::ImmCheck0_1:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, 1))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheck0_2:
+    case ArmImmCheckType::ImmCheck0_2:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, 2))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheck0_3:
+    case ArmImmCheckType::ImmCheck0_3:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, 3))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheck0_0:
+    case ArmImmCheckType::ImmCheck0_0:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, 0))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheck0_15:
+    case ArmImmCheckType::ImmCheck0_15:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, 15))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheck0_255:
+    case ArmImmCheckType::ImmCheck0_255:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, 255))
         HasError = true;
       break;
-    case SVETypeFlags::ImmCheck2_4_Mul2:
+    case ArmImmCheckType::ImmCheck2_4_Mul2:
       if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 2, 4) ||
           SemaRef.BuiltinConstantArgMultiple(TheCall, ArgNum, 2))
         HasError = true;
+      break;
+    default:
+      llvm_unreachable("Invalid SVE immediate range typeflag!");
       break;
     }
   }
@@ -749,7 +774,7 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
 
   llvm::APSInt Result;
   uint64_t mask = 0;
-  unsigned TV = 0;
+  int TV = -1;
   int PtrArgNum = -1;
   bool HasConstPtr = false;
   switch (BuiltinID) {
@@ -802,7 +827,7 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
 
   // For NEON intrinsics which take an immediate value as part of the
   // instruction, range check them here.
-  unsigned i = 0, l = 0, u = 0;
+  SmallVector<std::tuple<int, int, int>, 2> ImmChecks;
   switch (BuiltinID) {
   default:
     return false;
@@ -810,9 +835,9 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
 #include "clang/Basic/arm_fp16.inc"
 #include "clang/Basic/arm_neon.inc"
 #undef GET_NEON_IMMEDIATE_CHECK
-  }
-
-  return SemaRef.BuiltinConstantArgRange(TheCall, i, l, u + l);
+    }
+    
+  return ParseNeonImmChecks(TheCall, ImmChecks, TV);
 }
 
 bool SemaARM::CheckMVEBuiltinFunctionCall(unsigned BuiltinID,

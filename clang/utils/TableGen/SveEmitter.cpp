@@ -1573,7 +1573,7 @@ void SVEEmitter::createTypeFlags(raw_ostream &OS) {
     OS << "  " << KV.getKey() << " = " << KV.getValue() << ",\n";
   OS << "#endif\n\n";
 
-  OS << "#ifdef LLVM_GET_SVE_IMMCHECKTYPES\n";
+  OS << "#ifdef LLVM_GET_ARM_INTRIN_IMMCHECKTYPES\n";
   for (auto &KV : ImmCheckTypes)
     OS << "  " << KV.getKey() << " = " << KV.getValue() << ",\n";
   OS << "#endif\n\n";
