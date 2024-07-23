@@ -11501,28 +11501,28 @@ static SDValue foldBoolSelectToLogic(SDNode *N, const SDLoc &DL,
   if (VT != Cond.getValueType() || VT.getScalarSizeInBits() != 1)
     return SDValue();
 
-  // select Cond, Cond, F --> or Cond, F
-  // select Cond, 1, F    --> or Cond, F
+  // select Cond, Cond, F --> or Cond, freeze(F)
+  // select Cond, 1, F    --> or Cond, freeze(F)
   if (Cond == T || isOneOrOneSplat(T, /* AllowUndefs */ true))
-    return matcher.getNode(ISD::OR, DL, VT, Cond, F);
+    return matcher.getNode(ISD::OR, DL, VT, Cond, DAG.getFreeze(F));
 
-  // select Cond, T, Cond --> and Cond, T
-  // select Cond, T, 0    --> and Cond, T
+  // select Cond, T, Cond --> and Cond, freeze(T)
+  // select Cond, T, 0    --> and Cond, freeze(T)
   if (Cond == F || isNullOrNullSplat(F, /* AllowUndefs */ true))
-    return matcher.getNode(ISD::AND, DL, VT, Cond, T);
+    return matcher.getNode(ISD::AND, DL, VT, Cond, DAG.getFreeze(T));
 
-  // select Cond, T, 1 --> or (not Cond), T
+  // select Cond, T, 1 --> or (not Cond), freeze(T)
   if (isOneOrOneSplat(F, /* AllowUndefs */ true)) {
     SDValue NotCond =
         matcher.getNode(ISD::XOR, DL, VT, Cond, DAG.getAllOnesConstant(DL, VT));
-    return matcher.getNode(ISD::OR, DL, VT, NotCond, T);
+    return matcher.getNode(ISD::OR, DL, VT, NotCond, DAG.getFreeze(T));
   }
 
-  // select Cond, 0, F --> and (not Cond), F
+  // select Cond, 0, F --> and (not Cond), freeze(F)
   if (isNullOrNullSplat(T, /* AllowUndefs */ true)) {
     SDValue NotCond =
         matcher.getNode(ISD::XOR, DL, VT, Cond, DAG.getAllOnesConstant(DL, VT));
-    return matcher.getNode(ISD::AND, DL, VT, NotCond, F);
+    return matcher.getNode(ISD::AND, DL, VT, NotCond, DAG.getFreeze(F));
   }
 
   return SDValue();
@@ -11550,37 +11550,37 @@ static SDValue foldVSelectToSignBitSplatMask(SDNode *N, SelectionDAG &DAG) {
   else
     return SDValue();
 
-  // (Cond0 s< 0) ? N1 : 0 --> (Cond0 s>> BW-1) & N1
+  // (Cond0 s< 0) ? N1 : 0 --> (Cond0 s>> BW-1) & freeze(N1)
   if (isNullOrNullSplat(N2)) {
     SDLoc DL(N);
     SDValue ShiftAmt = DAG.getConstant(VT.getScalarSizeInBits() - 1, DL, VT);
     SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, Cond0, ShiftAmt);
-    return DAG.getNode(ISD::AND, DL, VT, Sra, N1);
+    return DAG.getNode(ISD::AND, DL, VT, Sra, DAG.getFreeze(N1));
   }
 
-  // (Cond0 s< 0) ? -1 : N2 --> (Cond0 s>> BW-1) | N2
+  // (Cond0 s< 0) ? -1 : N2 --> (Cond0 s>> BW-1) | freeze(N2)
   if (isAllOnesOrAllOnesSplat(N1)) {
     SDLoc DL(N);
     SDValue ShiftAmt = DAG.getConstant(VT.getScalarSizeInBits() - 1, DL, VT);
     SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, Cond0, ShiftAmt);
-    return DAG.getNode(ISD::OR, DL, VT, Sra, N2);
+    return DAG.getNode(ISD::OR, DL, VT, Sra, DAG.getFreeze(N2));
   }
 
   // If we have to invert the sign bit mask, only do that transform if the
   // target has a bitwise 'and not' instruction (the invert is free).
-  // (Cond0 s< -0) ? 0 : N2 --> ~(Cond0 s>> BW-1) & N2
+  // (Cond0 s< -0) ? 0 : N2 --> ~(Cond0 s>> BW-1) & freeze(N2)
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (isNullOrNullSplat(N1) && TLI.hasAndNot(N1)) {
     SDLoc DL(N);
     SDValue ShiftAmt = DAG.getConstant(VT.getScalarSizeInBits() - 1, DL, VT);
     SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, Cond0, ShiftAmt);
     SDValue Not = DAG.getNOT(DL, Sra, VT);
-    return DAG.getNode(ISD::AND, DL, VT, Not, N2);
+    return DAG.getNode(ISD::AND, DL, VT, Not, DAG.getFreeze(N2));
   }
 
   // TODO: There's another pattern in this family, but it may require
   //       implementing hasOrNot() to check for profitability:
-  //       (Cond0 s> -1) ? -1 : N2 --> ~(Cond0 s>> BW-1) | N2
+  //       (Cond0 s> -1) ? -1 : N2 --> ~(Cond0 s>> BW-1) | freeze(N2)
 
   return SDValue();
 }
