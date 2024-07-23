@@ -233,9 +233,8 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
   [[clang::ptrauth_vtable_pointer(key, address_discrimination,                 \
                                   extra_discrimination)]]
 
+/* The value is ptrauth_string_discriminator("init_fini") */
 #define __ptrauth_init_fini_discriminator 0xd9d4
-#define __ptrauth_init_fini_pointer                                            \
-  __ptrauth(ptrauth_key_init_fini_pointer, 1, __ptrauth_init_fini_discriminator)
 
 #else
 

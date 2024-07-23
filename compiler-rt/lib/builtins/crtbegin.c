@@ -51,9 +51,16 @@ static void __attribute__((used)) __do_init(void) {
 
 #ifdef CRT_HAS_INITFINI_ARRAY
 #if __has_feature(ptrauth_init_fini)
-__attribute__((section(".init_array"),
-               used)) static void *__ptrauth_init_fini_pointer __init =
-    __do_init;
+#if __has_feature(ptrauth_init_fini_address_discrimination)
+__attribute__((section(".init_array"), used)) static void *__init =
+    ptrauth_sign_constant(&__do_init, ptrauth_key_init_fini_pointer,
+                          ptrauth_blend_discriminator(
+                              &__init, __ptrauth_init_fini_discriminator));
+#else
+__attribute__((section(".init_array"), used)) static void *__init =
+    ptrauth_sign_constant(&__do_init, ptrauth_key_init_fini_pointer,
+                          __ptrauth_init_fini_discriminator);
+#endif
 #else
 __attribute__((section(".init_array"),
                used)) static void (*__init)(void) = __do_init;
@@ -114,9 +121,16 @@ static void __attribute__((used)) __do_fini(void) {
 
 #ifdef CRT_HAS_INITFINI_ARRAY
 #if __has_feature(ptrauth_init_fini)
-__attribute__((section(".fini_array"),
-               used)) static void *__ptrauth_init_fini_pointer __fini =
-    __do_fini;
+#if __has_feature(ptrauth_init_fini_address_discrimination)
+__attribute__((section(".fini_array"), used)) static void *__fini =
+    ptrauth_sign_constant(&__do_fini, ptrauth_key_init_fini_pointer,
+                          ptrauth_blend_discriminator(
+                              &__fini, __ptrauth_init_fini_discriminator));
+#else
+__attribute__((section(".fini_array"), used)) static void *__fini =
+    ptrauth_sign_constant(&__do_fini, ptrauth_key_init_fini_pointer,
+                          __ptrauth_init_fini_discriminator);
+#endif
 #else
 __attribute__((section(".fini_array"),
                used)) static void (*__fini)(void) = __do_fini;
