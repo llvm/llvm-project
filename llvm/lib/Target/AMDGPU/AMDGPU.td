@@ -1056,6 +1056,12 @@ def FeatureHasRestrictedSOffset : SubtargetFeature<"restricted-soffset",
   "Has restricted SOffset (immediate not supported)."
 >;
 
+def FeatureRequiredExportPriority : SubtargetFeature<"required-export-priority",
+  "HasRequiredExportPriority",
+  "true",
+  "Export priority must be explicitly manipulated on GFX11.5"
+>;
+
 def FeatureBitOp3Insts : SubtargetFeature<"bitop3-insts",
   "HasBitOp3Insts",
   "true",
@@ -1728,7 +1734,8 @@ def FeatureISAVersion11_Generic: FeatureSet<
      FeatureUserSGPRInit16Bug,
      FeatureMADIntraFwdBug,
      FeaturePrivEnabledTrap2NopBug,
-     FeatureRequiresCOV6])>;
+     FeatureRequiresCOV6,
+     FeatureRequiredExportPriority])>;
 
 def FeatureISAVersion11_0_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
@@ -1758,20 +1765,23 @@ def FeatureISAVersion11_5_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
-     FeatureVGPRSingleUseHintInsts])>;
+     FeatureVGPRSingleUseHintInsts,
+     FeatureRequiredExportPriority])>;
 
 def FeatureISAVersion11_5_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      FeatureVGPRSingleUseHintInsts,
-     Feature1_5xVGPRs])>;
+     Feature1_5xVGPRs,
+     FeatureRequiredExportPriority])>;
 
 def FeatureISAVersion11_5_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
-     FeatureVGPRSingleUseHintInsts])>;
+     FeatureVGPRSingleUseHintInsts,
+     FeatureRequiredExportPriority])>;
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
@@ -2206,6 +2216,8 @@ def HasAddNoCarryInsts : Predicate<"Subtarget->hasAddNoCarry()">,
   AssemblerPredicate<(all_of FeatureAddNoCarryInsts)>;
 
 def NotHasAddNoCarryInsts : Predicate<"!Subtarget->hasAddNoCarry()">;
+
+def HasXNACKEnabled : Predicate<"Subtarget->isXNACKEnabled()">;
 
 def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">,
   AssemblerPredicate<(all_of Feature16BitInsts)>;

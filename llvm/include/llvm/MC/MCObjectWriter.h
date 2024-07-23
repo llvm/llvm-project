@@ -38,6 +38,7 @@ protected:
   std::string CompilerVersion;
   std::vector<const MCSymbol *> AddrsigSyms;
   bool EmitAddrsigSection = false;
+  bool SubsectionsViaSymbols = false;
 
   struct CGProfileEntry {
     const MCSymbolRefExpr *From;
@@ -113,6 +114,10 @@ public:
 
   std::vector<const MCSymbol *> &getAddrsigSyms() { return AddrsigSyms; }
   SmallVector<CGProfileEntry, 0> &getCGProfile() { return CGProfile; }
+
+  // Mach-O specific: Whether .subsections_via_symbols is enabled.
+  bool getSubsectionsViaSymbols() const { return SubsectionsViaSymbols; }
+  void setSubsectionsViaSymbols(bool Value) { SubsectionsViaSymbols = Value; }
 
   /// Write the object file and returns the number of bytes written.
   ///
