@@ -11149,7 +11149,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
   if (isa<CXXMethodDecl>(Fn) && !isa<CXXConstructorDecl>(Fn)) {
     if (I == 0)
       isObjectArgument = true;
-    else
+    else if (!Fn->hasCXXExplicitFunctionObjectParameter())
       I--;
   }
 
