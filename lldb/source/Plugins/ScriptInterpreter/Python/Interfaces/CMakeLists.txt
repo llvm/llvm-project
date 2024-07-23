@@ -19,13 +19,14 @@ if (LLDB_ENABLE_LIBEDIT)
   list(APPEND LLDB_LIBEDIT_LIBS LibEdit::LibEdit)
 endif()
 
+add_subdirectory(ScriptedProcessPythonInterface)
+add_subdirectory(ScriptedThreadPlanPythonInterface)
+add_subdirectory(ScriptedPlatformPythonInterface)
+add_subdirectory(OperatingSystemPythonInterface)
+
 add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces
-  OperatingSystemPythonInterface.cpp
   ScriptedPythonInterface.cpp
-  ScriptedProcessPythonInterface.cpp
   ScriptedThreadPythonInterface.cpp
-  ScriptedThreadPlanPythonInterface.cpp
-  ScriptedPlatformPythonInterface.cpp
 
   LINK_LIBS
     lldbCore
