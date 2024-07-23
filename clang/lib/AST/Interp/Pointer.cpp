@@ -55,7 +55,7 @@ Pointer::Pointer(Pointer &&P)
 }
 
 Pointer::~Pointer() {
-  if (isIntegralPointer())
+  if (!isBlockPointer())
     return;
 
   if (Block *Pointee = PointeeStorage.BS.Pointee) {
@@ -87,6 +87,8 @@ void Pointer::operator=(const Pointer &P) {
       PointeeStorage.BS.Pointee->addPointer(this);
   } else if (P.isIntegralPointer()) {
     PointeeStorage.Int = P.PointeeStorage.Int;
+  } else if (P.isFunctionPointer()) {
+    PointeeStorage.Fn = P.PointeeStorage.Fn;
   } else {
     assert(false && "Unhandled storage kind");
   }
@@ -115,6 +117,8 @@ void Pointer::operator=(Pointer &&P) {
       PointeeStorage.BS.Pointee->addPointer(this);
   } else if (P.isIntegralPointer()) {
     PointeeStorage.Int = P.PointeeStorage.Int;
+  } else if (P.isFunctionPointer()) {
+    PointeeStorage.Fn = P.PointeeStorage.Fn;
   } else {
     assert(false && "Unhandled storage kind");
   }
@@ -131,6 +135,8 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
                    CharUnits::fromQuantity(asIntPointer().Value + this->Offset),
                    Path,
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
+  if (isFunctionPointer())
+    return asFunctionPointer().toAPValue(ASTCtx);
 
   // Build the lvalue base from the block.
   const Descriptor *Desc = getDeclDesc();
@@ -180,18 +186,30 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
       Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
       Ptr = Ptr.getArray();
     } else {
-      // TODO: figure out if base is virtual
       bool IsVirtual = false;
 
       // Create a path entry for the field.
       const Descriptor *Desc = Ptr.getFieldDesc();
       if (const auto *BaseOrMember = Desc->asDecl()) {
-        Path.push_back(APValue::LValuePathEntry({BaseOrMember, IsVirtual}));
-        Ptr = Ptr.getBase();
-
-        if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember))
+        if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember)) {
+          Ptr = Ptr.getBase();
           Offset += getFieldOffset(FD);
+        } else if (const auto *RD = dyn_cast<CXXRecordDecl>(BaseOrMember)) {
+          IsVirtual = Ptr.isVirtualBaseClass();
+          Ptr = Ptr.getBase();
+          const Record *BaseRecord = Ptr.getRecord();
 
+          const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(
+              cast<CXXRecordDecl>(BaseRecord->getDecl()));
+          if (IsVirtual)
+            Offset += Layout.getVBaseClassOffset(RD);
+          else
+            Offset += Layout.getBaseClassOffset(RD);
+
+        } else {
+          Ptr = Ptr.getBase();
+        }
+        Path.push_back(APValue::LValuePathEntry({BaseOrMember, IsVirtual}));
         continue;
       }
       llvm_unreachable("Invalid field type");
@@ -251,7 +269,7 @@ std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
 }
 
 bool Pointer::isInitialized() const {
-  if (isIntegralPointer())
+  if (!isBlockPointer())
     return true;
 
   if (isRoot() && PointeeStorage.BS.Base == sizeof(GlobalInlineDescriptor)) {
@@ -287,7 +305,7 @@ bool Pointer::isInitialized() const {
 }
 
 void Pointer::initialize() const {
-  if (isIntegralPointer())
+  if (!isBlockPointer())
     return;
 
   assert(PointeeStorage.BS.Pointee && "Cannot initialize null pointer");
@@ -356,9 +374,14 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
 
   if (A.isIntegralPointer() && B.isIntegralPointer())
     return true;
+  if (A.isFunctionPointer() && B.isFunctionPointer())
+    return true;
 
   if (A.isIntegralPointer() || B.isIntegralPointer())
     return A.getSource() == B.getSource();
+
+  if (A.StorageKind != B.StorageKind)
+    return false;
 
   return A.asBlockPointer().Pointee == B.asBlockPointer().Pointee;
 }

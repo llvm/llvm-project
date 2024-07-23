@@ -3407,7 +3407,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
   }
 }
 
-uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) const {
+uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) {
   assert(!T->isDependentType() &&
          "cannot compute type discriminator of a dependent type");
 
@@ -3417,11 +3417,13 @@ uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) const {
   if (T->isFunctionPointerType() || T->isFunctionReferenceType())
     T = T->getPointeeType();
 
-  if (T->isFunctionType())
+  if (T->isFunctionType()) {
     encodeTypeForFunctionPointerAuth(*this, Out, T);
-  else
-    llvm_unreachable(
-        "type discrimination of non-function type not implemented yet");
+  } else {
+    T = T.getUnqualifiedType();
+    std::unique_ptr<MangleContext> MC(createMangleContext());
+    MC->mangleCanonicalTypeName(T, Out);
+  }
 
   return llvm::getPointerAuthStableSipHash(Str);
 }

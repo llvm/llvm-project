@@ -949,6 +949,9 @@ def note_ptrauth_virtual_function_pointer_incomplete_arg_ret :
 def note_ptrauth_virtual_function_incomplete_arg_ret_type :
   Note<"%0 is incomplete">;
 
+def err_ptrauth_indirect_goto_addrlabel_arithmetic : Error<
+  "%select{subtraction|addition}0 of address-of-label expressions is not "
+  "supported with ptrauth indirect gotos">;
 
 /// main()
 // static main() is not an error in C, just in C++.
@@ -5165,7 +5168,7 @@ def warn_cxx11_compat_variable_template : Warning<
   InGroup<CXXPre14Compat>, DefaultIgnore;
 def err_template_variable_noparams : Error<
   "extraneous 'template<>' in declaration of variable %0">;
-def err_template_member : Error<"member %0 declared as a template">;
+def err_template_member : Error<"non-static data member %0 cannot be declared as a template">;
 def err_member_with_template_arguments : Error<"member %0 cannot have template arguments">;
 def err_template_member_noparams : Error<
   "extraneous 'template<>' in declaration of member %0">;

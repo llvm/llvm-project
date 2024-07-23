@@ -9705,7 +9705,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           CanonicalType = CanonicalType->getWithNewType(IntegerType::get(
               CanonicalType->getContext(),
               DL->getTypeSizeInBits(CanonicalType->getScalarType())));
-        IntrinsicCostAttributes CostAttrs(MinMaxID, VecTy, {VecTy, VecTy});
+        IntrinsicCostAttributes CostAttrs(MinMaxID, CanonicalType,
+                                          {CanonicalType, CanonicalType});
         InstructionCost IntrinsicCost =
             TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
         // If the selects are the only uses of the compares, they will be
@@ -16976,14 +16977,17 @@ public:
 
     // Iterate through all the operands of the possible reduction tree and
     // gather all the reduced values, sorting them by their value id.
+    BasicBlock *BB = Root->getParent();
     bool IsCmpSelMinMax = isCmpSelMinMax(Root);
-    SmallVector<Instruction *> Worklist(1, Root);
+    SmallVector<std::pair<Instruction *, unsigned>> Worklist(
+        1, std::make_pair(Root, 0));
     // Checks if the operands of the \p TreeN instruction are also reduction
     // operations or should be treated as reduced values or an extra argument,
     // which is not part of the reduction.
     auto CheckOperands = [&](Instruction *TreeN,
                              SmallVectorImpl<Value *> &PossibleReducedVals,
-                             SmallVectorImpl<Instruction *> &ReductionOps) {
+                             SmallVectorImpl<Instruction *> &ReductionOps,
+                             unsigned Level) {
       for (int I : reverse(seq<int>(getFirstOperandIndex(TreeN),
                                     getNumberOfOperands(TreeN)))) {
         Value *EdgeVal = getRdxOperand(TreeN, I);
@@ -16993,7 +16997,8 @@ public:
         // reduction opcode or has too many uses - possible reduced value.
         // Also, do not try to reduce const values, if the operation is not
         // foldable.
-        if (!EdgeInst || getRdxKind(EdgeInst) != RdxKind ||
+        if (!EdgeInst || Level > RecursionMaxDepth ||
+            getRdxKind(EdgeInst) != RdxKind ||
             IsCmpSelMinMax != isCmpSelMinMax(EdgeInst) ||
             !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst) ||
             !isVectorizable(RdxKind, EdgeInst) ||
@@ -17048,10 +17053,10 @@ public:
     };
 
     while (!Worklist.empty()) {
-      Instruction *TreeN = Worklist.pop_back_val();
+      auto [TreeN, Level] = Worklist.pop_back_val();
       SmallVector<Value *> PossibleRedVals;
       SmallVector<Instruction *> PossibleReductionOps;
-      CheckOperands(TreeN, PossibleRedVals, PossibleReductionOps);
+      CheckOperands(TreeN, PossibleRedVals, PossibleReductionOps, Level);
       addReductionOps(TreeN);
       // Add reduction values. The values are sorted for better vectorization
       // results.
@@ -17063,8 +17068,8 @@ public:
               .insert(std::make_pair(V, 0))
               .first->second;
       }
-      Worklist.append(PossibleReductionOps.rbegin(),
-                      PossibleReductionOps.rend());
+      for (Instruction *I : reverse(PossibleReductionOps))
+        Worklist.emplace_back(I, I->getParent() == BB ? 0 : Level + 1);
     }
     auto PossibleReducedValsVect = PossibleReducedVals.takeVector();
     // Sort values by the total number of values kinds to start the reduction
