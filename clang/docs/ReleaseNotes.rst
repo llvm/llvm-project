@@ -744,6 +744,8 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses dangling assignments for pointer-like objects (annotated with `[[gsl::Pointer]]`) under `-Wdangling-assignment-gsl` (off by default)
   Fixes #GH63310.
 
+- Clang now diagnoses dangling references to fields of temporary objects. Fixes #GH81589.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
