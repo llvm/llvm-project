@@ -146,3 +146,11 @@ class conditional {
 // FIXME: The diagnostics here are produced twice.
 void foo(conditional<decltype((1),int>) {  // expected-note 2 {{to match this '('}} expected-error {{expected ')'}} expected-note 2{{to match this '<'}}
 } // expected-error {{expected function body after function declarator}} expected-error 2 {{expected '>'}} expected-error {{expected ')'}}
+
+namespace GH97646 {
+  template<bool B>
+  void f() {
+    decltype(B) x = false;
+    !x;
+  }
+}
