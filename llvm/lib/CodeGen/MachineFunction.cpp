@@ -753,8 +753,8 @@ MCSymbol *MachineFunction::getJTISymbol(unsigned JTI, MCContext &Ctx,
   StringRef Prefix = isLinkerPrivate ? DL.getLinkerPrivateGlobalPrefix()
                                      : DL.getPrivateGlobalPrefix();
   SmallString<60> Name;
-  raw_svector_ostream(Name)
-    << Prefix << "JTI" << getFunctionNumber() << '_' << JTI;
+  buffered_svector_ostream(Name)
+      << Prefix << "JTI" << getFunctionNumber() << '_' << JTI;
   return Ctx.getOrCreateSymbol(Name);
 }
 

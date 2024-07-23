@@ -45,7 +45,8 @@ void AIXException::emitExceptionInfoTable(const MCSymbol *LSDA,
     // Table csect. This helps the linker to garbage-collect EH info of unused
     // functions.
     SmallString<128> NameStr = EHInfo->getName();
-    raw_svector_ostream(NameStr) << '.' << Asm->MF->getFunction().getName();
+    NameStr += ".";
+    NameStr += Asm->MF->getFunction().getName();
     EHInfo = Asm->OutContext.getXCOFFSection(NameStr, EHInfo->getKind(),
                                              EHInfo->getCsectProp());
   }

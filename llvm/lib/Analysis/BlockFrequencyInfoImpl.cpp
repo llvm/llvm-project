@@ -568,12 +568,9 @@ BlockFrequency
 BlockFrequencyInfoImplBase::getBlockFreq(const BlockNode &Node) const {
   if (!Node.isValid()) {
 #ifndef NDEBUG
-    if (CheckBFIUnknownBlockQueries) {
-      SmallString<256> Msg;
-      raw_svector_ostream OS(Msg);
-      OS << "*** Detected BFI query for unknown block " << getBlockName(Node);
-      report_fatal_error(OS.str());
-    }
+    if (CheckBFIUnknownBlockQueries)
+      report_fatal_error(Twine("*** Detected BFI query for unknown block ") +
+                         getBlockName(Node));
 #endif
     return BlockFrequency(0);
   }

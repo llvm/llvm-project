@@ -37,9 +37,11 @@ struct FmtAlign {
       return;
     }
     SmallString<64> Item;
-    raw_svector_ostream Stream(Item);
+    {
+      buffered_svector_ostream Stream(Item);
+      Adapter.format(Stream, Options);
+    }
 
-    Adapter.format(Stream, Options);
     if (Amount <= Item.size()) {
       S << Item;
       return;

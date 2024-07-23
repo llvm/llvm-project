@@ -1210,7 +1210,7 @@ void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
   if (!Substitutions.empty()) {
     for (const auto &Substitution : Substitutions) {
       SmallString<256> Msg;
-      raw_svector_ostream OS(Msg);
+      buffered_svector_ostream OS(Msg);
 
       Expected<std::string> MatchedValue = Substitution->getResult();
       // Substitution failures are handled in printNoMatch().
@@ -1280,7 +1280,7 @@ void Pattern::printVariableDefs(const SourceMgr &SM,
   // Create notes for the sorted captures.
   for (const VarCapture &VC : VarCaptures) {
     SmallString<256> Msg;
-    raw_svector_ostream OS(Msg);
+    buffered_svector_ostream OS(Msg);
     OS << "captured var \"" << VC.Name << "\"";
     if (Diags)
       Diags->emplace_back(SM, CheckTy, getLoc(), MatchTy, VC.Range, OS.str());

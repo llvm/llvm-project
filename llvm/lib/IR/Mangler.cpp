@@ -74,7 +74,7 @@ void Mangler::getNameWithPrefix(raw_ostream &OS, const Twine &GVName,
 
 void Mangler::getNameWithPrefix(SmallVectorImpl<char> &OutName,
                                 const Twine &GVName, const DataLayout &DL) {
-  raw_svector_ostream OS(OutName);
+  buffered_svector_ostream OS(OutName);
   char Prefix = DL.getGlobalPrefix();
   return getNameWithPrefixImpl(OS, GVName, Default, DL, Prefix);
 }
@@ -187,7 +187,7 @@ void Mangler::getNameWithPrefix(raw_ostream &OS, const GlobalValue *GV,
 void Mangler::getNameWithPrefix(SmallVectorImpl<char> &OutName,
                                 const GlobalValue *GV,
                                 bool CannotUsePrivateLabel) const {
-  raw_svector_ostream OS(OutName);
+  buffered_svector_ostream OS(OutName);
   getNameWithPrefix(OS, GV, CannotUsePrivateLabel);
 }
 

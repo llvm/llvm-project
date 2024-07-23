@@ -30,7 +30,7 @@ std::string Twine::str() const {
 }
 
 void Twine::toVector(SmallVectorImpl<char> &Out) const {
-  raw_svector_ostream OS(Out);
+  buffered_svector_ostream OS(Out);
   print(OS);
 }
 

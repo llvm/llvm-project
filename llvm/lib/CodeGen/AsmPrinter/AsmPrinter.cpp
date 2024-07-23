@@ -1111,7 +1111,7 @@ void AsmPrinter::emitImplicitDef(const MachineInstr *MI) const {
   Register RegNo = MI->getOperand(0).getReg();
 
   SmallString<128> Str;
-  raw_svector_ostream OS(Str);
+  buffered_svector_ostream OS(Str);
   OS << "implicit-def: "
      << printReg(RegNo, MF->getSubtarget().getRegisterInfo());
 
@@ -1141,7 +1141,7 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
     return false;
 
   SmallString<128> Str;
-  raw_svector_ostream OS(Str);
+  buffered_svector_ostream OS(Str);
   OS << "DEBUG_VALUE: ";
 
   const DILocalVariable *V = MI->getDebugVariable();
@@ -1235,7 +1235,7 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   }
 
   // NOTE: Want this comment at start of line, don't emit with AddComment.
-  AP.OutStreamer->emitRawComment(Str);
+  AP.OutStreamer->emitRawComment(OS.str());
   return true;
 }
 
@@ -1247,7 +1247,7 @@ static bool emitDebugLabelComment(const MachineInstr *MI, AsmPrinter &AP) {
     return false;
 
   SmallString<128> Str;
-  raw_svector_ostream OS(Str);
+  buffered_svector_ostream OS(Str);
   OS << "DEBUG_LABEL: ";
 
   const DILabel *V = MI->getDebugLabel();

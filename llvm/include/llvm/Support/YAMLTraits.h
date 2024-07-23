@@ -1004,7 +1004,7 @@ std::enable_if_t<has_ScalarTraits<T>::value, void> yamlize(IO &io, T &Val, bool,
                                                            EmptyContext &Ctx) {
   if ( io.outputting() ) {
     SmallString<128> Storage;
-    raw_svector_ostream Buffer(Storage);
+    buffered_svector_ostream Buffer(Storage);
     ScalarTraits<T>::output(Val, io.getContext(), Buffer);
     StringRef Str = Buffer.str();
     io.scalarString(Str, ScalarTraits<T>::mustQuote(Str));

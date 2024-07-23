@@ -5205,7 +5205,7 @@ void llvm::UpgradeSectionAttributes(Module &M) {
     Section.split(Components, ',');
 
     SmallString<32> Buffer;
-    raw_svector_ostream OS(Buffer);
+    buffered_svector_ostream OS(Buffer);
 
     for (auto Component : Components)
       OS << ',' << Component.trim();

@@ -459,7 +459,7 @@ Error LVBinaryReader::createInstructions(LVScope *Scope,
     MCInst Instruction;
     uint64_t BytesConsumed = 0;
     SmallVector<char, 64> InsnStr;
-    raw_svector_ostream Annotations(InsnStr);
+    buffered_svector_ostream Annotations(InsnStr);
     MCDisassembler::DecodeStatus const S =
         MD->getInstruction(Instruction, BytesConsumed,
                            ArrayRef<uint8_t>(Begin, End), Address, outs());

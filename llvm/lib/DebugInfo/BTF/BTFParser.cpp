@@ -656,12 +656,12 @@ static void relocKindName(uint32_t X, raw_ostream &Out) {
 // [1] https://www.kernel.org/doc/html/latest/bpf/libbpf/index.html
 void BTFParser::symbolize(const BTF::BPFFieldReloc *Reloc,
                           SmallVectorImpl<char> &Result) const {
-  raw_svector_ostream Stream(Result);
+  buffered_svector_ostream Stream(Result);
   StringRef FullSpecStr = findString(Reloc->OffsetNameOff);
   SmallVector<uint32_t, 8> RawSpec;
 
   auto Fail = [&](auto Msg) {
-    Result.resize(0);
+    Stream.truncate(0);
     relocKindName(Reloc->RelocKind, Stream);
     Stream << " [" << Reloc->TypeID << "] '" << FullSpecStr << "'"
            << " <" << Msg << ">";

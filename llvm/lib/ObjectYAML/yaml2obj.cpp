@@ -67,7 +67,7 @@ std::unique_ptr<object::ObjectFile>
 yaml2ObjectFile(SmallVectorImpl<char> &Storage, StringRef Yaml,
                 ErrorHandler ErrHandler) {
   Storage.clear();
-  raw_svector_ostream OS(Storage);
+  buffered_svector_ostream OS(Storage);
 
   yaml::Input YIn(Yaml);
   if (!convertYAML(YIn, OS, ErrHandler))
