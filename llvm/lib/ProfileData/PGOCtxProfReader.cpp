@@ -150,6 +150,8 @@ Error PGOCtxProfileReader::readMetadata() {
   if (Entry.Kind != BitstreamEntry::SubBlock ||
       Entry.ID != bitc::BLOCKINFO_BLOCK_ID)
     return unsupported("Expected Block ID");
+  // We don't need the blockinfo to read the rest, it's metadata usable for e.g.
+  // llvm-bcanalyzer.
   RET_ON_ERR(Cursor.SkipBlock());
 
   EXPECT_OR_RET(Blk, advance());
