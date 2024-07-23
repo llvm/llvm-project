@@ -14528,9 +14528,14 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   auto TPL = getDerived().TransformTemplateParameterList(
       E->getTemplateParameterList());
   LSI->GLTemplateParameterList = TPL;
-  if (TPL)
+  if (TPL) {
     getSema().AddTemplateParametersToLambdaCallOperator(NewCallOperator, Class,
                                                         TPL);
+    // The parameter list might reference to a pack that an outer fold
+    // expression would expand.
+    LSI->ContainsUnexpandedParameterPack |=
+        TPL->containsUnexpandedParameterPack();
+  }
 
   // Transform the type of the original lambda's call operator.
   // The transformation MUST be done in the CurrentInstantiationScope since
