@@ -194,12 +194,12 @@ bool RISCVVectorPeephole::convertToWholeRegister(MachineInstr &MI) const {
   if (!VLOp.isImm() || VLOp.getImm() != RISCV::VLMaxSentinel)
     return false;
 
-  // Stores don't have a policy op
+  // Whole register instructions aren't pseudos so they don't have
+  // policy/SEW/AVL ops.
   if (RISCVII::hasVecPolicyOp(MI.getDesc().TSFlags))
     MI.removeOperand(RISCVII::getVecPolicyOpNum(MI.getDesc()));
   MI.removeOperand(RISCVII::getSEWOpNum(MI.getDesc()));
   MI.removeOperand(RISCVII::getVLOpNum(MI.getDesc()));
-  // Stores don't have a passthru
   if (RISCVII::isFirstDefTiedToFirstUse(MI.getDesc()))
     MI.removeOperand(1);
 
