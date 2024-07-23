@@ -1345,12 +1345,13 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
 
 void DeclareImplicitDeductionGuidesFromInheritedConstructors(
     Sema &SemaRef, TemplateDecl *Template, ClassTemplateDecl *Pattern,
-    const CXXBaseSpecifier &Base, unsigned BaseIdx) {
+    TypeSourceInfo *BaseTSI, unsigned BaseIdx) {
   auto &Context = SemaRef.Context;
   DeclContext *DC = Template->getDeclContext();
-  const auto *BaseTST = Base.getType()->getAs<TemplateSpecializationType>();
+  const auto *BaseTST = BaseTSI->getType()->getAs<TemplateSpecializationType>();
   if (!BaseTST)
     return;
+  SourceLocation BaseLoc = BaseTSI->getTypeLoc().getBeginLoc();
 
   TemplateDecl *BaseTD = BaseTST->getTemplateName().getAsTemplateDecl();
   if (!BaseTD)
@@ -1425,12 +1426,11 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
 
   // [over.match.class.deduct]p1.10
   // Let A be an alias template whose template parameter list is that of
-  // [Template] and whose defining-type-id is [Base] ...
+  // [Template] and whose defining-type-id is [BaseTSI] ...
   auto *TransformedBase =
-      SemaRef.SubstType(Base.getTypeSourceInfo(), Args, Base.getBaseTypeLoc(),
-                        DeclarationName(), true);
+      SemaRef.SubstType(BaseTSI, Args, BaseLoc, DeclarationName(), true);
   auto *BaseAD = TypeAliasDecl::Create(
-      Context, DC, SourceLocation(), Base.getBaseTypeLoc(),
+      Context, DC, SourceLocation(), BaseLoc,
       TransformedBase->getType().getBaseTypeIdentifier(), TransformedBase);
   std::string AliasDeclName =
       (Twine("__ctad_alias_") + BaseTD->getName() + "_to_" +
@@ -1438,8 +1438,8 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
           .str();
   IdentifierInfo *AliasIdentifier = &Context.Idents.get(AliasDeclName);
   auto *BaseATD = TypeAliasTemplateDecl::Create(
-      Context, DC, Base.getBaseTypeLoc(), DeclarationName(AliasIdentifier),
-      PartialSpecTPL, BaseAD);
+      Context, DC, BaseLoc, DeclarationName(AliasIdentifier), PartialSpecTPL,
+      BaseAD);
   BaseAD->setDescribedAliasTemplate(BaseATD);
   BaseAD->setImplicit();
   BaseATD->setImplicit();
@@ -1516,9 +1516,9 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
   const auto &MapperTypedefII = Context.Idents.get("type");
   TypeSourceInfo *MapperTypedefTSI =
       MapperTypedefTLB.getTypeSourceInfo(Context, DerivedTST);
-  TypedefDecl *DerivedTypedef = TypedefDecl::Create(
-      Context, MapperSpecialization, Base.getBeginLoc(), Base.getBeginLoc(),
-      &MapperTypedefII, MapperTypedefTSI);
+  TypedefDecl *DerivedTypedef =
+      TypedefDecl::Create(Context, MapperSpecialization, BaseLoc, BaseLoc,
+                          &MapperTypedefII, MapperTypedefTSI);
 
   DerivedTypedef->setImplicit();
   DerivedTypedef->setAccess(AS_public);
@@ -1552,8 +1552,8 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
   TypeSourceInfo *MapperTSI =
       ReturnTypeTLB.getTypeSourceInfo(Context, MapperReturnType);
 
-  DeclareImplicitDeductionGuidesForTypeAlias(
-      SemaRef, BaseATD, Base.getBeginLoc(), Template, MapperTSI);
+  DeclareImplicitDeductionGuidesForTypeAlias(SemaRef, BaseATD, BaseLoc,
+                                             Template, MapperTSI);
 }
 
 // Build an aggregate deduction guide for a type alias template.
@@ -1726,29 +1726,28 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
 
   // FIXME: Handle explicit deduction guides from inherited constructors
   // when the base deduction guides are declared after this has first run
-  if (getLangOpts().CPlusPlus23 &&
-      Pattern->getTemplatedDecl()->hasDefinition()) {
+  CXXRecordDecl *TemplatedDecl = Pattern->getTemplatedDecl();
+  if (getLangOpts().CPlusPlus23 && TemplatedDecl->hasDefinition()) {
     unsigned BaseIdx = 0;
-    for (const auto &Base : Pattern->getTemplatedDecl()->bases()) {
-      ++BaseIdx;
-      if (!Base.getType()->isDependentType())
+    for (Decl *D : TemplatedDecl->decls()) {
+      auto *UUVD = dyn_cast<UnresolvedUsingValueDecl>(D);
+      if (!UUVD || UUVD->getDeclName().getNameKind() !=
+                       DeclarationName::CXXConstructorName)
         continue;
 
-      // The InheritConstructors field is not set for dependent
-      // bases because a using decl that inherits constructors
-      // for that base is unresolved.
-      // FIXME: This does not work for name specifiers
-      // like `using Derived::Base::Base;`
-      CanQualType T = Context.getCanonicalType(Base.getType());
-      DeclarationName Name = Context.DeclarationNames.getCXXConstructorName(T);
-      auto LR = Pattern->getTemplatedDecl()->lookup(Name);
-      assert((LR.empty() || LR.isSingleResult()) &&
-             "Expected at most one UsingDecl for a given base");
-      if (LR.empty() || !isa<UnresolvedUsingValueDecl>(LR.front()))
+      // FIXME: Handle identifier qualifiers, like in
+      // `using Derived::Base::Base;`
+      TypeLoc TL = UUVD->getQualifierLoc().getTypeLoc();
+      if (!TL)
         continue;
+
+      ++BaseIdx;
+      unsigned Size = TL.getFullDataSize();
+      auto *TSI = Context.CreateTypeSourceInfo(TL.getType(), Size);
+      TSI->getTypeLoc().initializeFullCopy(TL, Size);
 
       DeclareImplicitDeductionGuidesFromInheritedConstructors(
-          *this, Template, Pattern, Base, BaseIdx - 1);
+          *this, Template, Pattern, TSI, BaseIdx - 1);
     }
   }
 
