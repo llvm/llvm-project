@@ -9357,11 +9357,11 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
       "    \"a aaaaaaa aaaaaaaaaaaaaaaaa aaaaaaaaaaaaaaa aaaaaaaaaaaaa\"\n"
       ");",
       Style);
+  Style.ColumnLimit = 60;
   verifyFormat(
       "auto lambda =\n"
       "    [&b](\n"
-      "        auto "
-      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+      "        auto aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
       "    ) {};",
       Style);
 }
