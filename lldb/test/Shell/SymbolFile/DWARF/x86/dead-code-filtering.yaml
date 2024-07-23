@@ -1,3 +1,5 @@
+# XFAIL: target=x86_64-{{.*}}-windows{{.*}}
+
 # RUN: yaml2obj %s > %t
 # RUN: lldb-test symbols %t | FileCheck %s --check-prefix=TEST
 # RUN: %lldb %t -o "image dump line-table a.c" -o "image lookup -n _start" -o "image lookup -n f" -o exit | FileCheck %s

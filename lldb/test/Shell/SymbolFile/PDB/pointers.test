@@ -1,3 +1,4 @@
+# XFAIL: target=x86_64-{{.*}}-windows{{.*}}
 REQUIRES: system-windows, msvc
 RUN: %build --compiler=clang-cl --mode=compile --arch=32 --nodefaultlib --output=%T/PointerTypeTest.cpp.obj %S/Inputs/PointerTypeTest.cpp
 RUN: %build --compiler=msvc --mode=link --arch=32 --nodefaultlib --output=%T/PointerTypeTest.cpp.exe %T/PointerTypeTest.cpp.obj

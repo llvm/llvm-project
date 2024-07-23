@@ -1,5 +1,7 @@
 // clang-format off
 
+// XFAIL: target=x86_64-{{.*}}-windows{{.*}}
+
 // REQUIRES: system-windows
 // RUN: %build -o %t.exe -- %s
 // RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \

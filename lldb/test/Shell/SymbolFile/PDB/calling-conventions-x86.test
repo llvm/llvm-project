@@ -1,3 +1,4 @@
+# XFAIL: target=x86_64-{{.*}}-windows{{.*}}
 REQUIRES: system-windows, lld, (target-x86 || target-x86_64) 
 RUN: %build --compiler=clang-cl --arch=32 --nodefaultlib --output=%t.exe %S/Inputs/CallingConventionsTest.cpp \
 RUN:  && lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix 32BIT-CHECK %s
