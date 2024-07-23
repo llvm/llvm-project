@@ -1724,16 +1724,15 @@ ScriptParser::readSymbols() {
       SmallVector<SymbolVersion, 0> ext = readVersionExtern();
       v->insert(v->end(), ext.begin(), ext.end());
     } else {
-      if (consume("local:") || (consume("local") && consume(":"))) {
+      StringRef tok = next();
+      if (tok == "local:" || (tok == "local" && consume(":"))) {
         v = &locals;
         continue;
       }
-      if (consume("global:") || (consume("global") && consume(":"))) {
+      if (tok == "global:" || (tok == "global" && consume(":"))) {
         v = &globals;
         continue;
       }
-
-      StringRef tok = next();
       v->push_back({unquote(tok), false, hasWildcard(tok)});
     }
     expect(";");
