@@ -5255,13 +5255,19 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
   //     -- Otherwise, the reference shall be an lvalue reference to a
   //        non-volatile const type (i.e., cv1 shall be const), or the reference
   //        shall be an rvalue reference.
-  const bool CanBindLValueRef =
-      !S.getLangOpts().MSVCReferenceBinding
-          ? (T1.isConstQualified() && !T1.isVolatileQualified())
-          : S.AllowMSLValueReferenceBinding(T1.getQualifiers(), T1);
+  if (!isRValRef) {
+    const bool CanBindLValueRef =
+        !S.getLangOpts().MSVCReferenceBinding
+            ? (T1.isConstQualified() && !T1.isVolatileQualified())
+            : S.AllowMSLValueReferenceBinding(T1.getQualifiers(), T1);
+    if (!CanBindLValueRef) {
+      if (InitCategory.isRValue() && RefRelationship != Sema::Ref_Incompatible)
+        ICS.setBad(BadConversionSequence::lvalue_ref_to_rvalue, Init, DeclType);
+      return ICS;
+    }
+  }
+
   if (!isRValRef && !CanBindLValueRef) {
-    if (InitCategory.isRValue() && RefRelationship != Sema::Ref_Incompatible)
-      ICS.setBad(BadConversionSequence::lvalue_ref_to_rvalue, Init, DeclType);
     return ICS;
   }
 
