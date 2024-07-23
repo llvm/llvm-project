@@ -55,8 +55,7 @@ public:
 
   // Saves dump in Minidump file format
   static bool SaveCore(const lldb::ProcessSP &process_sp,
-                       const lldb_private::FileSpec &outfile,
-                       lldb::SaveCoreStyle &core_style,
+                       const lldb_private::SaveCoreOptions &options,
                        lldb_private::Status &error);
 
 private:

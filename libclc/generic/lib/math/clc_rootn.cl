@@ -368,3 +368,15 @@ _CLC_DEF _CLC_OVERLOAD double __clc_rootn(double x, int ny)
 }
 _CLC_BINARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, double, __clc_rootn, double, int)
 #endif
+
+#ifdef cl_khr_fp16
+
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+_CLC_OVERLOAD _CLC_DEF half __clc_rootn(half x, int y) {
+    return (half)__clc_rootn((float)x, y);
+}
+
+_CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, __clc_rootn, half, int);
+
+#endif

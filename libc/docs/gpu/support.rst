@@ -70,6 +70,7 @@ strcoll        |check|
 strcpy         |check|
 strcspn        |check|
 strdup         |check|
+strerror       |check|
 strlcat        |check|
 strlcpy        |check|
 strlen         |check|

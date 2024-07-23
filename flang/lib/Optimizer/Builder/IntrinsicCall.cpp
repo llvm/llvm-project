@@ -6161,7 +6161,7 @@ IntrinsicLibrary::genSecond(std::optional<mlir::Type> resultType,
   genCpuTime(subroutineArgs);
 
   if (resultType)
-    return result;
+    return builder.create<fir::LoadOp>(loc, fir::getBase(result));
   return {};
 }
 
