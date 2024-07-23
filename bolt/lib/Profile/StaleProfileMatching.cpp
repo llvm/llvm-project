@@ -224,6 +224,8 @@ public:
   matchBlock(BlendedBlockHash BlendedHash, uint64_t CallHash,
              const std::vector<yaml::bolt::PseudoProbeInfo> &PseudoProbes) {
     const FlowBlock *BestBlock = matchWithOpcodes(BlendedHash);
+    if (BestBlock)
+      ++MatchedWithOpcodes;
     BestBlock = BestBlock ? BestBlock : matchWithCalls(BlendedHash, CallHash);
     return BestBlock || !YamlBFGUID
                ? BestBlock
@@ -247,7 +249,10 @@ public:
   /// Returns the number of blocks matched with pseudo probes.
   size_t getNumBlocksMatchedWithPseudoProbes() const {
     return MatchedWithPseudoProbes.size();
-  } 
+  }
+
+  /// Returns the number of blocks matched with opcodes.
+  size_t getNumBlocksMatchedWithOpcodes() const { return MatchedWithOpcodes; }
 
 private:
   using HashBlockPairType = std::pair<BlendedBlockHash, FlowBlock *>;
@@ -259,9 +264,8 @@ private:
       BinaryPseudoProbeToBlock;
   std::unordered_set<uint64_t> MatchedWithPseudoProbes;
   std::vector<const FlowBlock *> Blocks;
-  // If the pseudo probe checksums of the profiled and binary functions are
-  // equal, then the YamlBF's GUID is defined and used to match blocks.
   uint64_t YamlBFGUID{0};
+  uint64_t MatchedWithOpcodes{0};
 
   // Uses OpcodeHash to find the most similar block for a given hash.
   const FlowBlock *matchWithOpcodes(BlendedBlockHash BlendedHash) const {
@@ -678,10 +682,13 @@ size_t matchWeightsByHashes(
     BC.Stats.StaleSampleCount += YamlBB.ExecCount;
   }
 
-  if (opts::Verbosity >= 2)
-    outs() << "BOLT-INFO: " 
-      << StaleMatcher.getNumBlocksMatchedWithPseudoProbes()
-      << " blocks matched with pseudo probes\n";
+  if (opts::Verbosity >= 2) {
+    outs() << "BOLT-INFO: "
+           << StaleMatcher.getNumBlocksMatchedWithPseudoProbes()
+           << " blocks matched with pseudo probes\n"
+           << "BOLT-INFO: " << StaleMatcher.getNumBlocksMatchedWithOpcodes()
+           << " blocks matched with opcodes\n";
+  }
 
   // Match jumps from the profile to the jumps from CFG
   std::vector<uint64_t> OutWeight(Func.Blocks.size(), 0);
