@@ -187,8 +187,6 @@ public:
 
   MCCodeEmitter *getEmitterPtr() const { return Emitter.get(); }
 
-  MCObjectWriter *getWriterPtr() const { return Writer.get(); }
-
   MCAsmBackend &getBackend() const { return *Backend; }
 
   MCCodeEmitter &getEmitter() const { return *Emitter; }
