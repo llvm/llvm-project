@@ -152,20 +152,12 @@ public:
   mlir::Value VisitUnaryDeref(const Expr *E) { llvm_unreachable("NYI"); }
 
   mlir::Value VisitUnaryPlus(const UnaryOperator *E,
-                             QualType PromotionType = QualType()) {
-    llvm_unreachable("NYI");
-  }
-  mlir::Value VisitPlus(const UnaryOperator *E, QualType PromotionType) {
-    llvm_unreachable("NYI");
-  }
+                             QualType PromotionType = QualType());
+  mlir::Value VisitPlus(const UnaryOperator *E, QualType PromotionType);
   mlir::Value VisitUnaryMinus(const UnaryOperator *E,
-                              QualType PromotionType = QualType()) {
-    llvm_unreachable("NYI");
-  }
-  mlir::Value VisitMinus(const UnaryOperator *E, QualType PromotionType) {
-    llvm_unreachable("NYI");
-  }
-  mlir::Value VisitUnaryNot(const UnaryOperator *E) { llvm_unreachable("NYI"); }
+                              QualType PromotionType = QualType());
+  mlir::Value VisitMinus(const UnaryOperator *E, QualType PromotionType);
+  mlir::Value VisitUnaryNot(const UnaryOperator *E);
   // LNot,Real,Imag never return complex.
   mlir::Value VisitUnaryExtension(const UnaryOperator *E) {
     return Visit(E->getSubExpr());
@@ -506,6 +498,58 @@ mlir::Value ComplexExprEmitter::VisitCallExpr(const CallExpr *E) {
     return buildLoadOfLValue(E);
 
   return CGF.buildCallExpr(E).getComplexVal();
+}
+
+mlir::Value ComplexExprEmitter::VisitUnaryPlus(const UnaryOperator *E,
+                                               QualType PromotionType) {
+  QualType promotionTy = PromotionType.isNull()
+                             ? getPromotionType(E->getSubExpr()->getType())
+                             : PromotionType;
+  mlir::Value result = VisitPlus(E, promotionTy);
+  if (!promotionTy.isNull())
+    return CGF.buildUnPromotedValue(result, E->getSubExpr()->getType());
+  return result;
+}
+
+mlir::Value ComplexExprEmitter::VisitPlus(const UnaryOperator *E,
+                                          QualType PromotionType) {
+  mlir::Value Op;
+  if (!PromotionType.isNull())
+    Op = CGF.buildPromotedComplexExpr(E->getSubExpr(), PromotionType);
+  else
+    Op = Visit(E->getSubExpr());
+
+  return Builder.createUnaryOp(CGF.getLoc(E->getExprLoc()),
+                               mlir::cir::UnaryOpKind::Plus, Op);
+}
+
+mlir::Value ComplexExprEmitter::VisitUnaryMinus(const UnaryOperator *E,
+                                                QualType PromotionType) {
+  QualType promotionTy = PromotionType.isNull()
+                             ? getPromotionType(E->getSubExpr()->getType())
+                             : PromotionType;
+  mlir::Value result = VisitMinus(E, promotionTy);
+  if (!promotionTy.isNull())
+    return CGF.buildUnPromotedValue(result, E->getSubExpr()->getType());
+  return result;
+}
+
+mlir::Value ComplexExprEmitter::VisitMinus(const UnaryOperator *E,
+                                           QualType PromotionType) {
+  mlir::Value Op;
+  if (!PromotionType.isNull())
+    Op = CGF.buildPromotedComplexExpr(E->getSubExpr(), PromotionType);
+  else
+    Op = Visit(E->getSubExpr());
+
+  return Builder.createUnaryOp(CGF.getLoc(E->getExprLoc()),
+                               mlir::cir::UnaryOpKind::Minus, Op);
+}
+
+mlir::Value ComplexExprEmitter::VisitUnaryNot(const UnaryOperator *E) {
+  mlir::Value Op = Visit(E->getSubExpr());
+  return Builder.createUnaryOp(CGF.getLoc(E->getExprLoc()),
+                               mlir::cir::UnaryOpKind::Not, Op);
 }
 
 ComplexExprEmitter::BinOpInfo

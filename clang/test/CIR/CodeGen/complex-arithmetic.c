@@ -645,3 +645,134 @@ void div_assign() {
 // CIRGEN-FULL: %{{.+}} = cir.complex.binop div %{{.+}}, %{{.+}} range(full) : !cir.complex<!s32i>
 
 // CHECK: }
+
+void unary_plus() {
+  cd1 = +cd1;
+  ci1 = +ci1;
+}
+
+//   CLANG: @unary_plus
+// CPPLANG: @_Z10unary_plusv
+
+// CIRGEN: %{{.+}} = cir.unary(plus, %{{.+}}) : !cir.complex<!cir.double>, !cir.complex<!cir.double>
+// CIRGEN: %{{.+}} = cir.unary(plus, %{{.+}}) : !cir.complex<!s32i>, !cir.complex<!s32i>
+
+//      CIR: %[[#OPR:]] = cir.complex.real %{{.+}} : !cir.complex<!cir.double> -> !cir.double
+// CIR-NEXT: %[[#OPI:]] = cir.complex.imag %{{.+}} : !cir.complex<!cir.double> -> !cir.double
+// CIR-NEXT: %[[#RESR:]] = cir.unary(plus, %[[#OPR]]) : !cir.double, !cir.double
+// CIR-NEXT: %[[#RESI:]] = cir.unary(plus, %[[#OPI]]) : !cir.double, !cir.double
+// CIR-NEXT: %{{.+}} = cir.complex.create %[[#RESR]], %[[#RESI]] : !cir.double -> !cir.complex<!cir.double>
+
+//      CIR: %[[#OPR:]] = cir.complex.real %{{.+}} : !cir.complex<!s32i> -> !s32i
+// CIR-NEXT: %[[#OPI:]] = cir.complex.imag %{{.+}} : !cir.complex<!s32i> -> !s32i
+// CIR-NEXT: %[[#RESR:]] = cir.unary(plus, %[[#OPR]]) : !s32i, !s32i
+// CIR-NEXT: %[[#RESI:]] = cir.unary(plus, %[[#OPI]]) : !s32i, !s32i
+// CIR-NEXT: %{{.+}} = cir.complex.create %[[#RESR]], %[[#RESI]] : !s32i -> !cir.complex<!s32i>
+
+//      LLVM: %[[#OPR:]] = extractvalue { double, double } %{{.+}}, 0
+// LLVM-NEXT: %[[#OPI:]] = extractvalue { double, double } %{{.+}}, 1
+// LLVM-NEXT: %[[#A:]] = insertvalue { double, double } undef, double %[[#OPR]], 0
+// LLVM-NEXT: %{{.+}} = insertvalue { double, double } %[[#A]], double %[[#OPI]], 1
+
+//      LLVM: %[[#OPR:]] = extractvalue { i32, i32 } %{{.+}}, 0
+// LLVM-NEXT: %[[#OPI:]] = extractvalue { i32, i32 } %{{.+}}, 1
+// LLVM-NEXT: %[[#A:]] = insertvalue { i32, i32 } undef, i32 %[[#OPR]], 0
+// LLVM-NEXT: %{{.+}} = insertvalue { i32, i32 } %[[#A]], i32 %[[#OPI]], 1
+
+// CHECK: }
+
+void unary_minus() {
+  cd1 = -cd1;
+  ci1 = -ci1;
+}
+
+//   CLANG: @unary_minus
+// CPPLANG: @_Z11unary_minusv
+
+// CIRGEN: %{{.+}} = cir.unary(minus, %{{.+}}) : !cir.complex<!cir.double>, !cir.complex<!cir.double>
+// CIRGEN: %{{.+}} = cir.unary(minus, %{{.+}}) : !cir.complex<!s32i>, !cir.complex<!s32i>
+
+//      CIR: %[[#OPR:]] = cir.complex.real %{{.+}} : !cir.complex<!cir.double> -> !cir.double
+// CIR-NEXT: %[[#OPI:]] = cir.complex.imag %{{.+}} : !cir.complex<!cir.double> -> !cir.double
+// CIR-NEXT: %[[#RESR:]] = cir.unary(minus, %[[#OPR]]) : !cir.double, !cir.double
+// CIR-NEXT: %[[#RESI:]] = cir.unary(minus, %[[#OPI]]) : !cir.double, !cir.double
+// CIR-NEXT: %{{.+}} = cir.complex.create %[[#RESR]], %[[#RESI]] : !cir.double -> !cir.complex<!cir.double>
+
+//      CIR: %[[#OPR:]] = cir.complex.real %{{.+}} : !cir.complex<!s32i> -> !s32i
+// CIR-NEXT: %[[#OPI:]] = cir.complex.imag %{{.+}} : !cir.complex<!s32i> -> !s32i
+// CIR-NEXT: %[[#RESR:]] = cir.unary(minus, %[[#OPR]]) : !s32i, !s32i
+// CIR-NEXT: %[[#RESI:]] = cir.unary(minus, %[[#OPI]]) : !s32i, !s32i
+// CIR-NEXT: %{{.+}} = cir.complex.create %[[#RESR]], %[[#RESI]] : !s32i -> !cir.complex<!s32i>
+
+//      LLVM: %[[#OPR:]] = extractvalue { double, double } %{{.+}}, 0
+// LLVM-NEXT: %[[#OPI:]] = extractvalue { double, double } %{{.+}}, 1
+// LLVM-NEXT: %[[#RESR:]] = fneg double %[[#OPR]]
+// LLVM-NEXT: %[[#RESI:]] = fneg double %[[#OPI]]
+// LLVM-NEXT: %[[#A:]] = insertvalue { double, double } undef, double %[[#RESR]], 0
+// LLVM-NEXT: %{{.+}} = insertvalue { double, double } %[[#A]], double %[[#RESI]], 1
+
+//      LLVM: %[[#OPR:]] = extractvalue { i32, i32 } %{{.+}}, 0
+// LLVM-NEXT: %[[#OPI:]] = extractvalue { i32, i32 } %{{.+}}, 1
+// LLVM-NEXT: %[[#RESR:]] = sub i32 0, %[[#OPR]]
+// LLVM-NEXT: %[[#RESI:]] = sub i32 0, %[[#OPI]]
+// LLVM-NEXT: %[[#A:]] = insertvalue { i32, i32 } undef, i32 %[[#RESR]], 0
+// LLVM-NEXT: %{{.+}} = insertvalue { i32, i32 } %[[#A]], i32 %[[#RESI]], 1
+
+// CHECK: }
+
+void unary_not() {
+  cd1 = ~cd1;
+  ci1 = ~ci1;
+}
+
+//   CLANG: @unary_not
+// CPPLANG: @_Z9unary_notv
+
+// CIRGEN: %{{.+}} = cir.unary(not, %{{.+}}) : !cir.complex<!cir.double>, !cir.complex<!cir.double>
+// CIRGEN: %{{.+}} = cir.unary(not, %{{.+}}) : !cir.complex<!s32i>, !cir.complex<!s32i>
+
+//      CIR: %[[#OPR:]] = cir.complex.real %{{.+}} : !cir.complex<!cir.double> -> !cir.double
+// CIR-NEXT: %[[#OPI:]] = cir.complex.imag %{{.+}} : !cir.complex<!cir.double> -> !cir.double
+// CIR-NEXT: %[[#RESI:]] = cir.unary(minus, %[[#OPI]]) : !cir.double, !cir.double
+// CIR-NEXT: %{{.+}} = cir.complex.create %[[#OPR]], %[[#RESI]] : !cir.double -> !cir.complex<!cir.double>
+
+//      CIR: %[[#OPR:]] = cir.complex.real %{{.+}} : !cir.complex<!s32i> -> !s32i
+// CIR-NEXT: %[[#OPI:]] = cir.complex.imag %{{.+}} : !cir.complex<!s32i> -> !s32i
+// CIR-NEXT: %[[#RESI:]] = cir.unary(minus, %[[#OPI]]) : !s32i, !s32i
+// CIR-NEXT: %{{.+}} = cir.complex.create %[[#OPR]], %[[#RESI]] : !s32i -> !cir.complex<!s32i>
+
+//      LLVM: %[[#OPR:]] = extractvalue { double, double } %{{.+}}, 0
+// LLVM-NEXT: %[[#OPI:]] = extractvalue { double, double } %{{.+}}, 1
+// LLVM-NEXT: %[[#RESI:]] = fneg double %[[#OPI]]
+// LLVM-NEXT: %[[#A:]] = insertvalue { double, double } undef, double %[[#OPR]], 0
+// LLVM-NEXT: %{{.+}} = insertvalue { double, double } %[[#A]], double %[[#RESI]], 1
+
+//      LLVM: %[[#OPR:]] = extractvalue { i32, i32 } %{{.+}}, 0
+// LLVM-NEXT: %[[#OPI:]] = extractvalue { i32, i32 } %{{.+}}, 1
+// LLVM-NEXT: %[[#RESI:]] = sub i32 0, %[[#OPI]]
+// LLVM-NEXT: %[[#A:]] = insertvalue { i32, i32 } undef, i32 %[[#OPR]], 0
+// LLVM-NEXT: %{{.+}} = insertvalue { i32, i32 } %[[#A]], i32 %[[#RESI]], 1
+
+// CHECK: }
+
+void builtin_conj() {
+  cd1 = __builtin_conj(cd1);
+}
+
+//   CLANG: @builtin_conj
+// CPPLANG: @_Z12builtin_conjv
+
+// CIRGEN: %{{.+}} = cir.unary(not, %{{.+}}) : !cir.complex<!cir.double>, !cir.complex<!cir.double>
+
+//      CIR: %[[#OPR:]] = cir.complex.real %{{.+}} : !cir.complex<!cir.double> -> !cir.double
+// CIR-NEXT: %[[#OPI:]] = cir.complex.imag %{{.+}} : !cir.complex<!cir.double> -> !cir.double
+// CIR-NEXT: %[[#RESI:]] = cir.unary(minus, %[[#OPI]]) : !cir.double, !cir.double
+// CIR-NEXT: %{{.+}} = cir.complex.create %[[#OPR]], %[[#RESI]] : !cir.double -> !cir.complex<!cir.double>
+
+//      LLVM: %[[#OPR:]] = extractvalue { double, double } %{{.+}}, 0
+// LLVM-NEXT: %[[#OPI:]] = extractvalue { double, double } %{{.+}}, 1
+// LLVM-NEXT: %[[#RESI:]] = fneg double %[[#OPI]]
+// LLVM-NEXT: %[[#A:]] = insertvalue { double, double } undef, double %[[#OPR]], 0
+// LLVM-NEXT: %{{.+}} = insertvalue { double, double } %[[#A]], double %[[#RESI]], 1
+
+// CHECK: }
