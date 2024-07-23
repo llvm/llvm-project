@@ -706,15 +706,15 @@ void DWARFRewriter::updateDebugInfo() {
     std::optional<uint64_t> DWOId = Unit.getDWOId();
     if (DWOId)
       SplitCU = BC.getDWOCU(*DWOId);
+    DebugLocWriter &DebugLocWriter =
+        *LocListWritersByCU[LocListWritersIndexByCU[Unit.getOffset()]].get();
+    DebugRangesSectionWriter &RangesSectionWriter =
+        Unit.getVersion() >= 5 ? *RangeListsSectionWriter.get()
+                               : *LegacyRangesSectionWriter.get();
     DebugAddrWriter &AddressWriter =
         *AddressWritersByCU[Unit.getOffset()].get();
     if (Unit.getVersion() >= 5)
       RangeListsSectionWriter->setAddressWriter(&AddressWriter);
-    DebugRangesSectionWriter &RangesSectionWriter =
-        Unit.getVersion() >= 5 ? *RangeListsSectionWriter.get()
-                               : *LegacyRangesSectionWriter.get();
-    DebugLocWriter &DebugLocWriter =
-        *LocListWritersByCU[LocListWritersIndexByCU[Unit.getOffset()]].get();
     if (Unit.getVersion() >= 5) {
       RangesBase = RangesSectionWriter.getSectionOffset() +
                    getDWARF5RngListLocListHeaderSize();
