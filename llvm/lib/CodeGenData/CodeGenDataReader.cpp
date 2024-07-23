@@ -12,6 +12,7 @@
 
 #include "llvm/CodeGenData/CodeGenDataReader.h"
 #include "llvm/CodeGenData/OutlinedHashTreeRecord.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #define DEBUG_TYPE "cg-data-reader"
