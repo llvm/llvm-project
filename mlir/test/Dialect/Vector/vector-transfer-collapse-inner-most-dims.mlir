@@ -191,7 +191,6 @@ func.func @negative_contiguous_inner_most_non_zero_idx_out_of_bounds(%src: memre
 // CHECK-NOT:     memref.shape_cast
 // CHECK:         vector.transfer_read
 
-
 // -----
 
 func.func @contiguous_inner_most_dim_with_subview(%src: memref<1000x1xf32>, %i:index, %ii:index) -> (vector<4x1xf32>) {
