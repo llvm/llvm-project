@@ -123,7 +123,8 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
   VReport(2,
           "__tls_get_addr: %p {0x%zx,0x%zx} => %p; tls_beg: %p; sp: %p "
           "num_live_dtls %zd\n",
-          (void *)arg, arg->dso_id, arg->offset, res, (void *)tls_beg, &tls_beg,
+          (void *)arg, arg->dso_id, arg->offset, res, (void *)tls_beg,
+          (void *)&tls_beg,
           atomic_load(&number_of_live_dtls, memory_order_relaxed));
   if (dtls.last_memalign_ptr == tls_beg) {
     tls_size = dtls.last_memalign_size;
