@@ -10,15 +10,6 @@ struct FEATURES {
 
 extern struct FEATURES __aarch64_cpu_features;
 
-struct SME_STATE {
-  long PSTATE;
-  long TPIDR2_EL0;
-};
-
-extern struct SME_STATE __arm_sme_state(void) __arm_streaming_compatible;
-
-extern bool __aarch64_has_sme_and_tpidr2_el0;
-
 #if __GNUC__ >= 9
 #pragma GCC diagnostic ignored "-Wprio-ctor-dtor"
 #endif

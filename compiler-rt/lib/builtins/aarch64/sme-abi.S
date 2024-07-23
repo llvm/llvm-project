@@ -187,7 +187,6 @@ END_COMPILERRT_OUTLINE_FUNCTION(__arm_za_disable)
 DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_get_current_vg)
   .variant_pcs __arm_get_current_vg
   BTI_C
-  mov x0, xzr
 
   stp     x29, x30, [sp, #-16]!
   .cfi_def_cfa_offset 16
@@ -195,20 +194,20 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_get_current_vg)
   .cfi_def_cfa w29, 16
   .cfi_offset w30, -8
   .cfi_offset w29, -16
-  mov     x17, x1
-  bl      __arm_sme_state
-  mov     x1, x17
-  adrp    x16, CPU_FEATS_SYMBOL
-  ldr     x16, [x16, CPU_FEATS_SYMBOL_OFFSET]
-  ldr     x16, [x16]
-  tbnz    w16, #30, 0f
-  adrp    x17, TPIDR2_SYMBOL
-  ldrb    w17, [x17, TPIDR2_SYMBOL_OFFSET]
-  cbz     w17, 1f
+  adrp    x17, CPU_FEATS_SYMBOL
+  ldr     x17, [x17, CPU_FEATS_SYMBOL_OFFSET]
+  ldr     x17, [x17]
+  tbnz    w17, #30, 0f
+  adrp    x16, TPIDR2_SYMBOL
+  ldrb    w16, [x16, TPIDR2_SYMBOL_OFFSET]
+  cbz     w16, 1f
 0:
-  and     x16, x16, #0x40000000
-  bfxil   x16, x0, #0, #1
-  cbz     x16, 1f
+  mov     x18, x1
+  bl      __arm_sme_state
+  mov     x1, x18
+  and     x17, x17, #0x40000000
+  bfxil   x17, x0, #0, #1
+  cbz     x17, 1f
   cntd    x0
   .cfi_def_cfa wsp, 16
   ldp     x29, x30, [sp], #16
