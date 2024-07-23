@@ -28,18 +28,7 @@ struct vector {
   unsigned long size() const;
   bool empty() const;
 
-  // Basic iterator implementation for testing
-  struct iterator {
-    T* ptr;
-    iterator(T* p) : ptr(p) {}
-    T& operator*() { return *ptr; }
-    T* operator->() { return ptr; }
-    iterator& operator++() {
-      ++ptr;
-      return *this;
-    }
-    bool operator!=(const iterator& other) const { return ptr != other.ptr; }
-  };
+  using iterator = T*;
 
   iterator begin();
   iterator end();
@@ -47,19 +36,6 @@ struct vector {
   T* data;
   unsigned long sz;
 };
-
-template <typename T>
-vector<T>::vector() : data(nullptr), sz(0) {}
-
-template <typename T>
-typename vector<T>::iterator vector<T>::begin() {
-  return iterator(data);
-}
-
-template <typename T>
-typename vector<T>::iterator vector<T>::end() {
-  return iterator(data + sz);
-}
 
 }  // namespace std
 
