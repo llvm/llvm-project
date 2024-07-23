@@ -176,15 +176,15 @@ static StringRef getSyntaxName(AttributeCommonInfo::Syntax SyntaxUsed) {
   case AttributeCommonInfo::AS_Implicit:
     return "Implicit";
   }
+  llvm_unreachable("Invalid attribute syntax");
 }
 
-std::string AttributeCommonInfo::getNormalizedFullNameWithSyntax(
+std::string AttributeCommonInfo::normalizeFullNameWithSyntax(
     const IdentifierInfo *Name, const IdentifierInfo *ScopeName,
     Syntax SyntaxUsed) {
-  std::string FullName = getSyntaxName(SyntaxUsed).str();
-  FullName += "::";
-  return FullName +=
-         static_cast<std::string>(normalizeName(Name, ScopeName, SyntaxUsed));
+  return (Twine(getSyntaxName(SyntaxUsed)) +
+          "::" + normalizeName(Name, ScopeName, SyntaxUsed))
+      .str();
 }
 
 unsigned AttributeCommonInfo::calculateAttributeSpellingListIndex() const {

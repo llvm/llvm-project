@@ -2372,11 +2372,10 @@ void PragmaClangAttributeSupport::generateParsingHelpers(raw_ostream &OS) {
   OS << "}\n\n";
 }
 
-template <typename Fn>
-static void forEachSpelling(const Record &Attr, Fn &&F) {
+template <typename Fn> static void forEachSpelling(const Record &Attr, Fn &&F) {
   std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(Attr);
   for (const FlattenedSpelling &S : Spellings) {
-      F(S);
+    F(S);
   }
 }
 
