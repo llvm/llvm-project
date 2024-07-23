@@ -71,6 +71,7 @@
 // INCLUDE_TREE-NEXT:     name: ModA
 // INCLUDE_TREE-NEXT:     context-hash: [[HASH_MOD_A:[A-Z0-9]+]]
 // INCLUDE_TREE-NEXT:     module-map-path: [[PREFIX]]/Inputs/module/module.modulemap
+// INCLUDE_TREE-NEXT:     include-tree-id: [[ModA_INCLUDE_TREE_ID:llvmcas://[[:xdigit:]]+]]
 // INCLUDE_TREE-NEXT:     cache-key: [[ModA_CACHE_KEY:llvmcas://[[:xdigit:]]+]]
 // INCLUDE_TREE-NEXT:     module-deps:
 // INCLUDE_TREE-NEXT:     file-deps:
@@ -81,12 +82,13 @@
 // INCLUDE_TREE-NEXT:     build-args:
 // INCLUDE_TREE-SAME:       -cc1
 // INCLUDE_TREE-SAME:       -fcas-path
-// INCLUDE_TREE-SAME:       -fcas-include-tree llvmcas://{{[[:xdigit:]]+}}
+// INCLUDE_TREE-SAME:       -fcas-include-tree [[ModA_INCLUDE_TREE_ID]]
 // INCLUDE_TREE-SAME:       -fcache-compile-job
 
 // INCLUDE_TREE:      dependencies:
 // INCLUDE_TREE-NEXT:   command 0:
 // INCLUDE_TREE-NEXT:     context-hash: [[HASH_TU:[A-Z0-9]+]]
+// INCLUDE_TREE-NEXT:     include-tree-id: [[INC_TU_INCLUDE_TREE_ID:llvmcas://[[:xdigit:]]+]]
 // INCLUDE_TREE-NEXT:     cache-key: [[INC_TU_CACHE_KEY:llvmcas://[[:xdigit:]]+]]
 // INCLUDE_TREE-NEXT:     module-deps:
 // INCLUDE_TREE-NEXT:       ModA:[[HASH_MOD_A]]
@@ -95,7 +97,7 @@
 // INCLUDE_TREE-NEXT:     build-args:
 // INCLUDE_TREE-SAME:       -cc1
 // INCLUDE_TREE-SAME:       -fcas-path
-// INCLUDE_TREE-SAME:       -fcas-include-tree llvmcas://{{[[:xdigit:]]+}}
+// INCLUDE_TREE-SAME:       -fcas-include-tree [[INC_TU_INCLUDE_TREE_ID]]
 // INCLUDE_TREE-SAME:       -fcache-compile-job
 // INCLUDE_TREE-SAME:       -fmodule-file-cache-key [[PCM:.*ModA_.*pcm]] [[ModA_CACHE_KEY]]
 // INCLUDE_TREE-SAME:       -fmodule-file={{(ModA=)?}}[[PCM]]
