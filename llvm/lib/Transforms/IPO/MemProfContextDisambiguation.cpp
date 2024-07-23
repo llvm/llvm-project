@@ -1814,9 +1814,10 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
           // correlate properly in applyImport in the backends.
           if (AN.MIBs.empty())
             continue;
-          CallsWithMetadata.push_back({&AN});
-          CallToFunc[{&AN}] = FS;
-          auto *AllocNode = addAllocNode({&AN}, FS);
+          IndexCall AllocCall(&AN);
+          CallsWithMetadata.push_back(AllocCall);
+          CallToFunc[AllocCall] = FS;
+          auto *AllocNode = addAllocNode(AllocCall, FS);
           // Pass an empty CallStack to the CallsiteContext (second)
           // parameter, since for ThinLTO we already collapsed out the inlined
           // stack ids on the allocation call during ModuleSummaryAnalysis.
@@ -1848,8 +1849,9 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
       // For callsite metadata, add to list for this function for later use.
       if (!FS->callsites().empty())
         for (auto &SN : FS->mutableCallsites()) {
-          CallsWithMetadata.push_back({&SN});
-          CallToFunc[{&SN}] = FS;
+          IndexCall StackNodeCall(&SN);
+          CallsWithMetadata.push_back(StackNodeCall);
+          CallToFunc[StackNodeCall] = FS;
         }
 
       if (!CallsWithMetadata.empty())
