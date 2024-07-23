@@ -716,9 +716,6 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses integer constant expressions that are folded to a constant value as an extension in more circumstances. Fixes #GH59863
 
-- Clang now diagnoses missing format attributes for non-template functions and
-  class/struct/union members. Fixes #GH60718
-
 Improvements to Clang's time-trace
 ----------------------------------
 
