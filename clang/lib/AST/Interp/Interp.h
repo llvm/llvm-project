@@ -187,10 +187,15 @@ template <typename T>
 bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
   if (RHS.isZero()) {
     const auto *Op = cast<BinaryOperator>(S.Current->getExpr(OpPC));
+    if constexpr (std::is_same_v<T, Floating>) {
+      S.CCEDiag(Op, diag::note_expr_divide_by_zero)
+          << Op->getRHS()->getSourceRange();
+      return true;
+    }
+
     S.FFDiag(Op, diag::note_expr_divide_by_zero)
         << Op->getRHS()->getSourceRange();
-    if constexpr (!std::is_same_v<T, Floating>)
-      return false;
+    return false;
   }
 
   if (LHS.isSigned() && LHS.isMin() && RHS.isNegative() && RHS.isMinusOne()) {

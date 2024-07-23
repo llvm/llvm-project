@@ -381,7 +381,8 @@ Changes in existing checks
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check by avoiding infinite recursion
   for recursive functions with forwarding reference parameters and reference
-  variables which refer to themselves.
+  variables which refer to themselves. Also adapted the check to work with
+  function-try-blocks.
 
 - Improved :doc:`misc-definitions-in-headers
   <clang-tidy/checks/misc/definitions-in-headers>` check by replacing the local

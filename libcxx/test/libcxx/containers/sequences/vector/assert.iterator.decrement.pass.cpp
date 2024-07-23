@@ -8,10 +8,10 @@
 
 // <vector>
 
-// Add to iterator out of bounds.
+// Decrement iterator prior to begin.
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
+// REQUIRES: has-unix-headers, libcpp-has-abi-bounded-iterators-in-vector
+// UNSUPPORTED: libcpp-hardening-mode=none, c++03
 
 #include <vector>
 #include <cassert>
@@ -24,22 +24,20 @@ int main(int, char**) {
     typedef int T;
     typedef std::vector<T> C;
     C c(1);
-    C::iterator i = c.begin();
-    i += 1;
-    assert(i == c.end());
-    i = c.begin();
-    TEST_LIBCPP_ASSERT_FAILURE(i + 2, "Attempted to add/subtract an iterator outside its valid range");
+    C::iterator i = c.end();
+    --i;
+    assert(i == c.begin());
+    TEST_LIBCPP_ASSERT_FAILURE(--i, "__bounded_iter::operator--: Attempt to rewind an iterator past the start");
   }
 
   {
     typedef int T;
     typedef std::vector<T, min_allocator<T> > C;
     C c(1);
-    C::iterator i = c.begin();
-    i += 1;
-    assert(i == c.end());
-    i = c.begin();
-    TEST_LIBCPP_ASSERT_FAILURE(i + 2, "Attempted to add/subtract an iterator outside its valid range");
+    C::iterator i = c.end();
+    --i;
+    assert(i == c.begin());
+    TEST_LIBCPP_ASSERT_FAILURE(--i, "__bounded_iter::operator--: Attempt to rewind an iterator past the start");
   }
 
   return 0;
