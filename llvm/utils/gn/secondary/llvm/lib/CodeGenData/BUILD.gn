@@ -5,6 +5,9 @@ static_library("CodeGenData") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "CodeGenData.cpp",
+    "CodeGenDataReader.cpp",
+    "CodeGenDataWriter.cpp",
     "OutlinedHashTree.cpp",
     "OutlinedHashTreeRecord.cpp",
   ]

@@ -487,6 +487,9 @@ public:
   }
   /// Checks if a structure is a base class.
   bool isBaseClass() const { return isField() && getInlineDesc()->IsBase; }
+  bool isVirtualBaseClass() const {
+    return isField() && getInlineDesc()->IsVirtualBase;
+  }
   /// Checks if the pointer points to a dummy value.
   bool isDummy() const {
     if (!isBlockPointer())
