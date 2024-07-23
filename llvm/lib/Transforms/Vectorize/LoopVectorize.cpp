@@ -206,7 +206,7 @@ static cl::opt<unsigned> VectorizeMemoryCheckThreshold(
     cl::desc("The maximum allowed number of runtime memory checks"));
 
 static cl::opt<bool> UseLegacyCostModel(
-    "vectorize-use-legacy-cost-model", cl::init(false), cl::Hidden,
+    "vectorize-use-legacy-cost-model", cl::init(true), cl::Hidden,
     cl::desc("Use the legacy cost model instead of the VPlan-based cost model. "
              "This option will be removed in the future."));
 
