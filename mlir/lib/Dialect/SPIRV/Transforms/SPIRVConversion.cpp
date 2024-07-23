@@ -20,17 +20,21 @@
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/OneToNTypeConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
 
 #include <functional>
@@ -1328,6 +1332,68 @@ mlir::spirv::getNativeVectorShape(Operation *op) {
       .Case<vector::ReductionOp, vector::TransposeOp>(
           [](auto typedOp) { return getNativeVectorShapeImpl(typedOp); })
       .Default([](Operation *) { return std::nullopt; });
+}
+
+LogicalResult mlir::spirv::unrollVectorsInSignatures(Operation *op) {
+  MLIRContext *context = op->getContext();
+  RewritePatternSet patterns(context);
+  populateFuncOpVectorRewritePatterns(patterns);
+  populateReturnOpVectorRewritePatterns(patterns);
+  GreedyRewriteConfig config;
+  config.strictMode = GreedyRewriteStrictness::ExistingOps;
+  return applyPatternsAndFoldGreedily(op, std::move(patterns), config);
+}
+
+LogicalResult mlir::spirv::unrollVectorsInFuncBodies(Operation *op) {
+  MLIRContext *context = op->getContext();
+
+  // Unroll vectors in function bodies to native vector size.
+  {
+    RewritePatternSet patterns(context);
+    auto options = vector::UnrollVectorOptions().setNativeShapeFn(
+        [](auto op) { return mlir::spirv::getNativeVectorShape(op); });
+    populateVectorUnrollPatterns(patterns, options);
+    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+      return llvm::failure();
+  }
+
+  // Convert transpose ops into extract and insert pairs, in preparation of
+  // further transformations to canonicalize/cancel.
+  {
+    RewritePatternSet patterns(context);
+    auto options = vector::VectorTransformsOptions().setVectorTransposeLowering(
+        vector::VectorTransposeLowering::EltWise);
+    vector::populateVectorTransposeLoweringPatterns(patterns, options);
+    vector::populateVectorShapeCastLoweringPatterns(patterns);
+    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+      return llvm::failure();
+  }
+
+  // Run canonicalization to cast away leading size-1 dimensions.
+  {
+    RewritePatternSet patterns(context);
+
+    // We need to pull in casting way leading one dims.
+    vector::populateCastAwayVectorLeadingOneDimPatterns(patterns);
+    vector::ReductionOp::getCanonicalizationPatterns(patterns, context);
+    vector::TransposeOp::getCanonicalizationPatterns(patterns, context);
+
+    // Decompose different rank insert_strided_slice and n-D
+    // extract_slided_slice.
+    vector::populateVectorInsertExtractStridedSliceDecompositionPatterns(
+        patterns);
+    vector::InsertOp::getCanonicalizationPatterns(patterns, context);
+    vector::ExtractOp::getCanonicalizationPatterns(patterns, context);
+
+    // Trimming leading unit dims may generate broadcast/shape_cast ops. Clean
+    // them up.
+    vector::BroadcastOp::getCanonicalizationPatterns(patterns, context);
+    vector::ShapeCastOp::getCanonicalizationPatterns(patterns, context);
+
+    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+      return llvm::failure();
+  }
+  return llvm::success();
 }
 
 //===----------------------------------------------------------------------===//

@@ -19,8 +19,10 @@
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/OneToNTypeConversion.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/Support/LogicalResult.h"
 
 namespace mlir {
 
@@ -201,6 +203,12 @@ SmallVector<int64_t> getNativeVectorShapeImpl(vector::TransposeOp op);
 
 // For general ops.
 std::optional<SmallVector<int64_t>> getNativeVectorShape(Operation *op);
+
+// Unroll vectors in function signatures to native size.
+LogicalResult unrollVectorsInSignatures(Operation *op);
+
+// Unroll vectors in function bodies to native size.
+LogicalResult unrollVectorsInFuncBodies(Operation *op);
 
 } // namespace spirv
 } // namespace mlir
