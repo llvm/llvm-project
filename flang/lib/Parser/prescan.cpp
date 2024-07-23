@@ -111,9 +111,13 @@ void Prescanner::Statement() {
     skipLeadingAmpersand_ |= !inFixedForm_;
     return;
   case LineClassification::Kind::PreprocessorDirective:
+    preprocessor_.Directive(TokenizePreprocessorDirective(), *this);
+    afterPreprocessingDirective_ = true;
+    // Don't set skipLeadingAmpersand_
+    return;
   case LineClassification::Kind::DefinitionDirective:
     preprocessor_.Directive(TokenizePreprocessorDirective(), *this);
-    // Don't set afterPreprocessingDirective_
+    // Don't set afterPreprocessingDirective_ or skipLeadingAmpersand_
     return;
   case LineClassification::Kind::CompilerDirective: {
     directiveSentinel_ = line.sentinel;
