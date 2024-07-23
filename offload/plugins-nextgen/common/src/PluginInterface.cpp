@@ -21,6 +21,8 @@
 #include "Utils/ELF.h"
 #include "omptarget.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Signals.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdio>
 #include <string>
 
@@ -1377,6 +1379,22 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
     if (auto Err = PinnedAllocs.registerHostBuffer(Alloc, Alloc, Size))
       return std::move(Err);
 
+  std::string StackTrace;
+  llvm::raw_string_ostream OS(StackTrace);
+  llvm::sys::PrintStackTrace(OS);
+
+  AllocationInfoTy *AllocationInfo = new AllocationInfoTy();
+  AllocationInfo->AllocationTrace = std::move(StackTrace);
+  AllocationInfo->HostPtr = HostPtr;
+  AllocationInfo->Size = Size;
+  AllocationInfo->Kind = Kind;
+
+  auto AllocationTraceMap = AllocationTraces.getExclusiveAccessor();
+  auto *&AI = (*AllocationTraceMap)[Alloc];
+  if (AI)
+    delete AI;
+  AI = AllocationInfo;
+
   return Alloc;
 }
 
@@ -1384,6 +1402,32 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
   // Free is a noop when recording or replaying.
   if (Plugin.getRecordReplay().isRecordingOrReplaying())
     return Plugin::success();
+
+  AllocationInfoTy *AllocationInfo = nullptr;
+  {
+    auto AllocationTraceMap = AllocationTraces.getExclusiveAccessor();
+    AllocationInfo = (*AllocationTraceMap)[TgtPtr];
+  }
+
+  std::string StackTrace;
+  llvm::raw_string_ostream OS(StackTrace);
+  llvm::sys::PrintStackTrace(OS);
+  if (!AllocationInfo) {
+    fprintf(stderr, "%s", StackTrace.c_str());
+    report_fatal_error("Free of non-allocated memory");
+  }
+
+  if (!AllocationInfo->DeallocationTrace.empty()) {
+    fprintf(stderr, "%s", StackTrace.c_str());
+    report_fatal_error("double-free");
+  }
+
+  if (AllocationInfo->Kind != Kind) {
+    fprintf(stderr, "%s", StackTrace.c_str());
+    report_fatal_error("free of wrong kind of memory");
+  }
+
+  AllocationInfo->DeallocationTrace = StackTrace;
 
   int Res;
   switch (Kind) {
@@ -2291,6 +2335,22 @@ void GPUSanTy::checkAndReportError() {
             "Allocation[slot:%d,tag:%u,kind:%i]\n%s",
             Green(), STI->PtrSlot, STI->PtrTag, STI->PtrKind, STI->AllocationId,
             STI->AllocationTag, STI->AllocationKind, Default());
+
+    AllocationInfoTy *AllocationInfo = nullptr;
+    if (STI->AllocationStart) {
+      auto AllocationTraceMap = Device.AllocationTraces.getExclusiveAccessor();
+      AllocationInfo = (*AllocationTraceMap)[STI->AllocationStart];
+    }
+    if (AllocationInfo) {
+      fprintf(stderr, "\nAllocated at\n");
+      fprintf(stderr, "%s", AllocationInfo->AllocationTrace.c_str());
+
+      if (!AllocationInfo->DeallocationTrace.empty()) {
+        fprintf(stderr, "\nDeallocated at\n");
+        fprintf(stderr, "%s", AllocationInfo->DeallocationTrace.c_str());
+      }
+    }
+
   };
 
   switch (STI->ErrorCode) {

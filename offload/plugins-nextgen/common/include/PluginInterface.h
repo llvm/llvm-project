@@ -19,6 +19,7 @@
 #include <shared_mutex>
 #include <vector>
 
+#include "ExclusiveAccess.h"
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
@@ -381,6 +382,14 @@ protected:
 
   /// If the kernel is a bare kernel.
   bool IsBareKernel = false;
+};
+
+struct AllocationInfoTy {
+  std::string AllocationTrace;
+  std::string DeallocationTrace;
+  void *HostPtr;
+  uint64_t Size;
+  TargetAllocTy Kind;
 };
 
 /// Class representing a map of host pinned allocations. We track these pinned
@@ -892,6 +901,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Reference to the underlying plugin that created this device.
   GenericPluginTy &Plugin;
 
+  ProtectedObj<DenseMap<void *, AllocationInfoTy *>> AllocationTraces;
+
 private:
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output
@@ -915,7 +926,6 @@ private:
 
   /// Pointer to the memory manager or nullptr if not available.
   MemoryManagerTy *MemoryManager;
-
   /// Environment variables defined by the OpenMP standard.
   Int32Envar OMP_TeamLimit;
   Int32Envar OMP_NumTeams;
