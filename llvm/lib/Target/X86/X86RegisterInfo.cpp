@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86RegisterInfo.h"
+#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86FrameLowering.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
@@ -22,6 +23,7 @@
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TileShapeInfo.h"
@@ -906,7 +908,7 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
   // Determine base register and offset.
-  int FIOffset;
+  int64_t FIOffset;
   Register BasePtr;
   if (MI.isReturn()) {
     assert((!hasStackRealignment(MF) ||
@@ -958,9 +960,36 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   if (MI.getOperand(FIOperandNum+3).isImm()) {
     int64_t Imm = MI.getOperand(FIOperandNum + 3).getImm();
-    int Offset = FIOffset + (int)Imm;
-    if (!Is64Bit && !isInt<32>((int64_t)FIOffset + Imm))
-      MI.emitGenericError("64-bit offset calculated but target is 32-bit");
+    int64_t Offset = FIOffset + Imm;
+    bool FitsIn32Bits = isInt<32>(Offset);
+    // If the offset will not fit in a 32-bit displacement, then for 64-bit
+    // targets, scavenge a register to hold it. Otherwise...
+    if (Is64Bit && !FitsIn32Bits) {
+      assert(RS && "RegisterScavenger was NULL");
+      const X86InstrInfo *TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
+      const DebugLoc &DL = MI.getDebugLoc();
+
+      RS->enterBasicBlockEnd(MBB);
+      RS->backward(std::next(II));
+
+      Register ScratchReg = RS->scavengeRegisterBackwards(
+          X86::GR64RegClass, II, /*RestoreAfter=*/false, /*SPAdj=*/0,
+          /*AllowSpill=*/true);
+      assert(ScratchReg != 0 && "scratch reg was 0");
+      RS->setRegUsed(ScratchReg);
+
+      BuildMI(MBB, II, DL, TII->get(X86::MOV64ri), ScratchReg).addImm(Offset);
+
+      MI.getOperand(FIOperandNum + 3).setImm(0);
+      MI.getOperand(FIOperandNum + 2).setReg(ScratchReg);
+
+      return false;
+    }
+
+    // ... for 32-bit targets, this is a bug!
+    if (!Is64Bit && !FitsIn32Bits)
+      MI.emitGenericError(("64-bit offset calculated but target is 32-bit"));
+
     if (Offset != 0 || !tryOptimizeLEAtoMOV(II))
       MI.getOperand(FIOperandNum + 3).ChangeToImmediate(Offset);
   } else {

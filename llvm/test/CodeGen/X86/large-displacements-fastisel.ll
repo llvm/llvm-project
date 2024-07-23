@@ -7,7 +7,8 @@
 define i32 @main() {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movabsq $-2147483652, %rax # imm = 0xFFFFFFFF7FFFFFFC
+; CHECK-NEXT:    movl $0, (%rsp,%rax)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
   %1 = alloca i32, align 4
