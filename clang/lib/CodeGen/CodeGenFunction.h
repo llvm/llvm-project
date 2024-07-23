@@ -3821,6 +3821,7 @@ public:
   void EmitOMPTileDirective(const OMPTileDirective &S);
   void EmitOMPUnrollDirective(const OMPUnrollDirective &S);
   void EmitOMPReverseDirective(const OMPReverseDirective &S);
+  void EmitOMPInterchangeDirective(const OMPInterchangeDirective &S);
   void EmitOMPForDirective(const OMPForDirective &S);
   void EmitOMPForSimdDirective(const OMPForSimdDirective &S);
   void EmitOMPSectionsDirective(const OMPSectionsDirective &S);
@@ -4373,7 +4374,8 @@ public:
   RValue EmitCall(const CGFunctionInfo &CallInfo, const CGCallee &Callee,
                   ReturnValueSlot ReturnValue, const CallArgList &Args,
                   llvm::CallBase **callOrInvoke, bool IsMustTail,
-                  SourceLocation Loc);
+                  SourceLocation Loc,
+                  bool IsVirtualFunctionPointerThunk = false);
   RValue EmitCall(const CGFunctionInfo &CallInfo, const CGCallee &Callee,
                   ReturnValueSlot ReturnValue, const CallArgList &Args,
                   llvm::CallBase **callOrInvoke = nullptr,

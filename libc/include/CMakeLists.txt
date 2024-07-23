@@ -174,7 +174,7 @@ file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/arpa)
 
 add_header_macro(
   arpa_inet
-  ../libc/newhdrgen/yaml/arpa/arpa_inet.yaml
+  ../libc/newhdrgen/yaml/arpa/inet.yaml
   arpa/inet.h.def
   arpa/inet.h
   DEPENDS
@@ -426,7 +426,7 @@ file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/sys)
 
 add_header_macro(
   sys_auxv
-  ../libc/newhdrgen/yaml/sys/sys_auxv.yaml
+  ../libc/newhdrgen/yaml/sys/auxv.yaml
   sys/auxv.h.def
   sys/auxv.h
   DEPENDS
@@ -436,7 +436,7 @@ add_header_macro(
 
 add_header_macro(
   sys_epoll
-  ../libc/newhdrgen/yaml/sys/sys_epoll.yaml
+  ../libc/newhdrgen/yaml/sys/epoll.yaml
   sys/epoll.h.def
   sys/epoll.h
   DEPENDS
@@ -449,7 +449,7 @@ add_header_macro(
 
 add_header_macro(
   sys_ioctl
-  ../libc/newhdrgen/yaml/sys/sys_ioctl.yaml
+  ../libc/newhdrgen/yaml/sys/ioctl.yaml
   sys/ioctl.h.def
   sys/ioctl.h
   DEPENDS
@@ -459,7 +459,7 @@ add_header_macro(
 
 add_header_macro(
   sys_mman
-  ../libc/newhdrgen/yaml/sys/sys_mman.yaml
+  ../libc/newhdrgen/yaml/sys/mman.yaml
   sys/mman.h.def
   sys/mman.h
   DEPENDS
@@ -472,7 +472,7 @@ add_header_macro(
 
 add_header_macro(
   sys_prctl
-  ../libc/newhdrgen/yaml/sys/sys_prctl.yaml
+  ../libc/newhdrgen/yaml/sys/prctl.yaml
   sys/prctl.h.def
   sys/prctl.h
   DEPENDS
@@ -489,7 +489,7 @@ add_header(
 
 add_header_macro(
   sys_random
-  ../libc/newhdrgen/yaml/sys/sys_random.yaml
+  ../libc/newhdrgen/yaml/sys/random.yaml
   sys/random.h.def
   sys/random.h
   DEPENDS
@@ -501,7 +501,7 @@ add_header_macro(
 
 add_header_macro(
   sys_resource
-  ../libc/newhdrgen/yaml/sys/sys_resource.yaml
+  ../libc/newhdrgen/yaml/sys/resource.yaml
   sys/resource.h.def
   sys/resource.h
   DEPENDS
@@ -513,7 +513,7 @@ add_header_macro(
 
 add_header_macro(
   sys_stat
-  ../libc/newhdrgen/yaml/sys/sys_stat.yaml
+  ../libc/newhdrgen/yaml/sys/stat.yaml
   sys/stat.h.def
   sys/stat.h
   DEPENDS
@@ -535,7 +535,7 @@ add_header_macro(
 
 add_header_macro(
   sys_select
-  ../libc/newhdrgen/yaml/sys/sys_select.yaml
+  ../libc/newhdrgen/yaml/sys/select.yaml
   sys/select.h.def
   sys/select.h
   DEPENDS
@@ -551,7 +551,7 @@ add_header_macro(
 
 add_header_macro(
   sys_sendfile
-  ../libc/newhdrgen/yaml/sys/sys_sendfile.yaml
+  ../libc/newhdrgen/yaml/sys/sendfile.yaml
   sys/sendfile.h.def
   sys/sendfile.h
   DEPENDS
@@ -563,7 +563,7 @@ add_header_macro(
 
 add_header_macro(
   sys_socket
-  ../libc/newhdrgen/yaml/sys/sys_socket.yaml
+  ../libc/newhdrgen/yaml/sys/socket.yaml
   sys/socket.h.def
   sys/socket.h
   DEPENDS
@@ -577,7 +577,7 @@ add_header_macro(
 
 add_header_macro(
   sys_statvfs
-  ../libc/newhdrgen/yaml/sys/sys_statvfs.yaml
+  ../libc/newhdrgen/yaml/sys/statvfs.yaml
   sys/statvfs.h.def
   sys/statvfs.h
   DEPENDS
@@ -587,7 +587,7 @@ add_header_macro(
 
 add_header_macro(
   sys_syscall
-  ../libc/newhdrgen/yaml/sys/sys_syscall.yaml
+  ../libc/newhdrgen/yaml/sys/syscall.yaml
   sys/syscall.h.def
   sys/syscall.h
   DEPENDS
@@ -595,7 +595,7 @@ add_header_macro(
 
 add_header_macro(
   sys_time
-  ../libc/newhdrgen/yaml/sys/sys_time.yaml
+  ../libc/newhdrgen/yaml/sys/time.yaml
   sys/time.h.def
   sys/time.h
   DEPENDS
@@ -606,7 +606,7 @@ add_header_macro(
 
 add_header_macro(
   sys_types
-  ../libc/newhdrgen/yaml/sys/sys_types.yaml
+  ../libc/newhdrgen/yaml/sys/types.yaml
   sys/types.h.def
   sys/types.h
   DEPENDS
@@ -636,7 +636,7 @@ add_header_macro(
 
 add_header_macro(
   sys_utsname
-  ../libc/newhdrgen/yaml/sys/sys_utsname.yaml
+  ../libc/newhdrgen/yaml/sys/utsname.yaml
   sys/utsname.h.def
   sys/utsname.h
   DEPENDS
@@ -646,7 +646,7 @@ add_header_macro(
 
 add_header_macro(
   sys_wait
-  ../libc/newhdrgen/yaml/sys/sys_wait.yaml
+  ../libc/newhdrgen/yaml/sys/wait.yaml
   sys/wait.h.def
   sys/wait.h
   DEPENDS

@@ -308,8 +308,7 @@ static bool shouldTrackFirstArgument(const FunctionDecl *FD) {
   const auto *RD = FD->getParamDecl(0)->getType()->getPointeeCXXRecordDecl();
   if (!FD->isInStdNamespace() || !RD || !RD->isInStdNamespace())
     return false;
-  if (!isRecordWithAttr<PointerAttr>(QualType(RD->getTypeForDecl(), 0)) &&
-      !isRecordWithAttr<OwnerAttr>(QualType(RD->getTypeForDecl(), 0)))
+  if (!RD->hasAttr<PointerAttr>() && !RD->hasAttr<OwnerAttr>())
     return false;
   if (FD->getReturnType()->isPointerType() ||
       isRecordWithAttr<PointerAttr>(FD->getReturnType())) {

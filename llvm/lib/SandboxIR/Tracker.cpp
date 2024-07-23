@@ -98,6 +98,54 @@ void EraseFromParent::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
+#endif // NDEBUG
+
+RemoveFromParent::RemoveFromParent(Instruction *RemovedI, Tracker &Tracker)
+    : IRChangeBase(Tracker), RemovedI(RemovedI) {
+  if (auto *NextI = RemovedI->getNextNode())
+    NextInstrOrBB = NextI;
+  else
+    NextInstrOrBB = RemovedI->getParent();
+}
+
+void RemoveFromParent::revert() {
+  if (auto *NextI = NextInstrOrBB.dyn_cast<Instruction *>()) {
+    RemovedI->insertBefore(NextI);
+  } else {
+    auto *BB = NextInstrOrBB.get<BasicBlock *>();
+    RemovedI->insertInto(BB, BB->end());
+  }
+}
+
+#ifndef NDEBUG
+void RemoveFromParent::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
+MoveInstr::MoveInstr(Instruction *MovedI, Tracker &Tracker)
+    : IRChangeBase(Tracker), MovedI(MovedI) {
+  if (auto *NextI = MovedI->getNextNode())
+    NextInstrOrBB = NextI;
+  else
+    NextInstrOrBB = MovedI->getParent();
+}
+
+void MoveInstr::revert() {
+  if (auto *NextI = NextInstrOrBB.dyn_cast<Instruction *>()) {
+    MovedI->moveBefore(NextI);
+  } else {
+    auto *BB = NextInstrOrBB.get<BasicBlock *>();
+    MovedI->moveBefore(*BB, BB->end());
+  }
+}
+
+#ifndef NDEBUG
+void MoveInstr::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
 #endif
 
 void Tracker::track(std::unique_ptr<IRChangeBase> &&Change) {

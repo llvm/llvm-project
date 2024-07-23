@@ -327,9 +327,10 @@ static bool MmapFixed(uptr fixed_addr, uptr size, int additional_flags,
                 MAP_PRIVATE | MAP_FIXED | additional_flags | MAP_ANON, name);
   int reserrno;
   if (internal_iserror(p, &reserrno)) {
-    Report("ERROR: %s failed to "
-           "allocate 0x%zx (%zd) bytes at address %zx (errno: %d)\n",
-           SanitizerToolName, size, size, fixed_addr, reserrno);
+    Report(
+        "ERROR: %s failed to "
+        "allocate 0x%zx (%zd) bytes at address %p (errno: %d)\n",
+        SanitizerToolName, size, size, (void *)fixed_addr, reserrno);
     return false;
   }
   IncreaseTotalMmap(size);

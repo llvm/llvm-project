@@ -620,6 +620,7 @@ void allocateTilesToLiveRanges(
         if (!activeRanges.remove(rangeToSpill)) {
           bool removed = inactiveRanges.remove(rangeToSpill);
           assert(removed && "expected a range to be removed!");
+          (void)removed;
         }
       }
       rangeToSpill->tileId = tileAllocator.allocateInMemoryTileId();

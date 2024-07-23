@@ -1,6 +1,20 @@
-// RUN: %clang_cc1 %s -fptrauth-function-pointer-type-discrimination -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck %s --check-prefixes=CHECK,TYPE
-// RUN: %clang_cc1 %s -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck %s --check-prefixes=CHECK,ZERO
-// RUN: %clang_cc1 -xc++ %s -fptrauth-function-pointer-type-discrimination -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck %s --check-prefixes=CHECK,CHECKCXX,TYPE,TYPECXX
+// RUN: %clang_cc1 %s -fptrauth-function-pointer-type-discrimination -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics \
+// RUN:   -disable-llvm-passes -emit-llvm -o-       | FileCheck %s --check-prefixes=CHECK,TYPE
+
+// RUN: %clang_cc1 %s -fptrauth-function-pointer-type-discrimination -triple aarch64-linux-gnu  -fptrauth-calls -fptrauth-intrinsics \
+// RUN:   -disable-llvm-passes -emit-llvm -o-       | FileCheck %s --check-prefixes=CHECK,TYPE
+
+// RUN: %clang_cc1 %s                                                -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics \
+// RUN:   -disable-llvm-passes -emit-llvm -o-       | FileCheck %s --check-prefixes=CHECK,ZERO
+
+// RUN: %clang_cc1 %s                                                -triple aarch64-linux-gnu  -fptrauth-calls -fptrauth-intrinsics \
+// RUN:   -disable-llvm-passes -emit-llvm -o-       | FileCheck %s --check-prefixes=CHECK,ZERO
+
+// RUN: %clang_cc1 %s -fptrauth-function-pointer-type-discrimination -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics \
+// RUN:   -disable-llvm-passes -emit-llvm -xc++ -o- | FileCheck %s --check-prefixes=CHECK,CHECKCXX,TYPE,TYPECXX
+
+// RUN: %clang_cc1 %s -fptrauth-function-pointer-type-discrimination -triple aarch64-linux-gnu  -fptrauth-calls -fptrauth-intrinsics \
+// RUN:   -disable-llvm-passes -emit-llvm -xc++ -o- | FileCheck %s --check-prefixes=CHECK,CHECKCXX,TYPE,TYPECXX
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,12 +33,12 @@ struct ptr_member {
 ptr_member pm;
 void (*test_member)() = (void (*)())pm.fptr_;
 
-// CHECKCXX-LABEL: define internal void @__cxx_global_var_init
+// CHECKCXX-LABEL: define{{.*}} internal void @__cxx_global_var_init
 // TYPECXX: call i64 @llvm.ptrauth.resign(i64 {{.*}}, i32 0, i64 2712, i32 0, i64 18983)
 #endif
 
 
-// CHECK-LABEL: define void @test_cast_to_opaque
+// CHECK-LABEL: define{{.*}} void @test_cast_to_opaque
 void test_cast_to_opaque() {
   opaque = (void *)f;
 
@@ -33,7 +47,7 @@ void test_cast_to_opaque() {
   // ZERO-NOT: @llvm.ptrauth.resign
 }
 
-// CHECK-LABEL: define void @test_cast_from_opaque
+// CHECK-LABEL: define{{.*}} void @test_cast_from_opaque
 void test_cast_from_opaque() {
   fptr = (void (*)(void))opaque;
 
@@ -48,7 +62,7 @@ void test_cast_from_opaque() {
   // ZERO-NOT: @llvm.ptrauth.resign
 }
 
-// CHECK-LABEL: define void @test_cast_to_intptr
+// CHECK-LABEL: define{{.*}} void @test_cast_to_intptr
 void test_cast_to_intptr() {
   uintptr = (unsigned long)fptr;
 
@@ -69,14 +83,14 @@ void test_cast_to_intptr() {
   // ZERO-NOT: @llvm.ptrauth.resign
 }
 
-// CHECK-LABEL: define void @test_function_to_function_cast
+// CHECK-LABEL: define{{.*}} void @test_function_to_function_cast
 void test_function_to_function_cast() {
   void (*fptr2)(int) = (void (*)(int))fptr;
   // TYPE: call i64 @llvm.ptrauth.resign(i64 {{.*}}, i32 0, i64 18983, i32 0, i64 2712)
   // ZERO-NOT: @llvm.ptrauth.resign
 }
 
-// CHECK-LABEL: define void @test_call_lvalue_cast
+// CHECK-LABEL: define{{.*}} void @test_call_lvalue_cast
 void test_call_lvalue_cast() {
   (*(void (*)(int))f)(42);
 
