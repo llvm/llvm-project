@@ -552,12 +552,18 @@ CINDEX_LINKAGE CXCStringArray
 
 /**
  * @returns the CASID of the include-tree for this module, if any.
+ *
+ * The string is only valid to use while the \c CXDepGraphModule object is
+ * valid.
  */
 CINDEX_LINKAGE const char *
     clang_experimental_DepGraphModule_getIncludeTreeID(CXDepGraphModule);
 
 /**
  * \returns the \c ActionCache key for this module, if any.
+ *
+ * The string is only valid to use while the \c CXDepGraphModule object is
+ * valid.
  */
 CINDEX_LINKAGE
 const char *clang_experimental_DepGraphModule_getCacheKey(CXDepGraphModule);
@@ -602,6 +608,9 @@ CINDEX_LINKAGE CXCStringArray
 
 /**
  * \returns the \c ActionCache key for this translation unit, if any.
+ *
+ * The string is only valid to use while the \c CXDepGraphTUCommand object is
+ * valid.
  */
 CINDEX_LINKAGE const char *
     clang_experimental_DepGraphTUCommand_getCacheKey(CXDepGraphTUCommand);
@@ -627,6 +636,8 @@ CXCStringArray clang_experimental_DepGraph_getTUModuleDeps(CXDepGraph);
 
 /**
  * @returns the CASID of the include-tree for this TU, if any.
+ *
+ * The string is only valid to use while the \c CXDepGraph object is valid.
  */
 CINDEX_LINKAGE
 const char *clang_experimental_DepGraph_getTUIncludeTreeID(CXDepGraph);
