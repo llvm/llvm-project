@@ -9358,12 +9358,11 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
       ");",
       Style);
   Style.ColumnLimit = 60;
-  verifyFormat(
-      "auto lambda =\n"
-      "    [&b](\n"
-      "        auto aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
-      "    ) {};",
-      Style);
+  verifyFormat("auto lambda =\n"
+               "    [&b](\n"
+               "        auto aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "    ) {};",
+               Style);
 }
 
 TEST_F(FormatTest, ParenthesesAndOperandAlignment) {
