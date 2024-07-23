@@ -1952,19 +1952,22 @@ public:
 class CXXDeductionGuideDecl : public FunctionDecl {
   void anchor() override;
 
+public:
+  enum class SourceKind : bool {
+    Alias,
+    InheritedConstructor,
+  };
+
 private:
   CXXDeductionGuideDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
                         ExplicitSpecifier ES,
                         const DeclarationNameInfo &NameInfo, QualType T,
                         TypeSourceInfo *TInfo, SourceLocation EndLocation,
                         CXXConstructorDecl *Ctor, DeductionCandidate Kind,
-                        CXXDeductionGuideDecl *GeneratedFrom,
-                        bool IsGeneratedFromInheritedConstructor)
+                        CXXDeductionGuideDecl *GeneratedFrom, SourceKind SK)
       : FunctionDecl(CXXDeductionGuide, C, DC, StartLoc, NameInfo, T, TInfo,
                      SC_None, false, false, ConstexprSpecKind::Unspecified),
-        Ctor(Ctor), ExplicitSpec(ES),
-        SourceDeductionGuide(GeneratedFrom,
-                             IsGeneratedFromInheritedConstructor) {
+        Ctor(Ctor), ExplicitSpec(ES), SourceDeductionGuide(GeneratedFrom, SK) {
     if (EndLocation.isValid())
       setRangeEnd(EndLocation);
     setDeductionCandidateKind(Kind);
@@ -1974,9 +1977,10 @@ private:
   ExplicitSpecifier ExplicitSpec;
   // The deduction guide, if any, that this deduction guide was generated from,
   // in the case of alias template deduction or CTAD from inherited
-  // constructors. The bool member indicates whether this deduction guide is
-  // generated from an inherited constructor.
-  llvm::PointerIntPair<CXXDeductionGuideDecl *, 1, bool> SourceDeductionGuide;
+  // constructors. The SourceKind member indicates which of these two sources
+  // applies, if there is a source, otherwise it is meaningless.
+  llvm::PointerIntPair<CXXDeductionGuideDecl *, 1, SourceKind>
+      SourceDeductionGuide;
   void setExplicitSpecifier(ExplicitSpecifier ES) { ExplicitSpec = ES; }
 
 public:
@@ -1990,7 +1994,7 @@ public:
          CXXConstructorDecl *Ctor = nullptr,
          DeductionCandidate Kind = DeductionCandidate::Normal,
          CXXDeductionGuideDecl *SourceDG = nullptr,
-         bool IsGeneratedFromInheritedConstructor = false);
+         SourceKind SK = SourceKind::Alias);
 
   static CXXDeductionGuideDecl *CreateDeserialized(ASTContext &C,
                                                    GlobalDeclID ID);
@@ -2021,13 +2025,9 @@ public:
     SourceDeductionGuide.setPointer(DG);
   }
 
-  bool isGeneratedFromInheritedConstructor() const {
-    return SourceDeductionGuide.getInt();
-  }
+  SourceKind getSourceKind() const { return SourceDeductionGuide.getInt(); }
 
-  void setGeneratedFromInheritedConstructor(bool G = true) {
-    SourceDeductionGuide.setInt(G);
-  }
+  void setSourceKind(SourceKind SK) { SourceDeductionGuide.setInt(SK); }
 
   void setDeductionCandidateKind(DeductionCandidate K) {
     FunctionDeclBits.DeductionCandidateKind = static_cast<unsigned char>(K);

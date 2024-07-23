@@ -2158,10 +2158,10 @@ CXXDeductionGuideDecl *CXXDeductionGuideDecl::Create(
     ExplicitSpecifier ES, const DeclarationNameInfo &NameInfo, QualType T,
     TypeSourceInfo *TInfo, SourceLocation EndLocation, CXXConstructorDecl *Ctor,
     DeductionCandidate Kind, CXXDeductionGuideDecl *GeneratedFrom,
-    bool IsGeneratedFromInheritedConstructor) {
-  return new (C, DC) CXXDeductionGuideDecl(
-      C, DC, StartLoc, ES, NameInfo, T, TInfo, EndLocation, Ctor, Kind,
-      GeneratedFrom, IsGeneratedFromInheritedConstructor);
+    SourceKind SK) {
+  return new (C, DC)
+      CXXDeductionGuideDecl(C, DC, StartLoc, ES, NameInfo, T, TInfo,
+                            EndLocation, Ctor, Kind, GeneratedFrom, SK);
 }
 
 CXXDeductionGuideDecl *
@@ -2170,7 +2170,7 @@ CXXDeductionGuideDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
       C, nullptr, SourceLocation(), ExplicitSpecifier(), DeclarationNameInfo(),
       QualType(), nullptr, SourceLocation(), nullptr,
       DeductionCandidate::Normal, /*GeneratedFrom=*/nullptr,
-      /*IsGeneratedFromInheritedConstructor=*/false);
+      /*SK=*/SourceKind::Alias);
 }
 
 RequiresExprBodyDecl *RequiresExprBodyDecl::Create(

@@ -1244,8 +1244,10 @@ FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
     DGuide->setDeductionCandidateKind(GG->getDeductionCandidateKind());
     DGuide->setSourceDeductionGuide(
         cast<CXXDeductionGuideDecl>(F->getTemplatedDecl()));
-    if (DerivedClassMapperType)
-      DGuide->setGeneratedFromInheritedConstructor();
+    DGuide->setSourceKind(
+        DerivedClassMapperType
+            ? CXXDeductionGuideDecl::SourceKind::InheritedConstructor
+            : CXXDeductionGuideDecl::SourceKind::Alias);
     return Result;
   }
   return nullptr;

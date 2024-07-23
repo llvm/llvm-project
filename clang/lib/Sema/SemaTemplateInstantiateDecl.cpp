@@ -2193,7 +2193,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
         InstantiatedExplicitSpecifier, NameInfo, T, TInfo,
         D->getSourceRange().getEnd(), DGuide->getCorrespondingConstructor(),
         DGuide->getDeductionCandidateKind(), DGuide->getSourceDeductionGuide(),
-        DGuide->isGeneratedFromInheritedConstructor());
+        DGuide->getSourceKind());
     Function->setAccess(D->getAccess());
   } else {
     Function = FunctionDecl::Create(

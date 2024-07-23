@@ -8078,7 +8078,6 @@ TEST_P(ImportFunctions, CTADImplicit) {
   ASSERT_TRUE(ToD);
   EXPECT_EQ(ToD->getDeductionCandidateKind(), DeductionCandidate::Copy);
   EXPECT_EQ(ToD->getSourceDeductionGuide(), nullptr);
-  EXPECT_FALSE(ToD->isGeneratedFromInheritedConstructor());
   // Check that the deduced class template is also imported.
   EXPECT_TRUE(findFromTU(FromD)->Importer->GetAlreadyImportedOrNull(
       FromD->getDeducedTemplate()));
@@ -8104,7 +8103,6 @@ TEST_P(ImportFunctions, CTADUserDefinedExplicit) {
   EXPECT_FALSE(FromD->isImplicit());
   EXPECT_TRUE(ToD->isExplicit());
   EXPECT_EQ(ToD->getSourceDeductionGuide(), nullptr);
-  EXPECT_FALSE(ToD->isGeneratedFromInheritedConstructor());
 }
 
 TEST_P(ImportFunctions, CTADWithLocalTypedef) {
@@ -8138,7 +8136,7 @@ TEST_P(ImportFunctions, CTADAliasTemplate) {
       TU, cxxDeductionGuideDecl(hasParameter(0, hasType(asString("int")))));
   auto *ToD = Import(FromD, Lang_CXX20);
   ASSERT_TRUE(ToD);
-  EXPECT_FALSE(ToD->isGeneratedFromInheritedConstructor());
+  EXPECT_TRUE(ToD->getSourceKind() == CXXDeductionGuideDecl::SourceKind::Alias);
   EXPECT_TRUE(ToD->getSourceDeductionGuide());
 }
 
@@ -8158,7 +8156,8 @@ TEST_P(ImportFunctions, CTADInheritedCtor) {
       TU, cxxDeductionGuideDecl(hasParameter(0, hasType(asString("int")))));
   auto *ToD = Import(FromD, Lang_CXX23);
   ASSERT_TRUE(ToD);
-  EXPECT_TRUE(ToD->isGeneratedFromInheritedConstructor());
+  EXPECT_TRUE(ToD->getSourceKind() ==
+              CXXDeductionGuideDecl::SourceKind::InheritedConstructor);
   EXPECT_TRUE(ToD->getSourceDeductionGuide());
 }
 

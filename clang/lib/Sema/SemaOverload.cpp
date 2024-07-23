@@ -10535,9 +10535,16 @@ bool clang::isBetterOverloadCandidate(
       //  -- F1 and F2 are generated from class template argument deduction
       //  for a class D, and F2 is generated from inheriting constructors
       //  from a base class of D while F1 is not, ...
+      bool G1Inherited =
+          Guide1->getSourceDeductionGuide() &&
+          Guide1->getSourceKind() ==
+              CXXDeductionGuideDecl::SourceKind::InheritedConstructor;
+      bool G2Inherited =
+          Guide2->getSourceDeductionGuide() &&
+          Guide2->getSourceKind() ==
+              CXXDeductionGuideDecl::SourceKind::InheritedConstructor;
       if (Guide1->isImplicit() && Guide2->isImplicit() &&
-          Guide1->isGeneratedFromInheritedConstructor() !=
-              Guide2->isGeneratedFromInheritedConstructor()) {
+          G1Inherited != G2Inherited) {
         const FunctionProtoType *FPT1 =
             Guide1->getType()->getAs<FunctionProtoType>();
         const FunctionProtoType *FPT2 =
@@ -10562,7 +10569,7 @@ bool clang::isBetterOverloadCandidate(
           }
 
           if (ParamsHaveSameType)
-            return Guide2->isGeneratedFromInheritedConstructor();
+            return G2Inherited;
         }
       }
 
@@ -11711,7 +11718,8 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     // partial specialization, so we show a generic diagnostic
     // in this case.
     if (auto *DG = dyn_cast<CXXDeductionGuideDecl>(Templated);
-        DG && DG->isGeneratedFromInheritedConstructor()) {
+        DG && DG->getSourceKind() ==
+                  CXXDeductionGuideDecl::SourceKind::InheritedConstructor) {
       CXXDeductionGuideDecl *Source = DG->getSourceDeductionGuide();
       assert(Source &&
              "Inherited constructor deduction guides must have a source");
