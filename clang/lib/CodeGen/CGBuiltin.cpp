@@ -18471,10 +18471,10 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("frac operand must have a float representation");
     return Builder.CreateIntrinsic(
-        /*ReturnType=*/Op0->getType(), Intrinsic::dx_frac,
-        ArrayRef<Value *>{Op0}, nullptr, "dx.frac");
-  }
-  case Builtin::BI__builtin_hlsl_elementwise_isinf: {
+        /*ReturnType=*/Op0->getType(), CGM.getHLSLRuntime().getFracIntrinsic(),
+        ArrayRef<Value *>{Op0}, nullptr, "hlsl.frac");
+}
+case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     llvm::Type *Xty = Op0->getType();
     llvm::Type *retType = llvm::Type::getInt1Ty(this->getLLVMContext());

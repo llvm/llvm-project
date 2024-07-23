@@ -3194,13 +3194,9 @@ bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
     }
 
     assert(S == Result);
-    if (const Expr *ResultExpr = dyn_cast<Expr>(S)) {
-      if (DiscardResult)
-        return this->discard(ResultExpr);
+    if (const Expr *ResultExpr = dyn_cast<Expr>(S))
       return this->delegate(ResultExpr);
-    }
-
-    return this->visitStmt(S);
+    return this->emitUnsupported(E);
   }
 
   return BS.destroyLocals();

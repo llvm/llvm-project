@@ -849,8 +849,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FNEARBYINT, MVT::f80, Expand);
     setOperationAction(ISD::FROUNDEVEN, MVT::f80, Expand);
     setOperationAction(ISD::FMA, MVT::f80, Expand);
-    setOperationAction(ISD::LROUND, MVT::f80, Expand);
-    setOperationAction(ISD::LLROUND, MVT::f80, Expand);
+    setOperationAction(ISD::LROUND, MVT::f80, LibCall);
+    setOperationAction(ISD::LLROUND, MVT::f80, LibCall);
     setOperationAction(ISD::LRINT, MVT::f80, Custom);
     setOperationAction(ISD::LLRINT, MVT::f80, Custom);
 
@@ -58378,7 +58378,7 @@ X86TargetLowering::getSingleConstraintMatchWeight(
       Wt = CW_SpecificReg;
     break;
   case 'y':
-    if (Ty->isX86_MMXTy() && Subtarget.hasMMX())
+    if (Ty->getPrimitiveSizeInBits() == 64 && Subtarget.hasMMX())
       Wt = CW_SpecificReg;
     break;
   case 'Y':
@@ -58401,8 +58401,8 @@ X86TargetLowering::getSingleConstraintMatchWeight(
       return CW_Invalid;
     // Any MMX reg
     case 'm':
-      if (Ty->isX86_MMXTy() && Subtarget.hasMMX())
-        return Wt;
+      if (Ty->getPrimitiveSizeInBits() == 64 && Subtarget.hasMMX())
+        return CW_SpecificReg;
       return CW_Invalid;
     // Any SSE reg when ISA >= SSE2, same as 'x'
     case 'i':
