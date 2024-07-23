@@ -28,18 +28,18 @@ struct B {
   template<> int get<1>() { return z; }
 };
 
+// Note: the following declarations are necessary for decomposition of tuple-like
+// structured bindings
 namespace std {
 template<typename T> struct tuple_size {
 };
 template<>
 struct tuple_size<B> {
-    static constexpr int value = 2;
+    static constexpr unsigned value = 2;
 };
 
-template<int, typename T> struct tuple_element {};
-template<> struct tuple_element<0, B> { using type = int; };
-template<> struct tuple_element<1, B> { using type = int; };
-}
+template<unsigned, typename T> struct tuple_element { using type = int; };
+} // namespace std
 
 int f() {
   A a{10, 20};
