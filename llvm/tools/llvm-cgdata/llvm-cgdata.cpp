@@ -18,7 +18,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
@@ -240,8 +240,8 @@ static int show_main(int argc, const char *argv[]) {
   return 0;
 }
 
-int llvm_cgdata_main(int argc, char **argvNonConst, const llvm::ToolContext &) {
-  const char **argv = const_cast<const char **>(argvNonConst);
+int main(int argc, const char **argv) {
+  llvm::InitLLVM X(argc, argv);
 
   StringRef ProgName(sys::path::filename(argv[0]));
 
