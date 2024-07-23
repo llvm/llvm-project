@@ -71,7 +71,7 @@ PrintMemData("print-mem-data",
 
 cl::opt<std::string> CompDirOverride(
     "comp-dir-override",
-    cl::desc("overrides DW_AT_comp_dir, and provides an alterantive base "
+    cl::desc("overrides DW_AT_comp_dir, and provides an alternative base "
              "location, which is used with DW_AT_dwo_name to construct a path "
              "to *.dwo files."),
     cl::Hidden, cl::init(""), cl::cat(BoltCategory));
@@ -2367,10 +2367,7 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   std::unique_ptr<MCObjectWriter> OW = MAB->createObjectWriter(VecOS);
   std::unique_ptr<MCStreamer> Streamer(TheTarget->createMCObjectStreamer(
       *TheTriple, *LocalCtx, std::unique_ptr<MCAsmBackend>(MAB), std::move(OW),
-      std::unique_ptr<MCCodeEmitter>(MCEInstance.MCE.release()), *STI,
-      /*RelaxAll=*/false,
-      /*IncrementalLinkerCompatible=*/false,
-      /*DWARFMustBeAtTheEnd=*/false));
+      std::unique_ptr<MCCodeEmitter>(MCEInstance.MCE.release()), *STI));
 
   Streamer->initSections(false, *STI);
 

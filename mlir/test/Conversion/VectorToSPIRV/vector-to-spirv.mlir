@@ -150,6 +150,19 @@ func.func @broadcast(%arg0 : f32) -> (vector<4xf32>, vector<2xf32>) {
 
 // -----
 
+// CHECK-LABEL: @broadcast_index
+//  CHECK-SAME: %[[ARG0:.*]]: index
+//       CHECK:   %[[CAST0:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : index to i32
+//       CHECK:   %[[CONSTRUCT:.*]] = spirv.CompositeConstruct %[[CAST0]], %[[CAST0]], %[[CAST0]], %[[CAST0]] : (i32, i32, i32, i32) -> vector<4xi32>
+//       CHECK:   %[[CAST1:.*]] = builtin.unrealized_conversion_cast %[[CONSTRUCT]] : vector<4xi32> to vector<4xindex>
+//       CHECK:   return %[[CAST1]] : vector<4xindex>
+func.func @broadcast_index(%a: index) -> vector<4xindex> {
+  %0 = vector.broadcast %a : index to vector<4xindex>
+  return %0 : vector<4xindex>
+}
+
+// -----
+
 // CHECK-LABEL: @extract
 //  CHECK-SAME: %[[ARG:.+]]: vector<2xf32>
 //       CHECK:   spirv.CompositeExtract %[[ARG]][0 : i32] : vector<2xf32>

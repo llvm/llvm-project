@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Support/SipHash.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 
 using namespace llvm;
@@ -572,6 +573,17 @@ AArch64Subtarget::getAuthenticatedLRCheckMethod() const {
   // At now, use None by default because checks may introduce an unexpected
   // performance regression or incompatibility with execute-only mappings.
   return AArch64PAuth::AuthCheckMethod::None;
+}
+
+std::optional<uint16_t>
+AArch64Subtarget::getPtrAuthBlockAddressDiscriminatorIfEnabled(
+    const Function &ParentFn) const {
+  if (!ParentFn.hasFnAttribute("ptrauth-indirect-gotos"))
+    return std::nullopt;
+  // We currently have one simple mechanism for all targets.
+  // This isn't ABI, so we can always do better in the future.
+  return getPointerAuthStableSipHash(
+      (Twine(ParentFn.getName()) + " blockaddress").str());
 }
 
 bool AArch64Subtarget::enableMachinePipeliner() const {

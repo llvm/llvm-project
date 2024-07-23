@@ -451,7 +451,8 @@ public:
     constexpr unique_ptr& operator=(nullptr_t) noexcept;                              // constexpr since C++23
 
     // observers
-    typename constexpr add_lvalue_reference<T>::type operator*() const;               // constexpr since C++23
+    constexpr
+    add_lvalue_reference<T>::type operator*() const noexcept(see below);              // constexpr since C++23
     constexpr pointer operator->() const noexcept;                                    // constexpr since C++23
     constexpr pointer get() const noexcept;                                           // constexpr since C++23
     constexpr deleter_type& get_deleter() noexcept;                                   // constexpr since C++23
