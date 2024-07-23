@@ -159,13 +159,10 @@ public:
     return reinterpret_cast<const cpp::byte *>(this) + BLOCK_OVERHEAD;
   }
 
-  /// Marks the block as free and merges it with any free neighbors.
-  ///
-  /// This method is static in order to consume and replace the given block
-  /// pointer. If neither member is free, the returned pointer will point to the
-  /// original block. Otherwise, it will point to the new, larger block created
-  /// by merging adjacent free blocks together.
-  static void free(Block *&block);
+  // @returns The region of memory the block manages, including the header.
+  ByteSpan region() {
+    return {reinterpret_cast<cpp::byte *>(this), outer_size()};
+  }
 
   /// Attempts to split this block.
   ///
@@ -176,16 +173,10 @@ public:
   /// This method may fail if the remaining space is too small to hold a new
   /// block. If this method fails for any reason, the original block is
   /// unmodified.
-  ///
-  /// This method is static in order to consume and replace the given block
-  /// pointer with a pointer to the new, smaller block.
-  static optional<Block *> split(Block *&block, size_t new_inner_size);
+  optional<Block *> split(size_t new_inner_size);
 
   /// Merges this block with the one that comes after it.
-  ///
-  /// This method is static in order to consume and replace the given block
-  /// pointer with a pointer to the new, larger block.
-  static bool merge_next(Block *&block);
+  bool merge_next();
 
   /// Fetches the block immediately after this one.
   ///
@@ -206,19 +197,9 @@ public:
   /// @endcode
   Block *next() const;
 
-  /// @copydoc `next`.
-  static Block *next_block(const Block *block) {
-    return block == nullptr ? nullptr : block->next();
-  }
-
   /// @returns The block immediately before this one, or a null pointer if this
   /// is the first block.
   Block *prev() const;
-
-  /// @copydoc `prev`.
-  static Block *prev_block(const Block *block) {
-    return block == nullptr ? nullptr : block->prev();
-  }
 
   /// Indicates whether the block is in use.
   ///
@@ -241,9 +222,6 @@ public:
 
   /// Marks this block as the last one in the chain.
   constexpr void mark_last() { next_ |= LAST_MASK; }
-
-  /// Clears the last bit from this block.
-  void clear_last() { next_ &= ~LAST_MASK; }
 
   /// @brief Checks if a block is valid.
   ///
@@ -314,10 +292,8 @@ public:
   static BlockInfo allocate(Block *block, size_t alignment, size_t size);
 
 private:
-  /// Consumes the block and returns as a span of bytes.
-  static ByteSpan as_bytes(Block *&&block);
-
-  /// Consumes the span of bytes and uses it to construct and return a block.
+  /// Construct a block to represent a span of bytes. Overwrites only enough
+  /// memory for the block header; the rest of the span is left alone.
   static Block *as_block(size_t prev_outer_size, ByteSpan bytes);
 
   /// Returns a `BlockStatus` that is either VALID or indicates the reason why
@@ -329,7 +305,7 @@ private:
 
   /// Like `split`, but assumes the caller has already checked to parameters to
   /// ensure the split will succeed.
-  static Block *split_impl(Block *&block, size_t new_inner_size);
+  Block *split_impl(size_t new_inner_size);
 
   /// Offset from this block to the previous block. 0 if this is the first
   /// block.
@@ -390,20 +366,6 @@ Block<OffsetType, kAlign>::init(ByteSpan region) {
 }
 
 template <typename OffsetType, size_t kAlign>
-void Block<OffsetType, kAlign>::free(Block *&block) {
-  if (block == nullptr)
-    return;
-
-  block->mark_free();
-  Block *prev = block->prev();
-
-  if (merge_next(prev))
-    block = prev;
-
-  merge_next(block);
-}
-
-template <typename OffsetType, size_t kAlign>
 bool Block<OffsetType, kAlign>::can_allocate(size_t alignment,
                                              size_t size) const {
   if (is_usable_space_aligned(alignment) && inner_size() >= size)
@@ -436,7 +398,7 @@ Block<OffsetType, kAlign>::allocate(Block *block, size_t alignment,
 
     Block *original = info.block;
     optional<Block *> maybe_aligned_block =
-        Block::split(original, adjustment - BLOCK_OVERHEAD);
+        original->split(adjustment - BLOCK_OVERHEAD);
     LIBC_ASSERT(maybe_aligned_block.has_value() &&
                 "This split should always result in a new block. The check in "
                 "`can_allocate` ensures that we have enough space here to make "
@@ -445,7 +407,7 @@ Block<OffsetType, kAlign>::allocate(Block *block, size_t alignment,
     if (Block *prev = original->prev()) {
       // If there is a block before this, we can merge the current one with the
       // newly created one.
-      merge_next(prev);
+      prev->merge_next();
     } else {
       // Otherwise, this was the very first block in the chain. Now we can make
       // it the new first block.
@@ -459,7 +421,7 @@ Block<OffsetType, kAlign>::allocate(Block *block, size_t alignment,
   }
 
   // Now get a block for the requested size.
-  if (optional<Block *> next = Block::split(info.block, size))
+  if (optional<Block *> next = info.block->split(size))
     info.next = *next;
 
   return info;
@@ -467,14 +429,11 @@ Block<OffsetType, kAlign>::allocate(Block *block, size_t alignment,
 
 template <typename OffsetType, size_t kAlign>
 optional<Block<OffsetType, kAlign> *>
-Block<OffsetType, kAlign>::split(Block *&block, size_t new_inner_size) {
-  if (block == nullptr)
+Block<OffsetType, kAlign>::split(size_t new_inner_size) {
+  if (used())
     return {};
 
-  if (block->used())
-    return {};
-
-  size_t old_inner_size = block->inner_size();
+  size_t old_inner_size = inner_size();
   new_inner_size = align_up(new_inner_size, ALIGNMENT);
   if (old_inner_size < new_inner_size)
     return {};
@@ -482,61 +441,58 @@ Block<OffsetType, kAlign>::split(Block *&block, size_t new_inner_size) {
   if (old_inner_size - new_inner_size < BLOCK_OVERHEAD)
     return {};
 
-  return split_impl(block, new_inner_size);
+  return split_impl(new_inner_size);
 }
 
 template <typename OffsetType, size_t kAlign>
 Block<OffsetType, kAlign> *
-Block<OffsetType, kAlign>::split_impl(Block *&block, size_t new_inner_size) {
-  size_t prev_outer_size = block->prev_;
+Block<OffsetType, kAlign>::split_impl(size_t new_inner_size) {
   size_t outer_size1 = new_inner_size + BLOCK_OVERHEAD;
-  bool is_last = block->last();
-  ByteSpan bytes = as_bytes(cpp::move(block));
-  Block *block1 = as_block(prev_outer_size, bytes.subspan(0, outer_size1));
-  Block *block2 = as_block(outer_size1, bytes.subspan(outer_size1));
+  bool is_last = last();
+  ByteSpan new_region = region().subspan(outer_size1);
+  LIBC_ASSERT(!used() && "used blocks cannot be split");
+  // The low order bits of outer_size1 should both be zero, and is the correct
+  // value for the flags is false.
+  next_ = outer_size1;
+  LIBC_ASSERT(!used() && !last() && "incorrect first split flags");
+  Block *new_block = as_block(outer_size1, new_region);
 
-  if (is_last)
-    block2->mark_last();
-  else
-    block2->next()->prev_ = block2->next_;
-
-  block = cpp::move(block1);
-  return block2;
+  if (is_last) {
+    new_block->mark_last();
+  } else {
+    // The two flags are both false, so next_ is a plain size.
+    LIBC_ASSERT(!new_block->used() && !new_block->last() &&
+                "flags disrupt use of size");
+    new_block->next()->prev_ = new_block->next_;
+  }
+  return new_block;
 }
 
 template <typename OffsetType, size_t kAlign>
-bool Block<OffsetType, kAlign>::merge_next(Block *&block) {
-  if (block == nullptr)
+bool Block<OffsetType, kAlign>::merge_next() {
+  if (last())
     return false;
 
-  if (block->last())
+  if (used() || next()->used())
     return false;
 
-  Block *next = block->next();
-  if (block->used() || next->used())
-    return false;
+  // Extend the size and copy the last() flag from the next block to this one.
+  next_ &= SIZE_MASK;
+  next_ += next()->next_;
 
-  size_t prev_outer_size = block->prev_;
-  bool is_last = next->last();
-  ByteSpan prev_bytes = as_bytes(cpp::move(block));
-  ByteSpan next_bytes = as_bytes(cpp::move(next));
-  size_t outer_size = prev_bytes.size() + next_bytes.size();
-  cpp::byte *merged = ::new (prev_bytes.data()) cpp::byte[outer_size];
-  block = as_block(prev_outer_size, ByteSpan(merged, outer_size));
-
-  if (is_last)
-    block->mark_last();
-  else
-    block->next()->prev_ = block->next_;
+  if (!last()) {
+    // The two flags are both false, so next_ is a plain size.
+    LIBC_ASSERT(!used() && !last() && "flags disrupt use of size");
+    next()->prev_ = next_;
+  }
 
   return true;
 }
 
 template <typename OffsetType, size_t kAlign>
 Block<OffsetType, kAlign> *Block<OffsetType, kAlign>::next() const {
-  uintptr_t addr =
-      last() ? 0 : reinterpret_cast<uintptr_t>(this) + outer_size();
-  return reinterpret_cast<Block *>(addr);
+  return reinterpret_cast<Block *>(reinterpret_cast<uintptr_t>(this) +
+                                   outer_size());
 }
 
 template <typename OffsetType, size_t kAlign>
@@ -553,13 +509,6 @@ constexpr Block<OffsetType, kAlign>::Block(size_t prev_outer_size,
   prev_ = prev_outer_size;
   LIBC_ASSERT(outer_size % ALIGNMENT == 0 && "block sizes must be aligned");
   next_ = outer_size;
-}
-
-template <typename OffsetType, size_t kAlign>
-ByteSpan Block<OffsetType, kAlign>::as_bytes(Block *&&block) {
-  size_t block_size = block->outer_size();
-  cpp::byte *bytes = new (cpp::move(block)) cpp::byte[block_size];
-  return {bytes, block_size};
 }
 
 template <typename OffsetType, size_t kAlign>
