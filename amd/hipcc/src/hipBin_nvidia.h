@@ -396,7 +396,10 @@ void HipBinNvidia::executeHipCCCmd(vector<string> argv) {
     for (unsigned int i = 2; i < argv.size(); i++) {
       string isaarg = argv.at(i);
       ISACMD += " ";
-      if (!hipBinUtilPtr_->substringPresent(isaarg,"--rocm-path=")) {
+      if (hipBinUtilPtr_->substringPresent(isaarg,"--rocm-path=") ||
+          hipBinUtilPtr_->substringPresent(isaarg,"--hip-path=")) {
+        ISACMD += "-I" + hipBinUtilPtr_->splitStr(isaarg, '=')[1] + "/include";
+      } else {
         ISACMD += isaarg;
       }
     }
@@ -417,6 +420,12 @@ void HipBinNvidia::executeHipCCCmd(vector<string> argv) {
     string trimarg = hipBinUtilPtr_->replaceRegex(arg, toRemove, "");
     bool swallowArg = false;
     bool escapeArg = true;
+    // do not pass amd paths to nvcc
+    if (hipBinUtilPtr_->substringPresent(arg,"--rocm-path=") ||
+        hipBinUtilPtr_->substringPresent(arg,"--hip-path=")) {
+      continue;
+    }
+
     if (arg == "-c" || arg == "--genco" || arg == "-E") {
       compileOnly = true;
       needLDFLAGS  = false;

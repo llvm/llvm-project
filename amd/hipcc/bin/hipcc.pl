@@ -267,6 +267,11 @@ foreach $arg (@ARGV)
     $trimarg =~ s/^\s+|\s+$//g;  # Remive whitespace
     my $swallowArg = 0;
     my $escapeArg = 1;
+    if ($HIP_PLATFORM eq "nvidia") {
+        if (($trimarg =~ /--rocm-path/) or ($trimarg =~ /--hip-path/)) {
+            next;
+        }
+    }
     if ($arg eq '-c' or $arg eq '--genco' or $arg eq '-E') {
         $compileOnly = 1;
         $needLDFLAGS  = 0;
