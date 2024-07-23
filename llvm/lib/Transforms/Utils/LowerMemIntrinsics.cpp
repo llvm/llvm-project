@@ -397,9 +397,7 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
   bool RequiresResidual = !LoopOpIsInt8;
 
   // Calculate the loop trip count and remaining bytes to copy after the loop.
-  IntegerType *ILengthType = dyn_cast<IntegerType>(TypeOfCopyLen);
-  assert(ILengthType &&
-         "expected size argument to memcpy to be an integer type!");
+  IntegerType *ILengthType = cast<IntegerType>(TypeOfCopyLen);
   ConstantInt *CILoopOpSize = ConstantInt::get(ILengthType, LoopOpSize);
   ConstantInt *Zero = ConstantInt::get(ILengthType, 0);
   ConstantInt *One = ConstantInt::get(ILengthType, 1);
