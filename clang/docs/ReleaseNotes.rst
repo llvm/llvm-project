@@ -711,6 +711,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses integer constant expressions that are folded to a constant value as an extension in more circumstances. Fixes #GH59863
 
+- Clang now diagnoses undefined behavior in constant expressions more consistently. This includes invalid shifts, and signed overflow in arithmetic.
+
 Improvements to Clang's time-trace
 ----------------------------------
 

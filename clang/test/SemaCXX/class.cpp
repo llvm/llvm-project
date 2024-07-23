@@ -58,6 +58,10 @@ public:
   static const int overflow = 1000000*1000000; // cxx11-error {{in-class initializer for static data member is not a constant expression}}
                                                // expected-warning@-1 {{overflow in expression}}
   static const int overflow_shift = 1<<32; // cxx11-error {{in-class initializer for static data member is not a constant expression}}
+  static const int overflow_shift2 = 1>>32; // cxx11-error {{in-class initializer for static data member is not a constant expression}}
+  static const int overflow_shift3 = 1<<-1; // cxx11-error {{in-class initializer for static data member is not a constant expression}}
+  static const int overflow_shift4 = 1<<-1; // cxx11-error {{in-class initializer for static data member is not a constant expression}}
+  static const int overflow_shift5 = -1<<1; // cxx11-error {{in-class initializer for static data member is not a constant expression}}
 
   void m() {
     sx = 0;
