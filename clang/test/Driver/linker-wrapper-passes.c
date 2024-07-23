@@ -1,9 +1,5 @@
 // Check various clang-linker-wrapper pass options after -offload-opt.
 
-// REQUIRES: llvm-plugins, llvm-examples
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // Setup.
 // RUN: mkdir -p %t
 // RUN: %clang -cc1 -emit-llvm-bc -o %t/host-x86_64-unknown-linux-gnu.bc \
@@ -23,14 +19,14 @@
 // RUN:     %t/host-x86_64-unknown-linux-gnu.s
 
 // Check plugin, -passes, and no remarks.
-// RUN: clang-linker-wrapper -o a.out --embed-bitcode \
+// RUN: clang-linker-wrapper -o a.out --embed-bitcode --dry-run \
 // RUN:     --linker-path=/usr/bin/true %t/host-x86_64-unknown-linux-gnu.o \
 // RUN:     %offload-opt-loadbye --offload-opt=-wave-goodbye \
 // RUN:     --offload-opt=-passes="function(goodbye),module(inline)" 2>&1 | \
 // RUN:   FileCheck -match-full-lines -check-prefixes=OUT %s
 
 // Check plugin, -p, and remarks.
-// RUN: clang-linker-wrapper -o a.out --embed-bitcode \
+// RUN: clang-linker-wrapper -o a.out --embed-bitcode --dry-run \
 // RUN:     --linker-path=/usr/bin/true %t/host-x86_64-unknown-linux-gnu.o \
 // RUN:     %offload-opt-loadbye --offload-opt=-wave-goodbye \
 // RUN:     --offload-opt=-p="function(goodbye),module(inline)" \
@@ -43,7 +39,7 @@
 // RUN:     -check-prefixes=YML %s
 
 // Check handling of bad plugin.
-// RUN: not clang-linker-wrapper \
+// RUN: not clang-linker-wrapper --dry-run \
 // RUN:     --offload-opt=-load-pass-plugin=%t/nonexistent.so 2>&1 | \
 // RUN:   FileCheck -match-full-lines -check-prefixes=BAD-PLUGIN %s
 
