@@ -669,8 +669,8 @@ void DWARFRewriter::updateDebugInfo() {
                             DIEBuilder &DIEBlder,
                             DebugRangesSectionWriter &TempRangesSectionWriter,
                             DebugAddrWriter &AddressWriter,
-                            std::string &DWOName,
-                            std::optional<std::string> &DwarfOutputPath) {
+                            const std::string &DWOName,
+                            const std::optional<std::string> &DwarfOutputPath) {
     DIEBuilder DWODIEBuilder(BC, &(SplitCU).getContext(), DebugNamesTable,
                              &Unit);
     DWODIEBuilder.buildDWOUnit(SplitCU);
@@ -751,13 +751,11 @@ void DWARFRewriter::updateDebugInfo() {
       DebugRangesSectionWriter *TempRangesSectionWriter =
           CU->getVersion() >= 5 ? RangeListsWritersByCU[*DWOId].get()
                                 : LegacyRangesWritersByCU[*DWOId].get();
-      std::string DWOName = "";
       std::optional<std::string> DwarfOutputPath =
           opts::DwarfOutputPath.empty()
               ? std::nullopt
               : std::optional<std::string>(opts::DwarfOutputPath.c_str());
-      std::lock_guard<std::mutex> Lock(AccessMutex);
-      DWOName = DIEBlder.updateDWONameCompDir(*StrOffstsWriter, *StrWriter, *CU,
+      std::string DWOName = DIEBlder.updateDWONameCompDir(*StrOffstsWriter, *StrWriter, *CU,
                                               DwarfOutputPath, std::nullopt);
       processSplitCU(*CU, **SplitCU, DIEBlder, *TempRangesSectionWriter,
                      AddressWriter, DWOName, DwarfOutputPath);
