@@ -1131,6 +1131,7 @@ static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
     case RISCVAttrs::RISCVAtomicAbiTag::A6C:
       return;
     };
+    break;
 
   case RISCVAtomicAbiTag::A6S:
     switch (newTag) {
@@ -1144,6 +1145,7 @@ static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
     case RISCVAttrs::RISCVAtomicAbiTag::A6S:
       return;
     };
+    break;
 
   case RISCVAtomicAbiTag::A7:
     switch (newTag) {
@@ -1157,6 +1159,7 @@ static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
     case RISCVAttrs::RISCVAtomicAbiTag::A7:
       return;
     };
+    break;
   };
 
   // If we get here, then we have an invalid tag, so report it.

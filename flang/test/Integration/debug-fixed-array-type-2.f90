@@ -23,20 +23,17 @@ end program
 ! CHECK-DAG: ![[R1:.*]] = !DISubrange(count: 3, lowerBound: 1)
 ! CHECK-DAG: ![[SUB1:.*]] = !{![[R1]]}
 ! CHECK-DAG: ![[D1TY:.*]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[INT]], elements: ![[SUB1]])
-! CHECK-DAG: !DILocalVariable(name: "d1"{{.*}}type: ![[D1TY]])
 
 ! CHECK-DAG: ![[R21:.*]] = !DISubrange(count: 2, lowerBound: 1)
 ! CHECK-DAG: ![[R22:.*]] = !DISubrange(count: 5, lowerBound: 1)
 ! CHECK-DAG: ![[SUB2:.*]] = !{![[R21]], ![[R22]]}
 ! CHECK-DAG: ![[D2TY:.*]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[INT]], elements: ![[SUB2]])
-! CHECK-DAG: !DILocalVariable(name: "d2"{{.*}}type: ![[D2TY]])
 
 ! CHECK-DAG: ![[R31:.*]] = !DISubrange(count: 6, lowerBound: 1)
 ! CHECK-DAG: ![[R32:.*]] = !DISubrange(count: 8, lowerBound: 1)
 ! CHECK-DAG: ![[R33:.*]] = !DISubrange(count: 7, lowerBound: 1)
 ! CHECK-DAG: ![[SUB3:.*]] = !{![[R31]], ![[R32]], ![[R33]]}
 ! CHECK-DAG: ![[D3TY:.*]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[REAL]], elements: ![[SUB3]])
-! CHECK-DAG: !DILocalVariable(name: "d3"{{.*}}type: ![[D3TY]])
 
 ! CHECK-DAG: !DILocalVariable(name: "a1", arg: 1{{.*}}type: ![[D1TY]])
 ! CHECK-DAG: !DILocalVariable(name: "b1", arg: 2{{.*}}type: ![[D2TY]])

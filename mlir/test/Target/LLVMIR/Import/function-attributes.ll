@@ -13,14 +13,14 @@ define internal spir_func void @spir_func_internal() {
 ; // -----
 
 ; CHECK-LABEL: @func_readnone
-; CHECK-SAME:  attributes {memory = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
+; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
 ; CHECK:   llvm.return
 define void @func_readnone() readnone {
   ret void
 }
 
 ; CHECK-LABEL: @func_readnone_indirect
-; CHECK-SAME:  attributes {memory = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
+; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
 declare void @func_readnone_indirect() #0
 attributes #0 = { readnone }
 
@@ -152,7 +152,7 @@ define void @entry_count() !prof !1 {
 ; // -----
 
 ; CHECK-LABEL: @func_memory
-; CHECK-SAME:  attributes {memory = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite>}
+; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite>}
 ; CHECK:   llvm.return
 define void @func_memory() memory(readwrite, argmem: none) {
   ret void
@@ -385,3 +385,15 @@ declare void @optnone_attribute() noinline optnone
 ; CHECK-LABEL: @convergent_attribute
 ; CHECK-SAME: attributes {convergent}
 declare void @convergent_attribute() convergent
+
+// -----
+
+; CHECK-LABEL: @nounwind_attribute
+; CHECK-SAME: attributes {no_unwind}
+declare void @nounwind_attribute() nounwind
+
+// -----
+
+; CHECK-LABEL: @willreturn_attribute
+; CHECK-SAME: attributes {will_return}
+declare void @willreturn_attribute() willreturn

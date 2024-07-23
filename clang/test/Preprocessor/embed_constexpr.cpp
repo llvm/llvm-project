@@ -96,3 +96,11 @@ struct ST {};
 ST<
 #embed <jk.txt> limit(1)
 > st;
+
+struct HasCharArray { unsigned char h[10]; };
+struct Wrapper { int a; struct HasCharArray d;  };
+constexpr struct Wrapper W = {
+#embed "numbers.txt"
+};
+
+static_assert(W.d.h[2] == '3');
