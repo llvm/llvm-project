@@ -143,7 +143,5 @@ llvm::SmallString<128> MapASTVisitor::getFile(const NamedDecl *D,
   return File;
 }
 
-
-
 } // namespace doc
 } // namespace clang
