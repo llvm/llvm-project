@@ -4019,9 +4019,7 @@ public:
     return isShiftAssignOp(getOpcode());
   }
 
-  bool ignoreOverflowSanitizers() const {
-    return isOverflowIdiom;
-  }
+  bool ignoreOverflowSanitizers() const { return isOverflowIdiom; }
 
   /// Return true if a binary operator using the specified opcode and operands
   /// would match the 'p = (i8*)nullptr + n' idiom for casting a pointer-sized
