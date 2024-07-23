@@ -1105,6 +1105,7 @@ Bug Fixes to C++ Support
 - Clang now diagnoses explicit object parameters in member pointers and other contexts where they should not appear.
   Fixes (#GH85992).
 - Fixed a crash-on-invalid bug involving extraneous template parameter with concept substitution. (#GH73885)
+- Fixed assertion failure by skipping the analysis of an invalid field declaration. (#GH99868)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1228,6 +1229,14 @@ Windows Support
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
+- ``-march=la64v1.0`` and ``-march=la64v1.1`` have been added to select the
+  ``la64v1.0`` and ``la64v1.1`` architecture respectively. And ``-march=la664``
+  is added to support the ``la664`` micro-architecture.
+- The 128-bits SIMD extension (``LSX``) is enabled by default.
+- ``-msimd=`` has beend added to select the SIMD extension(s) to be enabled.
+- Predefined macros ``__loongarch_simd_width`` and ``__loongarch_frecipe`` are
+  added.
+
 RISC-V Support
 ^^^^^^^^^^^^^^
 
@@ -1350,6 +1359,10 @@ Crash and bug fixes
 
 - Z3 crosschecking (aka. Z3 refutation) is now bounded, and can't consume
   more total time than the eymbolic execution itself. (#GH97298)
+
+- ``std::addressof``, ``std::as_const``, ``std::forward``,
+  ``std::forward_like``, ``std::move``, ``std::move_if_noexcept``, are now
+  modeled just like their builtin counterpart. (#GH94193)
 
 Improvements
 ^^^^^^^^^^^^

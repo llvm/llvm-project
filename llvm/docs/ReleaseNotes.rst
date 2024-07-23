@@ -166,6 +166,13 @@ Changes to the LoongArch Backend
 * i32 is now a native type in the datalayout string. This enables
   LoopStrengthReduce for loops with i32 induction variables, among other
   optimizations.
+* Codegen support is added for TLS Desciptor.
+* Interleaved vectorization and vector shuffle are supported on LoongArch and
+  the experimental feature ``auto-vec`` is removed.
+* Allow ``f16`` codegen with expansion to libcalls.
+* Clarify that emulated TLS is not supported.
+* A codegen issue for ``bstrins.w`` is fixed on loongarch32.
+* Assorted codegen improvements.
 
 Changes to the MIPS Backend
 ---------------------------
@@ -185,7 +192,6 @@ Changes to the RISC-V Backend
 * Codegen support was added for the Zimop (May-Be-Operations) extension.
 * The experimental Ssnpm, Smnpm, Smmpm, Sspm, and Supm 1.0.0 Pointer Masking extensions are supported.
 * The experimental Ssqosid extension is supported.
-* Zacas is no longer experimental.
 * Added the CSR names from the Resumable Non-Maskable Interrupts (Smrnmi) extension.
 * llvm-objdump now prints disassembled opcode bytes in groups of 2 or 4 bytes to
   match GNU objdump. The bytes within the groups are in big endian order.
