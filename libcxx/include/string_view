@@ -680,9 +680,9 @@ public:
 private:
   struct __assume_valid {};
 
-  // This is the same as the pointer and length constructor, but it does not include additionally hardening checks. It
-  // is intended for use within the class, when the class invariants already imply the resulting object is valid. The
-  // compiler usually cannot apply this optimization itself, because it does not know class invariants.
+  // This is the same as the pointer and length constructor, but without the additional hardening checks. It is intended
+  // for use within the class, when the class invariants already guarantee the resulting object is valid. The compiler
+  // usually cannot eliminate the redundant checks because it does not know class invariants.
   _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI
   basic_string_view(const _CharT* __s, size_type __len, __assume_valid) _NOEXCEPT
       : __data_(__s),
