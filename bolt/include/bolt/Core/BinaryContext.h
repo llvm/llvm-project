@@ -431,6 +431,9 @@ public:
     return nullptr;
   }
 
+  /// Deregister JumpTable registered at a given \p Address and delete it.
+  void deleteJumpTable(uint64_t Address);
+
   unsigned getDWARFEncodingSize(unsigned Encoding) {
     if (Encoding == dwarf::DW_EH_PE_omit)
       return 0;
