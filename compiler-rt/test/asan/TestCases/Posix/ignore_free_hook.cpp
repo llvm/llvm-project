@@ -4,9 +4,9 @@
 // RUN:   |& FileCheck %s -check-prefix=CHECK-IGNORE
 // RUN: %clangxx_asan -O2 %s -o %t -DTEST=ignore_twice && not %run %t \
 // RUN:   |& FileCheck %s -check-prefix=CHECK-IGNORE-2
-// RUN: %clangxx_asan -O2 %s -o %t -DTEST=mismatch && not %run %t \
+// RUN: %clangxx_asan -O2 %s -o %t -DTEST=mismatch && %env_asan_opts=alloc_dealloc_mismatch=1 not %run %t \
 // RUN:   |& FileCheck %s -check-prefix=CHECK-MISMATCH
-// RUN: %clangxx_asan -O2 %s -o %t -DTEST=ignore_mismatch && %run %t \
+// RUN: %clangxx_asan -O2 %s -o %t -DTEST=ignore_mismatch && %env_asan_opts=alloc_dealloc_mismatch=1 %run %t \
 // RUN:   |& FileCheck %s -check-prefix=CHECK-IGNORE-MISMATCH
 // RUN: %clangxx_asan -O2 %s -o %t -DTEST=double_delete && not %run %t \
 // RUN:   |& FileCheck %s -check-prefix=CHECK-DOUBLE-DELETE
