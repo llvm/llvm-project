@@ -11,8 +11,7 @@ namespace test1 {
   };
 
   InheritsCtors inheritsCtors(1);
-  using IC = InheritsCtors<int>;
-  using IC = decltype(inheritsCtors);
+  static_assert(__is_same(InheritsCtors<int>, decltype(inheritsCtors)));
 
   template<typename T> struct DoesNotInheritCtors : public Base<T> {}; // expected-note {{candidate template ignored: could not match 'DoesNotInheritCtors<T>' against 'int'}} \
                                                                        // expected-note 3{{implicit deduction guide declared as}} \
@@ -25,8 +24,7 @@ namespace test1 {
   };
 
   InheritsSecond inheritsSecond('a');
-  using IS = InheritsSecond<char>;
-  using IS = decltype(inheritsSecond);
+  static_assert(__is_same(InheritsSecond<char>, decltype(inheritsSecond)));
 
   template<typename T> struct NonTemplateDGuideBase {
     NonTemplateDGuideBase(T); // expected-note {{generated from 'NonTemplateDGuideBase<T>' constructor}}
@@ -49,8 +47,7 @@ namespace test1 {
   };
 
   NonTemplateDGuideDerived ntdg(1);
-  using NTDG = NonTemplateDGuideDerived<char>;
-  using NTDG = decltype(ntdg);
+  static_assert(__is_same(NonTemplateDGuideDerived<char>, decltype(ntdg)));
 
   NonTemplateDGuideDerived ntdg_char(""); // expected-error {{no viable constructor or deduction guide for deduction of template arguments}}
 
@@ -76,8 +73,7 @@ namespace test1 {
   };
 
   ExplicitDerived ed(10);
-  using ED = ExplicitDerived<int>;
-  using ED = decltype(ed);
+  static_assert(__is_same(ExplicitDerived<int>, decltype(ed)));
 
   ExplicitDerived substFail(""); // expected-error {{no viable constructor or deduction guide for deduction of template arguments}}
 
@@ -88,8 +84,7 @@ namespace test1 {
   Base(int) -> Base<char>;
 
   InheritsCtors ic2(1);
-  using IC2 = InheritsCtors<char>;
-  using IC2 = decltype(ic2);
+  static_assert(__is_same(InheritsCtors<char>, decltype(ic2)));
 #endif
 }
 
@@ -107,8 +102,7 @@ namespace test2 {
   };
 
   Derived derived(true, 'a', 1);
-  using D = Derived<char, bool>;
-  using D = decltype(derived);
+  static_assert(__is_same(Derived<char, bool>, decltype(derived)));
 }
 
 namespace test3 {
@@ -140,8 +134,7 @@ namespace test4 {
   };
 
   DefaultArgsNotInBase d('d');
-  using D = DefaultArgsNotInBase<int, char>;
-  using D = decltype(d);
+  static_assert(__is_same(DefaultArgsNotInBase<int, char>, decltype(d)));
 
   template<typename T> struct BaseEmptyCtor {
     BaseEmptyCtor();
@@ -153,8 +146,7 @@ namespace test4 {
   };
 
   DefaultArgsNotInBaseEmpty d2;
-  using D2 = DefaultArgsNotInBaseEmpty<>;
-  using D2 = decltype(d2);
+  static_assert(__is_same(DefaultArgsNotInBaseEmpty<>, decltype(d2)));
 }
 
 namespace test5 {
@@ -168,8 +160,7 @@ namespace test5 {
   };
 
   Outer<int>::Inner i(10);
-  using I = Outer<int>::Inner<int>;
-  using I = decltype(i);
+  static_assert(__is_same(Outer<int>::Inner<int>, decltype(i)));
 }
 
 namespace test6 {
@@ -203,8 +194,7 @@ namespace test6 {
   DerivedFalse df(10); // expected-error {{no viable constructor or deduction guide for deduction of template arguments}}
 
   DerivedTrue dt(10);
-  using DT = DerivedTrue<int>;
-  using DT = decltype(dt);
+  static_assert(__is_same(DerivedTrue<int>, decltype(dt)));
 }
 
 namespace test7 {
@@ -227,12 +217,10 @@ namespace test7 {
   };
 
   MultipleInheritance mi1(1, "");
-  using MI1 = MultipleInheritance<int, const char>;
-  using MI1 = decltype(mi1);
+  static_assert(__is_same(MultipleInheritance<int, const char>, decltype(mi1)));
 
   MultipleInheritance mi2("", 1);
-  using MI2 = MultipleInheritance<int, const char>;
-  using MI2 = decltype(mi2);
+  static_assert(__is_same(MultipleInheritance<int, const char>, decltype(mi2)));
 
   // This is an odd case.
   // Since the base DGs have the deducible constraint, they are more specialized than MultipleInheritance's
@@ -246,12 +234,10 @@ namespace test7 {
   };
 
   MultipleInheritanceSameBase misb1('a', "");
-  using MISB1 = MultipleInheritanceSameBase<char>;
-  using MISB1 = decltype(misb1);
+  static_assert(__is_same(MultipleInheritanceSameBase<char>, decltype(misb1)));
 
   MultipleInheritanceSameBase misb2("", 'a');
-  using MISB2 = MultipleInheritanceSameBase<char>;
-  using MISB2 = decltype(misb2);
+  static_assert(__is_same(MultipleInheritanceSameBase<char>, decltype(misb2)));
 }
 
 namespace test8 {
@@ -266,7 +252,7 @@ namespace test8 {
   };
 
   SpecializedBase sb1(10);
-  static_assert(__is_same(decltype(sb1), SpecializedBase<int>));
+  static_assert(__is_same(SpecializedBase<int>, decltype(sb1)));
 
   SpecializedBase sb2('a'); // expected-note {{in instantiation of template class 'test8::SpecializedBase<char>' requested here}}
 }
