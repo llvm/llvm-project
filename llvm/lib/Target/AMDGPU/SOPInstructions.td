@@ -55,18 +55,21 @@ class SOP1_Real<bits<8> op, SOP1_Pseudo ps, string real_name = ps.Mnemonic> :
   let Size = 4;
 
   // copy relevant pseudo op flags
-  let SubtargetPredicate = ps.SubtargetPredicate;
-  let AsmMatchConverter  = ps.AsmMatchConverter;
-  let SchedRW            = ps.SchedRW;
-  let mayLoad            = ps.mayLoad;
-  let mayStore           = ps.mayStore;
-  let isTerminator       = ps.isTerminator;
-  let isReturn           = ps.isReturn;
-  let isCall             = ps.isCall;
-  let isBranch           = ps.isBranch;
-  let isBarrier          = ps.isBarrier;
-  let Uses               = ps.Uses;
-  let Defs               = ps.Defs;
+  let SubtargetPredicate  = ps.SubtargetPredicate;
+  let AsmMatchConverter   = ps.AsmMatchConverter;
+  let SchedRW             = ps.SchedRW;
+  let mayLoad             = ps.mayLoad;
+  let mayStore            = ps.mayStore;
+  let isTerminator        = ps.isTerminator;
+  let isReturn            = ps.isReturn;
+  let isCall              = ps.isCall;
+  let isBranch            = ps.isBranch;
+  let isIndirectBranch    = ps.isIndirectBranch;
+  let isMoveImm           = ps.isMoveImm;
+  let mayRaiseFPException = ps.mayRaiseFPException;
+  let isBarrier           = ps.isBarrier;
+  let Uses                = ps.Uses;
+  let Defs                = ps.Defs;
 
   // encoding
   bits<7> sdst;
@@ -577,6 +580,7 @@ class SOP2_Real<SOP_Pseudo ps, string name = ps.Mnemonic> :
   let mayStore             = ps.mayStore;
   let Constraints          = ps.Constraints;
   let DisableEncoding      = ps.DisableEncoding;
+  let isCommutable         = ps.isCommutable;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
 
@@ -994,6 +998,7 @@ class SOPK_Real<SOPK_Pseudo ps, string name = ps.Mnemonic> :
   let isTerminator       = ps.isTerminator;
   let isReturn           = ps.isReturn;
   let isBarrier          = ps.isBarrier;
+  let isCompare          = ps.isCompare;
   let Uses               = ps.Uses;
   let Defs               = ps.Defs;
 
@@ -1456,6 +1461,7 @@ class SOPP_Real<SOPP_Pseudo ps, string name = ps.Mnemonic> :
   let isReturn             = ps.isReturn;
   let isCall               = ps.isCall;
   let isBranch             = ps.isBranch;
+  let isTrap               = ps.isTrap;
   let isBarrier            = ps.isBarrier;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
