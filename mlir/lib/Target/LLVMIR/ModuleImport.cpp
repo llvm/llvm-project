@@ -1471,6 +1471,28 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     callOp.setTailCallKind(
         convertTailCallKindFromLLVM(callInst->getTailCallKind()));
     setFastmathFlagsAttr(inst, callOp);
+
+    // Handle function attributes.
+    if (callInst->hasFnAttr(llvm::Attribute::Convergent))
+      callOp.setConvergent(true);
+    if (callInst->hasFnAttr(llvm::Attribute::NoUnwind))
+      callOp.setNoUnwind(true);
+    if (callInst->hasFnAttr(llvm::Attribute::WillReturn))
+      callOp.setWillReturn(true);
+
+    llvm::MemoryEffects memEffects = callInst->getMemoryEffects();
+    ModRefInfo othermem = convertModRefInfoFromLLVM(
+        memEffects.getModRef(llvm::MemoryEffects::Location::Other));
+    ModRefInfo argMem = convertModRefInfoFromLLVM(
+        memEffects.getModRef(llvm::MemoryEffects::Location::ArgMem));
+    ModRefInfo inaccessibleMem = convertModRefInfoFromLLVM(
+        memEffects.getModRef(llvm::MemoryEffects::Location::InaccessibleMem));
+    auto memAttr = MemoryEffectsAttr::get(callOp.getContext(), othermem, argMem,
+                                          inaccessibleMem);
+    // Only set the attribute when it does not match the default value.
+    if (!memAttr.isReadWrite())
+      callOp.setMemoryAttr(memAttr);
+
     if (!callInst->getType()->isVoidTy())
       mapValue(inst, callOp.getResult());
     else

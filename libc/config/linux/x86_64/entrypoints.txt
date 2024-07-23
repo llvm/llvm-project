@@ -228,7 +228,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.epoll.epoll_ctl
     libc.src.sys.epoll.epoll_pwait
     libc.src.sys.epoll.epoll_wait
-    libc.src.sys.epoll.epoll_pwait2
+    # TODO: Need to check if pwait2 is available before providing.
+    # https://github.com/llvm/llvm-project/issues/80060
+    # libc.src.sys.epoll.epoll_pwait2
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
@@ -382,6 +384,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.coshf
     libc.src.math.cospif
     libc.src.math.dmull
+    libc.src.math.dsqrtl
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.exp10
@@ -643,6 +646,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.ceilf128
     libc.src.math.copysignf128
     libc.src.math.dmulf128
+    libc.src.math.dsqrtf128
     libc.src.math.fabsf128
     libc.src.math.fdimf128
     libc.src.math.floorf128

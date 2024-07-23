@@ -43315,6 +43315,9 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
     bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
 
   switch (Op.getOpcode()) {
+  // SSE vector multiplies are either inbounds or saturate.
+  case X86ISD::VPMADDUBSW:
+  case X86ISD::VPMADDWD:
   // SSE vector shifts handle out of bounds shift amounts.
   case X86ISD::VSHLI:
   case X86ISD::VSRLI:
@@ -56165,6 +56168,17 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       SmallVector<SDValue> Subs;
       for (SDValue SubOp : SubOps)
         Subs.push_back(SubOp.getOperand(I));
+      // Attempt to peek through bitcasts and concat the original subvectors.
+      EVT SubVT = peekThroughBitcasts(Subs[0]).getValueType();
+      if (SubVT.isSimple() && SubVT.isVector()) {
+        EVT ConcatVT =
+            EVT::getVectorVT(*DAG.getContext(), SubVT.getScalarType(),
+                             SubVT.getVectorElementCount() * Subs.size());
+        for (SDValue &Sub : Subs)
+          Sub = DAG.getBitcast(SubVT, Sub);
+        return DAG.getBitcast(
+            VT, DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Subs));
+      }
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Subs);
     };
     auto IsConcatFree = [](MVT VT, ArrayRef<SDValue> SubOps, unsigned Op) {

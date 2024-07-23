@@ -5179,13 +5179,9 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
   LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
   LLT ScalarShiftAmtTy = ShiftAmtTy.getScalarType();
 
-  unsigned KnownLeadingZeros =
-      KB ? KB->getKnownBits(LHS).countMinLeadingZeros() : 0;
   auto &MIB = Builder;
 
   bool UseSRL = false;
-  bool UseNPQ = false;
-  SmallVector<Register, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
   SmallVector<Register, 16> Shifts, Factors;
   auto *RHSDefInstr = cast<GenericMachineInstr>(getDefIgnoringCopies(RHS, MRI));
   bool IsSplat = getIConstantSplatVal(*RHSDefInstr, MRI).has_value();
@@ -5213,6 +5209,33 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
     return true;
   };
 
+  if (MI.getFlag(MachineInstr::MIFlag::IsExact)) {
+    // Collect all magic values from the build vector.
+    if (!matchUnaryPredicate(MRI, RHS, BuildExactUDIVPattern))
+      llvm_unreachable("Expected unary predicate match to succeed");
+
+    Register Shift, Factor;
+    if (Ty.isVector()) {
+      Shift = MIB.buildBuildVector(ShiftAmtTy, Shifts).getReg(0);
+      Factor = MIB.buildBuildVector(Ty, Factors).getReg(0);
+    } else {
+      Shift = Shifts[0];
+      Factor = Factors[0];
+    }
+
+    Register Res = LHS;
+
+    if (UseSRL)
+      Res = MIB.buildLShr(Ty, Res, Shift, MachineInstr::IsExact).getReg(0);
+
+    return MIB.buildMul(Ty, Res, Factor);
+  }
+
+  unsigned KnownLeadingZeros =
+      KB ? KB->getKnownBits(LHS).countMinLeadingZeros() : 0;
+
+  bool UseNPQ = false;
+  SmallVector<Register, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
   auto BuildUDIVPattern = [&](const Constant *C) {
     auto *CI = cast<ConstantInt>(C);
     const APInt &Divisor = CI->getValue();
@@ -5257,29 +5280,6 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
     UseNPQ |= SelNPQ;
     return true;
   };
-
-  if (MI.getFlag(MachineInstr::MIFlag::IsExact)) {
-    // Collect all magic values from the build vector.
-    bool Matched = matchUnaryPredicate(MRI, RHS, BuildExactUDIVPattern);
-    (void)Matched;
-    assert(Matched && "Expected unary predicate match to succeed");
-
-    Register Shift, Factor;
-    if (Ty.isVector()) {
-      Shift = MIB.buildBuildVector(ShiftAmtTy, Shifts).getReg(0);
-      Factor = MIB.buildBuildVector(Ty, Factors).getReg(0);
-    } else {
-      Shift = Shifts[0];
-      Factor = Factors[0];
-    }
-
-    Register Res = LHS;
-
-    if (UseSRL)
-      Res = MIB.buildLShr(Ty, Res, Shift, MachineInstr::IsExact).getReg(0);
-
-    return MIB.buildMul(Ty, Res, Factor);
-  }
 
   // Collect the shifts/magic values from each element.
   bool Matched = matchUnaryPredicate(MRI, RHS, BuildUDIVPattern);

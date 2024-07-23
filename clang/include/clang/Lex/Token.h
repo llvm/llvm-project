@@ -235,9 +235,6 @@ public:
     assert(isAnnotation() && "Used AnnotVal on non-annotation token");
     return PtrData;
   }
-  template <class T> T getAnnotationValueAs() const {
-    return static_cast<T>(getAnnotationValue());
-  }
   void setAnnotationValue(void *val) {
     assert(isAnnotation() && "Used AnnotVal on non-annotation token");
     PtrData = val;

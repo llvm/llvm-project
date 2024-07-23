@@ -2272,6 +2272,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  dsqrtl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    dsqrtl_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.dsqrtl
+)
+
+add_fp_unittest(
   cbrtf_test
   NEED_MPFR
   SUITE
