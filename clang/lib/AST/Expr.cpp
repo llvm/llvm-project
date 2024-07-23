@@ -4764,7 +4764,8 @@ namespace {
 /// sanitization disabled. Check for the common pattern `if (a + b < a)` and
 /// return the resulting BinaryOperator responsible for the addition so we can
 /// elide overflow checks during codegen.
-static std::optional<BinaryOperator *> getOverflowIdiomBinOp(const BinaryOperator *E) {
+static std::optional<BinaryOperator *>
+getOverflowIdiomBinOp(const BinaryOperator *E) {
   Expr *Addition, *ComparedTo;
   if (E->getOpcode() == BO_LT) {
     Addition = E->getLHS();
@@ -4819,7 +4820,7 @@ BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
   SubExprs[LHS] = lhs;
   SubExprs[RHS] = rhs;
   if (!Ctx.getLangOpts().SanitizeOverflowIdioms) {
-    std::optional<BinaryOperator*> Result = getOverflowIdiomBinOp(this);
+    std::optional<BinaryOperator *> Result = getOverflowIdiomBinOp(this);
     if (Result.has_value())
       Result.value()->isOverflowIdiom = true;
   }
