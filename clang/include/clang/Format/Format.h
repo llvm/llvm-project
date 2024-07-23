@@ -2263,7 +2263,7 @@ struct FormatStyle {
   };
 
   /// The break constructor initializers style to use.
-  /// \version 19
+  /// \version 20
   BreakBinaryOperationsStyle BreakBinaryOperations;
 
   /// Different ways to break initializers.
