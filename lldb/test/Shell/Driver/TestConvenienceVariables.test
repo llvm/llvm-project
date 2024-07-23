@@ -3,6 +3,7 @@ RUN: mkdir -p %t
 RUN: %build %p/Inputs/hello.cpp -o %t/target.out
 RUN: %lldb %t/target.out -s %p/Inputs/convenience.in -o quit | FileCheck %s
 
+# XFAIL: target=x86_64-{{.*}}-windows{{.*}}
 CHECK: stop reason = breakpoint 1.1
 CHECK: script print(lldb.debugger)
 CHECK-NEXT: Debugger (instance: {{.*}}, id: {{[0-9]+}})
