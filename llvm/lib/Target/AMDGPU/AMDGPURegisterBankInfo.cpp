@@ -1148,11 +1148,9 @@ bool AMDGPURegisterBankInfo::applyMappingLoad(
   LLT PtrTy = MRI.getType(MI.getOperand(1).getReg());
   MRI.setType(BasePtrReg, PtrTy);
 
-  // the following are the loads not splitted enough during legalization
+  // The following are the loads not splitted enough during legalization
   // because it was not clear they are smem-load or vmem-load
-  if (MMO->getAddrSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
-      MMO->getAddrSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
-      MMO->getAddrSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
+  if (AMDGPU::isExtendedGlobalAddrSpace(MMO->getAddrSpace()) ||
       MMO->getAddrSpace() == AMDGPUAS::BUFFER_RESOURCE) {
     assert(LoadSize % MaxNonSmrdLoadSize == 0);
     unsigned NumSplitParts = LoadTy.getSizeInBits() / MaxNonSmrdLoadSize;
