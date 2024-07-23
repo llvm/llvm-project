@@ -166,6 +166,13 @@ Changes to the LoongArch Backend
 * i32 is now a native type in the datalayout string. This enables
   LoopStrengthReduce for loops with i32 induction variables, among other
   optimizations.
+* Codegen support is added for TLS Desciptor.
+* Interleaved vectorization and vector shuffle are supported on LoongArch and
+  the experimental feature ``auto-vec`` is removed.
+* Allow ``f16`` codegen with expansion to libcalls.
+* Clarify that emulated TLS is not supported.
+* A codegen issue for ``bstrins.w`` is fixed on loongarch32.
+* Assorted codegen improvements.
 
 Changes to the MIPS Backend
 ---------------------------
