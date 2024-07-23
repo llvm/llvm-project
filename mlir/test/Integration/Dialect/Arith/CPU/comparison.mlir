@@ -47,7 +47,7 @@ func.func @cmpi_signed() {
   %true_i1 = arith.constant 1 : i1
   %true_i1_n1 = arith.constant -1 : i1
 
-  // int values 1 and -1 represent the same bitvector
+  // int values 1 and -1 are represented with the same bitvector (`0b1`)
   // CHECK-LABEL: @cmpi_eq_i1
   // CHECK-NEXT:  1
   func.call @cmpi_eq_i1(%true_i1, %true_i1_n1) : (i1, i1) -> ()
