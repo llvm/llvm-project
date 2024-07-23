@@ -4,14 +4,13 @@
 define i128 @avgflooru_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: avgflooru_i128:
 ; CHECK:       // %bb.0: // %start
-; CHECK-NEXT:    eor x8, x3, x1
-; CHECK-NEXT:    eor x9, x2, x0
-; CHECK-NEXT:    and x10, x2, x0
-; CHECK-NEXT:    extr x9, x8, x9, #1
-; CHECK-NEXT:    lsr x8, x8, #1
-; CHECK-NEXT:    and x11, x3, x1
-; CHECK-NEXT:    adds x0, x10, x9
-; CHECK-NEXT:    adc x1, x11, x8
+; CHECK-NEXT:    adds x8, x0, x2
+; CHECK-NEXT:    adcs x9, x1, x3
+; CHECK-NEXT:    cset w10, hs
+; CHECK-NEXT:    extr x0, x9, x8, #1
+; CHECK-NEXT:    lsl x10, x10, #63
+; CHECK-NEXT:    csel x1, x10, xzr, hs
+; CHECK-NEXT:    bfxil x1, x9, #1, #63
 ; CHECK-NEXT:    ret
 start:
   %xor = xor i128 %y, %x
@@ -39,18 +38,19 @@ define i128 @avgflooru_i128_multi_use(i128 %x, i128 %y) nounwind {
 ; CHECK-NEXT:    mov x19, x3
 ; CHECK-NEXT:    mov x20, x2
 ; CHECK-NEXT:    bl use
-; CHECK-NEXT:    extr x24, x23, x24, #1
-; CHECK-NEXT:    lsr x23, x23, #1
-; CHECK-NEXT:    mov x0, x24
-; CHECK-NEXT:    mov x1, x23
+; CHECK-NEXT:    extr x0, x23, x24, #1
+; CHECK-NEXT:    lsr x1, x23, #1
 ; CHECK-NEXT:    bl use
-; CHECK-NEXT:    and x8, x20, x22
-; CHECK-NEXT:    and x9, x19, x21
-; CHECK-NEXT:    adds x0, x8, x24
-; CHECK-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    adc x1, x9, x23
-; CHECK-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    adds x8, x22, x20
 ; CHECK-NEXT:    ldp x24, x23, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    adcs x9, x21, x19
+; CHECK-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    cset w10, hs
+; CHECK-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    lsl x10, x10, #63
+; CHECK-NEXT:    extr x0, x9, x8, #1
+; CHECK-NEXT:    csel x1, x10, xzr, hs
+; CHECK-NEXT:    bfxil x1, x9, #1, #63
 ; CHECK-NEXT:    ldr x30, [sp], #64 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 start:
@@ -99,23 +99,21 @@ start:
 define <2 x i128> @avgflooru_i128_vec(<2 x i128> %x, <2 x i128> %y) {
 ; CHECK-LABEL: avgflooru_i128_vec:
 ; CHECK:       // %bb.0: // %start
-; CHECK-NEXT:    eor x8, x4, x0
-; CHECK-NEXT:    eor x9, x5, x1
-; CHECK-NEXT:    eor x11, x6, x2
-; CHECK-NEXT:    extr x8, x9, x8, #1
-; CHECK-NEXT:    eor x12, x7, x3
-; CHECK-NEXT:    and x13, x4, x0
-; CHECK-NEXT:    lsr x9, x9, #1
-; CHECK-NEXT:    extr x11, x12, x11, #1
-; CHECK-NEXT:    and x10, x5, x1
-; CHECK-NEXT:    adds x0, x13, x8
-; CHECK-NEXT:    lsr x8, x12, #1
-; CHECK-NEXT:    and x12, x6, x2
-; CHECK-NEXT:    adc x1, x10, x9
-; CHECK-NEXT:    adds x10, x12, x11
-; CHECK-NEXT:    and x9, x7, x3
+; CHECK-NEXT:    adds x8, x0, x4
+; CHECK-NEXT:    adcs x9, x1, x5
+; CHECK-NEXT:    cset w10, hs
+; CHECK-NEXT:    extr x0, x9, x8, #1
+; CHECK-NEXT:    lsl x10, x10, #63
+; CHECK-NEXT:    csel x1, x10, xzr, hs
+; CHECK-NEXT:    adds x10, x2, x6
+; CHECK-NEXT:    adcs x11, x3, x7
+; CHECK-NEXT:    bfxil x1, x9, #1, #63
+; CHECK-NEXT:    cset w12, hs
+; CHECK-NEXT:    extr x10, x11, x10, #1
+; CHECK-NEXT:    lsl x12, x12, #63
 ; CHECK-NEXT:    fmov d0, x10
-; CHECK-NEXT:    adc x3, x9, x8
+; CHECK-NEXT:    csel x3, x12, xzr, hs
+; CHECK-NEXT:    bfxil x3, x11, #1, #63
 ; CHECK-NEXT:    mov v0.d[1], x3
 ; CHECK-NEXT:    fmov x2, d0
 ; CHECK-NEXT:    ret
