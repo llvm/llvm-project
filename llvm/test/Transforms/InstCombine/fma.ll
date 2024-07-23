@@ -859,7 +859,7 @@ define <2 x float> @fma_unary_shuffle_ops_uses(<2 x float> %x, <2 x float> %y, <
 
 define half @fma_negone(half %x, half %y) {
 ; CHECK-LABEL: @fma_negone(
-; CHECK-NEXT:    [[SUB:%.*]] = call half @llvm.fma.f16(half [[X:%.*]], half 0xHBC00, half [[Y:%.*]])
+; CHECK-NEXT:    [[SUB:%.*]] = fsub half [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret half [[SUB]]
 ;
   %sub = call half @llvm.fma.f16(half %x, half -1.0, half %y)
@@ -868,7 +868,7 @@ define half @fma_negone(half %x, half %y) {
 
 define half @fmuladd_negone(half %x, half %y) {
 ; CHECK-LABEL: @fmuladd_negone(
-; CHECK-NEXT:    [[SUB:%.*]] = call half @llvm.fmuladd.f16(half [[X:%.*]], half 0xHBC00, half [[Y:%.*]])
+; CHECK-NEXT:    [[SUB:%.*]] = fsub half [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret half [[SUB]]
 ;
   %sub = call half @llvm.fmuladd.f16(half %x, half -1.0, half %y)
@@ -877,7 +877,7 @@ define half @fmuladd_negone(half %x, half %y) {
 
 define half @fma_negone_fmf(half %x, half %y) {
 ; CHECK-LABEL: @fma_negone_fmf(
-; CHECK-NEXT:    [[SUB:%.*]] = call nnan ninf nsz half @llvm.fma.f16(half [[X:%.*]], half 0xHBC00, half [[Y:%.*]])
+; CHECK-NEXT:    [[SUB:%.*]] = fsub nnan ninf nsz half [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret half [[SUB]]
 ;
   %sub = call nnan ninf nsz half @llvm.fma.f16(half %x, half -1.0, half %y)
@@ -886,7 +886,7 @@ define half @fma_negone_fmf(half %x, half %y) {
 
 define half @fmuladd_negone_fmf(half %x, half %y) {
 ; CHECK-LABEL: @fmuladd_negone_fmf(
-; CHECK-NEXT:    [[SUB:%.*]] = call nnan ninf nsz half @llvm.fmuladd.f16(half [[X:%.*]], half 0xHBC00, half [[Y:%.*]])
+; CHECK-NEXT:    [[SUB:%.*]] = fsub nnan ninf nsz half [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret half [[SUB]]
 ;
   %sub = call nnan ninf nsz half @llvm.fmuladd.f16(half %x, half -1.0, half %y)
@@ -895,7 +895,7 @@ define half @fmuladd_negone_fmf(half %x, half %y) {
 
 define <2 x half> @fma_negone_vec(<2 x half> %x, <2 x half> %y) {
 ; CHECK-LABEL: @fma_negone_vec(
-; CHECK-NEXT:    [[SUB:%.*]] = call <2 x half> @llvm.fma.v2f16(<2 x half> [[X:%.*]], <2 x half> <half 0xHBC00, half 0xHBC00>, <2 x half> [[Y:%.*]])
+; CHECK-NEXT:    [[SUB:%.*]] = fsub <2 x half> [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x half> [[SUB]]
 ;
   %sub = call <2 x half> @llvm.fma.v2f16(<2 x half> %x, <2 x half> splat(half -1.0), <2 x half> %y)
