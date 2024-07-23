@@ -31,10 +31,10 @@ using namespace llvm;
 CSKYTargetELFStreamer::CSKYTargetELFStreamer(MCStreamer &S,
                                              const MCSubtargetInfo &STI)
     : CSKYTargetStreamer(S), CurrentVendor("csky") {
-  MCAssembler &MCA = getStreamer().getAssembler();
+  ELFObjectWriter &W = getStreamer().getWriter();
   const FeatureBitset &Features = STI.getFeatureBits();
 
-  unsigned EFlags = MCA.getELFHeaderEFlags();
+  unsigned EFlags = W.getELFHeaderEFlags();
 
   EFlags |= ELF::EF_CSKY_ABIV2;
 
@@ -62,7 +62,7 @@ CSKYTargetELFStreamer::CSKYTargetELFStreamer(MCStreamer &S,
 
   EFlags |= ELF::EF_CSKY_EFV1;
 
-  MCA.setELFHeaderEFlags(EFlags);
+  W.setELFHeaderEFlags(EFlags);
 }
 
 MCELFStreamer &CSKYTargetELFStreamer::getStreamer() {
