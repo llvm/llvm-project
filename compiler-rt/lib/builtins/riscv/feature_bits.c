@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "cpu_model.h"
+
 #define RISCV_FEATURE_BITS_LENGTH 1
 struct {
   unsigned length;
