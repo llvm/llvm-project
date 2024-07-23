@@ -120,14 +120,16 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
 //
 // loop:
 // %phi = phi <float> [ ..., %entry ], [ %acc, %loop ]
-// %acc = call float @llvm.vector.reduce.fadd.nxv4f32(float %phi, <vscale x 2 x float> %vec)
+// %acc = call float @llvm.vector.reduce.fadd.nxv2f32(float %phi,
+//                                                    <vscale x 2 x float> %vec)
 //
 // ->
 //
 // loop:
 // %phi = phi <vscale x 2 x float> [ ..., %entry ], [ %acc.vec, %loop ]
 // %phi.scalar = extractelement <vscale x 2 x float> %phi, i64 0
-// %acc = call float @llvm.vector.reduce.fadd.nxv4f32(float %x, <vscale x 2 x float> %vec)
+// %acc = call float @llvm.vector.reduce.fadd.nxv2f32(float %x,
+//                                                    <vscale x 2 x float> %vec)
 // %acc.vec = insertelement <vscale x 2 x float> poison, float %acc.next, i64 0
 //
 // Which eliminates the scalar -> vector -> scalar crossing during instruction

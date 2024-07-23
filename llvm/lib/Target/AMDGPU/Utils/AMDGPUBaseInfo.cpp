@@ -153,7 +153,7 @@ inline unsigned getSaSdstBitWidth() { return 1; }
 /// \returns SaSdst bit shift
 inline unsigned getSaSdstBitShift() { return 0; }
 
-} // end namespace anonymous
+} // end anonymous namespace
 
 namespace llvm {
 
@@ -537,8 +537,7 @@ CanBeVOPD getCanBeVOPD(unsigned Opc) {
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   if (Info)
     return {Info->CanBeVOPDX, true};
-  else
-    return {false, false};
+  return {false, false};
 }
 
 unsigned getVOPDOpcode(unsigned Opc) {
@@ -1479,11 +1478,10 @@ static unsigned getCombinedCountBitMask(const IsaVersion &Version,
     unsigned Storecnt = getBitMask(getLoadcntStorecntBitShift(Version.Major),
                                    getStorecntBitWidth(Version.Major));
     return Dscnt | Storecnt;
-  } else {
-    unsigned Loadcnt = getBitMask(getLoadcntStorecntBitShift(Version.Major),
-                                  getLoadcntBitWidth(Version.Major));
-    return Dscnt | Loadcnt;
   }
+  unsigned Loadcnt = getBitMask(getLoadcntStorecntBitShift(Version.Major),
+                                getLoadcntBitWidth(Version.Major));
+  return Dscnt | Loadcnt;
 }
 
 Waitcnt decodeLoadcntDscnt(const IsaVersion &Version, unsigned LoadcntDscnt) {

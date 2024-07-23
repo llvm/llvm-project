@@ -117,7 +117,7 @@ private:
   bool foldShuffleOfShuffles(Instruction &I);
   bool foldShuffleToIdentity(Instruction &I);
   bool foldShuffleFromReductions(Instruction &I);
-  bool foldTruncFromReductions(Instruction &I);
+  bool foldCastFromReductions(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
 
   void replaceValue(Value &Old, Value &New) {
@@ -2113,15 +2113,20 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
 
 /// Determine if its more efficient to fold:
 ///   reduce(trunc(x)) -> trunc(reduce(x)).
-bool VectorCombine::foldTruncFromReductions(Instruction &I) {
+///   reduce(sext(x))  -> sext(reduce(x)).
+///   reduce(zext(x))  -> zext(reduce(x)).
+bool VectorCombine::foldCastFromReductions(Instruction &I) {
   auto *II = dyn_cast<IntrinsicInst>(&I);
   if (!II)
     return false;
 
+  bool TruncOnly = false;
   Intrinsic::ID IID = II->getIntrinsicID();
   switch (IID) {
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_mul:
+    TruncOnly = true;
+    break;
   case Intrinsic::vector_reduce_and:
   case Intrinsic::vector_reduce_or:
   case Intrinsic::vector_reduce_xor:
@@ -2133,35 +2138,37 @@ bool VectorCombine::foldTruncFromReductions(Instruction &I) {
   unsigned ReductionOpc = getArithmeticReductionInstruction(IID);
   Value *ReductionSrc = I.getOperand(0);
 
-  Value *TruncSrc;
-  if (!match(ReductionSrc, m_OneUse(m_Trunc(m_Value(TruncSrc)))))
+  Value *Src;
+  if (!match(ReductionSrc, m_OneUse(m_Trunc(m_Value(Src)))) &&
+      (TruncOnly || !match(ReductionSrc, m_OneUse(m_ZExtOrSExt(m_Value(Src))))))
     return false;
 
-  auto *TruncSrcTy = cast<VectorType>(TruncSrc->getType());
+  auto CastOpc =
+      (Instruction::CastOps)cast<Instruction>(ReductionSrc)->getOpcode();
+
+  auto *SrcTy = cast<VectorType>(Src->getType());
   auto *ReductionSrcTy = cast<VectorType>(ReductionSrc->getType());
   Type *ResultTy = I.getType();
 
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost OldCost = TTI.getArithmeticReductionCost(
       ReductionOpc, ReductionSrcTy, std::nullopt, CostKind);
-  if (auto *Trunc = dyn_cast<CastInst>(ReductionSrc))
-    OldCost +=
-        TTI.getCastInstrCost(Instruction::Trunc, ReductionSrcTy, TruncSrcTy,
-                             TTI::CastContextHint::None, CostKind, Trunc);
+  OldCost += TTI.getCastInstrCost(CastOpc, ReductionSrcTy, SrcTy,
+                                  TTI::CastContextHint::None, CostKind,
+                                  cast<CastInst>(ReductionSrc));
   InstructionCost NewCost =
-      TTI.getArithmeticReductionCost(ReductionOpc, TruncSrcTy, std::nullopt,
+      TTI.getArithmeticReductionCost(ReductionOpc, SrcTy, std::nullopt,
                                      CostKind) +
-      TTI.getCastInstrCost(Instruction::Trunc, ResultTy,
-                           ReductionSrcTy->getScalarType(),
+      TTI.getCastInstrCost(CastOpc, ResultTy, ReductionSrcTy->getScalarType(),
                            TTI::CastContextHint::None, CostKind);
 
   if (OldCost <= NewCost || !NewCost.isValid())
     return false;
 
-  Value *NewReduction = Builder.CreateIntrinsic(
-      TruncSrcTy->getScalarType(), II->getIntrinsicID(), {TruncSrc});
-  Value *NewTruncation = Builder.CreateTrunc(NewReduction, ResultTy);
-  replaceValue(I, *NewTruncation);
+  Value *NewReduction = Builder.CreateIntrinsic(SrcTy->getScalarType(),
+                                                II->getIntrinsicID(), {Src});
+  Value *NewCast = Builder.CreateCast(CastOpc, NewReduction, ResultTy);
+  replaceValue(I, *NewCast);
   return true;
 }
 
@@ -2559,7 +2566,7 @@ bool VectorCombine::run() {
       switch (Opcode) {
       case Instruction::Call:
         MadeChange |= foldShuffleFromReductions(I);
-        MadeChange |= foldTruncFromReductions(I);
+        MadeChange |= foldCastFromReductions(I);
         break;
       case Instruction::ICmp:
       case Instruction::FCmp:

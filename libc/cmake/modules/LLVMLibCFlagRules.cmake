@@ -263,6 +263,9 @@ set(FMA_OPT_FLAG "FMA_OPT")
 set(ROUND_OPT_FLAG "ROUND_OPT")
 # This flag controls whether we use explicit SIMD instructions or not.
 set(EXPLICIT_SIMD_OPT_FLAG "EXPLICIT_SIMD_OPT")
+# This flag controls whether we use compiler builtin functions to implement
+# various basic math operations or not.
+set(MISC_MATH_BASIC_OPS_OPT_FLAG "MISC_MATH_BASIC_OPS_OPT")
 
 # Skip FMA_OPT flag for targets that don't support fma.
 if(NOT((LIBC_TARGET_ARCHITECTURE_IS_X86 AND (LIBC_CPU_FEATURES MATCHES "FMA")) OR

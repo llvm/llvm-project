@@ -118,7 +118,7 @@ public:
   bool operator!=(const Pointer &P) const { return !(P == *this); }
 
   /// Converts the pointer to an APValue.
-  APValue toAPValue() const;
+  APValue toAPValue(const ASTContext &ASTCtx) const;
 
   /// Converts the pointer to a string usable in diagnostics.
   std::string toDiagnosticString(const ASTContext &Ctx) const;
@@ -487,6 +487,9 @@ public:
   }
   /// Checks if a structure is a base class.
   bool isBaseClass() const { return isField() && getInlineDesc()->IsBase; }
+  bool isVirtualBaseClass() const {
+    return isField() && getInlineDesc()->IsVirtualBase;
+  }
   /// Checks if the pointer points to a dummy value.
   bool isDummy() const {
     if (!isBlockPointer())
@@ -649,6 +652,7 @@ private:
   friend class MemberPointer;
   friend class InterpState;
   friend struct InitMap;
+  friend class DynamicAllocator;
 
   Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
 

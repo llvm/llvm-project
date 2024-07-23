@@ -519,6 +519,38 @@ inline _LIBCPP_HIDE_FROM_ABI void ios_base::exceptions(iostate __iostate) {
   clear(__rdstate_);
 }
 
+template <class _Traits>
+// Attribute 'packed' is used to keep the layout compatible with the previous
+// definition of the '__fill_' and '_set_' pair in basic_ios on AIX & z/OS.
+struct _LIBCPP_PACKED _FillHelper {
+  _LIBCPP_HIDE_FROM_ABI void __init() { __set_ = false; }
+  _LIBCPP_HIDE_FROM_ABI _FillHelper& operator=(typename _Traits::int_type __x) {
+    __set_      = true;
+    __fill_val_ = __x;
+    return *this;
+  }
+  _LIBCPP_HIDE_FROM_ABI bool __is_set() const { return __set_; }
+  _LIBCPP_HIDE_FROM_ABI typename _Traits::int_type __get() const { return __fill_val_; }
+
+private:
+  typename _Traits::int_type __fill_val_;
+  bool __set_;
+};
+
+template <class _Traits>
+struct _LIBCPP_PACKED _SentinelValueFill {
+  _LIBCPP_HIDE_FROM_ABI void __init() { __fill_val_ = _Traits::eof(); }
+  _LIBCPP_HIDE_FROM_ABI _SentinelValueFill& operator=(typename _Traits::int_type __x) {
+    __fill_val_ = __x;
+    return *this;
+  }
+  _LIBCPP_HIDE_FROM_ABI bool __is_set() const { return __fill_val_ != _Traits::eof(); }
+  _LIBCPP_HIDE_FROM_ABI typename _Traits::int_type __get() const { return __fill_val_; }
+
+private:
+  typename _Traits::int_type __fill_val_;
+};
+
 template <class _CharT, class _Traits>
 class _LIBCPP_TEMPLATE_VIS basic_ios : public ios_base {
 public:
@@ -588,7 +620,13 @@ protected:
 
 private:
   basic_ostream<char_type, traits_type>* __tie_;
-  mutable int_type __fill_;
+
+#if defined(_LIBCPP_ABI_IOS_ALLOW_ARBITRARY_FILL_VALUE)
+  using _FillType = _FillHelper<traits_type>;
+#else
+  using _FillType = _SentinelValueFill<traits_type>;
+#endif
+  mutable _FillType __fill_;
 };
 
 template <class _CharT, class _Traits>
@@ -603,7 +641,7 @@ template <class _CharT, class _Traits>
 inline _LIBCPP_HIDE_FROM_ABI void basic_ios<_CharT, _Traits>::init(basic_streambuf<char_type, traits_type>* __sb) {
   ios_base::init(__sb);
   __tie_  = nullptr;
-  __fill_ = traits_type::eof();
+  __fill_.__init();
 }
 
 template <class _CharT, class _Traits>
@@ -653,16 +691,16 @@ inline _LIBCPP_HIDE_FROM_ABI _CharT basic_ios<_CharT, _Traits>::widen(char __c) 
 
 template <class _CharT, class _Traits>
 inline _LIBCPP_HIDE_FROM_ABI _CharT basic_ios<_CharT, _Traits>::fill() const {
-  if (traits_type::eq_int_type(traits_type::eof(), __fill_))
+  if (!__fill_.__is_set())
     __fill_ = widen(' ');
-  return __fill_;
+  return __fill_.__get();
 }
 
 template <class _CharT, class _Traits>
 inline _LIBCPP_HIDE_FROM_ABI _CharT basic_ios<_CharT, _Traits>::fill(char_type __ch) {
-  if (traits_type::eq_int_type(traits_type::eof(), __fill_))
+  if (!__fill_.__is_set())
     __fill_ = widen(' ');
-  char_type __r = __fill_;
+  char_type __r = __fill_.__get();
   __fill_       = __ch;
   return __r;
 }

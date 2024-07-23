@@ -886,7 +886,7 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
     MIB.addImm(0);
     // The table into which this call_indirect indexes.
     MCSymbolWasm *Table = WebAssembly::getOrCreateFunctionTableSymbol(
-        MF->getMMI().getContext(), Subtarget);
+        MF->getContext(), Subtarget);
     if (Subtarget->hasReferenceTypes()) {
       MIB.addSym(Table);
     } else {

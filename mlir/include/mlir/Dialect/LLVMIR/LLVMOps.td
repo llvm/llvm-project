@@ -560,14 +560,14 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
                       DeclareOpInterfaceMethods<BranchWeightOpInterface>,
                       Terminator]> {
   let arguments = (ins
-                   OptionalAttr<TypeAttrOf<LLVM_FunctionType>>:$callee_type,
+                   OptionalAttr<TypeAttrOf<LLVM_FunctionType>>:$var_callee_type,
                    OptionalAttr<FlatSymbolRefAttr>:$callee,
                    Variadic<LLVM_Type>:$callee_operands,
                    Variadic<LLVM_Type>:$normalDestOperands,
                    Variadic<LLVM_Type>:$unwindDestOperands,
                    OptionalAttr<DenseI32ArrayAttr>:$branch_weights,
                    DefaultValuedAttr<CConv, "CConv::C">:$CConv);
-  let results = (outs Variadic<LLVM_Type>);
+  let results = (outs Optional<LLVM_Type>:$result);
   let successors = (successor AnySuccessor:$normalDest,
                               AnySuccessor:$unwindDest);
 
@@ -617,11 +617,12 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
     start with a function name (`@`-prefixed) and indirect calls start with an
     SSA value (`%`-prefixed). The direct callee, if present, is stored as a
     function attribute `callee`. For indirect calls, the callee is of `!llvm.ptr` type
-    and is stored as the first value in `callee_operands`. If the callee is a variadic
-    function, then the `callee_type` attribute must carry the function type. The
-    trailing type list contains the optional indirect callee type and the MLIR
-    function type, which differs from the LLVM function type that uses a explicit
-    void type to model functions that do not return a value.
+    and is stored as the first value in `callee_operands`. If and only if the
+    callee is a variadic function, the `var_callee_type` attribute must carry
+    the variadic LLVM function type. The trailing type list contains the
+    optional indirect callee type and the MLIR function type, which differs from
+    the LLVM function type that uses an explicit void type to model functions
+    that do not return a value.
 
     Examples:
 
@@ -644,7 +645,7 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
     ```
   }];
 
-  dag args = (ins OptionalAttr<TypeAttrOf<LLVM_FunctionType>>:$callee_type,
+  dag args = (ins OptionalAttr<TypeAttrOf<LLVM_FunctionType>>:$var_callee_type,
                   OptionalAttr<FlatSymbolRefAttr>:$callee,
                   Variadic<LLVM_Type>:$callee_operands,
                   DefaultValuedAttr<LLVM_FastmathFlagsAttr,
@@ -1449,6 +1450,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<LLVM_VScaleRangeAttr>:$vscale_range,
     OptionalAttr<FramePointerKindAttr>:$frame_pointer,
     OptionalAttr<StrAttr>:$target_cpu,
+    OptionalAttr<StrAttr>:$tune_cpu,
     OptionalAttr<LLVM_TargetFeaturesAttr>:$target_features,
     OptionalAttr<BoolAttr>:$unsafe_fp_math,
     OptionalAttr<BoolAttr>:$no_infs_fp_math,
@@ -1460,6 +1462,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<StrAttr>:$fp_contract,
     OptionalAttr<UnitAttr>:$no_inline,
     OptionalAttr<UnitAttr>:$always_inline,
+    OptionalAttr<UnitAttr>:$no_unwind,
+    OptionalAttr<UnitAttr>:$will_return,
     OptionalAttr<UnitAttr>:$optimize_none
   );
 

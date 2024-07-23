@@ -141,7 +141,7 @@ enum ProcessorFeatures {
   FEATURE_AVX512VP2INTERSECT,
   // FIXME: Below Features has some missings comparing to gcc, it's because gcc
   // has some not one-to-one mapped in llvm.
-  FEATURE_3DNOW,
+  // FEATURE_3DNOW,
   // FEATURE_3DNOWP,
   FEATURE_ADX = 40,
   // FEATURE_ABM,
