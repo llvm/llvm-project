@@ -819,11 +819,16 @@ static Instruction *foldNoWrapAdd(BinaryOperator &Add,
   Value *X;
   const APInt *C1, *C2;
   if (match(Op1, m_APInt(C1)) &&
-      match(Op0, m_OneUse(m_ZExt(m_NUWAddLike(m_Value(X), m_APInt(C2))))) &&
+      match(Op0, m_ZExt(m_NUWAddLike(m_Value(X), m_APInt(C2)))) &&
       C1->isNegative() && C1->sge(-C2->sext(C1->getBitWidth()))) {
-    Constant *NewC =
-        ConstantInt::get(X->getType(), *C2 + C1->trunc(C2->getBitWidth()));
-    return new ZExtInst(Builder.CreateNUWAdd(X, NewC), Ty);
+    APInt NewC = *C2 + C1->trunc(C2->getBitWidth());
+    // If the smaller add will fold to zero, we don't need to check one use.
+    if (NewC.isZero())
+      return new ZExtInst(X, Ty);
+    // Otherwise only do this if the existing zero extend will be removed.
+    if (Op0->hasOneUse())
+      return new ZExtInst(
+          Builder.CreateNUWAdd(X, ConstantInt::get(X->getType(), NewC)), Ty);
   }
 
   // More general combining of constants in the wide type.

@@ -54,7 +54,7 @@ struct MapUnmapCallback {
   }
 };
 
-static char allocator_placeholder[sizeof(Allocator)] ALIGNED(64);
+alignas(64) static char allocator_placeholder[sizeof(Allocator)];
 Allocator *allocator() {
   return reinterpret_cast<Allocator*>(&allocator_placeholder);
 }
@@ -75,7 +75,7 @@ struct GlobalProc {
         internal_alloc_mtx(MutexTypeInternalAlloc) {}
 };
 
-static char global_proc_placeholder[sizeof(GlobalProc)] ALIGNED(64);
+alignas(64) static char global_proc_placeholder[sizeof(GlobalProc)];
 GlobalProc *global_proc() {
   return reinterpret_cast<GlobalProc*>(&global_proc_placeholder);
 }

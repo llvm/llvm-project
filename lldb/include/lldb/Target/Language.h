@@ -371,6 +371,14 @@ public:
   /// a corresponding LanguageRuntime plugin.
   virtual bool SupportsExceptionBreakpointsOnCatch() const { return false; }
 
+  /// Returns the keyword used for throw statements in this language, e.g.
+  /// Python uses \b raise. Defaults to \b throw.
+  virtual llvm::StringRef GetThrowKeyword() const { return "throw"; }
+
+  /// Returns the keyword used for catch statements in this language, e.g.
+  /// Python uses \b except. Defaults to \b catch.
+  virtual llvm::StringRef GetCatchKeyword() const { return "catch"; }
+
 protected:
   // Classes that inherit from Language can see and modify these
 

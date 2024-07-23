@@ -4,12 +4,12 @@
 define amdgpu_kernel void @copy_flat(ptr nocapture %d, ptr nocapture readonly %s, i32 %n) {
 ; GCN-LABEL: copy_flat:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b32 s4, s[0:1], 0x34
+; GCN-NEXT:    s_load_b32 s4, s[2:3], 0x34
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_eq_u32 s4, 0
 ; GCN-NEXT:    s_cbranch_scc1 .LBB0_3
 ; GCN-NEXT:  ; %bb.1: ; %for.body.preheader
-; GCN-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 0xb0
 ; GCN-NEXT:  .LBB0_2: ; %for.body
@@ -50,12 +50,12 @@ for.end:                                          ; preds = %for.body, %entry
 define amdgpu_kernel void @copy_global(ptr addrspace(1) nocapture %d, ptr addrspace(1) nocapture readonly %s, i32 %n) {
 ; GCN-LABEL: copy_global:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b32 s4, s[0:1], 0x34
+; GCN-NEXT:    s_load_b32 s4, s[2:3], 0x34
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_eq_u32 s4, 0
 ; GCN-NEXT:    s_cbranch_scc1 .LBB1_3
 ; GCN-NEXT:  ; %bb.1: ; %for.body.preheader
-; GCN-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 0xb0
@@ -96,12 +96,12 @@ for.end:                                          ; preds = %for.body, %entry
 define amdgpu_kernel void @copy_constant(ptr addrspace(1) nocapture %d, ptr addrspace(4) nocapture readonly %s, i32 %n) {
 ; GCN-LABEL: copy_constant:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b32 s4, s[0:1], 0x34
+; GCN-NEXT:    s_load_b32 s4, s[2:3], 0x34
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_eq_u32 s4, 0
 ; GCN-NEXT:    s_cbranch_scc1 .LBB2_3
 ; GCN-NEXT:  ; %bb.1: ; %for.body.preheader
-; GCN-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:  .LBB2_2: ; %for.body
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -143,7 +143,7 @@ for.end:                                          ; preds = %for.body, %entry
 define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspace(3) nocapture readonly %s, i32 %n) {
 ; GCN-LABEL: copy_local:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
+; GCN-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_eq_u32 s2, 0
 ; GCN-NEXT:    s_cbranch_scc1 .LBB3_2

@@ -201,7 +201,7 @@ public:
   bool padInstructionEncoding(MCRelaxableFragment &RF, MCCodeEmitter &Emitter,
                               unsigned &RemainingSize) const;
 
-  void finishLayout(const MCAssembler &Asm) const override;
+  bool finishLayout(const MCAssembler &Asm) const override;
 
   unsigned getMaximumNopSize(const MCSubtargetInfo &STI) const override;
 
@@ -856,7 +856,7 @@ bool X86AsmBackend::padInstructionEncoding(MCRelaxableFragment &RF,
   return Changed;
 }
 
-void X86AsmBackend::finishLayout(MCAssembler const &Asm) const {
+bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
   // See if we can further relax some instructions to cut down on the number of
   // nop bytes required for code alignment.  The actual win is in reducing
   // instruction count, not number of bytes.  Modern X86-64 can easily end up
@@ -864,7 +864,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm) const {
   // (i.e. eliminate nops) even at the cost of increasing the size and
   // complexity of others.
   if (!X86PadForAlign && !X86PadForBranchAlign)
-    return;
+    return false;
 
   // The processed regions are delimitered by LabeledFragments. -g may have more
   // MCSymbols and therefore different relaxation results. X86PadForAlign is
@@ -911,9 +911,6 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm) const {
         continue;
       }
 
-#ifndef NDEBUG
-      const uint64_t OrigOffset = Asm.getFragmentOffset(F);
-#endif
       const uint64_t OrigSize = Asm.computeFragmentSize(F);
 
       // To keep the effects local, prefer to relax instructions closest to
@@ -926,8 +923,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm) const {
         // Give the backend a chance to play any tricks it wishes to increase
         // the encoding size of the given instruction.  Target independent code
         // will try further relaxation, but target's may play further tricks.
-        if (padInstructionEncoding(RF, Asm.getEmitter(), RemainingSize))
-          Sec.setHasLayout(false);
+        padInstructionEncoding(RF, Asm.getEmitter(), RemainingSize);
 
         // If we have an instruction which hasn't been fully relaxed, we can't
         // skip past it and insert bytes before it.  Changing its starting
@@ -944,14 +940,6 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm) const {
       if (F.getKind() == MCFragment::FT_BoundaryAlign)
         cast<MCBoundaryAlignFragment>(F).setSize(RemainingSize);
 
-#ifndef NDEBUG
-      const uint64_t FinalOffset = Asm.getFragmentOffset(F);
-      const uint64_t FinalSize = Asm.computeFragmentSize(F);
-      assert(OrigOffset + OrigSize == FinalOffset + FinalSize &&
-             "can't move start of next fragment!");
-      assert(FinalSize == RemainingSize && "inconsistent size computation?");
-#endif
-
       // If we're looking at a boundary align, make sure we don't try to pad
       // its target instructions for some following directive.  Doing so would
       // break the alignment of the current boundary align.
@@ -965,11 +953,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm) const {
     }
   }
 
-  // The layout is done. Mark every fragment as valid.
-  for (MCSection &Section : Asm) {
-    Asm.getFragmentOffset(*Section.curFragList()->Tail);
-    Asm.computeFragmentSize(*Section.curFragList()->Tail);
-  }
+  return true;
 }
 
 unsigned X86AsmBackend::getMaximumNopSize(const MCSubtargetInfo &STI) const {

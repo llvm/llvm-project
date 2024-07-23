@@ -502,8 +502,8 @@ define fastcc <vscale x 32 x i32> @vector_arg_indirect_stack(i32 %0, i32 %1, i32
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, t4, a0
-; CHECK-NEXT:    vl8re32.v v24, (t4)
+; CHECK-NEXT:    add a0, t5, a0
+; CHECK-NEXT:    vl8re32.v v24, (t5)
 ; CHECK-NEXT:    vl8re32.v v0, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v24
@@ -521,25 +521,31 @@ define fastcc <vscale x 32 x i32> @pass_vector_arg_indirect_stack(<vscale x 32 x
 ; RV32-NEXT:    .cfi_def_cfa_offset 144
 ; RV32-NEXT:    sw ra, 140(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 136(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 132(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    .cfi_offset s0, -8
+; RV32-NEXT:    .cfi_offset s1, -12
 ; RV32-NEXT:    addi s0, sp, 144
 ; RV32-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 5
 ; RV32-NEXT:    sub sp, sp, a0
 ; RV32-NEXT:    andi sp, sp, -128
+; RV32-NEXT:    mv s1, sp
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 3
+; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
 ; RV32-NEXT:    vmv.v.i v8, 0
-; RV32-NEXT:    addi a1, sp, 128
+; RV32-NEXT:    addi a1, s1, 128
 ; RV32-NEXT:    vs8r.v v8, (a1)
 ; RV32-NEXT:    csrr a2, vlenb
 ; RV32-NEXT:    slli a2, a2, 4
-; RV32-NEXT:    add a2, sp, a2
+; RV32-NEXT:    add a2, s1, a2
 ; RV32-NEXT:    addi a2, a2, 128
 ; RV32-NEXT:    vs8r.v v8, (a2)
+; RV32-NEXT:    li a3, 8
+; RV32-NEXT:    sw a3, 0(sp)
 ; RV32-NEXT:    add a1, a1, a0
 ; RV32-NEXT:    vs8r.v v8, (a1)
 ; RV32-NEXT:    add a0, a2, a0
@@ -550,47 +556,54 @@ define fastcc <vscale x 32 x i32> @pass_vector_arg_indirect_stack(<vscale x 32 x
 ; RV32-NEXT:    li a5, 5
 ; RV32-NEXT:    li a6, 6
 ; RV32-NEXT:    li a7, 7
-; RV32-NEXT:    csrr t2, vlenb
-; RV32-NEXT:    slli t2, t2, 4
-; RV32-NEXT:    add t2, sp, t2
-; RV32-NEXT:    addi t2, t2, 128
-; RV32-NEXT:    addi t4, sp, 128
-; RV32-NEXT:    li t6, 8
+; RV32-NEXT:    csrr t3, vlenb
+; RV32-NEXT:    slli t3, t3, 4
+; RV32-NEXT:    add t3, s1, t3
+; RV32-NEXT:    addi t3, t3, 128
+; RV32-NEXT:    addi t5, s1, 128
 ; RV32-NEXT:    vs8r.v v8, (a0)
 ; RV32-NEXT:    li a0, 0
 ; RV32-NEXT:    vmv.v.i v16, 0
 ; RV32-NEXT:    call vector_arg_indirect_stack
+; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    addi sp, s0, -144
 ; RV32-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 136(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 132(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 144
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: pass_vector_arg_indirect_stack:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -144
-; RV64-NEXT:    .cfi_def_cfa_offset 144
-; RV64-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 128(sp) # 8-byte Folded Spill
+; RV64-NEXT:    addi sp, sp, -160
+; RV64-NEXT:    .cfi_def_cfa_offset 160
+; RV64-NEXT:    sd ra, 152(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 144(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 136(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    .cfi_offset s0, -16
-; RV64-NEXT:    addi s0, sp, 144
+; RV64-NEXT:    .cfi_offset s1, -24
+; RV64-NEXT:    addi s0, sp, 160
 ; RV64-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 5
 ; RV64-NEXT:    sub sp, sp, a0
 ; RV64-NEXT:    andi sp, sp, -128
+; RV64-NEXT:    mv s1, sp
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 3
+; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
 ; RV64-NEXT:    vmv.v.i v8, 0
-; RV64-NEXT:    addi a1, sp, 128
+; RV64-NEXT:    addi a1, s1, 128
 ; RV64-NEXT:    vs8r.v v8, (a1)
 ; RV64-NEXT:    csrr a2, vlenb
 ; RV64-NEXT:    slli a2, a2, 4
-; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    add a2, s1, a2
 ; RV64-NEXT:    addi a2, a2, 128
 ; RV64-NEXT:    vs8r.v v8, (a2)
+; RV64-NEXT:    li a3, 8
+; RV64-NEXT:    sd a3, 0(sp)
 ; RV64-NEXT:    add a1, a1, a0
 ; RV64-NEXT:    vs8r.v v8, (a1)
 ; RV64-NEXT:    add a0, a2, a0
@@ -601,20 +614,21 @@ define fastcc <vscale x 32 x i32> @pass_vector_arg_indirect_stack(<vscale x 32 x
 ; RV64-NEXT:    li a5, 5
 ; RV64-NEXT:    li a6, 6
 ; RV64-NEXT:    li a7, 7
-; RV64-NEXT:    csrr t2, vlenb
-; RV64-NEXT:    slli t2, t2, 4
-; RV64-NEXT:    add t2, sp, t2
-; RV64-NEXT:    addi t2, t2, 128
-; RV64-NEXT:    addi t4, sp, 128
-; RV64-NEXT:    li t6, 8
+; RV64-NEXT:    csrr t3, vlenb
+; RV64-NEXT:    slli t3, t3, 4
+; RV64-NEXT:    add t3, s1, t3
+; RV64-NEXT:    addi t3, t3, 128
+; RV64-NEXT:    addi t5, s1, 128
 ; RV64-NEXT:    vs8r.v v8, (a0)
 ; RV64-NEXT:    li a0, 0
 ; RV64-NEXT:    vmv.v.i v16, 0
 ; RV64-NEXT:    call vector_arg_indirect_stack
-; RV64-NEXT:    addi sp, s0, -144
-; RV64-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
-; RV64-NEXT:    addi sp, sp, 144
+; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    addi sp, s0, -160
+; RV64-NEXT:    ld ra, 152(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 144(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 136(sp) # 8-byte Folded Reload
+; RV64-NEXT:    addi sp, sp, 160
 ; RV64-NEXT:    ret
   %s = call fastcc <vscale x 32 x i32> @vector_arg_indirect_stack(i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, <vscale x 32 x i32> zeroinitializer, <vscale x 32 x i32> zeroinitializer, <vscale x 32 x i32> zeroinitializer, i32 8)
   ret <vscale x 32 x i32> %s

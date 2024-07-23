@@ -11,12 +11,13 @@
 
 #include "src/__support/CPP/optional.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
 
 #define __need_wint_t
 #define __need_wchar_t
 #include <stddef.h> // needed for wint_t and wchar_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 // ------------------------------------------------------
@@ -44,6 +45,6 @@ LIBC_INLINE cpp::optional<wint_t> btowc(int c) {
 }
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_WCTYPE_UTILS_H

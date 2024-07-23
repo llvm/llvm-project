@@ -525,6 +525,8 @@
   }
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #2
+
+attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 attributes #1 = { nounwind }
 attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 !0 = !{}

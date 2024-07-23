@@ -1,15 +1,11 @@
 header: stdio.h
 macros:
-  - macro_name: _IONBF
-    macro_value: 2
-  - macro_name: _IOLBF
-    macro_value: 1
-  - macro_name: _IOFBF
-    macro_value: 0
   - macro_name: stdout
     macro_value: stdout
   - macro_name: stdin
     macro_value: stdin
+  - macro_name: stderr
+    macro_value: stderr
 types:
   - type_name: size_t
   - type_name: off_t
@@ -42,87 +38,87 @@ functions:
       - stdc
     return_type: int
     arguments:
-      - type: char * __restrict
-      - type: const char * __restrict
+      - type: char *__restrict
+      - type: const char *__restrict
       - type: ...
   - name: snprintf
     standards: 
       - stdc
     return_type: int
     arguments:
-      - type: char * __restrict
+      - type: char *__restrict
       - type: size_t
-      - type: const char * __restrict
+      - type: const char *__restrict
       - type: ...
   - name: fprintf
     standards: 
       - stdc
     return_type: int
     arguments:
-      - type: FILE * __restrict
-      - type: const char * __restrict
+      - type: FILE *__restrict
+      - type: const char *__restrict
       - type: ...
   - name: printf
     standards: 
       - stdc
     return_type: int
     arguments:
-      - type: const char * __restrict
+      - type: const char *__restrict
       - type: ...
   - name: vsprintf
     standards: 
       - stdc
     return_type: int
     arguments:
-      - type: char * __restrict
-      - type: const char * __restrict
+      - type: char *__restrict
+      - type: const char *__restrict
       - type: va_list
   - name: vsnprintf
     standards: 
       - stdc
     return_type: int
     arguments:
-      - type: char * __restrict
+      - type: char *__restrict
       - type: size_t
-      - type: const char * __restrict
+      - type: const char *__restrict
       - type: va_list
   - name: vfprintf
     standards: 
       - stdc
     return_type: int
     arguments:
-      - type: FILE * __restrict
-      - type: const char * __restrict
+      - type: FILE *__restrict
+      - type: const char *__restrict
       - type: va_list
   - name: vprintf
     standards: 
       - stdc
     return_type: int
     arguments:
-      - type: const char * __restrict
+      - type: const char *__restrict
       - type: va_list
   - name: sscanf
     standards: 
       - stdc
     return_type: int
     arguments:
-      - type: const char * __restrict
-      - type: const char * __restrict
+      - type: const char *__restrict
+      - type: const char *__restrict
       - type: ...
   - name: scanf
     standards: 
       - stdc
     return_type: int
     arguments:
-      - type: const char * __restrict
+      - type: const char *__restrict
       - type: ...
   - name: fscanf
     standards: 
       - stdc
     return_type: int
     arguments:
-      - type: FILE * __restrict
-      - type: const char * __restrict
+      - type: FILE *__restrict
+      - type: const char *__restrict
       - type: ... 
   - name: fileno
     standards: 
@@ -202,9 +198,9 @@ functions:
       - stdc 
     return_type: char *
     arguments:
-      - type: char * __restrict
+      - type: char *__restrict
       - type: int
-      - type: FILE * __restrict
+      - type: FILE *__restrict
   - name: fflush
     standards: 
       - stdc
@@ -230,8 +226,8 @@ functions:
       - stdc
     return_type: int
     arguments:
-      - type: const char * __restrict
-      - type: FILE * __restrict
+      - type: const char *__restrict
+      - type: FILE *__restrict
   - name: fopencookie
     standards: 
       - GNUExtensions
@@ -245,19 +241,19 @@ functions:
       - stdc
     return_type: size_t
     arguments:
-      - type: void * __restrict
+      - type: void *__restrict
       - type: size_t
       - type: size_t
-      - type: FILE * __restrict
+      - type: FILE *__restrict
   - name: fread_unlocked
     standards: 
       - GNUExtensions
     return_type: size_t
     arguments:
-      - type: void * __restrict
+      - type: void *__restrict
       - type: size_t
       - type: size_t
-      - type: FILE * __restrict
+      - type: FILE *__restrict
   - name: fseek
     standards: 
       - stdc
@@ -283,19 +279,19 @@ functions:
       - stdc
     return_type: size_t
     arguments:
-      - type: const void * __restrict
+      - type: const void *__restrict
       - type: size_t
       - type: size_t
-      - type: FILE * __restrict
+      - type: FILE *__restrict
   - name: fwrite_unlocked
     standards: 
       - GNUExtensions
     return_type: size_t
     arguments:
-      - type: const void * __restrict
+      - type: const void *__restrict
       - type: size_t
       - type: size_t
-      - type: FILE * __restrict
+      - type: FILE *__restrict
   - name: getc
     standards: 
       - stdc
@@ -342,15 +338,15 @@ functions:
       - stdc
     return_type: void
     arguments:
-      - type: FILE * __restrict
-      - type: char * __restrict
+      - type: FILE *__restrict
+      - type: char *__restrict
   - name: setvbuf
     standards: 
       - stdc
     return_type: int
     arguments:
-      - type: FILE * __restrict
-      - type: char * __restrict
+      - type: FILE *__restrict
+      - type: char *__restrict
       - type: int
       - type: size_t
   - name: ungetc
@@ -360,18 +356,3 @@ functions:
     arguments:
       - type: int
       - type: FILE *
-  - name: stderr
-    standards: 
-      - stdc
-    return_type: extern FILE *
-    arguments: []
-  - name: stdin
-    standards: 
-      - stdc
-    return_type: extern FILE *
-    arguments: []
-  - name: stdout
-    standards: 
-      - stdc 
-    return_type: extern FILE *
-    arguments: []

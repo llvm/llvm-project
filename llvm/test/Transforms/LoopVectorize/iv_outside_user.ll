@@ -202,7 +202,6 @@ exit:
 
 
 ; %iv.2 is dead in the vector loop and only used outside the loop.
-; FIXME: Scalar steps for iv.2 are not removed at the moment.
 define i32 @iv_2_dead_in_loop_only_used_outside(ptr %ptr) {
 ; CHECK-LABEL: @iv_2_dead_in_loop_only_used_outside
 ; CHECK-LABEL: vector.body:
@@ -210,7 +209,7 @@ define i32 @iv_2_dead_in_loop_only_used_outside(ptr %ptr) {
 ; VEC-NEXT:     [[VEC_IND:%.+]] = phi <2 x i64> [ <i64 0, i64 1>, %vector.ph ], [ [[VEC_IND_NEXT:%.+]], %vector.body ]
 ; CHECK:        [[IV_0:%.+]] = add i64 [[INDEX]], 0
 ; VEC-NOT:      add i64 [[INDEX]], 1
-; CHECK:        [[IV_2_0:%.+]] = add i32 %offset.idx, 0
+; CHECK-NOT:    add i32 %offset.idx, 0
 ; CHECK-LABEL: scalar.ph:
 ; CHECK-NEXT:    {{.+}} = phi i64 [ 1002, %middle.block ], [ 0, %entry ]
 ; CHECK-NEXT:    {{.+}} = phi i32 [ 2004, %middle.block ], [ 0, %entry ]

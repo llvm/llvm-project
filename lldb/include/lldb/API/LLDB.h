@@ -57,6 +57,7 @@
 #include "lldb/API/SBQueue.h"
 #include "lldb/API/SBQueueItem.h"
 #include "lldb/API/SBReproducer.h"
+#include "lldb/API/SBSaveCoreOptions.h"
 #include "lldb/API/SBSection.h"
 #include "lldb/API/SBSourceManager.h"
 #include "lldb/API/SBStatisticsOptions.h"

@@ -2323,7 +2323,7 @@ bool TargetLoweringObjectFileXCOFF::ShouldSetSSPCanaryBitInTB(
 
 MCSymbol *
 TargetLoweringObjectFileXCOFF::getEHInfoTableSymbol(const MachineFunction *MF) {
-  MCSymbol *EHInfoSym = MF->getMMI().getContext().getOrCreateSymbol(
+  MCSymbol *EHInfoSym = MF->getContext().getOrCreateSymbol(
       "__ehinfo." + Twine(MF->getFunctionNumber()));
   cast<MCSymbolXCOFF>(EHInfoSym)->setEHInfo();
   return EHInfoSym;

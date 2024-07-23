@@ -15,7 +15,7 @@ functions:
       - stdc
     return_type: char *
     arguments:
-      - type: struct tm *
+      - type: const struct tm *
   - name: asctime_r
     standard: 
       - stdc
@@ -34,7 +34,8 @@ functions:
     standard: 
       - stdc
     return_type: clock_t
-    arguments: []
+    arguments:
+      - type: void
   - name: difftime
     standard: 
       - stdc

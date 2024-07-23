@@ -1388,8 +1388,7 @@ bool PPCFastISel::processCallArgs(SmallVectorImpl<Value*> &Args,
   CCInfo.AnalyzeCallOperands(ArgVTs, ArgFlags, CC_PPC64_ELF_FIS);
 
   // Bail out if we can't handle any of the arguments.
-  for (unsigned I = 0, E = ArgLocs.size(); I != E; ++I) {
-    CCValAssign &VA = ArgLocs[I];
+  for (const CCValAssign &VA : ArgLocs) {
     MVT ArgVT = ArgVTs[VA.getValNo()];
 
     // Skip vector arguments for now, as well as long double and
@@ -1426,8 +1425,7 @@ bool PPCFastISel::processCallArgs(SmallVectorImpl<Value*> &Args,
   unsigned NextFPR = PPC::F1;
 
   // Process arguments.
-  for (unsigned I = 0, E = ArgLocs.size(); I != E; ++I) {
-    CCValAssign &VA = ArgLocs[I];
+  for (const CCValAssign &VA : ArgLocs) {
     unsigned Arg = ArgRegs[VA.getValNo()];
     MVT ArgVT = ArgVTs[VA.getValNo()];
 
@@ -1670,8 +1668,8 @@ bool PPCFastISel::fastLowerCall(CallLoweringInfo &CLI) {
   }
 
   // Add implicit physical register uses to the call.
-  for (unsigned II = 0, IE = RegArgs.size(); II != IE; ++II)
-    MIB.addReg(RegArgs[II], RegState::Implicit);
+  for (unsigned Reg : RegArgs)
+    MIB.addReg(Reg, RegState::Implicit);
 
   // Direct calls, in both the ELF V1 and V2 ABIs, need the TOC register live
   // into the call.
@@ -1795,8 +1793,8 @@ bool PPCFastISel::SelectRet(const Instruction *I) {
   MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                                     TII.get(PPC::BLR8));
 
-  for (unsigned i = 0, e = RetRegs.size(); i != e; ++i)
-    MIB.addReg(RetRegs[i], RegState::Implicit);
+  for (unsigned Reg : RetRegs)
+    MIB.addReg(Reg, RegState::Implicit);
 
   return true;
 }
