@@ -238,10 +238,16 @@ public:
     return Hash1.InstrHash == Hash2.InstrHash;
   }
 
+  /// Returns true if a profiled block was matched with its pseudo probe.
   bool isPseudoProbeMatch(BlendedBlockHash YamlBBHash) {
     return MatchedWithPseudoProbes.find(YamlBBHash.combine()) !=
            MatchedWithPseudoProbes.end();
   }
+
+  /// Returns the number of blocks matched with pseudo probes.
+  size_t getNumBlocksMatchedWithPseudoProbes() const {
+    return MatchedWithPseudoProbes.size();
+  } 
 
 private:
   using HashBlockPairType = std::pair<BlendedBlockHash, FlowBlock *>;
@@ -303,7 +309,7 @@ private:
     // Searches for the pseudo probe attached to the matched function's block,
     // ignoring pseudo probes attached to function calls and inlined functions'
     // blocks.
-    if (opts::Verbosity >= 2)
+    if (opts::Verbosity >= 3)
       outs() << "BOLT-INFO: attempting to match block with pseudo probes\n";
 
     std::vector<const yaml::bolt::PseudoProbeInfo *> BlockPseudoProbes;
@@ -671,6 +677,11 @@ size_t matchWeightsByHashes(
     ++BC.Stats.NumStaleBlocks;
     BC.Stats.StaleSampleCount += YamlBB.ExecCount;
   }
+
+  if (opts::Verbosity >= 2)
+    outs() << "BOLT-INFO: " 
+      << StaleMatcher.getNumBlocksMatchedWithPseudoProbes()
+      << " blocks matched with pseudo probes\n";
 
   // Match jumps from the profile to the jumps from CFG
   std::vector<uint64_t> OutWeight(Func.Blocks.size(), 0);
