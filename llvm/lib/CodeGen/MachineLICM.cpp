@@ -133,6 +133,8 @@ namespace {
     MachineBlockFrequencyInfo *MBFI = nullptr; // Machine block frequncy info
     MachineLoopInfo *MLI = nullptr;            // Current MachineLoopInfo
     MachineDominatorTree *DT = nullptr; // Machine dominator tree for the cur loop
+    MachineDomTreeUpdater *MDTU = nullptr; // Dominator tree updater, flush it
+                                           // to get the latest dominator tree.
 
     // State that is updated as we process loops
     bool Changed = false;           // True if a loop is changed.
@@ -262,7 +264,8 @@ namespace {
         DenseMap<MachineDomTreeNode *, unsigned> &OpenChildren,
         const DenseMap<MachineDomTreeNode *, MachineDomTreeNode *> &ParentMap);
 
-    void HoistOutOfLoop(MachineLoop *CurLoop, MachineBasicBlock *CurPreheader);
+    void HoistOutOfLoop(MachineDomTreeNode *HeaderN, MachineLoop *CurLoop,
+                        MachineBasicBlock *CurPreheader);
 
     void InitRegPressure(MachineBasicBlock *BB);
 
@@ -377,6 +380,9 @@ bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
   MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  MachineDomTreeUpdater Updater(DT,
+                                MachineDomTreeUpdater::UpdateStrategy::Lazy);
+  MDTU = &Updater;
 
   if (HoistConstLoads)
     InitializeLoadsHoistableLoops();
@@ -391,8 +397,9 @@ bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
     else {
       // CSEMap is initialized for loop header when the first instruction is
       // being hoisted.
+      MachineDomTreeNode *N = DT->getNode(CurLoop->getHeader());
       FirstInLoop = true;
-      HoistOutOfLoop(CurLoop, CurPreheader);
+      HoistOutOfLoop(N, CurLoop, CurPreheader);
       CSEMap.clear();
     }
   }
@@ -732,6 +739,8 @@ bool MachineLICMBase::IsGuaranteedToExecute(MachineBasicBlock *BB,
     // Check loop exiting blocks.
     SmallVector<MachineBasicBlock*, 8> CurrentLoopExitingBlocks;
     CurLoop->getExitingBlocks(CurrentLoopExitingBlocks);
+    if (!CurrentLoopExitingBlocks.empty())
+      MDTU->flush();
     for (MachineBasicBlock *CurrentLoopExitingBlock : CurrentLoopExitingBlocks)
       if (!DT->dominates(BB, CurrentLoopExitingBlock)) {
         SpeculationState = SpeculateTrue;
@@ -795,10 +804,10 @@ void MachineLICMBase::ExitScopeIfDone(MachineDomTreeNode *Node,
 /// specified header block, and that are in the current loop) in depth first
 /// order w.r.t the DominatorTree. This allows us to visit definitions before
 /// uses, allowing us to hoist a loop body in one pass without iteration.
-void MachineLICMBase::HoistOutOfLoop(MachineLoop *CurLoop,
+void MachineLICMBase::HoistOutOfLoop(MachineDomTreeNode *HeaderN,
+                                     MachineLoop *CurLoop,
                                      MachineBasicBlock *CurPreheader) {
   MachineBasicBlock *Preheader = getCurPreheader(CurLoop, CurPreheader);
-  MachineDomTreeNode *HeaderN = DT->getNode(CurLoop->getHeader());
   if (!Preheader)
     return;
 
@@ -1570,6 +1579,8 @@ bool MachineLICMBase::MayCSE(MachineInstr *MI) {
     return false;
 
   unsigned Opcode = MI->getOpcode();
+  if (!CSEMap.empty())
+    MDTU->flush();
   for (auto &Map : CSEMap) {
     // Check this CSEMap's preheader dominates MI's basic block.
     if (DT->dominates(Map.first, MI->getParent())) {
@@ -1638,6 +1649,8 @@ unsigned MachineLICMBase::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
   // Look for opportunity to CSE the hoisted instruction.
   unsigned Opcode = MI->getOpcode();
   bool HasCSEDone = false;
+  if (!CSEMap.empty())
+    MDTU->flush();
   for (auto &Map : CSEMap) {
     // Check this CSEMap's preheader dominates MI's basic block.
     if (DT->dominates(Map.first, MI->getParent())) {
@@ -1703,10 +1716,8 @@ MachineLICMBase::getCurPreheader(MachineLoop *CurLoop,
         return nullptr;
       }
 
-      MachineDomTreeUpdater MDTU(DT,
-                                 MachineDomTreeUpdater::UpdateStrategy::Eager);
-      CurPreheader =
-          Pred->SplitCriticalEdge(CurLoop->getHeader(), *this, nullptr, &MDTU);
+      CurPreheader = Pred->SplitCriticalEdge(CurLoop->getHeader(), *this,
+                                             /*LiveInSets=*/nullptr, MDTU);
       if (!CurPreheader) {
         CurPreheader = reinterpret_cast<MachineBasicBlock *>(-1);
         return nullptr;
