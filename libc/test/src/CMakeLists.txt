@@ -24,7 +24,12 @@ function(add_fp_unittest name)
       message(FATAL_ERROR "Hermetic math test cannot require MPFR.")
     endif()
     set(test_type UNIT_TEST_ONLY)
-    list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPFRWrapper -lmpfr -lgmp -latomic)
+    if(LIBC_TARGET_OS_IS_DARWIN)
+      # macOS does not have libatomic.
+      list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPFRWrapper -lmpfr -lgmp)
+    else()
+      list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPFRWrapper -lmpfr -lgmp -latomic)
+    endif()
   endif()
   list(APPEND MATH_UNITTEST_LINK_LIBRARIES LibcFPTestHelpers)
 
