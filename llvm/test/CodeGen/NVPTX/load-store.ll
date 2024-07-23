@@ -27,6 +27,18 @@ define void @plain(ptr %a, ptr %b, ptr %c, ptr %d) local_unnamed_addr {
   ; CHECK: st.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
   store i64 %d.add, ptr %d
 
+  ; CHECK: ld.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %e.load = load float, ptr %c
+  %e.add = fadd float %e.load, 1.
+  ; CHECK: st.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
+  store float %e.add, ptr %c
+
+  ; CHECK: ld.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %f.load = load double, ptr %c
+  %f.add = fadd double %f.load, 1.
+  ; CHECK: st.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
+  store double %f.add, ptr %c
+
   ret void
 }
 
@@ -55,6 +67,18 @@ define void @volatile(ptr %a, ptr %b, ptr %c, ptr %d) local_unnamed_addr {
   %d.add = add i64 %d.load, 1
   ; CHECK: st.volatile.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
   store volatile i64 %d.add, ptr %d
+
+  ; CHECK: ld.volatile.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %e.load = load volatile float, ptr %c
+  %e.add = fadd float %e.load, 1.
+  ; CHECK: st.volatile.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
+  store volatile float %e.add, ptr %c
+
+  ; CHECK: ld.volatile.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %f.load = load volatile double, ptr %c
+  %f.add = fadd double %f.load, 1.
+  ; CHECK: st.volatile.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
+  store volatile double %f.add, ptr %c
 
   ret void
 }
@@ -90,6 +114,12 @@ define void @monotonic(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) local_unnamed_add
   %e.add = fadd float %e.load, 1.0
   ; CHECK: st.volatile.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
   store atomic float %e.add, ptr %e monotonic, align 4
+
+  ; CHECK: ld.volatile.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %f.load = load atomic double, ptr %e monotonic, align 8
+  %f.add = fadd double %f.load, 1.
+  ; CHECK: st.volatile.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
+  store atomic double %f.add, ptr %e monotonic, align 8
 
   ret void
 }

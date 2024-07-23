@@ -159,14 +159,6 @@ namespace llvm {
       return StringRef(S, Length);
     }
 
-    /// equals - Check for string equality, this is more efficient than
-    /// compare() when the relative ordering of inequal strings isn't needed.
-    [[nodiscard]] LLVM_DEPRECATED("Use == instead",
-                                  "==") bool equals(StringRef RHS) const {
-      return (Length == RHS.Length &&
-              compareMemory(Data, RHS.Data, RHS.Length) == 0);
-    }
-
     /// Check for string equality, ignoring case.
     [[nodiscard]] bool equals_insensitive(StringRef RHS) const {
       return Length == RHS.Length && compare_insensitive(RHS) == 0;

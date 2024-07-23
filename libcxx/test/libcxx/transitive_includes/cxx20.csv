@@ -135,6 +135,9 @@ chrono type_traits
 chrono vector
 chrono version
 cinttypes cstdint
+cmath cstddef
+cmath cstdint
+cmath initializer_list
 cmath limits
 cmath type_traits
 cmath version
@@ -682,6 +685,7 @@ ranges optional
 ranges span
 ranges tuple
 ranges type_traits
+ranges variant
 ranges version
 ratio climits
 ratio cstdint
@@ -873,7 +877,6 @@ string_view version
 strstream istream
 strstream ostream
 strstream version
-syncstream cstddef
 syncstream ios
 syncstream iosfwd
 syncstream map
@@ -978,6 +981,7 @@ unordered_set type_traits
 unordered_set version
 utility compare
 utility cstddef
+utility cstdint
 utility cstdlib
 utility initializer_list
 utility iosfwd

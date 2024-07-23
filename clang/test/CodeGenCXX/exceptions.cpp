@@ -513,8 +513,7 @@ namespace test11 {
   // CHECK-LABEL:    define{{.*}} void @_ZN6test111CC2Ev(
   // CHECK:      [[THIS:%.*]] = load ptr, ptr {{%.*}}
   //   Construct single.
-  // CHECK-NEXT: [[SINGLE:%.*]] = getelementptr inbounds [[C:%.*]], ptr [[THIS]], i32 0, i32 0
-  // CHECK-NEXT: call void @_ZN6test111AC1Ev(ptr {{[^,]*}} [[SINGLE]])
+  // CHECK-NEXT: call void @_ZN6test111AC1Ev(ptr {{[^,]*}} [[THIS]])
   //   Construct array.
   // CHECK-NEXT: [[ARRAY:%.*]] = getelementptr inbounds [[C:%.*]], ptr [[THIS]], i32 0, i32 1
   // CHECK-NEXT: [[ARRAYBEGIN:%.*]] = getelementptr inbounds [2 x [3 x [[A:%.*]]]], ptr [[ARRAY]], i32 0, i32 0, i32 0
@@ -560,8 +559,8 @@ namespace test11 {
   // CHECK:      br label
   //   Finally, the cleanup for single.
 
-  // CHECK98:      invoke void @_ZN6test111AD1Ev(ptr {{[^,]*}} [[SINGLE]])
-  // CHECK11:      call void @_ZN6test111AD1Ev(ptr {{[^,]*}} [[SINGLE]])
+  // CHECK98:      invoke void @_ZN6test111AD1Ev(ptr {{[^,]*}} [[THIS]])
+  // CHECK11:      call void @_ZN6test111AD1Ev(ptr {{[^,]*}} [[THIS]])
 
   // CHECK:      br label
   // CHECK:      resume

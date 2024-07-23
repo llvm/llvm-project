@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.20.0)
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(libclc VERSION 0.2.0 LANGUAGES CXX C)
 endif()
+set(LLVM_SUBPROJECT_TITLE "libclc")
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -230,12 +231,14 @@ add_custom_command(
   COMMAND ${Python3_EXECUTABLE} ${script_loc} > convert.cl
   DEPENDS ${script_loc} )
 add_custom_target( "generate_convert.cl" DEPENDS convert.cl )
+set_target_properties( "generate_convert.cl" PROPERTIES FOLDER "libclc/Sourcegenning" )
 
 add_custom_command(
   OUTPUT clspv-convert.cl
   COMMAND ${Python3_EXECUTABLE} ${script_loc} --clspv > clspv-convert.cl
   DEPENDS ${script_loc} )
 add_custom_target( "clspv-generate_convert.cl" DEPENDS clspv-convert.cl )
+set_target_properties( "clspv-generate_convert.cl" PROPERTIES FOLDER "libclc/Sourcegenning" )
 
 enable_testing()
 
@@ -388,6 +391,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     add_custom_target( ${builtins_comp_lib_tgt}
       DEPENDS ${bytecode_files}
     )
+    set_target_properties( ${builtins_comp_lib_tgt} PROPERTIES FOLDER "libclc/Device IR/Comp" )
 
     set( builtins_link_lib_tgt builtins.link.${arch_suffix} )
     link_bc(
@@ -405,6 +409,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         DEPENDS ${builtins_link_lib} ${builtins_link_lib_tgt}
       )
       add_custom_target( "prepare-${spv_suffix}" ALL DEPENDS "${spv_suffix}" )
+      set_target_properties( "prepare-${spv_suffix}" PROPERTIES FOLDER "libclc/Device IR/Prepare" )
       install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${spv_suffix}
          DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
     else()
@@ -421,6 +426,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       )
       set_target_properties( ${builtins_opt_lib_tgt}
         PROPERTIES TARGET_FILE ${builtins_opt_lib_tgt}.bc
+                   FOLDER "libclc/Device IR/Opt"
       )
 
       set( builtins_opt_lib $<TARGET_PROPERTY:${builtins_opt_lib_tgt},TARGET_FILE> )
@@ -431,6 +437,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         COMMAND ${prepare_builtins_exe} -o ${obj_suffix} ${builtins_opt_lib}
         DEPENDS ${builtins_opt_lib} ${builtins_opt_lib_tgt} ${prepare_builtins_target} )
       add_custom_target( prepare-${obj_suffix} ALL DEPENDS ${obj_suffix} )
+      set_target_properties( "prepare-${obj_suffix}" PROPERTIES FOLDER "libclc/Device IR/Prepare" )
 
       # nvptx-- targets don't include workitem builtins
       if( NOT clang_triple MATCHES ".*ptx.*--$" )
@@ -445,6 +452,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         add_custom_target( ${alias_suffix} ALL
           COMMAND ${CMAKE_COMMAND} -E create_symlink ${obj_suffix} ${alias_suffix}
           DEPENDS prepare-${obj_suffix} )
+        set_target_properties( "${alias_suffix}" PROPERTIES FOLDER "libclc/Device IR/Aliases" )
         install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${alias_suffix} DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
       endforeach( a )
     endif()

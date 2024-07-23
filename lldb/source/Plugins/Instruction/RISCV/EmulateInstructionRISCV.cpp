@@ -622,10 +622,25 @@ std::optional<DecodeResult> EmulateInstructionRISCV::Decode(uint32_t inst) {
   Log *log = GetLog(LLDBLog::Unwind);
 
   uint16_t try_rvc = uint16_t(inst & 0x0000ffff);
-  // check whether the compressed encode could be valid
-  uint16_t mask = try_rvc & 0b11;
-  bool is_rvc = try_rvc != 0 && mask != 3;
   uint8_t inst_type = RV64;
+
+  // Try to get size of RISCV instruction.
+  // 1.2 Instruction Length Encoding
+  bool is_16b = (inst & 0b11) != 0b11;
+  bool is_32b = (inst & 0x1f) != 0x1f;
+  bool is_48b = (inst & 0x3f) != 0x1f;
+  bool is_64b = (inst & 0x7f) != 0x3f;
+  if (is_16b)
+    m_last_size = 2;
+  else if (is_32b)
+    m_last_size = 4;
+  else if (is_48b)
+    m_last_size = 6;
+  else if (is_64b)
+    m_last_size = 8;
+  else
+    // Not Valid
+    m_last_size = std::nullopt;
 
   // if we have ArchSpec::eCore_riscv128 in the future,
   // we also need to check it here
@@ -638,8 +653,8 @@ std::optional<DecodeResult> EmulateInstructionRISCV::Decode(uint32_t inst) {
       LLDB_LOGF(
           log, "EmulateInstructionRISCV::%s: inst(%x at %" PRIx64 ") was decoded to %s",
           __FUNCTION__, inst, m_addr, pat.name);
-      auto decoded = is_rvc ? pat.decode(try_rvc) : pat.decode(inst);
-      return DecodeResult{decoded, inst, is_rvc, pat};
+      auto decoded = is_16b ? pat.decode(try_rvc) : pat.decode(inst);
+      return DecodeResult{decoded, inst, is_16b, pat};
     }
   }
   LLDB_LOGF(log, "EmulateInstructionRISCV::%s: inst(0x%x) was unsupported",

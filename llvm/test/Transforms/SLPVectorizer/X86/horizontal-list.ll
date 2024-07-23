@@ -858,8 +858,8 @@ define float @extra_args_no_replace(ptr nocapture readonly %x, i32 %a, i32 %b, i
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast float [[CONV]], 2.000000e+00
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = fadd fast float [[OP_RDX]], [[CONVC]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = fadd fast float [[OP_RDX1]], 3.000000e+00
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = fadd fast float [[OP_RDX]], 3.000000e+00
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = fadd fast float [[OP_RDX1]], [[CONVC]]
 ; CHECK-NEXT:    ret float [[OP_RDX2]]
 ;
 ; THRESHOLD-LABEL: @extra_args_no_replace(
@@ -871,8 +871,8 @@ define float @extra_args_no_replace(ptr nocapture readonly %x, i32 %a, i32 %b, i
 ; THRESHOLD-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP0]])
 ; THRESHOLD-NEXT:    [[TMP2:%.*]] = fmul fast float [[CONV]], 2.000000e+00
 ; THRESHOLD-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP1]], [[TMP2]]
-; THRESHOLD-NEXT:    [[OP_RDX1:%.*]] = fadd fast float [[OP_RDX]], [[CONVC]]
-; THRESHOLD-NEXT:    [[OP_RDX2:%.*]] = fadd fast float [[OP_RDX1]], 3.000000e+00
+; THRESHOLD-NEXT:    [[OP_RDX1:%.*]] = fadd fast float [[OP_RDX]], 3.000000e+00
+; THRESHOLD-NEXT:    [[OP_RDX2:%.*]] = fadd fast float [[OP_RDX1]], [[CONVC]]
 ; THRESHOLD-NEXT:    ret float [[OP_RDX2]]
 ;
   entry:

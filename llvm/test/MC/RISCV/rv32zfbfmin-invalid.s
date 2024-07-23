@@ -1,6 +1,6 @@
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-zfbfmin,+d < %s 2>&1 | \
+# RUN: not llvm-mc -triple riscv32 -mattr=+zfbfmin,+d < %s 2>&1 | \
 # RUN:   FileCheck %s
-# RUN: not llvm-mc -triple riscv64 -mattr=+experimental-zfbfmin,+d < %s 2>&1 | \
+# RUN: not llvm-mc -triple riscv64 -mattr=+zfbfmin,+d < %s 2>&1 | \
 # RUN:   FileCheck %s
 
 # Out of range immediates

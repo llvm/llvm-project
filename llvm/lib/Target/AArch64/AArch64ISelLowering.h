@@ -907,6 +907,8 @@ public:
 
   bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
 
+  bool shouldExpandCmpUsingSelects() const override { return true; }
+
   bool isComplexDeinterleavingSupported() const override;
   bool isComplexDeinterleavingOperationSupported(
       ComplexDeinterleavingOperation Operation, Type *Ty) const override;
@@ -1143,6 +1145,7 @@ private:
                          SelectionDAG &DAG) const;
   SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerBRIND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerAAPCS_VASTART(SDValue Op, SelectionDAG &DAG) const;

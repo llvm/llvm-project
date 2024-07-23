@@ -20,3 +20,24 @@ void foo() {
   take_by_ref(x);
 }
 }
+
+namespace GH48937 {
+
+template <typename... Ts>
+consteval int f(Ts... ts) {
+  return ([]<Ts a = 42>(){ return a;}, ...)();
+}
+
+static_assert(f(0, 42) == 42);
+
+template <typename Ts>
+int g(Ts ts) {
+  return ([]<Ts a = 42>(){ return a;}, ...)();  // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
+}
+
+template <typename... Ts>
+int h(Ts... ts) {
+  return ([]<Ts a = 42>(){ return a;})();  // expected-error {{expression contains unexpanded parameter pack 'Ts'}}
+}
+
+}

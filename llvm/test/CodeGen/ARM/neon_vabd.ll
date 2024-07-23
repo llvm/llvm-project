@@ -340,20 +340,20 @@ define <2 x i64> @uabd_2d(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-NEXT:    sbcs r2, r3, r12
 ; CHECK-NEXT:    sbcs r3, r1, #0
 ; CHECK-NEXT:    sbc r3, r1, #0
-; CHECK-NEXT:    eor r0, r0, r3, asr #31
-; CHECK-NEXT:    eor r2, r2, r3, asr #31
-; CHECK-NEXT:    subs r0, r0, r3, asr #31
-; CHECK-NEXT:    sbc r2, r2, r3, asr #31
+; CHECK-NEXT:    eor r0, r0, r3
+; CHECK-NEXT:    eor r2, r2, r3
+; CHECK-NEXT:    subs r0, r0, r3
+; CHECK-NEXT:    sbc r2, r2, r3
 ; CHECK-NEXT:    subs r3, r4, lr
 ; CHECK-NEXT:    sbcs r6, r5, r6
 ; CHECK-NEXT:    vmov.32 d1[0], r0
 ; CHECK-NEXT:    sbcs r5, r1, #0
 ; CHECK-NEXT:    sbc r1, r1, #0
-; CHECK-NEXT:    eor r3, r3, r1, asr #31
-; CHECK-NEXT:    subs r0, r3, r1, asr #31
+; CHECK-NEXT:    eor r3, r3, r1
+; CHECK-NEXT:    subs r0, r3, r1
 ; CHECK-NEXT:    vmov.32 d0[0], r0
-; CHECK-NEXT:    eor r0, r6, r1, asr #31
-; CHECK-NEXT:    sbc r0, r0, r1, asr #31
+; CHECK-NEXT:    eor r0, r6, r1
+; CHECK-NEXT:    sbc r0, r0, r1
 ; CHECK-NEXT:    vmov.32 d1[1], r2
 ; CHECK-NEXT:    vmov.32 d0[1], r0
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}

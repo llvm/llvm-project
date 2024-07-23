@@ -2404,6 +2404,7 @@ void LSRInstance::OptimizeShadowIV() {
 
     /* Add new PHINode. */
     PHINode *NewPH = PHINode::Create(DestTy, 2, "IV.S.", PH->getIterator());
+    NewPH->setDebugLoc(PH->getDebugLoc());
 
     /* create new increment. '++d' in above example. */
     Constant *CFP = ConstantFP::get(DestTy, C->getZExtValue());
@@ -2411,6 +2412,7 @@ void LSRInstance::OptimizeShadowIV() {
         Incr->getOpcode() == Instruction::Add ? Instruction::FAdd
                                               : Instruction::FSub,
         NewPH, CFP, "IV.S.next.", Incr->getIterator());
+    NewIncr->setDebugLoc(Incr->getDebugLoc());
 
     NewPH->addIncoming(NewInit, PH->getIncomingBlock(Entry));
     NewPH->addIncoming(NewIncr, PH->getIncomingBlock(Latch));
@@ -5953,8 +5955,8 @@ void LSRInstance::RewriteForPHI(
       // formulae will not be implemented completely and some instructions
       // will not be eliminated.
       if (needUpdateFixups) {
-        for (size_t LUIdx = 0, NumUses = Uses.size(); LUIdx != NumUses; ++LUIdx)
-          for (LSRFixup &Fixup : Uses[LUIdx].Fixups)
+        for (LSRUse &LU : Uses)
+          for (LSRFixup &Fixup : LU.Fixups)
             // If fixup is supposed to rewrite some operand in the phi
             // that was just updated, it may be already moved to
             // another phi node. Such fixup requires update.

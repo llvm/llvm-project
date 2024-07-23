@@ -34,7 +34,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "printfToRuntime"
-#define DWORD_ALIGN 4
+enum { DWORD_ALIGN = 4 };
 
 namespace {
 class AMDGPUPrintfRuntimeBinding final : public ModulePass {
@@ -50,7 +50,7 @@ private:
 
 class AMDGPUPrintfRuntimeBindingImpl {
 public:
-  AMDGPUPrintfRuntimeBindingImpl() {}
+  AMDGPUPrintfRuntimeBindingImpl() = default;
   bool run(Module &M);
 
 private:

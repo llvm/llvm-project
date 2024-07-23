@@ -93,13 +93,12 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   // shall be run.
   const auto FunctionScope =
       functionDecl(
-          hasBody(
-              compoundStmt(forEachDescendant(
-                               declStmt(containsAnyDeclaration(
-                                            LocalValDecl.bind("local-value")),
-                                        unless(has(decompositionDecl())))
-                                   .bind("decl-stmt")))
-                  .bind("scope")))
+          hasBody(stmt(forEachDescendant(
+                           declStmt(containsAnyDeclaration(
+                                        LocalValDecl.bind("local-value")),
+                                    unless(has(decompositionDecl())))
+                               .bind("decl-stmt")))
+                      .bind("scope")))
           .bind("function-decl");
 
   Finder->addMatcher(FunctionScope, this);
@@ -109,7 +108,7 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
 enum class VariableCategory { Value, Reference, Pointer };
 
 void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *LocalScope = Result.Nodes.getNodeAs<CompoundStmt>("scope");
+  const auto *LocalScope = Result.Nodes.getNodeAs<Stmt>("scope");
   const auto *Variable = Result.Nodes.getNodeAs<VarDecl>("local-value");
   const auto *Function = Result.Nodes.getNodeAs<FunctionDecl>("function-decl");
 
@@ -198,7 +197,7 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-void ConstCorrectnessCheck::registerScope(const CompoundStmt *LocalScope,
+void ConstCorrectnessCheck::registerScope(const Stmt *LocalScope,
                                           ASTContext *Context) {
   auto &Analyzer = ScopesCache[LocalScope];
   if (!Analyzer)

@@ -941,6 +941,9 @@ class GroupSection : public SectionBase {
   SmallVector<SectionBase *, 3> GroupMembers;
 
 public:
+  template <class T>
+  using ConstRange = iterator_range<
+      pointee_iterator<typename llvm::SmallVector<T *, 3>::const_iterator>>;
   // TODO: Contents is present in several classes of the hierarchy.
   // This needs to be refactored to avoid duplication.
   ArrayRef<uint8_t> Contents;
@@ -964,7 +967,9 @@ public:
       const DenseMap<SectionBase *, SectionBase *> &FromTo) override;
   void onRemove() override;
 
-  size_t getMembersCount() const { return GroupMembers.size(); }
+  ConstRange<SectionBase> members() const {
+    return make_pointee_range(GroupMembers);
+  }
 
   static bool classof(const SectionBase *S) {
     return S->OriginalType == ELF::SHT_GROUP;
