@@ -1728,6 +1728,8 @@ public:
   void EnableBacktrackAtThisPos(bool Unannotated = false);
 
 private:
+  std::pair<CachedTokensTy::size_type, bool> LastBacktrackPos();
+
   CachedTokensTy PopUnannotatedBacktrackTokens();
 
 public:
@@ -1853,7 +1855,7 @@ public:
     assert(isBacktrackEnabled() &&
            "Should only be called when tokens are cached for backtracking");
     assert(signed(CachedLexPos) - signed(N) >=
-               signed(BacktrackPositions.back() >> 1) &&
+               signed(LastBacktrackPos().first) &&
            "Should revert tokens up to the last backtrack position, not more");
     assert(signed(CachedLexPos) - signed(N) >= 0 &&
            "Corrupted backtrack positions ?");
