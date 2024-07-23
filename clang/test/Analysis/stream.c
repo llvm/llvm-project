@@ -502,6 +502,7 @@ void gh_93408_regression_ZeroSized(struct ZeroSized *buffer) {
 extern FILE *stdout_like_ptr;
 void no_aliasing(void) {
   FILE *f = fopen("file", "r");
+  clang_analyzer_eval(f == stdin);           // expected-warning {{FALSE}} no-TRUE
   clang_analyzer_eval(f == stdout);          // expected-warning {{FALSE}} no-TRUE
   clang_analyzer_eval(f == stderr);          // expected-warning {{FALSE}} no-TRUE
   clang_analyzer_eval(f == stdout_like_ptr); // expected-warning {{FALSE}} expected-warning {{TRUE}}
