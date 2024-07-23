@@ -13,8 +13,6 @@
 ; int foo;
 ; $ clang -g -S -emit-llvm foo.c -o foo.ll
 
-target triple = "x86_64-unknown-linux-gnu"
-
 @foo = dso_local global i32 0, align 4, !dbg !0
 
 !llvm.dbg.cu = !{!2}
