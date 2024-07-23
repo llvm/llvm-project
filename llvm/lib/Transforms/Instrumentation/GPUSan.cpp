@@ -206,7 +206,7 @@ private:
   FunctionCallee getNewFn(PtrOrigin PO) {
     assert(PO <= GLOBAL && "Origin does not need handling.");
     return getOrCreateFn(NewFn[PO], "ompx_new" + getSuffix(PO), getPtrTy(PO),
-                         {getPtrTy(PO), Int64Ty, Int64Ty, Int64Ty});
+                         {getPtrTy(PO), Int64Ty, Int64Ty, Int64Ty, Int64Ty});
   }
   FunctionCallee getFreeFn(PtrOrigin PO) {
     assert(PO <= GLOBAL && "Origin does not need handling.");
@@ -220,14 +220,14 @@ private:
     assert(PO <= GLOBAL && "Origin does not need handling.");
     return getOrCreateFn(CheckFn[PO], "ompx_check" + getSuffix(PO),
                          getPtrTy(PO),
-                         {getPtrTy(PO), Int64Ty, Int64Ty, Int64Ty});
+                         {getPtrTy(PO), Int64Ty, Int64Ty, Int64Ty, Int64Ty});
   }
   FunctionCallee getCheckWithBaseFn(PtrOrigin PO) {
     assert(PO >= LOCAL && PO <= GLOBAL && "Origin does not need handling.");
     return getOrCreateFn(CheckWithBaseFn[PO],
                          "ompx_check_with_base" + getSuffix(PO), getPtrTy(PO),
                          {getPtrTy(PO), getPtrTy(PO), Int64Ty, Int32Ty, Int64Ty,
-                          Int64Ty, Int64Ty});
+                          Int64Ty, Int64Ty, Int64Ty});
   }
   FunctionCallee getAllocationInfoFn(PtrOrigin PO) {
     assert(PO >= LOCAL && PO <= GLOBAL && "Origin does not need handling.");
@@ -567,7 +567,7 @@ Value *GPUSanImpl::instrumentAllocation(Instruction &I, Value &Size,
   auto *CB =
       createCall(IRB, Fn,
                  {PlainI, &Size, ConstantInt::get(Int64Ty, AllocationId++),
-                  getSourceIndex(I)},
+                  getSourceIndex(I), getPC(IRB)},
                  I.getName() + ".san");
   SmallVector<LifetimeIntrinsic *> Lifetimes;
   I.replaceUsesWithIf(
@@ -636,12 +636,13 @@ void GPUSanImpl::instrumentAccess(LoopInfo &LI, Instruction &I, int PtrIdx,
   if (Start) {
     CB = createCall(IRB, getCheckWithBaseFn(PO),
                     {PlainPtrOp, Start, Length, Tag, Size,
-                     ConstantInt::get(Int64Ty, AccessId), getSourceIndex(I)},
+                     ConstantInt::get(Int64Ty, AccessId), getSourceIndex(I),
+                     getPC(IRB)},
                     I.getName() + ".san");
   } else {
     CB = createCall(IRB, getCheckFn(PO),
                     {PlainPtrOp, Size, ConstantInt::get(Int64Ty, AccessId),
-                     getSourceIndex(I)},
+                     getSourceIndex(I), getPC(IRB)},
                     I.getName() + ".san");
   }
   I.setOperand(PtrIdx,
