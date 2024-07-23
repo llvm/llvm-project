@@ -57,7 +57,8 @@ struct MDBuilder {
     appendMDs(MDs, More...);
   }
   template <typename... Ts>
-  void appendMDs(SmallVectorImpl<Metadata *> &MDs, nullptr_t V, Ts... More) {
+  void appendMDs(SmallVectorImpl<Metadata *> &MDs, std::nullptr_t V,
+                 Ts... More) {
     MDs.push_back(nullptr);
     appendMDs(MDs, More...);
   }
