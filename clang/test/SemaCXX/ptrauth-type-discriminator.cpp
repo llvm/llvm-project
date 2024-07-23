@@ -61,4 +61,8 @@ void test_builtin_ptrauth_type_discriminator(unsigned s) {
   (void)__builtin_ptrauth_type_discriminator(&t); // expected-error {{expected a type}}
   (void)__builtin_ptrauth_type_discriminator(decltype(vmarray)); // expected-error {{cannot pass undiscriminated type 'decltype(vmarray)' (aka 'int[s]')}}
   (void)__builtin_ptrauth_type_discriminator(int *); // expected-error {{cannot pass undiscriminated type 'int *' to '__builtin_ptrauth_type_discriminator'}}
+  (void)__builtin_ptrauth_type_discriminator(); // expected-error {{expected a type}}
+  (void)__builtin_ptrauth_type_discriminator(int (*)(int), int (*)(int));
+  // expected-error@-1 {{expected ')'}}
+  // expected-note@-2 {{to match this '('}}
 }
