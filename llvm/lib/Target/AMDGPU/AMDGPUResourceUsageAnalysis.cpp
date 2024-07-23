@@ -65,10 +65,7 @@ static const Function *getCalleeFunction(const MachineOperand &Op) {
     assert(Op.getImm() == 0);
     return nullptr;
   }
-  const GlobalValue *GV = Op.getGlobal();
-  while (auto *GA = dyn_cast<GlobalAlias>(GV))
-    GV = cast<GlobalValue>(GA->getOperand(0));
-  return cast<Function>(GV);
+  return cast<Function>(Op.getGlobal()->stripPointerCastsAndAliases());
 }
 
 static bool hasAnyNonFlatUseOfReg(const MachineRegisterInfo &MRI,

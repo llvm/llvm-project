@@ -1669,8 +1669,8 @@ void AsmPrinter::emitPCSections(const MachineFunction &MF) {
 }
 
 /// Returns true if function begin and end labels should be emitted.
-static bool needFuncLabels(const MachineFunction &MF) {
-  MachineModuleInfo &MMI = MF.getMMI();
+static bool needFuncLabels(const MachineFunction &MF,
+                           const MachineModuleInfo &MMI) {
   if (!MF.getLandingPads().empty() || MF.hasEHFunclets() ||
       MMI.hasDebugInfo() ||
       MF.getFunction().hasMetadata(LLVMContext::MD_pcsections))
@@ -1944,7 +1944,7 @@ void AsmPrinter::emitFunctionBody() {
   // are automatically sized.
   bool EmitFunctionSize = MAI->hasDotTypeDotSizeDirective() && !TT.isWasm();
 
-  if (needFuncLabels(*MF) || EmitFunctionSize) {
+  if (needFuncLabels(*MF, *MMI) || EmitFunctionSize) {
     // Create a symbol for the end of function.
     CurrentFnEnd = createTempSymbol("func_end");
     OutStreamer->emitLabel(CurrentFnEnd);
@@ -2587,8 +2587,9 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   bool NeedsLocalForSize = MAI->needsLocalForSize();
   if (F.hasFnAttribute("patchable-function-entry") ||
       F.hasFnAttribute("function-instrument") ||
-      F.hasFnAttribute("xray-instruction-threshold") || needFuncLabels(MF) ||
-      NeedsLocalForSize || MF.getTarget().Options.EmitStackSizeSection ||
+      F.hasFnAttribute("xray-instruction-threshold") ||
+      needFuncLabels(MF, *MMI) || NeedsLocalForSize ||
+      MF.getTarget().Options.EmitStackSizeSection ||
       MF.getTarget().Options.BBAddrMap || MF.hasBBLabels()) {
     CurrentFnBegin = createTempSymbol("func_begin");
     if (NeedsLocalForSize)
@@ -2859,8 +2860,8 @@ bool AsmPrinter::emitSpecialLLVMGlobal(const GlobalVariable *GV) {
     auto *Arr = cast<ConstantArray>(GV->getInitializer());
     for (auto &U : Arr->operands()) {
       auto *C = cast<Constant>(U);
-      auto *Src = cast<Function>(C->getOperand(0)->stripPointerCasts());
-      auto *Dst = cast<Function>(C->getOperand(1)->stripPointerCasts());
+      auto *Src = cast<GlobalValue>(C->getOperand(0)->stripPointerCasts());
+      auto *Dst = cast<GlobalValue>(C->getOperand(1)->stripPointerCasts());
       int Kind = cast<ConstantInt>(C->getOperand(2))->getZExtValue();
 
       if (Src->hasDLLImportStorageClass()) {
@@ -3143,7 +3144,7 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
     return MCSymbolRefExpr::create(getSymbol(GV), Ctx);
 
   if (const BlockAddress *BA = dyn_cast<BlockAddress>(CV))
-    return MCSymbolRefExpr::create(GetBlockAddressSymbol(BA), Ctx);
+    return lowerBlockAddressConstant(*BA);
 
   if (const auto *Equiv = dyn_cast<DSOLocalEquivalent>(CV))
     return getObjFileLowering().lowerDSOLocalEquivalent(Equiv, TM);
@@ -3823,6 +3824,10 @@ MCSymbol *AsmPrinter::GetBlockAddressSymbol(const BlockAddress *BA) const {
 
 MCSymbol *AsmPrinter::GetBlockAddressSymbol(const BasicBlock *BB) const {
   return const_cast<AsmPrinter *>(this)->getAddrLabelSymbol(BB);
+}
+
+const MCExpr *AsmPrinter::lowerBlockAddressConstant(const BlockAddress &BA) {
+  return MCSymbolRefExpr::create(GetBlockAddressSymbol(&BA), OutContext);
 }
 
 /// GetCPISymbol - Return the symbol for the specified constant pool entry.

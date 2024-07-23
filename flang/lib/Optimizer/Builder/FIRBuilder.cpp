@@ -455,13 +455,19 @@ mlir::Value fir::FirOpBuilder::convertWithSemantics(
   return createConvert(loc, toTy, val);
 }
 
-mlir::Value fir::FirOpBuilder::createConvert(mlir::Location loc,
-                                             mlir::Type toTy, mlir::Value val) {
+mlir::Value fir::factory::createConvert(mlir::OpBuilder &builder,
+                                        mlir::Location loc, mlir::Type toTy,
+                                        mlir::Value val) {
   if (val.getType() != toTy) {
     assert(!fir::isa_derived(toTy));
-    return create<fir::ConvertOp>(loc, toTy, val);
+    return builder.create<fir::ConvertOp>(loc, toTy, val);
   }
   return val;
+}
+
+mlir::Value fir::FirOpBuilder::createConvert(mlir::Location loc,
+                                             mlir::Type toTy, mlir::Value val) {
+  return fir::factory::createConvert(*this, loc, toTy, val);
 }
 
 void fir::FirOpBuilder::createStoreWithConvert(mlir::Location loc,

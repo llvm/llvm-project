@@ -118,7 +118,7 @@ public:
   bool operator!=(const Pointer &P) const { return !(P == *this); }
 
   /// Converts the pointer to an APValue.
-  APValue toAPValue() const;
+  APValue toAPValue(const ASTContext &ASTCtx) const;
 
   /// Converts the pointer to a string usable in diagnostics.
   std::string toDiagnosticString(const ASTContext &Ctx) const;
@@ -649,6 +649,7 @@ private:
   friend class MemberPointer;
   friend class InterpState;
   friend struct InitMap;
+  friend class DynamicAllocator;
 
   Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
 

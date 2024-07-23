@@ -136,6 +136,12 @@ enum Fixups {
   fixup_loongarch_tls_desc_ld,
   // 12-bit fixup corresponding to %desc_call(foo) for instruction jirl.
   fixup_loongarch_tls_desc_call,
+  // 20-bit fixup corresponding to %le_hi20_r(foo) for instruction lu12i.w.
+  fixup_loongarch_tls_le_hi20_r,
+  // Fixup corresponding to %le_add_r(foo) for instruction PseudoAddTPRel_W/D.
+  fixup_loongarch_tls_le_add_r,
+  // 12-bit fixup corresponding to %le_lo12_r(foo) for instruction addi.w/d.
+  fixup_loongarch_tls_le_lo12_r,
 };
 } // end namespace LoongArch
 } // end namespace llvm

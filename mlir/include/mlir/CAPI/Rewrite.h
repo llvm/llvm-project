@@ -15,9 +15,10 @@
 #ifndef MLIR_CAPI_REWRITE_H
 #define MLIR_CAPI_REWRITE_H
 
+#include "mlir-c/Rewrite.h"
 #include "mlir/CAPI/Wrap.h"
 #include "mlir/IR/PatternMatch.h"
 
-DEFINE_C_API_PTR_METHODS(MlirRewriterBase, mlir::RewriterBase);
+DEFINE_C_API_PTR_METHODS(MlirRewriterBase, mlir::RewriterBase)
 
 #endif // MLIR_CAPIREWRITER_H

@@ -412,6 +412,7 @@ public:
   LegalizeResult lowerUnmergeValues(MachineInstr &MI);
   LegalizeResult lowerExtractInsertVectorElt(MachineInstr &MI);
   LegalizeResult lowerShuffleVector(MachineInstr &MI);
+  LegalizeResult lowerVECTOR_COMPRESS(MachineInstr &MI);
   Register getDynStackAllocTargetPtr(Register SPReg, Register AllocSize,
                                      Align Alignment, LLT PtrTy);
   LegalizeResult lowerDynStackAlloc(MachineInstr &MI);

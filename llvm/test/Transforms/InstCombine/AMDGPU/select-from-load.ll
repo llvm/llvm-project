@@ -25,8 +25,8 @@ entry:
   br label %for.cond10
 
 for.cond10:                                       ; preds = %for.cond10, %entry
-  %3 = load i64, ptr %retval.0.i
-  store i64 %3, ptr addrspace(1) null
+  %load.0 = load i64, ptr %retval.0.i
+  store i64 %load.0, ptr addrspace(1) null
   br label %for.cond10
 }
 

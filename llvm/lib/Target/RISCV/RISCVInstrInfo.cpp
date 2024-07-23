@@ -1474,10 +1474,8 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
   if (!MI.memoperands_empty()) {
     MachineMemOperand *MMO = *(MI.memoperands_begin());
-    const MachineFunction &MF = *MI.getParent()->getParent();
-    const auto &ST = MF.getSubtarget<RISCVSubtarget>();
-    if (ST.hasStdExtZihintntl() && MMO->isNonTemporal()) {
-      if (ST.hasStdExtCOrZca() && ST.enableRVCHintInstrs()) {
+    if (STI.hasStdExtZihintntl() && MMO->isNonTemporal()) {
+      if (STI.hasStdExtCOrZca() && STI.enableRVCHintInstrs()) {
         if (isCompressibleInst(MI, STI))
           return 4; // c.ntl.all + c.load/c.store
         return 6;   // c.ntl.all + load/store
