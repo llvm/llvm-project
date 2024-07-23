@@ -316,7 +316,7 @@ public:
   /// allocas for the exception info
   struct CIRExceptionInfo {
     mlir::Value addr{};
-    mlir::cir::CatchOp catchOp{};
+    mlir::cir::TryOp catchOp{};
   };
 
   enum class EvaluationOrder {
@@ -940,7 +940,7 @@ public:
 
   mlir::LogicalResult buildCXXTryStmtUnderScope(const clang::CXXTryStmt &S);
   mlir::LogicalResult buildCXXTryStmt(const clang::CXXTryStmt &S);
-  void enterCXXTryStmt(const CXXTryStmt &S, mlir::cir::CatchOp catchOp,
+  void enterCXXTryStmt(const CXXTryStmt &S, mlir::cir::TryOp catchOp,
                        bool IsFnTryBlock = false);
   void exitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock = false);
 

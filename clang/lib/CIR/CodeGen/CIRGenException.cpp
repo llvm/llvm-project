@@ -257,8 +257,9 @@ mlir::Block *CIRGenFunction::getEHResumeBlock(bool isCleanup) {
   // pointer but only use it to denote we're tracking things, but there
   // shouldn't be any changes to that block after work done in this function.
   auto catchOp = currLexScope->getExceptionInfo().catchOp;
-  assert(catchOp && catchOp.getNumRegions() && "expected at least one region");
-  auto &fallbackRegion = catchOp.getRegion(catchOp.getNumRegions() - 1);
+  unsigned numCatchRegions = catchOp.getCatchRegions().size();
+  assert(catchOp && numCatchRegions && "expected at least one region");
+  auto &fallbackRegion = catchOp.getCatchRegions()[numCatchRegions - 1];
 
   auto *resumeBlock = &fallbackRegion.getBlocks().back();
   if (!resumeBlock->empty())
@@ -322,7 +323,6 @@ CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
 
   auto numHandlers = S.getNumHandlers();
   auto tryLoc = getLoc(S.getBeginLoc());
-  auto scopeLoc = getLoc(S.getSourceRange());
 
   mlir::OpBuilder::InsertPoint beginInsertTryBody;
   auto ehPtrTy = mlir::cir::PointerType::get(
@@ -335,28 +335,21 @@ CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
   // info but don't emit the bulk right away, for now only make sure the
   // scope returns the exception information.
   auto tryScope = builder.create<mlir::cir::TryOp>(
-      scopeLoc, /*scopeBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Type &yieldTy, mlir::Location loc) {
+      tryLoc, /*scopeBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
         // Allocate space for our exception info that might be passed down
         // to `cir.try_call` everytime a call happens.
-        yieldTy = ehPtrTy;
         exceptionInfoInsideTry = b.create<mlir::cir::AllocaOp>(
-            loc, /*addr type*/ getBuilder().getPointerTo(yieldTy),
-            /*var type*/ yieldTy, "__exception_ptr",
+            loc, /*addr type*/ getBuilder().getPointerTo(ehPtrTy),
+            /*var type*/ ehPtrTy, "__exception_ptr",
             CGM.getSize(CharUnits::One()), nullptr);
 
         beginInsertTryBody = getBuilder().saveInsertionPoint();
-      });
-
-  // The catch {} parts consume the exception information provided by a
-  // try scope. Also don't emit the code right away for catch clauses, for
-  // now create the regions and consume the try scope result.
-  // Note that clauses are later populated in
-  // CIRGenFunction::buildLandingPad.
-  auto catchOp = builder.create<mlir::cir::CatchOp>(
-      tryLoc,
-      tryScope->getResult(
-          0), // FIXME(cir): we can do better source location here.
+      },
+      // Don't emit the code right away for catch clauses, for
+      // now create the regions and consume the try scope result.
+      // Note that clauses are later populated in
+      // CIRGenFunction::buildLandingPad.
       [&](mlir::OpBuilder &b, mlir::Location loc,
           mlir::OperationState &result) {
         mlir::OpBuilder::InsertionGuard guard(b);
@@ -372,28 +365,24 @@ CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
 
   // Finally emit the body for try/catch.
   auto emitTryCatchBody = [&]() -> mlir::LogicalResult {
-    auto loc = catchOp.getLoc();
+    auto loc = tryScope.getLoc();
     mlir::OpBuilder::InsertionGuard guard(getBuilder());
     getBuilder().restoreInsertionPoint(beginInsertTryBody);
     CIRGenFunction::LexicalScope lexScope{*this, loc,
                                           getBuilder().getInsertionBlock()};
 
     {
-      lexScope.setExceptionInfo({exceptionInfoInsideTry, catchOp});
-      // Attach the basic blocks for the catchOp regions into ScopeCatch
-      // info.
-      enterCXXTryStmt(S, catchOp);
+      lexScope.setExceptionInfo({exceptionInfoInsideTry, tryScope});
+      // Attach the basic blocks for the catch regions.
+      enterCXXTryStmt(S, tryScope);
       // Emit the body for the `try {}` part.
       if (buildStmt(S.getTryBlock(), /*useCurrentScope=*/true).failed())
         return mlir::failure();
-
-      auto v = getBuilder().create<mlir::cir::LoadOp>(loc, ehPtrTy,
-                                                      exceptionInfoInsideTry);
-      getBuilder().create<mlir::cir::YieldOp>(loc, v.getResult());
+      getBuilder().create<mlir::cir::YieldOp>(loc);
     }
 
     {
-      lexScope.setExceptionInfo({tryScope->getResult(0), catchOp});
+      lexScope.setExceptionInfo({nullptr, tryScope});
       // Emit catch clauses.
       exitCXXTryStmt(S);
     }
@@ -452,7 +441,7 @@ static void buildCatchDispatchBlock(CIRGenFunction &CGF,
       // If the next handler is a catch-all, we're at the end, and the
       // next block is that handler.
     } else if (catchScope.getHandler(i + 1).isCatchAll()) {
-      // Block already created when creating CatchOp, just mark this
+      // Block already created when creating catch regions, just mark this
       // is the end.
       nextIsEnd = true;
     }
@@ -464,14 +453,14 @@ static void buildCatchDispatchBlock(CIRGenFunction &CGF,
 }
 
 void CIRGenFunction::enterCXXTryStmt(const CXXTryStmt &S,
-                                     mlir::cir::CatchOp catchOp,
+                                     mlir::cir::TryOp catchOp,
                                      bool IsFnTryBlock) {
   unsigned NumHandlers = S.getNumHandlers();
   EHCatchScope *CatchScope = EHStack.pushCatch(NumHandlers);
   for (unsigned I = 0; I != NumHandlers; ++I) {
     const CXXCatchStmt *C = S.getHandler(I);
 
-    mlir::Block *Handler = &catchOp.getRegion(I).getBlocks().front();
+    mlir::Block *Handler = &catchOp.getCatchRegions()[I].getBlocks().front();
     if (C->getExceptionDecl()) {
       // FIXME: Dropping the reference type on the type into makes it
       // impossible to correctly implement catch-by-reference
@@ -510,7 +499,18 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
   if (!CatchScope.hasEHBranches()) {
     CatchScope.clearHandlerBlocks();
     EHStack.popCatch();
-    currLexScope->getExceptionInfo().catchOp->erase();
+    // Drop all basic block from all catch regions.
+    auto tryOp = currLexScope->getExceptionInfo().catchOp;
+    SmallVector<mlir::Block *> eraseBlocks;
+    for (mlir::Region &r : tryOp.getCatchRegions()) {
+      if (r.empty())
+        continue;
+      for (mlir::Block &b : r.getBlocks())
+        eraseBlocks.push_back(&b);
+    }
+    for (mlir::Block *b : eraseBlocks)
+      b->erase();
+    tryOp.setCatchTypesAttr({});
     return;
   }
 
@@ -630,43 +630,13 @@ mlir::Operation *CIRGenFunction::buildLandingPad() {
       return lpad;
   }
 
-  // If there's an existing CatchOp, it means we got a `cir.try` scope
+  // If there's an existing TryOp, it means we got a `cir.try` scope
   // that leads to this "landing pad" creation site. Otherwise, exceptions
-  // are enabled but a throwing function is called anyways.
-  auto catchOp = currLexScope->getExceptionInfo().catchOp;
-  if (!catchOp) {
-    auto loc = *currSrcLoc;
-    auto ehPtrTy = mlir::cir::PointerType::get(
-        getBuilder().getContext(),
-        getBuilder().getType<::mlir::cir::ExceptionInfoType>());
-
-    mlir::Value exceptionAddr;
-    {
-      // Get a new alloca within the current scope.
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      exceptionAddr = buildAlloca(
-          "__exception_ptr", ehPtrTy, loc, CharUnits::One(),
-          builder.getBestAllocaInsertPoint(builder.getInsertionBlock()));
-    }
-
-    {
-      // Insert catch at the end of the block, and place the insert pointer
-      // back to where it was.
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      auto exceptionPtr =
-          builder.create<mlir::cir::LoadOp>(loc, ehPtrTy, exceptionAddr);
-      catchOp = builder.create<mlir::cir::CatchOp>(
-          loc, exceptionPtr,
-          [&](mlir::OpBuilder &b, mlir::Location loc,
-              mlir::OperationState &result) {
-            // There's no source code level catch here, create one region for
-            // the resume block.
-            mlir::OpBuilder::InsertionGuard guard(b);
-            auto *r = result.addRegion();
-            builder.createBlock(r);
-          });
-    }
-    currLexScope->setExceptionInfo({exceptionAddr, catchOp});
+  // are enabled but a throwing function is called anyways (common pattern
+  // with function local static initializers).
+  auto tryOp = currLexScope->getExceptionInfo().catchOp;
+  if (!tryOp) {
+    llvm_unreachable("NYI");
   }
 
   {
@@ -752,17 +722,17 @@ mlir::Operation *CIRGenFunction::buildLandingPad() {
       assert(!MissingFeatures::setLandingPadCleanup());
     }
 
-    assert((clauses.size() > 0 || hasCleanup) && "CatchOp has no clauses!");
+    assert((clauses.size() > 0 || hasCleanup) && "no catch clauses!");
 
     // If there's no catch_all, attach the unwind region. This needs to be the
-    // last region in the CatchOp operation.
+    // last region in the TryOp operation catch list.
     if (!hasCatchAll) {
       auto catchUnwind = mlir::cir::CatchUnwindAttr::get(builder.getContext());
       clauses.push_back(catchUnwind);
     }
 
-    // Add final array of clauses into catchOp.
-    catchOp.setCatchersAttr(
+    // Add final array of clauses into TryOp.
+    tryOp.setCatchTypesAttr(
         mlir::ArrayAttr::get(builder.getContext(), clauses));
 
     // In traditional LLVM codegen. this tells the backend how to generate the
@@ -772,7 +742,7 @@ mlir::Operation *CIRGenFunction::buildLandingPad() {
     (void)getEHDispatchBlock(EHStack.getInnermostEHScope());
   }
 
-  return catchOp;
+  return tryOp;
 }
 
 // Differently from LLVM traditional codegen, there are no dispatch blocks

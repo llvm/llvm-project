@@ -780,8 +780,8 @@ def ConditionOp : CIR_Op<"condition", [
 
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
     ParentOneOf<["IfOp", "ScopeOp", "SwitchOp", "WhileOp", "ForOp", "AwaitOp",
-                 "TernaryOp", "GlobalOp", "DoWhileOp", "CatchOp", "TryOp",
-                 "ArrayCtor", "ArrayDtor"]>]> {
+                 "TernaryOp", "GlobalOp", "DoWhileOp", "TryOp", "ArrayCtor",
+                 "ArrayDtor"]>]> {
   let summary = "Represents the default branching behaviour of a region";
   let description = [{
     The `cir.yield` operation terminates regions on different CIR operations,
@@ -871,7 +871,7 @@ def ContinueOp : CIR_Op<"continue", [Terminator]> {
 //===----------------------------------------------------------------------===//
 
 def ResumeOp : CIR_Op<"resume", [ReturnLike, Terminator,
-                                 ParentOneOf<["CatchOp"]>]> {
+                                 ParentOneOf<["TryOp"]>]> {
   let summary = "Resumes execution after not catching exceptions";
   let description = [{
     The `cir.resume` operation terminates a region on `cir.catch`, "resuming"
@@ -3205,6 +3205,17 @@ def AwaitOp : CIR_Op<"await",
 // TryOp
 //===----------------------------------------------------------------------===//
 
+// Represents the unwind region where unwind continues or
+// the program std::terminate's.
+def CatchUnwind : CIRUnitAttr<"CatchUnwind", "unwind"> {
+  let storageType = [{ CatchUnwind }];
+}
+
+// Represents the catch_all region.
+def CatchAllAttr : CIRUnitAttr<"CatchAll", "all"> {
+  let storageType = [{ CatchAllAttr }];
+}
+
 def TryOp : CIR_Op<"try",
        [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
         RecursivelySpeculatable, AutomaticAllocationScope,
@@ -3228,65 +3239,24 @@ def TryOp : CIR_Op<"try",
     ```
   }];
 
-  let regions = (region AnyRegion:$body);
-  let results = (outs ExceptionInfoPtr:$result);
+  let arguments = (ins OptionalAttr<ArrayAttr>:$catch_types);
+  let regions = (region AnyRegion:$try_region,
+                        VariadicRegion<AnyRegion>:$catch_regions);
 
   let assemblyFormat = [{
-    $body `:` functional-type(operands, results) attr-dict
+    $try_region
+    custom<CatchRegions>($catch_regions, $catch_types)
+    attr-dict
   }];
 
   // Everything already covered elsewhere.
   let hasVerifier = 0;
   let builders = [
     OpBuilder<(ins
-              "function_ref<void(OpBuilder &, Type &, Location)>":$tryBuilder)>,
+              "function_ref<void(OpBuilder &, Location)>":$tryBuilder,
+              "function_ref<void(OpBuilder &, Location, OperationState &)>"
+              :$catchBuilder)>,
   ];
-}
-
-//===----------------------------------------------------------------------===//
-// CatchOp
-//===----------------------------------------------------------------------===//
-
-// Represents the unwind region where unwind continues or
-// the program std::terminate's.
-def CatchUnwind : CIRUnitAttr<"CatchUnwind", "unwind"> {
-  let storageType = [{ CatchUnwind }];
-}
-
-// Represents the catch_all region.
-def CatchAllAttr : CIRUnitAttr<"CatchAll", "all"> {
-  let storageType = [{ CatchAllAttr }];
-}
-
-def CatchOp : CIR_Op<"catch",
-      [SameVariadicOperandSize,
-       DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-       RecursivelySpeculatable, NoRegionArguments]> {
-  let summary = "Catch operation";
-  let description = [{
-  }];
-
-  let arguments = (ins CIR_AnyType:$exception_info,
-                       OptionalAttr<ArrayAttr>:$catchers);
-  let regions = (region VariadicRegion<AnyRegion>:$regions);
-
-  // Already verified elsewhere
-  let hasVerifier = 0;
-
-  let skipDefaultBuilders = 1;
-  let builders = [
-    OpBuilder<(ins
-      "Value":$exception_info,
-      "function_ref<void(OpBuilder &, Location, OperationState &)>"
-      :$catchBuilder)>
-  ];
-
-  let assemblyFormat = [{
-    `(`
-      $exception_info `:` type($exception_info) `,`
-      custom<CatchOp>($regions, $catchers)
-    `)` attr-dict
-  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -3306,10 +3276,9 @@ def CatchParamOp : CIR_Op<"catch_param"> {
     ```
   }];
 
-  let arguments = (ins ExceptionInfoPtr:$exception_info);
   let results = (outs CIR_AnyType:$param);
   let assemblyFormat = [{
-    `(` $exception_info `)` `->` qualified(type($param)) attr-dict
+    `->` qualified(type($param)) attr-dict
   }];
 
   let hasVerifier = 0;

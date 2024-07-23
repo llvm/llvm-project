@@ -651,12 +651,10 @@ struct CallEndCatch final : EHScopeStack::Cleanup {
 /// call can be marked as nounwind even if EndMightThrow is true.
 ///
 /// \param EndMightThrow - true if __cxa_end_catch might throw
-static mlir::Value CallBeginCatch(CIRGenFunction &CGF, mlir::Value Exn,
-                                  mlir::Type ParamTy, bool EndMightThrow) {
-  // llvm::CallInst *call =
-  //     CGF.EmitNounwindRuntimeCall(getBeginCatchFn(CGF.CGM), Exn);
+static mlir::Value CallBeginCatch(CIRGenFunction &CGF, mlir::Type ParamTy,
+                                  bool EndMightThrow) {
   auto catchParam = CGF.getBuilder().create<mlir::cir::CatchParamOp>(
-      Exn.getLoc(), ParamTy, Exn);
+      CGF.getBuilder().getUnknownLoc(), ParamTy);
 
   CGF.EHStack.pushCleanup<CallEndCatch>(
       NormalAndEHCleanup,
@@ -690,7 +688,7 @@ static void InitCatchParam(CIRGenFunction &CGF, const VarDecl &CatchParam,
     // If the catch type is a pointer type, __cxa_begin_catch returns
     // the pointer by value.
     if (CatchType->hasPointerRepresentation()) {
-      auto catchParam = CallBeginCatch(CGF, Exn, CIRCatchTy, false);
+      auto catchParam = CallBeginCatch(CGF, CIRCatchTy, false);
 
       switch (CatchType.getQualifiers().getObjCLifetime()) {
       case Qualifiers::OCL_Strong:
@@ -702,7 +700,8 @@ static void InitCatchParam(CIRGenFunction &CGF, const VarDecl &CatchParam,
       case Qualifiers::OCL_None:
       case Qualifiers::OCL_ExplicitNone:
       case Qualifiers::OCL_Autoreleasing:
-        CGF.getBuilder().createStore(Exn.getLoc(), catchParam, ParamAddr);
+        CGF.getBuilder().createStore(CGF.getBuilder().getUnknownLoc(),
+                                     catchParam, ParamAddr);
         return;
 
       case Qualifiers::OCL_Weak:
@@ -715,8 +714,8 @@ static void InitCatchParam(CIRGenFunction &CGF, const VarDecl &CatchParam,
     }
 
     // Otherwise, it returns a pointer into the exception object.
-    auto catchParam = CallBeginCatch(
-        CGF, Exn, CGF.getBuilder().getPointerTo(CIRCatchTy), false);
+    auto catchParam =
+        CallBeginCatch(CGF, CGF.getBuilder().getPointerTo(CIRCatchTy), false);
     LValue srcLV = CGF.MakeNaturalAlignAddrLValue(catchParam, CatchType);
     LValue destLV = CGF.makeAddrLValue(ParamAddr, CatchType);
     switch (TEK) {
@@ -774,8 +773,7 @@ void CIRGenItaniumCXXABI::emitBeginCatch(CIRGenFunction &CGF,
 
   VarDecl *CatchParam = S->getExceptionDecl();
   if (!CatchParam) {
-    auto Exn = CGF.currLexScope->getExceptionInfo().addr;
-    CallBeginCatch(CGF, Exn, CGF.getBuilder().getVoidPtrTy(), true);
+    CallBeginCatch(CGF, CGF.getBuilder().getVoidPtrTy(), true);
     return;
   }
 

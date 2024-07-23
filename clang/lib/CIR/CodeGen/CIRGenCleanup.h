@@ -206,7 +206,7 @@ public:
   // 'takeHandler' or some such function which removes ownership from the
   // EHCatchScope object if the handlers should live longer than EHCatchScope.
   void clearHandlerBlocks() {
-    // The blocks are owned by CatchOp, nothing to delete.
+    // The blocks are owned by TryOp, nothing to delete.
   }
 
   typedef const Handler *iterator;

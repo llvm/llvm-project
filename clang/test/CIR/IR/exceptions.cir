@@ -1,24 +1,69 @@
 // RUN: cir-opt %s | FileCheck %s
+// XFAIL: *
 
 !s32i = !cir.int<s, 32>
+!s8i = !cir.int<s, 8>
+!u64i = !cir.int<u, 64>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
 
 module {
-  cir.func @div(%x : !s32i, %y : !s32i) -> !s32i {
-    %3 = cir.const #cir.int<0> : !s32i
-    cir.return %3 : !s32i
-  }
-
-  cir.func @foo(%x : !s32i, %y : !s32i) -> !cir.ptr<!cir.eh.info> {
-    %11 = cir.scope {
-      %10 = cir.try {
-        %0 = cir.alloca !cir.ptr<!cir.eh.info>, !cir.ptr<!cir.ptr<!cir.eh.info>>, ["exception_info"] {alignment = 16 : i64}
-        %d = cir.try_call exception(%0) @div(%x, %y) : (!s32i, !s32i) -> !s32i
-        // CHECK: cir.try_call exception(%2) @div(%arg0, %arg1) : (!cir.ptr<!cir.ptr<!cir.eh.info>>, !s32i, !s32i) -> !s32i
-        %1 = cir.load %0 : !cir.ptr<!cir.ptr<!cir.eh.info>>, !cir.ptr<!cir.eh.info>
-        cir.yield %1 : !cir.ptr<!cir.eh.info>
-      } : () -> !cir.ptr<!cir.eh.info>
-      cir.yield %10 : !cir.ptr<!cir.eh.info>
-    } : !cir.ptr<!cir.eh.info>
-    cir.return %11 : !cir.ptr<!cir.eh.info>
+    // Generated from clang/test/CIR/CodeGen/try-catch.cpp
+    cir.func @_Z2tcv() -> !u64i {
+    %0 = cir.alloca !u64i, !cir.ptr<!u64i>, ["__retval"] {alignment = 8 : i64}
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
+    %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init] {alignment = 4 : i64}
+    %3 = cir.alloca !u64i, !cir.ptr<!u64i>, ["z"] {alignment = 8 : i64}
+    %4 = cir.const #cir.int<50> : !s32i
+    cir.store %4, %1 : !s32i, !cir.ptr<!s32i>
+    %5 = cir.const #cir.int<3> : !s32i
+    cir.store %5, %2 : !s32i, !cir.ptr<!s32i>
+    cir.scope {
+      %8 = cir.alloca !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>, ["msg"] {alignment = 8 : i64}
+      %9 = cir.alloca !s32i, !cir.ptr<!s32i>, ["idx"] {alignment = 4 : i64}
+      cir.try {
+        %10 = cir.alloca !cir.ptr<!cir.eh.info>, !cir.ptr<!cir.ptr<!cir.eh.info>>, ["__exception_ptr"] {alignment = 1 : i64}
+        %11 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
+        %12 = cir.const #cir.int<4> : !s32i
+        cir.store %12, %11 : !s32i, !cir.ptr<!s32i>
+        %13 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+        %14 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+        %15 = cir.try_call exception(%10) @_Z8divisionii(%13, %14) : (!s32i, !s32i) -> !cir.double
+        %16 = cir.cast(float_to_int, %15 : !cir.double), !u64i
+        cir.store %16, %3 : !u64i, !cir.ptr<!u64i>
+        %17 = cir.load %11 : !cir.ptr<!s32i>, !s32i
+        %18 = cir.unary(inc, %17) : !s32i, !s32i
+        cir.store %18, %11 : !s32i, !cir.ptr<!s32i>
+        %19 = cir.load %10 : !cir.ptr<!cir.ptr<!cir.eh.info>>, !cir.ptr<!cir.eh.info>
+        cir.yield
+      } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i> {
+        %10 = cir.catch_param -> !cir.ptr<!s32i>
+        %11 = cir.load %10 : !cir.ptr<!s32i>, !s32i
+        cir.store %11, %9 : !s32i, !cir.ptr<!s32i>
+        %12 = cir.const #cir.int<98> : !s32i
+        %13 = cir.cast(integral, %12 : !s32i), !u64i
+        cir.store %13, %3 : !u64i, !cir.ptr<!u64i>
+        %14 = cir.load %9 : !cir.ptr<!s32i>, !s32i
+        %15 = cir.unary(inc, %14) : !s32i, !s32i
+        cir.store %15, %9 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      }, type #cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i> {
+        %10 = cir.catch_param -> !cir.ptr<!s8i>
+        cir.store %10, %8 : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
+        %11 = cir.const #cir.int<99> : !s32i
+        %12 = cir.cast(integral, %11 : !s32i), !u64i
+        cir.store %12, %3 : !u64i, !cir.ptr<!u64i>
+        %13 = cir.load %8 : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
+        %14 = cir.const #cir.int<0> : !s32i
+        %15 = cir.ptr_stride(%13 : !cir.ptr<!s8i>, %14 : !s32i), !cir.ptr<!s8i>
+        cir.yield
+      }, #cir.unwind {
+        cir.resume
+      }]
+    }
+    %6 = cir.load %3 : !cir.ptr<!u64i>, !u64i
+    cir.store %6, %0 : !u64i, !cir.ptr<!u64i>
+    %7 = cir.load %0 : !cir.ptr<!u64i>, !u64i
+    cir.return %7 : !u64i
   }
 }

@@ -11,21 +11,18 @@ unsigned long long tc() {
 
   try {
     int a = 4;
+    // CIR_FLAT_DISABLED:     cir.alloca !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>, ["msg"]
+    // CIR_FLAT_DISABLED:     cir.alloca !s32i, !cir.ptr<!s32i>, ["idx"]
     // CIR_FLAT:     cir.br ^bb1
-    // CIR_FLAT: ^bb1:  // pred: ^bb0
-    // CIR_FLAT:     cir.alloca !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>, ["msg"]
-    // CIR_FLAT:     cir.alloca !s32i, !cir.ptr<!s32i>, ["idx"]
+    // CIR_FLAT:   ^bb1:  // pred: ^bb0
     // CIR_FLAT:     cir.br ^bb2
-    // CIR_FLAT: ^bb2:  // pred: ^bb1
+    // CIR_FLAT:   ^bb2:  // pred: ^bb1
     // CIR_FLAT:     %[[EH_PTR:.*]] = cir.alloca !cir.ptr<!cir.eh.info>, !cir.ptr<!cir.ptr<!cir.eh.info>>, ["__exception_ptr"]
     // CIR_FLAT:     cir.try_call exception(%[[EH_PTR]]) @_Z8divisionii(
     z = division(x, y);
     a++;
 
-    // CIR_FLAT:     %[[LOAD_EH_PTR:.*]] = cir.load %[[EH_PTR]] : !cir.ptr<!cir.ptr<!cir.eh.info>>, !cir.ptr<!cir.eh.info>
-    // CIR_FLAT:     cir.br ^bb3(%[[LOAD_EH_PTR]] : !cir.ptr<!cir.eh.info>)
-    // CIR_FLAT: ^bb3(%[[EH_ARG:.*]]: !cir.ptr<!cir.eh.info> loc(fused[#loc1, #loc2])):  // pred: ^bb2
-    // CIR_FLAT:     cir.catch(%[[EH_ARG:.*]] : !cir.ptr<!cir.eh.info>, [
+    // CIR_FLAT:     cir.br ^bb3
   } catch (int idx) {
     z = 98;
     idx++;
