@@ -3532,7 +3532,7 @@ def fopenmp_use_tls : Flag<["-"], "fopenmp-use-tls">, Group<f_Group>,
 def fnoopenmp_use_tls : Flag<["-"], "fnoopenmp-use-tls">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 def fopenmp_targets_EQ : CommaJoined<["-"], "fopenmp-targets=">,
-  Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Specify comma-separated list of triples OpenMP offloading targets to be supported">;
 def fopenmp_relocatable_target : Flag<["-"], "fopenmp-relocatable-target">,
   Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>,

@@ -207,3 +207,21 @@
 ! RUN:   | FileCheck --check-prefix=MLINK-BUILTIN-BITCODE  %s
 ! MLINK-BUILTIN-BITCODE:      "{{[^"]*}}flang-new" "-fc1" "-triple" "amdgcn-amd-amdhsa"
 ! MLINK-BUILTIN-BITCODE-SAME: "-mlink-builtin-bitcode" {{.*Inputs.*rocm.*amdgcn.*bitcode.*}}oclc_isa_version_900.bc
+
+! Test that the -fopenmp-targets option is added to host compilation invocations
+! when --offload-arch or -fopenmp-targets are set.
+! RUN: %flang -S -### %s -o %t 2>&1 \
+! RUN: -fopenmp --offload-arch=gfx90a \
+! RUN: --target=x86_64-unknown-linux-gnu \
+! RUN: | FileCheck %s --check-prefix=OFFLOAD-TARGETS
+! RUN: %flang -S -### %s -o %t 2>&1 \
+! RUN: -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa --offload-arch=gfx90a \
+! RUN: --target=x86_64-unknown-linux-gnu \
+! RUN: | FileCheck %s --check-prefix=OFFLOAD-TARGETS
+
+! OFFLOAD-TARGETS: "{{[^"]*}}flang-new" "-fc1" "-triple" "x86_64-unknown-linux-gnu"
+! OFFLOAD-TARGETS-SAME: "-fopenmp-targets=amdgcn-amd-amdhsa"
+! OFFLOAD-TARGETS-NEXT: "{{[^"]*}}flang-new" "-fc1" "-triple" "amdgcn-amd-amdhsa"
+! OFFLOAD-TARGETS-NOT: -fopenmp-targets
+! OFFLOAD-TARGETS: "{{[^"]*}}flang-new" "-fc1" "-triple" "x86_64-unknown-linux-gnu"
+! OFFLOAD-TARGETS-SAME: "-fopenmp-targets=amdgcn-amd-amdhsa"
