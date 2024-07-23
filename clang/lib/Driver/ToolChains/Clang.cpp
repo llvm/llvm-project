@@ -3960,6 +3960,9 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
                    options::OPT_fno_modules_strict_decluse, false))
     CmdArgs.push_back("-fmodules-strict-decluse");
 
+  Args.addOptOutFlag(CmdArgs, options::OPT_fmodulemap_allow_subdirectory_search,
+                     options::OPT_fno_modulemap_allow_subdirectory_search);
+
   // -fno-implicit-modules turns off implicitly compiling modules on demand.
   bool ImplicitModules = false;
   if (!Args.hasFlag(options::OPT_fimplicit_modules,
