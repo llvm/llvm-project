@@ -33,6 +33,7 @@
 #include "InaccurateEraseCheck.h"
 #include "IncDecInConditionsCheck.h"
 #include "IncorrectEnableIfCheck.h"
+#include "IncorrectIteratorsCheck.h"
 #include "IncorrectRoundingsCheck.h"
 #include "InfiniteLoopCheck.h"
 #include "IntegerDivisionCheck.h"
@@ -139,6 +140,8 @@ public:
         "bugprone-inaccurate-erase");
     CheckFactories.registerCheck<IncorrectEnableIfCheck>(
         "bugprone-incorrect-enable-if");
+    CheckFactories.registerCheck<IncorrectIteratorsCheck>(
+        "bugprone-incorrect-iterators");
     CheckFactories.registerCheck<ReturnConstRefFromParameterCheck>(
         "bugprone-return-const-ref-from-parameter");
     CheckFactories.registerCheck<SwitchMissingDefaultCaseCheck>(
