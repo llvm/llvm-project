@@ -418,10 +418,6 @@ public:
         RecordMatchingPHIs(BlockList);
         break;
       }
-      // Match failed: clear all the PHITag values.
-      for (typename BlockListTy::iterator I = BlockList->begin(),
-             E = BlockList->end(); I != E; ++I)
-        (*I)->PHITag = nullptr;
     }
   }
 
@@ -429,10 +425,21 @@ public:
   /// in the BBMap.
   bool CheckIfPHIMatches(PhiT *PHI) {
     SmallVector<PhiT *, 20> WorkList;
+    SmallVector<BBInfo *, 20> TaggedBlocks;
     WorkList.push_back(PHI);
 
+    // Match failed: clear all the PHITag values. Only need to clear visited
+    // blocks.
+    auto OnFalseCleanup = [&]() {
+      for (BBInfo *TaggedBlock : TaggedBlocks) {
+        TaggedBlock->PHITag = nullptr;
+      }
+    };
+
     // Mark that the block containing this PHI has been visited.
-    BBMap[PHI->getParent()]->PHITag = PHI;
+    BBInfo *PHIBlock = BBMap[PHI->getParent()];
+    PHIBlock->PHITag = PHI;
+    TaggedBlocks.push_back(PHIBlock);
 
     while (!WorkList.empty()) {
       PHI = WorkList.pop_back_val();
@@ -450,21 +457,26 @@ public:
         if (PredInfo->AvailableVal) {
           if (IncomingVal == PredInfo->AvailableVal)
             continue;
+          OnFalseCleanup();
           return false;
         }
 
         // Check if the value is a PHI in the correct block.
         PhiT *IncomingPHIVal = Traits::ValueIsPHI(IncomingVal, Updater);
-        if (!IncomingPHIVal || IncomingPHIVal->getParent() != PredInfo->BB)
+        if (!IncomingPHIVal || IncomingPHIVal->getParent() != PredInfo->BB) {
+          OnFalseCleanup();
           return false;
+        }
 
         // If this block has already been visited, check if this PHI matches.
         if (PredInfo->PHITag) {
           if (IncomingPHIVal == PredInfo->PHITag)
             continue;
+          OnFalseCleanup();
           return false;
         }
         PredInfo->PHITag = IncomingPHIVal;
+        TaggedBlocks.push_back(PredInfo);
 
         WorkList.push_back(IncomingPHIVal);
       }
