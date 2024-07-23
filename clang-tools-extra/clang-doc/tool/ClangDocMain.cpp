@@ -45,10 +45,6 @@
 #include <atomic>
 #include <mutex>
 #include <string>
-#include <exception>
-#include <typeinfo>
-#include <stdexcept>
-
 
 using namespace clang::ast_matchers;
 using namespace clang::tooling;
@@ -209,19 +205,6 @@ llvm::Error getHtmlAssetFiles(const char *Argv0,
   return getDefaultAssetFiles(Argv0, CDCtx);
 }
 
-void handle_eptr(std::exception_ptr eptr) // passing by value is OK
-{
-  try
-  {
-    if (eptr)
-      std::rethrow_exception(eptr);
-  }
-  catch(const std::exception& e)
-  {
-    llvm::outs() << "Caught exception: '" << e.what() << "'\n";
-  }
-}
-
 int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   std::error_code OK;
@@ -320,41 +303,36 @@ Example usage for a project using a compile commands database:
   llvm::DefaultThreadPool Pool(llvm::hardware_concurrency(ExecutorConcurrency));
   for (auto &Group : USRToBitcode) {
     Pool.async([&]() {
-      try {
-        std::vector<std::unique_ptr<doc::Info>> Infos;
-        for (auto &Bitcode : Group.getValue()) {
-          llvm::BitstreamCursor Stream(Bitcode);
-          doc::ClangDocBitcodeReader Reader(Stream);
-          auto ReadInfos = Reader.readBitcode();
-          if (!ReadInfos) {
-            llvm::errs() << toString(ReadInfos.takeError()) << "\n";
-            Error = true;
-            return;
-          }
-          std::move(ReadInfos->begin(), ReadInfos->end(),
-                    std::back_inserter(Infos));
-        }
-
-        auto Reduced = doc::mergeInfos(Infos);
-        if (!Reduced) {
-          llvm::errs() << llvm::toString(Reduced.takeError());
+      std::vector<std::unique_ptr<doc::Info>> Infos;
+      for (auto &Bitcode : Group.getValue()) {
+        llvm::BitstreamCursor Stream(Bitcode);
+        doc::ClangDocBitcodeReader Reader(Stream);
+        auto ReadInfos = Reader.readBitcode();
+        if (!ReadInfos) {
+          llvm::errs() << toString(ReadInfos.takeError()) << "\n";
+          Error = true;
           return;
         }
+        std::move(ReadInfos->begin(), ReadInfos->end(),
+                  std::back_inserter(Infos));
+      }
 
-        // Add a reference to this Info in the Index
-        {
-          std::lock_guard<llvm::sys::Mutex> Guard(IndexMutex);
-          clang::doc::Generator::addInfoToIndex(CDCtx.Idx, Reduced.get().get());
-        }
+      auto Reduced = doc::mergeInfos(Infos);
+      if (!Reduced) {
+        llvm::errs() << llvm::toString(Reduced.takeError());
+        return;
+      }
 
-        // Save in the result map (needs a lock due to threaded access).
-        {
-          std::lock_guard<llvm::sys::Mutex> Guard(USRToInfoMutex);
-          USRToInfo[Group.getKey()] = std::move(Reduced.get());
-        }
-      } catch (...) {
-        std::exception_ptr P = std::current_exception();
-        handle_eptr(P);
+      // Add a reference to this Info in the Index
+      {
+        std::lock_guard<llvm::sys::Mutex> Guard(IndexMutex);
+        clang::doc::Generator::addInfoToIndex(CDCtx.Idx, Reduced.get().get());
+      }
+
+      // Save in the result map (needs a lock due to threaded access).
+      {
+        std::lock_guard<llvm::sys::Mutex> Guard(USRToInfoMutex);
+        USRToInfo[Group.getKey()] = std::move(Reduced.get());
       }
     });
   }
