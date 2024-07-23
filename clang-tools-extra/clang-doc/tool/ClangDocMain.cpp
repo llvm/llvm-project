@@ -41,7 +41,6 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/ThreadPool.h"
-#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <atomic>
 #include <mutex>
@@ -99,11 +98,6 @@ static llvm::cl::opt<std::string>
 URL of repository that hosts code.
 Used for links to definition locations.)"),
                   llvm::cl::cat(ClangDocCategory));
-
-static llvm::cl::opt<bool> FTimeTrace("ftime-trace", llvm::cl::desc(R"(
-Turn on time profiler. Generates clang-doc-tracing.json)"),
-                                      llvm::cl::init(false),
-                                      llvm::cl::cat(ClangDocCategory));
 
 enum OutputFormatTy {
   md,
@@ -235,12 +229,6 @@ Example usage for a project using a compile commands database:
     return 1;
   }
 
-  // turns on ftime trace profiling
-  if (FTimeTrace)
-    llvm::timeTraceProfilerInitialize(200, "clang-doc");
-
-  llvm::TimeTraceScope("main");
-
   // Fail early if an invalid format was provided.
   std::string Format = getFormatString();
   llvm::outs() << "Emiting docs in " << Format << " format.\n";
@@ -264,8 +252,8 @@ Example usage for a project using a compile commands database:
       OutDirectory,
       SourceRoot,
       RepositoryUrl,
-      {UserStylesheets.begin(), UserStylesheets.end()},
-      FTimeTrace};
+      {UserStylesheets.begin(), UserStylesheets.end()}
+  };
 
   if (Format == "html") {
     if (auto Err = getHtmlAssetFiles(argv[0], CDCtx)) {
@@ -274,7 +262,6 @@ Example usage for a project using a compile commands database:
     }
   }
 
-  llvm::timeTraceProfilerBegin("Mapping declaration", "total runtime");
   // Mapping phase
   llvm::outs() << "Mapping decls...\n";
   auto Err =
@@ -289,12 +276,10 @@ Example usage for a project using a compile commands database:
       return 1;
     }
   }
-  llvm::timeTraceProfilerEnd();
 
   // Collect values into output by key.
   // In ToolResults, the Key is the hashed USR and the value is the
   // bitcode-encoded representation of the Info object.
-  llvm::timeTraceProfilerBegin("Collect Info", "total runtime");
   llvm::outs() << "Collecting infos...\n";
   llvm::StringMap<std::vector<StringRef>> USRToBitcode;
   Executor->get()->getToolResults()->forEachResult(
@@ -302,7 +287,6 @@ Example usage for a project using a compile commands database:
         auto R = USRToBitcode.try_emplace(Key, std::vector<StringRef>());
         R.first->second.emplace_back(Value);
       });
-  llvm::timeTraceProfilerEnd();
 
   // Collects all Infos according to their unique USR value. This map is added
   // to from the thread pool below and is protected by the USRToInfoMutex.
@@ -310,7 +294,6 @@ Example usage for a project using a compile commands database:
   llvm::StringMap<std::unique_ptr<doc::Info>> USRToInfo;
 
   // First reducing phase (reduce all decls into one info per decl).
-  llvm::timeTraceProfilerBegin("Reducing infos", "total runtime");
   llvm::outs() << "Reducing " << USRToBitcode.size() << " infos...\n";
   std::atomic<bool> Error;
   Error = false;
@@ -319,11 +302,8 @@ Example usage for a project using a compile commands database:
   llvm::DefaultThreadPool Pool(llvm::hardware_concurrency(ExecutorConcurrency));
   for (auto &Group : USRToBitcode) {
     Pool.async([&]() {
-      if (FTimeTrace)
-        llvm::timeTraceProfilerInitialize(200, "clang-doc");
-
-      llvm::timeTraceProfilerBegin("Reducing infos", "decoding bitcode");
       std::vector<std::unique_ptr<doc::Info>> Infos;
+
       for (auto &Bitcode : Group.getValue()) {
         llvm::BitstreamCursor Stream(Bitcode);
         doc::ClangDocBitcodeReader Reader(Stream);
@@ -336,40 +316,32 @@ Example usage for a project using a compile commands database:
         std::move(ReadInfos->begin(), ReadInfos->end(),
                   std::back_inserter(Infos));
       }
-      llvm::timeTraceProfilerEnd();
 
-      llvm::timeTraceProfilerBegin("Reducing infos", "merging bitcode");
       auto Reduced = doc::mergeInfos(Infos);
       if (!Reduced) {
         llvm::errs() << llvm::toString(Reduced.takeError());
         return;
       }
-      llvm::timeTraceProfilerEnd();
 
       // Add a reference to this Info in the Index
       {
         std::lock_guard<llvm::sys::Mutex> Guard(IndexMutex);
         clang::doc::Generator::addInfoToIndex(CDCtx.Idx, Reduced.get().get());
       }
-      // Save in the result map (needs a lock due to threaded access).
 
+      // Save in the result map (needs a lock due to threaded access).
       {
         std::lock_guard<llvm::sys::Mutex> Guard(USRToInfoMutex);
         USRToInfo[Group.getKey()] = std::move(Reduced.get());
       }
-
-      if (CDCtx.FTimeTrace)
-        llvm::timeTraceProfilerFinishThread();
     });
   }
-  llvm::timeTraceProfilerEnd();
 
   Pool.wait();
 
   if (Error)
     return 1;
 
-  llvm::timeTraceProfilerBegin("Writing output", "total runtime");
   // Ensure the root output directory exists.
   if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory);
       Err != std::error_code()) {
@@ -390,16 +362,6 @@ Example usage for a project using a compile commands database:
   if (Err) {
     llvm::outs() << "warning: " << toString(std::move(Err)) << "\n";
   }
-  llvm::timeTraceProfilerEnd();
 
-  if (FTimeTrace) {
-    std::error_code EC;
-    llvm::raw_fd_ostream OS("clang-doc-tracing.json", EC,
-                            llvm::sys::fs::OF_Text);
-    if (!EC)
-      llvm::timeTraceProfilerWrite(OS);
-    else
-      return 1;
-  }
   return 0;
 }
