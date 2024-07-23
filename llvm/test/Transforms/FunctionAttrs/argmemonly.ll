@@ -516,6 +516,7 @@ entry:
   ret i64 %r
 }
 
+; FIXME: This could be `memory(argmem: read)`.
 define i64 @select_different_obj(i1 %c, ptr %p, ptr %p2) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, inaccessiblemem: none)
 ; FNATTRS-LABEL: define i64 @select_different_obj
@@ -577,6 +578,7 @@ join:
   ret i64 %r
 }
 
+; FIXME: This could be `memory(argmem: read)`.
 define i64 @phi_different_obj(i1 %c, ptr %p, ptr %p2) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, inaccessiblemem: none)
 ; FNATTRS-LABEL: define i64 @phi_different_obj
