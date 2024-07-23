@@ -81,12 +81,6 @@ public:
                                                       bool InSet,
                                                       bool IsPCRel) const;
 
-  /// ELF only. Mark that we have seen GNU ABI usage (e.g. SHF_GNU_RETAIN).
-  virtual void markGnuAbi() {}
-
-  /// ELF only, override the default ABIVersion in the ELF header.
-  virtual void setOverrideABIVersion(uint8_t ABIVersion) {}
-
   /// Tell the object writer to emit an address-significance table during
   /// writeObject(). If this function is not called, all symbols are treated as
   /// address-significant.
@@ -100,14 +94,6 @@ public:
 
   std::vector<const MCSymbol *> &getAddrsigSyms() { return AddrsigSyms; }
 
-  virtual void addExceptionEntry(const MCSymbol *Symbol, const MCSymbol *Trap,
-                                 unsigned LanguageCode, unsigned ReasonCode,
-                                 unsigned FunctionSize, bool hasDebug) {
-    report_fatal_error("addExceptionEntry is only supported on XCOFF targets");
-  }
-  virtual void addCInfoSymEntry(StringRef Name, StringRef Metadata) {
-    report_fatal_error("addCInfoSymEntry is only supported on XCOFF targets");
-  }
   /// Write the object file and returns the number of bytes written.
   ///
   /// This routine is called by the assembler after layout and relaxation is
