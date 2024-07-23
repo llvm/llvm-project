@@ -540,8 +540,7 @@ define <vscale x 16 x double> @vpload_nxv17f64(ptr %ptr, ptr %out, <vscale x 17 
 define <vscale x 8 x i8> @vpload_all_active_nxv8i8(ptr %ptr) {
 ; CHECK-LABEL: vpload_all_active_nxv8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vl1r.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vscale = call i32 @llvm.vscale()
   %evl = mul i32 %vscale, 8
