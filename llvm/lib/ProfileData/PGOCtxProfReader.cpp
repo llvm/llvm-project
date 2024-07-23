@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ProfileData/PGOCtxProfReader.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -139,6 +140,20 @@ PGOCtxProfileReader::readContext(bool ExpectIndex) {
 }
 
 Error PGOCtxProfileReader::readMetadata() {
+  if (Magic.size() < PGOCtxProfileWriter::ContainerMagic.size() ||
+      Magic != PGOCtxProfileWriter::ContainerMagic)
+    return make_error<InstrProfError>(instrprof_error::invalid_prof,
+                                      "Invalid magic");
+
+  BitstreamEntry Entry;
+  RET_ON_ERR(Cursor.advance().moveInto(Entry));
+  if (Entry.Kind != BitstreamEntry::SubBlock ||
+      Entry.ID != bitc::BLOCKINFO_BLOCK_ID)
+    return unsupported("Expected Block ID");
+  // We don't need the blockinfo to read the rest, it's metadata usable for e.g.
+  // llvm-bcanalyzer.
+  RET_ON_ERR(Cursor.SkipBlock());
+
   EXPECT_OR_RET(Blk, advance());
   if (Blk->Kind != BitstreamEntry::SubBlock)
     return unsupported("Expected Version record");

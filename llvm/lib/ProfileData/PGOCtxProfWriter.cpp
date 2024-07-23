@@ -16,6 +16,40 @@
 using namespace llvm;
 using namespace llvm::ctx_profile;
 
+PGOCtxProfileWriter::PGOCtxProfileWriter(
+    raw_ostream &Out, std::optional<unsigned> VersionOverride)
+    : Writer(Out, 0) {
+  static_assert(ContainerMagic.size() == 4);
+  Out.write(ContainerMagic.data(), ContainerMagic.size());
+  Writer.EnterBlockInfoBlock();
+  {
+    auto DescribeBlock = [&](unsigned ID, StringRef Name) {
+      Writer.EmitRecord(bitc::BLOCKINFO_CODE_SETBID,
+                        SmallVector<unsigned, 1>{ID});
+      Writer.EmitRecord(bitc::BLOCKINFO_CODE_BLOCKNAME,
+                        llvm::arrayRefFromStringRef(Name));
+    };
+    SmallVector<uint64_t, 16> Data;
+    auto DescribeRecord = [&](unsigned RecordID, StringRef Name) {
+      Data.clear();
+      Data.push_back(RecordID);
+      llvm::append_range(Data, Name);
+      Writer.EmitRecord(bitc::BLOCKINFO_CODE_SETRECORDNAME, Data);
+    };
+    DescribeBlock(PGOCtxProfileBlockIDs::ProfileMetadataBlockID, "Metadata");
+    DescribeRecord(PGOCtxProfileRecords::Version, "Version");
+    DescribeBlock(PGOCtxProfileBlockIDs::ContextNodeBlockID, "Context");
+    DescribeRecord(PGOCtxProfileRecords::Guid, "GUID");
+    DescribeRecord(PGOCtxProfileRecords::CalleeIndex, "CalleeIndex");
+    DescribeRecord(PGOCtxProfileRecords::Counters, "Counters");
+  }
+  Writer.ExitBlock();
+  Writer.EnterSubblock(PGOCtxProfileBlockIDs::ProfileMetadataBlockID, CodeLen);
+  const auto Version = VersionOverride ? *VersionOverride : CurrentVersion;
+  Writer.EmitRecord(PGOCtxProfileRecords::Version,
+                    SmallVector<unsigned, 1>({Version}));
+}
+
 void PGOCtxProfileWriter::writeCounters(const ContextNode &Node) {
   Writer.EmitCode(bitc::UNABBREV_RECORD);
   Writer.EmitVBR(PGOCtxProfileRecords::Counters, VBREncodingBits);
