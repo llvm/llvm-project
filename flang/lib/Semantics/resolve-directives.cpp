@@ -91,11 +91,12 @@ protected:
   void SetContextAssociatedLoopLevel(std::int64_t level) {
     GetContext().associatedLoopLevel = level;
   }
-  Symbol &MakeAssocSymbol(const SourceName &name, Symbol &prev, Scope &scope) {
+  Symbol &MakeAssocSymbol(
+      const SourceName &name, const Symbol &prev, Scope &scope) {
     const auto pair{scope.try_emplace(name, Attrs{}, HostAssocDetails{prev})};
     return *pair.first->second;
   }
-  Symbol &MakeAssocSymbol(const SourceName &name, Symbol &prev) {
+  Symbol &MakeAssocSymbol(const SourceName &name, const Symbol &prev) {
     return MakeAssocSymbol(name, prev, currScope());
   }
   void AddDataSharingAttributeObject(SymbolRef object) {
@@ -108,6 +109,7 @@ protected:
   const parser::Name *GetLoopIndex(const parser::DoConstruct &);
   const parser::DoConstruct *GetDoConstructIf(
       const parser::ExecutionPartConstruct &);
+  Symbol *DeclareNewPrivateAccessEntity(const Symbol &, Symbol::Flag, Scope &);
   Symbol *DeclarePrivateAccessEntity(
       const parser::Name &, Symbol::Flag, Scope &);
   Symbol *DeclarePrivateAccessEntity(Symbol &, Symbol::Flag, Scope &);
@@ -772,6 +774,19 @@ const parser::DoConstruct *DirectiveAttributeVisitor<T>::GetDoConstructIf(
 }
 
 template <typename T>
+Symbol *DirectiveAttributeVisitor<T>::DeclareNewPrivateAccessEntity(
+    const Symbol &object, Symbol::Flag flag, Scope &scope) {
+  assert(object.owner() != currScope());
+  auto &symbol{MakeAssocSymbol(object.name(), object, scope)};
+  symbol.set(flag);
+  if (flag == Symbol::Flag::OmpCopyIn) {
+    // The symbol in copyin clause must be threadprivate entity.
+    symbol.set(Symbol::Flag::OmpThreadprivate);
+  }
+  return &symbol;
+}
+
+template <typename T>
 Symbol *DirectiveAttributeVisitor<T>::DeclarePrivateAccessEntity(
     const parser::Name &name, Symbol::Flag flag, Scope &scope) {
   if (!name.symbol) {
@@ -785,13 +800,7 @@ template <typename T>
 Symbol *DirectiveAttributeVisitor<T>::DeclarePrivateAccessEntity(
     Symbol &object, Symbol::Flag flag, Scope &scope) {
   if (object.owner() != currScope()) {
-    auto &symbol{MakeAssocSymbol(object.name(), object, scope)};
-    symbol.set(flag);
-    if (flag == Symbol::Flag::OmpCopyIn) {
-      // The symbol in copyin clause must be threadprivate entity.
-      symbol.set(Symbol::Flag::OmpThreadprivate);
-    }
-    return &symbol;
+    return DeclareNewPrivateAccessEntity(object, flag, scope);
   } else {
     object.set(flag);
     return &object;
@@ -2076,13 +2085,30 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
       if (found->test(semantics::Symbol::Flag::OmpThreadprivate))
         return;
     }
-    if (!IsPrivatizable(symbol)) {
+
+    std::set<const Symbol *> stmtFunctionSymbols;
+    if (auto *stmtFunction{symbol->detailsIf<semantics::SubprogramDetails>()};
+        stmtFunction && stmtFunction->stmtFunction()) {
+      // Each non-dummy argument from a statement function must be handled too,
+      // as if it was explicitly referenced.
+      semantics::UnorderedSymbolSet symbols{
+          CollectSymbols(stmtFunction->stmtFunction().value())};
+      for (const auto &sym : symbols) {
+        if (!IsStmtFunctionDummy(sym) && IsPrivatizable(&*sym) &&
+            !IsObjectWithDSA(*sym)) {
+          stmtFunctionSymbols.insert(&*sym);
+        }
+      }
+      if (stmtFunctionSymbols.empty()) {
+        return;
+      }
+    } else if (!IsPrivatizable(symbol)) {
       return;
     }
 
     // Implicitly determined DSAs
     // OMP 5.2 5.1.1 - Variables Referenced in a Construct
-    Symbol *lastDeclSymbol = nullptr;
+    std::vector<const Symbol *> lastDeclSymbols;
     std::optional<Symbol::Flag> prevDSA;
     for (int dirDepth{0}; dirDepth < (int)dirContext_.size(); ++dirDepth) {
       DirContext &dirContext = dirContext_[dirDepth];
@@ -2127,23 +2153,59 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
       // it would have the private flag set.
       // This would make x appear to be defined in p2, causing it to be
       // privatized in p2 and its privatization in p1 to be skipped.
-      auto makePrivateSymbol = [&](Symbol::Flag flag) {
-        Symbol *hostSymbol =
-            lastDeclSymbol ? lastDeclSymbol : &symbol->GetUltimate();
-        lastDeclSymbol = DeclarePrivateAccessEntity(
-            *hostSymbol, flag, context_.FindScope(dirContext.directiveSource));
-        return lastDeclSymbol;
+      // TODO Move the lambda functions below to a separate class.
+      auto hostSymbol = [&](const Symbol *sym, int index = 0) {
+        if (lastDeclSymbols.empty())
+          return &sym->GetUltimate();
+        return lastDeclSymbols[index];
+      };
+      auto declNewPrivateSymbol = [&](const Symbol *sym, Symbol::Flag flag,
+                                      bool implicit) {
+        Symbol *newSym = DeclareNewPrivateAccessEntity(
+            *sym, flag, context_.FindScope(dirContext.directiveSource));
+        if (implicit)
+          newSym->set(Symbol::Flag::OmpImplicit);
+        return newSym;
+      };
+      auto makePrivateSymbol = [&](Symbol::Flag flag, bool implicit = false) {
+        bool hasLastDeclSymbols = !lastDeclSymbols.empty();
+        auto updateLastDeclSymbols = [&](const Symbol *sym, int index = 0) {
+          if (hasLastDeclSymbols)
+            lastDeclSymbols[index] = sym;
+          else
+            lastDeclSymbols.push_back(sym);
+        };
+
+        if (stmtFunctionSymbols.empty()) {
+          const Symbol *newSym =
+              declNewPrivateSymbol(hostSymbol(symbol), flag, implicit);
+          updateLastDeclSymbols(newSym);
+          return;
+        }
+
+        int i = 0;
+        for (const auto *sym : stmtFunctionSymbols) {
+          Symbol *newSym =
+              declNewPrivateSymbol(hostSymbol(sym, i), flag, implicit);
+          newSym->set(Symbol::Flag::OmpFromStmtFunction);
+          updateLastDeclSymbols(newSym, i++);
+        }
       };
       auto makeSharedSymbol = [&]() {
-        Symbol *hostSymbol =
-            lastDeclSymbol ? lastDeclSymbol : &symbol->GetUltimate();
-        MakeAssocSymbol(symbol->name(), *hostSymbol,
-            context_.FindScope(dirContext.directiveSource));
+        if (stmtFunctionSymbols.empty()) {
+          MakeAssocSymbol(symbol->name(), *hostSymbol(symbol),
+              context_.FindScope(dirContext.directiveSource));
+        } else {
+          int i = 0;
+          for (const auto *sym : stmtFunctionSymbols) {
+            MakeAssocSymbol(sym->name(), *hostSymbol(sym, i++),
+                context_.FindScope(dirContext.directiveSource));
+          }
+        }
       };
       auto useLastDeclSymbol = [&]() {
-        if (lastDeclSymbol)
-          MakeAssocSymbol(symbol->name(), *lastDeclSymbol,
-              context_.FindScope(dirContext.directiveSource));
+        if (!lastDeclSymbols.empty())
+          makeSharedSymbol();
       };
 
       bool taskGenDir = llvm::omp::taskGeneratingSet.test(dirContext.directive);
@@ -2191,7 +2253,7 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
         } else {
           // 7) firstprivate
           dsa = Symbol::Flag::OmpFirstPrivate;
-          makePrivateSymbol(*dsa)->set(Symbol::Flag::OmpImplicit);
+          makePrivateSymbol(*dsa, /*implicit=*/true);
         }
       }
       prevDSA = dsa;
