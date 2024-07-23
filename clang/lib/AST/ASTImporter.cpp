@@ -359,6 +359,31 @@ namespace clang {
           Params, Importer.getToContext().getTranslationUnitDecl());
     }
 
+    template <typename TemplateParmDeclT>
+    void tryUpdateTemplateParmDeclInheritedFrom(NamedDecl *RecentParm,
+                                                NamedDecl *NewParm) {
+      if (auto *ParmT = dyn_cast<TemplateParmDeclT>(RecentParm)) {
+        if (ParmT->hasDefaultArgument()) {
+          auto *P = cast<TemplateParmDeclT>(NewParm);
+          P->removeDefaultArgument();
+          P->setInheritedDefaultArgument(Importer.ToContext, ParmT);
+        }
+      }
+    }
+
+    void updateTemplateParametersInheritedFrom(
+        const TemplateParameterList &RecentParams,
+        TemplateParameterList &NewParams) {
+      for (auto [Idx, Param] : enumerate(RecentParams)) {
+        tryUpdateTemplateParmDeclInheritedFrom<NonTypeTemplateParmDecl>(
+            Param, NewParams.getParam(Idx));
+        tryUpdateTemplateParmDeclInheritedFrom<TemplateTypeParmDecl>(
+            Param, NewParams.getParam(Idx));
+        tryUpdateTemplateParmDeclInheritedFrom<TemplateTemplateParmDecl>(
+            Param, NewParams.getParam(Idx));
+      }
+    }
+
   public:
     explicit ASTNodeImporter(ASTImporter &Importer) : Importer(Importer) {}
 
@@ -6138,6 +6163,9 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     }
 
     D2->setPreviousDecl(Recent);
+
+    updateTemplateParametersInheritedFrom(*(Recent->getTemplateParameters()),
+                                          **TemplateParamsOrErr);
   }
 
   return D2;
@@ -6452,6 +6480,9 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateDecl(VarTemplateDecl *D) {
         ToTemplated->setPreviousDecl(PrevTemplated);
     }
     ToVarTD->setPreviousDecl(Recent);
+
+    updateTemplateParametersInheritedFrom(*(Recent->getTemplateParameters()),
+                                          **TemplateParamsOrErr);
   }
 
   return ToVarTD;
@@ -6724,6 +6755,9 @@ ASTNodeImporter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
         TemplatedFD->setPreviousDecl(PrevTemplated);
     }
     ToFunc->setPreviousDecl(Recent);
+
+    updateTemplateParametersInheritedFrom(*(Recent->getTemplateParameters()),
+                                          *Params);
   }
 
   return ToFunc;
