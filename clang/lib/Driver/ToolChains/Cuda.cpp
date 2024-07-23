@@ -609,6 +609,10 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(
         "--pxtas-path=" + Args.getLastArgValue(options::OPT_ptxas_path_EQ)));
 
+  if (Args.hasArg(options::OPT_cuda_path_EQ))
+    CmdArgs.push_back(Args.MakeArgString(
+        "--cuda-path=" + Args.getLastArgValue(options::OPT_cuda_path_EQ)));
+
   // Add paths specified in LIBRARY_PATH environment variable as -L options.
   addDirectoryList(Args, CmdArgs, "-L", "LIBRARY_PATH");
 
