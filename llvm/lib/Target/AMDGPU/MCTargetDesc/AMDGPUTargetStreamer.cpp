@@ -622,7 +622,7 @@ MCELFStreamer &AMDGPUTargetELFStreamer::getStreamer() {
 void AMDGPUTargetELFStreamer::finish() {
   MCAssembler &MCA = getStreamer().getAssembler();
   MCA.setELFHeaderEFlags(getEFlags());
-  MCA.getWriter().setOverrideABIVersion(
+  getStreamer().getWriter().setOverrideABIVersion(
       getELFABIVersion(STI.getTargetTriple(), CodeObjectVersion));
 
   std::string Blob;
