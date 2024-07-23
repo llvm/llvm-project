@@ -1713,7 +1713,7 @@ bool DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
     const MCSymbol *EndLabel;
     if (std::next(EI) == Entries.end()) {
       const MachineBasicBlock &EndMBB = Asm->MF->back();
-      EndLabel = Asm->MBBSectionRanges[EndMBB.getSectionIDNum()].EndLabel;
+      EndLabel = Asm->MBBSectionRanges[EndMBB.getSectionID()].EndLabel;
       if (EI->isClobber())
         EndMI = EI->getInstr();
     }
@@ -2064,7 +2064,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
 
   bool PrevInstInSameSection =
       (!PrevInstBB ||
-       PrevInstBB->getSectionIDNum() == MI->getParent()->getSectionIDNum());
+       PrevInstBB->getSectionID() == MI->getParent()->getSectionID());
   if (DL == PrevInstLoc && PrevInstInSameSection) {
     // If we have an ongoing unspecified location, nothing to do here.
     if (!DL)
@@ -2990,6 +2990,9 @@ struct ArangeSpan {
 // Emit a debug aranges section, containing a CU lookup for any
 // address we can tie back to a CU.
 void DwarfDebug::emitDebugARanges() {
+  if (ArangeLabels.empty())
+    return;
+
   // Provides a unique id per text section.
   MapVector<MCSection *, SmallVector<SymbolCU, 8>> SectionMap;
 
@@ -3012,8 +3015,7 @@ void DwarfDebug::emitDebugARanges() {
   for (auto &I : SectionMap) {
     MCSection *Section = I.first;
     SmallVector<SymbolCU, 8> &List = I.second;
-    if (List.size() < 1)
-      continue;
+    assert(!List.empty());
 
     // If we have no section (e.g. common), just write out
     // individual spans for each symbol.

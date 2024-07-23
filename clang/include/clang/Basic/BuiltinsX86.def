@@ -37,36 +37,6 @@ TARGET_BUILTIN(__builtin_ia32_undef512, "V8d", "ncV:512:", "")
 TARGET_BUILTIN(__builtin_ia32_readeflags_u32, "Ui", "n", "")
 TARGET_BUILTIN(__builtin_ia32_writeeflags_u32, "vUi", "n", "")
 
-// 3DNow!
-//
-TARGET_BUILTIN(__builtin_ia32_femms, "v", "n", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pavgusb, "V8cV8cV8c", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pf2id, "V2iV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfacc, "V2fV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfadd, "V2fV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfcmpeq, "V2iV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfcmpge, "V2iV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfcmpgt, "V2iV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfmax, "V2fV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfmin, "V2fV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfmul, "V2fV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfrcp, "V2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfrcpit1, "V2fV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfrcpit2, "V2fV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfrsqrt, "V2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfrsqit1, "V2fV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfsub, "V2fV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfsubr, "V2fV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pi2fd, "V2fV2i", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pmulhrw, "V4sV4sV4s", "ncV:64:", "3dnow")
-// 3DNow! Extensions (3dnowa).
-TARGET_BUILTIN(__builtin_ia32_pf2iw, "V2iV2f", "ncV:64:", "3dnowa")
-TARGET_BUILTIN(__builtin_ia32_pfnacc, "V2fV2fV2f", "ncV:64:", "3dnowa")
-TARGET_BUILTIN(__builtin_ia32_pfpnacc, "V2fV2fV2f", "ncV:64:", "3dnowa")
-TARGET_BUILTIN(__builtin_ia32_pi2fw, "V2fV2i", "ncV:64:", "3dnowa")
-TARGET_BUILTIN(__builtin_ia32_pswapdsf, "V2fV2f", "ncV:64:", "3dnowa")
-TARGET_BUILTIN(__builtin_ia32_pswapdsi, "V2iV2i", "ncV:64:", "3dnowa")
-
 // MMX
 //
 // All MMX instructions will be generated via builtins. Any MMX vector

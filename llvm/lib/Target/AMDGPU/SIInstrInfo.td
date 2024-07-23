@@ -34,6 +34,21 @@ def SIEncodingFamily {
 }
 
 //===----------------------------------------------------------------------===//
+// Subtarget info
+//===----------------------------------------------------------------------===//
+
+class GFXGen<Predicate pred, string dn, string suffix, int sub> {
+  Predicate AssemblerPredicate = pred;
+  string DecoderNamespace = dn;
+  string Suffix = suffix;
+  int Subtarget = sub;
+}
+
+def GFX12Gen : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
+def GFX11Gen : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
+def GFX10Gen : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.GFX10>;
+
+//===----------------------------------------------------------------------===//
 // SI DAG Nodes
 //===----------------------------------------------------------------------===//
 
@@ -1089,7 +1104,8 @@ def exp_vm : NamedBitOperand<"vm", "ExpVM">;
 def FORMAT : CustomOperand<i8>;
 
 def DMask : NamedIntOperand<i16, "dmask">;
-def Dim : CustomOperand<i8>;
+
+def Dim : CustomOperand<i8, /*optional=*/1>;
 
 def dst_sel : SDWAOperand<"dst_sel", "SDWADstSel">;
 def src0_sel : SDWAOperand<"src0_sel", "SDWASrc0Sel">;

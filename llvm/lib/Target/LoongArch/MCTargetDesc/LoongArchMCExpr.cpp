@@ -44,7 +44,7 @@ void LoongArchMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
 }
 
 bool LoongArchMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                                const MCAsmLayout *Layout,
+                                                const MCAssembler *Asm,
                                                 const MCFixup *Fixup) const {
   // Explicitly drop the layout and assembler to prevent any symbolic folding in
   // the expression handling.  This is required to preserve symbolic difference
@@ -160,6 +160,12 @@ StringRef LoongArchMCExpr::getVariantKindName(VariantKind Kind) {
     return "desc_ld";
   case VK_LoongArch_TLS_DESC_CALL:
     return "desc_call";
+  case VK_LoongArch_TLS_LE_HI20_R:
+    return "le_hi20_r";
+  case VK_LoongArch_TLS_LE_ADD_R:
+    return "le_add_r";
+  case VK_LoongArch_TLS_LE_LO12_R:
+    return "le_lo12_r";
   }
 }
 
@@ -213,6 +219,9 @@ LoongArchMCExpr::getVariantKindForName(StringRef name) {
       .Case("desc64_hi12", VK_LoongArch_TLS_DESC64_HI12)
       .Case("desc_ld", VK_LoongArch_TLS_DESC_LD)
       .Case("desc_call", VK_LoongArch_TLS_DESC_CALL)
+      .Case("le_hi20_r", VK_LoongArch_TLS_LE_HI20_R)
+      .Case("le_add_r", VK_LoongArch_TLS_LE_ADD_R)
+      .Case("le_lo12_r", VK_LoongArch_TLS_LE_LO12_R)
       .Default(VK_LoongArch_Invalid);
 }
 

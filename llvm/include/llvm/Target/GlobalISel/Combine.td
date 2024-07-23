@@ -1026,7 +1026,10 @@ def and_or_disjoint_mask : GICombineRule<
 
 def bitfield_extract_from_and : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
-  (match (wip_match_opcode G_AND):$root,
+  (match (G_CONSTANT $mask, $imm2),
+         (G_CONSTANT $lsb, $imm1),
+         (G_LSHR $shift, $x, $lsb),
+         (G_AND $root, $shift, $mask):$root,
     [{ return Helper.matchBitfieldExtractFromAnd(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
