@@ -97,7 +97,7 @@ private:
 
   // require types that are 1, 2, 4, 8, or 16 bytes in length to be aligned to at least their size to be potentially
   // used lock-free
-  static constexpr bool __min_alignment = (sizeof(_Tp) & (sizeof(_Tp) - 1)) || (sizeof(_Tp) > 16) ? 0 : sizeof(_Tp);
+  static constexpr size_t __min_alignment = (sizeof(_Tp) & (sizeof(_Tp) - 1)) || (sizeof(_Tp) > 16) ? 0 : sizeof(_Tp);
 
 public:
   using value_type = _Tp;
