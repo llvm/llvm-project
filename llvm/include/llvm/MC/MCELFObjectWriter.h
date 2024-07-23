@@ -10,6 +10,7 @@
 #define LLVM_MC_MCELFOBJECTWRITER_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -162,6 +163,15 @@ public:
   DenseMap<const MCSymbolELF *, const MCSymbolELF *> Renames;
   bool SeenGnuAbi = false;
   std::optional<uint8_t> OverrideABIVersion;
+
+  struct Symver {
+    SMLoc Loc;
+    const MCSymbol *Sym;
+    StringRef Name;
+    // True if .symver *, *@@@* or .symver *, *, remove.
+    bool KeepOriginalSym;
+  };
+  SmallVector<Symver, 0> Symvers;
 
   ELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW)
       : TargetObjectWriter(std::move(MOTW)) {}

@@ -1162,6 +1162,7 @@ void ELFObjectWriter::reset() {
   OverrideABIVersion.reset();
   Relocations.clear();
   Renames.clear();
+  Symvers.clear();
   MCObjectWriter::reset();
 }
 
@@ -1172,7 +1173,7 @@ bool ELFObjectWriter::hasRelocationAddend() const {
 void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
   // The presence of symbol versions causes undefined symbols and
   // versions declared with @@@ to be renamed.
-  for (const MCAssembler::Symver &S : Asm.Symvers) {
+  for (const Symver &S : Symvers) {
     StringRef AliasName = S.Name;
     const auto &Symbol = cast<MCSymbolELF>(*S.Sym);
     size_t Pos = AliasName.find('@');
