@@ -16182,8 +16182,13 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
         AS != AMDGPUAS::BUFFER_FAT_POINTER)
       return AtomicExpansionKind::CmpXChg;
 
-    if (Subtarget->hasGFX940Insts() && (Ty->isFloatTy() || Ty->isDoubleTy()))
-      return AtomicExpansionKind::None;
+    if (Subtarget->supportsAgentScopeFineGrainedRemoteMemoryAtomics() &&
+        Subtarget->hasMemoryAtomicFaddF32DenormalSupport()) {
+      if (Subtarget->hasAtomicFaddRtnInsts() && Ty->isFloatTy())
+        return AtomicExpansionKind::None;
+      if (Subtarget->hasFlatBufferGlobalAtomicFaddF64Inst() && Ty->isDoubleTy())
+        return AtomicExpansionKind::None;
+    }
 
     if (AS == AMDGPUAS::FLAT_ADDRESS) {
       // gfx940, gfx12
@@ -16239,7 +16244,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       }
     }
 
-    // flat atomic fadd f32: gfx940, gfx11+.
+    // flat atomic fadd f32: gfx11.
     if (AS == AMDGPUAS::FLAT_ADDRESS && Ty->isFloatTy()) {
       if (Subtarget->hasFlatAtomicFaddF32Inst())
         return ReportUnsafeHWInst(AtomicExpansionKind::None);
