@@ -259,6 +259,8 @@ public:
       unsigned ImmWidth = 0,
       AMDGPU::OperandSemantics Sema = AMDGPU::OperandSemantics::INT) const;
 
+  MCOperand decodeGVGPR(unsigned Val) const;
+
   MCOperand decodeVOPDDstYOp(MCInst &Inst, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;
   MCOperand decodeSpecialReg64(unsigned Val) const;

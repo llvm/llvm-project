@@ -1895,6 +1895,7 @@ private:
   bool validateSetVgprMSB(const MCInst &Inst, const OperandVector &Operands);
   bool validateAuxData(const MCInst &Inst, const OperandVector &Operands);
   std::optional<StringRef> validateLdsDirect(const MCInst &Inst);
+  bool validateRegOperands(const MCInst &Inst, const OperandVector &Operands);
   unsigned getConstantBusLimit(unsigned Opcode) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
   bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
@@ -2986,7 +2987,7 @@ unsigned AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
 
   const MCRegisterInfo *TRI = getContext().getRegisterInfo();
   const MCRegisterClass RC = TRI->getRegClass(RCID);
-  if (RegIdx >= RC.getNumRegs() || (RegKind == IS_VGPR && RegIdx > 255)) {
+  if (RegIdx >= RC.getNumRegs()) {
     Error(Loc, "register index is out of range");
     return AMDGPU::NoRegister;
   }
@@ -4767,6 +4768,25 @@ AMDGPUAsmParser::validateLdsDirect(const MCInst &Inst) {
   return std::nullopt;
 }
 
+bool AMDGPUAsmParser::validateRegOperands(const MCInst &Inst,
+                                          const OperandVector &Operands) {
+  unsigned Opc = Inst.getOpcode();
+  if (Opc == V_SEND_VGPR_NEXT_B32_gfx13 || Opc == V_SEND_VGPR_PREV_B32_gfx13)
+    return true;
+
+  const MCRegisterInfo &MRI = *getMRI();
+  for (const auto &Op : Operands) {
+    if (!Op->isReg())
+      continue;
+    unsigned Reg = Op->getReg();
+    if (AMDGPU::isVGPR(Reg, MRI) && AMDGPU::getHWRegIndex(Reg, MRI) > 255) {
+      Error(getRegLoc(Reg, Operands), "register index is out of range");
+      return false;
+    }
+  }
+  return true;
+}
+
 SMLoc AMDGPUAsmParser::getFlatOffsetLoc(const OperandVector &Operands) const {
   for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
@@ -5508,6 +5528,8 @@ bool AMDGPUAsmParser::validateAuxData(const MCInst &Inst,
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
                                           const SMLoc &IDLoc,
                                           const OperandVector &Operands) {
+  if (!validateRegOperands(Inst, Operands))
+    return false;
   if (auto ErrMsg = validateLdsDirect(Inst)) {
     Error(getRegLoc(LDS_DIRECT, Operands), *ErrMsg);
     return false;

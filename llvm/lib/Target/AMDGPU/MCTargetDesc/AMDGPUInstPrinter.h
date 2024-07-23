@@ -218,6 +218,8 @@ private:
 
   void printSema(const MCInst *MI, unsigned OpNo, raw_ostream &O,
                  StringRef Prefix, bool AlwaysPrint);
+  void printGVGPR(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                  raw_ostream &O);
 
 public:
   static void printIfSet(const MCInst *MI, unsigned OpNo, raw_ostream &O,

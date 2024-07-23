@@ -2080,4 +2080,10 @@ void AMDGPUInstPrinter::printSema(const MCInst *MI, unsigned OpNo,
     O << ' ' << Prefix << ':' << formatDec(V & 7);
 }
 
+void AMDGPUInstPrinter::printGVGPR(const MCInst *MI, unsigned OpNo,
+                                   const MCSubtargetInfo & /*STI*/,
+                                   raw_ostream &O) {
+  O << getRegisterName(MI->getOperand(OpNo).getReg());
+}
+
 #include "AMDGPUGenAsmWriter.inc"
