@@ -99,10 +99,6 @@ static bool IsModuleSwiftRuntime(lldb_private::Process &process,
   return module.GetFileSpec().GetFilename() == GetStandardLibraryName(process);
 }
 
-static UnwindPlanSP
-GetFollowAsyncContextUnwindPlan(RegisterContext *regctx, ArchSpec &arch,
-                                bool &behaves_like_zeroth_frame);
-
 AppleObjCRuntimeV2 *
 SwiftLanguageRuntime::GetObjCRuntime(lldb_private::Process &process) {
   if (auto objc_runtime = ObjCLanguageRuntime::Get(process)) {
@@ -2608,7 +2604,7 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
   addr_t fp = regctx->GetFP(LLDB_INVALID_ADDRESS);
   if (fp == LLDB_INVALID_ADDRESS) {
     if (GetAsyncContext(regctx) != LLDB_INVALID_ADDRESS)
-      return GetFollowAsyncContextUnwindPlan(regctx, arch,
+      return GetFollowAsyncContextUnwindPlan(process_sp, regctx, arch,
                                              behaves_like_zeroth_frame);
     return UnwindPlanSP();
   }
@@ -2763,11 +2759,9 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
   return plan;
 }
 
-// Creates an UnwindPlan for following the AsyncContext chain
-// up the stack, from a current AsyncContext frame.
-static UnwindPlanSP
-GetFollowAsyncContextUnwindPlan(RegisterContext *regctx, ArchSpec &arch,
-                                bool &behaves_like_zeroth_frame) {
+UnwindPlanSP SwiftLanguageRuntime::GetFollowAsyncContextUnwindPlan(
+    ProcessSP process_sp, RegisterContext *regctx, ArchSpec &arch,
+    bool &behaves_like_zeroth_frame) {
   LLDB_SCOPED_TIMER();
 
   UnwindPlan::RowSP row(new UnwindPlan::Row);
