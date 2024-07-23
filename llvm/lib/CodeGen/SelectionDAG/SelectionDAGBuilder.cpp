@@ -3730,8 +3730,8 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
     // ValueTracking's select pattern matching does not account for -0.0,
     // so we can't lower to FMINIMUM/FMAXIMUM because those nodes specify that
     // -0.0 is less than +0.0.
-    Value *LHS, *RHS;
-    auto SPR = matchSelectPattern(const_cast<User*>(&I), LHS, RHS);
+    const Value *LHS, *RHS;
+    auto SPR = matchSelectPattern(&I, LHS, RHS);
     ISD::NodeType Opc = ISD::DELETED_NODE;
     switch (SPR.Flavor) {
     case SPF_UMAX:    Opc = ISD::UMAX; break;
