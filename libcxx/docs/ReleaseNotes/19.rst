@@ -141,6 +141,8 @@ Deprecations and Removals
   of randomness, and others. Users that were checking whether including a header would fail (e.g. via a script
   or CMake's ``try_compile`` will experience a change in behavior).
 
+- The operators in the ``rel_ops`` namespace have been deprecated. The deprecation is part of the paper
+  P0768R1 "Library Support for the Spaceship (Comparison) Operator".
 
 Upcoming Deprecations and Removals
 ----------------------------------
