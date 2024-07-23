@@ -819,20 +819,20 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     return false;
   };
   // Identifies simple (no expression) one-argument function calls.
-  const auto IsNotSimpleFunction = [&](const FormatToken &Tok) {
+  const auto IsSimpleFunction = [&](const FormatToken &Tok) {
     const auto *Previous = Tok.Previous;
-    const auto *Next = Tok.Next;
-    if (Tok.FakeLParens.size() > 0 && Tok.FakeLParens.back() > prec::Unknown)
+    if (!Tok.FakeLParens.empty() && Tok.FakeLParens.back() > prec::Unknown)
+      return false;
+    if (!Previous || (!Previous->isOneOf(TT_FunctionDeclarationLParen,
+                                         TT_LambdaDefinitionLParen) &&
+                      !IsFunctionCallParen(*Previous))) {
       return true;
-    if (Previous && (Previous->is(TT_FunctionDeclarationLParen) ||
-                     IsFunctionCallParen(*Previous) ||
-                     Previous->is(TT_LambdaDefinitionLParen))) {
-      return !IsOpeningBracket(Tok) && Next && !Next->isMemberAccess() &&
-             !IsInTemplateString(Tok) &&
-             !Next->is(TT_FunctionDeclarationLParen) &&
-             !IsFunctionCallParen(*Next);
     }
-    return false;
+    if (IsOpeningBracket(Tok) || IsInTemplateString(Tok))
+      return true;
+    const auto *Next = Tok.Next;
+    return !Next || Next->isMemberAccess() ||
+           Next->is(TT_FunctionDeclarationLParen) || IsFunctionCallParen(*Next);
   };
   if ((Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak ||
        Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) &&
@@ -844,7 +844,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       //       caaaaaaaaaaaall(
       //           caaaaaaaaaaaall(
       //               caaaaaaaaaaaaaaaaaaaaaaall(aaaaaaaaaaaaaa, aaaaaaaaa))));
-      IsNotSimpleFunction(Current)) {
+      !IsSimpleFunction(Current)) {
     CurrentState.NoLineBreak = true;
   }
 
