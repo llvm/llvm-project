@@ -68,7 +68,8 @@ public:
         isAFAPlusOffset,   // reg = AFA + offset
         inOtherRegister,   // reg = other reg
         atDWARFExpression, // reg = deref(eval(dwarf_expr))
-        isDWARFExpression  // reg = eval(dwarf_expr)
+        isDWARFExpression, // reg = eval(dwarf_expr)
+        isConstant         // reg = constant
       };
 
       RegisterLocation() : m_location() {}
@@ -104,6 +105,15 @@ public:
       bool IsAtDWARFExpression() const { return m_type == atDWARFExpression; }
 
       bool IsDWARFExpression() const { return m_type == isDWARFExpression; }
+
+      bool IsConstant() const { return m_type == isConstant; }
+
+      void SetIsConstant(uint64_t value) {
+        m_type = isConstant;
+        m_location.constant_value = value;
+      }
+
+      uint64_t GetConstant() const { return m_location.constant_value; }
 
       void SetAtCFAPlusOffset(int32_t offset) {
         m_type = atCFAPlusOffset;
@@ -192,6 +202,8 @@ public:
           const uint8_t *opcodes;
           uint16_t length;
         } expr;
+        // For m_type == isConstant
+        uint64_t constant_value;
       } m_location;
     };
 
@@ -361,6 +373,10 @@ public:
     bool SetRegisterLocationToIsDWARFExpression(uint32_t reg_num,
                                                 const uint8_t *opcodes,
                                                 uint32_t len, bool can_replace);
+
+    bool SetRegisterLocationToIsConstant(uint32_t reg_num, uint64_t constant,
+                                         bool can_replace);
+
     // When this UnspecifiedRegistersAreUndefined mode is
     // set, any register that is not specified by this Row will
     // be described as Undefined.
