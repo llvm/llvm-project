@@ -236,23 +236,9 @@ public:
     return make_pointee_range(Symbols);
   }
 
-  /// @}
-  /// \name Linker Option List Access
-  /// @{
-
   std::vector<std::vector<std::string>> &getLinkerOptions() {
     return LinkerOptions;
   }
-
-  struct CGProfileEntry {
-    const MCSymbolRefExpr *From;
-    const MCSymbolRefExpr *To;
-    uint64_t Count;
-  };
-  std::vector<CGProfileEntry> CGProfile;
-  /// @}
-  /// \name Backend Data Access
-  /// @{
 
   bool registerSection(MCSection &Section);
   bool registerSymbol(const MCSymbol &Symbol);
@@ -261,8 +247,6 @@ public:
   /// Expects a fragment \p F containing instructions and its size \p FSize.
   void writeFragmentPadding(raw_ostream &OS, const MCEncodedFragment &F,
                             uint64_t FSize) const;
-
-  /// @}
 
   void dump() const;
 };
