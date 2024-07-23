@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCSymbol.h"
@@ -17,6 +18,14 @@ class MCSection;
 using namespace llvm;
 
 MCObjectWriter::~MCObjectWriter() = default;
+
+void MCObjectWriter::reset() {
+  FileNames.clear();
+  AddrsigSyms.clear();
+  EmitAddrsigSection = false;
+  SubsectionsViaSymbols = false;
+  CGProfile.clear();
+}
 
 bool MCObjectWriter::isSymbolRefDifferenceFullyResolved(
     const MCAssembler &Asm, const MCSymbolRefExpr *A, const MCSymbolRefExpr *B,
@@ -43,4 +52,8 @@ bool MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   const MCSection &SecB = *FB.getParent();
   // On ELF and COFF  A - B is absolute if A and B are in the same section.
   return &SecA == &SecB;
+}
+
+void MCObjectWriter::addFileName(MCAssembler &Asm, StringRef FileName) {
+  FileNames.emplace_back(std::string(FileName), Asm.Symbols.size());
 }

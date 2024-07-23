@@ -11,8 +11,8 @@ func.func @unknown_clause() {
 // -----
 
 func.func @not_wrapper() {
+  // expected-error@+1 {{op must be a loop wrapper}}
   omp.distribute {
-    // expected-error@+1 {{op must take a loop wrapper role if nested inside of 'omp.distribute'}}
     omp.parallel {
       %0 = arith.constant 0 : i32
       omp.terminator
@@ -383,12 +383,16 @@ func.func @omp_simd() -> () {
 
 // -----
 
-func.func @omp_simd_nested_wrapper() -> () {
+func.func @omp_simd_nested_wrapper(%lb : index, %ub : index, %step : index) -> () {
   // expected-error @below {{op must wrap an 'omp.loop_nest' directly}}
   omp.simd {
     omp.distribute {
+      omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
       omp.terminator
     }
+    omp.terminator
   }
   return
 }
@@ -1960,6 +1964,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
       }
       omp.terminator
     }
+    omp.terminator
   }
   return
 }
@@ -2158,11 +2163,13 @@ func.func @omp_distribute_wrapper() -> () {
 
 // -----
 
-func.func @omp_distribute_nested_wrapper(%data_var : memref<i32>) -> () {
+func.func @omp_distribute_nested_wrapper(%lb: index, %ub: index, %step: index) -> () {
   // expected-error @below {{only supported nested wrappers are 'omp.parallel' and 'omp.simd'}}
   omp.distribute {
     "omp.wsloop"() ({
-      %0 = arith.constant 0 : i32
+      omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+        "omp.yield"() : () -> ()
+      }
       "omp.terminator"() : () -> ()
     }) : () -> ()
     "omp.terminator"() : () -> ()
@@ -2356,5 +2363,23 @@ func.func @byref_in_private(%arg0: index) {
     omp.terminator
   }
 
+  return
+}
+
+// -----
+func.func @masked_arg_type_mismatch(%arg0: f32) {
+  // expected-error @below {{'omp.masked' op operand #0 must be integer or index, but got 'f32'}}
+  "omp.masked"(%arg0) ({
+      omp.terminator
+    }) : (f32) -> ()
+  return
+}
+
+// -----
+func.func @masked_arg_count_mismatch(%arg0: i32, %arg1: i32) {
+  // expected-error @below {{'omp.masked' op operand group starting at #0 requires 0 or 1 element, but found 2}}
+  "omp.masked"(%arg0, %arg1) ({
+      omp.terminator
+    }) : (i32, i32) -> ()
   return
 }

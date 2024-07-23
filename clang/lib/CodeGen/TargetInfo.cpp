@@ -19,6 +19,7 @@
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -204,6 +205,27 @@ llvm::Value *TargetCodeGenInfo::createEnqueuedBlockKernel(
   Builder.CreateRetVoid();
   Builder.restoreIP(IP);
   return F;
+}
+
+void TargetCodeGenInfo::setBranchProtectionFnAttributes(
+    const TargetInfo::BranchProtectionInfo &BPI, llvm::Function &F) {
+  llvm::AttrBuilder FuncAttrs(F.getContext());
+  setBranchProtectionFnAttributes(BPI, FuncAttrs);
+  F.addFnAttrs(FuncAttrs);
+}
+
+void TargetCodeGenInfo::setBranchProtectionFnAttributes(
+    const TargetInfo::BranchProtectionInfo &BPI, llvm::AttrBuilder &FuncAttrs) {
+  if (BPI.SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
+    FuncAttrs.addAttribute("sign-return-address", BPI.getSignReturnAddrStr());
+    FuncAttrs.addAttribute("sign-return-address-key", BPI.getSignKeyStr());
+  }
+  if (BPI.BranchTargetEnforcement)
+    FuncAttrs.addAttribute("branch-target-enforcement");
+  if (BPI.BranchProtectionPAuthLR)
+    FuncAttrs.addAttribute("branch-protection-pauth-lr");
+  if (BPI.GuardedControlStack)
+    FuncAttrs.addAttribute("guarded-control-stack");
 }
 
 namespace {

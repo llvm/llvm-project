@@ -16,10 +16,12 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/libc_assert.h"
+#include "src/__support/macros/config.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace internal {
 // Types of corrupted blocks, and functions to crash with an error message
@@ -261,6 +263,63 @@ public:
 
   constexpr Block(size_t prev_outer_size, size_t outer_size);
 
+  bool is_usable_space_aligned(size_t alignment) const {
+    return reinterpret_cast<uintptr_t>(usable_space()) % alignment == 0;
+  }
+
+  size_t padding_for_alignment(size_t alignment) const {
+    if (is_usable_space_aligned(alignment))
+      return 0;
+
+    // We need to ensure we can always split this block into a "padding" block
+    // and the aligned block. To do this, we need enough extra space for at
+    // least one block.
+    //
+    // |block   |usable_space                          |
+    // |........|......................................|
+    //                            ^
+    //                            Alignment requirement
+    //
+    //
+    // |block   |space   |block   |usable_space        |
+    // |........|........|........|....................|
+    //                            ^
+    //                            Alignment requirement
+    //
+    uintptr_t start = reinterpret_cast<uintptr_t>(usable_space());
+    alignment = cpp::max(alignment, ALIGNMENT);
+    return align_up(start + BLOCK_OVERHEAD, alignment) - start;
+  }
+
+  // Check that we can `allocate` a block with a given alignment and size from
+  // this existing block.
+  bool can_allocate(size_t alignment, size_t size) const;
+
+  // This is the return type for `allocate` which can split one block into up to
+  // three blocks.
+  struct BlockInfo {
+    // This is the newly aligned block. It will have the alignment requested by
+    // a call to `allocate` and at most `size`.
+    Block *block;
+
+    // If the usable_space in the new block was not aligned according to the
+    // `alignment` parameter, we will need to split into this block and the
+    // `block` to ensure `block` is properly aligned. In this case, `prev` will
+    // be a pointer to this new "padding" block. `prev` will be nullptr if no
+    // new block was created or we were able to merge the block before the
+    // original block with the "padding" block.
+    Block *prev;
+
+    // This is the remainder of the next block after splitting the `block`
+    // according to `size`. This can happen if there's enough space after the
+    // `block`.
+    Block *next;
+  };
+
+  // Divide a block into up to 3 blocks according to `BlockInfo`. This should
+  // only be called if `can_allocate` returns true.
+  static BlockInfo allocate(Block *block, size_t alignment, size_t size);
+
 private:
   /// Consumes the block and returns as a span of bytes.
   static ByteSpan as_bytes(Block *&&block);
@@ -355,6 +414,68 @@ void Block<OffsetType, kAlign>::free(Block *&block) {
     block = prev;
 
   merge_next(block);
+}
+
+template <typename OffsetType, size_t kAlign>
+bool Block<OffsetType, kAlign>::can_allocate(size_t alignment,
+                                             size_t size) const {
+  if (is_usable_space_aligned(alignment) && inner_size() >= size)
+    return true; // Size and alignment constraints met.
+
+  // Either the alignment isn't met or we don't have enough size.
+  // If we don't meet alignment, we can always adjust such that we do meet the
+  // alignment. If we meet the alignment but just don't have enough size. This
+  // check will fail anyway.
+  size_t adjustment = padding_for_alignment(alignment);
+  return inner_size() >= size + adjustment;
+}
+
+template <typename OffsetType, size_t kAlign>
+typename Block<OffsetType, kAlign>::BlockInfo
+Block<OffsetType, kAlign>::allocate(Block *block, size_t alignment,
+                                    size_t size) {
+  LIBC_ASSERT(
+      block->can_allocate(alignment, size) &&
+      "Calls to this function for a given alignment and size should only be "
+      "done if `can_allocate` for these parameters returns true.");
+
+  BlockInfo info{block, /*prev=*/nullptr, /*next=*/nullptr};
+
+  if (!info.block->is_usable_space_aligned(alignment)) {
+    size_t adjustment = info.block->padding_for_alignment(alignment);
+    LIBC_ASSERT((adjustment - BLOCK_OVERHEAD) % ALIGNMENT == 0 &&
+                "The adjustment calculation should always return a new size "
+                "that's a multiple of ALIGNMENT");
+
+    Block *original = info.block;
+    optional<Block *> maybe_aligned_block =
+        Block::split(original, adjustment - BLOCK_OVERHEAD);
+    LIBC_ASSERT(maybe_aligned_block.has_value() &&
+                "This split should always result in a new block. The check in "
+                "`can_allocate` ensures that we have enough space here to make "
+                "two blocks.");
+
+    if (Block *prev = original->prev()) {
+      // If there is a block before this, we can merge the current one with the
+      // newly created one.
+      merge_next(prev);
+    } else {
+      // Otherwise, this was the very first block in the chain. Now we can make
+      // it the new first block.
+      info.prev = original;
+    }
+
+    Block *aligned_block = *maybe_aligned_block;
+    LIBC_ASSERT(aligned_block->is_usable_space_aligned(alignment) &&
+                "The aligned block isn't aligned somehow.");
+    info.block = aligned_block;
+  }
+
+  // Now get a block for the requested size.
+  if (optional<Block *> next = Block::split(info.block, size))
+    info.next = *next;
+
+  return info;
 }
 
 template <typename OffsetType, size_t kAlign>
@@ -479,6 +600,6 @@ internal::BlockStatus Block<OffsetType, kAlign>::check_status() const {
   return internal::BlockStatus::VALID;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_BLOCK_H

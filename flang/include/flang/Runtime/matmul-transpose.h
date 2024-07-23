@@ -40,6 +40,8 @@ void RTDECL(MatmulTransposeDirect)(const Descriptor &, const Descriptor &,
       Descriptor & result, const Descriptor &x, const Descriptor &y, \
       const char *sourceFile, int line);
 
+#define MATMUL_FORCE_ALL_TYPES 0
+
 #include "matmul-instances.inc"
 
 } // extern "C"

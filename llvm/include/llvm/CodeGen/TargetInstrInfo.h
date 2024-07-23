@@ -2214,7 +2214,7 @@ public:
   /// Return MIR formatter to format/parse MIR operands.  Target can override
   /// this virtual function and return target specific MIR formatter.
   virtual const MIRFormatter *getMIRFormatter() const {
-    if (!Formatter.get())
+    if (!Formatter)
       Formatter = std::make_unique<MIRFormatter>();
     return Formatter.get();
   }
@@ -2224,6 +2224,12 @@ public:
   /// not provided.
   virtual unsigned getTailDuplicateSize(CodeGenOptLevel OptLevel) const {
     return OptLevel >= CodeGenOptLevel::Aggressive ? 4 : 2;
+  }
+
+  /// Returns the target-specific default value for tail merging.
+  /// This value will be used if the tail-merge-size argument is not provided.
+  virtual unsigned getTailMergeSize(const MachineFunction &MF) const {
+    return 3;
   }
 
   /// Returns the callee operand from the given \p MI.

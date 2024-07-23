@@ -15,11 +15,12 @@
 #define LLVM_CLANG_LIB_CODEGEN_TARGETINFO_H
 
 #include "CGBuilder.h"
-#include "CodeGenModule.h"
 #include "CGValue.h"
+#include "CodeGenModule.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SyncScope.h"
+#include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -417,6 +418,14 @@ public:
   virtual llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T) const {
     return nullptr;
   }
+  
+  static void
+  setBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
+                                  llvm::Function &F);
+
+  static void
+  setBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
+                                  llvm::AttrBuilder &FuncAttrs);
 
 protected:
   static std::string qualifyWindowsLibrary(StringRef Lib);
@@ -433,6 +442,7 @@ enum class AArch64ABIKind {
   DarwinPCS,
   Win64,
   AAPCSSoft,
+  PAuthTest,
 };
 
 std::unique_ptr<TargetCodeGenInfo>

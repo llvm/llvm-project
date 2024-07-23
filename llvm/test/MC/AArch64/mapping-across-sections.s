@@ -1,28 +1,40 @@
-// RUN: llvm-mc -triple=aarch64-none-linux-gnu -filetype=obj < %s | llvm-objdump -t - | FileCheck %s
+// RUN: llvm-mc -triple=aarch64 -filetype=obj %s | llvm-objdump -t - | FileCheck %s --match-full-lines
 
-        .text
-        add w0, w0, w0
+.section .text1,"ax"
+add w0, w0, w0
 
-// .wibble should *not* inherit .text's mapping symbol. It's a completely different section.
-        .section .wibble
-        add w0, w0, w0
+.text
+add w0, w0, w0
+.word 42
 
-// A setion should be able to start with a $d
-        .section .starts_data
-        .word 42
+.pushsection .data,"aw"
+.word 42
+.popsection
 
-// Changing back to .text should not emit a redundant $x
-        .text
-        add w0, w0, w0
+.text
+add w1, w1, w1
 
-// With all those constraints, we want:
-//   + .text to have $x at 0 and no others
-//   + .wibble to have $x at 0
-//   + .starts_data to have $d at 0
+.section .text1,"ax"
+add w1, w1, w1
 
+.text
+.word 42
 
-// CHECK:      0000000000000000 l .text        0000000000000000 $x
-// CHECK-NEXT: 0000000000000000 l .wibble      0000000000000000 $x
-// CHECK-NEXT: 0000000000000000 l .starts_data 0000000000000000 $d
-// CHECK-NOT: ${{[adtx]}}
+.section .rodata,"a"
+.word 42
+add w0, w0, w0
 
+.ident "clang"
+.section ".note.GNU-stack","",@progbits
+
+// CHECK:      SYMBOL TABLE:
+// CHECK-NEXT: 0000000000000000 l       .text1 0000000000000000 $x
+// CHECK-NEXT: 0000000000000000 l       .text  0000000000000000 $x
+// CHECK-NEXT: 0000000000000004 l       .text  0000000000000000 $d
+// CHECK-NEXT: 0000000000000000 l       .data  0000000000000000 $d
+// CHECK-NEXT: 0000000000000008 l       .text  0000000000000000 $x
+// CHECK-NEXT: 000000000000000c l       .text  0000000000000000 $d
+// CHECK-NEXT: 0000000000000000 l       .rodata        0000000000000000 $d
+// CHECK-NEXT: 0000000000000004 l       .rodata        0000000000000000 $x
+// CHECK-NEXT: 0000000000000000 l       .comment       0000000000000000 $d
+// CHECK-NOT:  {{.}}

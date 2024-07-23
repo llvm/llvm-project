@@ -78,19 +78,8 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
       !Args.hasArg(clang::driver::options::OPT_mfentry))
     return true;
 
-  if (Triple.isAndroid()) {
-    switch (Triple.getArch()) {
-    case llvm::Triple::aarch64:
-    case llvm::Triple::arm:
-    case llvm::Triple::armeb:
-    case llvm::Triple::thumb:
-    case llvm::Triple::thumbeb:
-    case llvm::Triple::riscv64:
-      return true;
-    default:
-      break;
-    }
-  }
+  if (Triple.isAndroid())
+    return true;
 
   switch (Triple.getArch()) {
   case llvm::Triple::xcore:
@@ -166,7 +155,7 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
 
 static bool useLeafFramePointerForTargetByDefault(const llvm::Triple &Triple) {
   if (Triple.isAArch64() || Triple.isPS() || Triple.isVE() ||
-      (Triple.isAndroid() && Triple.isRISCV64()))
+      (Triple.isAndroid() && !Triple.isARM()))
     return false;
 
   return true;
@@ -1133,6 +1122,27 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
 
   addMachineOutlinerArgs(D, Args, CmdArgs, ToolChain.getEffectiveTriple(),
                          /*IsLTO=*/true, PluginOptPrefix);
+
+  for (const Arg *A : Args.filtered(options::OPT_Wa_COMMA)) {
+    bool Crel = false;
+    for (StringRef V : A->getValues()) {
+      if (V == "--crel")
+        Crel = true;
+      else if (V == "--no-crel")
+        Crel = false;
+      else
+        continue;
+      A->claim();
+    }
+    if (Crel) {
+      if (Triple.isOSBinFormatELF() && !Triple.isMIPS()) {
+        CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + "-crel"));
+      } else {
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << "-Wa,--crel" << D.getTargetTriple();
+      }
+    }
+  }
 }
 
 /// Adds the '-lcgpu' and '-lmgpu' libraries to the compilation to include the
@@ -1399,6 +1409,8 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
         HelperStaticRuntimes.push_back("memprof-preinit");
     }
+    if (SanArgs.needsNsanRt())
+      SharedRuntimes.push_back("nsan");
     if (SanArgs.needsUbsanRt()) {
       if (SanArgs.requiresMinimalRuntime())
         SharedRuntimes.push_back("ubsan_minimal");
@@ -1469,7 +1481,7 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("msan_cxx");
   }
-  if (SanArgs.needsNsanRt())
+  if (!SanArgs.needsSharedRt() && SanArgs.needsNsanRt())
     StaticRuntimes.push_back("nsan");
   if (!SanArgs.needsSharedRt() && SanArgs.needsTsanRt()) {
     StaticRuntimes.push_back("tsan");
@@ -1522,6 +1534,12 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
                              RequiredSymbols);
   }
 
+  // -u options must be added before the runtime libs that resolve them.
+  for (auto S : RequiredSymbols) {
+    CmdArgs.push_back("-u");
+    CmdArgs.push_back(Args.MakeArgString(S));
+  }
+
   // Inject libfuzzer dependencies.
   if (SanArgs.needsFuzzer() && SanArgs.linkRuntimes() &&
       !Args.hasArg(options::OPT_shared)) {
@@ -1553,10 +1571,6 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   for (auto RT : NonWholeStaticRuntimes) {
     addSanitizerRuntime(TC, Args, CmdArgs, RT, false, false);
     AddExportDynamic |= !addSanitizerDynamicList(TC, Args, CmdArgs, RT);
-  }
-  for (auto S : RequiredSymbols) {
-    CmdArgs.push_back("-u");
-    CmdArgs.push_back(Args.MakeArgString(S));
   }
   // If there is a static runtime with no dynamic list, force all the symbols
   // to be dynamic to be sure we export sanitizer interface functions.

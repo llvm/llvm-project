@@ -961,7 +961,7 @@ bool CXXNameMangler::isStd(const NamespaceDecl *NS) {
   if (!Context.getEffectiveParentContext(NS)->isTranslationUnit())
     return false;
 
-  const IdentifierInfo *II = NS->getOriginalNamespace()->getIdentifier();
+  const IdentifierInfo *II = NS->getFirstDecl()->getIdentifier();
   return II && II->isStr("std");
 }
 
