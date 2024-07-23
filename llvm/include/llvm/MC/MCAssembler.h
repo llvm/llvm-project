@@ -65,7 +65,6 @@ private:
 
   bool HasLayout = false;
   bool RelaxAll = false;
-  bool SubsectionsViaSymbols = false;
 
   SectionListType Sections;
 
@@ -203,10 +202,6 @@ public:
 
   // Layout all section and prepare them for emission.
   void layout();
-
-  // FIXME: This does not belong here.
-  bool getSubsectionsViaSymbols() const { return SubsectionsViaSymbols; }
-  void setSubsectionsViaSymbols(bool Value) { SubsectionsViaSymbols = Value; }
 
   bool hasLayout() const { return HasLayout; }
   bool getRelaxAll() const { return RelaxAll; }
