@@ -33,6 +33,7 @@
 
 #include "ScriptLexer.h"
 #include "lld/Common/ErrorHandler.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
@@ -98,10 +99,10 @@ std::string ScriptLexer::joinTokens(size_t begin, size_t end) {
   if (itBegin == itEnd)
     return S;
 
-  S += (*itBegin).val;
+  S += itBegin->val;
   while (++itBegin != itEnd) {
     S += " ";
-    S += (*itBegin).val;
+    S += itBegin->val;
   }
   return S;
 }
@@ -145,7 +146,7 @@ void ScriptLexer::tokenize(MemoryBufferRef mb) {
         return;
       }
 
-      vec.push_back({Kind::Quote, s.take_front(e + 1)});
+      vec.push_back({Tok::Quote, s.take_front(e + 1)});
       s = s.substr(e + 1);
       continue;
     }
@@ -183,99 +184,99 @@ void ScriptLexer::tokenize(MemoryBufferRef mb) {
 }
 
 ScriptLexer::Token ScriptLexer::getOperatorToken(StringRef s) {
-  auto createToken = [&](Kind kind, size_t pos) -> Token {
+  auto createToken = [&](Tok kind, size_t pos) -> Token {
     return {kind, s.substr(0, pos)};
   };
 
   switch (s.front()) {
   case EOF:
-    return createToken(Kind::Eof, 0);
+    return createToken(Tok::Eof, 0);
   case '(':
-    return createToken(Kind::BracektBegin, 1);
+    return createToken(Tok::BracektBegin, 1);
   case ')':
-    return createToken(Kind::BracektEnd, 1);
+    return createToken(Tok::BracektEnd, 1);
   case '{':
-    return createToken(Kind::CurlyBegin, 1);
+    return createToken(Tok::CurlyBegin, 1);
   case '}':
-    return createToken(Kind::CurlyEnd, 1);
+    return createToken(Tok::CurlyEnd, 1);
   case ';':
-    return createToken(Kind::Semicolon, 1);
+    return createToken(Tok::Semicolon, 1);
   case ',':
-    return createToken(Kind::Comma, 1);
+    return createToken(Tok::Comma, 1);
   case ':':
-    return createToken(Kind::Colon, 1);
+    return createToken(Tok::Colon, 1);
   case '?':
-    return createToken(Kind::Question, 1);
+    return createToken(Tok::Question, 1);
   case '%':
-    return createToken(Kind::Percent, 1);
+    return createToken(Tok::Percent, 1);
   case '!':
     if (s.size() > 1 && s[1] == '=')
-      return createToken(Kind::NotEqual, 2);
-    return createToken(Kind::Excalamation, 1);
+      return createToken(Tok::NotEqual, 2);
+    return createToken(Tok::Excalamation, 1);
   case '*':
     if (s.size() > 1 && s[1] == '=')
-      return createToken(Kind::MulAssign, 2);
-    return createToken(Kind::Asterisk, 1);
+      return createToken(Tok::MulAssign, 2);
+    return createToken(Tok::Asterisk, 1);
   case '/':
     if (s.size() > 1 && s[1] == '=')
-      return createToken(Kind::DivAssign, 2);
-    return createToken(Kind::Slash, 1);
+      return createToken(Tok::DivAssign, 2);
+    return createToken(Tok::Slash, 1);
   case '=':
     if (s.size() > 1 && s[1] == '=')
-      return createToken(Kind::Equal, 2);
-    return createToken(Kind::Assign, 1);
+      return createToken(Tok::Equal, 2);
+    return createToken(Tok::Assign, 1);
   case '+':
     if (s.size() > 1 && s[1] == '=')
-      return createToken(Kind::PlusAssign, 2);
-    return createToken(Kind::Plus, 1);
+      return createToken(Tok::PlusAssign, 2);
+    return createToken(Tok::Plus, 1);
   case '-':
     if (s.size() > 1 && s[1] == '=')
-      return createToken(Kind::MinusAssign, 2);
-    return createToken(Kind::Minus, 1);
+      return createToken(Tok::MinusAssign, 2);
+    return createToken(Tok::Minus, 1);
   case '<':
     if (s.size() > 2 && s[1] == s[0] && s[2] == '=')
-      return createToken(Kind::LeftShiftAssign, 3);
+      return createToken(Tok::LeftShiftAssign, 3);
     if (s.size() > 1) {
       if (s[1] == '=')
-        return createToken(Kind::LessEqual, 2);
+        return createToken(Tok::LessEqual, 2);
       if (s[1] == '<')
-        return createToken(Kind::LeftShift, 2);
+        return createToken(Tok::LeftShift, 2);
     }
-    return createToken(Kind::Less, 1);
+    return createToken(Tok::Less, 1);
   case '>':
     if (s.size() > 2 && s[1] == s[0] && s[2] == '=')
-      return createToken(Kind::RightShiftAssign, 3);
+      return createToken(Tok::RightShiftAssign, 3);
     if (s.size() > 1) {
       if (s[1] == '=')
-        return createToken(Kind::GreaterEqual, 2);
+        return createToken(Tok::GreaterEqual, 2);
       if (s[1] == '>')
-        return createToken(Kind::RightShift, 2);
+        return createToken(Tok::RightShift, 2);
     }
-    return createToken(Kind::Greater, 1);
+    return createToken(Tok::Greater, 1);
   case '&':
     if (s.size() > 1) {
       if (s[1] == '=')
-        return createToken(Kind::AndAssign, 2);
+        return createToken(Tok::AndAssign, 2);
       if (s[1] == '&')
-        return createToken(Kind::AndGate, 2);
+        return createToken(Tok::AndGate, 2);
     }
-    return createToken(Kind::Bitwise, 1);
+    return createToken(Tok::Bitwise, 1);
   case '^':
     if (s.size() > 1 && s[1] == '=')
-      return createToken(Kind::XorAssign, 2);
-    return createToken(Kind::Xor, 1);
+      return createToken(Tok::XorAssign, 2);
+    return createToken(Tok::Xor, 1);
   case '|':
     if (s.size() > 1) {
       if (s[1] == '=')
-        return createToken(Kind::OrAssign, 2);
+        return createToken(Tok::OrAssign, 2);
       if (s[1] == '|')
-        return createToken(Kind::OrGate, 2);
+        return createToken(Tok::OrGate, 2);
     }
-    return createToken(Kind::Or, 1);
+    return createToken(Tok::Or, 1);
   case '.':
-    return createToken(Kind::Dot, 1);
+    return createToken(Tok::Dot, 1);
   case '_':
-    return createToken(Kind::Underscore, 1);
+    return createToken(Tok::Underscore, 1);
   case '0':
   case '1':
   case '2':
@@ -286,81 +287,82 @@ ScriptLexer::Token ScriptLexer::getOperatorToken(StringRef s) {
   case '7':
   case '8':
   case '9':
-    return createToken(Kind::Decimal, 1);
+    return createToken(Tok::Decimal, 1);
   default:
-    return {Kind::Identifier, s};
+    return {Tok::Identifier, s};
   }
 }
 
+const llvm::StringMap<Tok> ScriptLexer::keywordTokMap = {
+    {"ENTRY", Tok::Entry},
+    {"INPUT", Tok::Input},
+    {"GROUP", Tok::Group},
+    {"INCLUDE", Tok::Include},
+    {"MEMORY", Tok::Memory},
+    {"OUTPUT", Tok::Output},
+    {"SEARCH_DIR", Tok::SearchDir},
+    {"STARTUP", Tok::Startup},
+    {"INSERT", Tok::Insert},
+    {"AFTER", Tok::After},
+    {"OUTPUT_FORMAT", Tok::OutputFormat},
+    {"TARGET", Tok::Target},
+    {"ASSERT", Tok::Assert},
+    {"CONSTANT", Tok::Constant},
+    {"EXTERN", Tok::Extern},
+    {"OUTPUT_ARCH", Tok::OutputArch},
+    {"NOCROSSREFS", Tok::Nocrossrefs},
+    {"NOCROSSREFS_TO", Tok::NocrossrefsTo},
+    {"PROVIDE", Tok::Provide},
+    {"HIDDEN", Tok::Hidden},
+    {"PROVIDE_HIDDEN", Tok::ProvideHidden},
+    {"SECTIONS", Tok::Sections},
+    {"BEFORE", Tok::Before},
+    {"EXCLUDE_FILE", Tok::ExcludeFile},
+    {"KEEP", Tok::Keep},
+    {"INPUT_SECTION_FLAGS", Tok::InputSectionFlags},
+    {"OVERLAY", Tok::Overlay},
+    {"NOLOAD", Tok::Noload},
+    {"COPY", Tok::Copy},
+    {"INFO", Tok::Info},
+    {"OVERWRITE_SECTIONS", Tok::OverwriteSections},
+    {"SUBALIGN", Tok::Subalign},
+    {"ONLY_IF_RO", Tok::OnlyIfRO},
+    {"ONLY_IF_RW", Tok::OnlyIfRW},
+    {"FILL", Tok::Fill},
+    {"SORT", Tok::Sort},
+    {"ABSOLUTE", Tok::Absolute},
+    {"ADDR", Tok::Addr},
+    {"ALIGN", Tok::Align},
+    {"ALIGNOF", Tok::Alignof},
+    {"DATA_SEGMENT_ALIGN", Tok::DataSegmentAlign},
+    {"DATA_SEGMENT_END", Tok::DataSegmentEnd},
+    {"DATA_SEGMENT_RELRO_END", Tok::DataSegmentRelroEnd},
+    {"DEFINED", Tok::Defined},
+    {"LENGTH", Tok::Length},
+    {"LOADADDR", Tok::Loadaddr},
+    {"LOG2CEIL", Tok::Log2ceil},
+    {"MAX", Tok::Max},
+    {"MIN", Tok::Min},
+    {"ORIGIN", Tok::Origin},
+    {"SEGMENT_START", Tok::SegmentStart},
+    {"SIZEOF", Tok::Sizeof},
+    {"SIZEOF_HEADERS", Tok::SizeofHeaders},
+    {"FILEHDR", Tok::Filehdr},
+    {"PHDRS", Tok::Phdrs},
+    {"AT", Tok::At},
+    {"FLAGS", Tok::Flags},
+    {"VERSION", Tok::Version},
+    {"REGION_ALIAS", Tok::RegionAlias},
+    {"AS_NEEDED", Tok::AsNeeded},
+    {"CONSTRUCTORS", Tok::Constructors},
+    {"MAXPAGESIZE", Tok::Maxpagesize},
+    {"COMMONPAGESIZE", Tok::Commonpagesize}};
+
 ScriptLexer::Token ScriptLexer::getKeywordorIdentifier(StringRef s) {
-  static const std::unordered_map<std::string, Kind> keywords = {
-      {"ENTRY", Kind::Entry},
-      {"INPUT", Kind::Input},
-      {"GROUP", Kind::Group},
-      {"INCLUDE", Kind::Include},
-      {"MEMORY", Kind::Memory},
-      {"OUTPUT", Kind::Output},
-      {"SEARCH_DIR", Kind::SearchDir},
-      {"STARTUP", Kind::Startup},
-      {"INSERT", Kind::Insert},
-      {"AFTER", Kind::After},
-      {"OUTPUT_FORMAT", Kind::OutputFormat},
-      {"TARGET", Kind::Target},
-      {"ASSERT", Kind::Assert},
-      {"CONSTANT", Kind::Constant},
-      {"EXTERN", Kind::Extern},
-      {"OUTPUT_ARCH", Kind::OutputArch},
-      {"NOCROSSREFS", Kind::Nocrossrefs},
-      {"NOCROSSREFS_TO", Kind::NocrossrefsTo},
-      {"PROVIDE", Kind::Provide},
-      {"HIDDEN", Kind::Hidden},
-      {"PROVIDE_HIDDEN", Kind::ProvideHidden},
-      {"SECTIONS", Kind::Sections},
-      {"BEFORE", Kind::Before},
-      {"EXCLUDE_FILE", Kind::ExcludeFile},
-      {"KEEP", Kind::Keep},
-      {"INPUT_SECTION_FLAGS", Kind::InputSectionFlags},
-      {"OVERLAY", Kind::Overlay},
-      {"NOLOAD", Kind::Noload},
-      {"COPY", Kind::Copy},
-      {"INFO", Kind::Info},
-      {"OVERWRITE_SECTIONS", Kind::OverwriteSections},
-      {"SUBALIGN", Kind::Subalign},
-      {"ONLY_IF_RO", Kind::OnlyIfRO},
-      {"ONLY_IF_RW", Kind::OnlyIfRW},
-      {"FILL", Kind::Fill},
-      {"SORT", Kind::Sort},
-      {"ABSOLUTE", Kind::Absolute},
-      {"ADDR", Kind::Addr},
-      {"ALIGN", Kind::Align},
-      {"ALIGNOF", Kind::Alignof},
-      {"DATA_SEGMENT_ALIGN", Kind::DataSegmentAlign},
-      {"DATA_SEGMENT_END", Kind::DataSegmentEnd},
-      {"DATA_SEGMENT_RELRO_END", Kind::DataSegmentRelroEnd},
-      {"DEFINED", Kind::Defined},
-      {"LENGTH", Kind::Length},
-      {"LOADADDR", Kind::Loadaddr},
-      {"LOG2CEIL", Kind::Log2ceil},
-      {"MAX", Kind::Max},
-      {"MIN", Kind::Min},
-      {"ORIGIN", Kind::Origin},
-      {"SEGMENT_START", Kind::SegmentStart},
-      {"SIZEOF", Kind::Sizeof},
-      {"SIZEOF_HEADERS", Kind::SizeofHeaders},
-      {"FILEHDR", Kind::Filehdr},
-      {"PHDRS", Kind::Phdrs},
-      {"AT", Kind::At},
-      {"FLAGS", Kind::Flags},
-      {"VERSION", Kind::Version},
-      {"REGION_ALIAS", Kind::RegionAlias},
-      {"AS_NEEDED", Kind::AsNeeded},
-      {"CONSTRUCTORS", Kind::Constructors},
-      {"MAXPAGESIZE", Kind::Maxpagesize},
-      {"COMMONPAGESIZE", Kind::Commonpagesize}};
-  auto it = keywords.find(s.str());
-  if (it != keywords.end())
+  auto it = keywordTokMap.find(s.str());
+  if (it != keywordTokMap.end())
     return {it->second, s};
-  return {Kind::Identifier, s};
+  return {Tok::Identifier, s};
 }
 
 // Skip leading whitespace characters or comments.
@@ -399,7 +401,7 @@ std::vector<ScriptLexer::Token> ScriptLexer::tokenizeExpr(StringRef s) {
 
   // Quoted strings are literal strings, so we don't want to split it.
   if (s.starts_with("\""))
-    return {{Kind::Quote, s}};
+    return {{Tok::Quote, s}};
 
   // Split S with operators as separators.
   std::vector<ScriptLexer::Token> ret;
@@ -408,13 +410,13 @@ std::vector<ScriptLexer::Token> ScriptLexer::tokenizeExpr(StringRef s) {
 
     // No need to split if there is no operator.
     if (e == StringRef::npos) {
-      ret.push_back({Kind::Identifier, s});
+      ret.push_back({Tok::Identifier, s});
       break;
     }
 
     // Get a token before the operator.
     if (e != 0)
-      ret.push_back({Kind::Identifier, s.substr(0, e)});
+      ret.push_back({Tok::Identifier, s.substr(0, e)});
 
     // Get the operator as a token.
     // Keep !=, ==, >=, <=, << and >> operators as a single tokens.
@@ -450,10 +452,10 @@ void ScriptLexer::maybeSplitExpr() {
 
 ScriptLexer::Token ScriptLexer::next() {
   if (errorCount())
-    return {Kind::Error, ""};
+    return {Tok::Error, ""};
   if (atEOF()) {
     setError("unexpected EOF");
-    return {Kind::Eof, ""};
+    return {Tok::Eof, ""};
   }
   if (inExpr)
     maybeSplitExpr();
@@ -463,7 +465,7 @@ ScriptLexer::Token ScriptLexer::next() {
 ScriptLexer::Token ScriptLexer::peek() {
   Token tok = next();
   if (errorCount())
-    return {Kind::Error, ""};
+    return {Tok::Error, ""};
   pos = pos - 1;
   return tok;
 }

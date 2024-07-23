@@ -11,16 +11,17 @@
 
 #include "ScriptToken.h"
 #include "lld/Common/LLVM.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include <vector>
 
 namespace lld::elf {
-
 class ScriptLexer {
 public:
+  static const llvm::StringMap<Tok> keywordTokMap;
   struct Token {
-    Kind kind;
+    Tok kind;
     StringRef val;
     inline bool operator==(StringRef other) { return val == other; }
 
@@ -44,6 +45,7 @@ public:
 
   std::vector<MemoryBufferRef> mbs;
   std::vector<Token> tokens;
+  static const llvm::StringMap<Tok> keywordToMap;
   std::string joinTokens(size_t begin, size_t end);
   bool inExpr = false;
   size_t pos = 0;

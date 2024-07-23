@@ -233,7 +233,7 @@ void ScriptParser::readVersionScriptCommand() {
 
   while (!atEOF() && !errorCount() && peek() != "}") {
     ScriptLexer::Token verTok = next();
-    if (verTok.kind == Kind::CurlyBegin) {
+    if (verTok.kind == Tok::CurlyBegin) {
       setError("anonymous version definition is used in "
                "combination with other version definitions");
       return;
@@ -252,62 +252,62 @@ void ScriptParser::readVersion() {
 void ScriptParser::readLinkerScript() {
   while (!atEOF()) {
     ScriptLexer::Token tok = next();
-    if (tok.kind == Kind::Semicolon)
+    if (tok.kind == Tok::Semicolon)
       continue;
 
     switch (tok.kind) {
-    case Kind::Entry:
+    case Tok::Entry:
       readEntry();
       break;
-    case Kind::Extern:
+    case Tok::Extern:
       readExtern();
       break;
-    case Kind::Group:
+    case Tok::Group:
       readGroup();
       break;
-    case Kind::Include:
+    case Tok::Include:
       readInclude();
       break;
-    case Kind::Input:
+    case Tok::Input:
       readInput();
       break;
-    case Kind::Memory:
+    case Tok::Memory:
       readMemory();
       break;
-    case Kind::Output:
+    case Tok::Output:
       readOutput();
       break;
-    case Kind::OutputArch:
+    case Tok::OutputArch:
       readOutputArch();
       break;
-    case Kind::OutputFormat:
+    case Tok::OutputFormat:
       readOutputFormat();
       break;
-    case Kind::OverwriteSections:
+    case Tok::OverwriteSections:
       readOverwriteSections();
       break;
-    case Kind::Phdrs:
+    case Tok::Phdrs:
       readPhdrs();
       break;
-    case Kind::RegionAlias:
+    case Tok::RegionAlias:
       readRegionAlias();
       break;
-    case Kind::SearchDir:
+    case Tok::SearchDir:
       readSearchDir();
       break;
-    case Kind::Sections:
+    case Tok::Sections:
       readSections();
       break;
-    case Kind::Target:
+    case Tok::Target:
       readTarget();
       break;
-    case Kind::Version:
+    case Tok::Version:
       readVersion();
       break;
-    case Kind::Nocrossrefs:
+    case Tok::Nocrossrefs:
       readNoCrossRefs(/*to=*/false);
       break;
-    case Kind::NocrossrefsTo:
+    case Tok::NocrossrefsTo:
       readNoCrossRefs(/*to=*/true);
       break;
     default:
@@ -550,16 +550,16 @@ void ScriptParser::readPhdrs() {
     while (!errorCount() && !consume(";")) {
       ScriptLexer::Token tok = next();
       switch (tok.kind) {
-      case Kind::Filehdr:
+      case Tok::Filehdr:
         cmd.hasFilehdr = true;
         break;
-      case Kind::Phdrs:
+      case Tok::Phdrs:
         cmd.hasPhdrs = true;
         break;
-      case Kind::At:
+      case Tok::At:
         cmd.lmaExpr = readParenExpr();
         break;
-      case Kind::Flags:
+      case Tok::Flags:
         cmd.flags = readParenExpr()().getValue();
         break;
       default:
@@ -658,11 +658,11 @@ void ScriptParser::readSections() {
   SmallVector<SectionCommand *, 0> v;
   while (!errorCount() && !consume("}")) {
     ScriptLexer::Token tok = next();
-    if (tok.kind == Kind::Overlay) {
+    if (tok.kind == Tok::Overlay) {
       for (SectionCommand *cmd : readOverlay())
         v.push_back(cmd);
       continue;
-    } else if (tok.kind == Kind::Include) {
+    } else if (tok.kind == Tok::Include) {
       readInclude();
       continue;
     }
@@ -786,12 +786,12 @@ SmallVector<SectionPattern, 0> ScriptParser::readInputSectionsList() {
     // Break if the next token is ), EXCLUDE_FILE, or SORT*.
     while (!errorCount() && peekSortKind() == SortSectionPolicy::Default) {
       ScriptLexer::Token tok = peek();
-      if (tok.kind == Kind::BracektEnd || tok.kind == Kind::ExcludeFile)
+      if (tok.kind == Tok::BracektEnd || tok.kind == Tok::ExcludeFile)
         break;
       // Detect common mistakes when certain non-wildcard meta characters are
       // used without a closing ')'.
-      if (tok.kind == Kind::CurlyBegin || tok.kind == Kind::CurlyEnd ||
-          tok.kind == Kind::BracektBegin || tok.kind == Kind::BracektEnd) {
+      if (tok.kind == Tok::CurlyBegin || tok.kind == Tok::CurlyEnd ||
+          tok.kind == Tok::BracektBegin || tok.kind == Tok::BracektEnd) {
         skip();
         setError("section pattern is expected");
         break;
@@ -1029,7 +1029,6 @@ OutputDesc *ScriptParser::readOutputSectionDescription(StringRef outSec) {
   expect("{");
 
   while (!errorCount() && !consume("}")) {
-    // StringRef tok = next().val;
     ScriptLexer::Token tok = next();
     if (tok == ";") {
       // Empty commands are allowed. Do nothing here.
@@ -1139,31 +1138,30 @@ SymbolAssignment *ScriptParser::readProvideHidden(bool provide, bool hidden) {
 
 SymbolAssignment *ScriptParser::readAssignment(ScriptLexer::Token tok) {
   // Assert expression returns Dot, so this is equal to ".=."
-  if (tok == "ASSERT")
+  if (tok.kind == Tok::Assert)
     return make<SymbolAssignment>(".", readAssert(), 0, getCurrentLocation());
 
   size_t oldPos = pos;
   SymbolAssignment *cmd = nullptr;
   bool savedSeenRelroEnd = script->seenRelroEnd;
   ScriptLexer::Token opTok = peek();
-  if (opTok.kind == Kind::Assign || opTok.val.starts_with("=")) {
+  if (opTok.val.starts_with("=")) {
     SaveAndRestore saved(inExpr, true);
     cmd = readSymbolAssignment(tok.val);
-  } else if (opTok.kind == Kind::PlusAssign ||
-             opTok.kind == Kind::MinusAssign || opTok.kind == Kind::MulAssign ||
-             opTok.kind == Kind::DivAssign ||
-             opTok.kind == Kind::LeftShiftAssign ||
-             opTok.kind == Kind::RightShiftAssign ||
-             opTok.kind == Kind::AndAssign || opTok.kind == Kind::OrAssign ||
-             opTok.kind == Kind::XorAssign) {
+  } else if (opTok.kind == Tok::PlusAssign || opTok.kind == Tok::MinusAssign ||
+             opTok.kind == Tok::MulAssign || opTok.kind == Tok::DivAssign ||
+             opTok.kind == Tok::LeftShiftAssign ||
+             opTok.kind == Tok::RightShiftAssign ||
+             opTok.kind == Tok::AndAssign || opTok.kind == Tok::OrAssign ||
+             opTok.kind == Tok::XorAssign) {
     cmd = readSymbolAssignment(tok.val);
-  } else if (tok.kind == Kind::Provide) {
+  } else if (tok.kind == Tok::Provide) {
     SaveAndRestore saved(inExpr, true);
     cmd = readProvideHidden(true, false);
-  } else if (tok.kind == Kind::Hidden) {
+  } else if (tok.kind == Tok::Hidden) {
     SaveAndRestore saved(inExpr, true);
     cmd = readProvideHidden(false, true);
-  } else if (tok.kind == Kind::ProvideHidden) {
+  } else if (tok.kind == Tok::ProvideHidden) {
     SaveAndRestore saved(inExpr, true);
     cmd = readProvideHidden(true, true);
   }
@@ -1482,7 +1480,7 @@ Expr ScriptParser::readPrimary() {
   // Built-in functions are parsed here.
   // https://sourceware.org/binutils/docs/ld/Builtin-Functions.html.
   switch (tok.kind) {
-  case Kind::Absolute: {
+  case Tok::Absolute: {
     Expr inner = readParenExpr();
     return [=] {
       ExprValue i = inner();
@@ -1490,7 +1488,7 @@ Expr ScriptParser::readPrimary() {
       return i;
     };
   }
-  case Kind::Addr: {
+  case Tok::Addr: {
     StringRef name = unquote(readParenLiteral());
     OutputSection *osec = &script->getOrCreateOutputSection(name)->osec;
     osec->usedInExpression = true;
@@ -1499,7 +1497,7 @@ Expr ScriptParser::readPrimary() {
       return {osec, false, 0, location};
     };
   }
-  case Kind::Align: {
+  case Tok::Align: {
     expect("(");
     Expr e = readExpr();
     if (consume(")")) {
@@ -1515,7 +1513,7 @@ Expr ScriptParser::readPrimary() {
       return v;
     };
   }
-  case Kind::Alignof: {
+  case Tok::Alignof: {
     StringRef name = unquote(readParenLiteral());
     OutputSection *osec = &script->getOrCreateOutputSection(name)->osec;
     return [=] {
@@ -1523,11 +1521,11 @@ Expr ScriptParser::readPrimary() {
       return osec->addralign;
     };
   }
-  case Kind::Assert:
+  case Tok::Assert:
     return readAssert();
-  case Kind::Constant:
+  case Tok::Constant:
     return readConstant();
-  case Kind::DataSegmentAlign: {
+  case Tok::DataSegmentAlign: {
     expect("(");
     Expr e = readExpr();
     expect(",");
@@ -1539,13 +1537,13 @@ Expr ScriptParser::readPrimary() {
       return (script->getDot() + align - 1) & -align;
     };
   }
-  case Kind::DataSegmentEnd: {
+  case Tok::DataSegmentEnd: {
     expect("(");
     expect(".");
     expect(")");
     return [] { return script->getDot(); };
   }
-  case Kind::DataSegmentRelroEnd: {
+  case Tok::DataSegmentRelroEnd: {
     // GNU linkers implements more complicated logic to handle
     // DATA_SEGMENT_RELRO_END. We instead ignore the arguments and
     // just align to the next page boundary for simplicity.
@@ -1558,7 +1556,7 @@ Expr ScriptParser::readPrimary() {
     return
         [=] { return alignToPowerOf2(script->getDot(), config->maxPageSize); };
   }
-  case Kind::Defined: {
+  case Tok::Defined: {
     StringRef name = unquote(readParenLiteral());
     // Return 1 if s is defined. If the definition is only found in a linker
     // script, it must happen before this DEFINED.
@@ -1569,7 +1567,7 @@ Expr ScriptParser::readPrimary() {
                                                                          : 0;
     };
   }
-  case Kind::Length: {
+  case Tok::Length: {
     StringRef name = readParenLiteral();
     if (script->memoryRegions.count(name) == 0) {
       setError("memory region not defined: " + name);
@@ -1577,7 +1575,7 @@ Expr ScriptParser::readPrimary() {
     }
     return script->memoryRegions[name]->length;
   }
-  case Kind::Loadaddr: {
+  case Tok::Loadaddr: {
     StringRef name = unquote(readParenLiteral());
     OutputSection *osec = &script->getOrCreateOutputSection(name)->osec;
     osec->usedInExpression = true;
@@ -1586,7 +1584,7 @@ Expr ScriptParser::readPrimary() {
       return osec->getLMA();
     };
   }
-  case Kind::Log2ceil: {
+  case Tok::Log2ceil: {
     expect("(");
     Expr a = readExpr();
     expect(")");
@@ -1595,18 +1593,18 @@ Expr ScriptParser::readPrimary() {
       return llvm::Log2_64_Ceil(std::max(a().getValue(), UINT64_C(1)));
     };
   }
-  case Kind::Max:
-  case Kind::Min: {
+  case Tok::Max:
+  case Tok::Min: {
     expect("(");
     Expr a = readExpr();
     expect(",");
     Expr b = readExpr();
     expect(")");
-    if (tok.kind == Kind::Min)
+    if (tok.kind == Tok::Min)
       return [=] { return std::min(a().getValue(), b().getValue()); };
     return [=] { return std::max(a().getValue(), b().getValue()); };
   }
-  case Kind::Origin: {
+  case Tok::Origin: {
     StringRef name = readParenLiteral();
     if (script->memoryRegions.count(name) == 0) {
       setError("memory region not defined: " + name);
@@ -1614,7 +1612,7 @@ Expr ScriptParser::readPrimary() {
     }
     return script->memoryRegions[name]->origin;
   }
-  case Kind::SegmentStart: {
+  case Tok::SegmentStart: {
     expect("(");
     skip();
     expect(",");
@@ -1622,7 +1620,7 @@ Expr ScriptParser::readPrimary() {
     expect(")");
     return [=] { return e(); };
   }
-  case Kind::Sizeof: {
+  case Tok::Sizeof: {
     StringRef name = unquote(readParenLiteral());
     OutputSection *cmd = &script->getOrCreateOutputSection(name)->osec;
     // Linker script does not create an output section if its content is empty.
@@ -1630,7 +1628,7 @@ Expr ScriptParser::readPrimary() {
     // be empty.
     return [=] { return cmd->size; };
   }
-  case Kind::SizeofHeaders:
+  case Tok::SizeofHeaders:
     return [=] { return elf::getHeaderSize(); };
 
   default: {

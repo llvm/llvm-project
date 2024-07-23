@@ -15,7 +15,7 @@
 
 namespace lld {
 namespace elf {
-enum class Kind {
+enum class Tok {
   Entry,
 
   // Commands Files
