@@ -16,11 +16,11 @@
 ;         | sed -r 's/[[][[]TMP[0-9]+[]][]]/%B/'             \
 ;         | sed -r 's/[[][[]TMP[0-9]+[]][]]/%C/'             \
 ;         | sed -r 's/[[][[]TMP[0-9]+[]][]]/%D/'             \
-;         | sort \
-;         | uniq \
-;         | while read x;
-;             do \
-;                 y=`echo "$x" \
+;         | sort                                             \
+;         | uniq                                             \
+;         | while read x;                                    \
+;             do                                             \
+;                 y=`echo "$x"                               \
 ;                     | sed -r 's/@llvm[.]aarch64[.]neon[.]/@/' \
 ;                     | sed -r 's/[.]p0//'                      \
 ;                     | tr '.' '_'`;                            \
