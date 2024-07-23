@@ -670,27 +670,42 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
   // Build the argument list.
   bool NeedWrapperFunction =
       getDebugInfo() && CGM.getCodeGenOpts().hasReducedDebugInfo();
-  FunctionArgList Args;
-  llvm::MapVector<const Decl *, std::pair<const VarDecl *, Address>> LocalAddrs;
-  llvm::DenseMap<const Decl *, std::pair<const Expr *, llvm::Value *>> VLASizes;
+  FunctionArgList Args, WrapperArgs;
+  llvm::MapVector<const Decl *, std::pair<const VarDecl *, Address>> LocalAddrs,
+      WrapperLocalAddrs;
+  llvm::DenseMap<const Decl *, std::pair<const Expr *, llvm::Value *>> VLASizes,
+      WrapperVLASizes;
   SmallString<256> Buffer;
   llvm::raw_svector_ostream Out(Buffer);
   Out << CapturedStmtInfo->getHelperName();
-  if (NeedWrapperFunction)
+
+  CodeGenFunction WrapperCGF(CGM, /*suppressNewContext=*/true);
+  llvm::Function *WrapperF = nullptr;
+  if (NeedWrapperFunction) {
+    // Emit the final kernel early to allow attributes to be added by the
+    // OpenMPI-IR-Builder.
+    FunctionOptions WrapperFO(&S, /*UIntPtrCastRequired=*/true,
+                              /*RegisterCastedArgsOnly=*/true,
+                              CapturedStmtInfo->getHelperName(), Loc);
+    WrapperCGF.CapturedStmtInfo = CapturedStmtInfo;
+    WrapperF =
+        emitOutlinedFunctionPrologue(WrapperCGF, Args, LocalAddrs, VLASizes,
+                                     WrapperCGF.CXXThisValue, WrapperFO);
     Out << "_debug__";
+  }
   FunctionOptions FO(&S, !NeedWrapperFunction, /*RegisterCastedArgsOnly=*/false,
                      Out.str(), Loc);
-  llvm::Function *F = emitOutlinedFunctionPrologue(*this, Args, LocalAddrs,
-                                                   VLASizes, CXXThisValue, FO);
+  llvm::Function *F = emitOutlinedFunctionPrologue(
+      *this, WrapperArgs, WrapperLocalAddrs, WrapperVLASizes, CXXThisValue, FO);
   CodeGenFunction::OMPPrivateScope LocalScope(*this);
-  for (const auto &LocalAddrPair : LocalAddrs) {
+  for (const auto &LocalAddrPair : WrapperLocalAddrs) {
     if (LocalAddrPair.second.first) {
       LocalScope.addPrivate(LocalAddrPair.second.first,
                             LocalAddrPair.second.second);
     }
   }
   (void)LocalScope.Privatize();
-  for (const auto &VLASizePair : VLASizes)
+  for (const auto &VLASizePair : WrapperVLASizes)
     VLASizeMap[VLASizePair.second.first] = VLASizePair.second.second;
   PGO.assignRegionCounters(GlobalDecl(CD), F);
   CapturedStmtInfo->EmitBody(*this, CD->getBody());
@@ -699,17 +714,10 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
   if (!NeedWrapperFunction)
     return F;
 
-  FunctionOptions WrapperFO(&S, /*UIntPtrCastRequired=*/true,
-                            /*RegisterCastedArgsOnly=*/true,
-                            CapturedStmtInfo->getHelperName(), Loc);
-  CodeGenFunction WrapperCGF(CGM, /*suppressNewContext=*/true);
-  WrapperCGF.CapturedStmtInfo = CapturedStmtInfo;
-  Args.clear();
-  LocalAddrs.clear();
-  VLASizes.clear();
-  llvm::Function *WrapperF =
-      emitOutlinedFunctionPrologue(WrapperCGF, Args, LocalAddrs, VLASizes,
-                                   WrapperCGF.CXXThisValue, WrapperFO);
+  // Reverse the order.
+  WrapperF->removeFromParent();
+  F->getParent()->getFunctionList().insertAfter(F->getIterator(), WrapperF);
+
   llvm::SmallVector<llvm::Value *, 4> CallArgs;
   auto *PI = F->arg_begin();
   for (const auto *Arg : Args) {

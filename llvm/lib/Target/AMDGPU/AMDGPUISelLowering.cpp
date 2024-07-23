@@ -397,6 +397,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::FLOG2, MVT::f32, Custom);
   setOperationAction(ISD::FROUND, {MVT::f32, MVT::f64}, Custom);
+  setOperationAction({ISD::LROUND, ISD::LLROUND},
+                     {MVT::f16, MVT::f32, MVT::f64}, Expand);
 
   setOperationAction(
       {ISD::FLOG, ISD::FLOG10, ISD::FEXP, ISD::FEXP2, ISD::FEXP10}, MVT::f32,
