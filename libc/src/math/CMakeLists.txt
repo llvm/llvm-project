@@ -430,6 +430,11 @@ add_math_entrypoint_object(tanf)
 add_math_entrypoint_object(tanh)
 add_math_entrypoint_object(tanhf)
 
+add_math_entrypoint_object(totalordermag)
+add_math_entrypoint_object(totalordermagf)
+add_math_entrypoint_object(totalordermagl)
+add_math_entrypoint_object(totalordermagf128)
+
 add_math_entrypoint_object(tgamma)
 add_math_entrypoint_object(tgammaf)
 

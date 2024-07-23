@@ -569,6 +569,10 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"tan", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"tanf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
 
+          FunctionSpec<"totalordermag", RetValSpec<IntType>, [ArgSpec<DoublePtr>, ArgSpec<DoublePtr>]>,
+	  FunctionSpec<"totalordermagf", RetValSpec<IntType>, [ArgSpec<FloatPtr>, ArgSpec<FloatPtr>]>,
+	  FunctionSpec<"totalordermagl", RetValSpec<IntType>, [ArgSpec<LongDoublePtr>, ArgSpec<LongDoublePtr>]>,
+
           FunctionSpec<"erff", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
 
           FunctionSpec<"exp", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
