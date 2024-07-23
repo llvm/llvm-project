@@ -106,11 +106,6 @@ def FeatureRelax
     : SubtargetFeature<"relax", "HasLinkerRelax", "true",
                        "Enable Linker relaxation">;
 
-// Experimental auto vectorization
-def FeatureAutoVec
-    : SubtargetFeature<"auto-vec", "HasExpAutoVec", "true",
-                       "Experimental auto vectorization">;
-
 // Floating point approximation operation
 def FeatureFrecipe
     : SubtargetFeature<"frecipe", "HasFrecipe", "true",
