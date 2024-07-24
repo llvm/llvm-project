@@ -11157,9 +11157,7 @@ bool Sema::areMultiversionVariantFunctionsCompatible(
     const auto *NewFPT = NewFD->getType()->getAs<FunctionProtoType>();
 
     bool ArmStreamingCCMismatched = false;
-    // Locally streaming does not affect the calling convention.
-    if (OldFPT && NewFPT && !OldFD->hasAttr<ArmLocallyStreamingAttr>() &&
-        !NewFD->hasAttr<ArmLocallyStreamingAttr>()) {
+    if (OldFPT && NewFPT) {
       unsigned Diff =
           OldFPT->getAArch64SMEAttributes() ^ NewFPT->getAArch64SMEAttributes();
       // Streaming versions cannot be mixed with non-streaming versions.
