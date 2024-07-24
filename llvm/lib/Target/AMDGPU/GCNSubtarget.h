@@ -265,6 +265,7 @@ protected:
   bool HasMin3Max3PKF16 = false;
   bool HasMinimum3Maximum3PKF16 = false;
   bool HasVNBREncoding = false;
+  bool HasSWC = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -996,6 +997,8 @@ public:
   bool hasSCmpK() const { return getGeneration() < GFX12; }
 
   bool hasVNBREncoding() const { return HasVNBREncoding; }
+
+  bool hasSWC() const { return HasSWC; }
 
   // Scratch is allocated in 256 dword per wave blocks for the entire
   // wavefront. When viewed from the perspective of an arbitrary workitem, this

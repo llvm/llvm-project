@@ -1176,6 +1176,12 @@ def FeatureVNBREncoding : SubtargetFeature<"vnbr-encoding",
   "Neighbour data sharing instructions"
 >;
 
+def FeatureSWC : SubtargetFeature<"swc",
+  "HasSWC",
+  "true",
+  "Streaming wave coalescer"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1505,7 +1511,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
-   FeatureExclusiveScanInsts
+   FeatureExclusiveScanInsts, FeatureSWC
   ]
 >;
 
@@ -2858,6 +2864,9 @@ def HasExclusiveScanInsts : Predicate<"Subtarget->hasExclusiveScanInsts()">,
 
 def HasVNBREncoding : Predicate<"Subtarget->hasVNBREncoding()">,
   AssemblerPredicate<(all_of FeatureVNBREncoding)>;
+
+def HasSWC : Predicate<"Subtarget->hasSWC()">,
+  AssemblerPredicate<(all_of FeatureSWC)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"
