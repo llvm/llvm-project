@@ -544,3 +544,43 @@ define void @foo(i8 %arg) {
   Ctx.revert();
   EXPECT_EQ(Invoke->getSuccessor(1), ExceptionBB);
 }
+
+TEST_F(TrackerTest, CallBrSetters) {
+  parseIR(C, R"IR(
+define void @foo(i8 %arg) {
+ bb0:
+   callbr void @foo(i8 %arg)
+               to label %bb1 [label %bb2]
+ bb1:
+   ret void
+ bb2:
+   ret void
+ other_bb:
+   ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb0")));
+  auto *OtherBB = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "other_bb")));
+  auto It = BB0->begin();
+  auto *CallBr = cast<sandboxir::CallBrInst>(&*It++);
+  // Check setDefaultDest().
+  Ctx.save();
+  auto *OrigDefaultDest = CallBr->getDefaultDest();
+  CallBr->setDefaultDest(OtherBB);
+  EXPECT_EQ(CallBr->getDefaultDest(), OtherBB);
+  Ctx.revert();
+  EXPECT_EQ(CallBr->getDefaultDest(), OrigDefaultDest);
+
+  // Check setIndirectDest().
+  Ctx.save();
+  auto *OrigIndirectDest = CallBr->getIndirectDest(0);
+  CallBr->setIndirectDest(0, OtherBB);
+  EXPECT_EQ(CallBr->getIndirectDest(0), OtherBB);
+  Ctx.revert();
+  EXPECT_EQ(CallBr->getIndirectDest(0), OrigIndirectDest);
+}
