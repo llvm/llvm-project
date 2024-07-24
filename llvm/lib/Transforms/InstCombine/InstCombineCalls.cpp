@@ -1575,21 +1575,26 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return eraseInstFromFunction(CI);
     }
 
-    bool SrcIsNull = false;
+    auto IsPointerUndefined = [MI](Value *Ptr) {
+      return isa<ConstantPointerNull>(Ptr) &&
+             !NullPointerIsDefined(
+                 MI->getFunction(),
+                 cast<PointerType>(Ptr->getType())->getAddressSpace());
+    };
+    bool SrcIsUndefined = false;
     // If we can determine a pointer alignment that is bigger than currently
     // set, update the alignment.
     if (auto *MTI = dyn_cast<AnyMemTransferInst>(MI)) {
       if (Instruction *I = SimplifyAnyMemTransfer(MTI))
         return I;
-      SrcIsNull = isa<ConstantPointerNull>(MTI->getRawSource());
+      SrcIsUndefined = IsPointerUndefined(MTI->getRawSource());
     } else if (auto *MSI = dyn_cast<AnyMemSetInst>(MI)) {
       if (Instruction *I = SimplifyAnyMemSet(MSI))
         return I;
     }
 
     // If src/dest is null, this memory intrinsic must be a noop.
-    if (!NullPointerIsDefined(MI->getFunction()) &&
-        (SrcIsNull || isa<ConstantPointerNull>(MI->getRawDest()))) {
+    if (SrcIsUndefined || IsPointerUndefined(MI->getRawDest())) {
       Builder.CreateAssumption(Builder.CreateIsNull(MI->getLength()));
       return eraseInstFromFunction(CI);
     }
