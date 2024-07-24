@@ -534,7 +534,7 @@ int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
   {
     auto FoundCC1Args =
         std::find_if(Argv.begin(), Argv.end(), [](const char *Arg) -> bool {
-          return StringRef(Arg).equals("-cc1-args");
+          return (StringRef(Arg) == "-cc1-args");
         });
     if (FoundCC1Args != Argv.end()) {
       SmallVector<const char *, 8> WarnOpts{Argv0};
