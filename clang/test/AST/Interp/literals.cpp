@@ -1216,7 +1216,7 @@ namespace StmtExprs {
   static_assert(foo() == 76, "");
 
   namespace CrossFuncLabelDiff {
-    constexpr long a(bool x) { return x ? 0 : (long)&&lbl + (0 && ({lbl: 0;})); }
+    constexpr long a(bool x) { return x ? 0 : (intptr_t)&&lbl + (0 && ({lbl: 0;})); }
   }
 }
 #endif
