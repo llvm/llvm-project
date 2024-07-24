@@ -745,8 +745,8 @@ Status Scalar::SetValueFromData(const DataExtractor &data,
 
 bool Scalar::SignExtend(uint32_t sign_bit_pos) {
   const uint32_t max_bit_pos = GetByteSize() * 8;
-  assert(sign_bit_pos < max_bit_pos);
 
+  assert(sign_bit_pos <= max_bit_pos);
   if (m_type != Scalar::e_int || sign_bit_pos >= (max_bit_pos - 1)) {
     return false;
   }
