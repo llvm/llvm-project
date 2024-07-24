@@ -59,7 +59,6 @@ class MachineConstantPool;
 class MachineFrameInfo;
 class MachineFunction;
 class MachineJumpTableInfo;
-class MachineModuleInfo;
 class MachineRegisterInfo;
 class MCContext;
 class MCInstrDesc;
