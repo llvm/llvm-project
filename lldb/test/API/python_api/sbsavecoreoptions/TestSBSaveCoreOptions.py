@@ -26,3 +26,14 @@ class SBSaveCoreOptionsAPICase(TestBase):
         """Test that the default core style is unspecified."""
         options = lldb.SBSaveCoreOptions()
         self.assertEqual(options.GetStyle(), lldb.eSaveCoreUnspecified)
+
+    def test_adding_and_removing_thread(self):
+        """Test adding and removing a thread from save core options."""
+        options = lldb.SBSaveCoreOptions()
+        options.AddThread(1)
+        removed_success = options.RemoveThreadID(1)
+        self.assertTrue(removed_success)
+        self.assertEqual(options.GetNumThreads(), 0)
+        error = lldb.SBError()
+        options.GetThreadAtIndex(0, error)
+        self.assertTrue(error.Fail())
