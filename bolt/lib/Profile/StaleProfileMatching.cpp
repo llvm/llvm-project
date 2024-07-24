@@ -229,9 +229,8 @@ public:
       return BestBlock;
     }
     BestBlock = matchWithCalls(BlendedHash, CallHash);
-    if (BestBlock) {
+    if (BestBlock)
       return BestBlock;
-    }
     BestBlock = matchWithPseudoProbes(BlendedHash, PseudoProbes);
     if (BestBlock) {
       MatchedWithPseudoProbes.insert(BlendedHash.combine());
