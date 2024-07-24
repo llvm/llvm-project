@@ -1443,6 +1443,8 @@
 
 #CHECK: brc	2, foo                  # encoding: [0xa7,0x24,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
+#CHECK: brc	2, foo                  # encoding: [0xa7,0x24,A,A]
+#CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
 #CHECK: jh	foo                     # encoding: [0xa7,0x24,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
 #CHECK: jp	foo                     # encoding: [0xa7,0x24,A,A]
@@ -1452,6 +1454,7 @@
 #CHECK: jp	foo                     # encoding: [0xa7,0x24,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
 	brc	2, foo
+	jc	2, foo
 	jh	foo
 	jp	foo
 	brh	foo
@@ -8695,10 +8698,12 @@
 #CHECK: iilf	%r0, 0                  # encoding: [0xc0,0x09,0x00,0x00,0x00,0x00]
 #CHECK: iilf	%r0, 4294967295         # encoding: [0xc0,0x09,0xff,0xff,0xff,0xff]
 #CHECK: iilf	%r15, 0                 # encoding: [0xc0,0xf9,0x00,0x00,0x00,0x00]
+#CHECK: iilf	%r15, 0                 # encoding: [0xc0,0xf9,0x00,0x00,0x00,0x00]
 
 	iilf	%r0, 0
 	iilf	%r0, 0xffffffff
 	iilf	%r15, 0
+	lfi	%r15, 0
 
 #CHECK: iilh	%r0, 0                  # encoding: [0xa5,0x02,0x00,0x00]
 #CHECK: iilh	%r0, 32768              # encoding: [0xa5,0x02,0x80,0x00]
@@ -10336,10 +10341,12 @@
 #CHECK: llilf	%r0, 0                  # encoding: [0xc0,0x0f,0x00,0x00,0x00,0x00]
 #CHECK: llilf	%r0, 4294967295         # encoding: [0xc0,0x0f,0xff,0xff,0xff,0xff]
 #CHECK: llilf	%r15, 0                 # encoding: [0xc0,0xff,0x00,0x00,0x00,0x00]
+#CHECK: llilf	%r15, 0                 # encoding: [0xc0,0xff,0x00,0x00,0x00,0x00]
 
 	llilf	%r0, 0
 	llilf	%r0, 0xffffffff
 	llilf	%r15, 0
+	llgfi	%r15, 0
 
 #CHECK: llilh	%r0, 0                  # encoding: [0xa5,0x0e,0x00,0x00]
 #CHECK: llilh	%r0, 32768              # encoding: [0xa5,0x0e,0x80,0x00]
@@ -10355,11 +10362,13 @@
 #CHECK: llill	%r0, 32768              # encoding: [0xa5,0x0f,0x80,0x00]
 #CHECK: llill	%r0, 65535              # encoding: [0xa5,0x0f,0xff,0xff]
 #CHECK: llill	%r15, 0                 # encoding: [0xa5,0xff,0x00,0x00]
+#CHECK: llill	%r15, 0                 # encoding: [0xa5,0xff,0x00,0x00]
 
 	llill	%r0, 0
 	llill	%r0, 0x8000
 	llill	%r0, 0xffff
 	llill	%r15, 0
+	llghi	%r15, 0
 
 #CHECK: lm	%r0, %r0, 0             # encoding: [0x98,0x00,0x00,0x00]
 #CHECK: lm	%r0, %r15, 0            # encoding: [0x98,0x0f,0x00,0x00]
@@ -13122,10 +13131,10 @@
 	niy	524287(%r1), 42
 	niy	524287(%r15), 42
 
-#CHECK: bc	0, 0                    # encoding: [0x47,0x00,0x00,0x00]
+#CHECK: nop	0                       # encoding: [0x47,0x00,0x00,0x00]
 #CHECK: nop                             # encoding: [0x47,0x00,0x00,0x00]
-#CHECK: bcr	0, %r7                  # encoding: [0x07,0x07]
-#CHECK: bcr	0, %r0                  # encoding: [0x07,0x00]
+#CHECK: nopr	%r7                     # encoding: [0x07,0x07]
+#CHECK: nopr	%r0                 # encoding: [0x07,0x00]
 
 	nop	0
 	nop
@@ -13680,21 +13689,33 @@
 #CHECK: risbg	%r0, %r0, 0, 0, 63      # encoding: [0xec,0x00,0x00,0x00,0x3f,0x55]
 #CHECK: risbg	%r0, %r0, 0, 0, 64      # encoding: [0xec,0x00,0x00,0x00,0x40,0x55]
 #CHECK: risbg	%r0, %r0, 0, 0, 255     # encoding: [0xec,0x00,0x00,0x00,0xff,0x55]
-#CHECK: risbg	%r0, %r0, 0, 255, 0     # encoding: [0xec,0x00,0x00,0xff,0x00,0x55]
+#CHECK: risbgz	%r0, %r0, 0, 255, 0     # encoding: [0xec,0x00,0x00,0xff,0x00,0x55]
+#CHECK: risbg 	%r0, %r0, 0, 255, 0     # encoding: [0xec,0x00,0x00,0xff,0x00,0x55]
 #CHECK: risbg	%r0, %r0, 255, 0, 0     # encoding: [0xec,0x00,0xff,0x00,0x00,0x55]
+#CHECK: risbg	%r0, %r0, 0, 0, 127     # encoding: [0xec,0x00,0x00,0x00,0x7f,0x55]
+#CHECK: risbgz	%r0, %r0, 0, 127, 0     # encoding: [0xec,0x00,0x00,0xff,0x00,0x55]
+#CHECK: risbg 	%r0, %r0, 0, 127, 0     # encoding: [0xec,0x00,0x00,0x7f,0x00,0x55]
+#CHECK: risbg	%r0, %r0, 127, 0, 0     # encoding: [0xec,0x00,0x7f,0x00,0x00,0x55]
 #CHECK: risbg	%r0, %r15, 0, 0, 0      # encoding: [0xec,0x0f,0x00,0x00,0x00,0x55]
 #CHECK: risbg	%r15, %r0, 0, 0, 0      # encoding: [0xec,0xf0,0x00,0x00,0x00,0x55]
 #CHECK: risbg	%r4, %r5, 6, 7, 8       # encoding: [0xec,0x45,0x06,0x07,0x08,0x55]
+#CHECK: risbgz	%r4, %r5, 6, 7, 8       # encoding: [0xec,0x45,0x06,0x87,0x08,0x55]
 
 	risbg	%r0,%r0,0,0,0
 	risbg	%r0,%r0,0,0,63
 	risbg	%r0,%r0,0,0,64
 	risbg	%r0,%r0,0,0,255
+	risbgz	%r0,%r0,0,255,0
 	risbg	%r0,%r0,0,255,0
 	risbg	%r0,%r0,255,0,0
+	risbg	%r0,%r0,0,0,127
+	risbgz	%r0,%r0,0,127,0
+	risbg	%r0,%r0,0,127,0
+	risbg	%r0,%r0,127,0,0
 	risbg	%r0,%r15,0,0,0
 	risbg	%r15,%r0,0,0,0
 	risbg	%r4,%r5,6,7,8
+	risbgz	%r4,%r5,6,7,8
 
 #CHECK: rll	%r0, %r0, 0             # encoding: [0xeb,0x00,0x00,0x00,0x00,0x1d]
 #CHECK: rll	%r15, %r1, 0            # encoding: [0xeb,0xf1,0x00,0x00,0x00,0x1d]
