@@ -32,9 +32,10 @@ contains
 ! CHECK:   %{{.*}} = fir.call @_FortranAReportFatalUserError(%{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<i8>, !fir.ref<i8>, i32) -> none
 ! CHECK: }
 ! CHECK: %[[LOAD_P:.*]] = fir.load %[[P]] : !fir.ref<!fir.class<!fir.ptr<none>>>
-! CHECK: %[[ELE_SIZE:.*]] = fir.box_elesize %[[LOAD_P]] : (!fir.class<!fir.ptr<none>>) -> i32
+! CHECK: %[[ELE_SIZE:.*]] = fir.box_elesize %[[LOAD_P]] : (!fir.class<!fir.ptr<none>>) -> i64
+! CHECK: %[[ELE_SIZE_CONV:.*]] = fir.convert %[[ELE_SIZE]] : (i64) -> i32
 ! CHECK: %[[C8:.*]] = arith.constant 8 : i32
-! CHECK: %[[BITS:.*]] = arith.muli %[[ELE_SIZE]], %[[C8]] : i32
+! CHECK: %[[BITS:.*]] = arith.muli %[[ELE_SIZE_CONV]], %[[C8]] : i32
 ! CHECK: fir.store %[[BITS]] to %[[SIZE]] : !fir.ref<i32>
 ! CHECK: %[[RES:.*]] = fir.load %[[SIZE]] : !fir.ref<i32>
 ! CHECK: return %[[RES]] : i32
@@ -56,9 +57,10 @@ contains
 ! CHECK:   %{{.*}} = fir.call @_FortranAReportFatalUserError(%{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<i8>, !fir.ref<i8>, i32) -> none
 ! CHECK: }
 ! CHECK: %[[LOAD_P:.*]] = fir.load %[[P]] : !fir.ref<!fir.class<!fir.heap<none>>>
-! CHECK: %[[ELE_SIZE:.*]] = fir.box_elesize %[[LOAD_P]] : (!fir.class<!fir.heap<none>>) -> i32
+! CHECK: %[[ELE_SIZE:.*]] = fir.box_elesize %[[LOAD_P]] : (!fir.class<!fir.heap<none>>) -> i64
+! CHECK: %[[ELE_SIZE_CONV:.*]] = fir.convert %[[ELE_SIZE]] : (i64) -> i32
 ! CHECK: %[[C8:.*]] = arith.constant 8 : i32
-! CHECK: %[[BITS:.*]] = arith.muli %[[ELE_SIZE]], %[[C8]] : i32
+! CHECK: %[[BITS:.*]] = arith.muli %[[ELE_SIZE_CONV]], %[[C8]] : i32
 ! CHECK: fir.store %[[BITS]] to %[[SIZE]] : !fir.ref<i32>
 ! CHECK: %[[RES:.*]] = fir.load %[[SIZE]] : !fir.ref<i32>
 ! CHECK: return %[[RES]] : i32
@@ -72,9 +74,10 @@ contains
 ! CHECK-SAME: %[[P:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMstorage_size_testTp1{a:i32}>>>> {fir.bindc_name = "p"}) -> i32 {
 ! CHECK: %[[SIZE:.*]] = fir.alloca i32 {bindc_name = "size", uniq_name = "_QMstorage_size_testFpolymorphic_pointerEsize"}
 ! CHECK: %[[LOAD_P:.*]] = fir.load %[[P]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMstorage_size_testTp1{a:i32}>>>>
-! CHECK: %[[ELE_SIZE:.*]] = fir.box_elesize %[[LOAD_P]] : (!fir.class<!fir.ptr<!fir.type<_QMstorage_size_testTp1{a:i32}>>>) -> i32
+! CHECK: %[[ELE_SIZE:.*]] = fir.box_elesize %[[LOAD_P]] : (!fir.class<!fir.ptr<!fir.type<_QMstorage_size_testTp1{a:i32}>>>) -> i64
+! CHECK: %[[ELE_SIZE_CONV:.*]] = fir.convert %[[ELE_SIZE]] : (i64) -> i32
 ! CHECK: %[[C8:.*]] = arith.constant 8 : i32
-! CHECK: %[[BITS:.*]] = arith.muli %[[ELE_SIZE]], %[[C8]] : i32
+! CHECK: %[[BITS:.*]] = arith.muli %[[ELE_SIZE_CONV]], %[[C8]] : i32
 ! CHECK: fir.store %[[BITS]] to %[[SIZE]] : !fir.ref<i32>
 ! CHECK: %[[RES:.*]] = fir.load %[[SIZE]] : !fir.ref<i32>
 ! CHECK: return %[[RES]] : i32
@@ -87,9 +90,10 @@ contains
 ! CHECK-LABEL: func.func @_QMstorage_size_testPpolymorphic(
 ! CHECK-SAME: %[[P:.*]]: !fir.class<!fir.type<_QMstorage_size_testTp1{a:i32}>> {fir.bindc_name = "p"}) -> i32 {
 ! CHECK: %[[SIZE:.*]] = fir.alloca i32 {bindc_name = "size", uniq_name = "_QMstorage_size_testFpolymorphicEsize"}
-! CHECK: %[[ELE_SIZE:.*]] = fir.box_elesize %[[P]] : (!fir.class<!fir.type<_QMstorage_size_testTp1{a:i32}>>) -> i32
+! CHECK: %[[ELE_SIZE:.*]] = fir.box_elesize %[[P]] : (!fir.class<!fir.type<_QMstorage_size_testTp1{a:i32}>>) -> i64
+! CHECK: %[[ELE_SIZE_CONV:.*]] = fir.convert %[[ELE_SIZE]] : (i64) -> i32
 ! CHECK: %[[C8:.*]] = arith.constant 8 : i32
-! CHECK: %[[BITS:.*]] = arith.muli %[[ELE_SIZE]], %[[C8]] : i32
+! CHECK: %[[BITS:.*]] = arith.muli %[[ELE_SIZE_CONV]], %[[C8]] : i32
 ! CHECK: fir.store %[[BITS]] to %[[SIZE]] : !fir.ref<i32>
 ! CHECK: %[[RES:.*]] = fir.load %[[SIZE]] : !fir.ref<i32>
 ! CHECK: return %[[RES]] : i32
@@ -127,9 +131,10 @@ contains
 ! CHECK: %[[IDX:.*]] = arith.subi %[[C1]], %[[DIMI64]] : i64
 ! CHECK: %[[COORD_OF:.*]] = fir.coordinate_of %[[LOAD_COORD_P]], %[[IDX]] : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMstorage_size_testTp1{a:i32}>>>>, i64) -> !fir.ref<!fir.type<_QMstorage_size_testTp1{a:i32}>>
 ! CHECK: %[[BOXED:.*]] = fir.embox %[[COORD_OF]] source_box %[[LOAD_COORD_P]] : (!fir.ref<!fir.type<_QMstorage_size_testTp1{a:i32}>>, !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMstorage_size_testTp1{a:i32}>>>>) -> !fir.class<!fir.type<_QMstorage_size_testTp1{a:i32}>>
-! CHECK: %[[ELE_SIZE:.*]] = fir.box_elesize %[[BOXED]] : (!fir.class<!fir.type<_QMstorage_size_testTp1{a:i32}>>) -> i32
+! CHECK: %[[ELE_SIZE:.*]] = fir.box_elesize %[[BOXED]] : (!fir.class<!fir.type<_QMstorage_size_testTp1{a:i32}>>) -> i64
+! CHECK: %[[ELE_SIZE_CONV:.*]] = fir.convert %[[ELE_SIZE]] : (i64) -> i32
 ! CHECK: %[[C8:.*]] = arith.constant 8 : i32
-! CHECK: %[[SIZE:.*]] = arith.muli %[[ELE_SIZE]], %[[C8]] : i32
+! CHECK: %[[SIZE:.*]] = arith.muli %[[ELE_SIZE_CONV]], %[[C8]] : i32
 ! CHECK: fir.store %[[SIZE]] to %[[ALLOCA]] : !fir.ref<i32>
 ! CHECK: %[[RET:.*]] = fir.load %[[ALLOCA]] : !fir.ref<i32>
 ! CHECK: return %[[RET]] : i32

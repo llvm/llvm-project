@@ -191,9 +191,10 @@ end subroutine
 ! CHECK-SAME:                                      %[[VAL_0:.*]]: !fir.class<!fir.array<*:none>> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {uniq_name = "_QFtest_storage_size_1Ex"} : (!fir.class<!fir.array<*:none>>, !fir.dscope) -> (!fir.class<!fir.array<*:none>>, !fir.class<!fir.array<*:none>>)
-! CHECK:           %[[VAL_3:.*]] = fir.box_elesize %[[VAL_2]]#0 : (!fir.class<!fir.array<*:none>>) -> i32
+! CHECK:           %[[VAL_3:.*]] = fir.box_elesize %[[VAL_2]]#0 : (!fir.class<!fir.array<*:none>>) -> i64
+! CHECK:           %[[VAL_3_CONV:.*]] = fir.convert %[[VAL_3]] : (i64) -> i32
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 8 : i32
-! CHECK:           %[[VAL_5:.*]] = arith.muli %[[VAL_3]], %[[VAL_4]] : i32
+! CHECK:           %[[VAL_5:.*]] = arith.muli %[[VAL_3_CONV]], %[[VAL_4]] : i32
 ! CHECK:           %[[VAL_6:.*]]:3 = hlfir.associate %[[VAL_5]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 ! CHECK:           fir.call @_QPtakes_integer(%[[VAL_6]]#1) fastmath<contract> : (!fir.ref<i32>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_6]]#1, %[[VAL_6]]#2 : !fir.ref<i32>, i1
@@ -213,9 +214,10 @@ end subroutine
 ! CHECK:             %[[VAL_13:.*]] = fir.call @_FortranAReportFatalUserError
 ! CHECK:           }
 ! CHECK:           %[[VAL_14:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.array<*:none>>>>
-! CHECK:           %[[VAL_15:.*]] = fir.box_elesize %[[VAL_14]] : (!fir.class<!fir.ptr<!fir.array<*:none>>>) -> i32
+! CHECK:           %[[VAL_15:.*]] = fir.box_elesize %[[VAL_14]] : (!fir.class<!fir.ptr<!fir.array<*:none>>>) -> i64
+! CHECK:           %[[VAL_15_CONV:.*]] = fir.convert %[[VAL_15]] : (i64) -> i32
 ! CHECK:           %[[VAL_16:.*]] = arith.constant 8 : i32
-! CHECK:           %[[VAL_17:.*]] = arith.muli %[[VAL_15]], %[[VAL_16]] : i32
+! CHECK:           %[[VAL_17:.*]] = arith.muli %[[VAL_15_CONV]], %[[VAL_16]] : i32
 ! CHECK:           %[[VAL_18:.*]]:3 = hlfir.associate %[[VAL_17]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 ! CHECK:           fir.call @_QPtakes_integer(%[[VAL_18]]#1) fastmath<contract> : (!fir.ref<i32>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_18]]#1, %[[VAL_18]]#2 : !fir.ref<i32>, i1
