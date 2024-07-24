@@ -616,14 +616,14 @@ public:
                         extraFnAttr);
   }
 
-  mlir::cir::TryCallOp
-  createTryCallOp(mlir::Location loc, mlir::Value exception,
+  mlir::cir::CallOp
+  createTryCallOp(mlir::Location loc,
                   mlir::SymbolRefAttr callee = mlir::SymbolRefAttr(),
                   mlir::Type returnType = mlir::cir::VoidType(),
                   mlir::ValueRange operands = mlir::ValueRange(),
                   mlir::cir::ExtraFuncAttributesAttr extraFnAttr = {}) {
-    mlir::cir::TryCallOp tryCallOp = create<mlir::cir::TryCallOp>(
-        loc, callee, exception, returnType, operands);
+    mlir::cir::CallOp tryCallOp = create<mlir::cir::CallOp>(
+        loc, callee, returnType, operands, getUnitAttr());
     if (extraFnAttr) {
       tryCallOp->setAttr("extra_attrs", extraFnAttr);
     } else {
@@ -635,24 +635,23 @@ public:
     return tryCallOp;
   }
 
-  mlir::cir::TryCallOp
+  mlir::cir::CallOp
   createTryCallOp(mlir::Location loc, mlir::cir::FuncOp callee,
-                  mlir::Value exception, mlir::ValueRange operands,
+                  mlir::ValueRange operands,
                   mlir::cir::ExtraFuncAttributesAttr extraFnAttr = {}) {
-    return createTryCallOp(loc, exception, mlir::SymbolRefAttr::get(callee),
+    return createTryCallOp(loc, mlir::SymbolRefAttr::get(callee),
                            callee.getFunctionType().getReturnType(), operands,
                            extraFnAttr);
   }
 
-  mlir::cir::TryCallOp createIndirectTryCallOp(mlir::Location loc,
-                                               mlir::Value ind_target,
-                                               mlir::Value exception,
-                                               mlir::cir::FuncType fn_type,
-                                               mlir::ValueRange operands) {
+  mlir::cir::CallOp createIndirectTryCallOp(mlir::Location loc,
+                                            mlir::Value ind_target,
+                                            mlir::cir::FuncType fn_type,
+                                            mlir::ValueRange operands) {
     llvm::SmallVector<mlir::Value, 4> resOperands({ind_target});
     resOperands.append(operands.begin(), operands.end());
-    return createTryCallOp(loc, exception, mlir::SymbolRefAttr(),
-                           fn_type.getReturnType(), resOperands);
+    return createTryCallOp(loc, mlir::SymbolRefAttr(), fn_type.getReturnType(),
+                           resOperands);
   }
 };
 
