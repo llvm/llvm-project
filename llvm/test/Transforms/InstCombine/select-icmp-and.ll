@@ -629,3 +629,32 @@ define i8 @set_to_clear_decomposebittest_extra_use(i8 %x) {
   ret i8 %t3
 }
 
+define i32 @select_bittest_to_add(i32 %x) {
+; CHECK-LABEL: @select_bittest_to_add(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 3, i32 4
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+entry:
+  %and = and i32 %x, 1
+  %cmp = icmp eq i32 %and, 0
+  %ret = select i1 %cmp, i32 3, i32 4
+  ret i32 %ret
+}
+
+define i32 @select_bittest_to_sub(i32 %x) {
+; CHECK-LABEL: @select_bittest_to_sub(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 4, i32 3
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+entry:
+  %and = and i32 %x, 1
+  %cmp = icmp eq i32 %and, 0
+  %ret = select i1 %cmp, i32 4, i32 3
+  ret i32 %ret
+}
