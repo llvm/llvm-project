@@ -132,4 +132,4 @@ for.end:                                          ; preds = %for.body, %middle.b
   ret void
 }
 
-attributes #0 = { argmemonly nofree norecurse nosync nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv66" "target-features"="+hvx-length64b,+hvxv66,+v66,-long-calls" }
+attributes #0 = { argmemonly nofree norecurse nosync nounwind "target-cpu"="hexagonv66" "target-features"="+hvx-length64b,+hvxv66,+v66" }
