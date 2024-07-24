@@ -268,8 +268,7 @@ defm change_section_lma
       MetaVarName<"*{+|-}val">;
 
 defm change_section_address
-    : Eq<"change-section-address", "Set, or adjust the address of sections in <sectionpattern> to, "
-         "or by <val> in a relocatable file">,
+    : Eq<"change-section-address", "Set the address of the <section> to, or adjust it by, <val>">,
       MetaVarName<"sectionpattern{=|+|-}val">;
 def adjust_section_vma : JoinedOrSeparate<["--"], "adjust-section-vma">,
                    Alias<change_section_address>,

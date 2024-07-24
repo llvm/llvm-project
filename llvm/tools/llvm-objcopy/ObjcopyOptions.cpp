@@ -590,54 +590,58 @@ parseChangeSectionAddr(StringRef ArgValue, StringRef OptionName,
                        function_ref<Error(Error)> ErrorCallback) {
 
   SectionPatternAddressUpdate PatternUpdate;
-  std::pair<StringRef, StringRef> UpdateParts;
-  std::string UpdateSymbol;
 
-  if (ArgValue.contains("+")) {
-    UpdateParts = ArgValue.split("+");
-    UpdateSymbol = '+';
-  } else if (ArgValue.contains("-")) {
-    UpdateParts = ArgValue.split("-");
-    UpdateSymbol = '-';
-    PatternUpdate.Update.Negative = true;
-  } else if (ArgValue.contains("=")) {
-    UpdateParts = ArgValue.split("=");
-    UpdateSymbol = '=';
-    PatternUpdate.Update.Absolute = true;
-  } else {
+  size_t last_i = ArgValue.find_last_of("+-=");
+  StringRef Value = ArgValue.slice(last_i + 1, StringRef::npos);
+  StringRef SectionPattern = ArgValue.slice(0, last_i);
+
+  if (last_i == StringRef::npos)
     return createStringError(errc::invalid_argument,
                              "bad format for " + OptionName +
                                  ": argument value " + ArgValue +
-                                 " is invalid. See help");
+                                 " is invalid. See --help");
+
+  char UpdateSymbol = ArgValue[last_i];
+
+  switch (UpdateSymbol) {
+  case '+':
+    PatternUpdate.Update.Kind = AdjustKind::Add;
+    break;
+  case '-':
+    PatternUpdate.Update.Kind = AdjustKind::Subtract;
+    break;
+  case '=':
+    PatternUpdate.Update.Kind = AdjustKind::Set;
   }
 
-  if (UpdateParts.second.empty()) {
-    if (UpdateSymbol == "+" || UpdateSymbol == "-")
+  if (Value.empty()) {
+    if (UpdateSymbol == '+' || UpdateSymbol == '-')
       return createStringError(errc::invalid_argument,
                                "bad format for " + OptionName +
                                    ": missing value of offset after '" +
-                                   UpdateSymbol + "'");
-    else if (UpdateSymbol == "=")
+                                   std::string({UpdateSymbol}) + "'");
+    else if (UpdateSymbol == '=')
       return createStringError(errc::invalid_argument,
                                "bad format for " + OptionName +
                                    ": missing address value after '='");
   }
-  if (UpdateParts.first.empty())
+
+  if (SectionPattern.empty())
     return createStringError(
         errc::invalid_argument,
         "bad format for " + OptionName +
             ": missing section pattern to apply address change to");
 
   if (Error E = PatternUpdate.SectionPattern.addMatcher(NameOrPattern::create(
-          UpdateParts.first, SectionMatchStyle, ErrorCallback)))
+          SectionPattern, SectionMatchStyle, ErrorCallback)))
     return std::move(E);
 
-  auto AddrValue = getAsInteger<uint64_t>(UpdateParts.second);
+  auto AddrValue = getAsInteger<uint64_t>(Value);
   if (!AddrValue)
     return createStringError(AddrValue.getError(),
                              "bad format for " + OptionName + ": value after " +
-                                 UpdateSymbol + " is " + UpdateParts.second +
-                                 " when it should be an integer");
+                                 std::string({UpdateSymbol}) + " is " + Value +
+                                 " when it should be a 64-bit integer");
 
   PatternUpdate.Update.Value = *AddrValue;
   return PatternUpdate;
@@ -939,8 +943,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
                                SectionMatchStyle, ErrorCallback);
     if (!AddressUpdate)
       return AddressUpdate.takeError();
-    else
-      Config.ChangeSectionAddress.push_back(*AddressUpdate);
+    Config.ChangeSectionAddress.push_back(*AddressUpdate);
   }
 
   for (auto *Arg : InputArgs.filtered(OBJCOPY_redefine_symbol)) {
