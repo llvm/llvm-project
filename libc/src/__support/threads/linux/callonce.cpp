@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/threads/callonce.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/callonce.h"
 #include "src/__support/threads/linux/futex_utils.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace callonce_impl {
 int callonce_slowpath(CallOnceFlag *flag, CallOnceCallback *func) {
   auto *futex_word = reinterpret_cast<Futex *>(flag);
@@ -37,4 +36,4 @@ int callonce_slowpath(CallOnceFlag *flag, CallOnceCallback *func) {
   return 0;
 }
 } // namespace callonce_impl
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

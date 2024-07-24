@@ -9,14 +9,13 @@
 #include "src/stdbit/stdc_first_leading_zero_uc.h"
 
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/math_extras.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(unsigned, stdc_first_leading_zero_uc,
                    (unsigned char value)) {
   return static_cast<unsigned>(first_leading_zero(value));
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

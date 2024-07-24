@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_NETWORK_HTONS_H
 #define LLVM_LIBC_SRC_NETWORK_HTONS_H
 
-#include "src/__support/macros/config.h"
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 uint16_t htons(uint16_t hostshort);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_NETWORK_HTONS_H

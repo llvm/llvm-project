@@ -1,5 +1,4 @@
 #include "llvm-libc-macros/linux/fcntl-macros.h"
-#include "src/__support/macros/config.h"
 #include "src/fcntl/open.h"
 #include "src/sys/statvfs/fstatvfs.h"
 #include "src/sys/statvfs/linux/statfs_utils.h"
@@ -9,7 +8,7 @@
 #include <linux/magic.h>
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 static int fstatfs(int fd, struct statfs *buf) {
   using namespace statfs_utils;
   if (cpp::optional<LinuxStatFs> result = linux_fstatfs(fd)) {
@@ -18,7 +17,7 @@ static int fstatfs(int fd, struct statfs *buf) {
   }
   return -1;
 }
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 struct PathFD {
   int fd;

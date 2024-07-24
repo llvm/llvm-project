@@ -9,9 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_FORK_CALLBACKS_H
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_FORK_CALLBACKS_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 using ForkCallback = void(void);
 
@@ -21,6 +19,6 @@ void invoke_prepare_callbacks();
 void invoke_parent_callbacks();
 void invoke_child_callbacks();
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_FORK_CALLBACKS_H

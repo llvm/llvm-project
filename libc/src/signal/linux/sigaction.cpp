@@ -10,11 +10,10 @@
 
 #include "hdr/types/sigset_t.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include "src/signal/linux/signal_utils.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 // TOOD: Some architectures will have their signal trampoline functions in the
 // vdso, use those when available.
@@ -47,4 +46,4 @@ LLVM_LIBC_FUNCTION(int, sigaction,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

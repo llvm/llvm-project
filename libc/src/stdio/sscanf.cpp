@@ -10,7 +10,6 @@
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/arg_list.h"
-#include "src/__support/macros/config.h"
 #include "src/stdio/scanf_core/reader.h"
 #include "src/stdio/scanf_core/scanf_main.h"
 
@@ -18,7 +17,7 @@
 #include "hdr/types/FILE.h"
 #include <stdarg.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, sscanf,
                    (const char *__restrict buffer,
@@ -38,4 +37,4 @@ LLVM_LIBC_FUNCTION(int, sscanf,
   return (ret_val == -1) ? EOF : ret_val;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

@@ -11,14 +11,13 @@
 
 #include "linux_extension_signals.h"
 #include "posix_signals.h"
-#include "src/__support/macros/config.h"
 #include "stdc_signals.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE_VAR constexpr auto PLATFORM_SIGNALS =
     STDC_SIGNALS + POSIX_SIGNALS + LINUX_SIGNALS;
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_LINUX_PLATFORM_SIGNALS_H

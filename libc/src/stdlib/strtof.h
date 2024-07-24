@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_STRTOF_H
 #define LLVM_LIBC_SRC_STDLIB_STRTOF_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 float strtof(const char *__restrict str, char **__restrict str_end);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDLIB_STRTOF_H

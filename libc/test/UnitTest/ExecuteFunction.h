@@ -9,10 +9,9 @@
 #ifndef LLVM_LIBC_TEST_UNITTEST_EXECUTEFUNCTION_H
 #define LLVM_LIBC_TEST_UNITTEST_EXECUTEFUNCTION_H
 
-#include "src/__support/macros/config.h"
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace testutils {
 
 class FunctionCaller {
@@ -48,6 +47,6 @@ invoke_in_subprocess(FunctionCaller *func,
 const char *signal_as_string(int signum);
 
 } // namespace testutils
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_TEST_UNITTEST_EXECUTEFUNCTION_H
