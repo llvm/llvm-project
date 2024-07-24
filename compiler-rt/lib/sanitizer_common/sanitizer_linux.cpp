@@ -2239,7 +2239,7 @@ static const char *RegNumToRegName(int reg) {
 #    endif
     default:
       return NULL;
-#  endif
+#  endif // SANITIZER_LINUX
   }
   return NULL;
 }
