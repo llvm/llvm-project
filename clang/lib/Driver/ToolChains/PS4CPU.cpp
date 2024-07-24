@@ -155,9 +155,6 @@ void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const bool UseJMC =
       Args.hasFlag(options::OPT_fjmc, options::OPT_fno_jmc, false);
 
-  const bool UnifiedLTO = Args.hasFlag(options::OPT_funified_lto,
-                                       options::OPT_fno_unified_lto, true);
-
   const char *LTOArgs = "";
   auto AddLTOFlag = [&](Twine Flag) {
     LTOArgs = Args.MakeArgString(Twine(LTOArgs) + " " + Flag);
@@ -167,7 +164,8 @@ void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // whether or not that will be the case at this point. So, unconditionally
   // pass LTO options to ensure proper codegen, metadata production, etc if
   // LTO indeed occurs.
-  if (UnifiedLTO)
+  if (Args.hasFlag(options::OPT_funified_lto, options::OPT_fno_unified_lto,
+                   true))
     CmdArgs.push_back(D.getLTOMode() == LTOK_Thin ? "--lto=thin"
                                                   : "--lto=full");
   if (UseJMC)
@@ -252,9 +250,6 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const bool UseJMC =
       Args.hasFlag(options::OPT_fjmc, options::OPT_fno_jmc, false);
 
-  const bool UnifiedLTO = Args.hasFlag(options::OPT_funified_lto,
-                                       options::OPT_fno_unified_lto, true);
-
   auto AddLTOFlag = [&](Twine Flag) {
     CmdArgs.push_back(Args.MakeArgString(Twine("-plugin-opt=") + Flag));
   };
@@ -263,7 +258,8 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // whether or not that will be the case at this point. So unconditionally
   // pass LTO options to ensure proper codegen, metadata production, etc if
   // LTO indeed occurs.
-  if (UnifiedLTO)
+  if (Args.hasFlag(options::OPT_funified_lto, options::OPT_fno_unified_lto,
+                   true))
     CmdArgs.push_back(D.getLTOMode() == LTOK_Thin ? "--lto=thin"
                                                   : "--lto=full");
 
