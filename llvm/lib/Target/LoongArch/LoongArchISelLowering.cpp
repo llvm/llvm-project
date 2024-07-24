@@ -78,7 +78,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SRA_PARTS, GRLenVT, Custom);
   setOperationAction(ISD::SRL_PARTS, GRLenVT, Custom);
   setOperationAction(ISD::FP_TO_SINT, GRLenVT, Custom);
-  setOperationAction(ISD::ROTL, GRLenVT, Expand);
+  setOperationAction(ISD::ROTL, GRLenVT, Custom);
   setOperationAction(ISD::CTPOP, GRLenVT, Expand);
 
   setOperationAction({ISD::GlobalAddress, ISD::BlockAddress, ISD::ConstantPool,
@@ -2661,7 +2661,8 @@ static SDValue customLegalizeToWOp(SDNode *N, SelectionDAG &DAG, int NumOp,
     NewOp0 = DAG.getNode(ExtOpc, DL, MVT::i64, N->getOperand(0));
     SDValue NewOp1 = DAG.getNode(ExtOpc, DL, MVT::i64, N->getOperand(1));
     if (N->getOpcode() == ISD::ROTL) {
-      SDValue TmpOp = DAG.getConstant(32, DL, MVT::i64);
+      SDValue TmpOp = DAG.getConstant(
+          isa<ConstantSDNode>(NewOp1.getNode()) ? 32 : 0, DL, MVT::i64);
       NewOp1 = DAG.getNode(ISD::SUB, DL, MVT::i64, TmpOp, NewOp1);
     }
     NewRes = DAG.getNode(WOpcode, DL, MVT::i64, NewOp0, NewOp1);
@@ -2833,6 +2834,17 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     }
     break;
   case ISD::ROTL:
+    if (VT == MVT::i32 && Subtarget.is64Bit()) {
+      Results.push_back(customLegalizeToWOp(N, DAG, 2));
+    } else {
+      SDValue Op0 = N->getOperand(0);
+      SDValue TmpOp = DAG.getConstant(
+          isa<ConstantSDNode>(Op0.getNode()) ? Subtarget.getGRLen() : 0, DL,
+          VT);
+      SDValue NewOp1 = DAG.getNode(ISD::SUB, DL, VT, TmpOp, N->getOperand(1));
+      Results.push_back(DAG.getNode(ISD::ROTR, DL, VT, Op0, NewOp1));
+    }
+    break;
   case ISD::ROTR:
     assert(VT == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
