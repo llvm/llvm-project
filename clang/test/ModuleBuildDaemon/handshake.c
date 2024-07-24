@@ -15,12 +15,12 @@ int main() {return 0;}
 // RUN: cat %t/output-new |  sed 's:\\\\\?:/:g' | FileCheck %s
 // RUN: cat %t/output-existing |  sed 's:\\\\\?:/:g' | FileCheck %s --check-prefix=CHECK-EXIST
 
-// CHECK: remark: Successfully spawned module build daemon [-Rmodule-build-daemon]
-// CHECK-NEXT: remark: Successfully connected to module build daemon at mbd-handshake/mbd.sock [-Rmodule-build-daemon]
-// CHECK-NEXT: remark: Clang invocation responsible for {{.*main.c}} successfully completed handshake with module build daemon [-Rmodule-build-daemon]
+// CHECK: remark: successfully spawned module build daemon [-Rmodule-build-daemon]
+// CHECK-NEXT: remark: successfully connected to module build daemon at mbd-handshake/mbd.sock [-Rmodule-build-daemon]
+// CHECK-NEXT: remark: clang invocation responsible for {{.*main.c}} successfully completed handshake with module build daemon [-Rmodule-build-daemon]
 
 // Check that a clang invocation can handshake with an existing module build daemon
-// CHECK-EXIST: remark: Clang invocation responsible for {{.*main.c}} successfully completed handshake with module build daemon [-Rmodule-build-daemon]
+// CHECK-EXIST: remark: clang invocation responsible for {{.*main.c}} successfully completed handshake with module build daemon [-Rmodule-build-daemon]
 
 // Make sure mbd.err is empty
 // RUN: [ ! -s "mbd-launch/mbd.err" ] && true || false

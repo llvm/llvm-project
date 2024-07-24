@@ -18,10 +18,10 @@ int main() {return foo();}
 
 // RUN: cat %t/output |  sed 's:\\\\\?:/:g' | FileCheck %s
 
-// CHECK: remark: Successfully spawned module build daemon [-Rmodule-build-daemon]
-// CHECK-NEXT: remark: Successfully connected to module build daemon at mbd-multiple-tu/mbd.sock [-Rmodule-build-daemon]
-// CHECK-DAG: remark: Clang invocation responsible for {{.*main.c}} successfully completed handshake with module build daemon [-Rmodule-build-daemon]
-// CHECK-DAG: remark: Clang invocation responsible for {{.*foo.c}} successfully completed handshake with module build daemon [-Rmodule-build-daemon]
+// CHECK: remark: successfully spawned module build daemon [-Rmodule-build-daemon]
+// CHECK-NEXT: remark: successfully connected to module build daemon at mbd-multiple-tu/mbd.sock [-Rmodule-build-daemon]
+// CHECK-DAG: remark: clang invocation responsible for {{.*main.c}} successfully completed handshake with module build daemon [-Rmodule-build-daemon]
+// CHECK-DAG: remark: clang invocation responsible for {{.*foo.c}} successfully completed handshake with module build daemon [-Rmodule-build-daemon]
 
 // Make sure mbd.err is empty
 // RUN: [ ! -s "mbd-launch/mbd.err" ] && true || false

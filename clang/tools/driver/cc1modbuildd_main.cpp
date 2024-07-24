@@ -154,7 +154,7 @@ void ModuleBuildDaemonServer::createDaemonSocket() {
             exit(EXIT_FAILURE);
           }
           // If a previous module build daemon invocation crashes, the socket
-          // file will need to be removed before the address can be binded to
+          // file will need to be removed before the address can be bound to
           logVerbose("Removing ineligible file: " + SocketPath);
         } else {
           llvm::errs() << "MBD failed to create unix socket: "
@@ -163,7 +163,7 @@ void ModuleBuildDaemonServer::createDaemonSocket() {
         }
       });
     } else {
-      logVerbose("MBD created and binded to socket at: " + SocketPath);
+      logVerbose("MBD created and bound to socket at: " + SocketPath);
       ServerListener.emplace(std::move(*MaybeServerListener));
       break;
     }
@@ -209,7 +209,7 @@ void ModuleBuildDaemonServer::listenForClients() {
         if (EC == std::errc::timed_out) {
           RunServiceLoop = false;
           logVerbose("ListeningServer::accept timed out, shutting down");
-        } else if (EC == std::errc::bad_file_descriptor &&
+        } else if (EC == std::errc::operation_canceled &&
                    RunServiceLoop == false) {
           logVerbose("Signal received, shutting down");
         } else

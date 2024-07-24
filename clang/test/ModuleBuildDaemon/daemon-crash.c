@@ -11,9 +11,9 @@
 // RUN: cat mbd-crash/mbd.out | sed 's:\\\\\?:/:g' | FileCheck %s
 
 // There should only be one shutdown log line due to the crash
-// CHECK: MBD created and binded to socket at: mbd-crash/mbd.sock
+// CHECK: MBD created and bound to socket at: mbd-crash/mbd.sock
 // CHECK-NEXT: Removing ineligible file: mbd-crash/mbd.sock
-// CHECK-NEXT: MBD created and binded to socket at: mbd-crash/mbd.sock
+// CHECK-NEXT: MBD created and bound to socket at: mbd-crash/mbd.sock
 // CHECK-NEXT: Signal received, shutting down
 
 // Make sure mbd.err is empty

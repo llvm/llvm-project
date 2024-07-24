@@ -18,11 +18,12 @@ namespace clang::tooling::cc1modbuildd {
 llvm::Expected<std::string>
 readBufferFromSocket(llvm::raw_socket_stream &Socket) {
   constexpr unsigned short MAX_BUFFER = 4096;
+  constexpr std::chrono::milliseconds TIMEOUT(5000);
   char Buffer[MAX_BUFFER];
   std::string ReturnBuffer;
 
   ssize_t n = 0;
-  while ((n = Socket.read(Buffer, MAX_BUFFER)) > 0) {
+  while ((n = Socket.read(Buffer, MAX_BUFFER, TIMEOUT)) > 0) {
     ReturnBuffer.append(Buffer, n);
     // Read until \n... encountered which is the last line of a YAML document
     if (ReturnBuffer.find("\n...") != std::string::npos)

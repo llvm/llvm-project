@@ -127,7 +127,7 @@ void spawnModuleBuildDaemonAndHandshake(const CompilerInvocation &Clang,
     // Get user provided BasePath and confirm it is short enough
     BasePath = Clang.getFrontendOpts().ModuleBuildDaemonPath;
     if (!validBasePathLength(BasePath)) {
-      Diag.Report(diag::err_basepath_length) << BasePath << BasePathMaxLength;
+      Diag.Report(diag::err_path_length) << BasePath << BasePathMaxLength;
       return;
     }
   }

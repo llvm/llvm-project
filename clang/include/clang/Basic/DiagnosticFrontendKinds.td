@@ -268,23 +268,23 @@ def err_test_module_file_extension_version : Error<
   "(%3.%4)">;
 
 // Module Build Daemon
-def err_basepath_length :
-  Error<"BasePath '%0' is longer then the max length of %1">,
+def err_path_length :
+  Error<"path '%0' is longer then the max length of %1">,
   DefaultFatal;
 def err_mbd_handshake :
-  Error<"Attempt to handshake with module build daemon has failed: %0">,
+  Error<"attempt to handshake with module build daemon has failed: %0">,
   DefaultFatal;
 def err_mbd_connect :
-  Error<"Attempt to connect to module build daemon has failed: %0">,
+  Error<"attempt to connect to module build daemon has failed: %0">,
   DefaultFatal;
 def remark_mbd_spawn :
-  Remark<"Successfully spawned module build daemon">,
+  Remark<"successfully spawned module build daemon">,
   InGroup<ModuleBuildDaemon>;
 def remark_mbd_connection :
-  Remark<"Successfully connected to module build daemon at %0">,
+  Remark<"successfully connected to module build daemon at %0">,
   InGroup<ModuleBuildDaemon>;
 def remark_mbd_handshake :
-  Remark<"Clang invocation responsible for %0 successfully completed handshake "
+  Remark<"clang invocation responsible for %0 successfully completed handshake "
          "with module build daemon">,
   InGroup<ModuleBuildDaemon>;
 
