@@ -176,6 +176,106 @@ class CIRTryOpFlattening : public mlir::OpRewritePattern<mlir::cir::TryOp> {
 public:
   using OpRewritePattern<mlir::cir::TryOp>::OpRewritePattern;
 
+  mlir::Block *buildTypeCase(mlir::PatternRewriter &rewriter, mlir::Region &r,
+                             mlir::Block *afterTry) const {
+    YieldOp yieldOp;
+    CatchParamOp paramOp;
+    r.walk([&](YieldOp op) {
+      assert(!yieldOp && "expect to only find one");
+      yieldOp = op;
+    });
+    r.walk([&](CatchParamOp op) {
+      assert(!paramOp && "expect to only find one");
+      paramOp = op;
+    });
+
+    rewriter.inlineRegionBefore(r, afterTry);
+    rewriter.setInsertionPointToEnd(yieldOp->getBlock());
+    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(yieldOp, afterTry);
+    return paramOp->getBlock();
+  }
+
+  void buildUnwindCase(mlir::PatternRewriter &rewriter, mlir::Region &r,
+                       mlir::Block *unwindBlock) const {
+    assert(&r.front() == &r.back() && "only one block expected");
+    rewriter.mergeBlocks(&r.back(), unwindBlock);
+  }
+
+  void buildCatchers(mlir::cir::TryOp tryOp, mlir::PatternRewriter &rewriter,
+                     mlir::Block *afterBody, mlir::Block *afterTry) const {
+    auto loc = tryOp.getLoc();
+    // Replace the tryOp return with a branch that jumps out of the body.
+    rewriter.setInsertionPointToEnd(afterBody);
+    auto tryBodyYield = cast<mlir::cir::YieldOp>(afterBody->getTerminator());
+
+    mlir::Block *beforeCatch = rewriter.getInsertionBlock();
+    auto *catchBegin =
+        rewriter.splitBlock(beforeCatch, rewriter.getInsertionPoint());
+    rewriter.setInsertionPointToEnd(beforeCatch);
+
+    // FIXME: this branch should be to afterTry instead of catchBegin, before we
+    // change this, we need to break calls into their branch version
+    // (invoke-like) first, otherwise these will be unrecheable and eliminated.
+    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(tryBodyYield, catchBegin);
+
+    // Start the landing pad by getting the inflight exception information.
+    rewriter.setInsertionPointToEnd(catchBegin);
+    auto exception = rewriter.create<mlir::cir::EhInflightOp>(
+        loc, mlir::cir::ExceptionInfoType::get(rewriter.getContext()));
+
+    // TODO: direct catch all needs no dispatch?
+
+    // Handle dispatch. In could in theory use a switch, but let's just
+    // mimic LLVM more closely since we have no specific thing to achieve
+    // doing that (might not play as well with existing optimizers either).
+    auto *dispatchBlock =
+        rewriter.splitBlock(catchBegin, rewriter.getInsertionPoint());
+    rewriter.setInsertionPointToEnd(catchBegin);
+    rewriter.create<mlir::cir::BrOp>(loc, dispatchBlock);
+
+    // Fill in dispatcher.
+    rewriter.setInsertionPointToEnd(dispatchBlock);
+    auto selector = rewriter.create<mlir::cir::EhSelectorOp>(loc, exception);
+
+    // FIXME: we should have an extra block for the dispatcher, just in case
+    // there isn't one later.
+
+    llvm::MutableArrayRef<mlir::Region> caseRegions = tryOp.getCatchRegions();
+    mlir::ArrayAttr caseAttrList = tryOp.getCatchTypesAttr();
+    unsigned caseCnt = 0;
+
+    mlir::Block *nextDispatcher = rewriter.getInsertionBlock();
+
+    for (mlir::Attribute caseAttr : caseAttrList) {
+      if (auto typeIdGlobal = dyn_cast<mlir::cir::GlobalViewAttr>(caseAttr)) {
+        auto typeId = rewriter.create<mlir::cir::EhTypeIdOp>(
+            loc, typeIdGlobal.getSymbol());
+        auto match = rewriter.create<mlir::cir::CmpOp>(
+            loc, mlir::cir::BoolType::get(rewriter.getContext()),
+            mlir::cir::CmpOpKind::eq, selector, typeId);
+
+        auto *previousDispatcher = nextDispatcher;
+        mlir::Block *typeCatchBlock =
+            buildTypeCase(rewriter, caseRegions[caseCnt], afterTry);
+        nextDispatcher = rewriter.createBlock(afterTry);
+        rewriter.setInsertionPointToEnd(previousDispatcher);
+        rewriter.create<mlir::cir::BrCondOp>(loc, match, typeCatchBlock,
+                                             nextDispatcher);
+        rewriter.setInsertionPointToEnd(nextDispatcher);
+      } else if (auto catchAll = dyn_cast<mlir::cir::CatchAllAttr>(caseAttr)) {
+        // TBD
+      } else if (auto catchUnwind =
+                     dyn_cast<mlir::cir::CatchUnwindAttr>(caseAttr)) {
+        assert(nextDispatcher->empty() && "expect empty dispatcher");
+        buildUnwindCase(rewriter, caseRegions[caseCnt], nextDispatcher);
+        nextDispatcher = nullptr; // No more business in try/catch
+      }
+      caseCnt++;
+    }
+
+    assert(!nextDispatcher && "no dispatcher available anymore");
+  }
+
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::TryOp tryOp,
                   mlir::PatternRewriter &rewriter) const override {
@@ -193,54 +293,26 @@ public:
     // Split the current block before the TryOp to create the inlining
     // point.
     auto *beforeTryScopeBlock = rewriter.getInsertionBlock();
-    auto *remainingOpsBlock =
+    mlir::Block *afterTry =
         rewriter.splitBlock(beforeTryScopeBlock, rewriter.getInsertionPoint());
-    mlir::Block *continueBlock;
-    continueBlock = remainingOpsBlock;
 
     // Inline body region.
     auto *beforeBody = &tryOp.getTryRegion().front();
     auto *afterBody = &tryOp.getTryRegion().back();
-    rewriter.inlineRegionBefore(tryOp.getTryRegion(), continueBlock);
+    rewriter.inlineRegionBefore(tryOp.getTryRegion(), afterTry);
 
     // Branch into the body of the region.
     rewriter.setInsertionPointToEnd(beforeTryScopeBlock);
     rewriter.create<mlir::cir::BrOp>(loc, mlir::ValueRange(), beforeBody);
 
-    // Replace the tryOp return with a branch that jumps out of the body.
-    rewriter.setInsertionPointToEnd(afterBody);
-    auto yieldOp = cast<mlir::cir::YieldOp>(afterBody->getTerminator());
-    mlir::Block *beforeCatch = rewriter.getInsertionBlock();
-    auto *catchBegin =
-        rewriter.splitBlock(beforeCatch, rewriter.getInsertionPoint());
-    rewriter.setInsertionPointToEnd(beforeCatch);
-
-    // FIXME: first step here is to build the landing pad like block, but
-    // since cir.call exception isn't yet lowered, jump from the try block
-    // to the catch block as a placeholder for now.
-    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(yieldOp, catchBegin);
-
-    // Start the landing pad by getting the inflight exception information.
-    rewriter.setInsertionPointToEnd(catchBegin);
-    auto exception = rewriter.create<mlir::cir::EhInflightOp>(
-        loc, mlir::cir::ExceptionInfoType::get(rewriter.getContext()));
-
-    // TODO: direct catch all needs no dispatch.
-
-    // Handle dispatch. In could in theory use a switch, but let's just
-    // mimic LLVM more closely since we have no specific thing to achieve
-    // doing that (might not play as well with existing optimizers either).
-    auto *dispatchBlock =
-        rewriter.splitBlock(catchBegin, rewriter.getInsertionPoint());
-    rewriter.setInsertionPointToEnd(catchBegin);
-    rewriter.create<mlir::cir::BrOp>(loc, dispatchBlock);
-
-    // Fill in dispatcher.
-    rewriter.setInsertionPointToEnd(dispatchBlock);
-    auto selector = rewriter.create<mlir::cir::EhSelectorOp>(loc, exception);
-    rewriter.create<mlir::cir::BrOp>(loc, continueBlock);
-
+    buildCatchers(tryOp, rewriter, afterBody, afterTry);
     rewriter.eraseOp(tryOp);
+
+    // Quick block cleanup: no indirection to the post try block.
+    auto brOp = dyn_cast<mlir::cir::BrOp>(afterTry->getTerminator());
+    mlir::Block *srcBlock = brOp.getDest();
+    rewriter.eraseOp(brOp);
+    rewriter.mergeBlocks(srcBlock, afterTry);
     return mlir::success();
   }
 };
