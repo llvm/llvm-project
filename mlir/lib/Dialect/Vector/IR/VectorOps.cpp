@@ -5240,9 +5240,12 @@ static LogicalResult verifyVectorShapeCast(Operation *op,
   }
 
   // Check that (non-)scalability is preserved
-  if (sourceVectorType.getNumScalableDims() !=
-      resultVectorType.getNumScalableDims())
-    return op->emitOpError("non-matching scalable dims");
+  auto sourceNScalableDims = sourceVectorType.getNumScalableDims();
+  auto resultNScalableDims = resultVectorType.getNumScalableDims();
+  if (sourceNScalableDims != resultNScalableDims)
+    return op->emitOpError("different number of scalable dims at source (")
+           << sourceNScalableDims << ") and result (" << resultNScalableDims
+           << ")";
   sourceVectorType.getNumDynamicDims();
 
   return success();
