@@ -48,6 +48,7 @@ def quant_DequantizeCastOp : quant_Op<"dcast", [
   let results = (outs quant_FloatScalarOrTensor:$result);
   let assemblyFormat = "$input attr-dict `:` type($input) `to` type($result)";
   let hasVerifier = 1;
+  let hasFolder = 1;
   let extraClassDeclaration = [{
     /// Return the float type of the scalar or tensor result.
     FloatType getFloatType();
@@ -87,6 +88,7 @@ def quant_QuantizeCastOp : quant_Op<"qcast", [
   let results = (outs quant_QuantizedScalarOrTensor:$result);
   let assemblyFormat = "$input attr-dict `:` type($input) `to` type($result)";
   let hasVerifier = 1;
+  let hasFolder = 1;
   let extraClassDeclaration = [{
     /// Return the float type of the scalar or tensor input.
     FloatType getFloatType();
