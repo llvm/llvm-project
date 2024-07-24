@@ -31,10 +31,6 @@
 using namespace llvm;
 using namespace llvm::dwarf;
 
-static cl::opt<bool>
-    DisableDebugInfoPrinting("disable-debug-info-print", cl::Hidden,
-                             cl::desc("Disable debug info printing"));
-
 // Out of line virtual method.
 MachineModuleInfoImpl::~MachineModuleInfoImpl() = default;
 
@@ -224,8 +220,7 @@ bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
         Ctx.diagnose(
             DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, LocCookie));
       });
-  MMI.DbgInfoAvailable = !DisableDebugInfoPrinting &&
-                         !M.debug_compile_units().empty();
+  MMI.DbgInfoAvailable = !M.debug_compile_units().empty();
   return false;
 }
 
@@ -250,7 +245,6 @@ MachineModuleAnalysis::run(Module &M, ModuleAnalysisManager &) {
         Ctx.diagnose(
             DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, LocCookie));
       });
-  MMI.DbgInfoAvailable =
-      !DisableDebugInfoPrinting && !M.debug_compile_units().empty();
+  MMI.DbgInfoAvailable = !M.debug_compile_units().empty();
   return Result(MMI);
 }
