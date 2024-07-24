@@ -3,22 +3,23 @@
 
 target triple = "x86_64-redhat-linux-gnu"
 
+; Should not get vectorized.
 define void @test(ptr %p1, i64 %arg1, i64 %arg2) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[P1:%.*]], i64 [[ARG1:%.*]], i64 [[ARG2:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP1:.*]]
-; CHECK:       [[LOOP1]]:
-; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[I21:%.*]], %[[BB20:.*]] ], [ [[P1]], %[[ENTRY]] ]
+; CHECK-NEXT:  [[_PREHEADER48_PREHEADER_1:.*]]:
+; CHECK-NEXT:    br label %[[_LOOPEXIT49_1:.*]]
+; CHECK:       [[_LOOPEXIT49_1]]:
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[I21:%.*]], %[[BB20:.*]] ], [ [[P1]], %[[_PREHEADER48_PREHEADER_1]] ]
 ; CHECK-NEXT:    br i1 false, label %[[BB22:.*]], label %[[DOTPREHEADER48_PREHEADER_1:.*]]
 ; CHECK:       [[DEAD:.*]]:
 ; CHECK-NEXT:    br label %[[DOTPREHEADER48_PREHEADER_1]]
-; CHECK:       [[_PREHEADER48_PREHEADER_1:.*:]]
-; CHECK-NEXT:    [[I5:%.*]] = phi ptr [ [[I]], %[[DEAD]] ], [ [[I]], %[[LOOP1]] ]
+; CHECK:       [[_PREHEADER48_PREHEADER_2:.*:]]
+; CHECK-NEXT:    [[I5:%.*]] = phi ptr [ [[I]], %[[DEAD]] ], [ [[I]], %[[_LOOPEXIT49_1]] ]
 ; CHECK-NEXT:    br label %[[DOTLOOPEXIT49_1:.*]]
 ; CHECK:       [[DEAD1:.*]]:
 ; CHECK-NEXT:    br i1 false, label %[[DOTLOOPEXIT49_1]], label %[[BB20]]
-; CHECK:       [[_LOOPEXIT49_1:.*:]]
+; CHECK:       [[_LOOPEXIT49_2:.*:]]
 ; CHECK-NEXT:    [[I6:%.*]] = phi ptr [ [[I5]], %[[DEAD1]] ], [ [[I5]], %[[DOTPREHEADER48_PREHEADER_1]] ]
 ; CHECK-NEXT:    [[I7:%.*]] = getelementptr i8, ptr [[I6]], i64 [[ARG1]]
 ; CHECK-NEXT:    br label %[[BB10:.*]]
@@ -26,13 +27,16 @@ define void @test(ptr %p1, i64 %arg1, i64 %arg2) {
 ; CHECK-NEXT:    br label %[[BB10]]
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[I11:%.*]] = phi ptr [ [[I7]], %[[DOTLOOPEXIT49_1]] ], [ null, %[[DEAD2]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[I11]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    store <2 x i64> [[TMP1]], ptr [[I6]], align 1
+; CHECK-NEXT:    [[I16:%.*]] = getelementptr i8, ptr [[I11]], i64 8
+; CHECK-NEXT:    [[I17:%.*]] = load i64, ptr [[I16]], align 1
+; CHECK-NEXT:    store i64 [[I17]], ptr [[I6]], align 1
+; CHECK-NEXT:    [[I18:%.*]] = getelementptr i8, ptr [[I6]], i64 8
+; CHECK-NEXT:    [[I19:%.*]] = load i64, ptr [[I11]], align 1
+; CHECK-NEXT:    store i64 [[I19]], ptr [[I18]], align 1
 ; CHECK-NEXT:    br label %[[BB20]]
 ; CHECK:       [[BB20]]:
 ; CHECK-NEXT:    [[I21]] = phi ptr [ [[I5]], %[[DEAD1]] ], [ [[I6]], %[[BB10]] ]
-; CHECK-NEXT:    br label %[[LOOP1]]
+; CHECK-NEXT:    br label %[[_LOOPEXIT49_1]]
 ; CHECK:       [[BB22]]:
 ; CHECK-NEXT:    [[I23:%.*]] = getelementptr i8, ptr [[I]], i64 [[ARG2]]
 ; CHECK-NEXT:    [[I25:%.*]] = getelementptr i8, ptr [[I23]], i64 8
