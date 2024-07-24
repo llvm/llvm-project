@@ -5957,7 +5957,7 @@ CheckCountedByAttrOnField(Sema &S, FieldDecl *FD, Expr *E,
   } else if (PointeeTy->isFunctionType()) {
     InvalidTypeKind = CountedByInvalidPointeeTypeKind::FUNCTION;
   } else if (PointeeTy->isStructureTypeWithFlexibleArrayMember()) {
-    if (FieldTy->isArrayType()) {
+    if (FieldTy->isArrayType() && !S.getLangOpts().BoundsSafety) {
       // This is a workaround for the Linux kernel that has already adopted
       // `counted_by` on a FAM where the pointee is a struct with a FAM. This
       // should be an error because computing the bounds of the array cannot be
