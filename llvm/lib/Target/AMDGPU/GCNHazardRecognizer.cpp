@@ -885,35 +885,32 @@ GCNHazardRecognizer::checkVALUHazardsHelper(const MachineOperand &Def,
 
 static const MachineOperand *
 getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
+  // Assume inline asm has dst forwarding hazard
+  if (MI.isInlineAsm()) {
+    for (auto &Op :
+         llvm::drop_begin(MI.operands(), InlineAsm::MIOp_FirstOperand)) {
+      if (Op.isReg() && Op.isDef()) {
+        return &Op;
+      }
+    }
+  }
+
   const SIInstrInfo *TII = ST.getInstrInfo();
-  if (SIInstrInfo::isVALU(MI) && SIInstrInfo::isSDWA(MI)) {
+  if (!SIInstrInfo::isVALU(MI))
+    return nullptr;
+
+  if (SIInstrInfo::isSDWA(MI)) {
     if (auto *DstSel = TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel))
       if (DstSel->getImm() == AMDGPU::SDWA::DWORD)
         return nullptr;
-  } else if (SIInstrInfo::isVALU(MI)) {
+  } else {
     if (!AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::op_sel) ||
         !(TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm() &
           SISrcMods::DST_OP_SEL))
       return nullptr;
   }
 
-  const MachineOperand *Dst = nullptr;
-
-  if (SIInstrInfo::isVALU(MI))
-    Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
-
-  // Assume inline asm has dst forwarding hazard
-  else if (MI.isInlineAsm()) {
-    for (auto &Op :
-         llvm::drop_begin(MI.operands(), InlineAsm::MIOp_FirstOperand)) {
-      if (Op.isReg() && Op.isDef()) {
-        Dst = &Op;
-        break;
-      }
-    }
-  }
-
-  return Dst;
+  return TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
 }
 
 int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
@@ -1084,7 +1081,7 @@ int GCNHazardRecognizer::checkInlineAsmHazards(MachineInstr *IA) {
         auto IsShift16BitDefFn = [this](const MachineInstr &MI) {
           const MachineOperand *Dst = getDstSelForwardingOperand(MI, ST);
           // Assume inline asm reads the dst
-          return Dst ? true : false;
+          return (bool)Dst;
         };
 
         int WaitStatesNeededForDef =
