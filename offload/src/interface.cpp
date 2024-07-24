@@ -57,7 +57,7 @@ EXTERN void __tgt_register_lib(__tgt_bin_desc *Desc) {
 /// Initialize all available devices without registering any image
 EXTERN void __tgt_init_all_rtls() {
   assert(PM && "Runtime not initialized");
-  PM->initAllPlugins();
+  PM->initializeAllDevices();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
