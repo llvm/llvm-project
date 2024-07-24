@@ -639,9 +639,9 @@ LLDBMemoryReader::resolveRemoteAddress(uint64_t address) const {
              file_address, object_file->GetFileSpec().GetFilename());
     return {};
   }
-  auto sec = sec_list->GetSectionAtIndex(0);
-  auto sec_file_address = sec->GetFileAddress();
-  auto sec_load_address = sec->GetLoadBaseAddress(&m_process.GetTarget());
+  SectionSP sec = sec_list->GetSectionAtIndex(0);
+  addr_t sec_file_address = sec->GetFileAddress();
+  addr_t sec_load_address = sec->GetLoadBaseAddress(&m_process.GetTarget());
 
   if (sec_load_address < sec_file_address) {
     LLDB_LOG(log,
@@ -651,10 +651,10 @@ LLDBMemoryReader::resolveRemoteAddress(uint64_t address) const {
     return {};
   }
 
-  auto slide = sec_load_address - sec_file_address;
+  addr_t slide = sec_load_address - sec_file_address;
 
   bool overflow = false;
-  auto virtual_address = llvm::SaturatingAdd(file_address, slide, &overflow);
+  addr_t virtual_address = llvm::SaturatingAdd(file_address, slide, &overflow);
   if (overflow) {
     LLDB_LOG(log, "[MemoryReader] file address {0:x} + slide {1:x} overflows",
              sec_load_address, sec_file_address);
