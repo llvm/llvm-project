@@ -234,8 +234,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
     filePath = llvm::sys::path::parent_path(funcLoc.getFilename().getValue());
   }
 
-  mlir::StringAttr fullName =
-      mlir::StringAttr::get(context, funcOp.getName());
+  mlir::StringAttr fullName = mlir::StringAttr::get(context, funcOp.getName());
   mlir::Attribute attr = funcOp->getAttr(fir::getInternalFuncNameAttrName());
   mlir::StringAttr funcName =
       (attr) ? mlir::cast<mlir::StringAttr>(attr)
