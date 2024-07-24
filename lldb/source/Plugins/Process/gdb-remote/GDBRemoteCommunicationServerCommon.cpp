@@ -646,7 +646,9 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Size(
   packet.GetHexByteString(path);
   if (!path.empty()) {
     uint64_t Size;
-    if (llvm::sys::fs::file_size(path, Size))
+    FileSpec file_spec(path);
+    FileSystem::Instance().Resolve(file_spec);
+    if (llvm::sys::fs::file_size(file_spec.GetPath(), Size))
       return SendErrorResponse(5);
     StreamString response;
     response.PutChar('F');
@@ -725,7 +727,9 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_unlink(
   packet.SetFilePos(::strlen("vFile:unlink:"));
   std::string path;
   packet.GetHexByteString(path);
-  Status error(llvm::sys::fs::remove(path));
+  FileSpec file_spec(path);
+  FileSystem::Instance().Resolve(file_spec);
+  Status error(llvm::sys::fs::remove(file_spec.GetPath()));
   StreamString response;
   response.Printf("F%x,%x", error.GetError(), error.GetError());
   return SendPacketNoLock(response.GetString());
@@ -744,6 +748,13 @@ GDBRemoteCommunicationServerCommon::Handle_qPlatform_shell(
       // uint32_t timeout = packet.GetHexMaxU32(false, 32);
       if (packet.GetChar() == ',')
         packet.GetHexByteString(working_dir);
+      else {
+        auto cwd = FileSystem::Instance()
+                       .GetVirtualFileSystem()
+                       ->getCurrentWorkingDirectory();
+        if (cwd)
+          working_dir = *cwd;
+      }
       int status, signo;
       std::string output;
       FileSpec working_spec(working_dir);

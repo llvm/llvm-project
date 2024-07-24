@@ -49,7 +49,15 @@ void FileSystem::Terminate() {
   InstanceImpl().reset();
 }
 
+std::optional<FileSystem> &FileSystem::InstancePerThread() {
+  static thread_local std::optional<FileSystem> t_fs;
+  return t_fs;
+}
+
 std::optional<FileSystem> &FileSystem::InstanceImpl() {
+  std::optional<FileSystem> &fs = InstancePerThread();
+  if (fs)
+    return fs;
   static std::optional<FileSystem> g_fs;
   return g_fs;
 }

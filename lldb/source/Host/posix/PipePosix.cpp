@@ -324,6 +324,18 @@ Status PipePosix::ReadWithTimeout(void *buf, size_t size,
         bytes_read += result;
         if (bytes_read == size || result == 0)
           break;
+
+        // This is the workaround for the following bug in Linux multithreading
+        // select() https://bugzilla.kernel.org/show_bug.cgi?id=546
+        // ReadWithTimeout() with a non-zero timeout is used only to
+        // read the port number from the gdbserver pipe
+        // in GDBRemoteCommunication::StartDebugserverProcess().
+        // The port number may be "1024\0".."65535\0".
+        if (timeout.count() > 0 && size == 6 && bytes_read == 5 &&
+            static_cast<char *>(buf)[4] == '\0') {
+          break;
+        }
+
       } else if (errno == EINTR) {
         continue;
       } else {

@@ -47,6 +47,12 @@ public:
 
   static FileSystem &Instance();
 
+  static void InitializePerThread() {
+    lldbassert(!InstancePerThread() && "Already initialized.");
+    InstancePerThread().emplace(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>(
+        llvm::vfs::createPhysicalFileSystem().release()));
+  }
+
   template <class... T> static void Initialize(T &&...t) {
     lldbassert(!InstanceImpl() && "Already initialized.");
     InstanceImpl().emplace(std::forward<T>(t)...);
@@ -206,6 +212,7 @@ public:
 
 private:
   static std::optional<FileSystem> &InstanceImpl();
+  static std::optional<FileSystem> &InstancePerThread();
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> m_fs;
   std::unique_ptr<TildeExpressionResolver> m_tilde_resolver;
   std::string m_home_directory;
