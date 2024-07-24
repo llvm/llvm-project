@@ -1217,7 +1217,7 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
     llvm::Triple TT(Triple);
     // If this isn't a recognized triple then it's an `arg=value` option.
     if (TT.getArch() <= Triple::ArchType::UnknownArch ||
-        TT.getArch() >= Triple::ArchType::LastArchType)
+        TT.getArch() > Triple::ArchType::LastArchType)
       DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_linker_arg_EQ),
                        Args.MakeArgString(Arg));
     else if (Value.empty())
