@@ -28,7 +28,10 @@
 #include <sys/syscall.h>
 
 #ifndef MFD_CLOEXEC
-#define MFD_CLOEXEC 1U
+#define MFD_CLOEXEC 0x0001U
+#endif
+#ifndef MFD_EXEC
+#define MFD_EXEC 0x0010U
 #endif
 
 namespace llvm {
@@ -94,6 +97,7 @@ static inline int memfd_create(const char *name, int flags) {
 #ifdef SYS_memfd_create
   return syscall(SYS_memfd_create, name, flags);
 #else
+  errno = ENOSYS;
   return -1;
 #endif
 }
