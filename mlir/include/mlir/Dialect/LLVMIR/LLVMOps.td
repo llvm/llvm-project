@@ -652,7 +652,12 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
                                    "{}">:$fastmathFlags,
                   OptionalAttr<DenseI32ArrayAttr>:$branch_weights,
                   DefaultValuedAttr<CConv, "CConv::C">:$CConv,
-                  DefaultValuedAttr<TailCallKind, "TailCallKind::None">:$TailCallKind);
+                  DefaultValuedAttr<TailCallKind, "TailCallKind::None">:$TailCallKind,
+                  OptionalAttr<LLVM_MemoryEffectsAttr>:$memory_effects,
+                  OptionalAttr<UnitAttr>:$convergent,
+                  OptionalAttr<UnitAttr>:$no_unwind,
+                  OptionalAttr<UnitAttr>:$will_return
+                  );
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs Optional<LLVM_Type>:$result);
@@ -1434,7 +1439,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs,
     OptionalAttr<I64Attr>:$function_entry_count,
-    OptionalAttr<LLVM_MemoryEffectsAttr>:$memory,
+    OptionalAttr<LLVM_MemoryEffectsAttr>:$memory_effects,
     DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_,
     OptionalAttr<UnitAttr>:$arm_streaming,
     OptionalAttr<UnitAttr>:$arm_locally_streaming,

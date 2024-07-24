@@ -54,8 +54,6 @@ using namespace __nsan;
 constexpr int kMaxVectorWidth = 8;
 
 // When copying application memory, we also copy its shadow and shadow type.
-// FIXME: We could provide fixed-size versions that would nicely
-// vectorize for known sizes.
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
 __nsan_copy_values(const u8 *daddr, const u8 *saddr, uptr size) {
   internal_memmove((void *)GetShadowTypeAddrFor(daddr),
@@ -64,13 +62,33 @@ __nsan_copy_values(const u8 *daddr, const u8 *saddr, uptr size) {
                    size * kShadowScale);
 }
 
-// FIXME: We could provide fixed-size versions that would nicely
-// vectorize for known sizes.
+#define NSAN_COPY_VALUES_N(N)                                                  \
+  extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_copy_##N(               \
+      const u8 *daddr, const u8 *saddr) {                                      \
+    __builtin_memmove((void *)GetShadowTypeAddrFor(daddr),                     \
+                      GetShadowTypeAddrFor(saddr), N);                         \
+    __builtin_memmove((void *)GetShadowAddrFor(daddr),                         \
+                      GetShadowAddrFor(saddr), N * kShadowScale);              \
+  }
+
+NSAN_COPY_VALUES_N(4)
+NSAN_COPY_VALUES_N(8)
+NSAN_COPY_VALUES_N(16)
+
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
 __nsan_set_value_unknown(const u8 *addr, uptr size) {
   internal_memset((void *)GetShadowTypeAddrFor(addr), 0, size);
 }
 
+#define NSAN_SET_VALUE_UNKNOWN_N(N)                                            \
+  extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_set_value_unknown_##N(  \
+      const u8 *daddr) {                                                       \
+    __builtin_memset((void *)GetShadowTypeAddrFor(daddr), 0, N);               \
+  }
+
+NSAN_SET_VALUE_UNKNOWN_N(4)
+NSAN_SET_VALUE_UNKNOWN_N(8)
+NSAN_SET_VALUE_UNKNOWN_N(16)
 
 const char *FTInfo<float>::kCppTypeName = "float";
 const char *FTInfo<double>::kCppTypeName = "double";
