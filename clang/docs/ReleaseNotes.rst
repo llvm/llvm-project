@@ -142,7 +142,7 @@ Bug Fixes to Attribute Support
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Fixed a failed assertion when checking invalid delete operator declaration (GH96191).
+- Fixed a failed assertion when checking invalid delete operator declaration. (#GH96191).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
