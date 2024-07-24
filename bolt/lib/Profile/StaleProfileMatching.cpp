@@ -218,7 +218,8 @@ public:
     this->YamlBFGUID = YamlBFGUID;
   }
 
-  /// Find the most similar block for a given hash.
+  /// Find the most similar flow block for a profile block given its hashes and
+  /// pseudo probe information.
   const FlowBlock *
   matchBlock(BlendedBlockHash BlendedHash, uint64_t CallHash,
              const std::vector<yaml::bolt::PseudoProbeInfo> &PseudoProbes) {
@@ -315,6 +316,8 @@ private:
   const FlowBlock *matchWithPseudoProbes(
       BlendedBlockHash BlendedHash,
       const std::vector<yaml::bolt::PseudoProbeInfo> &PseudoProbes) const {
+    if (!YamlBFGUID)
+      return nullptr;
     // Searches for the pseudo probe attached to the matched function's block,
     // ignoring pseudo probes attached to function calls and inlined functions'
     // blocks.
@@ -582,6 +585,7 @@ size_t matchWeightsByHashes(
     Blocks.push_back(&Func.Blocks[I + 1]);
     BlendedBlockHash BlendedHash(BB->getHash());
     BlendedHashes.push_back(BlendedHash);
+    // Collects pseudo probes attached to the BB for use in the StaleMatcher.
     if (PseudoProbeDecoder) {
       const AddressProbesMap &ProbeMap =
           PseudoProbeDecoder->getAddress2ProbesMap();
@@ -607,6 +611,10 @@ size_t matchWeightsByHashes(
                       << Twine::utohexstr(BB->getHash()) << "\n");
   }
 
+  // Sets the YamlBFGUID in the StaleMatcher such that if either the profiled or
+  // binary function dne or they are not equal, to zero, as not to perform
+  // pseudo probe block matching. Otherwise, the YamlBF's GUID is used for
+  // pseudo probe block matching.
   uint64_t BFPseudoProbeDescHash = 0;
   if (BF.getGUID() != 0) {
     assert(PseudoProbeDecoder &&
