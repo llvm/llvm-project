@@ -2872,8 +2872,8 @@ inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
   return true;
 }
 
+bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B);
 static inline bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm) {
-
   if (!CheckDynamicMemoryAllocation(S, OpPC))
     return false;
 
@@ -2903,6 +2903,10 @@ static inline bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm) {
   }
   assert(Source);
   assert(BlockToDelete);
+
+  // Invoke destructors before deallocating the memory.
+  if (!RunDestructors(S, OpPC, BlockToDelete))
+    return false;
 
   DynamicAllocator &Allocator = S.getAllocator();
   bool WasArrayAlloc = Allocator.isArrayAllocation(Source);
