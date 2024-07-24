@@ -690,6 +690,11 @@ bool PPCTargetInfo::initFeatureMap(
     return false;
   }
 
+  if (llvm::is_contained(FeaturesVec, "-hard-float")) {
+    Features["altivec"] = false;
+    Features["vsx"] = false;
+  }
+
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
 }
 
