@@ -3340,43 +3340,43 @@ bool LoopVectorizationCostModel::isScalarWithPredication(
 }
 
 bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
-  if (!blockNeedsPredicationForAnyReason(I->getParent()))
-    return false;
-
-  // Can we prove this instruction is safe to unconditionally execute?
-  if (I->getOpcode() == Instruction::Call)
-    return Legal->isMaskRequired(I);
-
-  if (isa<LoadInst, StoreInst>(I) && !Legal->isMaskRequired(I))
-    return false;
-
+  // If predication is not needed, avoid it.
   // TODO: We can use the loop-preheader as context point here and get
-  // context sensitive reasoning
-  if (isa<BranchInst, PHINode>(I) || isSafeToSpeculativelyExecute(I))
+  // context sensitive reasoning for isSafeToSpeculativelyExecute.
+  if (!blockNeedsPredicationForAnyReason(I->getParent()) ||
+      isSafeToSpeculativelyExecute(I) ||
+      (isa<LoadInst, StoreInst, CallInst>(I) && !Legal->isMaskRequired(I)) ||
+      isa<BranchInst, PHINode>(I))
     return false;
 
   // If the instruction was executed conditionally in the original scalar loop,
-  // predication is needed.
+  // predication is needed with a mask whose lanes are all possibly inactive.
   if (Legal->blockNeedsPredication(I->getParent()))
     return true;
 
-  // Tail folding may introduce additional predication, but we're guaranteed to
-  // always have at least one active lane. If the instruction in the original
-  // scalar loop was executed unconditionally, it may not need predication,
-  // depending on its operands.
+  // All that remain are instructions with side-effects originally executed in
+  // the loop unconditionally, but now execute under a tail-fold mask (only)
+  // having at least one active lane (the first). If the side-effects of the
+  // instruction are invariant, executing it w/o (the tail-folding) mask is safe
+  // - it will cause the same side-effects as when masked.
   switch(I->getOpcode()) {
   default:
     llvm_unreachable(
-        "instruction should have been considered to not require predication "
-        "by earlier checks");
+        "instruction should have been considered by earlier checks");
+  case Instruction::Call:
+    // Side-effects of a Call are assumed to be non-invariant, needing a
+    // (fold-tail) mask.
+    assert(Legal->isMaskRequired(I) &&
+           "should have returned earlier for calls not needing a mask");
+    return true;
   case Instruction::Load:
     // If the address is loop invariant no predication is needed.
     return !Legal->isInvariant(getLoadStorePointerOperand(I));
   case Instruction::Store: {
-    // For stores, we need to prove
-    // both speculation safety (which follows from the same argument as loads),
-    // but also must prove the value being stored is correct.  The easiest
-    // form of the later is to require that all values stored are the same.
+    // For stores, we need to prove both speculation safety (which follows from
+    // the same argument as loads), but also must prove the value being stored
+    // is correct.  The easiest form of the later is to require that all values
+    // stored are the same.
     return !(Legal->isInvariant(getLoadStorePointerOperand(I)) &&
              TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand()));
   }
