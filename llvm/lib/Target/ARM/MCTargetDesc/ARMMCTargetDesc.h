@@ -67,8 +67,7 @@ MCSubtargetInfo *createARMMCSubtargetInfo(const Triple &TT, StringRef CPU,
 MCTargetStreamer *createARMNullTargetStreamer(MCStreamer &S);
 MCTargetStreamer *createARMTargetAsmStreamer(MCStreamer &S,
                                              formatted_raw_ostream &OS,
-                                             MCInstPrinter *InstPrint,
-                                             bool isVerboseAsm);
+                                             MCInstPrinter *InstPrint);
 MCTargetStreamer *createARMObjectTargetStreamer(MCStreamer &S,
                                                 const MCSubtargetInfo &STI);
 MCTargetStreamer *createARMObjectTargetELFStreamer(MCStreamer &S);

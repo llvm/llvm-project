@@ -473,7 +473,7 @@ void X86FrameLowering::emitCalleeSavedFrameMovesFullCFA(
                                : FramePtr;
   unsigned DwarfReg = MRI->getDwarfRegNum(MachineFramePtr, true);
   // Offset = space for return address + size of the frame pointer itself.
-  unsigned Offset = (Is64Bit ? 8 : 4) + (Uses64BitFramePtr ? 8 : 4);
+  int64_t Offset = (Is64Bit ? 8 : 4) + (Uses64BitFramePtr ? 8 : 4);
   BuildCFI(MBB, MBBI, DebugLoc{},
            MCCFIInstruction::createOffset(nullptr, DwarfReg, -Offset));
   emitCalleeSavedFrameMoves(MBB, MBBI, DebugLoc{}, true);
@@ -1530,7 +1530,6 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   MachineBasicBlock::iterator MBBI = MBB.begin();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const Function &Fn = MF.getFunction();
-  MachineModuleInfo &MMI = MF.getMMI();
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   uint64_t MaxAlign = calculateMaxStackAlign(MF); // Desired stack alignment.
   uint64_t StackSize = MFI.getStackSize(); // Number of bytes to allocate.
@@ -1545,8 +1544,8 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   bool IsWin64Prologue = isWin64Prologue(MF);
   bool NeedsWin64CFI = IsWin64Prologue && Fn.needsUnwindTableEntry();
   // FIXME: Emit FPO data for EH funclets.
-  bool NeedsWinFPO =
-      !IsFunclet && STI.isTargetWin32() && MMI.getModule()->getCodeViewFlag();
+  bool NeedsWinFPO = !IsFunclet && STI.isTargetWin32() &&
+                     MF.getFunction().getParent()->getCodeViewFlag();
   bool NeedsWinCFI = NeedsWin64CFI || NeedsWinFPO;
   bool NeedsDwarfCFI = needsDwarfCFI(MF);
   Register FramePtr = TRI->getFrameRegister(MF);
@@ -2554,7 +2553,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (!HasFP && NeedsDwarfCFI) {
     MBBI = FirstCSPop;
-    int64_t Offset = -CSSize - SlotSize;
+    int64_t Offset = -(int64_t)CSSize - SlotSize;
     // Mark callee-saved pop instruction.
     // Define the current CFA rule to use the provided offset.
     while (MBBI != MBB.end()) {
@@ -3521,7 +3520,7 @@ void X86FrameLowering::adjustForHiPEPrologue(
 
   // HiPE-specific values
   NamedMDNode *HiPELiteralsMD =
-      MF.getMMI().getModule()->getNamedMetadata("hipe.literals");
+      MF.getFunction().getParent()->getNamedMetadata("hipe.literals");
   if (!HiPELiteralsMD)
     report_fatal_error(
         "Can't generate HiPE prologue without runtime parameters");

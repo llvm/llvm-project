@@ -132,7 +132,7 @@ namespace PR10896 {
   private:
 
     template<typename T>
-    T SomeField; // expected-error {{member 'SomeField' declared as a template}}
+    T SomeField; // expected-error {{non-static data member 'SomeField' cannot be declared as a template}}
     template<> int SomeField2; // expected-error {{extraneous 'template<>' in declaration of variable 'SomeField2'}}
   };
 

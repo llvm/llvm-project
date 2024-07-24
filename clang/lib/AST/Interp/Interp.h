@@ -39,8 +39,9 @@ namespace interp {
 using APSInt = llvm::APSInt;
 
 /// Convert a value to an APValue.
-template <typename T> bool ReturnValue(const T &V, APValue &R) {
-  R = V.toAPValue();
+template <typename T>
+bool ReturnValue(const InterpState &S, const T &V, APValue &R) {
+  R = V.toAPValue(S.getCtx());
   return true;
 }
 
@@ -186,10 +187,15 @@ template <typename T>
 bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
   if (RHS.isZero()) {
     const auto *Op = cast<BinaryOperator>(S.Current->getExpr(OpPC));
+    if constexpr (std::is_same_v<T, Floating>) {
+      S.CCEDiag(Op, diag::note_expr_divide_by_zero)
+          << Op->getRHS()->getSourceRange();
+      return true;
+    }
+
     S.FFDiag(Op, diag::note_expr_divide_by_zero)
         << Op->getRHS()->getSourceRange();
-    if constexpr (!std::is_same_v<T, Floating>)
-      return false;
+    return false;
   }
 
   if (LHS.isSigned() && LHS.isMin() && RHS.isNegative() && RHS.isMinusOne()) {
@@ -286,7 +292,7 @@ bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
   } else {
     delete S.Current;
     S.Current = nullptr;
-    if (!ReturnValue<T>(Ret, Result))
+    if (!ReturnValue<T>(S, Ret, Result))
       return false;
   }
   return true;
@@ -1318,7 +1324,7 @@ bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
   const Pointer &Ptr = S.P.getGlobal(I);
 
   const T Value = S.Stk.peek<T>();
-  APValue APV = Value.toAPValue();
+  APValue APV = Value.toAPValue(S.getCtx());
   APValue *Cached = Temp->getOrCreateValue(true);
   *Cached = APV;
 
@@ -2735,6 +2741,15 @@ inline bool InvalidDeclRef(InterpState &S, CodePtr OpPC,
   return CheckDeclRef(S, OpPC, DR);
 }
 
+inline bool SizelessVectorElementSize(InterpState &S, CodePtr OpPC) {
+  if (S.inConstantContext()) {
+    const SourceRange &ArgRange = S.Current->getRange(OpPC);
+    const Expr *E = S.Current->getExpr(OpPC);
+    S.CCEDiag(E, diag::note_constexpr_non_const_vectorelements) << ArgRange;
+  }
+  return false;
+}
+
 inline bool Assume(InterpState &S, CodePtr OpPC) {
   const auto Val = S.Stk.pop<Boolean>();
 
@@ -2796,6 +2811,13 @@ inline bool DecayPtr(InterpState &S, CodePtr OpPC) {
   using ToT = typename PrimConv<TOut>::T;
 
   const FromT &OldPtr = S.Stk.pop<FromT>();
+
+  if constexpr (std::is_same_v<FromT, FunctionPointer> &&
+                std::is_same_v<ToT, Pointer>) {
+    S.Stk.push<Pointer>(OldPtr.getFunction());
+    return true;
+  }
+
   S.Stk.push<ToT>(ToT(OldPtr.getIntegerRepresentation(), nullptr));
   return true;
 }

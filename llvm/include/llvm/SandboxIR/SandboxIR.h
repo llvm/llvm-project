@@ -40,7 +40,7 @@
 //                                      |
 //                                      +- PHINode
 //                                      |
-//                                      +- RetInst
+//                                      +- ReturnInst
 //                                      |
 //                                      +- SelectInst
 //                                      |
@@ -75,7 +75,11 @@ class BasicBlock;
 class Context;
 class Function;
 class Instruction;
+class SelectInst;
+class BranchInst;
 class LoadInst;
+class ReturnInst;
+class StoreInst;
 class User;
 class Value;
 
@@ -172,10 +176,14 @@ protected:
   /// order.
   llvm::Value *Val = nullptr;
 
-  friend class Context;  // For getting `Val`.
-  friend class User;     // For getting `Val`.
-  friend class Use;      // For getting `Val`.
-  friend class LoadInst; // For getting `Val`.
+  friend class Context;    // For getting `Val`.
+  friend class User;       // For getting `Val`.
+  friend class Use;        // For getting `Val`.
+  friend class SelectInst; // For getting `Val`.
+  friend class BranchInst; // For getting `Val`.
+  friend class LoadInst;   // For getting `Val`.
+  friend class StoreInst;  // For getting `Val`.
+  friend class ReturnInst; // For getting `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -337,6 +345,14 @@ protected:
   virtual unsigned getUseOperandNo(const Use &Use) const = 0;
   friend unsigned Use::getOperandNo() const; // For getUseOperandNo()
 
+  void swapOperandsInternal(unsigned OpIdxA, unsigned OpIdxB) {
+    assert(OpIdxA < getNumOperands() && "OpIdxA out of bounds!");
+    assert(OpIdxB < getNumOperands() && "OpIdxB out of bounds!");
+    auto UseA = getOperandUse(OpIdxA);
+    auto UseB = getOperandUse(OpIdxB);
+    UseA.swap(UseB);
+  }
+
 #ifndef NDEBUG
   void verifyUserOfLLVMUse(const llvm::Use &Use) const;
 #endif // NDEBUG
@@ -407,6 +423,8 @@ class Constant : public sandboxir::User {
   }
 
 public:
+  static Constant *createInt(Type *Ty, uint64_t V, Context &Ctx,
+                             bool IsSigned = false);
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
     return From->getSubclassID() == ClassID::Constant ||
@@ -495,7 +513,11 @@ protected:
   /// A SandboxIR Instruction may map to multiple LLVM IR Instruction. This
   /// returns its topmost LLVM IR instruction.
   llvm::Instruction *getTopmostLLVMInstruction() const;
-  friend class LoadInst; // For getTopmostLLVMInstruction().
+  friend class SelectInst; // For getTopmostLLVMInstruction().
+  friend class BranchInst; // For getTopmostLLVMInstruction().
+  friend class LoadInst;   // For getTopmostLLVMInstruction().
+  friend class StoreInst;  // For getTopmostLLVMInstruction().
+  friend class ReturnInst; // For getTopmostLLVMInstruction().
 
   /// \Returns the LLVM IR Instructions that this SandboxIR maps to in program
   /// order.
@@ -560,6 +582,146 @@ public:
 #endif
 };
 
+class SelectInst : public Instruction {
+  /// Use Context::createSelectInst(). Don't call the
+  /// constructor directly.
+  SelectInst(llvm::SelectInst *CI, Context &Ctx)
+      : Instruction(ClassID::Select, Opcode::Select, CI, Ctx) {}
+  friend Context; // for SelectInst()
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+  static Value *createCommon(Value *Cond, Value *True, Value *False,
+                             const Twine &Name, IRBuilder<> &Builder,
+                             Context &Ctx);
+
+public:
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+  static Value *create(Value *Cond, Value *True, Value *False,
+                       Instruction *InsertBefore, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Value *Cond, Value *True, Value *False,
+                       BasicBlock *InsertAtEnd, Context &Ctx,
+                       const Twine &Name = "");
+  Value *getCondition() { return getOperand(0); }
+  Value *getTrueValue() { return getOperand(1); }
+  Value *getFalseValue() { return getOperand(2); }
+
+  void setCondition(Value *New) { setOperand(0, New); }
+  void setTrueValue(Value *New) { setOperand(1, New); }
+  void setFalseValue(Value *New) { setOperand(2, New); }
+  void swapValues() { cast<llvm::SelectInst>(Val)->swapValues(); }
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From);
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::SelectInst>(Val) && "Expected SelectInst!");
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
+class BranchInst : public Instruction {
+  /// Use Context::createBranchInst(). Don't call the constructor directly.
+  BranchInst(llvm::BranchInst *BI, Context &Ctx)
+      : Instruction(ClassID::Br, Opcode::Br, BI, Ctx) {}
+  friend Context; // for BranchInst()
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+
+public:
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+  static BranchInst *create(BasicBlock *IfTrue, Instruction *InsertBefore,
+                            Context &Ctx);
+  static BranchInst *create(BasicBlock *IfTrue, BasicBlock *InsertAtEnd,
+                            Context &Ctx);
+  static BranchInst *create(BasicBlock *IfTrue, BasicBlock *IfFalse,
+                            Value *Cond, Instruction *InsertBefore,
+                            Context &Ctx);
+  static BranchInst *create(BasicBlock *IfTrue, BasicBlock *IfFalse,
+                            Value *Cond, BasicBlock *InsertAtEnd, Context &Ctx);
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From);
+  bool isUnconditional() const {
+    return cast<llvm::BranchInst>(Val)->isUnconditional();
+  }
+  bool isConditional() const {
+    return cast<llvm::BranchInst>(Val)->isConditional();
+  }
+  Value *getCondition() const;
+  void setCondition(Value *V) { setOperand(0, V); }
+  unsigned getNumSuccessors() const { return 1 + isConditional(); }
+  BasicBlock *getSuccessor(unsigned SuccIdx) const;
+  void setSuccessor(unsigned Idx, BasicBlock *NewSucc);
+  void swapSuccessors() { swapOperandsInternal(1, 2); }
+
+private:
+  struct LLVMBBToSBBB {
+    Context &Ctx;
+    LLVMBBToSBBB(Context &Ctx) : Ctx(Ctx) {}
+    BasicBlock *operator()(llvm::BasicBlock *BB) const;
+  };
+
+  struct ConstLLVMBBToSBBB {
+    Context &Ctx;
+    ConstLLVMBBToSBBB(Context &Ctx) : Ctx(Ctx) {}
+    const BasicBlock *operator()(const llvm::BasicBlock *BB) const;
+  };
+
+public:
+  using sb_succ_op_iterator =
+      mapped_iterator<llvm::BranchInst::succ_op_iterator, LLVMBBToSBBB>;
+  iterator_range<sb_succ_op_iterator> successors() {
+    iterator_range<llvm::BranchInst::succ_op_iterator> LLVMRange =
+        cast<llvm::BranchInst>(Val)->successors();
+    LLVMBBToSBBB BBMap(Ctx);
+    sb_succ_op_iterator MappedBegin = map_iterator(LLVMRange.begin(), BBMap);
+    sb_succ_op_iterator MappedEnd = map_iterator(LLVMRange.end(), BBMap);
+    return make_range(MappedBegin, MappedEnd);
+  }
+
+  using const_sb_succ_op_iterator =
+      mapped_iterator<llvm::BranchInst::const_succ_op_iterator,
+                      ConstLLVMBBToSBBB>;
+  iterator_range<const_sb_succ_op_iterator> successors() const {
+    iterator_range<llvm::BranchInst::const_succ_op_iterator> ConstLLVMRange =
+        static_cast<const llvm::BranchInst *>(cast<llvm::BranchInst>(Val))
+            ->successors();
+    ConstLLVMBBToSBBB ConstBBMap(Ctx);
+    const_sb_succ_op_iterator ConstMappedBegin =
+        map_iterator(ConstLLVMRange.begin(), ConstBBMap);
+    const_sb_succ_op_iterator ConstMappedEnd =
+        map_iterator(ConstLLVMRange.end(), ConstBBMap);
+    return make_range(ConstMappedBegin, ConstMappedEnd);
+  }
+
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::BranchInst>(Val) && "Expected BranchInst!");
+  }
+  friend raw_ostream &operator<<(raw_ostream &OS, const BranchInst &BI) {
+    BI.dump(OS);
+    return OS;
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
 class LoadInst final : public Instruction {
   /// Use LoadInst::create() instead of calling the constructor.
   LoadInst(llvm::LoadInst *LI, Context &Ctx)
@@ -594,6 +756,80 @@ public:
   void verify() const final {
     assert(isa<llvm::LoadInst>(Val) && "Expected LoadInst!");
   }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
+class StoreInst final : public Instruction {
+  /// Use StoreInst::create().
+  StoreInst(llvm::StoreInst *SI, Context &Ctx)
+      : Instruction(ClassID::Store, Opcode::Store, SI, Ctx) {}
+  friend Context; // for StoreInst()
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+
+public:
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+  static StoreInst *create(Value *V, Value *Ptr, MaybeAlign Align,
+                           Instruction *InsertBefore, Context &Ctx);
+  static StoreInst *create(Value *V, Value *Ptr, MaybeAlign Align,
+                           BasicBlock *InsertAtEnd, Context &Ctx);
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From);
+  Value *getValueOperand() const;
+  Value *getPointerOperand() const;
+  Align getAlign() const { return cast<llvm::StoreInst>(Val)->getAlign(); }
+  bool isSimple() const { return cast<llvm::StoreInst>(Val)->isSimple(); }
+  bool isUnordered() const { return cast<llvm::StoreInst>(Val)->isUnordered(); }
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::StoreInst>(Val) && "Expected StoreInst!");
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
+class ReturnInst final : public Instruction {
+  /// Use ReturnInst::create() instead of calling the constructor.
+  ReturnInst(llvm::Instruction *I, Context &Ctx)
+      : Instruction(ClassID::Ret, Opcode::Ret, I, Ctx) {}
+  ReturnInst(ClassID SubclassID, llvm::Instruction *I, Context &Ctx)
+      : Instruction(SubclassID, Opcode::Ret, I, Ctx) {}
+  friend class Context; // For accessing the constructor in create*()
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+  static ReturnInst *createCommon(Value *RetVal, IRBuilder<> &Builder,
+                                  Context &Ctx);
+
+public:
+  static ReturnInst *create(Value *RetVal, Instruction *InsertBefore,
+                            Context &Ctx);
+  static ReturnInst *create(Value *RetVal, BasicBlock *InsertAtEnd,
+                            Context &Ctx);
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::Ret;
+  }
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+  /// \Returns null if there is no return value.
+  Value *getReturnValue() const;
+#ifndef NDEBUG
+  void verify() const final {}
   void dump(raw_ostream &OS) const override;
   LLVM_DUMP_METHOD void dump() const override;
 #endif
@@ -723,6 +959,11 @@ protected:
   Value *getOrCreateValue(llvm::Value *LLVMV) {
     return getOrCreateValueInternal(LLVMV, 0);
   }
+  /// Get or create a sandboxir::Constant from an existing LLVM IR \p LLVMC.
+  Constant *getOrCreateConstant(llvm::Constant *LLVMC) {
+    return cast<Constant>(getOrCreateValueInternal(LLVMC, 0));
+  }
+  friend class Constant; // For getOrCreateConstant().
   /// Create a sandboxir::BasicBlock for an existing LLVM IR \p BB. This will
   /// also create all contents of the block.
   BasicBlock *createBasicBlock(llvm::BasicBlock *BB);
@@ -732,8 +973,16 @@ protected:
   IRBuilder<ConstantFolder> LLVMIRBuilder;
   auto &getLLVMIRBuilder() { return LLVMIRBuilder; }
 
+  SelectInst *createSelectInst(llvm::SelectInst *SI);
+  friend SelectInst; // For createSelectInst()
+  BranchInst *createBranchInst(llvm::BranchInst *I);
+  friend BranchInst; // For createBranchInst()
   LoadInst *createLoadInst(llvm::LoadInst *LI);
   friend LoadInst; // For createLoadInst()
+  StoreInst *createStoreInst(llvm::StoreInst *SI);
+  friend StoreInst; // For createStoreInst()
+  ReturnInst *createReturnInst(llvm::ReturnInst *I);
+  friend ReturnInst; // For createReturnInst()
 
 public:
   Context(LLVMContext &LLVMCtx)

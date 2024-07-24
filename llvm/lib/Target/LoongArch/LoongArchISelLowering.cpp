@@ -22,7 +22,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsLoongArch.h"
@@ -252,9 +252,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
       setOperationAction(ISD::SETCC, VT, Legal);
       setOperationAction(ISD::VSELECT, VT, Legal);
+      setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
     }
     for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64}) {
-      setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
       setOperationAction({ISD::ADD, ISD::SUB}, VT, Legal);
       setOperationAction({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN}, VT,
                          Legal);
@@ -298,9 +298,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
       setOperationAction(ISD::SETCC, VT, Legal);
       setOperationAction(ISD::VSELECT, VT, Legal);
+      setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
     }
     for (MVT VT : {MVT::v4i64, MVT::v8i32, MVT::v16i16, MVT::v32i8}) {
-      setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
       setOperationAction({ISD::ADD, ISD::SUB}, VT, Legal);
       setOperationAction({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN}, VT,
                          Legal);
@@ -428,9 +428,926 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
   return SDValue();
 }
 
+/// Determine whether a range fits a regular pattern of values.
+/// This function accounts for the possibility of jumping over the End iterator.
+template <typename ValType>
+static bool
+fitsRegularPattern(typename SmallVectorImpl<ValType>::const_iterator Begin,
+                   unsigned CheckStride,
+                   typename SmallVectorImpl<ValType>::const_iterator End,
+                   ValType ExpectedIndex, unsigned ExpectedIndexStride) {
+  auto &I = Begin;
+
+  while (I != End) {
+    if (*I != -1 && *I != ExpectedIndex)
+      return false;
+    ExpectedIndex += ExpectedIndexStride;
+
+    // Incrementing past End is undefined behaviour so we must increment one
+    // step at a time and check for End at each step.
+    for (unsigned n = 0; n < CheckStride && I != End; ++n, ++I)
+      ; // Empty loop body.
+  }
+  return true;
+}
+
+/// Lower VECTOR_SHUFFLE into VREPLVEI (if possible).
+///
+/// VREPLVEI performs vector broadcast based on an element specified by an
+/// integer immediate, with its mask being similar to:
+///   <x, x, x, ...>
+/// where x is any valid index.
+///
+/// When undef's appear in the mask they are treated as if they were whatever
+/// value is necessary in order to fit the above form.
+static SDValue lowerVECTOR_SHUFFLE_VREPLVEI(const SDLoc &DL, ArrayRef<int> Mask,
+                                            MVT VT, SDValue V1, SDValue V2,
+                                            SelectionDAG &DAG) {
+  int SplatIndex = -1;
+  for (const auto &M : Mask) {
+    if (M != -1) {
+      SplatIndex = M;
+      break;
+    }
+  }
+
+  if (SplatIndex == -1)
+    return DAG.getUNDEF(VT);
+
+  assert(SplatIndex < (int)Mask.size() && "Out of bounds mask index");
+  if (fitsRegularPattern<int>(Mask.begin(), 1, Mask.end(), SplatIndex, 0)) {
+    APInt Imm(64, SplatIndex);
+    return DAG.getNode(LoongArchISD::VREPLVEI, DL, VT, V1,
+                       DAG.getConstant(Imm, DL, MVT::i64));
+  }
+
+  return SDValue();
+}
+
+/// Lower VECTOR_SHUFFLE into VSHUF4I (if possible).
+///
+/// VSHUF4I splits the vector into blocks of four elements, then shuffles these
+/// elements according to a <4 x i2> constant (encoded as an integer immediate).
+///
+/// It is therefore possible to lower into VSHUF4I when the mask takes the form:
+///   <a, b, c, d, a+4, b+4, c+4, d+4, a+8, b+8, c+8, d+8, ...>
+/// When undef's appear they are treated as if they were whatever value is
+/// necessary in order to fit the above forms.
+///
+/// For example:
+///   %2 = shufflevector <8 x i16> %0, <8 x i16> undef,
+///                      <8 x i32> <i32 3, i32 2, i32 1, i32 0,
+///                                 i32 7, i32 6, i32 5, i32 4>
+/// is lowered to:
+///   (VSHUF4I_H $v0, $v1, 27)
+/// where the 27 comes from:
+///   3 + (2 << 2) + (1 << 4) + (0 << 6)
+static SDValue lowerVECTOR_SHUFFLE_VSHUF4I(const SDLoc &DL, ArrayRef<int> Mask,
+                                           MVT VT, SDValue V1, SDValue V2,
+                                           SelectionDAG &DAG) {
+
+  // When the size is less than 4, lower cost instructions may be used.
+  if (Mask.size() < 4)
+    return SDValue();
+
+  int SubMask[4] = {-1, -1, -1, -1};
+  for (unsigned i = 0; i < 4; ++i) {
+    for (unsigned j = i; j < Mask.size(); j += 4) {
+      int Idx = Mask[j];
+
+      // Convert from vector index to 4-element subvector index
+      // If an index refers to an element outside of the subvector then give up
+      if (Idx != -1) {
+        Idx -= 4 * (j / 4);
+        if (Idx < 0 || Idx >= 4)
+          return SDValue();
+      }
+
+      // If the mask has an undef, replace it with the current index.
+      // Note that it might still be undef if the current index is also undef
+      if (SubMask[i] == -1)
+        SubMask[i] = Idx;
+      // Check that non-undef values are the same as in the mask. If they
+      // aren't then give up
+      else if (Idx != -1 && Idx != SubMask[i])
+        return SDValue();
+    }
+  }
+
+  // Calculate the immediate. Replace any remaining undefs with zero
+  APInt Imm(64, 0);
+  for (int i = 3; i >= 0; --i) {
+    int Idx = SubMask[i];
+
+    if (Idx == -1)
+      Idx = 0;
+
+    Imm <<= 2;
+    Imm |= Idx & 0x3;
+  }
+
+  return DAG.getNode(LoongArchISD::VSHUF4I, DL, VT, V1,
+                     DAG.getConstant(Imm, DL, MVT::i64));
+}
+
+/// Lower VECTOR_SHUFFLE into VPACKEV (if possible).
+///
+/// VPACKEV interleaves the even elements from each vector.
+///
+/// It is possible to lower into VPACKEV when the mask consists of two of the
+/// following forms interleaved:
+///   <0, 2, 4, ...>
+///   <n, n+2, n+4, ...>
+/// where n is the number of elements in the vector.
+/// For example:
+///   <0, 0, 2, 2, 4, 4, ...>
+///   <0, n, 2, n+2, 4, n+4, ...>
+///
+/// When undef's appear in the mask they are treated as if they were whatever
+/// value is necessary in order to fit the above forms.
+static SDValue lowerVECTOR_SHUFFLE_VPACKEV(const SDLoc &DL, ArrayRef<int> Mask,
+                                           MVT VT, SDValue V1, SDValue V2,
+                                           SelectionDAG &DAG) {
+
+  const auto &Begin = Mask.begin();
+  const auto &End = Mask.end();
+  SDValue OriV1 = V1, OriV2 = V2;
+
+  if (fitsRegularPattern<int>(Begin, 2, End, 0, 2))
+    V1 = OriV1;
+  else if (fitsRegularPattern<int>(Begin, 2, End, Mask.size(), 2))
+    V1 = OriV2;
+  else
+    return SDValue();
+
+  if (fitsRegularPattern<int>(Begin + 1, 2, End, 0, 2))
+    V2 = OriV1;
+  else if (fitsRegularPattern<int>(Begin + 1, 2, End, Mask.size(), 2))
+    V2 = OriV2;
+  else
+    return SDValue();
+
+  return DAG.getNode(LoongArchISD::VPACKEV, DL, VT, V2, V1);
+}
+
+/// Lower VECTOR_SHUFFLE into VPACKOD (if possible).
+///
+/// VPACKOD interleaves the odd elements from each vector.
+///
+/// It is possible to lower into VPACKOD when the mask consists of two of the
+/// following forms interleaved:
+///   <1, 3, 5, ...>
+///   <n+1, n+3, n+5, ...>
+/// where n is the number of elements in the vector.
+/// For example:
+///   <1, 1, 3, 3, 5, 5, ...>
+///   <1, n+1, 3, n+3, 5, n+5, ...>
+///
+/// When undef's appear in the mask they are treated as if they were whatever
+/// value is necessary in order to fit the above forms.
+static SDValue lowerVECTOR_SHUFFLE_VPACKOD(const SDLoc &DL, ArrayRef<int> Mask,
+                                           MVT VT, SDValue V1, SDValue V2,
+                                           SelectionDAG &DAG) {
+
+  const auto &Begin = Mask.begin();
+  const auto &End = Mask.end();
+  SDValue OriV1 = V1, OriV2 = V2;
+
+  if (fitsRegularPattern<int>(Begin, 2, End, 1, 2))
+    V1 = OriV1;
+  else if (fitsRegularPattern<int>(Begin, 2, End, Mask.size() + 1, 2))
+    V1 = OriV2;
+  else
+    return SDValue();
+
+  if (fitsRegularPattern<int>(Begin + 1, 2, End, 1, 2))
+    V2 = OriV1;
+  else if (fitsRegularPattern<int>(Begin + 1, 2, End, Mask.size() + 1, 2))
+    V2 = OriV2;
+  else
+    return SDValue();
+
+  return DAG.getNode(LoongArchISD::VPACKOD, DL, VT, V2, V1);
+}
+
+/// Lower VECTOR_SHUFFLE into VILVH (if possible).
+///
+/// VILVH interleaves consecutive elements from the left (highest-indexed) half
+/// of each vector.
+///
+/// It is possible to lower into VILVH when the mask consists of two of the
+/// following forms interleaved:
+///   <x, x+1, x+2, ...>
+///   <n+x, n+x+1, n+x+2, ...>
+/// where n is the number of elements in the vector and x is half n.
+/// For example:
+///   <x, x, x+1, x+1, x+2, x+2, ...>
+///   <x, n+x, x+1, n+x+1, x+2, n+x+2, ...>
+///
+/// When undef's appear in the mask they are treated as if they were whatever
+/// value is necessary in order to fit the above forms.
+static SDValue lowerVECTOR_SHUFFLE_VILVH(const SDLoc &DL, ArrayRef<int> Mask,
+                                         MVT VT, SDValue V1, SDValue V2,
+                                         SelectionDAG &DAG) {
+
+  const auto &Begin = Mask.begin();
+  const auto &End = Mask.end();
+  unsigned HalfSize = Mask.size() / 2;
+  SDValue OriV1 = V1, OriV2 = V2;
+
+  if (fitsRegularPattern<int>(Begin, 2, End, HalfSize, 1))
+    V1 = OriV1;
+  else if (fitsRegularPattern<int>(Begin, 2, End, Mask.size() + HalfSize, 1))
+    V1 = OriV2;
+  else
+    return SDValue();
+
+  if (fitsRegularPattern<int>(Begin + 1, 2, End, HalfSize, 1))
+    V2 = OriV1;
+  else if (fitsRegularPattern<int>(Begin + 1, 2, End, Mask.size() + HalfSize,
+                                   1))
+    V2 = OriV2;
+  else
+    return SDValue();
+
+  return DAG.getNode(LoongArchISD::VILVH, DL, VT, V2, V1);
+}
+
+/// Lower VECTOR_SHUFFLE into VILVL (if possible).
+///
+/// VILVL interleaves consecutive elements from the right (lowest-indexed) half
+/// of each vector.
+///
+/// It is possible to lower into VILVL when the mask consists of two of the
+/// following forms interleaved:
+///   <0, 1, 2, ...>
+///   <n, n+1, n+2, ...>
+/// where n is the number of elements in the vector.
+/// For example:
+///   <0, 0, 1, 1, 2, 2, ...>
+///   <0, n, 1, n+1, 2, n+2, ...>
+///
+/// When undef's appear in the mask they are treated as if they were whatever
+/// value is necessary in order to fit the above forms.
+static SDValue lowerVECTOR_SHUFFLE_VILVL(const SDLoc &DL, ArrayRef<int> Mask,
+                                         MVT VT, SDValue V1, SDValue V2,
+                                         SelectionDAG &DAG) {
+
+  const auto &Begin = Mask.begin();
+  const auto &End = Mask.end();
+  SDValue OriV1 = V1, OriV2 = V2;
+
+  if (fitsRegularPattern<int>(Begin, 2, End, 0, 1))
+    V1 = OriV1;
+  else if (fitsRegularPattern<int>(Begin, 2, End, Mask.size(), 1))
+    V1 = OriV2;
+  else
+    return SDValue();
+
+  if (fitsRegularPattern<int>(Begin + 1, 2, End, 0, 1))
+    V2 = OriV1;
+  else if (fitsRegularPattern<int>(Begin + 1, 2, End, Mask.size(), 1))
+    V2 = OriV2;
+  else
+    return SDValue();
+
+  return DAG.getNode(LoongArchISD::VILVL, DL, VT, V2, V1);
+}
+
+/// Lower VECTOR_SHUFFLE into VPICKEV (if possible).
+///
+/// VPICKEV copies the even elements of each vector into the result vector.
+///
+/// It is possible to lower into VPICKEV when the mask consists of two of the
+/// following forms concatenated:
+///   <0, 2, 4, ...>
+///   <n, n+2, n+4, ...>
+/// where n is the number of elements in the vector.
+/// For example:
+///   <0, 2, 4, ..., 0, 2, 4, ...>
+///   <0, 2, 4, ..., n, n+2, n+4, ...>
+///
+/// When undef's appear in the mask they are treated as if they were whatever
+/// value is necessary in order to fit the above forms.
+static SDValue lowerVECTOR_SHUFFLE_VPICKEV(const SDLoc &DL, ArrayRef<int> Mask,
+                                           MVT VT, SDValue V1, SDValue V2,
+                                           SelectionDAG &DAG) {
+
+  const auto &Begin = Mask.begin();
+  const auto &Mid = Mask.begin() + Mask.size() / 2;
+  const auto &End = Mask.end();
+  SDValue OriV1 = V1, OriV2 = V2;
+
+  if (fitsRegularPattern<int>(Begin, 1, Mid, 0, 2))
+    V1 = OriV1;
+  else if (fitsRegularPattern<int>(Begin, 1, Mid, Mask.size(), 2))
+    V1 = OriV2;
+  else
+    return SDValue();
+
+  if (fitsRegularPattern<int>(Mid, 1, End, 0, 2))
+    V2 = OriV1;
+  else if (fitsRegularPattern<int>(Mid, 1, End, Mask.size(), 2))
+    V2 = OriV2;
+
+  else
+    return SDValue();
+
+  return DAG.getNode(LoongArchISD::VPICKEV, DL, VT, V2, V1);
+}
+
+/// Lower VECTOR_SHUFFLE into VPICKOD (if possible).
+///
+/// VPICKOD copies the odd elements of each vector into the result vector.
+///
+/// It is possible to lower into VPICKOD when the mask consists of two of the
+/// following forms concatenated:
+///   <1, 3, 5, ...>
+///   <n+1, n+3, n+5, ...>
+/// where n is the number of elements in the vector.
+/// For example:
+///   <1, 3, 5, ..., 1, 3, 5, ...>
+///   <1, 3, 5, ..., n+1, n+3, n+5, ...>
+///
+/// When undef's appear in the mask they are treated as if they were whatever
+/// value is necessary in order to fit the above forms.
+static SDValue lowerVECTOR_SHUFFLE_VPICKOD(const SDLoc &DL, ArrayRef<int> Mask,
+                                           MVT VT, SDValue V1, SDValue V2,
+                                           SelectionDAG &DAG) {
+
+  const auto &Begin = Mask.begin();
+  const auto &Mid = Mask.begin() + Mask.size() / 2;
+  const auto &End = Mask.end();
+  SDValue OriV1 = V1, OriV2 = V2;
+
+  if (fitsRegularPattern<int>(Begin, 1, Mid, 1, 2))
+    V1 = OriV1;
+  else if (fitsRegularPattern<int>(Begin, 1, Mid, Mask.size() + 1, 2))
+    V1 = OriV2;
+  else
+    return SDValue();
+
+  if (fitsRegularPattern<int>(Mid, 1, End, 1, 2))
+    V2 = OriV1;
+  else if (fitsRegularPattern<int>(Mid, 1, End, Mask.size() + 1, 2))
+    V2 = OriV2;
+  else
+    return SDValue();
+
+  return DAG.getNode(LoongArchISD::VPICKOD, DL, VT, V2, V1);
+}
+
+/// Lower VECTOR_SHUFFLE into VSHUF.
+///
+/// This mostly consists of converting the shuffle mask into a BUILD_VECTOR and
+/// adding it as an operand to the resulting VSHUF.
+static SDValue lowerVECTOR_SHUFFLE_VSHUF(const SDLoc &DL, ArrayRef<int> Mask,
+                                         MVT VT, SDValue V1, SDValue V2,
+                                         SelectionDAG &DAG) {
+
+  SmallVector<SDValue, 16> Ops;
+  for (auto M : Mask)
+    Ops.push_back(DAG.getConstant(M, DL, MVT::i64));
+
+  EVT MaskVecTy = VT.changeVectorElementTypeToInteger();
+  SDValue MaskVec = DAG.getBuildVector(MaskVecTy, DL, Ops);
+
+  // VECTOR_SHUFFLE concatenates the vectors in an vectorwise fashion.
+  // <0b00, 0b01> + <0b10, 0b11> -> <0b00, 0b01, 0b10, 0b11>
+  // VSHF concatenates the vectors in a bitwise fashion:
+  // <0b00, 0b01> + <0b10, 0b11> ->
+  // 0b0100       + 0b1110       -> 0b01001110
+  //                                <0b10, 0b11, 0b00, 0b01>
+  // We must therefore swap the operands to get the correct result.
+  return DAG.getNode(LoongArchISD::VSHUF, DL, VT, MaskVec, V2, V1);
+}
+
+/// Dispatching routine to lower various 128-bit LoongArch vector shuffles.
+///
+/// This routine breaks down the specific type of 128-bit shuffle and
+/// dispatches to the lowering routines accordingly.
+static SDValue lower128BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
+                                  SDValue V1, SDValue V2, SelectionDAG &DAG) {
+  assert((VT.SimpleTy == MVT::v16i8 || VT.SimpleTy == MVT::v8i16 ||
+          VT.SimpleTy == MVT::v4i32 || VT.SimpleTy == MVT::v2i64 ||
+          VT.SimpleTy == MVT::v4f32 || VT.SimpleTy == MVT::v2f64) &&
+         "Vector type is unsupported for lsx!");
+  assert(V1.getSimpleValueType() == V2.getSimpleValueType() &&
+         "Two operands have different types!");
+  assert(VT.getVectorNumElements() == Mask.size() &&
+         "Unexpected mask size for shuffle!");
+  assert(Mask.size() % 2 == 0 && "Expected even mask size.");
+
+  SDValue Result;
+  // TODO: Add more comparison patterns.
+  if (V2.isUndef()) {
+    if ((Result = lowerVECTOR_SHUFFLE_VREPLVEI(DL, Mask, VT, V1, V2, DAG)))
+      return Result;
+    if ((Result = lowerVECTOR_SHUFFLE_VSHUF4I(DL, Mask, VT, V1, V2, DAG)))
+      return Result;
+
+    // TODO: This comment may be enabled in the future to better match the
+    // pattern for instruction selection.
+    /* V2 = V1; */
+  }
+
+  // It is recommended not to change the pattern comparison order for better
+  // performance.
+  if ((Result = lowerVECTOR_SHUFFLE_VPACKEV(DL, Mask, VT, V1, V2, DAG)))
+    return Result;
+  if ((Result = lowerVECTOR_SHUFFLE_VPACKOD(DL, Mask, VT, V1, V2, DAG)))
+    return Result;
+  if ((Result = lowerVECTOR_SHUFFLE_VILVH(DL, Mask, VT, V1, V2, DAG)))
+    return Result;
+  if ((Result = lowerVECTOR_SHUFFLE_VILVL(DL, Mask, VT, V1, V2, DAG)))
+    return Result;
+  if ((Result = lowerVECTOR_SHUFFLE_VPICKEV(DL, Mask, VT, V1, V2, DAG)))
+    return Result;
+  if ((Result = lowerVECTOR_SHUFFLE_VPICKOD(DL, Mask, VT, V1, V2, DAG)))
+    return Result;
+  if ((Result = lowerVECTOR_SHUFFLE_VSHUF(DL, Mask, VT, V1, V2, DAG)))
+    return Result;
+
+  return SDValue();
+}
+
+/// Lower VECTOR_SHUFFLE into XVREPLVEI (if possible).
+///
+/// It is a XVREPLVEI when the mask is:
+///   <x, x, x, ..., x+n, x+n, x+n, ...>
+/// where the number of x is equal to n and n is half the length of vector.
+///
+/// When undef's appear in the mask they are treated as if they were whatever
+/// value is necessary in order to fit the above form.
+static SDValue lowerVECTOR_SHUFFLE_XVREPLVEI(const SDLoc &DL,
+                                             ArrayRef<int> Mask, MVT VT,
+                                             SDValue V1, SDValue V2,
+                                             SelectionDAG &DAG) {
+  int SplatIndex = -1;
+  for (const auto &M : Mask) {
+    if (M != -1) {
+      SplatIndex = M;
+      break;
+    }
+  }
+
+  if (SplatIndex == -1)
+    return DAG.getUNDEF(VT);
+
+  const auto &Begin = Mask.begin();
+  const auto &End = Mask.end();
+  unsigned HalfSize = Mask.size() / 2;
+
+  assert(SplatIndex < (int)Mask.size() && "Out of bounds mask index");
+  if (fitsRegularPattern<int>(Begin, 1, End - HalfSize, SplatIndex, 0) &&
+      fitsRegularPattern<int>(Begin + HalfSize, 1, End, SplatIndex + HalfSize,
+                              0)) {
+    APInt Imm(64, SplatIndex);
+    return DAG.getNode(LoongArchISD::VREPLVEI, DL, VT, V1,
+                       DAG.getConstant(Imm, DL, MVT::i64));
+  }
+
+  return SDValue();
+}
+
+/// Lower VECTOR_SHUFFLE into XVSHUF4I (if possible).
+static SDValue lowerVECTOR_SHUFFLE_XVSHUF4I(const SDLoc &DL, ArrayRef<int> Mask,
+                                            MVT VT, SDValue V1, SDValue V2,
+                                            SelectionDAG &DAG) {
+  // When the size is less than or equal to 4, lower cost instructions may be
+  // used.
+  if (Mask.size() <= 4)
+    return SDValue();
+  return lowerVECTOR_SHUFFLE_VSHUF4I(DL, Mask, VT, V1, V2, DAG);
+}
+
+/// Lower VECTOR_SHUFFLE into XVPACKEV (if possible).
+static SDValue lowerVECTOR_SHUFFLE_XVPACKEV(const SDLoc &DL, ArrayRef<int> Mask,
+                                            MVT VT, SDValue V1, SDValue V2,
+                                            SelectionDAG &DAG) {
+  return lowerVECTOR_SHUFFLE_VPACKEV(DL, Mask, VT, V1, V2, DAG);
+}
+
+/// Lower VECTOR_SHUFFLE into XVPACKOD (if possible).
+static SDValue lowerVECTOR_SHUFFLE_XVPACKOD(const SDLoc &DL, ArrayRef<int> Mask,
+                                            MVT VT, SDValue V1, SDValue V2,
+                                            SelectionDAG &DAG) {
+  return lowerVECTOR_SHUFFLE_VPACKOD(DL, Mask, VT, V1, V2, DAG);
+}
+
+/// Lower VECTOR_SHUFFLE into XVILVH (if possible).
+static SDValue lowerVECTOR_SHUFFLE_XVILVH(const SDLoc &DL, ArrayRef<int> Mask,
+                                          MVT VT, SDValue V1, SDValue V2,
+                                          SelectionDAG &DAG) {
+
+  const auto &Begin = Mask.begin();
+  const auto &End = Mask.end();
+  unsigned HalfSize = Mask.size() / 2;
+  unsigned LeftSize = HalfSize / 2;
+  SDValue OriV1 = V1, OriV2 = V2;
+
+  if (fitsRegularPattern<int>(Begin, 2, End - HalfSize, HalfSize - LeftSize,
+                              1) &&
+      fitsRegularPattern<int>(Begin + HalfSize, 2, End, HalfSize + LeftSize, 1))
+    V1 = OriV1;
+  else if (fitsRegularPattern<int>(Begin, 2, End - HalfSize,
+                                   Mask.size() + HalfSize - LeftSize, 1) &&
+           fitsRegularPattern<int>(Begin + HalfSize, 2, End,
+                                   Mask.size() + HalfSize + LeftSize, 1))
+    V1 = OriV2;
+  else
+    return SDValue();
+
+  if (fitsRegularPattern<int>(Begin + 1, 2, End - HalfSize, HalfSize - LeftSize,
+                              1) &&
+      fitsRegularPattern<int>(Begin + 1 + HalfSize, 2, End, HalfSize + LeftSize,
+                              1))
+    V2 = OriV1;
+  else if (fitsRegularPattern<int>(Begin + 1, 2, End - HalfSize,
+                                   Mask.size() + HalfSize - LeftSize, 1) &&
+           fitsRegularPattern<int>(Begin + 1 + HalfSize, 2, End,
+                                   Mask.size() + HalfSize + LeftSize, 1))
+    V2 = OriV2;
+  else
+    return SDValue();
+
+  return DAG.getNode(LoongArchISD::VILVH, DL, VT, V2, V1);
+}
+
+/// Lower VECTOR_SHUFFLE into XVILVL (if possible).
+static SDValue lowerVECTOR_SHUFFLE_XVILVL(const SDLoc &DL, ArrayRef<int> Mask,
+                                          MVT VT, SDValue V1, SDValue V2,
+                                          SelectionDAG &DAG) {
+
+  const auto &Begin = Mask.begin();
+  const auto &End = Mask.end();
+  unsigned HalfSize = Mask.size() / 2;
+  SDValue OriV1 = V1, OriV2 = V2;
+
+  if (fitsRegularPattern<int>(Begin, 2, End - HalfSize, 0, 1) &&
+      fitsRegularPattern<int>(Begin + HalfSize, 2, End, HalfSize, 1))
+    V1 = OriV1;
+  else if (fitsRegularPattern<int>(Begin, 2, End - HalfSize, Mask.size(), 1) &&
+           fitsRegularPattern<int>(Begin + HalfSize, 2, End,
+                                   Mask.size() + HalfSize, 1))
+    V1 = OriV2;
+  else
+    return SDValue();
+
+  if (fitsRegularPattern<int>(Begin + 1, 2, End - HalfSize, 0, 1) &&
+      fitsRegularPattern<int>(Begin + 1 + HalfSize, 2, End, HalfSize, 1))
+    V2 = OriV1;
+  else if (fitsRegularPattern<int>(Begin + 1, 2, End - HalfSize, Mask.size(),
+                                   1) &&
+           fitsRegularPattern<int>(Begin + 1 + HalfSize, 2, End,
+                                   Mask.size() + HalfSize, 1))
+    V2 = OriV2;
+  else
+    return SDValue();
+
+  return DAG.getNode(LoongArchISD::VILVL, DL, VT, V2, V1);
+}
+
+/// Lower VECTOR_SHUFFLE into XVPICKEV (if possible).
+static SDValue lowerVECTOR_SHUFFLE_XVPICKEV(const SDLoc &DL, ArrayRef<int> Mask,
+                                            MVT VT, SDValue V1, SDValue V2,
+                                            SelectionDAG &DAG) {
+
+  const auto &Begin = Mask.begin();
+  const auto &LeftMid = Mask.begin() + Mask.size() / 4;
+  const auto &Mid = Mask.begin() + Mask.size() / 2;
+  const auto &RightMid = Mask.end() - Mask.size() / 4;
+  const auto &End = Mask.end();
+  unsigned HalfSize = Mask.size() / 2;
+  SDValue OriV1 = V1, OriV2 = V2;
+
+  if (fitsRegularPattern<int>(Begin, 1, LeftMid, 0, 2) &&
+      fitsRegularPattern<int>(Mid, 1, RightMid, HalfSize, 2))
+    V1 = OriV1;
+  else if (fitsRegularPattern<int>(Begin, 1, LeftMid, Mask.size(), 2) &&
+           fitsRegularPattern<int>(Mid, 1, RightMid, Mask.size() + HalfSize, 2))
+    V1 = OriV2;
+  else
+    return SDValue();
+
+  if (fitsRegularPattern<int>(LeftMid, 1, Mid, 0, 2) &&
+      fitsRegularPattern<int>(RightMid, 1, End, HalfSize, 2))
+    V2 = OriV1;
+  else if (fitsRegularPattern<int>(LeftMid, 1, Mid, Mask.size(), 2) &&
+           fitsRegularPattern<int>(RightMid, 1, End, Mask.size() + HalfSize, 2))
+    V2 = OriV2;
+
+  else
+    return SDValue();
+
+  return DAG.getNode(LoongArchISD::VPICKEV, DL, VT, V2, V1);
+}
+
+/// Lower VECTOR_SHUFFLE into XVPICKOD (if possible).
+static SDValue lowerVECTOR_SHUFFLE_XVPICKOD(const SDLoc &DL, ArrayRef<int> Mask,
+                                            MVT VT, SDValue V1, SDValue V2,
+                                            SelectionDAG &DAG) {
+
+  const auto &Begin = Mask.begin();
+  const auto &LeftMid = Mask.begin() + Mask.size() / 4;
+  const auto &Mid = Mask.begin() + Mask.size() / 2;
+  const auto &RightMid = Mask.end() - Mask.size() / 4;
+  const auto &End = Mask.end();
+  unsigned HalfSize = Mask.size() / 2;
+  SDValue OriV1 = V1, OriV2 = V2;
+
+  if (fitsRegularPattern<int>(Begin, 1, LeftMid, 1, 2) &&
+      fitsRegularPattern<int>(Mid, 1, RightMid, HalfSize + 1, 2))
+    V1 = OriV1;
+  else if (fitsRegularPattern<int>(Begin, 1, LeftMid, Mask.size() + 1, 2) &&
+           fitsRegularPattern<int>(Mid, 1, RightMid, Mask.size() + HalfSize + 1,
+                                   2))
+    V1 = OriV2;
+  else
+    return SDValue();
+
+  if (fitsRegularPattern<int>(LeftMid, 1, Mid, 1, 2) &&
+      fitsRegularPattern<int>(RightMid, 1, End, HalfSize + 1, 2))
+    V2 = OriV1;
+  else if (fitsRegularPattern<int>(LeftMid, 1, Mid, Mask.size() + 1, 2) &&
+           fitsRegularPattern<int>(RightMid, 1, End, Mask.size() + HalfSize + 1,
+                                   2))
+    V2 = OriV2;
+  else
+    return SDValue();
+
+  return DAG.getNode(LoongArchISD::VPICKOD, DL, VT, V2, V1);
+}
+
+/// Lower VECTOR_SHUFFLE into XVSHUF (if possible).
+static SDValue lowerVECTOR_SHUFFLE_XVSHUF(const SDLoc &DL, ArrayRef<int> Mask,
+                                          MVT VT, SDValue V1, SDValue V2,
+                                          SelectionDAG &DAG) {
+
+  int MaskSize = Mask.size();
+  int HalfSize = Mask.size() / 2;
+  const auto &Begin = Mask.begin();
+  const auto &Mid = Mask.begin() + HalfSize;
+  const auto &End = Mask.end();
+
+  // VECTOR_SHUFFLE concatenates the vectors:
+  //  <0, 1, 2, 3, 4, 5, 6, 7> + <8, 9, 10, 11, 12, 13, 14, 15>
+  //  shuffling ->
+  //  <0, 1, 2, 3, 8, 9, 10, 11> <4, 5, 6, 7, 12, 13, 14, 15>
+  //
+  // XVSHUF concatenates the vectors:
+  //  <a0, a1, a2, a3, b0, b1, b2, b3> + <a4, a5, a6, a7, b4, b5, b6, b7>
+  //  shuffling ->
+  //  <a0, a1, a2, a3, a4, a5, a6, a7> + <b0, b1, b2, b3, b4, b5, b6, b7>
+  SmallVector<SDValue, 8> MaskAlloc;
+  for (auto it = Begin; it < Mid; it++) {
+    if (*it < 0) // UNDEF
+      MaskAlloc.push_back(DAG.getTargetConstant(0, DL, MVT::i64));
+    else if ((*it >= 0 && *it < HalfSize) ||
+             (*it >= MaskSize && *it <= MaskSize + HalfSize)) {
+      int M = *it < HalfSize ? *it : *it - HalfSize;
+      MaskAlloc.push_back(DAG.getTargetConstant(M, DL, MVT::i64));
+    } else
+      return SDValue();
+  }
+  assert((int)MaskAlloc.size() == HalfSize && "xvshuf convert failed!");
+
+  for (auto it = Mid; it < End; it++) {
+    if (*it < 0) // UNDEF
+      MaskAlloc.push_back(DAG.getTargetConstant(0, DL, MVT::i64));
+    else if ((*it >= HalfSize && *it < MaskSize) ||
+             (*it >= MaskSize + HalfSize && *it < MaskSize * 2)) {
+      int M = *it < MaskSize ? *it - HalfSize : *it - MaskSize;
+      MaskAlloc.push_back(DAG.getTargetConstant(M, DL, MVT::i64));
+    } else
+      return SDValue();
+  }
+  assert((int)MaskAlloc.size() == MaskSize && "xvshuf convert failed!");
+
+  EVT MaskVecTy = VT.changeVectorElementTypeToInteger();
+  SDValue MaskVec = DAG.getBuildVector(MaskVecTy, DL, MaskAlloc);
+  return DAG.getNode(LoongArchISD::VSHUF, DL, VT, MaskVec, V2, V1);
+}
+
+/// Shuffle vectors by lane to generate more optimized instructions.
+/// 256-bit shuffles are always considered as 2-lane 128-bit shuffles.
+///
+/// Therefore, except for the following four cases, other cases are regarded
+/// as cross-lane shuffles, where optimization is relatively limited.
+///
+/// - Shuffle high, low lanes of two inputs vector
+///   <0, 1, 2, 3> + <4, 5, 6, 7> --- <0, 5, 3, 6>
+/// - Shuffle low, high lanes of two inputs vector
+///   <0, 1, 2, 3> + <4, 5, 6, 7> --- <3, 6, 0, 5>
+/// - Shuffle low, low lanes of two inputs vector
+///   <0, 1, 2, 3> + <4, 5, 6, 7> --- <3, 6, 3, 6>
+/// - Shuffle high, high lanes of two inputs vector
+///   <0, 1, 2, 3> + <4, 5, 6, 7> --- <0, 5, 0, 5>
+///
+/// The first case is the closest to LoongArch instructions and the other
+/// cases need to be converted to it for processing.
+///
+/// This function may modify V1, V2 and Mask
+static void canonicalizeShuffleVectorByLane(const SDLoc &DL,
+                                            MutableArrayRef<int> Mask, MVT VT,
+                                            SDValue &V1, SDValue &V2,
+                                            SelectionDAG &DAG) {
+
+  enum HalfMaskType { HighLaneTy, LowLaneTy, None };
+
+  int MaskSize = Mask.size();
+  int HalfSize = Mask.size() / 2;
+
+  HalfMaskType preMask = None, postMask = None;
+
+  if (std::all_of(Mask.begin(), Mask.begin() + HalfSize, [&](int M) {
+        return M < 0 || (M >= 0 && M < HalfSize) ||
+               (M >= MaskSize && M < MaskSize + HalfSize);
+      }))
+    preMask = HighLaneTy;
+  else if (std::all_of(Mask.begin(), Mask.begin() + HalfSize, [&](int M) {
+             return M < 0 || (M >= HalfSize && M < MaskSize) ||
+                    (M >= MaskSize + HalfSize && M < MaskSize * 2);
+           }))
+    preMask = LowLaneTy;
+
+  if (std::all_of(Mask.begin() + HalfSize, Mask.end(), [&](int M) {
+        return M < 0 || (M >= 0 && M < HalfSize) ||
+               (M >= MaskSize && M < MaskSize + HalfSize);
+      }))
+    postMask = HighLaneTy;
+  else if (std::all_of(Mask.begin() + HalfSize, Mask.end(), [&](int M) {
+             return M < 0 || (M >= HalfSize && M < MaskSize) ||
+                    (M >= MaskSize + HalfSize && M < MaskSize * 2);
+           }))
+    postMask = LowLaneTy;
+
+  // The pre-half of mask is high lane type, and the post-half of mask
+  // is low lane type, which is closest to the LoongArch instructions.
+  //
+  // Note: In the LoongArch architecture, the high lane of mask corresponds
+  // to the lower 128-bit of vector register, and the low lane of mask
+  // corresponds the higher 128-bit of vector register.
+  if (preMask == HighLaneTy && postMask == LowLaneTy) {
+    return;
+  }
+  if (preMask == LowLaneTy && postMask == HighLaneTy) {
+    V1 = DAG.getBitcast(MVT::v4i64, V1);
+    V1 = DAG.getNode(LoongArchISD::XVPERMI, DL, MVT::v4i64, V1,
+                     DAG.getConstant(0b01001110, DL, MVT::i64));
+    V1 = DAG.getBitcast(VT, V1);
+
+    if (!V2.isUndef()) {
+      V2 = DAG.getBitcast(MVT::v4i64, V2);
+      V2 = DAG.getNode(LoongArchISD::XVPERMI, DL, MVT::v4i64, V2,
+                       DAG.getConstant(0b01001110, DL, MVT::i64));
+      V2 = DAG.getBitcast(VT, V2);
+    }
+
+    for (auto it = Mask.begin(); it < Mask.begin() + HalfSize; it++) {
+      *it = *it < 0 ? *it : *it - HalfSize;
+    }
+    for (auto it = Mask.begin() + HalfSize; it < Mask.end(); it++) {
+      *it = *it < 0 ? *it : *it + HalfSize;
+    }
+  } else if (preMask == LowLaneTy && postMask == LowLaneTy) {
+    V1 = DAG.getBitcast(MVT::v4i64, V1);
+    V1 = DAG.getNode(LoongArchISD::XVPERMI, DL, MVT::v4i64, V1,
+                     DAG.getConstant(0b11101110, DL, MVT::i64));
+    V1 = DAG.getBitcast(VT, V1);
+
+    if (!V2.isUndef()) {
+      V2 = DAG.getBitcast(MVT::v4i64, V2);
+      V2 = DAG.getNode(LoongArchISD::XVPERMI, DL, MVT::v4i64, V2,
+                       DAG.getConstant(0b11101110, DL, MVT::i64));
+      V2 = DAG.getBitcast(VT, V2);
+    }
+
+    for (auto it = Mask.begin(); it < Mask.begin() + HalfSize; it++) {
+      *it = *it < 0 ? *it : *it - HalfSize;
+    }
+  } else if (preMask == HighLaneTy && postMask == HighLaneTy) {
+    V1 = DAG.getBitcast(MVT::v4i64, V1);
+    V1 = DAG.getNode(LoongArchISD::XVPERMI, DL, MVT::v4i64, V1,
+                     DAG.getConstant(0b01000100, DL, MVT::i64));
+    V1 = DAG.getBitcast(VT, V1);
+
+    if (!V2.isUndef()) {
+      V2 = DAG.getBitcast(MVT::v4i64, V2);
+      V2 = DAG.getNode(LoongArchISD::XVPERMI, DL, MVT::v4i64, V2,
+                       DAG.getConstant(0b01000100, DL, MVT::i64));
+      V2 = DAG.getBitcast(VT, V2);
+    }
+
+    for (auto it = Mask.begin() + HalfSize; it < Mask.end(); it++) {
+      *it = *it < 0 ? *it : *it + HalfSize;
+    }
+  } else { // cross-lane
+    return;
+  }
+}
+
+/// Dispatching routine to lower various 256-bit LoongArch vector shuffles.
+///
+/// This routine breaks down the specific type of 256-bit shuffle and
+/// dispatches to the lowering routines accordingly.
+static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
+                                  SDValue V1, SDValue V2, SelectionDAG &DAG) {
+  assert((VT.SimpleTy == MVT::v32i8 || VT.SimpleTy == MVT::v16i16 ||
+          VT.SimpleTy == MVT::v8i32 || VT.SimpleTy == MVT::v4i64 ||
+          VT.SimpleTy == MVT::v8f32 || VT.SimpleTy == MVT::v4f64) &&
+         "Vector type is unsupported for lasx!");
+  assert(V1.getSimpleValueType() == V2.getSimpleValueType() &&
+         "Two operands have different types!");
+  assert(VT.getVectorNumElements() == Mask.size() &&
+         "Unexpected mask size for shuffle!");
+  assert(Mask.size() % 2 == 0 && "Expected even mask size.");
+  assert(Mask.size() >= 4 && "Mask size is less than 4.");
+
+  // canonicalize non cross-lane shuffle vector
+  SmallVector<int> NewMask(Mask);
+  canonicalizeShuffleVectorByLane(DL, NewMask, VT, V1, V2, DAG);
+
+  SDValue Result;
+  // TODO: Add more comparison patterns.
+  if (V2.isUndef()) {
+    if ((Result = lowerVECTOR_SHUFFLE_XVREPLVEI(DL, NewMask, VT, V1, V2, DAG)))
+      return Result;
+    if ((Result = lowerVECTOR_SHUFFLE_XVSHUF4I(DL, NewMask, VT, V1, V2, DAG)))
+      return Result;
+
+    // TODO: This comment may be enabled in the future to better match the
+    // pattern for instruction selection.
+    /* V2 = V1; */
+  }
+
+  // It is recommended not to change the pattern comparison order for better
+  // performance.
+  if ((Result = lowerVECTOR_SHUFFLE_XVPACKEV(DL, NewMask, VT, V1, V2, DAG)))
+    return Result;
+  if ((Result = lowerVECTOR_SHUFFLE_XVPACKOD(DL, NewMask, VT, V1, V2, DAG)))
+    return Result;
+  if ((Result = lowerVECTOR_SHUFFLE_XVILVH(DL, NewMask, VT, V1, V2, DAG)))
+    return Result;
+  if ((Result = lowerVECTOR_SHUFFLE_XVILVL(DL, NewMask, VT, V1, V2, DAG)))
+    return Result;
+  if ((Result = lowerVECTOR_SHUFFLE_XVPICKEV(DL, NewMask, VT, V1, V2, DAG)))
+    return Result;
+  if ((Result = lowerVECTOR_SHUFFLE_XVPICKOD(DL, NewMask, VT, V1, V2, DAG)))
+    return Result;
+  if ((Result = lowerVECTOR_SHUFFLE_XVSHUF(DL, NewMask, VT, V1, V2, DAG)))
+    return Result;
+
+  return SDValue();
+}
+
 SDValue LoongArchTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
                                                      SelectionDAG &DAG) const {
-  // TODO: custom shuffle.
+  ShuffleVectorSDNode *SVOp = cast<ShuffleVectorSDNode>(Op);
+  ArrayRef<int> OrigMask = SVOp->getMask();
+  SDValue V1 = Op.getOperand(0);
+  SDValue V2 = Op.getOperand(1);
+  MVT VT = Op.getSimpleValueType();
+  int NumElements = VT.getVectorNumElements();
+  SDLoc DL(Op);
+
+  bool V1IsUndef = V1.isUndef();
+  bool V2IsUndef = V2.isUndef();
+  if (V1IsUndef && V2IsUndef)
+    return DAG.getUNDEF(VT);
+
+  // When we create a shuffle node we put the UNDEF node to second operand,
+  // but in some cases the first operand may be transformed to UNDEF.
+  // In this case we should just commute the node.
+  if (V1IsUndef)
+    return DAG.getCommutedVectorShuffle(*SVOp);
+
+  // Check for non-undef masks pointing at an undef vector and make the masks
+  // undef as well. This makes it easier to match the shuffle based solely on
+  // the mask.
+  if (V2IsUndef &&
+      any_of(OrigMask, [NumElements](int M) { return M >= NumElements; })) {
+    SmallVector<int, 8> NewMask(OrigMask);
+    for (int &M : NewMask)
+      if (M >= NumElements)
+        M = -1;
+    return DAG.getVectorShuffle(VT, DL, V1, V2, NewMask);
+  }
+
+  // Check for illegal shuffle mask element index values.
+  int MaskUpperLimit = OrigMask.size() * (V2IsUndef ? 1 : 2);
+  (void)MaskUpperLimit;
+  assert(llvm::all_of(OrigMask,
+                      [&](int M) { return -1 <= M && M < MaskUpperLimit; }) &&
+         "Out of bounds shuffle index");
+
+  // For each vector width, delegate to a specialized lowering routine.
+  if (VT.is128BitVector())
+    return lower128BitShuffle(DL, OrigMask, VT, V1, V2, DAG);
+
+  if (VT.is256BitVector())
+    return lower256BitShuffle(DL, OrigMask, VT, V1, V2, DAG);
+
   return SDValue();
 }
 
@@ -2675,6 +3592,10 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
       !checkValueWidth(TruncInputValue2, ExtType2))
     return SDValue();
 
+  if (TruncInputValue1->getValueType(0) != TruncInputValue2->getValueType(0) ||
+      AndNode->getValueType(0) != TruncInputValue1->getValueType(0))
+    return SDValue();
+
   if ((ExtType2 != ISD::ZEXTLOAD) &&
       ((ExtType2 != ISD::SEXTLOAD) && (ExtType1 != ISD::SEXTLOAD)))
     return SDValue();
@@ -3702,6 +4623,16 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(MOVFCSR2GR)
     NODE_NAME_CASE(CACOP_D)
     NODE_NAME_CASE(CACOP_W)
+    NODE_NAME_CASE(VSHUF)
+    NODE_NAME_CASE(VPICKEV)
+    NODE_NAME_CASE(VPICKOD)
+    NODE_NAME_CASE(VPACKEV)
+    NODE_NAME_CASE(VPACKOD)
+    NODE_NAME_CASE(VILVL)
+    NODE_NAME_CASE(VILVH)
+    NODE_NAME_CASE(VSHUF4I)
+    NODE_NAME_CASE(VREPLVEI)
+    NODE_NAME_CASE(XVPERMI)
     NODE_NAME_CASE(VPICK_SEXT_ELT)
     NODE_NAME_CASE(VPICK_ZEXT_ELT)
     NODE_NAME_CASE(VREPLVE)

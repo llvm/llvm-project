@@ -509,7 +509,10 @@ void SelectionDAGISel::initializeAnalysisResults(
     FnVarLocs = &FAM.getResult<DebugAssignmentTrackingAnalysis>(Fn);
 
   auto *UA = FAM.getCachedResult<UniformityInfoAnalysis>(Fn);
-  CurDAG->init(*MF, *ORE, MFAM, LibInfo, UA, PSI, BFI, *MMI, FnVarLocs);
+  MachineModuleInfo &MMI =
+      MAMP.getCachedResult<MachineModuleAnalysis>(*Fn.getParent())->getMMI();
+
+  CurDAG->init(*MF, *ORE, MFAM, LibInfo, UA, PSI, BFI, MMI, FnVarLocs);
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
