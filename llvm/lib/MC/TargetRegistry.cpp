@@ -14,7 +14,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <vector>
@@ -94,10 +93,9 @@ MCStreamer *Target::createAsmStreamer(MCContext &Ctx,
                                       std::unique_ptr<MCCodeEmitter> CE,
                                       std::unique_ptr<MCAsmBackend> TAB) const {
   formatted_raw_ostream &OSRef = *OS;
-  MCStreamer *S = llvm::createAsmStreamer(Ctx, std::move(OS), false, false, IP,
-                                          std::move(CE), std::move(TAB), false);
-  auto *TO = Ctx.getTargetOptions();
-  createAsmTargetStreamer(*S, OSRef, IP, TO && TO->AsmVerbose);
+  MCStreamer *S = llvm::createAsmStreamer(Ctx, std::move(OS), IP,
+                                          std::move(CE), std::move(TAB));
+  createAsmTargetStreamer(*S, OSRef, IP);
   return S;
 }
 

@@ -29,7 +29,6 @@ public:
   void skip();
   bool consume(StringRef tok);
   void expect(StringRef expect);
-  bool consumeLabel(StringRef tok);
   std::string getCurrentLocation();
   MemoryBufferRef getCurrentMB();
 

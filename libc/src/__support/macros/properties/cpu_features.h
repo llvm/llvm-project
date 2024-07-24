@@ -14,6 +14,10 @@
 
 #include "architectures.h"
 
+#if defined(__ARM_FEATURE_FP16_SCALAR_ARITHMETIC)
+#define LIBC_TARGET_CPU_HAS_FULLFP16
+#endif
+
 #if defined(__SSE2__)
 #define LIBC_TARGET_CPU_HAS_SSE2
 #endif

@@ -5,8 +5,8 @@
 // RUN: %clang --target=x86_64-scei-ps4 -flto=full -fjmc %s -### 2>&1 | FileCheck --check-prefixes=CHECK-FULL-LTO,CHECK-LIB %s
 
 // CHECK-NOT: -enable-jmc-instrument
-// CHECK-THIN-LTO: "-lto-thin-debug-options= -generate-arange-section -enable-jmc-instrument"
-// CHECK-FULL-LTO: "-lto-debug-options= -generate-arange-section -enable-jmc-instrument"
+// CHECK-THIN-LTO: "-lto-thin-debug-options= -enable-jmc-instrument"
+// CHECK-FULL-LTO: "-lto-debug-options= -enable-jmc-instrument"
 
 // Check the default library name.
 // CHECK-LIB: "--whole-archive" "-lSceDbgJmc" "--no-whole-archive"
@@ -16,5 +16,5 @@
 // RUN: %clang --target=x86_64-scei-ps4 -flto=thin -fcrash-diagnostics-dir=mydumps %s -### 2>&1 | FileCheck --check-prefixes=CHECK-DIAG-THIN-LTO %s
 // RUN: %clang --target=x86_64-scei-ps4 -flto=full -fcrash-diagnostics-dir=mydumps %s -### 2>&1 | FileCheck --check-prefixes=CHECK-DIAG-FULL-LTO %s
 
-// CHECK-DIAG-THIN-LTO: "-lto-thin-debug-options= -generate-arange-section -crash-diagnostics-dir=mydumps"
-// CHECK-DIAG-FULL-LTO: "-lto-debug-options= -generate-arange-section -crash-diagnostics-dir=mydumps"
+// CHECK-DIAG-THIN-LTO: "-lto-thin-debug-options= -crash-diagnostics-dir=mydumps"
+// CHECK-DIAG-FULL-LTO: "-lto-debug-options= -crash-diagnostics-dir=mydumps"

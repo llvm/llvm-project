@@ -71,7 +71,7 @@ PrintMemData("print-mem-data",
 
 cl::opt<std::string> CompDirOverride(
     "comp-dir-override",
-    cl::desc("overrides DW_AT_comp_dir, and provides an alterantive base "
+    cl::desc("overrides DW_AT_comp_dir, and provides an alternative base "
              "location, which is used with DW_AT_dwo_name to construct a path "
              "to *.dwo files."),
     cl::Hidden, cl::init(""), cl::cat(BoltCategory));
@@ -646,7 +646,7 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
     const BinaryFunction *TargetBF = getBinaryFunctionContainingAddress(Value);
     const bool DoesBelongToFunction =
         BF.containsAddress(Value) ||
-        (TargetBF && TargetBF->isParentOrChildOf(BF));
+        (TargetBF && areRelatedFragments(TargetBF, &BF));
     if (!DoesBelongToFunction) {
       LLVM_DEBUG({
         if (!BF.containsAddress(Value)) {
@@ -839,9 +839,11 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
     assert(Address == JT->getAddress() && "unexpected non-empty jump table");
 
     // Prevent associating a jump table to a specific fragment twice.
-    // This simple check arises from the assumption: no more than 2 fragments.
-    if (JT->Parents.size() == 1 && JT->Parents[0] != &Function) {
-      assert(JT->Parents[0]->isParentOrChildOf(Function) &&
+    if (!llvm::is_contained(JT->Parents, &Function)) {
+      assert(llvm::all_of(JT->Parents,
+                          [&](const BinaryFunction *BF) {
+                            return areRelatedFragments(&Function, BF);
+                          }) &&
              "cannot re-use jump table of a different function");
       // Duplicate the entry for the parent function for easy access
       JT->Parents.push_back(&Function);
@@ -852,8 +854,8 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
         JT->print(this->outs());
       }
       Function.JumpTables.emplace(Address, JT);
-      JT->Parents[0]->setHasIndirectTargetToSplitFragment(true);
-      JT->Parents[1]->setHasIndirectTargetToSplitFragment(true);
+      for (BinaryFunction *Parent : JT->Parents)
+        Parent->setHasIndirectTargetToSplitFragment(true);
     }
 
     bool IsJumpTableParent = false;
@@ -1209,12 +1211,13 @@ void BinaryContext::generateSymbolHashes() {
 }
 
 bool BinaryContext::registerFragment(BinaryFunction &TargetFunction,
-                                     BinaryFunction &Function) const {
+                                     BinaryFunction &Function) {
   assert(TargetFunction.isFragment() && "TargetFunction must be a fragment");
   if (TargetFunction.isChildOf(Function))
     return true;
   TargetFunction.addParentFragment(Function);
   Function.addFragment(TargetFunction);
+  FragmentClasses.unionSets(&TargetFunction, &Function);
   if (!HasRelocations) {
     TargetFunction.setSimple(false);
     Function.setSimple(false);
@@ -1336,7 +1339,7 @@ void BinaryContext::processInterproceduralReferences() {
 
     if (TargetFunction) {
       if (TargetFunction->isFragment() &&
-          !TargetFunction->isChildOf(Function)) {
+          !areRelatedFragments(TargetFunction, &Function)) {
         this->errs()
             << "BOLT-WARNING: interprocedural reference between unrelated "
                "fragments: "
