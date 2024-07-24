@@ -4,9 +4,6 @@
 define amdgpu_kernel void @system_one_as_acquire() {
   ; CHECK-LABEL: name: system_one_as_acquire
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 4, 2
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("one-as") acquire
@@ -16,9 +13,6 @@ define amdgpu_kernel void @system_one_as_acquire() {
 define amdgpu_kernel void @system_one_as_release() {
   ; CHECK-LABEL: name: system_one_as_release
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 5, 2
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("one-as") release
@@ -28,9 +22,6 @@ define amdgpu_kernel void @system_one_as_release() {
 define amdgpu_kernel void @system_one_as_acq_rel() {
   ; CHECK-LABEL: name: system_one_as_acq_rel
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 6, 2
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("one-as") acq_rel
@@ -40,9 +31,6 @@ define amdgpu_kernel void @system_one_as_acq_rel() {
 define amdgpu_kernel void @system_one_as_seq_cst() {
   ; CHECK-LABEL: name: system_one_as_seq_cst
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 7, 2
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("one-as") seq_cst
@@ -52,9 +40,6 @@ define amdgpu_kernel void @system_one_as_seq_cst() {
 define amdgpu_kernel void @singlethread_one_as_acquire() {
   ; CHECK-LABEL: name: singlethread_one_as_acquire
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 4, 3
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("singlethread-one-as") acquire
@@ -64,9 +49,6 @@ define amdgpu_kernel void @singlethread_one_as_acquire() {
 define amdgpu_kernel void @singlethread_one_as_release() {
   ; CHECK-LABEL: name: singlethread_one_as_release
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 5, 3
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("singlethread-one-as") release
@@ -76,9 +58,6 @@ define amdgpu_kernel void @singlethread_one_as_release() {
 define amdgpu_kernel void @singlethread_one_as_acq_rel() {
   ; CHECK-LABEL: name: singlethread_one_as_acq_rel
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 6, 3
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("singlethread-one-as") acq_rel
@@ -88,9 +67,6 @@ define amdgpu_kernel void @singlethread_one_as_acq_rel() {
 define amdgpu_kernel void @singlethread_one_as_seq_cst() {
   ; CHECK-LABEL: name: singlethread_one_as_seq_cst
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 7, 3
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("singlethread-one-as") seq_cst
@@ -100,9 +76,6 @@ define amdgpu_kernel void @singlethread_one_as_seq_cst() {
 define amdgpu_kernel void @agent_one_as_acquire() {
   ; CHECK-LABEL: name: agent_one_as_acquire
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 4, 4
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("agent-one-as") acquire
@@ -112,9 +85,6 @@ define amdgpu_kernel void @agent_one_as_acquire() {
 define amdgpu_kernel void @agent_one_as_release() {
   ; CHECK-LABEL: name: agent_one_as_release
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 5, 4
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("agent-one-as") release
@@ -124,9 +94,6 @@ define amdgpu_kernel void @agent_one_as_release() {
 define amdgpu_kernel void @agent_one_as_acq_rel() {
   ; CHECK-LABEL: name: agent_one_as_acq_rel
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 6, 4
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("agent-one-as") acq_rel
@@ -136,9 +103,6 @@ define amdgpu_kernel void @agent_one_as_acq_rel() {
 define amdgpu_kernel void @agent_one_as_seq_cst() {
   ; CHECK-LABEL: name: agent_one_as_seq_cst
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 7, 4
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("agent-one-as") seq_cst
@@ -148,9 +112,6 @@ define amdgpu_kernel void @agent_one_as_seq_cst() {
 define amdgpu_kernel void @workgroup_one_as_acquire() {
   ; CHECK-LABEL: name: workgroup_one_as_acquire
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 4, 5
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("workgroup-one-as") acquire
@@ -160,9 +121,6 @@ define amdgpu_kernel void @workgroup_one_as_acquire() {
 define amdgpu_kernel void @workgroup_one_as_release() {
   ; CHECK-LABEL: name: workgroup_one_as_release
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 5, 5
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("workgroup-one-as") release
@@ -172,9 +130,6 @@ define amdgpu_kernel void @workgroup_one_as_release() {
 define amdgpu_kernel void @workgroup_one_as_acq_rel() {
   ; CHECK-LABEL: name: workgroup_one_as_acq_rel
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 6, 5
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("workgroup-one-as") acq_rel
@@ -184,9 +139,6 @@ define amdgpu_kernel void @workgroup_one_as_acq_rel() {
 define amdgpu_kernel void @workgroup_one_as_seq_cst() {
   ; CHECK-LABEL: name: workgroup_one_as_seq_cst
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 7, 5
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("workgroup-one-as") seq_cst
@@ -196,9 +148,6 @@ define amdgpu_kernel void @workgroup_one_as_seq_cst() {
 define amdgpu_kernel void @wavefront_one_as_acquire() {
   ; CHECK-LABEL: name: wavefront_one_as_acquire
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 4, 6
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("wavefront-one-as") acquire
@@ -208,9 +157,6 @@ define amdgpu_kernel void @wavefront_one_as_acquire() {
 define amdgpu_kernel void @wavefront_one_as_release() {
   ; CHECK-LABEL: name: wavefront_one_as_release
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 5, 6
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("wavefront-one-as") release
@@ -220,9 +166,6 @@ define amdgpu_kernel void @wavefront_one_as_release() {
 define amdgpu_kernel void @wavefront_one_as_acq_rel() {
   ; CHECK-LABEL: name: wavefront_one_as_acq_rel
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 6, 6
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("wavefront-one-as") acq_rel
@@ -232,9 +175,6 @@ define amdgpu_kernel void @wavefront_one_as_acq_rel() {
 define amdgpu_kernel void @wavefront_one_as_seq_cst() {
   ; CHECK-LABEL: name: wavefront_one_as_seq_cst
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 7, 6
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("wavefront-one-as") seq_cst
@@ -244,9 +184,6 @@ define amdgpu_kernel void @wavefront_one_as_seq_cst() {
 define amdgpu_kernel void @system_acquire() {
   ; CHECK-LABEL: name: system_acquire
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   S_ENDPGM 0
 entry:
   ret void
@@ -255,9 +192,6 @@ entry:
 define amdgpu_kernel void @system_release() {
   ; CHECK-LABEL: name: system_release
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 5, 1
   ; CHECK-NEXT:   S_ENDPGM 0
   fence release
@@ -267,9 +201,6 @@ define amdgpu_kernel void @system_release() {
 define amdgpu_kernel void @system_acq_rel() {
   ; CHECK-LABEL: name: system_acq_rel
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 6, 1
   ; CHECK-NEXT:   S_ENDPGM 0
   fence acq_rel
@@ -279,9 +210,6 @@ define amdgpu_kernel void @system_acq_rel() {
 define amdgpu_kernel void @system_seq_cst() {
   ; CHECK-LABEL: name: system_seq_cst
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 7, 1
   ; CHECK-NEXT:   S_ENDPGM 0
   fence seq_cst
@@ -291,9 +219,6 @@ define amdgpu_kernel void @system_seq_cst() {
 define amdgpu_kernel void @singlethread_acquire() {
   ; CHECK-LABEL: name: singlethread_acquire
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 4, 0
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("singlethread") acquire
@@ -303,9 +228,6 @@ define amdgpu_kernel void @singlethread_acquire() {
 define amdgpu_kernel void @singlethread_release() {
   ; CHECK-LABEL: name: singlethread_release
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 5, 0
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("singlethread") release
@@ -315,9 +237,6 @@ define amdgpu_kernel void @singlethread_release() {
 define amdgpu_kernel void @singlethread_acq_rel() {
   ; CHECK-LABEL: name: singlethread_acq_rel
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 6, 0
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("singlethread") acq_rel
@@ -327,9 +246,6 @@ define amdgpu_kernel void @singlethread_acq_rel() {
 define amdgpu_kernel void @singlethread_seq_cst() {
   ; CHECK-LABEL: name: singlethread_seq_cst
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 7, 0
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("singlethread") seq_cst
@@ -339,9 +255,6 @@ define amdgpu_kernel void @singlethread_seq_cst() {
 define amdgpu_kernel void @agent_acquire() {
   ; CHECK-LABEL: name: agent_acquire
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 4, 7
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("agent") acquire
@@ -351,9 +264,6 @@ define amdgpu_kernel void @agent_acquire() {
 define amdgpu_kernel void @agent_release() {
   ; CHECK-LABEL: name: agent_release
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 5, 7
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("agent") release
@@ -363,9 +273,6 @@ define amdgpu_kernel void @agent_release() {
 define amdgpu_kernel void @agent_acq_rel() {
   ; CHECK-LABEL: name: agent_acq_rel
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 6, 7
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("agent") acq_rel
@@ -375,9 +282,6 @@ define amdgpu_kernel void @agent_acq_rel() {
 define amdgpu_kernel void @agent_seq_cst() {
   ; CHECK-LABEL: name: agent_seq_cst
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 7, 7
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("agent") seq_cst
@@ -387,9 +291,6 @@ define amdgpu_kernel void @agent_seq_cst() {
 define amdgpu_kernel void @workgroup_acquire() {
   ; CHECK-LABEL: name: workgroup_acquire
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 4, 8
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("workgroup") acquire
@@ -399,9 +300,6 @@ define amdgpu_kernel void @workgroup_acquire() {
 define amdgpu_kernel void @workgroup_release() {
   ; CHECK-LABEL: name: workgroup_release
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 5, 8
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("workgroup") release
@@ -411,9 +309,6 @@ define amdgpu_kernel void @workgroup_release() {
 define amdgpu_kernel void @workgroup_acq_rel() {
   ; CHECK-LABEL: name: workgroup_acq_rel
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 6, 8
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("workgroup") acq_rel
@@ -423,9 +318,6 @@ define amdgpu_kernel void @workgroup_acq_rel() {
 define amdgpu_kernel void @workgroup_seq_cst() {
   ; CHECK-LABEL: name: workgroup_seq_cst
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 7, 8
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("workgroup") seq_cst
@@ -435,9 +327,6 @@ define amdgpu_kernel void @workgroup_seq_cst() {
 define amdgpu_kernel void @wavefront_acquire() {
   ; CHECK-LABEL: name: wavefront_acquire
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 4, 9
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("wavefront") acquire
@@ -447,9 +336,6 @@ define amdgpu_kernel void @wavefront_acquire() {
 define amdgpu_kernel void @wavefront_release() {
   ; CHECK-LABEL: name: wavefront_release
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 5, 9
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("wavefront") release
@@ -459,9 +345,6 @@ define amdgpu_kernel void @wavefront_release() {
 define amdgpu_kernel void @wavefront_acq_rel() {
   ; CHECK-LABEL: name: wavefront_acq_rel
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 6, 9
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("wavefront") acq_rel
@@ -471,9 +354,6 @@ define amdgpu_kernel void @wavefront_acq_rel() {
 define amdgpu_kernel void @wavefront_seq_cst() {
   ; CHECK-LABEL: name: wavefront_seq_cst
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   G_FENCE 7, 9
   ; CHECK-NEXT:   S_ENDPGM 0
   fence syncscope("wavefront") seq_cst
