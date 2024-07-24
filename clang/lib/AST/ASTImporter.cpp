@@ -371,6 +371,29 @@ namespace clang {
       }
     }
 
+    // Update the parameter list `NewParams` of a template declaration
+    // by "inheriting" default argument values from `RecentParams`,
+    // which is the parameter list of an earlier declaration of the
+    // same template. (Note that "inheriting" default argument values
+    // is not related to object-oriented inheritance.)
+    //
+    // In the clang AST template parameters (NonTypeTemplateParmDec,
+    // TemplateTypeParmDecl, TemplateTemplateParmDecl) have a reference to the
+    // default value, if one is specified at the first declaration. The default
+    // value can be specified only once. The template parameters of the
+    // following declarations have a reference to the original default value
+    // through the "inherited" value. This value should be set for all imported
+    // template parameters that have a previous declaration (also a previous
+    // template declaration).
+    //
+    // In the `Visit*ParmDecl` functions the default value of these template
+    // arguments is always imported. At that location the previous declaration
+    // is not easily accessible, it is not possible to call
+    // `setInheritedDefaultArgument` at that place.
+    // `updateTemplateParametersInheritedFrom` is called later when the already
+    // imported default value is erased and changed to "inherited".
+    // It is important to change the mode to "inherited" otherwise false
+    // structural in-equivalences could be detected.
     void updateTemplateParametersInheritedFrom(
         const TemplateParameterList &RecentParams,
         TemplateParameterList &NewParams) {
