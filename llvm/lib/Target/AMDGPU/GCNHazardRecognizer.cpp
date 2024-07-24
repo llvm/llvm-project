@@ -875,6 +875,7 @@ GCNHazardRecognizer::checkVALUHazardsHelper(const MachineOperand &Def,
     return DataIdx >= 0 &&
            TRI->regsOverlap(MI.getOperand(DataIdx).getReg(), Reg);
   };
+
   int WaitStatesNeededForDef =
     VALUWaitStates - getWaitStatesSince(IsHazardFn, VALUWaitStates);
   WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForDef);
@@ -931,33 +932,22 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
       if (auto *Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst)) {
         Register Def = Dst->getReg();
 
-        for (const MachineOperand &Use : VALU->explicit_uses()) {
+        for (const MachineOperand &Use : VALU->all_uses()) {
           if (Use.isReg() && TRI->regsOverlap(Def, Use.getReg()))
             return true;
         }
 
-        // If the non-impacted bits of a sdwa dst are preserved, then we
-        // read them and must resolve the hazard. SDWA dst preserve is modelled
-        // as a tied-def implicit use
-        if (SIInstrInfo::isSDWA(*VALU)) {
-          if (auto *DstSel =
-                  TII->getNamedOperand(*VALU, AMDGPU::OpName::dst_sel)) {
-            if (DstSel->getImm() == AMDGPU::SDWA::DWORD)
-              return false;
-            if (auto *ThisDst =
-                    TII->getNamedOperand(MI, AMDGPU::OpName::vdst)) {
-              if (!TRI->regsOverlap(Def, ThisDst->getReg()))
-                return false;
-              for (const MachineOperand &ImplicitOp :
-                   VALU->implicit_operands()) {
-                if (ImplicitOp.isDef())
-                  continue;
-                if (ImplicitOp.isReg() &&
-                    TRI->regsOverlap(Def, ImplicitOp.getReg()))
-                  return true;
-              }
-            }
-          }
+        // We also read the dst for sub 32 writes to the same register for ECC
+        if (auto *ThisDst = TII->getNamedOperand(*VALU, AMDGPU::OpName::vdst)) {
+          Register ThisDef = ThisDst->getReg();
+          if (!TRI->regsOverlap(Def, ThisDef))
+            return false;
+          if (AMDGPU::hasNamedOperand(VALU->getOpcode(),
+                                      AMDGPU::OpName::op_sel) &&
+              TII->getNamedOperand(*VALU, AMDGPU::OpName::src0_modifiers)
+                      ->getImm() &
+                  SISrcMods::DST_OP_SEL)
+            return true;
         }
       }
 
