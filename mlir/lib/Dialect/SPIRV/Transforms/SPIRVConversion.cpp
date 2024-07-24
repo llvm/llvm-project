@@ -1103,10 +1103,11 @@ struct ReturnOpVectorUnroll final : OpRewritePattern<func::ReturnOp> {
            StaticTileOffsetRange(originalShape, *targetShape)) {
         Value result = rewriter.create<vector::ExtractStridedSliceOp>(
             loc, returnValue, offsets, extractShape, strides);
-        SmallVector<int64_t> extractIndices(originalShape.size() - 1, 0);
-        if (originalShape.size() > 1)
+        if (originalShape.size() > 1) {
+          SmallVector<int64_t> extractIndices(originalShape.size() - 1, 0);
           result =
               rewriter.create<vector::ExtractOp>(loc, result, extractIndices);
+        }
         newOperands.push_back(result);
         newTypes.push_back(unrolledType);
       }
@@ -1320,7 +1321,7 @@ mlir::spirv::getNativeVectorShapeImpl(vector::TransposeOp op) {
 std::optional<SmallVector<int64_t>>
 mlir::spirv::getNativeVectorShape(Operation *op) {
   if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1) {
-    if (auto vecType = llvm::dyn_cast<VectorType>(op->getResultTypes()[0])) {
+    if (auto vecType = dyn_cast<VectorType>(op->getResultTypes()[0])) {
       SmallVector<int64_t> nativeSize(vecType.getRank(), 1);
       nativeSize.back() =
           mlir::spirv::getComputeVectorSize(vecType.getShape().back());
@@ -1339,6 +1340,9 @@ LogicalResult mlir::spirv::unrollVectorsInSignatures(Operation *op) {
   RewritePatternSet patterns(context);
   populateFuncOpVectorRewritePatterns(patterns);
   populateReturnOpVectorRewritePatterns(patterns);
+  // We only want to apply signature conversion once to the existing func ops.
+  // Without specifying strictMode, the greedy pattern rewriter will keep
+  // looking for newly created func ops.
   GreedyRewriteConfig config;
   config.strictMode = GreedyRewriteStrictness::ExistingOps;
   return applyPatternsAndFoldGreedily(op, std::move(patterns), config);
