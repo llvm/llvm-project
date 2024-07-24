@@ -86,9 +86,8 @@ MCStreamer *createNullStreamer(MCContext &Ctx);
 /// the assembly.
 MCStreamer *
 createAsmStreamer(MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> OS,
-                  bool isVerboseAsm, bool useDwarfDirectory,
                   MCInstPrinter *InstPrint, std::unique_ptr<MCCodeEmitter> &&CE,
-                  std::unique_ptr<MCAsmBackend> &&TAB, bool ShowInst);
+                  std::unique_ptr<MCAsmBackend> &&TAB);
 
 MCStreamer *createELFStreamer(MCContext &Ctx,
                               std::unique_ptr<MCAsmBackend> &&TAB,
@@ -206,9 +205,9 @@ public:
                       std::unique_ptr<MCCodeEmitter> &&Emitter);
 
   using NullTargetStreamerCtorTy = MCTargetStreamer *(*)(MCStreamer &S);
-  using AsmTargetStreamerCtorTy = MCTargetStreamer *(*)(
-      MCStreamer &S, formatted_raw_ostream &OS, MCInstPrinter *InstPrint,
-      bool IsVerboseAsm);
+  using AsmTargetStreamerCtorTy =
+      MCTargetStreamer *(*)(MCStreamer &S, formatted_raw_ostream &OS,
+                            MCInstPrinter *InstPrint);
   using ObjectTargetStreamerCtorTy = MCTargetStreamer *(*)(
       MCStreamer &S, const MCSubtargetInfo &STI);
   using MCRelocationInfoCtorTy = MCRelocationInfo *(*)(const Triple &TT,
@@ -544,6 +543,7 @@ public:
                                 MCInstPrinter *IP,
                                 std::unique_ptr<MCCodeEmitter> CE,
                                 std::unique_ptr<MCAsmBackend> TAB) const;
+  LLVM_DEPRECATED("Use the overload without the 3 unused bool", "")
   MCStreamer *
   createAsmStreamer(MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> OS,
                     bool IsVerboseAsm, bool UseDwarfDirectory,
@@ -552,10 +552,9 @@ public:
 
   MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
                                             formatted_raw_ostream &OS,
-                                            MCInstPrinter *InstPrint,
-                                            bool IsVerboseAsm) const {
+                                            MCInstPrinter *InstPrint) const {
     if (AsmTargetStreamerCtorFn)
-      return AsmTargetStreamerCtorFn(S, OS, InstPrint, IsVerboseAsm);
+      return AsmTargetStreamerCtorFn(S, OS, InstPrint);
     return nullptr;
   }
 

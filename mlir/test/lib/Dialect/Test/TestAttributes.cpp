@@ -13,9 +13,12 @@
 
 #include "TestAttributes.h"
 #include "TestDialect.h"
+#include "TestTypes.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/ExtensibleDialect.h"
+#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Hashing.h"
@@ -62,6 +65,39 @@ void CompoundAAttr::print(AsmPrinter &printer) const {
 //===----------------------------------------------------------------------===//
 // CompoundAAttr
 //===----------------------------------------------------------------------===//
+
+Attribute TestDecimalShapeAttr::parse(AsmParser &parser, Type type) {
+  if (parser.parseLess()){
+    return Attribute();
+  }
+  SmallVector<int64_t> shape;
+  if (parser.parseOptionalGreater()) {
+    auto parseDecimal = [&]() {
+      shape.emplace_back();
+      auto parseResult = parser.parseOptionalDecimalInteger(shape.back());
+      if (!parseResult.has_value() || failed(*parseResult)) {
+        parser.emitError(parser.getCurrentLocation()) << "expected an integer";
+        return failure();
+      }
+      return success();
+    };
+    if (failed(parseDecimal())) {
+      return Attribute();
+    }
+    while (failed(parser.parseOptionalGreater())) {
+      if (failed(parser.parseXInDimensionList()) || failed(parseDecimal())) {
+        return Attribute();
+      }
+    }
+  }
+  return get(parser.getContext(), shape);
+}
+
+void TestDecimalShapeAttr::print(AsmPrinter &printer) const {
+  printer << "<";
+  llvm::interleave(getShape(), printer, "x");
+  printer << ">";
+}
 
 Attribute TestI64ElementsAttr::parse(AsmParser &parser, Type type) {
   SmallVector<uint64_t> elements;

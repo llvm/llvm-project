@@ -1096,7 +1096,7 @@ public:
       : F(Func), M(Modu), BFI(BFIin), PSI(PSI),
         FuncInfo(Func, TLI, ComdatMembers, false, BPI, BFIin, IsCS,
                  InstrumentFuncEntry, HasSingleByteCoverage),
-        FreqAttr(FFA_Normal), IsCS(IsCS) {}
+        FreqAttr(FFA_Normal), IsCS(IsCS), VPC(Func, TLI) {}
 
   void handleInstrProfError(Error Err, uint64_t MismatchedFuncSum);
 
@@ -1177,6 +1177,8 @@ private:
 
   // Is to use the context sensitive profile.
   bool IsCS;
+
+  ValueProfileCollector VPC;
 
   // Find the Instrumented BB and set the value. Return false on error.
   bool setInstrumentedCounts(const std::vector<uint64_t> &CountFromProfile);
@@ -1755,8 +1757,23 @@ void PGOUseFunc::annotateValueSites() {
 void PGOUseFunc::annotateValueSites(uint32_t Kind) {
   assert(Kind <= IPVK_Last);
   unsigned ValueSiteIndex = 0;
-  auto &ValueSites = FuncInfo.ValueSites[Kind];
+
   unsigned NumValueSites = ProfileRecord.getNumValueSites(Kind);
+
+  // Since there isn't a reliable or fast way for profile reader to tell if a
+  // profile is generated with `-enable-vtable-value-profiling` on, we run the
+  // value profile collector over the function IR to find the instrumented sites
+  // iff function profile records shows the number of instrumented vtable sites
+  // is not zero. Function cfg already takes the number of instrumented
+  // indirect call sites into account so it doesn't hash the number of
+  // instrumented vtables; as a side effect it makes it easier to enable
+  // profiling and profile use in two steps if needed.
+  // TODO: Remove this if/when -enable-vtable-value-profiling is on by default.
+  if (NumValueSites > 0 && Kind == IPVK_VTableTarget &&
+      NumValueSites != FuncInfo.ValueSites[IPVK_VTableTarget].size() &&
+      MaxNumVTableAnnotations != 0)
+    FuncInfo.ValueSites[IPVK_VTableTarget] = VPC.get(IPVK_VTableTarget);
+  auto &ValueSites = FuncInfo.ValueSites[Kind];
   if (NumValueSites != ValueSites.size()) {
     auto &Ctx = M->getContext();
     Ctx.diagnose(DiagnosticInfoPGOProfile(
@@ -1875,6 +1892,8 @@ PGOInstrumentationGenCreateVar::run(Module &M, ModuleAnalysisManager &MAM) {
   // The variable in a comdat may be discarded by LTO. Ensure the declaration
   // will be retained.
   appendToCompilerUsed(M, createIRLevelProfileFlagVar(M, /*IsCS=*/true));
+  if (ProfileSampling)
+    createProfileSamplingVar(M);
   PreservedAnalyses PA;
   PA.preserve<FunctionAnalysisManagerModuleProxy>();
   PA.preserveSet<AllAnalysesOn<Function>>();

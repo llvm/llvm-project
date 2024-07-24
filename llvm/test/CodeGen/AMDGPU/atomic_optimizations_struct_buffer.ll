@@ -439,13 +439,14 @@ define amdgpu_kernel void @add_i32_uniform(ptr addrspace(1) %out, ptr addrspace(
 ; GFX10W32-NEXT:  .LBB1_2:
 ; GFX10W32-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10W32-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX10W32-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x24
+; GFX10W32-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x24
 ; GFX10W32-NEXT:    s_waitcnt vmcnt(0)
-; GFX10W32-NEXT:    v_readfirstlane_b32 s4, v1
+; GFX10W32-NEXT:    s_mov_b32 null, 0
+; GFX10W32-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX10W32-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10W32-NEXT:    v_mad_u64_u32 v[0:1], s0, s0, v0, s[4:5]
+; GFX10W32-NEXT:    v_mad_u64_u32 v[0:1], s0, s0, v0, s[2:3]
 ; GFX10W32-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10W32-NEXT:    global_store_dword v1, v0, s[2:3]
+; GFX10W32-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX10W32-NEXT:    s_endpgm
 ;
 ; GFX11W64-LABEL: add_i32_uniform:
@@ -1674,14 +1675,14 @@ define amdgpu_kernel void @sub_i32_uniform(ptr addrspace(1) %out, ptr addrspace(
 ; GFX10W32-NEXT:  .LBB6_2:
 ; GFX10W32-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10W32-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX10W32-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x24
+; GFX10W32-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x24
 ; GFX10W32-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10W32-NEXT:    v_mul_lo_u32 v0, s0, v0
 ; GFX10W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10W32-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX10W32-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10W32-NEXT:    v_sub_nc_u32_e32 v0, s0, v0
-; GFX10W32-NEXT:    global_store_dword v1, v0, s[2:3]
+; GFX10W32-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX10W32-NEXT:    s_endpgm
 ;
 ; GFX11W64-LABEL: sub_i32_uniform:

@@ -1698,10 +1698,8 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
   if (Kind == UETT_VectorElements) {
     if (const auto *VT = E->getTypeOfArgument()->getAs<VectorType>())
       return this->emitConst(VT->getNumElements(), E);
-
-    // FIXME: Apparently we need to catch the fact that a sizeless vector type
-    // has been passed and diagnose that (at run time).
     assert(E->getTypeOfArgument()->isSizelessVectorType());
+    return this->emitSizelessVectorElementSize(E);
   }
 
   if (Kind == UETT_VecStep) {
@@ -3196,13 +3194,9 @@ bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
     }
 
     assert(S == Result);
-    if (const Expr *ResultExpr = dyn_cast<Expr>(S)) {
-      if (DiscardResult)
-        return this->discard(ResultExpr);
+    if (const Expr *ResultExpr = dyn_cast<Expr>(S))
       return this->delegate(ResultExpr);
-    }
-
-    return this->visitStmt(S);
+    return this->emitUnsupported(E);
   }
 
   return BS.destroyLocals();
@@ -3688,6 +3682,9 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD, bool Topleve
 
   const Expr *Init = VD->getInit();
   std::optional<PrimType> VarT = classify(VD->getType());
+
+  if (Init && Init->isValueDependent())
+    return false;
 
   if (Context::shouldBeGloballyIndexed(VD)) {
     auto checkDecl = [&]() -> bool {

@@ -900,6 +900,25 @@ public:
   };
 };
 
+/// Represents a threeway compare.
+class GSUCmp : public GenericMachineInstr {
+public:
+  Register getLHSReg() const { return getOperand(1).getReg(); }
+  Register getRHSReg() const { return getOperand(2).getReg(); }
+
+  bool isSigned() const { return getOpcode() == TargetOpcode::G_SCMP; }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_SCMP:
+    case TargetOpcode::G_UCMP:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H
