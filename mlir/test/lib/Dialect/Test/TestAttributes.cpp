@@ -66,7 +66,6 @@ void CompoundAAttr::print(AsmPrinter &printer) const {
 // CompoundAAttr
 //===----------------------------------------------------------------------===//
 
-
 Attribute TestDecimalShapeAttr::parse(AsmParser &parser, Type type) {
   if (parser.parseLess()){
     return Attribute();
