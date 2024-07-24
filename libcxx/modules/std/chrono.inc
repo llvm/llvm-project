@@ -37,7 +37,6 @@ export namespace std {
 
     // [time.duration.comparisons], duration comparisons
     using std::chrono::operator==;
-    using std::chrono::operator!=;
     using std::chrono::operator<;
     using std::chrono::operator>;
     using std::chrono::operator<=;
@@ -233,9 +232,7 @@ export namespace std {
     // [time.zone.zonedtime], class template zoned_time
     using std::chrono::zoned_time;
 
-#    if 0
     using std::chrono::zoned_seconds;
-#    endif // if 0
 
     // [time.zone.leap], leap second support
     using std::chrono::leap_second;

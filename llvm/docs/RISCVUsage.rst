@@ -70,6 +70,33 @@ To specify the target triple:
 To select an E variant ISA (e.g. RV32E instead of RV32I), use the base
 architecture string (e.g. ``riscv32``) with the extension ``e``.
 
+Profiles
+========
+
+Supported profile names can be passed using ``-march`` instead of a standard
+ISA naming string. Currently supported profiles:
+
+* ``rvi20u32``
+* ``rvi20u64``
+* ``rva20u64``
+* ``rva20s64``
+* ``rva22u64``
+* ``rva22s64``
+
+Note that you can also append additional extension names to be enabled, e.g.
+``rva20u64_zicond`` will enable the ``zicond`` extension in addition to those
+in the ``rva20u64`` profile.
+
+Profiles that are not yet ratified cannot be used unless
+``-menable-experimental-extensions`` (or equivalent for other tools) is
+specified. This applies to the following profiles:
+
+* ``rva23u64``
+* ``rva23s64``
+* ``rvb23u64``
+* ``rvb23s64``
+* ``rvm23u32``
+
 .. _riscv-extensions:
 
 Extensions
@@ -126,7 +153,6 @@ on support follow.
      ``Za64rs``        Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zaamo``         Assembly Support
      ``Zabha``         Supported
-     ``Zacas``         Supported (`See note <#riscv-zacas-note>`__)
      ``Zalrsc``        Assembly Support
      ``Zama16b``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zawrs``         Assembly Support
@@ -254,11 +280,6 @@ Supported
 ``Za128rs``, ``Za64rs``, ``Zama16b``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
   These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`__.  They do not introduce any new features themselves, but instead describe existing hardware features.
 
-  .. _riscv-zacas-note:
-
-``Zacas``
-  amocas.w will be used for i32 cmpxchg. amocas.d will be used i64 cmpxchg on RV64. The compiler will not generate amocas.d on RV32 or amocas.q on RV64 due to ABI compatibilty. These can only be used in the assembler.
-
 Experimental Extensions
 =======================
 
@@ -272,11 +293,14 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-ssqosid``
   LLVM implements assembler support for the `v1.0-rc1 draft specification <https://github.com/riscv/riscv-ssqosid/releases/tag/v1.0-rc1>`_.
 
+``experimental-zacas``
+  LLVM implements the `1.0 release specification <https://github.com/riscvarchive/riscv-zacas/releases/tag/v1.0>`__. amocas.w will be used for i32 cmpxchg. amocas.d will be used i64 cmpxchg on RV64. The compiler will not generate amocas.d on RV32 or amocas.q on RV64 due to ABI compatibilty. These can only be used in the assembler. The extension will be left as experimental until `an ABI issue <https://github.com/riscv-non-isa/riscv-elf-psabi-doc/issues/444>`__ is resolved.
+
 ``experimental-zalasr``
   LLVM implements the `0.0.5 draft specification <https://github.com/mehnadnerd/riscv-zalasr>`__.
 
 ``experimental-zicfilp``, ``experimental-zicfiss``
-  LLVM implements the `0.4 draft specification <https://github.com/riscv/riscv-cfi/releases/tag/v0.4.0>`__.
+  LLVM implements the `1.0 release specification <https://github.com/riscv/riscv-cfi/releases/tag/v1.0>`__.
 
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 
@@ -368,6 +392,9 @@ The current vendor extensions supported are:
 
 ``XSfcease``
   LLVM implements `the SiFive sf.cease instruction specified in <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`_ by SiFive.
+
+``Xwchc``
+  LLVM implements `the custom compressed opcodes present in some QingKe cores` by WCH / Nanjing Qinheng Microelectronics. The vendor refers to these opcodes by the name "XW".
 
 Experimental C Intrinsics
 =========================

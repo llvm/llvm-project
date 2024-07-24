@@ -40,6 +40,7 @@
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBMemoryRegionInfoList.h"
+#include "lldb/API/SBSaveCoreOptions.h"
 #include "lldb/API/SBScriptObject.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
@@ -1216,13 +1217,28 @@ bool SBProcess::IsInstrumentationRuntimePresent(
 
 lldb::SBError SBProcess::SaveCore(const char *file_name) {
   LLDB_INSTRUMENT_VA(this, file_name);
-  return SaveCore(file_name, "", SaveCoreStyle::eSaveCoreFull);
+  SBSaveCoreOptions options;
+  options.SetOutputFile(SBFileSpec(file_name));
+  options.SetStyle(SaveCoreStyle::eSaveCoreFull);
+  return SaveCore(options);
 }
 
 lldb::SBError SBProcess::SaveCore(const char *file_name,
                                   const char *flavor,
                                   SaveCoreStyle core_style) {
   LLDB_INSTRUMENT_VA(this, file_name, flavor, core_style);
+  SBSaveCoreOptions options;
+  options.SetOutputFile(SBFileSpec(file_name));
+  options.SetStyle(core_style);
+  SBError error = options.SetPluginName(flavor);
+  if (error.Fail())
+    return error;
+  return SaveCore(options);
+}
+
+lldb::SBError SBProcess::SaveCore(SBSaveCoreOptions &options) {
+
+  LLDB_INSTRUMENT_VA(this, options);
 
   lldb::SBError error;
   ProcessSP process_sp(GetSP());
@@ -1239,10 +1255,7 @@ lldb::SBError SBProcess::SaveCore(const char *file_name,
     return error;
   }
 
-  FileSpec core_file(file_name);
-  FileSystem::Instance().Resolve(core_file);
-  error.ref() = PluginManager::SaveCore(process_sp, core_file, core_style,
-                                        flavor);
+  error.ref() = PluginManager::SaveCore(process_sp, options.ref());
 
   return error;
 }

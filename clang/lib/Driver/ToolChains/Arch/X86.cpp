@@ -131,11 +131,9 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
   // If -march=native, autodetect the feature list.
   if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ)) {
     if (StringRef(A->getValue()) == "native") {
-      llvm::StringMap<bool> HostFeatures;
-      if (llvm::sys::getHostCPUFeatures(HostFeatures))
-        for (auto &F : HostFeatures)
-          Features.push_back(
-              Args.MakeArgString((F.second ? "+" : "-") + F.first()));
+      for (auto &F : llvm::sys::getHostCPUFeatures())
+        Features.push_back(
+            Args.MakeArgString((F.second ? "+" : "-") + F.first()));
     }
   }
 
@@ -312,4 +310,17 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back("+prefer-no-scatter");
   if (Args.hasArg(options::OPT_mapx_inline_asm_use_gpr32))
     Features.push_back("+inline-asm-use-gpr32");
+
+  // Warn for removed 3dnow support
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_m3dnowa, options::OPT_mno_3dnowa,
+                          options::OPT_mno_3dnow)) {
+    if (A->getOption().matches(options::OPT_m3dnowa))
+      D.Diag(diag::warn_drv_clang_unsupported) << A->getAsString(Args);
+  }
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_m3dnow, options::OPT_mno_3dnow)) {
+    if (A->getOption().matches(options::OPT_m3dnow))
+      D.Diag(diag::warn_drv_clang_unsupported) << A->getAsString(Args);
+  }
 }

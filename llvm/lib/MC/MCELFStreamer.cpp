@@ -46,6 +46,10 @@ MCELFStreamer::MCELFStreamer(MCContext &Context,
     : MCObjectStreamer(Context, std::move(TAB), std::move(OW),
                        std::move(Emitter)) {}
 
+ELFObjectWriter &MCELFStreamer::getWriter() {
+  return static_cast<ELFObjectWriter &>(getAssembler().getWriter());
+}
+
 bool MCELFStreamer::isBundleLocked() const {
   return getCurrentSectionOnly()->isBundleLocked();
 }
@@ -84,18 +88,6 @@ void MCELFStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCDataFragment &F,
 void MCELFStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
   // Let the target do whatever target specific stuff it needs to do.
   getAssembler().getBackend().handleAssemblerFlag(Flag);
-  // Do any generic stuff we need to do.
-  switch (Flag) {
-  case MCAF_SyntaxUnified: return; // no-op here.
-  case MCAF_Code16: return; // Change parsing mode; no-op here.
-  case MCAF_Code32: return; // Change parsing mode; no-op here.
-  case MCAF_Code64: return; // Change parsing mode; no-op here.
-  case MCAF_SubsectionsViaSymbols:
-    getAssembler().setSubsectionsViaSymbols(true);
-    return;
-  }
-
-  llvm_unreachable("invalid assembler flag!");
 }
 
 // If bundle alignment is used and there are any instructions in the section, it
@@ -120,7 +112,7 @@ void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   if (Grp)
     Asm.registerSymbol(*Grp);
   if (SectionELF->getFlags() & ELF::SHF_GNU_RETAIN)
-    Asm.getWriter().markGnuAbi();
+    getWriter().markGnuAbi();
 
   changeSectionImpl(Section, Subsection);
   Asm.registerSymbol(*Section->getBeginSymbol());
@@ -188,7 +180,7 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   case MCSA_ELF_TypeGnuUniqueObject:
     Symbol->setType(CombineSymbolTypes(Symbol->getType(), ELF::STT_OBJECT));
     Symbol->setBinding(ELF::STB_GNU_UNIQUE);
-    getAssembler().getWriter().markGnuAbi();
+    getWriter().markGnuAbi();
     break;
 
   case MCSA_Global:
@@ -226,7 +218,7 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
 
   case MCSA_ELF_TypeIndFunction:
     Symbol->setType(CombineSymbolTypes(Symbol->getType(), ELF::STT_GNU_IFUNC));
-    getAssembler().getWriter().markGnuAbi();
+    getWriter().markGnuAbi();
     break;
 
   case MCSA_ELF_TypeObject:
@@ -310,7 +302,7 @@ void MCELFStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
 void MCELFStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
                                            StringRef Name,
                                            bool KeepOriginalSym) {
-  getAssembler().Symvers.push_back(MCAssembler::Symver{
+  getWriter().Symvers.push_back(ELFObjectWriter::Symver{
       getStartTokLoc(), OriginalSym, Name, KeepOriginalSym});
 }
 
@@ -343,7 +335,7 @@ void MCELFStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
 void MCELFStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
                                        const MCSymbolRefExpr *To,
                                        uint64_t Count) {
-  getAssembler().CGProfile.push_back({From, To, Count});
+  getWriter().getCGProfile().push_back({From, To, Count});
 }
 
 void MCELFStreamer::emitIdent(StringRef IdentString) {
@@ -472,8 +464,8 @@ void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE,
 }
 
 void MCELFStreamer::finalizeCGProfile() {
-  MCAssembler &Asm = getAssembler();
-  if (Asm.CGProfile.empty())
+  ELFObjectWriter &W = getWriter();
+  if (W.getCGProfile().empty())
     return;
   MCSection *CGProfile = getAssembler().getContext().getELFSection(
       ".llvm.call-graph-profile", ELF::SHT_LLVM_CALL_GRAPH_PROFILE,
@@ -481,7 +473,7 @@ void MCELFStreamer::finalizeCGProfile() {
   pushSection();
   switchSection(CGProfile);
   uint64_t Offset = 0;
-  for (MCAssembler::CGProfileEntry &E : Asm.CGProfile) {
+  for (auto &E : W.getCGProfile()) {
     finalizeCGProfileEntry(E.From, Offset);
     finalizeCGProfileEntry(E.To, Offset);
     emitIntValue(E.Count, sizeof(uint64_t));
@@ -699,17 +691,16 @@ void MCELFStreamer::setAttributeItems(unsigned Attribute, unsigned IntValue,
 
 MCELFStreamer::AttributeItem *
 MCELFStreamer::getAttributeItem(unsigned Attribute) {
-  for (size_t I = 0; I < Contents.size(); ++I)
-    if (Contents[I].Tag == Attribute)
-      return &Contents[I];
+  for (AttributeItem &Item : Contents)
+    if (Item.Tag == Attribute)
+      return &Item;
   return nullptr;
 }
 
 size_t
 MCELFStreamer::calculateContentSize(SmallVector<AttributeItem, 64> &AttrsVec) {
   size_t Result = 0;
-  for (size_t I = 0; I < AttrsVec.size(); ++I) {
-    AttributeItem Item = AttrsVec[I];
+  for (const AttributeItem &Item : AttrsVec) {
     switch (Item.Type) {
     case AttributeItem::HiddenAttribute:
       break;
@@ -770,8 +761,7 @@ void MCELFStreamer::createAttributesSection(
 
   // Size should have been accounted for already, now
   // emit each field as its type (ULEB or String)
-  for (size_t I = 0; I < AttrsVec.size(); ++I) {
-    AttributeItem Item = AttrsVec[I];
+  for (const AttributeItem &Item : AttrsVec) {
     emitULEB128IntValue(Item.Tag);
     switch (Item.Type) {
     default:

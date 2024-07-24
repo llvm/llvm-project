@@ -74,7 +74,7 @@ class RABasic : public MachineFunctionPass,
   void LRE_WillShrinkVirtReg(Register) override;
 
 public:
-  RABasic(const RegClassFilterFunc F = nullptr);
+  RABasic(const RegAllocFilterFunc F = nullptr);
 
   /// Return the pass name.
   StringRef getPassName() const override { return "Basic Register Allocator"; }
@@ -131,7 +131,7 @@ INITIALIZE_PASS_BEGIN(RABasic, "regallocbasic", "Basic Register Allocator",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveDebugVariables)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(RegisterCoalescer)
 INITIALIZE_PASS_DEPENDENCY(MachineScheduler)
 INITIALIZE_PASS_DEPENDENCY(LiveStacks)
@@ -168,24 +168,22 @@ void RABasic::LRE_WillShrinkVirtReg(Register VirtReg) {
   enqueue(&LI);
 }
 
-RABasic::RABasic(RegClassFilterFunc F):
-  MachineFunctionPass(ID),
-  RegAllocBase(F) {
-}
+RABasic::RABasic(RegAllocFilterFunc F)
+    : MachineFunctionPass(ID), RegAllocBase(F) {}
 
 void RABasic::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<AAResultsWrapperPass>();
   AU.addPreserved<AAResultsWrapperPass>();
-  AU.addRequired<LiveIntervals>();
-  AU.addPreserved<LiveIntervals>();
+  AU.addRequired<LiveIntervalsWrapperPass>();
+  AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addPreserved<SlotIndexesWrapperPass>();
   AU.addRequired<LiveDebugVariables>();
   AU.addPreserved<LiveDebugVariables>();
   AU.addRequired<LiveStacks>();
   AU.addPreserved<LiveStacks>();
-  AU.addRequired<MachineBlockFrequencyInfo>();
-  AU.addPreserved<MachineBlockFrequencyInfo>();
+  AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+  AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
   AU.addRequiredID(MachineDominatorsID);
   AU.addPreservedID(MachineDominatorsID);
   AU.addRequired<MachineLoopInfoWrapperPass>();
@@ -310,11 +308,11 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
 
   MF = &mf;
   RegAllocBase::init(getAnalysis<VirtRegMap>(),
-                     getAnalysis<LiveIntervals>(),
+                     getAnalysis<LiveIntervalsWrapperPass>().getLIS(),
                      getAnalysis<LiveRegMatrix>());
-  VirtRegAuxInfo VRAI(*MF, *LIS, *VRM,
-                      getAnalysis<MachineLoopInfoWrapperPass>().getLI(),
-                      getAnalysis<MachineBlockFrequencyInfo>());
+  VirtRegAuxInfo VRAI(
+      *MF, *LIS, *VRM, getAnalysis<MachineLoopInfoWrapperPass>().getLI(),
+      getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI());
   VRAI.calculateSpillWeightsAndHints();
 
   SpillerInstance.reset(createInlineSpiller(*this, *MF, *VRM, VRAI));
@@ -333,6 +331,6 @@ FunctionPass* llvm::createBasicRegisterAllocator() {
   return new RABasic();
 }
 
-FunctionPass* llvm::createBasicRegisterAllocator(RegClassFilterFunc F) {
+FunctionPass *llvm::createBasicRegisterAllocator(RegAllocFilterFunc F) {
   return new RABasic(F);
 }

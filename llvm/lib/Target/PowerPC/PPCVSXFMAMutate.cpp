@@ -347,7 +347,7 @@ public:
       if (!STI.hasVSX())
         return false;
 
-      LIS = &getAnalysis<LiveIntervals>();
+      LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
 
       TII = STI.getInstrInfo();
 
@@ -364,8 +364,8 @@ public:
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<LiveIntervals>();
-      AU.addPreserved<LiveIntervals>();
+      AU.addRequired<LiveIntervalsWrapperPass>();
+      AU.addPreserved<LiveIntervalsWrapperPass>();
       AU.addRequired<SlotIndexesWrapperPass>();
       AU.addPreserved<SlotIndexesWrapperPass>();
       AU.addRequired<MachineDominatorTreeWrapperPass>();
@@ -377,7 +377,7 @@ public:
 
 INITIALIZE_PASS_BEGIN(PPCVSXFMAMutate, DEBUG_TYPE,
                       "PowerPC VSX FMA Mutation", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(PPCVSXFMAMutate, DEBUG_TYPE,

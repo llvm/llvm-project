@@ -81,7 +81,15 @@ void test() {
 
   {
     std::chrono::zoned_time<std::chrono::seconds> zt;
-    zt.get_time_zone(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    zt.get_sys_time();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    static_cast<std::chrono::sys_seconds>(zt);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    static_cast<std::chrono::local_seconds>(zt);
+
+    zt.get_time_zone();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    zt.get_local_time(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    zt.get_sys_time();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    zt.get_info();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
 }

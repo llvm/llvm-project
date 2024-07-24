@@ -56,6 +56,8 @@ private:
                             raw_ostream &OS);
   void emitND2NonNDTable(ArrayRef<const CodeGenInstruction *> Insts,
                          raw_ostream &OS);
+  void emitSSE2AVXTable(ArrayRef<const CodeGenInstruction *> Insts,
+                        raw_ostream &OS);
 
   // Prints the definition of class X86TableEntry.
   void printClassDef(raw_ostream &OS);
@@ -335,6 +337,38 @@ void X86InstrMappingEmitter::emitND2NonNDTable(
   printTable(Table, "X86ND2NonNDTable", "GET_X86_ND2NONND_TABLE", OS);
 }
 
+void X86InstrMappingEmitter::emitSSE2AVXTable(
+    ArrayRef<const CodeGenInstruction *> Insts, raw_ostream &OS) {
+
+  const std::map<StringRef, StringRef> ManualMap = {
+#define ENTRY_SSE2AVX(OLD, NEW) {#OLD, #NEW},
+#include "X86ManualInstrMapping.def"
+  };
+
+  std::vector<Entry> Table;
+  for (const CodeGenInstruction *Inst : Insts) {
+    const Record *Rec = Inst->TheDef;
+    StringRef Name = Rec->getName();
+    if (!isInteresting(Rec))
+      continue;
+    if (ManualMap.find(Name) != ManualMap.end()) {
+      auto *NewRec = Records.getDef(ManualMap.at(Rec->getName()));
+      assert(NewRec && "Instruction not found!");
+      auto &NewInst = Target.getInstruction(NewRec);
+      Table.push_back(std::pair(Inst, &NewInst));
+      continue;
+    }
+
+    std::string NewName = ("V" + Name).str();
+    auto *AVXRec = Records.getDef(NewName);
+    if (!AVXRec)
+      continue;
+    auto &AVXInst = Target.getInstruction(AVXRec);
+    Table.push_back(std::pair(Inst, &AVXInst));
+  }
+  printTable(Table, "X86SSE2AVXTable", "GET_X86_SSE2AVX_TABLE", OS);
+}
+
 void X86InstrMappingEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("X86 instruction mapping", OS);
 
@@ -344,6 +378,7 @@ void X86InstrMappingEmitter::run(raw_ostream &OS) {
   emitCompressEVEXTable(Insts, OS);
   emitNFTransformTable(Insts, OS);
   emitND2NonNDTable(Insts, OS);
+  emitSSE2AVXTable(Insts, OS);
 }
 } // namespace
 

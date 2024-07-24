@@ -40,10 +40,10 @@ class WebAssemblyOptimizeLiveIntervals final : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<LiveIntervals>();
-    AU.addPreserved<MachineBlockFrequencyInfo>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
-    AU.addPreserved<LiveIntervals>();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreservedID(LiveVariablesID);
     AU.addPreservedID(MachineDominatorsID);
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -77,7 +77,7 @@ bool WebAssemblyOptimizeLiveIntervals::runOnMachineFunction(
                     << MF.getName() << '\n');
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  auto &LIS = getAnalysis<LiveIntervals>();
+  auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
 
   // We don't preserve SSA form.
   MRI.leaveSSA();

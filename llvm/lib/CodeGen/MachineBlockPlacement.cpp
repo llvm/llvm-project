@@ -609,7 +609,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
-    AU.addRequired<MachineBlockFrequencyInfo>();
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     if (TailDupPlacement)
       AU.addRequired<MachinePostDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
@@ -628,7 +628,7 @@ char &llvm::MachineBlockPlacementID = MachineBlockPlacement::ID;
 INITIALIZE_PASS_BEGIN(MachineBlockPlacement, DEBUG_TYPE,
                       "Branch Probability Basic Block Placement", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
@@ -2596,7 +2596,15 @@ void MachineBlockPlacement::rotateLoopWithProfile(
 /// otherwise, collect all blocks in the loop.
 MachineBlockPlacement::BlockFilterSet
 MachineBlockPlacement::collectLoopBlockSet(const MachineLoop &L) {
-  BlockFilterSet LoopBlockSet;
+  // Collect the blocks in a set ordered by block number, as this gives the same
+  // order as they appear in the function.
+  struct MBBCompare {
+    bool operator()(const MachineBasicBlock *X,
+                    const MachineBasicBlock *Y) const {
+      return X->getNumber() < Y->getNumber();
+    }
+  };
+  std::set<const MachineBasicBlock *, MBBCompare> LoopBlockSet;
 
   // Filter cold blocks off from LoopBlockSet when profile data is available.
   // Collect the sum of frequencies of incoming edges to the loop header from
@@ -2627,7 +2635,11 @@ MachineBlockPlacement::collectLoopBlockSet(const MachineLoop &L) {
   } else
     LoopBlockSet.insert(L.block_begin(), L.block_end());
 
-  return LoopBlockSet;
+  // Copy the blocks into a BlockFilterSet, as iterating it is faster than
+  // std::set. We will only remove blocks and never insert them, which will
+  // preserve the ordering.
+  BlockFilterSet Ret(LoopBlockSet.begin(), LoopBlockSet.end());
+  return Ret;
 }
 
 /// Forms basic block chains from the natural loop structures.
@@ -3427,7 +3439,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   F = &MF;
   MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   MBFI = std::make_unique<MBFIWrapper>(
-      getAnalysis<MachineBlockFrequencyInfo>());
+      getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI());
   MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   TII = MF.getSubtarget().getInstrInfo();
   TLI = MF.getSubtarget().getTargetLowering();
@@ -3727,7 +3739,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
-    AU.addRequired<MachineBlockFrequencyInfo>();
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -3742,7 +3754,7 @@ char &llvm::MachineBlockPlacementStatsID = MachineBlockPlacementStats::ID;
 INITIALIZE_PASS_BEGIN(MachineBlockPlacementStats, "block-placement-stats",
                       "Basic Block Placement Stats", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_END(MachineBlockPlacementStats, "block-placement-stats",
                     "Basic Block Placement Stats", false, false)
 
@@ -3755,7 +3767,7 @@ bool MachineBlockPlacementStats::runOnMachineFunction(MachineFunction &F) {
     return false;
 
   MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
-  MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
 
   for (MachineBasicBlock &MBB : F) {
     BlockFrequency BlockFreq = MBFI->getBlockFreq(&MBB);

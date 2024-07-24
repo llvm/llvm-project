@@ -24,3 +24,7 @@ void f15(int, int)
 void f16(int *i, int *j) __attribute__((ownership_holds(foo, 1))) __attribute__((ownership_holds(foo, 1))); // OK, same index
 void f17(void*) __attribute__((ownership_takes(__, 1)));
 void f18() __attribute__((ownership_takes(foo, 1)));  // expected-warning {{'ownership_takes' attribute only applies to non-K&R-style functions}}
+
+int f19(void *)
+  __attribute__((ownership_takes(foo, 1)))    // expected-error {{'ownership_takes' attribute class does not match; here it is 'foo'}}
+  __attribute__((ownership_takes(foo1, 1)));  // expected-note {{declared with class 'foo1' here}}

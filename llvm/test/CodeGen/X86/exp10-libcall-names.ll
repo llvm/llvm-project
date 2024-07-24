@@ -5,12 +5,11 @@
 ; RUN: llc -mtriple=x86_64-apple-tvos9.0 < %s | FileCheck -check-prefix=APPLE %s
 ; RUN: llc -mtriple=x86_64-apple-watchos9.0 < %s | FileCheck -check-prefix=APPLE %s
 ; RUN: llc -mtriple=x86_64-apple-xros9.0 < %s | FileCheck -check-prefix=APPLE %s
+; RUN: llc -mtriple=x86_64-apple-ios8.0 < %s | FileCheck -check-prefix=APPLE %s
+; RUN: llc -mtriple=x86_64-apple-tvos8.0 < %s | FileCheck -check-prefix=APPLE %s
+; RUN: llc -mtriple=x86_64-apple-xros8.0 < %s | FileCheck -check-prefix=APPLE %s
 
 ; RUN: not llc -mtriple=x86_64-apple-macos10.8 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -mtriple=x86_64-apple-ios8.0 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -mtriple=x86_64-apple-tvos8.0 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -mtriple=x86_64-apple-xros8.0 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
-
 ; Check exp10/exp10f is emitted as __exp10/__exp10f on assorted systems.
 
 ; ERR: no libcall available for fexp10

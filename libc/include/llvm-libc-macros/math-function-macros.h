@@ -12,5 +12,6 @@
 #define isfinite(x) __builtin_isfinite(x)
 #define isinf(x) __builtin_isinf(x)
 #define isnan(x) __builtin_isnan(x)
+#define signbit(x) __builtin_signbit(x)
 
 #endif // LLVM_LIBC_MACROS_MATH_FUNCTION_MACROS_H
