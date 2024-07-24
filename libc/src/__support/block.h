@@ -102,9 +102,12 @@ using cpp::optional;
 ///                       types can address more memory, but consume greater
 ///                       overhead.
 /// @tparam   kAlign      Sets the overall alignment for blocks. Minimum is
-///                       `alignof(OffsetType)` (the default). Larger values
-///                       cause greater overhead.
-template <typename OffsetType = uintptr_t, size_t kAlign = alignof(OffsetType)>
+///                       `alignof(OffsetType)`, but the default is max_align_t,
+///                       since the usable space will then already be
+///                       aligned to max_align_t if the size of OffsetType is no
+///                       less than half of max_align_t. Larger values cause
+///                       greater overhead.
+template <typename OffsetType = uintptr_t, size_t kAlign = alignof(max_align_t)>
 class Block {
   // Masks for the contents of the next_ field.
   static constexpr size_t USED_MASK = 1 << 0;
