@@ -5240,8 +5240,10 @@ static LogicalResult verifyVectorShapeCast(Operation *op,
   }
 
   // Check that (non-)scalability is preserved
-  if (sourceVectorType.isScalable() != resultVectorType.isScalable())
-    return op->emitOpError("non-matching scalability flags");
+  if (sourceVectorType.getNumScalableDims() !=
+      resultVectorType.getNumScalableDims())
+    return op->emitOpError("non-matching scalable dims");
+  sourceVectorType.getNumDynamicDims();
 
   return success();
 }
