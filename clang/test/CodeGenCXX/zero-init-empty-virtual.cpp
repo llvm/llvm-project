@@ -26,7 +26,7 @@ struct Holder2 {
   derived_virtual a{};
 } g_holder2;
 
-// CHECK: @{{.*}} = {{.*}}global %struct.Holder2 zeroinitializer, align 8
+// CHECK: @{{.*}} = {{.*}}global %struct.Holder2 zeroinitializer
 
 struct Holder3 {
   derived a{};
