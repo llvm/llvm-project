@@ -1348,10 +1348,14 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     LIS->repairIntervalsInRange(this, getFirstTerminator(), end(), UsedRegs);
   }
 
-  if (MDTU)
-    MDTU->applyUpdates({{MachineDominatorTree::Insert, this, NMBB},
-                        {MachineDominatorTree::Insert, NMBB, Succ},
-                        {MachineDominatorTree::Delete, this, Succ}});
+  if (MDTU) {
+    SmallVector<MachineDominatorTree::UpdateType, 3> Updates;
+    Updates.push_back({MachineDominatorTree::Insert, this, NMBB});
+    Updates.push_back({MachineDominatorTree::Insert, NMBB, Succ});
+    if (!llvm::is_contained(successors(), Succ))
+      Updates.push_back({MachineDominatorTree::Delete, this, Succ});
+    MDTU->applyUpdates(Updates);
+  }
 
   if (MachineLoopInfo *MLI = GET_RESULT(MachineLoop, getLI, Info))
     if (MachineLoop *TIL = MLI->getLoopFor(this)) {
