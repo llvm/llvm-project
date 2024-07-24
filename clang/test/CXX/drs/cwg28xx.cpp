@@ -153,8 +153,6 @@ void g() {
 namespace cwg2881 { // cwg2881: 19
 
 #if __cplusplus >= 202302L
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Winaccessible-base"
 
 template <typename T> struct A : T {};
 template <typename T> struct B : T {};
@@ -242,7 +240,7 @@ struct Indirect : T {
 };
 
 template<typename T>
-struct Ambiguous : Indirect<T>, T {
+struct Ambiguous : Indirect<T>, T { // expected-warning {{is inaccessible due to ambiguity}}
   using Indirect<T>::operator();
 };
 
@@ -253,6 +251,7 @@ constexpr auto f3(L l) -> decltype(Private<L>{l}()) { return l(); }
 template <typename L>
 constexpr auto f4(L l) -> decltype(Ambiguous<L>{{l}, l}()) { return l(); }
 // expected-note@-1 {{is inaccessible due to ambiguity}}
+// expected-note@-2 {{in instantiation of template class}}
 
 template<typename T>
 concept is_callable = requires(T t) { { t() }; };
@@ -262,11 +261,11 @@ void g() {
   auto lambda = [x](this auto self) {};
   f3(lambda); // expected-error {{no matching function for call to 'f3'}}
   f4(lambda); // expected-error {{no matching function for call to 'f4'}}
+  // expected-note@-1 {{while substituting deduced template arguments into function template 'f4'}}
   static_assert(!is_callable<Private<decltype(lambda)>>);
   static_assert(!is_callable<Ambiguous<decltype(lambda)>>);
 }
 
-#pragma clang diagnostic pop
 #endif
 
 } // namespace cwg2881
