@@ -188,6 +188,9 @@
 ; GCN-O1-NEXT:        Function Alias Analysis Results
 ; GCN-O1-NEXT:    Lower OpenCL enqueued blocks
 ; GCN-O1-NEXT:    Lower uses of LDS variables from non-kernel functions
+; GCN-O1-NEXT:    AMDGPU Attributor
+; GCN-O1-NEXT:      FunctionPass Manager
+; GCN-O1-NEXT:        Cycle Info Analysis
 ; GCN-O1-NEXT:    FunctionPass Manager
 ; GCN-O1-NEXT:      Infer address spaces
 ; GCN-O1-NEXT:      Dominator Tree Construction
@@ -462,6 +465,9 @@
 ; GCN-O1-OPTS-NEXT:        Function Alias Analysis Results
 ; GCN-O1-OPTS-NEXT:    Lower OpenCL enqueued blocks
 ; GCN-O1-OPTS-NEXT:    Lower uses of LDS variables from non-kernel functions
+; GCN-O1-OPTS-NEXT:    AMDGPU Attributor
+; GCN-O1-OPTS-NEXT:      FunctionPass Manager
+; GCN-O1-OPTS-NEXT:        Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:    FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:      Infer address spaces
 ; GCN-O1-OPTS-NEXT:      Dominator Tree Construction
@@ -766,6 +772,9 @@
 ; GCN-O2-NEXT:        Function Alias Analysis Results
 ; GCN-O2-NEXT:    Lower OpenCL enqueued blocks
 ; GCN-O2-NEXT:    Lower uses of LDS variables from non-kernel functions
+; GCN-O2-NEXT:    AMDGPU Attributor
+; GCN-O2-NEXT:      FunctionPass Manager
+; GCN-O2-NEXT:        Cycle Info Analysis
 ; GCN-O2-NEXT:    FunctionPass Manager
 ; GCN-O2-NEXT:      Infer address spaces
 ; GCN-O2-NEXT:      Dominator Tree Construction
@@ -1074,6 +1083,9 @@
 ; GCN-O3-NEXT:        Function Alias Analysis Results
 ; GCN-O3-NEXT:    Lower OpenCL enqueued blocks
 ; GCN-O3-NEXT:    Lower uses of LDS variables from non-kernel functions
+; GCN-O3-NEXT:    AMDGPU Attributor
+; GCN-O3-NEXT:      FunctionPass Manager
+; GCN-O3-NEXT:        Cycle Info Analysis
 ; GCN-O3-NEXT:    FunctionPass Manager
 ; GCN-O3-NEXT:      Infer address spaces
 ; GCN-O3-NEXT:      Dominator Tree Construction
