@@ -9352,6 +9352,7 @@ SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
     }
   }
 
+  // avgflooru(lhs, rhs) -> or(lshr(add(lhs, rhs),1),shl(overflow, typesize-1))
   if (Opc == ISD::AVGFLOORU && VT.isScalarInteger() && !isTypeLegal(VT)) {
     SDValue UAddWithOverflow =
         DAG.getNode(ISD::UADDO, dl, DAG.getVTList(VT, MVT::i1), {RHS, LHS});
@@ -9363,7 +9364,6 @@ SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
     SDValue One = DAG.getShiftAmountConstant(1, VT, dl);
     SDValue LShrVal = DAG.getNode(ISD::SRL, dl, VT, Sum, One);
 
-    // Creating the select instruction
     SDValue ZeroExtOverflow = DAG.getNode(ISD::ANY_EXTEND, dl, VT, Overflow);
     SDValue OverflowShl =
         DAG.getNode(ISD::SHL, dl, VT, ZeroExtOverflow,
