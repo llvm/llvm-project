@@ -75,6 +75,7 @@ add_clang_library(clangAST
   Interp/InterpBuiltin.cpp
   Interp/Floating.cpp
   Interp/EvaluationResult.cpp
+  Interp/DynamicAllocator.cpp
   Interp/Interp.cpp
   Interp/InterpBlock.cpp
   Interp/InterpFrame.cpp

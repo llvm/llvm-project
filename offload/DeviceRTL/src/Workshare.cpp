@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Workshare.h"
 #include "Debug.h"
 #include "Interface.h"
 #include "Mapping.h"
@@ -444,28 +445,77 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
 // KMP interface implementation (dyn loops)
 ////////////////////////////////////////////////////////////////////////////////
 
-// TODO: This is a stopgap. We probably want to expand the dispatch API to take
-//       an DST pointer which can then be allocated properly without malloc.
-static DynamicScheduleTracker *THREAD_LOCAL(ThreadDSTPtr);
+// TODO: Expand the dispatch API to take a DST pointer which can then be
+//       allocated properly without malloc.
+// For now, each team will contain an LDS pointer (ThreadDST) to a global array
+// of references to the DST structs allocated (in global memory) for each thread
+// in the team. The global memory array is allocated during the init phase if it
+// was not allocated already and will be deallocated when the dispatch phase
+// ends:
+//
+//  __kmpc_dispatch_init
+//
+//  ** Dispatch loop **
+//
+//  __kmpc_dispatch_deinit
+//
+static DynamicScheduleTracker **SHARED(ThreadDST);
 
 // Create a new DST, link the current one, and define the new as current.
 static DynamicScheduleTracker *pushDST() {
+  int32_t ThreadIndex = mapping::getThreadIdInBlock();
+  // Each block will allocate an array of pointers to DST structs. The array is
+  // equal in length to the number of threads in that block.
+  if (!ThreadDST) {
+    // Allocate global memory array of pointers to DST structs:
+    if (mapping::isMainThreadInGenericMode() || ThreadIndex == 0)
+      ThreadDST = static_cast<DynamicScheduleTracker **>(
+          memory::allocGlobal(mapping::getNumberOfThreadsInBlock() *
+                                  sizeof(DynamicScheduleTracker *),
+                              "new ThreadDST array"));
+    synchronize::threads(atomic::seq_cst);
+
+    // Initialize the array pointers:
+    ThreadDST[ThreadIndex] = nullptr;
+  }
+
+  // Create a DST struct for the current thread:
   DynamicScheduleTracker *NewDST = static_cast<DynamicScheduleTracker *>(
       memory::allocGlobal(sizeof(DynamicScheduleTracker), "new DST"));
   *NewDST = DynamicScheduleTracker({0});
-  NewDST->NextDST = ThreadDSTPtr;
-  ThreadDSTPtr = NewDST;
-  return ThreadDSTPtr;
+
+  // Add the new DST struct to the array of DST structs:
+  NewDST->NextDST = ThreadDST[ThreadIndex];
+  ThreadDST[ThreadIndex] = NewDST;
+  return NewDST;
 }
 
 // Return the current DST.
-static DynamicScheduleTracker *peekDST() { return ThreadDSTPtr; }
+static DynamicScheduleTracker *peekDST() {
+  return ThreadDST[mapping::getThreadIdInBlock()];
+}
 
 // Pop the current DST and restore the last one.
 static void popDST() {
-  DynamicScheduleTracker *OldDST = ThreadDSTPtr->NextDST;
-  memory::freeGlobal(ThreadDSTPtr, "remove DST");
-  ThreadDSTPtr = OldDST;
+  int32_t ThreadIndex = mapping::getThreadIdInBlock();
+  DynamicScheduleTracker *CurrentDST = ThreadDST[ThreadIndex];
+  DynamicScheduleTracker *OldDST = CurrentDST->NextDST;
+  memory::freeGlobal(CurrentDST, "remove DST");
+  ThreadDST[ThreadIndex] = OldDST;
+
+  // Check if we need to deallocate the global array. Ensure all threads
+  // in the block have finished deallocating the individual DSTs.
+  synchronize::threads(atomic::seq_cst);
+  if (!ThreadDST[ThreadIndex] && !ThreadIndex) {
+    memory::freeGlobal(ThreadDST, "remove ThreadDST array");
+    ThreadDST = nullptr;
+  }
+  synchronize::threads(atomic::seq_cst);
+}
+
+void workshare::init(bool IsSPMD) {
+  if (mapping::isInitialThreadInLevel0(IsSPMD))
+    ThreadDST = nullptr;
 }
 
 extern "C" {
@@ -533,23 +583,22 @@ int __kmpc_dispatch_next_8u(IdentTy *loc, int32_t tid, int32_t *p_last,
 // fini
 void __kmpc_dispatch_fini_4(IdentTy *loc, int32_t tid) {
   omptarget_nvptx_LoopSupport<int32_t, int32_t>::dispatch_fini();
-  popDST();
 }
 
 void __kmpc_dispatch_fini_4u(IdentTy *loc, int32_t tid) {
   omptarget_nvptx_LoopSupport<uint32_t, int32_t>::dispatch_fini();
-  popDST();
 }
 
 void __kmpc_dispatch_fini_8(IdentTy *loc, int32_t tid) {
   omptarget_nvptx_LoopSupport<int64_t, int64_t>::dispatch_fini();
-  popDST();
 }
 
 void __kmpc_dispatch_fini_8u(IdentTy *loc, int32_t tid) {
   omptarget_nvptx_LoopSupport<uint64_t, int64_t>::dispatch_fini();
-  popDST();
 }
+
+// deinit
+void __kmpc_dispatch_deinit(IdentTy *loc, int32_t tid) { popDST(); }
 
 ////////////////////////////////////////////////////////////////////////////////
 // KMP interface implementation (static loops)

@@ -254,3 +254,18 @@ __VEC_REMQUO(double, 4, 2)
 __VEC_REMQUO(double, 8, 4)
 __VEC_REMQUO(double, 16, 8)
 #endif
+
+#ifdef cl_khr_fp16
+
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+_CLC_OVERLOAD _CLC_DEF half __clc_remquo(half x, half y, __private int *pquo) {
+    return (half)__clc_remquo((float)x, (float)y, pquo);
+}
+__VEC_REMQUO(half, 2,)
+__VEC_REMQUO(half, 3, 2)
+__VEC_REMQUO(half, 4, 2)
+__VEC_REMQUO(half, 8, 4)
+__VEC_REMQUO(half, 16, 8)
+
+#endif

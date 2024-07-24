@@ -6554,7 +6554,7 @@ bool DeclarationVisitor::PassesLocalityChecks(
           name.source, currScope(), DefinabilityFlags{}, symbol)}) {
     SayWithReason(name, symbol,
         "'%s' may not appear in a locality-spec because it is not definable"_err_en_US,
-        std::move(*whyNot));
+        std::move(whyNot->set_severity(parser::Severity::Because)));
     return false;
   }
   return PassesSharedLocalityChecks(name, symbol);

@@ -2376,7 +2376,7 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
 EmbedExpr::EmbedExpr(const ASTContext &Ctx, SourceLocation Loc,
                      EmbedDataStorage *Data, unsigned Begin,
                      unsigned NumOfElements)
-    : Expr(EmbedExprClass, Ctx.UnsignedCharTy, VK_PRValue, OK_Ordinary),
+    : Expr(EmbedExprClass, Ctx.IntTy, VK_PRValue, OK_Ordinary),
       EmbedKeywordLoc(Loc), Ctx(&Ctx), Data(Data), Begin(Begin),
       NumOfElements(NumOfElements) {
   setDependence(ExprDependence::None);
