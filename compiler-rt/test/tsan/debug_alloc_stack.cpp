@@ -6,10 +6,11 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 
 #ifndef __APPLE__
+#define _GNU_SOURCE
 #include <sys/types.h>
+#include <unistd.h>
 #endif
 
 extern "C" int __tsan_get_alloc_stack(void *addr, void **trace, size_t size,
