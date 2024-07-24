@@ -5,8 +5,6 @@
 ;
 ; RUN: opt < %s -passes=msan -S -disable-verify | FileCheck %s
 ;
-; UNSUPPORTED: {{.*}}
-;
 ; Generated with:
 ;     grep call clang/test/CodeGen/aarch64-neon-intrinsics.c \
 ;         |  grep 'neon[.]st'                                \
