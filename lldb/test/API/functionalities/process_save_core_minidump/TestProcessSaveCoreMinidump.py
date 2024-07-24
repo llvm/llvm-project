@@ -200,13 +200,12 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             if os.path.isfile(core_sb_full):
                 os.unlink(core_sb_full)
 
-
     @skipUnlessArch("x86_64")
     @skipUnlessPlatform(["linux"])
     def test_save_linux_mini_dump_thread_options(self):
         """Test that we can save a Linux mini dump
-           with a subset of threads"""
-        
+        with a subset of threads"""
+
         self.build()
         exe = self.getBuildArtifact("a.out")
         thread_subset_dmp = self.getBuildArtifact("core.thread.subset.dmp")
@@ -231,12 +230,11 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             core_process = core_target.LoadCore(thread_subset_dmp)
 
             self.assertTrue(core_process, PROCESS_IS_VALID)
-            self.assertEqual(core_process.GetNumThreads(), 1
-)
+            self.assertEqual(core_process.GetNumThreads(), 1)
             saved_thread = core_process.GetThreadAtIndex(0)
             expected_thread = process.GetThreadAtIndex(0)
             self.assertEqual(expected_thread.GetThreadID(), saved_thread.GetThreadID())
-            expected_sp = expected_thread.GetFrameAtIndex(0).GetSP()    
+            expected_sp = expected_thread.GetFrameAtIndex(0).GetSP()
             saved_sp = saved_thread.GetFrameAtIndex(0).GetSP()
             self.assertEqual(expected_sp, saved_sp)
             expected_region = lldb.SBMemoryRegionInfo()
@@ -245,8 +243,12 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertTrue(error.Success(), error.GetCString())
             error = process.GetMemoryRegionInfo(expected_sp, expected_region)
             self.assertTrue(error.Success(), error.GetCString())
-            self.assertEqual(expected_region.GetRegionBase(), saved_region.GetRegionBase())
-            self.assertEqual(expected_region.GetRegionEnd(), saved_region.GetRegionEnd())
+            self.assertEqual(
+                expected_region.GetRegionBase(), saved_region.GetRegionBase()
+            )
+            self.assertEqual(
+                expected_region.GetRegionEnd(), saved_region.GetRegionEnd()
+            )
 
         finally:
             self.assertTrue(self.dbg.DeleteTarget(target))
