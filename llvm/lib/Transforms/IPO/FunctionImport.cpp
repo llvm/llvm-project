@@ -176,7 +176,14 @@ static cl::opt<std::string> WorkloadDefinitions(
 
 static cl::opt<bool> ImportAssumeUniqueLocal(
     "import-assume-unique-local", cl::init(false),
-    cl::description("assume local-linkage global variables have unique names"),
+    cl::desc(
+        "By default, a local-linkage global variable won't be imported in the "
+        "edge mod1:func -> mod2:func_bar -> mod2:local-var since compiler "
+        "cannot assume mod2 is compiled with full path or local-var has a "
+        "unique GUID. "
+        "Set this option to true will help cross-module import of such "
+        "variables. But it is only safe if the compiler user specify the full "
+        "module path."),
     cl::Hidden);
 
 namespace llvm {

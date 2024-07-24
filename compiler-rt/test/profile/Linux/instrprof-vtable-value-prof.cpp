@@ -1,3 +1,4 @@
+
 // REQUIRES: lld, lld-available
 
 // Building the instrumented binary will fail because lld doesn't support
@@ -5,7 +6,7 @@
 // ld.lld: error: /lib/../lib64/Scrt1.o: ABI version 1 is not supported
 // UNSUPPORTED: ppc && host-byteorder-big-endian
 
-// RUN: rm -rf %t && mkdir %t && cd %t
+// RUN: rm -rf %t && split-file %s %t && cd %t
 
 // RUN: %clangxx_pgogen -fuse-ld=lld -O2 -fprofile-generate=. -mllvm -enable-vtable-value-profiling %s -o test
 // RUN: env LLVM_PROFILE_FILE=test.profraw ./test
@@ -141,18 +142,19 @@
 // RUN:    -g -flto=thin -fwhole-program-vtables -fno-split-lto-unit -O2 \
 // RUN:    -mllvm -enable-vtable-value-profiling -Wl,-mllvm,-enable-vtable-value-profiling \
 // RUN:    -mllvm -enable-vtable-profile-use \
+// RUN:    -Wl,-plugin-opt,-import-assume-unique-local \
 // RUN:    -Wl,-mllvm,-enable-vtable-profile-use -Rpass=pgo-icall-prom \
 // RUN:    -Wl,-mllvm,-print-after=pgo-icall-prom \
 // RUN:    -Wl,-mllvm,-filter-print-funcs=main %s 2>&1 \
 // RUN:    | FileCheck %s --check-prefixes=REMARK,IR --implicit-check-not="!VP"
 
 // For the indirect call site `ptr->func`
-// REMARK: instrprof-vtable-value-prof.cpp:226:19: Promote indirect call to _ZN12_GLOBAL__N_18Derived24funcEii with count 150 out of 200, sink 1 instruction(s) and compare 1 vtable(s): {_ZTVN12_GLOBAL__N_18Derived2E}
-// REMARK: instrprof-vtable-value-prof.cpp:226:19: Promote indirect call to _ZN8Derived14funcEii with count 50 out of 50, sink 1 instruction(s) and compare 1 vtable(s): {_ZTV8Derived1}
+// REMARK: instrprof-vtable-value-prof.cpp:240:19: Promote indirect call to _ZN12_GLOBAL__N_18Derived24funcEii with count 150 out of 200, sink 1 instruction(s) and compare 1 vtable(s): {_ZTVN12_GLOBAL__N_18Derived2E}
+// REMARK: instrprof-vtable-value-prof.cpp:240:19: Promote indirect call to _ZN8Derived14funcEii with count 50 out of 50, sink 1 instruction(s) and compare 1 vtable(s): {_ZTV8Derived1}
 //
 // For the indirect call site `delete ptr`
-// REMARK: instrprof-vtable-value-prof.cpp:228:5: Promote indirect call to _ZN12_GLOBAL__N_18Derived2D0Ev with count 750 out of 1000, sink 2 instruction(s) and compare 1 vtable(s): {_ZTVN12_GLOBAL__N_18Derived2E}
-// REMARK: instrprof-vtable-value-prof.cpp:228:5: Promote indirect call to _ZN8Derived1D0Ev with count 250 out of 250, sink 2 instruction(s) and compare 1 vtable(s): {_ZTV8Derived1}
+// REMARK: instrprof-vtable-value-prof.cpp:242:5: Promote indirect call to _ZN12_GLOBAL__N_18Derived2D0Ev with count 750 out of 1000, sink 2 instruction(s) and compare 1 vtable(s): {_ZTVN12_GLOBAL__N_18Derived2E}
+// REMARK: instrprof-vtable-value-prof.cpp:242:5: Promote indirect call to _ZN8Derived1D0Ev with count 250 out of 250, sink 2 instruction(s) and compare 1 vtable(s): {_ZTV8Derived1}
 
 // The IR matchers for indirect callsite `ptr->func`.
 // IR-LABEL: @main
@@ -185,6 +187,7 @@
 // IR: [[MERGE0]]:
 // IR:    [[RES2:%.*]] = phi i32 [ [[RES1]], %[[MERGE1]] ], [ [[RESBB1]], %[[BB1]] ]
 
+//--- lib.h
 #include <stdio.h>
 #include <stdlib.h>
 class Base {
@@ -193,21 +196,31 @@ public:
 
   virtual ~Base() {};
 };
+
 class Derived1 : public Base {
 public:
-  int func(int a, int b) override { return a * b; }
+  int func(int a, int b) override;
 
   ~Derived1() {}
 };
 namespace {
 class Derived2 : public Base {
 public:
-  int func(int a, int b) override { return a * (a - b); }
+  int func(int a, int b) override;
 
   ~Derived2() {}
 };
 } // namespace
-__attribute__((noinline)) Base *createType(int a) {
+
+__attribute__((noinline)) Base *createType(int a);
+
+//-- lib.cpp
+
+int Derived1::func(int a, int b) { return a * b; }
+
+int Derived2::func(int a, int b) { return a * (a - b); }
+
+Base *createType(int a) {
   Base *base = nullptr;
   if (a % 4 == 0)
     base = new Derived1();
@@ -216,6 +229,7 @@ __attribute__((noinline)) Base *createType(int a) {
   return base;
 }
 
+//--- main.cpp
 int main(int argc, char **argv) {
   int sum = 0;
   for (int i = 0; i < 1000; i++) {
