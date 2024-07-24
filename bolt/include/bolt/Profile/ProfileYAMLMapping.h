@@ -93,11 +93,36 @@ template <> struct MappingTraits<bolt::SuccessorInfo> {
   static const bool flow = true;
 };
 
+namespace bolt {
+struct PseudoProbeInfo {
+  llvm::yaml::Hex64 GUID;
+  uint64_t Index;
+  uint8_t Type;
+
+  bool operator==(const PseudoProbeInfo &Other) const {
+    return GUID == Other.GUID && Index == Other.Index;
+  }
+  bool operator!=(const PseudoProbeInfo &Other) const {
+    return !(*this == Other);
+  }
+};
+} // end namespace bolt
+
+template <> struct MappingTraits<bolt::PseudoProbeInfo> {
+  static void mapping(IO &YamlIO, bolt::PseudoProbeInfo &PI) {
+    YamlIO.mapRequired("guid", PI.GUID);
+    YamlIO.mapRequired("id", PI.Index);
+    YamlIO.mapRequired("type", PI.Type);
+  }
+
+  static const bool flow = true;
+};
 } // end namespace yaml
 } // end namespace llvm
 
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(llvm::yaml::bolt::CallSiteInfo)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(llvm::yaml::bolt::SuccessorInfo)
+LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(llvm::yaml::bolt::PseudoProbeInfo)
 
 namespace llvm {
 namespace yaml {
@@ -111,6 +136,7 @@ struct BinaryBasicBlockProfile {
   uint64_t EventCount{0};
   std::vector<CallSiteInfo> CallSites;
   std::vector<SuccessorInfo> Successors;
+  std::vector<PseudoProbeInfo> PseudoProbes;
 
   bool operator==(const BinaryBasicBlockProfile &Other) const {
     return Index == Other.Index;
@@ -132,6 +158,8 @@ template <> struct MappingTraits<bolt::BinaryBasicBlockProfile> {
                        std::vector<bolt::CallSiteInfo>());
     YamlIO.mapOptional("succ", BBP.Successors,
                        std::vector<bolt::SuccessorInfo>());
+    YamlIO.mapOptional("pseudo_probes", BBP.PseudoProbes,
+                       std::vector<bolt::PseudoProbeInfo>());
   }
 };
 
