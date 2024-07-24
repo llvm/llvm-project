@@ -798,7 +798,7 @@ public:
   /// Return the cost of this recipe, taking into account if the cost
   /// computation should be skipped and the ForceTargetInstructionCost flag.
   /// Also takes care of printing the cost for debugging.
-  virtual InstructionCost cost(ElementCount VF, VPCostContext &Ctx);
+  InstructionCost cost(ElementCount VF, VPCostContext &Ctx);
 
   /// Insert an unlinked recipe into a basic block immediately before
   /// the specified recipe.
@@ -862,8 +862,9 @@ public:
   DebugLoc getDebugLoc() const { return DL; }
 
 protected:
-  /// Compute the cost of this recipe using the legacy cost model and the
-  /// underlying instructions.
+  /// Compute the cost of this recipe either using a recipe's specialized
+  /// implementation or using the legacy cost model and the underlying
+  /// instructions.
   virtual InstructionCost computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const;
 };

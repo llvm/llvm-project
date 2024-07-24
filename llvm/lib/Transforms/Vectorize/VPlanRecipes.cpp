@@ -1173,17 +1173,17 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor: {
-    VPValue *Op2 = getOperand(1);
+    VPValue *RHS = getOperand(1);
     // Certain instructions can be cheaper to vectorize if they have a constant
     // second vector operand. One example of this are shifts on x86.
-    TargetTransformInfo::OperandValueInfo Op2Info = {
+    TargetTransformInfo::OperandValueInfo RHSInfo = {
         TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None};
-    if (Op2->isLiveIn())
-      Op2Info = Ctx.TTI.getOperandInfo(Op2->getLiveInIRValue());
+    if (RHS->isLiveIn())
+      RHSInfo = Ctx.TTI.getOperandInfo(RHS->getLiveInIRValue());
 
-    if (Op2Info.Kind == TargetTransformInfo::OK_AnyValue &&
+    if (RHSInfo.Kind == TargetTransformInfo::OK_AnyValue &&
         getOperand(1)->isDefinedOutsideVectorRegions())
-      Op2Info.Kind = TargetTransformInfo::OK_UniformValue;
+      RHSInfo.Kind = TargetTransformInfo::OK_UniformValue;
     Type *VectorTy =
         ToVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
     Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
@@ -1194,7 +1194,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
     return Ctx.TTI.getArithmeticInstrCost(
         Opcode, VectorTy, CostKind,
         {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
-        Op2Info, Operands, CtxI, &Ctx.TLI);
+        RHSInfo, Operands, CtxI, &Ctx.TLI);
   }
   case Instruction::Freeze: {
     // This opcode is unknown. Assume that it is the same as 'mul'.
