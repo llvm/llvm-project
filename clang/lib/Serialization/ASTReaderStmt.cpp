@@ -790,16 +790,17 @@ readConstraintSatisfaction(ASTRecordReader &Record) {
   ConstraintSatisfaction Satisfaction;
   Satisfaction.IsSatisfied = Record.readInt();
   Satisfaction.ContainsErrors = Record.readInt();
+  const ASTContext &C = Record.getContext();
   if (!Satisfaction.IsSatisfied) {
     unsigned NumDetailRecords = Record.readInt();
     for (unsigned i = 0; i != NumDetailRecords; ++i) {
       if (/* IsDiagnostic */Record.readInt()) {
         SourceLocation DiagLocation = Record.readSourceLocation();
-        std::string DiagMessage = Record.readString();
+        StringRef DiagMessage = C.backupStr(Record.readString());
+
         Satisfaction.Details.emplace_back(
-            new (Record.getContext())
-                ConstraintSatisfaction::SubstitutionDiagnostic(DiagLocation,
-                                                               DiagMessage));
+            new (C) ConstraintSatisfaction::SubstitutionDiagnostic(
+                DiagLocation, DiagMessage));
       } else
         Satisfaction.Details.emplace_back(Record.readExpr());
     }
@@ -820,9 +821,11 @@ void ASTStmtReader::VisitConceptSpecializationExpr(
 
 static concepts::Requirement::SubstitutionDiagnostic *
 readSubstitutionDiagnostic(ASTRecordReader &Record) {
-  std::string SubstitutedEntity = Record.readString();
+  const ASTContext &C = Record.getContext();
+  StringRef SubstitutedEntity = C.backupStr(Record.readString());
   SourceLocation DiagLoc = Record.readSourceLocation();
-  std::string DiagMessage = Record.readString();
+  StringRef DiagMessage = C.backupStr(Record.readString());
+
   return new (Record.getContext())
       concepts::Requirement::SubstitutionDiagnostic{SubstitutedEntity, DiagLoc,
                                                     DiagMessage};
@@ -907,26 +910,21 @@ void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
                   std::move(*Req));
       } break;
       case concepts::Requirement::RK_Nested: {
+        ASTContext &C = Record.getContext();
         bool HasInvalidConstraint = Record.readInt();
         if (HasInvalidConstraint) {
-          std::string InvalidConstraint = Record.readString();
-          char *InvalidConstraintBuf =
-              new (Record.getContext()) char[InvalidConstraint.size()];
-          std::copy(InvalidConstraint.begin(), InvalidConstraint.end(),
-                    InvalidConstraintBuf);
-          R = new (Record.getContext()) concepts::NestedRequirement(
-              Record.getContext(),
-              StringRef(InvalidConstraintBuf, InvalidConstraint.size()),
+          StringRef InvalidConstraint = C.backupStr(Record.readString());
+          R = new (C) concepts::NestedRequirement(
+              Record.getContext(), InvalidConstraint,
               readConstraintSatisfaction(Record));
           break;
         }
         Expr *E = Record.readExpr();
         if (E->isInstantiationDependent())
-          R = new (Record.getContext()) concepts::NestedRequirement(E);
+          R = new (C) concepts::NestedRequirement(E);
         else
-          R = new (Record.getContext())
-              concepts::NestedRequirement(Record.getContext(), E,
-                                          readConstraintSatisfaction(Record));
+          R = new (C) concepts::NestedRequirement(
+              C, E, readConstraintSatisfaction(Record));
       } break;
     }
     if (!R)
@@ -1992,43 +1990,42 @@ void ASTStmtReader::VisitCXXDependentScopeMemberExpr(
     CXXDependentScopeMemberExpr *E) {
   VisitExpr(E);
 
-  CurrentUnpackingBits.emplace(Record.readInt());
-  bool HasQualifier = CurrentUnpackingBits->getNextBit();
-  bool HasTemplateInfo = CurrentUnpackingBits->getNextBit();
-  unsigned NumUnqualifiedLookups = Record.readInt();
   unsigned NumTemplateArgs = Record.readInt();
-  E->CXXDependentScopeMemberExprBits.HasQualifier = HasQualifier;
-  E->CXXDependentScopeMemberExprBits.NumUnqualifiedLookups =
-      NumUnqualifiedLookups;
-  E->CXXDependentScopeMemberExprBits.HasTemplateKWAndArgsInfo = HasTemplateInfo;
+  CurrentUnpackingBits.emplace(Record.readInt());
+  bool HasTemplateKWAndArgsInfo = CurrentUnpackingBits->getNextBit();
+  bool HasFirstQualifierFoundInScope = CurrentUnpackingBits->getNextBit();
 
-  E->BaseType = Record.readType();
+  assert((HasTemplateKWAndArgsInfo == E->hasTemplateKWAndArgsInfo()) &&
+         "Wrong HasTemplateKWAndArgsInfo!");
+  assert(
+      (HasFirstQualifierFoundInScope == E->hasFirstQualifierFoundInScope()) &&
+      "Wrong HasFirstQualifierFoundInScope!");
+
+  if (HasTemplateKWAndArgsInfo)
+    ReadTemplateKWAndArgsInfo(
+        *E->getTrailingObjects<ASTTemplateKWAndArgsInfo>(),
+        E->getTrailingObjects<TemplateArgumentLoc>(), NumTemplateArgs);
+
+  assert((NumTemplateArgs == E->getNumTemplateArgs()) &&
+         "Wrong NumTemplateArgs!");
+
   E->CXXDependentScopeMemberExprBits.IsArrow =
       CurrentUnpackingBits->getNextBit();
 
+  E->BaseType = Record.readType();
+  E->QualifierLoc = Record.readNestedNameSpecifierLoc();
+  // not ImplicitAccess
   if (CurrentUnpackingBits->getNextBit())
     E->Base = Record.readSubExpr();
   else
     E->Base = nullptr;
 
-  E->OperatorLoc = Record.readSourceLocation();
+  E->CXXDependentScopeMemberExprBits.OperatorLoc = readSourceLocation();
+
+  if (HasFirstQualifierFoundInScope)
+    *E->getTrailingObjects<NamedDecl *>() = readDeclAs<NamedDecl>();
+
   E->MemberNameInfo = Record.readDeclarationNameInfo();
-
-  if (HasQualifier)
-    new (E->getTrailingObjects<NestedNameSpecifierLoc>())
-        NestedNameSpecifierLoc(Record.readNestedNameSpecifierLoc());
-
-  for (unsigned I = 0; I != NumUnqualifiedLookups; ++I) {
-    auto *FoundD = Record.readDeclAs<NamedDecl>();
-    auto AS = (AccessSpecifier)Record.readInt();
-    E->getTrailingObjects<DeclAccessPair>()[I] =
-        DeclAccessPair::make(FoundD, AS);
-  }
-
-  if (HasTemplateInfo)
-    ReadTemplateKWAndArgsInfo(
-        *E->getTrailingObjects<ASTTemplateKWAndArgsInfo>(),
-        E->getTrailingObjects<TemplateArgumentLoc>(), NumTemplateArgs);
 }
 
 void
@@ -2393,7 +2390,6 @@ void ASTStmtReader::VisitOMPExecutableDirective(OMPExecutableDirective *E) {
   Record.readOMPChildren(E->Data);
   E->setLocStart(readSourceLocation());
   E->setLocEnd(readSourceLocation());
-  E->setMappedDirective(Record.readEnum<OpenMPDirectiveKind>());
 }
 
 void ASTStmtReader::VisitOMPLoopBasedDirective(OMPLoopBasedDirective *D) {
@@ -2435,6 +2431,14 @@ void ASTStmtReader::VisitOMPTileDirective(OMPTileDirective *D) {
 }
 
 void ASTStmtReader::VisitOMPUnrollDirective(OMPUnrollDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+}
+
+void ASTStmtReader::VisitOMPReverseDirective(OMPReverseDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+}
+
+void ASTStmtReader::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
   VisitOMPLoopTransformationDirective(D);
 }
 
@@ -3457,6 +3461,22 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
     }
 
+    case STMT_OMP_REVERSE_DIRECTIVE: {
+      assert(Record[ASTStmtReader::NumStmtFields] == 1 &&
+             "Reverse directive accepts only a single loop");
+      assert(Record[ASTStmtReader::NumStmtFields + 1] == 0 &&
+             "Reverse directive has no clauses");
+      S = OMPReverseDirective::CreateEmpty(Context);
+      break;
+    }
+
+    case STMT_OMP_INTERCHANGE_DIRECTIVE: {
+      unsigned NumLoops = Record[ASTStmtReader::NumStmtFields];
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPInterchangeDirective::CreateEmpty(Context, NumClauses, NumLoops);
+      break;
+    }
+
     case STMT_OMP_FOR_DIRECTIVE: {
       unsigned CollapsedNum = Record[ASTStmtReader::NumStmtFields];
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
@@ -4075,16 +4095,16 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_CXX_DEPENDENT_SCOPE_MEMBER: {
+      unsigned NumTemplateArgs = Record[ASTStmtReader::NumExprFields];
       BitsUnpacker DependentScopeMemberBits(
-          Record[ASTStmtReader::NumExprFields]);
-      bool HasQualifier = DependentScopeMemberBits.getNextBit();
-      bool HasTemplateInfo = DependentScopeMemberBits.getNextBit();
-      unsigned NumUnqualifiedLookups = Record[ASTStmtReader::NumExprFields + 1];
-      unsigned NumTemplateArgs = Record[ASTStmtReader::NumExprFields + 2];
+          Record[ASTStmtReader::NumExprFields + 1]);
+      bool HasTemplateKWAndArgsInfo = DependentScopeMemberBits.getNextBit();
 
+      bool HasFirstQualifierFoundInScope =
+          DependentScopeMemberBits.getNextBit();
       S = CXXDependentScopeMemberExpr::CreateEmpty(
-          Context, HasQualifier, NumUnqualifiedLookups, HasTemplateInfo,
-          NumTemplateArgs);
+          Context, HasTemplateKWAndArgsInfo, NumTemplateArgs,
+          HasFirstQualifierFoundInScope);
       break;
     }
 

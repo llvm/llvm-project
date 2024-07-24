@@ -400,6 +400,14 @@ number of cross compilers, or may only support a native target.
   option is only supported on AArch64 and RISC-V. On RISC-V, this option also
   prints out the ISA string of enabled extensions.
 
+.. option:: --print-supported-extensions
+
+  Prints the list of all extensions that are supported for every CPU target
+  for an architecture (specified through ``--target=<architecture>`` or
+  :option:`-arch` ``<architecture>``). If no target is specified, the system
+  default target will be used. Currently, this option is only supported on
+  AArch64 and RISC-V.
+
 Code Generation Options
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -421,7 +429,8 @@ Code Generation Options
 
     :option:`-Ofast` Enables all the optimizations from :option:`-O3` along
     with other aggressive optimizations that may violate strict compliance with
-    language standards.
+    language standards. This is deprecated in favor of :option:`-O3`
+    in combination with :option:`-ffast-math`.
 
     :option:`-Os` Like :option:`-O2` with extra optimizations to reduce code
     size.

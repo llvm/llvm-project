@@ -222,6 +222,12 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OMPUnrollDirectiveClass:
     EmitOMPUnrollDirective(cast<OMPUnrollDirective>(*S));
     break;
+  case Stmt::OMPReverseDirectiveClass:
+    EmitOMPReverseDirective(cast<OMPReverseDirective>(*S));
+    break;
+  case Stmt::OMPInterchangeDirectiveClass:
+    EmitOMPInterchangeDirective(cast<OMPInterchangeDirective>(*S));
+    break;
   case Stmt::OMPForDirectiveClass:
     EmitOMPForDirective(cast<OMPForDirective>(*S));
     break;
@@ -1537,9 +1543,15 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
     Builder.CreateStore(Result.getScalarVal(), ReturnValue);
   } else {
     switch (getEvaluationKind(RV->getType())) {
-    case TEK_Scalar:
-      Builder.CreateStore(EmitScalarExpr(RV), ReturnValue);
+    case TEK_Scalar: {
+      llvm::Value *Ret = EmitScalarExpr(RV);
+      if (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::Indirect)
+        EmitStoreOfScalar(Ret, MakeAddrLValue(ReturnValue, RV->getType()),
+                          /*isInit*/ true);
+      else
+        Builder.CreateStore(Ret, ReturnValue);
       break;
+    }
     case TEK_Complex:
       EmitComplexExprIntoLValue(RV, MakeAddrLValue(ReturnValue, RV->getType()),
                                 /*isInit*/ true);

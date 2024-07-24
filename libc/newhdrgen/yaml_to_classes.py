@@ -8,32 +8,32 @@
 #
 # ==-------------------------------------------------------------------------==#
 
-
 import yaml
 import argparse
-
 from pathlib import Path
 from header import HeaderFile
+from gpu_headers import GpuHeaderFile as GpuHeader
 from class_implementation.classes.macro import Macro
 from class_implementation.classes.type import Type
 from class_implementation.classes.function import Function
-from class_implementation.classes.include import Include
 from class_implementation.classes.enumeration import Enumeration
 from class_implementation.classes.object import Object
 
 
-def yaml_to_classes(yaml_data):
+def yaml_to_classes(yaml_data, header_class, entry_points=None):
     """
     Convert YAML data to header classes.
 
     Args:
         yaml_data: The YAML data containing header specifications.
+        header_class: The class to use for creating the header.
+        entry_points: A list of specific function names to include in the header.
 
     Returns:
         HeaderFile: An instance of HeaderFile populated with the data.
     """
     header_name = yaml_data.get("header")
-    header = HeaderFile(header_name)
+    header = header_class(header_name)
 
     for macro_data in yaml_data.get("macros", []):
         header.add_macro(Macro(macro_data["macro_name"], macro_data["macro_value"]))
@@ -49,12 +49,15 @@ def yaml_to_classes(yaml_data):
         )
 
     functions = yaml_data.get("functions", [])
+    if entry_points:
+        entry_points_set = set(entry_points)
+        functions = [f for f in functions if f["name"] in entry_points_set]
     sorted_functions = sorted(functions, key=lambda x: x["name"])
     guards = []
     guarded_function_dict = {}
     for function_data in sorted_functions:
         guard = function_data.get("guard", None)
-        if guard == None:
+        if guard is None:
             arguments = [arg["type"] for arg in function_data["arguments"]]
             attributes = function_data.get("attributes", None)
             standards = function_data.get("standards", None)
@@ -99,25 +102,24 @@ def yaml_to_classes(yaml_data):
             Object(object_data["object_name"], object_data["object_type"])
         )
 
-    for include_data in yaml_data.get("includes", []):
-        header.add_include(Include(include_data))
-
     return header
 
 
-def load_yaml_file(yaml_file):
+def load_yaml_file(yaml_file, header_class, entry_points):
     """
     Load YAML file and convert it to header classes.
 
     Args:
-        yaml_file: The path to the YAML file.
+        yaml_file: Path to the YAML file.
+        header_class: The class to use for creating the header (HeaderFile or GpuHeader).
+        entry_points: A list of specific function names to include in the header.
 
     Returns:
-        HeaderFile: An instance of HeaderFile populated with the data from the YAML file.
+        HeaderFile: An instance of HeaderFile populated with the data.
     """
     with open(yaml_file, "r") as f:
-        yaml_data = yaml.safe_load(f)
-    return yaml_to_classes(yaml_data)
+        yaml_data = yaml.load(f, Loader=yaml.FullLoader)
+    return yaml_to_classes(yaml_data, header_class, entry_points)
 
 
 def fill_public_api(header_str, h_def_content):
@@ -171,8 +173,7 @@ def add_function_to_yaml(yaml_file, function_details):
     new_function = parse_function_details(function_details)
 
     with open(yaml_file, "r") as f:
-        yaml_data = yaml.safe_load(f)
-
+        yaml_data = yaml.load(f, Loader=yaml.FullLoader)
     if "functions" not in yaml_data:
         yaml_data["functions"] = []
 
@@ -207,7 +208,14 @@ def add_function_to_yaml(yaml_file, function_details):
     print(f"Added function {new_function.name} to {yaml_file}")
 
 
-def main(yaml_file, h_def_file, output_dir, add_function=None):
+def main(
+    yaml_file,
+    output_dir=None,
+    h_def_file=None,
+    add_function=None,
+    entry_points=None,
+    export_decls=False,
+):
     """
     Main function to generate header files from YAML and .h.def templates.
 
@@ -216,40 +224,49 @@ def main(yaml_file, h_def_file, output_dir, add_function=None):
         h_def_file: Path to the .h.def template file.
         output_dir: Directory to output the generated header file.
         add_function: Details of the function to be added to the YAML file (if any).
+        entry_points: A list of specific function names to include in the header.
+        export_decls: Flag to use GpuHeader for exporting declarations.
     """
-
     if add_function:
         add_function_to_yaml(yaml_file, add_function)
 
-    header = load_yaml_file(yaml_file)
-
-    with open(h_def_file, "r") as f:
-        h_def_content = f.read()
+    header_class = GpuHeader if export_decls else HeaderFile
+    header = load_yaml_file(yaml_file, header_class, entry_points)
 
     header_str = str(header)
-    final_header_content = fill_public_api(header_str, h_def_content)
 
-    output_file_name = Path(h_def_file).stem
-    output_file_path = Path(output_dir) / output_file_name
+    if output_dir:
+        output_file_path = Path(output_dir)
+        if output_file_path.is_dir():
+            output_file_path /= f"{Path(yaml_file).stem}.h"
+    else:
+        output_file_path = Path(f"{Path(yaml_file).stem}.h")
 
-    with open(output_file_path, "w") as f:
-        f.write(final_header_content)
+    if not export_decls and h_def_file:
+        with open(h_def_file, "r") as f:
+            h_def_content = f.read()
+        final_header_content = fill_public_api(header_str, h_def_content)
+        with open(output_file_path, "w") as f:
+            f.write(final_header_content)
+    else:
+        with open(output_file_path, "w") as f:
+            f.write(header_str)
 
     print(f"Generated header file: {output_file_path}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Generate header files from YAML and .h.def templates"
-    )
+    parser = argparse.ArgumentParser(description="Generate header files from YAML")
     parser.add_argument(
         "yaml_file", help="Path to the YAML file containing header specification"
     )
-    parser.add_argument("h_def_file", help="Path to the .h.def template file")
     parser.add_argument(
         "--output_dir",
-        default=".",
         help="Directory to output the generated header file",
+    )
+    parser.add_argument(
+        "--h_def_file",
+        help="Path to the .h.def template file (required if not using --export_decls)",
     )
     parser.add_argument(
         "--add_function",
@@ -264,6 +281,21 @@ if __name__ == "__main__":
         ),
         help="Add a function to the YAML file",
     )
+    parser.add_argument(
+        "--e", action="append", help="Entry point to include", dest="entry_points"
+    )
+    parser.add_argument(
+        "--export-decls",
+        action="store_true",
+        help="Flag to use GpuHeader for exporting declarations",
+    )
     args = parser.parse_args()
 
-    main(args.yaml_file, args.h_def_file, args.output_dir, args.add_function)
+    main(
+        args.yaml_file,
+        args.output_dir,
+        args.h_def_file,
+        args.add_function,
+        args.entry_points,
+        args.export_decls,
+    )

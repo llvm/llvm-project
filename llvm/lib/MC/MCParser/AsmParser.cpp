@@ -658,7 +658,7 @@ private:
 
   bool parseDirectiveComm(bool IsLocal); // ".comm" and ".lcomm"
 
-  bool parseDirectiveAbort(); // ".abort"
+  bool parseDirectiveAbort(SMLoc DirectiveLoc); // ".abort"
   bool parseDirectiveInclude(); // ".include"
   bool parseDirectiveIncbin(); // ".incbin"
 
@@ -2120,7 +2120,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     case DK_LCOMM:
       return parseDirectiveComm(/*IsLocal=*/true);
     case DK_ABORT:
-      return parseDirectiveAbort();
+      return parseDirectiveAbort(IDLoc);
     case DK_INCLUDE:
       return parseDirectiveInclude();
     case DK_INCBIN:
@@ -3033,6 +3033,11 @@ bool AsmParser::parseEscapedString(std::string &Data) {
   StringRef Str = getTok().getStringContents();
   for (unsigned i = 0, e = Str.size(); i != e; ++i) {
     if (Str[i] != '\\') {
+      if (Str[i] == '\n') {
+        SMLoc NewlineLoc = SMLoc::getFromPointer(Str.data() + i);
+        if (Warning(NewlineLoc, "unterminated string; newline inserted"))
+          return true;
+      }
       Data += Str[i];
       continue;
     }
@@ -5090,21 +5095,17 @@ bool AsmParser::parseDirectiveComm(bool IsLocal) {
 
 /// parseDirectiveAbort
 ///  ::= .abort [... message ...]
-bool AsmParser::parseDirectiveAbort() {
-  // FIXME: Use loc from directive.
-  SMLoc Loc = getLexer().getLoc();
-
+bool AsmParser::parseDirectiveAbort(SMLoc DirectiveLoc) {
   StringRef Str = parseStringToEndOfStatement();
   if (parseEOL())
     return true;
 
   if (Str.empty())
-    return Error(Loc, ".abort detected. Assembly stopping.");
-  else
-    return Error(Loc, ".abort '" + Str + "' detected. Assembly stopping.");
-  // FIXME: Actually abort assembly here.
+    return Error(DirectiveLoc, ".abort detected. Assembly stopping");
 
-  return false;
+  // FIXME: Actually abort assembly here.
+  return Error(DirectiveLoc,
+               ".abort '" + Str + "' detected. Assembly stopping");
 }
 
 /// parseDirectiveInclude

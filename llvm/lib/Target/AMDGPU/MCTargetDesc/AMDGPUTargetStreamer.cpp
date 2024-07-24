@@ -605,9 +605,9 @@ MCELFStreamer &AMDGPUTargetELFStreamer::getStreamer() {
 // We use it for emitting the accumulated PAL metadata as a .note record.
 // The PAL metadata is reset after it is emitted.
 void AMDGPUTargetELFStreamer::finish() {
-  MCAssembler &MCA = getStreamer().getAssembler();
-  MCA.setELFHeaderEFlags(getEFlags());
-  MCA.getWriter().setOverrideABIVersion(
+  ELFObjectWriter &W = getStreamer().getWriter();
+  W.setELFHeaderEFlags(getEFlags());
+  W.setOverrideABIVersion(
       getELFABIVersion(STI.getTargetTriple(), CodeObjectVersion));
 
   std::string Blob;
@@ -828,10 +828,8 @@ void AMDGPUTargetELFStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
   MCSymbolELF *SymbolELF = cast<MCSymbolELF>(Symbol);
   SymbolELF->setType(ELF::STT_OBJECT);
 
-  if (!SymbolELF->isBindingSet()) {
+  if (!SymbolELF->isBindingSet())
     SymbolELF->setBinding(ELF::STB_GLOBAL);
-    SymbolELF->setExternal(true);
-  }
 
   if (SymbolELF->declareCommon(Size, Alignment, true)) {
     report_fatal_error("Symbol: " + Symbol->getName() +

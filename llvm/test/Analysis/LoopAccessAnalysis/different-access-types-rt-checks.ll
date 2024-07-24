@@ -3,8 +3,6 @@
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 
-; FIXME: The runtime checks for A are based on i8 accesses, but should be based
-; on i32.
 define void @loads_of_same_pointer_with_different_sizes1(ptr %A, ptr %B, i64 %N) {
 ; CHECK-LABEL: 'loads_of_same_pointer_with_different_sizes1'
 ; CHECK-NEXT:    loop:
@@ -22,7 +20,7 @@ define void @loads_of_same_pointer_with_different_sizes1(ptr %A, ptr %B, i64 %N)
 ; CHECK-NEXT:          (Low: %B High: ((4 * %N) + %B))
 ; CHECK-NEXT:            Member: {%B,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group [[GRP2]]:
-; CHECK-NEXT:          (Low: %A High: (%N + %A))
+; CHECK-NEXT:          (Low: %A High: (3 + %N + %A))
 ; CHECK-NEXT:            Member: {%A,+,1}<nuw><%loop>
 ; CHECK-NEXT:            Member: {%A,+,1}<nuw><%loop>
 ; CHECK-EMPTY:
@@ -101,8 +99,6 @@ exit:
   ret void
 }
 
-; FIXME: The both runtime checks for A are based on i8 accesses, but one should
-; be based on i32.
 define void @loads_of_same_pointer_with_different_sizes_retry_with_runtime_checks(ptr %A, ptr %B, i64 %N, i64 %off) {
 ; CHECK-LABEL: 'loads_of_same_pointer_with_different_sizes_retry_with_runtime_checks'
 ; CHECK-NEXT:    loop:
@@ -145,7 +141,7 @@ define void @loads_of_same_pointer_with_different_sizes_retry_with_runtime_check
 ; CHECK-NEXT:          (Low: %A High: (%N + %A))
 ; CHECK-NEXT:            Member: {%A,+,1}<nuw><%loop>
 ; CHECK-NEXT:        Group [[GRP8]]:
-; CHECK-NEXT:          (Low: %A High: (%N + %A))
+; CHECK-NEXT:          (Low: %A High: (3 + %N + %A))
 ; CHECK-NEXT:            Member: {%A,+,1}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.

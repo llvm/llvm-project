@@ -912,6 +912,7 @@ public:
     case VPRecipeBase::VPEVLBasedIVPHISC:
     case VPRecipeBase::VPExpandSCEVSC:
     case VPRecipeBase::VPInstructionSC:
+    case VPRecipeBase::VPReductionEVLSC:
     case VPRecipeBase::VPReductionSC:
     case VPRecipeBase::VPReplicateSC:
     case VPRecipeBase::VPScalarIVStepsSC:
@@ -1401,9 +1402,10 @@ public:
   bool isSingleScalar() const;
 };
 
-/// VPWidenRecipe is a recipe for producing a copy of vector type its
-/// ingredient. This recipe covers most of the traditional vectorization cases
-/// where each ingredient transforms into a vectorized version of itself.
+/// VPWidenRecipe is a recipe for producing a widened instruction using the
+/// opcode and operands of the recipe. This recipe covers most of the
+/// traditional vectorization cases where each recipe transforms into a
+/// vectorized version of itself.
 class VPWidenRecipe : public VPRecipeWithIRFlags {
   unsigned Opcode;
 
@@ -1423,7 +1425,8 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPWidenSC)
 
-  /// Produce widened copies of all Ingredients.
+  /// Produce a widened instruction using the opcode and operands of the recipe,
+  /// processing State.VF elements.
   void execute(VPTransformState &State) override;
 
   /// Return the cost of this VPWidenRecipe.
@@ -2178,17 +2181,27 @@ class VPReductionRecipe : public VPSingleDefRecipe {
   /// The recurrence decriptor for the reduction in question.
   const RecurrenceDescriptor &RdxDesc;
   bool IsOrdered;
+  /// Whether the reduction is conditional.
+  bool IsConditional = false;
+
+protected:
+  VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
+                    Instruction *I, ArrayRef<VPValue *> Operands,
+                    VPValue *CondOp, bool IsOrdered)
+      : VPSingleDefRecipe(SC, Operands, I), RdxDesc(R), IsOrdered(IsOrdered) {
+    if (CondOp) {
+      IsConditional = true;
+      addOperand(CondOp);
+    }
+  }
 
 public:
   VPReductionRecipe(const RecurrenceDescriptor &R, Instruction *I,
                     VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
                     bool IsOrdered)
-      : VPSingleDefRecipe(VPDef::VPReductionSC,
-                          ArrayRef<VPValue *>({ChainOp, VecOp}), I),
-        RdxDesc(R), IsOrdered(IsOrdered) {
-    if (CondOp)
-      addOperand(CondOp);
-  }
+      : VPReductionRecipe(VPDef::VPReductionSC, R, I,
+                          ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
+                          IsOrdered) {}
 
   ~VPReductionRecipe() override = default;
 
@@ -2197,7 +2210,15 @@ public:
                                  getVecOp(), getCondOp(), IsOrdered);
   }
 
-  VP_CLASSOF_IMPL(VPDef::VPReductionSC)
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() == VPRecipeBase::VPReductionSC ||
+           R->getVPDefID() == VPRecipeBase::VPReductionEVLSC;
+  }
+
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && classof(R);
+  }
 
   /// Generate the reduction in the loop
   void execute(VPTransformState &State) override;
@@ -2208,13 +2229,62 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
+  /// Return the recurrence decriptor for the in-loop reduction.
+  const RecurrenceDescriptor &getRecurrenceDescriptor() const {
+    return RdxDesc;
+  }
+  /// Return true if the in-loop reduction is ordered.
+  bool isOrdered() const { return IsOrdered; };
+  /// Return true if the in-loop reduction is conditional.
+  bool isConditional() const { return IsConditional; };
   /// The VPValue of the scalar Chain being accumulated.
   VPValue *getChainOp() const { return getOperand(0); }
   /// The VPValue of the vector value to be reduced.
   VPValue *getVecOp() const { return getOperand(1); }
   /// The VPValue of the condition for the block.
   VPValue *getCondOp() const {
-    return getNumOperands() > 2 ? getOperand(2) : nullptr;
+    return isConditional() ? getOperand(getNumOperands() - 1) : nullptr;
+  }
+};
+
+/// A recipe to represent inloop reduction operations with vector-predication
+/// intrinsics, performing a reduction on a vector operand with the explicit
+/// vector length (EVL) into a scalar value, and adding the result to a chain.
+/// The Operands are {ChainOp, VecOp, EVL, [Condition]}.
+class VPReductionEVLRecipe : public VPReductionRecipe {
+public:
+  VPReductionEVLRecipe(VPReductionRecipe *R, VPValue *EVL, VPValue *CondOp)
+      : VPReductionRecipe(
+            VPDef::VPReductionEVLSC, R->getRecurrenceDescriptor(),
+            cast_or_null<Instruction>(R->getUnderlyingValue()),
+            ArrayRef<VPValue *>({R->getChainOp(), R->getVecOp(), EVL}), CondOp,
+            R->isOrdered()) {}
+
+  ~VPReductionEVLRecipe() override = default;
+
+  VPReductionEVLRecipe *clone() override {
+    llvm_unreachable("cloning not implemented yet");
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPReductionEVLSC)
+
+  /// Generate the reduction in the loop
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// The VPValue of the explicit vector length.
+  VPValue *getEVL() const { return getOperand(2); }
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return Op == getEVL();
   }
 };
 

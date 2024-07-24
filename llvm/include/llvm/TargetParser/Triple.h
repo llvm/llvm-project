@@ -88,6 +88,8 @@ public:
     xtensa,         // Tensilica: Xtensa
     nvptx,          // NVPTX: 32-bit
     nvptx64,        // NVPTX: 64-bit
+    le32,           // le32: generic little-endian 32-bit CPU (PNaCl)
+    le64,           // le64: generic little-endian 64-bit CPU (PNaCl)
     amdil,          // AMDIL
     amdil64,        // AMDIL with 64-bit pointers
     hsail,          // AMD HSAIL
@@ -266,7 +268,7 @@ public:
     Cygnus,
     CoreCLR,
     Simulator, // Simulator variants of other systems, e.g., Apple's iOS
-    MacABI, // Mac Catalyst variant of Apple's iOS deployment target.
+    MacABI,    // Mac Catalyst variant of Apple's iOS deployment target.
 
     // Shader Stages
     // The order of these values matters, and must be kept in sync with the
@@ -290,7 +292,9 @@ public:
     OpenCL,
     OpenHOS,
 
-    LastEnvironmentType = OpenHOS
+    PAuthTest,
+
+    LastEnvironmentType = PAuthTest
   };
   enum ObjectFormatType {
     UnknownObjectFormat,

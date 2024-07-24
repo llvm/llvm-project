@@ -202,6 +202,7 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef emul) {
           .Case("elf64_amdgpu", {ELF64LEKind, EM_AMDGPU})
           .Case("elf64loongarch", {ELF64LEKind, EM_LOONGARCH})
           .Case("elf64_s390", {ELF64BEKind, EM_S390})
+          .Case("hexagonelf", {ELF32LEKind, EM_HEXAGON})
           .Default({ELFNoneKind, EM_NONE});
 
   if (ret.first == ELFNoneKind)
@@ -2883,9 +2884,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // to, i.e. if the symbol's definition is in bitcode. Any other required
   // libcall symbols will be added to the link after LTO when we add the LTO
   // object file to the link.
-  if (!ctx.bitcodeFiles.empty())
-    for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
+  if (!ctx.bitcodeFiles.empty()) {
+    llvm::Triple TT(ctx.bitcodeFiles.front()->obj->getTargetTriple());
+    for (auto *s : lto::LTO::getRuntimeLibcallSymbols(TT))
       handleLibcall(s);
+  }
 
   // Archive members defining __wrap symbols may be extracted.
   std::vector<WrappedSymbol> wrapped = addWrappedSymbols(args);

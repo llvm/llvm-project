@@ -3951,7 +3951,7 @@ SDValue SystemZTargetLowering::lowerVACOPY(SDValue Op,
       Subtarget.isTargetXPLINK64() ? getTargetMachine().getPointerSize(0) : 32;
   return DAG.getMemcpy(Chain, DL, DstPtr, SrcPtr, DAG.getIntPtrConstant(Sz, DL),
                        Align(8), /*isVolatile*/ false, /*AlwaysInline*/ false,
-                       /*isTailCall*/ false, MachinePointerInfo(DstSV),
+                       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(DstSV),
                        MachinePointerInfo(SrcSV));
 }
 
@@ -6727,8 +6727,8 @@ SDValue SystemZTargetLowering::combineSIGN_EXTEND_INREG(
   if (EVT == MVT::i1 && N0.hasOneUse() && N0.getOpcode() == ISD::SETCC) {
     SDLoc DL(N0);
     SDValue Ops[] = { N0.getOperand(0), N0.getOperand(1),
-                      DAG.getConstant(-1, DL, VT), DAG.getConstant(0, DL, VT),
-                      N0.getOperand(2) };
+                      DAG.getAllOnesConstant(DL, VT),
+                      DAG.getConstant(0, DL, VT), N0.getOperand(2) };
     return DAG.getNode(ISD::SELECT_CC, DL, VT, Ops);
   }
   return SDValue();

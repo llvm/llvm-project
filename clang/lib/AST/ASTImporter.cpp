@@ -1551,7 +1551,7 @@ ASTNodeImporter::VisitCountAttributedType(const CountAttributedType *T) {
   Expr *CountExpr = importChecked(Err, T->getCountExpr());
 
   SmallVector<TypeCoupledDeclRefInfo, 1> CoupledDecls;
-  for (auto TI : T->dependent_decls()) {
+  for (const TypeCoupledDeclRefInfo &TI : T->dependent_decls()) {
     Expected<ValueDecl *> ToDeclOrErr = import(TI.getDecl());
     if (!ToDeclOrErr)
       return ToDeclOrErr.takeError();
@@ -2949,7 +2949,7 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
       if (auto *FoundEnum = dyn_cast<EnumDecl>(FoundDecl)) {
         if (!hasSameVisibilityContextAndLinkage(FoundEnum, D))
           continue;
-        if (IsStructuralMatch(D, FoundEnum)) {
+        if (IsStructuralMatch(D, FoundEnum, !SearchName.isEmpty())) {
           EnumDecl *FoundDef = FoundEnum->getDefinition();
           if (D->isThisDeclarationADefinition() && FoundDef)
             return Importer.MapImported(D, FoundDef);
@@ -2960,7 +2960,12 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
       }
     }
 
-    if (!ConflictingDecls.empty()) {
+    // In case of unnamed enums, we try to find an existing similar one, if none
+    // was found, perform the import always.
+    // Structural in-equivalence is not detected in this way here, but it may
+    // be found when the parent decl is imported (if the enum is part of a
+    // class). To make this totally exact a more difficult solution is needed.
+    if (SearchName && !ConflictingDecls.empty()) {
       ExpectedName NameOrErr = Importer.HandleNameConflict(
           SearchName, DC, IDNS, ConflictingDecls.data(),
           ConflictingDecls.size());
@@ -8439,14 +8444,8 @@ ExpectedStmt ASTNodeImporter::VisitCXXDependentScopeMemberExpr(
   auto ToOperatorLoc = importChecked(Err, E->getOperatorLoc());
   auto ToQualifierLoc = importChecked(Err, E->getQualifierLoc());
   auto ToTemplateKeywordLoc = importChecked(Err, E->getTemplateKeywordLoc());
-
-  UnresolvedSet<8> ToUnqualifiedLookups;
-  for (auto D : E->unqualified_lookups())
-    if (auto ToDOrErr = import(D.getDecl()))
-      ToUnqualifiedLookups.addDecl(*ToDOrErr);
-    else
-      return ToDOrErr.takeError();
-
+  auto ToFirstQualifierFoundInScope =
+      importChecked(Err, E->getFirstQualifierFoundInScope());
   if (Err)
     return std::move(Err);
 
@@ -8480,7 +8479,7 @@ ExpectedStmt ASTNodeImporter::VisitCXXDependentScopeMemberExpr(
 
   return CXXDependentScopeMemberExpr::Create(
       Importer.getToContext(), ToBase, ToType, E->isArrow(), ToOperatorLoc,
-      ToQualifierLoc, ToTemplateKeywordLoc, ToUnqualifiedLookups.pairs(),
+      ToQualifierLoc, ToTemplateKeywordLoc, ToFirstQualifierFoundInScope,
       ToMemberNameInfo, ResInfo);
 }
 
