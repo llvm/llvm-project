@@ -2296,8 +2296,8 @@ static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
   Printf("%s%s = 0xzx  ", internal_strlen(RegName) == 2 ? " " : "", RegName,
          GetArmRegister(ctx, RegNum));
 #    elif defined(__aarch64__)
-  Printf("%s%s = 0xzx  ", internal_strlen(RegName) == 2 ? " " : "",
-         RegName, GetArmRegister(ctx, RegNum));
+  Printf("%s%s = 0xzx  ", internal_strlen(RegName) == 2 ? " " : "", RegName,
+         GetArmRegister(ctx, RegNum));
 #    else
   (void)RegName;
 #    endif
