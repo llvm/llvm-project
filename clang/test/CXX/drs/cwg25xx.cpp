@@ -94,10 +94,14 @@ using ::cwg2521::operator""_div;
 
 namespace cwg2547 { // cwg2547: 20
 #if __cplusplus >= 202302L
-struct S; // since-cxx23-note 3 {{forward declaration of 'cwg2547::S'}}
+struct S;
+// since-cxx23-note@-1 {{forward declaration of 'cwg2547::S'}}
+// since-cxx23-note@-2 {{forward declaration of 'cwg2547::S'}}
+// since-cxx23-note@-3 {{forward declaration of 'cwg2547::S'}}
 bool operator==(S, S) = default;  // error: S is not complete
-// since-cxx23-error@-1 2 {{variable has incomplete type 'S'}}
-// since-cxx23-error@-2 {{equality comparison operator is not a friend of incomplete class 'cwg2547::S'}}
+// since-cxx23-error@-1 {{variable has incomplete type 'S'}}
+// since-cxx23-error@-2 {{variable has incomplete type 'S'}}
+// since-cxx23-error@-3 {{equality comparison operator is not a friend of incomplete class 'cwg2547::S'}}
 struct S {
   friend bool operator==(S, const S&) = default; // error: parameters of different types
   // since-cxx23-error@-1 {{parameters for defaulted equality comparison operator must have the same type (found 'S' vs 'const S &')}}
