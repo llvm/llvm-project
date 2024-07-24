@@ -10,17 +10,14 @@ define void @numsignbits_shl_zext(i8 %x) {
 ; CHECK-NEXT:    [[ASHR:%.*]] = ashr i8 [[X]], 5
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[ASHR]] to i16
 ; CHECK-NEXT:    [[NSB4:%.*]] = shl i16 [[ZEXT]], 10
-; CHECK-NEXT:    [[AND14:%.*]] = and i16 [[NSB4]], 16384
-; CHECK-NEXT:    [[ADD14:%.*]] = add i16 [[AND14]], [[NSB4]]
+; CHECK-NEXT:    [[ADD14:%.*]] = and i16 [[NSB4]], 15360
 ; CHECK-NEXT:    call void @escape(i16 [[ADD14]])
-; CHECK-NEXT:    [[AND13:%.*]] = and i16 [[NSB4]], 8192
-; CHECK-NEXT:    [[ADD13:%.*]] = add i16 [[AND13]], [[NSB4]]
+; CHECK-NEXT:    [[ADD13:%.*]] = and i16 [[NSB4]], 7168
 ; CHECK-NEXT:    call void @escape(i16 [[ADD13]])
-; CHECK-NEXT:    [[AND12:%.*]] = and i16 [[NSB4]], 4096
-; CHECK-NEXT:    [[ADD12:%.*]] = add i16 [[AND12]], [[NSB4]]
+; CHECK-NEXT:    [[ADD12:%.*]] = and i16 [[NSB4]], 3072
 ; CHECK-NEXT:    call void @escape(i16 [[ADD12]])
 ; CHECK-NEXT:    [[AND11:%.*]] = and i16 [[NSB4]], 2048
-; CHECK-NEXT:    [[ADD11:%.*]] = add i16 [[AND11]], [[NSB4]]
+; CHECK-NEXT:    [[ADD11:%.*]] = add nsw i16 [[AND11]], [[NSB4]]
 ; CHECK-NEXT:    call void @escape(i16 [[ADD11]])
 ; CHECK-NEXT:    ret void
 ;
@@ -51,14 +48,12 @@ define void @numsignbits_shl_zext_shift_amounr_matches_extend(i8 %x) {
 ; CHECK-NEXT:    [[ASHR:%.*]] = ashr i8 [[X]], 2
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[ASHR]] to i16
 ; CHECK-NEXT:    [[NSB3:%.*]] = shl nuw i16 [[ZEXT]], 8
-; CHECK-NEXT:    [[AND14:%.*]] = and i16 [[NSB3]], 16384
-; CHECK-NEXT:    [[ADD14:%.*]] = add i16 [[AND14]], [[NSB3]]
+; CHECK-NEXT:    [[ADD14:%.*]] = and i16 [[NSB3]], 16128
 ; CHECK-NEXT:    call void @escape(i16 [[ADD14]])
-; CHECK-NEXT:    [[AND13:%.*]] = and i16 [[NSB3]], 8192
-; CHECK-NEXT:    [[ADD13:%.*]] = add i16 [[AND13]], [[NSB3]]
+; CHECK-NEXT:    [[ADD13:%.*]] = and i16 [[NSB3]], 7936
 ; CHECK-NEXT:    call void @escape(i16 [[ADD13]])
 ; CHECK-NEXT:    [[AND12:%.*]] = and i16 [[NSB3]], 4096
-; CHECK-NEXT:    [[ADD12:%.*]] = add i16 [[AND12]], [[NSB3]]
+; CHECK-NEXT:    [[ADD12:%.*]] = add nsw i16 [[AND12]], [[NSB3]]
 ; CHECK-NEXT:    call void @escape(i16 [[ADD12]])
 ; CHECK-NEXT:    ret void
 ;
@@ -132,17 +127,14 @@ define void @numsignbits_shl_zext_vector(<2 x i8> %x) {
 ; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i8> [[X]], <i8 5, i8 5>
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[ASHR]] to <2 x i16>
 ; CHECK-NEXT:    [[NSB4:%.*]] = shl <2 x i16> [[ZEXT]], <i16 10, i16 10>
-; CHECK-NEXT:    [[AND14:%.*]] = and <2 x i16> [[NSB4]], <i16 16384, i16 16384>
-; CHECK-NEXT:    [[ADD14:%.*]] = add <2 x i16> [[AND14]], [[NSB4]]
+; CHECK-NEXT:    [[ADD14:%.*]] = and <2 x i16> [[NSB4]], <i16 15360, i16 15360>
 ; CHECK-NEXT:    call void @escape2(<2 x i16> [[ADD14]])
-; CHECK-NEXT:    [[AND13:%.*]] = and <2 x i16> [[NSB4]], <i16 8192, i16 8192>
-; CHECK-NEXT:    [[ADD13:%.*]] = add <2 x i16> [[AND13]], [[NSB4]]
+; CHECK-NEXT:    [[ADD13:%.*]] = and <2 x i16> [[NSB4]], <i16 7168, i16 7168>
 ; CHECK-NEXT:    call void @escape2(<2 x i16> [[ADD13]])
-; CHECK-NEXT:    [[AND12:%.*]] = and <2 x i16> [[NSB4]], <i16 4096, i16 4096>
-; CHECK-NEXT:    [[ADD12:%.*]] = add <2 x i16> [[AND12]], [[NSB4]]
+; CHECK-NEXT:    [[ADD12:%.*]] = and <2 x i16> [[NSB4]], <i16 3072, i16 3072>
 ; CHECK-NEXT:    call void @escape2(<2 x i16> [[ADD12]])
 ; CHECK-NEXT:    [[AND11:%.*]] = and <2 x i16> [[NSB4]], <i16 2048, i16 2048>
-; CHECK-NEXT:    [[ADD11:%.*]] = add <2 x i16> [[AND11]], [[NSB4]]
+; CHECK-NEXT:    [[ADD11:%.*]] = add nsw <2 x i16> [[AND11]], [[NSB4]]
 ; CHECK-NEXT:    call void @escape2(<2 x i16> [[ADD11]])
 ; CHECK-NEXT:    ret void
 ;
