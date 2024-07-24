@@ -52,8 +52,8 @@ TEST_FOR_EACH_BLOCK_TYPE(CanCreateSingleAlignedBlock) {
   EXPECT_EQ(block->outer_size(), kN);
   EXPECT_EQ(block->inner_size(), kN - BlockType::BLOCK_OVERHEAD);
   EXPECT_EQ(block->prev(), static_cast<BlockType *>(nullptr));
+  EXPECT_EQ(block->next(), static_cast<BlockType *>(nullptr));
   EXPECT_FALSE(block->used());
-  EXPECT_TRUE(block->last());
 }
 
 TEST_FOR_EACH_BLOCK_TYPE(CanCreateUnalignedSingleBlock) {
@@ -102,11 +102,9 @@ TEST_FOR_EACH_BLOCK_TYPE(CanSplitBlock) {
 
   EXPECT_EQ(block1->inner_size(), kSplitN);
   EXPECT_EQ(block1->outer_size(), kSplitN + BlockType::BLOCK_OVERHEAD);
-  EXPECT_FALSE(block1->last());
 
   EXPECT_EQ(block2->outer_size(), kN - kSplitN - BlockType::BLOCK_OVERHEAD);
   EXPECT_FALSE(block2->used());
-  EXPECT_TRUE(block2->last());
 
   EXPECT_EQ(block1->next(), block2);
   EXPECT_EQ(block2->prev(), block1);
@@ -608,18 +606,17 @@ TEST_FOR_EACH_BLOCK_TYPE(CanRemergeBlockAllocations) {
 
   // Check we have the appropriate blocks.
   ASSERT_NE(prev, static_cast<BlockType *>(nullptr));
-  ASSERT_FALSE(prev->last());
   ASSERT_EQ(aligned_block->prev(), prev);
   EXPECT_NE(next, static_cast<BlockType *>(nullptr));
   EXPECT_NE(next, static_cast<BlockType *>(nullptr));
   EXPECT_EQ(aligned_block->next(), next);
-  ASSERT_TRUE(next->last());
+  EXPECT_EQ(next->next(), static_cast<BlockType *>(nullptr));
 
   // Now check for successful merges.
   EXPECT_TRUE(prev->merge_next());
   EXPECT_EQ(prev->next(), next);
   EXPECT_TRUE(prev->merge_next());
-  EXPECT_TRUE(prev->last());
+  EXPECT_EQ(prev->next(), static_cast<BlockType *>(nullptr));
 
   // We should have the original buffer.
   EXPECT_EQ(reinterpret_cast<byte *>(prev), &*bytes.begin());

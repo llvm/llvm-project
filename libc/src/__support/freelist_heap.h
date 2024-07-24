@@ -189,7 +189,7 @@ template <size_t NUM_BUCKETS> void FreeListHeap<NUM_BUCKETS>::free(void *ptr) {
   BlockType *prev = chunk_block->prev();
   BlockType *next = nullptr;
 
-  if (!chunk_block->last())
+  if (chunk_block->next())
     next = chunk_block->next();
 
   if (prev != nullptr && !prev->used()) {

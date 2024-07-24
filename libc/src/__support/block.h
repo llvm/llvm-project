@@ -178,23 +178,8 @@ public:
   /// Merges this block with the one that comes after it.
   bool merge_next();
 
-  /// Fetches the block immediately after this one.
-  ///
-  /// For performance, this always returns a block pointer, even if the returned
-  /// pointer is invalid. The pointer is valid if and only if `last()` is false.
-  ///
-  /// Typically, after calling `Init` callers may save a pointer past the end of
-  /// the list using `next()`. This makes it easy to subsequently iterate over
-  /// the list:
-  /// @code{.cpp}
-  ///   auto result = Block<>::init(byte_span);
-  ///   Block<>* begin = *result;
-  ///   Block<>* end = begin->next();
-  ///   ...
-  ///   for (auto* block = begin; block != end; block = block->next()) {
-  ///     // Do something which each block.
-  ///   }
-  /// @endcode
+  /// @returns The block immediately after this one, or a null pointer if this
+  /// is the last block.
   Block *next() const;
 
   /// @returns The block immediately before this one, or a null pointer if this
@@ -206,21 +191,14 @@ public:
   /// @returns `true` if the block is in use or `false` if not.
   bool used() const { return next_ & USED_MASK; }
 
-  /// Indicates whether this block is the last block or not (i.e. whether
-  /// `next()` points to a valid block or not). This is needed because
-  /// `next()` points to the end of this block, whether there is a valid
-  /// block there or not.
-  ///
-  /// @returns `true` is this is the last block or `false` if not.
-  bool last() const { return next_ & LAST_MASK; }
-
   /// Marks this block as in use.
   void mark_used() { next_ |= USED_MASK; }
 
   /// Marks this block as free.
   void mark_free() { next_ &= ~USED_MASK; }
 
-  /// Marks this block as the last one in the chain.
+  /// Marks this block as the last one in the chain. Makes next() return
+  /// nullptr.
   constexpr void mark_last() { next_ |= LAST_MASK; }
 
   /// @brief Checks if a block is valid.
@@ -448,41 +426,37 @@ template <typename OffsetType, size_t kAlign>
 Block<OffsetType, kAlign> *
 Block<OffsetType, kAlign>::split_impl(size_t new_inner_size) {
   size_t outer_size1 = new_inner_size + BLOCK_OVERHEAD;
-  bool is_last = last();
+  bool has_next = next();
   ByteSpan new_region = region().subspan(outer_size1);
   LIBC_ASSERT(!used() && "used blocks cannot be split");
   // The low order bits of outer_size1 should both be zero, and is the correct
   // value for the flags is false.
   next_ = outer_size1;
-  LIBC_ASSERT(!used() && !last() && "incorrect first split flags");
+  LIBC_ASSERT(!used() && next() && "incorrect first split flags");
   Block *new_block = as_block(outer_size1, new_region);
 
-  if (is_last) {
-    new_block->mark_last();
-  } else {
+  if (has_next) {
     // The two flags are both false, so next_ is a plain size.
-    LIBC_ASSERT(!new_block->used() && !new_block->last() &&
-                "flags disrupt use of size");
+    LIBC_ASSERT(!new_block->used() && next() && "flags disrupt use of size");
     new_block->next()->prev_ = new_block->next_;
+  } else {
+    new_block->mark_last();
   }
   return new_block;
 }
 
 template <typename OffsetType, size_t kAlign>
 bool Block<OffsetType, kAlign>::merge_next() {
-  if (last())
-    return false;
-
-  if (used() || next()->used())
+  if (used() || !next() || next()->used())
     return false;
 
   // Extend the size and copy the last() flag from the next block to this one.
   next_ &= SIZE_MASK;
   next_ += next()->next_;
 
-  if (!last()) {
+  if (next()) {
     // The two flags are both false, so next_ is a plain size.
-    LIBC_ASSERT(!used() && !last() && "flags disrupt use of size");
+    LIBC_ASSERT(!used() && next() && "flags disrupt use of size");
     next()->prev_ = next_;
   }
 
@@ -491,6 +465,8 @@ bool Block<OffsetType, kAlign>::merge_next() {
 
 template <typename OffsetType, size_t kAlign>
 Block<OffsetType, kAlign> *Block<OffsetType, kAlign>::next() const {
+  if (next_ & LAST_MASK)
+    return nullptr;
   return reinterpret_cast<Block *>(reinterpret_cast<uintptr_t>(this) +
                                    outer_size());
 }
@@ -522,7 +498,7 @@ internal::BlockStatus Block<OffsetType, kAlign>::check_status() const {
   if (reinterpret_cast<uintptr_t>(this) % ALIGNMENT != 0)
     return internal::BlockStatus::MISALIGNED;
 
-  if (!last() && (this >= next() || this != next()->prev()))
+  if (next() && (this >= next() || this != next()->prev()))
     return internal::BlockStatus::NEXT_MISMATCHED;
 
   if (prev() && (this <= prev() || this != prev()->next()))
