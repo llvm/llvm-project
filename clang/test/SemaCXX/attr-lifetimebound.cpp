@@ -56,6 +56,7 @@ namespace usage_ok {
       const int& a;
       int b;
       Set c;
+      int * d;
     };
     Pair p;  
     FieldCheck(const int& a): p(a){}
@@ -69,6 +70,7 @@ namespace usage_ok {
     const int& b = FieldCheck{x}.getP()->b;   // expected-warning {{temporary bound to local reference 'b' will be destroyed at the end of the full-expression}}
     const int& c = FieldCheck{x}.getP()->c.a; // expected-warning {{temporary bound to local reference 'c' will be destroyed at the end of the full-expression}}
     const int& d = FieldCheck{x}.getNoLB()->c.a;
+    const int* e = FieldCheck{x}.getR().d;
   }
 }
 
