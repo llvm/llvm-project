@@ -961,7 +961,7 @@ ItaniumCXXABI::EmitMemberPointerConversion(CodeGenFunction &CGF,
       CGF.EmitBlock(resignBB);
       llvm::Type *ptrTy = llvm::PointerType::getUnqual(CGM.Int8Ty);
       memFnPtr = Builder.CreateIntToPtr(memFnPtr, ptrTy);
-      memFnPtr = CGF.EmitPointerAuthResign(memFnPtr, srcType, curAuthInfo,
+      memFnPtr = CGF.emitPointerAuthResign(memFnPtr, srcType, curAuthInfo,
                                            newAuthInfo,
                                            isa<llvm::Constant>(src));
       memFnPtr = Builder.CreatePtrToInt(memFnPtr, origTy);
