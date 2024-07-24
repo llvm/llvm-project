@@ -141,7 +141,7 @@ struct X {
   union {
     int variant_member;
   };
-  struct {
+  struct { // expected-warning {{anonymous structs are a GNU extension}}
     int anonymous_struct_member;
   };
   int data_member;
