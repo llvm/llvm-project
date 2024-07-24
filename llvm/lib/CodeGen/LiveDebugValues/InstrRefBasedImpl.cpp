@@ -3411,7 +3411,7 @@ void InstrRefBasedLDV::buildVLocValueMap(
         continue;
       if (BlockLiveIn->Kind == DbgValue::VPHI)
         BlockLiveIn->Kind = DbgValue::Def;
-      auto &[Var, DILoc] = DVMap.lookupDVID(VarID);
+      [[maybe_unused]] auto &[Var, DILoc] = DVMap.lookupDVID(VarID);
       assert(BlockLiveIn->Properties.DIExpr->getFragmentInfo() ==
                  Var.getFragment() &&
              "Fragment info missing during value prop");
