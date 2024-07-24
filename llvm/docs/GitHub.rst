@@ -376,7 +376,7 @@ Releases
 
 Backporting Fixes to the Release Branches
 -----------------------------------------
-You can use special comments on issues or pull requestes to make backport
+You can use special comments on issues or pull requests to make backport
 requests for the release branches.  This is done by making a comment containing
 the following command on any issue or pull request that has been added to one
 of the "X.Y.Z Release" milestones.
