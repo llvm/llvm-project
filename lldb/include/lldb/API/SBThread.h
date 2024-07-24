@@ -233,6 +233,7 @@ private:
   friend class SBBreakpoint;
   friend class SBBreakpointLocation;
   friend class SBBreakpointCallbackBaton;
+  friend class SBSaveCoreOptions;
   friend class SBExecutionContext;
   friend class SBFrame;
   friend class SBProcess;

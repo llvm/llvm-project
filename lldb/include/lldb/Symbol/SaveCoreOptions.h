@@ -13,8 +13,8 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 
+#include <map>
 #include <optional>
-#include <set>
 #include <string>
 
 namespace lldb_private {
@@ -33,21 +33,24 @@ public:
   void SetOutputFile(lldb_private::FileSpec file);
   const std::optional<lldb_private::FileSpec> GetOutputFile() const;
 
-  void AddThread(lldb::tid_t tid);
-  bool RemoveThread(lldb::tid_t tid);
-  size_t GetNumThreads() const;
-  int64_t GetThreadAtIndex(size_t index) const;
+  Status SetProcess(lldb::ProcessSP process_sp);
+
+  Status AddThread(lldb_private::Thread *thread);
+  bool RemoveThread(lldb_private::Thread *thread);
   bool ShouldSaveThread(lldb::tid_t tid) const;
 
-  Status EnsureValidConfiguration() const;
+  Status EnsureValidConfiguration(lldb::ProcessSP process_to_save) const;
 
   void Clear();
 
 private:
+  void ClearProcessSpecificData();
+
   std::optional<std::string> m_plugin_name;
   std::optional<lldb_private::FileSpec> m_file;
   std::optional<lldb::SaveCoreStyle> m_style;
-  std::set<lldb::tid_t> m_threads_to_save;
+  std::optional<lldb::ProcessSP> m_process_sp;
+  std::map<lldb::tid_t, lldb::ThreadSP> m_threads_to_save;
 };
 } // namespace lldb_private
 

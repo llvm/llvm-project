@@ -9,6 +9,8 @@
 #include "lldb/API/SBSaveCoreOptions.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBProcess.h"
+#include "lldb/API/SBThread.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Utility/Instrumentation.h"
@@ -75,24 +77,16 @@ lldb::SaveCoreStyle SBSaveCoreOptions::GetStyle() const {
   return m_opaque_up->GetStyle();
 }
 
-void SBSaveCoreOptions::AddThread(lldb::tid_t tid) {
-  m_opaque_up->AddThread(tid);
+SBError SBSaveCoreOptions::SetProcess(lldb::SBProcess process) {
+  return m_opaque_up->SetProcess(process.GetSP());
 }
 
-bool SBSaveCoreOptions::RemoveThread(lldb::tid_t tid) {
-  return m_opaque_up->RemoveThread(tid);
+SBError SBSaveCoreOptions::AddThread(lldb::SBThread thread) {
+  return m_opaque_up->AddThread(thread.get());
 }
 
-uint32_t SBSaveCoreOptions::GetNumThreads() const {
-  return m_opaque_up->GetNumThreads();
-}
-
-lldb::tid_t SBSaveCoreOptions::GetThreadAtIndex(uint32_t idx,
-                                                SBError &error) const {
-  int64_t tid = m_opaque_up->GetThreadAtIndex(idx);
-  if (tid == -1)
-    error.SetErrorString("Invalid index");
-  return 0;
+bool SBSaveCoreOptions::RemoveThread(lldb::SBThread thread) {
+  return m_opaque_up->RemoveThread(thread.get());
 }
 
 void SBSaveCoreOptions::Clear() {

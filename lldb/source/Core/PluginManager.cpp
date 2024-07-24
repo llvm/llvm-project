@@ -714,7 +714,7 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
     return error;
   }
 
-  error = options.EnsureValidConfiguration();
+  error = options.EnsureValidConfiguration(process_sp);
   if (error.Fail())
     return error;
 

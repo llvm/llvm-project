@@ -216,7 +216,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             )
             self.assertState(process.GetState(), lldb.eStateStopped)
 
-            thread_to_include = process.GetThreadAtIndex(0).GetThreadID()
+            thread_to_include = process.GetThreadAtIndex(0)
             options = lldb.SBSaveCoreOptions()
             thread_subset_spec = lldb.SBFileSpec(thread_subset_dmp)
             options.AddThread(thread_to_include)

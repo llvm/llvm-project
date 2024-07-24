@@ -8,6 +8,8 @@
 
 #include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Target/Process.h"
+#include "lldb/Target/Thread.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -46,34 +48,48 @@ SaveCoreOptions::GetOutputFile() const {
   return m_file;
 }
 
-void SaveCoreOptions::AddThread(lldb::tid_t tid) {
-  if (m_threads_to_save.count(tid) == 0)
-    m_threads_to_save.emplace(tid);
-}
-
-bool SaveCoreOptions::RemoveThread(lldb::tid_t tid) {
-  if (m_threads_to_save.count(tid) == 0) {
-    m_threads_to_save.erase(tid);
-    return true;
+Status SaveCoreOptions::SetProcess(lldb::ProcessSP process_sp) {
+  Status error;
+  if (!process_sp) {
+    ClearProcessSpecificData();
+    m_process_sp = std::nullopt;
+    return error;
   }
 
-  return false;
-}
-
-size_t SaveCoreOptions::GetNumThreads() const {
-  return m_threads_to_save.size();
-}
-
-int64_t SaveCoreOptions::GetThreadAtIndex(size_t index) const {
-  auto iter = m_threads_to_save.begin();
-  while (index >= 0 && iter != m_threads_to_save.end()) {
-    if (index == 0)
-      return *iter;
-    index--;
-    iter++;
+  if (!process_sp->IsValid()) {
+    error.SetErrorString("Cannot assign an invalid process.");
+    return error;
   }
 
-  return -1;
+  if (m_process_sp.has_value())
+    ClearProcessSpecificData();
+
+  m_process_sp = process_sp;
+  return error;
+}
+
+Status SaveCoreOptions::AddThread(lldb_private::Thread *thread) {
+  Status error;
+  if (!thread) {
+    error.SetErrorString("Thread is null");
+  }
+
+  if (!m_process_sp.has_value())
+    m_process_sp = thread->GetProcess();
+
+  if (m_process_sp.value() != thread->GetProcess()) {
+    error.SetErrorString("Cannot add thread from a different process.");
+    return error;
+  }
+
+  std::pair<lldb::tid_t, lldb::ThreadSP> tid_pair(thread->GetID(),
+                                                  thread->GetBackingThread());
+  m_threads_to_save.insert(tid_pair);
+  return error;
+}
+
+bool SaveCoreOptions::RemoveThread(lldb_private::Thread *thread) {
+  return thread && m_threads_to_save.erase(thread->GetID()) > 0;
 }
 
 bool SaveCoreOptions::ShouldSaveThread(lldb::tid_t tid) const {
@@ -83,18 +99,24 @@ bool SaveCoreOptions::ShouldSaveThread(lldb::tid_t tid) const {
   return m_threads_to_save.count(tid) > 0;
 }
 
-Status SaveCoreOptions::EnsureValidConfiguration() const {
+Status SaveCoreOptions::EnsureValidConfiguration(
+    lldb::ProcessSP process_to_save) const {
   Status error;
   std::string error_str;
-  if (!m_threads_to_save.empty() && GetStyle() == lldb::eSaveCoreFull) {
+  if (!m_threads_to_save.empty() && GetStyle() == lldb::eSaveCoreFull)
     error_str += "Cannot save a full core with a subset of threads\n";
-  }
+
+  if (m_process_sp.has_value() && m_process_sp != process_to_save)
+    error_str += "Cannot save core for process using supplied core options. "
+                 "Options were constructed targeting a different process. \n";
 
   if (!error_str.empty())
     error.SetErrorString(error_str);
 
   return error;
 }
+
+void SaveCoreOptions::ClearProcessSpecificData() { m_threads_to_save.clear(); }
 
 void SaveCoreOptions::Clear() {
   m_file = std::nullopt;

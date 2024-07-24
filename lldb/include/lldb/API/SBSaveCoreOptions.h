@@ -10,6 +10,7 @@
 #define LLDB_API_SBSAVECOREOPTIONS_H
 
 #include "lldb/API/SBDefines.h"
+#include "lldb/API/SBThread.h"
 
 namespace lldb {
 
@@ -53,29 +54,25 @@ public:
   /// \return The output file spec.
   SBFileSpec GetOutputFile() const;
 
+  /// Set the process to save, or unset if supplied with a null process.
+  ///
+  /// \param process The process to save.
+  /// \return Success if process was set, otherwise an error
+  /// \note This will clear all process specific options if
+  /// an exisiting process is overriden.
+  SBError SetProcess(lldb::SBProcess process);
+
   /// Add a thread to save in the core file.
   ///
-  /// \param thread_id The thread ID to save.
-  void AddThread(lldb::tid_t thread_id);
+  /// \param thread The thread to save.
+  /// \note This will set the process if it is not already set.
+  SBError AddThread(lldb::SBThread thread);
 
   /// Remove a thread from the list of threads to save.
   ///
-  /// \param thread_id The thread ID to remove.
+  /// \param thread The thread to remove.
   /// \return True if the thread was removed, false if it was not in the list.
-  bool RemoveThread(lldb::tid_t thread_id);
-
-  /// Get the number of threads to save. If this list is empty all threads will
-  /// be saved.
-  ///
-  /// \return The number of threads to save.
-  uint32_t GetNumThreads() const;
-
-  /// Get the thread ID at the given index.
-  ///
-  /// \param[in] index The index of the thread ID to get.
-  /// \return The thread ID at the given index, or an error
-  /// if there is no thread at the index.
-  lldb::tid_t GetThreadAtIndex(uint32_t index, SBError &error) const;
+  bool RemoveThread(lldb::SBThread thread);
 
   /// Reset all options.
   void Clear();
