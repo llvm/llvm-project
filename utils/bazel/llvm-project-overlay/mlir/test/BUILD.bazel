@@ -668,6 +668,7 @@ cc_library(
         "//mlir:TransformUtils",
         "//mlir:Transforms",
         "//mlir:VectorDialect",
+        "//mlir:VectorTransforms",
     ],
 )
 
