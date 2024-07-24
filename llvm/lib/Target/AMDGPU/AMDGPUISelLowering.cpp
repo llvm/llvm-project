@@ -408,6 +408,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::FRINT, {MVT::f16, MVT::f32, MVT::f64}, Custom);
 
+  setOperationAction({ISD::LRINT, ISD::LLRINT}, {MVT::f16, MVT::f32, MVT::f64},
+                     Expand);
+
   setOperationAction(ISD::FREM, {MVT::f16, MVT::f32, MVT::f64}, Custom);
 
   if (Subtarget->has16BitInsts())
