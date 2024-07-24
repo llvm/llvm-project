@@ -1,30 +1,30 @@
-# Check Default Environment
-# RUN: env | FileCheck -check-prefix=CHECK-2-EMPTY %s
+# Check default environment.
+# RUN: env | FileCheck -check-prefix=NO-ARGS %s
 #
-# CHECK-2-EMPTY: BAR = 2
-# CHECK-2-EMPTY: FOO = 1
+# NO-ARGS: BAR=2
+# NO-ARGS: FOO=1
 
-# Set Environment Variables
-# RUN: env FOO=2 BAR=1 | FileCheck -check-prefix=CHECK-2-VAL %s
+# Set environment variables.
+# RUN: env FOO=2 BAR=1 | FileCheck -check-prefix=SET-VAL %s
 #
-# CHECK-2-VAL: BAR = 1
-# CHECK-2-VAL: FOO = 2
+# SET-VAL: BAR=1
+# SET-VAL: FOO=2
 
-# Unset Environment Variables
-# RUN: env -u FOO -u BAR | FileCheck -check-prefix=CHECK-2-U %s
+# Unset environment variables.
+# RUN: env -u FOO -u BAR | FileCheck -check-prefix=UNSET-U %s
 #
-# CHECK-2-U-NOT: BAR
-# CHECK-2-U-NOT: FOO
+# UNSET_U-NOT: BAR
+# UNSET-U-NOT: FOO
 
-# Mixed Set and Unset Environment Variables
-# RUN: env -u FOO BAR=1 -u BAR FOO=2 | FileCheck -check-prefix=CHECK-2-U-VAL %s
+# Mixed set and unset environment variables.
+# RUN: env -u FOO BAR=1 -u BAR FOO=2 | FileCheck -check-prefix=MIXED-SET-UNSET %s
 #
-# CHECK-2-U-VAL-NOT: BAR
-# CHECK-2-U-VAL: FOO = 2
- 
-# Mixed Set and Unset with Additional Variable
-# RUN: env -u FOO BAR=1 -u BAR FOO=2 BAZ=3 | FileCheck -check-prefix=CHECK-3 %s
+# MIXED-SET-UNSET-NOT: BAR
+# MIXED-SET-UNSET: FOO=2
+
+# Mixed set and unset with additional variable.
+# RUN: env -u FOO BAR=1 -u BAR FOO=2 BAZ=3 | FileCheck -check-prefix=MIXED-SET-UNSET-ADD-3 %s
 #
-# CHECK-3-NOT: BAR
-# CHECK-3: BAZ = 3
-# CHECK-3: FOO = 2
+# MIXED-SET-UNSET-ADD-NOT: BAR
+# MIXED-SET-UNSET-ADD: BAZ=3
+# MIXED-SET-UNSET-ADD: FOO=2
