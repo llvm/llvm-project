@@ -8,8 +8,6 @@ namespace GH97646 {
   template<bool B>
   void f() {
     __typeof__(B) x = false;
-    __typeof_unqual__(B) y = false;
     !x;
-    !y;
   }
 }
