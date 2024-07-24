@@ -51,6 +51,8 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.OSUtil.osutil
     .exit_handler
+    .at_quick_exit
+    .atexit
 )
 
 add_entrypoint_object(
@@ -329,7 +331,12 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
     include(${LIBC_SOURCE_DIR}/../compiler-rt/cmake/Modules/AllSupportedArchDefs.cmake)
 
     # scudo distinguishes riscv32 and riscv64, so we need to translate the architecture
-    set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO ${LIBC_TARGET_ARCHITECTURE})
+    # set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO ${LIBC_TARGET_ARCHITECTURE})
+    if (LIBC_TARGET_OS_IS_DARWIN AND (LIBC_TARGET_ARCHITECTURE STREQUAL "arm"))
+      set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO arm64)
+    else()
+      set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO ${LIBC_TARGET_ARCHITECTURE})
+    endif()
     if(LIBC_TARGET_ARCHITECTURE_IS_RISCV64)
       set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO riscv64)
     elseif(LIBC_TARGET_ARCHITECTURE_IS_RISCV32)
@@ -462,15 +469,11 @@ add_entrypoint_object(
 
 # TODO: Move all exit functions to linux specific 
 
-if (TARGET libc.src.__support.threads.mutex)
-add_object_library(
+if(TARGET libc.src.__support.threads.mutex)
+add_header_library(
   exit_handler
-  SRCS
-    exit_handler.cpp
   HDRS
     exit_handler.h
-  CXX_STANDARD
-    20 # For constinit 
   DEPENDS
     libc.src.__support.CPP.mutex
     libc.src.__support.CPP.new
@@ -487,6 +490,8 @@ add_entrypoint_object(
     atexit.cpp
   HDRS
     atexit.h
+  CXX_STANDARD
+    20 # For constinit 
   DEPENDS
     .exit_handler
 )
@@ -497,8 +502,11 @@ add_entrypoint_object(
     at_quick_exit.cpp
   HDRS
     at_quick_exit.h
+  CXX_STANDARD
+    20 # For constinit 
   DEPENDS
     .exit_handler
+    .atexit
 )
 
 list(APPEND exit_deps

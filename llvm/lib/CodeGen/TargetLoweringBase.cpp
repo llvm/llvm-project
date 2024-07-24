@@ -824,13 +824,16 @@ void TargetLoweringBase::initActions() {
                      Expand);
 
   // These library functions default to expand.
-  setOperationAction({ISD::FCBRT,      ISD::FLOG,    ISD::FLOG2,  ISD::FLOG10,
-                      ISD::FEXP,       ISD::FEXP2,   ISD::FEXP10, ISD::FFLOOR,
-                      ISD::FNEARBYINT, ISD::FCEIL,   ISD::FRINT,  ISD::FTRUNC,
-                      ISD::LROUND,     ISD::LLROUND, ISD::LRINT,  ISD::LLRINT,
-                      ISD::FROUNDEVEN, ISD::FTAN,    ISD::FACOS,  ISD::FASIN,
-                      ISD::FATAN,      ISD::FCOSH,   ISD::FSINH,  ISD::FTANH},
-                     {MVT::f32, MVT::f64, MVT::f128}, Expand);
+  setOperationAction(
+      {ISD::FCBRT, ISD::FLOG,   ISD::FLOG2,  ISD::FLOG10,     ISD::FEXP,
+       ISD::FEXP2, ISD::FEXP10, ISD::FFLOOR, ISD::FNEARBYINT, ISD::FCEIL,
+       ISD::FRINT, ISD::FTRUNC, ISD::LRINT,  ISD::LLRINT,     ISD::FROUNDEVEN,
+       ISD::FTAN,  ISD::FACOS,  ISD::FASIN,  ISD::FATAN,      ISD::FCOSH,
+       ISD::FSINH, ISD::FTANH},
+      {MVT::f32, MVT::f64, MVT::f128}, Expand);
+
+  setOperationAction({ISD::LROUND, ISD::LLROUND},
+                     {MVT::f32, MVT::f64, MVT::f128}, LibCall);
 
   setOperationAction({ISD::FTAN, ISD::FACOS, ISD::FASIN, ISD::FATAN, ISD::FCOSH,
                       ISD::FSINH, ISD::FTANH},
