@@ -279,18 +279,6 @@ bool ScriptLexer::consume(StringRef tok) {
   return false;
 }
 
-// Consumes Tok followed by ":". Space is allowed between Tok and ":".
-bool ScriptLexer::consumeLabel(StringRef tok) {
-  if (consume((tok + ":").str()))
-    return true;
-  if (tokens.size() >= pos + 2 && tokens[pos] == tok &&
-      tokens[pos + 1] == ":") {
-    pos += 2;
-    return true;
-  }
-  return false;
-}
-
 void ScriptLexer::skip() { (void)next(); }
 
 void ScriptLexer::expect(StringRef expect) {

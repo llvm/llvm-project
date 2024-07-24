@@ -31,6 +31,7 @@ static_library("Utils") {
   # AMDGPUBaseInfo.h includes a header from MCTargetDesc :-/
   include_dirs = [ ".." ]
   sources = [
+    "AMDGPUAsanInstrumentation.cpp",
     "AMDGPUAsmUtils.cpp",
     "AMDGPUBaseInfo.cpp",
     "AMDGPUDelayedMCExpr.cpp",
