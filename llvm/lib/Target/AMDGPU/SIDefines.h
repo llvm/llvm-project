@@ -1120,8 +1120,9 @@ enum Type { TRAP = -2, WORKGROUP = -1 };
 // clang-format off
 
 #define R_00B028_SPI_SHADER_PGM_RSRC1_PS                                0x00B028
-#define   S_00B028_VGPRS(x)                                           (((x) & 0x3F) << 0)
-#define   S_00B028_SGPRS(x)                                           (((x) & 0x0F) << 6)
+#define   S_00B028_VGPRS_GFX6_GFX12(x)                                (((x) & 0x3F) << 0)
+#define   S_00B028_VGPRS_GFX13(x)                                     (((x) & 0x7F) << 0)
+#define   S_00B028_SGPRS_GFX6_GFX12(x)                                (((x) & 0x0F) << 6)
 #define   S_00B028_MEM_ORDERED(x)                                     (((x) & 0x1) << 25)
 #define   G_00B028_MEM_ORDERED(x)                                     (((x) >> 25) & 0x1)
 #define   C_00B028_MEM_ORDERED                                        0xFDFFFFFF
@@ -1193,12 +1194,15 @@ enum Type { TRAP = -2, WORKGROUP = -1 };
 #define R_0286D0_SPI_PS_INPUT_ADDR                                      0x0286D0
 
 #define R_00B848_COMPUTE_PGM_RSRC1                                      0x00B848
-#define   S_00B848_VGPRS(x)                                           (((x) & 0x3F) << 0)
-#define   G_00B848_VGPRS(x)                                           (((x) >> 0) & 0x3F)
-#define   C_00B848_VGPRS                                              0xFFFFFFC0
-#define   S_00B848_SGPRS(x)                                           (((x) & 0x0F) << 6)
-#define   G_00B848_SGPRS(x)                                           (((x) >> 6) & 0x0F)
-#define   C_00B848_SGPRS                                              0xFFFFFC3F
+#define   S_00B848_VGPRS_GFX6_GFX12(x)                                (((x) & 0x3F) << 0)
+#define   G_00B848_VGPRS_GFX6_GFX12(x)                                (((x) >> 0) & 0x3F)
+#define   C_00B848_VGPRS_GFX6_GFX12                                   0xFFFFFFC0
+#define   S_00B848_VGPRS_GFX13(x)                                     (((x) & 0x7F) << 0)
+#define   G_00B848_VGPRS_GFX13(x)                                     (((x) >> 0) & 0x7F)
+#define   C_00B848_VGPRS_GFX13                                        0xFFFFFF80
+#define   S_00B848_SGPRS_GFX6_GFX12(x)                                (((x) & 0x0F) << 6)
+#define   G_00B848_SGPRS_GFX6_GFX12(x)                                (((x) >> 6) & 0x0F)
+#define   C_00B848_SGPRS_GFX6_GFX12                                   0xFFFFFC3F
 #define   S_00B848_PRIORITY(x)                                        (((x) & 0x03) << 10)
 #define   G_00B848_PRIORITY(x)                                        (((x) >> 10) & 0x03)
 #define   C_00B848_PRIORITY                                           0xFFFFF3FF
