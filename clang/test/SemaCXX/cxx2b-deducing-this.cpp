@@ -729,10 +729,10 @@ struct S2 {
 };
 
 S2& S2::operator=(this int&& self, const S2&) = default;
-// expected-error@-1 {{the type of the explicit object parameter of an explicitly-defaulted copy assignment operator should match the type of the class 'S2'}}
+// expected-error@-1 {{the type of the explicit object parameter of an explicitly-defaulted copy assignment operator should be reference to 'S2'}}
 
 S2& S2::operator=(this int&& self, S2&&) = default;
-// expected-error@-1 {{the type of the explicit object parameter of an explicitly-defaulted move assignment operator should match the type of the class 'S2'}}
+// expected-error@-1 {{the type of the explicit object parameter of an explicitly-defaulted move assignment operator should be reference to 'S2'}}
 
 struct Move {
     Move& operator=(this int&, Move&&) = default;
@@ -965,3 +965,11 @@ void f();
 };
 void a::f(this auto) {} // expected-error {{an explicit object parameter cannot appear in a non-member function}}
 }
+
+namespace GH100329 {
+struct A {
+    bool operator == (this const int&, const A&);
+};
+bool A::operator == (this const int&, const A&) = default;
+// expected-error@-1 {{invalid parameter type for defaulted equality comparison operator; found 'const int &', expected 'const GH100329::A &'}}
+} // namespace GH100329
