@@ -65,7 +65,6 @@ private:
 
   bool HasLayout = false;
   bool RelaxAll = false;
-  bool SubsectionsViaSymbols = false;
 
   SectionListType Sections;
 
@@ -144,7 +143,6 @@ public:
               std::unique_ptr<MCObjectWriter> Writer);
   MCAssembler(const MCAssembler &) = delete;
   MCAssembler &operator=(const MCAssembler &) = delete;
-  ~MCAssembler();
 
   /// Compute the effective fragment size.
   uint64_t computeFragmentSize(const MCFragment &F) const;
@@ -194,7 +192,6 @@ public:
   MCObjectWriter &getWriter() const { return *Writer; }
 
   MCDwarfLineTableParams getDWARFLinetableParams() const { return LTParams; }
-  void setDWARFLinetableParams(MCDwarfLineTableParams P) { LTParams = P; }
 
   /// Finish - Do final processing and write the object to the output stream.
   /// \p Writer is used for custom object writer (as the MCJIT does),
@@ -203,10 +200,6 @@ public:
 
   // Layout all section and prepare them for emission.
   void layout();
-
-  // FIXME: This does not belong here.
-  bool getSubsectionsViaSymbols() const { return SubsectionsViaSymbols; }
-  void setSubsectionsViaSymbols(bool Value) { SubsectionsViaSymbols = Value; }
 
   bool hasLayout() const { return HasLayout; }
   bool getRelaxAll() const { return RelaxAll; }
