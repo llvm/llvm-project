@@ -6,15 +6,14 @@
 void p2unsigned(unsigned **ptr) {
   // COMMON-LABEL: define void @p2unsigned(
   // COMMON-SAME:    ptr noundef [[PTR:%.+]])
-  // COMMON-NEXT:  entry:
-  // COMMON-NEXT:   [[PTR_ADDR:%.+]] = alloca ptr, align 8
+  // COMMON:        [[PTR_ADDR:%.+]] = alloca ptr, align 8
   // ENABLED-NEXT:  store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[P2INT_0:!.+]]
   // ENABLED-NEXT:  [[BASE:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[P2INT_0]]
   // ENABLED-NEXT:  store ptr null, ptr [[BASE]], align 8, !tbaa [[P1INT_0:!.+]]
   // DEFAULT-NEXT:  store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR:!.+]]
   // DEFAULT-NEXT:  [[BASE:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
   // DEFAULT-NEXT:  store ptr null, ptr [[BASE]], align 8, !tbaa [[ANYPTR]]
-  // COMMON-NEXT:  ret void
+  // COMMON-NEXT:   ret void
   //
   *ptr = 0;
 }
@@ -22,15 +21,14 @@ void p2unsigned(unsigned **ptr) {
 void p2unsigned_volatile(unsigned *volatile *ptr) {
   // COMMON-LABEL: define void @p2unsigned_volatile(
   // COMMON-SAME:    ptr noundef [[PTR:%.+]])
-  // COMMON-NEXT:  entry:
-  // COMMON-NEXT:    [[PTR_ADDR:%.+]] = alloca ptr, align 8
+  // COMMON:         [[PTR_ADDR:%.+]] = alloca ptr, align 8
   // ENABLED-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[P2INT_0]]
   // ENABLED-NEXT:   [[BASE:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[P2INT_0]]
   // ENABLED-NEXT:   store volatile ptr null, ptr [[BASE]], align 8, !tbaa [[P1INT_0]]
   // DEFAULT-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
   // DEFAULT-NEXT:   [[BASE:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
   // DEFAULT-NEXT:   store volatile ptr null, ptr [[BASE]], align 8, !tbaa [[ANYPTR]]
-  // COMMON-NEXT:   ret void
+  // COMMON-NEXT:    ret void
   //
   *ptr = 0;
 }
@@ -38,8 +36,7 @@ void p2unsigned_volatile(unsigned *volatile *ptr) {
 void p3int(int ***ptr) {
   // COMMON-LABEL: define void @p3int(
   // COMMON-SAME:    ptr noundef [[PTR:%.+]])
-  // COMMON-NEXT:  entry:
-  // COMMON-NEXT:    [[PTR_ADDR:%.+]] = alloca ptr, align 8
+  // COMMON:         [[PTR_ADDR:%.+]] = alloca ptr, align 8
   // ENABLED-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[P3INT_0:!.+]]
   // ENABLED-NEXT:   [[BASE_0:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[P3INT_0]]
   // ENABLED-NEXT:   [[BASE_1:%.+]] = load ptr, ptr [[BASE_0]], align 8, !tbaa [[P2INT_0]]
@@ -48,8 +45,7 @@ void p3int(int ***ptr) {
   // DEFAULT-NEXT:   [[BASE_0:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
   // DEFAULT-NEXT:   [[BASE_1:%.+]] = load ptr, ptr [[BASE_0]], align 8, !tbaa [[ANYPTR]]
   // DEFAULT-NEXT:   store ptr null, ptr [[BASE_1]], align 8, !tbaa [[ANYPTR]]
-
-  // COMMON-NEXT:   ret void
+  // COMMON-NEXT:    ret void
   //
   **ptr = 0;
 }
@@ -57,8 +53,7 @@ void p3int(int ***ptr) {
 void p4char(char ****ptr) {
   // COMMON-LABEL: define void @p4char(
   // COMMON-SAME:    ptr noundef [[PTR:%.+]])
-  // COMMON-NEXT:  entry:
-  // COMMON-NEXT:    [[PTR_ADDR:%.+]] = alloca ptr, align 8
+  // COMMON:         [[PTR_ADDR:%.+]] = alloca ptr, align 8
   // ENABLED-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[P4CHAR_0:!.+]]
   // ENABLED-NEXT:   [[BASE_0:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[P4CHAR_0]]
   // ENABLED-NEXT:   [[BASE_1:%.+]] = load ptr, ptr [[BASE_0]], align 8, !tbaa [[P3CHAR_0:!.+]]
@@ -69,7 +64,7 @@ void p4char(char ****ptr) {
   // DEFAULT-NEXT:   [[BASE_1:%.+]] = load ptr, ptr [[BASE_0]], align 8, !tbaa [[ANYPTR]]
   // DEFAULT-NEXT:   [[BASE_2:%.+]] = load ptr, ptr [[BASE_1]], align 8, !tbaa [[ANYPTR]]
   // DEFAULT-NEXT:   store ptr null, ptr [[BASE_2]], align 8, !tbaa [[ANYPTR]]
-  // COMMON-NEXT:   ret void
+  // COMMON-NEXT:    ret void
   //
   ***ptr = 0;
 }
@@ -77,8 +72,7 @@ void p4char(char ****ptr) {
 void p4char_const1(const char ****ptr) {
   // COMMON-LABEL: define void @p4char_const1(
   // COMMON-SAME:    ptr noundef [[PTR:%.+]])
-  // COMMON-NEXT:  entry:
-  // COMMON-NEXT:    [[PTR_ADDR:%.+]] = alloca ptr, align 8
+  // COMMON:         [[PTR_ADDR:%.+]] = alloca ptr, align 8
   // ENABLED-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[P4CHAR_0]]
   // ENABLED-NEXT:   [[BASE_0:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[P4CHAR_0]]
   // ENABLED-NEXT:   [[BASE_1:%.+]] = load ptr, ptr [[BASE_0]], align 8, !tbaa [[P3CHAR_0]]
@@ -109,7 +103,7 @@ void p4char_const2(const char **const **ptr) {
   // DEFAULT-NEXT:   [[BASE_1:%.+]] = load ptr, ptr [[BASE_0]], align 8, !tbaa [[ANYPTR]]
   // DEFAULT-NEXT:   [[BASE_2:%.+]] = load ptr, ptr [[BASE_1]], align 8, !tbaa [[ANYPTR]]
   // DEFAULT-NEXT:   store ptr null, ptr [[BASE_2]], align 8, !tbaa [[ANYPTR]]
-  // COMMON-NEXT:   ret void
+  // COMMON-NEXT:    ret void
   //
   ***ptr = 0;
 }
@@ -122,15 +116,14 @@ struct S1 {
 void p2struct(struct S1 **ptr) {
   // COMMON-LABEL: define void @p2struct(
   // COMMON-SAME:    ptr noundef [[PTR:%.+]])
-  // COMMON-NEXT:  entry:
-  // COMMON-NEXT:    [[PTR_ADDR:%.+]] = alloca ptr, align 8
+  // COMMON:         [[PTR_ADDR:%.+]] = alloca ptr, align 8
   // ENABLED-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[P2S1_0:!.+]]
   // ENABLED-NEXT:   [[BASE:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[P2S1_0]]
   // ENABLED-NEXT:   store ptr null, ptr [[BASE]], align 8, !tbaa [[P1S1_:!.+]]
   // DEFAULT-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
   // DEFAULT-NEXT:   [[BASE:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
   // DEFAULT-NEXT:   store ptr null, ptr [[BASE]], align 8, !tbaa [[ANYPTR]]
-  // COMMON-NEXT:   ret void
+  // COMMON-NEXT:    ret void
   //
   *ptr = 0;
 }
