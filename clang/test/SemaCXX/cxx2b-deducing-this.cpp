@@ -984,3 +984,11 @@ struct A {
   // expected-note@-2 {{function is implicitly deleted because its declared type does not match the type of an implicit copy assignment operator}}
 };
 } // namespace defaulted_assign
+
+namespace defaulted_compare {
+struct A {
+  bool operator==(this A&, const A&) = default;
+  // expected-error@-1 {{defaulted member equality comparison operator must be const-qualified}}
+  bool operator==(this A, A) = default;
+};
+} // namespace defaulted_compare
