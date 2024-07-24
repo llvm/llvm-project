@@ -6928,6 +6928,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
   if (const char *Name = C.getTimeTraceFile(&JA)) {
     CmdArgs.push_back(Args.MakeArgString("-ftime-trace=" + Twine(Name)));
     Args.AddLastArg(CmdArgs, options::OPT_ftime_trace_granularity_EQ);
+    Args.AddLastArg(CmdArgs, options::OPT_ftime_trace_verbose);
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_ftrapv_handler_EQ)) {
