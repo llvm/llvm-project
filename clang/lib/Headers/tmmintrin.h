@@ -17,10 +17,15 @@
 #include <pmmintrin.h>
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("ssse3,no-evex512"), __min_vector_width__(128)))
+#define __DEFAULT_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__,                               \
+                 __target__("ssse3,no-evex512"), __min_vector_width__(128)))
 
-#define __trunc64(x) (__m64)__builtin_shufflevector((__v2di)(x), __extension__ (__v2di){}, 0)
-#define __anyext128(x) (__m128i)__builtin_shufflevector((__v2si)(x), __extension__ (__v2si){}, 0, 1, -1, -1)
+#define __trunc64(x)                                                           \
+  (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+#define __anyext128(x)                                                         \
+  (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
+                                    1, -1, -1)
 
 /// Computes the absolute value of each of the packed 8-bit signed
 ///    integers in the source operand and stores the 8-bit unsigned integer

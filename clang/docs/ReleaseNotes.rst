@@ -164,8 +164,8 @@ X86 Support
   reimplemented to use the SSE2 instruction-set and XMM registers
   unconditionally. These intrinsics are therefore *no longer
   supported* if MMX is enabled without SSE2 -- either from targeting
-  CPUs from the Pentium-MMX through the Pentium 3, or via explicitly
-  via passing arguments such as ``-mmmx -mno-sse2``.
+  CPUs from the Pentium-MMX through the Pentium 3, or explicitly via
+  passing arguments such as ``-mmmx -mno-sse2``.
 
 - The compiler builtins such as ``__builtin_ia32_paddb`` which
   formerly implemented the above MMX intrinsic functions have been

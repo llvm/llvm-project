@@ -32,13 +32,24 @@ typedef unsigned int __v4su __attribute__((__vector_size__(16)));
 #endif
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("sse,no-evex512"), __min_vector_width__(128)))
-#define __DEFAULT_FN_ATTRS_SSE2 __attribute__((__always_inline__, __nodebug__, __target__("sse2,no-evex512"), __min_vector_width__(128)))
+#define __DEFAULT_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__, __target__("sse,no-evex512"), \
+                 __min_vector_width__(128)))
+#define __DEFAULT_FN_ATTRS_SSE2                                                \
+  __attribute__((__always_inline__, __nodebug__,                               \
+                 __target__("sse2,no-evex512"), __min_vector_width__(128)))
 
-#define __trunc64(x) (__m64)__builtin_shufflevector((__v2di)(x), __extension__ (__v2di){}, 0)
-#define __zext128(x) (__m128i)__builtin_shufflevector((__v2si)(x), __extension__ (__v2si){}, 0, 1, 2, 3)
-#define __anyext128(x) (__m128i)__builtin_shufflevector((__v2si)(x), __extension__ (__v2si){}, 0, 1, -1, -1)
-#define __zeroupper64(x) (__m128i)__builtin_shufflevector((__v4si)(x), __extension__ (__v4si){}, 0, 1, 4, 5)
+#define __trunc64(x)                                                           \
+  (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+#define __zext128(x)                                                           \
+  (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
+                                    1, 2, 3)
+#define __anyext128(x)                                                         \
+  (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
+                                    1, -1, -1)
+#define __zeroupper64(x)                                                       \
+  (__m128i) __builtin_shufflevector((__v4si)(x), __extension__(__v4si){}, 0,   \
+                                    1, 4, 5)
 
 /// Adds the 32-bit float values in the low-order bits of the operands.
 ///
@@ -2481,9 +2492,9 @@ _mm_mulhi_pu16(__m64 __a, __m64 __b)
 ///    <c>_MM_SHUFFLE(b6, b4, b2, b0)</c> can create an 8-bit mask of the form
 ///    <c>[b6, b4, b2, b0]</c>.
 /// \returns A 64-bit integer vector containing the shuffled values.
-#define _mm_shuffle_pi16(a, n) \
-  ((__m64)__builtin_shufflevector((__v4hi)(__m64)(a), __extension__ (__v4hi){}, \
-                                  (n) & 0x3, ((n) >> 2) & 0x3, \
+#define _mm_shuffle_pi16(a, n)                                                 \
+  ((__m64)__builtin_shufflevector((__v4hi)(__m64)(a), __extension__(__v4hi){}, \
+                                  (n) & 0x3, ((n) >> 2) & 0x3,                 \
                                   ((n) >> 4) & 0x3, ((n) >> 6) & 0x3))
 
 /// Conditionally copies the values from each 8-bit element in the first

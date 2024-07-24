@@ -49,10 +49,15 @@ typedef __bf16 __m128bh __attribute__((__vector_size__(16), __aligned__(16)));
 #endif
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("sse2,no-evex512"), __min_vector_width__(128)))
+#define __DEFAULT_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__,                               \
+                 __target__("sse2,no-evex512"), __min_vector_width__(128)))
 
-#define __trunc64(x) (__m64)__builtin_shufflevector((__v2di)(x), __extension__ (__v2di){}, 0)
-#define __anyext128(x) (__m128i)__builtin_shufflevector((__v2si)(x), __extension__ (__v2si){}, 0, 1, -1, -1)
+#define __trunc64(x)                                                           \
+  (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+#define __anyext128(x)                                                         \
+  (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
+                                    1, -1, -1)
 
 /// Adds lower double-precision values in both operands and returns the
 ///    sum in the lower 64 bits of the result. The upper 64 bits of the result
