@@ -5281,8 +5281,8 @@ template <class Emitter>
 unsigned Compiler<Emitter>::collectBaseOffset(const QualType BaseType,
                                               const QualType DerivedType) {
   const auto extractRecordDecl = [](QualType Ty) -> const CXXRecordDecl * {
-    if (const auto *PT = dyn_cast<PointerType>(Ty))
-      return PT->getPointeeType()->getAsCXXRecordDecl();
+    if (const auto *R = Ty->getPointeeCXXRecordDecl())
+      return R;
     return Ty->getAsCXXRecordDecl();
   };
   const CXXRecordDecl *BaseDecl = extractRecordDecl(BaseType);
