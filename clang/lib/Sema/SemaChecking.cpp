@@ -8199,7 +8199,7 @@ static bool IsStdFunction(const FunctionDecl *FDecl,
 }
 
 enum class MathCheck { NaN, Inf };
-static bool IsSpecialMathFunction(StringRef calleeName, MathCheck Check) {
+static bool IsInfOrNanFunction(StringRef calleeName, MathCheck Check) {
   auto MatchesAny = [&](std::initializer_list<llvm::StringRef> names) {
     return std::any_of(names.begin(), names.end(), [&](llvm::StringRef name) {
       return calleeName == name;
@@ -8225,7 +8225,7 @@ void Sema::CheckInfNaNFunction(const CallExpr *Call,
   bool IsNaNOrIsUnordered =
       IsStdFunction(FDecl, "isnan") || IsStdFunction(FDecl, "isunordered");
   bool IsSpecialNaN =
-      HasIdentifier && IsSpecialMathFunction(FDecl->getName(), MathCheck::NaN);
+      HasIdentifier && IsInfOrNanFunction(FDecl->getName(), MathCheck::NaN);
   if ((IsNaNOrIsUnordered || IsSpecialNaN) && FPO.getNoHonorNaNs()) {
     Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
         << 1 << 0 << Call->getSourceRange();
@@ -8233,9 +8233,8 @@ void Sema::CheckInfNaNFunction(const CallExpr *Call,
     bool IsInfOrIsFinite =
         IsStdFunction(FDecl, "isinf") || IsStdFunction(FDecl, "isfinite");
     bool IsInfinityOrIsSpecialInf =
-        HasIdentifier &&
-        ((FDecl->getName() == "infinity") ||
-         IsSpecialMathFunction(FDecl->getName(), MathCheck::Inf));
+        HasIdentifier && ((FDecl->getName() == "infinity") ||
+                          IsInfOrNanFunction(FDecl->getName(), MathCheck::Inf));
     if ((IsInfOrIsFinite || IsInfinityOrIsSpecialInf) && FPO.getNoHonorInfs())
       Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
           << 0 << 0 << Call->getSourceRange();
