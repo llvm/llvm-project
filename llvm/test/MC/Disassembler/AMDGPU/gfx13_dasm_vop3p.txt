@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefix=GFX13 %s
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=-wavefrontsize32,+wavefrontsize64 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefix=GFX13 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefix=GFX13 %s
 
 # GFX13: v_dot4_i32_iu8 v255, 0xaf123456, vcc_hi, null neg_lo:[0,1,0] ; encoding: [0xff,0x40,0x16,0xcc,0xff,0xd6,0xf0,0x59,0x56,0x34,0x12,0xaf]
 0xff,0x40,0x16,0xcc,0xff,0xd6,0xf0,0x59,0x56,0x34,0x12,0xaf
