@@ -133,12 +133,14 @@ bool CombinerHelper::matchTruncateOfExt(const MachineInstr &Root,
     MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(Dst, Src); };
 
     return true;
-  } else if (SrcTy.getScalarSizeInBits() < DstTy.getScalarSizeInBits()) {
-    // Protect against scalable vectors.
+  }
+
+  if (SrcTy.getScalarSizeInBits() < DstTy.getScalarSizeInBits()) {
+    // If the source is smaller than the destination, we need to extend.
+
     if (!isLegalOrBeforeLegalizer({Ext->getOpcode(), {DstTy, SrcTy}}))
       return false;
 
-    // If the source is smaller than the destination, we need to extend.
     MatchInfo = [=](MachineIRBuilder &B) {
       B.buildInstr(Ext->getOpcode(), {Dst}, {Src});
     };
@@ -146,12 +148,16 @@ bool CombinerHelper::matchTruncateOfExt(const MachineInstr &Root,
     return true;
   }
 
-  // The source is larger than the destination. We need to truncate.
+  if (SrcTy.getScalarSizeInBits() > DstTy.getScalarSizeInBits()) {
+    // The source is larger than the destination. We need to truncate.
 
-  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {DstTy, SrcTy}}))
-    return false;
+    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {DstTy, SrcTy}}))
+      return false;
 
-  MatchInfo = [=](MachineIRBuilder &B) { B.buildTrunc(Dst, Src); };
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildTrunc(Dst, Src); };
 
-  return true;
+    return true;
+  }
+
+  return false;
 }
