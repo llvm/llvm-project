@@ -11,9 +11,11 @@
 // RUN:   -fno-ptrauth-auth-traps -fptrauth-auth-traps \
 // RUN:   -fno-ptrauth-vtable-pointer-address-discrimination -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -fno-ptrauth-vtable-pointer-type-discrimination -fptrauth-vtable-pointer-type-discrimination \
+// RUN:   -fno-ptrauth-type-info-vtable-pointer-discrimination -fptrauth-type-info-vtable-pointer-discrimination \
 // RUN:   -fno-ptrauth-init-fini -fptrauth-init-fini \
+// RUN:   -fno-ptrauth-indirect-gotos -fptrauth-indirect-gotos \
 // RUN:   %s 2>&1 | FileCheck %s --check-prefix=ALL
-// ALL: "-cc1"{{.*}} "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-init-fini"
+// ALL: "-cc1"{{.*}} "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-type-info-vtable-pointer-discrimination" "-fptrauth-init-fini" "-fptrauth-indirect-gotos"
 
 // RUN: %clang -### -c --target=aarch64-linux -mabi=pauthtest %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI1
 // RUN: %clang -### -c --target=aarch64-linux-pauthtest %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI1
@@ -34,13 +36,16 @@
 
 // RUN: not %clang -### -c --target=x86_64 -fptrauth-intrinsics -fptrauth-calls -fptrauth-returns -fptrauth-auth-traps \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination -fptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fptrauth-init-fini %s 2>&1 | FileCheck %s --check-prefix=ERR1
+// RUN:   -fptrauth-type-info-vtable-pointer-discrimination -fptrauth-indirect-gotos -fptrauth-init-fini %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=ERR1
 // ERR1:      error: unsupported option '-fptrauth-intrinsics' for target '{{.*}}'
 // ERR1-NEXT: error: unsupported option '-fptrauth-calls' for target '{{.*}}'
 // ERR1-NEXT: error: unsupported option '-fptrauth-returns' for target '{{.*}}'
 // ERR1-NEXT: error: unsupported option '-fptrauth-auth-traps' for target '{{.*}}'
 // ERR1-NEXT: error: unsupported option '-fptrauth-vtable-pointer-address-discrimination' for target '{{.*}}'
 // ERR1-NEXT: error: unsupported option '-fptrauth-vtable-pointer-type-discrimination' for target '{{.*}}'
+// ERR1-NEXT: error: unsupported option '-fptrauth-type-info-vtable-pointer-discrimination' for target '{{.*}}'
+// ERR1-NEXT: error: unsupported option '-fptrauth-indirect-gotos' for target '{{.*}}'
 // ERR1-NEXT: error: unsupported option '-fptrauth-init-fini' for target '{{.*}}'
 
 //// Only support PAuth ABI for Linux as for now.
