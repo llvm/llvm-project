@@ -212,8 +212,7 @@ public:
     }
   }
 
-  /// Creates a mapping from a pseudo probe index to block pseudo probe in the
-  /// binary.
+  /// Creates a mapping from a pseudo probe index to pseudo probe.
   void mapIndexToProbe(uint64_t Index, const MCDecodedPseudoProbe *Probe) {
     IndexToBBPseudoProbes[Index].push_back(Probe);
   }
@@ -321,12 +320,13 @@ private:
       const std::vector<yaml::bolt::PseudoProbeInfo> &PseudoProbes) const {
     if (!YamlBFGUID)
       return nullptr;
-    // Searches for the pseudo probe attached to the matched function's block,
-    // ignoring pseudo probes attached to function calls and inlined functions'
-    // blocks.
+
     if (opts::Verbosity >= 3)
       outs() << "BOLT-INFO: attempting to match block with pseudo probes\n";
 
+    // Searches for the pseudo probe attached to the matched function's block,
+    // ignoring pseudo probes attached to function calls and inlined functions'
+    // blocks.
     std::vector<const yaml::bolt::PseudoProbeInfo *> BlockPseudoProbes;
     for (const auto &PseudoProbe : PseudoProbes) {
       // Ensures that pseudo probe information belongs to the appropriate
