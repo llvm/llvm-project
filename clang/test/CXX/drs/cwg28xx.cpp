@@ -30,7 +30,7 @@ using U2 = decltype(&main);
 #endif
 } // namespace cwg2811
 
-namespace cwg2813 { // cwg2813: 19
+namespace cwg2813 { // cwg2813: 20
 #if __cplusplus >= 202302L
 struct X {
   X() = default;
