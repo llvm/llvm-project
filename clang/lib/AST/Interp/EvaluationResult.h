@@ -98,7 +98,12 @@ public:
   /// LValue and we can't read from it.
   std::optional<APValue> toRValue() const;
 
+  /// Check that all subobjects of the given pointer have been initialized.
   bool checkFullyInitialized(InterpState &S, const Pointer &Ptr) const;
+  /// Check that none of the blocks the given pointer (transitively) points
+  /// to are dynamically allocated.
+  bool checkReturnValue(InterpState &S, const Context &Ctx, const Pointer &Ptr,
+                        const SourceInfo &Info);
 
   QualType getSourceType() const {
     if (const auto *D =
@@ -113,6 +118,7 @@ public:
   void dump() const;
 
   friend class EvalEmitter;
+  friend class InterpState;
 };
 
 } // namespace interp
