@@ -136,7 +136,7 @@ struct TidEpoch {
   Epoch epoch;
 };
 
-struct alignas(SANITIZER_CACHE_LINE_SIZE) TidSlot {
+struct TidSlot {
   Mutex mtx;
   Sid sid;
   atomic_uint32_t raw_epoch;
@@ -153,10 +153,10 @@ struct alignas(SANITIZER_CACHE_LINE_SIZE) TidSlot {
   }
 
   TidSlot();
-};
+} ALIGNED(SANITIZER_CACHE_LINE_SIZE);
 
 // This struct is stored in TLS.
-struct alignas(SANITIZER_CACHE_LINE_SIZE) ThreadState {
+struct ThreadState {
   FastState fast_state;
   int ignore_sync;
 #if !SANITIZER_GO
@@ -234,7 +234,7 @@ struct alignas(SANITIZER_CACHE_LINE_SIZE) ThreadState {
   const ReportDesc *current_report;
 
   explicit ThreadState(Tid tid);
-};
+} ALIGNED(SANITIZER_CACHE_LINE_SIZE);
 
 #if !SANITIZER_GO
 #if SANITIZER_APPLE || SANITIZER_ANDROID
