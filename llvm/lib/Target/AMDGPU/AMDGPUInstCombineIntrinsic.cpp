@@ -1103,6 +1103,20 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     break;
   }
+  case Intrinsic::amdgcn_wave_match: {
+    // TODO: We should use UniformityAnalysis instead of just checking for
+    // trivially uniform constants.
+
+    // A constant value is trivially uniform.
+    if (Constant *C = dyn_cast<Constant>(II.getArgOperand(0))) {
+      Function *NewF = Intrinsic::getDeclaration(
+          II.getModule(), Intrinsic::amdgcn_ballot, II.getType());
+      CallInst *NewCall =
+          IC.Builder.CreateCall(NewF, {IC.Builder.getInt1(true)});
+      return IC.replaceInstUsesWith(II, NewCall);
+    }
+    break;
+  }
   case Intrinsic::amdgcn_trig_preop: {
     // The intrinsic is declared with name mangling, but currently the
     // instruction only exists for f64

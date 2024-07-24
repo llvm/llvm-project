@@ -1889,6 +1889,11 @@ let SubtargetPredicate = HasWaitXcnt, hasSideEffects = 1 in {
     SOPP_Pseudo<"s_wait_xcnt", (ins s16imm:$simm16), "$simm16">;
 } // End SubtargetPredicate = hasWaitXcnt, hasSideEffects = 1
 
+let SubtargetPredicate = HasSWC, hasSideEffects = 1 in {
+  def S_WAIT_SWCCNT :
+    SOPP_Pseudo<"s_wait_swccnt", (ins s16imm:$simm16), "$simm16">;
+}
+
 let SubtargetPredicate = Has1024AddressableVGPRs in {
   def S_SET_VGPR_MSB : SOPP_Pseudo<"s_set_vgpr_msb" , (ins i16imm:$simm16), "$simm16"> {
     let hasSideEffects = 1;
@@ -2806,8 +2811,7 @@ defm S_SEMA_SIGNAL_AFTER_VALU : SOPP_Real_32_gfx13<0x35>;
 //             for confusion (probably best to do post-upstreaming to reduce
 //             conflicts)
 defm S_WAIT_BVHCNT            : SOPP_Real_32_gfx13<0x4c, "s_wait_rtscnt", 0>;
-// TODO-GFX13:
-//defm S_WAIT_SWCCNT            : SOPP_Real_32_gfx13<0x4d>;
+defm S_WAIT_SWCCNT            : SOPP_Real_32_gfx13<0x4d>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX12 only.

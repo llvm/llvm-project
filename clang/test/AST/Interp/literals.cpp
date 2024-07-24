@@ -1214,6 +1214,10 @@ namespace StmtExprs {
     return 76;
   }
   static_assert(foo() == 76, "");
+
+  namespace CrossFuncLabelDiff {
+    constexpr long a(bool x) { return x ? 0 : (intptr_t)&&lbl + (0 && ({lbl: 0;})); }
+  }
 }
 #endif
 
@@ -1303,3 +1307,15 @@ namespace VolatileReads {
   static_assert(b, ""); // both-error {{not an integral constant expression}} \
                         // both-note {{read of volatile-qualified type 'const volatile int' is not allowed in a constant expression}}
 }
+#if __cplusplus >= 201703L
+namespace {
+  struct C {
+    int x;
+  };
+
+  template <const C *p> void f() {
+    const auto &[c] = *p;
+    &c; // both-warning {{expression result unused}}
+  }
+}
+#endif

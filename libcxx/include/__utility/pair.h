@@ -32,7 +32,6 @@
 #include <__type_traits/is_implicitly_default_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_relocatable.h>
@@ -80,38 +79,6 @@ struct _LIBCPP_TEMPLATE_VIS pair
 
   _LIBCPP_HIDE_FROM_ABI pair(pair const&) = default;
   _LIBCPP_HIDE_FROM_ABI pair(pair&&)      = default;
-
-  // When we are requested for pair to be trivially copyable by the ABI macro, we use defaulted members
-  // if it is both legal to do it (i.e. no references) and we have a way to actually implement it, which requires
-  // the __enable_if__ attribute before C++20.
-#ifdef _LIBCPP_ABI_TRIVIALLY_COPYABLE_PAIR
-  // FIXME: This should really just be a static constexpr variable. It's in a struct to avoid gdb printing the value
-  // when printing a pair
-  struct __has_defaulted_members {
-    static const bool value = !is_reference<first_type>::value && !is_reference<second_type>::value;
-  };
-#  if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI constexpr pair& operator=(const pair&)
-    requires __has_defaulted_members::value
-  = default;
-
-  _LIBCPP_HIDE_FROM_ABI constexpr pair& operator=(pair&&)
-    requires __has_defaulted_members::value
-  = default;
-#  elif __has_attribute(__enable_if__)
-  _LIBCPP_HIDE_FROM_ABI pair& operator=(const pair&)
-      __attribute__((__enable_if__(__has_defaulted_members::value, ""))) = default;
-
-  _LIBCPP_HIDE_FROM_ABI pair& operator=(pair&&)
-      __attribute__((__enable_if__(__has_defaulted_members::value, ""))) = default;
-#  else
-#    error "_LIBCPP_ABI_TRIVIALLY_COPYABLE_PAIR isn't supported with this compiler"
-#  endif
-#else
-  struct __has_defaulted_members {
-    static const bool value = false;
-  };
-#endif // defined(_LIBCPP_ABI_TRIVIALLY_COPYABLE_PAIR) && __has_attribute(__enable_if__)
 
 #ifdef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI pair() : first(), second() {}
@@ -258,8 +225,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
              typename __make_tuple_indices<sizeof...(_Args2) >::type()) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair&
-  operator=(__conditional_t<!__has_defaulted_members::value && is_copy_assignable<first_type>::value &&
-                                is_copy_assignable<second_type>::value,
+  operator=(__conditional_t<is_copy_assignable<first_type>::value && is_copy_assignable<second_type>::value,
                             pair,
                             __nat> const& __p) noexcept(is_nothrow_copy_assignable<first_type>::value &&
                                                         is_nothrow_copy_assignable<second_type>::value) {
@@ -268,12 +234,10 @@ struct _LIBCPP_TEMPLATE_VIS pair
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair&
-  operator=(__conditional_t<!__has_defaulted_members::value && is_move_assignable<first_type>::value &&
-                                is_move_assignable<second_type>::value,
-                            pair,
-                            __nat>&& __p) noexcept(is_nothrow_move_assignable<first_type>::value &&
-                                                   is_nothrow_move_assignable<second_type>::value) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair& operator=(
+      __conditional_t<is_move_assignable<first_type>::value && is_move_assignable<second_type>::value, pair, __nat>&&
+          __p) noexcept(is_nothrow_move_assignable<first_type>::value &&
+                        is_nothrow_move_assignable<second_type>::value) {
     first  = std::forward<first_type>(__p.first);
     second = std::forward<second_type>(__p.second);
     return *this;

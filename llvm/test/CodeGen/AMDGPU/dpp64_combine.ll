@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,GFX90A,DPP64-GFX9 -DCTL=row_newbcast
-; RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,DPP64-GFX9 -DCTL=row_newbcast
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32 -DCTL=row_share
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32 -DCTL=row_share
+; RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,DPP64-GFX9,GFX940 -DCTL=row_newbcast
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10 -DCTL=row_share
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX11 -DCTL=row_share
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX1210 -DCTL=row_share
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1211 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,DPP64-GFX1211 -DCTL=row_share
 
@@ -91,6 +91,27 @@ define amdgpu_kernel void @dpp_mul_row_share(ptr addrspace(1) %arg) {
   %mul = mul i32 %tmp0, %load
   store i32 %mul, ptr addrspace(1) %gep
   ret void
+}
+
+; GCN-LABEL: {{^}}dpp64_loop:
+; GCN: v_mov_b32_dpp
+; DPP64: v_mov_b32_dpp
+; GFX90A: v_add_co_u32_e32
+; GFX90A: v_addc_co_u32_e32
+; GFX940: v_lshl_add_u64
+; GFX10: v_mov_b32_dpp
+; GFX10: v_add_co_u32
+; GFX10: v_add_co_ci_u32_e32
+; GFX11: v_add_co_u32_e64_dpp
+; GFX11: v_add_co_ci_u32_e32
+define amdgpu_cs void @dpp64_loop(i64 %arg) {
+bb:
+  br label %bb1
+bb1:
+  %i = call i64 @llvm.amdgcn.update.dpp.i64(i64 0, i64 0, i32 0, i32 0, i32 0, i1 false)
+  %i2 = add i64 %i, %arg
+  %i3 = atomicrmw add ptr addrspace(1) null, i64 %i2 monotonic, align 8
+  br label %bb1
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x()
