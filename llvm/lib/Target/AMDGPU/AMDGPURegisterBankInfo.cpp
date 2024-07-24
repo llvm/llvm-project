@@ -3172,6 +3172,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   }
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_D16:
+  case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_NORET:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE_D16: {
     const AMDGPU::RsrcIntrinsic *RSrcIntrin =
@@ -4842,6 +4843,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_D16:
+  case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_NORET:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE_D16: {
     auto IntrID = AMDGPU::getIntrinsicID(MI);
@@ -4983,6 +4985,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
     case Intrinsic::amdgcn_raw_buffer_load:
     case Intrinsic::amdgcn_raw_ptr_buffer_load:
+    case Intrinsic::amdgcn_raw_atomic_buffer_load:
+    case Intrinsic::amdgcn_raw_ptr_atomic_buffer_load:
     case Intrinsic::amdgcn_raw_tbuffer_load:
     case Intrinsic::amdgcn_raw_ptr_tbuffer_load: {
       // FIXME: Should make intrinsic ID the last operand of the instruction,
@@ -5016,7 +5020,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_struct_buffer_load:
     case Intrinsic::amdgcn_struct_ptr_buffer_load:
     case Intrinsic::amdgcn_struct_tbuffer_load:
-    case Intrinsic::amdgcn_struct_ptr_tbuffer_load: {
+    case Intrinsic::amdgcn_struct_ptr_tbuffer_load:
+    case Intrinsic::amdgcn_struct_atomic_buffer_load:
+    case Intrinsic::amdgcn_struct_ptr_atomic_buffer_load: {
       OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       OpdsMapping[3] = getVGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);

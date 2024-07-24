@@ -87,7 +87,7 @@ struct TimeTraceMetadata {
   std::string Detail;
   // Source file and line number information for the event.
   std::string File;
-  int Line;
+  int Line = 0;
 
   bool isEmpty() const { return Detail.empty() && File.empty(); }
 };

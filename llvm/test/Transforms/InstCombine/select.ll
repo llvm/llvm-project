@@ -4713,3 +4713,19 @@ define i8 @select_knownbits_simplify_missing_noundef(i8 %x)  {
   %res = select i1 %cmp, i8 %and, i8 0
   ret i8 %res
 }
+
+@g_ext = external global i8
+
+; Make sure we don't replace %ptr with @g_ext, which may cause the load to trigger UB.
+define i32 @pr99436(ptr align 4 dereferenceable(4) %ptr) {
+; CHECK-LABEL: @pr99436(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[PTR:%.*]], @g_ext
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 [[VAL]], i32 0
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %cmp = icmp eq ptr %ptr, @g_ext
+  %val = load i32, ptr %ptr, align 4
+  %ret = select i1 %cmp, i32 %val, i32 0
+  ret i32 %ret
+}
