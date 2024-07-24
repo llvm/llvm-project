@@ -1366,7 +1366,7 @@ LogicalResult mlir::spirv::unrollVectorsInFuncBodies(Operation *op) {
     vector::populateVectorTransposeLoweringPatterns(patterns, options);
     vector::populateVectorShapeCastLoweringPatterns(patterns);
     if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
-      return llvm::failure();
+      return failure();
   }
 
   // Run canonicalization to cast away leading size-1 dimensions.
@@ -1391,9 +1391,9 @@ LogicalResult mlir::spirv::unrollVectorsInFuncBodies(Operation *op) {
     vector::ShapeCastOp::getCanonicalizationPatterns(patterns, context);
 
     if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
-      return llvm::failure();
+      return failure();
   }
-  return llvm::success();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
