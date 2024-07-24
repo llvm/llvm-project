@@ -39,8 +39,7 @@ CodeGenModule::getPointerAuthOtherDiscriminator(const PointerAuthSchema &Schema,
     return nullptr;
 
   case PointerAuthSchema::Discrimination::Type:
-    assert(!Type.isNull() &&
-           "type not provided for type-discriminated schema");
+    assert(!Type.isNull() && "type not provided for type-discriminated schema");
     return llvm::ConstantInt::get(
         IntPtrTy, getContext().getPointerAuthTypeDiscriminator(Type));
 
@@ -57,8 +56,8 @@ CodeGenModule::getPointerAuthOtherDiscriminator(const PointerAuthSchema &Schema,
 }
 
 uint16_t CodeGen::getPointerAuthTypeDiscriminator(CodeGenModule &CGM,
-                                                  QualType functionType) {
-  return CGM.getContext().getPointerAuthTypeDiscriminator(functionType);
+                                                  QualType FunctionType) {
+  return CGM.getContext().getPointerAuthTypeDiscriminator(FunctionType);
 }
 
 /// Compute an ABI-stable hash of the given string.
@@ -93,7 +92,6 @@ CGPointerAuthInfo CodeGenModule::getFunctionPointerAuthInfo(QualType T) {
   assert(!Schema.isAddressDiscriminated() &&
          "function pointers cannot use address-specific discrimination");
 
-
   llvm::Constant *Discriminator = nullptr;
   if (T->isFunctionPointerType() || T->isFunctionReferenceType())
     T = T->getPointeeType();
@@ -123,24 +121,6 @@ CodeGenModule::getMemberFunctionPointerAuthInfo(QualType functionType) {
                            /* authenticatesNullValues */ false, discriminator);
 }
 
-/// Return the natural pointer authentication for values of the given
-/// pointer type.
-static CGPointerAuthInfo getPointerAuthInfoForType(CodeGenModule &CGM,
-                                                   QualType type) {
-  assert(type->isPointerType());
-
-  // Function pointers use the function-pointer schema by default.
-  if (auto ptrTy = type->getAs<PointerType>()) {
-    auto functionType = ptrTy->getPointeeType();
-    if (functionType->isFunctionType()) {
-      return CGM.getFunctionPointerAuthInfo(functionType);
-    }
-  }
-
-  // Normal data pointers never use direct pointer authentication by default.
-  return CGPointerAuthInfo();
-}
-
 CGPointerAuthInfo
 CodeGenFunction::EmitPointerAuthInfo(PointerAuthQualifier qualifier,
                                      Address storageAddress) {
@@ -168,6 +148,47 @@ CodeGenFunction::EmitPointerAuthInfo(PointerAuthQualifier qualifier,
                            qualifier.getAuthenticationMode(),
                            qualifier.isIsaPointer(),
                            qualifier.authenticatesNullValues(), discriminator);
+}
+
+/// Return the natural pointer authentication for values of the given
+/// pointee type.
+static CGPointerAuthInfo
+getPointerAuthInfoForPointeeType(CodeGenModule &CGM, QualType PointeeType) {
+  if (PointeeType.isNull())
+    return CGPointerAuthInfo();
+
+  // Function pointers use the function-pointer schema by default.
+  if (PointeeType->isFunctionType())
+    return CGM.getFunctionPointerAuthInfo(PointeeType);
+
+  // Normal data pointers never use direct pointer authentication by default.
+  return CGPointerAuthInfo();
+}
+
+CGPointerAuthInfo CodeGenModule::getPointerAuthInfoForPointeeType(QualType T) {
+  return ::getPointerAuthInfoForPointeeType(*this, T);
+}
+
+/// Return the natural pointer authentication for values of the given
+/// pointer type.
+static CGPointerAuthInfo getPointerAuthInfoForType(CodeGenModule &CGM,
+                                                   QualType PointerType) {
+  assert(PointerType->isSignableType());
+
+  // Block pointers are currently not signed.
+  if (PointerType->isBlockPointerType())
+    return CGPointerAuthInfo();
+
+  auto PointeeType = PointerType->getPointeeType();
+
+  if (PointeeType.isNull())
+    return CGPointerAuthInfo();
+
+  return ::getPointerAuthInfoForPointeeType(CGM, PointeeType);
+}
+
+CGPointerAuthInfo CodeGenModule::getPointerAuthInfoForType(QualType T) {
+  return ::getPointerAuthInfoForType(*this, T);
 }
 
 static std::pair<llvm::Value *, CGPointerAuthInfo>
@@ -631,7 +652,7 @@ llvm::Constant *CodeGenModule::getFunctionPointer(GlobalDecl GD,
       FuncType = Context.getFunctionNoProtoType(Proto->getReturnType(),
                                                 Proto->getExtInfo());
 
-  return getFunctionPointer(getRawFunctionPointer(GD, Ty), FuncType, FD);
+  return getFunctionPointer(getRawFunctionPointer(GD, Ty), FuncType);
 }
 
 llvm::Constant *
