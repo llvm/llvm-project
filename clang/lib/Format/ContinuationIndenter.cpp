@@ -820,9 +820,9 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   };
   // Identifies simple (no expression) one-argument function calls.
   const auto IsSimpleFunction = [&](const FormatToken &Tok) {
-    const auto *Previous = Tok.Previous;
     if (!Tok.FakeLParens.empty() && Tok.FakeLParens.back() > prec::Unknown)
       return false;
+    const auto *Previous = Tok.Previous;
     if (!Previous || (!Previous->isOneOf(TT_FunctionDeclarationLParen,
                                          TT_LambdaDefinitionLParen) &&
                       !IsFunctionCallParen(*Previous))) {
