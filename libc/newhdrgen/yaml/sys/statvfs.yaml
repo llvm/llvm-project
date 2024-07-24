@@ -2,6 +2,8 @@ header: sys-statvfs.h
 macros: []
 types:
   - type_name: struct_statvfs
+  - type_name: fsblkcnt_t
+  - type_name: fsfilcnt_t
 enums: []
 objects: []
 functions:
