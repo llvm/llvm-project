@@ -516,7 +516,7 @@ structured_op: !LinalgStructuredOpConfig
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: erf
-  cpp_class_name: erfOp
+  cpp_class_name: ErfOp
   doc: |-
     Applies erf(x) elementwise.
 
