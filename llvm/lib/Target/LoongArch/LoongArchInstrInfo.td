@@ -1144,7 +1144,6 @@ def : PatGprGpr<urem, MOD_DU>;
 def : PatGprGpr<loongarch_mod_wu, MOD_WU>;
 def : PatGprGpr<rotr, ROTR_D>;
 def : PatGprGpr<loongarch_rotr_w, ROTR_W>;
-def : PatGprGpr_32<rotr, ROTR_W>;
 def : PatGprImm<rotr, ROTRI_D, uimm6>;
 def : PatGprImm_32<rotr, ROTRI_W, uimm5>;
 def : PatGprImm<loongarch_rotr_w, ROTRI_W, uimm5>;

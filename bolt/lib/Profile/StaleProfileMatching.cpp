@@ -46,6 +46,7 @@ namespace opts {
 extern cl::opt<bool> TimeRewrite;
 extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<unsigned> Verbosity;
+extern cl::opt<bool> ProfileUsePseudoProbes;
 
 cl::opt<bool>
     InferStaleProfile("infer-stale-profile",
@@ -585,7 +586,7 @@ size_t matchWeightsByHashes(
     BlendedBlockHash BlendedHash(BB->getHash());
     BlendedHashes.push_back(BlendedHash);
     // Collects pseudo probes attached to the BB for use in the StaleMatcher.
-    if (PseudoProbeDecoder) {
+    if (opts::ProfileUsePseudoProbes && PseudoProbeDecoder) {
       const AddressProbesMap &ProbeMap =
           PseudoProbeDecoder->getAddress2ProbesMap();
       const uint64_t FuncAddr = BF.getAddress();
@@ -615,7 +616,7 @@ size_t matchWeightsByHashes(
   // pseudo probe block matching. Otherwise, the YamlBF's GUID is used for
   // pseudo probe block matching.
   uint64_t BFPseudoProbeDescHash = 0;
-  if (BF.getGUID() != 0) {
+  if (opts::ProfileUsePseudoProbes && BF.getGUID() != 0) {
     assert(PseudoProbeDecoder &&
            "If BF has pseudo probe, BC should have a pseudo probe decoder");
     auto &GUID2FuncDescMap = PseudoProbeDecoder->getGUID2FuncDescMap();

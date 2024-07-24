@@ -605,9 +605,9 @@ MCELFStreamer &AMDGPUTargetELFStreamer::getStreamer() {
 // We use it for emitting the accumulated PAL metadata as a .note record.
 // The PAL metadata is reset after it is emitted.
 void AMDGPUTargetELFStreamer::finish() {
-  MCAssembler &MCA = getStreamer().getAssembler();
-  MCA.setELFHeaderEFlags(getEFlags());
-  MCA.getWriter().setOverrideABIVersion(
+  ELFObjectWriter &W = getStreamer().getWriter();
+  W.setELFHeaderEFlags(getEFlags());
+  W.setOverrideABIVersion(
       getELFABIVersion(STI.getTargetTriple(), CodeObjectVersion));
 
   std::string Blob;

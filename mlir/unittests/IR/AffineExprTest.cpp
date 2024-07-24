@@ -106,3 +106,9 @@ TEST(AffineExprTest, modSimplificationRegression) {
   auto sum = d0 + d0.floorDiv(3).floorDiv(-3);
   ASSERT_EQ(sum.getKind(), AffineExprKind::Add);
 }
+
+TEST(AffineExprTest, divisorOfNegativeFloorDiv) {
+  MLIRContext ctx;
+  OpBuilder b(&ctx);
+  ASSERT_EQ(b.getAffineDimExpr(0).floorDiv(-1).getLargestKnownDivisor(), 1);
+}
