@@ -663,9 +663,6 @@ static mlir::Value CallBeginCatch(CIRGenFunction &CGF, mlir::Type ParamTy,
 /// parameter during catch initialization.
 static void InitCatchParam(CIRGenFunction &CGF, const VarDecl &CatchParam,
                            Address ParamAddr, SourceLocation Loc) {
-  // Load the exception from where the landing pad saved it.
-  auto Exn = CGF.currLexScope->getExceptionInfo().addr;
-
   CanQualType CatchType =
       CGF.CGM.getASTContext().getCanonicalType(CatchParam.getType());
   auto CIRCatchTy = CGF.convertTypeForMem(CatchType);
