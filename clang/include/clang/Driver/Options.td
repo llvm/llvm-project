@@ -5089,6 +5089,11 @@ def mspe : Flag<["-"], "mspe">, Group<m_ppc_Features_Group>;
 def mno_spe : Flag<["-"], "mno-spe">, Group<m_ppc_Features_Group>;
 def mefpu2 : Flag<["-"], "mefpu2">, Group<m_ppc_Features_Group>;
 } // let Flags = [TargetSpecific]
+def msave_reg_params : Flag<["-"], "msave-reg-params">, Group<m_Group>,
+  Flags<[TargetSpecific]>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Save arguments passed by registers to ABI-defined stack positions">,
+  MarshallingInfoFlag<CodeGenOpts<"SaveRegParams">>;
 def mabi_EQ_quadword_atomics : Flag<["-"], "mabi=quadword-atomics">,
   Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable quadword atomics ABI on AIX (AIX PPC64 only). Uses lqarx/stqcx. instructions.">,
