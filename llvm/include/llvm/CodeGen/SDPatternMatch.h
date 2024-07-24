@@ -478,16 +478,16 @@ struct TernaryOpc_match {
 
 template <typename T0_P, typename T1_P, typename T2_P>
 inline TernaryOpc_match<T0_P, T1_P, T2_P, false, false>
-m_SetCC(const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
-  return TernaryOpc_match<T0_P, T1_P, T2_P, false, false>(ISD::SETCC, Op0, Op1,
-                                                          Op2);
+m_SetCC(const T0_P &LHS, const T1_P &RHS, const T2_P &CC) {
+  return TernaryOpc_match<T0_P, T1_P, T2_P, false, false>(ISD::SETCC, LHS, RHS,
+                                                          CC);
 }
 
 template <typename T0_P, typename T1_P, typename T2_P>
 inline TernaryOpc_match<T0_P, T1_P, T2_P, true, false>
-m_c_SetCC(const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
-  return TernaryOpc_match<T0_P, T1_P, T2_P, true, false>(ISD::SETCC, Op0, Op1,
-                                                         Op2);
+m_c_SetCC(const T0_P &LHS, const T1_P &RHS, const T2_P &CC) {
+  return TernaryOpc_match<T0_P, T1_P, T2_P, true, false>(ISD::SETCC, LHS, RHS,
+                                                         CC);
 }
 
 // === Binary operations ===
