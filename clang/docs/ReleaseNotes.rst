@@ -124,6 +124,8 @@ Improvements to Clang's diagnostics
       template <typename> int i; // error: non-static data member 'i' cannot be declared as a template
      };
 
+- Clang now diagnoses dangling references to fields of temporary objects. Fixes #GH81589.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -132,6 +134,9 @@ Improvements to Coverage Mapping
 
 Bug Fixes in This Version
 -------------------------
+
+- Fixed the definition of ``ATOMIC_FLAG_INIT`` in ``<stdatomic.h>`` so it can
+  be used in C++.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
