@@ -1168,7 +1168,7 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector",
       return !llvm::is_contained(getScalableDims(), false);
     }
 
-    /// Get the number of scalable dimension.
+    /// Get the number of scalable dimensions.
     int64_t getNumScalableDims() const {
       return llvm::count(getScalableDims(), true);
     }

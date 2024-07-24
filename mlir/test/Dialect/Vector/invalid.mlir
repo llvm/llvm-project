@@ -1191,7 +1191,7 @@ func.func @shape_cast_scalability_flag_is_dropped(%arg0 : vector<15x[2]xf32>) {
 
 func.func @shape_cast_scalability_flag_is_dropped(%arg0 : vector<2x[15]x[2]xf32>) {
   // expected-error@+1 {{non-matching scalable dims}}
-  %0 = vector.shape_cast %arg0 : vector<2x[15]x[2]xf32> to vector<30x[2]f32>
+  %0 = vector.shape_cast %arg0 : vector<2x[15]x[2]xf32> to vector<30x[2]xf32>
 }
 
 // -----
