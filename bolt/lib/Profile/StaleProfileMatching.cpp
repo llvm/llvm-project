@@ -252,13 +252,13 @@ public:
            MatchedWithPseudoProbes.end();
   }
 
+  /// Returns the number of blocks matched with opcodes.
+  size_t getNumBlocksMatchedWithOpcodes() const { return MatchedWithOpcodes; }
+
   /// Returns the number of blocks matched with pseudo probes.
   size_t getNumBlocksMatchedWithPseudoProbes() const {
     return MatchedWithPseudoProbes.size();
   }
-
-  /// Returns the number of blocks matched with opcodes.
-  size_t getNumBlocksMatchedWithOpcodes() const { return MatchedWithOpcodes; }
 
 private:
   using HashBlockPairType = std::pair<BlendedBlockHash, FlowBlock *>;

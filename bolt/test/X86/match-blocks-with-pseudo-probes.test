@@ -53,7 +53,7 @@ functions:
     exec:                   1
     nblocks:                6
     guid:                   0xDB956436E78DD5FA
-    pseudo_probe_desc_hash: 4294967295    #lookup in code in a second
+    pseudo_probe_desc_hash: 4294967295
     blocks:
       - bid:             1
         hash:            0x0000000000000001
