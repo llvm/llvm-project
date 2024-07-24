@@ -2173,6 +2173,9 @@ static const char *RegNumToRegName(int reg) {
     case REG_ESP:
       return "esp";
 #    elif defined(__arm__)
+#      ifdef MAKE_CASE
+#        undef MAKE_CASE
+#      endif
 #      define REG_STR(reg) #reg
 #      define MAKE_CASE(N) \
         case REG_R##N:     \
@@ -2197,6 +2200,9 @@ static const char *RegNumToRegName(int reg) {
     case REG_R15:
       return "pc";
 #    elif defined(__aarch64__)
+#      ifdef MAKE_CASE
+#        undef MAKE_CASE
+#      endif
 #      define REG_STR(reg) #reg
 #      define MAKE_CASE(N) \
         case N:            \
@@ -2247,6 +2253,9 @@ static const char *RegNumToRegName(int reg) {
 static uptr GetArmRegister(ucontext_t *ctx, int RegNum) {
   switch (RegNum) {
 #      if defined(__arm__)
+#        ifdef MAKE_CASE
+#          undef MAKE_CASE
+#        endif
 #        define MAKE_CASE(N) \
           case REG_R##N:     \
             return ctx->uc_mcontext.arm_r##N
