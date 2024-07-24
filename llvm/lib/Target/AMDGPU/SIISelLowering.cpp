@@ -1213,13 +1213,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     if (Aux->getZExtValue() & AMDGPU::CPol::VOLATILE)
       Info.flags |= MachineMemOperand::MOVolatile;
     Info.flags |= MachineMemOperand::MODereferenceable;
-    if (ME.onlyReadsMemory() ||
-        IntrID == Intrinsic::amdgcn_raw_atomic_buffer_load ||
-        IntrID == Intrinsic::amdgcn_raw_atomic_ptr_buffer_load) {
-#if LLPC_BUILD_GFX12
-#else /* LLPC_BUILD_GFX12 */
-
-#endif /* LLPC_BUILD_GFX12 */
+    if (ME.onlyReadsMemory()) {
       if (RsrcIntr->IsImage) {
         unsigned MaxNumLanes = 4;
 
@@ -1281,6 +1275,14 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
         unsigned Width = cast<ConstantInt>(CI.getArgOperand(2))->getZExtValue();
         Info.memVT = EVT::getIntegerVT(CI.getContext(), Width * 8);
         Info.ptrVal = CI.getArgOperand(1);
+        return true;
+      }
+      case Intrinsic::amdgcn_raw_atomic_buffer_load:
+      case Intrinsic::amdgcn_raw_ptr_atomic_buffer_load: {
+        Info.memVT =
+            memVTFromLoadIntrReturn(*this, MF.getDataLayout(), CI.getType(),
+                                    std::numeric_limits<unsigned>::max());
+        Info.flags &= ~MachineMemOperand::MOStore;
         return true;
       }
       }
@@ -3758,19 +3760,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       else
         ChainCallSpecialArgs.push_back(Arg.Node);
     };
-#else /* LLPC_BUILD_GFX12 */
-    assert(CLI.Outs.back().OrigArgIndex == 2 && "Unexpected last arg");
-    CLI.Outs.pop_back();
-    CLI.OutVals.pop_back();
 
-    if (RequestedExec.Ty->isIntegerTy(64)) {
-      assert(CLI.Outs.back().OrigArgIndex == 2 && "Exec wasn't split up");
-      CLI.Outs.pop_back();
-      CLI.OutVals.pop_back();
-    }
-#endif /* LLPC_BUILD_GFX12 */
-
-#if LLPC_BUILD_GFX12
     PushNodeOrTargetConstant(RequestedExecArg);
 
     // Process any other special arguments depending on the value of the flags.
@@ -3785,7 +3775,19 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       if (CLI.Args.size() != ChainCallArgIdx::FallbackCallee + 1) {
         return lowerUnhandledCall(CLI, InVals, "Expected 3 additional args");
       }
+#else /* LLPC_BUILD_GFX12 */
+    assert(CLI.Outs.back().OrigArgIndex == 2 && "Unexpected last arg");
+    CLI.Outs.pop_back();
+    CLI.OutVals.pop_back();
 
+    if (RequestedExec.Ty->isIntegerTy(64)) {
+      assert(CLI.Outs.back().OrigArgIndex == 2 && "Exec wasn't split up");
+      CLI.Outs.pop_back();
+      CLI.OutVals.pop_back();
+    }
+#endif /* LLPC_BUILD_GFX12 */
+
+#if LLPC_BUILD_GFX12
       std::for_each(CLI.Args.begin() + ChainCallArgIdx::NumVGPRs,
                     CLI.Args.end(), PushNodeOrTargetConstant);
     }
@@ -9062,7 +9064,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_raw_buffer_load:
   case Intrinsic::amdgcn_raw_ptr_buffer_load:
   case Intrinsic::amdgcn_raw_atomic_buffer_load:
-  case Intrinsic::amdgcn_raw_atomic_ptr_buffer_load:
+  case Intrinsic::amdgcn_raw_ptr_atomic_buffer_load:
   case Intrinsic::amdgcn_raw_buffer_load_format:
   case Intrinsic::amdgcn_raw_ptr_buffer_load_format: {
     const bool IsFormat =

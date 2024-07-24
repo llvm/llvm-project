@@ -1131,6 +1131,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
        .scalarize(0)
        .lower();
 
+  getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
+      .clampScalar(0, S16, S64)
+      .scalarize(0)
+      .lower();
+
   getActionDefinitionsBuilder(G_INTRINSIC_FPTRUNC_ROUND)
       .customFor({S16, S32})
       .scalarize(0)
@@ -7443,7 +7448,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_raw_buffer_load:
   case Intrinsic::amdgcn_raw_ptr_buffer_load:
   case Intrinsic::amdgcn_raw_atomic_buffer_load:
-  case Intrinsic::amdgcn_raw_atomic_ptr_buffer_load:
+  case Intrinsic::amdgcn_raw_ptr_atomic_buffer_load:
   case Intrinsic::amdgcn_struct_buffer_load:
   case Intrinsic::amdgcn_struct_ptr_buffer_load:
     return legalizeBufferLoad(MI, MRI, B, false, false);

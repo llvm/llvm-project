@@ -794,10 +794,6 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
       Args.hasArg(options::OPT_coverage))
     FProfileDir = Args.getLastArg(options::OPT_fprofile_dir);
 
-  // TODO: Don't claim -c/-S to warn about -fsyntax-only -c/-S, -E -c/-S,
-  // like we warn about -fsyntax-only -E.
-  (void)(Args.hasArg(options::OPT_c) || Args.hasArg(options::OPT_S));
-
   // Put the .gcno and .gcda files (if needed) next to the primary output file,
   // or fall back to a file in the current directory for `clang -c --coverage
   // d/a.c` in the absence of -o.
@@ -1486,6 +1482,41 @@ void AddUnalignedAccessWarning(ArgStringList &CmdArgs) {
 }
 }
 
+// Each combination of options here forms a signing schema, and in most cases
+// each signing schema is its own incompatible ABI. The default values of the
+// options represent the default signing schema.
+static void handlePAuthABI(const ArgList &DriverArgs, ArgStringList &CC1Args) {
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_intrinsics,
+                         options::OPT_fno_ptrauth_intrinsics))
+    CC1Args.push_back("-fptrauth-intrinsics");
+
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_calls,
+                         options::OPT_fno_ptrauth_calls))
+    CC1Args.push_back("-fptrauth-calls");
+
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_returns,
+                         options::OPT_fno_ptrauth_returns))
+    CC1Args.push_back("-fptrauth-returns");
+
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_auth_traps,
+                         options::OPT_fno_ptrauth_auth_traps))
+    CC1Args.push_back("-fptrauth-auth-traps");
+
+  if (!DriverArgs.hasArg(
+          options::OPT_fptrauth_vtable_pointer_address_discrimination,
+          options::OPT_fno_ptrauth_vtable_pointer_address_discrimination))
+    CC1Args.push_back("-fptrauth-vtable-pointer-address-discrimination");
+
+  if (!DriverArgs.hasArg(
+          options::OPT_fptrauth_vtable_pointer_type_discrimination,
+          options::OPT_fno_ptrauth_vtable_pointer_type_discrimination))
+    CC1Args.push_back("-fptrauth-vtable-pointer-type-discrimination");
+
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_init_fini,
+                         options::OPT_fno_ptrauth_init_fini))
+    CC1Args.push_back("-fptrauth-init-fini");
+}
+
 static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
                                     ArgStringList &CmdArgs, bool isAArch64) {
   const Arg *A = isAArch64
@@ -1548,16 +1579,30 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
 
   CmdArgs.push_back(
       Args.MakeArgString(Twine("-msign-return-address=") + Scope));
-  if (Scope != "none")
+  if (Scope != "none") {
+    if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << Triple.getTriple();
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-msign-return-address-key=") + Key));
-  if (BranchProtectionPAuthLR)
+  }
+  if (BranchProtectionPAuthLR) {
+    if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << Triple.getTriple();
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-mbranch-protection-pauth-lr")));
+  }
   if (IndirectBranches)
     CmdArgs.push_back("-mbranch-target-enforce");
-  if (GuardedControlStack)
+  // GCS is currently untested with PAuthABI, but enabling this could be allowed
+  // in future after testing with a suitable system.
+  if (GuardedControlStack) {
+    if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << Triple.getTriple();
     CmdArgs.push_back("-mguarded-control-stack");
+  }
 }
 
 void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
@@ -1701,6 +1746,8 @@ void RenderAArch64ABI(const llvm::Triple &Triple, const ArgList &Args,
     ABIName = A->getValue();
   else if (Triple.isOSDarwin())
     ABIName = "darwinpcs";
+  else if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
+    ABIName = "pauthtest";
   else
     ABIName = "aapcs";
 
@@ -1736,6 +1783,9 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
 
   // Enable/disable return address signing and indirect branch targets.
   CollectARMPACBTIOptions(getToolChain(), Args, CmdArgs, true /*isAArch64*/);
+
+  if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
+    handlePAuthABI(Args, CmdArgs);
 
   // Handle -msve_vector_bits=<bits>
   if (Arg *A = Args.getLastArg(options::OPT_msve_vector_bits_EQ)) {
@@ -1794,6 +1844,9 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
   Args.addOptInFlag(
       CmdArgs, options::OPT_fptrauth_function_pointer_type_discrimination,
       options::OPT_fno_ptrauth_function_pointer_type_discrimination);
+
+  Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_indirect_gotos,
+                    options::OPT_fno_ptrauth_indirect_gotos);
 }
 
 void Clang::AddLoongArchTargetArgs(const ArgList &Args,
@@ -3903,6 +3956,9 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
                    options::OPT_fno_modules_strict_decluse, false))
     CmdArgs.push_back("-fmodules-strict-decluse");
 
+  Args.addOptOutFlag(CmdArgs, options::OPT_fmodulemap_allow_subdirectory_search,
+                     options::OPT_fno_modulemap_allow_subdirectory_search);
+
   // -fno-implicit-modules turns off implicitly compiling modules on demand.
   bool ImplicitModules = false;
   if (!Args.hasFlag(options::OPT_fimplicit_modules,
@@ -4661,11 +4717,8 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
 
   // -gdwarf-aranges turns on the emission of the aranges section in the
   // backend.
-  // Always enabled for SCE tuning.
-  bool NeedAranges = DebuggerTuning == llvm::DebuggerKind::SCE;
-  if (const Arg *A = Args.getLastArg(options::OPT_gdwarf_aranges))
-    NeedAranges = checkDebugInfoOption(A, Args, D, TC) || NeedAranges;
-  if (NeedAranges) {
+  if (const Arg *A = Args.getLastArg(options::OPT_gdwarf_aranges);
+      A && checkDebugInfoOption(A, Args, D, TC)) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-generate-arange-section");
   }
@@ -9050,6 +9103,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
     A->claim();
   }
+
+  // If we disable the GPU C library support it needs to be forwarded to the
+  // link job.
+  if (!Args.hasFlag(options::OPT_gpulibc, options::OPT_nogpulibc, true))
+    CmdArgs.push_back("--device-linker=-nolibc");
 
   // Add the linker arguments to be forwarded by the wrapper.
   CmdArgs.push_back(Args.MakeArgString(Twine("--linker-path=") +

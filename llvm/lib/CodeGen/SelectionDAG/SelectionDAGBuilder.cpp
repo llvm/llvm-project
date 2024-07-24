@@ -3730,8 +3730,8 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
     // ValueTracking's select pattern matching does not account for -0.0,
     // so we can't lower to FMINIMUM/FMAXIMUM because those nodes specify that
     // -0.0 is less than +0.0.
-    Value *LHS, *RHS;
-    auto SPR = matchSelectPattern(const_cast<User*>(&I), LHS, RHS);
+    const Value *LHS, *RHS;
+    auto SPR = matchSelectPattern(&I, LHS, RHS);
     ISD::NodeType Opc = ISD::DELETED_NODE;
     switch (SPR.Flavor) {
     case SPF_UMAX:    Opc = ISD::UMAX; break;
@@ -6707,11 +6707,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(0))));
     return;
   case Intrinsic::eh_sjlj_callsite: {
-    MachineModuleInfo &MMI = DAG.getMachineFunction().getMMI();
     ConstantInt *CI = cast<ConstantInt>(I.getArgOperand(0));
-    assert(MMI.getCurrentCallSite() == 0 && "Overlapping call sites!");
+    assert(DAG.getMMI()->getCurrentCallSite() == 0 &&
+           "Overlapping call sites!");
 
-    MMI.setCurrentCallSite(CI->getZExtValue());
+    DAG.getMMI()->setCurrentCallSite(CI->getZExtValue());
     return;
   }
   case Intrinsic::eh_sjlj_functioncontext: {
@@ -9580,10 +9580,15 @@ static SDValue getAddressForMemoryInput(SDValue Chain, const SDLoc &Location,
   // Otherwise, create a stack slot and emit a store to it before the asm.
   Type *Ty = OpVal->getType();
   auto &DL = DAG.getDataLayout();
-  uint64_t TySize = DL.getTypeAllocSize(Ty);
+  TypeSize TySize = DL.getTypeAllocSize(Ty);
   MachineFunction &MF = DAG.getMachineFunction();
-  int SSFI = MF.getFrameInfo().CreateStackObject(
-      TySize, DL.getPrefTypeAlign(Ty), false);
+  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
+  int StackID = 0;
+  if (TySize.isScalable())
+    StackID = TFI->getStackIDForScalableVectors();
+  int SSFI = MF.getFrameInfo().CreateStackObject(TySize.getKnownMinValue(),
+                                                 DL.getPrefTypeAlign(Ty), false,
+                                                 nullptr, StackID);
   SDValue StackSlot = DAG.getFrameIndex(SSFI, TLI.getFrameIndexTy(DL));
   Chain = DAG.getTruncStore(Chain, Location, OpInfo.CallOperand, StackSlot,
                             MachinePointerInfo::getFixedStack(MF, SSFI),

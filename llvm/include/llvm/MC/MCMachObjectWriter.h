@@ -83,7 +83,7 @@ public:
   /// @}
 };
 
-class MachObjectWriter : public MCObjectWriter {
+class MachObjectWriter final : public MCObjectWriter {
 public:
   struct DataRegionData {
     MachO::DataRegionType Kind;
@@ -163,6 +163,9 @@ private:
 
   VersionInfoType VersionInfo{};
   VersionInfoType TargetVariantVersionInfo{};
+
+  // The list of linker options for LC_LINKER_OPTION.
+  std::vector<std::vector<std::string>> LinkerOptions;
 
   MachSymbolData *findSymbolData(const MCSymbol &Sym);
 
@@ -247,6 +250,10 @@ public:
     TargetVariantVersionInfo.Minor = Minor;
     TargetVariantVersionInfo.Update = Update;
     TargetVariantVersionInfo.SDKVersion = SDKVersion;
+  }
+
+  std::vector<std::vector<std::string>> &getLinkerOptions() {
+    return LinkerOptions;
   }
 
   /// @}

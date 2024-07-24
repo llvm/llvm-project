@@ -973,7 +973,15 @@ public:
   llvm::Constant *getFunctionPointer(llvm::Constant *Pointer,
                                      QualType FunctionType);
 
+  llvm::Constant *getMemberFunctionPointer(const FunctionDecl *FD,
+                                           llvm::Type *Ty = nullptr);
+
+  llvm::Constant *getMemberFunctionPointer(llvm::Constant *Pointer,
+                                           QualType FT);
+
   CGPointerAuthInfo getFunctionPointerAuthInfo(QualType T);
+
+  CGPointerAuthInfo getMemberFunctionPointerAuthInfo(QualType FT);
 
   CGPointerAuthInfo getPointerAuthInfoForPointeeType(QualType type);
 
