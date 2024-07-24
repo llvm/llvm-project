@@ -242,6 +242,7 @@ time.h
 Function Name  Available  RPC Required
 =============  =========  ============
 clock          |check|
+clock_gettime  |check|
 nanosleep      |check|
 =============  =========  ============
 
