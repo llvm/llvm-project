@@ -1,4 +1,4 @@
-//===-- Implementation of fmul function -----------------------------------===//
+//===-- Implementation of f16mulf128 function -----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/fmul.h"
+#include "src/math/f16mulf128.h"
 #include "src/__support/FPUtil/generic/mul.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
-  return fputil::generic::mul<float>(x, y);
+LLVM_LIBC_FUNCTION(float16, f16mulf128, (float128 x, float128 y)) {
+  return fputil::generic::mul<float16>(x, y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
