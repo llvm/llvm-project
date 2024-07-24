@@ -16,7 +16,8 @@ define i16 @pr100298() {
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i32 [[ADD]] to i16
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[MASK]], 3
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP2]], i16 [[CONV]], i16 0
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i16 [[CONV]], 14
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP2]], i16 [[CONV]], i16 [[SHL]]
 ; CHECK-NEXT:    ret i16 [[RES]]
 ;
 entry:
