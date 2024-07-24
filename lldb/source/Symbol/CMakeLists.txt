@@ -26,6 +26,7 @@ add_lldb_library(lldbSymbol ${PLUGIN_DEPENDENCY_ARG}
   CompilerDecl.cpp
   CompilerDeclContext.cpp
   CompilerType.cpp
+  SaveCoreOptions.cpp
   DWARFCallFrameInfo.cpp
   DebugMacros.cpp
   DeclVendor.cpp
