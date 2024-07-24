@@ -2918,19 +2918,30 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   std::string ComplexRangeStr = "";
   std::string GccRangeComplexOption = "";
 
+  auto setComplexRange = [&](LangOptions::ComplexRangeKind NewRange) {
+    // Warn if user expects to perform full implementation of complex
+    // multiplication or division in the presence of nan or ninf flags.
+    if (Range != NewRange)
+      EmitComplexRangeDiag(D,
+                           !GccRangeComplexOption.empty()
+                               ? GccRangeComplexOption
+                               : ComplexArithmeticStr(Range),
+                           ComplexArithmeticStr(NewRange));
+    Range = NewRange;
+  };
+
   // Lambda to set fast-math options. This is also used by -ffp-model=fast
   auto applyFastMath = [&](bool Aggressive) {
-    LangOptions::ComplexRangeKind NewRange;
     if (Aggressive) {
       HonorINFs = false;
       HonorNaNs = false;
       FPContract = "fast";
-      NewRange = LangOptions::ComplexRangeKind::CX_Basic;
+      setComplexRange(LangOptions::ComplexRangeKind::CX_Basic);
     } else {
       HonorINFs = true;
       HonorNaNs = true;
       FPContract = "fast-honor-pragmas";
-      NewRange = LangOptions::ComplexRangeKind::CX_Promoted;
+      setComplexRange(LangOptions::ComplexRangeKind::CX_Promoted);
     }
     MathErrno = false;
     AssociativeMath = true;
@@ -2940,16 +2951,6 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     TrappingMath = false;
     RoundingFPMath = false;
     FPExceptionBehavior = "";
-    // Warn if user expects to perform full implementation of complex
-    // multiplication or division in the presence of nan or ninf flags.
-    if (Range != NewRange)
-      EmitComplexRangeDiag(
-          D,
-          !GccRangeComplexOption.empty()
-              ? GccRangeComplexOption
-              : ComplexArithmeticStr(Range),
-              ComplexArithmeticStr(NewRange));
-    Range = NewRange;
     SeenUnsafeMathModeOption = true;
   };
 
@@ -3078,7 +3079,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
 
       StringRef Val = A->getValue();
       if (OFastEnabled && Val != "aggressive") {
-          // Only -ffp-model=aggressive is compatible with OFast, ignore.
+        // Only -ffp-model=aggressive is compatible with OFast, ignore.
         D.Diag(clang::diag::warn_drv_overriding_option)
             << Args.MakeArgString("-ffp-model=" + Val) << "-Ofast";
         break;
@@ -3093,15 +3094,16 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         applyFastMath(false);
         // applyFastMath sets fp-contract="fast"
         LastFpContractOverrideOption = "-ffp-model=fast";
-      } else if (Val.equals("aggressive")) {
+      } else if (Val == "aggressive") {
         FPModel = Val;
         applyFastMath(true);
         // applyFastMath sets fp-contract="fast"
         LastFpContractOverrideOption = "-ffp-model=aggressive";
-      } else if (Val.equals("precise")) {
+      } else if (Val == "precise") {
         FPModel = Val;
         FPContract = "on";
         LastFpContractOverrideOption = "-ffp-model=precise";
+        setComplexRange(LangOptions::ComplexRangeKind::CX_Full);
       } else if (Val == "strict") {
         StrictFPModel = true;
         FPExceptionBehavior = "strict";
@@ -3110,6 +3112,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         LastFpContractOverrideOption = "-ffp-model=strict";
         TrappingMath = true;
         RoundingFPMath = true;
+        setComplexRange(LangOptions::ComplexRangeKind::CX_Full);
       } else
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getSpelling() << Val;

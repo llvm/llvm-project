@@ -178,13 +178,12 @@ Modified Compiler Flags
 
 - The ``-ffp-model`` option has been updated to enable a more limited set of
   optimizations when the ``fast`` argument is used and to accept a new argument,
-  ``aggressive``. The behavior of ``-ffp-model=aggressive`` is mostly equivalent
+  ``aggressive``. The behavior of ``-ffp-model=aggressive`` is equivalent
   to the previous behavior of ``-ffp-model=fast``. The updated
-  ``-ffp-model=fast`` behavior no longer assumes finite math only and uses a
+  ``-ffp-model=fast`` behavior no longer assumes finite math only, uses
   the ``promoted`` algorithm for complex division when possible rather than the
-  less robust Smith algorithm. Both ``-ffp-model=fast`` and
-  ``-ffp-model=aggressive`` will now imply ``-ffp-contract=fast-honor-pragmas``
-  rather than ``-ffp-contract=fast``.
+  less basic (limited range) algorithm, and sets
+  ``-ffp-contract=fast-honor-pragmas`` rather than ``-ffp-contract=fast``.
 
 Removed Compiler Flags
 -------------------------

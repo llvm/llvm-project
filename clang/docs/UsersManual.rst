@@ -1770,7 +1770,7 @@ for more details.
      top of the source file.
    * ``fast`` Behaves identically to specifying ``-funsafe-math-optimizations``,
      ``-fno-math-errno`` and ``-fcomplex-arithmetic=promoted``
-     ``ffp-contract=fast``
+     ``ffp-contract=fast-honor-pragmas``
    * ``aggressive`` Behaves identically to specifying both ``-ffast-math`` and
      ``ffp-contract=fast``
 

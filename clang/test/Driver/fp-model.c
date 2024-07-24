@@ -4,11 +4,11 @@
 
 // RUN: %clang -### -ffp-model=aggressive -ffp-contract=off -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN %s
-// WARN: warning: overriding '-ffp-model=fast' option with '-ffp-contract=off' [-Woverriding-option]
+// WARN: warning: overriding '-ffp-model=aggressive' option with '-ffp-contract=off' [-Woverriding-option]
 
 // RUN: %clang -### -ffp-model=aggressive -ffp-contract=on -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN1 %s
-// WARN1: warning: overriding '-ffp-model=fast' option with '-ffp-contract=on' [-Woverriding-option]
+// WARN1: warning: overriding '-ffp-model=aggressive' option with '-ffp-contract=on' [-Woverriding-option]
 
 // RUN: %clang -### -ffp-model=strict -fassociative-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN2 %s
@@ -74,8 +74,11 @@
 
 // RUN: %clang -### -Ofast -ffp-model=strict -c %s 2>&1 | FileCheck \
 // RUN:   --check-prefix=WARN12 %s
-// RUN: %clang -### -Werror -ffast-math -ffp-model=strict -c %s
 // WARN12: warning: overriding '-ffp-model=strict' option with '-Ofast'
+
+// RUN: %clang -### -ffast-math -ffp-model=strict -c %s 2>&1 | FileCheck \
+// RUN:   --check-prefix=WARN-CX-BASIC-TO-FULL %s
+// WARN-CX-BASIC-TO-FULL: warning: overriding '-fcomplex-arithmetic=basic' option with '-fcomplex-arithmetic=full'
 
 // RUN: %clang -### -ffp-model=strict -fapprox-func -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN13 %s
@@ -109,20 +112,37 @@
 // CHECK-TRAP: "-cc1"
 // CHECK-TRAP: "-ffp-exception-behavior=strict"
 
+// RUN: %clang -### -nostdinc -ffp-model=aggressive -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-FPM-AGGR %s
+// CHECK-FPM-AGGR: "-cc1"
+// CHECK-FPM-AGGR: "-menable-no-infs"
+// CHECK-FPM-AGGR: "-menable-no-nans"
+// CHECK-FPM-AGGR: "-fapprox-func"
+// CHECK-FPM-AGGR: "-funsafe-math-optimizations"
+// CHECK-FPM-AGGR: "-fno-signed-zeros"
+// CHECK-FPM-AGGR: "-mreassociate"
+// CHECK-FPM-AGGR: "-freciprocal-math"
+// CHECK-FPM-AGGR: "-ffp-contract=fast"
+// CHECK-FPM-AGGR: "-fno-rounding-math"
+// CHECK-FPM-AGGR: "-ffast-math"
+// CHECK-FPM-AGGR: "-ffinite-math-only"
+// CHECK-FPM-AGGR: "-complex-range=basic"
+
 // RUN: %clang -### -nostdinc -ffp-model=fast -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FPM-FAST %s
 // CHECK-FPM-FAST: "-cc1"
-// CHECK-FPM-FAST: "-menable-no-infs"
-// CHECK-FPM-FAST: "-menable-no-nans"
+// CHECK-FPM-FAST-NOT: "-menable-no-infs"
+// CHECK-FPM-FAST-NOT: "-menable-no-nans"
 // CHECK-FPM-FAST: "-fapprox-func"
 // CHECK-FPM-FAST: "-funsafe-math-optimizations"
 // CHECK-FPM-FAST: "-fno-signed-zeros"
 // CHECK-FPM-FAST: "-mreassociate"
 // CHECK-FPM-FAST: "-freciprocal-math"
-// CHECK-FPM-FAST: "-ffp-contract=fast"
+// CHECK-FPM-FAST: "-ffp-contract=fast-honor-pragmas"
 // CHECK-FPM-FAST: "-fno-rounding-math"
-// CHECK-FPM-FAST: "-ffast-math"
-// CHECK-FPM-FAST: "-ffinite-math-only"
+// CHECK-FPM-FAST-NOT: "-ffast-math"
+// CHECK-FPM-FAST-NOT: "-ffinite-math-only"
+// CHECK-FPM-FAST: "-complex-range=promoted"
 
 // RUN: %clang -### -nostdinc -ffp-model=precise -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FPM-PRECISE %s
@@ -163,23 +183,41 @@
 // CHECK-FEB-IGNORE: "-fno-rounding-math"
 // CHECK-FEB-IGNORE: "-ffp-exception-behavior=ignore"
 
-// RUN: %clang -### -nostdinc -Werror -ffast-math -ffp-model=fast -c %s 2>&1 \
+// RUN: %clang -### -nostdinc -Werror -ffast-math -ffp-model=aggressive -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-FASTMATH-FPM-AGGR %s
+// CHECK-FASTMATH-FPM-AGGR: "-cc1"
+// CHECK-FASTMATH-FPM-AGGR: "-menable-no-infs"
+// CHECK-FASTMATH-FPM-AGGR: "-menable-no-nans"
+// CHECK-FASTMATH-FPM-AGGR: "-fapprox-func"
+// CHECK-FASTMATH-FPM-AGGR: "-funsafe-math-optimizations"
+// CHECK-FASTMATH-FPM-AGGR: "-fno-signed-zeros"
+// CHECK-FASTMATH-FPM-AGGR: "-mreassociate"
+// CHECK-FASTMATH-FPM-AGGR: "-freciprocal-math"
+// CHECK-FASTMATH-FPM-AGGR: "-ffp-contract=fast"
+// CHECK-FASTMATH-FPM-AGGR: "-fno-rounding-math"
+// CHECK-FASTMATH-FPM-AGGR: "-ffast-math"
+// CHECK-FASTMATH-FPM-AGGR: "-ffinite-math-only"
+// CHECK-FASTMATH-FPM-AGGR: "-complex-range=basic"
+
+// RUN: %clang -### -nostdinc -ffast-math -ffp-model=fast -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FASTMATH-FPM-FAST %s
+// CHECK-FASTMATH-FPM-FAST: warning: overriding '-fcomplex-arithmetic=basic' option with '-fcomplex-arithmetic=promoted'
 // CHECK-FASTMATH-FPM-FAST: "-cc1"
-// CHECK-FASTMATH-FPM-FAST: "-menable-no-infs"
-// CHECK-FASTMATH-FPM-FAST: "-menable-no-nans"
+// CHECK-FASTMATH-FPM-FAST-NOT: "-menable-no-infs"
+// CHECK-FASTMATH-FPM-FAST-NOT: "-menable-no-nans"
 // CHECK-FASTMATH-FPM-FAST: "-fapprox-func"
 // CHECK-FASTMATH-FPM-FAST: "-funsafe-math-optimizations"
 // CHECK-FASTMATH-FPM-FAST: "-fno-signed-zeros"
 // CHECK-FASTMATH-FPM-FAST: "-mreassociate"
 // CHECK-FASTMATH-FPM-FAST: "-freciprocal-math"
-// CHECK-FASTMATH-FPM-FAST: "-ffp-contract=fast"
+// CHECK-FASTMATH-FPM-FAST: "-ffp-contract=fast-honor-pragmas"
 // CHECK-FASTMATH-FPM-FAST: "-fno-rounding-math"
-// CHECK-FASTMATH-FPM-FAST: "-ffast-math"
-// CHECK-FASTMATH-FPM-FAST: "-ffinite-math-only"
+// CHECK-FASTMATH-FPM-FAST-NOT: "-ffast-math"
+// CHECK-FASTMATH-FPM-FAST-NOT: "-ffinite-math-only"
+// CHECK-FASTMATH-FPM-FAST: "-complex-range=promoted"
 
-// RUN: %clang -### -nostdinc -Werror -ffast-math -ffp-model=precise -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-FASTMATH-FPM-PRECISE %s
+// RUN: %clang -### -nostdinc -ffast-math -ffp-model=precise -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefixes=CHECK-FASTMATH-FPM-PRECISE,WARN-CX-BASIC-TO-FULL %s
 // CHECK-FASTMATH-FPM-PRECISE:     "-cc1"
 // CHECK-FASTMATH-FPM-PRECISE-NOT: "-menable-no-infs"
 // CHECK-FASTMATH-FPM-PRECISE-NOT: "-menable-no-nans"
@@ -192,9 +230,10 @@
 // CHECK-FASTMATH-FPM-PRECISE:     "-fno-rounding-math"
 // CHECK-FASTMATH-FPM-PRECISE-NOT: "-ffast-math"
 // CHECK-FASTMATH-FPM-PRECISE-NOT: "-ffinite-math-only"
+// CHECK-FASTMATH-FPM-PRECISE: "-complex-range=full"
 
-// RUN: %clang -### -nostdinc -Werror -ffast-math -ffp-model=strict -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-FASTMATH-FPM-STRICT %s
+// RUN: %clang -### -nostdinc -ffast-math -ffp-model=strict -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefixes=CHECK-FASTMATH-FPM-STRICT,WARN-CX-BASIC-TO-FULL %s
 // CHECK-FASTMATH-FPM-STRICT:     "-cc1"
 // CHECK-FASTMATH-FPM-STRICT-NOT: "-menable-no-infs"
 // CHECK-FASTMATH-FPM-STRICT-NOT: "-menable-no-nans"
@@ -207,3 +246,4 @@
 // CHECK-FASTMATH-FPM-STRICT-NOT: "-fno-rounding-math"
 // CHECK-FASTMATH-FPM-STRICT-NOT: "-ffast-math"
 // CHECK-FASTMATH-FPM-STRICT-NOT: "-ffinite-math-only"
+// CHECK-FASTMATH-FPM-STRICT: "-complex-range=full"
