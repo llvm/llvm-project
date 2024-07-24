@@ -76,6 +76,7 @@ C++20 Feature Support
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+- Removed the restriction to literal types in constexpr functions in C++23 mode.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
