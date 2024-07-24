@@ -137,6 +137,9 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::MachO;
 
+static constexpr llvm::StringLiteral g_loader_path = "@loader_path";
+static constexpr llvm::StringLiteral g_executable_path = "@executable_path";
+
 LLDB_PLUGIN_DEFINE(ObjectFileMachO)
 
 static void PrintRegisterValue(RegisterContext *reg_ctx, const char *name,
@@ -5190,17 +5193,14 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
   FileSystem::Instance().Resolve(this_file_spec);
 
   if (!rpath_paths.empty()) {
-    // Fixup all LC_RPATH values to be absolute paths
-    std::string loader_path("@loader_path");
-    std::string executable_path("@executable_path");
+    // Fixup all LC_RPATH values to be absolute paths.
+    const std::string this_directory =
+        this_file_spec.GetDirectory().GetString();
     for (auto &rpath : rpath_paths) {
-      if (llvm::StringRef(rpath).starts_with(loader_path)) {
-        rpath.erase(0, loader_path.size());
-        rpath.insert(0, this_file_spec.GetDirectory().GetCString());
-      } else if (llvm::StringRef(rpath).starts_with(executable_path)) {
-        rpath.erase(0, executable_path.size());
-        rpath.insert(0, this_file_spec.GetDirectory().GetCString());
-      }
+      if (llvm::StringRef(rpath).starts_with(g_loader_path))
+        rpath = this_directory + rpath.substr(g_loader_path.size());
+      else if (llvm::StringRef(rpath).starts_with(g_executable_path))
+        rpath = this_directory + rpath.substr(g_executable_path.size());
     }
 
     for (const auto &rpath_relative_path : rpath_relative_paths) {
