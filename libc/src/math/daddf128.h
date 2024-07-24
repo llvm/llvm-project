@@ -1,5 +1,4 @@
-//===-- Implementation header for daddf128 --------------------------*- C++
-//-*-===//
+//===-- Implementation header for daddf128 ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_MATH_DADDF128_H
 #define LLVM_LIBC_SRC_MATH_DADDF128_H
 
-#include "include/llvm-libc-types/float128.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

@@ -4165,7 +4165,6 @@ add_fp_unittest(
     AddTest.h
   DEPENDS
     libc.src.math.daddl
-    libc.src.__support.FPUtil.generic.add_sub
 )
 
 add_fp_unittest(
@@ -4178,7 +4177,6 @@ add_fp_unittest(
     AddTest.h
   DEPENDS
     libc.src.math.daddf128
-    libc.src.__support.FPUtil.generic.add_sub
 )
 
 add_fp_unittest(
@@ -4191,7 +4189,6 @@ add_fp_unittest(
     DivTest.h
   DEPENDS
     libc.src.math.ddivl
-    libc.src.__support.FPUtil.generic.div
 )
 
 add_fp_unittest(
@@ -4204,5 +4201,4 @@ add_fp_unittest(
     DivTest.h
   DEPENDS
     libc.src.math.ddivf128
-    libc.src.__support.FPUtil.generic.div
 )
