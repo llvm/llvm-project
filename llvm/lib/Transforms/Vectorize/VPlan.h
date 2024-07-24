@@ -1476,7 +1476,8 @@ public:
   VPValue *getEVL() { return getOperand(getNumOperands() - 1); }
   const VPValue *getEVL() const { return getOperand(getNumOperands() - 1); }
 
-  /// Produce widened copies of all Ingredients.
+  /// Produce a vp-intrinsic using the opcode and operands of the recipe,
+  /// processing EVL elements.
   void execute(VPTransformState &State) override final;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
