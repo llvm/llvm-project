@@ -17,7 +17,6 @@ unsigned long long tc() {
     // CIR_FLAT:   ^bb1:  // pred: ^bb0
     // CIR_FLAT:     cir.br ^bb2
     // CIR_FLAT:   ^bb2:  // pred: ^bb1
-    // CIR_FLAT:     %[[EH_PTR:.*]] = cir.alloca !cir.ptr<!cir.eh.info>, !cir.ptr<!cir.ptr<!cir.eh.info>>, ["__exception_ptr"]
     // CIR_FLAT:     cir.call exception @_Z8divisionii(
     z = division(x, y);
     a++;
