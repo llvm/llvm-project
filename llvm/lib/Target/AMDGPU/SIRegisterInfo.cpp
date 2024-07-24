@@ -2555,12 +2555,33 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                       TmpResultReg)
                   .addImm(ST.getWavefrontSizeLog2())
                   .addReg(FrameReg);
-              auto Add = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ADD_U32_e32),
-                                 TmpResultReg);
-              Add.addImm(Offset).addReg(TmpResultReg, RegState::Kill);
+
+              MachineInstrBuilder Add;
+              if ((Add = TII->getAddNoCarry(*MBB, MI, DL, TmpResultReg, *RS)) ==
+                  nullptr) {
+                // VCC is live and no SGPR is free.
+                // since emergency stack slot is already used for spilling VGPR
+                // scavenged? This a way around to avoid carry, need follow-up.
+                BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), ResultReg)
+                    .addImm(Offset);
+                Add = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MAD_I32_I24_e64),
+                              TmpResultReg)
+                          .addReg(TmpResultReg, RegState::Kill)
+                          .addImm(1)
+                          .addReg(ResultReg, RegState::Kill)
+                          .addImm(0);
+              } else if (Add->getOpcode() == AMDGPU::V_ADD_CO_U32_e64) {
+                BuildMI(*MBB, *Add, DL, TII->get(AMDGPU::S_MOV_B32), ResultReg)
+                    .addImm(Offset);
+                Add.addReg(ResultReg, RegState::Kill)
+                    .addReg(TmpResultReg, RegState::Kill)
+                    .addImm(0);
+              } else
+                Add.addImm(Offset).addReg(TmpResultReg, RegState::Kill);
+
               Register NewDest = IsCopy ? ResultReg
                                         : RS->scavengeRegisterBackwards(
-                                              AMDGPU::SReg_32RegClass, Add,
+                                              AMDGPU::SReg_32RegClass, *Add,
                                               false, 0, /*AllowSpill=*/true);
               BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
                       NewDest)
