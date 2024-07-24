@@ -316,10 +316,10 @@ TEST_P(MappedMemoryTest, MakeExec) {
   MemoryBlock M = Memory::allocateMappedMemory(sizeof(int), nullptr, Flags, EC);
   EXPECT_EQ(std::error_code(), EC);
 
-  EXPECT_NE((void*)nullptr, M.base());
+  EXPECT_NE((void *)nullptr, M.base());
   EXPECT_LE(sizeof(int), M.allocatedSize());
 
-  int *x = (int*)M.base();
+  int *x = (int *)M.base();
   *x = 0xcc;
 
   EXPECT_EQ(0xcc, *x);

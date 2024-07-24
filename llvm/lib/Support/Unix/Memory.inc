@@ -196,10 +196,19 @@ std::error_code Memory::protectMappedMemory(const MemoryBlock &M,
     public:
       FDWrapper(int fd) : fd(fd) {}
       ~FDWrapper() { close(); }
-      FDWrapper& operator=(int nfd) { close(); fd = nfd; return *this; }
+      FDWrapper &operator=(int nfd) {
+        close();
+        fd = nfd;
+        return *this;
+      }
       operator int() const { return fd; }
+
     private:
-      void close() { if (fd >= 0) ::close(fd); fd = -1; }
+      void close() {
+        if (fd >= 0)
+          ::close(fd);
+        fd = -1;
+      }
       int fd;
     } fd(memfd_create("llvm", flags));
 
