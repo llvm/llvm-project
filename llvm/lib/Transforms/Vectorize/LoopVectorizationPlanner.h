@@ -365,9 +365,8 @@ public:
   /// Return the best VPlan for \p VF.
   VPlan &getBestPlanFor(ElementCount VF) const;
 
-  /// Return the most profitable vectorization factor together with the most
-  /// profitable plan containing that vectorization factor.
-  std::pair<ElementCount, VPlan &> getBestPlan() const;
+  /// Return the most profitable vectorization factor.
+  ElementCount getBestVF() const;
 
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
   /// according to the best selected \p VF and  \p UF.

@@ -7139,13 +7139,12 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
   return Cost;
 }
 
-std::pair<ElementCount, VPlan &> LoopVectorizationPlanner::getBestPlan() const {
+ElementCount LoopVectorizationPlanner::getBestVF() const {
   // If there is a single VPlan with a single VF, return it directly.
   VPlan &FirstPlan = *VPlans[0];
   if (VPlans.size() == 1 && size(FirstPlan.vectorFactors()) == 1)
-    return {*FirstPlan.vectorFactors().begin(), FirstPlan};
+    return *FirstPlan.vectorFactors().begin();
 
-  VPlan *BestPlan = &FirstPlan;
   ElementCount ScalarVF = ElementCount::getFixed(1);
   assert(hasPlanWithVF(ScalarVF) &&
          "More than a single plan/VF w/o any plan having scalar VF");
@@ -7178,11 +7177,10 @@ std::pair<ElementCount, VPlan &> LoopVectorizationPlanner::getBestPlan() const {
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
       if (isMoreProfitable(CurrentFactor, BestFactor)) {
         BestFactor = CurrentFactor;
-        BestPlan = &*P;
       }
     }
   }
-  return {BestFactor.Width, *BestPlan};
+  return BestFactor.Width;
 }
 
 VPlan &LoopVectorizationPlanner::getBestPlanFor(ElementCount VF) const {
@@ -9970,13 +9968,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, AC, ORE, IC, &LVL,
                                  &CM, BFI, PSI, Checks);
 
-      VPlan &BestPlan = UseLegacyCostModel ? LVP.getBestPlanFor(VF.Width)
-                                           : LVP.getBestPlan().second;
-      assert((UseLegacyCostModel || BestPlan.hasScalarVFOnly()) &&
-=======
-      VPlan &BestPlan = LVP.getBestPlan();
-      assert(BestPlan.hasScalarVFOnly() &&
->>>>>>> origin/main
+      ElementCount BestVF = LVP.getBestVF();
+      VPlan &BestPlan = LVP.getBestPlanFor(BestVF);
+      assert(BestVF.isScalar() &&
              "VPlan cost model and legacy cost model disagreed");
       LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
 
@@ -9989,28 +9983,20 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     } else {
       // If we decided that it is *legal* to vectorize the loop, then do it.
 
-      ElementCount Width = VF.Width;
-      std::optional<VPlan *> VPlanFromVPCost;
-      if (!UseLegacyCostModel) {
-        const auto &[VPWidth, Plan] = LVP.getBestPlan();
-        LLVM_DEBUG(dbgs() << "VF picked by VPlan cost model: " << Width
-                          << "\n");
-        Width = VPWidth;
-        assert(VF.Width == Width &&
-               "VPlan cost model and legacy cost model disagreed");
-      }
-      VPlan &BestPlan =
-          *VPlanFromVPCost.value_or(&LVP.getBestPlanFor(VF.Width));
-
+      ElementCount BestVF = LVP.getBestVF();
+      VPlan &BestPlan = LVP.getBestPlanFor(BestVF);
+      LLVM_DEBUG(dbgs() << "VF picked by VPlan cost model: " << BestVF << "\n");
+      assert(VF.Width == BestVF &&
+             "VPlan cost model and legacy cost model disagreed");
       // Consider vectorizing the epilogue too if it's profitable.
       VectorizationFactor EpilogueVF =
-          LVP.selectEpilogueVectorizationFactor(VF.Width, IC);
+          LVP.selectEpilogueVectorizationFactor(BestVF, IC);
       if (EpilogueVF.Width.isVector()) {
 
         // The first pass vectorizes the main loop and creates a scalar epilogue
         // to be vectorized by executing the plan (potentially with a different
         // factor) again shortly afterwards.
-        EpilogueLoopVectorizationInfo EPI(VF.Width, IC, EpilogueVF.Width, 1);
+        EpilogueLoopVectorizationInfo EPI(BestVF, IC, EpilogueVF.Width, 1);
         EpilogueVectorizerMainLoop MainILV(L, PSE, LI, DT, TLI, TTI, AC, ORE,
                                            EPI, &LVL, &CM, BFI, PSI, Checks);
 
@@ -10106,21 +10092,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         if (!MainILV.areSafetyChecksAdded())
           DisableRuntimeUnroll = true;
       } else {
-<<<<<<< HEAD
-=======
-        VPlan &BestPlan = LVP.getBestPlan();
-        assert(size(BestPlan.vectorFactors()) == 1 &&
-               "Plan should have a single VF");
-        ElementCount Width = *BestPlan.vectorFactors().begin();
-        LLVM_DEBUG(dbgs() << "VF picked by VPlan cost model: " << Width
-                          << "\n");
-        assert(VF.Width == Width &&
-               "VPlan cost model and legacy cost model disagreed");
->>>>>>> origin/main
-        InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, Width,
+        InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, BestVF,
                                VF.MinProfitableTripCount, IC, &LVL, &CM, BFI,
                                PSI, Checks);
-        LVP.executePlan(Width, IC, BestPlan, LB, DT, false);
+        LVP.executePlan(BestVF, IC, BestPlan, LB, DT, false);
         ++LoopsVectorized;
 
         // Add metadata to disable runtime unrolling a scalar loop when there
