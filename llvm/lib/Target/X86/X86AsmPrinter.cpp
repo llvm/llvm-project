@@ -977,7 +977,12 @@ static void emitNonLazyStubs(MachineModuleInfo *MMI, MCStreamer &OutStreamer) {
 }
 
 /// True if this module is being built for windows/msvc, and uses floating
-/// point.  This is used to emit an undefined reference to _fltused.
+/// point. This is used to emit an undefined reference to _fltused. This is
+/// needed in Windows kernel or driver contexts to find and prevent code from
+/// modifying non-GPR registers.
+///
+/// TODO: It would be better if this was computed from MIR by looking for
+/// selected floating-point instructions.
 static bool usesMSVCFloatingPoint(const Triple &TT, const Module &M) {
   // Only needed for MSVC
   if (!TT.isWindowsMSVCEnvironment())
