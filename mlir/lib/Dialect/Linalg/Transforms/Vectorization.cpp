@@ -586,6 +586,14 @@ static SmallVector<bool> getDimsToReduce(LinalgOp linalgOp) {
       llvm::map_range(linalgOp.getIteratorTypesArray(), isReductionIterator));
 }
 
+/// Check if `op` is a linalg.reduce or a linalg.generic that has at least one
+/// reduction iterator.
+static bool hasReductionIterator(LinalgOp &op) {
+  return isa<linalg::ReduceOp>(op) ||
+         (isa<linalg::GenericOp>(op) &&
+          llvm::any_of(op.getIteratorTypesArray(), isReductionIterator));
+}
+
 /// Build a vector.transfer_write of `value` into `outputOperand` at indices set
 /// to all `0`; where `outputOperand` is an output operand of the LinalgOp
 /// currently being vectorized. If `dest` has null rank, build an memref.store.
@@ -1787,6 +1795,9 @@ vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
   if (isa<ConvolutionOpInterface>(op.getOperation()))
     return vectorizeDynamicConvOpPrecondition(op, flatten1DDepthwiseConv);
 
+  if (hasReductionIterator(op))
+    return reductionPreconditions(op);
+
   // TODO: Masking only supports dynamic element-wise ops, linalg.generic ops,
   // linalg.copy ops and ops that implement ContractionOpInterface for now.
   if (!isElementwise(op) &&
@@ -1976,6 +1987,7 @@ vectorizeScalableVectorPrecondition(Operation *op,
   //  1. exactly 1 dim is scalable and that's the _last_ parallel dim
   //  2. exactly 2 dims are scalable and those are the _last two adjacent_
   //     parallel dims
+  //  3. exactly 1 reduction dim is scalable and that's the last (innermost) dim
   // The 2nd restriction above means that only Matmul-like Ops are supported
   // when 2 dims are scalable, e.g. :
   //    * iterators = [parallel, parallel, reduction]
@@ -1992,19 +2004,45 @@ vectorizeScalableVectorPrecondition(Operation *op,
     scalableFlags.pop_back();
   }
 
-  // TODO: Support scalable vectorisation for reduction dims
-  if (iterators.back() == utils::IteratorType::reduction)
-    return failure();
-
-  // If this is not the _last_ parallel dim, 1. above is not met
-  if (seenParalell)
-    return failure();
+  switch (iterators.back()) {
+  case utils::IteratorType::reduction: {
+    // Check 3. above is met.
+    if (iterators.size() != inputVectorSizes.size()) {
+      LDBG("Non-trailing reduction dim requested for scalable "
+           "vectorization\n");
+      return failure();
+    }
+    if (isa<linalg::MatmulOp>(op) || isa<linalg::MatmulTransposeAOp>(op)) {
+      LDBG("Scalable vectorization of the reduction dim in Matmul-like ops "
+           "is not supported\n");
+      return failure();
+    }
+    break;
+  }
+  case utils::IteratorType::parallel: {
+    // Check 1. and 2. above are met.
+    if (seenParalell) {
+      LDBG("Inner parallel dim not requested for scalable "
+           "vectorization\n");
+      return failure();
+    }
+    break;
+  }
+  }
 
   // If present, check the 2nd scalable dim. ATM, only Matmul-like Ops are
   // supported for which expect the folowing config:
   //    * iterators = [parallel, parallel, reduction]
   //    * scalable flags = [true, true, false]
   if (numOfScalableDims == 2) {
+    // Disallow below case which breaks 3. above:
+    //    * iterators = [..., parallel, reduction]
+    //    * scalable flags = [..., true, true]
+    if (iterators.back() == utils::IteratorType::reduction) {
+      LDBG("Higher dim than the trailing reduction dim requested for scalable "
+           "vectorization\n");
+      return failure();
+    }
     scalableFlags.pop_back();
     iterators.pop_back();
 
@@ -2017,7 +2055,8 @@ vectorizeScalableVectorPrecondition(Operation *op,
   // presence of scalable vectors
   return success(isElementwise(linalgOp) || isa<linalg::MatmulOp>(op) ||
                  isa<linalg::MatmulTransposeAOp>(op) ||
-                 isa<linalg::DepthwiseConv1DNwcWcOp>(op));
+                 isa<linalg::DepthwiseConv1DNwcWcOp>(op) ||
+                 isa<linalg::MatvecOp>(op) || hasReductionIterator(linalgOp));
 }
 
 LogicalResult mlir::linalg::vectorizeOpPrecondition(
