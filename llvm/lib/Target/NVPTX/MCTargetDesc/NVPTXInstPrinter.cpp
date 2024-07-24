@@ -227,9 +227,33 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
   if (Modifier) {
     const MCOperand &MO = MI->getOperand(OpNum);
     int Imm = (int) MO.getImm();
-    if (!strcmp(Modifier, "volatile")) {
-      if (Imm)
+    if (!strcmp(Modifier, "sem")) {
+      switch (Imm) {
+      case NVPTX::PTXLdStInstCode::NotAtomic:
+        break;
+      case NVPTX::PTXLdStInstCode::Volatile:
         O << ".volatile";
+        break;
+      case NVPTX::PTXLdStInstCode::Relaxed:
+        O << ".relaxed.sys";
+        break;
+      case NVPTX::PTXLdStInstCode::Acquire:
+        O << ".acquire.sys";
+        break;
+      case NVPTX::PTXLdStInstCode::Release:
+        O << ".release.sys";
+        break;
+      case NVPTX::PTXLdStInstCode::RelaxedMMIO:
+        O << ".mmio.relaxed.sys";
+        break;
+      default:
+        SmallString<256> Msg;
+        raw_svector_ostream OS(Msg);
+        OS << "NVPTX LdStCode Printer does not support \"" << Imm
+           << "\" sem modifier.";
+        report_fatal_error(OS.str());
+        break;
+      }
     } else if (!strcmp(Modifier, "addsp")) {
       switch (Imm) {
       case NVPTX::PTXLdStInstCode::GLOBAL:
