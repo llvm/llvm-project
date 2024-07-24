@@ -1,4 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -pass-remarks-output=%t -pass-remarks-analysis=kernel-resource-usage -filetype=null %s 2>&1 | FileCheck -check-prefix=STDERR %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -pass-remarks-output=%t -pass-remarks-analysis=kernel-resource-usage -filetype=null %s 2>&1 | FileCheck -check-prefixes=STDERR,STDERR_C %s
+; RUN: FileCheck -check-prefix=REMARK %s < %t
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -attributor-assume-closed-world=false -pass-remarks-output=%t -pass-remarks-analysis=kernel-resource-usage -filetype=null %s 2>&1 | FileCheck -check-prefixes=STDERR,STDERR_O %s
 ; RUN: FileCheck -check-prefix=REMARK %s < %t
 
 ; STDERR: remark: foo.cl:27:0: Function Name: test_kernel
@@ -140,16 +142,27 @@ define void @empty_func() !dbg !8 {
   ret void
 }
 
-; STDERR: remark: foo.cl:64:0: Function Name: test_indirect_call
-; STDERR-NEXT: remark: foo.cl:64:0:     SGPRs: 39
-; STDERR-NEXT: remark: foo.cl:64:0:     VGPRs: 32
-; STDERR-NEXT: remark: foo.cl:64:0:     AGPRs: 10
-; STDERR-NEXT: remark: foo.cl:64:0:     ScratchSize [bytes/lane]: 0
-; STDERR-NEXT: remark: foo.cl:64:0:     Dynamic Stack: True
-; STDERR-NEXT: remark: foo.cl:64:0:     Occupancy [waves/SIMD]: 8
-; STDERR-NEXT: remark: foo.cl:64:0:     SGPRs Spill: 0
-; STDERR-NEXT: remark: foo.cl:64:0:     VGPRs Spill: 0
-; STDERR-NEXT: remark: foo.cl:64:0:     LDS Size [bytes/block]: 0
+; STDERR_O: remark: foo.cl:64:0: Function Name: test_indirect_call
+; STDERR_O-NEXT: remark: foo.cl:64:0:     SGPRs: 39
+; STDERR_O-NEXT: remark: foo.cl:64:0:     VGPRs: 32
+; STDERR_O-NEXT: remark: foo.cl:64:0:     AGPRs: 10
+; STDERR_O-NEXT: remark: foo.cl:64:0:     ScratchSize [bytes/lane]: 0
+; STDERR_O-NEXT: remark: foo.cl:64:0:     Dynamic Stack: True
+; STDERR_O-NEXT: remark: foo.cl:64:0:     Occupancy [waves/SIMD]: 8
+; STDERR_O-NEXT: remark: foo.cl:64:0:     SGPRs Spill: 0
+; STDERR_O-NEXT: remark: foo.cl:64:0:     VGPRs Spill: 0
+; STDERR_O-NEXT: remark: foo.cl:64:0:     LDS Size [bytes/block]: 0
+
+; STDERR_C:      remark: foo.cl:64:0: Function Name: test_indirect_call
+; STDERR_C-NEXT: remark: foo.cl:64:0:     SGPRs: 4
+; STDERR_C-NEXT: remark: foo.cl:64:0:     VGPRs: 0
+; STDERR_C-NEXT: remark: foo.cl:64:0:     AGPRs: 0
+; STDERR_C-NEXT: remark: foo.cl:64:0:     ScratchSize [bytes/lane]: 0
+; STDERR_C-NEXT: remark: foo.cl:64:0:     Dynamic Stack: False
+; STDERR_C-NEXT: remark: foo.cl:64:0:     Occupancy [waves/SIMD]: 8
+; STDERR_C-NEXT: remark: foo.cl:64:0:     SGPRs Spill: 0
+; STDERR_C-NEXT: remark: foo.cl:64:0:     VGPRs Spill: 0
+; STDERR_C-NEXT: remark: foo.cl:64:0:     LDS Size [bytes/block]: 0
 @gv.fptr0 = external hidden unnamed_addr addrspace(4) constant ptr, align 4
 
 define amdgpu_kernel void @test_indirect_call() !dbg !9 {
@@ -158,17 +171,27 @@ define amdgpu_kernel void @test_indirect_call() !dbg !9 {
   ret void
 }
 
-; STDERR: remark: foo.cl:74:0: Function Name: test_indirect_w_static_stack
-; STDERR-NEXT: remark: foo.cl:74:0:     SGPRs: 39
-; STDERR-NEXT: remark: foo.cl:74:0:     VGPRs: 32
-; STDERR-NEXT: remark: foo.cl:74:0:     AGPRs: 10
-; STDERR-NEXT: remark: foo.cl:74:0:     ScratchSize [bytes/lane]: 144
-; STDERR-NEXT: remark: foo.cl:74:0:     Dynamic Stack: True
-; STDERR-NEXT: remark: foo.cl:74:0:     Occupancy [waves/SIMD]: 8
-; STDERR-NEXT: remark: foo.cl:74:0:     SGPRs Spill: 0
-; STDERR-NEXT: remark: foo.cl:74:0:     VGPRs Spill: 0
-; STDERR-NEXT: remark: foo.cl:74:0:     LDS Size [bytes/block]: 0
+; STDERR_O: remark: foo.cl:74:0: Function Name: test_indirect_w_static_stack
+; STDERR_O-NEXT: remark: foo.cl:74:0:     SGPRs: 39
+; STDERR_O-NEXT: remark: foo.cl:74:0:     VGPRs: 32
+; STDERR_O-NEXT: remark: foo.cl:74:0:     AGPRs: 10
+; STDERR_O-NEXT: remark: foo.cl:74:0:     ScratchSize [bytes/lane]: 144
+; STDERR_O-NEXT: remark: foo.cl:74:0:     Dynamic Stack: True
+; STDERR_O-NEXT: remark: foo.cl:74:0:     Occupancy [waves/SIMD]: 8
+; STDERR_O-NEXT: remark: foo.cl:74:0:     SGPRs Spill: 0
+; STDERR_O-NEXT: remark: foo.cl:74:0:     VGPRs Spill: 0
+; STDERR_O-NEXT: remark: foo.cl:74:0:     LDS Size [bytes/block]: 0
 
+; STDERR_C:      remark: foo.cl:74:0: Function Name: test_indirect_w_static_stack
+; STDERR_C-NEXT: remark: foo.cl:74:0:     SGPRs: 12
+; STDERR_C-NEXT: remark: foo.cl:74:0:     VGPRs: 1
+; STDERR_C-NEXT: remark: foo.cl:74:0:     AGPRs: 0
+; STDERR_C-NEXT: remark: foo.cl:74:0:     ScratchSize [bytes/lane]: 144
+; STDERR_C-NEXT: remark: foo.cl:74:0:     Dynamic Stack: False
+; STDERR_C-NEXT: remark: foo.cl:74:0:     Occupancy [waves/SIMD]: 8
+; STDERR_C-NEXT: remark: foo.cl:74:0:     SGPRs Spill: 0
+; STDERR_C-NEXT: remark: foo.cl:74:0:     VGPRs Spill: 0
+; STDERR_C-NEXT: remark: foo.cl:74:0:     LDS Size [bytes/block]: 0
 declare void @llvm.memset.p5.i64(ptr addrspace(5) nocapture readonly, i8, i64, i1 immarg)
 
 define amdgpu_kernel void @test_indirect_w_static_stack() !dbg !10 {

@@ -1448,7 +1448,7 @@ struct AttributorConfig {
   /// Callback function to determine if an indirect call targets should be made
   /// direct call targets (with an if-cascade).
   std::function<bool(Attributor &A, const AbstractAttribute &AA, CallBase &CB,
-                     Function &AssummedCallee)>
+                     Function &AssummedCallee, unsigned NumCallees)>
       IndirectCalleeSpecializationCallback = nullptr;
 
   /// Helper to update an underlying call graph and to delete functions.

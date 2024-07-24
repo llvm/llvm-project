@@ -14,11 +14,15 @@
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/CycleAnalysis.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO/Attributor.h"
+#include <optional>
 
 #define DEBUG_TYPE "amdgpu-attributor"
 
@@ -1023,7 +1027,8 @@ static void addPreloadKernArgHint(Function &F, TargetMachine &TM) {
   }
 }
 
-static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM) {
+static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
+                    bool HasWholeProgramVisibility) {
   SetVector<Function *> Functions;
   for (Function &F : M) {
     if (!F.isIntrinsic())
@@ -1036,14 +1041,33 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM) {
   DenseSet<const char *> Allowed(
       {&AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID,
        &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID,
-       &AAAMDWavesPerEU::ID, &AAAMDGPUNoAGPR::ID, &AACallEdges::ID,
-       &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
-       &AAUnderlyingObjects::ID});
+       &AAAMDWavesPerEU::ID, &AAAMDGPUNoAGPR::ID, &AACallEdges::ID, &AAPointerInfo::ID,
+       &AAPotentialConstantValues::ID, &AAUnderlyingObjects::ID,
+       &AAIndirectCallInfo::ID});
+
+  /// Helper to decide if we should specialize the indirect \p CB for \p Callee,
+  /// which is one of the \p NumCallees potential callees.
+  auto IndirectCalleeSpecializationCallback =
+      [&](Attributor &A, const AbstractAttribute &AA, CallBase &CB,
+          Function &Callee, unsigned NumCallees) {
+        if (AMDGPU::isEntryFunctionCC(Callee.getCallingConv()))
+          return false;
+        // Singleton functions should be specialized.
+        if (NumCallees == 1)
+          return true;
+        // Otherewise specialize uniform values.
+        const auto &TTI = TM.getTargetTransformInfo(*CB.getCaller());
+        return TTI.isAlwaysUniform(CB.getCalledOperand());
+      };
 
   AttributorConfig AC(CGUpdater);
   AC.Allowed = &Allowed;
   AC.IsModulePass = true;
   AC.DefaultInitializeLiveInternals = false;
+  errs() << "HasWholeProgramVisibility " << HasWholeProgramVisibility << "\n";
+  AC.IsClosedWorldModule = HasWholeProgramVisibility;
+  AC.IndirectCalleeSpecializationCallback =
+      IndirectCalleeSpecializationCallback;
   AC.IPOAmendableCB = [](const Function &F) {
     return F.getCallingConv() == CallingConv::AMDGPU_KERNEL;
   };
@@ -1070,8 +1094,12 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM) {
 }
 
 class AMDGPUAttributorLegacy : public ModulePass {
+  /// Asserts whether we can assume whole program visibility during codegen.
+  bool HasWholeProgramVisibility = false;
+
 public:
-  AMDGPUAttributorLegacy() : ModulePass(ID) {}
+  AMDGPUAttributorLegacy(bool HasWholeProgramVisibility = false)
+      : ModulePass(ID), HasWholeProgramVisibility(HasWholeProgramVisibility) {}
 
   /// doInitialization - Virtual method overridden by subclasses to do
   /// any necessary initialization before any pass is run.
@@ -1086,7 +1114,7 @@ public:
 
   bool runOnModule(Module &M) override {
     AnalysisGetter AG(this);
-    return runImpl(M, AG, *TM);
+    return runImpl(M, AG, *TM, HasWholeProgramVisibility);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -1107,14 +1135,15 @@ PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
   AnalysisGetter AG(FAM);
 
   // TODO: Probably preserves CFG
-  return runImpl(M, AG, TM) ? PreservedAnalyses::none()
-                            : PreservedAnalyses::all();
+  return runImpl(M, AG, TM, HasWholeProgramVisibility)
+             ? PreservedAnalyses::none()
+             : PreservedAnalyses::all();
 }
 
 char AMDGPUAttributorLegacy::ID = 0;
 
-Pass *llvm::createAMDGPUAttributorLegacyPass() {
-  return new AMDGPUAttributorLegacy();
+Pass *llvm::createAMDGPUAttributorLegacyPass(bool HasWholeProgramVisibility) {
+  return new AMDGPUAttributorLegacy(HasWholeProgramVisibility);
 }
 INITIALIZE_PASS_BEGIN(AMDGPUAttributorLegacy, DEBUG_TYPE, "AMDGPU Attributor",
                       false, false)

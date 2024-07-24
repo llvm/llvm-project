@@ -89,7 +89,7 @@ extern char &AMDGPUMachineCFGStructurizerID;
 void initializeAMDGPUAlwaysInlinePass(PassRegistry&);
 
 Pass *createAMDGPUAnnotateKernelFeaturesPass();
-Pass *createAMDGPUAttributorLegacyPass();
+Pass *createAMDGPUAttributorLegacyPass(bool HasWholeProgramVisibility = false);
 void initializeAMDGPUAttributorLegacyPass(PassRegistry &);
 void initializeAMDGPUAnnotateKernelFeaturesPass(PassRegistry &);
 extern char &AMDGPUAnnotateKernelFeaturesID;
@@ -287,8 +287,13 @@ class AMDGPUAttributorPass : public PassInfoMixin<AMDGPUAttributorPass> {
 private:
   TargetMachine &TM;
 
+  /// Asserts whether we can assume whole program visibility during codegen.
+  bool HasWholeProgramVisibility = false;
+
 public:
-  AMDGPUAttributorPass(TargetMachine &TM) : TM(TM){};
+  AMDGPUAttributorPass(TargetMachine &TM,
+                       bool HasWholeProgramVisibility = false)
+      : TM(TM), HasWholeProgramVisibility(HasWholeProgramVisibility){};
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
