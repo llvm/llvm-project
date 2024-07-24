@@ -233,9 +233,8 @@ public:
     if (BestBlock)
       return BestBlock;
     BestBlock = matchWithPseudoProbes(BlendedHash, PseudoProbes);
-    if (BestBlock) {
+    if (BestBlock)
       MatchedWithPseudoProbes.insert(BlendedHash.combine());
-    }
     return BestBlock;
   }
 
