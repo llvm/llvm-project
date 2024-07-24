@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/daddf128.h"
-#include "include/llvm-libc-types/float128.h"
 #include "src/__support/FPUtil/generic/add_sub.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"

@@ -56,7 +56,6 @@ add_fp_unittest(
     AddTest.h
   DEPENDS
     libc.src.math.daddl
-    libc.src.__support.FPUtil.generic.add_sub
 )
 
 add_fp_unittest(
