@@ -2244,7 +2244,7 @@ static const char *RegNumToRegName(int reg) {
 }
 
 #    if SANITIZER_LINUX && (defined(__arm__) || defined(__aarch64__))
-static unsigned long GetArmRegister(ucontext_t *ctx, int RegNum) {
+static uptr GetArmRegister(ucontext_t *ctx, int RegNum) {
   switch (RegNum) {
 #      if defined(__arm__)
 #        define MAKE_CASE(N) \
@@ -2278,9 +2278,9 @@ static unsigned long GetArmRegister(ucontext_t *ctx, int RegNum) {
       return ctx->uc_mcontext.sp;
 #      endif
     default:
-      return 0UL;
+      return 0;
   }
-  return 0UL;
+  return 0;
 }
 #    endif  // SANITIZER_LINUX && (defined(__arm__) || defined(__aarch64__))
 
@@ -2293,10 +2293,10 @@ static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
 #    elif defined(__i386__)
   Printf("%s = 0x%08x  ", RegName, ctx->uc_mcontext.gregs[RegNum]);
 #    elif defined(__arm__)
-  Printf("%s%s = 0x%08lx  ", internal_strlen(RegName) == 2 ? " " : "", RegName,
+  Printf("%s%s = 0xzx  ", internal_strlen(RegName) == 2 ? " " : "", RegName,
          GetArmRegister(ctx, RegNum));
 #    elif defined(__aarch64__)
-  Printf("%s%s = 0x%016llx  ", internal_strlen(RegName) == 2 ? " " : "",
+  Printf("%s%s = 0xzx  ", internal_strlen(RegName) == 2 ? " " : "",
          RegName, GetArmRegister(ctx, RegNum));
 #    else
   (void)RegName;
