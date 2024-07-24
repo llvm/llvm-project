@@ -2025,6 +2025,9 @@ static void getTrivialDefaultFunctionAttributes(
     FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
   }
 
+  if (CodeGenOpts.SaveRegParams && !AttrOnCallSite)
+    FuncAttrs.addAttribute("save-reg-params");
+
   for (StringRef Attr : CodeGenOpts.DefaultFunctionAttrs) {
     StringRef Var, Value;
     std::tie(Var, Value) = Attr.split('=');
