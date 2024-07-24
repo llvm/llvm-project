@@ -178,12 +178,11 @@ static cl::opt<bool> ImportAssumeUniqueLocal(
     "import-assume-unique-local", cl::init(false),
     cl::desc(
         "By default, a local-linkage global variable won't be imported in the "
-        "edge mod1:func -> mod2:func_bar -> mod2:local-var since compiler "
-        "cannot assume mod2 is compiled with full path or local-var has a "
-        "unique GUID. "
-        "Set this option to true will help cross-module import of such "
-        "variables. But it is only safe if the compiler user specify the full "
-        "module path."),
+        "edge mod1:func -> mod2:local-var (from value profiles) since compiler "
+        "cannot assume mod2 is compiled with full path which gives local-var a "
+        "program-wide unique GUID. Set this option to true will help cross "
+        "module import of such variables. This is only safe if the compiler "
+        "user specify the full module path."),
     cl::Hidden);
 
 namespace llvm {
@@ -206,6 +205,23 @@ static std::unique_ptr<Module> loadFile(const std::string &FileName,
   }
 
   return Result;
+}
+
+static shouldSkipLocalInAnotherModule(const GlobalVarSummary *RefSummary,
+                                      size_t NumRefs,
+                                      StringRef ImporterModule) {
+  // We can import a local from another module if all inputs are compiled
+  // with full paths or when there is one entry in the list.
+  if (ImportAssumeUniqueLocal || NumRefs == 1)
+    return false;
+  // If this is a local variable, make sure we import the copy
+  // in the caller's module. The only time a local variable can
+  // share an entry in the index is if there is a local with the same name
+  // in another module that had the same source file name (in a different
+  // directory), where each was compiled in their own directory so there
+  // was not distinguishing path.
+  return GlobalValue::isLocalLinkage(RefSummary->linkage()) &&
+         RefSummary->modulePath() != ImporterModule;
 }
 
 /// Given a list of possible callee implementation for a call site, qualify the
@@ -250,9 +266,8 @@ static auto qualifyCalleeCandidates(
         // entry in the list - in that case this must be a reference due
         // to indirect call profile data, since a function pointer can point to
         // a local in another module.
-        if (GlobalValue::isLocalLinkage(Summary->linkage()) &&
-            CalleeSummaryList.size() > 1 &&
-            Summary->modulePath() != CallerModulePath)
+        if (shouldSkipLocalInAnotherModule(Summary, CalleeSummaryList.size(),
+                                           CallerModulePath))
           return {
               FunctionImporter::ImportFailureReason::LocalLinkageNotInModule,
               GVSummary};
@@ -371,21 +386,6 @@ class GlobalsImporter final {
 
       LLVM_DEBUG(dbgs() << " ref -> " << VI << "\n");
 
-      // If this is a local variable, make sure we import the copy
-      // in the caller's module. The only time a local variable can
-      // share an entry in the index is if there is a local with the same name
-      // in another module that had the same source file name (in a different
-      // directory), where each was compiled in their own directory so there
-      // was not distinguishing path.
-      auto LocalNotInModule =
-          [&](const GlobalValueSummary *RefSummary) -> bool {
-        if (ImportAssumeUniqueLocal)
-          return false;
-
-        return GlobalValue::isLocalLinkage(RefSummary->linkage()) &&
-               RefSummary->modulePath() != Summary.modulePath();
-      };
-
       for (const auto &RefSummary : VI.getSummaryList()) {
         const auto *GVS = dyn_cast<GlobalVarSummary>(RefSummary.get());
         // Functions could be referenced by global vars - e.g. a vtable; but we
@@ -394,7 +394,8 @@ class GlobalsImporter final {
         // based on profile information). Should we decide to handle them here,
         // we can refactor accordingly at that time.
         if (!GVS || !Index.canImportGlobalVar(GVS, /* AnalyzeRefs */ true) ||
-            LocalNotInModule(GVS))
+            shouldSkipLocalInAnotherModule(GVS, VI.getSummaryList().size(),
+                                           Summary.modulePath()))
           continue;
 
         // If there isn't an entry for GUID, insert <GUID, Definition> pair.
