@@ -1,6 +1,9 @@
 static_library("Symbol") {
   output_name = "lldbSymbol"
-  configs += [ "//llvm/utils/gn/build:lldb_code" ]
+  configs += [
+    "//llvm/utils/gn/build:clang_code",
+    "//llvm/utils/gn/build:lldb_code",
+  ]
   deps = [
     "//lldb/source/Core",
     "//lldb/source/Expression",
