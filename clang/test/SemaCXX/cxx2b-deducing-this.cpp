@@ -973,3 +973,14 @@ struct A {
 bool A::operator == (this const int&, const A&) = default;
 // expected-error@-1 {{invalid parameter type for defaulted equality comparison operator; found 'const int &', expected 'const GH100329::A &'}}
 } // namespace GH100329
+
+namespace defaulted_assign {
+struct A {
+  A& operator=(this A, const A&) = default;
+  // expected-warning@-1 {{explicitly defaulted copy assignment operator is implicitly deleted}}
+  // expected-note@-2 {{function is implicitly deleted because its declared type does not match the type of an implicit copy assignment operator}}
+  A& operator=(this int, const A&) = default;
+  // expected-warning@-1 {{explicitly defaulted copy assignment operator is implicitly deleted}}
+  // expected-note@-2 {{function is implicitly deleted because its declared type does not match the type of an implicit copy assignment operator}}
+};
+} // namespace defaulted_assign
