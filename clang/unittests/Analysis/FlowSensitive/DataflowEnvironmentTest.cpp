@@ -488,7 +488,7 @@ TEST_F(EnvironmentTest, ResultObjectLocationForInheritedCtorInitExpr) {
   RecordStorageLocation &Loc = Env.getResultObjectLocation(*InheritedCtorInit);
   EXPECT_NE(&Loc, nullptr);
 
-  ASSERT_EQ(&Loc, Env.getThisPointeeStorageLocation());
+  EXPECT_EQ(&Loc, Env.getThisPointeeStorageLocation());
 }
 
 TEST_F(EnvironmentTest, Stmt) {
