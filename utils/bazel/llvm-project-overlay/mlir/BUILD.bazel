@@ -918,19 +918,6 @@ exports_files(
     glob(["lib/Bindings/Python/**/*.cpp"]),
 )
 
-# In the targets related to Python bindings, the projects @pybind11 and
-# @local_config_python are defined by @pybind11_bazel. The latter contains
-# python headers, and can be configured in an out-of-tree bazel project via
-#
-#   load("@pybind11_bazel//:python_configure.bzl", "python_configure")
-#   python_configure(name = "local_config_python")
-#
-# For more up-to-date instructions, see
-# https://github.com/pybind/pybind11_bazel
-#
-# Some out-of-tree projects alias @python_runtime//:headers to
-# @local_config_python//:python_headers.
-
 filegroup(
     name = "MLIRBindingsPythonHeaderFiles",
     srcs = glob([
@@ -946,16 +933,12 @@ cc_library(
         "include",
         "lib/Bindings/Python",
     ],
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
     textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
         ":CAPIIRHeaders",
         ":CAPITransformsHeaders",
-        "@local_config_python//:python_headers",
         "@pybind11",
+        "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
 
@@ -965,16 +948,12 @@ cc_library(
         "include",
         "lib/Bindings/Python",
     ],
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
     textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
         ":CAPIIR",
         ":CAPITransforms",
-        "@local_config_python//:python_headers",
         "@pybind11",
+        "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
 
@@ -1008,10 +987,6 @@ cc_library(
     srcs = [":MLIRBindingsPythonSourceFiles"],
     copts = PYBIND11_COPTS,
     features = PYBIND11_FEATURES,
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
     deps = [
         ":CAPIAsync",
         ":CAPIDebug",
@@ -1021,8 +996,8 @@ cc_library(
         ":Support",
         ":config",
         "//llvm:Support",
-        "@local_config_python//:python_headers",
         "@pybind11",
+        "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
 
@@ -1031,10 +1006,6 @@ cc_library(
     srcs = [":MLIRBindingsPythonSourceFiles"],
     copts = PYBIND11_COPTS,
     features = PYBIND11_FEATURES,
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
     deps = [
         ":CAPIAsyncHeaders",
         ":CAPIDebugHeaders",
@@ -1043,8 +1014,8 @@ cc_library(
         ":Support",
         ":config",
         "//llvm:Support",
-        "@local_config_python//:python_headers",
         "@pybind11",
+        "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
 
@@ -1052,10 +1023,6 @@ cc_library(
 # MLIRBindingsPythonCoreNoCAPI.
 cc_library(
     name = "MLIRBindingsPythonCAPIObjects",
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
     deps = [
         ":CAPIAsyncObjects",
         ":CAPIDebugObjects",
@@ -1074,10 +1041,6 @@ cc_binary(
     features = PYBIND11_FEATURES,
     linkshared = 1,
     linkstatic = 0,
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
     deps = [
         ":MLIRBindingsPythonCore",
         ":MLIRBindingsPythonHeadersAndDeps",
@@ -1091,10 +1054,6 @@ cc_binary(
     features = PYBIND11_FEATURES,
     linkshared = 1,
     linkstatic = 0,
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
     deps = [
         ":CAPIIR",
         ":CAPILinalg",
@@ -1109,10 +1068,6 @@ cc_binary(
     features = PYBIND11_FEATURES,
     linkshared = 1,
     linkstatic = 0,
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",
-    ],
     deps = [
         ":CAPIIR",
         ":CAPILLVM",
@@ -1128,10 +1083,6 @@ cc_binary(
     features = PYBIND11_FEATURES,
     linkshared = 1,
     linkstatic = 0,
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
     deps = [
         ":CAPIIR",
         ":CAPIQuant",
@@ -1147,10 +1098,6 @@ cc_binary(
     features = PYBIND11_FEATURES,
     linkshared = 1,
     linkstatic = 0,
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
     deps = [
         ":CAPIIR",
         ":CAPISparseTensor",
@@ -1167,15 +1114,11 @@ cc_binary(
     features = PYBIND11_FEATURES,
     linkshared = 1,
     linkstatic = 0,
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
     deps = [
         ":CAPIExecutionEngine",
         ":MLIRBindingsPythonHeadersAndDeps",
-        "@local_config_python//:python_headers",
         "@pybind11",
+        "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
 
@@ -1187,15 +1130,11 @@ cc_binary(
     features = PYBIND11_FEATURES,
     linkshared = 1,
     linkstatic = 0,
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
     deps = [
         ":CAPILinalg",
         ":MLIRBindingsPythonHeadersAndDeps",
-        "@local_config_python//:python_headers",
         "@pybind11",
+        "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
 
