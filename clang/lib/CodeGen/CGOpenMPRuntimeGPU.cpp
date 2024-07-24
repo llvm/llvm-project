@@ -1652,6 +1652,7 @@ static llvm::Value *castValueToType(CodeGenFunction &CGF, llvm::Value *Val,
 /// Finally, a call is made to '__kmpc_nvptx_parallel_reduce_nowait_v2' to
 /// reduce across workers and compute a globally reduced value.
 ///
+
 void CGOpenMPRuntimeGPU::emitReduction(
     CodeGenFunction &CGF, SourceLocation Loc, ArrayRef<const Expr *> Privates,
     ArrayRef<const Expr *> LHSExprs, ArrayRef<const Expr *> RHSExprs,
@@ -1694,7 +1695,8 @@ void CGOpenMPRuntimeGPU::emitReduction(
                          CGF.AllocaInsertPt->getIterator());
   InsertPointTy CodeGenIP(CGF.Builder.GetInsertBlock(),
                           CGF.Builder.GetInsertPoint());
-  llvm::OpenMPIRBuilder::LocationDescription OmpLoc(CodeGenIP);
+  llvm::OpenMPIRBuilder::LocationDescription OmpLoc(
+      CodeGenIP, CGF.SourceLocToDebugLoc(Loc));
   llvm::SmallVector<llvm::OpenMPIRBuilder::ReductionInfo> ReductionInfos;
 
   CodeGenFunction::OMPPrivateScope Scope(CGF);
