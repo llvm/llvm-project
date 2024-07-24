@@ -1793,11 +1793,6 @@ public:
     return ParentFragments.contains(&Other);
   }
 
-  /// Returns if this function is a parent of \p Other function.
-  bool isParentOf(const BinaryFunction &Other) const {
-    return Fragments.contains(&Other);
-  }
-
   /// Return the child fragment form parent function
   iterator_range<FragmentsSetTy::const_iterator> getFragments() const {
     return iterator_range<FragmentsSetTy::const_iterator>(Fragments.begin(),
@@ -1806,11 +1801,6 @@ public:
 
   /// Return the parent function for split function fragments.
   FragmentsSetTy *getParentFragments() { return &ParentFragments; }
-
-  /// Returns if this function is a parent or child of \p Other function.
-  bool isParentOrChildOf(const BinaryFunction &Other) const {
-    return isChildOf(Other) || isParentOf(Other);
-  }
 
   /// Set the profile data for the number of times the function was called.
   BinaryFunction &setExecutionCount(uint64_t Count) {
