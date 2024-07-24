@@ -66,16 +66,6 @@ TYPE_PARSER(
             normalProgramUnit) /
             skipStuffBeforeStatement))
 
-// R504 specification-part ->
-//         [use-stmt]... [import-stmt]... [implicit-part]
-//         [declaration-construct]...
-TYPE_CONTEXT_PARSER("specification part"_en_US,
-    construct<SpecificationPart>(many(openaccDeclarativeConstruct),
-        many(openmpDeclarativeConstruct), many(indirect(compilerDirective)),
-        many(statement(indirect(Parser<UseStmt>{}))),
-        many(unambiguousStatement(indirect(Parser<ImportStmt>{}))),
-        implicitPart, many(declarationConstruct)))
-
 // R507 declaration-construct ->
 //        specification-construct | data-stmt | format-stmt |
 //        entry-stmt | stmt-function-stmt
@@ -106,18 +96,29 @@ constexpr auto misplacedSpecificationStmt{Parser<UseStmt>{} >>
         fail<DeclarationConstruct>(
             "IMPLICIT statements must follow USE and IMPORT and precede all other declarations"_err_en_US)};
 
-TYPE_PARSER(recovery(
-    withMessage("expected declaration construct"_err_en_US,
-        CONTEXT_PARSER("declaration construct"_en_US,
-            first(construct<DeclarationConstruct>(specificationConstruct),
-                construct<DeclarationConstruct>(statement(indirect(dataStmt))),
-                construct<DeclarationConstruct>(
-                    statement(indirect(formatStmt))),
-                construct<DeclarationConstruct>(statement(indirect(entryStmt))),
-                construct<DeclarationConstruct>(
-                    statement(indirect(Parser<StmtFunctionStmt>{}))),
-                misplacedSpecificationStmt))),
-    construct<DeclarationConstruct>(declErrorRecovery)))
+TYPE_CONTEXT_PARSER("declaration construct"_en_US,
+    first(construct<DeclarationConstruct>(specificationConstruct),
+        construct<DeclarationConstruct>(statement(indirect(dataStmt))),
+        construct<DeclarationConstruct>(statement(indirect(formatStmt))),
+        construct<DeclarationConstruct>(statement(indirect(entryStmt))),
+        construct<DeclarationConstruct>(
+            statement(indirect(Parser<StmtFunctionStmt>{}))),
+        misplacedSpecificationStmt))
+
+constexpr auto recoveredDeclarationConstruct{
+    recovery(withMessage("expected declaration construct"_err_en_US,
+                 declarationConstruct),
+        construct<DeclarationConstruct>(declErrorRecovery))};
+
+// R504 specification-part ->
+//         [use-stmt]... [import-stmt]... [implicit-part]
+//         [declaration-construct]...
+TYPE_CONTEXT_PARSER("specification part"_en_US,
+    construct<SpecificationPart>(many(openaccDeclarativeConstruct),
+        many(openmpDeclarativeConstruct), many(indirect(compilerDirective)),
+        many(statement(indirect(Parser<UseStmt>{}))),
+        many(unambiguousStatement(indirect(Parser<ImportStmt>{}))),
+        implicitPart, many(recoveredDeclarationConstruct)))
 
 // R507 variant of declaration-construct for use in limitedSpecificationPart.
 constexpr auto invalidDeclarationStmt{formatStmt >>
