@@ -2955,10 +2955,6 @@ static SDValue lowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
   if (SatVT != DstEltVT)
     return SDValue();
 
-  // FIXME: Don't support narrowing by more than 1 steps for now.
-  if (SrcEltSize > (2 * DstEltSize))
-    return SDValue();
-
   MVT DstContainerVT = DstVT;
   MVT SrcContainerVT = SrcVT;
   if (DstVT.isFixedLengthVector()) {
@@ -2986,9 +2982,25 @@ static SDValue lowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
     Src = DAG.getNode(RISCVISD::FP_EXTEND_VL, DL, InterVT, Src, Mask, VL);
   }
 
+  MVT CvtContainerVT = DstContainerVT;
+  MVT CvtEltVT = DstEltVT;
+  if (SrcEltSize > (2 * DstEltSize)) {
+    CvtEltVT = MVT::getIntegerVT(SrcEltVT.getSizeInBits() / 2);
+    CvtContainerVT = CvtContainerVT.changeVectorElementType(CvtEltVT);
+  }
+
   unsigned RVVOpc =
       IsSigned ? RISCVISD::VFCVT_RTZ_X_F_VL : RISCVISD::VFCVT_RTZ_XU_F_VL;
-  SDValue Res = DAG.getNode(RVVOpc, DL, DstContainerVT, Src, Mask, VL);
+  SDValue Res = DAG.getNode(RVVOpc, DL, CvtContainerVT, Src, Mask, VL);
+
+  while (CvtContainerVT != DstContainerVT) {
+    CvtEltVT = MVT::getIntegerVT(CvtEltVT.getSizeInBits() / 2);
+    CvtContainerVT = CvtContainerVT.changeVectorElementType(CvtEltVT);
+    // Rounding mode here is arbitrary since we aren't shifting out any bits.
+    unsigned ClipOpc = IsSigned ? RISCVISD::TRUNCATE_VECTOR_VL_SSAT
+                                : RISCVISD::TRUNCATE_VECTOR_VL_USAT;
+    Res = DAG.getNode(ClipOpc, DL, CvtContainerVT, Res, Mask, VL);
+  }
 
   SDValue SplatZero = DAG.getNode(
       RISCVISD::VMV_V_X_VL, DL, DstContainerVT, DAG.getUNDEF(DstContainerVT),
@@ -8273,11 +8285,9 @@ SDValue RISCVTargetLowering::lowerVectorTruncLike(SDValue Op,
         getDefaultVLOps(SrcVT, ContainerVT, DL, DAG, Subtarget);
   }
 
-  LLVMContext &Context = *DAG.getContext();
-  const ElementCount Count = ContainerVT.getVectorElementCount();
   do {
     SrcEltVT = MVT::getIntegerVT(SrcEltVT.getSizeInBits() / 2);
-    EVT ResultVT = EVT::getVectorVT(Context, SrcEltVT, Count);
+    MVT ResultVT = ContainerVT.changeVectorElementType(SrcEltVT);
     Result = DAG.getNode(RISCVISD::TRUNCATE_VECTOR_VL, DL, ResultVT, Result,
                          Mask, VL);
   } while (SrcEltVT != DstEltVT);
@@ -16629,9 +16639,9 @@ static SDValue combineTruncToVnclip(SDNode *N, SelectionDAG &DAG,
   SDValue Val;
   unsigned ClipOpc;
   if ((Val = DetectUSatPattern(Src)))
-    ClipOpc = RISCVISD::VNCLIPU_VL;
+    ClipOpc = RISCVISD::TRUNCATE_VECTOR_VL_USAT;
   else if ((Val = DetectSSatPattern(Src)))
-    ClipOpc = RISCVISD::VNCLIP_VL;
+    ClipOpc = RISCVISD::TRUNCATE_VECTOR_VL_SSAT;
   else
     return SDValue();
 
@@ -16640,12 +16650,7 @@ static SDValue combineTruncToVnclip(SDNode *N, SelectionDAG &DAG,
   do {
     MVT ValEltVT = MVT::getIntegerVT(ValVT.getScalarSizeInBits() / 2);
     ValVT = ValVT.changeVectorElementType(ValEltVT);
-    // Rounding mode here is arbitrary since we aren't shifting out any bits.
-    Val = DAG.getNode(
-        ClipOpc, DL, ValVT,
-        {Val, DAG.getConstant(0, DL, ValVT), DAG.getUNDEF(VT), Mask,
-         DAG.getTargetConstant(RISCVVXRndMode::RNU, DL, Subtarget.getXLenVT()),
-         VL});
+    Val = DAG.getNode(ClipOpc, DL, ValVT, Val, Mask, VL);
   } while (ValVT != VT);
 
   return Val;
@@ -20449,6 +20454,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(SPLAT_VECTOR_SPLIT_I64_VL)
   NODE_NAME_CASE(READ_VLENB)
   NODE_NAME_CASE(TRUNCATE_VECTOR_VL)
+  NODE_NAME_CASE(TRUNCATE_VECTOR_VL_SSAT)
+  NODE_NAME_CASE(TRUNCATE_VECTOR_VL_USAT)
   NODE_NAME_CASE(VSLIDEUP_VL)
   NODE_NAME_CASE(VSLIDE1UP_VL)
   NODE_NAME_CASE(VSLIDEDOWN_VL)
@@ -20492,8 +20499,6 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(UADDSAT_VL)
   NODE_NAME_CASE(SSUBSAT_VL)
   NODE_NAME_CASE(USUBSAT_VL)
-  NODE_NAME_CASE(VNCLIP_VL)
-  NODE_NAME_CASE(VNCLIPU_VL)
   NODE_NAME_CASE(FADD_VL)
   NODE_NAME_CASE(FSUB_VL)
   NODE_NAME_CASE(FMUL_VL)

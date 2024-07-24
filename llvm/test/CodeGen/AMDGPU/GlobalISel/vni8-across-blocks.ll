@@ -479,33 +479,33 @@ return:
 define amdgpu_kernel void @v8i8_phi_chain(ptr addrspace(1) %src1, ptr addrspace(1) %src2, ptr addrspace(1) nocapture %dst0, ptr addrspace(1) nocapture %dst1) {
 ; GFX906-LABEL: v8i8_phi_chain:
 ; GFX906:       ; %bb.0: ; %entry
-; GFX906-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
+; GFX906-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x24
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
 ; GFX906-NEXT:    v_cmp_gt_u32_e32 vcc, 15, v0
-; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX906-NEXT:    global_load_dwordx2 v[1:2], v3, s[0:1]
 ; GFX906-NEXT:    s_xor_b64 s[0:1], vcc, -1
-; GFX906-NEXT:    s_and_saveexec_b64 s[8:9], vcc
+; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX906-NEXT:    global_load_dwordx2 v[1:2], v3, s[4:5]
+; GFX906-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX906-NEXT:    s_cbranch_execz .LBB8_2
 ; GFX906-NEXT:  ; %bb.1: ; %bb.1
-; GFX906-NEXT:    global_load_dwordx2 v[1:2], v3, s[2:3]
+; GFX906-NEXT:    global_load_dwordx2 v[1:2], v3, s[6:7]
 ; GFX906-NEXT:    v_cmp_gt_u32_e32 vcc, 7, v0
 ; GFX906-NEXT:    s_andn2_b64 s[0:1], s[0:1], exec
-; GFX906-NEXT:    s_and_b64 s[2:3], exec, vcc
-; GFX906-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
+; GFX906-NEXT:    s_and_b64 s[4:5], exec, vcc
+; GFX906-NEXT:    s_or_b64 s[0:1], s[0:1], s[4:5]
 ; GFX906-NEXT:  .LBB8_2: ; %Flow
-; GFX906-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GFX906-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX906-NEXT:    s_and_saveexec_b64 s[2:3], s[0:1]
 ; GFX906-NEXT:    s_cbranch_execz .LBB8_4
 ; GFX906-NEXT:  ; %bb.3: ; %bb.2
 ; GFX906-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
-; GFX906-NEXT:    global_store_dwordx2 v0, v[1:2], s[4:5]
+; GFX906-NEXT:    global_store_dwordx2 v0, v[1:2], s[8:9]
 ; GFX906-NEXT:  .LBB8_4: ; %bb.3
 ; GFX906-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX906-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
-; GFX906-NEXT:    global_store_dwordx2 v0, v[1:2], s[6:7]
+; GFX906-NEXT:    global_store_dwordx2 v0, v[1:2], s[10:11]
 ; GFX906-NEXT:    s_endpgm
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -533,31 +533,31 @@ bb.3:
 define amdgpu_kernel void @v8i8_multi_block(ptr addrspace(1) %src1, ptr addrspace(1) %src2, ptr addrspace(1) nocapture %dst0, ptr addrspace(1) nocapture %dst1) {
 ; GFX906-LABEL: v8i8_multi_block:
 ; GFX906:       ; %bb.0: ; %entry
-; GFX906-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
+; GFX906-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x24
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v5, 3, v0
 ; GFX906-NEXT:    v_cmp_gt_u32_e32 vcc, 15, v0
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX906-NEXT:    global_load_dwordx2 v[3:4], v5, s[0:1]
+; GFX906-NEXT:    global_load_dwordx2 v[3:4], v5, s[4:5]
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    v_mov_b32_e32 v1, v3
 ; GFX906-NEXT:    v_mov_b32_e32 v2, v4
 ; GFX906-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX906-NEXT:    s_cbranch_execz .LBB9_4
 ; GFX906-NEXT:  ; %bb.1: ; %bb.1
-; GFX906-NEXT:    global_load_dwordx2 v[1:2], v5, s[2:3]
+; GFX906-NEXT:    global_load_dwordx2 v[1:2], v5, s[6:7]
 ; GFX906-NEXT:    v_cmp_gt_u32_e32 vcc, 7, v0
 ; GFX906-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX906-NEXT:    s_cbranch_execz .LBB9_3
 ; GFX906-NEXT:  ; %bb.2: ; %bb.2
 ; GFX906-NEXT:    v_mov_b32_e32 v0, 0
-; GFX906-NEXT:    global_store_dwordx2 v0, v[3:4], s[4:5]
+; GFX906-NEXT:    global_store_dwordx2 v0, v[3:4], s[8:9]
 ; GFX906-NEXT:  .LBB9_3: ; %Flow
 ; GFX906-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX906-NEXT:  .LBB9_4: ; %bb.3
 ; GFX906-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX906-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
-; GFX906-NEXT:    global_store_dwordx2 v0, v[1:2], s[6:7]
+; GFX906-NEXT:    global_store_dwordx2 v0, v[1:2], s[10:11]
 ; GFX906-NEXT:    s_endpgm
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()

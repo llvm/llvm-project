@@ -1848,6 +1848,9 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
   Args.addOptInFlag(
       CmdArgs, options::OPT_fptrauth_function_pointer_type_discrimination,
       options::OPT_fno_ptrauth_function_pointer_type_discrimination);
+
+  Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_indirect_gotos,
+                    options::OPT_fno_ptrauth_indirect_gotos);
 }
 
 void Clang::AddLoongArchTargetArgs(const ArgList &Args,
@@ -3956,6 +3959,9 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
   if (Args.hasFlag(options::OPT_fmodules_strict_decluse,
                    options::OPT_fno_modules_strict_decluse, false))
     CmdArgs.push_back("-fmodules-strict-decluse");
+
+  Args.addOptOutFlag(CmdArgs, options::OPT_fmodulemap_allow_subdirectory_search,
+                     options::OPT_fno_modulemap_allow_subdirectory_search);
 
   // -fno-implicit-modules turns off implicitly compiling modules on demand.
   bool ImplicitModules = false;
@@ -9104,6 +9110,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
     A->claim();
   }
+
+  // If we disable the GPU C library support it needs to be forwarded to the
+  // link job.
+  if (!Args.hasFlag(options::OPT_gpulibc, options::OPT_nogpulibc, true))
+    CmdArgs.push_back("--device-linker=-nolibc");
 
   // Add the linker arguments to be forwarded by the wrapper.
   CmdArgs.push_back(Args.MakeArgString(Twine("--linker-path=") +

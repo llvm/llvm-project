@@ -3144,7 +3144,7 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
     return MCSymbolRefExpr::create(getSymbol(GV), Ctx);
 
   if (const BlockAddress *BA = dyn_cast<BlockAddress>(CV))
-    return MCSymbolRefExpr::create(GetBlockAddressSymbol(BA), Ctx);
+    return lowerBlockAddressConstant(*BA);
 
   if (const auto *Equiv = dyn_cast<DSOLocalEquivalent>(CV))
     return getObjFileLowering().lowerDSOLocalEquivalent(Equiv, TM);
@@ -3824,6 +3824,10 @@ MCSymbol *AsmPrinter::GetBlockAddressSymbol(const BlockAddress *BA) const {
 
 MCSymbol *AsmPrinter::GetBlockAddressSymbol(const BasicBlock *BB) const {
   return const_cast<AsmPrinter *>(this)->getAddrLabelSymbol(BB);
+}
+
+const MCExpr *AsmPrinter::lowerBlockAddressConstant(const BlockAddress &BA) {
+  return MCSymbolRefExpr::create(GetBlockAddressSymbol(&BA), OutContext);
 }
 
 /// GetCPISymbol - Return the symbol for the specified constant pool entry.

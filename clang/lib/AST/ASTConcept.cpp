@@ -28,11 +28,9 @@ CreateUnsatisfiedConstraintRecord(const ASTContext &C,
   else {
     auto &SubstitutionDiagnostic =
         *Detail.get<std::pair<SourceLocation, StringRef> *>();
-    unsigned MessageSize = SubstitutionDiagnostic.second.size();
-    char *Mem = new (C) char[MessageSize];
-    memcpy(Mem, SubstitutionDiagnostic.second.data(), MessageSize);
+    StringRef Message = C.backupStr(SubstitutionDiagnostic.second);
     auto *NewSubstDiag = new (C) std::pair<SourceLocation, StringRef>(
-        SubstitutionDiagnostic.first, StringRef(Mem, MessageSize));
+        SubstitutionDiagnostic.first, Message);
     new (TrailingObject) UnsatisfiedConstraintRecord(NewSubstDiag);
   }
 }
