@@ -353,7 +353,7 @@
                   "number",
                   "string"
                 ],
-                "description": "TCP/IP port to attach to a remote systerm. Specifying both pid and port is an error."
+                "description": "TCP/IP port to attach to a remote system. Specifying both pid and port is an error."
               },
               "gdb-remote-hostname": {
                 "type": "string",
