@@ -133,6 +133,8 @@ Improvements to Coverage Mapping
 Bug Fixes in This Version
 -------------------------
 
+- Fixed defaulted `operator==` doesn't lookup its scope when namespace scope is used. (#GH97087)
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

@@ -4856,7 +4856,7 @@ bool TemplateDeclInstantiator::SubstDefaultedFunction(FunctionDecl *New,
                    : DFI);
   }
 
-  SemaRef.SetDeclDefaulted(New, Tmpl->getLocation());
+  SemaRef.SetDeclDefaulted(/*Scope=*/nullptr, New, Tmpl->getLocation());
   return false;
 }
 
@@ -5138,7 +5138,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
 
   if (PatternDecl->isDefaulted()) {
     RebuildTypeSourceInfoForDefaultSpecialMembers();
-    SetDeclDefaulted(Function, PatternDecl->getLocation());
+    SetDeclDefaulted(/*Scope=*/nullptr, Function, PatternDecl->getLocation());
   } else {
     MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
         Function, Function->getLexicalDeclContext(), /*Final=*/false,
