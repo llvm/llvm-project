@@ -30,7 +30,7 @@ using U2 = decltype(&main);
 #endif
 } // namespace cwg2811
 
-namespace cwg2819 { // cwg2819: 19 ready 2024-06-26
+namespace cwg2819 { // cwg2819: 19 accepted 2023-12-01
 #if __cpp_constexpr >= 202306L
   constexpr void* p = nullptr;
   constexpr int* q = static_cast<int*>(p);
@@ -111,7 +111,7 @@ struct D : N::B {
 #endif
 } // namespace cwg2857
 
-namespace cwg2858 { // cwg2858: 19 ready 2024-04-05
+namespace cwg2858 { // cwg2858: 19 accepted 2024-04-05
 
 #if __cplusplus > 202302L
 
@@ -134,7 +134,7 @@ struct A {
 
 } // namespace cwg2858
 
-namespace cwg2877 { // cwg2877: 19 ready 2024-06-26
+namespace cwg2877 { // cwg2877: 19
 #if __cplusplus >= 202002L
 enum E { x };
 void f() {
@@ -150,7 +150,7 @@ void g() {
 #endif
 } // namespace cwg2877
 
-namespace cwg2881 { // cwg2881: 19 ready 2024-06-26
+namespace cwg2881 { // cwg2881: 19
 
 #if __cplusplus >= 202302L
 #pragma clang diagnostic push
@@ -271,7 +271,7 @@ void g() {
 
 } // namespace cwg2881
 
-namespace cwg2882 { // cwg2882: 2.7 ready 2024-06-27
+namespace cwg2882 { // cwg2882: 2.7
 struct C {
   operator void() = delete;
   // expected-warning@-1 {{conversion function converting 'cwg2882::C' to 'void' will never be used}}
@@ -283,7 +283,7 @@ void f(C c) {
 }
 } // namespace cwg2882
 
-namespace cwg2883 { // cwg2883: no ready 2024-06-27
+namespace cwg2883 { // cwg2883: no
 #if __cplusplus >= 201103L
 void f() {
   int x;
@@ -308,7 +308,7 @@ void g() {
 #endif
 } // namespace cwg2883
 
-namespace cwg2885 { // cwg2885: 16 review 2024-06-28
+namespace cwg2885 { // cwg2885: 16 review 2024-05-31
 #if __cplusplus >= 202002L
 template <class T>
 struct A {
@@ -322,7 +322,7 @@ static_assert(!__is_trivially_constructible(B));
 #endif
 } // namespace cwg2885
 
-namespace cwg2886 { // cwg2886: 9 ready 2024-06-27
+namespace cwg2886 { // cwg2886: 9
 #if __cplusplus >= 201103L
 struct C {
   C() = default;
