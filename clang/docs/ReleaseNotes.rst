@@ -40,8 +40,6 @@ code bases.
 - Setting the deprecated CMake variable ``GCC_INSTALL_PREFIX`` (which sets the
   default ``--gcc-toolchain=``) now leads to a fatal error.
 
-- The ``le32`` and ``le64`` targets have been removed.
-
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
