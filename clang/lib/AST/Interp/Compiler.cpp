@@ -3583,7 +3583,19 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD, bool Topleve
         return checkDecl() && this->emitInitGlobal(*VarT, GlobalIndex, VD);
       }
 
-      return checkDecl() && this->visitGlobalInitializer(Init, GlobalIndex);
+      if (!checkDecl())
+        return false;
+
+      if (!this->emitGetPtrGlobal(GlobalIndex, Init))
+        return false;
+
+      if (!visitInitializer(Init))
+        return false;
+
+      if (!this->emitFinishInit(Init))
+        return false;
+
+      return this->emitPopPtr(Init);
     };
 
     // We've already seen and initialized this global.
@@ -3627,7 +3639,16 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD, bool Topleve
         if (!Init)
           return true;
 
-        return this->visitLocalInitializer(Init, *Offset);
+        if (!this->emitGetPtrLocal(*Offset, Init))
+          return false;
+
+        if (!visitInitializer(Init))
+          return false;
+
+        if (!this->emitFinishInit(Init))
+          return false;
+
+        return this->emitPopPtr(Init);
       }
       return false;
     }
