@@ -379,6 +379,10 @@ bool LoongArchInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   //   addi.d $a1, $zero, %ie_pc_lo12(s)
   //   lu32i.d $a1, %ie64_pc_lo20(s)
   //   lu52i.d $a1, $a1, %ie64_pc_hi12(s)
+  //
+  // For simplicity, only pcalau12i and lu52i.d are marked as scheduling
+  // boundaries, and the instructions between them are guaranteed to be
+  // ordered according to data dependencies.
   switch (MI.getOpcode()) {
   case LoongArch::PCADDU18I:
     if (MI.getOperand(1).getTargetFlags() == LoongArchII::MO_CALL36)
@@ -403,27 +407,6 @@ bool LoongArchInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
       return true;
     if (MO0 == LoongArchII::MO_IE_PC_HI && MO1 == LoongArchII::MO_IE_PC_LO &&
         MO2 == LoongArchII::MO_IE_PC64_LO)
-      return true;
-    break;
-  }
-  case LoongArch::ADDI_D: {
-    auto Lu32I = std::next(MII);
-    if (Lu32I == MIE || Lu32I->getOpcode() != LoongArch::LU32I_D)
-      break;
-    auto MO0 = MI.getOperand(2).getTargetFlags();
-    auto MO1 = Lu32I->getOperand(2).getTargetFlags();
-    if (MO0 == LoongArchII::MO_PCREL_LO && MO1 == LoongArchII::MO_PCREL64_LO)
-      return true;
-    if (MO0 == LoongArchII::MO_GOT_PC_LO && MO1 == LoongArchII::MO_GOT_PC64_LO)
-      return true;
-    if (MO0 == LoongArchII::MO_IE_PC_LO && MO1 == LoongArchII::MO_IE_PC64_LO)
-      return true;
-    break;
-  }
-  case LoongArch::LU32I_D: {
-    auto MO = MI.getOperand(2).getTargetFlags();
-    if (MO == LoongArchII::MO_PCREL64_LO || MO == LoongArchII::MO_GOT_PC64_LO ||
-        MO == LoongArchII::MO_IE_PC64_LO)
       return true;
     break;
   }
