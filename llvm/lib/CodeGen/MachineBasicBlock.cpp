@@ -1348,14 +1348,8 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     LIS->repairIntervalsInRange(this, getFirstTerminator(), end(), UsedRegs);
   }
 
-  if (MDTU) {
-    SmallVector<MachineDominatorTree::UpdateType, 3> Updates;
-    Updates.push_back({MachineDominatorTree::Insert, this, NMBB});
-    Updates.push_back({MachineDominatorTree::Insert, NMBB, Succ});
-    if (!llvm::is_contained(successors(), Succ))
-      Updates.push_back({MachineDominatorTree::Delete, this, Succ});
-    MDTU->applyUpdates(Updates);
-  }
+  if (MDTU)
+    MDTU->applyUpdatesForCriticalEdgeSplitting(this, Succ, NMBB);
 
   if (MachineLoopInfo *MLI = GET_RESULT(MachineLoop, getLI, Info))
     if (MachineLoop *TIL = MLI->getLoopFor(this)) {

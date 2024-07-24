@@ -745,8 +745,7 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
       MadeChange |= ProcessBlock(MBB);
 
     // If we have anything we marked as toSplit, split it now.
-    MachineDomTreeUpdater MDTU(DT, PDT,
-                               MachineDomTreeUpdater::UpdateStrategy::Lazy);
+    MachineDomTreeUpdater MDTU(DT, MachineDomTreeUpdater::UpdateStrategy::Lazy);
     for (const auto &Pair : ToSplit) {
       auto NewSucc =
           Pair.first->SplitCriticalEdge(Pair.second, *this, nullptr, &MDTU);

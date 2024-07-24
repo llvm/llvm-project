@@ -50,7 +50,53 @@ public:
 
   ///@}
 
+  /// Apply updates that the critical edge (FromBB, ToBB) has been
+  /// split with NewBB.
+  ///
+  /// \note Do not use this method with regular edges.
+  ///
+  /// \note This method only updates forward dominator tree, and is incompatible
+  /// with regular updates.
+  void applyUpdatesForCriticalEdgeSplitting(MachineBasicBlock *FromBB,
+                                            MachineBasicBlock *ToBB,
+                                            MachineBasicBlock *NewBB);
+
+  void flush() {
+    if (CriticalEdgesToSplit.empty())
+      Base::flush();
+    else
+      applySplitCriticalEdges();
+  }
+
 private:
+  /// Helper structure used to hold all the basic blocks
+  /// involved in the split of a critical edge.
+  struct CriticalEdge {
+    MachineBasicBlock *FromBB;
+    MachineBasicBlock *ToBB;
+    MachineBasicBlock *NewBB;
+  };
+
+  /// Pile up all the critical edges to be split.
+  /// The splitting of a critical edge is local and thus, it is possible
+  /// to apply several of those changes at the same time.
+  SmallVector<CriticalEdge, 32> CriticalEdgesToSplit;
+
+  /// Remember all the basic blocks that are inserted during
+  /// edge splitting.
+  /// Invariant: NewBBs == all the basic blocks contained in the NewBB
+  /// field of all the elements of CriticalEdgesToSplit.
+  /// I.e., forall elt in CriticalEdgesToSplit, it exists BB in NewBBs
+  /// such as BB == elt.NewBB.
+  SmallSet<MachineBasicBlock *, 32> NewBBs;
+
+  /// Apply all the recorded critical edges to the DT.
+  /// This updates the underlying DT information in a way that uses
+  /// the fast query path of DT as much as possible.
+  ///
+  /// \post CriticalEdgesToSplit.empty().
+  void applySplitCriticalEdges();
+
   /// First remove all the instructions of DelBB and then make sure DelBB has a
   /// valid terminator instruction which is necessary to have when DelBB still
   /// has to be inside of its parent Function while awaiting deletion under Lazy
