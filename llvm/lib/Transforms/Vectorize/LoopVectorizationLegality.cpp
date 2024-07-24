@@ -216,6 +216,7 @@ void LoopVectorizeHints::emitRemarkWithHints() const {
                                       TheLoop->getStartLoc(),
                                       TheLoop->getHeader())
              << "loop not vectorized: vectorization is explicitly disabled";
+
     OptimizationRemarkMissed R(LV_NAME, "MissedDetails", TheLoop->getStartLoc(),
                                TheLoop->getHeader());
     R << "loop not vectorized";
@@ -1145,7 +1146,8 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
     }
   }
 
-  return PSE.addPredicate(LAI->getPSE().getPredicate()), true;
+  PSE.addPredicate(LAI->getPSE().getPredicate());
+  return true;
 }
 
 bool LoopVectorizationLegality::canVectorizeFPMath(
