@@ -195,7 +195,7 @@ bool RISCVVectorPeephole::convertToWholeRegister(MachineInstr &MI) const {
     return false;
 
   // Whole register instructions aren't pseudos so they don't have
-  // policy/SEW/AVL ops.
+  // policy/SEW/AVL ops, and they don't have passthrus.
   if (RISCVII::hasVecPolicyOp(MI.getDesc().TSFlags))
     MI.removeOperand(RISCVII::getVecPolicyOpNum(MI.getDesc()));
   MI.removeOperand(RISCVII::getSEWOpNum(MI.getDesc()));
