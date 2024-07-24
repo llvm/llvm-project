@@ -223,12 +223,19 @@ public:
   matchBlock(BlendedBlockHash BlendedHash, uint64_t CallHash,
              const std::vector<yaml::bolt::PseudoProbeInfo> &PseudoProbes) {
     const FlowBlock *BestBlock = matchWithOpcodes(BlendedHash);
-    if (BestBlock)
+    if (BestBlock) {
       ++MatchedWithOpcodes;
-    BestBlock = BestBlock ? BestBlock : matchWithCalls(BlendedHash, CallHash);
-    return BestBlock || !YamlBFGUID
-               ? BestBlock
-               : matchWithPseudoProbes(BlendedHash, PseudoProbes);
+      return BestBlock;
+    }
+    BestBlock = matchWithCalls(BlendedHash, CallHash);
+    if (BestBlock) {
+      return BestBlock;
+    }
+    BestBlock = matchWithPseudoProbes(BlendedHash, PseudoProbes);
+    if (BestBlock) {
+      MatchedWithPseudoProbes.insert(BlendedHash.combine());
+    }
+    return BestBlock;
   }
 
   /// Returns true if the two basic blocks (in the binary and in the profile)
@@ -307,7 +314,7 @@ private:
   // block.
   const FlowBlock *matchWithPseudoProbes(
       BlendedBlockHash BlendedHash,
-      const std::vector<yaml::bolt::PseudoProbeInfo> &PseudoProbes) {
+      const std::vector<yaml::bolt::PseudoProbeInfo> &PseudoProbes) const {
     // Searches for the pseudo probe attached to the matched function's block,
     // ignoring pseudo probes attached to function calls and inlined functions'
     // blocks.
@@ -357,7 +364,6 @@ private:
     assert(BinaryPseudoProbeIt != BBPseudoProbeToBlock.end() &&
            "All binary pseudo probes should belong a binary basic block");
 
-    MatchedWithPseudoProbes.insert(BlendedHash.combine());
     return BinaryPseudoProbeIt->second;
   }
 };
