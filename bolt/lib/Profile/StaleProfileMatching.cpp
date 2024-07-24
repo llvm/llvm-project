@@ -586,7 +586,6 @@ size_t matchWeightsByHashes(
   std::vector<uint64_t> CallHashes;
   std::vector<FlowBlock *> Blocks;
   std::vector<BlendedBlockHash> BlendedHashes;
-
   for (uint64_t I = 0; I < BlockOrder.size(); I++) {
     const BinaryBasicBlock *BB = BlockOrder[I];
     assert(BB->getHash() != 0 && "empty hash of BinaryBasicBlock");
@@ -631,7 +630,6 @@ size_t matchWeightsByHashes(
     LLVM_DEBUG(dbgs() << "BB with index " << I << " has hash = "
                       << Twine::utohexstr(BB->getHash()) << "\n");
   }
-
   Matcher.init(Blocks, BlendedHashes, CallHashes);
 
   // Index in yaml profile => corresponding (matched) block
