@@ -253,7 +253,7 @@ body:             |
   auto *NewMMO = MF->getMachineMemOperand(OldMMO, AAInfo);
   MI.setMemRefs(*MF, NewMMO);
 
-  MachineModuleSlotTracker MST(MF);
+  MachineModuleSlotTracker MST(MMI, MF);
   // Print that MI with new machine metadata, which slot numbers should be
   // assigned.
   EXPECT_EQ("%1:gpr32 = LDRWui %0, 0 :: (load (s32) from %ir.p, "
@@ -277,7 +277,7 @@ body:             |
   EXPECT_EQ(Collected, Generated);
 
   // FileCheck the output from MIR printer.
-  std::string Output = print([&](raw_ostream &OS) { printMIR(OS, *MF); });
+  std::string Output = print([&](raw_ostream &OS) { printMIR(OS, MMI, *MF); });
   std::string CheckString = R"(
 CHECK: machineMetadataNodes:
 CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"domain"}
@@ -403,7 +403,7 @@ body:             |
   auto *NewMMO = MF->getMachineMemOperand(OldMMO, AAInfo);
   MI.setMemRefs(*MF, NewMMO);
 
-  MachineModuleSlotTracker MST(MF);
+  MachineModuleSlotTracker MST(MMI, MF);
   // Print that MI with new machine metadata, which slot numbers should be
   // assigned.
   EXPECT_EQ("%1:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg :: (load (s32) from %ir.p, "
@@ -427,7 +427,7 @@ body:             |
   EXPECT_EQ(Collected, Generated);
 
   // FileCheck the output from MIR printer.
-  std::string Output = print([&](raw_ostream &OS) { printMIR(OS, *MF); });
+  std::string Output = print([&](raw_ostream &OS) { printMIR(OS, MMI, *MF); });
   std::string CheckString = R"(
 CHECK: machineMetadataNodes:
 CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"domain"}
@@ -501,7 +501,7 @@ body:             |
   auto *NewMMO = MF->getMachineMemOperand(OldMMO, AAInfo);
   MI.setMemRefs(*MF, NewMMO);
 
-  MachineModuleSlotTracker MST(MF);
+  MachineModuleSlotTracker MST(MMI, MF);
   // Print that MI with new machine metadata, which slot numbers should be
   // assigned.
   EXPECT_EQ(
@@ -526,7 +526,7 @@ body:             |
   EXPECT_EQ(Collected, Generated);
 
   // FileCheck the output from MIR printer.
-  std::string Output = print([&](raw_ostream &OS) { printMIR(OS, *MF); });
+  std::string Output = print([&](raw_ostream &OS) { printMIR(OS, MMI, *MF); });
   std::string CheckString = R"(
 CHECK: machineMetadataNodes:
 CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"domain"}
