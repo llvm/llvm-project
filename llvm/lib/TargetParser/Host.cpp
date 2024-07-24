@@ -50,6 +50,11 @@
 #if defined(__sun__) && defined(__svr4__)
 #include <kstat.h>
 #endif
+#if defined(__GNUC__) || defined(__clang__)
+#if (defined(__i386__) || defined(__x86_64__)) && !defined(_MSC_VER)
+#include <cpuid.h>
+#endif
+#endif
 
 #define DEBUG_TYPE "host-detection"
 
@@ -150,6 +155,7 @@ StringRef sys::detail::getHostCPUNameForPowerPC(StringRef ProcCpuinfoContent) {
       .Case("POWER8NVL", "pwr8")
       .Case("POWER9", "pwr9")
       .Case("POWER10", "pwr10")
+      .Case("POWER11", "pwr11")
       // FIXME: If we get a simulator or machine with the capabilities of
       // mcpu=future, we should revisit this and add the name reported by the
       // simulator/machine.
@@ -521,68 +527,15 @@ StringRef sys::detail::getHostCPUNameForBPF() {
 #endif
 }
 
-#if defined(__i386__) || defined(_M_IX86) || \
-    defined(__x86_64__) || defined(_M_X64)
-
-// The check below for i386 was copied from clang's cpuid.h (__get_cpuid_max).
-// Check motivated by bug reports for OpenSSL crashing on CPUs without CPUID
-// support. Consequently, for i386, the presence of CPUID is checked first
-// via the corresponding eflags bit.
-// Removal of cpuid.h header motivated by PR30384
-// Header cpuid.h and method __get_cpuid_max are not used in llvm, clang, openmp
-// or test-suite, but are used in external projects e.g. libstdcxx
-static bool isCpuIdSupported() {
-#if defined(__GNUC__) || defined(__clang__)
-#if defined(__i386__)
-  int __cpuid_supported;
-  __asm__("  pushfl\n"
-          "  popl   %%eax\n"
-          "  movl   %%eax,%%ecx\n"
-          "  xorl   $0x00200000,%%eax\n"
-          "  pushl  %%eax\n"
-          "  popfl\n"
-          "  pushfl\n"
-          "  popl   %%eax\n"
-          "  movl   $0,%0\n"
-          "  cmpl   %%eax,%%ecx\n"
-          "  je     1f\n"
-          "  movl   $1,%0\n"
-          "1:"
-          : "=r"(__cpuid_supported)
-          :
-          : "eax", "ecx");
-  if (!__cpuid_supported)
-    return false;
-#endif
-  return true;
-#endif
-  return true;
-}
+#if defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||            \
+    defined(_M_X64)
 
 /// getX86CpuIDAndInfo - Execute the specified cpuid and return the 4 values in
 /// the specified arguments.  If we can't run cpuid on the host, return true.
 static bool getX86CpuIDAndInfo(unsigned value, unsigned *rEAX, unsigned *rEBX,
                                unsigned *rECX, unsigned *rEDX) {
-#if defined(__GNUC__) || defined(__clang__)
-#if defined(__x86_64__)
-  // gcc doesn't know cpuid would clobber ebx/rbx. Preserve it manually.
-  // FIXME: should we save this for Clang?
-  __asm__("movq\t%%rbx, %%rsi\n\t"
-          "cpuid\n\t"
-          "xchgq\t%%rbx, %%rsi\n\t"
-          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
-          : "a"(value));
-  return false;
-#elif defined(__i386__)
-  __asm__("movl\t%%ebx, %%esi\n\t"
-          "cpuid\n\t"
-          "xchgl\t%%ebx, %%esi\n\t"
-          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
-          : "a"(value));
-  return false;
-#else
-  return true;
-#endif
+#if (defined(__i386__) || defined(__x86_64__)) && !defined(_MSC_VER)
+  return !__get_cpuid(value, rEAX, rEBX, rECX, rEDX);
 #elif defined(_MSC_VER)
   // The MSVC intrinsic is portable across x86 and x64.
   int registers[4];
@@ -608,9 +561,6 @@ VendorSignatures getVendorSignature(unsigned *MaxLeaf) {
     MaxLeaf = &EAX;
   else
     *MaxLeaf = 0;
-
-  if (!isCpuIdSupported())
-    return VendorSignatures::UNKNOWN;
 
   if (getX86CpuIDAndInfo(0, MaxLeaf, &EBX, &ECX, &EDX) || *MaxLeaf < 1)
     return VendorSignatures::UNKNOWN;
@@ -639,26 +589,12 @@ using namespace llvm::sys::detail::x86;
 static bool getX86CpuIDAndInfoEx(unsigned value, unsigned subleaf,
                                  unsigned *rEAX, unsigned *rEBX, unsigned *rECX,
                                  unsigned *rEDX) {
-#if defined(__GNUC__) || defined(__clang__)
-#if defined(__x86_64__)
-  // gcc doesn't know cpuid would clobber ebx/rbx. Preserve it manually.
-  // FIXME: should we save this for Clang?
-  __asm__("movq\t%%rbx, %%rsi\n\t"
-          "cpuid\n\t"
-          "xchgq\t%%rbx, %%rsi\n\t"
-          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
-          : "a"(value), "c"(subleaf));
-  return false;
-#elif defined(__i386__)
-  __asm__("movl\t%%ebx, %%esi\n\t"
-          "cpuid\n\t"
-          "xchgl\t%%ebx, %%esi\n\t"
-          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
-          : "a"(value), "c"(subleaf));
-  return false;
-#else
-  return true;
-#endif
+  // TODO(boomanaiden154): When the minimum toolchain versions for gcc and clang
+  // are such that __cpuidex is defined within cpuid.h for both, we can remove
+  // the __get_cpuid_count function and share the MSVC implementation between
+  // all three.
+#if (defined(__i386__) || defined(__x86_64__)) && !defined(_MSC_VER)
+  return !__get_cpuid_count(value, subleaf, rEAX, rEBX, rECX, rEDX);
 #elif defined(_MSC_VER)
   int registers[4];
   __cpuidex(registers, value, subleaf);
@@ -674,6 +610,9 @@ static bool getX86CpuIDAndInfoEx(unsigned value, unsigned subleaf,
 
 // Read control register 0 (XCR0). Used to detect features such as AVX.
 static bool getX86XCR0(unsigned *rEAX, unsigned *rEDX) {
+  // TODO(boomanaiden154): When the minimum toolchain versions for gcc and clang
+  // are such that _xgetbv is supported by both, we can unify the implementation
+  // with MSVC and remove all inline assembly.
 #if defined(__GNUC__) || defined(__clang__)
   // Check xgetbv; this uses a .byte sequence instead of the instruction
   // directly because older assemblers do not include support for xgetbv and
@@ -1549,6 +1488,12 @@ StringRef sys::getHostCPUName() {
   case 0x40000:
 #endif
     return "pwr10";
+#ifdef POWER_11
+  case POWER_11:
+#else
+  case 0x80000:
+#endif
+    return "pwr11";
   default:
     return "generic";
   }
