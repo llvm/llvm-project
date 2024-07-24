@@ -5996,6 +5996,15 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
           CGM.getLLVMContext(), {PrefixSigType, Int32Ty}, /*isPacked=*/true);
 
       llvm::Value *CalleePtr = Callee.getFunctionPointer();
+      if (CGM.getCodeGenOpts().PointerAuth.FunctionPointers) {
+        // Use raw pointer since we are using the callee pointer as data here.
+        Address Addr =
+            Address(CalleePtr, CalleePtr->getType(),
+                    CharUnits::fromQuantity(
+                        CalleePtr->getPointerAlignment(CGM.getDataLayout())),
+                    Callee.getPointerAuthInfo(), nullptr);
+        CalleePtr = Addr.emitRawPointer(*this);
+      }
 
       // On 32-bit Arm, the low bit of a function pointer indicates whether
       // it's using the Arm or Thumb instruction set. The actual first
