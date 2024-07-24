@@ -622,8 +622,6 @@ std::optional<DecodeResult> EmulateInstructionRISCV::Decode(uint32_t inst) {
   Log *log = GetLog(LLDBLog::Unwind);
 
   uint16_t try_rvc = uint16_t(inst & 0x0000ffff);
-  // check whether the compressed encode could be valid
-  uint16_t mask = try_rvc & 0b11;
   uint8_t inst_type = RV64;
 
   // Try to get size of RISCV instruction.
