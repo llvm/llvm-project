@@ -1718,10 +1718,11 @@ struct Attributor {
   /// Return true if we should specialize the call site \b CB for the potential
   /// callee \p Fn.
   bool shouldSpecializeCallSiteForCallee(const AbstractAttribute &AA,
-                                         CallBase &CB, Function &Callee) {
+                                         CallBase &CB, Function &Callee,
+                                         unsigned NumCallees) {
     return Configuration.IndirectCalleeSpecializationCallback
-               ? Configuration.IndirectCalleeSpecializationCallback(*this, AA,
-                                                                    CB, Callee)
+               ? Configuration.IndirectCalleeSpecializationCallback(
+                     *this, AA, CB, Callee, NumCallees)
                : true;
   }
 
