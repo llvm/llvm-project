@@ -185,7 +185,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   for (auto [fieldName, fieldTy] : Ty.getTypeList()) {
     auto result = fir::getTypeSizeAndAlignment(loc, fieldTy, *dl, kindMapping);
     if (!result)
-      return genPlaceholderType(context);
+      break;
     auto [byteSize, byteAlign] = *result;
     mlir::LLVM::DITypeAttr elemTy = convertType(fieldTy, fileAttr, scope, loc);
     offset = llvm::alignTo(offset, byteAlign);
