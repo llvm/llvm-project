@@ -325,10 +325,6 @@ CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
   auto tryLoc = getLoc(S.getBeginLoc());
 
   mlir::OpBuilder::InsertPoint beginInsertTryBody;
-  auto ehPtrTy = mlir::cir::PointerType::get(
-      getBuilder().getContext(),
-      getBuilder().getType<::mlir::cir::ExceptionInfoType>());
-  mlir::Value exceptionInfoInsideTry;
 
   // Create the scope to represent only the C/C++ `try {}` part. However,
   // don't populate right away. Reserve some space to store the exception
@@ -337,13 +333,6 @@ CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
   auto tryScope = builder.create<mlir::cir::TryOp>(
       tryLoc, /*scopeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        // Allocate space for our exception info that might be passed down
-        // to `cir.try_call` everytime a call happens.
-        exceptionInfoInsideTry = b.create<mlir::cir::AllocaOp>(
-            loc, /*addr type*/ getBuilder().getPointerTo(ehPtrTy),
-            /*var type*/ ehPtrTy, "__exception_ptr",
-            CGM.getSize(CharUnits::One()), nullptr);
-
         beginInsertTryBody = getBuilder().saveInsertionPoint();
       },
       // Don't emit the code right away for catch clauses, for

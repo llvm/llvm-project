@@ -14,7 +14,6 @@ unsigned long long tc() {
     // CHECK: %[[idx:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["idx"]
 
     // CHECK: cir.try {
-    // CHECK: %[[eh_info:.*]] = cir.alloca !cir.ptr<!cir.eh.info>, !cir.ptr<!cir.ptr<!cir.eh.info>>, ["__exception_ptr"]
     // CHECK: %[[local_a:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
     int a = 4;
     z = division(x, y);
