@@ -123,6 +123,7 @@ __all__ = [
     "Float8E4M3B11FNUZType",
     "Float8E4M3FNType",
     "Float8E4M3FNUZType",
+    "Float8E4M3Type",
     "Float8E5M2FNUZType",
     "Float8E5M2Type",
     "FloatAttr",
@@ -1568,6 +1569,19 @@ class Float8E4M3FNUZType(FloatType):
     def get(context: Optional[Context] = None) -> Float8E4M3FNUZType:
         """
         Create a float8_e4m3fnuz type.
+        """
+    @staticmethod
+    def isinstance(other: Type) -> bool: ...
+    def __init__(self, cast_from_type: Type) -> None: ...
+    @property
+    def typeid(self) -> TypeID: ...
+
+class Float8E4M3Type(FloatType):
+    static_typeid: ClassVar[TypeID]
+    @staticmethod
+    def get(context: Optional[Context] = None) -> Float8E4M3Type:
+        """
+        Create a float8_e4m3 type.
         """
     @staticmethod
     def isinstance(other: Type) -> bool: ...

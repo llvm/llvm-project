@@ -46,11 +46,11 @@ define amdgpu_kernel void @test2(ptr %p, i32 %x) {
 ; GFX9-NEXT:    s_cmp_lt_i32 s0, 1
 ; GFX9-NEXT:    s_cbranch_scc0 .LBB2_2
 ; GFX9-NEXT:  ; %bb.1: ; %else
-; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
+; GFX9-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    flat_store_dword v[0:1], v2
 ; GFX9-NEXT:    s_endpgm
 ; GFX9-NEXT:  .LBB2_2: ; %then
@@ -63,11 +63,11 @@ define amdgpu_kernel void @test2(ptr %p, i32 %x) {
 ; GFX10-NEXT:    s_cmp_lt_i32 s0, 1
 ; GFX10-NEXT:    s_cbranch_scc0 .LBB2_2
 ; GFX10-NEXT:  ; %bb.1: ; %else
-; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x24
+; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x24
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GFX10-NEXT:    v_mov_b32_e32 v1, s3
+; GFX10-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-NEXT:    s_endpgm
 ; GFX10-NEXT:  .LBB2_2: ; %then

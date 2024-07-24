@@ -18,3 +18,21 @@ define <2 x i32> @test_mmx_asm(<2 x i32> %a) nounwind {
   %2 = tail call <2 x i32> asm sideeffect "# $0 = $1", "=y,y"(i64 %1)
   ret <2 x i32> %2
 }
+
+;; And same thing with the 'Ym' constraint.
+define <2 x i32> @test_mmx_asm_Ym(<2 x i32> %a) nounwind {
+; CHECK-LABEL: test_mmx_asm_Ym:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movdq2q %xmm0, %mm0
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    # %mm0 = %mm0
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    # %mm0 = %mm0
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    movq2dq %mm0, %xmm0
+; CHECK-NEXT:    retq
+  %1 = tail call i64 asm sideeffect "# $0 = $1", "=^Ym,^Ym"(<2 x i32> %a)
+  %2 = tail call <2 x i32> asm sideeffect "# $0 = $1", "=^Ym,^Ym"(i64 %1)
+  ret <2 x i32> %2
+}
