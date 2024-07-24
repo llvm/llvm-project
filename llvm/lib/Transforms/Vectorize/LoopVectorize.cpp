@@ -2426,7 +2426,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
   // Prepare for the vector type of the interleaved load/store.
   Type *ScalarTy = getLoadStoreType(Instr);
   unsigned InterleaveFactor = Group->getFactor();
-  auto *VecTy = VectorType::get(ScalarTy, VF * InterleaveFactor);
+  auto *VecTy = VectorType::get(ScalarTy, State.VF * InterleaveFactor);
 
   // Prepare for the new pointers.
   SmallVector<Value *, 2> AddrParts;
@@ -2444,7 +2444,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
   // uniform instructions, we're only required to generate a value for the
   // first vector lane in each unroll iteration.
   if (Group->isReverse()) {
-    Value *RuntimeVF = getRuntimeVF(Builder, Builder.getInt32Ty(), VF);
+    Value *RuntimeVF = getRuntimeVF(Builder, Builder.getInt32Ty(), State.VF);
     Idx = Builder.CreateSub(RuntimeVF, Builder.getInt32(1));
     Idx = Builder.CreateMul(Idx, Builder.getInt32(Group->getFactor()));
     Idx = Builder.CreateAdd(Idx, Builder.getInt32(Index));
@@ -2481,14 +2481,14 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
 
   auto CreateGroupMask = [this, &BlockInMask, &State, &InterleaveFactor](
                              unsigned Part, Value *MaskForGaps) -> Value * {
-    if (VF.isScalable()) {
+    if (State.VF.isScalable()) {
       assert(!MaskForGaps && "Interleaved groups with gaps are not supported.");
       assert(InterleaveFactor == 2 &&
              "Unsupported deinterleave factor for scalable vectors");
       auto *BlockInMaskPart = State.get(BlockInMask, Part);
       SmallVector<Value *, 2> Ops = {BlockInMaskPart, BlockInMaskPart};
-      auto *MaskTy =
-          VectorType::get(Builder.getInt1Ty(), VF.getKnownMinValue() * 2, true);
+      auto *MaskTy = VectorType::get(Builder.getInt1Ty(),
+                                     State.VF.getKnownMinValue() * 2, true);
       return Builder.CreateIntrinsic(MaskTy, Intrinsic::vector_interleave2, Ops,
                                      /*FMFSource=*/nullptr, "interleaved.mask");
     }
@@ -2499,7 +2499,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
     Value *BlockInMaskPart = State.get(BlockInMask, Part);
     Value *ShuffledMask = Builder.CreateShuffleVector(
         BlockInMaskPart,
-        createReplicatedMask(InterleaveFactor, VF.getKnownMinValue()),
+        createReplicatedMask(InterleaveFactor, State.VF.getKnownMinValue()),
         "interleaved.mask");
     return MaskForGaps ? Builder.CreateBinOp(Instruction::And, ShuffledMask,
                                              MaskForGaps)
@@ -2511,7 +2511,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
     Value *MaskForGaps = nullptr;
     if (NeedsMaskForGaps) {
       MaskForGaps =
-          createBitMaskForGaps(Builder, VF.getKnownMinValue(), *Group);
+          createBitMaskForGaps(Builder, State.VF.getKnownMinValue(), *Group);
       assert(MaskForGaps && "Mask for Gaps is required but it is null");
     }
 
@@ -2554,7 +2554,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
           Value *StridedVec = Builder.CreateExtractValue(DI, I);
           // If this member has different type, cast the result type.
           if (Member->getType() != ScalarTy) {
-            VectorType *OtherVTy = VectorType::get(Member->getType(), VF);
+            VectorType *OtherVTy = VectorType::get(Member->getType(), State.VF);
             StridedVec = createBitOrPointerCast(StridedVec, OtherVTy, DL);
           }
 
@@ -2580,15 +2580,15 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
         continue;
 
       auto StrideMask =
-          createStrideMask(I, InterleaveFactor, VF.getKnownMinValue());
+          createStrideMask(I, InterleaveFactor, State.VF.getKnownMinValue());
       for (unsigned Part = 0; Part < State.UF; Part++) {
         Value *StridedVec = Builder.CreateShuffleVector(
             NewLoads[Part], StrideMask, "strided.vec");
 
         // If this member has different type, cast the result type.
         if (Member->getType() != ScalarTy) {
-          assert(!VF.isScalable() && "VF is assumed to be non scalable.");
-          VectorType *OtherVTy = VectorType::get(Member->getType(), VF);
+          assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
+          VectorType *OtherVTy = VectorType::get(Member->getType(), State.VF);
           StridedVec = createBitOrPointerCast(StridedVec, OtherVTy, DL);
         }
 
@@ -2603,14 +2603,14 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
   }
 
   // The sub vector type for current instruction.
-  auto *SubVT = VectorType::get(ScalarTy, VF);
+  auto *SubVT = VectorType::get(ScalarTy, State.VF);
 
   // Vectorize the interleaved store group.
   Value *MaskForGaps =
-      createBitMaskForGaps(Builder, VF.getKnownMinValue(), *Group);
+      createBitMaskForGaps(Builder, State.VF.getKnownMinValue(), *Group);
   assert((!MaskForGaps || useMaskedInterleavedAccesses(*TTI)) &&
          "masked interleaved groups are not allowed.");
-  assert((!MaskForGaps || !VF.isScalable()) &&
+  assert((!MaskForGaps || !State.VF.isScalable()) &&
          "masking gaps for scalable vectors is not yet supported.");
   for (unsigned Part = 0; Part < State.UF; Part++) {
     // Collect the stored vector from each member.
