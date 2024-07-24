@@ -692,23 +692,22 @@ static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
   RValue Call =
       CGF.EmitCall(E->getCallee()->getType(), callee, E, ReturnValueSlot());
 
-  // Check the supported intrinsic.
+  ASTContext &Context = CGF.getContext();
   if (unsigned BuiltinID = FD->getBuiltinID()) {
     auto IsErrnoIntrinsic = [&]() -> unsigned {
-      switch (BuiltinID) {
-      case Builtin::BIexpf:
-      case Builtin::BI__builtin_expf:
-      case Builtin::BI__builtin_expf128:
+      // Check whether a FP math builtin function, such as BI__builtin_expf
+      QualType ResultTy = FD->getReturnType();
+      bool IsMathLibCall =
+          Context.BuiltinInfo.isLibFunction(BuiltinID) ||
+          Context.BuiltinInfo.isPredefinedLibFunction(BuiltinID);
+      if (IsMathLibCall && CGF.ConvertType(ResultTy)->isFloatingPointTy())
         return true;
-      }
-      // TODO: support more FP math libcalls
       return false;
     }();
 
     // Restrict to target with errno, for example, MacOS doesn't set errno.
     if (IsErrnoIntrinsic && CGF.CGM.getLangOpts().MathErrno &&
         !CGF.Builder.getIsFPConstrained()) {
-      ASTContext &Context = CGF.getContext();
       // Emit "int" TBAA metadata on FP math libcalls.
       clang::QualType IntTy = Context.IntTy;
       TBAAAccessInfo TBAAInfo = CGF.CGM.getTBAAAccessInfo(IntTy);
