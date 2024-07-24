@@ -11160,11 +11160,10 @@ bool Sema::areMultiversionVariantFunctionsCompatible(
     if (OldFPT && NewFPT) {
       unsigned Diff =
           OldFPT->getAArch64SMEAttributes() ^ NewFPT->getAArch64SMEAttributes();
-      // Streaming versions cannot be mixed with non-streaming versions.
-      if (Diff & FunctionType::SME_PStateSMEnabledMask)
-        ArmStreamingCCMismatched = true;
-      // Streaming-compatible versions cannot be mixed with anything else.
-      if (Diff & FunctionType::SME_PStateSMCompatibleMask)
+      // Arm-streaming, arm-streaming-compatible and non-streaming versions
+      // cannot be mixed.
+      if (Diff & (FunctionType::SME_PStateSMEnabledMask |
+                  FunctionType::SME_PStateSMCompatibleMask))
         ArmStreamingCCMismatched = true;
     }
 
