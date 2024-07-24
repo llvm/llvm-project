@@ -30,7 +30,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-[[gnu::naked]]
 LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
   LOAD(ra, buf->__pc);
   LOAD(s0, buf->__regs[0]);

@@ -1165,19 +1165,19 @@ def client__name : JoinedOrSeparate<["-"], "client_name">;
 def combine : Flag<["-", "--"], "combine">, Flags<[NoXarchOption, Unsupported]>;
 def compatibility__version : JoinedOrSeparate<["-"], "compatibility_version">;
 def config : Joined<["--"], "config=">, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>, MetaVarName<"<file>">,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>, MetaVarName<"<file>">,
   HelpText<"Specify configuration file">;
-def : Separate<["--"], "config">, Alias<config>;
+def : Separate<["--"], "config">, Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>, Alias<config>;
 def no_default_config : Flag<["--"], "no-default-config">,
-  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"Disable loading default configuration files">;
 def config_system_dir_EQ : Joined<["--"], "config-system-dir=">,
   Flags<[NoXarchOption, HelpHidden]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"System directory for configuration files">;
 def config_user_dir_EQ : Joined<["--"], "config-user-dir=">,
   Flags<[NoXarchOption, HelpHidden]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"User directory for configuration files">;
 def coverage : Flag<["-", "--"], "coverage">, Group<Link_Group>,
   Visibility<[ClangOption, CLOption]>;
@@ -3232,6 +3232,10 @@ def fimplicit_module_maps : Flag <["-"], "fimplicit-module-maps">, Group<f_Group
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Implicitly search the file system for module map files.">,
   MarshallingInfoFlag<HeaderSearchOpts<"ImplicitModuleMaps">>;
+defm modulemap_allow_subdirectory_search : BoolFOption <"modulemap-allow-subdirectory-search",
+  HeaderSearchOpts<"AllowModuleMapSubdirectorySearch">, DefaultTrue,
+  PosFlag<SetTrue, [], [], "Allow to search for module maps in subdirectories of search paths">,
+  NegFlag<SetFalse>, BothFlags<[NoXarchOption], [ClangOption, CC1Option]>>;
 defm modules : BoolFOption<"modules",
   LangOpts<"Modules">, Default<fcxx_modules.KeyPath>,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -5085,6 +5089,11 @@ def mspe : Flag<["-"], "mspe">, Group<m_ppc_Features_Group>;
 def mno_spe : Flag<["-"], "mno-spe">, Group<m_ppc_Features_Group>;
 def mefpu2 : Flag<["-"], "mefpu2">, Group<m_ppc_Features_Group>;
 } // let Flags = [TargetSpecific]
+def msave_reg_params : Flag<["-"], "msave-reg-params">, Group<m_Group>,
+  Flags<[TargetSpecific]>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Save arguments passed by registers to ABI-defined stack positions">,
+  MarshallingInfoFlag<CodeGenOpts<"SaveRegParams">>;
 def mabi_EQ_quadword_atomics : Flag<["-"], "mabi=quadword-atomics">,
   Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable quadword atomics ABI on AIX (AIX PPC64 only). Uses lqarx/stqcx. instructions.">,
