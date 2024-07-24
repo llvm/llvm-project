@@ -12,6 +12,8 @@
 
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
@@ -657,8 +659,7 @@ NewArchiveMember ObjectFactory::createWeakExternal(StringRef Sym,
 Error writeImportLibrary(StringRef ImportName, StringRef Path,
                          ArrayRef<COFFShortExport> Exports,
                          MachineTypes Machine, bool MinGW,
-                         ArrayRef<COFFShortExport> NativeExports,
-                         bool AddUnderscores) {
+                         ArrayRef<COFFShortExport> NativeExports) {
 
   MachineTypes NativeMachine = Machine;
   if (isArm64EC(Machine)) {
@@ -680,6 +681,13 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
 
   auto addExports = [&](ArrayRef<COFFShortExport> Exp,
                         MachineTypes M) -> Error {
+    StringMap<std::string> RegularImports;
+    struct Deferred {
+      std::string Name;
+      ImportType ImpType;
+      const COFFShortExport *Export;
+    };
+    SmallVector<Deferred, 0> Renames;
     for (const COFFShortExport &E : Exp) {
       if (E.Private)
         continue;
@@ -724,15 +732,11 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
         else if (Name == E.ImportName)
           NameType = IMPORT_NAME;
         else {
-          StringRef Prefix = "";
-          if (Machine == IMAGE_FILE_MACHINE_I386 && AddUnderscores)
-            Prefix = "_";
-
-          if (ImportType == IMPORT_CODE)
-            Members.push_back(OF.createWeakExternal(
-                (Prefix + E.ImportName).str(), Name, false, M));
-          Members.push_back(OF.createWeakExternal((Prefix + E.ImportName).str(),
-                                                  Name, true, M));
+          Deferred D;
+          D.Name = Name;
+          D.ImpType = ImportType;
+          D.Export = &E;
+          Renames.push_back(D);
           continue;
         }
       } else {
@@ -754,8 +758,24 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
         }
       }
 
+      RegularImports[applyNameType(NameType, Name)] = Name;
       Members.push_back(OF.createShortImport(Name, E.Ordinal, ImportType,
                                              NameType, ExportName, M));
+    }
+    for (const auto &D : Renames) {
+      auto It = RegularImports.find(D.Export->ImportName);
+      if (It != RegularImports.end()) {
+        // We have a regular import entry for a symbol with the name we
+        // want to reference; produce an alias pointing at that.
+        StringRef Symbol = It->second;
+        if (D.ImpType == IMPORT_CODE)
+          Members.push_back(OF.createWeakExternal(Symbol, D.Name, false, M));
+        Members.push_back(OF.createWeakExternal(Symbol, D.Name, true, M));
+      } else {
+        Members.push_back(OF.createShortImport(D.Name, D.Export->Ordinal,
+                                               D.ImpType, IMPORT_NAME_EXPORTAS,
+                                               D.Export->ImportName, M));
+      }
     }
     return Error::success();
   };
