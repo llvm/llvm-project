@@ -183,9 +183,6 @@ public:
   std::vector<std::pair<MachineInstr*, unsigned> > PHINodesToUpdate;
   unsigned OrigNumPHINodesToUpdate;
 
-  /// \name Exception Handling
-  /// \{
-
   /// If the current MBB is a landing pad, the exception pointer and exception
   /// selector registers are copied into these virtual registers by
   /// SelectionDAGISel::PrepareEHLandingPad().
@@ -198,12 +195,6 @@ public:
   // even under this switch, we'd like .debug_frame to be precise when using
   // -g. At this moment, there's no way to specify that some CFI directives
   // go into .eh_frame only, while others go into .debug_frame only.
-
-  /// Set the call site currently being processed.
-  void setCurrentCallSite(unsigned Site) { CurCallSite = Site; }
-
-  /// Get the call site currently being processed, if any. Return zero if none.
-  unsigned getCurrentCallSite() { return CurCallSite; }
 
   /// Collection of dbg.declare instructions handled after argument
   /// lowering and before ISel proper.
@@ -297,6 +288,12 @@ public:
 
   Register getCatchPadExceptionPointerVReg(const Value *CPI,
                                            const TargetRegisterClass *RC);
+
+  /// Set the call site currently being processed.
+  void setCurrentCallSite(unsigned Site) { CurCallSite = Site; }
+
+  /// Get the call site currently being processed, if any. Return zero if none.
+  unsigned getCurrentCallSite() { return CurCallSite; }
 
 private:
   /// LiveOutRegInfo - Information about live out vregs.
