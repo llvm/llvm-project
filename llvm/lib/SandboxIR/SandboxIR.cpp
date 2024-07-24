@@ -496,6 +496,50 @@ void LoadInst::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
+#endif // NDEBUG
+StoreInst *StoreInst::create(Value *V, Value *Ptr, MaybeAlign Align,
+                             Instruction *InsertBefore, Context &Ctx) {
+  llvm::Instruction *BeforeIR = InsertBefore->getTopmostLLVMInstruction();
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(BeforeIR);
+  auto *NewSI =
+      Builder.CreateAlignedStore(V->Val, Ptr->Val, Align, /*isVolatile=*/false);
+  auto *NewSBI = Ctx.createStoreInst(NewSI);
+  return NewSBI;
+}
+StoreInst *StoreInst::create(Value *V, Value *Ptr, MaybeAlign Align,
+                             BasicBlock *InsertAtEnd, Context &Ctx) {
+  auto *InsertAtEndIR = cast<llvm::BasicBlock>(InsertAtEnd->Val);
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(InsertAtEndIR);
+  auto *NewSI =
+      Builder.CreateAlignedStore(V->Val, Ptr->Val, Align, /*isVolatile=*/false);
+  auto *NewSBI = Ctx.createStoreInst(NewSI);
+  return NewSBI;
+}
+
+bool StoreInst::classof(const Value *From) {
+  return From->getSubclassID() == ClassID::Store;
+}
+
+Value *StoreInst::getValueOperand() const {
+  return Ctx.getValue(cast<llvm::StoreInst>(Val)->getValueOperand());
+}
+
+Value *StoreInst::getPointerOperand() const {
+  return Ctx.getValue(cast<llvm::StoreInst>(Val)->getPointerOperand());
+}
+
+#ifndef NDEBUG
+void StoreInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void StoreInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
 
 void OpaqueInst::dump(raw_ostream &OS) const {
   dumpCommonPrefix(OS);
@@ -581,7 +625,8 @@ Value *Context::registerValue(std::unique_ptr<Value> &&VPtr) {
   assert(VPtr->getSubclassID() != Value::ClassID::User &&
          "Can't register a user!");
   Value *V = VPtr.get();
-  auto Pair = LLVMValueToValueMap.insert({VPtr->Val, std::move(VPtr)});
+  [[maybe_unused]] auto Pair =
+         LLVMValueToValueMap.insert({VPtr->Val, std::move(VPtr)});
   assert(Pair.second && "Already exists!");
   return V;
 }
@@ -618,6 +663,11 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     It->second = std::unique_ptr<LoadInst>(new LoadInst(LLVMLd, *this));
     return It->second.get();
   }
+  case llvm::Instruction::Store: {
+    auto *LLVMSt = cast<llvm::StoreInst>(LLVMV);
+    It->second = std::unique_ptr<StoreInst>(new StoreInst(LLVMSt, *this));
+    return It->second.get();
+  }
   default:
     break;
   }
@@ -639,6 +689,11 @@ BasicBlock *Context::createBasicBlock(llvm::BasicBlock *LLVMBB) {
 LoadInst *Context::createLoadInst(llvm::LoadInst *LI) {
   auto NewPtr = std::unique_ptr<LoadInst>(new LoadInst(LI, *this));
   return cast<LoadInst>(registerValue(std::move(NewPtr)));
+}
+
+StoreInst *Context::createStoreInst(llvm::StoreInst *SI) {
+  auto NewPtr = std::unique_ptr<StoreInst>(new StoreInst(SI, *this));
+  return cast<StoreInst>(registerValue(std::move(NewPtr)));
 }
 
 Value *Context::getValue(llvm::Value *V) const {

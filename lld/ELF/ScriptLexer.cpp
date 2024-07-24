@@ -272,20 +272,10 @@ StringRef ScriptLexer::peek() {
   return tok;
 }
 
-StringRef ScriptLexer::peek2() {
-  skip();
-  StringRef tok = next();
-  if (errorCount())
-    return "";
-  pos = pos - 2;
-  return tok;
-}
-
 bool ScriptLexer::consume(StringRef tok) {
-  if (peek() == tok) {
-    skip();
+  if (next() == tok)
     return true;
-  }
+  --pos;
   return false;
 }
 
