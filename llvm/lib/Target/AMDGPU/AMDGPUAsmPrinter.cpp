@@ -344,13 +344,13 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
     switch (CodeObjectVersion) {
     case AMDGPU::AMDHSA_COV4:
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV4());
+      HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV4>();
       break;
     case AMDGPU::AMDHSA_COV5:
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV5());
+      HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV5>();
       break;
     case AMDGPU::AMDHSA_COV6:
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV6());
+      HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV6>();
       break;
     default:
       report_fatal_error("Unexpected code object version");
