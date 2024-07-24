@@ -770,8 +770,8 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   const size_t MatchedWithHash = matchWithHash(BC);
   const size_t MatchedWithLTOCommonName = matchWithLTOCommonName();
   const size_t MatchedWithCallGraph = matchWithCallGraph(BC);
-  const size_t MatchedWithNameSimilarity = matchWithNameSimilarity(BC);
   const size_t MatchedWithPseudoProbes = matchWithPseudoProbes(BC);
+  const size_t MatchedWithNameSimilarity = matchWithNameSimilarity(BC);
 
   for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs))
     if (!YamlBF.Used && BF && !ProfiledFunctions.count(BF))
@@ -792,10 +792,10 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
            << " functions with matching LTO common names\n";
     outs() << "BOLT-INFO: matched " << MatchedWithCallGraph
            << " functions with call graph\n";
-    outs() << "BOLT-INFO: matched " << MatchedWithNameSimilarity
-           << " functions with similar names\n";
     outs() << "BOLT-INFO: matched " << MatchedWithPseudoProbes
            << " functions with pseudo probes\n";
+    outs() << "BOLT-INFO: matched " << MatchedWithNameSimilarity
+           << " functions with similar names\n";
   }
 
   // Set for parseFunctionProfile().
