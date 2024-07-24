@@ -1,4 +1,5 @@
 add_llvm_component_library(LLVMAMDGPUUtils
+  AMDGPUAsanInstrumentation.cpp
   AMDGPUAsmUtils.cpp
   AMDGPUBaseInfo.cpp
   AMDGPUDelayedMCExpr.cpp

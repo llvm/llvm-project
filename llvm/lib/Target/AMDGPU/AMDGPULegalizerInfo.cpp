@@ -7375,6 +7375,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_raw_ptr_atomic_buffer_load:
   case Intrinsic::amdgcn_struct_buffer_load:
   case Intrinsic::amdgcn_struct_ptr_buffer_load:
+  case Intrinsic::amdgcn_struct_atomic_buffer_load:
+  case Intrinsic::amdgcn_struct_ptr_atomic_buffer_load:
     return legalizeBufferLoad(MI, MRI, B, false, false);
   case Intrinsic::amdgcn_raw_buffer_load_format:
   case Intrinsic::amdgcn_raw_ptr_buffer_load_format:

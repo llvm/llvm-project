@@ -20,6 +20,13 @@ void Use::set(Value *V) { LLVMUse->set(V->Val); }
 
 unsigned Use::getOperandNo() const { return Usr->getUseOperandNo(*this); }
 
+void Use::swap(Use &OtherUse) {
+  auto &Tracker = Ctx->getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<UseSwap>(*this, OtherUse, Tracker));
+  LLVMUse->swap(*OtherUse.LLVMUse);
+}
+
 #ifndef NDEBUG
 void Use::dump(raw_ostream &OS) const {
   Value *Def = nullptr;
@@ -500,6 +507,85 @@ void SelectInst::dump() const {
 }
 #endif // NDEBUG
 
+BranchInst *BranchInst::create(BasicBlock *IfTrue, Instruction *InsertBefore,
+                               Context &Ctx) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(cast<llvm::Instruction>(InsertBefore->Val));
+  llvm::BranchInst *NewBr =
+      Builder.CreateBr(cast<llvm::BasicBlock>(IfTrue->Val));
+  return Ctx.createBranchInst(NewBr);
+}
+
+BranchInst *BranchInst::create(BasicBlock *IfTrue, BasicBlock *InsertAtEnd,
+                               Context &Ctx) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
+  llvm::BranchInst *NewBr =
+      Builder.CreateBr(cast<llvm::BasicBlock>(IfTrue->Val));
+  return Ctx.createBranchInst(NewBr);
+}
+
+BranchInst *BranchInst::create(BasicBlock *IfTrue, BasicBlock *IfFalse,
+                               Value *Cond, Instruction *InsertBefore,
+                               Context &Ctx) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(cast<llvm::Instruction>(InsertBefore->Val));
+  llvm::BranchInst *NewBr =
+      Builder.CreateCondBr(Cond->Val, cast<llvm::BasicBlock>(IfTrue->Val),
+                           cast<llvm::BasicBlock>(IfFalse->Val));
+  return Ctx.createBranchInst(NewBr);
+}
+
+BranchInst *BranchInst::create(BasicBlock *IfTrue, BasicBlock *IfFalse,
+                               Value *Cond, BasicBlock *InsertAtEnd,
+                               Context &Ctx) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
+  llvm::BranchInst *NewBr =
+      Builder.CreateCondBr(Cond->Val, cast<llvm::BasicBlock>(IfTrue->Val),
+                           cast<llvm::BasicBlock>(IfFalse->Val));
+  return Ctx.createBranchInst(NewBr);
+}
+
+bool BranchInst::classof(const Value *From) {
+  return From->getSubclassID() == ClassID::Br;
+}
+
+Value *BranchInst::getCondition() const {
+  assert(isConditional() && "Cannot get condition of an uncond branch!");
+  return Ctx.getValue(cast<llvm::BranchInst>(Val)->getCondition());
+}
+
+BasicBlock *BranchInst::getSuccessor(unsigned SuccIdx) const {
+  assert(SuccIdx < getNumSuccessors() &&
+         "Successor # out of range for Branch!");
+  return cast_or_null<BasicBlock>(
+      Ctx.getValue(cast<llvm::BranchInst>(Val)->getSuccessor(SuccIdx)));
+}
+
+void BranchInst::setSuccessor(unsigned Idx, BasicBlock *NewSucc) {
+  assert((Idx == 0 || Idx == 1) && "Out of bounds!");
+  setOperand(2u - Idx, NewSucc);
+}
+
+BasicBlock *BranchInst::LLVMBBToSBBB::operator()(llvm::BasicBlock *BB) const {
+  return cast<BasicBlock>(Ctx.getValue(BB));
+}
+const BasicBlock *
+BranchInst::ConstLLVMBBToSBBB::operator()(const llvm::BasicBlock *BB) const {
+  return cast<BasicBlock>(Ctx.getValue(BB));
+}
+#ifndef NDEBUG
+void BranchInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+void BranchInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
 LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
                            Instruction *InsertBefore, Context &Ctx,
                            const Twine &Name) {
@@ -758,6 +844,11 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     It->second = std::unique_ptr<SelectInst>(new SelectInst(LLVMSel, *this));
     return It->second.get();
   }
+  case llvm::Instruction::Br: {
+    auto *LLVMBr = cast<llvm::BranchInst>(LLVMV);
+    It->second = std::unique_ptr<BranchInst>(new BranchInst(LLVMBr, *this));
+    return It->second.get();
+  }
   case llvm::Instruction::Load: {
     auto *LLVMLd = cast<llvm::LoadInst>(LLVMV);
     It->second = std::unique_ptr<LoadInst>(new LoadInst(LLVMLd, *this));
@@ -794,6 +885,11 @@ BasicBlock *Context::createBasicBlock(llvm::BasicBlock *LLVMBB) {
 SelectInst *Context::createSelectInst(llvm::SelectInst *SI) {
   auto NewPtr = std::unique_ptr<SelectInst>(new SelectInst(SI, *this));
   return cast<SelectInst>(registerValue(std::move(NewPtr)));
+}
+
+BranchInst *Context::createBranchInst(llvm::BranchInst *BI) {
+  auto NewPtr = std::unique_ptr<BranchInst>(new BranchInst(BI, *this));
+  return cast<BranchInst>(registerValue(std::move(NewPtr)));
 }
 
 LoadInst *Context::createLoadInst(llvm::LoadInst *LI) {
