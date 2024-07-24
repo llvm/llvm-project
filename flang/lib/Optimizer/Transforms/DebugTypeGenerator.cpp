@@ -183,12 +183,10 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
   std::uint64_t offset = 0;
   for (auto [fieldName, fieldTy] : Ty.getTypeList()) {
-    bool success = true;
-    auto [byteSize, byteAlign] =
-        fir::getTypeSizeAndAlignment(loc, fieldTy, *dl, kindMapping, &success);
-    if (!success)
+    auto result = fir::getTypeSizeAndAlignment(loc, fieldTy, *dl, kindMapping);
+    if (!result)
       return genPlaceholderType(context);
-
+    auto [byteSize, byteAlign] = *result;
     mlir::LLVM::DITypeAttr elemTy = convertType(fieldTy, fileAttr, scope, loc);
     offset = llvm::alignTo(offset, byteAlign);
     mlir::LLVM::DIDerivedTypeAttr tyAttr = mlir::LLVM::DIDerivedTypeAttr::get(
