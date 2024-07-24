@@ -137,6 +137,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
@@ -6681,6 +6682,7 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
   CodeMetrics::collectEphemeralValues(TheLoop, AC, ValuesToIgnore);
 
   SmallVector<Value *, 4> DeadInterleavePointerOps;
+  SmallVector<Value *, 4> DeadOps;
   for (BasicBlock *BB : TheLoop->blocks())
     for (Instruction &I : *BB) {
       // Find all stores to invariant variables. Since they are going to sink
@@ -6689,6 +6691,17 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
       if ((SI = dyn_cast<StoreInst>(&I)) &&
           Legal->isInvariantAddressOfReduction(SI->getPointerOperand()))
         ValuesToIgnore.insert(&I);
+
+      if (VecValuesToIgnore.contains(&I) || ValuesToIgnore.contains(&I))
+        continue;
+
+      // Add instructions that would be trivially dead and are only used by
+      // values already ignored to DeadOps to seed worklist.
+      if (wouldInstructionBeTriviallyDead(&I, TLI) &&
+          all_of(I.users(), [this](User *U) {
+            return VecValuesToIgnore.contains(U) || ValuesToIgnore.contains(U);
+          }))
+        DeadOps.push_back(&I);
 
       // For interleave groups, we only create a pointer for the start of the
       // interleave group. Queue up addresses of group members except the insert
@@ -6715,6 +6728,29 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
       continue;
     VecValuesToIgnore.insert(Op);
     DeadInterleavePointerOps.append(Op->op_begin(), Op->op_end());
+  }
+
+  // Mark ops that would be trivially dead and are only used by ignored
+  // instructions as free.
+  for (unsigned I = 0; I != DeadOps.size(); ++I) {
+    auto *Op = dyn_cast<Instruction>(DeadOps[I]);
+    // Skip any op that shouldn't be considered dead.
+    if (!Op || !TheLoop->contains(Op) ||
+        !wouldInstructionBeTriviallyDead(Op, TLI) ||
+        any_of(Op->users(), [this](User *U) {
+          return !VecValuesToIgnore.contains(U) && !ValuesToIgnore.contains(U);
+        }))
+      continue;
+
+    // If all of Op's users are in ValuesToIgnore, add it to ValuesToIgnore
+    // which applies for both scalar and vector versions. Otherwise it is only
+    // dead in vector versions, so only add it to VecValuesToIgnore.
+    if (all_of(Op->users(),
+               [this](User *U) { return ValuesToIgnore.contains(U); }))
+      ValuesToIgnore.insert(Op);
+
+    VecValuesToIgnore.insert(Op);
+    DeadOps.append(Op->op_begin(), Op->op_end());
   }
 
   // Ignore type-promoting instructions we identified during reduction
