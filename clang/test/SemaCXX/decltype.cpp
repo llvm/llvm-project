@@ -164,6 +164,14 @@ static_assert(A<int>().f<int>() != 0, ""); // expected-error {{static assertion 
                                            // expected-note@-1 {{expression evaluates to '0 != 0'}}
 }
 
+namespace GH97646 {
+  template<bool B>
+  void f() {
+    decltype(B) x = false;
+    !x;
+  }
+}
+
 template<typename>
 class conditional {
 };

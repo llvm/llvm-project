@@ -1123,6 +1123,7 @@ Bug Fixes to C++ Support
 - Fixed assertion failure by skipping the analysis of an invalid field declaration. (#GH99868)
 - Fix an issue with dependent source location expressions (#GH106428), (#GH81155), (#GH80210), (#GH85373)
 - Fix handling of ``_`` as the name of a lambda's init capture variable. (#GH107024)
+- Fixed a crash when an expression with a dependent ``__typeof__`` type is used as the operand of a unary operator. (#GH97646)
 
 
 Bug Fixes to AST Handling
