@@ -98,26 +98,23 @@ public:
   constexpr Value(detail::ValueImpl *impl = nullptr) : impl(impl) {}
 
   template <typename U>
-  [[deprecated("Use mlir::isa<U>() instead")]]
-  bool isa() const {
+  [[deprecated("Use mlir::isa<U>() instead")]] bool isa() const {
     return llvm::isa<U>(*this);
   }
 
   template <typename U>
-  [[deprecated("Use mlir::dyn_cast<U>() instead")]]
-  U dyn_cast() const {
+  [[deprecated("Use mlir::dyn_cast<U>() instead")]] U dyn_cast() const {
     return llvm::dyn_cast<U>(*this);
   }
 
   template <typename U>
-  [[deprecated("Use mlir::dyn_cast_or_null<U>() instead")]]
-  U dyn_cast_or_null() const {
+  [[deprecated("Use mlir::dyn_cast_or_null<U>() instead")]] U
+  dyn_cast_or_null() const {
     return llvm::dyn_cast_or_null<U>(*this);
   }
 
   template <typename U>
-  [[deprecated("Use mlir::cast<U>() instead")]]
-  U cast() const {
+  [[deprecated("Use mlir::cast<U>() instead")]] U cast() const {
     return llvm::cast<U>(*this);
   }
 
@@ -153,6 +150,11 @@ public:
   /// Return the location of this value.
   Location getLoc() const;
   void setLoc(Location loc);
+
+  /// Return the owning operation of the this value. In case of a
+  /// BlockArgument, it is the owner of the block. In case of an OpResult, it
+  /// is the defining op.
+  Operation *getOwningOp() const;
 
   /// Return the Region in which this Value is defined.
   Region *getParentRegion();

@@ -134,12 +134,6 @@ Region *bufferization::getParallelRegion(Region *region,
   return nullptr;
 }
 
-Operation *bufferization::getOwnerOfValue(Value value) {
-  if (auto opResult = llvm::dyn_cast<OpResult>(value))
-    return opResult.getDefiningOp();
-  return llvm::cast<BlockArgument>(value).getOwner()->getParentOp();
-}
-
 /// Create an AllocTensorOp for the given shaped value. If `copy` is set, the
 /// shaped value is copied. Otherwise, a tensor with undefined contents is
 /// allocated.
@@ -153,8 +147,8 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
     tensor = b.create<ToTensorOp>(loc, shapedValue);
   } else if (llvm::isa<UnrankedTensorType>(shapedValue.getType()) ||
              llvm::isa<UnrankedMemRefType>(shapedValue.getType())) {
-    return getOwnerOfValue(shapedValue)
-        ->emitError("copying of unranked tensors is not implemented");
+    return shapedValue.getOwningOp()->emitError(
+        "copying of unranked tensors is not implemented");
   } else {
     llvm_unreachable("expected RankedTensorType or MemRefType");
   }
@@ -355,7 +349,7 @@ BufferizationOptions::dynCastBufferizableOp(Operation *op) const {
 
 BufferizableOpInterface
 BufferizationOptions::dynCastBufferizableOp(Value value) const {
-  return dynCastBufferizableOp(getOwnerOfValue(value));
+  return dynCastBufferizableOp(value.getOwningOp());
 }
 
 void BufferizationOptions::setFunctionBoundaryTypeConversion(
@@ -388,9 +382,9 @@ static void setInsertionPointAfter(OpBuilder &b, Value value) {
 /// Determine which OpOperand* will alias with `value` if the op is bufferized
 /// in place. Return all tensor OpOperand* if the op is not bufferizable.
 AliasingOpOperandList AnalysisState::getAliasingOpOperands(Value value) const {
-  if (Operation *op = getOwnerOfValue(value))
-    if (auto bufferizableOp = getOptions().dynCastBufferizableOp(op))
-      return bufferizableOp.getAliasingOpOperands(value, *this);
+  if (auto bufferizableOp =
+          getOptions().dynCastBufferizableOp(value.getOwningOp()))
+    return bufferizableOp.getAliasingOpOperands(value, *this);
 
   // The op is not bufferizable.
   return detail::unknownGetAliasingOpOperands(value);
@@ -677,7 +671,7 @@ bufferization::getBufferType(Value value, const BufferizationOptions &options,
       llvm::make_scope_exit([&]() { invocationStack.pop_back(); });
 
   // Try querying BufferizableOpInterface.
-  Operation *op = getOwnerOfValue(value);
+  Operation *op = value.getOwningOp();
   auto bufferizableOp = options.dynCastBufferizableOp(op);
   if (bufferizableOp)
     return bufferizableOp.getBufferType(value, options, invocationStack);
@@ -880,7 +874,7 @@ bool bufferization::detail::defaultResultBufferizesToMemoryWrite(
   // * conflictingWrite = %1
   //
   auto isMemoryWriteInsideOp = [&](Value v) {
-    Operation *op = getOwnerOfValue(v);
+    Operation *op = v.getOwningOp();
     if (!opResult.getDefiningOp()->isAncestor(op))
       return false;
     return state.bufferizesToMemoryWrite(v);
@@ -901,7 +895,7 @@ bool bufferization::detail::defaultResultBufferizesToMemoryWrite(
 // getAliasingValues.
 AliasingOpOperandList bufferization::detail::defaultGetAliasingOpOperands(
     Value value, const AnalysisState &state) {
-  Operation *op = getOwnerOfValue(value);
+  Operation *op = value.getOwningOp();
   SmallVector<AliasingOpOperand> result;
   for (OpOperand &opOperand : op->getOpOperands()) {
     if (!llvm::isa<TensorType>(opOperand.get().getType()))
@@ -924,7 +918,7 @@ FailureOr<BaseMemRefType> bufferization::detail::defaultGetBufferType(
     return bufferization::getMemRefType(value, options);
 
   // Value is an OpResult.
-  Operation *op = getOwnerOfValue(value);
+  Operation *op = value.getOwningOp();
   auto opResult = llvm::cast<OpResult>(value);
   AnalysisState state(options);
   AliasingOpOperandList aliases = state.getAliasingOpOperands(opResult);

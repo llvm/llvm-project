@@ -73,7 +73,8 @@ OpAsmParser::~OpAsmParser() = default;
 MLIRContext *AsmParser::getContext() const { return getBuilder().getContext(); }
 
 /// Parse a type list.
-/// This is out-of-line to work-around https://github.com/llvm/llvm-project/issues/62918
+/// This is out-of-line to work-around
+/// https://github.com/llvm/llvm-project/issues/62918
 ParseResult AsmParser::parseTypeList(SmallVectorImpl<Type> &result) {
   return parseCommaSeparatedList(
       [&]() { return parseType(result.emplace_back()); });
@@ -3925,15 +3926,10 @@ static Operation *findParent(Operation *op, bool shouldUseLocalScope) {
 
 void Value::printAsOperand(raw_ostream &os,
                            const OpPrintingFlags &flags) const {
-  Operation *op;
-  if (auto result = llvm::dyn_cast<OpResult>(*this)) {
-    op = result.getOwner();
-  } else {
-    op = llvm::cast<BlockArgument>(*this).getOwner()->getParentOp();
-    if (!op) {
-      os << "<<UNKNOWN SSA VALUE>>";
-      return;
-    }
+  Operation *op = getOwningOp();
+  if (!op) {
+    os << "<<UNKNOWN SSA VALUE>>";
+    return;
   }
   op = findParent(op, flags.shouldUseLocalScope());
   AsmState state(op, flags);

@@ -227,7 +227,7 @@ bool OneShotAnalysisState::isWritable(Value value) const {
   // TODO: Out-of-place bufferized value could be considered writable.
   // Query BufferizableOpInterface to see if the BlockArgument is writable.
   if (auto bufferizableOp =
-          getOptions().dynCastBufferizableOp(getOwnerOfValue(value)))
+          getOptions().dynCastBufferizableOp(value.getOwningOp()))
     return bufferizableOp.isWritable(value, *this);
 
   // Not a bufferizable op: The conservative answer is "not writable".

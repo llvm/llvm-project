@@ -25,12 +25,6 @@ namespace mlir {
 #include "mlir/Interfaces/ValueBoundsOpInterface.cpp.inc"
 } // namespace mlir
 
-static Operation *getOwnerOfValue(Value value) {
-  if (auto bbArg = dyn_cast<BlockArgument>(value))
-    return bbArg.getOwner()->getParentOp();
-  return value.getDefiningOp();
-}
-
 HyperrectangularSlice::HyperrectangularSlice(ArrayRef<OpFoldResult> offsets,
                                              ArrayRef<OpFoldResult> sizes,
                                              ArrayRef<OpFoldResult> strides)
@@ -272,7 +266,7 @@ int64_t ValueBoundsConstraintSet::insert(Value value,
   LLVM_DEBUG(llvm::dbgs() << "Inserting constraint set column " << pos
                           << " for: " << value
                           << " (dim: " << dim.value_or(kIndexValue)
-                          << ", owner: " << getOwnerOfValue(value)->getName()
+                          << ", owner: " << value.getOwningOp()->getName()
                           << ")\n");
   positionToValueDim.insert(positionToValueDim.begin() + pos, valueDim);
   // Update reverse mapping.
@@ -338,7 +332,7 @@ int64_t ValueBoundsConstraintSet::getPos(Value value,
 #endif // NDEBUG
   LLVM_DEBUG(llvm::dbgs() << "Getting pos for: " << value
                           << " (dim: " << dim.value_or(kIndexValue)
-                          << ", owner: " << getOwnerOfValue(value)->getName()
+                          << ", owner: " << value.getOwningOp()->getName()
                           << ")\n");
   auto it =
       valueDimToPosition.find(std::make_pair(value, dim.value_or(kIndexValue)));
@@ -390,11 +384,10 @@ void ValueBoundsConstraintSet::processWorklist() {
 
     // Query `ValueBoundsOpInterface` for constraints. New items may be added to
     // the worklist.
-    auto valueBoundsOp =
-        dyn_cast<ValueBoundsOpInterface>(getOwnerOfValue(value));
+    auto valueBoundsOp = dyn_cast<ValueBoundsOpInterface>(value.getOwningOp());
     LLVM_DEBUG(llvm::dbgs()
                << "Query value bounds for: " << value
-               << " (owner: " << getOwnerOfValue(value)->getName() << ")\n");
+               << " (owner: " << value.getOwningOp()->getName() << ")\n");
     if (valueBoundsOp) {
       if (dim == kIndexValue) {
         valueBoundsOp.populateBoundsForIndexValue(value, *this);
@@ -892,7 +885,7 @@ void ValueBoundsConstraintSet::dump() const {
       } else {
         llvm::errs() << valueDim->second << "\t";
       }
-      llvm::errs() << getOwnerOfValue(valueDim->first)->getName() << " ";
+      llvm::errs() << valueDim->first.getOwningOp()->getName() << " ";
       if (OpResult result = dyn_cast<OpResult>(valueDim->first)) {
         llvm::errs() << "(result " << result.getResultNumber() << ")";
       } else {

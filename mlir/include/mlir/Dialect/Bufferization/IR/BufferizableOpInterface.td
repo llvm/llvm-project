@@ -525,7 +525,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
                       "::llvm::SmallVector<::mlir::Value> &":$invocationStack),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          assert(getOwnerOfValue(value) == $_op.getOperation() &&
+          assert(value.getOwningOp() == $_op.getOperation() &&
                  "expected that value belongs to this op");
           assert(invocationStack.back() == value &&
                  "inconsistant invocation stack");

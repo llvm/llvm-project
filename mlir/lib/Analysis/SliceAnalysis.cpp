@@ -132,12 +132,7 @@ void mlir::getBackwardSlice(Operation *op,
 
 void mlir::getBackwardSlice(Value root, SetVector<Operation *> *backwardSlice,
                             const BackwardSliceOptions &options) {
-  if (Operation *definingOp = root.getDefiningOp()) {
-    getBackwardSlice(definingOp, backwardSlice, options);
-    return;
-  }
-  Operation *bbAargOwner = cast<BlockArgument>(root).getOwner()->getParentOp();
-  getBackwardSlice(bbAargOwner, backwardSlice, options);
+  getBackwardSlice(root.getOwningOp(), backwardSlice, options);
 }
 
 SetVector<Operation *>

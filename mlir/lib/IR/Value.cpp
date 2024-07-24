@@ -37,6 +37,12 @@ void Value::setLoc(Location loc) {
   return llvm::cast<BlockArgument>(*this).setLoc(loc);
 }
 
+Operation *Value::getOwningOp() const {
+  if (auto blockArg = llvm::dyn_cast<BlockArgument>(*this))
+    return blockArg.getOwner()->getParentOp();
+  return llvm::cast<OpResult>(*this).getOwner();
+}
+
 /// Return the Region in which this Value is defined.
 Region *Value::getParentRegion() {
   if (auto *op = getDefiningOp())

@@ -60,7 +60,8 @@ struct AliasingValue {
   bool isDefinite;
 };
 
-template <typename T> class AliasList {
+template <typename T>
+class AliasList {
 public:
   /// Create an empty list of aliases.
   AliasList() = default;
@@ -662,10 +663,6 @@ getMemRefTypeWithFullyDynamicLayout(TensorType tensorType,
 BaseMemRefType
 getMemRefTypeWithStaticIdentityLayout(TensorType tensorType,
                                       Attribute memorySpace = nullptr);
-
-/// Return the owner of the given value. In case of a BlockArgument that is the
-/// owner of the block. In case of an OpResult that is the defining op.
-Operation *getOwnerOfValue(Value value);
 
 /// Assuming that the given region is repetitive, find the next enclosing
 /// repetitive region.

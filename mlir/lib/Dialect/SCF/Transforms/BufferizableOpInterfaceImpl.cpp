@@ -697,7 +697,7 @@ struct ForOpInterface
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
                 SmallVector<Value> &invocationStack) const {
     auto forOp = cast<scf::ForOp>(op);
-    assert(getOwnerOfValue(value) == op && "invalid value");
+    assert(value.getOwningOp() == op && "invalid value");
     assert(isa<TensorType>(value.getType()) && "expected tensor type");
 
     if (auto opResult = dyn_cast<OpResult>(value)) {
@@ -1020,7 +1020,7 @@ struct WhileOpInterface
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
                 SmallVector<Value> &invocationStack) const {
     auto whileOp = cast<scf::WhileOp>(op);
-    assert(getOwnerOfValue(value) == op && "invalid value");
+    assert(value.getOwningOp() == op && "invalid value");
     assert(isa<TensorType>(value.getType()) && "expected tensor type");
 
     // Case 1: Block argument of the "before" region.

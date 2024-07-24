@@ -228,9 +228,7 @@ MemorySlotPromoter::MemorySlotPromoter(
       blockIndexCache(blockIndexCache) {
 #ifndef NDEBUG
   auto isResultOrNewBlockArgument = [&]() {
-    if (BlockArgument arg = dyn_cast<BlockArgument>(slot.ptr))
-      return arg.getOwner()->getParentOp() == allocator;
-    return slot.ptr.getDefiningOp() == allocator;
+    return slot.ptr.getOwningOp() == allocator;
   };
 
   assert(isResultOrNewBlockArgument() &&

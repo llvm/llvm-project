@@ -167,16 +167,11 @@ static Operation *findParent(Operation *op, bool shouldUseLocalScope) {
 
 MlirAsmState mlirAsmStateCreateForValue(MlirValue value,
                                         MlirOpPrintingFlags flags) {
-  Operation *op;
   mlir::Value val = unwrap(value);
-  if (auto result = llvm::dyn_cast<OpResult>(val)) {
-    op = result.getOwner();
-  } else {
-    op = llvm::cast<BlockArgument>(val).getOwner()->getParentOp();
-    if (!op) {
-      emitError(val.getLoc()) << "<<UNKNOWN SSA VALUE>>";
-      return {nullptr};
-    }
+  Operation *op = val.getOwningOp();
+  if (!op) {
+    emitError(val.getLoc()) << "<<UNKNOWN SSA VALUE>>";
+    return {nullptr};
   }
   op = findParent(op, unwrap(flags)->shouldUseLocalScope());
   return wrap(new AsmState(op, *unwrap(flags)));

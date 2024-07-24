@@ -225,11 +225,7 @@ getAllocEffectFor(Value value,
                   std::optional<MemoryEffects::EffectInstance> &effect,
                   Operation *&allocScopeOp) {
   // Try to get a memory effect interface for the parent operation.
-  Operation *op;
-  if (BlockArgument arg = dyn_cast<BlockArgument>(value))
-    op = arg.getOwner()->getParentOp();
-  else
-    op = cast<OpResult>(value).getOwner();
+  Operation *op = value.getOwningOp();
   MemoryEffectOpInterface interface = dyn_cast<MemoryEffectOpInterface>(op);
   if (!interface)
     return failure();
