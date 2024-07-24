@@ -113,3 +113,51 @@ bool CombinerHelper::matchNonNegZext(const MachineOperand &MO,
 
   return false;
 }
+
+bool CombinerHelper::matchTruncateOfExt(const MachineInstr &Root,
+                                        const MachineInstr &ExtMI,
+                                        BuildFnTy &MatchInfo) {
+  const GTrunc *Trunc = cast<GTrunc>(&Root);
+  const GExtOp *Ext = cast<GExtOp>(&ExtMI);
+
+  if (!MRI.hasOneNonDBGUse(Ext->getReg(0)))
+    return false;
+
+  Register Dst = Trunc->getReg(0);
+  Register Src = Ext->getSrcReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  if (SrcTy == DstTy) {
+    // The source and the destination are equally sized. We need to copy.
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(Dst, Src); };
+
+    return true;
+  }
+
+  if (SrcTy.getScalarSizeInBits() < DstTy.getScalarSizeInBits()) {
+    // If the source is smaller than the destination, we need to extend.
+
+    if (!isLegalOrBeforeLegalizer({Ext->getOpcode(), {DstTy, SrcTy}}))
+      return false;
+
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildInstr(Ext->getOpcode(), {Dst}, {Src});
+    };
+
+    return true;
+  }
+
+  if (SrcTy.getScalarSizeInBits() > DstTy.getScalarSizeInBits()) {
+    // If the source is larger than the destination, then we need to truncate.
+
+    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {DstTy, SrcTy}}))
+      return false;
+
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildTrunc(Dst, Src); };
+
+    return true;
+  }
+
+  return false;
+}

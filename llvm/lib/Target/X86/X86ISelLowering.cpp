@@ -43328,6 +43328,16 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   case X86ISD::UNPCKH:
   case X86ISD::UNPCKL:
     return false;
+  case ISD::INTRINSIC_WO_CHAIN:
+    switch (Op->getConstantOperandVal(0)) {
+    case Intrinsic::x86_sse2_pmadd_wd:
+    case Intrinsic::x86_avx2_pmadd_wd:
+    case Intrinsic::x86_avx512_pmaddw_d_512:
+    case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
+    case Intrinsic::x86_avx2_pmadd_ub_sw:
+    case Intrinsic::x86_avx512_pmaddubs_w_512:
+      return false;
+    }
   }
   return TargetLowering::canCreateUndefOrPoisonForTargetNode(
       Op, DemandedElts, DAG, PoisonOnly, ConsiderFlags, Depth);
@@ -53482,13 +53492,6 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   if (SDValue Not = IsNOT(N0, DAG))
     return DAG.getNode(ISD::AND, DL, VT, DAG.getBitcast(VT, Not), N1);
 
-  // Fold for better commutativity:
-  // ANDNP(x,NOT(y)) -> AND(NOT(x),NOT(y)) -> NOT(OR(X,Y)).
-  if (N1->hasOneUse())
-    if (SDValue Not = IsNOT(N1, DAG))
-      return DAG.getNOT(
-          DL, DAG.getNode(ISD::OR, DL, VT, N0, DAG.getBitcast(VT, Not)), VT);
-
   // Constant Folding
   APInt Undefs0, Undefs1;
   SmallVector<APInt> EltBits0, EltBits1;
@@ -53563,6 +53566,28 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
       if (N->getOpcode() != ISD::DELETED_NODE)
         DCI.AddToWorklist(N);
       return SDValue(N, 0);
+    }
+  }
+
+  // Folds for better commutativity:
+  if (N1->hasOneUse()) {
+    // ANDNP(x,NOT(y)) -> AND(NOT(x),NOT(y)) -> NOT(OR(X,Y)).
+    if (SDValue Not = IsNOT(N1, DAG))
+      return DAG.getNOT(
+          DL, DAG.getNode(ISD::OR, DL, VT, N0, DAG.getBitcast(VT, Not)), VT);
+
+    // ANDNP(x,PSHUFB(y,z)) -> PSHUFB(y,OR(z,x))
+    // Zero out elements by setting the PSHUFB mask value to 0xFF.
+    if (DAG.ComputeNumSignBits(N0) == EltSizeInBits) {
+      SDValue BC1 = peekThroughOneUseBitcasts(N1);
+      if (BC1.getOpcode() == X86ISD::PSHUFB) {
+        EVT ShufVT = BC1.getValueType();
+        SDValue NewMask = DAG.getNode(ISD::OR, DL, ShufVT, BC1.getOperand(1),
+                                      DAG.getBitcast(ShufVT, N0));
+        SDValue NewShuf =
+            DAG.getNode(X86ISD::PSHUFB, DL, ShufVT, BC1.getOperand(0), NewMask);
+        return DAG.getBitcast(VT, NewShuf);
+      }
     }
   }
 
