@@ -822,7 +822,6 @@ bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
     REVERTIBLE_TYPE_TRAIT(__is_unbounded_array);
     REVERTIBLE_TYPE_TRAIT(__is_union);
     REVERTIBLE_TYPE_TRAIT(__is_unsigned);
-    REVERTIBLE_TYPE_TRAIT(__is_virtual_base_of);
     REVERTIBLE_TYPE_TRAIT(__is_void);
     REVERTIBLE_TYPE_TRAIT(__is_volatile);
     REVERTIBLE_TYPE_TRAIT(__reference_binds_to_temporary);

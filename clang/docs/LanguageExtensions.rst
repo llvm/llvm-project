@@ -1660,6 +1660,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_unsigned`` (C++, Embarcadero):
   Returns false for enumeration types. Note, before Clang 13, returned true for
   enumeration types if the underlying type was unsigned.
+* ``__is_virtual_base_of`` (C++, GNU, Microsoft)
 * ``__is_void`` (C++, Embarcadero)
 * ``__is_volatile`` (C++, Embarcadero)
 * ``__reference_binds_to_temporary(T, U)`` (Clang):  Determines whether a

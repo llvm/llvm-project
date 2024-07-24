@@ -2486,6 +2486,7 @@ void is_virtual_base_of(int n) {
   static_assert(!__is_virtual_base_of(Empty, Empty));
   static_assert(!__is_virtual_base_of(class_forward, class_forward)); // expected-error {{incomplete type 'class_forward' where a complete type is required}}
   static_assert(!__is_virtual_base_of(Empty, class_forward)); // expected-error {{incomplete type 'class_forward' where a complete type is required}}
+  static_assert(!__is_virtual_base_of(class_forward, Empty));
   static_assert(!__is_virtual_base_of(Base&, Derived&));
   static_assert(!__is_virtual_base_of(Base[10], Derived[10]));
   static_assert(!__is_virtual_base_of(Base[n], Derived[n])); // expected-error 2 {{variable length arrays are not supported in '__is_virtual_base_of'}}
