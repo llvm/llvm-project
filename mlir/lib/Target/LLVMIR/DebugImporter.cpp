@@ -180,7 +180,8 @@ DILocalVariableAttr DebugImporter::translateImpl(llvm::DILocalVariable *node) {
   return DILocalVariableAttr::get(
       context, scope, getStringAttrOrNull(node->getRawName()),
       translate(node->getFile()), node->getLine(), node->getArg(),
-      node->getAlignInBits(), translate(node->getType()));
+      node->getAlignInBits(), translate(node->getType()),
+      symbolizeDIFlags(node->getFlags()).value_or(DIFlags::Zero));
 }
 
 DIVariableAttr DebugImporter::translateImpl(llvm::DIVariable *node) {
