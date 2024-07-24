@@ -2237,9 +2237,9 @@ static const char *RegNumToRegName(int reg) {
     case 31:
       return "sp";
 #    endif
+#  endif  // SANITIZER_LINUX
     default:
       return NULL;
-#  endif // SANITIZER_LINUX
   }
   return NULL;
 }
