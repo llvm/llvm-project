@@ -63,9 +63,10 @@ namespace usage_ok {
     Pair* getPairP() [[clang::lifetimebound]] { return &p; }
   };
   void test_field_access() {
-    const int& a = FieldCheck{0}.getPairR().a; // expected-warning {{temporary bound to local reference 'a' will be destroyed at the end of the full-expression}}
-    const int& b = FieldCheck{0}.getPairP()->b; // expected-warning {{temporary bound to local reference 'b' will be destroyed at the end of the full-expression}}
-    const int& c = FieldCheck{0}.getPairP()->c.a; // expected-warning {{temporary bound to local reference 'c' will be destroyed at the end of the full-expression}}
+    int x = 0;
+    const int& a = FieldCheck{x}.getPairR().a;
+    const int& b = FieldCheck{x}.getPairP()->b; // expected-warning {{temporary bound to local reference 'b' will be destroyed at the end of the full-expression}}
+    const int& c = FieldCheck{x}.getPairP()->c.a; // expected-warning {{temporary bound to local reference 'c' will be destroyed at the end of the full-expression}}
   }
 }
 

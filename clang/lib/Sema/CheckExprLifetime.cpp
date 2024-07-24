@@ -550,8 +550,9 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
   }
 
   if (auto *M = dyn_cast<MemberExpr>(Init)) {
-    // Lifetime of a field is the lifetime of the base object.
-    if (isa<FieldDecl>(M->getMemberDecl()))
+    // Lifetime of a non-reference type field is same as base object.
+    if (auto *F = dyn_cast<FieldDecl>(M->getMemberDecl());
+        F && !F->getType()->isReferenceType())
       visitLocalsRetainedByInitializer(Path, M->getBase(), Visit, true,
                                        EnableLifetimeWarnings);
   }
