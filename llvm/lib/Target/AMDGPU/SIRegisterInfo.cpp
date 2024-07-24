@@ -2568,9 +2568,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                 } else
                   Add.addImm(Offset).addReg(TmpResultReg, RegState::Kill);
               } else {
-                // VCC is live and no SGPR is free.
-                // Since emergency stack slot is already used for spilling VGPR
-                // scavenged? This a way around to avoid carry, need follow-up.
+                // We have to produce a carry out, and there isn't a free SGPR
+                // pair for it. This a way around to avoid carry.
                 BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), ResultReg)
                     .addImm(Offset);
                 Add = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MAD_U32_U24_e64),
