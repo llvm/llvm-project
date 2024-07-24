@@ -883,6 +883,39 @@ GCNHazardRecognizer::checkVALUHazardsHelper(const MachineOperand &Def,
   return WaitStatesNeeded;
 }
 
+static const MachineOperand *
+getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  if (SIInstrInfo::isVALU(MI) && SIInstrInfo::isSDWA(MI)) {
+    if (auto *DstSel = TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel))
+      if (DstSel->getImm() == AMDGPU::SDWA::DWORD)
+        return nullptr;
+  } else if (SIInstrInfo::isVALU(MI)) {
+    if (!AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::op_sel) ||
+        !(TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm() &
+          SISrcMods::DST_OP_SEL))
+      return nullptr;
+  }
+
+  const MachineOperand *Dst = nullptr;
+
+  if (SIInstrInfo::isVALU(MI))
+    Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+
+  // Assume inline asm has dst forwarding hazard
+  else if (MI.isInlineAsm()) {
+    for (auto &Op :
+         llvm::drop_begin(MI.operands(), InlineAsm::MIOp_FirstOperand)) {
+      if (Op.isReg() && Op.isDef()) {
+        Dst = &Op;
+        break;
+      }
+    }
+  }
+
+  return Dst;
+}
+
 int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
   int WaitStatesNeeded = 0;
 
@@ -914,22 +947,10 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
     const int Shift16DefWaitstates = 1;
 
     auto IsShift16BitDefFn = [this, VALU](const MachineInstr &MI) {
-      if (!SIInstrInfo::isVALU(MI))
-        return false;
       const SIInstrInfo *TII = ST.getInstrInfo();
-      if (SIInstrInfo::isSDWA(MI)) {
-        if (auto *DstSel = TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel))
-          if (DstSel->getImm() == AMDGPU::SDWA::DWORD)
-            return false;
-      } else {
-        if (!AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::op_sel) ||
-            !(TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)
-                  ->getImm() &
-              SISrcMods::DST_OP_SEL))
-          return false;
-      }
       const SIRegisterInfo *TRI = ST.getRegisterInfo();
-      if (auto *Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst)) {
+      const MachineOperand *Dst = getDstSelForwardingOperand(MI, ST);
+      if (Dst) {
         Register Def = Dst->getReg();
 
         for (const MachineOperand &Use : VALU->all_uses()) {
@@ -950,7 +971,6 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
             return true;
         }
       }
-
       return false;
     };
 
@@ -1043,7 +1063,7 @@ int GCNHazardRecognizer::checkInlineAsmHazards(MachineInstr *IA) {
   // problematic thus far.
 
   // see checkVALUHazards()
-  if (!ST.has12DWordStoreHazard())
+  if (!ST.has12DWordStoreHazard() && !ST.hasDstSelForwardingHazard())
     return 0;
 
   const MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -1054,6 +1074,24 @@ int GCNHazardRecognizer::checkInlineAsmHazards(MachineInstr *IA) {
     if (Op.isReg() && Op.isDef()) {
       WaitStatesNeeded =
           std::max(WaitStatesNeeded, checkVALUHazardsHelper(Op, MRI));
+
+      if (!TRI.isVectorRegister(MRI, Op.getReg()))
+        continue;
+
+      if (ST.hasDstSelForwardingHazard()) {
+        const int Shift16DefWaitstates = 1;
+
+        auto IsShift16BitDefFn = [this](const MachineInstr &MI) {
+          const MachineOperand *Dst = getDstSelForwardingOperand(MI, ST);
+          // Assume inline asm reads the dst
+          return Dst ? true : false;
+        };
+
+        int WaitStatesNeededForDef =
+            Shift16DefWaitstates -
+            getWaitStatesSince(IsShift16BitDefFn, Shift16DefWaitstates);
+        WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForDef);
+      }
     }
   }
 
