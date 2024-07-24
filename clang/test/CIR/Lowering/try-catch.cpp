@@ -21,7 +21,13 @@ unsigned long long tc() {
     z = division(x, y);
     a++;
 
-    // CIR_FLAT:     cir.br ^bb3
+    // FIXME: this is temporary, should branch directly to ^bb4
+    // but if done now it would be stripped by MLIR simplification.
+    // CIR_FLAT:   cir.br ^bb3
+
+    // CIR_FLAT: ^bb3:  // pred: ^bb2
+    // CIR_FLAT:   %14 = cir.inflight_exception
+    // CIR_FLAT:   cir.br ^bb4
   } catch (int idx) {
     z = 98;
     idx++;

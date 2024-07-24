@@ -188,11 +188,13 @@ public:
       return mlir::success();
     }
 
+    // TODO: keep track of cir.try_call before we flatten.
+
     // Split the current block before the TryOp to create the inlining
     // point.
-    auto *currentBlock = rewriter.getInsertionBlock();
+    auto *beforeTryScopeBlock = rewriter.getInsertionBlock();
     auto *remainingOpsBlock =
-        rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
+        rewriter.splitBlock(beforeTryScopeBlock, rewriter.getInsertionPoint());
     mlir::Block *continueBlock;
     continueBlock = remainingOpsBlock;
 
@@ -202,15 +204,29 @@ public:
     rewriter.inlineRegionBefore(tryOp.getTryRegion(), continueBlock);
 
     // Branch into the body of the region.
-    rewriter.setInsertionPointToEnd(currentBlock);
+    rewriter.setInsertionPointToEnd(beforeTryScopeBlock);
     rewriter.create<mlir::cir::BrOp>(loc, mlir::ValueRange(), beforeBody);
 
     // Replace the tryOp return with a branch that jumps out of the body.
     rewriter.setInsertionPointToEnd(afterBody);
     auto yieldOp = cast<mlir::cir::YieldOp>(afterBody->getTerminator());
-    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(yieldOp, continueBlock);
+    mlir::Block *beforeCatch = rewriter.getInsertionBlock();
+    auto *catchBegin =
+        rewriter.splitBlock(beforeCatch, rewriter.getInsertionPoint());
+    rewriter.setInsertionPointToEnd(beforeCatch);
 
-    // TODO: handle the catch clauses and cir.try_call while here.
+    // FIXME: first step here is to build the landing pad like block, but
+    // since cir.call exception isn't yet lowered, jump from the try block
+    // to the catch block as a placeholder for now.
+    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(yieldOp, catchBegin);
+
+    // Start the landing pad by getting the inflight exception information,
+    // and jumping to the catchBegin phase.
+    rewriter.setInsertionPointToEnd(catchBegin);
+    InflightEhOp exception = rewriter.create<mlir::cir::InflightEhOp>(
+        loc, mlir::cir::ExceptionInfoType::get(rewriter.getContext()));
+    // FIXME: TBD emission.
+    rewriter.create<mlir::cir::BrOp>(loc, continueBlock);
 
     rewriter.eraseOp(tryOp);
     return mlir::success();
