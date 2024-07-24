@@ -1730,7 +1730,7 @@ bool MemoryDepChecker::Dependence::isBackward() const {
 }
 
 bool MemoryDepChecker::Dependence::isPossiblyBackward() const {
-  return isBackward() || Type == Unknown;
+  return isBackward() || Type == Unknown || Type == IndirectUnsafe;
 }
 
 bool MemoryDepChecker::Dependence::isForward() const {

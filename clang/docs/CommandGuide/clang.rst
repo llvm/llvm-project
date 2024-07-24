@@ -429,7 +429,8 @@ Code Generation Options
 
     :option:`-Ofast` Enables all the optimizations from :option:`-O3` along
     with other aggressive optimizations that may violate strict compliance with
-    language standards.
+    language standards. This is deprecated in favor of :option:`-O3`
+    in combination with :option:`-ffast-math`.
 
     :option:`-Os` Like :option:`-O2` with extra optimizations to reduce code
     size.

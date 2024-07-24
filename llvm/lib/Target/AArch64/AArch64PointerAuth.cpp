@@ -116,7 +116,7 @@ void AArch64PointerAuth::signLR(MachineFunction &MF,
   // PAuthLR authentication instructions need to know the value of PC at the
   // point of signing (PACI*).
   if (MFnI.branchProtectionPAuthLR()) {
-    MCSymbol *PACSym = MF.getMMI().getContext().createTempSymbol();
+    MCSymbol *PACSym = MF.getContext().createTempSymbol();
     MFnI.setSigningInstrLabel(PACSym);
   }
 

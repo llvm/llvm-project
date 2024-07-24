@@ -9,6 +9,7 @@ import subprocess
 import sys
 import os
 from packaging import version
+from urllib.parse import urlparse
 
 # LLDB modules
 import lldb
@@ -34,6 +35,8 @@ def check_first_register_readable(test_case):
         test_case.expect("register read r0", substrs=["r0 = 0x"])
     elif arch in ["powerpc64le"]:
         test_case.expect("register read r0", substrs=["r0 = 0x"])
+    elif re.match("^rv(32|64)", arch):
+        test_case.expect("register read zero", substrs=["zero = 0x"])
     else:
         # TODO: Add check for other architectures
         test_case.fail(

@@ -17,7 +17,6 @@ class HeaderFile:
         self.enumerations = []
         self.objects = []
         self.functions = []
-        self.includes = []
 
     def add_macro(self, macro):
         self.macros.append(macro)
@@ -34,14 +33,8 @@ class HeaderFile:
     def add_function(self, function):
         self.functions.append(function)
 
-    def add_include(self, include):
-        self.includes.append(include)
-
     def __str__(self):
         content = [""]
-
-        for include in self.includes:
-            content.append(str(include))
 
         for macro in self.macros:
             content.append(f"{macro}\n")
@@ -60,16 +53,16 @@ class HeaderFile:
         current_guard = None
         for function in self.functions:
             if function.guard == None:
-                content.append(str(function) + "__NOEXCEPT")
+                content.append(str(function) + " __NOEXCEPT;")
                 content.append("")
             else:
                 if current_guard == None:
                     current_guard = function.guard
                     content.append(f"#ifdef {current_guard}")
-                    content.append(str(function) + "__NOEXCEPT")
+                    content.append(str(function) + " __NOEXCEPT;")
                     content.append("")
                 elif current_guard == function.guard:
-                    content.append(str(function) + "__NOEXCEPT")
+                    content.append(str(function) + " __NOEXCEPT;")
                     content.append("")
                 else:
                     content.pop()
@@ -77,7 +70,7 @@ class HeaderFile:
                     content.append("")
                     current_guard = function.guard
                     content.append(f"#ifdef {current_guard}")
-                    content.append(str(function) + "__NOEXCEPT")
+                    content.append(str(function) + " __NOEXCEPT;")
                     content.append("")
         if current_guard != None:
             content.pop()

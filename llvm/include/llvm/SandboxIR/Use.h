@@ -44,8 +44,10 @@ class Use {
 public:
   operator Value *() const { return get(); }
   Value *get() const;
+  void set(Value *V);
   class User *getUser() const { return Usr; }
   unsigned getOperandNo() const;
+  void swap(Use &OtherUse);
   Context *getContext() const { return Ctx; }
   bool operator==(const Use &Other) const {
     assert(Ctx == Other.Ctx && "Contexts differ!");

@@ -547,6 +547,11 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<VoidType>]
         >,
         FunctionSpec<
+          "gettid",
+          RetValSpec<PidT>,
+          [ArgSpec<VoidType>]
+        >,
+        FunctionSpec<
           "getuid",
           RetValSpec<UidT>,
           [ArgSpec<VoidType>]
@@ -600,16 +605,6 @@ def POSIX : StandardSpec<"POSIX"> {
           "rmdir",
           RetValSpec<IntType>,
           [ArgSpec<ConstCharPtr>]
-        >,
-        FunctionSpec<
-          "getpid",
-          RetValSpec<IntType>,
-          [ArgSpec<VoidType>]
-        >,
-        FunctionSpec<
-          "getppid",
-          RetValSpec<IntType>,
-          [ArgSpec<VoidType>]
         >,
         FunctionSpec<
           "link",
