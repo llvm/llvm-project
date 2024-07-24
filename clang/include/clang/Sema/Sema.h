@@ -3456,6 +3456,8 @@ public:
                                     TemplateIdAnnotation *TemplateId,
                                     bool IsMemberSpecialization);
 
+  bool checkPointerAuthEnabled(SourceLocation Loc, SourceRange Range);
+
   bool checkConstantPointerAuthKey(Expr *keyExpr, unsigned &key);
 
   /// Diagnose function specifiers on a declaration of an identifier that
