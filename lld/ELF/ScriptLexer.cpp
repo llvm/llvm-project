@@ -33,6 +33,7 @@
 
 #include "ScriptLexer.h"
 #include "lld/Common/ErrorHandler.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
@@ -44,7 +45,7 @@ using namespace lld::elf;
 // Returns a whole line containing the current token.
 StringRef ScriptLexer::getLine() {
   StringRef s = getCurrentMB().getBuffer();
-  StringRef tok = tokens[pos - 1];
+  StringRef tok = tokens[pos - 1].val;
 
   size_t pos = s.rfind('\n', tok.data() - s.data());
   if (pos != StringRef::npos)
@@ -57,7 +58,7 @@ size_t ScriptLexer::getLineNumber() {
   if (pos == 0)
     return 1;
   StringRef s = getCurrentMB().getBuffer();
-  StringRef tok = tokens[pos - 1];
+  StringRef tok = tokens[pos - 1].val;
   const size_t tokOffset = tok.data() - s.data();
 
   // For the first token, or when going backwards, start from the beginning of
@@ -81,13 +82,29 @@ size_t ScriptLexer::getLineNumber() {
 
 // Returns 0-based column number of the current token.
 size_t ScriptLexer::getColumnNumber() {
-  StringRef tok = tokens[pos - 1];
+  StringRef tok = tokens[pos - 1].val;
   return tok.data() - getLine().data();
 }
 
 std::string ScriptLexer::getCurrentLocation() {
   std::string filename = std::string(getCurrentMB().getBufferIdentifier());
   return (filename + ":" + Twine(getLineNumber())).str();
+}
+
+std::string ScriptLexer::joinTokens(size_t begin, size_t end) {
+  auto itBegin = tokens.begin() + begin;
+  auto itEnd = tokens.begin() + end;
+
+  std::string S;
+  if (itBegin == itEnd)
+    return S;
+
+  S += itBegin->val;
+  while (++itBegin != itEnd) {
+    S += " ";
+    S += itBegin->val;
+  }
+  return S;
 }
 
 ScriptLexer::ScriptLexer(MemoryBufferRef mb) { tokenize(mb); }
@@ -106,7 +123,7 @@ void ScriptLexer::setError(const Twine &msg) {
 
 // Split S into linker script tokens.
 void ScriptLexer::tokenize(MemoryBufferRef mb) {
-  std::vector<StringRef> vec;
+  std::vector<Token> vec;
   mbs.push_back(mb);
   StringRef s = mb.getBuffer();
   StringRef begin = s;
@@ -129,20 +146,19 @@ void ScriptLexer::tokenize(MemoryBufferRef mb) {
         return;
       }
 
-      vec.push_back(s.take_front(e + 1));
+      vec.push_back({Tok::Quote, s.take_front(e + 1)});
       s = s.substr(e + 1);
       continue;
     }
-
     // Some operators form separate tokens.
     if (s.starts_with("<<=") || s.starts_with(">>=")) {
-      vec.push_back(s.substr(0, 3));
+      vec.push_back(getOperatorToken(s));
       s = s.substr(3);
       continue;
     }
     if (s.size() > 1 && ((s[1] == '=' && strchr("*/+-<>&^|", s[0])) ||
                          (s[0] == s[1] && strchr("<>&|", s[0])))) {
-      vec.push_back(s.substr(0, 2));
+      vec.push_back(getOperatorToken(s));
       s = s.substr(2);
       continue;
     }
@@ -155,13 +171,198 @@ void ScriptLexer::tokenize(MemoryBufferRef mb) {
 
     // A character that cannot start a word (which is usually a
     // punctuation) forms a single character token.
-    if (pos == 0)
+    if (pos == 0) {
       pos = 1;
-    vec.push_back(s.substr(0, pos));
+      vec.push_back(getOperatorToken(s));
+    } else {
+      vec.push_back(getKeywordorIdentifier(s.substr(0, pos)));
+    }
     s = s.substr(pos);
   }
 
   tokens.insert(tokens.begin() + pos, vec.begin(), vec.end());
+}
+
+ScriptLexer::Token ScriptLexer::getOperatorToken(StringRef s) {
+  auto createToken = [&](Tok kind, size_t pos) -> Token {
+    return {kind, s.substr(0, pos)};
+  };
+
+  switch (s.front()) {
+  case EOF:
+    return createToken(Tok::Eof, 0);
+  case '(':
+    return createToken(Tok::LeftParenthesis, 1);
+  case ')':
+    return createToken(Tok::RightParenthesis, 1);
+  case '{':
+    return createToken(Tok::LeftCurlyBracket, 1);
+  case '}':
+    return createToken(Tok::RightCurlyBracket, 1);
+  case ';':
+    return createToken(Tok::Semicolon, 1);
+  case ',':
+    return createToken(Tok::Comma, 1);
+  case ':':
+    return createToken(Tok::Colon, 1);
+  case '?':
+    return createToken(Tok::Question, 1);
+  case '%':
+    return createToken(Tok::Percent, 1);
+  case '!':
+    if (s.size() > 1 && s[1] == '=')
+      return createToken(Tok::NotEqual, 2);
+    return createToken(Tok::Excalamation, 1);
+  case '*':
+    if (s.size() > 1 && s[1] == '=')
+      return createToken(Tok::MulAssign, 2);
+    return createToken(Tok::Asterisk, 1);
+  case '/':
+    if (s.size() > 1 && s[1] == '=')
+      return createToken(Tok::DivAssign, 2);
+    return createToken(Tok::Slash, 1);
+  case '=':
+    if (s.size() > 1 && s[1] == '=')
+      return createToken(Tok::Equal, 2);
+    return createToken(Tok::Assign, 1);
+  case '+':
+    if (s.size() > 1 && s[1] == '=')
+      return createToken(Tok::PlusAssign, 2);
+    return createToken(Tok::Plus, 1);
+  case '-':
+    if (s.size() > 1 && s[1] == '=')
+      return createToken(Tok::MinusAssign, 2);
+    return createToken(Tok::Minus, 1);
+  case '<':
+    if (s.size() > 2 && s[1] == s[0] && s[2] == '=')
+      return createToken(Tok::LeftShiftAssign, 3);
+    if (s.size() > 1) {
+      if (s[1] == '=')
+        return createToken(Tok::LessEqual, 2);
+      if (s[1] == '<')
+        return createToken(Tok::LeftShift, 2);
+    }
+    return createToken(Tok::Less, 1);
+  case '>':
+    if (s.size() > 2 && s[1] == s[0] && s[2] == '=')
+      return createToken(Tok::RightShiftAssign, 3);
+    if (s.size() > 1) {
+      if (s[1] == '=')
+        return createToken(Tok::GreaterEqual, 2);
+      if (s[1] == '>')
+        return createToken(Tok::RightShift, 2);
+    }
+    return createToken(Tok::Greater, 1);
+  case '&':
+    if (s.size() > 1) {
+      if (s[1] == '=')
+        return createToken(Tok::AndAssign, 2);
+      if (s[1] == '&')
+        return createToken(Tok::LogicalAnd, 2);
+    }
+    return createToken(Tok::BitwiseAnd, 1);
+  case '^':
+    if (s.size() > 1 && s[1] == '=')
+      return createToken(Tok::XorAssign, 2);
+    return createToken(Tok::BitwiseXor, 1);
+  case '|':
+    if (s.size() > 1) {
+      if (s[1] == '=')
+        return createToken(Tok::OrAssign, 2);
+      if (s[1] == '|')
+        return createToken(Tok::LogicalOr, 2);
+    }
+    return createToken(Tok::BitwiseOr, 1);
+  case '.':
+    return createToken(Tok::Dot, 1);
+  case '_':
+    return createToken(Tok::Underscore, 1);
+  case '0':
+  case '1':
+  case '2':
+  case '3':
+  case '4':
+  case '5':
+  case '6':
+  case '7':
+  case '8':
+  case '9':
+    return createToken(Tok::Decimal, 1);
+  default:
+    return {Tok::Identifier, s};
+  }
+}
+
+const llvm::StringMap<Tok> ScriptLexer::keywordTokMap = {
+    {"ENTRY", Tok::Entry},
+    {"INPUT", Tok::Input},
+    {"GROUP", Tok::Group},
+    {"INCLUDE", Tok::Include},
+    {"MEMORY", Tok::Memory},
+    {"OUTPUT", Tok::Output},
+    {"SEARCH_DIR", Tok::SearchDir},
+    {"STARTUP", Tok::Startup},
+    {"INSERT", Tok::Insert},
+    {"AFTER", Tok::After},
+    {"OUTPUT_FORMAT", Tok::OutputFormat},
+    {"TARGET", Tok::Target},
+    {"ASSERT", Tok::Assert},
+    {"CONSTANT", Tok::Constant},
+    {"EXTERN", Tok::Extern},
+    {"OUTPUT_ARCH", Tok::OutputArch},
+    {"NOCROSSREFS", Tok::Nocrossrefs},
+    {"NOCROSSREFS_TO", Tok::NocrossrefsTo},
+    {"PROVIDE", Tok::Provide},
+    {"HIDDEN", Tok::Hidden},
+    {"PROVIDE_HIDDEN", Tok::ProvideHidden},
+    {"SECTIONS", Tok::Sections},
+    {"BEFORE", Tok::Before},
+    {"EXCLUDE_FILE", Tok::ExcludeFile},
+    {"KEEP", Tok::Keep},
+    {"INPUT_SECTION_FLAGS", Tok::InputSectionFlags},
+    {"OVERLAY", Tok::Overlay},
+    {"NOLOAD", Tok::Noload},
+    {"COPY", Tok::Copy},
+    {"INFO", Tok::Info},
+    {"OVERWRITE_SECTIONS", Tok::OverwriteSections},
+    {"SUBALIGN", Tok::Subalign},
+    {"ONLY_IF_RO", Tok::OnlyIfRO},
+    {"ONLY_IF_RW", Tok::OnlyIfRW},
+    {"FILL", Tok::Fill},
+    {"SORT", Tok::Sort},
+    {"ABSOLUTE", Tok::Absolute},
+    {"ADDR", Tok::Addr},
+    {"ALIGN", Tok::Align},
+    {"ALIGNOF", Tok::Alignof},
+    {"DATA_SEGMENT_ALIGN", Tok::DataSegmentAlign},
+    {"DATA_SEGMENT_END", Tok::DataSegmentEnd},
+    {"DATA_SEGMENT_RELRO_END", Tok::DataSegmentRelroEnd},
+    {"DEFINED", Tok::Defined},
+    {"LENGTH", Tok::Length},
+    {"LOADADDR", Tok::Loadaddr},
+    {"LOG2CEIL", Tok::Log2ceil},
+    {"MAX", Tok::Max},
+    {"MIN", Tok::Min},
+    {"ORIGIN", Tok::Origin},
+    {"SEGMENT_START", Tok::SegmentStart},
+    {"SIZEOF", Tok::Sizeof},
+    {"SIZEOF_HEADERS", Tok::SizeofHeaders},
+    {"FILEHDR", Tok::Filehdr},
+    {"PHDRS", Tok::Phdrs},
+    {"AT", Tok::At},
+    {"FLAGS", Tok::Flags},
+    {"VERSION", Tok::Version},
+    {"REGION_ALIAS", Tok::RegionAlias},
+    {"AS_NEEDED", Tok::AsNeeded},
+    {"CONSTRUCTORS", Tok::Constructors},
+    {"MAXPAGESIZE", Tok::Maxpagesize},
+    {"COMMONPAGESIZE", Tok::Commonpagesize}};
+
+ScriptLexer::Token ScriptLexer::getKeywordorIdentifier(StringRef s) {
+  auto it = keywordTokMap.find(s.str());
+  if (it != keywordTokMap.end())
+    return {it->second, s};
+  return {Tok::Identifier, s};
 }
 
 // Skip leading whitespace characters or comments.
@@ -195,37 +396,37 @@ bool ScriptLexer::atEOF() { return errorCount() || tokens.size() == pos; }
 
 // Split a given string as an expression.
 // This function returns "3", "*" and "5" for "3*5" for example.
-static std::vector<StringRef> tokenizeExpr(StringRef s) {
+std::vector<ScriptLexer::Token> ScriptLexer::tokenizeExpr(StringRef s) {
   StringRef ops = "!~*/+-<>?^:="; // List of operators
 
   // Quoted strings are literal strings, so we don't want to split it.
   if (s.starts_with("\""))
-    return {s};
+    return {{Tok::Quote, s}};
 
   // Split S with operators as separators.
-  std::vector<StringRef> ret;
+  std::vector<ScriptLexer::Token> ret;
   while (!s.empty()) {
     size_t e = s.find_first_of(ops);
 
     // No need to split if there is no operator.
     if (e == StringRef::npos) {
-      ret.push_back(s);
+      ret.push_back({Tok::Identifier, s});
       break;
     }
 
     // Get a token before the operator.
     if (e != 0)
-      ret.push_back(s.substr(0, e));
+      ret.push_back({Tok::Identifier, s.substr(0, e)});
 
     // Get the operator as a token.
     // Keep !=, ==, >=, <=, << and >> operators as a single tokens.
     if (s.substr(e).starts_with("!=") || s.substr(e).starts_with("==") ||
         s.substr(e).starts_with(">=") || s.substr(e).starts_with("<=") ||
         s.substr(e).starts_with("<<") || s.substr(e).starts_with(">>")) {
-      ret.push_back(s.substr(e, 2));
+      ret.push_back(getOperatorToken(s.substr(e)));
       s = s.substr(e + 2);
     } else {
-      ret.push_back(s.substr(e, 1));
+      ret.push_back(getOperatorToken(s.substr(e, 1)));
       s = s.substr(e + 1);
     }
   }
@@ -242,32 +443,29 @@ static std::vector<StringRef> tokenizeExpr(StringRef s) {
 //
 // This function may split the current token into multiple tokens.
 void ScriptLexer::maybeSplitExpr() {
-  if (!inExpr || errorCount() || atEOF())
-    return;
-
-  std::vector<StringRef> v = tokenizeExpr(tokens[pos]);
+  std::vector<Token> v = tokenizeExpr(tokens[pos].val);
   if (v.size() == 1)
     return;
   tokens.erase(tokens.begin() + pos);
   tokens.insert(tokens.begin() + pos, v.begin(), v.end());
 }
 
-StringRef ScriptLexer::next() {
-  maybeSplitExpr();
-
+ScriptLexer::Token ScriptLexer::next() {
   if (errorCount())
-    return "";
+    return {Tok::Error, ""};
   if (atEOF()) {
     setError("unexpected EOF");
-    return "";
+    return {Tok::Eof, ""};
   }
+  if (inExpr)
+    maybeSplitExpr();
   return tokens[pos++];
 }
 
-StringRef ScriptLexer::peek() {
-  StringRef tok = next();
+ScriptLexer::Token ScriptLexer::peek() {
+  Token tok = next();
   if (errorCount())
-    return "";
+    return {Tok::Error, ""};
   pos = pos - 1;
   return tok;
 }
@@ -283,8 +481,8 @@ bool ScriptLexer::consume(StringRef tok) {
 bool ScriptLexer::consumeLabel(StringRef tok) {
   if (consume((tok + ":").str()))
     return true;
-  if (tokens.size() >= pos + 2 && tokens[pos] == tok &&
-      tokens[pos + 1] == ":") {
+  if (tokens.size() >= pos + 2 && tokens[pos].val == tok &&
+      tokens[pos + 1].val == ":") {
     pos += 2;
     return true;
   }
@@ -296,9 +494,9 @@ void ScriptLexer::skip() { (void)next(); }
 void ScriptLexer::expect(StringRef expect) {
   if (errorCount())
     return;
-  StringRef tok = next();
+  Token tok = next();
   if (tok != expect)
-    setError(expect + " expected, but got " + tok);
+    setError(expect + " expected, but got " + tok.val);
 }
 
 // Returns true if S encloses T.
@@ -312,7 +510,7 @@ MemoryBufferRef ScriptLexer::getCurrentMB() {
   if (pos == 0)
     return mbs.back();
   for (MemoryBufferRef mb : mbs)
-    if (encloses(mb.getBuffer(), tokens[pos - 1]))
+    if (encloses(mb.getBuffer(), tokens[pos - 1].val))
       return mb;
   llvm_unreachable("getCurrentMB: failed to find a token");
 }
