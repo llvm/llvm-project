@@ -1644,7 +1644,7 @@ Expr ScriptParser::readPrimary() {
 
     // Tok is a symbol name.
     StringRef tokVal = tok.val;
-    if (tokVal.starts_with("\""))
+    if (tokVal.starts_with('"'))
       tokVal = unquote(tok);
     else if (!isValidSymbolName(tokVal))
       setError("malformed number: " + tokVal);

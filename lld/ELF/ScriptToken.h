@@ -66,8 +66,8 @@ enum class Tok {
   // Output Section
   OverwriteSections,
   Subalign,
-  OnlyIfRO,
-  OnlyIfRW,
+  OnlyIfRo,
+  OnlyIfRw,
   Fill,
   Sort,
 

@@ -11,7 +11,8 @@
 
 #include "ScriptToken.h"
 #include "lld/Common/LLVM.h"
-#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/CachedHashString.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include <vector>
@@ -19,13 +20,12 @@
 namespace lld::elf {
 class ScriptLexer {
 public:
-  static const llvm::StringMap<Tok> keywordTokMap;
+  static const llvm::DenseMap<llvm::CachedHashStringRef, Tok> keywordToMap;
   struct Token {
     Tok kind;
     StringRef val;
-    inline bool operator==(StringRef other) { return val == other; }
-
-    inline bool operator!=(StringRef other) { return val != other; }
+    bool operator==(StringRef other) { return val == other; }
+    bool operator!=(StringRef other) { return val != other; }
   };
 
   explicit ScriptLexer(MemoryBufferRef mb);
@@ -45,7 +45,6 @@ public:
 
   std::vector<MemoryBufferRef> mbs;
   std::vector<Token> tokens;
-  static const llvm::StringMap<Tok> keywordToMap;
   std::string joinTokens(size_t begin, size_t end);
   bool inExpr = false;
   size_t pos = 0;
@@ -60,7 +59,7 @@ private:
   size_t getColumnNumber();
 
   Token getOperatorToken(StringRef s);
-  Token getKeywordorIdentifier(StringRef s);
+  Token getKeywordOrIdentifier(StringRef s);
   std::vector<ScriptLexer::Token> tokenizeExpr(StringRef s);
 };
 
