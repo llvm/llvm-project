@@ -3233,6 +3233,26 @@ def CatchParamOp : CIR_Op<"catch_param"> {
 }
 
 //===----------------------------------------------------------------------===//
+// InflightEhOp
+//===----------------------------------------------------------------------===//
+
+def InflightEhOp : CIR_Op<"inflight_exception"> {
+  let summary = "Materialize the catch clause formal parameter";
+  let description = [{
+    `cir.inflight_exception` returns an exception coming from a
+    `cir.call exception` that might throw. The returned value is opaque
+    but can be further decomposed by other operations.
+  }];
+
+  let results = (outs CIR_ExceptionType:$exception);
+  let assemblyFormat = [{
+    attr-dict
+  }];
+
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // CopyOp
 //===----------------------------------------------------------------------===//
 
