@@ -306,6 +306,32 @@ TEST_P(MappedMemoryTest, EnabledWrite) {
   EXPECT_FALSE(Memory::releaseMappedMemory(M2));
 }
 
+TEST_P(MappedMemoryTest, MakeExec) {
+  // This test applies only to readable and writeable combinations
+  if (Flags && !((Flags & Memory::MF_READ) && (Flags & Memory::MF_WRITE)))
+    GTEST_SKIP();
+  CHECK_UNSUPPORTED();
+
+  std::error_code EC;
+  MemoryBlock M = Memory::allocateMappedMemory(sizeof(int), nullptr, Flags, EC);
+  EXPECT_EQ(std::error_code(), EC);
+
+  EXPECT_NE((void*)nullptr, M.base());
+  EXPECT_LE(sizeof(int), M.allocatedSize());
+
+  int *x = (int*)M.base();
+  *x = 0xcc;
+
+  EXPECT_EQ(0xcc, *x);
+
+  Flags ^= Memory::MF_WRITE;
+  Flags |= Memory::MF_EXEC;
+
+  EXPECT_EQ(std::error_code(), Memory::protectMappedMemory(M, Flags));
+  EXPECT_EQ(0xcc, *x);
+  EXPECT_FALSE(Memory::releaseMappedMemory(M));
+}
+
 TEST_P(MappedMemoryTest, SuccessiveNear) {
   CHECK_UNSUPPORTED();
   std::error_code EC;
