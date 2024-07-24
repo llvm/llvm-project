@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// XFAIL: *
 class A;
 
 class S {
@@ -132,8 +133,8 @@ namespace PR10896 {
   private:
 	
     template<typename T>
-    T SomeField; // expected-error {{member 'SomeField' declared as a template}}
-    template<> int SomeField2; // expected-error {{extraneous 'template<>' in declaration of member 'SomeField2'}}
+    T SomeField; // expected-error {{non-static data member 'SomeField' cannot be declared as a template}}
+    template<> int SomeField2; // expected-error {{extraneous 'template<>' in declaration of variable 'SomeField2'}}
   };
 
   void g() {

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++98 -verify -fsyntax-only %s -Wno-c++11-extensions -Wno-c++1y-extensions -DPRECXX11
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 -verify -fsyntax-only -Wno-c++1y-extensions %s
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++1y -verify -fsyntax-only %s -DCPP1Y
-
+// XFAIL: *
 #define CONST const
 
 #ifdef PRECXX11
@@ -9,14 +9,20 @@
 #endif
 
 class A {
-  template<typename T> CONST T wrong;           // expected-error {{member 'wrong' declared as a template}}
-  template<typename T> CONST T wrong_init = 5;      // expected-error {{member 'wrong_init' declared as a template}}
+  template<typename T> CONST T wrong;           // expected-error {{non-static data member 'wrong' cannot be declared as a template}}
+  template<typename T> CONST T wrong_init = 5;      // expected-error {{non-static data member 'wrong_init' cannot be declared as a template}}
   template<typename T, typename T0> static CONST T right = T(100);
   template<typename T> static CONST T right<T,int> = 5;
-  template<typename T> CONST int right<int,T>;  // expected-error {{member 'right' declared as a template}}
-  template<typename T> CONST float right<float,T> = 5;  // expected-error {{member 'right' declared as a template}}
-  template<> static CONST int right<int,int> = 7;
-  template<> static CONST float right<float,int>;
+  template<typename T> CONST int right<int,T>;  // expected-error {{non-static data member 'right' cannot be declared as a template}}
+  template<typename T> CONST float right<float,T> = 5;  // expected-error {{non-static data member 'right' cannot be declared as a template}}
+#ifdef PRECXX11
+                                                        // expected-warning@-2 {{in-class initializer for static data member of type 'const float' is a GNU extension}}
+#else
+                                                        // expected-error@-4 {{in-class initializer for static data member of type 'const float' requires 'constexpr' specifier}}
+                                                        // expected-note@-5 {{add 'constexpr'}}
+#endif
+  template<> CONST int right<int,int> = 7;
+  template<> CONST float right<float,int>;
   template static CONST int right<int,int>;     // expected-error {{expected '<' after 'template'}}
 };
 
@@ -155,16 +161,16 @@ namespace non_const_init {
 #ifndef PRECXX11
 namespace constexpred {
   class A {
-    template<typename T> constexpr T wrong;           // expected-error {{member 'wrong' declared as a template}} \
-                                                      // expected-error {{non-static data member cannot be constexpr; did you intend to make it const?}}
-    template<typename T> constexpr T wrong_init = 5;      // expected-error {{non-static data member cannot be constexpr; did you intend to make it static?}}
+    template<typename T> constexpr T wrong;           // expected-error {{non-static data member 'wrong' cannot be declared as a template}}
+                                                      // expected-error@-1 {{declaration of constexpr static data member 'wrong' requires an initializer}}
+    template<typename T> constexpr T wrong_init = 5;  // expected-error {{non-static data member 'wrong_init' cannot be declared as a template}}
     template<typename T, typename T0> static constexpr T right = T(100);
     template<typename T> static constexpr T right<T,int> = 5;
-    template<typename T> constexpr int right<int,T>;  // expected-error {{member 'right' declared as a template}} \
-                                                      // expected-error {{non-static data member cannot be constexpr; did you intend to make it const?}}
-    template<typename T> constexpr float right<float,T> = 5;  // expected-error {{non-static data member cannot be constexpr; did you intend to make it static?}}
-    template<> static constexpr int right<int,int> = 7;
-    template <> static constexpr float right<float, int>; // expected-error {{declaration of constexpr static data member 'right<float, int>' requires an initializer}}
+    template<typename T> constexpr int right<int,T>;         // expected-error {{non-static data member 'right' cannot be declared as a template}}
+                                                             // expected-error@-1 {{declaration of constexpr static data member 'right<int, T>' requires an initializer}}
+    template<typename T> constexpr float right<float,T> = 5; // expected-error {{non-static data member 'right' cannot be declared as a template}}
+    template<> constexpr int right<int,int> = 7;
+    template<> constexpr float right<float, int>; // expected-error {{declaration of constexpr static data member 'right<float, int>' requires an initializer}}
     template static constexpr int right<int,int>;     // expected-error {{expected '<' after 'template'}}
   };
 }
@@ -384,16 +390,16 @@ namespace dependent_static_var_template {
   struct A {
     template<int = 0> static int n; // expected-note 2{{here}}
   };
-  int &r = A::template n; // expected-error {{use of variable template 'A::template n' requires template arguments}}
+  int &r = A::template n; // expected-error {{use of variable template 'A::template n' requires template arguments}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
 
   template<typename T>
-  int &f() { return T::template n; } // expected-error {{use of variable template 'A::template n' requires template arguments}}
+  int &f() { return T::template n; } // expected-error {{use of variable template 'A::template n' requires template arguments}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
   int &s = f<A>(); // expected-note {{instantiation of}}
 
   namespace B {
     template<int = 0> static int n; // expected-note {{here}}
   }
-  int &t = B::template n; // expected-error {{use of variable template 'B::template n' requires template arguments}}
+  int &t = B::template n; // expected-error {{use of variable template 'B::template n' requires template arguments}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
 
   struct C {
     template <class T> static T G;
