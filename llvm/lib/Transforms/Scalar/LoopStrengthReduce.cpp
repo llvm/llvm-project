@@ -946,13 +946,15 @@ static Immediate ExtractImmediate(const SCEV *&S, ScalarEvolution &SE) {
                            // FIXME: AR->getNoWrapFlags(SCEV::FlagNW)
                            SCEV::FlagAnyWrap);
     return Result;
-  } else if (EnableVScaleImmediates)
-    if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(S))
+  } else if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(S)) {
+    if (EnableVScaleImmediates && M->getNumOperands() == 2) {
       if (const SCEVConstant *C = dyn_cast<SCEVConstant>(M->getOperand(0)))
         if (isa<SCEVVScale>(M->getOperand(1))) {
           S = SE.getConstant(M->getType(), 0);
           return Immediate::getScalable(C->getValue()->getSExtValue());
         }
+    }
+  }
   return Immediate::getZero();
 }
 
