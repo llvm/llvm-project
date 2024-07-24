@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_LOG2_H
 #define LLVM_LIBC_SRC_MATH_LOG2_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 double log2(double x);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_LOG2_H

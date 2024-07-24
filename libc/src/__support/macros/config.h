@@ -15,7 +15,6 @@
 
 // Workaround for compilers that do not support builtin detection.
 // FIXME: This is only required for the GPU portion which should be moved.
-#include "src/__support/macros/config.h"
 #ifndef __has_builtin
 #define __has_builtin(b) 0
 #endif

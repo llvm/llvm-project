@@ -9,7 +9,6 @@
 #define LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_BCMP_H
 
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_generic.h"
@@ -17,7 +16,7 @@
 
 #include <stddef.h> // size_t
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 [[maybe_unused]] LIBC_INLINE BcmpReturnType inline_bcmp_aarch64(CPtr p1,
                                                                 CPtr p2,
@@ -66,6 +65,6 @@ namespace LIBC_NAMESPACE_DECL {
   return aarch64::Bcmp<32>::loop_and_tail(p1, p2, count);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_BCMP_H

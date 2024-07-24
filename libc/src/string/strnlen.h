@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRNLEN_H
 #define LLVM_LIBC_SRC_STRING_STRNLEN_H
 
-#include "src/__support/macros/config.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 size_t strnlen(const char *src, size_t n);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_STRNLEN_H

@@ -8,7 +8,6 @@
 
 #include "automemcpy/CodeGen.h"
 #include "automemcpy/RandomFunctionGenerator.h"
-#include "src/__support/macros/config.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <optional>
@@ -64,7 +63,7 @@ using llvm::libc_benchmarks::MemcpyConfiguration;
 using llvm::libc_benchmarks::MemmoveConfiguration;
 using llvm::libc_benchmarks::MemsetConfiguration;
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 static void memcpy_0xE00E29EE73994E2B(char *__restrict dst, const char *__restrict src, size_t size) {
   using namespace LIBC_NAMESPACE::x86;
@@ -135,7 +134,7 @@ static void bzero_0x475977492C218AD4(char * dst, size_t size) {
   return splat_set<Align<_32,Arg::Dst>::Then<Loop<_32>>>(dst, 0, size);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 namespace llvm {
 namespace automemcpy {

@@ -9,10 +9,9 @@
 #include "src/assert/__assert_fail.h"
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/libc_assert.h"
-#include "src/__support/macros/config.h"
 #include "src/stdlib/abort.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void, __assert_fail,
                    (const char *assertion, const char *file, unsigned line,
@@ -21,4 +20,4 @@ LLVM_LIBC_FUNCTION(void, __assert_fail,
   LIBC_NAMESPACE::abort();
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

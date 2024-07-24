@@ -9,14 +9,13 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_GETSPECIFIC_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_GETSPECIFIC_H
 
-#include "src/__support/macros/config.h"
 #include <pthread.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 void *pthread_getspecific(pthread_key_t);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_GETSPECIFIC_H
