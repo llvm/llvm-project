@@ -745,8 +745,8 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                 if not args:
                     # Return the environment variables if no argument is provided.
                     env_str = "\n".join(
-                            f"{key}={value}" for key, value in sorted(cmd_shenv.env.items())
-                        )
+                        f"{key}={value}" for key, value in sorted(cmd_shenv.env.items())
+                    )
                     results.append(
                         ShellCommandResult(
                             j, env_str, "", 0, timeoutHelper.timeoutReached(), []
