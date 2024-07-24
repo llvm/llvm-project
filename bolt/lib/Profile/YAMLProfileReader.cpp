@@ -614,6 +614,8 @@ size_t YAMLProfileReader::matchWithPseudoProbes(BinaryContext &BC) {
 
   uint64_t MatchedWithPseudoProbes = 0;
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
+    if (YamlBF.Used)
+      continue;
     auto It = PseudoProbeDescHashToBF.find(YamlBF.PseudoProbeDescHash);
     if (It == PseudoProbeDescHashToBF.end())
       continue;
