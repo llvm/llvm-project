@@ -60,7 +60,6 @@ define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED2:%.+]]> = ir<%rem>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): loop.2
@@ -143,7 +142,6 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED:%.+]]> = ir<%rem>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): loop.1
@@ -332,8 +330,6 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, ptr 
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK:        pred.store.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED1:%.+]]> = ir<%rem>
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED2:%.+]]> = ir<%lv.2>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT:   Successor(s): loop.3
@@ -426,8 +422,6 @@ define void @sink_replicate_region_after_replicate_region(ptr %ptr, ptr noalias 
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED:%.+]]> = ir<%rem>
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED2:%.+]]> = ir<%rem.div>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): loop.3
@@ -510,7 +504,6 @@ define void @need_new_block_after_sinking_pr56146(i32 %x, ptr %src, ptr noalias 
 ; CHECK-NEXT:     Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:     pred.store.continue:
-; CHECK-NEXT:       PHI-PREDICATED-INSTRUCTION vp<[[P_VAL:%.+]]> = ir<%val>
 ; CHECK-NEXT:     No successors
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Successor(s): loop.1

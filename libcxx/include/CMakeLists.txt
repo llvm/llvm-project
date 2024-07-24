@@ -509,6 +509,7 @@ set(files
   __math/remainder.h
   __math/roots.h
   __math/rounding_functions.h
+  __math/special_functions.h
   __math/traits.h
   __math/trigonometric_functions.h
   __mbstate_t.h

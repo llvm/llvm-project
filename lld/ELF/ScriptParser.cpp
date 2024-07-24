@@ -92,7 +92,7 @@ private:
   SymbolAssignment *readSymbolAssignment(StringRef name);
   ByteCommand *readByteCommand(StringRef tok);
   std::array<uint8_t, 4> readFill();
-  bool readSectionDirective(OutputSection *cmd, StringRef tok1, StringRef tok2);
+  bool readSectionDirective(OutputSection *cmd, StringRef tok);
   void readSectionAddressType(OutputSection *cmd);
   OutputDesc *readOverlaySectionDescription();
   OutputDesc *readOutputSectionDescription(StringRef outSec);
@@ -873,16 +873,11 @@ constexpr std::pair<const char *, unsigned> typeMap[] = {
 // Tries to read the special directive for an output section definition which
 // can be one of following: "(NOLOAD)", "(COPY)", "(INFO)", "(OVERLAY)", and
 // "(TYPE=<value>)".
-// Tok1 and Tok2 are next 2 tokens peeked. See comment for
-// readSectionAddressType below.
-bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok1, StringRef tok2) {
-  if (tok1 != "(")
-    return false;
-  if (tok2 != "NOLOAD" && tok2 != "COPY" && tok2 != "INFO" &&
-      tok2 != "OVERLAY" && tok2 != "TYPE")
+bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok) {
+  if (tok != "NOLOAD" && tok != "COPY" && tok != "INFO" && tok != "OVERLAY" &&
+      tok != "TYPE")
     return false;
 
-  expect("(");
   if (consume("NOLOAD")) {
     cmd->type = SHT_NOBITS;
     cmd->typeIsSet = true;
@@ -921,16 +916,23 @@ bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok1, Stri
 // https://sourceware.org/binutils/docs/ld/Output-Section-Address.html
 // https://sourceware.org/binutils/docs/ld/Output-Section-Type.html
 void ScriptParser::readSectionAddressType(OutputSection *cmd) {
-  // Temporarily set inExpr to support TYPE=<value> without spaces.
-  bool saved = std::exchange(inExpr, true);
-  bool isDirective = readSectionDirective(cmd, peek(), peek2());
-  inExpr = saved;
-  if (isDirective)
-    return;
+  if (consume("(")) {
+    // Temporarily set inExpr to support TYPE=<value> without spaces.
+    SaveAndRestore saved(inExpr, true);
+    if (readSectionDirective(cmd, peek()))
+      return;
+    cmd->addrExpr = readExpr();
+    expect(")");
+  } else {
+    cmd->addrExpr = readExpr();
+  }
 
-  cmd->addrExpr = readExpr();
-  if (peek() == "(" && !readSectionDirective(cmd, "(", peek2()))
-    setError("unknown section directive: " + peek2());
+  if (consume("(")) {
+    SaveAndRestore saved(inExpr, true);
+    StringRef tok = peek();
+    if (!readSectionDirective(cmd, tok))
+      setError("unknown section directive: " + tok);
+  }
 }
 
 static Expr checkAlignment(Expr e, std::string &loc) {
@@ -1180,10 +1182,8 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
 Expr ScriptParser::readExpr() {
   // Our lexer is context-aware. Set the in-expression bit so that
   // they apply different tokenization rules.
-  bool orig = inExpr;
-  inExpr = true;
+  SaveAndRestore saved(inExpr, true);
   Expr e = readExpr1(readPrimary(), 0);
-  inExpr = orig;
   return e;
 }
 
@@ -1249,9 +1249,9 @@ Expr ScriptParser::readExpr1(Expr lhs, int minPrec) {
     StringRef op1 = peek();
     if (precedence(op1) < minPrec)
       break;
-    if (consume("?"))
-      return readTernary(lhs);
     skip();
+    if (op1 == "?")
+      return readTernary(lhs);
     Expr rhs = readPrimary();
 
     // Evaluate the remaining part of the expression first if the

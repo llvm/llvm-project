@@ -518,4 +518,6 @@ void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
   __builtin_unreachable();
 }
 
+pid_t Thread::get_uncached_tid() { return syscall_impl<pid_t>(SYS_gettid); }
+
 } // namespace LIBC_NAMESPACE_DECL

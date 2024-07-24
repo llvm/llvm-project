@@ -26,6 +26,7 @@ DEF_USER(Constant, Constant)
 //       ClassID, Opcode(s),  Class
 DEF_INSTR(Opaque, OP(Opaque), OpaqueInst)
 DEF_INSTR(Load, OP(Load), LoadInst)
+DEF_INSTR(Store, OP(Store), StoreInst)
 
 #ifdef DEF_VALUE
 #undef DEF_VALUE
