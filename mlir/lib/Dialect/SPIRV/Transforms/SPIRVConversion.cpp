@@ -1354,7 +1354,7 @@ LogicalResult mlir::spirv::unrollVectorsInFuncBodies(Operation *op) {
         [](auto op) { return mlir::spirv::getNativeVectorShape(op); });
     populateVectorUnrollPatterns(patterns, options);
     if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
-      return llvm::failure();
+      return failure();
   }
 
   // Convert transpose ops into extract and insert pairs, in preparation of
