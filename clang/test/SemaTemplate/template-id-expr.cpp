@@ -19,7 +19,7 @@ template<typename T>
 struct X0 {
   template<typename U>
   void f1();
-
+  
   template<typename U>
   void f2(U) {
     f1<U>();
@@ -39,9 +39,9 @@ struct Y {
 template<int I>
 struct X {
   X(int, int);
-  void f() {
-    Y<X<I> >(X<I>(0, 0));
-    Y<X<I> >(::X<I>(0, 0));
+  void f() { 
+    Y<X<I> >(X<I>(0, 0)); 
+    Y<X<I> >(::X<I>(0, 0)); 
   }
 };
 
@@ -149,11 +149,11 @@ struct Y2 : Y1<T> {
 
     int x;
     x = Y1::f4(0);
-    x = Y1::f4<int>(0); // expected-warning {{use 'template'}} expected-error {{assigning to 'int' from incompatible type 'void'}}
+    x = Y1::f4<int>(0); // expected-error {{use 'template'}} expected-error {{assigning to 'int' from incompatible type 'void'}}
     x = Y1::template f4(0); // expected-error {{assigning to 'int' from incompatible type 'void'}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
 
     x = p->f4(0);
-    x = p->f4<int>(0); // expected-error {{assigning to 'int' from incompatible type 'void'}} expected-warning {{use 'template'}}
+    x = p->f4<int>(0); // expected-error {{assigning to 'int' from incompatible type 'void'}} expected-error {{use 'template'}}
     x = p->template f4(0); // expected-error {{assigning to 'int' from incompatible type 'void'}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
   }
 };
@@ -184,7 +184,7 @@ class E {
 #if __cplusplus <= 199711L
 // expected-warning@+2 {{extension}}
 #endif
-template<typename T> using D = int; // expected-note {{declared here}}
+template<typename T> using D = int; // expected-note {{declared here}} 
 E<D> ed; // expected-note {{instantiation of}}
 
 namespace non_functions {
