@@ -903,6 +903,9 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
       return std::move(Err);
   }
 
+  if (auto Err = setupSanitizerEnvironment(Plugin, *Image))
+    return std::move(Err);
+
   if (auto Err = setupRPCServer(Plugin, *Image))
     return std::move(Err);
 
@@ -1006,6 +1009,23 @@ Error GenericDeviceTy::setupDeviceMemoryPool(GenericPluginTy &Plugin,
 
   // Write device environment values to the device.
   return GHandler.writeGlobalToDevice(*this, Image, DevEnvGlobal);
+}
+
+Error GenericDeviceTy::setupSanitizerEnvironment(GenericPluginTy &Plugin,
+                                                 DeviceImageTy &Image) {
+  GenericGlobalHandlerTy &GHandler = Plugin.getGlobalHandler();
+  if (!GHandler.isSymbolInImage(*this, Image, "__sanitizer_environment_ptr"))
+    return Plugin::success();
+
+  auto *&SanitizerEnvironment = SanitizerEnvironmentMap[&Image];
+  SanitizerEnvironment = reinterpret_cast<SanitizerEnvironmentTy *>(allocate(
+      sizeof(*SanitizerEnvironment), &SanitizerEnvironment, TARGET_ALLOC_HOST));
+  memset(SanitizerEnvironment, '\0', sizeof(SanitizerEnvironmentTy));
+
+  GlobalTy SanitizerEnvironmentGlobal("__sanitizer_environment_ptr",
+                                      sizeof(SanitizerEnvironment),
+                                      &SanitizerEnvironment);
+  return GHandler.writeGlobalToDevice(*this, Image, SanitizerEnvironmentGlobal);
 }
 
 Error GenericDeviceTy::setupRPCServer(GenericPluginTy &Plugin,

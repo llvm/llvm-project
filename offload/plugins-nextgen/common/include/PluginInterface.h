@@ -712,6 +712,11 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error setupDeviceMemoryPool(GenericPluginTy &Plugin, DeviceImageTy &Image,
                               uint64_t PoolSize);
 
+  /// Setup the sanitizer environment to receive sanitizer information from the
+  /// device.
+  Error setupSanitizerEnvironment(GenericPluginTy &Plugin,
+                                  DeviceImageTy &Image);
+
   // Setup the RPC server for this device if needed. This may not run on some
   // plugins like the CPU targets. By default, it will not be executed so it is
   // up to the target to override this using the shouldSetupRPCServer function.
@@ -930,6 +935,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Allocate and construct a kernel object.
   virtual Expected<GenericKernelTy &> constructKernel(const char *Name) = 0;
+
+  DenseMap<DeviceImageTy *, SanitizerEnvironmentTy *> SanitizerEnvironmentMap;
 
   /// Reference to the underlying plugin that created this device.
   GenericPluginTy &Plugin;

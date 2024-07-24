@@ -94,6 +94,7 @@ set(src_files
   ${source_directory}/Misc.cpp
   ${source_directory}/Parallelism.cpp
   ${source_directory}/Reduction.cpp
+  ${source_directory}/Sanitizer.cpp
   ${source_directory}/State.cpp
   ${source_directory}/Synchronization.cpp
   ${source_directory}/Tasking.cpp
