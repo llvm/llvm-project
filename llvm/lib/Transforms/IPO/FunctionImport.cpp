@@ -207,19 +207,19 @@ static std::unique_ptr<Module> loadFile(const std::string &FileName,
   return Result;
 }
 
-static shouldSkipLocalInAnotherModule(const GlobalVarSummary *RefSummary,
-                                      size_t NumRefs,
-                                      StringRef ImporterModule) {
+static bool shouldSkipLocalInAnotherModule(const GlobalVarSummary *RefSummary,
+                                           size_t NumRefs,
+                                           StringRef ImporterModule) {
   // We can import a local from another module if all inputs are compiled
   // with full paths or when there is one entry in the list.
   if (ImportAssumeUniqueLocal || NumRefs == 1)
     return false;
-  // If this is a local variable, make sure we import the copy
-  // in the caller's module. The only time a local variable can
-  // share an entry in the index is if there is a local with the same name
-  // in another module that had the same source file name (in a different
-  // directory), where each was compiled in their own directory so there
-  // was not distinguishing path.
+  // In other cases, make sure we import the copy in the caller's module if the
+  // referenced value has local linkage. The only time a local variable can
+  // share an entry in the index is if there is a local with the same name in
+  // another module that had the same source file name (in a different
+  // directory), where each was compiled in their own directory so there was not
+  // distinguishing path.
   return GlobalValue::isLocalLinkage(RefSummary->linkage()) &&
          RefSummary->modulePath() != ImporterModule;
 }
@@ -256,17 +256,20 @@ static auto qualifyCalleeCandidates(
         if (!Summary)
           return {FunctionImporter::ImportFailureReason::GlobalVar, GVSummary};
 
-        // If this is a local function, make sure we import the copy
-        // in the caller's module. The only time a local function can
-        // share an entry in the index is if there is a local with the same name
-        // in another module that had the same source file name (in a different
-        // directory), where each was compiled in their own directory so there
-        // was not distinguishing path.
-        // However, do the import from another module if there is only one
-        // entry in the list - in that case this must be a reference due
-        // to indirect call profile data, since a function pointer can point to
-        // a local in another module.
-        if (shouldSkipLocalInAnotherModule(Summary, CalleeSummaryList.size(),
+        // If this is a local function, make sure we import the copy in the
+        // caller's module. The only time a local function can share an entry in
+        // the index is if there is a local with the same name in another module
+        // that had the same source file name (in a different directory), where
+        // each was compiled in their own directory so there was not
+        // distinguishing path.
+        // If the local function is from another module, it must be a reference
+        // due to indirect call profile data since a function pointer can point
+        // to a local in another module. Do the import from another module if
+        // there is only one entry in the list or when all files in the program
+        // are compiled with full path - in both cases the local function has
+        // unique PGO name and GUID.
+        if (shouldSkipLocalInAnotherModule(dyn_cast<GlobalVarSummary>(Summary),
+                                           CalleeSummaryList.size(),
                                            CallerModulePath))
           return {
               FunctionImporter::ImportFailureReason::LocalLinkageNotInModule,
