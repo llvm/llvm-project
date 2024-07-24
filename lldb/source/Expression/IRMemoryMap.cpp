@@ -117,9 +117,10 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
     if (err.Success()) {
       while (true) {
         if (region_info.GetRange().GetRangeBase() == 0 &&
-            region_info.GetRange().GetRangeEnd() - 1 < end_of_memory) {
+            region_info.GetRange().GetRangeEnd() < end_of_memory) {
           // Don't use a region that starts at address 0,
-          // that can mask null dereferences in the inferior.
+          // it can make it harder to debug null dereference crashes
+          // in the inferior.
           ret = region_info.GetRange().GetRangeEnd();
         } else if (region_info.GetReadable() !=
                        MemoryRegionInfo::OptionalBool::eNo ||
