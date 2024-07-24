@@ -442,6 +442,14 @@ TEST_F(EnvironmentTest, CXXDefaultInitExprResultObjIsWrappedExprResultObj) {
             &Env.getResultObjectLocation(*DefaultInit->getExpr()));
 }
 
+// This test verifies the behavior of `getResultObjectLocation()` in
+// scenarios involving inherited constructors.
+// Since the specific AST node of interest `CXXConstructorDecl` is implicitly
+// generated, we cannot annotate any statements inside of it as we do in tests
+// within TransferTest. Thus, the only way to get the right `Environment` is by
+// explicitly initializing it as we do in tests within EnvironmentTest.
+// This is why this test is not inside TransferTest, where most of the tests for
+// `getResultObjectLocation()` are located.
 TEST_F(EnvironmentTest, ResultObjectLocationForInheritedCtorInitExpr) {
   using namespace ast_matchers;
 
@@ -469,17 +477,18 @@ TEST_F(EnvironmentTest, ResultObjectLocationForInheritedCtorInitExpr) {
                 .bind("ctor"),
             Context);
   const auto *Constructor = selectFirst<CXXConstructorDecl>("ctor", Results);
-  const auto *InheritedCtorInit =
-      selectFirst<CXXInheritedCtorInitExpr>("inherited_ctor_init_expr", Results);
+  const auto *InheritedCtorInit = selectFirst<CXXInheritedCtorInitExpr>(
+      "inherited_ctor_init_expr", Results);
 
-  // Verify that `inherited_ctor_init_expr` has no children.
-  ASSERT_EQ(InheritedCtorInit->child_begin(), InheritedCtorInit->child_end());
+  EXPECT_EQ(InheritedCtorInit->child_begin(), InheritedCtorInit->child_end());
 
   Environment Env(DAContext, *Constructor);
   Env.initialize();
 
   RecordStorageLocation &Loc = Env.getResultObjectLocation(*InheritedCtorInit);
-  ASSERT_NE(&Loc, nullptr);
+  EXPECT_NE(&Loc, nullptr);
+
+  ASSERT_EQ(&Loc, Env.getThisPointeeStorageLocation());
 }
 
 TEST_F(EnvironmentTest, Stmt) {
