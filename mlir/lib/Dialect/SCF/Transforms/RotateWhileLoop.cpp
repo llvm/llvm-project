@@ -19,10 +19,6 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
-#include "llvm/Support/Debug.h"
-
-#define DEBUG_TYPE "scf-rotate-while"
-
 namespace mlir {
 #define GEN_PASS_DEF_SCFROTATEWHILELOOPPASS
 #include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
@@ -42,15 +38,17 @@ struct RotateWhileLoopPattern : OpRewritePattern<scf::WhileOp> {
                                 PatternRewriter &rewriter) const final {
     FailureOr<scf::WhileOp> result =
         scf::wrapWhileLoopInZeroTripCheck(whileOp, rewriter, forceCreateCheck);
-    if (failed(result) || *result == whileOp) {
-      LLVM_DEBUG(whileOp->emitRemark("Failed to rotate loop"));
-      return failure();
-    };
-    return success();
+    return success(succeeded(result) && *result != whileOp);
   }
 
   bool forceCreateCheck;
 };
+
+static void populateSCFRotateWhileLoopPatterns(
+    RewritePatternSet &patterns, const SCFRotateWhileLoopPassOptions &options) {
+  patterns.add<RotateWhileLoopPattern>(options.forceCreateCheck,
+                                       patterns.getContext());
+}
 
 struct SCFRotateWhileLoopPass
     : impl::SCFRotateWhileLoopPassBase<SCFRotateWhileLoopPass> {
@@ -61,22 +59,19 @@ struct SCFRotateWhileLoopPass
     MLIRContext *context = &getContext();
     RewritePatternSet patterns(context);
     SCFRotateWhileLoopPassOptions options{forceCreateCheck};
-    scf::populateSCFRotateWhileLoopPatterns(patterns, options);
+    populateSCFRotateWhileLoopPatterns(patterns, options);
     // Avoid applying the pattern to a loop more than once.
     GreedyRewriteConfig config;
     config.strictMode = GreedyRewriteStrictness::ExistingOps;
-    [[maybe_unused]] LogicalResult success =
-        applyPatternsAndFoldGreedily(parentOp, std::move(patterns), config);
+    (void)applyPatternsAndFoldGreedily(parentOp, std::move(patterns), config);
   }
 };
 } // namespace
 
 namespace mlir {
 namespace scf {
-void populateSCFRotateWhileLoopPatterns(
-    RewritePatternSet &patterns, const SCFRotateWhileLoopPassOptions &options) {
-  patterns.add<RotateWhileLoopPattern>(options.forceCreateCheck,
-                                       patterns.getContext());
+void populateSCFRotateWhileLoopPatterns(RewritePatternSet &patterns) {
+  ::populateSCFRotateWhileLoopPatterns(patterns, {});
 }
 } // namespace scf
 } // namespace mlir
