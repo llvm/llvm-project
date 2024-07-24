@@ -1255,9 +1255,6 @@ public:
 /// This class wraps the llvm.memset.pattern intrinsic.
 class MemSetPatternInst : public MemSetInst {
 public:
-  ConstantInt *getLength() const {
-    return cast<ConstantInt>(MemSetInst::getLength());
-  }
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::memset_pattern;
