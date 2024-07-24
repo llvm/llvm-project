@@ -40,28 +40,30 @@ void test() {
 
   std::views::drop(std::views::repeat(1)); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
-  std::views::enumerate(range);                   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  auto enumerate_view = std::views::enumerate(range);
-  enumerate_view.begin();                         // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::as_const(enumerate_view).begin();          // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  enumerate_view.end();                           // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::as_const(enumerate_view).end();            // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  enumerate_view.size();                          // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::as_const(enumerate_view).size();           // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  enumerate_view.base();                          // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::move(enumerate_view).base();               // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  auto enumerate_view_it = enumerate_view.begin();
-  enumerate_view_it.base();                       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::move(enumerate_view_it).base();            // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::as_const(enumerate_view_it).index();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  *std::as_const(enumerate_view_it);              // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  enumerate_view_it[2];                           // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  enumerate_view_it == enumerate_view_it;         // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  enumerate_view_it <=> enumerate_view_it;        // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  enumerate_view_it + 1;                          // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  enumerate_view_it - 1;                          // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  enumerate_view_it - enumerate_view_it;          // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  iter_move(enumerate_view_it);                   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::views::enumerate(range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  {
+    auto ev = std::views::enumerate(range);
+    ev.begin();                 // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::as_const(ev).begin();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ev.end();                   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::as_const(ev).end();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ev.size();                  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::as_const(ev).size();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ev.base();                  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::move(ev).base();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    auto it = enumerate_view.begin();
+    it.base();                  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::move(it).base();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::as_const(it).index();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    *std::as_const(it);         // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    it[2];                      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    it == it;                   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    it <=> it;                  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    it + 1;                     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    it - 1;                     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    it - it;                    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    iter_move(it);              // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  }
 
   std::views::repeat(1, std::unreachable_sentinel); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
