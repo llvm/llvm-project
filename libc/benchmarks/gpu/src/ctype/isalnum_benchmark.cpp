@@ -7,6 +7,10 @@ uint64_t BM_IsAlnum() {
   return LIBC_NAMESPACE::latency(LIBC_NAMESPACE::isalnum, x);
 }
 BENCHMARK(LlvmLibcIsAlNumGpuBenchmark, IsAlnum, BM_IsAlnum);
+SINGLE_THREADED_BENCHMARK(LlvmLibcIsAlNumGpuBenchmark, IsAlnumSingleThread,
+                          BM_IsAlnum);
+SINGLE_WAVE_BENCHMARK(LlvmLibcIsAlNumGpuBenchmark, IsAlnumSingleWave,
+                      BM_IsAlnum);
 
 uint64_t BM_IsAlnumCapital() {
   char x = 'A';
