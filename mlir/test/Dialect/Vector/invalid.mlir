@@ -1182,6 +1182,13 @@ func.func @shape_cast_invalid_rank_expansion(%arg0 : vector<15x2xf32>) {
 
 // -----
 
+func.func @shape_cast_scalability_flag_is_dropped(%arg0 : vector<15x[2]xf32>) {
+  // expected-error@+1 {{non-matching scalability flags}}
+  %0 = vector.shape_cast %arg0 : vector<15x[2]xf32> to vector<30xf32>
+}
+
+// -----
+
 func.func @bitcast_not_vector(%arg0 : vector<5x1x3x2xf32>) {
   // expected-error@+1 {{'vector.bitcast' invalid kind of type specified}}
   %0 = vector.bitcast %arg0 : vector<5x1x3x2xf32> to f32

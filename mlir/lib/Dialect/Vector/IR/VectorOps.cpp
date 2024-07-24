@@ -5238,6 +5238,11 @@ static LogicalResult verifyVectorShapeCast(Operation *op,
     if (!isValidShapeCast(resultShape, sourceShape))
       return op->emitOpError("invalid shape cast");
   }
+
+  // Check that (non-)scalability is preserved
+  if (sourceVectorType.isScalable() != resultVectorType.isScalable())
+    return op->emitOpError("non-matching scalability flags");
+
   return success();
 }
 
