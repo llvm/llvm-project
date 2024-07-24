@@ -1954,8 +1954,8 @@ void PPCInstrInfo::storeRegToStackSlotNoUpd(
 
   StoreRegToStackSlot(MF, SrcReg, isKill, FrameIdx, RC, NewMIs);
 
-  for (unsigned i = 0, e = NewMIs.size(); i != e; ++i)
-    MBB.insert(MI, NewMIs[i]);
+  for (MachineInstr *NewMI : NewMIs)
+    MBB.insert(MI, NewMI);
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
@@ -2001,8 +2001,8 @@ void PPCInstrInfo::loadRegFromStackSlotNoUpd(
 
   LoadRegFromStackSlot(MF, DL, DestReg, FrameIdx, RC, NewMIs);
 
-  for (unsigned i = 0, e = NewMIs.size(); i != e; ++i)
-    MBB.insert(MI, NewMIs[i]);
+  for (MachineInstr *NewMI : NewMIs)
+    MBB.insert(MI, NewMI);
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
