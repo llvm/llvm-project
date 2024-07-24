@@ -212,7 +212,6 @@ public:
       if (CallHashes[I])
         CallHashToBlocks[CallHashes[I]].push_back(
             std::make_pair(Hashes[I], Block));
-      this->Blocks.push_back(Block);
     }
     this->IndexToBBPseudoProbes = IndexToBBPseudoProbes;
     this->BBPseudoProbeToBlock = BBPseudoProbeToBlock;
@@ -263,7 +262,6 @@ private:
   std::unordered_map<const MCDecodedPseudoProbe *, FlowBlock *>
       BBPseudoProbeToBlock;
   std::unordered_set<uint64_t> MatchedWithPseudoProbes;
-  std::vector<const FlowBlock *> Blocks;
   uint64_t YamlBFGUID{0};
   uint64_t MatchedWithOpcodes{0};
 
@@ -341,11 +339,6 @@ private:
       return nullptr;
     }
     uint64_t Index = BlockPseudoProbes[0]->Index;
-    if (Index > Blocks.size()) {
-      if (opts::Verbosity >= 3)
-        errs() << "BOLT-WARNING: invalid index block pseudo probe index\n";
-      return nullptr;
-    }
     auto It = IndexToBBPseudoProbes.find(Index);
     if (It == IndexToBBPseudoProbes.end()) {
       if (opts::Verbosity >= 3)
