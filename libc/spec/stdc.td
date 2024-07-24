@@ -717,6 +717,9 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"canonicalizel", RetValSpec<IntType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
           GuardedFunctionSpec<"canonicalizef16", RetValSpec<IntType>, [ArgSpec<Float16Type>, ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"canonicalizef128", RetValSpec<IntType>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+	  
+          FunctionSpec<"dsqrtl", RetValSpec<DoubleType>, [ArgSpec<LongDoubleType>]>,
+	
 
           GuardedFunctionSpec<"totalorderf16", RetValSpec<IntType>, [ArgSpec<Float16Ptr>, ArgSpec<Float16Ptr>], "LIBC_TYPES_HAS_FLOAT16">,
 
@@ -739,6 +742,9 @@ def StdC : StandardSpec<"stdc"> {
 
           GuardedFunctionSpec<"f16mulf128", RetValSpec<Float16Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128">,
 
+          FunctionSpec<"fsqrt", RetValSpec<FloatType>, [ArgSpec<DoubleType>]>,
+          FunctionSpec<"fsqrtl", RetValSpec<FloatType>, [ArgSpec<LongDoubleType>]>,
+	  
           GuardedFunctionSpec<"f16divf128", RetValSpec<Float16Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128">,
 
           GuardedFunctionSpec<"f16sqrtf128", RetValSpec<Float16Type>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128">,

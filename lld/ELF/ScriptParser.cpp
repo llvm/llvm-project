@@ -1719,20 +1719,20 @@ ScriptParser::readSymbols() {
   while (!errorCount()) {
     if (consume("}"))
       break;
-    if (consumeLabel("local")) {
-      v = &locals;
-      continue;
-    }
-    if (consumeLabel("global")) {
-      v = &globals;
-      continue;
-    }
 
     if (consume("extern")) {
       SmallVector<SymbolVersion, 0> ext = readVersionExtern();
       v->insert(v->end(), ext.begin(), ext.end());
     } else {
       StringRef tok = next();
+      if (tok == "local:" || (tok == "local" && consume(":"))) {
+        v = &locals;
+        continue;
+      }
+      if (tok == "global:" || (tok == "global" && consume(":"))) {
+        v = &globals;
+        continue;
+      }
       v->push_back({unquote(tok), false, hasWildcard(tok)});
     }
     expect(";");

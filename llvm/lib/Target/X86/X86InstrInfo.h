@@ -585,13 +585,15 @@ public:
   getSerializableDirectMachineOperandTargetFlags() const override;
 
   std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
+      const MachineModuleInfo &MMI,
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
 
   bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
                                    bool OutlineFromLinkOnceODRs) const override;
 
-  outliner::InstrType
-  getOutliningTypeImpl(MachineBasicBlock::iterator &MIT, unsigned Flags) const override;
+  outliner::InstrType getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                                           MachineBasicBlock::iterator &MIT,
+                                           unsigned Flags) const override;
 
   void buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
                           const outliner::OutlinedFunction &OF) const override;
