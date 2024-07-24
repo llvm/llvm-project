@@ -15507,12 +15507,9 @@ static SDValue performVFMADD_VLCombine(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineVFMADD_VLWithVFNEG_VL(N, DAG))
     return V;
 
-  if (N->getValueType(0).isScalableVector() &&
-      N->getValueType(0).getVectorElementType() == MVT::f32 &&
-      (Subtarget.hasVInstructionsF16Minimal() &&
-       !Subtarget.hasVInstructionsF16())) {
+  if (N->getValueType(0).getVectorElementType() == MVT::f32 &&
+      !Subtarget.hasVInstructionsF16())
     return SDValue();
-  }
 
   // FIXME: Ignore strict opcodes for now.
   if (N->isTargetStrictFPOpcode())
@@ -17275,10 +17272,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case RISCVISD::FMUL_VL:
   case RISCVISD::VFWADD_W_VL:
   case RISCVISD::VFWSUB_W_VL: {
-    if (N->getValueType(0).isScalableVector() &&
-        N->getValueType(0).getVectorElementType() == MVT::f32 &&
-        (Subtarget.hasVInstructionsF16Minimal() &&
-         !Subtarget.hasVInstructionsF16()))
+    if (N->getValueType(0).getVectorElementType() == MVT::f32 &&
+        !Subtarget.hasVInstructionsF16())
       return SDValue();
     return combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget);
   }
