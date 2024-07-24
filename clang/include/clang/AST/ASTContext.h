@@ -651,6 +651,9 @@ private:
   /// address spaces (e.g. OpenCL/CUDA)
   bool AddrSpaceMapMangling;
 
+  /// For performance, track whether any function effects are in use.
+  mutable bool AnyFunctionEffects = false;
+
   const TargetInfo *Target = nullptr;
   const TargetInfo *AuxTarget = nullptr;
   clang::PrintingPolicy PrintingPolicy;
@@ -2937,6 +2940,8 @@ public:
   bool addressSpaceMapManglingFor(LangAS AS) const {
     return AddrSpaceMapMangling || isTargetAddressSpace(AS);
   }
+
+  bool hasAnyFunctionEffects() const { return AnyFunctionEffects; }
 
   // Merges two exception specifications, such that the resulting
   // exception spec is the union of both. For example, if either
