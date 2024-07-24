@@ -12,6 +12,7 @@
 
 #include "llvm/CodeGenData/CodeGenDataReader.h"
 #include "llvm/CodeGenData/OutlinedHashTreeRecord.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #define DEBUG_TYPE "cg-data-reader"
@@ -75,7 +76,7 @@ Error IndexedCodeGenDataReader::read() {
   auto *End =
       reinterpret_cast<const unsigned char *>(DataBuffer->getBufferEnd());
   if (auto E = IndexedCGData::Header::readFromBuffer(Start).moveInto(Header))
-    return std::move(E);
+    return E;
 
   if (hasOutlinedHashTree()) {
     const unsigned char *Ptr = Start + Header.OutlinedHashTreeOffset;

@@ -1,4 +1,4 @@
-# REQUIRES: shell
+# REQUIRES: shell, aarch64-registered-target
 # UNSUPPORTED: system-windows
 
 # Merge an archive that has two object files having cgdata (__llvm_outline)

@@ -1,4 +1,4 @@
-# REQUIRES: shell
+# REQUIRES: shell, aarch64-registered-target
 # UNSUPPORTED: system-windows
 
 # Merge a binary file (e.g., a linked executable) having concatenated cgdata (__llvm_outline)
