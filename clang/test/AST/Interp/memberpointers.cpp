@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++14 -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -std=c++23 -fexperimental-new-constant-interpreter -verify=expected,both %s
 // RUN: %clang_cc1 -std=c++14 -verify=ref,both %s
+// RUN: %clang_cc1 -std=c++23 -verify=ref,both %s
 
 namespace MemberPointers {
   struct A {
