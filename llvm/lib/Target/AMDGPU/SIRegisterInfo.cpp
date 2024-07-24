@@ -2557,8 +2557,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                   .addReg(FrameReg);
 
               MachineInstrBuilder Add;
-              if ((Add = TII->getAddNoCarry(*MBB, MI, DL, TmpResultReg, *RS)) !=
-                  nullptr) {
+              if (Add = TII->getAddNoCarry(*MBB, MI, DL, TmpResultReg, *RS)) {
                 if (Add->getOpcode() == AMDGPU::V_ADD_CO_U32_e64) {
                   BuildMI(*MBB, *Add, DL, TII->get(AMDGPU::S_MOV_B32),
                           ResultReg)
@@ -2570,7 +2569,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                   Add.addImm(Offset).addReg(TmpResultReg, RegState::Kill);
               } else {
                 // VCC is live and no SGPR is free.
-                // since emergency stack slot is already used for spilling VGPR
+                // Since emergency stack slot is already used for spilling VGPR
                 // scavenged? This a way around to avoid carry, need follow-up.
                 BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), ResultReg)
                     .addImm(Offset);
