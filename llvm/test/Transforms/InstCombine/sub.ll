@@ -2661,3 +2661,139 @@ define i8 @sub_of_adds_2xc(i8 %x, i8 %y) {
   %r = sub i8 %xc, %yc
   ret i8 %r
 }
+
+define i32 @sub_infer_nuw_from_domcond(i32 %x, i32 %y) {
+; CHECK-LABEL: @sub_infer_nuw_from_domcond(
+; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[COND_NOT]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i32 [[X]], [[Y]]
+; CHECK-NEXT:    ret i32 [[SUB]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i32 0
+;
+  %cond = icmp uge i32 %x, %y
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  %sub = sub i32 %x, %y
+  ret i32 %sub
+
+if.else:
+  ret i32 0
+}
+
+define i1 @sub_infer_nuw_from_domcond_fold1(i32 %x, i32 %y) {
+; CHECK-LABEL: @sub_infer_nuw_from_domcond_fold1(
+; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[COND_NOT]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cond = icmp uge i32 %x, %y
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  %ext0 = zext i32 %y to i64
+  %ext1 = zext i32 %x to i64
+  %sub = sub i32 %x, %y
+  %ext2 = zext i32 %sub to i64
+  %add = add nuw nsw i64 %ext2, %ext0
+  %cmp = icmp ugt i64 %add, %ext1
+  ret i1 %cmp
+
+if.else:
+  ret i1 false
+}
+
+define i64 @sub_infer_nuw_from_domcond_fold2(i32 range(i32 0, 2147483648) %x, i32 range(i32 0, 2147483648) %y) {
+; CHECK-LABEL: @sub_infer_nuw_from_domcond_fold2(
+; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[COND_NOT]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i32 [[SUB]] to i64
+; CHECK-NEXT:    ret i64 [[EXT]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i64 0
+;
+  %cond = icmp uge i32 %x, %y
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  %sub = sub i32 %x, %y
+  %ext = zext i32 %sub to i64
+  ret i64 %ext
+
+if.else:
+  ret i64 0
+}
+
+define i1 @sub_infer_nuw_from_domcond_fold3(i16 %xx, i32 range(i32 0, 12) %y) {
+; CHECK-LABEL: @sub_infer_nuw_from_domcond_fold3(
+; CHECK-NEXT:    [[X:%.*]] = zext i16 [[XX:%.*]] to i32
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+  %x = zext i16 %xx to i32
+  %cond = icmp ult i32 %x, %y
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  %sub = sub nsw i32 %y, %x
+  %cmp = icmp eq i32 %sub, -1
+  ret i1 %cmp
+
+if.else:
+  ret i1 false
+}
+
+; negative tests
+
+define i32 @sub_infer_nuw_from_domcond_wrong_pred(i32 %x, i32 %y) {
+; CHECK-LABEL: @sub_infer_nuw_from_domcond_wrong_pred(
+; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[COND_NOT]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X]], [[Y]]
+; CHECK-NEXT:    ret i32 [[SUB]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i32 0
+;
+  %cond = icmp sge i32 %x, %y
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  %sub = sub i32 %x, %y
+  ret i32 %sub
+
+if.else:
+  ret i32 0
+}
+
+define i32 @sub_infer_nuw_from_domcond_lhs_is_false(i32 %x, i32 %y) {
+; CHECK-LABEL: @sub_infer_nuw_from_domcond_lhs_is_false(
+; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[COND_NOT]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X]], [[Y]]
+; CHECK-NEXT:    ret i32 [[SUB]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i32 0
+;
+  %cond = icmp uge i32 %x, %y
+  br i1 %cond, label %if.else, label %if.then
+
+if.then:
+  %sub = sub i32 %x, %y
+  ret i32 %sub
+
+if.else:
+  ret i32 0
+}
