@@ -2074,6 +2074,8 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
         Attrs.getAttribute(Attribute::Range).getValueAsConstantRange();
     Check(Ty->isIntOrIntVectorTy(CR.getBitWidth()),
           "Range bit width must match type bit width!", V);
+    Check(!CR.isEmptySet(), "Range must not be empty!", V);
+    Check(!CR.isFullSet(), "Range must not be full!", V);
   }
 }
 

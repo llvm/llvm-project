@@ -3109,8 +3109,9 @@ bool LLParser::parseRangeAttr(AttrBuilder &B) {
   if (ParseAPSInt(BitWidth, Lower) ||
       parseToken(lltok::comma, "expected ','") || ParseAPSInt(BitWidth, Upper))
     return true;
-  if (Lower == Upper)
-    return tokError("the range should not represent the full or empty set!");
+  if (Lower == Upper && !(Lower.isMaxValue() || Lower.isMinValue()))
+    return tokError("the range represent the full or empty set but they aren't "
+                    "min or max value!");
 
   if (parseToken(lltok::rparen, "expected ')'"))
     return true;

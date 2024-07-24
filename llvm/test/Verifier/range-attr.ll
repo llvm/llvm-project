@@ -17,3 +17,15 @@ define void @bit_widths_do_not_match_vector(<4 x i32> range(i8 1, 0) %a) {
 define void @not-integer-type(ptr range(i8 1, 0) %a) {
   ret void
 }
+
+; CHECK: Range must not be empty!
+; CHECK-NEXT: ptr @empty_range
+define void @empty_range(i8 range(i8 0, 0) %a) {
+  ret void
+}
+
+; CHECK: Range must not be full!
+; CHECK-NEXT: ptr @full_range
+define void @full_range(i8 range(i8 -1, -1) %a) {
+  ret void
+}
