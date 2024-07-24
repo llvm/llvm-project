@@ -13,11 +13,8 @@
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
 
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
-#include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_SCFROTATEWHILELOOPPASS
@@ -28,42 +25,40 @@ using namespace mlir;
 
 namespace {
 struct RotateWhileLoopPattern : OpRewritePattern<scf::WhileOp> {
-  RotateWhileLoopPattern(bool rotateLoop, MLIRContext *context,
-                         PatternBenefit benefit = 1,
-                         ArrayRef<StringRef> generatedNames = {})
-      : OpRewritePattern<scf::WhileOp>(context, benefit, generatedNames),
-        forceCreateCheck(rotateLoop) {}
+  using OpRewritePattern<scf::WhileOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(scf::WhileOp whileOp,
                                 PatternRewriter &rewriter) const final {
+    // Setting this option would lead to infinite recursion on a greedy driver
+    // as 'do-while' loops wouldn't be skipped.
+    constexpr bool forceCreateCheck = false;
     FailureOr<scf::WhileOp> result =
         scf::wrapWhileLoopInZeroTripCheck(whileOp, rewriter, forceCreateCheck);
+    // scf::wrapWhileLoopInZeroTripCheck hasn't yet implemented a failure
+    // mechanism. 'do-while' loops are simply returned unmodified. In order to
+    // stop recursion, we check input and output operations differ.
     return success(succeeded(result) && *result != whileOp);
   }
-
-  bool forceCreateCheck;
 };
 
-static void populateSCFRotateWhileLoopPatterns(
-    RewritePatternSet &patterns, const SCFRotateWhileLoopPassOptions &options) {
-  patterns.add<RotateWhileLoopPattern>(options.forceCreateCheck,
-                                       patterns.getContext());
-}
-
+/// We do not use the above pattern in this pass as we can simply walk over the
+/// `scf.while` operations and run the function.
 struct SCFRotateWhileLoopPass
     : impl::SCFRotateWhileLoopPassBase<SCFRotateWhileLoopPass> {
   using Base::Base;
 
   void runOnOperation() final {
     Operation *parentOp = getOperation();
+
+    SmallVector<scf::WhileOp> workList;
+    parentOp->walk(
+        [&workList](scf::WhileOp whileOp) { workList.push_back(whileOp); });
+
     MLIRContext *context = &getContext();
-    RewritePatternSet patterns(context);
-    SCFRotateWhileLoopPassOptions options{forceCreateCheck};
-    populateSCFRotateWhileLoopPatterns(patterns, options);
-    // Avoid applying the pattern to a loop more than once.
-    GreedyRewriteConfig config;
-    config.strictMode = GreedyRewriteStrictness::ExistingOps;
-    (void)applyPatternsAndFoldGreedily(parentOp, std::move(patterns), config);
+    PatternRewriter rewriter(context);
+    for (scf::WhileOp whileOp : workList)
+      (void)scf::wrapWhileLoopInZeroTripCheck(whileOp, rewriter,
+                                              forceCreateCheck);
   }
 };
 } // namespace
@@ -71,7 +66,7 @@ struct SCFRotateWhileLoopPass
 namespace mlir {
 namespace scf {
 void populateSCFRotateWhileLoopPatterns(RewritePatternSet &patterns) {
-  ::populateSCFRotateWhileLoopPatterns(patterns, {});
+  patterns.add<RotateWhileLoopPattern>(patterns.getContext());
 }
 } // namespace scf
 } // namespace mlir
