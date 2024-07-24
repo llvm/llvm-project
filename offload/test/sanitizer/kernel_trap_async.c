@@ -1,11 +1,11 @@
 
 // clang-format off
 // RUN: %libomptarget-compileopt-generic
-// RUN: %not --crash env -u LLVM_DISABLE_SYMBOLIZATION OFFLOAD_TRACK_NUM_KERNEL_LAUNCH_TRACES=1 %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefixes=CHECK,TRACE
-// RUN: %not --crash %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefixes=CHECK
-// RUN: %libomptarget-compileopt-generic -g
-// RUN: %not --crash env -u LLVM_DISABLE_SYMBOLIZATION OFFLOAD_TRACK_NUM_KERNEL_LAUNCH_TRACES=1 %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefixes=CHECK,TRACE,DEBUG
-// RUN: %not --crash %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefixes=CHECK
+// RUN: %not --crash env -u LLVM_DISABLE_SYMBOLIZATION OFFLOAD_TRACK_NUM_KERNEL_LAUNCH_TRACES=1 %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefixes=CHECK,TRACE,NOSAN
+// RUN: %not --crash %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefixes=CHECK,NOSAN
+// RUN: %libomptarget-compileopt-generic -g -mllvm -amdgpu-enable-offload-sanitizer
+// RUN: %not --crash env -u LLVM_DISABLE_SYMBOLIZATION OFFLOAD_TRACK_NUM_KERNEL_LAUNCH_TRACES=1 %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefixes=CHECK,TRACE,DEBUG,SANIT
+// RUN: %not --crash %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefixes=CHECK,SANIT
 // clang-format on
 
 // UNSUPPORTED: nvptx64-nvidia-cuda
@@ -36,7 +36,9 @@ int main(void) {
 
 // clang-format off
 // CHECK: OFFLOAD ERROR: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l30)
-// CHECK: OFFLOAD ERROR: execution interrupted by hardware trap instruction
+// NOSAN: OFFLOAD ERROR: execution stopped, reason is unknown
+// NOSAN: Compile with '-mllvm -amdgpu-enable-offload-sanitizer' improved diagnosis 
+// SANIT: OFFLOAD ERROR: execution interrupted by hardware trap instruction
 // TRACE:     launchKernel
 // DEBUG:     kernel_trap_async.c:
 // clang-format on

@@ -106,6 +106,7 @@ MODULE_PASS("name-anon-globals", NameAnonGlobalPass())
 MODULE_PASS("no-op-module", NoOpModulePass())
 MODULE_PASS("nsan", NumericalStabilitySanitizerPass())
 MODULE_PASS("objc-arc-apelim", ObjCARCAPElimPass())
+MODULE_PASS("offload-sanitizer", OffloadSanitizerPass())
 MODULE_PASS("openmp-opt", OpenMPOptPass())
 MODULE_PASS("openmp-opt-postlink",
             OpenMPOptPass(ThinOrFullLTOPhase::FullLTOPostLink))
