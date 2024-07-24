@@ -31,7 +31,7 @@
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcallUtil.h"
+#include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
@@ -45,7 +45,6 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -3416,40 +3415,44 @@ public:
     return nullptr;
   }
 
+  //===--------------------------------------------------------------------===//
+  // Runtime Library hooks
+  //
+
   /// Rename the default libcall routine name for the specified libcall.
   void setLibcallName(RTLIB::Libcall Call, const char *Name) {
-    Libcalls.setLibcallName(Call, Name);
+    LibcallRoutineNames[Call] = Name;
   }
-
   void setLibcallName(ArrayRef<RTLIB::Libcall> Calls, const char *Name) {
-    Libcalls.setLibcallName(Calls, Name);
+    for (auto Call : Calls)
+      setLibcallName(Call, Name);
   }
 
   /// Get the libcall routine name for the specified libcall.
   const char *getLibcallName(RTLIB::Libcall Call) const {
-    return Libcalls.getLibcallName(Call);
+    return LibcallRoutineNames[Call];
   }
 
   /// Override the default CondCode to be used to test the result of the
   /// comparison libcall against zero.
   void setCmpLibcallCC(RTLIB::Libcall Call, ISD::CondCode CC) {
-    Libcalls.setCmpLibcallCC(Call, CC);
+    CmpLibcallCCs[Call] = CC;
   }
 
   /// Get the CondCode that's to be used to test the result of the comparison
   /// libcall against zero.
   ISD::CondCode getCmpLibcallCC(RTLIB::Libcall Call) const {
-    return Libcalls.getCmpLibcallCC(Call);
+    return CmpLibcallCCs[Call];
   }
 
   /// Set the CallingConv that should be used for the specified libcall.
   void setLibcallCallingConv(RTLIB::Libcall Call, CallingConv::ID CC) {
-    Libcalls.setLibcallCallingConv(Call, CC);
+    LibcallCallingConvs[Call] = CC;
   }
 
   /// Get the CallingConv that should be used for the specified libcall.
   CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
-    return Libcalls.getLibcallCallingConv(Call);
+    return LibcallCallingConvs[Call];
   }
 
   /// Execute target specific actions to finalize target lowering.
@@ -3628,8 +3631,18 @@ private:
   std::map<std::pair<unsigned, MVT::SimpleValueType>, MVT::SimpleValueType>
     PromoteToType;
 
-  /// The list of libcalls that the target will use.
-  RTLIB::RuntimeLibcallsInfo Libcalls;
+  /// Stores the name each libcall.
+  const char *LibcallRoutineNames[RTLIB::UNKNOWN_LIBCALL + 1];
+
+  /// The ISD::CondCode that should be used to test the result of each of the
+  /// comparison libcall against zero.
+  ISD::CondCode CmpLibcallCCs[RTLIB::UNKNOWN_LIBCALL];
+
+  /// Stores the CallingConv that should be used for each libcall.
+  CallingConv::ID LibcallCallingConvs[RTLIB::UNKNOWN_LIBCALL];
+
+  /// Set default libcall names and calling conventions.
+  void InitLibcalls(const Triple &TT);
 
   /// The bits of IndexedModeActions used to store the legalisation actions
   /// We store the data as   | ML | MS |  L |  S | each taking 4 bits.
