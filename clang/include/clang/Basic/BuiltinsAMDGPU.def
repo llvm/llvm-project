@@ -1094,6 +1094,7 @@ TARGET_BUILTIN(__builtin_amdgcn_cvt_to_tensor_u8_f32_scatter2, "vi*i*V4fIib", "n
 TARGET_BUILTIN(__builtin_amdgcn_discard_b32, "vv*Ii", "nc", "gfx13-insts")
 TARGET_BUILTIN(__builtin_amdgcn_discard_b128, "vv*Ii", "nc", "gfx13-insts")
 TARGET_BUILTIN(__builtin_amdgcn_discard_b1024, "vv*Ii", "nc", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_wave_match, "ii", "nc", "gfx13-insts")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN

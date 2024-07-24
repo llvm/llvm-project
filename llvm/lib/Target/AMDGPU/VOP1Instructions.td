@@ -118,18 +118,22 @@ class getVOP1Pat <SDPatternOperator node, VOPProfile P> : LetDummies {
 }
 
 multiclass VOP1Inst <string opName, VOPProfile P,
-                     SDPatternOperator node = null_frag, int VOPDOp = -1> {
+                     SDPatternOperator node = null_frag, int VOPDOp = -1, bit Convergent = 0> {
   // We only want to set this on the basic, non-SDWA or DPP forms.
   defvar should_mov_imm = !or(!eq(opName, "v_mov_b32"),
                               !eq(opName, "v_mov_b64"));
 
   let isMoveImm = should_mov_imm in {
     if !eq(VOPDOp, -1) then
-      def _e32 : VOP1_Pseudo <opName, P>;
+      def _e32 : VOP1_Pseudo <opName, P> {
+        let isConvergent = Convergent;
+      }
     else
       // Only for V_MOV_B32/V_MOV_B64
       def _e32 : VOP1_Pseudo <opName, P>, VOPD_Component<VOPDOp, opName>;
-    def _e64 : VOP3InstBase <opName, P, node>;
+    def _e64 : VOP3InstBase <opName, P, node> {
+      let isConvergent = Convergent;
+    }
   }
 
   if P.HasExtSDWA then
@@ -878,8 +882,7 @@ def VOP_WAVE_MATCH : VOPProfile<[i32, i32, untyped, untyped]> {
 }
 
 let SubtargetPredicate = HasExclusiveScanInsts in
-defm V_WAVE_MATCH : VOP1Inst<"v_wave_match", VOP_WAVE_MATCH>;
-
+defm V_WAVE_MATCH : VOP1Inst<"v_wave_match", VOP_WAVE_MATCH, int_amdgcn_wave_match, -1, 1>;
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.
 //===----------------------------------------------------------------------===//
