@@ -98,4 +98,14 @@ define double @i_powi() {
   ret double %res
 }
 
+; Make sure that the type is correct after constant folding
+
+define half @pr98665() {
+; CHECK-LABEL: @pr98665(
+; CHECK-NEXT:    ret half 0xH3C00
+;
+  %x = call half @llvm.powi.f16.i32(half 0xH3C00, i32 1)
+  ret half %x
+}
+
 attributes #0 = { nofree nounwind willreturn }
