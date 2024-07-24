@@ -17,7 +17,7 @@ void bar();
 __attribute__((interrupt_save_fp)) void test_generic_interrupt() {
     // CHECK-R:      vmrs	r4, fpscr
     // CHECK-R-NEXT: vmrs	r5, fpexc
-    // CHECK-R-NEXT: .save  {fpscr, fpexc}
+    // CHECK-R-NEXT: .save  {r4, r5}
     // CHECK-R-NEXT: push	{r4, r5}
     // .....
     // CHECK-R:      pop	{r4, r5}
@@ -25,7 +25,7 @@ __attribute__((interrupt_save_fp)) void test_generic_interrupt() {
     // CHECK-R-NEXT: vmsr	fpexc, r5
 
     // CHECK-M:      vmrs	r4, fpscr
-    // CHECK-M-NEXT: .save  {fpscr}
+    // CHECK-M-NEXT: .save  {r4}
     // CHECK-M-NEXT: push	{r4}
     // .....
     // CHECK-M:      pop	{r4}

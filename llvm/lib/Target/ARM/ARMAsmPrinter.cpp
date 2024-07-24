@@ -1384,9 +1384,10 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
       case ARM::VMRS:
       case ARM::VMRS_FPEXC:
         // If a function spills FPSCR or FPEXC, we copy the values to low
-        // registers before pushing them. Record the copy so we can emit the
-        // correct ".save" later.
-        AFI->EHPrologueRemappedRegs[DstReg] = SrcReg;
+        // registers before pushing them.  However, we can't issue annotations
+        // for FP status registers because ".save" requires GPR registers, and
+        // ".vsave" requires DPR registers, so don't record the copy and simply
+        // emit annotations for the source registers used for the store.
         break;
       case ARM::tLDRpci: {
         // Grab the constpool index and check, whether it corresponds to
