@@ -108,7 +108,7 @@ private:
   std::vector<BinaryFunction *> YamlProfileToFunction;
 
   using FunctionSet = std::unordered_set<const BinaryFunction *>;
-  /// To keep track of functions that have a matched profile before the profile
+  /// To keep track of functions that have a matched profile before the profilez
   /// is attributed.
   FunctionSet ProfiledFunctions;
 
@@ -155,6 +155,9 @@ private:
 
   /// Matches functions using the call graph.
   size_t matchWithCallGraph(BinaryContext &BC);
+
+  /// Matches functions using the call graph.
+  size_t matchWithPseudoProbes(BinaryContext &BC);
 
   /// Matches functions with similarly named profiled functions.
   size_t matchWithNameSimilarity(BinaryContext &BC);
