@@ -53,6 +53,35 @@ static const std::pair<MCPhysReg, int8_t> FixedCSRFIMap[] = {
     {/*s9*/ RISCV::X25, -11}, {/*s10*/ RISCV::X26, -12},
     {/*s11*/ RISCV::X27, -13}};
 
+// This function returns {Base VReg, corresponding LMUL} of callee-saved VReg.
+// For example:
+// V2M2 -> {RISCV::V2, 2}
+// V8   -> {RISCV::V8, 1}
+static std::pair<MCPhysReg, int8_t> getCSBaseVRegLMULPair(MCPhysReg VR) {
+  assert(((VR >= RISCV::V1 && VR <= RISCV::V7) ||
+          (VR >= RISCV::V24 && VR <= RISCV::V31) ||
+          (VR >= RISCV::V2M2 && VR <= RISCV::V6M2) ||
+          (VR >= RISCV::V24M2 && VR <= RISCV::V30M2)) &&
+         "Invalid VR");
+
+  static constexpr std::pair<MCPhysReg, int8_t> VRegLMULLUT[] = {
+      {/*V2M2*/ RISCV::V2, 2},   {/*V4M2*/ RISCV::V4, 2},
+      {/*V4M4*/ RISCV::V4, 4},   {/*V6M2*/ RISCV::V6, 2},
+      {/*V24M2*/ RISCV::V24, 2}, {/*V24M4*/ RISCV::V24, 4},
+      {/*V24M8*/ RISCV::V24, 8}, {/*V26M2*/ RISCV::V26, 2},
+      {/*V28M2*/ RISCV::V28, 2}, {/*V28M4*/ RISCV::V28, 4},
+      {/*V30M2*/ RISCV::V30, 2}};
+
+  if ((VR >= RISCV::V1 && VR <= RISCV::V7) ||
+      (VR >= RISCV::V24 && VR <= RISCV::V31))
+    return std::make_pair(VR, 1);
+
+  if (VR >= RISCV::V2M2 && VR <= RISCV::V6M2)
+    return VRegLMULLUT[VR - RISCV::V2M2];
+
+  return VRegLMULLUT[VR - RISCV::V24M2 + 4];
+}
+
 // For now we use x3, a.k.a gp, as pointer to shadow call stack.
 // User should not use x3 in their asm.
 static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
@@ -1554,12 +1583,15 @@ void RISCVFrameLowering::emitCalleeSavedRVVPrologCFI(
     // Insert the spill to the stack frame.
     int FI = CS.getFrameIdx();
     if (FI >= 0 && MFI.getStackID(FI) == TargetStackID::ScalableVector) {
-      unsigned CFIIndex = MF->addFrameInst(
-          createDefCFAOffset(*STI.getRegisterInfo(), CS.getReg(), -FixedSize,
-                             MFI.getObjectOffset(FI) / 8));
-      BuildMI(MBB, MI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-          .addCFIIndex(CFIIndex)
-          .setMIFlag(MachineInstr::FrameSetup);
+      auto VRegLMULPair = getCSBaseVRegLMULPair(CS.getReg());
+      for (int i = 0; i < VRegLMULPair.second; ++i) {
+        unsigned CFIIndex = MF->addFrameInst(
+            createDefCFAOffset(*STI.getRegisterInfo(), VRegLMULPair.first + i,
+                               -FixedSize, MFI.getObjectOffset(FI) / 8 + i));
+        BuildMI(MBB, MI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+            .addCFIIndex(CFIIndex)
+            .setMIFlag(MachineInstr::FrameSetup);
+      }
     }
   }
 }
