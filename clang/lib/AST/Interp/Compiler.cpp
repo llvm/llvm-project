@@ -5094,9 +5094,10 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     if (E->getType()->isVoidType())
       return true;
     // Convert the dummy pointer to another pointer type if we have to.
-    if (PrimType PT = classifyPrim(E); PT != PT_Ptr && isPtrType(PT)) {
-      if (!this->emitDecayPtr(PT_Ptr, PT, E))
-        return false;
+    if (PrimType PT = classifyPrim(E); PT != PT_Ptr) {
+      if (isPtrType(PT))
+        return this->emitDecayPtr(PT_Ptr, PT, E);
+      return false;
     }
     return true;
   }
