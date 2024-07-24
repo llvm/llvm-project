@@ -56,8 +56,6 @@ define void @st1x2_v1f64(<1 x double> %A, <1 x double> %B, ptr %p) sanitize_memo
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x2.v1f64.p0(<1 x double> [[A]], <1 x double> [[B]], ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
-; EDITOR'S NOTE: the next call is invalid because the parameters (shadows) are integer, but the called function
-;                expects floating-point parameters.
   call void @llvm.aarch64.neon.st1x2.v1f64.p0(<1 x double> %A, <1 x double> %B, ptr %p)
   ret void
 }
@@ -437,6 +435,10 @@ define void @st2_v1f64(<1 x double> %A, <1 x double> %B, ptr %p) sanitize_memory
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st2.v1f64.p0(<1 x double> [[A]], <1 x double> [[B]], ptr [[P]])
+;
+; EDITOR'S NOTE: the next call is invalid because the parameters (shadows) are integer, but the called function
+;                expects floating-point parameters.
+;
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st2.v1f64.p0(<1 x i64> [[TMP2]], <1 x i64> [[TMP3]], ptr [[TMP6]])
 ; CHECK-NEXT:    ret void
 ;
