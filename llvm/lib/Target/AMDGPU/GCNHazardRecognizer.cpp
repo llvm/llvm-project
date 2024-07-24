@@ -3012,7 +3012,9 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
   return true;
 }
 
-static unsigned baseSGPRNumber(Register Reg, const SIRegisterInfo &TRI) {
+// Return the numeric ID 0-63 of an 64b SGPR pair for a given SGPR.
+// i.e. SGPR0 = SGPR0_SGPR1 = 0, SGPR3 = SGPR2_SGPR3 = 1, etc
+static unsigned sgprPairNumber(Register Reg, const SIRegisterInfo &TRI) {
   unsigned RegN = TRI.getEncodingValue(Reg);
   assert(RegN <= 127);
   return (RegN >> 1) & 0x3f;
@@ -3058,13 +3060,14 @@ void GCNHazardRecognizer::computeVALUHazardSGPRs(MachineFunction *MMF) {
     for (auto &MI : reverse(MBB->instrs())) {
       bool IsVALU = SIInstrInfo::isVALU(MI);
       bool IsSALU = SIInstrInfo::isSALU(MI);
-      if (!(IsVALU || IsSALU))
+      if (!IsVALU && !IsSALU)
         continue;
 
       for (const MachineOperand &Op : MI.operands()) {
         if (!Op.isReg())
           continue;
         Register Reg = Op.getReg();
+        assert(!Op.getSubReg());
         // Only consider implicit operands of VCC.
         if (Op.isImplicit() && !(Reg == AMDGPU::VCC_LO ||
                                  Reg == AMDGPU::VCC_HI || Reg == AMDGPU::VCC))
@@ -3073,7 +3076,7 @@ void GCNHazardRecognizer::computeVALUHazardSGPRs(MachineFunction *MMF) {
           continue;
         if (TRI.getEncodingValue(Reg) >= SGPR_NULL)
           continue;
-        unsigned RegN = baseSGPRNumber(Reg, TRI);
+        unsigned RegN = sgprPairNumber(Reg, TRI);
         if (IsVALU && Op.isUse()) {
           // Note: any access within a cycle must be considered a hazard.
           if (InCycle || (ReadSGPRs[RegN] && SALUWriteSGPRs[RegN]))
@@ -3147,10 +3150,9 @@ bool GCNHazardRecognizer::fixVALUReadSGPRHazard(MachineInstr *MI) {
 
   // All SGPR writes before a call/return must be flushed as the callee/caller
   // will not will not see the hazard chain, i.e. (2) to (3) described above.
-  const bool IsSetPC = (MI->getOpcode() == AMDGPU::S_SETPC_B64 ||
-                        MI->getOpcode() == AMDGPU::S_SETPC_B64_return ||
-                        MI->getOpcode() == AMDGPU::S_SWAPPC_B64 ||
-                        MI->getOpcode() == AMDGPU::S_CALL_B64);
+  const bool IsSetPC = (MI->isCall() || MI->isReturn()) &&
+                       !(MI->getOpcode() == AMDGPU::S_ENDPGM ||
+                         MI->getOpcode() == AMDGPU::S_ENDPGM_SAVED);
 
   // Collect all SGPR sources for MI which are read by a VALU.
   const unsigned SGPR_NULL = TRI.getEncodingValue(AMDGPU::SGPR_NULL_gfx11plus);
@@ -3173,7 +3175,7 @@ bool GCNHazardRecognizer::fixVALUReadSGPRHazard(MachineInstr *MI) {
       if (TRI.getEncodingValue(OpReg) >= SGPR_NULL)
         continue;
 
-      unsigned RegN = baseSGPRNumber(OpReg, TRI);
+      unsigned RegN = sgprPairNumber(OpReg, TRI);
       if (!VALUReadHazardSGPRs[RegN])
         continue;
 
@@ -3194,7 +3196,7 @@ bool GCNHazardRecognizer::fixVALUReadSGPRHazard(MachineInstr *MI) {
     if (IsSetPC && I.getNumDefs() > 0)
       return true;
     // Check for any register writes.
-    return llvm::any_of(SGPRsUsed, [this, &I](Register Reg) {
+    return any_of(SGPRsUsed, [this, &I](Register Reg) {
       return I.modifiesRegister(Reg, &TRI);
     });
   };
@@ -3215,9 +3217,8 @@ bool GCNHazardRecognizer::fixVALUReadSGPRHazard(MachineInstr *MI) {
     if (!SIInstrInfo::isSALU(I) || SIInstrInfo::isSOPP(I))
       return 0;
     // SALU must be unrelated to any hazard registers.
-    if (llvm::any_of(SGPRsUsed, [this, &I](Register Reg) {
-          return I.readsRegister(Reg, &TRI);
-        }))
+    if (any_of(SGPRsUsed,
+               [this, &I](Register Reg) { return I.readsRegister(Reg, &TRI); }))
       return 0;
     return 1;
   };
@@ -3239,14 +3240,14 @@ bool GCNHazardRecognizer::fixVALUReadSGPRHazard(MachineInstr *MI) {
       if (Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI)
         return Register(AMDGPU::VCC);
       // TODO: handle TTMP?
-      return Register(AMDGPU::SGPR0_SGPR1 + baseSGPRNumber(Reg, TRI));
+      return Register(AMDGPU::SGPR0_SGPR1 + sgprPairNumber(Reg, TRI));
     };
     auto SearchHazardFn = [this, hazardPair,
                            &SGPRsUsed](const MachineInstr &I) {
       if (!SIInstrInfo::isVALU(I))
         return false;
       // Check for any register reads.
-      return llvm::any_of(SGPRsUsed, [this, hazardPair, &I](Register Reg) {
+      return any_of(SGPRsUsed, [this, hazardPair, &I](Register Reg) {
         return I.readsRegister(hazardPair(Reg), &TRI);
       });
     };
