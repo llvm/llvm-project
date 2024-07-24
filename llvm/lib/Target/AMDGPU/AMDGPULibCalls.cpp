@@ -55,7 +55,7 @@ private:
   AssumptionCache *AC = nullptr;
   DominatorTree *DT = nullptr;
 
-  typedef llvm::AMDGPULibFunc FuncInfo;
+  using FuncInfo = llvm::AMDGPULibFunc;
 
   bool UnsafeFPMath = false;
 
