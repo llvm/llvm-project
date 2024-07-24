@@ -396,6 +396,9 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
   // i8-accesses are required to move remaining bytes.
   bool RequiresResidual = !LoopOpIsInt8;
 
+  Type *ResidualLoopOpType = Int8Type;
+  unsigned ResidualLoopOpSize = DL.getTypeStoreSize(ResidualLoopOpType);
+
   // Calculate the loop trip count and remaining bytes to copy after the loop.
   IntegerType *ILengthType = cast<IntegerType>(TypeOfCopyLen);
   ConstantInt *CILoopOpSize = ConstantInt::get(ILengthType, LoopOpSize);
@@ -467,6 +470,11 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
   Align PartSrcAlign(commonAlignment(SrcAlign, LoopOpSize));
   Align PartDstAlign(commonAlignment(DstAlign, LoopOpSize));
 
+  // Accesses in the residual loops do not share the same alignment as those in
+  // the main loops.
+  Align ResidualSrcAlign(commonAlignment(PartSrcAlign, ResidualLoopOpSize));
+  Align ResidualDstAlign(commonAlignment(PartDstAlign, ResidualLoopOpSize));
+
   // Copying backwards.
   {
     BasicBlock *MainLoopBB = BasicBlock::Create(
@@ -484,13 +492,15 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
       PHINode *ResidualLoopPhi = ResidualLoopBuilder.CreatePHI(ILengthType, 0);
       Value *ResidualIndex = ResidualLoopBuilder.CreateSub(
           ResidualLoopPhi, One, "bwd_residual_index");
-      Value *LoadGEP = ResidualLoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr,
-                                                             ResidualIndex);
-      Value *Element = ResidualLoopBuilder.CreateLoad(Int8Type, LoadGEP,
-                                                      SrcIsVolatile, "element");
-      Value *StoreGEP = ResidualLoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr,
-                                                              ResidualIndex);
-      ResidualLoopBuilder.CreateStore(Element, StoreGEP, DstIsVolatile);
+      Value *LoadGEP = ResidualLoopBuilder.CreateInBoundsGEP(
+          ResidualLoopOpType, SrcAddr, ResidualIndex);
+      Value *Element = ResidualLoopBuilder.CreateAlignedLoad(
+          ResidualLoopOpType, LoadGEP, ResidualSrcAlign, SrcIsVolatile,
+          "element");
+      Value *StoreGEP = ResidualLoopBuilder.CreateInBoundsGEP(
+          ResidualLoopOpType, DstAddr, ResidualIndex);
+      ResidualLoopBuilder.CreateAlignedStore(Element, StoreGEP,
+                                             ResidualDstAlign, DstIsVolatile);
 
       // After the residual loop, go to an intermediate block.
       BasicBlock *IntermediateBB = BasicBlock::Create(
@@ -587,13 +597,15 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
       IRBuilder<> ResidualLoopBuilder(ResidualLoopBB);
       PHINode *ResidualLoopPhi =
           ResidualLoopBuilder.CreatePHI(ILengthType, 0, "fwd_residual_index");
-      Value *LoadGEP = ResidualLoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr,
-                                                             ResidualLoopPhi);
-      Value *Element = ResidualLoopBuilder.CreateLoad(Int8Type, LoadGEP,
-                                                      SrcIsVolatile, "element");
-      Value *StoreGEP = ResidualLoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr,
-                                                              ResidualLoopPhi);
-      ResidualLoopBuilder.CreateStore(Element, StoreGEP, DstIsVolatile);
+      Value *LoadGEP = ResidualLoopBuilder.CreateInBoundsGEP(
+          ResidualLoopOpType, SrcAddr, ResidualLoopPhi);
+      Value *Element = ResidualLoopBuilder.CreateAlignedLoad(
+          ResidualLoopOpType, LoadGEP, ResidualSrcAlign, SrcIsVolatile,
+          "element");
+      Value *StoreGEP = ResidualLoopBuilder.CreateInBoundsGEP(
+          ResidualLoopOpType, DstAddr, ResidualLoopPhi);
+      ResidualLoopBuilder.CreateAlignedStore(Element, StoreGEP,
+                                             ResidualDstAlign, DstIsVolatile);
       Value *ResidualIndex =
           ResidualLoopBuilder.CreateAdd(ResidualLoopPhi, One);
       ResidualLoopBuilder.CreateCondBr(
