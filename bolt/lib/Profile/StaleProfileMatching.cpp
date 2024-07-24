@@ -338,30 +338,34 @@ private:
 
       BlockPseudoProbes.push_back(&PseudoProbe);
     }
+
+    auto LogPseudoProbeBlockMatchFail = [&](std::string Message) {
+      if (opts::Verbosity >= 3)
+        errs() << Message;
+    };
     // Returns nullptr if there is not a 1:1 mapping of the yaml block pseudo
     // probe and binary pseudo probe.
-    if (BlockPseudoProbes.size() == 0) {
-      if (opts::Verbosity >= 3)
-        errs() << "BOLT-WARNING: no pseudo probes in profile block\n";
+    size_t NBlockPseudoProbes = BlockPseudoProbes.size();
+    if (NBlockPseudoProbes == 0) {
+      LogPseudoProbeBlockMatchFail(
+        "BOLT-WARNING: no pseudo probes in profile block\n");
       return nullptr;
     }
-    if (BlockPseudoProbes.size() > 1) {
-      if (opts::Verbosity >= 3)
-        errs() << "BOLT-WARNING: more than 1 pseudo probes in profile block\n";
+    if (BNBlockPseudoProbes > 1) {
+      LogPseudoProbeBlockMatchFail(
+        "BOLT-WARNING: more than 1 pseudo probes in profile block\n");
       return nullptr;
     }
     uint64_t Index = BlockPseudoProbes[0]->Index;
     auto It = IndexToBBPseudoProbes.find(Index);
     if (It == IndexToBBPseudoProbes.end()) {
-      if (opts::Verbosity >= 3)
-        errs() << "BOLT-WARNING: no block pseudo probes found within binary "
-                  "block at index\n";
+      LogPseudoProbeBlockMatchFail(
+        "BOLT-WARNING: no block pseudo probes found within BB at index\n");
       return nullptr;
     }
     if (It->second.size() > 1) {
-      if (opts::Verbosity >= 3)
-        errs() << "BOLT-WARNING: more than 1 block pseudo probes in binary "
-                  "block at index\n";
+      LogPseudoProbeBlockMatchFail(
+        "BOLT-WARNING: more than 1 block pseudo probes in BB at index\n");
       return nullptr;
     }
     const MCDecodedPseudoProbe *BinaryPseudoProbe = It->second[0];
