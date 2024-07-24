@@ -5399,7 +5399,6 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
     const Expr *RetExpr = cast<ReturnStmt>(S)->getRetValue();
     FullExpressionRAII Scope(Info);
     if (RetExpr && RetExpr->isValueDependent()) {
-      EvaluateDependentExpr(RetExpr, Info);
       // We know we returned, but we don't know what the value is.
       return ESR_Failed;
     }

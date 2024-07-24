@@ -276,6 +276,8 @@ Bug Fixes to C++ Support
 - Clang now properly handles the order of attributes in `extern` blocks. (#GH101990).
 - Fixed an assertion failure by preventing null explicit object arguments from being deduced. (#GH102025).
 - Correctly check constraints of explicit instantiations of member functions. (#GH46029)
+- When performing partial ordering of function templates, clang now checks that
+  the deduction was consistent. Fixes (#GH18291).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

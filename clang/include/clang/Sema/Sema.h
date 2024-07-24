@@ -13273,6 +13273,10 @@ public:
   /// \param AllowDeducedTST Whether a DeducedTemplateSpecializationType is
   /// acceptable as the top level type of the result.
   ///
+  /// \param IsIncompleteSubstitution If provided, the pointee will be set
+  /// whenever substitution would perform a replacement with a null or
+  /// non-existent template argument.
+  ///
   /// \returns If the instantiation succeeds, the instantiated
   /// type. Otherwise, produces diagnostics and returns a NULL type.
   TypeSourceInfo *SubstType(TypeSourceInfo *T,
@@ -13282,7 +13286,8 @@ public:
 
   QualType SubstType(QualType T,
                      const MultiLevelTemplateArgumentList &TemplateArgs,
-                     SourceLocation Loc, DeclarationName Entity);
+                     SourceLocation Loc, DeclarationName Entity,
+                     bool *IsIncompleteSubstitution = nullptr);
 
   TypeSourceInfo *SubstType(TypeLoc TL,
                             const MultiLevelTemplateArgumentList &TemplateArgs,
