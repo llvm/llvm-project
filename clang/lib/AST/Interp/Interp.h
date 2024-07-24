@@ -2531,12 +2531,12 @@ inline bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
       if (!CheckInvoke(S, OpPC, ThisPtr))
         return false;
     }
+
+    if (S.checkingPotentialConstantExpression())
+      return false;
   }
 
   if (!CheckCallable(S, OpPC, Func))
-    return false;
-
-  if (Func->hasThisPointer() && S.checkingPotentialConstantExpression())
     return false;
 
   if (!CheckCallDepth(S, OpPC))
