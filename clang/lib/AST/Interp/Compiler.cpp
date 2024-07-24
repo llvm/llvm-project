@@ -89,6 +89,10 @@ bool InitLink::emit(Compiler<Emitter> *Ctx, const Expr *E) const {
     return Ctx->emitGetPtrLocal(Offset, E);
   case K_Decl:
     return Ctx->visitDeclRef(D, E);
+  case K_Elem:
+    if (!Ctx->emitConstUint32(Offset, E))
+      return false;
+    return Ctx->emitArrayElemPtrUint32(E);
   default:
     llvm_unreachable("Unhandled InitLink kind");
   }
@@ -1556,6 +1560,7 @@ bool Compiler<Emitter>::visitArrayElemInit(unsigned ElemIndex,
     return this->emitInitElem(*T, ElemIndex, Init);
   }
 
+  InitLinkScope<Emitter> ILS(this, InitLink::Elem(ElemIndex));
   // Advance the pointer currently on the stack to the given
   // dimension.
   if (!this->emitConstUint32(ElemIndex, Init))
