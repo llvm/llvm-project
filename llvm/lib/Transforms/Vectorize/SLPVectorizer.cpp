@@ -5892,6 +5892,8 @@ void BoUpSLP::buildExternalUses(
           }
         }
 
+        if (U && Scalar->hasNUsesOrMore(UsesLimit))
+          U = nullptr;
         int FoundLane = Entry->findLaneForValue(Scalar);
         LLVM_DEBUG(dbgs() << "SLP: Need to extract:" << *UserInst
                           << " from lane " << FoundLane << " from " << *Scalar
@@ -13940,6 +13942,7 @@ Value *BoUpSLP::vectorizeTree(
       if (!ScalarsWithNullptrUser.insert(Scalar).second)
         continue;
       assert((ExternallyUsedValues.count(Scalar) ||
+              Scalar->hasNUsesOrMore(UsesLimit) ||
               any_of(Scalar->users(),
                      [&](llvm::User *U) {
                        if (ExternalUsesAsGEPs.contains(U))
