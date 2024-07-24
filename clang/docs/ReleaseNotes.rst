@@ -76,6 +76,7 @@ C++20 Feature Support
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+- Removed the restriction to literal types in constexpr functions in C++23 mode.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -112,6 +113,9 @@ Removed Compiler Flags
 Attribute Changes in Clang
 --------------------------
 
+- Clang now disallows more than one ``__attribute__((ownership_returns(class, idx)))`` with
+  different class names attached to one function.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -125,6 +129,8 @@ Improvements to Clang's diagnostics
       template <typename> int i; // error: non-static data member 'i' cannot be declared as a template
      };
 
+- Clang now diagnoses dangling references to fields of temporary objects. Fixes #GH81589.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -134,6 +140,9 @@ Improvements to Coverage Mapping
 Bug Fixes in This Version
 -------------------------
 
+- Fixed the definition of ``ATOMIC_FLAG_INIT`` in ``<stdatomic.h>`` so it can
+  be used in C++.
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -142,6 +151,8 @@ Bug Fixes to Attribute Support
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fixed a crash when an expression with a dependent ``__typeof__`` type is used as the operand of a unary operator. (#GH97646)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -220,6 +231,11 @@ Static Analyzer
 
 New features
 ^^^^^^^^^^^^
+
+- MallocChecker now checks for ``ownership_returns(class, idx)`` and ``ownership_takes(class, idx)``
+  attributes with class names different from "malloc". Clang static analyzer now reports an error
+  if class of allocation and deallocation function mismatches.
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-mismatcheddeallocator-c-c>`__.
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^

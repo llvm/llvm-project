@@ -354,6 +354,9 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
 
   UseLocSection = !TT.isNVPTX();
 
+  // Always emit .debug_aranges for SCE tuning.
+  UseARangesSection = GenerateARangeSection || tuneForSCE();
+
   HasAppleExtensionAttributes = tuneForLLDB();
   HasHeterogeneousExtensionAttributes =
       Asm->MAI->supportsHeterogeneousDebuggingExtensions();
@@ -1493,7 +1496,7 @@ void DwarfDebug::endModule() {
   emitDebugInfo();
 
   // Emit info into a debug aranges section.
-  if (GenerateARangeSection)
+  if (UseARangesSection)
     emitDebugARanges();
 
   // Emit info into a debug ranges section.

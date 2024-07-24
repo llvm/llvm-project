@@ -125,3 +125,7 @@ problematic cmake in npsdb:
 breaks rocALUTION build
 72ff0499bba7 [ValueTracking] Consistently propagate `DemandedElts` is `isKnownNonZero`  
 --
+breaks openmp tests:
+3c8efd79283b [OpenMP] Ensure the actual kernel is annotated with launch bounds (#99927)  
+Ron
+---

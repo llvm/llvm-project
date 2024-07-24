@@ -76,8 +76,11 @@ static uint32_t getLineFromLoc(mlir::Location loc) {
 }
 
 bool debugInfoIsAlreadySet(mlir::Location loc) {
-  if (mlir::isa<mlir::FusedLoc>(loc))
+  if (mlir::isa<mlir::FusedLoc>(loc)) {
+    if (loc->findInstanceOf<mlir::FusedLocWith<fir::LocationKindAttr>>())
+      return false;
     return true;
+  }
   return false;
 }
 
@@ -126,7 +129,7 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
   auto localVarAttr = mlir::LLVM::DILocalVariableAttr::get(
       context, scopeAttr, mlir::StringAttr::get(context, result.second.name),
       fileAttr, getLineFromLoc(declOp.getLoc()), argNo, /* alignInBits*/ 0,
-      tyAttr);
+      tyAttr, mlir::LLVM::DIFlags::Zero);
   declOp->setLoc(builder.getFusedLoc({declOp->getLoc()}, localVarAttr));
 }
 

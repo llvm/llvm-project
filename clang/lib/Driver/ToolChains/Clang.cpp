@@ -822,10 +822,6 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
       Args.hasArg(options::OPT_coverage))
     FProfileDir = Args.getLastArg(options::OPT_fprofile_dir);
 
-  // TODO: Don't claim -c/-S to warn about -fsyntax-only -c/-S, -E -c/-S,
-  // like we warn about -fsyntax-only -E.
-  (void)(Args.hasArg(options::OPT_c) || Args.hasArg(options::OPT_S));
-
   // Put the .gcno and .gcda files (if needed) next to the primary output file,
   // or fall back to a file in the current directory for `clang -c --coverage
   // d/a.c` in the absence of -o.
@@ -2924,6 +2920,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   // If one wasn't given by the user, don't pass it here.
   StringRef FPContract;
   StringRef LastSeenFfpContractOption;
+  StringRef LastFpContractOverrideOption;
   bool SeenUnsafeMathModeOption = false;
   if (!JA.isDeviceOffloading(Action::OFK_Cuda) &&
       !JA.isOffloading(Action::OFK_HIP))
@@ -2963,6 +2960,27 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
               : ComplexArithmeticStr(LangOptions::ComplexRangeKind::CX_Basic));
     Range = LangOptions::ComplexRangeKind::CX_Basic;
     SeenUnsafeMathModeOption = true;
+  };
+
+  // Lambda to consolidate common handling for fp-contract
+  auto restoreFPContractState = [&]() {
+    // CUDA and HIP don't rely on the frontend to pass an ffp-contract option.
+    // For other targets, if the state has been changed by one of the
+    // unsafe-math umbrella options a subsequent -fno-fast-math or
+    // -fno-unsafe-math-optimizations option reverts to the last value seen for
+    // the -ffp-contract option or "on" if we have not seen the -ffp-contract
+    // option. If we have not seen an unsafe-math option or -ffp-contract,
+    // we leave the FPContract state unchanged.
+    if (!JA.isDeviceOffloading(Action::OFK_Cuda) &&
+        !JA.isOffloading(Action::OFK_HIP)) {
+      if (LastSeenFfpContractOption != "")
+        FPContract = LastSeenFfpContractOption;
+      else if (SeenUnsafeMathModeOption)
+        FPContract = "on";
+    }
+    // In this case, we're reverting to the last explicit fp-contract option
+    // or the platform default
+    LastFpContractOverrideOption = "";
   };
 
   if (const Arg *A = Args.getLastArg(options::OPT_flimited_precision_EQ)) {
@@ -3066,7 +3084,6 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       AssociativeMath = false;
       ReciprocalMath = false;
       SignedZeros = true;
-      FPContract = "on";
 
       StringRef Val = A->getValue();
       if (OFastEnabled && Val != "fast") {
@@ -3083,14 +3100,18 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       if (Val == "fast") {
         FPModel = Val;
         applyFastMath();
+        // applyFastMath sets fp-contract="fast"
+        LastFpContractOverrideOption = "-ffp-model=fast";
       } else if (Val == "precise") {
         FPModel = Val;
         FPContract = "on";
+        LastFpContractOverrideOption = "-ffp-model=precise";
       } else if (Val == "strict") {
         StrictFPModel = true;
         FPExceptionBehavior = "strict";
         FPModel = Val;
         FPContract = "off";
+        LastFpContractOverrideOption = "-ffp-model=strict";
         TrappingMath = true;
         RoundingFPMath = true;
       } else
@@ -3169,8 +3190,15 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       StringRef Val = A->getValue();
       if (Val == "fast" || Val == "on" || Val == "off" ||
           Val == "fast-honor-pragmas") {
+        if (Val != FPContract && LastFpContractOverrideOption != "") {
+          D.Diag(clang::diag::warn_drv_overriding_option)
+              << LastFpContractOverrideOption
+              << Args.MakeArgString("-ffp-contract=" + Val);
+        }
+
         FPContract = Val;
         LastSeenFfpContractOption = Val;
+        LastFpContractOverrideOption = "";
       } else
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getSpelling() << Val;
@@ -3254,6 +3282,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       TrappingMath = false;
       FPExceptionBehavior = "";
       FPContract = "fast";
+      LastFpContractOverrideOption = "-funsafe-math-optimizations";
       SeenUnsafeMathModeOption = true;
       break;
     case options::OPT_fno_unsafe_math_optimizations:
@@ -3261,14 +3290,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       ReciprocalMath = false;
       SignedZeros = true;
       ApproxFunc = false;
-
-      if (!JA.isDeviceOffloading(Action::OFK_Cuda) &&
-          !JA.isOffloading(Action::OFK_HIP)) {
-        if (LastSeenFfpContractOption != "") {
-          FPContract = LastSeenFfpContractOption;
-        } else if (SeenUnsafeMathModeOption)
-          FPContract = "on";
-      }
+      restoreFPContractState();
       break;
 
     case options::OPT_Ofast:
@@ -3276,10 +3298,13 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       if (!OFastEnabled)
         continue;
       [[fallthrough]];
-    case options::OPT_ffast_math: {
+    case options::OPT_ffast_math:
       applyFastMath();
+      if (A->getOption().getID() == options::OPT_Ofast)
+        LastFpContractOverrideOption = "-Ofast";
+      else
+        LastFpContractOverrideOption = "-ffast-math";
       break;
-    }
     case options::OPT_fno_fast_math:
       HonorINFs = true;
       HonorNaNs = true;
@@ -3291,16 +3316,11 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       ReciprocalMath = false;
       ApproxFunc = false;
       SignedZeros = true;
-      // -fno_fast_math restores default fpcontract handling
-      if (!JA.isDeviceOffloading(Action::OFK_Cuda) &&
-          !JA.isOffloading(Action::OFK_HIP)) {
-        if (LastSeenFfpContractOption != "") {
-          FPContract = LastSeenFfpContractOption;
-        } else if (SeenUnsafeMathModeOption)
-          FPContract = "on";
-      }
+      restoreFPContractState();
+      LastFpContractOverrideOption = "";
       break;
-    }
+    } // End switch (A->getOption().getID())
+
     // The StrictFPModel local variable is needed to report warnings
     // in the way we intend. If -ffp-model=strict has been used, we
     // want to report a warning for the next option encountered that
@@ -3318,12 +3338,17 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       else {
         StrictFPModel = false;
         FPModel = "";
+        // The warning for -ffp-contract would have been reported by the
+        // OPT_ffp_contract_EQ handler above. A special check here is needed
+        // to avoid duplicating the warning.
         auto RHS = (A->getNumValues() == 0)
                        ? A->getSpelling()
                        : Args.MakeArgString(A->getSpelling() + A->getValue());
-        if (RHS != "-ffp-model=strict")
-          D.Diag(clang::diag::warn_drv_overriding_option)
-              << "-ffp-model=strict" << RHS;
+        if (A->getSpelling() != "-ffp-contract=") {
+          if (RHS != "-ffp-model=strict")
+            D.Diag(clang::diag::warn_drv_overriding_option)
+                << "-ffp-model=strict" << RHS;
+        }
       }
     }
 
@@ -3405,21 +3430,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   // individual features enabled by -ffast-math instead of the option itself as
   // that's consistent with gcc's behaviour.
   if (!HonorINFs && !HonorNaNs && !MathErrno && AssociativeMath && ApproxFunc &&
-      ReciprocalMath && !SignedZeros && !TrappingMath && !RoundingFPMath) {
+      ReciprocalMath && !SignedZeros && !TrappingMath && !RoundingFPMath)
     CmdArgs.push_back("-ffast-math");
-    if (FPModel == "fast") {
-      if (FPContract == "fast")
-        // All set, do nothing.
-        ;
-      else if (FPContract.empty())
-        // Enable -ffp-contract=fast
-        CmdArgs.push_back(Args.MakeArgString("-ffp-contract=fast"));
-      else
-        D.Diag(clang::diag::warn_drv_overriding_option)
-            << "-ffp-model=fast"
-            << Args.MakeArgString("-ffp-contract=" + FPContract);
-    }
-  }
 
   // Handle __FINITE_MATH_ONLY__ similarly.
   if (!HonorINFs && !HonorNaNs)
@@ -4017,6 +4029,9 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
   if (Args.hasFlag(options::OPT_fmodules_strict_decluse,
                    options::OPT_fno_modules_strict_decluse, false))
     CmdArgs.push_back("-fmodules-strict-decluse");
+
+  Args.addOptOutFlag(CmdArgs, options::OPT_fmodulemap_allow_subdirectory_search,
+                     options::OPT_fno_modulemap_allow_subdirectory_search);
 
   // -fno-implicit-modules turns off implicitly compiling modules on demand.
   bool ImplicitModules = false;
@@ -4776,11 +4791,8 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
 
   // -gdwarf-aranges turns on the emission of the aranges section in the
   // backend.
-  // Always enabled for SCE tuning.
-  bool NeedAranges = DebuggerTuning == llvm::DebuggerKind::SCE;
-  if (const Arg *A = Args.getLastArg(options::OPT_gdwarf_aranges))
-    NeedAranges = checkDebugInfoOption(A, Args, D, TC) || NeedAranges;
-  if (NeedAranges) {
+  if (const Arg *A = Args.getLastArg(options::OPT_gdwarf_aranges);
+      A && checkDebugInfoOption(A, Args, D, TC)) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-generate-arange-section");
   }
@@ -9613,6 +9625,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
     A->claim();
   }
+
+  // If we disable the GPU C library support it needs to be forwarded to the
+  // link job.
+  if (!Args.hasFlag(options::OPT_gpulibc, options::OPT_nogpulibc, true))
+    CmdArgs.push_back("--device-linker=-nolibc");
 
   // Add the linker arguments to be forwarded by the wrapper.
   CmdArgs.push_back(Args.MakeArgString(Twine("--linker-path=") +

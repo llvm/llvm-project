@@ -228,8 +228,8 @@ DebugTranslation::translateImpl(DILocalVariableAttr attr) {
   return llvm::DILocalVariable::get(
       llvmCtx, translate(attr.getScope()), getMDStringOrNull(attr.getName()),
       translate(attr.getFile()), attr.getLine(), translate(attr.getType()),
-      attr.getArg(),
-      /*Flags=*/llvm::DINode::FlagZero, llvm::dwarf::DW_MSPACE_LLVM_none,
+      attr.getArg(), static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
+      llvm::dwarf::DW_MSPACE_LLVM_none,
       attr.getAlignInBits(),
       /*Annotations=*/nullptr);
 }

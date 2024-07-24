@@ -504,6 +504,42 @@ define i64 @rotr_64_mask_or_128_or_64(i64 %x, i64 %y) nounwind {
   ret i64 %f
 }
 
+define signext i32 @rotr_64_trunc_32(i64 %x, i64 %y) nounwind {
+; LA32-LABEL: rotr_64_trunc_32:
+; LA32:       # %bb.0:
+; LA32-NEXT:    srl.w $a3, $a0, $a2
+; LA32-NEXT:    xori $a4, $a2, 31
+; LA32-NEXT:    slli.w $a5, $a1, 1
+; LA32-NEXT:    sll.w $a4, $a5, $a4
+; LA32-NEXT:    or $a3, $a3, $a4
+; LA32-NEXT:    addi.w $a4, $a2, -32
+; LA32-NEXT:    slti $a5, $a4, 0
+; LA32-NEXT:    maskeqz $a3, $a3, $a5
+; LA32-NEXT:    srl.w $a1, $a1, $a4
+; LA32-NEXT:    masknez $a1, $a1, $a5
+; LA32-NEXT:    or $a1, $a3, $a1
+; LA32-NEXT:    sub.w $a3, $zero, $a2
+; LA32-NEXT:    sll.w $a0, $a0, $a3
+; LA32-NEXT:    ori $a3, $zero, 32
+; LA32-NEXT:    sub.w $a2, $a3, $a2
+; LA32-NEXT:    srai.w $a2, $a2, 31
+; LA32-NEXT:    and $a0, $a2, $a0
+; LA32-NEXT:    or $a0, $a1, $a0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: rotr_64_trunc_32:
+; LA64:       # %bb.0:
+; LA64-NEXT:    rotr.d $a0, $a0, $a1
+; LA64-NEXT:    addi.w $a0, $a0, 0
+; LA64-NEXT:    ret
+  %z = sub i64 64, %y
+  %b = lshr i64 %x, %y
+  %c = shl i64 %x, %z
+  %d = or i64 %b, %c
+  %e = trunc i64 %d to i32
+  ret i32 %e
+}
+
 define signext i32 @rotri_i32(i32 signext %a) nounwind {
 ; LA32-LABEL: rotri_i32:
 ; LA32:       # %bb.0:
