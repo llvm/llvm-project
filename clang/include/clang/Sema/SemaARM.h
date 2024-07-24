@@ -44,8 +44,8 @@ public:
                                     unsigned MaxWidth);
   bool CheckNeonBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                     CallExpr *TheCall);
-  bool ParseNeonImmChecks(CallExpr *TheCall, 
-                          SmallVector<std::tuple<int, int, int>, 2> &ImmChecks, 
+  bool ParseNeonImmChecks(CallExpr *TheCall,
+                          SmallVector<std::tuple<int, int, int>, 2> &ImmChecks,
                           int OverloadType);
   bool CheckMVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);

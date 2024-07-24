@@ -370,10 +370,13 @@ class Intrinsic {
 
 public:
   Intrinsic(Record *R, StringRef Name, StringRef Proto, TypeSpec OutTS,
-            TypeSpec InTS, ArrayRef<std::tuple<int, int, int>> ImmChecks, ClassKind CK, ListInit *Body, NeonEmitter &Emitter,
-            StringRef ArchGuard, StringRef TargetGuard, bool IsUnavailable, bool BigEndianSafe)
-      : R(R), Name(Name.str()), OutTS(OutTS), InTS(InTS), ImmChecks(ImmChecks), CK(CK), Body(Body),
-        ArchGuard(ArchGuard.str()), TargetGuard(TargetGuard.str()), IsUnavailable(IsUnavailable),
+            TypeSpec InTS, ArrayRef<std::tuple<int, int, int>> ImmChecks,
+            ClassKind CK, ListInit *Body, NeonEmitter &Emitter,
+            StringRef ArchGuard, StringRef TargetGuard, bool IsUnavailable,
+            bool BigEndianSafe)
+      : R(R), Name(Name.str()), OutTS(OutTS), InTS(InTS), ImmChecks(ImmChecks),
+        CK(CK), Body(Body), ArchGuard(ArchGuard.str()),
+        TargetGuard(TargetGuard.str()), IsUnavailable(IsUnavailable),
         BigEndianSafe(BigEndianSafe), PolymorphicKeyType(0), NeededEarly(false),
         UseMacro(false), BaseType(OutTS, "."), InBaseType(InTS, "."),
         Emitter(Emitter) {
@@ -416,14 +419,14 @@ public:
   /// Get the architectural guard string (#ifdef).
   std::string getArchGuard() const { return ArchGuard; }
   std::string getTargetGuard() const { return TargetGuard; }
-  ArrayRef<std::tuple<int, int, int>> getImmChecks() const {return ImmChecks; }
+  ArrayRef<std::tuple<int, int, int>> getImmChecks() const { return ImmChecks; }
   /// Get the non-mangled name.
   std::string getName() const { return Name; }
 
   /// Return true if the intrinsic takes an immediate operand.
   bool hasImmediate() const {
     return llvm::any_of(Types, [](const Type &T) { return T.isImmediate(); });
-    //return !ImmChecks.empty();
+    // return !ImmChecks.empty();
   }
 
   // Return if the supplied argument is an immediate
@@ -558,6 +561,7 @@ class NeonEmitter {
   void genNeonImmCheckTypes(raw_ostream &OS);
   void genIntrinsicRangeCheckCode(raw_ostream &OS,
                                   SmallVectorImpl<Intrinsic *> &Defs);
+
 public:
   /// Called by Intrinsic - this attempts to get an intrinsic that takes
   /// the given types as arguments.
@@ -1032,7 +1036,7 @@ std::string Intrinsic::getBuiltinTypeStr() {
     if (LocalCK == ClassI && T.isInteger())
       T.makeSigned();
 
-    if(isArgImmediate(I))
+    if (isArgImmediate(I))
       T.makeImmediate(32);
 
     S += T.builtin_str();
@@ -1954,12 +1958,13 @@ void NeonEmitter::createIntrinsic(Record *R,
   bool BigEndianSafe  = R->getValueAsBit("BigEndianSafe");
   std::string ArchGuard = std::string(R->getValueAsString("ArchGuard"));
   std::string TargetGuard = std::string(R->getValueAsString("TargetGuard"));
-  std::vector<Record*> ImmCheckList = R->getValueAsListOfDefs("ImmChecks");
+  std::vector<Record *> ImmCheckList = R->getValueAsListOfDefs("ImmChecks");
 
   SmallVector<std::tuple<int, int, int>, 2> ImmChecks;
-  for(const auto *R: ImmCheckList) {
+  for (const auto *R : ImmCheckList) {
 
-    ImmChecks.push_back(std::make_tuple(R->getValueAsInt("Arg"), 
+    ImmChecks.push_back(
+        std::make_tuple(R->getValueAsInt("Arg"),
                         R->getValueAsDef("Kind")->getValueAsInt("Value"),
                         R->getValueAsInt("EltSizeArg")));
   }
@@ -2004,8 +2009,9 @@ void NeonEmitter::createIntrinsic(Record *R,
   auto &Entry = IntrinsicMap[Name];
 
   for (auto &I : NewTypeSpecs) {
-    Entry.emplace_back(R, Name, Proto, I.first, I.second, ImmChecks, CK, Body, *this,
-                       ArchGuard, TargetGuard, IsUnavailable, BigEndianSafe);
+    Entry.emplace_back(R, Name, Proto, I.first, I.second, ImmChecks, CK, Body,
+                       *this, ArchGuard, TargetGuard, IsUnavailable,
+                       BigEndianSafe);
     Out.push_back(&Entry.back());
   }
 
@@ -2158,34 +2164,38 @@ void NeonEmitter::genNeonImmCheckTypes(raw_ostream &OS) {
   OS << "#ifdef GET_NEON_IMMCHECKTYPES\n";
 
   for (auto *RV : Records.getAllDerivedDefinitions("ImmCheckType")) {
-    OS << "  " << RV->getNameInitAsString() << " = " << RV->getValueAsInt("Value") << ",\n";
+    OS << "  " << RV->getNameInitAsString() << " = "
+       << RV->getValueAsInt("Value") << ",\n";
   }
 
   OS << "#endif\n\n";
 }
 
-void NeonEmitter::genIntrinsicRangeCheckCode(raw_ostream &OS, SmallVectorImpl<Intrinsic *> &Defs) {
+void NeonEmitter::genIntrinsicRangeCheckCode(
+    raw_ostream &OS, SmallVectorImpl<Intrinsic *> &Defs) {
   OS << "#ifdef GET_NEON_IMMEDIATE_CHECK\n";
   int EltType;
   // Ensure these are only emitted once.
   std::set<std::string> Emitted;
 
   for (auto &Def : Defs) {
-    if (Emitted.find(Def->getMangledName()) != Emitted.end() || !Def->hasImmediate())
+    if (Emitted.find(Def->getMangledName()) != Emitted.end() ||
+        !Def->hasImmediate())
       continue;
 
     // If the Def has a body (operation DAGs), it is not a __builtin_neon_
-    if(Def->hasBody()) continue;
+    if (Def->hasBody())
+      continue;
 
     OS << "case NEON::BI__builtin_neon_" << Def->getMangledName() << ":\n";
-    
-    for(const auto &Check: Def->getImmChecks()){
-      EltType = std::get<2>(Check);   // elt type argument
-      if(EltType >= 0)
+
+    for (const auto &Check : Def->getImmChecks()) {
+      EltType = std::get<2>(Check); // elt type argument
+      if (EltType >= 0)
         EltType = Def->getParamType(EltType).getNeonEnum();
 
-      OS << "  ImmChecks.push_back(std::make_tuple(" << std::get<0>(Check) << 
-                ", " << std::get<1>(Check) <<  ", " << EltType << ")); \n";
+      OS << "  ImmChecks.push_back(std::make_tuple(" << std::get<0>(Check)
+         << ", " << std::get<1>(Check) << ", " << EltType << ")); \n";
       OS << "  break;\n";
     }
     Emitted.insert(Def->getMangledName());
