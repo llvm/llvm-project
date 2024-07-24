@@ -183,10 +183,27 @@ public:
   std::vector<std::pair<MachineInstr*, unsigned> > PHINodesToUpdate;
   unsigned OrigNumPHINodesToUpdate;
 
+  /// \name Exception Handling
+  /// \{
+
   /// If the current MBB is a landing pad, the exception pointer and exception
   /// selector registers are copied into these virtual registers by
   /// SelectionDAGISel::PrepareEHLandingPad().
   unsigned ExceptionPointerVirtReg, ExceptionSelectorVirtReg;
+
+  /// The current call site index being processed, if any. 0 if none.
+  unsigned CurCallSite = 0;
+  // TODO: Ideally, what we'd like is to have a switch that allows emitting
+  // synchronous (precise at call-sites only) CFA into .eh_frame. However,
+  // even under this switch, we'd like .debug_frame to be precise when using
+  // -g. At this moment, there's no way to specify that some CFI directives
+  // go into .eh_frame only, while others go into .debug_frame only.
+
+  /// Set the call site currently being processed.
+  void setCurrentCallSite(unsigned Site) { CurCallSite = Site; }
+
+  /// Get the call site currently being processed, if any. Return zero if none.
+  unsigned getCurrentCallSite() { return CurCallSite; }
 
   /// Collection of dbg.declare instructions handled after argument
   /// lowering and before ISel proper.
