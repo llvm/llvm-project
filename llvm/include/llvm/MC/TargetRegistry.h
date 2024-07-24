@@ -206,8 +206,7 @@ public:
   using COFFStreamerCtorTy =
       MCStreamer *(*)(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
                       std::unique_ptr<MCObjectWriter> &&OW,
-                      std::unique_ptr<MCCodeEmitter> &&Emitter,
-                      bool IncrementalLinkerCompatible);
+                      std::unique_ptr<MCCodeEmitter> &&Emitter);
   using WasmStreamerCtorTy =
       MCStreamer *(*)(const Triple &T, MCContext &Ctx,
                       std::unique_ptr<MCAsmBackend> &&TAB,
@@ -555,13 +554,11 @@ public:
   /// \param TAB The target assembler backend object. Takes ownership.
   /// \param OW The stream object.
   /// \param Emitter The target independent assembler object.Takes ownership.
-  /// \param RelaxAll Relax all fixups?
   MCStreamer *createMCObjectStreamer(const Triple &T, MCContext &Ctx,
                                      std::unique_ptr<MCAsmBackend> &&TAB,
                                      std::unique_ptr<MCObjectWriter> &&OW,
                                      std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                     const MCSubtargetInfo &STI, bool,
-                                     bool IncrementalLinkerCompatible,
+                                     const MCSubtargetInfo &STI, bool, bool,
                                      bool DWARFMustBeAtTheEnd) const {
     MCStreamer *S = nullptr;
     switch (T.getObjectFormat()) {
@@ -571,7 +568,7 @@ public:
       assert((T.isOSWindows() || T.isUEFI()) &&
              "only Windows and UEFI COFF are supported");
       S = COFFStreamerCtorFn(Ctx, std::move(TAB), std::move(OW),
-                             std::move(Emitter), IncrementalLinkerCompatible);
+                             std::move(Emitter));
       break;
     case Triple::MachO:
       if (MachOStreamerCtorFn)
