@@ -177,6 +177,7 @@ syn keyword llvmKeyword
       \ speculative_load_hardening
       \ spir_func
       \ spir_kernel
+      \ splat
       \ sret
       \ ssp
       \ sspreq
