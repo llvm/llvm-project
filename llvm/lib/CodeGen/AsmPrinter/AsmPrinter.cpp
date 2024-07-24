@@ -1277,7 +1277,6 @@ AsmPrinter::getFunctionCFISectionType(const Function &F) const {
   if (MAI->usesCFIWithoutEH() && F.hasUWTable())
     return CFISection::EH;
 
-  assert(MMI != nullptr && "Invalid machine module info");
   if (hasDebugInfo() || TM.Options.ForceDwarfFrameSection)
     return CFISection::Debug;
 
@@ -1670,9 +1669,9 @@ void AsmPrinter::emitPCSections(const MachineFunction &MF) {
 
 /// Returns true if function begin and end labels should be emitted.
 static bool needFuncLabels(const MachineFunction &MF, const AsmPrinter &Asm) {
-  if (!MF.getLandingPads().empty() || MF.hasEHFunclets() ||
-      MF.getFunction().hasMetadata(LLVMContext::MD_pcsections) ||
-      Asm.hasDebugInfo())
+  if (Asm.hasDebugInfo() || !MF.getLandingPads().empty() ||
+      MF.hasEHFunclets() ||
+      MF.getFunction().hasMetadata(LLVMContext::MD_pcsections))
     return true;
 
   // We might emit an EH table that uses function begin and end labels even if

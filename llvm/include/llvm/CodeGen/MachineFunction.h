@@ -395,8 +395,8 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
 
   /// Clear all the members of this MachineFunction, but the ones used to
   /// initialize again the MachineFunction.  More specifically, this deallocates
-  /// all the dynamically allocated objects and get rid of all the XXXInfo data
-  /// structure, but keep unchanged the references to Fn, Target, and
+  /// all the dynamically allocated objects and get rids of all the XXXInfo data
+  /// structure, but keeps unchanged the references to Fn, Target, and
   /// FunctionNumber.
   void clear();
   /// Allocate and initialize the different members.
