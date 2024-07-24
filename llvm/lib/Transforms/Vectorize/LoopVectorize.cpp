@@ -4374,7 +4374,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
 
   // Group the remarks per instruction, keeping the instruction order from
   // InvalidCosts.
-  std::map<VPRecipeBase *, unsigned> Numbering;
+  DenseMap<VPRecipeBase *, unsigned> Numbering;
   unsigned I = 0;
   for (auto &Pair : InvalidCosts)
     if (!Numbering.count(Pair.first))
@@ -7008,7 +7008,6 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   // cost-model and will be retired once the VPlan-based cost-model is
   // stabilized.
   VectorizationFactor VF = selectVectorizationFactor();
-
   assert((VF.Width.isScalar() || VF.ScalarCost > 0) && "when vectorizing, the scalar cost must be non-zero.");
   if (!hasPlanWithVF(VF.Width)) {
     LLVM_DEBUG(dbgs() << "LV: No VPlan could be built for " << VF.Width
@@ -7220,7 +7219,6 @@ VPlan &LoopVectorizationPlanner::getBestPlan() const {
       }
     }
   }
-
   BestPlan->setVF(BestFactor.Width);
   return *BestPlan;
 }
@@ -9890,7 +9888,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       hasBranchWeightMD(*L->getLoopLatch()->getTerminator());
   GeneratedRTChecks Checks(*PSE.getSE(), DT, LI, TTI,
                            F->getDataLayout(), AddBranchWeights);
-
   if (MaybeVF) {
     VF = *MaybeVF;
     // Select the interleave count.
