@@ -16,7 +16,6 @@
 namespace mlir {
 
 class ConversionTarget;
-struct SCFRotateWhileLoopPassOptions;
 class TypeConverter;
 
 namespace scf {
