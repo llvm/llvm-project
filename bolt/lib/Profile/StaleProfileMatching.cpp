@@ -267,11 +267,10 @@ private:
   using HashBlockPairType = std::pair<BlendedBlockHash, FlowBlock *>;
   std::unordered_map<uint16_t, std::vector<HashBlockPairType>> OpHashToBlocks;
   std::unordered_map<uint64_t, std::vector<HashBlockPairType>> CallHashToBlocks;
-  std::unordered_map<uint64_t, std::vector<const MCDecodedPseudoProbe *>>
+  DenseMap<uint64_t, std::vector<const MCDecodedPseudoProbe *>>
       IndexToBBPseudoProbes;
-  std::unordered_map<const MCDecodedPseudoProbe *, FlowBlock *>
-      BBPseudoProbeToBlock;
-  std::unordered_set<uint64_t> MatchedWithPseudoProbes;
+  DenseMap<const MCDecodedPseudoProbe *, FlowBlock *> BBPseudoProbeToBlock;
+  DenseSet<uint64_t> MatchedWithPseudoProbes;
   const uint64_t YamlBFGUID{0};
   uint64_t MatchedWithOpcodes{0};
 
@@ -327,7 +326,7 @@ private:
     // Searches for the pseudo probe attached to the matched function's block,
     // ignoring pseudo probes attached to function calls and inlined functions'
     // blocks.
-    std::vector<const yaml::bolt::PseudoProbeInfo *> BlockPseudoProbes;
+    SmallVector<const yaml::bolt::PseudoProbeInfo *> BlockPseudoProbes;
     for (const auto &PseudoProbe : PseudoProbes) {
       // Ensures that pseudo probe information belongs to the appropriate
       // function and not an inlined function.
