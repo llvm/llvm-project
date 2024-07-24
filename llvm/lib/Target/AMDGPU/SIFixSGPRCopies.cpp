@@ -613,10 +613,8 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
   TII = ST.getInstrInfo();
   MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
-  for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
-                                                  BI != BE; ++BI) {
-    MachineBasicBlock *MBB = &*BI;
-    for (MachineBasicBlock::iterator I = MBB->begin(), E = MBB->end(); I != E;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
          ++I) {
       MachineInstr &MI = *I;
 
@@ -665,7 +663,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
               Register NewDst = MRI->createVirtualRegister(DestRC);
               MachineBasicBlock *BlockToInsertCopy =
                   MI.isPHI() ? MI.getOperand(MO.getOperandNo() + 1).getMBB()
-                             : MBB;
+                             : &MBB;
               MachineBasicBlock::iterator PointToInsertCopy =
                   MI.isPHI() ? BlockToInsertCopy->getFirstInstrTerminator() : I;
 
@@ -1095,10 +1093,8 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
 
 void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
   bool IsWave32 = MF.getSubtarget<GCNSubtarget>().isWave32();
-  for (MachineFunction::iterator BI = MF.begin(), BE = MF.end(); BI != BE;
-       ++BI) {
-    MachineBasicBlock *MBB = &*BI;
-    for (MachineBasicBlock::iterator I = MBB->begin(), E = MBB->end(); I != E;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
          ++I) {
       MachineInstr &MI = *I;
       // May already have been lowered.
