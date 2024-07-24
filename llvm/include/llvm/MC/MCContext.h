@@ -468,6 +468,10 @@ public:
   /// true, behaves like getOrCreateSymbol, prefixed with PrivateLabelPrefix.
   MCSymbol *createBlockSymbol(const Twine &Name, bool AlwaysEmit = false);
 
+  /// Create a local, non-temporary symbol like an ELF mapping symbol. Calling
+  /// the function with the same name will generate new, unique instances.
+  MCSymbol *createLocalSymbol(StringRef Name);
+
   /// Create the definition of a directional local symbol for numbered label
   /// (used for "1:" definitions).
   MCSymbol *createDirectionalLocalSymbol(unsigned LocalLabelVal);
@@ -643,7 +647,7 @@ public:
   MCSectionXCOFF *getXCOFFSection(
       StringRef Section, SectionKind K,
       std::optional<XCOFF::CsectProperties> CsectProp = std::nullopt,
-      bool MultiSymbolsAllowed = false, const char *BeginSymName = nullptr,
+      bool MultiSymbolsAllowed = false,
       std::optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSubtypeFlags =
           std::nullopt);
 

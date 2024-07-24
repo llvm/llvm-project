@@ -11501,28 +11501,28 @@ static SDValue foldBoolSelectToLogic(SDNode *N, const SDLoc &DL,
   if (VT != Cond.getValueType() || VT.getScalarSizeInBits() != 1)
     return SDValue();
 
-  // select Cond, Cond, F --> or Cond, F
-  // select Cond, 1, F    --> or Cond, F
+  // select Cond, Cond, F --> or Cond, freeze(F)
+  // select Cond, 1, F    --> or Cond, freeze(F)
   if (Cond == T || isOneOrOneSplat(T, /* AllowUndefs */ true))
-    return matcher.getNode(ISD::OR, DL, VT, Cond, F);
+    return matcher.getNode(ISD::OR, DL, VT, Cond, DAG.getFreeze(F));
 
-  // select Cond, T, Cond --> and Cond, T
-  // select Cond, T, 0    --> and Cond, T
+  // select Cond, T, Cond --> and Cond, freeze(T)
+  // select Cond, T, 0    --> and Cond, freeze(T)
   if (Cond == F || isNullOrNullSplat(F, /* AllowUndefs */ true))
-    return matcher.getNode(ISD::AND, DL, VT, Cond, T);
+    return matcher.getNode(ISD::AND, DL, VT, Cond, DAG.getFreeze(T));
 
-  // select Cond, T, 1 --> or (not Cond), T
+  // select Cond, T, 1 --> or (not Cond), freeze(T)
   if (isOneOrOneSplat(F, /* AllowUndefs */ true)) {
     SDValue NotCond =
         matcher.getNode(ISD::XOR, DL, VT, Cond, DAG.getAllOnesConstant(DL, VT));
-    return matcher.getNode(ISD::OR, DL, VT, NotCond, T);
+    return matcher.getNode(ISD::OR, DL, VT, NotCond, DAG.getFreeze(T));
   }
 
-  // select Cond, 0, F --> and (not Cond), F
+  // select Cond, 0, F --> and (not Cond), freeze(F)
   if (isNullOrNullSplat(T, /* AllowUndefs */ true)) {
     SDValue NotCond =
         matcher.getNode(ISD::XOR, DL, VT, Cond, DAG.getAllOnesConstant(DL, VT));
-    return matcher.getNode(ISD::AND, DL, VT, NotCond, F);
+    return matcher.getNode(ISD::AND, DL, VT, NotCond, DAG.getFreeze(F));
   }
 
   return SDValue();
@@ -11550,37 +11550,37 @@ static SDValue foldVSelectToSignBitSplatMask(SDNode *N, SelectionDAG &DAG) {
   else
     return SDValue();
 
-  // (Cond0 s< 0) ? N1 : 0 --> (Cond0 s>> BW-1) & N1
+  // (Cond0 s< 0) ? N1 : 0 --> (Cond0 s>> BW-1) & freeze(N1)
   if (isNullOrNullSplat(N2)) {
     SDLoc DL(N);
     SDValue ShiftAmt = DAG.getConstant(VT.getScalarSizeInBits() - 1, DL, VT);
     SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, Cond0, ShiftAmt);
-    return DAG.getNode(ISD::AND, DL, VT, Sra, N1);
+    return DAG.getNode(ISD::AND, DL, VT, Sra, DAG.getFreeze(N1));
   }
 
-  // (Cond0 s< 0) ? -1 : N2 --> (Cond0 s>> BW-1) | N2
+  // (Cond0 s< 0) ? -1 : N2 --> (Cond0 s>> BW-1) | freeze(N2)
   if (isAllOnesOrAllOnesSplat(N1)) {
     SDLoc DL(N);
     SDValue ShiftAmt = DAG.getConstant(VT.getScalarSizeInBits() - 1, DL, VT);
     SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, Cond0, ShiftAmt);
-    return DAG.getNode(ISD::OR, DL, VT, Sra, N2);
+    return DAG.getNode(ISD::OR, DL, VT, Sra, DAG.getFreeze(N2));
   }
 
   // If we have to invert the sign bit mask, only do that transform if the
   // target has a bitwise 'and not' instruction (the invert is free).
-  // (Cond0 s< -0) ? 0 : N2 --> ~(Cond0 s>> BW-1) & N2
+  // (Cond0 s< -0) ? 0 : N2 --> ~(Cond0 s>> BW-1) & freeze(N2)
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (isNullOrNullSplat(N1) && TLI.hasAndNot(N1)) {
     SDLoc DL(N);
     SDValue ShiftAmt = DAG.getConstant(VT.getScalarSizeInBits() - 1, DL, VT);
     SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, Cond0, ShiftAmt);
     SDValue Not = DAG.getNOT(DL, Sra, VT);
-    return DAG.getNode(ISD::AND, DL, VT, Not, N2);
+    return DAG.getNode(ISD::AND, DL, VT, Not, DAG.getFreeze(N2));
   }
 
   // TODO: There's another pattern in this family, but it may require
   //       implementing hasOrNot() to check for profitability:
-  //       (Cond0 s> -1) ? -1 : N2 --> ~(Cond0 s>> BW-1) | N2
+  //       (Cond0 s> -1) ? -1 : N2 --> ~(Cond0 s>> BW-1) | freeze(N2)
 
   return SDValue();
 }
@@ -13782,9 +13782,10 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
 /// Given an extending node with a pop-count operand, if the target does not
 /// support a pop-count in the narrow source type but does support it in the
 /// destination type, widen the pop-count to the destination type.
-static SDValue widenCtPop(SDNode *Extend, SelectionDAG &DAG) {
+static SDValue widenCtPop(SDNode *Extend, SelectionDAG &DAG, const SDLoc &DL) {
   assert((Extend->getOpcode() == ISD::ZERO_EXTEND ||
-          Extend->getOpcode() == ISD::ANY_EXTEND) && "Expected extend op");
+          Extend->getOpcode() == ISD::ANY_EXTEND) &&
+         "Expected extend op");
 
   SDValue CtPop = Extend->getOperand(0);
   if (CtPop.getOpcode() != ISD::CTPOP || !CtPop.hasOneUse())
@@ -13797,7 +13798,6 @@ static SDValue widenCtPop(SDNode *Extend, SelectionDAG &DAG) {
     return SDValue();
 
   // zext (ctpop X) --> ctpop (zext X)
-  SDLoc DL(Extend);
   SDValue NewZext = DAG.getZExtOrTrunc(CtPop.getOperand(0), DL, VT);
   return DAG.getNode(ISD::CTPOP, DL, VT, NewZext);
 }
@@ -14138,7 +14138,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   if (SDValue NewVSel = matchVSelectOpSizesWithSetCC(N))
     return NewVSel;
 
-  if (SDValue NewCtPop = widenCtPop(N, DAG))
+  if (SDValue NewCtPop = widenCtPop(N, DAG, DL))
     return NewCtPop;
 
   if (SDValue V = widenAbs(N, DAG))
@@ -14316,7 +14316,7 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
       return SCC;
   }
 
-  if (SDValue NewCtPop = widenCtPop(N, DAG))
+  if (SDValue NewCtPop = widenCtPop(N, DAG, DL))
     return NewCtPop;
 
   if (SDValue Res = tryToFoldExtendSelectLoad(N, TLI, DAG, DL, Level))
@@ -15653,6 +15653,8 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     return SDValue();
 
   bool AllowMultipleMaybePoisonOperands =
+      N0.getOpcode() == ISD::SELECT_CC ||
+      N0.getOpcode() == ISD::SETCC ||
       N0.getOpcode() == ISD::BUILD_VECTOR ||
       N0.getOpcode() == ISD::BUILD_PAIR ||
       N0.getOpcode() == ISD::VECTOR_SHUFFLE ||
@@ -21411,7 +21413,7 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
   }
 
   // Turn 'store undef, Ptr' -> nothing.
-  if (Value.isUndef() && ST->isUnindexed())
+  if (Value.isUndef() && ST->isUnindexed() && !ST->isVolatile())
     return Chain;
 
   // Try to infer better alignment information than the store already has.
@@ -22531,6 +22533,7 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
   if (VecOp.getOpcode() == ISD::INSERT_VECTOR_ELT &&
       Index == VecOp.getOperand(2)) {
     SDValue Elt = VecOp.getOperand(1);
+    AddUsersToWorklist(VecOp.getNode());
     return VecVT.isInteger() ? DAG.getAnyExtOrTrunc(Elt, DL, ScalarVT) : Elt;
   }
 

@@ -9,6 +9,7 @@ import subprocess
 import sys
 import os
 from packaging import version
+from urllib.parse import urlparse
 
 # LLDB modules
 import lldb
