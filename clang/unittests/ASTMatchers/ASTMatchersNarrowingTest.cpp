@@ -2664,6 +2664,41 @@ TEST_P(ASTMatchersTest, HasName_QualifiedStringMatchesThroughLinkage) {
   EXPECT_TRUE(notMatches(code, functionDecl(hasName("::test"))));
 }
 
+TEST_P(ASTMatchersTest, HasName_TemplateStrip) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+
+  StringRef Code = "template<typename T> struct Foo{void Bar() const;}; void "
+                   "Func() { Foo<int> Item; Item.Bar(); }";
+
+  EXPECT_TRUE(matches(Code, callExpr(callee(cxxMethodDecl(hasName("Bar"))))));
+  EXPECT_TRUE(
+      matches(Code, callExpr(callee(cxxMethodDecl(hasName("Foo<int>::Bar"))))));
+  EXPECT_TRUE(matches(
+      Code, callExpr(callee(cxxMethodDecl(hasName("::Foo<int>::Bar"))))));
+  EXPECT_TRUE(
+      matches(Code, callExpr(callee(cxxMethodDecl(hasName("::Foo<*>::Bar"))))));
+  EXPECT_TRUE(notMatches(
+      Code, callExpr(callee(cxxMethodDecl(hasName("::Foo<::Bar"))))));
+  EXPECT_TRUE(notMatches(
+      Code, callExpr(callee(cxxMethodDecl(hasName("::Foo<long>::Bar"))))));
+
+  if (GetParam().isCXX11OrLater()) {
+    Code = "template<typename T> struct Foo{void Bar() const;}; void Func() { "
+           "Foo<Foo<int>> Item; Item.Bar(); }";
+    EXPECT_TRUE(matches(Code, callExpr(callee(cxxMethodDecl(hasName("Bar"))))));
+    EXPECT_TRUE(
+        matches(Code, callExpr(callee(cxxMethodDecl(hasName("Foo<*>::Bar"))))));
+    EXPECT_TRUE(matches(
+        Code, callExpr(callee(cxxMethodDecl(hasName("::Foo<*>::Bar"))))));
+    EXPECT_TRUE(matches(
+        Code, callExpr(callee(cxxMethodDecl(hasName("Foo<Foo<*>>::Bar"))))));
+    EXPECT_TRUE(matches(
+        Code, callExpr(callee(cxxMethodDecl(hasName("::Foo<Foo<*>>::Bar"))))));
+  }
+}
+
 TEST_P(ASTMatchersTest, HasAnyName) {
   if (!GetParam().isCXX()) {
     // FIXME: Add a test for `hasAnyName()` that does not depend on C++.

@@ -638,6 +638,39 @@ bool HasNameMatcher::matchesNodeFullFast(const NamedDecl &Node) const {
   return Patterns.foundMatch(/*AllowFullyQualified=*/true);
 }
 
+static std::optional<StringRef> consumePatternBack(StringRef Pattern,
+                                                   StringRef Target) {
+  while (!Pattern.empty()) {
+    auto Index = Pattern.rfind("<*>");
+    if (Index == StringRef::npos) {
+      if (Target.consume_back(Pattern))
+        return Target;
+      return {};
+    }
+    auto Suffix = Pattern.substr(Index + 2);
+    if (!Target.consume_back(Suffix))
+      return {};
+    auto BracketCount = 1;
+    while (BracketCount) {
+      if (Target.empty())
+        return {};
+      switch (Target.back()) {
+      case '<':
+        --BracketCount;
+        break;
+      case '>':
+        ++BracketCount;
+        break;
+      default:
+        break;
+      }
+      Target = Target.drop_back();
+    }
+    Pattern = Pattern.take_front(Index);
+  }
+  return Target;
+}
+
 bool HasNameMatcher::matchesNodeFullSlow(const NamedDecl &Node) const {
   const bool SkipUnwrittenCases[] = {false, true};
   for (bool SkipUnwritten : SkipUnwrittenCases) {
@@ -653,10 +686,12 @@ bool HasNameMatcher::matchesNodeFullSlow(const NamedDecl &Node) const {
 
     for (const StringRef Pattern : Names) {
       if (Pattern.starts_with("::")) {
-        if (FullName == Pattern)
+        if (auto Result = consumePatternBack(Pattern, FullName);
+            Result && Result->empty()) {
           return true;
-      } else if (FullName.ends_with(Pattern) &&
-                 FullName.drop_back(Pattern.size()).ends_with("::")) {
+        }
+      } else if (auto Result = consumePatternBack(Pattern, FullName);
+                 Result && Result->ends_with("::")) {
         return true;
       }
     }
