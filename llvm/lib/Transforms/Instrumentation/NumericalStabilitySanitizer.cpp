@@ -527,7 +527,7 @@ NsanMemOpFn::NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized,
         M.getOrInsertFunction(Fallback, Attr, VoidTy, PtrTy, IntptrTy));
     SizedFnTy = FunctionType::get(VoidTy, {PtrTy}, false);
   } else {
-    assert(!"Unexpected value of sized functions arguments");
+    llvm_unreachable("Unexpected value of sized functions arguments");
   }
 
   for (size_t i = 0; i < NumSizedFuncs; ++i)
