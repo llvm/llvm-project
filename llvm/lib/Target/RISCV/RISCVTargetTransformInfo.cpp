@@ -1688,7 +1688,6 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                          Args, CxtI);
 
-
   auto getConstantMatCost =
     [&](unsigned Operand, TTI::OperandValueInfo OpInfo) -> InstructionCost {
     if (OpInfo.isUniform() && TLI->canSplatOperand(Opcode, Operand))
@@ -1760,8 +1759,14 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
                                                            Op1Info, Op2Info,
                                                            Args, CxtI);
   }
-  return ConstantMatCost +
-         LT.first * getRISCVInstructionCost(Op, LT.second, CostKind);
+
+  InstructionCost InstrCost = getRISCVInstructionCost(Op, LT.second, CostKind);
+  // We use BasicTTIImpl to calculate scalar costs, which assumes floating point
+  // ops are twice as expensive as integer ops. Do the same for vectors so
+  // scalar floating point ops aren't cheaper than their vector equivalents.
+  if (Ty->isFPOrFPVectorTy())
+    InstrCost *= 2;
+  return ConstantMatCost + LT.first * InstrCost;
 }
 
 // TODO: Deduplicate from TargetTransformInfoImplCRTPBase.

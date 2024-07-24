@@ -171,9 +171,7 @@ Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
         getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions));
     auto FOut = std::make_unique<formatted_raw_ostream>(Out);
     MCStreamer *S = getTarget().createAsmStreamer(
-        Context, std::move(FOut), Options.MCOptions.AsmVerbose, true,
-        InstPrinter, std::move(MCE), std::move(MAB),
-        Options.MCOptions.ShowMCInst);
+        Context, std::move(FOut), InstPrinter, std::move(MCE), std::move(MAB));
     AsmStreamer.reset(S);
     break;
   }

@@ -206,13 +206,15 @@ function(add_asan_tests arch test_runtime)
           -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames
         )
     else()
+      set(DYNAMIC_LINK_FLAGS)
+      get_dynamic_link_flags_for_arch(${arch} DYNAMIC_LINK_FLAGS)
 
       # Otherwise, reuse ASAN_INST_TEST_OBJECTS.
       add_compiler_rt_test(AsanDynamicUnitTests "${dynamic_test_name}" "${arch}"
         SUBDIR "${CONFIG_NAME_DYNAMIC}"
         OBJECTS ${ASAN_INST_TEST_OBJECTS}
         DEPS asan ${ASAN_INST_TEST_OBJECTS}
-        LINK_FLAGS ${ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS} ${TARGET_LINK_FLAGS}
+        LINK_FLAGS ${ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS} ${TARGET_LINK_FLAGS} ${DYNAMIC_LINK_FLAGS}
         )
     endif()
   endif()
