@@ -31,9 +31,28 @@ unsigned long long tc() {
     // CIR_FLAT: ^bb4:  // pred: ^bb3
     // CIR_FLAT:   %[[SEL:.*]] = cir.eh.selector %[[EH]]
   } catch (int idx) {
+    // CIR_FLAT:   %[[INT_IDX_ID:.*]] = cir.eh.typeid @_ZTIi
+    // CIR_FLAT:   %[[MATCH_CASE_INT_IDX:.*]] = cir.cmp(eq, %[[SEL]], %[[INT_IDX_ID]]) : !u32i, !cir.bool
+    // CIR_FLAT:   cir.brcond %[[MATCH_CASE_INT_IDX]] ^bb5, ^bb6
+    // CIR_FLAT: ^bb5:  // pred: ^bb4
+    // CIR_FLAT:   %[[PARAM_INT_IDX:.*]] = cir.catch_param -> !cir.ptr<!s32i>
+    // CIR_FLAT:   cir.const #cir.int<98>
+    // CIR_FLAT:   cir.br ^bb9
     z = 98;
     idx++;
   } catch (const char* msg) {
+    // CIR_FLAT: ^bb6:  // pred: ^bb4
+    // CIR_FLAT:   %[[CHAR_MSG_ID:.*]] = cir.eh.typeid @_ZTIPKc
+    // CIR_FLAT:   %[[MATCH_CASE_CHAR_MSG:.*]] = cir.cmp(eq, %[[SEL]], %[[CHAR_MSG_ID]]) : !u32i, !cir.bool
+    // CIR_FLAT:   cir.brcond %[[MATCH_CASE_CHAR_MSG]] ^bb7, ^bb8
+    // CIR_FLAT: ^bb7:  // pred: ^bb6
+    // CIR_FLAT:   %[[PARAM_CHAR_MSG:.*]] = cir.catch_param -> !cir.ptr<!s8i>
+    // CIR_FLAT:   cir.const #cir.int<99> : !s32i
+    // CIR_FLAT:   cir.br ^bb9
+    // CIR_FLAT: ^bb8:  // pred: ^bb6
+    // CIR_FLAT:   cir.resume
+    // CIR_FLAT: ^bb9:  // 2 preds: ^bb5, ^bb7
+    // CIR_FLAT: cir.load
     z = 99;
     (void)msg[0];
   }

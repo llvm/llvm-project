@@ -870,8 +870,7 @@ def ContinueOp : CIR_Op<"continue", [Terminator]> {
 // Resume
 //===----------------------------------------------------------------------===//
 
-def ResumeOp : CIR_Op<"resume", [ReturnLike, Terminator,
-                                 ParentOneOf<["TryOp"]>]> {
+def ResumeOp : CIR_Op<"resume", [ReturnLike, Terminator]> {
   let summary = "Resumes execution after not catching exceptions";
   let description = [{
     The `cir.resume` operation terminates a region on `cir.catch`, "resuming"
@@ -886,8 +885,10 @@ def ResumeOp : CIR_Op<"resume", [ReturnLike, Terminator,
     ```
   }];
 
-  let arguments = (ins);
-  let assemblyFormat = "attr-dict";
+  let arguments = (ins UnitAttr:$rethrow);
+  let assemblyFormat = [{
+    (`rethrow` $rethrow^)? attr-dict
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -3262,9 +3263,26 @@ def EhSelectorOp : CIR_Op<"eh.selector"> {
   }];
 
   let arguments = (ins CIR_ExceptionType:$exception);
-  let results = (outs UInt32:$selector);
+  let results = (outs UInt32:$type_id);
   let assemblyFormat = [{
     $exception attr-dict
+  }];
+
+  let hasVerifier = 0;
+}
+
+def EhTypeIdOp : CIR_Op<"eh.typeid",
+  [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "Compute exception type id from it's global type symbol";
+  let description = [{
+    Returns the exception type id for a given global symbol representing
+    a type.
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$type_sym);
+  let results = (outs UInt32:$type_id);
+  let assemblyFormat = [{
+    $type_sym attr-dict
   }];
 
   let hasVerifier = 0;

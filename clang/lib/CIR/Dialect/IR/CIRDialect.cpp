@@ -3205,6 +3205,18 @@ LogicalResult LabelOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// EhTypeIdOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult EhTypeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  auto op = symbolTable.lookupNearestSymbolFrom(*this, getTypeSymAttr());
+  if (!isa<GlobalOp>(op))
+    return emitOpError("'")
+           << getTypeSym() << "' does not reference a valid cir.global";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
