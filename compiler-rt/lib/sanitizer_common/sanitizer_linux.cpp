@@ -2186,6 +2186,8 @@ static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
          RegName, ctx->uc_mcontext.gregs[RegNum]);
 #  elif defined(__i386__)
   Printf("%s = 0x%08x  ", RegName, ctx->uc_mcontext.gregs[RegNum]);
+#  else
+  (void)RegName;
 #  endif
 }
 
