@@ -893,13 +893,6 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
     }
   }
 
-  if (!var.hipccCompileFlagsAppendEnv_.empty()) {
-    HIPCXXFLAGS += " " + var.hipccCompileFlagsAppendEnv_ + " ";
-    HIPCFLAGS += " " + var.hipccCompileFlagsAppendEnv_ + " ";
-  }
-  if (!var.hipccLinkFlagsAppendEnv_.empty()) {
-    HIPLDFLAGS += " " + var.hipccLinkFlagsAppendEnv_ + " ";
-  }
   // TODO(hipcc): convert CMD to an array rather than a string
   string compiler;
   compiler = getHipCC();
@@ -917,6 +910,15 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
   }
 
   CMD += " " + toolArgs;
+  if ((needCFLAGS || needCXXFLAGS) &&
+      !var.hipccCompileFlagsAppendEnv_.empty()) {
+    CMD.append(" ");
+    CMD.append(var.hipccCompileFlagsAppendEnv_);
+  }
+  if (needLDFLAGS && !compileOnly && !var.hipccLinkFlagsAppendEnv_.empty()) {
+    CMD.append(" ");
+    CMD.append(var.hipccLinkFlagsAppendEnv_);
+  }
   if (verbose & 0x1) {
     cout << "hipcc-cmd: " <<  CMD << "\n";
   }

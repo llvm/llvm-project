@@ -568,14 +568,6 @@ if ($HIP_PLATFORM eq "amd") {
     }
 }
 
-if ($HIPCC_COMPILE_FLAGS_APPEND) {
-    $HIPCXXFLAGS .= " $HIPCC_COMPILE_FLAGS_APPEND";
-    $HIPCFLAGS .= " $HIPCC_COMPILE_FLAGS_APPEND";
-}
-if ($HIPCC_LINK_FLAGS_APPEND) {
-    $HIPLDFLAGS .= " $HIPCC_LINK_FLAGS_APPEND";
-}
-
 # TODO: convert CMD to an array rather than a string
 my $CMD="$HIPCC";
 
@@ -591,6 +583,14 @@ if ($needLDFLAGS and not $compileOnly) {
     $CMD .= " $HIPLDFLAGS";
 }
 $CMD .= " $toolArgs";
+
+if (($needCFLAGS or $needCXXFLAGS) and $HIPCC_COMPILE_FLAGS_APPEND) {
+    $CMD .= " $HIPCC_COMPILE_FLAGS_APPEND";
+}
+
+if ($needLDFLAGS and not $compileOnly and $HIPCC_LINK_FLAGS_APPEND) {
+    $CMD .= " $HIPCC_LINK_FLAGS_APPEND";
+}
 
 if ($verbose & 0x1) {
     print "hipcc-cmd: ", $CMD, "\n";

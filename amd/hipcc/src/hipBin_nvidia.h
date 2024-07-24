@@ -584,13 +584,6 @@ void HipBinNvidia::executeHipCCCmd(vector<string> argv) {
     HIPCXXFLAGS += " -M -D__CUDACC__";
     HIPCFLAGS += " -M -D__CUDACC__";
   }
-  if (!var.hipccCompileFlagsAppendEnv_.empty()) {
-    HIPCXXFLAGS += "\" " + var.hipccCompileFlagsAppendEnv_ + "\"";
-    HIPCFLAGS += "\" " + var.hipccCompileFlagsAppendEnv_ + "\"";
-  }
-  if (!var.hipccLinkFlagsAppendEnv_.empty()) {
-    HIPLDFLAGS += "\" " + var.hipccLinkFlagsAppendEnv_ + "\"";
-  }
   string compiler;
   compiler = getHipCC();
   string CMD = compiler;
@@ -604,6 +597,17 @@ void HipBinNvidia::executeHipCCCmd(vector<string> argv) {
     CMD += " " + HIPLDFLAGS;
   }
   CMD += " " + toolArgs;
+  if ((needCFLAGS || needCXXFLAGS) &&
+      !var.hipccCompileFlagsAppendEnv_.empty()) {
+    CMD.append("\" ");
+    CMD.append(var.hipccCompileFlagsAppendEnv_);
+    CMD.append("\" ");
+  }
+  if (needLDFLAGS && !compileOnly && !var.hipccLinkFlagsAppendEnv_.empty()) {
+    CMD.append("\" ");
+    CMD.append(var.hipccLinkFlagsAppendEnv_);
+    CMD.append("\" ");
+  }
   if (verbose & 0x1) {
     cout << "hipcc-cmd: " <<  CMD << "\n";
   }
