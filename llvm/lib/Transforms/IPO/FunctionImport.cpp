@@ -381,6 +381,10 @@ class GlobalsImporter final {
           [&](const GlobalValueSummary *RefSummary) -> bool {
         if (ImportAssumeUniqueLocal)
           return false;
+
+        errs() << "Ref VI is " << VI << "\n";
+        errs() << RefSummary->modulePath() << "\n";
+        errs() << Summary.modulePath() << "\n";
         return GlobalValue::isLocalLinkage(RefSummary->linkage()) &&
                RefSummary->modulePath() != Summary.modulePath();
       };
