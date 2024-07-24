@@ -12,9 +12,10 @@
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/gpu/file.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 template <uint16_t opcode>
 int fprintf_impl(::FILE *__restrict file, const char *__restrict format,
@@ -68,4 +69,4 @@ LLVM_LIBC_FUNCTION(int, rpc_fprintf,
                                               args, size);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
