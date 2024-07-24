@@ -3032,6 +3032,9 @@ DEF_TRAVERSE_STMT(OMPTileDirective,
 DEF_TRAVERSE_STMT(OMPUnrollDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
+DEF_TRAVERSE_STMT(OMPReverseDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
 DEF_TRAVERSE_STMT(OMPForDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
