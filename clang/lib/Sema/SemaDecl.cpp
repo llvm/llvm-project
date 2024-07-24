@@ -3813,45 +3813,47 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     return true;
   }
 
-  const auto OldFX = Old->getFunctionEffects();
-  const auto NewFX = New->getFunctionEffects();
   QualType OldQTypeForComparison = OldQType;
-  if (OldFX != NewFX) {
-    const auto Diffs = FunctionEffectDifferences(OldFX, NewFX);
-    for (const auto &Diff : Diffs) {
-      if (Diff.shouldDiagnoseRedeclaration(*Old, OldFX, *New, NewFX)) {
-        Diag(New->getLocation(),
-             diag::warn_mismatched_func_effect_redeclaration)
-            << Diff.effectName();
-        Diag(Old->getLocation(), diag::note_previous_declaration);
+  if (Context.hasAnyFunctionEffects()) {
+    const auto OldFX = Old->getFunctionEffects();
+    const auto NewFX = New->getFunctionEffects();
+    if (OldFX != NewFX) {
+      const auto Diffs = FunctionEffectDifferences(OldFX, NewFX);
+      for (const auto &Diff : Diffs) {
+        if (Diff.shouldDiagnoseRedeclaration(*Old, OldFX, *New, NewFX)) {
+          Diag(New->getLocation(),
+               diag::warn_mismatched_func_effect_redeclaration)
+              << Diff.effectName();
+          Diag(Old->getLocation(), diag::note_previous_declaration);
+        }
       }
-    }
-    // Following a warning, we could skip merging effects from the previous
-    // declaration, but that would trigger an additional "conflicting types"
-    // error.
-    if (const auto *NewFPT = NewQType->getAs<FunctionProtoType>()) {
-      FunctionEffectSet::Conflicts MergeErrs;
-      FunctionEffectSet MergedFX =
-          FunctionEffectSet::getUnion(OldFX, NewFX, MergeErrs);
-      if (!MergeErrs.empty())
-        diagnoseFunctionEffectMergeConflicts(MergeErrs, New->getLocation(),
-                                             Old->getLocation());
+      // Following a warning, we could skip merging effects from the previous
+      // declaration, but that would trigger an additional "conflicting types"
+      // error.
+      if (const auto *NewFPT = NewQType->getAs<FunctionProtoType>()) {
+        FunctionEffectSet::Conflicts MergeErrs;
+        FunctionEffectSet MergedFX =
+            FunctionEffectSet::getUnion(OldFX, NewFX, MergeErrs);
+        if (!MergeErrs.empty())
+          diagnoseFunctionEffectMergeConflicts(MergeErrs, New->getLocation(),
+                                               Old->getLocation());
 
-      FunctionProtoType::ExtProtoInfo EPI = NewFPT->getExtProtoInfo();
-      EPI.FunctionEffects = FunctionEffectsRef(MergedFX);
-      QualType ModQT = Context.getFunctionType(NewFPT->getReturnType(),
-                                               NewFPT->getParamTypes(), EPI);
-
-      New->setType(ModQT);
-      NewQType = New->getType();
-
-      // Revise OldQTForComparison to include the merged effects,
-      // so as not to fail due to differences later.
-      if (const auto *OldFPT = OldQType->getAs<FunctionProtoType>()) {
-        EPI = OldFPT->getExtProtoInfo();
+        FunctionProtoType::ExtProtoInfo EPI = NewFPT->getExtProtoInfo();
         EPI.FunctionEffects = FunctionEffectsRef(MergedFX);
-        OldQTypeForComparison = Context.getFunctionType(
-            OldFPT->getReturnType(), OldFPT->getParamTypes(), EPI);
+        QualType ModQT = Context.getFunctionType(NewFPT->getReturnType(),
+                                                 NewFPT->getParamTypes(), EPI);
+
+        New->setType(ModQT);
+        NewQType = New->getType();
+
+        // Revise OldQTForComparison to include the merged effects,
+        // so as not to fail due to differences later.
+        if (const auto *OldFPT = OldQType->getAs<FunctionProtoType>()) {
+          EPI = OldFPT->getExtProtoInfo();
+          EPI.FunctionEffects = FunctionEffectsRef(MergedFX);
+          OldQTypeForComparison = Context.getFunctionType(
+              OldFPT->getReturnType(), OldFPT->getParamTypes(), EPI);
+        }
       }
     }
   }
