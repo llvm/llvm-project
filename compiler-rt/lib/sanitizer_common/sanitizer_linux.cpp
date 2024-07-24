@@ -2293,10 +2293,10 @@ static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
 #    elif defined(__i386__)
   Printf("%s = 0x%08x  ", RegName, ctx->uc_mcontext.gregs[RegNum]);
 #    elif defined(__arm__)
-  Printf("%s%s = 0xzx  ", internal_strlen(RegName) == 2 ? " " : "", RegName,
+  Printf("%s%s = 0x%08zx  ", internal_strlen(RegName) == 2 ? " " : "", RegName,
          GetArmRegister(ctx, RegNum));
 #    elif defined(__aarch64__)
-  Printf("%s%s = 0xzx  ", internal_strlen(RegName) == 2 ? " " : "", RegName,
+  Printf("%s%s = 0x%016zx  ", internal_strlen(RegName) == 2 ? " " : "", RegName,
          GetArmRegister(ctx, RegNum));
 #    else
   (void)RegName;
