@@ -147,7 +147,7 @@ public:
   bool useNative(CallInst *CI);
 };
 
-} // end llvm namespace
+} // end namespace llvm
 
 template <typename IRB>
 static CallInst *CreateCallEx(IRB &B, FunctionCallee Callee, Value *Arg,
@@ -899,7 +899,7 @@ static double log2(double V) {
   return log(V) / numbers::ln2;
 #endif
 }
-}
+} // namespace llvm
 
 bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
                               const FuncInfo &FInfo) {
