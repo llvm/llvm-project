@@ -27837,7 +27837,7 @@ SDValue X86TargetLowering::LowerGET_FPENV_MEM(SDValue Op,
   return Chain;
 }
 
-static SDValue createSetFPEnvNodes(SDValue Ptr, SDValue Chain, SDLoc DL,
+static SDValue createSetFPEnvNodes(SDValue Ptr, SDValue Chain, const SDLoc &DL,
                                    EVT MemVT, MachineMemOperand *MMO,
                                    SelectionDAG &DAG,
                                    const X86Subtarget &Subtarget) {
