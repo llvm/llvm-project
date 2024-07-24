@@ -2239,6 +2239,7 @@ static const char *RegNumToRegName(int reg) {
 #    endif
     default:
       return NULL;
+#endif
   }
   return NULL;
 }
@@ -2302,7 +2303,6 @@ static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
   (void)RegName;
 #    endif
 }
-#  endif
 
 void SignalContext::DumpAllRegisters(void *context) {
   ucontext_t *ucontext = (ucontext_t *)context;
