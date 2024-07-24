@@ -339,35 +339,31 @@ private:
       BlockPseudoProbes.push_back(&PseudoProbe);
     }
 
-    auto LogPseudoProbeBlockMatchFail = [&](std::string Message) {
-      if (opts::Verbosity >= 3)
+    auto LogErrIfExpr = [&](bool Expr, std::string Message) -> bool {
+      if (Expr)
         errs() << Message;
+      return Expr;
     };
     // Returns nullptr if there is not a 1:1 mapping of the yaml block pseudo
     // probe and binary pseudo probe.
     size_t NBlockPseudoProbes = BlockPseudoProbes.size();
-    if (NBlockPseudoProbes == 0) {
-      LogPseudoProbeBlockMatchFail(
-        "BOLT-WARNING: no pseudo probes in profile block\n");
+    if (LogErrIfExpr(NBlockPseudoProbes == 0,
+                     "BOLT-WARNING: no pseudo probes in profile block\n"))
       return nullptr;
-    }
-    if (BNBlockPseudoProbes > 1) {
-      LogPseudoProbeBlockMatchFail(
-        "BOLT-WARNING: more than 1 pseudo probes in profile block\n");
+    if (LogErrIfExpr(
+            NBlockPseudoProbes > 1,
+            "BOLT-WARNING: more than 1 pseudo probes in profile block\n"))
       return nullptr;
-    }
     uint64_t Index = BlockPseudoProbes[0]->Index;
     auto It = IndexToBBPseudoProbes.find(Index);
-    if (It == IndexToBBPseudoProbes.end()) {
-      LogPseudoProbeBlockMatchFail(
-        "BOLT-WARNING: no block pseudo probes found within BB at index\n");
+    if (LogErrIfExpr(
+            It == IndexToBBPseudoProbes.end(),
+            "BOLT-WARNING: no block pseudo probes found within BB at index\n"))
       return nullptr;
-    }
-    if (It->second.size() > 1) {
-      LogPseudoProbeBlockMatchFail(
-        "BOLT-WARNING: more than 1 block pseudo probes in BB at index\n");
+    if (LogErrIfExpr(
+            It->second.size() > 1,
+            "BOLT-WARNING: more than 1 block pseudo probes in BB at index\n"))
       return nullptr;
-    }
     const MCDecodedPseudoProbe *BinaryPseudoProbe = It->second[0];
     auto BinaryPseudoProbeIt = BBPseudoProbeToBlock.find(BinaryPseudoProbe);
     assert(BinaryPseudoProbeIt != BBPseudoProbeToBlock.end() &&
