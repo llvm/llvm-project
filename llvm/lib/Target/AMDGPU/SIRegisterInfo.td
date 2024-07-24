@@ -1251,6 +1251,19 @@ def OperandSemantics {
 }
 
 //===----------------------------------------------------------------------===//
+//  GVGPR Operands
+//===----------------------------------------------------------------------===//
+
+def GVGPR : RegisterOperand<VGPR_32_STAGING> {
+  let EncoderMethod = "encodeGVGPR";
+  let DecoderMethod =
+    "[](MCInst & Inst, unsigned Val, uint64_t /*Addr*/, "
+    "const MCDisassembler *Decoder) { return addOperand(Inst, "
+    "static_cast<const AMDGPUDisassembler *>(Decoder)->decodeGVGPR(Val)); }";
+  let PrintMethod = "printGVGPR";
+}
+
+//===----------------------------------------------------------------------===//
 //  SSrc_* Operands with an SGPR, a 32-bit immediate, or 64-bit immediate
 //  if supported by target.
 //===----------------------------------------------------------------------===//

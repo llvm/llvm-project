@@ -2546,6 +2546,15 @@ int32_t getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR,
   return std::max(ArgNumVGPR, ArgNumAGPR);
 }
 
+unsigned getHWRegIndex(MCRegister Reg, const MCRegisterInfo &MRI) {
+  return MRI.getEncodingValue(Reg) & AMDGPU::HWEncoding::REG_IDX_MASK;
+}
+
+bool isVGPR(MCRegister Reg, const MCRegisterInfo &MRI) {
+  unsigned EV = MRI.getEncodingValue(Reg);
+  return (EV & HWEncoding::IS_VGPR_OR_AGPR) && !(EV & HWEncoding::IS_AGPR);
+}
+
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
   const MCRegisterClass SGPRClass = TRI->getRegClass(AMDGPU::SReg_32RegClassID);
   const unsigned FirstSubReg = TRI->getSubReg(Reg, AMDGPU::sub0);

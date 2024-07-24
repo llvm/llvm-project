@@ -1110,6 +1110,12 @@ def FeatureHasRestrictedSOffset : SubtargetFeature<"restricted-soffset",
   "Has restricted SOffset (immediate not supported)."
 >;
 
+def FeatureRequiredExportPriority : SubtargetFeature<"required-export-priority",
+  "HasRequiredExportPriority",
+  "true",
+  "Export priority must be explicitly manipulated on GFX11.5"
+>;
+
 def FeatureBitOp3Insts : SubtargetFeature<"bitop3-insts",
   "HasBitOp3Insts",
   "true",
@@ -1162,6 +1168,12 @@ def FeatureExclusiveScanInsts : SubtargetFeature<"exclusive-scan-insts",
   "HasExclusiveScanInsts",
   "true",
   "Has exclusive scan instructions"
+>;
+
+def FeatureVNBREncoding : SubtargetFeature<"vnbr-encoding",
+  "HasVNBREncoding",
+  "true",
+  "Neighbour data sharing instructions"
 >;
 
 //===------------------------------------------------------------===//
@@ -1846,7 +1858,8 @@ def FeatureISAVersion11_Generic: FeatureSet<
      FeatureUserSGPRInit16Bug,
      FeatureMADIntraFwdBug,
      FeaturePrivEnabledTrap2NopBug,
-     FeatureRequiresCOV6])>;
+     FeatureRequiresCOV6,
+     FeatureRequiredExportPriority])>;
 
 def FeatureISAVersion11_0_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
@@ -1876,20 +1889,23 @@ def FeatureISAVersion11_5_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
-     FeatureVGPRSingleUseHintInsts])>;
+     FeatureVGPRSingleUseHintInsts,
+     FeatureRequiredExportPriority])>;
 
 def FeatureISAVersion11_5_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      FeatureVGPRSingleUseHintInsts,
-     Feature1_5xVGPRs])>;
+     Feature1_5xVGPRs,
+     FeatureRequiredExportPriority])>;
 
 def FeatureISAVersion11_5_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
-     FeatureVGPRSingleUseHintInsts])>;
+     FeatureVGPRSingleUseHintInsts,
+     FeatureRequiredExportPriority])>;
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
@@ -2049,6 +2065,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureFmaMixBF16Insts,
+   FeatureVNBREncoding,
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -2494,6 +2511,8 @@ def HasAddNoCarryInsts : Predicate<"Subtarget->hasAddNoCarry()">,
 
 def NotHasAddNoCarryInsts : Predicate<"!Subtarget->hasAddNoCarry()">;
 
+def HasXNACKEnabled : Predicate<"Subtarget->isXNACKEnabled()">;
+
 def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">,
   AssemblerPredicate<(all_of Feature16BitInsts)>;
 
@@ -2835,6 +2854,9 @@ def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,
 
 def HasExclusiveScanInsts : Predicate<"Subtarget->hasExclusiveScanInsts()">,
   AssemblerPredicate<(all_of FeatureExclusiveScanInsts)>;
+
+def HasVNBREncoding : Predicate<"Subtarget->hasVNBREncoding()">,
+  AssemblerPredicate<(all_of FeatureVNBREncoding)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"

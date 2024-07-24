@@ -256,6 +256,7 @@ protected:
   bool HasVOPDInsts = false;
   bool HasVALUTransUseHazard = false;
   bool HasForceStoreSC0SC1 = false;
+  bool HasRequiredExportPriority = false;
   bool HasForceVALUThrottle = false;
   bool HasAshrPkInsts = false;
   bool HasMLMathInsts = false;
@@ -263,6 +264,8 @@ protected:
   bool HasMinimum3Maximum3F16 = false;
   bool HasMin3Max3PKF16 = false;
   bool HasMinimum3Maximum3PKF16 = false;
+  bool HasVNBREncoding = false;
+
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
 
@@ -994,6 +997,8 @@ public:
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }
 
+  bool hasVNBREncoding() const { return HasVNBREncoding; }
+
   // Scratch is allocated in 256 dword per wave blocks for the entire
   // wavefront. When viewed from the perspective of an arbitrary workitem, this
   // is 4-byte aligned.
@@ -1367,6 +1372,8 @@ public:
   bool hasPseudoScalarTrans() const { return HasPseudoScalarTrans; }
 
   bool hasRestrictedSOffset() const { return HasRestrictedSOffset; }
+
+  bool hasRequiredExportPriority() const { return HasRequiredExportPriority; }
 
   /// \returns true if the target uses LOADcnt/SAMPLEcnt/BVHcnt, DScnt/KMcnt
   /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.

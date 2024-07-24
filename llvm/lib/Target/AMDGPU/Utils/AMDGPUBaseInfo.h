@@ -1454,6 +1454,12 @@ int getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR, int32_t ArgNumVGPR);
 unsigned hasKernargPreload(const MCSubtargetInfo &STI);
 bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST);
 
+/// \returns Returns the index of \p Reg, e.g., 5 for v5.
+unsigned getHWRegIndex(MCRegister Reg, const MCRegisterInfo &MRI);
+
+/// \returns if \p Reg is a VGPR register.
+bool isVGPR(MCRegister Reg, const MCRegisterInfo &MRI);
+
 /// Is Reg - scalar register
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI);
 

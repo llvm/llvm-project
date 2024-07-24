@@ -23,6 +23,7 @@ class DivergentSextInreg<ValueType VT> : PatFrag<
   [{ return N->isDivergent(); }]>;
 
 include "SOPInstructions.td"
+include "VNBRInstructions.td"
 include "VOPInstructions.td"
 include "SMInstructions.td"
 include "FLATInstructions.td"
