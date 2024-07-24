@@ -138,7 +138,8 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
-    libc.src.__support.FPUtil.generic.add_sub.h
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.add_sub
 
 )
 
@@ -150,8 +151,9 @@ add_entrypoint_object(
     ../daddf128.h
   COMPILE_OPTIONS
     -O3
-  DEPENDS
-    libc.src.__support.FPUtil.generic.add_sub.h
+ DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.add_sub
 )
 
 add_entrypoint_object(
@@ -163,7 +165,8 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
-    libc.src.__support.FPUtil.generic.div.h
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.div
 )
 
 add_entrypoint_object(
@@ -175,7 +178,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
-    libc.src.__support.FPUtil.generic.div.h
+    libc.src.__support.FPUtil.generic.div
 )
 
 add_entrypoint_object(

@@ -118,7 +118,7 @@ def load_yaml_file(yaml_file, header_class, entry_points):
         HeaderFile: An instance of HeaderFile populated with the data.
     """
     with open(yaml_file, "r") as f:
-        yaml_data = yaml.load(f, loader=yaml.FullLoader)
+        yaml_data = yaml.load(f, Loader=yaml.FullLoader)
     return yaml_to_classes(yaml_data, header_class, entry_points)
 
 
