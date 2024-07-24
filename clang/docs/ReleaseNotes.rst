@@ -80,6 +80,9 @@ C++23 Feature Support
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Add ``__is_virtual_base_of`` intrinsic, which supports
+  `P2985R0 A type trait for detecting virtual base classes <https://wg21.link/p2985r0>`_
+
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
