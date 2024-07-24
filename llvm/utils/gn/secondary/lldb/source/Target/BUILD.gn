@@ -103,5 +103,6 @@ static_library("Target") {
     "UnixSignals.cpp",
     "UnwindAssembly.cpp",
     "UnwindLLDB.cpp",
+    "VerboseTrapFrameRecognizer.cpp",
   ]
 }
