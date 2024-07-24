@@ -4,7 +4,8 @@
 define void @memset_null(i64 %len) {
 ; CHECK-LABEL: define void @memset_null(
 ; CHECK-SAME: i64 [[LEN:%.*]]) {
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4294967296 null, i8 0, i64 [[LEN]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[LEN]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr null, i8 0, i64 %len, i1 false)
@@ -23,7 +24,8 @@ define void @memset_null_ub() {
 define void @memcpy_null_src(ptr %dst, i64 %len) {
 ; CHECK-LABEL: define void @memcpy_null_src(
 ; CHECK-SAME: ptr [[DST:%.*]], i64 [[LEN:%.*]]) {
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[DST]], ptr align 4294967296 null, i64 [[LEN]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[LEN]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.i64(ptr %dst, ptr null, i64 %len, i1 false)
@@ -33,7 +35,8 @@ define void @memcpy_null_src(ptr %dst, i64 %len) {
 define void @memmove_null_src(ptr %dst, i64 %len) {
 ; CHECK-LABEL: define void @memmove_null_src(
 ; CHECK-SAME: ptr [[DST:%.*]], i64 [[LEN:%.*]]) {
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[DST]], ptr align 4294967296 null, i64 [[LEN]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[LEN]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memmove.p0.i64(ptr %dst, ptr null, i64 %len, i1 false)
@@ -43,7 +46,8 @@ define void @memmove_null_src(ptr %dst, i64 %len) {
 define void @memset_element_atomic(i64 %len) {
 ; CHECK-LABEL: define void @memset_element_atomic(
 ; CHECK-SAME: i64 [[LEN:%.*]]) {
-; CHECK-NEXT:    call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 4294967296 null, i8 0, i64 [[LEN]], i32 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[LEN]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 1 null, i8 0, i64 %len, i32 1)
