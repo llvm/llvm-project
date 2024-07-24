@@ -43,6 +43,7 @@ public:
 
   void handleInterruptAttr(Decl *D, const ParsedAttr &AL);
   bool isAliasValid(unsigned BuiltinID, llvm::StringRef AliasName);
+  bool isValidFMVExtension(StringRef Ext);
 
   /// Indicate RISC-V vector builtin functions enabled or not.
   bool DeclareRVVBuiltins = false;
