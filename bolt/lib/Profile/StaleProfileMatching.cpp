@@ -193,16 +193,12 @@ public:
 /// release.
 class StaleMatcher {
 public:
+  StaleMatcher(const uint64_t YamlBFGUID) : YamlBFGUID(YamlBFGUID) {}
+
   /// Initialize stale matcher.
   void init(const std::vector<FlowBlock *> &Blocks,
             const std::vector<BlendedBlockHash> &Hashes,
-            const std::vector<uint64_t> &CallHashes,
-            const std::unordered_map<uint64_t,
-                                     std::vector<const MCDecodedPseudoProbe *>>
-                &IndexToBBPseudoProbes,
-            const std::unordered_map<const MCDecodedPseudoProbe *, FlowBlock *>
-                &BBPseudoProbeToBlock,
-            const uint64_t YamlBFGUID) {
+            const std::vector<uint64_t> &CallHashes) {
     assert(Blocks.size() == Hashes.size() &&
            Hashes.size() == CallHashes.size() &&
            "incorrect matcher initialization");
@@ -214,9 +210,17 @@ public:
         CallHashToBlocks[CallHashes[I]].push_back(
             std::make_pair(Hashes[I], Block));
     }
-    this->IndexToBBPseudoProbes = IndexToBBPseudoProbes;
-    this->BBPseudoProbeToBlock = BBPseudoProbeToBlock;
-    this->YamlBFGUID = YamlBFGUID;
+  }
+
+  /// Creates a mapping from a pseudo probe index to block pseudo probe in the
+  /// binary.
+  void mapIndexToProbe(uint64_t Index, const MCDecodedPseudoProbe *Probe) {
+    IndexToBBPseudoProbes[Index].push_back(Probe);
+  }
+
+  /// Creates a mapping from a pseudo probe to a flow block.
+  void mapProbeToBB(const MCDecodedPseudoProbe *Probe, FlowBlock *Block) {
+    BBPseudoProbeToBlock[Probe] = Block;
   }
 
   /// Find the most similar flow block for a profile block given its hashes and
@@ -269,7 +273,7 @@ private:
   std::unordered_map<const MCDecodedPseudoProbe *, FlowBlock *>
       BBPseudoProbeToBlock;
   std::unordered_set<uint64_t> MatchedWithPseudoProbes;
-  uint64_t YamlBFGUID{0};
+  const uint64_t YamlBFGUID{0};
   uint64_t MatchedWithOpcodes{0};
 
   // Uses OpcodeHash to find the most similar block for a given hash.
@@ -557,14 +561,32 @@ size_t matchWeightsByHashes(
 
   assert(Func.Blocks.size() == BlockOrder.size() + 2);
 
+  // Sets the YamlBFGUID in the StaleMatcher such that if either the profiled or
+  // binary function dne or they are not equal, to zero, as not to perform
+  // pseudo probe block matching. Otherwise, the YamlBF's GUID is used for
+  // pseudo probe block matching.
+  const MCPseudoProbeDecoder *PseudoProbeDecoder =
+      opts::ProfileUsePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
+  uint64_t BFPseudoProbeDescHash = 0;
+  if (opts::ProfileUsePseudoProbes && BF.getGUID() != 0) {
+    assert(PseudoProbeDecoder &&
+           "If BF has pseudo probe, BC should have a pseudo probe decoder");
+    auto &GUID2FuncDescMap = PseudoProbeDecoder->getGUID2FuncDescMap();
+    auto It = GUID2FuncDescMap.find(BF.getGUID());
+    if (It != GUID2FuncDescMap.end())
+      BFPseudoProbeDescHash = It->second.FuncHash;
+  }
+  uint64_t YamlBFGUID =
+      BFPseudoProbeDescHash && YamlBF.PseudoProbeDescHash &&
+              BFPseudoProbeDescHash == YamlBF.PseudoProbeDescHash
+          ? static_cast<uint64_t>(YamlBF.GUID)
+          : 0;
+
+  StaleMatcher Matcher(YamlBFGUID);
   std::vector<uint64_t> CallHashes;
   std::vector<FlowBlock *> Blocks;
   std::vector<BlendedBlockHash> BlendedHashes;
-  std::unordered_map<uint64_t, std::vector<const MCDecodedPseudoProbe *>>
-      IndexToBBPseudoProbes;
-  std::unordered_map<const MCDecodedPseudoProbe *, FlowBlock *>
-      BBPseudoProbeToBlock;
-  const MCPseudoProbeDecoder *PseudoProbeDecoder = BC.getPseudoProbeDecoder();
+
   for (uint64_t I = 0; I < BlockOrder.size(); I++) {
     const BinaryBasicBlock *BB = BlockOrder[I];
     assert(BB->getHash() != 0 && "empty hash of BinaryBasicBlock");
@@ -600,8 +622,8 @@ size_t matchWeightsByHashes(
             continue;
           if (Probe.getType() != static_cast<uint8_t>(PseudoProbeType::Block))
             continue;
-          IndexToBBPseudoProbes[Probe.getIndex()].push_back(&Probe);
-          BBPseudoProbeToBlock[&Probe] = Blocks[I];
+          Matcher.mapIndexToProbe(Probe.getIndex(), &Probe);
+          Matcher.mapProbeToBB(&Probe, Blocks[I]);
         }
       }
     }
@@ -610,28 +632,7 @@ size_t matchWeightsByHashes(
                       << Twine::utohexstr(BB->getHash()) << "\n");
   }
 
-  // Sets the YamlBFGUID in the StaleMatcher such that if either the profiled or
-  // binary function dne or they are not equal, to zero, as not to perform
-  // pseudo probe block matching. Otherwise, the YamlBF's GUID is used for
-  // pseudo probe block matching.
-  uint64_t BFPseudoProbeDescHash = 0;
-  if (opts::ProfileUsePseudoProbes && BF.getGUID() != 0) {
-    assert(PseudoProbeDecoder &&
-           "If BF has pseudo probe, BC should have a pseudo probe decoder");
-    auto &GUID2FuncDescMap = PseudoProbeDecoder->getGUID2FuncDescMap();
-    auto It = GUID2FuncDescMap.find(BF.getGUID());
-    if (It != GUID2FuncDescMap.end())
-      BFPseudoProbeDescHash = It->second.FuncHash;
-  }
-  uint64_t YamlBFGUID =
-      BFPseudoProbeDescHash && YamlBF.PseudoProbeDescHash &&
-              BFPseudoProbeDescHash == YamlBF.PseudoProbeDescHash
-          ? static_cast<uint64_t>(YamlBF.GUID)
-          : 0;
-
-  StaleMatcher Matcher;
-  Matcher.init(Blocks, BlendedHashes, CallHashes, IndexToBBPseudoProbes,
-               BBPseudoProbeToBlock, YamlBFGUID);
+  Matcher.init(Blocks, BlendedHashes, CallHashes);
 
   // Index in yaml profile => corresponding (matched) block
   DenseMap<uint64_t, const FlowBlock *> MatchedBlocks;
