@@ -80,8 +80,8 @@ static uint32_t getDeclAlignIfRequired(const Decl *D, const ASTContext &Ctx) {
   return D->hasAttr<AlignedAttr>() ? D->getMaxAlignment() : 0;
 }
 
-/// Returns true if \ref VD is a VarDecl that is a holding variable
-/// (aka a VarDecl retrieved using \ref BindingDecl::getHoldingVar).
+/// Returns true if \ref VD is a a holding variable (aka a
+/// VarDecl retrieved using \ref BindingDecl::getHoldingVar).
 static bool IsDecomposedVarDecl(VarDecl const *VD) {
   auto const *Init = VD->getInit();
   if (!Init)
@@ -95,7 +95,7 @@ static bool IsDecomposedVarDecl(VarDecl const *VD) {
   return llvm::dyn_cast_or_null<DecompositionDecl>(RefExpr->getDecl());
 }
 
-/// Return true if \ref VD is a compiler-generated variable
+/// Returns true if \ref VD is a compiler-generated variable
 /// and should be treated as artificial for the purposes
 /// of debug-info generation.
 static bool IsArtificial(VarDecl const *VD) {
