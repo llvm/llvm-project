@@ -446,10 +446,10 @@ void GCNHazardRecognizer::RecedeCycle() {
 // Helper Functions
 //===----------------------------------------------------------------------===//
 
-typedef enum { HazardFound, HazardExpired, NoHazardFound } HazardFnResult;
+using HazardFnResult = enum { HazardFound, HazardExpired, NoHazardFound };
 
-typedef function_ref<bool(const MachineInstr &, int WaitStates)> IsExpiredFn;
-typedef function_ref<unsigned int(const MachineInstr &)> GetNumWaitStatesFn;
+using IsExpiredFn = function_ref<bool(const MachineInstr &, int WaitStates)>;
+using GetNumWaitStatesFn = function_ref<unsigned int(const MachineInstr &)>;
 
 // Search for a hazard in a block and its predecessors.
 template <typename StateT>
