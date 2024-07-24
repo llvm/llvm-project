@@ -1123,24 +1123,22 @@ Instruction *InstCombinerImpl::matchAddSubSat(IntrinsicInst &MinMax1) {
   Type *Ty = MinMax1.getType();
 
   // 1. We are looking for a tree of signed saturation:
-  //    smax(SINT_MIN, smin(SINT_MAX, add|sub(sext(A), sext(B))))
+  //    smax(SINT_MIN, smin(SINT_MAX, add(sext(A), sext(B)))) -> sadd_sat
+  //    smax(SINT_MIN, smin(SINT_MAX, sub(sext(A), sext(B)))) -> ssub_sat
   //    Where the smin and smax could be reversed.
   // 2. A tree of unsigned saturation:
-  //    smax(UINT_MIN, sub(zext(A), zext(B)))
-  //    Or umin(UINT_MAX, add(zext(A), zext(B))).
+  //	smax(UINT_MIN, sub(zext(A), zext(B))) -> usub_sat
+  //    umin(UINT_MAX, add(zext(A), zext(B))) -> uadd_sat.
   Instruction *MinMax2 = nullptr;
   BinaryOperator *AddSub;
   const APInt *MinValue = nullptr, *MaxValue = nullptr;
   bool IsUnsignedSaturate = false;
   // Pattern match for unsigned saturation.
-  if (match(&MinMax1, m_UMin(m_BinOp(AddSub), m_APInt(MaxValue)))) {
-    // Bail out if AddSub could be negative.
-    if (!isKnownNonNegative(AddSub, SQ.getWithInstruction(AddSub)))
-      return nullptr;
+  if (match(&MinMax1, m_UMin(m_BinOp(AddSub), m_APInt(MaxValue))) &&
+      AddSub->getOpcode() == Instruction::Add) {
     IsUnsignedSaturate = true;
-  } else if (match(&MinMax1, m_SMax(m_BinOp(AddSub), m_APInt(MinValue)))) {
-    if (!MinValue->isZero())
-      return nullptr;
+  } else if (match(&MinMax1, m_SMax(m_BinOp(AddSub), m_Zero())) &&
+             AddSub->getOpcode() == Instruction::Sub) {
     IsUnsignedSaturate = true;
   } else {
     // Pattern match for signed saturation.
@@ -1160,34 +1158,14 @@ Instruction *InstCombinerImpl::matchAddSubSat(IntrinsicInst &MinMax1) {
   if ((MaxValue && !(*MaxValue + 1).isPowerOf2()) ||
       (!IsUnsignedSaturate && -*MinValue != *MaxValue + 1))
     return nullptr;
-
   // Trying to decide the bitwidth for saturating arithmetics.
-  Value *Op0 = AddSub->getOperand(0);
-  Value *Op1 = AddSub->getOperand(1);
-  unsigned Op0MaxBitWidth =
-      IsUnsignedSaturate ? computeKnownBits(Op0, 0, AddSub).countMaxActiveBits()
-                         : ComputeMaxSignificantBits(Op0, 0, AddSub);
-  unsigned Op1MaxBitWidth =
-      IsUnsignedSaturate ? computeKnownBits(Op1, 0, AddSub).countMaxActiveBits()
-                         : ComputeMaxSignificantBits(Op1, 0, AddSub);
-  unsigned NewBitWidth = IsUnsignedSaturate
-                             ? std::max(Op0MaxBitWidth, Op1MaxBitWidth)
-                             : (*MaxValue + 1).logBase2() + 1;
-
-  if (!IsUnsignedSaturate) {
-    // The two operands of the add/sub must be nsw-truncatable to type with
-    // NewBitWidth. This is usually achieved via a sext from a smaller type.
-    if (Op0MaxBitWidth > NewBitWidth || Op1MaxBitWidth > NewBitWidth)
-      return nullptr;
-  } else {
-    // Bail out if NewBitWidth is not smaller than the bitwidth of MinMax1.
-    if (NewBitWidth == Ty->getScalarType()->getIntegerBitWidth())
-      return nullptr;
-    // Bail out if MaxValue is not a valid unsigned saturating maximum value.
-    if (MaxValue && (*MaxValue + 1).logBase2() != NewBitWidth)
-      return nullptr;
-  }
-
+  // If the MaxValue is not specified when trying to fold unsigned saturation
+  // smax(UINT_MIN, sub(zext(A), zext(B))) into usub_sat. NewBitWidth is set to
+  // half of the MinMax1 bitwidth as a first attempt. Then use the results from
+  // computeKnownBits to determine legality, and if NewBitWidth can be reduced.
+  unsigned NewBitWidth =
+      MaxValue ? (*MaxValue + 1).logBase2() + (IsUnsignedSaturate ? 0 : 1)
+               : Ty->getScalarType()->getIntegerBitWidth() / 2;
   // FIXME: This isn't quite right for vectors, but using the scalar type is a
   // good first approximation for what should be done there.
   if (!shouldChangeType(Ty->getScalarType()->getIntegerBitWidth(), NewBitWidth))
@@ -1196,9 +1174,6 @@ Instruction *InstCombinerImpl::matchAddSubSat(IntrinsicInst &MinMax1) {
   // Also make sure that the inner min/max and the add/sub have one use.
   if ((MinMax2 && !MinMax2->hasOneUse()) || !AddSub->hasOneUse())
     return nullptr;
-
-  // Create the new type (which can be a vector type)
-  Type *NewTy = Ty->getWithNewBitWidth(NewBitWidth);
 
   Intrinsic::ID IntrinsicID;
   if (AddSub->getOpcode() == Instruction::Add)
@@ -1210,13 +1185,37 @@ Instruction *InstCombinerImpl::matchAddSubSat(IntrinsicInst &MinMax1) {
   else
     return nullptr;
 
+  Value *Op0 = AddSub->getOperand(0);
+  Value *Op1 = AddSub->getOperand(1);
+  unsigned Op0MaxBitWidth =
+      IsUnsignedSaturate ? computeKnownBits(Op0, 0, AddSub).countMaxActiveBits()
+                         : ComputeMaxSignificantBits(Op0, 0, AddSub);
+  unsigned Op1MaxBitWidth =
+      IsUnsignedSaturate ? computeKnownBits(Op1, 0, AddSub).countMaxActiveBits()
+                         : ComputeMaxSignificantBits(Op1, 0, AddSub);
+  // The two operands of the add/sub must be nsw|nuw-truncatable to type with
+  // NewBitWidth. This is usually achieved via a [s|z]ext from a smaller type.
+  if (Op0MaxBitWidth > NewBitWidth || Op1MaxBitWidth > NewBitWidth)
+    return nullptr;
+
+  if (IsUnsignedSaturate) {
+    // Try to reduce NewBitWidth based on computeKnownBits results.
+    NewBitWidth =
+        std::min(NewBitWidth, std::max(Op0MaxBitWidth, Op1MaxBitWidth));
+    // Bail out if MaxValue is not a valid unsigned saturating maximum value.
+    if (MaxValue && (*MaxValue + 1).logBase2() != NewBitWidth)
+      return nullptr;
+  }
+
+  // Create the new type (which can be a vector type)
+  Type *NewTy = Ty->getWithNewBitWidth(NewBitWidth);
+
   // Finally create and return the sat intrinsic, truncated to the new type
   Function *F = Intrinsic::getDeclaration(MinMax1.getModule(), IntrinsicID, NewTy);
   Value *AT = Builder.CreateTrunc(AddSub->getOperand(0), NewTy);
   Value *BT = Builder.CreateTrunc(AddSub->getOperand(1), NewTy);
   Value *Sat = Builder.CreateCall(F, {AT, BT});
-  return CastInst::Create(
-      IsUnsignedSaturate ? Instruction::ZExt : Instruction::SExt, Sat, Ty);
+  return CastInst::CreateIntegerCast(Sat, Ty, /*isSigned=*/!IsUnsignedSaturate);
 }
 
 /// If we have a clamp pattern like max (min X, 42), 41 -- where the output
