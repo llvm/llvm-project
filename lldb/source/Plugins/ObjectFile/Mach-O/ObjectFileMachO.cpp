@@ -6558,7 +6558,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
 
     if (make_core) {
       Process::CoreFileMemoryRanges core_ranges;
-      error = process_sp->CalculateCoreFileSaveRanges(core_style, core_ranges);
+      error = process_sp->CalculateCoreFileSaveRanges(options, core_ranges);
       if (error.Success()) {
         const uint32_t addr_byte_size = target_arch.GetAddressByteSize();
         const ByteOrder byte_order = target_arch.GetByteOrder();
@@ -6608,8 +6608,9 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         mach_header.ncmds = segment_load_commands.size();
         mach_header.flags = 0;
         mach_header.reserved = 0;
-        ThreadList &thread_list = process_sp->GetThreadList();
-        const uint32_t num_threads = thread_list.GetSize();
+        std::vector<ThreadSP> thread_list =
+            process_sp->CalculateCoreFileThreadList(options);
+        const uint32_t num_threads = thread_list.size();
 
         // Make an array of LC_THREAD data items. Each one contains the
         // contents of the LC_THREAD load command. The data doesn't contain
@@ -6622,7 +6623,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
           LC_THREAD_data.SetByteOrder(byte_order);
         }
         for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
-          ThreadSP thread_sp(thread_list.GetThreadAtIndex(thread_idx));
+          ThreadSP thread_sp = thread_list.at(thread_idx);
           if (thread_sp) {
             switch (mach_header.cputype) {
             case llvm::MachO::CPU_TYPE_ARM64:
@@ -6730,7 +6731,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         StructuredData::ArraySP threads(
             std::make_shared<StructuredData::Array>());
         for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
-          ThreadSP thread_sp(thread_list.GetThreadAtIndex(thread_idx));
+          ThreadSP thread_sp = thread_list.at(thread_idx);
           StructuredData::DictionarySP thread(
               std::make_shared<StructuredData::Dictionary>());
           thread->AddIntegerItem("thread_id", thread_sp->GetID());

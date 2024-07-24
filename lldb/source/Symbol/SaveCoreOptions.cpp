@@ -77,6 +77,9 @@ int64_t SaveCoreOptions::GetThreadAtIndex(size_t index) const {
 }
 
 bool SaveCoreOptions::ShouldSaveThread(lldb::tid_t tid) const {
+  // If the user specified no threads to save, then we save all threads.
+  if (m_threads_to_save.empty())
+    return true;
   return m_threads_to_save.count(tid) > 0;
 }
 
