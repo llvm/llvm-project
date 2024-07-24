@@ -25,3 +25,26 @@ define i1 @logical_and_icmp_diff_preds(<4 x i32> %x) {
   %s3 = select i1 %s2, i1 %c3, i1 false
   ret i1 %s3
 }
+
+define i1 @logical_and_icmp_clamp(<4 x i32> %x) {
+  %x0 = extractelement <4 x i32> %x, i32 0
+  %x1 = extractelement <4 x i32> %x, i32 1
+  %x2 = extractelement <4 x i32> %x, i32 2
+  %x3 = extractelement <4 x i32> %x, i32 3
+  %c0 = icmp slt i32 %x0, 42
+  %c1 = icmp slt i32 %x1, 42
+  %c2 = icmp slt i32 %x2, 42
+  %c3 = icmp slt i32 %x3, 42
+  %d0 = icmp sgt i32 %x0, 17
+  %d1 = icmp sgt i32 %x1, 17
+  %d2 = icmp sgt i32 %x2, 17
+  %d3 = icmp sgt i32 %x3, 17
+  %s1 = select i1 %c0, i1 %c1, i1 false
+  %s2 = select i1 %s1, i1 %c2, i1 false
+  %s3 = select i1 %s2, i1 %c3, i1 false
+  %s4 = select i1 %s3, i1 %d0, i1 false
+  %s5 = select i1 %s4, i1 %d1, i1 false
+  %s6 = select i1 %s5, i1 %d2, i1 false
+  %s7 = select i1 %s6, i1 %d3, i1 false
+  ret i1 %s7
+}
