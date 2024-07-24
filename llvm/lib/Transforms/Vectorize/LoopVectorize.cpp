@@ -137,6 +137,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
@@ -204,11 +205,6 @@ static cl::opt<unsigned> TinyTripCountVectorThreshold(
 static cl::opt<unsigned> VectorizeMemoryCheckThreshold(
     "vectorize-memory-check-threshold", cl::init(128), cl::Hidden,
     cl::desc("The maximum allowed number of runtime memory checks"));
-
-static cl::opt<bool> UseLegacyCostModel(
-    "vectorize-use-legacy-cost-model", cl::init(false), cl::Hidden,
-    cl::desc("Use the legacy cost model instead of the VPlan-based cost model. "
-             "This option will be removed in the future."));
 
 // Option prefer-predicate-over-epilogue indicates that an epilogue is undesired,
 // that predication is preferred, and this lists all options. I.e., the
@@ -6681,6 +6677,7 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
   CodeMetrics::collectEphemeralValues(TheLoop, AC, ValuesToIgnore);
 
   SmallVector<Value *, 4> DeadInterleavePointerOps;
+  SmallVector<Value *, 4> DeadOps;
   for (BasicBlock *BB : TheLoop->blocks())
     for (Instruction &I : *BB) {
       // Find all stores to invariant variables. Since they are going to sink
@@ -6689,6 +6686,17 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
       if ((SI = dyn_cast<StoreInst>(&I)) &&
           Legal->isInvariantAddressOfReduction(SI->getPointerOperand()))
         ValuesToIgnore.insert(&I);
+
+      if (VecValuesToIgnore.contains(&I) || ValuesToIgnore.contains(&I))
+        continue;
+
+      // Add instructions that would be trivially dead and are only used by
+      // values already ignored to DeadOps to seed worklist.
+      if (wouldInstructionBeTriviallyDead(&I, TLI) &&
+          all_of(I.users(), [this](User *U) {
+            return VecValuesToIgnore.contains(U) || ValuesToIgnore.contains(U);
+          }))
+        DeadOps.push_back(&I);
 
       // For interleave groups, we only create a pointer for the start of the
       // interleave group. Queue up addresses of group members except the insert
@@ -6715,6 +6723,29 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
       continue;
     VecValuesToIgnore.insert(Op);
     DeadInterleavePointerOps.append(Op->op_begin(), Op->op_end());
+  }
+
+  // Mark ops that would be trivially dead and are only used by ignored
+  // instructions as free.
+  for (unsigned I = 0; I != DeadOps.size(); ++I) {
+    auto *Op = dyn_cast<Instruction>(DeadOps[I]);
+    // Skip any op that shouldn't be considered dead.
+    if (!Op || !TheLoop->contains(Op) ||
+        !wouldInstructionBeTriviallyDead(Op, TLI) ||
+        any_of(Op->users(), [this](User *U) {
+          return !VecValuesToIgnore.contains(U) && !ValuesToIgnore.contains(U);
+        }))
+      continue;
+
+    // If all of Op's users are in ValuesToIgnore, add it to ValuesToIgnore
+    // which applies for both scalar and vector versions. Otherwise it is only
+    // dead in vector versions, so only add it to VecValuesToIgnore.
+    if (all_of(Op->users(),
+               [this](User *U) { return ValuesToIgnore.contains(U); }))
+      ValuesToIgnore.insert(Op);
+
+    VecValuesToIgnore.insert(Op);
+    DeadOps.append(Op->op_begin(), Op->op_end());
   }
 
   // Ignore type-promoting instructions we identified during reduction
@@ -9940,9 +9971,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, AC, ORE, IC, &LVL,
                                  &CM, BFI, PSI, Checks);
 
-      VPlan &BestPlan =
-          UseLegacyCostModel ? LVP.getBestPlanFor(VF.Width) : LVP.getBestPlan();
-      assert((UseLegacyCostModel || BestPlan.hasScalarVFOnly()) &&
+      VPlan &BestPlan = LVP.getBestPlan();
+      assert(BestPlan.hasScalarVFOnly() &&
              "VPlan cost model and legacy cost model disagreed");
       LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
 
@@ -10059,18 +10089,14 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         if (!MainILV.areSafetyChecksAdded())
           DisableRuntimeUnroll = true;
       } else {
-        ElementCount Width = VF.Width;
-        VPlan &BestPlan =
-            UseLegacyCostModel ? LVP.getBestPlanFor(Width) : LVP.getBestPlan();
-        if (!UseLegacyCostModel) {
-          assert(size(BestPlan.vectorFactors()) == 1 &&
-                 "Plan should have a single VF");
-          Width = *BestPlan.vectorFactors().begin();
-          LLVM_DEBUG(dbgs()
-                     << "VF picked by VPlan cost model: " << Width << "\n");
-          assert(VF.Width == Width &&
-                 "VPlan cost model and legacy cost model disagreed");
-        }
+        VPlan &BestPlan = LVP.getBestPlan();
+        assert(size(BestPlan.vectorFactors()) == 1 &&
+               "Plan should have a single VF");
+        ElementCount Width = *BestPlan.vectorFactors().begin();
+        LLVM_DEBUG(dbgs() << "VF picked by VPlan cost model: " << Width
+                          << "\n");
+        assert(VF.Width == Width &&
+               "VPlan cost model and legacy cost model disagreed");
         InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, Width,
                                VF.MinProfitableTripCount, IC, &LVL, &CM, BFI,
                                PSI, Checks);

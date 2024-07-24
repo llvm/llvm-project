@@ -71,12 +71,16 @@ if (NOT "${LIBCXX_HARDENING_MODE}" IN_LIST LIBCXX_SUPPORTED_HARDENING_MODES)
     "Unsupported hardening mode: '${LIBCXX_HARDENING_MODE}'. Supported values are ${LIBCXX_SUPPORTED_HARDENING_MODES}.")
 endif()
 set(LIBCXX_ASSERTION_HANDLER_FILE
-  "${CMAKE_CURRENT_SOURCE_DIR}/vendor/llvm/default_assertion_handler.in"
+  "vendor/llvm/default_assertion_handler.in"
   CACHE STRING
   "Specify the path to a header that contains a custom implementation of the
    assertion handler that gets invoked when a hardening assertion fails. If
    provided, this header will be included by the library, replacing the
-   default assertion handler.")
+   default assertion handler. If this is specified as a relative path, it
+   is assumed to be relative to '<monorepo>/libcxx'.")
+if (NOT IS_ABSOLUTE "${LIBCXX_ASSERTION_HANDLER_FILE}")
+  set(LIBCXX_ASSERTION_HANDLER_FILE "${CMAKE_CURRENT_SOURCE_DIR}/${LIBCXX_ASSERTION_HANDLER_FILE}")
+endif()
 option(LIBCXX_ENABLE_RANDOM_DEVICE
   "Whether to include support for std::random_device in the library. Disabling
    this can be useful when building the library for platforms that don't have

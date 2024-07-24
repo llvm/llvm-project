@@ -2,20 +2,14 @@
 ; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 -mattr=+v -verify-machineinstrs | FileCheck %s
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs | FileCheck %s
 
-declare <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, iXLen)
-
-declare <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, iXLen)
-
-define <vscale x 4 x i32> @vadd(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1, iXLen %vl2) {
+define <vscale x 4 x i32> @vadd(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
 ; CHECK-LABEL: vadd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vadd.vv v10, v10, v12
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
+; CHECK-NEXT:    vadd.vv v8, v10, v12
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1)
-  %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, iXLen %vl2)
+  %v = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl)
+  %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, iXLen %vl)
   ret <vscale x 4 x i32> %w
 }
 
@@ -30,22 +24,30 @@ define <vscale x 4 x i32> @vadd_mask(<vscale x 4 x i32> %passthru, <vscale x 4 x
   ret <vscale x 4 x i32> %w
 }
 
-define <vscale x 4 x i32> @vadd_undef(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1, iXLen %vl2) {
+define <vscale x 4 x i32> @vadd_undef(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
 ; CHECK-LABEL: vadd_undef:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v10
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.v.v v8, v8
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1)
-  %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %v, iXLen %vl2)
+  %v = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl)
+  %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %v, iXLen %vl)
   ret <vscale x 4 x i32> %w
 }
 
-; TODO: Is this correct if there's already a passthru in the src?
-define <vscale x 4 x i32> @vadd_same_passthru(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1, iXLen %vl2) {
+define <vscale x 4 x i32> @vadd_same_passthru(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
 ; CHECK-LABEL: vadd_same_passthru:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
+; CHECK-NEXT:    vadd.vv v8, v10, v12
+; CHECK-NEXT:    ret
+  %v = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl)
+  %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, iXLen %vl)
+  ret <vscale x 4 x i32> %w
+}
+
+define <vscale x 4 x i32> @unfoldable_diff_avl_unknown(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1, iXLen %vl2) {
+; CHECK-LABEL: unfoldable_diff_avl_unknown:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv2r.v v14, v8
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
@@ -58,35 +60,49 @@ define <vscale x 4 x i32> @vadd_same_passthru(<vscale x 4 x i32> %passthru, <vsc
   ret <vscale x 4 x i32> %w
 }
 
-declare <vscale x 4 x i32> @llvm.riscv.vadd.mask.nxv4i32.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i1>, iXLen, iXLen)
+define <vscale x 4 x i32> @diff_avl_known(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: diff_avl_known:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
+; CHECK-NEXT:    vadd.vv v8, v10, v12
+; CHECK-NEXT:    ret
+  %v = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen 4)
+  %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, iXLen 8)
+  ret <vscale x 4 x i32> %w
+}
 
-define <vscale x 4 x i32> @vadd_mask_ma(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i1> %mask, iXLen %vl1, iXLen %vl2) {
+define <vscale x 4 x i32> @diff_avl_vlmax(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
+; CHECK-LABEL: diff_avl_vlmax:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
+; CHECK-NEXT:    vadd.vv v8, v10, v12
+; CHECK-NEXT:    ret
+  %v = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1)
+  %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, iXLen %vl)
+  ret <vscale x 4 x i32> %w
+}
+
+define <vscale x 4 x i32> @vadd_mask_ma(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i1> %mask, iXLen %vl) {
 ; CHECK-LABEL: vadd_mask_ma:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vadd.vv v10, v10, v12, v0.t
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, mu
+; CHECK-NEXT:    vadd.vv v8, v10, v12, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 4 x i32> @llvm.riscv.vadd.mask.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i1> %mask, iXLen %vl1, iXLen 2)
-  %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, iXLen %vl2)
+  %v = call <vscale x 4 x i32> @llvm.riscv.vadd.mask.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i1> %mask, iXLen %vl, iXLen 2)
+  %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, iXLen %vl)
   ret <vscale x 4 x i32> %w
 }
 
-define <vscale x 4 x i32> @vadd_mask_mu(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i1> %mask, iXLen %vl1, iXLen %vl2) {
+define <vscale x 4 x i32> @vadd_mask_mu(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i1> %mask, iXLen %vl) {
 ; CHECK-LABEL: vadd_mask_mu:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vadd.vv v10, v10, v12, v0.t
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, mu
+; CHECK-NEXT:    vadd.vv v8, v10, v12, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 4 x i32> @llvm.riscv.vadd.mask.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i1> %mask, iXLen %vl1, iXLen 0)
-  %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, iXLen %vl2)
+  %v = call <vscale x 4 x i32> @llvm.riscv.vadd.mask.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i1> %mask, iXLen %vl, iXLen 0)
+  %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, iXLen %vl)
   ret <vscale x 4 x i32> %w
 }
-
-declare <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32(<vscale x 4 x i32>, ptr, iXLen)
 
 define <vscale x 4 x i32> @foldable_load(<vscale x 4 x i32> %passthru, ptr %p) {
 ; CHECK-LABEL: foldable_load:
@@ -112,10 +128,6 @@ define <vscale x 4 x i32> @unfoldable_load(<vscale x 4 x i32> %passthru, ptr %p,
   %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, iXLen %vl2)
   ret <vscale x 4 x i32> %w
 }
-
-declare <vscale x 4 x float> @llvm.riscv.vmv.v.v.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, iXLen)
-
-declare <vscale x 4 x float> @llvm.riscv.vfadd.nxv4f32.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, iXLen, iXLen)
 
 define <vscale x 4 x float> @unfoldable_vfadd(<vscale x 4 x float> %passthru, <vscale x 4 x float> %a, <vscale x 4 x float> %b, iXLen %vl1, iXLen %vl2) {
 ; CHECK-LABEL: unfoldable_vfadd:

@@ -839,15 +839,6 @@ def unmerge_zext_to_zext : GICombineRule<
   (apply [{ Helper.applyCombineUnmergeZExtToZExt(*${d}); }])
 >;
 
-// Fold trunc ([asz]ext x) -> x or ([asz]ext x) or (trunc x).
-def trunc_ext_fold_matchinfo : GIDefMatchData<"std::pair<Register, unsigned>">;
-def trunc_ext_fold: GICombineRule <
-  (defs root:$root, trunc_ext_fold_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_TRUNC):$root,
-         [{ return Helper.matchCombineTruncOfExt(*${root}, ${matchinfo}); }]),
-  (apply [{ Helper.applyCombineTruncOfExt(*${root}, ${matchinfo}); }])
->;
-
 // Under certain conditions, transform:
 //  trunc (shl x, K)     -> shl (trunc x), K//
 //  trunc ([al]shr x, K) -> (trunc ([al]shr (trunc x), K))
@@ -1768,6 +1759,25 @@ def freeze_combines: GICombineGroup<[
   push_freeze_to_prevent_poison_from_propagating
 ]>;
 
+/// Transform trunc ([asz]ext x) to x or ([asz]ext x) or (trunc x).
+class truncate_of_opcode<Instruction extOpcode> : GICombineRule <
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (extOpcode $ext, $src):$ExtMI,
+         (G_TRUNC $root, $ext):$root,
+         [{ return Helper.matchTruncateOfExt(*${root}, *${ExtMI}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+def truncate_of_zext : truncate_of_opcode<G_ZEXT>;
+def truncate_of_sext : truncate_of_opcode<G_SEXT>;
+def truncate_of_anyext : truncate_of_opcode<G_ANYEXT>;
+
+def cast_combines: GICombineGroup<[
+  truncate_of_zext,
+  truncate_of_sext,
+  truncate_of_anyext
+]>;
+
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -1828,7 +1838,7 @@ def constant_fold_binops : GICombineGroup<[constant_fold_binop,
 def prefer_sign_combines : GICombineGroup<[nneg_zext]>;
 
 def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
-    vector_ops_combines, freeze_combines,
+    vector_ops_combines, freeze_combines, cast_combines,
     insert_vec_elt_combines, extract_vec_elt_combines, combines_for_extload,
     combine_extracted_vector_load,
     undef_combines, identity_combines, phi_combines,
@@ -1839,7 +1849,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     known_bits_simplifications, ext_ext_fold,
     not_cmp_fold, opt_brcond_by_inverting_cond,
     unmerge_merge, unmerge_cst, unmerge_dead_to_trunc,
-    unmerge_zext_to_zext, merge_unmerge, trunc_ext_fold, trunc_shift,
+    unmerge_zext_to_zext, merge_unmerge, trunc_shift,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
     div_rem_to_divrem, funnel_shift_combines, bitreverse_shift, commute_shift,

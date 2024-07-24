@@ -315,7 +315,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   getActionDefinitionsBuilder(G_PHI)
       .legalIf([=](const LegalityQuery &Query) -> bool {
         return typeInSet(0, {s8, s16, s32, p0})(Query) ||
-               (Is64Bit && typeInSet(0, {s64})(Query)) ||
+               (UseX87 && typeIs(0, s80)(Query)) ||
+               (Is64Bit && typeIs(0, s64)(Query)) ||
                (HasSSE1 && typeInSet(0, {v16s8, v8s16, v4s32, v2s64})(Query)) ||
                (HasAVX && typeInSet(0, {v32s8, v16s16, v8s32, v4s64})(Query)) ||
                (HasAVX512 &&
