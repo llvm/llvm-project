@@ -220,12 +220,24 @@ public:
     // to the catch block as a placeholder for now.
     rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(yieldOp, catchBegin);
 
-    // Start the landing pad by getting the inflight exception information,
-    // and jumping to the catchBegin phase.
+    // Start the landing pad by getting the inflight exception information.
     rewriter.setInsertionPointToEnd(catchBegin);
-    InflightEhOp exception = rewriter.create<mlir::cir::InflightEhOp>(
+    auto exception = rewriter.create<mlir::cir::EhInflightOp>(
         loc, mlir::cir::ExceptionInfoType::get(rewriter.getContext()));
-    // FIXME: TBD emission.
+
+    // TODO: direct catch all needs no dispatch.
+
+    // Handle dispatch. In could in theory use a switch, but let's just
+    // mimic LLVM more closely since we have no specific thing to achieve
+    // doing that (might not play as well with existing optimizers either).
+    auto *dispatchBlock =
+        rewriter.splitBlock(catchBegin, rewriter.getInsertionPoint());
+    rewriter.setInsertionPointToEnd(catchBegin);
+    rewriter.create<mlir::cir::BrOp>(loc, dispatchBlock);
+
+    // Fill in dispatcher.
+    rewriter.setInsertionPointToEnd(dispatchBlock);
+    auto selector = rewriter.create<mlir::cir::EhSelectorOp>(loc, exception);
     rewriter.create<mlir::cir::BrOp>(loc, continueBlock);
 
     rewriter.eraseOp(tryOp);

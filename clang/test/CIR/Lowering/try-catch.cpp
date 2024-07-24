@@ -26,8 +26,10 @@ unsigned long long tc() {
     // CIR_FLAT:   cir.br ^bb3
 
     // CIR_FLAT: ^bb3:  // pred: ^bb2
-    // CIR_FLAT:   %14 = cir.inflight_exception
+    // CIR_FLAT:   %[[EH:.*]] = cir.eh.inflight_exception
     // CIR_FLAT:   cir.br ^bb4
+    // CIR_FLAT: ^bb4:  // pred: ^bb3
+    // CIR_FLAT:   %[[SEL:.*]] = cir.eh.selector %[[EH]]
   } catch (int idx) {
     z = 98;
     idx++;
