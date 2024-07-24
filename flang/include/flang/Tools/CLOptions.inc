@@ -9,6 +9,7 @@
 /// This file defines some shared command-line options that can be used when
 /// debugging the test tools. This file must be included into the tool.
 
+#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Pass/PassManager.h"
@@ -223,6 +224,10 @@ inline void addFIRToLLVMPass(
   options.forceUnifiedTBAATree = useOldAliasTags;
   addPassConditionally(pm, disableFirToLlvmIr,
       [&]() { return fir::createFIRToLLVMPass(options); });
+  // The dialect conversion framework may leave dead unrealized_conversion_cast
+  // ops behind, so run reconcile-unrealized-casts to clean them up.
+  addPassConditionally(pm, disableFirToLlvmIr,
+      [&]() { return mlir::createReconcileUnrealizedCastsPass(); });
 }
 
 inline void addLLVMDialectToLLVMPass(
