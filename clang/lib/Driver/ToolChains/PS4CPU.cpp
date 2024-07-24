@@ -255,7 +255,7 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   };
 
   // If the linker sees bitcode objects it will perform LTO. We can't tell
-  // whether or not that will be the case at this point. So unconditionally
+  // whether or not that will be the case at this point. So, unconditionally
   // pass LTO options to ensure proper codegen, metadata production, etc if
   // LTO indeed occurs.
   if (Args.hasFlag(options::OPT_funified_lto, options::OPT_fno_unified_lto,
