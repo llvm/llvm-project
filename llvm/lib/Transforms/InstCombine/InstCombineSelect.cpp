@@ -186,6 +186,22 @@ static Value *foldSelectICmpAnd(SelectInst &Sel, ICmpInst *Cmp,
       return ExtraBitInTC ? Builder.CreateXor(V, C) : Builder.CreateOr(V, C);
     }
 
+    // (V & AndMaskC) == 0 ? TC : FC --> (V & AndMaskC) + TC
+    if (TC + AndMask == FC) {
+      if (CreateAnd)
+        V = Builder.CreateAnd(V, ConstantInt::get(SelType, AndMask));
+      Constant *C = ConstantInt::get(SelType, TC);
+      return Builder.CreateAdd(V, C);
+    }
+
+    // (V & AndMaskC) == 0 ? TC : FC --> TC - (V & AndMaskC)
+    if (TC - AndMask == FC) {
+      if (CreateAnd)
+        V = Builder.CreateAnd(V, ConstantInt::get(SelType, AndMask));
+      Constant *C = ConstantInt::get(SelType, TC);
+      return Builder.CreateSub(C, V);
+    }
+
     return nullptr;
   }
 

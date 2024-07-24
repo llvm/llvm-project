@@ -633,8 +633,7 @@ define i32 @select_bittest_to_add(i32 %x) {
 ; CHECK-LABEL: @select_bittest_to_add(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 3, i32 4
+; CHECK-NEXT:    [[RET:%.*]] = add nuw nsw i32 [[AND]], 3
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
 entry:
@@ -648,8 +647,7 @@ define i32 @select_bittest_to_sub(i32 %x) {
 ; CHECK-LABEL: @select_bittest_to_sub(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 4, i32 3
+; CHECK-NEXT:    [[RET:%.*]] = sub nuw nsw i32 4, [[AND]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
 entry:
