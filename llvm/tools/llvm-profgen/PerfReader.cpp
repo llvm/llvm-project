@@ -53,6 +53,10 @@ static cl::alias
                           cl::desc("Comma-delimited version of -perf-event"),
                           cl::aliasopt(PerfEventFilter));
 
+static cl::opt<uint64_t>
+    SamplePeriod("sample-period", cl::init(1),
+                 cl::desc("The sampling period (-c) used for perf data"));
+
 extern cl::opt<std::string> PerfTraceFilename;
 extern cl::opt<bool> ShowDisassemblyOnly;
 extern cl::opt<bool> ShowSourceLocations;
@@ -1000,6 +1004,16 @@ void LBRPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
   if (extractLBRStack(TraceIt, Sample->LBRStack)) {
     warnIfMissingMMap();
     // Record LBR only samples by aggregation
+    // If a sampling period is given we can adjust the magnitude of sample
+    // counts to estimate the absolute magnitute.
+    if (SamplePeriod.getNumOccurrences()) {
+      Count *= SamplePeriod;
+      // If counts are LBR-based, as opposed to IP-based, then the magnitude is
+      // now amplified by roughly the LBR stack size. By adjusting this down, we
+      // can produce LBR-based and IP-based profiles with comparable magnitudes.
+      if (!LeadingIPOnly && Sample->LBRStack.size() > 1)
+        Count /= (Sample->LBRStack.size() - 1);
+    }
     AggregatedSamples[Hashable<PerfSample>(Sample)] += Count;
   }
 }

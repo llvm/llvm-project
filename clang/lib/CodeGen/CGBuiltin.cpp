@@ -62,6 +62,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/X86TargetParser.h"
 #include <optional>
 #include <sstream>
@@ -14308,6 +14309,16 @@ Value *CodeGenFunction::EmitAArch64CpuInit() {
   return Builder.CreateCall(Func);
 }
 
+Value *CodeGenFunction::EmitRISCVCpuInit() {
+  llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
+  llvm::FunctionCallee Func =
+      CGM.CreateRuntimeFunction(FTy, "__init_riscv_feature_bits");
+  auto *CalleeGV = cast<llvm::GlobalValue>(Func.getCallee());
+  CalleeGV->setDSOLocal(true);
+  CalleeGV->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
+  return Builder.CreateCall(Func);
+}
+
 Value *CodeGenFunction::EmitX86CpuInit() {
   llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy,
                                                     /*Variadic*/ false);
@@ -14358,6 +14369,42 @@ CodeGenFunction::EmitAArch64CpuSupports(ArrayRef<StringRef> FeaturesStrs) {
     Result = Builder.CreateAnd(Result, Cmp);
   }
   return Result;
+}
+
+Value *CodeGenFunction::EmitRISCVCpuSupports(const CallExpr *E) {
+
+  const Expr *FeatureExpr = E->getArg(0)->IgnoreParenCasts();
+  StringRef FeatureStr = cast<StringLiteral>(FeatureExpr)->getString();
+  if (!getContext().getTargetInfo().validateCpuSupports(FeatureStr))
+    return Builder.getFalse();
+
+  // Note: We are making an unchecked assumption that the size of the
+  // feature array is >= 1.  This holds for any version of compiler-rt
+  // which defines this interface.
+  llvm::ArrayType *ArrayOfInt64Ty = llvm::ArrayType::get(Int64Ty, 1);
+  llvm::Type *StructTy = llvm::StructType::get(Int32Ty, ArrayOfInt64Ty);
+  llvm::Constant *RISCVFeaturesBits =
+      CGM.CreateRuntimeVariable(StructTy, "__riscv_feature_bits");
+  auto *GV = cast<llvm::GlobalValue>(RISCVFeaturesBits);
+  GV->setDSOLocal(true);
+
+  auto LoadFeatureBit = [&](unsigned Index) {
+    // Create GEP then load.
+    Value *IndexVal = llvm::ConstantInt::get(Int32Ty, Index);
+    llvm::Value *GEPIndices[] = {Builder.getInt32(0), Builder.getInt32(1),
+                                 IndexVal};
+    Value *Ptr =
+        Builder.CreateInBoundsGEP(StructTy, RISCVFeaturesBits, GEPIndices);
+    Value *FeaturesBit =
+        Builder.CreateAlignedLoad(Int64Ty, Ptr, CharUnits::fromQuantity(8));
+    return FeaturesBit;
+  };
+
+  int BitPos = RISCVISAInfo::getRISCVFeaturesBitPosition(FeatureStr);
+  assert(BitPos != -1 && "validation should have rejected this feature");
+  Value *MaskV = Builder.getInt64(1ULL << BitPos);
+  Value *Bitset = Builder.CreateAnd(LoadFeatureBit(0), MaskV);
+  return Builder.CreateICmpEQ(Bitset, MaskV);
 }
 
 Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
@@ -18424,10 +18471,10 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("frac operand must have a float representation");
     return Builder.CreateIntrinsic(
-        /*ReturnType=*/Op0->getType(), Intrinsic::dx_frac,
-        ArrayRef<Value *>{Op0}, nullptr, "dx.frac");
-  }
-  case Builtin::BI__builtin_hlsl_elementwise_isinf: {
+        /*ReturnType=*/Op0->getType(), CGM.getHLSLRuntime().getFracIntrinsic(),
+        ArrayRef<Value *>{Op0}, nullptr, "hlsl.frac");
+}
+case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     llvm::Type *Xty = Op0->getType();
     llvm::Type *retType = llvm::Type::getInt1Ty(this->getLLVMContext());
@@ -21854,6 +21901,12 @@ Value *CodeGenFunction::EmitHexagonBuiltinExpr(unsigned BuiltinID,
 Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
                                              const CallExpr *E,
                                              ReturnValueSlot ReturnValue) {
+
+  if (BuiltinID == Builtin::BI__builtin_cpu_supports)
+    return EmitRISCVCpuSupports(E);
+  if (BuiltinID == Builtin::BI__builtin_cpu_init)
+    return EmitRISCVCpuInit();
+
   SmallVector<Value *, 4> Ops;
   llvm::Type *ResultType = ConvertType(E->getType());
 

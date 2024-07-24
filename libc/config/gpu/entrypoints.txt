@@ -182,10 +182,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.vprintf
     libc.src.stdio.fprintf
     libc.src.stdio.vfprintf
-    libc.src.stdio.sprintf
     libc.src.stdio.snprintf
-    libc.src.stdio.vsprintf
+    libc.src.stdio.sprintf
     libc.src.stdio.vsnprintf
+    libc.src.stdio.vsprintf
     libc.src.stdio.feof
     libc.src.stdio.ferror
     libc.src.stdio.fflush

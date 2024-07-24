@@ -329,8 +329,8 @@ std::pair<uint32_t, uint32_t> ResourceInfo::getAnnotateProps() const {
   uint32_t ResourceKind = llvm::to_underlying(Kind);
   uint32_t AlignLog2 = isStruct() ? Log2(Struct.Alignment) : 0;
   bool IsUAV = isUAV();
-  bool IsROV = IsUAV ? UAVFlags.IsROV : 0;
-  bool IsGloballyCoherent = IsUAV ? UAVFlags.GloballyCoherent : 0;
+  bool IsROV = IsUAV && UAVFlags.IsROV;
+  bool IsGloballyCoherent = IsUAV && UAVFlags.GloballyCoherent;
   uint8_t SamplerCmpOrHasCounter = 0;
   if (IsUAV)
     SamplerCmpOrHasCounter = UAVFlags.HasCounter;
