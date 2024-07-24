@@ -895,6 +895,10 @@ void g() {
 }
 
 namespace P2797 {
+
+int bar(void) { return 55; }
+int (&fref)(void) = bar;
+
 struct C {
   void c(this const C&);    // #first
   void c() &;               // #second
@@ -915,6 +919,8 @@ struct C {
     (&C::c)(C{});
     (&C::c)(*this);     // expected-error {{call to non-static member function without an object argument}}
     (&C::c)();
+
+    (&fref)();
   }
 };
 }

@@ -233,7 +233,8 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC) {
       assert(false && "Can't get arguments from that expression type");
 
     assert(NumArgs >= CurFunc->getNumWrittenParams());
-    NumVarArgs = NumArgs - CurFunc->getNumWrittenParams();
+    NumVarArgs = NumArgs - (CurFunc->getNumWrittenParams() +
+                            isa<CXXOperatorCallExpr>(CallSite));
     for (unsigned I = 0; I != NumVarArgs; ++I) {
       const Expr *A = Args[NumArgs - 1 - I];
       popArg(S, A);

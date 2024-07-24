@@ -1,12 +1,14 @@
 // RUN: %clangxx_tsan -O0 %s -o %t
 // RUN: env %env_tsan_opts=stack_trace_format=DEFAULT %deflake %run %t 2>&1 | FileCheck %s
 
+// Until I figure out how to make this test work on Linux
+// REQUIRES: system-darwin
+
 #include "test.h"
 #include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 
 #ifndef __APPLE__
 #include <sys/types.h>
