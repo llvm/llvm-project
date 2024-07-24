@@ -2319,7 +2319,7 @@ TYPED_TEST(MutableConstTest, /* FIXME: UAR bug */ DISABLED_ICmp) {
                    .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
 }
 
-TYPED_TEST(MutableConstTest, FCmp) {
+TYPED_TEST(MutableConstTest, /* FIXME: UAR bug */ DISABLED_FCmp) {
   auto &IRB = PatternMatchTest::IRB;
 
   typedef std::tuple_element_t<0, TypeParam> ValueType;
