@@ -5,7 +5,7 @@
 define amdgpu_kernel void @buffers_dont_alias(ptr addrspace(8) noalias %a, ptr addrspace(8) noalias %b) {
 ; SDAG-LABEL: buffers_dont_alias:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
+; SDAG-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -18,7 +18,7 @@ define amdgpu_kernel void @buffers_dont_alias(ptr addrspace(8) noalias %a, ptr a
 ;
 ; GISEL-LABEL: buffers_dont_alias:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
+; GISEL-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -50,7 +50,7 @@ define amdgpu_kernel void @buffers_dont_alias(ptr addrspace(8) noalias %a, ptr a
 define amdgpu_kernel void @buffers_from_flat_dont_alias(ptr noalias %a.flat, ptr noalias %b.flat) {
 ; SDAG-LABEL: buffers_from_flat_dont_alias:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; SDAG-NEXT:    s_mov_b32 s7, 0
 ; SDAG-NEXT:    s_mov_b32 s6, 16
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -69,7 +69,7 @@ define amdgpu_kernel void @buffers_from_flat_dont_alias(ptr noalias %a.flat, ptr
 ;
 ; GISEL-LABEL: buffers_from_flat_dont_alias:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GISEL-NEXT:    s_mov_b32 s7, 0
 ; GISEL-NEXT:    s_mov_b32 s6, 16
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -110,7 +110,7 @@ define amdgpu_kernel void @buffers_from_flat_dont_alias(ptr noalias %a.flat, ptr
 define amdgpu_kernel void @buffers_might_alias(ptr addrspace(8) %a, ptr addrspace(8) %b) {
 ; SDAG-LABEL: buffers_might_alias:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
+; SDAG-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    buffer_load_dword v0, off, s[0:3], 0
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -132,7 +132,7 @@ define amdgpu_kernel void @buffers_might_alias(ptr addrspace(8) %a, ptr addrspac
 ;
 ; GISEL-LABEL: buffers_might_alias:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
+; GISEL-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    buffer_load_dword v0, off, s[0:3], 0
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -173,7 +173,7 @@ define amdgpu_kernel void @buffers_might_alias(ptr addrspace(8) %a, ptr addrspac
 define amdgpu_kernel void @independent_offsets(ptr addrspace(8) %a) {
 ; SDAG-LABEL: independent_offsets:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SDAG-NEXT:    v_mov_b32_e32 v2, 1.0
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -186,7 +186,7 @@ define amdgpu_kernel void @independent_offsets(ptr addrspace(8) %a) {
 ;
 ; GISEL-LABEL: independent_offsets:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 1.0
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
