@@ -149,7 +149,7 @@ bool CombinerHelper::matchTruncateOfExt(const MachineInstr &Root,
   }
 
   if (SrcTy.getScalarSizeInBits() > DstTy.getScalarSizeInBits()) {
-    // If the source is larger than the destination, we need to truncate.
+    // If the source is larger than the destination, then we need to truncate.
 
     if (!isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {DstTy, SrcTy}}))
       return false;
