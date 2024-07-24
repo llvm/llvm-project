@@ -104,15 +104,15 @@ define amdgpu_kernel void @basic_smax_smin_sgpr(ptr addrspace(1) %out, i32 inreg
 ;
 ; SDAG-GFX9-LABEL: basic_smax_smin_sgpr:
 ; SDAG-GFX9:       ; %bb.0:
-; SDAG-GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; SDAG-GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; SDAG-GFX9-NEXT:    v_mov_b32_e32 v1, 0xff
 ; SDAG-GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX9-NEXT:    v_med3_i16 v2, s2, 0, v1
-; SDAG-GFX9-NEXT:    v_med3_i16 v1, s3, 0, v1
+; SDAG-GFX9-NEXT:    v_med3_i16 v2, s6, 0, v1
+; SDAG-GFX9-NEXT:    v_med3_i16 v1, s7, 0, v1
 ; SDAG-GFX9-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; SDAG-GFX9-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
-; SDAG-GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
+; SDAG-GFX9-NEXT:    global_store_dword v0, v1, s[4:5]
 ; SDAG-GFX9-NEXT:    s_endpgm
 ;
 ; SDAG-GFX11-LABEL: basic_smax_smin_sgpr:
@@ -156,22 +156,22 @@ define amdgpu_kernel void @basic_smax_smin_sgpr(ptr addrspace(1) %out, i32 inreg
 ;
 ; GISEL-GFX9-LABEL: basic_smax_smin_sgpr:
 ; GISEL-GFX9:       ; %bb.0:
-; GISEL-GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
-; GISEL-GFX9-NEXT:    s_sext_i32_i16 s4, 0
-; GISEL-GFX9-NEXT:    s_sext_i32_i16 s5, 0xff
+; GISEL-GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
+; GISEL-GFX9-NEXT:    s_sext_i32_i16 s0, 0
+; GISEL-GFX9-NEXT:    s_sext_i32_i16 s1, 0xff
 ; GISEL-GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-GFX9-NEXT:    s_sext_i32_i16 s2, s6
+; GISEL-GFX9-NEXT:    s_sext_i32_i16 s3, s7
+; GISEL-GFX9-NEXT:    s_max_i32 s2, s2, s0
+; GISEL-GFX9-NEXT:    s_max_i32 s0, s3, s0
 ; GISEL-GFX9-NEXT:    s_sext_i32_i16 s2, s2
-; GISEL-GFX9-NEXT:    s_sext_i32_i16 s3, s3
-; GISEL-GFX9-NEXT:    s_max_i32 s2, s2, s4
-; GISEL-GFX9-NEXT:    s_max_i32 s3, s3, s4
-; GISEL-GFX9-NEXT:    s_sext_i32_i16 s2, s2
-; GISEL-GFX9-NEXT:    s_sext_i32_i16 s3, s3
-; GISEL-GFX9-NEXT:    s_min_i32 s2, s2, s5
-; GISEL-GFX9-NEXT:    s_min_i32 s3, s3, s5
-; GISEL-GFX9-NEXT:    s_pack_ll_b32_b16 s2, s2, s3
-; GISEL-GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-GFX9-NEXT:    global_store_dword v1, v0, s[0:1]
+; GISEL-GFX9-NEXT:    s_sext_i32_i16 s0, s0
+; GISEL-GFX9-NEXT:    s_min_i32 s2, s2, s1
+; GISEL-GFX9-NEXT:    s_min_i32 s0, s0, s1
+; GISEL-GFX9-NEXT:    s_pack_ll_b32_b16 s0, s2, s0
+; GISEL-GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX9-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GISEL-GFX9-NEXT:    s_endpgm
 ;
 ; GISEL-GFX11-LABEL: basic_smax_smin_sgpr:

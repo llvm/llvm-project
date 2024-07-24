@@ -254,7 +254,8 @@ inline void assertStreamStateOpened(const StreamState *SS) {
 }
 
 class StreamChecker : public Checker<check::PreCall, eval::Call,
-                                     check::DeadSymbols, check::PointerEscape> {
+                                     check::DeadSymbols, check::PointerEscape,
+                                     check::ASTDecl<TranslationUnitDecl>> {
   BugType BT_FileNull{this, "NULL stream pointer", "Stream handling error"};
   BugType BT_UseAfterClose{this, "Closed stream", "Stream handling error"};
   BugType BT_UseAfterOpenFailed{this, "Invalid stream",
@@ -276,10 +277,20 @@ public:
                                      const CallEvent *Call,
                                      PointerEscapeKind Kind) const;
 
+  /// Finds the declarations of 'FILE *stdin, *stdout, *stderr'.
+  void checkASTDecl(const TranslationUnitDecl *TU, AnalysisManager &,
+                    BugReporter &) const;
+
   const BugType *getBT_StreamEof() const { return &BT_StreamEof; }
   const BugType *getBT_IndeterminatePosition() const {
     return &BT_IndeterminatePosition;
   }
+
+  /// Assumes that the result of 'fopen' can't alias with the pointee of
+  /// 'stdin', 'stdout' or 'stderr'.
+  ProgramStateRef assumeNoAliasingWithStdStreams(ProgramStateRef State,
+                                                 DefinedSVal RetVal,
+                                                 CheckerContext &C) const;
 
   const NoteTag *constructSetEofNoteTag(CheckerContext &C,
                                         SymbolRef StreamSym) const {
@@ -450,6 +461,10 @@ private:
   mutable int SeekEndVal = 2;
   /// The built-in va_list type is platform-specific
   mutable QualType VaListType;
+
+  mutable const VarDecl *StdinDecl = nullptr;
+  mutable const VarDecl *StdoutDecl = nullptr;
+  mutable const VarDecl *StderrDecl = nullptr;
 
   void evalFopen(const FnDescription *Desc, const CallEvent &Call,
                  CheckerContext &C) const;
@@ -887,6 +902,30 @@ bool StreamChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
   return C.isDifferent();
 }
 
+ProgramStateRef StreamChecker::assumeNoAliasingWithStdStreams(
+    ProgramStateRef State, DefinedSVal RetVal, CheckerContext &C) const {
+  auto assumeRetNE = [&C, RetVal](ProgramStateRef State,
+                                  const VarDecl *Var) -> ProgramStateRef {
+    if (!Var)
+      return State;
+    const auto *LCtx = C.getLocationContext();
+    auto &StoreMgr = C.getStoreManager();
+    auto &SVB = C.getSValBuilder();
+    SVal VarValue = State->getSVal(StoreMgr.getLValueVar(Var, LCtx));
+    auto NoAliasState =
+        SVB.evalBinOp(State, BO_NE, RetVal, VarValue, SVB.getConditionType())
+            .castAs<DefinedOrUnknownSVal>();
+    return State->assume(NoAliasState, true);
+  };
+
+  assert(State);
+  State = assumeRetNE(State, StdinDecl);
+  State = assumeRetNE(State, StdoutDecl);
+  State = assumeRetNE(State, StderrDecl);
+  assert(State);
+  return State;
+}
+
 void StreamChecker::evalFopen(const FnDescription *Desc, const CallEvent &Call,
                               CheckerContext &C) const {
   ProgramStateRef State = C.getState();
@@ -899,6 +938,7 @@ void StreamChecker::evalFopen(const FnDescription *Desc, const CallEvent &Call,
   assert(RetSym && "RetVal must be a symbol here.");
 
   State = State->BindExpr(CE, C.getLocationContext(), RetVal);
+  State = assumeNoAliasingWithStdStreams(State, RetVal, C);
 
   // Bifurcate the state into two: one with a valid FILE* pointer, the other
   // with a NULL.
@@ -2015,6 +2055,36 @@ ProgramStateRef StreamChecker::checkPointerEscape(
     State = State->remove<StreamMap>(Sym);
   }
   return State;
+}
+
+static const VarDecl *
+getGlobalStreamPointerByName(const TranslationUnitDecl *TU, StringRef VarName) {
+  ASTContext &Ctx = TU->getASTContext();
+  const auto &SM = Ctx.getSourceManager();
+  const QualType FileTy = Ctx.getFILEType();
+
+  if (FileTy.isNull())
+    return nullptr;
+
+  const QualType FilePtrTy = Ctx.getPointerType(FileTy).getCanonicalType();
+
+  auto LookupRes = TU->lookup(&Ctx.Idents.get(VarName));
+  for (const Decl *D : LookupRes) {
+    if (auto *VD = dyn_cast_or_null<VarDecl>(D)) {
+      if (SM.isInSystemHeader(VD->getLocation()) && VD->hasExternalStorage() &&
+          VD->getType().getCanonicalType() == FilePtrTy) {
+        return VD;
+      }
+    }
+  }
+  return nullptr;
+}
+
+void StreamChecker::checkASTDecl(const TranslationUnitDecl *TU,
+                                 AnalysisManager &, BugReporter &) const {
+  StdinDecl = getGlobalStreamPointerByName(TU, "stdin");
+  StdoutDecl = getGlobalStreamPointerByName(TU, "stdout");
+  StderrDecl = getGlobalStreamPointerByName(TU, "stderr");
 }
 
 //===----------------------------------------------------------------------===//

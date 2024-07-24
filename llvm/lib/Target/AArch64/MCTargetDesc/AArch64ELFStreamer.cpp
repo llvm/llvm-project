@@ -190,9 +190,9 @@ public:
   }
 
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override {
-    // We have to keep track of the mapping symbol state of any sections we use.
-    // The initial state is EMS_A64 for text sections and EMS_Data for the
-    // others.
+    // Save the mapping symbol state for potential reuse when revisiting the
+    // section. When OptimizeMappingSymbols is true, the initial state is
+    // EMS_A64 for text sections and EMS_Data for the others.
     LastMappingSymbols[getCurrentSection().first] = LastEMS;
     auto It = LastMappingSymbols.find(Section);
     if (It != LastMappingSymbols.end())
@@ -281,11 +281,10 @@ private:
     LastEMS = EMS_A64;
   }
 
-  void emitMappingSymbol(StringRef Name) {
+  MCSymbol *emitMappingSymbol(StringRef Name) {
     auto *Symbol = cast<MCSymbolELF>(getContext().createLocalSymbol(Name));
     emitLabel(Symbol);
-    Symbol->setType(ELF::STT_NOTYPE);
-    Symbol->setBinding(ELF::STB_LOCAL);
+    return Symbol;
   }
 
   DenseMap<const MCSection *, ElfMappingSymbol> LastMappingSymbols;
@@ -316,14 +315,44 @@ void AArch64TargetELFStreamer::finish() {
   // If OptimizeMappingSymbols is specified, ensure that text sections end with
   // the A64 state while non-text sections end with the data state. When
   // sections are combined by the linker, the subsequent section will start with
-  // the right state.
+  // the right state. The ending mapping symbol is added right after the last
+  // symbol relative to the section. When a dumb linker combines (.text.0; .word
+  // 0) and (.text.1; .word 0), the ending $x of .text.0 precedes the $d of
+  // .text.1, even if they have the same address.
   if (S.OptimizeMappingSymbols) {
+    auto &Syms = Asm.getSymbols();
+    const size_t NumSyms = Syms.size();
+    DenseMap<MCSection *, MCSymbol *> EndMappingSym;
     for (MCSection &Sec : Asm) {
       S.switchSection(&Sec);
-      if (Sec.isText())
-        S.emitA64MappingSymbol();
-      else
-        S.emitDataMappingSymbol();
+      if (S.LastEMS == (Sec.isText() ? AArch64ELFStreamer::EMS_Data
+                                     : AArch64ELFStreamer::EMS_A64))
+        EndMappingSym.try_emplace(
+            &Sec, S.emitMappingSymbol(Sec.isText() ? "$x" : "$d"));
+    }
+    if (Syms.size() != NumSyms) {
+      SmallVector<const MCSymbol *, 0> NewSyms;
+      DenseMap<MCSection *, size_t> Cnt;
+      Syms.truncate(NumSyms);
+      for (const MCSymbol *Sym : Syms)
+        if (Sym->isInSection())
+          ++Cnt[&Sym->getSection()];
+      SmallVector<size_t, 0> Idx;
+      for (auto [I, Sym] : llvm::enumerate(Syms)) {
+        NewSyms.push_back(Sym);
+        MCSection *Sec = Sym->isInSection() ? &Sym->getSection() : nullptr;
+        if (!Sec || --Cnt[Sec])
+          continue;
+        if (auto *MapSym = EndMappingSym.lookup(Sec)) {
+          NewSyms.push_back(MapSym);
+          Idx.push_back(I);
+        }
+      }
+      Syms = std::move(NewSyms);
+      // F.second holds the number of symbols added before the FILE symbol.
+      // Take into account the inserted mapping symbols.
+      for (auto &F : S.getWriter().getFileNames())
+        F.second += llvm::lower_bound(Idx, F.second) - Idx.begin();
     }
   }
 
