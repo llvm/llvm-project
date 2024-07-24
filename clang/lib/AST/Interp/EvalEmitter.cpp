@@ -152,7 +152,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
 
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
-    if (!Ptr.isDereferencable())
+    if (!Ptr.isZero() && !Ptr.isDereferencable())
       return false;
     // Never allow reading from a non-const pointer, unless the memory
     // has been created in this evaluation.
