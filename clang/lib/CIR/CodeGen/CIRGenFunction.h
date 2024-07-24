@@ -312,13 +312,6 @@ public:
   using SymTableScopeTy =
       llvm::ScopedHashTableScope<const clang::Decl *, mlir::Value>;
 
-  /// Try/Catch: calls within try statements need to refer to local
-  /// allocas for the exception info
-  struct CIRExceptionInfo {
-    mlir::Value addr{};
-    mlir::cir::TryOp catchOp{};
-  };
-
   enum class EvaluationOrder {
     ///! No langauge constraints on evaluation order.
     Default,
@@ -1925,14 +1918,15 @@ public:
 
     LexicalScope *ParentScope = nullptr;
 
-    // If there's exception information for this scope, store it.
-    CIRExceptionInfo exInfo{};
+    // Holds actual value for ScopeKind::Try
+    mlir::cir::TryOp tryOp = nullptr;
 
     // FIXME: perhaps we can use some info encoded in operations.
     enum Kind {
       Regular, // cir.if, cir.scope, if_regions
       Ternary, // cir.ternary
-      Switch   // cir.switch
+      Switch,  // cir.switch
+      Try,     // cir.try
     } ScopeKind = Regular;
 
     // Track scope return value.
@@ -1993,9 +1987,18 @@ public:
     bool isRegular() { return ScopeKind == Kind::Regular; }
     bool isSwitch() { return ScopeKind == Kind::Switch; }
     bool isTernary() { return ScopeKind == Kind::Ternary; }
+    bool isTry() { return ScopeKind == Kind::Try; }
+    mlir::cir::TryOp getTry() {
+      assert(isTry());
+      return tryOp;
+    }
 
     void setAsSwitch() { ScopeKind = Kind::Switch; }
     void setAsTernary() { ScopeKind = Kind::Ternary; }
+    void setAsTry(mlir::cir::TryOp op) {
+      ScopeKind = Kind::Try;
+      tryOp = op;
+    }
 
     // ---
     // Goto handling
@@ -2020,12 +2023,6 @@ public:
       assert(builder.getInsertionBlock() && "Should be valid");
       return CleanupBlock;
     }
-
-    // ---
-    // Exception handling
-    // ---
-    CIRExceptionInfo &getExceptionInfo() { return exInfo; }
-    void setExceptionInfo(const CIRExceptionInfo &info) { exInfo = info; }
 
     // ---
     // Return handling

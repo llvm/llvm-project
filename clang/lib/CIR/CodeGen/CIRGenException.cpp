@@ -256,10 +256,10 @@ mlir::Block *CIRGenFunction::getEHResumeBlock(bool isCleanup) {
   // Just like some other try/catch related logic: return the basic block
   // pointer but only use it to denote we're tracking things, but there
   // shouldn't be any changes to that block after work done in this function.
-  auto catchOp = currLexScope->getExceptionInfo().catchOp;
-  unsigned numCatchRegions = catchOp.getCatchRegions().size();
-  assert(catchOp && numCatchRegions && "expected at least one region");
-  auto &fallbackRegion = catchOp.getCatchRegions()[numCatchRegions - 1];
+  auto tryOp = currLexScope->getTry();
+  unsigned numCatchRegions = tryOp.getCatchRegions().size();
+  assert(tryOp && numCatchRegions && "expected at least one region");
+  auto &fallbackRegion = tryOp.getCatchRegions()[numCatchRegions - 1];
 
   auto *resumeBlock = &fallbackRegion.getBlocks().back();
   if (!resumeBlock->empty())
@@ -277,7 +277,7 @@ mlir::Block *CIRGenFunction::getEHResumeBlock(bool isCleanup) {
     llvm_unreachable("NYI");
   }
 
-  getBuilder().create<mlir::cir::ResumeOp>(catchOp.getLoc());
+  getBuilder().create<mlir::cir::ResumeOp>(tryOp.getLoc());
   getBuilder().restoreInsertionPoint(ip);
   return resumeBlock;
 }
@@ -372,7 +372,7 @@ CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
                                           getBuilder().getInsertionBlock()};
 
     {
-      lexScope.setExceptionInfo({exceptionInfoInsideTry, tryScope});
+      lexScope.setAsTry(tryScope);
       // Attach the basic blocks for the catch regions.
       enterCXXTryStmt(S, tryScope);
       // Emit the body for the `try {}` part.
@@ -382,7 +382,6 @@ CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
     }
 
     {
-      lexScope.setExceptionInfo({nullptr, tryScope});
       // Emit catch clauses.
       exitCXXTryStmt(S);
     }
@@ -453,14 +452,14 @@ static void buildCatchDispatchBlock(CIRGenFunction &CGF,
 }
 
 void CIRGenFunction::enterCXXTryStmt(const CXXTryStmt &S,
-                                     mlir::cir::TryOp catchOp,
+                                     mlir::cir::TryOp tryOp,
                                      bool IsFnTryBlock) {
   unsigned NumHandlers = S.getNumHandlers();
   EHCatchScope *CatchScope = EHStack.pushCatch(NumHandlers);
   for (unsigned I = 0; I != NumHandlers; ++I) {
     const CXXCatchStmt *C = S.getHandler(I);
 
-    mlir::Block *Handler = &catchOp.getCatchRegions()[I].getBlocks().front();
+    mlir::Block *Handler = &tryOp.getCatchRegions()[I].getBlocks().front();
     if (C->getExceptionDecl()) {
       // FIXME: Dropping the reference type on the type into makes it
       // impossible to correctly implement catch-by-reference
@@ -500,7 +499,7 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
     CatchScope.clearHandlerBlocks();
     EHStack.popCatch();
     // Drop all basic block from all catch regions.
-    auto tryOp = currLexScope->getExceptionInfo().catchOp;
+    mlir::cir::TryOp tryOp = currLexScope->getTry();
     SmallVector<mlir::Block *> eraseBlocks;
     for (mlir::Region &r : tryOp.getCatchRegions()) {
       if (r.empty())
@@ -634,10 +633,10 @@ mlir::Operation *CIRGenFunction::buildLandingPad() {
   // that leads to this "landing pad" creation site. Otherwise, exceptions
   // are enabled but a throwing function is called anyways (common pattern
   // with function local static initializers).
-  auto tryOp = currLexScope->getExceptionInfo().catchOp;
-  if (!tryOp) {
+  if (!currLexScope->isTry()) {
     llvm_unreachable("NYI");
   }
+  mlir::cir::TryOp tryOp = currLexScope->getTry();
 
   {
     // Save the current CIR generation state.
