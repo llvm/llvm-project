@@ -765,6 +765,8 @@ Improvements to Clang's diagnostics
 
      UsingWithAttr<int> objUsingWA; // warning: 'UsingWithAttr' is deprecated
 
+- Clang now diagnoses undefined behavior in constant expressions more consistently. This includes invalid shifts, and signed overflow in arithmetic.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
