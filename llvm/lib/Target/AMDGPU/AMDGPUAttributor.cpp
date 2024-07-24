@@ -1055,7 +1055,7 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
         // Singleton functions should be specialized.
         if (NumCallees == 1)
           return true;
-        // Otherewise specialize uniform values.
+        // Otherwise specialize uniform values.
         const auto &TTI = TM.getTargetTransformInfo(*CB.getCaller());
         return TTI.isAlwaysUniform(CB.getCalledOperand());
       };
@@ -1064,7 +1064,6 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
   AC.Allowed = &Allowed;
   AC.IsModulePass = true;
   AC.DefaultInitializeLiveInternals = false;
-  errs() << "HasWholeProgramVisibility " << HasWholeProgramVisibility << "\n";
   AC.IsClosedWorldModule = HasWholeProgramVisibility;
   AC.IndirectCalleeSpecializationCallback =
       IndirectCalleeSpecializationCallback;

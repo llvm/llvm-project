@@ -738,7 +738,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       [this](ModulePassManager &PM, OptimizationLevel Level) {
         if (Level != OptimizationLevel::O0)
           PM.addPass(
-              AMDGPUAttributorPass(*this, /*HasWholeProgramVisibility*/ true));
+              AMDGPUAttributorPass(*this, /*HasWholeProgramVisibility=*/true));
         // We want to support the -lto-partitions=N option as "best effort".
         // For that, we need to lower LDS earlier in the pipeline before the
         // module is partitioned for codegen.

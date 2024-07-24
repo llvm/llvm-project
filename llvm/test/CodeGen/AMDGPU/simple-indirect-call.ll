@@ -3,7 +3,7 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-attributor %s -attributor-assume-closed-world | FileCheck -check-prefixes=ATTRIBUTOR_GCN,ATTRIBUTOR_GCN_CW %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-attributor %s | FileCheck -check-prefixes=ATTRIBUTOR_GCN,ATTRIBUTOR_GCN_OW %s
 
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -attributor-assume-closed-world=false < %s | FileCheck -check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9 %s
 
 target datalayout = "A5"
 
