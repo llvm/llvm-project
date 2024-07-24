@@ -7027,7 +7027,7 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
   // Ignore ephemeral values.
   CodeMetrics::collectEphemeralValues(TheLoop, AC, ValuesToIgnore);
 
-  SmallVector<Value *> InitialInterleavePointersOps;
+  SmallVector<Value *, 4> DeadInterleavePointerOps;
   for (BasicBlock *BB : TheLoop->blocks())
     for (Instruction &I : *BB) {
       // Find all stores to invariant variables. Since they are going to sink
@@ -7045,13 +7045,10 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
         if (Group->getInsertPos() == &I)
           continue;
         Value *PointerOp = getLoadStorePointerOperand(&I);
-        InitialInterleavePointersOps.push_back(PointerOp);
+        DeadInterleavePointerOps.push_back(PointerOp);
       }
     }
 
-  SmallSetVector<Value *, 4> DeadInterleavePointerOps(
-      InitialInterleavePointersOps.rbegin(),
-      InitialInterleavePointersOps.rend());
   // Mark ops feeding interleave group members as free, if they are only used
   // by other dead computations.
   for (unsigned I = 0; I != DeadInterleavePointerOps.size(); ++I) {
@@ -7064,7 +7061,7 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
         }))
       continue;
     VecValuesToIgnore.insert(Op);
-    DeadInterleavePointerOps.insert(Op->op_begin(), Op->op_end());
+    DeadInterleavePointerOps.append(Op->op_begin(), Op->op_end());
   }
 
   // Ignore type-promoting instructions we identified during reduction
