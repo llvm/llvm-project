@@ -3,10 +3,7 @@
 
 define <4 x i1> @vec_reverse_known_bits(<4 x i8> %xx) {
 ; CHECK-LABEL: @vec_reverse_known_bits(
-; CHECK-NEXT:    [[X:%.*]] = or <4 x i8> [[XX:%.*]], <i8 -128, i8 -128, i8 -128, i8 -128>
-; CHECK-NEXT:    [[REV:%.*]] = call <4 x i8> @llvm.vector.reverse.v4i8(<4 x i8> [[X]])
-; CHECK-NEXT:    [[R:%.*]] = icmp slt <4 x i8> [[REV]], zeroinitializer
-; CHECK-NEXT:    ret <4 x i1> [[R]]
+; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 true, i1 true, i1 true>
 ;
   %x = or <4 x i8> %xx, <i8 128, i8 128, i8 128, i8 128>
   %rev = call <4 x i8> @llvm.vector.reverse(<4 x i8> %x)
