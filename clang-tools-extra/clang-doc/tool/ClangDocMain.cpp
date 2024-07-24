@@ -231,7 +231,6 @@ Example usage for a project using a compile commands database:
 
   // Fail early if an invalid format was provided.
   std::string Format = getFormatString();
-  llvm::outs() << "Unoptimized\n";
   llvm::outs() << "Emiting docs in " << Format << " format.\n";
   auto G = doc::findGeneratorByName(Format);
   if (!G) {
