@@ -993,6 +993,51 @@ define void @maximal_legal_fpmath(ptr %addr1, ptr %addr2, ptr %result, float %va
   ret void
 }
 
+; TODO: Peek through (repeated) bitcasts to find a common source value.
+define <4 x i64> @bitcast_smax_v8i32_v4i32(<4 x i64> %a, <4 x i64> %b) {
+; CHECK-LABEL: @bitcast_smax_v8i32_v4i32(
+; CHECK-NEXT:    [[A_BC0:%.*]] = bitcast <4 x i64> [[A:%.*]] to <8 x i32>
+; CHECK-NEXT:    [[B_BC0:%.*]] = bitcast <4 x i64> [[B:%.*]] to <8 x i32>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <8 x i32> [[A_BC0]], [[B_BC0]]
+; CHECK-NEXT:    [[CMP_LO:%.*]] = shufflevector <8 x i1> [[CMP]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[CMP_HI:%.*]] = shufflevector <8 x i1> [[CMP]], <8 x i1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[A_BC1:%.*]] = bitcast <4 x i64> [[A]] to <8 x i32>
+; CHECK-NEXT:    [[B_BC1:%.*]] = bitcast <4 x i64> [[B]] to <8 x i32>
+; CHECK-NEXT:    [[A_LO:%.*]] = shufflevector <8 x i32> [[A_BC1]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[B_LO:%.*]] = shufflevector <8 x i32> [[B_BC1]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[LO:%.*]] = select <4 x i1> [[CMP_LO]], <4 x i32> [[B_LO]], <4 x i32> [[A_LO]]
+; CHECK-NEXT:    [[A_BC2:%.*]] = bitcast <4 x i64> [[A]] to <8 x i32>
+; CHECK-NEXT:    [[B_BC2:%.*]] = bitcast <4 x i64> [[B]] to <8 x i32>
+; CHECK-NEXT:    [[A_HI:%.*]] = shufflevector <8 x i32> [[A_BC2]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[B_HI:%.*]] = shufflevector <8 x i32> [[B_BC2]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[HI:%.*]] = select <4 x i1> [[CMP_HI]], <4 x i32> [[B_HI]], <4 x i32> [[A_HI]]
+; CHECK-NEXT:    [[CONCAT:%.*]] = shufflevector <4 x i32> [[LO]], <4 x i32> [[HI]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[RES:%.*]] = bitcast <8 x i32> [[CONCAT]] to <4 x i64>
+; CHECK-NEXT:    ret <4 x i64> [[RES]]
+;
+  %a.bc0 = bitcast <4 x i64> %a to <8 x i32>
+  %b.bc0 = bitcast <4 x i64> %b to <8 x i32>
+  %cmp = icmp slt <8 x i32> %a.bc0, %b.bc0
+  %cmp.lo = shufflevector <8 x i1> %cmp, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %cmp.hi = shufflevector <8 x i1> %cmp, <8 x i1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+
+  %a.bc1 = bitcast <4 x i64> %a to <8 x i32>
+  %b.bc1 = bitcast <4 x i64> %b to <8 x i32>
+  %a.lo = shufflevector <8 x i32> %a.bc1, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %b.lo = shufflevector <8 x i32> %b.bc1, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %lo = select <4 x i1> %cmp.lo, <4 x i32> %b.lo, <4 x i32> %a.lo
+
+  %a.bc2 = bitcast <4 x i64> %a to <8 x i32>
+  %b.bc2 = bitcast <4 x i64> %b to <8 x i32>
+  %a.hi = shufflevector <8 x i32> %a.bc2, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %b.hi = shufflevector <8 x i32> %b.bc2, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %hi = select <4 x i1> %cmp.hi, <4 x i32> %b.hi, <4 x i32> %a.hi
+
+  %concat = shufflevector <4 x i32> %lo, <4 x i32> %hi, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %res = bitcast <8 x i32> %concat to <4 x i64>
+  ret <4 x i64> %res
+}
+
 define void @bitcast_srcty_mismatch() {
 ; CHECK-LABEL: @bitcast_srcty_mismatch(
 ; CHECK-NEXT:  entry:
