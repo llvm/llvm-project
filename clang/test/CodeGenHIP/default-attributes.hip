@@ -8,6 +8,15 @@
 #define __device__ __attribute__((device))
 #define __global__ __attribute__((global))
 
+//.
+// OPTNONE: @__hip_cuid_ = addrspace(1) global i8 0
+// OPTNONE: @llvm.compiler.used = appending addrspace(1) global [1 x ptr] [ptr addrspacecast (ptr addrspace(1) @__hip_cuid_ to ptr)], section "llvm.metadata"
+// OPTNONE: @__oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 500
+//.
+// OPT: @__hip_cuid_ = addrspace(1) global i8 0
+// OPT: @__oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 500
+// OPT: @llvm.compiler.used = appending addrspace(1) global [1 x ptr] [ptr addrspacecast (ptr addrspace(1) @__hip_cuid_ to ptr)], section "llvm.metadata"
+//.
 // OPTNONE: Function Attrs: convergent mustprogress noinline nounwind optnone
 // OPTNONE-LABEL: define {{[^@]+}}@_Z4funcv
 // OPTNONE-SAME: () #[[ATTR0:[0-9]+]] {
@@ -40,17 +49,17 @@ __global__ void kernel() {
 
 }
 //.
-// OPTNONE: attributes #0 = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// OPTNONE: attributes #1 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,1024" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
+// OPTNONE: attributes #[[ATTR0]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// OPTNONE: attributes #[[ATTR1]] = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,1024" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
 //.
-// OPT: attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// OPT: attributes #1 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "amdgpu-flat-work-group-size"="1,1024" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
+// OPT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="false" }
+// OPT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "amdgpu-flat-work-group-size"="1,1024" "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
 //.
-// OPTNONE: !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}
-// OPTNONE: !1 = !{i32 1, !"amdgpu_printf_kind", !"hostcall"}
-// OPTNONE: !2 = !{i32 1, !"wchar_size", i32 4}
+// OPTNONE: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 500}
+// OPTNONE: [[META1:![0-9]+]] = !{i32 1, !"amdgpu_printf_kind", !"hostcall"}
+// OPTNONE: [[META2:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 //.
-// OPT: !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}
-// OPT: !1 = !{i32 1, !"amdgpu_printf_kind", !"hostcall"}
-// OPT: !2 = !{i32 1, !"wchar_size", i32 4}
+// OPT: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 500}
+// OPT: [[META1:![0-9]+]] = !{i32 1, !"amdgpu_printf_kind", !"hostcall"}
+// OPT: [[META2:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 //.
