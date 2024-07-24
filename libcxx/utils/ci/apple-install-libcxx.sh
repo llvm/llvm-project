@@ -118,6 +118,7 @@ for arch in ${architectures}; do
 
     step "Building shims to make libc++ compatible with the system libc++ on Apple platforms when running the tests"
     shims_library="${build_dir}/${arch}/apple-system-shims.a"
+    # Note that this doesn't need to match the Standard version used to build the rest of the library.
     xcrun clang++ -c -std=c++2b -target ${target} "${llvm_root}/libcxxabi/src/vendor/apple/shims.cpp" -static -o "${shims_library}"
 
     step "Building libc++.dylib and libc++abi.dylib for architecture ${arch}"
