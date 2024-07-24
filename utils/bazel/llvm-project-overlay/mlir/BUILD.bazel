@@ -5992,6 +5992,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":MathDialect",
+        ":MathToROCDL",
         ":MemRefDialect",
         ":MemRefToLLVM",
         ":Pass",
@@ -7281,6 +7282,32 @@ cc_library(
         ":SPIRVDialect",
         ":TransformUtils",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "MathToROCDL",
+    srcs = glob([
+        "lib/Conversion/MathToROCDL/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/MathToROCDL/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":DialectUtils",
+        ":FuncDialect",
+        ":GPUCommonTransforms",
+        ":GPUToGPURuntimeTransforms",
+        ":IR",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":MathDialect",
+        ":Pass",
+        ":ROCDLDialect",
+        ":TransformUtils",
+        ":VectorDialect",
     ],
 )
 
