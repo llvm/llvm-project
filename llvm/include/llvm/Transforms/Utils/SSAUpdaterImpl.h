@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_UTILS_SSAUPDATERIMPL_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
@@ -413,8 +414,9 @@ public:
   /// FindExistingPHI - Look through the PHI nodes in a block to see if any of
   /// them match what is needed.
   void FindExistingPHI(BlkT *BB, BlockListTy *BlockList) {
+    SmallVector<BBInfo *, 20> TaggedBlocks;
     for (auto &SomePHI : BB->phis()) {
-      if (CheckIfPHIMatches(&SomePHI)) {
+      if (CheckIfPHIMatches(&SomePHI, TaggedBlocks)) {
         RecordMatchingPHIs(BlockList);
         break;
       }
@@ -423,18 +425,18 @@ public:
 
   /// CheckIfPHIMatches - Check if a PHI node matches the placement and values
   /// in the BBMap.
-  bool CheckIfPHIMatches(PhiT *PHI) {
-    SmallVector<PhiT *, 20> WorkList;
-    SmallVector<BBInfo *, 20> TaggedBlocks;
-    WorkList.push_back(PHI);
-
+  bool CheckIfPHIMatches(PhiT *PHI, SmallVector<BBInfo *, 20> &TaggedBlocks) {
     // Match failed: clear all the PHITag values. Only need to clear visited
     // blocks.
-    auto OnFalseCleanup = [&]() {
+    auto Cleanup = make_scope_exit([&]() {
       for (BBInfo *TaggedBlock : TaggedBlocks) {
         TaggedBlock->PHITag = nullptr;
       }
-    };
+      TaggedBlocks.clear();
+    });
+
+    SmallVector<PhiT *, 20> WorkList;
+    WorkList.push_back(PHI);
 
     // Mark that the block containing this PHI has been visited.
     BBInfo *PHIBlock = BBMap[PHI->getParent()];
@@ -457,22 +459,18 @@ public:
         if (PredInfo->AvailableVal) {
           if (IncomingVal == PredInfo->AvailableVal)
             continue;
-          OnFalseCleanup();
           return false;
         }
 
         // Check if the value is a PHI in the correct block.
         PhiT *IncomingPHIVal = Traits::ValueIsPHI(IncomingVal, Updater);
-        if (!IncomingPHIVal || IncomingPHIVal->getParent() != PredInfo->BB) {
-          OnFalseCleanup();
+        if (!IncomingPHIVal || IncomingPHIVal->getParent() != PredInfo->BB)
           return false;
-        }
 
         // If this block has already been visited, check if this PHI matches.
         if (PredInfo->PHITag) {
           if (IncomingPHIVal == PredInfo->PHITag)
             continue;
-          OnFalseCleanup();
           return false;
         }
         PredInfo->PHITag = IncomingPHIVal;
@@ -481,6 +479,8 @@ public:
         WorkList.push_back(IncomingPHIVal);
       }
     }
+    // Match found, keep PHITags.
+    Cleanup.release();
     return true;
   }
 
