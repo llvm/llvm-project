@@ -2990,6 +2990,7 @@ class CIR_CallOp<string mnemonic, list<Trait> extra_traits = []> :
     OptionalAttr<FlatSymbolRefAttr>:$callee,
     Variadic<CIR_AnyType>:$arg_ops,
     ExtraFuncAttr:$extra_attrs,
+    UnitAttr:$exception,
     OptionalAttr<ASTCallExprInterface>:$ast
   );
 }
@@ -3029,10 +3030,13 @@ def CallOp : CIR_CallOp<"call"> {
 
   let builders = [
     OpBuilder<(ins "SymbolRefAttr":$callee, "mlir::Type":$resType,
-              CArg<"ValueRange", "{}">:$operands), [{
+              CArg<"ValueRange", "{}">:$operands,
+              CArg<"UnitAttr", "{}">:$exception), [{
       $_state.addOperands(operands);
       if (callee)
         $_state.addAttribute("callee", callee);
+      if (exception) // $_builder
+        $_state.addAttribute("exception", exception);
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
     }]>,
@@ -3045,62 +3049,6 @@ def CallOp : CIR_CallOp<"call"> {
         $_state.addTypes(fn_type.getReturnType());
     }]>
   ];
-}
-
-//===----------------------------------------------------------------------===//
-// TryCallOp
-//===----------------------------------------------------------------------===//
-
-def TryCallOp : CIR_CallOp<"try_call"> {
-  let summary = "try call operation";
-  let description = [{
-    Similar to `cir.call`, direct and indirect properties are the same. The
-    difference relies in an exception object address operand. It's encoded
-    as the first operands or second (for indirect calls).
-
-    Similarly to `cir.call`, avoid using `mlir::Operation` methods to walk the
-    operands for this operation, instead use the methods provided by
-    `CIRCallOpInterface`.
-
-    Example:
-
-    ```mlir
-    cir.try {
-      %0 = cir.alloca !cir.ptr<!cir.eh.info>, !cir.ptr<!cir.ptr<!cir.eh.info>>
-      ...
-      %r = cir.try_call %exception(%0) @division(%1, %2)
-    } ...
-    ```
-  }];
-
-  let arguments = !con((ins
-    ExceptionInfoPtrPtr:$exceptionInfo
-  ), commonArgs);
-
-  let results = (outs Variadic<CIR_AnyType>);
-
-  let builders = [
-    OpBuilder<(ins "Value":$ind_target, "mlir::Value":$exception,
-               "FuncType":$fn_type,
-               CArg<"ValueRange", "{}">:$operands), [{
-      $_state.addOperands(ValueRange{exception});
-      $_state.addOperands(ValueRange{ind_target});
-      $_state.addOperands(operands);
-      if (!fn_type.isVoid())
-        $_state.addTypes(fn_type.getReturnType());
-    }]>,
-    OpBuilder<(ins "SymbolRefAttr":$callee, "mlir::Value":$exception,
-                   "mlir::Type":$resType, CArg<"ValueRange", "{}">:$operands),
-    [{
-      $_state.addOperands(ValueRange{exception});
-      $_state.addOperands(operands);
-      if (callee)
-        $_state.addAttribute("callee", callee);
-      if (resType && !isa<VoidType>(resType))
-        $_state.addTypes(resType);
-    }]>];
-
-    let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
