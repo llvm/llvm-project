@@ -895,10 +895,10 @@ getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
     }
   }
 
-  const SIInstrInfo *TII = ST.getInstrInfo();
   if (!SIInstrInfo::isVALU(MI))
     return nullptr;
 
+  const SIInstrInfo *TII = ST.getInstrInfo();
   if (SIInstrInfo::isSDWA(MI)) {
     if (auto *DstSel = TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel))
       if (DstSel->getImm() == AMDGPU::SDWA::DWORD)
