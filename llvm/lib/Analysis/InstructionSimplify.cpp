@@ -2105,17 +2105,21 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   const APInt *Mask;
   const APInt *ShAmt;
   Value *X, *Y;
+  auto LogicalShiftRightIsZero = [&Mask](const APInt &ShAmt) {
+    return (~(*Mask)).lshr(ShAmt).isZero();
+  };
+  auto ShiftLeftIsZero = [&Mask](const APInt &ShAmt) {
+    return (~(*Mask)).shl(ShAmt).isZero();
+  };
   if (match(Op1, m_APInt(Mask))) {
     // If all bits in the inverted and shifted mask are clear:
     // and (shl X, ShAmt), Mask --> shl X, ShAmt
-    if (match(Op0, m_Shl(m_Value(X), m_APInt(ShAmt))) &&
-        (~(*Mask)).lshr(*ShAmt).isZero())
+    if (match(Op0, m_Shl(m_Value(X), m_CheckedInt(LogicalShiftRightIsZero))))
       return Op0;
 
     // If all bits in the inverted and shifted mask are clear:
     // and (lshr X, ShAmt), Mask --> lshr X, ShAmt
-    if (match(Op0, m_LShr(m_Value(X), m_APInt(ShAmt))) &&
-        (~(*Mask)).shl(*ShAmt).isZero())
+    if (match(Op0, m_LShr(m_Value(X), m_CheckedInt(ShiftLeftIsZero))))
       return Op0;
   }
 
@@ -2376,14 +2380,15 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   // (-1 >> X) | (-1 << (C - X)) --> -1
   // ...with C <= bitwidth (and commuted variants).
   Value *X, *Y;
+  auto UleCheck = [&X](const APInt &C) {
+    return C.ule(X->getType()->getScalarSizeInBits());
+  };
   if ((match(Op0, m_Shl(m_AllOnes(), m_Value(X))) &&
        match(Op1, m_LShr(m_AllOnes(), m_Value(Y)))) ||
       (match(Op1, m_Shl(m_AllOnes(), m_Value(X))) &&
        match(Op0, m_LShr(m_AllOnes(), m_Value(Y))))) {
-    const APInt *C;
-    if ((match(X, m_Sub(m_APInt(C), m_Specific(Y))) ||
-         match(Y, m_Sub(m_APInt(C), m_Specific(X)))) &&
-        C->ule(X->getType()->getScalarSizeInBits())) {
+    if (match(X, m_Sub(m_CheckedInt(UleCheck), m_Specific(Y))) ||
+        match(Y, m_Sub(m_CheckedInt(UleCheck), m_Specific(X)))) {
       return ConstantInt::getAllOnesValue(X->getType());
     }
   }
