@@ -39,6 +39,7 @@
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
 
@@ -1394,7 +1395,22 @@ namespace {
                                  SourceRange PatternRange,
                                  ArrayRef<UnexpandedParameterPack> Unexpanded,
                                  bool &ShouldExpand, bool &RetainExpansion,
-                                 std::optional<unsigned> &NumExpansions) {
+                                 std::optional<unsigned> &NumExpansions,
+                                 bool ForConstraints = false) {
+      if (ForConstraints) {
+        LambdaScopeInfo *LSI = getSema().getCurLambda();
+        if (LSI) {
+          MultiLevelTemplateArgumentList MLTAL =
+              getSema().getTemplateInstantiationArgs(
+                  LSI->CallOperator, /*DC=*/nullptr, /*Final=*/false,
+                  /*Innermost=*/std::nullopt, /*RelativeToPrimary=*/true,
+                  /*Pattern=*/nullptr, /*ForConstraintInstantiation=*/true);
+          return getSema().CheckParameterPacksForExpansion(
+              EllipsisLoc, PatternRange, Unexpanded, MLTAL, ShouldExpand,
+              RetainExpansion, NumExpansions);
+        }
+      }
+
       return getSema().CheckParameterPacksForExpansion(EllipsisLoc,
                                                        PatternRange, Unexpanded,
                                                        TemplateArgs,
@@ -1656,11 +1672,12 @@ namespace {
       LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
       Sema::ConstraintEvalRAII<TemplateInstantiator> RAII(*this);
 
-      ExprResult Result = inherited::TransformLambdaExpr(E);
-      if (Result.isInvalid())
-        return Result;
+      return inherited::TransformLambdaExpr(E);
+    }
 
-      CXXMethodDecl *MD = Result.getAs<LambdaExpr>()->getCallOperator();
+    void RebuildLambdaExprImpl(SourceLocation StartLoc, SourceLocation EndLoc,
+                               LambdaScopeInfo *LSI) {
+      CXXMethodDecl *MD = LSI->CallOperator;
       for (ParmVarDecl *PVD : MD->parameters()) {
         assert(PVD && "null in a parameter list");
         if (!PVD->hasDefaultArg())
@@ -1673,14 +1690,12 @@ namespace {
           // RecoveryExpr that wraps the uninstantiated default argument so
           // that downstream diagnostics are omitted.
           ExprResult ErrorResult = SemaRef.CreateRecoveryExpr(
-              UninstExpr->getBeginLoc(), UninstExpr->getEndLoc(),
-              { UninstExpr }, UninstExpr->getType());
+              UninstExpr->getBeginLoc(), UninstExpr->getEndLoc(), {UninstExpr},
+              UninstExpr->getType());
           if (ErrorResult.isUsable())
             PVD->setDefaultArg(ErrorResult.get());
         }
       }
-
-      return Result;
     }
 
     StmtResult TransformLambdaBody(LambdaExpr *E, Stmt *Body) {
@@ -1693,11 +1708,8 @@ namespace {
       // `true` to temporarily fix this issue.
       // FIXME: This temporary fix can be removed after fully implementing
       // p0588r1.
-      bool Prev = EvaluateConstraints;
-      EvaluateConstraints = true;
-      StmtResult Stmt = inherited::TransformLambdaBody(E, Body);
-      EvaluateConstraints = Prev;
-      return Stmt;
+      llvm::SaveAndRestore _(EvaluateConstraints, true);
+      return inherited::TransformLambdaBody(E, Body);
     }
 
     ExprResult TransformRequiresExpr(RequiresExpr *E) {

@@ -14040,6 +14040,15 @@ public:
   ///
   /// \param Arg The template argument that will be traversed to find
   /// unexpanded parameter packs.
+  void collectUnexpandedParameterPacksForFoldExprs(
+      Expr *E, SmallVectorImpl<UnexpandedParameterPack> &Unexpanded,
+      SmallVectorImpl<UnexpandedParameterPack> &UnexpandedFromConstraints);
+
+  /// Collect the set of unexpanded parameter packs within the given
+  /// template argument.
+  ///
+  /// \param Arg The template argument that will be traversed to find
+  /// unexpanded parameter packs.
   void collectUnexpandedParameterPacks(
       TemplateArgumentLoc Arg,
       SmallVectorImpl<UnexpandedParameterPack> &Unexpanded);
@@ -14051,14 +14060,6 @@ public:
   /// unexpanded parameter packs.
   void collectUnexpandedParameterPacks(
       QualType T, SmallVectorImpl<UnexpandedParameterPack> &Unexpanded);
-
-  /// Collect the set of unexpanded parameter packs from a lambda call operator.
-  ///
-  /// \param LambdaCall The lambda call operator that will be traversed to find
-  /// unexpanded parameter packs.
-  void collectUnexpandedParameterPacksFromLambda(
-      CXXMethodDecl *LambdaCall,
-      SmallVectorImpl<UnexpandedParameterPack> &Unexpanded);
 
   /// Collect the set of unexpanded parameter packs within the given
   /// type.
