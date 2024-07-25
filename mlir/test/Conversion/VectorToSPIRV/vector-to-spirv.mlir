@@ -809,8 +809,7 @@ func.func @step() -> vector<4xindex> {
 
 // -----
 
-// CHECK-LABEL: @step_size1
-//  CHECK-SAME: ()
+// CHECK-LABEL: @step_size1()
 //       CHECK:   %[[CST0:.*]] = spirv.Constant 0 : i32
 //       CHECK:   %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[CST0]] : i32 to vector<1xindex>
 //       CHECK:   return %[[CAST]] : vector<1xindex>
