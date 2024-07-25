@@ -471,7 +471,7 @@ private:
   bool replaceMathCmpWithIntrinsic(BinaryOperator *BO, Value *Arg0, Value *Arg1,
                                    CmpInst *Cmp, Intrinsic::ID IID);
   bool optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT);
-  bool optimizeRem(Instruction *Rem);
+  bool optimizeURem(Instruction *Rem);
   bool combineToUSubWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
   bool combineToUAddWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
   void verifyBFIUpdates(Function &F);
@@ -1976,26 +1976,23 @@ static bool foldFCmpToFPClassTest(CmpInst *Cmp, const TargetLowering &TLI,
 }
 
 static bool isRemOfLoopIncrementWithLoopInvariant(
-    Value *Rem, const LoopInfo *LI, Value *&RemAmtOut,
-    std::optional<bool> &AddOrSubOut, Value *&AddOrSubOffsetOut,
-    PHINode *&LoopIncrPNOut) {
+    Instruction *Rem, const LoopInfo *LI, Value *&RemAmtOut,
+    std::optional<bool> &AddOrSubOut, Value *&AddOrSubInstOut,
+    Value *&AddOrSubOffsetOut, PHINode *&LoopIncrPNOut) {
   Value *Incr, *RemAmt;
-  if (!isa<Instruction>(Rem))
-    return false;
   // NB: If RemAmt is a power of 2 it *should* have been transformed by now.
   if (!match(Rem, m_URem(m_Value(Incr), m_Value(RemAmt))))
     return false;
 
   // Only trivially analyzable loops.
-  Loop *L = LI->getLoopFor(cast<Instruction>(Rem)->getParent());
-  if (L == nullptr || L->getLoopPreheader() == nullptr ||
-      L->getLoopLatch() == nullptr)
+  Loop *L = LI->getLoopFor(Rem->getParent());
+  if (!L || !L->getLoopPreheader() || !L->getLoopLatch())
     return false;
 
   std::optional<bool> AddOrSub;
   Value *AddOrSubOffset;
   // Find out loop increment PHI.
-  PHINode *PN = dyn_cast<PHINode>(Incr);
+  auto *PN = dyn_cast<PHINode>(Incr);
   if (PN != nullptr) {
     AddOrSub = std::nullopt;
     AddOrSubOffset = nullptr;
@@ -2009,6 +2006,8 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
     else
       return false;
 
+    AddOrSubInstOut = Incr;
+
     PN = dyn_cast<PHINode>(V0);
     if (PN != nullptr) {
       AddOrSubOffset = V1;
@@ -2018,7 +2017,7 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
     }
   }
 
-  if (PN == nullptr)
+  if (!PN)
     return false;
 
   // This isn't strictly necessary, what we really need is one increment and any
@@ -2032,7 +2031,12 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
 
   // Is the PHI a loop increment?
   auto LoopIncrInfo = getIVIncrement(PN, LI);
-  if (!LoopIncrInfo.has_value())
+  if (!LoopIncrInfo)
+    return false;
+
+  // getIVIncrement finds the loop at PN->getParent(). This might be a different
+  // loop from the loop with Rem->getParent().
+  if (L->getHeader() != PN->getParent())
     return false;
 
   // We need remainder_amount % increment_amount to be zero. Increment of one
@@ -2043,11 +2047,6 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
 
   // Need the increment to not overflow.
   if (!match(LoopIncrInfo->first, m_NUWAdd(m_Value(), m_Value())))
-    return false;
-
-  // Need unique loop preheader and latch.
-  if (PN->getBasicBlockIndex(L->getLoopLatch()) < 0 ||
-      PN->getBasicBlockIndex(L->getLoopPreheader()) < 0)
     return false;
 
   // Set output variables.
@@ -2071,20 +2070,19 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
 //    Rem = rem == RemAmtLoopInvariant ? 0 : Rem;
 //
 // Currently only implemented for `Start` and `IncrLoopInvariant` being zero.
-static bool foldURemOfLoopIncrement(Instruction *Rem, const LoopInfo *LI,
+static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
+                                    const LoopInfo *LI,
                                     SmallSet<BasicBlock *, 32> &FreshBBs,
                                     bool IsHuge) {
   std::optional<bool> AddOrSub;
-  Value *AddOrSubOffset, *RemAmt;
+  Value *AddOrSubOffset, *RemAmt, *AddOrSubInst;
   PHINode *LoopIncrPN;
-  if (!isRemOfLoopIncrementWithLoopInvariant(Rem, LI, RemAmt, AddOrSub,
-                                             AddOrSubOffset, LoopIncrPN))
+  if (!isRemOfLoopIncrementWithLoopInvariant(
+          Rem, LI, RemAmt, AddOrSub, AddOrSubInst, AddOrSubOffset, LoopIncrPN))
     return false;
 
   // Only non-constant remainder as the extra IV is probably not profitable
-  // in that case. Further, since remainder amount is non-constant, only handle
-  // case where `IncrLoopInvariant` and `Start` are 0 to entirely eliminate the
-  // rem (as opposed to just hoisting it outside of the loop).
+  // in that case.
   //
   // Potential TODO(1): `urem` of a const ends up as `mul` + `shift` + `add`. If
   // we can rule out register pressure and ensure this `urem` is executed each
@@ -2093,12 +2091,37 @@ static bool foldURemOfLoopIncrement(Instruction *Rem, const LoopInfo *LI,
   // Potential TODO(2): Should we have a check for how "nested" this remainder
   // operation is? The new code runs every iteration so if the remainder is
   // guarded behind unlikely conditions this might not be worth it.
-  if (AddOrSub.has_value() || match(RemAmt, m_ImmConstant()))
+  if (match(RemAmt, m_ImmConstant()))
     return false;
   Loop *L = LI->getLoopFor(Rem->getParent());
-  if (!match(LoopIncrPN->getIncomingValueForBlock(L->getLoopPreheader()),
-             m_Zero()))
-    return false;
+
+  // If we have add/sub create initial value for remainder.
+  // The logic here is:
+  // (urem (add/sub nuw Start, IncrLoopInvariant), RemAmtLoopInvariant
+  //
+  // Only proceed if the expression simplifies (otherwise we can't fully
+  // optimize out the urem).
+  Value *Start = LoopIncrPN->getIncomingValueForBlock(L->getLoopPreheader());
+  if (AddOrSub) {
+    assert(AddOrSubOffset && AddOrSubInst &&
+           "We found an add/sub but missing values");
+    // Without dom-condition/assumption cache we aren't likely to get much out
+    // of a context instruction.
+    const SimplifyQuery Q(*DL);
+    bool NSW = cast<OverflowingBinaryOperator>(AddOrSubInst)->hasNoSignedWrap();
+    if (*AddOrSub)
+      Start = simplifyAddInst(Start, AddOrSubOffset, /*IsNSW=*/NSW,
+                              /*IsNUW=*/true, Q);
+    else
+      Start = simplifySubInst(Start, AddOrSubOffset, /*IsNSW=*/NSW,
+                              /*IsNUW=*/true, Q);
+    if (!Start)
+      return false;
+
+    Start = simplifyURemInst(Start, RemAmt, Q);
+    if (!Start)
+      return false;
+  }
 
   // Create new remainder with induction variable.
   Type *Ty = Rem->getType();
@@ -2115,7 +2138,7 @@ static bool foldURemOfLoopIncrement(Instruction *Rem, const LoopInfo *LI,
   Value *RemSel =
       Builder.CreateSelect(RemCmp, Constant::getNullValue(Ty), RemAdd);
 
-  NewRem->addIncoming(Constant::getNullValue(Ty), L->getLoopPreheader());
+  NewRem->addIncoming(Start, L->getLoopPreheader());
   NewRem->addIncoming(RemSel, L->getLoopLatch());
 
   // Insert all touched BBs.
@@ -2125,11 +2148,13 @@ static bool foldURemOfLoopIncrement(Instruction *Rem, const LoopInfo *LI,
 
   replaceAllUsesWith(Rem, NewRem, FreshBBs, IsHuge);
   Rem->eraseFromParent();
+  if (AddOrSubInst && AddOrSubInst->use_empty())
+    cast<Instruction>(AddOrSubInst)->eraseFromParent();
   return true;
 }
 
-bool CodeGenPrepare::optimizeRem(Instruction *Rem) {
-  if (foldURemOfLoopIncrement(Rem, LI, FreshBBs, IsHugeFunc))
+bool CodeGenPrepare::optimizeURem(Instruction *Rem) {
+  if (foldURemOfLoopIncrement(Rem, DL, LI, FreshBBs, IsHugeFunc))
     return true;
   return false;
 }
@@ -8520,9 +8545,8 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
     if (optimizeCmp(Cmp, ModifiedDT))
       return true;
 
-  if (match(I, m_URem(m_Value(), m_Value())) ||
-      match(I, m_SRem(m_Value(), m_Value())))
-    if (optimizeRem(I))
+  if (match(I, m_URem(m_Value(), m_Value())))
+    if (optimizeURem(I))
       return true;
 
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
