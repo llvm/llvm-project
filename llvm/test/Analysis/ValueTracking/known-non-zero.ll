@@ -1499,10 +1499,7 @@ define i1 @trunc_nsw_nuw_non_zero_fail(i8 %xx) {
 
 define <4 x i1> @vec_reverse_non_zero(<4 x i8> %xx) {
 ; CHECK-LABEL: @vec_reverse_non_zero(
-; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], <i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[REV:%.*]] = call <4 x i8> @llvm.vector.reverse.v4i8(<4 x i8> [[X]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i8> [[REV]], zeroinitializer
-; CHECK-NEXT:    ret <4 x i1> [[R]]
+; CHECK-NEXT:    ret <4 x i1> zeroinitializer
 ;
   %x = add nuw <4 x i8> %xx, <i8 1, i8 1, i8 1, i8 1>
   %rev = call <4 x i8> @llvm.vector.reverse(<4 x i8> %x)
