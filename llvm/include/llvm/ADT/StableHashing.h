@@ -95,18 +95,6 @@ inline stable_hash stable_hash_combine_array(const stable_hash *P, size_t C) {
     hashing::detail::stable_hash_append(Hash, P[I]);
   return Hash;
 }
-
-inline stable_hash stable_hash_combine_string(const StringRef &S) {
-  return stable_hash_combine_range(S.begin(), S.end());
-}
-
-inline stable_hash stable_hash_combine_string(const char *C) {
-  stable_hash Hash = hashing::detail::FNV_OFFSET_64;
-  while (*C)
-    hashing::detail::stable_hash_append(Hash, *(C++));
-  return Hash;
-}
-
 } // namespace llvm
 
 #endif
