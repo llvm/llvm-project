@@ -1619,11 +1619,9 @@ private:
   }
 
   void serialisePaths() {
-    errs() << "Num Paths: " << Paths.size() << "\n";
     OutStreamer.emitSizeT(Paths.size());
     for (string &P : Paths) {
       serialiseString(P);
-      errs() << P << "\n";
     }
   }
 
