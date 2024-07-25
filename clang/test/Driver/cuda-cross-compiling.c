@@ -32,8 +32,8 @@
 // RUN:   | FileCheck -check-prefix=ARGS %s
 
 //      ARGS: -cc1" "-triple" "nvptx64-nvidia-cuda" "-S" {{.*}} "-target-cpu" "sm_61" "-target-feature" "+ptx{{[0-9]+}}" {{.*}} "-o" "[[PTX:.+]].s"
-// ARGS-NEXT: ptxas{{.*}}"-m64" "-O0" "--gpu-name" "sm_61" "--output-file" "[[CUBIN:.+]].cubin" "[[PTX]].s" "-c"
-// ARGS-NEXT: nvlink{{.*}}"-o" "a.out" "-arch" "sm_61" {{.*}} "[[CUBIN]].cubin"
+// ARGS-NEXT: ptxas{{.*}}"-m64" "-O0" "--gpu-name" "sm_61" "--output-file" "[[CUBIN:.+]].o" "[[PTX]].s" "-c"
+// ARGS-NEXT: clang-nvlink-wrapper{{.*}}"-o" "a.out" "-arch" "sm_61"{{.*}}"[[CUBIN]].o"
 
 //
 // Test the generated arguments to the CUDA binary utils when targeting NVPTX. 
@@ -55,7 +55,7 @@
 // RUN: %clang -target nvptx64-nvidia-cuda -march=sm_61 -### %t.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=LINK %s
 
-// LINK: nvlink{{.*}}"-o" "a.out" "-arch" "sm_61" {{.*}} "{{.*}}.cubin"
+// LINK: clang-nvlink-wrapper{{.*}}"-o" "a.out" "-arch" "sm_61"{{.*}}[[CUBIN:.+]].o
 
 //
 // Test to ensure that we enable handling global constructors in a freestanding
@@ -72,7 +72,7 @@
 // RUN: %clang -target nvptx64-nvidia-cuda -Wl,-v -Wl,a,b -march=sm_52 -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=LINKER-ARGS %s
 
-// LINKER-ARGS: nvlink{{.*}}"-v"{{.*}}"a" "b"
+// LINKER-ARGS: clang-nvlink-wrapper{{.*}}"-v"{{.*}}"a" "b"
 
 // Tests for handling a missing architecture.
 //
@@ -90,3 +90,11 @@
 // RUN:   | FileCheck -check-prefix=GENERIC %s
 
 // GENERIC-NOT: -cc1" "-triple" "nvptx64-nvidia-cuda" {{.*}} "-target-cpu"
+
+//
+// Test forwarding the necessary +ptx feature.
+//
+// RUN: %clang -target nvptx64-nvidia-cuda --cuda-feature=+ptx63 -march=sm_52 -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=FEATURE %s
+
+// FEATURE: clang-nvlink-wrapper{{.*}}"--feature" "+ptx63"

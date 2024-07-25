@@ -78,13 +78,18 @@ public:
   bool hasAtomBitwise64() const { return SmVersion >= 32; }
   bool hasAtomMinMax64() const { return SmVersion >= 32; }
   bool hasLDG() const { return SmVersion >= 32; }
-  inline bool hasHWROT32() const { return SmVersion >= 32; }
+  bool hasHWROT32() const { return SmVersion >= 32; }
   bool hasImageHandles() const;
   bool hasFP16Math() const { return SmVersion >= 53; }
   bool hasBF16Math() const { return SmVersion >= 80; }
   bool allowFP16Math() const;
   bool hasMaskOperator() const { return PTXVersion >= 71; }
   bool hasNoReturn() const { return SmVersion >= 30 && PTXVersion >= 64; }
+  // Does SM & PTX support memory orderings (weak and atomic: relaxed, acquire,
+  // release, acq_rel, sc) ?
+  bool hasMemoryOrdering() const { return SmVersion >= 70 && PTXVersion >= 60; }
+  // Does SM & PTX support atomic relaxed MMIO operations ?
+  bool hasRelaxedMMIO() const { return SmVersion >= 70 && PTXVersion >= 82; }
   unsigned int getFullSmVersion() const { return FullSmVersion; }
   unsigned int getSmVersion() const { return getFullSmVersion() / 10; }
   // GPUs with "a" suffix have include architecture-accelerated features that

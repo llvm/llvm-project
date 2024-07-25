@@ -235,7 +235,7 @@ func.func @test_misplaced_yield() {
 // -----
 
 func.func @test_assign_to_non_variable(%arg1: f32, %arg2: f32) {
-  // expected-error @+1 {{'emitc.assign' op requires first operand (<block argument> of type 'f32' at index: 1) to be a get_global, subscript or variable}}
+  // expected-error @+1 {{'emitc.assign' op requires first operand (<block argument> of type 'f32' at index: 1) to be a get_global, member, member of pointer, subscript or variable}}
   emitc.assign %arg1 : f32 to %arg2 : f32
   return
 }
@@ -448,5 +448,21 @@ emitc.global @myglobal : !emitc.array<2xf32>
 func.func @use_global() {
   // expected-error @+1 {{'emitc.get_global' op result type 'f32' does not match type '!emitc.array<2xf32>' of the global @myglobal}}
   %0 = emitc.get_global @myglobal : f32
+  return
+}
+
+// -----
+
+func.func @member(%arg0: i32) {
+  // expected-error @+1 {{'emitc.member' op operand #0 must be EmitC opaque type, but got 'i32'}}
+  %0 = "emitc.member" (%arg0) {member = "a"} : (i32) -> i32
+  return
+}
+
+// -----
+
+func.func @member_of_ptr(%arg0: i32) {
+  // expected-error @+1 {{'emitc.member_of_ptr' op operand #0 must be EmitC opaque type or EmitC pointer type, but got 'i32}}
+  %0 = "emitc.member_of_ptr" (%arg0) {member = "a"} : (i32) -> i32
   return
 }

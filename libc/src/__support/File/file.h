@@ -9,16 +9,18 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H
 #define LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H
 
-#include "include/llvm-libc-types/off_t.h"
+#include "hdr/stdio_macros.h"
+#include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/error_or.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/threads/mutex.h"
 
 #include <stddef.h>
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 struct FileIOResult {
   size_t value;
@@ -181,7 +183,7 @@ public:
     return read_unlocked(data, len);
   }
 
-  ErrorOr<int> seek(long offset, int whence);
+  ErrorOr<int> seek(off_t offset, int whence);
 
   ErrorOr<off_t> tell();
 
@@ -313,6 +315,6 @@ extern File *stdin;
 extern File *stdout;
 extern File *stderr;
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H

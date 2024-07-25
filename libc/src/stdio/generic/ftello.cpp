@@ -9,9 +9,10 @@
 #include "src/stdio/ftello.h"
 #include "src/__support/File/file.h"
 
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(off_t, ftello, (::FILE * stream)) {
   auto result = reinterpret_cast<LIBC_NAMESPACE::File *>(stream)->tell();
@@ -22,4 +23,4 @@ LLVM_LIBC_FUNCTION(off_t, ftello, (::FILE * stream)) {
   return result.value();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

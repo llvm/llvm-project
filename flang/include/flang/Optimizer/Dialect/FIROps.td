@@ -124,6 +124,13 @@ def fir_AllocaOp : fir_Op<"alloca", [AttrSizedOperandSegments,
     Indeed, a user would likely expect a good Fortran compiler to perform such
     an optimization.
 
+    Stack allocations have a maximum lifetime concept: their uses must not
+    exceed the lifetime of the closest parent operation with the
+    AutomaticAllocationScope trait, IsIsolatedFromAbove trait, or
+    LoopLikeOpInterface trait. This restriction is meant to ease the
+    insertion of stack save and restore operations, and to ease the conversion
+    of stack allocation into heap allocation.
+
     Until Fortran 2018, procedures defaulted to non-recursive. A legal
     implementation could therefore convert stack allocations to global
     allocations. Such a conversion effectively adds the SAVE attribute to all
@@ -183,11 +190,17 @@ def fir_AllocaOp : fir_Op<"alloca", [AttrSizedOperandSegments,
     mlir::Type getAllocatedType();
     bool hasLenParams() { return !getTypeparams().empty(); }
     bool hasShapeOperands() { return !getShape().empty(); }
+    bool isDynamic() {return hasLenParams() || hasShapeOperands();}
     unsigned numLenParams() { return getTypeparams().size(); }
     operand_range getLenParams() { return getTypeparams(); }
     unsigned numShapeOperands() { return getShape().size(); }
     operand_range getShapeOperands() { return getShape(); }
     static mlir::Type getRefTy(mlir::Type ty);
+    /// Is this an operation that owns the alloca directly made in its region?
+    static bool ownsNestedAlloca(mlir::Operation* op);
+    /// Get the parent region that owns this alloca. Nullptr if none can be
+    /// identified.
+    mlir::Region* getOwnerRegion();
   }];
 }
 
@@ -804,7 +817,7 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
   let extraClassDeclaration = [{
     bool hasLenParams() { return !getTypeparams().empty(); }
     unsigned numLenParams() { return getTypeparams().size(); }
-    unsigned getSourceBoxOffset() {
+    unsigned getSourceBoxOperandIndex() {
       return 1 + (getShape() ? 1 : 0) + (getSlice() ? 1 : 0)
           + numLenParams();
     }

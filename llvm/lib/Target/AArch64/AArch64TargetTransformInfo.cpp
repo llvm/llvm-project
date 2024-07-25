@@ -2785,7 +2785,7 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     std::pair<InstructionCost, MVT> LT =
         getTypeLegalizationCost(WiderTy.getTypeForEVT(Dst->getContext()));
     unsigned NumElements = AArch64::SVEBitsPerBlock /
-                           LT.second.getVectorElementType().getSizeInBits();
+                           LT.second.getScalarSizeInBits();
     return AdjustCost(
         LT.first *
         getCastInstrCost(
@@ -4065,15 +4065,12 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
           NMask.push_back(MaskElt % LTNumElts);
       }
       // If the sub-mask has at most 2 input sub-vectors then re-cost it using
-      // getShuffleCost. If not then cost it using the worst case.
+      // getShuffleCost. If not then cost it using the worst case as the number
+      // of element moves into a new vector.
       if (NumSources <= 2)
         Cost += getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
                                                : TTI::SK_PermuteTwoSrc,
                                NTp, NMask, CostKind, 0, nullptr, Args, CxtI);
-      else if (any_of(enumerate(NMask), [&](const auto &ME) {
-                 return ME.value() % LTNumElts == ME.index();
-               }))
-        Cost += LTNumElts - 1;
       else
         Cost += LTNumElts;
     }

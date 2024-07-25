@@ -1667,15 +1667,15 @@ public:
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
-  StmtResult RebuildOMPExecutableDirective(
-      OpenMPDirectiveKind Kind, DeclarationNameInfo DirName,
-      OpenMPDirectiveKind CancelRegion, ArrayRef<OMPClause *> Clauses,
-      Stmt *AStmt, SourceLocation StartLoc, SourceLocation EndLoc,
-      OpenMPDirectiveKind PrevMappedDirective = OMPD_unknown) {
+  StmtResult RebuildOMPExecutableDirective(OpenMPDirectiveKind Kind,
+                                           DeclarationNameInfo DirName,
+                                           OpenMPDirectiveKind CancelRegion,
+                                           ArrayRef<OMPClause *> Clauses,
+                                           Stmt *AStmt, SourceLocation StartLoc,
+                                           SourceLocation EndLoc) {
 
     return getSema().OpenMP().ActOnOpenMPExecutableDirective(
-        Kind, DirName, CancelRegion, Clauses, AStmt, StartLoc, EndLoc,
-        PrevMappedDirective);
+        Kind, DirName, CancelRegion, Clauses, AStmt, StartLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'if' clause.
@@ -6737,8 +6737,13 @@ QualType TreeTransform<Derived>::TransformUnaryTransformType(
   QualType Result = TL.getType();
   if (Result->isDependentType()) {
     const UnaryTransformType *T = TL.getTypePtr();
-    QualType NewBase =
-      getDerived().TransformType(TL.getUnderlyingTInfo())->getType();
+
+    TypeSourceInfo *NewBaseTSI =
+        getDerived().TransformType(TL.getUnderlyingTInfo());
+    if (!NewBaseTSI)
+      return QualType();
+    QualType NewBase = NewBaseTSI->getType();
+
     Result = getDerived().RebuildUnaryTransformType(NewBase,
                                                     T->getUTTKind(),
                                                     TL.getKWLoc());
@@ -9177,8 +9182,7 @@ StmtResult TreeTransform<Derived>::TransformOMPExecutableDirective(
 
   return getDerived().RebuildOMPExecutableDirective(
       D->getDirectiveKind(), DirName, CancelRegion, TClauses,
-      AssociatedStmt.get(), D->getBeginLoc(), D->getEndLoc(),
-      D->getMappedDirective());
+      AssociatedStmt.get(), D->getBeginLoc(), D->getEndLoc());
 }
 
 template <typename Derived>
@@ -9226,6 +9230,28 @@ TreeTransform<Derived>::TransformOMPTileDirective(OMPTileDirective *D) {
 template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPUnrollDirective(OMPUnrollDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformOMPReverseDirective(OMPReverseDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOMPInterchangeDirective(
+    OMPInterchangeDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().OpenMP().StartOpenMPDSABlock(
       D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());

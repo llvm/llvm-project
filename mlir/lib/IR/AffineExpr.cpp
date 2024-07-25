@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cmath>
 #include <cstdint>
 #include <limits>
 #include <utility>
@@ -257,7 +258,7 @@ int64_t AffineExpr::getLargestKnownDivisor() const {
     if (rhs && rhs.getValue() != 0) {
       int64_t lhsDiv = binExpr.getLHS().getLargestKnownDivisor();
       if (lhsDiv % rhs.getValue() == 0)
-        return lhsDiv / rhs.getValue();
+        return std::abs(lhsDiv / rhs.getValue());
     }
     return 1;
   }
@@ -751,8 +752,10 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   }
 
   // Process lrhs, which is 'expr floordiv c'.
+  // expr + (expr // c * -c) = expr % c
   AffineBinaryOpExpr lrBinOpExpr = dyn_cast<AffineBinaryOpExpr>(lrhs);
-  if (!lrBinOpExpr || lrBinOpExpr.getKind() != AffineExprKind::FloorDiv)
+  if (!lrBinOpExpr || rhs.getKind() != AffineExprKind::Mul ||
+      lrBinOpExpr.getKind() != AffineExprKind::FloorDiv)
     return nullptr;
 
   llrhs = lrBinOpExpr.getLHS();

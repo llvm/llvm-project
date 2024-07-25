@@ -1479,27 +1479,39 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
     using Key = PointerAuthSchema::ARM8_3Key;
     using Discrimination = PointerAuthSchema::Discrimination;
     // If you change anything here, be sure to update <ptrauth.h>.
-    Opts.FunctionPointers =
-        PointerAuthSchema(Key::ASIA, false, Discrimination::None);
+    Opts.FunctionPointers = PointerAuthSchema(
+        Key::ASIA, false,
+        LangOpts.PointerAuthFunctionTypeDiscrimination ? Discrimination::Type
+                                                       : Discrimination::None);
 
     Opts.CXXVTablePointers = PointerAuthSchema(
         Key::ASDA, LangOpts.PointerAuthVTPtrAddressDiscrimination,
         LangOpts.PointerAuthVTPtrTypeDiscrimination ? Discrimination::Type
                                                     : Discrimination::None);
-    Opts.CXXTypeInfoVTablePointer =
-        PointerAuthSchema(Key::ASDA, false, Discrimination::None);
+
+    if (LangOpts.PointerAuthTypeInfoVTPtrDiscrimination)
+      Opts.CXXTypeInfoVTablePointer =
+          PointerAuthSchema(Key::ASDA, true, Discrimination::Constant,
+                            StdTypeInfoVTablePointerConstantDiscrimination);
+    else
+      Opts.CXXTypeInfoVTablePointer =
+          PointerAuthSchema(Key::ASDA, false, Discrimination::None);
+
     Opts.CXXVTTVTablePointers =
         PointerAuthSchema(Key::ASDA, false, Discrimination::None);
     Opts.CXXVirtualFunctionPointers = Opts.CXXVirtualVariadicFunctionPointers =
         PointerAuthSchema(Key::ASIA, true, Discrimination::Decl);
+    Opts.CXXMemberFunctionPointers =
+        PointerAuthSchema(Key::ASIA, false, Discrimination::Type);
   }
+  Opts.IndirectGotos = LangOpts.PointerAuthIndirectGotos;
 }
 
 static void parsePointerAuthOptions(PointerAuthOptions &Opts,
                                     const LangOptions &LangOpts,
                                     const llvm::Triple &Triple,
                                     DiagnosticsEngine &Diags) {
-  if (!LangOpts.PointerAuthCalls)
+  if (!LangOpts.PointerAuthCalls && !LangOpts.PointerAuthIndirectGotos)
     return;
 
   CompilerInvocation::setDefaultPointerAuthOptions(Opts, LangOpts, Triple);
@@ -3403,14 +3415,21 @@ static void GeneratePointerAuthArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_fptrauth_calls);
   if (Opts.PointerAuthReturns)
     GenerateArg(Consumer, OPT_fptrauth_returns);
+  if (Opts.PointerAuthIndirectGotos)
+    GenerateArg(Consumer, OPT_fptrauth_indirect_gotos);
   if (Opts.PointerAuthAuthTraps)
     GenerateArg(Consumer, OPT_fptrauth_auth_traps);
   if (Opts.PointerAuthVTPtrAddressDiscrimination)
     GenerateArg(Consumer, OPT_fptrauth_vtable_pointer_address_discrimination);
   if (Opts.PointerAuthVTPtrTypeDiscrimination)
     GenerateArg(Consumer, OPT_fptrauth_vtable_pointer_type_discrimination);
+  if (Opts.PointerAuthTypeInfoVTPtrDiscrimination)
+    GenerateArg(Consumer, OPT_fptrauth_type_info_vtable_pointer_discrimination);
+
   if (Opts.PointerAuthInitFini)
     GenerateArg(Consumer, OPT_fptrauth_init_fini);
+  if (Opts.PointerAuthFunctionTypeDiscrimination)
+    GenerateArg(Consumer, OPT_fptrauth_function_pointer_type_discrimination);
 }
 
 static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
@@ -3418,12 +3437,18 @@ static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
   Opts.PointerAuthIntrinsics = Args.hasArg(OPT_fptrauth_intrinsics);
   Opts.PointerAuthCalls = Args.hasArg(OPT_fptrauth_calls);
   Opts.PointerAuthReturns = Args.hasArg(OPT_fptrauth_returns);
+  Opts.PointerAuthIndirectGotos = Args.hasArg(OPT_fptrauth_indirect_gotos);
   Opts.PointerAuthAuthTraps = Args.hasArg(OPT_fptrauth_auth_traps);
   Opts.PointerAuthVTPtrAddressDiscrimination =
       Args.hasArg(OPT_fptrauth_vtable_pointer_address_discrimination);
   Opts.PointerAuthVTPtrTypeDiscrimination =
       Args.hasArg(OPT_fptrauth_vtable_pointer_type_discrimination);
+  Opts.PointerAuthTypeInfoVTPtrDiscrimination =
+      Args.hasArg(OPT_fptrauth_type_info_vtable_pointer_discrimination);
+
   Opts.PointerAuthInitFini = Args.hasArg(OPT_fptrauth_init_fini);
+  Opts.PointerAuthFunctionTypeDiscrimination =
+      Args.hasArg(OPT_fptrauth_function_pointer_type_discrimination);
 }
 
 /// Check if input file kind and language standard are compatible.

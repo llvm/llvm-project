@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_DESCRIPTOR_H
 #define LLVM_CLANG_AST_INTERP_DESCRIPTOR_H
 
+#include "PrimType.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 
@@ -82,6 +83,8 @@ struct InlineDescriptor {
   /// Flag indicating if the field is an embedded base class.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsBase : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsVirtualBase : 1;
   /// Flag indicating if the field is the active member of a union.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsActive : 1;
@@ -124,6 +127,11 @@ public:
   using MetadataSize = std::optional<unsigned>;
   static constexpr MetadataSize InlineDescMD = sizeof(InlineDescriptor);
   static constexpr MetadataSize GlobalMD = sizeof(GlobalInlineDescriptor);
+
+  /// Maximum number of bytes to be used for array elements.
+  static constexpr unsigned MaxArrayElemBytes =
+      std::numeric_limits<decltype(AllocSize)>::max() - sizeof(InitMapPtr) -
+      align(std::max(*InlineDescMD, *GlobalMD));
 
   /// Pointer to the record, if block contains records.
   const Record *const ElemRecord = nullptr;

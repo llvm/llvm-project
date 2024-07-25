@@ -91,6 +91,13 @@
 #  define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_STRING_VIEW
 // Dont' add an inline namespace for `std::filesystem`
 #  define _LIBCPP_ABI_NO_FILESYSTEM_INLINE_NAMESPACE
+// std::basic_ios uses WEOF to indicate that the fill value is
+// uninitialized. However, on platforms where the size of char_type is
+// equal to or greater than the size of int_type and char_type is unsigned,
+// std::char_traits<char_type>::eq_int_type() cannot distinguish between WEOF
+// and WCHAR_MAX. This ABI setting determines whether we should instead track whether the fill
+// value has been initialized using a separate boolean, which changes the ABI.
+#  define _LIBCPP_ABI_IOS_ALLOW_ARBITRARY_FILL_VALUE
 #elif _LIBCPP_ABI_VERSION == 1
 #  if !(defined(_LIBCPP_OBJECT_FORMAT_COFF) || defined(_LIBCPP_OBJECT_FORMAT_XCOFF))
 // Enable compiling copies of now inline methods into the dylib to support
@@ -129,6 +136,19 @@
 // - `span`;
 // - `string_view`.
 // #define _LIBCPP_ABI_BOUNDED_ITERATORS
+
+// Changes the iterator type of `basic_string` to a bounded iterator that keeps track of whether it's within the bounds
+// of the original container and asserts it on every dereference and when performing iterator arithmetics.
+//
+// ABI impact: changes the iterator type of `basic_string` and its specializations, such as `string` and `wstring`.
+// #define _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
+
+// Changes the iterator type of `vector` to a bounded iterator that keeps track of whether it's within the bounds of the
+// original container and asserts it on every dereference and when performing iterator arithmetics. Note: this doesn't
+// yet affect `vector<bool>`.
+//
+// ABI impact: changes the iterator type of `vector` (except `vector<bool>`).
+// #define _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
 
 #if defined(_LIBCPP_COMPILER_CLANG_BASED)
 #  if defined(__APPLE__)

@@ -46,8 +46,8 @@ define i64 @leaf_clobbers_lr(i64 %x) "sign-return-address"="non-leaf"  {
 ; COMPAT-LABEL: leaf_clobbers_lr:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #25
-; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; COMPAT-NEXT:    .cfi_offset w30, -16
 ; COMPAT-NEXT:    //APP
@@ -60,8 +60,8 @@ define i64 @leaf_clobbers_lr(i64 %x) "sign-return-address"="non-leaf"  {
 ; V83A-LABEL: leaf_clobbers_lr:
 ; V83A:       // %bb.0:
 ; V83A-NEXT:    paciasp
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
 ; V83A-NEXT:    //APP
@@ -79,8 +79,8 @@ define i32 @non_leaf_sign_all(i32 %x) "sign-return-address"="all" {
 ; COMPAT-LABEL: non_leaf_sign_all:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #25
-; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; COMPAT-NEXT:    .cfi_offset w30, -16
 ; COMPAT-NEXT:    bl foo
@@ -91,8 +91,8 @@ define i32 @non_leaf_sign_all(i32 %x) "sign-return-address"="all" {
 ; V83A-LABEL: non_leaf_sign_all:
 ; V83A:       // %bb.0:
 ; V83A-NEXT:    paciasp
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
 ; V83A-NEXT:    bl foo
@@ -106,8 +106,8 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "sign-return-address"="non-leaf"  {
 ; COMPAT-LABEL: non_leaf_sign_non_leaf:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #25
-; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; COMPAT-NEXT:    .cfi_offset w30, -16
 ; COMPAT-NEXT:    bl foo
@@ -118,8 +118,8 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "sign-return-address"="non-leaf"  {
 ; V83A-LABEL: non_leaf_sign_non_leaf:
 ; V83A:       // %bb.0:
 ; V83A-NEXT:    paciasp
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
 ; V83A-NEXT:    bl foo
@@ -136,8 +136,8 @@ define i32 @non_leaf_scs(i32 %x) "sign-return-address"="non-leaf" shadowcallstac
 ; CHECK-NEXT:    str x30, [x18], #8
 ; CHECK-NEXT:    .cfi_escape 0x16, 0x12, 0x02, 0x82, 0x78 //
 ; CHECK-NEXT:    paciasp
-; CHECK-NEXT:    .cfi_negate_ra_state
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_negate_ra_state
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl foo
@@ -164,8 +164,8 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "sign-return-address"="all" {
 ; COMPAT-LABEL: spill_lr_and_tail_call:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #25
-; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; COMPAT-NEXT:    .cfi_offset w30, -16
 ; COMPAT-NEXT:    //APP
@@ -178,8 +178,8 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "sign-return-address"="all" {
 ; V83A-LABEL: spill_lr_and_tail_call:
 ; V83A:       // %bb.0:
 ; V83A-NEXT:    paciasp
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
 ; V83A-NEXT:    //APP

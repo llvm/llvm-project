@@ -114,18 +114,21 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
   // here because we don't want to allow arbitrary orderings.
   ParsedAttributes CXX11Attrs(AttrFactory);
   MaybeParseCXX11Attributes(CXX11Attrs, /*MightBeObjCMessageSend*/ true);
-  ParsedAttributes GNUAttrs(AttrFactory);
+  ParsedAttributes GNUOrMSAttrs(AttrFactory);
   if (getLangOpts().OpenCL)
-    MaybeParseGNUAttributes(GNUAttrs);
+    MaybeParseGNUAttributes(GNUOrMSAttrs);
+
+  if (getLangOpts().HLSL)
+    MaybeParseMicrosoftAttributes(GNUOrMSAttrs);
 
   StmtResult Res = ParseStatementOrDeclarationAfterAttributes(
-      Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, GNUAttrs);
+      Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, GNUOrMSAttrs);
   MaybeDestroyTemplateIds();
 
   // Attributes that are left should all go on the statement, so concatenate the
   // two lists.
   ParsedAttributes Attrs(AttrFactory);
-  takeAndConcatenateAttrs(CXX11Attrs, GNUAttrs, Attrs);
+  takeAndConcatenateAttrs(CXX11Attrs, GNUOrMSAttrs, Attrs);
 
   assert((Attrs.empty() || Res.isInvalid() || Res.isUsable()) &&
          "attributes on empty statement");
@@ -294,6 +297,15 @@ Retry:
     GNUAttributeLoc = Tok.getLocation();
     ParseGNUAttributes(GNUAttrs);
     goto Retry;
+  }
+
+  case tok::kw_template: {
+    SourceLocation DeclEnd;
+    ParsedAttributes Attrs(AttrFactory);
+    ParseTemplateDeclarationOrSpecialization(DeclaratorContext::Block, DeclEnd,
+                                             Attrs,
+                                             getAccessSpecifierIfPresent());
+    return StmtError();
   }
 
   case tok::kw_case:                // C99 6.8.1: labeled-statement

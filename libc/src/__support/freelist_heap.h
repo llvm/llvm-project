@@ -16,10 +16,11 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/memory_utils/inline_memset.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using cpp::optional;
 using cpp::span;
@@ -188,19 +189,19 @@ template <size_t NUM_BUCKETS> void FreeListHeap<NUM_BUCKETS>::free(void *ptr) {
   BlockType *prev = chunk_block->prev();
   BlockType *next = nullptr;
 
-  if (!chunk_block->last())
+  if (chunk_block->next())
     next = chunk_block->next();
 
   if (prev != nullptr && !prev->used()) {
     // Remove from freelist and merge
     freelist_.remove_chunk(block_to_span(prev));
     chunk_block = chunk_block->prev();
-    BlockType::merge_next(chunk_block);
+    chunk_block->merge_next();
   }
 
   if (next != nullptr && !next->used()) {
     freelist_.remove_chunk(block_to_span(next));
-    BlockType::merge_next(chunk_block);
+    chunk_block->merge_next();
   }
   // Add back to the freelist
   freelist_.add_chunk(block_to_span(chunk_block));
@@ -258,6 +259,6 @@ void *FreeListHeap<NUM_BUCKETS>::calloc(size_t num, size_t size) {
 
 extern FreeListHeap<> *freelist_heap;
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FREELIST_HEAP_H

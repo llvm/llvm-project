@@ -120,6 +120,16 @@ enum NodeType : unsigned {
 
   // Vector Shuffle
   VREPLVE,
+  VSHUF,
+  VPICKEV,
+  VPICKOD,
+  VPACKEV,
+  VPACKOD,
+  VILVL,
+  VILVH,
+  VSHUF4I,
+  VREPLVEI,
+  XVPERMI,
 
   // Extended vector element extraction
   VPICK_SEXT_ELT,

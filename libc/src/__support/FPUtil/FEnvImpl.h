@@ -13,6 +13,7 @@
 #include "hdr/math_macros.h"
 #include "hdr/types/fenv_t.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/errno/libc_errno.h"
 
@@ -34,7 +35,8 @@
 #include "riscv/FEnvImpl.h"
 #else
 
-namespace LIBC_NAMESPACE::fputil {
+namespace LIBC_NAMESPACE_DECL {
+namespace fputil {
 
 // All dummy functions silently succeed.
 
@@ -62,10 +64,12 @@ LIBC_INLINE int get_env(fenv_t *) { return 0; }
 
 LIBC_INLINE int set_env(const fenv_t *) { return 0; }
 
-} // namespace LIBC_NAMESPACE::fputil
+} // namespace fputil
+} // namespace LIBC_NAMESPACE_DECL
 #endif
 
-namespace LIBC_NAMESPACE::fputil {
+namespace LIBC_NAMESPACE_DECL {
+namespace fputil {
 
 LIBC_INLINE int clear_except_if_required(int excepts) {
   if (math_errhandling & MATH_ERREXCEPT)
@@ -90,6 +94,7 @@ LIBC_INLINE void set_errno_if_required(int err) {
     libc_errno = err;
 }
 
-} // namespace LIBC_NAMESPACE::fputil
+} // namespace fputil
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FENVIMPL_H
