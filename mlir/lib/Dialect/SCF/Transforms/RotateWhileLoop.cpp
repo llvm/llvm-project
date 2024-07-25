@@ -15,6 +15,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_SCFROTATEWHILELOOPPASS
@@ -41,24 +42,16 @@ struct RotateWhileLoopPattern : OpRewritePattern<scf::WhileOp> {
   }
 };
 
-/// We do not use the above pattern in this pass as we can simply walk over the
-/// `scf.while` operations and run the function.
 struct SCFRotateWhileLoopPass
     : impl::SCFRotateWhileLoopPassBase<SCFRotateWhileLoopPass> {
   using Base::Base;
 
   void runOnOperation() final {
     Operation *parentOp = getOperation();
-
-    SmallVector<scf::WhileOp> workList;
-    parentOp->walk(
-        [&workList](scf::WhileOp whileOp) { workList.push_back(whileOp); });
-
     MLIRContext *context = &getContext();
-    PatternRewriter rewriter(context);
-    for (scf::WhileOp whileOp : workList)
-      (void)scf::wrapWhileLoopInZeroTripCheck(whileOp, rewriter,
-                                              forceCreateCheck);
+    RewritePatternSet patterns(context);
+    scf::populateSCFRotateWhileLoopPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(parentOp, std::move(patterns));
   }
 };
 } // namespace

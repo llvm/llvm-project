@@ -209,10 +209,6 @@ scf.if %pre_cond -> i64 {
 }
     ```
   }];
-  let options = [
-    Option<"forceCreateCheck", "force-create-check", "bool", /*default=*/"false",
-           "Create loop guard even if the loop is already in a do-while form.">
-  ];
 }
 
 #endif // MLIR_DIALECT_SCF_PASSES

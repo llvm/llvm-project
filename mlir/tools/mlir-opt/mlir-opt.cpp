@@ -138,6 +138,7 @@ void registerTestRecursiveTypesPass();
 void registerTestSCFUpliftWhileToFor();
 void registerTestSCFUtilsPass();
 void registerTestSCFWhileOpBuilderPass();
+void registerTestSCFForceWrapInZeroTripCheckPasses();
 void registerTestShapeMappingPass();
 void registerTestSliceAnalysisPass();
 void registerTestSPIRVFuncSignatureConversion();
@@ -270,6 +271,7 @@ void registerTestPasses() {
   mlir::test::registerTestSCFUpliftWhileToFor();
   mlir::test::registerTestSCFUtilsPass();
   mlir::test::registerTestSCFWhileOpBuilderPass();
+  mlir::test::registerTestSCFForceWrapInZeroTripCheckPasses();
   mlir::test::registerTestShapeMappingPass();
   mlir::test::registerTestSliceAnalysisPass();
   mlir::test::registerTestSPIRVFuncSignatureConversion();
