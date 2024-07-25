@@ -24,6 +24,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/Transforms/OneToNTypeConversion.h"
 
 #define DEBUG_TYPE "arm-sme-vector-legalization"
@@ -376,14 +377,6 @@ struct LegalizeTransferWriteOpsByDecomposition
   }
 };
 
-auto makeVscaleConstantBuilder(PatternRewriter &rewriter, Location loc) {
-  Value vscale = rewriter.create<vector::VectorScaleOp>(loc);
-  return [loc, vscale, &rewriter](int64_t multiplier) {
-    return rewriter.create<arith::MulIOp>(
-        loc, vscale, rewriter.create<arith::ConstantIndexOp>(loc, multiplier));
-  };
-}
-
 /// Legalize a multi-tile transfer_write as a single store loop. This is done as
 /// part of type decomposition as at this level we know each tile write is
 /// disjoint, but that information is lost after decomposition (without analysis
@@ -450,7 +443,8 @@ struct LegalizeMultiTileTransferWriteAsStoreLoop
                                          kMatchFailureUnsupportedMaskOp);
 
     auto loc = writeOp.getLoc();
-    auto createVscaleMultiple = makeVscaleConstantBuilder(rewriter, loc);
+    auto createVscaleMultiple =
+        vector::makeVscaleConstantBuilder(rewriter, loc);
 
     // Get SME tile and slice types.
     auto smeTileType = getSMETileTypeForElement(vectorType.getElementType());
@@ -846,7 +840,8 @@ struct LowerIllegalTransposeStoreViaZA
       return rewriter.notifyMatchFailure(writeOp, "unsupported source shape");
 
     auto loc = writeOp.getLoc();
-    auto createVscaleMultiple = makeVscaleConstantBuilder(rewriter, loc);
+    auto createVscaleMultiple =
+        vector::makeVscaleConstantBuilder(rewriter, loc);
 
     auto transposeMap = AffineMapAttr::get(
         AffineMap::getPermutationMap(ArrayRef<int64_t>{1, 0}, getContext()));
