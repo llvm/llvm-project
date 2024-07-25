@@ -129,6 +129,12 @@ public:
 
   const TargetLowering &getTargetLowering() const;
 
+  const MachineFunction &getMachineFunction() const;
+
+  const DataLayout &getDataLayout() const;
+
+  LLVMContext &getContext() const;
+
   /// \returns true if the combiner is running pre-legalization.
   bool isPreLegalize() const;
 
@@ -884,6 +890,9 @@ public:
   bool matchTruncateOfExt(const MachineInstr &Root, const MachineInstr &ExtMI,
                           BuildFnTy &MatchInfo);
 
+  bool matchCastOfSelect(const MachineInstr &Cast, const MachineInstr &SelectMI,
+                         BuildFnTy &MatchInfo);
+
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
@@ -996,6 +1005,8 @@ private:
 
   // Simplify (cmp cc0 x, y) (&& or ||) (cmp cc1 x, y) -> cmp cc2 x, y.
   bool tryFoldLogicOfFCmps(GLogicalBinOp *Logic, BuildFnTy &MatchInfo);
+
+  bool isCastFree(unsigned Opcode, LLT ToTy, LLT FromTy) const;
 };
 } // namespace llvm
 
