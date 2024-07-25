@@ -31,18 +31,55 @@ class quant_Op<string mnemonic, list<Trait> traits> :
 def quant_DequantizeCastOp : quant_Op<"dcast", [
     Pure,
     quant_SameScalarOrTensorShape]> {
-  let summary = "convert back from a quantized to quantizable (expressed) type operation";
+  let summary = "Dequantize cast operation";
   let description = [{
-    A DequantizeCast op `dcast` represents the inverse of a `qcast`,
-    converting back from a quantized to quantizable (expressed) type.
+    Convert an input quantized value into its expressed floating-point value.
+    The dequantization process consists of the following steps:
 
-    Like `qcast`s, a `dcast` is allowed to have both its operand and result
-    as non quantized types. This facilitates transformations and marks edges
-    where the computation must be carried out in the expressed type.
+    ```
+    def dequantize(quantizedValue: quantizedType) -> expressedType:
+        storedValue = reinterpretCast(quantizedValue, storageType)
+        storedValueFloat = convertIntToFloat(storedValue, expressedType)
+        zeroPointFloat = convertIntToFloat(zeroPoint, expressedType)
+        expressedValue = (storedValueFloat - zeroPointFloat) * scale
+        return expressedValue
+    ```
 
-    Especially early in transformation, it is common to have `dcast`s on
-    all operands to ops that must operate with the expressed type (typically
-    math ops prior to lowering to target-specific, quantized kernels).
+    Here, `storageType`, `expressedType`, `scale`, and `zeroPoint` are obtained
+    from the corresponding parameters encoded in `quantizedType`. For
+    per-channel quantization, the appropriate `scale` and `zeroPoint` values
+    are used for each tensor element computation according to the channel the
+    element belongs to.
+
+    The operation must satisfy the following syntactic constraints:
+
+    - Operand `input` must be a scalar or tensor of type `!quant.uniform`.
+
+    - The result type must be a floating-point scalar or tensor.
+
+    - The `expressedType` parameter of the `!quant.uniform` type of the input
+      must match the floating-point type of the result.
+
+    - The operand and result types must be both scalars or both tensors. If
+      tensors, they must be both ranked or both unranked. If ranked, both must
+      have the same shape, including matching static and dynamic dimensions.
+
+    - If the operand uses per-channel quantization, its `!quant.uniform` type
+      must adhere to the [Per-axis quantization
+      integrity](#per-axis-quantization-integrity) guidelines.
+
+    Examples:
+
+    ```
+    // Dequantize a scalar quantized value
+    %result = quant.dcast %input : !quant.uniform<i8:f32, 2.0> to f32
+
+    // Dequantize a dynamically shaped tensor of quantized values
+    %result = quant.dcast %input : tensor<?x!quant.uniform<i8:f32, 2.0>> to tensor<?xf32>
+
+    // Dequantize an unranked tensor using per-axis quantization information
+    %result = quant.dcast %input : tensor<*x!quant.uniform<i8:f32:1, {2.0, 3.0}>> to tensor<*xf32>
+    ```
   }];
   let arguments = (ins quant_QuantizedScalarOrTensor:$input);
   let results = (outs quant_FloatScalarOrTensor:$result);
@@ -61,28 +98,57 @@ def quant_DequantizeCastOp : quant_Op<"dcast", [
 def quant_QuantizeCastOp : quant_Op<"qcast", [
     Pure,
     quant_SameScalarOrTensorShape]> {
-  let summary = "convert a quantizable type to a quantized type";
+  let summary = "Quantize cast operation";
   let description = [{
-    A QuantizeCast `qcast` represents a potential type shift from a quantizable
-    type to a quantized type.
+    Convert a floating-point value to a quantized type. The quantization
+    process consists of the following steps:
 
-    At runtime, a `qcast` will apply the transformation expressed by its
-    operand and result type. For flexibility during transformation, it is also
-    possible to have a `qcast` that performs no transformation (both its
-    operand and result type are quantizable).
+    ```
+    def quantize(expressedValue: expressedType) -> quantizedType:
+        zeroPointFloat = convertIntToFloat(zeroPoint, expressedType)
+        scaledValue = expressedValue / scale
+        storedValueFloat = scaledValue + zeroPointFloat
+        storedValue = convertFloatToInt(storedValueFloat, storageType)
+        storedValueClamped = clamp(storedValue, storageMin, storageMax)
+        quantizedValue = reinterpretCast(storedValueClamped, quantizedType)
+        return quantizedValue
+    ```
 
-    A `qcast` will typically originate from either:
-      a) An expressed or implied constraint in the source dialect which signals
-         that a certain level of quantization is possible or required.
-      b) An inference made by a quantization algorithm indicating that a
-         quantized representation may be acceptable.
+    Here, `storageType`, `storageMin`, `storageMax`, `expressedType`, `scale`,
+    and `zeroPoint` are obtained from the corresponding parameters encoded in
+    `quantizedType`. For per-channel quantization, the appropriate `scale` and
+    `zeroPoint` values are used for each tensor element computation according
+    to the channel the element belongs to.
 
-    Especially early in transformation, it is common to have pairs of
-    `qcast` and `dcast` at points where a transition to a quantized type is
-    required. In addition, it is also common to have an identity `qcast`
-    (where the operand and result type are not quantized) at all points where
-    it is legal to use a quantized representation (but is not known to be
-    acceptable).
+    The operation must satisfy the following syntactic constraints:
+
+    - Operand `input` must be a floating-point scalar or tensor.
+
+    - The result type must be a scalar or tensor of type `!quant.uniform`.
+
+    - The `expressedType` parameter in the `!quant.uniform` type of the result
+      must match the floating-point type of the input.
+
+    - The operand and result types must be both scalars or both tensors. If
+      tensors, they must be both ranked or both unranked. If ranked, both must
+      have the same shape, including matching static and dynamic dimensions.
+
+    - If the result uses per-channel quantization, its `!quant.uniform` type
+      must adhere to the [Per-axis quantization
+      integrity](#per-axis-quantization-integrity) guidelines.
+
+    Examples:
+
+    ```
+    // Quantize a scalar floating-point value
+    %result = quant.qcast %input : f32 to !quant.uniform<i8:f32, 2.0>
+
+    // Quantize a dynamically shaped tensor of quantized values
+    %result = quant.qcast %input : tensor<?xf32> to tensor<?x!quant.uniform<i8:f32, 2.0>>
+
+    // Quantize an unranked tensor using per-axis quantization information
+    %result = quant.qcast %input : tensor<*xf32> to tensor<*x!quant.uniform<i8:f32:1, {2.0, 3.0}>>
+    ```
   }];
   let arguments = (ins quant_FloatScalarOrTensor:$input);
   let results = (outs quant_QuantizedScalarOrTensor:$result);
@@ -102,24 +168,48 @@ def quant_StorageCastOp : quant_Op<"scast", [
     Pure,
     quant_SameScalarOrTensorShape,
     quant_IntegerAndQuantizedCombination]> {
-  let summary = "cast from or to a type based on the storage type and the corresponding quantized type";
+  let summary = "Storage cast operation";
   let description = [{
-    A StorageCast `scast` represents a cast from or to a type based on the
-    storage type and a type based on a corresponding quantized type.
+    Convert a value from a quantized type to the corresponding signless integer
+    storage type, or vice versa. This conversion simply involves a
+    reinterpretation of the input bits and does not involve any data
+    manipulation.
 
-    This op exists to ensure type coherency for between parts of the computation
-    which are operating directly on an underlying storage type and those which
-    operate on quantized values.
+    The following syntactic restrictions must be met:
 
-    Examples from storage to quantized type:
+    - Operand `input` must be a scalar or tensor of a signless integer or
+      `!quant.uniform` type.
+
+    - The result must be a scalar or tensor of a signless integer or
+      `!quant.uniform` type.
+
+    - If the operand is a scalar or tensor of type integer, the result must be
+      a scalar or tensor of type `!quant.uniform`, and vice versa.
+
+    - The operand and result must be both scalars or both tensors. If tensors,
+      they must be both ranked or both unranked. If ranked, both must have the
+      same shape, including matching static and dynamic dimensions.
+
+    - The width of the `storageType` parameter of the quantized type of the
+      operand or result must match the width of the signless integer type of
+      the operand or result.
+
+    - If the operand or result uses per-channel quantization, its
+      `!quant.uniform` type must adhere to the [Per-axis quantization
+      integrity](#per-axis-quantization-integrity) guidelines.
+
+    Examples:
+
     ```
-    i8 -> !quant<"uniform[i8:f32]{1.0}">
-    ```
-    ```
-    tensor<4xi8> -> tensor<4x!quant<"uniform[i8:f32]{1.0}">>
-    ```
-    ```
-    vector<4xi8> -> vector<4x!quant<"uniform[i8:f32]{1.0}">>
+    // Cast a scalar quantized value into its storage type
+    %result = quant.scast %input : !quant.uniform<i8:f32, 2.0> to i8
+
+    // Cast a dynamically shaped tensor of quantized values into their storage type
+    %result = quant.scast %input : tensor<?x!quant.uniform<i8:f32, 2.0>> to tensor<?xi8>
+
+    // Cast an unranked tensor of signless integers into a quantized type using
+    // per-channel quantization
+    %result = quant.scast %input : tensor<*xi8> to tensor<*x!quant.uniform<i8:f32:1, {2.0, 3.0}>>
     ```
   }];
   let arguments = (ins quant_IntegerOrQuantizedScalarOrTensor:$input);

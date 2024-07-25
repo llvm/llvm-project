@@ -17,8 +17,59 @@ include "mlir/IR/OpBase.td"
 
 def Quant_Dialect : Dialect {
   let name = "quant";
-  let cppNamespace = "::mlir::quant";
+  let description = [{
+    ## Per-axis quantization integrity
 
+    When type `!quant.uniform` contains per-axis quantization information, the
+    rules below are enforced. These rules guarantee that the quantization
+    information encoded in the data type is applicable to the context in which
+    the quantized type is used. For efficiency, these rules are actively
+    enforced by the verifiers of `quant` dialect ops, but they must be
+    respected in any context in which the `!quant.uniform` data type is used,
+    such as the header of a `func.func` op, or the input of an arithmetic
+    operation.
+ 
+    - A quantized type with per-channel quantization information must be the
+      element type of a tensor container type, and may not occur directly as
+      the data type of a scalar value.
+
+    ```
+    // Incorrect. Type !quant.uniform specifies per-channel quantization for a
+    // scalar type.
+    %result = quant.qcast %input : f32 to !quant.uniform<i8:f32:0, {1.0, 2.0}>
+
+    // Correct. Type `!quant.uniform` with per-channel quantization is wrapped in
+    // a `tensor` type.
+    %result = quant.qcast %input : tensor<2xf32> to tensor<2x!quant.uniform<i8:f32:0, {1.0, 2.0}>>
+    ```
+
+    - If the tensor containing the `!quant.uniform` type is ranked, its rank
+      must be greater than the channel axis specified in the quantized type.
+
+    ```
+    // Incorrect. The tensor rank (2) is not greater than the channel axis in the
+    // quantized type (3).
+    %result = quant.qcast %input : tensor<1x2xf32> to tensor<1x2x!quant.uniform<i8:f32:3, {1.0, 2.0}>>
+
+    // Correct. The tensor rank (2) is now greater than the channel axis (1):
+    %result = quant.qcast %input : tensor<1x2xf32> to tensor<1x2x!quant.uniform<i8:f32:1, {1.0, 2.0}>>
+    ```
+
+    - If the axis dimension in the containing tensor is static, its size must
+      be equal to the number of scales present in the quantized type.
+
+    ```
+    // Incorrect. The channel axis is 1, and the size of dimension 1 in the
+    // containing tensor is 3. However, there are 4 scale values present in the
+    // quantized type.
+    %result = quant.qcast %input : tensor<?x3xf32> to tensor<?x3x!quant.uniform<i8:f32:1, {1.0, 2.0, 3.0, 4.0}>>
+
+    // Correct. The quantized type now includes 3 scale values, matching the size
+    // of dimension 1 of the result tensor.
+    %result = quant.qcast %input : tensor<?x3xf32> to tensor<?x3x!quant.uniform<i8:f32:1, {2.0, 3.0, 4.0}>>
+    ```
+  }];
+  let cppNamespace = "::mlir::quant";
   let useDefaultTypePrinterParser = 1;
 }
 
