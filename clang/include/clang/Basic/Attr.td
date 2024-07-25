@@ -2042,7 +2042,8 @@ def NoDuplicate : InheritableAttr {
 
 def Convergent : InheritableAttr {
   let Spellings = [Clang<"convergent">];
-  let Subjects = SubjectList<[Function]>;
+  let Subjects = SubjectList<[Function, Stmt], WarnDiag,
+                             "functions and statements">;
   let Documentation = [ConvergentDocs];
   let SimpleHandler = 1;
 }

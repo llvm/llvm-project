@@ -5636,6 +5636,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     Attrs =
         Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::AlwaysInline);
 
+  // Add call-site convergent attribute if exists.
+  if (InConvergentAttributedStmt)
+    Attrs =
+        Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::Convergent);
+
   // Apply some call-site-specific attributes.
   // TODO: work this into building the attribute set.
 
