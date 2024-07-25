@@ -9,6 +9,9 @@ add_lld_tool(lld
   SUPPORT_PLUGINS
   GENERATE_DRIVER
   )
+if(LLVM_BUILD_INSTRUMENTED)
+  target_compile_definitions(lld PRIVATE LLVM_BUILD_INSTRUMENTED)
+endif()
 export_executable_symbols_for_plugins(lld)
 
 function(lld_target_link_libraries target type)
