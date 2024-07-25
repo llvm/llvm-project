@@ -2604,6 +2604,41 @@ AArch64FrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
 }
 
 StackOffset
+AArch64FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
+                                                   int FI) const {
+  // This function serves to provide a comparable offset from a single reference
+  // point (the value of SP at function entry) that can be used for analysis,
+  // e.g. the stack-frame-layout analysis pass. It is not guaranteed to be
+  // correct for all objects in the presence of VLA-area objects or dynamic
+  // stack re-alignment.
+
+  const auto &MFI = MF.getFrameInfo();
+
+  int64_t ObjectOffset = MFI.getObjectOffset(FI);
+
+  // This is correct in the absence of any SVE stack objects.
+  StackOffset SVEStackSize = getSVEStackSize(MF);
+  if (!SVEStackSize)
+    return StackOffset::getFixed(ObjectOffset - getOffsetOfLocalArea());
+
+  const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+  if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
+    return StackOffset::get(-((int64_t)AFI->getCalleeSavedStackSize()),
+                            ObjectOffset);
+  }
+
+  bool IsFixed = MFI.isFixedObjectIndex(FI);
+  bool IsCSR =
+      !IsFixed && ObjectOffset >= -((int)AFI->getCalleeSavedStackSize(MFI));
+
+  StackOffset ScalableOffset = {};
+  if (!IsFixed && !IsCSR)
+    ScalableOffset = -SVEStackSize;
+
+  return StackOffset::getFixed(ObjectOffset) + ScalableOffset;
+}
+
+StackOffset
 AArch64FrameLowering::getNonLocalFrameIndexReference(const MachineFunction &MF,
                                                      int FI) const {
   return StackOffset::getFixed(getSEHFrameIndexOffset(MF, FI));
