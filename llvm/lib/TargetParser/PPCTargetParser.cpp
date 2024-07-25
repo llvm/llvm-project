@@ -97,7 +97,7 @@ StringRef getNormalizedPPCTargetCPU(const Triple &T, StringRef CPUName) {
     }
 
     StringRef CPU = normalizeCPUName(CPUName);
-    if (CPU != "generic")
+    if (CPU != "generic" && CPU != "native")
       return CPU;
   }
 
