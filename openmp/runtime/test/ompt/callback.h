@@ -93,6 +93,18 @@ static const char *ompt_dependence_type_t_values[36] = {
     "ompt_dependence_type_inout_all_memory" // 35
 };
 
+static const char *ompt_sync_region_t_values[] = {"undefined",
+                                                  "barrier",
+                                                  "barrier_implicit",
+                                                  "barrier_explicit",
+                                                  "barrier_implementation",
+                                                  "taskwait",
+                                                  "taskgroup",
+                                                  "reduction",
+                                                  "barrier_implicit_workshare",
+                                                  "barrier_implicit_parallel",
+                                                  "barrier_teams"};
+
 static void format_task_type(int type, char *buffer) {
   char *progress = buffer;
   if (type & ompt_task_initial)
@@ -506,89 +518,32 @@ on_ompt_callback_sync_region(
   ompt_data_t *task_data,
   const void *codeptr_ra)
 {
-  switch(endpoint)
-  {
-    case ompt_scope_begin:
-      switch(kind)
-      {
-        case ompt_sync_region_barrier:
-        case ompt_sync_region_barrier_implicit:
-        case ompt_sync_region_barrier_implicit_workshare:
-        case ompt_sync_region_barrier_implicit_parallel:
-        case ompt_sync_region_barrier_teams:
-        case ompt_sync_region_barrier_explicit:
-        case ompt_sync_region_barrier_implementation:
-          printf("%" PRIu64 ":" _TOOL_PREFIX
-                 " ompt_event_barrier_begin: parallel_id=%" PRIu64
-                 ", task_id=%" PRIu64 ", codeptr_ra=%p\n",
-                 ompt_get_thread_data()->value, parallel_data->value,
-                 task_data->value, codeptr_ra);
-          print_ids(0);
-          break;
-        case ompt_sync_region_taskwait:
-          printf("%" PRIu64 ":" _TOOL_PREFIX
-                 " ompt_event_taskwait_begin: parallel_id=%" PRIu64
-                 ", task_id=%" PRIu64 ", codeptr_ra=%p\n",
-                 ompt_get_thread_data()->value, parallel_data->value,
-                 task_data->value, codeptr_ra);
-          break;
-        case ompt_sync_region_taskgroup:
-          printf("%" PRIu64 ":" _TOOL_PREFIX
-                 " ompt_event_taskgroup_begin: parallel_id=%" PRIu64
-                 ", task_id=%" PRIu64 ", codeptr_ra=%p\n",
-                 ompt_get_thread_data()->value, parallel_data->value,
-                 task_data->value, codeptr_ra);
-          break;
-        case ompt_sync_region_reduction:
-          printf("ompt_sync_region_reduction should never be passed to "
-                 "on_ompt_callback_sync_region\n");
-          exit(-1);
-          break;
-      }
-      break;
-    case ompt_scope_end:
-      switch(kind)
-      {
-        case ompt_sync_region_barrier:
-        case ompt_sync_region_barrier_implicit:
-        case ompt_sync_region_barrier_explicit:
-        case ompt_sync_region_barrier_implicit_workshare:
-        case ompt_sync_region_barrier_implicit_parallel:
-        case ompt_sync_region_barrier_teams:
-        case ompt_sync_region_barrier_implementation:
-          printf("%" PRIu64 ":" _TOOL_PREFIX
-                 " ompt_event_barrier_end: parallel_id=%" PRIu64
-                 ", task_id=%" PRIu64 ", codeptr_ra=%p\n",
-                 ompt_get_thread_data()->value,
-                 (parallel_data) ? parallel_data->value : 0, task_data->value,
-                 codeptr_ra);
-          break;
-        case ompt_sync_region_taskwait:
-          printf("%" PRIu64 ":" _TOOL_PREFIX
-                 " ompt_event_taskwait_end: parallel_id=%" PRIu64
-                 ", task_id=%" PRIu64 ", codeptr_ra=%p\n",
-                 ompt_get_thread_data()->value,
-                 (parallel_data) ? parallel_data->value : 0, task_data->value,
-                 codeptr_ra);
-          break;
-        case ompt_sync_region_taskgroup:
-          printf("%" PRIu64 ":" _TOOL_PREFIX
-                 " ompt_event_taskgroup_end: parallel_id=%" PRIu64
-                 ", task_id=%" PRIu64 ", codeptr_ra=%p\n",
-                 ompt_get_thread_data()->value,
-                 (parallel_data) ? parallel_data->value : 0, task_data->value,
-                 codeptr_ra);
-          break;
-        case ompt_sync_region_reduction:
-          printf("ompt_sync_region_reduction should never be passed to "
-                 "on_ompt_callback_sync_region\n");
-          exit(-1);
-          break;
-      }
-      break;
-    case ompt_scope_beginend:
-      printf("ompt_scope_beginend should never be passed to %s\n", __func__);
-      exit(-1);
+  if (endpoint == ompt_scope_beginend) {
+    printf("ompt_scope_beginend should never be passed to %s\n", __func__);
+    exit(-1);
+  }
+  if (kind == ompt_sync_region_reduction) {
+    printf("ompt_sync_region_reduction should never be passed to %s\n",
+           __func__);
+    exit(-1);
+  }
+  uint64_t parallel_data_value = parallel_data ? parallel_data->value : 0;
+  const char *begin_or_end = (endpoint == ompt_scope_begin) ? "begin" : "end";
+  printf("%" PRIu64 ":" _TOOL_PREFIX " ompt_event_%s_%s: parallel_id=%" PRIu64
+         ", task_id=%" PRIu64 ", codeptr_ra=%p\n",
+         ompt_get_thread_data()->value, ompt_sync_region_t_values[kind],
+         begin_or_end, parallel_data_value, task_data->value, codeptr_ra);
+  switch (kind) {
+  case ompt_sync_region_barrier:
+  case ompt_sync_region_barrier_implicit:
+  case ompt_sync_region_barrier_implicit_workshare:
+  case ompt_sync_region_barrier_implicit_parallel:
+  case ompt_sync_region_barrier_teams:
+  case ompt_sync_region_barrier_explicit:
+  case ompt_sync_region_barrier_implementation:
+    if (endpoint == ompt_scope_begin)
+      print_ids(0);
+  default:;
   }
 }
 
@@ -600,89 +555,22 @@ on_ompt_callback_sync_region_wait(
   ompt_data_t *task_data,
   const void *codeptr_ra)
 {
-  switch(endpoint)
-  {
-    case ompt_scope_begin:
-      switch(kind)
-      {
-        case ompt_sync_region_barrier:
-        case ompt_sync_region_barrier_implicit:
-        case ompt_sync_region_barrier_implicit_workshare:
-        case ompt_sync_region_barrier_implicit_parallel:
-        case ompt_sync_region_barrier_teams:
-        case ompt_sync_region_barrier_explicit:
-        case ompt_sync_region_barrier_implementation:
-          printf("%" PRIu64 ":" _TOOL_PREFIX
-                 " ompt_event_wait_barrier_begin: parallel_id=%" PRIu64
-                 ", task_id=%" PRIu64 ", codeptr_ra=%p\n",
-                 ompt_get_thread_data()->value, parallel_data->value,
-                 task_data->value, codeptr_ra);
-          break;
-        case ompt_sync_region_taskwait:
-          printf("%" PRIu64 ":" _TOOL_PREFIX
-                 " ompt_event_wait_taskwait_begin: parallel_id=%" PRIu64
-                 ", task_id=%" PRIu64 ", codeptr_ra=%p\n",
-                 ompt_get_thread_data()->value, parallel_data->value,
-                 task_data->value, codeptr_ra);
-          break;
-        case ompt_sync_region_taskgroup:
-          printf("%" PRIu64 ":" _TOOL_PREFIX
-                 " ompt_event_wait_taskgroup_begin: parallel_id=%" PRIu64
-                 ", task_id=%" PRIu64 ", codeptr_ra=%p\n",
-                 ompt_get_thread_data()->value, parallel_data->value,
-                 task_data->value, codeptr_ra);
-          break;
-        case ompt_sync_region_reduction:
-          printf("ompt_sync_region_reduction should never be passed to "
-                 "on_ompt_callback_sync_region_wait\n");
-          exit(-1);
-          break;
-      }
-      break;
-    case ompt_scope_end:
-      switch(kind)
-      {
-        case ompt_sync_region_barrier:
-        case ompt_sync_region_barrier_implicit:
-        case ompt_sync_region_barrier_implicit_workshare:
-        case ompt_sync_region_barrier_implicit_parallel:
-        case ompt_sync_region_barrier_teams:
-        case ompt_sync_region_barrier_explicit:
-        case ompt_sync_region_barrier_implementation:
-          printf("%" PRIu64 ":" _TOOL_PREFIX
-                 " ompt_event_wait_barrier_end: parallel_id=%" PRIu64
-                 ", task_id=%" PRIu64 ", codeptr_ra=%p\n",
-                 ompt_get_thread_data()->value,
-                 (parallel_data) ? parallel_data->value : 0, task_data->value,
-                 codeptr_ra);
-          break;
-        case ompt_sync_region_taskwait:
-          printf("%" PRIu64 ":" _TOOL_PREFIX
-                 " ompt_event_wait_taskwait_end: parallel_id=%" PRIu64
-                 ", task_id=%" PRIu64 ", codeptr_ra=%p\n",
-                 ompt_get_thread_data()->value,
-                 (parallel_data) ? parallel_data->value : 0, task_data->value,
-                 codeptr_ra);
-          break;
-        case ompt_sync_region_taskgroup:
-          printf("%" PRIu64 ":" _TOOL_PREFIX
-                 " ompt_event_wait_taskgroup_end: parallel_id=%" PRIu64
-                 ", task_id=%" PRIu64 ", codeptr_ra=%p\n",
-                 ompt_get_thread_data()->value,
-                 (parallel_data) ? parallel_data->value : 0, task_data->value,
-                 codeptr_ra);
-          break;
-        case ompt_sync_region_reduction:
-          printf("ompt_sync_region_reduction should never be passed to "
-                 "on_ompt_callback_sync_region_wait\n");
-          exit(-1);
-          break;
-      }
-      break;
-    case ompt_scope_beginend:
-      printf("ompt_scope_beginend should never be passed to %s\n", __func__);
-      exit(-1);
+  if (endpoint == ompt_scope_beginend) {
+    printf("ompt_scope_beginend should never be passed to %s\n", __func__);
+    exit(-1);
   }
+  if (kind == ompt_sync_region_reduction) {
+    printf("ompt_sync_region_reduction should never be passed to %s\n",
+           __func__);
+    exit(-1);
+  }
+  uint64_t parallel_data_value = parallel_data ? parallel_data->value : 0;
+  const char *begin_or_end = (endpoint == ompt_scope_begin) ? "begin" : "end";
+  printf("%" PRIu64 ":" _TOOL_PREFIX
+         " ompt_event_wait_%s_%s: parallel_id=%" PRIu64 ", task_id=%" PRIu64
+         ", codeptr_ra=%p\n",
+         ompt_get_thread_data()->value, ompt_sync_region_t_values[kind],
+         begin_or_end, parallel_data_value, task_data->value, codeptr_ra);
 }
 
 static void on_ompt_callback_reduction(ompt_sync_region_t kind,
