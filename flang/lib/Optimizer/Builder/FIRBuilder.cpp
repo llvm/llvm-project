@@ -248,6 +248,12 @@ mlir::Value fir::FirOpBuilder::allocateLocal(
 
 /// Get the block for adding Allocas.
 mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
+  if (auto accComputeConstructIface =
+          getRegion()
+              .getParentOfType<mlir::acc::ComputeConstructOpInterface>()) {
+    return accComputeConstructIface.getAllocaBlock();
+  }
+
   if (auto ompOutlineableIface =
           getRegion()
               .getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>()) {
