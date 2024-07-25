@@ -3112,8 +3112,7 @@ static QualType commonTypeImpl(Sema &S, TemplateName BaseTemplate,
     // Otherwise, if decay_t<decltype(false ? declval<D1>() : declval<D2>())>
     // denotes a valid type, let C denote that type.
     {
-      auto CheckConditionalOperands =
-          [&](bool ConstRefQual) -> QualType {
+      auto CheckConditionalOperands = [&](bool ConstRefQual) -> QualType {
         EnterExpressionEvaluationContext UnevaluatedContext(
             S, Sema::ExpressionEvaluationContext::Unevaluated);
         Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/true);

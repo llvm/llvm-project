@@ -1520,6 +1520,7 @@ __common_type
 -------------
 
 .. code-block:: c++
+
   template <template <class... Args> class BaseTemplate,
             template <class TypeMember> class HasTypeMember,
             class HasNoTypeMember,
@@ -1534,6 +1535,7 @@ __type_pack_element
 -------------------
 
 .. code-block:: c++
+
   template <std::size_t Index, class... Ts>
   using __type_pack_element = ...;
 
@@ -1543,7 +1545,8 @@ __make_integer_seq
 ------------------
 
 .. code-block:: c++
-  template <template <class IntSeqT, IntSeqT... Ints> class IntSeq, class T, class N>
+
+  template <template <class IntSeqT, IntSeqT... Ints> class IntSeq, class T, T N>
   using __make_integer_seq = ...;
 
 This alias returns ``IntSeq`` instantiated with ``IntSeqT = T``and ``Ints`` being the pack ``0, ..., N - 1``.

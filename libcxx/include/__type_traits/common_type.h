@@ -30,11 +30,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class... _Args>
 struct common_type : __common_type<common_type, __type_identity, __empty, _Args...> {};
 
-#if _LIBCPP_STD_VER >= 14
-template <class... _Args>
-using common_type_t = typename __common_type<common_type, __type_identity, __empty, _Args...>::type;
-#endif
-
 #else
 #  if _LIBCPP_STD_VER >= 20
 // Let COND_RES(X, Y) be:
@@ -105,11 +100,11 @@ template <class _Tp, class _Up, class _Vp, class... _Rest>
 struct _LIBCPP_TEMPLATE_VIS common_type<_Tp, _Up, _Vp, _Rest...>
     : __common_type_impl<__common_types<_Tp, _Up, _Vp, _Rest...> > {};
 
+#endif
+
 #if _LIBCPP_STD_VER >= 14
 template <class... _Tp>
 using common_type_t = typename common_type<_Tp...>::type;
-#endif
-
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
