@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/atan2.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -19,32 +18,29 @@ using LIBC_NAMESPACE::testing::tlog;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcAtan2Test, TrickyInputs) {
-  mpfr::BinaryInput<double> INPUTS[] = {
+  mpfr::BinaryInput<double> inputs[] = {
       {0x1.0853408534085p-2, 0x1.e7b54166c6126p-2},
       {FPBits::inf().get_val(), 0x0.0000000000001p-1022},
   };
-  constexpr int N = sizeof(INPUTS) / sizeof(INPUTS[0]);
 
-  for (int i = 0; i < N; ++i) {
-    double x = INPUTS[i].x;
-    double y = INPUTS[i].y;
+  for (mpfr::BinaryInput<double> &input : inputs) {
+    double x = input.x;
+    double y = input.y;
     mpfr::RoundingMode rm = mpfr::RoundingMode::Downward;
     mpfr::ForceRoundingMode rr(rm);
-    ASSERT_MPFR_MATCH(mpfr::Operation::Atan2, INPUTS[i],
+    ASSERT_MPFR_MATCH(mpfr::Operation::Atan2, input,
                       LIBC_NAMESPACE::atan2(x, y), 0.5, rm);
-    INPUTS[i].x = -INPUTS[i].x;
-    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan2, INPUTS[i],
+    input.x = -input.x;
+    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan2, input,
                                    LIBC_NAMESPACE::atan2(-x, y), 0.5);
-    INPUTS[i].y = -INPUTS[i].y;
-    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan2, INPUTS[i],
+    input.y = -input.y;
+    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan2, input,
                                    LIBC_NAMESPACE::atan2(-x, -y), 0.5);
-    INPUTS[i].x = -INPUTS[i].x;
-    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan2, INPUTS[i],
+    input.x = -input.x;
+    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan2, input,
                                    LIBC_NAMESPACE::atan2(x, -y), 0.5);
   }
 }
-
-#ifndef DEBUGDEBUG
 
 TEST_F(LlvmLibcAtan2Test, InDoubleRange) {
   constexpr uint64_t X_COUNT = 123;
@@ -65,7 +61,7 @@ TEST_F(LlvmLibcAtan2Test, InDoubleRange) {
     uint64_t fails = 0;
     uint64_t finite_count = 0;
     uint64_t total_count = 0;
-    double failed_x, failed_y, failed_r = 0.0;
+    double failed_x = 0.0, failed_y = 0.0, failed_r = 0.0;
     double tol = 0.5;
 
     for (uint64_t i = 0, v = X_START; i <= X_COUNT; ++i, v += X_STEP) {
@@ -127,5 +123,3 @@ TEST_F(LlvmLibcAtan2Test, InDoubleRange) {
   tlog << " Test Rounding Toward Zero...\n";
   test(mpfr::RoundingMode::TowardZero);
 }
-
-#endif // DEBUGDEBUG
