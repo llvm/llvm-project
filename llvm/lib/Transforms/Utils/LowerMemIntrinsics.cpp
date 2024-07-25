@@ -347,10 +347,10 @@ void llvm::createMemCpyLoopUnknownSize(
   }
 }
 
-// If \p Addr1 and \p Addr2 are pointers to different address space that support
-// addrspacecasts, create an addresspacecast to obtain a pair of pointers in the
-// same addressspace. Noop if the pointers are in the same address space or
-// addrspacecasting is not possible.
+// If \p Addr1 and \p Addr2 are pointers to different address spaces, create an
+// addresspacecast to obtain a pair of pointers in the same addressspace. The
+// caller needs to ensure that addrspacecasting is possible.
+// No-op if the pointers are in the same address space.
 static std::pair<Value *, Value *>
 tryInsertCastToCommonAddrSpace(IRBuilderBase &B, Value *Addr1, Value *Addr2,
                                const TargetTransformInfo &TTI) {
@@ -364,6 +364,9 @@ tryInsertCastToCommonAddrSpace(IRBuilderBase &B, Value *Addr1, Value *Addr2,
       ResAddr2 = B.CreateAddrSpaceCast(Addr2, Addr1->getType());
     else if (TTI.isValidAddrSpaceCast(AS1, AS2))
       ResAddr1 = B.CreateAddrSpaceCast(Addr1, Addr2->getType());
+    else
+      llvm_unreachable("Can only lower memmove between address spaces if they "
+                       "support addrspacecast");
   }
   return {ResAddr1, ResAddr2};
 }
