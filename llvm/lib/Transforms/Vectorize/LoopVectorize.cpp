@@ -8983,6 +8983,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
 
     bool NeedsMaskForGaps =
         IG->requiresScalarEpilogue() && !CM.isScalarEpilogueAllowed();
+    assert((!NeedsMaskForGaps || useMaskedInterleavedAccesses(CM.TTI)) &&
+           "masked interleaved groups are not allowed.");
     auto *VPIG = new VPInterleaveRecipe(IG, Recipe->getAddr(), StoredValues,
                                         Recipe->getMask(), NeedsMaskForGaps);
     VPIG->insertBefore(Recipe);
