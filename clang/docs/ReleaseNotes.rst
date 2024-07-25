@@ -65,6 +65,9 @@ sections with improvements to Clang's support for those languages.
 C++ Language Changes
 --------------------
 
+- The builtin type alias ``__common_type`` has been added to improve the
+  performance of ``std::common_type``.
+
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -117,7 +120,7 @@ Improvements to Clang's diagnostics
 - Some template related diagnostics have been improved.
 
   .. code-block:: c++
-    
+
      void foo() { template <typename> int i; } // error: templates can only be declared in namespace or class scope
 
      struct S {
