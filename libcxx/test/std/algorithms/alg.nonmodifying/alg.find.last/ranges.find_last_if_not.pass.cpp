@@ -59,7 +59,8 @@ static_assert(!HasFindLastIfR<ForwardRangeNotSentinelEqualityComparableWith>);
 
 template <class It, class Sent>
 constexpr auto make_range(auto& a) {
-  return std::ranges::subrange(It(std::ranges::begin(a)), Sent(It(std::ranges::end(a))));
+  return std::ranges::subrange(
+      It(std::to_address(std::ranges::begin(a))), Sent(It(std::to_address(std::ranges::end(a)))));
 }
 
 template <template <class> class IteratorT, template <class> class SentinelT>

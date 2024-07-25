@@ -61,7 +61,8 @@ template <class It, class Sent = It>
 constexpr void test_iterators() {
   using ValueT    = std::iter_value_t<It>;
   auto make_range = [](auto& a) {
-    return std::ranges::subrange(It(std::ranges::begin(a)), Sent(It(std::ranges::end(a))));
+    return std::ranges::subrange(
+        It(std::to_address(std::ranges::begin(a))), Sent(It(std::to_address(std::ranges::end(a)))));
   };
   { // simple test
     {
