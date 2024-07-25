@@ -13,7 +13,7 @@ from typing import List, Optional
 
 log = logging.getLogger()
 
-REMOTE = 'git@github.com:apple/llvm-project.git'
+REMOTE = 'git@github.com:swiftlang/llvm-project.git'
 
 class GitError(Exception):
     """
