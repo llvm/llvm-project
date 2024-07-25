@@ -437,3 +437,18 @@ func.func @fold_legalization() -> i32 {
   %1 = "test.op_in_place_self_fold"() : () -> (i32)
   "test.return"(%1) : (i32) -> ()
 }
+
+// -----
+
+// CHECK-LABEL: func @convert_detached_signature()
+//       CHECK:   "test.legal_op_with_region"() ({
+//       CHECK:   ^bb0(%arg0: f64):
+//       CHECK:     "test.return"() : () -> ()
+//       CHECK:   }) : () -> ()
+func.func @convert_detached_signature() {
+  "test.detached_signature_conversion"() ({
+  ^bb0(%arg0: i64):
+    "test.return"() : () -> ()
+  }) : () -> ()
+  "test.return"() : () -> ()
+}
