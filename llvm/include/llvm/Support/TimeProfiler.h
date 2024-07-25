@@ -83,8 +83,19 @@ namespace llvm {
 
 class raw_pwrite_stream;
 
+struct TimeTraceMetadata {
+  std::string Detail;
+  // Source file and line number information for the event.
+  std::string File;
+  int Line;
+
+  bool isEmpty() const { return Detail.empty() && File.empty(); }
+};
+
 struct TimeTraceProfiler;
 TimeTraceProfiler *getTimeTraceProfilerInstance();
+
+bool isTimeTraceVerbose();
 
 struct TimeTraceProfilerEntry;
 
@@ -92,7 +103,8 @@ struct TimeTraceProfilerEntry;
 /// This sets up the global \p TimeTraceProfilerInstance
 /// variable to be the profiler instance.
 void timeTraceProfilerInitialize(unsigned TimeTraceGranularity,
-                                 StringRef ProcName);
+                                 StringRef ProcName,
+                                 bool TimeTraceVerbose = false);
 
 /// Cleanup the time trace profiler, if it was initialized.
 void timeTraceProfilerCleanup();
@@ -127,6 +139,10 @@ TimeTraceProfilerEntry *timeTraceProfilerBegin(StringRef Name,
 TimeTraceProfilerEntry *
 timeTraceProfilerBegin(StringRef Name,
                        llvm::function_ref<std::string()> Detail);
+
+TimeTraceProfilerEntry *
+timeTraceProfilerBegin(StringRef Name,
+                       llvm::function_ref<TimeTraceMetadata()> MetaData);
 
 /// Manually begin a time section, with the given \p Name and \p Detail.
 /// This starts Async Events having \p Name as a category which is shown
@@ -163,6 +179,11 @@ public:
   TimeTraceScope(StringRef Name, llvm::function_ref<std::string()> Detail) {
     if (getTimeTraceProfilerInstance() != nullptr)
       Entry = timeTraceProfilerBegin(Name, Detail);
+  }
+  TimeTraceScope(StringRef Name,
+                 llvm::function_ref<TimeTraceMetadata()> Metadata) {
+    if (getTimeTraceProfilerInstance() != nullptr)
+      Entry = timeTraceProfilerBegin(Name, Metadata);
   }
   ~TimeTraceScope() {
     if (getTimeTraceProfilerInstance() != nullptr)
