@@ -135,8 +135,7 @@ static const char *getReasonStr(SIScheduleCandReason Reason) {
 
 #endif
 
-namespace llvm {
-namespace SISched {
+namespace llvm::SISched {
 static bool tryLess(int TryVal, int CandVal,
                     SISchedulerCandidate &TryCand,
                     SISchedulerCandidate &Cand,
@@ -170,8 +169,7 @@ static bool tryGreater(int TryVal, int CandVal,
   Cand.setRepeat(Reason);
   return false;
 }
-} // end namespace SISched
-} // end namespace llvm
+} // end namespace llvm::SISched
 
 // SIScheduleBlock //
 
