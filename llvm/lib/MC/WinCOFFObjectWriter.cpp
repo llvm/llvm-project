@@ -1200,17 +1200,3 @@ MCWinCOFFObjectTargetWriter::MCWinCOFFObjectTargetWriter(unsigned Machine_)
 
 // Pin the vtable to this file.
 void MCWinCOFFObjectTargetWriter::anchor() {}
-
-//------------------------------------------------------------------------------
-// WinCOFFObjectWriter factory function
-
-std::unique_ptr<MCObjectWriter> llvm::createWinCOFFObjectWriter(
-    std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS) {
-  return std::make_unique<WinCOFFObjectWriter>(std::move(MOTW), OS);
-}
-
-std::unique_ptr<MCObjectWriter> llvm::createWinCOFFDwoObjectWriter(
-    std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS,
-    raw_pwrite_stream &DwoOS) {
-  return std::make_unique<WinCOFFObjectWriter>(std::move(MOTW), OS, DwoOS);
-}
