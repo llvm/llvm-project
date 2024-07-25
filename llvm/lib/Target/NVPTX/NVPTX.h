@@ -110,7 +110,7 @@ enum LoadStore {
 using OrderingUnderlyingType = unsigned int;
 enum class Ordering : OrderingUnderlyingType {
   NotAtomic = 0, // PTX calls these: "Weak"
-  // Unordered = 1, // TODO: NVPTX should map this to "Relaxed"
+  // Unordered = 1, // NVPTX maps LLVM Unorderd to Relaxed
   Relaxed = 2,
   // Consume = 3,   // Unimplemented in LLVM; NVPTX would map to "Acquire"
   Acquire = 4,
