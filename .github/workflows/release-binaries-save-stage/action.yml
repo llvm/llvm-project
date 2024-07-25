@@ -1,4 +1,9 @@
 name: Save Stage
+description: >-
+  Upload the source and binary directories from a build stage so that they
+  can be re-used in the next stage.  This action is used to the release
+  binaries workflow into multiple stages to avoid the 6 hour timeout on
+  the GitHub hosted runners.
 inputs:
   build-prefix:
     description: "Directory containing the build directory."
