@@ -549,9 +549,17 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
       symTable->addSymbol(*sym, localExV);
       symTable->pushScope();
       cloneSymbol(sym);
-      firOpBuilder.create<mlir::omp::YieldOp>(
-          hsb.getAddr().getLoc(),
-          symTable->shallowLookupSymbol(*sym).getAddr());
+      mlir::Value cloneAddr = symTable->shallowLookupSymbol(*sym).getAddr();
+      mlir::Type cloneType = cloneAddr.getType();
+
+      mlir::Value yieldedValue =
+          (symType == cloneType) ? cloneAddr
+                                 : firOpBuilder.createConvert(
+                                       cloneAddr.getLoc(), symType, cloneAddr);
+
+      auto yieldOp = firOpBuilder.create<mlir::omp::YieldOp>(
+          hsb.getAddr().getLoc(), yieldedValue);
+      yieldOp.getOperand(0).getType();
       symTable->popScope();
     }
 

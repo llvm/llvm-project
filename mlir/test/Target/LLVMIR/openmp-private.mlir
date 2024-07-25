@@ -234,3 +234,38 @@ omp.declare_reduction @reducer.part : !llvm.ptr init {
 ^bb0(%arg0: !llvm.ptr):
   omp.yield
 }
+
+// -----
+
+llvm.func @_QPequivalence() {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x !llvm.array<4 x i8> : (i64) -> !llvm.ptr
+  %2 = llvm.mlir.constant(0 : index) : i64
+  %3 = llvm.getelementptr %1[0, %2] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<4 x i8>
+  omp.parallel private(@_QFequivalenceEx_firstprivate_ptr_f32 %3 -> %arg0 : !llvm.ptr) {
+    %4 = llvm.mlir.constant(3.140000e+00 : f32) : f32
+    llvm.store %4, %arg0 : f32, !llvm.ptr
+    omp.terminator
+  }
+  llvm.return
+}
+
+omp.private {type = firstprivate} @_QFequivalenceEx_firstprivate_ptr_f32 : !llvm.ptr alloc {
+^bb0(%arg0: !llvm.ptr):
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x f32 {bindc_name = "x", pinned} : (i64) -> !llvm.ptr
+  omp.yield(%1 : !llvm.ptr)
+} copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  %0 = llvm.load %arg0 : !llvm.ptr -> f32
+  llvm.store %0, %arg1 : f32, !llvm.ptr
+  omp.yield(%arg1 : !llvm.ptr)
+}
+
+// CHECK: define internal void @_QPequivalence..omp_par
+// CHECK:   %[[PRIV_ALLOC:.*]] = alloca float, i64 1, align 4
+// CHECK:   %[[HOST_VAL:.*]] = load float, ptr %{{.*}}, align 4
+// Test that we initialzie the firstprivate variable.
+// CHECK:   store float %[[HOST_VAL]], ptr %[[PRIV_ALLOC]], align 4
+// Test that we inlined the body of the parallel region.
+// CHECK:   store float 0x{{.*}}, ptr %[[PRIV_ALLOC]], align 4
