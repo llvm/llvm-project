@@ -94,7 +94,6 @@ entry:
 
 ;
 ; MMX Store
-; Note: doesn't actually emit a non-temporal store here.
 ;
 
 define void @test_mmx(ptr nocapture %a0, ptr nocapture %a1) {
@@ -102,7 +101,7 @@ define void @test_mmx(ptr nocapture %a0, ptr nocapture %a1) {
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    movq (%rdi), %mm0
 ; ALL-NEXT:    psrlq $3, %mm0
-; ALL-NEXT:    movq %mm0, (%rsi)
+; ALL-NEXT:    movntq %mm0, (%rsi)
 ; ALL-NEXT:    retq
 entry:
   %0 = load x86_mmx, ptr %a0
