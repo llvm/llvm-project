@@ -17,8 +17,8 @@
 
 namespace llvm {
 
-class CycleConvergenceExtendPass
-    : public PassInfoMixin<CycleConvergenceExtendPass> {
+class ExtendCycleConvergencePass
+    : public PassInfoMixin<ExtendCycleConvergencePass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

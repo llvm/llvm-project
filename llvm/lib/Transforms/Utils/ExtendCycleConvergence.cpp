@@ -1,5 +1,4 @@
-//===- CycleConvergenceExtend.cpp - Extend cycle body for convergence
-//--------===//
+//===- CycleConvergenceExtend.cpp - Extend cycle body for convergence -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -90,7 +89,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Utils/CycleConvergenceExtend.h"
+#include "llvm/Transforms/Utils/ExtendCycleConvergence.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/StringExtras.h"
@@ -101,7 +100,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
-#define DEBUG_TYPE "cycle-convergence-extend"
+#define DEBUG_TYPE "extend-cycle-convergence"
 
 using namespace llvm;
 
@@ -192,9 +191,9 @@ static bool hasSuccInsideCycle(BasicBlock *BB, Cycle *C) {
   return false;
 }
 
-PreservedAnalyses CycleConvergenceExtendPass::run(Function &F,
+PreservedAnalyses ExtendCycleConvergencePass::run(Function &F,
                                                   FunctionAnalysisManager &AM) {
-  LLVM_DEBUG(dbgs() << "===== Cycle convergence extension for function "
+  LLVM_DEBUG(dbgs() << "===== Extend cycle convergence for function "
                     << F.getName() << "\n");
 
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
