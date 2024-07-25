@@ -40,6 +40,17 @@ function(_get_compile_options_from_flags output_var)
     endif()
     if(ADD_MISC_MATH_BASIC_OPS_OPT_FLAG)
       list(APPEND compile_options "-D__LIBC_MISC_MATH_BASIC_OPS_OPT")
+      if(LIBC_COMPILER_HAS_BUILTIN_FMAX_FMIN)
+        list(APPEND compile_options "-D__LIBC_USE_BUILTIN_FMAX_FMIN")
+      endif()
+      if(LIBC_COMPILER_HAS_BUILTIN_FMAXF16_FMINF16)
+        list(APPEND compile_options "-D__LIBC_USE_BUILTIN_FMAXF16_FMINF16")
+      endif()
+      if("FullFP16" IN_LIST LIBC_CPU_FEATURES AND
+         CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        list(APPEND compile_options
+             "SHELL:-Xclang -target-feature -Xclang +fullfp16")
+      endif()
     endif()
   elseif(MSVC)
     if(ADD_FMA_FLAG)
@@ -104,16 +115,7 @@ function(_get_common_compile_options output_var flags)
       list(APPEND compile_options "-ffixed-point")
     endif()
 
-    # Builtin recognition causes issues when trying to implement the builtin
-    # functions themselves. The GPU backends do not use libcalls so we disable
-    # the known problematic ones. This allows inlining during LTO linking.
-    if(LIBC_TARGET_OS_IS_GPU)
-      set(libc_builtins bcmp strlen memmem bzero memcmp memcpy memmem memmove
-                        memset strcmp strstr)
-      foreach(builtin ${libc_builtins})
-        list(APPEND compile_options "-fno-builtin-${builtin}")
-      endforeach()
-    else()
+    if(NOT LIBC_TARGET_OS_IS_GPU)
       list(APPEND compile_options "-fno-builtin")
     endif()
 

@@ -1491,7 +1491,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                                           inaccessibleMem);
     // Only set the attribute when it does not match the default value.
     if (!memAttr.isReadWrite())
-      callOp.setMemoryAttr(memAttr);
+      callOp.setMemoryEffectsAttr(memAttr);
 
     if (!callInst->getType()->isVoidTy())
       mapValue(inst, callOp.getResult());
@@ -1683,7 +1683,7 @@ static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {
   // Only set the attr when it does not match the default value.
   if (memAttr.isReadWrite())
     return;
-  funcOp.setMemoryAttr(memAttr);
+  funcOp.setMemoryEffectsAttr(memAttr);
 }
 
 // List of LLVM IR attributes that map to an explicit attribute on the MLIR
