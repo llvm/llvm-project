@@ -3116,9 +3116,6 @@ bool CastInst::isBitCastable(Type *SrcTy, Type *DestTy) {
   if (SrcBits != DestBits)
     return false;
 
-  if (DestTy->isX86_MMXTy() || SrcTy->isX86_MMXTy())
-    return false;
-
   return true;
 }
 
@@ -3228,12 +3225,6 @@ CastInst::getCastOpcode(
       return IntToPtr;                              // int -> ptr
     }
     llvm_unreachable("Casting pointer to other than pointer or int");
-  } else if (DestTy->isX86_MMXTy()) {
-    if (SrcTy->isVectorTy()) {
-      assert(DestBits == SrcBits && "Casting vector of wrong width to X86_MMX");
-      return BitCast;                               // 64-bit vector to MMX
-    }
-    llvm_unreachable("Illegal cast to X86_MMX");
   }
   llvm_unreachable("Casting to type that is not first-class");
 }

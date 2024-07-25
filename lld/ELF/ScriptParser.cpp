@@ -414,9 +414,9 @@ void ScriptParser::readInclude() {
 
   if (std::optional<std::string> path = searchScript(tok)) {
     if (std::optional<MemoryBufferRef> mb = readFile(*path)) {
-      buffers.push_back(cur);
-      cur.s = mb->getBuffer();
-      cur.filename = mb->getBufferIdentifier();
+      buffers.push_back(curBuf);
+      curBuf.s = mb->getBuffer();
+      curBuf.filename = mb->getBufferIdentifier();
       mbs.push_back(*mb);
     }
     return;
@@ -1112,9 +1112,9 @@ SymbolAssignment *ScriptParser::readProvideHidden(bool provide, bool hidden) {
   return cmd;
 }
 
-// Replace whitespace sequence with one single space. The output is used by
-// -Map.
-static void screezeSpaces(std::string &str) {
+// Replace whitespace sequence (including \n) with one single space. The output
+// is used by -Map.
+static void squeezeSpaces(std::string &str) {
   std::string ret;
   bool flag = false;
   auto it = str.begin();
@@ -1161,7 +1161,7 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
   if (cmd) {
     cmd->dataSegmentRelroEnd = !savedSeenRelroEnd && script->seenRelroEnd;
     cmd->commandString = StringRef(oldS, curTok.data() - oldS).str();
-    screezeSpaces(cmd->commandString);
+    squeezeSpaces(cmd->commandString);
     expect(";");
   }
   return cmd;
@@ -1367,9 +1367,9 @@ ByteCommand *ScriptParser::readByteCommand(StringRef tok) {
 
   const char *oldS = prevTok.data();
   Expr e = readParenExpr();
-  std::string commandString = StringRef(oldS, cur.s.data() - oldS).str();
-  screezeSpaces(commandString);
-  return make<ByteCommand>(e, size, commandString);
+  std::string commandString = StringRef(oldS, curBuf.s.data() - oldS).str();
+  squeezeSpaces(commandString);
+  return make<ByteCommand>(e, size, std::move(commandString));
 }
 
 static std::optional<uint64_t> parseFlag(StringRef tok) {

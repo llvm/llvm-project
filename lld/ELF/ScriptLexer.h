@@ -20,16 +20,18 @@ namespace lld::elf {
 class ScriptLexer {
 protected:
   struct Buffer {
-    // The unparsed buffer and the filename.
+    // The remaining content to parse and the filename.
     StringRef s, filename;
   };
   // The current buffer and parent buffers due to INCLUDE.
-  Buffer cur;
+  Buffer curBuf;
   SmallVector<Buffer, 0> buffers;
 
   // The token before the last next().
   StringRef prevTok;
-  // The cache value of peek(). This is valid if curTokState and inExpr match.
+  // Rules for what is a token are different when we are in an expression.
+  // curTok holds the cached return value of peek() and is invalid when the
+  // expression state changes.
   StringRef curTok;
   // The inExpr state when curTok is cached.
   bool curTokState = false;
@@ -39,7 +41,7 @@ public:
   explicit ScriptLexer(MemoryBufferRef mb);
 
   void setError(const Twine &msg);
-  void lexToken();
+  void lex();
   StringRef skipSpace(StringRef s);
   bool atEOF();
   StringRef next();

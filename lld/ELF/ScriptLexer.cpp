@@ -85,8 +85,8 @@ std::string ScriptLexer::getCurrentLocation() {
 }
 
 ScriptLexer::ScriptLexer(MemoryBufferRef mb) {
-  cur.s = mb.getBuffer();
-  cur.filename = mb.getBufferIdentifier();
+  curBuf.s = mb.getBuffer();
+  curBuf.filename = mb.getBufferIdentifier();
   mbs.push_back(mb);
 }
 
@@ -102,20 +102,21 @@ void ScriptLexer::setError(const Twine &msg) {
   error(s);
 }
 
-void ScriptLexer::lexToken() {
+void ScriptLexer::lex() {
   std::vector<StringRef> vec;
-  StringRef begin = cur.s;
+  StringRef begin = curBuf.s;
 
   for (;;) {
-    cur.s = skipSpace(cur.s);
-    if (cur.s.empty()) {
+    StringRef &s = curBuf.s;
+    s = skipSpace(curBuf.s);
+    if (s.empty()) {
       // If this buffer is from an INCLUDE command, switch to the "return
       // value"; otherwise, mark EOF.
       if (buffers.empty()) {
         eof = true;
         return;
       }
-      cur = buffers.pop_back_val();
+      curBuf = buffers.pop_back_val();
       continue;
     }
     curTokState = inExpr;
@@ -124,31 +125,29 @@ void ScriptLexer::lexToken() {
     // because, in a glob match context, only unquoted tokens are interpreted
     // as glob patterns. Double-quoted tokens are literal patterns in that
     // context.
-    if (cur.s.starts_with("\"")) {
-      size_t e = cur.s.find("\"", 1);
+    if (s.starts_with("\"")) {
+      size_t e = s.find("\"", 1);
       if (e == StringRef::npos) {
-        size_t lineno =
-            begin.substr(0, cur.s.data() - begin.data()).count('\n');
-        error(cur.filename + ":" + Twine(lineno + 1) + ": unclosed quote");
+        size_t lineno = begin.substr(0, s.data() - begin.data()).count('\n');
+        error(curBuf.filename + ":" + Twine(lineno + 1) + ": unclosed quote");
         return;
       }
 
-      curTok = cur.s.take_front(e + 1);
-      cur.s = cur.s.substr(e + 1);
+      curTok = s.take_front(e + 1);
+      s = s.substr(e + 1);
       return;
     }
 
     // Some operators form separate tokens.
-    if (cur.s.starts_with("<<=") || cur.s.starts_with(">>=")) {
-      curTok = cur.s.substr(0, 3);
-      cur.s = cur.s.substr(3);
+    if (s.starts_with("<<=") || s.starts_with(">>=")) {
+      curTok = s.substr(0, 3);
+      s = s.substr(3);
       return;
     }
-    if (cur.s.size() > 1 &&
-        ((cur.s[1] == '=' && strchr("*/+-!<>&^|", cur.s[0])) ||
-         (cur.s[0] == cur.s[1] && strchr("<>&|", cur.s[0])))) {
-      curTok = cur.s.substr(0, 2);
-      cur.s = cur.s.substr(2);
+    if (s.size() > 1 && ((s[1] == '=' && strchr("*/+-!<>&^|", s[0])) ||
+                         (s[0] == s[1] && strchr("<>&|", s[0])))) {
+      curTok = s.substr(0, 2);
+      s = s.substr(2);
       return;
     }
 
@@ -157,23 +156,22 @@ void ScriptLexer::lexToken() {
     // token.
     size_t pos;
     if (inExpr) {
-      pos = cur.s.find_first_not_of(
+      pos = s.find_first_not_of(
           "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
           "0123456789_.$");
-      if (pos == 0 && cur.s.size() >= 2 &&
-          is_contained({"==", "!=", "<=", ">=", "<<", ">>"},
-                       cur.s.substr(0, 2)))
+      if (pos == 0 && s.size() >= 2 &&
+          is_contained({"==", "!=", "<=", ">=", "<<", ">>"}, s.substr(0, 2)))
         pos = 2;
     } else {
-      pos = cur.s.find_first_not_of(
+      pos = s.find_first_not_of(
           "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
           "0123456789_.$/\\~=+[]*?-!^:");
     }
 
     if (pos == 0)
       pos = 1;
-    curTok = cur.s.substr(0, pos);
-    cur.s = cur.s.substr(pos);
+    curTok = s.substr(0, pos);
+    s = s.substr(pos);
     break;
   }
 }
@@ -204,24 +202,24 @@ StringRef ScriptLexer::skipSpace(StringRef s) {
   }
 }
 
-// An erroneous token is handled as if it were the last token before EOF.
+// Used to determine whether to stop parsing. Treat errors like EOF.
 bool ScriptLexer::atEOF() { return eof || errorCount(); }
 
 StringRef ScriptLexer::next() {
   if (errorCount())
     return "";
   prevTok = peek();
-  return std::exchange(curTok, StringRef(cur.s.data(), 0));
+  return std::exchange(curTok, StringRef(curBuf.s.data(), 0));
 }
 
 StringRef ScriptLexer::peek() {
   // curTok is invalid if curTokState and inExpr mismatch.
   if (curTok.size() && curTokState != inExpr) {
-    cur.s = StringRef(curTok.data(), cur.s.end() - curTok.data());
+    curBuf.s = StringRef(curTok.data(), curBuf.s.end() - curTok.data());
     curTok = {};
   }
   if (curTok.empty())
-    lexToken();
+    lex();
   return curTok;
 }
 
@@ -257,7 +255,7 @@ MemoryBufferRef ScriptLexer::getCurrentMB() {
   if (prevTok.empty())
     return mbs.back();
   for (MemoryBufferRef mb : mbs)
-    if (encloses(mb.getBuffer(), cur.s))
+    if (encloses(mb.getBuffer(), curBuf.s))
       return mb;
   llvm_unreachable("getCurrentMB: failed to find a token");
 }
