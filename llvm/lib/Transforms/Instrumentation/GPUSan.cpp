@@ -169,6 +169,9 @@ private:
   Value *instrumentAllocaInst(LoopInfo &LI, AllocaInst &AI);
   void instrumentAccess(LoopInfo &LI, Instruction &I, int PtrIdx,
                         Type &AccessTy, bool IsRead);
+  void instrumentMultipleAccessPerBasicBlock(
+      LoopInfo &LI,
+      SmallVector<Instruction *> &AccessCausingInstructionInABasicBlock);
   void instrumentLoadInst(LoopInfo &LI, LoadInst &LoadI);
   void instrumentStoreInst(LoopInfo &LI, StoreInst &StoreI);
   void instrumentGEPInst(LoopInfo &LI, GetElementPtrInst &GEP);
@@ -229,6 +232,35 @@ private:
                          {getPtrTy(PO), getPtrTy(PO), Int64Ty, Int32Ty, Int64Ty,
                           Int64Ty, Int64Ty, Int64Ty});
   }
+
+  FunctionCallee getCheckFnVector(uint64_t NumElements) {
+    return getOrCreateFn(CheckFnVector[0], "ompx_check_global_vec", PtrTy,
+                         {
+                             PtrTy,   /*PlainPtrOps*/
+                             PtrTy,   /*Sizes*/
+                             PtrTy,   /*AccessIds*/
+                             PtrTy,   /*SourceIds*/
+                             Int64Ty, /*PC*/
+                             Int64Ty  /*NumElements*/
+                         });
+  }
+
+  FunctionCallee getCheckWithBaseFnVector(uint64_t NumElements) {
+    return getOrCreateFn(CheckWithBaseFnVector[0],
+                         "ompx_check_with_base_global_vec", PtrTy,
+                         {
+                             PtrTy,   /*PlainPtrOps*/
+                             PtrTy,   /*Starts*/
+                             PtrTy,   /*Lengths*/
+                             PtrTy,   /*Tags*/
+                             PtrTy,   /*Sizes*/
+                             PtrTy,   /*AccessIds*/
+                             PtrTy,   /*SourceIds*/
+                             Int64Ty, /*PC*/
+                             Int64Ty  /*NumElementsTy*/
+                         });
+  }
+
   FunctionCallee getAllocationInfoFn(PtrOrigin PO) {
     assert(PO >= LOCAL && PO <= GLOBAL && "Origin does not need handling.");
     if (auto *F = M.getFunction("ompx_get_allocation_info" + getSuffix(PO)))
@@ -292,6 +324,8 @@ private:
   FunctionCallee FreeFn[3];
   FunctionCallee CheckFn[3];
   FunctionCallee CheckWithBaseFn[3];
+  FunctionCallee CheckFnVector[1];
+  FunctionCallee CheckWithBaseFnVector[1];
   FunctionCallee AllocationInfoFn[3];
   FunctionCallee UnpackFn[3];
   FunctionCallee LifetimeEndFn;
@@ -649,6 +683,303 @@ void GPUSanImpl::instrumentAccess(LoopInfo &LI, Instruction &I, int PtrIdx,
                IRB.CreatePointerBitCastOrAddrSpaceCast(CB, PtrOp->getType()));
 }
 
+void GPUSanImpl::instrumentMultipleAccessPerBasicBlock(
+    LoopInfo &LI,
+    SmallVector<Instruction *> &AccessCausingInstructionInABasicBlock) {
+
+  if (AccessCausingInstructionInABasicBlock.empty())
+    return;
+
+  SmallVector<Instruction *> InstructionsFromBase;
+  SmallVector<int> PtrIdxListBase;
+  SmallVector<Value *> PtrOpsBase;
+  SmallVector<Value *> PlainPtrOpsBase;
+  SmallVector<Value *> StartsBase;
+  SmallVector<Value *> LengthsBase;
+  SmallVector<Value *> TagsBase;
+  SmallVector<Value *> SizesBase;
+  SmallVector<Value *> AccessIdsBase;
+  SmallVector<Value *> SourceIdsBase;
+
+  SmallVector<Instruction *> InstructionsWithoutBase;
+  SmallVector<int> PtrIdxList;
+  SmallVector<Value *> PtrOps;
+  SmallVector<Value *> PlainPtrOps;
+  SmallVector<Value *> Starts;
+  SmallVector<Value *> Lengths;
+  SmallVector<Value *> Tags;
+  SmallVector<Value *> Sizes;
+  SmallVector<Value *> AccessIds;
+  SmallVector<Value *> SourceIds;
+
+  IRBuilder<> IRB(AccessCausingInstructionInABasicBlock.front());
+
+  for (Instruction *I : AccessCausingInstructionInABasicBlock) {
+
+    int PtrIdx = -1;
+    Type *AccessTy;
+    bool IsRead;
+    if (LoadInst *Load = dyn_cast<LoadInst>(I)) {
+      PtrIdx = LoadInst::getPointerOperandIndex();
+      AccessTy = Load->getType();
+      IsRead = true;
+
+    } else if (StoreInst *Store = dyn_cast<StoreInst>(I)) {
+      PtrIdx = StoreInst::getPointerOperandIndex();
+      AccessTy = Store->getValueOperand()->getType();
+      IsRead = true;
+    } else {
+      continue;
+    }
+
+    Value *PtrOp = I->getOperand(PtrIdx);
+    const Value *Object = nullptr;
+    PtrOrigin PO = getPtrOrigin(LI, PtrOp, &Object);
+
+    if (PO > GLOBAL)
+      continue;
+
+    Value *Start = nullptr;
+    Value *Length = nullptr;
+    Value *Tag = nullptr;
+    if (PO != UNKNOWN && Object)
+      getAllocationInfo(*I->getFunction(), PO, *const_cast<Value *>(Object),
+                        Start, Length, Tag);
+
+    if (Loop *L = LI.getLoopFor(I->getParent())) {
+      auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(*I->getFunction());
+      const auto &LD = SE.getLoopDisposition(SE.getSCEVAtScope(PtrOp, L), L);
+    }
+
+    static int32_t ReadAccessId = -1;
+    static int32_t WriteAccessId = 1;
+    const int32_t &AccessId = IsRead ? ReadAccessId-- : WriteAccessId++;
+
+    auto TySize = DL.getTypeStoreSize(AccessTy);
+    assert(!TySize.isScalable());
+    Value *Size = ConstantInt::get(Int64Ty, TySize.getFixedValue());
+
+    Value *PlainPtrOp =
+        IRB.CreatePointerBitCastOrAddrSpaceCast(PtrOp, getPtrTy(PO));
+    if (Start) {
+      if (PO == GLOBAL) {
+        InstructionsFromBase.push_back(I);
+        PtrIdxListBase.push_back(PtrIdx);
+        PtrOpsBase.push_back(PtrOp);
+        PlainPtrOpsBase.push_back(PlainPtrOp);
+        StartsBase.push_back(Start);
+        LengthsBase.push_back(Length);
+        TagsBase.push_back(Tag);
+        SizesBase.push_back(Size);
+        AccessIdsBase.push_back(ConstantInt::get(Int64Ty, AccessId));
+        SourceIdsBase.push_back(getSourceIndex(*I));
+      } else {
+
+        CallInst *CB;
+        CB = createCall(IRB, getCheckWithBaseFn(PO),
+                        {PlainPtrOp, Start, Length, Tag, Size,
+                         ConstantInt::get(Int64Ty, AccessId),
+                         getSourceIndex(*I), getPC(IRB)},
+                        I->getName() + ".san");
+
+        I->setOperand(PtrIdx, IRB.CreatePointerBitCastOrAddrSpaceCast(
+                                  CB, PtrOp->getType()));
+      }
+    } else {
+      if (PO == GLOBAL) {
+        InstructionsWithoutBase.push_back(I);
+        PtrIdxList.push_back(PtrIdx);
+        PtrOps.push_back(PtrOp);
+        PlainPtrOps.push_back(PlainPtrOp);
+        Sizes.push_back(Size);
+        AccessIds.push_back(ConstantInt::get(Int64Ty, AccessId));
+        SourceIds.push_back(getSourceIndex(*I));
+      } else {
+        CallInst *CB;
+        CB = createCall(IRB, getCheckFn(PO),
+                        {PlainPtrOp, Size, ConstantInt::get(Int64Ty, AccessId),
+                         getSourceIndex(*I), getPC(IRB)},
+                        I->getName() + ".san");
+
+        I->setOperand(PtrIdx, IRB.CreatePointerBitCastOrAddrSpaceCast(
+                                  CB, PtrOp->getType()));
+      }
+    }
+  }
+
+  // Sanitize multiple pointers in one call.
+  if (!PlainPtrOpsBase.empty()) {
+    CallInst *CB;
+    uint64_t NumElements = PlainPtrOpsBase.size();
+    // ArrayType for array of plain pointer ops from base
+    auto *PlainPtrOpsBaseTy = ArrayType::get(PtrTy, NumElements);
+    // Make Alloca to array type
+    AllocaInst *PlainPtrOpsBaseArr = IRB.CreateAlloca(PlainPtrOpsBaseTy);
+    int Index = 0;
+    for (auto &Element : PlainPtrOpsBase) {
+      StoreInst *Store = IRB.CreateStore(
+          Element,
+          IRB.CreateGEP(PlainPtrOpsBaseTy, PlainPtrOpsBaseArr,
+                        {ConstantInt::get(Type::getInt32Ty(Ctx), Index)}));
+      Index++;
+    }
+
+    auto *StartsBaseTy = ArrayType::get(PtrTy, NumElements);
+    AllocaInst *StartsBaseArr = IRB.CreateAlloca(StartsBaseTy);
+    Index = 0;
+    for (auto &Element : StartsBase) {
+      StoreInst *Store = IRB.CreateStore(
+          Element,
+          IRB.CreateGEP(StartsBaseTy, StartsBaseArr,
+                        {ConstantInt::get(Type::getInt32Ty(Ctx), Index)}));
+      Index++;
+    }
+
+    auto *LengthsBaseTy = ArrayType::get(Int64Ty, NumElements);
+    AllocaInst *LengthsBaseArr = IRB.CreateAlloca(LengthsBaseTy);
+    Index = 0;
+    for (auto &Element : StartsBase) {
+      StoreInst *Store = IRB.CreateStore(
+          Element,
+          IRB.CreateGEP(LengthsBaseTy, LengthsBaseArr,
+                        {ConstantInt::get(Type::getInt32Ty(Ctx), Index)}));
+      Index++;
+    }
+
+    auto *TagsBaseTy = ArrayType::get(Int32Ty, NumElements);
+    AllocaInst *TagsBaseArr = IRB.CreateAlloca(TagsBaseTy);
+    Index = 0;
+    for (auto &Element : TagsBase) {
+      StoreInst *Store = IRB.CreateStore(
+          Element,
+          IRB.CreateGEP(TagsBaseTy, TagsBaseArr,
+                        {ConstantInt::get(Type::getInt32Ty(Ctx), Index)}));
+      Index++;
+    }
+
+    auto *SizesBaseTy = ArrayType::get(Int64Ty, NumElements);
+    auto *SizesBaseArr = IRB.CreateAlloca(SizesBaseTy);
+    Index = 0;
+    for (auto &Element : SizesBase) {
+      StoreInst *Store = IRB.CreateStore(
+          Element,
+          IRB.CreateGEP(SizesBaseTy, SizesBaseArr,
+                        {ConstantInt::get(Type::getInt32Ty(Ctx), Index)}));
+      Index++;
+    }
+
+    auto *AccessIdsBaseTy = ArrayType::get(Int64Ty, NumElements);
+    auto *AccessIdsBaseArr = IRB.CreateAlloca(AccessIdsBaseTy);
+    Index = 0;
+    for (auto &Element : AccessIdsBase) {
+      StoreInst *Store = IRB.CreateStore(
+          Element,
+          IRB.CreateGEP(AccessIdsBaseTy, AccessIdsBaseArr,
+                        {ConstantInt::get(Type::getInt32Ty(Ctx), Index)}));
+      Index++;
+    }
+
+    auto *SourceIdsBaseTy = ArrayType::get(Int64Ty, NumElements);
+    auto *SourceIdsBaseArr = IRB.CreateAlloca(SourceIdsBaseTy);
+    Index = 0;
+    for (auto &Element : SourceIdsBase) {
+      StoreInst *Store = IRB.CreateStore(
+          Element,
+          IRB.CreateGEP(SourceIdsBaseTy, SourceIdsBaseArr,
+                        {ConstantInt::get(Type::getInt32Ty(Ctx), Index)}));
+      Index++;
+    }
+
+    CB = createCall(IRB, getCheckWithBaseFnVector(NumElements),
+                    {PlainPtrOpsBaseArr, StartsBaseArr, LengthsBaseArr,
+                     TagsBaseArr, SizesBaseArr, AccessIdsBaseArr,
+                     SourceIdsBaseArr, getPC(IRB),
+                     ConstantInt::get(Int64Ty, NumElements)},
+                    ".san_vector");
+
+    // Set the current operand from the result of the sanitization call.
+    Index = 0;
+    for (auto *I : InstructionsFromBase) {
+      Value *Zero = ConstantInt::get(Type::getInt32Ty(Ctx), 0);
+      Value *ValueIndex = ConstantInt::get(Type::getInt32Ty(Ctx), Index);
+      Value *GEPForLoad = IRB.CreateGEP(CB->getType(), CB, {ValueIndex});
+      LoadInst *Load = IRB.CreateLoad(PtrTy, GEPForLoad);
+      int PtrIdx = PtrIdxListBase[Index];
+      Value *PtrOp = PtrOpsBase[Index];
+      I->setOperand(PtrIdx, IRB.CreatePointerBitCastOrAddrSpaceCast(
+                                Load, PtrOp->getType()));
+      Index++;
+    }
+  }
+
+  if (!PlainPtrOps.empty()) {
+    CallInst *CB;
+    uint64_t NumElements = PlainPtrOps.size();
+    auto *PlainPtrOpsTy = ArrayType::get(PtrTy, NumElements);
+    auto *PlainPtrOpsArr = IRB.CreateAlloca(PlainPtrOpsTy);
+    int Index = 0;
+    for (auto &Element : PlainPtrOps) {
+      IRB.CreateStore(
+          Element,
+          IRB.CreateGEP(PlainPtrOpsTy, PlainPtrOpsArr,
+                        {ConstantInt::get(Type::getInt32Ty(Ctx), Index)}));
+      Index++;
+    }
+
+    auto *SizesTy = ArrayType::get(Int64Ty, NumElements);
+    auto *SizesArr = IRB.CreateAlloca(SizesTy);
+    Index = 0;
+    for (auto &Element : Sizes) {
+      IRB.CreateStore(
+          Element,
+          IRB.CreateGEP(SizesTy, SizesArr,
+                        {ConstantInt::get(Type::getInt32Ty(Ctx), Index)}));
+      Index++;
+    }
+
+    auto *AccessIdsTy = ArrayType::get(Int64Ty, NumElements);
+    auto *AccessIdsArr = IRB.CreateAlloca(AccessIdsTy);
+    Index = 0;
+    for (auto &Element : AccessIds) {
+      IRB.CreateStore(
+          Element,
+          IRB.CreateGEP(AccessIdsTy, AccessIdsArr,
+                        {ConstantInt::get(Type::getInt32Ty(Ctx), Index)}));
+      Index++;
+    }
+
+    auto *SourceIdsTy = ArrayType::get(Int64Ty, NumElements);
+    auto *SourceIdsArr = IRB.CreateAlloca(SourceIdsTy);
+    Index = 0;
+    for (auto &Element : SourceIds) {
+      IRB.CreateStore(
+          Element,
+          IRB.CreateGEP(SourceIdsTy, SourceIdsArr,
+                        {ConstantInt::get(Type::getInt32Ty(Ctx), Index)}));
+      Index++;
+    }
+
+    CB = createCall(IRB, getCheckFnVector(NumElements),
+                    {PlainPtrOpsArr, SizesArr, AccessIdsArr, SourceIdsArr,
+                     getPC(IRB), ConstantInt::get(Int64Ty, NumElements)},
+                    ".san_vector");
+
+    // Set the current operand from the result of the sanitization call.
+    Index = 0;
+    for (Instruction *I : InstructionsWithoutBase) {
+      Value *Zero = ConstantInt::get(Type::getInt32Ty(Ctx), 0);
+      Value *ValueIndex = ConstantInt::get(Type::getInt32Ty(Ctx), Index);
+      Value *GEPForLoad = IRB.CreateGEP(CB->getType(), CB, {Zero, ValueIndex});
+      LoadInst *Load = IRB.CreateLoad(PtrTy, GEPForLoad);
+      int PtrIdx = PtrIdxList[Index];
+      Value *PtrOp = PtrOps[Index];
+      I->setOperand(PtrIdx, IRB.CreatePointerBitCastOrAddrSpaceCast(
+                                Load, PtrOp->getType()));
+      Index++;
+    }
+  }
+}
+
 void GPUSanImpl::instrumentLoadInst(LoopInfo &LI, LoadInst &LoadI) {
   instrumentAccess(LI, LoadI, LoadInst::getPointerOperandIndex(),
                    *LoadI.getType(),
@@ -718,60 +1049,86 @@ bool GPUSanImpl::instrumentFunction(Function &Fn) {
 
   bool Changed = false;
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(Fn);
-  SmallVector<std::pair<AllocaInst *, Value *>> Allocas;
-  SmallVector<ReturnInst *> Returns;
-  SmallVector<LoadInst *> Loads;
-  SmallVector<StoreInst *> Stores;
-  SmallVector<CallInst *> Calls;
-  SmallVector<GetElementPtrInst *> GEPs;
 
-  for (auto &I : instructions(Fn)) {
-    switch (I.getOpcode()) {
-    case Instruction::Alloca: {
-      AllocaInst &AI = cast<AllocaInst>(I);
-      Allocas.push_back({&AI, nullptr});
-      Changed = true;
-      break;
+  for (auto BB = Fn.begin(); BB != Fn.end(); BB++) {
+
+    SmallVector<std::pair<AllocaInst *, Value *>> Allocas;
+    SmallVector<ReturnInst *> Returns;
+    SmallVector<Instruction *> LoadsStores;
+    SmallVector<CallInst *> Calls;
+    SmallVector<GetElementPtrInst *> GEPs;
+
+    for (auto I = BB->begin(); I != BB->end(); I++) {
+
+      switch (I->getOpcode()) {
+      case Instruction::Alloca: {
+        AllocaInst &AI = cast<AllocaInst>(*I);
+        Allocas.push_back({&AI, nullptr});
+        Changed = true;
+        break;
+      }
+      case Instruction::Load:
+        LoadsStores.push_back(&*I);
+        Changed = true;
+        break;
+      case Instruction::Store:
+        LoadsStores.push_back(&*I);
+        Changed = true;
+        break;
+      case Instruction::GetElementPtr:
+        GEPs.push_back(&cast<GetElementPtrInst>(*I));
+        Changed = true;
+        break;
+      case Instruction::Call: {
+        auto &CI = cast<CallInst>(*I);
+        Calls.push_back(&CI);
+        if (CI.isIndirectCall())
+          AmbiguousCalls.insert(&CI);
+        break;
+      }
+      case Instruction::Ret:
+        Returns.push_back(&cast<ReturnInst>(*I));
+        break;
+      default:
+        break;
+      }
     }
-    case Instruction::Load:
-      Loads.push_back(&cast<LoadInst>(I));
-      Changed = true;
-      break;
-    case Instruction::Store:
-      Stores.push_back(&cast<StoreInst>(I));
-      Changed = true;
-      break;
-    case Instruction::GetElementPtr:
-      GEPs.push_back(&cast<GetElementPtrInst>(I));
-      Changed = true;
-      break;
-    case Instruction::Call: {
-      auto &CI = cast<CallInst>(I);
-      Calls.push_back(&CI);
-      if (CI.isIndirectCall())
-        AmbiguousCalls.insert(&CI);
-      break;
+
+    // Hoist all address computation in a basic block
+    auto GEPCopy = GEPs;
+    while (!GEPCopy.empty()) {
+      auto *Inst = GEPCopy.pop_back_val();
+      Instruction *LatestDependency = &*Inst->getParent()->begin();
+      for (auto *It = Inst->op_begin(); It != Inst->op_end(); It++) {
+
+        if (Instruction *ToInstruction = dyn_cast<Instruction>(It)) {
+
+          if (!LatestDependency) {
+            LatestDependency = ToInstruction;
+            continue;
+          }
+
+          if (ToInstruction->getParent() != Inst->getParent())
+            continue;
+
+          if (LatestDependency->comesBefore(ToInstruction))
+            LatestDependency = ToInstruction;
+        }
+      }
+
+      Inst->moveAfter(LatestDependency);
     }
-    case Instruction::Ret:
-      Returns.push_back(&cast<ReturnInst>(I));
-      break;
-    default:
-      break;
-    }
+
+    instrumentMultipleAccessPerBasicBlock(LI, LoadsStores);
+    for (auto *GEP : GEPs)
+      instrumentGEPInst(LI, *GEP);
+    for (auto *Call : Calls)
+      Changed |= instrumentCallInst(LI, *Call);
+    for (auto &It : Allocas)
+      It.second = instrumentAllocaInst(LI, *It.first);
+
+    instrumentReturns(Allocas, Returns);
   }
-
-  for (auto *Load : Loads)
-    instrumentLoadInst(LI, *Load);
-  for (auto *Store : Stores)
-    instrumentStoreInst(LI, *Store);
-  for (auto *GEP : GEPs)
-    instrumentGEPInst(LI, *GEP);
-  for (auto *Call : Calls)
-    Changed |= instrumentCallInst(LI, *Call);
-  for (auto &It : Allocas)
-    It.second = instrumentAllocaInst(LI, *It.first);
-
-  instrumentReturns(Allocas, Returns);
 
   return Changed;
 }
