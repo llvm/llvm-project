@@ -1357,10 +1357,11 @@ of the condition.
 def ConvergentDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-The ``convergent`` attribute can be placed on a function declaration. It is
-translated into the LLVM ``convergent`` attribute, which indicates that the call
-instructions of a function with this attribute cannot be made control-dependent
-on any additional values.
+The ``convergent`` attribute can be placed on a function declaration or a
+statement containing call expressions. It is translated into the LLVM
+``convergent`` attribute, which indicates that the call instructions of a
+function with this attribute cannot be made control-dependent on any additional
+values.
 
 In languages designed for SPMD/SIMT programming model, e.g. OpenCL or CUDA,
 the call instructions of a function with this attribute must be executed by
@@ -1379,6 +1380,10 @@ Sample usage:
   // Setting it as a C++11 attribute is also valid in a C++ program.
   // void convfunc(void) [[clang::convergent]];
 
+  int f() {
+    [[clang::convergent]] foo(arg);
+    // The call to 'foo' has attribute 'convergent'.
+  }
   }];
 }
 
