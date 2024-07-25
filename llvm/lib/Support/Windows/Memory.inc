@@ -189,5 +189,7 @@ void Memory::InvalidateInstructionCache(const void *Addr, size_t Len) {
   FlushInstructionCache(GetCurrentProcess(), Addr, Len);
 }
 
+bool Memory::execProtectionChangeNeedsNewMapping() { return false; }
+
 } // namespace sys
 } // namespace llvm

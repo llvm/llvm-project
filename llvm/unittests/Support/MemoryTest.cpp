@@ -11,10 +11,6 @@
 #include "gtest/gtest.h"
 #include <cstdlib>
 
-#if defined(__linux__)
-#include "../lib/Support/Unix/MemoryLinux.h"
-#endif
-
 #if defined(__NetBSD__)
 // clang-format off
 #include <sys/param.h>
@@ -30,6 +26,10 @@ using namespace sys;
 
 namespace {
 
+struct checkMPROTECT : private llvm::sys::Memory {
+  static bool check() { return execProtectionChangeNeedsNewMapping(); }
+};
+
 bool IsMPROTECT() {
 #if defined(__NetBSD__)
   int mib[3];
@@ -44,12 +44,10 @@ bool IsMPROTECT() {
     err(EXIT_FAILURE, "sysctl");
 
   return !!(paxflags & CTL_PROC_PAXFLAGS_MPROTECT);
-#elif defined(__linux__)
-  return execProtChangeNeedsNewMapping();
 #elif (defined(__APPLE__) && defined(__aarch64__)) || defined(__OpenBSD__)
   return true;
 #else
-  return false;
+  return checkMPROTECT::check();
 #endif
 }
 
