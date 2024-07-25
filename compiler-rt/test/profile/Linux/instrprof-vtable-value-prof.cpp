@@ -1,4 +1,3 @@
-
 // REQUIRES: lld, lld-available
 
 // Building the instrumented binary will fail because lld doesn't support
