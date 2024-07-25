@@ -1245,10 +1245,6 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
 
       // Round up vec3/vec5 argument.
       if (MemVT.isVector() && !MemVT.isPow2VectorType()) {
-        assert(MemVT.getVectorNumElements() == 3 ||
-               MemVT.getVectorNumElements() == 5 ||
-               (MemVT.getVectorNumElements() >= 9 &&
-                MemVT.getVectorNumElements() <= 12));
         MemVT = MemVT.getPow2VectorType(State.getContext());
       } else if (!MemVT.isSimple() && !MemVT.isVector()) {
         MemVT = MemVT.getRoundIntegerType(State.getContext());
