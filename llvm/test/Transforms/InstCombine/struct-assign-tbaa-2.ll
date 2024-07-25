@@ -15,8 +15,8 @@ define void @test1(ptr %a1, ptr %a2) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[A2]], align 2, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    store i16 [[TMP0]], ptr [[A1:%.*]], align 2, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[B2:%.*]] = getelementptr inbounds i8, ptr [[A1]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[B]], align 2, !tbaa [[TBAA0]]
-; CHECK-NEXT:    store i16 [[TMP1]], ptr [[B2]], align 2, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[B]], align 2, !tbaa [[TBAA6:![0-9]+]]
+; CHECK-NEXT:    store i16 [[TMP1]], ptr [[B2]], align 2, !tbaa [[TBAA6]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -38,8 +38,11 @@ entry:
 !8 = !{!1, !4, i64 2, i64 2}
 
 ;.
-; CHECK: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0, i64 2}
-; CHECK: [[META1]] = !{[[META2:![0-9]+]], i64 2, !"short"}
+; CHECK: [[TBAA0]] = !{[[META1:![0-9]+]], [[META4:![0-9]+]], i64 0, i64 2}
+; CHECK: [[META1]] = !{[[META2:![0-9]+]], i64 4, !"_ZTS1T", [[META4]], i64 0, i64 2, [[META4]], i64 2, i64 2}
 ; CHECK: [[META2]] = !{[[META3:![0-9]+]], i64 1, !"omnipotent char"}
 ; CHECK: [[META3]] = !{!"Simple C++ TBAA"}
+; CHECK: [[META4]] = !{[[META2]], i64 2, !"_ZTS7Wrapper", [[META5:![0-9]+]], i64 0, i64 2}
+; CHECK: [[META5]] = !{[[META2]], i64 2, !"short"}
+; CHECK: [[TBAA6]] = !{[[META1]], [[META4]], i64 2, i64 2}
 ;.
