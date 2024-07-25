@@ -30,3 +30,20 @@ void mlir::populateConversionTargetFromOperation(
                                                    patterns);
   });
 }
+
+void mlir::populateOpConvertToLLVMConversionPatterns(
+    Operation *op, ConversionTarget &target, LLVMTypeConverter &typeConverter,
+    RewritePatternSet &patterns) {
+  auto iface = dyn_cast<ConvertToLLVMOpInterface>(op);
+  if (!iface)
+    return;
+  SmallVector<ConvertToLLVMAttrInterface, 12> attrs;
+  iface.getConvertToLLVMConversionAttrs(attrs);
+  for (ConvertToLLVMAttrInterface attr : attrs)
+    attr.populateConvertToLLVMConversionPatterns(target, typeConverter,
+                                                 patterns);
+}
+
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMAttrInterface.cpp.inc"
+
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMOpInterface.cpp.inc"
