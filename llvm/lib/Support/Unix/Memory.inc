@@ -363,7 +363,8 @@ bool Memory::execProtectionChangeNeedsNewMapping() {
 
   // Try to get the status from /proc/self/status, looking for PaX flags.
   if (auto file = MemoryBuffer::getFileAsStream("/proc/self/status")) {
-    auto pax_flags = (*file)->getBuffer().rsplit("PaX:").second.trim();
+    auto pax_flags =
+        (*file)->getBuffer().rsplit("PaX:").second.split('\n').first.trim();
     if (!pax_flags.empty())
       // 'M' indicates MPROTECT is enabled
       return (status = pax_flags.find('M') != StringRef::npos);
