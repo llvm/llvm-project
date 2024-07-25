@@ -111,19 +111,9 @@ function(add_bitcode_entrypoint_library target_name base_target_name)
     list(APPEND objects ${object})
   endforeach()
 
-  set(output ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.bc)
-  add_custom_command(
-    OUTPUT ${output}
-    COMMAND ${LIBC_LLVM_LINK} ${objects} -o ${output}
-    DEPENDS ${all_deps} ${base_target_name}
-    COMMENT "Linking LLVM-IR bitcode for ${base_target_name}"
-    COMMAND_EXPAND_LISTS
-  )
-  add_custom_target(${target_name} DEPENDS ${output} ${all_deps})
-  set_target_properties(${target_name} PROPERTIES TARGET_OBJECT ${output})
-  if(TARGET llvm-link)
-    add_dependencies(${target_name} llvm-link)
-  endif()
+  add_executable(${target_name} ${objects})
+  target_link_options(${target_name} PRIVATE
+                      "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm" "-march= ")
 endfunction(add_bitcode_entrypoint_library)
 
 # A rule to build a library from a collection of entrypoint objects.
