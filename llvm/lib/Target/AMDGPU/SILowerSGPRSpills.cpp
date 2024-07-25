@@ -237,7 +237,7 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
         int JunkFI = MFI.CreateStackObject(TRI->getSpillSize(*RC),
                                            TRI->getSpillAlign(*RC), true);
 
-        CSI.push_back(CalleeSavedInfo(Reg, JunkFI));
+        CSI.emplace_back(Reg, JunkFI);
         CalleeSavedFIs.push_back(JunkFI);
       }
     }

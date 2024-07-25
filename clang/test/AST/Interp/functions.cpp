@@ -644,3 +644,21 @@ namespace FunctionCast {
                              // both-warning {{are a Clang extension}}
   int b[(int)IntFn(f)()];    // ok
 }
+
+#if __cplusplus >= 202002L
+namespace StableAddress {
+  template<unsigned N> struct str {
+    char arr[N];
+  };
+  // FIXME: Deduction guide not needed with P1816R0.
+  template<unsigned N> str(const char (&)[N]) -> str<N>;
+
+  template<str s> constexpr int sum() {
+    int n = 0;
+    for (char c : s.arr)
+      n += c;
+    return n;
+  }
+  static_assert(sum<str{"$hello $world."}>() == 1234, "");
+}
+#endif

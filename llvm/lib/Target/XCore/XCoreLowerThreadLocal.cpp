@@ -178,8 +178,7 @@ bool XCoreLowerThreadLocal::runOnModule(Module &M) {
   for (GlobalVariable &GV : M.globals())
     if (GV.isThreadLocal())
       ThreadLocalGlobals.push_back(&GV);
-  for (unsigned I = 0, E = ThreadLocalGlobals.size(); I != E; ++I) {
-    MadeChange |= lowerGlobal(ThreadLocalGlobals[I]);
-  }
+  for (GlobalVariable *GV : ThreadLocalGlobals)
+    MadeChange |= lowerGlobal(GV);
   return MadeChange;
 }

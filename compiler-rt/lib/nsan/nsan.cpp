@@ -54,8 +54,6 @@ using namespace __nsan;
 constexpr int kMaxVectorWidth = 8;
 
 // When copying application memory, we also copy its shadow and shadow type.
-// FIXME: We could provide fixed-size versions that would nicely
-// vectorize for known sizes.
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
 __nsan_copy_values(const u8 *daddr, const u8 *saddr, uptr size) {
   internal_memmove((void *)GetShadowTypeAddrFor(daddr),
@@ -64,13 +62,33 @@ __nsan_copy_values(const u8 *daddr, const u8 *saddr, uptr size) {
                    size * kShadowScale);
 }
 
-// FIXME: We could provide fixed-size versions that would nicely
-// vectorize for known sizes.
+#define NSAN_COPY_VALUES_N(N)                                                  \
+  extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_copy_##N(               \
+      const u8 *daddr, const u8 *saddr) {                                      \
+    __builtin_memmove((void *)GetShadowTypeAddrFor(daddr),                     \
+                      GetShadowTypeAddrFor(saddr), N);                         \
+    __builtin_memmove((void *)GetShadowAddrFor(daddr),                         \
+                      GetShadowAddrFor(saddr), N * kShadowScale);              \
+  }
+
+NSAN_COPY_VALUES_N(4)
+NSAN_COPY_VALUES_N(8)
+NSAN_COPY_VALUES_N(16)
+
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
 __nsan_set_value_unknown(const u8 *addr, uptr size) {
   internal_memset((void *)GetShadowTypeAddrFor(addr), 0, size);
 }
 
+#define NSAN_SET_VALUE_UNKNOWN_N(N)                                            \
+  extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_set_value_unknown_##N(  \
+      const u8 *daddr) {                                                       \
+    __builtin_memset((void *)GetShadowTypeAddrFor(daddr), 0, N);               \
+  }
+
+NSAN_SET_VALUE_UNKNOWN_N(4)
+NSAN_SET_VALUE_UNKNOWN_N(8)
+NSAN_SET_VALUE_UNKNOWN_N(16)
 
 const char *FTInfo<float>::kCppTypeName = "float";
 const char *FTInfo<double>::kCppTypeName = "double";
@@ -390,24 +408,23 @@ __nsan_dump_shadow_mem(const u8 *addr, size_t size_bytes, size_t bytes_per_line,
   }
 }
 
-SANITIZER_INTERFACE_ATTRIBUTE
-alignas(16) thread_local uptr __nsan_shadow_ret_tag = 0;
+alignas(16) SANITIZER_INTERFACE_ATTRIBUTE
+    thread_local uptr __nsan_shadow_ret_tag = 0;
 
-SANITIZER_INTERFACE_ATTRIBUTE
-alignas(16) thread_local char __nsan_shadow_ret_ptr[kMaxVectorWidth *
-                                                    sizeof(__float128)];
+alignas(16) SANITIZER_INTERFACE_ATTRIBUTE
+    thread_local char __nsan_shadow_ret_ptr[kMaxVectorWidth *
+                                            sizeof(__float128)];
 
-SANITIZER_INTERFACE_ATTRIBUTE
-alignas(16) thread_local uptr __nsan_shadow_args_tag = 0;
+alignas(16) SANITIZER_INTERFACE_ATTRIBUTE
+    thread_local uptr __nsan_shadow_args_tag = 0;
 
 // Maximum number of args. This should be enough for anyone (tm). An alternate
 // scheme is to have the generated code create an alloca and make
 // __nsan_shadow_args_ptr point ot the alloca.
 constexpr const int kMaxNumArgs = 128;
-SANITIZER_INTERFACE_ATTRIBUTE
-alignas(
-    16) thread_local char __nsan_shadow_args_ptr[kMaxVectorWidth * kMaxNumArgs *
-                                                 sizeof(__float128)];
+alignas(16) SANITIZER_INTERFACE_ATTRIBUTE
+    thread_local char __nsan_shadow_args_ptr[kMaxVectorWidth * kMaxNumArgs *
+                                             sizeof(__float128)];
 
 enum ContinuationType { // Keep in sync with instrumentation pass.
   kContinueWithShadow = 0,

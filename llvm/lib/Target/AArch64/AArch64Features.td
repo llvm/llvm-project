@@ -185,6 +185,9 @@ def FeatureJS : ExtensionWithMArch<"jsconv", "JS", "FEAT_JSCVT",
   "Enable Armv8.3-A JavaScript FP conversion instructions",
   [FeatureFPARMv8]>;
 
+def FeatureFPAC : Extension<"fpac", "FPAC", "FEAT_FPAC",
+  "Enable v8.3-A Pointer Authentication Faulting enhancement">;
+
 def FeatureCCIDX : Extension<"ccidx", "CCIDX", "FEAT_CCIDX",
   "Enable Armv8.3-A Extend of the CCSIDR number of sets">;
 
@@ -354,6 +357,10 @@ def FeatureTHE : ExtensionWithMArch<"the", "THE", "FEAT_THE",
 //===----------------------------------------------------------------------===//
 //  Armv9.0 Architecture Extensions
 //===----------------------------------------------------------------------===//
+
+def FeatureUseFixedOverScalableIfEqualCost: SubtargetFeature<"use-fixed-over-scalable-if-equal-cost",
+  "UseFixedOverScalableIfEqualCost", "true",
+  "Prefer fixed width loop vectorization over scalable if the cost-model assigns equal costs">;
 
 def FeatureUseScalarIncVL : SubtargetFeature<"use-scalar-inc-vl",
   "UseScalarIncVL", "true", "Prefer inc/dec over add+cnt">;

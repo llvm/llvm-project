@@ -76,11 +76,6 @@ void AMDGPUInstPrinter::printU4ImmDecOperand(const MCInst *MI, unsigned OpNo,
   O << formatDec(MI->getOperand(OpNo).getImm() & 0xf);
 }
 
-void AMDGPUInstPrinter::printU8ImmDecOperand(const MCInst *MI, unsigned OpNo,
-                                             raw_ostream &O) {
-  O << formatDec(MI->getOperand(OpNo).getImm() & 0xff);
-}
-
 void AMDGPUInstPrinter::printU16ImmDecOperand(const MCInst *MI, unsigned OpNo,
                                               raw_ostream &O) {
   O << formatDec(MI->getOperand(OpNo).getImm() & 0xffff);
@@ -138,19 +133,15 @@ void AMDGPUInstPrinter::printFlatOffset(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printOffset0(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
-  if (MI->getOperand(OpNo).getImm()) {
-    O << " offset0:";
-    printU8ImmDecOperand(MI, OpNo, O);
-  }
+  if (int64_t Offset = MI->getOperand(OpNo).getImm())
+    O << " offset0:" << formatDec(Offset);
 }
 
 void AMDGPUInstPrinter::printOffset1(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
-  if (MI->getOperand(OpNo).getImm()) {
-    O << " offset1:";
-    printU8ImmDecOperand(MI, OpNo, O);
-  }
+  if (int64_t Offset = MI->getOperand(OpNo).getImm())
+    O << " offset1:" << formatDec(Offset);
 }
 
 void AMDGPUInstPrinter::printSMRDOffset8(const MCInst *MI, unsigned OpNo,
@@ -1071,7 +1062,8 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
   if (!AMDGPU::isLegalDPALU_DPPControl(Imm) && AMDGPU::isDPALU_DPP(Desc)) {
     O << " /* DP ALU dpp only supports row_newbcast */";
     return;
-  } else if (Imm <= DppCtrl::QUAD_PERM_LAST) {
+  }
+  if (Imm <= DppCtrl::QUAD_PERM_LAST) {
     O << "quad_perm:[";
     O << formatDec(Imm & 0x3)         << ',';
     O << formatDec((Imm & 0xc)  >> 2) << ',';

@@ -11,6 +11,8 @@
 #define _LIBCPP___ITERATOR_BOUNDED_ITER_H
 
 #include <__assert>
+#include <__compare/ordering.h>
+#include <__compare/three_way_comparable.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__memory/pointer_traits.h>
@@ -201,10 +203,15 @@ public:
   operator==(__bounded_iter const& __x, __bounded_iter const& __y) _NOEXCEPT {
     return __x.__current_ == __y.__current_;
   }
+
+#if _LIBCPP_STD_VER <= 17
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR friend bool
   operator!=(__bounded_iter const& __x, __bounded_iter const& __y) _NOEXCEPT {
     return __x.__current_ != __y.__current_;
   }
+#endif
+
+  // TODO(mordante) disable these overloads in the LLVM 20 release.
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR friend bool
   operator<(__bounded_iter const& __x, __bounded_iter const& __y) _NOEXCEPT {
     return __x.__current_ < __y.__current_;
@@ -222,9 +229,28 @@ public:
     return __x.__current_ >= __y.__current_;
   }
 
+#if _LIBCPP_STD_VER >= 20
+  _LIBCPP_HIDE_FROM_ABI constexpr friend strong_ordering
+  operator<=>(__bounded_iter const& __x, __bounded_iter const& __y) noexcept {
+    if constexpr (three_way_comparable<_Iterator, strong_ordering>) {
+      return __x.__current_ <=> __y.__current_;
+    } else {
+      if (__x.__current_ < __y.__current_)
+        return strong_ordering::less;
+
+      if (__x.__current_ == __y.__current_)
+        return strong_ordering::equal;
+
+      return strong_ordering::greater;
+    }
+  }
+#endif // _LIBCPP_STD_VER >= 20
+
 private:
   template <class>
   friend struct pointer_traits;
+  template <class, class>
+  friend struct __bounded_iter;
   _Iterator __current_;       // current iterator
   _Iterator __begin_, __end_; // valid range represented as [begin, end]
 };

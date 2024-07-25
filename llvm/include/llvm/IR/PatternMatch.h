@@ -2682,9 +2682,7 @@ m_c_ICmp(ICmpInst::Predicate &Pred, const LHS &L, const RHS &R) {
 template <typename LHS, typename RHS>
 inline CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate, true>
 m_c_ICmp(const LHS &L, const RHS &R) {
-  ICmpInst::Predicate Unused;
-  return CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate, true>(Unused,
-                                                                       L, R);
+  return CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate, true>(L, R);
 }
 
 /// Matches a specific opcode with LHS and RHS in either order.

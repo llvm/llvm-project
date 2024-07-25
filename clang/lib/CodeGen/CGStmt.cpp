@@ -222,6 +222,12 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OMPUnrollDirectiveClass:
     EmitOMPUnrollDirective(cast<OMPUnrollDirective>(*S));
     break;
+  case Stmt::OMPReverseDirectiveClass:
+    EmitOMPReverseDirective(cast<OMPReverseDirective>(*S));
+    break;
+  case Stmt::OMPInterchangeDirectiveClass:
+    EmitOMPInterchangeDirective(cast<OMPInterchangeDirective>(*S));
+    break;
   case Stmt::OMPForDirectiveClass:
     EmitOMPForDirective(cast<OMPForDirective>(*S));
     break;

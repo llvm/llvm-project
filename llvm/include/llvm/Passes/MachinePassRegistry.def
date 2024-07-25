@@ -17,6 +17,7 @@
 #define MODULE_ANALYSIS(NAME, CREATE_PASS)
 #endif
 MODULE_ANALYSIS("collector-metadata", CollectorMetadataAnalysis())
+MODULE_ANALYSIS("machine-module-info", MachineModuleAnalysis())
 MODULE_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 #undef MODULE_ANALYSIS
 
@@ -132,6 +133,7 @@ MACHINE_FUNCTION_PASS("dead-mi-elimination", DeadMachineInstructionElimPass())
 MACHINE_FUNCTION_PASS("finalize-isel", FinalizeISelPass())
 MACHINE_FUNCTION_PASS("localstackalloc", LocalStackSlotAllocationPass())
 MACHINE_FUNCTION_PASS("no-op-machine-function", NoOpMachineFunctionPass())
+MACHINE_FUNCTION_PASS("phi-node-elimination", PHIEliminationPass())
 MACHINE_FUNCTION_PASS("print", PrintMIRPass())
 MACHINE_FUNCTION_PASS("print<live-intervals>", LiveIntervalsPrinterPass(dbgs()))
 MACHINE_FUNCTION_PASS("print<live-vars>", LiveVariablesPrinterPass(dbgs()))
@@ -231,7 +233,6 @@ DUMMY_MACHINE_FUNCTION_PASS("mirfs-discriminators", MIRAddFSDiscriminatorsPass)
 DUMMY_MACHINE_FUNCTION_PASS("opt-phis", OptimizePHIsPass)
 DUMMY_MACHINE_FUNCTION_PASS("patchable-function", PatchableFunctionPass)
 DUMMY_MACHINE_FUNCTION_PASS("peephole-opt", PeepholeOptimizerPass)
-DUMMY_MACHINE_FUNCTION_PASS("phi-node-elimination", PHIEliminationPass)
 DUMMY_MACHINE_FUNCTION_PASS("post-RA-sched", PostRASchedulerPass)
 DUMMY_MACHINE_FUNCTION_PASS("postmisched", PostMachineSchedulerPass)
 DUMMY_MACHINE_FUNCTION_PASS("postra-machine-sink", PostRAMachineSinkingPass)

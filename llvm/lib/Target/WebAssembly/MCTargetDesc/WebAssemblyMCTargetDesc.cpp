@@ -111,10 +111,9 @@ createObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
   return new WebAssemblyTargetWasmStreamer(S);
 }
 
-static MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
-                                                 formatted_raw_ostream &OS,
-                                                 MCInstPrinter * /*InstPrint*/,
-                                                 bool /*isVerboseAsm*/) {
+static MCTargetStreamer *
+createAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
+                        MCInstPrinter * /*InstPrint*/) {
   return new WebAssemblyTargetAsmStreamer(S, OS);
 }
 

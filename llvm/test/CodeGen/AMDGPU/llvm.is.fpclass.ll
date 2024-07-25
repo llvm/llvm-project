@@ -139,12 +139,12 @@ define amdgpu_kernel void @sgpr_isnan_f64(ptr addrspace(1) %out, double %x) {
 ;
 ; GFX9CHECK-LABEL: sgpr_isnan_f64:
 ; GFX9CHECK:       ; %bb.0:
-; GFX9CHECK-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9CHECK-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9CHECK-NEXT:    v_cmp_class_f64_e64 s[2:3], s[2:3], 3
-; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s[2:3]
-; GFX9CHECK-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9CHECK-NEXT:    v_cmp_class_f64_e64 s[0:1], s[6:7], 3
+; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s[0:1]
+; GFX9CHECK-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX9CHECK-NEXT:    s_endpgm
 ;
 ; GFX10CHECK-LABEL: sgpr_isnan_f64:

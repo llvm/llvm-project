@@ -42,9 +42,9 @@ entry:
 ; CHECK: icmp ne {{.*}}[[S]], 0
 ; CHECK: br
 ; CHECK: call void @__msan_warning_noreturn()
-; CHECK: call x86_mmx @llvm.x86.sse.cvtps2pi
-; CHECK: store i64 0, {{.*}} @__msan_retval_tls
-; CHECK: ret x86_mmx
+; CHECK: call <1 x i64> @llvm.x86.sse.cvtps2pi
+; CHECK: store <1 x i64> zeroinitializer, {{.*}} @__msan_retval_tls
+; CHECK: ret <1 x i64>
 
 ; avx512 rounding conversion.
 
