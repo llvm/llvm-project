@@ -5805,22 +5805,18 @@ FunctionDecl *Sema::getMoreConstrainedFunction(FunctionDecl *FD1,
                                                FunctionDecl *FD2) {
   assert(!FD1->getDescribedTemplate() && !FD2->getDescribedTemplate() &&
          "not for function templates");
+  assert(!FD1->isFunctionTemplateSpecialization() ||
+         isa<CXXConversionDecl>(FD1));
+  assert(!FD2->isFunctionTemplateSpecialization() ||
+         isa<CXXConversionDecl>(FD2));
 
-  auto getTemplatePattern = [](FunctionDecl *FD) {
-    // Specializations of conversion function templates are believed to be the
-    // only case where a function template specialization reaches here.
-    assert(!FD->isFunctionTemplateSpecialization() ||
-           isa<CXXConversionDecl>(FD));
+  FunctionDecl *F1 = FD1;
+  if (FunctionDecl *P = FD1->getTemplateInstantiationPattern(false))
+    F1 = P;
 
-    if (FunctionDecl *MF = FD->getInstantiatedFromMemberFunction())
-      return MF;
-    else if (FunctionTemplateDecl *FTD = FD->getPrimaryTemplate())
-      return FTD->getTemplatedDecl();
-
-    return FD;
-  };
-  FunctionDecl *F1 = getTemplatePattern(FD1);
-  FunctionDecl *F2 = getTemplatePattern(FD2);
+  FunctionDecl *F2 = FD2;
+  if (FunctionDecl *P = FD2->getTemplateInstantiationPattern(false))
+    F2 = P;
 
   llvm::SmallVector<const Expr *, 1> AC1, AC2;
   F1->getAssociatedConstraints(AC1);
