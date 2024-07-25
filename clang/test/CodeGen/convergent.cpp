@@ -16,14 +16,12 @@ public:
 
 bool bar();
 [[clang::convergent]] void f(bool, bool);
-//[[clang::convergent]] void (*fptr)(void);
 
 void foo(int i, A *ap, B *bp) {
   [[clang::convergent]] bar();
   [[clang::convergent]] (i = 4, bar());
   [[clang::convergent]] (void)(bar());
   f(bar(), bar());
-  //fptr();
   [[clang::convergent]] [] { bar(); bar(); }(); // convergent only applies to the anonymous function call
   [[clang::convergent]] for (bar(); bar(); bar()) {}
   [[clang::convergent]] { asm("nop"); }
@@ -68,8 +66,6 @@ void something_else_again() {
 // CHECK: call noundef zeroext i1 @_Z3barv(){{$}}
 // CHECK: call noundef zeroext i1 @_Z3barv(){{$}}
 // CHECK: call void @_Z1fbb({{.*}}) #[[ATTR0]]
-// XXX: %[[FPTR:.*]] = load ptr, ptr @fptr
-// XXX-NEXT: call void %[[FPTR]]() #[[ATTR0]]
 // CHECK: call void @"_ZZ3fooiP1AP1BENK3$_0clEv"{{.*}} #[[ATTR0]]
 // CHECK: call noundef zeroext i1 @_Z3barv() #[[ATTR0]]
 // CHECK-LABEL: for.cond:
