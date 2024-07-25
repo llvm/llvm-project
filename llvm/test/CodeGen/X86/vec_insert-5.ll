@@ -26,8 +26,8 @@ define void  @t1(i32 %a, ptr %P) nounwind {
  %tmp12 = shl i32 %a, 12
  %tmp21 = insertelement <2 x i32> undef, i32 %tmp12, i32 1
  %tmp22 = insertelement <2 x i32> %tmp21, i32 0, i32 0
- %tmp23 = bitcast <2 x i32> %tmp22 to x86_mmx
- store x86_mmx %tmp23, ptr %P
+ %tmp23 = bitcast <2 x i32> %tmp22 to <1 x i64>
+ store <1 x i64> %tmp23, ptr %P
  ret void
 }
 

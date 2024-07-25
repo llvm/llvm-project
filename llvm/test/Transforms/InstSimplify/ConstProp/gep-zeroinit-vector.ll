@@ -23,7 +23,7 @@ define <4 x i16> @test_mmx_const() {
 ; CHECK-LABEL: @test_mmx_const(
 ; CHECK-NEXT:    ret <4 x i16> zeroinitializer
 ;
-  %A = bitcast <2 x i32> zeroinitializer to x86_mmx
-  %B = bitcast x86_mmx %A to <4 x i16>
+  %A = bitcast <2 x i32> zeroinitializer to <1 x i64>
+  %B = bitcast <1 x i64> %A to <4 x i16>
   ret <4 x i16> %B
 }

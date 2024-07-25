@@ -7,6 +7,6 @@ define i32 @load_mmx() {
 ; CHECK-LABEL: @load_mmx(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %temp = load x86_mmx, ptr @m64
+  %temp = load <1 x i64>, ptr @m64
   ret i32 0
 }

@@ -644,7 +644,7 @@ define void @typesystem() {
   ; CHECK: %t5 = alloca x86_fp80
   %t6 = alloca ppc_fp128
   ; CHECK: %t6 = alloca ppc_fp128
-  %t7 = alloca x86_mmx
+  %t7 = alloca <1 x i64>
   ; CHECK: %t7 = alloca <1 x i64>
   %t8 = alloca %opaquety*
   ; CHECK: %t8 = alloca ptr

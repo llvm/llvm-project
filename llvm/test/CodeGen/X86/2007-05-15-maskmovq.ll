@@ -25,10 +25,10 @@ define void @test(<1 x i64> %c64, <1 x i64> %mask1, ptr %P) {
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    retl
 entry:
-	%tmp4 = bitcast <1 x i64> %mask1 to x86_mmx		; <x86_mmx> [#uses=1]
-	%tmp6 = bitcast <1 x i64> %c64 to x86_mmx		; <x86_mmx> [#uses=1]
-	tail call void @llvm.x86.mmx.maskmovq( x86_mmx %tmp4, x86_mmx %tmp6, ptr %P )
+	%tmp4 = bitcast <1 x i64> %mask1 to <1 x i64>		; <<1 x i64>> [#uses=1]
+	%tmp6 = bitcast <1 x i64> %c64 to <1 x i64>		; <<1 x i64>> [#uses=1]
+	tail call void @llvm.x86.mmx.maskmovq( <1 x i64> %tmp4, <1 x i64> %tmp6, ptr %P )
 	ret void
 }
 
-declare void @llvm.x86.mmx.maskmovq(x86_mmx, x86_mmx, ptr)
+declare void @llvm.x86.mmx.maskmovq(<1 x i64>, <1 x i64>, ptr)

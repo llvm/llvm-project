@@ -942,8 +942,8 @@ define i64 @test_mmx(<2 x i32> %x) {
 ; ALL-NEXT:    [[C:%.*]] = bitcast <2 x i32> [[X:%.*]] to i64
 ; ALL-NEXT:    ret i64 [[C]]
 ;
-  %A = bitcast <2 x i32> %x to x86_mmx
-  %B = bitcast x86_mmx %A to <2 x i32>
+  %A = bitcast <2 x i32> %x to <1 x i64>
+  %B = bitcast <1 x i64> %A to <2 x i32>
   %C = bitcast <2 x i32> %B to i64
   ret i64 %C
 }
@@ -952,8 +952,8 @@ define i64 @test_mmx_const(<2 x i32> %c) {
 ; ALL-LABEL: @test_mmx_const(
 ; ALL-NEXT:    ret i64 0
 ;
-  %A = bitcast <2 x i32> zeroinitializer to x86_mmx
-  %B = bitcast x86_mmx %A to <2 x i32>
+  %A = bitcast <2 x i32> zeroinitializer to <1 x i64>
+  %B = bitcast <1 x i64> %A to <2 x i32>
   %C = bitcast <2 x i32> %B to i64
   ret i64 %C
 }
