@@ -44,6 +44,17 @@ template <class ELFT> struct RelsOrRelas {
   bool areRelocsCrel() const { return crels.size(); }
 };
 
+#define doRelocs(sec, f, ...)                                                  \
+  {                                                                            \
+    const RelsOrRelas<ELFT> rs = (sec).template relsOrRelas<ELFT>();           \
+    if (rs.areRelocsCrel())                                                    \
+      f<ELFT>(__VA_ARGS__, rs.crels);                                          \
+    else if (rs.areRelocsRel())                                                \
+      f<ELFT>(__VA_ARGS__, rs.rels);                                           \
+    else                                                                       \
+      f<ELFT>(__VA_ARGS__, rs.relas);                                          \
+  }
+
 // This is the base class of all sections that lld handles. Some are sections in
 // input files, some are sections in the produced output file and some exist
 // just as a convenience for implementing special ways of combining some

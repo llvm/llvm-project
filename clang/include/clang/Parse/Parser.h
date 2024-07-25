@@ -221,6 +221,7 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> MaxTokensHerePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensTotalPragmaHandler;
   std::unique_ptr<PragmaHandler> RISCVPragmaHandler;
+  std::unique_ptr<PragmaHandler> MCFuncPragmaHandler;
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
@@ -1877,6 +1878,10 @@ private:
     UnaryExprOnly,
     PrimaryExprOnly
   };
+
+  bool isRevertibleTypeTrait(const IdentifierInfo *Id,
+                             clang::tok::TokenKind *Kind = nullptr);
+
   ExprResult ParseCastExpression(CastParseKind ParseKind,
                                  bool isAddressOfOperand,
                                  bool &NotCastExpr,
@@ -2123,7 +2128,7 @@ private:
   };
   ExprResult ParseInitializerWithPotentialDesignator(DesignatorCompletionInfo);
   ExprResult createEmbedExpr();
-  void ExpandEmbedDirective(SmallVectorImpl<Expr *> &Exprs);
+  void injectEmbedTokens();
 
   //===--------------------------------------------------------------------===//
   // clang Expressions
@@ -3830,7 +3835,6 @@ private:
   AnnotateTemplateIdTokenAsType(CXXScopeSpec &SS,
                                 ImplicitTypenameContext AllowImplicitTypename,
                                 bool IsClassName = false);
-  void ExpandEmbedIntoTemplateArgList(TemplateArgList &TemplateArgs);
   bool ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
                                  TemplateTy Template, SourceLocation OpenLoc);
   ParsedTemplateArgument ParseTemplateTemplateArgument();
@@ -3885,6 +3889,8 @@ private:
   // Embarcadero: Arary and Expression Traits
   ExprResult ParseArrayTypeTrait();
   ExprResult ParseExpressionTrait();
+
+  ExprResult ParseBuiltinPtrauthTypeDiscriminator();
 
   //===--------------------------------------------------------------------===//
   // Preprocessor code-completion pass-through

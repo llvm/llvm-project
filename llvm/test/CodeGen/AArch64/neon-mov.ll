@@ -298,8 +298,8 @@ define <8 x i16> @mvni8h_neg() {
 ;
 ; CHECK-NOFP16-GI-LABEL: mvni8h_neg:
 ; CHECK-NOFP16-GI:       // %bb.0:
-; CHECK-NOFP16-GI-NEXT:    mov w8, #-32528 // =0xffff80f0
-; CHECK-NOFP16-GI-NEXT:    dup v0.8h, w8
+; CHECK-NOFP16-GI-NEXT:    adrp x8, .LCPI32_0
+; CHECK-NOFP16-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI32_0]
 ; CHECK-NOFP16-GI-NEXT:    ret
    ret <8 x i16> <i16 33008, i16 33008, i16 33008, i16 33008, i16 33008, i16 33008, i16 33008, i16 33008>
 }

@@ -206,12 +206,13 @@ RuntimeCheckingPtrGroup::RuntimeCheckingPtrGroup(
 static std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
     const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy,
     PredicatedScalarEvolution &PSE,
-    DenseMap<const SCEV *, std::pair<const SCEV *, const SCEV *>>
-        &PointerBounds) {
+    DenseMap<std::pair<const SCEV *, Type *>,
+             std::pair<const SCEV *, const SCEV *>> &PointerBounds) {
   ScalarEvolution *SE = PSE.getSE();
 
   auto [Iter, Ins] = PointerBounds.insert(
-      {PtrExpr, {SE->getCouldNotCompute(), SE->getCouldNotCompute()}});
+      {{PtrExpr, AccessTy},
+       {SE->getCouldNotCompute(), SE->getCouldNotCompute()}});
   if (!Ins)
     return Iter->second;
 
@@ -785,7 +786,8 @@ private:
   //intrinsic property (such as TBAA metadata).
   AliasSetTracker AST;
 
-  LoopInfo *LI;
+  /// The LoopInfo of the loop being checked.
+  const LoopInfo *LI;
 
   /// Sets of potentially dependent accesses - members of one set share an
   /// underlying pointer. The set "CheckDeps" identfies which sets really need a
@@ -1729,7 +1731,7 @@ bool MemoryDepChecker::Dependence::isBackward() const {
 }
 
 bool MemoryDepChecker::Dependence::isPossiblyBackward() const {
-  return isBackward() || Type == Unknown;
+  return isBackward() || Type == Unknown || Type == IndirectUnsafe;
 }
 
 bool MemoryDepChecker::Dependence::isForward() const {

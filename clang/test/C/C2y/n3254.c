@@ -21,9 +21,9 @@ struct S {
 // CHECK-LABEL: define dso_local i32 @foo(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[BUFFER:%.*]] = alloca [12 x i8], align 1
+// CHECK-NEXT:    [[BUFFER:%.*]] = alloca [12 x i8], align 4
 // CHECK-NEXT:    [[S_PTR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[BUFFER]], i8 0, i64 12, i1 false)
+// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[BUFFER]], i8 0, i64 12, i1 false)
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [12 x i8], ptr [[BUFFER]], i64 0, i64 0
 // CHECK-NEXT:    store ptr [[ARRAYDECAY]], ptr [[S_PTR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_PTR]], align 8
@@ -40,13 +40,13 @@ int foo() {
 // CHECK-LABEL: define dso_local signext i8 @bar(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[BUFFER:%.*]] = alloca [12 x i8], align 1
+// CHECK-NEXT:    [[BUFFER:%.*]] = alloca [12 x i8], align 4
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [12 x i8], ptr [[BUFFER]], i64 0, i64 0
 // CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[ARRAYDECAY]], i32 0, i32 1
-// CHECK-NEXT:    store i8 97, ptr [[C]], align 1
+// CHECK-NEXT:    store i8 97, ptr [[C]], align 4
 // CHECK-NEXT:    [[ARRAYDECAY1:%.*]] = getelementptr inbounds [12 x i8], ptr [[BUFFER]], i64 0, i64 0
 // CHECK-NEXT:    [[C2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYDECAY1]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[C2]], align 1
+// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[C2]], align 4
 // CHECK-NEXT:    ret i8 [[TMP0]]
 //
 char bar() {
@@ -58,13 +58,13 @@ char bar() {
 // CHECK-LABEL: define dso_local float @baz(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[BUFFER:%.*]] = alloca [12 x i8], align 1
+// CHECK-NEXT:    [[BUFFER:%.*]] = alloca [12 x i8], align 4
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [12 x i8], ptr [[BUFFER]], i64 0, i64 0
 // CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[ARRAYDECAY]], i32 0, i32 2
-// CHECK-NEXT:    store float 3.000000e+00, ptr [[F]], align 1
+// CHECK-NEXT:    store float 3.000000e+00, ptr [[F]], align 4
 // CHECK-NEXT:    [[ARRAYDECAY1:%.*]] = getelementptr inbounds [12 x i8], ptr [[BUFFER]], i64 0, i64 0
 // CHECK-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYDECAY1]], i32 0, i32 2
-// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F2]], align 1
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F2]], align 4
 // CHECK-NEXT:    ret float [[TMP0]]
 //
 float baz() {
@@ -80,9 +80,9 @@ struct T {
 // CHECK-LABEL: define dso_local signext i8 @quux(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[T:%.*]] = alloca [[STRUCT_T:%.*]], align 1
+// CHECK-NEXT:    [[T:%.*]] = alloca [[STRUCT_T:%.*]], align 4
 // CHECK-NEXT:    [[S_PTR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[T]], i8 0, i64 12, i1 false)
+// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[T]], i8 0, i64 12, i1 false)
 // CHECK-NEXT:    [[BUFFER:%.*]] = getelementptr inbounds [[STRUCT_T]], ptr [[T]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [12 x i8], ptr [[BUFFER]], i64 0, i64 0
 // CHECK-NEXT:    store ptr [[ARRAYDECAY]], ptr [[S_PTR]], align 8
@@ -100,10 +100,10 @@ char quux() {
 // CHECK-LABEL: define dso_local float @quibble(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[BUFFER:%.*]] = alloca [12 x i8], align 1
+// CHECK-NEXT:    [[BUFFER:%.*]] = alloca [12 x i8], align 4
 // CHECK-NEXT:    [[T_PTR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[S_PTR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[BUFFER]], i8 0, i64 12, i1 false)
+// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[BUFFER]], i8 0, i64 12, i1 false)
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [12 x i8], ptr [[BUFFER]], i64 0, i64 0
 // CHECK-NEXT:    store ptr [[ARRAYDECAY]], ptr [[T_PTR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[T_PTR]], align 8
@@ -125,13 +125,13 @@ float quibble() {
 // CHECK-LABEL: define dso_local i32 @quorble(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[BUFFER:%.*]] = alloca [12 x i8], align 1
+// CHECK-NEXT:    [[BUFFER:%.*]] = alloca [12 x i8], align 4
 // CHECK-NEXT:    [[S_PTR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [12 x i8], ptr [[BUFFER]], i64 0, i64 0
 // CHECK-NEXT:    [[BUFFER1:%.*]] = getelementptr inbounds [[STRUCT_T:%.*]], ptr [[ARRAYDECAY]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYDECAY2:%.*]] = getelementptr inbounds [12 x i8], ptr [[BUFFER1]], i64 0, i64 0
 // CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[ARRAYDECAY2]], i32 0, i32 0
-// CHECK-NEXT:    store i32 12, ptr [[X]], align 1
+// CHECK-NEXT:    store i32 12, ptr [[X]], align 4
 // CHECK-NEXT:    [[ARRAYDECAY3:%.*]] = getelementptr inbounds [12 x i8], ptr [[BUFFER]], i64 0, i64 0
 // CHECK-NEXT:    [[BUFFER4:%.*]] = getelementptr inbounds [[STRUCT_T]], ptr [[ARRAYDECAY3]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYDECAY5:%.*]] = getelementptr inbounds [12 x i8], ptr [[BUFFER4]], i64 0, i64 0

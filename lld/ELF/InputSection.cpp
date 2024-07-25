@@ -160,11 +160,10 @@ RelsOrRelas<ELFT> InputSectionBase::relsOrRelas(bool supportsCrel) const {
       sec->size = entries.size();
       auto *relas = makeThreadLocalN<typename ELFT::Rela>(entries.size());
       sec->content_ = reinterpret_cast<uint8_t *>(relas);
-      size_t i = 0;
-      for (Elf_Crel_Impl<ELFT::Is64Bits> r : entries) {
+      for (auto [i, r] : llvm::enumerate(entries)) {
         relas[i].r_offset = r.r_offset;
         relas[i].setSymbolAndType(r.r_symidx, r.r_type, false);
-        relas[i++].r_addend = r.r_addend;
+        relas[i].r_addend = r.r_addend;
       }
     }
     ret.relas = {ArrayRef(
@@ -695,6 +694,11 @@ static int64_t getTlsTpOffset(const Symbol &s) {
     return s.getVA(0) + (tls->p_vaddr & (tls->p_align - 1)) - 0x7000;
   case EM_LOONGARCH:
   case EM_RISCV:
+    // See the comment in handleTlsRelocation. For TLSDESC=>IE,
+    // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} also reach here. While
+    // `tls` may be null, the return value is ignored.
+    if (s.type != STT_TLS)
+      return 0;
     return s.getVA(0) + (tls->p_vaddr & (tls->p_align - 1));
 
     // Variant 2.
@@ -1103,13 +1107,7 @@ void InputSectionBase::relocate(uint8_t *buf, uint8_t *bufEnd) {
   auto *sec = cast<InputSection>(this);
   // For a relocatable link, also call relocateNonAlloc() to rewrite applicable
   // locations with tombstone values.
-  const RelsOrRelas<ELFT> rels = sec->template relsOrRelas<ELFT>();
-  if (rels.areRelocsCrel())
-    sec->relocateNonAlloc<ELFT>(buf, rels.crels);
-  else if (rels.areRelocsRel())
-    sec->relocateNonAlloc<ELFT>(buf, rels.rels);
-  else
-    sec->relocateNonAlloc<ELFT>(buf, rels.relas);
+  doRelocs(*sec, sec->relocateNonAlloc, buf);
 }
 
 // For each function-defining prologue, find any calls to __morestack,

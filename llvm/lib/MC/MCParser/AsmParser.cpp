@@ -658,7 +658,7 @@ private:
 
   bool parseDirectiveComm(bool IsLocal); // ".comm" and ".lcomm"
 
-  bool parseDirectiveAbort(); // ".abort"
+  bool parseDirectiveAbort(SMLoc DirectiveLoc); // ".abort"
   bool parseDirectiveInclude(); // ".include"
   bool parseDirectiveIncbin(); // ".incbin"
 
@@ -2120,7 +2120,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     case DK_LCOMM:
       return parseDirectiveComm(/*IsLocal=*/true);
     case DK_ABORT:
-      return parseDirectiveAbort();
+      return parseDirectiveAbort(IDLoc);
     case DK_INCLUDE:
       return parseDirectiveInclude();
     case DK_INCBIN:
@@ -2572,6 +2572,8 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, MCAsmMacro &Macro,
       continue;
     }
 
+    // In Darwin mode, $ is used for macro expansion, not considered an
+    // identifier char.
     if (Body[I] == '$' && I + 1 != End && IsDarwin && !NParameters) {
       // This macro has no parameters, look for $0, $1, etc.
       switch (Body[I + 1]) {
@@ -2600,26 +2602,28 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, MCAsmMacro &Macro,
       }
     }
 
-    if (AltMacroMode && isIdentifierChar(Body[I])) {
-      size_t Len = 1;
-      while (I + Len != End && isIdentifierChar(Body[I + Len]))
-        ++Len;
-      StringRef Argument(Body.data() + I, Len);
+    if (!isIdentifierChar(Body[I]) || IsDarwin) {
+      OS << Body[I++];
+      continue;
+    }
+
+    const size_t Start = I;
+    while (++I && isIdentifierChar(Body[I])) {
+    }
+    StringRef Token(Body.data() + Start, I - Start);
+    if (AltMacroMode) {
       unsigned Index = 0;
       for (; Index != NParameters; ++Index)
-        if (Parameters[Index].Name == Argument)
+        if (Parameters[Index].Name == Token)
           break;
       if (Index != NParameters) {
         expandArg(Index);
-        I += Len;
         if (I != End && Body[I] == '&')
           ++I;
         continue;
       }
     }
-
-    OS << Body[I];
-    ++I;
+    OS << Token;
   }
 
   ++Macro.Count;
@@ -3029,6 +3033,11 @@ bool AsmParser::parseEscapedString(std::string &Data) {
   StringRef Str = getTok().getStringContents();
   for (unsigned i = 0, e = Str.size(); i != e; ++i) {
     if (Str[i] != '\\') {
+      if (Str[i] == '\n') {
+        SMLoc NewlineLoc = SMLoc::getFromPointer(Str.data() + i);
+        if (Warning(NewlineLoc, "unterminated string; newline inserted"))
+          return true;
+      }
       Data += Str[i];
       continue;
     }
@@ -3453,17 +3462,6 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
     }
   }
 
-  if (HasFillExpr && FillExpr != 0) {
-    MCSection *Sec = getStreamer().getCurrentSectionOnly();
-    if (Sec && Sec->isVirtualSection()) {
-      ReturnVal |=
-          Warning(FillExprLoc, "ignoring non-zero fill value in " +
-                                   Sec->getVirtualSectionKind() + " section '" +
-                                   Sec->getName() + "'");
-      FillExpr = 0;
-    }
-  }
-
   // Diagnose non-sensical max bytes to align.
   if (MaxBytesLoc.isValid()) {
     if (MaxBytesToFill < 1) {
@@ -3480,13 +3478,20 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
     }
   }
 
-  // Check whether we should use optimal code alignment for this .align
-  // directive.
   const MCSection *Section = getStreamer().getCurrentSectionOnly();
   assert(Section && "must have section to emit alignment");
-  bool useCodeAlign = Section->useCodeAlign();
-  if ((!HasFillExpr || Lexer.getMAI().getTextAlignFillValue() == FillExpr) &&
-      ValueSize == 1 && useCodeAlign) {
+
+  if (HasFillExpr && FillExpr != 0 && Section->isVirtualSection()) {
+    ReturnVal |=
+        Warning(FillExprLoc, "ignoring non-zero fill value in " +
+                                 Section->getVirtualSectionKind() +
+                                 " section '" + Section->getName() + "'");
+    FillExpr = 0;
+  }
+
+  // Check whether we should use optimal code alignment for this .align
+  // directive.
+  if (Section->useCodeAlign() && !HasFillExpr) {
     getStreamer().emitCodeAlignment(
         Align(Alignment), &getTargetParser().getSTI(), MaxBytesToFill);
   } else {
@@ -5086,21 +5091,17 @@ bool AsmParser::parseDirectiveComm(bool IsLocal) {
 
 /// parseDirectiveAbort
 ///  ::= .abort [... message ...]
-bool AsmParser::parseDirectiveAbort() {
-  // FIXME: Use loc from directive.
-  SMLoc Loc = getLexer().getLoc();
-
+bool AsmParser::parseDirectiveAbort(SMLoc DirectiveLoc) {
   StringRef Str = parseStringToEndOfStatement();
   if (parseEOL())
     return true;
 
   if (Str.empty())
-    return Error(Loc, ".abort detected. Assembly stopping.");
-  else
-    return Error(Loc, ".abort '" + Str + "' detected. Assembly stopping.");
-  // FIXME: Actually abort assembly here.
+    return Error(DirectiveLoc, ".abort detected. Assembly stopping");
 
-  return false;
+  // FIXME: Actually abort assembly here.
+  return Error(DirectiveLoc,
+               ".abort '" + Str + "' detected. Assembly stopping");
 }
 
 /// parseDirectiveInclude
@@ -6116,8 +6117,8 @@ bool AsmParser::parseMSInlineAsm(
   const char *AsmStart = ASMString.begin();
   const char *AsmEnd = ASMString.end();
   array_pod_sort(AsmStrRewrites.begin(), AsmStrRewrites.end(), rewritesSort);
-  for (auto it = AsmStrRewrites.begin(); it != AsmStrRewrites.end(); ++it) {
-    const AsmRewrite &AR = *it;
+  for (auto I = AsmStrRewrites.begin(), E = AsmStrRewrites.end(); I != E; ++I) {
+    const AsmRewrite &AR = *I;
     // Check if this has already been covered by another rewrite...
     if (AR.Done)
       continue;
@@ -6160,7 +6161,7 @@ bool AsmParser::parseMSInlineAsm(
         SMLoc OffsetLoc = SMLoc::getFromPointer(AR.IntelExp.OffsetName.data());
         size_t OffsetLen = OffsetName.size();
         auto rewrite_it = std::find_if(
-            it, AsmStrRewrites.end(), [&](const AsmRewrite &FusingAR) {
+            I, AsmStrRewrites.end(), [&](const AsmRewrite &FusingAR) {
               return FusingAR.Loc == OffsetLoc && FusingAR.Len == OffsetLen &&
                      (FusingAR.Kind == AOK_Input ||
                       FusingAR.Kind == AOK_CallInput);

@@ -121,7 +121,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVOptWInstrsPass(*PR);
   initializeRISCVPreRAExpandPseudoPass(*PR);
   initializeRISCVExpandPseudoPass(*PR);
-  initializeRISCVFoldMasksPass(*PR);
+  initializeRISCVVectorPeepholePass(*PR);
   initializeRISCVInsertVSETVLIPass(*PR);
   initializeRISCVInsertReadWriteCSRPass(*PR);
   initializeRISCVInsertWriteVXRMPass(*PR);
@@ -279,8 +279,10 @@ public:
 };
 
 static bool onlyAllocateRVVReg(const TargetRegisterInfo &TRI,
-                               const TargetRegisterClass &RC) {
-  return RISCVRegisterInfo::isRVVRegClass(&RC);
+                               const MachineRegisterInfo &MRI,
+                               const Register Reg) {
+  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+  return RISCVRegisterInfo::isRVVRegClass(RC);
 }
 
 static FunctionPass *useDefaultRegisterAllocator() { return nullptr; }
@@ -532,7 +534,7 @@ void RISCVPassConfig::addPreEmitPass2() {
 }
 
 void RISCVPassConfig::addMachineSSAOptimization() {
-  addPass(createRISCVFoldMasksPass());
+  addPass(createRISCVVectorPeepholePass());
 
   TargetPassConfig::addMachineSSAOptimization();
 

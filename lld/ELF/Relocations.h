@@ -142,6 +142,7 @@ struct JumpInstrMod {
 // Call reportUndefinedSymbols() after calling scanRelocations() to emit
 // the diagnostics.
 template <class ELFT> void scanRelocations();
+template <class ELFT> void checkNoCrossRefs();
 void reportUndefinedSymbols();
 void postScanRelocations();
 void addGotEntry(Symbol &sym);
@@ -223,6 +224,11 @@ inline int64_t readSLEB128(const uint8_t *&p) { return readLEB128(p, 64); }
 template <bool is64> struct RelocsCrel {
   using uint = std::conditional_t<is64, uint64_t, uint32_t>;
   struct const_iterator {
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = llvm::object::Elf_Crel_Impl<is64>;
+    using difference_type = ptrdiff_t;
+    using pointer = value_type *;
+    using reference = const value_type &;
     uint32_t count;
     uint8_t flagBits, shift;
     const uint8_t *p;
@@ -250,6 +256,7 @@ template <bool is64> struct RelocsCrel {
     const llvm::object::Elf_Crel_Impl<is64> *operator->() const {
       return &crel;
     }
+    bool operator==(const const_iterator &r) const { return count == r.count; }
     bool operator!=(const const_iterator &r) const { return count != r.count; }
     const_iterator &operator++() {
       if (--count)

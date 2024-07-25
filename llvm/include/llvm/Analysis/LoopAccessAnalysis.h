@@ -269,7 +269,8 @@ public:
 
   const Loop *getInnermostLoop() const { return InnermostLoop; }
 
-  DenseMap<const SCEV *, std::pair<const SCEV *, const SCEV *>> &
+  DenseMap<std::pair<const SCEV *, Type *>,
+           std::pair<const SCEV *, const SCEV *>> &
   getPointerBounds() {
     return PointerBounds;
   }
@@ -334,7 +335,9 @@ private:
 
   /// Mapping of SCEV expressions to their expanded pointer bounds (pair of
   /// start and end pointer expressions).
-  DenseMap<const SCEV *, std::pair<const SCEV *, const SCEV *>> PointerBounds;
+  DenseMap<std::pair<const SCEV *, Type *>,
+           std::pair<const SCEV *, const SCEV *>>
+      PointerBounds;
 
   /// Check whether there is a plausible dependence between the two
   /// accesses.

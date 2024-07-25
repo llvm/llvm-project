@@ -58,12 +58,20 @@ public:
   using StubValueTy = PointerIntPair<MCSymbol *, 1, bool>;
   using SymbolListTy = std::vector<std::pair<MCSymbol *, StubValueTy>>;
 
+  /// A variant of SymbolListTy where the stub is a generalized MCExpr.
+  using ExprStubListTy = std::vector<std::pair<MCSymbol *, const MCExpr *>>;
+
   virtual ~MachineModuleInfoImpl();
 
 protected:
   /// Return the entries from a DenseMap in a deterministic sorted orer.
   /// Clears the map.
   static SymbolListTy getSortedStubs(DenseMap<MCSymbol*, StubValueTy>&);
+
+  /// Return the entries from a DenseMap in a deterministic sorted orer.
+  /// Clears the map.
+  static ExprStubListTy
+  getSortedExprStubs(DenseMap<MCSymbol *, const MCExpr *> &);
 };
 
 //===----------------------------------------------------------------------===//

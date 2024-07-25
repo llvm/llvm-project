@@ -120,8 +120,8 @@ public:
   /// Construct a PBQP register allocator.
   RegAllocPBQP(char *cPassID = nullptr)
       : MachineFunctionPass(ID), customPassID(cPassID) {
-    initializeSlotIndexesPass(*PassRegistry::getPassRegistry());
-    initializeLiveIntervalsPass(*PassRegistry::getPassRegistry());
+    initializeSlotIndexesWrapperPassPass(*PassRegistry::getPassRegistry());
+    initializeLiveIntervalsWrapperPassPass(*PassRegistry::getPassRegistry());
     initializeLiveStacksPass(*PassRegistry::getPassRegistry());
     initializeVirtRegMapPass(*PassRegistry::getPassRegistry());
   }
@@ -544,17 +544,17 @@ void RegAllocPBQP::getAnalysisUsage(AnalysisUsage &au) const {
   au.setPreservesCFG();
   au.addRequired<AAResultsWrapperPass>();
   au.addPreserved<AAResultsWrapperPass>();
-  au.addRequired<SlotIndexes>();
-  au.addPreserved<SlotIndexes>();
-  au.addRequired<LiveIntervals>();
-  au.addPreserved<LiveIntervals>();
+  au.addRequired<SlotIndexesWrapperPass>();
+  au.addPreserved<SlotIndexesWrapperPass>();
+  au.addRequired<LiveIntervalsWrapperPass>();
+  au.addPreserved<LiveIntervalsWrapperPass>();
   //au.addRequiredID(SplitCriticalEdgesID);
   if (customPassID)
     au.addRequiredID(*customPassID);
   au.addRequired<LiveStacks>();
   au.addPreserved<LiveStacks>();
-  au.addRequired<MachineBlockFrequencyInfo>();
-  au.addPreserved<MachineBlockFrequencyInfo>();
+  au.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+  au.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
   au.addRequired<MachineLoopInfoWrapperPass>();
   au.addPreserved<MachineLoopInfoWrapperPass>();
   au.addRequired<MachineDominatorTreeWrapperPass>();
@@ -791,9 +791,9 @@ void RegAllocPBQP::postOptimization(Spiller &VRegSpiller, LiveIntervals &LIS) {
 }
 
 bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
-  LiveIntervals &LIS = getAnalysis<LiveIntervals>();
+  LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   MachineBlockFrequencyInfo &MBFI =
-    getAnalysis<MachineBlockFrequencyInfo>();
+      getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
 
   VirtRegMap &VRM = getAnalysis<VirtRegMap>();
 
