@@ -142,7 +142,7 @@ constexpr int arb(int n) { // expected-note {{declared here}}
                expected-note {{function parameter 'n' with unknown value cannot be used in a constant expression}}
 }
 constexpr long Overflow[(1 << 30) << 2]{}; // expected-warning {{requires 34 bits to represent}} \
-                                              expected-warning {{variable length array folded to constant array as an extension}} \
+                                              expected-error {{variable length array declaration not allowed at file scope}} \
                                               expected-warning {{variable length arrays in C++ are a Clang extension}} \
                                               expected-note {{signed left shift discards bits}}
 

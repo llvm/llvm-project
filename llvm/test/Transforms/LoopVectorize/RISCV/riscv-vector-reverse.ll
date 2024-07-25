@@ -18,6 +18,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Found an induction variable.
 ; CHECK-NEXT:  LV: Did not find one integer induction var.
 ; CHECK-NEXT:  LV: We can vectorize this loop (with a runtime bound check)!
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  LV: Found trip count: 0
 ; CHECK-NEXT:  LV: Scalable vectorization is available
 ; CHECK-NEXT:  LV: The max safe fixed VF is: 67108864.
@@ -222,6 +223,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Found FP op with unsafe algebra.
 ; CHECK-NEXT:  LV: Did not find one integer induction var.
 ; CHECK-NEXT:  LV: We can vectorize this loop (with a runtime bound check)!
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  LV: Found trip count: 0
 ; CHECK-NEXT:  LV: Scalable vectorization is available
 ; CHECK-NEXT:  LV: The max safe fixed VF is: 67108864.
