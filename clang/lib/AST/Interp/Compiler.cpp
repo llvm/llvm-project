@@ -3593,14 +3593,8 @@ VarCreationState Compiler<Emitter>::visitDecl(const VarDecl *VD) {
   if (R.notCreated())
     return R;
 
-  if (R) {
-    bool Ok = true;
-    if (const auto *DD = dyn_cast<DecompositionDecl>(VD))
-      for (const auto *BD : DD->bindings())
-        if (const auto *HoldingVar = BD->getHoldingVar())
-          Ok &= this->visitDecl(HoldingVar);
-    return Ok;
-  }
+  if (R)
+    return true;
 
   if (!R && Context::shouldBeGloballyIndexed(VD)) {
     if (auto GlobalIndex = P.getGlobal(VD)) {
@@ -5240,6 +5234,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
           return false;
         };
 
+        // DecompositionDecls are just proxies for us.
         if (isa<DecompositionDecl>(VD))
           return revisit(VD);
 
