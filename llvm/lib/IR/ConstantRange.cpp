@@ -988,6 +988,8 @@ ConstantRange ConstantRange::overflowingBinaryOp(Instruction::BinaryOps BinOp,
     return subWithNoWrap(Other, NoWrapKind);
   case Instruction::Mul:
     return multiplyWithNoWrap(Other, NoWrapKind);
+  case Instruction::Shl:
+    return shlWithNoWrap(Other, NoWrapKind);
   default:
     // Don't know about this Overflowing Binary Operation.
     // Conservatively fallback to plain binop handling.
@@ -1613,6 +1615,23 @@ ConstantRange::shl(const ConstantRange &Other) const {
   Max <<= OtherMax;
 
   return ConstantRange::getNonEmpty(std::move(Min), std::move(Max) + 1);
+}
+
+ConstantRange ConstantRange::shlWithNoWrap(const ConstantRange &Other,
+                                           unsigned NoWrapKind,
+                                           PreferredRangeType RangeType) const {
+  if (isEmptySet() || Other.isEmptySet())
+    return getEmpty();
+
+  ConstantRange Result = shl(Other);
+
+  if (NoWrapKind & OverflowingBinaryOperator::NoSignedWrap)
+    Result = Result.intersectWith(sshl_sat(Other), RangeType);
+
+  if (NoWrapKind & OverflowingBinaryOperator::NoUnsignedWrap)
+    Result = Result.intersectWith(ushl_sat(Other), RangeType);
+
+  return Result;
 }
 
 ConstantRange

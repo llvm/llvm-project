@@ -86,7 +86,7 @@ define i8 @test4(i8 %a, i8 %b) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i8 [[A:%.*]], [[B]]
-; CHECK-NEXT:    ret i8 [[SHL]]
+; CHECK-NEXT:    ret i8 -1
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i8 0
 ;
@@ -382,8 +382,7 @@ define i1 @nuw_range1(i8 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i8 [[B:%.*]], 1
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 [[C]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[SHL]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %c = add nuw nsw i8 %b, 1
@@ -397,8 +396,7 @@ define i1 @nuw_range2(i8 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i8 [[B:%.*]], 3
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 [[C]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[SHL]], 2
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %c = add nuw nsw i8 %b, 3
@@ -425,12 +423,11 @@ define i64 @shl_nuw_nsw_test1(i32 %x) {
 ; CHECK-LABEL: @shl_nuw_nsw_test1(
 ; CHECK-NEXT:    [[SHL1:%.*]] = shl nuw nsw i32 1, [[X:%.*]]
 ; CHECK-NEXT:    [[ADD1:%.*]] = add nsw i32 [[SHL1]], -1
-; CHECK-NEXT:    [[EXT:%.*]] = sext i32 [[ADD1]] to i64
-; CHECK-NEXT:    [[SHL2:%.*]] = shl nsw i64 [[EXT]], 2
-; CHECK-NEXT:    [[ADD2:%.*]] = add nsw i64 [[SHL2]], 39
+; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i32 [[ADD1]] to i64
+; CHECK-NEXT:    [[SHL2:%.*]] = shl nuw nsw i64 [[EXT]], 2
+; CHECK-NEXT:    [[ADD2:%.*]] = add nuw nsw i64 [[SHL2]], 39
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i64 [[ADD2]], 3
-; CHECK-NEXT:    [[AND:%.*]] = and i64 [[LSHR]], 4294967295
-; CHECK-NEXT:    ret i64 [[AND]]
+; CHECK-NEXT:    ret i64 [[LSHR]]
 ;
   %shl1 = shl nuw nsw i32 1, %x
   %add1 = add nsw i32 %shl1, -1
@@ -445,8 +442,7 @@ define i64 @shl_nuw_nsw_test1(i32 %x) {
 define i32 @shl_nuw_nsw_test2(i32 range(i32 -2147483248, 1) %x) {
 ; CHECK-LABEL: @shl_nuw_nsw_test2(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[SHL]], i32 200)
-; CHECK-NEXT:    ret i32 [[SMAX]]
+; CHECK-NEXT:    ret i32 200
 ;
   %shl = shl nsw i32 %x, 1
   %smax = call i32 @llvm.smax.i32(i32 %shl, i32 200)
@@ -457,8 +453,7 @@ define i64 @shl_nuw_nsw_test3(i1 %cond, i64 range(i64 1, 0) %x, i64 range(i64 3,
 ; CHECK-LABEL: @shl_nuw_nsw_test3(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i64 1, [[X:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i64 [[Y:%.*]], i64 [[SHL]]
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[SEL]], i64 2)
-; CHECK-NEXT:    ret i64 [[UMAX]]
+; CHECK-NEXT:    ret i64 [[SEL]]
 ;
   %shl = shl nuw i64 1, %x
   %sel = select i1 %cond, i64 %y, i64 %shl
@@ -471,8 +466,7 @@ define i1 @shl_nuw_nsw_test4(i32 %x, i32 range(i32 0, 32) %k) {
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[SH_PROM:%.*]] = zext nneg i32 [[K:%.*]] to i64
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i64 [[CONV]], [[SH_PROM]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[SHL]], -9223372036854775808
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %conv = sext i32 %x to i64
   %sh_prom = zext nneg i32 %k to i64
