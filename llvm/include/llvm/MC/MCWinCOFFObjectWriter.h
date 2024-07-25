@@ -43,10 +43,8 @@ public:
   virtual bool recordRelocation(const MCFixup &) const { return true; }
 };
 
-class WinCOFFWriter;
-
 class WinCOFFObjectWriter final : public MCObjectWriter {
-  friend class WinCOFFWriter;
+  class WinCOFFWriter;
 
   std::unique_ptr<MCWinCOFFObjectTargetWriter> TargetObjectWriter;
   std::unique_ptr<WinCOFFWriter> ObjWriter, DwoWriter;
