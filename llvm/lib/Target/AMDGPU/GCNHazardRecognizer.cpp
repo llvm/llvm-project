@@ -960,11 +960,7 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
           Register ThisDef = ThisDst->getReg();
           if (!TRI->regsOverlap(Def, ThisDef))
             return false;
-          if (AMDGPU::hasNamedOperand(VALU->getOpcode(),
-                                      AMDGPU::OpName::op_sel) &&
-              TII->getNamedOperand(*VALU, AMDGPU::OpName::src0_modifiers)
-                      ->getImm() &
-                  SISrcMods::DST_OP_SEL)
+          if (TII->isVOP3(*VALU) && !TII->isVOP3P(*VALU))
             return true;
         }
       }
