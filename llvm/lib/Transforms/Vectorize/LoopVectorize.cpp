@@ -6678,6 +6678,15 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
 
   SmallVector<Value *, 4> DeadInterleavePointerOps;
   SmallVector<Value *, 4> DeadOps;
+
+  // If a scalar epilogue is required, users outside the loop won't use
+  // live-outs from the vector loop but from the scalar epilogue. Ignore them if
+  // that is the case.
+  bool RequiresScalarEpilogue = requiresScalarEpilogue(true);
+  auto IsLiveOutDead = [this, RequiresScalarEpilogue](User *U) {
+    return RequiresScalarEpilogue &&
+           !TheLoop->contains(cast<Instruction>(U)->getParent());
+  };
   for (BasicBlock *BB : TheLoop->blocks())
     for (Instruction &I : *BB) {
       // Find all stores to invariant variables. Since they are going to sink
@@ -6693,8 +6702,9 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
       // Add instructions that would be trivially dead and are only used by
       // values already ignored to DeadOps to seed worklist.
       if (wouldInstructionBeTriviallyDead(&I, TLI) &&
-          all_of(I.users(), [this](User *U) {
-            return VecValuesToIgnore.contains(U) || ValuesToIgnore.contains(U);
+          all_of(I.users(), [this, IsLiveOutDead](User *U) {
+            return VecValuesToIgnore.contains(U) ||
+                   ValuesToIgnore.contains(U) || IsLiveOutDead(U);
           }))
         DeadOps.push_back(&I);
 
@@ -6727,14 +6737,20 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
 
   // Mark ops that would be trivially dead and are only used by ignored
   // instructions as free.
+  BasicBlock *Header = TheLoop->getHeader();
   for (unsigned I = 0; I != DeadOps.size(); ++I) {
     auto *Op = dyn_cast<Instruction>(DeadOps[I]);
     // Skip any op that shouldn't be considered dead.
     if (!Op || !TheLoop->contains(Op) ||
+        (isa<PHINode>(Op) && Op->getParent() == Header) ||
         !wouldInstructionBeTriviallyDead(Op, TLI) ||
-        any_of(Op->users(), [this](User *U) {
-          return !VecValuesToIgnore.contains(U) && !ValuesToIgnore.contains(U);
+        any_of(Op->users(), [this, IsLiveOutDead](User *U) {
+          return !VecValuesToIgnore.contains(U) && ValuesToIgnore.contains(U) &&
+                 !IsLiveOutDead(U);
         }))
+      continue;
+
+    if (!TheLoop->contains(Op->getParent()))
       continue;
 
     // If all of Op's users are in ValuesToIgnore, add it to ValuesToIgnore
