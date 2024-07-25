@@ -26,7 +26,6 @@ public:
   bool atEOF();
   StringRef next();
   StringRef peek();
-  StringRef peek2();
   void skip();
   bool consume(StringRef tok);
   void expect(StringRef expect);
