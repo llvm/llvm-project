@@ -1173,7 +1173,6 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector",
       return llvm::count(getScalableDims(), true);
     }
 
-
     /// Get or create a new VectorType with the same shape as `this` and an
     /// element type of bitwidth scaled by `scale`.
     /// Return null if the scaled element type cannot be represented.
