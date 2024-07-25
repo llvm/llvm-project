@@ -2,25 +2,31 @@
 //// For example, -fptrauth-init-fini will not affect codegen without -fptrauth-calls, but the preprocessor feature would be set anyway.
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-intrinsics | \
-// RUN:   FileCheck %s --check-prefixes=INTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOFUNC,NOINITFINI
+// RUN:   FileCheck %s --check-prefixes=INTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOGOTOS
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-calls | \
-// RUN:   FileCheck %s --check-prefixes=NOINTRIN,CALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOFUNC,NOINITFINI
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,CALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOGOTOS
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-returns | \
-// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,RETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOFUNC,NOINITFINI
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,RETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOGOTOS
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-vtable-pointer-address-discrimination | \
-// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,VPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOFUNC,NOINITFINI
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,VPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOGOTOS
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-vtable-pointer-type-discrimination | \
-// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,VPTR_TYPE_DISCR,NOFUNC,NOINITFINI
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,VPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOGOTOS
+
+// RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-type-info-vtable-pointer-discrimination | \
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,TYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOGOTOS
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-function-pointer-type-discrimination | \
-// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,FUNC,NOINITFINI
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,FUNC,NOINITFINI,NOGOTOS
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-init-fini | \
-// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOFUNC,INITFINI
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,INITFINI,NOGOTOS
+
+// RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-indirect-gotos | \
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,GOTOS
 
 #if __has_feature(ptrauth_intrinsics)
 // INTRIN: has_ptrauth_intrinsics
@@ -71,6 +77,14 @@ void has_ptrauth_vtable_pointer_type_discrimination() {}
 void no_ptrauth_vtable_pointer_type_discrimination() {}
 #endif
 
+#if __has_feature(ptrauth_type_info_vtable_pointer_discrimination)
+// TYPE_INFO_DISCR: has_ptrauth_type_info_vtable_pointer_discrimination
+void has_ptrauth_type_info_vtable_pointer_discrimination() {}
+#else
+// NOTYPE_INFO_DISCR: no_ptrauth_type_info_vtable_pointer_discrimination
+void no_ptrauth_type_info_vtable_pointer_discrimination() {}
+#endif
+
 #if __has_feature(ptrauth_function_pointer_type_discrimination)
 // FUNC: has_ptrauth_function_pointer_type_discrimination
 void has_ptrauth_function_pointer_type_discrimination() {}
@@ -85,4 +99,12 @@ void has_ptrauth_init_fini() {}
 #else
 // NOINITFINI: no_ptrauth_init_fini
 void no_ptrauth_init_fini() {}
+#endif
+
+#if __has_feature(ptrauth_indirect_gotos)
+// GOTOS: has_ptrauth_indirect_gotos
+void has_ptrauth_indirect_gotos() {}
+#else
+// NOGOTOS: no_ptrauth_indirect_gotos
+void no_ptrauth_indirect_gotos() {}
 #endif

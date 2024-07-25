@@ -222,11 +222,11 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_sse_cvttss2si64 : ClangBuiltin<"__builtin_ia32_cvttss2si64">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_v4f32_ty], [IntrNoMem]>;
 
-  def int_x86_sse_cvtps2pi : ClangBuiltin<"__builtin_ia32_cvtps2pi">,
+  def int_x86_sse_cvtps2pi :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_v4f32_ty], [IntrNoMem]>;
-  def int_x86_sse_cvttps2pi: ClangBuiltin<"__builtin_ia32_cvttps2pi">,
+  def int_x86_sse_cvttps2pi:
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_v4f32_ty], [IntrNoMem]>;
-  def int_x86_sse_cvtpi2ps : ClangBuiltin<"__builtin_ia32_cvtpi2ps">,
+  def int_x86_sse_cvtpi2ps :
       DefaultAttrsIntrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty,
                              llvm_x86mmx_ty], [IntrNoMem]>;
 }
@@ -426,11 +426,11 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_sse2_cvtsd2ss : ClangBuiltin<"__builtin_ia32_cvtsd2ss">,
       DefaultAttrsIntrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty,
                              llvm_v2f64_ty], [IntrNoMem]>;
-  def int_x86_sse_cvtpd2pi : ClangBuiltin<"__builtin_ia32_cvtpd2pi">,
+  def int_x86_sse_cvtpd2pi :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_v2f64_ty], [IntrNoMem]>;
-  def int_x86_sse_cvttpd2pi: ClangBuiltin<"__builtin_ia32_cvttpd2pi">,
+  def int_x86_sse_cvttpd2pi:
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_v2f64_ty], [IntrNoMem]>;
-  def int_x86_sse_cvtpi2pd : ClangBuiltin<"__builtin_ia32_cvtpi2pd">,
+  def int_x86_sse_cvtpi2pd :
       DefaultAttrsIntrinsic<[llvm_v2f64_ty], [llvm_x86mmx_ty], [IntrNoMem]>;
 }
 
@@ -512,49 +512,49 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 
 // Horizontal arithmetic ops
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_ssse3_phadd_w         : ClangBuiltin<"__builtin_ia32_phaddw">,
+  def int_x86_ssse3_phadd_w         :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty,
                              llvm_x86mmx_ty], [IntrNoMem]>;
   def int_x86_ssse3_phadd_w_128     : ClangBuiltin<"__builtin_ia32_phaddw128">,
       DefaultAttrsIntrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty,
                              llvm_v8i16_ty], [IntrNoMem]>;
 
-  def int_x86_ssse3_phadd_d         : ClangBuiltin<"__builtin_ia32_phaddd">,
+  def int_x86_ssse3_phadd_d         :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty,
                              llvm_x86mmx_ty], [IntrNoMem]>;
   def int_x86_ssse3_phadd_d_128     : ClangBuiltin<"__builtin_ia32_phaddd128">,
       DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty,
                              llvm_v4i32_ty], [IntrNoMem]>;
 
-  def int_x86_ssse3_phadd_sw        : ClangBuiltin<"__builtin_ia32_phaddsw">,
+  def int_x86_ssse3_phadd_sw        :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty,
                              llvm_x86mmx_ty], [IntrNoMem]>;
   def int_x86_ssse3_phadd_sw_128    : ClangBuiltin<"__builtin_ia32_phaddsw128">,
       DefaultAttrsIntrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty,
                              llvm_v8i16_ty], [IntrNoMem]>;
 
-  def int_x86_ssse3_phsub_w         : ClangBuiltin<"__builtin_ia32_phsubw">,
+  def int_x86_ssse3_phsub_w         :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty,
                              llvm_x86mmx_ty], [IntrNoMem]>;
   def int_x86_ssse3_phsub_w_128     : ClangBuiltin<"__builtin_ia32_phsubw128">,
       DefaultAttrsIntrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty,
                              llvm_v8i16_ty], [IntrNoMem]>;
 
-  def int_x86_ssse3_phsub_d         : ClangBuiltin<"__builtin_ia32_phsubd">,
+  def int_x86_ssse3_phsub_d         :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty,
                              llvm_x86mmx_ty], [IntrNoMem]>;
   def int_x86_ssse3_phsub_d_128     : ClangBuiltin<"__builtin_ia32_phsubd128">,
       DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty,
                              llvm_v4i32_ty], [IntrNoMem]>;
 
-  def int_x86_ssse3_phsub_sw        : ClangBuiltin<"__builtin_ia32_phsubsw">,
+  def int_x86_ssse3_phsub_sw        :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty,
                              llvm_x86mmx_ty], [IntrNoMem]>;
   def int_x86_ssse3_phsub_sw_128    : ClangBuiltin<"__builtin_ia32_phsubsw128">,
       DefaultAttrsIntrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty,
                              llvm_v8i16_ty], [IntrNoMem]>;
 
-  def int_x86_ssse3_pmadd_ub_sw     : ClangBuiltin<"__builtin_ia32_pmaddubsw">,
+  def int_x86_ssse3_pmadd_ub_sw     :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty,
                              llvm_x86mmx_ty], [IntrNoMem]>;
   def int_x86_ssse3_pmadd_ub_sw_128 : ClangBuiltin<"__builtin_ia32_pmaddubsw128">,
@@ -564,7 +564,7 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 
 // Packed multiply high with round and scale
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_ssse3_pmul_hr_sw      : ClangBuiltin<"__builtin_ia32_pmulhrsw">,
+  def int_x86_ssse3_pmul_hr_sw      :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty,
                              llvm_x86mmx_ty], [IntrNoMem, Commutative]>;
   def int_x86_ssse3_pmul_hr_sw_128  : ClangBuiltin<"__builtin_ia32_pmulhrsw128">,
@@ -574,34 +574,34 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 
 // Shuffle ops
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_ssse3_pshuf_b         : ClangBuiltin<"__builtin_ia32_pshufb">,
+  def int_x86_ssse3_pshuf_b         :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty,
                              llvm_x86mmx_ty], [IntrNoMem]>;
   def int_x86_ssse3_pshuf_b_128     : ClangBuiltin<"__builtin_ia32_pshufb128">,
       DefaultAttrsIntrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty,
                              llvm_v16i8_ty], [IntrNoMem]>;
-  def int_x86_sse_pshuf_w           : ClangBuiltin<"__builtin_ia32_pshufw">,
+  def int_x86_sse_pshuf_w           :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_i8_ty],
                              [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 }
 
 // Sign ops
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_ssse3_psign_b         : ClangBuiltin<"__builtin_ia32_psignb">,
+  def int_x86_ssse3_psign_b         :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty,
                              llvm_x86mmx_ty], [IntrNoMem]>;
   def int_x86_ssse3_psign_b_128     : ClangBuiltin<"__builtin_ia32_psignb128">,
       DefaultAttrsIntrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty,
                              llvm_v16i8_ty], [IntrNoMem]>;
 
-  def int_x86_ssse3_psign_w         : ClangBuiltin<"__builtin_ia32_psignw">,
+  def int_x86_ssse3_psign_w         :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty,
                              llvm_x86mmx_ty], [IntrNoMem]>;
   def int_x86_ssse3_psign_w_128     : ClangBuiltin<"__builtin_ia32_psignw128">,
       DefaultAttrsIntrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty,
                              llvm_v8i16_ty], [IntrNoMem]>;
 
-  def int_x86_ssse3_psign_d         : ClangBuiltin<"__builtin_ia32_psignd">,
+  def int_x86_ssse3_psign_d         :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty,
                              llvm_x86mmx_ty], [IntrNoMem]>;
   def int_x86_ssse3_psign_d_128     : ClangBuiltin<"__builtin_ia32_psignd128">,
@@ -611,13 +611,13 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 
 // Absolute value ops
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_ssse3_pabs_b     : ClangBuiltin<"__builtin_ia32_pabsb">,
+  def int_x86_ssse3_pabs_b     :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty], [IntrNoMem]>;
 
-  def int_x86_ssse3_pabs_w     : ClangBuiltin<"__builtin_ia32_pabsw">,
+  def int_x86_ssse3_pabs_w     :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty], [IntrNoMem]>;
 
-  def int_x86_ssse3_pabs_d     : ClangBuiltin<"__builtin_ia32_pabsd">,
+  def int_x86_ssse3_pabs_d     :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty], [IntrNoMem]>;
 }
 
@@ -2260,118 +2260,118 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 // Integer arithmetic ops.
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   // Addition
-  def int_x86_mmx_padd_b : ClangBuiltin<"__builtin_ia32_paddb">,
+  def int_x86_mmx_padd_b :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
-  def int_x86_mmx_padd_w : ClangBuiltin<"__builtin_ia32_paddw">,
+  def int_x86_mmx_padd_w :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
-  def int_x86_mmx_padd_d : ClangBuiltin<"__builtin_ia32_paddd">,
+  def int_x86_mmx_padd_d :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
-  def int_x86_mmx_padd_q : ClangBuiltin<"__builtin_ia32_paddq">,
-      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
-                            [IntrNoMem, Commutative]>;
-
-  def int_x86_mmx_padds_b : ClangBuiltin<"__builtin_ia32_paddsb">,
-      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
-                            [IntrNoMem, Commutative]>;
-  def int_x86_mmx_padds_w : ClangBuiltin<"__builtin_ia32_paddsw">,
+  def int_x86_mmx_padd_q :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
 
-  def int_x86_mmx_paddus_b : ClangBuiltin<"__builtin_ia32_paddusb">,
+  def int_x86_mmx_padds_b :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
-  def int_x86_mmx_paddus_w : ClangBuiltin<"__builtin_ia32_paddusw">,
+  def int_x86_mmx_padds_w :
+      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
+                            [IntrNoMem, Commutative]>;
+
+  def int_x86_mmx_paddus_b :
+      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
+                            [IntrNoMem, Commutative]>;
+  def int_x86_mmx_paddus_w :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
 
   // Subtraction
-  def int_x86_mmx_psub_b : ClangBuiltin<"__builtin_ia32_psubb">,
+  def int_x86_mmx_psub_b :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
-  def int_x86_mmx_psub_w : ClangBuiltin<"__builtin_ia32_psubw">,
+  def int_x86_mmx_psub_w :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
-  def int_x86_mmx_psub_d : ClangBuiltin<"__builtin_ia32_psubd">,
+  def int_x86_mmx_psub_d :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
-  def int_x86_mmx_psub_q : ClangBuiltin<"__builtin_ia32_psubq">,
-      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
-                            [IntrNoMem]>;
-
-  def int_x86_mmx_psubs_b : ClangBuiltin<"__builtin_ia32_psubsb">,
-      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
-                            [IntrNoMem]>;
-  def int_x86_mmx_psubs_w : ClangBuiltin<"__builtin_ia32_psubsw">,
+  def int_x86_mmx_psub_q :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
 
-  def int_x86_mmx_psubus_b : ClangBuiltin<"__builtin_ia32_psubusb">,
+  def int_x86_mmx_psubs_b :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
-  def int_x86_mmx_psubus_w : ClangBuiltin<"__builtin_ia32_psubusw">,
+  def int_x86_mmx_psubs_w :
+      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
+                            [IntrNoMem]>;
+
+  def int_x86_mmx_psubus_b :
+      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
+                            [IntrNoMem]>;
+  def int_x86_mmx_psubus_w :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
 
   // Multiplication
-  def int_x86_mmx_pmulh_w : ClangBuiltin<"__builtin_ia32_pmulhw">,
+  def int_x86_mmx_pmulh_w :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
-  def int_x86_mmx_pmull_w : ClangBuiltin<"__builtin_ia32_pmullw">,
+  def int_x86_mmx_pmull_w :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
-  def int_x86_mmx_pmulhu_w : ClangBuiltin<"__builtin_ia32_pmulhuw">,
+  def int_x86_mmx_pmulhu_w :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
-  def int_x86_mmx_pmulu_dq : ClangBuiltin<"__builtin_ia32_pmuludq">,
+  def int_x86_mmx_pmulu_dq :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
-  def int_x86_mmx_pmadd_wd : ClangBuiltin<"__builtin_ia32_pmaddwd">,
+  def int_x86_mmx_pmadd_wd :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
 
   // Bitwise operations
-  def int_x86_mmx_pand : ClangBuiltin<"__builtin_ia32_pand">,
+  def int_x86_mmx_pand :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
-  def int_x86_mmx_pandn : ClangBuiltin<"__builtin_ia32_pandn">,
+  def int_x86_mmx_pandn :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
-  def int_x86_mmx_por : ClangBuiltin<"__builtin_ia32_por">,
+  def int_x86_mmx_por :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
-  def int_x86_mmx_pxor : ClangBuiltin<"__builtin_ia32_pxor">,
+  def int_x86_mmx_pxor :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
 
   // Averages
-  def int_x86_mmx_pavg_b : ClangBuiltin<"__builtin_ia32_pavgb">,
+  def int_x86_mmx_pavg_b :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
-  def int_x86_mmx_pavg_w : ClangBuiltin<"__builtin_ia32_pavgw">,
+  def int_x86_mmx_pavg_w :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
 
   // Maximum
-  def int_x86_mmx_pmaxu_b : ClangBuiltin<"__builtin_ia32_pmaxub">,
+  def int_x86_mmx_pmaxu_b :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
-  def int_x86_mmx_pmaxs_w : ClangBuiltin<"__builtin_ia32_pmaxsw">,
+  def int_x86_mmx_pmaxs_w :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
 
   // Minimum
-  def int_x86_mmx_pminu_b : ClangBuiltin<"__builtin_ia32_pminub">,
+  def int_x86_mmx_pminu_b :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
-  def int_x86_mmx_pmins_w : ClangBuiltin<"__builtin_ia32_pminsw">,
+  def int_x86_mmx_pmins_w :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
 
   // Packed sum of absolute differences
-  def int_x86_mmx_psad_bw : ClangBuiltin<"__builtin_ia32_psadbw">,
+  def int_x86_mmx_psad_bw :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
 }
@@ -2379,58 +2379,58 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 // Integer shift ops.
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   // Shift left logical
-  def int_x86_mmx_psll_w : ClangBuiltin<"__builtin_ia32_psllw">,
+  def int_x86_mmx_psll_w :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
-  def int_x86_mmx_psll_d : ClangBuiltin<"__builtin_ia32_pslld">,
+  def int_x86_mmx_psll_d :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
-  def int_x86_mmx_psll_q : ClangBuiltin<"__builtin_ia32_psllq">,
-      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
-                            [IntrNoMem]>;
-
-  def int_x86_mmx_psrl_w : ClangBuiltin<"__builtin_ia32_psrlw">,
-      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
-                            [IntrNoMem]>;
-  def int_x86_mmx_psrl_d : ClangBuiltin<"__builtin_ia32_psrld">,
-      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
-                            [IntrNoMem]>;
-  def int_x86_mmx_psrl_q : ClangBuiltin<"__builtin_ia32_psrlq">,
+  def int_x86_mmx_psll_q :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
 
-  def int_x86_mmx_psra_w : ClangBuiltin<"__builtin_ia32_psraw">,
+  def int_x86_mmx_psrl_w :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
-  def int_x86_mmx_psra_d : ClangBuiltin<"__builtin_ia32_psrad">,
+  def int_x86_mmx_psrl_d :
+      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
+                            [IntrNoMem]>;
+  def int_x86_mmx_psrl_q :
+      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
+                            [IntrNoMem]>;
+
+  def int_x86_mmx_psra_w :
+      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
+                            [IntrNoMem]>;
+  def int_x86_mmx_psra_d :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
 
   // Oddly these don't require an immediate due to a gcc compatibility issue.
-  def int_x86_mmx_pslli_w : ClangBuiltin<"__builtin_ia32_psllwi">,
+  def int_x86_mmx_pslli_w :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_i32_ty],
                             [IntrNoMem]>;
-  def int_x86_mmx_pslli_d : ClangBuiltin<"__builtin_ia32_pslldi">,
+  def int_x86_mmx_pslli_d :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_i32_ty],
                             [IntrNoMem]>;
-  def int_x86_mmx_pslli_q : ClangBuiltin<"__builtin_ia32_psllqi">,
-      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_i32_ty],
-                            [IntrNoMem]>;
-
-  def int_x86_mmx_psrli_w : ClangBuiltin<"__builtin_ia32_psrlwi">,
-      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_i32_ty],
-                            [IntrNoMem]>;
-  def int_x86_mmx_psrli_d : ClangBuiltin<"__builtin_ia32_psrldi">,
-      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_i32_ty],
-                            [IntrNoMem]>;
-  def int_x86_mmx_psrli_q : ClangBuiltin<"__builtin_ia32_psrlqi">,
+  def int_x86_mmx_pslli_q :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_i32_ty],
                             [IntrNoMem]>;
 
-  def int_x86_mmx_psrai_w : ClangBuiltin<"__builtin_ia32_psrawi">,
+  def int_x86_mmx_psrli_w :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_i32_ty],
                             [IntrNoMem]>;
-  def int_x86_mmx_psrai_d : ClangBuiltin<"__builtin_ia32_psradi">,
+  def int_x86_mmx_psrli_d :
+      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_i32_ty],
+                            [IntrNoMem]>;
+  def int_x86_mmx_psrli_q :
+      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_i32_ty],
+                            [IntrNoMem]>;
+
+  def int_x86_mmx_psrai_w :
+      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_i32_ty],
+                            [IntrNoMem]>;
+  def int_x86_mmx_psrai_d :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_i32_ty],
                             [IntrNoMem]>;
 }
@@ -2475,83 +2475,83 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 }
 // Pack ops.
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_mmx_packsswb : ClangBuiltin<"__builtin_ia32_packsswb">,
+  def int_x86_mmx_packsswb :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
-  def int_x86_mmx_packssdw : ClangBuiltin<"__builtin_ia32_packssdw">,
+  def int_x86_mmx_packssdw :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
-  def int_x86_mmx_packuswb : ClangBuiltin<"__builtin_ia32_packuswb">,
+  def int_x86_mmx_packuswb :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
 }
 
 // Unpacking ops.
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_mmx_punpckhbw : ClangBuiltin<"__builtin_ia32_punpckhbw">,
+  def int_x86_mmx_punpckhbw :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
-  def int_x86_mmx_punpckhwd : ClangBuiltin<"__builtin_ia32_punpckhwd">,
+  def int_x86_mmx_punpckhwd :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
-  def int_x86_mmx_punpckhdq : ClangBuiltin<"__builtin_ia32_punpckhdq">,
+  def int_x86_mmx_punpckhdq :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
-  def int_x86_mmx_punpcklbw : ClangBuiltin<"__builtin_ia32_punpcklbw">,
+  def int_x86_mmx_punpcklbw :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
-  def int_x86_mmx_punpcklwd : ClangBuiltin<"__builtin_ia32_punpcklwd">,
+  def int_x86_mmx_punpcklwd :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
-  def int_x86_mmx_punpckldq : ClangBuiltin<"__builtin_ia32_punpckldq">,
+  def int_x86_mmx_punpckldq :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
 }
 
 // Integer comparison ops
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_mmx_pcmpeq_b : ClangBuiltin<"__builtin_ia32_pcmpeqb">,
+  def int_x86_mmx_pcmpeq_b :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
-  def int_x86_mmx_pcmpeq_w : ClangBuiltin<"__builtin_ia32_pcmpeqw">,
+  def int_x86_mmx_pcmpeq_w :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
-  def int_x86_mmx_pcmpeq_d : ClangBuiltin<"__builtin_ia32_pcmpeqd">,
+  def int_x86_mmx_pcmpeq_d :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem, Commutative]>;
 
-  def int_x86_mmx_pcmpgt_b : ClangBuiltin<"__builtin_ia32_pcmpgtb">,
+  def int_x86_mmx_pcmpgt_b :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
-  def int_x86_mmx_pcmpgt_w : ClangBuiltin<"__builtin_ia32_pcmpgtw">,
+  def int_x86_mmx_pcmpgt_w :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
-  def int_x86_mmx_pcmpgt_d : ClangBuiltin<"__builtin_ia32_pcmpgtd">,
+  def int_x86_mmx_pcmpgt_d :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_x86mmx_ty],
                             [IntrNoMem]>;
 }
 
 // Misc.
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_mmx_maskmovq : ClangBuiltin<"__builtin_ia32_maskmovq">,
+  def int_x86_mmx_maskmovq :
               Intrinsic<[], [llvm_x86mmx_ty, llvm_x86mmx_ty, llvm_ptr_ty], []>;
 
-  def int_x86_mmx_pmovmskb : ClangBuiltin<"__builtin_ia32_pmovmskb">,
+  def int_x86_mmx_pmovmskb :
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_x86mmx_ty], [IntrNoMem]>;
 
-  def int_x86_mmx_movnt_dq : ClangBuiltin<"__builtin_ia32_movntq">,
+  def int_x86_mmx_movnt_dq :
               Intrinsic<[], [llvm_ptr_ty, llvm_x86mmx_ty], []>;
 
-  def int_x86_mmx_palignr_b : ClangBuiltin<"__builtin_ia32_palignr">,
+  def int_x86_mmx_palignr_b :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty],
                             [llvm_x86mmx_ty, llvm_x86mmx_ty, llvm_i8_ty],
                             [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
-  def int_x86_mmx_pextr_w : ClangBuiltin<"__builtin_ia32_vec_ext_v4hi">,
+  def int_x86_mmx_pextr_w :
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_x86mmx_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
-  def int_x86_mmx_pinsr_w : ClangBuiltin<"__builtin_ia32_vec_set_v4hi">,
+  def int_x86_mmx_pinsr_w :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty],
                             [llvm_x86mmx_ty, llvm_i32_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<2>>]>;
