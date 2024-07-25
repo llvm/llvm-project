@@ -3879,11 +3879,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// last argument, with the initial arguments being the inputs. They return
   /// void.
   ///
-  /// The difference between st1_x4 and st4 is that the latter interleaves the
-  /// output e.g., st4 (A, B, C, D, P) writes abcdabcdabcdabcd... into *P, while
-  /// st1_x4 (A, B, C, D, P) writes aaaa...bbbb...cccc...dddd... into *P.
-  /// Since we apply the cloned instruction to the shadow, we can reuse the same
-  /// logic.
+  /// - st4 interleaves the output e.g., st4 (inA, inB, inC, inD, outP) writes
+  ///   abcdabcdabcdabcd... into *outP
+  /// - st1_x4 is non-interleaved i.e., st1_x4 (inA, inB, inC, inD, outP)
+  ///   writes aaaa...bbbb...cccc...dddd... into *outP
+  /// Since we apply the corresponding intrinsic to the shadow, we can reuse
+  /// the same logic.
   void handleNEONVectorStoreIntrinsic(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
 

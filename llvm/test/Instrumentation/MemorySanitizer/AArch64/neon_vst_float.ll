@@ -54,8 +54,6 @@ define void @st1x2_v1f64(<1 x double> %A, <1 x double> %B, ptr %p) sanitize_memo
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x2.v1f64.p0(<1 x double> [[A]], <1 x double> [[B]], ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
-; EDITOR'S NOTE: the next call is invalid because the parameters (shadows) are integer, but the called function
-;                expects floating-point parameters.
   call void @llvm.aarch64.neon.st1x2.v1f64.p0(<1 x double> %A, <1 x double> %B, ptr %p)
   ret void
 }
