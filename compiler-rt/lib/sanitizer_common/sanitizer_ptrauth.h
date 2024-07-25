@@ -27,7 +27,7 @@
           : "=r"(ret)                   \
           : "r"(__value)                \
           : "x30");                     \
-      ret;                              \
+      __typeof(__value) ret;            \
     })
 #  define ptrauth_auth_data(__value, __old_key, __old_data) __value
 #  define ptrauth_string_discriminator(__string) ((int)0)
