@@ -113,14 +113,30 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   // command line is not empty, its contents may be modified by CreateProcessW.
   WCHAR *pwcommandLine = wcommandLine.empty() ? nullptr : &wcommandLine[0];
 
-  BOOL result = ::CreateProcessW(
-      wexecutable.c_str(), pwcommandLine, NULL, NULL, TRUE, flags, env_block,
-      wworkingDirectory.size() == 0 ? NULL : wworkingDirectory.c_str(),
-      &startupinfo, &pi);
+  BOOL result;
+  DWORD last_error = 0;
+  // This is the workaround for the error "The process cannot access the file
+  // because it is being used by another process". Note the executable file is
+  // installed to the target by the process `lldb-server platform`, but launched
+  // by the process `lldb-server gdbserver`. Sometimes system may block the file
+  // for some time after copying.
+  for (int i = 0; i < 50; ++i) {
+    result = ::CreateProcessW(
+        wexecutable.c_str(), pwcommandLine, NULL, NULL, TRUE, flags, env_block,
+        wworkingDirectory.size() == 0 ? NULL : wworkingDirectory.c_str(),
+        &startupinfo, &pi);
+    if (!result) {
+      last_error = ::GetLastError();
+      if (last_error != ERROR_SHARING_VIOLATION)
+        break;
+      ::Sleep(100);
+    } else
+      break;
+  }
 
   if (!result) {
     // Call GetLastError before we make any other system calls.
-    error.SetError(::GetLastError(), eErrorTypeWin32);
+    error.SetError(last_error, eErrorTypeWin32);
     // Note that error 50 ("The request is not supported") will occur if you
     // try debug a 64-bit inferior from a 32-bit LLDB.
   }
