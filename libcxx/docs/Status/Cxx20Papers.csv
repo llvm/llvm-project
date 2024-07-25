@@ -123,7 +123,7 @@
 "`P1522R1 <https://wg21.link/P1522R1>`__","LWG","Iterator Difference Type and Integer Overflow","Cologne","|Complete|","15.0","|ranges|"
 "`P1523R1 <https://wg21.link/P1523R1>`__","LWG","Views and Size Types","Cologne","|Complete|","15.0","|ranges|"
 "`P1612R1 <https://wg21.link/P1612R1>`__","LWG","Relocate Endian's Specification","Cologne","|Complete|","10.0"
-"`P1614R2 <https://wg21.link/P1614R2>`__","LWG","The Mothership has Landed","Cologne","|In Progress|",""
+"`P1614R2 <https://wg21.link/P1614R2>`__","LWG","The Mothership has Landed","Cologne","|Complete| [#note-P1614]_","19.0"
 "`P1638R1 <https://wg21.link/P1638R1>`__","LWG","basic_istream_view::iterator should not be copyable","Cologne","|Complete|","16.0","|ranges|"
 "`P1643R1 <https://wg21.link/P1643R1>`__","LWG","Add wait/notify to atomic_ref","Cologne","|Complete|","19.0"
 "`P1644R0 <https://wg21.link/P1644R0>`__","LWG","Add wait/notify to atomic<shared_ptr>","Cologne","",""
