@@ -3339,6 +3339,7 @@ bool LoopVectorizationCostModel::isScalarWithPredication(
   }
 }
 
+// TODO: Fold into LoopVectorizationLegality::isMaskRequired.
 bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
   // If predication is not needed, avoid it.
   // TODO: We can use the loop-preheader as context point here and get
