@@ -229,8 +229,7 @@ define i1 @test_mul_nuw_nsw_nneg(i32 %x, i32 range(i32 3, 2147483648) %y) {
 ; CHECK-LABEL: @test_mul_nuw_nsw_nneg(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[MUL]], -1
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %mul = mul nuw nsw i32 %x, %y
@@ -246,8 +245,7 @@ define i1 @test_mul_nuw_nsw_nneg_complex(i32 %x, i32 noundef %y, i32 %z) {
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP2]], i32 3, i32 4
 ; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP1]], i32 [[Y]], i32 [[SEL1]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[X]], [[SEL2]]
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[MUL]], -1
-; CHECK-NEXT:    ret i1 [[CMP3]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %cmp1 = icmp sgt i32 %y, 2
