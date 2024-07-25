@@ -35,6 +35,7 @@ template <class = void> void f() {
      ...);
   }.template operator()<char, int, float>(); // expected-note {{requested here}}
 
+
   []<class... Is>() {
     ([](Is)
        requires (!C<Is>)
