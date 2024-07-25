@@ -8533,66 +8533,90 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
 
 SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
                                                       SelectionDAG &DAG) const {
-  SDLoc dl(Node);
-  unsigned NewOp = Node->getOpcode() == ISD::FMINIMUMNUM ? ISD::FMINNUM_IEEE
-                                                         : ISD::FMAXNUM_IEEE;
+  SDLoc DL(Node);
+  SDValue LHS = Node->getOperand(0);
+  SDValue RHS = Node->getOperand(1);
+  unsigned Opc = Node->getOpcode();
   EVT VT = Node->getValueType(0);
+  EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  bool IsMax = Opc == ISD::FMAXIMUMNUM;
+  SDNodeFlags Flags = Node->getFlags();
 
-  if (VT.isScalableVector())
-    report_fatal_error(
-        "Expanding fminimumnum/fmaximumnum for scalable vectors is undefined.");
+  unsigned NewOp =
+      Opc == ISD::FMINIMUMNUM ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
 
   if (isOperationLegalOrCustom(NewOp, VT)) {
-    SDValue Quiet0 = Node->getOperand(0);
-    SDValue Quiet1 = Node->getOperand(1);
-
-    if (!Node->getFlags().hasNoNaNs()) {
+    if (!Flags.hasNoNaNs()) {
       // Insert canonicalizes if it's possible we need to quiet to get correct
       // sNaN behavior.
-      if (!DAG.isKnownNeverSNaN(Quiet0)) {
-        Quiet0 =
-            DAG.getNode(ISD::FCANONICALIZE, dl, VT, Quiet0, Node->getFlags());
+      if (!DAG.isKnownNeverSNaN(LHS)) {
+        LHS = DAG.getNode(ISD::FCANONICALIZE, DL, VT, LHS, Node->getFlags());
       }
-      if (!DAG.isKnownNeverSNaN(Quiet1)) {
-        Quiet1 =
-            DAG.getNode(ISD::FCANONICALIZE, dl, VT, Quiet1, Node->getFlags());
+      if (!DAG.isKnownNeverSNaN(RHS)) {
+        RHS = DAG.getNode(ISD::FCANONICALIZE, DL, VT, RHS, Node->getFlags());
       }
     }
 
-    return DAG.getNode(NewOp, dl, VT, Quiet0, Quiet1, Node->getFlags());
+    return DAG.getNode(NewOp, DL, VT, LHS, RHS, Flags);
   }
 
   // FMINIMUM/FMAXIMUM always return NaN if either operand is NaN.
   // It has same behavior about +0.0 vs -0.0.
-  if (Node->getFlags().hasNoNaNs() ||
-      (DAG.isKnownNeverNaN(Node->getOperand(0)) &&
-       DAG.isKnownNeverNaN(Node->getOperand(1)))) {
+  if (Flags.hasNoNaNs() ||
+      (DAG.isKnownNeverNaN(LHS) && DAG.isKnownNeverNaN(RHS))) {
     unsigned IEEE2019Op =
-        Node->getOpcode() == ISD::FMINIMUMNUM ? ISD::FMINIMUM : ISD::FMAXIMUM;
+        Opc == ISD::FMINIMUMNUM ? ISD::FMINIMUM : ISD::FMAXIMUM;
     if (isOperationLegalOrCustom(IEEE2019Op, VT))
-      return DAG.getNode(IEEE2019Op, dl, VT, Node->getOperand(0),
-                         Node->getOperand(1), Node->getFlags());
+      return DAG.getNode(IEEE2019Op, DL, VT, LHS, RHS, Flags);
   }
 
   // FMINNUM/FMAXMUM returns qNaN if either operand is sNaN, and it may return
   // either one for +0.0 vs -0.0.
   // FIXME: maybe we need hasNoSNaNs().
-  if ((Node->getFlags().hasNoNaNs() ||
-       (DAG.isKnownNeverSNaN(Node->getOperand(0)) &&
-        DAG.isKnownNeverSNaN(Node->getOperand(1)))) &&
-      (Node->getFlags().hasNoSignedZeros() ||
-       DAG.isKnownNeverZeroFloat(Node->getOperand(0)) ||
-       DAG.isKnownNeverZeroFloat(Node->getOperand(1)))) {
-    unsigned IEEE2008Op =
-        Node->getOpcode() == ISD::FMINIMUMNUM ? ISD::FMINNUM : ISD::FMAXNUM;
+  if ((Flags.hasNoNaNs() ||
+       (DAG.isKnownNeverSNaN(LHS) && DAG.isKnownNeverSNaN(RHS))) &&
+      (Flags.hasNoSignedZeros() || DAG.isKnownNeverZeroFloat(LHS) ||
+       DAG.isKnownNeverZeroFloat(RHS))) {
+    unsigned IEEE2008Op = Opc == ISD::FMINIMUMNUM ? ISD::FMINNUM : ISD::FMAXNUM;
     if (isOperationLegalOrCustom(IEEE2008Op, VT))
-      return DAG.getNode(IEEE2008Op, dl, VT, Node->getOperand(0),
-                         Node->getOperand(1), Node->getFlags());
+      return DAG.getNode(IEEE2008Op, DL, VT, LHS, RHS, Flags);
   }
 
-  // FIXME: we may use setCC/getSELECT to optimize it instead of fallback to
-  // libcall.
-  return SDValue();
+  SDValue MinMax;
+  // If one operand is NaN, let's move another value to it.
+  // So that if only one operand is NaN, we can have both two operands are
+  // non-NaN now.
+  SDValue LHSCompareLHS = DAG.getSetCC(DL, CCVT, LHS, LHS, ISD::SETEQ);
+  LHS = DAG.getSelect(DL, VT, LHSCompareLHS, LHS, RHS, Flags);
+  SDValue RHSCompareRHS = DAG.getSetCC(DL, CCVT, RHS, RHS, ISD::SETEQ);
+  RHS = DAG.getSelect(DL, VT, RHSCompareRHS, RHS, LHS, Flags);
+
+  SDValue Compare =
+      DAG.getSetCC(DL, CCVT, LHS, RHS, IsMax ? ISD::SETGT : ISD::SETLT);
+  MinMax = DAG.getSelect(DL, VT, Compare, LHS, RHS, Flags);
+
+  // If MinMax is NaN, let's quiet it with MinMax = MinMax + 0.
+  SDValue MinMaxCompareMinMax =
+      DAG.getSetCC(DL, CCVT, MinMax, MinMax, ISD::SETEQ);
+  SDValue MinMaxQuiet = DAG.getNode(ISD::FADD, DL, VT, MinMax,
+                                    DAG.getConstantFP(0.0, DL, VT), Flags);
+  MinMax =
+      DAG.getSelect(DL, VT, MinMaxCompareMinMax, MinMax, MinMaxQuiet, Flags);
+
+  // Let's process +0.0 vs -0.0.
+  SDValue TestZero =
+      DAG.getTargetConstant(IsMax ? fcPosZero : fcNegZero, DL, MVT::i32);
+  SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
+                                DAG.getConstantFP(0.0, DL, VT), ISD::SETEQ);
+  SDValue LCmp = DAG.getSelect(
+      DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, LHS, TestZero), LHS,
+      MinMax, Flags);
+  SDValue RCmp = DAG.getSelect(
+      DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, RHS, TestZero), RHS, LCmp,
+      Flags);
+  MinMax = DAG.getSelect(DL, VT, IsZero, RCmp, MinMax, Flags);
+
+  return MinMax;
 }
 
 /// Returns a true value if if this FPClassTest can be performed with an ordered
