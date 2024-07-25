@@ -9,11 +9,12 @@
 #ifndef LLVM_ANALYSIS_DXILRESOURCE_H
 #define LLVM_ANALYSIS_DXILRESOURCE_H
 
-#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/DXILABI.h"
 
 namespace llvm {
+class MDTuple;
+
 namespace dxil {
 
 struct ResourceBinding {
