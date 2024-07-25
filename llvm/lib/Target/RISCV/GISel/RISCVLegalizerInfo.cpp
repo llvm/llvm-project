@@ -68,6 +68,17 @@ typeIsLegalBoolVec(unsigned TypeIdx, std::initializer_list<LLT> BoolVecTys,
   return all(typeInSet(TypeIdx, BoolVecTys), P);
 }
 
+static LegalityPredicate typeIsLegalPtrVec(unsigned TypeIdx,
+                                           std::initializer_list<LLT> PtrVecTys,
+                                           const RISCVSubtarget &ST) {
+  LegalityPredicate P = [=, &ST](const LegalityQuery &Query) {
+    return ST.hasVInstructions() &&
+           (Query.Types[TypeIdx].getElementCount().getKnownMinValue() != 1 ||
+            ST.getELen() == 64);
+  };
+  return all(typeInSet(TypeIdx, PtrVecTys), P);
+}
+
 RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     : STI(ST), XLen(STI.getXLen()), sXLen(LLT::scalar(XLen)) {
   const LLT sDoubleXLen = LLT::scalar(2 * XLen);
@@ -112,6 +123,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   const LLT nxv4s64 = LLT::scalable_vector(4, s64);
   const LLT nxv8s64 = LLT::scalable_vector(8, s64);
 
+  const LLT nxv1p0 = LLT::scalable_vector(1, p0);
+  const LLT nxv2p0 = LLT::scalable_vector(2, p0);
+  const LLT nxv4p0 = LLT::scalable_vector(4, p0);
+  const LLT nxv8p0 = LLT::scalable_vector(8, p0);
+
   using namespace TargetOpcode;
 
   auto BoolVecTys = {nxv1s1, nxv2s1, nxv4s1, nxv8s1, nxv16s1, nxv32s1, nxv64s1};
@@ -120,6 +136,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                         nxv64s8,  nxv1s16, nxv2s16, nxv4s16, nxv8s16, nxv16s16,
                         nxv32s16, nxv1s32, nxv2s32, nxv4s32, nxv8s32, nxv16s32,
                         nxv1s64,  nxv2s64, nxv4s64, nxv8s64};
+
+  auto PtrVecTys = {nxv1p0, nxv2p0, nxv4p0, nxv8p0};
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
       .legalFor({s32, sXLen})
@@ -261,27 +279,27 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(0, s32, (XLen == 64 || ST.hasStdExtD()) ? s64 : s32)
       .clampScalar(1, sXLen, sXLen);
 
-  auto &LoadStoreActions =
-      getActionDefinitionsBuilder({G_LOAD, G_STORE})
-          .legalForTypesWithMemDesc({{s32, p0, s8, 8},
-                                     {s32, p0, s16, 16},
-                                     {s32, p0, s32, 32},
-                                     {p0, p0, sXLen, XLen},
-                                     {nxv2s8, p0, nxv2s8, 8},
-                                     {nxv4s8, p0, nxv4s8, 8},
-                                     {nxv8s8, p0, nxv8s8, 8},
-                                     {nxv16s8, p0, nxv16s8, 8},
-                                     {nxv32s8, p0, nxv32s8, 8},
-                                     {nxv64s8, p0, nxv64s8, 8},
-                                     {nxv2s16, p0, nxv2s16, 16},
-                                     {nxv4s16, p0, nxv4s16, 16},
-                                     {nxv8s16, p0, nxv8s16, 16},
-                                     {nxv16s16, p0, nxv16s16, 16},
-                                     {nxv32s16, p0, nxv32s16, 16},
-                                     {nxv2s32, p0, nxv2s32, 32},
-                                     {nxv4s32, p0, nxv4s32, 32},
-                                     {nxv8s32, p0, nxv8s32, 32},
-                                     {nxv16s32, p0, nxv16s32, 32}});
+  auto &LoadStoreActions = getActionDefinitionsBuilder({G_LOAD, G_STORE});
+  if (ST.hasVInstructions())
+    LoadStoreActions.legalForTypesWithMemDesc({{s32, p0, s8, 8},
+                                               {s32, p0, s16, 16},
+                                               {s32, p0, s32, 32},
+                                               {p0, p0, sXLen, XLen},
+                                               {nxv2s8, p0, nxv2s8, 8},
+                                               {nxv4s8, p0, nxv4s8, 8},
+                                               {nxv8s8, p0, nxv8s8, 8},
+                                               {nxv16s8, p0, nxv16s8, 8},
+                                               {nxv32s8, p0, nxv32s8, 8},
+                                               {nxv64s8, p0, nxv64s8, 8},
+                                               {nxv2s16, p0, nxv2s16, 16},
+                                               {nxv4s16, p0, nxv4s16, 16},
+                                               {nxv8s16, p0, nxv8s16, 16},
+                                               {nxv16s16, p0, nxv16s16, 16},
+                                               {nxv32s16, p0, nxv32s16, 16},
+                                               {nxv2s32, p0, nxv2s32, 32},
+                                               {nxv4s32, p0, nxv4s32, 32},
+                                               {nxv8s32, p0, nxv8s32, 32},
+                                               {nxv16s32, p0, nxv16s32, 32}});
 
   auto &ExtLoadActions =
       getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
@@ -309,10 +327,13 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   LoadStoreActions.widenScalarToNextPow2(0, /* MinSize = */ 8)
       .lowerIfMemSizeNotByteSizePow2()
-      .customIf([=](const LegalityQuery &Query) {
-        LLT Type = Query.Types[0];
-        return Type.isScalableVector();
-      })
+      .customIf(all(LegalityPredicate([=](const LegalityQuery &Query) {
+                      LLT Type = Query.Types[0];
+                      return Type.isScalableVector();
+                    }),
+                    LegalityPredicate(LegalityPredicates::any(
+                        typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
+                        typeIsLegalPtrVec(0, PtrVecTys, ST)))))
       .clampScalar(0, s32, sXLen)
       .lower();
 
@@ -690,28 +711,22 @@ bool RISCVLegalizerInfo::legalizeExt(MachineInstr &MI,
 bool RISCVLegalizerInfo::legalizeLoadStore(MachineInstr &MI,
                                            LegalizerHelper &Helper,
                                            MachineIRBuilder &MIB) const {
+  assert((isa<GLoad>(MI) || isa<GStore>(MI)) &&
+         "Machine instructions must be Load/Store.");
   MachineRegisterInfo &MRI = *MIB.getMRI();
   MachineFunction *MF = MI.getMF();
   const DataLayout &DL = MIB.getDataLayout();
   LLVMContext &Ctx = MF->getFunction().getContext();
 
   Register DstReg = MI.getOperand(0).getReg();
-  Register PtrReg = MI.getOperand(1).getReg();
   LLT DataTy = MRI.getType(DstReg);
   if (!DataTy.isVector())
-    return false;
-
-  if (!(STI.hasVInstructions() &&
-        (DataTy.getScalarSizeInBits() != 64 || STI.hasVInstructionsI64()) &&
-        (DataTy.getElementCount().getKnownMinValue() != 1 ||
-         STI.getELen() == 64)))
     return false;
 
   if (!MI.hasOneMemOperand())
     return false;
 
   MachineMemOperand *MMO = *MI.memoperands_begin();
-  Align Alignment = MMO->getAlign();
 
   const auto *TLI = STI.getTargetLowering();
   EVT VT = EVT::getEVT(getTypeForLLT(DataTy, Ctx));
@@ -728,17 +743,10 @@ bool RISCVLegalizerInfo::legalizeLoadStore(MachineInstr &MI,
       DataTy.getElementCount().getKnownMinValue() * (EltSizeBits / 8);
   LLT NewDataTy = LLT::scalable_vector(NumElements, 8);
 
-  MachinePointerInfo PI = MMO->getPointerInfo();
-  MachineMemOperand *NewMMO =
-      MF->getMachineMemOperand(PI, MMO->getFlags(), NewDataTy, Alignment);
-
-  if (isa<GLoad>(MI)) {
+  if (isa<GLoad>(MI))
     Helper.bitcast(MI, 0, NewDataTy);
-  } else {
-    assert(isa<GStore>(MI) && "Machine instructions must be Load/Store.");
+  else
     Helper.bitcast(MI, 0, NewDataTy);
-    MIB.buildStore(MI.getOperand(0), PtrReg, *NewMMO);
-  }
 
   return true;
 }

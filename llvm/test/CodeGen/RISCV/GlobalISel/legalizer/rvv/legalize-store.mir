@@ -728,7 +728,6 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 4 x s16>) = COPY $v8
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<vscale x 8 x s8>) = G_BITCAST [[COPY1]](<vscale x 4 x s16>)
     ; CHECK-NEXT: G_STORE [[BITCAST]](<vscale x 8 x s8>), [[COPY]](p0) :: (store (<vscale x 8 x s8>) into %ir.pa, align 1)
-    ; CHECK-NEXT: G_STORE [[BITCAST]](<vscale x 8 x s8>), [[COPY]](p0) :: (store (<vscale x 8 x s8>) into %ir.pa, align 1)
     ; CHECK-NEXT: PseudoRET
     %0:_(p0) = COPY $x10
     %1:_(<vscale x 4 x s16>) = COPY $v8
@@ -825,7 +824,6 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 2 x s32>) = COPY $v8
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<vscale x 8 x s8>) = G_BITCAST [[COPY1]](<vscale x 2 x s32>)
     ; CHECK-NEXT: G_STORE [[BITCAST]](<vscale x 8 x s8>), [[COPY]](p0) :: (store (<vscale x 8 x s8>) into %ir.pa, align 2)
-    ; CHECK-NEXT: G_STORE [[BITCAST]](<vscale x 8 x s8>), [[COPY]](p0) :: (store (<vscale x 8 x s8>) into %ir.pa, align 2)
     ; CHECK-NEXT: PseudoRET
     %0:_(p0) = COPY $x10
     %1:_(<vscale x 2 x s32>) = COPY $v8
@@ -921,7 +919,6 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $v8m2
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<vscale x 16 x s8>) = G_BITCAST [[COPY1]](<vscale x 2 x s64>)
-    ; CHECK-NEXT: G_STORE [[BITCAST]](<vscale x 16 x s8>), [[COPY]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 4)
     ; CHECK-NEXT: G_STORE [[BITCAST]](<vscale x 16 x s8>), [[COPY]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 4)
     ; CHECK-NEXT: PseudoRET
     %0:_(p0) = COPY $x10
