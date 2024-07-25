@@ -36,6 +36,16 @@ struct test_range {
 
 template <template <class...> class I, class T = int>
   requires std::input_or_output_iterator<I<T*> >
+struct test_sized_range {
+  I<T*> begin();
+  I<T const*> begin() const;
+  sentinel end();
+  sentinel end() const;
+  std::size_t size();
+};
+
+template <template <class...> class I, class T = int>
+  requires std::input_or_output_iterator<I<T*> >
 struct test_non_const_range {
   I<T*> begin();
   sentinel end();

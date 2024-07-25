@@ -13,10 +13,13 @@
 // clang-format off
 
 #include <ranges>
+#include <tuple>
 #include <utility>
 #include <vector>
 
+#include "test_iterators.h"
 #include "test_macros.h"
+#include "test_range.h"
 
 void test() {
   std::vector<int> range;
@@ -40,29 +43,52 @@ void test() {
 
   std::views::drop(std::views::repeat(1)); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
-  std::views::enumerate(range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  // std::ranges::enumerate
   {
-    auto ev = std::views::enumerate(range);
-    ev.begin();                 // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::as_const(ev).begin();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    ev.end();                   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::as_const(ev).end();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    ev.size();                  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::as_const(ev).size();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    ev.base();                  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::move(ev).base();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    auto it = enumerate_view.begin();
-    it.base();                  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::move(it).base();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::as_const(it).index();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    *std::as_const(it);         // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    it[2];                      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    it == it;                   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    it <=> it;                  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    it + 1;                     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    it - 1;                     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    it - it;                    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    iter_move(it);              // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    // test_range<cpp17_input_iterator<std::tuple<int, int*>>> r;
+    test_sized_range<cpp17_input_iterator> r;
+    std::views::enumerate(r);    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+    // class enumerate_view<>
+    auto ev = std::views::enumerate(r);
+    ev.begin();                  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::as_const(ev).begin();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ev.end();                    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::as_const(ev).end();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ev.size();                   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::as_const(ev).size();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ev.base();                   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::move(ev).base();        // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+    // class enumerate_view<>::__iterator
+    auto it = ev.begin();
+    auto const_it = std::as_const(ev).begin();
+    it.base();                   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::move(it).base();        // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::as_const(it).index();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    *std::as_const(it);          // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    // it[2];                       // _expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    it == it;                    // expected-warning {{equality comparison result unused}}
+    it <=> it;                   // expected-warning {{three-way comparison result unused}}
+    // it + 1;                      // _expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    // it - 1;                      // _expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    // it - it;                     // _expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    iter_move(it);               // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+    // class enumerate_view<>::__sentinel
+    auto st = ev.end();
+    auto const_st = std::as_const(ev).end();
+    st.base();                   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    it == st;                    // expected-warning {{equality comparison result unused}}
+    it == const_st;              // expected-warning {{equality comparison result unused}}
+    const_it == st;              // expected-warning {{equality comparison result unused}}
+    const_it == const_st;        // expected-warning {{equality comparison result unused}}
+    st == it;                    // expected-warning {{expression result unused}}
+    st == const_it;              // expected-warning {{expression result unused}}
+    const_st == it;              // expected-warning {{expression result unused}}
+    const_st == const_it;        // expected-warning {{expression result unused}}
+    // it - st;
+    // st - it;
   }
 
   std::views::repeat(1, std::unreachable_sentinel); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
