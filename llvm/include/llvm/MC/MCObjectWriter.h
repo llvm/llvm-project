@@ -22,40 +22,12 @@ class MCSymbol;
 class MCSymbolRefExpr;
 class MCValue;
 
-/// Defines the object file and target independent interfaces used by the
-/// assembler backend to write native file format object files.
-///
-/// The object writer contains a few callbacks used by the assembler to allow
-/// the object writer to modify the assembler data structures at appropriate
-/// points. Once assembly is complete, the object writer is given the
-/// MCAssembler instance, which contains all the symbol and section data which
-/// should be emitted as part of writeObject().
-class MCObjectWriter {
-protected:
-  /// List of declared file names
-  SmallVector<std::pair<std::string, size_t>, 0> FileNames;
-  // XCOFF specific: Optional compiler version.
-  std::string CompilerVersion;
-  std::vector<const MCSymbol *> AddrsigSyms;
-  bool EmitAddrsigSection = false;
-  bool SubsectionsViaSymbols = false;
-
-  struct CGProfileEntry {
-    const MCSymbolRefExpr *From;
-    const MCSymbolRefExpr *To;
-    uint64_t Count;
-  };
-  SmallVector<CGProfileEntry, 0> CGProfile;
-
-  MCObjectWriter() = default;
-
-public:
-  MCObjectWriter(const MCObjectWriter &) = delete;
-  MCObjectWriter &operator=(const MCObjectWriter &) = delete;
-  virtual ~MCObjectWriter();
+/// Abstract class for MCObjectWriter.
+struct MCObjectWriterBase {
+  virtual ~MCObjectWriterBase();
 
   /// lifetime management
-  virtual void reset();
+  virtual void reset() = 0;
 
   /// \name High-Level API
   /// @{
@@ -93,6 +65,47 @@ public:
                                                       bool InSet,
                                                       bool IsPCRel) const;
 
+  /// Write the object file and returns the number of bytes written.
+  ///
+  /// This routine is called by the assembler after layout and relaxation is
+  /// complete, fixups have been evaluated and applied, and relocations
+  /// generated.
+  virtual uint64_t writeObject(MCAssembler &Asm) = 0;
+};
+
+/// Defines the object file and target independent interfaces used by the
+/// assembler backend to write native file format object files.
+///
+/// The object writer contains a few callbacks used by the assembler to allow
+/// the object writer to modify the assembler data structures at appropriate
+/// points. Once assembly is complete, the object writer is given the
+/// MCAssembler instance, which contains all the symbol and section data which
+/// should be emitted as part of writeObject().
+class MCObjectWriter : public MCObjectWriterBase {
+protected:
+  /// List of declared file names
+  SmallVector<std::pair<std::string, size_t>, 0> FileNames;
+  // XCOFF specific: Optional compiler version.
+  std::string CompilerVersion;
+  std::vector<const MCSymbol *> AddrsigSyms;
+  bool EmitAddrsigSection = false;
+  bool SubsectionsViaSymbols = false;
+
+  struct CGProfileEntry {
+    const MCSymbolRefExpr *From;
+    const MCSymbolRefExpr *To;
+    uint64_t Count;
+  };
+  SmallVector<CGProfileEntry, 0> CGProfile;
+
+  MCObjectWriter() = default;
+
+public:
+  MCObjectWriter(const MCObjectWriter &) = delete;
+  MCObjectWriter &operator=(const MCObjectWriter &) = delete;
+
+  void reset() override;
+
   MutableArrayRef<std::pair<std::string, size_t>> getFileNames() {
     return FileNames;
   }
@@ -118,13 +131,6 @@ public:
   // Mach-O specific: Whether .subsections_via_symbols is enabled.
   bool getSubsectionsViaSymbols() const { return SubsectionsViaSymbols; }
   void setSubsectionsViaSymbols(bool Value) { SubsectionsViaSymbols = Value; }
-
-  /// Write the object file and returns the number of bytes written.
-  ///
-  /// This routine is called by the assembler after layout and relaxation is
-  /// complete, fixups have been evaluated and applied, and relocations
-  /// generated.
-  virtual uint64_t writeObject(MCAssembler &Asm) = 0;
 
   /// @}
 };

@@ -17,17 +17,9 @@ class MCSection;
 
 using namespace llvm;
 
-MCObjectWriter::~MCObjectWriter() = default;
+MCObjectWriterBase::~MCObjectWriterBase() = default;
 
-void MCObjectWriter::reset() {
-  FileNames.clear();
-  AddrsigSyms.clear();
-  EmitAddrsigSection = false;
-  SubsectionsViaSymbols = false;
-  CGProfile.clear();
-}
-
-bool MCObjectWriter::isSymbolRefDifferenceFullyResolved(
+bool MCObjectWriterBase::isSymbolRefDifferenceFullyResolved(
     const MCAssembler &Asm, const MCSymbolRefExpr *A, const MCSymbolRefExpr *B,
     bool InSet) const {
   // Modified symbol references cannot be resolved.
@@ -45,13 +37,21 @@ bool MCObjectWriter::isSymbolRefDifferenceFullyResolved(
   return isSymbolRefDifferenceFullyResolvedImpl(Asm, SA, *FB, InSet, /*IsPCRel=*/false);
 }
 
-bool MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
+bool MCObjectWriterBase::isSymbolRefDifferenceFullyResolvedImpl(
     const MCAssembler &Asm, const MCSymbol &SymA, const MCFragment &FB,
     bool InSet, bool IsPCRel) const {
   const MCSection &SecA = SymA.getSection();
   const MCSection &SecB = *FB.getParent();
   // On ELF and COFF  A - B is absolute if A and B are in the same section.
   return &SecA == &SecB;
+}
+
+void MCObjectWriter::reset() {
+  FileNames.clear();
+  AddrsigSyms.clear();
+  EmitAddrsigSection = false;
+  SubsectionsViaSymbols = false;
+  CGProfile.clear();
 }
 
 void MCObjectWriter::addFileName(MCAssembler &Asm, StringRef FileName) {
