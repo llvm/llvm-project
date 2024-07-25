@@ -1571,7 +1571,10 @@ inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
     return false;
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
     return false;
-  S.Stk.push<Pointer>(Ptr.atField(Off));
+  const Pointer &Result = Ptr.atField(Off);
+  if (Result.isPastEnd())
+    return false;
+  S.Stk.push<Pointer>(Result);
   return true;
 }
 
@@ -1581,7 +1584,10 @@ inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off) {
     return false;
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
     return false;
-  S.Stk.push<Pointer>(Ptr.atField(Off));
+  const Pointer &Result = Ptr.atField(Off);
+  if (Result.isPastEnd())
+    return false;
+  S.Stk.push<Pointer>(Result);
   return true;
 }
 
