@@ -32,7 +32,7 @@ define i32 @PR29222(i32) nounwind {
 ; X86-AVX-NEXT:    pshufw $68, %mm0, %mm0 # mm0 = mm0[0,1,0,1]
 ; X86-AVX-NEXT:    packsswb %mm0, %mm0
 ; X86-AVX-NEXT:    movq %mm0, (%esp)
-; X86-AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    vpbroadcastq (%esp), %xmm0
 ; X86-AVX-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX-NEXT:    movl %ebp, %esp
@@ -54,7 +54,9 @@ define i32 @PR29222(i32) nounwind {
 ; X64-AVX-NEXT:    movd %edi, %mm0
 ; X64-AVX-NEXT:    pshufw $68, %mm0, %mm0 # mm0 = mm0[0,1,0,1]
 ; X64-AVX-NEXT:    packsswb %mm0, %mm0
-; X64-AVX-NEXT:    movq2dq %mm0, %xmm0
+; X64-AVX-NEXT:    movq %mm0, %rax
+; X64-AVX-NEXT:    vmovq %rax, %xmm0
+; X64-AVX-NEXT:    vpbroadcastq %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; X64-AVX-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX-NEXT:    retq

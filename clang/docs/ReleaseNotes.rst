@@ -153,6 +153,7 @@ Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fixed a crash when an expression with a dependent ``__typeof__`` type is used as the operand of a unary operator. (#GH97646)
+- Fixed a failed assertion when checking invalid delete operator declaration. (#GH96191)
 - Reject compound assignment operators with a braced-init-list.
 
 Bug Fixes to AST Handling

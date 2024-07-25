@@ -22,7 +22,7 @@ Implementation Status
 
   - `linux-aarch32 <https://github.com/llvm/llvm-project/tree/main/libc/config/linux/arm/entrypoints.txt>`_
 
-  - `linux-riscv64 <https://github.com/llvm/llvm-project/tree/main/libc/config/linux/riscv64/entrypoints.txt>`_
+  - `linux-riscv and linux-riscv32 <https://github.com/llvm/llvm-project/tree/main/libc/config/linux/riscv/entrypoints.txt>`_
 
 * To check date and time functions enabled for Windows:
 
@@ -49,7 +49,7 @@ Implementation Status
 +---------------------+---------------------------------------+-------------------+-------------------+-------------------+-------------------+
 | <Func>              |  Linux                                | Windows           | MacOS             | Embedded          | GPU               |
 |                     +---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-|                     | x86_64  | aarch64 | aarch32 | riscv64 | x86_64  | aarch64 | x86_64  | aarch64 | aarch32 | riscv32 | AMD     | nVidia  |
+|                     | x86_64  | aarch64 | aarch32 | riscv64/riscv32 | x86_64  | aarch64 | x86_64  | aarch64 | aarch32 | riscv32 | AMD     | nVidia  |
 +=====================+=========+=========+=========+=========+=========+=========+=========+=========+=========+=========+=========+=========+
 | asctime             | |check| | |check| |         | |check| |         |         |         |         |         |         |         |         |
 +---------------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
