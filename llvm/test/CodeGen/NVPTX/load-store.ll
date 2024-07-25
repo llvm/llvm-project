@@ -806,40 +806,52 @@ define void @global_unordered(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addr
 
 ; CHECK-LABEL: global_unordered_volatile
 define void @global_unordered_volatile(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1) %e) local_unnamed_addr {
-  ; CHECK: ld.volatile.global.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM60: ld.volatile.global.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.mmio.relaxed.sys.global.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   %a.load = load atomic volatile i8, ptr addrspace(1) %a unordered, align 1
   %a.add = add i8 %a.load, 1
-  ; CHECK: st.volatile.global.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  ; SM60: st.volatile.global.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  ; SM70: st.mmio.relaxed.sys.global.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
   store atomic volatile i8 %a.add, ptr addrspace(1) %a unordered, align 1
 
-  ; CHECK: ld.volatile.global.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM60: ld.volatile.global.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.mmio.relaxed.sys.global.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   %b.load = load atomic volatile i16, ptr addrspace(1) %b unordered, align 2
   %b.add = add i16 %b.load, 1
-  ; CHECK: st.volatile.global.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  ; SM60: st.volatile.global.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  ; SM70: st.mmio.relaxed.sys.global.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
   store atomic volatile i16 %b.add, ptr addrspace(1) %b unordered, align 2
 
-  ; CHECK: ld.volatile.global.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM60: ld.volatile.global.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.mmio.relaxed.sys.global.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
   %c.load = load atomic volatile i32, ptr addrspace(1) %c unordered, align 4
   %c.add = add i32 %c.load, 1
-  ; CHECK: st.volatile.global.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
+  ; SM60: st.volatile.global.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
+  ; SM70: st.mmio.relaxed.sys.global.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
   store atomic volatile i32 %c.add, ptr addrspace(1) %c unordered, align 4
 
-  ; CHECK: ld.volatile.global.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM60: ld.volatile.global.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.mmio.relaxed.sys.global.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
   %d.load = load atomic volatile i64, ptr addrspace(1) %d unordered, align 8
   %d.add = add i64 %d.load, 1
-  ; CHECK: st.volatile.global.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
+  ; SM60: st.volatile.global.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
+  ; SM70: st.mmio.relaxed.sys.global.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
   store atomic volatile i64 %d.add, ptr addrspace(1) %d unordered, align 8
 
-  ; CHECK: ld.volatile.global.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM60: ld.volatile.global.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.mmio.relaxed.sys.global.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
   %e.load = load atomic volatile float, ptr addrspace(1) %e unordered, align 4
   %e.add = fadd float %e.load, 1.0
-  ; CHECK: st.volatile.global.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
+  ; SM60: st.volatile.global.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
+  ; SM70: st.mmio.relaxed.sys.global.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
   store atomic volatile float %e.add, ptr addrspace(1) %e unordered, align 4
 
-  ; CHECK: ld.volatile.global.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM60: ld.volatile.global.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.mmio.relaxed.sys.global.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
   %f.load = load atomic volatile double, ptr addrspace(1) %e unordered, align 8
   %f.add = fadd double %f.load, 1.
-  ; CHECK: st.volatile.global.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
+  ; SM60: st.volatile.global.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
+  ; SM70: st.mmio.relaxed.sys.global.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
   store atomic volatile double %f.add, ptr addrspace(1) %e unordered, align 8
 
   ; TODO: LLVM IR Verifier does not support atomics on vector types.
