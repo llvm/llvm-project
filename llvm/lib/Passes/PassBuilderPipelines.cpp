@@ -1237,22 +1237,23 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
   if (EnableInferAlignmentPass)
     FPM.addPass(InferAlignmentPass());
 
-  // Cleanup after loop vectorization. Simplification passes like CVP and
-  // GVN, loop transforms, and others have already run, so it's now better to
-  // convert to more optimized IR using more aggressive simplify CFG options.
-  FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
-                                  .forwardSwitchCondToPhi(true)
-                                  .convertSwitchRangeToICmp(true)
-                                  .convertSwitchToLookupTable(true)
-                                  .needCanonicalLoops(false)
-                                  .hoistCommonInsts(true)
-                                  .sinkCommonInsts(true)));
-
   // We do UnrollAndJam in a separate LPM to Unroll to ensure it happens first.
   // In order for outer loop vectorization to be done, UnrollAndJam must occur before the SLPVectorizerPass.
   // Placing UnrollAndJam immediately after the LoopVectorizePass when !IsFullLTO leads to improved compile times versus
-  // placing it immediately before the SLPVectorizerPass, presumably due to analysis re-use.
+  // placing it immediately before the SLPVectorizerPass, due to analysis re-use.
   if (EnableUnrollAndJam && PTO.LoopUnrolling) {
+    // Cleanup after loop vectorization. Simplification passes like CVP and
+    // GVN, loop transforms, and others have already run, so it's now better to
+    // convert to more optimized IR using more aggressive simplify CFG options.
+    // SimplifyCFGPass must be run before UnrollAndJam for UnrollAndJam-SLP outer loop vectorization to happen.
+    FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
+                                    .forwardSwitchCondToPhi(true)
+                                    .convertSwitchRangeToICmp(true)
+                                    .convertSwitchToLookupTable(true)
+                                    .needCanonicalLoops(false)
+                                    .hoistCommonInsts(true)
+                                    .sinkCommonInsts(true)));
+
     FPM.addPass(createFunctionToLoopPassAdaptor(
         LoopUnrollAndJamPass(Level.getSpeedupLevel())));
   }
