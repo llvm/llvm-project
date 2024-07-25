@@ -28,12 +28,19 @@ define half @trunc(fp128 %a) unnamed_addr {
 ;
 ; CHECK-LABEL: trunc:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xscvqpdp v2, v2
-; CHECK-NEXT:    xscvdphp f0, vs34
-; CHECK-NEXT:    mffprwz r3, f0
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl __trunctfhf2
+; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrlwi r3, r3, 16
 ; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    xscvhpdp f1, f0
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 ;
 ; SOFT-LABEL: trunc:
