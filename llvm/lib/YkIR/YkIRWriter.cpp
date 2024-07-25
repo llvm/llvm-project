@@ -1369,6 +1369,8 @@ private:
                                          unsigned BBIdx, unsigned &InstIdx) {
     // opcode:
     serialiseOpcode(OpCodeUnimplemented);
+    // tyidx:
+    OutStreamer.emitSizeT(typeIndex(I->getType()));
     // stringified problem instruction
     serialiseString(toString(I));
 
