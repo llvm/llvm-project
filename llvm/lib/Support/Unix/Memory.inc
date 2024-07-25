@@ -210,58 +210,29 @@ std::error_code Memory::protectMappedMemory(const MemoryBlock &M,
   // To support such systems, we need to create a fresh mapping with the
   // target protection flags.
   if ((M.Flags ^ Flags) & MF_EXEC && execProtectionChangeNeedsNewMapping()) {
-    static unsigned int flags = MFD_CLOEXEC | MFD_EXEC;
-    class FDWrapper {
-    public:
-      FDWrapper(int fd) : fd(fd) {}
-      ~FDWrapper() { close(); }
-      FDWrapper &operator=(int nfd) {
-        close();
-        fd = nfd;
-        return *this;
-      }
-      operator int() const { return fd; }
-
-    private:
-      void close() {
-        if (fd >= 0)
-          ::close(fd);
-        fd = -1;
-      }
-      int fd;
-    } fd(memfd_create("llvm", flags));
-
     // The initial version of memfd_create() created executable fds by default.
     // Since Linux v6.3 the default behaviour depends on a sysctl setting
     // 'vm.memfd_noexec', requiring users to explicitly request the executable
     // status by passing MFD_EXEC in the flags. This flag will be rejected by
     // earlier kernels with EINVAL. Simply retry without the flag in this case,
     // as mappings will be executable by default on these kernels.
+    static unsigned int flags = MFD_CLOEXEC | MFD_EXEC;
+    int fd = memfd_create("llvm", flags);
     if (fd < 0 && errno == EINVAL && (flags & MFD_EXEC)) {
       flags &= ~MFD_EXEC;
       fd = memfd_create("llvm", flags);
     }
-
     if (fd < 0)
       return errnoAsErrorCode();
 
-    const char *data = reinterpret_cast<char *>(Start);
-    uintptr_t len = End - Start;
-    uintptr_t left = len;
+    raw_fd_ostream fdos(fd, /*shouldClose=*/true, /*unbuffered=*/true,
+                        /*simpleStream=*/true);
 
-    while (left) {
-      ssize_t cnt = ::write(fd, data, left);
-      if (cnt < 0) {
-        if (errno == EINTR)
-          continue;
+    fdos.write(reinterpret_cast<char *>(Start), End - Start);
+    if (auto ec = fdos.error())
+      return ec;
 
-        return errnoAsErrorCode();
-      }
-      left -= cnt;
-      data += cnt;
-    }
-
-    void *addr = ::mmap(reinterpret_cast<void *>(Start), len, Protect,
+    void *addr = ::mmap(reinterpret_cast<void *>(Start), End - Start, Protect,
                         MAP_PRIVATE | MAP_FIXED, fd, 0);
     if (addr == MAP_FAILED)
       return errnoAsErrorCode();
