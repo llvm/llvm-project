@@ -9,15 +9,20 @@
 #ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H
 
-#include <optional>
-#include <string>
+#if LLDB_ENABLE_PYTHON
+
+// clang-format off
+// LLDB Python header must be included first
+#include "lldb-python.h"
+//clang-format on
+#endif
 
 #include "lldb/Host/Config.h"
 
-#if LLDB_ENABLE_PYTHON
+#include <optional>
+#include <string>
 
-// LLDB Python header must be included first
-#include "lldb-python.h"
+#if LLDB_ENABLE_PYTHON
 
 #include "Plugins/ScriptInterpreter/Python/PythonDataObjects.h"
 #include "lldb/lldb-forward.h"
