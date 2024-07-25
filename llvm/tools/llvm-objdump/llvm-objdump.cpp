@@ -1486,7 +1486,9 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
                           std::unordered_map<uint64_t, std::string> &Labels) {
   // So far only supports PowerPC and X86.
   const bool isPPC = STI->getTargetTriple().isPPC();
-  if (!isPPC && !STI->getTargetTriple().isX86())
+  const bool isX86 = STI->getTargetTriple().isX86();
+  const bool isBPF = STI->getTargetTriple().isBPF();
+  if (!isPPC && !isX86 && !isBPF)
     return;
 
   if (MIA)
