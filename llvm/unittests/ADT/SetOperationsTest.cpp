@@ -8,6 +8,8 @@
 
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -16,6 +18,7 @@
 using namespace llvm;
 
 using testing::IsEmpty;
+using testing::UnorderedElementsAre;
 
 namespace {
 
@@ -197,6 +200,38 @@ TEST(SetOperationsTest, SetSubtract) {
   set_subtract(Set1, Set2);
   EXPECT_EQ(ExpectedSet1, Set1);
   EXPECT_EQ(ExpectedSet2, Set2);
+}
+
+TEST(SetOperationsTest, SetSubtractSmallPtrSet) {
+  int A[4];
+
+  // Set1.size() < Set2.size()
+  SmallPtrSet<int *, 4> Set1 = {&A[0], &A[1]};
+  SmallPtrSet<int *, 4> Set2 = {&A[1], &A[2], &A[3]};
+  set_subtract(Set1, Set2);
+  EXPECT_THAT(Set1, UnorderedElementsAre(&A[0]));
+
+  // Set1.size() > Set2.size()
+  Set1 = {&A[0], &A[1], &A[2]};
+  Set2 = {&A[0], &A[2]};
+  set_subtract(Set1, Set2);
+  EXPECT_THAT(Set1, UnorderedElementsAre(&A[1]));
+}
+
+TEST(SetOperationsTest, SetSubtractSmallVector) {
+  int A[4];
+
+  // Set1.size() < Set2.size()
+  SmallPtrSet<int *, 4> Set1 = {&A[0], &A[1]};
+  SmallVector<int *> Set2 = {&A[1], &A[2], &A[3]};
+  set_subtract(Set1, Set2);
+  EXPECT_THAT(Set1, UnorderedElementsAre(&A[0]));
+
+  // Set1.size() > Set2.size()
+  Set1 = {&A[0], &A[1], &A[2]};
+  Set2 = {&A[0], &A[2]};
+  set_subtract(Set1, Set2);
+  EXPECT_THAT(Set1, UnorderedElementsAre(&A[1]));
 }
 
 TEST(SetOperationsTest, SetSubtractRemovedRemaining) {
