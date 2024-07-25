@@ -420,3 +420,63 @@ entry:
   %cmp = icmp slt i8 %c, %shl
   ret i1 %cmp
 }
+
+define i64 @shl_nuw_nsw_test1(i32 %x) {
+; CHECK-LABEL: @shl_nuw_nsw_test1(
+; CHECK-NEXT:    [[SHL1:%.*]] = shl nuw nsw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add nsw i32 [[SHL1]], -1
+; CHECK-NEXT:    [[EXT:%.*]] = sext i32 [[ADD1]] to i64
+; CHECK-NEXT:    [[SHL2:%.*]] = shl nsw i64 [[EXT]], 2
+; CHECK-NEXT:    [[ADD2:%.*]] = add nsw i64 [[SHL2]], 39
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i64 [[ADD2]], 3
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[LSHR]], 4294967295
+; CHECK-NEXT:    ret i64 [[AND]]
+;
+  %shl1 = shl nuw nsw i32 1, %x
+  %add1 = add nsw i32 %shl1, -1
+  %ext = sext i32 %add1 to i64
+  %shl2 = shl nsw i64 %ext, 2
+  %add2 = add nsw i64 %shl2, 39
+  %lshr = lshr i64 %add2, 3
+  %and = and i64 %lshr, 4294967295
+  ret i64 %and
+}
+
+define i32 @shl_nuw_nsw_test2(i32 range(i32 -2147483248, 1) %x) {
+; CHECK-LABEL: @shl_nuw_nsw_test2(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[SHL]], i32 200)
+; CHECK-NEXT:    ret i32 [[SMAX]]
+;
+  %shl = shl nsw i32 %x, 1
+  %smax = call i32 @llvm.smax.i32(i32 %shl, i32 200)
+  ret i32 %smax
+}
+
+define i64 @shl_nuw_nsw_test3(i1 %cond, i64 range(i64 1, 0) %x, i64 range(i64 3, 0) %y) {
+; CHECK-LABEL: @shl_nuw_nsw_test3(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i64 1, [[X:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i64 [[Y:%.*]], i64 [[SHL]]
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[SEL]], i64 2)
+; CHECK-NEXT:    ret i64 [[UMAX]]
+;
+  %shl = shl nuw i64 1, %x
+  %sel = select i1 %cond, i64 %y, i64 %shl
+  %umax = call i64 @llvm.umax.i64(i64 %sel, i64 2)
+  ret i64 %umax
+}
+
+define i1 @shl_nuw_nsw_test4(i32 %x, i32 range(i32 0, 32) %k) {
+; CHECK-LABEL: @shl_nuw_nsw_test4(
+; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[SH_PROM:%.*]] = zext nneg i32 [[K:%.*]] to i64
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i64 [[CONV]], [[SH_PROM]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[SHL]], -9223372036854775808
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %conv = sext i32 %x to i64
+  %sh_prom = zext nneg i32 %k to i64
+  %shl = shl nsw i64 %conv, %sh_prom
+  %cmp = icmp eq i64 %shl, -9223372036854775808
+  ret i1 %cmp
+}
