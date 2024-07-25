@@ -308,13 +308,12 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
     SIUse->removeIncomingValue(StartBlock);
 
     // Update any other PHI nodes in EndBlock.
-    for (auto II = EndBlock->begin(); PHINode *Phi = dyn_cast<PHINode>(II);
-         ++II) {
-      if (Phi != SIUse) {
-        Phi->addIncoming(Phi->getIncomingValueForBlock(StartBlock), NewBlockT);
-        Phi->addIncoming(Phi->getIncomingValueForBlock(StartBlock), NewBlockF);
-        Phi->removeIncomingValue(StartBlock);
-      }
+    for (PHINode &Phi : EndBlock->phis()) {
+      if (SIUse == &Phi)
+        continue;
+      Phi.addIncoming(Phi.getIncomingValueForBlock(StartBlock), NewBlockT);
+      Phi.addIncoming(Phi.getIncomingValueForBlock(StartBlock), NewBlockF);
+      Phi.removeIncomingValue(StartBlock);
     }
 
     // Update the appropriate successor of the start block to point to the new
@@ -619,7 +618,7 @@ private:
         continue;
 
       Value *IncomingValue = Phi->getIncomingValueForBlock(IncomingBB);
-      // We found the determinator. The is the start of our path.
+      // We found the determinator. This is the start of our path.
       if (auto *C = dyn_cast<ConstantInt>(IncomingValue)) {
         // SwitchBlock is the determinator, unsupported unless its also the def.
         if (PhiBB == SwitchBlock &&
@@ -646,7 +645,7 @@ private:
       if (!StateDef.contains(IncomingPhiDefBB))
         continue;
 
-      // Direct prececessor, just add to the path.
+      // Direct predecessor, just add to the path.
       if (IncomingPhiDefBB == IncomingBB) {
         std::vector<ThreadingPath> PredPaths =
             getPathsFromStateDefMap(StateDef, IncomingPhi, VB);
@@ -656,7 +655,7 @@ private:
         }
         continue;
       }
-      // Not a direct prececessor, find intermediate paths to append to the
+      // Not a direct predecessor, find intermediate paths to append to the
       // existing path.
       if (VB.contains(IncomingPhiDefBB))
         continue;
@@ -715,10 +714,7 @@ private:
 
       // Found a cycle through the final block.
       if (Succ == ToBB) {
-        PathType NewPath;
-        NewPath.push_back(BB);
-        NewPath.push_back(ToBB);
-        Res.push_back(NewPath);
+        Res.push_back({BB, ToBB});
         continue;
       }
 
