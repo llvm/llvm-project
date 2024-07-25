@@ -965,7 +965,7 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   if (HasLeaf7Subleaf1 && ((EDX >> 21) & 1))
     setFeature(FEATURE_APXF);
 
-  unsigned MaxLevel;
+  unsigned MaxLevel = 0;
   getX86CpuIDAndInfo(0, &MaxLevel, &EBX, &ECX, &EDX);
   bool HasLeafD = MaxLevel >= 0xd &&
                   !getX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);
@@ -981,7 +981,7 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   if (HasLeaf7Subleaf1 && ((EDX >> 19) & 1) && HasLeaf24 && ((EBX >> 18) & 1))
     setFeature(FEATURE_AVX10_1_512);
 
-  unsigned MaxExtLevel;
+  unsigned MaxExtLevel = 0;
   getX86CpuIDAndInfo(0x80000000, &MaxExtLevel, &EBX, &ECX, &EDX);
 
   bool HasExtLeaf1 = MaxExtLevel >= 0x80000001 &&
@@ -1075,7 +1075,7 @@ unsigned __cpu_features2[(CPU_FEATURE_MAX - 1) / 32];
 // needs to be called explicitly there.
 
 int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
-  unsigned EAX, EBX, ECX, EDX;
+  unsigned EAX = 0, EBX = 0, ECX = 0, EDX = 0;
   unsigned MaxLeaf = 5;
   unsigned Vendor;
   unsigned Model, Family;

@@ -1321,11 +1321,8 @@ class DropInnerMostUnitDimsTransferRead
         cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
             srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
             strides));
-    ArrayAttr inBoundsAttr =
-        readOp.getInBounds()
-            ? rewriter.getArrayAttr(
-                  readOp.getInBoundsAttr().getValue().drop_back(dimsToDrop))
-            : ArrayAttr();
+    ArrayAttr inBoundsAttr = rewriter.getArrayAttr(
+        readOp.getInBoundsAttr().getValue().drop_back(dimsToDrop));
     Value rankedReducedView = rewriter.create<memref::SubViewOp>(
         loc, resultMemrefType, readOp.getSource(), offsets, sizes, strides);
     auto permMap = getTransferMinorIdentityMap(
@@ -1415,11 +1412,8 @@ class DropInnerMostUnitDimsTransferWrite
         cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
             srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
             strides));
-    ArrayAttr inBoundsAttr =
-        writeOp.getInBounds()
-            ? rewriter.getArrayAttr(
-                  writeOp.getInBoundsAttr().getValue().drop_back(dimsToDrop))
-            : ArrayAttr();
+    ArrayAttr inBoundsAttr = rewriter.getArrayAttr(
+        writeOp.getInBoundsAttr().getValue().drop_back(dimsToDrop));
 
     Value rankedReducedView = rewriter.create<memref::SubViewOp>(
         loc, resultMemrefType, writeOp.getSource(), offsets, sizes, strides);
