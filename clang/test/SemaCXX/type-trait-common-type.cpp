@@ -5,7 +5,7 @@
 #  error
 #endif
 
-// expected-note@*:* {{template declaration from hidden source: template <class, template <class> class, class>}}
+// expected-note@*:* {{template declaration from hidden source: template <template <class ...> class, template <class> class, class, class ...>}}
 
 void test() {
   __common_type<> a; // expected-error {{too few template arguments for template '__common_type'}}
@@ -22,7 +22,8 @@ template <class...>
 struct common_type;
 
 template <class... Args>
-using common_type_base = __common_type<common_type, type_identity, empty_type, Args...>; // expected-error {{incomplete type 'common_type<Incomplete, Incomplete>' where a complete type is required}}
+using common_type_base = __common_type<common_type, type_identity, empty_type, Args...>;
+// expected-error@-1 {{incomplete type 'common_type<Incomplete, Incomplete>' where a complete type is required}}
 
 template <class... Args>
 struct common_type : common_type_base<Args...> {};
@@ -124,3 +125,44 @@ static_assert(__is_same(common_type_base<const_ref_convertible, int &>, type_ide
 #else
 static_assert(__is_same(common_type_base<const_ref_convertible, int &>, empty_type));
 #endif
+
+struct WeirdConvertible_1p2_p3 {};
+
+struct WeirdConvertible3 {
+  operator WeirdConvertible_1p2_p3();
+};
+
+struct WeirdConvertible1p2 {
+  operator WeirdConvertible_1p2_p3();
+};
+
+template <>
+struct common_type<WeirdConvertible3, WeirdConvertible1p2> {
+  using type = WeirdConvertible_1p2_p3;
+};
+
+template <>
+struct common_type<WeirdConvertible1p2, WeirdConvertible3> {
+  using type = WeirdConvertible_1p2_p3;
+};
+
+struct WeirdConvertible1 {
+  operator WeirdConvertible1p2();
+};
+
+struct WeirdConvertible2 {
+  operator WeirdConvertible1p2();
+};
+
+template <>
+struct common_type<WeirdConvertible1, WeirdConvertible2> {
+  using type = WeirdConvertible1p2;
+};
+
+template <>
+struct common_type<WeirdConvertible2, WeirdConvertible1> {
+  using type = WeirdConvertible1p2;
+};
+
+static_assert(__is_same(common_type_base<WeirdConvertible1, WeirdConvertible2, WeirdConvertible3>,
+                        type_identity<WeirdConvertible_1p2_p3>));

@@ -6848,7 +6848,7 @@ CXXRecordMembersNamed(StringRef Name, Sema &S, QualType Ty) {
   return Results;
 }
 
-QualType Sema::getTypeMember(StringRef Name, QualType Type) {
+QualType Sema::getTypeMember(QualType Type, StringRef Name) {
   auto Results = CXXRecordMembersNamed<TypeDecl>(Name, *this, Type);
   assert(Results.size() <= 1);
   if (Results.empty())

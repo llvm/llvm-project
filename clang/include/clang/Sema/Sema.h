@@ -2284,7 +2284,7 @@ public:
 
   // Check whether a type member 'Type::Name' exists, and if yes, return the
   // type. If there is no type, the QualType is null
-  QualType getTypeMember(StringRef Name, QualType Type);
+  QualType getTypeMember(QualType Type, StringRef Name);
 
   /// Diagnose pointers that are always non-null.
   /// \param E the expression containing the pointer

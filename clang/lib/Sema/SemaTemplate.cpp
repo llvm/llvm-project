@@ -3058,12 +3058,11 @@ void Sema::NoteAllFoundTemplates(TemplateName Name) {
   }
 }
 
-static std::optional<QualType> commonTypeImpl(Sema &S,
-                                              TemplateName BaseTemplate,
-                                              SourceLocation TemplateLoc,
-                                              ArrayRef<TemplateArgument> Ts) {
+static QualType commonTypeImpl(Sema &S, TemplateName BaseTemplate,
+                               SourceLocation TemplateLoc,
+                               ArrayRef<TemplateArgument> Ts) {
   auto lookUpCommonType = [&](TemplateArgument T1,
-                              TemplateArgument T2) -> std::optional<QualType> {
+                              TemplateArgument T2) -> QualType {
     // Don't bother looking for other specializations if both types are
     // builtins - users aren't allowed to specialize for them
     if (T1.getAsType()->isBuiltinType() && T2.getAsType()->isBuiltinType())
@@ -3078,12 +3077,8 @@ static std::optional<QualType> commonTypeImpl(Sema &S,
         S.CheckTemplateIdType(BaseTemplate, TemplateLoc, Args);
     if (S.RequireCompleteType(TemplateLoc, BaseTemplateInst,
                               diag::err_incomplete_type))
-      return std::nullopt;
-    if (QualType Type = S.getTypeMember("type", BaseTemplateInst);
-        !Type.isNull()) {
-      return Type;
-    }
-    return std::nullopt;
+      return QualType();
+    return S.getTypeMember(BaseTemplateInst, "type");
   };
 
   // Note A: For the common_type trait applied to a template parameter pack T of
@@ -3092,7 +3087,7 @@ static std::optional<QualType> commonTypeImpl(Sema &S,
 
   // If sizeof...(T) is zero, there shall be no member type.
   case 0:
-    return std::nullopt;
+    return QualType();
 
   // If sizeof...(T) is one, let T0 denote the sole type constituting the
   // pack T. The member typedef-name type shall denote the same type, if any, as
@@ -3111,27 +3106,25 @@ static std::optional<QualType> commonTypeImpl(Sema &S,
 
     // If is_same_v<T1, D1> is false or is_same_v<T2, D2> is false, let C denote
     // the same type, if any, as common_type_t<D1, D2>.
-    if (!S.Context.hasSameType(T1, D1) || !S.Context.hasSameType(T2, D2)) {
+    if (!S.Context.hasSameType(T1, D1) || !S.Context.hasSameType(T2, D2))
       return lookUpCommonType(D1, D2);
-    }
 
     // Otherwise, if decay_t<decltype(false ? declval<D1>() : declval<D2>())>
     // denotes a valid type, let C denote that type.
     {
       auto CheckConditionalOperands =
-          [&](bool ConstRefQual) -> std::optional<QualType> {
+          [&](bool ConstRefQual) -> QualType {
         EnterExpressionEvaluationContext UnevaluatedContext(
             S, Sema::ExpressionEvaluationContext::Unevaluated);
         Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/true);
         Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
 
         // false
-        OpaqueValueExpr CondExpr({}, S.Context.BoolTy,
-                                 ExprValueKind::VK_PRValue);
+        OpaqueValueExpr CondExpr(SourceLocation(), S.Context.BoolTy,
+                                 VK_PRValue);
         ExprResult Cond = &CondExpr;
 
-        auto EVK =
-            ConstRefQual ? ExprValueKind::VK_LValue : ExprValueKind::VK_PRValue;
+        auto EVK = ConstRefQual ? VK_LValue : VK_PRValue;
         if (ConstRefQual) {
           D1.addConst();
           D2.addConst();
@@ -3153,13 +3146,13 @@ static std::optional<QualType> commonTypeImpl(Sema &S,
             S.CheckConditionalOperands(Cond, LHS, RHS, VK, OK, TemplateLoc);
 
         if (Result.isNull() || SFINAE.hasErrorOccurred())
-          return std::nullopt;
+          return QualType();
 
         // decay_t<decltype(false ? declval<D1>() : declval<D2>())>
         return S.BuiltinDecay(Result, TemplateLoc);
       };
 
-      if (auto Res = CheckConditionalOperands(false))
+      if (auto Res = CheckConditionalOperands(false); !Res.isNull())
         return Res;
 
       // Let:
@@ -3171,7 +3164,7 @@ static std::optional<QualType> commonTypeImpl(Sema &S,
       // Otherwise, if COND-RES(CREF(D1), CREF(D2)) denotes a type, let C denote
       // the type decay_t<COND-RES(CREF(D1), CREF(D2))>.
       if (!S.Context.getLangOpts().CPlusPlus20)
-        return std::nullopt;
+        return QualType();
       return CheckConditionalOperands(true);
     }
   }
@@ -3182,11 +3175,11 @@ static std::optional<QualType> commonTypeImpl(Sema &S,
   // a type C, the member typedef-name type shall denote the same type, if any,
   // as common_type_t<C, R...>. Otherwise, there shall be no member type.
   default: {
-    std::optional<QualType> Result = Ts[Ts.size() - 1].getAsType();
-    for (size_t i = Ts.size() - 1; i != 0; --i) {
-      Result = lookUpCommonType(Ts[i - 1].getAsType(), *Result);
-      if (!Result)
-        return std::nullopt;
+    QualType Result = Ts.front().getAsType();
+    for (auto T : llvm::drop_begin(Ts)) {
+      Result = lookUpCommonType(Result, T.getAsType());
+      if (Result.isNull())
+        return QualType();
     }
     return Result;
   }
@@ -3287,11 +3280,12 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
     TemplateName HasTypeMember = Converted[1].getAsTemplate();
     QualType HasNoTypeMember = Converted[2].getAsType();
     ArrayRef<TemplateArgument> Ts = Converted[3].getPackAsArray();
-    if (auto CT = commonTypeImpl(SemaRef, BaseTemplate, TemplateLoc, Ts)) {
+    if (auto CT = commonTypeImpl(SemaRef, BaseTemplate, TemplateLoc, Ts);
+        !CT.isNull()) {
       TemplateArgumentListInfo TAs;
       TAs.addArgument(TemplateArgumentLoc(
-          TemplateArgument(*CT), SemaRef.Context.getTrivialTypeSourceInfo(
-                                     *CT, TemplateArgs[1].getLocation())));
+          TemplateArgument(CT), SemaRef.Context.getTrivialTypeSourceInfo(
+                                    CT, TemplateArgs[1].getLocation())));
 
       return SemaRef.CheckTemplateIdType(HasTypeMember, TemplateLoc, TAs);
     }

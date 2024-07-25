@@ -1611,34 +1611,37 @@ createTypePackElementParameterList(const ASTContext &C, DeclContext *DC) {
 static TemplateParameterList *createCommonTypeList(const ASTContext &C,
                                                    DeclContext *DC) {
   // class... Args
-  auto *Args = TemplateTypeParmDecl::Create(
-      C, DC, {}, {}, /*Depth=*/1, /*Position=*/0, /*Id=*/nullptr,
-      /*Typename=*/false, /*ParameterPack=*/true);
-  Args->setImplicit();
+  auto *Args =
+      TemplateTypeParmDecl::Create(C, DC, SourceLocation(), SourceLocation(),
+                                   /*Depth=*/1, /*Position=*/0, /*Id=*/nullptr,
+                                   /*Typename=*/false, /*ParameterPack=*/true);
 
   // <class... Args>
-  auto *BaseTemplateList =
-      TemplateParameterList::Create(C, {}, {}, Args, {}, nullptr);
+  auto *BaseTemplateList = TemplateParameterList::Create(
+      C, SourceLocation(), SourceLocation(), Args, SourceLocation(), nullptr);
 
   // template <class... Args> class BaseTemplate
   auto *BaseTemplate = TemplateTemplateParmDecl::Create(
-      C, DC, {}, /*Depth=*/0, /*Position=*/0, /*ParameterPack=*/false, {},
+      C, DC, SourceLocation(), /*Depth=*/0, /*Position=*/0,
+      /*ParameterPack=*/false, /*Id=*/nullptr,
       /*Typename=*/false, BaseTemplateList);
 
   // class TypeMember
-  auto *TypeMember = TemplateTypeParmDecl::Create(
-      C, DC, {}, {}, /*Depth=*/1, /*Position=*/0, /*Id=*/nullptr,
-      /*Typename=*/false, /*ParameterPack=*/false);
+  auto *TypeMember =
+      TemplateTypeParmDecl::Create(C, DC, SourceLocation(), SourceLocation(),
+                                   /*Depth=*/1, /*Position=*/0, /*Id=*/nullptr,
+                                   /*Typename=*/false, /*ParameterPack=*/false);
 
   // <class TypeMember>
   auto *HasTypeMemberList =
-      TemplateParameterList::Create(C, {}, {}, TypeMember, {}, nullptr);
+      TemplateParameterList::Create(C, SourceLocation(), SourceLocation(),
+                                    TypeMember, SourceLocation(), nullptr);
 
   // template <class TypeMember> class HasTypeMember
-  auto *HasTypeMember =
-      TemplateTemplateParmDecl::Create(C, DC, {}, /*Depth=*/0, /*Position=*/1,
-                                       /*ParameterPack=*/false, {},
-                                       /*Typename=*/false, HasTypeMemberList);
+  auto *HasTypeMember = TemplateTemplateParmDecl::Create(
+      C, DC, SourceLocation(), /*Depth=*/0, /*Position=*/1,
+      /*ParameterPack=*/false, /*Id=*/nullptr,
+      /*Typename=*/false, HasTypeMemberList);
 
   // class HasNoTypeMember
   auto *HasNoTypeMember = TemplateTypeParmDecl::Create(
@@ -1647,15 +1650,15 @@ static TemplateParameterList *createCommonTypeList(const ASTContext &C,
 
   // class... Ts
   auto *Ts = TemplateTypeParmDecl::Create(
-      C, DC, {}, {}, /*Depth=*/0, /*Position=*/3,
+      C, DC, SourceLocation(), SourceLocation(), /*Depth=*/0, /*Position=*/3,
       /*Id=*/nullptr, /*Typename=*/false, /*ParameterPack=*/true);
-  Ts->setImplicit();
 
   // template <template <class... Args> class BaseTemplate,
   //   template <class TypeMember> class HasTypeMember, class HasNoTypeMember,
   //   class... Ts>
   return TemplateParameterList::Create(
-      C, {}, {}, {BaseTemplate, HasTypeMember, HasNoTypeMember, Ts}, {},
+      C, SourceLocation(), SourceLocation(),
+      {BaseTemplate, HasTypeMember, HasNoTypeMember, Ts}, SourceLocation(),
       nullptr);
 }
 
