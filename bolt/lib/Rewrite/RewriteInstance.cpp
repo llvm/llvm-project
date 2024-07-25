@@ -1432,7 +1432,9 @@ void RewriteInstance::registerFragments() {
   // of the last local symbol.
   ELFSymbolRef LocalSymEnd = ELF64LEFile->toSymbolRef(SymTab, SymTab->sh_info);
 
-  for (auto &[ParentName, BF] : AmbiguousFragments) {
+  for (auto &Fragment : AmbiguousFragments) {
+    const StringRef &ParentName = Fragment.first;
+    BinaryFunction *BF = Fragment.second;
     const uint64_t Address = BF->getAddress();
 
     // Get fragment's own symbol
