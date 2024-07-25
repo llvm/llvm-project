@@ -44,9 +44,8 @@ using namespace lld::elf;
 // Returns a whole line containing the current token.
 StringRef ScriptLexer::getLine() {
   StringRef s = getCurrentMB().getBuffer();
-  StringRef tok = tokens[pos - 1];
 
-  size_t pos = s.rfind('\n', tok.data() - s.data());
+  size_t pos = s.rfind('\n', prevTok.data() - s.data());
   if (pos != StringRef::npos)
     s = s.substr(pos + 1);
   return s.substr(0, s.find_first_of("\r\n"));
@@ -54,11 +53,10 @@ StringRef ScriptLexer::getLine() {
 
 // Returns 1-based line number of the current token.
 size_t ScriptLexer::getLineNumber() {
-  if (pos == 0)
+  if (prevTok.empty())
     return 1;
   StringRef s = getCurrentMB().getBuffer();
-  StringRef tok = tokens[pos - 1];
-  const size_t tokOffset = tok.data() - s.data();
+  const size_t tokOffset = prevTok.data() - s.data();
 
   // For the first token, or when going backwards, start from the beginning of
   // the buffer. If this token is after the previous token, start from the
@@ -81,8 +79,7 @@ size_t ScriptLexer::getLineNumber() {
 
 // Returns 0-based column number of the current token.
 size_t ScriptLexer::getColumnNumber() {
-  StringRef tok = tokens[pos - 1];
-  return tok.data() - getLine().data();
+  return prevTok.data() - getLine().data();
 }
 
 std::string ScriptLexer::getCurrentLocation() {
@@ -90,7 +87,11 @@ std::string ScriptLexer::getCurrentLocation() {
   return (filename + ":" + Twine(getLineNumber())).str();
 }
 
-ScriptLexer::ScriptLexer(MemoryBufferRef mb) { tokenize(mb); }
+ScriptLexer::ScriptLexer(MemoryBufferRef mb) {
+  cur.s = mb.getBuffer();
+  cur.filename = mb.getBufferIdentifier();
+  mbs.push_back(mb);
+}
 
 // We don't want to record cascading errors. Keep only the first one.
 void ScriptLexer::setError(const Twine &msg) {
@@ -98,70 +99,86 @@ void ScriptLexer::setError(const Twine &msg) {
     return;
 
   std::string s = (getCurrentLocation() + ": " + msg).str();
-  if (pos)
+  if (prevTok.size())
     s += "\n>>> " + getLine().str() + "\n>>> " +
          std::string(getColumnNumber(), ' ') + "^";
   error(s);
 }
 
-// Split S into linker script tokens.
-void ScriptLexer::tokenize(MemoryBufferRef mb) {
+void ScriptLexer::lexToken() {
   std::vector<StringRef> vec;
-  mbs.push_back(mb);
-  StringRef s = mb.getBuffer();
-  StringRef begin = s;
+  StringRef begin = cur.s;
 
   for (;;) {
-    s = skipSpace(s);
-    if (s.empty())
-      break;
+    cur.s = skipSpace(cur.s);
+    if (cur.s.empty()) {
+      // If this buffer is from an INCLUDE command, switch to the "return
+      // value"; otherwise, mark EOF.
+      if (buffers.empty()) {
+        eof = true;
+        return;
+      }
+      cur = buffers.pop_back_val();
+      continue;
+    }
+    curTokState = inExpr;
 
     // Quoted token. Note that double-quote characters are parts of a token
     // because, in a glob match context, only unquoted tokens are interpreted
     // as glob patterns. Double-quoted tokens are literal patterns in that
     // context.
-    if (s.starts_with("\"")) {
-      size_t e = s.find("\"", 1);
+    if (cur.s.starts_with("\"")) {
+      size_t e = cur.s.find("\"", 1);
       if (e == StringRef::npos) {
-        StringRef filename = mb.getBufferIdentifier();
-        size_t lineno = begin.substr(0, s.data() - begin.data()).count('\n');
-        error(filename + ":" + Twine(lineno + 1) + ": unclosed quote");
+        size_t lineno =
+            begin.substr(0, cur.s.data() - begin.data()).count('\n');
+        error(cur.filename + ":" + Twine(lineno + 1) + ": unclosed quote");
         return;
       }
 
-      vec.push_back(s.take_front(e + 1));
-      s = s.substr(e + 1);
-      continue;
+      curTok = cur.s.take_front(e + 1);
+      cur.s = cur.s.substr(e + 1);
+      return;
     }
 
     // Some operators form separate tokens.
-    if (s.starts_with("<<=") || s.starts_with(">>=")) {
-      vec.push_back(s.substr(0, 3));
-      s = s.substr(3);
-      continue;
+    if (cur.s.starts_with("<<=") || cur.s.starts_with(">>=")) {
+      curTok = cur.s.substr(0, 3);
+      cur.s = cur.s.substr(3);
+      return;
     }
-    if (s.size() > 1 && ((s[1] == '=' && strchr("*/+-<>&^|", s[0])) ||
-                         (s[0] == s[1] && strchr("<>&|", s[0])))) {
-      vec.push_back(s.substr(0, 2));
-      s = s.substr(2);
-      continue;
+    if (cur.s.size() > 1 &&
+        ((cur.s[1] == '=' && strchr("*/+-!<>&^|", cur.s[0])) ||
+         (cur.s[0] == cur.s[1] && strchr("<>&|", cur.s[0])))) {
+      curTok = cur.s.substr(0, 2);
+      cur.s = cur.s.substr(2);
+      return;
     }
 
-    // Unquoted token. This is more relaxed than tokens in C-like language,
-    // so that you can write "file-name.cpp" as one bare token, for example.
-    size_t pos = s.find_first_not_of(
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-        "0123456789_.$/\\~=+[]*?-!^:");
+    // Unquoted token. The non-expression token is more relaxed than tokens in
+    // C-like languages, so that you can write "file-name.cpp" as one bare
+    // token.
+    size_t pos;
+    if (inExpr) {
+      pos = cur.s.find_first_not_of(
+          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+          "0123456789_.$");
+      if (pos == 0 && cur.s.size() >= 2 &&
+          is_contained({"==", "!=", "<=", ">=", "<<", ">>"},
+                       cur.s.substr(0, 2)))
+        pos = 2;
+    } else {
+      pos = cur.s.find_first_not_of(
+          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+          "0123456789_.$/\\~=+[]*?-!^:");
+    }
 
-    // A character that cannot start a word (which is usually a
-    // punctuation) forms a single character token.
     if (pos == 0)
       pos = 1;
-    vec.push_back(s.substr(0, pos));
-    s = s.substr(pos);
+    curTok = cur.s.substr(0, pos);
+    cur.s = cur.s.substr(pos);
+    break;
   }
-
-  tokens.insert(tokens.begin() + pos, vec.begin(), vec.end());
 }
 
 // Skip leading whitespace characters or comments.
@@ -191,92 +208,31 @@ StringRef ScriptLexer::skipSpace(StringRef s) {
 }
 
 // An erroneous token is handled as if it were the last token before EOF.
-bool ScriptLexer::atEOF() { return errorCount() || tokens.size() == pos; }
-
-// Split a given string as an expression.
-// This function returns "3", "*" and "5" for "3*5" for example.
-static std::vector<StringRef> tokenizeExpr(StringRef s) {
-  StringRef ops = "!~*/+-<>?^:="; // List of operators
-
-  // Quoted strings are literal strings, so we don't want to split it.
-  if (s.starts_with("\""))
-    return {s};
-
-  // Split S with operators as separators.
-  std::vector<StringRef> ret;
-  while (!s.empty()) {
-    size_t e = s.find_first_of(ops);
-
-    // No need to split if there is no operator.
-    if (e == StringRef::npos) {
-      ret.push_back(s);
-      break;
-    }
-
-    // Get a token before the operator.
-    if (e != 0)
-      ret.push_back(s.substr(0, e));
-
-    // Get the operator as a token.
-    // Keep !=, ==, >=, <=, << and >> operators as a single tokens.
-    if (s.substr(e).starts_with("!=") || s.substr(e).starts_with("==") ||
-        s.substr(e).starts_with(">=") || s.substr(e).starts_with("<=") ||
-        s.substr(e).starts_with("<<") || s.substr(e).starts_with(">>")) {
-      ret.push_back(s.substr(e, 2));
-      s = s.substr(e + 2);
-    } else {
-      ret.push_back(s.substr(e, 1));
-      s = s.substr(e + 1);
-    }
-  }
-  return ret;
-}
-
-// In contexts where expressions are expected, the lexer should apply
-// different tokenization rules than the default one. By default,
-// arithmetic operator characters are regular characters, but in the
-// expression context, they should be independent tokens.
-//
-// For example, "foo*3" should be tokenized to "foo", "*" and "3" only
-// in the expression context.
-//
-// This function may split the current token into multiple tokens.
-void ScriptLexer::maybeSplitExpr() {
-  if (!inExpr || errorCount() || atEOF())
-    return;
-
-  std::vector<StringRef> v = tokenizeExpr(tokens[pos]);
-  if (v.size() == 1)
-    return;
-  tokens.erase(tokens.begin() + pos);
-  tokens.insert(tokens.begin() + pos, v.begin(), v.end());
-}
+bool ScriptLexer::atEOF() { return eof || errorCount(); }
 
 StringRef ScriptLexer::next() {
-  maybeSplitExpr();
-
   if (errorCount())
     return "";
-  if (atEOF()) {
-    setError("unexpected EOF");
-    return "";
-  }
-  return tokens[pos++];
+  prevTok = peek();
+  return std::exchange(curTok, StringRef(cur.s.data(), 0));
 }
 
 StringRef ScriptLexer::peek() {
-  StringRef tok = next();
-  if (errorCount())
-    return "";
-  pos = pos - 1;
-  return tok;
+  // curTok is invalid if curTokState and inExpr mismatch.
+  if (curTok.size() && curTokState != inExpr) {
+    cur.s = StringRef(curTok.data(), cur.s.end() - curTok.data());
+    curTok = {};
+  }
+  if (curTok.empty())
+    lexToken();
+  return curTok;
 }
 
 bool ScriptLexer::consume(StringRef tok) {
-  if (next() == tok)
-    return true;
-  --pos;
-  return false;
+  if (peek() != tok)
+    return false;
+  next();
+  return true;
 }
 
 void ScriptLexer::skip() { (void)next(); }
@@ -285,8 +241,12 @@ void ScriptLexer::expect(StringRef expect) {
   if (errorCount())
     return;
   StringRef tok = next();
-  if (tok != expect)
-    setError(expect + " expected, but got " + tok);
+  if (tok != expect) {
+    if (atEOF())
+      setError("unexpected EOF");
+    else
+      setError(expect + " expected, but got " + tok);
+  }
 }
 
 // Returns true if S encloses T.
@@ -297,10 +257,10 @@ static bool encloses(StringRef s, StringRef t) {
 MemoryBufferRef ScriptLexer::getCurrentMB() {
   // Find input buffer containing the current token.
   assert(!mbs.empty());
-  if (pos == 0)
+  if (prevTok.empty())
     return mbs.back();
   for (MemoryBufferRef mb : mbs)
-    if (encloses(mb.getBuffer(), tokens[pos - 1]))
+    if (encloses(mb.getBuffer(), cur.s))
       return mb;
   llvm_unreachable("getCurrentMB: failed to find a token");
 }
