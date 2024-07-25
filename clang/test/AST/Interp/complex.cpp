@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=both,expected -Wno-unused-value %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=both,expected -Wno-unused-value -DUSE_NEW_CONST_INTERP %s
 // RUN: %clang_cc1 -verify=both,ref -Wno-unused-value %s
 
 constexpr _Complex double z1 = {1.0, 2.0};
@@ -416,4 +416,18 @@ namespace ComplexConstexpr {
   static_assert(__real test6 == 5, "");
   static_assert(__imag test6 == 6, "");
   static_assert(&__imag test6 == &__real test6 + 1, "");
+#ifdef USE_NEW_CONST_INTERP
+  // Only supported in new constant interpreter
+  constexpr float decompose_complex(_Complex float cf) {
+    _Complex float scf = cf;
+    auto &[sre, sim] = scf;
+    static_assert(&sre == &__real scf);
+    static_assert(&sim == &__imag scf);
+
+    auto [re, im] = cf;
+    return re * re + im * im;
+  }
+  constexpr float f1 = decompose_complex(__builtin_complex(1.0f, 2.0f));
+  static_assert((int)f1 == 5, "Expect 5");
+#endif
 }
