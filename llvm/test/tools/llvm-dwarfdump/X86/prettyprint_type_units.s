@@ -18,12 +18,15 @@
 # doesn't really need templates - two local variables would've sufficed
 # (anything that references the type units) but I was working on something else
 # and this seemed minimal enough.
+# A gcc-style type signature reference was also inserted.
 
 
 # CHECK: DW_TAG_template_type_parameter
 # CHECK:   DW_AT_type ({{.*}} "t1")
 # CHECK: DW_TAG_template_type_parameter
 # CHECK:   DW_AT_type ({{.*}} "t2")
+# CHECK: DW_TAG_template_type_parameter
+# CHECK:   DW_AT_type (0xc6694e51369161f2 "t1")
 
 	.text
 	.file	"test.cpp"
@@ -270,6 +273,13 @@ _Z2f1IJ2t12t2EEvv:                      # @_Z2f1IJ2t12t2EEvv
 	.byte	11                              # DW_FORM_data1
 	.byte	0                               # EOM(1)
 	.byte	0                               # EOM(2)
+	.byte	12                              # Abbreviation Code
+	.byte	47                              # DW_TAG_template_type_parameter
+	.byte	0                               # DW_CHILDREN_no
+	.byte	73                              # DW_AT_type
+	.byte	32                              # DW_FORM_ref_sig8
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
 	.byte	0                               # EOM(3)
 	.section	.debug_info,"",@progbits
 .Lcu_begin0:
@@ -313,18 +323,23 @@ _Z2f1IJ2t12t2EEvv:                      # @_Z2f1IJ2t12t2EEvv
 	.byte	6                               # Abbrev [6] 0x46:0xd DW_TAG_GNU_template_parameter_pack
 	.byte	5                               # DW_AT_name
 	.byte	7                               # Abbrev [7] 0x48:0x5 DW_TAG_template_type_parameter
-	.long	88                              # DW_AT_type
+	.long	.Lt1_decl-.Lcu_begin0           # DW_AT_type
 	.byte	7                               # Abbrev [7] 0x4d:0x5 DW_TAG_template_type_parameter
-	.long	97                              # DW_AT_type
+	# Simulate DWARF emitted by GCC where the signature is directly in the type attribute.
+	.long	.Lt2_decl-.Lcu_begin0           # DW_AT_type
+	.byte	12                              # Abbrev [12] DW_TAG_template_type_parameter
+	.quad	-4149699470930386446            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	8                               # Abbrev [8] 0x54:0x4 DW_TAG_base_type
 	.byte	4                               # DW_AT_name
 	.byte	5                               # DW_AT_encoding
 	.byte	4                               # DW_AT_byte_size
+  .Lt1_decl:
 	.byte	9                               # Abbrev [9] 0x58:0x9 DW_TAG_structure_type
                                         # DW_AT_declaration
 	.quad	-4149699470930386446            # DW_AT_signature
+  .Lt2_decl:
 	.byte	9                               # Abbrev [9] 0x61:0x9 DW_TAG_structure_type
                                         # DW_AT_declaration
 	.quad	5649318945901130368             # DW_AT_signature
