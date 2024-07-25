@@ -16,6 +16,7 @@
 //   bool try_lock_until(const chrono::time_point<Clock, Duration>& abs_time);
 
 #include <cassert>
+#include <chrono>
 #include <mutex>
 #include <system_error>
 
