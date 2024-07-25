@@ -1569,6 +1569,8 @@ private:
   void serialiseUnimplementedConstant(Constant *C) {
     // `Const` discriminator:
     OutStreamer.emitInt8(ConstKindUnimplemented);
+    // tyidx:
+    OutStreamer.emitSizeT(typeIndex(C->getType()));
     // problem constant, stringified:
     serialiseString(toString(C));
   }
