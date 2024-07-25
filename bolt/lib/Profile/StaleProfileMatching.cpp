@@ -118,6 +118,11 @@ cl::opt<unsigned> StaleMatchingCostJumpUnknownFTInc(
         "The cost of increasing an unknown fall-through jump count by one."),
     cl::init(3), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
+cl::opt<bool> StaleMatchingWithBlockPseudoProbes(
+    "stale-matching-with-block-pseudo-probes",
+    cl::desc("Turns on stale matching with block pseudo probes."), cl::init(3),
+    cl::ReallyHidden, cl::cat(BoltOptCategory));
+
 } // namespace opts
 
 namespace llvm {
@@ -413,7 +418,7 @@ private:
   const FlowBlock *matchWithPseudoProbes(
       BlendedBlockHash BlendedHash,
       const std::vector<yaml::bolt::PseudoProbeInfo> &PseudoProbes) const {
-    if (!YamlBFGUID)
+    if (!opts::StaleMatchingWithBlockPseudoProbes || !YamlBFGUID)
       return nullptr;
 
     // Searches for the pseudo probe attached to the matched function's block.
@@ -671,7 +676,8 @@ size_t matchWeightsByHashes(
     BlendedBlockHash BlendedHash(BB->getHash());
     BlendedHashes.push_back(BlendedHash);
     // Collects pseudo probes attached to the BB for use in the StaleMatcher.
-    if (opts::ProfileUsePseudoProbes && PseudoProbeDecoder) {
+    if (opts::ProfileUsePseudoProbes &&
+        opts::StaleMatchingWithBlockPseudoProbes && PseudoProbeDecoder) {
       const AddressProbesMap &ProbeMap =
           PseudoProbeDecoder->getAddress2ProbesMap();
       const uint64_t FuncAddr = BF.getAddress();
