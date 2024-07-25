@@ -618,8 +618,8 @@ func.func @transpose_store_scalable_via_za_multi_tile(%vec: vector<8x[4]xf32>, %
 
 // -----
 
-// CHECK-LABEL: @transpose_store_scalable_via_za_multi_tile_with_scalable_extracts
-func.func @transpose_store_scalable_via_za_multi_tile_with_scalable_extracts(%vec: vector<2x[8]xf32>, %dest: memref<?x?xf32>, %i: index, %j: index) {
+// CHECK-LABEL: @transpose_store_scalable_via_za_multi_tile_wide
+func.func @transpose_store_scalable_via_za_multi_tile_wide(%vec: vector<2x[8]xf32>, %dest: memref<?x?xf32>, %i: index, %j: index) {
   // <check extracts from lower 4 x vscale of %vec>
   // CHECK: vector.scalable.extract
   // CHECK: %[[ROW_2_LOWER:.*]] = vector.scalable.extract %{{.*}}[0] : vector<[4]xf32> from vector<[8]xf32>
