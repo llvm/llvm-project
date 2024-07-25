@@ -3822,7 +3822,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
             DAG.getMemcpy(Chain, DL, DstAddr, Arg, SizeNode,
                           Outs[i].Flags.getNonZeroByValAlign(),
                           /*isVol = */ false, /*AlwaysInline = */ true,
-                          /*isTailCall = */ false, DstInfo,
+                          /*CI=*/nullptr, std::nullopt, DstInfo,
                           MachinePointerInfo(AMDGPUAS::PRIVATE_ADDRESS));
 
         MemOpChains.push_back(Cpy);

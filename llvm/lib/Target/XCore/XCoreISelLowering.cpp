@@ -1301,8 +1301,8 @@ SDValue XCoreTargetLowering::LowerCCCArguments(
       InVals.push_back(FIN);
       MemOps.push_back(DAG.getMemcpy(
           Chain, dl, FIN, ArgDI.SDV, DAG.getConstant(Size, dl, MVT::i32),
-          Alignment, false, false, false, MachinePointerInfo(),
-          MachinePointerInfo()));
+          Alignment, false, false, /*CI=*/nullptr, std::nullopt,
+          MachinePointerInfo(), MachinePointerInfo()));
     } else {
       InVals.push_back(ArgDI.SDV);
     }
@@ -1704,7 +1704,7 @@ SDValue XCoreTargetLowering::PerformDAGCombine(SDNode *N,
         bool isTail = isInTailCallPosition(DAG, ST, Chain);
         return DAG.getMemmove(Chain, dl, ST->getBasePtr(), LD->getBasePtr(),
                               DAG.getConstant(StoreBits / 8, dl, MVT::i32),
-                              Alignment, false, isTail,
+                              Alignment, false, nullptr, isTail,
                               ST->getPointerInfo(), LD->getPointerInfo());
       }
     }
