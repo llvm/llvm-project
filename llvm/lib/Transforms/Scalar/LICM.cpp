@@ -2814,8 +2814,7 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   Value *C1 = BO0->getOperand(1);
   Value *C2 = BO->getOperand(1);
 
-  if (L.isLoopInvariant(LV) || !L.isLoopInvariant(C1) ||
-      !L.isLoopInvariant(C2))
+  if (L.isLoopInvariant(LV) || !L.isLoopInvariant(C1) || !L.isLoopInvariant(C2))
     return false;
 
   auto *Preheader = L.getLoopPreheader();
