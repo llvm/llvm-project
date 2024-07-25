@@ -6731,9 +6731,7 @@ IntrinsicLibrary::genStorageSize(mlir::Type resultType,
 
   box = builder.createBox(loc, args[0],
                           /*isPolymorphic=*/args[0].isPolymorphic());
-  mlir::Type i64Ty = builder.getIntegerType(64);
-  mlir::Value boxEleSize = builder.create<fir::BoxEleSizeOp>(loc, i64Ty, box);
-  mlir::Value eleSize = builder.createConvert(loc, kindTy, boxEleSize);
+  mlir::Value eleSize = builder.create<fir::BoxEleSizeOp>(loc, kindTy, box);
   mlir::Value c8 = builder.createIntegerConstant(loc, kindTy, 8);
   return builder.create<mlir::arith::MulIOp>(loc, eleSize, c8);
 }

@@ -17,10 +17,9 @@ subroutine test_storage_size(n)
 ! CHECK: %[[expr:.*]] = hlfir.as_expr %[[res]]#0 move %[[false]] : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
 ! CHECK: %[[assoc:.*]]:3 = hlfir.associate %[[expr]] typeparams %[[res_len]] {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
 ! CHECK: %[[val_18:.*]] = fir.embox %[[assoc]]#1 typeparams %[[res_len]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
-! CHECK: %[[val_19:.*]] = fir.box_elesize %[[val_18]] : (!fir.box<!fir.char<1,?>>) -> i64
-! CHECK: %[[val_19_conv:.*]] = fir.convert %[[val_19]] : (i64) -> i32
+! CHECK: %[[val_19:.*]] = fir.box_elesize %[[val_18]] : (!fir.box<!fir.char<1,?>>) -> i32
 ! CHECK: %[[val_20:.*]] = arith.constant 8 : i32
-! CHECK: %[[val_21:.*]] = arith.muli %[[val_19_conv]], %[[val_20]] : i32
+! CHECK: %[[val_21:.*]] = arith.muli %[[val_19]], %[[val_20]] : i32
 ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[val_21]])
 end subroutine
 
