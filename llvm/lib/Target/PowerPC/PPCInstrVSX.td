@@ -3995,8 +3995,6 @@ defm : ScalToVecWPermute<
 // Load/convert and convert/store patterns for f16.
 def : Pat<(f128 (extloadf16 ForceXForm:$src)),
           (f128 (XSCVDPQP (XSCVHPDP (LXSIHZX ForceXForm:$src))))>;
-def : Pat<(truncstoref16 f128:$src, ForceXForm:$dst),
-          (STXSIHX (XSCVDPHP (XSCVQPDP $src)), ForceXForm:$dst)>;
 def : Pat<(f64 (extloadf16 ForceXForm:$src)),
           (f64 (XSCVHPDP (LXSIHZX ForceXForm:$src)))>;
 def : Pat<(truncstoref16 f64:$src, ForceXForm:$dst),
@@ -4014,8 +4012,6 @@ def : Pat<(f32 (f16_to_fp i32:$A)),
 def : Pat<(i32 (fp_to_f16 f32:$A)),
           (i32 (MFVSRWZ (XSCVDPHP (COPY_TO_REGCLASS $A, VSFRC))))>;
 def : Pat<(i32 (fp_to_f16 f64:$A)), (i32 (MFVSRWZ (XSCVDPHP $A)))>;
-def : Pat<(i32 (fp_to_f16 f128:$A)),
-          (i32 (MFVSRWZ (XSCVDPHP (XSCVQPDP $A))))>;
 
 // Vector sign extensions
 def : Pat<(f64 (PPCVexts f64:$A, 1)),
