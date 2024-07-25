@@ -18,6 +18,7 @@
 #include "llvm/ProfileData/PGOCtxProfWriter.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -144,5 +145,6 @@ int llvm_ctxprof_util_main(int argc, char **argv, const llvm::ToolContext &) {
     }
     return 0;
   }
-  return 1;
+  llvm_unreachable("Unknown subcommands should have been handled by the "
+                   "command line parser.");
 }
