@@ -794,8 +794,7 @@ func.func @shape_cast_size1_vector(%arg0 : vector<f32>) -> vector<1xf32> {
 
 // -----
 
-// CHECK-LABEL: @step
-//  CHECK-SAME: ()
+// CHECK-LABEL: @step()
 //       CHECK:   %[[CST0:.*]] = spirv.Constant 0 : i32
 //       CHECK:   %[[CST1:.*]] = spirv.Constant 1 : i32
 //       CHECK:   %[[CST2:.*]] = spirv.Constant 2 : i32
