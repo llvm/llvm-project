@@ -276,7 +276,6 @@ private:
     emitLabel(Symbol);
     Symbol->setType(ELF::STT_NOTYPE);
     Symbol->setBinding(ELF::STB_LOCAL);
-    Symbol->setExternal(false);
   }
 
   int64_t MappingSymbolCounter;
