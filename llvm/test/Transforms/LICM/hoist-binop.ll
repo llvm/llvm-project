@@ -2,11 +2,10 @@
 ; RUN: opt -S -passes=licm < %s | FileCheck %s
 
 ; Fold ADD and remove old op if unused.
-; https://alive2.llvm.org/ce/z/wAY-Nd
-define void @add_one_use(i64 %c) {
+define void @add_one_use(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @add_one_use(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i64 [[C:%.*]], [[C]]
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i64 [[C1:%.*]], [[C2:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
@@ -18,21 +17,21 @@ entry:
 
 loop:
   %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
-  %step.add = add i64 %index, %c
-  %index.next = add i64 %step.add, %c
+  %step.add = add i64 %index, %c1
+  %index.next = add i64 %step.add, %c2
   br label %loop
 }
 
 ; Fold ADD and copy NUW if both ops have it.
-; https://alive2.llvm.org/ce/z/wAY-Nd
-define void @add_nuw(i64 %c) {
+; https://alive2.llvm.org/ce/z/bPAT7Z
+define void @add_nuw(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @add_nuw(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add nuw i64 [[C:%.*]], [[C]]
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add nuw i64 [[C1:%.*]], [[C2:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw i64 [[INDEX]], [[C]]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw i64 [[INDEX]], [[C1]]
 ; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
 ; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add nuw i64 [[INDEX]], [[INVARIANT_OP]]
 ; CHECK-NEXT:    br label [[LOOP]]
@@ -42,22 +41,21 @@ entry:
 
 loop:
   %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
-  %step.add = add nuw i64 %index, %c
+  %step.add = add nuw i64 %index, %c1
   call void @use(i64 %step.add)
-  %index.next = add nuw i64 %step.add, %c
+  %index.next = add nuw i64 %step.add, %c2
   br label %loop
 }
 
 ; Fold ADD but don't copy NUW if only one op has it.
-; https://alive2.llvm.org/ce/z/6n95Gf
-define void @add_no_nuw(i64 %c) {
+define void @add_no_nuw(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @add_no_nuw(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i64 [[C:%.*]], [[C]]
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i64 [[C1:%.*]], [[C2:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add i64 [[INDEX]], [[C]]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add i64 [[INDEX]], [[C1]]
 ; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
 ; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add i64 [[INDEX]], [[INVARIANT_OP]]
 ; CHECK-NEXT:    br label [[LOOP]]
@@ -67,22 +65,21 @@ entry:
 
 loop:
   %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
-  %step.add = add i64 %index, %c
+  %step.add = add i64 %index, %c1
   call void @use(i64 %step.add)
-  %index.next = add nuw i64 %step.add, %c
+  %index.next = add nuw i64 %step.add, %c2
   br label %loop
 }
 
 ; Fold ADD but don't copy NSW if one op has it.
-; https://alive2.llvm.org/ce/z/iz3dfB
-define void @add_no_nsw(i64 %c) {
+define void @add_no_nsw(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @add_no_nsw(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i64 [[C:%.*]], [[C]]
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i64 [[C1:%.*]], [[C2:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add i64 [[INDEX]], [[C]]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add i64 [[INDEX]], [[C1]]
 ; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
 ; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add i64 [[INDEX]], [[INVARIANT_OP]]
 ; CHECK-NEXT:    br label [[LOOP]]
@@ -92,22 +89,21 @@ entry:
 
 loop:
   %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
-  %step.add = add i64 %index, %c
+  %step.add = add i64 %index, %c1
   call void @use(i64 %step.add)
-  %index.next = add nsw i64 %step.add, %c
+  %index.next = add nsw i64 %step.add, %c2
   br label %loop
 }
 
 ; Fold ADD but don't copy NSW even if both ops have it.
-; https://alive2.llvm.org/ce/z/F9f43_
-define void @add_no_nsw_2(i64 %c) {
+define void @add_no_nsw_2(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @add_no_nsw_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i64 [[C:%.*]], [[C]]
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i64 [[C1:%.*]], [[C2:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nsw i64 [[INDEX]], [[C]]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nsw i64 [[INDEX]], [[C1]]
 ; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
 ; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add i64 [[INDEX]], [[INVARIANT_OP]]
 ; CHECK-NEXT:    br label [[LOOP]]
@@ -117,22 +113,22 @@ entry:
 
 loop:
   %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
-  %step.add = add nsw i64 %index, %c
+  %step.add = add nsw i64 %index, %c1
   call void @use(i64 %step.add)
-  %index.next = add nsw i64 %step.add, %c
+  %index.next = add nsw i64 %step.add, %c2
   br label %loop
 }
 
 ; Don't fold if the ops are different (even if they are both associative).
-define void @diff_ops(i64 %c) {
+define void @diff_ops(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @diff_ops(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add i64 [[INDEX]], [[C:%.*]]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add i64 [[INDEX]], [[C1:%.*]]
 ; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = mul i64 [[STEP_ADD]], [[C]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = mul i64 [[STEP_ADD]], [[C2:%.*]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
@@ -140,22 +136,22 @@ entry:
 
 loop:
   %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
-  %step.add = add i64 %index, %c
+  %step.add = add i64 %index, %c1
   call void @use(i64 %step.add)
-  %index.next = mul i64 %step.add, %c
+  %index.next = mul i64 %step.add, %c2
   br label %loop
 }
 
 ; Don't fold if the ops are not associative.
-define void @noassoc_ops(i64 %c) {
+define void @noassoc_ops(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @noassoc_ops(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = sub i64 [[INDEX]], [[C:%.*]]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = sub i64 [[INDEX]], [[C1:%.*]]
 ; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = sub i64 [[STEP_ADD]], [[C]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = sub i64 [[STEP_ADD]], [[C2:%.*]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
@@ -163,22 +159,23 @@ entry:
 
 loop:
   %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
-  %step.add = sub i64 %index, %c
+  %step.add = sub i64 %index, %c1
   call void @use(i64 %step.add)
-  %index.next = sub i64 %step.add, %c
+  %index.next = sub i64 %step.add, %c2
   br label %loop
 }
 
-; Don't fold floating-point ops, even if they are associative.
-define void @fadd(float %c) {
+; Don't fold floating-point ops, even if they are associative. This would be
+; valid, but is currently disabled.
+define void @fadd(float %c1, float %c2) {
 ; CHECK-LABEL: @fadd(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = fadd fast float [[INDEX]], [[C:%.*]]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = fadd fast float [[INDEX]], [[C1:%.*]]
 ; CHECK-NEXT:    call void @use(float [[STEP_ADD]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = fadd fast float [[STEP_ADD]], [[C]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = fadd fast float [[STEP_ADD]], [[C2:%.*]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
@@ -186,9 +183,9 @@ entry:
 
 loop:
   %index = phi float [ 0., %entry ], [ %index.next, %loop ]
-  %step.add = fadd fast float %index, %c
+  %step.add = fadd fast float %index, %c1
   call void @use(float %step.add)
-  %index.next = fadd fast float %step.add, %c
+  %index.next = fadd fast float %step.add, %c2
   br label %loop
 }
 

@@ -2796,7 +2796,7 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
                                ICFLoopSafetyInfo &SafetyInfo,
                                MemorySSAUpdater &MSSAU, AssumptionCache *AC,
                                DominatorTree *DT) {
-  BinaryOperator *BO = dyn_cast<BinaryOperator>(&I);
+  auto *BO = dyn_cast<BinaryOperator>(&I);
   if (!BO || !BO->isAssociative())
     return false;
 
@@ -2805,46 +2805,43 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   if (Opcode != Instruction::Add)
     return false;
 
-  BinaryOperator *BO0 = dyn_cast<BinaryOperator>(BO->getOperand(0));
+  auto *BO0 = dyn_cast<BinaryOperator>(BO->getOperand(0));
+  if (!BO0 || BO0->getOpcode() != Opcode || !BO0->isAssociative())
+    return false;
 
   // Transform: "(LV op C1) op C2" ==> "LV op (C1 op C2)"
-  if (BO0 && BO0->getOpcode() == Opcode && BO0->isAssociative()) {
-    Value *LV = BO0->getOperand(0);
-    Value *C1 = BO0->getOperand(1);
-    Value *C2 = BO->getOperand(1);
+  Value *LV = BO0->getOperand(0);
+  Value *C1 = BO0->getOperand(1);
+  Value *C2 = BO->getOperand(1);
 
-    if (L.isLoopInvariant(LV) || !L.isLoopInvariant(C1) ||
-        !L.isLoopInvariant(C2))
-      return false;
+  if (L.isLoopInvariant(LV) || !L.isLoopInvariant(C1) ||
+      !L.isLoopInvariant(C2))
+    return false;
 
-    auto *Preheader = L.getLoopPreheader();
-    assert(Preheader && "Loop is not in simplify form?");
+  auto *Preheader = L.getLoopPreheader();
+  assert(Preheader && "Loop is not in simplify form?");
 
-    auto *Inv = BinaryOperator::Create(Opcode, C1, C2, "invariant.op",
-                                       Preheader->getTerminator());
-    auto *NewBO = BinaryOperator::Create(Opcode, LV, Inv,
-                                         BO->getName() + ".reass", BO);
+  auto *Inv = BinaryOperator::Create(Opcode, C1, C2, "invariant.op",
+                                     Preheader->getTerminator());
+  auto *NewBO =
+      BinaryOperator::Create(Opcode, LV, Inv, BO->getName() + ".reass", BO);
 
-    // Copy NUW for ADDs if both instructions have it.
-    // https://alive2.llvm.org/ce/z/K9W3rk
-    if (Opcode == Instruction::Add && BO->hasNoUnsignedWrap() &&
-        BO0->hasNoUnsignedWrap()) {
-      Inv->setHasNoUnsignedWrap(true);
-      NewBO->setHasNoUnsignedWrap(true);
-    }
-
-    BO->replaceAllUsesWith(NewBO);
-    eraseInstruction(*BO, SafetyInfo, MSSAU);
-
-    // Note: (LV op C1) might not be erased if it has more uses than the one we
-    //       just replaced.
-    if (BO0->use_empty())
-      eraseInstruction(*BO0, SafetyInfo, MSSAU);
-
-    return true;
+  // Copy NUW for ADDs if both instructions have it.
+  if (Opcode == Instruction::Add && BO->hasNoUnsignedWrap() &&
+      BO0->hasNoUnsignedWrap()) {
+    Inv->setHasNoUnsignedWrap(true);
+    NewBO->setHasNoUnsignedWrap(true);
   }
 
-  return false;
+  BO->replaceAllUsesWith(NewBO);
+  eraseInstruction(*BO, SafetyInfo, MSSAU);
+
+  // (LV op C1) might not be erased if it has more uses than the one we just
+  // replaced.
+  if (BO0->use_empty())
+    eraseInstruction(*BO0, SafetyInfo, MSSAU);
+
+  return true;
 }
 
 static bool hoistArithmetics(Instruction &I, Loop &L,
