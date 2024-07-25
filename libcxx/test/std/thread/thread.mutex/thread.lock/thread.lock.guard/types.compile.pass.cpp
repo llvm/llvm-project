@@ -8,19 +8,17 @@
 
 // <mutex>
 
-// template <class Mutex> class lock_guard;
-
-// lock_guard& operator=(lock_guard const&) = delete;
+// template <class Mutex>
+// class lock_guard
+// {
+// public:
+//     typedef Mutex mutex_type;
+//     ...
+// };
 
 #include <mutex>
+#include <type_traits>
 
-int main(int, char**)
-{
-    std::mutex m0;
-    std::mutex m1;
-    std::lock_guard<std::mutex> lg0(m0);
-    std::lock_guard<std::mutex> lg(m1);
-    lg = lg0;
+#include "types.h"
 
-  return 0;
-}
+static_assert(std::is_same<std::lock_guard<MyMutex>::mutex_type, MyMutex>::value, "");
