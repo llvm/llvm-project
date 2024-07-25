@@ -348,7 +348,8 @@ void ReplaceableMetadataImpl::SalvageDebugInfo(const Constant &C) {
       continue;
     // Check for MetadataAsValue.
     if (isa<MetadataAsValue *>(Owner)) {
-      cast<MetadataAsValue *>(Owner)->handleChangedMetadata(ValueAsMetadata::get(UndefValue::get(C.getType())));
+      cast<MetadataAsValue *>(Owner)->handleChangedMetadata(
+          ValueAsMetadata::get(UndefValue::get(C.getType())));
       continue;
     }
     if (!isa<Metadata *>(Owner))
