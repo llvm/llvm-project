@@ -219,6 +219,14 @@ TEST(AllocatorTest, TestIdentifyObject) {
   uint64_t *b = nullptr;
   std::optional<int64_t> maybe_b_belongs = Alloc.identifyObject(b);
   EXPECT_FALSE(maybe_b_belongs);
+
+  // The default slab size is 4096 (or 512 uint64_t values). Custom slabs are
+  // allocated when the requested size is larger than the slab size.
+  uint64_t *c =
+      (uint64_t *)Alloc.Allocate(sizeof(uint64_t) * 1024, alignof(uint64_t));
+  std::optional<int64_t> maybe_c_belongs = Alloc.identifyObject(c);
+  EXPECT_TRUE(maybe_c_belongs.has_value());
+  EXPECT_TRUE(*maybe_c_belongs < 0);
 }
 
 // Mock slab allocator that returns slabs aligned on 4096 bytes.  There is no
