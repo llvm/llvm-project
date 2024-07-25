@@ -10,8 +10,8 @@
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPU_ASAN_INSTRUMENTATION_H
 
 #include "AMDGPU.h"
-#include "AMDGPUBaseInfo.h"
-#include "AMDGPUMemoryUtils.h"
+#include "Utils/AMDGPUBaseInfo.h"
+#include "Utils/AMDGPUMemoryUtils.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
