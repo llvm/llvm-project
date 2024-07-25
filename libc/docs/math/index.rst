@@ -77,7 +77,7 @@ Implementation Status
 
   - `linux-aarch32 <https://github.com/llvm/llvm-project/tree/main/libc/config/linux/arm/entrypoints.txt>`_
 
-  - `linux-riscv64 <https://github.com/llvm/llvm-project/tree/main/libc/config/linux/riscv64/entrypoints.txt>`_
+  - `linux-riscv and linux-riscv32 <https://github.com/llvm/llvm-project/tree/main/libc/config/linux/riscv/entrypoints.txt>`_
 
 * To check math functions enabled for Windows:
 
