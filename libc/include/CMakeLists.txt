@@ -157,6 +157,7 @@ add_header_macro(
     .llvm-libc-types.double_t
     .llvm-libc-types.float_t
     .llvm-libc-types.float128
+    .llvm-libc-macros.math_function_macros
 )
 
 add_header_macro(
