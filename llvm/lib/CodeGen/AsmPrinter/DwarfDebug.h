@@ -435,6 +435,9 @@ class DwarfDebug : public DebugHandlerBase {
   ///Allow emission of the .debug_loc section.
   bool UseLocSection = true;
 
+  /// Allow emission of .debug_aranges section
+  bool UseARangesSection = false;
+
   /// Generate DWARF v4 type units.
   bool GenerateTypeUnits;
 

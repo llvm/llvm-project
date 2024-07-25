@@ -13,6 +13,7 @@
 #include "PluginManager.h"
 #include "Shared/Debug.h"
 #include "Shared/Profile.h"
+#include "device.h"
 
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -60,15 +61,61 @@ void PluginManager::deinit() {
   DP("RTLs unloaded!\n");
 }
 
-void PluginManager::initAllPlugins() {
-  for (auto &R : plugins()) {
-    if (auto Err = R.init()) {
-      [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
-      DP("Failed to init plugin: %s\n", InfoMsg.c_str());
+bool PluginManager::initializePlugin(GenericPluginTy &Plugin) {
+  if (Plugin.is_initialized())
+    return true;
+
+  if (auto Err = Plugin.init()) {
+    [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
+    DP("Failed to init plugin: %s\n", InfoMsg.c_str());
+    return false;
+  }
+
+  DP("Registered plugin %s with %d visible device(s)\n", Plugin.getName(),
+     Plugin.number_of_devices());
+  return true;
+}
+
+bool PluginManager::initializeDevice(GenericPluginTy &Plugin,
+                                     int32_t DeviceId) {
+  if (Plugin.is_device_initialized(DeviceId))
+    return true;
+
+  // Initialize the device information for the RTL we are about to use.
+  auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
+
+  int32_t UserId = ExclusiveDevicesAccessor->size();
+
+  // Set the device identifier offset in the plugin.
+#ifdef OMPT_SUPPORT
+  Plugin.set_device_identifier(UserId, DeviceId);
+#endif
+
+  auto Device = std::make_unique<DeviceTy>(&Plugin, UserId, DeviceId);
+  if (auto Err = Device->init()) {
+    [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
+    DP("Failed to init device %d: %s\n", DeviceId, InfoMsg.c_str());
+    return false;
+  }
+
+  ExclusiveDevicesAccessor->push_back(std::move(Device));
+
+  // We need to map between the plugin's device identifier and the one
+  // that OpenMP will use.
+  PM->DeviceIds[std::make_pair(&Plugin, DeviceId)] = UserId;
+
+  return true;
+}
+
+void PluginManager::initializeAllDevices() {
+  for (auto &Plugin : plugins()) {
+    if (!initializePlugin(Plugin))
       continue;
+
+    for (int32_t DeviceId = 0; DeviceId < Plugin.number_of_devices();
+         ++DeviceId) {
+      initializeDevice(Plugin, DeviceId);
     }
-    DP("Registered plugin %s with %d visible device(s)\n", R.getName(),
-       R.number_of_devices());
   }
 }
 
@@ -94,19 +141,12 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
 
     // Scan the RTLs that have associated images until we find one that supports
     // the current image.
-    for (auto &R : PM->plugins()) {
+    for (auto &R : plugins()) {
       if (!R.is_plugin_compatible(Img))
         continue;
 
-      if (!R.is_initialized()) {
-        if (auto Err = R.init()) {
-          [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
-          DP("Failed to init plugin: %s\n", InfoMsg.c_str());
-          continue;
-        }
-        DP("Registered plugin %s with %d visible device(s)\n", R.getName(),
-           R.number_of_devices());
-      }
+      if (!initializePlugin(R))
+        continue;
 
       if (!R.number_of_devices()) {
         DP("Skipping plugin %s with no visible devices\n", R.getName());
@@ -120,30 +160,8 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
         DP("Image " DPxMOD " is compatible with RTL %s device %d!\n",
            DPxPTR(Img->ImageStart), R.getName(), DeviceId);
 
-        if (!R.is_device_initialized(DeviceId)) {
-          // Initialize the device information for the RTL we are about to use.
-          auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
-
-          int32_t UserId = ExclusiveDevicesAccessor->size();
-
-          // Set the device identifier offset in the plugin.
-#ifdef OMPT_SUPPORT
-          R.set_device_identifier(UserId, DeviceId);
-#endif
-
-          auto Device = std::make_unique<DeviceTy>(&R, UserId, DeviceId);
-          if (auto Err = Device->init()) {
-            [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
-            DP("Failed to init device %d: %s\n", DeviceId, InfoMsg.c_str());
-            continue;
-          }
-
-          ExclusiveDevicesAccessor->push_back(std::move(Device));
-
-          // We need to map between the plugin's device identifier and the one
-          // that OpenMP will use.
-          PM->DeviceIds[std::make_pair(&R, DeviceId)] = UserId;
-        }
+        if (!initializeDevice(R, DeviceId))
+          continue;
 
         // Initialize (if necessary) translation table for this library.
         PM->TrlTblMtx.lock();
@@ -219,7 +237,7 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
 
     // Scan the RTLs that have associated images until we find one that supports
     // the current image. We only need to scan RTLs that are already being used.
-    for (auto &R : PM->plugins()) {
+    for (auto &R : plugins()) {
       if (R.is_initialized())
         continue;
 

@@ -14,6 +14,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
 
 using namespace clang;
 using namespace clang::targets;
@@ -385,6 +386,8 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("_ARCH_PWR9");
   if (ArchDefs & ArchDefinePwr10)
     Builder.defineMacro("_ARCH_PWR10");
+  if (ArchDefs & ArchDefinePwr11)
+    Builder.defineMacro("_ARCH_PWR11");
   if (ArchDefs & ArchDefineA2)
     Builder.defineMacro("_ARCH_A2");
   if (ArchDefs & ArchDefineE500)
@@ -622,10 +625,17 @@ bool PPCTargetInfo::initFeatureMap(
     addP10SpecificFeatures(Features);
   }
 
-  // Future CPU should include all of the features of Power 10 as well as any
+  // Power11 includes all the same features as Power10 plus any features
+  // specific to the Power11 core.
+  if (CPU == "pwr11" || CPU == "power11") {
+    initFeatureMap(Features, Diags, "pwr10", FeaturesVec);
+    addP11SpecificFeatures(Features);
+  }
+
+  // Future CPU should include all of the features of Power 11 as well as any
   // additional features (yet to be determined) specific to it.
   if (CPU == "future") {
-    initFeatureMap(Features, Diags, "pwr10", FeaturesVec);
+    initFeatureMap(Features, Diags, "pwr11", FeaturesVec);
     addFutureSpecificFeatures(Features);
   }
 
@@ -695,6 +705,10 @@ void PPCTargetInfo::addP10SpecificFeatures(
   Features["prefix-instrs"] = true;
   Features["isa-v31-instructions"] = true;
 }
+
+// Add any Power11 specific features.
+void PPCTargetInfo::addP11SpecificFeatures(
+    llvm::StringMap<bool> &Features) const {}
 
 // Add features specific to the "Future" CPU.
 void PPCTargetInfo::addFutureSpecificFeatures(
@@ -869,25 +883,12 @@ ArrayRef<TargetInfo::AddlRegName> PPCTargetInfo::getGCCAddlRegNames() const {
   return llvm::ArrayRef(GCCAddlRegNames);
 }
 
-static constexpr llvm::StringLiteral ValidCPUNames[] = {
-    {"generic"},     {"440"},     {"450"},    {"601"},       {"602"},
-    {"603"},         {"603e"},    {"603ev"},  {"604"},       {"604e"},
-    {"620"},         {"630"},     {"g3"},     {"7400"},      {"g4"},
-    {"7450"},        {"g4+"},     {"750"},    {"8548"},      {"970"},
-    {"g5"},          {"a2"},      {"e500"},   {"e500mc"},    {"e5500"},
-    {"power3"},      {"pwr3"},    {"power4"}, {"pwr4"},      {"power5"},
-    {"pwr5"},        {"power5x"}, {"pwr5x"},  {"power6"},    {"pwr6"},
-    {"power6x"},     {"pwr6x"},   {"power7"}, {"pwr7"},      {"power8"},
-    {"pwr8"},        {"power9"},  {"pwr9"},   {"power10"},   {"pwr10"},
-    {"powerpc"},     {"ppc"},     {"ppc32"},  {"powerpc64"}, {"ppc64"},
-    {"powerpc64le"}, {"ppc64le"}, {"future"}};
-
 bool PPCTargetInfo::isValidCPUName(StringRef Name) const {
-  return llvm::is_contained(ValidCPUNames, Name);
+  return llvm::PPC::isValidCPU(Name);
 }
 
 void PPCTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
-  Values.append(std::begin(ValidCPUNames), std::end(ValidCPUNames));
+  llvm::PPC::fillValidCPUList(Values);
 }
 
 void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {

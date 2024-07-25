@@ -476,7 +476,7 @@ static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo &TRI,
   RUs |= RUsFromRegsNotInMask;
 }
 
-/// Examine the instruction for potentai LICM candidate. Also
+/// Examine the instruction for potential LICM candidate. Also
 /// gather register def and frame object update information.
 void MachineLICMBase::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
                                 BitVector &RUClobbers,
