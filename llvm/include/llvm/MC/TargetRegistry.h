@@ -86,9 +86,8 @@ MCStreamer *createNullStreamer(MCContext &Ctx);
 /// the assembly.
 MCStreamer *
 createAsmStreamer(MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> OS,
-                  bool isVerboseAsm, bool useDwarfDirectory,
                   MCInstPrinter *InstPrint, std::unique_ptr<MCCodeEmitter> &&CE,
-                  std::unique_ptr<MCAsmBackend> &&TAB, bool ShowInst);
+                  std::unique_ptr<MCAsmBackend> &&TAB);
 
 MCStreamer *createELFStreamer(MCContext &Ctx,
                               std::unique_ptr<MCAsmBackend> &&TAB,
@@ -544,6 +543,7 @@ public:
                                 MCInstPrinter *IP,
                                 std::unique_ptr<MCCodeEmitter> CE,
                                 std::unique_ptr<MCAsmBackend> TAB) const;
+  LLVM_DEPRECATED("Use the overload without the 3 unused bool", "")
   MCStreamer *
   createAsmStreamer(MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> OS,
                     bool IsVerboseAsm, bool UseDwarfDirectory,
