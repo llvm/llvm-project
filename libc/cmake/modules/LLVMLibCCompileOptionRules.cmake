@@ -88,7 +88,11 @@ function(_get_common_compile_options output_var flags)
          (LIBC_CC_SUPPORTS_NOSTDLIBINC OR COMPILER_RESOURCE_DIR))
         # We use -idirafter to avoid preempting libc's own headers in case the
         # directory (e.g. /usr/include) contains other headers.
-        list(APPEND compile_options "-idirafter${LIBC_KERNEL_HEADERS}")
+        if(CMAKE_CROSSCOMPILING)
+          list(APPEND compile_options "-idirafter=${LIBC_KERNEL_HEADERS}")
+        else()
+          list(APPEND compile_options "-idirafter${LIBC_KERNEL_HEADERS}")
+        endif()
       endif()
     endif()
 
