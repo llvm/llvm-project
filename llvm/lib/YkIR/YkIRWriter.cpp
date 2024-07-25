@@ -1369,6 +1369,8 @@ private:
                                          unsigned BBIdx, unsigned &InstIdx) {
     // opcode:
     serialiseOpcode(OpCodeUnimplemented);
+    // tyidx:
+    OutStreamer.emitSizeT(typeIndex(I->getType()));
     // stringified problem instruction
     serialiseString(toString(I));
 
@@ -1617,11 +1619,9 @@ private:
   }
 
   void serialisePaths() {
-    errs() << "Num Paths: " << Paths.size() << "\n";
     OutStreamer.emitSizeT(Paths.size());
     for (string &P : Paths) {
       serialiseString(P);
-      errs() << P << "\n";
     }
   }
 
