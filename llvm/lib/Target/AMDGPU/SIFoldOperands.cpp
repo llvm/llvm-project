@@ -1585,7 +1585,7 @@ bool SIFoldOperands::tryFoldClamp(MachineInstr &MI) {
   Register DefReg = Def->getOperand(0).getReg();
   Register MIDstReg = MI.getOperand(0).getReg();
   if (TRI->isSGPRReg(*MRI, DefReg)) {
-    // Psuedo scalar instructions have a SGPR for dst and clamp is a v_max*
+    // Pseudo scalar instructions have a SGPR for dst and clamp is a v_max*
     // instruction with a VGPR dst.
     BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY),
             MIDstReg)
