@@ -34,24 +34,21 @@ endif()
 
 serialize_lit_params_list(SERIALIZED_LIT_PARAMS LIBCXX_TEST_PARAMS)
 
-if (LIBCXX_INCLUDE_TESTS)
-  include(AddLLVM) # for configure_lit_site_cfg and add_lit_testsuite
+include(AddLLVM) # for configure_lit_site_cfg and add_lit_testsuite
 
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/configs/cmake-bridge.cfg.in"
-                 "${CMAKE_CURRENT_BINARY_DIR}/cmake-bridge.cfg"
-                 @ONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/configs/cmake-bridge.cfg.in"
+                "${CMAKE_CURRENT_BINARY_DIR}/cmake-bridge.cfg"
+                @ONLY)
 
-  configure_lit_site_cfg(
-    "${LIBCXX_TEST_CONFIG}"
-    ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
-    MAIN_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py")
+configure_lit_site_cfg(
+  "${LIBCXX_TEST_CONFIG}"
+  ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
+  MAIN_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py")
 
-  add_lit_testsuite(check-cxx
-    "Running libcxx tests"
-    ${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS cxx-test-depends)
-
-endif()
+add_lit_testsuite(check-cxx
+  "Running libcxx tests"
+  ${CMAKE_CURRENT_BINARY_DIR}
+  DEPENDS cxx-test-depends)
 
 if (LIBCXX_GENERATE_COVERAGE)
   include(CodeCoverage)
