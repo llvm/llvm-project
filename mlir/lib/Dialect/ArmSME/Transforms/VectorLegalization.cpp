@@ -803,7 +803,7 @@ struct ConvertIllegalShapeCastOpsToTransposes
 ///   %4 = vector.insert %3, %2 [1] : vector<[4]xf32> into vector<[4]x[4]xf32>
 ///   %c4_vscale = arith.muli %vscale, %c4 : index
 ///   %mask = vector.create_mask %c4_vscale, %c2 : vector<[4]x[4]xi1>
-///   vector.transfer_write %4, %arg1[%arg2, %arg3], %mask
+///   vector.transfer_write %4, %dest[%y, %x], %mask
 ///      {permutation_map = affine_map<(d0, d1) -> (d1, d0)>}
 ///      : vector<[4]x[4]xf32>, memref<?x?xf32>
 ///  ```
@@ -832,7 +832,7 @@ struct LowerIllegalTransposeStoreViaZA
     auto resultType = transposeOp.getResultVectorType();
 
     if (resultType.getRank() != 2)
-      return rewriter.notifyMatchFailure(transposeOp, "not rank 2");
+      return rewriter.notifyMatchFailure(transposeOp, "TransposeOp not rank 2");
 
     if (!isLegalVectorType(sourceType) || isLegalVectorType(resultType))
       return rewriter.notifyMatchFailure(
@@ -865,7 +865,7 @@ struct LowerIllegalTransposeStoreViaZA
       // vscale (and emitting multiple implementations) we can't make use of the
       // rows of the tile after 1*vscale rows.
       Value tile = undefTile;
-      for (int d = 0, e = numSlicesPerTile; d < e; ++d) {
+      for (int d = 0; d < numSlicesPerTile; ++d) {
         Value vector = rewriter.create<vector::ExtractOp>(
             loc, transposeOp.getVector(),
             rewriter.getIndexAttr(d + smeTile.row));

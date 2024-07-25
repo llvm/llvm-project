@@ -573,9 +573,9 @@ func.func @transpose_store_scalable_via_za(%vec: vector<2x[4]xf32>, %dest: memre
 
 // -----
 
-// CHECK: @transpose_store_scalable_via_za_masked(
-// CHECK-SAME:                                    %[[A:[a-z0-9]+]]: index,
-// CHECK-SAME:                                    %[[B:[a-z0-9]+]]: index)
+// CHECK-LABEL: @transpose_store_scalable_via_za_masked(
+// CHECK-SAME:                                          %[[A:[a-z0-9]+]]: index,
+// CHECK-SAME:                                          %[[B:[a-z0-9]+]]: index)
 func.func @transpose_store_scalable_via_za_masked(%vec: vector<2x[4]xf32>, %dest: memref<?x?xf32>, %a: index, %b: index) {
   // CHECK: %[[C2:.*]] = arith.constant 2 : index
   // CHECK: %[[MIN:.*]] = index.mins %[[B]], %[[C2]]
@@ -590,11 +590,11 @@ func.func @transpose_store_scalable_via_za_masked(%vec: vector<2x[4]xf32>, %dest
 
 // -----
 
-// CHECK: @transpose_store_scalable_via_za_multi_tile(
-// CHECK-SAME:                                       %[[VEC:.*]]: vector<8x[4]xf32>
-// CHECK-SAME:                                       %[[DEST:.*]]: memref<?x?xf32>,
-// CHECK-SAME:                                       %[[I:.*]]: index,
-// CHECK-SAME:                                       %[[J:.*]]: index)
+// CHECK-LABEL: @transpose_store_scalable_via_za_multi_tile(
+// CHECK-SAME:                                              %[[VEC:.*]]: vector<8x[4]xf32>
+// CHECK-SAME:                                              %[[DEST:.*]]: memref<?x?xf32>,
+// CHECK-SAME:                                              %[[I:.*]]: index,
+// CHECK-SAME:                                              %[[J:.*]]: index)
 func.func @transpose_store_scalable_via_za_multi_tile(%vec: vector<8x[4]xf32>, %dest: memref<?x?xf32>, %i: index, %j: index) {
   // CHECK: %[[C4:.*]] = arith.constant 4 : index
   // CHECK: %[[VSCALE:.*]] = vector.vscale
@@ -613,5 +613,36 @@ func.func @transpose_store_scalable_via_za_multi_tile(%vec: vector<8x[4]xf32>, %
   // CHECK: vector.transfer_write %[[TILE_1]], %[[DEST]][%[[I]], %[[J_OFFSET]]], %[[MASK]] {{.*}} : vector<[4]x[4]xf32>, memref<?x?xf32>
   %tr = vector.transpose %vec, [1, 0] : vector<8x[4]xf32> to vector<[4]x8xf32>
   vector.transfer_write %tr, %dest[%i, %j] {in_bounds = [true, true]} : vector<[4]x8xf32>,  memref<?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @transpose_store_scalable_via_za_multi_tile_with_scalable_extracts
+func.func @transpose_store_scalable_via_za_multi_tile_with_scalable_extracts(%vec: vector<2x[8]xf32>, %dest: memref<?x?xf32>, %i: index, %j: index) {
+  // <check extracts from lower 4 x vscale of %vec>
+  // CHECK: vector.scalable.extract
+  // CHECK: %[[ROW_2_LOWER:.*]] = vector.scalable.extract %{{.*}}[0] : vector<[4]xf32> from vector<[8]xf32>
+  // CHECK: %[[TILE_0:.*]] = vector.insert %[[ROW_2_LOWER]], %{{.*}}[1] : vector<[4]xf32> into vector<[4]x[4]xf32>
+  // CHECK: vector.transfer_write %[[TILE_0]], %{{.*}}[%[[I:.[a-z0-9]+]], %[[J:[a-z0-9]+]]]
+
+  // <check extracts from upper 4 x vscale of %vec>
+  // CHECK: vector.scalable.extract
+  // CHECK: %[[ROW_2_UPPER:.*]] = vector.scalable.extract %{{.*}}[4] : vector<[4]xf32> from vector<[8]xf32>
+  // CHECK: %[[TILE_0:.*]] = vector.insert %[[ROW_2_UPPER]], %{{.*}}[1] : vector<[4]xf32> into vector<[4]x[4]xf32>
+  // CHECK: %[[I_OFFSET:.*]] = arith.addi %c4_vscale, %[[I]] : index
+  // CHECK: vector.transfer_write %[[TILE_0]], %{{.*}}[%[[I_OFFSET]], %[[J]]]
+  %tr = vector.transpose %vec, [1, 0] : vector<2x[8]xf32> to vector<[8]x2xf32>
+  vector.transfer_write %tr, %dest[%i, %j] {in_bounds = [true, true]} : vector<[8]x2xf32>,  memref<?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @negative_transpose_store_scalable_via_za__bad_source_shape
+// CHECK-NOT: arm_sme.get_tile
+func.func @negative_transpose_store_scalable_via_za__bad_source_shape(%vec: vector<2x[7]xf32>, %dest: memref<?x?xf32>, %i: index, %j: index) {
+  %tr = vector.transpose %vec, [1, 0] : vector<2x[7]xf32> to vector<[7]x2xf32>
+  vector.transfer_write %tr, %dest[%i, %j] {in_bounds = [true, true]} : vector<[7]x2xf32>,  memref<?x?xf32>
   return
 }
