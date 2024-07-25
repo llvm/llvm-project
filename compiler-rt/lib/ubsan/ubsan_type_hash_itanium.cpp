@@ -207,8 +207,7 @@ struct VtablePrefix {
   std::type_info *TypeInfo;
 };
 VtablePrefix *getVtablePrefix(void *Vtable) {
-  Vtable = reinterpret_cast<void *>(
-      ptrauth_strip(Vtable, ptrauth_key_cxx_vtable_pointer));
+  Vtable = ptrauth_strip(Vtable, ptrauth_key_cxx_vtable_pointer);
   VtablePrefix *Vptr = reinterpret_cast<VtablePrefix*>(Vtable);
   VtablePrefix *Prefix = Vptr - 1;
   if (!IsAccessibleMemoryRange((uptr)Prefix, sizeof(VtablePrefix)))
