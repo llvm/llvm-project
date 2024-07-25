@@ -73,6 +73,7 @@ class SM_Real <SM_Pseudo ps, string opName = ps.Mnemonic>
   let IsAtomicNoRet        = ps.IsAtomicNoRet;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
+  let isConvergent         = ps.isConvergent;
 
   let TSFlags = ps.TSFlags;
 
