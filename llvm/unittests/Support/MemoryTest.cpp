@@ -304,7 +304,7 @@ TEST_P(MappedMemoryTest, EnabledWrite) {
   EXPECT_FALSE(Memory::releaseMappedMemory(M2));
 }
 
-TEST_P(MappedMemoryTest, MakeExec) {
+TEST_P(MappedMemoryTest, MakeExecutable) {
   // This test applies only to readable and writeable combinations
   if (Flags && !((Flags & Memory::MF_READ) && (Flags & Memory::MF_WRITE)))
     GTEST_SKIP();
