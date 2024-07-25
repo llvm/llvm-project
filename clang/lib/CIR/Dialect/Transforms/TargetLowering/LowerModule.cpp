@@ -217,7 +217,8 @@ LogicalResult LowerModule::rewriteFunctionCall(CallOp callOp, FuncOp funcOp) {
 }
 
 // TODO: not to create it every time
-LowerModule createLowerModule(ModuleOp module, PatternRewriter &rewriter) {
+std::unique_ptr<LowerModule> createLowerModule(ModuleOp module,
+                                               PatternRewriter &rewriter) {
   // Fetch the LLVM data layout string.
   auto dataLayoutStr = cast<StringAttr>(
       module->getAttr(LLVM::LLVMDialect::getDataLayoutAttrName()));
@@ -237,7 +238,8 @@ LowerModule createLowerModule(ModuleOp module, PatternRewriter &rewriter) {
   auto context = CIRLowerContext(module, langOpts);
   context.initBuiltinTypes(*targetInfo);
 
-  return LowerModule(context, module, dataLayoutStr, *targetInfo, rewriter);
+  return std::make_unique<LowerModule>(context, module, dataLayoutStr,
+                                       *targetInfo, rewriter);
 }
 
 } // namespace cir

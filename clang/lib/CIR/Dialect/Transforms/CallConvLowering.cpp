@@ -36,7 +36,8 @@ struct CallConvLoweringPattern : public OpRewritePattern<FuncOp> {
       return op.emitError("function has no AST information");
 
     auto modOp = op->getParentOfType<ModuleOp>();
-    LowerModule lowerModule = createLowerModule(modOp, rewriter);
+    std::unique_ptr<LowerModule> lowerModule =
+        createLowerModule(modOp, rewriter);
 
     // Rewrite function calls before definitions. This should be done before
     // lowering the definition.
@@ -44,14 +45,14 @@ struct CallConvLoweringPattern : public OpRewritePattern<FuncOp> {
     if (calls.has_value()) {
       for (auto call : calls.value()) {
         auto callOp = cast<CallOp>(call.getUser());
-        if (lowerModule.rewriteFunctionCall(callOp, op).failed())
+        if (lowerModule->rewriteFunctionCall(callOp, op).failed())
           return failure();
       }
     }
 
     // TODO(cir): Instead of re-emmiting every load and store, bitcast arguments
     // and return values to their ABI-specific counterparts when possible.
-    if (lowerModule.rewriteFunctionDefinition(op).failed())
+    if (lowerModule->rewriteFunctionDefinition(op).failed())
       return failure();
 
     return success();

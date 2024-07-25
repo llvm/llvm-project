@@ -91,7 +91,8 @@ public:
   LogicalResult rewriteFunctionCall(CallOp callOp, FuncOp funcOp);
 };
 
-LowerModule createLowerModule(ModuleOp module, PatternRewriter &rewriter);
+std::unique_ptr<LowerModule> createLowerModule(ModuleOp module,
+                                               PatternRewriter &rewriter);
 
 } // namespace cir
 } // namespace mlir
