@@ -8217,9 +8217,8 @@ static bool IsInfOrNanFunction(StringRef calleeName, MathCheck Check) {
   case MathCheck::Inf:
     return MatchesAny({"__builtin_inf", "__builtin_inff", "__builtin_infl",
                        "__builtin_inff16", "__builtin_inff128"});
-  default:
-    return false;
   }
+  llvm_unreachable("unknown MathCheck");
 }
 
 void Sema::CheckInfNaNFunction(const CallExpr *Call,
