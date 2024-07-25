@@ -3753,6 +3753,17 @@ bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
   if (X86::optimizeShiftRotateWithImmediateOne(Inst))
     return true;
 
+  auto replaceWithCCMP = [&] (unsigned Opcode) -> bool {
+  if (ForcedOpcodePrefix == OpcodePrefix_EVEX) {
+      Inst.setFlags(~(X86::IP_USE_EVEX) & Inst.getFlags());
+      Inst.setOpcode(Opcode);
+      Inst.addOperand(MCOperand::createImm(0));
+      Inst.addOperand(MCOperand::createImm(10));
+      return true;
+    }
+    return false;
+  };
+
   switch (Inst.getOpcode()) {
   default: return false;
   case X86::JMP_1:
@@ -3787,14 +3798,7 @@ bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
   // `{evex} cmp <>, <>` is alias of `ccmpt {dfv=} <>, <>`
 #define FROM_TO(FROM, TO)                                                      \
   case X86::FROM: {                                                            \
-    if (ForcedOpcodePrefix == OpcodePrefix_EVEX) {                             \
-      Inst.setFlags(~(X86::IP_USE_EVEX) & Inst.getFlags());                    \
-      Inst.setOpcode(X86::TO);                                                 \
-      Inst.addOperand(MCOperand::createImm(0));                                \
-      Inst.addOperand(MCOperand::createImm(10));                               \
-      return true;                                                             \
-    }                                                                          \
-    return false;                                                              \
+    return replaceWithCCMP(X86::TO);                                           \
   }
     FROM_TO(CMP64rr, CCMP64rr)
     FROM_TO(CMP64mi32, CCMP64mi32)
