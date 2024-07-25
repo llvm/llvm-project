@@ -902,7 +902,7 @@ struct LowerIllegalTransposeStoreViaZA
           rewriter.create<arith::AddIOp>(loc, transposedCol, writeIndices[1]);
       auto smeWrite = rewriter.create<vector::TransferWriteOp>(
           loc, tile, destTensorOrMemref, ValueRange{destRow, destCol},
-          transposeMap, subMask, writeOp.getInBounds().value_or(ArrayAttr{}));
+          transposeMap, subMask, writeOp.getInBounds());
 
       if (writeOp.hasPureTensorSemantics())
         destTensorOrMemref = smeWrite.getResult();
