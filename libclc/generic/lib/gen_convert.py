@@ -142,7 +142,10 @@ def conditional_guard(src, dst):
         float64_count = float64_count + 1
     elif dst in float16_types:
         float16_count = float16_count + 1
-    if float64_count > 0:
+    if float64_count > 0 and float16_count > 0:
+        print("#if defined(cl_khr_fp16) && defined(cl_khr_fp64)")
+        return True
+    elif float64_count > 0:
         # In embedded profile, if cl_khr_fp64 is supported cles_khr_int64 has to be
         print("#ifdef cl_khr_fp64")
         return True

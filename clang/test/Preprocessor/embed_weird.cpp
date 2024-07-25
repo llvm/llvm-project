@@ -115,3 +115,22 @@ void f1() {
   };
 }
 #endif
+
+static_assert(_Generic(
+#embed __FILE__ limit(1)
+  , int : 1, default : 0));
+
+static_assert(alignof(typeof(
+#embed __FILE__ limit(1)
+)) == alignof(int));
+
+struct HasChar {
+  signed char ch;
+};
+
+constexpr struct HasChar c = {
+#embed "Inputs/big_char.txt" // cxx-error {{constant expression evaluates to 255 which cannot be narrowed to type 'signed char'}} \
+                                cxx-note {{insert an explicit cast to silence this issue}} \
+                                c-error {{constexpr initializer evaluates to 255 which is not exactly representable in type 'signed char'}}
+
+};

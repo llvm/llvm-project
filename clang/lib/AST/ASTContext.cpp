@@ -1391,7 +1391,8 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #include "clang/Basic/OpenCLExtensionTypes.def"
   }
 
-  if (Target.hasAArch64SVETypes()) {
+  if (Target.hasAArch64SVETypes() ||
+      (AuxTarget && AuxTarget->hasAArch64SVETypes())) {
 #define SVE_TYPE(Name, Id, SingletonId) \
     InitBuiltinType(SingletonId, BuiltinType::Id);
 #include "clang/Basic/AArch64SVEACLETypes.def"
@@ -3229,14 +3230,16 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     OS << "<objc_object>";
     return;
 
-  case Type::Enum:
+  case Type::Enum: {
     // C11 6.7.2.2p4:
     //   Each enumerated type shall be compatible with char, a signed integer
     //   type, or an unsigned integer type.
     //
     // So we have to treat enum types as integers.
+    QualType UnderlyingType = cast<EnumType>(T)->getDecl()->getIntegerType();
     return encodeTypeForFunctionPointerAuth(
-        Ctx, OS, cast<EnumType>(T)->getDecl()->getIntegerType());
+        Ctx, OS, UnderlyingType.isNull() ? Ctx.IntTy : UnderlyingType);
+  }
 
   case Type::FunctionNoProto:
   case Type::FunctionProto: {
@@ -3367,6 +3370,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
 #include "clang/Basic/RISCVVTypes.def"
       llvm_unreachable("not yet implemented");
     }
+    llvm_unreachable("should never get here");
   }
   case Type::Record: {
     const RecordDecl *RD = T->getAs<RecordType>()->getDecl();
@@ -3411,7 +3415,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
   }
 }
 
-uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) const {
+uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) {
   assert(!T->isDependentType() &&
          "cannot compute type discriminator of a dependent type");
 
@@ -3421,11 +3425,13 @@ uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) const {
   if (T->isFunctionPointerType() || T->isFunctionReferenceType())
     T = T->getPointeeType();
 
-  if (T->isFunctionType())
+  if (T->isFunctionType()) {
     encodeTypeForFunctionPointerAuth(*this, Out, T);
-  else
-    llvm_unreachable(
-        "type discrimination of non-function type not implemented yet");
+  } else {
+    T = T.getUnqualifiedType();
+    std::unique_ptr<MangleContext> MC(createMangleContext());
+    MC->mangleCanonicalTypeName(T, Out);
+  }
 
   return llvm::getPointerAuthStableSipHash(Str);
 }

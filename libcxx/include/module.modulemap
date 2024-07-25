@@ -764,6 +764,7 @@ module std_private_algorithm_ranges_find_end                             [system
 module std_private_algorithm_ranges_find_first_of                        [system] { header "__algorithm/ranges_find_first_of.h" }
 module std_private_algorithm_ranges_find_if                              [system] { header "__algorithm/ranges_find_if.h" }
 module std_private_algorithm_ranges_find_if_not                          [system] { header "__algorithm/ranges_find_if_not.h" }
+module std_private_algorithm_ranges_find_last                            [system] { header "__algorithm/ranges_find_last.h" }
 module std_private_algorithm_ranges_for_each                             [system] {
   header "__algorithm/ranges_for_each.h"
   export std_private_algorithm_in_fun_result
@@ -1484,6 +1485,7 @@ module std_private_math_modulo                          [system] { header "__mat
 module std_private_math_remainder                       [system] { header "__math/remainder.h" }
 module std_private_math_roots                           [system] { header "__math/roots.h" }
 module std_private_math_rounding_functions              [system] { header "__math/rounding_functions.h" }
+module std_private_math_special_functions               [system] { header "__math/special_functions.h" }
 module std_private_math_traits                          [system] { header "__math/traits.h" }
 module std_private_math_trigonometric_functions         [system] { header "__math/trigonometric_functions.h" }
 
@@ -1521,6 +1523,8 @@ module std_private_memory_concepts                        [system] {
 module std_private_memory_construct_at                    [system] { header "__memory/construct_at.h" }
 module std_private_memory_destruct_n                      [system] { header "__memory/destruct_n.h" }
 module std_private_memory_fwd                             [system] { header "__fwd/memory.h" }
+module std_private_memory_inout_ptr                       [system] { header "__memory/inout_ptr.h" }
+module std_private_memory_out_ptr                         [system] { header "__memory/out_ptr.h" }
 module std_private_memory_pointer_traits                  [system] { header "__memory/pointer_traits.h" }
 module std_private_memory_ranges_construct_at             [system] { header "__memory/ranges_construct_at.h" }
 module std_private_memory_ranges_uninitialized_algorithms [system] {
@@ -2011,7 +2015,6 @@ module std_private_type_traits_is_scalar                                 [system
   header "__type_traits/is_scalar.h"
   export std_private_type_traits_is_null_pointer
 }
-module std_private_type_traits_is_scoped_enum                            [system] { header "__type_traits/is_scoped_enum.h" }
 module std_private_type_traits_is_signed                                 [system] { header "__type_traits/is_signed.h" }
 module std_private_type_traits_is_signed_integer                         [system] { header "__type_traits/is_signed_integer.h" }
 module std_private_type_traits_is_specialization                         [system] { header "__type_traits/is_specialization.h" }

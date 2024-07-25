@@ -786,7 +786,8 @@ private:
   //intrinsic property (such as TBAA metadata).
   AliasSetTracker AST;
 
-  LoopInfo *LI;
+  /// The LoopInfo of the loop being checked.
+  const LoopInfo *LI;
 
   /// Sets of potentially dependent accesses - members of one set share an
   /// underlying pointer. The set "CheckDeps" identfies which sets really need a
@@ -1730,7 +1731,7 @@ bool MemoryDepChecker::Dependence::isBackward() const {
 }
 
 bool MemoryDepChecker::Dependence::isPossiblyBackward() const {
-  return isBackward() || Type == Unknown;
+  return isBackward() || Type == Unknown || Type == IndirectUnsafe;
 }
 
 bool MemoryDepChecker::Dependence::isForward() const {

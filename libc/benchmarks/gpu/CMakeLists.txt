@@ -7,9 +7,10 @@ function(add_benchmark benchmark_name)
     "BENCHMARK"
     "" # Optional arguments
     "" # Single value arguments
-    "LINK_LIBRARIES" # Multi-value arguments
+    "LINK_LIBRARIES;DEPENDS" # Multi-value arguments
     ${ARGN}
   )
+  
   if(NOT libc.src.time.clock IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
     message(FATAL_ERROR "target does not support clock")
   endif()
@@ -19,6 +20,9 @@ function(add_benchmark benchmark_name)
     LINK_LIBRARIES
       LibcGpuBenchmark.hermetic
       ${BENCHMARK_LINK_LIBRARIES}
+    DEPENDS
+      libc.src.stdio.printf
+      ${BENCHMARK_DEPENDS}
     ${BENCHMARK_UNPARSED_ARGUMENTS}
   )
   get_fq_target_name(${benchmark_name} fq_target_name)
@@ -54,6 +58,7 @@ add_unittest_framework_library(
     libc.src.__support.fixedvector
     libc.src.time.clock
     libc.benchmarks.gpu.timing.timing
+    libc.src.stdio.printf
 )
 
 add_subdirectory(src)

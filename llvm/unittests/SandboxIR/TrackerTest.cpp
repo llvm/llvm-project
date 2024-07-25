@@ -69,6 +69,49 @@ define void @foo(ptr %ptr) {
   EXPECT_EQ(Ld->getOperand(0), Gep0);
 }
 
+TEST_F(TrackerTest, SwapOperands) {
+  parseIR(C, R"IR(
+define void @foo(i1 %cond) {
+ bb0:
+   br i1 %cond, label %bb1, label %bb2
+ bb1:
+   ret void
+ bb2:
+   ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  Ctx.createFunction(&LLVMF);
+  auto *BB0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb0")));
+  auto *BB1 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb1")));
+  auto *BB2 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb2")));
+  auto &Tracker = Ctx.getTracker();
+  Tracker.save();
+  auto It = BB0->begin();
+  auto *Br = cast<sandboxir::BranchInst>(&*It++);
+
+  unsigned SuccIdx = 0;
+  SmallVector<sandboxir::BasicBlock *> ExpectedSuccs({BB2, BB1});
+  for (auto *Succ : Br->successors())
+    EXPECT_EQ(Succ, ExpectedSuccs[SuccIdx++]);
+
+  // This calls User::swapOperandsInternal() internally.
+  Br->swapSuccessors();
+
+  SuccIdx = 0;
+  for (auto *Succ : reverse(Br->successors()))
+    EXPECT_EQ(Succ, ExpectedSuccs[SuccIdx++]);
+
+  Ctx.getTracker().revert();
+  SuccIdx = 0;
+  for (auto *Succ : Br->successors())
+    EXPECT_EQ(Succ, ExpectedSuccs[SuccIdx++]);
+}
+
 TEST_F(TrackerTest, RUWIf_RAUW_RUOW) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr) {
@@ -145,4 +188,228 @@ define void @foo(ptr %ptr) {
   EXPECT_EQ(St0->getOperand(0), Ld1);
   Ctx.accept();
   EXPECT_EQ(St0->getOperand(0), Ld1);
+}
+
+// TODO: Test multi-instruction patterns.
+TEST_F(TrackerTest, EraseFromParent) {
+  parseIR(C, R"IR(
+define void @foo(i32 %v1) {
+  %add0 = add i32 %v1, %v1
+  %add1 = add i32 %add0, %v1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  sandboxir::Instruction *Add0 = &*It++;
+  sandboxir::Instruction *Add1 = &*It++;
+  sandboxir::Instruction *Ret = &*It++;
+
+  Ctx.save();
+  // Check erase.
+  Add1->eraseFromParent();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+  EXPECT_EQ(Add0->getNumUses(), 0u);
+
+  // Check revert().
+  Ctx.revert();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Add1);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+  EXPECT_EQ(Add1->getOperand(0), Add0);
+
+  // Same for the last instruction in the block.
+  Ctx.save();
+  Ret->eraseFromParent();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Add1);
+  EXPECT_EQ(It, BB->end());
+  Ctx.revert();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Add1);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+}
+
+// TODO: Test multi-instruction patterns.
+TEST_F(TrackerTest, RemoveFromParent) {
+  parseIR(C, R"IR(
+define i32 @foo(i32 %arg) {
+  %add0 = add i32 %arg, %arg
+  %add1 = add i32 %add0, %arg
+  ret i32 %add1
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto *F = Ctx.createFunction(&LLVMF);
+  auto *Arg = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  sandboxir::Instruction *Add0 = &*It++;
+  sandboxir::Instruction *Add1 = &*It++;
+  sandboxir::Instruction *Ret = &*It++;
+
+  Ctx.save();
+  // Check removeFromParent().
+  Add1->removeFromParent();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+  // Removed instruction still be connected to operands and users.
+  EXPECT_EQ(Add1->getOperand(0), Add0);
+  EXPECT_EQ(Add1->getOperand(1), Arg);
+  EXPECT_EQ(Add0->getNumUses(), 1u);
+
+  // Check revert().
+  Ctx.revert();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Add1);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+  EXPECT_EQ(Add1->getOperand(0), Add0);
+
+  // Same for the last instruction in the block.
+  Ctx.save();
+  Ret->removeFromParent();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Add1);
+  EXPECT_EQ(It, BB->end());
+  EXPECT_EQ(Ret->getOperand(0), Add1);
+  Ctx.revert();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Add1);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+}
+
+// TODO: Test multi-instruction patterns.
+TEST_F(TrackerTest, MoveInstr) {
+  parseIR(C, R"IR(
+define i32 @foo(i32 %arg) {
+  %add0 = add i32 %arg, %arg
+  %add1 = add i32 %add0, %arg
+  ret i32 %add1
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  sandboxir::Instruction *Add0 = &*It++;
+  sandboxir::Instruction *Add1 = &*It++;
+  sandboxir::Instruction *Ret = &*It++;
+
+  // Check moveBefore(Instruction *) with tracking enabled.
+  Ctx.save();
+  Add1->moveBefore(Add0);
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add1);
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+  // Check revert().
+  Ctx.revert();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Add1);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+
+  // Same for the last instruction in the block.
+  Ctx.save();
+  Ret->moveBefore(Add0);
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Add1);
+  EXPECT_EQ(It, BB->end());
+  Ctx.revert();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Add1);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+
+  // Check moveBefore(BasicBlock &, BasicBlock::iterator) with tracking enabled.
+  Ctx.save();
+  Add1->moveBefore(*BB, Add0->getIterator());
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add1);
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+  // Check revert().
+  Ctx.revert();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Add1);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+
+  // Same for the last instruction in the block.
+  Ctx.save();
+  Ret->moveBefore(*BB, Add0->getIterator());
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Add1);
+  EXPECT_EQ(It, BB->end());
+  // Check revert().
+  Ctx.revert();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Add1);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+
+  // Check moveAfter(Instruction *) with tracking enabled.
+  Ctx.save();
+  Add0->moveAfter(Add1);
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add1);
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+  // Check revert().
+  Ctx.revert();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Add1);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+
+  // Same for the last instruction in the block.
+  Ctx.save();
+  Ret->moveAfter(Add0);
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(&*It++, Add1);
+  EXPECT_EQ(It, BB->end());
+  // Check revert().
+  Ctx.revert();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Add1);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
 }

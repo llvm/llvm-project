@@ -178,7 +178,10 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
 static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags, const Symbol &original) {
   const Symbol &ultimate{original.GetUltimate()};
-  if (const auto *association{ultimate.detailsIf<AssocEntityDetails>()}) {
+  if (const auto *association{ultimate.detailsIf<AssocEntityDetails>()};
+      association &&
+      (association->rank().has_value() ||
+          !flags.test(DefinabilityFlag::PointerDefinition))) {
     if (auto dataRef{
             evaluate::ExtractDataRef(*association->expr(), true, true)}) {
       return WhyNotDefinableLast(at, scope, flags, dataRef->GetLastSymbol());

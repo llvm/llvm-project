@@ -333,3 +333,13 @@ add_entrypoint_external(
 add_entrypoint_external(
   opterr
 )
+
+add_entrypoint_object(
+  gettid
+  SRCS
+    gettid.cpp
+  HDRS
+    gettid.h
+  DEPENDS
+    libc.src.__support.threads.tid
+)

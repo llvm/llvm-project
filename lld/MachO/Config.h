@@ -212,9 +212,15 @@ struct Configuration {
   bool csProfileGenerate = false;
   llvm::StringRef csProfilePath;
   bool pgoWarnMismatch;
+  bool warnThinArchiveMissingMembers;
 
   bool callGraphProfileSort = false;
   llvm::StringRef printSymbolOrder;
+
+  llvm::StringRef irpgoProfileSortProfilePath;
+  bool functionOrderForCompression = false;
+  bool dataOrderForCompression = false;
+  bool verboseBpSectionOrderer = false;
 
   SectionRenameMap sectionRenameMap;
   SegmentRenameMap segmentRenameMap;

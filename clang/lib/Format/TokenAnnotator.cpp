@@ -62,6 +62,7 @@ static bool canBeObjCSelectorComponent(const FormatToken &Tok) {
 
 /// With `Left` being '(', check if we're at either `[...](` or
 /// `[...]<...>(`, where the [ opens a lambda capture list.
+// FIXME: this doesn't cover attributes/constraints before the l_paren.
 static bool isLambdaParameterList(const FormatToken *Left) {
   // Skip <...> if present.
   if (Left->Previous && Left->Previous->is(tok::greater) &&
@@ -365,6 +366,7 @@ private:
       Contexts.back().IsExpression = false;
     } else if (isLambdaParameterList(&OpeningParen)) {
       // This is a parameter list of a lambda expression.
+      OpeningParen.setType(TT_LambdaDefinitionLParen);
       Contexts.back().IsExpression = false;
     } else if (OpeningParen.is(TT_RequiresExpressionLParen)) {
       Contexts.back().IsExpression = false;
@@ -2458,9 +2460,9 @@ private:
         Current.setType(TT_CastRParen);
       if (Current.MatchingParen && Current.Next &&
           !Current.Next->isBinaryOperator() &&
-          !Current.Next->isOneOf(tok::semi, tok::colon, tok::l_brace,
-                                 tok::comma, tok::period, tok::arrow,
-                                 tok::coloncolon, tok::kw_noexcept)) {
+          !Current.Next->isOneOf(
+              tok::semi, tok::colon, tok::l_brace, tok::l_paren, tok::comma,
+              tok::period, tok::arrow, tok::coloncolon, tok::kw_noexcept)) {
         if (FormatToken *AfterParen = Current.MatchingParen->Next;
             AfterParen && AfterParen->isNot(tok::caret)) {
           // Make sure this isn't the return type of an Obj-C block declaration.
@@ -2616,8 +2618,10 @@ private:
       return false;
 
     // int a or auto a.
-    if (PreviousNotConst->isOneOf(tok::identifier, tok::kw_auto))
+    if (PreviousNotConst->isOneOf(tok::identifier, tok::kw_auto) &&
+        PreviousNotConst->isNot(TT_StatementAttributeLikeMacro)) {
       return true;
+    }
 
     // *a or &a or &&a.
     if (PreviousNotConst->is(TT_PointerOrReference))
@@ -6192,6 +6196,12 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return false;
     const FormatToken *Previous = Right.MatchingParen->Previous;
     return !(Previous && (Previous->is(tok::kw_for) || Previous->isIf()));
+  }
+
+  if (Left.isOneOf(tok::r_paren, TT_TrailingAnnotation) &&
+      Right.is(TT_TrailingAnnotation) &&
+      Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) {
+    return false;
   }
 
   // Allow breaking after a trailing annotation, e.g. after a method
