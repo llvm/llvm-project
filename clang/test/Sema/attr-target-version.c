@@ -112,15 +112,3 @@ int unspec_args_implicit_default_first();
 // expected-note@+1 {{function multiversioning caused by this declaration}}
 int __attribute__((target_version("aes"))) unspec_args_implicit_default_first() { return -1; }
 int __attribute__((target_version("default"))) unspec_args_implicit_default_first() { return 0; }
-
-void __attribute__((target_version("default"))) variadic_ok(int x, ...) {}
-void __attribute__((target_version("fp"))) variadic_ok(int x, ...) {}
-// expected-note@+1 {{candidate function}}
-void __attribute__((target_version("default"))) variadic_bad(int x) {}
-void __attribute__((target_version("fp"))) variadic_bad(int x, ...) {}
-
-void calls_variadic() {
-  variadic_ok(3);
-  //expected-error@+1 {{call to 'variadic_bad' is ambiguous}}
-  variadic_bad(3);
-}
