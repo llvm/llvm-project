@@ -931,6 +931,7 @@ struct VectorStepOpConvert final : OpConversionPattern<vector::StepOp> {
     }
 
     SmallVector<Value> source;
+    source.reserve(numElements);
     for (int64_t i = 0; i < numElements; ++i) {
       Attribute intAttr = rewriter.getIntegerAttr(intType, i);
       Value constOp = rewriter.create<spirv::ConstantOp>(loc, intType, intAttr);
