@@ -3642,6 +3642,42 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  totalorder_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    totalorder_test.cpp
+  HDRS
+    TotalOrderTest.h
+  DEPENDS
+    libc.src.math.totalorder
+)
+
+add_fp_unittest(
+  totalorderf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    totalorderf_test.cpp
+  HDRS
+    TotalOrderTest.h
+  DEPENDS
+    libc.src.math.totalorderf
+)
+
+add_fp_unittest(
+  totalorderl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    totalorderl_test.cpp
+  HDRS
+    TotalOrderTest.h
+  DEPENDS
+    libc.src.math.totalorderl
+)
+
+add_fp_unittest(
   totalorderf16_test
   SUITE
     libc-math-smoke-tests
@@ -3651,6 +3687,18 @@ add_fp_unittest(
     TotalOrderTest.h
   DEPENDS
     libc.src.math.totalorderf16
+)
+
+add_fp_unittest(
+  totalorderf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    totalorderf128_test.cpp
+  HDRS
+    TotalOrderTest.h
+  DEPENDS
+    libc.src.math.totalorderf128
 )
 
 add_fp_unittest(
