@@ -20,12 +20,12 @@ program omp_do
   !$omp parallel  default(shared)
   !$omp do
   !DEF: /omp_do/OtherConstruct2/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
-  !DEF: /omp_do/OtherConstruct2/n HostAssoc INTEGER(4)
+  !REF: /omp_do/n
   do i=1,n
     !$omp parallel
     !$omp single
     !DEF: /work EXTERNAL (Subroutine) ProcEntity
-    !DEF: /omp_do/OtherConstruct2/OtherConstruct1/OtherConstruct1/i HostAssoc INTEGER(4)
+    !REF: /omp_do/OtherConstruct2/OtherConstruct1/i
     call work(i, 1)
     !$omp end single
     !$omp end parallel

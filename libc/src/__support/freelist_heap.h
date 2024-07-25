@@ -189,19 +189,19 @@ template <size_t NUM_BUCKETS> void FreeListHeap<NUM_BUCKETS>::free(void *ptr) {
   BlockType *prev = chunk_block->prev();
   BlockType *next = nullptr;
 
-  if (!chunk_block->last())
+  if (chunk_block->next())
     next = chunk_block->next();
 
   if (prev != nullptr && !prev->used()) {
     // Remove from freelist and merge
     freelist_.remove_chunk(block_to_span(prev));
     chunk_block = chunk_block->prev();
-    BlockType::merge_next(chunk_block);
+    chunk_block->merge_next();
   }
 
   if (next != nullptr && !next->used()) {
     freelist_.remove_chunk(block_to_span(next));
-    BlockType::merge_next(chunk_block);
+    chunk_block->merge_next();
   }
   // Add back to the freelist
   freelist_.add_chunk(block_to_span(chunk_block));
