@@ -431,8 +431,23 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
   // SplitBlockAndInsertIfThenElse conveniently creates the basic if-then-else
   // structure. Its block terminators (unconditional branches) are replaced by
   // the appropriate conditional branches when the loop is built.
+  // If the pointers are in different address spaces, they need to be converted
+  // to a compatible one. Cases where memory ranges in the different address
+  // spaces cannot overlap are lowered as memcpy and not handled here.
+  Value *CmpSrcAddr = SrcAddr;
+  Value *CmpDstAddr = DstAddr;
+  if ((SrcAS != DstAS)) {
+    if (TTI.isValidAddrSpaceCast(DstAS, SrcAS)) {
+      CmpDstAddr = PLBuilder.CreateAddrSpaceCast(DstAddr, SrcAddr->getType());
+    } else if (TTI.isValidAddrSpaceCast(SrcAS, DstAS)) {
+      CmpSrcAddr = PLBuilder.CreateAddrSpaceCast(SrcAddr, DstAddr->getType());
+    } else {
+      llvm_unreachable("Can only lower memmove between address spaces if they "
+                       "support addrspacecast");
+    }
+  }
   Value *PtrCompare =
-      PLBuilder.CreateICmpULT(SrcAddr, DstAddr, "compare_src_dst");
+      PLBuilder.CreateICmpULT(CmpSrcAddr, CmpDstAddr, "compare_src_dst");
   Instruction *ThenTerm, *ElseTerm;
   SplitBlockAndInsertIfThenElse(PtrCompare, InsertBefore->getIterator(),
                                 &ThenTerm, &ElseTerm);
@@ -655,8 +670,20 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
 
   IRBuilder<> PLBuilder(InsertBefore);
 
+  Value *CmpSrcAddr = SrcAddr;
+  Value *CmpDstAddr = DstAddr;
+  if ((SrcAS != DstAS)) {
+    if (TTI.isValidAddrSpaceCast(DstAS, SrcAS)) {
+      CmpDstAddr = PLBuilder.CreateAddrSpaceCast(DstAddr, SrcAddr->getType());
+    } else if (TTI.isValidAddrSpaceCast(SrcAS, DstAS)) {
+      CmpSrcAddr = PLBuilder.CreateAddrSpaceCast(SrcAddr, DstAddr->getType());
+    } else {
+      llvm_unreachable("Can only lower memmove between address spaces if they "
+                       "support addrspacecast");
+    }
+  }
   Value *PtrCompare =
-      PLBuilder.CreateICmpULT(SrcAddr, DstAddr, "compare_src_dst");
+      PLBuilder.CreateICmpULT(CmpSrcAddr, CmpDstAddr, "compare_src_dst");
   Instruction *ThenTerm, *ElseTerm;
   SplitBlockAndInsertIfThenElse(PtrCompare, InsertBefore->getIterator(),
                                 &ThenTerm, &ElseTerm);
@@ -907,11 +934,8 @@ bool llvm::expandMemMoveAsLoop(MemMoveInst *Memmove,
       return true;
     }
 
-    if (TTI.isValidAddrSpaceCast(DstAS, SrcAS))
-      DstAddr = CastBuilder.CreateAddrSpaceCast(DstAddr, SrcAddr->getType());
-    else if (TTI.isValidAddrSpaceCast(SrcAS, DstAS))
-      SrcAddr = CastBuilder.CreateAddrSpaceCast(SrcAddr, DstAddr->getType());
-    else {
+    if (!(TTI.isValidAddrSpaceCast(DstAS, SrcAS) ||
+          TTI.isValidAddrSpaceCast(SrcAS, DstAS))) {
       // We don't know generically if it's legal to introduce an
       // addrspacecast. We need to know either if it's legal to insert an
       // addrspacecast, or if the address spaces cannot alias.
