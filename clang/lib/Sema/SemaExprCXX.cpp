@@ -6032,8 +6032,8 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
     const RecordType *DerivedRecord = RhsT->getAs<RecordType>();
 
     if (!BaseRecord || !DerivedRecord) {
-      DiagnoseVLAInCXXTypeTrait(Self, Lhs, tok::kw___is_virtual_base_of);
-      DiagnoseVLAInCXXTypeTrait(Self, Rhs, tok::kw___is_virtual_base_of);
+      DiagnoseVLAInCXXTypeTrait(Self, Lhs, tok::kw___builtin_is_virtual_base_of);
+      DiagnoseVLAInCXXTypeTrait(Self, Rhs, tok::kw___builtin_is_virtual_base_of);
       return false;
     }
 

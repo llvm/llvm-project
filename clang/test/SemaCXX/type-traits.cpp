@@ -2471,60 +2471,60 @@ struct DerivedProtectedPrivate : protected DerivedProtected {};
 struct DerivedProtectedProtected : protected DerivedProtected {};
 
 void is_virtual_base_of(int n) {
-  static_assert(!__is_virtual_base_of(Base, Derived));
-  static_assert(!__is_virtual_base_of(const Base, Derived));
-  static_assert(!__is_virtual_base_of(Derived, Base));
-  static_assert(!__is_virtual_base_of(Derived, int));
-  static_assert(!__is_virtual_base_of(Base, Base));
-  static_assert(!__is_virtual_base_of(Base, Derived3));
-  static_assert(!__is_virtual_base_of(Derived, Derived3));
-  static_assert(__is_virtual_base_of(Derived2b, Derived3));
-  static_assert(__is_virtual_base_of(Derived2a, Derived3));
-  static_assert(!__is_virtual_base_of(BaseA<int>, DerivedB<int>));
-  static_assert(!__is_virtual_base_of(DerivedB<int>, BaseA<int>));
-  static_assert(!__is_virtual_base_of(Union, Union));
-  static_assert(!__is_virtual_base_of(Empty, Empty));
-  static_assert(!__is_virtual_base_of(class_forward, class_forward)); // expected-error {{incomplete type 'class_forward' where a complete type is required}}
-  static_assert(!__is_virtual_base_of(Empty, class_forward)); // expected-error {{incomplete type 'class_forward' where a complete type is required}}
-  static_assert(!__is_virtual_base_of(class_forward, Empty));
-  static_assert(!__is_virtual_base_of(Base&, Derived&));
-  static_assert(!__is_virtual_base_of(Base[10], Derived[10]));
-  static_assert(!__is_virtual_base_of(Base[n], Derived[n])); // expected-error 2 {{variable length arrays are not supported in '__is_virtual_base_of'}}
-  static_assert(!__is_virtual_base_of(int, int));
-  static_assert(!__is_virtual_base_of(int[], int[]));
-  static_assert(!__is_virtual_base_of(long, int));
-  static_assert(!__is_virtual_base_of(Base, DerivedTemp<int>));
-  static_assert(!__is_virtual_base_of(Base, NonderivedTemp<int>));
-  static_assert(!__is_virtual_base_of(Base, UndefinedTemp<int>)); // expected-error {{implicit instantiation of undefined template 'UndefinedTemp<int>'}}
-  static_assert(__is_virtual_base_of(Base, DerivedPrivate));
-  static_assert(__is_virtual_base_of(Base, DerivedProtected));
-  static_assert(__is_virtual_base_of(Base, DerivedPrivatePrivate));
-  static_assert(__is_virtual_base_of(Base, DerivedPrivateProtected));
-  static_assert(__is_virtual_base_of(Base, DerivedProtectedPrivate));
-  static_assert(__is_virtual_base_of(Base, DerivedProtectedProtected));
-  static_assert(__is_virtual_base_of(Derived2a, DerivedTransitiveViaNonVirtual));
-  static_assert(__is_virtual_base_of(Derived2b, DerivedTransitiveViaNonVirtual));
-  static_assert(__is_virtual_base_of(Derived2a, DerivedTransitiveViaVirtual));
-  static_assert(__is_virtual_base_of(Derived2b, DerivedTransitiveViaVirtual));
-  static_assert(!__is_virtual_base_of(Base, CrazyDerived<Base>));
-  static_assert(!__is_virtual_base_of(CrazyDerived<Base>, Base));
-  static_assert(__is_virtual_base_of(Base, CrazyDerivedVirtual<Base>));
-  static_assert(!__is_virtual_base_of(CrazyDerivedVirtual<Base>, Base));
+  static_assert(!__builtin_is_virtual_base_of(Base, Derived));
+  static_assert(!__builtin_is_virtual_base_of(const Base, Derived));
+  static_assert(!__builtin_is_virtual_base_of(Derived, Base));
+  static_assert(!__builtin_is_virtual_base_of(Derived, int));
+  static_assert(!__builtin_is_virtual_base_of(Base, Base));
+  static_assert(!__builtin_is_virtual_base_of(Base, Derived3));
+  static_assert(!__builtin_is_virtual_base_of(Derived, Derived3));
+  static_assert(__builtin_is_virtual_base_of(Derived2b, Derived3));
+  static_assert(__builtin_is_virtual_base_of(Derived2a, Derived3));
+  static_assert(!__builtin_is_virtual_base_of(BaseA<int>, DerivedB<int>));
+  static_assert(!__builtin_is_virtual_base_of(DerivedB<int>, BaseA<int>));
+  static_assert(!__builtin_is_virtual_base_of(Union, Union));
+  static_assert(!__builtin_is_virtual_base_of(Empty, Empty));
+  static_assert(!__builtin_is_virtual_base_of(class_forward, class_forward)); // expected-error {{incomplete type 'class_forward' where a complete type is required}}
+  static_assert(!__builtin_is_virtual_base_of(Empty, class_forward)); // expected-error {{incomplete type 'class_forward' where a complete type is required}}
+  static_assert(!__builtin_is_virtual_base_of(class_forward, Empty));
+  static_assert(!__builtin_is_virtual_base_of(Base&, Derived&));
+  static_assert(!__builtin_is_virtual_base_of(Base[10], Derived[10]));
+  static_assert(!__builtin_is_virtual_base_of(Base[n], Derived[n])); // expected-error 2 {{variable length arrays are not supported in '__builtin_is_virtual_base_of'}}
+  static_assert(!__builtin_is_virtual_base_of(int, int));
+  static_assert(!__builtin_is_virtual_base_of(int[], int[]));
+  static_assert(!__builtin_is_virtual_base_of(long, int));
+  static_assert(!__builtin_is_virtual_base_of(Base, DerivedTemp<int>));
+  static_assert(!__builtin_is_virtual_base_of(Base, NonderivedTemp<int>));
+  static_assert(!__builtin_is_virtual_base_of(Base, UndefinedTemp<int>)); // expected-error {{implicit instantiation of undefined template 'UndefinedTemp<int>'}}
+  static_assert(__builtin_is_virtual_base_of(Base, DerivedPrivate));
+  static_assert(__builtin_is_virtual_base_of(Base, DerivedProtected));
+  static_assert(__builtin_is_virtual_base_of(Base, DerivedPrivatePrivate));
+  static_assert(__builtin_is_virtual_base_of(Base, DerivedPrivateProtected));
+  static_assert(__builtin_is_virtual_base_of(Base, DerivedProtectedPrivate));
+  static_assert(__builtin_is_virtual_base_of(Base, DerivedProtectedProtected));
+  static_assert(__builtin_is_virtual_base_of(Derived2a, DerivedTransitiveViaNonVirtual));
+  static_assert(__builtin_is_virtual_base_of(Derived2b, DerivedTransitiveViaNonVirtual));
+  static_assert(__builtin_is_virtual_base_of(Derived2a, DerivedTransitiveViaVirtual));
+  static_assert(__builtin_is_virtual_base_of(Derived2b, DerivedTransitiveViaVirtual));
+  static_assert(!__builtin_is_virtual_base_of(Base, CrazyDerived<Base>));
+  static_assert(!__builtin_is_virtual_base_of(CrazyDerived<Base>, Base));
+  static_assert(__builtin_is_virtual_base_of(Base, CrazyDerivedVirtual<Base>));
+  static_assert(!__builtin_is_virtual_base_of(CrazyDerivedVirtual<Base>, Base));
 
-  static_assert(!__is_virtual_base_of(IncompleteUnion, IncompleteUnion));
-  static_assert(!__is_virtual_base_of(Union, IncompleteUnion));
-  static_assert(!__is_virtual_base_of(IncompleteUnion, Union));
-  static_assert(!__is_virtual_base_of(IncompleteStruct, IncompleteUnion));
-  static_assert(!__is_virtual_base_of(IncompleteUnion, IncompleteStruct));
-  static_assert(!__is_virtual_base_of(Empty, IncompleteUnion));
-  static_assert(!__is_virtual_base_of(IncompleteUnion, Empty));
-  static_assert(!__is_virtual_base_of(int, IncompleteUnion));
-  static_assert(!__is_virtual_base_of(IncompleteUnion, int));
-  static_assert(!__is_virtual_base_of(Empty, Union));
-  static_assert(!__is_virtual_base_of(Union, Empty));
-  static_assert(!__is_virtual_base_of(int, Empty));
-  static_assert(!__is_virtual_base_of(Union, int));
-  static_assert(!__is_virtual_base_of(IncompleteStruct, IncompleteStruct[n])); // expected-error {{variable length arrays are not supported in '__is_virtual_base_of'}}
+  static_assert(!__builtin_is_virtual_base_of(IncompleteUnion, IncompleteUnion));
+  static_assert(!__builtin_is_virtual_base_of(Union, IncompleteUnion));
+  static_assert(!__builtin_is_virtual_base_of(IncompleteUnion, Union));
+  static_assert(!__builtin_is_virtual_base_of(IncompleteStruct, IncompleteUnion));
+  static_assert(!__builtin_is_virtual_base_of(IncompleteUnion, IncompleteStruct));
+  static_assert(!__builtin_is_virtual_base_of(Empty, IncompleteUnion));
+  static_assert(!__builtin_is_virtual_base_of(IncompleteUnion, Empty));
+  static_assert(!__builtin_is_virtual_base_of(int, IncompleteUnion));
+  static_assert(!__builtin_is_virtual_base_of(IncompleteUnion, int));
+  static_assert(!__builtin_is_virtual_base_of(Empty, Union));
+  static_assert(!__builtin_is_virtual_base_of(Union, Empty));
+  static_assert(!__builtin_is_virtual_base_of(int, Empty));
+  static_assert(!__builtin_is_virtual_base_of(Union, int));
+  static_assert(!__builtin_is_virtual_base_of(IncompleteStruct, IncompleteStruct[n])); // expected-error {{variable length arrays are not supported in '__builtin_is_virtual_base_of'}}
 }
 
 template<class T, class U>
