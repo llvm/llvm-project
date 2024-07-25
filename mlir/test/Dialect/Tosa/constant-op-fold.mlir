@@ -566,6 +566,17 @@ func.func @cast_float_to_int() -> tensor<i16> {
 
 // -----
 
+// CHECK: func.func @cast_float_to_int_round
+func.func @cast_float_to_int_round() -> tensor<i16> {
+  %splat = "tosa.const"() {value = dense<-3.5> : tensor<f32>} : () -> tensor<f32>
+  // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{value = dense<-4> : tensor<i16>}
+  %cast = tosa.cast %splat : (tensor<f32>) -> tensor<i16>
+  // CHECK: return %[[SPLAT]]
+  return %cast : tensor<i16>
+}
+
+// -----
+
 // CHECK: func.func @cast_int_to_int_trunc
 func.func @cast_int_to_int_trunc() -> tensor<i16> {
   %splat = "tosa.const"() {value = dense<-1> : tensor<i32>} : () -> tensor<i32>
