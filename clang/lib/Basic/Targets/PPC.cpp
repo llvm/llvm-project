@@ -14,6 +14,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
 
 using namespace clang;
 using namespace clang::targets;
@@ -882,25 +883,12 @@ ArrayRef<TargetInfo::AddlRegName> PPCTargetInfo::getGCCAddlRegNames() const {
   return llvm::ArrayRef(GCCAddlRegNames);
 }
 
-static constexpr llvm::StringLiteral ValidCPUNames[] = {
-    {"generic"},   {"440"},     {"450"},         {"601"},     {"602"},
-    {"603"},       {"603e"},    {"603ev"},       {"604"},     {"604e"},
-    {"620"},       {"630"},     {"g3"},          {"7400"},    {"g4"},
-    {"7450"},      {"g4+"},     {"750"},         {"8548"},    {"970"},
-    {"g5"},        {"a2"},      {"e500"},        {"e500mc"},  {"e5500"},
-    {"power3"},    {"pwr3"},    {"power4"},      {"pwr4"},    {"power5"},
-    {"pwr5"},      {"power5x"}, {"pwr5x"},       {"power6"},  {"pwr6"},
-    {"power6x"},   {"pwr6x"},   {"power7"},      {"pwr7"},    {"power8"},
-    {"pwr8"},      {"power9"},  {"pwr9"},        {"power10"}, {"pwr10"},
-    {"power11"},   {"pwr11"},   {"powerpc"},     {"ppc"},     {"ppc32"},
-    {"powerpc64"}, {"ppc64"},   {"powerpc64le"}, {"ppc64le"}, {"future"}};
-
 bool PPCTargetInfo::isValidCPUName(StringRef Name) const {
-  return llvm::is_contained(ValidCPUNames, Name);
+  return llvm::PPC::isValidCPU(Name);
 }
 
 void PPCTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
-  Values.append(std::begin(ValidCPUNames), std::end(ValidCPUNames));
+  llvm::PPC::fillValidCPUList(Values);
 }
 
 void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
