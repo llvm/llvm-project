@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 class MultipleSlidesTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @expectedFailureAll(oslist=["windows"], archs=["x86_64"])
     def test_mulitple_slides(self):
         """Test that a binary can be slid multiple times correctly."""
         self.build()

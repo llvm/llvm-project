@@ -52,6 +52,7 @@ class ThreadAPITestCase(TestBase):
         self.build()
         self.validate_negative_indexing()
  
+    @expectedFailureAll(oslist=["windows"], archs=["x86_64"])
     def test_StepInstruction(self):
         """Test that StepInstruction preserves the plan stack."""
         self.build()

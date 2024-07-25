@@ -6,7 +6,7 @@ from lldbsuite.test import lldbutil
 
 class TestCaseClassTemplateNonTypeParameterPack(TestBase):
     @expectedFailureAll(
-        oslist=["windows"], archs=["i[3-6]86", "x86_64"]
+        oslist=["windows"], archs=["i[3-6]86"]
     )  # Fails to read memory from target.
     @no_debug_info_test
     def test(self):
