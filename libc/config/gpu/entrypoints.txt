@@ -186,6 +186,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.sprintf
     libc.src.stdio.vsnprintf
     libc.src.stdio.vsprintf
+    libc.src.stdio.sscanf
     libc.src.stdio.feof
     libc.src.stdio.ferror
     libc.src.stdio.fflush
