@@ -92,7 +92,7 @@ bool InitLink::emit(Compiler<Emitter> *Ctx, const Expr *E) const {
   case K_Elem:
     if (!Ctx->emitConstUint32(Offset, E))
       return false;
-    return Ctx->emitArrayElemPtrUint32(E);
+    return Ctx->emitArrayElemPtrPopUint32(E);
   default:
     llvm_unreachable("Unhandled InitLink kind");
   }
@@ -4156,7 +4156,8 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   if (InitStackActive && !InitStack.empty()) {
     unsigned StartIndex = 0;
     for (StartIndex = InitStack.size() - 1; StartIndex > 0; --StartIndex) {
-      if (InitStack[StartIndex].Kind != InitLink::K_Field)
+      if (InitStack[StartIndex].Kind != InitLink::K_Field &&
+          InitStack[StartIndex].Kind != InitLink::K_Elem)
         break;
     }
 
@@ -5237,6 +5238,10 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
             return RT->getPointeeType().isConstQualified();
           return false;
         };
+
+        // DecompositionDecls are just proxies for us.
+        if (isa<DecompositionDecl>(VD))
+          return revisit(VD);
 
         // Visit local const variables like normal.
         if ((VD->hasGlobalStorage() || VD->isLocalVarDecl() ||

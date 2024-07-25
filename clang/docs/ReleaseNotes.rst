@@ -150,6 +150,7 @@ Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fixed a crash when an expression with a dependent ``__typeof__`` type is used as the operand of a unary operator. (#GH97646)
+- Fixed a failed assertion when checking invalid delete operator declaration. (#GH96191)
 - Fix a crash when checking destructor reference with an invalid initializer. (#GH97230)
 
 Bug Fixes to AST Handling
@@ -179,7 +180,9 @@ X86 Support
   unconditionally. These intrinsics are therefore *no longer
   supported* if MMX is enabled without SSE2 -- either from targeting
   CPUs from the Pentium-MMX through the Pentium 3, or explicitly via
-  passing arguments such as ``-mmmx -mno-sse2``.
+  passing arguments such as ``-mmmx -mno-sse2``. MMX assembly code
+  remains supported without requiring SSE2, including inside
+  inline-assembly.
 
 - The compiler builtins such as ``__builtin_ia32_paddb`` which
   formerly implemented the above MMX intrinsic functions have been
