@@ -3883,8 +3883,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///   abcdabcdabcdabcd... into *outP
   /// - st1_x4 is non-interleaved i.e., st1_x4 (inA, inB, inC, inD, outP)
   ///   writes aaaa...bbbb...cccc...dddd... into *outP
-  /// Since we apply the corresponding intrinsic to the shadow, we can reuse
-  /// the same logic.
+  /// These instructions can all be instrumented with essentially the same
+  /// logic, simply by applying the corresponding intrinsic to the shadow.
   void handleNEONVectorStoreIntrinsic(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
 
@@ -3930,6 +3930,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         Addr, IRB, OutputShadowTy, Align(1), /*isStore*/ true);
     Shadows.append(1, OutputShadowPtr);
 
+    // CreateIntrinsic will select the correct (integer) type for the
+    // intrinsic; the original instruction I may have either integer- or
+    // float-type inputs.
     CallInst *CI =
         IRB.CreateIntrinsic(IRB.getVoidTy(), I.getIntrinsicID(), Shadows);
     setShadow(&I, CI);
