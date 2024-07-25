@@ -1114,6 +1114,11 @@ bool ConstructDecompositionT<C, H>::applyClause(
 template <typename C, typename H> bool ConstructDecompositionT<C, H>::split() {
   bool success = true;
 
+  auto isImplicit = [this](const ClauseTy *node) {
+    return llvm::any_of(
+        implicit, [node](const ClauseTy &clause) { return &clause == node; });
+  };
+
   for (llvm::omp::Directive leaf :
        llvm::omp::getLeafConstructsOrSelf(construct))
     leafs.push_back(LeafReprInternal{leaf, /*clauses=*/{}});
@@ -1153,9 +1158,10 @@ template <typename C, typename H> bool ConstructDecompositionT<C, H>::split() {
   for (const ClauseTy *node : nodes) {
     if (skip(node))
       continue;
-    success =
-        success &&
+    bool result =
         std::visit([&](auto &&s) { return applyClause(s, node); }, node->u);
+    if (!isImplicit(node))
+      success = success && result;
   }
 
   // Apply "allocate".
