@@ -62,6 +62,7 @@ static bool canBeObjCSelectorComponent(const FormatToken &Tok) {
 
 /// With `Left` being '(', check if we're at either `[...](` or
 /// `[...]<...>(`, where the [ opens a lambda capture list.
+// FIXME: this doesn't cover attributes/constraints before the l_paren.
 static bool isLambdaParameterList(const FormatToken *Left) {
   // Skip <...> if present.
   if (Left->Previous && Left->Previous->is(tok::greater) &&
@@ -365,12 +366,17 @@ private:
       Contexts.back().IsExpression = false;
     } else if (isLambdaParameterList(&OpeningParen)) {
       // This is a parameter list of a lambda expression.
+      OpeningParen.setType(TT_LambdaDefinitionLParen);
       Contexts.back().IsExpression = false;
     } else if (OpeningParen.is(TT_RequiresExpressionLParen)) {
       Contexts.back().IsExpression = false;
     } else if (OpeningParen.Previous &&
                OpeningParen.Previous->is(tok::kw__Generic)) {
       Contexts.back().ContextType = Context::C11GenericSelection;
+      Contexts.back().IsExpression = true;
+    } else if (Line.InPPDirective &&
+               (!OpeningParen.Previous ||
+                OpeningParen.Previous->isNot(tok::identifier))) {
       Contexts.back().IsExpression = true;
     } else if (Contexts[Contexts.size() - 2].CaretFound) {
       // This is the parameter list of an ObjC block.
@@ -384,20 +390,7 @@ private:
                OpeningParen.Previous->MatchingParen->isOneOf(
                    TT_ObjCBlockLParen, TT_FunctionTypeLParen)) {
       Contexts.back().IsExpression = false;
-    } else if (Line.InPPDirective) {
-      auto IsExpr = [&OpeningParen] {
-        const auto *Tok = OpeningParen.Previous;
-        if (!Tok || Tok->isNot(tok::identifier))
-          return true;
-        Tok = Tok->Previous;
-        while (Tok && Tok->endsSequence(tok::coloncolon, tok::identifier)) {
-          assert(Tok->Previous);
-          Tok = Tok->Previous->Previous;
-        }
-        return !Tok || !Tok->Tok.getIdentifierInfo();
-      };
-      Contexts.back().IsExpression = IsExpr();
-    } else if (!Line.MustBeDeclaration) {
+    } else if (!Line.MustBeDeclaration && !Line.InPPDirective) {
       bool IsForOrCatch =
           OpeningParen.Previous &&
           OpeningParen.Previous->isOneOf(tok::kw_for, tok::kw_catch);
@@ -6203,6 +6196,12 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return false;
     const FormatToken *Previous = Right.MatchingParen->Previous;
     return !(Previous && (Previous->is(tok::kw_for) || Previous->isIf()));
+  }
+
+  if (Left.isOneOf(tok::r_paren, TT_TrailingAnnotation) &&
+      Right.is(TT_TrailingAnnotation) &&
+      Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) {
+    return false;
   }
 
   // Allow breaking after a trailing annotation, e.g. after a method
