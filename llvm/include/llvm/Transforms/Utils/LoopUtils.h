@@ -359,6 +359,10 @@ bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                         SinkAndHoistLICMFlags &LICMFlags,
                         OptimizationRemarkEmitter *ORE = nullptr);
 
+/// Returns the llvm.vector.reduce intrinsic that corresponds to the recurrence
+/// kind.
+constexpr Intrinsic::ID getReductionIntrinsicID(RecurKind RK);
+
 /// Returns the arithmetic instruction opcode used when expanding a reduction.
 unsigned getArithmeticReductionInstruction(Intrinsic::ID RdxID);
 

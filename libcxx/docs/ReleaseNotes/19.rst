@@ -53,6 +53,7 @@ Implemented Papers
 ------------------
 
 - P1132R8 - ``out_ptr`` - a scalable output pointer abstraction
+- P1614R2 - The Mothership has Landed
 - P2637R3 - Member ``visit``
 - P2652R2 - Disallow User Specialization of ``allocator_traits``
 - P2819R2 - Add ``tuple`` protocol to ``complex``
