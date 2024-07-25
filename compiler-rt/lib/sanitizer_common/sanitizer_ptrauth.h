@@ -18,7 +18,7 @@
 // the NOP space so will do nothing when it is not enabled or not available.
 #  define ptrauth_strip(__value, __key) \
     ({                                  \
-      unsigned long ret;                \
+      __typeof(__value) ret;            \
       asm volatile(                     \
           "mov x30, %1\n\t"             \
           "hint #7\n\t"                 \
@@ -27,7 +27,7 @@
           : "=r"(ret)                   \
           : "r"(__value)                \
           : "x30");                     \
-      __typeof(__value) ret;            \
+      ret;                              \
     })
 #  define ptrauth_auth_data(__value, __old_key, __old_data) __value
 #  define ptrauth_string_discriminator(__string) ((int)0)
