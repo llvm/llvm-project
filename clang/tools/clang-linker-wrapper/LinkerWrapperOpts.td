@@ -102,6 +102,10 @@ def offload_opt_eq_minus : Joined<["--", "-"], "offload-opt=">, Flags<[HelpHidde
   HelpText<"Options passed to LLVM, not including the Clang invocation. Use "
            "'--offload-opt=--help' for a list of options.">;
 
+// Arguments for LTO
+def lto_in_process : Flag<["--"], "lto-in-process">,
+  Flags<[WrapperOnlyOption]>, HelpText<"Use in-process LTO even if linker supports LTO">;
+
 // Standard linker flags also used by the linker wrapper.
 def sysroot_EQ : Joined<["--"], "sysroot=">, HelpText<"Set the system root">;
 

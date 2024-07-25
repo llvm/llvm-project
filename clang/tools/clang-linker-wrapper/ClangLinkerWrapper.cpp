@@ -781,6 +781,8 @@ bool isValidCIdentifier(StringRef S) {
 Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
                        SmallVectorImpl<StringRef> &OutputFiles,
                        const ArgList &Args) {
+  if (Verbose)
+    llvm::errs() << "Linking bitcode files\n";
   llvm::TimeTraceScope TimeScope("Link bitcode files");
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
@@ -1017,6 +1019,8 @@ Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
 // Compile the module to an object file using the appropriate target machine for
 // the host triple.
 Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
+  if (Verbose)
+    llvm::errs() << "Compiling module\n";
   llvm::TimeTraceScope TimeScope("Compile module");
   std::string Msg;
   const Target *T = TargetRegistry::lookupTarget(M.getTargetTriple(), Msg);
@@ -1309,7 +1313,7 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
     // First link and remove all the input files containing bitcode if
     // the target linker does not support it natively.
     SmallVector<StringRef> InputFiles;
-    if (!linkerSupportsLTO(LinkerArgs))
+    if (!linkerSupportsLTO(LinkerArgs) || Args.hasArg(OPT_lto_in_process))
       if (Error Err = linkBitcodeFiles(Input, InputFiles, LinkerArgs))
         return Err;
 
