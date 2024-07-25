@@ -3829,6 +3829,12 @@ static void RenderBuiltinOptions(const ToolChain &TC, const llvm::Triple &T,
     if (UseBuiltins)
       A->render(Args, CmdArgs);
   }
+
+  // le32-specific flags:
+  //  -fno-math-builtin: clang should not convert math builtins to intrinsics
+  //                     by default.
+  if (TC.getArch() == llvm::Triple::le32)
+    CmdArgs.push_back("-fno-math-builtin");
 }
 
 bool Driver::getDefaultModuleCachePath(SmallVectorImpl<char> &Result) {
