@@ -526,6 +526,7 @@ public:
   /// this closes the file when the stream is destroyed. If FD is for stdout or
   /// stderr, it will not be closed.
   raw_fd_ostream(int fd, bool shouldClose, bool unbuffered = false,
+                 bool simpleStream = false,
                  OStreamKind K = OStreamKind::OK_OStream);
 
   ~raw_fd_ostream() override;
