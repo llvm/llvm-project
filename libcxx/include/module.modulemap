@@ -2009,7 +2009,6 @@ module std_private_type_traits_is_scalar                                 [system
   header "__type_traits/is_scalar.h"
   export std_private_type_traits_is_null_pointer
 }
-module std_private_type_traits_is_scoped_enum                            [system] { header "__type_traits/is_scoped_enum.h" }
 module std_private_type_traits_is_signed                                 [system] { header "__type_traits/is_signed.h" }
 module std_private_type_traits_is_signed_integer                         [system] { header "__type_traits/is_signed_integer.h" }
 module std_private_type_traits_is_specialization                         [system] { header "__type_traits/is_specialization.h" }
