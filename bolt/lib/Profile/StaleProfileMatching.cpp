@@ -433,7 +433,6 @@ private:
       else
         BlockPseudoProbes.push_back(&PseudoProbe);
     }
-
     // Returns nullptr if there is not a 1:1 mapping of the profile block pseudo
     // probe and a binary block pseudo probe.
     const FlowBlock *MatchedInlinedBlock =
@@ -636,9 +635,12 @@ size_t matchWeightsByHashes(
   // pseudo probe block matching. Otherwise, the YamlBF's GUID is used for
   // pseudo probe block matching.
   const MCPseudoProbeDecoder *PseudoProbeDecoder =
-      opts::ProfileUsePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
+      opts::ProfileUsePseudoProbes && opts::StaleMatchingWithBlockPseudoProbes
+          ? BC.getPseudoProbeDecoder()
+          : nullptr;
   uint64_t BFPseudoProbeDescHash = 0;
-  if (opts::ProfileUsePseudoProbes && BF.getGUID() != 0) {
+  if (opts::ProfileUsePseudoProbes &&
+      opts::StaleMatchingWithBlockPseudoProbes && BF.getGUID() != 0) {
     assert(PseudoProbeDecoder &&
            "If BF has pseudo probe, BC should have a pseudo probe decoder");
     auto &GUID2FuncDescMap = PseudoProbeDecoder->getGUID2FuncDescMap();
@@ -646,13 +648,8 @@ size_t matchWeightsByHashes(
     if (It != GUID2FuncDescMap.end())
       BFPseudoProbeDescHash = It->second.FuncHash;
   }
-  uint64_t YamlBFGUID =
-      BFPseudoProbeDescHash && YamlBF.PseudoProbeDescHash &&
-              BFPseudoProbeDescHash == YamlBF.PseudoProbeDescHash
-          ? static_cast<uint64_t>(YamlBF.GUID)
-          : 0;
 
-  StaleMatcher Matcher(YamlBFGUID);
+  StaleMatcher Matcher(YamlBF.GUID);
   std::vector<uint64_t> CallHashes;
   std::vector<FlowBlock *> Blocks;
   std::vector<BlendedBlockHash> BlendedHashes;
@@ -677,7 +674,11 @@ size_t matchWeightsByHashes(
     BlendedHashes.push_back(BlendedHash);
     // Collects pseudo probes attached to the BB for use in the StaleMatcher.
     if (opts::ProfileUsePseudoProbes &&
-        opts::StaleMatchingWithBlockPseudoProbes && PseudoProbeDecoder) {
+        opts::StaleMatchingWithBlockPseudoProbes && BFPseudoProbeDescHash &&
+        YamlBF.PseudoProbeDescHash &&
+        BFPseudoProbeDescHash == YamlBF.PseudoProbeDescHash) {
+      assert(PseudoProbeDecoder &&
+             "If pseudo probes are in use, psuedo probe decoder should exist");
       const AddressProbesMap &ProbeMap =
           PseudoProbeDecoder->getAddress2ProbesMap();
       const uint64_t FuncAddr = BF.getAddress();
