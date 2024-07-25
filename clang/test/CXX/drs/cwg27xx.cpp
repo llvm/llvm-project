@@ -111,6 +111,7 @@ void f() {
   // cxx11-14-error@-1 {{cannot initialize a value of type 'E' with an rvalue of type 'int'}}
   e = {0};  // #2
   // since-cxx11-error@-1 {{cannot initialize a value of type 'E' with an rvalue of type 'int'}}
+  e = {E::E1};
 }
 #endif
 } // namespace cwg2768

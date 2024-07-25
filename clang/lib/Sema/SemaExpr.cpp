@@ -14580,54 +14580,49 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   if (getLangOpts().CPlusPlus11 && isa<InitListExpr>(RHSExpr)) {
     // C++11 [expr.ass]p9, per CWG2768:
     //   A braced-init-list B may appear on the right-hand side of
-    //    - an assignment to a scalar of type T, in which case the initializer
-    //      list shall have at most a single element. The meaning of x = B is
-    //      x = t, where t is an invented temporary variable declared and
-    //      initialized as T t = B.
-    switch (Opc) {
-    case BO_Assign: {
-      QualType LHSTy = LHSExpr->getType();
-      assert(!LHSTy->isDependentType() &&
-             "Should not have tried to create a builtin binary operator");
-      if (LHSTy->isScalarType()) {
-        InitializationKind Kind =
-            InitializationKind::CreateCopy(RHSExpr->getBeginLoc(), OpLoc);
-        InitializedEntity Entity =
-            InitializedEntity::InitializeTemporary(LHSExpr->getType());
-        InitializationSequence InitSeq(*this, Entity, Kind, RHSExpr);
-        ExprResult InventedTemporary =
-            InitSeq.Perform(*this, Entity, Kind, RHSExpr);
-        if (InventedTemporary.isInvalid())
-          return InventedTemporary;
-        assert(cast<InitListExpr>(RHSExpr)->getNumInits() <= 1 &&
-               "The initialization should have failed");
-        RHSExpr = InventedTemporary.get();
-      }
-      break;
-    }
-    case BO_MulAssign:
-    case BO_DivAssign:
-    case BO_RemAssign:
-    case BO_AddAssign:
-    case BO_SubAssign:
-    case BO_ShlAssign:
-    case BO_ShrAssign:
-    case BO_AndAssign:
-    case BO_XorAssign:
-    case BO_OrAssign: {
+    //    - an assignment to a scalar of type T, in which case B shall have at
+    //      most a single element. The meaning of x = B is x = t, where t is an
+    //      invented temporary variable declared and initialized as T t = B.
+    if (Opc != BO_Assign) {
       // A compound assignment like `i += {0}` is equivalent to `i = i + {0}`,
       // which is a parsing error
-      StringRef Op = BinaryOperator::getOpcodeStr(Opc);
-      [[maybe_unused]] bool AssignmentStripped = Op.consume_back("=");
-      assert(AssignmentStripped);
+      assert(BinaryOperator::isCompoundAssignmentOp(Opc) &&
+             "Non-assignment binary operator with braced-init-list should not "
+             "be parsed");
       Diag(OpLoc, diag::err_init_list_bin_op)
-          << 1 << Op << getExprRange(RHSExpr);
+          << 1
+          << BinaryOperator::getOpcodeStr(
+                 BinaryOperator::getOpForCompoundAssignment(Opc))
+          << getExprRange(RHSExpr);
       return ExprError();
     }
-    default:
-      llvm_unreachable("Non-assignment binary operator with braced-init-list "
-                       "should not be parsed");
+
+    QualType LHSTy = LHSExpr->getType();
+    assert(!LHSTy->isDependentType() &&
+           "Should not have tried to create a builtin binary operator");
+    // Extend this to be done for non-scalars too. This is so extension types
+    // like vectors can be assigned to with an initializer list
+    if (LHSTy->isArrayType()) {
+      // Except arrays, which we know this will fail for, but fail early to
+      // prevent trying to convert the initializer list elements to the array
+      // type
+      Diag(OpLoc, diag::err_typecheck_array_not_modifiable_lvalue)
+          << LHSTy << getExprRange(LHSExpr);
+      return ExprError();
     }
+    InitializationKind Kind =
+        InitializationKind::CreateCopy(RHSExpr->getBeginLoc(), OpLoc);
+    InitializedEntity Entity =
+        InitializedEntity::InitializeTemporary(LHSExpr->getType());
+    InitializationSequence InitSeq(*this, Entity, Kind, RHSExpr);
+    ExprResult InventedTemporary =
+        InitSeq.Perform(*this, Entity, Kind, RHSExpr);
+    if (InventedTemporary.isInvalid())
+      return InventedTemporary;
+    // The "at most a single element" condition should be checked by this
+    // initialization succeeding, but allow multiple initializers for the
+    // extension type _Complex T / [[gnu::vector_size]]
+    RHSExpr = InventedTemporary.get();
   }
 
   ExprResult LHS = LHSExpr, RHS = RHSExpr;
