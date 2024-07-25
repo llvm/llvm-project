@@ -111,6 +111,13 @@ void foo(int i, A *ap, B *bp) {
   delete newA;
 }
 //.
+// CHECK: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+// CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+// CHECK: attributes #[[ATTR6]] = { convergent }
+// CHECK: attributes #[[ATTR7]] = { convergent nounwind }
+// CHECK: attributes #[[ATTR8]] = { builtin allocsize(0) }
+// CHECK: attributes #[[ATTR9]] = { nounwind }
+//.
 // CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]]}
 // CHECK: [[META3]] = !{!"llvm.loop.mustprogress"}
 // CHECK: [[META4]] = !{i64 5689}
