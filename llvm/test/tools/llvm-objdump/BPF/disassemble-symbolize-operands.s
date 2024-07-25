@@ -1,10 +1,10 @@
 # REQUIRES: bpf-registered-target
 
-## Verify generation of 'Lxx' labels for local jump targets,
-## when --symbolize-operands option is specified.
+## Verify generation of 'Lxx' labels for local jump targets, when
+## --symbolize-operands option is specified.
 
-# RUN: llvm-mc -triple=bpfel %s -filetype=obj -o - | \
-# RUN:   llvm-objdump -d --symbolize-operands --no-show-raw-insn --no-leading-addr - | \
+# RUN: llvm-mc -triple=bpfel %s -filetype=obj -o %t
+# RUN: llvm-objdump -d --symbolize-operands --no-show-raw-insn --no-leading-addr %t | \
 # RUN:   FileCheck %s
         .text
 main:
