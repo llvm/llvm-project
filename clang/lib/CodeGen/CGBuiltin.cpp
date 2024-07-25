@@ -1069,7 +1069,7 @@ public:
   const Expr *VisitDeclRefExpr(const DeclRefExpr *E) { return E; }
   const Expr *VisitMemberExpr(const MemberExpr *E) { return E; }
   const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
-    return E->getBase()->IgnoreParenImpCasts();
+    return E->getBase()->IgnoreParens();
   }
 
   const Expr *VisitCastExpr(const CastExpr *E) {
@@ -1077,14 +1077,14 @@ public:
     return NoopE == E ? nullptr : Visit(NoopE);
   }
   const Expr *VisitUnaryAddrOf(const clang::UnaryOperator *E) {
-    const Expr *SubExpr = E->getSubExpr()->IgnoreParenImpCasts();
+    const Expr *SubExpr = E->getSubExpr()->IgnoreParens();
     if (isa<MemberExpr>(SubExpr) || isa<DeclRefExpr>(SubExpr) ||
         isa<ArraySubscriptExpr>(SubExpr))
       return SubExpr;
     return Visit(SubExpr);
   }
   const Expr *VisitUnaryDeref(const clang::UnaryOperator *E) {
-    return Visit(E->getSubExpr()->IgnoreParenImpCasts());
+    return Visit(E->getSubExpr()->IgnoreParens());
   }
 };
 
@@ -1108,14 +1108,14 @@ public:
     return Visit(E->getSubExpr());
   }
   const Expr *VisitUnaryAddrOf(const clang::UnaryOperator *E) {
-    const Expr *SubExpr = E->getSubExpr()->IgnoreParenImpCasts();
+    const Expr *SubExpr = E->getSubExpr()->IgnoreParens();
     if (isa<MemberExpr>(SubExpr) || isa<DeclRefExpr>(SubExpr) ||
         isa<ArraySubscriptExpr>(SubExpr))
       return SubExpr;
     return Visit(SubExpr);
   }
   const Expr *VisitUnaryDeref(const clang::UnaryOperator *E) {
-    return Visit(E->getSubExpr()->IgnoreParenImpCasts());
+    return Visit(E->getSubExpr()->IgnoreParens());
   }
 };
 
@@ -1156,7 +1156,7 @@ CodeGenFunction::tryToCalculateSubObjectSize(const Expr *E, unsigned Type,
     // Only support sub-object calculation.
     return nullptr;
 
-  E = E->IgnoreParenImpCasts();
+  E = E->IgnoreParens();
 
   // BaseObj is the object we want the size of.
   ASTContext &Ctx = getContext();
@@ -1169,7 +1169,7 @@ CodeGenFunction::tryToCalculateSubObjectSize(const Expr *E, unsigned Type,
   const Expr *ArrayBase = (isa<ArraySubscriptExpr>(BaseObj)
                                ? cast<ArraySubscriptExpr>(BaseObj)->getBase()
                                : BaseObj)
-                              ->IgnoreParenImpCasts();
+                              ->IgnoreParens();
 
   ArrayBase = ArrayBaseVisitor().Visit(ArrayBase);
   if (!ArrayBase)
