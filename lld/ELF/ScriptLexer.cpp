@@ -20,10 +20,7 @@
 // in various corner cases. We do not care much about efficiency because
 // the time spent in parsing linker scripts is usually negligible.
 //
-// Our grammar of the linker script is LL(2), meaning that it needs at
-// most two-token lookahead to parse. The only place we need two-token
-// lookahead is labels in version scripts, where we need to parse "local :"
-// as if "local:".
+// Our grammar of the linker script is LL(1).
 //
 // Overall, this lexer works fine for most linker scripts. There might
 // be room for improving compatibility, but that's probably not at the

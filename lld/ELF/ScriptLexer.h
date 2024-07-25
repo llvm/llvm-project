@@ -57,7 +57,6 @@ public:
   size_t lastLineNumberOffset = 0;
 
 private:
-  void maybeSplitExpr();
   StringRef getLine();
   size_t getLineNumber();
   size_t getColumnNumber();
