@@ -142,6 +142,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fadd_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fadd_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.fadd
+    libc.src.__support.FPUtil.basic_operations
+
+)
+
+add_fp_unittest(
   trunc_test
   SUITE
     libc-math-smoke-tests
