@@ -212,9 +212,15 @@ public:
     }
   }
 
+  /// Creates a mapping from a inlined pseudo probe's guid and index to probe.
+  void mapGUIDAndIndexToProbe(uint64_t Guid, uint64_t Index,
+                              const MCDecodedPseudoProbe *Probe) {
+    IndexAndGUIDToInlinedProbes[Guid][Index].push_back(Probe);
+  }
+
   /// Creates a mapping from a pseudo probe index to pseudo probe.
   void mapIndexToProbe(uint64_t Index, const MCDecodedPseudoProbe *Probe) {
-    IndexToBBPseudoProbes[Index].push_back(Probe);
+    IndexToProbes[Index].push_back(Probe);
   }
 
   /// Creates a mapping from a pseudo probe to a flow block.
@@ -267,8 +273,10 @@ private:
   using HashBlockPairType = std::pair<BlendedBlockHash, FlowBlock *>;
   std::unordered_map<uint16_t, std::vector<HashBlockPairType>> OpHashToBlocks;
   std::unordered_map<uint64_t, std::vector<HashBlockPairType>> CallHashToBlocks;
-  DenseMap<uint64_t, std::vector<const MCDecodedPseudoProbe *>>
-      IndexToBBPseudoProbes;
+  DenseMap<uint64_t, std::vector<const MCDecodedPseudoProbe *>> IndexToProbes;
+  DenseMap<uint64_t,
+           DenseMap<uint64_t, std::vector<const MCDecodedPseudoProbe *>>>
+      IndexAndGUIDToInlinedProbes;
   DenseMap<const MCDecodedPseudoProbe *, FlowBlock *> BBPseudoProbeToBlock;
   DenseSet<uint64_t> MatchedWithPseudoProbes;
   const uint64_t YamlBFGUID{0};
@@ -312,40 +320,68 @@ private:
     }
     return BestBlock;
   }
-  // Uses pseudo probe information to attach the profile to the appropriate
-  // block.
-  const FlowBlock *matchWithPseudoProbes(
-      BlendedBlockHash BlendedHash,
-      const std::vector<yaml::bolt::PseudoProbeInfo> &PseudoProbes) const {
-    if (!YamlBFGUID)
+
+  /// A helper function for logging.
+  static bool LogErrIfExpr(bool Expr, std::string Message) {
+    if (Expr)
+      errs() << Message;
+    return Expr;
+  }
+
+  /// Matches an inlined profile block with an inlined binary block based on
+  /// pseudo probes.
+  const FlowBlock *matchWithInlinedBlockPseudoProbes(
+      SmallVector<const yaml::bolt::PseudoProbeInfo *>
+          &InlinedBlockPseudoProbes) const {
+    if (opts::Verbosity >= 3)
+      outs() << "BOLT-INFO: attempting to match block with inlined block "
+                "pseudo probes\n";
+
+    size_t NInlinedBlockPseudoProbes = InlinedBlockPseudoProbes.size();
+    if (LogErrIfExpr(NInlinedBlockPseudoProbes == 0,
+                     "BOLT-WARNING: no pseudo probes in profile block\n"))
+      return nullptr;
+    if (LogErrIfExpr(
+            NInlinedBlockPseudoProbes > 1,
+            "BOLT-WARNING: more than 1 pseudo probes in profile block\n"))
       return nullptr;
 
+    const auto *InlinedPseudoProbe = InlinedBlockPseudoProbes[0];
+    uint64_t Guid = InlinedPseudoProbe->GUID;
+    uint64_t Index = InlinedPseudoProbe->Index;
+
+    auto GuidIt = IndexAndGUIDToInlinedProbes.find(Guid);
+    if (LogErrIfExpr(
+            GuidIt == IndexAndGUIDToInlinedProbes.end(),
+            "BOLT-WARNING: no pseudo probes found within BB at index\n"))
+      return nullptr;
+    auto IndexIt = GuidIt->second.find(Index);
+    if (LogErrIfExpr(
+            IndexIt == GuidIt->second.end(),
+            "BOLT-WARNING: no pseudo probes found within BB at index\n"))
+      return nullptr;
+
+    if (LogErrIfExpr(
+            IndexIt->second.size() > 1,
+            "BOLT-WARNING: more than 1 block pseudo probes in BB at index\n"))
+      return nullptr;
+
+    const MCDecodedPseudoProbe *BinaryPseudoProbe = IndexIt->second[0];
+    auto BinaryPseudoProbeIt = BBPseudoProbeToBlock.find(BinaryPseudoProbe);
+    assert(BinaryPseudoProbeIt != BBPseudoProbeToBlock.end() &&
+           "All binary pseudo probes should belong a binary basic block");
+
+    return BinaryPseudoProbeIt->second;
+  }
+
+  /// Matches a profile block with an binary block based on pseudo probes.
+  const FlowBlock *matchWithNonInlinedBlockPseudoProbes(
+      SmallVector<const yaml::bolt::PseudoProbeInfo *> &BlockPseudoProbes)
+      const {
     if (opts::Verbosity >= 3)
-      outs() << "BOLT-INFO: attempting to match block with pseudo probes\n";
+      outs() << "BOLT-INFO: attempting to match block with inlined block "
+                "pseudo probes\n";
 
-    // Searches for the pseudo probe attached to the matched function's block,
-    // ignoring pseudo probes attached to function calls and inlined functions'
-    // blocks.
-    SmallVector<const yaml::bolt::PseudoProbeInfo *> BlockPseudoProbes;
-    for (const auto &PseudoProbe : PseudoProbes) {
-      // Ensures that pseudo probe information belongs to the appropriate
-      // function and not an inlined function.
-      if (PseudoProbe.GUID != YamlBFGUID)
-        continue;
-      // Skips pseudo probes attached to function calls.
-      if (PseudoProbe.Type != static_cast<uint8_t>(PseudoProbeType::Block))
-        continue;
-
-      BlockPseudoProbes.push_back(&PseudoProbe);
-    }
-
-    auto LogErrIfExpr = [&](bool Expr, std::string Message) -> bool {
-      if (Expr)
-        errs() << Message;
-      return Expr;
-    };
-    // Returns nullptr if there is not a 1:1 mapping of the yaml block pseudo
-    // probe and binary pseudo probe.
     size_t NBlockPseudoProbes = BlockPseudoProbes.size();
     if (LogErrIfExpr(NBlockPseudoProbes == 0,
                      "BOLT-WARNING: no pseudo probes in profile block\n"))
@@ -355,9 +391,9 @@ private:
             "BOLT-WARNING: more than 1 pseudo probes in profile block\n"))
       return nullptr;
     uint64_t Index = BlockPseudoProbes[0]->Index;
-    auto It = IndexToBBPseudoProbes.find(Index);
+    auto It = IndexToProbes.find(Index);
     if (LogErrIfExpr(
-            It == IndexToBBPseudoProbes.end(),
+            It == IndexToProbes.end(),
             "BOLT-WARNING: no block pseudo probes found within BB at index\n"))
       return nullptr;
     if (LogErrIfExpr(
@@ -370,6 +406,36 @@ private:
            "All binary pseudo probes should belong a binary basic block");
 
     return BinaryPseudoProbeIt->second;
+  }
+
+  /// Uses pseudo probe information to attach the profile to the appropriate
+  /// block.
+  const FlowBlock *matchWithPseudoProbes(
+      BlendedBlockHash BlendedHash,
+      const std::vector<yaml::bolt::PseudoProbeInfo> &PseudoProbes) const {
+    if (!YamlBFGUID)
+      return nullptr;
+
+    // Searches for the pseudo probe attached to the matched function's block.
+    SmallVector<const yaml::bolt::PseudoProbeInfo *> BlockPseudoProbes;
+    SmallVector<const yaml::bolt::PseudoProbeInfo *> InlinedBlockPseudoProbes;
+    for (const auto &PseudoProbe : PseudoProbes) {
+      // Skips pseudo probes attached to function calls.
+      if (PseudoProbe.Type != static_cast<uint8_t>(PseudoProbeType::Block))
+        continue;
+      if (PseudoProbe.GUID != YamlBFGUID)
+        InlinedBlockPseudoProbes.push_back(&PseudoProbe);
+      else
+        BlockPseudoProbes.push_back(&PseudoProbe);
+    }
+
+    // Returns nullptr if there is not a 1:1 mapping of the profile block pseudo
+    // probe and a binary block pseudo probe.
+    const FlowBlock *MatchedInlinedBlock =
+        matchWithInlinedBlockPseudoProbes(InlinedBlockPseudoProbes);
+    return MatchedInlinedBlock
+               ? MatchedInlinedBlock
+               : matchWithNonInlinedBlockPseudoProbes(BlockPseudoProbes);
   }
 };
 
@@ -616,11 +682,13 @@ size_t matchWeightsByHashes(
                            ProbeMap.lower_bound(FuncAddr + BlockRange.second));
       for (const auto &[_, Probes] : BlockProbes) {
         for (const MCDecodedPseudoProbe &Probe : Probes) {
-          if (Probe.getInlineTreeNode()->hasInlineSite())
-            continue;
           if (Probe.getType() != static_cast<uint8_t>(PseudoProbeType::Block))
             continue;
-          Matcher.mapIndexToProbe(Probe.getIndex(), &Probe);
+          if (Probe.getInlineTreeNode()->hasInlineSite())
+            Matcher.mapGUIDAndIndexToProbe(Probe.getGuid(), Probe.getIndex(),
+                                           &Probe);
+          else
+            Matcher.mapIndexToProbe(Probe.getIndex(), &Probe);
           Matcher.mapProbeToBB(&Probe, Blocks[I]);
         }
       }
