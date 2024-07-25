@@ -1413,3 +1413,164 @@ define void @foo(ptr %ptr, <2 x ptr> %ptrs) {
   EXPECT_EQ(NewGEP2->getPrevNode(), Ret);
   EXPECT_EQ(NewGEP2->getNextNode(), nullptr);
 }
+
+TEST_F(SandboxIRTest, CastInst) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
+  %zext = zext i32 %arg to i64
+  %sext = sext i32 %arg to i64
+  %fptoui = fptoui float %farg to i32
+  %fptosi = fptosi float %farg to i32
+  %fpext = fpext float %farg to double
+  %ptrtoint = ptrtoint ptr %ptr to i32
+  %inttoptr = inttoptr i32 %arg to ptr
+  %sitofp = sitofp i32 %arg to float
+  %uitofp = uitofp i32 %arg to float
+  %trunc = trunc i32 %arg to i16
+  %fptrunc = fptrunc double %darg to float
+  %bitcast = bitcast i32 %arg to float
+  %addrspacecast = addrspacecast ptr %ptr to ptr addrspace(1)
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(&LLVMF);
+  unsigned ArgIdx = 0;
+  auto *Arg = F->getArg(ArgIdx++);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+
+  Type *Ti64 = Type::getInt64Ty(C);
+  Type *Ti32 = Type::getInt32Ty(C);
+  Type *Ti16 = Type::getInt16Ty(C);
+  Type *Tdouble = Type::getDoubleTy(C);
+  Type *Tfloat = Type::getFloatTy(C);
+  Type *Tptr = Tfloat->getPointerTo();
+  Type *Tptr1 = Tfloat->getPointerTo(1);
+
+  // Check classof(), getOpcode(), getSrcTy(), getDstTy()
+  auto *ZExt = cast<sandboxir::CastInst>(&*It++);
+  EXPECT_EQ(ZExt->getOpcode(), sandboxir::Instruction::Opcode::ZExt);
+  EXPECT_EQ(ZExt->getSrcTy(), Ti32);
+  EXPECT_EQ(ZExt->getDestTy(), Ti64);
+
+  auto *SExt = cast<sandboxir::CastInst>(&*It++);
+  EXPECT_EQ(SExt->getOpcode(), sandboxir::Instruction::Opcode::SExt);
+  EXPECT_EQ(SExt->getSrcTy(), Ti32);
+  EXPECT_EQ(SExt->getDestTy(), Ti64);
+
+  auto *FPToUI = cast<sandboxir::CastInst>(&*It++);
+  EXPECT_EQ(FPToUI->getOpcode(), sandboxir::Instruction::Opcode::FPToUI);
+  EXPECT_EQ(FPToUI->getSrcTy(), Tfloat);
+  EXPECT_EQ(FPToUI->getDestTy(), Ti32);
+
+  auto *FPToSI = cast<sandboxir::CastInst>(&*It++);
+  EXPECT_EQ(FPToSI->getOpcode(), sandboxir::Instruction::Opcode::FPToSI);
+  EXPECT_EQ(FPToSI->getSrcTy(), Tfloat);
+  EXPECT_EQ(FPToSI->getDestTy(), Ti32);
+
+  auto *FPExt = cast<sandboxir::CastInst>(&*It++);
+  EXPECT_EQ(FPExt->getOpcode(), sandboxir::Instruction::Opcode::FPExt);
+  EXPECT_EQ(FPExt->getSrcTy(), Tfloat);
+  EXPECT_EQ(FPExt->getDestTy(), Tdouble);
+
+  auto *PtrToInt = cast<sandboxir::CastInst>(&*It++);
+  EXPECT_EQ(PtrToInt->getOpcode(), sandboxir::Instruction::Opcode::PtrToInt);
+  EXPECT_EQ(PtrToInt->getSrcTy(), Tptr);
+  EXPECT_EQ(PtrToInt->getDestTy(), Ti32);
+
+  auto *IntToPtr = cast<sandboxir::CastInst>(&*It++);
+  EXPECT_EQ(IntToPtr->getOpcode(), sandboxir::Instruction::Opcode::IntToPtr);
+  EXPECT_EQ(IntToPtr->getSrcTy(), Ti32);
+  EXPECT_EQ(IntToPtr->getDestTy(), Tptr);
+
+  auto *SIToFP = cast<sandboxir::CastInst>(&*It++);
+  EXPECT_EQ(SIToFP->getOpcode(), sandboxir::Instruction::Opcode::SIToFP);
+  EXPECT_EQ(SIToFP->getSrcTy(), Ti32);
+  EXPECT_EQ(SIToFP->getDestTy(), Tfloat);
+
+  auto *UIToFP = cast<sandboxir::CastInst>(&*It++);
+  EXPECT_EQ(UIToFP->getOpcode(), sandboxir::Instruction::Opcode::UIToFP);
+  EXPECT_EQ(UIToFP->getSrcTy(), Ti32);
+  EXPECT_EQ(UIToFP->getDestTy(), Tfloat);
+
+  auto *Trunc = cast<sandboxir::CastInst>(&*It++);
+  EXPECT_EQ(Trunc->getOpcode(), sandboxir::Instruction::Opcode::Trunc);
+  EXPECT_EQ(Trunc->getSrcTy(), Ti32);
+  EXPECT_EQ(Trunc->getDestTy(), Ti16);
+
+  auto *FPTrunc = cast<sandboxir::CastInst>(&*It++);
+  EXPECT_EQ(FPTrunc->getOpcode(), sandboxir::Instruction::Opcode::FPTrunc);
+  EXPECT_EQ(FPTrunc->getSrcTy(), Tdouble);
+  EXPECT_EQ(FPTrunc->getDestTy(), Tfloat);
+
+  auto *BitCast = cast<sandboxir::CastInst>(&*It++);
+  EXPECT_EQ(BitCast->getOpcode(), sandboxir::Instruction::Opcode::BitCast);
+  EXPECT_EQ(BitCast->getSrcTy(), Ti32);
+  EXPECT_EQ(BitCast->getDestTy(), Tfloat);
+
+  auto *AddrSpaceCast = cast<sandboxir::CastInst>(&*It++);
+  EXPECT_EQ(AddrSpaceCast->getOpcode(),
+            sandboxir::Instruction::Opcode::AddrSpaceCast);
+  EXPECT_EQ(AddrSpaceCast->getSrcTy(), Tptr);
+  EXPECT_EQ(AddrSpaceCast->getDestTy(), Tptr1);
+
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  {
+    // Check create() WhereIt, WhereBB
+    auto *NewI = cast<sandboxir::CastInst>(sandboxir::CastInst::create(
+        Ti64, sandboxir::Instruction::Opcode::SExt, Arg, /*WhereIt=*/BB->end(),
+        /*WhereBB=*/BB, Ctx, "SExt"));
+    // Check getOpcode().
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::SExt);
+    // Check getSrcTy().
+    EXPECT_EQ(NewI->getSrcTy(), Arg->getType());
+    // Check getDestTy().
+    EXPECT_EQ(NewI->getDestTy(), Ti64);
+    // Check instr position.
+    EXPECT_EQ(NewI->getNextNode(), nullptr);
+    EXPECT_EQ(NewI->getPrevNode(), Ret);
+  }
+
+  {
+    // Check create() InsertBefore.
+    auto *NewI = cast<sandboxir::CastInst>(
+        sandboxir::CastInst::create(Ti64, sandboxir::Instruction::Opcode::ZExt,
+                                    Arg, /*InsertBefore=*/Ret, Ctx, "ZExt"));
+    // Check getOpcode().
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::ZExt);
+    // Check getSrcTy().
+    EXPECT_EQ(NewI->getSrcTy(), Arg->getType());
+    // Check getDestTy().
+    EXPECT_EQ(NewI->getDestTy(), Ti64);
+    // Check instr position.
+    EXPECT_EQ(NewI->getNextNode(), Ret);
+  }
+  {
+    // Check create() InsertAtEnd.
+    auto *NewI = cast<sandboxir::CastInst>(
+        sandboxir::CastInst::create(Ti64, sandboxir::Instruction::Opcode::ZExt,
+                                    Arg, /*InsertAtEnd=*/BB, Ctx, "ZExt"));
+    // Check getOpcode().
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::ZExt);
+    // Check getSrcTy().
+    EXPECT_EQ(NewI->getSrcTy(), Arg->getType());
+    // Check getDestTy().
+    EXPECT_EQ(NewI->getDestTy(), Ti64);
+    // Check instr position.
+    EXPECT_EQ(NewI->getNextNode(), nullptr);
+    EXPECT_EQ(NewI->getParent(), BB);
+  }
+
+  {
+#ifndef NDEBUG
+    // Check that passing a non-cast opcode crashes.
+    EXPECT_DEATH(
+        sandboxir::CastInst::create(Ti64, sandboxir::Instruction::Opcode::Store,
+                                    Arg, /*InsertBefore=*/Ret, Ctx, "Bad"),
+        ".*Opcode.*");
+#endif // NDEBUG
+  }
+}

@@ -313,11 +313,10 @@ BBIterator &BBIterator::operator--() {
 
 const char *Instruction::getOpcodeName(Opcode Opc) {
   switch (Opc) {
-#define DEF_VALUE(ID, CLASS)
-#define DEF_USER(ID, CLASS)
 #define OP(OPC)                                                                \
   case Opcode::OPC:                                                            \
     return #OPC;
+#define OPCODES(...) __VA_ARGS__
 #define DEF_INSTR(ID, OPC, CLASS) OPC
 #include "llvm/SandboxIR/SandboxIRValues.def"
   }
@@ -1050,6 +1049,87 @@ void GetElementPtrInst::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
+#endif // NDEBUG
+
+static llvm::Instruction::CastOps getLLVMCastOp(Instruction::Opcode Opc) {
+  switch (Opc) {
+  case Instruction::Opcode::ZExt:
+    return static_cast<llvm::Instruction::CastOps>(llvm::Instruction::ZExt);
+  case Instruction::Opcode::SExt:
+    return static_cast<llvm::Instruction::CastOps>(llvm::Instruction::SExt);
+  case Instruction::Opcode::FPToUI:
+    return static_cast<llvm::Instruction::CastOps>(llvm::Instruction::FPToUI);
+  case Instruction::Opcode::FPToSI:
+    return static_cast<llvm::Instruction::CastOps>(llvm::Instruction::FPToSI);
+  case Instruction::Opcode::FPExt:
+    return static_cast<llvm::Instruction::CastOps>(llvm::Instruction::FPExt);
+  case Instruction::Opcode::PtrToInt:
+    return static_cast<llvm::Instruction::CastOps>(llvm::Instruction::PtrToInt);
+  case Instruction::Opcode::IntToPtr:
+    return static_cast<llvm::Instruction::CastOps>(llvm::Instruction::IntToPtr);
+  case Instruction::Opcode::SIToFP:
+    return static_cast<llvm::Instruction::CastOps>(llvm::Instruction::SIToFP);
+  case Instruction::Opcode::UIToFP:
+    return static_cast<llvm::Instruction::CastOps>(llvm::Instruction::UIToFP);
+  case Instruction::Opcode::Trunc:
+    return static_cast<llvm::Instruction::CastOps>(llvm::Instruction::Trunc);
+  case Instruction::Opcode::FPTrunc:
+    return static_cast<llvm::Instruction::CastOps>(llvm::Instruction::FPTrunc);
+  case Instruction::Opcode::BitCast:
+    return static_cast<llvm::Instruction::CastOps>(llvm::Instruction::BitCast);
+  case Instruction::Opcode::AddrSpaceCast:
+    return static_cast<llvm::Instruction::CastOps>(
+        llvm::Instruction::AddrSpaceCast);
+  default:
+    llvm_unreachable("Opcode not suitable for CastInst!");
+  }
+}
+
+Value *CastInst::create(Type *DestTy, Opcode Op, Value *Operand,
+                        BBIterator WhereIt, BasicBlock *WhereBB, Context &Ctx,
+                        const Twine &Name) {
+  assert(getLLVMCastOp(Op) && "Opcode not suitable for CastInst!");
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt == WhereBB->end())
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  else
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  auto *NewV =
+      Builder.CreateCast(getLLVMCastOp(Op), Operand->Val, DestTy, Name);
+  if (auto *NewCI = dyn_cast<llvm::CastInst>(NewV))
+    return Ctx.createCastInst(NewCI);
+  assert(isa<llvm::Constant>(NewV) && "Expected constant");
+  return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
+}
+
+Value *CastInst::create(Type *DestTy, Opcode Op, Value *Operand,
+                        Instruction *InsertBefore, Context &Ctx,
+                        const Twine &Name) {
+  return create(DestTy, Op, Operand, InsertBefore->getIterator(),
+                InsertBefore->getParent(), Ctx, Name);
+}
+
+Value *CastInst::create(Type *DestTy, Opcode Op, Value *Operand,
+                        BasicBlock *InsertAtEnd, Context &Ctx,
+                        const Twine &Name) {
+  return create(DestTy, Op, Operand, InsertAtEnd->end(), InsertAtEnd, Ctx,
+                Name);
+}
+
+bool CastInst::classof(const Value *From) {
+  return From->getSubclassID() == ClassID::Cast;
+}
+
+#ifndef NDEBUG
+void CastInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void CastInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
 
 void OpaqueInst::dump(raw_ostream &OS) const {
   dumpCommonPrefix(OS);
@@ -1225,6 +1305,23 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
         new GetElementPtrInst(LLVMGEP, *this));
     return It->second.get();
   }
+  case llvm::Instruction::ZExt:
+  case llvm::Instruction::SExt:
+  case llvm::Instruction::FPToUI:
+  case llvm::Instruction::FPToSI:
+  case llvm::Instruction::FPExt:
+  case llvm::Instruction::PtrToInt:
+  case llvm::Instruction::IntToPtr:
+  case llvm::Instruction::SIToFP:
+  case llvm::Instruction::UIToFP:
+  case llvm::Instruction::Trunc:
+  case llvm::Instruction::FPTrunc:
+  case llvm::Instruction::BitCast:
+  case llvm::Instruction::AddrSpaceCast: {
+    auto *LLVMCast = cast<llvm::CastInst>(LLVMV);
+    It->second = std::unique_ptr<CastInst>(new CastInst(LLVMCast, *this));
+    return It->second.get();
+  }
   default:
     break;
   }
@@ -1288,6 +1385,11 @@ Context::createGetElementPtrInst(llvm::GetElementPtrInst *I) {
   auto NewPtr =
       std::unique_ptr<GetElementPtrInst>(new GetElementPtrInst(I, *this));
   return cast<GetElementPtrInst>(registerValue(std::move(NewPtr)));
+}
+
+CastInst *Context::createCastInst(llvm::CastInst *I) {
+  auto NewPtr = std::unique_ptr<CastInst>(new CastInst(I, *this));
+  return cast<CastInst>(registerValue(std::move(NewPtr)));
 }
 
 Value *Context::getValue(llvm::Value *V) const {
