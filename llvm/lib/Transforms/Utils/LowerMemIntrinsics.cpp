@@ -698,7 +698,7 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
 
   // Helper function to generate a load/store pair of a given type in the
   // residual. Used in the forward and backward branches.
-  auto GenerateResidualLdStPair = [&](Type *OpTy, IRBuilder<> &Builder,
+  auto GenerateResidualLdStPair = [&](Type *OpTy, IRBuilderBase &Builder,
                                       uint64_t &BytesCopied) {
     Align ResSrcAlign(commonAlignment(SrcAlign, BytesCopied));
     Align ResDstAlign(commonAlignment(DstAlign, BytesCopied));
