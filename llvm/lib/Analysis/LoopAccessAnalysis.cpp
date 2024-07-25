@@ -841,8 +841,8 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE,
     return true;
 
   int64_t Stride = getPtrStride(PSE, AccessTy, Ptr, L, Strides).value_or(0);
-  return (Stride == 1 ||
-          PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW));
+  return Stride == 1 ||
+         PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
 }
 
 static void visitPointers(Value *StartPtr, const Loop &InnermostLoop,
