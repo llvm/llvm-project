@@ -702,32 +702,73 @@ static void genBodyOfTargetDataOp(
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Region &region = dataOp.getRegion();
 
-  firOpBuilder.createBlock(&region, {}, useDeviceTypes, useDeviceLocs);
+  auto *regionBlock =
+      firOpBuilder.createBlock(&region, {}, useDeviceTypes, useDeviceLocs);
+
+  // Clones the `bounds` placing them inside the target region and returns them.
+  auto cloneBound = [&](mlir::Value bound) {
+    if (mlir::isMemoryEffectFree(bound.getDefiningOp())) {
+      mlir::Operation *clonedOp = bound.getDefiningOp()->clone();
+      regionBlock->push_back(clonedOp);
+      return clonedOp->getResult(0);
+    }
+    TODO(converter.getCurrentLocation(),
+         "target map clause operand unsupported bound type");
+  };
+
+  auto cloneBounds = [cloneBound](llvm::ArrayRef<mlir::Value> bounds) {
+    llvm::SmallVector<mlir::Value> clonedBounds;
+    for (mlir::Value bound : bounds)
+      clonedBounds.emplace_back(cloneBound(bound));
+    return clonedBounds;
+  };
 
   for (auto [argIndex, argSymbol] : llvm::enumerate(useDeviceSymbols)) {
     const mlir::BlockArgument &arg = region.front().getArgument(argIndex);
     fir::ExtendedValue extVal = converter.getSymbolExtendedValue(*argSymbol);
-    if (auto refType = mlir::dyn_cast<fir::ReferenceType>(arg.getType())) {
-      if (fir::isa_builtin_cptr_type(refType.getElementType())) {
-        converter.bindSymbol(*argSymbol, arg);
-      } else {
-        // Avoid capture of a reference to a structured binding.
-        const semantics::Symbol *sym = argSymbol;
-        extVal.match(
-            [&](const fir::MutableBoxValue &mbv) {
-              converter.bindSymbol(
-                  *sym,
-                  fir::MutableBoxValue(
-                      arg, fir::factory::getNonDeferredLenParams(extVal), {}));
-            },
-            [&](const auto &) {
-              TODO(converter.getCurrentLocation(),
-                   "use_device clause operand unsupported type");
-            });
-      }
+    auto refType = mlir::dyn_cast<fir::ReferenceType>(arg.getType());
+    if (refType && fir::isa_builtin_cptr_type(refType.getElementType())) {
+      converter.bindSymbol(*argSymbol, arg);
     } else {
-      TODO(converter.getCurrentLocation(),
-           "use_device clause operand unsupported type");
+      // Avoid capture of a reference to a structured binding.
+      const Fortran::semantics::Symbol *sym = argSymbol;
+      // Structure component symbols don't have bindings.
+      if (sym->owner().IsDerivedType())
+        continue;
+      fir::ExtendedValue extVal = converter.getSymbolExtendedValue(*sym);
+      extVal.match(
+          [&](const fir::BoxValue &v) {
+            converter.bindSymbol(*sym,
+                                 fir::BoxValue(arg, cloneBounds(v.getLBounds()),
+                                               v.getExplicitParameters(),
+                                               v.getExplicitExtents()));
+          },
+          [&](const fir::MutableBoxValue &v) {
+            converter.bindSymbol(
+                *sym, fir::MutableBoxValue(arg, cloneBounds(v.getLBounds()),
+                                           v.getMutableProperties()));
+          },
+          [&](const fir::ArrayBoxValue &v) {
+            converter.bindSymbol(
+                *sym, fir::ArrayBoxValue(arg, cloneBounds(v.getExtents()),
+                                         cloneBounds(v.getLBounds()),
+                                         v.getSourceBox()));
+          },
+          [&](const fir::CharArrayBoxValue &v) {
+            converter.bindSymbol(
+                *sym, fir::CharArrayBoxValue(arg, cloneBound(v.getLen()),
+                                             cloneBounds(v.getExtents()),
+                                             cloneBounds(v.getLBounds())));
+          },
+          [&](const fir::CharBoxValue &v) {
+            converter.bindSymbol(
+                *sym, fir::CharBoxValue(arg, cloneBound(v.getLen())));
+          },
+          [&](const fir::UnboxedValue &v) { converter.bindSymbol(*sym, arg); },
+          [&](const auto &) {
+            TODO(converter.getCurrentLocation(),
+                 "target map clause operand unsupported type");
+          });
     }
   }
 
@@ -1191,9 +1232,9 @@ static void genTargetDataClauses(
   cp.processDevice(stmtCtx, clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_target_data, clauseOps);
   cp.processMap(loc, stmtCtx, clauseOps);
-  cp.processUseDeviceAddr(clauseOps, useDeviceTypes, useDeviceLocs,
+  cp.processUseDeviceAddr(stmtCtx, clauseOps, useDeviceTypes, useDeviceLocs,
                           useDeviceSyms);
-  cp.processUseDevicePtr(clauseOps, useDeviceTypes, useDeviceLocs,
+  cp.processUseDevicePtr(stmtCtx, clauseOps, useDeviceTypes, useDeviceLocs,
                          useDeviceSyms);
 
   // This function implements the deprecated functionality of use_device_ptr

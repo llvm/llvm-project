@@ -128,16 +128,20 @@ public:
       llvm::SmallVectorImpl<const semantics::Symbol *> *reductionSyms =
           nullptr) const;
   bool processTo(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
-  bool processUseDeviceAddr(
-      mlir::omp::UseDeviceAddrClauseOps &result,
-      llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
-      llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
-      llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const;
-  bool processUseDevicePtr(
-      mlir::omp::UseDevicePtrClauseOps &result,
-      llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
-      llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
-      llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const;
+  bool
+  processUseDeviceAddr(Fortran::lower::StatementContext &stmtCtx,
+                       mlir::omp::UseDeviceAddrClauseOps &result,
+                       llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
+                       llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
+                       llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
+                           &useDeviceSyms) const;
+  bool
+  processUseDevicePtr(Fortran::lower::StatementContext &stmtCtx,
+                      mlir::omp::UseDevicePtrClauseOps &result,
+                      llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
+                      llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
+                      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
+                          &useDeviceSyms) const;
 
   template <typename T>
   bool processMotionClauses(lower::StatementContext &stmtCtx,
