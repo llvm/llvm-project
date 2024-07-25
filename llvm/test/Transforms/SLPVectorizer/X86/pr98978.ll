@@ -3,7 +3,10 @@
 
 target triple = "x86_64-redhat-linux-gnu"
 
-; Should not get vectorized.
+; The load+store sequence inside bb10 should not get vectorized. Previously,
+; we incorrectly determined that the pointers do not alias, because a cache
+; entry based indirectly on a disproven NoAlias assumption was not cleared
+; from the BatchAA cache.
 define void @test(ptr %p1, i64 %arg1, i64 %arg2) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[P1:%.*]], i64 [[ARG1:%.*]], i64 [[ARG2:%.*]]) {
