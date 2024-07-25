@@ -207,7 +207,11 @@ static std::unique_ptr<Module> loadFile(const std::string &FileName,
   return Result;
 }
 
+<<<<<<< HEAD
 static bool shouldSkipLocalInAnotherModule(const GlobalValueSummary *RefSummary,
+=======
+static bool shouldSkipLocalInAnotherModule(const GlobalVarSummary *RefSummary,
+>>>>>>> main
                                            size_t NumDefs,
                                            StringRef ImporterModule) {
   // We can import a local from another module if all inputs are compiled

@@ -76,6 +76,7 @@ class Context;
 class Function;
 class Instruction;
 class SelectInst;
+class BranchInst;
 class LoadInst;
 class ReturnInst;
 class StoreInst;
@@ -179,6 +180,7 @@ protected:
   friend class User;       // For getting `Val`.
   friend class Use;        // For getting `Val`.
   friend class SelectInst; // For getting `Val`.
+  friend class BranchInst; // For getting `Val`.
   friend class LoadInst;   // For getting `Val`.
   friend class StoreInst;  // For getting `Val`.
   friend class ReturnInst; // For getting `Val`.
@@ -343,6 +345,14 @@ protected:
   virtual unsigned getUseOperandNo(const Use &Use) const = 0;
   friend unsigned Use::getOperandNo() const; // For getUseOperandNo()
 
+  void swapOperandsInternal(unsigned OpIdxA, unsigned OpIdxB) {
+    assert(OpIdxA < getNumOperands() && "OpIdxA out of bounds!");
+    assert(OpIdxB < getNumOperands() && "OpIdxB out of bounds!");
+    auto UseA = getOperandUse(OpIdxA);
+    auto UseB = getOperandUse(OpIdxB);
+    UseA.swap(UseB);
+  }
+
 #ifndef NDEBUG
   void verifyUserOfLLVMUse(const llvm::Use &Use) const;
 #endif // NDEBUG
@@ -504,6 +514,7 @@ protected:
   /// returns its topmost LLVM IR instruction.
   llvm::Instruction *getTopmostLLVMInstruction() const;
   friend class SelectInst; // For getTopmostLLVMInstruction().
+  friend class BranchInst; // For getTopmostLLVMInstruction().
   friend class LoadInst;   // For getTopmostLLVMInstruction().
   friend class StoreInst;  // For getTopmostLLVMInstruction().
   friend class ReturnInst; // For getTopmostLLVMInstruction().
@@ -611,6 +622,100 @@ public:
 #ifndef NDEBUG
   void verify() const final {
     assert(isa<llvm::SelectInst>(Val) && "Expected SelectInst!");
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
+class BranchInst : public Instruction {
+  /// Use Context::createBranchInst(). Don't call the constructor directly.
+  BranchInst(llvm::BranchInst *BI, Context &Ctx)
+      : Instruction(ClassID::Br, Opcode::Br, BI, Ctx) {}
+  friend Context; // for BranchInst()
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+
+public:
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+  static BranchInst *create(BasicBlock *IfTrue, Instruction *InsertBefore,
+                            Context &Ctx);
+  static BranchInst *create(BasicBlock *IfTrue, BasicBlock *InsertAtEnd,
+                            Context &Ctx);
+  static BranchInst *create(BasicBlock *IfTrue, BasicBlock *IfFalse,
+                            Value *Cond, Instruction *InsertBefore,
+                            Context &Ctx);
+  static BranchInst *create(BasicBlock *IfTrue, BasicBlock *IfFalse,
+                            Value *Cond, BasicBlock *InsertAtEnd, Context &Ctx);
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From);
+  bool isUnconditional() const {
+    return cast<llvm::BranchInst>(Val)->isUnconditional();
+  }
+  bool isConditional() const {
+    return cast<llvm::BranchInst>(Val)->isConditional();
+  }
+  Value *getCondition() const;
+  void setCondition(Value *V) { setOperand(0, V); }
+  unsigned getNumSuccessors() const { return 1 + isConditional(); }
+  BasicBlock *getSuccessor(unsigned SuccIdx) const;
+  void setSuccessor(unsigned Idx, BasicBlock *NewSucc);
+  void swapSuccessors() { swapOperandsInternal(1, 2); }
+
+private:
+  struct LLVMBBToSBBB {
+    Context &Ctx;
+    LLVMBBToSBBB(Context &Ctx) : Ctx(Ctx) {}
+    BasicBlock *operator()(llvm::BasicBlock *BB) const;
+  };
+
+  struct ConstLLVMBBToSBBB {
+    Context &Ctx;
+    ConstLLVMBBToSBBB(Context &Ctx) : Ctx(Ctx) {}
+    const BasicBlock *operator()(const llvm::BasicBlock *BB) const;
+  };
+
+public:
+  using sb_succ_op_iterator =
+      mapped_iterator<llvm::BranchInst::succ_op_iterator, LLVMBBToSBBB>;
+  iterator_range<sb_succ_op_iterator> successors() {
+    iterator_range<llvm::BranchInst::succ_op_iterator> LLVMRange =
+        cast<llvm::BranchInst>(Val)->successors();
+    LLVMBBToSBBB BBMap(Ctx);
+    sb_succ_op_iterator MappedBegin = map_iterator(LLVMRange.begin(), BBMap);
+    sb_succ_op_iterator MappedEnd = map_iterator(LLVMRange.end(), BBMap);
+    return make_range(MappedBegin, MappedEnd);
+  }
+
+  using const_sb_succ_op_iterator =
+      mapped_iterator<llvm::BranchInst::const_succ_op_iterator,
+                      ConstLLVMBBToSBBB>;
+  iterator_range<const_sb_succ_op_iterator> successors() const {
+    iterator_range<llvm::BranchInst::const_succ_op_iterator> ConstLLVMRange =
+        static_cast<const llvm::BranchInst *>(cast<llvm::BranchInst>(Val))
+            ->successors();
+    ConstLLVMBBToSBBB ConstBBMap(Ctx);
+    const_sb_succ_op_iterator ConstMappedBegin =
+        map_iterator(ConstLLVMRange.begin(), ConstBBMap);
+    const_sb_succ_op_iterator ConstMappedEnd =
+        map_iterator(ConstLLVMRange.end(), ConstBBMap);
+    return make_range(ConstMappedBegin, ConstMappedEnd);
+  }
+
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::BranchInst>(Val) && "Expected BranchInst!");
+  }
+  friend raw_ostream &operator<<(raw_ostream &OS, const BranchInst &BI) {
+    BI.dump(OS);
+    return OS;
   }
   void dump(raw_ostream &OS) const override;
   LLVM_DUMP_METHOD void dump() const override;
@@ -870,6 +975,8 @@ protected:
 
   SelectInst *createSelectInst(llvm::SelectInst *SI);
   friend SelectInst; // For createSelectInst()
+  BranchInst *createBranchInst(llvm::BranchInst *I);
+  friend BranchInst; // For createBranchInst()
   LoadInst *createLoadInst(llvm::LoadInst *LI);
   friend LoadInst; // For createLoadInst()
   StoreInst *createStoreInst(llvm::StoreInst *SI);

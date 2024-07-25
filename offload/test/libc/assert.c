@@ -3,8 +3,9 @@
 
 // REQUIRES: libc
 
-// NVPTX without LTO uses the implementation in OpenMP currently.
+// AMDGPU and NVPTX without LTO uses the implementation in OpenMP currently.
 // UNSUPPORTED: nvptx64-nvidia-cuda
+// UNSUPPORTED: amdgcn-amd-amdhsa
 // REQUIRES: gpu
 
 #include <assert.h>

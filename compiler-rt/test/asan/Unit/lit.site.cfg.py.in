@@ -53,7 +53,7 @@ config.test_source_root = config.test_exec_root
 # host triple as the trailing path component. The value is incorrect for i386
 # tests on x86_64 hosts and vice versa. Adjust config.compiler_rt_libdir
 # accordingly.
-if config.enable_per_target_runtime_dir and config.target_arch != config.host_arch:
+if config.enable_per_target_runtime_dir:
     if config.target_arch == 'i386':
         config.compiler_rt_libdir = re.sub(r'/x86_64(?=-[^/]+$)', '/i386', config.compiler_rt_libdir)
     elif config.target_arch == 'x86_64':

@@ -154,7 +154,7 @@ public:
   }
 };
 
-class ELFObjectWriter : public MCObjectWriter {
+class ELFObjectWriter final : public MCObjectWriter {
   unsigned ELFHeaderEFlags = 0;
 
 public:
