@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -triple i686-unknown-linux -analyzer-checker=alpha.security.MmapWriteExec -analyzer-config alpha.security.MmapWriteExec:MmapProtExec=1 -analyzer-config alpha.security.MmapWriteExec:MmapProtRead=4 -DUSE_ALTERNATIVE_PROT_EXEC_DEFINITION -verify %s
+// RUN: %clang_analyze_cc1 -triple i686-unknown-linux -analyzer-checker=alpha.security.MmapWriteExec -DUSE_ALTERNATIVE_PROT_EXEC_DEFINITION -verify %s
 // RUN: %clang_analyze_cc1 -triple x86_64-unknown-apple-darwin10 -analyzer-checker=alpha.security.MmapWriteExec -verify %s
 
 #ifndef USE_ALTERNATIVE_PROT_EXEC_DEFINITION
