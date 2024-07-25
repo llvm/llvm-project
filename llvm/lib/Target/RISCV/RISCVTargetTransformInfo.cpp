@@ -1398,12 +1398,14 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     if (CostKind != TTI::TCK_RecipThroughput)
       return Cost;
 
-    // Our actual lowering uses a VL predicated load of the next legal type,
-    // or splitting if there is no wider legal type.  This is reflected in
+    // Our actual lowering for the case where a wider legal type is available
+    // uses the a VL predicated load on the wider type.  This is reflected in
     // the result of getTypeLegalizationCost, but BasicTTI assumes the
     // widened cases are scalarized.
     const DataLayout &DL = this->getDataLayout();
-    if (Src->isVectorTy() && LT.second.isVector()) {
+    if (Src->isVectorTy() && LT.second.isVector() &&
+        TypeSize::isKnownLT(DL.getTypeStoreSizeInBits(Src),
+                            LT.second.getSizeInBits())) {
       auto *SrcVT = cast<VectorType>(Src);
       TypeSize SrcEltSize = DL.getTypeStoreSizeInBits(SrcVT->getElementType());
       TypeSize LegalEltSize = LT.second.getVectorElementType().getSizeInBits();
