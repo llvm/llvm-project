@@ -4,6 +4,7 @@
 // RUN:  %clang_cc1 -triple=aarch64-unknown-linux-gnu -fmath-errno -O3 -new-struct-path-tbaa -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefixes=CHECK,NewStructPathTBAA
 
 extern "C" float expf(float);
+extern "C" double remainder(double, double);
 extern "C" double fabs(double);
 
 // Emit int TBAA metadata on FP math libcalls, which is useful for alias analysis
@@ -23,6 +24,8 @@ extern "C" float foo (float num[]) {
    return tmp;
 }
 
+//
+// Negative test: fabs cannot set errno
 // CHECK-LABEL: define dso_local double @foo_fabs(
 // CHECK-SAME: ptr nocapture noundef readonly [[NUM:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -33,7 +36,22 @@ extern "C" float foo (float num[]) {
 // CHECK-NEXT:    ret double [[MUL]]
 //
 extern "C" double foo_fabs (double num[]) {
-   const double expm2 = fabs(num[10]);  // Emit TBAA metadata on @fabs
+   const double expm2 = fabs(num[10]);          // Don't emit TBAA metadata
+   double tmp = expm2 * num[10];
+   return tmp;
+}
+
+// CHECK-LABEL: define dso_local double @foo_remainder(
+// CHECK-SAME: ptr nocapture noundef readonly [[NUM:%.*]], double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[NUM]], i64 80
+// CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA8]]
+// CHECK-NEXT:    [[CALL:%.*]] = tail call double @remainder(double noundef [[TMP0]], double noundef [[A]]) #[[ATTR4]], !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[MUL:%.*]] = fmul double [[TMP0]], [[CALL]]
+// CHECK-NEXT:    ret double [[MUL]]
+//
+extern "C" double foo_remainder (double num[], double a) {
+   const double expm2 = remainder(num[10], a);  // Emit TBAA metadata
    double tmp = expm2 * num[10];
    return tmp;
 }

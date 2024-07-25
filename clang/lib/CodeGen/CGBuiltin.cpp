@@ -697,10 +697,10 @@ static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
     auto IsErrnoIntrinsic = [&]() -> unsigned {
       // Check whether a FP math builtin function, such as BI__builtin_expf
       QualType ResultTy = FD->getReturnType();
-      bool IsMathLibCall =
-          Context.BuiltinInfo.isLibFunction(BuiltinID) ||
-          Context.BuiltinInfo.isPredefinedLibFunction(BuiltinID);
-      if (IsMathLibCall && CGF.ConvertType(ResultTy)->isFloatingPointTy())
+      bool ConstWithoutErrnoAndExceptions =
+          Context.BuiltinInfo.isConstWithoutErrnoAndExceptions(BuiltinID);
+      if (ConstWithoutErrnoAndExceptions &&
+          CGF.ConvertType(ResultTy)->isFloatingPointTy())
         return true;
       return false;
     }();
