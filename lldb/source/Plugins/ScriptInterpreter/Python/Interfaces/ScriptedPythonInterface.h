@@ -16,16 +16,15 @@
 //clang-format on
 #endif
 
+#include "lldb/Host/Config.h"
+#include "lldb/Interpreter/Interfaces/ScriptedInterface.h"
+#include "lldb/Utility/DataBufferHeap.h"
 
 #include <optional>
 #include <sstream>
 #include <tuple>
 #include <type_traits>
 #include <utility>
-
-#include "lldb/Host/Config.h"
-#include "lldb/Interpreter/Interfaces/ScriptedInterface.h"
-#include "lldb/Utility/DataBufferHeap.h"
 
 #if LLDB_ENABLE_PYTHON
 
