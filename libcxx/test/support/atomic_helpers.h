@@ -55,10 +55,15 @@ constexpr bool msvc_is_lock_free_macro_value() {
 #  pragma clang diagnostic ignored "-Wc++11-extensions"
 #endif
 
-// The entire LockFreeStatus exists entirely to work around the support for C++03, which many of our atomic tests
-// run under. This is a bit of a hack, but it's the best we can do.
 enum class LockFreeStatus : int { unknown = -1, never = 0, sometimes = 1, always = 2 };
-#define COMPARE_TYPES(T1, T2) (sizeof(T1) == sizeof(T2) && TEST_ALIGNOF(T1) >= TEST_ALIGNOF(T2))
+
+// We should really be checking whether the alignment of T is greater-than-or-equal-to the alignment required
+// for T to be atomic, but this is basically impossible to implement portably. Instead, we assume that any type
+// aligned to at least its size is going to be atomic if there exists atomic operations for that size at all,
+// which is true on most platforms. This technically reduces our test coverage in the sense that if a type has
+// an alignment requirement less than its size but could still be made lockfree, LockFreeStatusInfo will report
+// that we don't know whether it is lockfree or not.
+#define COMPARE_TYPES(T, FundamentalT) (sizeof(T) == sizeof(FundamentalT) && TEST_ALIGNOF(T) >= sizeof(T))
 
 template <class T>
 struct LockFreeStatusInfo {
@@ -77,6 +82,8 @@ struct LockFreeStatusInfo {
 
   static const bool status_known = LockFreeStatusInfo::value != LockFreeStatus::unknown;
 };
+
+#undef COMPARE_TYPES
 
 // This doesn't work in C++03 due to issues with scoped enumerations. Just disable the test.
 #if TEST_STD_VER >= 11
