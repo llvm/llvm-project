@@ -435,6 +435,13 @@ public:
 
   /// Allocate space for an array of objects without constructing them.
   T *Allocate(size_t num = 1) { return Allocator.Allocate<T>(num); }
+
+  /// \return An index uniquely and reproducibly identifying
+  /// an input pointer \p Ptr in the given allocator.
+  /// Returns an empty optional if the pointer is not found in the allocator.
+  std::optional<int64_t> identifyObject(const void *Ptr) {
+    return Allocator.identifyObject(Ptr);
+  }
 };
 
 } // end namespace llvm
