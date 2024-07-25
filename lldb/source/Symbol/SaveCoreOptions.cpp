@@ -52,7 +52,7 @@ Status SaveCoreOptions::SetProcess(lldb::ProcessSP process_sp) {
   Status error;
   if (!process_sp) {
     ClearProcessSpecificData();
-    m_process_sp = std::nullopt;
+    m_process_sp = nullptr;
     return error;
   }
 
@@ -61,38 +61,38 @@ Status SaveCoreOptions::SetProcess(lldb::ProcessSP process_sp) {
     return error;
   }
 
-  if (m_process_sp.has_value())
+  if (m_process_sp)
     ClearProcessSpecificData();
 
   m_process_sp = process_sp;
   return error;
 }
 
-Status SaveCoreOptions::AddThread(lldb_private::Thread *thread) {
+Status SaveCoreOptions::AddThread(lldb::ThreadSP thread_sp) {
   Status error;
-  if (!thread) {
+  if (!thread_sp) {
     error.SetErrorString("Thread is null");
-  }
-
-  if (!m_process_sp.has_value())
-    m_process_sp = thread->GetProcess();
-
-  if (m_process_sp.value() != thread->GetProcess()) {
-    error.SetErrorString("Cannot add thread from a different process.");
     return error;
   }
 
-  std::pair<lldb::tid_t, lldb::ThreadSP> tid_pair(thread->GetID(),
-                                                  thread->GetBackingThread());
-  m_threads_to_save.insert(tid_pair);
+  if (m_process_sp) {
+    if (m_process_sp != thread_sp->GetProcess()) {
+      error.SetErrorString("Cannot add a thread from a different process.");
+      return error;
+    }
+  } else {
+    m_process_sp = thread_sp->GetProcess();
+  }
+
+  m_threads_to_save[thread_sp->GetID()];
   return error;
 }
 
-bool SaveCoreOptions::RemoveThread(lldb_private::Thread *thread) {
-  return thread && m_threads_to_save.erase(thread->GetID()) > 0;
+bool SaveCoreOptions::RemoveThread(lldb::ThreadSP thread_sp) {
+  return thread_sp && m_threads_to_save.erase(thread_sp->GetID()) > 0;
 }
 
-bool SaveCoreOptions::ShouldSaveThread(lldb::tid_t tid) const {
+bool SaveCoreOptions::ShouldThreadBeSaved(lldb::tid_t tid) const {
   // If the user specified no threads to save, then we save all threads.
   if (m_threads_to_save.empty())
     return true;
@@ -106,7 +106,7 @@ Status SaveCoreOptions::EnsureValidConfiguration(
   if (!m_threads_to_save.empty() && GetStyle() == lldb::eSaveCoreFull)
     error_str += "Cannot save a full core with a subset of threads\n";
 
-  if (m_process_sp.has_value() && m_process_sp != process_to_save)
+  if (m_process_sp != process_to_save)
     error_str += "Cannot save core for process using supplied core options. "
                  "Options were constructed targeting a different process. \n";
 

@@ -65,7 +65,8 @@ public:
   /// Add a thread to save in the core file.
   ///
   /// \param thread The thread to save.
-  /// \note This will set the process if it is not already set.
+  /// \note This will set the process if it is not already set, or return
+  /// and error if the SBThread is not from the set process.
   SBError AddThread(lldb::SBThread thread);
 
   /// Remove a thread from the list of threads to save.

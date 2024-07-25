@@ -82,11 +82,11 @@ SBError SBSaveCoreOptions::SetProcess(lldb::SBProcess process) {
 }
 
 SBError SBSaveCoreOptions::AddThread(lldb::SBThread thread) {
-  return m_opaque_up->AddThread(thread.get());
+  return m_opaque_up->AddThread(thread.get_sp());
 }
 
 bool SBSaveCoreOptions::RemoveThread(lldb::SBThread thread) {
-  return m_opaque_up->RemoveThread(thread.get());
+  return m_opaque_up->RemoveThread(thread.get_sp());
 }
 
 void SBSaveCoreOptions::Clear() {

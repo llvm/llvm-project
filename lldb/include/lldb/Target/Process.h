@@ -743,6 +743,7 @@ public:
 
   /// Helper function for Process::SaveCore(...) that calculates the thread list
   /// based upon options set within a given \a core_options object.
+  /// \note If there is no thread list defined, all threads will be saved.
   std::vector<lldb::ThreadSP>
   CalculateCoreFileThreadList(const SaveCoreOptions &core_options);
 

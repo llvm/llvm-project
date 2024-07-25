@@ -35,9 +35,9 @@ public:
 
   Status SetProcess(lldb::ProcessSP process_sp);
 
-  Status AddThread(lldb_private::Thread *thread);
-  bool RemoveThread(lldb_private::Thread *thread);
-  bool ShouldSaveThread(lldb::tid_t tid) const;
+  Status AddThread(lldb::ThreadSP thread_sp);
+  bool RemoveThread(lldb::ThreadSP thread_sp);
+  bool ShouldThreadBeSaved(lldb::tid_t tid) const;
 
   Status EnsureValidConfiguration(lldb::ProcessSP process_to_save) const;
 
@@ -49,7 +49,7 @@ private:
   std::optional<std::string> m_plugin_name;
   std::optional<lldb_private::FileSpec> m_file;
   std::optional<lldb::SaveCoreStyle> m_style;
-  std::optional<lldb::ProcessSP> m_process_sp;
+  lldb::ProcessSP m_process_sp;
   std::map<lldb::tid_t, lldb::ThreadSP> m_threads_to_save;
 };
 } // namespace lldb_private

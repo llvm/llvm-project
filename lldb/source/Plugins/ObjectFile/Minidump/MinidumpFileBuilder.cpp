@@ -69,10 +69,9 @@ Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories() {
     m_expected_directories += 9;
 
   // Go through all of the threads and check for exceptions.
-  lldb_private::ThreadList thread_list = m_process_sp->GetThreadList();
-  const uint32_t num_threads = thread_list.GetSize();
-  for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
-    ThreadSP thread_sp(thread_list.GetThreadAtIndex(thread_idx));
+  std::vector<lldb::ThreadSP> threads =
+      m_process_sp->CalculateCoreFileThreadList(m_save_core_options);
+  for (const ThreadSP &thread_sp : threads) {
     StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
     if (stop_info_sp) {
       const StopReason &stop_reason = stop_info_sp->GetStopReason();
@@ -610,10 +609,8 @@ Status MinidumpFileBuilder::AddThreadList() {
   m_thread_list_start = GetCurrentDataEndOffset();
   DataBufferHeap helper_data;
 
-  const uint32_t num_threads = thread_list.size();
   Log *log = GetLog(LLDBLog::Object);
-  for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
-    ThreadSP thread_sp = thread_list.at(thread_idx);
+  for (const ThreadSP &thread_sp : thread_list) {
     RegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
 
     if (!reg_ctx_sp) {
@@ -651,7 +648,7 @@ Status MinidumpFileBuilder::AddThreadList() {
     m_tid_to_reg_ctx[thread_sp->GetID()] = thread_context_memory_locator;
 
     LLDB_LOGF(log, "AddThreadList for thread %d: thread_context %zu bytes",
-              thread_idx, thread_context.size());
+              thread_sp->GetIndexID(), thread_context.size());
     helper_data.AppendData(thread_context.data(), thread_context.size());
 
     llvm::minidump::Thread t;
@@ -675,11 +672,10 @@ Status MinidumpFileBuilder::AddThreadList() {
 }
 
 Status MinidumpFileBuilder::AddExceptions() {
-  lldb_private::ThreadList thread_list = m_process_sp->GetThreadList();
+  std::vector<ThreadSP> thread_list =
+      m_process_sp->CalculateCoreFileThreadList(m_save_core_options);
   Status error;
-  const uint32_t num_threads = thread_list.GetSize();
-  for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
-    ThreadSP thread_sp(thread_list.GetThreadAtIndex(thread_idx));
+  for (const ThreadSP &thread_sp : thread_list) {
     StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
     bool add_exception = false;
     if (stop_info_sp) {

@@ -256,6 +256,8 @@ private:
 
   lldb::ExecutionContextRefSP m_opaque_sp;
 
+  lldb::ThreadSP get_sp() const;
+
   lldb_private::Thread *operator->();
 
   lldb_private::Thread *get();
