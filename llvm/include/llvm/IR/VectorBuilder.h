@@ -15,6 +15,7 @@
 #ifndef LLVM_IR_VECTORBUILDER_H
 #define LLVM_IR_VECTORBUILDER_H
 
+#include <llvm/Analysis/IVDescriptors.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/InstrTypes.h>
 #include <llvm/IR/Instruction.h>
@@ -57,6 +58,11 @@ private:
     return RetType();
   }
 
+  /// Helper function for creating VP intrinsic call.
+  Value *createVectorInstructionImpl(Intrinsic::ID VPID, Type *ReturnTy,
+                                     ArrayRef<Value *> VecOpArray,
+                                     const Twine &Name = Twine());
+
 public:
   VectorBuilder(IRBuilderBase &Builder,
                 Behavior ErrorHandling = Behavior::ReportAndAbort)
@@ -92,6 +98,15 @@ public:
   Value *createVectorInstruction(unsigned Opcode, Type *ReturnTy,
                                  ArrayRef<Value *> VecOpArray,
                                  const Twine &Name = Twine());
+
+  /// Emit a VP reduction intrinsic call for recurrence kind.
+  /// \param Kind        The kind of recurrence
+  /// \param ValTy       The type of operand which the reduction operation is
+  ///                    performed.
+  /// \param VecOpArray  The operand list.
+  Value *createSimpleTargetReduction(RecurKind Kind, Type *ValTy,
+                                     ArrayRef<Value *> VecOpArray,
+                                     const Twine &Name = Twine());
 };
 
 } // namespace llvm
