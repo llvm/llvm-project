@@ -787,7 +787,6 @@ void DWARFRewriter::updateUnitDebugInfo(
     DWARFUnit &Unit, DIEBuilder &DIEBldr, DebugLocWriter &DebugLocWriter,
     DebugRangesSectionWriter &RangesSectionWriter,
     DebugAddrWriter &AddressWriter, std::optional<uint64_t> RangesBase) {
-  // Cache debug ranges so that the offset for identical ranges could be reused.
   std::map<DebugAddressRangesVector, uint64_t> CachedRanges;
 
   uint64_t DIEOffset = Unit.getOffset() + Unit.getHeaderSize();
@@ -795,7 +794,177 @@ void DWARFRewriter::updateUnitDebugInfo(
   const std::vector<std::unique_ptr<DIEBuilder::DIEInfo>> &DIs =
       DIEBldr.getDIEsByUnit(Unit);
 
-  // Either updates or normalizes DW_AT_range to DW_AT_low_pc and DW_AT_high_pc.
+  for (const std::unique_ptr<DIEBuilder::DIEInfo> &DI : DIs) {
+    DIE *Die = DI->Die;
+    switch (Die->getTag()) {
+    case dwarf::DW_TAG_compile_unit:
+    case dwarf::DW_TAG_skeleton_unit:
+      handleCompileUnit(*Die, Unit, DIEBldr, DebugLocWriter,
+                        RangesSectionWriter, AddressWriter, RangesBase);
+      break;
+    case dwarf::DW_TAG_subprogram:
+      handleSubprogram(*Die, Unit, DIEBldr, RangesSectionWriter, AddressWriter,
+                       CachedRanges);
+      break;
+    case dwarf::DW_TAG_lexical_block:
+    case dwarf::DW_TAG_inlined_subroutine:
+    case dwarf::DW_TAG_try_block:
+    case dwarf::DW_TAG_catch_block:
+      handleLexicalBlock(*Die, Unit, DIEBldr, RangesSectionWriter,
+                         AddressWriter, CachedRanges);
+      break;
+    case dwarf::DW_TAG_call_site:
+      handleCallSite(*Die, Unit, DIEBldr, AddressWriter);
+      break;
+    default:
+      handleDefaultCase(*Die, Unit, DIEBldr, DebugLocWriter,
+                        RangesSectionWriter, AddressWriter);
+      break;
+    }
+  }
+
+  if (DIEOffset > NextCUOffset)
+    errs() << "BOLT-WARNING: corrupt DWARF detected at 0x"
+           << Twine::utohexstr(Unit.getOffset()) << '\n';
+}
+
+void DWARFRewriter::handleCompileUnit(
+    DIE &Die, DWARFUnit &Unit, DIEBuilder &DIEBldr,
+    DebugLocWriter &DebugLocWriter,
+    DebugRangesSectionWriter &RangesSectionWriter,
+    DebugAddrWriter &AddressWriter, std::optional<uint64_t> &RangesBase) {
+  // For dwarf5 section 3.1.3
+  // The following attributes are not part of a split full compilation unit
+  // entry but instead are inherited (if present) from the corresponding
+  // skeleton compilation unit: DW_AT_low_pc, DW_AT_high_pc, DW_AT_ranges,
+  // DW_AT_stmt_list, DW_AT_comp_dir, DW_AT_str_offsets_base,
+  // DW_AT_addr_base and DW_AT_rnglists_base.
+  if (Unit.getVersion() == 5 && Unit.isDWOUnit())
+    return;
+  auto ModuleRangesOrError = getDIEAddressRanges(Die, Unit);
+  if (!ModuleRangesOrError) {
+    consumeError(ModuleRangesOrError.takeError());
+    return;
+  }
+  DWARFAddressRangesVector &ModuleRanges = *ModuleRangesOrError;
+  DebugAddressRangesVector OutputRanges =
+      BC.translateModuleAddressRanges(ModuleRanges);
+  DIEValue LowPCAttrInfo = Die.findAttribute(dwarf::DW_AT_low_pc);
+  // For a case where LLD GCs only function used in the CU.
+  // If CU doesn't have DW_AT_low_pc we are not going to convert,
+  // so don't need to do anything.
+  if (OutputRanges.empty() && !Unit.isDWOUnit() && LowPCAttrInfo)
+    OutputRanges.push_back({0, 0});
+  const uint64_t RangesSectionOffset =
+      RangesSectionWriter.addRanges(OutputRanges);
+  // Don't emit the zero low_pc arange.
+  if (!Unit.isDWOUnit() && !OutputRanges.empty() && OutputRanges.back().LowPC)
+    ARangesSectionWriter->addCURanges(Unit.getOffset(),
+                                      std::move(OutputRanges));
+  updateDWARFObjectAddressRanges(Unit, DIEBldr, Die, RangesSectionOffset,
+                                 RangesBase);
+  DIEValue StmtListAttrVal = Die.findAttribute(dwarf::DW_AT_stmt_list);
+  if (LineTablePatchMap.count(&Unit))
+    DIEBldr.replaceValue(&Die, dwarf::DW_AT_stmt_list,
+                         StmtListAttrVal.getForm(),
+                         DIEInteger(LineTablePatchMap[&Unit]));
+}
+
+void DWARFRewriter::handleSubprogram(
+    DIE &Die, DWARFUnit &Unit, DIEBuilder &DIEBldr,
+    DebugRangesSectionWriter &RangesSectionWriter,
+    DebugAddrWriter &AddressWriter,
+    std::map<DebugAddressRangesVector, uint64_t> &CachedRanges) {
+  auto updateLowPCHighPC = [&](DIE *Die, const DIEValue &LowPCVal,
+                               const DIEValue &HighPCVal, uint64_t LowPC,
+                               const uint64_t HighPC) {
+    dwarf::Attribute AttrLowPC = dwarf::DW_AT_low_pc;
+    dwarf::Form FormLowPC = dwarf::DW_FORM_addr;
+    dwarf::Attribute AttrHighPC = dwarf::DW_AT_high_pc;
+    dwarf::Form FormHighPC = dwarf::DW_FORM_data4;
+    const uint32_t Size = HighPC - LowPC;
+    // Whatever was generated is not low_pc/high_pc, so will reset to
+    // default for size 1.
+    if (!LowPCVal || !HighPCVal) {
+      if (Unit.getVersion() >= 5)
+        FormLowPC = dwarf::DW_FORM_addrx;
+      else if (Unit.isDWOUnit())
+        FormLowPC = dwarf::DW_FORM_GNU_addr_index;
+    } else {
+      AttrLowPC = LowPCVal.getAttribute();
+      FormLowPC = LowPCVal.getForm();
+      AttrHighPC = HighPCVal.getAttribute();
+      FormHighPC = HighPCVal.getForm();
+    }
+
+    if (FormLowPC == dwarf::DW_FORM_addrx ||
+        FormLowPC == dwarf::DW_FORM_GNU_addr_index)
+      LowPC = AddressWriter.getIndexFromAddress(LowPC, Unit);
+
+    if (LowPCVal)
+      DIEBldr.replaceValue(Die, AttrLowPC, FormLowPC, DIEInteger(LowPC));
+    else
+      DIEBldr.addValue(Die, AttrLowPC, FormLowPC, DIEInteger(LowPC));
+    if (HighPCVal) {
+      DIEBldr.replaceValue(Die, AttrHighPC, FormHighPC, DIEInteger(Size));
+    } else {
+      DIEBldr.deleteValue(Die, dwarf::DW_AT_ranges);
+      DIEBldr.addValue(Die, AttrHighPC, FormHighPC, DIEInteger(Size));
+    }
+  };
+  // Get function address either from ranges or [LowPC, HighPC) pair.
+  uint64_t Address = UINT64_MAX;
+  uint64_t SectionIndex, HighPC;
+  DebugAddressRangesVector FunctionRanges;
+  if (!getLowAndHighPC(Die, Unit, Address, HighPC, SectionIndex)) {
+    Expected<DWARFAddressRangesVector> RangesOrError =
+        getDIEAddressRanges(Die, Unit);
+    if (!RangesOrError) {
+      consumeError(RangesOrError.takeError());
+      return;
+    }
+    DWARFAddressRangesVector Ranges = *RangesOrError;
+    // Not a function definition.
+    if (Ranges.empty())
+      return;
+
+    for (const DWARFAddressRange &Range : Ranges) {
+      if (const BinaryFunction *Function =
+              BC.getBinaryFunctionAtAddress(Range.LowPC))
+        FunctionRanges.append(Function->getOutputAddressRanges());
+    }
+  } else {
+    if (const BinaryFunction *Function = BC.getBinaryFunctionAtAddress(Address))
+      FunctionRanges = Function->getOutputAddressRanges();
+  }
+
+      // Clear cached ranges as the new function will have its own set.
+      CachedRanges.clear();
+      DIEValue LowPCVal = Die.findAttribute(dwarf::DW_AT_low_pc);
+      DIEValue HighPCVal = Die.findAttribute(dwarf::DW_AT_high_pc);
+      if (FunctionRanges.empty()) {
+        if (LowPCVal && HighPCVal)
+          FunctionRanges.push_back({0, HighPCVal.getDIEInteger().getValue()});
+        else
+          FunctionRanges.push_back({0, 1});
+      }
+
+      if (FunctionRanges.size() == 1 && !opts::AlwaysConvertToRanges) {
+        updateLowPCHighPC(&Die, LowPCVal, HighPCVal,
+                          FunctionRanges.back().LowPC,
+                          FunctionRanges.back().HighPC);
+        return;
+      }
+
+      updateDWARFObjectAddressRanges(
+          Unit, DIEBldr, Die, RangesSectionWriter.addRanges(FunctionRanges));
+}
+
+void DWARFRewriter::handleLexicalBlock(
+    DIE &Die, DWARFUnit &Unit, DIEBuilder &DIEBldr,
+    DebugRangesSectionWriter &RangesSectionWriter,
+    DebugAddrWriter &AddressWriter,
+    std::map<DebugAddressRangesVector, uint64_t> &CachedRanges) {
   auto updateLowPCHighPC = [&](DIE *Die, const DIEValue &LowPCVal,
                                const DIEValue &HighPCVal, uint64_t LowPC,
                                const uint64_t HighPC) {
@@ -834,207 +1003,110 @@ void DWARFRewriter::updateUnitDebugInfo(
     }
   };
 
-  for (const std::unique_ptr<DIEBuilder::DIEInfo> &DI : DIs) {
-    DIE *Die = DI->Die;
-    switch (Die->getTag()) {
-    case dwarf::DW_TAG_compile_unit:
-    case dwarf::DW_TAG_skeleton_unit: {
-      // For dwarf5 section 3.1.3
-      // The following attributes are not part of a split full compilation unit
-      // entry but instead are inherited (if present) from the corresponding
-      // skeleton compilation unit: DW_AT_low_pc, DW_AT_high_pc, DW_AT_ranges,
-      // DW_AT_stmt_list, DW_AT_comp_dir, DW_AT_str_offsets_base,
-      // DW_AT_addr_base and DW_AT_rnglists_base.
-      if (Unit.getVersion() == 5 && Unit.isDWOUnit())
-        continue;
-      auto ModuleRangesOrError = getDIEAddressRanges(*Die, Unit);
-      if (!ModuleRangesOrError) {
-        consumeError(ModuleRangesOrError.takeError());
-        break;
-      }
-      DWARFAddressRangesVector &ModuleRanges = *ModuleRangesOrError;
-      DebugAddressRangesVector OutputRanges =
-          BC.translateModuleAddressRanges(ModuleRanges);
-      DIEValue LowPCAttrInfo = Die->findAttribute(dwarf::DW_AT_low_pc);
-      // For a case where LLD GCs only function used in the CU.
-      // If CU doesn't have DW_AT_low_pc we are not going to convert,
-      // so don't need to do anything.
-      if (OutputRanges.empty() && !Unit.isDWOUnit() && LowPCAttrInfo)
-        OutputRanges.push_back({0, 0});
-      const uint64_t RangesSectionOffset =
-          RangesSectionWriter.addRanges(OutputRanges);
-      // Don't emit the zero low_pc arange.
-      if (!Unit.isDWOUnit() && !OutputRanges.empty() &&
-          OutputRanges.back().LowPC)
-        ARangesSectionWriter->addCURanges(Unit.getOffset(),
-                                          std::move(OutputRanges));
-      updateDWARFObjectAddressRanges(Unit, DIEBldr, *Die, RangesSectionOffset,
-                                     RangesBase);
-      DIEValue StmtListAttrVal = Die->findAttribute(dwarf::DW_AT_stmt_list);
-      if (LineTablePatchMap.count(&Unit))
-        DIEBldr.replaceValue(Die, dwarf::DW_AT_stmt_list,
-                             StmtListAttrVal.getForm(),
-                             DIEInteger(LineTablePatchMap[&Unit]));
-      break;
+  uint64_t RangesSectionOffset = 0;
+  Expected<DWARFAddressRangesVector> RangesOrError =
+      getDIEAddressRanges(Die, Unit);
+  const BinaryFunction *Function =
+      RangesOrError && !RangesOrError->empty()
+          ? BC.getBinaryFunctionContainingAddress(RangesOrError->front().LowPC)
+          : nullptr;
+  DebugAddressRangesVector OutputRanges;
+  if (Function) {
+    OutputRanges = translateInputToOutputRanges(*Function, *RangesOrError);
+    LLVM_DEBUG(if (OutputRanges.empty() != RangesOrError->empty()) {
+      dbgs() << "BOLT-DEBUG: problem with DIE at 0x"
+             << Twine::utohexstr(Die.getOffset()) << " in CU at 0x"
+             << Twine::utohexstr(Unit.getOffset()) << '\n';
+    });
+    if (opts::AlwaysConvertToRanges || OutputRanges.size() > 1) {
+      RangesSectionOffset =
+          RangesSectionWriter.addRanges(std::move(OutputRanges), CachedRanges);
+      OutputRanges.clear();
+    } else if (OutputRanges.empty()) {
+      OutputRanges.push_back({0, RangesOrError.get().front().HighPC});
     }
+  } else if (!RangesOrError) {
+    consumeError(RangesOrError.takeError());
+  } else {
+    OutputRanges.push_back(
+        {0, !RangesOrError->empty() ? RangesOrError.get().front().HighPC : 0});
+  }
+  DIEValue LowPCVal = Die.findAttribute(dwarf::DW_AT_low_pc);
+  DIEValue HighPCVal = Die.findAttribute(dwarf::DW_AT_high_pc);
+  if (OutputRanges.size() == 1) {
+    updateLowPCHighPC(&Die, LowPCVal, HighPCVal, OutputRanges.back().LowPC,
+                      OutputRanges.back().HighPC);
+    return;
+  }
+  updateDWARFObjectAddressRanges(Unit, DIEBldr, Die, RangesSectionOffset);
+}
 
-    case dwarf::DW_TAG_subprogram: {
-      // Get function address either from ranges or [LowPC, HighPC) pair.
-      uint64_t Address = UINT64_MAX;
-      uint64_t SectionIndex, HighPC;
-      DebugAddressRangesVector FunctionRanges;
-      if (!getLowAndHighPC(*Die, Unit, Address, HighPC, SectionIndex)) {
-        Expected<DWARFAddressRangesVector> RangesOrError =
-            getDIEAddressRanges(*Die, Unit);
-        if (!RangesOrError) {
-          consumeError(RangesOrError.takeError());
-          break;
-        }
-        DWARFAddressRangesVector Ranges = *RangesOrError;
-        // Not a function definition.
-        if (Ranges.empty())
-          break;
+void DWARFRewriter::handleCallSite(DIE &Die, DWARFUnit &Unit,
+                                   DIEBuilder &DIEBldr,
+                                   DebugAddrWriter &AddressWriter) {
+  auto patchPC = [&](DIE *Die, DIEValue &AttrVal, StringRef Entry) -> void {
+    std::optional<uint64_t> Address = getAsAddress(Unit, AttrVal);
+    const BinaryFunction *Function =
+        BC.getBinaryFunctionContainingAddress(*Address);
+    uint64_t UpdatedAddress = *Address;
+    if (Function)
+      UpdatedAddress = Function->translateInputToOutputAddress(UpdatedAddress);
 
-        for (const DWARFAddressRange &Range : Ranges) {
-          if (const BinaryFunction *Function =
-                  BC.getBinaryFunctionAtAddress(Range.LowPC))
-            FunctionRanges.append(Function->getOutputAddressRanges());
-        }
-      } else {
-        if (const BinaryFunction *Function =
-                BC.getBinaryFunctionAtAddress(Address))
-          FunctionRanges = Function->getOutputAddressRanges();
-      }
-
-      // Clear cached ranges as the new function will have its own set.
-      CachedRanges.clear();
-      DIEValue LowPCVal = Die->findAttribute(dwarf::DW_AT_low_pc);
-      DIEValue HighPCVal = Die->findAttribute(dwarf::DW_AT_high_pc);
-      if (FunctionRanges.empty()) {
-        if (LowPCVal && HighPCVal)
-          FunctionRanges.push_back({0, HighPCVal.getDIEInteger().getValue()});
-        else
-          FunctionRanges.push_back({0, 1});
-      }
-
-      if (FunctionRanges.size() == 1 && !opts::AlwaysConvertToRanges) {
-        updateLowPCHighPC(Die, LowPCVal, HighPCVal, FunctionRanges.back().LowPC,
-                          FunctionRanges.back().HighPC);
-        break;
-      }
-
-      updateDWARFObjectAddressRanges(
-          Unit, DIEBldr, *Die, RangesSectionWriter.addRanges(FunctionRanges));
-
-      break;
+    if (AttrVal.getForm() == dwarf::DW_FORM_addrx) {
+      const uint32_t Index =
+          AddressWriter.getIndexFromAddress(UpdatedAddress, Unit);
+      DIEBldr.replaceValue(Die, AttrVal.getAttribute(), AttrVal.getForm(),
+                           DIEInteger(Index));
+    } else if (AttrVal.getForm() == dwarf::DW_FORM_addr) {
+      DIEBldr.replaceValue(Die, AttrVal.getAttribute(), AttrVal.getForm(),
+                           DIEInteger(UpdatedAddress));
+    } else {
+      errs() << "BOLT-ERROR: unsupported form for " << Entry << "\n";
     }
-    case dwarf::DW_TAG_lexical_block:
-    case dwarf::DW_TAG_inlined_subroutine:
-    case dwarf::DW_TAG_try_block:
-    case dwarf::DW_TAG_catch_block: {
-      uint64_t RangesSectionOffset = 0;
-      Expected<DWARFAddressRangesVector> RangesOrError =
-          getDIEAddressRanges(*Die, Unit);
-      const BinaryFunction *Function =
-          RangesOrError && !RangesOrError->empty()
-              ? BC.getBinaryFunctionContainingAddress(
-                    RangesOrError->front().LowPC)
-              : nullptr;
-      DebugAddressRangesVector OutputRanges;
-      if (Function) {
-        OutputRanges = translateInputToOutputRanges(*Function, *RangesOrError);
-        LLVM_DEBUG(if (OutputRanges.empty() != RangesOrError->empty()) {
-          dbgs() << "BOLT-DEBUG: problem with DIE at 0x"
-                 << Twine::utohexstr(Die->getOffset()) << " in CU at 0x"
-                 << Twine::utohexstr(Unit.getOffset()) << '\n';
-        });
-        if (opts::AlwaysConvertToRanges || OutputRanges.size() > 1) {
-          RangesSectionOffset = RangesSectionWriter.addRanges(
-              std::move(OutputRanges), CachedRanges);
-          OutputRanges.clear();
-        } else if (OutputRanges.empty()) {
-          OutputRanges.push_back({0, RangesOrError.get().front().HighPC});
-        }
-      } else if (!RangesOrError) {
-        consumeError(RangesOrError.takeError());
-      } else {
-        OutputRanges.push_back({0, !RangesOrError->empty()
-                                       ? RangesOrError.get().front().HighPC
-                                       : 0});
+  };
+  DIEValue CallPcAttrVal = Die.findAttribute(dwarf::DW_AT_call_pc);
+  if (CallPcAttrVal)
+    patchPC(&Die, CallPcAttrVal, "DW_AT_call_pc");
+
+  DIEValue CallRetPcAttrVal = Die.findAttribute(dwarf::DW_AT_call_return_pc);
+  if (CallRetPcAttrVal)
+    patchPC(&Die, CallRetPcAttrVal, "DW_AT_call_return_pc");
+}
+
+void DWARFRewriter::handleDefaultCase(
+    DIE &Die, DWARFUnit &Unit, DIEBuilder &DIEBldr,
+    DebugLocWriter &DebugLocWriter,
+    DebugRangesSectionWriter &RangesSectionWriter,
+    DebugAddrWriter &AddressWriter) {
+  // Handle any tag that can have DW_AT_location attribute.
+  DIEValue LocAttrInfo = Die.findAttribute(dwarf::DW_AT_location);
+  DIEValue LowPCAttrInfo = Die.findAttribute(dwarf::DW_AT_low_pc);
+  if (LocAttrInfo) {
+    if (doesFormBelongToClass(LocAttrInfo.getForm(),
+                              DWARFFormValue::FC_Constant, Unit.getVersion()) ||
+        doesFormBelongToClass(LocAttrInfo.getForm(),
+                              DWARFFormValue::FC_SectionOffset,
+                              Unit.getVersion())) {
+      uint64_t Offset = LocAttrInfo.getForm() == dwarf::DW_FORM_loclistx
+                            ? LocAttrInfo.getDIELocList().getValue()
+                            : LocAttrInfo.getDIEInteger().getValue();
+      DebugLocationsVector InputLL;
+
+      std::optional<object::SectionedAddress> SectionAddress =
+          Unit.getBaseAddress();
+      uint64_t BaseAddress = 0;
+      if (SectionAddress)
+        BaseAddress = SectionAddress->Address;
+
+      if (Unit.getVersion() >= 5 &&
+          LocAttrInfo.getForm() == dwarf::DW_FORM_loclistx) {
+        std::optional<uint64_t> LocOffset = Unit.getLoclistOffset(Offset);
+        assert(LocOffset && "Location Offset is invalid.");
+        Offset = *LocOffset;
       }
-      DIEValue LowPCVal = Die->findAttribute(dwarf::DW_AT_low_pc);
-      DIEValue HighPCVal = Die->findAttribute(dwarf::DW_AT_high_pc);
-      if (OutputRanges.size() == 1) {
-        updateLowPCHighPC(Die, LowPCVal, HighPCVal, OutputRanges.back().LowPC,
-                          OutputRanges.back().HighPC);
-        break;
-      }
-      updateDWARFObjectAddressRanges(Unit, DIEBldr, *Die, RangesSectionOffset);
-      break;
-    }
-    case dwarf::DW_TAG_call_site: {
-      auto patchPC = [&](DIE *Die, DIEValue &AttrVal, StringRef Entry) -> void {
-        std::optional<uint64_t> Address = getAsAddress(Unit, AttrVal);
-        const BinaryFunction *Function =
-            BC.getBinaryFunctionContainingAddress(*Address);
-        uint64_t UpdatedAddress = *Address;
-        if (Function)
-          UpdatedAddress =
-              Function->translateInputToOutputAddress(UpdatedAddress);
 
-        if (AttrVal.getForm() == dwarf::DW_FORM_addrx) {
-          const uint32_t Index =
-              AddressWriter.getIndexFromAddress(UpdatedAddress, Unit);
-          DIEBldr.replaceValue(Die, AttrVal.getAttribute(), AttrVal.getForm(),
-                               DIEInteger(Index));
-        } else if (AttrVal.getForm() == dwarf::DW_FORM_addr) {
-          DIEBldr.replaceValue(Die, AttrVal.getAttribute(), AttrVal.getForm(),
-                               DIEInteger(UpdatedAddress));
-        } else {
-          errs() << "BOLT-ERROR: unsupported form for " << Entry << "\n";
-        }
-      };
-      DIEValue CallPcAttrVal = Die->findAttribute(dwarf::DW_AT_call_pc);
-      if (CallPcAttrVal)
-        patchPC(Die, CallPcAttrVal, "DW_AT_call_pc");
-
-      DIEValue CallRetPcAttrVal =
-          Die->findAttribute(dwarf::DW_AT_call_return_pc);
-      if (CallRetPcAttrVal)
-        patchPC(Die, CallRetPcAttrVal, "DW_AT_call_return_pc");
-
-      break;
-    }
-    default: {
-      // Handle any tag that can have DW_AT_location attribute.
-      DIEValue LocAttrInfo = Die->findAttribute(dwarf::DW_AT_location);
-      DIEValue LowPCAttrInfo = Die->findAttribute(dwarf::DW_AT_low_pc);
-      if (LocAttrInfo) {
-        if (doesFormBelongToClass(LocAttrInfo.getForm(),
-                                  DWARFFormValue::FC_Constant,
-                                  Unit.getVersion()) ||
-            doesFormBelongToClass(LocAttrInfo.getForm(),
-                                  DWARFFormValue::FC_SectionOffset,
-                                  Unit.getVersion())) {
-          uint64_t Offset = LocAttrInfo.getForm() == dwarf::DW_FORM_loclistx
-                                ? LocAttrInfo.getDIELocList().getValue()
-                                : LocAttrInfo.getDIEInteger().getValue();
-          DebugLocationsVector InputLL;
-
-          std::optional<object::SectionedAddress> SectionAddress =
-              Unit.getBaseAddress();
-          uint64_t BaseAddress = 0;
-          if (SectionAddress)
-            BaseAddress = SectionAddress->Address;
-
-          if (Unit.getVersion() >= 5 &&
-              LocAttrInfo.getForm() == dwarf::DW_FORM_loclistx) {
-            std::optional<uint64_t> LocOffset = Unit.getLoclistOffset(Offset);
-            assert(LocOffset && "Location Offset is invalid.");
-            Offset = *LocOffset;
-          }
-
-          Error E = Unit.getLocationTable().visitLocationList(
+      Error E =
+          Unit.getLocationTable().visitLocationList(
               &Offset, [&](const DWARFLocationEntry &Entry) {
                 switch (Entry.Kind) {
                 default:
@@ -1091,188 +1163,177 @@ void DWARFRewriter::updateUnitDebugInfo(
                 return true;
               });
 
-          if (E || InputLL.empty()) {
-            consumeError(std::move(E));
-            errs() << "BOLT-WARNING: empty location list detected at 0x"
-                   << Twine::utohexstr(Offset) << " for DIE at 0x" << Die
-                   << " in CU at 0x" << Twine::utohexstr(Unit.getOffset())
-                   << '\n';
-          } else {
-            const uint64_t Address = InputLL.front().LowPC;
-            DebugLocationsVector OutputLL;
-            if (const BinaryFunction *Function =
-                    BC.getBinaryFunctionContainingAddress(Address)) {
-              OutputLL = translateInputToOutputLocationList(*Function, InputLL);
-              LLVM_DEBUG(if (OutputLL.empty()) {
-                dbgs() << "BOLT-DEBUG: location list translated to an empty "
-                          "one at 0x"
-                       << Die << " in CU at 0x"
-                       << Twine::utohexstr(Unit.getOffset()) << '\n';
-              });
-            } else {
-              // It's possible for a subprogram to be removed and to have
-              // address of 0. Adding this entry to output to preserve debug
-              // information.
-              OutputLL = InputLL;
-            }
-            DebugLocWriter.addList(DIEBldr, *Die, LocAttrInfo, OutputLL);
-          }
+      if (E || InputLL.empty()) {
+        consumeError(std::move(E));
+        errs() << "BOLT-WARNING: empty location list detected at 0x"
+               << Twine::utohexstr(Offset) << " for DIE at 0x" << &Die
+               << " in CU at 0x" << Twine::utohexstr(Unit.getOffset()) << '\n';
+      } else {
+        const uint64_t Address = InputLL.front().LowPC;
+        DebugLocationsVector OutputLL;
+        if (const BinaryFunction *Function =
+                BC.getBinaryFunctionContainingAddress(Address)) {
+          OutputLL = translateInputToOutputLocationList(*Function, InputLL);
+          LLVM_DEBUG(if (OutputLL.empty()) {
+            dbgs() << "BOLT-DEBUG: location list translated to an empty "
+                      "one at 0x"
+                   << &Die << " in CU at 0x"
+                   << Twine::utohexstr(Unit.getOffset()) << '\n';
+          });
         } else {
-          assert((doesFormBelongToClass(LocAttrInfo.getForm(),
-                                        DWARFFormValue::FC_Exprloc,
-                                        Unit.getVersion()) ||
-                  doesFormBelongToClass(LocAttrInfo.getForm(),
-                                        DWARFFormValue::FC_Block,
-                                        Unit.getVersion())) &&
-                 "unexpected DW_AT_location form");
-          if (Unit.isDWOUnit() || Unit.getVersion() >= 5) {
-            std::vector<uint8_t> Sblock;
-            DIEValueList *AttrLocValList;
-            if (doesFormBelongToClass(LocAttrInfo.getForm(),
-                                      DWARFFormValue::FC_Exprloc,
-                                      Unit.getVersion())) {
-              for (const DIEValue &Val : LocAttrInfo.getDIELoc().values()) {
-                Sblock.push_back(Val.getDIEInteger().getValue());
-              }
-              DIELoc *LocAttr = const_cast<DIELoc *>(&LocAttrInfo.getDIELoc());
-              AttrLocValList = static_cast<DIEValueList *>(LocAttr);
-            } else {
-              for (const DIEValue &Val : LocAttrInfo.getDIEBlock().values()) {
-                Sblock.push_back(Val.getDIEInteger().getValue());
-              }
-              DIEBlock *BlockAttr =
-                  const_cast<DIEBlock *>(&LocAttrInfo.getDIEBlock());
-              AttrLocValList = static_cast<DIEValueList *>(BlockAttr);
-            }
-            ArrayRef<uint8_t> Expr = ArrayRef<uint8_t>(Sblock);
-            DataExtractor Data(
-                StringRef((const char *)Expr.data(), Expr.size()),
-                Unit.getContext().isLittleEndian(), 0);
-            DWARFExpression LocExpr(Data, Unit.getAddressByteSize(),
-                                    Unit.getFormParams().Format);
-            uint32_t PrevOffset = 0;
-            DIEValueList *NewAttr;
-            DIEValue Value;
-            uint32_t NewExprSize = 0;
-            DIELoc *Loc = nullptr;
-            DIEBlock *Block = nullptr;
-            if (LocAttrInfo.getForm() == dwarf::DW_FORM_exprloc) {
-              Loc = DIEBldr.allocateDIEValue<DIELoc>();
-              NewAttr = Loc;
-              Value = DIEValue(LocAttrInfo.getAttribute(),
-                               LocAttrInfo.getForm(), Loc);
-            } else if (doesFormBelongToClass(LocAttrInfo.getForm(),
-                                             DWARFFormValue::FC_Block,
-                                             Unit.getVersion())) {
-              Block = DIEBldr.allocateDIEValue<DIEBlock>();
-              NewAttr = Block;
-              Value = DIEValue(LocAttrInfo.getAttribute(),
-                               LocAttrInfo.getForm(), Block);
-            } else {
-              errs() << "BOLT-WARNING: Unexpected Form value in Updating "
-                        "DW_AT_Location\n";
-              continue;
-            }
-
-            for (const DWARFExpression::Operation &Expr : LocExpr) {
-              uint32_t CurEndOffset = PrevOffset + 1;
-              if (Expr.getDescription().Op.size() == 1)
-                CurEndOffset = Expr.getOperandEndOffset(0);
-              if (Expr.getDescription().Op.size() == 2)
-                CurEndOffset = Expr.getOperandEndOffset(1);
-              if (Expr.getDescription().Op.size() > 2)
-                errs() << "BOLT-WARNING: [internal-dwarf-error]: Unsupported "
-                          "number of operands.\n";
-              // not addr index, just copy.
-              if (!(Expr.getCode() == dwarf::DW_OP_GNU_addr_index ||
-                    Expr.getCode() == dwarf::DW_OP_addrx)) {
-                auto Itr = AttrLocValList->values().begin();
-                std::advance(Itr, PrevOffset);
-                uint32_t CopyNum = CurEndOffset - PrevOffset;
-                NewExprSize += CopyNum;
-                while (CopyNum--) {
-                  DIEBldr.addValue(NewAttr, *Itr);
-                  std::advance(Itr, 1);
-                }
-              } else {
-                const uint64_t Index = Expr.getRawOperand(0);
-                std::optional<object::SectionedAddress> EntryAddress =
-                    Unit.getAddrOffsetSectionItem(Index);
-                assert(EntryAddress && "Address is not found.");
-                assert(Index <= std::numeric_limits<uint32_t>::max() &&
-                       "Invalid Operand Index.");
-                const uint32_t AddrIndex = AddressWriter.getIndexFromAddress(
-                    EntryAddress->Address, Unit);
-                // update Index into .debug_address section for DW_AT_location.
-                // The Size field is not stored in IR, we need to minus 1 in
-                // offset for each expr.
-                SmallString<8> Tmp;
-                raw_svector_ostream OSE(Tmp);
-                encodeULEB128(AddrIndex, OSE);
-
-                DIEBldr.addValue(NewAttr, static_cast<dwarf::Attribute>(0),
-                                 dwarf::DW_FORM_data1,
-                                 DIEInteger(Expr.getCode()));
-                NewExprSize += 1;
-                for (uint8_t Byte : Tmp) {
-                  DIEBldr.addValue(NewAttr, static_cast<dwarf::Attribute>(0),
-                                   dwarf::DW_FORM_data1, DIEInteger(Byte));
-                  NewExprSize += 1;
-                }
-              }
-              PrevOffset = CurEndOffset;
-            }
-
-            // update the size since the index might be changed
-            if (Loc)
-              Loc->setSize(NewExprSize);
-            else
-              Block->setSize(NewExprSize);
-            DIEBldr.replaceValue(Die, LocAttrInfo.getAttribute(),
-                                 LocAttrInfo.getForm(), Value);
-          }
+          // It's possible for a subprogram to be removed and to have
+          // address of 0. Adding this entry to output to preserve debug
+          // information.
+          OutputLL = InputLL;
         }
-      } else if (LowPCAttrInfo) {
-        uint64_t Address = 0;
-        uint64_t SectionIndex = 0;
-        if (getLowPC(*Die, Unit, Address, SectionIndex)) {
-          uint64_t NewAddress = 0;
-          if (const BinaryFunction *Function =
-                  BC.getBinaryFunctionContainingAddress(Address)) {
-            NewAddress = Function->translateInputToOutputAddress(Address);
-            LLVM_DEBUG(dbgs()
-                       << "BOLT-DEBUG: Fixing low_pc 0x"
-                       << Twine::utohexstr(Address) << " for DIE with tag "
-                       << Die->getTag() << " to 0x"
-                       << Twine::utohexstr(NewAddress) << '\n');
+        DebugLocWriter.addList(DIEBldr, Die, LocAttrInfo, OutputLL);
+      }
+    } else {
+      assert((doesFormBelongToClass(LocAttrInfo.getForm(),
+                                    DWARFFormValue::FC_Exprloc,
+                                    Unit.getVersion()) ||
+              doesFormBelongToClass(LocAttrInfo.getForm(),
+                                    DWARFFormValue::FC_Block,
+                                    Unit.getVersion())) &&
+             "unexpected DW_AT_location form");
+      if (Unit.isDWOUnit() || Unit.getVersion() >= 5) {
+        std::vector<uint8_t> Sblock;
+        DIEValueList *AttrLocValList;
+        if (doesFormBelongToClass(LocAttrInfo.getForm(),
+                                  DWARFFormValue::FC_Exprloc,
+                                  Unit.getVersion())) {
+          for (const DIEValue &Val : LocAttrInfo.getDIELoc().values()) {
+            Sblock.push_back(Val.getDIEInteger().getValue());
           }
+          DIELoc *LocAttr = const_cast<DIELoc *>(&LocAttrInfo.getDIELoc());
+          AttrLocValList = static_cast<DIEValueList *>(LocAttr);
+        } else {
+          for (const DIEValue &Val : LocAttrInfo.getDIEBlock().values()) {
+            Sblock.push_back(Val.getDIEInteger().getValue());
+          }
+          DIEBlock *BlockAttr =
+              const_cast<DIEBlock *>(&LocAttrInfo.getDIEBlock());
+          AttrLocValList = static_cast<DIEValueList *>(BlockAttr);
+        }
+        ArrayRef<uint8_t> Expr = ArrayRef<uint8_t>(Sblock);
+        DataExtractor Data(StringRef((const char *)Expr.data(), Expr.size()),
+                           Unit.getContext().isLittleEndian(), 0);
+        DWARFExpression LocExpr(Data, Unit.getAddressByteSize(),
+                                Unit.getFormParams().Format);
+        uint32_t PrevOffset = 0;
+        DIEValueList *NewAttr;
+        DIEValue Value;
+        uint32_t NewExprSize = 0;
+        DIELoc *Loc = nullptr;
+        DIEBlock *Block = nullptr;
+        if (LocAttrInfo.getForm() == dwarf::DW_FORM_exprloc) {
+          Loc = DIEBldr.allocateDIEValue<DIELoc>();
+          NewAttr = Loc;
+          Value =
+              DIEValue(LocAttrInfo.getAttribute(), LocAttrInfo.getForm(), Loc);
+        } else if (doesFormBelongToClass(LocAttrInfo.getForm(),
+                                         DWARFFormValue::FC_Block,
+                                         Unit.getVersion())) {
+          Block = DIEBldr.allocateDIEValue<DIEBlock>();
+          NewAttr = Block;
+          Value = DIEValue(LocAttrInfo.getAttribute(), LocAttrInfo.getForm(),
+                           Block);
+        } else {
+          errs() << "BOLT-WARNING: Unexpected Form value in Updating "
+                    "DW_AT_Location\n";
+          return;
+        }
 
-          dwarf::Form Form = LowPCAttrInfo.getForm();
-          assert(Form != dwarf::DW_FORM_LLVM_addrx_offset &&
-                 "DW_FORM_LLVM_addrx_offset is not supported");
-          std::lock_guard<std::mutex> Lock(DWARFRewriterMutex);
-          if (Form == dwarf::DW_FORM_addrx ||
-              Form == dwarf::DW_FORM_GNU_addr_index) {
-            const uint32_t Index = AddressWriter.getIndexFromAddress(
-                NewAddress ? NewAddress : Address, Unit);
-            DIEBldr.replaceValue(Die, LowPCAttrInfo.getAttribute(),
-                                 LowPCAttrInfo.getForm(), DIEInteger(Index));
+        for (const DWARFExpression::Operation &Expr : LocExpr) {
+          uint32_t CurEndOffset = PrevOffset + 1;
+          if (Expr.getDescription().Op.size() == 1)
+            CurEndOffset = Expr.getOperandEndOffset(0);
+          if (Expr.getDescription().Op.size() == 2)
+            CurEndOffset = Expr.getOperandEndOffset(1);
+          if (Expr.getDescription().Op.size() > 2)
+            errs() << "BOLT-WARNING: [internal-dwarf-error]: Unsupported "
+                      "number of operands.\n";
+          // not addr index, just copy.
+          if (!(Expr.getCode() == dwarf::DW_OP_GNU_addr_index ||
+                Expr.getCode() == dwarf::DW_OP_addrx)) {
+            auto Itr = AttrLocValList->values().begin();
+            std::advance(Itr, PrevOffset);
+            uint32_t CopyNum = CurEndOffset - PrevOffset;
+            NewExprSize += CopyNum;
+            while (CopyNum--) {
+              DIEBldr.addValue(NewAttr, *Itr);
+              std::advance(Itr, 1);
+            }
           } else {
-            DIEBldr.replaceValue(Die, LowPCAttrInfo.getAttribute(),
-                                 LowPCAttrInfo.getForm(),
-                                 DIEInteger(NewAddress));
+            const uint64_t Index = Expr.getRawOperand(0);
+            std::optional<object::SectionedAddress> EntryAddress =
+                Unit.getAddrOffsetSectionItem(Index);
+            assert(EntryAddress && "Address is not found.");
+            assert(Index <= std::numeric_limits<uint32_t>::max() &&
+                   "Invalid Operand Index.");
+            const uint32_t AddrIndex =
+                AddressWriter.getIndexFromAddress(EntryAddress->Address, Unit);
+            // update Index into .debug_address section for DW_AT_location.
+            // The Size field is not stored in IR, we need to minus 1 in
+            // offset for each expr.
+            SmallString<8> Tmp;
+            raw_svector_ostream OSE(Tmp);
+            encodeULEB128(AddrIndex, OSE);
+
+            DIEBldr.addValue(NewAttr, static_cast<dwarf::Attribute>(0),
+                             dwarf::DW_FORM_data1, DIEInteger(Expr.getCode()));
+            NewExprSize += 1;
+            for (uint8_t Byte : Tmp) {
+              DIEBldr.addValue(NewAttr, static_cast<dwarf::Attribute>(0),
+                               dwarf::DW_FORM_data1, DIEInteger(Byte));
+              NewExprSize += 1;
+            }
           }
-        } else if (opts::Verbosity >= 1) {
-          errs() << "BOLT-WARNING: unexpected form value for attribute "
-                    "LowPCAttrInfo\n";
+          PrevOffset = CurEndOffset;
         }
+
+        // update the size since the index might be changed
+        if (Loc)
+          Loc->setSize(NewExprSize);
+        else
+          Block->setSize(NewExprSize);
+        DIEBldr.replaceValue(&Die, LocAttrInfo.getAttribute(),
+                             LocAttrInfo.getForm(), Value);
       }
     }
+  } else if (LowPCAttrInfo) {
+    uint64_t Address = 0;
+    uint64_t SectionIndex = 0;
+    if (getLowPC(Die, Unit, Address, SectionIndex)) {
+      uint64_t NewAddress = 0;
+      if (const BinaryFunction *Function =
+              BC.getBinaryFunctionContainingAddress(Address)) {
+        NewAddress = Function->translateInputToOutputAddress(Address);
+        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Fixing low_pc 0x"
+                          << Twine::utohexstr(Address) << " for DIE with tag "
+                          << Die.getTag() << " to 0x"
+                          << Twine::utohexstr(NewAddress) << '\n');
+      }
+
+      dwarf::Form Form = LowPCAttrInfo.getForm();
+      assert(Form != dwarf::DW_FORM_LLVM_addrx_offset &&
+             "DW_FORM_LLVM_addrx_offset is not supported");
+      std::lock_guard<std::mutex> Lock(DWARFRewriterMutex);
+      if (Form == dwarf::DW_FORM_addrx ||
+          Form == dwarf::DW_FORM_GNU_addr_index) {
+        const uint32_t Index = AddressWriter.getIndexFromAddress(
+            NewAddress ? NewAddress : Address, Unit);
+        DIEBldr.replaceValue(&Die, LowPCAttrInfo.getAttribute(),
+                             LowPCAttrInfo.getForm(), DIEInteger(Index));
+      } else {
+        DIEBldr.replaceValue(&Die, LowPCAttrInfo.getAttribute(),
+                             LowPCAttrInfo.getForm(), DIEInteger(NewAddress));
+      }
+    } else if (opts::Verbosity >= 1) {
+      errs() << "BOLT-WARNING: unexpected form value for attribute "
+                "LowPCAttrInfo\n";
     }
   }
-  if (DIEOffset > NextCUOffset)
-    errs() << "BOLT-WARNING: corrupt DWARF detected at 0x"
-           << Twine::utohexstr(Unit.getOffset()) << '\n';
 }
 
 void DWARFRewriter::updateDWARFObjectAddressRanges(

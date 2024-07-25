@@ -115,6 +115,32 @@ private:
                            DebugAddrWriter &AddressWriter,
                            std::optional<uint64_t> RangesBase = std::nullopt);
 
+  void handleCompileUnit(DIE &Die, DWARFUnit &Unit, DIEBuilder &DIEBldr,
+                         DebugLocWriter &DebugLocWriter,
+                         DebugRangesSectionWriter &RangesSectionWriter,
+                         DebugAddrWriter &AddressWriter,
+                         std::optional<uint64_t> &RangesBase);
+
+  void
+  handleSubprogram(DIE &Die, DWARFUnit &Unit, DIEBuilder &DIEBldr,
+                   DebugRangesSectionWriter &RangesSectionWriter,
+                   DebugAddrWriter &AddressWriter,
+                   std::map<DebugAddressRangesVector, uint64_t> &CachedRanges);
+
+  void handleLexicalBlock(
+      DIE &Die, DWARFUnit &Unit, DIEBuilder &DIEBldr,
+      DebugRangesSectionWriter &RangesSectionWriter,
+      DebugAddrWriter &AddressWriter,
+      std::map<DebugAddressRangesVector, uint64_t> &CachedRanges);
+
+  void handleCallSite(DIE &Die, DWARFUnit &Unit, DIEBuilder &DIEBldr,
+                      DebugAddrWriter &AddressWriter);
+
+  void handleDefaultCase(DIE &Die, DWARFUnit &Unit, DIEBuilder &DIEBldr,
+                         DebugLocWriter &DebugLocWriter,
+                         DebugRangesSectionWriter &RangesSectionWriter,
+                         DebugAddrWriter &AddressWriter);
+
   /// Patches the binary for an object's address ranges to be updated.
   /// The object can be anything that has associated address ranges via either
   /// DW_AT_low/high_pc or DW_AT_ranges (i.e. functions, lexical blocks, etc).
