@@ -39,6 +39,7 @@ public:
 };
 
 #define YK_OUTLINE_FNATTR "yk_outline"
+#define YK_PROMOTE_PREFIX "__yk_promote"
 const char *SectionName = ".yk_ir";
 const uint32_t Magic = 0xedd5f00d;
 const uint32_t Version = 0;
@@ -63,6 +64,7 @@ enum OpCode {
   OpCodeSelect,
   OpCodeLoadArg,
   OpCodeFCmp,
+  OpCodePromote,
   OpCodeUnimplemented = 255, // YKFIXME: Will eventually be deleted.
 };
 
@@ -588,6 +590,26 @@ private:
     }
   }
 
+  void serialisePromotion(CallInst *I, FuncLowerCtxt &FLCtxt,
+                          unsigned &InstIdx) {
+    assert(I->arg_size() == 1);
+    // opcode:
+    serialiseOpcode(OpCodePromote);
+
+    // type_idx:
+    OutStreamer.emitSizeT(typeIndex(I->getOperand(0)->getType()));
+
+    // value:
+    serialiseOperand(I, FLCtxt, I->getOperand(0));
+
+    // safepoint:
+    CallInst *SMI = dyn_cast<CallInst>(I->getNextNonDebugInstruction());
+    serialiseStackmapCall(SMI, FLCtxt);
+
+    FLCtxt.updateVLMap(I, InstIdx);
+    InstIdx++;
+  }
+
   void serialiseIndirectCallInst(CallInst *I, FuncLowerCtxt &FLCtxt,
                                  unsigned BBIdx, unsigned &InstIdx) {
 
@@ -700,6 +722,11 @@ private:
     // or `condbr` instruction which they belong to.
     if (I->getCalledFunction()->isIntrinsic() &&
         I->getIntrinsicID() == Intrinsic::experimental_stackmap) {
+      return;
+    }
+
+    if (I->getCalledFunction()->getName().startswith(YK_PROMOTE_PREFIX)) {
+      serialisePromotion(I, FLCtxt, InstIdx);
       return;
     }
 
