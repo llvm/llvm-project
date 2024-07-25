@@ -26,7 +26,7 @@ struct CPUInfo {
 constexpr CPUInfo PPCCPUInfo[] = {
 #define PPC_CPU(Name, Linux_SUPPORT_METHOD, LinuxID, AIX_SUPPORT_METHOD,       \
                 AIXID)                                                         \
-  Name,
+  {Name},
 #include "llvm/TargetParser/PPCTargetParser.def"
 };
 
@@ -91,7 +91,7 @@ bool isValidCPU(StringRef CPU) {
 StringRef getNormalizedPPCTargetCPU(const Triple &T, StringRef CPUName) {
   if (!CPUName.empty()) {
     if (CPUName == "native") {
-      std::string CPU = std::string(sys::getHostCPUName());
+      StringRef CPU = sys::getHostCPUName();
       if (!CPU.empty() && CPU != "generic")
         return CPU;
     }
