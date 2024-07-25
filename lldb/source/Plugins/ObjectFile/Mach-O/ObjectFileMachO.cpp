@@ -6348,20 +6348,19 @@ struct segment_vmaddr {
 
 static offset_t CreateAllImageInfosPayload(
     const lldb::ProcessSP &process_sp, offset_t initial_file_offset,
-    StreamString &all_image_infos_payload, SaveCoreStyle core_style) {
+    StreamString &all_image_infos_payload, const lldb_private::SaveCoreOptions &options) {
   Target &target = process_sp->GetTarget();
   ModuleList modules = target.GetImages();
 
   // stack-only corefiles have no reason to include binaries that
   // are not executing; we're trying to make the smallest corefile
   // we can, so leave the rest out.
-  if (core_style == SaveCoreStyle::eSaveCoreStackOnly)
+  if (options.GetStyle() == SaveCoreStyle::eSaveCoreStackOnly)
     modules.Clear();
 
   std::set<std::string> executing_uuids;
-  ThreadList &thread_list(process_sp->GetThreadList());
-  for (uint32_t i = 0; i < thread_list.GetSize(); i++) {
-    ThreadSP thread_sp = thread_list.GetThreadAtIndex(i);
+  std::vector<ThreadSP> thread_list = process_sp->CalculateCoreFileThreadList(options);
+  for (const ThreadSP &thread_sp : thread_list) {
     uint32_t stack_frame_count = thread_sp->GetStackFrameCount();
     for (uint32_t j = 0; j < stack_frame_count; j++) {
       StackFrameSP stack_frame_sp = thread_sp->GetStackFrameAtIndex(j);
@@ -6622,29 +6621,28 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
           LC_THREAD_data.SetAddressByteSize(addr_byte_size);
           LC_THREAD_data.SetByteOrder(byte_order);
         }
-        for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
-          ThreadSP thread_sp = thread_list.at(thread_idx);
+        for (const ThreadSP &thread_sp : thread_list) {
           if (thread_sp) {
             switch (mach_header.cputype) {
             case llvm::MachO::CPU_TYPE_ARM64:
             case llvm::MachO::CPU_TYPE_ARM64_32:
               RegisterContextDarwin_arm64_Mach::Create_LC_THREAD(
-                  thread_sp.get(), LC_THREAD_datas[thread_idx]);
+                  thread_sp.get(), LC_THREAD_datas[thread_sp->GetIndexID()]);
               break;
 
             case llvm::MachO::CPU_TYPE_ARM:
               RegisterContextDarwin_arm_Mach::Create_LC_THREAD(
-                  thread_sp.get(), LC_THREAD_datas[thread_idx]);
+                  thread_sp.get(), LC_THREAD_datas[thread_sp->GetIndexID()]);
               break;
 
             case llvm::MachO::CPU_TYPE_I386:
               RegisterContextDarwin_i386_Mach::Create_LC_THREAD(
-                  thread_sp.get(), LC_THREAD_datas[thread_idx]);
+                  thread_sp.get(), LC_THREAD_datas[thread_sp->GetIndexID()]);
               break;
 
             case llvm::MachO::CPU_TYPE_X86_64:
               RegisterContextDarwin_x86_64_Mach::Create_LC_THREAD(
-                  thread_sp.get(), LC_THREAD_datas[thread_idx]);
+                  thread_sp.get(), LC_THREAD_datas[thread_sp->GetIndexID()]);
               break;
             }
           }
@@ -6730,8 +6728,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
             std::make_shared<StructuredData::Dictionary>());
         StructuredData::ArraySP threads(
             std::make_shared<StructuredData::Array>());
-        for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
-          ThreadSP thread_sp = thread_list.at(thread_idx);
+        for (const ThreadSP &thread_sp : thread_list) {
           StructuredData::DictionarySP thread(
               std::make_shared<StructuredData::Dictionary>());
           thread->AddIntegerItem("thread_id", thread_sp->GetID());
@@ -6754,7 +6751,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         all_image_infos_lcnote_up->payload_file_offset = file_offset;
         file_offset = CreateAllImageInfosPayload(
             process_sp, file_offset, all_image_infos_lcnote_up->payload,
-            core_style);
+            options);
         lc_notes.push_back(std::move(all_image_infos_lcnote_up));
 
         // Add LC_NOTE load commands

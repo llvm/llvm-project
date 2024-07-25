@@ -6564,7 +6564,7 @@ static void SaveOffRegionsWithStackPointers(
       stack_ends.insert(sp_region.GetRange().GetRangeEnd());
       // This will return true if the threadlist the user specified is empty,
       // or contains the thread id from thread_sp.
-      if (core_options.ShouldSaveThread(thread_sp->GetID()))
+      if (core_options.ShouldThreadBeSaved(thread_sp->GetID()))
         AddRegion(sp_region, try_dirty_pages, ranges);
     }
   }
@@ -6680,7 +6680,7 @@ std::vector<ThreadSP>
 Process::CalculateCoreFileThreadList(const SaveCoreOptions &core_options) {
   std::vector<ThreadSP> thread_list;
   for (const auto &thread : m_thread_list.Threads()) {
-    if (core_options.ShouldSaveThread(thread->GetID())) {
+    if (core_options.ShouldThreadBeSaved(thread->GetID())) {
       thread_list.push_back(thread);
     }
   }
