@@ -16178,9 +16178,9 @@ on working with qNaN/sNaN and +0.0/-0.0. Here is the list:
 LLVM Implementation:
 """"""""""""""""""""
 
-LLVM implements all ISO C flavors as listed in this table.
-Only basic intrinsics list here. The constrained version
-ones may have different behaivor on exception.
+LLVM implements all ISO C flavors as listed in this table, except in the
+default floating-point environment exceptions are ignored. The constrained
+versions of the intrinsics respect the exception behavior.
 
 .. list-table::
    :header-rows: 1
@@ -16444,7 +16444,7 @@ be less than +0.0 for this intrinsic.
 
 Note that these are the semantics of minimumNumber specified in IEEE 754-2019.
 
-It has some different with '``llvm.minnum.*``':
+It has some differences with '``llvm.minnum.*``':
 1)'``llvm.minnum.*``' will return qNaN if either operand is sNaN.
 2)'``llvm.minnum*``' may return either one if we compare +0.0 vs -0.0.
 
@@ -16490,7 +16490,7 @@ be less than +0.0 for this intrinsic.
 
 Note that these are the semantics of maximumNumber specified in IEEE 754-2019.
 
-It has some different with '``llvm.maxnum.*``':
+It has some differences with '``llvm.maxnum.*``':
 1)'``llvm.maxnum.*``' will return qNaN if either operand is sNaN.
 2)'``llvm.maxnum*``' may return either one if we compare +0.0 vs -0.0.
 
