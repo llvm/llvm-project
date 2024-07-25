@@ -1799,12 +1799,6 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   const bool should_directly_complete =
       DirectlyCompleteType(containing_decl_ctx, attrs);
 
-  // UniqueDWARFASTType is large, so don't create a local variables on the
-  // stack, put it on the heap. This function is often called recursively and
-  // clang isn't good at sharing the stack space for variables in different
-  // blocks.
-  auto unique_ast_entry_up = std::make_unique<UniqueDWARFASTType>();
-
   ConstString unique_typename(attrs.name);
   Declaration unique_decl(attrs.decl);
   uint64_t byte_size = attrs.byte_size.value_or(0);
