@@ -2012,7 +2012,8 @@ def FeatureISAVersion12_10 : FeatureSet<
 
 def FeatureISAVersion12_11 : FeatureSet<
   !listconcat(FeatureISAVersion12_10.Features,
-  [FeatureDPALU_DPP,
+  [FullRate64Ops,
+   FeatureDPALU_DPP,
    FeatureGFX1211GEMMInsts])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<

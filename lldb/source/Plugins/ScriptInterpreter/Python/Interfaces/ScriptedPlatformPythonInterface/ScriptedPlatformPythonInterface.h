@@ -10,15 +10,16 @@
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPLATFORMPYTHONINTERFACE_H
 
 #include "lldb/Host/Config.h"
+#include "lldb/Interpreter/Interfaces/ScriptedPlatformInterface.h"
 
 #if LLDB_ENABLE_PYTHON
 
-#include "ScriptedPythonInterface.h"
-#include "lldb/Interpreter/Interfaces/ScriptedPlatformInterface.h"
+#include "../ScriptedPythonInterface.h"
 
 namespace lldb_private {
 class ScriptedPlatformPythonInterface : public ScriptedPlatformInterface,
-                                        public ScriptedPythonInterface {
+                                        public ScriptedPythonInterface,
+                                        public PluginInterface {
 public:
   ScriptedPlatformPythonInterface(ScriptInterpreterPythonImpl &interpreter);
 
@@ -43,6 +44,16 @@ public:
   Status LaunchProcess(lldb::ProcessLaunchInfoSP launch_info) override;
 
   Status KillProcess(lldb::pid_t pid) override;
+
+  static void Initialize();
+
+  static void Terminate();
+
+  static llvm::StringRef GetPluginNameStatic() {
+    return "ScriptedPlatformPythonInterface";
+  }
+
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 };
 } // namespace lldb_private
 
