@@ -17,12 +17,8 @@
 #error Linux only support header!
 #endif
 
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 
 #include <sys/mman.h>
 #include <sys/syscall.h>
@@ -43,7 +39,6 @@ static inline bool isPermissionError(int err) {
   return err == EPERM || err == EACCES;
 }
 
-// FIXME: Make this either more low-level C'ish or C++'ish
 static inline bool execProtChangeNeedsNewMapping() {
   static int status = -1;
 
@@ -51,25 +46,11 @@ static inline bool execProtChangeNeedsNewMapping() {
     return status;
 
   // Try to get the status from /proc/self/status, looking for PaX flags.
-  FILE *f = fopen("/proc/self/status", "re");
-  if (f) {
-    char *buf = NULL;
-    size_t len;
-
-    while (getline(&buf, &len, f) != -1) {
-      if (strncmp(buf, "PaX:", 4))
-        continue;
-
-      // Look for 'm', indicating PaX MPROTECT is disabled.
-      status = !strchr(buf + 4, 'm');
-      break;
-    }
-
-    fclose(f);
-    free(buf);
-
-    if (status != -1)
-      return status;
+  if (auto file = MemoryBuffer::getFileAsStream("/proc/self/status")) {
+    auto pax_flags = (*file)->getBuffer().rsplit("PaX:").second.trim();
+    if (!pax_flags.empty())
+      // 'M' indicates MPROTECT is enabled
+      return (status = pax_flags.find('M') != StringRef::npos);
   }
 
   // Create a temporary writable mapping and try to make it executable.  If
