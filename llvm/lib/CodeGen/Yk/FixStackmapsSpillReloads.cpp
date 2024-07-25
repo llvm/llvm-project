@@ -238,7 +238,16 @@ bool FixStackmapsSpillReloads::runOnMachineFunction(MachineFunction &MF) {
       if (Collect) {
         int FI;
         if (TII->isCopyInstr(MI) || TII->isLoadFromStackSlotPostFE(MI, FI)) {
-          Spills[MI.getOperand(0).getReg()] = &MI;
+          // FIXME: Can there be multiple spill reloads here? Then this would
+          // need to be a loop.
+          if (TII->isCopyInstr(MI) && Spills.count(MI.getOperand(1).getReg())) {
+            // The source for this copy instruction is itself a spill reload.
+            // So we need to lookup the spill for the source and apply this
+            // instead.
+            Spills[MI.getOperand(0).getReg()] = Spills[MI.getOperand(1).getReg()];
+          } else {
+            Spills[MI.getOperand(0).getReg()] = &MI;
+          }
         }
       }
     }
