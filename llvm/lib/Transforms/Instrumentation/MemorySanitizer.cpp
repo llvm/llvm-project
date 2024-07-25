@@ -3873,11 +3873,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  /// Handle Arm NEON vector store intrinsics (vst{2,3,4}).
+  /// Handle Arm NEON vector store intrinsics (vst{2,3,4} and vst1x_{2,3,4}).
   ///
   /// Arm NEON vector store intrinsics have the output address (pointer) as the
   /// last argument, with the initial arguments being the inputs. They return
   /// void.
+  ///
+  /// The difference between st1_x4 and st4 is that the latter interleaves the
+  /// output e.g., st4 (A, B, C, D, P) writes abcdabcdabcdabcd... into *P, while
+  /// st1_x4 (A, B, C, D, P) writes aaaa...bbbb...cccc...dddd... into *P.
+  /// Since we apply the cloned instruction to the shadow, we can reuse the same
+  /// logic.
   void handleNEONVectorStoreIntrinsic(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
 
@@ -3892,11 +3898,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (ClCheckAccessAddress)
       insertShadowCheck(Addr, &I);
 
+    SmallVector<Value *, 8> Shadows;
     // Every arg operand, other than the last one, is an input vector
-    IntrinsicInst *ShadowI = cast<IntrinsicInst>(I.clone());
     for (int i = 0; i < numArgOperands - 1; i++) {
       assert(isa<FixedVectorType>(I.getArgOperand(i)->getType()));
-      ShadowI->setArgOperand(i, getShadow(&I, i));
+      Value *Shadow = getShadow(&I, i);
+      Shadows.append(1, Shadow);
     }
 
     // MSan's GetShadowTy assumes the LHS is the type we want the shadow for
@@ -3914,13 +3921,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         cast<FixedVectorType>(I.getArgOperand(0)->getType())->getElementType(),
         cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements() *
             (numArgOperands - 1));
-    Type *ShadowTy = getShadowTy(OutputVectorTy);
-    Value *ShadowPtr, *OriginPtr;
+    Type *OutputShadowTy = getShadowTy(OutputVectorTy);
+
+    Value *OutputShadowPtr, *OutputOriginPtr;
     // AArch64 NEON does not need alignment (unless OS requires it)
-    std::tie(ShadowPtr, OriginPtr) =
-        getShadowOriginPtr(Addr, IRB, ShadowTy, Align(1), /*isStore*/ true);
-    ShadowI->setArgOperand(numArgOperands - 1, ShadowPtr);
-    ShadowI->insertAfter(&I);
+    std::tie(OutputShadowPtr, OutputOriginPtr) = getShadowOriginPtr(
+        Addr, IRB, OutputShadowTy, Align(1), /*isStore*/ true);
+    Shadows.append(1, OutputShadowPtr);
+
+    CallInst *CI =
+        IRB.CreateIntrinsic(IRB.getVoidTy(), I.getIntrinsicID(), Shadows);
+    setShadow(&I, CI);
 
     if (MS.TrackOrigins) {
       // TODO: if we modelled the vst* instruction more precisely, we could
@@ -3932,7 +3943,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         OC.Add(I.getArgOperand(i));
 
       const DataLayout &DL = F.getDataLayout();
-      OC.DoneAndStoreOrigin(DL.getTypeStoreSize(OutputVectorTy), OriginPtr);
+      OC.DoneAndStoreOrigin(DL.getTypeStoreSize(OutputVectorTy),
+                            OutputOriginPtr);
     }
   }
 
@@ -4277,6 +4289,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       setOrigin(&I, getCleanOrigin());
       break;
 
+    case Intrinsic::aarch64_neon_st1x2:
+    case Intrinsic::aarch64_neon_st1x3:
+    case Intrinsic::aarch64_neon_st1x4:
     case Intrinsic::aarch64_neon_st2:
     case Intrinsic::aarch64_neon_st3:
     case Intrinsic::aarch64_neon_st4: {
