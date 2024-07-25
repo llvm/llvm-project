@@ -90,3 +90,11 @@
 // RUN:   | FileCheck -check-prefix=GENERIC %s
 
 // GENERIC-NOT: -cc1" "-triple" "nvptx64-nvidia-cuda" {{.*}} "-target-cpu"
+
+//
+// Test forwarding the necessary +ptx feature.
+//
+// RUN: %clang -target nvptx64-nvidia-cuda --cuda-feature=+ptx63 -march=sm_52 -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=FEATURE %s
+
+// FEATURE: clang-nvlink-wrapper{{.*}}"--feature" "+ptx63"
