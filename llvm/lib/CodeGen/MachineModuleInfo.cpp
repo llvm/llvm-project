@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Constants.h"
@@ -16,17 +14,9 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCContext.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
-#include <algorithm>
 #include <cassert>
-#include <memory>
-#include <utility>
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::dwarf;
