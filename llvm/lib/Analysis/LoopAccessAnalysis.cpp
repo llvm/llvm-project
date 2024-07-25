@@ -728,11 +728,6 @@ public:
 
   MemAccessInfoList &getDependenciesToCheck() { return CheckDeps; }
 
-  const DenseMap<Value *, SmallVector<const Value *, 16>> &
-  getUnderlyingObjects() {
-    return UnderlyingObjects;
-  }
-
 private:
   typedef MapVector<MemAccessInfo, SmallSetVector<Type *, 1>> PtrAccessMap;
 
@@ -1459,19 +1454,18 @@ static bool isNoWrapAddRec(Value *Ptr, const SCEVAddRecExpr *AR,
   return false;
 }
 
-static std::optional<const SCEV *>
-getPtrStrideSCEV(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
-                 const Loop *Lp,
-                 const DenseMap<Value *, const SCEV *> &StridesMap, bool Assume,
-                 bool ShouldCheckWrap) {
+/// Check whether the access through \p Ptr has a constant stride.
+std::optional<int64_t>
+llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
+                   const Loop *Lp,
+                   const DenseMap<Value *, const SCEV *> &StridesMap,
+                   bool Assume, bool ShouldCheckWrap) {
   const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
+  if (PSE.getSE()->isLoopInvariant(PtrScev, Lp))
+    return {0};
+
   Type *Ty = Ptr->getType();
   assert(Ty->isPointerTy() && "Unexpected non-ptr");
-  auto &DL = Lp->getHeader()->getDataLayout();
-  auto *IdxTy = DL.getIndexType(Ty);
-  if (PSE.getSE()->isLoopInvariant(PtrScev, Lp))
-    return PSE.getSE()->getZero(IdxTy);
-
   if (isa<ScalableVectorType>(AccessTy)) {
     LLVM_DEBUG(dbgs() << "LAA: Bad stride - Scalable object: " << *AccessTy
                       << "\n");
@@ -1507,6 +1501,7 @@ getPtrStrideSCEV(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
     return std::nullopt;
   }
 
+  auto &DL = Lp->getHeader()->getDataLayout();
   TypeSize AllocSize = DL.getTypeAllocSize(AccessTy);
   int64_t Size = AllocSize.getFixedValue();
   const APInt &APStepVal = C->getAPInt();
@@ -1523,14 +1518,13 @@ getPtrStrideSCEV(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   if (Rem)
     return std::nullopt;
 
-  const SCEV *StrideSCEV = PSE.getSE()->getConstant(C->getType(), Stride);
   if (!ShouldCheckWrap)
-    return StrideSCEV;
+    return Stride;
 
   // The address calculation must not wrap. Otherwise, a dependence could be
   // inverted.
   if (isNoWrapAddRec(Ptr, AR, PSE, Lp))
-    return StrideSCEV;
+    return Stride;
 
   // An inbounds getelementptr that is a AddRec with a unit stride
   // cannot wrap per definition.  If it did, the result would be poison
@@ -1538,7 +1532,7 @@ getPtrStrideSCEV(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   // when executed.
   if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
       GEP && GEP->isInBounds() && (Stride == 1 || Stride == -1))
-    return StrideSCEV;
+    return Stride;
 
   // If the null pointer is undefined, then a access sequence which would
   // otherwise access it can be assumed not to unsigned wrap.  Note that this
@@ -1546,7 +1540,7 @@ getPtrStrideSCEV(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   unsigned AddrSpace = Ty->getPointerAddressSpace();
   if (!NullPointerIsDefined(Lp->getHeader()->getParent(), AddrSpace) &&
       (Stride == 1 || Stride == -1))
-    return StrideSCEV;
+    return Stride;
 
   if (Assume) {
     PSE.setNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
@@ -1554,24 +1548,11 @@ getPtrStrideSCEV(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
                       << "LAA:   Pointer: " << *Ptr << "\n"
                       << "LAA:   SCEV: " << *AR << "\n"
                       << "LAA:   Added an overflow assumption\n");
-    return StrideSCEV;
+    return Stride;
   }
   LLVM_DEBUG(
       dbgs() << "LAA: Bad stride - Pointer may wrap in the address space "
              << *Ptr << " SCEV: " << *AR << "\n");
-  return std::nullopt;
-}
-
-/// Check whether the access through \p Ptr has a constant stride.
-std::optional<int64_t>
-llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
-                   const Loop *Lp,
-                   const DenseMap<Value *, const SCEV *> &StridesMap,
-                   bool Assume, bool ShouldCheckWrap) {
-  std::optional<const SCEV *> StrideSCEV = getPtrStrideSCEV(
-      PSE, AccessTy, Ptr, Lp, StridesMap, Assume, ShouldCheckWrap);
-  if (StrideSCEV && isa<SCEVConstant>(*StrideSCEV))
-    return cast<SCEVConstant>(*StrideSCEV)->getAPInt().getSExtValue();
   return std::nullopt;
 }
 
@@ -1986,43 +1967,30 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   // Need accesses with constant strides and the same direction for further
   // dependence analysis. We don't want to vectorize "A[B[i]] += ..." and
   // similar code or pointer arithmetic that could wrap in the address space.
-  //
-  // If Src or Sink are non-wrapping AddRecs, StrideAPtr and StrideBPtr contain
-  // a SCEV representing the stride of the SCEV. It may not be a known constant
-  // value though.
 
-  // If either Src or Sink are not strided (i.e. not a non-wrapping AddRec), we
-  // cannot analyze the dependence further.
+  // If either Src or Sink are not strided (i.e. not a non-wrapping AddRec) and
+  // not loop-invariant (stride will be 0 in that case), we cannot analyze the
+  // dependence further and also cannot generate runtime checks.
   if (!StrideAPtr || !StrideBPtr) {
+    LLVM_DEBUG(dbgs() << "Pointer access with non-constant stride\n");
     return MemoryDepChecker::Dependence::IndirectUnsafe;
   }
 
-  if (*StrideAPtr == 0 || StrideBPtr == 0) {
-    bool SrcInvariant = SE.isLoopInvariant(Src, InnermostLoop);
-    bool SinkInvariant = SE.isLoopInvariant(Sink, InnermostLoop);
-    // If either Src or Sink are not loop invariant and not strided, the
-    // expression in the current iteration may overlap with any earlier or later
-    // iteration. This is not safe and we also cannot generate runtime checks to
-    // ensure safety. This includes expressions where an index is loaded in each
-    // iteration or wrapping AddRecs.
-
-    // Otherwise both Src or Sink are either loop invariant or strided and we
-    // can generate a runtime check to disambiguate the accesses.
+  int64_t StrideAPtrInt = *StrideAPtr;
+  int64_t StrideBPtrInt = *StrideBPtr;
+  LLVM_DEBUG(dbgs() << "LAA:  Src induction step: " << StrideAPtrInt
+                    << " Sink induction step: " << StrideBPtrInt << "\n");
+  // At least Src or Sink are loop invariant and the other is strided or
+  // invariant. We can generate a runtime check to disambiguate the accesses.
+  if (StrideAPtrInt == 0 || StrideBPtrInt == 0)
     return MemoryDepChecker::Dependence::Unknown;
-  }
-
-  LLVM_DEBUG(dbgs() << "LAA:  Src induction step: " << *StrideAPtr
-                    << " Sink induction step: " << *StrideBPtr << "\n");
 
   // Both Src and Sink have a constant stride, check if they are in the same
   // direction.
-  int64_t StrideAPtrInt =
-      *StrideAPtr;
-  int64_t StrideBPtrInt =
-      *StrideBPtr;
   if ((StrideAPtrInt > 0 && StrideBPtrInt < 0) ||
       (StrideAPtrInt < 0 && StrideBPtrInt > 0)) {
-    LLVM_DEBUG(dbgs() << "Pointer access with non-constant stride\n");
+    LLVM_DEBUG(
+        dbgs() << "Pointer access with strides in different directions\n");
     return MemoryDepChecker::Dependence::Unknown;
   }
 
