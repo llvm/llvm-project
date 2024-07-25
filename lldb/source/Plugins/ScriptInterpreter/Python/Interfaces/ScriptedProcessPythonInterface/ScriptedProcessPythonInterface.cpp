@@ -6,11 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Host/Config.h"
-#if LLDB_ENABLE_PYTHON
-// LLDB Python header must be included first
-#include "../lldb-python.h"
-#endif
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
@@ -18,16 +15,24 @@
 
 #if LLDB_ENABLE_PYTHON
 
-#include "../SWIGPythonBridge.h"
-#include "../ScriptInterpreterPythonImpl.h"
+// clang-format off
+// LLDB Python header must be included first
+#include "../../lldb-python.h"
+//clang-format on
+
+#include "../../SWIGPythonBridge.h"
+#include "../../ScriptInterpreterPythonImpl.h"
+#include "../ScriptedThreadPythonInterface.h"
 #include "ScriptedProcessPythonInterface.h"
-#include "ScriptedThreadPythonInterface.h"
+
 #include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::python;
 using Locker = ScriptInterpreterPythonImpl::Locker;
+
+LLDB_PLUGIN_DEFINE_ADV(ScriptedProcessPythonInterface, ScriptInterpreterPythonScriptedProcessPythonInterface)
 
 ScriptedProcessPythonInterface::ScriptedProcessPythonInterface(
     ScriptInterpreterPythonImpl &interpreter)
@@ -206,6 +211,26 @@ StructuredData::DictionarySP ScriptedProcessPythonInterface::GetMetadata() {
     return {};
 
   return dict;
+}
+
+void ScriptedProcessPythonInterface::Initialize() {
+  const std::vector<llvm::StringRef> ci_usages = {
+      "process attach -C <script-name> [-k key -v value ...]",
+      "process launch -C <script-name> [-k key -v value ...]"};
+  const std::vector<llvm::StringRef> api_usages = {
+      "SBAttachInfo.SetScriptedProcessClassName",
+      "SBAttachInfo.SetScriptedProcessDictionary",
+      "SBTarget.Attach",
+      "SBLaunchInfo.SetScriptedProcessClassName",
+      "SBLaunchInfo.SetScriptedProcessDictionary",
+      "SBTarget.Launch"};
+  PluginManager::RegisterPlugin(
+      GetPluginNameStatic(), llvm::StringRef("Mock process state"),
+      CreateInstance, eScriptLanguagePython, {ci_usages, api_usages});
+}
+
+void ScriptedProcessPythonInterface::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
 }
 
 #endif
