@@ -3881,10 +3881,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// - st4 interleaves the output e.g., st4 (inA, inB, inC, inD, outP) writes
   ///   abcdabcdabcdabcd... into *outP
-  /// - st1_x4 is non-interleaved i.e., st1_x4 (inA, inB, inC, inD, outP)
+  /// - st1_x4 is non-interleaved e.g., st1_x4 (inA, inB, inC, inD, outP)
   ///   writes aaaa...bbbb...cccc...dddd... into *outP
   /// These instructions can all be instrumented with essentially the same
-  /// logic, simply by applying the corresponding intrinsic to the shadow.
+  /// MSan logic, simply by applying the corresponding intrinsic to the shadow.
   void handleNEONVectorStoreIntrinsic(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
 
