@@ -54,9 +54,6 @@ private:
   /// need for local relocations. False by default.
   bool LabelSections;
 
-  bool DWARFMustBeAtTheEnd;
-  bool CreatedADWARFSection;
-
   /// HasSectionLabel - map of which sections have already had a non-local
   /// label emitted to them. Used so we don't emit extraneous linker local
   /// labels in the middle of the section.
@@ -70,16 +67,13 @@ private:
 public:
   MCMachOStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
                   std::unique_ptr<MCObjectWriter> OW,
-                  std::unique_ptr<MCCodeEmitter> Emitter,
-                  bool DWARFMustBeAtTheEnd, bool label)
+                  std::unique_ptr<MCCodeEmitter> Emitter, bool label)
       : MCObjectStreamer(Context, std::move(MAB), std::move(OW),
                          std::move(Emitter)),
-        LabelSections(label), DWARFMustBeAtTheEnd(DWARFMustBeAtTheEnd),
-        CreatedADWARFSection(false) {}
+        LabelSections(label) {}
 
   /// state management
   void reset() override {
-    CreatedADWARFSection = false;
     HasSectionLabel.clear();
     MCObjectStreamer::reset();
   }
@@ -143,49 +137,9 @@ public:
 
 } // end anonymous namespace.
 
-static bool canGoAfterDWARF(const MCSectionMachO &MSec) {
-  // These sections are created by the assembler itself after the end of
-  // the .s file.
-  StringRef SegName = MSec.getSegmentName();
-  StringRef SecName = MSec.getName();
-
-  if (SegName == "__LD" && SecName == "__compact_unwind")
-    return true;
-
-  if (SegName == "__IMPORT") {
-    if (SecName == "__jump_table")
-      return true;
-
-    if (SecName == "__pointers")
-      return true;
-  }
-
-  if (SegName == "__TEXT" && SecName == "__eh_frame")
-    return true;
-
-  if (SegName == "__DATA" &&
-      (SecName == "__llvm_addrsig" || SecName == "__nl_symbol_ptr" ||
-       SecName == "__thread_ptr"))
-    return true;
-
-  if (SegName == "__DATA" && SecName == "__auth_ptr")
-    return true;
-
-  if (SegName == "__LLVM" && (SecName == "__cg_profile"))
-    return true;
-
-  return false;
-}
-
 void MCMachOStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   // Change the section normally.
-  bool Created = changeSectionImpl(Section, Subsection);
-  const MCSectionMachO &MSec = *cast<MCSectionMachO>(Section);
-  StringRef SegName = MSec.getSegmentName();
-  if (SegName == "__DWARF")
-    CreatedADWARFSection = true;
-  else if (Created && DWARFMustBeAtTheEnd && !canGoAfterDWARF(MSec))
-    assert(!CreatedADWARFSection && "Creating regular section after DWARF");
+  changeSectionImpl(Section, Subsection);
 
   // Output a linker-local symbol so we don't need section-relative local
   // relocations. The linker hates us when we do that.
@@ -585,9 +539,8 @@ MCStreamer *llvm::createMachOStreamer(MCContext &Context,
                                       std::unique_ptr<MCCodeEmitter> &&CE,
                                       bool DWARFMustBeAtTheEnd,
                                       bool LabelSections) {
-  MCMachOStreamer *S =
-      new MCMachOStreamer(Context, std::move(MAB), std::move(OW), std::move(CE),
-                          DWARFMustBeAtTheEnd, LabelSections);
+  MCMachOStreamer *S = new MCMachOStreamer(
+      Context, std::move(MAB), std::move(OW), std::move(CE), LabelSections);
   const Triple &Target = Context.getTargetTriple();
   S->emitVersionForTarget(
       Target, Context.getObjectFileInfo()->getSDKVersion(),
