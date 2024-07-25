@@ -184,6 +184,9 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   std::uint64_t offset = 0;
   for (auto [fieldName, fieldTy] : Ty.getTypeList()) {
     auto result = fir::getTypeSizeAndAlignment(loc, fieldTy, *dl, kindMapping);
+    // If we get a type whose size we can't determine, we will break the loop
+    // and generate the derived type with whatever components we have
+    // assembled thus far.
     if (!result)
       break;
     auto [byteSize, byteAlign] = *result;
