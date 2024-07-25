@@ -88,9 +88,10 @@ struct StackFrameLayoutAnalysisPass : public MachineFunctionPass {
     bool isVarSize() const { return SlotTy == SlotType::VariableSized; }
 
     // We use this to sort in reverse order, so that the layout is displayed
-    // correctly. Variable sized slots are sorted to the end of the list, and
-    // the Slot index is used to ensure deterministic order when offsets are
-    // equal.
+    // correctly. Variable sized slots are sorted to the end of the list, as
+    // offsets are currently incorrect for these but they reside at the end of
+    // the stack frame. The Slot index is used to ensure deterministic order
+    // when offsets are equal.
     bool operator<(const SlotData &Rhs) const {
       return std::make_tuple(!isVarSize(),
                              Offset.getFixed() + Offset.getScalable(), Slot) >
