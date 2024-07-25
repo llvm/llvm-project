@@ -1919,8 +1919,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     return;
   }
 
-  bool IsWin64 =
-      Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
+  bool IsWin64 = Subtarget.isCallingConvWin64(F.getCallingConv(), F.isVarArg());
   unsigned FixedObject = getFixedObjectSize(MF, AFI, IsWin64, IsFunclet);
 
   auto PrologueSaveSize = AFI->getCalleeSavedStackSize() + FixedObject;
@@ -2352,8 +2351,8 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // How much of the stack used by incoming arguments this function is expected
   // to restore in this particular epilogue.
   int64_t ArgumentStackToRestore = getArgumentStackToRestore(MF, MBB);
-  bool IsWin64 =
-      Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
+  bool IsWin64 = Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv(),
+                                              MF.getFunction().isVarArg());
   unsigned FixedObject = getFixedObjectSize(MF, AFI, IsWin64, IsFunclet);
 
   int64_t AfterCSRPopSize = ArgumentStackToRestore;
@@ -2659,8 +2658,8 @@ static StackOffset getFPOffset(const MachineFunction &MF,
                                int64_t ObjectOffset) {
   const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
   const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-  bool IsWin64 =
-      Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
+  const Function &F = MF.getFunction();
+  bool IsWin64 = Subtarget.isCallingConvWin64(F.getCallingConv(), F.isVarArg());
   unsigned FixedObject =
       getFixedObjectSize(MF, AFI, IsWin64, /*IsFunclet=*/false);
   int64_t CalleeSaveSize = AFI->getCalleeSavedStackSize(MF.getFrameInfo());
@@ -2766,9 +2765,9 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
         // via the frame pointer, so we have to use the FP in the parent
         // function.
         (void) Subtarget;
-        assert(
-            Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv()) &&
-            "Funclets should only be present on Win64");
+        assert(Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv(),
+                                            MF.getFunction().isVarArg()) &&
+               "Funclets should only be present on Win64");
         UseFP = true;
       } else {
         // We have the choice between FP and (SP or BP).
