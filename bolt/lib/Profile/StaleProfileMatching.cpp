@@ -120,8 +120,8 @@ cl::opt<unsigned> StaleMatchingCostJumpUnknownFTInc(
 
 cl::opt<bool> StaleMatchingWithBlockPseudoProbes(
     "stale-matching-with-block-pseudo-probes",
-    cl::desc("Turns on stale matching with block pseudo probes."), cl::init(3),
-    cl::ReallyHidden, cl::cat(BoltOptCategory));
+    cl::desc("Turns on stale matching with block pseudo probes."),
+    cl::init(false), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 } // namespace opts
 
@@ -327,7 +327,7 @@ private:
   }
 
   /// A helper function for logging.
-  static bool LogErrIfExpr(bool Expr, std::string Message) {
+  static bool LogErrIfExpr(bool Expr, StringRef Message) {
     if (Expr)
       errs() << Message;
     return Expr;
