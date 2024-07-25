@@ -186,20 +186,22 @@ static Value *foldSelectICmpAnd(SelectInst &Sel, ICmpInst *Cmp,
       return ExtraBitInTC ? Builder.CreateXor(V, C) : Builder.CreateOr(V, C);
     }
 
-    // (V & AndMaskC) == 0 ? TC : FC --> (V & AndMaskC) + TC
-    if (TC + AndMask == FC) {
-      if (CreateAnd)
-        V = Builder.CreateAnd(V, ConstantInt::get(SelType, AndMask));
-      Constant *C = ConstantInt::get(SelType, TC);
-      return Builder.CreateAdd(V, C);
-    }
-
+    // (V & AndMaskC) == 0 ? TC : FC --> TC + (V & AndMaskC)
     // (V & AndMaskC) == 0 ? TC : FC --> TC - (V & AndMaskC)
-    if (TC - AndMask == FC) {
-      if (CreateAnd)
-        V = Builder.CreateAnd(V, ConstantInt::get(SelType, AndMask));
-      Constant *C = ConstantInt::get(SelType, TC);
-      return Builder.CreateSub(C, V);
+    // (V & AndMaskC) == 0 ? TC : FC --> TC s>> (V & AndMaskC)
+    // (V & AndMaskC) == 0 ? TC : FC --> TC u>> (V & AndMaskC)
+    // (V & AndMaskC) == 0 ? TC : FC --> TC << (V & AndMaskC)
+    Constant *TCC = ConstantInt::get(SelType, TC);
+    Constant *FCC = ConstantInt::get(SelType, FC);
+    Constant *MaskC = ConstantInt::get(SelType, AndMask);
+    for (auto Opc : {Instruction::Add, Instruction::Sub, Instruction::Shl,
+                     Instruction::LShr, Instruction::AShr}) {
+      if (ConstantFoldBinaryOpOperands(Opc, TCC, MaskC, Sel.getDataLayout()) ==
+          FCC) {
+        if (CreateAnd)
+          V = Builder.CreateAnd(V, MaskC);
+        return Builder.CreateBinOp(Opc, TCC, V);
+      }
     }
 
     return nullptr;
