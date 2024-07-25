@@ -1,4 +1,4 @@
-//===- DXILResource.cpp - Tools to translate DXIL resources ---------------===//
+//===- DXILResource.cpp - Representations of DXIL resources ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Utils/DXILResource.h"
+#include "llvm/Analysis/DXILResource.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Metadata.h"
 
 using namespace llvm;
 using namespace dxil;
