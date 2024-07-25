@@ -4070,10 +4070,6 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
         Cost += getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
                                                : TTI::SK_PermuteTwoSrc,
                                NTp, NMask, CostKind, 0, nullptr, Args, CxtI);
-      else if (any_of(enumerate(NMask), [&](const auto &ME) {
-                 return ME.value() % LTNumElts == ME.index();
-               }))
-        Cost += LTNumElts - 1;
       else
         Cost += LTNumElts;
     }
