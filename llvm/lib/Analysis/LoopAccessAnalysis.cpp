@@ -1464,8 +1464,13 @@ getPtrStrideSCEV(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
                  const Loop *Lp,
                  const DenseMap<Value *, const SCEV *> &StridesMap, bool Assume,
                  bool ShouldCheckWrap) {
+  const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
   Type *Ty = Ptr->getType();
   assert(Ty->isPointerTy() && "Unexpected non-ptr");
+  auto &DL = Lp->getHeader()->getDataLayout();
+  auto *IdxTy = DL.getIndexType(Ty);
+  if (PSE.getSE()->isLoopInvariant(PtrScev, Lp))
+    return PSE.getSE()->getZero(IdxTy);
 
   if (isa<ScalableVectorType>(AccessTy)) {
     LLVM_DEBUG(dbgs() << "LAA: Bad stride - Scalable object: " << *AccessTy
@@ -1473,7 +1478,6 @@ getPtrStrideSCEV(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
     return std::nullopt;
   }
 
-  const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
 
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PtrScev);
   if (Assume && !AR)
@@ -1503,7 +1507,6 @@ getPtrStrideSCEV(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
     return std::nullopt;
   }
 
-  auto &DL = Lp->getHeader()->getDataLayout();
   TypeSize AllocSize = DL.getTypeAllocSize(AccessTy);
   int64_t Size = AllocSize.getFixedValue();
   const APInt &APStepVal = C->getAPInt();
@@ -1935,9 +1938,9 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
       BPtr->getType()->getPointerAddressSpace())
     return MemoryDepChecker::Dependence::Unknown;
 
-  std::optional<const SCEV *> StrideAPtr = getPtrStrideSCEV(
+  std::optional<int64_t> StrideAPtr = getPtrStride(
       PSE, ATy, APtr, InnermostLoop, SymbolicStrides, true, true);
-  std::optional<const SCEV *> StrideBPtr = getPtrStrideSCEV(
+  std::optional<int64_t> StrideBPtr = getPtrStride(
       PSE, BTy, BPtr, InnermostLoop, SymbolicStrides, true, true);
 
   const SCEV *Src = PSE.getSCEV(APtr);
@@ -1946,7 +1949,7 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   // If the induction step is negative we have to invert source and sink of the
   // dependence when measuring the distance between them. We should not swap
   // AIsWrite with BIsWrite, as their uses expect them in program order.
-  if (StrideAPtr && SE.isKnownNegative(*StrideAPtr)) {
+  if (StrideAPtr && *StrideAPtr < 0) {
     std::swap(Src, Sink);
     std::swap(AInst, BInst);
     std::swap(StrideAPtr, StrideBPtr);
@@ -1991,6 +1994,10 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   // If either Src or Sink are not strided (i.e. not a non-wrapping AddRec), we
   // cannot analyze the dependence further.
   if (!StrideAPtr || !StrideBPtr) {
+    return MemoryDepChecker::Dependence::IndirectUnsafe;
+  }
+
+  if (*StrideAPtr == 0 || StrideBPtr == 0) {
     bool SrcInvariant = SE.isLoopInvariant(Src, InnermostLoop);
     bool SinkInvariant = SE.isLoopInvariant(Sink, InnermostLoop);
     // If either Src or Sink are not loop invariant and not strided, the
@@ -1998,27 +2005,21 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
     // iteration. This is not safe and we also cannot generate runtime checks to
     // ensure safety. This includes expressions where an index is loaded in each
     // iteration or wrapping AddRecs.
-    if ((!SrcInvariant && !StrideAPtr) || (!SinkInvariant && !StrideBPtr))
-      return MemoryDepChecker::Dependence::IndirectUnsafe;
 
     // Otherwise both Src or Sink are either loop invariant or strided and we
     // can generate a runtime check to disambiguate the accesses.
     return MemoryDepChecker::Dependence::Unknown;
   }
 
-  LLVM_DEBUG(dbgs() << "LAA:  Src induction step: " << **StrideAPtr
-                    << " Sink induction step: " << **StrideBPtr << "\n");
-  // If either Src or Sink have a non-constant stride, we can generate a runtime
-  // check to disambiguate them.
-  if ((!isa<SCEVConstant>(*StrideAPtr)) || (!isa<SCEVConstant>(*StrideBPtr)))
-    return MemoryDepChecker::Dependence::Unknown;
+  LLVM_DEBUG(dbgs() << "LAA:  Src induction step: " << *StrideAPtr
+                    << " Sink induction step: " << *StrideBPtr << "\n");
 
   // Both Src and Sink have a constant stride, check if they are in the same
   // direction.
   int64_t StrideAPtrInt =
-      cast<SCEVConstant>(*StrideAPtr)->getAPInt().getSExtValue();
+      *StrideAPtr;
   int64_t StrideBPtrInt =
-      cast<SCEVConstant>(*StrideBPtr)->getAPInt().getSExtValue();
+      *StrideBPtr;
   if ((StrideAPtrInt > 0 && StrideBPtrInt < 0) ||
       (StrideAPtrInt < 0 && StrideBPtrInt > 0)) {
     LLVM_DEBUG(dbgs() << "Pointer access with non-constant stride\n");
