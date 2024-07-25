@@ -1166,22 +1166,22 @@ bool CombineRuleBuilder::buildPermutationsToEmit() {
 bool CombineRuleBuilder::checkSemantics() {
   assert(MatchRoot && "Cannot call this before findRoots()");
 
-  const auto CheckVariadicOperands = [&](const InstructionPattern &IP, bool IsMatch) {
+  const auto CheckVariadicOperands = [&](const InstructionPattern &IP,
+                                         bool IsMatch) {
     for (auto &Op : IP.operands()) {
       if (!Op.getType().isVariadicPack())
         continue;
 
       if (IsMatch && &Op != &IP.operands_back()) {
         PrintError("'" + IP.getInstName() +
-                            "': " + PatternType::VariadicClassName +
-                            " can only be used on the last operand");
+                   "': " + PatternType::VariadicClassName +
+                   " can only be used on the last operand");
         return false;
       }
 
       if (Op.isDef()) {
-        PrintError("'" + IP.getInstName() +
-                            "': " + PatternType::VariadicClassName +
-                            " cannot be used on defs");
+        PrintError("'" + IP.getInstName() + "': " +
+                   PatternType::VariadicClassName + " cannot be used on defs");
         return false;
       }
     }
@@ -1200,15 +1200,15 @@ bool CombineRuleBuilder::checkSemantics() {
     }
 
     if (const auto IP = dyn_cast<InstructionPattern>(Pat)) {
-      if(!CheckVariadicOperands(*IP, /*IsMatch=*/true))
+      if (!CheckVariadicOperands(*IP, /*IsMatch=*/true))
         return false;
 
       // MIFlags in match cannot use the following syntax: (MIFlags $mi)
       if (const auto *CGP = dyn_cast<CodeGenInstructionPattern>(Pat)) {
         if (auto *FI = CGP->getMIFlagsInfo()) {
           if (!FI->copy_flags().empty()) {
-            PrintError(
-                "'match' patterns cannot refer to flags from other instructions");
+            PrintError("'match' patterns cannot refer to flags from other "
+                       "instructions");
             PrintNote("MIFlags in '" + CGP->getName() +
                       "' refer to: " + join(FI->copy_flags(), ", "));
             return false;
@@ -1217,7 +1217,6 @@ bool CombineRuleBuilder::checkSemantics() {
       }
       continue;
     }
-
 
     const auto *AOP = dyn_cast<AnyOpcodePattern>(Pat);
     if (!AOP)

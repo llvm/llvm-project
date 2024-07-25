@@ -60,11 +60,11 @@ std::optional<PatternType> PatternType::get(ArrayRef<SMLoc> DiagLoc,
     }
 
     if (Max <= Min && Max != 0) {
-      PrintError(DiagLoc,
-                 DiagCtx +
-                     ": maximum number of arguments (" + Twine(Max) + ") must be zero, or greater "
-                     "than the minimum number of arguments (" +
-                     Twine(Min) + ") in " + VariadicClassName);
+      PrintError(DiagLoc, DiagCtx + ": maximum number of arguments (" +
+                              Twine(Max) +
+                              ") must be zero, or greater "
+                              "than the minimum number of arguments (" +
+                              Twine(Min) + ") in " + VariadicClassName);
       return std::nullopt;
     }
 

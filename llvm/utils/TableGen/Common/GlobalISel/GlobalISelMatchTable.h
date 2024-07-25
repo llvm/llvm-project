@@ -641,7 +641,9 @@ public:
     return make_range(actions_begin(), actions_end());
   }
 
-  bool hasOperand(StringRef SymbolicName) const { return DefinedOperands.contains(SymbolicName); }
+  bool hasOperand(StringRef SymbolicName) const {
+    return DefinedOperands.contains(SymbolicName);
+  }
 
   void defineOperand(StringRef SymbolicName, OperandMatcher &OM);
 
@@ -1264,7 +1266,8 @@ public:
                  const std::string &SymbolicName,
                  unsigned AllocatedTemporariesBaseID, bool IsVariadic = false)
       : Insn(Insn), OpIdx(OpIdx), SymbolicName(SymbolicName),
-        AllocatedTemporariesBaseID(AllocatedTemporariesBaseID), IsVariadic(IsVariadic) {}
+        AllocatedTemporariesBaseID(AllocatedTemporariesBaseID),
+        IsVariadic(IsVariadic) {}
 
   bool hasSymbolicName() const { return !SymbolicName.empty(); }
   StringRef getSymbolicName() const { return SymbolicName; }
@@ -1413,28 +1416,24 @@ public:
 
 class InstructionNumOperandsMatcher final : public InstructionPredicateMatcher {
 public:
-  enum CheckKind {
-    CK_Eq,
-    CK_LE,
-    CK_GE
-  };
+  enum CheckKind { CK_Eq, CK_LE, CK_GE };
 
 private:
   unsigned NumOperands = 0;
   CheckKind CK;
 
 public:
-
-  InstructionNumOperandsMatcher(unsigned InsnVarID, unsigned NumOperands, CheckKind CK = CK_Eq)
+  InstructionNumOperandsMatcher(unsigned InsnVarID, unsigned NumOperands,
+                                CheckKind CK = CK_Eq)
       : InstructionPredicateMatcher(IPM_NumOperands, InsnVarID),
-       NumOperands(NumOperands), CK(CK) {}
+        NumOperands(NumOperands), CK(CK) {}
 
   static bool classof(const PredicateMatcher *P) {
     return P->getKind() == IPM_NumOperands;
   }
 
   bool isIdentical(const PredicateMatcher &B) const override {
-    if(!InstructionPredicateMatcher::isIdentical(B))
+    if (!InstructionPredicateMatcher::isIdentical(B))
       return false;
     const auto &Other = *cast<InstructionNumOperandsMatcher>(&B);
     return NumOperands == Other.NumOperands && CK == Other.CK;
@@ -1762,15 +1761,18 @@ protected:
     // Add if it's allowed, and:
     //    - We don't have a variadic operand
     //    - We don't already have such a check.
-    return AllowNumOpsCheck && !hasVariadicMatcher() && none_of(Predicates, [&](const auto& P){
-      return P->getKind() == InstructionPredicateMatcher::IPM_NumOperands;
-    });
+    return AllowNumOpsCheck && !hasVariadicMatcher() &&
+           none_of(Predicates, [&](const auto &P) {
+             return P->getKind() ==
+                    InstructionPredicateMatcher::IPM_NumOperands;
+           });
   }
 
 public:
-  InstructionMatcher(RuleMatcher &Rule, StringRef SymbolicName, bool AllowNumOpsCheck = true
-                     )
-      : Rule(Rule), SymbolicName(SymbolicName), AllowNumOpsCheck(AllowNumOpsCheck) {
+  InstructionMatcher(RuleMatcher &Rule, StringRef SymbolicName,
+                     bool AllowNumOpsCheck = true)
+      : Rule(Rule), SymbolicName(SymbolicName),
+        AllowNumOpsCheck(AllowNumOpsCheck) {
     // We create a new instruction matcher.
     // Get a new ID for that instruction.
     InsnVarID = Rule.implicitlyDefineInsnVar(*this);
@@ -1790,7 +1792,8 @@ public:
 
   /// Add an operand to the matcher.
   OperandMatcher &addOperand(unsigned OpIdx, const std::string &SymbolicName,
-                             unsigned AllocatedTemporariesBaseID, bool IsVariadic = false);
+                             unsigned AllocatedTemporariesBaseID,
+                             bool IsVariadic = false);
   OperandMatcher &getOperand(unsigned OpIdx);
   OperandMatcher &addPhysRegInput(Record *Reg, unsigned OpIdx,
                                   unsigned TempOpIdx);
@@ -1802,7 +1805,9 @@ public:
   StringRef getSymbolicName() const { return SymbolicName; }
 
   unsigned getNumOperandMatchers() const { return Operands.size(); }
-  bool hasVariadicMatcher() const { return !Operands.empty() && Operands.back()->isVariadic(); }
+  bool hasVariadicMatcher() const {
+    return !Operands.empty() && Operands.back()->isVariadic();
+  }
 
   OperandVec::iterator operands_begin() { return Operands.begin(); }
   OperandVec::iterator operands_end() { return Operands.end(); }
@@ -1867,7 +1872,8 @@ public:
                             RuleMatcher &Rule, StringRef SymbolicName,
                             bool AllowNumOpsCheck = true)
       : OperandPredicateMatcher(OPM_Instruction, InsnVarID, OpIdx),
-        InsnMatcher(new InstructionMatcher(Rule, SymbolicName, AllowNumOpsCheck)),
+        InsnMatcher(
+            new InstructionMatcher(Rule, SymbolicName, AllowNumOpsCheck)),
         Flags(Rule.getGISelFlags()) {}
 
   static bool classof(const PredicateMatcher *P) {
@@ -1948,7 +1954,8 @@ public:
 
   static void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule,
                                 unsigned NewInsnID, unsigned OldInsnID,
-                                unsigned OpIdx, StringRef Name, bool ForVariadic = false);
+                                unsigned OpIdx, StringRef Name,
+                                bool ForVariadic = false);
 
   void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
 };

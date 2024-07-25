@@ -1807,11 +1807,10 @@ void InstructionMatcher::optimize() {
   Stash.push_back(predicates_pop_front());
   if (Stash.back().get() == &OpcMatcher) {
     // FIXME: Is this even needed still? Why the isVariadicNumOperands check?
-    if (canAddNumOperandsCheck() &&
-        OpcMatcher.isVariadicNumOperands() && getNumOperandMatchers() != 0) {
+    if (canAddNumOperandsCheck() && OpcMatcher.isVariadicNumOperands() &&
+        getNumOperandMatchers() != 0) {
       Stash.emplace_back(new InstructionNumOperandsMatcher(
-          InsnVarID,
-          getNumOperandMatchers()));
+          InsnVarID, getNumOperandMatchers()));
     }
     AllowNumOpsCheck = false;
 
