@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <memory>
 #include <ranges>
 #include <vector>
 
@@ -92,7 +93,7 @@ constexpr void test_iterators() {
       std::array<ValueT, 0> a = {};
 
       auto ret = std::ranges::find_last(make_range(a), 1).begin();
-      assert(ret == It(a.begin()));
+      assert(ret == It(a.data()));
     }
   }
 

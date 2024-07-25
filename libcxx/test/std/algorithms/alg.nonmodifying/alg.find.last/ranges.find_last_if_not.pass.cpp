@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <memory>
 #include <ranges>
 
 #include "almost_satisfies_types.h"
@@ -100,7 +101,7 @@ constexpr void test_iterator_classes() {
       std::array<int, 0> a = {};
 
       auto ret = std::ranges::find_last_if_not(make_range<it, sent>(a), [](auto&&) { return false; }).begin();
-      assert(ret == it(a.begin()));
+      assert(ret == it(a.data()));
     }
   }
 

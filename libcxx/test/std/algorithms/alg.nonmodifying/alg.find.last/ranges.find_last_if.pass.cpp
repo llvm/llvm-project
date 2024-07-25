@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <memory>
 #include <ranges>
 
 #include "almost_satisfies_types.h"
