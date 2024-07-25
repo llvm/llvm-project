@@ -787,7 +787,8 @@ void ErrorNonSelfAMDGPU::Print() {
   PrintThreadsAndAddresses();
   Printf("%s", d.Default());
   if (shadow_val == kAsanHeapFreeMagic ||
-      shadow_val == kAsanHeapLeftRedzoneMagic) {
+      shadow_val == kAsanHeapLeftRedzoneMagic ||
+      shadow_val == kAsanArrayCookieMagic) {
     PrintMallocStack();
   }
   addr_description.Print(bug_descr, true);
