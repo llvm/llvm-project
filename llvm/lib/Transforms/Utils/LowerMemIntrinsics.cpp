@@ -347,6 +347,27 @@ void llvm::createMemCpyLoopUnknownSize(
   }
 }
 
+// If \p Addr1 and \p Addr2 are pointers to different address space that support
+// addrspacecasts, create an addresspacecast to obtain a pair of pointers in the
+// same addressspace. Noop if the pointers are in the same address space or
+// addrspacecasting is not possible.
+static std::pair<Value *, Value *>
+tryInsertCastToCommonAddrSpace(IRBuilderBase &B, Value *Addr1, Value *Addr2,
+                               const TargetTransformInfo &TTI) {
+  Value *ResAddr1 = Addr1;
+  Value *ResAddr2 = Addr2;
+
+  unsigned AS1 = cast<PointerType>(Addr1->getType())->getAddressSpace();
+  unsigned AS2 = cast<PointerType>(Addr2->getType())->getAddressSpace();
+  if (AS1 != AS2) {
+    if (TTI.isValidAddrSpaceCast(AS2, AS1))
+      ResAddr2 = B.CreateAddrSpaceCast(Addr2, Addr1->getType());
+    else if (TTI.isValidAddrSpaceCast(AS1, AS2))
+      ResAddr1 = B.CreateAddrSpaceCast(Addr1, Addr2->getType());
+  }
+  return {ResAddr1, ResAddr2};
+}
+
 // Lower memmove to IR. memmove is required to correctly copy overlapping memory
 // regions; therefore, it has to check the relative positions of the source and
 // destination pointers and choose the copy direction accordingly.
@@ -434,18 +455,8 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
   // If the pointers are in different address spaces, they need to be converted
   // to a compatible one. Cases where memory ranges in the different address
   // spaces cannot overlap are lowered as memcpy and not handled here.
-  Value *CmpSrcAddr = SrcAddr;
-  Value *CmpDstAddr = DstAddr;
-  if ((SrcAS != DstAS)) {
-    if (TTI.isValidAddrSpaceCast(DstAS, SrcAS)) {
-      CmpDstAddr = PLBuilder.CreateAddrSpaceCast(DstAddr, SrcAddr->getType());
-    } else if (TTI.isValidAddrSpaceCast(SrcAS, DstAS)) {
-      CmpSrcAddr = PLBuilder.CreateAddrSpaceCast(SrcAddr, DstAddr->getType());
-    } else {
-      llvm_unreachable("Can only lower memmove between address spaces if they "
-                       "support addrspacecast");
-    }
-  }
+  auto [CmpSrcAddr, CmpDstAddr] =
+      tryInsertCastToCommonAddrSpace(PLBuilder, SrcAddr, DstAddr, TTI);
   Value *PtrCompare =
       PLBuilder.CreateICmpULT(CmpSrcAddr, CmpDstAddr, "compare_src_dst");
   Instruction *ThenTerm, *ElseTerm;
@@ -670,18 +681,8 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
 
   IRBuilder<> PLBuilder(InsertBefore);
 
-  Value *CmpSrcAddr = SrcAddr;
-  Value *CmpDstAddr = DstAddr;
-  if ((SrcAS != DstAS)) {
-    if (TTI.isValidAddrSpaceCast(DstAS, SrcAS)) {
-      CmpDstAddr = PLBuilder.CreateAddrSpaceCast(DstAddr, SrcAddr->getType());
-    } else if (TTI.isValidAddrSpaceCast(SrcAS, DstAS)) {
-      CmpSrcAddr = PLBuilder.CreateAddrSpaceCast(SrcAddr, DstAddr->getType());
-    } else {
-      llvm_unreachable("Can only lower memmove between address spaces if they "
-                       "support addrspacecast");
-    }
-  }
+  auto [CmpSrcAddr, CmpDstAddr] =
+      tryInsertCastToCommonAddrSpace(PLBuilder, SrcAddr, DstAddr, TTI);
   Value *PtrCompare =
       PLBuilder.CreateICmpULT(CmpSrcAddr, CmpDstAddr, "compare_src_dst");
   Instruction *ThenTerm, *ElseTerm;
