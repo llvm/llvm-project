@@ -187,11 +187,6 @@ function check-abi-list() {
     )
 }
 
-function check-cxx-benchmarks() {
-    step "Running the benchmarks"
-    ${NINJA} -vC "${BUILD_DIR}" check-cxx-benchmarks
-}
-
 function test-armv7m-picolibc() {
     clean
 
@@ -639,11 +634,6 @@ apple-system)
 
     step "Running the libunwind tests"
     ${NINJA} -vC "${BUILD_DIR}/unwind" check-unwind
-;;
-benchmarks)
-    clean
-    generate-cmake
-    check-cxx-benchmarks
 ;;
 aarch64)
     clean

@@ -35,6 +35,9 @@ definitions:
       - "**/test-results.xml"
       - "**/*.abilist"
       - "**/crash_diagnostics/*"
+      - "**/CMakeConfigureLog.yaml"
+      - "**/CMakeError.log"
+      - "**/CMakeOutput.log"
 
 steps:
 - group: ARM
