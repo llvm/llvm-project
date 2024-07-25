@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Utils/DXILResource.h"
+#include "llvm/Analysis/DXILResource.h"
 #include "llvm/IR/Constants.h"
 #include "gtest/gtest.h"
 
