@@ -1,4 +1,4 @@
-//===-- Implementation of fmul function -----------------------------------===//
+//===-- Implementation header for dmull -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/fmul.h"
-#include "src/__support/FPUtil/generic/mul.h"
-#include "src/__support/common.h"
+#ifndef LLVM_LIBC_SRC_MATH_DMULL_H
+#define LLVM_LIBC_SRC_MATH_DMULL_H
+
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
-  return fputil::generic::mul<float>(x, y);
-}
+double dmull(long double x, long double y);
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC_MATH_DMULL_H

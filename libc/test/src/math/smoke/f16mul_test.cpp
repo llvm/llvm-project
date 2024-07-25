@@ -1,4 +1,4 @@
-//===-- Unittests for fmul ------------------------------------------------===//
+//===-- Unittests for f16mul ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,6 +8,6 @@
 
 #include "MulTest.h"
 
-#include "src/math/fmul.h"
+#include "src/math/f16mul.h"
 
-LIST_MUL_TESTS(float, double, LIBC_NAMESPACE::fmul)
+LIST_MUL_TESTS(float16, double, LIBC_NAMESPACE::f16mul)
