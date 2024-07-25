@@ -885,16 +885,6 @@ GCNHazardRecognizer::checkVALUHazardsHelper(const MachineOperand &Def,
 
 static const MachineOperand *
 getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
-  // Assume inline asm has dst forwarding hazard
-  if (MI.isInlineAsm()) {
-    for (auto &Op :
-         llvm::drop_begin(MI.operands(), InlineAsm::MIOp_FirstOperand)) {
-      if (Op.isReg() && Op.isDef()) {
-        return &Op;
-      }
-    }
-  }
-
   if (!SIInstrInfo::isVALU(MI))
     return nullptr;
 
@@ -946,8 +936,21 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
     auto IsShift16BitDefFn = [this, VALU](const MachineInstr &MI) {
       const SIInstrInfo *TII = ST.getInstrInfo();
       const SIRegisterInfo *TRI = ST.getRegisterInfo();
-      const MachineOperand *Dst = getDstSelForwardingOperand(MI, ST);
-      if (Dst) {
+      SmallVector<const MachineOperand *, 4> Dsts;
+      const MachineOperand *ForwardedDst = getDstSelForwardingOperand(MI, ST);
+      if (ForwardedDst) {
+        Dsts.push_back(ForwardedDst);
+      } else if (MI.isInlineAsm()) {
+        // Assume inline asm has dst forwarding hazard
+        for (auto &Op :
+             drop_begin(MI.operands(), InlineAsm::MIOp_FirstOperand)) {
+          if (Op.isReg() && Op.isDef()) {
+            Dsts.push_back(&Op);
+          }
+        }
+      }
+
+      for (auto Dst : Dsts) {
         Register Def = Dst->getReg();
 
         for (const MachineOperand &Use : VALU->all_uses()) {
@@ -1077,7 +1080,20 @@ int GCNHazardRecognizer::checkInlineAsmHazards(MachineInstr *IA) {
         auto IsShift16BitDefFn = [this](const MachineInstr &MI) {
           const MachineOperand *Dst = getDstSelForwardingOperand(MI, ST);
           // Assume inline asm reads the dst
-          return (bool)Dst;
+          if (Dst)
+            return true;
+
+          if (MI.isInlineAsm()) {
+            // Assume other inline asm has dst forwarding hazard
+            for (auto &Op :
+                 drop_begin(MI.operands(), InlineAsm::MIOp_FirstOperand)) {
+              if (Op.isReg() && Op.isDef()) {
+                return true;
+              }
+            }
+          }
+
+          return false;
         };
 
         int WaitStatesNeededForDef =
