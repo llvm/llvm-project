@@ -106,7 +106,7 @@ __find_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n) 
   // do first partial word
   if (__first.__ctz_ != 0) {
     __storage_type __clz_f = static_cast<__storage_type>(__bits_per_word - __first.__ctz_);
-    __storage_type __dn    = (__clz_f < __n) ? __clz_f : __n;
+    __storage_type __dn    = std::min(__clz_f, __n);
     __storage_type __m     = (~__storage_type(0) << __first.__ctz_) & (~__storage_type(0) >> (__clz_f - __dn));
     __storage_type __b     = std::__invert_if<!_ToFind>(*__first.__seg_) & __m;
     if (__b)
