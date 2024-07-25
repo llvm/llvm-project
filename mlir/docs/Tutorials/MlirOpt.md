@@ -176,26 +176,78 @@ they will be run in order.
 build/bin/mlir-opt --convert-to-llvm --canonicalize mlir/test/Examples/mlir-opt/ctlz.mlir
 ```
 
-Passes can also be configured to run
-in a way that is limited to a particular sub-IR
-nested under scope-isolated ops like functions.
-For example, one could run `--convert-math-to-llvm`
-on each `func` separately, by running
+This simplified form is useful, but only works for
+passes which "anchor" on `builtin.module`.
+[Pass anchoring](https://mlir.llvm.org/docs/PassManagement/#oppassmanager)
+is a way for passes to specify
+that they only run on particular ops
+or at a particular level of IR nesting.
+If you use the short form with a pass that is not anchored properly,
+it will not run.
+
+To use passes that have non-trivial anchoring,
+and to be more precise about where and how passes should run,
+one can use the `pass-pipeline` flag.
+
+For example, consider the following IR which has the same redundant code,
+but in two different levels of nesting.
+
+```mlir
+module {
+  module {
+    func.func @func1(%arg0: i32) -> i32 {
+      %0 = arith.addi %arg0, %arg0 : i32
+      %1 = arith.addi %arg0, %arg0 : i32
+      %2 = arith.addi %0, %1 : i32
+      func.return %2 : i32
+    }
+  }
+
+  gpu.module @gpu_module {
+    gpu.func @func2(%arg0: i32) -> i32 {
+      %0 = arith.addi %arg0, %arg0 : i32
+      %1 = arith.addi %arg0, %arg0 : i32
+      %2 = arith.addi %0, %1 : i32
+      gpu.return %2 : i32
+    }
+  }
+}
+```
+
+The following pipeline runs `cse` (common subexpression elimination)
+but only on the `func.func` inside the two `builtin.module` ops.
 
 ```bash
 build/bin/mlir-opt mlir/test/Examples/mlir-opt/ctlz.mlir --pass-pipeline='
     builtin.module(
-        func.func(cse,canonicalize),
-        convert-to-llvm
+        builtin.module(
+            func.func(cse,canonicalize),
+            convert-to-llvm
+        )
     )'
 ```
 
-The outer nesting tells `mlir-opt` to run the pass pipeline
-on each `module` op,
-and then within that to run (on each `func.func` op),
-the [`cse`](https://mlir.llvm.org/docs/Passes/#-cse)
-and [`canonicalize`](https://mlir.llvm.org/docs/Passes/#-canonicalize) passes,
-and then convert the rest to the `llvm` dialect.
+The output leaves the `gpu.module` alone
+
+```mlir
+module {
+  module {
+    llvm.func @func1(%arg0: i32) -> i32 {
+      %0 = llvm.add %arg0, %arg0 : i32
+      %1 = llvm.add %0, %0 : i32
+      llvm.return %1 : i32
+    }
+  }
+  gpu.module @gpu_module {
+    gpu.func @func2(%arg0: i32) -> i32 {
+      %0 = arith.addi %arg0, %arg0 : i32
+      %1 = arith.addi %arg0, %arg0 : i32
+      %2 = arith.addi %0, %1 : i32
+      gpu.return %2 : i32
+    }
+  }
+}
+```
 
 For a spec of the pass-pipeline textual description language,
 see [the docs](https://mlir.llvm.org/docs/PassManagement/#textual-pass-pipeline-specification).
