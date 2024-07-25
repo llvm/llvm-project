@@ -651,7 +651,6 @@ function(add_libc_hermetic test_name)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
       -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
-      "-Wl,-asdfasdfasdf"
       "-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0" -nostdlib -static
       "-Wl,-mllvm,-amdhsa-code-object-version=${LIBC_GPU_CODE_OBJECT_VERSION}")
   elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)

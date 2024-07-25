@@ -6,6 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if LLDB_ENABLE_PYTHON
+
+// clang-format off
+// LLDB Python header must be included first
+#include "../../lldb-python.h"
+//clang-format on
+
+#endif
+
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -14,11 +23,6 @@
 #include "lldb/lldb-enumerations.h"
 
 #if LLDB_ENABLE_PYTHON
-
-// clang-format off
-// LLDB Python header must be included first
-#include "../../lldb-python.h"
-//clang-format on
 
 #include "../../SWIGPythonBridge.h"
 #include "../../ScriptInterpreterPythonImpl.h"
@@ -29,7 +33,7 @@ using namespace lldb_private;
 using namespace lldb_private::python;
 using Locker = ScriptInterpreterPythonImpl::Locker;
 
-LLDB_PLUGIN_DEFINE(ScriptedPlatformPythonInterface)
+LLDB_PLUGIN_DEFINE_ADV(ScriptedPlatformPythonInterface, ScriptInterpreterPythonScriptedPlatformPythonInterface)
 
 ScriptedPlatformPythonInterface::ScriptedPlatformPythonInterface(
     ScriptInterpreterPythonImpl &interpreter)
