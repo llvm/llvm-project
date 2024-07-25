@@ -918,6 +918,44 @@ bool llvm::hasIterationCountInvariantInParent(Loop *InnerLoop,
   return true;
 }
 
+constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
+  switch (RK) {
+  default:
+    llvm_unreachable("Unexpected recurrence kind");
+  case RecurKind::Add:
+    return Intrinsic::vector_reduce_add;
+  case RecurKind::Mul:
+    return Intrinsic::vector_reduce_mul;
+  case RecurKind::And:
+    return Intrinsic::vector_reduce_and;
+  case RecurKind::Or:
+    return Intrinsic::vector_reduce_or;
+  case RecurKind::Xor:
+    return Intrinsic::vector_reduce_xor;
+  case RecurKind::FMulAdd:
+  case RecurKind::FAdd:
+    return Intrinsic::vector_reduce_fadd;
+  case RecurKind::FMul:
+    return Intrinsic::vector_reduce_fmul;
+  case RecurKind::SMax:
+    return Intrinsic::vector_reduce_smax;
+  case RecurKind::SMin:
+    return Intrinsic::vector_reduce_smin;
+  case RecurKind::UMax:
+    return Intrinsic::vector_reduce_umax;
+  case RecurKind::UMin:
+    return Intrinsic::vector_reduce_umin;
+  case RecurKind::FMax:
+    return Intrinsic::vector_reduce_fmax;
+  case RecurKind::FMin:
+    return Intrinsic::vector_reduce_fmin;
+  case RecurKind::FMaximum:
+    return Intrinsic::vector_reduce_fmaximum;
+  case RecurKind::FMinimum:
+    return Intrinsic::vector_reduce_fminimum;
+  }
+}
+
 unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
   switch (RdxID) {
   case Intrinsic::vector_reduce_fadd:
@@ -1215,12 +1253,13 @@ Value *llvm::createSimpleTargetReduction(VectorBuilder &VBuilder, Value *Src,
   RecurKind Kind = Desc.getRecurrenceKind();
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
          "AnyOf reduction is not supported.");
+  Intrinsic::ID Id = getReductionIntrinsicID(Kind);
   auto *SrcTy = cast<VectorType>(Src->getType());
   Type *SrcEltTy = SrcTy->getElementType();
   Value *Iden =
       Desc.getRecurrenceIdentity(Kind, SrcEltTy, Desc.getFastMathFlags());
   Value *Ops[] = {Iden, Src};
-  return VBuilder.createSimpleTargetReduction(Kind, SrcTy, Ops);
+  return VBuilder.createSimpleTargetReduction(Id, SrcTy, Ops);
 }
 
 Value *llvm::createTargetReduction(IRBuilderBase &B,
@@ -1260,9 +1299,10 @@ Value *llvm::createOrderedReduction(VectorBuilder &VBuilder,
   assert(Src->getType()->isVectorTy() && "Expected a vector type");
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
 
+  Intrinsic::ID Id = getReductionIntrinsicID(RecurKind::FAdd);
   auto *SrcTy = cast<VectorType>(Src->getType());
   Value *Ops[] = {Start, Src};
-  return VBuilder.createSimpleTargetReduction(RecurKind::FAdd, SrcTy, Ops);
+  return VBuilder.createSimpleTargetReduction(Id, SrcTy, Ops);
 }
 
 void llvm::propagateIRFlags(Value *I, ArrayRef<Value *> VL, Value *OpValue,
