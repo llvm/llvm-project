@@ -6048,9 +6048,6 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
                                  diag::err_incomplete_type))
       return false;
 
-    if (Self.Context.hasSameUnqualifiedType(LhsT, RhsT))
-      return false;
-
     return cast<CXXRecordDecl>(DerivedRecord->getDecl())
         ->isVirtuallyDerivedFrom(cast<CXXRecordDecl>(BaseRecord->getDecl()));
   }
