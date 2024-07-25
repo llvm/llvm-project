@@ -14578,21 +14578,56 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
                                     BinaryOperatorKind Opc,
                                     Expr *LHSExpr, Expr *RHSExpr) {
   if (getLangOpts().CPlusPlus11 && isa<InitListExpr>(RHSExpr)) {
-    // The syntax only allows initializer lists on the RHS of assignment,
-    // so we don't need to worry about accepting invalid code for
-    // non-assignment operators.
-    // C++11 5.17p9:
-    //   The meaning of x = {v} [...] is that of x = T(v) [...]. The meaning
-    //   of x = {} is x = T().
-    InitializationKind Kind = InitializationKind::CreateDirectList(
-        RHSExpr->getBeginLoc(), RHSExpr->getBeginLoc(), RHSExpr->getEndLoc());
-    InitializedEntity Entity =
-        InitializedEntity::InitializeTemporary(LHSExpr->getType());
-    InitializationSequence InitSeq(*this, Entity, Kind, RHSExpr);
-    ExprResult Init = InitSeq.Perform(*this, Entity, Kind, RHSExpr);
-    if (Init.isInvalid())
-      return Init;
-    RHSExpr = Init.get();
+    // C++11 [expr.ass]p9, per CWG2768:
+    //   A braced-init-list B may appear on the right-hand side of
+    //    - an assignment to a scalar of type T, in which case the initializer
+    //      list shall have at most a single element. The meaning of x = B is
+    //      x = t, where t is an invented temporary variable declared and
+    //      initialized as T t = B.
+    switch (Opc) {
+    case BO_Assign: {
+      QualType LHSTy = LHSExpr->getType();
+      assert(!LHSTy->isDependentType() &&
+             "Should not have tried to create a builtin binary operator");
+      if (LHSTy->isScalarType()) {
+        InitializationKind Kind =
+            InitializationKind::CreateCopy(RHSExpr->getBeginLoc(), OpLoc);
+        InitializedEntity Entity =
+            InitializedEntity::InitializeTemporary(LHSExpr->getType());
+        InitializationSequence InitSeq(*this, Entity, Kind, RHSExpr);
+        ExprResult InventedTemporary =
+            InitSeq.Perform(*this, Entity, Kind, RHSExpr);
+        if (InventedTemporary.isInvalid())
+          return InventedTemporary;
+        assert(cast<InitListExpr>(RHSExpr)->getNumInits() <= 1 &&
+               "The initialization should have failed");
+        RHSExpr = InventedTemporary.get();
+      }
+      break;
+    }
+    case BO_MulAssign:
+    case BO_DivAssign:
+    case BO_RemAssign:
+    case BO_AddAssign:
+    case BO_SubAssign:
+    case BO_ShlAssign:
+    case BO_ShrAssign:
+    case BO_AndAssign:
+    case BO_XorAssign:
+    case BO_OrAssign: {
+      // A compound assignment like `i += {0}` is equivalent to `i = i + {0}`,
+      // which is a parsing error
+      StringRef Op = BinaryOperator::getOpcodeStr(Opc);
+      [[maybe_unused]] bool AssignmentStripped = Op.consume_back("=");
+      assert(AssignmentStripped);
+      Diag(OpLoc, diag::err_init_list_bin_op)
+          << 1 << Op << getExprRange(RHSExpr);
+      return ExprError();
+    }
+    default:
+      llvm_unreachable("Non-assignment binary operator with braced-init-list "
+                       "should not be parsed");
+    }
   }
 
   ExprResult LHS = LHSExpr, RHS = RHSExpr;

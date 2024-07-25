@@ -84,6 +84,9 @@ C++2c Feature Support
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Reject assigning to enums with an initailizer list containing an integer.
+  (`CWG2768: Assignment to enumeration variable with a braced-init-list <https://cplusplus.github.io/CWG/issues/2768.html>`_).
+
 C Language Changes
 ------------------
 
@@ -150,6 +153,7 @@ Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fixed a crash when an expression with a dependent ``__typeof__`` type is used as the operand of a unary operator. (#GH97646)
+- Reject compound assignment operators with a braced-init-list.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
