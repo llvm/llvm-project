@@ -1,4 +1,4 @@
-//===- DXILResource.h - Tools to translate DXIL resources -------*- C++ -*-===//
+//===- DXILResource.h - Representations of DXIL resources -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_DXILRESOURCE_H
-#define LLVM_TRANSFORMS_UTILS_DXILRESOURCE_H
+#ifndef LLVM_ANALYSIS_DXILRESOURCE_H
+#define LLVM_ANALYSIS_DXILRESOURCE_H
 
-#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/DXILABI.h"
 
 namespace llvm {
+class MDTuple;
+
 namespace dxil {
 
 struct ResourceBinding {
@@ -188,4 +189,4 @@ public:
 } // namespace dxil
 } // namespace llvm
 
-#endif // LLVM_TRANSFORMS_UTILS_DXILRESOURCE_H
+#endif // LLVM_ANALYSIS_DXILRESOURCE_H

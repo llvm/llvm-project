@@ -127,8 +127,8 @@ template <class T> struct DataRegion {
 };
 
 template <class ELFT>
-std::string getSecIndexForError(const ELFFile<ELFT> &Obj,
-                                const typename ELFT::Shdr &Sec) {
+static std::string getSecIndexForError(const ELFFile<ELFT> &Obj,
+                                       const typename ELFT::Shdr &Sec) {
   auto TableOrErr = Obj.sections();
   if (TableOrErr)
     return "[index " + std::to_string(&Sec - &TableOrErr->front()) + "]";
@@ -151,8 +151,8 @@ static std::string describe(const ELFFile<ELFT> &Obj,
 }
 
 template <class ELFT>
-std::string getPhdrIndexForError(const ELFFile<ELFT> &Obj,
-                                 const typename ELFT::Phdr &Phdr) {
+static std::string getPhdrIndexForError(const ELFFile<ELFT> &Obj,
+                                        const typename ELFT::Phdr &Phdr) {
   auto Headers = Obj.program_headers();
   if (Headers)
     return ("[index " + Twine(&Phdr - &Headers->front()) + "]").str();
@@ -166,8 +166,8 @@ static inline Error defaultWarningHandler(const Twine &Msg) {
 }
 
 template <class ELFT>
-bool checkSectionOffsets(const typename ELFT::Phdr &Phdr,
-                         const typename ELFT::Shdr &Sec) {
+static bool checkSectionOffsets(const typename ELFT::Phdr &Phdr,
+                                const typename ELFT::Shdr &Sec) {
   // SHT_NOBITS sections don't need to have an offset inside the segment.
   if (Sec.sh_type == ELF::SHT_NOBITS)
     return true;
@@ -184,8 +184,8 @@ bool checkSectionOffsets(const typename ELFT::Phdr &Phdr,
 // Check that an allocatable section belongs to a virtual address
 // space of a segment.
 template <class ELFT>
-bool checkSectionVMA(const typename ELFT::Phdr &Phdr,
-                     const typename ELFT::Shdr &Sec) {
+static bool checkSectionVMA(const typename ELFT::Phdr &Phdr,
+                            const typename ELFT::Shdr &Sec) {
   if (!(Sec.sh_flags & ELF::SHF_ALLOC))
     return true;
 
@@ -203,8 +203,8 @@ bool checkSectionVMA(const typename ELFT::Phdr &Phdr,
 }
 
 template <class ELFT>
-bool isSectionInSegment(const typename ELFT::Phdr &Phdr,
-                        const typename ELFT::Shdr &Sec) {
+static bool isSectionInSegment(const typename ELFT::Phdr &Phdr,
+                               const typename ELFT::Shdr &Sec) {
   return checkSectionOffsets<ELFT>(Phdr, Sec) &&
          checkSectionVMA<ELFT>(Phdr, Sec);
 }
@@ -212,7 +212,7 @@ bool isSectionInSegment(const typename ELFT::Phdr &Phdr,
 // HdrHandler is called once with the number of relocations and whether the
 // relocations have addends. EntryHandler is called once per decoded relocation.
 template <bool Is64>
-Error decodeCrel(
+static Error decodeCrel(
     ArrayRef<uint8_t> Content,
     function_ref<void(uint64_t /*relocation count*/, bool /*explicit addends*/)>
         HdrHandler,

@@ -161,3 +161,51 @@ bool CombinerHelper::matchTruncateOfExt(const MachineInstr &Root,
 
   return false;
 }
+
+bool CombinerHelper::isCastFree(unsigned Opcode, LLT ToTy, LLT FromTy) const {
+  const TargetLowering &TLI = getTargetLowering();
+  const DataLayout &DL = getDataLayout();
+  LLVMContext &Ctx = getContext();
+
+  switch (Opcode) {
+  case TargetOpcode::G_ANYEXT:
+  case TargetOpcode::G_ZEXT:
+    return TLI.isZExtFree(FromTy, ToTy, DL, Ctx);
+  case TargetOpcode::G_TRUNC:
+    return TLI.isTruncateFree(FromTy, ToTy, DL, Ctx);
+  default:
+    return false;
+  }
+}
+
+bool CombinerHelper::matchCastOfSelect(const MachineInstr &CastMI,
+                                       const MachineInstr &SelectMI,
+                                       BuildFnTy &MatchInfo) {
+  const GExtOrTruncOp *Cast = cast<GExtOrTruncOp>(&CastMI);
+  const GSelect *Select = cast<GSelect>(&SelectMI);
+
+  if (!MRI.hasOneNonDBGUse(Select->getReg(0)))
+    return false;
+
+  Register Dst = Cast->getReg(0);
+  LLT DstTy = MRI.getType(Dst);
+  LLT CondTy = MRI.getType(Select->getCondReg());
+  Register TrueReg = Select->getTrueReg();
+  Register FalseReg = Select->getFalseReg();
+  LLT SrcTy = MRI.getType(TrueReg);
+  Register Cond = Select->getCondReg();
+
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SELECT, {DstTy, CondTy}}))
+    return false;
+
+  if (!isCastFree(Cast->getOpcode(), DstTy, SrcTy))
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto True = B.buildInstr(Cast->getOpcode(), {DstTy}, {TrueReg});
+    auto False = B.buildInstr(Cast->getOpcode(), {DstTy}, {FalseReg});
+    B.buildSelect(Dst, Cond, True, False);
+  };
+
+  return true;
+}

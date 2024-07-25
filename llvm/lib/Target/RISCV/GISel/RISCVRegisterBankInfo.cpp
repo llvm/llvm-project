@@ -112,51 +112,6 @@ using namespace llvm;
 RISCVRegisterBankInfo::RISCVRegisterBankInfo(unsigned HwMode)
     : RISCVGenRegisterBankInfo(HwMode) {}
 
-const RegisterBank &
-RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
-                                              LLT Ty) const {
-  switch (RC.getID()) {
-  default:
-    llvm_unreachable("Register class not supported");
-  case RISCV::GPRRegClassID:
-  case RISCV::GPRF16RegClassID:
-  case RISCV::GPRF32RegClassID:
-  case RISCV::GPRNoX0RegClassID:
-  case RISCV::GPRNoX0X2RegClassID:
-  case RISCV::GPRJALRRegClassID:
-  case RISCV::GPRJALRNonX7RegClassID:
-  case RISCV::GPRTCRegClassID:
-  case RISCV::GPRTCNonX7RegClassID:
-  case RISCV::GPRC_and_GPRTCRegClassID:
-  case RISCV::GPRCRegClassID:
-  case RISCV::GPRC_and_SR07RegClassID:
-  case RISCV::SR07RegClassID:
-  case RISCV::SPRegClassID:
-  case RISCV::GPRX0RegClassID:
-    return getRegBank(RISCV::GPRBRegBankID);
-  case RISCV::FPR64RegClassID:
-  case RISCV::FPR16RegClassID:
-  case RISCV::FPR32RegClassID:
-  case RISCV::FPR64CRegClassID:
-  case RISCV::FPR32CRegClassID:
-    return getRegBank(RISCV::FPRBRegBankID);
-  case RISCV::VMRegClassID:
-  case RISCV::VRRegClassID:
-  case RISCV::VRNoV0RegClassID:
-  case RISCV::VRM2RegClassID:
-  case RISCV::VRM2NoV0RegClassID:
-  case RISCV::VRM4RegClassID:
-  case RISCV::VRM4NoV0RegClassID:
-  case RISCV::VMV0RegClassID:
-  case RISCV::VRM2_with_sub_vrm1_0_in_VMV0RegClassID:
-  case RISCV::VRM4_with_sub_vrm1_0_in_VMV0RegClassID:
-  case RISCV::VRM8RegClassID:
-  case RISCV::VRM8NoV0RegClassID:
-  case RISCV::VRM8_with_sub_vrm1_0_in_VMV0RegClassID:
-    return getRegBank(RISCV::VRBRegBankID);
-  }
-}
-
 static const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
   unsigned Idx;
   switch (Size) {
