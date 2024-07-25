@@ -234,10 +234,11 @@ printf         |check|    |check|
 vprintf        |check|    |check|
 fprintf        |check|    |check|
 vfprintf       |check|    |check|
-sprintf        |check|    |check|
-snprintf       |check|    |check|
-vsprintf       |check|    |check|
-vsnprintf      |check|    |check|
+sprintf        |check|
+snprintf       |check|
+vsprintf       |check|
+vsnprintf      |check|
+sscanf         |check|
 putchar        |check|    |check|
 fclose         |check|    |check|
 fopen          |check|    |check|

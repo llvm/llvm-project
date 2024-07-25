@@ -2451,8 +2451,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
 
       int FI = getOrCreateFrameIndex(*cast<AllocaInst>(Arg));
       MCSymbol *FrameAllocSym =
-          MF->getMMI().getContext().getOrCreateFrameAllocSymbol(EscapedName,
-                                                                Idx);
+          MF->getContext().getOrCreateFrameAllocSymbol(EscapedName, Idx);
 
       // This should be inserted at the start of the entry block.
       auto LocalEscape =

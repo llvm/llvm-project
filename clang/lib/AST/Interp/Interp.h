@@ -39,8 +39,9 @@ namespace interp {
 using APSInt = llvm::APSInt;
 
 /// Convert a value to an APValue.
-template <typename T> bool ReturnValue(const T &V, APValue &R) {
-  R = V.toAPValue();
+template <typename T>
+bool ReturnValue(const InterpState &S, const T &V, APValue &R) {
+  R = V.toAPValue(S.getCtx());
   return true;
 }
 
@@ -152,7 +153,8 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
   if (RHS.isNegative()) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS.toAPSInt();
-    return false;
+    if (!S.noteUndefinedBehavior())
+      return false;
   }
 
   // C++11 [expr.shift]p1: Shift width must be less than the bit width of
@@ -162,17 +164,24 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
     const APSInt Val = RHS.toAPSInt();
     QualType Ty = E->getType();
     S.CCEDiag(E, diag::note_constexpr_large_shift) << Val << Ty << Bits;
-    return !(S.getEvalStatus().Diag && !S.getEvalStatus().Diag->empty() && S.getLangOpts().CPlusPlus11);
+    if (!S.noteUndefinedBehavior())
+      return false;
   }
 
   if (LHS.isSigned() && !S.getLangOpts().CPlusPlus20) {
     const Expr *E = S.Current->getExpr(OpPC);
     // C++11 [expr.shift]p2: A signed left shift must have a non-negative
     // operand, and must not overflow the corresponding unsigned type.
-    if (LHS.isNegative())
+    if (LHS.isNegative()) {
       S.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
-    else if (LHS.toUnsigned().countLeadingZeros() < static_cast<unsigned>(RHS))
+      if (!S.noteUndefinedBehavior())
+        return false;
+    } else if (LHS.toUnsigned().countLeadingZeros() <
+               static_cast<unsigned>(RHS)) {
       S.CCEDiag(E, diag::note_constexpr_lshift_discards);
+      if (!S.noteUndefinedBehavior())
+        return false;
+    }
   }
 
   // C++2a [expr.shift]p2: [P0907R4]:
@@ -186,10 +195,15 @@ template <typename T>
 bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
   if (RHS.isZero()) {
     const auto *Op = cast<BinaryOperator>(S.Current->getExpr(OpPC));
+    if constexpr (std::is_same_v<T, Floating>) {
+      S.CCEDiag(Op, diag::note_expr_divide_by_zero)
+          << Op->getRHS()->getSourceRange();
+      return true;
+    }
+
     S.FFDiag(Op, diag::note_expr_divide_by_zero)
         << Op->getRHS()->getSourceRange();
-    if constexpr (!std::is_same_v<T, Floating>)
-      return false;
+    return false;
   }
 
   if (LHS.isSigned() && LHS.isMin() && RHS.isNegative() && RHS.isMinusOne()) {
@@ -286,7 +300,7 @@ bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
   } else {
     delete S.Current;
     S.Current = nullptr;
-    if (!ReturnValue<T>(Ret, Result))
+    if (!ReturnValue<T>(S, Ret, Result))
       return false;
   }
   return true;
@@ -1318,7 +1332,7 @@ bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
   const Pointer &Ptr = S.P.getGlobal(I);
 
   const T Value = S.Stk.peek<T>();
-  APValue APV = Value.toAPValue();
+  APValue APV = Value.toAPValue(S.getCtx());
   APValue *Cached = Temp->getOrCreateValue(true);
   *Cached = APV;
 
@@ -1557,7 +1571,10 @@ inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
     return false;
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
     return false;
-  S.Stk.push<Pointer>(Ptr.atField(Off));
+  const Pointer &Result = Ptr.atField(Off);
+  if (Result.isPastEnd())
+    return false;
+  S.Stk.push<Pointer>(Result);
   return true;
 }
 
@@ -1567,7 +1584,10 @@ inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off) {
     return false;
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
     return false;
-  S.Stk.push<Pointer>(Ptr.atField(Off));
+  const Pointer &Result = Ptr.atField(Off);
+  if (Result.isPastEnd())
+    return false;
+  S.Stk.push<Pointer>(Result);
   return true;
 }
 
@@ -2263,8 +2283,7 @@ inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS) {
     // shift is not a constant expression.
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS.toAPSInt();
-    if (S.getLangOpts().CPlusPlus11 && S.getEvalStatus().Diag &&
-        !S.getEvalStatus().Diag->empty())
+    if (!S.noteUndefinedBehavior())
       return false;
     RHS = -RHS;
     return DoShift < LT, RT,
@@ -2280,8 +2299,7 @@ inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS) {
       // E1 x 2^E2 module 2^N.
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.CCEDiag(Loc, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
-      if (S.getLangOpts().CPlusPlus11 && S.getEvalStatus().Diag &&
-          !S.getEvalStatus().Diag->empty())
+      if (!S.noteUndefinedBehavior())
         return false;
     }
   }
@@ -2735,6 +2753,15 @@ inline bool InvalidDeclRef(InterpState &S, CodePtr OpPC,
   return CheckDeclRef(S, OpPC, DR);
 }
 
+inline bool SizelessVectorElementSize(InterpState &S, CodePtr OpPC) {
+  if (S.inConstantContext()) {
+    const SourceRange &ArgRange = S.Current->getRange(OpPC);
+    const Expr *E = S.Current->getExpr(OpPC);
+    S.CCEDiag(E, diag::note_constexpr_non_const_vectorelements) << ArgRange;
+  }
+  return false;
+}
+
 inline bool Assume(InterpState &S, CodePtr OpPC) {
   const auto Val = S.Stk.pop<Boolean>();
 
@@ -2796,6 +2823,13 @@ inline bool DecayPtr(InterpState &S, CodePtr OpPC) {
   using ToT = typename PrimConv<TOut>::T;
 
   const FromT &OldPtr = S.Stk.pop<FromT>();
+
+  if constexpr (std::is_same_v<FromT, FunctionPointer> &&
+                std::is_same_v<ToT, Pointer>) {
+    S.Stk.push<Pointer>(OldPtr.getFunction());
+    return true;
+  }
+
   S.Stk.push<ToT>(ToT(OldPtr.getIntegerRepresentation(), nullptr));
   return true;
 }
@@ -2934,6 +2968,39 @@ static inline bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm) {
   }
   return CheckNewDeleteForms(S, OpPC, WasArrayAlloc, DeleteIsArrayForm,
                              BlockDesc, Source);
+}
+
+inline bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T) {
+  assert(T);
+  assert(!S.getLangOpts().CPlusPlus23);
+
+  // C++1y: A constant initializer for an object o [...] may also invoke
+  // constexpr constructors for o and its subobjects even if those objects
+  // are of non-literal class types.
+  //
+  // C++11 missed this detail for aggregates, so classes like this:
+  //   struct foo_t { union { int i; volatile int j; } u; };
+  // are not (obviously) initializable like so:
+  //   __attribute__((__require_constant_initialization__))
+  //   static const foo_t x = {{0}};
+  // because "i" is a subobject with non-literal initialization (due to the
+  // volatile member of the union). See:
+  //   http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_active.html#1677
+  // Therefore, we use the C++1y behavior.
+
+  if (S.EvaluatingDecl)
+    return true;
+
+  if (S.Current->getFunction() && S.Current->getFunction()->isConstructor() &&
+      S.Current->getThis().getDeclDesc()->asDecl() == S.EvaluatingDecl)
+    return true;
+
+  const Expr *E = S.Current->getExpr(OpPC);
+  if (S.getLangOpts().CPlusPlus11)
+    S.FFDiag(E, diag::note_constexpr_nonliteral) << E->getType();
+  else
+    S.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
