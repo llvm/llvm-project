@@ -31,4 +31,19 @@ def LowerQuantOps : Pass<"lower-quant-ops", "func::FuncOp"> {
   ];
 }
 
+def StripFuncQuantTypes : Pass<"strip-func-quant-types"> {
+  let summary = "Strip quantized types from function headers";
+  let description = [{
+    Identify occurrences of function arguments using a quantized type and
+    replace them with a new value of the corresponding storage (signless
+    integer) type. For each converted argument, a `quant.scast` op is introduced
+    at the head of the function's entry block converting the new integer
+    argument into the original quantized value.
+  }];
+  let dependentDialects = [
+    "func::FuncDialect",
+    "quant::QuantDialect"
+  ];
+}
+
 #endif // MLIR_DIALECT_QUANT_TRANSFORMS_PASSES
