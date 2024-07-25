@@ -64,6 +64,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include <optional>
 
@@ -509,6 +510,22 @@ void tools::addLinkerCompressDebugSectionsOption(
   }
 }
 
+void tools::addGPULibraries(const ToolChain &TC, const llvm::opt::ArgList &Args,
+                            llvm::opt::ArgStringList &CmdArgs) {
+  if (Args.hasArg(options::OPT_nostdlib, options::OPT_r,
+                  options::OPT_nodefaultlibs, options::OPT_nolibc,
+                  options::OPT_nogpulibc))
+    return;
+
+  // If the user's toolchain has the 'include/<triple>/` path, we assume it
+  // supports the standard C libraries for the GPU and include them.
+  bool HasLibC = TC.getStdlibIncludePath().has_value();
+  if (HasLibC) {
+    CmdArgs.push_back("-lc");
+    CmdArgs.push_back("-lm");
+  }
+}
+
 void tools::AddTargetFeature(const ArgList &Args,
                              std::vector<StringRef> &Features,
                              OptSpecifier OnOpt, OptSpecifier OffOpt,
@@ -618,7 +635,10 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
   case llvm::Triple::ppcle:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
-    return ppc::getPPCTargetCPU(D, Args, T);
+    if (Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ))
+      return std::string(
+          llvm::PPC::getNormalizedPPCTargetCPU(T, A->getValue()));
+    return std::string(llvm::PPC::getNormalizedPPCTargetCPU(T));
 
   case llvm::Triple::csky:
     if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
@@ -1145,42 +1165,6 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   }
 }
 
-/// Adds the '-lcgpu' and '-lmgpu' libraries to the compilation to include the
-/// LLVM C library for GPUs.
-static void addOpenMPDeviceLibC(const Compilation &C, const ArgList &Args,
-                                ArgStringList &CmdArgs) {
-  if (Args.hasArg(options::OPT_nogpulib) || Args.hasArg(options::OPT_nolibc))
-    return;
-
-  // Check the resource directory for the LLVM libc GPU declarations. If it's
-  // found we can assume that LLVM was built with support for the GPU libc.
-  SmallString<256> LibCDecls(C.getDriver().ResourceDir);
-  llvm::sys::path::append(LibCDecls, "include", "llvm_libc_wrappers",
-                          "llvm-libc-decls");
-  bool HasLibC = llvm::sys::fs::exists(LibCDecls) &&
-                 llvm::sys::fs::is_directory(LibCDecls);
-  if (!Args.hasFlag(options::OPT_gpulibc, options::OPT_nogpulibc, HasLibC))
-    return;
-
-  SmallVector<const ToolChain *> ToolChains;
-  auto TCRange = C.getOffloadToolChains(Action::OFK_OpenMP);
-  for (auto TI = TCRange.first, TE = TCRange.second; TI != TE; ++TI)
-    ToolChains.push_back(TI->second);
-
-  if (llvm::any_of(ToolChains, [](const ToolChain *TC) {
-        return TC->getTriple().isAMDGPU();
-      })) {
-    CmdArgs.push_back("-lcgpu-amdgpu");
-    CmdArgs.push_back("-lmgpu-amdgpu");
-  }
-  if (llvm::any_of(ToolChains, [](const ToolChain *TC) {
-        return TC->getTriple().isNVPTX();
-      })) {
-    CmdArgs.push_back("-lcgpu-nvptx");
-    CmdArgs.push_back("-lmgpu-nvptx");
-  }
-}
-
 void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,
                                         const ArgList &Args,
                                         ArgStringList &CmdArgs) {
@@ -1253,10 +1237,8 @@ bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
   if (IsOffloadingHost && !Args.hasArg(options::OPT_nogpulib))
     CmdArgs.push_back("-lomptarget.devicertl");
 
-  if (IsOffloadingHost)
-    addOpenMPDeviceLibC(C, Args, CmdArgs);
-
   addArchSpecificRPath(TC, Args, CmdArgs);
+
   addOpenMPRuntimeLibraryPath(TC, Args, CmdArgs);
 
   return true;
