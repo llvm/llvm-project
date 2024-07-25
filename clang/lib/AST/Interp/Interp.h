@@ -1252,8 +1252,7 @@ bool GetGlobalUnchecked(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Pointer &Ptr = S.P.getPtrGlobal(I);
   if (!Ptr.isInitialized())
     return false;
-  const Block *B = S.P.getGlobal(I);
-  S.Stk.push<T>(B->deref<T>());
+  S.Stk.push<T>(Ptr.deref<T>());
   return true;
 }
 
