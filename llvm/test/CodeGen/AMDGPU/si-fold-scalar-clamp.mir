@@ -13,12 +13,14 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; CHECK-NEXT: [[V_S_RSQ_F32_e64_:%[0-9]+]]:sgpr_32 = nofpexcept V_S_RSQ_F32_e64 0, [[COPY]], 1, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_S_RSQ_F32_e64_]]
-    ; CHECK-NEXT: EXP_DONE 0, killed [[COPY1]], [[COPY1]], [[COPY1]], [[COPY1]], -1, 0, 15, implicit $exec
+    ; CHECK-NEXT: [[V_ADD_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e32 [[COPY1]], [[COPY1]], implicit $mode, implicit $exec
+    ; CHECK-NEXT: $vgpr0 = COPY [[V_ADD_F32_e32_]]
     ; CHECK-NEXT: S_ENDPGM 0
     %0:sgpr_32 = COPY $sgpr0
     %1:sgpr_32 = nofpexcept V_S_RSQ_F32_e64 0, %0, 0, 0, implicit $mode, implicit $exec
     %2:vgpr_32 = nofpexcept V_MAX_F32_e64 0, %1, 0, %1, -1, 0, implicit $mode, implicit $exec
-    EXP_DONE 0, killed %2, %2, %2, %2, -1, 0, 15, implicit $exec
+    %3:vgpr_32 = nofpexcept V_ADD_F32_e32 %2:vgpr_32, %2:vgpr_32, implicit $mode, implicit $exec
+    $vgpr0 = COPY %3
     S_ENDPGM 0
 
 ...
