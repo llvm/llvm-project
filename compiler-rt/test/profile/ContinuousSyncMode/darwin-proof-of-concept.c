@@ -56,7 +56,7 @@ int create_tmpfile(char *path) {
   // - &cnts_start must be page-aligned.
   // - The length and offset-into-fd must be page-aligned.
   int *counter_map = (int *)mmap(&cnts_start, cnts_len, PROT_READ | PROT_WRITE,
-      MAP_FIXED | MAP_SHARED, fd, 0);
+                                 MAP_FIXED | MAP_SHARED, fd, 0);
   if (counter_map != &cnts_start) {
     perror("mmap");
     return EXIT_FAILURE;
@@ -132,7 +132,8 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
   if (data_start_int % 0x1000 != 0) {
-    fprintf(stderr, "__pdata is not correctly aligned: 0x%lx.\n", data_start_int);
+    fprintf(stderr, "__pdata is not correctly aligned: 0x%lx.\n",
+            data_start_int);
     return EXIT_FAILURE;
   }
   if (cnts_start_int + 0x1000 != data_start_int) {
