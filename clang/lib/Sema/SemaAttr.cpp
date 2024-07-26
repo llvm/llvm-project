@@ -193,6 +193,7 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
       "basic_string_view",
       "reference_wrapper",
       "regex_iterator",
+      "span",
   };
 
   if (!Record->getIdentifier())
