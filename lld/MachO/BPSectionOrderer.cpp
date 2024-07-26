@@ -48,9 +48,9 @@ getRelocHash(const Reloc &reloc,
     sectionIdx = sectionIdxIt->getSecond();
   std::string kind;
   if (isec)
-    kind = ("Section " + Twine(isec->kind())).str();
+    kind = ("Section " + Twine((uint8_t)isec->kind())).str();
   if (auto *sym = reloc.referent.dyn_cast<Symbol *>()) {
-    kind += (" Symbol " + Twine(sym->kind())).str();
+    kind += (" Symbol " + Twine((uint8_t)sym->kind())).str();
     if (auto *d = dyn_cast<Defined>(sym)) {
       if (isa_and_nonnull<CStringInputSection>(isec))
         return getRelocHash(kind, 0, isec->getOffset(d->value), reloc.addend);

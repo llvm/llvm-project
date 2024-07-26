@@ -9783,6 +9783,43 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportExistingEmptyAnonymousEnums) {
   EXPECT_EQ(ImportedE2, ToE1);
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, ImportMultipleAnonymousEnumDecls) {
+  Decl *ToTU = getToTuDecl("", Lang_CXX03);
+  Decl *FromTU = getTuDecl(
+      R"(
+        struct foo {
+          enum { A };
+          enum { B };
+        };
+      )",
+      Lang_CXX03);
+
+  auto EnumConstA = enumConstantDecl(hasName("A"));
+  auto EnumConstB = enumConstantDecl(hasName("B"));
+
+  auto *FromA = FirstDeclMatcher<EnumConstantDecl>().match(FromTU, EnumConstA);
+  auto *FromB = FirstDeclMatcher<EnumConstantDecl>().match(FromTU, EnumConstB);
+
+  auto *ToA = Import(FromA, Lang_CXX03);
+  auto *ToB = Import(FromB, Lang_CXX03);
+
+  ASSERT_TRUE(ToA);
+  ASSERT_TRUE(ToB);
+
+  auto *ToFooA = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, tagDecl(has(enumDecl(has(EnumConstA)))));
+  auto *ToFooB = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, tagDecl(has(enumDecl(has(EnumConstB)))));
+  ASSERT_EQ(ToFooA, ToFooB);
+
+  // different EnumDecl
+  auto *ToEnumDeclA =
+      FirstDeclMatcher<EnumDecl>().match(ToTU, enumDecl(has(EnumConstA)));
+  auto *ToEnumDeclB =
+      FirstDeclMatcher<EnumDecl>().match(ToTU, enumDecl(has(EnumConstB)));
+  ASSERT_NE(ToEnumDeclA, ToEnumDeclB);
+}
+
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ASTImporterLookupTableTest,
                          DefaultTestValuesForRunOptions);
 

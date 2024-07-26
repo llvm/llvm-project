@@ -186,6 +186,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.sprintf
     libc.src.stdio.vsnprintf
     libc.src.stdio.vsprintf
+    libc.src.stdio.sscanf
     libc.src.stdio.feof
     libc.src.stdio.ferror
     libc.src.stdio.fflush
@@ -346,6 +347,74 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.trunc
     libc.src.math.truncf
 )
+
+if(LIBC_TYPES_HAS_FLOAT16)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # math.h C23 _Float16 entrypoints
+    libc.src.math.canonicalizef16
+    libc.src.math.ceilf16
+    libc.src.math.copysignf16
+    libc.src.math.f16add
+    libc.src.math.f16addf
+    libc.src.math.f16div
+    libc.src.math.f16divf
+    libc.src.math.f16fma
+    libc.src.math.f16fmaf
+    libc.src.math.f16mul
+    libc.src.math.f16mulf
+    libc.src.math.f16sqrt
+    libc.src.math.f16sqrtf
+    libc.src.math.f16sub
+    libc.src.math.f16subf
+    libc.src.math.fabsf16
+    libc.src.math.fdimf16
+    libc.src.math.floorf16
+    libc.src.math.fmaxf16
+    libc.src.math.fmaximum_mag_numf16
+    libc.src.math.fmaximum_magf16
+    libc.src.math.fmaximum_numf16
+    libc.src.math.fmaximumf16
+    libc.src.math.fminf16
+    libc.src.math.fminimum_mag_numf16
+    libc.src.math.fminimum_magf16
+    libc.src.math.fminimum_numf16
+    libc.src.math.fminimumf16
+    libc.src.math.fmodf16
+    libc.src.math.frexpf16
+    libc.src.math.fromfpf16
+    libc.src.math.fromfpxf16
+    libc.src.math.getpayloadf16
+    libc.src.math.ilogbf16
+    libc.src.math.ldexpf16
+    libc.src.math.llogbf16
+    libc.src.math.llrintf16
+    libc.src.math.llroundf16
+    libc.src.math.logbf16
+    libc.src.math.lrintf16
+    libc.src.math.lroundf16
+    libc.src.math.modff16
+    libc.src.math.nanf16
+    libc.src.math.nearbyintf16
+    libc.src.math.nextafterf16
+    libc.src.math.nextdownf16
+    libc.src.math.nexttowardf16
+    libc.src.math.nextupf16
+    libc.src.math.remainderf16
+    libc.src.math.remquof16
+    libc.src.math.rintf16
+    libc.src.math.roundevenf16
+    libc.src.math.roundf16
+    libc.src.math.scalblnf16
+    libc.src.math.scalbnf16
+    libc.src.math.setpayloadf16
+    libc.src.math.setpayloadsigf16
+    libc.src.math.totalorderf16
+    libc.src.math.totalordermagf16
+    libc.src.math.truncf16
+    libc.src.math.ufromfpf16
+    libc.src.math.ufromfpxf16
+  )
+endif()
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS
   ${TARGET_LIBC_ENTRYPOINTS}

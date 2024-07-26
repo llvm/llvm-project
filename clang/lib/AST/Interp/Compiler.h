@@ -50,6 +50,7 @@ public:
     K_Field = 1,
     K_Temp = 2,
     K_Decl = 3,
+    K_Elem = 5,
   };
 
   static InitLink This() { return InitLink{K_This}; }
@@ -66,6 +67,11 @@ public:
   static InitLink Decl(const ValueDecl *D) {
     InitLink IL{K_Decl};
     IL.D = D;
+    return IL;
+  }
+  static InitLink Elem(unsigned Index) {
+    InitLink IL{K_Elem};
+    IL.Offset = Index;
     return IL;
   }
 
@@ -352,6 +358,8 @@ private:
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);
   bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
+
+  bool checkLiteralType(const Expr *E);
 
 protected:
   /// Variable to storage mapping.
