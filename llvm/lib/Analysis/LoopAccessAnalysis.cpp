@@ -1467,7 +1467,6 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
     return std::nullopt;
   }
 
-
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PtrScev);
   if (Assume && !AR)
     AR = PSE.getAsAddRec(Ptr);
@@ -1916,10 +1915,10 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
       BPtr->getType()->getPointerAddressSpace())
     return MemoryDepChecker::Dependence::Unknown;
 
-  std::optional<int64_t> StrideAPtr = getPtrStride(
-      PSE, ATy, APtr, InnermostLoop, SymbolicStrides, true, true);
-  std::optional<int64_t> StrideBPtr = getPtrStride(
-      PSE, BTy, BPtr, InnermostLoop, SymbolicStrides, true, true);
+  std::optional<int64_t> StrideAPtr =
+      getPtrStride(PSE, ATy, APtr, InnermostLoop, SymbolicStrides, true, true);
+  std::optional<int64_t> StrideBPtr =
+      getPtrStride(PSE, BTy, BPtr, InnermostLoop, SymbolicStrides, true, true);
 
   const SCEV *Src = PSE.getSCEV(APtr);
   const SCEV *Sink = PSE.getSCEV(BPtr);
@@ -2243,8 +2242,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   return Dependence::BackwardVectorizable;
 }
 
-bool MemoryDepChecker::areDepsSafe(
-    const DepCandidates &AccessSets, const MemAccessInfoList &CheckDeps) {
+bool MemoryDepChecker::areDepsSafe(const DepCandidates &AccessSets,
+                                   const MemAccessInfoList &CheckDeps) {
 
   MinDepDistBytes = -1;
   SmallPtrSet<MemAccessInfo, 8> Visited;
