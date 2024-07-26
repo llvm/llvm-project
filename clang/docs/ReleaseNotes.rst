@@ -111,6 +111,8 @@ Attribute Changes in Clang
 - Clang now disallows more than one ``__attribute__((ownership_returns(class, idx)))`` with
   different class names attached to one function.
 
+- Introduced a new format attribute ``__attribute__((format(syslog, 1, 2)))`` from OpenBSD.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
