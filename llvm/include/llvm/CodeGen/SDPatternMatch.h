@@ -529,7 +529,7 @@ struct BinaryOpc_match {
 
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS> m_BinOp(unsigned Opc, const LHS &L,
-                                                const RHS &R) {
+                                         const RHS &R) {
   return BinaryOpc_match<LHS, RHS>(Opc, L, R);
 }
 template <typename LHS, typename RHS>
