@@ -744,6 +744,19 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses dangling assignments for pointer-like objects (annotated with `[[gsl::Pointer]]`) under `-Wdangling-assignment-gsl` (off by default)
   Fixes #GH63310.
+  
+- Clang now diagnoses uses of alias templates with a deprecated attribute. (Fixes #GH18236).
+
+  .. code-block:: c++
+
+     template <typename T>
+     struct NoAttr {
+     };
+
+     template <typename T>
+     using UsingWithAttr __attribute__((deprecated)) = NoAttr<T>;
+
+     UsingWithAttr<int> objUsingWA; // warning: 'UsingWithAttr' is deprecated
 
 Improvements to Clang's time-trace
 ----------------------------------
