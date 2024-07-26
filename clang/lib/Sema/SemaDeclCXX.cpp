@@ -4239,7 +4239,7 @@ bool Sema::DiagRedefinedPlaceholderFieldDecl(SourceLocation Loc,
   Diag(Loc, diag::err_using_placeholder_variable) << Name;
   for (DeclContextLookupResult::iterator It = Found; It != Result.end(); It++) {
     const NamedDecl *ND = *It;
-    if (ND->getDeclContext() != ClassDecl->getDeclContext())
+    if (ND->getDeclContext() != ND->getDeclContext())
       break;
     if (isa<FieldDecl, IndirectFieldDecl>(ND) &&
         ND->isPlaceholderVar(getLangOpts()))

@@ -430,7 +430,7 @@ private:
               AST.getSourceManager(), AST.getLangOpts());
           if (EltRange.isInvalid())
             continue;
-          if (EltRange.getEnd() <= Range.getBegin() ||
+          if (EltRange.getEnd() < Range.getBegin() ||
               EltRange.getBegin() >= Range.getEnd())
             continue;
 
