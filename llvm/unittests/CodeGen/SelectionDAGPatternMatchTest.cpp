@@ -241,6 +241,8 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   SDValue Neg = DAG->getNegative(Op0, DL, Int32VT);
   SDValue Not = DAG->getNOT(DL, Op0, Int32VT);
 
+  SDValue VScale = DAG->getVScale(DL, Int32VT, APInt::getMaxValue(32));
+
   using namespace SDPatternMatch;
   EXPECT_TRUE(sd_match(ZExt, m_UnaryOp(ISD::ZERO_EXTEND, m_Value())));
   EXPECT_TRUE(sd_match(SExt, m_SExt(m_Value())));
@@ -251,6 +253,7 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   EXPECT_FALSE(sd_match(ZExt, m_Neg(m_Value())));
   EXPECT_FALSE(sd_match(Sub, m_Neg(m_Value())));
   EXPECT_FALSE(sd_match(Neg, m_Not(m_Value())));
+  EXPECT_TRUE(sd_match(VScale, m_VScale(m_Value())));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
