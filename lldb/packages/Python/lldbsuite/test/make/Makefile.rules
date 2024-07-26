@@ -55,8 +55,10 @@ LLDB_BASE_DIR := $(THIS_FILE_DIR)/../../../../../
 # Also reset BUILDDIR value because "pwd" returns cygwin or msys path
 # which needs to be converted to windows path.
 #----------------------------------------------------------------------
-ifeq "$(OS)" "Windows_NT"
-	SHELL = $(WINDIR)\system32\cmd.exe
+ifeq "$(HOST_OS)" "Windows_NT"
+	# MinGW make gets $(windir) variable if launched from cmd.exe
+	# and $(WINDIR) if launched from MSYS2.
+	SHELL := $(or $(windir),$(WINDIR),C:\WINDOWS)\system32\cmd.exe
 	BUILDDIR := $(shell echo %cd%)
 endif
 
