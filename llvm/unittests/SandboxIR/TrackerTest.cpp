@@ -69,6 +69,49 @@ define void @foo(ptr %ptr) {
   EXPECT_EQ(Ld->getOperand(0), Gep0);
 }
 
+TEST_F(TrackerTest, SwapOperands) {
+  parseIR(C, R"IR(
+define void @foo(i1 %cond) {
+ bb0:
+   br i1 %cond, label %bb1, label %bb2
+ bb1:
+   ret void
+ bb2:
+   ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  Ctx.createFunction(&LLVMF);
+  auto *BB0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb0")));
+  auto *BB1 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb1")));
+  auto *BB2 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb2")));
+  auto &Tracker = Ctx.getTracker();
+  Tracker.save();
+  auto It = BB0->begin();
+  auto *Br = cast<sandboxir::BranchInst>(&*It++);
+
+  unsigned SuccIdx = 0;
+  SmallVector<sandboxir::BasicBlock *> ExpectedSuccs({BB2, BB1});
+  for (auto *Succ : Br->successors())
+    EXPECT_EQ(Succ, ExpectedSuccs[SuccIdx++]);
+
+  // This calls User::swapOperandsInternal() internally.
+  Br->swapSuccessors();
+
+  SuccIdx = 0;
+  for (auto *Succ : reverse(Br->successors()))
+    EXPECT_EQ(Succ, ExpectedSuccs[SuccIdx++]);
+
+  Ctx.getTracker().revert();
+  SuccIdx = 0;
+  for (auto *Succ : Br->successors())
+    EXPECT_EQ(Succ, ExpectedSuccs[SuccIdx++]);
+}
+
 TEST_F(TrackerTest, RUWIf_RAUW_RUOW) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr) {

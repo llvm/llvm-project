@@ -1537,6 +1537,16 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                 << Idx.getSourceIndex() << Ex->getSourceRange();
           return;
         }
+      } else if (K == OwnershipAttr::Takes &&
+                 I->getOwnKind() == OwnershipAttr::Takes) {
+        if (I->getModule()->getName() != ModuleName) {
+          S.Diag(I->getLocation(), diag::err_ownership_takes_class_mismatch)
+              << I->getModule()->getName();
+          S.Diag(AL.getLoc(), diag::note_ownership_takes_class_mismatch)
+              << ModuleName << Ex->getSourceRange();
+
+          return;
+        }
       }
     }
     OwnershipArgs.push_back(Idx);
@@ -3397,8 +3407,8 @@ static FormatAttrKind getFormatAttrKind(StringRef Format) {
       // Otherwise, check for supported formats.
       .Cases("scanf", "printf", "printf0", "strfmon", SupportedFormat)
       .Cases("cmn_err", "vcmn_err", "zcmn_err", SupportedFormat)
-      .Case("kprintf", SupportedFormat)         // OpenBSD.
-      .Case("freebsd_kprintf", SupportedFormat) // FreeBSD.
+      .Cases("kprintf", "syslog", SupportedFormat) // OpenBSD.
+      .Case("freebsd_kprintf", SupportedFormat)    // FreeBSD.
       .Case("os_trace", SupportedFormat)
       .Case("os_log", SupportedFormat)
 

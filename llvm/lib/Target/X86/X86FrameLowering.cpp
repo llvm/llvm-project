@@ -473,7 +473,7 @@ void X86FrameLowering::emitCalleeSavedFrameMovesFullCFA(
                                : FramePtr;
   unsigned DwarfReg = MRI->getDwarfRegNum(MachineFramePtr, true);
   // Offset = space for return address + size of the frame pointer itself.
-  unsigned Offset = (Is64Bit ? 8 : 4) + (Uses64BitFramePtr ? 8 : 4);
+  int64_t Offset = (Is64Bit ? 8 : 4) + (Uses64BitFramePtr ? 8 : 4);
   BuildCFI(MBB, MBBI, DebugLoc{},
            MCCFIInstruction::createOffset(nullptr, DwarfReg, -Offset));
   emitCalleeSavedFrameMoves(MBB, MBBI, DebugLoc{}, true);
@@ -2553,7 +2553,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (!HasFP && NeedsDwarfCFI) {
     MBBI = FirstCSPop;
-    int64_t Offset = -CSSize - SlotSize;
+    int64_t Offset = -(int64_t)CSSize - SlotSize;
     // Mark callee-saved pop instruction.
     // Define the current CFA rule to use the provided offset.
     while (MBBI != MBB.end()) {

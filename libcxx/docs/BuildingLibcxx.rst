@@ -406,7 +406,8 @@ libc++ Feature Options
   Specify the path to a header that contains a custom implementation of the
   assertion handler that gets invoked when a hardening assertion fails. If
   provided, this header will be included by the library, replacing the
-  default assertion handler.
+  default assertion handler. If this is specified as a relative path, it
+  is assumed to be relative to ``<monorepo>/libcxx``.
 
 
 libc++ ABI Feature Options

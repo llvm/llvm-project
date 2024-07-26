@@ -3426,11 +3426,6 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductionsGPU(
   else
     Config.setGridValue(getGridValue(T, ReductionFunc));
 
-  uint32_t SrcLocStrSize;
-  Constant *SrcLocStr = getOrCreateDefaultSrcLocStr(SrcLocStrSize);
-  Value *RTLoc =
-      getOrCreateIdent(SrcLocStr, SrcLocStrSize, omp::IdentFlag(0), 0);
-
   // Build res = __kmpc_reduce{_nowait}(<gtid>, <n>, sizeof(RedList),
   // RedList, shuffle_reduce_func, interwarp_copy_func);
   // or
@@ -3483,7 +3478,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductionsGPU(
         Builder.CreatePointerBitCastOrAddrSpaceCast(SarFunc, PtrTy);
     Value *WcFuncCast =
         Builder.CreatePointerBitCastOrAddrSpaceCast(WcFunc, PtrTy);
-    Value *Args[] = {RTLoc, ReductionDataSize, RL, SarFuncCast, WcFuncCast};
+    Value *Args[] = {SrcLocInfo, ReductionDataSize, RL, SarFuncCast,
+                     WcFuncCast};
     Function *Pv2Ptr = getOrCreateRuntimeFunctionPtr(
         RuntimeFunction::OMPRTL___kmpc_nvptx_parallel_reduce_nowait_v2);
     Res = Builder.CreateCall(Pv2Ptr, Args);
@@ -3506,7 +3502,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductionsGPU(
     Value *KernelTeamsReductionPtr = Builder.CreateCall(
         RedFixedBuferFn, {}, "_openmp_teams_reductions_buffer_$_$ptr");
 
-    Value *Args3[] = {RTLoc,
+    Value *Args3[] = {SrcLocInfo,
                       KernelTeamsReductionPtr,
                       Builder.getInt32(ReductionBufNum),
                       ReductionDataSize,
@@ -6013,7 +6009,17 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
   Constant *MayUseNestedParallelismVal = ConstantInt::getSigned(Int8, true);
   Constant *DebugIndentionLevelVal = ConstantInt::getSigned(Int16, 0);
 
-  Function *Kernel = Builder.GetInsertBlock()->getParent();
+  Function *DebugKernelWrapper = Builder.GetInsertBlock()->getParent();
+  Function *Kernel = DebugKernelWrapper;
+
+  // We need to strip the debug prefix to get the correct kernel name.
+  StringRef KernelName = Kernel->getName();
+  const std::string DebugPrefix = "_debug__";
+  if (KernelName.ends_with(DebugPrefix)) {
+    KernelName = KernelName.drop_back(DebugPrefix.length());
+    Kernel = M.getFunction(KernelName);
+    assert(Kernel && "Expected the real kernel to exist");
+  }
 
   // Manifest the launch configuration in the metadata matching the kernel
   // environment.
@@ -6034,12 +6040,6 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
   Constant *MaxTeams = ConstantInt::getSigned(Int32, MaxTeamsVal);
   Constant *ReductionDataSize = ConstantInt::getSigned(Int32, 0);
   Constant *ReductionBufferLength = ConstantInt::getSigned(Int32, 0);
-
-  // We need to strip the debug prefix to get the correct kernel name.
-  StringRef KernelName = Kernel->getName();
-  const std::string DebugPrefix = "_debug__";
-  if (KernelName.ends_with(DebugPrefix))
-    KernelName = KernelName.drop_back(DebugPrefix.length());
 
   Function *Fn = getOrCreateRuntimeFunctionPtr(
       omp::RuntimeFunction::OMPRTL___kmpc_target_init);
@@ -6093,7 +6093,7 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
           ? KernelEnvironmentGV
           : ConstantExpr::getAddrSpaceCast(KernelEnvironmentGV,
                                            KernelEnvironmentPtr);
-  Value *KernelLaunchEnvironment = Kernel->getArg(0);
+  Value *KernelLaunchEnvironment = DebugKernelWrapper->getArg(0);
   CallInst *ThreadKind =
       Builder.CreateCall(Fn, {KernelEnvironment, KernelLaunchEnvironment});
 
@@ -6368,8 +6368,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
                          CustomMapperCB);
 
     TargetDataRTArgs RTArgs;
-    emitOffloadingArraysArgument(Builder, RTArgs, Info,
-                                 !MapInfo->Names.empty());
+    emitOffloadingArraysArgument(Builder, RTArgs, Info);
 
     // Emit the number of elements in the offloading arrays.
     Value *PointerNum = Builder.getInt32(Info.NumberOfPtrs);
@@ -6422,8 +6421,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
   // Generate code for the closing of the data region.
   auto EndThenGen = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
     TargetDataRTArgs RTArgs;
-    emitOffloadingArraysArgument(Builder, RTArgs, Info, !MapInfo->Names.empty(),
-                                 /*ForEndCall=*/true);
+    Info.EmitDebug = !MapInfo->Names.empty();
+    emitOffloadingArraysArgument(Builder, RTArgs, Info, /*ForEndCall=*/true);
 
     // Emit the number of elements in the offloading arrays.
     Value *PointerNum = Builder.getInt32(Info.NumberOfPtrs);
@@ -7053,6 +7052,16 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetTask(
                     << "\n");
   return Builder.saveIP();
 }
+void OpenMPIRBuilder::emitOffloadingArraysAndArgs(
+    InsertPointTy AllocaIP, InsertPointTy CodeGenIP, TargetDataInfo &Info,
+    TargetDataRTArgs &RTArgs, MapInfosTy &CombinedInfo, bool IsNonContiguous,
+    bool ForEndCall, function_ref<void(unsigned int, Value *)> DeviceAddrCB,
+    function_ref<Value *(unsigned int)> CustomMapperCB) {
+  emitOffloadingArrays(AllocaIP, CodeGenIP, CombinedInfo, Info, IsNonContiguous,
+                       DeviceAddrCB, CustomMapperCB);
+  emitOffloadingArraysArgument(Builder, RTArgs, Info, ForEndCall);
+}
+
 static void emitTargetCall(
     OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
     OpenMPIRBuilder::InsertPointTy AllocaIP, Function *OutlinedFn,
@@ -7066,12 +7075,11 @@ static void emitTargetCall(
       /*SeparateBeginEndCalls=*/true);
 
   OpenMPIRBuilder::MapInfosTy &MapInfo = GenMapInfoCB(Builder.saveIP());
-  OMPBuilder.emitOffloadingArrays(AllocaIP, Builder.saveIP(), MapInfo, Info,
-                                  /*IsNonContiguous=*/true);
-
   OpenMPIRBuilder::TargetDataRTArgs RTArgs;
-  OMPBuilder.emitOffloadingArraysArgument(Builder, RTArgs, Info,
-                                          !MapInfo.Names.empty());
+  OMPBuilder.emitOffloadingArraysAndArgs(AllocaIP, Builder.saveIP(), Info,
+                                         RTArgs, MapInfo,
+                                         /*IsNonContiguous=*/true,
+                                         /*ForEndCall=*/false);
 
   //  emitKernelLaunch
   auto &&EmitTargetCallFallbackCB =
@@ -7081,7 +7089,7 @@ static void emitTargetCall(
     return Builder.saveIP();
   };
 
-  unsigned NumTargetItems = MapInfo.BasePointers.size();
+  unsigned NumTargetItems = Info.NumberOfPtrs;
   // TODO: Use correct device ID
   Value *DeviceID = Builder.getInt64(OMP_DEVICEID_UNDEF);
   Value *NumTeamsVal = Builder.getInt32(NumTeams);
@@ -7275,7 +7283,6 @@ void OpenMPIRBuilder::emitMapperCall(const LocationDescription &Loc,
 void OpenMPIRBuilder::emitOffloadingArraysArgument(IRBuilderBase &Builder,
                                                    TargetDataRTArgs &RTArgs,
                                                    TargetDataInfo &Info,
-                                                   bool EmitDebug,
                                                    bool ForEndCall) {
   assert((!ForEndCall || Info.separateBeginEndCalls()) &&
          "expected region end call to runtime only when end call is separate");
@@ -7315,7 +7322,7 @@ void OpenMPIRBuilder::emitOffloadingArraysArgument(IRBuilderBase &Builder,
 
   // Only emit the mapper information arrays if debug information is
   // requested.
-  if (!EmitDebug)
+  if (!Info.EmitDebug)
     RTArgs.MapNamesArray = ConstantPointerNull::get(VoidPtrPtrTy);
   else
     RTArgs.MapNamesArray = Builder.CreateConstInBoundsGEP2_32(
@@ -7504,9 +7511,11 @@ void OpenMPIRBuilder::emitOffloadingArrays(
     auto *MapNamesArrayGbl =
         createOffloadMapnames(CombinedInfo.Names, MapnamesName);
     Info.RTArgs.MapNamesArray = MapNamesArrayGbl;
+    Info.EmitDebug = true;
   } else {
     Info.RTArgs.MapNamesArray =
         Constant::getNullValue(PointerType::getUnqual(Builder.getContext()));
+    Info.EmitDebug = false;
   }
 
   // If there's a present map type modifier, it must not be applied to the end

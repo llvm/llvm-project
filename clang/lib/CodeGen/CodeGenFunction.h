@@ -4160,6 +4160,13 @@ public:
           llvm::AtomicOrdering::SequentiallyConsistent,
       bool IsWeak = false, AggValueSlot Slot = AggValueSlot::ignored());
 
+  /// Emit an atomicrmw instruction, and applying relevant metadata when
+  /// applicable.
+  llvm::AtomicRMWInst *emitAtomicRMWInst(
+      llvm::AtomicRMWInst::BinOp Op, Address Addr, llvm::Value *Val,
+      llvm::AtomicOrdering Order = llvm::AtomicOrdering::SequentiallyConsistent,
+      llvm::SyncScope::ID SSID = llvm::SyncScope::System);
+
   void EmitAtomicUpdate(LValue LVal, llvm::AtomicOrdering AO,
                         const llvm::function_ref<RValue(RValue)> &UpdateOp,
                         bool IsVolatile);
@@ -4696,6 +4703,9 @@ public:
   llvm::Value *EmitHexagonBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitRISCVBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                     ReturnValueSlot ReturnValue);
+
+  llvm::Value *EmitRISCVCpuSupports(const CallExpr *E);
+  llvm::Value *EmitRISCVCpuInit();
 
   void AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
                                       const CallExpr *E);

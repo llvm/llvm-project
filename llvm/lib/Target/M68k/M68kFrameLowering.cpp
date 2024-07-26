@@ -475,13 +475,11 @@ void M68kFrameLowering::emitPrologue(MachineFunction &MF,
 
   MachineBasicBlock::iterator MBBI = MBB.begin();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  const auto &Fn = MF.getFunction();
-  MachineModuleInfo &MMI = MF.getMMI();
   M68kMachineFunctionInfo *MMFI = MF.getInfo<M68kMachineFunctionInfo>();
   uint64_t MaxAlign = calculateMaxStackAlign(MF); // Desired stack alignment.
   uint64_t StackSize = MFI.getStackSize(); // Number of bytes to allocate.
   bool HasFP = hasFP(MF);
-  bool NeedsDwarfCFI = MMI.hasDebugInfo() || Fn.needsUnwindTableEntry();
+  bool NeedsDwarfCFI = MF.needsFrameMoves();
   Register FramePtr = TRI->getFrameRegister(MF);
   const unsigned MachineFramePtr = FramePtr;
   unsigned BasePtr = TRI->getBaseRegister();

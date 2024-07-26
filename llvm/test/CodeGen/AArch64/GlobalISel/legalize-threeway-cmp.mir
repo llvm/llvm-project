@@ -14,11 +14,12 @@ body:             |
     ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(slt), [[COPY]](s64), [[COPY1]]
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
     ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s32), [[C2]], [[SELECT]]
-    ; CHECK-NEXT: $w0 = COPY [[SELECT1]](s32)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[SELECT1]], 2
+    ; CHECK-NEXT: $w0 = COPY [[SEXT_INREG]](s32)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x0
     %4:_(s2) = G_SCMP %0(s64), %1
-    %14:_(s32) = G_ANYEXT %4(s2)
+    %14:_(s32) = G_SEXT %4(s2)
     $w0 = COPY %14(s32)
 
 ...
@@ -36,11 +37,12 @@ body:             |
     ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[COPY]](s64), [[COPY1]]
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
     ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s32), [[C2]], [[SELECT]]
-    ; CHECK-NEXT: $w0 = COPY [[SELECT1]](s32)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[SELECT1]], 2
+    ; CHECK-NEXT: $w0 = COPY [[SEXT_INREG]](s32)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x0
     %4:_(s2) = G_UCMP %0(s64), %1
-    %14:_(s32) = G_ANYEXT %4(s2)
+    %14:_(s32) = G_SEXT %4(s2)
     $w0 = COPY %14(s32)
 
 ...
@@ -94,7 +96,8 @@ body:             |
     ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(<4 x s16>) = G_AND [[OR]], [[XOR1]]
     ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(<4 x s16>) = G_OR [[AND2]], [[AND3]]
     ; CHECK-NEXT: [[ANYEXT5:%[0-9]+]]:_(<4 x s32>) = G_ANYEXT [[OR1]](<4 x s16>)
-    ; CHECK-NEXT: $q0 = COPY [[ANYEXT5]](<4 x s32>)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(<4 x s32>) = G_SEXT_INREG [[ANYEXT5]], 2
+    ; CHECK-NEXT: $q0 = COPY [[SEXT_INREG]](<4 x s32>)
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(s32) = COPY $w2
@@ -106,7 +109,7 @@ body:             |
     %8:_(s32) = COPY $w3
     %9:_(<4 x s32>) = G_BUILD_VECTOR %0(s32), %1(s32), %2(s32), %3(s32)
     %10:_(<4 x s2>) = G_UCMP %4(<4 x s32>), %9
-    %11:_(<4 x s32>) = G_ANYEXT %10(<4 x s2>)
+    %11:_(<4 x s32>) = G_SEXT %10(<4 x s2>)
     $q0 = COPY %11(<4 x s32>)
 
 ...
@@ -131,11 +134,12 @@ body:             |
     ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[ICMP4]](s32), [[ICMP5]], [[ICMP3]]
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
     ; CHECK-NEXT: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[SELECT2]](s32), [[C2]], [[SELECT1]]
-    ; CHECK-NEXT: $w0 = COPY [[SELECT3]](s32)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[SELECT3]], 2
+    ; CHECK-NEXT: $w0 = COPY [[SEXT_INREG]](s32)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x0
     %l:_(s128) = G_ANYEXT %0
     %r:_(s128) = G_ANYEXT %1
     %4:_(s2) = G_UCMP %l(s128), %r
-    %14:_(s32) = G_ANYEXT %4(s2)
+    %14:_(s32) = G_SEXT %4(s2)
     $w0 = COPY %14(s32)

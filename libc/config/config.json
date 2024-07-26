@@ -1,8 +1,8 @@
 {
   "errno": {
     "LIBC_CONF_ERRNO_MODE": {
-      "value": "",
-      "doc": "The implementation used for errno, acceptable values are LIBC_ERRNO_MODE_UNDEFINED, LIBC_ERRNO_MODE_THREAD_LOCAL, LIBC_ERRNO_MODE_SHARED, LIBC_ERRNO_MODE_EXTERNAL, and LIBC_ERRNO_MODE_SYSTEM."
+      "value": "LIBC_ERRNO_MODE_DEFAULT",
+      "doc": "The implementation used for errno, acceptable values are LIBC_ERRNO_MODE_DEFAULT, LIBC_ERRNO_MODE_UNDEFINED, LIBC_ERRNO_MODE_THREAD_LOCAL, LIBC_ERRNO_MODE_SHARED, LIBC_ERRNO_MODE_EXTERNAL, and LIBC_ERRNO_MODE_SYSTEM."
     }
   },
   "printf": {
@@ -69,12 +69,6 @@
     "LIBC_CONF_RWLOCK_DEFAULT_SPIN_COUNT": {
       "value": 100,
       "doc": "Default number of spins before blocking if a rwlock is in contention (default to 100)."
-    }
-  },
-  "malloc": {
-    "LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE": {
-      "value": 1073741824,
-      "doc": "Default size for the constinit freelist buffer used for the freelist malloc implementation (default 1o 1GB)."
     }
   },
   "unistd": {
