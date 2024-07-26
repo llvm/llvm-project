@@ -18478,6 +18478,11 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   F->insert(I, IfFalseMBB);
   F->insert(I, TailMBB);
 
+  // Set the call frame size on entry to the new basic blocks.
+  unsigned CallFrameSize = TII.getCallFrameSizeAt(MI);
+  IfFalseMBB->setCallFrameSize(CallFrameSize);
+  TailMBB->setCallFrameSize(CallFrameSize);
+
   // Transfer debug instructions associated with the selects to TailMBB.
   for (MachineInstr *DebugInstr : SelectDebugValues) {
     TailMBB->push_back(DebugInstr->removeFromParent());
