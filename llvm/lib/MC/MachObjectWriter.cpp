@@ -394,7 +394,7 @@ const MCSymbol &MachObjectWriter::findAliasedSymbol(const MCSymbol &Sym) const {
 
 void MachObjectWriter::writeNlist(MachSymbolData &MSD, const MCAssembler &Asm) {
   const MCSymbol *Symbol = MSD.Symbol;
-  const MCSymbol &Data = *Symbol;
+  const auto &Data = cast<MCSymbolMachO>(*Symbol);
   const MCSymbol *AliasedSymbol = &findAliasedSymbol(*Symbol);
   uint8_t SectionIndex = MSD.SectionIndex;
   uint8_t Type = 0;

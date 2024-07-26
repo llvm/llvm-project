@@ -99,7 +99,7 @@ protected:
   /// uses binding instead of this bit.
   mutable unsigned IsExternal : 1;
 
-  /// This symbol is private extern.
+  /// Mach-O specific: This symbol is private extern.
   mutable unsigned IsPrivateExtern : 1;
 
   /// This symbol is weak external.
@@ -407,9 +407,7 @@ public:
   bool isExternal() const { return IsExternal; }
   void setExternal(bool Value) const { IsExternal = Value; }
 
-  bool isPrivateExtern() const { return IsPrivateExtern; }
-  void setPrivateExtern(bool Value) { IsPrivateExtern = Value; }
-
+  // COFF-specific
   bool isWeakExternal() const { return IsWeakExternal; }
 
   /// print - Print the value to the stream \p OS.
