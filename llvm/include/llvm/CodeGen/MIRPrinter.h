@@ -21,6 +21,7 @@ namespace llvm {
 
 class MachineBasicBlock;
 class MachineFunction;
+class MachineModuleInfo;
 class Module;
 template <typename T> class SmallVectorImpl;
 

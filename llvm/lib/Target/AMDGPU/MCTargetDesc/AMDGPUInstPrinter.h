@@ -36,11 +36,8 @@ public:
                               const MCRegisterInfo &MRI);
 
 private:
-  void printU4ImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
   void printU16ImmOperand(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU4ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU16ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU32ImmOperand(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
