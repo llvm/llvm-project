@@ -289,6 +289,11 @@ public:
             strchr(getRecord(ID).Attributes, 'O') != nullptr);
   }
 
+  /// Returns true if this is an immediate (consteval) function
+  bool isImmediate(unsigned ID) const {
+    return strchr(getRecord(ID).Attributes, 'G') != nullptr;
+  }
+
 private:
   const Info &getRecord(unsigned ID) const;
 

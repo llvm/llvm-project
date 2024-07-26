@@ -1468,7 +1468,31 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       callOp = builder.create<CallOp>(loc, funcTy, operands);
     }
     callOp.setCConv(convertCConvFromLLVM(callInst->getCallingConv()));
+    callOp.setTailCallKind(
+        convertTailCallKindFromLLVM(callInst->getTailCallKind()));
     setFastmathFlagsAttr(inst, callOp);
+
+    // Handle function attributes.
+    if (callInst->hasFnAttr(llvm::Attribute::Convergent))
+      callOp.setConvergent(true);
+    if (callInst->hasFnAttr(llvm::Attribute::NoUnwind))
+      callOp.setNoUnwind(true);
+    if (callInst->hasFnAttr(llvm::Attribute::WillReturn))
+      callOp.setWillReturn(true);
+
+    llvm::MemoryEffects memEffects = callInst->getMemoryEffects();
+    ModRefInfo othermem = convertModRefInfoFromLLVM(
+        memEffects.getModRef(llvm::MemoryEffects::Location::Other));
+    ModRefInfo argMem = convertModRefInfoFromLLVM(
+        memEffects.getModRef(llvm::MemoryEffects::Location::ArgMem));
+    ModRefInfo inaccessibleMem = convertModRefInfoFromLLVM(
+        memEffects.getModRef(llvm::MemoryEffects::Location::InaccessibleMem));
+    auto memAttr = MemoryEffectsAttr::get(callOp.getContext(), othermem, argMem,
+                                          inaccessibleMem);
+    // Only set the attribute when it does not match the default value.
+    if (!memAttr.isReadWrite())
+      callOp.setMemoryEffectsAttr(memAttr);
+
     if (!callInst->getType()->isVoidTy())
       mapValue(inst, callOp.getResult());
     else
@@ -1659,28 +1683,38 @@ static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {
   // Only set the attr when it does not match the default value.
   if (memAttr.isReadWrite())
     return;
-  funcOp.setMemoryAttr(memAttr);
+  funcOp.setMemoryEffectsAttr(memAttr);
 }
 
 // List of LLVM IR attributes that map to an explicit attribute on the MLIR
 // LLVMFuncOp.
-static constexpr std::array ExplicitAttributes{
-    StringLiteral("aarch64_pstate_sm_enabled"),
+static constexpr std::array kExplicitAttributes{
+    StringLiteral("aarch64_in_za"),
+    StringLiteral("aarch64_inout_za"),
+    StringLiteral("aarch64_new_za"),
+    StringLiteral("aarch64_out_za"),
+    StringLiteral("aarch64_preserves_za"),
     StringLiteral("aarch64_pstate_sm_body"),
     StringLiteral("aarch64_pstate_sm_compatible"),
-    StringLiteral("aarch64_new_za"),
-    StringLiteral("aarch64_preserves_za"),
-    StringLiteral("aarch64_in_za"),
-    StringLiteral("aarch64_out_za"),
-    StringLiteral("aarch64_inout_za"),
-    StringLiteral("vscale_range"),
+    StringLiteral("aarch64_pstate_sm_enabled"),
+    StringLiteral("alwaysinline"),
+    StringLiteral("approx-func-fp-math"),
+    StringLiteral("convergent"),
+    StringLiteral("denormal-fp-math"),
+    StringLiteral("denormal-fp-math-f32"),
+    StringLiteral("fp-contract"),
     StringLiteral("frame-pointer"),
-    StringLiteral("target-features"),
-    StringLiteral("unsafe-fp-math"),
     StringLiteral("no-infs-fp-math"),
     StringLiteral("no-nans-fp-math"),
-    StringLiteral("approx-func-fp-math"),
     StringLiteral("no-signed-zeros-fp-math"),
+    StringLiteral("noinline"),
+    StringLiteral("nounwind"),
+    StringLiteral("optnone"),
+    StringLiteral("target-features"),
+    StringLiteral("tune-cpu"),
+    StringLiteral("unsafe-fp-math"),
+    StringLiteral("vscale_range"),
+    StringLiteral("willreturn"),
 };
 
 static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
@@ -1709,7 +1743,7 @@ static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
     auto keyAttr = StringAttr::get(context, attrName);
 
     // Skip attributes that map to an explicit attribute on the LLVMFuncOp.
-    if (llvm::is_contained(ExplicitAttributes, attrName))
+    if (llvm::is_contained(kExplicitAttributes, attrName))
       continue;
 
     if (attr.isStringAttribute()) {
@@ -1744,6 +1778,19 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
                                              LLVMFuncOp funcOp) {
   processMemoryEffects(func, funcOp);
   processPassthroughAttrs(func, funcOp);
+
+  if (func->hasFnAttribute(llvm::Attribute::NoInline))
+    funcOp.setNoInline(true);
+  if (func->hasFnAttribute(llvm::Attribute::AlwaysInline))
+    funcOp.setAlwaysInline(true);
+  if (func->hasFnAttribute(llvm::Attribute::OptimizeNone))
+    funcOp.setOptimizeNone(true);
+  if (func->hasFnAttribute(llvm::Attribute::Convergent))
+    funcOp.setConvergent(true);
+  if (func->hasFnAttribute(llvm::Attribute::NoUnwind))
+    funcOp.setNoUnwind(true);
+  if (func->hasFnAttribute(llvm::Attribute::WillReturn))
+    funcOp.setWillReturn(true);
 
   if (func->hasFnAttribute("aarch64_pstate_sm_enabled"))
     funcOp.setArmStreaming(true);
@@ -1786,6 +1833,10 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
       attr.isStringAttribute())
     funcOp.setTargetCpuAttr(StringAttr::get(context, attr.getValueAsString()));
 
+  if (llvm::Attribute attr = func->getFnAttribute("tune-cpu");
+      attr.isStringAttribute())
+    funcOp.setTuneCpuAttr(StringAttr::get(context, attr.getValueAsString()));
+
   if (llvm::Attribute attr = func->getFnAttribute("target-features");
       attr.isStringAttribute())
     funcOp.setTargetFeaturesAttr(
@@ -1810,6 +1861,20 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   if (llvm::Attribute attr = func->getFnAttribute("no-signed-zeros-fp-math");
       attr.isStringAttribute())
     funcOp.setNoSignedZerosFpMath(attr.getValueAsBool());
+
+  if (llvm::Attribute attr = func->getFnAttribute("denormal-fp-math");
+      attr.isStringAttribute())
+    funcOp.setDenormalFpMathAttr(
+        StringAttr::get(context, attr.getValueAsString()));
+
+  if (llvm::Attribute attr = func->getFnAttribute("denormal-fp-math-f32");
+      attr.isStringAttribute())
+    funcOp.setDenormalFpMathF32Attr(
+        StringAttr::get(context, attr.getValueAsString()));
+
+  if (llvm::Attribute attr = func->getFnAttribute("fp-contract");
+      attr.isStringAttribute())
+    funcOp.setFpContractAttr(StringAttr::get(context, attr.getValueAsString()));
 }
 
 DictionaryAttr

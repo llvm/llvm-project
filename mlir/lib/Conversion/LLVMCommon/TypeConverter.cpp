@@ -153,25 +153,51 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
                                        type.isVarArg());
   });
 
-  // Materialization for memrefs creates descriptor structs from individual
-  // values constituting them, when descriptors are used, i.e. more than one
-  // value represents a memref.
+  // Argument materializations convert from the new block argument types
+  // (multiple SSA values that make up a memref descriptor) back to the
+  // original block argument type. The dialect conversion framework will then
+  // insert a target materialization from the original block argument type to
+  // a legal type.
   addArgumentMaterialization(
       [&](OpBuilder &builder, UnrankedMemRefType resultType, ValueRange inputs,
           Location loc) -> std::optional<Value> {
-        if (inputs.size() == 1)
+        if (inputs.size() == 1) {
+          // Bare pointers are not supported for unranked memrefs because a
+          // memref descriptor cannot be built just from a bare pointer.
           return std::nullopt;
-        return UnrankedMemRefDescriptor::pack(builder, loc, *this, resultType,
-                                              inputs);
+        }
+        Value desc = UnrankedMemRefDescriptor::pack(builder, loc, *this,
+                                                    resultType, inputs);
+        // An argument materialization must return a value of type
+        // `resultType`, so insert a cast from the memref descriptor type
+        // (!llvm.struct) to the original memref type.
+        return builder.create<UnrealizedConversionCastOp>(loc, resultType, desc)
+            .getResult(0);
       });
   addArgumentMaterialization([&](OpBuilder &builder, MemRefType resultType,
                                  ValueRange inputs,
                                  Location loc) -> std::optional<Value> {
-    // TODO: bare ptr conversion could be handled here but we would need a way
-    // to distinguish between FuncOp and other regions.
-    if (inputs.size() == 1)
-      return std::nullopt;
-    return MemRefDescriptor::pack(builder, loc, *this, resultType, inputs);
+    Value desc;
+    if (inputs.size() == 1) {
+      // This is a bare pointer. We allow bare pointers only for function entry
+      // blocks.
+      BlockArgument barePtr = dyn_cast<BlockArgument>(inputs.front());
+      if (!barePtr)
+        return std::nullopt;
+      Block *block = barePtr.getOwner();
+      if (!block->isEntryBlock() ||
+          !isa<FunctionOpInterface>(block->getParentOp()))
+        return std::nullopt;
+      desc = MemRefDescriptor::fromStaticShape(builder, loc, *this, resultType,
+                                               inputs[0]);
+    } else {
+      desc = MemRefDescriptor::pack(builder, loc, *this, resultType, inputs);
+    }
+    // An argument materialization must return a value of type `resultType`,
+    // so insert a cast from the memref descriptor type (!llvm.struct) to the
+    // original memref type.
+    return builder.create<UnrealizedConversionCastOp>(loc, resultType, desc)
+        .getResult(0);
   });
   // Add generic source and target materializations to handle cases where
   // non-LLVM types persist after an LLVM conversion.
@@ -221,8 +247,9 @@ Type LLVMTypeConverter::convertIntegerType(IntegerType type) const {
 }
 
 Type LLVMTypeConverter::convertFloatType(FloatType type) const {
-  if (type.isFloat8E5M2() || type.isFloat8E4M3FN() || type.isFloat8E5M2FNUZ() ||
-      type.isFloat8E4M3FNUZ() || type.isFloat8E4M3B11FNUZ())
+  if (type.isFloat8E5M2() || type.isFloat8E4M3() || type.isFloat8E4M3FN() ||
+      type.isFloat8E5M2FNUZ() || type.isFloat8E4M3FNUZ() ||
+      type.isFloat8E4M3B11FNUZ())
     return IntegerType::get(&getContext(), type.getWidth());
   return type;
 }

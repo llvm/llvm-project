@@ -215,3 +215,63 @@ F:
   %z2 = trunc nsw nuw i32 %x to i16
   ret i16 %z2
 }
+
+define ptr @hoist_gep_flags_both_nuw(i1 %C, ptr %p) {
+; CHECK-LABEL: @hoist_gep_flags_both_nuw(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    ret ptr [[GEP1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %gep1 = getelementptr nuw i8, ptr %p, i64 1
+  ret ptr %gep1
+F:
+  %gep2 = getelementptr nuw i8, ptr %p, i64 1
+  ret ptr %gep2
+}
+
+define ptr @hoist_gep_flags_both_nusw(i1 %C, ptr %p) {
+; CHECK-LABEL: @hoist_gep_flags_both_nusw(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nusw i8, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    ret ptr [[GEP1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %gep1 = getelementptr nusw i8, ptr %p, i64 1
+  ret ptr %gep1
+F:
+  %gep2 = getelementptr nusw i8, ptr %p, i64 1
+  ret ptr %gep2
+}
+
+define ptr @hoist_gep_flags_intersect1(i1 %C, ptr %p) {
+; CHECK-LABEL: @hoist_gep_flags_intersect1(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nusw i8, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    ret ptr [[GEP1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %gep1 = getelementptr inbounds nuw i8, ptr %p, i64 1
+  ret ptr %gep1
+F:
+  %gep2 = getelementptr nusw i8, ptr %p, i64 1
+  ret ptr %gep2
+}
+
+define ptr @hoist_gep_flags_intersect2(i1 %C, ptr %p) {
+; CHECK-LABEL: @hoist_gep_flags_intersect2(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    ret ptr [[GEP1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %gep1 = getelementptr inbounds i8, ptr %p, i64 1
+  ret ptr %gep1
+F:
+  %gep2 = getelementptr nuw i8, ptr %p, i64 1
+  ret ptr %gep2
+}

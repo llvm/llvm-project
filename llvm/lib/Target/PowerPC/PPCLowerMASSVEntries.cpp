@@ -29,8 +29,10 @@ using namespace llvm;
 namespace {
 
 static StringRef MASSVFuncs[] = {
-#define TLI_DEFINE_MASSV_VECFUNCS_NAMES
+#define TLI_DEFINE_MASSV_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX) VEC,
 #include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_MASSV_VECFUNCS
 };
 
 class PPCLowerMASSVEntries : public ModulePass {

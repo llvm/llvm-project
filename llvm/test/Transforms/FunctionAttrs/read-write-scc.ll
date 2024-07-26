@@ -4,7 +4,7 @@
 @i = global i32 0
 
 define void @foo() {
-; CHECK: Function Attrs: nofree nosync nounwind
+; CHECK: Function Attrs: nofree nosync nounwind memory(readwrite, argmem: none, inaccessiblemem: none)
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    store i32 1, ptr @i, align 4
@@ -17,7 +17,7 @@ define void @foo() {
 }
 
 define void @bar() {
-; CHECK: Function Attrs: nofree nosync nounwind
+; CHECK: Function Attrs: nofree nosync nounwind memory(readwrite, argmem: none, inaccessiblemem: none)
 ; CHECK-LABEL: define {{[^@]+}}@bar
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    [[I:%.*]] = load i32, ptr @i, align 4

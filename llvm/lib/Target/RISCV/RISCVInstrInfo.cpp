@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -163,6 +164,18 @@ Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   }
 
   return 0;
+}
+
+bool RISCVInstrInfo::isReallyTriviallyReMaterializable(
+    const MachineInstr &MI) const {
+  if (RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::VID_V &&
+      MI.getOperand(1).isUndef() &&
+      /* After RISCVInsertVSETVLI most pseudos will have implicit uses on vl and
+         vtype.  Make sure we only rematerialize before RISCVInsertVSETVLI
+         i.e. -riscv-vsetvl-after-rvv-regalloc=true */
+      !MI.hasRegisterImplicitUseOperand(RISCV::VTYPE))
+    return true;
+  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
 }
 
 static bool forwardCopyWillClobberTuple(unsigned DstReg, unsigned SrcReg,
@@ -1352,7 +1365,7 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
       return nullptr;
   }
   bool DontMoveAcrossStores = true;
-  if (!MI->isSafeToMove(/* AliasAnalysis = */ nullptr, DontMoveAcrossStores))
+  if (!MI->isSafeToMove(DontMoveAcrossStores))
     return nullptr;
   return MI;
 }
@@ -1455,17 +1468,14 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   if (Opcode == TargetOpcode::INLINEASM ||
       Opcode == TargetOpcode::INLINEASM_BR) {
     const MachineFunction &MF = *MI.getParent()->getParent();
-    const auto &TM = static_cast<const RISCVTargetMachine &>(MF.getTarget());
     return getInlineAsmLength(MI.getOperand(0).getSymbolName(),
-                              *TM.getMCAsmInfo());
+                              *MF.getTarget().getMCAsmInfo());
   }
 
   if (!MI.memoperands_empty()) {
     MachineMemOperand *MMO = *(MI.memoperands_begin());
-    const MachineFunction &MF = *MI.getParent()->getParent();
-    const auto &ST = MF.getSubtarget<RISCVSubtarget>();
-    if (ST.hasStdExtZihintntl() && MMO->isNonTemporal()) {
-      if (ST.hasStdExtCOrZca() && ST.enableRVCHintInstrs()) {
+    if (STI.hasStdExtZihintntl() && MMO->isNonTemporal()) {
+      if (STI.hasStdExtCOrZca() && STI.enableRVCHintInstrs()) {
         if (isCompressibleInst(MI, STI))
           return 4; // c.ntl.all + c.load/c.store
         return 6;   // c.ntl.all + load/store
@@ -2374,6 +2384,12 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_UIMM2_LSB0:
           Ok = isShiftedUInt<1, 1>(Imm);
           break;
+        case RISCVOp::OPERAND_UIMM5_LSB0:
+          Ok = isShiftedUInt<4, 1>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMM6_LSB0:
+          Ok = isShiftedUInt<5, 1>(Imm);
+          break;
         case RISCVOp::OPERAND_UIMM7_LSB00:
           Ok = isShiftedUInt<5, 2>(Imm);
           break;
@@ -2814,6 +2830,7 @@ bool RISCVInstrInfo::shouldOutlineFromFunctionByDefault(
 
 std::optional<outliner::OutlinedFunction>
 RISCVInstrInfo::getOutliningCandidateInfo(
+    const MachineModuleInfo &MMI,
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
 
   // First we need to filter out candidates where the X5 register (IE t0) can't
@@ -2852,8 +2869,9 @@ RISCVInstrInfo::getOutliningCandidateInfo(
 }
 
 outliner::InstrType
-RISCVInstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MBBI,
-                                 unsigned Flags) const {
+RISCVInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                                     MachineBasicBlock::iterator &MBBI,
+                                     unsigned Flags) const {
   MachineInstr &MI = *MBBI;
   MachineBasicBlock *MBB = MI.getParent();
   const TargetRegisterInfo *TRI =
@@ -3695,7 +3713,7 @@ void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
         .addReg(ScaledRegister, RegState::Kill)
         .addReg(DestReg, RegState::Kill)
         .setMIFlag(Flag);
-  } else if (STI.hasStdExtM() || STI.hasStdExtZmmul()) {
+  } else if (STI.hasStdExtZmmul()) {
     Register N = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     movImm(MBB, II, DL, N, Amount, Flag);
     BuildMI(MBB, II, DL, get(RISCV::MUL), DestReg)

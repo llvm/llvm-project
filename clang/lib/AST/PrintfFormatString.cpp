@@ -865,6 +865,8 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/AMDGPUTypes.def"
 #define SIGNED_TYPE(Id, SingletonId)
 #define UNSIGNED_TYPE(Id, SingletonId)
 #define FLOATING_TYPE(Id, SingletonId)

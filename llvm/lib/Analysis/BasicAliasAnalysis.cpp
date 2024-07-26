@@ -268,31 +268,43 @@ struct CastedValue {
   unsigned ZExtBits = 0;
   unsigned SExtBits = 0;
   unsigned TruncBits = 0;
+  /// Whether trunc(V) is non-negative.
+  bool IsNonNegative = false;
 
   explicit CastedValue(const Value *V) : V(V) {}
   explicit CastedValue(const Value *V, unsigned ZExtBits, unsigned SExtBits,
-                       unsigned TruncBits)
-      : V(V), ZExtBits(ZExtBits), SExtBits(SExtBits), TruncBits(TruncBits) {}
+                       unsigned TruncBits, bool IsNonNegative)
+      : V(V), ZExtBits(ZExtBits), SExtBits(SExtBits), TruncBits(TruncBits),
+        IsNonNegative(IsNonNegative) {}
 
   unsigned getBitWidth() const {
     return V->getType()->getPrimitiveSizeInBits() - TruncBits + ZExtBits +
            SExtBits;
   }
 
-  CastedValue withValue(const Value *NewV) const {
-    return CastedValue(NewV, ZExtBits, SExtBits, TruncBits);
+  CastedValue withValue(const Value *NewV, bool PreserveNonNeg) const {
+    return CastedValue(NewV, ZExtBits, SExtBits, TruncBits,
+                       IsNonNegative && PreserveNonNeg);
   }
 
   /// Replace V with zext(NewV)
-  CastedValue withZExtOfValue(const Value *NewV) const {
+  CastedValue withZExtOfValue(const Value *NewV, bool ZExtNonNegative) const {
     unsigned ExtendBy = V->getType()->getPrimitiveSizeInBits() -
                         NewV->getType()->getPrimitiveSizeInBits();
     if (ExtendBy <= TruncBits)
-      return CastedValue(NewV, ZExtBits, SExtBits, TruncBits - ExtendBy);
+      // zext<nneg>(trunc(zext(NewV))) == zext<nneg>(trunc(NewV))
+      // The nneg can be preserved on the outer zext here.
+      return CastedValue(NewV, ZExtBits, SExtBits, TruncBits - ExtendBy,
+                         IsNonNegative);
 
     // zext(sext(zext(NewV))) == zext(zext(zext(NewV)))
     ExtendBy -= TruncBits;
-    return CastedValue(NewV, ZExtBits + SExtBits + ExtendBy, 0, 0);
+    // zext<nneg>(zext(NewV)) == zext(NewV)
+    // zext(zext<nneg>(NewV)) == zext<nneg>(NewV)
+    // The nneg can be preserved from the inner zext here but must be dropped
+    // from the outer.
+    return CastedValue(NewV, ZExtBits + SExtBits + ExtendBy, 0, 0,
+                       ZExtNonNegative);
   }
 
   /// Replace V with sext(NewV)
@@ -300,11 +312,16 @@ struct CastedValue {
     unsigned ExtendBy = V->getType()->getPrimitiveSizeInBits() -
                         NewV->getType()->getPrimitiveSizeInBits();
     if (ExtendBy <= TruncBits)
-      return CastedValue(NewV, ZExtBits, SExtBits, TruncBits - ExtendBy);
+      // zext<nneg>(trunc(sext(NewV))) == zext<nneg>(trunc(NewV))
+      // The nneg can be preserved on the outer zext here
+      return CastedValue(NewV, ZExtBits, SExtBits, TruncBits - ExtendBy,
+                         IsNonNegative);
 
     // zext(sext(sext(NewV)))
     ExtendBy -= TruncBits;
-    return CastedValue(NewV, ZExtBits, SExtBits + ExtendBy, 0);
+    // zext<nneg>(sext(sext(NewV))) = zext<nneg>(sext(NewV))
+    // The nneg can be preserved on the outer zext here
+    return CastedValue(NewV, ZExtBits, SExtBits + ExtendBy, 0, IsNonNegative);
   }
 
   APInt evaluateWith(APInt N) const {
@@ -333,8 +350,15 @@ struct CastedValue {
   }
 
   bool hasSameCastsAs(const CastedValue &Other) const {
-    return ZExtBits == Other.ZExtBits && SExtBits == Other.SExtBits &&
-           TruncBits == Other.TruncBits;
+    if (ZExtBits == Other.ZExtBits && SExtBits == Other.SExtBits &&
+        TruncBits == Other.TruncBits)
+      return true;
+    // If either CastedValue has a nneg zext then the sext/zext bits are
+    // interchangable for that value.
+    if (IsNonNegative || Other.IsNonNegative)
+      return (ZExtBits + SExtBits == Other.ZExtBits + Other.SExtBits &&
+              TruncBits == Other.TruncBits);
+    return false;
   }
 };
 
@@ -410,21 +434,21 @@ static LinearExpression GetLinearExpression(
 
         [[fallthrough]];
       case Instruction::Add: {
-        E = GetLinearExpression(Val.withValue(BOp->getOperand(0)), DL,
+        E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
                                 Depth + 1, AC, DT);
         E.Offset += RHS;
         E.IsNSW &= NSW;
         break;
       }
       case Instruction::Sub: {
-        E = GetLinearExpression(Val.withValue(BOp->getOperand(0)), DL,
+        E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
                                 Depth + 1, AC, DT);
         E.Offset -= RHS;
         E.IsNSW &= NSW;
         break;
       }
       case Instruction::Mul:
-        E = GetLinearExpression(Val.withValue(BOp->getOperand(0)), DL,
+        E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
                                 Depth + 1, AC, DT)
                 .mul(RHS, NSW);
         break;
@@ -437,7 +461,7 @@ static LinearExpression GetLinearExpression(
         if (RHS.getLimitedValue() > Val.getBitWidth())
           return Val;
 
-        E = GetLinearExpression(Val.withValue(BOp->getOperand(0)), DL,
+        E = GetLinearExpression(Val.withValue(BOp->getOperand(0), NSW), DL,
                                 Depth + 1, AC, DT);
         E.Offset <<= RHS.getLimitedValue();
         E.Scale <<= RHS.getLimitedValue();
@@ -448,10 +472,10 @@ static LinearExpression GetLinearExpression(
     }
   }
 
-  if (isa<ZExtInst>(Val.V))
+  if (const auto *ZExt = dyn_cast<ZExtInst>(Val.V))
     return GetLinearExpression(
-        Val.withZExtOfValue(cast<CastInst>(Val.V)->getOperand(0)),
-        DL, Depth + 1, AC, DT);
+        Val.withZExtOfValue(ZExt->getOperand(0), ZExt->hasNonNeg()), DL,
+        Depth + 1, AC, DT);
 
   if (isa<SExtInst>(Val.V))
     return GetLinearExpression(
@@ -673,7 +697,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       unsigned SExtBits = IndexSize > Width ? IndexSize - Width : 0;
       unsigned TruncBits = IndexSize < Width ? Width - IndexSize : 0;
       LinearExpression LE = GetLinearExpression(
-          CastedValue(Index, 0, SExtBits, TruncBits), DL, 0, AC, DT);
+          CastedValue(Index, 0, SExtBits, TruncBits, false), DL, 0, AC, DT);
 
       // Scale by the type size.
       unsigned TypeSize = AllocTypeSize.getFixedValue();
@@ -1668,9 +1692,12 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   if (!Pair.second) {
     auto &Entry = Pair.first->second;
     if (!Entry.isDefinitive()) {
-      // Remember that we used an assumption.
-      ++Entry.NumAssumptionUses;
+      // Remember that we used an assumption. This may either be a direct use
+      // of an assumption, or a use of an entry that may itself be based on an
+      // assumption.
       ++AAQI.NumAssumptionUses;
+      if (Entry.isAssumption())
+        ++Entry.NumAssumptionUses;
     }
     // Cache contains sorted {V1,V2} pairs but we should return original order.
     auto Result = Entry.Result;
@@ -1698,7 +1725,6 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   Entry.Result = Result;
   // Cache contains sorted {V1,V2} pairs.
   Entry.Result.swap(Swapped);
-  Entry.NumAssumptionUses = -1;
 
   // If the assumption has been disproven, remove any results that may have
   // been based on this assumption. Do this after the Entry updates above to
@@ -1710,8 +1736,26 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   // The result may still be based on assumptions higher up in the chain.
   // Remember it, so it can be purged from the cache later.
   if (OrigNumAssumptionUses != AAQI.NumAssumptionUses &&
-      Result != AliasResult::MayAlias)
+      Result != AliasResult::MayAlias) {
     AAQI.AssumptionBasedResults.push_back(Locs);
+    Entry.NumAssumptionUses = AAQueryInfo::CacheEntry::AssumptionBased;
+  } else {
+    Entry.NumAssumptionUses = AAQueryInfo::CacheEntry::Definitive;
+  }
+
+  // Depth is incremented before this function is called, so Depth==1 indicates
+  // a root query.
+  if (AAQI.Depth == 1) {
+    // Any remaining assumption based results must be based on proven
+    // assumptions, so convert them to definitive results.
+    for (const auto &Loc : AAQI.AssumptionBasedResults) {
+      auto It = AAQI.AliasCache.find(Loc);
+      if (It != AAQI.AliasCache.end())
+        It->second.NumAssumptionUses = AAQueryInfo::CacheEntry::Definitive;
+    }
+    AAQI.AssumptionBasedResults.clear();
+    AAQI.NumAssumptionUses = 0;
+  }
   return Result;
 }
 
@@ -1895,7 +1939,7 @@ BasicAAResult BasicAA::run(Function &F, FunctionAnalysisManager &AM) {
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
-  return BasicAAResult(F.getParent()->getDataLayout(), F, TLI, AC, DT);
+  return BasicAAResult(F.getDataLayout(), F, TLI, AC, DT);
 }
 
 BasicAAWrapperPass::BasicAAWrapperPass() : FunctionPass(ID) {
@@ -1923,7 +1967,7 @@ bool BasicAAWrapperPass::runOnFunction(Function &F) {
   auto &TLIWP = getAnalysis<TargetLibraryInfoWrapperPass>();
   auto &DTWP = getAnalysis<DominatorTreeWrapperPass>();
 
-  Result.reset(new BasicAAResult(F.getParent()->getDataLayout(), F,
+  Result.reset(new BasicAAResult(F.getDataLayout(), F,
                                  TLIWP.getTLI(F), ACT.getAssumptionCache(F),
                                  &DTWP.getDomTree()));
 

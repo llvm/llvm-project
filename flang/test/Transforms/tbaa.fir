@@ -7,7 +7,8 @@
   func.func @_QPonearg(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}) {
     %c1 = arith.constant 1 : index
     %c2 = arith.constant 2 : index
-    %0 = fir.declare %arg0 {uniq_name = "_QFoneargEa"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+    %dscope = fir.dummy_scope : !fir.dscope
+    %0 = fir.declare %arg0 dummy_scope %dscope {uniq_name = "_QFoneargEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
     %1 = fir.rebox %0 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
     %2 = fir.array_coor %1 %c2 : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
     %3 = fir.load %2 : !fir.ref<i32>
@@ -27,7 +28,8 @@
 // CHECK-SAME:                         %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}) {
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_2:.*]] = arith.constant 2 : index
-// CHECK:           %[[VAL_3:.*]] = fir.declare %[[VAL_0]] {uniq_name = "_QFoneargEa"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
+// CHECK:           %[[VAL_3:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFoneargEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_4:.*]] = fir.rebox %[[VAL_3]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_5:.*]] = fir.array_coor %[[VAL_4]] %[[VAL_2]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_5]] {tbaa = [#[[ONE_ARG_A_TAG]]]} : !fir.ref<i32>
@@ -44,9 +46,10 @@
 // end subroutine
   func.func @_QPtwoarg(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"}) {
     %c1 = arith.constant 1 : index
-    %0 = fir.declare %arg0 {uniq_name = "_QFtwoargEa"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+    %dscope = fir.dummy_scope : !fir.dscope
+    %0 = fir.declare %arg0 dummy_scope %dscope {uniq_name = "_QFtwoargEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
     %1 = fir.rebox %0 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
-    %2 = fir.declare %arg1 {uniq_name = "_QFtwoargEb"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+    %2 = fir.declare %arg1 dummy_scope %dscope {uniq_name = "_QFtwoargEb"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
     %3 = fir.rebox %2 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
     %4 = fir.array_coor %3 %c1 : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
     %5 = fir.load %4 : !fir.ref<i32>
@@ -68,9 +71,10 @@
 // CHECK-SAME:                         %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"},
 // CHECK-SAME:                         %[[VAL_1:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"}) {
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_3:.*]] = fir.declare %[[VAL_0]] {uniq_name = "_QFtwoargEa"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
+// CHECK:           %[[VAL_3:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFtwoargEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_4:.*]] = fir.rebox %[[VAL_3]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
-// CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_1]] {uniq_name = "_QFtwoargEb"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_1]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFtwoargEb"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_6:.*]] = fir.rebox %[[VAL_5]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_7:.*]] = fir.array_coor %[[VAL_6]] %[[VAL_2]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_7]] {tbaa = [#[[TWO_ARG_B_TAG]]]} : !fir.ref<i32>
@@ -88,9 +92,10 @@
 // end subroutine
   func.func @_QPtargetarg(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a", fir.target}, %arg1: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"}) {
     %c1 = arith.constant 1 : index
-    %0 = fir.declare %arg0 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtargetargEa"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+    %dscope = fir.dummy_scope : !fir.dscope
+    %0 = fir.declare %arg0 dummy_scope %dscope {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtargetargEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
     %1 = fir.rebox %0 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
-    %2 = fir.declare %arg1 {uniq_name = "_QFtargetargEb"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+    %2 = fir.declare %arg1 dummy_scope %dscope {uniq_name = "_QFtargetargEb"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
     %3 = fir.rebox %2 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
     %4 = fir.array_coor %3 %c1 : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
     %5 = fir.load %4 : !fir.ref<i32>
@@ -111,9 +116,10 @@
 // CHECK-SAME:                            %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a", fir.target},
 // CHECK-SAME:                            %[[VAL_1:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"}) {
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_3:.*]] = fir.declare %[[VAL_0]] {fortran_attrs = #{{.*}}<target>, uniq_name = "_QFtargetargEa"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
+// CHECK:           %[[VAL_3:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] {fortran_attrs = #{{.*}}<target>, uniq_name = "_QFtargetargEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_4:.*]] = fir.rebox %[[VAL_3]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
-// CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_1]] {uniq_name = "_QFtargetargEb"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_1]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFtargetargEb"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_6:.*]] = fir.rebox %[[VAL_5]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_7:.*]] = fir.array_coor %[[VAL_6]] %[[VAL_2]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_7]] {tbaa = [#[[TARGET_B_TAG]]]} : !fir.ref<i32>
@@ -133,8 +139,9 @@
   func.func @_QPpointerarg(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"}) {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
-    %0 = fir.declare %arg0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFpointerargEa"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-    %1 = fir.declare %arg1 {uniq_name = "_QFpointerargEb"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+    %dscope = fir.dummy_scope : !fir.dscope
+    %0 = fir.declare %arg0 dummy_scope %dscope {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFpointerargEa"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+    %1 = fir.declare %arg1 dummy_scope %dscope {uniq_name = "_QFpointerargEb"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
     %2 = fir.rebox %1 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
     %3 = fir.array_coor %2 %c1 : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
     %4 = fir.load %3 : !fir.ref<i32>
@@ -159,8 +166,9 @@
 // CHECK-SAME:                             %[[VAL_1:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"}) {
 // CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_4:.*]] = fir.declare %[[VAL_0]] {fortran_attrs = #{{.*}}<pointer>, uniq_name = "_QFpointerargEa"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-// CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_1]] {uniq_name = "_QFpointerargEb"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
+// CHECK:           %[[VAL_4:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] {fortran_attrs = #{{.*}}<pointer>, uniq_name = "_QFpointerargEa"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+// CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_1]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFpointerargEb"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_6:.*]] = fir.rebox %[[VAL_5]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_7:.*]] = fir.array_coor %[[VAL_6]] %[[VAL_3]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_7]] {tbaa = [#[[POINTER_B_TAG]]]} : !fir.ref<i32>

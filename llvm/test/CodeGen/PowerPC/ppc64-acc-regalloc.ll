@@ -4,7 +4,7 @@
 ; RUN:    | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64le-unknown-linux-gnu \
 ; RUN:     -mcpu=pwr10 -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names \
-; RUN:     -ppc-track-subreg-liveness < %s | FileCheck %s --check-prefix=TRACKLIVE
+; RUN:     -enable-subreg-liveness < %s | FileCheck %s --check-prefix=TRACKLIVE
 
 %0 = type <{ double }>
 %1 = type <{ double }>

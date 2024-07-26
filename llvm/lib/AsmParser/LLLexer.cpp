@@ -566,6 +566,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(fast);
   KEYWORD(nuw);
   KEYWORD(nsw);
+  KEYWORD(nusw);
   KEYWORD(exact);
   KEYWORD(disjoint);
   KEYWORD(inbounds);
@@ -603,6 +604,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(aarch64_vector_pcs);
   KEYWORD(aarch64_sve_vector_pcs);
   KEYWORD(aarch64_sme_preservemost_from_x0);
+  KEYWORD(aarch64_sme_preservemost_from_x1);
   KEYWORD(aarch64_sme_preservemost_from_x2);
   KEYWORD(msp430_intrcc);
   KEYWORD(avr_intrcc);
@@ -709,6 +711,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(blockaddress);
   KEYWORD(dso_local_equivalent);
   KEYWORD(no_cfi);
+  KEYWORD(ptrauth);
 
   // Metadata types.
   KEYWORD(distinct);
@@ -835,7 +838,8 @@ lltok::Kind LLLexer::LexIdentifier() {
   TYPEKEYWORD("ppc_fp128", Type::getPPC_FP128Ty(Context));
   TYPEKEYWORD("label",     Type::getLabelTy(Context));
   TYPEKEYWORD("metadata",  Type::getMetadataTy(Context));
-  TYPEKEYWORD("x86_mmx",   Type::getX86_MMXTy(Context));
+  TYPEKEYWORD("x86_mmx", llvm::FixedVectorType::get(
+                             llvm::IntegerType::get(Context, 64), 1));
   TYPEKEYWORD("x86_amx",   Type::getX86_AMXTy(Context));
   TYPEKEYWORD("token",     Type::getTokenTy(Context));
   TYPEKEYWORD("ptr",       PointerType::getUnqual(Context));

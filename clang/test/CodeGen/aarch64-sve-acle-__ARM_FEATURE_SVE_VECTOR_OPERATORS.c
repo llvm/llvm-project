@@ -88,8 +88,10 @@ typedef svint8_t vec2 __attribute__((arm_sve_vector_bits(N)));
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[INDIRECT_ARG_TEMP:%.*]] = alloca <[[#div(VBITS,8)]] x i8>, align 16
 // CHECK-NEXT:   [[X:%.*]] = tail call <[[#div(VBITS,8)]] x i8> @llvm.vector.extract.v[[#div(VBITS,8)]]i8.nxv16i8(<vscale x 16 x i8> [[X_COERCE:%.*]], i64 0)
+// CHECK-NEXT:   call void @llvm.lifetime.start.p0(i64 [[SIZE:[0-9]+]], ptr nonnull [[INDIRECT_ARG_TEMP]]) #[[ATTR6:[0-9]+]]
 // CHECK-NEXT:   store <[[#div(VBITS,8)]] x i8> [[X]], ptr [[INDIRECT_ARG_TEMP]], align 16, [[TBAA6]]
 // CHECK-NEXT:   call void @f3(ptr noundef nonnull [[INDIRECT_ARG_TEMP]]) [[ATTR5:#.*]]
+// CHECK-NEXT:   call void @llvm.lifetime.end.p0(i64 [[SIZE]], ptr nonnull [[INDIRECT_ARG_TEMP]]) #[[ATTR6:[0-9]+]]
 // CHECK-NEXT:   ret void
 
 // CHECK128-LABEL: declare void @f3(<16 x i8> noundef)

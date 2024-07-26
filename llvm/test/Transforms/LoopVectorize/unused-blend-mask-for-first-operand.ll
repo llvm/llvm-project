@@ -172,8 +172,6 @@ define void @test_not_first_lane_only_wide_compare_incoming_order_swapped(ptr %A
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i16> poison, i16 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i16> poison, i16 [[Y]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT1]], <4 x i16> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -184,14 +182,8 @@ define void @test_not_first_lane_only_wide_compare_incoming_order_swapped(ptr %A
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP2]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult <4 x i16> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor <4 x i1> [[TMP3]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult <4 x i16> [[WIDE_LOAD]], [[BROADCAST_SPLAT2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP5]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = xor <4 x i1> [[TMP5]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP7]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP8]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = or i1 [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP11]], ptr [[B]], ptr poison
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP4]], i32 0
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP9]], ptr [[B]], ptr poison
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i16, ptr [[PREDPHI]], align 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP12]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT3]], <4 x i16> poison, <4 x i32> zeroinitializer

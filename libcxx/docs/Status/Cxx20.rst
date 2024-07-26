@@ -48,6 +48,7 @@ Paper Status
    .. [#note-P0883.1] P0883: shared_ptr and floating-point changes weren't applied as they themselves aren't implemented yet.
    .. [#note-P0883.2] P0883: ``ATOMIC_FLAG_INIT`` was marked deprecated in version 14.0, but was undeprecated with the implementation of LWG3659 in version 15.0.
    .. [#note-P0660] P0660: The paper is implemented but the features are experimental and can be enabled via ``-fexperimental-library``.
+   .. [#note-P1614] P1614: ``std::strong_order(long double, long double)`` is partly implemented.
    .. [#note-P0355] P0355: The implementation status is:
 
       * ``Calendars`` mostly done in Clang 7
@@ -57,8 +58,6 @@ Paper Status
       * ``TAI clock`` not done
       * ``GPS clock`` not done
       * ``UTC clock`` not done
-
-   .. [#note-P0718] P0718: Implemented deprecation of ``shared_ptr`` atomic access APIs only.
 
 .. _issues-status-cxx20:
 

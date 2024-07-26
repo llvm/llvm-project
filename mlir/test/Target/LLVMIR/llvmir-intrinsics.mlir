@@ -724,7 +724,7 @@ llvm.func @coro_promise(%arg0: !llvm.ptr, %arg1 : i32, %arg2 : i1) {
 
 // CHECK-LABEL: @eh_typeid_for
 llvm.func @eh_typeid_for(%arg0 : !llvm.ptr) {
-    // CHECK: call i32 @llvm.eh.typeid.for
+    // CHECK: call i32 @llvm.eh.typeid.for.p0
     %0 = llvm.intr.eh.typeid.for %arg0 : (!llvm.ptr) -> i32
     llvm.return
 }
@@ -1069,8 +1069,8 @@ llvm.func @experimental_constrained_fptrunc(%s: f64, %v: vector<4xf32>) {
 // CHECK-DAG: declare void @llvm.debugtrap()
 // CHECK-DAG: declare void @llvm.ubsantrap(i8 immarg)
 // CHECK-DAG: declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
-// CHECK-DAG: declare void @llvm.memcpy.inline.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32 immarg, i1 immarg)
-// CHECK-DAG: declare void @llvm.memcpy.inline.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64 immarg, i1 immarg)
+// CHECK-DAG: declare void @llvm.memcpy.inline.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
+// CHECK-DAG: declare void @llvm.memcpy.inline.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
 // CHECK-DAG: declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32)
 // CHECK-DAG: declare { <8 x i32>, <8 x i1> } @llvm.sadd.with.overflow.v8i32(<8 x i32>, <8 x i32>)
 // CHECK-DAG: declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32)

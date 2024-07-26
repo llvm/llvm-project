@@ -1,5 +1,4 @@
 // REQUIRES: zlib
-// REQUIRES: x86-registered-target
 
 // RUN: %clang -### -target i686-unknown-linux-gnu -fno-integrated-as -Wa,-compress-debug-sections -c %s 2>&1 | FileCheck -check-prefix CHECK-_COMPRESS_DEBUG_SECTIONS %s
 // CHECK-_COMPRESS_DEBUG_SECTIONS: "-compress-debug-sections"

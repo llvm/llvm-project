@@ -192,7 +192,8 @@ public:
 
   bool tryCombineSExt(MachineInstr &MI,
                       SmallVectorImpl<MachineInstr *> &DeadInsts,
-                      SmallVectorImpl<Register> &UpdatedDefs) {
+                      SmallVectorImpl<Register> &UpdatedDefs,
+                      GISelObserverWrapper &Observer) {
     using namespace llvm::MIPatternMatch;
     assert(MI.getOpcode() == TargetOpcode::G_SEXT);
 
@@ -211,7 +212,14 @@ public:
       uint64_t SizeInBits = SrcTy.getScalarSizeInBits();
       if (DstTy != MRI.getType(TruncSrc))
         TruncSrc = Builder.buildAnyExtOrTrunc(DstTy, TruncSrc).getReg(0);
-      Builder.buildSExtInReg(DstReg, TruncSrc, SizeInBits);
+      // Elide G_SEXT_INREG if possible. This is similar to eliding G_AND in
+      // tryCombineZExt. Refer to the comment in tryCombineZExt for rationale.
+      if (KB && KB->computeNumSignBits(TruncSrc) >
+                    DstTy.getScalarSizeInBits() - SizeInBits)
+        replaceRegOrBuildCopy(DstReg, TruncSrc, MRI, Builder, UpdatedDefs,
+                              Observer);
+      else
+        Builder.buildSExtInReg(DstReg, TruncSrc, SizeInBits);
       markInstAndDefDead(MI, *MRI.getVRegDef(SrcReg), DeadInsts);
       return true;
     }
@@ -1322,7 +1330,7 @@ public:
       Changed = tryCombineZExt(MI, DeadInsts, UpdatedDefs, WrapperObserver);
       break;
     case TargetOpcode::G_SEXT:
-      Changed = tryCombineSExt(MI, DeadInsts, UpdatedDefs);
+      Changed = tryCombineSExt(MI, DeadInsts, UpdatedDefs, WrapperObserver);
       break;
     case TargetOpcode::G_UNMERGE_VALUES:
       Changed = tryCombineUnmergeValues(cast<GUnmerge>(MI), DeadInsts,

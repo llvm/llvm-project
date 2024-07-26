@@ -68,8 +68,8 @@ void LazyASTUnresolvedSet::getFromExternalSource(ASTContext &C) const {
   assert(Source && "getFromExternalSource with no external source");
 
   for (ASTUnresolvedSet::iterator I = Impl.begin(); I != Impl.end(); ++I)
-    I.setDecl(cast<NamedDecl>(Source->GetExternalDecl(
-        GlobalDeclID(reinterpret_cast<uintptr_t>(I.getDecl()) >> 2))));
+    I.setDecl(
+        cast<NamedDecl>(Source->GetExternalDecl(GlobalDeclID(I.getDeclID()))));
   Impl.Decls.setLazy(false);
 }
 
@@ -673,6 +673,9 @@ bool CXXRecordDecl::hasSubobjectAtOffsetZeroOfEmptyBaseType(
         continue;
 
       if (!IsFirstField && !FD->isZeroSize(Ctx))
+        continue;
+
+      if (FD->isInvalidDecl())
         continue;
 
       //   -- If X is n array type, [visit the element type]
@@ -1521,11 +1524,11 @@ void CXXRecordDecl::setCaptures(ASTContext &Context,
   auto *ToCapture = (LambdaCapture *)Context.Allocate(sizeof(LambdaCapture) *
                                                       Captures.size());
   Data.AddCaptureList(Context, ToCapture);
-  for (unsigned I = 0, N = Captures.size(); I != N; ++I) {
-    if (Captures[I].isExplicit())
+  for (const LambdaCapture &C : Captures) {
+    if (C.isExplicit())
       ++Data.NumExplicitCaptures;
 
-    new (ToCapture) LambdaCapture(Captures[I]);
+    new (ToCapture) LambdaCapture(C);
     ToCapture++;
   }
 
@@ -2056,40 +2059,39 @@ void CXXRecordDecl::completeDefinition() {
   completeDefinition(nullptr);
 }
 
+static bool hasPureVirtualFinalOverrider(
+    const CXXRecordDecl &RD, const CXXFinalOverriderMap *FinalOverriders) {
+  if (!FinalOverriders) {
+    CXXFinalOverriderMap MyFinalOverriders;
+    RD.getFinalOverriders(MyFinalOverriders);
+    return hasPureVirtualFinalOverrider(RD, &MyFinalOverriders);
+  }
+
+  for (const CXXFinalOverriderMap::value_type &
+        OverridingMethodsEntry : *FinalOverriders) {
+    for (const auto &[_, SubobjOverrides] : OverridingMethodsEntry.second) {
+      assert(SubobjOverrides.size() > 0 &&
+            "All virtual functions have overriding virtual functions");
+
+      if (SubobjOverrides.front().Method->isPureVirtual())
+        return true;
+    }
+  }
+  return false;
+}
+
 void CXXRecordDecl::completeDefinition(CXXFinalOverriderMap *FinalOverriders) {
   RecordDecl::completeDefinition();
 
   // If the class may be abstract (but hasn't been marked as such), check for
   // any pure final overriders.
-  if (mayBeAbstract()) {
-    CXXFinalOverriderMap MyFinalOverriders;
-    if (!FinalOverriders) {
-      getFinalOverriders(MyFinalOverriders);
-      FinalOverriders = &MyFinalOverriders;
-    }
-
-    bool Done = false;
-    for (CXXFinalOverriderMap::iterator M = FinalOverriders->begin(),
-                                     MEnd = FinalOverriders->end();
-         M != MEnd && !Done; ++M) {
-      for (OverridingMethods::iterator SO = M->second.begin(),
-                                    SOEnd = M->second.end();
-           SO != SOEnd && !Done; ++SO) {
-        assert(SO->second.size() > 0 &&
-               "All virtual functions have overriding virtual functions");
-
-        // C++ [class.abstract]p4:
-        //   A class is abstract if it contains or inherits at least one
-        //   pure virtual function for which the final overrider is pure
-        //   virtual.
-        if (SO->second.front().Method->isPureVirtual()) {
-          data().Abstract = true;
-          Done = true;
-          break;
-        }
-      }
-    }
-  }
+  //
+  // C++ [class.abstract]p4:
+  //   A class is abstract if it contains or inherits at least one
+  //   pure virtual function for which the final overrider is pure
+  //   virtual.
+  if (mayBeAbstract() && hasPureVirtualFinalOverrider(*this, FinalOverriders))
+    markAbstract();
 
   // Set access bits correctly on the directly-declared conversions.
   for (conversion_iterator I = conversion_begin(), E = conversion_end();
@@ -2942,7 +2944,7 @@ UsingDirectiveDecl *UsingDirectiveDecl::Create(ASTContext &C, DeclContext *DC,
                                                NamedDecl *Used,
                                                DeclContext *CommonAncestor) {
   if (auto *NS = dyn_cast_or_null<NamespaceDecl>(Used))
-    Used = NS->getOriginalNamespace();
+    Used = NS->getFirstDecl();
   return new (C, DC) UsingDirectiveDecl(DC, L, NamespaceLoc, QualifierLoc,
                                         IdentLoc, Used, CommonAncestor);
 }
@@ -2967,16 +2969,9 @@ NamespaceDecl::NamespaceDecl(ASTContext &C, DeclContext *DC, bool Inline,
                              bool Nested)
     : NamedDecl(Namespace, DC, IdLoc, Id), DeclContext(Namespace),
       redeclarable_base(C), LocStart(StartLoc) {
-  unsigned Flags = 0;
-  if (Inline)
-    Flags |= F_Inline;
-  if (Nested)
-    Flags |= F_Nested;
-  AnonOrFirstNamespaceAndFlags = {nullptr, Flags};
+  setInline(Inline);
+  setNested(Nested);
   setPreviousDecl(PrevDecl);
-
-  if (PrevDecl)
-    AnonOrFirstNamespaceAndFlags.setPointer(PrevDecl->getOriginalNamespace());
 }
 
 NamespaceDecl *NamespaceDecl::Create(ASTContext &C, DeclContext *DC,
@@ -2992,22 +2987,6 @@ NamespaceDecl *NamespaceDecl::CreateDeserialized(ASTContext &C,
   return new (C, ID) NamespaceDecl(C, nullptr, false, SourceLocation(),
                                    SourceLocation(), nullptr, nullptr, false);
 }
-
-NamespaceDecl *NamespaceDecl::getOriginalNamespace() {
-  if (isFirstDecl())
-    return this;
-
-  return AnonOrFirstNamespaceAndFlags.getPointer();
-}
-
-const NamespaceDecl *NamespaceDecl::getOriginalNamespace() const {
-  if (isFirstDecl())
-    return this;
-
-  return AnonOrFirstNamespaceAndFlags.getPointer();
-}
-
-bool NamespaceDecl::isOriginalNamespace() const { return isFirstDecl(); }
 
 NamespaceDecl *NamespaceDecl::getNextRedeclarationImpl() {
   return getNextRedeclaration();
@@ -3044,7 +3023,7 @@ NamespaceAliasDecl *NamespaceAliasDecl::Create(ASTContext &C, DeclContext *DC,
                                                NamedDecl *Namespace) {
   // FIXME: Preserve the aliased namespace as written.
   if (auto *NS = dyn_cast_or_null<NamespaceDecl>(Namespace))
-    Namespace = NS->getOriginalNamespace();
+    Namespace = NS->getFirstDecl();
   return new (C, DC) NamespaceAliasDecl(C, DC, UsingLoc, AliasLoc, Alias,
                                         QualifierLoc, IdentLoc, Namespace);
 }

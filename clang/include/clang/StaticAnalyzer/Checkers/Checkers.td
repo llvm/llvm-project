@@ -36,12 +36,16 @@ def CoreAlpha : Package<"core">, ParentPackage<Alpha>;
 // Note: OptIn is *not* intended for checkers that are too noisy to be on by
 // default. Such checkers belong in the alpha package.
 def OptIn : Package<"optin">;
+
 def CoreOptIn : Package<"core">, ParentPackage<OptIn>;
 
 // In the Portability package reside checkers for finding code that relies on
 // implementation-defined behavior. Such checks are wanted for cross-platform
 // development, but unwanted for developers who target only a single platform.
 def PortabilityOptIn : Package<"portability">, ParentPackage<OptIn>;
+
+// Optional checkers related to taint security analysis.
+def TaintOptIn : Package<"taint">, ParentPackage<OptIn>;
 
 def Nullability : Package<"nullability">,
   PackageOptions<[
@@ -292,10 +296,6 @@ def PointerSubChecker : Checker<"PointerSub">,
            "different memory chunks">,
   Documentation<HasDocumentation>;
 
-def SizeofPointerChecker : Checker<"SizeofPtr">,
-  HelpText<"Warn about unintended use of sizeof() on pointer expressions">,
-  Documentation<HasDocumentation>;
-
 def TestAfterDivZeroChecker : Checker<"TestAfterDivZero">,
   HelpText<"Check for division by variable that is later compared against 0. "
            "Either the comparison is useless or there is division by zero.">,
@@ -509,6 +509,10 @@ def UnixAPIMisuseChecker : Checker<"API">,
   HelpText<"Check calls to various UNIX/Posix functions">,
   Documentation<HasDocumentation>;
 
+def BlockInCriticalSectionChecker : Checker<"BlockInCriticalSection">,
+  HelpText<"Check for calls to blocking functions inside a critical section">,
+  Documentation<HasDocumentation>;
+
 def DynamicMemoryModeling: Checker<"DynamicMemoryModeling">,
   HelpText<"The base of several malloc() related checkers. On it's own it "
            "emits no reports, but adds valuable information to the analysis "
@@ -619,10 +623,6 @@ def SimpleStreamChecker : Checker<"SimpleStream">,
   HelpText<"Check for misuses of stream APIs">,
   Documentation<HasDocumentation>;
 
-def BlockInCriticalSectionChecker : Checker<"BlockInCriticalSection">,
-  HelpText<"Check for calls to blocking functions inside a critical section">,
-  Documentation<HasDocumentation>;
-
 } // end "alpha.unix"
 
 //===----------------------------------------------------------------------===//
@@ -686,22 +686,11 @@ def MoveChecker: Checker<"Move">,
   CheckerOptions<[
     CmdLineOption<String,
                   "WarnOn",
-                  "In non-aggressive mode, only warn on use-after-move of "
-                  "local variables (or local rvalue references) and of STL "
-                  "objects. The former is possible because local variables (or "
-                  "local rvalue references) are not tempting their user to "
-                  "re-use the storage. The latter is possible because STL "
-                  "objects are known to end up in a valid but unspecified "
-                  "state after the move and their state-reset methods are also "
-                  "known, which allows us to predict precisely when "
-                  "use-after-move is invalid. Some STL objects are known to "
-                  "conform to additional contracts after move, so they are not "
-                  "tracked. However, smart pointers specifically are tracked "
-                  "because we can perform extra checking over them. In "
-                  "aggressive mode, warn on any use-after-move because the "
-                  "user has intentionally asked us to completely eliminate "
-                  "use-after-move in his code. Values: \"KnownsOnly\", "
-                  "\"KnownsAndLocals\", \"All\".",
+                  "With setting \"KnownsOnly\" warn only on objects with known "
+                  "move semantics like smart pointers and other STL objects. "
+                  "With setting \"KnownsAndLocals\" warn additionally on local "
+                  "variables (or rvalue references). With setting \"All\" warn "
+                  "on all variables (excluding global variables).",
                   "KnownsAndLocals",
                   Released>
   ]>,
@@ -1011,6 +1000,16 @@ def FloatLoopCounter : Checker<"FloatLoopCounter">,
   Dependencies<[SecuritySyntaxChecker]>,
   Documentation<HasDocumentation>;
 
+def PutenvStackArray : Checker<"PutenvStackArray">,
+  HelpText<"Finds calls to the function 'putenv' which pass a pointer to "
+           "an automatic (stack-allocated) array as the argument.">,
+  Documentation<HasDocumentation>;
+
+def SetgidSetuidOrderChecker : Checker<"SetgidSetuidOrder">,
+  HelpText<"Warn on possible reversed order of 'setgid(getgid()))' and "
+           "'setuid(getuid())' (CERT: POS36-C)">,
+  Documentation<HasDocumentation>;
+
 } // end "security"
 
 let ParentPackage = ENV in {
@@ -1030,15 +1029,6 @@ let ParentPackage = ENV in {
 
 } // end "security.cert.env"
 
-let ParentPackage = POSAlpha in {
-
-  def PutenvWithAuto : Checker<"34c">,
-  HelpText<"Finds calls to the 'putenv' function which pass a pointer to "
-           "an automatic variable as the argument.">,
-  Documentation<HasDocumentation>;
-
-} // end "alpha.cert.pos"
-
 let ParentPackage = SecurityAlpha in {
 
 def ArrayBoundChecker : Checker<"ArrayBound">,
@@ -1049,28 +1039,16 @@ def ArrayBoundCheckerV2 : Checker<"ArrayBoundV2">,
   HelpText<"Warn about buffer overflows (newer checker)">,
   Documentation<HasDocumentation>;
 
-def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,
-  HelpText<"Check for an out-of-bound pointer being returned to callers">,
-  Documentation<HasDocumentation>;
-
 def MallocOverflowSecurityChecker : Checker<"MallocOverflow">,
   HelpText<"Check for overflows in the arguments to malloc()">,
   Documentation<HasDocumentation>;
 
 def MmapWriteExecChecker : Checker<"MmapWriteExec">,
   HelpText<"Warn on mmap() calls that are both writable and executable">,
-  CheckerOptions<[
-    CmdLineOption<Integer,
-                  "MmapProtExec",
-                  "Specifies the value of PROT_EXEC",
-                  "0x04",
-                  Released>,
-    CmdLineOption<Integer,
-                  "MmapProtRead",
-                  "Specifies the value of PROT_READ",
-                  "0x01",
-                  Released>
-  ]>,
+  Documentation<HasDocumentation>;
+
+def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,
+  HelpText<"Check for an out-of-bound pointer being returned to callers">,
   Documentation<HasDocumentation>;
 
 } // end "alpha.security"
@@ -1081,7 +1059,7 @@ def MmapWriteExecChecker : Checker<"MmapWriteExec">,
 
 let ParentPackage = Taint in {
 
-def GenericTaintChecker : Checker<"TaintPropagation">,
+def TaintPropagationChecker : Checker<"TaintPropagation">, // Modelling checker
   HelpText<"Generate taint information used by other checkers">,
   CheckerOptions<[
     CmdLineOption<String,
@@ -1090,6 +1068,12 @@ def GenericTaintChecker : Checker<"TaintPropagation">,
                   "",
                   InAlpha>,
   ]>,
+  Documentation<NotDocumented>,
+  Hidden;
+
+def GenericTaintChecker : Checker<"GenericTaint">,
+  HelpText<"Reports potential injection vulnerabilities">,
+  Dependencies<[TaintPropagationChecker]>,
   Documentation<HasDocumentation>;
 
 } // end "alpha.security.taint"
@@ -1716,6 +1700,21 @@ def UnixAPIPortabilityChecker : Checker<"UnixAPI">,
   Documentation<NotDocumented>;
 
 } // end optin.portability
+
+
+//===----------------------------------------------------------------------===//
+// Taint checkers.
+//===----------------------------------------------------------------------===//
+
+let ParentPackage = TaintOptIn in {
+
+def TaintedAllocChecker: Checker<"TaintedAlloc">,
+  HelpText<"Check for memory allocations, where the size parameter "
+           "might be a tainted (attacker controlled) value.">,
+  Dependencies<[DynamicMemoryModeling, TaintPropagationChecker]>,
+  Documentation<HasDocumentation>;
+
+} // end "optin.taint"
 
 //===----------------------------------------------------------------------===//
 // NonDeterminism checkers.

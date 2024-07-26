@@ -13,8 +13,9 @@
 #define DEBUG_TYPE "flang-type-conversion"
 
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
-#include "DescriptorModel.h"
+#include "flang/Common/Fortran.h"
 #include "flang/Optimizer/Builder/Todo.h" // remove when TODO's are done
+#include "flang/Optimizer/CodeGen/DescriptorModel.h"
 #include "flang/Optimizer/CodeGen/TBAABuilder.h"
 #include "flang/Optimizer/CodeGen/Target.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -34,9 +35,11 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
       kindMapping(getKindMapping(module)),
       specifics(CodeGenSpecifics::get(
           module.getContext(), getTargetTriple(module), getKindMapping(module),
-          getTargetCPU(module), getTargetFeatures(module), dl)),
+          getTargetCPU(module), getTargetFeatures(module), dl,
+          getTuneCPU(module))),
       tbaaBuilder(std::make_unique<TBAABuilder>(module->getContext(), applyTBAA,
-                                                forceUnifiedTBAATree)) {
+                                                forceUnifiedTBAATree)),
+      dataLayout{&dl} {
   LLVM_DEBUG(llvm::dbgs() << "FIR type converter\n");
 
   // Each conversion should return a value of type mlir::Type.
@@ -120,40 +123,6 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
     // Convert it here to i1 just in case it survives.
     return mlir::IntegerType::get(&getContext(), 1);
   });
-  // FIXME: https://reviews.llvm.org/D82831 introduced an automatic
-  // materialization of conversion around function calls that is not working
-  // well with fir lowering to llvm (incorrect llvm.mlir.cast are inserted).
-  // Workaround until better analysis: register a handler that does not insert
-  // any conversions.
-  addSourceMaterialization(
-      [&](mlir::OpBuilder &builder, mlir::Type resultType,
-          mlir::ValueRange inputs,
-          mlir::Location loc) -> std::optional<mlir::Value> {
-        if (inputs.size() != 1)
-          return std::nullopt;
-        return inputs[0];
-      });
-  // Similar FIXME workaround here (needed for compare.fir/select-type.fir
-  // as well as rebox-global.fir tests). This is needed to cope with the
-  // the fact that codegen does not lower some operation results to the LLVM
-  // type produced by this LLVMTypeConverter. For instance, inside FIR
-  // globals, fir.box are lowered to llvm.struct, while the fir.box type
-  // conversion translates it into an llvm.ptr<llvm.struct<>> because
-  // descriptors are manipulated in memory outside of global initializers
-  // where this is not possible. Hence, MLIR inserts
-  // builtin.unrealized_conversion_cast after the translation of operations
-  // producing fir.box in fir.global codegen. addSourceMaterialization and
-  // addTargetMaterialization allow ignoring these ops and removing them
-  // after codegen assuming the type discrepencies are intended (like for
-  // fir.box inside globals).
-  addTargetMaterialization(
-      [&](mlir::OpBuilder &builder, mlir::Type resultType,
-          mlir::ValueRange inputs,
-          mlir::Location loc) -> std::optional<mlir::Value> {
-        if (inputs.size() != 1)
-          return std::nullopt;
-        return inputs[0];
-      });
 }
 
 // i32 is used here because LLVM wants i32 constants when indexing into struct
@@ -168,7 +137,7 @@ mlir::Type LLVMTypeConverter::indexType() const {
 }
 
 // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
-std::optional<mlir::LogicalResult> LLVMTypeConverter::convertRecordType(
+std::optional<llvm::LogicalResult> LLVMTypeConverter::convertRecordType(
     fir::RecordType derived, llvm::SmallVectorImpl<mlir::Type> &results) {
   auto name = fir::NameUniquer::dropTypeConversionMarkers(derived.getName());
   auto st = mlir::LLVM::LLVMStructType::getIdentified(&getContext(), name);
@@ -243,7 +212,10 @@ mlir::Type LLVMTypeConverter::convertBoxTypeAsStruct(BaseBoxType box,
   // [dims]
   if (rank == unknownRank()) {
     if (auto seqTy = mlir::dyn_cast<SequenceType>(ele))
-      rank = seqTy.getDimension();
+      if (seqTy.hasUnknownShape())
+        rank = Fortran::common::maxRank;
+      else
+        rank = seqTy.getDimension();
     else
       rank = 0;
   }

@@ -216,7 +216,7 @@ private:
                                    CombineInfo &Paired, bool Modify = false);
   static bool widthsFit(const GCNSubtarget &STI, const CombineInfo &CI,
                         const CombineInfo &Paired);
-  static unsigned getNewOpcode(const CombineInfo &CI, const CombineInfo &Paired);
+  unsigned getNewOpcode(const CombineInfo &CI, const CombineInfo &Paired);
   static std::pair<unsigned, unsigned> getSubRegIdxs(const CombineInfo &CI,
                                                      const CombineInfo &Paired);
   const TargetRegisterClass *
@@ -353,6 +353,7 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR_IMM:
   case AMDGPU::S_LOAD_DWORDX2_IMM:
+  case AMDGPU::S_LOAD_DWORDX2_IMM_ec:
   case AMDGPU::GLOBAL_LOAD_DWORDX2:
   case AMDGPU::GLOBAL_LOAD_DWORDX2_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX2:
@@ -363,6 +364,7 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   case AMDGPU::S_BUFFER_LOAD_DWORDX3_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX3_SGPR_IMM:
   case AMDGPU::S_LOAD_DWORDX3_IMM:
+  case AMDGPU::S_LOAD_DWORDX3_IMM_ec:
   case AMDGPU::GLOBAL_LOAD_DWORDX3:
   case AMDGPU::GLOBAL_LOAD_DWORDX3_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX3:
@@ -373,6 +375,7 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM:
   case AMDGPU::S_LOAD_DWORDX4_IMM:
+  case AMDGPU::S_LOAD_DWORDX4_IMM_ec:
   case AMDGPU::GLOBAL_LOAD_DWORDX4:
   case AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX4:
@@ -383,6 +386,7 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM:
   case AMDGPU::S_LOAD_DWORDX8_IMM:
+  case AMDGPU::S_LOAD_DWORDX8_IMM_ec:
     return 8;
   case AMDGPU::DS_READ_B32:
   case AMDGPU::DS_READ_B32_gfx9:
@@ -507,6 +511,10 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::S_LOAD_DWORDX3_IMM:
   case AMDGPU::S_LOAD_DWORDX4_IMM:
   case AMDGPU::S_LOAD_DWORDX8_IMM:
+  case AMDGPU::S_LOAD_DWORDX2_IMM_ec:
+  case AMDGPU::S_LOAD_DWORDX3_IMM_ec:
+  case AMDGPU::S_LOAD_DWORDX4_IMM_ec:
+  case AMDGPU::S_LOAD_DWORDX8_IMM_ec:
     return S_LOAD_IMM;
   case AMDGPU::DS_READ_B32:
   case AMDGPU::DS_READ_B32_gfx9:
@@ -591,6 +599,10 @@ static unsigned getInstSubclass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::S_LOAD_DWORDX3_IMM:
   case AMDGPU::S_LOAD_DWORDX4_IMM:
   case AMDGPU::S_LOAD_DWORDX8_IMM:
+  case AMDGPU::S_LOAD_DWORDX2_IMM_ec:
+  case AMDGPU::S_LOAD_DWORDX3_IMM_ec:
+  case AMDGPU::S_LOAD_DWORDX4_IMM_ec:
+  case AMDGPU::S_LOAD_DWORDX8_IMM_ec:
     return AMDGPU::S_LOAD_DWORD_IMM;
   case AMDGPU::GLOBAL_LOAD_DWORD:
   case AMDGPU::GLOBAL_LOAD_DWORDX2:
@@ -703,6 +715,10 @@ static AddressRegs getRegs(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::S_LOAD_DWORDX3_IMM:
   case AMDGPU::S_LOAD_DWORDX4_IMM:
   case AMDGPU::S_LOAD_DWORDX8_IMM:
+  case AMDGPU::S_LOAD_DWORDX2_IMM_ec:
+  case AMDGPU::S_LOAD_DWORDX3_IMM_ec:
+  case AMDGPU::S_LOAD_DWORDX4_IMM_ec:
+  case AMDGPU::S_LOAD_DWORDX8_IMM_ec:
     Result.SBase = true;
     return Result;
   case AMDGPU::DS_READ_B32:
@@ -1212,8 +1228,14 @@ void SILoadStoreOptimizer::copyToDestRegs(
 
   // Copy to the old destination registers.
   const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
-  const auto *Dest0 = TII->getNamedOperand(*CI.I, OpName);
-  const auto *Dest1 = TII->getNamedOperand(*Paired.I, OpName);
+  auto *Dest0 = TII->getNamedOperand(*CI.I, OpName);
+  auto *Dest1 = TII->getNamedOperand(*Paired.I, OpName);
+
+  // The constrained sload instructions in S_LOAD_IMM class will have
+  // `early-clobber` flag in the dst operand. Remove the flag before using the
+  // MOs in copies.
+  Dest0->setIsEarlyClobber(false);
+  Dest1->setIsEarlyClobber(false);
 
   BuildMI(*MBB, InsertBefore, DL, CopyDesc)
       .add(*Dest0) // Copy to same destination including flags and sub reg.
@@ -1700,19 +1722,29 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
     case 8:
       return AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM;
     }
-  case S_LOAD_IMM:
+  case S_LOAD_IMM: {
+    // If XNACK is enabled, use the constrained opcodes when the first load is
+    // under-aligned.
+    const MachineMemOperand *MMO = *CI.I->memoperands_begin();
+    bool NeedsConstrainedOpc =
+        STM->isXNACKEnabled() && MMO->getAlign().value() < Width * 4;
     switch (Width) {
     default:
       return 0;
     case 2:
-      return AMDGPU::S_LOAD_DWORDX2_IMM;
+      return NeedsConstrainedOpc ? AMDGPU::S_LOAD_DWORDX2_IMM_ec
+                                 : AMDGPU::S_LOAD_DWORDX2_IMM;
     case 3:
-      return AMDGPU::S_LOAD_DWORDX3_IMM;
+      return NeedsConstrainedOpc ? AMDGPU::S_LOAD_DWORDX3_IMM_ec
+                                 : AMDGPU::S_LOAD_DWORDX3_IMM;
     case 4:
-      return AMDGPU::S_LOAD_DWORDX4_IMM;
+      return NeedsConstrainedOpc ? AMDGPU::S_LOAD_DWORDX4_IMM_ec
+                                 : AMDGPU::S_LOAD_DWORDX4_IMM;
     case 8:
-      return AMDGPU::S_LOAD_DWORDX8_IMM;
+      return NeedsConstrainedOpc ? AMDGPU::S_LOAD_DWORDX8_IMM_ec
+                                 : AMDGPU::S_LOAD_DWORDX8_IMM;
     }
+  }
   case GLOBAL_LOAD:
     switch (Width) {
     default:
@@ -2034,7 +2066,7 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
   if (Src0->isImm())
     std::swap(Src0, Src1);
 
-  if (!Src1->isImm())
+  if (!Src1->isImm() || Src0->isImm())
     return;
 
   uint64_t Offset1 = Src1->getImm();
@@ -2052,16 +2084,15 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     MemInfoMap &Visited,
     SmallPtrSet<MachineInstr *, 4> &AnchorList) const {
 
-  if (!(MI.mayLoad() ^ MI.mayStore()))
+  if (!STM->hasFlatInstOffsets() || !SIInstrInfo::isFLAT(MI))
     return false;
 
-  // TODO: Support flat and scratch.
-  if (AMDGPU::getGlobalSaddrOp(MI.getOpcode()) < 0)
+  // TODO: Support FLAT_SCRATCH. Currently code expects 64-bit pointers.
+  if (SIInstrInfo::isFLATScratch(MI))
     return false;
 
-  if (MI.mayLoad() &&
-      TII->getNamedOperand(MI, AMDGPU::OpName::vdata) != nullptr)
-    return false;
+  unsigned AS = SIInstrInfo::isFLATGlobal(MI) ? AMDGPUAS::GLOBAL_ADDRESS
+                                              : AMDGPUAS::FLAT_ADDRESS;
 
   if (AnchorList.count(&MI))
     return false;
@@ -2157,7 +2188,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     TargetLoweringBase::AddrMode AM;
     AM.HasBaseReg = true;
     AM.BaseOffs = Dist;
-    if (TLI->isLegalGlobalAddressingMode(AM) &&
+    if (TLI->isLegalFlatAddressingMode(AM, AS) &&
         (uint32_t)std::abs(Dist) > MaxDist) {
       MaxDist = std::abs(Dist);
 
@@ -2183,7 +2214,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
       AM.HasBaseReg = true;
       AM.BaseOffs = OtherOffset - AnchorAddr.Offset;
 
-      if (TLI->isLegalGlobalAddressingMode(AM)) {
+      if (TLI->isLegalFlatAddressingMode(AM, AS)) {
         LLVM_DEBUG(dbgs() << "  Promote Offset(" << OtherOffset; dbgs() << ")";
                    OtherMI->dump());
         updateBaseAndOffset(*OtherMI, Base, OtherOffset - AnchorAddr.Offset);

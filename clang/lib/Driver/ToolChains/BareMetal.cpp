@@ -37,7 +37,7 @@ static bool findRISCVMultilibs(const Driver &D,
                                const llvm::Triple &TargetTriple,
                                const ArgList &Args, DetectedMultilibs &Result) {
   Multilib::flags_list Flags;
-  StringRef Arch = riscv::getRISCVArch(Args, TargetTriple);
+  std::string Arch = riscv::getRISCVArch(Args, TargetTriple);
   StringRef Abi = tools::riscv::getRISCVABI(Args, TargetTriple);
 
   if (TargetTriple.isRISCV64()) {
@@ -270,15 +270,19 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     addSystemInclude(DriverArgs, CC1Args, Dir.str());
   }
 
-  if (!DriverArgs.hasArg(options::OPT_nostdlibinc)) {
-    const SmallString<128> SysRoot(computeSysRoot());
-    if (!SysRoot.empty()) {
-      for (const Multilib &M : getOrderedMultilibs()) {
-        SmallString<128> Dir(SysRoot);
-        llvm::sys::path::append(Dir, M.includeSuffix());
-        llvm::sys::path::append(Dir, "include");
-        addSystemInclude(DriverArgs, CC1Args, Dir.str());
-      }
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc))
+    return;
+
+  if (std::optional<std::string> Path = getStdlibIncludePath())
+    addSystemInclude(DriverArgs, CC1Args, *Path);
+
+  const SmallString<128> SysRoot(computeSysRoot());
+  if (!SysRoot.empty()) {
+    for (const Multilib &M : getOrderedMultilibs()) {
+      SmallString<128> Dir(SysRoot);
+      llvm::sys::path::append(Dir, M.includeSuffix());
+      llvm::sys::path::append(Dir, "include");
+      addSystemInclude(DriverArgs, CC1Args, Dir.str());
     }
   }
 }
@@ -296,6 +300,40 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
     return;
 
   const Driver &D = getDriver();
+  std::string Target = getTripleString();
+
+  auto AddCXXIncludePath = [&](StringRef Path) {
+    std::string Version = detectLibcxxVersion(Path);
+    if (Version.empty())
+      return;
+
+    {
+      // First the per-target include dir: include/<target>/c++/v1.
+      SmallString<128> TargetDir(Path);
+      llvm::sys::path::append(TargetDir, Target, "c++", Version);
+      addSystemInclude(DriverArgs, CC1Args, TargetDir);
+    }
+
+    {
+      // Then the generic dir: include/c++/v1.
+      SmallString<128> Dir(Path);
+      llvm::sys::path::append(Dir, "c++", Version);
+      addSystemInclude(DriverArgs, CC1Args, Dir);
+    }
+  };
+
+  switch (GetCXXStdlibType(DriverArgs)) {
+    case ToolChain::CST_Libcxx: {
+      SmallString<128> P(D.Dir);
+      llvm::sys::path::append(P, "..", "include");
+      AddCXXIncludePath(P);
+      break;
+    }
+    case ToolChain::CST_Libstdcxx:
+      // We only support libc++ toolchain installation.
+      break;
+  }
+
   std::string SysRoot(computeSysRoot());
   if (SysRoot.empty())
     return;
@@ -429,6 +467,7 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   ArgStringList CmdArgs;
 
   auto &TC = static_cast<const toolchains::BareMetal &>(getToolChain());
+  const Driver &D = getToolChain().getDriver();
   const llvm::Triple::ArchType Arch = TC.getArch();
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
 
@@ -466,6 +505,19 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     TC.AddLinkRuntimeLib(Args, CmdArgs);
   }
 
+  if (D.isUsingLTO()) {
+    assert(!Inputs.empty() && "Must have at least one input.");
+    // Find the first filename InputInfo object.
+    auto Input = llvm::find_if(
+        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
+    if (Input == Inputs.end())
+      // For a very rare case, all of the inputs to the linker are
+      // InputArg. If that happens, just use the first InputInfo.
+      Input = Inputs.begin();
+
+    addLTOOptions(TC, Args, CmdArgs, Output, *Input,
+                  D.getLTOMode() == LTOK_Thin);
+  }
   if (TC.getTriple().isRISCV())
     CmdArgs.push_back("-X");
 

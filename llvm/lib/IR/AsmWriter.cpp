@@ -326,6 +326,9 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0:
     Out << "aarch64_sme_preservemost_from_x0";
     break;
+  case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1:
+    Out << "aarch64_sme_preservemost_from_x1";
+    break;
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2:
     Out << "aarch64_sme_preservemost_from_x2";
     break;
@@ -570,8 +573,9 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
   case Type::FP128TyID:     OS << "fp128"; return;
   case Type::PPC_FP128TyID: OS << "ppc_fp128"; return;
   case Type::LabelTyID:     OS << "label"; return;
-  case Type::MetadataTyID:  OS << "metadata"; return;
-  case Type::X86_MMXTyID:   OS << "x86_mmx"; return;
+  case Type::MetadataTyID:
+    OS << "metadata";
+    return;
   case Type::X86_AMXTyID:   OS << "x86_amx"; return;
   case Type::TokenTyID:     OS << "token"; return;
   case Type::IntegerTyID:
@@ -1018,8 +1022,8 @@ void SlotTracker::processModule() {
 
   // Add metadata used by named metadata.
   for (const NamedMDNode &NMD : TheModule->named_metadata()) {
-    for (unsigned i = 0, e = NMD.getNumOperands(); i != e; ++i)
-      CreateMetadataSlot(NMD.getOperand(i));
+    for (const MDNode *N : NMD.operands())
+      CreateMetadataSlot(N);
   }
 
   for (const Function &F : *TheModule) {
@@ -1417,6 +1421,10 @@ static void WriteOptimizationInfo(raw_ostream &Out, const User *U) {
   } else if (const GEPOperator *GEP = dyn_cast<GEPOperator>(U)) {
     if (GEP->isInBounds())
       Out << " inbounds";
+    else if (GEP->hasNoUnsignedSignedWrap())
+      Out << " nusw";
+    if (GEP->hasNoUnsignedWrap())
+      Out << " nuw";
     if (auto InRange = GEP->getInRange()) {
       Out << " inrange(" << InRange->getLower() << ", " << InRange->getUpper()
           << ")";
@@ -1590,6 +1598,27 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     return;
   }
 
+  if (const ConstantPtrAuth *CPA = dyn_cast<ConstantPtrAuth>(CV)) {
+    Out << "ptrauth (";
+
+    // ptrauth (ptr CST, i32 KEY[, i64 DISC[, ptr ADDRDISC]?]?)
+    unsigned NumOpsToWrite = 2;
+    if (!CPA->getOperand(2)->isNullValue())
+      NumOpsToWrite = 3;
+    if (!CPA->getOperand(3)->isNullValue())
+      NumOpsToWrite = 4;
+
+    ListSeparator LS;
+    for (unsigned i = 0, e = NumOpsToWrite; i != e; ++i) {
+      Out << LS;
+      WriterCtx.TypePrinter->print(CPA->getOperand(i)->getType(), Out);
+      Out << ' ';
+      WriteAsOperandInternal(Out, CPA->getOperand(i), WriterCtx);
+    }
+    Out << ')';
+    return;
+  }
+
   if (const ConstantArray *CA = dyn_cast<ConstantArray>(CV)) {
     Type *ETy = CA->getType()->getElementType();
     Out << '[';
@@ -1699,8 +1728,6 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
   if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(CV)) {
     Out << CE->getOpcodeName();
     WriteOptimizationInfo(Out, CE);
-    if (CE->isCompare())
-      Out << ' ' << static_cast<CmpInst::Predicate>(CE->getPredicate());
     Out << " (";
 
     if (const GEPOperator *GEP = dyn_cast<GEPOperator>(CE)) {

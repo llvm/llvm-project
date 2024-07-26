@@ -177,9 +177,11 @@ matchTrailingTemplateParam(const FunctionTemplateDecl *FunctionTemplate) {
           dyn_cast<TemplateTypeParmDecl>(LastParam)) {
     if (LastTemplateParam->hasDefaultArgument() &&
         LastTemplateParam->getIdentifier() == nullptr) {
-      return {matchEnableIfSpecialization(
-                  LastTemplateParam->getDefaultArgumentInfo()->getTypeLoc()),
-              LastTemplateParam};
+      return {
+          matchEnableIfSpecialization(LastTemplateParam->getDefaultArgument()
+                                          .getTypeSourceInfo()
+                                          ->getTypeLoc()),
+          LastTemplateParam};
     }
   }
   return {};

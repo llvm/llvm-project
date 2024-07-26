@@ -14,6 +14,7 @@
 #include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Lex/Token.h"
 #include "clang/Parse/LoopHint.h"
 #include "clang/Parse/ParseDiagnostic.h"
@@ -23,6 +24,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaCodeCompletion.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <optional>
@@ -410,6 +412,19 @@ private:
   Sema &Actions;
 };
 
+struct PragmaMCFuncHandler : public PragmaHandler {
+  PragmaMCFuncHandler(bool ReportError)
+      : PragmaHandler("mc_func"), ReportError(ReportError) {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &Tok) override {
+    if (ReportError)
+      PP.Diag(Tok, diag::err_pragma_mc_func_not_supported);
+  }
+
+private:
+  bool ReportError = false;
+};
+
 void markAsReinjectedForRelexing(llvm::MutableArrayRef<clang::Token> Toks) {
   for (auto &T : Toks)
     T.setFlag(clang::Token::IsReinjected);
@@ -567,6 +582,12 @@ void Parser::initializePragmaHandlers() {
     RISCVPragmaHandler = std::make_unique<PragmaRISCVHandler>(Actions);
     PP.AddPragmaHandler("clang", RISCVPragmaHandler.get());
   }
+
+  if (getTargetInfo().getTriple().isOSAIX()) {
+    MCFuncPragmaHandler = std::make_unique<PragmaMCFuncHandler>(
+        PP.getPreprocessorOpts().ErrorOnPragmaMcfuncOnAIX);
+    PP.AddPragmaHandler(MCFuncPragmaHandler.get());
+  }
 }
 
 void Parser::resetPragmaHandlers() {
@@ -700,6 +721,11 @@ void Parser::resetPragmaHandlers() {
   if (getTargetInfo().getTriple().isRISCV()) {
     PP.RemovePragmaHandler("clang", RISCVPragmaHandler.get());
     RISCVPragmaHandler.reset();
+  }
+
+  if (getTargetInfo().getTriple().isOSAIX()) {
+    PP.RemovePragmaHandler(MCFuncPragmaHandler.get());
+    MCFuncPragmaHandler.reset();
   }
 }
 
@@ -4154,7 +4180,7 @@ void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
   }
 
   if (II->isStr("vector"))
-    Actions.DeclareRISCVVBuiltins = true;
+    Actions.RISCV().DeclareRVVBuiltins = true;
   else if (II->isStr("sifive_vector"))
-    Actions.DeclareRISCVSiFiveVectorBuiltins = true;
+    Actions.RISCV().DeclareSiFiveVectorBuiltins = true;
 }

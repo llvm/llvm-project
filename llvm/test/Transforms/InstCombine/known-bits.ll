@@ -1698,6 +1698,44 @@ define i32 @test_none(float nofpclass(all) %x) {
   ret i32 %and
 }
 
+; We cannot make assumptions about the sign of result of sqrt
+; when the input is a negative value (except for -0).
+define i1 @pr92217() {
+; CHECK-LABEL: @pr92217(
+; CHECK-NEXT:    [[X:%.*]] = call float @llvm.sqrt.f32(float 0xC6DEBE9E60000000)
+; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[Y]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x = call float @llvm.sqrt.f32(float 0xC6DEBE9E60000000)
+  %y = bitcast float %x to i32
+  %cmp = icmp slt i32 %y, 0
+  ret i1 %cmp
+}
+
+define i1 @sqrt_negative_input(float nofpclass(nan zero pnorm psub pinf) %a) {
+; CHECK-LABEL: @sqrt_negative_input(
+; CHECK-NEXT:    [[X:%.*]] = call float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[Y]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x = call float @llvm.sqrt.f32(float %a)
+  %y = bitcast float %x to i32
+  %cmp = icmp slt i32 %y, 0
+  ret i1 %cmp
+}
+
+define i1 @sqrt_negative_input_nnan(float nofpclass(nan zero pnorm psub pinf) %a) {
+; CHECK-LABEL: @sqrt_negative_input_nnan(
+; CHECK-NEXT:    ret i1 false
+;
+  %x = call nnan float @llvm.sqrt.f32(float %a)
+  %y = bitcast float %x to i32
+  %cmp = icmp slt i32 %y, 0
+  ret i1 %cmp
+}
+
 define i8 @test_icmp_add(i8 %n, i8 %n2, i8 %other) {
 ; CHECK-LABEL: @test_icmp_add(
 ; CHECK-NEXT:  entry:
@@ -1970,5 +2008,51 @@ if.else:
   ret i8 %other
 }
 
+define i8 @simplifydemanded_context(i8 %x, i8 %y) {
+; CHECK-LABEL: @simplifydemanded_context(
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    [[X_LOBITS:%.*]] = and i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[PRECOND:%.*]] = icmp eq i8 [[X_LOBITS]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRECOND]])
+; CHECK-NEXT:    ret i8 0
+;
+  %and1 = and i8 %x, 1
+  call void @dummy() ; may unwind
+  %x.lobits = and i8 %x, 3
+  %precond = icmp eq i8 %x.lobits, 0
+  call void @llvm.assume(i1 %precond)
+  %and2 = and i8 %and1, %y
+  ret i8 %and2
+}
+
+define i16 @pr97330(i1 %c, ptr %p1, ptr %p2) {
+; CHECK-LABEL: @pr97330(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EXIT:%.*]], label [[IF:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    unreachable
+; CHECK:       exit:
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[P1:%.*]], align 8
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[V]] to i16
+; CHECK-NEXT:    ret i16 [[CONV]]
+;
+entry:
+  %v = load i64, ptr %p1, align 8
+  %conv = trunc i64 %v to i16
+  br i1 %c, label %exit, label %if
+
+if:
+  %cmp = icmp ne i16 %conv, 1
+  %conv2 = zext i1 %cmp to i32
+  store i32 %conv2, ptr %p2, align 4
+  %cmp2 = icmp eq i64 %v, 1
+  call void @llvm.assume(i1 %cmp2)
+  unreachable
+
+exit:
+  ret i16 %conv
+}
+
+declare void @dummy()
 declare void @use(i1)
 declare void @sink(i8)

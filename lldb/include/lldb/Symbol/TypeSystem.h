@@ -209,6 +209,7 @@ public:
   // TypeSystems can support more than one language
   virtual bool SupportsLanguage(lldb::LanguageType language) = 0;
 
+  static bool SupportsLanguageStatic(lldb::LanguageType language);
   // Type Completion
 
   virtual bool GetCompleteType(lldb::opaque_compiler_type_t type) = 0;
@@ -359,7 +360,7 @@ public:
     return CompilerDecl();
   }
 
-  virtual CompilerType GetChildCompilerTypeAtIndex(
+  virtual llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
       bool transparent_pointers, bool omit_empty_base_classes,
       bool ignore_array_bounds, std::string &child_name,

@@ -379,7 +379,10 @@ const char *SBValue::GetObjectDescription() {
   if (!value_sp)
     return nullptr;
 
-  return ConstString(value_sp->GetObjectDescription()).GetCString();
+  llvm::Expected<std::string> str = value_sp->GetObjectDescription();
+  if (!str)
+    return ConstString("error: " + toString(str.takeError())).AsCString();
+  return ConstString(*str).AsCString();
 }
 
 SBType SBValue::GetType() {
@@ -757,6 +760,21 @@ lldb::SBValue SBValue::GetNonSyntheticValue() {
     ValueImplSP proxy_sp(new ValueImpl(m_opaque_sp->GetRootSP(),
                                        m_opaque_sp->GetUseDynamic(), false));
     value_sb.SetSP(proxy_sp);
+  }
+  return value_sb;
+}
+
+lldb::SBValue SBValue::GetSyntheticValue() {
+  LLDB_INSTRUMENT_VA(this);
+
+  SBValue value_sb;
+  if (IsValid()) {
+    ValueImplSP proxy_sp(new ValueImpl(m_opaque_sp->GetRootSP(),
+                                       m_opaque_sp->GetUseDynamic(), true));
+    value_sb.SetSP(proxy_sp);
+    if (!value_sb.IsSynthetic()) {
+      return {};
+    }
   }
   return value_sb;
 }
@@ -1233,7 +1251,10 @@ bool SBValue::GetDescription(SBStream &description) {
     DumpValueObjectOptions options;
     options.SetUseDynamicType(m_opaque_sp->GetUseDynamic());
     options.SetUseSyntheticValue(m_opaque_sp->GetUseSynthetic());
-    value_sp->Dump(strm, options);
+    if (llvm::Error error = value_sp->Dump(strm, options)) {
+      strm << "error: " << toString(std::move(error));
+      return false;
+    }
   } else {
     strm.PutCString("No value");
   }
@@ -1281,26 +1302,8 @@ lldb::addr_t SBValue::GetLoadAddress() {
   lldb::addr_t value = LLDB_INVALID_ADDRESS;
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  if (value_sp) {
-    TargetSP target_sp(value_sp->GetTargetSP());
-    if (target_sp) {
-      const bool scalar_is_load_address = true;
-      AddressType addr_type;
-      value = value_sp->GetAddressOf(scalar_is_load_address, &addr_type);
-      if (addr_type == eAddressTypeFile) {
-        ModuleSP module_sp(value_sp->GetModule());
-        if (!module_sp)
-          value = LLDB_INVALID_ADDRESS;
-        else {
-          Address addr;
-          module_sp->ResolveFileAddress(value, addr);
-          value = addr.GetLoadAddress(target_sp.get());
-        }
-      } else if (addr_type == eAddressTypeHost ||
-                 addr_type == eAddressTypeInvalid)
-        value = LLDB_INVALID_ADDRESS;
-    }
-  }
+  if (value_sp)
+    return value_sp->GetLoadAddress();
 
   return value;
 }

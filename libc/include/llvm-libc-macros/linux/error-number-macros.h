@@ -1,13 +1,6 @@
 #ifndef LLVM_LIBC_MACROS_LINUX_ERROR_NUMBER_MACROS_H
 #define LLVM_LIBC_MACROS_LINUX_ERROR_NUMBER_MACROS_H
 
-#if defined(__mips__)
-#include "mips/error-number-macros.h"
-
-#elif defined(__sparc__)
-#include "sparc/error-number-macros.h"
-
-#else
 #ifndef ECANCELED
 #define ECANCELED 125
 #endif // ECANCELED
@@ -27,6 +20,5 @@
 #ifndef EHWPOISON
 #define EHWPOISON 133
 #endif // EHWPOISON
-#endif
 
 #endif // LLVM_LIBC_MACROS_LINUX_ERROR_NUMBER_MACROS_H

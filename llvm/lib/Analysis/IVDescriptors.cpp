@@ -95,7 +95,7 @@ static std::pair<Type *, bool> computeRecurrenceType(Instruction *Exit,
                                                      AssumptionCache *AC,
                                                      DominatorTree *DT) {
   bool IsSigned = false;
-  const DataLayout &DL = Exit->getModule()->getDataLayout();
+  const DataLayout &DL = Exit->getDataLayout();
   uint64_t MaxBitWidth = DL.getTypeSizeInBits(Exit->getType());
 
   if (DB) {
@@ -635,9 +635,8 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
       return InstDesc(Select, Prev.getRecKind());
   }
 
-  // Only match select with single use cmp condition.
-  if (!match(I, m_Select(m_OneUse(m_Cmp(Pred, m_Value(), m_Value())), m_Value(),
-                         m_Value())))
+  if (!match(I,
+             m_Select(m_Cmp(Pred, m_Value(), m_Value()), m_Value(), m_Value())))
     return InstDesc(false, I);
 
   SelectInst *SI = cast<SelectInst>(I);

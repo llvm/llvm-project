@@ -534,7 +534,7 @@ TEST(WalkAST, Enums) {
 TEST(WalkAST, InitializerList) {
   testWalk(R"cpp(
        namespace std {
-        template <typename T> struct $implicit^initializer_list {};
+        template <typename T> struct $implicit^initializer_list { const T *a, *b; };
        })cpp",
            R"cpp(
        const char* s = "";

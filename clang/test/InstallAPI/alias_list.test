@@ -23,7 +23,7 @@
 ; RUN: -o %t/AliasList.tbd 2>&1 | FileCheck -allow-empty %s  \
 ; RUN: --check-prefix=INVALID
 
-; INVALID: error: could not read alias list {{.*}} missing alias for: _hidden
+; INVALID: error: could not read symbol alias input list {{.*}}invalid.txt': invalid input format: missing alias for: _hidden
 
 ;--- Frameworks/AliasList.framework/Headers/AliasList.h
 // simple alias from one symbol to another.

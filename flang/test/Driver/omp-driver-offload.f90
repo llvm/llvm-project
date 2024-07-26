@@ -175,35 +175,28 @@
 ! RUN: | FileCheck %s --check-prefix=HOST-IR-MISSING
 ! HOST-IR-MISSING: error: provided host compiler IR file 'non-existant-file.bc' is required to generate code for OpenMP target regions but cannot be found
 
-! Check that `-gpulibc` includes the LLVM C libraries for the GPU.
-! RUN:   %flang -### --target=x86_64-unknown-linux-gnu -fopenmp  \
-! RUN:      --offload-arch=sm_52 \
-! RUN:      -gpulibc %s 2>&1 \
-! RUN:   | FileCheck --check-prefix=LIBC-GPU-NVPTX %s
-! LIBC-GPU-NVPTX-DAG: "-lcgpu-nvptx"
-! LIBC-GPU-NVPTX-DAG: "-lmgpu-nvptx"
-
-! RUN:   %flang -### --target=x86_64-unknown-linux-gnu -fopenmp  \
-! RUN:      --offload-arch=sm_52 \
-! RUN:      -nogpulibc %s 2>&1 \
-! RUN:   | FileCheck --check-prefix=NO-LIBC-GPU-NVPTX %s
-! NO-LIBC-GPU-NVPTX-NOT: "-lcgpu-nvptx"
-
-! RUN:   %flang -### --target=x86_64-unknown-linux-gnu -fopenmp  \
-! RUN:      --offload-arch=gfx90a \
-! RUN:      -gpulibc %s 2>&1 \
-! RUN:   | FileCheck --check-prefix=LIBC-GPU-AMDGPU %s
-! LIBC-GPU-AMDGPU-DAG: "-lcgpu-amdgpu"
-! LIBC-GPU-AMDGPU-DAG: "-lmgpu-amdgpu"
-
-! RUN:   %flang -### --target=x86_64-unknown-linux-gnu -fopenmp  \
-! RUN:      --offload-arch=gfx90a \
-! RUN:      -nogpulibc %s 2>&1 \
-! RUN:   | FileCheck --check-prefix=NO-LIBC-GPU-AMDGPU %s
-! NO-LIBC-GPU-AMDGPU-NOT: "-lcgpu-amdgpu"
-
 ! RUN:   %flang -### -v --target=x86_64-unknown-linux-gnu -fopenmp  \
 ! RUN:      --offload-arch=gfx900 \
 ! RUN:      --rocm-path=%S/Inputs/rocm %s 2>&1 \
 ! RUN:   | FileCheck --check-prefix=ROCM-PATH %s
 ! ROCM-PATH: Found HIP installation: {{.*Inputs.*rocm}}, version 3.6.20214-a2917cd
+
+! Test -fopenmp-force-usm option without offload
+! RUN: %flang -S -### %s -o %t 2>&1 \
+! RUN: -fopenmp -fopenmp-force-usm \
+! RUN: --target=aarch64-unknown-linux-gnu \
+! RUN:   | FileCheck %s --check-prefix=FORCE-USM-NO-OFFLOAD
+
+! FORCE-USM-NO-OFFLOAD: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
+! FORCE-USM-NO-OFFLOAD-SAME: "-fopenmp" "-fopenmp-force-usm"
+
+! Test -fopenmp-force-usm option with offload
+! RUN: %flang -S -### %s -o %t 2>&1 \
+! RUN: -fopenmp -fopenmp-force-usm --offload-arch=gfx90a \
+! RUN: --target=aarch64-unknown-linux-gnu \
+! RUN:   | FileCheck %s --check-prefix=FORCE-USM-OFFLOAD
+
+! FORCE-USM-OFFLOAD: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
+! FORCE-USM-OFFLOAD-SAME: "-fopenmp" "-fopenmp-force-usm"
+! FORCE-USM-OFFLOAD-NEXT: "{{[^"]*}}flang-new" "-fc1" "-triple" "amdgcn-amd-amdhsa"
+! FORCE-USM-OFFLOAD-SAME: "-fopenmp" "-fopenmp-force-usm"

@@ -4,6 +4,7 @@
 # based on the ability of the host toolchain to target various platforms.
 
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "Compiler-RT")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
@@ -90,7 +91,7 @@ if (COMPILER_RT_STANDALONE_BUILD)
   if (TARGET intrinsics_gen)
     # Loading the llvm config causes this target to be imported so place it
     # under the appropriate folder in an IDE.
-    set_target_properties(intrinsics_gen PROPERTIES FOLDER "Compiler-RT Misc")
+    set_target_properties(intrinsics_gen PROPERTIES FOLDER "LLVM/Tablegenning")
   endif()
 
   find_package(Python3 COMPONENTS Interpreter)
@@ -602,10 +603,6 @@ if (COMPILER_RT_TEST_STANDALONE_BUILD_LIBS)
   #
   if ("${COMPILER_RT_TEST_COMPILER_ID}" MATCHES "Clang")
     list(APPEND COMPILER_RT_UNITTEST_LINK_FLAGS "-resource-dir=${COMPILER_RT_OUTPUT_DIR}")
-  endif()
-  get_compiler_rt_output_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} rtlib_dir)
-  if (NOT WIN32)
-    list(APPEND COMPILER_RT_UNITTEST_LINK_FLAGS "-Wl,-rpath,${rtlib_dir}")
   endif()
 endif()
 

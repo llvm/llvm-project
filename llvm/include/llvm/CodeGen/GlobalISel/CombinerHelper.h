@@ -129,6 +129,12 @@ public:
 
   const TargetLowering &getTargetLowering() const;
 
+  const MachineFunction &getMachineFunction() const;
+
+  const DataLayout &getDataLayout() const;
+
+  LLVMContext &getContext() const;
+
   /// \returns true if the combiner is running pre-legalization.
   bool isPreLegalize() const;
 
@@ -389,12 +395,6 @@ public:
                             std::tuple<Register, unsigned> &MatchInfo);
   void applyCombineExtOfExt(MachineInstr &MI,
                             std::tuple<Register, unsigned> &MatchInfo);
-
-  /// Transform trunc ([asz]ext x) to x or ([asz]ext x) or (trunc x).
-  bool matchCombineTruncOfExt(MachineInstr &MI,
-                              std::pair<Register, unsigned> &MatchInfo);
-  void applyCombineTruncOfExt(MachineInstr &MI,
-                              std::pair<Register, unsigned> &MatchInfo);
 
   /// Transform trunc (shl x, K) to shl (trunc x), K
   ///    if K < VT.getScalarSizeInBits().
@@ -816,6 +816,9 @@ public:
   /// Combine zext of trunc.
   bool matchZextOfTrunc(const MachineOperand &MO, BuildFnTy &MatchInfo);
 
+  /// Combine zext nneg to sext.
+  bool matchNonNegZext(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
   /// Match constant LHS FP ops that should be commuted.
   bool matchCommuteFPConstantToRHS(MachineInstr &MI);
 
@@ -840,10 +843,6 @@ public:
   /// Combine extract vector element.
   bool matchExtractVectorElement(MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  /// Combine extract vector element with freeze on the vector register.
-  bool matchExtractVectorElementWithFreeze(const MachineOperand &MO,
-                                           BuildFnTy &MatchInfo);
-
   /// Combine extract vector element with a build vector on the vector register.
   bool matchExtractVectorElementWithBuildVector(const MachineOperand &MO,
                                                 BuildFnTy &MatchInfo);
@@ -866,8 +865,33 @@ public:
   /// By default, it erases the instruction def'd on \p MO from the function.
   void applyBuildFnMO(const MachineOperand &MO, BuildFnTy &MatchInfo);
 
+  /// Match FPOWI if it's safe to extend it into a series of multiplications.
+  bool matchFPowIExpansion(MachineInstr &MI, int64_t Exponent);
+
+  /// Expands FPOWI into a series of multiplications and a division if the
+  /// exponent is negative.
+  void applyExpandFPowI(MachineInstr &MI, int64_t Exponent);
+
   /// Combine insert vector element OOB.
   bool matchInsertVectorElementOOB(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  bool matchFreezeOfSingleMaybePoisonOperand(MachineInstr &MI,
+                                             BuildFnTy &MatchInfo);
+
+  bool matchAddOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  bool matchMulOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  bool matchSubOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  bool matchShlOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  /// Transform trunc ([asz]ext x) to x or ([asz]ext x) or (trunc x).
+  bool matchTruncateOfExt(const MachineInstr &Root, const MachineInstr &ExtMI,
+                          BuildFnTy &MatchInfo);
+
+  bool matchCastOfSelect(const MachineInstr &Cast, const MachineInstr &SelectMI,
+                         BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
@@ -981,6 +1005,8 @@ private:
 
   // Simplify (cmp cc0 x, y) (&& or ||) (cmp cc1 x, y) -> cmp cc2 x, y.
   bool tryFoldLogicOfFCmps(GLogicalBinOp *Logic, BuildFnTy &MatchInfo);
+
+  bool isCastFree(unsigned Opcode, LLT ToTy, LLT FromTy) const;
 };
 } // namespace llvm
 

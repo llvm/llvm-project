@@ -1099,6 +1099,10 @@ ExpectedType ASTNodeImporter::VisitBuiltinType(const BuiltinType *T) {
   case BuiltinType::Id:                                                        \
     return Importer.getToContext().SingletonId;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+  case BuiltinType::Id:                                                        \
+    return Importer.getToContext().SingletonId;
+#include "clang/Basic/AMDGPUTypes.def"
 #define SHARED_SINGLETON_TYPE(Expansion)
 #define BUILTIN_TYPE(Id, SingletonId) \
   case BuiltinType::Id: return Importer.getToContext().SingletonId;
@@ -1505,7 +1509,7 @@ ExpectedType ASTNodeImporter::VisitInjectedClassNameType(
   // The InjectedClassNameType is created in VisitRecordDecl when the
   // T->getDecl() is imported. Here we can return the existing type.
   const Type *Ty = (*ToDeclOrErr)->getTypeForDecl();
-  assert(Ty && isa<InjectedClassNameType>(Ty));
+  assert(isa_and_nonnull<InjectedClassNameType>(Ty));
   return QualType(Ty, 0);
 }
 
@@ -1547,7 +1551,7 @@ ASTNodeImporter::VisitCountAttributedType(const CountAttributedType *T) {
   Expr *CountExpr = importChecked(Err, T->getCountExpr());
 
   SmallVector<TypeCoupledDeclRefInfo, 1> CoupledDecls;
-  for (auto TI : T->dependent_decls()) {
+  for (const TypeCoupledDeclRefInfo &TI : T->dependent_decls()) {
     Expected<ValueDecl *> ToDeclOrErr = import(TI.getDecl());
     if (!ToDeclOrErr)
       return ToDeclOrErr.takeError();
@@ -2929,7 +2933,7 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
 
   // We may already have an enum of the same name; try to find and match it.
   EnumDecl *PrevDecl = nullptr;
-  if (!DC->isFunctionOrMethod() && SearchName) {
+  if (!DC->isFunctionOrMethod()) {
     SmallVector<NamedDecl *, 4> ConflictingDecls;
     auto FoundDecls =
         Importer.findDeclsInToCtx(DC, SearchName);
@@ -2945,7 +2949,7 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
       if (auto *FoundEnum = dyn_cast<EnumDecl>(FoundDecl)) {
         if (!hasSameVisibilityContextAndLinkage(FoundEnum, D))
           continue;
-        if (IsStructuralMatch(D, FoundEnum)) {
+        if (IsStructuralMatch(D, FoundEnum, !SearchName.isEmpty())) {
           EnumDecl *FoundDef = FoundEnum->getDefinition();
           if (D->isThisDeclarationADefinition() && FoundDef)
             return Importer.MapImported(D, FoundDef);
@@ -2956,7 +2960,12 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
       }
     }
 
-    if (!ConflictingDecls.empty()) {
+    // In case of unnamed enums, we try to find an existing similar one, if none
+    // was found, perform the import always.
+    // Structural in-equivalence is not detected in this way here, but it may
+    // be found when the parent decl is imported (if the enum is part of a
+    // class). To make this totally exact a more difficult solution is needed.
+    if (SearchName && !ConflictingDecls.empty()) {
       ExpectedName NameOrErr = Importer.HandleNameConflict(
           SearchName, DC, IDNS, ConflictingDecls.data(),
           ConflictingDecls.size());
@@ -5917,11 +5926,11 @@ ASTNodeImporter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   }
 
   if (D->hasDefaultArgument()) {
-    Expected<TypeSourceInfo *> ToDefaultArgOrErr =
-        import(D->getDefaultArgumentInfo());
+    Expected<TemplateArgumentLoc> ToDefaultArgOrErr =
+        import(D->getDefaultArgument());
     if (!ToDefaultArgOrErr)
       return ToDefaultArgOrErr.takeError();
-    ToD->setDefaultArgument(*ToDefaultArgOrErr);
+    ToD->setDefaultArgument(ToD->getASTContext(), *ToDefaultArgOrErr);
   }
 
   return ToD;
@@ -5949,10 +5958,11 @@ ASTNodeImporter::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
     return ToD;
 
   if (D->hasDefaultArgument()) {
-    ExpectedExpr ToDefaultArgOrErr = import(D->getDefaultArgument());
+    Expected<TemplateArgumentLoc> ToDefaultArgOrErr =
+        import(D->getDefaultArgument());
     if (!ToDefaultArgOrErr)
       return ToDefaultArgOrErr.takeError();
-    ToD->setDefaultArgument(*ToDefaultArgOrErr);
+    ToD->setDefaultArgument(Importer.getToContext(), *ToDefaultArgOrErr);
   }
 
   return ToD;
@@ -6560,6 +6570,11 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
       return D2;
   }
 
+  // Update InsertPos, because preceding import calls may have invalidated
+  // it by adding new specializations.
+  if (!VarTemplate->findSpecialization(TemplateArgs, InsertPos))
+    VarTemplate->AddSpecialization(D2, InsertPos);
+
   QualType T;
   if (Error Err = importInto(T, D->getType()))
     return std::move(Err);
@@ -6597,8 +6612,6 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
 
   if (FoundSpecialization)
     D2->setPreviousDecl(FoundSpecialization->getMostRecentDecl());
-
-  VarTemplate->AddSpecialization(D2, InsertPos);
 
   addDeclToContexts(D, D2);
 

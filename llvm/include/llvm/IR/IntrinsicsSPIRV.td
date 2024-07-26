@@ -36,6 +36,7 @@ let TargetPrefix = "spv" in {
   def int_spv_alloca : Intrinsic<[llvm_any_ty], []>;
   def int_spv_alloca_array : Intrinsic<[llvm_any_ty], [llvm_anyint_ty]>;
   def int_spv_undef : Intrinsic<[llvm_i32_ty], []>;
+  def int_spv_inline_asm : Intrinsic<[], [llvm_metadata_ty, llvm_metadata_ty, llvm_vararg_ty]>;
 
   // Expect, Assume Intrinsics
   def int_spv_assume : Intrinsic<[], [llvm_i1_ty]>;
@@ -59,6 +60,8 @@ let TargetPrefix = "spv" in {
       Intrinsic<[ llvm_ptr_ty ], [llvm_i8_ty], [IntrWillReturn]>;
   def int_spv_all : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty]>;
   def int_spv_any : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty]>;
+  def int_spv_frac : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]>;
   def int_spv_lerp : Intrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty, LLVMMatchType<0>,LLVMMatchType<0>], 
     [IntrNoMem, IntrWillReturn] >;
+  def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]>;
 }

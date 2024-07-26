@@ -153,6 +153,9 @@ class Parser : public CodeCompletionHandler {
   /// Identifier for "replacement".
   IdentifierInfo *Ident_replacement;
 
+  /// Identifier for "environment".
+  IdentifierInfo *Ident_environment;
+
   /// Identifiers used by the 'external_source_symbol' attribute.
   IdentifierInfo *Ident_language, *Ident_defined_in,
       *Ident_generated_declaration, *Ident_USR;
@@ -218,6 +221,7 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> MaxTokensHerePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensTotalPragmaHandler;
   std::unique_ptr<PragmaHandler> RISCVPragmaHandler;
+  std::unique_ptr<PragmaHandler> MCFuncPragmaHandler;
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
@@ -464,15 +468,18 @@ class Parser : public CodeCompletionHandler {
 
   /// Flags describing a context in which we're parsing a statement.
   enum class ParsedStmtContext {
+    /// This context permits declarations in language modes where declarations
+    /// are not statements.
+    AllowDeclarationsInC = 0x1,
     /// This context permits standalone OpenMP directives.
-    AllowStandaloneOpenMPDirectives = 0x1,
+    AllowStandaloneOpenMPDirectives = 0x2,
     /// This context is at the top level of a GNU statement expression.
-    InStmtExpr = 0x2,
+    InStmtExpr = 0x4,
 
     /// The context of a regular substatement.
     SubStmt = 0,
     /// The context of a compound-statement.
-    Compound = AllowStandaloneOpenMPDirectives,
+    Compound = AllowDeclarationsInC | AllowStandaloneOpenMPDirectives,
 
     LLVM_MARK_AS_BITMASK_ENUM(InStmtExpr)
   };
@@ -1643,9 +1650,11 @@ private:
   void ParseLexedAttributes(ParsingClass &Class);
   void ParseLexedAttributeList(LateParsedAttrList &LAs, Decl *D,
                                bool EnterScope, bool OnDefinition);
+  void ParseLexedCAttributeList(LateParsedAttrList &LA, bool EnterScope,
+                                ParsedAttributes *OutAttrs = nullptr);
   void ParseLexedAttribute(LateParsedAttribute &LA,
                            bool EnterScope, bool OnDefinition);
-  void ParseLexedCAttribute(LateParsedAttribute &LA,
+  void ParseLexedCAttribute(LateParsedAttribute &LA, bool EnterScope,
                             ParsedAttributes *OutAttrs = nullptr);
   void ParseLexedMethodDeclarations(ParsingClass &Class);
   void ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM);
@@ -1869,6 +1878,10 @@ private:
     UnaryExprOnly,
     PrimaryExprOnly
   };
+
+  bool isRevertibleTypeTrait(const IdentifierInfo *Id,
+                             clang::tok::TokenKind *Kind = nullptr);
+
   ExprResult ParseCastExpression(CastParseKind ParseKind,
                                  bool isAddressOfOperand,
                                  bool &NotCastExpr,
@@ -2114,6 +2127,8 @@ private:
     QualType PreferredBaseType;
   };
   ExprResult ParseInitializerWithPotentialDesignator(DesignatorCompletionInfo);
+  ExprResult createEmbedExpr();
+  void injectEmbedTokens();
 
   //===--------------------------------------------------------------------===//
   // clang Expressions
@@ -2814,7 +2829,7 @@ private:
                                        SourceLocation CorrectLocation);
 
   void stripTypeAttributesOffDeclSpec(ParsedAttributes &Attrs, DeclSpec &DS,
-                                      Sema::TagUseKind TUK);
+                                      TagUseKind TUK);
 
   // FixItLoc = possible correct location for the attributes
   void ProhibitAttributes(ParsedAttributes &Attrs,
@@ -2997,7 +3012,8 @@ private:
   bool ParseCXXAssumeAttributeArg(ParsedAttributes &Attrs,
                                   IdentifierInfo *AttrName,
                                   SourceLocation AttrNameLoc,
-                                  SourceLocation *EndLoc);
+                                  SourceLocation *EndLoc,
+                                  ParsedAttr::Form Form);
 
   IdentifierInfo *TryParseCXX11AttributeIdentifier(
       SourceLocation &Loc,
@@ -3006,11 +3022,12 @@ private:
       const IdentifierInfo *EnclosingScope = nullptr);
 
   void MaybeParseHLSLAnnotations(Declarator &D,
-                                 SourceLocation *EndLoc = nullptr) {
+                                 SourceLocation *EndLoc = nullptr,
+                                 bool CouldBeBitField = false) {
     assert(getLangOpts().HLSL && "MaybeParseHLSLAnnotations is for HLSL only");
     if (Tok.is(tok::colon)) {
       ParsedAttributes Attrs(AttrFactory);
-      ParseHLSLAnnotations(Attrs, EndLoc);
+      ParseHLSLAnnotations(Attrs, EndLoc, CouldBeBitField);
       D.takeAttributes(Attrs);
     }
   }
@@ -3018,12 +3035,13 @@ private:
   void MaybeParseHLSLAnnotations(ParsedAttributes &Attrs,
                                  SourceLocation *EndLoc = nullptr) {
     assert(getLangOpts().HLSL && "MaybeParseHLSLAnnotations is for HLSL only");
-    if (getLangOpts().HLSL && Tok.is(tok::colon))
+    if (Tok.is(tok::colon))
       ParseHLSLAnnotations(Attrs, EndLoc);
   }
 
   void ParseHLSLAnnotations(ParsedAttributes &Attrs,
-                            SourceLocation *EndLoc = nullptr);
+                            SourceLocation *EndLoc = nullptr,
+                            bool CouldBeBitField = false);
   Decl *ParseHLSLBuffer(SourceLocation &DeclEnd);
 
   void MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs) {
@@ -3500,6 +3518,19 @@ private:
   /// metadirective and therefore ends on the closing paren.
   StmtResult ParseOpenMPDeclarativeOrExecutableDirective(
       ParsedStmtContext StmtCtx, bool ReadDirectiveWithinMetadirective = false);
+
+  /// Parses executable directive.
+  ///
+  /// \param StmtCtx The context in which we're parsing the directive.
+  /// \param DKind The kind of the executable directive.
+  /// \param Loc Source location of the beginning of the directive.
+  /// \param ReadDirectiveWithinMetadirective true if directive is within a
+  /// metadirective and therefore ends on the closing paren.
+  StmtResult
+  ParseOpenMPExecutableDirective(ParsedStmtContext StmtCtx,
+                                 OpenMPDirectiveKind DKind, SourceLocation Loc,
+                                 bool ReadDirectiveWithinMetadirective);
+
   /// Parses clause of kind \a CKind for directive of a kind \a Kind.
   ///
   /// \param DKind Kind of current directive.
@@ -3650,6 +3681,7 @@ private:
   struct OpenACCDirectiveParseInfo {
     OpenACCDirectiveKind DirKind;
     SourceLocation StartLoc;
+    SourceLocation DirLoc;
     SourceLocation EndLoc;
     SmallVector<OpenACCClause *> Clauses;
     // TODO OpenACC: As we implement support for the Atomic, Routine, Cache, and
@@ -3688,9 +3720,9 @@ private:
 
   using OpenACCVarParseResult = std::pair<ExprResult, OpenACCParseCanContinue>;
   /// Parses a single variable in a variable list for OpenACC.
-  OpenACCVarParseResult ParseOpenACCVar();
+  OpenACCVarParseResult ParseOpenACCVar(OpenACCClauseKind CK);
   /// Parses the variable list for the variety of places that take a var-list.
-  llvm::SmallVector<Expr *> ParseOpenACCVarList();
+  llvm::SmallVector<Expr *> ParseOpenACCVarList(OpenACCClauseKind CK);
   /// Parses any parameters for an OpenACC Clause, including required/optional
   /// parens.
   OpenACCClauseParseResult
@@ -3857,6 +3889,8 @@ private:
   // Embarcadero: Arary and Expression Traits
   ExprResult ParseArrayTypeTrait();
   ExprResult ParseExpressionTrait();
+
+  ExprResult ParseBuiltinPtrauthTypeDiscriminator();
 
   //===--------------------------------------------------------------------===//
   // Preprocessor code-completion pass-through

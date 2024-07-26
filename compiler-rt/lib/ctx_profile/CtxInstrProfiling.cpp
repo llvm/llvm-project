@@ -228,8 +228,9 @@ ContextNode *__llvm_ctx_profile_get_context(void *Callee, GUID Guid,
       Ret->counters_size() != NrCounters)
     __sanitizer::Printf("[ctxprof] Returned ctx differs from what's asked: "
                         "Context: %p, Asked: %lu %u %u, Got: %lu %u %u \n",
-                        Ret, Guid, NrCallsites, NrCounters, Ret->guid(),
-                        Ret->callsites_size(), Ret->counters_size());
+                        reinterpret_cast<void *>(Ret), Guid, NrCallsites,
+                        NrCounters, Ret->guid(), Ret->callsites_size(),
+                        Ret->counters_size());
   onContextEnter(*Ret);
   return Ret;
 }

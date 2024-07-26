@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_VECTOR_UTILS_VECTORUTILS_H_
 #define MLIR_DIALECT_VECTOR_UTILS_VECTORUTILS_H_
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
@@ -101,6 +102,24 @@ bool isContiguousSlice(MemRefType memrefType, VectorType vectorType);
 std::optional<StaticTileOffsetRange>
 createUnrollIterator(VectorType vType, int64_t targetRank = 1);
 
+/// Returns a functor (int64_t -> Value) which returns a constant vscale
+/// multiple.
+///
+/// Example:
+/// ```c++
+/// auto createVscaleMultiple = makeVscaleConstantBuilder(rewriter, loc);
+/// auto c4Vscale = createVscaleMultiple(4); // 4 * vector.vscale
+/// ```
+inline auto makeVscaleConstantBuilder(PatternRewriter &rewriter, Location loc) {
+  Value vscale = nullptr;
+  return [loc, vscale, &rewriter](int64_t multiplier) mutable {
+    if (!vscale)
+      vscale = rewriter.create<vector::VectorScaleOp>(loc);
+    return rewriter.create<arith::MulIOp>(
+        loc, vscale, rewriter.create<arith::ConstantIndexOp>(loc, multiplier));
+  };
+}
+
 /// A wrapper for getMixedSizes for vector.transfer_read and
 /// vector.transfer_write Ops (for source and destination, respectively).
 ///
@@ -157,7 +176,14 @@ private:
     if (failed(newOp))
       return failure();
 
-    rewriter.replaceOp(rootOp, *newOp);
+    // Rewriting succeeded but there are no values to replace.
+    if (rootOp->getNumResults() == 0) {
+      rewriter.eraseOp(rootOp);
+    } else {
+      assert(*newOp != Value() &&
+             "Cannot replace an op's use with an empty value.");
+      rewriter.replaceOp(rootOp, *newOp);
+    }
     return success();
   }
 

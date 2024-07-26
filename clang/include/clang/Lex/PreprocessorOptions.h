@@ -170,6 +170,9 @@ public:
   /// of the specified memory buffer (the second part of each pair).
   std::vector<std::pair<std::string, llvm::MemoryBuffer *>> RemappedFileBuffers;
 
+  /// User specified embed entries.
+  std::vector<std::string> EmbedEntries;
+
   /// Whether the compiler instance should retain (i.e., not free)
   /// the buffers associated with remapped files.
   ///
@@ -208,6 +211,10 @@ public:
   /// If set, the UNIX timestamp specified by SOURCE_DATE_EPOCH.
   std::optional<uint64_t> SourceDateEpoch;
 
+  /// If set, the preprocessor reports an error when processing #pragma mc_func
+  /// on AIX.
+  bool ErrorOnPragmaMcfuncOnAIX = false;
+
 public:
   PreprocessorOptions() : PrecompiledPreambleBytes(0, false) {}
 
@@ -245,6 +252,7 @@ public:
     PrecompiledPreambleBytes.first = 0;
     PrecompiledPreambleBytes.second = false;
     RetainExcludedConditionalBlocks = false;
+    ErrorOnPragmaMcfuncOnAIX = false;
   }
 };
 

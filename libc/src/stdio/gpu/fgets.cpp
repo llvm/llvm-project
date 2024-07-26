@@ -8,13 +8,15 @@
 
 #include "src/stdio/fgets.h"
 #include "file.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/feof.h"
 #include "src/stdio/ferror.h"
 
+#include "hdr/stdio_macros.h" // for EOF.
+#include "hdr/types/FILE.h"
 #include <stddef.h>
-#include <stdio.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(char *, fgets,
                    (char *__restrict str, int count,
@@ -39,4 +41,4 @@ LLVM_LIBC_FUNCTION(char *, fgets,
   return str;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

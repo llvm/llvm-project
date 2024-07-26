@@ -1250,7 +1250,7 @@ void OpEmitter::genPropertiesSupport() {
   auto &setPropMethod =
       opClass
           .addStaticMethod(
-              "::mlir::LogicalResult", "setPropertiesFromAttr",
+              "::llvm::LogicalResult", "setPropertiesFromAttr",
               MethodParameter("Properties &", "prop"),
               MethodParameter("::mlir::Attribute", "attr"),
               MethodParameter(
@@ -1292,7 +1292,7 @@ void OpEmitter::genPropertiesSupport() {
   auto &verifyInherentAttrsMethod =
       opClass
           .addStaticMethod(
-              "::mlir::LogicalResult", "verifyInherentAttrs",
+              "::llvm::LogicalResult", "verifyInherentAttrs",
               MethodParameter("::mlir::OperationName", "opName"),
               MethodParameter("::mlir::NamedAttrList &", "attrs"),
               MethodParameter(
@@ -1597,7 +1597,7 @@ void OpEmitter::genPropertiesSupportForBytecode(
     ArrayRef<ConstArgument> attrOrProperties) {
   if (op.useCustomPropertiesEncoding()) {
     opClass.declareStaticMethod(
-        "::mlir::LogicalResult", "readProperties",
+        "::llvm::LogicalResult", "readProperties",
         MethodParameter("::mlir::DialectBytecodeReader &", "reader"),
         MethodParameter("::mlir::OperationState &", "state"));
     opClass.declareMethod(
@@ -1609,7 +1609,7 @@ void OpEmitter::genPropertiesSupportForBytecode(
   auto &readPropertiesMethod =
       opClass
           .addStaticMethod(
-              "::mlir::LogicalResult", "readProperties",
+              "::llvm::LogicalResult", "readProperties",
               MethodParameter("::mlir::DialectBytecodeReader &", "reader"),
               MethodParameter("::mlir::OperationState &", "state"))
           ->body();
@@ -3226,7 +3226,7 @@ void OpEmitter::genCanonicalizerDecls() {
     SmallVector<MethodParameter> paramList;
     paramList.emplace_back(op.getCppClassName(), "op");
     paramList.emplace_back("::mlir::PatternRewriter &", "rewriter");
-    auto *m = opClass.declareStaticMethod("::mlir::LogicalResult",
+    auto *m = opClass.declareStaticMethod("::llvm::LogicalResult",
                                           "canonicalize", std::move(paramList));
     ERROR_IF_PRUNED(m, "canonicalize", op);
   }
@@ -3272,7 +3272,7 @@ void OpEmitter::genFolderDecls() {
   } else {
     paramList.emplace_back("::llvm::SmallVectorImpl<::mlir::OpFoldResult> &",
                            "results");
-    retType = "::mlir::LogicalResult";
+    retType = "::llvm::LogicalResult";
   }
 
   auto *m = opClass.declareMethod(retType, "fold", std::move(paramList));
@@ -3423,12 +3423,18 @@ void OpEmitter::genSideEffectInterfaceMethods() {
         }
       } else {
         // Otherwise this is an operand/result, so we need to attach the Value.
-        body << "  for (::mlir::Value value : getODS"
-             << (location.kind == EffectKind::Operand ? "Operands" : "Results")
-             << "(" << location.index << "))\n  "
-             << llvm::formatv(addEffectCode, effect, "value, ", stage,
-                              effectOnFullRegion, resource)
-                    .str();
+        body << "  {\n    auto valueRange = getODS"
+             << (location.kind == EffectKind::Operand ? "Operand" : "Result")
+             << "IndexAndLength(" << location.index << ");\n"
+             << "    for (unsigned idx = valueRange.first; idx < "
+                "valueRange.first"
+             << " + valueRange.second; idx++) {\n    "
+             << llvm::formatv(addEffectCode, effect,
+                              (location.kind == EffectKind::Operand
+                                   ? "&getOperation()->getOpOperand(idx), "
+                                   : "getOperation()->getOpResult(idx), "),
+                              stage, effectOnFullRegion, resource)
+             << "    }\n  }\n";
       }
     }
   }
@@ -3557,7 +3563,7 @@ void OpEmitter::genPrinter() {
 
 void OpEmitter::genVerifier() {
   auto *implMethod =
-      opClass.addMethod("::mlir::LogicalResult", "verifyInvariantsImpl");
+      opClass.addMethod("::llvm::LogicalResult", "verifyInvariantsImpl");
   ERROR_IF_PRUNED(implMethod, "verifyInvariantsImpl", op);
   auto &implBody = implMethod->body();
   bool useProperties = emitHelper.hasProperties();
@@ -3586,7 +3592,7 @@ void OpEmitter::genVerifier() {
   // This may not act as their expectation because this doesn't call any
   // verifiers of native/interface traits. Needs to review those use cases and
   // see if we should use the mlir::verify() instead.
-  auto *method = opClass.addMethod("::mlir::LogicalResult", "verifyInvariants");
+  auto *method = opClass.addMethod("::llvm::LogicalResult", "verifyInvariants");
   ERROR_IF_PRUNED(method, "verifyInvariants", op);
   auto &body = method->body();
   if (def.getValueAsBit("hasVerifier")) {
@@ -3601,13 +3607,13 @@ void OpEmitter::genVerifier() {
 
 void OpEmitter::genCustomVerifier() {
   if (def.getValueAsBit("hasVerifier")) {
-    auto *method = opClass.declareMethod("::mlir::LogicalResult", "verify");
+    auto *method = opClass.declareMethod("::llvm::LogicalResult", "verify");
     ERROR_IF_PRUNED(method, "verify", op);
   }
 
   if (def.getValueAsBit("hasRegionVerifier")) {
     auto *method =
-        opClass.declareMethod("::mlir::LogicalResult", "verifyRegions");
+        opClass.declareMethod("::llvm::LogicalResult", "verifyRegions");
     ERROR_IF_PRUNED(method, "verifyRegions", op);
   }
 }
@@ -4101,7 +4107,8 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
                              "{}");
     }
     paramList.emplace_back("::mlir::RegionRange", "regions", "{}");
-    auto *baseConstructor = genericAdaptorBase.addConstructor(paramList);
+    auto *baseConstructor =
+        genericAdaptorBase.addConstructor<Method::Inline>(paramList);
     baseConstructor->addMemberInitializer("odsAttrs", "attrs");
     if (useProperties)
       baseConstructor->addMemberInitializer("properties", "properties");
@@ -4163,14 +4170,24 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
   // and the value range from the parameter.
   {
     // Base class is in the cpp file and can simply access the members of the op
-    // class to initialize the template independent fields.
-    auto *constructor = genericAdaptorBase.addConstructor(
-        MethodParameter(op.getCppClassName(), "op"));
-    constructor->addMemberInitializer(
-        genericAdaptorBase.getClassName(),
-        llvm::Twine(!useProperties ? "op->getAttrDictionary()"
-                                   : "op->getDiscardableAttrDictionary()") +
-            ", op.getProperties(), op->getRegions()");
+    // class to initialize the template independent fields. If the op doesn't
+    // have properties, we can emit a generic constructor inline. Otherwise,
+    // emit it out-of-line because we need the op to be defined.
+    Constructor *constructor;
+    if (useProperties) {
+      constructor = genericAdaptorBase.addConstructor(
+          MethodParameter(op.getCppClassName(), "op"));
+    } else {
+      constructor = genericAdaptorBase.addConstructor<Method::Inline>(
+          MethodParameter("::mlir::Operation *", "op"));
+    }
+    constructor->addMemberInitializer("odsAttrs",
+                                      "op->getRawDictionaryAttrs()");
+    // Retrieve the operation name from the op directly.
+    constructor->addMemberInitializer("odsOpName", "op->getName()");
+    if (useProperties)
+      constructor->addMemberInitializer("properties", "op.getProperties()");
+    constructor->addMemberInitializer("odsRegions", "op->getRegions()");
 
     // Generic adaptor is templated and therefore defined inline in the header.
     // We cannot use the Op class here as it is an incomplete type (we have a
@@ -4317,7 +4334,7 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
 }
 
 void OpOperandAdaptorEmitter::addVerification() {
-  auto *method = adaptor.addMethod("::mlir::LogicalResult", "verify",
+  auto *method = adaptor.addMethod("::llvm::LogicalResult", "verify",
                                    MethodParameter("::mlir::Location", "loc"));
   ERROR_IF_PRUNED(method, "verify", op);
   auto &body = method->body();
