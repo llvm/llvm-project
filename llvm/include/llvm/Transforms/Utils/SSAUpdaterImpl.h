@@ -425,13 +425,12 @@ public:
 
   /// CheckIfPHIMatches - Check if a PHI node matches the placement and values
   /// in the BBMap.
-  bool CheckIfPHIMatches(PhiT *PHI, SmallVector<BBInfo *, 20> &TaggedBlocks) {
+  bool CheckIfPHIMatches(PhiT *PHI, SmallVectorImpl<BBInfo *> &TaggedBlocks) {
     // Match failed: clear all the PHITag values. Only need to clear visited
     // blocks.
     auto Cleanup = make_scope_exit([&]() {
-      for (BBInfo *TaggedBlock : TaggedBlocks) {
+      for (BBInfo *TaggedBlock : TaggedBlocks)
         TaggedBlock->PHITag = nullptr;
-      }
       TaggedBlocks.clear();
     });
 
