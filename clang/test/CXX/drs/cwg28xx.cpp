@@ -88,7 +88,7 @@ void B<int>::g() requires true;
 
 } // namespace cwg2847
 
-namespace cwg2851 { // cwg2851: 19
+namespace cwg2851 { // cwg2851: 20
 #if __cplusplus >= 202002L
 template<typename T, T v> struct Val { static constexpr T value = v; };
 
