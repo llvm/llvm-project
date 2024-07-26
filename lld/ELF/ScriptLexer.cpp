@@ -20,8 +20,6 @@
 // in various corner cases. We do not care much about efficiency because
 // the time spent in parsing linker scripts is usually negligible.
 //
-// Our grammar of the linker script is LL(1).
-//
 // Overall, this lexer works fine for most linker scripts. There might
 // be room for improving compatibility, but that's probably not at the
 // top of our todo list.
@@ -37,6 +35,8 @@
 using namespace llvm;
 using namespace lld;
 using namespace lld::elf;
+
+ScriptLexer::ScriptLexer(MemoryBufferRef mb) : curBuf(mb), mbs(1, mb) {}
 
 // Returns a whole line containing the current token.
 StringRef ScriptLexer::getLine() {
@@ -84,12 +84,6 @@ std::string ScriptLexer::getCurrentLocation() {
   return (filename + ":" + Twine(getLineNumber())).str();
 }
 
-ScriptLexer::ScriptLexer(MemoryBufferRef mb) {
-  curBuf.s = mb.getBuffer();
-  curBuf.filename = mb.getBufferIdentifier();
-  mbs.push_back(mb);
-}
-
 // We don't want to record cascading errors. Keep only the first one.
 void ScriptLexer::setError(const Twine &msg) {
   if (errorCount())
@@ -103,12 +97,9 @@ void ScriptLexer::setError(const Twine &msg) {
 }
 
 void ScriptLexer::lex() {
-  std::vector<StringRef> vec;
-  StringRef begin = curBuf.s;
-
   for (;;) {
     StringRef &s = curBuf.s;
-    s = skipSpace(curBuf.s);
+    s = skipSpace(s);
     if (s.empty()) {
       // If this buffer is from an INCLUDE command, switch to the "return
       // value"; otherwise, mark EOF.
@@ -128,7 +119,8 @@ void ScriptLexer::lex() {
     if (s.starts_with("\"")) {
       size_t e = s.find("\"", 1);
       if (e == StringRef::npos) {
-        size_t lineno = begin.substr(0, s.data() - begin.data()).count('\n');
+        size_t lineno =
+            StringRef(curBuf.begin, s.data() - curBuf.begin).count('\n');
         error(curBuf.filename + ":" + Twine(lineno + 1) + ": unclosed quote");
         return;
       }
@@ -144,8 +136,7 @@ void ScriptLexer::lex() {
       s = s.substr(3);
       return;
     }
-    if (s.size() > 1 && ((s[1] == '=' && strchr("*/+-!<>&^|", s[0])) ||
-                         (s[0] == s[1] && strchr("<>&|", s[0])))) {
+    if (s.size() > 1 && (s[1] == '=' && strchr("+-*/!&^|", s[0]))) {
       curTok = s.substr(0, 2);
       s = s.substr(2);
       return;
@@ -160,7 +151,8 @@ void ScriptLexer::lex() {
           "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
           "0123456789_.$");
       if (pos == 0 && s.size() >= 2 &&
-          is_contained({"==", "!=", "<=", ">=", "<<", ">>"}, s.substr(0, 2)))
+          ((s[0] == s[1] && strchr("<>&|", s[0])) ||
+           is_contained({"==", "!=", "<=", ">=", "<<", ">>"}, s.substr(0, 2))))
         pos = 2;
     } else {
       pos = s.find_first_not_of(
@@ -206,8 +198,6 @@ StringRef ScriptLexer::skipSpace(StringRef s) {
 bool ScriptLexer::atEOF() { return eof || errorCount(); }
 
 StringRef ScriptLexer::next() {
-  if (errorCount())
-    return "";
   prevTok = peek();
   return std::exchange(curTok, StringRef(curBuf.s.data(), 0));
 }

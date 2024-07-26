@@ -200,8 +200,9 @@ void ScriptParser::readDynamicList() {
   std::tie(locals, globals) = readSymbols();
   expect(";");
 
-  if (peek() != "") {
-    setError("EOF expected, but got " + next());
+  StringRef tok = peek();
+  if (tok.size()) {
+    setError("EOF expected, but got " + tok);
     return;
   }
   if (!locals.empty()) {
@@ -215,8 +216,9 @@ void ScriptParser::readDynamicList() {
 
 void ScriptParser::readVersionScript() {
   readVersionScriptCommand();
-  if (peek().size())
-    setError("EOF expected, but got " + next());
+  StringRef tok = peek();
+  if (tok.size())
+    setError("EOF expected, but got " + tok);
 }
 
 void ScriptParser::readVersionScriptCommand() {
@@ -415,8 +417,7 @@ void ScriptParser::readInclude() {
   if (std::optional<std::string> path = searchScript(tok)) {
     if (std::optional<MemoryBufferRef> mb = readFile(*path)) {
       buffers.push_back(curBuf);
-      curBuf.s = mb->getBuffer();
-      curBuf.filename = mb->getBufferIdentifier();
+      curBuf = Buffer(*mb);
       mbs.push_back(*mb);
     }
     return;

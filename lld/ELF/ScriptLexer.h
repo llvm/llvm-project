@@ -22,6 +22,11 @@ protected:
   struct Buffer {
     // The remaining content to parse and the filename.
     StringRef s, filename;
+    const char *begin = nullptr;
+    Buffer() = default;
+    Buffer(MemoryBufferRef mb)
+        : s(mb.getBuffer()), filename(mb.getBufferIdentifier()),
+          begin(mb.getBufferStart()) {}
   };
   // The current buffer and parent buffers due to INCLUDE.
   Buffer curBuf;
