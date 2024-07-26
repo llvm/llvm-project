@@ -276,11 +276,30 @@ public:
     assert(!nextDispatcher && "no dispatcher available anymore");
   }
 
+  mlir::Block *buildTryBody(mlir::cir::TryOp tryOp,
+                            mlir::PatternRewriter &rewriter) const {
+    auto loc = tryOp.getLoc();
+    // Split the current block before the TryOp to create the inlining
+    // point.
+    auto *beforeTryScopeBlock = rewriter.getInsertionBlock();
+    mlir::Block *afterTry =
+        rewriter.splitBlock(beforeTryScopeBlock, rewriter.getInsertionPoint());
+
+    // Inline body region.
+    auto *beforeBody = &tryOp.getTryRegion().front();
+    rewriter.inlineRegionBefore(tryOp.getTryRegion(), afterTry);
+
+    // Branch into the body of the region.
+    rewriter.setInsertionPointToEnd(beforeTryScopeBlock);
+    rewriter.create<mlir::cir::BrOp>(loc, mlir::ValueRange(), beforeBody);
+    return afterTry;
+  }
+
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::TryOp tryOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::OpBuilder::InsertionGuard guard(rewriter);
-    auto loc = tryOp.getLoc();
+    auto *afterBody = &tryOp.getTryRegion().back();
 
     // Empty scope: just remove it.
     if (tryOp.getTryRegion().empty()) {
@@ -290,21 +309,10 @@ public:
 
     // TODO: keep track of cir.try_call before we flatten.
 
-    // Split the current block before the TryOp to create the inlining
-    // point.
-    auto *beforeTryScopeBlock = rewriter.getInsertionBlock();
-    mlir::Block *afterTry =
-        rewriter.splitBlock(beforeTryScopeBlock, rewriter.getInsertionPoint());
+    // Build try body.
+    mlir::Block *afterTry = buildTryBody(tryOp, rewriter);
 
-    // Inline body region.
-    auto *beforeBody = &tryOp.getTryRegion().front();
-    auto *afterBody = &tryOp.getTryRegion().back();
-    rewriter.inlineRegionBefore(tryOp.getTryRegion(), afterTry);
-
-    // Branch into the body of the region.
-    rewriter.setInsertionPointToEnd(beforeTryScopeBlock);
-    rewriter.create<mlir::cir::BrOp>(loc, mlir::ValueRange(), beforeBody);
-
+    // Build catchers.
     buildCatchers(tryOp, rewriter, afterBody, afterTry);
     rewriter.eraseOp(tryOp);
 
