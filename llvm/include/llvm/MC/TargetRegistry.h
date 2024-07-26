@@ -552,8 +552,7 @@ public:
 
   MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
                                             formatted_raw_ostream &OS,
-                                            MCInstPrinter *InstPrint,
-                                            bool IsVerboseAsm) const {
+                                            MCInstPrinter *InstPrint) const {
     if (AsmTargetStreamerCtorFn)
       return AsmTargetStreamerCtorFn(S, OS, InstPrint);
     return nullptr;
