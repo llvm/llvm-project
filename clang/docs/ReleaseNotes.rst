@@ -857,6 +857,9 @@ Bug Fixes in This Version
 
 - ``typeof_unqual`` now properly removes type qualifiers from arrays and their element types. (#GH92667)
 
+- Fixed an assertion failure when a template non-type parameter contains
+  an invalid expression.
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
