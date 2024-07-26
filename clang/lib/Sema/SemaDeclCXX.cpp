@@ -16721,15 +16721,10 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S, TypeSourceInfo *TInfo,
   if (ExDeclType->isArrayType())
     ExDeclType = Context.getArrayDecayedType(ExDeclType);
   else if (ExDeclType->isFunctionType()) {
-    if (ExDeclType.isReferenceable())
-      ExDeclType = Context.getPointerType(ExDeclType);
-    else {
-      Diag(Loc, diag::err_compound_qualified_function_type)
-          << 1 << true << ExDeclType
-          << ExDeclType->castAs<FunctionProtoType>()
-                 ->getFunctionQualifiersAsString();
+    if (CheckQualifiedFunctionForPointer(ExDeclType, Loc, QFK_Pointer))
       Invalid = true;
-    }
+    else
+      ExDeclType = Context.getPointerType(ExDeclType);
   }
 
   // C++ 15.3p1: The exception-declaration shall not denote an incomplete type.

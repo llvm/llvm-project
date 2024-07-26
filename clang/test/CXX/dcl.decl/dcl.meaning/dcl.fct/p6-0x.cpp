@@ -54,7 +54,7 @@ void (X::*mpf2)() && = &X::f1;
 void (f() &&); // expected-error{{non-member function cannot have '&&' qualifier}}
 
 template<typename T> struct pass {
-  void f(T); // expected-error {{pointer to function type cannot have '&' qualifier}}
+  void f(T); // expected-error {{pointer to function type 'void () &' cannot have '&' qualifier}}
 };
 pass<func_type_lvalue> pass0; // expected-note {{in instantiation of template class 'pass<void () &>' requested here}}
 pass<func_type_lvalue> pass1;

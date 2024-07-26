@@ -624,14 +624,9 @@ private:
       NewType = SemaRef.Context.getDecayedType(NewType);
     else if (NewType->isFunctionType()) {
       // Reject cv- and ref-qualified function
-      if (!NewType.isReferenceable()) {
-        SemaRef.Diag(OldParam->getLocation(),
-                     diag::err_compound_qualified_function_type)
-            << 1 << true << NewType
-            << cast<FunctionProtoType>(NewType)
-                   ->getFunctionQualifiersAsString();
+      if (SemaRef.CheckQualifiedFunctionForPointer(
+              NewType, OldParam->getLocation(), Sema::QFK_Pointer))
         return nullptr;
-      }
       NewType = SemaRef.Context.getDecayedType(NewType);
     }
 

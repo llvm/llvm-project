@@ -15071,12 +15071,8 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
     T = Context.getLifetimeQualifiedType(T, lifetime);
   }
 
-  if (T->isFunctionType() && !T.isReferenceable()) {
-    Diag(NameLoc, diag::err_compound_qualified_function_type)
-        << 1 << true << T
-        << T->castAs<FunctionProtoType>()->getFunctionQualifiersAsString();
+  if (CheckQualifiedFunctionForPointer(T, NameLoc, QFK_Pointer))
     return nullptr;
-  }
 
   ParmVarDecl *New = ParmVarDecl::Create(Context, DC, StartLoc, NameLoc, Name,
                                          Context.getAdjustedParameterType(T),

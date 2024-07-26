@@ -1707,31 +1707,14 @@ static QualType inferARCLifetimeForPointee(Sema &S, QualType type,
   return S.Context.getQualifiedType(type, qs);
 }
 
-namespace {
-/// Kinds of declarator that cannot contain a qualified function type.
-///
-/// C++98 [dcl.fct]p4 / C++11 [dcl.fct]p6:
-///     a function type with a cv-qualifier or a ref-qualifier can only appear
-///     at the topmost level of a type.
-///
-/// Parens and member pointers are permitted. We don't diagnose array and
-/// function declarators, because they don't allow function types at all.
-///
-/// The values of this enum are used in diagnostics.
-enum QualifiedFunctionKind { QFK_BlockPointer, QFK_Pointer, QFK_Reference };
-} // end anonymous namespace
-
-/// Check whether the type T is a qualified function type, and if it is,
-/// diagnose that it cannot be contained within the given kind of declarator.
-static bool checkQualifiedFunction(Sema &S, QualType T, SourceLocation Loc,
-                                   QualifiedFunctionKind QFK) {
+bool Sema::CheckQualifiedFunctionForPointer(QualType T, SourceLocation Loc,
+                                            QualifiedFunctionKind QFK) {
   // Does T refer to a function type with a cv-qualifier or a ref-qualifier?
   const FunctionProtoType *FPT = T->getAs<FunctionProtoType>();
-  if (!FPT ||
-      (FPT->getMethodQuals().empty() && FPT->getRefQualifier() == RQ_None))
+  if (!FPT || !FPT->hasQualifiers())
     return false;
 
-  S.Diag(Loc, diag::err_compound_qualified_function_type)
+  Diag(Loc, diag::err_compound_qualified_function_type)
       << QFK << isa<FunctionType>(T.IgnoreParens()) << T
       << FPT->getFunctionQualifiersAsString();
   return true;
@@ -1739,8 +1722,7 @@ static bool checkQualifiedFunction(Sema &S, QualType T, SourceLocation Loc,
 
 bool Sema::CheckQualifiedFunctionForTypeId(QualType T, SourceLocation Loc) {
   const FunctionProtoType *FPT = T->getAs<FunctionProtoType>();
-  if (!FPT ||
-      (FPT->getMethodQuals().empty() && FPT->getRefQualifier() == RQ_None))
+  if (!FPT || !FPT->hasQualifiers())
     return false;
 
   Diag(Loc, diag::err_qualified_function_typeid)
@@ -1779,7 +1761,7 @@ QualType Sema::BuildPointerType(QualType T,
     return QualType();
   }
 
-  if (checkQualifiedFunction(*this, T, Loc, QFK_Pointer))
+  if (CheckQualifiedFunctionForPointer(T, Loc, QFK_Pointer))
     return QualType();
 
   assert(!T->isObjCObjectType() && "Should build ObjCObjectPointerType");
@@ -1851,7 +1833,7 @@ QualType Sema::BuildReferenceType(QualType T, bool SpelledAsLValue,
     return QualType();
   }
 
-  if (checkQualifiedFunction(*this, T, Loc, QFK_Reference))
+  if (CheckQualifiedFunctionForPointer(T, Loc, QFK_Reference))
     return QualType();
 
   if (T->isFunctionType() && getLangOpts().OpenCL &&
@@ -2590,13 +2572,9 @@ QualType Sema::BuildFunctionType(QualType T,
   for (unsigned Idx = 0, Cnt = ParamTypes.size(); Idx < Cnt; ++Idx) {
     // FIXME: Loc is too inprecise here, should use proper locations for args.
     QualType ParamType = ParamTypes[Idx];
-    if (ParamType->isFunctionType() && !ParamType.isReferenceable()) {
-      Diag(Loc, diag::err_compound_qualified_function_type)
-          << 1 << true << ParamType
-          << ParamType->castAs<FunctionProtoType>()
-                 ->getFunctionQualifiersAsString();
+    if (CheckQualifiedFunctionForPointer(ParamType, Loc, QFK_Pointer))
       Invalid = true;
-    } else
+    else
       ParamType = Context.getAdjustedParameterType(ParamType);
 
     if (ParamType->isVoidType()) {
@@ -2697,7 +2675,7 @@ QualType Sema::BuildBlockPointerType(QualType T,
     return QualType();
   }
 
-  if (checkQualifiedFunction(*this, T, Loc, QFK_BlockPointer))
+  if (CheckQualifiedFunctionForPointer(T, Loc, QFK_BlockPointer))
     return QualType();
 
   if (getLangOpts().OpenCL)
@@ -4216,8 +4194,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
   // Does T refer to a function type with a cv-qualifier or a ref-qualifier?
   bool IsQualifiedFunction = T->isFunctionProtoType() &&
-      (!T->castAs<FunctionProtoType>()->getMethodQuals().empty() ||
-       T->castAs<FunctionProtoType>()->getRefQualifier() != RQ_None);
+                             T->castAs<FunctionProtoType>()->hasQualifiers();
 
   // If T is 'decltype(auto)', the only declarators we can have are parens
   // and at most one function declarator if this is a function declaration.

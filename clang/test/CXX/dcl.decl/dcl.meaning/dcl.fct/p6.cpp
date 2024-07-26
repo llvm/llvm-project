@@ -27,6 +27,6 @@ template<typename T> struct S {
 S<F> s; // expected-note {{in instantiation of}}
 
 template<typename T> struct U {
-  void f(T); // expected-error {{pointer to function type cannot have 'const' qualifier}}
+  void f(T); // expected-error {{pointer to function type 'void () const' cannot have 'const' qualifier}}
 };
 U<F> u; // expected-note {{in instantiation of}}

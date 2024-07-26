@@ -3649,6 +3649,20 @@ QualType ASTContext::getComplexType(QualType T) const {
 /// getPointerType - Return the uniqued reference to the type for a pointer to
 /// the specified type.
 QualType ASTContext::getPointerType(QualType T) const {
+#ifndef NDEBUG
+  {
+    assert(!T->isReferenceType() &&
+           "Attempting to create pointer to reference type");
+    // FIXME: Get rid of creating pointers to qualified function types. It is
+    // used as an intermediary for building a CallExpr that is eventually
+    // converted into a CXXMemberCallExpr (and loses the pointer type)
+    // if (auto *FPT = T->getAs<FunctionProtoType>())
+    //   assert(!FPT->hasQualifiers() &&
+    //          "Attempting to create pointer to qualified function type; Use "
+    //          "Sema::CheckQualifiedFunctionForPointer to check for and "
+    //          "diagnose this");
+  }
+#endif
   // Unique pointers, to guarantee there is only one pointer of a particular
   // structure.
   llvm::FoldingSetNodeID ID;

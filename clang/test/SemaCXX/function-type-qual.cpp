@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -std=c++11 -verify %s
+// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -std=c++17 -verify %s
 
 void f() const; // expected-error {{non-member function cannot have 'const' qualifier}}
 void (*pf)() const; // expected-error {{pointer to function type cannot have 'const' qualifier}}
@@ -86,6 +87,24 @@ void catch_fn() {
 }
 template void catch_fn<void()>();
 template void catch_fn<void() const>();
-// expected-error@#GH27059-catch_fn {{pointer to function type cannot have 'const' qualifier}}
+// expected-error@#GH27059-catch_fn {{pointer to function type 'void () const' cannot have 'const' qualifier}}
 //   expected-note@-2 {{in instantiation of function template specialization 'GH27059::catch_fn<void () const>' requested here}}
+template<typename T = int()const, T = nullptr> void f1() {}
+template void f1();
+// expected-error@-1 {{explicit instantiation of 'f1' does not refer to a function template, variable template, member function, member class, or static data member}}
+//   expected-note@-3 {{candidate template ignored: substitution failure [with T = int () const]: pointer to function type cannot have 'const' qualifier}}
+
+#if __cplusplus >= 201703L
+template<typename T = void()const>
+struct X { // expected-note {{candidate function template not viable: requires 1 argument, but 0 were provided}} \
+              expected-note {{implicit deduction guide declared as 'template <typename T = void () const> X(X<T>) -> X<T>'}}
+  X(T = 1); // expected-note {{candidate template ignored: substitution failure [with T = void () const]: pointer to function type 'void () const' cannot have 'const' qualifier}} \
+               expected-note {{implicit deduction guide declared as 'template <typename T = void () const> X(T = <null expr>) -> X<T>'}}
+};
+void f2() {
+  X{};
+  // expected-error@-1 {{no viable constructor or deduction guide for deduction of template arguments of 'X'}}
+}
+#endif
+
 }

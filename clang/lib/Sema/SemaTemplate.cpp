@@ -1413,13 +1413,8 @@ QualType Sema::CheckNonTypeTemplateParameterType(QualType T,
   //   "function returning T" is adjusted to be of type "pointer to
   //   T" or "pointer to function returning T", respectively.
   if (T->isArrayType() || T->isFunctionType()) {
-    if (!T.isReferenceable()) {
-      // Pointer to cv- or ref- qualified type will be invalid
-      Diag(Loc, diag::err_compound_qualified_function_type)
-          << 1 << true << T
-          << T->castAs<FunctionProtoType>()->getFunctionQualifiersAsString();
+    if (CheckQualifiedFunctionForPointer(T, Loc, QFK_Pointer))
       return QualType();
-    }
     return Context.getDecayedType(T);
   }
 
@@ -7243,8 +7238,11 @@ ExprResult Sema::BuildExpressionFromDeclTemplateArgument(
   //   T" or "pointer to function returning T", respectively.
   if (ParamType->isArrayType())
     ParamType = Context.getArrayDecayedType(ParamType);
-  else if (ParamType->isFunctionType())
+  else if (ParamType->isFunctionType()) {
+    if (CheckQualifiedFunctionForPointer(ParamType, Loc, QFK_Pointer))
+      return ExprError();
     ParamType = Context.getPointerType(ParamType);
+  }
 
   // For a NULL non-type template argument, return nullptr casted to the
   // parameter's type.
