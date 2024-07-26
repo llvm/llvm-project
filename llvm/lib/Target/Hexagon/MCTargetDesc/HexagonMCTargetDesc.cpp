@@ -226,12 +226,11 @@ namespace {
 
 class HexagonTargetAsmStreamer : public HexagonTargetStreamer {
   formatted_raw_ostream &OS;
-  bool IsVerboseAsm;
 
 public:
   HexagonTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS,
-                           bool IsVerboseAsm, MCInstPrinter &IP)
-      : HexagonTargetStreamer(S), OS(OS), IsVerboseAsm(IsVerboseAsm) {}
+                           MCInstPrinter &IP)
+      : HexagonTargetStreamer(S), OS(OS) {}
 
   void prettyPrintAsm(MCInstPrinter &InstPrinter, uint64_t Address,
                       const MCInst &Inst, const MCSubtargetInfo &STI,
@@ -275,7 +274,7 @@ public:
 
   void emitAttribute(unsigned Attribute, unsigned Value) override {
     OS << "\t.attribute\t" << Attribute << ", " << Twine(Value);
-    if (IsVerboseAsm) {
+    if (getStreamer().isVerboseAsm()) {
       StringRef Name = ELFAttrs::attrTypeAsString(
           Attribute, HexagonAttrs::getHexagonAttributeTags());
       if (!Name.empty())
@@ -379,7 +378,7 @@ static MCInstPrinter *createHexagonMCInstPrinter(const Triple &T,
 static MCTargetStreamer *
 createMCAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
                           MCInstPrinter *IP, bool IsVerboseAsm) {
-  return new HexagonTargetAsmStreamer(S, OS, IsVerboseAsm, *IP);
+  return new HexagonTargetAsmStreamer(S, OS, *IP);
 }
 
 static MCStreamer *createMCStreamer(Triple const &T, MCContext &Context,
