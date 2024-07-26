@@ -81,6 +81,19 @@
 // RUN:   | FileCheck --check-prefix=WARN13 %s
 // WARN13: warning: overriding '-ffp-model=strict' option with '-fapprox-func' [-Woverriding-option]
 
+// RUN: %clang -### -ffp-model=precise -ffp-contract=off -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=WARN14 %s
+// WARN14: warning: overriding '-ffp-model=precise' option with '-ffp-contract=off' [-Woverriding-option]
+
+// RUN: %clang -### -ffp-model=precise -ffp-contract=fast -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=WARN15 %s
+// WARN15: warning: overriding '-ffp-model=precise' option with '-ffp-contract=fast' [-Woverriding-option]
+
+// RUN: %clang -### -ffp-model=strict -fassociative-math -ffp-contract=on \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefix=WARN16 %s
+// WARN16: warning: overriding '-ffp-model=strict' option with '-fassociative-math' [-Woverriding-option]
+// WARN16: warning: overriding '-ffp-model=strict' option with '-ffp-contract=on' [-Woverriding-option]
+
 // RUN: %clang -### -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOROUND %s
 // CHECK-NOROUND: "-cc1"

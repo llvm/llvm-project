@@ -47,6 +47,7 @@ public:
   const TargetInstrInfo *TII;
   MachineRegisterInfo *MRI;
   const TargetRegisterInfo *TRI;
+  const RISCVSubtarget *ST;
   RISCVVectorPeephole() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -55,14 +56,18 @@ public:
         MachineFunctionProperties::Property::IsSSA);
   }
 
-  StringRef getPassName() const override { return "RISC-V Fold Masks"; }
+  StringRef getPassName() const override {
+    return "RISC-V Vector Peephole Optimization";
+  }
 
 private:
   bool convertToVLMAX(MachineInstr &MI) const;
+  bool convertToWholeRegister(MachineInstr &MI) const;
   bool convertToUnmasked(MachineInstr &MI) const;
   bool convertVMergeToVMv(MachineInstr &MI) const;
 
   bool isAllOnesMask(const MachineInstr *MaskDef) const;
+  std::optional<unsigned> getConstant(const MachineOperand &VL) const;
 
   /// Maps uses of V0 to the corresponding def of V0.
   DenseMap<const MachineInstr *, const MachineInstr *> V0Defs;
@@ -75,13 +80,44 @@ char RISCVVectorPeephole::ID = 0;
 INITIALIZE_PASS(RISCVVectorPeephole, DEBUG_TYPE, "RISC-V Fold Masks", false,
                 false)
 
-// If an AVL is a VLENB that's possibly scaled to be equal to VLMAX, convert it
-// to the VLMAX sentinel value.
+/// Check if an operand is an immediate or a materialized ADDI $x0, imm.
+std::optional<unsigned>
+RISCVVectorPeephole::getConstant(const MachineOperand &VL) const {
+  if (VL.isImm())
+    return VL.getImm();
+
+  MachineInstr *Def = MRI->getVRegDef(VL.getReg());
+  if (!Def || Def->getOpcode() != RISCV::ADDI ||
+      Def->getOperand(1).getReg() != RISCV::X0)
+    return std::nullopt;
+  return Def->getOperand(2).getImm();
+}
+
+/// Convert AVLs that are known to be VLMAX to the VLMAX sentinel.
 bool RISCVVectorPeephole::convertToVLMAX(MachineInstr &MI) const {
   if (!RISCVII::hasVLOp(MI.getDesc().TSFlags) ||
       !RISCVII::hasSEWOp(MI.getDesc().TSFlags))
     return false;
+
+  auto LMUL = RISCVVType::decodeVLMUL(RISCVII::getLMul(MI.getDesc().TSFlags));
+  // Fixed-point value, denominator=8
+  unsigned LMULFixed = LMUL.second ? (8 / LMUL.first) : 8 * LMUL.first;
+  unsigned Log2SEW = MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
+  // A Log2SEW of 0 is an operation on mask registers only
+  unsigned SEW = Log2SEW ? 1 << Log2SEW : 8;
+  assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
+  assert(8 * LMULFixed / SEW > 0);
+
+  // If the exact VLEN is known then we know VLMAX, check if the AVL == VLMAX.
   MachineOperand &VL = MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
+  if (auto VLen = ST->getRealVLen(), AVL = getConstant(VL);
+      VLen && AVL && (*VLen * LMULFixed) / SEW == *AVL * 8) {
+    VL.ChangeToImmediate(RISCV::VLMaxSentinel);
+    return true;
+  }
+
+  // If an AVL is a VLENB that's possibly scaled to be equal to VLMAX, convert
+  // it to the VLMAX sentinel value.
   if (!VL.isReg())
     return false;
   MachineInstr *Def = MRI->getVRegDef(VL.getReg());
@@ -103,15 +139,6 @@ bool RISCVVectorPeephole::convertToVLMAX(MachineInstr &MI) const {
 
   if (!Def || Def->getOpcode() != RISCV::PseudoReadVLENB)
     return false;
-
-  auto LMUL = RISCVVType::decodeVLMUL(RISCVII::getLMul(MI.getDesc().TSFlags));
-  // Fixed-point value, denominator=8
-  unsigned LMULFixed = LMUL.second ? (8 / LMUL.first) : 8 * LMUL.first;
-  unsigned Log2SEW = MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
-  // A Log2SEW of 0 is an operation on mask registers only
-  unsigned SEW = Log2SEW ? 1 << Log2SEW : 8;
-  assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
-  assert(8 * LMULFixed / SEW > 0);
 
   // AVL = (VLENB * Scale)
   //
@@ -153,6 +180,58 @@ bool RISCVVectorPeephole::isAllOnesMask(const MachineInstr *MaskDef) const {
   default:
     return false;
   }
+}
+
+/// Convert unit strided unmasked loads and stores to whole-register equivalents
+/// to avoid the dependency on $vl and $vtype.
+///
+/// %x = PseudoVLE8_V_M1 %passthru, %ptr, %vlmax, policy
+/// PseudoVSE8_V_M1 %v, %ptr, %vlmax
+///
+/// ->
+///
+/// %x = VL1RE8_V %ptr
+/// VS1R_V %v, %ptr
+bool RISCVVectorPeephole::convertToWholeRegister(MachineInstr &MI) const {
+#define CASE_WHOLE_REGISTER_LMUL_SEW(lmul, sew)                                \
+  case RISCV::PseudoVLE##sew##_V_M##lmul:                                      \
+    NewOpc = RISCV::VL##lmul##RE##sew##_V;                                     \
+    break;                                                                     \
+  case RISCV::PseudoVSE##sew##_V_M##lmul:                                      \
+    NewOpc = RISCV::VS##lmul##R_V;                                             \
+    break;
+#define CASE_WHOLE_REGISTER_LMUL(lmul)                                         \
+  CASE_WHOLE_REGISTER_LMUL_SEW(lmul, 8)                                        \
+  CASE_WHOLE_REGISTER_LMUL_SEW(lmul, 16)                                       \
+  CASE_WHOLE_REGISTER_LMUL_SEW(lmul, 32)                                       \
+  CASE_WHOLE_REGISTER_LMUL_SEW(lmul, 64)
+
+  unsigned NewOpc;
+  switch (MI.getOpcode()) {
+    CASE_WHOLE_REGISTER_LMUL(1)
+    CASE_WHOLE_REGISTER_LMUL(2)
+    CASE_WHOLE_REGISTER_LMUL(4)
+    CASE_WHOLE_REGISTER_LMUL(8)
+  default:
+    return false;
+  }
+
+  MachineOperand &VLOp = MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
+  if (!VLOp.isImm() || VLOp.getImm() != RISCV::VLMaxSentinel)
+    return false;
+
+  // Whole register instructions aren't pseudos so they don't have
+  // policy/SEW/AVL ops, and they don't have passthrus.
+  if (RISCVII::hasVecPolicyOp(MI.getDesc().TSFlags))
+    MI.removeOperand(RISCVII::getVecPolicyOpNum(MI.getDesc()));
+  MI.removeOperand(RISCVII::getSEWOpNum(MI.getDesc()));
+  MI.removeOperand(RISCVII::getVLOpNum(MI.getDesc()));
+  if (RISCVII::isFirstDefTiedToFirstUse(MI.getDesc()))
+    MI.removeOperand(1);
+
+  MI.setDesc(TII->get(NewOpc));
+
+  return true;
 }
 
 // Transform (VMERGE_VVM_<LMUL> false, false, true, allones, vl, sew) to
@@ -249,11 +328,11 @@ bool RISCVVectorPeephole::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   // Skip if the vector extension is not enabled.
-  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
-  if (!ST.hasVInstructions())
+  ST = &MF.getSubtarget<RISCVSubtarget>();
+  if (!ST->hasVInstructions())
     return false;
 
-  TII = ST.getInstrInfo();
+  TII = ST->getInstrInfo();
   MRI = &MF.getRegInfo();
   TRI = MRI->getTargetRegisterInfo();
 
@@ -281,6 +360,7 @@ bool RISCVVectorPeephole::runOnMachineFunction(MachineFunction &MF) {
     for (MachineInstr &MI : MBB) {
       Changed |= convertToVLMAX(MI);
       Changed |= convertToUnmasked(MI);
+      Changed |= convertToWholeRegister(MI);
       Changed |= convertVMergeToVMv(MI);
     }
   }

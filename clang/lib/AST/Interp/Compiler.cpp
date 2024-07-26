@@ -89,6 +89,10 @@ bool InitLink::emit(Compiler<Emitter> *Ctx, const Expr *E) const {
     return Ctx->emitGetPtrLocal(Offset, E);
   case K_Decl:
     return Ctx->visitDeclRef(D, E);
+  case K_Elem:
+    if (!Ctx->emitConstUint32(Offset, E))
+      return false;
+    return Ctx->emitArrayElemPtrPopUint32(E);
   default:
     llvm_unreachable("Unhandled InitLink kind");
   }
@@ -465,6 +469,16 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
     if (!this->visit(SubExpr))
       return false;
+
+    // Possibly diagnose casts to enum types if the target type does not
+    // have a fixed size.
+    if (Ctx.getLangOpts().CPlusPlus && CE->getType()->isEnumeralType()) {
+      if (const auto *ET = CE->getType().getCanonicalType()->getAs<EnumType>();
+          ET && !ET->getDecl()->isFixed()) {
+        if (!this->emitCheckEnumValue(*FromT, ET->getDecl(), CE))
+          return false;
+      }
+    }
 
     if (ToT == PT_IntAP)
       return this->emitCastAP(*FromT, Ctx.getBitWidth(CE->getType()), CE);
@@ -1324,6 +1338,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 
     auto initPrimitiveField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init, PrimType T) -> bool {
+      InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(Init));
       if (!this->visit(Init))
         return false;
 
@@ -1334,6 +1349,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 
     auto initCompositeField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init) -> bool {
+      InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(Init));
       InitLinkScope<Emitter> ILS(this, InitLink::Field(FieldToInit->Offset));
       // Non-primitive case. Get a pointer to the field-to-initialize
       // on the stack and recurse into visitInitializer().
@@ -1544,6 +1560,7 @@ bool Compiler<Emitter>::visitArrayElemInit(unsigned ElemIndex,
     return this->emitInitElem(*T, ElemIndex, Init);
   }
 
+  InitLinkScope<Emitter> ILS(this, InitLink::Elem(ElemIndex));
   // Advance the pointer currently on the stack to the given
   // dimension.
   if (!this->emitConstUint32(ElemIndex, Init))
@@ -1686,10 +1703,8 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
   if (Kind == UETT_VectorElements) {
     if (const auto *VT = E->getTypeOfArgument()->getAs<VectorType>())
       return this->emitConst(VT->getNumElements(), E);
-
-    // FIXME: Apparently we need to catch the fact that a sizeless vector type
-    // has been passed and diagnose that (at run time).
     assert(E->getTypeOfArgument()->isSizelessVectorType());
+    return this->emitSizelessVectorElementSize(E);
   }
 
   if (Kind == UETT_VecStep) {
@@ -3184,13 +3199,9 @@ bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
     }
 
     assert(S == Result);
-    if (const Expr *ResultExpr = dyn_cast<Expr>(S)) {
-      if (DiscardResult)
-        return this->discard(ResultExpr);
+    if (const Expr *ResultExpr = dyn_cast<Expr>(S))
       return this->delegate(ResultExpr);
-    }
-
-    return this->visitStmt(S);
+    return this->emitUnsupported(E);
   }
 
   return BS.destroyLocals();
@@ -3244,6 +3255,9 @@ bool Compiler<Emitter>::visitInitializer(const Expr *E) {
 
   if (E->containsErrors())
     return this->emitError(E);
+
+  if (!this->checkLiteralType(E))
+    return false;
 
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
                              /*NewInitializing=*/true);
@@ -3677,6 +3691,9 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD, bool Topleve
   const Expr *Init = VD->getInit();
   std::optional<PrimType> VarT = classify(VD->getType());
 
+  if (Init && Init->isValueDependent())
+    return false;
+
   if (Context::shouldBeGloballyIndexed(VD)) {
     auto checkDecl = [&]() -> bool {
       bool NeedsOp = !Toplevel && VD->isLocalVarDecl() && VD->isStaticLocal();
@@ -4078,12 +4095,7 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E) {
   SourceLocScope<Emitter> SLS(this, E);
 
-  bool Old = InitStackActive;
-  InitStackActive =
-      !(E->getUsedContext()->getDeclKind() == Decl::CXXConstructor);
-  bool Result = this->delegate(E->getExpr());
-  InitStackActive = Old;
-  return Result;
+  return this->delegate(E->getExpr());
 }
 
 template <class Emitter>
@@ -4141,10 +4153,14 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   // instance pointer of the current function frame, but e.g. to the declaration
   // currently being initialized. Here we emit the necessary instruction(s) for
   // this scenario.
+  if (!InitStackActive || !E->isImplicit())
+    return this->emitThis(E);
+
   if (InitStackActive && !InitStack.empty()) {
     unsigned StartIndex = 0;
     for (StartIndex = InitStack.size() - 1; StartIndex > 0; --StartIndex) {
-      if (InitStack[StartIndex].Kind != InitLink::K_Field)
+      if (InitStack[StartIndex].Kind != InitLink::K_Field &&
+          InitStack[StartIndex].Kind != InitLink::K_Elem)
         break;
     }
 
@@ -4683,6 +4699,17 @@ bool Compiler<Emitter>::emitLambdaStaticInvokerBody(const CXXMethodDecl *MD) {
 
   // Nothing to do, since we emitted the RVO pointer above.
   return this->emitRetVoid(MD);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::checkLiteralType(const Expr *E) {
+  if (Ctx.getLangOpts().CPlusPlus23)
+    return true;
+
+  if (!E->isPRValue() || E->getType()->isLiteralType(Ctx.getASTContext()))
+    return true;
+
+  return this->emitCheckLiteralType(E->getType().getTypePtr(), E);
 }
 
 template <class Emitter>
@@ -5226,6 +5253,10 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
           return false;
         };
 
+        // DecompositionDecls are just proxies for us.
+        if (isa<DecompositionDecl>(VD))
+          return revisit(VD);
+
         // Visit local const variables like normal.
         if ((VD->hasGlobalStorage() || VD->isLocalVarDecl() ||
              VD->isStaticDataMember()) &&
@@ -5274,8 +5305,8 @@ template <class Emitter>
 unsigned Compiler<Emitter>::collectBaseOffset(const QualType BaseType,
                                               const QualType DerivedType) {
   const auto extractRecordDecl = [](QualType Ty) -> const CXXRecordDecl * {
-    if (const auto *PT = dyn_cast<PointerType>(Ty))
-      return PT->getPointeeType()->getAsCXXRecordDecl();
+    if (const auto *R = Ty->getPointeeCXXRecordDecl())
+      return R;
     return Ty->getAsCXXRecordDecl();
   };
   const CXXRecordDecl *BaseDecl = extractRecordDecl(BaseType);

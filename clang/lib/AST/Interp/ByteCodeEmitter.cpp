@@ -27,10 +27,18 @@ using namespace clang::interp;
 /// Similar information is available via ASTContext::BuiltinInfo,
 /// but that is not correct for our use cases.
 static bool isUnevaluatedBuiltin(unsigned BuiltinID) {
-  return BuiltinID == Builtin::BI__builtin_classify_type;
+  return BuiltinID == Builtin::BI__builtin_classify_type ||
+         BuiltinID == Builtin::BI__builtin_os_log_format_buffer_size ||
+         BuiltinID == Builtin::BI__builtin_constant_p;
 }
 
 Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
+
+  // Manually created functions that haven't been assigned proper
+  // parameters yet.
+  if (!FuncDecl->param_empty() && !FuncDecl->param_begin())
+    return nullptr;
+
   bool IsLambdaStaticInvoker = false;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl);
       MD && MD->isLambdaStaticInvoker()) {

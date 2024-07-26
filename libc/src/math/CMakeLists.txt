@@ -86,6 +86,12 @@ add_math_entrypoint_object(cosh)
 add_math_entrypoint_object(coshf)
 add_math_entrypoint_object(cospif)
 
+add_math_entrypoint_object(dmull)
+add_math_entrypoint_object(dmulf128)
+
+add_math_entrypoint_object(dsqrtl)
+add_math_entrypoint_object(dsqrtf128)
+
 add_math_entrypoint_object(erf)
 add_math_entrypoint_object(erff)
 
@@ -118,10 +124,19 @@ add_math_entrypoint_object(f16fmaf)
 add_math_entrypoint_object(f16fmal)
 add_math_entrypoint_object(f16fmaf128)
 
+add_math_entrypoint_object(f16mul)
+add_math_entrypoint_object(f16mulf)
+add_math_entrypoint_object(f16mull)
+add_math_entrypoint_object(f16mulf128)
+
 add_math_entrypoint_object(f16sqrt)
 add_math_entrypoint_object(f16sqrtf)
 add_math_entrypoint_object(f16sqrtl)
 add_math_entrypoint_object(f16sqrtf128)
+
+add_math_entrypoint_object(fsqrt)
+add_math_entrypoint_object(fsqrtl)
+add_math_entrypoint_object(fsqrtf128)
 
 add_math_entrypoint_object(f16sub)
 add_math_entrypoint_object(f16subf)
@@ -133,6 +148,7 @@ add_math_entrypoint_object(fabsf)
 add_math_entrypoint_object(fabsl)
 add_math_entrypoint_object(fabsf16)
 add_math_entrypoint_object(fabsf128)
+add_math_entrypoint_object(fadd)
 
 add_math_entrypoint_object(fdim)
 add_math_entrypoint_object(fdimf)
@@ -210,6 +226,8 @@ add_math_entrypoint_object(fminimum_mag_numf16)
 add_math_entrypoint_object(fminimum_mag_numf128)
 
 add_math_entrypoint_object(fmul)
+add_math_entrypoint_object(fmull)
+add_math_entrypoint_object(fmulf128)
 
 add_math_entrypoint_object(fmod)
 add_math_entrypoint_object(fmodf)
@@ -417,7 +435,11 @@ add_math_entrypoint_object(tgammaf)
 
 add_math_entrypoint_object(totalorderf16)
 
+add_math_entrypoint_object(totalordermag)
+add_math_entrypoint_object(totalordermagf)
+add_math_entrypoint_object(totalordermagl)
 add_math_entrypoint_object(totalordermagf16)
+add_math_entrypoint_object(totalordermagf128)
 
 add_math_entrypoint_object(trunc)
 add_math_entrypoint_object(truncf)

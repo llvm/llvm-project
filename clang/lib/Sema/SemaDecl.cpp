@@ -7436,10 +7436,10 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     tryToFixVariablyModifiedVarType(TInfo, R, D.getIdentifierLoc(),
                                     /*DiagID=*/0);
 
-  if (const AutoType *AutoT = R->getAs<AutoType>())
-    CheckConstrainedAuto(
-        AutoT,
-        TInfo->getTypeLoc().getContainedAutoTypeLoc().getConceptNameLoc());
+  if (AutoTypeLoc TL = TInfo->getTypeLoc().getContainedAutoTypeLoc()) {
+    const AutoType *AT = TL.getTypePtr();
+    CheckConstrainedAuto(AT, TL.getConceptNameLoc());
+  }
 
   bool IsMemberSpecialization = false;
   bool IsVariableTemplateSpecialization = false;
@@ -20148,8 +20148,10 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
     // be emitted, because (say) the definition could include "inline".
     const FunctionDecl *Def = FD->getDefinition();
 
-    return Def && !isDiscardableGVALinkage(
-                      getASTContext().GetGVALinkageForFunction(Def));
+    // We can't compute linkage when we skip function bodies.
+    return Def && !Def->hasSkippedBody() &&
+           !isDiscardableGVALinkage(
+               getASTContext().GetGVALinkageForFunction(Def));
   };
 
   if (LangOpts.OpenMPIsTargetDevice) {

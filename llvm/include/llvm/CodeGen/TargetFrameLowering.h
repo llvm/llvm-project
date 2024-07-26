@@ -51,7 +51,7 @@ public:
   // Maps a callee saved register to a stack slot with a fixed offset.
   struct SpillSlot {
     unsigned Reg;
-    int Offset; // Offset relative to stack pointer on function entry.
+    int64_t Offset; // Offset relative to stack pointer on function entry.
   };
 
   struct DwarfFrameBase {
@@ -66,7 +66,7 @@ public:
       // Used with FrameBaseKind::Register.
       unsigned Reg;
       // Used with FrameBaseKind::CFA.
-      int Offset;
+      int64_t Offset;
       struct WasmFrameBase WasmLoc;
     } Location;
   };
@@ -342,6 +342,13 @@ public:
     Register FrameReg;
     return getFrameIndexReference(MF, FI, FrameReg);
   }
+
+  /// getFrameIndexReferenceFromSP - This method returns the offset from the
+  /// stack pointer to the slot of the specified index. This function serves to
+  /// provide a comparable offset from a single reference point (the value of
+  /// the stack-pointer at function entry) that can be used for analysis.
+  virtual StackOffset getFrameIndexReferenceFromSP(const MachineFunction &MF,
+                                                   int FI) const;
 
   /// Returns the callee-saved registers as computed by determineCalleeSaves
   /// in the BitVector \p SavedRegs.

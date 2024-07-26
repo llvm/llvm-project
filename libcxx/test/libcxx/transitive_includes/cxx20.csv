@@ -682,6 +682,7 @@ ranges optional
 ranges span
 ranges tuple
 ranges type_traits
+ranges variant
 ranges version
 ratio climits
 ratio cstdint
@@ -977,6 +978,7 @@ unordered_set type_traits
 unordered_set version
 utility compare
 utility cstddef
+utility cstdint
 utility cstdlib
 utility initializer_list
 utility iosfwd

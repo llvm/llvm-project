@@ -821,7 +821,7 @@ void ASTDeclReader::VisitEnumDecl(EnumDecl *ED) {
       Reader.mergeDefinitionVisibility(OldDef, ED);
       // We don't want to check the ODR hash value for declarations from global
       // module fragment.
-      if (!shouldSkipCheckingODR(ED) &&
+      if (!shouldSkipCheckingODR(ED) && !shouldSkipCheckingODR(OldDef) &&
           OldDef->getODRHash() != ED->getODRHash())
         Reader.PendingEnumOdrMergeFailures[OldDef].push_back(ED);
     } else {
@@ -2134,7 +2134,7 @@ void ASTDeclReader::MergeDefinitionData(
   }
 
   // We don't want to check ODR for decls in the global module fragment.
-  if (shouldSkipCheckingODR(MergeDD.Definition))
+  if (shouldSkipCheckingODR(MergeDD.Definition) || shouldSkipCheckingODR(D))
     return;
 
   if (D->getODRHash() != MergeDD.ODRHash) {
