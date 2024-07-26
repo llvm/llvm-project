@@ -416,7 +416,7 @@ public:
     // below them can initialize the same object (or part of it).
     if (isa<CXXConstructExpr>(E) || isa<CallExpr>(E) || isa<LambdaExpr>(E) ||
         isa<CXXDefaultArgExpr>(E) || isa<CXXStdInitializerListExpr>(E) ||
-        isa<AtomicExpr>(E) ||
+        isa<AtomicExpr>(E) || isa<CXXInheritedCtorInitExpr>(E) ||
         // We treat `BuiltinBitCastExpr` as an "original initializer" too as
         // it may not even be casting from a record type -- and even if it is,
         // the two objects are in general of unrelated type.
