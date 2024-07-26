@@ -152,7 +152,7 @@ Bug Fixes to C++ Support
 - Fixed a crash when an expression with a dependent ``__typeof__`` type is used as the operand of a unary operator. (#GH97646)
 - Fixed a failed assertion when checking invalid delete operator declaration. (#GH96191)
 - Clang now correctly handles unexpanded packs in a lambda used as the pattern of a fold expression. (#GH56852), 
-  (#GH85667), (#99877).
+  (#GH85667), (#GH99877).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
