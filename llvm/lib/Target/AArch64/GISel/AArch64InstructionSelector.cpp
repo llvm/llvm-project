@@ -3633,7 +3633,8 @@ bool AArch64InstructionSelector::selectBrJT(MachineInstr &I,
 
   // With aarch64-jump-table-hardening, we only expand the jump table dispatch
   // sequence later, to guarantee the integrity of the intermediate values.
-  if (MF->getFunction().hasFnAttribute("aarch64-jump-table-hardening")) {
+  if (MF->getFunction().hasFnAttribute("aarch64-jump-table-hardening") ||
+      STI.getTargetTriple().isArm64e()) {
     CodeModel::Model CM = TM.getCodeModel();
     if (STI.isTargetMachO()) {
       if (CM != CodeModel::Small && CM != CodeModel::Large)

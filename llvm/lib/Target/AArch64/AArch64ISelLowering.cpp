@@ -10754,7 +10754,7 @@ SDValue AArch64TargetLowering::LowerBR_JT(SDValue Op,
   // sequence later, to guarantee the integrity of the intermediate values.
   if (DAG.getMachineFunction().getFunction().hasFnAttribute(
           "aarch64-jump-table-hardening") ||
-      Subtarget->getTargetTriple().getArchName() == "arm64e") {
+      Subtarget->getTargetTriple().isArm64e()) {
     CodeModel::Model CM = getTargetMachine().getCodeModel();
     if (Subtarget->isTargetMachO()) {
       if (CM != CodeModel::Small && CM != CodeModel::Large)

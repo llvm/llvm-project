@@ -190,13 +190,16 @@ bb2:
 
 ;; Check we don't interfere with jump-table BRIND lowering.
 
+; This implicitly enables aarch64-hardened-jump-table via arm64e.
+
 ; MACHO-LABEL: test_jumptable:
-; MACHO:        adrp x9, LJTI3_0@PAGE
-; MACHO-NEXT:   add x9, x9, LJTI3_0@PAGEOFF
-; MACHO-NEXT:   adr x10, LBB3_2
-; MACHO-NEXT:   ldrb w11, [x9, x8]
-; MACHO-NEXT:   add x10, x10, x11, lsl #2
-; MACHO-NEXT:   br x10
+; MACHO:        adrp  x17, LJTI3_0@PAGE
+; MACHO-NEXT:   add   x17, x17, LJTI3_0@PAGEOFF
+; MACHO-NEXT:   ldrsw x16, [x17, x16, lsl #2]
+; MACHO-NEXT:  Ltmp4:
+; MACHO-NEXT:   adr   x17, Ltmp4
+; MACHO-NEXT:   add   x16, x17, x16
+; MACHO-NEXT:   br    x16
 
 ; ELF-LABEL: test_jumptable:
 ; ELF:        adrp x9, .LJTI3_0
