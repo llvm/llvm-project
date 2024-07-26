@@ -137,13 +137,17 @@ LogicalResult CreateNdDescOp::verify() {
   // already handeled by OffsetSizeAndStrideOpInterface.
   // So they are not check here.
   if (invalidRank)
-    return emitOpError("Expecting the rank of shape, strides, offsets, and source (if source is a memref) should match with each other.");
+    return emitOpError(
+        "Expecting the rank of shape, strides, offsets, and source (if source "
+        "is a memref) should match with each other.");
 
   // check result TensorDesc rank
   invalidRank = (getType().getRank() > 2 || getType().getRank() > rank);
 
   if (invalidRank)
-    return emitOpError("Expecting the TensorDesc rank is up to 2 and not greater than the ranks of shape, strides, offsets or the memref source.");
+    return emitOpError(
+        "Expecting the TensorDesc rank is up to 2 and not greater than the "
+        "ranks of shape, strides, offsets or the memref source.");
 
   if (invalidElemTy)
     return emitOpError("TensorDesc should have the same element "
