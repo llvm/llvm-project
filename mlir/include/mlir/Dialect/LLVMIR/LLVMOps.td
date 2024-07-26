@@ -59,21 +59,8 @@ class LLVM_IntArithmeticOpWithOverflowFlag<string mnemonic, string instName,
                                    list<Trait> traits = []> :
     LLVM_ArithmeticOpBase<AnySignlessInteger, mnemonic, instName,
     !listconcat([DeclareOpInterfaceMethods<IntegerOverflowFlagsInterface>], traits)> {
-  dag iofArg = (ins EnumProperty<"IntegerOverflowFlags">:$overflowFlags);
+  dag iofArg = (ins EnumProperty<"IntegerOverflowFlags", "", "IntegerOverflowFlags::none">:$overflowFlags);
   let arguments = !con(commonArgs, iofArg);
-
-  let builders = [
-    OpBuilder<(ins "Type":$type, "Value":$lhs, "Value":$rhs,
-                   "IntegerOverflowFlags":$overflowFlags), [{
-      $_state.getOrAddProperties<Properties>().overflowFlags = overflowFlags;
-      build($_builder, $_state, type, lhs, rhs);
-    }]>,
-    OpBuilder<(ins "Value":$lhs, "Value":$rhs,
-                   "IntegerOverflowFlags":$overflowFlags), [{
-      $_state.getOrAddProperties<Properties>().overflowFlags = overflowFlags;
-      build($_builder, $_state, lhs, rhs);
-    }]>
-  ];
 
   string mlirBuilder = [{
     auto op = $_builder.create<$_qualCppClassName>($_location, $lhs, $rhs);

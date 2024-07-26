@@ -739,7 +739,7 @@ void ModuloScheduleExpander::removeDeadInstructions(MachineBasicBlock *KernelBB,
       bool SawStore = false;
       // Check if it's safe to remove the instruction due to side effects.
       // We can, and want to, remove Phis here.
-      if (!MI->isSafeToMove(nullptr, SawStore) && !MI->isPHI()) {
+      if (!MI->isSafeToMove(SawStore) && !MI->isPHI()) {
         ++MI;
         continue;
       }
