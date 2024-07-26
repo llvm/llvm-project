@@ -227,6 +227,12 @@ bool Pointer::isInitialized() const {
   if (isIntegralPointer())
     return true;
 
+  if (isRoot() && PointeeStorage.BS.Base == sizeof(GlobalInlineDescriptor)) {
+    const GlobalInlineDescriptor &GD =
+        *reinterpret_cast<const GlobalInlineDescriptor *>(block()->rawData());
+    return GD.InitState == GlobalInitState::Initialized;
+  }
+
   assert(PointeeStorage.BS.Pointee &&
          "Cannot check if null pointer was initialized");
   const Descriptor *Desc = getFieldDesc();
@@ -249,12 +255,6 @@ bool Pointer::isInitialized() const {
   if (asBlockPointer().Base == 0)
     return true;
 
-  if (isRoot() && PointeeStorage.BS.Base == sizeof(GlobalInlineDescriptor)) {
-    const GlobalInlineDescriptor &GD =
-        *reinterpret_cast<const GlobalInlineDescriptor *>(block()->rawData());
-    return GD.InitState == GlobalInitState::Initialized;
-  }
-
   // Field has its bit in an inline descriptor.
   return getInlineDesc()->IsInitialized;
 }
@@ -265,6 +265,13 @@ void Pointer::initialize() const {
 
   assert(PointeeStorage.BS.Pointee && "Cannot initialize null pointer");
   const Descriptor *Desc = getFieldDesc();
+
+  if (isRoot() && PointeeStorage.BS.Base == sizeof(GlobalInlineDescriptor)) {
+    GlobalInlineDescriptor &GD = *reinterpret_cast<GlobalInlineDescriptor *>(
+        asBlockPointer().Pointee->rawData());
+    GD.InitState = GlobalInitState::Initialized;
+    return;
+  }
 
   assert(Desc);
   if (Desc->isPrimitiveArray()) {
@@ -291,13 +298,6 @@ void Pointer::initialize() const {
       IM->first = true;
       IM->second.reset();
     }
-    return;
-  }
-
-  if (isRoot() && PointeeStorage.BS.Base == sizeof(GlobalInlineDescriptor)) {
-    GlobalInlineDescriptor &GD = *reinterpret_cast<GlobalInlineDescriptor *>(
-        asBlockPointer().Pointee->rawData());
-    GD.InitState = GlobalInitState::Initialized;
     return;
   }
 
