@@ -129,3 +129,137 @@ body:             |
     %res:_(<2 x s64>) = G_SELECT %cond(<2 x s32>), %bv, %bv2
     %small:_(<2 x s32>) = G_TRUNC %res(<2 x s64>)
     $x0 = COPY %small(<2 x s32>)
+
+...
+---
+name:            zext_const
+legalized: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-PRE-LABEL: name: zext_const
+    ; CHECK-PRE: liveins: $w0, $w1
+    ; CHECK-PRE-NEXT: {{  $}}
+    ; CHECK-PRE-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
+    ; CHECK-PRE-NEXT: $x0 = COPY [[C]](s64)
+    ;
+    ; CHECK-POST-LABEL: name: zext_const
+    ; CHECK-POST: liveins: $w0, $w1
+    ; CHECK-POST-NEXT: {{  $}}
+    ; CHECK-POST-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
+    ; CHECK-POST-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s32)
+    ; CHECK-POST-NEXT: $x0 = COPY [[ZEXT]](s64)
+    %2:_(s32) = G_CONSTANT i32 5
+    %3:_(s64) = G_ZEXT %2
+    $x0 = COPY %3
+...
+---
+name:            sext_const
+legalized: true
+body:             |
+  bb.0:
+    liveins: $q0, $q1
+    ; CHECK-PRE-LABEL: name: sext_const
+    ; CHECK-PRE: liveins: $q0, $q1
+    ; CHECK-PRE-NEXT: {{  $}}
+    ; CHECK-PRE-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -5
+    ; CHECK-PRE-NEXT: $x0 = COPY [[C]](s64)
+    ;
+    ; CHECK-POST-LABEL: name: sext_const
+    ; CHECK-POST: liveins: $q0, $q1
+    ; CHECK-POST-NEXT: {{  $}}
+    ; CHECK-POST-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -5
+    ; CHECK-POST-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[C]](s32)
+    ; CHECK-POST-NEXT: $x0 = COPY [[SEXT]](s64)
+    %2:_(s32) = G_CONSTANT i32 -5
+    %3:_(s64) = G_SEXT %2
+    $x0 = COPY %3
+...
+---
+name:            trunc_const
+legalized: true
+body:             |
+  bb.0:
+    liveins: $q0, $q1
+    ; CHECK-PRE-LABEL: name: trunc_const
+    ; CHECK-PRE: liveins: $q0, $q1
+    ; CHECK-PRE-NEXT: {{  $}}
+    ; CHECK-PRE-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 705032704
+    ; CHECK-PRE-NEXT: $w0 = COPY [[C]](s32)
+    ;
+    ; CHECK-POST-LABEL: name: trunc_const
+    ; CHECK-POST: liveins: $q0, $q1
+    ; CHECK-POST-NEXT: {{  $}}
+    ; CHECK-POST-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 5000000000
+    ; CHECK-POST-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[C]](s64)
+    ; CHECK-POST-NEXT: $w0 = COPY [[TRUNC]](s32)
+    %2:_(s64) = G_CONSTANT i64 5000000000
+    %3:_(s32) = G_TRUNC %2
+    $w0 = COPY %3
+...
+---
+name:            trunc_const_bv
+legalized: true
+body:             |
+  bb.0:
+    liveins: $q0, $q1
+    ; CHECK-LABEL: name: trunc_const_bv
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 5000000000
+    ; CHECK-NEXT: %bv:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC %bv(<2 x s64>)
+    ; CHECK-NEXT: $x0 = COPY [[TRUNC]](<2 x s32>)
+    %2:_(s64) = G_CONSTANT i64 5000000000
+    %bv:_(<2 x s64>) = G_BUILD_VECTOR %2, %2
+    %3:_(<2 x s32>) = G_TRUNC %bv
+    $x0 = COPY %3
+...
+---
+name:            anyext_const
+legalized: true
+body:             |
+  bb.0:
+    liveins: $q0, $q1
+    ; CHECK-PRE-LABEL: name: anyext_const
+    ; CHECK-PRE: liveins: $q0, $q1
+    ; CHECK-PRE-NEXT: {{  $}}
+    ; CHECK-PRE-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 500
+    ; CHECK-PRE-NEXT: $x0 = COPY [[C]](s64)
+    ;
+    ; CHECK-POST-LABEL: name: anyext_const
+    ; CHECK-POST: liveins: $q0, $q1
+    ; CHECK-POST-NEXT: {{  $}}
+    ; CHECK-POST-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 500
+    ; CHECK-POST-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
+    ; CHECK-POST-NEXT: $x0 = COPY [[ANYEXT]](s64)
+    %2:_(s32) = G_CONSTANT i32 500
+    %3:_(s64) = G_ANYEXT %2
+    $x0 = COPY %3
+...
+---
+name:            mul_const
+legalized: true
+body:             |
+  bb.0:
+    liveins: $q0, $q1
+    ; CHECK-PRE-LABEL: name: mul_const
+    ; CHECK-PRE: liveins: $q0, $q1
+    ; CHECK-PRE-NEXT: {{  $}}
+    ; CHECK-PRE-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-PRE-NEXT: $x0 = COPY [[C]](s64)
+    ;
+    ; CHECK-POST-LABEL: name: mul_const
+    ; CHECK-POST: liveins: $q0, $q1
+    ; CHECK-POST-NEXT: {{  $}}
+    ; CHECK-POST-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-POST-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB %x, %x
+    ; CHECK-POST-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+    ; CHECK-POST-NEXT: %mul:_(s32) = G_SHL [[SUB]], [[C]](s64)
+    ; CHECK-POST-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %mul(s32)
+    ; CHECK-POST-NEXT: $x0 = COPY [[ANYEXT]](s64)
+    %x:_(s32) = COPY $w0
+    %zero:_(s32) = G_CONSTANT i32 0
+    %mul:_(s32) = G_MUL %x, %zero
+    %3:_(s64) = G_ANYEXT %mul
+    $x0 = COPY %3

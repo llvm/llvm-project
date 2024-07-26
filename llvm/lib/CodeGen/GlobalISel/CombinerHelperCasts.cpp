@@ -209,3 +209,48 @@ bool CombinerHelper::matchCastOfSelect(const MachineInstr &CastMI,
 
   return true;
 }
+
+bool CombinerHelper::matchCastOfInteger(const MachineInstr &CastMI,
+                                        APInt &MatchInfo) {
+  const GExtOrTruncOp *Cast = cast<GExtOrTruncOp>(&CastMI);
+
+  std::optional<APInt> Input = getIConstantVRegVal(Cast->getSrcReg(), MRI);
+  if (!Input)
+    return false;
+
+  LLT DstTy = MRI.getType(Cast->getReg(0));
+  LLT SrcTy = MRI.getType(Cast->getSrcReg());
+
+  if (!isConstantLegalOrBeforeLegalizer(DstTy))
+    return false;
+
+  switch (Cast->getOpcode()) {
+  case TargetOpcode::G_ZEXT: {
+    MatchInfo = Input->zext(DstTy.getScalarSizeInBits());
+    return true;
+  }
+  case TargetOpcode::G_SEXT: {
+    MatchInfo = Input->sext(DstTy.getScalarSizeInBits());
+    return true;
+  }
+  case TargetOpcode::G_TRUNC: {
+    MatchInfo = Input->trunc(DstTy.getScalarSizeInBits());
+    return true;
+  }
+  case TargetOpcode::G_ANYEXT: {
+    const auto &TLI = getTargetLowering();
+    LLVMContext &Ctx = getContext();
+    const DataLayout &DL = getDataLayout();
+
+    // Some targets like RISC-V prefer to sign extend some types.
+    if (TLI.isSExtCheaperThanZExt(SrcTy, DstTy, DL, Ctx))
+      MatchInfo = Input->sext(DstTy.getScalarSizeInBits());
+    else
+      MatchInfo = Input->zext(DstTy.getScalarSizeInBits());
+
+    return true;
+  }
+  default:
+    return false;
+  }
+}

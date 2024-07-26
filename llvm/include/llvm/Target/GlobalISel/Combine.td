@@ -1783,13 +1783,30 @@ def select_of_zext : select_of_opcode<G_ZEXT>;
 def select_of_anyext : select_of_opcode<G_ANYEXT>;
 def select_of_truncate : select_of_opcode<G_TRUNC>;
 
+// Cast of integer.
+class integer_of_opcode<Instruction castOpcode> : GICombineRule <
+  (defs root:$root, apint_matchinfo:$matchinfo),
+  (match (G_CONSTANT $int, $imm),
+         (castOpcode $root, $int):$Cast,
+         [{ return Helper.matchCastOfInteger(*${Cast}, ${matchinfo}); }]),
+  (apply [{ Helper.replaceInstWithConstant(*${Cast}, ${matchinfo}); }])>;
+
+def zext_of_integer : integer_of_opcode<G_ZEXT>;
+def sext_of_integer : integer_of_opcode<G_SEXT>;
+def anyext_of_integer : integer_of_opcode<G_ANYEXT>;
+def truncate_of_integer : integer_of_opcode<G_TRUNC>;
+
 def cast_combines: GICombineGroup<[
   truncate_of_zext,
   truncate_of_sext,
   truncate_of_anyext,
   select_of_zext,
   select_of_anyext,
-  select_of_truncate
+  select_of_truncate,
+  zext_of_integer,
+  sext_of_integer,
+  anyext_of_integer,
+  truncate_of_integer
 ]>;
 
 

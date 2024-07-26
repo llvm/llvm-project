@@ -893,6 +893,8 @@ public:
   bool matchCastOfSelect(const MachineInstr &Cast, const MachineInstr &SelectMI,
                          BuildFnTy &MatchInfo);
 
+  bool matchCastOfInteger(const MachineInstr &CastMI, APInt &MatchInfo);
+
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
