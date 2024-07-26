@@ -11,11 +11,11 @@
 
 include "mlir/IR/OpBase.td"
 
-def ComputeRegionOpInterface : OpInterface<"ComputeRegionOpInterface"> {
+def ComputeConstructOpInterface : OpInterface<"ComputeConstructOpInterface"> {
   let cppNamespace = "::mlir::acc";
 
   let description = [{
-    An interface for compute and loop construct operations.
+    An interface for compute construct operations.
   }];
 
   let methods = [
