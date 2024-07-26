@@ -779,7 +779,7 @@ static auto getDims(VectorType vType) {
   return llvm::zip_equal(vType.getShape(), vType.getScalableDims());
 }
 
-/// Helper to drop unit dims from a VectorType.
+/// Helper to drop (fixed-size) unit dims from a VectorType.
 static VectorType dropUnitDims(VectorType vType) {
   SmallVector<bool> scalableFlags;
   SmallVector<int64_t> dimSizes;
