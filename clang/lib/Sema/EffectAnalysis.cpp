@@ -199,7 +199,6 @@ struct CallableInfo {
   // FunctionDecl if CallType::Function or Virtual
   // BlockDecl if CallType::Block
   const Decl *CDecl;
-  mutable std::optional<std::string> MaybeName;
   SpecialFuncType FuncType = SpecialFuncType::None;
   EffectSet Effects;
   CallType CType = CallType::Unknown;
@@ -247,20 +246,17 @@ struct CallableInfo {
 
   /// Generate a name for logging and diagnostics.
   std::string name(Sema &Sem) const {
-    if (!MaybeName) {
-      std::string Name;
-      llvm::raw_string_ostream OS(Name);
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
 
-      if (auto *FD = dyn_cast<FunctionDecl>(CDecl))
-        FD->getNameForDiagnostic(OS, Sem.getPrintingPolicy(),
-                                 /*Qualified=*/true);
-      else if (auto *BD = dyn_cast<BlockDecl>(CDecl))
-        OS << "(block " << BD->getBlockManglingNumber() << ")";
-      else if (auto *VD = dyn_cast<NamedDecl>(CDecl))
-        VD->printQualifiedName(OS);
-      MaybeName = Name;
-    }
-    return *MaybeName;
+    if (auto *FD = dyn_cast<FunctionDecl>(CDecl))
+      FD->getNameForDiagnostic(OS, Sem.getPrintingPolicy(),
+                                /*Qualified=*/true);
+    else if (auto *BD = dyn_cast<BlockDecl>(CDecl))
+      OS << "(block " << BD->getBlockManglingNumber() << ")";
+    else if (auto *VD = dyn_cast<NamedDecl>(CDecl))
+      VD->printQualifiedName(OS);
+    return Name;
   }
 };
 
@@ -955,17 +951,10 @@ private:
 
     // -- Entry point --
     void run() {
-      // The target function itself may have some implicit code paths beyond the
-      // body: member and base constructors and destructors. Visit these first.
-      if (const auto *FD = dyn_cast<const FunctionDecl>(CurrentCaller.CDecl)) {
-        if (auto *Ctor = dyn_cast<CXXConstructorDecl>(FD)) {
-          for (const CXXCtorInitializer *Initer : Ctor->inits())
-            if (Expr *Init = Initer->getInit())
-              VisitStmt(Init);
-        } else if (auto *Dtor = dyn_cast<CXXDestructorDecl>(FD))
-          followDestructor(dyn_cast<CXXRecordDecl>(Dtor->getParent()), Dtor);
-      }
-      // else could be BlockDecl
+      // The target function may have implicit code paths beyond the
+      // body: member and base destructors. Visit these first.
+      if (auto *Dtor = dyn_cast<CXXDestructorDecl>(CurrentCaller.CDecl))
+        followDestructor(dyn_cast<CXXRecordDecl>(Dtor->getParent()), Dtor);
 
       // Do an AST traversal of the function/block body
       TraverseDecl(const_cast<Decl *>(CurrentCaller.CDecl));
@@ -1043,18 +1032,18 @@ private:
     void followDestructor(const CXXRecordDecl *Rec,
                           const CXXDestructorDecl *Dtor) {
       for (const FieldDecl *Field : Rec->fields())
-        followTypeDtor(Field->getType());
+        followTypeDtor(Field->getType(), Dtor);
 
       if (const auto *Class = dyn_cast<CXXRecordDecl>(Rec)) {
         for (const CXXBaseSpecifier &Base : Class->bases())
-          followTypeDtor(Base.getType());
+          followTypeDtor(Base.getType(), Dtor);
 
         for (const CXXBaseSpecifier &Base : Class->vbases())
-          followTypeDtor(Base.getType());
+          followTypeDtor(Base.getType(), Dtor);
       }
     }
 
-    void followTypeDtor(QualType QT) {
+    void followTypeDtor(QualType QT, const CXXDestructorDecl *OuterDtor) {
       const Type *Ty = QT.getTypePtr();
       while (Ty->isArrayType()) {
         const ArrayType *Arr = Ty->getAsArrayTypeUnsafe();
@@ -1066,7 +1055,7 @@ private:
         if (const CXXRecordDecl *Class = Ty->getAsCXXRecordDecl()) {
           if (CXXDestructorDecl *Dtor = Class->getDestructor()) {
             CallableInfo CI(Outer.Sem, *Dtor);
-            followCall(CI, Dtor->getLocation());
+            followCall(CI, OuterDtor->getLocation());
           }
         }
       }
