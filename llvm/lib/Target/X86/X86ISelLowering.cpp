@@ -43315,6 +43315,9 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
     bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
 
   switch (Op.getOpcode()) {
+  // SSE vector multiplies are either inbounds or saturate.
+  case X86ISD::VPMADDUBSW:
+  case X86ISD::VPMADDWD:
   // SSE vector shifts handle out of bounds shift amounts.
   case X86ISD::VSHLI:
   case X86ISD::VSRLI:
