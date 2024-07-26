@@ -3475,6 +3475,18 @@ private:
       return Proceed;
     }
 
+    bool VisitObjCAtThrowStmt(ObjCAtThrowStmt *Throw) {
+      diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeThrow,
+                                DiagnosticID::Throws, Throw->getThrowLoc());
+      return Proceed;
+    }
+
+    bool VisitObjCAtCatchStmt(ObjCAtCatchStmt *Catch) {
+      diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeCatch,
+                                DiagnosticID::Catches, Catch->getAtCatchLoc());
+      return Proceed;
+    }
+
     bool VisitObjCMessageExpr(ObjCMessageExpr *Msg) {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeObjCMessageSend,
                                 DiagnosticID::CallsObjC, Msg->getBeginLoc());

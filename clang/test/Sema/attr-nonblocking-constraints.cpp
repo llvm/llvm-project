@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -verify %s
 // These are in a separate file because errors (e.g. incompatible attributes) currently prevent
-// the AnalysisBasedWarnings pass from running at all.
+// the FXAnalysis pass from running at all.
 
 // This diagnostic is re-enabled and exercised in isolation later in this file.
 #pragma clang diagnostic ignored "-Wperf-constraint-implies-noexcept"
@@ -9,7 +9,8 @@
 
 void nl1() [[clang::nonblocking]]
 {
-	auto* pInt = new int; // expected-warning {{'nonblocking' function must not allocate or deallocate memory}}
+	int *pInt = new int; // expected-warning {{'nonblocking' function must not allocate or deallocate memory}}
+	delete pInt; // expected-warning {{'nonblocking' function must not allocate or deallocate memory}}
 }
 
 void nl2() [[clang::nonblocking]]
