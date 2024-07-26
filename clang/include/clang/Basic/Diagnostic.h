@@ -1776,8 +1776,12 @@ public:
   /// BeginSourceFile() are inaccessible.
   virtual void EndSourceFile() {}
 
-  /// Callback to inform the diagnostic client that processing of all
-  /// source files has ended.
+  /// Callback to inform the diagnostic client that processing of all source
+  /// files has ended, and that no more diagnostics will be emitted.
+  ///
+  /// This is only called when the DiagnosticConsumer's destructor would not
+  /// otherwise be called. Subclasses that require this to be called must ensure
+  /// that in their destructor.
   virtual void finish() {}
 
   /// Indicates whether the diagnostics handled by this
