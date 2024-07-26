@@ -2736,6 +2736,15 @@ inline bool InvalidDeclRef(InterpState &S, CodePtr OpPC,
   return CheckDeclRef(S, OpPC, DR);
 }
 
+inline bool SizelessVectorElementSize(InterpState &S, CodePtr OpPC) {
+  if (S.inConstantContext()) {
+    const SourceRange &ArgRange = S.Current->getRange(OpPC);
+    const Expr *E = S.Current->getExpr(OpPC);
+    S.CCEDiag(E, diag::note_constexpr_non_const_vectorelements) << ArgRange;
+  }
+  return false;
+}
+
 inline bool Assume(InterpState &S, CodePtr OpPC) {
   const auto Val = S.Stk.pop<Boolean>();
 
