@@ -1505,13 +1505,13 @@ void InstructionNumOperandsMatcher::emitPredicateOpcodes(
     MatchTable &Table, RuleMatcher &Rule) const {
   StringRef Opc;
   switch (CK) {
-  case CK_Eq:
+  case CheckKind::Eq:
     Opc = "GIM_CheckNumOperands";
     break;
-  case CK_GE:
+  case CheckKind::GE:
     Opc = "GIM_CheckNumOperandsGE";
     break;
-  case CK_LE:
+  case CheckKind::LE:
     Opc = "GIM_CheckNumOperandsLE";
     break;
   }

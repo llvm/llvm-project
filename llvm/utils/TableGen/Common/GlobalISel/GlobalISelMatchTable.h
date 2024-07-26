@@ -1416,7 +1416,7 @@ public:
 
 class InstructionNumOperandsMatcher final : public InstructionPredicateMatcher {
 public:
-  enum CheckKind { CK_Eq, CK_LE, CK_GE };
+  enum class CheckKind { Eq, LE, GE };
 
 private:
   unsigned NumOperands = 0;
@@ -1424,7 +1424,7 @@ private:
 
 public:
   InstructionNumOperandsMatcher(unsigned InsnVarID, unsigned NumOperands,
-                                CheckKind CK = CK_Eq)
+                                CheckKind CK = CheckKind::Eq)
       : InstructionPredicateMatcher(IPM_NumOperands, InsnVarID),
         NumOperands(NumOperands), CK(CK) {}
 

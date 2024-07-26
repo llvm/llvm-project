@@ -2258,10 +2258,10 @@ bool CombineRuleBuilder::emitCodeGenInstructionMatchPattern(
       auto VPTI = Ty.getVariadicPackTypeInfo();
       assert(VPTI.Min > 0 && (VPTI.Max == 0 || VPTI.Max > VPTI.Min));
       IM.addPredicate<InstructionNumOperandsMatcher>(
-          RealIdx + VPTI.Min, InstructionNumOperandsMatcher::CK_GE);
+          RealIdx + VPTI.Min, InstructionNumOperandsMatcher::CheckKind::GE);
       if (VPTI.Max) {
         IM.addPredicate<InstructionNumOperandsMatcher>(
-            RealIdx + VPTI.Max, InstructionNumOperandsMatcher::CK_LE);
+            RealIdx + VPTI.Max, InstructionNumOperandsMatcher::CheckKind::LE);
       }
       break;
     }
