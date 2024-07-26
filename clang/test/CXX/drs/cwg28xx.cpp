@@ -30,7 +30,7 @@ using U2 = decltype(&main);
 #endif
 } // namespace cwg2811
 
-namespace cwg2819 { // cwg2819: 19 accepted 2023-12-01
+namespace cwg2819 { // cwg2819: 19
 #if __cpp_constexpr >= 202306L
   constexpr void* p = nullptr;
   constexpr int* q = static_cast<int*>(p);
@@ -111,7 +111,7 @@ struct D : N::B {
 #endif
 } // namespace cwg2857
 
-namespace cwg2858 { // cwg2858: 19 accepted 2024-04-05
+namespace cwg2858 { // cwg2858: 19
 
 #if __cplusplus > 202302L
 
