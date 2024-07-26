@@ -46,6 +46,10 @@ MCELFStreamer::MCELFStreamer(MCContext &Context,
     : MCObjectStreamer(Context, std::move(TAB), std::move(OW),
                        std::move(Emitter)) {}
 
+ELFObjectWriter &MCELFStreamer::getWriter() {
+  return static_cast<ELFObjectWriter &>(getAssembler().getWriter());
+}
+
 bool MCELFStreamer::isBundleLocked() const {
   return getCurrentSectionOnly()->isBundleLocked();
 }
@@ -120,7 +124,7 @@ void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   if (Grp)
     Asm.registerSymbol(*Grp);
   if (SectionELF->getFlags() & ELF::SHF_GNU_RETAIN)
-    Asm.getWriter().markGnuAbi();
+    getWriter().markGnuAbi();
 
   changeSectionImpl(Section, Subsection);
   Asm.registerSymbol(*Section->getBeginSymbol());
@@ -188,7 +192,7 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   case MCSA_ELF_TypeGnuUniqueObject:
     Symbol->setType(CombineSymbolTypes(Symbol->getType(), ELF::STT_OBJECT));
     Symbol->setBinding(ELF::STB_GNU_UNIQUE);
-    getAssembler().getWriter().markGnuAbi();
+    getWriter().markGnuAbi();
     break;
 
   case MCSA_Global:
@@ -226,7 +230,7 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
 
   case MCSA_ELF_TypeIndFunction:
     Symbol->setType(CombineSymbolTypes(Symbol->getType(), ELF::STT_GNU_IFUNC));
-    getAssembler().getWriter().markGnuAbi();
+    getWriter().markGnuAbi();
     break;
 
   case MCSA_ELF_TypeObject:
