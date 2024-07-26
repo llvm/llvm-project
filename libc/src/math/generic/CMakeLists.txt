@@ -111,7 +111,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
-    libc.src.__support.macros.properties.architectures
+    libc.src.__support.macros.properties.cpu_features
   FLAGS
     ROUND_OPT
 )
@@ -548,7 +548,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
-    libc.src.__support.macros.properties.architectures
+    libc.src.__support.macros.properties.cpu_features
   FLAGS
     ROUND_OPT
 )
@@ -617,7 +617,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
-    libc.src.__support.macros.properties.architectures
+    libc.src.__support.macros.properties.cpu_features
   FLAGS
     ROUND_OPT
 )
@@ -686,7 +686,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
-    libc.src.__support.macros.properties.architectures
+    libc.src.__support.macros.properties.cpu_features
   FLAGS
     ROUND_OPT
 )
@@ -755,7 +755,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
-    libc.src.__support.macros.properties.architectures
+    libc.src.__support.macros.properties.cpu_features
   FLAGS
     ROUND_OPT
 )
@@ -948,7 +948,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
-    libc.src.__support.macros.properties.architectures
+    libc.src.__support.macros.properties.cpu_features
   FLAGS
     ROUND_OPT
 )
@@ -4231,7 +4231,7 @@ add_entrypoint_object(
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.fma
   COMPILE_OPTIONS
-    -O0 -ggdb3
+    -O3
 )
 
 add_entrypoint_object(
