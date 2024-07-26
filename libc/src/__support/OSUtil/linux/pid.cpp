@@ -1,4 +1,4 @@
-//===-- Implementation header for getpid ------------------------*- C++ -*-===//
+//===------------ pid_t utilities implementation ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_UNISTD_GETPID_H
-#define LLVM_LIBC_SRC_UNISTD_GETPID_H
-
-#include "hdr/types/pid_t.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/OSUtil/pid.h"
+#include "src/__support/OSUtil/syscall.h"
+#include <sys/syscall.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
-pid_t getpid(void);
+pid_t ProcessIdentity::cache = -1;
+pid_t ProcessIdentity::get_uncached() {
+  return syscall_impl<pid_t>(SYS_getpid);
+}
 
 } // namespace LIBC_NAMESPACE_DECL
-
-#endif // LLVM_LIBC_SRC_UNISTD_GETPID_H

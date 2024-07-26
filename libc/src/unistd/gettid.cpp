@@ -1,4 +1,4 @@
-//===-- Implementation header for getpid ------------------------*- C++ -*-===//
+//===-- Implementation file for gettid --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_UNISTD_GETPID_H
-#define LLVM_LIBC_SRC_UNISTD_GETPID_H
-
-#include "hdr/types/pid_t.h"
-#include "src/__support/macros/config.h"
+#include "src/unistd/gettid.h"
+#include "src/__support/common.h"
+#include "src/__support/threads/tid.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-pid_t getpid(void);
+LLVM_LIBC_FUNCTION(pid_t, gettid, (void)) { return gettid_inline(); }
 
 } // namespace LIBC_NAMESPACE_DECL
-
-#endif // LLVM_LIBC_SRC_UNISTD_GETPID_H
