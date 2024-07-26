@@ -2035,6 +2035,12 @@ void OmpAttributeVisitor::Post(const parser::OpenMPAllocatorsConstruct &x) {
 // and adjust the symbol for each Name if necessary
 void OmpAttributeVisitor::Post(const parser::Name &name) {
   auto *symbol{name.symbol};
+  auto IsPrivatizable = [](const Symbol *sym) {
+    return !sym->owner().IsDerivedType() && !IsProcedure(*sym) &&
+        !IsNamedConstant(*sym) &&
+        !sym->detailsIf<semantics::AssocEntityDetails>();
+  };
+
   if (symbol && !dirContext_.empty() && GetContext().withinConstruct) {
     // Exclude construct-names
     if (auto *details{symbol->detailsIf<semantics::MiscDetails>()}) {
@@ -2042,8 +2048,7 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
         return;
       }
     }
-    if (!symbol->owner().IsDerivedType() && !IsProcedure(*symbol) &&
-        !IsObjectWithDSA(*symbol) && !IsNamedConstant(*symbol)) {
+    if (IsPrivatizable(symbol) && !IsObjectWithDSA(*symbol)) {
       // TODO: create a separate function to go through the rules for
       //       predetermined, explicitly determined, and implicitly
       //       determined data-sharing attributes (2.15.1.1).
@@ -2067,6 +2072,9 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
     if (Symbol * found{currScope().FindSymbol(name.source)}) {
       if (found->test(semantics::Symbol::Flag::OmpThreadprivate))
         return;
+    }
+    if (!IsPrivatizable(symbol)) {
+      return;
     }
 
     // Implicitly determined DSAs
