@@ -167,25 +167,12 @@ Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
     if (Options.MCOptions.ShowMCEncoding)
       MCE.reset(getTarget().createMCCodeEmitter(MII, Context));
 
-    bool UseDwarfDirectory = false;
-    switch (Options.MCOptions.MCUseDwarfDirectory) {
-    case MCTargetOptions::DisableDwarfDirectory:
-      UseDwarfDirectory = false;
-      break;
-    case MCTargetOptions::EnableDwarfDirectory:
-      UseDwarfDirectory = true;
-      break;
-    case MCTargetOptions::DefaultDwarfDirectory:
-      UseDwarfDirectory = MAI.enableDwarfFileDirectoryDefault();
-      break;
-    }
-
     std::unique_ptr<MCAsmBackend> MAB(
         getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions));
     auto FOut = std::make_unique<formatted_raw_ostream>(Out);
     MCStreamer *S = getTarget().createAsmStreamer(
-        Context, std::move(FOut), Options.MCOptions.AsmVerbose,
-        UseDwarfDirectory, InstPrinter, std::move(MCE), std::move(MAB),
+        Context, std::move(FOut), Options.MCOptions.AsmVerbose, true,
+        InstPrinter, std::move(MCE), std::move(MAB),
         Options.MCOptions.ShowMCInst);
     AsmStreamer.reset(S);
     break;
