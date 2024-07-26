@@ -744,6 +744,9 @@ public:
                           Instruction *InsertBefore, Context &Ctx,
                           const Twine &Name = "");
   static LoadInst *create(Type *Ty, Value *Ptr, MaybeAlign Align,
+                          Instruction *InsertBefore, Context &Ctx,
+                          const Twine &Name = "", bool isVolatile);
+  static LoadInst *create(Type *Ty, Value *Ptr, MaybeAlign Align,
                           BasicBlock *InsertAtEnd, Context &Ctx,
                           const Twine &Name = "");
   /// For isa/dyn_cast.
