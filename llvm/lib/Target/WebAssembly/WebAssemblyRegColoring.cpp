@@ -135,8 +135,7 @@ static void undefInvalidDbgValues(
 #ifndef NDEBUG
   DenseSet<Register> SeenRegs;
 #endif
-  for (size_t I = 0, E = Assignments.size(); I < E; ++I) {
-    const auto &CoalescedIntervals = Assignments[I];
+  for (const auto &CoalescedIntervals : Assignments) {
     if (CoalescedIntervals.empty())
       continue;
     for (LiveInterval *LI : CoalescedIntervals) {
