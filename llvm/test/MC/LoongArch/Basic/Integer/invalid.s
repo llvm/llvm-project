@@ -99,10 +99,12 @@ jirl $a0, $a0, 0x20000
 # CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %b16) or an integer in the range [-131072, 131068]
 
 ## simm20
-pcaddi $a0, -0x80001
-# CHECK: :[[#@LINE-1]]:13: error: immediate must be an integer in the range [-524288, 524287]
 pcaddu12i $a0, 0x80000
 # CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-524288, 524287]
+
+## simm20_pcaddi
+pcaddi $a0, -0x80001
+# CHECK: :[[#@LINE-1]]:13: error: operand must be a symbol with modifier (e.g. %pcrel_20) or an integer in the range [-524288, 524287]
 
 ## simm20_lu12iw
 lu12i.w $a0, -0x80001
