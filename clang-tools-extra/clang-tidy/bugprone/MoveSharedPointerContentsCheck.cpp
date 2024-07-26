@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <signal.h>
-#include <unistd.h>
-
 #include "MoveSharedPointerContentsCheck.h"
 #include "../ClangTidyCheck.h"
 #include "../utils/Matchers.h"

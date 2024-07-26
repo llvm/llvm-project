@@ -1,6 +1,8 @@
-// RUN: %check_clang_tidy %s bugprone-move-shared-pointer-contents %t -- -config="{CheckOptions: {bugprone-move-shared-pointer-contents.SharedPointerClasses: '::std::shared_ptr;my::OtherSharedPtr;'}}"
+// RUN: %check_clang_tidy %s bugprone-move-shared-pointer-contents %t -- -config="{CheckOptions: {bugprone-move-shared-pointer-contents.SharedPointerClasses: '::std::shared_ptr;my::OtherSharedPtr;'}}" -- -I %S/../modernize/Inputs/smart-ptr
 
 // Some dummy definitions we'll need.
+
+#include "shared_ptr.h"
 
 namespace std {
 
@@ -20,16 +22,6 @@ template <typename _Tp>
 constexpr _Tp&& forward(typename std::remove_reference<_Tp>::type &__t) {
   return static_cast<_Tp>(__t);
 }
-
-template <typename T>
-struct shared_ptr {
-  shared_ptr();
-  T *get() const;
-  explicit operator bool() const;
-  void reset(T *ptr);
-  T &operator*() const;
-  T *operator->() const;
-};
 
 }  // namespace std
 

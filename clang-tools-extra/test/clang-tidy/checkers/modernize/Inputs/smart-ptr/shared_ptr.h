@@ -10,6 +10,7 @@ public:
   type &operator*() { return *ptr; }
   type *operator->() { return ptr; }
   type *release();
+  type *get() const;
   void reset();
   void reset(type *pt);
 
