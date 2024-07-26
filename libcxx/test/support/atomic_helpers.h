@@ -91,8 +91,11 @@ static_assert(LockFreeStatusInfo<char>::status_known, "");
 static_assert(LockFreeStatusInfo<short>::status_known, "");
 static_assert(LockFreeStatusInfo<int>::status_known, "");
 static_assert(LockFreeStatusInfo<long>::status_known, "");
-static_assert(LockFreeStatusInfo<long long>::status_known, "");
 static_assert(LockFreeStatusInfo<void*>::status_known, "");
+
+// long long is a bit funky: on some platforms, its alignment is 4 bytes but its size is
+// 8 bytes. In that case, atomics may or may not be lockfree based on their address.
+static_assert(alignof(long long) == sizeof(long long) ? LockFreeStatusInfo<long long>::status_known : true, "");
 
 // Those should always be lock free: hardcode some expected values to make sure our tests are actually
 // testing something meaningful.
