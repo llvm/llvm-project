@@ -26,7 +26,7 @@ protected:
   /// is done syntactically, because we are trying to argue about alternative
   /// paths of execution, and as a consequence we don't have path-sensitive
   /// information.
-  virtual bool doesFnIntendToHandleOwnership(const Decl *Callee,
+  virtual bool doesFnIntendToHandleOwnership(const FunctionDecl *Callee,
                                              ASTContext &ACtx) = 0;
 
   virtual bool hasResourceStateChanged(ProgramStateRef CallEnterState,

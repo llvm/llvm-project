@@ -746,13 +746,12 @@ protected:
     return StreamChk->FCloseDesc.matchesAsWritten(Call);
   }
 
-  bool doesFnIntendToHandleOwnership(const Decl *Callee,
+  bool doesFnIntendToHandleOwnership(const FunctionDecl *Callee,
                                      ASTContext &ACtx) final {
     using namespace clang::ast_matchers;
-    const FunctionDecl *FD = dyn_cast<FunctionDecl>(Callee);
 
     auto Matches =
-        match(findAll(callExpr().bind("call")), *FD->getBody(), ACtx);
+        match(findAll(callExpr().bind("call")), Callee->getBody(), ACtx);
     for (BoundNodes Match : Matches) {
       if (const auto *Call = Match.getNodeAs<CallExpr>("call"))
         if (isClosingCallAsWritten(*Call))

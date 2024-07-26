@@ -796,14 +796,13 @@ protected:
   /// done syntactically, because we are trying to argue about alternative
   /// paths of execution, and as a consequence we don't have path-sensitive
   /// information.
-  bool doesFnIntendToHandleOwnership(const Decl *Callee,
+  bool doesFnIntendToHandleOwnership(const FunctionDecl *Callee,
                                      ASTContext &ACtx) final {
     using namespace clang::ast_matchers;
-    const FunctionDecl *FD = dyn_cast<FunctionDecl>(Callee);
 
     auto Matches = match(findAll(stmt(anyOf(cxxDeleteExpr().bind("delete"),
                                             callExpr().bind("call")))),
-                         *FD->getBody(), ACtx);
+                         Callee->getBody(), ACtx);
     for (BoundNodes Match : Matches) {
       if (Match.getNodeAs<CXXDeleteExpr>("delete"))
         return true;
