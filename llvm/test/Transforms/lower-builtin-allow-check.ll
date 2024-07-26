@@ -309,7 +309,7 @@ define dso_local noundef i32 @veryHot(ptr noundef readonly %0) !prof !39 {
 ; ALL70-LABEL: define dso_local noundef i32 @veryHot(
 ; ALL70-SAME: ptr noundef readonly [[TMP0:%.*]]) !prof [[PROF17:![0-9]+]] {
 ; ALL70-NEXT:    [[CHK:%.*]] = icmp eq ptr [[TMP0]], null
-; ALL70-NEXT:    [[HOT:%.*]] = xor i1 true, true
+; ALL70-NEXT:    [[HOT:%.*]] = xor i1 false, true
 ; ALL70-NEXT:    [[TMP2:%.*]] = or i1 [[CHK]], [[HOT]]
 ; ALL70-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP4:%.*]]
 ; ALL70:       3:
