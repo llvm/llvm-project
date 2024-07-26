@@ -1079,7 +1079,8 @@ IdentifierInfo *ASTIdentifierLookupTrait::ReadData(const internal_key_type& k,
     II = &Reader.getIdentifierTable().getOwn(k);
     KnownII = II;
   }
-  markIdentifierFromAST(Reader, *II, Reader.getPreprocessor().getCurrentModule() != nullptr);
+  bool IsModule = Reader.getPreprocessor().getCurrentModule() != nullptr;
+  markIdentifierFromAST(Reader, *II, IsModule);
   Reader.markIdentifierUpToDate(II);
 
   IdentifierID ID = Reader.getGlobalIdentifierID(F, RawID);
@@ -8960,7 +8961,8 @@ IdentifierInfo *ASTReader::DecodeIdentifierInfo(IdentifierID ID) {
     auto Key = Trait.ReadKey(Data, KeyDataLen.first);
     auto &II = PP.getIdentifierTable().get(Key);
     IdentifiersLoaded[Index] = &II;
-    markIdentifierFromAST(*this,  II, getPreprocessor().getCurrentModule() != nullptr);
+    bool IsModule = getPreprocessor().getCurrentModule() != nullptr;
+    markIdentifierFromAST(*this,  II, IsModule);
     if (DeserializationListener)
       DeserializationListener->IdentifierRead(ID, &II);
   }

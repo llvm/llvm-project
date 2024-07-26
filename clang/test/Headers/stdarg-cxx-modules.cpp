@@ -6,12 +6,10 @@
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only main.cpp -fmodule-file=h1.pcm -fmodule-file=h2.pcm
 
 //--- h1.h
-#pragma once
 #include <stdarg.h>
 // expected-no-diagnostics
 
 //--- h2.h
-#pragma once
 import "h1.h";
 // expected-no-diagnostics
 
