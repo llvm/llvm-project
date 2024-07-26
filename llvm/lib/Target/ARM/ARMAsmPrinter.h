@@ -126,9 +126,8 @@ private:
 
   void EmitUnwindingInstruction(const MachineInstr *MI);
 
-  // emitPseudoExpansionLowering - tblgen'erated.
-  bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
-                                   const MachineInstr *MI);
+  // tblgen'erated.
+  bool lowerMachineInstrToMCInstImpl(const MachineInstr *MI, MCInst &Inst);
 
 public:
   unsigned getISAEncoding() override {
