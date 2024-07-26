@@ -694,7 +694,7 @@ SDValue XtensaTargetLowering::LowerConstantPool(SDValue Op,
                                                 SelectionDAG &DAG) const {
   EVT PtrVT = Op.getValueType();
   ConstantPoolSDNode *CP = cast<ConstantPoolSDNode>(Op);
-  auto C = const_cast<Constant*>(CP->getConstVal());
+  auto C = const_cast<Constant *>(CP->getConstVal());
   auto T = CP->getType();
   SDValue Result;
 
