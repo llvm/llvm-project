@@ -1182,10 +1182,8 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
 Expr ScriptParser::readExpr() {
   // Our lexer is context-aware. Set the in-expression bit so that
   // they apply different tokenization rules.
-  bool orig = inExpr;
-  inExpr = true;
+  SaveAndRestore saved(inExpr, true);
   Expr e = readExpr1(readPrimary(), 0);
-  inExpr = orig;
   return e;
 }
 
@@ -1251,9 +1249,9 @@ Expr ScriptParser::readExpr1(Expr lhs, int minPrec) {
     StringRef op1 = peek();
     if (precedence(op1) < minPrec)
       break;
-    if (consume("?"))
-      return readTernary(lhs);
     skip();
+    if (op1 == "?")
+      return readTernary(lhs);
     Expr rhs = readPrimary();
 
     // Evaluate the remaining part of the expression first if the
