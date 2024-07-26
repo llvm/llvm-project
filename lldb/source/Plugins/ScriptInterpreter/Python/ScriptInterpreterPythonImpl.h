@@ -9,11 +9,17 @@
 #ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H
 
+#if LLDB_ENABLE_PYTHON
+
+// clang-format off
+// LLDB Python header must be included first
+#include "lldb-python.h"
+//clang-format on
+#endif
+
 #include "lldb/Host/Config.h"
 
 #if LLDB_ENABLE_PYTHON
-
-#include "lldb-python.h"
 
 #include "PythonDataObjects.h"
 #include "ScriptInterpreterPython.h"
