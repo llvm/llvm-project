@@ -450,6 +450,24 @@ public:
                      IsValidKind;
   }
 
+  bool isSImm20pcaddi() const {
+    if (!isImm())
+      return false;
+
+    int64_t Imm;
+    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
+                       VK == LoongArchMCExpr::VK_LoongArch_PCREL20_S2 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LD_PCREL20_S2 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_GD_PCREL20_S2 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_DESC_PCREL20_S2;
+    return IsConstantImm
+               ? isInt<20>(Imm) && IsValidKind
+               : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
+                     IsValidKind;
+  }
+
   bool isSImm21lsl2() const {
     if (!isImm())
       return false;
@@ -1675,6 +1693,12 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         Operands, ErrorInfo, /*Lower=*/-(1 << 19),
         /*Upper=*/(1 << 19) - 1,
         "operand must be a symbol with modifier (e.g. %call36) or an integer "
+        "in the range");
+  case Match_InvalidSImm20pcaddi:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 19),
+        /*Upper=*/(1 << 19) - 1,
+        "operand must be a symbol with modifier (e.g. %pcrel_20) or an integer "
         "in the range");
   case Match_InvalidSImm21lsl2:
     return generateImmOutOfRangeError(
