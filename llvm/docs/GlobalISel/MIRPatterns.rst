@@ -171,10 +171,11 @@ Semantics:
 * The min/max operands will result in the matcher checking that the number of operands
   falls within that range.
 * ``GIVariadic<>`` operands can be used in C++ code within a rule, which will
-  result in the operand name being expanded to an iterator range containing all
-  the matched operands, similar to the one returned by ``MachineInstr::operands()``.
+  result in the operand name being expanded to a value of type ``ArrayRef<MachineOperand>``.
 
 .. code-block:: text
+
+  // bool checkBuildVectorToUnmerge(ArrayRef<MachineOperand>);
 
   def build_vector_to_unmerge: GICombineRule <
     (defs root:$root),

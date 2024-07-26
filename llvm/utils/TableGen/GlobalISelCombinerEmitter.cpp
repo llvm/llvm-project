@@ -100,8 +100,9 @@ void declareInstExpansion(CodeExpansions &CE, const BuildMIAction &A,
 void declareOperandExpansion(CodeExpansions &CE, const OperandMatcher &OM,
                              StringRef Name) {
   if (OM.isVariadic()) {
-    CE.declare(Name, "drop_begin(State.MIs[" + to_string(OM.getInsnVarID()) +
-                         "]->operands(), " + to_string(OM.getOpIdx()) + ")");
+    CE.declare(Name, "getVariadicOperands(*State.MIs[" +
+                         to_string(OM.getInsnVarID()) + "], " +
+                         to_string(OM.getOpIdx()) + ")");
   } else {
     CE.declare(Name, "State.MIs[" + to_string(OM.getInsnVarID()) +
                          "]->getOperand(" + to_string(OM.getOpIdx()) + ")");

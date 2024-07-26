@@ -47,6 +47,23 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   VariadicTypeTestReuse
 ]>;
 
+// CHECK:     bool GenMyCombiner::runCustomAction(unsigned ApplyID, const MatcherState &State, NewMIVector &OutMIs) const {
+// CHECK-NEXT:   Helper.getBuilder().setInstrAndDebugLoc(*State.MIs[0]);
+// CHECK-NEXT:   switch(ApplyID) {
+// CHECK-NEXT:   case GICXXCustomAction_GICombiner0:{
+// CHECK-NEXT:     // Apply Patterns
+// CHECK-NEXT:     APPLY
+// CHECK-NEXT:     return true;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   case GICXXCustomAction_GICombiner1:{
+// CHECK-NEXT:     // Apply Patterns
+// CHECK-NEXT:     getVariadicOperands(*State.MIs[0], 1)
+// CHECK-NEXT:     return true;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   }
+// CHECK-NEXT:   llvm_unreachable("Unknown Apply Action");
+// CHECK-NEXT: }
+
 // CHECK:      const uint8_t *GenMyCombiner::getMatchTable() const {
 // CHECK-NEXT:   constexpr static uint8_t MatchTable0[] = {
 // CHECK-NEXT:     GIM_SwitchOpcode, /*MI*/0, /*[*/GIMT_Encode2(70), GIMT_Encode2(74), /*)*//*default:*//*Label 2*/ GIMT_Encode4(127),

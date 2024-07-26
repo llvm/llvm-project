@@ -15,11 +15,13 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_GIMATCHTABLEEXECUTOR_H
 #define LLVM_CODEGEN_GLOBALISEL_GIMATCHTABLEEXECUTOR_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Function.h"
 #include <bitset>
@@ -727,6 +729,12 @@ protected:
     Ty Ret;
     memcpy(&Ret, MatchTable, sizeof(Ret));
     return Ret;
+  }
+
+  static ArrayRef<MachineOperand> getVariadicOperands(const MachineInstr &MI,
+                                                      unsigned FirstVarOp) {
+    auto Operands = drop_begin(MI.operands(), FirstVarOp);
+    return {Operands.begin(), Operands.end()};
   }
 
 public:
