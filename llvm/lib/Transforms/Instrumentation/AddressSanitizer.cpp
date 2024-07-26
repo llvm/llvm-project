@@ -1733,6 +1733,12 @@ void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
   else
     NumInstrumentedReads++;
 
+  if (O.MaybeOffset) {
+    Type *Ty = Type::getInt8Ty(*C);
+    IRBuilder IB(O.getInsn());
+    Addr = IB.CreateGEP(Ty, Addr, {O.MaybeOffset});
+  }
+
   unsigned Granularity = 1 << Mapping.Scale;
   if (O.MaybeMask) {
     instrumentMaskedLoadOrStore(this, DL, IntptrTy, O.MaybeMask, O.MaybeEVL,
