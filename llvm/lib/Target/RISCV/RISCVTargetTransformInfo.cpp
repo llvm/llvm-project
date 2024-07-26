@@ -1405,13 +1405,9 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     const DataLayout &DL = this->getDataLayout();
     if (Src->isVectorTy() && LT.second.isVector() &&
         TypeSize::isKnownLT(DL.getTypeStoreSizeInBits(Src),
-                            LT.second.getSizeInBits())) {
-      auto *SrcVT = cast<VectorType>(Src);
-      TypeSize SrcEltSize = DL.getTypeStoreSizeInBits(SrcVT->getElementType());
-      TypeSize LegalEltSize = LT.second.getVectorElementType().getSizeInBits();
-      if (SrcEltSize == LegalEltSize)
+                            LT.second.getSizeInBits()))
         return Cost;
-    }
+
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                   CostKind, OpInfo, I);
   }();
