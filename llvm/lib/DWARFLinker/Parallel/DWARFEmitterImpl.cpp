@@ -89,8 +89,7 @@ Error DwarfEmitterImpl::init(Triple TheTriple,
     MS = TheTarget->createMCObjectStreamer(
         TheTriple, *MC, std::unique_ptr<MCAsmBackend>(MAB),
         MAB->createObjectWriter(OutFile), std::unique_ptr<MCCodeEmitter>(MCE),
-        *MSTI, MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
-        /*DWARFMustBeAtTheEnd*/ false);
+        *MSTI);
     break;
   }
   }

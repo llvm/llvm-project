@@ -402,9 +402,8 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
     MCAsmBackend *MAB = TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions);
     Str.reset(TheTarget->createMCObjectStreamer(
         TheTriple, Ctx, std::unique_ptr<MCAsmBackend>(MAB),
-        MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(CE), *STI,
-        MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
-        /*DWARFMustBeAtTheEnd*/ false));
+        MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(CE),
+        *STI));
   } else {
     llvm_unreachable("Invalid file type!");
   }

@@ -235,8 +235,7 @@ Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
         Options.UseCASBackend ? std::move(CASBackendWriter) // MCCAS
         : DwoOut ? MAB->createDwoObjectWriter(Out, *DwoOut)
                : MAB->createObjectWriter(Out),
-        std::unique_ptr<MCCodeEmitter>(MCE), STI, /*ignore=*/false, false,
-        false));
+        std::unique_ptr<MCCodeEmitter>(MCE), STI));
     break;
   }
   case CodeGenFileType::Null:
@@ -303,15 +302,15 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
   const MCRegisterInfo &MRI = *getMCRegisterInfo();
   std::unique_ptr<MCCodeEmitter> MCE(
       getTarget().createMCCodeEmitter(*getMCInstrInfo(), *Ctx));
-  std::unique_ptr<MCAsmBackend> MAB(
-      getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions));
+  MCAsmBackend *MAB =
+      getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions);
   if (!MCE || !MAB)
     return true;
 
   const Triple &T = getTargetTriple();
   std::unique_ptr<MCStreamer> AsmStreamer(getTarget().createMCObjectStreamer(
-      T, *Ctx, std::move(MAB), MAB->createObjectWriter(Out), std::move(MCE),
-      STI, /*ignore=*/false, false, false));
+      T, *Ctx, std::unique_ptr<MCAsmBackend>(MAB), MAB->createObjectWriter(Out),
+      std::move(MCE), STI));
 
   // Create the AsmPrinter, which takes ownership of AsmStreamer if successful.
   FunctionPass *Printer =
