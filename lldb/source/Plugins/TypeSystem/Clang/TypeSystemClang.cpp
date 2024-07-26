@@ -4783,11 +4783,9 @@ TypeSystemClang::GetBitSize(lldb::opaque_compiler_type_t type,
 
     return bit_size;
   }
-  default: {
-    const uint32_t bit_size = getASTContext().getTypeSize(qual_type);
-    if (bit_size)
+  default:
+    if (const uint64_t bit_size = getASTContext().getTypeSize(qual_type))
       return bit_size;
-  }
   }
 
   return std::nullopt;
