@@ -13,12 +13,20 @@
 # RUN: perf2bolt %t.bolt -p %t.preagg2 --pa -w %t.yaml2 -o %t.fdata2
 # RUN: FileCheck --input-file %t.yaml2 %s --check-prefix CHECK-YAML
 # CHECK-YAML: name: bar
+# CHECK-YAML: - bid: 0
+# CHECK-YAML:   pseudo_probes: [ { guid: 0xE413754A191DB537, id: 1, type: 0 }, { guid: 0xE413754A191DB537, id: 4, type: 0 } ]
 # CHECK-YAML: guid: 0xE413754A191DB537
 # CHECK-YAML: pseudo_probe_desc_hash: 0x10E852DA94
+#
 # CHECK-YAML: name: foo
+# CHECK-YAML: - bid: 0
+# CHECK-YAML:   pseudo_probes: [ { guid: 0x5CF8C24CDB18BDAC, id: 1, type: 0 }, { guid: 0x5CF8C24CDB18BDAC, id: 2, type: 0 } ]
 # CHECK-YAML: guid: 0x5CF8C24CDB18BDAC
 # CHECK-YAML: pseudo_probe_desc_hash: 0x200205A19C5B4
+#
 # CHECK-YAML: name: main
+# CHECK-YAML: - bid: 0
+# CHECK-YAML:   pseudo_probes: [ { guid: 0xDB956436E78DD5FA, id: 1, type: 0 }, { guid: 0x5CF8C24CDB18BDAC, id: 1, type: 0 }, { guid: 0x5CF8C24CDB18BDAC, id: 2, type: 0 } ]
 # CHECK-YAML: guid: 0xDB956436E78DD5FA
 # CHECK-YAML: pseudo_probe_desc_hash: 0x10000FFFFFFFF
 
