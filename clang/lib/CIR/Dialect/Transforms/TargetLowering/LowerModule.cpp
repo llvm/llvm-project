@@ -14,6 +14,7 @@
 // FIXME(cir): This header file is not exposed to the public API, but can be
 // reused by CIR ABI lowering since it holds target-specific information.
 #include "../../../../Basic/Targets.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetOptions.h"
 
 #include "CIRLowerContext.h"
@@ -87,11 +88,15 @@ createTargetLoweringInfo(LowerModule &LM) {
   }
 }
 
-LowerModule::LowerModule(CIRLowerContext &C, ModuleOp &module, StringAttr DL,
-                         const clang::TargetInfo &target,
+LowerModule::LowerModule(clang::LangOptions opts, ModuleOp &module,
+                         StringAttr DL,
+                         std::unique_ptr<clang::TargetInfo> target,
                          PatternRewriter &rewriter)
-    : context(C), module(module), Target(target), ABI(createCXXABI(*this)),
-      types(*this, DL.getValue()), rewriter(rewriter) {}
+    : context(module, opts), module(module), Target(std::move(target)),
+      ABI(createCXXABI(*this)), types(*this, DL.getValue()),
+      rewriter(rewriter) {
+  context.initBuiltinTypes(*Target);
+}
 
 const TargetLoweringInfo &LowerModule::getTargetLoweringInfo() {
   if (!TheTargetCodeGenInfo)
@@ -235,11 +240,9 @@ std::unique_ptr<LowerModule> createLowerModule(ModuleOp module,
   // Create context.
   assert(!::cir::MissingFeatures::langOpts());
   clang::LangOptions langOpts;
-  auto context = CIRLowerContext(module, langOpts);
-  context.initBuiltinTypes(*targetInfo);
 
-  return std::make_unique<LowerModule>(context, module, dataLayoutStr,
-                                       *targetInfo, rewriter);
+  return std::make_unique<LowerModule>(langOpts, module, dataLayoutStr,
+                                       std::move(targetInfo), rewriter);
 }
 
 } // namespace cir

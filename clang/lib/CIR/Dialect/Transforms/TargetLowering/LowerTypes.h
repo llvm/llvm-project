@@ -56,6 +56,7 @@ public:
   LowerTypes(LowerModule &LM, StringRef DLString);
   ~LowerTypes() = default;
 
+  const ::cir::CIRDataLayout &getDataLayout() const { return DL; }
   LowerModule &getLM() const { return LM; }
   CIRCXXABI &getCXXABI() const { return CXXABI; }
   CIRLowerContext &getContext() { return context; }

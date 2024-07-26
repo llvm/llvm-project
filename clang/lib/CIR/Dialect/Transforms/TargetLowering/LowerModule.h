@@ -21,17 +21,19 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
+#include <memory>
 
 namespace mlir {
 namespace cir {
 
 class LowerModule {
-  CIRLowerContext &context;
+  CIRLowerContext context;
   ModuleOp module;
-  const clang::TargetInfo &Target;
+  const std::unique_ptr<clang::TargetInfo> Target;
   mutable std::unique_ptr<TargetLoweringInfo> TheTargetCodeGenInfo;
   std::unique_ptr<CIRCXXABI> ABI;
 
@@ -40,22 +42,23 @@ class LowerModule {
   PatternRewriter &rewriter;
 
 public:
-  LowerModule(CIRLowerContext &C, ModuleOp &module, StringAttr DL,
-              const clang::TargetInfo &target, PatternRewriter &rewriter);
+  LowerModule(clang::LangOptions opts, ModuleOp &module, StringAttr DL,
+              std::unique_ptr<clang::TargetInfo> target,
+              PatternRewriter &rewriter);
   ~LowerModule() = default;
 
   // Trivial getters.
   LowerTypes &getTypes() { return types; }
   CIRLowerContext &getContext() { return context; }
   CIRCXXABI &getCXXABI() const { return *ABI; }
-  const clang::TargetInfo &getTarget() const { return Target; }
+  const clang::TargetInfo &getTarget() const { return *Target; }
   MLIRContext *getMLIRContext() { return module.getContext(); }
   ModuleOp &getModule() { return module; }
 
   const TargetLoweringInfo &getTargetLoweringInfo();
 
   // FIXME(cir): This would be in ASTContext, not CodeGenModule.
-  const clang::TargetInfo &getTargetInfo() const { return Target; }
+  const clang::TargetInfo &getTargetInfo() const { return *Target; }
 
   // FIXME(cir): This would be in ASTContext, not CodeGenModule.
   clang::TargetCXXABI::Kind getCXXABIKind() const {

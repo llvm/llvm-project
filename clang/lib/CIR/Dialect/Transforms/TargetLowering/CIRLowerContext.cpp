@@ -50,7 +50,7 @@ clang::TypeInfo CIRLowerContext::getTypeInfoImpl(const Type T) const {
   // TODO(cir): We should implement a better way to identify type kinds and use
   // builting data layout interface for this.
   auto typeKind = clang::Type::Builtin;
-  if (isa<IntType>(T)) {
+  if (isa<IntType, SingleType, DoubleType>(T)) {
     typeKind = clang::Type::Builtin;
   } else {
     llvm_unreachable("Unhandled type class");
@@ -72,6 +72,16 @@ clang::TypeInfo CIRLowerContext::getTypeInfoImpl(const Type T) const {
       Width = intTy.getWidth();
       // FIXME(cir): Use the proper getABIAlignment method here.
       Align = std::ceil((float)Width / 8) * 8;
+      break;
+    }
+    if (auto floatTy = dyn_cast<SingleType>(T)) {
+      Width = Target->getFloatWidth();
+      Align = Target->getFloatAlign();
+      break;
+    }
+    if (auto doubleTy = dyn_cast<DoubleType>(T)) {
+      Width = Target->getDoubleWidth();
+      Align = Target->getDoubleAlign();
       break;
     }
     llvm_unreachable("Unknown builtin type!");
