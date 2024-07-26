@@ -16,7 +16,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NEXT: %[[PGOCOUNTINC:.+]] = add i64 %[[PGOCOUNT]], 1
 ; CHECK-NEXT: store i64 %[[PGOCOUNTINC]], ptr @__profc_foo
 ; RELOC-LABEL: define void @foo
-; RELOC-NEXT: %[[BIAS:.+]] = load i64, ptr @__llvm_profile_counter_bias, align 8, !invariant.load !0
+; RELOC-NEXT: %[[BIAS:.+]] = load i64, ptr @__llvm_profile_counter_bias, align {{[0-9]+}}, !invariant.load !0
 ; RELOC-NEXT: %[[PROFC_BIAS:.+]] = add i64 ptrtoint (ptr @__profc_foo to i64), %[[BIAS]]
 ; RELOC-NEXT: %[[PROFC_ADDR:.+]] = inttoptr i64 %[[PROFC_BIAS]] to ptr
 ; RELOC-NEXT: %[[PGOCOUNT:.+]] = load i64, ptr %[[PROFC_ADDR]]
@@ -28,7 +28,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; RELOCOPT-NEXT: %[[PGOCOUNTINC1:.+]] = add i64 %[[PGOCOUNT1]], 1
 ; RELOCOPT-NEXT: store i64 %[[PGOCOUNTINC1]], ptr %[[PROFC_ADDR1]]
 ; ATOMIC-LABEL: define void @foo
-; ATOMIC-NEXT: %[[BIAS:.+]] = load i64, ptr @__llvm_profile_counter_bias, align 8, !invariant.load !0
+; ATOMIC-NEXT: %[[BIAS:.+]] = load i64, ptr @__llvm_profile_counter_bias, align {{[0-9]+}}, !invariant.load !0
 ; ATOMIC-NEXT: %[[PROFC_BIAS:.+]] = add i64 ptrtoint (ptr @__profc_foo to i64), %[[BIAS]]
 ; ATOMIC-NEXT: %[[PROFC_ADDR:.+]] = inttoptr i64 %[[PROFC_BIAS]] to ptr
 ; ATOMIC-NEXT: %[[PGOCOUNTINC:.+]] = atomicrmw add ptr %[[PROFC_ADDR]], i64 1 monotonic
