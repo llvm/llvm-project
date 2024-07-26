@@ -225,7 +225,8 @@ LogicalResult LoadNdOp::verify() {
       tdescShape[axis] /= vnni_factor;
       tdescShape.push_back(vnni_factor);
     } else {
-      return emitWarning("Invalid Packed Attr. It is ignored (available for 2D TensorDesc only).");
+      return emitWarning("Invalid Packed Attr. It is ignored (available for 2D "
+                         "TensorDesc only).");
     }
   }
 
@@ -424,7 +425,8 @@ LogicalResult DpasOp::verify() {
   int64_t rhsRank = getRhsType().getRank();
 
   if (lhsRank != 2 || (rhsRank != 2 && rhsRank != 3))
-    return emitOpError("expecting lhs to be a 2D vector, and rhs to be either 2D or 3D (packed) vector.");
+    return emitOpError("expecting lhs to be a 2D vector, and rhs to be either "
+                       "2D or 3D (packed) vector.");
 
   auto lhsShape = getLhsType().getShape();
   auto rhsShape = getRhsType().getShape();
