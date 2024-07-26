@@ -18,6 +18,7 @@
 #if _LIBCPP_STD_VER >= 17
 #  include <__algorithm/max.h>
 #  include <__math/abs.h>
+#  include <__math/exponential_functions.h>
 #  include <__math/roots.h>
 #  include <__utility/pair.h>
 #  include <limits>
@@ -53,45 +54,19 @@ inline _LIBCPP_HIDE_FROM_ABI typename __promote<_A1, _A2>::type hypot(_A1 __x, _
 }
 
 #if _LIBCPP_STD_VER >= 17
-// Factors needed to determine if over-/underflow might happen for `std::hypot(x,y,z)`.
-// returns [overflow_threshold, overflow_scale]
-template <class _Real>
-_LIBCPP_HIDE_FROM_ABI std::pair<_Real, _Real> __hypot_factors() {
-  static_assert(std::numeric_limits<_Real>::is_iec559);
-
-  if constexpr (std::is_same_v<_Real, float>) {
-    static_assert(-125 == std::numeric_limits<_Real>::min_exponent);
-    static_assert(+128 == std::numeric_limits<_Real>::max_exponent);
-    return {0x1.0p+62f, 0x1.0p-70f};
-  } else if constexpr (std::is_same_v<_Real, double>) {
-    static_assert(-1021 == std::numeric_limits<_Real>::min_exponent);
-    static_assert(+1024 == std::numeric_limits<_Real>::max_exponent);
-    return {0x1.0p+510, 0x1.0p-600};
-  } else { // long double
-    static_assert(std::is_same_v<_Real, long double>);
-
-    // preprocessor guard necessary, otherwise literals (e.g. `0x1.0p+8'190l`) throw warnings even when shielded by `if
-    // constexpr`
-#  if __DBL_MAX_EXP__ == __LDBL_MAX_EXP__
-    static_assert(sizeof(_Real) == sizeof(double));
-    return static_cast<std::pair<_Real, _Real>>(__math::__hypot_factors<double>());
-#  else
-    static_assert(sizeof(_Real) > sizeof(double));
-    static_assert(-16381 == std::numeric_limits<_Real>::min_exponent);
-    static_assert(+16384 == std::numeric_limits<_Real>::max_exponent);
-    return {0x1.0p+8190l, 0x1.0p-9000l};
-#  endif
-  }
-}
-
 // Computes the three-dimensional hypotenuse: `std::hypot(x,y,z)`.
 // The naive implementation might over-/underflow which is why this implementation is more involved:
 //    If the square of an argument might run into issues, we scale the arguments appropriately.
 // See https://github.com/llvm/llvm-project/issues/92782 for a detailed discussion and summary.
 template <class _Real>
 _LIBCPP_HIDE_FROM_ABI _Real __hypot(_Real __x, _Real __y, _Real __z) {
+  // Factors needed to determine if over-/underflow might happen
+  constexpr int __exp              = std::numeric_limits<_Real>::max_exponent / 2;
+  const _Real __overflow_threshold = __math::ldexp(_Real(1), __exp);
+  const _Real __overflow_scale     = __math::ldexp(_Real(1), -(__exp + 20));
+
+  // Scale arguments depending on their size
   const _Real __max_abs = std::max(__math::fabs(__x), std::max(__math::fabs(__y), __math::fabs(__z)));
-  const auto [__overflow_threshold, __overflow_scale] = __math::__hypot_factors<_Real>();
   _Real __scale;
   if (__max_abs > __overflow_threshold) { // x*x + y*y + z*z might overflow
     __scale = __overflow_scale;
