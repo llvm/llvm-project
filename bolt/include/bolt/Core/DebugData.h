@@ -506,7 +506,7 @@ public:
   DenseSet<uint64_t> &getDebugStrOffsetsFinalized() {
     return DebugStrOffsetFinalized;
   }
-  
+
 private:
   std::unique_ptr<DebugStrOffsetsBufferVector> StrOffsetsBuffer;
   std::unique_ptr<raw_svector_ostream> StrOffsetsStream;
