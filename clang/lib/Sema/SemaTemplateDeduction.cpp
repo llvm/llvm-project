@@ -951,9 +951,11 @@ private:
 
     // Skip over the pack elements that were expanded into separate arguments.
     // If we partially expanded, this is the number of partial arguments.
+    // FIXME: `&& FixedNumExpansions` is a workaround for UB described in
+    // https://github.com/llvm/llvm-project/issues/100095
     if (IsPartiallyExpanded)
       PackElements += NumPartialPackArgs;
-    else if (IsExpanded)
+    else if (IsExpanded && FixedNumExpansions)
       PackElements += *FixedNumExpansions;
 
     for (auto &Pack : Packs) {

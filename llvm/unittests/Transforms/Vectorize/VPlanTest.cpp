@@ -1140,7 +1140,7 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
                              &VecOp, false);
     VPValue EVL;
-    VPReductionEVLRecipe EVLRecipe(&Recipe, &EVL, &CondOp);
+    VPReductionEVLRecipe EVLRecipe(Recipe, EVL, &CondOp);
     EXPECT_FALSE(EVLRecipe.mayHaveSideEffects());
     EXPECT_FALSE(EVLRecipe.mayReadFromMemory());
     EXPECT_FALSE(EVLRecipe.mayWriteToMemory());
@@ -1495,7 +1495,7 @@ TEST(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
   VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
                            &VecOp, false);
   VPValue EVL;
-  VPReductionEVLRecipe EVLRecipe(&Recipe, &EVL, &CondOp);
+  VPReductionEVLRecipe EVLRecipe(Recipe, EVL, &CondOp);
   EXPECT_TRUE(isa<VPUser>(&EVLRecipe));
   VPRecipeBase *BaseR = &EVLRecipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));

@@ -18,7 +18,7 @@
 // the NOP space so will do nothing when it is not enabled or not available.
 #  define ptrauth_strip(__value, __key) \
     ({                                  \
-      unsigned long ret;                \
+      __typeof(__value) ret;            \
       asm volatile(                     \
           "mov x30, %1\n\t"             \
           "hint #7\n\t"                 \

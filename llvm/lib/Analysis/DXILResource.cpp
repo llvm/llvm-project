@@ -64,10 +64,9 @@ bool ResourceInfo::isMultiSample() const {
 }
 
 ResourceInfo ResourceInfo::SRV(Value *Symbol, StringRef Name,
-                               ResourceBinding Binding, uint32_t UniqueID,
                                ElementType ElementTy, uint32_t ElementCount,
                                ResourceKind Kind) {
-  ResourceInfo RI(ResourceClass::SRV, Kind, Symbol, Name, Binding, UniqueID);
+  ResourceInfo RI(ResourceClass::SRV, Kind, Symbol, Name);
   assert(RI.isTyped() && !(RI.isStruct() || RI.isMultiSample()) &&
          "Invalid ResourceKind for SRV constructor.");
   RI.Typed.ElementTy = ElementTy;
@@ -75,43 +74,37 @@ ResourceInfo ResourceInfo::SRV(Value *Symbol, StringRef Name,
   return RI;
 }
 
-ResourceInfo ResourceInfo::RawBuffer(Value *Symbol, StringRef Name,
-                                     ResourceBinding Binding,
-                                     uint32_t UniqueID) {
-  ResourceInfo RI(ResourceClass::SRV, ResourceKind::RawBuffer, Symbol, Name,
-                  Binding, UniqueID);
+ResourceInfo ResourceInfo::RawBuffer(Value *Symbol, StringRef Name) {
+  ResourceInfo RI(ResourceClass::SRV, ResourceKind::RawBuffer, Symbol, Name);
   return RI;
 }
 
 ResourceInfo ResourceInfo::StructuredBuffer(Value *Symbol, StringRef Name,
-                                            ResourceBinding Binding,
-                                            uint32_t UniqueID, uint32_t Stride,
-                                            Align Alignment) {
+                                            uint32_t Stride, Align Alignment) {
   ResourceInfo RI(ResourceClass::SRV, ResourceKind::StructuredBuffer, Symbol,
-                  Name, Binding, UniqueID);
+                  Name);
   RI.Struct.Stride = Stride;
   RI.Struct.Alignment = Alignment;
   return RI;
 }
 
 ResourceInfo ResourceInfo::Texture2DMS(Value *Symbol, StringRef Name,
-                                       ResourceBinding Binding,
-                                       uint32_t UniqueID, ElementType ElementTy,
+                                       ElementType ElementTy,
                                        uint32_t ElementCount,
                                        uint32_t SampleCount) {
-  ResourceInfo RI(ResourceClass::SRV, ResourceKind::Texture2DMS, Symbol, Name,
-                  Binding, UniqueID);
+  ResourceInfo RI(ResourceClass::SRV, ResourceKind::Texture2DMS, Symbol, Name);
   RI.Typed.ElementTy = ElementTy;
   RI.Typed.ElementCount = ElementCount;
   RI.MultiSample.Count = SampleCount;
   return RI;
 }
 
-ResourceInfo ResourceInfo::Texture2DMSArray(
-    Value *Symbol, StringRef Name, ResourceBinding Binding, uint32_t UniqueID,
-    ElementType ElementTy, uint32_t ElementCount, uint32_t SampleCount) {
+ResourceInfo ResourceInfo::Texture2DMSArray(Value *Symbol, StringRef Name,
+                                            ElementType ElementTy,
+                                            uint32_t ElementCount,
+                                            uint32_t SampleCount) {
   ResourceInfo RI(ResourceClass::SRV, ResourceKind::Texture2DMSArray, Symbol,
-                  Name, Binding, UniqueID);
+                  Name);
   RI.Typed.ElementTy = ElementTy;
   RI.Typed.ElementCount = ElementCount;
   RI.MultiSample.Count = SampleCount;
@@ -119,11 +112,10 @@ ResourceInfo ResourceInfo::Texture2DMSArray(
 }
 
 ResourceInfo ResourceInfo::UAV(Value *Symbol, StringRef Name,
-                               ResourceBinding Binding, uint32_t UniqueID,
                                ElementType ElementTy, uint32_t ElementCount,
                                bool GloballyCoherent, bool IsROV,
                                ResourceKind Kind) {
-  ResourceInfo RI(ResourceClass::UAV, Kind, Symbol, Name, Binding, UniqueID);
+  ResourceInfo RI(ResourceClass::UAV, Kind, Symbol, Name);
   assert(RI.isTyped() && !(RI.isStruct() || RI.isMultiSample()) &&
          "Invalid ResourceKind for UAV constructor.");
   RI.Typed.ElementTy = ElementTy;
@@ -135,11 +127,8 @@ ResourceInfo ResourceInfo::UAV(Value *Symbol, StringRef Name,
 }
 
 ResourceInfo ResourceInfo::RWRawBuffer(Value *Symbol, StringRef Name,
-                                       ResourceBinding Binding,
-                                       uint32_t UniqueID, bool GloballyCoherent,
-                                       bool IsROV) {
-  ResourceInfo RI(ResourceClass::UAV, ResourceKind::RawBuffer, Symbol, Name,
-                  Binding, UniqueID);
+                                       bool GloballyCoherent, bool IsROV) {
+  ResourceInfo RI(ResourceClass::UAV, ResourceKind::RawBuffer, Symbol, Name);
   RI.UAVFlags.GloballyCoherent = GloballyCoherent;
   RI.UAVFlags.IsROV = IsROV;
   RI.UAVFlags.HasCounter = false;
@@ -147,13 +136,11 @@ ResourceInfo ResourceInfo::RWRawBuffer(Value *Symbol, StringRef Name,
 }
 
 ResourceInfo ResourceInfo::RWStructuredBuffer(Value *Symbol, StringRef Name,
-                                              ResourceBinding Binding,
-                                              uint32_t UniqueID,
                                               uint32_t Stride, Align Alignment,
                                               bool GloballyCoherent, bool IsROV,
                                               bool HasCounter) {
   ResourceInfo RI(ResourceClass::UAV, ResourceKind::StructuredBuffer, Symbol,
-                  Name, Binding, UniqueID);
+                  Name);
   RI.Struct.Stride = Stride;
   RI.Struct.Alignment = Alignment;
   RI.UAVFlags.GloballyCoherent = GloballyCoherent;
@@ -162,13 +149,12 @@ ResourceInfo ResourceInfo::RWStructuredBuffer(Value *Symbol, StringRef Name,
   return RI;
 }
 
-ResourceInfo
-ResourceInfo::RWTexture2DMS(Value *Symbol, StringRef Name,
-                            ResourceBinding Binding, uint32_t UniqueID,
-                            ElementType ElementTy, uint32_t ElementCount,
-                            uint32_t SampleCount, bool GloballyCoherent) {
-  ResourceInfo RI(ResourceClass::UAV, ResourceKind::Texture2DMS, Symbol, Name,
-                  Binding, UniqueID);
+ResourceInfo ResourceInfo::RWTexture2DMS(Value *Symbol, StringRef Name,
+                                         ElementType ElementTy,
+                                         uint32_t ElementCount,
+                                         uint32_t SampleCount,
+                                         bool GloballyCoherent) {
+  ResourceInfo RI(ResourceClass::UAV, ResourceKind::Texture2DMS, Symbol, Name);
   RI.Typed.ElementTy = ElementTy;
   RI.Typed.ElementCount = ElementCount;
   RI.UAVFlags.GloballyCoherent = GloballyCoherent;
@@ -178,13 +164,13 @@ ResourceInfo::RWTexture2DMS(Value *Symbol, StringRef Name,
   return RI;
 }
 
-ResourceInfo
-ResourceInfo::RWTexture2DMSArray(Value *Symbol, StringRef Name,
-                                 ResourceBinding Binding, uint32_t UniqueID,
-                                 ElementType ElementTy, uint32_t ElementCount,
-                                 uint32_t SampleCount, bool GloballyCoherent) {
+ResourceInfo ResourceInfo::RWTexture2DMSArray(Value *Symbol, StringRef Name,
+                                              ElementType ElementTy,
+                                              uint32_t ElementCount,
+                                              uint32_t SampleCount,
+                                              bool GloballyCoherent) {
   ResourceInfo RI(ResourceClass::UAV, ResourceKind::Texture2DMSArray, Symbol,
-                  Name, Binding, UniqueID);
+                  Name);
   RI.Typed.ElementTy = ElementTy;
   RI.Typed.ElementCount = ElementCount;
   RI.UAVFlags.GloballyCoherent = GloballyCoherent;
@@ -195,11 +181,9 @@ ResourceInfo::RWTexture2DMSArray(Value *Symbol, StringRef Name,
 }
 
 ResourceInfo ResourceInfo::FeedbackTexture2D(Value *Symbol, StringRef Name,
-                                             ResourceBinding Binding,
-                                             uint32_t UniqueID,
                                              SamplerFeedbackType FeedbackTy) {
   ResourceInfo RI(ResourceClass::UAV, ResourceKind::FeedbackTexture2D, Symbol,
-                  Name, Binding, UniqueID);
+                  Name);
   RI.UAVFlags.GloballyCoherent = false;
   RI.UAVFlags.IsROV = false;
   RI.UAVFlags.HasCounter = false;
@@ -209,10 +193,9 @@ ResourceInfo ResourceInfo::FeedbackTexture2D(Value *Symbol, StringRef Name,
 
 ResourceInfo
 ResourceInfo::FeedbackTexture2DArray(Value *Symbol, StringRef Name,
-                                     ResourceBinding Binding, uint32_t UniqueID,
                                      SamplerFeedbackType FeedbackTy) {
   ResourceInfo RI(ResourceClass::UAV, ResourceKind::FeedbackTexture2DArray,
-                  Symbol, Name, Binding, UniqueID);
+                  Symbol, Name);
   RI.UAVFlags.GloballyCoherent = false;
   RI.UAVFlags.IsROV = false;
   RI.UAVFlags.HasCounter = false;
@@ -221,27 +204,22 @@ ResourceInfo::FeedbackTexture2DArray(Value *Symbol, StringRef Name,
 }
 
 ResourceInfo ResourceInfo::CBuffer(Value *Symbol, StringRef Name,
-                                   ResourceBinding Binding, uint32_t UniqueID,
                                    uint32_t Size) {
-  ResourceInfo RI(ResourceClass::CBuffer, ResourceKind::CBuffer, Symbol, Name,
-                  Binding, UniqueID);
+  ResourceInfo RI(ResourceClass::CBuffer, ResourceKind::CBuffer, Symbol, Name);
   RI.CBufferSize = Size;
   return RI;
 }
 
 ResourceInfo ResourceInfo::Sampler(Value *Symbol, StringRef Name,
-                                   ResourceBinding Binding, uint32_t UniqueID,
                                    SamplerType SamplerTy) {
-  ResourceInfo RI(ResourceClass::Sampler, ResourceKind::Sampler, Symbol, Name,
-                  Binding, UniqueID);
+  ResourceInfo RI(ResourceClass::Sampler, ResourceKind::Sampler, Symbol, Name);
   RI.SamplerTy = SamplerTy;
   return RI;
 }
 
 bool ResourceInfo::operator==(const ResourceInfo &RHS) const {
-  if (std::tie(Symbol, Name, Binding, UniqueID, RC, Kind) !=
-      std::tie(RHS.Symbol, RHS.Name, RHS.Binding, RHS.UniqueID, RHS.RC,
-               RHS.Kind))
+  if (std::tie(Symbol, Name, Binding, RC, Kind) !=
+      std::tie(RHS.Symbol, RHS.Name, RHS.Binding, RHS.RC, RHS.Kind))
     return false;
   if (isCBuffer())
     return CBufferSize == RHS.CBufferSize;
@@ -278,7 +256,7 @@ MDTuple *ResourceInfo::getAsMetadata(LLVMContext &Ctx) const {
         Constant::getIntegerValue(I1Ty, APInt(1, V)));
   };
 
-  MDVals.push_back(getIntMD(UniqueID));
+  MDVals.push_back(getIntMD(Binding.UniqueID));
   MDVals.push_back(ValueAsMetadata::get(Symbol));
   MDVals.push_back(MDString::get(Ctx, Name));
   MDVals.push_back(getIntMD(Binding.Space));

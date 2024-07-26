@@ -17,19 +17,22 @@ class MDTuple;
 
 namespace dxil {
 
-struct ResourceBinding {
-  uint32_t Space;
-  uint32_t LowerBound;
-  uint32_t Size;
-
-  bool operator==(const ResourceBinding &RHS) const {
-    return std::tie(Space, LowerBound, Size) ==
-           std::tie(RHS.Space, RHS.LowerBound, RHS.Size);
-  }
-  bool operator!=(const ResourceBinding &RHS) const { return !(*this == RHS); }
-};
-
 class ResourceInfo {
+  struct ResourceBinding {
+    uint32_t UniqueID;
+    uint32_t Space;
+    uint32_t LowerBound;
+    uint32_t Size;
+
+    bool operator==(const ResourceBinding &RHS) const {
+      return std::tie(UniqueID, Space, LowerBound, Size) ==
+             std::tie(RHS.UniqueID, RHS.Space, RHS.LowerBound, RHS.Size);
+    }
+    bool operator!=(const ResourceBinding &RHS) const {
+      return !(*this == RHS);
+    }
+  };
+
   struct UAVInfo {
     bool GloballyCoherent;
     bool HasCounter;
@@ -81,11 +84,10 @@ class ResourceInfo {
   Value *Symbol;
   StringRef Name;
 
-  ResourceBinding Binding;
-  uint32_t UniqueID;
-
   dxil::ResourceClass RC;
   dxil::ResourceKind Kind;
+
+  ResourceBinding Binding = {};
 
   // Resource class dependent properties.
   // CBuffer, Sampler, and RawBuffer end here.
@@ -114,69 +116,61 @@ class ResourceInfo {
   bool isMultiSample() const;
 
   ResourceInfo(dxil::ResourceClass RC, dxil::ResourceKind Kind, Value *Symbol,
-               StringRef Name, ResourceBinding Binding, uint32_t UniqueID)
-      : Symbol(Symbol), Name(Name), Binding(Binding), UniqueID(UniqueID),
-        RC(RC), Kind(Kind) {}
+               StringRef Name)
+      : Symbol(Symbol), Name(Name), RC(RC), Kind(Kind) {}
 
 public:
   static ResourceInfo SRV(Value *Symbol, StringRef Name,
-                          ResourceBinding Binding, uint32_t UniqueID,
                           dxil::ElementType ElementTy, uint32_t ElementCount,
                           dxil::ResourceKind Kind);
-  static ResourceInfo RawBuffer(Value *Symbol, StringRef Name,
-                                ResourceBinding Binding, uint32_t UniqueID);
+  static ResourceInfo RawBuffer(Value *Symbol, StringRef Name);
   static ResourceInfo StructuredBuffer(Value *Symbol, StringRef Name,
-                                       ResourceBinding Binding,
-                                       uint32_t UniqueID, uint32_t Stride,
-                                       Align Alignment);
+                                       uint32_t Stride, Align Alignment);
   static ResourceInfo Texture2DMS(Value *Symbol, StringRef Name,
-                                  ResourceBinding Binding, uint32_t UniqueID,
                                   dxil::ElementType ElementTy,
                                   uint32_t ElementCount, uint32_t SampleCount);
-  static ResourceInfo
-  Texture2DMSArray(Value *Symbol, StringRef Name, ResourceBinding Binding,
-                   uint32_t UniqueID, dxil::ElementType ElementTy,
-                   uint32_t ElementCount, uint32_t SampleCount);
+  static ResourceInfo Texture2DMSArray(Value *Symbol, StringRef Name,
+                                       dxil::ElementType ElementTy,
+                                       uint32_t ElementCount,
+                                       uint32_t SampleCount);
 
   static ResourceInfo UAV(Value *Symbol, StringRef Name,
-                          ResourceBinding Binding, uint32_t UniqueID,
                           dxil::ElementType ElementTy, uint32_t ElementCount,
                           bool GloballyCoherent, bool IsROV,
                           dxil::ResourceKind Kind);
   static ResourceInfo RWRawBuffer(Value *Symbol, StringRef Name,
-                                  ResourceBinding Binding, uint32_t UniqueID,
                                   bool GloballyCoherent, bool IsROV);
   static ResourceInfo RWStructuredBuffer(Value *Symbol, StringRef Name,
-                                         ResourceBinding Binding,
-                                         uint32_t UniqueID, uint32_t Stride,
+                                         uint32_t Stride,
                                          Align Alignment, bool GloballyCoherent,
                                          bool IsROV, bool HasCounter);
   static ResourceInfo RWTexture2DMS(Value *Symbol, StringRef Name,
-                                    ResourceBinding Binding, uint32_t UniqueID,
                                     dxil::ElementType ElementTy,
                                     uint32_t ElementCount, uint32_t SampleCount,
                                     bool GloballyCoherent);
-  static ResourceInfo
-  RWTexture2DMSArray(Value *Symbol, StringRef Name, ResourceBinding Binding,
-                     uint32_t UniqueID, dxil::ElementType ElementTy,
-                     uint32_t ElementCount, uint32_t SampleCount,
-                     bool GloballyCoherent);
+  static ResourceInfo RWTexture2DMSArray(Value *Symbol, StringRef Name,
+                                         dxil::ElementType ElementTy,
+                                         uint32_t ElementCount,
+                                         uint32_t SampleCount,
+                                         bool GloballyCoherent);
   static ResourceInfo FeedbackTexture2D(Value *Symbol, StringRef Name,
-                                        ResourceBinding Binding,
-                                        uint32_t UniqueID,
                                         dxil::SamplerFeedbackType FeedbackTy);
   static ResourceInfo
-  FeedbackTexture2DArray(Value *Symbol, StringRef Name, ResourceBinding Binding,
-                         uint32_t UniqueID,
+  FeedbackTexture2DArray(Value *Symbol, StringRef Name,
                          dxil::SamplerFeedbackType FeedbackTy);
 
-  static ResourceInfo CBuffer(Value *Symbol, StringRef Name,
-                              ResourceBinding Binding, uint32_t UniqueID,
-                              uint32_t Size);
+  static ResourceInfo CBuffer(Value *Symbol, StringRef Name, uint32_t Size);
 
   static ResourceInfo Sampler(Value *Symbol, StringRef Name,
-                              ResourceBinding Binding, uint32_t UniqueID,
                               dxil::SamplerType SamplerTy);
+
+  void bind(uint32_t UniqueID, uint32_t Space, uint32_t LowerBound,
+            uint32_t Size) {
+    Binding.UniqueID = UniqueID;
+    Binding.Space = Space;
+    Binding.LowerBound = LowerBound;
+    Binding.Size = Size;
+  }
 
   bool operator==(const ResourceInfo &RHS) const;
 

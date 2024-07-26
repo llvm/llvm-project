@@ -232,7 +232,7 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
                                                 MachineModuleInfo &DestMMI) {
   auto DstMF = std::make_unique<MachineFunction>(
       SrcMF->getFunction(), SrcMF->getTarget(), SrcMF->getSubtarget(),
-      SrcMF->getFunctionNumber(), DestMMI);
+      SrcMF->getContext(), SrcMF->getFunctionNumber());
   DenseMap<MachineBasicBlock *, MachineBasicBlock *> Src2DstMBB;
 
   auto *SrcMRI = &SrcMF->getRegInfo();

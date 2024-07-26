@@ -841,12 +841,6 @@ let Command = "scripting run" in {
     " language. If none is specific the default scripting language is used.">;
 }
 
-let Command = "scripting template list" in {
-  def scripting_template_list_language : Option<"language", "l">,
-    EnumArg<"ScriptLang">, Desc<"Specify the scripting "
-    " language. If none is specified the default scripting language is used.">;
-}
-
 let Command = "source info" in {
   def source_info_count : Option<"count", "c">, Arg<"Count">,
     Desc<"The number of line entries to display.">;
