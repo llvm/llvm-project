@@ -4632,10 +4632,7 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
     return false;
 
   // Loops containing histograms are not currently supported.
-  if (!Legal->getHistograms().empty())
-    return false;
-
-  return true;
+  return Legal->getHistograms().empty();
 }
 
 bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
@@ -8470,17 +8467,11 @@ VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
   HGramOps.push_back(getVPValueOrAddLiveIn(HI->Update->getOperand(1), Plan));
 
   // In case of predicated execution (due to tail-folding, or conditional
-  // execution, or both), pass the relevant mask. When there is no such mask,
-  // generate an all-true mask.
-  VPValue *Mask = nullptr;
+  // execution, or both), pass the relevant mask.
   if (Legal->isMaskRequired(HI->Store))
-    Mask = getBlockInMask(HI->Store->getParent());
-  else
-    Mask = Plan.getOrAddLiveIn(
-        ConstantInt::getTrue(IntegerType::getInt1Ty(HI->Load->getContext())));
-  HGramOps.push_back(Mask);
+    HGramOps.push_back(getBlockInMask(HI->Store->getParent()));
 
-  return new VPHistogramRecipe(HI, Opcode,
+  return new VPHistogramRecipe(*HI, Opcode,
                                make_range(HGramOps.begin(), HGramOps.end()),
                                HI->Store->getDebugLoc());
 }
@@ -9010,15 +9001,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
         auto OpRange = RecipeBuilder.mapToVPValues(Instr->operands());
         Operands = {OpRange.begin(), OpRange.end()};
       }
-
-      // If this is a load instruction or a binop associated with a histogram,
-      // leave it until the store instruction to emit a combined intrinsic.
-      // Note that if the initial VF is scalar, we need to generate the normal
-      // clone recipe for these instructions. A histogram recipe will only be
-      // generated when minVF > 1.
-      if (Legal->getHistogramInfo(Instr) && !isa<StoreInst>(Instr) &&
-          !Range.Start.isScalar())
-        continue;
 
       // Invariant stores inside loop will be deleted and a single store
       // with the final reduction value will be added to the exit block

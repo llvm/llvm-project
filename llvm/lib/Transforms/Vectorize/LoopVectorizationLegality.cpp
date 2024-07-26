@@ -1055,7 +1055,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
   return true;
 }
 
-/// Find Histogram counts that match high-level code in loops:
+/// Find histogram operations that match high-level code in loops:
 /// \code
 /// buckets[indices[i]]+=step;
 /// \endcode
@@ -1068,10 +1068,9 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
 /// regardless of hardware support. When there is support, it additionally
 /// stores the BinOp/Load pairs in \p HistogramCounts, as well the pointers
 /// used to update histogram in \p HistogramPtrs.
-
-static bool findHistograms(LoadInst *LI, StoreInst *HSt, Loop *TheLoop,
-                           const PredicatedScalarEvolution &PSE,
-                           SmallVectorImpl<HistogramInfo> &Histograms) {
+static bool findHistogram(LoadInst *LI, StoreInst *HSt, Loop *TheLoop,
+                          const PredicatedScalarEvolution &PSE,
+                          SmallVectorImpl<HistogramInfo> &Histograms) {
 
   // Store value must come from a Binary Operation.
   Instruction *HPtrInstr = nullptr;
@@ -1093,23 +1092,27 @@ static bool findHistograms(LoadInst *LI, StoreInst *HSt, Loop *TheLoop,
     return false;
 
   // The address to store is calculated through a GEP Instruction.
-  // FIXME: Support GEPs with more operands.
-  GetElementPtrInst *HPtr = dyn_cast<GetElementPtrInst>(HPtrInstr);
-  if (!HPtr || HPtr->getNumOperands() > 2)
+  GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(HPtrInstr);
+  if (!GEP)
+    return false;
+
+  // Restrict address calculation to constant indices except for the last term.
+  Value *HIdx = nullptr;
+  for (Value *Index : GEP->indices()) {
+    if (HIdx)
+      return false;
+    if (!isa<ConstantInt>(Index))
+      HIdx = Index;
+  }
+
+  if (!HIdx)
     return false;
 
   // Check that the index is calculated by loading from another array. Ignore
   // any extensions.
   // FIXME: Support indices from other sources that a linear load from memory?
-  Value *HIdx = HPtr->getOperand(1);
-  Instruction *IdxInst = nullptr;
-  if (!match(HIdx, m_ZExtOrSExtOrSelf(m_Instruction(IdxInst))))
-    return false;
-
-  // Currently restricting this to linear addressing when loading indices.
-  LoadInst *VLoad = dyn_cast<LoadInst>(IdxInst);
   Value *VPtrVal;
-  if (!VLoad || !match(VLoad, m_Load(m_Value(VPtrVal))))
+  if (!match(HIdx, m_ZExtOrSExtOrSelf(m_Load(m_Value(VPtrVal)))))
     return false;
 
   if (!isa<SCEVAddRecExpr>(PSE.getSE()->getSCEV(VPtrVal)))
@@ -1139,7 +1142,7 @@ bool LoopVectorizationLegality::canVectorizeUnknownDependences() {
   LAI = &LAIs.getInfo(*TheLoop);
   const MemoryDepChecker &DepChecker = LAI->getDepChecker();
   const auto *Deps = DepChecker.getDependences();
-  if (!Deps || Deps->size() > 1)
+  if (!Deps || Deps->size() != 1)
     return false;
 
   const MemoryDepChecker::Dependence &Dep = (*Deps).front();
@@ -1156,7 +1159,7 @@ bool LoopVectorizationLegality::canVectorizeUnknownDependences() {
     return false;
 
   LLVM_DEBUG(dbgs() << "LV: Checking for a histogram on: " << *SI << "\n");
-  return findHistograms(LI, SI, TheLoop, LAI->getPSE(), Histograms);
+  return findHistogram(LI, SI, TheLoop, LAI->getPSE(), Histograms);
 }
 
 bool LoopVectorizationLegality::canVectorizeMemory() {

@@ -289,7 +289,7 @@ static Instruction *getInstructionForCost(const VPRecipeBase *R) {
   // FIXME: Override the cost method properly to take gather/scatter cost
   //        into account, instead of just the intrinsic via the legacy model.
   if (auto *HG = dyn_cast<VPHistogramRecipe>(R))
-    return HG->getHistogramInfo()->Update;
+    return HG->getHistogramInfo().Update;
   return nullptr;
 }
 
@@ -1036,7 +1036,17 @@ void VPHistogramRecipe::execute(VPTransformState &State) {
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     Value *Address = State.get(getOperand(0), Part);
     Value *IncVec = State.get(getOperand(1), Part);
-    Value *Mask = State.get(getOperand(2), Part);
+    VectorType *VTy = cast<VectorType>(Address->getType());
+
+    // The histogram intrinsic requires a mask even if the recipe doesn't;
+    // if the mask operand was omitted then all lanes should be executed and
+    // we just need to synthesize an all-true mask.
+    Value *Mask = nullptr;
+    if (VPValue *VPMask = getMask())
+      Mask = State.get(VPMask, Part);
+    else
+      Mask = Builder.CreateVectorSplat(
+          VTy->getElementCount(), ConstantInt::getTrue(Builder.getInt1Ty()));
 
     // Not sure how to make IncAmt stay scalar yet. For now just extract the
     // first element and tidy up later.
@@ -1048,9 +1058,11 @@ void VPHistogramRecipe::execute(VPTransformState &State) {
     // add a separate intrinsic in future, but for now we'll try this.
     if (Opcode == Instruction::Sub)
       IncAmt = Builder.CreateNeg(IncAmt);
+    else
+      assert(Opcode == Instruction::Add);
 
     State.Builder.CreateIntrinsic(Intrinsic::experimental_vector_histogram_add,
-                                  {Address->getType(), IncAmt->getType()},
+                                  {VTy, IncAmt->getType()},
                                   {Address, IncAmt, Mask});
   }
 }
@@ -1060,10 +1072,19 @@ void VPHistogramRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-HISTOGRAM buckets: ";
   getOperand(0)->printAsOperand(O, SlotTracker);
-  O << ", inc: ";
+
+  if (Opcode == Instruction::Sub)
+    O << ", dec: ";
+  else {
+    assert(Opcode == Instruction::Add);
+    O << ", inc: ";
+  }
   getOperand(1)->printAsOperand(O, SlotTracker);
-  O << ", mask: ";
-  getOperand(2)->printAsOperand(O, SlotTracker);
+
+  if (VPValue *Mask = getMask()) {
+    O << ", mask: ";
+    Mask->printAsOperand(O, SlotTracker);
+  }
 }
 
 void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
