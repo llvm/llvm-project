@@ -222,3 +222,12 @@ entry:
   %cmp = icmp ugt <4 x i32> %vbsl, <i32 2, i32 3, i32 4, i32 5>
   ret <4 x i1> %cmp
 }
+
+define void @test7() {
+  %1 = getelementptr i8, ptr null, i64 16
+  %2 = trunc <8 x i64> zeroinitializer to <8 x i16>
+  store <8 x i16> %2, ptr %1, align 2
+  %3 = trunc <8 x i64> zeroinitializer to <8 x i16>
+  store <8 x i16> %3, ptr null, align 2
+  ret void
+}
