@@ -48,12 +48,17 @@
 #ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H
 
+#if LLDB_ENABLE_PYTHON
+
+// clang-format off
+// LLDB Python header must be included first
+#include "lldb-python.h"
+//clang-format on
+#endif
+
 #include "lldb/Host/Config.h"
 
 #if LLDB_ENABLE_PYTHON
-
-// LLDB Python header must be included first
-#include "lldb-python.h"
 
 #include "lldb/Host/File.h"
 #include "lldb/Utility/StructuredData.h"
