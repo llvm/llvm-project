@@ -4275,12 +4275,9 @@ defm strict_return : BoolFOption<"strict-return",
 
 let Group = f_Group in {
   let Visibility = [ClangOption, CC1Option] in {
-    def fptrauth_indirect_gotos : Flag<["-"], "fptrauth-indirect-gotos">,
-      HelpText<"Enable signing and authentication of indirect goto targets">;
     def fptrauth_soft : Flag<["-"], "fptrauth-soft">,
       HelpText<"Enable software lowering of pointer authentication">;
   }
-  def fno_ptrauth_indirect_gotos : Flag<["-"], "fno-ptrauth-indirect-gotos">;
   def fno_ptrauth_soft : Flag<["-"], "fno-ptrauth-soft">;
 }
 
@@ -4312,6 +4309,8 @@ defm ptrauth_type_info_vtable_pointer_discrimination :
 defm ptrauth_init_fini : OptInCC1FFlag<"ptrauth-init-fini", "Enable signing of function pointers in init/fini arrays">;
 defm ptrauth_function_pointer_type_discrimination : OptInCC1FFlag<"ptrauth-function-pointer-type-discrimination",
   "Enable type discrimination on C function pointers">;
+defm ptrauth_indirect_gotos : OptInCC1FFlag<"ptrauth-indirect-gotos",
+  "Enable signing and authentication of indirect goto targets">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,

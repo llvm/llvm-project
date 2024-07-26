@@ -579,6 +579,9 @@ public:
     report_fatal_error("ptrauth constant lowering not implemented");
   }
 
+  /// Lower the specified BlockAddress to an MCExpr.
+  virtual const MCExpr *lowerBlockAddressConstant(const BlockAddress &BA);
+
   /// Return true if the basic block has exactly one predecessor and the control
   /// transfer mechanism between the predecessor and this block is a
   /// fall-through.
@@ -594,10 +597,6 @@ public:
   lowerPtrAuthGlobalConstant(const GlobalPtrAuthInfo &PAI) {
     report_fatal_error("llvm.ptrauth global lowering not implemented");
   }
-
-  /// Lower the specified "llvm.ptrauth" GlobalVariable to an MCExpr.
-  virtual const MCExpr *
-  lowerBlockAddressConstant(const BlockAddress *BA);
 
   /// getSubtargetInfo() cannot be used where this is needed because we don't
   /// have a MachineFunction when we're lowering a GlobalIFunc, and
