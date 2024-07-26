@@ -503,7 +503,7 @@ private:
   /// If LAA cannot determine whether all dependences are safe, we may be able
   /// to further analyse some unknown dependences and if they match a certain
   /// pattern (like a histogram) then we may still be able to vectorize.
-  bool canVectorizeUnknownDependences();
+  bool canVectorizeUncheckedDependences();
 
   /// Return true if we can vectorize this loop using the IF-conversion
   /// transformation.

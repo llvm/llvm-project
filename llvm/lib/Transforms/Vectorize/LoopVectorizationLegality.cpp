@@ -1132,12 +1132,12 @@ static bool findHistogram(LoadInst *LI, StoreInst *HSt, Loop *TheLoop,
   return true;
 }
 
-bool LoopVectorizationLegality::canVectorizeUnknownDependences() {
+bool LoopVectorizationLegality::canVectorizeUncheckedDependences() {
   // For now, we only support an unknown dependency that calculates a histogram
   if (!EnableHistogramVectorization)
     return false;
 
-  // FIXME: Support more than one unknown dependence, and check to see if some
+  // FIXME: Support more than one unchecked dependence, and check to see if some
   //        are handled by runtime checks before looking for histograms.
   LAI = &LAIs.getInfo(*TheLoop);
   const MemoryDepChecker &DepChecker = LAI->getDepChecker();
@@ -1147,8 +1147,9 @@ bool LoopVectorizationLegality::canVectorizeUnknownDependences() {
 
   const MemoryDepChecker::Dependence &Dep = (*Deps).front();
 
-  // We're only interested in unknown dependences.
-  if (Dep.Type != MemoryDepChecker::Dependence::Unknown)
+  // We're only interested in Unknown or IndirectUnsafe dependences.
+  if (Dep.Type != MemoryDepChecker::Dependence::Unknown &&
+      Dep.Type != MemoryDepChecker::Dependence::IndirectUnsafe)
     return false;
 
   // For now only normal loads and stores are supported.
@@ -1173,7 +1174,7 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   }
 
   if (!LAI->canVectorizeMemory())
-    return canVectorizeUnknownDependences();
+    return canVectorizeUncheckedDependences();
 
   if (LAI->hasLoadStoreDependenceInvolvingLoopInvariantAddress()) {
     reportVectorizationFailure("We don't allow storing to uniform addresses",
