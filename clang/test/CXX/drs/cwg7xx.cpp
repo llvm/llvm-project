@@ -77,13 +77,22 @@ namespace cwg712 { // cwg712: partial
 }
 
 namespace cwg713 { // cwg713: yes
-static_assert(!__is_const(void()const), "");
-static_assert(!__is_const(void()const volatile), "");
-static_assert(!__is_volatile(void()volatile), "");
-static_assert(!__is_volatile(void()const volatile), "");
+template<typename T>
+struct is_const {
+    static const bool value = __is_const(T);
+};
+template<typename T>
+struct is_volatile {
+    static const bool value = __is_volatile(T);
+};
+
+static_assert(!is_const<void()const>::value, "");
+static_assert(!is_const<void()const volatile>::value, "");
+static_assert(!is_volatile<void()volatile>::value, "");
+static_assert(!is_volatile<void()const volatile>::value, "");
 #if __cplusplus >= 201103L
-static_assert(!__is_const(void()const&), "");
-static_assert(!__is_volatile(void()volatile&), "");
+static_assert(!is_const<void()const&>::value, "");
+static_assert(!is_volatile<void()volatile&>::value, "");
 #endif
 } // namespace cwg713
 
