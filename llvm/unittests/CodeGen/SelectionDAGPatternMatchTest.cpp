@@ -162,6 +162,8 @@ TEST_F(SelectionDAGPatternMatchTest, matchTernaryOp) {
 
   EXPECT_TRUE(sd_match(
       Select, m_Select(m_Specific(Cond), m_Specific(T), m_Specific(F))));
+  EXPECT_FALSE(sd_match(
+      Select, m_Select(m_Specific(Cond), m_Specific(F), m_Specific(T))));
   EXPECT_FALSE(sd_match(ICMP_EQ01, m_Select(m_Specific(Op0), m_Specific(Op1),
                                             m_SpecificCondCode(ISD::SETEQ))));
 }
