@@ -3034,9 +3034,6 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << CurFeature << TargetVersion;
   }
-  if (IsArmStreamingFunction(cast<FunctionDecl>(D),
-                             /*IncludeLocallyStreaming=*/false))
-    return Diag(LiteralLoc, diag::err_sme_streaming_cannot_be_multiversioned);
   return false;
 }
 
@@ -3133,10 +3130,6 @@ bool Sema::checkTargetClonesAttrString(
           HasNotDefault = true;
         }
       }
-      if (IsArmStreamingFunction(cast<FunctionDecl>(D),
-                                 /*IncludeLocallyStreaming=*/false))
-        return Diag(LiteralLoc,
-                    diag::err_sme_streaming_cannot_be_multiversioned);
     } else {
       // Other targets ( currently X86 )
       if (Cur.starts_with("arch=")) {
@@ -3407,8 +3400,8 @@ static FormatAttrKind getFormatAttrKind(StringRef Format) {
       // Otherwise, check for supported formats.
       .Cases("scanf", "printf", "printf0", "strfmon", SupportedFormat)
       .Cases("cmn_err", "vcmn_err", "zcmn_err", SupportedFormat)
-      .Case("kprintf", SupportedFormat)         // OpenBSD.
-      .Case("freebsd_kprintf", SupportedFormat) // FreeBSD.
+      .Cases("kprintf", "syslog", SupportedFormat) // OpenBSD.
+      .Case("freebsd_kprintf", SupportedFormat)    // FreeBSD.
       .Case("os_trace", SupportedFormat)
       .Case("os_log", SupportedFormat)
 
