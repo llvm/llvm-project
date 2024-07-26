@@ -52,6 +52,7 @@ class MCValue;
 
 class MCAssembler {
 public:
+  friend class MCObjectWriter;
   using SectionListType = SmallVector<MCSection *, 0>;
   using const_iterator = pointee_iterator<SectionListType::const_iterator>;
 
@@ -72,11 +73,6 @@ private:
 
   /// The list of linker options to propagate into the object file.
   std::vector<std::vector<std::string>> LinkerOptions;
-
-  /// List of declared file names
-  std::vector<std::pair<std::string, size_t>> FileNames;
-  // Optional compiler version.
-  std::string CompilerVersion;
 
   MCDwarfLineTableParams LTParams;
 
@@ -260,20 +256,6 @@ public:
 
   bool registerSection(MCSection &Section);
   bool registerSymbol(const MCSymbol &Symbol);
-
-  MutableArrayRef<std::pair<std::string, size_t>> getFileNames() {
-    return FileNames;
-  }
-
-  void addFileName(StringRef FileName) {
-    FileNames.emplace_back(std::string(FileName), Symbols.size());
-  }
-
-  void setCompilerVersion(std::string CompilerVers) {
-    if (CompilerVersion.empty())
-      CompilerVersion = std::move(CompilerVers);
-  }
-  StringRef getCompilerVersion() { return CompilerVersion; }
 
   /// Write the necessary bundle padding to \p OS.
   /// Expects a fragment \p F containing instructions and its size \p FSize.
