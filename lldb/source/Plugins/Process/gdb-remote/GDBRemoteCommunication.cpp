@@ -1145,7 +1145,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
       if (socket_pipe.CanWrite())
         socket_pipe.CloseWriteFileDescriptor();
       if (socket_pipe.CanRead()) {
-        // The port number may be "1024\0".."65535\0".
+        // The port number may be up to "65535\0".
         char port_cstr[6] = {0};
         size_t num_bytes = sizeof(port_cstr);
         // Read port from pipe with 10 second timeout.
