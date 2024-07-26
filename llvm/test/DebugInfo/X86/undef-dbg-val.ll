@@ -1,5 +1,5 @@
-; RUN:  opt -S -passes=globalopt <%s | FileCheck %s
-; CHECK: #dbg_value(ptr poison, 
+; RUN:  opt -S -passes=globalopt --experimental-debuginfo-iterators=false <%s | FileCheck %s
+; CHECK: #dbg_value(ptr undef, 
 ; CHECK-SAME:    [[VAR:![0-9]+]],
 ; CHECK-SAME:    !DIExpression()
 ; CHECK: [[VAR]] = !DILocalVariable(name: "_format"
