@@ -70,16 +70,16 @@ _LIBCPP_HIDE_FROM_ABI _Real __hypot(_Real __x, _Real __y, _Real __z) {
   _Real __scale;
   if (__max_abs > __overflow_threshold) { // x*x + y*y + z*z might overflow
     __scale = __overflow_scale;
-    __x *= __scale;
-    __y *= __scale;
-    __z *= __scale;
   } else if (__max_abs < 1 / __overflow_threshold) { // x*x + y*y + z*z might underflow
     __scale = 1 / __overflow_scale;
-    __x *= __scale;
-    __y *= __scale;
-    __z *= __scale;
-  } else
+  } else {
     __scale = 1;
+  }
+  __x *= __scale;
+  __y *= __scale;
+  __z *= __scale;
+
+  // Compute hypot of scaled arguments and undo scaling
   return __math::sqrt(__x * __x + __y * __y + __z * __z) / __scale;
 }
 
