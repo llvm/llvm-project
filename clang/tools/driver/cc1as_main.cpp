@@ -563,10 +563,8 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
         TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
 
     auto FOut = std::make_unique<formatted_raw_ostream>(*Out);
-    Str.reset(TheTarget->createAsmStreamer(
-        Ctx, std::move(FOut), /*asmverbose*/ true,
-        /*useDwarfDirectory*/ true, IP, std::move(CE), std::move(MAB),
-        Opts.ShowInst));
+    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), IP,
+                                           std::move(CE), std::move(MAB)));
   } else if (Opts.OutputType == AssemblerInvocation::FT_Null) {
     Str.reset(createNullStreamer(Ctx));
   } else {

@@ -82,9 +82,9 @@ Error DwarfEmitterImpl::init(Triple TheTriple,
     MIP = TheTarget->createMCInstPrinter(TheTriple, MAI->getAssemblerDialect(),
                                          *MAI, *MII, *MRI);
     MS = TheTarget->createAsmStreamer(
-        *MC, std::make_unique<formatted_raw_ostream>(OutFile), true, true, MIP,
-        std::unique_ptr<MCCodeEmitter>(MCE), std::unique_ptr<MCAsmBackend>(MAB),
-        true);
+        *MC, std::make_unique<formatted_raw_ostream>(OutFile), MIP,
+        std::unique_ptr<MCCodeEmitter>(MCE),
+        std::unique_ptr<MCAsmBackend>(MAB));
     break;
   }
   case DWARFLinker::OutputFileType::Object: {
