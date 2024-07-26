@@ -144,17 +144,6 @@ struct LessExtName {
 };
 } // namespace
 
-static RISCVExtensionBitmaskTable::RISCVExtensionBitmask
-getExtensionBitmask(StringRef ExtName) {
-  ArrayRef<RISCVExtensionBitmaskTable::RISCVExtensionBitmask> ExtBitmasks =
-      RISCVExtensionBitmaskTable::ExtensionBitmask;
-  auto *I = llvm::lower_bound(ExtBitmasks, ExtName, LessExtName());
-
-  if (I != ExtBitmasks.end() && ExtName.equals_insensitive(I->Name))
-    return *I;
-
-  return RISCVExtensionBitmaskTable::RISCVExtensionBitmask();
-}
 } // namespace RISCV
 
 namespace RISCVVType {
