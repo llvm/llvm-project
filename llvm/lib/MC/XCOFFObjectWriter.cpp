@@ -422,16 +422,12 @@ class XCOFFObjectWriter : public MCObjectWriter {
   void finalizeRelocationInfo(SectionEntry *Sec, uint64_t RelCount);
   void calcOffsetToRelocations(SectionEntry *Sec, uint64_t &RawPointer);
 
-  void addExceptionEntry(const MCSymbol *Symbol, const MCSymbol *Trap,
-                         unsigned LanguageCode, unsigned ReasonCode,
-                         unsigned FunctionSize, bool hasDebug) override;
   bool hasExceptionSection() {
     return !ExceptionSection.ExceptionTable.empty();
   }
   unsigned getExceptionSectionSize();
   unsigned getExceptionOffset(const MCSymbol *Symbol);
 
-  void addCInfoSymEntry(StringRef Name, StringRef Metadata) override;
   size_t auxiliaryHeaderSize() const {
     // 64-bit object files have no auxiliary header.
     return HasVisibility && !is64Bit() ? XCOFF::AuxFileHeaderSizeShort : 0;
@@ -444,6 +440,11 @@ public:
   void writeWord(uint64_t Word) {
     is64Bit() ? W.write<uint64_t>(Word) : W.write<uint32_t>(Word);
   }
+
+  void addExceptionEntry(const MCSymbol *Symbol, const MCSymbol *Trap,
+                         unsigned LanguageCode, unsigned ReasonCode,
+                         unsigned FunctionSize, bool hasDebug);
+  void addCInfoSymEntry(StringRef Name, StringRef Metadata);
 };
 
 XCOFFObjectWriter::XCOFFObjectWriter(
@@ -1738,4 +1739,19 @@ std::unique_ptr<MCObjectWriter>
 llvm::createXCOFFObjectWriter(std::unique_ptr<MCXCOFFObjectTargetWriter> MOTW,
                               raw_pwrite_stream &OS) {
   return std::make_unique<XCOFFObjectWriter>(std::move(MOTW), OS);
+}
+
+// TODO: Export XCOFFObjectWriter to llvm/MC/MCXCOFFObjectWriter.h and remove
+// the forwarders.
+void XCOFF::addExceptionEntry(MCObjectWriter &Writer, const MCSymbol *Symbol,
+                              const MCSymbol *Trap, unsigned LanguageCode,
+                              unsigned ReasonCode, unsigned FunctionSize,
+                              bool hasDebug) {
+  static_cast<XCOFFObjectWriter &>(Writer).addExceptionEntry(
+      Symbol, Trap, LanguageCode, ReasonCode, FunctionSize, hasDebug);
+}
+
+void XCOFF::addCInfoSymEntry(MCObjectWriter &Writer, StringRef Name,
+                             StringRef Metadata) {
+  static_cast<XCOFFObjectWriter &>(Writer).addCInfoSymEntry(Name, Metadata);
 }
