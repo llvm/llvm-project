@@ -79,7 +79,7 @@ LLVM_LIBC_FUNCTION(float16, expf16, (float16 x)) {
     }
 
     // When x >= 12.
-    if (x_bits.is_pos() && x_u >= 0x4a00U) {
+    if (x_bits.is_pos()) {
       // exp(+inf) = +inf
       if (x_bits.is_inf())
         return FPBits::inf().get_val();
