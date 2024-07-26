@@ -565,10 +565,16 @@ AddressSpaceAttr::getValueFromLangAS(clang::LangAS langAS) {
     // Default address space should be encoded as a null attribute.
     return std::nullopt;
   case LangAS::opencl_global:
+    return Kind::offload_global;
   case LangAS::opencl_local:
+    return Kind::offload_local;
   case LangAS::opencl_constant:
+    return Kind::offload_constant;
   case LangAS::opencl_private:
+    return Kind::offload_private;
   case LangAS::opencl_generic:
+    return Kind::offload_generic;
+
   case LangAS::opencl_global_device:
   case LangAS::opencl_global_host:
   case LangAS::cuda_device:
