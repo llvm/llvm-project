@@ -49,13 +49,14 @@ unsigned long long tc() {
     // CIR_FLAT:   %[[PARAM_CHAR_MSG:.*]] = cir.catch_param -> !cir.ptr<!s8i>
     // CIR_FLAT:   cir.const #cir.int<99> : !s32i
     // CIR_FLAT:   cir.br ^bb9
-    // CIR_FLAT: ^bb8:  // pred: ^bb6
-    // CIR_FLAT:   cir.resume
-    // CIR_FLAT: ^bb9:  // 2 preds: ^bb5, ^bb7
-    // CIR_FLAT: cir.load
     z = 99;
     (void)msg[0];
   }
+  // CIR_FLAT: ^bb8:  // pred: ^bb6
+  // CIR_FLAT:   cir.resume
+
+  // CIR_FLAT: ^bb9:  // 2 preds: ^bb5, ^bb7
+  // CIR_FLAT: cir.load
 
   return z;
 }
