@@ -53,24 +53,27 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
   let summary = "Create nd-tensor descriptor operation";
   let description = [{
     The "create_nd_tdesc" operation creates a TensorDescType which represents
-    a sub-view of a 2D memory region (It can be extended to support n-D memory
-    region if needed in future). Elements in the subview continuous in each
-    dimension. It encodes the following important information for supporting
-    Intel hardware features:
+    a sub-view of a 1D/2D memory region inside the one or two innermost dimensions
+    of the source. (It can be extended to support n-D memory region if needed in
+    future). Elements in the subview continuous in each dimension. It encodes the
+    following important information for supporting Intel hardware features:
 
-    * source: an object representing (starting address/pointer of) a 2D memory region.
-        It can be either a 2D memref object, or simply a pointer represented by uint64_t type.
-        for the later case, the shape and layout information of the 2D memory region should
-        be explicitly passed via `shape` and `strides` parameters.
-    * offsets: two index values represents offsets from the "source" at the each dimension
-        at which the subview of the target memory will be created. It is encoded via two
-        variables, including "offsets" and "const_offsets", such that it can
-        accept various forms, such as, operands (e.g., [%c0, %c]) and attributes (e.g., [2, 4]).
-    * shape: the shape information of the memory region pointed by the "source".  It is
-        typically encoded via the MemRefType of the source, e.g., memref<4096x4096xf16>.
+    * source: an object representing (starting address/pointer of) a memory region.
+       It can be either a memref object, or simply a pointer represented by uint64_t type.
+       for the later case, the shape and layout information of the memory region should
+       be explicitly passed via `shape` and `strides` parameters.
+
+    * offsets: index values represents offsets from the "source" at the each dimension
+        at which the subview of the target memory will be created. It is encoded via
+        "offsets" and "const_offsets", such that it can accept various forms, such as,
+        operands (e.g., [%c0, %c]) and attributes (e.g., [2, 4]).
+
+    * shape: the shape information of the memory region pointed by the "source". It is
+         typically encoded via the MemRefType of the source, e.g., memref<4096x4096xf16>.
         But if "source" is simply a pointer represented as uint64_t type, or a memref
         type without shape information e.g., memref<?x?xf16>, the shape information has
         to be explicitly passed via the "shape" and "const_shape" arguments.
+
     * strides: the strides of the memory region pointed by the "source". Similar to shape,
         it is typically encoded via the MemRefType of the source too. But if "source" is
         simply a pointer represented as uint64_t type, or a memref type without shape
@@ -78,22 +81,28 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
         passed via the "strides" and "const_strides" argument.
 
     Example 1 (suppose the tensor shape inferred by the compiler is 8x16):
+    ```mlir
     %0 = memref.alloc() : memref<1024x1024xf32>
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %1 = xegpu.create_nd_tdesc %0[%c0, %c0]: memref<1024x1024xf32> -> TensorDesc<8x16xf32>
+    ```
 
     Example 2 (suppose the tensor shape inferred by the compiler is 8x16):
+    ```mlir
     %0 = memref.alloc(%h, %w) : memref<?x?xf32>
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %1 = xegpu.create_nd_tdesc %0[%c0, %c0], [%h, %w], [%w, %c1]: memref<?x?xf32> -> TensorDesc<8x16xf32>
+    ```
 
     Example 3 (suppose the tensor shape inferred by the compiler is 8x16):
+    ```mlir
     %0 = ... : ui64
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %1 = xegpu.create_nd_tdesc %0[%c0, %c0], [%h, %w], [%w, %c1]: ui64 -> TensorDesc<8x16xf32>
+    ```
   }];
 
   let arguments = (ins
@@ -219,7 +228,7 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
     memory regions to each level of the cache based on their cache policy.
 
     Example:
-    ```
+    ```mlir
       xegpu.prefetch_nd %tdesc {l1_hint = #xegpu.cache_hint<cached>,
                                 l2_hint = #xegpu.cache_hint<cached>,
                                 l3_hint = #xegpu.cache_hint<cached>}
@@ -262,7 +271,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [AllElementTypesMatch<["value", "Tensor
     same time.
 
     Example:
-    ```
+    ```mlir
       xegpu.load_nd %1 {transpose = [1, 0],
                         l1_hint = #xegpu.cache_hint<cached>,
                         l2_hint = #xegpu.cache_hint<uncached>,
@@ -308,7 +317,7 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [AllShapesMatch<["value", "TensorDesc
     Corresponding cache hint attribute will be masked.
 
     Example:
-    ```
+    ```mlir
       xegpu.store_nd %3, %2 {l1_hint = #xegpu.cache_hint<uncached>,
                              l2_hint = #xegpu.cache_hint<write_back>,
                              l3_hint = #xegpu.cache_hint<write_through>}
@@ -406,21 +415,21 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
       elements accessed for each offset, default is 1.
 
     Example 1. It assumes subgroup size is 4, and accesses a[0], a[16], a[32], a[64]
-    ```
+    ```mlir
     %a = memref.alloc() : memref<1024xf32>
     %1 = xegpu.create_tdesc %a[0, 16, 32, 64]: memref<1024xf32> -> TensorDesc<4xf32>
     ```
 
     Example 2. It assumes subgroup size is 4, and each workitem access 8 elements.
                It will access totally 32 data elements: a[0:7], a[16:23], a[32:39], a[64:71]
-    ```
+    ```mlir
     %0 = memref.alloc() : memref<1024xf32>
     %1 = xegpu.create_tdesc %0[0, 16, 32, 64] {chunk_size = 8}: memref<1024xf32> -> TensorDesc<4x8xf32>
     ```
 
     Example 3. It is similar to Example 2, but there is some overlaps among workitems.
                It accesses: a[0:7], a[4:11], a[8:15], a[12:19]
-    ```
+    ```mlir
     %0 = memref.alloc() : memref<1024xf32>
     %1 = xegpu.create_tdesc %0[0, 4, 8, 12] {chunk_size = 8}: memref<1024xf32> -> TensorDesc<4x8xf32>
     ```
@@ -479,7 +488,7 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
     it works on scattered TensorDesc instead.
 
     Example:
-    ```
+    ```mlir
       xegpu.prefetch %tdesc {l1_hint = #xegpu.cache_hint<cached>,
                              l2_hint = #xegpu.cache_hint<cached>,
                              l3_hint = #xegpu.cache_hint<cached>}
@@ -519,7 +528,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [AllRanksMatch<["value", "TensorDesc"]
     addresses/offsets as long as they are masked. It applies to slots of SIMD lanes.
 
   Example:
-  ```
+  ```mlir
     %2 = xegpu.load %1, %0 {transpose = [1, 0],
                             l1_hint = #xegpu.cache_hint<cached>,
                             l2_hint = #xegpu.cache_hint<uncached>,
@@ -571,7 +580,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [AllShapesMatch<["value", "TensorDe
   It has similar semantic to `load_gather`.
 
   Example:
-  ```
+  ```mlir
     %3 = xegpu.store %0, %1, %2 {l1_hint = #xegpu.cache_hint<uncached>,
                                  l2_hint = #xegpu.cache_hint<write_back>,
                                  l3_hint = #xegpu.cache_hint<write_through>}
@@ -620,7 +629,7 @@ def XeGPU_UpdateOffsetOp: XeGPU_Op<"update_offset",
     shifts for each work-item.
 
     Example:
-    ```
+    ```mlir
       %2 = xegpu.update_offset %1, [32, 32, 32, 32]
             : !xegpu.tensor_desc<4x2xf32, #xegpu.tdesc_attr<scattered = true>>
     ```

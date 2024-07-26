@@ -2,7 +2,7 @@
 
 // -----
 func.func @test_create_nd_tdesc_vc_1(%src: memref<24xf32>) {
-  // expected-error@+1 {{Expecting the rank of shape, strides, offsets, source memref type (if source is a memref) and TensorDesc should match with each other. They currenlty are 2D.}}
+  // expected-error@+1 {{Expecting the TensorDesc rank is up to 2 and not greater than the ranks of shape, strides, offsets or the memref source}}
   %1 = xegpu.create_nd_tdesc %src[0] : memref<24xf32> -> !xegpu.tensor_desc<8x16xf32>
   return
 }
@@ -49,6 +49,15 @@ func.func @test_load_nd_vc_2(%src: memref<16xf16>) {
   // expected-error@+1 {{Expects a non-scattered TensorDesc.}}
   %2 = xegpu.load_nd %1 <{l1_hint = #xegpu.cache_hint<cached>}>
       : !xegpu.tensor_desc<8x2xf16, #xegpu.tdesc_attr<scattered=true>> -> vector<8x2xf16>
+  return
+}
+
+// -----
+func.func @test_load_nd_vc_3(%src: memref<8x16xf16>) {
+  %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<8x16xf16> -> !xegpu.tensor_desc<16xf16>
+  // expected-warning@+1 {{Invalid Packed Attr.}}
+  %2 = xegpu.load_nd %1 <{packed, l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>
+        : !xegpu.tensor_desc<16xf16> -> vector<16xf16>
   return
 }
 
