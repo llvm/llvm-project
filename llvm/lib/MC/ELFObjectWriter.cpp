@@ -360,7 +360,7 @@ void ELFWriter::writeHeader(const MCAssembler &Asm) {
   WriteWord(0);                     // e_shoff = sec hdr table off in bytes
 
   // e_flags = whatever the target wants
-  W.write<uint32_t>(Asm.getELFHeaderEFlags());
+  W.write<uint32_t>(OWriter.getELFHeaderEFlags());
 
   // e_ehsize = ELF header size
   W.write<uint16_t>(is64Bit() ? sizeof(ELF::Elf64_Ehdr)
@@ -1157,6 +1157,7 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
 }
 
 void ELFObjectWriter::reset() {
+  ELFHeaderEFlags = 0;
   SeenGnuAbi = false;
   OverrideABIVersion.reset();
   Relocations.clear();

@@ -154,6 +154,8 @@ public:
 };
 
 class ELFObjectWriter : public MCObjectWriter {
+  unsigned ELFHeaderEFlags = 0;
+
 public:
   std::unique_ptr<MCELFObjectTargetWriter> TargetObjectWriter;
   DenseMap<const MCSectionELF *, std::vector<ELFRelocationEntry>> Relocations;
@@ -186,6 +188,9 @@ public:
                                const MCSectionELF *To) {
     return true;
   }
+
+  unsigned getELFHeaderEFlags() const { return ELFHeaderEFlags; }
+  void setELFHeaderEFlags(unsigned Flags) { ELFHeaderEFlags = Flags; }
 
   // Mark that we have seen GNU ABI usage (e.g. SHF_GNU_RETAIN, STB_GNU_UNIQUE).
   void markGnuAbi() { SeenGnuAbi = true; }
