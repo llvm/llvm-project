@@ -152,17 +152,6 @@ jobs:
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       with:
         ref: ${{ needs.prepare.outputs.ref }}
-    - name: Debug - Move actions
-      if: github.event_name != 'pull_request'
-      shell: bash
-      run: |
-        cd .github/workflows
-        for d in release-binaries-setup-stage release-binaries-save-stage; do
-          mkdir $d
-          pushd $d
-          curl -O -L https://raw.githubusercontent.com/tstellar/llvm-project/main/.github/workflows/$d/action.yml
-          popd
-        done
 
     - name: Setup sccache
       uses: hendrikmuhs/ccache-action@ca3acd2731eef11f1572ccb126356c2f9298d35e # v1.2.9
