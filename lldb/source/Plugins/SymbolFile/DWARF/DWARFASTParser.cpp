@@ -66,7 +66,6 @@ DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
               }
           } else
             num_elements = form_value.Unsigned();
-
           break;
 
         case DW_AT_bit_stride:
