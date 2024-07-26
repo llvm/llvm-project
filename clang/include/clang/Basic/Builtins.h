@@ -15,10 +15,10 @@
 #ifndef LLVM_CLANG_BASIC_BUILTINS_H
 #define LLVM_CLANG_BASIC_BUILTINS_H
 
+#include "LangStandard.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "LangStandard.h"
 #include <cstring>
 
 // VC++ defines 'alloca' as an object-like macro, which interferes with our
