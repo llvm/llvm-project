@@ -503,10 +503,15 @@ public:
     return StrOffsetSectionWasModified;
   }
 
+  std::unordered_map<uint64_t, bool> &getDebugStrOffsetFinalized() {
+    return DebugStrOffsetFinalized;
+  }
+
 private:
   std::unique_ptr<DebugStrOffsetsBufferVector> StrOffsetsBuffer;
   std::unique_ptr<raw_svector_ostream> StrOffsetsStream;
   std::map<uint32_t, uint32_t> IndexToAddressMap;
+  std::unordered_map<uint64_t, bool> DebugStrOffsetFinalized;
   SmallVector<uint32_t, 5> StrOffsets;
   std::unordered_map<uint64_t, uint64_t> ProcessedBaseOffsets;
   bool StrOffsetSectionWasModified = false;
