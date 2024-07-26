@@ -24,7 +24,7 @@ is the entry point for running passes and lowerings,
 as well as emitting debug and diagnostic data.
 
 Running `mlir-opt` with no flags will consume textual or bytecode IR
-from standard in, parse and run verifiers on it,
+from the standard input, parse and run verifiers on it,
 and write the textual format back to standard out.
 This is a good way to test if an input MLIR is well-formed.
 
