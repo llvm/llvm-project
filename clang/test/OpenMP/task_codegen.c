@@ -139,7 +139,8 @@ for (int i = 0; i < 10; ++i)
   // CHECK: [[EB_SUB_2_ADD_1_SUB:%.+]] = sub i32 [[EB_SUB_2_ADD]], 1
   // CHECK: [[EB_SUB_2_ADD_1_SUB_2_DIV:%.+]] = udiv i32 [[EB_SUB_2_ADD_1_SUB]], 2
   // CHECK: [[ELEMS:%.+]] = zext i32 [[EB_SUB_2_ADD_1_SUB_2_DIV]] to i64
-  // CHECK: [[NELEMS:%.+]] = mul nuw i64 [[ELEMS]], 1
+  // CHECK: [[ELEMS2:%.+]] = mul nuw i64 [[ELEMS]], 1
+  // CHECK: [[NELEMS:%.+]] = mul nuw i64 [[ELEMS2]], 1
 
   // ITERATOR_TOTAL = NELEMS + 0;
   // CHECK: [[ITERATOR_TOTAL:%.+]] = add nuw i64 0, [[NELEMS]]

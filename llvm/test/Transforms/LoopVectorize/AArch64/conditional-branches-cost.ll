@@ -1224,7 +1224,484 @@ exit:
   ret void
 }
 
+define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias %src.2, ptr noalias %src.3, ptr noalias %src.4, ptr noalias %dst, i64 %N) #2 {
+; DEFAULT-LABEL: define void @test_conditional_interleave_group(
+; DEFAULT-SAME: ptr noalias [[SRC_1:%.*]], ptr noalias [[SRC_2:%.*]], ptr noalias [[SRC_3:%.*]], ptr noalias [[SRC_4:%.*]], ptr noalias [[DST:%.*]], i64 [[N:%.*]]) #[[ATTR3:[0-9]+]] {
+; DEFAULT-NEXT:  entry:
+; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
+; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
+; DEFAULT:       vector.scevcheck:
+; DEFAULT-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 4
+; DEFAULT-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
+; DEFAULT-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL]], 0
+; DEFAULT-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
+; DEFAULT-NEXT:    [[TMP1:%.*]] = sub i64 0, [[MUL_RESULT]]
+; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT]]
+; DEFAULT-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[TMP2]], [[SCEVGEP]]
+; DEFAULT-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
+; DEFAULT-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[DST]], i64 8
+; DEFAULT-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
+; DEFAULT-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
+; DEFAULT-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
+; DEFAULT-NEXT:    [[TMP5:%.*]] = sub i64 0, [[MUL_RESULT3]]
+; DEFAULT-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i64 [[MUL_RESULT3]]
+; DEFAULT-NEXT:    [[TMP7:%.*]] = icmp ult ptr [[TMP6]], [[SCEVGEP1]]
+; DEFAULT-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW4]]
+; DEFAULT-NEXT:    [[MUL5:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
+; DEFAULT-NEXT:    [[MUL_RESULT6:%.*]] = extractvalue { i64, i1 } [[MUL5]], 0
+; DEFAULT-NEXT:    [[MUL_OVERFLOW7:%.*]] = extractvalue { i64, i1 } [[MUL5]], 1
+; DEFAULT-NEXT:    [[TMP9:%.*]] = sub i64 0, [[MUL_RESULT6]]
+; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[DST]], i64 [[MUL_RESULT6]]
+; DEFAULT-NEXT:    [[TMP11:%.*]] = icmp ult ptr [[TMP10]], [[DST]]
+; DEFAULT-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[MUL_OVERFLOW7]]
+; DEFAULT-NEXT:    [[TMP13:%.*]] = or i1 [[TMP4]], [[TMP8]]
+; DEFAULT-NEXT:    [[TMP14:%.*]] = or i1 [[TMP13]], [[TMP12]]
+; DEFAULT-NEXT:    br i1 [[TMP14]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; DEFAULT:       vector.ph:
+; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
+; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; DEFAULT-NEXT:    br label [[VECTOR_BODY:%.*]]
+; DEFAULT:       vector.body:
+; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE27:%.*]] ]
+; DEFAULT-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE27]] ]
+; DEFAULT-NEXT:    [[TMP15:%.*]] = load float, ptr [[SRC_1]], align 4
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <8 x float> poison, float [[TMP15]], i64 0
+; DEFAULT-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT8]], <8 x float> poison, <8 x i32> zeroinitializer
+; DEFAULT-NEXT:    [[TMP16:%.*]] = load float, ptr [[SRC_2]], align 4
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x float> poison, float [[TMP16]], i64 0
+; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT]], <8 x float> poison, <8 x i32> zeroinitializer
+; DEFAULT-NEXT:    [[TMP17:%.*]] = fmul <8 x float> [[BROADCAST_SPLAT]], zeroinitializer
+; DEFAULT-NEXT:    [[TMP18:%.*]] = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> [[BROADCAST_SPLAT9]], <8 x float> zeroinitializer, <8 x float> [[TMP17]])
+; DEFAULT-NEXT:    [[TMP19:%.*]] = load float, ptr [[SRC_3]], align 4
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <8 x float> poison, float [[TMP19]], i64 0
+; DEFAULT-NEXT:    [[BROADCAST_SPLAT11:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT10]], <8 x float> poison, <8 x i32> zeroinitializer
+; DEFAULT-NEXT:    [[TMP20:%.*]] = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> [[BROADCAST_SPLAT11]], <8 x float> zeroinitializer, <8 x float> [[TMP18]])
+; DEFAULT-NEXT:    [[TMP21:%.*]] = load float, ptr [[SRC_3]], align 4
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <8 x float> poison, float [[TMP21]], i64 0
+; DEFAULT-NEXT:    [[BROADCAST_SPLAT13:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT12]], <8 x float> poison, <8 x i32> zeroinitializer
+; DEFAULT-NEXT:    [[TMP22:%.*]] = fcmp ogt <8 x float> [[TMP20]], [[BROADCAST_SPLAT13]]
+; DEFAULT-NEXT:    [[TMP23:%.*]] = getelementptr { [4 x float] }, ptr [[DST]], <8 x i64> [[VEC_IND]]
+; DEFAULT-NEXT:    [[TMP24:%.*]] = extractelement <8 x i1> [[TMP22]], i32 0
+; DEFAULT-NEXT:    br i1 [[TMP24]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; DEFAULT:       pred.store.if:
+; DEFAULT-NEXT:    [[TMP25:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 0
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP25]], align 4
+; DEFAULT-NEXT:    [[TMP26:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 0
+; DEFAULT-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[TMP26]], i64 4
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP27]], align 4
+; DEFAULT-NEXT:    [[TMP28:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 0
+; DEFAULT-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[TMP28]], i64 8
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP29]], align 4
+; DEFAULT-NEXT:    [[TMP30:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 0
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP30]], align 4
+; DEFAULT-NEXT:    br label [[PRED_STORE_CONTINUE]]
+; DEFAULT:       pred.store.continue:
+; DEFAULT-NEXT:    [[TMP31:%.*]] = extractelement <8 x i1> [[TMP22]], i32 1
+; DEFAULT-NEXT:    br i1 [[TMP31]], label [[PRED_STORE_IF14:%.*]], label [[PRED_STORE_CONTINUE15:%.*]]
+; DEFAULT:       pred.store.if14:
+; DEFAULT-NEXT:    [[TMP32:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 1
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP32]], align 4
+; DEFAULT-NEXT:    [[TMP33:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 1
+; DEFAULT-NEXT:    [[TMP34:%.*]] = getelementptr i8, ptr [[TMP33]], i64 4
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP34]], align 4
+; DEFAULT-NEXT:    [[TMP35:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 1
+; DEFAULT-NEXT:    [[TMP36:%.*]] = getelementptr i8, ptr [[TMP35]], i64 8
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP36]], align 4
+; DEFAULT-NEXT:    [[TMP37:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 1
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP37]], align 4
+; DEFAULT-NEXT:    br label [[PRED_STORE_CONTINUE15]]
+; DEFAULT:       pred.store.continue15:
+; DEFAULT-NEXT:    [[TMP38:%.*]] = extractelement <8 x i1> [[TMP22]], i32 2
+; DEFAULT-NEXT:    br i1 [[TMP38]], label [[PRED_STORE_IF16:%.*]], label [[PRED_STORE_CONTINUE17:%.*]]
+; DEFAULT:       pred.store.if16:
+; DEFAULT-NEXT:    [[TMP39:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 2
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP39]], align 4
+; DEFAULT-NEXT:    [[TMP40:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 2
+; DEFAULT-NEXT:    [[TMP41:%.*]] = getelementptr i8, ptr [[TMP40]], i64 4
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP41]], align 4
+; DEFAULT-NEXT:    [[TMP42:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 2
+; DEFAULT-NEXT:    [[TMP43:%.*]] = getelementptr i8, ptr [[TMP42]], i64 8
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP43]], align 4
+; DEFAULT-NEXT:    [[TMP44:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 2
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP44]], align 4
+; DEFAULT-NEXT:    br label [[PRED_STORE_CONTINUE17]]
+; DEFAULT:       pred.store.continue17:
+; DEFAULT-NEXT:    [[TMP45:%.*]] = extractelement <8 x i1> [[TMP22]], i32 3
+; DEFAULT-NEXT:    br i1 [[TMP45]], label [[PRED_STORE_IF18:%.*]], label [[PRED_STORE_CONTINUE19:%.*]]
+; DEFAULT:       pred.store.if18:
+; DEFAULT-NEXT:    [[TMP46:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 3
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP46]], align 4
+; DEFAULT-NEXT:    [[TMP47:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 3
+; DEFAULT-NEXT:    [[TMP48:%.*]] = getelementptr i8, ptr [[TMP47]], i64 4
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP48]], align 4
+; DEFAULT-NEXT:    [[TMP49:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 3
+; DEFAULT-NEXT:    [[TMP50:%.*]] = getelementptr i8, ptr [[TMP49]], i64 8
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP50]], align 4
+; DEFAULT-NEXT:    [[TMP51:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 3
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP51]], align 4
+; DEFAULT-NEXT:    br label [[PRED_STORE_CONTINUE19]]
+; DEFAULT:       pred.store.continue19:
+; DEFAULT-NEXT:    [[TMP52:%.*]] = extractelement <8 x i1> [[TMP22]], i32 4
+; DEFAULT-NEXT:    br i1 [[TMP52]], label [[PRED_STORE_IF20:%.*]], label [[PRED_STORE_CONTINUE21:%.*]]
+; DEFAULT:       pred.store.if20:
+; DEFAULT-NEXT:    [[TMP53:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 4
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP53]], align 4
+; DEFAULT-NEXT:    [[TMP54:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 4
+; DEFAULT-NEXT:    [[TMP55:%.*]] = getelementptr i8, ptr [[TMP54]], i64 4
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP55]], align 4
+; DEFAULT-NEXT:    [[TMP56:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 4
+; DEFAULT-NEXT:    [[TMP57:%.*]] = getelementptr i8, ptr [[TMP56]], i64 8
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP57]], align 4
+; DEFAULT-NEXT:    [[TMP58:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 4
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP58]], align 4
+; DEFAULT-NEXT:    br label [[PRED_STORE_CONTINUE21]]
+; DEFAULT:       pred.store.continue21:
+; DEFAULT-NEXT:    [[TMP59:%.*]] = extractelement <8 x i1> [[TMP22]], i32 5
+; DEFAULT-NEXT:    br i1 [[TMP59]], label [[PRED_STORE_IF22:%.*]], label [[PRED_STORE_CONTINUE23:%.*]]
+; DEFAULT:       pred.store.if22:
+; DEFAULT-NEXT:    [[TMP60:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 5
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP60]], align 4
+; DEFAULT-NEXT:    [[TMP61:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 5
+; DEFAULT-NEXT:    [[TMP62:%.*]] = getelementptr i8, ptr [[TMP61]], i64 4
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP62]], align 4
+; DEFAULT-NEXT:    [[TMP63:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 5
+; DEFAULT-NEXT:    [[TMP64:%.*]] = getelementptr i8, ptr [[TMP63]], i64 8
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP64]], align 4
+; DEFAULT-NEXT:    [[TMP65:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 5
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP65]], align 4
+; DEFAULT-NEXT:    br label [[PRED_STORE_CONTINUE23]]
+; DEFAULT:       pred.store.continue23:
+; DEFAULT-NEXT:    [[TMP66:%.*]] = extractelement <8 x i1> [[TMP22]], i32 6
+; DEFAULT-NEXT:    br i1 [[TMP66]], label [[PRED_STORE_IF24:%.*]], label [[PRED_STORE_CONTINUE25:%.*]]
+; DEFAULT:       pred.store.if24:
+; DEFAULT-NEXT:    [[TMP67:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 6
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP67]], align 4
+; DEFAULT-NEXT:    [[TMP68:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 6
+; DEFAULT-NEXT:    [[TMP69:%.*]] = getelementptr i8, ptr [[TMP68]], i64 4
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP69]], align 4
+; DEFAULT-NEXT:    [[TMP70:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 6
+; DEFAULT-NEXT:    [[TMP71:%.*]] = getelementptr i8, ptr [[TMP70]], i64 8
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP71]], align 4
+; DEFAULT-NEXT:    [[TMP72:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 6
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP72]], align 4
+; DEFAULT-NEXT:    br label [[PRED_STORE_CONTINUE25]]
+; DEFAULT:       pred.store.continue25:
+; DEFAULT-NEXT:    [[TMP73:%.*]] = extractelement <8 x i1> [[TMP22]], i32 7
+; DEFAULT-NEXT:    br i1 [[TMP73]], label [[PRED_STORE_IF26:%.*]], label [[PRED_STORE_CONTINUE27]]
+; DEFAULT:       pred.store.if26:
+; DEFAULT-NEXT:    [[TMP74:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 7
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP74]], align 4
+; DEFAULT-NEXT:    [[TMP75:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 7
+; DEFAULT-NEXT:    [[TMP76:%.*]] = getelementptr i8, ptr [[TMP75]], i64 4
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP76]], align 4
+; DEFAULT-NEXT:    [[TMP77:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 7
+; DEFAULT-NEXT:    [[TMP78:%.*]] = getelementptr i8, ptr [[TMP77]], i64 8
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP78]], align 4
+; DEFAULT-NEXT:    [[TMP79:%.*]] = extractelement <8 x ptr> [[TMP23]], i32 7
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[TMP79]], align 4
+; DEFAULT-NEXT:    br label [[PRED_STORE_CONTINUE27]]
+; DEFAULT:       pred.store.continue27:
+; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
+; DEFAULT-NEXT:    [[TMP80:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; DEFAULT-NEXT:    br i1 [[TMP80]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
+; DEFAULT:       middle.block:
+; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; DEFAULT-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; DEFAULT:       scalar.ph:
+; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; DEFAULT-NEXT:    br label [[LOOP_HEADER:%.*]]
+; DEFAULT:       loop.header:
+; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; DEFAULT-NEXT:    [[TMP81:%.*]] = load float, ptr [[SRC_1]], align 4
+; DEFAULT-NEXT:    [[TMP82:%.*]] = load float, ptr [[SRC_2]], align 4
+; DEFAULT-NEXT:    [[MUL8_I_US:%.*]] = fmul float [[TMP82]], 0.000000e+00
+; DEFAULT-NEXT:    [[TMP83:%.*]] = tail call float @llvm.fmuladd.f32(float [[TMP81]], float 0.000000e+00, float [[MUL8_I_US]])
+; DEFAULT-NEXT:    [[TMP84:%.*]] = load float, ptr [[SRC_3]], align 4
+; DEFAULT-NEXT:    [[TMP85:%.*]] = tail call float @llvm.fmuladd.f32(float [[TMP84]], float 0.000000e+00, float [[TMP83]])
+; DEFAULT-NEXT:    [[TMP86:%.*]] = load float, ptr [[SRC_3]], align 4
+; DEFAULT-NEXT:    [[C:%.*]] = fcmp ogt float [[TMP85]], [[TMP86]]
+; DEFAULT-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[LOOP_LATCH]]
+; DEFAULT:       if.then:
+; DEFAULT-NEXT:    [[DST_0:%.*]] = getelementptr { [4 x float] }, ptr [[DST]], i64 [[IV]]
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[DST_0]], align 4
+; DEFAULT-NEXT:    [[DST_1:%.*]] = getelementptr i8, ptr [[DST_0]], i64 4
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[DST_1]], align 4
+; DEFAULT-NEXT:    [[DST_2:%.*]] = getelementptr i8, ptr [[DST_0]], i64 8
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[DST_2]], align 4
+; DEFAULT-NEXT:    [[DST_3:%.*]] = getelementptr i8, ptr [[DST_0]], i64 16
+; DEFAULT-NEXT:    store float 0.000000e+00, ptr [[DST_0]], align 4
+; DEFAULT-NEXT:    br label [[LOOP_LATCH]]
+; DEFAULT:       loop.latch:
+; DEFAULT-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; DEFAULT-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], [[N]]
+; DEFAULT-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP29:![0-9]+]]
+; DEFAULT:       exit:
+; DEFAULT-NEXT:    ret void
+;
+; PRED-LABEL: define void @test_conditional_interleave_group(
+; PRED-SAME: ptr noalias [[SRC_1:%.*]], ptr noalias [[SRC_2:%.*]], ptr noalias [[SRC_3:%.*]], ptr noalias [[SRC_4:%.*]], ptr noalias [[DST:%.*]], i64 [[N:%.*]]) #[[ATTR3:[0-9]+]] {
+; PRED-NEXT:  entry:
+; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
+; PRED-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
+; PRED:       vector.scevcheck:
+; PRED-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 4
+; PRED-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
+; PRED-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL]], 0
+; PRED-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
+; PRED-NEXT:    [[TMP1:%.*]] = sub i64 0, [[MUL_RESULT]]
+; PRED-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT]]
+; PRED-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[TMP2]], [[SCEVGEP]]
+; PRED-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
+; PRED-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[DST]], i64 8
+; PRED-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
+; PRED-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
+; PRED-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
+; PRED-NEXT:    [[TMP5:%.*]] = sub i64 0, [[MUL_RESULT3]]
+; PRED-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i64 [[MUL_RESULT3]]
+; PRED-NEXT:    [[TMP7:%.*]] = icmp ult ptr [[TMP6]], [[SCEVGEP1]]
+; PRED-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW4]]
+; PRED-NEXT:    [[MUL5:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
+; PRED-NEXT:    [[MUL_RESULT6:%.*]] = extractvalue { i64, i1 } [[MUL5]], 0
+; PRED-NEXT:    [[MUL_OVERFLOW7:%.*]] = extractvalue { i64, i1 } [[MUL5]], 1
+; PRED-NEXT:    [[TMP9:%.*]] = sub i64 0, [[MUL_RESULT6]]
+; PRED-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[DST]], i64 [[MUL_RESULT6]]
+; PRED-NEXT:    [[TMP11:%.*]] = icmp ult ptr [[TMP10]], [[DST]]
+; PRED-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[MUL_OVERFLOW7]]
+; PRED-NEXT:    [[TMP13:%.*]] = or i1 [[TMP4]], [[TMP8]]
+; PRED-NEXT:    [[TMP14:%.*]] = or i1 [[TMP13]], [[TMP12]]
+; PRED-NEXT:    br i1 [[TMP14]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; PRED:       vector.ph:
+; PRED-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP0]], 7
+; PRED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 8
+; PRED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
+; PRED-NEXT:    [[TMP15:%.*]] = sub i64 [[TMP0]], 8
+; PRED-NEXT:    [[TMP16:%.*]] = icmp ugt i64 [[TMP0]], 8
+; PRED-NEXT:    [[TMP17:%.*]] = select i1 [[TMP16]], i64 [[TMP15]], i64 0
+; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 0, i64 [[TMP0]])
+; PRED-NEXT:    br label [[VECTOR_BODY:%.*]]
+; PRED:       vector.body:
+; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE27:%.*]] ]
+; PRED-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <8 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[PRED_STORE_CONTINUE27]] ]
+; PRED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE27]] ]
+; PRED-NEXT:    [[TMP18:%.*]] = load float, ptr [[SRC_1]], align 4
+; PRED-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <8 x float> poison, float [[TMP18]], i64 0
+; PRED-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT8]], <8 x float> poison, <8 x i32> zeroinitializer
+; PRED-NEXT:    [[TMP19:%.*]] = load float, ptr [[SRC_2]], align 4
+; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x float> poison, float [[TMP19]], i64 0
+; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT]], <8 x float> poison, <8 x i32> zeroinitializer
+; PRED-NEXT:    [[TMP20:%.*]] = fmul <8 x float> [[BROADCAST_SPLAT]], zeroinitializer
+; PRED-NEXT:    [[TMP21:%.*]] = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> [[BROADCAST_SPLAT9]], <8 x float> zeroinitializer, <8 x float> [[TMP20]])
+; PRED-NEXT:    [[TMP22:%.*]] = load float, ptr [[SRC_3]], align 4
+; PRED-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <8 x float> poison, float [[TMP22]], i64 0
+; PRED-NEXT:    [[BROADCAST_SPLAT11:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT10]], <8 x float> poison, <8 x i32> zeroinitializer
+; PRED-NEXT:    [[TMP23:%.*]] = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> [[BROADCAST_SPLAT11]], <8 x float> zeroinitializer, <8 x float> [[TMP21]])
+; PRED-NEXT:    [[TMP24:%.*]] = load float, ptr [[SRC_3]], align 4
+; PRED-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <8 x float> poison, float [[TMP24]], i64 0
+; PRED-NEXT:    [[BROADCAST_SPLAT13:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT12]], <8 x float> poison, <8 x i32> zeroinitializer
+; PRED-NEXT:    [[TMP25:%.*]] = fcmp ogt <8 x float> [[TMP23]], [[BROADCAST_SPLAT13]]
+; PRED-NEXT:    [[TMP26:%.*]] = select <8 x i1> [[ACTIVE_LANE_MASK]], <8 x i1> [[TMP25]], <8 x i1> zeroinitializer
+; PRED-NEXT:    [[TMP27:%.*]] = getelementptr { [4 x float] }, ptr [[DST]], <8 x i64> [[VEC_IND]]
+; PRED-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP26]], i32 0
+; PRED-NEXT:    br i1 [[TMP28]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; PRED:       pred.store.if:
+; PRED-NEXT:    [[TMP29:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 0
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP29]], align 4
+; PRED-NEXT:    [[TMP30:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 0
+; PRED-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[TMP30]], i64 4
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP31]], align 4
+; PRED-NEXT:    [[TMP32:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 0
+; PRED-NEXT:    [[TMP33:%.*]] = getelementptr i8, ptr [[TMP32]], i64 8
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP33]], align 4
+; PRED-NEXT:    [[TMP34:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 0
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP34]], align 4
+; PRED-NEXT:    br label [[PRED_STORE_CONTINUE]]
+; PRED:       pred.store.continue:
+; PRED-NEXT:    [[TMP35:%.*]] = extractelement <8 x i1> [[TMP26]], i32 1
+; PRED-NEXT:    br i1 [[TMP35]], label [[PRED_STORE_IF14:%.*]], label [[PRED_STORE_CONTINUE15:%.*]]
+; PRED:       pred.store.if14:
+; PRED-NEXT:    [[TMP36:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 1
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP36]], align 4
+; PRED-NEXT:    [[TMP37:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 1
+; PRED-NEXT:    [[TMP38:%.*]] = getelementptr i8, ptr [[TMP37]], i64 4
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP38]], align 4
+; PRED-NEXT:    [[TMP39:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 1
+; PRED-NEXT:    [[TMP40:%.*]] = getelementptr i8, ptr [[TMP39]], i64 8
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP40]], align 4
+; PRED-NEXT:    [[TMP41:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 1
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP41]], align 4
+; PRED-NEXT:    br label [[PRED_STORE_CONTINUE15]]
+; PRED:       pred.store.continue15:
+; PRED-NEXT:    [[TMP42:%.*]] = extractelement <8 x i1> [[TMP26]], i32 2
+; PRED-NEXT:    br i1 [[TMP42]], label [[PRED_STORE_IF16:%.*]], label [[PRED_STORE_CONTINUE17:%.*]]
+; PRED:       pred.store.if16:
+; PRED-NEXT:    [[TMP43:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 2
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP43]], align 4
+; PRED-NEXT:    [[TMP44:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 2
+; PRED-NEXT:    [[TMP45:%.*]] = getelementptr i8, ptr [[TMP44]], i64 4
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP45]], align 4
+; PRED-NEXT:    [[TMP46:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 2
+; PRED-NEXT:    [[TMP47:%.*]] = getelementptr i8, ptr [[TMP46]], i64 8
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP47]], align 4
+; PRED-NEXT:    [[TMP48:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 2
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP48]], align 4
+; PRED-NEXT:    br label [[PRED_STORE_CONTINUE17]]
+; PRED:       pred.store.continue17:
+; PRED-NEXT:    [[TMP49:%.*]] = extractelement <8 x i1> [[TMP26]], i32 3
+; PRED-NEXT:    br i1 [[TMP49]], label [[PRED_STORE_IF18:%.*]], label [[PRED_STORE_CONTINUE19:%.*]]
+; PRED:       pred.store.if18:
+; PRED-NEXT:    [[TMP50:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 3
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP50]], align 4
+; PRED-NEXT:    [[TMP51:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 3
+; PRED-NEXT:    [[TMP52:%.*]] = getelementptr i8, ptr [[TMP51]], i64 4
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP52]], align 4
+; PRED-NEXT:    [[TMP53:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 3
+; PRED-NEXT:    [[TMP54:%.*]] = getelementptr i8, ptr [[TMP53]], i64 8
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP54]], align 4
+; PRED-NEXT:    [[TMP55:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 3
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP55]], align 4
+; PRED-NEXT:    br label [[PRED_STORE_CONTINUE19]]
+; PRED:       pred.store.continue19:
+; PRED-NEXT:    [[TMP56:%.*]] = extractelement <8 x i1> [[TMP26]], i32 4
+; PRED-NEXT:    br i1 [[TMP56]], label [[PRED_STORE_IF20:%.*]], label [[PRED_STORE_CONTINUE21:%.*]]
+; PRED:       pred.store.if20:
+; PRED-NEXT:    [[TMP57:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 4
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP57]], align 4
+; PRED-NEXT:    [[TMP58:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 4
+; PRED-NEXT:    [[TMP59:%.*]] = getelementptr i8, ptr [[TMP58]], i64 4
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP59]], align 4
+; PRED-NEXT:    [[TMP60:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 4
+; PRED-NEXT:    [[TMP61:%.*]] = getelementptr i8, ptr [[TMP60]], i64 8
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP61]], align 4
+; PRED-NEXT:    [[TMP62:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 4
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP62]], align 4
+; PRED-NEXT:    br label [[PRED_STORE_CONTINUE21]]
+; PRED:       pred.store.continue21:
+; PRED-NEXT:    [[TMP63:%.*]] = extractelement <8 x i1> [[TMP26]], i32 5
+; PRED-NEXT:    br i1 [[TMP63]], label [[PRED_STORE_IF22:%.*]], label [[PRED_STORE_CONTINUE23:%.*]]
+; PRED:       pred.store.if22:
+; PRED-NEXT:    [[TMP64:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 5
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP64]], align 4
+; PRED-NEXT:    [[TMP65:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 5
+; PRED-NEXT:    [[TMP66:%.*]] = getelementptr i8, ptr [[TMP65]], i64 4
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP66]], align 4
+; PRED-NEXT:    [[TMP67:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 5
+; PRED-NEXT:    [[TMP68:%.*]] = getelementptr i8, ptr [[TMP67]], i64 8
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP68]], align 4
+; PRED-NEXT:    [[TMP69:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 5
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP69]], align 4
+; PRED-NEXT:    br label [[PRED_STORE_CONTINUE23]]
+; PRED:       pred.store.continue23:
+; PRED-NEXT:    [[TMP70:%.*]] = extractelement <8 x i1> [[TMP26]], i32 6
+; PRED-NEXT:    br i1 [[TMP70]], label [[PRED_STORE_IF24:%.*]], label [[PRED_STORE_CONTINUE25:%.*]]
+; PRED:       pred.store.if24:
+; PRED-NEXT:    [[TMP71:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 6
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP71]], align 4
+; PRED-NEXT:    [[TMP72:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 6
+; PRED-NEXT:    [[TMP73:%.*]] = getelementptr i8, ptr [[TMP72]], i64 4
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP73]], align 4
+; PRED-NEXT:    [[TMP74:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 6
+; PRED-NEXT:    [[TMP75:%.*]] = getelementptr i8, ptr [[TMP74]], i64 8
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP75]], align 4
+; PRED-NEXT:    [[TMP76:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 6
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP76]], align 4
+; PRED-NEXT:    br label [[PRED_STORE_CONTINUE25]]
+; PRED:       pred.store.continue25:
+; PRED-NEXT:    [[TMP77:%.*]] = extractelement <8 x i1> [[TMP26]], i32 7
+; PRED-NEXT:    br i1 [[TMP77]], label [[PRED_STORE_IF26:%.*]], label [[PRED_STORE_CONTINUE27]]
+; PRED:       pred.store.if26:
+; PRED-NEXT:    [[TMP78:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 7
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP78]], align 4
+; PRED-NEXT:    [[TMP79:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 7
+; PRED-NEXT:    [[TMP80:%.*]] = getelementptr i8, ptr [[TMP79]], i64 4
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP80]], align 4
+; PRED-NEXT:    [[TMP81:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 7
+; PRED-NEXT:    [[TMP82:%.*]] = getelementptr i8, ptr [[TMP81]], i64 8
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP82]], align 4
+; PRED-NEXT:    [[TMP83:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 7
+; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP83]], align 4
+; PRED-NEXT:    br label [[PRED_STORE_CONTINUE27]]
+; PRED:       pred.store.continue27:
+; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
+; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[INDEX]], i64 [[TMP17]])
+; PRED-NEXT:    [[TMP84:%.*]] = xor <8 x i1> [[ACTIVE_LANE_MASK_NEXT]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; PRED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
+; PRED-NEXT:    [[TMP85:%.*]] = extractelement <8 x i1> [[TMP84]], i32 0
+; PRED-NEXT:    br i1 [[TMP85]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
+; PRED:       middle.block:
+; PRED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; PRED:       scalar.ph:
+; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; PRED-NEXT:    br label [[LOOP_HEADER:%.*]]
+; PRED:       loop.header:
+; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; PRED-NEXT:    [[TMP86:%.*]] = load float, ptr [[SRC_1]], align 4
+; PRED-NEXT:    [[TMP87:%.*]] = load float, ptr [[SRC_2]], align 4
+; PRED-NEXT:    [[MUL8_I_US:%.*]] = fmul float [[TMP87]], 0.000000e+00
+; PRED-NEXT:    [[TMP88:%.*]] = tail call float @llvm.fmuladd.f32(float [[TMP86]], float 0.000000e+00, float [[MUL8_I_US]])
+; PRED-NEXT:    [[TMP89:%.*]] = load float, ptr [[SRC_3]], align 4
+; PRED-NEXT:    [[TMP90:%.*]] = tail call float @llvm.fmuladd.f32(float [[TMP89]], float 0.000000e+00, float [[TMP88]])
+; PRED-NEXT:    [[TMP91:%.*]] = load float, ptr [[SRC_3]], align 4
+; PRED-NEXT:    [[C:%.*]] = fcmp ogt float [[TMP90]], [[TMP91]]
+; PRED-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[LOOP_LATCH]]
+; PRED:       if.then:
+; PRED-NEXT:    [[DST_0:%.*]] = getelementptr { [4 x float] }, ptr [[DST]], i64 [[IV]]
+; PRED-NEXT:    store float 0.000000e+00, ptr [[DST_0]], align 4
+; PRED-NEXT:    [[DST_1:%.*]] = getelementptr i8, ptr [[DST_0]], i64 4
+; PRED-NEXT:    store float 0.000000e+00, ptr [[DST_1]], align 4
+; PRED-NEXT:    [[DST_2:%.*]] = getelementptr i8, ptr [[DST_0]], i64 8
+; PRED-NEXT:    store float 0.000000e+00, ptr [[DST_2]], align 4
+; PRED-NEXT:    [[DST_3:%.*]] = getelementptr i8, ptr [[DST_0]], i64 16
+; PRED-NEXT:    store float 0.000000e+00, ptr [[DST_0]], align 4
+; PRED-NEXT:    br label [[LOOP_LATCH]]
+; PRED:       loop.latch:
+; PRED-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; PRED-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], [[N]]
+; PRED-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP26:![0-9]+]]
+; PRED:       exit:
+; PRED-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %0 = load float, ptr %src.1, align 4
+  %1 = load float, ptr %src.2, align 4
+  %mul8.i.us = fmul float %1, 0.000000e+00
+  %2 = tail call float @llvm.fmuladd.f32(float %0, float 0.000000e+00, float %mul8.i.us)
+  %3 = load float, ptr %src.3, align 4
+  %4 = tail call float @llvm.fmuladd.f32(float %3, float 0.000000e+00, float %2)
+  %5 = load float, ptr %src.3, align 4
+  %c = fcmp ogt float %4, %5
+  br i1 %c, label %if.then, label %loop.latch
+
+if.then:
+  %dst.0 = getelementptr { [4 x float] }, ptr %dst, i64 %iv
+  store float 0.000000e+00, ptr %dst.0, align 4
+  %dst.1 = getelementptr i8, ptr %dst.0, i64 4
+  store float 0.000000e+00, ptr %dst.1, align 4
+  %dst.2 = getelementptr i8, ptr %dst.0, i64 8
+  store float 0.000000e+00, ptr %dst.2, align 4
+  %dst.3 = getelementptr i8, ptr %dst.0, i64 16
+  store float 0.000000e+00, ptr %dst.0, align 4
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, %N
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare float @llvm.fmuladd.f32(float, float, float) #1
+
 attributes #1 = { "target-cpu"="neoverse-512tvb" }
+attributes #2 = { vscale_range(2,2) "target-cpu"="neoverse-512tvb" }
 
 ;.
 ; DEFAULT: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
@@ -1255,6 +1732,8 @@ attributes #1 = { "target-cpu"="neoverse-512tvb" }
 ; DEFAULT: [[LOOP25]] = distinct !{[[LOOP25]], [[META2]], [[META1]]}
 ; DEFAULT: [[LOOP26]] = distinct !{[[LOOP26]], [[META1]], [[META2]]}
 ; DEFAULT: [[LOOP27]] = distinct !{[[LOOP27]], [[META2]], [[META1]]}
+; DEFAULT: [[LOOP28]] = distinct !{[[LOOP28]], [[META1]], [[META2]]}
+; DEFAULT: [[LOOP29]] = distinct !{[[LOOP29]], [[META1]]}
 ;.
 ; PRED: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; PRED: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
@@ -1281,4 +1760,6 @@ attributes #1 = { "target-cpu"="neoverse-512tvb" }
 ; PRED: [[LOOP22]] = distinct !{[[LOOP22]], [[META2]], [[META1]]}
 ; PRED: [[LOOP23]] = distinct !{[[LOOP23]], [[META1]], [[META2]]}
 ; PRED: [[LOOP24]] = distinct !{[[LOOP24]], [[META2]], [[META1]]}
+; PRED: [[LOOP25]] = distinct !{[[LOOP25]], [[META1]], [[META2]]}
+; PRED: [[LOOP26]] = distinct !{[[LOOP26]], [[META1]]}
 ;.

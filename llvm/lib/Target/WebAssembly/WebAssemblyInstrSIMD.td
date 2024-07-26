@@ -702,6 +702,19 @@ defm "" : ReplaceLane<I64x2, 30>;
 defm "" : ReplaceLane<F32x4, 32>;
 defm "" : ReplaceLane<F64x2, 34>;
 
+// For now use an instrinsic for f16x8.replace_lane instead of ReplaceLane above
+// since LLVM IR generated with half type arguments is not well supported and
+// creates conversions from f16->f32.
+defm REPLACE_LANE_F16x8 :
+  HALF_PRECISION_I<(outs V128:$dst), (ins V128:$vec, vec_i8imm_op:$idx, F32:$x),
+                   (outs), (ins vec_i8imm_op:$idx),
+                   [(set (v8f16 V128:$dst), (int_wasm_replace_lane_f16x8
+                     (v8f16 V128:$vec),
+                     (i32 LaneIdx8:$idx),
+                     (f32 F32:$x)))],
+                   "f16x8.replace_lane\t$dst, $vec, $idx, $x",
+                   "f16x8.replace_lane\t$idx", 0x122>;
+
 // Lower undef lane indices to zero
 def : Pat<(vector_insert (v16i8 V128:$vec), I32:$x, undef),
           (REPLACE_LANE_I8x16 $vec, 0, $x)>;
@@ -1270,7 +1283,11 @@ def pmin : PatFrags<(ops node:$lhs, node:$rhs), [
                     (vselect (setolt $rhs, $lhs), $rhs, $lhs),
                     (vselect (setole $rhs, $lhs), $rhs, $lhs),
                     (vselect (setogt $lhs, $rhs), $rhs, $lhs),
-                    (vselect (setoge $lhs, $rhs), $rhs, $lhs)
+                    (vselect (setoge $lhs, $rhs), $rhs, $lhs),
+                    (vselect (setlt $lhs, $rhs), $lhs, $rhs),
+                    (vselect (setle $lhs, $rhs), $lhs, $rhs),
+                    (vselect (setgt $lhs, $rhs), $rhs, $lhs),
+                    (vselect (setge $lhs, $rhs), $rhs, $lhs)
 ]>;
 defm PMIN : SIMDBinaryFP<pmin, "pmin", 234>;
 
@@ -1279,7 +1296,11 @@ def pmax : PatFrags<(ops node:$lhs, node:$rhs), [
                     (vselect (setogt $rhs, $lhs), $rhs, $lhs),
                     (vselect (setoge $rhs, $lhs), $rhs, $lhs),
                     (vselect (setolt $lhs, $rhs), $rhs, $lhs),
-                    (vselect (setole $lhs, $rhs), $rhs, $lhs)
+                    (vselect (setole $lhs, $rhs), $rhs, $lhs),
+                    (vselect (setgt $lhs, $rhs), $lhs, $rhs),
+                    (vselect (setge $lhs, $rhs), $lhs, $rhs),
+                    (vselect (setlt $lhs, $rhs), $rhs, $lhs),
+                    (vselect (setle $lhs, $rhs), $rhs, $lhs)
 ]>;
 defm PMAX : SIMDBinaryFP<pmax, "pmax", 235>;
 
@@ -1320,16 +1341,23 @@ def : Pat<(v8f16 (int_wasm_pmax (v8f16 V128:$lhs), (v8f16 V128:$rhs))),
 //===----------------------------------------------------------------------===//
 
 multiclass SIMDConvert<Vec vec, Vec arg, SDPatternOperator op, string name,
-                       bits<32> simdop> {
+                       bits<32> simdop, list<Predicate> reqs = []> {
   defm op#_#vec :
     SIMD_I<(outs V128:$dst), (ins V128:$vec), (outs), (ins),
            [(set (vec.vt V128:$dst), (vec.vt (op (arg.vt V128:$vec))))],
-           vec.prefix#"."#name#"\t$dst, $vec", vec.prefix#"."#name, simdop>;
+           vec.prefix#"."#name#"\t$dst, $vec", vec.prefix#"."#name, simdop, reqs>;
+}
+
+multiclass HalfPrecisionConvert<Vec vec, Vec arg, SDPatternOperator op,
+                                string name, bits<32> simdop> {
+  defm "" : SIMDConvert<vec, arg, op, name, simdop, [HasHalfPrecision]>;
 }
 
 // Floating point to integer with saturation: trunc_sat
 defm "" : SIMDConvert<I32x4, F32x4, fp_to_sint, "trunc_sat_f32x4_s", 248>;
 defm "" : SIMDConvert<I32x4, F32x4, fp_to_uint, "trunc_sat_f32x4_u", 249>;
+defm "" : HalfPrecisionConvert<I16x8, F16x8, fp_to_sint, "trunc_sat_f16x8_s", 0x148>;
+defm "" : HalfPrecisionConvert<I16x8, F16x8, fp_to_uint, "trunc_sat_f16x8_u", 0x149>;
 
 // Support the saturating variety as well.
 def trunc_s_sat32 : PatFrag<(ops node:$x), (fp_to_sint_sat $x, i32)>;
@@ -1355,6 +1383,8 @@ defm "" : SIMDConvert<F32x4, I32x4, sint_to_fp, "convert_i32x4_s", 250>;
 defm "" : SIMDConvert<F32x4, I32x4, uint_to_fp, "convert_i32x4_u", 251>;
 defm "" : SIMDConvert<F64x2, I32x4, convert_low_s, "convert_low_i32x4_s", 0xfe>;
 defm "" : SIMDConvert<F64x2, I32x4, convert_low_u, "convert_low_i32x4_u", 0xff>;
+defm "" : HalfPrecisionConvert<F16x8, I16x8, sint_to_fp, "convert_i16x8_s", 0x14a>;
+defm "" : HalfPrecisionConvert<F16x8, I16x8, uint_to_fp, "convert_i16x8_u", 0x14b>;
 
 // Extending operations
 // TODO: refactor this to be uniform for i64x2 if the numbering is not changed.

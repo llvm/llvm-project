@@ -32,6 +32,8 @@ using __sanitizer::uptr;
 // Private nsan interface. Used e.g. by interceptors.
 extern "C" {
 
+void __nsan_init();
+
 // This marks the shadow type of the given block of application memory as
 // unknown.
 // printf-free (see comment in nsan_interceptors.cc).
@@ -55,6 +57,7 @@ extern bool nsan_initialized;
 extern bool nsan_init_is_running;
 
 void InitializeInterceptors();
+void InitializeMallocInterceptors();
 
 // See notes in nsan_platform.
 // printf-free (see comment in nsan_interceptors.cc).

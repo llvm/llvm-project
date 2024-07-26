@@ -26,6 +26,9 @@ static_assert(foo[2][2] == nullptr, "");
 static_assert(foo[2][3] == &m, "");
 static_assert(foo[2][4] == nullptr, "");
 
+constexpr int afterEnd[] = {1,2,3};
+static_assert(&afterEnd[3] == afterEnd + 3, "");
+
 constexpr int ZeroSizeArray[] = {};
 
 constexpr int SomeInt[] = {1};
@@ -510,11 +513,9 @@ namespace NonConstReads {
             // both-note {{read of non-const variable 'z'}}
 #else
   void *p = nullptr;
-  int arr[!p]; // ref-error {{not allowed at file scope}} \
-               // expected-error {{not allowed at file scope}}
+  int arr[!p]; // both-error {{not allowed at file scope}}
   int z;
-  int a[z]; // ref-error {{not allowed at file scope}} \
-            // expected-error {{not allowed at file scope}}
+  int a[z]; // both-error {{not allowed at file scope}}
 #endif
 
   const int y = 0;
@@ -623,3 +624,11 @@ constexpr int *get2() {
   extern int same_entity_2[];
   return same_entity_2;
 }
+static_assert(get2() == same_entity_2, "failed to find previous decl");
+
+constexpr int zs[2][2][2][2] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+constexpr int fail(const int &p) {
+  return (&p)[64]; // both-note {{cannot refer to element 64 of array of 2 elements}}
+}
+static_assert(fail(*(&(&(*(*&(&zs[2] - 1)[0] + 2 - 2))[2])[-1][2] - 2)) == 11, ""); // both-error {{not an integral constant expression}} \
+                                                                                    // both-note {{in call to}}

@@ -14,12 +14,13 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/time/linux/abs_timeout.h"
 #include <linux/errno.h>
 #include <linux/futex.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 class Futex : public cpp::Atomic<FutexWordType> {
 public:
   using Timeout = internal::AbsTimeout;
@@ -82,6 +83,6 @@ public:
 
 static_assert(__is_standard_layout(Futex),
               "Futex must be a standard layout type.");
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_FUTEX_UTILS_H

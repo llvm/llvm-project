@@ -515,17 +515,23 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II,
 
   Builder.SetInsertPoint(II);
 
+  Value *EVL = Builder.CreateElementCount(
+      IntegerType::get(Ctx, 32), cast<VectorType>(DataType)->getElementCount());
+
   CallInst *Call;
-  if (II->getIntrinsicID() == Intrinsic::masked_gather)
+  if (II->getIntrinsicID() == Intrinsic::masked_gather) {
     Call = Builder.CreateIntrinsic(
-        Intrinsic::riscv_masked_strided_load,
+        Intrinsic::experimental_vp_strided_load,
         {DataType, BasePtr->getType(), Stride->getType()},
-        {II->getArgOperand(3), BasePtr, Stride, II->getArgOperand(2)});
-  else
+        {BasePtr, Stride, II->getArgOperand(2), EVL});
     Call = Builder.CreateIntrinsic(
-        Intrinsic::riscv_masked_strided_store,
+        Intrinsic::vp_select, {DataType},
+        {II->getOperand(2), Call, II->getArgOperand(3), EVL});
+  } else
+    Call = Builder.CreateIntrinsic(
+        Intrinsic::experimental_vp_strided_store,
         {DataType, BasePtr->getType(), Stride->getType()},
-        {II->getArgOperand(0), BasePtr, Stride, II->getArgOperand(3)});
+        {II->getArgOperand(0), BasePtr, Stride, II->getArgOperand(3), EVL});
 
   Call->takeName(II);
   II->replaceAllUsesWith(Call);
@@ -548,7 +554,7 @@ bool RISCVGatherScatterLowering::runOnFunction(Function &F) {
     return false;
 
   TLI = ST->getTargetLowering();
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 
   StridedAddrs.clear();

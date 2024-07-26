@@ -684,7 +684,7 @@ void DwarfCompileUnit::attachRangesOrLowHighPC(
     // the order of blocks will be frozen beyond this point.
     do {
       if (MBB->sameSection(EndMBB) || MBB->isEndSection()) {
-        auto MBBSectionRange = Asm->MBBSectionRanges[MBB->getSectionIDNum()];
+        auto MBBSectionRange = Asm->MBBSectionRanges[MBB->getSectionID()];
         List.push_back(
             {MBB->sameSection(BeginMBB) ? BeginLabel
                                         : MBBSectionRange.BeginLabel,

@@ -164,7 +164,7 @@ llvm.func @test_omp_parallel_if_1(%arg0: i32) -> () {
 // CHECK: br label %[[OUTLINED_EXIT_IF_1:.*]]
 // CHECK: [[OUTLINED_EXIT_IF_1]]:
 // CHECK: br label %[[RETURN_BLOCK_IF_1:.*]]
-  omp.parallel if(%1 : i1) {
+  omp.parallel if(%1) {
     omp.barrier
     omp.terminator
   }
@@ -301,6 +301,26 @@ llvm.func @test_omp_master() -> () {
       omp.master {
         omp.terminator
       }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: define void @test_omp_masked({{.*}})
+llvm.func @test_omp_masked(%arg0: i32)-> () {
+// CHECK: call void {{.*}}@__kmpc_fork_call{{.*}} @{{.*}})
+// CHECK: omp.par.region1:
+  omp.parallel {
+    omp.masked filter(%arg0: i32) {
+// CHECK: [[OMP_THREAD_3_4:%.*]] = call i32 @__kmpc_global_thread_num(ptr @{{[0-9]+}})
+// CHECK: {{[0-9]+}} = call i32 @__kmpc_masked(ptr @{{[0-9]+}}, i32 [[OMP_THREAD_3_4]], i32 %{{[0-9]+}})
+// CHECK: omp.masked.region
+// CHECK: call void @__kmpc_end_masked(ptr @{{[0-9]+}}, i32 [[OMP_THREAD_3_4]])
+// CHECK: br label %omp_region.end
       omp.terminator
     }
     omp.terminator
@@ -726,6 +746,7 @@ llvm.func @simd_simple_multiple(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64
       llvm.store %3, %5 : f32, !llvm.ptr
       omp.yield
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -749,6 +770,7 @@ llvm.func @simd_simple_multiple_simdlen(%lb1 : i64, %ub1 : i64, %step1 : i64, %l
       llvm.store %3, %5 : f32, !llvm.ptr
       omp.yield
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -769,6 +791,7 @@ llvm.func @simd_simple_multiple_safelen(%lb1 : i64, %ub1 : i64, %step1 : i64, %l
       llvm.store %3, %5 : f32, !llvm.ptr
       omp.yield
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -788,6 +811,7 @@ llvm.func @simd_simple_multiple_simdlen_safelen(%lb1 : i64, %ub1 : i64, %step1 :
       llvm.store %3, %5 : f32, !llvm.ptr
       omp.yield
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -816,6 +840,7 @@ llvm.func @simd_if(%arg0: !llvm.ptr {fir.bindc_name = "n"}, %arg1: !llvm.ptr {fi
       llvm.store %arg2, %1 : i32, !llvm.ptr
       omp.yield
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -824,6 +849,27 @@ llvm.func @simd_if(%arg0: !llvm.ptr {fir.bindc_name = "n"}, %arg1: !llvm.ptr {fi
 // CHECK-NEXT: llvm.loop.vectorize.enable
 // CHECK: llvm.loop.vectorize.enable
 
+// -----
+
+// CHECK-LABEL: @simd_order
+llvm.func @simd_order() {
+  %0 = llvm.mlir.constant(10 : i64) : i64
+  %1 = llvm.mlir.constant(1 : i64) : i64
+  %2 = llvm.alloca %1 x i64 : (i64) -> !llvm.ptr
+  omp.simd order(concurrent) safelen(2) {
+    omp.loop_nest (%arg0) : i64 = (%1) to (%0) inclusive step (%1) {
+      llvm.store %arg0, %2 : i64, !llvm.ptr
+      omp.yield
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+// If clause order(concurrent) is specified then the memory instructions
+// are marked parallel even if 'safelen' is finite.
+// CHECK: llvm.loop.parallel_accesses
+// CHECK-NEXT: llvm.loop.vectorize.enable
+// CHECK-NEXT: llvm.loop.vectorize.width{{.*}}i64 2
 // -----
 
 llvm.func @body(i64)
@@ -2073,6 +2119,8 @@ llvm.func @omp_sections_empty() -> () {
   omp.sections {
     omp.terminator
   }
+  // CHECK-NEXT: br label %entry
+  // CHECK: entry:
   // CHECK-NEXT: ret void
   llvm.return
 }

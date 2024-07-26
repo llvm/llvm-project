@@ -241,6 +241,15 @@ public:
     return m_external_type_modules;
   }
 
+  /// Given a DIERef, find the correct SymbolFileDWARF.
+  ///
+  /// A DIERef contains a file index that can uniquely identify a N_OSO file for
+  /// DWARF in .o files on mac, or a .dwo or .dwp file index for split DWARF.
+  /// Calling this function will find the correct symbol file to use so that
+  /// further lookups can be done on the correct symbol file so that the DIE
+  /// offset makes sense in the DIERef.
+  virtual SymbolFileDWARF *GetDIERefSymbolFile(const DIERef &die_ref);
+
   virtual DWARFDIE GetDIE(const DIERef &die_ref);
 
   DWARFDIE GetDIE(lldb::user_id_t uid);
@@ -333,12 +342,8 @@ public:
 
   virtual DIEToTypePtr &GetDIEToType() { return m_die_to_type; }
 
-  typedef llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef>
-      CompilerTypeToDIE;
-
-  virtual CompilerTypeToDIE &GetForwardDeclCompilerTypeToDIE() {
-    return m_forward_decl_compiler_type_to_die;
-  }
+  virtual llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> &
+  GetForwardDeclCompilerTypeToDIE();
 
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb::VariableSP>
       DIEToVariableSP;
@@ -351,8 +356,7 @@ public:
 
   SymbolFileDWARFDebugMap *GetDebugMapSymfile();
 
-  virtual lldb::TypeSP
-  FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die);
+  virtual DWARFDIE FindDefinitionDIE(const DWARFDIE &die);
 
   virtual lldb::TypeSP FindCompleteObjCDefinitionTypeForDIE(
       const DWARFDIE &die, ConstString type_name, bool must_be_implementation);
@@ -529,9 +533,14 @@ protected:
   NameToOffsetMap m_function_scope_qualified_name_map;
   std::unique_ptr<DWARFDebugRanges> m_ranges;
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
+  // A map from DIE to lldb_private::Type. For record type, the key might be
+  // either declaration DIE or definition DIE.
   DIEToTypePtr m_die_to_type;
   DIEToVariableSP m_die_to_variable_sp;
-  CompilerTypeToDIE m_forward_decl_compiler_type_to_die;
+  // A map from CompilerType to the struct/class/union/enum DIE (might be a
+  // declaration or a definition) that is used to construct it.
+  llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef>
+      m_forward_decl_compiler_type_to_die;
   llvm::DenseMap<dw_offset_t, std::unique_ptr<SupportFileList>>
       m_type_unit_support_files;
   std::vector<uint32_t> m_lldb_cu_to_dwarf_unit;

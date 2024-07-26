@@ -56,6 +56,14 @@
 
   Allow processing of stripped binaries
 
+- `--alt-inst-feature-size=<uint>`
+
+  Size of feature field in .altinstructions
+
+- `--alt-inst-has-padlen`
+
+  Specify that .altinstructions has padlen field
+
 - `--asm-dump[=<dump folder>]`
 
   Dump function into assembly
@@ -78,6 +86,16 @@
   in the input is decoded and re-encoded. If the resulting bytes do not match
   the input, a warning message is printed.
 
+- `--comp-dir-override=<string>`
+
+  Overrides DW_AT_comp_dir, and provides an alternative base location, which is
+  used with DW_AT_dwo_name to construct a path to *.dwo files.
+
+- `--create-debug-names-section`
+
+  Creates .debug_names section, if the input binary doesn't have it already, for
+  DWARF5 CU/TUs.
+
 - `--cu-processing-batch-size=<uint>`
 
   Specifies the size of batches for processing CUs. Higher number has better
@@ -93,16 +111,15 @@
 
 - `--debug-skeleton-cu`
 
-  Prints out offsetrs for abbrev and debu_info of Skeleton CUs that get patched.
-
-- `--deterministic-debuginfo`
-
-  Disables parallel execution of tasks that may produce nondeterministic debug
-  info
+  Prints out offsets for abbrev and debug_info of Skeleton CUs that get patched.
 
 - `--dot-tooltip-code`
 
   Add basic block instructions as tool tips on nodes
+
+- `--dump-alt-instructions`
+
+  Dump Linux alternative instructions info
 
 - `--dump-cg=<string>`
 
@@ -117,9 +134,33 @@
   Dump function CFGs to graphviz format after each stage;enable '-print-loops'
   for color-coded blocks
 
+- `--dump-linux-exceptions`
+
+  Dump Linux kernel exception table
+
 - `--dump-orc`
 
   Dump raw ORC unwind information (sorted)
+
+- `--dump-para-sites`
+
+  Dump Linux kernel paravitual patch sites
+
+- `--dump-pci-fixups`
+
+  Dump Linux kernel PCI fixup table
+
+- `--dump-smp-locks`
+
+  Dump Linux kernel SMP locks
+
+- `--dump-static-calls`
+
+  Dump Linux kernel static calls
+
+- `--dump-static-keys`
+
+  Dump Linux kernel static keys jump table
 
 - `--dwarf-output-path=<string>`
 
@@ -205,6 +246,18 @@
 
   Skip processing of cold functions
 
+- `--log-file=<string>`
+
+  Redirect journaling to a file instead of stdout/stderr
+
+- `--long-jump-labels`
+
+  Always use long jumps/nops for Linux kernel static keys
+
+- `--match-profile-with-function-hash`
+
+  Match profile with function hash
+
 - `--max-data-relocations=<uint>`
 
   Maximum number of data relocations to process
@@ -224,6 +277,12 @@
 - `--pad-funcs=<func1:pad1,func2:pad2,func3:pad3,...>`
 
   List of functions to pad with amount of bytes
+
+- `--print-mappings`
+
+  Print mappings in the legend, between characters/blocks and text sections
+  (default false).
+
 
 - `--profile-format=<value>`
 
@@ -273,6 +332,10 @@
 - `--tasks-per-thread=<uint>`
 
   Number of tasks to be created per thread
+
+- `--terminal-trap`
+
+  Assume that execution stops at trap instruction
 
 - `--thread-count=<uint>`
 
@@ -618,9 +681,9 @@
   threshold means fewer functions to process. E.g threshold of 90 means only top
   10 percent of functions with profile will be processed.
 
-- `--mcf-use-rarcs`
+- `--match-with-call-graph`
 
-  In MCF, consider the possibility of cancelling flow to balance edges
+  Match functions with call graph
 
 - `--memcpy1-spec=<func1,func2:cs1:cs2,func3:cs1,...>`
 
@@ -629,6 +692,10 @@
 - `--min-branch-clusters`
 
   Use a modified clustering algorithm geared towards minimizing branches
+
+- `--name-similarity-function-matching-threshold=<uint>`
+
+  Match functions using namespace and edit distance.
 
 - `--no-inline`
 
@@ -710,7 +777,7 @@
   - `none`: do not reorder functions
   - `exec-count`: order by execution count
   - `hfsort`: use hfsort algorithm
-  - `hfsort+`: use hfsort+ algorithm
+  - `hfsort+`: use cache-directed sort
   - `cdsort`: use cache-directed sort
   - `pettis-hansen`: use Pettis-Hansen algorithm
   - `random`: reorder functions randomly
@@ -804,8 +871,8 @@
 
 - `--stale-matching-min-matched-block=<uint>`
 
-  Minimum percent of exact match block for a function to be considered for
-  profile inference.
+  Percentage threshold of matched basic blocks at which stale profile inference
+  is executed.
 
 - `--stale-threshold=<uint>`
 
@@ -852,6 +919,10 @@
 - `--x86-align-branch-boundary-hot-only`
 
   Only apply branch boundary alignment in hot code
+
+- `--x86-strip-redundant-address-size`
+
+  Remove redundant Address-Size override prefix
 
 ### BOLT options in relocation mode:
 
@@ -1039,6 +1110,10 @@
 
   Print clusters
 
+- `--print-estimate-edge-counts`
+
+  Print function after edge counts are set for no-LBR profile
+
 - `--print-finalized`
 
   Print function after CFG is finalized
@@ -1070,6 +1145,10 @@
 - `--print-inline`
 
   Print functions after inlining optimization
+
+- `--print-large-functions`
+
+  Print functions that could not be overwritten due to excessive size
 
 - `--print-longjmp`
 

@@ -72,6 +72,16 @@ public:
                          APInt(64, Upper, /*isSigned=*/true)));
   }
 
+  void subtract(const ConstantRange &SubRange);
+
+  /// Return the range list that results from the union of this
+  /// ConstantRangeList with another ConstantRangeList, "CRL".
+  ConstantRangeList unionWith(const ConstantRangeList &CRL) const;
+
+  /// Return the range list that results from the intersection of this
+  /// ConstantRangeList with another ConstantRangeList, "CRL".
+  ConstantRangeList intersectWith(const ConstantRangeList &CRL) const;
+
   /// Return true if this range list is equal to another range list.
   bool operator==(const ConstantRangeList &CRL) const {
     return Ranges == CRL.Ranges;

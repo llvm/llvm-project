@@ -344,7 +344,7 @@ public:
   ~X86MCCodeEmitter() override = default;
 
   void emitPrefix(const MCInst &MI, SmallVectorImpl<char> &CB,
-                  const MCSubtargetInfo &STI) const override;
+                  const MCSubtargetInfo &STI) const;
 
   void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
@@ -691,9 +691,12 @@ void X86MCCodeEmitter::emitMemModRMByte(
 
   unsigned BaseRegNo = BaseReg ? getX86RegNum(Base) : -1U;
 
+  bool IsAdSize16 = STI.hasFeature(X86::Is32Bit) &&
+                    (TSFlags & X86II::AdSizeMask) == X86II::AdSize16;
+
   // 16-bit addressing forms of the ModR/M byte have a different encoding for
   // the R/M field and are far more limited in which registers can be used.
-  if (X86_MC::is16BitMemOperand(MI, Op, STI)) {
+  if (IsAdSize16 || X86_MC::is16BitMemOperand(MI, Op, STI)) {
     if (BaseReg) {
       // For 32-bit addressing, the row and column values in Table 2-2 are
       // basically the same. It's AX/CX/DX/BX/SP/BP/SI/DI in that order, with
@@ -1529,6 +1532,11 @@ void X86MCCodeEmitter::emitPrefix(const MCInst &MI, SmallVectorImpl<char> &CB,
   unsigned CurOp = X86II::getOperandBias(Desc);
 
   emitPrefixImpl(CurOp, MI, STI, CB);
+}
+
+void X86_MC::emitPrefix(MCCodeEmitter &MCE, const MCInst &MI,
+                        SmallVectorImpl<char> &CB, const MCSubtargetInfo &STI) {
+  static_cast<X86MCCodeEmitter &>(MCE).emitPrefix(MI, CB, STI);
 }
 
 void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,

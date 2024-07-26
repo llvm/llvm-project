@@ -58,12 +58,20 @@ public:
   using StubValueTy = PointerIntPair<MCSymbol *, 1, bool>;
   using SymbolListTy = std::vector<std::pair<MCSymbol *, StubValueTy>>;
 
+  /// A variant of SymbolListTy where the stub is a generalized MCExpr.
+  using ExprStubListTy = std::vector<std::pair<MCSymbol *, const MCExpr *>>;
+
   virtual ~MachineModuleInfoImpl();
 
 protected:
   /// Return the entries from a DenseMap in a deterministic sorted orer.
   /// Clears the map.
   static SymbolListTy getSortedStubs(DenseMap<MCSymbol*, StubValueTy>&);
+
+  /// Return the entries from a DenseMap in a deterministic sorted orer.
+  /// Clears the map.
+  static ExprStubListTy
+  getSortedExprStubs(DenseMap<MCSymbol *, const MCExpr *> &);
 };
 
 //===----------------------------------------------------------------------===//
@@ -107,10 +115,6 @@ class MachineModuleInfo {
 
   /// True if debugging information is available in this module.
   bool DbgInfoAvailable = false;
-
-  /// True if this module is being built for windows/msvc, and uses floating
-  /// point.  This is used to emit an undefined reference to _fltused.
-  bool UsesMSVCFloatingPoint = false;
 
   /// Maps IR Functions to their corresponding MachineFunctions.
   DenseMap<const Function*, std::unique_ptr<MachineFunction>> MachineFunctions;
@@ -180,10 +184,6 @@ public:
 
   /// Returns true if valid debug info is present.
   bool hasDebugInfo() const { return DbgInfoAvailable; }
-
-  bool usesMSVCFloatingPoint() const { return UsesMSVCFloatingPoint; }
-
-  void setUsesMSVCFloatingPoint(bool b) { UsesMSVCFloatingPoint = b; }
 
   /// \name Exception Handling
   /// \{

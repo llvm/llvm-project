@@ -2851,6 +2851,9 @@ public:
     Attribute vectorDestCst;
     if (!matchPattern(destVector, m_Constant(&vectorDestCst)))
       return failure();
+    auto denseDest = llvm::dyn_cast<DenseElementsAttr>(vectorDestCst);
+    if (!denseDest)
+      return failure();
 
     VectorType destTy = destVector.getType();
     if (destTy.isScalable())
@@ -2860,8 +2863,6 @@ public:
     if (destTy.getNumElements() > vectorSizeFoldThreshold &&
         !destVector.hasOneUse())
       return failure();
-
-    auto denseDest = llvm::cast<DenseElementsAttr>(vectorDestCst);
 
     Value sourceValue = op.getSource();
     Attribute sourceCst;
@@ -3817,7 +3818,8 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
   auto inBoundsAttr = (inBounds && !inBounds.value().empty())
                           ? builder.getBoolArrayAttr(inBounds.value())
-                          : ArrayAttr();
+                          : builder.getBoolArrayAttr(
+                                SmallVector<bool>(vectorType.getRank(), false));
   build(builder, result, vectorType, source, indices, permutationMapAttr,
         inBoundsAttr);
 }
@@ -3832,7 +3834,8 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
   auto inBoundsAttr = (inBounds && !inBounds.value().empty())
                           ? builder.getBoolArrayAttr(inBounds.value())
-                          : ArrayAttr();
+                          : builder.getBoolArrayAttr(
+                                SmallVector<bool>(vectorType.getRank(), false));
   build(builder, result, vectorType, source, indices, permutationMapAttr,
         padding,
         /*mask=*/Value(), inBoundsAttr);
@@ -3950,17 +3953,15 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
            << inferredMaskType << ") and mask operand type (" << maskType
            << ") don't match";
 
-  if (inBounds) {
-    if (permutationMap.getNumResults() != static_cast<int64_t>(inBounds.size()))
-      return op->emitOpError("expects the optional in_bounds attr of same rank "
-                             "as permutation_map results: ")
-             << AffineMapAttr::get(permutationMap)
-             << " vs inBounds of size: " << inBounds.size();
-    for (unsigned int i = 0; i < permutationMap.getNumResults(); ++i)
-      if (isa<AffineConstantExpr>(permutationMap.getResult(i)) &&
-          !llvm::cast<BoolAttr>(inBounds.getValue()[i]).getValue())
-        return op->emitOpError("requires broadcast dimensions to be in-bounds");
-  }
+  if (permutationMap.getNumResults() != static_cast<int64_t>(inBounds.size()))
+    return op->emitOpError("expects the in_bounds attr of same rank "
+                           "as permutation_map results: ")
+           << AffineMapAttr::get(permutationMap)
+           << " vs inBounds of size: " << inBounds.size();
+  for (unsigned int i = 0, e = permutationMap.getNumResults(); i < e; ++i)
+    if (isa<AffineConstantExpr>(permutationMap.getResult(i)) &&
+        !llvm::cast<BoolAttr>(inBounds.getValue()[i]).getValue())
+      return op->emitOpError("requires broadcast dimensions to be in-bounds");
 
   return success();
 }
@@ -4036,6 +4037,13 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
   } else {
     permMap = llvm::cast<AffineMapAttr>(permMapAttr).getValue();
   }
+  auto inBoundsAttrName = TransferReadOp::getInBoundsAttrName(result.name);
+  Attribute inBoundsAttr = result.attributes.get(inBoundsAttrName);
+  if (!inBoundsAttr) {
+    result.addAttribute(inBoundsAttrName,
+                        builder.getBoolArrayAttr(
+                            SmallVector<bool>(permMap.getNumResults(), false)));
+  }
   if (parser.resolveOperand(sourceInfo, shapedType, result.operands) ||
       parser.resolveOperands(indexInfo, indexType, result.operands) ||
       parser.resolveOperand(paddingInfo, shapedType.getElementType(),
@@ -4080,8 +4088,7 @@ LogicalResult TransferReadOp::verify() {
 
   if (failed(verifyTransferOp(cast<VectorTransferOpInterface>(getOperation()),
                               shapedType, vectorType, maskType,
-                              inferredMaskType, permutationMap,
-                              getInBounds() ? *getInBounds() : ArrayAttr())))
+                              inferredMaskType, permutationMap, getInBounds())))
     return failure();
 
   if (auto sourceVectorElementType =
@@ -4172,11 +4179,7 @@ static LogicalResult foldTransferFullMask(TransferOp op) {
   if (!mask)
     return failure();
 
-  auto constantMask = mask.template getDefiningOp<vector::ConstantMaskOp>();
-  if (!constantMask)
-    return failure();
-
-  if (!constantMask.isAllOnesMask())
+  if (getMaskFormat(mask) != MaskFormat::AllTrue)
     return failure();
 
   op.getMaskMutable().clear();
@@ -4358,9 +4361,11 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             AffineMap permutationMap,
                             std::optional<ArrayRef<bool>> inBounds) {
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
-  auto inBoundsAttr = (inBounds && !inBounds.value().empty())
-                          ? builder.getBoolArrayAttr(inBounds.value())
-                          : ArrayAttr();
+  auto inBoundsAttr =
+      (inBounds && !inBounds.value().empty())
+          ? builder.getBoolArrayAttr(inBounds.value())
+          : builder.getBoolArrayAttr(SmallVector<bool>(
+                llvm::cast<VectorType>(vector.getType()).getRank(), false));
   build(builder, result, vector, dest, indices, permutationMapAttr,
         /*mask=*/Value(), inBoundsAttr);
 }
@@ -4412,6 +4417,13 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
     result.attributes.set(permMapAttrName, AffineMapAttr::get(permMap));
   } else {
     permMap = llvm::cast<AffineMapAttr>(permMapAttr).getValue();
+  }
+  auto inBoundsAttrName = TransferWriteOp::getInBoundsAttrName(result.name);
+  Attribute inBoundsAttr = result.attributes.get(inBoundsAttrName);
+  if (!inBoundsAttr) {
+    result.addAttribute(inBoundsAttrName,
+                        builder.getBoolArrayAttr(
+                            SmallVector<bool>(permMap.getNumResults(), false)));
   }
   if (parser.resolveOperand(vectorInfo, vectorType, result.operands) ||
       parser.resolveOperand(sourceInfo, shapedType, result.operands) ||
@@ -4466,8 +4478,7 @@ LogicalResult TransferWriteOp::verify() {
 
   if (failed(verifyTransferOp(cast<VectorTransferOpInterface>(getOperation()),
                               shapedType, vectorType, maskType,
-                              inferredMaskType, permutationMap,
-                              getInBounds() ? *getInBounds() : ArrayAttr())))
+                              inferredMaskType, permutationMap, getInBounds())))
     return failure();
 
   return verifyPermutationMap(permutationMap,
@@ -5227,6 +5238,16 @@ static LogicalResult verifyVectorShapeCast(Operation *op,
     if (!isValidShapeCast(resultShape, sourceShape))
       return op->emitOpError("invalid shape cast");
   }
+
+  // Check that (non-)scalability is preserved
+  int64_t sourceNScalableDims = sourceVectorType.getNumScalableDims();
+  int64_t resultNScalableDims = resultVectorType.getNumScalableDims();
+  if (sourceNScalableDims != resultNScalableDims)
+    return op->emitOpError("different number of scalable dims at source (")
+           << sourceNScalableDims << ") and result (" << resultNScalableDims
+           << ")";
+  sourceVectorType.getNumDynamicDims();
+
   return success();
 }
 
@@ -6314,6 +6335,20 @@ OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
 
   // SplatElementsAttr::get treats single value for second arg as being a splat.
   return SplatElementsAttr::get(getType(), {constOperand});
+}
+
+//===----------------------------------------------------------------------===//
+// StepOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult StepOp::fold(FoldAdaptor adaptor) {
+  auto resultType = cast<VectorType>(getType());
+  if (resultType.isScalable())
+    return nullptr;
+  SmallVector<APInt> indices;
+  for (unsigned i = 0; i < resultType.getNumElements(); i++)
+    indices.push_back(APInt(/*width=*/64, i));
+  return DenseElementsAttr::get(resultType, indices);
 }
 
 //===----------------------------------------------------------------------===//

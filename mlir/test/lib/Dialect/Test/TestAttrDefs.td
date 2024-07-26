@@ -81,6 +81,15 @@ def AttrWithTrait : Test_Attr<"AttrWithTrait", [TestAttrTrait]> {
   let mnemonic = "attr_with_trait";
 }
 
+// An attribute of a list of decimal formatted integers in similar format to shapes.
+def TestDecimalShapeAttr : Test_Attr<"TestDecimalShape"> {
+  let mnemonic = "decimal_shape";
+
+  let parameters = (ins ArrayRefParameter<"int64_t">:$shape);
+
+  let hasCustomAssemblyFormat = 1;
+}
+
 // Test support for ElementsAttrInterface.
 def TestI64ElementsAttr : Test_Attr<"TestI64Elements", [ElementsAttrInterface]> {
   let mnemonic = "i64_elements";
@@ -356,8 +365,17 @@ def NestedPolynomialAttr : Test_Attr<"NestedPolynomialAttr"> {
   let mnemonic = "nested_polynomial";
   let parameters = (ins Polynomial_IntPolynomialAttr:$poly);
   let assemblyFormat = [{
-    `<` $poly `>`
+    `<` struct(params) `>`
   }];
 }
+
+def NestedPolynomialAttr2 : Test_Attr<"NestedPolynomialAttr2"> {
+  let mnemonic = "nested_polynomial2";
+  let parameters = (ins OptionalParameter<"::mlir::polynomial::IntPolynomialAttr">:$poly);
+  let assemblyFormat = [{
+    `<` struct(params) `>`
+  }];
+}
+
 
 #endif // TEST_ATTRDEFS

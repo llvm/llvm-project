@@ -32,10 +32,15 @@ public:
         : m_value(value), m_name(std::move(name)) {}
 
     void ToXML(Stream &strm) const;
+
+    void DumpToLog(Log *log) const;
   };
 
   typedef std::vector<Enumerator> Enumerators;
 
+  // GDB also includes a "size" that is the size of the underlying register.
+  // We will not store that here but instead use the size of the register
+  // this gets attached to when emitting XML.
   FieldEnum(std::string id, const Enumerators &enumerators);
 
   const Enumerators &GetEnumerators() const { return m_enumerators; }
@@ -43,6 +48,8 @@ public:
   const std::string &GetID() const { return m_id; }
 
   void ToXML(Stream &strm, unsigned size) const;
+
+  void DumpToLog(Log *log) const;
 
 private:
   std::string m_id;

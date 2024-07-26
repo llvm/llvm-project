@@ -1,6 +1,7 @@
 # REQUIRES: asserts
 # RUN: llc --march=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
-# RUN: -window-sched=force -filetype=null 2>&1 | FileCheck %s
+# RUN: -window-sched=force -filetype=null -verify-machineinstrs 2>&1 \
+# RUN: | FileCheck %s
 
 # CHECK: SU(3): Ord  Latency=0 Weak
 # CHECK: SU(1): Ord  Latency=0 Weak

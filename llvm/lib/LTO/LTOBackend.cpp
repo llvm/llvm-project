@@ -191,12 +191,8 @@ static void RegisterPassPlugins(ArrayRef<std::string> PassPlugins,
   // Load requested pass plugins and let them register pass builder callbacks
   for (auto &PluginFN : PassPlugins) {
     auto PassPlugin = PassPlugin::Load(PluginFN);
-    if (!PassPlugin) {
-      errs() << "Failed to load passes from '" << PluginFN
-             << "'. Request ignored.\n";
-      continue;
-    }
-
+    if (!PassPlugin)
+      report_fatal_error(PassPlugin.takeError(), /*gen_crash_diag=*/false);
     PassPlugin->registerPassBuilderCallbacks(PB);
   }
 }

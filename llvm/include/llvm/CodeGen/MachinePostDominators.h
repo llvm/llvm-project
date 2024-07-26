@@ -49,6 +49,12 @@ class MachinePostDominatorTree : public PostDomTreeBase<MachineBasicBlock> {
 public:
   MachinePostDominatorTree() = default;
 
+  explicit MachinePostDominatorTree(MachineFunction &MF) { recalculate(MF); }
+
+  /// Handle invalidation explicitly.
+  bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
+                  MachineFunctionAnalysisManager::Invalidator &);
+
   /// Make findNearestCommonDominator(const NodeT *A, const NodeT *B) available.
   using Base::findNearestCommonDominator;
 
@@ -56,6 +62,29 @@ public:
   /// If that tree node is a virtual root, a nullptr will be returned.
   MachineBasicBlock *
   findNearestCommonDominator(ArrayRef<MachineBasicBlock *> Blocks) const;
+};
+
+class MachinePostDominatorTreeAnalysis
+    : public AnalysisInfoMixin<MachinePostDominatorTreeAnalysis> {
+  friend AnalysisInfoMixin<MachinePostDominatorTreeAnalysis>;
+
+  static AnalysisKey Key;
+
+public:
+  using Result = MachinePostDominatorTree;
+
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+};
+
+class MachinePostDominatorTreePrinterPass
+    : public PassInfoMixin<MachinePostDominatorTreePrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit MachinePostDominatorTreePrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
 };
 
 class MachinePostDominatorTreeWrapperPass : public MachineFunctionPass {

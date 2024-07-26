@@ -1122,35 +1122,31 @@ bool Decl::isInExportDeclContext() const {
 bool Decl::isInAnotherModuleUnit() const {
   auto *M = getOwningModule();
 
-  if (!M || !M->isNamedModule())
+  if (!M)
     return false;
 
+  M = M->getTopLevelModule();
+  // FIXME: It is problematic if the header module lives in another module
+  // unit. Consider to fix this by techniques like
+  // ExternalASTSource::hasExternalDefinitions.
+  if (M->isHeaderLikeModule())
+    return false;
+
+  // A global module without parent implies that we're parsing the global
+  // module. So it can't be in another module unit.
+  if (M->isGlobalModule())
+    return false;
+
+  assert(M->isNamedModule() && "New module kind?");
   return M != getASTContext().getCurrentNamedModule();
-}
-
-bool Decl::isInCurrentModuleUnit() const {
-  auto *M = getOwningModule();
-
-  if (!M || !M->isNamedModule())
-    return false;
-
-  return M == getASTContext().getCurrentNamedModule();
-}
-
-bool Decl::shouldEmitInExternalSource() const {
-  ExternalASTSource *Source = getASTContext().getExternalSource();
-  if (!Source)
-    return false;
-
-  return Source->hasExternalDefinitions(this) == ExternalASTSource::EK_Always;
-}
-
-bool Decl::isInNamedModule() const {
-  return getOwningModule() && getOwningModule()->isNamedModule();
 }
 
 bool Decl::isFromExplicitGlobalModule() const {
   return getOwningModule() && getOwningModule()->isExplicitGlobalModule();
+}
+
+bool Decl::isInNamedModule() const {
+  return getOwningModule() && getOwningModule()->isNamedModule();
 }
 
 static Decl::Kind getKind(const Decl *D) { return D->getKind(); }
@@ -1426,8 +1422,7 @@ DeclContext *DeclContext::getPrimaryContext() {
   case Decl::TranslationUnit:
     return static_cast<TranslationUnitDecl *>(this)->getFirstDecl();
   case Decl::Namespace:
-    // The original namespace is our primary context.
-    return static_cast<NamespaceDecl *>(this)->getOriginalNamespace();
+    return static_cast<NamespaceDecl *>(this)->getFirstDecl();
 
   case Decl::ObjCMethod:
     return this;

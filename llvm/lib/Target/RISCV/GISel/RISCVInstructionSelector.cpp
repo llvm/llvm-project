@@ -577,12 +577,14 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     const APFloat &FPimm = MI.getOperand(1).getFPImm()->getValueAPF();
     APInt Imm = FPimm.bitcastToAPInt();
     unsigned Size = MRI.getType(DstReg).getSizeInBits();
-    if (Size == 32 || (Size == 64 && Subtarget->is64Bit())) {
+    if (Size == 16 || Size == 32 || (Size == 64 && Subtarget->is64Bit())) {
       Register GPRReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
       if (!materializeImm(GPRReg, Imm.getSExtValue(), MIB))
         return false;
 
-      unsigned Opcode = Size == 64 ? RISCV::FMV_D_X : RISCV::FMV_W_X;
+      unsigned Opcode = Size == 64   ? RISCV::FMV_D_X
+                        : Size == 32 ? RISCV::FMV_W_X
+                                     : RISCV::FMV_H_X;
       auto FMV = MIB.buildInstr(Opcode, {DstReg}, {GPRReg});
       if (!FMV.constrainAllUses(TII, TRI, RBI))
         return false;
@@ -1146,16 +1148,16 @@ bool RISCVInstructionSelector::selectSelect(MachineInstr &MI,
 
 // Convert an FCMP predicate to one of the supported F or D instructions.
 static unsigned getFCmpOpcode(CmpInst::Predicate Pred, unsigned Size) {
-  assert((Size == 32 || Size == 64) && "Unsupported size");
+  assert((Size == 16 || Size == 32 || Size == 64) && "Unsupported size");
   switch (Pred) {
   default:
     llvm_unreachable("Unsupported predicate");
   case CmpInst::FCMP_OLT:
-    return Size == 32 ? RISCV::FLT_S : RISCV::FLT_D;
+    return Size == 16 ? RISCV::FLT_H : Size == 32 ? RISCV::FLT_S : RISCV::FLT_D;
   case CmpInst::FCMP_OLE:
-    return Size == 32 ? RISCV::FLE_S : RISCV::FLE_D;
+    return Size == 16 ? RISCV::FLE_H : Size == 32 ? RISCV::FLE_S : RISCV::FLE_D;
   case CmpInst::FCMP_OEQ:
-    return Size == 32 ? RISCV::FEQ_S : RISCV::FEQ_D;
+    return Size == 16 ? RISCV::FEQ_H : Size == 32 ? RISCV::FEQ_S : RISCV::FEQ_D;
   }
 }
 
@@ -1207,7 +1209,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI,
   Register RHS = CmpMI.getRHSReg();
 
   unsigned Size = MRI.getType(LHS).getSizeInBits();
-  assert((Size == 32 || Size == 64) && "Unexpected size");
+  assert((Size == 16 || Size == 32 || Size == 64) && "Unexpected size");
 
   Register TmpReg = DstReg;
 
@@ -1328,8 +1330,8 @@ void RISCVInstructionSelector::emitFence(AtomicOrdering FenceOrdering,
 namespace llvm {
 InstructionSelector *
 createRISCVInstructionSelector(const RISCVTargetMachine &TM,
-                               RISCVSubtarget &Subtarget,
-                               RISCVRegisterBankInfo &RBI) {
+                               const RISCVSubtarget &Subtarget,
+                               const RISCVRegisterBankInfo &RBI) {
   return new RISCVInstructionSelector(TM, Subtarget, RBI);
 }
 } // end namespace llvm

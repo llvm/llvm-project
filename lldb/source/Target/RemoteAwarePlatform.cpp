@@ -29,6 +29,32 @@ bool RemoteAwarePlatform::GetModuleSpec(const FileSpec &module_file_spec,
   return false;
 }
 
+Status RemoteAwarePlatform::ResolveExecutable(
+    const ModuleSpec &module_spec, lldb::ModuleSP &exe_module_sp,
+    const FileSpecList *module_search_paths_ptr) {
+  ModuleSpec resolved_module_spec(module_spec);
+
+  // The host platform can resolve the path more aggressively.
+  if (IsHost()) {
+    FileSpec &resolved_file_spec = resolved_module_spec.GetFileSpec();
+
+    if (!FileSystem::Instance().Exists(resolved_file_spec)) {
+      resolved_module_spec.GetFileSpec().SetFile(resolved_file_spec.GetPath(),
+                                                 FileSpec::Style::native);
+      FileSystem::Instance().Resolve(resolved_file_spec);
+    }
+
+    if (!FileSystem::Instance().Exists(resolved_file_spec))
+      FileSystem::Instance().ResolveExecutableLocation(resolved_file_spec);
+  } else if (m_remote_platform_sp) {
+    return GetCachedExecutable(resolved_module_spec, exe_module_sp,
+                               module_search_paths_ptr);
+  }
+
+  return Platform::ResolveExecutable(resolved_module_spec, exe_module_sp,
+                                     module_search_paths_ptr);
+}
+
 Status RemoteAwarePlatform::RunShellCommand(
     llvm::StringRef command, const FileSpec &working_dir, int *status_ptr,
     int *signo_ptr, std::string *command_output,

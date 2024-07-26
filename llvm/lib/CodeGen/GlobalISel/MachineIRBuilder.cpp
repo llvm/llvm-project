@@ -397,6 +397,19 @@ MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
   return buildFConstant(Res, *CFP);
 }
 
+MachineInstrBuilder
+MachineIRBuilder::buildConstantPtrAuth(const DstOp &Res,
+                                       const ConstantPtrAuth *CPA,
+                                       Register Addr, Register AddrDisc) {
+  auto MIB = buildInstr(TargetOpcode::G_PTRAUTH_GLOBAL_VALUE);
+  Res.addDefToMIB(*getMRI(), MIB);
+  MIB.addUse(Addr);
+  MIB.addImm(CPA->getKey()->getZExtValue());
+  MIB.addUse(AddrDisc);
+  MIB.addImm(CPA->getDiscriminator()->getZExtValue());
+  return MIB;
+}
+
 MachineInstrBuilder MachineIRBuilder::buildBrCond(const SrcOp &Tst,
                                                   MachineBasicBlock &Dest) {
   assert(Tst.getLLTTy(*getMRI()).isScalar() && "invalid operand type");
@@ -896,6 +909,18 @@ MachineInstrBuilder MachineIRBuilder::buildFCmp(CmpInst::Predicate Pred,
                                                 std::optional<unsigned> Flags) {
 
   return buildInstr(TargetOpcode::G_FCMP, Res, {Pred, Op0, Op1}, Flags);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildSCmp(const DstOp &Res,
+                                                const SrcOp &Op0,
+                                                const SrcOp &Op1) {
+  return buildInstr(TargetOpcode::G_SCMP, Res, {Op0, Op1});
+}
+
+MachineInstrBuilder MachineIRBuilder::buildUCmp(const DstOp &Res,
+                                                const SrcOp &Op0,
+                                                const SrcOp &Op1) {
+  return buildInstr(TargetOpcode::G_UCMP, Res, {Op0, Op1});
 }
 
 MachineInstrBuilder

@@ -1,9 +1,9 @@
 # If binary input file is not specified, llvm-symbolizer assumes it is the first
 # item in the command.
 
-# No input items at all, complain about missing input file.
+# No input items at all. Report an unknown line, but do not produce any output on stderr.
 RUN: echo | llvm-symbolizer 2>%t.1.err | FileCheck %s --check-prefix=NOSOURCE
-RUN: FileCheck --input-file=%t.1.err --check-prefix=NOFILE %s
+RUN: FileCheck --input-file=%t.1.err --implicit-check-not={{.}} --allow-empty %s
 
 # Only one input item, complain about missing addresses.
 RUN: llvm-symbolizer "foo" 2>%t.2.err | FileCheck %s --check-prefix=NOSOURCE
@@ -31,8 +31,6 @@ RUN: FileCheck --input-file=%t.7.err --check-prefix=BAD-QUOTE %s
 
 NOSOURCE:      ??
 NOSOURCE-NEXT: ??:0:0
-
-NOFILE: error: no input filename has been specified
 
 NOADDR: error: 'foo': no module offset has been specified
 

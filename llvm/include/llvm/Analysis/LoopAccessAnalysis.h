@@ -199,7 +199,8 @@ public:
   /// Check whether the dependencies between the accesses are safe.
   ///
   /// Only checks sets with elements in \p CheckDeps.
-  bool areDepsSafe(DepCandidates &AccessSets, MemAccessInfoList &CheckDeps,
+  bool areDepsSafe(const DepCandidates &AccessSets,
+                   const MemAccessInfoList &CheckDeps,
                    const DenseMap<Value *, SmallVector<const Value *, 16>>
                        &UnderlyingObjects);
 
@@ -269,6 +270,12 @@ public:
 
   const Loop *getInnermostLoop() const { return InnermostLoop; }
 
+  DenseMap<std::pair<const SCEV *, Type *>,
+           std::pair<const SCEV *, const SCEV *>> &
+  getPointerBounds() {
+    return PointerBounds;
+  }
+
 private:
   /// A wrapper around ScalarEvolution, used to add runtime SCEV checks, and
   /// applies dynamic knowledge to simplify SCEV expressions and convert them
@@ -326,6 +333,12 @@ private:
   /// backwards dependence with non-constant stride should be classified as
   /// backwards-vectorizable or unknown (triggering a runtime check).
   unsigned MaxTargetVectorWidthInBits = 0;
+
+  /// Mapping of SCEV expressions to their expanded pointer bounds (pair of
+  /// start and end pointer expressions).
+  DenseMap<std::pair<const SCEV *, Type *>,
+           std::pair<const SCEV *, const SCEV *>>
+      PointerBounds;
 
   /// Check whether there is a plausible dependence between the two
   /// accesses.
@@ -393,14 +406,15 @@ class RuntimePointerChecking;
 struct RuntimeCheckingPtrGroup {
   /// Create a new pointer checking group containing a single
   /// pointer, with index \p Index in RtCheck.
-  RuntimeCheckingPtrGroup(unsigned Index, RuntimePointerChecking &RtCheck);
+  RuntimeCheckingPtrGroup(unsigned Index,
+                          const RuntimePointerChecking &RtCheck);
 
   /// Tries to add the pointer recorded in RtCheck at index
   /// \p Index to this pointer checking group. We can only add a pointer
   /// to a checking group if we will still be able to get
   /// the upper and lower bounds of the check. Returns true in case
   /// of success, false otherwise.
-  bool addPointer(unsigned Index, RuntimePointerChecking &RtCheck);
+  bool addPointer(unsigned Index, const RuntimePointerChecking &RtCheck);
   bool addPointer(unsigned Index, const SCEV *Start, const SCEV *End,
                   unsigned AS, bool NeedsFreeze, ScalarEvolution &SE);
 
@@ -706,8 +720,8 @@ public:
 private:
   /// Analyze the loop. Returns true if all memory access in the loop can be
   /// vectorized.
-  bool analyzeLoop(AAResults *AA, LoopInfo *LI, const TargetLibraryInfo *TLI,
-                   DominatorTree *DT);
+  bool analyzeLoop(AAResults *AA, const LoopInfo *LI,
+                   const TargetLibraryInfo *TLI, DominatorTree *DT);
 
   /// Check if the structure of the loop allows it to be analyzed by this
   /// pass.
@@ -718,8 +732,8 @@ private:
   /// LAA does not directly emits the remarks.  Instead it stores it which the
   /// client can retrieve and presents as its own analysis
   /// (e.g. -Rpass-analysis=loop-vectorize).
-  OptimizationRemarkAnalysis &recordAnalysis(StringRef RemarkName,
-                                             Instruction *Instr = nullptr);
+  OptimizationRemarkAnalysis &
+  recordAnalysis(StringRef RemarkName, const Instruction *Instr = nullptr);
 
   /// Collect memory access with loop invariant strides.
   ///
@@ -854,7 +868,7 @@ public:
 
   const LoopAccessInfo &getInfo(Loop &L);
 
-  void clear() { LoopAccessInfoMap.clear(); }
+  void clear();
 
   bool invalidate(Function &F, const PreservedAnalyses &PA,
                   FunctionAnalysisManager::Invalidator &Inv);
