@@ -245,8 +245,7 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
 }
 
 
-def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [AllElementTypesMatch<["value", "TensorDesc"]>,
-                                         AllElementCountsMatch<["value", "TensorDesc"]>]> {
+def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [AllElementTypesMatch<["value", "TensorDesc"]>]> {
   let summary = "loads a n-D block from memory (represented by TensorDesc)"
                 "to registers (represented by vector)";
   let description = [{
@@ -275,7 +274,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [AllElementTypesMatch<["value", "Tensor
   }];
 
   let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
-                       OptionalAttr<I64Attr>: $vnni_axis,
+                       OptionalAttr<UnitAttr>: $packed,
                        OptionalAttr<DenseI64ArrayAttr>: $transpose,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
@@ -668,14 +667,12 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]
     data type, the matrices are `A: vector<8x16xf16>`, `B: vector<16x16xf16>`,
     and `C/D: vector<8x16xf32>`. Besides the matrix size requirements, DPAS
     also requires A and B to be loaded with the required data layout. Specially,
-    VNNI layout is required for B operand. It is achieved via setting `vnni_axis = 0`
-    of the corresponding `load_nd` operator. To keep both operands as 3D vector,
-    operand A is loaded via setting `vnni_axis = 1` without impacting the
-    physical layouts change in register. Due to the VNNI transformation, A and B operands
-    are represented as 3D vector, with the last dimension representing the VNNI factor,
-    which is computed as `32/bit_width_of_elem_type`. Therefore, `A: vector<8x16xf16>`
-    is represented as `A: vector<8x8x2xf16>`, and `B: vector<16x16xf16>` is
-    represented as `B: vector<8x16x2xf16>`.
+
+    VNNI layout is required for B operand. It is achieved via adding `packed`
+    attribute to the `load_nd` operator.  Due to the VNNI transformation, B operands
+    can be represented as a 3D vector, with the last dimension representing the VNNI
+    factor, which is computed as `32/bit_width_of_elem_type`. Thus, `B: vector<16x16xf16>`
+    can be represented as `B: vector<8x16x2xf16>`.
 
     Note: on PVC, the hardware can perform load with VNNI transformation when data
           element type is 16-bit or lower precision, taking 2 or 4 elements from
@@ -739,7 +736,7 @@ def XeGPU_AtomicRMWOp: XeGPU_Op<"atomic_rmw", [Pure,
 
   let assemblyFormat = [{
     $kind $tensorDesc `,` $mask `,` $value attr-dict `:`
-    type($tensorDesc) `,` type($mask) `,` type($value) `->` type($result)
+    qualified(type($tensorDesc)) `,` type($mask) `,` type($value) `->` type($result)
   }];
 }
 
