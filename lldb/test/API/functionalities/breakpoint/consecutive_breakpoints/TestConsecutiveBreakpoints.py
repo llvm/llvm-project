@@ -2,6 +2,7 @@
 Test that we handle breakpoints on consecutive instructions correctly.
 """
 
+
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -63,30 +64,20 @@ class ConsecutiveBreakpointsTestCase(TestBase):
         """Test that single step stops at the second breakpoint."""
         self.prepare_test()
 
-        # Instruction step to the next instruction
-        # We haven't executed breakpoint2 yet, we're sitting at it now.
         step_over = False
         self.thread.StepInstruction(step_over)
-
-        step_over = False
-        self.thread.StepInstruction(step_over)
-
-        # We've now hit the breakpoint and this StepInstruction has
-        # been interrupted, it is still sitting on the thread plan stack.
 
         self.assertState(self.process.GetState(), lldb.eStateStopped)
         self.assertEqual(
             self.thread.GetFrameAtIndex(0).GetPCAddress().GetLoadAddress(self.target),
             self.bkpt_address.GetLoadAddress(self.target),
         )
-
-        # One more instruction to complete the Step that was interrupted
-        # earlier.
-        self.thread.StepInstruction(step_over)
-        strm = lldb.SBStream()
-        self.thread.GetDescription(strm)
-        self.assertIn("instruction step into", strm.GetData())
-        self.assertIsNotNone(self.thread, "Expected to see that step-in had completed")
+        self.thread = lldbutil.get_one_thread_stopped_at_breakpoint(
+            self.process, self.breakpoint2
+        )
+        self.assertIsNotNone(
+            self.thread, "Expected one thread to be stopped at breakpoint 2"
+        )
 
         self.finish_test()
 
@@ -114,8 +105,5 @@ class ConsecutiveBreakpointsTestCase(TestBase):
             lldb.eStopReasonPlanComplete,
             "Stop reason should be 'plan complete'",
         )
-
-        # Hit our second breakpoint
-        self.process.Continue()
 
         self.finish_test()
