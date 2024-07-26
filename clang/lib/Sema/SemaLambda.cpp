@@ -2392,7 +2392,7 @@ Sema::LambdaScopeForCallOperatorInstantiationRAII::
   if (!ShouldAddDeclsFromParentScope)
     return;
 
-  FunctionDecl *OutermostFD = FD, *OutermostFDPattern = FDPattern;
+  FunctionDecl *InnermostFD = FD, *InnermostFDPattern = FDPattern;
   llvm::SmallVector<std::pair<FunctionDecl *, FunctionDecl *>, 4>
       ParentInstantiations;
   while (true) {
@@ -2421,6 +2421,6 @@ Sema::LambdaScopeForCallOperatorInstantiationRAII::
       SemaRef.addInstantiatedCapturesToScope(FD, FDPattern, Scope, MLTAL);
   }
 
-  SemaRef.addInstantiatedCapturesToScope(OutermostFD, OutermostFDPattern, Scope,
+  SemaRef.addInstantiatedCapturesToScope(InnermostFD, InnermostFDPattern, Scope,
                                          MLTAL);
 }
