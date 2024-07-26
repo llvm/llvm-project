@@ -339,59 +339,91 @@ cpp20_random_access_iterator(It) -> cpp20_random_access_iterator<It>;
 
 static_assert(std::random_access_iterator<cpp20_random_access_iterator<int*>>);
 
-template <class It>
-class contiguous_iterator
-{
-    static_assert(std::is_pointer_v<It>, "Things probably break in this case");
+template <std::contiguous_iterator It>
+class contiguous_iterator {
+  It it_;
 
-    It it_;
+  template <std::contiguous_iterator U>
+  friend class contiguous_iterator;
 
-    template <class U> friend class contiguous_iterator;
 public:
     typedef          std::contiguous_iterator_tag              iterator_category;
     typedef typename std::iterator_traits<It>::value_type      value_type;
     typedef typename std::iterator_traits<It>::difference_type difference_type;
     typedef It                                                 pointer;
     typedef typename std::iterator_traits<It>::reference       reference;
-    typedef typename std::remove_pointer<It>::type             element_type;
+    typedef value_type element_type;
 
-    TEST_CONSTEXPR_CXX14 It base() const {return it_;}
+    constexpr It base() const { return it_; }
 
-    TEST_CONSTEXPR_CXX14 contiguous_iterator() : it_() {}
-    TEST_CONSTEXPR_CXX14 explicit contiguous_iterator(It it) : it_(it) {}
+    constexpr contiguous_iterator() : it_() {}
+    constexpr explicit contiguous_iterator(It it) : it_(it) {}
 
     template <class U>
-    TEST_CONSTEXPR_CXX14 contiguous_iterator(const contiguous_iterator<U>& u) : it_(u.it_) {}
+    constexpr contiguous_iterator(const contiguous_iterator<U>& u) : it_(u.it_) {}
 
     template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
     constexpr contiguous_iterator(contiguous_iterator<U>&& u) : it_(u.it_) { u.it_ = U(); }
 
-    TEST_CONSTEXPR reference operator*() const {return *it_;}
-    TEST_CONSTEXPR pointer operator->() const {return it_;}
-    TEST_CONSTEXPR reference operator[](difference_type n) const {return it_[n];}
+    constexpr reference operator*() const { return *it_; }
+    constexpr pointer operator->() const { return it_; }
+    constexpr reference operator[](difference_type n) const { return it_[n]; }
 
-    TEST_CONSTEXPR_CXX14 contiguous_iterator& operator++() {++it_; return *this;}
-    TEST_CONSTEXPR_CXX14 contiguous_iterator& operator--() {--it_; return *this;}
-    TEST_CONSTEXPR_CXX14 contiguous_iterator operator++(int) {return contiguous_iterator(it_++);}
-    TEST_CONSTEXPR_CXX14 contiguous_iterator operator--(int) {return contiguous_iterator(it_--);}
+    constexpr contiguous_iterator& operator++() {
+      ++it_;
+      return *this;
+    }
+    constexpr contiguous_iterator& operator--() {
+      --it_;
+      return *this;
+    }
+    constexpr contiguous_iterator operator++(int) { return contiguous_iterator(it_++); }
+    constexpr contiguous_iterator operator--(int) { return contiguous_iterator(it_--); }
 
-    TEST_CONSTEXPR_CXX14 contiguous_iterator& operator+=(difference_type n) {it_ += n; return *this;}
-    TEST_CONSTEXPR_CXX14 contiguous_iterator& operator-=(difference_type n) {it_ -= n; return *this;}
-    friend TEST_CONSTEXPR_CXX14 contiguous_iterator operator+(contiguous_iterator x, difference_type n) {x += n; return x;}
-    friend TEST_CONSTEXPR_CXX14 contiguous_iterator operator+(difference_type n, contiguous_iterator x) {x += n; return x;}
-    friend TEST_CONSTEXPR_CXX14 contiguous_iterator operator-(contiguous_iterator x, difference_type n) {x -= n; return x;}
-    friend TEST_CONSTEXPR difference_type operator-(contiguous_iterator x, contiguous_iterator y) {return x.it_ - y.it_;}
+    constexpr contiguous_iterator& operator+=(difference_type n) {
+      it_ += n;
+      return *this;
+    }
+    constexpr contiguous_iterator& operator-=(difference_type n) {
+      it_ -= n;
+      return *this;
+    }
+    friend constexpr contiguous_iterator operator+(contiguous_iterator x, difference_type n) {
+      x += n;
+      return x;
+    }
+    friend constexpr contiguous_iterator operator+(difference_type n, contiguous_iterator x) {
+      x += n;
+      return x;
+    }
+    friend constexpr contiguous_iterator operator-(contiguous_iterator x, difference_type n) {
+      x -= n;
+      return x;
+    }
+    friend constexpr difference_type operator-(contiguous_iterator x, contiguous_iterator y) { return x.it_ - y.it_; }
 
-    friend TEST_CONSTEXPR bool operator==(const contiguous_iterator& x, const contiguous_iterator& y) {return x.it_ == y.it_;}
-    friend TEST_CONSTEXPR bool operator!=(const contiguous_iterator& x, const contiguous_iterator& y) {return x.it_ != y.it_;}
-    friend TEST_CONSTEXPR bool operator< (const contiguous_iterator& x, const contiguous_iterator& y) {return x.it_ <  y.it_;}
-    friend TEST_CONSTEXPR bool operator<=(const contiguous_iterator& x, const contiguous_iterator& y) {return x.it_ <= y.it_;}
-    friend TEST_CONSTEXPR bool operator> (const contiguous_iterator& x, const contiguous_iterator& y) {return x.it_ >  y.it_;}
-    friend TEST_CONSTEXPR bool operator>=(const contiguous_iterator& x, const contiguous_iterator& y) {return x.it_ >= y.it_;}
+    friend constexpr bool operator==(const contiguous_iterator& x, const contiguous_iterator& y) {
+      return x.it_ == y.it_;
+    }
+    friend constexpr bool operator!=(const contiguous_iterator& x, const contiguous_iterator& y) {
+      return x.it_ != y.it_;
+    }
+    friend constexpr bool operator<(const contiguous_iterator& x, const contiguous_iterator& y) {
+      return x.it_ < y.it_;
+    }
+    friend constexpr bool operator<=(const contiguous_iterator& x, const contiguous_iterator& y) {
+      return x.it_ <= y.it_;
+    }
+    friend constexpr bool operator>(const contiguous_iterator& x, const contiguous_iterator& y) {
+      return x.it_ > y.it_;
+    }
+    friend constexpr bool operator>=(const contiguous_iterator& x, const contiguous_iterator& y) {
+      return x.it_ >= y.it_;
+    }
 
     // Note no operator<=>, use three_way_contiguous_iterator for testing operator<=>
 
-    friend TEST_CONSTEXPR It base(const contiguous_iterator& i) { return i.it_; }
+    friend constexpr It base(const contiguous_iterator& i) { return i.it_; }
 
     template <class T>
     void operator,(T const &) = delete;

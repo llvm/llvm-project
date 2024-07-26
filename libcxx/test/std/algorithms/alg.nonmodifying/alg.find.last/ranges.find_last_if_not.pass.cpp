@@ -20,7 +20,6 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
-#include <memory>
 #include <ranges>
 
 #include "almost_satisfies_types.h"
@@ -60,8 +59,7 @@ static_assert(!HasFindLastIfR<ForwardRangeNotSentinelEqualityComparableWith>);
 
 template <class It, class Sent>
 constexpr auto make_range(auto& a) {
-  return std::ranges::subrange(
-      It(std::to_address(std::ranges::begin(a))), Sent(It(std::to_address(std::ranges::end(a)))));
+  return std::ranges::subrange(It(std::ranges::begin(a)), Sent(It(std::ranges::end(a))));
 }
 
 template <template <class> class IteratorT, template <class> class SentinelT>
@@ -94,14 +92,14 @@ constexpr void test_iterator_classes() {
     {
       std::array<int, 0> a = {};
 
-      auto ret = std::ranges::find_last_if_not(it(a.data()), sent(it(a.data())), [](auto&&) { return false; }).begin();
-      assert(ret == it(a.data()));
+      auto ret = std::ranges::find_last_if_not(it(a.begin()), sent(it(a.end())), [](auto&&) { return false; }).begin();
+      assert(ret == it(a.end()));
     }
     {
       std::array<int, 0> a = {};
 
       auto ret = std::ranges::find_last_if_not(make_range<it, sent>(a), [](auto&&) { return false; }).begin();
-      assert(ret == it(a.data()));
+      assert(ret == it(a.end()));
     }
   }
 
@@ -185,8 +183,17 @@ struct NonConstComparable {
   friend constexpr bool operator!=(NonConstComparable&, const NonConstComparable&) { return false; }
 };
 
+// note: this should really use `std::const_iterator`
 template <class T>
-using add_const_to_ptr_t = std::add_pointer_t<std::add_const_t<std::remove_pointer_t<T>>>;
+struct add_const_to_ptr {
+  using type = T;
+};
+template <class T>
+struct add_const_to_ptr<T*> {
+  using type = const T*;
+};
+template <class T>
+using add_const_to_ptr_t = typename add_const_to_ptr<T>::type;
 
 constexpr bool test() {
   test_iterator_classes<std::type_identity_t, std::type_identity_t>();
