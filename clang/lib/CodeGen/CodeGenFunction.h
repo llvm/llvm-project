@@ -202,7 +202,7 @@ template <> struct DominatingValue<Address> {
   }
   static type restore(CodeGenFunction &CGF, saved_type value) {
     return Address(DominatingLLVMValue::restore(CGF, value.BasePtr),
-                   value.ElementType, value.Alignment,
+                   value.ElementType, value.Alignment, CGPointerAuthInfo(),
                    DominatingLLVMValue::restore(CGF, value.Offset));
   }
 };
@@ -2689,7 +2689,8 @@ public:
     if (Alignment.isZero())
       Alignment =
           CGM.getNaturalTypeAlignment(T, BaseInfo, TBAAInfo, ForPointeeType);
-    return Address(Ptr, ConvertTypeForMem(T), Alignment, nullptr,
+    return Address(Ptr, ConvertTypeForMem(T), Alignment,
+                   CGM.getPointerAuthInfoForPointeeType(T), /*Offset=*/nullptr,
                    IsKnownNonNull);
   }
 
@@ -2730,7 +2731,9 @@ public:
   /// an l-value with the natural pointee alignment of T.
   LValue MakeNaturalAlignPointeeAddrLValue(llvm::Value *V, QualType T);
 
-  LValue MakeNaturalAlignAddrLValue(llvm::Value *V, QualType T);
+  LValue
+  MakeNaturalAlignAddrLValue(llvm::Value *V, QualType T,
+                             KnownNonNull_t IsKnownNonNull = NotKnownNonNull);
 
   /// Same as MakeNaturalAlignPointeeAddrLValue except that the pointer is known
   /// to be unsigned.
@@ -4425,15 +4428,6 @@ public:
                                                CXXDtorType Type,
                                                const CXXRecordDecl *RD);
 
-  llvm::Value *EmitPointerAuthResign(llvm::Value *pointer,
-                                     QualType pointerType,
-                                     const CGPointerAuthInfo &curAuthInfo,
-                                     const CGPointerAuthInfo &newAuthInfo,
-                                     bool isKnownNonNull);
-  llvm::Value *EmitPointerAuthResignCall(llvm::Value *pointer,
-                                         const CGPointerAuthInfo &curInfo,
-                                         const CGPointerAuthInfo &newInfo);
-
   CGPointerAuthInfo EmitPointerAuthInfo(PointerAuthQualifier qualifier,
                                         Address storageAddress);
   llvm::Value *EmitPointerAuthQualify(PointerAuthQualifier qualifier,
@@ -4455,10 +4449,6 @@ public:
   std::pair<llvm::Value *, CGPointerAuthInfo>
   EmitOrigPointerRValue(const Expr *E);
 
-  llvm::Value *getAsNaturalPointerTo(Address Addr, QualType PointeeType) {
-    return Addr.getBasePointer();
-  }
-
   bool isPointerKnownNonNull(const Expr *E);
 
   /// Create the discriminator from the storage address and the entity hash.
@@ -4468,15 +4458,35 @@ public:
                                         llvm::Value *StorageAddress,
                                         GlobalDecl SchemaDecl,
                                         QualType SchemaType);
-  llvm::Value *EmitPointerAuthSign(QualType PointeeType, llvm::Value *Pointer);
+
   llvm::Value *EmitPointerAuthSign(const CGPointerAuthInfo &Info,
                                    llvm::Value *Pointer);
+
   llvm::Value *EmitPointerAuthAuth(const CGPointerAuthInfo &Info,
                                    llvm::Value *Pointer);
+
+  llvm::Value *emitPointerAuthResign(llvm::Value *Pointer, QualType PointerType,
+                                     const CGPointerAuthInfo &CurAuthInfo,
+                                     const CGPointerAuthInfo &NewAuthInfo,
+                                     bool IsKnownNonNull);
+  llvm::Value *emitPointerAuthResignCall(llvm::Value *Pointer,
+                                         const CGPointerAuthInfo &CurInfo,
+                                         const CGPointerAuthInfo &NewInfo);
 
   void EmitPointerAuthOperandBundle(
       const CGPointerAuthInfo &Info,
       SmallVectorImpl<llvm::OperandBundleDef> &Bundles);
+
+  llvm::Value *authPointerToPointerCast(llvm::Value *ResultPtr,
+                                        QualType SourceType, QualType DestType);
+  Address authPointerToPointerCast(Address Ptr, QualType SourceType,
+                                   QualType DestType);
+
+  Address getAsNaturalAddressOf(Address Addr, QualType PointeeTy);
+
+  llvm::Value *getAsNaturalPointerTo(Address Addr, QualType PointeeType) {
+    return getAsNaturalAddressOf(Addr, PointeeType).getBasePointer();
+  }
 
   // Return the copy constructor name with the prefix "__copy_constructor_"
   // removed.
