@@ -92,7 +92,7 @@ private:
   SymbolAssignment *readSymbolAssignment(StringRef name);
   ByteCommand *readByteCommand(StringRef tok);
   std::array<uint8_t, 4> readFill();
-  bool readSectionDirective(OutputSection *cmd, StringRef tok1, StringRef tok2);
+  bool readSectionDirective(OutputSection *cmd, StringRef tok2);
   void readSectionAddressType(OutputSection *cmd);
   OutputDesc *readOverlaySectionDescription();
   OutputDesc *readOutputSectionDescription(StringRef outSec);
@@ -875,9 +875,7 @@ constexpr std::pair<const char *, unsigned> typeMap[] = {
 // "(TYPE=<value>)".
 // Tok1 and Tok2 are next 2 tokens peeked. See comment for
 // readSectionAddressType below.
-bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok1, StringRef tok2) {
-  if (tok1 != "(")
-    return false;
+bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok2) {
   if (tok2 != "NOLOAD" && tok2 != "COPY" && tok2 != "INFO" &&
       tok2 != "OVERLAY" && tok2 != "TYPE")
     return false;
@@ -921,16 +919,20 @@ bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok1, Stri
 // https://sourceware.org/binutils/docs/ld/Output-Section-Address.html
 // https://sourceware.org/binutils/docs/ld/Output-Section-Type.html
 void ScriptParser::readSectionAddressType(OutputSection *cmd) {
-  // Temporarily set inExpr to support TYPE=<value> without spaces.
-  bool saved = std::exchange(inExpr, true);
-  bool isDirective = readSectionDirective(cmd, peek(), peek2());
-  inExpr = saved;
-  if (isDirective)
-    return;
-
+  if (peek() == "(") {
+    // Temporarily set inExpr to support TYPE=<value> without spaces.
+    SaveAndRestore saved(inExpr, true);
+    if (readSectionDirective(cmd, peek2()))
+      return;
+  }
   cmd->addrExpr = readExpr();
-  if (peek() == "(" && !readSectionDirective(cmd, "(", peek2()))
-    setError("unknown section directive: " + peek2());
+
+  if (peek() == "(") {
+    SaveAndRestore saved(inExpr, true);
+    StringRef tok2 = peek2();
+    if (!readSectionDirective(cmd, tok2))
+      setError("unknown section directive: " + tok2);
+  }
 }
 
 static Expr checkAlignment(Expr e, std::string &loc) {
