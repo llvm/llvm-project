@@ -198,8 +198,11 @@ static bool CanElideOverflowCheck(const ASTContext &Ctx, const BinOpInfo &Op) {
 
   const UnaryOperator *UO = dyn_cast<UnaryOperator>(Op.E);
 
+  // TODO: rename or rework NegUnsignedConst because it doesn't only work on
+  // constants.
   if (UO && UO->getOpcode() == UO_Minus &&
-      Ctx.getLangOpts().IgnoreNegationOverflow)
+      Ctx.getLangOpts().isOverflowPatternExcluded(
+          LangOptions::OverflowPatternExclusionKind::NegUnsignedConst))
     return true;
 
   // If a unary op has a widened operand, the op cannot overflow.
@@ -2888,11 +2891,11 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     QualType promotedType;
     bool canPerformLossyDemotionCheck = false;
 
-    // Does this match the pattern of while(i--) {...}? If so, and if
-    // SanitizeOverflowIdioms is disabled, we don't want to enable sanitizer.
+    // Is the pattern "while (i--)" and overflow exclusion?
     bool disableSanitizer =
         (!isInc && !isPre &&
-         !CGF.getContext().getLangOpts().SanitizeOverflowIdioms &&
+         CGF.getContext().getLangOpts().isOverflowPatternExcluded(
+             LangOptions::OverflowPatternExclusionKind::PostDecrInWhile) &&
          llvm::all_of(CGF.getContext().getParentMapContext().getParents(*E),
                       [&](const DynTypedNode &Parent) -> bool {
                         return Parent.get<WhileStmt>();
