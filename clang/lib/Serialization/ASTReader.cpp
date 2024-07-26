@@ -8962,7 +8962,7 @@ IdentifierInfo *ASTReader::DecodeIdentifierInfo(IdentifierID ID) {
     auto &II = PP.getIdentifierTable().get(Key);
     IdentifiersLoaded[Index] = &II;
     bool IsModule = getPreprocessor().getCurrentModule() != nullptr;
-    markIdentifierFromAST(*this,  II, IsModule);
+    markIdentifierFromAST(*this, II, IsModule);
     if (DeserializationListener)
       DeserializationListener->IdentifierRead(ID, &II);
   }
