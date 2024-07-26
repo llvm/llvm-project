@@ -1248,6 +1248,12 @@ def ElementwiseBitreverse : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwiseLength : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_elementwise_length"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
+  let Prototype = "T(float, T)";
+}
+
 def ElementwiseMax : Builtin {
   let Spellings = ["__builtin_elementwise_max"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];

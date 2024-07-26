@@ -243,6 +243,7 @@ DWARF Support in Clang
 
 Floating Point Support in Clang
 -------------------------------
+- Add ``__builtin_elementwise_length``builtin for floating point types only.
 
 Fixed Point Support in Clang
 ----------------------------
