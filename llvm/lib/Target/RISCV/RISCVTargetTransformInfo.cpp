@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/PatternMatch.h"
@@ -42,6 +43,8 @@ bool RISCVTTIImpl::getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
   const DataLayout &DL = getDataLayout();
   Intrinsic::ID IntNo = II->getIntrinsicID();
   LLVMContext &C = II->getContext();
+  Type *XLenIntTy = IntegerType::get(C, ST->getXLen());
+  IRBuilder<> IB(II);
   bool HasMask = false;
 
   switch (IntNo) {
@@ -98,6 +101,37 @@ bool RISCVTTIImpl::getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
     Interesting.emplace_back(II, PtrOperandNo, IsWrite, Ty, Alignment, Mask,
                              EVL, Stride);
     return true;
+  }
+  case Intrinsic::riscv_vloxei_mask:
+  case Intrinsic::riscv_vluxei_mask:
+  case Intrinsic::riscv_vsoxei_mask:
+  case Intrinsic::riscv_vsuxei_mask:
+    HasMask = true;
+    [[fallthrough]];
+  case Intrinsic::riscv_vloxei:
+  case Intrinsic::riscv_vluxei:
+  case Intrinsic::riscv_vsoxei:
+  case Intrinsic::riscv_vsuxei: {
+    bool IsWrite = II->getType()->isVoidTy();
+    Type *Ty = IsWrite ? II->getArgOperand(0)->getType() : II->getType();
+    const auto *RVVIInfo = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntNo);
+    unsigned VLIndex = RVVIInfo->VLOperand;
+    unsigned PtrOperandNo = VLIndex - 2 - HasMask;
+    // RVV indexed loads/stores zero-extend offset operands which are narrower
+    // than XLEN to XLEN.
+    Value *OffsetOp = II->getArgOperand(PtrOperandNo + 1);
+    Type *OffsetTy = OffsetOp->getType();
+    if (OffsetTy->getScalarType()->getIntegerBitWidth() < ST->getXLen()) {
+      VectorType *OrigType = cast<VectorType>(OffsetTy);
+      Type *ExtendTy = VectorType::get(XLenIntTy, OrigType);
+      OffsetOp = IB.CreateZExt(OffsetOp, ExtendTy);
+    }
+    Value *Mask = ConstantInt::get(OffsetTy->getWithNewBitWidth(1), 1);
+    if (HasMask)
+      Mask = II->getArgOperand(VLIndex - 1);
+    Value *EVL = II->getArgOperand(VLIndex);
+    Interesting.emplace_back(II, PtrOperandNo, IsWrite, Ty, Align(1), Mask, EVL,
+                             /* Stride */ nullptr, OffsetOp);
   }
   }
   return false;
