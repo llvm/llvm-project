@@ -290,7 +290,7 @@ def err_function_always_inline_attribute_mismatch : Error<
   "always_inline function %1 and its caller %0 have mismatching %2 attributes">;
 def warn_function_always_inline_attribute_mismatch : Warning<
   "always_inline function %1 and its caller %0 have mismatching %2 attributes, "
-  "inlining may result in different runtime behaviour">, InGroup<AArch64SMEAttributes>;
+  "inlining may change runtime behaviour">, InGroup<AArch64SMEAttributes>;
 def err_function_always_inline_new_za : Error<
   "always_inline function %0 has new za state">;
 
