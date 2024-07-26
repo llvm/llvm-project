@@ -4775,7 +4775,7 @@ TypeSystemClang::GetBitSize(lldb::opaque_compiler_type_t type,
   case clang::Type::ObjCObject:
     return GetObjCBitSize(qual_type, exe_scope);
   case clang::Type::IncompleteArray: {
-    const uint32_t bit_size = getASTContext().getTypeSize(qual_type);
+    const uint64_t bit_size = getASTContext().getTypeSize(qual_type);
     if (bit_size == 0)
       return getASTContext().getTypeSize(
           qual_type->getArrayElementTypeNoTypeQual()
