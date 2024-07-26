@@ -29,7 +29,7 @@ dummy:
 .type foo, %function
 foo:
 # CHECK: <foo>:
-# CHECK-NEXT : {{.*}} bl {{.*}} <foo2>
+# CHECK-NEXT: {{.*}} bl {{.*}} <foo2>
   bl .L2
   ret
 .size foo, .-foo
@@ -38,7 +38,7 @@ foo:
 .type foo2, %function
 foo2:
 # CHECK: <foo2>:
-# CHECK-NEXT : {{.*}} bl {{.*}} <foo2>
+# CHECK-NEXT: {{.*}} bl {{.*}} <foo2>
   bl .L2
   ret
 .size foo2, .-foo2
