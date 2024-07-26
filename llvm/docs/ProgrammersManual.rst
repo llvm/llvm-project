@@ -1392,6 +1392,7 @@ How to use reduce-chunk-list:
 First, Figure out the number of calls to the debug counter you want to minimize.
 To do so, run the compilation command causing you want to minimize with `-print-debug-counter` adding a `-mllvm` if needed.
 Than find the line with the counter of interest. it should look like:
+
 .. code-block:: none
 
   my-counter               : {5678,empty}
@@ -1400,6 +1401,7 @@ The number of calls to `my-counter` is 5678
 
 Than Find the minimum set of chunks that is interesting, with `reduce-chunk-list`.
 Build a reproducer script like:
+
 .. code-block:: bash
 
   #! /bin/bash
