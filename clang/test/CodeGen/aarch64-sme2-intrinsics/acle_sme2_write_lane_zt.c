@@ -114,17 +114,17 @@ void test_write_lane_zt_s32_3(svint32_t v) __arm_streaming __arm_inout("zt0") {
 // CHECK-LABEL: define dso_local void @test_write_lane_zt_u64_0(
 // CHECK-SAME: <vscale x 2 x i64> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.write.lane.zt.nxv2i64(i32 0, <vscale x 2 x i64> [[V]], i32 0)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.write.lane.zt.nxv2i64(i32 0, <vscale x 2 x i64> [[V]], i32 1)
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z24test_write_lane_zt_u64_0u12__SVUint64_t(
 // CHECK-CXX-SAME: <vscale x 2 x i64> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.write.lane.zt.nxv2i64(i32 0, <vscale x 2 x i64> [[V]], i32 0)
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.write.lane.zt.nxv2i64(i32 0, <vscale x 2 x i64> [[V]], i32 1)
 // CHECK-CXX-NEXT:    ret void
 //
 void test_write_lane_zt_u64_0(svuint64_t v) __arm_streaming __arm_inout("zt0") {
-  SVE_ACLE_FUNC(svwrite_lane_zt, _u64)(0, v, 0);
+  SVE_ACLE_FUNC(svwrite_lane_zt, _u64)(0, v, 1);
 }
 
 // CHECK-LABEL: define dso_local void @test_write_lane_zt_s64_1(
@@ -178,17 +178,17 @@ void test_write_lane_zt_bf16_3(svbfloat16_t v) __arm_streaming __arm_inout("zt0"
 // CHECK-LABEL: define dso_local void @test_write_lane_zt_f32_0(
 // CHECK-SAME: <vscale x 4 x float> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.write.lane.zt.nxv4f32(i32 0, <vscale x 4 x float> [[V]], i32 0)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.write.lane.zt.nxv4f32(i32 0, <vscale x 4 x float> [[V]], i32 2)
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z24test_write_lane_zt_f32_0u13__SVFloat32_t(
 // CHECK-CXX-SAME: <vscale x 4 x float> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.write.lane.zt.nxv4f32(i32 0, <vscale x 4 x float> [[V]], i32 0)
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.write.lane.zt.nxv4f32(i32 0, <vscale x 4 x float> [[V]], i32 2)
 // CHECK-CXX-NEXT:    ret void
 //
 void test_write_lane_zt_f32_0(svfloat32_t v) __arm_streaming __arm_inout("zt0") {
-  SVE_ACLE_FUNC(svwrite_lane_zt, _f32)(0, v, 0);
+  SVE_ACLE_FUNC(svwrite_lane_zt, _f32)(0, v, 2);
 }
 
 // CHECK-LABEL: define dso_local void @test_write_lane_zt_f64_1(
