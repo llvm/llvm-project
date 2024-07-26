@@ -92,8 +92,8 @@ private:
 // The storage for this object follows the last used dim[] entry in a
 // Descriptor (CFI_cdesc_t) generic descriptor.  Space matters here, since
 // descriptors serve as POINTER and ALLOCATABLE components of derived type
-// instances.  The presence of this structure is implied by the lsb of
-// CFI_cdesc_t.extra set to 1, and the number of elements in the len_[]
+// instances.  The presence of this structure is encoded in the
+// CFI_cdesc_t.extra field, and the number of elements in the len_[]
 // array is determined by derivedType_->LenParameters().
 class DescriptorAddendum {
 public:

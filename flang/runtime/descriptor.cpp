@@ -52,7 +52,7 @@ RT_API_ATTRS void Descriptor::Establish(TypeCode t, std::size_t elementBytes,
     }
   }
   if (addendum) {
-    raw_.extra = raw_.extra | 1;
+    raw_.SetHasAddendum();
   }
   DescriptorAddendum *a{Addendum()};
   RUNTIME_CHECK(terminator, addendum == (a != nullptr));
@@ -297,6 +297,8 @@ void Descriptor::Dump(FILE *f) const {
   std::fprintf(f, "  type      %d\n", static_cast<int>(raw_.type));
   std::fprintf(f, "  attribute %d\n", static_cast<int>(raw_.attribute));
   std::fprintf(f, "  extra     %d\n", static_cast<int>(raw_.extra));
+  std::fprintf(f, "    addendum  %d\n", static_cast<int>(raw_.HasAddendum()));
+  std::fprintf(f, "    alloc_idx %d\n", static_cast<int>(raw_.GetAllocIdx()));
   for (int j{0}; j < raw_.rank; ++j) {
     std::fprintf(f, "  dim[%d] lower_bound %jd\n", j,
         static_cast<std::intmax_t>(raw_.dim[j].lower_bound));

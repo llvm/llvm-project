@@ -146,10 +146,14 @@ extern "C++" template <typename T> struct FlexibleArray : T {
   CFI_rank_t rank; /* [0 .. CFI_MAX_RANK] */ \
   CFI_type_t type; \
   CFI_attribute_t attribute; \
-  /* The lsb of this field indicates the presence of the f18Addendum. Other \
-   * bits are used to specify the index of the allocator used to managed \
-   * memory of the data hold by the descriptor. */ \
+  /* This encodes both the presence of the f18Addendum and the index of the \
+   * allocator used to managed memory of the data hold by the descriptor. */ \
   unsigned char extra;
+
+/* Number of bits used to encode the addendum presence flag */
+#define _CFI_ADDENDUM_BITS 1
+/* Value of the addendum presence flag */
+#define _CFI_ADDENDUM_FLAG 1
 
 typedef struct CFI_cdesc_t {
   _CFI_CDESC_T_HEADER_MEMBERS
@@ -160,8 +164,15 @@ typedef struct CFI_cdesc_t {
 #endif
 
 #ifdef __cplusplus
-  RT_API_ATTRS inline bool HasAddendum() const { return extra & 1; }
-  RT_API_ATTRS inline int GetAllocIdx() const { return ((int)extra >> 1); }
+  RT_API_ATTRS inline bool HasAddendum() const {
+    return extra & _CFI_ADDENDUM_FLAG;
+  }
+  RT_API_ATTRS inline void SetHasAddendum() {
+    extra = extra | _CFI_ADDENDUM_FLAG;
+  }
+  RT_API_ATTRS inline int GetAllocIdx() const {
+    return ((int)extra >> _CFI_ADDENDUM_BITS);
+  }
 #endif
 } CFI_cdesc_t;
 
