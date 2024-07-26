@@ -77,11 +77,8 @@ static void addStringHelper(DebugStrOffsetsWriter &StrOffstsWriter,
                             DIEValue &DIEAttrInfo, StringRef Str) {
   uint32_t NewOffset = StrWriter.addString(Str);
   if (Unit.getVersion() >= 5) {
-    assert(StrOffstsWriter.getDebugStrOffsetsFinalized().count(
-               Unit.getOffset()) == 0 &&
-           "debug_str_offsets was already finalized for this CU.");
     StrOffstsWriter.updateAddressMap(DIEAttrInfo.getDIEInteger().getValue(),
-                                     NewOffset);
+                                     NewOffset, Unit);
     return;
   }
   DIEBldr.replaceValue(&Die, DIEAttrInfo.getAttribute(), DIEAttrInfo.getForm(),
