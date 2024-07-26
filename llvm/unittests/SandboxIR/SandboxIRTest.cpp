@@ -738,6 +738,7 @@ TEST_F(SandboxIRTest, LoadInst) {
   parseIR(C, R"IR(
 define void @foo(ptr %arg0, ptr %arg1) {
   %ld = load i8, ptr %arg0, align 64
+  %vld = load volatile i8, ptr %arg0, align 64
   ret void
 }
 )IR");
@@ -749,8 +750,13 @@ define void @foo(ptr %arg0, ptr %arg1) {
   auto *BB = &*F->begin();
   auto It = BB->begin();
   auto *Ld = cast<sandboxir::LoadInst>(&*It++);
+  auto *Vld = cast<sandboxir::LoadInst>(&*It++);
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
+  // Check isVolatile()
+  EXPECT_FALSE(Ld->isVolatile());
+  // Check isVolatile() 
+  EXPECT_TRUE(Vld->isVolatile());
   // Check getPointerOperand()
   EXPECT_EQ(Ld->getPointerOperand(), Arg0);
   // Check getAlign()
