@@ -62,3 +62,16 @@ long long LongLong(long long l) {
   // CHECK: cir.call @_Z8LongLongx(%{{.+}}) : (!s64i) -> !s64i
   return LongLong(l);
 }
+
+/// Test call conv lowering for floating point. ///
+
+// CHECK: cir.func @_Z5Floatf(%arg0: !cir.float loc({{.+}})) -> !cir.float
+float Float(float f) {
+  // cir.call @_Z5Floatf(%{{.+}}) : (!cir.float) -> !cir.float
+  return Float(f);
+}
+// CHECK: cir.func @_Z6Doubled(%arg0: !cir.double loc({{.+}})) -> !cir.double
+double Double(double d) {
+  // cir.call @_Z6Doubled(%{{.+}}) : (!cir.double) -> !cir.double
+  return Double(d);
+}

@@ -6,6 +6,7 @@
 #include "LowerTypes.h"
 #include "TargetInfo.h"
 #include "clang/CIR/ABIArgInfo.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <memory>
@@ -33,6 +34,15 @@ static bool BitsContainNoUserData(Type Ty, unsigned StartBit, unsigned EndBit,
   unsigned TySize = (unsigned)Context.getTypeSize(Ty);
   if (TySize <= StartBit)
     return true;
+
+  llvm_unreachable("NYI");
+}
+
+/// Return a floating point type at the specified offset.
+Type getFPTypeAtOffset(Type IRType, unsigned IROffset,
+                       const ::cir::CIRDataLayout &TD) {
+  if (IROffset == 0 && isa<SingleType, DoubleType>(IRType))
+    return IRType;
 
   llvm_unreachable("NYI");
 }
@@ -70,6 +80,9 @@ class X86_64ABIInfo : public ABIInfo {
   /// also be ComplexX87.
   void classify(Type T, uint64_t OffsetBase, Class &Lo, Class &Hi,
                 bool isNamedArg, bool IsRegCall = false) const;
+
+  Type GetSSETypeAtOffset(Type IRType, unsigned IROffset, Type SourceTy,
+                          unsigned SourceOffset) const;
 
   Type GetINTEGERTypeAtOffset(Type DestTy, unsigned IROffset, Type SourceTy,
                               unsigned SourceOffset) const;
@@ -125,6 +138,10 @@ void X86_64ABIInfo::classify(Type Ty, uint64_t OffsetBase, Class &Lo, Class &Hi,
       }
       return;
 
+    } else if (isa<SingleType>(Ty) || isa<DoubleType>(Ty)) {
+      Current = Class::SSE;
+      return;
+
     } else {
       llvm::outs() << "Missing X86 classification for type " << Ty << "\n";
       llvm_unreachable("NYI");
@@ -135,6 +152,37 @@ void X86_64ABIInfo::classify(Type Ty, uint64_t OffsetBase, Class &Lo, Class &Hi,
   }
 
   llvm::outs() << "Missing X86 classification for non-builtin types\n";
+  llvm_unreachable("NYI");
+}
+
+/// Return a type that will be passed by the backend in the low 8 bytes of an
+/// XMM register, corresponding to the SSE class.
+Type X86_64ABIInfo::GetSSETypeAtOffset(Type IRType, unsigned IROffset,
+                                       Type SourceTy,
+                                       unsigned SourceOffset) const {
+  const ::cir::CIRDataLayout &TD = getDataLayout();
+  unsigned SourceSize =
+      (unsigned)getContext().getTypeSize(SourceTy) / 8 - SourceOffset;
+  Type T0 = getFPTypeAtOffset(IRType, IROffset, TD);
+  if (!T0 || isa<Float64Type>(T0))
+    return T0; // NOTE(cir): Not sure if this is correct.
+
+  Type T1 = {};
+  unsigned T0Size = TD.getTypeAllocSize(T0);
+  if (SourceSize > T0Size)
+    llvm_unreachable("NYI");
+  if (T1 == nullptr) {
+    // Check if IRType is a half/bfloat + float. float type will be in
+    // IROffset+4 due to its alignment.
+    if (isa<Float16Type>(T0) && SourceSize > 4)
+      llvm_unreachable("NYI");
+    // If we can't get a second FP type, return a simple half or float.
+    // avx512fp16-abi.c:pr51813_2 shows it works to return float for
+    // {float, i8} too.
+    if (T1 == nullptr)
+      return T0;
+  }
+
   llvm_unreachable("NYI");
 }
 
@@ -236,6 +284,12 @@ Type X86_64ABIInfo::GetINTEGERTypeAtOffset(Type DestTy, unsigned IROffset,
     }
     break;
 
+    // AMD64-ABI 3.2.3p4: Rule 4. If the class is SSE, the next
+    // available SSE register of the sequence %xmm0, %xmm1 is used.
+  case Class::SSE:
+    resType = GetSSETypeAtOffset(RetTy, 0, RetTy, 0);
+    break;
+
   default:
     llvm_unreachable("NYI");
   }
@@ -302,6 +356,14 @@ ABIArgInfo X86_64ABIInfo::classifyArgumentType(Type Ty, unsigned freeIntRegs,
 
     break;
 
+    // AMD64-ABI 3.2.3p3: Rule 3. If the class is SSE, the next
+    // available SSE register is used, the registers are taken in the
+    // order from %xmm0 to %xmm7.
+  case Class::SSE: {
+    ResType = GetSSETypeAtOffset(Ty, 0, Ty, 0);
+    ++neededSSE;
+    break;
+  }
   default:
     llvm_unreachable("NYI");
   }
