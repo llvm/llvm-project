@@ -2,6 +2,8 @@
 ; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-percentile-cutoff-hot=990000 2>&1 | FileCheck %s --check-prefix=NONE
 ; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-random-rate=1.0 2>&1 | FileCheck %s --check-prefix=ALL
 ; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-random-rate=0.0 2>&1 | FileCheck %s --check-prefix=NONE
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-random-rate=1.0 -hwasan-percentile-cutoff-hot=990000 2>&1 | FileCheck %s --check-prefix=NONE
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-random-rate=0.0 -hwasan-percentile-cutoff-hot=700000 2>&1 | FileCheck %s --check-prefix=NONE
 
 ; ALL: remark: <unknown>:0:0: Sanitized: F=sanitize
 ; ALL: @sanitized
