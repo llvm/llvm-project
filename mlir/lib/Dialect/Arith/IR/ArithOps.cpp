@@ -1740,9 +1740,24 @@ OpFoldResult arith::BitcastOp::fold(FoldAdaptor adaptor) {
                    ? llvm::cast<FloatAttr>(operand).getValue().bitcastToAPInt()
                    : llvm::cast<IntegerAttr>(operand).getValue();
 
-  if (auto resFloatType = llvm::dyn_cast<FloatType>(resType))
-    return FloatAttr::get(resType,
-                          APFloat(resFloatType.getFloatSemantics(), bits));
+  /// If bitwidth aren't the same, don't fold.
+  if (resType.getIntOrFloatBitWidth() != bits.getBitWidth())
+    return {};
+
+  MLIRContext *ctx = getContext();
+  auto emitErrorFn = [=] { return ::emitError(UnknownLoc::get(ctx)); };
+
+  if (auto resFloatType = llvm::dyn_cast<FloatType>(resType)) {
+    /// If bits don't represent a valid float, don't fold.
+    APFloat floatBits(resFloatType.getFloatSemantics(), bits);
+    if (failed(FloatAttr::verify(emitErrorFn, resType, floatBits)))
+      return {};
+    return FloatAttr::get(resType, floatBits);
+  }
+
+  /// If bits don't represent a valid integer, don't fold.
+  if (failed(IntegerAttr::verify(emitErrorFn, resType, bits)))
+    return {};
   return IntegerAttr::get(resType, bits);
 }
 
