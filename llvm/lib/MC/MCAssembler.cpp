@@ -96,7 +96,6 @@ MCAssembler::~MCAssembler() = default;
 void MCAssembler::reset() {
   RelaxAll = false;
   SubsectionsViaSymbols = false;
-  IncrementalLinkerCompatible = false;
   Sections.clear();
   Symbols.clear();
   LinkerOptions.clear();
