@@ -16,6 +16,7 @@ import io
 import os
 import re
 import sys
+import textwrap
 
 # Adapts the module's CMakelist file. Returns 'True' if it could add a new
 # entry and 'False' if the entry already existed.
@@ -53,7 +54,14 @@ def adapt_cmake(module_path, check_name_camel):
 
 
 # Adds a header for the new check.
-def write_header(module_path, module, namespace, check_name, check_name_camel):
+def write_header(
+    module_path, module, namespace, check_name, check_name_camel, description
+):
+    wrapped_desc = "\n".join(
+        textwrap.wrap(
+            description, width=80, initial_indent="/// ", subsequent_indent="/// "
+        )
+    )
     filename = os.path.join(module_path, check_name_camel) + ".h"
     print("Creating %s..." % filename)
     with io.open(filename, "w", encoding="utf8", newline="\n") as f:
@@ -85,7 +93,7 @@ def write_header(module_path, module, namespace, check_name, check_name_camel):
 
 namespace clang::tidy::%(namespace)s {
 
-/// FIXME: Write a short description.
+%(description)s
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/%(module)s/%(check_name)s.html
@@ -107,6 +115,7 @@ public:
                 "check_name": check_name,
                 "module": module,
                 "namespace": namespace,
+                "description": wrapped_desc,
             }
         )
 
@@ -235,7 +244,12 @@ def adapt_module(module_path, module, check_name, check_name_camel):
 
 
 # Adds a release notes entry.
-def add_release_notes(module_path, module, check_name):
+def add_release_notes(module_path, module, check_name, description):
+    wrapped_desc = "\n".join(
+        textwrap.wrap(
+            description, width=80, initial_indent="  ", subsequent_indent="  "
+        )
+    )
     check_name_dashes = module + "-" + check_name
     filename = os.path.normpath(
         os.path.join(module_path, "../../docs/ReleaseNotes.rst")
@@ -281,10 +295,10 @@ def add_release_notes(module_path, module, check_name):
                             """- New :doc:`%s
   <clang-tidy/checks/%s/%s>` check.
 
-  FIXME: add release notes.
+%s
 
 """
-                            % (check_name_dashes, module, check_name)
+                            % (check_name_dashes, module, check_name, wrapped_desc)
                         )
                         note_added = True
 
@@ -613,6 +627,13 @@ def main():
         metavar="LANG",
     )
     parser.add_argument(
+        "--description",
+        "-d",
+        help="short description of what the check does",
+        default="FIXME: Write a short description",
+        type=str,
+    )
+    parser.add_argument(
         "module",
         nargs="?",
         help="module directory under which to place the new tidy check (e.g., misc)",
@@ -652,10 +673,16 @@ def main():
     else:
         namespace = module
 
-    write_header(module_path, module, namespace, check_name, check_name_camel)
+    description = args.description
+    if not description.endswith("."):
+        description += "."
+
+    write_header(
+        module_path, module, namespace, check_name, check_name_camel, description
+    )
     write_implementation(module_path, module, namespace, check_name_camel)
     adapt_module(module_path, module, check_name, check_name_camel)
-    add_release_notes(module_path, module, check_name)
+    add_release_notes(module_path, module, check_name, description)
     test_extension = language_to_extension.get(args.language)
     write_test(module_path, module, check_name, test_extension)
     write_docs(module_path, module, check_name)
