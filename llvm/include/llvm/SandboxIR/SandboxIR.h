@@ -65,6 +65,7 @@
 #define LLVM_SANDBOXIR_SANDBOXIR_H
 
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -758,6 +759,9 @@ class LoadInst final : public Instruction {
   }
 
 public:
+  /// Return true if this is a load from a volatile memory location.
+  bool isVolatile() const { return cast<llvm::LoadInst>(Val)->isVolatile(); }  
+
   unsigned getUseOperandNo(const Use &Use) const final {
     return getUseOperandNoDefault(Use);
   }
