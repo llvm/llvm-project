@@ -469,8 +469,9 @@ def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
    FeatureFP6BF6ConversionScaleInsts,
    FeatureF16BF16ToFP6BF6ConversionScaleInsts,
    FeatureF32ToF16BF16ConversionSRInsts,
+   FeatureCvtPkF16F32Inst,
    FeatureMinimum3Maximum3F32,
-   FeatureMinimum3Maximum3PKF16
+   FeatureMinimum3Maximum3PKF16,
    ]
 >;
 
