@@ -597,11 +597,9 @@ void SCEVUnknown::allUsesReplacedWith(Value *New) {
 ///
 /// Since we do not continue running this routine on expression trees once we
 /// have seen unequal values, there is no need to track them in the cache.
-static int
-CompareValueComplexity(EquivalenceClasses<const Value *> &EqCacheValue,
-                       const LoopInfo *const LI, Value *LV, Value *RV,
-                       unsigned Depth) {
-  if (Depth > MaxValueCompareDepth || EqCacheValue.isEquivalent(LV, RV))
+static int CompareValueComplexity(const LoopInfo *const LI, Value *LV,
+                                  Value *RV, unsigned Depth) {
+  if (Depth > MaxValueCompareDepth)
     return 0;
 
   // Order pointer values after integer values. This helps SCEVExpander form
@@ -660,15 +658,13 @@ CompareValueComplexity(EquivalenceClasses<const Value *> &EqCacheValue,
       return (int)LNumOps - (int)RNumOps;
 
     for (unsigned Idx : seq(LNumOps)) {
-      int Result =
-          CompareValueComplexity(EqCacheValue, LI, LInst->getOperand(Idx),
-                                 RInst->getOperand(Idx), Depth + 1);
+      int Result = CompareValueComplexity(LI, LInst->getOperand(Idx),
+                                          RInst->getOperand(Idx), Depth + 1);
       if (Result != 0)
         return Result;
     }
   }
 
-  EqCacheValue.unionSets(LV, RV);
   return 0;
 }
 
@@ -679,7 +675,6 @@ CompareValueComplexity(EquivalenceClasses<const Value *> &EqCacheValue,
 // not know if they are equivalent for sure.
 static std::optional<int>
 CompareSCEVComplexity(EquivalenceClasses<const SCEV *> &EqCacheSCEV,
-                      EquivalenceClasses<const Value *> &EqCacheValue,
                       const LoopInfo *const LI, const SCEV *LHS,
                       const SCEV *RHS, DominatorTree &DT, unsigned Depth = 0) {
   // Fast-path: SCEVs are uniqued so we can do a quick equality check.
@@ -705,8 +700,8 @@ CompareSCEVComplexity(EquivalenceClasses<const SCEV *> &EqCacheSCEV,
     const SCEVUnknown *LU = cast<SCEVUnknown>(LHS);
     const SCEVUnknown *RU = cast<SCEVUnknown>(RHS);
 
-    int X = CompareValueComplexity(EqCacheValue, LI, LU->getValue(),
-                                   RU->getValue(), Depth + 1);
+    int X =
+        CompareValueComplexity(LI, LU->getValue(), RU->getValue(), Depth + 1);
     if (X == 0)
       EqCacheSCEV.unionSets(LHS, RHS);
     return X;
@@ -773,8 +768,8 @@ CompareSCEVComplexity(EquivalenceClasses<const SCEV *> &EqCacheSCEV,
       return (int)LNumOps - (int)RNumOps;
 
     for (unsigned i = 0; i != LNumOps; ++i) {
-      auto X = CompareSCEVComplexity(EqCacheSCEV, EqCacheValue, LI, LOps[i],
-                                     ROps[i], DT, Depth + 1);
+      auto X = CompareSCEVComplexity(EqCacheSCEV, LI, LOps[i], ROps[i], DT,
+                                     Depth + 1);
       if (X != 0)
         return X;
     }
@@ -802,12 +797,10 @@ static void GroupByComplexity(SmallVectorImpl<const SCEV *> &Ops,
   if (Ops.size() < 2) return;  // Noop
 
   EquivalenceClasses<const SCEV *> EqCacheSCEV;
-  EquivalenceClasses<const Value *> EqCacheValue;
 
   // Whether LHS has provably less complexity than RHS.
   auto IsLessComplex = [&](const SCEV *LHS, const SCEV *RHS) {
-    auto Complexity =
-        CompareSCEVComplexity(EqCacheSCEV, EqCacheValue, LI, LHS, RHS, DT);
+    auto Complexity = CompareSCEVComplexity(EqCacheSCEV, LI, LHS, RHS, DT);
     return Complexity && *Complexity < 0;
   };
   if (Ops.size() == 2) {
