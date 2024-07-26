@@ -468,7 +468,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
     // Possibly diagnose casts to enum types if the target type does not
     // have a fixed size.
-    if (CE->getType()->isEnumeralType()) {
+    if (Ctx.getLangOpts().CPlusPlus && CE->getType()->isEnumeralType()) {
       if (const auto *ET = CE->getType().getCanonicalType()->getAs<EnumType>();
           ET && !ET->getDecl()->isFixed()) {
         if (!this->emitCheckEnumValue(*FromT, ET->getDecl(), CE))
