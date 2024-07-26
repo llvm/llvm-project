@@ -5588,7 +5588,7 @@ MachineInstr *X86InstrInfo::optimizeLoadInstr(MachineInstr &MI,
   DefMI = MRI->getVRegDef(FoldAsLoadDefReg);
   assert(DefMI);
   bool SawStore = false;
-  if (!DefMI->isSafeToMove(nullptr, SawStore))
+  if (!DefMI->isSafeToMove(SawStore))
     return nullptr;
 
   // Collect information about virtual register operands of MI.

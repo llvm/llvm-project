@@ -76,6 +76,7 @@ struct KnownBits;
 class LLVMContext;
 class MachineBasicBlock;
 class MachineConstantPoolValue;
+class MachineModuleInfo;
 class MCSymbol;
 class OptimizationRemarkEmitter;
 class ProfileSummaryInfo;
