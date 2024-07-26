@@ -26,7 +26,7 @@
 MyTimedMutex m;
 
 int main(int, char**) {
-  typedef std::chrono::steady_clock Clock;
+  typedef std::chrono::system_clock Clock;
   std::unique_lock<MyTimedMutex> lk(m, std::defer_lock);
   assert(lk.try_lock_until(Clock::now()) == true);
   assert(m.try_lock_until_called == true);
