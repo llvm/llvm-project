@@ -1106,6 +1106,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // from which all the elements were originally extracted from?
   // Note that we want for the map to have stable iteration order!
   SmallDenseMap<BasicBlock *, Value *, 4> SourceAggregates;
+  bool FoundSrcAgg = false;
   for (BasicBlock *Pred : Preds) {
     std::pair<decltype(SourceAggregates)::iterator, bool> IV =
         SourceAggregates.insert({Pred, nullptr});
@@ -1117,9 +1118,35 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     // aggregate produced by OrigIVI must have been originally extracted from
     // the same aggregate. Is that so? Can we find said original aggregate?
     SourceAggregate = FindCommonSourceAggregate(UseBB, Pred);
-    if (Describe(SourceAggregate) != AggregateDescription::Found)
-      return nullptr; // Give up.
-    IV.first->second = *SourceAggregate;
+    if (Describe(SourceAggregate) == AggregateDescription::Found) {
+      FoundSrcAgg = true;
+      IV.first->second = *SourceAggregate;
+    } else {
+      // If UseBB is the single successor of Pred, we can add InsertValue to
+      // Pred.
+      if (succ_size(Pred) != 1)
+        return nullptr; // Give up.
+    }
+  }
+
+  if (!FoundSrcAgg)
+    return nullptr;
+
+  // For predecessors without appropriate source aggregate, create one in the
+  // predecessor.
+  for (auto &It : SourceAggregates) {
+    if (Describe(It.second) == AggregateDescription::Found)
+      continue;
+
+    BasicBlock *Pred = It.first;
+    Builder.SetInsertPoint(Pred, Pred->getTerminator()->getIterator());
+    Value *V = PoisonValue::get(AggTy);
+    for (auto I : enumerate(AggElts)) {
+      Value *Elt = (*I.value())->DoPHITranslation(UseBB, Pred);
+      V = Builder.CreateInsertValue(V, Elt, I.index());
+    }
+
+    It.second = V;
   }
 
   // All good! Now we just need to thread the source aggregates here.
