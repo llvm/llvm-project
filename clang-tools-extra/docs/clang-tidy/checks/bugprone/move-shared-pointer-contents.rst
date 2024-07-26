@@ -19,4 +19,4 @@ Options
    A semicolon-separated list of class names that should be treated as
    shared pointers. Classes are resolved through aliases, so any alias
    to the defined classes will be considered. Default is
-   `::std::shared_ptr` and `::boost::shared_pointer`.
+   `::std::shared_ptr;::boost::shared_pointer`.
