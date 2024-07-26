@@ -7198,9 +7198,8 @@ ElementCount LoopVectorizationPlanner::getBestVF() const {
 
       InstructionCost Cost = cost(*P, VF);
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
-      if (isMoreProfitable(CurrentFactor, BestFactor)) {
+      if (isMoreProfitable(CurrentFactor, BestFactor))
         BestFactor = CurrentFactor;
-      }
     }
   }
   return BestFactor.Width;
@@ -9999,10 +9998,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                  &CM, BFI, PSI, Checks);
 
       ElementCount BestVF = LVP.getBestVF();
-      VPlan &BestPlan = LVP.getBestPlanFor(BestVF);
       assert(BestVF.isScalar() &&
              "VPlan cost model and legacy cost model disagreed");
-      LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
+      VPlan &BestPlan = LVP.getBestPlanFor(BestVF);
+      LVP.executePlan(BestVF, IC, BestPlan, Unroller, DT, false);
 
       ORE->emit([&]() {
         return OptimizationRemark(LV_NAME, "Interleaved", L->getStartLoc(),
@@ -10014,10 +10013,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       // If we decided that it is *legal* to vectorize the loop, then do it.
 
       ElementCount BestVF = LVP.getBestVF();
-      VPlan &BestPlan = LVP.getBestPlanFor(BestVF);
       LLVM_DEBUG(dbgs() << "VF picked by VPlan cost model: " << BestVF << "\n");
       assert(VF.Width == BestVF &&
              "VPlan cost model and legacy cost model disagreed");
+      VPlan &BestPlan = LVP.getBestPlanFor(BestVF);
       // Consider vectorizing the epilogue too if it's profitable.
       VectorizationFactor EpilogueVF =
           LVP.selectEpilogueVectorizationFactor(BestVF, IC);
@@ -10031,8 +10030,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                            EPI, &LVL, &CM, BFI, PSI, Checks);
 
         assert(EPI.MainLoopVF == VF.Width && "VFs must match");
-        std::unique_ptr<VPlan> BestMainPlan(
-            LVP.getBestPlanFor(VF.Width).duplicate());
+        std::unique_ptr<VPlan> BestMainPlan(BestPlan.duplicate());
         const auto &[ExpandedSCEVs, ReductionResumeValues] = LVP.executePlan(
             EPI.MainLoopVF, EPI.MainLoopUF, *BestMainPlan, MainILV, DT, true);
         ++LoopsVectorized;
