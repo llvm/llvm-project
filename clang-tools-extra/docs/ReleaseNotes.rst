@@ -98,15 +98,6 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
-New check aliases
-^^^^^^^^^^^^^^^^^
-
-Changes in existing checks
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-New checks
-^^^^^^^^^^
-
 - New :doc:`bugprone-move-shared-pointer-contents
   <clang-tidy/checks/bugprone/move-shared-pointer-contents>` check.
 
