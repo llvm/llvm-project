@@ -906,7 +906,8 @@ void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
   }
 
   StrOffsetSectionWasModified = false;
-  DebugStrOffsetFinalized[Unit.getOffset()] = true;
+  assert(DebugStrOffsetFinalized.insert(Unit.getOffset()).second == true &&
+         "debug_str_offsets was already finalized.");
   clear();
 }
 

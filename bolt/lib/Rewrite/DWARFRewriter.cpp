@@ -711,7 +711,8 @@ void DWARFRewriter::updateDebugInfo() {
       RangesBase = RangesSectionWriter.getSectionOffset() +
                    getDWARF5RngListLocListHeaderSize();
       RangesSectionWriter.initSection(Unit);
-      StrOffstsWriter->finalizeSection(Unit, DIEBlder);
+      if (!SplitCU)
+        StrOffstsWriter->finalizeSection(Unit, DIEBlder);
     } else if (SplitCU) {
       RangesBase = LegacyRangesSectionWriter.get()->getSectionOffset();
     }
