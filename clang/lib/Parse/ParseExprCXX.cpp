@@ -541,7 +541,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         // error recovery. But before we commit to this, check that we actually
         // have something that looks like a template-argument-list next.
         if (!IsTypename && (ObjectType || TNK == TNK_Undeclared_template) &&
-            isTemplateArgumentList(1) == TPResult::False)
+            isTemplateArgumentList(1, TNK) == TPResult::False)
           break;
 
         // We have found a template name, so annotate this token
@@ -560,7 +560,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
 
       if (MemberOfUnknownSpecialization && !Disambiguation &&
           (ObjectType || SS.isSet()) &&
-          (IsTypename || isTemplateArgumentList(1) == TPResult::True)) {
+          (IsTypename || isTemplateArgumentList(1, TNK_Non_template) == TPResult::True)) {
         // If we had errors before, ObjectType can be dependent even without any
         // templates. Do not report missing template keyword in that case.
         if (!ObjectHadErrors) {
@@ -2566,11 +2566,11 @@ bool Parser::ParseUnqualifiedIdTemplateId(
       // name, double-check that makes sense syntactically before committing
       // to it.
       if (TNK == TNK_Undeclared_template &&
-          isTemplateArgumentList(0) == TPResult::False)
+          isTemplateArgumentList(0, TNK) == TPResult::False)
         return false;
 
       if (TNK == TNK_Non_template && MemberOfUnknownSpecialization &&
-          ObjectType && isTemplateArgumentList(0) == TPResult::True) {
+          ObjectType && isTemplateArgumentList(0, TNK) == TPResult::True) {
         // If we had errors before, ObjectType can be dependent even without any
         // templates, do not report missing template keyword in that case.
         if (!ObjectHadErrors) {

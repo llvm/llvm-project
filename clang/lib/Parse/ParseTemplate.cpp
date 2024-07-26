@@ -1795,6 +1795,9 @@ bool Parser::isMissingTemplateKeywordBeforeScope(bool AnnotateInvalid) {
   assert(Tok.is(tok::coloncolon));
   Sema::DisableTypoCorrectionRAII DTC(Actions);
   ColonProtectionRAIIObject ColonProtection(*this);
+  std::optional<Sema::TentativeAnalysisScope> TAS;
+  if (!AnnotateInvalid)
+    TAS.emplace(Actions);
 
   SourceLocation StartLoc = Tok.getLocation();
   if (TryAnnotateTypeOrScopeToken())
@@ -1813,16 +1816,16 @@ bool Parser::isMissingTemplateKeywordBeforeScope(bool AnnotateInvalid) {
   SourceLocation EndLoc = Tok.getLocation();
   if (PP.isBacktrackEnabled()) {
     PP.RevertCachedTokens(1);
-    if (Result.isInvalid())
-      EndLoc = PP.getLastCachedTokenLocation();
+    // if (Result.isInvalid())
+    EndLoc = PP.getLastCachedTokenLocation();
   } else {
     PP.EnterToken(Tok, /*IsReinject=*/true);
   }
 
   Tok.setKind(tok::annot_primary_expr);
   setExprAnnotation(Tok, Result);
-  Tok.setAnnotationEndLoc(EndLoc);
   Tok.setLocation(StartLoc);
+  Tok.setAnnotationEndLoc(EndLoc);
   PP.AnnotateCachedTokens(Tok);
   return Result.isInvalid();
 }
