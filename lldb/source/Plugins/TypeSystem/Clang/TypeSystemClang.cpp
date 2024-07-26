@@ -4730,8 +4730,7 @@ TypeSystemClang::GetObjCBitSize(QualType qual_type,
                                 ExecutionContextScope *exe_scope) {
   assert(qual_type->isObjCObjectOrInterfaceType());
   ExecutionContext exe_ctx(exe_scope);
-  Process *process = exe_ctx.GetProcessPtr();
-  if (process) {
+  if (Process *process = exe_ctx.GetProcessPtr()) {
     if (ObjCLanguageRuntime *objc_runtime =
             ObjCLanguageRuntime::Get(*process)) {
       if (std::optional<uint64_t> bit_size =
