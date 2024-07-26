@@ -242,8 +242,6 @@ static bool encloses(StringRef s, StringRef t) {
 MemoryBufferRef ScriptLexer::getCurrentMB() {
   // Find input buffer containing the current token.
   assert(!mbs.empty());
-  if (prevTok.empty())
-    return mbs.back();
   for (MemoryBufferRef mb : mbs)
     if (encloses(mb.getBuffer(), curBuf.s))
       return mb;

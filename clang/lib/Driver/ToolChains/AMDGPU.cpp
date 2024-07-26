@@ -620,8 +620,10 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const char *LinkingOutput) const {
   std::string Linker = getToolChain().GetLinkerPath();
   ArgStringList CmdArgs;
-  CmdArgs.push_back("--no-undefined");
-  CmdArgs.push_back("-shared");
+  if (!Args.hasArg(options::OPT_r)) {
+    CmdArgs.push_back("--no-undefined");
+    CmdArgs.push_back("-shared");
+  }
 
   addLinkerCompressDebugSectionsOption(getToolChain(), Args, CmdArgs);
   Args.AddAllArgs(CmdArgs, options::OPT_L);

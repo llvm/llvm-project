@@ -7,7 +7,7 @@
 # RUN: FileCheck -strict-whitespace %s < %t.map
 
 SECTIONS {
-  . = 0x1000;
+  .		 = 	0x1000;  # tabs
   .foo : {
     BYTE ( 0x11 )
     SHORT (0x1122)

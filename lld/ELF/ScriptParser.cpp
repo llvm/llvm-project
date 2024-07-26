@@ -1116,19 +1116,11 @@ SymbolAssignment *ScriptParser::readProvideHidden(bool provide, bool hidden) {
 // Replace whitespace sequence (including \n) with one single space. The output
 // is used by -Map.
 static void squeezeSpaces(std::string &str) {
-  std::string ret;
-  bool flag = false;
+  char prev = '\0';
   auto it = str.begin();
-  for (char c : str) {
-    if (isSpace(c)) {
-      if (!flag)
-        *it++ = ' ';
-      flag = true;
-    } else {
-      *it++ = c;
-      flag = false;
-    }
-  }
+  for (char c : str)
+    if (!isSpace(c) || (c = ' ') != prev)
+      *it++ = prev = c;
   str.erase(it, str.end());
 }
 
