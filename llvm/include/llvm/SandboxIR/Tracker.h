@@ -156,6 +156,26 @@ public:
 #endif // NDEBUG
 };
 
+class MoveInstr : public IRChangeBase {
+  /// The instruction that moved.
+  Instruction *MovedI;
+  /// This is either the next instruction in the block, or the parent BB if at
+  /// the end of the BB.
+  PointerUnion<Instruction *, BasicBlock *> NextInstrOrBB;
+
+public:
+  MoveInstr(sandboxir::Instruction *I, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "MoveInstr";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif // NDEBUG
+};
+
 /// The tracker collects all the change objects and implements the main API for
 /// saving / reverting / accepting.
 class Tracker {
