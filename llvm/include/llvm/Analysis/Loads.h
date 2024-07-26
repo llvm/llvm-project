@@ -106,6 +106,13 @@ bool isSafeToLoadUnconditionally(Value *V, Type *Ty, Align Alignment,
                                  const DominatorTree *DT = nullptr,
                                  const TargetLibraryInfo *TLI = nullptr);
 
+/// Return true if speculation of the given load must be suppressed to avoid
+/// ordering or interfering with an active sanitizer.  If not suppressed,
+/// dereferenceability and alignment must be proven separately.  Note: This
+/// is only needed for raw reasoning; if you use the interface below
+/// (isSafeToSpeculativelyExecute), this is handled internally.
+bool mustSuppressSpeculation(const LoadInst &LI);
+
 /// The default number of maximum instructions to scan in the block, used by
 /// FindAvailableLoadedValue().
 extern cl::opt<unsigned> DefMaxInstsToScan;
