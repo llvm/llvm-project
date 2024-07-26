@@ -13,6 +13,7 @@
 
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Parse/Parser.h"
+#include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/ParsedTemplate.h"
 using namespace clang;
 
@@ -2324,6 +2325,9 @@ Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip, TemplateN
   if (!TryConsumeToken(tok::less))
     return TPResult::False;
 
+  bool IsNestedTemplateArgumentList = !GreaterThanIsOperator;
+  GreaterThanIsOperatorScope G(GreaterThanIsOperator, false);
+
   while (true) {
     // An expression cannot be followed by a braced-init-list unless
     // its the right operand of an assignment operator.
@@ -2338,7 +2342,7 @@ Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip, TemplateN
     if (InvalidAsTemplateArgumentList)
       return TPResult::False;
 
-    if (!GreaterThanIsOperator || TNK != TNK_Non_template)
+    if (IsNestedTemplateArgumentList || TNK != TNK_Non_template)
       break;
 
     if (TryAnnotateOptionalCXXScopeToken())
