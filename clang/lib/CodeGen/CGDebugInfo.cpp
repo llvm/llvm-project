@@ -1979,7 +1979,8 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateInstanceMethodType(
   Elts.push_back(Args[0]);
 
   // "this" pointer is always first argument.
-  // ThisPtr may be null if the member function has an explicit 'this' parameter.
+  // ThisPtr may be null if the member function has an explicit 'this'
+  // parameter.
   if (!ThisPtr.isNull()) {
     const CXXRecordDecl *RD = ThisPtr->getPointeeCXXRecordDecl();
     if (isa<ClassTemplateSpecializationDecl>(RD)) {
