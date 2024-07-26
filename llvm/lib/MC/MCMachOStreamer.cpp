@@ -254,27 +254,27 @@ void MCMachOStreamer::emitDataRegion(MCDataRegionType Kind) {
 void MCMachOStreamer::emitVersionMin(MCVersionMinType Kind, unsigned Major,
                                      unsigned Minor, unsigned Update,
                                      VersionTuple SDKVersion) {
-  getAssembler().setVersionMin(Kind, Major, Minor, Update, SDKVersion);
+  getWriter().setVersionMin(Kind, Major, Minor, Update, SDKVersion);
 }
 
 void MCMachOStreamer::emitBuildVersion(unsigned Platform, unsigned Major,
                                        unsigned Minor, unsigned Update,
                                        VersionTuple SDKVersion) {
-  getAssembler().setBuildVersion((MachO::PlatformType)Platform, Major, Minor,
-                                 Update, SDKVersion);
+  getWriter().setBuildVersion((MachO::PlatformType)Platform, Major, Minor,
+                              Update, SDKVersion);
 }
 
 void MCMachOStreamer::emitDarwinTargetVariantBuildVersion(
     unsigned Platform, unsigned Major, unsigned Minor, unsigned Update,
     VersionTuple SDKVersion) {
-  getAssembler().setDarwinTargetVariantBuildVersion(
-      (MachO::PlatformType)Platform, Major, Minor, Update, SDKVersion);
+  getWriter().setTargetVariantBuildVersion((MachO::PlatformType)Platform, Major,
+                                           Minor, Update, SDKVersion);
 }
 
 void MCMachOStreamer::EmitPtrAuthABIVersion(unsigned PtrAuthABIVersion,
                                             bool PtrAuthKernelABIVersion) {
-  getAssembler().setPtrAuthABIVersion(PtrAuthABIVersion);
-  getAssembler().setPtrAuthKernelABIVersion(PtrAuthKernelABIVersion);
+  getWriter().setPtrAuthABIVersion(PtrAuthABIVersion);
+  getWriter().setPtrAuthKernelABIVersion(PtrAuthKernelABIVersion);
 }
 
 void MCMachOStreamer::emitThumbFunc(MCSymbol *Symbol) {

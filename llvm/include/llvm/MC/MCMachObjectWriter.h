@@ -12,12 +12,14 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/VersionTuple.h"
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -90,6 +92,21 @@ public:
     MCSymbol *End;
   };
 
+  // A Major version of 0 indicates that no version information was supplied
+  // and so the corresponding load command should not be emitted.
+  using VersionInfoType = struct {
+    bool EmitBuildVersion;
+    union {
+      MCVersionMinType Type;        ///< Used when EmitBuildVersion==false.
+      MachO::PlatformType Platform; ///< Used when EmitBuildVersion==true.
+    } TypeOrPlatform;
+    unsigned Major;
+    unsigned Minor;
+    unsigned Update;
+    /// An optional version of the SDK that was used to build the source.
+    VersionTuple SDKVersion;
+  };
+
 private:
   /// Helper struct for containing some precomputed information on symbols.
   struct MachSymbolData {
@@ -151,6 +168,12 @@ private:
   // Used to communicate Linker Optimization Hint information.
   MCLOHContainer LOHContainer;
 
+  VersionInfoType VersionInfo{};
+  VersionInfoType TargetVariantVersionInfo{};
+
+  std::optional<unsigned> PtrAuthABIVersion;
+  bool PtrAuthKernelABIVersion;
+
   MachSymbolData *findSymbolData(const MCSymbol &Sym);
 
   void writeWithPadding(StringRef Str, uint64_t Size);
@@ -211,6 +234,45 @@ public:
   const MCSymbol *getAtom(const MCSymbol &S) const;
 
   bool doesSymbolRequireExternRelocation(const MCSymbol &S);
+
+  /// Mach-O deployment target version information.
+  void setVersionMin(MCVersionMinType Type, unsigned Major, unsigned Minor,
+                     unsigned Update,
+                     VersionTuple SDKVersion = VersionTuple()) {
+    VersionInfo.EmitBuildVersion = false;
+    VersionInfo.TypeOrPlatform.Type = Type;
+    VersionInfo.Major = Major;
+    VersionInfo.Minor = Minor;
+    VersionInfo.Update = Update;
+    VersionInfo.SDKVersion = SDKVersion;
+  }
+  void setBuildVersion(MachO::PlatformType Platform, unsigned Major,
+                       unsigned Minor, unsigned Update,
+                       VersionTuple SDKVersion = VersionTuple()) {
+    VersionInfo.EmitBuildVersion = true;
+    VersionInfo.TypeOrPlatform.Platform = Platform;
+    VersionInfo.Major = Major;
+    VersionInfo.Minor = Minor;
+    VersionInfo.Update = Update;
+    VersionInfo.SDKVersion = SDKVersion;
+  }
+  void setTargetVariantBuildVersion(MachO::PlatformType Platform,
+                                    unsigned Major, unsigned Minor,
+                                    unsigned Update, VersionTuple SDKVersion) {
+    TargetVariantVersionInfo.EmitBuildVersion = true;
+    TargetVariantVersionInfo.TypeOrPlatform.Platform = Platform;
+    TargetVariantVersionInfo.Major = Major;
+    TargetVariantVersionInfo.Minor = Minor;
+    TargetVariantVersionInfo.Update = Update;
+    TargetVariantVersionInfo.SDKVersion = SDKVersion;
+  }
+
+  std::optional<unsigned> getPtrAuthABIVersion() const {
+    return PtrAuthABIVersion;
+  }
+  void setPtrAuthABIVersion(unsigned V) { PtrAuthABIVersion = V; }
+  bool getPtrAuthKernelABIVersion() const { return PtrAuthKernelABIVersion; }
+  void setPtrAuthKernelABIVersion(bool V) { PtrAuthKernelABIVersion = V; }
 
   /// @}
 

@@ -15,12 +15,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/BinaryFormat/MachO.h"
-#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/SMLoc.h"
-#include "llvm/Support/VersionTuple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -57,22 +54,6 @@ class MCAssembler {
 public:
   using SectionListType = SmallVector<MCSection *, 0>;
   using const_iterator = pointee_iterator<SectionListType::const_iterator>;
-
-  /// MachO specific deployment target version info.
-  // A Major version of 0 indicates that no version information was supplied
-  // and so the corresponding load command should not be emitted.
-  using VersionInfoType = struct {
-    bool EmitBuildVersion;
-    union {
-      MCVersionMinType Type;          ///< Used when EmitBuildVersion==false.
-      MachO::PlatformType Platform;   ///< Used when EmitBuildVersion==true.
-    } TypeOrPlatform;
-    unsigned Major;
-    unsigned Minor;
-    unsigned Update;
-    /// An optional version of the SDK that was used to build the source.
-    VersionTuple SDKVersion;
-  };
 
 private:
   MCContext &Context;
@@ -119,12 +100,6 @@ private:
   // Access to the flags is necessary in cases where assembler directives affect
   // which flags to be set.
   unsigned ELFHeaderEFlags = 0;
-
-  VersionInfoType VersionInfo;
-  VersionInfoType DarwinTargetVariantVersionInfo;
-
-  std::optional<unsigned> PtrAuthABIVersion;
-  bool PtrAuthKernelABIVersion;
 
   /// Evaluate a fixup to a relocatable expression and the value which should be
   /// placed into the fixup.
@@ -228,51 +203,6 @@ public:
   /// ELF e_header flags
   unsigned getELFHeaderEFlags() const { return ELFHeaderEFlags; }
   void setELFHeaderEFlags(unsigned Flags) { ELFHeaderEFlags = Flags; }
-
-  /// MachO deployment target version information.
-  const VersionInfoType &getVersionInfo() const { return VersionInfo; }
-  void setVersionMin(MCVersionMinType Type, unsigned Major, unsigned Minor,
-                     unsigned Update,
-                     VersionTuple SDKVersion = VersionTuple()) {
-    VersionInfo.EmitBuildVersion = false;
-    VersionInfo.TypeOrPlatform.Type = Type;
-    VersionInfo.Major = Major;
-    VersionInfo.Minor = Minor;
-    VersionInfo.Update = Update;
-    VersionInfo.SDKVersion = SDKVersion;
-  }
-  void setBuildVersion(MachO::PlatformType Platform, unsigned Major,
-                       unsigned Minor, unsigned Update,
-                       VersionTuple SDKVersion = VersionTuple()) {
-    VersionInfo.EmitBuildVersion = true;
-    VersionInfo.TypeOrPlatform.Platform = Platform;
-    VersionInfo.Major = Major;
-    VersionInfo.Minor = Minor;
-    VersionInfo.Update = Update;
-    VersionInfo.SDKVersion = SDKVersion;
-  }
-
-  const VersionInfoType &getDarwinTargetVariantVersionInfo() const {
-    return DarwinTargetVariantVersionInfo;
-  }
-  void setDarwinTargetVariantBuildVersion(MachO::PlatformType Platform,
-                                          unsigned Major, unsigned Minor,
-                                          unsigned Update,
-                                          VersionTuple SDKVersion) {
-    DarwinTargetVariantVersionInfo.EmitBuildVersion = true;
-    DarwinTargetVariantVersionInfo.TypeOrPlatform.Platform = Platform;
-    DarwinTargetVariantVersionInfo.Major = Major;
-    DarwinTargetVariantVersionInfo.Minor = Minor;
-    DarwinTargetVariantVersionInfo.Update = Update;
-    DarwinTargetVariantVersionInfo.SDKVersion = SDKVersion;
-  }
-
-  std::optional<unsigned> getPtrAuthABIVersion() const {
-    return PtrAuthABIVersion;
-  }
-  void setPtrAuthABIVersion(unsigned V) { PtrAuthABIVersion = V; }
-  bool getPtrAuthKernelABIVersion() const { return PtrAuthKernelABIVersion; }
-  void setPtrAuthKernelABIVersion(bool V) { PtrAuthKernelABIVersion = V; }
 
   /// Reuse an assembler instance
   ///

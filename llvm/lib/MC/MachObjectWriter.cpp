@@ -57,6 +57,12 @@ void MachObjectWriter::reset() {
   ExternalSymbolData.clear();
   UndefinedSymbolData.clear();
   LOHContainer.reset();
+  VersionInfo.Major = 0;
+  VersionInfo.SDKVersion = VersionTuple();
+  TargetVariantVersionInfo.Major = 0;
+  TargetVariantVersionInfo.SDKVersion = VersionTuple();
+  PtrAuthABIVersion = std::nullopt;
+  PtrAuthKernelABIVersion = false;
   MCObjectWriter::reset();
 }
 
@@ -822,7 +828,6 @@ void MachObjectWriter::prepareObject(MCAssembler &Asm) {
 void MachObjectWriter::writeMachOHeader(MCAssembler &Asm) {
   // END MCCAS
   unsigned NumSections = Asm.end() - Asm.begin();
-  const MCAssembler::VersionInfoType &VersionInfo = Asm.getVersionInfo();
 
   // The section data starts after the header, the segment load command (and
   // section headers) and the symbol table.
@@ -839,9 +844,6 @@ void MachObjectWriter::writeMachOHeader(MCAssembler &Asm) {
     else
       LoadCommandsSize += sizeof(MachO::version_min_command);
   }
-
-  const MCAssembler::VersionInfoType &TargetVariantVersionInfo =
-      Asm.getDarwinTargetVariantVersionInfo();
 
   // Add the target variant version info load command size, if used.
   if (TargetVariantVersionInfo.Major != 0) {
@@ -914,13 +916,13 @@ void MachObjectWriter::writeMachOHeader(MCAssembler &Asm) {
   SectionDataFileSize += SectionDataPadding;
 
   // The ptrauth ABI version is limited to 4 bits.
-  std::optional<unsigned> PtrAuthABIVersion = Asm.getPtrAuthABIVersion();
+  std::optional<unsigned> PtrAuthABIVersion = getPtrAuthABIVersion();
   if (PtrAuthABIVersion && *PtrAuthABIVersion > 63) {
     Asm.getContext().reportError(SMLoc(), "invalid ptrauth ABI version: " +
                                               utostr(*PtrAuthABIVersion));
     PtrAuthABIVersion = 63;
   }
-  bool PtrAuthKernelABIVersion = Asm.getPtrAuthKernelABIVersion();
+  bool PtrAuthKernelABIVersion = getPtrAuthKernelABIVersion();
 
   // Write the prolog, starting with the header and load command...
   writeHeader(MachO::MH_OBJECT, NumLoadCommands, LoadCommandsSize,
@@ -960,7 +962,7 @@ void MachObjectWriter::writeMachOHeader(MCAssembler &Asm) {
 
   // Write out the deployment target information, if it's available.
   auto EmitDeploymentTargetVersion =
-      [&](const MCAssembler::VersionInfoType &VersionInfo) {
+      [&](const VersionInfoType &VersionInfo) {
         auto EncodeVersion = [](VersionTuple V) -> uint32_t {
           assert(!V.empty() && "empty version");
           unsigned Update = V.getSubminor().value_or(0);
