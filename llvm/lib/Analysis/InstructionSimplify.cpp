@@ -1061,12 +1061,13 @@ static bool isDivZero(Value *X, Value *Y, const SimplifyQuery &Q,
   // IsSigned == false.
 
   // Is the unsigned dividend known to be less than a constant divisor?
-  // TODO: Convert this (and above) to range analysis
-  //      ("computeConstantRangeIncludingKnownBits")?
   const APInt *C;
-  if (match(Y, m_APInt(C)) &&
-      computeKnownBits(X, /* Depth */ 0, Q).getMaxValue().ult(*C))
-    return true;
+  if (match(Y, m_APInt(C))) {
+    ConstantRange XRange =
+        computeConstantRangeIncludingKnownBits(X, /*ForSigned=*/false, Q);
+    if (!XRange.isFullSet() && XRange.icmp(CmpInst::ICMP_ULT, *C))
+      return true;
+  }
 
   // Try again for any divisor:
   // Is the dividend unsigned less than the divisor?
