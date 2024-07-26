@@ -2324,6 +2324,56 @@ Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip) {
   if (!TryConsumeToken(tok::less))
     return TPResult::False;
 
+  while (true) {
+    // An expression cannot be followed by a braced-init-list unless
+    // its the right operand of an assignment operator.
+    if (Tok.is(tok::l_brace))
+      return TPResult::True;
+
+    bool InvalidAsTemplateArgumentList = false;
+    if (isCXXDeclarationSpecifier(ImplicitTypenameContext::No, TPResult::False,
+                                  &InvalidAsTemplateArgumentList) ==
+        TPResult::True)
+      return TPResult::True;
+    if (InvalidAsTemplateArgumentList)
+      return TPResult::False;
+
+    if (Tok.is(tok::l_paren)) {
+      // Skip the parens.
+      ConsumeParen();
+      if (!SkipUntil(tok::r_paren, StopAtSemi))
+        return TPResult::Error;
+    } else if (MightBeCXXScopeToken()) {
+      if (TryAnnotateCXXScopeToken())
+        return TPResult::Error;
+    }
+
+    if (!SkipUntil({tok::comma, tok::less,
+        tok::greater, tok::greatergreater, tok::greatergreatergreater},
+        StopAtSemi | StopBeforeMatch))
+      return TPResult::False;
+
+    if (Tok.isNot(tok::comma)) {
+      if (Tok.is(tok::less))
+        break;
+      if (TryConsumeToken(tok::greater) && Tok.is(tok::coloncolon)) {
+        TentativeParsingAction TPA(*this, /*Unannotated=*/true);
+        if (isMissingTemplateKeywordBeforeScope(/*AnnotateInvalid=*/false)) {
+          TPA.Revert();
+          return TPResult::True;
+        }
+        TPA.Commit();
+      }
+      #if 0
+      if (TryConsumeToken(tok::greater) && Tok.is(tok::coloncolon) &&
+          isMissingTemplateKeywordBeforeScope(/*AnnotateInvalid=*/false))
+        return TPResult::True;
+      #endif
+      return TPResult::Ambiguous;
+    }
+    ConsumeToken();
+  }
+
   // We can't do much to tell an expression apart from a template-argument,
   // but one good distinguishing factor is that a "decl-specifier" not
   // followed by '(' or '{' can't appear in an expression.
