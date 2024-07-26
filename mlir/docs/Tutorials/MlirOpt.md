@@ -25,7 +25,7 @@ as well as emitting debug and diagnostic data.
 
 Running `mlir-opt` with no flags will consume textual or bytecode IR
 from the standard input, parse and run verifiers on it,
-and write the textual format back to standard out.
+and write the textual format back to the standard output.
 This is a good way to test if an input MLIR is well-formed.
 
 `mlir-opt --help` shows a complete list of flags
