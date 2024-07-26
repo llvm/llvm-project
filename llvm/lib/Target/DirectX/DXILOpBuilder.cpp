@@ -15,7 +15,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/TargetParser/Triple.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::dxil;
@@ -151,9 +151,9 @@ struct OpCodeProperty {
   dxil::OpCodeClass OpCodeClass;
   // Offset in DXILOpCodeClassNameTable.
   unsigned OpCodeClassNameOffset;
-  std::vector<OpOverload> Overloads;
-  std::vector<OpStage> Stages;
-  std::vector<OpAttribute> Attributes;
+  llvm::SmallVector<OpOverload> Overloads;
+  llvm::SmallVector<OpStage> Stages;
+  llvm::SmallVector<OpAttribute> Attributes;
   int OverloadParamIndex;        // parameter index which control the overload.
                                  // When < 0, should be only 1 overload type.
   unsigned NumOfParameters;      // Number of parameters include return value.
@@ -292,7 +292,7 @@ static FunctionType *getDXILOpFunctionType(const OpCodeProperty *Prop,
                                            Type *ReturnTy, Type *OverloadTy) {
   SmallVector<Type *> ArgTys;
 
-  auto ParamKinds = getOpCodeParameterKind(*Prop);
+  const ParameterKind *ParamKinds = getOpCodeParameterKind(*Prop);
 
   // Add ReturnTy as return type of the function
   ArgTys.emplace_back(ReturnTy);
@@ -313,45 +313,43 @@ static FunctionType *getDXILOpFunctionType(const OpCodeProperty *Prop,
 /// DXIL version not greater than DXILVer.
 /// PropList is expected to be sorted in ascending order of DXIL version.
 template <typename T>
-static int getPropIndex(const std::vector<T> PropList,
-                        const VersionTuple DXILVer) {
-  auto Size = PropList.size();
-  for (int I = Size - 1; I >= 0; I--) {
-    auto OL = PropList[I];
-    if (VersionTuple(OL.DXILVersion.Major, OL.DXILVersion.Minor) <= DXILVer) {
-      return I;
+static std::optional<size_t> getPropIndex(ArrayRef<T> PropList,
+                                          const VersionTuple DXILVer) {
+  size_t Index = PropList.size() - 1;
+  for (auto Iter = PropList.rbegin(); Iter != PropList.rend(); Iter++, Index--) {
+    const T& Prop = *Iter;
+    if (VersionTuple(Prop.DXILVersion.Major, Prop.DXILVersion.Minor) <= DXILVer) {
+      return Index;
     }
   }
-  report_fatal_error(Twine(DXILVer.getAsString()) + ": Unknown DXIL Version",
-                     /*gen_crash_diag*/ false);
-
-  return -1;
+  return std::nullopt;
 }
 
 namespace llvm {
 namespace dxil {
 
-// No extra checks on TargetTripleStr need be performed to verify that the
+// No extra checks on TargetTriple need be performed to verify that the
 // Triple is well-formed or that the target is supported since these checks
 // would have been done at the time the module M is constructed in the earlier
 // stages of compilation.
 DXILOpBuilder::DXILOpBuilder(Module &M, IRBuilderBase &B)
-    : M(M), B(B), TargetTripleStr(M.getTargetTriple()) {}
+    : M(M), B(B), TargetTriple(Triple(M.getTargetTriple())) {}
 
 CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
                                           Type *OverloadTy,
                                           SmallVector<Value *> Args) {
 
-  auto Major = Triple(TargetTripleStr).getDXILVersion().getMajor();
-  auto MinorOrErr = Triple(TargetTripleStr).getDXILVersion().getMinor();
-  uint32_t Minor = MinorOrErr.has_value() ? *MinorOrErr : 0;
-  VersionTuple DXILVer(Major, Minor);
-  // Get Shader Stage Kind
-  Triple::EnvironmentType ShaderEnv = Triple(TargetTripleStr).getEnvironment();
+  VersionTuple DXILVer = TargetTriple.getDXILVersion();
 
   const OpCodeProperty *Prop = getOpCodeProperty(OpCode);
-  int OlIndex = getPropIndex(Prop->Overloads, DXILVer);
-  uint16_t ValidTyMask = Prop->Overloads[OlIndex].ValidTys;
+  auto OlIndexOrErr = getPropIndex(ArrayRef(Prop->Overloads), DXILVer);
+  if (!OlIndexOrErr.has_value()) {
+    report_fatal_error(Twine(getOpCodeName(OpCode)) +
+                           ": No valid overloads found for DXIL Version - " +
+                           DXILVer.getAsString(),
+                       /*gen_crash_diag*/ false);
+  }
+  uint16_t ValidTyMask = Prop->Overloads[*OlIndexOrErr].ValidTys;
 
   OverloadKind Kind = getOverloadKind(OverloadTy);
 
@@ -364,6 +362,8 @@ CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
                        /* gen_crash_diag=*/false);
   }
 
+  // Get Shader Stage Kind
+  Triple::EnvironmentType ShaderEnv = TargetTriple.getEnvironment();
   // Ensure Environment type is known
   if (ShaderEnv == Triple::UnknownEnvironment) {
     report_fatal_error(
@@ -374,9 +374,15 @@ CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
 
   // Perform necessary checks to ensure Opcode is valid in the targeted shader
   // kind
-  int StIndex = getPropIndex(Prop->Stages, DXILVer);
-  uint16_t ValidShaderKindMask = Prop->Stages[StIndex].ValidStages;
-  enum ShaderKind ModuleStagekind = getShaderKindEnum(ShaderEnv);
+  auto StIndexOrErr = getPropIndex(ArrayRef(Prop->Stages), DXILVer);
+  if (!StIndexOrErr.has_value()) {
+    report_fatal_error(Twine(getOpCodeName(OpCode)) +
+                           ": No valid stages found for DXIL Version - " +
+                           DXILVer.getAsString(),
+                       /*gen_crash_diag*/ false);
+  }
+  uint16_t ValidShaderKindMask = Prop->Stages[*StIndexOrErr].ValidStages;
+  ShaderKind ModuleStagekind = getShaderKindEnum(ShaderEnv);
 
   // Ensure valid shader stage properties are specified
   if (ValidShaderKindMask == ShaderKind::removed) {
@@ -392,7 +398,7 @@ CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
 
   // Verify the target shader stage is valid for the DXIL operation
   if (!(ValidShaderKindMask & ModuleStagekind)) {
-    auto ShaderEnvStr = Triple(TargetTripleStr).getEnvironmentName();
+    auto ShaderEnvStr = TargetTriple.getEnvironmentName();
     report_fatal_error(Twine(ShaderEnvStr) +
                            " : Invalid Shader Stage for DXIL operation - " +
                            getOpCodeName(OpCode) + " for DXIL Version " +
@@ -431,7 +437,7 @@ Type *DXILOpBuilder::getOverloadTy(dxil::OpCode OpCode, FunctionType *FT) {
     OverloadType = FT->getParamType(Prop->OverloadParamIndex - 1);
   }
 
-  const auto *ParamKinds = getOpCodeParameterKind(*Prop);
+  const ParameterKind *ParamKinds = getOpCodeParameterKind(*Prop);
   auto Kind = ParamKinds[Prop->OverloadParamIndex];
   // For ResRet and CBufferRet, OverloadTy is in field of StructType.
   if (Kind == ParameterKind::CBufferRet ||

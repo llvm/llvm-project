@@ -14,6 +14,7 @@
 
 #include "DXILConstants.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 class Module;
@@ -47,7 +48,7 @@ public:
 private:
   Module &M;
   IRBuilderBase &B;
-  std::string TargetTripleStr;
+  Triple TargetTriple;
 };
 
 } // namespace dxil
