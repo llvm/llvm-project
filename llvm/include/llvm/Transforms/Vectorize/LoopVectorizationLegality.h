@@ -377,6 +377,18 @@ public:
     return LAI->getDepChecker().getMaxSafeVectorWidthInBits();
   }
 
+  /// Return safe power-of-2 number of elements, which do not prevent store-load
+  /// forwarding.
+  std::optional<unsigned> getMaxStoreLoadForwardSafeVFPowerOf2() const {
+    return LAI->getDepChecker().getStoreLoadForwardSafeVFPowerOf2();
+  }
+
+  /// Return safe non-power-of-2 number of elements, which do not prevent
+  /// store-load forwarding.
+  std::optional<unsigned> getMaxStoreLoadForwardSafeVFNonPowerOf2() const {
+    return LAI->getDepChecker().getStoreLoadForwardSafeVFNonPowerOf2();
+  }
+
   /// Returns true if vector representation of the instruction \p I
   /// requires mask.
   bool isMaskRequired(const Instruction *I) const {

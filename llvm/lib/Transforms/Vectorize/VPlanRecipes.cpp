@@ -471,6 +471,11 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
       assert(State.VF.isScalable() && "Expected scalable vector factor.");
       Value *VFArg = State.Builder.getInt32(State.VF.getKnownMinValue());
 
+      if (getNumOperands() == 3) {
+        Value *MaxSafeVF = State.get(getOperand(2), VPIteration(0, 0));
+        AVL = State.Builder.CreateBinaryIntrinsic(Intrinsic::umin, AVL,
+                                                  MaxSafeVF);
+      }
       Value *EVL = State.Builder.CreateIntrinsic(
           State.Builder.getInt32Ty(), Intrinsic::experimental_get_vector_length,
           {AVL, VFArg, State.Builder.getTrue()});
