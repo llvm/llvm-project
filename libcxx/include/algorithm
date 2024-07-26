@@ -42,11 +42,11 @@ namespace ranges {
   template <class I>
     struct in_found_result;              // since C++20
 
-  template <class O, class T>
-    struct out_value_result;             // since C++23
-
   template <class I, class T>
     struct in_value_result;              // since C++23
+
+  template <class O, class T>
+    struct out_value_result;             // since C++23
 
   template<forward_iterator I, sentinel_for<I> S, class Proj = identity,
     indirect_strict_weak_order<projected<I, Proj>> Comp = ranges::less>                                   // since C++20

@@ -48,7 +48,7 @@ public:
   template <weakly_incrementable _Tp, ranges::output_range<const _Tp&> _Range>
   _LIBCPP_HIDE_FROM_ABI static constexpr iota_result<ranges::borrowed_iterator_t<_Range>, _Tp>
   operator()(_Range&& __r, _Tp __value) {
-    return __iota_fn::operator()(ranges::begin(__r), ranges::end(__r), std::move(__value));
+    return operator()(ranges::begin(__r), ranges::end(__r), std::move(__value));
   }
 };
 

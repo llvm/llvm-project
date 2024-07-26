@@ -108,7 +108,7 @@ constexpr void run_tests() {
   test(std::ranges::search_n, in, count, x);
   test(std::ranges::find_end, in, in2);
 #if TEST_STD_VER >= 23
-  if constexpr (std::copyable<T>) {
+  if constexpr (std::weakly_incrementable<T>) {
     test(std::ranges::iota, in, x);
   }
 #endif

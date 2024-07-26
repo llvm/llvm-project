@@ -9,7 +9,6 @@ C++23,`shift_left <https://wg21.link/p2440r1>`_,Unassigned,No patch yet,Not star
 C++23,`shift_right <https://wg21.link/p2440r1>`_,Unassigned,No patch yet,Not started
 C++23,`iota (algorithm) <https://wg21.link/p2440r1>`_,Unassigned,No patch yet,Not started
 C++23,`fold <https://wg21.link/p2322r5>`_,Unassigned,No patch yet,Not started
-C++23,`contains <https://wg21.link/p2302r2>`_,Zijun Zhao,No patch yet,In Progress
 C++23,`ranges::iota <https://wg21.link/P2440R1>`_, James E T Smith, `PR68494 <https://github.com/llvm/llvm-project/pull/68494>`_, In Progress
 C++23,`contains <https://wg21.link/p2302r2>`_,Zijun Zhao, `#65148 <https://github.com/llvm/llvm-project/pull/65148>`_,Complete
 C++23,`fold_left_with_iter <https://wg21.link/p2322r6>`_,Christopher Di Bella,N/A,Complete

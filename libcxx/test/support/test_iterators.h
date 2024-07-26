@@ -1198,7 +1198,7 @@ struct Proxy : ProxyDiffTBase<T> {
   // Calling swap(Proxy<T>{}, Proxy<T>{}) would fail (pass prvalues)
 
   // Compare operators are defined for the convenience of the tests
-  friend constexpr bool operator==(const Proxy& lhs, const Proxy& rhs)
+  friend constexpr bool operator==(const Proxy&, const Proxy&)
     requires(std::equality_comparable<T> && !std::is_reference_v<T>)
   = default;
 
@@ -1210,7 +1210,7 @@ struct Proxy : ProxyDiffTBase<T> {
     return lhs.data == rhs.data;
   }
 
-  friend constexpr auto operator<=>(const Proxy& lhs, const Proxy& rhs)
+  friend constexpr auto operator<=>(const Proxy&, const Proxy&)
     requires(std::three_way_comparable<T> && !std::is_reference_v<T>)
   = default;
 
