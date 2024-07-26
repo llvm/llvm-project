@@ -10131,7 +10131,7 @@ def warn_dangling_lifetime_pointer : Warning<
   InGroup<DanglingGsl>;
 def warn_dangling_lifetime_pointer_assignment : Warning<"object backing the "
   "pointer %0 will be destroyed at the end of the full-expression">,
-  InGroup<DanglingAssignmentGsl>, DefaultIgnore;
+  InGroup<DanglingAssignmentGsl>;
 def warn_new_dangling_initializer_list : Warning<
   "array backing "
   "%select{initializer list subobject of the allocated object|"
