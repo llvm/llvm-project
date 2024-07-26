@@ -769,15 +769,22 @@ class AMDGPUDimProfileCopy<AMDGPUDimProfile base> : AMDGPUDimProfile<base.OpMod,
 
 class AMDGPUDimSampleProfile<string opmod,
                              AMDGPUDimProps dim,
-                             AMDGPUSampleVariant sample> : AMDGPUDimProfile<opmod, dim> {
+                             AMDGPUSampleVariant sample,
+                             bit has_return = true> : AMDGPUDimProfile<opmod, dim> {
   let IsSample = true;
-  let RetTypes = [llvm_any_ty];
+  let RetTypes = !if(has_return, [llvm_any_ty], []);
   let ExtraAddrArgs = sample.ExtraAddrArgs;
   let Offset = sample.Offset;
   let Bias = sample.Bias;
   let ZCompare = sample.ZCompare;
   let Gradients = sample.Gradients;
   let LodClampMip = sample.LodOrClamp;
+}
+
+class AMDGPUDimSampleNoReturnProfile<string opmod,
+                             AMDGPUDimProps dim,
+                             AMDGPUSampleVariant sample>
+    : AMDGPUDimSampleProfile<opmod, dim, sample, false> {
 }
 
 class AMDGPUDimNoSampleProfile<string opmod,
@@ -967,6 +974,21 @@ defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimIntrinsics = {
   foreach sample = AMDGPUSampleVariants in {
     defm int_amdgcn_image_sample # sample.LowerCaseMod
       : AMDGPUImageDimSampleDims<"SAMPLE" # sample.UpperCaseMod, sample>,
+        AMDGPUImageDMaskIntrinsic;
+  }
+
+  multiclass AMDGPUImageDimSampleNoReturnDims<string opmod,
+                                      AMDGPUSampleVariant sample> {
+    foreach dim = AMDGPUDims.NoMsaa in {
+      def !strconcat(NAME, "_", dim.Name, "_nortn") : AMDGPUImageDimIntrinsic<
+          AMDGPUDimSampleNoReturnProfile<opmod, dim, sample>,
+          [IntrWillReturn], [SDNPMemOperand]>;
+    }
+  }
+  foreach sample = AMDGPUSampleVariants in {
+    defm int_amdgcn_image_sample # sample.LowerCaseMod
+      : AMDGPUImageDimSampleNoReturnDims<
+        "SAMPLE" # sample.UpperCaseMod # "_nortn", sample>,
         AMDGPUImageDMaskIntrinsic;
   }
 
