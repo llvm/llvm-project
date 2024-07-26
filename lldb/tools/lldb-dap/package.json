@@ -1,7 +1,7 @@
 {
   "name": "lldb-dap",
   "displayName": "LLDB DAP",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://lldb.llvm.org",
   "description": "LLDB debugging from VSCode",
@@ -353,7 +353,7 @@
                   "number",
                   "string"
                 ],
-                "description": "TCP/IP port to attach to. Specifying both pid and port is an error."
+                "description": "TCP/IP port to attach to a remote system. Specifying both pid and port is an error."
               },
               "gdb-remote-hostname": {
                 "type": "string",
