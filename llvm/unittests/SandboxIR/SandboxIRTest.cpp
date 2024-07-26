@@ -737,7 +737,7 @@ define void @foo(i1 %cond0, i1 %cond2) {
 TEST_F(SandboxIRTest, LoadInst) {
   parseIR(C, R"IR(
 define void @foo(ptr %arg0, ptr %arg1) {
-  %ld = load i8, ptr %arg0, align 64
+  %ld = load volatile i8, ptr %arg0, align 64
   ret void
 }
 )IR");
@@ -751,6 +751,8 @@ define void @foo(ptr %arg0, ptr %arg1) {
   auto *Ld = cast<sandboxir::LoadInst>(&*It++);
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
+  // Check isVolatile()
+  EXPECT_TRUE(Ld->isVolatile());
   // Check getPointerOperand()
   EXPECT_EQ(Ld->getPointerOperand(), Arg0);
   // Check getAlign()
