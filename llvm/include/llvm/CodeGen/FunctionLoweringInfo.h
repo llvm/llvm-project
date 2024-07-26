@@ -190,11 +190,6 @@ public:
 
   /// The current call site index being processed, if any. 0 if none.
   unsigned CurCallSite = 0;
-  // TODO: Ideally, what we'd like is to have a switch that allows emitting
-  // synchronous (precise at call-sites only) CFA into .eh_frame. However,
-  // even under this switch, we'd like .debug_frame to be precise when using
-  // -g. At this moment, there's no way to specify that some CFI directives
-  // go into .eh_frame only, while others go into .debug_frame only.
 
   /// Collection of dbg.declare instructions handled after argument
   /// lowering and before ISel proper.
