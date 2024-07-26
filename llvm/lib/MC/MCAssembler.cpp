@@ -97,7 +97,6 @@ void MCAssembler::reset() {
   FileNames.clear();
   ThumbFuncs.clear();
   BundleAlignSize = 0;
-  ELFHeaderEFlags = 0;
 
   // reset objects owned by us
   if (getBackendPtr())
