@@ -7,17 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/unistd/getpid.h"
-
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/pid.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
-
-#include <sys/syscall.h> // For syscall numbers.
-
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(pid_t, getpid, ()) {
-  return LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_getpid);
-}
+LLVM_LIBC_FUNCTION(pid_t, getpid, (void)) { return ProcessIdentity::get(); }
 
 } // namespace LIBC_NAMESPACE_DECL
