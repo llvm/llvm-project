@@ -944,10 +944,7 @@ cc_library(
     srcs = glob([
         "lib/IR/*.cpp",
         "lib/IR/*.h",
-    ]) + [
-        # To avoid a dependency cycle.
-        "include/llvm/Analysis/IVDescriptors.h",
-    ],
+    ]),
     hdrs = glob(
         [
             "include/llvm/*.h",
