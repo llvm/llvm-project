@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=both,expected -std=c++11 %s
-// RUN: %clang_cc1 -verify=both,ref -std=c++11 %s
+// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -verify=both,expected -std=c++11 %s
+// RUN: %clang_cc1 -triple x86_64-linux -verify=both,ref -std=c++11 %s
 
 namespace IntOrEnum {
   const int k = 0;
