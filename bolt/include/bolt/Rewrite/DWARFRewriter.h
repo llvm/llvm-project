@@ -15,7 +15,6 @@
 #include "bolt/Core/GDBIndex.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DIE.h"
-#include "llvm/DWP/DWP.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include <cstdint>
@@ -194,35 +193,6 @@ public:
                      const std::string &, DebugLocWriter &,
                      DebugStrOffsetsWriter &, DebugStrWriter &);
   using KnownSectionsEntry = std::pair<MCSection *, DWARFSectionKind>;
-  struct DWPState {
-    std::unique_ptr<ToolOutputFile> Out;
-    std::unique_ptr<BinaryContext> TmpBC;
-    std::unique_ptr<MCStreamer> Streamer;
-    std::unique_ptr<DWPStringPool> Strings;
-    /// Used to store String sections for .dwo files if they are being modified.
-    std::vector<std::unique_ptr<DebugBufferVector>> StrSections;
-    const MCObjectFileInfo *MCOFI = nullptr;
-    const DWARFUnitIndex *CUIndex = nullptr;
-    std::deque<SmallString<32>> UncompressedSections;
-    MapVector<uint64_t, UnitIndexEntry> IndexEntries;
-    MapVector<uint64_t, UnitIndexEntry> TypeIndexEntries;
-    StringMap<KnownSectionsEntry> KnownSections;
-    uint32_t ContributionOffsets[8] = {};
-    uint32_t IndexVersion = 2;
-    uint64_t DebugInfoSize = 0;
-    uint16_t Version = 0;
-    bool IsDWP = false;
-  };
-  /// Init .dwp file
-  void initDWPState(DWPState &);
-
-  /// Write out .dwp File
-  void finalizeDWP(DWPState &);
-
-  /// add content of dwo to .dwp file.
-  void updateDWP(DWARFUnit &, const OverriddenSectionsMap &, const UnitMeta &,
-                 UnitMetaVectorType &, DWPState &, DebugLocWriter &,
-                 DebugStrOffsetsWriter &, DebugStrWriter &);
 };
 
 } // namespace bolt
