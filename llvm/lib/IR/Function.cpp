@@ -48,6 +48,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -385,6 +386,25 @@ unsigned Function::getInstructionCount() const {
 Function *Function::Create(FunctionType *Ty, LinkageTypes Linkage,
                            const Twine &N, Module &M) {
   return Create(Ty, Linkage, M.getDataLayout().getProgramAddressSpace(), N, &M);
+}
+
+StringRef Function::getDefaultTargetFeatures(const StringRef TargetABI) {
+  Triple T(getParent()->getTargetTriple());
+  StringRef attr = "";
+  if (T.isRISCV64()) {
+    if (TargetABI.equals_insensitive("lp64d"))
+      attr = "+d";
+    else if (TargetABI.equals_insensitive("lp64f"))
+      attr = "+f";
+    else if (TargetABI.equals_insensitive("lp64q"))
+      attr = "+q";
+  } else if (T.isRISCV32() && TargetABI.contains("ilp32f")) {
+    attr = "+f";
+  } else if (T.isARM() || T.isThumb()) {
+    attr = "+thumb-mode";
+  }
+
+  return attr;
 }
 
 Function *Function::createWithDefaultAttr(FunctionType *Ty,
