@@ -1068,8 +1068,9 @@ def OpenACC_ReductionRecipeOp : OpenACC_Op<"reduction.recipe",
 //===----------------------------------------------------------------------===//
 
 def OpenACC_ParallelOp : OpenACC_Op<"parallel",
-    [AttrSizedOperandSegments, RecursiveMemoryEffects,
-     DeclareOpInterfaceMethods<ComputeConstructOpInterface>,
+    [AttrSizedOperandSegments, AutomaticAllocationScope,
+     RecursiveMemoryEffects,
+     DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
      MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
                     MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "parallel construct";
@@ -1233,8 +1234,9 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
 //===----------------------------------------------------------------------===//
 
 def OpenACC_SerialOp : OpenACC_Op<"serial",
-    [AttrSizedOperandSegments, RecursiveMemoryEffects,
-     DeclareOpInterfaceMethods<ComputeConstructOpInterface>,
+    [AttrSizedOperandSegments, AutomaticAllocationScope,
+     RecursiveMemoryEffects,
+     DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
      MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
                     MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "serial construct";
@@ -1350,8 +1352,9 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
 //===----------------------------------------------------------------------===//
 
 def OpenACC_KernelsOp : OpenACC_Op<"kernels",
-    [AttrSizedOperandSegments, RecursiveMemoryEffects,
-     DeclareOpInterfaceMethods<ComputeConstructOpInterface>,
+    [AttrSizedOperandSegments, AutomaticAllocationScope,
+     RecursiveMemoryEffects,
+     DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
      MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
                     MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "kernels construct";
@@ -1741,9 +1744,11 @@ def OpenACC_HostDataOp : OpenACC_Op<"host_data",
 //===----------------------------------------------------------------------===//
 
 def OpenACC_LoopOp : OpenACC_Op<"loop",
-    [AttrSizedOperandSegments, RecursiveMemoryEffects,
-     MemoryEffects<[MemWrite<OpenACC_ConstructResource>]>,
-     DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
+    [AttrSizedOperandSegments, AutomaticAllocationScope,
+     RecursiveMemoryEffects,
+     DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
+     DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+     MemoryEffects<[MemWrite<OpenACC_ConstructResource>]>]> {
   let summary = "loop construct";
 
   let description = [{
