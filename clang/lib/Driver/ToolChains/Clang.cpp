@@ -3774,7 +3774,7 @@ static void RenderOpenCLOptions(const ArgList &Args, ArgStringList &CmdArgs,
     CmdArgs.push_back(Args.MakeArgString(CLExtStr));
   }
 
-  if (Arg *A = Args.getLastArg(options::OPT_cl_finite_math_only)) {
+  if (Args.hasArg(options::OPT_cl_finite_math_only)) {
     CmdArgs.push_back("-menable-no-infs");
     CmdArgs.push_back("-menable-no-nans");
   }
