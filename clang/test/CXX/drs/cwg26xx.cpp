@@ -51,7 +51,7 @@ using enum E;
 #endif
 }
 
-namespace cwg2627 { // cwg2627: 19
+namespace cwg2627 { // cwg2627: 20
 #if __cplusplus >= 202002L
 struct C {
   long long i : 8;
