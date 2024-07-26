@@ -153,6 +153,20 @@ CINDEX_LINKAGE
 CXError clang_experimental_cas_Databases_prune_ondisk_data(CXCASDatabases);
 
 /**
+ * Checks whether an object is materialized in the database using its printed
+ * \p CASID.
+ *
+ * \param CASID The printed CASID string for the object.
+ * \param[out] OutError The error object to pass back to client (if any).
+ * If non-null the object must be disposed using \c clang_Error_dispose.
+ *
+ * \returns whether the object is materialized in the database.
+ */
+CINDEX_LINKAGE bool clang_experimental_cas_isMaterialized(CXCASDatabases,
+                                                          const char *CASID,
+                                                          CXError *OutError);
+
+/**
  * Loads an object using its printed \p CASID.
  *
  * \param CASID The printed CASID string for the object.

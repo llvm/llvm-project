@@ -202,6 +202,35 @@ clang_experimental_cas_Databases_prune_ondisk_data(CXCASDatabases CDBs) {
   return nullptr;
 }
 
+bool clang_experimental_cas_isMaterialized(CXCASDatabases CDBs,
+                                           const char *PrintedID,
+                                           CXError *OutError) {
+  WrappedCASDatabases &DBs = *unwrap(CDBs);
+  ObjectStore &CAS = *DBs.CAS;
+
+  if (OutError)
+    *OutError = nullptr;
+
+  auto Failure = [OutError](Error &&E) -> bool {
+    passAsCXError(std::move(E), OutError);
+    return false;
+  };
+
+  Expected<CASID> Digest = CAS.parseID(PrintedID);
+  if (!Digest)
+    return Failure(Digest.takeError());
+
+  std::optional<ObjectRef> Ref = CAS.getReference(*Digest);
+  if (!Ref)
+    return false;
+
+  Expected<bool> IsMaterialized = CAS.isMaterialized(*Ref);
+  if (!IsMaterialized)
+    return Failure(IsMaterialized.takeError());
+
+  return *IsMaterialized;
+}
+
 CXCASObject clang_experimental_cas_loadObjectByString(CXCASDatabases CDBs,
                                                       const char *PrintedID,
                                                       CXError *OutError) {
