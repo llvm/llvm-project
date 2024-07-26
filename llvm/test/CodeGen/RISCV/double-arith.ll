@@ -1497,3 +1497,61 @@ define double @fnmsub_d_contract(double %a, double %b, double %c) nounwind {
   %2 = fsub contract double %c, %1
   ret double %2
 }
+
+define double @fsgnjx_f64(double %x, double %y) nounwind {
+; CHECKIFD-LABEL: fsgnjx_f64:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    lui a0, %hi(.LCPI23_0)
+; CHECKIFD-NEXT:    fld fa5, %lo(.LCPI23_0)(a0)
+; CHECKIFD-NEXT:    fsgnj.d fa5, fa5, fa0
+; CHECKIFD-NEXT:    fmul.d fa0, fa5, fa1
+; CHECKIFD-NEXT:    ret
+;
+; RV32IZFINXZDINX-LABEL: fsgnjx_f64:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    lui a4, %hi(.LCPI23_0)
+; RV32IZFINXZDINX-NEXT:    lw a5, %lo(.LCPI23_0+4)(a4)
+; RV32IZFINXZDINX-NEXT:    lw a4, %lo(.LCPI23_0)(a4)
+; RV32IZFINXZDINX-NEXT:    fsgnj.d a0, a4, a0
+; RV32IZFINXZDINX-NEXT:    fmul.d a0, a0, a2
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: fsgnjx_f64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    lui a2, %hi(.LCPI23_0)
+; RV64IZFINXZDINX-NEXT:    ld a2, %lo(.LCPI23_0)(a2)
+; RV64IZFINXZDINX-NEXT:    fsgnj.d a0, a2, a0
+; RV64IZFINXZDINX-NEXT:    fmul.d a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
+;
+; RV32I-LABEL: fsgnjx_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    lui a0, 524288
+; RV32I-NEXT:    and a0, a1, a0
+; RV32I-NEXT:    lui a1, 261888
+; RV32I-NEXT:    or a1, a0, a1
+; RV32I-NEXT:    li a0, 0
+; RV32I-NEXT:    call __muldf3
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fsgnjx_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    srli a0, a0, 63
+; RV64I-NEXT:    slli a0, a0, 63
+; RV64I-NEXT:    li a2, 1023
+; RV64I-NEXT:    slli a2, a2, 52
+; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    call __muldf3
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %z = call double @llvm.copysign.f64(double 1.0, double %x)
+  %mul = fmul double %z, %y
+  ret double %mul
+}
