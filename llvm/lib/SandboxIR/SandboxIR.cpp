@@ -809,6 +809,81 @@ void CallInst::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
+#endif // NDEBUG
+
+InvokeInst *InvokeInst::create(FunctionType *FTy, Value *Func,
+                               BasicBlock *IfNormal, BasicBlock *IfException,
+                               ArrayRef<Value *> Args, BBIterator WhereIt,
+                               BasicBlock *WhereBB, Context &Ctx,
+                               const Twine &NameStr) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  SmallVector<llvm::Value *> LLVMArgs;
+  LLVMArgs.reserve(Args.size());
+  for (Value *Arg : Args)
+    LLVMArgs.push_back(Arg->Val);
+  llvm::InvokeInst *Invoke = Builder.CreateInvoke(
+      FTy, Func->Val, cast<llvm::BasicBlock>(IfNormal->Val),
+      cast<llvm::BasicBlock>(IfException->Val), LLVMArgs, NameStr);
+  return Ctx.createInvokeInst(Invoke);
+}
+
+InvokeInst *InvokeInst::create(FunctionType *FTy, Value *Func,
+                               BasicBlock *IfNormal, BasicBlock *IfException,
+                               ArrayRef<Value *> Args,
+                               Instruction *InsertBefore, Context &Ctx,
+                               const Twine &NameStr) {
+  return create(FTy, Func, IfNormal, IfException, Args,
+                InsertBefore->getIterator(), InsertBefore->getParent(), Ctx,
+                NameStr);
+}
+
+InvokeInst *InvokeInst::create(FunctionType *FTy, Value *Func,
+                               BasicBlock *IfNormal, BasicBlock *IfException,
+                               ArrayRef<Value *> Args, BasicBlock *InsertAtEnd,
+                               Context &Ctx, const Twine &NameStr) {
+  return create(FTy, Func, IfNormal, IfException, Args, InsertAtEnd->end(),
+                InsertAtEnd, Ctx, NameStr);
+}
+
+BasicBlock *InvokeInst::getNormalDest() const {
+  return cast<BasicBlock>(
+      Ctx.getValue(cast<llvm::InvokeInst>(Val)->getNormalDest()));
+}
+BasicBlock *InvokeInst::getUnwindDest() const {
+  return cast<BasicBlock>(
+      Ctx.getValue(cast<llvm::InvokeInst>(Val)->getUnwindDest()));
+}
+void InvokeInst::setNormalDest(BasicBlock *BB) {
+  setOperand(1, BB);
+  assert(getNormalDest() == BB && "LLVM IR uses a different operan index!");
+}
+void InvokeInst::setUnwindDest(BasicBlock *BB) {
+  setOperand(2, BB);
+  assert(getUnwindDest() == BB && "LLVM IR uses a different operan index!");
+}
+Instruction *InvokeInst::getLandingPadInst() const {
+  return cast<Instruction>(
+      Ctx.getValue(cast<llvm::InvokeInst>(Val)->getLandingPadInst()));
+  ;
+}
+BasicBlock *InvokeInst::getSuccessor(unsigned SuccIdx) const {
+  return cast<BasicBlock>(
+      Ctx.getValue(cast<llvm::InvokeInst>(Val)->getSuccessor(SuccIdx)));
+}
+
+#ifndef NDEBUG
+void InvokeInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+void InvokeInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
 
 void OpaqueInst::dump(raw_ostream &OS) const {
   dumpCommonPrefix(OS);
@@ -968,6 +1043,11 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     It->second = std::unique_ptr<CallInst>(new CallInst(LLVMCall, *this));
     return It->second.get();
   }
+  case llvm::Instruction::Invoke: {
+    auto *LLVMInvoke = cast<llvm::InvokeInst>(LLVMV);
+    It->second = std::unique_ptr<InvokeInst>(new InvokeInst(LLVMInvoke, *this));
+    return It->second.get();
+  }
   default:
     break;
   }
@@ -1014,6 +1094,11 @@ ReturnInst *Context::createReturnInst(llvm::ReturnInst *I) {
 CallInst *Context::createCallInst(llvm::CallInst *I) {
   auto NewPtr = std::unique_ptr<CallInst>(new CallInst(I, *this));
   return cast<CallInst>(registerValue(std::move(NewPtr)));
+}
+
+InvokeInst *Context::createInvokeInst(llvm::InvokeInst *I) {
+  auto NewPtr = std::unique_ptr<InvokeInst>(new InvokeInst(I, *this));
+  return cast<InvokeInst>(registerValue(std::move(NewPtr)));
 }
 
 Value *Context::getValue(llvm::Value *V) const {
