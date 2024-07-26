@@ -442,7 +442,10 @@ public:
          continue;
 
        const CXXMethodDecl *Method = VtableComponent.getFunctionDecl();
-       if (!Method->getCanonicalDecl()->isInlined())
+       const FunctionDecl *FD = Method->getDefinition();
+       const bool IsInlined =
+           Method->getCanonicalDecl()->isInlined() || (FD && FD->isInlined());
+       if (!IsInlined)
          continue;
 
        StringRef Name = CGM.getMangledName(VtableComponent.getGlobalDecl());
