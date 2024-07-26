@@ -4,8 +4,6 @@
 // RUN: %clang_cc1 -cl-std=CL3.0 -fclangir -emit-llvm -triple spirv64-unknown-unknown %s -o %t_64.ll
 // RUN: FileCheck --input-file=%t_64.ll %s --check-prefix=LLVM-SPIRV64
 
-// Lowering of language-specific AS not supported
-// XFAIL: *
 
 // CIR-SPIRV64: cir.triple = "spirv64-unknown-unknown"
 // LLVM-SPIRV64: target triple = "spirv64-unknown-unknown"

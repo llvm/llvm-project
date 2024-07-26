@@ -62,6 +62,21 @@ public:
       : TargetLoweringInfo(std::make_unique<AArch64ABIInfo>(LT, Kind)) {
     assert(!MissingFeature::swift());
   }
+
+  unsigned getTargetAddrSpaceFromCIRAddrSpace(
+      mlir::cir::AddressSpaceAttr addressSpaceAttr) const override {
+    using Kind = mlir::cir::AddressSpaceAttr::Kind;
+    switch (addressSpaceAttr.getValue()) {
+    case Kind::offload_private:
+    case Kind::offload_local:
+    case Kind::offload_global:
+    case Kind::offload_constant:
+    case Kind::offload_generic:
+      return 0;
+    default:
+      llvm_unreachable("Unknown CIR address space for this target");
+    }
+  }
 };
 
 } // namespace

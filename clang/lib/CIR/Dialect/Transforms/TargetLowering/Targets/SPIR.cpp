@@ -41,6 +41,25 @@ class SPIRVTargetLoweringInfo : public TargetLoweringInfo {
 public:
   SPIRVTargetLoweringInfo(LowerTypes &LT)
       : TargetLoweringInfo(std::make_unique<SPIRVABIInfo>(LT)) {}
+
+  unsigned getTargetAddrSpaceFromCIRAddrSpace(
+      mlir::cir::AddressSpaceAttr addressSpaceAttr) const override {
+    using Kind = mlir::cir::AddressSpaceAttr::Kind;
+    switch (addressSpaceAttr.getValue()) {
+    case Kind::offload_private:
+      return 0;
+    case Kind::offload_local:
+      return 3;
+    case Kind::offload_global:
+      return 1;
+    case Kind::offload_constant:
+      return 2;
+    case Kind::offload_generic:
+      return 4;
+    default:
+      llvm_unreachable("Unknown CIR address space for this target");
+    }
+  }
 };
 
 } // namespace

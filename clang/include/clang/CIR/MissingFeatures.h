@@ -161,7 +161,6 @@ struct MissingFeatures {
   static bool constantFoldsToSimpleInteger() { return false; }
   static bool checkFunctionCallABI() { return false; }
   static bool zeroInitializer() { return false; }
-  static bool targetLoweringInfoAddressSpaceMap() { return false; }
   static bool targetCodeGenInfoIsProtoCallVariadic() { return false; }
   static bool targetCodeGenInfoGetNullPointer() { return false; }
   static bool operandBundles() { return false; }
@@ -277,6 +276,10 @@ struct MissingFeatures {
   static bool returnValueDominatingStoreOptmiization() { return false; }
   // Globals (vars and functions) may have attributes that are target depedent.
   static bool setTargetAttributes() { return false; }
+
+  // CIR modules parsed from text form may not carry the triple or data layout
+  // specs. We should make it always present.
+  static bool makeTripleAlwaysPresent() { return false; }
 };
 
 } // namespace cir
