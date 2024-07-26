@@ -97,6 +97,12 @@ PHDRS { text PT_FOO FOOHDR; }
 # PTFOO-NEXT:>>> PHDRS { text PT_FOO FOOHDR; }
 # PTFOO-NEXT:>>>              ^
 
+#--- unclosed.lds
+PHDRS { text PT_LOAD ;
+
+# RUN: not ld.lld -T unclosed.lds a.o 2>&1 | FileCheck --check-prefix=UNCLOSED %s
+#     UNCLOSED:error: unclosed.lds:1: invalid program header type:
+
 #--- a.s
 .global _start
 _start:
