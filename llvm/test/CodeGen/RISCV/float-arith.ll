@@ -1199,17 +1199,12 @@ define float @fnmsub_s_contract(float %a, float %b, float %c) nounwind {
 define float @fsgnjx_f32(float %x, float %y) nounwind {
 ; CHECKIF-LABEL: fsgnjx_f32:
 ; CHECKIF:       # %bb.0:
-; CHECKIF-NEXT:    lui a0, 260096
-; CHECKIF-NEXT:    fmv.w.x fa5, a0
-; CHECKIF-NEXT:    fsgnj.s fa5, fa5, fa0
-; CHECKIF-NEXT:    fmul.s fa0, fa5, fa1
+; CHECKIF-NEXT:    fsgnjx.s fa0, fa1, fa0
 ; CHECKIF-NEXT:    ret
 ;
 ; CHECKIZFINX-LABEL: fsgnjx_f32:
 ; CHECKIZFINX:       # %bb.0:
-; CHECKIZFINX-NEXT:    lui a2, 260096
-; CHECKIZFINX-NEXT:    fsgnj.s a0, a2, a0
-; CHECKIZFINX-NEXT:    fmul.s a0, a0, a1
+; CHECKIZFINX-NEXT:    fsgnjx.s a0, a1, a0
 ; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fsgnjx_f32:

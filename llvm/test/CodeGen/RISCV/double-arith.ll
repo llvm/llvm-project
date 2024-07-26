@@ -1501,27 +1501,17 @@ define double @fnmsub_d_contract(double %a, double %b, double %c) nounwind {
 define double @fsgnjx_f64(double %x, double %y) nounwind {
 ; CHECKIFD-LABEL: fsgnjx_f64:
 ; CHECKIFD:       # %bb.0:
-; CHECKIFD-NEXT:    lui a0, %hi(.LCPI23_0)
-; CHECKIFD-NEXT:    fld fa5, %lo(.LCPI23_0)(a0)
-; CHECKIFD-NEXT:    fsgnj.d fa5, fa5, fa0
-; CHECKIFD-NEXT:    fmul.d fa0, fa5, fa1
+; CHECKIFD-NEXT:    fsgnjx.d fa0, fa1, fa0
 ; CHECKIFD-NEXT:    ret
 ;
 ; RV32IZFINXZDINX-LABEL: fsgnjx_f64:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    lui a4, %hi(.LCPI23_0)
-; RV32IZFINXZDINX-NEXT:    lw a5, %lo(.LCPI23_0+4)(a4)
-; RV32IZFINXZDINX-NEXT:    lw a4, %lo(.LCPI23_0)(a4)
-; RV32IZFINXZDINX-NEXT:    fsgnj.d a0, a4, a0
-; RV32IZFINXZDINX-NEXT:    fmul.d a0, a0, a2
+; RV32IZFINXZDINX-NEXT:    fsgnjx.d a0, a2, a0
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fsgnjx_f64:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    lui a2, %hi(.LCPI23_0)
-; RV64IZFINXZDINX-NEXT:    ld a2, %lo(.LCPI23_0)(a2)
-; RV64IZFINXZDINX-NEXT:    fsgnj.d a0, a2, a0
-; RV64IZFINXZDINX-NEXT:    fmul.d a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    fsgnjx.d a0, a1, a0
 ; RV64IZFINXZDINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fsgnjx_f64:

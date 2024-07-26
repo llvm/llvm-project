@@ -3108,18 +3108,12 @@ define half @fnmsub_s_contract(half %a, half %b, half %c) nounwind {
 define half @fsgnjx_f16(half %x, half %y) nounwind {
 ; CHECKIZFH-LABEL: fsgnjx_f16:
 ; CHECKIZFH:       # %bb.0:
-; CHECKIZFH-NEXT:    lui a0, %hi(.LCPI23_0)
-; CHECKIZFH-NEXT:    flh fa5, %lo(.LCPI23_0)(a0)
-; CHECKIZFH-NEXT:    fsgnj.h fa5, fa5, fa0
-; CHECKIZFH-NEXT:    fmul.h fa0, fa5, fa1
+; CHECKIZFH-NEXT:    fsgnjx.h fa0, fa1, fa0
 ; CHECKIZFH-NEXT:    ret
 ;
 ; CHECK-ZHINX-LABEL: fsgnjx_f16:
 ; CHECK-ZHINX:       # %bb.0:
-; CHECK-ZHINX-NEXT:    lui a2, %hi(.LCPI23_0)
-; CHECK-ZHINX-NEXT:    lh a2, %lo(.LCPI23_0)(a2)
-; CHECK-ZHINX-NEXT:    fsgnj.h a0, a2, a0
-; CHECK-ZHINX-NEXT:    fmul.h a0, a0, a1
+; CHECK-ZHINX-NEXT:    fsgnjx.h a0, a1, a0
 ; CHECK-ZHINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fsgnjx_f16:
