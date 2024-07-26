@@ -122,22 +122,20 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
   }
 
   // Check Fields in all bases
-  for (const Record::Base &B : R->bases()) {
+  unsigned BaseIndex = 0;
+  const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(R->getDecl());
+  for (const CXXBaseSpecifier &BS : CD->bases()) {
+    const Record::Base &B = *R->getBase(BaseIndex);
     Pointer P = BasePtr.atField(B.Offset);
     if (!P.isInitialized()) {
-      const Descriptor *Desc = BasePtr.getDeclDesc();
-      if (Desc->asDecl())
-        S.FFDiag(BasePtr.getDeclDesc()->asDecl()->getLocation(),
-                 diag::note_constexpr_uninitialized_base)
-            << B.Desc->getType();
-      else
-        S.FFDiag(BasePtr.getDeclDesc()->asExpr()->getExprLoc(),
-                 diag::note_constexpr_uninitialized_base)
-            << B.Desc->getType();
-
+      SourceLocation TypeBeginLoc = BS.getBaseTypeLoc();
+      SourceRange Range(TypeBeginLoc, BS.getEndLoc());
+      S.FFDiag(TypeBeginLoc, diag::note_constexpr_uninitialized_base)
+          << B.Desc->getType() << Range;
       return false;
     }
     Result &= CheckFieldsInitialized(S, Loc, P, B.R);
+    BaseIndex++;
   }
 
   // TODO: Virtual bases
