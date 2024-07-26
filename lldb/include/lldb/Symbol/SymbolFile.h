@@ -211,7 +211,7 @@ public:
   /// The characteristics of an array type.
   struct ArrayInfo {
     int64_t first_index = 0;
-    llvm::SmallVector<uint64_t, 1> element_orders;
+    llvm::SmallVector<std::optional<uint64_t>, 1> element_orders;
     uint32_t byte_stride = 0;
     uint32_t bit_stride = 0;
   };
