@@ -2424,7 +2424,7 @@ template <class ELFT> void elf::checkNoCrossRefs() {
         if (!isd)
           continue;
         parallelForEach(isd->sections, [&](InputSection *sec) {
-          doRelocs(*sec, scanCrossRefs, noxref, osec, sec);
+          invokeOnRelocs(*sec, scanCrossRefs, noxref, osec, sec);
         });
       }
     }

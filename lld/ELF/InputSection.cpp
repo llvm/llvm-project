@@ -153,7 +153,7 @@ RelsOrRelas<ELFT> InputSectionBase::relsOrRelas(bool supportsCrel) const {
     // InputSection with zero eqClass[0].
     if (!relSec || !cast<InputSection>(relSec)->eqClass[0]) {
       auto *sec = makeThreadLocal<InputSection>(*f, shdr, name);
-      f->setSection(relSecIdx, sec);
+      f->cacheDecodedCrel(relSecIdx, sec);
       cast<InputSection>(sec)->eqClass[0] = SHT_RELA;
 
       RelocsCrel<ELFT::Is64Bits> entries(sec->content_);
@@ -1107,7 +1107,7 @@ void InputSectionBase::relocate(uint8_t *buf, uint8_t *bufEnd) {
   auto *sec = cast<InputSection>(this);
   // For a relocatable link, also call relocateNonAlloc() to rewrite applicable
   // locations with tombstone values.
-  doRelocs(*sec, sec->relocateNonAlloc, buf);
+  invokeOnRelocs(*sec, sec->relocateNonAlloc, buf);
 }
 
 // For each function-defining prologue, find any calls to __morestack,

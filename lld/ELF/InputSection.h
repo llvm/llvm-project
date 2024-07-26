@@ -35,7 +35,7 @@ class OutputSection;
 
 LLVM_LIBRARY_VISIBILITY extern std::vector<Partition> partitions;
 
-// Returned by InputSectionBase::relsOrRelas. At least one member is empty.
+// Returned by InputSectionBase::relsOrRelas. At most one member is empty.
 template <class ELFT> struct RelsOrRelas {
   Relocs<typename ELFT::Rel> rels;
   Relocs<typename ELFT::Rela> relas;
@@ -44,7 +44,7 @@ template <class ELFT> struct RelsOrRelas {
   bool areRelocsCrel() const { return crels.size(); }
 };
 
-#define doRelocs(sec, f, ...)                                                  \
+#define invokeOnRelocs(sec, f, ...)                                            \
   {                                                                            \
     const RelsOrRelas<ELFT> rs = (sec).template relsOrRelas<ELFT>();           \
     if (rs.areRelocsCrel())                                                    \
