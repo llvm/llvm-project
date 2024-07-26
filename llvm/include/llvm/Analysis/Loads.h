@@ -69,8 +69,7 @@ bool isDereferenceableAndAlignedPointer(const Value *V, Align Alignment,
 /// quick local scan of the basic block containing ScanFrom, to determine if
 /// the address is already accessed.
 bool isSafeToLoadUnconditionally(Value *V, Align Alignment, const APInt &Size,
-                                 const DataLayout &DL,
-                                 Instruction *ScanFrom = nullptr,
+                                 const DataLayout &DL, Instruction *ScanFrom,
                                  AssumptionCache *AC = nullptr,
                                  const DominatorTree *DT = nullptr,
                                  const TargetLibraryInfo *TLI = nullptr);
@@ -100,8 +99,7 @@ bool isDereferenceableReadOnlyLoop(Loop *L, ScalarEvolution *SE,
 /// quick local scan of the basic block containing ScanFrom, to determine if
 /// the address is already accessed.
 bool isSafeToLoadUnconditionally(Value *V, Type *Ty, Align Alignment,
-                                 const DataLayout &DL,
-                                 Instruction *ScanFrom = nullptr,
+                                 const DataLayout &DL, Instruction *ScanFrom,
                                  AssumptionCache *AC = nullptr,
                                  const DominatorTree *DT = nullptr,
                                  const TargetLibraryInfo *TLI = nullptr);
