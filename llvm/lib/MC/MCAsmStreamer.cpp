@@ -72,9 +72,8 @@ class MCAsmStreamer final : public MCStreamer {
 
 public:
   MCAsmStreamer(MCContext &Context, std::unique_ptr<formatted_raw_ostream> os,
-                bool, bool, MCInstPrinter *printer,
-                std::unique_ptr<MCCodeEmitter> emitter,
-                std::unique_ptr<MCAsmBackend> asmbackend, bool)
+                MCInstPrinter *printer, std::unique_ptr<MCCodeEmitter> emitter,
+                std::unique_ptr<MCAsmBackend> asmbackend)
       : MCStreamer(Context), OSOwner(std::move(os)), OS(*OSOwner),
         MAI(Context.getAsmInfo()), InstPrinter(printer),
         Assembler(std::make_unique<MCAssembler>(
@@ -2675,7 +2674,6 @@ MCStreamer *llvm::createAsmStreamer(MCContext &Context,
                                     std::unique_ptr<MCCodeEmitter> &&CE,
                                     std::unique_ptr<MCAsmBackend> &&MAB,
                                     bool ShowInst) {
-  return new MCAsmStreamer(Context, std::move(OS), isVerboseAsm,
-                           useDwarfDirectory, IP, std::move(CE), std::move(MAB),
-                           ShowInst);
+  return new MCAsmStreamer(Context, std::move(OS), IP, std::move(CE),
+                           std::move(MAB));
 }
