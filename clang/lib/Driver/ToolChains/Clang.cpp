@@ -4666,8 +4666,11 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
 
   // -gdwarf-aranges turns on the emission of the aranges section in the
   // backend.
-  if (const Arg *A = Args.getLastArg(options::OPT_gdwarf_aranges);
-      A && checkDebugInfoOption(A, Args, D, TC)) {
+  // Always enabled for SCE tuning.
+  bool NeedAranges = DebuggerTuning == llvm::DebuggerKind::SCE;
+  if (const Arg *A = Args.getLastArg(options::OPT_gdwarf_aranges))
+    NeedAranges = checkDebugInfoOption(A, Args, D, TC) || NeedAranges;
+  if (NeedAranges) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-generate-arange-section");
   }
