@@ -20,6 +20,7 @@
 #ifndef NVGPU
 #define NVGPU
 
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
@@ -802,4 +803,16 @@ def NVGPU_WarpgroupMmaInitAccumulatorOp : NVGPU_Op<"warpgroup.mma.init.accumulat
   let hasVerifier = 1;
 }
 
+def NVGPU_RcpApproxOp : NVGPU_Op<"rcp_approx", [
+  Pure, SameOperandsAndResultType
+]> {
+  let summary = "A wrapper of nvvm rcp.approx.ftz.f";
+  let description = [{
+    F32 vector reciprocal calculation using `nvvm.rcp.approx.ftz.f`.
+    The input and output are both F32 vector with same shape.
+  }];
+  let arguments = (ins VectorOf<[F32]>:$in);
+  let results = (outs VectorOf<[F32]>:$out);
+  let assemblyFormat = "$in attr-dict `:` type($out)";
+}
 #endif // NVGPU

@@ -11,6 +11,7 @@
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Conversion/LLVMCommon/VectorPattern.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -1666,6 +1667,41 @@ struct NVGPUTmaPrefetchOpLowering
   }
 };
 
+struct NVGPURcpApproxOpLowering
+    : public ConvertOpToLLVMPattern<nvgpu::RcpApproxOp> {
+  using ConvertOpToLLVMPattern<nvgpu::RcpApproxOp>::ConvertOpToLLVMPattern;
+  LogicalResult
+  matchAndRewrite(nvgpu::RcpApproxOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+    auto i64Ty = b.getI64Type();
+    auto f32Ty = b.getF32Type();
+    VectorType inTy = op.getIn().getType();
+    // apply rcp.approx.ftz.f on each element in vector.
+    auto convert1DVec = [&](Type llvm1DVectorTy, Value inVec) {
+      Value ret1DVec = b.create<LLVM::UndefOp>(llvm1DVectorTy);
+      int numElems = llvm::cast<VectorType>(llvm1DVectorTy).getNumElements();
+      for (int i = 0; i < numElems; i++) {
+        Value idx = b.create<LLVM::ConstantOp>(i64Ty, b.getI64IntegerAttr(i));
+        Value elem = b.create<LLVM::ExtractElementOp>(inVec, idx);
+        Value dst = b.create<NVVM::RcpApproxFtzF32Op>(f32Ty, elem);
+        ret1DVec = b.create<LLVM::InsertElementOp>(ret1DVec, dst, idx);
+      }
+      return ret1DVec;
+    };
+    if (inTy.getRank() == 1) {
+      rewriter.replaceOp(op, convert1DVec(inTy, adaptor.getIn()));
+      return success();
+    }
+    return LLVM::detail::handleMultidimensionalVectors(
+        op.getOperation(), adaptor.getOperands(), *(this->getTypeConverter()),
+        [&](Type llvm1DVectorTy, ValueRange operands) -> Value {
+          OpAdaptor adaptor(operands);
+          return convert1DVec(llvm1DVectorTy, adaptor.getIn());
+        },
+        rewriter);
+  }
+};
 } // namespace
 
 void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
@@ -1688,5 +1724,5 @@ void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
       NVGPUWarpgroupMmaInitAccumulatorOpLowering, // nvgpu.warpgroup.mma.init.accumulator
       MmaSyncOptoNVVM, MmaLdMatrixOpToNVVM, NVGPUAsyncCopyLowering,
       NVGPUAsyncCreateGroupLowering, NVGPUAsyncWaitLowering,
-      NVGPUMmaSparseSyncLowering>(converter);
+      NVGPUMmaSparseSyncLowering, NVGPURcpApproxOpLowering>(converter);
 }

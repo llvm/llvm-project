@@ -1339,3 +1339,19 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// CHECK-LABEL: @rcp_approx_ftz_f32
+// CHECK-SAME:  %[[IN:.*]]: vector<32x16xf32>
+func.func @rcp_approx_ftz_f32(
+    %in: vector<32x16xf32>) {
+  // CHECK: %[[IN_LLVM:.*]] = builtin.unrealized_conversion_cast %[[IN]] : vector<32x16xf32> to !llvm.array<32 x vector<16xf32>>
+  // CHECK: %[[IN1DVEC:.*]] = llvm.extractvalue %[[IN_LLVM]][0] : !llvm.array<32 x vector<16xf32>>
+  // CHECK: %[[OUT1DVEC:.*]] = llvm.mlir.undef : vector<16xf32>
+  // CHECK: %[[IDX_0:.+]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK: %[[ELEM_0:.*]] = llvm.extractelement %[[IN1DVEC]][%[[IDX_0]] : i64]
+  // CHECK: %[[ELEM_RCP0:.*]] = nvvm.rcp.approx.ftz.f %[[ELEM_0]] : f32
+  // CHECK: llvm.insertelement %[[ELEM_RCP0]], %[[OUT1DVEC]][%[[IDX_0]] : i64] : vector<16xf32>
+  // CHECK-COUNT-511: nvvm.rcp.approx.ftz.f
+  %out = nvgpu.rcp_approx %in : vector<32x16xf32>
+  return
+}
