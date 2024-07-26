@@ -129,5 +129,5 @@ void foo(int i, A *ap, B *bp) {
 // CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 // CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]]}
 // CHECK: [[META3]] = !{!"llvm.loop.mustprogress"}
-// CHECK: [[META4]] = !{i64 5689}
+// CHECK: [[META4]] = !{i64 5791}
 //.
