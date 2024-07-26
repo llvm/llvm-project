@@ -3395,13 +3395,13 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,
       Lo = DAG.getNode(ISD::UADDO, dl, VTList, LoOps);
       HiOps[2] = Lo.getValue(1);
       Hi = DAG.computeKnownBits(HiOps[2]).isZero()
-               ? DAG.getNode(ISD::UADDO, dl, VTList, ArrayRef(HiOps, 2))
+               ? DAG.getNode(ISD::ADD, dl, NVT, ArrayRef(HiOps, 2))
                : DAG.getNode(ISD::UADDO_CARRY, dl, VTList, HiOps);
     } else {
       Lo = DAG.getNode(ISD::USUBO, dl, VTList, LoOps);
       HiOps[2] = Lo.getValue(1);
       Hi = DAG.computeKnownBits(HiOps[2]).isZero()
-               ? DAG.getNode(ISD::USUBO, dl, VTList, ArrayRef(HiOps, 2))
+               ? DAG.getNode(ISD::SUB, dl, NVT, ArrayRef(HiOps, 2))
                : DAG.getNode(ISD::USUBO_CARRY, dl, VTList, HiOps);
     }
     return;
