@@ -91,6 +91,116 @@ define i32 @exthz(i16 %a) {
   ret i32 %1
 }
 
+declare i32 @llvm.riscv.cv.alu.slet(i32, i32)
+
+define i32 @test.cv.alu.slet(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.slet:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.slet a0, a0, a1
+; CHECK-NEXT:    ret
+  %1 = call i32 @llvm.riscv.cv.alu.slet(i32 %a, i32 %b)
+  ret i32 %1
+}
+
+declare i32 @llvm.riscv.cv.alu.sletu(i32, i32)
+
+define i32 @test.cv.alu.sletu(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.sletu:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.sletu a0, a0, a1
+; CHECK-NEXT:    ret
+  %1 = call i32 @llvm.riscv.cv.alu.sletu(i32 %a, i32 %b)
+  ret i32 %1
+}
+
+declare i32 @llvm.riscv.cv.alu.min(i32, i32)
+
+define i32 @test.cv.alu.min(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.min:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.min a0, a0, a1
+; CHECK-NEXT:    ret
+  %1 = call i32 @llvm.riscv.cv.alu.min(i32 %a, i32 %b)
+  ret i32 %1
+}
+
+declare i32 @llvm.riscv.cv.alu.minu(i32, i32)
+
+define i32 @test.cv.alu.minu(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.minu:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.minu a0, a0, a1
+; CHECK-NEXT:    ret
+  %1 = call i32 @llvm.riscv.cv.alu.minu(i32 %a, i32 %b)
+  ret i32 %1
+}
+
+declare i32 @llvm.riscv.cv.alu.max(i32, i32)
+
+define i32 @test.cv.alu.max(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.max:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.max a0, a0, a1
+; CHECK-NEXT:    ret
+  %1 = call i32 @llvm.riscv.cv.alu.max(i32 %a, i32 %b)
+  ret i32 %1
+}
+
+declare i32 @llvm.riscv.cv.alu.maxu(i32, i32)
+
+define i32 @test.cv.alu.maxu(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.maxu:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.maxu a0, a0, a1
+; CHECK-NEXT:    ret
+  %1 = call i32 @llvm.riscv.cv.alu.maxu(i32 %a, i32 %b)
+  ret i32 %1
+}
+
+declare i32 @llvm.riscv.cv.alu.exths(i32)
+
+define i32 @test.cv.alu.exths(i32 %a) {
+; CHECK-LABEL: test.cv.alu.exths:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.exths a0, a0
+; CHECK-NEXT:    ret
+  %1 = call i32 @llvm.riscv.cv.alu.exths(i32 %a)
+  ret i32 %1
+}
+
+declare i32 @llvm.riscv.cv.alu.exthz(i32)
+
+define i32 @test.cv.alu.exthz(i32 %a) {
+; CHECK-LABEL: test.cv.alu.exthz:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.exthz a0, a0
+; CHECK-NEXT:    ret
+  %1 = call i32 @llvm.riscv.cv.alu.exthz(i32 %a)
+  ret i32 %1
+}
+
+declare i32 @llvm.riscv.cv.alu.extbs(i32)
+
+define i32 @test.cv.alu.extbs(i32 %a) {
+; CHECK-LABEL: test.cv.alu.extbs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.extbs a0, a0
+; CHECK-NEXT:    ret
+  %1 = call i32 @llvm.riscv.cv.alu.extbs(i32 %a)
+  ret i32 %1
+}
+
+declare i32 @llvm.riscv.cv.alu.extbz(i32)
+
+define i32 @test.cv.alu.extbz(i32 %a) {
+; CHECK-LABEL: test.cv.alu.extbz:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.extbz a0, a0
+; CHECK-NEXT:    ret
+  %1 = call i32 @llvm.riscv.cv.alu.extbz(i32 %a)
+  ret i32 %1
+}
+
 declare i32 @llvm.riscv.cv.alu.clip(i32, i32)
 
 define i32 @test.cv.alu.clip.case.a(i32 %a) {
@@ -133,170 +243,170 @@ define i32 @test.cv.alu.clipu.case.b(i32 %a) {
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.alu.addn(i32, i32, i32)
+declare i32 @llvm.riscv.cv.alu.addN(i32, i32, i32)
 
-define i32 @test.cv.alu.addn.case.a(i32 %a, i32 %b) {
-; CHECK-LABEL: test.cv.alu.addn.case.a:
+define i32 @test.cv.alu.addN.case.a(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.addN.case.a:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cv.addn a0, a0, a1, 15
 ; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.riscv.cv.alu.addn(i32 %a, i32 %b, i32 15)
+  %1 = call i32 @llvm.riscv.cv.alu.addN(i32 %a, i32 %b, i32 15)
   ret i32 %1
 }
 
-define i32 @test.cv.alu.addn.case.b(i32 %a, i32 %b) {
-; CHECK-LABEL: test.cv.alu.addn.case.b:
+define i32 @test.cv.alu.addN.case.b(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.addN.case.b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    cv.addnr a0, a1, a2
 ; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.riscv.cv.alu.addn(i32 %a, i32 %b, i32 32)
+  %1 = call i32 @llvm.riscv.cv.alu.addN(i32 %a, i32 %b, i32 32)
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.alu.addun(i32, i32, i32)
+declare i32 @llvm.riscv.cv.alu.adduN(i32, i32, i32)
 
-define i32 @test.cv.alu.addun.case.a(i32 %a, i32 %b) {
-; CHECK-LABEL: test.cv.alu.addun.case.a:
+define i32 @test.cv.alu.adduN.case.a(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.adduN.case.a:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cv.addun a0, a0, a1, 15
 ; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.riscv.cv.alu.addun(i32 %a, i32 %b, i32 15)
+  %1 = call i32 @llvm.riscv.cv.alu.adduN(i32 %a, i32 %b, i32 15)
   ret i32 %1
 }
 
-define i32 @test.cv.alu.addun.case.b(i32 %a, i32 %b) {
-; CHECK-LABEL: test.cv.alu.addun.case.b:
+define i32 @test.cv.alu.adduN.case.b(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.adduN.case.b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    cv.addunr a0, a1, a2
 ; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.riscv.cv.alu.addun(i32 %a, i32 %b, i32 32)
+  %1 = call i32 @llvm.riscv.cv.alu.adduN(i32 %a, i32 %b, i32 32)
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.alu.addrn(i32, i32, i32)
+declare i32 @llvm.riscv.cv.alu.addRN(i32, i32, i32)
 
-define i32 @test.cv.alu.addrn.case.a(i32 %a, i32 %b) {
-; CHECK-LABEL: test.cv.alu.addrn.case.a:
+define i32 @test.cv.alu.addRN.case.a(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.addRN.case.a:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cv.addrn a0, a0, a1, 15
 ; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.riscv.cv.alu.addrn(i32 %a, i32 %b, i32 15)
+  %1 = call i32 @llvm.riscv.cv.alu.addRN(i32 %a, i32 %b, i32 15)
   ret i32 %1
 }
 
-define i32 @test.cv.alu.addrn.case.b(i32 %a, i32 %b) {
-; CHECK-LABEL: test.cv.alu.addrn.case.b:
+define i32 @test.cv.alu.addRN.case.b(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.addRN.case.b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    cv.addrnr a0, a1, a2
 ; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.riscv.cv.alu.addrn(i32 %a, i32 %b, i32 32)
+  %1 = call i32 @llvm.riscv.cv.alu.addRN(i32 %a, i32 %b, i32 32)
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.alu.addurn(i32, i32, i32)
+declare i32 @llvm.riscv.cv.alu.adduRN(i32, i32, i32)
 
-define i32 @test.cv.alu.addurn.case.a(i32 %a, i32 %b) {
-; CHECK-LABEL: test.cv.alu.addurn.case.a:
+define i32 @test.cv.alu.adduRN.case.a(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.adduRN.case.a:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cv.addurn a0, a0, a1, 15
 ; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.riscv.cv.alu.addurn(i32 %a, i32 %b, i32 15)
+  %1 = call i32 @llvm.riscv.cv.alu.adduRN(i32 %a, i32 %b, i32 15)
   ret i32 %1
 }
 
-define i32 @test.cv.alu.addurn.case.b(i32 %a, i32 %b) {
-; CHECK-LABEL: test.cv.alu.addurn.case.b:
+define i32 @test.cv.alu.adduRN.case.b(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.adduRN.case.b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    cv.addurnr a0, a1, a2
 ; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.riscv.cv.alu.addurn(i32 %a, i32 %b, i32 32)
+  %1 = call i32 @llvm.riscv.cv.alu.adduRN(i32 %a, i32 %b, i32 32)
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.alu.subn(i32, i32, i32)
+declare i32 @llvm.riscv.cv.alu.subN(i32, i32, i32)
 
-define i32 @test.cv.alu.subn.case.a(i32 %a, i32 %b) {
-; CHECK-LABEL: test.cv.alu.subn.case.a:
+define i32 @test.cv.alu.subN.case.a(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.subN.case.a:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cv.subn a0, a0, a1, 15
 ; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.riscv.cv.alu.subn(i32 %a, i32 %b, i32 15)
+  %1 = call i32 @llvm.riscv.cv.alu.subN(i32 %a, i32 %b, i32 15)
   ret i32 %1
 }
 
-define i32 @test.cv.alu.subn.case.b(i32 %a, i32 %b) {
-; CHECK-LABEL: test.cv.alu.subn.case.b:
+define i32 @test.cv.alu.subN.case.b(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.subN.case.b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    cv.subnr a0, a1, a2
 ; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.riscv.cv.alu.subn(i32 %a, i32 %b, i32 32)
+  %1 = call i32 @llvm.riscv.cv.alu.subN(i32 %a, i32 %b, i32 32)
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.alu.subun(i32, i32, i32)
+declare i32 @llvm.riscv.cv.alu.subuN(i32, i32, i32)
 
-define i32 @test.cv.alu.subun.case.a(i32 %a, i32 %b) {
-; CHECK-LABEL: test.cv.alu.subun.case.a:
+define i32 @test.cv.alu.subuN.case.a(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.subuN.case.a:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cv.subun a0, a0, a1, 15
 ; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.riscv.cv.alu.subun(i32 %a, i32 %b, i32 15)
+  %1 = call i32 @llvm.riscv.cv.alu.subuN(i32 %a, i32 %b, i32 15)
   ret i32 %1
 }
 
-define i32 @test.cv.alu.subun.case.b(i32 %a, i32 %b) {
-; CHECK-LABEL: test.cv.alu.subun.case.b:
+define i32 @test.cv.alu.subuN.case.b(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.subuN.case.b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    cv.subunr a0, a1, a2
 ; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.riscv.cv.alu.subun(i32 %a, i32 %b, i32 32)
+  %1 = call i32 @llvm.riscv.cv.alu.subuN(i32 %a, i32 %b, i32 32)
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.alu.subrn(i32, i32, i32)
+declare i32 @llvm.riscv.cv.alu.subRN(i32, i32, i32)
 
-define i32 @test.cv.alu.subrn.case.a(i32 %a, i32 %b) {
-; CHECK-LABEL: test.cv.alu.subrn.case.a:
+define i32 @test.cv.alu.subRN.case.a(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.subRN.case.a:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cv.subrn a0, a0, a1, 15
 ; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.riscv.cv.alu.subrn(i32 %a, i32 %b, i32 15)
+  %1 = call i32 @llvm.riscv.cv.alu.subRN(i32 %a, i32 %b, i32 15)
   ret i32 %1
 }
 
-define i32 @test.cv.alu.subrn.case.b(i32 %a, i32 %b) {
-; CHECK-LABEL: test.cv.alu.subrn.case.b:
+define i32 @test.cv.alu.subRN.case.b(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.subRN.case.b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    cv.subrnr a0, a1, a2
 ; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.riscv.cv.alu.subrn(i32 %a, i32 %b, i32 32)
+  %1 = call i32 @llvm.riscv.cv.alu.subRN(i32 %a, i32 %b, i32 32)
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.alu.suburn(i32, i32, i32)
+declare i32 @llvm.riscv.cv.alu.subuRN(i32, i32, i32)
 
-define i32 @test.cv.alu.suburn.case.a(i32 %a, i32 %b) {
-; CHECK-LABEL: test.cv.alu.suburn.case.a:
+define i32 @test.cv.alu.subuRN.case.a(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.subuRN.case.a:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cv.suburn a0, a0, a1, 15
 ; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.riscv.cv.alu.suburn(i32 %a, i32 %b, i32 15)
+  %1 = call i32 @llvm.riscv.cv.alu.subuRN(i32 %a, i32 %b, i32 15)
   ret i32 %1
 }
 
-define i32 @test.cv.alu.suburn.case.b(i32 %a, i32 %b) {
-; CHECK-LABEL: test.cv.alu.suburn.case.b:
+define i32 @test.cv.alu.subuRN.case.b(i32 %a, i32 %b) {
+; CHECK-LABEL: test.cv.alu.subuRN.case.b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    cv.suburnr a0, a1, a2
 ; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.riscv.cv.alu.suburn(i32 %a, i32 %b, i32 32)
+  %1 = call i32 @llvm.riscv.cv.alu.subuRN(i32 %a, i32 %b, i32 32)
   ret i32 %1
 }
