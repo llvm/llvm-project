@@ -11222,6 +11222,17 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
       return;
     }
 
+    if (!FromQs.getPointerAuth().isEquivalent(ToQs.getPointerAuth())) {
+      S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_ptrauth)
+          << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
+          << FromTy << !!FromQs.getPointerAuth()
+          << FromQs.getPointerAuth().getAsString() << !!ToQs.getPointerAuth()
+          << ToQs.getPointerAuth().getAsString() << I + 1
+          << (FromExpr ? FromExpr->getSourceRange() : SourceRange());
+      MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
+      return;
+    }
+
     unsigned CVR = FromQs.getCVRQualifiers() & ~ToQs.getCVRQualifiers();
     assert(CVR && "expected qualifiers mismatch");
 

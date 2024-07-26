@@ -2822,6 +2822,26 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
   if (Quals.hasUnaligned())
     mangleVendorQualifier("__unaligned");
 
+  // __ptrauth.  Note that this is parameterized.
+  if (auto ptrauth = Quals.getPointerAuth()) {
+    mangleVendorQualifier("__ptrauth");
+    // For now, since we only allow non-dependent arguments, we can just
+    // inline the mangling of those arguments as literals.  We treat the
+    // key and extra-discriminator arguments as 'unsigned int' and the
+    // address-discriminated argument as 'bool'.
+    Out << "I"
+           "Lj"
+        << ptrauth.getKey()
+        << "E"
+           "Lb"
+        << unsigned(ptrauth.isAddressDiscriminated())
+        << "E"
+           "Lj"
+        << ptrauth.getExtraDiscriminator()
+        << "E"
+           "E";
+  }
+
   // Remaining ARC ownership qualifiers.
   switch (Quals.getObjCLifetime()) {
   case Qualifiers::OCL_None:

@@ -3460,6 +3460,17 @@ public:
 
   bool checkConstantPointerAuthKey(Expr *keyExpr, unsigned &key);
 
+  enum PointerAuthDiscArgKind {
+    // Address discrimination argument of __ptrauth.
+    PADAK_AddrDiscPtrAuth,
+
+    // Extra discriminator argument of __ptrauth.
+    PADAK_ExtraDiscPtrAuth,
+  };
+
+  bool checkPointerAuthDiscriminatorArg(Expr *arg, PointerAuthDiscArgKind kind,
+                                        unsigned &intVal);
+
   /// Diagnose function specifiers on a declaration of an identifier that
   /// does not identify a function.
   void DiagnoseFunctionSpecifiers(const DeclSpec &DS);

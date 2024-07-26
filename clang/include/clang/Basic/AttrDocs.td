@@ -1758,6 +1758,152 @@ Also see the documentation for `@available
   }];
 }
 
+def PtrAuthDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "__ptrauth, __ptrauth_restricted_intptr";
+  let Content = [{
+The ``__ptrauth`` qualifier allows the programmer to directly control
+how pointers are signed when they are stored in a particular variable.
+This can be used to strengthen the default protections of pointer
+authentication and make it more difficult for an attacker to escalate
+an ability to alter memory into full control of a process.
+
+.. code-block:: c
+
+  #include <ptrauth.h>
+
+  typedef void (*my_callback)(const void*);
+  my_callback __ptrauth(ptrauth_key_process_dependent_code, 1, 0xe27a) callback;
+
+The first argument to ``__ptrauth`` is the name of the signing key.
+Valid key names for the target are defined in ``<ptrauth.h>``.
+
+On ARM64, there are four keys:
+
+- ``ptrauth_key_process_independent_data``
+- ``ptrauth_key_process_dependent_data``
+- ``ptrauth_key_process_independent_code``
+- ``ptrauth_key_process_dependent_code``
+
+In general, prefer using a code key for function pointers and a data key
+for object pointers.  The ARM64 architecture allows loads and calls to
+execute more efficiently when the pointer is signed with an appropriate
+key.  Using code keys only for function pointers also substantially lessens
+the risk of creating a so-called "signing oracle" for function pointers;
+see the general pointer authentication language documentation.
+
+Using a process-dependent key provides stronger protection against
+cross-process attacks.  However, it also inhibits certain memory
+optimizations when a shared library is loaded into multiple processes.
+Using a process-independent key also allows signed pointers to be passed
+in shared memory.  Note that even the process-independent keys may change
+after a reboot, so signed values should never be serialized.
+
+The second argument to ``__ptrauth`` is a flag (0 or 1) specifying whether
+the object should use address discrimination.  If only one argument is
+given, the flag defaults to 0.  Address discrimination provides strong
+protection against attacks which copy signed pointers around in memory.
+An attacker cannot usefully copy an arbitrary signed pointer over an
+address-discriminated object.  Nor can a value taken from an
+address-discriminated object be usefully copied over some other signed
+pointer.  However, it is more expensive to copy values from one
+address-discriminated object to another, even if the other arguments to
+``__ptrauth`` are the same, and it is not valid to copy them with
+``memcpy``.  It is also not valid to map memory containing an
+address-discriminated object into different places in the address
+space, e.g. with ``mmap``.
+
+The third argument to ``__ptrauth`` is a small non-negative integer
+which allows additional discrimination between objects.  Using a
+unique extra discriminator provides strong protection against attacks
+which work by substituting one signed value for another.  For example,
+an attacker cannot usefully overwrite an object with a pointer from an
+object using a different extra discriminator; this protection is similar
+to the protection offered by address discrimination.  A unique extra
+discriminator also protects against "slide" attacks where an attacker
+alters a pointer instead of altering the memory that the pointer points to.
+The extra discriminator must be a constant expression.  On ARM64,
+its value must be between 0 and 65535.  If the argument is not provided,
+the default value is 0.  It is generally preferable not to use the value 0,
+especially with the process-independent keys, as this combination is used
+in various places in the standard language ABI.
+
+The type qualified by ``__ptrauth`` must be a pointer type.  Currently
+only C pointer types are allowed and not block pointers, Objective-C
+object pointers, or C++ references.  ``__ptrauth`` is parsed and interpreted
+using the same language rules as qualifiers like ``const`` and ``volatile``.
+For example:
+
+.. code-block:: c
+
+  __ptrauth(...) int *ex0;    /* invalid: qualifies 'int', which is not a pointer type */
+  int * __ptrauth(...) ex1;   /* valid: ex1 has qualified type */
+  int * __ptrauth(...) *ex2;  /* valid: ex2 is a pointer to a qualified object */
+
+  typedef int *intp;
+  __ptrauth(...) intp ex3;    /* valid: ex3 has qualified type */
+  intp __ptrauth(...) ex4;    /* valid: means the exact same thing as ex3 */
+
+If a ``__ptrauth``-qualified l-value of function pointer type is
+used as the function operand of a call expression, the function pointer
+will be authenticated "atomically" with the call, such that an attacker
+will not be able to corrupt the destination of the call even in the
+presence of undefined behavior.  (That is, the compiler must not
+leave an un-signed pointer that it will later unconditionally trust
+in a place where it could be feasibly overwritten by an attacker,
+such as the stack or a callee-save register during an intervening call.
+The compiler is not required to protect against improbable attacks
+such as corruption of the register file, as might occur with a
+corrupted kernel.  It also need not guard against jumps to an arbitrary
+place in the instruction stream, since such jumps would require an
+attacker to already fully control the PC.)
+
+If the ABI specifies that a pointer is always signed --- that is,
+if the pointer is a function pointer and the target uses ABI function
+pointer authentication --- then signing and authenticating it as part
+of a load/store actually means resigning it to/from the standard ABI
+signature schema.  Similarly, if both operands of a simple assignment
+operator are ``__ptrauth``-qualified, the pointer copied by the
+assignment is resigned from the right-hand operand's schema to the
+left-hand operand's schema.  These resigning operations are also done
+"atomically" in the same sense as above.
+
+As a final guarantee, if the right-hand operand of an assignment or
+the expression used to initialize a ``__ptrauth``-qualified object is
+a direct reference to an object or function (e.g. ``&my_var``), the
+signing of that pointer is atomic with the evaluaton of the reference
+in this same sense.
+
+Otherwise, there are no guarantees of atomicity, and it is the
+programmer's responsibility to avoid allowing a store into a
+``__ptrauth``-qualified object to create a potential "signing oracle"
+which an attacker could use to sign an arbitrary pointer of their choice.
+Such oracles are particularly problematic when the signing uses a code
+key because the oracle could potentially be used to allow an attacker
+to construct a validly-signed function pointer, v-table entry, or
+return address that points to an arbitrary instruction, allowing them
+to completely take over the PC.  Programmers attempting to use
+``__ptrauth`` to protect a data pointer, or to protect function pointers
+on targets that do not use ABI function pointer authentication, should
+aim to maintain a "chain of authentication" from initialization all
+the way to the point at which the pointer is used.  If this is infeasible,
+they should consider using ``ptrauth_sign_generic_data`` instead.
+
+Types that are written in r-value positions, such as return types,
+parameter types, and cast types, may not be ``__ptrauth``-qualified
+at the outermost level.  This may be supported in the future.
+
+In C++, the arguments to ``__ptrauth`` may not be instantiation-dependent.
+This may be supported in the future.
+
+This feature may be tested for with ``__has_feature(ptrauth_qualifier)``.
+It is enabled whenever the ``ptrauth`` intrinsics are enabled.
+
+``<ptrauth.h>`` provides predefined qualifiers for various language
+features that implicitly use pointer authentication.
+  }];
+}
+
 def ExternalSourceSymbolDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{

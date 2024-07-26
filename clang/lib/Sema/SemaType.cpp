@@ -2522,6 +2522,13 @@ bool Sema::CheckFunctionReturnType(QualType T, SourceLocation Loc) {
     return true;
   }
 
+  // __ptrauth is illegal on a function return type.
+  if (T.getPointerAuth()) {
+    Diag(Loc, diag::err_ptrauth_qualifier_invalid)
+        << T << (int)!T->isSignableType() << 0;
+    return true;
+  }
+
   if (T.hasNonTrivialToPrimitiveDestructCUnion() ||
       T.hasNonTrivialToPrimitiveCopyCUnion())
     checkNonTrivialCUnion(T, Loc, NTCUC_FunctionReturn,
@@ -2624,6 +2631,11 @@ QualType Sema::BuildFunctionType(QualType T,
       Invalid = true;
     } else if (ParamType->isWebAssemblyTableType()) {
       Diag(Loc, diag::err_wasm_table_as_function_parameter);
+      Invalid = true;
+    } else if (ParamType.getPointerAuth()) {
+      // __ptrauth is illegal on a function return type.
+      Diag(Loc, diag::err_ptrauth_qualifier_invalid)
+          << T << (int)!T->isSignableType() << 1;
       Invalid = true;
     }
 
@@ -4921,6 +4933,12 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             diag::err_parameters_retval_cannot_have_fp16_type) << 1;
           D.setInvalidType(true);
         }
+      }
+
+      // __ptrauth is illegal on a function return type.
+      if (T.getPointerAuth()) {
+        S.Diag(DeclType.Loc, diag::err_ptrauth_qualifier_invalid)
+            << T << (int)!T->isSignableType() << 0;
       }
 
       if (LangOpts.OpenCL) {
@@ -8210,6 +8228,70 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
   CurType = S.Context.getVectorType(CurType, numElts, VecKind);
 }
 
+/// Handle the __ptrauth qualifier.
+static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &type,
+                                   const ParsedAttr &attr, Sema &S) {
+  auto attributeName = attr.getAttrName()->getName();
+  if (attr.getNumArgs() < 1 || attr.getNumArgs() > 3) {
+    S.Diag(attr.getLoc(), diag::err_ptrauth_qualifier_bad_arg_count)
+        << attributeName;
+    attr.setInvalid();
+    return;
+  }
+
+  Expr *keyArg = attr.getArgAsExpr(0);
+  Expr *isAddressDiscriminatedArg =
+      attr.getNumArgs() >= 2 ? attr.getArgAsExpr(1) : nullptr;
+  Expr *extraDiscriminatorArg =
+      attr.getNumArgs() >= 3 ? attr.getArgAsExpr(2) : nullptr;
+
+  unsigned key;
+  if (S.checkConstantPointerAuthKey(keyArg, key)) {
+    attr.setInvalid();
+    return;
+  }
+  assert(key <= PointerAuthQualifier::MaxKey && "ptrauth key is out of range");
+
+  bool isInvalid = false;
+  unsigned isAddressDiscriminated, extraDiscriminator;
+  isInvalid |= !S.checkPointerAuthDiscriminatorArg(isAddressDiscriminatedArg,
+                                                   Sema::PADAK_AddrDiscPtrAuth,
+                                                   isAddressDiscriminated);
+  isInvalid |= !S.checkPointerAuthDiscriminatorArg(
+      extraDiscriminatorArg, Sema::PADAK_ExtraDiscPtrAuth, extraDiscriminator);
+
+  if (isInvalid) {
+    attr.setInvalid();
+    return;
+  }
+
+  if (!type->isSignableType() && !type->isDependentType()) {
+    S.Diag(attr.getLoc(), diag::err_ptrauth_qualifier_nonpointer) << type;
+    attr.setInvalid();
+    return;
+  }
+
+  if (type.getPointerAuth()) {
+    S.Diag(attr.getLoc(), diag::err_ptrauth_qualifier_redundant)
+        << type << attr.getAttrName()->getName();
+    attr.setInvalid();
+    return;
+  }
+
+  if (!S.getLangOpts().PointerAuthIntrinsics) {
+    S.Diag(attr.getLoc(), diag::err_ptrauth_disabled) << attr.getRange();
+    attr.setInvalid();
+    return;
+  }
+
+  assert((!isAddressDiscriminatedArg || isAddressDiscriminated <= 1) &&
+         "address discriminator arg should be either 0 or 1");
+  PointerAuthQualifier qual = PointerAuthQualifier::Create(
+      key, isAddressDiscriminated, extraDiscriminator,
+      PointerAuthenticationMode::SignAndAuth, false, false);
+  type = S.Context.getPointerAuthType(type, qual);
+}
+
 /// HandleArmSveVectorBitsTypeAttr - The "arm_sve_vector_bits" attribute is
 /// used to create fixed-length versions of sizeless SVE types defined by
 /// the ACLE, such as svint32_t and svbool_t.
@@ -8632,6 +8714,11 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       break;
     case ParsedAttr::AT_OpenCLAccess:
       HandleOpenCLAccessAttr(type, attr, state.getSema());
+      attr.setUsedAsTypeAttr();
+      break;
+    case ParsedAttr::AT_PointerAuth:
+      HandlePtrAuthQualifier(state.getSema().Context, type, attr,
+                             state.getSema());
       attr.setUsedAsTypeAttr();
       break;
     case ParsedAttr::AT_LifetimeBound:

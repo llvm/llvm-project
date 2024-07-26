@@ -1072,6 +1072,33 @@ void CXXRecordDecl::addedMember(Decl *D) {
     } else if (!T.isCXX98PODType(Context))
       data().PlainOldData = false;
 
+    // If a class has an address-discriminated signed pointer member, it is a
+    // non-POD type and its copy constructor, move constructor, copy assignment
+    // operator, move assignment operator are non-trivial.
+    if (PointerAuthQualifier Q = T.getPointerAuth()) {
+      if (Q.isAddressDiscriminated()) {
+        struct DefinitionData &Data = data();
+        Data.PlainOldData = false;
+        Data.HasTrivialSpecialMembers &=
+            ~(SMF_CopyConstructor | SMF_MoveConstructor | SMF_CopyAssignment |
+              SMF_MoveAssignment);
+        setArgPassingRestrictions(RecordArgPassingKind::CanNeverPassInRegs);
+
+        // Copy/move constructors/assignment operators of a union are deleted by
+        // default if it has an address-discriminated ptrauth field.
+        if (isUnion()) {
+          data().DefaultedCopyConstructorIsDeleted = true;
+          data().DefaultedMoveConstructorIsDeleted = true;
+          data().DefaultedCopyAssignmentIsDeleted = true;
+          data().DefaultedMoveAssignmentIsDeleted = true;
+          data().NeedOverloadResolutionForCopyConstructor = true;
+          data().NeedOverloadResolutionForMoveConstructor = true;
+          data().NeedOverloadResolutionForCopyAssignment = true;
+          data().NeedOverloadResolutionForMoveAssignment = true;
+        }
+      }
+    }
+
     if (T->isReferenceType()) {
       if (!Field->hasInClassInitializer())
         data().HasUninitializedReferenceMember = true;

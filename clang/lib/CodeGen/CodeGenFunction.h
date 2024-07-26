@@ -4457,6 +4457,26 @@ public:
       const CGPointerAuthInfo &Info,
       SmallVectorImpl<llvm::OperandBundleDef> &Bundles);
 
+  CGPointerAuthInfo EmitPointerAuthInfo(PointerAuthQualifier qualifier,
+                                        Address storageAddress);
+  llvm::Value *EmitPointerAuthQualify(PointerAuthQualifier qualifier,
+                                      llvm::Value *pointer, QualType valueType,
+                                      Address storageAddress,
+                                      bool isKnownNonNull);
+  llvm::Value *EmitPointerAuthQualify(PointerAuthQualifier qualifier,
+                                      const Expr *pointerExpr,
+                                      Address storageAddress);
+  llvm::Value *EmitPointerAuthUnqualify(PointerAuthQualifier qualifier,
+                                        llvm::Value *pointer,
+                                        QualType pointerType,
+                                        Address storageAddress,
+                                        bool isKnownNonNull);
+  void EmitPointerAuthCopy(PointerAuthQualifier qualifier, QualType type,
+                           Address destField, Address srcField);
+
+  std::pair<llvm::Value *, CGPointerAuthInfo>
+  EmitOrigPointerRValue(const Expr *E);
+
   llvm::Value *authPointerToPointerCast(llvm::Value *ResultPtr,
                                         QualType SourceType, QualType DestType);
   Address authPointerToPointerCast(Address Ptr, QualType SourceType,

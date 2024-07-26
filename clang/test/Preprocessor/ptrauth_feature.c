@@ -85,6 +85,8 @@ void has_ptrauth_type_info_vtable_pointer_discrimination() {}
 void no_ptrauth_type_info_vtable_pointer_discrimination() {}
 #endif
 
+#include <ptrauth.h>
+
 #if __has_feature(ptrauth_function_pointer_type_discrimination)
 // FUNC: has_ptrauth_function_pointer_type_discrimination
 void has_ptrauth_function_pointer_type_discrimination() {}
@@ -107,4 +109,12 @@ void has_ptrauth_indirect_gotos() {}
 #else
 // NOGOTOS: no_ptrauth_indirect_gotos
 void no_ptrauth_indirect_gotos() {}
+#endif
+
+#if __has_feature(ptrauth_qualifier)
+// INTRIN: has_ptrauth_qualifier
+void has_ptrauth_qualifier() {}
+#else
+// NOINTRIN: no_ptrauth_qualifier
+void no_ptrauth_qualifier() {}
 #endif
