@@ -111,6 +111,8 @@ Attribute Changes in Clang
 - Clang now disallows more than one ``__attribute__((ownership_returns(class, idx)))`` with
   different class names attached to one function.
 
+- Introduced a new format attribute ``__attribute__((format(syslog, 1, 2)))`` from OpenBSD.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -150,6 +152,7 @@ Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fixed a crash when an expression with a dependent ``__typeof__`` type is used as the operand of a unary operator. (#GH97646)
+- Fixed a failed assertion when checking invalid delete operator declaration. (#GH96191)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

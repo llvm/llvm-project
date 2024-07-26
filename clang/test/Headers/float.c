@@ -223,8 +223,9 @@
   #ifndef NAN
     #error "Mandatory macro NAN is missing."
   #endif
-  // FIXME: the NAN diagnostic should only be issued once, not twice.
-  _Static_assert(_Generic(INFINITY, float : 1, default : 0), ""); // finite-warning {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// FIXME: the NAN and INF diagnostics should only be issued once, not twice.
+  _Static_assert(_Generic(INFINITY, float : 1, default : 0), ""); // finite-warning {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}} \
+								  finite-warning {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
   _Static_assert(_Generic(NAN, float : 1, default : 0), ""); // finite-warning {{use of NaN is undefined behavior due to the currently enabled floating-point options}} \
                                                                 finite-warning {{use of NaN via a macro is undefined behavior due to the currently enabled floating-point options}}
 

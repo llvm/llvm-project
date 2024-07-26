@@ -492,6 +492,7 @@ int WindowScheduler::calculateMaxCycle(ScheduleDAGInstrs &DAG,
 // ========================================
 int WindowScheduler::calculateStallCycle(unsigned Offset, int MaxCycle) {
   int MaxStallCycle = 0;
+  int CurrentII = MaxCycle + 1;
   auto Range = getScheduleRange(Offset, SchedInstrNum);
   for (auto &MI : Range) {
     auto *SU = TripleDAG->getSUnit(&MI);
@@ -499,8 +500,8 @@ int WindowScheduler::calculateStallCycle(unsigned Offset, int MaxCycle) {
     for (auto &Succ : SU->Succs) {
       if (Succ.isWeak() || Succ.getSUnit() == &TripleDAG->ExitSU)
         continue;
-      // If the expected cycle does not exceed MaxCycle, no check is needed.
-      if (DefCycle + (int)Succ.getLatency() <= MaxCycle)
+      // If the expected cycle does not exceed CurrentII, no check is needed.
+      if (DefCycle + (int)Succ.getLatency() <= CurrentII)
         continue;
       // If the cycle of the scheduled MI A is less than that of the scheduled
       // MI B, the scheduling will fail because the lifetime of the
@@ -510,7 +511,7 @@ int WindowScheduler::calculateStallCycle(unsigned Offset, int MaxCycle) {
       if (DefCycle < UseCycle)
         return WindowIILimit;
       // Get the stall cycle introduced by the register between two trips.
-      int StallCycle = DefCycle + (int)Succ.getLatency() - MaxCycle - UseCycle;
+      int StallCycle = DefCycle + (int)Succ.getLatency() - CurrentII - UseCycle;
       MaxStallCycle = std::max(MaxStallCycle, StallCycle);
     }
   }
