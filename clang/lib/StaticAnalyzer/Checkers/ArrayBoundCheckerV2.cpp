@@ -373,14 +373,14 @@ static std::optional<int64_t> getConcreteValue(std::optional<NonLoc> SV) {
 }
 
 static Messages getPrecedesMsgs(const SubRegion *Region, NonLoc Offset) {
-  std::string RegName = getRegionName(Region);
-  SmallString<128> Buf;
-  llvm::raw_svector_ostream Out(Buf);
-  Out << "Access of " << RegName << " at negative byte offset";
-  if (auto ConcreteIdx = Offset.getAs<nonloc::ConcreteInt>())
-    Out << ' ' << ConcreteIdx->getValue();
-  return {formatv("Out of bound access to memory preceding {0}", RegName),
-          std::string(Buf)};
+  std::string RegName = getRegionName(Region), OffsetStr = "";
+
+  if (auto ConcreteOffset = getConcreteValue(Offset))
+    OffsetStr = formatv(" {0}", ConcreteOffset);
+
+  return {
+      formatv("Out of bound access to memory preceding {0}", RegName),
+      formatv("Access of {0} at negative byte offset{1}", RegName, OffsetStr)};
 }
 
 /// Try to divide `Val1` and `Val2` (in place) by `Divisor` and return true if
@@ -609,7 +609,7 @@ void ArrayBoundCheckerV2::performCheck(const Expr *E, CheckerContext &C) const {
   // CHECK UPPER BOUND
   DefinedOrUnknownSVal Size = getDynamicExtent(State, Reg, SVB);
   if (auto KnownSize = Size.getAs<NonLoc>()) {
-    // In a situation where both overflow and overflow are possible (but the
+    // In a situation where both underflow and overflow are possible (but the
     // index is either tainted or known to be invalid), the logic of this
     // checker will first assume that the offset is non-negative, and then
     // (with this additional assumption) it will detect an overflow error.

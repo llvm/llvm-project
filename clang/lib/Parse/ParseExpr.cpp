@@ -763,6 +763,9 @@ class CastExpressionIdValidator final : public CorrectionCandidateCallback {
 bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
                                    tok::TokenKind *Kind) {
   if (RevertibleTypeTraits.empty()) {
+// Revertible type trait is a feature for backwards compatibility with older
+// standard libraries that declare their own structs with the same name as
+// the builtins listed below. New builtins should NOT be added to this list.
 #define RTT_JOIN(X, Y) X##Y
 #define REVERTIBLE_TYPE_TRAIT(Name)                                            \
   RevertibleTypeTraits[PP.getIdentifierInfo(#Name)] = RTT_JOIN(tok::kw_, Name)
@@ -790,7 +793,6 @@ bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
     REVERTIBLE_TYPE_TRAIT(__is_fundamental);
     REVERTIBLE_TYPE_TRAIT(__is_integral);
     REVERTIBLE_TYPE_TRAIT(__is_interface_class);
-    REVERTIBLE_TYPE_TRAIT(__is_layout_compatible);
     REVERTIBLE_TYPE_TRAIT(__is_literal);
     REVERTIBLE_TYPE_TRAIT(__is_lvalue_expr);
     REVERTIBLE_TYPE_TRAIT(__is_lvalue_reference);
@@ -839,6 +841,26 @@ bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
     return true;
   }
   return false;
+}
+
+ExprResult Parser::ParseBuiltinPtrauthTypeDiscriminator() {
+  SourceLocation Loc = ConsumeToken();
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume())
+    return ExprError();
+
+  TypeResult Ty = ParseTypeName();
+  if (Ty.isInvalid()) {
+    SkipUntil(tok::r_paren, StopAtSemi);
+    return ExprError();
+  }
+
+  SourceLocation EndLoc = Tok.getLocation();
+  T.consumeClose();
+  return Actions.ActOnUnaryExprOrTypeTraitExpr(
+      Loc, UETT_PtrAuthTypeDiscriminator,
+      /*isType=*/true, Ty.get().getAsOpaquePtr(), SourceRange(Loc, EndLoc));
 }
 
 /// Parse a cast-expression, or, if \pisUnaryExpression is true, parse
@@ -1099,6 +1121,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
 
     // primary-expression
   case tok::numeric_constant:
+  case tok::binary_data:
     // constant: integer-constant
     // constant: floating-constant
 
@@ -1148,18 +1171,9 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   }
 
   case tok::annot_embed: {
-    // We've met #embed in a context where a single value is expected. Take last
-    // element from #embed data as if it were a comma expression.
-    EmbedAnnotationData *Data =
-        reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
-    SourceLocation StartLoc = ConsumeAnnotationToken();
-    ASTContext &Context = Actions.getASTContext();
-    Res = IntegerLiteral::Create(Context,
-                                 llvm::APInt(CHAR_BIT, Data->BinaryData.back()),
-                                 Context.UnsignedCharTy, StartLoc);
-    if (Data->BinaryData.size() > 1)
-      Diag(StartLoc, diag::warn_unused_comma_left_operand);
-    break;
+    injectEmbedTokens();
+    return ParseCastExpression(ParseKind, isAddressOfOperand, isTypeCast,
+                               isVectorLiteral, NotPrimaryExpression);
   }
 
   case tok::kw___super:
@@ -1814,6 +1828,9 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     Res = ParseArrayTypeTrait();
     break;
 
+  case tok::kw___builtin_ptrauth_type_discriminator:
+    return ParseBuiltinPtrauthTypeDiscriminator();
+
   case tok::kw___is_lvalue_expr:
   case tok::kw___is_rvalue_expr:
     if (NotPrimaryExpression)
@@ -2348,9 +2365,10 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       }
 
       if (!LHS.isInvalid())
-        LHS = Actions.ActOnMemberAccessExpr(
-            getCurScope(), LHS.get(), OpLoc, OpKind, SS, TemplateKWLoc, Name,
-            CurParsedObjCImpl ? CurParsedObjCImpl->Dcl : nullptr);
+        LHS = Actions.ActOnMemberAccessExpr(getCurScope(), LHS.get(), OpLoc,
+                                            OpKind, SS, TemplateKWLoc, Name,
+                                 CurParsedObjCImpl ? CurParsedObjCImpl->Dcl
+                                                   : nullptr);
       if (!LHS.isInvalid()) {
         if (Tok.is(tok::less))
           checkPotentialAngleBracket(LHS);
@@ -3583,15 +3601,29 @@ ExprResult Parser::ParseFoldExpression(ExprResult LHS,
                                   T.getCloseLocation());
 }
 
-void Parser::ExpandEmbedDirective(SmallVectorImpl<Expr *> &Exprs) {
+void Parser::injectEmbedTokens() {
   EmbedAnnotationData *Data =
       reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
-  SourceLocation StartLoc = ConsumeAnnotationToken();
-  ASTContext &Context = Actions.getASTContext();
-  for (auto Byte : Data->BinaryData) {
-    Exprs.push_back(IntegerLiteral::Create(Context, llvm::APInt(CHAR_BIT, Byte),
-                                           Context.UnsignedCharTy, StartLoc));
+  MutableArrayRef<Token> Toks(PP.getPreprocessorAllocator().Allocate<Token>(
+                                  Data->BinaryData.size() * 2 - 1),
+                              Data->BinaryData.size() * 2 - 1);
+  unsigned I = 0;
+  for (auto &Byte : Data->BinaryData) {
+    Toks[I].startToken();
+    Toks[I].setKind(tok::binary_data);
+    Toks[I].setLocation(Tok.getLocation());
+    Toks[I].setLength(1);
+    Toks[I].setLiteralData(&Byte);
+    if (I != ((Data->BinaryData.size() - 1) * 2)) {
+      Toks[I + 1].startToken();
+      Toks[I + 1].setKind(tok::comma);
+      Toks[I + 1].setLocation(Tok.getLocation());
+    }
+    I += 2;
   }
+  PP.EnterTokenStream(std::move(Toks), /*DisableMacroExpansion=*/true,
+                      /*IsReinject=*/true);
+  ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
 }
 
 /// ParseExpressionList - Used for C/C++ (argument-)expression-list.
@@ -3629,17 +3661,8 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
     if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
       Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
       Expr = ParseBraceInitializer();
-    } else if (Tok.is(tok::annot_embed)) {
-      ExpandEmbedDirective(Exprs);
-      if (Tok.isNot(tok::comma))
-        break;
-      Token Comma = Tok;
-      ConsumeToken();
-      checkPotentialAngleBracketDelimiter(Comma);
-      continue;
-    } else {
+    } else
       Expr = ParseAssignmentExpression();
-    }
 
     if (EarlyTypoCorrection)
       Expr = Actions.CorrectDelayedTyposInExpr(Expr);

@@ -1331,6 +1331,9 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (auto targetCpu = func.getTargetCpu())
     llvmFunc->addFnAttr("target-cpu", *targetCpu);
 
+  if (auto tuneCpu = func.getTuneCpu())
+    llvmFunc->addFnAttr("tune-cpu", *tuneCpu);
+
   if (auto targetFeatures = func.getTargetFeatures())
     llvmFunc->addFnAttr("target-features", targetFeatures->getFeaturesString());
 
@@ -1409,10 +1412,10 @@ LogicalResult ModuleTranslation::convertDialectAttributes(
 /// `llvmFunc`.
 static void convertFunctionMemoryAttributes(LLVMFuncOp func,
                                             llvm::Function *llvmFunc) {
-  if (!func.getMemory())
+  if (!func.getMemoryEffects())
     return;
 
-  MemoryEffectsAttr memEffects = func.getMemoryAttr();
+  MemoryEffectsAttr memEffects = func.getMemoryEffectsAttr();
 
   // Add memory effects incrementally.
   llvm::MemoryEffects newMemEffects =
@@ -1438,6 +1441,10 @@ static void convertFunctionAttributes(LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::OptimizeNone);
   if (func.getConvergentAttr())
     llvmFunc->addFnAttr(llvm::Attribute::Convergent);
+  if (func.getNoUnwindAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::NoUnwind);
+  if (func.getWillReturnAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::WillReturn);
   convertFunctionMemoryAttributes(func, llvmFunc);
 }
 

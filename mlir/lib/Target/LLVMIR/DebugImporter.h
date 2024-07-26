@@ -18,6 +18,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Support/CyclicReplacerCache.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 
 namespace mlir {

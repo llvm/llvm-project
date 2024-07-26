@@ -434,6 +434,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::MSTORE:                     return "masked_store";
   case ISD::MGATHER:                    return "masked_gather";
   case ISD::MSCATTER:                   return "masked_scatter";
+  case ISD::VECTOR_COMPRESS:            return "vector_compress";
   case ISD::VAARG:                      return "vaarg";
   case ISD::VACOPY:                     return "vacopy";
   case ISD::VAEND:                      return "vaend";

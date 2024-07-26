@@ -113,6 +113,10 @@ static cl::opt<bool>
     RunSLPVectorization("vectorize-slp", cl::init(true), cl::Hidden,
                         cl::desc("Run the SLP vectorization passes"));
 
+static cl::opt<bool>
+    SLPReVec("slp-revec", cl::init(false), cl::Hidden,
+             cl::desc("Enable vectorization for wider vector utilization"));
+
 static cl::opt<int>
     SLPCostThreshold("slp-threshold", cl::init(0), cl::Hidden,
                      cl::desc("Only vectorize if you gain more than this "
@@ -205,7 +209,7 @@ static const unsigned AliasedCheckLimit = 10;
 
 // Limit of the number of uses for potentially transformed instructions/values,
 // used in checks to avoid compile-time explode.
-static constexpr int UsesLimit = 8;
+static constexpr int UsesLimit = 64;
 
 // Another limit for the alias checks: The maximum distance between load/store
 // instructions where alias checks are done.
@@ -227,13 +231,26 @@ static const unsigned MaxPHINumOperands = 128;
 /// avoids spending time checking the cost model and realizing that they will
 /// be inevitably scalarized.
 static bool isValidElementType(Type *Ty) {
+  // TODO: Support ScalableVectorType.
+  if (SLPReVec && isa<FixedVectorType>(Ty))
+    Ty = Ty->getScalarType();
   return VectorType::isValidElementType(Ty) && !Ty->isX86_FP80Ty() &&
          !Ty->isPPC_FP128Ty();
 }
 
+/// \returns the number of elements for Ty.
+static unsigned getNumElements(Type *Ty) {
+  assert(!isa<ScalableVectorType>(Ty) &&
+         "ScalableVectorType is not supported.");
+  if (auto *VecTy = dyn_cast<FixedVectorType>(Ty))
+    return VecTy->getNumElements();
+  return 1;
+}
+
 /// \returns the vector type of ScalarTy based on vectorization factor.
 static FixedVectorType *getWidenedType(Type *ScalarTy, unsigned VF) {
-  return FixedVectorType::get(ScalarTy, VF);
+  return FixedVectorType::get(ScalarTy->getScalarType(),
+                              VF * getNumElements(ScalarTy));
 }
 
 /// \returns True if the value is a constant (but not globals/constant
@@ -5875,6 +5892,8 @@ void BoUpSLP::buildExternalUses(
           }
         }
 
+        if (U && Scalar->hasNUsesOrMore(UsesLimit))
+          U = nullptr;
         int FoundLane = Entry->findLaneForValue(Scalar);
         LLVM_DEBUG(dbgs() << "SLP: Need to extract:" << *UserInst
                           << " from lane " << FoundLane << " from " << *Scalar
@@ -6779,7 +6798,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   }
 
   // Don't handle vectors.
-  if (S.OpValue->getType()->isVectorTy() &&
+  if (!SLPReVec && S.OpValue->getType()->isVectorTy() &&
       !isa<InsertElementInst>(S.OpValue)) {
     LLVM_DEBUG(dbgs() << "SLP: Gathering due to vector type.\n");
     newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
@@ -6787,7 +6806,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   }
 
   if (StoreInst *SI = dyn_cast<StoreInst>(S.OpValue))
-    if (SI->getValueOperand()->getType()->isVectorTy()) {
+    if (!SLPReVec && SI->getValueOperand()->getType()->isVectorTy()) {
       LLVM_DEBUG(dbgs() << "SLP: Gathering due to store vector type.\n");
       newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
       return;
@@ -8344,6 +8363,12 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                   : TTI.getStridedMemoryOpCost(
                         Instruction::Load, LoadTy, LI->getPointerOperand(),
                         /*VariableMask=*/false, Alignment, CostKind, LI);
+          // Add external uses costs.
+          for (auto [Idx, V] : enumerate(VL.slice(
+                   P.first, std::min<unsigned>(VL.size() - P.first, VF))))
+            if (!R.areAllUsersVectorized(cast<Instruction>(V)))
+              GatherCost += TTI.getVectorInstrCost(Instruction::ExtractElement,
+                                                   LoadTy, CostKind, Idx);
           // Estimate GEP cost.
           SmallVector<Value *> PointerOps(VF);
           for (auto [I, V] : enumerate(VL.slice(P.first, VF)))
@@ -9316,7 +9341,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           function_ref<InstructionCost(InstructionCost)> VectorCost) {
         // Calculate the cost of this instruction.
         InstructionCost ScalarCost = 0;
-        if (isa<CastInst, CmpInst, SelectInst, CallInst>(VL0)) {
+        if (isa<CastInst, CallInst>(VL0)) {
           // For some of the instructions no need to calculate cost for each
           // particular instruction, we can use the cost of the single
           // instruction x total number of scalar instructions.
@@ -9637,9 +9662,33 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                        ? CmpInst::BAD_FCMP_PREDICATE
                                        : CmpInst::BAD_ICMP_PREDICATE;
 
-      return TTI->getCmpSelInstrCost(E->getOpcode(), OrigScalarTy,
-                                     Builder.getInt1Ty(), CurrentPred, CostKind,
-                                     VI);
+      InstructionCost ScalarCost = TTI->getCmpSelInstrCost(
+          E->getOpcode(), OrigScalarTy, Builder.getInt1Ty(), CurrentPred,
+          CostKind, VI);
+      auto [MinMaxID, SelectOnly] = canConvertToMinOrMaxIntrinsic(VI);
+      if (MinMaxID != Intrinsic::not_intrinsic) {
+        Type *CanonicalType = OrigScalarTy;
+        if (CanonicalType->isPtrOrPtrVectorTy())
+          CanonicalType = CanonicalType->getWithNewType(IntegerType::get(
+              CanonicalType->getContext(),
+              DL->getTypeSizeInBits(CanonicalType->getScalarType())));
+
+        IntrinsicCostAttributes CostAttrs(MinMaxID, CanonicalType,
+                                          {CanonicalType, CanonicalType});
+        InstructionCost IntrinsicCost =
+            TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
+        // If the selects are the only uses of the compares, they will be
+        // dead and we can adjust the cost by removing their cost.
+        if (SelectOnly) {
+          auto *CI = cast<CmpInst>(VI->getOperand(0));
+          IntrinsicCost -= TTI->getCmpSelInstrCost(
+              CI->getOpcode(), OrigScalarTy, Builder.getInt1Ty(),
+              CI->getPredicate(), CostKind, CI);
+        }
+        ScalarCost = std::min(ScalarCost, IntrinsicCost);
+      }
+
+      return ScalarCost;
     };
     auto GetVectorCost = [&](InstructionCost CommonCost) {
       auto *MaskTy = getWidenedType(Builder.getInt1Ty(), VL.size());
@@ -9649,17 +9698,25 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // Check if it is possible and profitable to use min/max for selects
       // in VL.
       //
-      auto IntrinsicAndUse = canConvertToMinOrMaxIntrinsic(VL);
-      if (IntrinsicAndUse.first != Intrinsic::not_intrinsic) {
-        IntrinsicCostAttributes CostAttrs(IntrinsicAndUse.first, VecTy,
-                                          {VecTy, VecTy});
+      auto [MinMaxID, SelectOnly] = canConvertToMinOrMaxIntrinsic(VL);
+      if (MinMaxID != Intrinsic::not_intrinsic) {
+        Type *CanonicalType = VecTy;
+        if (CanonicalType->isPtrOrPtrVectorTy())
+          CanonicalType = CanonicalType->getWithNewType(IntegerType::get(
+              CanonicalType->getContext(),
+              DL->getTypeSizeInBits(CanonicalType->getScalarType())));
+        IntrinsicCostAttributes CostAttrs(MinMaxID, CanonicalType,
+                                          {CanonicalType, CanonicalType});
         InstructionCost IntrinsicCost =
             TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
         // If the selects are the only uses of the compares, they will be
         // dead and we can adjust the cost by removing their cost.
-        if (IntrinsicAndUse.second)
-          IntrinsicCost -= TTI->getCmpSelInstrCost(Instruction::ICmp, VecTy,
+        if (SelectOnly) {
+          auto *CI =
+              cast<CmpInst>(cast<Instruction>(VL.front())->getOperand(0));
+          IntrinsicCost -= TTI->getCmpSelInstrCost(CI->getOpcode(), VecTy,
                                                    MaskTy, VecPred, CostKind);
+        }
         VecCost = std::min(VecCost, IntrinsicCost);
       }
       return VecCost + CommonCost;
@@ -11802,10 +11859,11 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
   Value *castToScalarTyElem(Value *V,
                             std::optional<bool> IsSigned = std::nullopt) {
     auto *VecTy = cast<VectorType>(V->getType());
-    if (VecTy->getElementType() == ScalarTy)
+    assert(getNumElements(VecTy) % getNumElements(ScalarTy) == 0);
+    if (VecTy->getElementType() == ScalarTy->getScalarType())
       return V;
     return Builder.CreateIntCast(
-        V, VectorType::get(ScalarTy, VecTy->getElementCount()),
+        V, VectorType::get(ScalarTy->getScalarType(), VecTy->getElementCount()),
         IsSigned.value_or(!isKnownNonNegative(V, SimplifyQuery(*R.DL))));
   }
 
@@ -11991,6 +12049,9 @@ public:
   /// Adds 2 input vectors and the mask for their shuffling.
   void add(Value *V1, Value *V2, ArrayRef<int> Mask) {
     assert(V1 && V2 && !Mask.empty() && "Expected non-empty input vectors.");
+    assert(isa<FixedVectorType>(V1->getType()) &&
+           isa<FixedVectorType>(V2->getType()) &&
+           "castToScalarTyElem expects V1 and V2 to be FixedVectorType");
     V1 = castToScalarTyElem(V1);
     V2 = castToScalarTyElem(V2);
     if (InVectors.empty()) {
@@ -12020,13 +12081,10 @@ public:
   }
   /// Adds another one input vector and the mask for the shuffling.
   void add(Value *V1, ArrayRef<int> Mask, bool = false) {
+    assert(isa<FixedVectorType>(V1->getType()) &&
+           "castToScalarTyElem expects V1 to be FixedVectorType");
     V1 = castToScalarTyElem(V1);
     if (InVectors.empty()) {
-      if (!isa<FixedVectorType>(V1->getType())) {
-        V1 = createShuffle(V1, nullptr, CommonMask);
-        CommonMask.assign(Mask.size(), PoisonMaskElem);
-        transformMaskAfterShuffle(CommonMask, Mask);
-      }
       InVectors.push_back(V1);
       CommonMask.assign(Mask.begin(), Mask.end());
       return;
@@ -12034,8 +12092,7 @@ public:
     const auto *It = find(InVectors, V1);
     if (It == InVectors.end()) {
       if (InVectors.size() == 2 ||
-          InVectors.front()->getType() != V1->getType() ||
-          !isa<FixedVectorType>(V1->getType())) {
+          InVectors.front()->getType() != V1->getType()) {
         Value *V = InVectors.front();
         if (InVectors.size() == 2) {
           V = createShuffle(InVectors.front(), InVectors.back(), CommonMask);
@@ -12069,9 +12126,7 @@ public:
           break;
         }
     }
-    int VF = CommonMask.size();
-    if (auto *FTy = dyn_cast<FixedVectorType>(V1->getType()))
-      VF = FTy->getNumElements();
+    int VF = cast<FixedVectorType>(V1->getType())->getNumElements();
     for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
       if (Mask[Idx] != PoisonMaskElem && CommonMask[Idx] == PoisonMaskElem)
         CommonMask[Idx] = Mask[Idx] + (It == InVectors.begin() ? 0 : VF);
@@ -12190,7 +12245,8 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx,
         return ShuffleBuilder.finalize(std::nullopt);
       };
       Value *V = vectorizeTree(VE, PostponedPHIs);
-      if (VF != cast<FixedVectorType>(V->getType())->getNumElements()) {
+      if (VF * getNumElements(VL[0]->getType()) !=
+          cast<FixedVectorType>(V->getType())->getNumElements()) {
         if (!VE->ReuseShuffleIndices.empty()) {
           // Reshuffle to get only unique values.
           // If some of the scalars are duplicated in the vectorization
@@ -13447,7 +13503,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         }
         ScalarArg = CEI->getArgOperand(I);
         if (cast<VectorType>(OpVec->getType())->getElementType() !=
-                ScalarArg->getType() &&
+                ScalarArg->getType()->getScalarType() &&
             It == MinBWs.end()) {
           auto *CastTy =
               getWidenedType(ScalarArg->getType(), VecTy->getNumElements());
@@ -13889,6 +13945,7 @@ Value *BoUpSLP::vectorizeTree(
       if (!ScalarsWithNullptrUser.insert(Scalar).second)
         continue;
       assert((ExternallyUsedValues.count(Scalar) ||
+              Scalar->hasNUsesOrMore(UsesLimit) ||
               any_of(Scalar->users(),
                      [&](llvm::User *U) {
                        if (ExternalUsesAsGEPs.contains(U))
@@ -14201,9 +14258,23 @@ Value *BoUpSLP::vectorizeTree(
     for (Instruction *I : RemovedInsts) {
       if (getTreeEntry(I)->Idx != 0)
         continue;
+      SmallVector<SelectInst *> LogicalOpSelects;
       I->replaceUsesWithIf(PoisonValue::get(I->getType()), [&](Use &U) {
+        // Do not replace condition of the logical op in form select <cond>.
+        bool IsPoisoningLogicalOp = isa<SelectInst>(U.getUser()) &&
+                                    (match(U.getUser(), m_LogicalAnd()) ||
+                                     match(U.getUser(), m_LogicalOr())) &&
+                                    U.getOperandNo() == 0;
+        if (IsPoisoningLogicalOp) {
+          LogicalOpSelects.push_back(cast<SelectInst>(U.getUser()));
+          return false;
+        }
         return UserIgnoreList->contains(U.getUser());
       });
+      // Replace conditions of the poisoning logical ops with the non-poison
+      // constant value.
+      for (SelectInst *SI : LogicalOpSelects)
+        SI->setCondition(Constant::getNullValue(SI->getCondition()->getType()));
     }
   }
   // Retain to-be-deleted instructions for some debug-info bookkeeping and alias
@@ -15457,8 +15528,41 @@ void BoUpSLP::computeMinimumValueSizes() {
   auto ComputeMaxBitWidth = [&](const TreeEntry &E, bool IsTopRoot,
                                 bool IsProfitableToDemoteRoot, unsigned Opcode,
                                 unsigned Limit, bool IsTruncRoot,
-                                bool IsSignedCmp) {
+                                bool IsSignedCmp) -> unsigned {
     ToDemote.clear();
+    // Check if the root is trunc and the next node is gather/buildvector, then
+    // keep trunc in scalars, which is free in most cases.
+    if (E.isGather() && IsTruncRoot && E.UserTreeIndices.size() == 1 &&
+        E.Idx > (IsStoreOrInsertElt ? 2 : 1) &&
+        all_of(E.Scalars, [&](Value *V) {
+          return V->hasOneUse() || isa<Constant>(V) ||
+                 (!V->hasNUsesOrMore(UsesLimit) &&
+                  none_of(V->users(), [&](User *U) {
+                    const TreeEntry *TE = getTreeEntry(U);
+                    const TreeEntry *UserTE = E.UserTreeIndices.back().UserTE;
+                    if (TE == UserTE || !TE)
+                      return false;
+                    unsigned UserTESz = DL->getTypeSizeInBits(
+                        UserTE->Scalars.front()->getType());
+                    auto It = MinBWs.find(TE);
+                    if (It != MinBWs.end() && It->second.first > UserTESz)
+                      return true;
+                    return DL->getTypeSizeInBits(U->getType()) > UserTESz;
+                  }));
+        })) {
+      ToDemote.push_back(E.Idx);
+      const TreeEntry *UserTE = E.UserTreeIndices.back().UserTE;
+      auto It = MinBWs.find(UserTE);
+      if (It != MinBWs.end())
+        return It->second.first;
+      unsigned MaxBitWidth =
+          DL->getTypeSizeInBits(UserTE->Scalars.front()->getType());
+      MaxBitWidth = bit_ceil(MaxBitWidth);
+      if (MaxBitWidth < 8 && MaxBitWidth > 1)
+        MaxBitWidth = 8;
+      return MaxBitWidth;
+    }
+
     unsigned VF = E.getVectorFactor();
     auto *TreeRootIT = dyn_cast<IntegerType>(E.Scalars.front()->getType());
     if (!TreeRootIT || !Opcode)
@@ -18240,6 +18344,14 @@ bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
   if (!findBuildAggregate(IVI, TTI, BuildVectorOpds, BuildVectorInsts))
     return false;
 
+  if (MaxVFOnly && BuildVectorOpds.size() == 2) {
+    R.getORE()->emit([&]() {
+      return OptimizationRemarkMissed(SV_NAME, "NotPossible", IVI)
+             << "Cannot SLP vectorize list: only 2 elements of buildvalue, "
+                "trying reduction first.";
+    });
+    return false;
+  }
   LLVM_DEBUG(dbgs() << "SLP: array mappable to vector: " << *IVI << "\n");
   // Aggregate value is unlikely to be processed in vector register.
   return tryToVectorizeList(BuildVectorOpds, R, MaxVFOnly);
@@ -18256,6 +18368,14 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
        isFixedVectorShuffle(BuildVectorOpds, Mask)))
     return false;
 
+  if (MaxVFOnly && BuildVectorInsts.size() == 2) {
+    R.getORE()->emit([&]() {
+      return OptimizationRemarkMissed(SV_NAME, "NotPossible", IEI)
+             << "Cannot SLP vectorize list: only 2 elements of buildvector, "
+                "trying reduction first.";
+    });
+    return false;
+  }
   LLVM_DEBUG(dbgs() << "SLP: array mappable to vector: " << *IEI << "\n");
   return tryToVectorizeList(BuildVectorInsts, R, MaxVFOnly);
 }

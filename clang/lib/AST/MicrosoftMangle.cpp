@@ -337,6 +337,10 @@ class MicrosoftCXXNameMangler {
 
   const bool PointersAre64Bit;
 
+  DiagnosticBuilder Error(SourceLocation, StringRef, StringRef);
+  DiagnosticBuilder Error(SourceLocation, StringRef);
+  DiagnosticBuilder Error(StringRef);
+
 public:
   enum QualifierMangleMode { QMM_Drop, QMM_Mangle, QMM_Escape, QMM_Result };
   enum class TplArgKind { ClassNTTP, StructuralValue };
@@ -562,6 +566,31 @@ bool MicrosoftMangleContextImpl::shouldMangleCXXName(const NamedDecl *D) {
 bool
 MicrosoftMangleContextImpl::shouldMangleStringLiteral(const StringLiteral *SL) {
   return true;
+}
+
+DiagnosticBuilder MicrosoftCXXNameMangler::Error(SourceLocation loc,
+                                                 StringRef thing1,
+                                                 StringRef thing2) {
+  DiagnosticsEngine &Diags = Context.getDiags();
+  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
+                                          "cannot mangle this %0 %1 yet");
+  return Diags.Report(loc, DiagID) << thing1 << thing2;
+}
+
+DiagnosticBuilder MicrosoftCXXNameMangler::Error(SourceLocation loc,
+                                                 StringRef thingy) {
+  DiagnosticsEngine &Diags = Context.getDiags();
+  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
+                                          "cannot mangle this %0 yet");
+  return Diags.Report(loc, DiagID) << thingy;
+}
+
+DiagnosticBuilder MicrosoftCXXNameMangler::Error(StringRef thingy) {
+  DiagnosticsEngine &Diags = Context.getDiags();
+  // extra placeholders are ignored quietly when not used
+  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
+                                          "cannot mangle this %0 yet");
+  return Diags.Report(DiagID) << thingy;
 }
 
 void MicrosoftCXXNameMangler::mangle(GlobalDecl GD, StringRef Prefix) {
@@ -981,6 +1010,7 @@ void MicrosoftCXXNameMangler::mangleFloat(llvm::APFloat Number) {
   case APFloat::S_IEEEquad: Out << 'Y'; break;
   case APFloat::S_PPCDoubleDouble: Out << 'Z'; break;
   case APFloat::S_Float8E5M2:
+  case APFloat::S_Float8E4M3:
   case APFloat::S_Float8E4M3FN:
   case APFloat::S_Float8E5M2FNUZ:
   case APFloat::S_Float8E4M3FNUZ:
@@ -1577,10 +1607,7 @@ void MicrosoftCXXNameMangler::mangleOperatorName(OverloadedOperatorKind OO,
   case OO_Spaceship: Out << "?__M"; break;
 
   case OO_Conditional: {
-    DiagnosticsEngine &Diags = Context.getDiags();
-    unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-      "cannot mangle this conditional operator yet");
-    Diags.Report(Loc, DiagID);
+    Error(Loc, "conditional operator");
     break;
   }
 
@@ -1672,11 +1699,8 @@ void MicrosoftCXXNameMangler::mangleExpression(
   }
 
   // As bad as this diagnostic is, it's better than crashing.
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(
-      DiagnosticsEngine::Error, "cannot yet mangle expression type %0");
-  Diags.Report(E->getExprLoc(), DiagID) << E->getStmtClassName()
-                                        << E->getSourceRange();
+  Error(E->getExprLoc(), "expression type: ", E->getStmtClassName())
+      << E->getSourceRange();
 }
 
 void MicrosoftCXXNameMangler::mangleTemplateArgs(
@@ -1922,11 +1946,19 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
     if (WithScalarType)
       mangleType(T, SourceRange(), QMM_Escape);
 
-    // We don't know how to mangle past-the-end pointers yet.
-    if (V.isLValueOnePastTheEnd())
-      break;
-
     APValue::LValueBase Base = V.getLValueBase();
+
+    // this might not cover every case but did cover issue 97756
+    // see test CodeGen/ms_mangler_templatearg_opte
+    if (V.isLValueOnePastTheEnd()) {
+      Out << "5E";
+      auto *VD = Base.dyn_cast<const ValueDecl *>();
+      if (VD)
+        mangle(VD);
+      Out << "@";
+      return;
+    }
+
     if (!V.hasLValuePath() || V.getLValuePath().empty()) {
       // Taking the address of a complete object has a special-case mangling.
       if (Base.isNull()) {
@@ -1938,12 +1970,14 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
         mangleNumber(V.getLValueOffset().getQuantity());
       } else if (!V.hasLValuePath()) {
         // FIXME: This can only happen as an extension. Invent a mangling.
-        break;
+        Error("template argument (extension not comaptible with ms mangler)");
+        return;
       } else if (auto *VD = Base.dyn_cast<const ValueDecl*>()) {
         Out << "E";
         mangle(VD);
       } else {
-        break;
+        Error("template argument (undeclared base)");
+        return;
       }
     } else {
       if (TAK == TplArgKind::ClassNTTP && T->isPointerType())
@@ -1988,8 +2022,10 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
         Out << *I;
 
       auto *VD = Base.dyn_cast<const ValueDecl*>();
-      if (!VD)
-        break;
+      if (!VD) {
+        Error("template argument (null value decl)");
+        return;
+      }
       Out << (TAK == TplArgKind::ClassNTTP ? 'E' : '1');
       mangle(VD);
 
@@ -2104,15 +2140,16 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
     return;
   }
 
-  case APValue::AddrLabelDiff:
-  case APValue::FixedPoint:
-    break;
+  case APValue::AddrLabelDiff: {
+    Error("template argument (value type: address label diff)");
+    return;
   }
 
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(
-      DiagnosticsEngine::Error, "cannot mangle this template argument yet");
-  Diags.Report(DiagID);
+  case APValue::FixedPoint: {
+    Error("template argument (value type: fixed point)");
+    return;
+  }
+  }
 }
 
 void MicrosoftCXXNameMangler::mangleObjCProtocol(const ObjCProtocolDecl *PD) {
@@ -2739,11 +2776,9 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
   case BuiltinType::SatULongFract:
   case BuiltinType::Ibm128:
   case BuiltinType::Float128: {
-    DiagnosticsEngine &Diags = Context.getDiags();
-    unsigned DiagID = Diags.getCustomDiagID(
-        DiagnosticsEngine::Error, "cannot mangle this built-in %0 type yet");
-    Diags.Report(Range.getBegin(), DiagID)
-        << T->getName(Context.getASTContext().getPrintingPolicy()) << Range;
+    Error(Range.getBegin(), "built-in type: ",
+          T->getName(Context.getASTContext().getPrintingPolicy()))
+        << Range;
     break;
   }
   }
@@ -3061,10 +3096,7 @@ void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC,
       return;
   }
 
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(
-      DiagnosticsEngine::Error, "cannot mangle this calling convention yet");
-  Diags.Report(Range.getBegin(), DiagID) << Range;
+  Error(Range.getBegin(), "calling convention") << Range;
 }
 void MicrosoftCXXNameMangler::mangleCallingConvention(const FunctionType *T,
                                                       SourceRange Range) {
@@ -3085,11 +3117,7 @@ void MicrosoftCXXNameMangler::mangleType(const UnresolvedUsingType *T,
                                          Qualifiers, SourceRange Range) {
   // Probably should be mangled as a template instantiation; need to see what
   // VC does first.
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-    "cannot mangle this unresolved dependent type yet");
-  Diags.Report(Range.getBegin(), DiagID)
-    << Range;
+  Error(Range.getBegin(), "unresolved dependent type") << Range;
 }
 
 // <type>        ::= <union-type> | <struct-type> | <class-type> | <enum-type>
@@ -3196,11 +3224,8 @@ void MicrosoftCXXNameMangler::mangleArrayType(const ArrayType *T) {
       // The dependent expression has to be folded into a constant (TODO).
       const DependentSizedArrayType *DSAT =
         getASTContext().getAsDependentSizedArrayType(ElementTy);
-      DiagnosticsEngine &Diags = Context.getDiags();
-      unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-        "cannot mangle this dependent-length array yet");
-      Diags.Report(DSAT->getSizeExpr()->getExprLoc(), DiagID)
-        << DSAT->getBracketsRange();
+      Error(DSAT->getSizeExpr()->getExprLoc(), "dependent-length")
+          << DSAT->getBracketsRange();
       return;
     } else {
       break;
@@ -3240,20 +3265,12 @@ void MicrosoftCXXNameMangler::mangleType(const MemberPointerType *T,
 
 void MicrosoftCXXNameMangler::mangleType(const TemplateTypeParmType *T,
                                          Qualifiers, SourceRange Range) {
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-    "cannot mangle this template type parameter type yet");
-  Diags.Report(Range.getBegin(), DiagID)
-    << Range;
+  Error(Range.getBegin(), "template type parameter type") << Range;
 }
 
 void MicrosoftCXXNameMangler::mangleType(const SubstTemplateTypeParmPackType *T,
                                          Qualifiers, SourceRange Range) {
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-    "cannot mangle this substituted parameter pack yet");
-  Diags.Report(Range.getBegin(), DiagID)
-    << Range;
+  Error(Range.getBegin(), "substituted parameter pack") << Range;
 }
 
 // <type> ::= <pointer-type>
@@ -3404,46 +3421,27 @@ void MicrosoftCXXNameMangler::mangleType(const ExtVectorType *T,
 
 void MicrosoftCXXNameMangler::mangleType(const DependentVectorType *T,
                                          Qualifiers, SourceRange Range) {
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(
-      DiagnosticsEngine::Error,
-      "cannot mangle this dependent-sized vector type yet");
-  Diags.Report(Range.getBegin(), DiagID) << Range;
+  Error(Range.getBegin(), "dependent-sized vector type") << Range;
 }
 
 void MicrosoftCXXNameMangler::mangleType(const DependentSizedExtVectorType *T,
                                          Qualifiers, SourceRange Range) {
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-    "cannot mangle this dependent-sized extended vector type yet");
-  Diags.Report(Range.getBegin(), DiagID)
-    << Range;
+  Error(Range.getBegin(), "dependent-sized extended vector type") << Range;
 }
 
 void MicrosoftCXXNameMangler::mangleType(const ConstantMatrixType *T,
                                          Qualifiers quals, SourceRange Range) {
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                          "Cannot mangle this matrix type yet");
-  Diags.Report(Range.getBegin(), DiagID) << Range;
+  Error(Range.getBegin(), "matrix type") << Range;
 }
 
 void MicrosoftCXXNameMangler::mangleType(const DependentSizedMatrixType *T,
                                          Qualifiers quals, SourceRange Range) {
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(
-      DiagnosticsEngine::Error,
-      "Cannot mangle this dependent-sized matrix type yet");
-  Diags.Report(Range.getBegin(), DiagID) << Range;
+  Error(Range.getBegin(), "dependent-sized matrix type") << Range;
 }
 
 void MicrosoftCXXNameMangler::mangleType(const DependentAddressSpaceType *T,
                                          Qualifiers, SourceRange Range) {
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(
-      DiagnosticsEngine::Error,
-      "cannot mangle this dependent address space type yet");
-  Diags.Report(Range.getBegin(), DiagID) << Range;
+  Error(Range.getBegin(), "dependent address space type") << Range;
 }
 
 void MicrosoftCXXNameMangler::mangleType(const ObjCInterfaceType *T, Qualifiers,
@@ -3513,39 +3511,23 @@ void MicrosoftCXXNameMangler::mangleType(const InjectedClassNameType *,
 
 void MicrosoftCXXNameMangler::mangleType(const TemplateSpecializationType *T,
                                          Qualifiers, SourceRange Range) {
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-    "cannot mangle this template specialization type yet");
-  Diags.Report(Range.getBegin(), DiagID)
-    << Range;
+  Error(Range.getBegin(), "template specialization type") << Range;
 }
 
 void MicrosoftCXXNameMangler::mangleType(const DependentNameType *T, Qualifiers,
                                          SourceRange Range) {
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-    "cannot mangle this dependent name type yet");
-  Diags.Report(Range.getBegin(), DiagID)
-    << Range;
+  Error(Range.getBegin(), "dependent name type") << Range;
 }
 
 void MicrosoftCXXNameMangler::mangleType(
     const DependentTemplateSpecializationType *T, Qualifiers,
     SourceRange Range) {
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-    "cannot mangle this dependent template specialization type yet");
-  Diags.Report(Range.getBegin(), DiagID)
-    << Range;
+  Error(Range.getBegin(), "dependent template specialization type") << Range;
 }
 
 void MicrosoftCXXNameMangler::mangleType(const PackExpansionType *T, Qualifiers,
                                          SourceRange Range) {
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-    "cannot mangle this pack expansion yet");
-  Diags.Report(Range.getBegin(), DiagID)
-    << Range;
+  Error(Range.getBegin(), "pack expansion") << Range;
 }
 
 void MicrosoftCXXNameMangler::mangleType(const PackIndexingType *T,
@@ -3556,60 +3538,37 @@ void MicrosoftCXXNameMangler::mangleType(const PackIndexingType *T,
 
 void MicrosoftCXXNameMangler::mangleType(const TypeOfType *T, Qualifiers,
                                          SourceRange Range) {
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-    "cannot mangle this typeof(type) yet");
-  Diags.Report(Range.getBegin(), DiagID)
-    << Range;
+  Error(Range.getBegin(), "typeof(type)") << Range;
 }
 
 void MicrosoftCXXNameMangler::mangleType(const TypeOfExprType *T, Qualifiers,
                                          SourceRange Range) {
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-    "cannot mangle this typeof(expression) yet");
-  Diags.Report(Range.getBegin(), DiagID)
-    << Range;
+  Error(Range.getBegin(), "typeof(expression)") << Range;
 }
 
 void MicrosoftCXXNameMangler::mangleType(const DecltypeType *T, Qualifiers,
                                          SourceRange Range) {
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-    "cannot mangle this decltype() yet");
-  Diags.Report(Range.getBegin(), DiagID)
-    << Range;
+  Error(Range.getBegin(), "decltype()") << Range;
 }
 
 void MicrosoftCXXNameMangler::mangleType(const UnaryTransformType *T,
                                          Qualifiers, SourceRange Range) {
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-    "cannot mangle this unary transform type yet");
-  Diags.Report(Range.getBegin(), DiagID)
-    << Range;
+  Error(Range.getBegin(), "unary transform type") << Range;
 }
 
 void MicrosoftCXXNameMangler::mangleType(const AutoType *T, Qualifiers,
                                          SourceRange Range) {
   assert(T->getDeducedType().isNull() && "expecting a dependent type!");
 
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-    "cannot mangle this 'auto' type yet");
-  Diags.Report(Range.getBegin(), DiagID)
-    << Range;
+  Error(Range.getBegin(), "'auto' type") << Range;
 }
 
 void MicrosoftCXXNameMangler::mangleType(
     const DeducedTemplateSpecializationType *T, Qualifiers, SourceRange Range) {
   assert(T->getDeducedType().isNull() && "expecting a dependent type!");
 
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-    "cannot mangle this deduced class template specialization type yet");
-  Diags.Report(Range.getBegin(), DiagID)
-    << Range;
+  Error(Range.getBegin(), "deduced class template specialization type")
+      << Range;
 }
 
 void MicrosoftCXXNameMangler::mangleType(const AtomicType *T, Qualifiers,
@@ -3683,10 +3642,7 @@ void MicrosoftCXXNameMangler::mangleType(const BitIntType *T, Qualifiers,
 
 void MicrosoftCXXNameMangler::mangleType(const DependentBitIntType *T,
                                          Qualifiers, SourceRange Range) {
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(
-      DiagnosticsEngine::Error, "cannot mangle this DependentBitInt type yet");
-  Diags.Report(Range.getBegin(), DiagID) << Range;
+  Error(Range.getBegin(), "DependentBitInt type") << Range;
 }
 
 // <this-adjustment> ::= <no-adjustment> | <static-adjustment> |

@@ -1512,3 +1512,51 @@ namespace OnePastEndAndBack {
   constexpr const Base *d = c - 1;
   static_assert(d == &a, "");
 }
+
+namespace BitSet {
+  class Bitset {
+    unsigned Bit = 0;
+
+  public:
+    constexpr Bitset() {
+      int Init[2] = {1,2};
+      for (auto I : Init)
+        set(I);
+    }
+    constexpr void set(unsigned I) {
+      this->Bit++;
+      this->Bit = 1u << 1;
+    }
+  };
+
+  struct ArchInfo {
+    Bitset DefaultExts;
+  };
+
+  constexpr ArchInfo ARMV8A = {
+    Bitset()
+  };
+}
+
+namespace ArrayInitChain {
+  struct StringLiteral {
+    const char *S;
+  };
+
+  struct CustomOperandVal {
+    StringLiteral Str;
+    unsigned Width;
+    unsigned Mask = Width + 1;
+  };
+
+  constexpr CustomOperandVal A[] = {
+    {},
+    {{"depctr_hold_cnt"},  12,   13},
+  };
+  static_assert(A[0].Str.S == nullptr, "");
+  static_assert(A[0].Width == 0, "");
+  static_assert(A[0].Mask == 1, "");
+
+  static_assert(A[1].Width == 12, "");
+  static_assert(A[1].Mask == 13, "");
+}

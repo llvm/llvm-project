@@ -3753,11 +3753,6 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   if (!Info)
     return false;
 
-  // When Mask is not a true mask, this transformation is illegal for some
-  // operations whose results are affected by mask, like viota.m.
-  if (Info->MaskAffectsResult && Mask && !usesAllOnesMask(Mask, Glue))
-    return false;
-
   // If True has a merge operand then it needs to be the same as vmerge's False,
   // since False will be used for the result's merge operand.
   if (HasTiedDest && !isImplicitDef(True->getOperand(0))) {
@@ -3834,6 +3829,16 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   VL = GetMinVL(TrueVL, VL);
   if (!VL)
     return false;
+
+  // Some operations produce different elementwise results depending on the
+  // active elements, like viota.m or vredsum. This transformation is illegal
+  // for these if we change the active elements (i.e. mask or VL).
+  if (Info->ActiveElementsAffectResult) {
+    if (Mask && !usesAllOnesMask(Mask, Glue))
+      return false;
+    if (TrueVL != VL)
+      return false;
+  }
 
   // If we end up changing the VL or mask of True, then we need to make sure it
   // doesn't raise any observable fp exceptions, since changing the active

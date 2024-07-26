@@ -184,6 +184,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.malloc
     libc.src.stdlib.qsort
     libc.src.stdlib.rand
+    libc.src.stdlib.realloc
     libc.src.stdlib.srand
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
@@ -231,6 +232,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.canonicalize
     libc.src.math.canonicalizef
     libc.src.math.canonicalizel
+    libc.src.math.cbrt
     libc.src.math.cbrtf
     libc.src.math.ceil
     libc.src.math.ceilf

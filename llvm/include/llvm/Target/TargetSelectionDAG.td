@@ -266,6 +266,12 @@ def SDTMaskedScatter : SDTypeProfile<0, 4, [
   SDTCisSameNumEltsAs<0, 1>, SDTCisSameNumEltsAs<0, 3>
 ]>;
 
+def SDTVectorCompress : SDTypeProfile<1, 3, [
+  SDTCisVec<0>, SDTCisSameAs<0, 1>,
+  SDTCisVec<2>, SDTCisSameNumEltsAs<1, 2>,
+  SDTCisSameAs<1, 3>
+]>;
+
 def SDTVecShuffle : SDTypeProfile<1, 2, [
   SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>
 ]>;
@@ -756,6 +762,8 @@ def masked_gather : SDNode<"ISD::MGATHER", SDTMaskedGather,
 
 def masked_scatter : SDNode<"ISD::MSCATTER", SDTMaskedScatter,
                             [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+def vector_compress : SDNode<"ISD::VECTOR_COMPRESS", SDTVectorCompress>;
 
 // Do not use ld, st directly. Use load, extload, sextload, zextload, store,
 // and truncst (see below).

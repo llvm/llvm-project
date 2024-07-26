@@ -192,14 +192,12 @@ FunctionPass* llvm::createGreedyRegisterAllocator() {
   return new RAGreedy();
 }
 
-FunctionPass *llvm::createGreedyRegisterAllocator(RegClassFilterFunc Ftor) {
+FunctionPass *llvm::createGreedyRegisterAllocator(RegAllocFilterFunc Ftor) {
   return new RAGreedy(Ftor);
 }
 
-RAGreedy::RAGreedy(RegClassFilterFunc F):
-  MachineFunctionPass(ID),
-  RegAllocBase(F) {
-}
+RAGreedy::RAGreedy(RegAllocFilterFunc F)
+    : MachineFunctionPass(ID), RegAllocBase(F) {}
 
 void RAGreedy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
@@ -1664,8 +1662,8 @@ unsigned RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
 
     // Remove any gaps with regmask clobbers.
     if (Matrix->checkRegMaskInterference(VirtReg, PhysReg))
-      for (unsigned I = 0, E = RegMaskGaps.size(); I != E; ++I)
-        GapWeight[RegMaskGaps[I]] = huge_valf;
+      for (unsigned Gap : RegMaskGaps)
+        GapWeight[Gap] = huge_valf;
 
     // Try to find the best sequence of gaps to close.
     // The new spill weight must be larger than any gap interference.
@@ -2306,7 +2304,7 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
     if (Reg.isPhysical())
       continue;
 
-    // This may be a skipped class
+    // This may be a skipped register.
     if (!VRM->hasPhys(Reg)) {
       assert(!shouldAllocateRegister(Reg) &&
              "We have an unallocated variable which should have been handled");

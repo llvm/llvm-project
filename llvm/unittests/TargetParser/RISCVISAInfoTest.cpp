@@ -892,7 +892,6 @@ R"(All available -march extensions for RISC-V
     za64rs               1.0
     zaamo                1.0
     zabha                1.0
-    zacas                1.0
     zalrsc               1.0
     zama16b              1.0
     zawrs                1.0
@@ -1026,8 +1025,9 @@ R"(All available -march extensions for RISC-V
     xwchc                2.2
 
 Experimental extensions
-    zicfilp              0.4       This is a long dummy description
-    zicfiss              0.4
+    zicfilp              1.0       This is a long dummy description
+    zicfiss              1.0
+    zacas                1.0
     zalasr               0.1
     smmpm                1.0
     smnpm                1.0
@@ -1079,9 +1079,9 @@ R"(Extensions enabled for the given RISC-V target
     i                    2.1       'I' (Base Integer Instruction Set)
 
 Experimental extensions
-    zicfilp              0.4       'Zicfilp' (Landing pad)
+    zicfilp              1.0       'Zicfilp' (Landing pad)
 
-ISA String: rv64i2p1_zicfilp0p4_zicsr2p0
+ISA String: rv64i2p1_zicfilp1p0_zicsr2p0
 )";
   // clang-format on
 

@@ -57,7 +57,23 @@ Value *VectorBuilder::createVectorInstruction(unsigned Opcode, Type *ReturnTy,
   auto VPID = VPIntrinsic::getForOpcode(Opcode);
   if (VPID == Intrinsic::not_intrinsic)
     return returnWithError<Value *>("No VPIntrinsic for this opcode");
+  return createVectorInstructionImpl(VPID, ReturnTy, InstOpArray, Name);
+}
 
+Value *VectorBuilder::createSimpleTargetReduction(Intrinsic::ID RdxID,
+                                                  Type *ValTy,
+                                                  ArrayRef<Value *> InstOpArray,
+                                                  const Twine &Name) {
+  auto VPID = VPIntrinsic::getForIntrinsic(RdxID);
+  assert(VPReductionIntrinsic::isVPReduction(VPID) &&
+         "No VPIntrinsic for this reduction");
+  return createVectorInstructionImpl(VPID, ValTy, InstOpArray, Name);
+}
+
+Value *VectorBuilder::createVectorInstructionImpl(Intrinsic::ID VPID,
+                                                  Type *ReturnTy,
+                                                  ArrayRef<Value *> InstOpArray,
+                                                  const Twine &Name) {
   auto MaskPosOpt = VPIntrinsic::getMaskParamPos(VPID);
   auto VLenPosOpt = VPIntrinsic::getVectorLengthParamPos(VPID);
   size_t NumInstParams = InstOpArray.size();

@@ -997,7 +997,7 @@ define i64 @umull_ldr2_d(ptr %x0, i64 %x1) {
 ; CHECK-LABEL: umull_ldr2_d:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    and x9, x1, #0xffffffff
+; CHECK-NEXT:    mov w9, w1
 ; CHECK-NEXT:    umull x0, w8, w9
 ; CHECK-NEXT:    ret
 entry:
@@ -1110,7 +1110,7 @@ define i64 @umaddl_ldr2_d(ptr %x0, i64 %x1, i64 %x2) {
 ; CHECK-LABEL: umaddl_ldr2_d:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    and x9, x1, #0xffffffff
+; CHECK-NEXT:    mov w9, w1
 ; CHECK-NEXT:    umaddl x0, w8, w9, x2
 ; CHECK-NEXT:    ret
 entry:
@@ -1224,7 +1224,7 @@ define i64 @umnegl_ldr2_d(ptr %x0, i64 %x1) {
 ; CHECK-LABEL: umnegl_ldr2_d:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    and x9, x1, #0xffffffff
+; CHECK-NEXT:    mov w9, w1
 ; CHECK-NEXT:    umnegl x0, w8, w9
 ; CHECK-NEXT:    ret
 entry:
@@ -1338,7 +1338,7 @@ define i64 @umsubl_ldr2_d(ptr %x0, i64 %x1, i64 %x2) {
 ; CHECK-LABEL: umsubl_ldr2_d:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    and x9, x1, #0xffffffff
+; CHECK-NEXT:    mov w9, w1
 ; CHECK-NEXT:    umsubl x0, w8, w9, x2
 ; CHECK-NEXT:    ret
 entry:
@@ -1400,7 +1400,7 @@ define i64 @umull_and_lshr(i64 %x) {
 ; CHECK-LABEL: umull_and_lshr:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr x8, x0, #32
-; CHECK-NEXT:    and x9, x0, #0xffffffff
+; CHECK-NEXT:    mov w9, w0
 ; CHECK-NEXT:    umull x0, w9, w8
 ; CHECK-NEXT:    ret
     %lo = and i64 %x, u0xffffffff
@@ -1424,7 +1424,7 @@ define i64 @umaddl_and_lshr(i64 %x, i64 %a) {
 ; CHECK-LABEL: umaddl_and_lshr:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr x8, x0, #32
-; CHECK-NEXT:    and x9, x0, #0xffffffff
+; CHECK-NEXT:    mov w9, w0
 ; CHECK-NEXT:    umaddl x0, w9, w8, x1
 ; CHECK-NEXT:    ret
     %lo = and i64 %x, u0xffffffff
@@ -1437,8 +1437,8 @@ define i64 @umaddl_and_lshr(i64 %x, i64 %a) {
 define i64 @umaddl_and_and(i64 %x, i64 %y, i64 %a) {
 ; CHECK-LABEL: umaddl_and_and:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and x8, x0, #0xffffffff
-; CHECK-NEXT:    and x9, x1, #0xffffffff
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov w9, w1
 ; CHECK-NEXT:    umaddl x0, w8, w9, x2
 ; CHECK-NEXT:    ret
     %lo = and i64 %x, u0xffffffff
@@ -1446,4 +1446,22 @@ define i64 @umaddl_and_and(i64 %x, i64 %y, i64 %a) {
     %mul = mul i64 %lo, %hi
     %add = add i64 %a, %mul
     ret i64 %add
+}
+
+; Check which can contain multiple copies that should all be removed.
+define i32 @f(i32 %0) {
+entry:
+  %1 = sext i32 %0 to i64
+  br label %A
+
+A:
+  %2 = trunc i64 %1 to i32
+  %a69.us = sub i32 0, %2
+  %a69.us.fr = freeze i32 %a69.us
+  %3 = zext i32 %a69.us.fr to i64
+  br label %B
+
+B:
+  %t = icmp eq i64 0, %3
+  br i1 %t, label %A, label %B
 }

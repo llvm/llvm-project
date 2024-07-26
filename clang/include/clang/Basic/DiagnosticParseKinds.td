@@ -895,9 +895,10 @@ def missing_template_arg_list_after_template_kw : Extension<
   "keyword">, InGroup<DiagGroup<"missing-template-arg-list-after-template-kw">>,
   DefaultError;
 
-def ext_missing_dependent_template_keyword : ExtWarn<
-  "use 'template' keyword to treat '%0' as a dependent template name">,
-  InGroup<DiagGroup<"missing-dependent-template-keyword">>;
+def err_missing_dependent_template_keyword : Error<
+  "use 'template' keyword to treat '%0' as a dependent template name">;
+def warn_missing_dependent_template_keyword : ExtWarn<
+  "use 'template' keyword to treat '%0' as a dependent template name">;
 
 def ext_extern_template : Extension<
   "extern templates are a C++11 extension">, InGroup<CXX11>;
@@ -1259,6 +1260,9 @@ def warn_pragma_intrinsic_builtin : Warning<
 def warn_pragma_unused_expected_var : Warning<
   "expected '#pragma unused' argument to be a variable name">,
   InGroup<IgnoredPragmas>;
+// - #pragma mc_func
+def err_pragma_mc_func_not_supported :
+   Error<"#pragma mc_func is not supported">;
 // - #pragma init_seg
 def warn_pragma_init_seg_unsupported_target : Warning<
   "'#pragma init_seg' is only supported when targeting a "
