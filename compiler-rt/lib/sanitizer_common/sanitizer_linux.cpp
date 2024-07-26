@@ -2262,6 +2262,18 @@ void SignalContext::DumpAllRegisters(void *context) {
   Printf("r14 = 0x%016llx  ", ucontext->uc_mcontext.mc_r14);
   Printf("r15 = 0x%016llx  ", ucontext->uc_mcontext.mc_r15);
   Printf("\n");
+#    elif defined(__i386__)
+  Report("Register values:\n");
+  Printf("eax = 0x%08x  ", ucontext->uc_mcontext.mc_eax);
+  Printf("ebx = 0x%08x  ", ucontext->uc_mcontext.mc_ebx);
+  Printf("ecx = 0x%08x  ", ucontext->uc_mcontext.mc_ecx);
+  Printf("edx = 0x%08x  ", ucontext->uc_mcontext.mc_edx);
+  Printf("\n");
+  Printf("edi = 0x%08x  ", ucontext->uc_mcontext.mc_edi);
+  Printf("esi = 0x%08x  ", ucontext->uc_mcontext.mc_esi);
+  Printf("ebp = 0x%08x  ", ucontext->uc_mcontext.mc_ebp);
+  Printf("esp = 0x%08x  ", ucontext->uc_mcontext.mc_esp);
+  Printf("\n");
 #    else
   (void)ucontext;
 #    endif
