@@ -2774,6 +2774,20 @@ inline bool CheckNonNullArg(InterpState &S, CodePtr OpPC) {
   return false;
 }
 
+void diagnoseEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED,
+                       const APSInt &Value);
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool CheckEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED) {
+  assert(ED);
+  assert(!ED->isFixed());
+  const APSInt Val = S.Stk.peek<T>().toAPSInt();
+
+  if (S.inConstantContext())
+    diagnoseEnumValue(S, OpPC, ED, Val);
+  return true;
+}
+
 /// OldPtr -> Integer -> NewPtr.
 template <PrimType TIn, PrimType TOut>
 inline bool DecayPtr(InterpState &S, CodePtr OpPC) {
