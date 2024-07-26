@@ -256,6 +256,7 @@ template <bool is64> struct RelocsCrel {
     const llvm::object::Elf_Crel_Impl<is64> *operator->() const {
       return &crel;
     }
+    // For llvm::enumerate.
     bool operator==(const const_iterator &r) const { return count == r.count; }
     bool operator!=(const const_iterator &r) const { return count != r.count; }
     const_iterator &operator++() {
@@ -263,15 +264,11 @@ template <bool is64> struct RelocsCrel {
         step();
       return *this;
     }
+    // For RelocationScanner::scanOne.
     void operator+=(size_t n) {
       for (; n; --n)
         operator++();
     }
-
-    // R_PPC64_REL24_NOTOC in Relocations.cpp
-    explicit operator const void *() const { return nullptr; }
-    bool operator==(const void *) const { return !count; }
-    bool operator!=(const void *) const { return count; }
   };
 
   size_t hdr = 0;

@@ -143,28 +143,9 @@ if (LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
     )
 endif()
 
-# Add all the headers to the project for IDEs.
-if (LIBCXX_CONFIGURE_IDE)
-  file(GLOB_RECURSE LIBCXX_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../include/*)
-  if(WIN32)
-    file( GLOB LIBCXX_WIN32_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../include/__support/win32/*.h)
-    list(APPEND LIBCXX_HEADERS ${LIBCXX_WIN32_HEADERS})
-  endif()
-  # Force them all into the headers dir on MSVC, otherwise they end up at
-  # project scope because they don't have extensions.
-  if (MSVC_IDE)
-    source_group("Header Files" FILES ${LIBCXX_HEADERS})
-  endif()
-endif()
-
 if(NOT LIBCXX_INSTALL_LIBRARY)
   set(exclude_from_all EXCLUDE_FROM_ALL)
 endif()
-
-if (LIBCXX_GENERATE_COVERAGE AND NOT LIBCXX_COVERAGE_LIBRARY)
-  find_compiler_rt_library(profile LIBCXX_COVERAGE_LIBRARY)
-endif()
-add_library_flags_if(LIBCXX_COVERAGE_LIBRARY "${LIBCXX_COVERAGE_LIBRARY}")
 
 if (APPLE AND LLVM_USE_SANITIZER)
   if (("${LLVM_USE_SANITIZER}" STREQUAL "Address") OR

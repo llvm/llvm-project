@@ -35,12 +35,17 @@
 # CHECKE-NEXT:      R_X86_64_PC32 .L.str1-0x4
 
 # RELOCE:      .rodata             PROGBITS        {{0*}}[[#%x,RO:]]
+# RELOCE:      .eh_frame           PROGBITS        {{0*}}[[#%x,EHFRAME:]]
 # RELOCE:      .data               PROGBITS        {{0*}}[[#%x,DATA:]]
 
-# RELOCE:      Relocation section '.crel.data' at offset 0x3c8 contains 2 entries:
+# RELOCE:      Relocation section '.crel.data' at offset {{.*}} contains 2 entries:
 # RELOCE-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
 # RELOCE-NEXT: {{0*}}[[#DATA+8]] {{.*}}           R_X86_64_64            {{.*}}           .data - 8000000000000000
 # RELOCE-NEXT: {{0*}}[[#DATA+24]]{{.*}}           R_X86_64_64            {{.*}}           .data - 1
+# RELOCE:      Relocation section '.crel.eh_frame' at offset {{.*}} contains 2 entries:
+# RELOCE-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# RELOCE-NEXT: {{0*}}[[#EHFRAME+32]] {{.*}}       R_X86_64_PC32          {{.*}}           .text + 0
+# RELOCE-NEXT: {{0*}}[[#EHFRAME+52]] {{.*}}       R_X86_64_PC32          {{.*}}           .text + a
 # RELOCE:      Relocation section '.crel.rodata' at offset {{.*}} contains 4 entries:
 # RELOCE-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
 # RELOCE-NEXT: {{0*}}[[#RO+8]]   {{.*}}           R_X86_64_PC32          {{.*}}           foo + 0
@@ -51,13 +56,17 @@
 #--- a.s
 .global _start, foo
 _start:
+  .cfi_startproc # Test .eh_frame
   call foo
   call .text.foo
+  .cfi_endproc
 
 .section .text.foo,"ax"
 foo:
+  .cfi_startproc
   leaq .L.str(%rip), %rsi
   leaq .L.str1(%rip), %rsi
+  .cfi_endproc
 
 .section .rodata.str1.1,"aMS",@progbits,1
 .L.str:

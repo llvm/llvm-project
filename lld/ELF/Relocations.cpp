@@ -1309,7 +1309,8 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
   // LoongArch does not yet implement transition from TLSDESC to LE/IE, so
   // generate TLSDESC dynamic relocation for the dynamic linker to handle.
   if (config->emachine == EM_LOONGARCH &&
-      oneof<R_LOONGARCH_TLSDESC_PAGE_PC, R_TLSDESC, R_TLSDESC_CALL>(expr)) {
+      oneof<R_LOONGARCH_TLSDESC_PAGE_PC, R_TLSDESC, R_TLSDESC_PC,
+            R_TLSDESC_CALL>(expr)) {
     if (expr != R_TLSDESC_CALL) {
       sym.setFlags(NEEDS_TLSDESC);
       c.addReloc({expr, type, offset, addend, &sym});
@@ -1444,6 +1445,7 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
     type = rel.getType(config->isMips64EL);
     ++i;
   } else {
+    // CREL is unsupported for MIPS N32.
     if (config->mipsN32Abi) {
       type = getMipsN32RelType(i);
     } else {
@@ -1476,39 +1478,40 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
       maybeReportUndefined(cast<Undefined>(sym), *sec, offset))
     return;
 
-  if constexpr (!RelTy::IsCrel) {
-    if (config->emachine == EM_PPC64) {
-      // We can separate the small code model relocations into 2 categories:
-      // 1) Those that access the compiler generated .toc sections.
-      // 2) Those that access the linker allocated got entries.
-      // lld allocates got entries to symbols on demand. Since we don't try to
-      // sort the got entries in any way, we don't have to track which objects
-      // have got-based small code model relocs. The .toc sections get placed
-      // after the end of the linker allocated .got section and we do sort those
-      // so sections addressed with small code model relocations come first.
-      if (type == R_PPC64_TOC16 || type == R_PPC64_TOC16_DS)
-        sec->file->ppc64SmallCodeModelTocRelocs = true;
+  if (config->emachine == EM_PPC64) {
+    // We can separate the small code model relocations into 2 categories:
+    // 1) Those that access the compiler generated .toc sections.
+    // 2) Those that access the linker allocated got entries.
+    // lld allocates got entries to symbols on demand. Since we don't try to
+    // sort the got entries in any way, we don't have to track which objects
+    // have got-based small code model relocs. The .toc sections get placed
+    // after the end of the linker allocated .got section and we do sort those
+    // so sections addressed with small code model relocations come first.
+    if (type == R_PPC64_TOC16 || type == R_PPC64_TOC16_DS)
+      sec->file->ppc64SmallCodeModelTocRelocs = true;
 
-      // Record the TOC entry (.toc + addend) as not relaxable. See the comment
-      // in InputSectionBase::relocateAlloc().
-      if (type == R_PPC64_TOC16_LO && sym.isSection() && isa<Defined>(sym) &&
-          cast<Defined>(sym).section->name == ".toc")
-        ppc64noTocRelax.insert({&sym, addend});
+    // Record the TOC entry (.toc + addend) as not relaxable. See the comment in
+    // InputSectionBase::relocateAlloc().
+    if (type == R_PPC64_TOC16_LO && sym.isSection() && isa<Defined>(sym) &&
+        cast<Defined>(sym).section->name == ".toc")
+      ppc64noTocRelax.insert({&sym, addend});
 
-      if ((type == R_PPC64_TLSGD && expr == R_TLSDESC_CALL) ||
-          (type == R_PPC64_TLSLD && expr == R_TLSLD_HINT)) {
+    if ((type == R_PPC64_TLSGD && expr == R_TLSDESC_CALL) ||
+        (type == R_PPC64_TLSLD && expr == R_TLSLD_HINT)) {
+      // Skip the error check for CREL, which does not set `end`.
+      if constexpr (!RelTy::IsCrel) {
         if (i == end) {
           errorOrWarn("R_PPC64_TLSGD/R_PPC64_TLSLD may not be the last "
                       "relocation" +
                       getLocation(*sec, sym, offset));
           return;
         }
-
-        // Offset the 4-byte aligned R_PPC64_TLSGD by one byte in the NOTOC
-        // case, so we can discern it later from the toc-case.
-        if (i->getType(/*isMips64EL=*/false) == R_PPC64_REL24_NOTOC)
-          ++offset;
       }
+
+      // Offset the 4-byte aligned R_PPC64_TLSGD by one byte in the NOTOC
+      // case, so we can discern it later from the toc-case.
+      if (i->getType(/*isMips64EL=*/false) == R_PPC64_REL24_NOTOC)
+        ++offset;
     }
   }
 
@@ -1594,9 +1597,15 @@ void RelocationScanner::scan(Relocs<RelTy> rels) {
   if (isa<EhInputSection>(sec) || config->emachine == EM_S390)
     rels = sortRels(rels, storage);
 
-  end = static_cast<const void *>(rels.end());
-  for (auto i = rels.begin(); i != end;)
-    scanOne<ELFT, RelTy>(i);
+  if constexpr (RelTy::IsCrel) {
+    for (auto i = rels.begin(); i != rels.end();)
+      scanOne<ELFT, RelTy>(i);
+  } else {
+    // The non-CREL code path has additional check for PPC64 TLS.
+    end = static_cast<const void *>(rels.end());
+    for (auto i = rels.begin(); i != end;)
+      scanOne<ELFT, RelTy>(i);
+  }
 
   // Sort relocations by offset for more efficient searching for
   // R_RISCV_PCREL_HI20 and R_PPC64_ADDR64.
