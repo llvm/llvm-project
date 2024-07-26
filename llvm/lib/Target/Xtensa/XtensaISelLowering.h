@@ -109,7 +109,7 @@ private:
 
   SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue LowerConstantPool(ConstantPoolSDNode *CP, SelectionDAG &DAG) const;
+  SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
 

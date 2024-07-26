@@ -690,25 +690,25 @@ SDValue XtensaTargetLowering::getAddrPCRel(SDValue Op,
   return DAG.getNode(XtensaISD::PCREL_WRAPPER, DL, Ty, Op);
 }
 
-SDValue XtensaTargetLowering::LowerConstantPool(ConstantPoolSDNode *CP,
+SDValue XtensaTargetLowering::LowerConstantPool(SDValue Op,
                                                 SelectionDAG &DAG) const {
-  EVT PtrVT = getPointerTy(DAG.getDataLayout());
-  auto C = const_cast<Constant *>(CP->getConstVal());
-  auto T = const_cast<Type *>(CP->getType());
+  EVT PtrVT = Op.getValueType();
+  ConstantPoolSDNode *CP = cast<ConstantPoolSDNode>(Op);
+  auto C = const_cast<Constant*>(CP->getConstVal());
+  auto T = CP->getType();
   SDValue Result;
 
   // Do not use constant pool for aggregate or vector constant types,
   // in such cases create global variable, for example to store tabel
   // when we lower CTTZ operation.
-  if (T->isAggregateType() || T->isVectorTy()) {
-    auto AFI = DAG.getMachineFunction().getInfo<XtensaFunctionInfo>();
-    auto M = const_cast<Module *>(
-        DAG.getMachineFunction().getFunction().getParent());
+  if (T->isAggregateType()) {
+    MachineFunction &MF = DAG.getMachineFunction();
+    auto AFI = MF.getInfo<XtensaFunctionInfo>();
+    auto M = const_cast<Module *>(MF.getFunction().getParent());
     auto GV = new GlobalVariable(
         *M, T, /*isConstant=*/true, GlobalVariable::InternalLinkage, C,
         Twine(DAG.getDataLayout().getPrivateGlobalPrefix()) + "CP" +
-            Twine(DAG.getMachineFunction().getFunctionNumber()) + "_" +
-            Twine(AFI->createLabelUId()));
+            Twine(MF.getFunctionNumber()) + "_" + Twine(AFI->createLabelUId()));
     Result = DAG.getTargetConstantPool(GV, PtrVT, Align(4));
   } else {
     if (!CP->isMachineConstantPoolEntry()) {
@@ -898,7 +898,7 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
   case ISD::JumpTable:
     return LowerJumpTable(Op, DAG);
   case ISD::ConstantPool:
-    return LowerConstantPool(cast<ConstantPoolSDNode>(Op), DAG);
+    return LowerConstantPool(Op, DAG);
   case ISD::MUL:
     return LowerMUL(Op, DAG);
   case ISD::SELECT_CC:
