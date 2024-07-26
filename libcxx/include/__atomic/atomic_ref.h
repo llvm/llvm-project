@@ -57,11 +57,6 @@ struct __get_aligner_instance {
 
 template <class _Tp>
 struct __atomic_ref_base {
-protected:
-  _Tp* __ptr_;
-
-  _LIBCPP_HIDE_FROM_ABI __atomic_ref_base(_Tp& __obj) : __ptr_(std::addressof(__obj)) {}
-
 private:
   _LIBCPP_HIDE_FROM_ABI static _Tp* __clear_padding(_Tp& __val) noexcept {
     _Tp* __ptr = std::addressof(__val);
@@ -222,6 +217,12 @@ public:
   }
   _LIBCPP_HIDE_FROM_ABI void notify_one() const noexcept { std::__atomic_notify_one(*this); }
   _LIBCPP_HIDE_FROM_ABI void notify_all() const noexcept { std::__atomic_notify_all(*this); }
+
+protected:
+  typedef _Tp _Aligned_Tp __attribute__((aligned(required_alignment)));
+  _Aligned_Tp* __ptr_;
+
+  _LIBCPP_HIDE_FROM_ABI __atomic_ref_base(_Tp& __obj) : __ptr_(std::addressof(__obj)) {}
 };
 
 template <class _Tp>
