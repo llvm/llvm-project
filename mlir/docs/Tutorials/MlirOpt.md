@@ -30,11 +30,13 @@ This is a good way to test if an input MLIR is well-formed.
 
 `mlir-opt --help` shows a complete list of flags
 (there are nearly 1000).
-Each pass gets its own flag.
+Each pass has its own flag,
+though it is recommended to use `--pass-pipeline`
+to run passes rather than bare flags.
 
 ## Running a pass
 
-Next we run [`--convert-to-llvm`](/docs/Passes/#-convert-to-llvm),
+Next we run [`convert-to-llvm`](/docs/Passes/#-convert-to-llvm),
 which converts all supported dialects to the `llvm` dialect,
 on the following IR:
 
@@ -49,7 +51,7 @@ func.func @main(%arg0: i32) -> i32 {
 After building MLIR, and from the `llvm-project` base directory, run
 
 ```bash
-build/bin/mlir-opt --convert-math-to-llvm mlir/test/Examples/mlir-opt/ctlz.mlir
+build/bin/mlir-opt --pass-pipeline="builtin.module(convert-math-to-llvm)" mlir/test/Examples/mlir-opt/ctlz.mlir
 ```
 
 which produces
@@ -96,11 +98,11 @@ func.func @producer_consumer_fusion(%arg0: memref<10xf32>, %arg1: memref<10xf32>
 }
 ```
 
-Running this with the [`affine-loop-fusion`](https://mlir.llvm.org/docs/Passes/#-affine-loop-fusion) pass
+Running this with the [`affine-loop-fusion`](/docs/Passes/#-affine-loop-fusion) pass
 produces a fused loop.
 
 ```bash
-build/bin/mlir-opt --affine-loop-fusion mlir/test/Examples/mlir-opt/loop_fusion.mlir
+build/bin/mlir-opt --pass-pipeline="builtin.module(affine-loop-fusion)" mlir/test/Examples/mlir-opt/loop_fusion.mlir
 ```
 
 ```mlir
@@ -131,7 +133,7 @@ If this value is set to zero on the command line,
 the pass will not fuse the loops.
 
 ```bash
-build/bin/mlir-opt --affine-loop-fusion='fusion-compute-tolerance=0' \
+build/bin/mlir-opt --pass-pipeline="builtin.module(affine-loop-fusion{fusion-compute-tolerance=0})" \
 mlir/test/Examples/mlir-opt/loop_fusion.mlir
 ```
 
@@ -161,34 +163,32 @@ module {
 ```
 
 Options passed to a pass
-should come in the form of a quoted string
-(to join all options into a single shell argument)
-with space-separated `key=value` pairs for each option.
+are specified via the syntax `{option1=value1 option2=value2 ...}`,
+i.e., use space-separated `key=value` pairs for each option.
 
 ## Building a pass pipeline on the command line
 
-One can combine passes on the command line in two ways.
-
-First, by simply placing the pass flags one after the other,
-they will be run in order.
-
-```bash
-build/bin/mlir-opt --convert-to-llvm --canonicalize mlir/test/Examples/mlir-opt/ctlz.mlir
-```
-
-This simplified form is useful, but only works for
-passes which "anchor" on `builtin.module`.
-[Pass anchoring](https://mlir.llvm.org/docs/PassManagement/#oppassmanager)
+The `--pass-pipeline` flag supports combining multiple passes into a pipeline.
+So far we have used the trivial pipeline with a single pass
+that is "anchored" on the `builtin.module` op.
+[Pass anchoring](/docs/PassManagement/#oppassmanager)
 is a way for passes to specify
-that they only run on particular ops
-or at a particular level of IR nesting.
-If you use the short form with a pass that is not anchored properly,
+that they only run on particular ops.
+While many passes are anchored on `builtin.module`,
+if you try to run a pass that is anchored on some other op
+inside `--pass-pipeline="builtin.module(pass-name)"`,
 it will not run.
 
-To use passes that have non-trivial anchoring,
-and to be more precise about where and how passes should run,
-one can use the `pass-pipeline` flag.
+Multiple passes can be chained together
+by providing the pass names in a comma-separated list
+in the `--pass-pipeline` string,
+e.g.,
+`--pass-pipeline="builtin.module(pass1,pass2)"`.
+The passes will be run sequentially.
 
+To use passes that have nontrivial anchoring,
+the appropriate level of nesting must be specified
+in the pass pipeline.
 For example, consider the following IR which has the same redundant code,
 but in two different levels of nesting.
 
@@ -250,7 +250,8 @@ module {
 ```
 
 For a spec of the pass-pipeline textual description language,
-see [the docs](https://mlir.llvm.org/docs/PassManagement/#textual-pass-pipeline-specification).
+see [the docs](/docs/PassManagement/#textual-pass-pipeline-specification).
+For more general information on pass management, see [Pass Infrastructure](/docs/PassManagement/#).
 
 ## Useful CLI flags
 
@@ -264,12 +265,12 @@ see [the docs](https://mlir.llvm.org/docs/PassManagement/#textual-pass-pipeline-
       for the dialect conversion framework.
  - `--emit-bytecode` emits MLIR in the bytecode format.
  - `--mlir-pass-statistics` print statistics about the passes run.
-    These are generated via [pass statistics](https://mlir.llvm.org/docs/PassManagement/#pass-statistics).
+    These are generated via [pass statistics](/docs/PassManagement/#pass-statistics).
  - `--mlir-print-ir-after-all` prints the IR after each pass.
     See also `--mlir-print-ir-after-change` and `--mlir-print-ir-after-failure`
  - `--mlir-timing` displays execution times of each pass.
 
 ## Further readering
 
-- [List of passes](https://mlir.llvm.org/docs/Passes/)
-- [List of dialects](https://mlir.llvm.org/docs/Dialects/)
+- [List of passes](/docs/Passes/)
+- [List of dialects](/docs/Dialects/)

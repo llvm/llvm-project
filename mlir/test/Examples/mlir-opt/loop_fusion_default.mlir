@@ -1,4 +1,5 @@
-// RUN: mlir-opt --affine-loop-fusion %s | FileCheck %s
+// RUN: mlir-opt --pass-pipeline="builtin.module(affine-loop-fusion)" %s | FileCheck %s
+
 
 // CHECK-LABEL: @producer_consumer_fusion
 // CHECK-COUNT-1: affine.for

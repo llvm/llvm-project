@@ -1,4 +1,4 @@
-// RUN: mlir-opt --convert-to-llvm %s | FileCheck %s
+// RUN: mlir-opt --pass-pipeline="builtin.module(convert-to-llvm)" %s | FileCheck %s
 
 // CHECK-LABEL: @main
 // CHECK: llvm.intr.ctlz
