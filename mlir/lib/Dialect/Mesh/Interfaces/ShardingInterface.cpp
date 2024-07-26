@@ -13,7 +13,6 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -166,12 +165,12 @@ LogicalResult mesh::ShardingInterface::verifyShardingInterfaceImpl() {
 
   // check loop types
   SmallVector<utils::IteratorType> loopTypes = getLoopIteratorTypes();
-  if (loopTypes.size() == 0)
+  if (loopTypes.empty())
     return failure();
 
   // check maps
   SmallVector<AffineMap> maps = getIndexingMaps();
-  if (maps.size() == 0)
+  if (maps.empty())
     return failure();
   unsigned numOperands = op->getNumOperands();
   unsigned numResults = op->getNumResults();

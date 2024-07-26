@@ -90,20 +90,32 @@
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineVerifier.h"
+#include "llvm/CodeGen/PHIElimination.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/TwoAddressInstructionPass.h"
 #include "llvm/CodeGen/TypePromotion.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
@@ -181,6 +193,7 @@
 #include "llvm/Transforms/Instrumentation/LowerAllowCheckPass.h"
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
+#include "llvm/Transforms/Instrumentation/NumericalStabilitySanitizer.h"
 #include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
 #include "llvm/Transforms/Instrumentation/PGOForceFunctionAttrs.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
@@ -324,27 +337,25 @@ AnalysisKey NoOpLoopAnalysis::Key;
 
 namespace {
 
-/// Whether or not we should populate a PassInstrumentationCallbacks's class to
-/// pass name map.
-///
-/// This is for optimization purposes so we don't populate it if we never use
-/// it. This should be updated if new pass instrumentation wants to use the map.
-/// We currently only use this for --print-before/after.
-bool shouldPopulateClassToPassNames() {
-  return PrintPipelinePasses || !printBeforePasses().empty() ||
-         !printAfterPasses().empty() || !isFilterPassesEmpty() ||
-         TargetPassConfig::hasLimitedCodeGenPipeline();
-}
-
-// A pass for testing -print-on-crash.
+// Passes for testing crashes.
 // DO NOT USE THIS EXCEPT FOR TESTING!
-class TriggerCrashPass : public PassInfoMixin<TriggerCrashPass> {
+class TriggerCrashModulePass : public PassInfoMixin<TriggerCrashModulePass> {
 public:
   PreservedAnalyses run(Module &, ModuleAnalysisManager &) {
     abort();
     return PreservedAnalyses::all();
   }
-  static StringRef name() { return "TriggerCrashPass"; }
+  static StringRef name() { return "TriggerCrashModulePass"; }
+};
+
+class TriggerCrashFunctionPass
+    : public PassInfoMixin<TriggerCrashFunctionPass> {
+public:
+  PreservedAnalyses run(Function &, FunctionAnalysisManager &) {
+    abort();
+    return PreservedAnalyses::all();
+  }
+  static StringRef name() { return "TriggerCrashFunctionPass"; }
 };
 
 // A pass for testing message reporting of -verify-each failures.
@@ -386,7 +397,8 @@ public:
 class RequireAllMachineFunctionPropertiesPass
     : public PassInfoMixin<RequireAllMachineFunctionPropertiesPass> {
 public:
-  PreservedAnalyses run(MachineFunction &, MachineFunctionAnalysisManager &) {
+  PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &) {
+    MFPropsModifier _(*this, MF);
     return PreservedAnalyses::none();
   }
 
@@ -414,10 +426,13 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
                          std::optional<PGOOptions> PGOOpt,
                          PassInstrumentationCallbacks *PIC)
     : TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC) {
-  bool ShouldPopulateClassToPassNames = PIC && shouldPopulateClassToPassNames();
   if (TM)
-    TM->registerPassBuilderCallbacks(*this, ShouldPopulateClassToPassNames);
-  if (ShouldPopulateClassToPassNames) {
+    TM->registerPassBuilderCallbacks(*this);
+  if (PIC) {
+    PIC->registerClassToPassNameCallback([this, PIC]() {
+      // MSVC requires this to be captured if it's used inside decltype.
+      // Other compilers consider it an unused lambda capture.
+      (void)this;
 #define MODULE_PASS(NAME, CREATE_PASS)                                         \
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
 #define MODULE_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)      \
@@ -451,6 +466,7 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)                               \
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
 #include "llvm/Passes/MachinePassRegistry.def"
+    });
   }
 }
 
@@ -829,6 +845,8 @@ Expected<SimplifyCFGOptions> parseSimplifyCFGOptions(StringRef Params) {
       Result.hoistCommonInsts(Enable);
     } else if (ParamName == "sink-common-insts") {
       Result.sinkCommonInsts(Enable);
+    } else if (ParamName == "speculate-unpredictables") {
+      Result.speculateUnpredictables(Enable);
     } else if (Enable && ParamName.consume_front("bonus-inst-threshold=")) {
       APInt BonusInstThreshold;
       if (ParamName.getAsInteger(0, BonusInstThreshold))
@@ -1164,7 +1182,7 @@ parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
     std::tie(ParamName, Params) = Params.split(';');
 
     if (ParamName.consume_front("filter=")) {
-      std::optional<RegClassFilterFunc> Filter =
+      std::optional<RegAllocFilterFunc> Filter =
           PB.parseRegAllocFilter(ParamName);
       if (!Filter) {
         return make_error<StringError>(
@@ -1915,6 +1933,18 @@ Error PassBuilder::parseMachinePass(MachineFunctionPassManager &MFPM,
     MFPM.addPass(CREATE_PASS(Params.get()));                                   \
     return Error::success();                                                   \
   }
+#define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS)                           \
+  if (Name == "require<" NAME ">") {                                           \
+    MFPM.addPass(                                                              \
+        RequireAnalysisPass<std::remove_reference_t<decltype(CREATE_PASS)>,    \
+                            MachineFunction>());                               \
+    return Error::success();                                                   \
+  }                                                                            \
+  if (Name == "invalidate<" NAME ">") {                                        \
+    MFPM.addPass(InvalidateAnalysisPass<                                       \
+                 std::remove_reference_t<decltype(CREATE_PASS)>>());           \
+    return Error::success();                                                   \
+  }
 #include "llvm/Passes/MachinePassRegistry.def"
 
   for (auto &C : MachineFunctionPipelineParsingCallbacks)
@@ -2162,7 +2192,7 @@ Error PassBuilder::parseAAPipeline(AAManager &AA, StringRef PipelineText) {
   return Error::success();
 }
 
-std::optional<RegClassFilterFunc>
+std::optional<RegAllocFilterFunc>
 PassBuilder::parseRegAllocFilter(StringRef FilterName) {
   if (FilterName == "all")
     return nullptr;

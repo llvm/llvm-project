@@ -202,7 +202,7 @@ template <> struct DominatingValue<Address> {
   }
   static type restore(CodeGenFunction &CGF, saved_type value) {
     return Address(DominatingLLVMValue::restore(CGF, value.BasePtr),
-                   value.ElementType, value.Alignment,
+                   value.ElementType, value.Alignment, CGPointerAuthInfo(),
                    DominatingLLVMValue::restore(CGF, value.Offset));
   }
 };
@@ -2453,10 +2453,20 @@ public:
 
   void InitializeVTablePointers(const CXXRecordDecl *ClassDecl);
 
+  // VTableTrapMode - whether we guarantee that loading the
+  // vtable is guaranteed to trap on authentication failure,
+  // even if the resulting vtable pointer is unused.
+  enum class VTableAuthMode {
+    Authenticate,
+    MustTrap,
+    UnsafeUbsanStrip // Should only be used for Vptr UBSan check
+  };
   /// GetVTablePtr - Return the Value of the vtable pointer member pointed
   /// to by This.
-  llvm::Value *GetVTablePtr(Address This, llvm::Type *VTableTy,
-                            const CXXRecordDecl *VTableClass);
+  llvm::Value *
+  GetVTablePtr(Address This, llvm::Type *VTableTy,
+               const CXXRecordDecl *VTableClass,
+               VTableAuthMode AuthMode = VTableAuthMode::Authenticate);
 
   enum CFITypeCheckKind {
     CFITCK_VCall,
@@ -2566,6 +2576,8 @@ public:
 
   llvm::Type *ConvertTypeForMem(QualType T);
   llvm::Type *ConvertType(QualType T);
+  llvm::Type *convertTypeForLoadStore(QualType ASTTy,
+                                      llvm::Type *LLVMTy = nullptr);
   llvm::Type *ConvertType(const TypeDecl *T) {
     return ConvertType(getContext().getTypeDeclType(T));
   }
@@ -2677,7 +2689,8 @@ public:
     if (Alignment.isZero())
       Alignment =
           CGM.getNaturalTypeAlignment(T, BaseInfo, TBAAInfo, ForPointeeType);
-    return Address(Ptr, ConvertTypeForMem(T), Alignment, nullptr,
+    return Address(Ptr, ConvertTypeForMem(T), Alignment,
+                   CGM.getPointerAuthInfoForPointeeType(T), /*Offset=*/nullptr,
                    IsKnownNonNull);
   }
 
@@ -2718,7 +2731,9 @@ public:
   /// an l-value with the natural pointee alignment of T.
   LValue MakeNaturalAlignPointeeAddrLValue(llvm::Value *V, QualType T);
 
-  LValue MakeNaturalAlignAddrLValue(llvm::Value *V, QualType T);
+  LValue
+  MakeNaturalAlignAddrLValue(llvm::Value *V, QualType T,
+                             KnownNonNull_t IsKnownNonNull = NotKnownNonNull);
 
   /// Same as MakeNaturalAlignPointeeAddrLValue except that the pointer is known
   /// to be unsigned.
@@ -3805,6 +3820,8 @@ public:
   void EmitOMPSimdDirective(const OMPSimdDirective &S);
   void EmitOMPTileDirective(const OMPTileDirective &S);
   void EmitOMPUnrollDirective(const OMPUnrollDirective &S);
+  void EmitOMPReverseDirective(const OMPReverseDirective &S);
+  void EmitOMPInterchangeDirective(const OMPInterchangeDirective &S);
   void EmitOMPForDirective(const OMPForDirective &S);
   void EmitOMPForSimdDirective(const OMPForSimdDirective &S);
   void EmitOMPSectionsDirective(const OMPSectionsDirective &S);
@@ -4143,6 +4160,13 @@ public:
           llvm::AtomicOrdering::SequentiallyConsistent,
       bool IsWeak = false, AggValueSlot Slot = AggValueSlot::ignored());
 
+  /// Emit an atomicrmw instruction, and applying relevant metadata when
+  /// applicable.
+  llvm::AtomicRMWInst *emitAtomicRMWInst(
+      llvm::AtomicRMWInst::BinOp Op, Address Addr, llvm::Value *Val,
+      llvm::AtomicOrdering Order = llvm::AtomicOrdering::SequentiallyConsistent,
+      llvm::SyncScope::ID SSID = llvm::SyncScope::System);
+
   void EmitAtomicUpdate(LValue LVal, llvm::AtomicOrdering AO,
                         const llvm::function_ref<RValue(RValue)> &UpdateOp,
                         bool IsVolatile);
@@ -4357,7 +4381,8 @@ public:
   RValue EmitCall(const CGFunctionInfo &CallInfo, const CGCallee &Callee,
                   ReturnValueSlot ReturnValue, const CallArgList &Args,
                   llvm::CallBase **callOrInvoke, bool IsMustTail,
-                  SourceLocation Loc);
+                  SourceLocation Loc,
+                  bool IsVirtualFunctionPointerThunk = false);
   RValue EmitCall(const CGFunctionInfo &CallInfo, const CGCallee &Callee,
                   ReturnValueSlot ReturnValue, const CallArgList &Args,
                   llvm::CallBase **callOrInvoke = nullptr,
@@ -4411,15 +4436,44 @@ public:
                                                CXXDtorType Type,
                                                const CXXRecordDecl *RD);
 
-  llvm::Value *getAsNaturalPointerTo(Address Addr, QualType PointeeType) {
-    return Addr.getBasePointer();
-  }
-
   bool isPointerKnownNonNull(const Expr *E);
+
+  /// Create the discriminator from the storage address and the entity hash.
+  llvm::Value *EmitPointerAuthBlendDiscriminator(llvm::Value *StorageAddress,
+                                                 llvm::Value *Discriminator);
+  CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &Schema,
+                                        llvm::Value *StorageAddress,
+                                        GlobalDecl SchemaDecl,
+                                        QualType SchemaType);
+
+  llvm::Value *EmitPointerAuthSign(const CGPointerAuthInfo &Info,
+                                   llvm::Value *Pointer);
+
+  llvm::Value *EmitPointerAuthAuth(const CGPointerAuthInfo &Info,
+                                   llvm::Value *Pointer);
+
+  llvm::Value *emitPointerAuthResign(llvm::Value *Pointer, QualType PointerType,
+                                     const CGPointerAuthInfo &CurAuthInfo,
+                                     const CGPointerAuthInfo &NewAuthInfo,
+                                     bool IsKnownNonNull);
+  llvm::Value *emitPointerAuthResignCall(llvm::Value *Pointer,
+                                         const CGPointerAuthInfo &CurInfo,
+                                         const CGPointerAuthInfo &NewInfo);
 
   void EmitPointerAuthOperandBundle(
       const CGPointerAuthInfo &Info,
       SmallVectorImpl<llvm::OperandBundleDef> &Bundles);
+
+  llvm::Value *authPointerToPointerCast(llvm::Value *ResultPtr,
+                                        QualType SourceType, QualType DestType);
+  Address authPointerToPointerCast(Address Ptr, QualType SourceType,
+                                   QualType DestType);
+
+  Address getAsNaturalAddressOf(Address Addr, QualType PointeeTy);
+
+  llvm::Value *getAsNaturalPointerTo(Address Addr, QualType PointeeType) {
+    return getAsNaturalAddressOf(Addr, PointeeType).getBasePointer();
+  }
 
   // Return the copy constructor name with the prefix "__copy_constructor_"
   // removed.
@@ -4482,7 +4536,6 @@ public:
 
   RValue EmitNVPTXDevicePrintfCallExpr(const CallExpr *E);
   RValue EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E);
-  RValue EmitOpenMPDevicePrintfCallExpr(const CallExpr *E);
 
   RValue EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                          const CallExpr *E, ReturnValueSlot ReturnValue);
@@ -4649,6 +4702,9 @@ public:
   llvm::Value *EmitHexagonBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitRISCVBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                     ReturnValueSlot ReturnValue);
+
+  llvm::Value *EmitRISCVCpuSupports(const CallExpr *E);
+  llvm::Value *EmitRISCVCpuInit();
 
   void AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
                                       const CallExpr *E);
@@ -4839,7 +4895,7 @@ public:
   void EmitCXXGlobalVarDeclInit(const VarDecl &D, llvm::GlobalVariable *GV,
                                 bool PerformInit);
 
-  llvm::Function *createAtExitStub(const VarDecl &VD, llvm::FunctionCallee Dtor,
+  llvm::Constant *createAtExitStub(const VarDecl &VD, llvm::FunctionCallee Dtor,
                                    llvm::Constant *Addr);
 
   llvm::Function *createTLSAtExitStub(const VarDecl &VD,

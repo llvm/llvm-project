@@ -111,9 +111,6 @@ static bool checkPositiveIntArgument(Sema &S, const AttrInfo &AI, const Expr *Ex
   return true;
 }
 
-/// Check if the argument \p E is a ASCII string literal. If not emit an error
-/// and return false, otherwise set \p Str to the value of the string literal
-/// and return true.
 bool Sema::checkStringLiteralArgumentAttr(const AttributeCommonInfo &CI,
                                           const Expr *E, StringRef &Str,
                                           SourceLocation *ArgLocation) {
@@ -131,10 +128,6 @@ bool Sema::checkStringLiteralArgumentAttr(const AttributeCommonInfo &CI,
   return true;
 }
 
-/// Check if the argument \p ArgNum of \p Attr is a ASCII string literal.
-/// If not emit an error and return false. If the argument is an identifier it
-/// will emit an error with a fixit hint and treat it as if it was a string
-/// literal.
 bool Sema::checkStringLiteralArgumentAttr(const ParsedAttr &AL, unsigned ArgNum,
                                           StringRef &Str,
                                           SourceLocation *ArgLocation) {
@@ -1544,6 +1537,16 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                 << Idx.getSourceIndex() << Ex->getSourceRange();
           return;
         }
+      } else if (K == OwnershipAttr::Takes &&
+                 I->getOwnKind() == OwnershipAttr::Takes) {
+        if (I->getModule()->getName() != ModuleName) {
+          S.Diag(I->getLocation(), diag::err_ownership_takes_class_mismatch)
+              << I->getModule()->getName();
+          S.Diag(AL.getLoc(), diag::note_ownership_takes_class_mismatch)
+              << ModuleName << Ex->getSourceRange();
+
+          return;
+        }
       }
     }
     OwnershipArgs.push_back(Idx);
@@ -2843,15 +2846,6 @@ SectionAttr *Sema::mergeSectionAttr(Decl *D, const AttributeCommonInfo &CI,
   return ::new (Context) SectionAttr(Context, CI, Name);
 }
 
-/// Used to implement to perform semantic checking on
-/// attribute((section("foo"))) specifiers.
-///
-/// In this case, "foo" is passed in to be checked.  If the section
-/// specifier is invalid, return an Error that indicates the problem.
-///
-/// This is a simple quality of implementation feature to catch errors
-/// and give good diagnostics in cases when the assembler or code generator
-/// would otherwise reject the section specifier.
 llvm::Error Sema::isValidSectionSpecifier(StringRef SecName) {
   if (!Context.getTargetInfo().getTriple().isOSDarwin())
     return llvm::Error::success();
@@ -2964,8 +2958,6 @@ static void handleCodeSegAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     D->addAttr(CSA);
 }
 
-// Check for things we'd like to warn about. Multiversioning issues are
-// handled later in the process, once we know how many exist.
 bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
   enum FirstParam { Unsupported, Duplicate, Unknown };
   enum SecondParam { None, CPU, Tune };
@@ -3009,7 +3001,7 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
              << Unsupported << None << CurFeature << Target;
   }
 
-  TargetInfo::BranchProtectionInfo BPI;
+  TargetInfo::BranchProtectionInfo BPI{};
   StringRef DiagMsg;
   if (ParsedAttrs.BranchProtection.empty())
     return false;
@@ -3027,14 +3019,11 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
   return false;
 }
 
-// Check Target Version attrs
 bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
-                                  StringRef &AttrStr, bool &isDefault) {
+                                  StringRef AttrStr) {
   enum FirstParam { Unsupported };
   enum SecondParam { None };
   enum ThirdParam { Target, TargetClones, TargetVersion };
-  if (AttrStr.trim() == "default")
-    isDefault = true;
   llvm::SmallVector<StringRef, 8> Features;
   AttrStr.split(Features, "+");
   for (auto &CurFeature : Features) {
@@ -3045,25 +3034,18 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << CurFeature << TargetVersion;
   }
-  if (IsArmStreamingFunction(cast<FunctionDecl>(D),
-                             /*IncludeLocallyStreaming=*/false))
-    return Diag(LiteralLoc, diag::err_sme_streaming_cannot_be_multiversioned);
   return false;
 }
 
 static void handleTargetVersionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef Str;
   SourceLocation LiteralLoc;
-  bool isDefault = false;
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &LiteralLoc) ||
-      S.checkTargetVersionAttr(LiteralLoc, D, Str, isDefault))
+      S.checkTargetVersionAttr(LiteralLoc, D, Str))
     return;
-  // Do not create default only target_version attribute
-  if (!isDefault) {
-    TargetVersionAttr *NewAttr =
-        ::new (S.Context) TargetVersionAttr(S.Context, AL, Str);
-    D->addAttr(NewAttr);
-  }
+  TargetVersionAttr *NewAttr =
+      ::new (S.Context) TargetVersionAttr(S.Context, AL, Str);
+  D->addAttr(NewAttr);
 }
 
 static void handleTargetAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -3148,10 +3130,6 @@ bool Sema::checkTargetClonesAttrString(
           HasNotDefault = true;
         }
       }
-      if (IsArmStreamingFunction(cast<FunctionDecl>(D),
-                                 /*IncludeLocallyStreaming=*/false))
-        return Diag(LiteralLoc,
-                    diag::err_sme_streaming_cannot_be_multiversioned);
     } else {
       // Other targets ( currently X86 )
       if (Cur.starts_with("arch=")) {
@@ -3422,8 +3400,8 @@ static FormatAttrKind getFormatAttrKind(StringRef Format) {
       // Otherwise, check for supported formats.
       .Cases("scanf", "printf", "printf0", "strfmon", SupportedFormat)
       .Cases("cmn_err", "vcmn_err", "zcmn_err", SupportedFormat)
-      .Case("kprintf", SupportedFormat)         // OpenBSD.
-      .Case("freebsd_kprintf", SupportedFormat) // FreeBSD.
+      .Cases("kprintf", "syslog", SupportedFormat) // OpenBSD.
+      .Case("freebsd_kprintf", SupportedFormat)    // FreeBSD.
       .Case("os_trace", SupportedFormat)
       .Case("os_log", SupportedFormat)
 
@@ -5066,8 +5044,6 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
   return false;
 }
 
-/// Checks a regparm attribute, returning true if it is ill-formed and
-/// otherwise setting numParams to the appropriate value.
 bool Sema::CheckRegparmAttr(const ParsedAttr &AL, unsigned &numParams) {
   if (AL.isInvalid())
     return true;
@@ -5102,12 +5078,12 @@ bool Sema::CheckRegparmAttr(const ParsedAttr &AL, unsigned &numParams) {
   return false;
 }
 
-// Helper to get CudaArch.
-static CudaArch getCudaArch(const TargetInfo &TI) {
+// Helper to get OffloadArch.
+static OffloadArch getOffloadArch(const TargetInfo &TI) {
   if (!TI.getTriple().isNVPTX())
-    llvm_unreachable("getCudaArch is only valid for NVPTX triple");
+    llvm_unreachable("getOffloadArch is only valid for NVPTX triple");
   auto &TO = TI.getTargetOpts();
-  return StringToCudaArch(TO.CPU);
+  return StringToOffloadArch(TO.CPU);
 }
 
 // Checks whether an argument of launch_bounds attribute is
@@ -5167,10 +5143,10 @@ Sema::CreateLaunchBoundsAttr(const AttributeCommonInfo &CI, Expr *MaxThreads,
 
   if (MaxBlocks) {
     // '.maxclusterrank' ptx directive requires .target sm_90 or higher.
-    auto SM = getCudaArch(Context.getTargetInfo());
-    if (SM == CudaArch::UNKNOWN || SM < CudaArch::SM_90) {
+    auto SM = getOffloadArch(Context.getTargetInfo());
+    if (SM == OffloadArch::UNKNOWN || SM < OffloadArch::SM_90) {
       Diag(MaxBlocks->getBeginLoc(), diag::warn_cuda_maxclusterrank_sm_90)
-          << CudaArchToString(SM) << CI << MaxBlocks->getSourceRange();
+          << OffloadArchToString(SM) << CI << MaxBlocks->getSourceRange();
       // Ignore it by setting MaxBlocks to null;
       MaxBlocks = nullptr;
     } else {
@@ -5274,6 +5250,10 @@ static void handleXRayLogArgsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handlePatchableFunctionEntryAttr(Sema &S, Decl *D,
                                              const ParsedAttr &AL) {
+  if (S.Context.getTargetInfo().getTriple().isOSAIX()) {
+    S.Diag(AL.getLoc(), diag::err_aix_attr_unsupported) << AL;
+    return;
+  }
   uint32_t Count = 0, Offset = 0;
   if (!S.checkUInt32Argument(AL, AL.getArgAsExpr(0), Count, 0, true))
     return;
@@ -5879,164 +5859,6 @@ static void handleZeroCallUsedRegsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(ZeroCallUsedRegsAttr::Create(S.Context, Kind, AL));
 }
 
-static const RecordDecl *GetEnclosingNamedOrTopAnonRecord(const FieldDecl *FD) {
-  const auto *RD = FD->getParent();
-  // An unnamed struct is anonymous struct only if it's not instantiated.
-  // However, the struct may not be fully processed yet to determine
-  // whether it's anonymous or not. In that case, this function treats it as
-  // an anonymous struct and tries to find a named parent.
-  while (RD && (RD->isAnonymousStructOrUnion() ||
-                (!RD->isCompleteDefinition() && RD->getName().empty()))) {
-    const auto *Parent = dyn_cast<RecordDecl>(RD->getParent());
-    if (!Parent)
-      break;
-    RD = Parent;
-  }
-  return RD;
-}
-
-enum class CountedByInvalidPointeeTypeKind {
-  INCOMPLETE,
-  SIZELESS,
-  FUNCTION,
-  FLEXIBLE_ARRAY_MEMBER,
-  VALID,
-};
-
-static bool CheckCountedByAttrOnField(
-    Sema &S, FieldDecl *FD, Expr *E,
-    llvm::SmallVectorImpl<TypeCoupledDeclRefInfo> &Decls) {
-  // Check the context the attribute is used in
-
-  if (FD->getParent()->isUnion()) {
-    S.Diag(FD->getBeginLoc(), diag::err_counted_by_attr_in_union)
-        << FD->getSourceRange();
-    return true;
-  }
-
-  const auto FieldTy = FD->getType();
-  if (!FieldTy->isArrayType() && !FieldTy->isPointerType()) {
-    S.Diag(FD->getBeginLoc(),
-           diag::err_counted_by_attr_not_on_ptr_or_flexible_array_member)
-        << FD->getLocation();
-    return true;
-  }
-
-  LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-      LangOptions::StrictFlexArraysLevelKind::IncompleteOnly;
-  if (FieldTy->isArrayType() &&
-      !Decl::isFlexibleArrayMemberLike(S.getASTContext(), FD, FieldTy,
-                                       StrictFlexArraysLevel, true)) {
-    S.Diag(FD->getBeginLoc(),
-           diag::err_counted_by_attr_on_array_not_flexible_array_member)
-        << FD->getLocation();
-    return true;
-  }
-
-  CountedByInvalidPointeeTypeKind InvalidTypeKind =
-      CountedByInvalidPointeeTypeKind::VALID;
-  QualType PointeeTy;
-  int SelectPtrOrArr = 0;
-  if (FieldTy->isPointerType()) {
-    PointeeTy = FieldTy->getPointeeType();
-    SelectPtrOrArr = 0;
-  } else {
-    assert(FieldTy->isArrayType());
-    const ArrayType *AT = S.getASTContext().getAsArrayType(FieldTy);
-    PointeeTy = AT->getElementType();
-    SelectPtrOrArr = 1;
-  }
-  // Note: The `Decl::isFlexibleArrayMemberLike` check earlier on means
-  // only `PointeeTy->isStructureTypeWithFlexibleArrayMember()` is reachable
-  // when `FieldTy->isArrayType()`.
-  bool ShouldWarn = false;
-  if (PointeeTy->isIncompleteType()) {
-    InvalidTypeKind = CountedByInvalidPointeeTypeKind::INCOMPLETE;
-  } else if (PointeeTy->isSizelessType()) {
-    InvalidTypeKind = CountedByInvalidPointeeTypeKind::SIZELESS;
-  } else if (PointeeTy->isFunctionType()) {
-    InvalidTypeKind = CountedByInvalidPointeeTypeKind::FUNCTION;
-  } else if (PointeeTy->isStructureTypeWithFlexibleArrayMember()) {
-    if (FieldTy->isArrayType()) {
-      // This is a workaround for the Linux kernel that has already adopted
-      // `counted_by` on a FAM where the pointee is a struct with a FAM. This
-      // should be an error because computing the bounds of the array cannot be
-      // done correctly without manually traversing every struct object in the
-      // array at runtime. To allow the code to be built this error is
-      // downgraded to a warning.
-      ShouldWarn = true;
-    }
-    InvalidTypeKind = CountedByInvalidPointeeTypeKind::FLEXIBLE_ARRAY_MEMBER;
-  }
-
-  if (InvalidTypeKind != CountedByInvalidPointeeTypeKind::VALID) {
-    unsigned DiagID = ShouldWarn
-                          ? diag::warn_counted_by_attr_elt_type_unknown_size
-                          : diag::err_counted_by_attr_pointee_unknown_size;
-    S.Diag(FD->getBeginLoc(), DiagID)
-        << SelectPtrOrArr << PointeeTy << (int)InvalidTypeKind
-        << (ShouldWarn ? 1 : 0) << FD->getSourceRange();
-    return true;
-  }
-
-  // Check the expression
-
-  if (!E->getType()->isIntegerType() || E->getType()->isBooleanType()) {
-    S.Diag(E->getBeginLoc(), diag::err_counted_by_attr_argument_not_integer)
-        << E->getSourceRange();
-    return true;
-  }
-
-  auto *DRE = dyn_cast<DeclRefExpr>(E);
-  if (!DRE) {
-    S.Diag(E->getBeginLoc(),
-           diag::err_counted_by_attr_only_support_simple_decl_reference)
-        << E->getSourceRange();
-    return true;
-  }
-
-  auto *CountDecl = DRE->getDecl();
-  FieldDecl *CountFD = dyn_cast<FieldDecl>(CountDecl);
-  if (auto *IFD = dyn_cast<IndirectFieldDecl>(CountDecl)) {
-    CountFD = IFD->getAnonField();
-  }
-  if (!CountFD) {
-    S.Diag(E->getBeginLoc(), diag::err_counted_by_must_be_in_structure)
-        << CountDecl << E->getSourceRange();
-
-    S.Diag(CountDecl->getBeginLoc(),
-           diag::note_flexible_array_counted_by_attr_field)
-        << CountDecl << CountDecl->getSourceRange();
-    return true;
-  }
-
-  if (FD->getParent() != CountFD->getParent()) {
-    if (CountFD->getParent()->isUnion()) {
-      S.Diag(CountFD->getBeginLoc(), diag::err_counted_by_attr_refer_to_union)
-          << CountFD->getSourceRange();
-      return true;
-    }
-    // Whether CountRD is an anonymous struct is not determined at this
-    // point. Thus, an additional diagnostic in case it's not anonymous struct
-    // is done later in `Parser::ParseStructDeclaration`.
-    auto *RD = GetEnclosingNamedOrTopAnonRecord(FD);
-    auto *CountRD = GetEnclosingNamedOrTopAnonRecord(CountFD);
-
-    if (RD != CountRD) {
-      S.Diag(E->getBeginLoc(),
-             diag::err_flexible_array_count_not_in_same_struct)
-          << CountFD << E->getSourceRange();
-      S.Diag(CountFD->getBeginLoc(),
-             diag::note_flexible_array_counted_by_attr_field)
-          << CountFD << CountFD->getSourceRange();
-      return true;
-    }
-  }
-
-  Decls.push_back(TypeCoupledDeclRefInfo(CountFD, /*IsDref*/ false));
-  return false;
-}
-
 static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
   auto *FD = dyn_cast<FieldDecl>(D);
   assert(FD);
@@ -6045,12 +5867,35 @@ static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!CountExpr)
     return;
 
+  bool CountInBytes;
+  bool OrNull;
+  switch (AL.getKind()) {
+  case ParsedAttr::AT_CountedBy:
+    CountInBytes = false;
+    OrNull = false;
+    break;
+  case ParsedAttr::AT_CountedByOrNull:
+    CountInBytes = false;
+    OrNull = true;
+    break;
+  case ParsedAttr::AT_SizedBy:
+    CountInBytes = true;
+    OrNull = false;
+    break;
+  case ParsedAttr::AT_SizedByOrNull:
+    CountInBytes = true;
+    OrNull = true;
+    break;
+  default:
+    llvm_unreachable("unexpected counted_by family attribute");
+  }
+
   llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
-  if (CheckCountedByAttrOnField(S, FD, CountExpr, Decls))
+  if (S.CheckCountedByAttrOnField(FD, CountExpr, Decls, CountInBytes, OrNull))
     return;
 
-  QualType CAT =
-      S.BuildCountAttributedArrayOrPointerType(FD->getType(), CountExpr);
+  QualType CAT = S.BuildCountAttributedArrayOrPointerType(
+      FD->getType(), CountExpr, CountInBytes, OrNull);
   FD->setType(CAT);
 }
 
@@ -6267,6 +6112,116 @@ EnforceTCBLeafAttr *Sema::mergeEnforceTCBLeafAttr(
       *this, D, AL);
 }
 
+static void handleVTablePointerAuthentication(Sema &S, Decl *D,
+                                              const ParsedAttr &AL) {
+  CXXRecordDecl *Decl = cast<CXXRecordDecl>(D);
+  const uint32_t NumArgs = AL.getNumArgs();
+  if (NumArgs > 4) {
+    S.Diag(AL.getLoc(), diag::err_attribute_too_many_arguments) << AL << 4;
+    AL.setInvalid();
+  }
+
+  if (NumArgs == 0) {
+    S.Diag(AL.getLoc(), diag::err_attribute_too_few_arguments) << AL;
+    AL.setInvalid();
+    return;
+  }
+
+  if (D->getAttr<VTablePointerAuthenticationAttr>()) {
+    S.Diag(AL.getLoc(), diag::err_duplicated_vtable_pointer_auth) << Decl;
+    AL.setInvalid();
+  }
+
+  auto KeyType = VTablePointerAuthenticationAttr::VPtrAuthKeyType::DefaultKey;
+  if (AL.isArgIdent(0)) {
+    IdentifierLoc *IL = AL.getArgAsIdent(0);
+    if (!VTablePointerAuthenticationAttr::ConvertStrToVPtrAuthKeyType(
+            IL->Ident->getName(), KeyType)) {
+      S.Diag(IL->Loc, diag::err_invalid_authentication_key) << IL->Ident;
+      AL.setInvalid();
+    }
+    if (KeyType == VTablePointerAuthenticationAttr::DefaultKey &&
+        !S.getLangOpts().PointerAuthCalls) {
+      S.Diag(AL.getLoc(), diag::err_no_default_vtable_pointer_auth) << 0;
+      AL.setInvalid();
+    }
+  } else {
+    S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
+        << AL << AANT_ArgumentIdentifier;
+    return;
+  }
+
+  auto AddressDiversityMode = VTablePointerAuthenticationAttr::
+      AddressDiscriminationMode::DefaultAddressDiscrimination;
+  if (AL.getNumArgs() > 1) {
+    if (AL.isArgIdent(1)) {
+      IdentifierLoc *IL = AL.getArgAsIdent(1);
+      if (!VTablePointerAuthenticationAttr::
+              ConvertStrToAddressDiscriminationMode(IL->Ident->getName(),
+                                                    AddressDiversityMode)) {
+        S.Diag(IL->Loc, diag::err_invalid_address_discrimination) << IL->Ident;
+        AL.setInvalid();
+      }
+      if (AddressDiversityMode ==
+              VTablePointerAuthenticationAttr::DefaultAddressDiscrimination &&
+          !S.getLangOpts().PointerAuthCalls) {
+        S.Diag(IL->Loc, diag::err_no_default_vtable_pointer_auth) << 1;
+        AL.setInvalid();
+      }
+    } else {
+      S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
+          << AL << AANT_ArgumentIdentifier;
+    }
+  }
+
+  auto ED = VTablePointerAuthenticationAttr::ExtraDiscrimination::
+      DefaultExtraDiscrimination;
+  if (AL.getNumArgs() > 2) {
+    if (AL.isArgIdent(2)) {
+      IdentifierLoc *IL = AL.getArgAsIdent(2);
+      if (!VTablePointerAuthenticationAttr::ConvertStrToExtraDiscrimination(
+              IL->Ident->getName(), ED)) {
+        S.Diag(IL->Loc, diag::err_invalid_extra_discrimination) << IL->Ident;
+        AL.setInvalid();
+      }
+      if (ED == VTablePointerAuthenticationAttr::DefaultExtraDiscrimination &&
+          !S.getLangOpts().PointerAuthCalls) {
+        S.Diag(AL.getLoc(), diag::err_no_default_vtable_pointer_auth) << 2;
+        AL.setInvalid();
+      }
+    } else {
+      S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
+          << AL << AANT_ArgumentIdentifier;
+    }
+  }
+
+  uint32_t CustomDiscriminationValue = 0;
+  if (ED == VTablePointerAuthenticationAttr::CustomDiscrimination) {
+    if (NumArgs < 4) {
+      S.Diag(AL.getLoc(), diag::err_missing_custom_discrimination) << AL << 4;
+      AL.setInvalid();
+      return;
+    }
+    if (NumArgs > 4) {
+      S.Diag(AL.getLoc(), diag::err_attribute_too_many_arguments) << AL << 4;
+      AL.setInvalid();
+    }
+
+    if (!AL.isArgExpr(3) || !S.checkUInt32Argument(AL, AL.getArgAsExpr(3),
+                                                   CustomDiscriminationValue)) {
+      S.Diag(AL.getLoc(), diag::err_invalid_custom_discrimination);
+      AL.setInvalid();
+    }
+  } else if (NumArgs > 3) {
+    S.Diag(AL.getLoc(), diag::err_attribute_too_many_arguments) << AL << 3;
+    AL.setInvalid();
+  }
+
+  Decl->addAttr(::new (S.Context) VTablePointerAuthenticationAttr(
+      S.Context, AL, KeyType, AddressDiversityMode, ED,
+      CustomDiscriminationValue));
+}
+
 //===----------------------------------------------------------------------===//
 // Top Level Sema Entry Points
 //===----------------------------------------------------------------------===//
@@ -6312,8 +6267,14 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     return;
 
   // Ignore C++11 attributes on declarator chunks: they appertain to the type
-  // instead.
-  if (AL.isCXX11Attribute() && !Options.IncludeCXX11Attributes)
+  // instead. Note, isCXX11Attribute() will look at whether the attribute is
+  // [[]] or alignas, while isC23Attribute() will only look at [[]]. This is
+  // important for ensuring that alignas in C23 is properly handled on a
+  // structure member declaration because it is a type-specifier-qualifier in
+  // C but still applies to the declaration rather than the type.
+  if ((S.getLangOpts().CPlusPlus ? AL.isCXX11Attribute()
+                                 : AL.isC23Attribute()) &&
+      !Options.IncludeCXX11Attributes)
     return;
 
   // Unknown attributes are automatically warned on. Target-specific attributes
@@ -6888,6 +6849,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
 
   case ParsedAttr::AT_CountedBy:
+  case ParsedAttr::AT_CountedByOrNull:
+  case ParsedAttr::AT_SizedBy:
+  case ParsedAttr::AT_SizedByOrNull:
     handleCountedByAttrField(S, D, AL);
     break;
 
@@ -6926,6 +6890,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLResourceBinding:
     S.HLSL().handleResourceBindingAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLResourceClass:
+    S.HLSL().handleResourceClassAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLParamModifier:
     S.HLSL().handleParamModifierAttr(D, AL);
@@ -7136,11 +7103,13 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_TypeNullable:
     handleNullableTypeAttr(S, D, AL);
     break;
+
+  case ParsedAttr::AT_VTablePointerAuthentication:
+    handleVTablePointerAuthentication(S, D, AL);
+    break;
   }
 }
 
-/// ProcessDeclAttributeList - Apply all the decl attributes in the specified
-/// attribute list to the specified decl, ignoring any type attributes.
 void Sema::ProcessDeclAttributeList(
     Scope *S, Decl *D, const ParsedAttributesView &AttrList,
     const ProcessDeclAttributeOptions &Options) {
@@ -7214,8 +7183,6 @@ void Sema::ProcessDeclAttributeList(
   }
 }
 
-// Helper for delayed processing TransparentUnion or BPFPreserveAccessIndexAttr
-// attribute.
 void Sema::ProcessDeclAttributeDelayed(Decl *D,
                                        const ParsedAttributesView &AttrList) {
   for (const ParsedAttr &AL : AttrList)
@@ -7230,8 +7197,6 @@ void Sema::ProcessDeclAttributeDelayed(Decl *D,
     BPF().handlePreserveAIRecord(cast<RecordDecl>(D));
 }
 
-// Annotation attributes are the only attributes allowed after an access
-// specifier.
 bool Sema::ProcessAccessDeclAttributeList(
     AccessSpecDecl *ASDecl, const ParsedAttributesView &AttrList) {
   for (const ParsedAttr &AL : AttrList) {
@@ -7266,9 +7231,6 @@ static void checkUnusedDeclAttributes(Sema &S, const ParsedAttributesView &A) {
   }
 }
 
-/// checkUnusedDeclAttributes - Given a declarator which is not being
-/// used to build a declaration, complain about any decl attributes
-/// which might be lying around on it.
 void Sema::checkUnusedDeclAttributes(Declarator &D) {
   ::checkUnusedDeclAttributes(*this, D.getDeclarationAttributes());
   ::checkUnusedDeclAttributes(*this, D.getDeclSpec().getAttributes());
@@ -7277,8 +7239,6 @@ void Sema::checkUnusedDeclAttributes(Declarator &D) {
     ::checkUnusedDeclAttributes(*this, D.getTypeObject(i).getAttrs());
 }
 
-/// DeclClonePragmaWeak - clone existing decl (maybe definition),
-/// \#pragma weak needs a non-definition decl and source may not have one.
 NamedDecl *Sema::DeclClonePragmaWeak(NamedDecl *ND, const IdentifierInfo *II,
                                      SourceLocation Loc) {
   assert(isa<FunctionDecl>(ND) || isa<VarDecl>(ND));
@@ -7323,8 +7283,6 @@ NamedDecl *Sema::DeclClonePragmaWeak(NamedDecl *ND, const IdentifierInfo *II,
   return NewD;
 }
 
-/// DeclApplyPragmaWeak - A declaration (maybe definition) needs \#pragma weak
-/// applied to it, possibly with an alias.
 void Sema::DeclApplyPragmaWeak(Scope *S, NamedDecl *ND, const WeakInfo &W) {
   if (W.getAlias()) { // clone decl, impersonate __attribute(weak,alias(...))
     IdentifierInfo *NDId = ND->getIdentifier();
@@ -7380,29 +7338,37 @@ void Sema::ProcessDeclAttributes(Scope *S, Decl *D, const Declarator &PD) {
   // Ordering of attributes can be important, so we take care to process
   // attributes in the order in which they appeared in the source code.
 
+  auto ProcessAttributesWithSliding =
+      [&](const ParsedAttributesView &Src,
+          const ProcessDeclAttributeOptions &Options) {
+        ParsedAttributesView NonSlidingAttrs;
+        for (ParsedAttr &AL : Src) {
+          // FIXME: this sliding is specific to standard attributes and should
+          // eventually be deprecated and removed as those are not intended to
+          // slide to anything.
+          if ((AL.isStandardAttributeSyntax() || AL.isAlignas()) &&
+              AL.slidesFromDeclToDeclSpecLegacyBehavior()) {
+            // Skip processing the attribute, but do check if it appertains to
+            // the declaration. This is needed for the `MatrixType` attribute,
+            // which, despite being a type attribute, defines a `SubjectList`
+            // that only allows it to be used on typedef declarations.
+            AL.diagnoseAppertainsTo(*this, D);
+          } else {
+            NonSlidingAttrs.addAtEnd(&AL);
+          }
+        }
+        ProcessDeclAttributeList(S, D, NonSlidingAttrs, Options);
+      };
+
   // First, process attributes that appeared on the declaration itself (but
   // only if they don't have the legacy behavior of "sliding" to the DeclSepc).
-  ParsedAttributesView NonSlidingAttrs;
-  for (ParsedAttr &AL : PD.getDeclarationAttributes()) {
-    if (AL.slidesFromDeclToDeclSpecLegacyBehavior()) {
-      // Skip processing the attribute, but do check if it appertains to the
-      // declaration. This is needed for the `MatrixType` attribute, which,
-      // despite being a type attribute, defines a `SubjectList` that only
-      // allows it to be used on typedef declarations.
-      AL.diagnoseAppertainsTo(*this, D);
-    } else {
-      NonSlidingAttrs.addAtEnd(&AL);
-    }
-  }
-  ProcessDeclAttributeList(S, D, NonSlidingAttrs);
+  ProcessAttributesWithSliding(PD.getDeclarationAttributes(), {});
 
   // Apply decl attributes from the DeclSpec if present.
-  if (!PD.getDeclSpec().getAttributes().empty()) {
-    ProcessDeclAttributeList(S, D, PD.getDeclSpec().getAttributes(),
-                             ProcessDeclAttributeOptions()
-                                 .WithIncludeCXX11Attributes(false)
-                                 .WithIgnoreTypeAttributes(true));
-  }
+  ProcessAttributesWithSliding(PD.getDeclSpec().getAttributes(),
+                               ProcessDeclAttributeOptions()
+                                   .WithIncludeCXX11Attributes(false)
+                                   .WithIgnoreTypeAttributes(true));
 
   // Walk the declarator structure, applying decl attributes that were in a type
   // position to the decl itself.  This handles cases like:
@@ -7543,9 +7509,6 @@ void Sema::PopParsingDeclaration(ParsingDeclState state, Decl *decl) {
   } while ((pool = pool->getParent()));
 }
 
-/// Given a set of delayed diagnostics, re-emit them as if they had
-/// been delayed in the current context instead of in the given pool.
-/// Essentially, this just moves them to the current pool.
 void Sema::redelayDiagnostics(DelayedDiagnosticPool &pool) {
   DelayedDiagnosticPool *curPool = DelayedDiagnostics.getCurrentPool();
   assert(curPool && "re-emitting in undelayed context not supported");

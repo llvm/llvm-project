@@ -734,6 +734,8 @@ private:
 
   void AddOmpRequiresToScope(Scope &, WithOmpDeclarative::RequiresFlags,
       std::optional<common::OmpAtomicDefaultMemOrderType>);
+  void IssueNonConformanceWarning(
+      llvm::omp::Directive D, parser::CharBlock source);
 };
 
 template <typename T>
@@ -1524,6 +1526,8 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
     // TODO others
     break;
   }
+  if (beginDir.v == llvm::omp::Directive::OMPD_master)
+    IssueNonConformanceWarning(beginDir.v, beginDir.source);
   ClearDataSharingAttributeObjects();
   ClearPrivateDataSharingAttributeObjects();
   ClearAllocateNames();
@@ -1634,11 +1638,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
     break;
   }
   if (beginDir.v == llvm::omp::Directive::OMPD_target_loop)
-    if (context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
-      context_.Say(beginDir.source,
-          "Usage of directive %s is non-confirming to OpenMP standard"_warn_en_US,
-          llvm::omp::getOpenMPDirectiveName(beginDir.v).str());
-    }
+    IssueNonConformanceWarning(beginDir.v, beginDir.source);
   ClearDataSharingAttributeObjects();
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
 
@@ -1708,26 +1708,46 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
 // Use of DO CONCURRENT inside OpenMP construct is unspecified behavior
 // till OpenMP-5.0 standard.
 // In above both cases we skip the privatization of iteration variables.
+// [OpenMP 5.1] DO CONCURRENT indices are private
 bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
-  // TODO:[OpenMP 5.1] DO CONCURRENT indices are private
-  if (x.IsDoNormal()) {
-    if (!dirContext_.empty() && GetContext().withinConstruct) {
+  if (!dirContext_.empty() && GetContext().withinConstruct) {
+    llvm::SmallVector<const parser::Name *> ivs;
+    if (x.IsDoNormal()) {
       const parser::Name *iv{GetLoopIndex(x)};
-      if (iv && iv->symbol) {
-        if (!iv->symbol->test(Symbol::Flag::OmpPreDetermined)) {
-          ResolveSeqLoopIndexInParallelOrTaskConstruct(*iv);
-        } else {
-          // TODO: conflict checks with explicitly determined DSA
-        }
-        ordCollapseLevel--;
-        if (ordCollapseLevel) {
-          if (const auto *details{iv->symbol->detailsIf<HostAssocDetails>()}) {
-            const Symbol *tpSymbol = &details->symbol();
-            if (tpSymbol->test(Symbol::Flag::OmpThreadprivate)) {
-              context_.Say(iv->source,
-                  "Loop iteration variable %s is not allowed in THREADPRIVATE."_err_en_US,
-                  iv->ToString());
-            }
+      if (iv && iv->symbol)
+        ivs.push_back(iv);
+    } else if (x.IsDoConcurrent()) {
+      const Fortran::parser::LoopControl *loopControl = &*x.GetLoopControl();
+      const Fortran::parser::LoopControl::Concurrent &concurrent =
+          std::get<Fortran::parser::LoopControl::Concurrent>(loopControl->u);
+      const Fortran::parser::ConcurrentHeader &concurrentHeader =
+          std::get<Fortran::parser::ConcurrentHeader>(concurrent.t);
+      const std::list<Fortran::parser::ConcurrentControl> &controls =
+          std::get<std::list<Fortran::parser::ConcurrentControl>>(
+              concurrentHeader.t);
+      for (const auto &control : controls) {
+        const parser::Name *iv{&std::get<0>(control.t)};
+        if (iv && iv->symbol)
+          ivs.push_back(iv);
+      }
+    }
+    ordCollapseLevel--;
+    for (auto iv : ivs) {
+      if (!iv->symbol->test(Symbol::Flag::OmpPreDetermined)) {
+        ResolveSeqLoopIndexInParallelOrTaskConstruct(*iv);
+      } else {
+        // TODO: conflict checks with explicitly determined DSA
+      }
+      if (ordCollapseLevel) {
+        if (const auto *details{iv->symbol->detailsIf<HostAssocDetails>()}) {
+          const Symbol *tpSymbol = &details->symbol();
+          // TODO: DoConcurrent won't capture the following check because a new
+          // symbol is declared in ResolveIndexName(), which will not have the
+          // OmpThreadprivate flag.
+          if (tpSymbol->test(Symbol::Flag::OmpThreadprivate)) {
+            context_.Say(iv->source,
+                "Loop iteration variable %s is not allowed in THREADPRIVATE."_err_en_US,
+                iv->ToString());
           }
         }
       }
@@ -2738,4 +2758,21 @@ void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
   } while (!scopeIter->IsGlobal());
 }
 
+void OmpAttributeVisitor::IssueNonConformanceWarning(
+    llvm::omp::Directive D, parser::CharBlock source) {
+  std::string warnStr = "";
+  std::string dirName = llvm::omp::getOpenMPDirectiveName(D).str();
+  switch (D) {
+  case llvm::omp::OMPD_master:
+    warnStr = "OpenMP directive '" + dirName +
+        "' has been deprecated, please use 'masked' instead.";
+    break;
+  case llvm::omp::OMPD_target_loop:
+  default:
+    warnStr = "OpenMP directive '" + dirName + "' has been deprecated.";
+  }
+  if (context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
+    context_.Say(source, "%s"_warn_en_US, warnStr);
+  }
+}
 } // namespace Fortran::semantics

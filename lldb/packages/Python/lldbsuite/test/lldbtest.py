@@ -229,7 +229,7 @@ def pointer_size():
 
 def is_exe(fpath):
     """Returns true if fpath is an executable."""
-    if fpath == None:
+    if fpath is None:
         return False
     if sys.platform == "win32":
         if not fpath.endswith(".exe"):
@@ -1379,10 +1379,6 @@ class Base(unittest.TestCase):
         """Returns the compiler in effect the test suite is running with."""
         return lldbplatformutil.getCompiler()
 
-    def getCompilerBinary(self):
-        """Returns the compiler binary the test suite is running with."""
-        return lldbplatformutil.getCompilerBinary()
-
     def getCompilerVersion(self):
         """Returns a string that represents the compiler version.
         Supports: llvm, clang.
@@ -2191,7 +2187,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         if num_matches == 0:
             compare_string = str_input
         else:
-            if common_match != None and len(common_match) > 0:
+            if common_match is not None and len(common_match) > 0:
                 compare_string = str_input + common_match
             else:
                 compare_string = ""
@@ -2446,7 +2442,7 @@ FileCheck output:
                 log_lines.append(pattern_line)
 
                 # Convert to bool because match objects
-                # are True-ish but != True itself
+                # are True-ish but is not True itself
                 matched = bool(matched)
                 if matched != matching:
                     break
@@ -2552,7 +2548,7 @@ FileCheck output:
         if obj.Success():
             self.fail(self._formatMessage(msg, "Error not in a fail state"))
 
-        if error_str == None:
+        if error_str is None:
             return
 
         error = obj.GetCString()

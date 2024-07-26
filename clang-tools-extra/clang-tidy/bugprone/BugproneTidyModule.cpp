@@ -52,6 +52,7 @@
 #include "NotNullTerminatedResultCheck.h"
 #include "OptionalValueConversionCheck.h"
 #include "ParentVirtualCallCheck.h"
+#include "PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "PosixReturnCheck.h"
 #include "RedundantBranchConditionCheck.h"
 #include "ReservedIdentifierCheck.h"
@@ -174,6 +175,8 @@ public:
         "bugprone-multiple-statement-macro");
     CheckFactories.registerCheck<OptionalValueConversionCheck>(
         "bugprone-optional-value-conversion");
+    CheckFactories.registerCheck<PointerArithmeticOnPolymorphicObjectCheck>(
+        "bugprone-pointer-arithmetic-on-polymorphic-object");
     CheckFactories.registerCheck<RedundantBranchConditionCheck>(
         "bugprone-redundant-branch-condition");
     CheckFactories.registerCheck<cppcoreguidelines::NarrowingConversionsCheck>(

@@ -24,16 +24,16 @@ class MCSectionSPIRV final : public MCSection {
   friend class MCContext;
 
   MCSectionSPIRV()
-      : MCSection(SV_SPIRV, "", /*IsText=*/true, /*Begin=*/nullptr) {}
+      : MCSection(SV_SPIRV, "", /*IsText=*/true, /*IsVirtual=*/false,
+                  /*Begin=*/nullptr) {}
   // TODO: Add StringRef Name to MCSectionSPIRV.
 
 public:
   ~MCSectionSPIRV() = default;
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
-                            const MCExpr *Subsection) const override {}
+                            uint32_t Subsection) const override {}
   bool useCodeAlign() const override { return false; }
-  bool isVirtualSection() const override { return false; }
 };
 
 } // end namespace llvm

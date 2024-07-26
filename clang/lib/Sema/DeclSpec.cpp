@@ -1146,7 +1146,7 @@ void DeclSpec::SaveWrittenBuiltinSpecs() {
 }
 
 /// Finish - This does final analysis of the declspec, rejecting things like
-/// "_Imaginary" (lacking an FP type). After calling this method, DeclSpec is
+/// "_Complex" (lacking an FP type). After calling this method, DeclSpec is
 /// guaranteed to be self-consistent, even if an error occurred.
 void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
   // Before possibly changing their values, save specs as written.
@@ -1331,8 +1331,8 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     break;
   }
 
-  // TODO: if the implementation does not implement _Complex or _Imaginary,
-  // disallow their use.  Need information about the backend.
+  // TODO: if the implementation does not implement _Complex, disallow their
+  // use. Need information about the backend.
   if (TypeSpecComplex != TSC_unspecified) {
     if (TypeSpecType == TST_unspecified) {
       S.Diag(TSCLoc, diag::ext_plain_complex)

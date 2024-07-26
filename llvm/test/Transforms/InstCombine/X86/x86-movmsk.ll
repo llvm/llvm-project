@@ -9,7 +9,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define i32 @test_upper_x86_mmx_pmovmskb(x86_mmx %a0) {
 ; CHECK-LABEL: @test_upper_x86_mmx_pmovmskb(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.mmx.pmovmskb(x86_mmx [[A0:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.mmx.pmovmskb(<1 x i64> [[A0:%.*]])
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = call i32 @llvm.x86.mmx.pmovmskb(x86_mmx %a0)
@@ -207,16 +207,6 @@ define i32 @undef_x86_avx2_pmovmskb() {
 ; Constant Folding (ZERO -> ZERO)
 ;
 
-define i32 @zero_x86_mmx_pmovmskb() {
-; CHECK-LABEL: @zero_x86_mmx_pmovmskb(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.mmx.pmovmskb(x86_mmx bitcast (<1 x i64> zeroinitializer to x86_mmx))
-; CHECK-NEXT:    ret i32 [[TMP1]]
-;
-  %1 = bitcast <1 x i64> zeroinitializer to x86_mmx
-  %2 = call i32 @llvm.x86.mmx.pmovmskb(x86_mmx %1)
-  ret i32 %2
-}
-
 define i32 @zero_x86_sse_movmsk_ps() {
 ; CHECK-LABEL: @zero_x86_sse_movmsk_ps(
 ; CHECK-NEXT:    ret i32 0
@@ -271,7 +261,7 @@ define i32 @zero_x86_avx2_pmovmskb() {
 
 define i32 @fold_x86_mmx_pmovmskb() {
 ; CHECK-LABEL: @fold_x86_mmx_pmovmskb(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.mmx.pmovmskb(x86_mmx bitcast (<8 x i8> <i8 0, i8 -1, i8 -1, i8 127, i8 -127, i8 63, i8 64, i8 0> to x86_mmx))
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.mmx.pmovmskb(<1 x i64> <i64 18084223940296448>)
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = bitcast <8 x i8> <i8 0, i8 255, i8 -1, i8 127, i8 -127, i8 63, i8 64, i8 256> to x86_mmx

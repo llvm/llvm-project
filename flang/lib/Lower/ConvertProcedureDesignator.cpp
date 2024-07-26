@@ -89,9 +89,15 @@ fir::ExtendedValue Fortran::lower::convertProcedureDesignator(
             fir::factory::genMaxWithZero(builder, loc, rawLen);
       }
     }
+    // The caller of the function pointer will have to allocate
+    // the function result with the character length specified
+    // by the boxed value. If the result length cannot be
+    // computed statically, set it to zero (we used to use -1,
+    // but this could cause assertions in LLVM after inlining
+    // exposed alloca of size -1).
     if (!funcPtrResultLength)
       funcPtrResultLength = builder.createIntegerConstant(
-          loc, builder.getCharacterLengthType(), -1);
+          loc, builder.getCharacterLengthType(), 0);
     return fir::CharBoxValue{funcPtr, funcPtrResultLength};
   }
   return funcPtr;

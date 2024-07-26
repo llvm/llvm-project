@@ -263,7 +263,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
                                              ScalarEvolution &SE,
                                              DominatorTree &DT,
                                              AssumptionCache *AC) {
-  auto &DL = LI->getModule()->getDataLayout();
+  auto &DL = LI->getDataLayout();
   Value *Ptr = LI->getPointerOperand();
 
   APInt EltSize(DL.getIndexTypeSizeInBits(Ptr->getType()),
@@ -313,6 +313,13 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
     const auto *Offset = dyn_cast<SCEVConstant>(StartS->getOperand(0));
     const auto *NewBase = dyn_cast<SCEVUnknown>(StartS->getOperand(1));
     if (StartS->getNumOperands() == 2 && Offset && NewBase) {
+      // The following code below assumes the offset is unsigned, but GEP
+      // offsets are treated as signed so we can end up with a signed value
+      // here too. For example, suppose the initial PHI value is (i8 255),
+      // the offset will be treated as (i8 -1) and sign-extended to (i64 -1).
+      if (Offset->getAPInt().isNegative())
+        return false;
+
       // For the moment, restrict ourselves to the case where the offset is a
       // multiple of the requested alignment and the base is aligned.
       // TODO: generalize if a case found which warrants
@@ -349,7 +356,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
 ///
 /// This uses the pointee type to determine how many bytes need to be safe to
 /// load from the pointer.
-bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, APInt &Size,
+bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, const APInt &Size,
                                        const DataLayout &DL,
                                        Instruction *ScanFrom,
                                        AssumptionCache *AC,
@@ -588,7 +595,7 @@ Value *llvm::findAvailablePtrLoadStore(
   if (MaxInstsToScan == 0)
     MaxInstsToScan = ~0U;
 
-  const DataLayout &DL = ScanBB->getModule()->getDataLayout();
+  const DataLayout &DL = ScanBB->getDataLayout();
   const Value *StrippedPtr = Loc.Ptr->stripPointerCasts();
 
   while (ScanFrom != ScanBB->begin()) {
@@ -668,7 +675,7 @@ Value *llvm::findAvailablePtrLoadStore(
 Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
                                       bool *IsLoadCSE,
                                       unsigned MaxInstsToScan) {
-  const DataLayout &DL = Load->getModule()->getDataLayout();
+  const DataLayout &DL = Load->getDataLayout();
   Value *StrippedPtr = Load->getPointerOperand()->stripPointerCasts();
   BasicBlock *ScanBB = Load->getParent();
   Type *AccessTy = Load->getType();
@@ -743,9 +750,8 @@ static bool isPointerAlwaysReplaceable(const Value *From, const Value *To,
   if (isa<Constant>(To) &&
       isDereferenceablePointer(To, Type::getInt8Ty(To->getContext()), DL))
     return true;
-  if (getUnderlyingObject(From) == getUnderlyingObject(To))
-    return true;
-  return false;
+  return getUnderlyingObjectAggressive(From) ==
+         getUnderlyingObjectAggressive(To);
 }
 
 bool llvm::canReplacePointersInUseIfEqual(const Use &U, const Value *To,
@@ -768,4 +774,19 @@ bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To,
     return true;
 
   return isPointerAlwaysReplaceable(From, To, DL);
+}
+
+bool llvm::isDereferenceableReadOnlyLoop(Loop *L, ScalarEvolution *SE,
+                                         DominatorTree *DT,
+                                         AssumptionCache *AC) {
+  for (BasicBlock *BB : L->blocks()) {
+    for (Instruction &I : *BB) {
+      if (auto *LI = dyn_cast<LoadInst>(&I)) {
+        if (!isDereferenceableAndAlignedInLoop(LI, L, *SE, *DT, AC))
+          return false;
+      } else if (I.mayReadFromMemory() || I.mayWriteToMemory() || I.mayThrow())
+        return false;
+    }
+  }
+  return true;
 }

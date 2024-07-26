@@ -184,6 +184,11 @@ public:
   /// Get the definition register of the loaded value.
   Register getDstReg() const { return getOperand(0).getReg(); }
 
+  /// Returns the Ranges that describes the dereference.
+  const MDNode *getRanges() const {
+    return getMMO().getRanges();
+  }
+
   static bool classof(const MachineInstr *MI) {
     switch (MI->getOpcode()) {
     case TargetOpcode::G_LOAD:
@@ -892,6 +897,56 @@ public:
 
   static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_SHL;
+  };
+};
+
+/// Represents a threeway compare.
+class GSUCmp : public GenericMachineInstr {
+public:
+  Register getLHSReg() const { return getOperand(1).getReg(); }
+  Register getRHSReg() const { return getOperand(2).getReg(); }
+
+  bool isSigned() const { return getOpcode() == TargetOpcode::G_SCMP; }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_SCMP:
+    case TargetOpcode::G_UCMP:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
+/// Represents an integer-like extending operation.
+class GExtOp : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_SEXT:
+    case TargetOpcode::G_ZEXT:
+    case TargetOpcode::G_ANYEXT:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
+/// Represents an integer-like extending or truncating operation.
+class GExtOrTruncOp : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_SEXT:
+    case TargetOpcode::G_ZEXT:
+    case TargetOpcode::G_ANYEXT:
+    case TargetOpcode::G_TRUNC:
+      return true;
+    default:
+      return false;
+    }
   };
 };
 

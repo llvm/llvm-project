@@ -23,6 +23,7 @@ namespace llvm {
 namespace XtensaISD {
 enum {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
+  BR_JT,
 
   // Calls a function.  Operand 0 is the chain operand and operand 1
   // is the target address.  The arguments start at operand 2.
@@ -32,7 +33,13 @@ enum {
   // Wraps a TargetGlobalAddress that should be loaded using PC-relative
   // accesses.  Operand 0 is the address.
   PCREL_WRAPPER,
-  RET
+  RET,
+
+  // Select with condition operator - This selects between a true value and
+  // a false value (ops #2 and #3) based on the boolean result of comparing
+  // the lhs and rhs (ops #0 and #1) of a conditional expression with the
+  // condition code in op #4
+  SELECT_CC,
 };
 }
 
@@ -42,6 +49,15 @@ class XtensaTargetLowering : public TargetLowering {
 public:
   explicit XtensaTargetLowering(const TargetMachine &TM,
                                 const XtensaSubtarget &STI);
+
+  EVT getSetCCResultType(const DataLayout &, LLVMContext &,
+                         EVT VT) const override {
+    if (!VT.isVector())
+      return MVT::i32;
+    return VT.changeVectorElementTypeToInteger();
+  }
+
+  bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
   const char *getTargetNodeName(unsigned Opcode) const override;
 
@@ -68,12 +84,26 @@ public:
 
   const XtensaSubtarget &getSubtarget() const { return Subtarget; }
 
+  MachineBasicBlock *
+  EmitInstrWithCustomInserter(MachineInstr &MI,
+                              MachineBasicBlock *BB) const override;
+
 private:
   const XtensaSubtarget &Subtarget;
 
+  SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerImmediate(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerConstantPool(ConstantPoolSDNode *CP, SelectionDAG &DAG) const;
+
+  SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
 
@@ -84,6 +114,9 @@ private:
   SDValue getAddrPCRel(SDValue Op, SelectionDAG &DAG) const;
 
   CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg) const;
+
+  MachineBasicBlock *emitSelectCC(MachineInstr &MI,
+                                  MachineBasicBlock *BB) const;
 };
 
 } // end namespace llvm

@@ -59,10 +59,10 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"
 
-#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
@@ -4252,7 +4252,7 @@ public:
     m_option_group.Append(&m_current_stack_option, LLDB_OPT_SET_2,
                           LLDB_OPT_SET_2);
     m_option_group.Finalize();
-    AddSimpleArgumentList(eArgTypeShlibName);
+    AddSimpleArgumentList(eArgTypeFilename);
   }
 
   ~CommandObjectTargetSymbolsAdd() override = default;

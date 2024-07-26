@@ -38,7 +38,7 @@ class AssignOpConversion : public mlir::OpRewritePattern<hlfir::AssignOp> {
 public:
   explicit AssignOpConversion(mlir::MLIRContext *ctx) : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::AssignOp assignOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = assignOp->getLoc();
@@ -231,7 +231,7 @@ public:
     return {res[0], res[1]};
   }
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::CopyInOp copyInOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = copyInOp.getLoc();
@@ -249,7 +249,7 @@ public:
   explicit CopyOutOpConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::CopyOutOp copyOutOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = copyOutOp.getLoc();
@@ -290,7 +290,7 @@ public:
   explicit DeclareOpConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::DeclareOp declareOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = declareOp->getLoc();
@@ -428,7 +428,7 @@ public:
   explicit DesignateOpConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::DesignateOp designate,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = designate.getLoc();
@@ -648,7 +648,7 @@ public:
   explicit ParentComponentOpConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::ParentComponentOp parentComponent,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = parentComponent.getLoc();
@@ -696,7 +696,7 @@ public:
   explicit NoReassocOpConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::NoReassocOp noreassoc,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<fir::NoReassocOp>(noreassoc,
@@ -709,7 +709,7 @@ class NullOpConversion : public mlir::OpRewritePattern<hlfir::NullOp> {
 public:
   explicit NullOpConversion(mlir::MLIRContext *ctx) : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::NullOp nullop,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<fir::ZeroOp>(nullop, nullop.getType());
@@ -722,7 +722,7 @@ class GetExtentOpConversion
 public:
   using mlir::OpRewritePattern<hlfir::GetExtentOp>::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::GetExtentOp getExtentOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Value shape = getExtentOp.getShape();

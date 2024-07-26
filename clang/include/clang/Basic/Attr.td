@@ -686,6 +686,10 @@ class Attr {
   bit PragmaAttributeSupport;
   // Set to true if this attribute accepts parameter pack expansion expressions.
   bit AcceptsExprPack = 0;
+  // To support multiple enum parameters to an attribute without breaking
+  // our existing general parsing we need to have a separate flag that
+  // opts an attribute into strict parsing of attribute parameters
+  bit StrictEnumParameters = 0;
   // Lists language options, one of which is required to be true for the
   // attribute to be applicable. If empty, no language options are required.
   list<LangOpt> LangOpts = [];
@@ -898,7 +902,7 @@ def PatchableFunctionEntry
     : InheritableAttr,
       TargetSpecificAttr<TargetArch<
           ["aarch64", "aarch64_be", "loongarch32", "loongarch64", "riscv32",
-           "riscv64", "x86", "x86_64"]>> {
+           "riscv64", "x86", "x86_64", "ppc", "ppc64"]>> {
   let Spellings = [GCC<"patchable_function_entry">];
   let Subjects = SubjectList<[Function, ObjCMethod]>;
   let Args = [UnsignedArgument<"Count">, DefaultIntArgument<"Offset", 0>];
@@ -1459,6 +1463,28 @@ def CXX11NoReturn : InheritableAttr {
                    C23<"", "noreturn", 202202>, C23<"", "_Noreturn", 202202>];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [CXX11NoReturnDocs];
+}
+
+def NonBlocking : TypeAttr {
+  let Spellings = [Clang<"nonblocking">];
+  let Args = [ExprArgument<"Cond", /*optional*/1>];
+  let Documentation = [NonBlockingDocs];
+}
+
+def NonAllocating : TypeAttr {
+  let Spellings = [Clang<"nonallocating">];
+  let Args = [ExprArgument<"Cond", /*optional*/1>];
+  let Documentation = [NonAllocatingDocs];
+}
+
+def Blocking : TypeAttr {
+  let Spellings = [Clang<"blocking">];
+  let Documentation = [BlockingDocs];
+}
+
+def Allocating : TypeAttr {
+  let Spellings = [Clang<"allocating">];
+  let Documentation = [AllocatingDocs];
 }
 
 // Similar to CUDA, OpenCL attributes do not receive a [[]] spelling because
@@ -2260,6 +2286,36 @@ def CountedBy : DeclOrTypeAttr {
   let Spellings = [Clang<"counted_by">];
   let Subjects = SubjectList<[Field], ErrorDiag>;
   let Args = [ExprArgument<"Count">, IntArgument<"NestedLevel", 1>];
+  let LateParsed = LateAttrParseExperimentalExt;
+  let ParseArgumentsAsUnevaluated = 1;
+  let Documentation = [CountedByDocs];
+  let LangOpts = [COnly];
+}
+
+def CountedByOrNull : DeclOrTypeAttr {
+  let Spellings = [Clang<"counted_by_or_null">];
+  let Subjects = SubjectList<[Field], ErrorDiag>;
+  let Args = [ExprArgument<"Count">, IntArgument<"NestedLevel", 1>];
+  let LateParsed = LateAttrParseExperimentalExt;
+  let ParseArgumentsAsUnevaluated = 1;
+  let Documentation = [CountedByDocs];
+  let LangOpts = [COnly];
+}
+
+def SizedBy : DeclOrTypeAttr {
+  let Spellings = [Clang<"sized_by">];
+  let Subjects = SubjectList<[Field], ErrorDiag>;
+  let Args = [ExprArgument<"Size">, IntArgument<"NestedLevel", 1>];
+  let LateParsed = LateAttrParseExperimentalExt;
+  let ParseArgumentsAsUnevaluated = 1;
+  let Documentation = [CountedByDocs];
+  let LangOpts = [COnly];
+}
+
+def SizedByOrNull : DeclOrTypeAttr {
+  let Spellings = [Clang<"sized_by_or_null">];
+  let Subjects = SubjectList<[Field], ErrorDiag>;
+  let Args = [ExprArgument<"Size">, IntArgument<"NestedLevel", 1>];
   let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
   let Documentation = [CountedByDocs];
@@ -3634,7 +3690,7 @@ def NoThreadSafetyAnalysis : InheritableAttr {
 def GuardedBy : InheritableAttr {
   let Spellings = [GNU<"guarded_by">];
   let Args = [ExprArgument<"Arg">];
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -3645,7 +3701,7 @@ def GuardedBy : InheritableAttr {
 def PtGuardedBy : InheritableAttr {
   let Spellings = [GNU<"pt_guarded_by">];
   let Args = [ExprArgument<"Arg">];
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -3656,7 +3712,7 @@ def PtGuardedBy : InheritableAttr {
 def AcquiredAfter : InheritableAttr {
   let Spellings = [GNU<"acquired_after">];
   let Args = [VariadicExprArgument<"Args">];
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -3667,7 +3723,7 @@ def AcquiredAfter : InheritableAttr {
 def AcquiredBefore : InheritableAttr {
   let Spellings = [GNU<"acquired_before">];
   let Args = [VariadicExprArgument<"Args">];
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -4116,6 +4172,18 @@ def LoopHint : Attr {
   let HasCustomParsing = 1;
 }
 
+/// The HLSL loop attributes
+def HLSLLoopHint: StmtAttr {
+  /// [unroll(directive)]
+  /// [loop]
+  let Spellings = [Microsoft<"unroll">, Microsoft<"loop">];
+  let Args = [UnsignedArgument<"directive", /*opt*/1>];
+  let Subjects = SubjectList<[ForStmt, WhileStmt, DoStmt],
+                              ErrorDiag, "'for', 'while', and 'do' statements">;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLLoopHintDocs, HLSLUnrollHintDocs];
+}
+
 def CapturedRecord : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];
@@ -4493,11 +4561,7 @@ def HLSLResource : InheritableAttr {
   let Spellings = [];
   let Subjects = SubjectList<[Struct]>;
   let LangOpts = [HLSL];
-  let Args = [
-    EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
-                 /*is_string=*/0, ["SRV", "UAV", "CBuffer", "Sampler"],
-                 ["SRV", "UAV", "CBuffer", "Sampler"],
-                 /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>,
+  let Args = [    
     EnumArgument<
         "ResourceKind", "llvm::hlsl::ResourceKind",
         /*is_string=*/0,
@@ -4517,6 +4581,19 @@ def HLSLResource : InheritableAttr {
         ],
         /*opt=*/0, /*fake=*/0, /*isExternalType=*/1, /*isCovered=*/0>,
     DefaultBoolArgument<"isROV", /*default=*/0>
+  ];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLResourceClass : InheritableAttr {
+  let Spellings = [CXX11<"hlsl", "resource_class">];
+  let Subjects = SubjectList<[Struct]>;
+  let LangOpts = [HLSL];
+  let Args = [
+	EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
+				 /*is_string=*/true, ["SRV", "UAV", "CBuffer", "Sampler"],
+				 ["SRV", "UAV", "CBuffer", "Sampler"],
+				 /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>
   ];
   let Documentation = [InternalOnly];
 }
@@ -4553,6 +4630,31 @@ def NoRandomizeLayout : InheritableAttr {
   let LangOpts = [COnly];
 }
 def : MutualExclusions<[RandomizeLayout, NoRandomizeLayout]>;
+
+def VTablePointerAuthentication : InheritableAttr {
+  let Spellings = [Clang<"ptrauth_vtable_pointer">];
+  let Subjects = SubjectList<[CXXRecord]>;
+  let Documentation = [Undocumented];
+  let StrictEnumParameters = 1;
+  let Args = [EnumArgument<"Key", "VPtrAuthKeyType", /*is_string=*/ true,
+                ["default_key", "no_authentication", "process_dependent",
+                 "process_independent"],
+                ["DefaultKey", "NoKey", "ProcessDependent",
+                 "ProcessIndependent"]>,
+              EnumArgument<"AddressDiscrimination", "AddressDiscriminationMode",
+                /*is_string=*/ true,
+                ["default_address_discrimination", "no_address_discrimination",
+                 "address_discrimination"],
+                ["DefaultAddressDiscrimination", "NoAddressDiscrimination",
+                 "AddressDiscrimination"]>,
+              EnumArgument<"ExtraDiscrimination", "ExtraDiscrimination",
+                /*is_string=*/ true,
+                ["default_extra_discrimination", "no_extra_discrimination",
+                 "type_discrimination", "custom_discrimination"],
+                ["DefaultExtraDiscrimination", "NoExtraDiscrimination",
+                 "TypeDiscrimination", "CustomDiscrimination"]>,
+              IntArgument<"CustomDiscriminationValue", 1>];
+}
 
 def FunctionReturnThunks : InheritableAttr,
     TargetSpecificAttr<TargetAnyX86> {

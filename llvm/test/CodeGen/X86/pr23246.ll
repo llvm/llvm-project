@@ -9,7 +9,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 define <2 x i64> @test(x86_mmx %a) #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq2dq %mm0, %xmm0
+; CHECK-NEXT:    movq %rdi, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; CHECK-NEXT:    retq
 entry:

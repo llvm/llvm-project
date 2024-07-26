@@ -1,5 +1,10 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
 
+
+// CHECK-LABEL: func @baz
+// something to call
+llvm.func @baz()
+
 // CHECK-LABEL: func @ops
 // CHECK-SAME: (%[[I32:.*]]: i32, %[[FLOAT:.*]]: f32, %[[PTR1:.*]]: !llvm.ptr, %[[PTR2:.*]]: !llvm.ptr, %[[BOOL:.*]]: i1, %[[VPTR1:.*]]: !llvm.vec<2 x ptr>)
 func.func @ops(%arg0: i32, %arg1: f32,
@@ -92,6 +97,19 @@ func.func @ops(%arg0: i32, %arg1: f32,
   %variadic_func = llvm.mlir.addressof @vararg_func : !llvm.ptr
   llvm.call %variadic_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) : !llvm.ptr, (i32, i32) -> ()
   llvm.call %variadic_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) {fastmathFlags = #llvm.fastmath<fast>} : !llvm.ptr, (i32, i32) -> ()
+
+// Function call attributes
+// CHECK: llvm.call @baz() {convergent} : () -> ()
+  llvm.call @baz() {convergent} : () -> ()
+
+// CHECK: llvm.call @baz() {no_unwind} : () -> ()
+  llvm.call @baz() {no_unwind} : () -> ()
+
+// CHECK: llvm.call @baz() {will_return} : () -> ()
+  llvm.call @baz() {will_return} : () -> ()
+
+// CHECK: llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write>} : () -> ()
+  llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write>} : () -> ()
 
 // Terminator operations and their successors.
 //
@@ -672,4 +690,42 @@ llvm.func @experimental_constrained_fptrunc(%in: f64) {
   // CHECK: llvm.intr.experimental.constrained.fptrunc %{{.*}} tonearestaway ignore : f64 to f32
   %4 = llvm.intr.experimental.constrained.fptrunc %in tonearestaway ignore : f64 to f32
   llvm.return
+}
+
+// CHECK: llvm.func @tail_call_target() -> i32
+llvm.func @tail_call_target() -> i32
+
+// CHECK-LABEL: @test_none
+llvm.func @test_none() -> i32 {
+  // CHECK-NEXT: llvm.call @tail_call_target() : () -> i32
+  %0 = llvm.call none @tail_call_target() : () -> i32
+  llvm.return %0 : i32
+}
+
+// CHECK-LABEL: @test_default
+llvm.func @test_default() -> i32 {
+  // CHECK-NEXT: llvm.call @tail_call_target() : () -> i32
+  %0 = llvm.call @tail_call_target() : () -> i32
+  llvm.return %0 : i32
+}
+
+// CHECK-LABEL: @test_musttail
+llvm.func @test_musttail() -> i32 {
+  // CHECK-NEXT: llvm.call musttail @tail_call_target() : () -> i32
+  %0 = llvm.call musttail @tail_call_target() : () -> i32
+  llvm.return %0 : i32
+}
+
+// CHECK-LABEL: @test_tail
+llvm.func @test_tail() -> i32 {
+  // CHECK-NEXT: llvm.call tail @tail_call_target() : () -> i32
+  %0 = llvm.call tail @tail_call_target() : () -> i32
+  llvm.return %0 : i32
+}
+
+// CHECK-LABEL: @test_notail
+llvm.func @test_notail() -> i32 {
+  // CHECK-NEXT: llvm.call notail @tail_call_target() : () -> i32
+  %0 = llvm.call notail @tail_call_target() : () -> i32
+  llvm.return %0 : i32
 }

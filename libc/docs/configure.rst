@@ -28,8 +28,10 @@ to learn about the defaults for your platform and target.
 * **"codegen" options**
     - ``LIBC_CONF_ENABLE_STRONG_STACK_PROTECTOR``: Enable -fstack-protector-strong to defend against stack smashing attack.
     - ``LIBC_CONF_KEEP_FRAME_POINTER``: Keep frame pointer in functions for better debugging experience.
-* **"malloc" options**
-    - ``LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE``: Default size for the constinit freelist buffer used for the freelist malloc implementation (default 1o 1GB).
+* **"errno" options**
+    - ``LIBC_CONF_ERRNO_MODE``: The implementation used for errno, acceptable values are LIBC_ERRNO_MODE_DEFAULT, LIBC_ERRNO_MODE_UNDEFINED, LIBC_ERRNO_MODE_THREAD_LOCAL, LIBC_ERRNO_MODE_SHARED, LIBC_ERRNO_MODE_EXTERNAL, and LIBC_ERRNO_MODE_SYSTEM.
+* **"math" options**
+    - ``LIBC_CONF_MATH_OPTIMIZATIONS``: Configures optimizations for math functions. Values accepted are LIBC_MATH_SKIP_ACCURATE_PASS, LIBC_MATH_SMALL_TABLES, LIBC_MATH_NO_ERRNO, LIBC_MATH_NO_EXCEPT, and LIBC_MATH_FAST.
 * **"printf" options**
     - ``LIBC_CONF_PRINTF_DISABLE_FIXED_POINT``: Disable printing fixed point values in printf and friends.
     - ``LIBC_CONF_PRINTF_DISABLE_FLOAT``: Disable printing floating point values in printf and friends.
@@ -40,6 +42,14 @@ to learn about the defaults for your platform and target.
     - ``LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT``: Default number of spins before blocking if a mutex is in contention (default to 100).
     - ``LIBC_CONF_RWLOCK_DEFAULT_SPIN_COUNT``: Default number of spins before blocking if a rwlock is in contention (default to 100).
     - ``LIBC_CONF_TIMEOUT_ENSURE_MONOTONICITY``: Automatically adjust timeout to CLOCK_MONOTONIC (default to true). POSIX API may require CLOCK_REALTIME, which can be unstable and leading to unexpected behavior. This option will convert the real-time timestamp to monotonic timestamp relative to the time of call.
+* **"qsort" options**
+    - ``LIBC_CONF_QSORT_IMPL``: Configures sorting algorithm for qsort and qsort_r. Values accepted are LIBC_QSORT_QUICK_SORT, LIBC_QSORT_HEAP_SORT.
+* **"scanf" options**
+    - ``LIBC_CONF_SCANF_DISABLE_FLOAT``: Disable parsing floating point values in scanf and friends.
+    - ``LIBC_CONF_SCANF_DISABLE_INDEX_MODE``: Disable index mode in the scanf format string.
 * **"string" options**
     - ``LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING``: Inserts prefetch for write instructions (PREFETCHW) for memset on x86 to recover performance when hardware prefetcher is disabled.
     - ``LIBC_CONF_STRING_UNSAFE_WIDE_READ``: Read more than a byte at a time to perform byte-string operations like strlen.
+* **"unistd" options**
+    - ``LIBC_CONF_ENABLE_PID_CACHE``: Enable caching mechanism for getpid to avoid syscall (default to true). Please refer to Undefined Behavior documentation for implications.
+    - ``LIBC_CONF_ENABLE_TID_CACHE``: Enable caching mechanism for gettid to avoid syscall (only effective in fullbuild mode, default to true). Please refer to Undefined Behavior documentation for implications.

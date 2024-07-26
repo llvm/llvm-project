@@ -284,17 +284,18 @@ void annotateValueSite(Module &M, Instruction &Inst,
                        ArrayRef<InstrProfValueData> VDs, uint64_t Sum,
                        InstrProfValueKind ValueKind, uint32_t MaxMDCount);
 
+// TODO: Unify metadata name 'PGOFuncName' and 'PGOName', by supporting read
+// of this metadata for backward compatibility and generating 'PGOName' only.
 /// Extract the value profile data from \p Inst and returns them if \p Inst is
-/// annotated with value profile data. Returns nullptr otherwise. It's similar
-/// to `getValueProfDataFromInst` above except that an array is allocated only
-/// after a preliminary checking that the value profiles of kind `ValueKind`
-/// exist.
-std::unique_ptr<InstrProfValueData[]>
+/// annotated with value profile data. Returns an empty vector otherwise.
+SmallVector<InstrProfValueData, 4>
 getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
-                         uint32_t MaxNumValueData, uint32_t &ActualNumValueData,
-                         uint64_t &TotalC, bool GetNoICPValue = false);
+                         uint32_t MaxNumValueData, uint64_t &TotalC,
+                         bool GetNoICPValue = false);
 
 inline StringRef getPGOFuncNameMetadataName() { return "PGOFuncName"; }
+
+inline StringRef getPGONameMetadataName() { return "PGOName"; }
 
 /// Return the PGOFuncName meta data associated with a function.
 MDNode *getPGOFuncNameMetadata(const Function &F);
@@ -304,7 +305,13 @@ std::string getPGOName(const GlobalVariable &V, bool InLTO = false);
 /// Create the PGOFuncName meta data if PGOFuncName is different from
 /// function's raw name. This should only apply to internal linkage functions
 /// declared by users only.
+/// TODO: Update all callers to 'createPGONameMetadata' and deprecate this
+/// function.
 void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName);
+
+/// Create the PGOName metadata if a global object's PGO name is different from
+/// its mangled name. This should apply to local-linkage global objects only.
+void createPGONameMetadata(GlobalObject &GO, StringRef PGOName);
 
 /// Check if we can use Comdat for profile variables. This will eliminate
 /// the duplicated profile variables for Comdat functions.
@@ -787,9 +794,8 @@ struct InstrProfValueSiteRecord {
   std::vector<InstrProfValueData> ValueData;
 
   InstrProfValueSiteRecord() = default;
-  template <class InputIterator>
-  InstrProfValueSiteRecord(InputIterator F, InputIterator L)
-      : ValueData(F, L) {}
+  InstrProfValueSiteRecord(std::vector<InstrProfValueData> &&VD)
+      : ValueData(VD) {}
 
   /// Sort ValueData ascending by Value
   void sortByTargetValues() {
@@ -863,7 +869,7 @@ struct InstrProfRecord {
   /// Add ValueData for ValueKind at value Site.  We do not support adding sites
   /// out of order.  Site must go up from 0 one by one.
   void addValueData(uint32_t ValueKind, uint32_t Site,
-                    InstrProfValueData *VData, uint32_t N,
+                    ArrayRef<InstrProfValueData> VData,
                     InstrProfSymtab *SymTab);
 
   /// Merge the counts in \p Other into this one.
@@ -928,11 +934,8 @@ struct InstrProfRecord {
   }
 
 private:
-  struct ValueProfData {
-    std::vector<InstrProfValueSiteRecord> IndirectCallSites;
-    std::vector<InstrProfValueSiteRecord> MemOPSizes;
-    std::vector<InstrProfValueSiteRecord> VTableTargets;
-  };
+  using ValueProfData = std::array<std::vector<InstrProfValueSiteRecord>,
+                                   IPVK_Last - IPVK_First + 1>;
   std::unique_ptr<ValueProfData> ValueData;
 
   MutableArrayRef<InstrProfValueSiteRecord>
@@ -949,32 +952,18 @@ private:
   getValueSitesForKind(uint32_t ValueKind) const {
     if (!ValueData)
       return std::nullopt;
-    switch (ValueKind) {
-    case IPVK_IndirectCallTarget:
-      return ValueData->IndirectCallSites;
-    case IPVK_MemOPSize:
-      return ValueData->MemOPSizes;
-    case IPVK_VTableTarget:
-      return ValueData->VTableTargets;
-    default:
-      llvm_unreachable("Unknown value kind!");
-    }
+    assert(IPVK_First <= ValueKind && ValueKind <= IPVK_Last &&
+           "Unknown value kind!");
+    return (*ValueData)[ValueKind - IPVK_First];
   }
 
   std::vector<InstrProfValueSiteRecord> &
   getOrCreateValueSitesForKind(uint32_t ValueKind) {
     if (!ValueData)
       ValueData = std::make_unique<ValueProfData>();
-    switch (ValueKind) {
-    case IPVK_IndirectCallTarget:
-      return ValueData->IndirectCallSites;
-    case IPVK_MemOPSize:
-      return ValueData->MemOPSizes;
-    case IPVK_VTableTarget:
-      return ValueData->VTableTargets;
-    default:
-      llvm_unreachable("Unknown value kind!");
-    }
+    assert(IPVK_First <= ValueKind && ValueKind <= IPVK_Last &&
+           "Unknown value kind!");
+    return (*ValueData)[ValueKind - IPVK_First];
   }
 
   // Map indirect call target name hash to name string.

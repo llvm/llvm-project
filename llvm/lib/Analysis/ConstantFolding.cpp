@@ -564,16 +564,14 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
     Type *MapTy = Type::getIntNTy(C->getContext(),
                                   DL.getTypeSizeInBits(LoadTy).getFixedValue());
     if (Constant *Res = FoldReinterpretLoadFromConst(C, MapTy, Offset, DL)) {
-      if (Res->isNullValue() && !LoadTy->isX86_MMXTy() &&
-          !LoadTy->isX86_AMXTy())
+      if (Res->isNullValue() && !LoadTy->isX86_AMXTy())
         // Materializing a zero can be done trivially without a bitcast
         return Constant::getNullValue(LoadTy);
       Type *CastTy = LoadTy->isPtrOrPtrVectorTy() ? DL.getIntPtrType(LoadTy) : LoadTy;
       Res = FoldBitCast(Res, CastTy, DL);
       if (LoadTy->isPtrOrPtrVectorTy()) {
         // For vector of pointer, we needed to first convert to a vector of integer, then do vector inttoptr
-        if (Res->isNullValue() && !LoadTy->isX86_MMXTy() &&
-            !LoadTy->isX86_AMXTy())
+        if (Res->isNullValue() && !LoadTy->isX86_AMXTy())
           return Constant::getNullValue(LoadTy);
         if (DL.isNonIntegralPointerType(LoadTy->getScalarType()))
           // Be careful not to replace a load of an addrspace value with an inttoptr here
@@ -644,7 +642,7 @@ Constant *llvm::ReadByteArrayFromGlobal(const GlobalVariable *GV,
   if (!GV->isConstant() || !GV->hasDefinitiveInitializer())
     return nullptr;
 
-  const DataLayout &DL = GV->getParent()->getDataLayout();
+  const DataLayout &DL = GV->getDataLayout();
   Constant *Init = const_cast<Constant *>(GV->getInitializer());
   TypeSize InitSize = DL.getTypeAllocSize(Init->getType());
   if (InitSize < Offset)
@@ -764,7 +762,7 @@ Constant *llvm::ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty,
   // uniform.
   if (!DL.typeSizeEqualsStoreSize(C->getType()))
     return nullptr;
-  if (C->isNullValue() && !Ty->isX86_MMXTy() && !Ty->isX86_AMXTy())
+  if (C->isNullValue() && !Ty->isX86_AMXTy())
     return Constant::getNullValue(Ty);
   if (C->isAllOnesValue() &&
       (Ty->isIntOrIntVectorTy() || Ty->isFPOrFPVectorTy()))
@@ -2754,27 +2752,28 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
           ((Mask & fcPosInf) && Op1V.isPosInfinity());
         return ConstantInt::get(Ty, Result);
       }
+      case Intrinsic::powi: {
+        int Exp = static_cast<int>(Op2C->getSExtValue());
+        switch (Ty->getTypeID()) {
+        case Type::HalfTyID:
+        case Type::FloatTyID: {
+          APFloat Res(static_cast<float>(std::pow(Op1V.convertToFloat(), Exp)));
+          if (Ty->isHalfTy()) {
+            bool Unused;
+            Res.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven,
+                        &Unused);
+          }
+          return ConstantFP::get(Ty->getContext(), Res);
+        }
+        case Type::DoubleTyID:
+          return ConstantFP::get(Ty, std::pow(Op1V.convertToDouble(), Exp));
+        default:
+          return nullptr;
+        }
+      }
       default:
         break;
       }
-
-      if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
-        return nullptr;
-      if (IntrinsicID == Intrinsic::powi && Ty->isHalfTy())
-        return ConstantFP::get(
-            Ty->getContext(),
-            APFloat((float)std::pow((float)Op1V.convertToDouble(),
-                                    (int)Op2C->getZExtValue())));
-      if (IntrinsicID == Intrinsic::powi && Ty->isFloatTy())
-        return ConstantFP::get(
-            Ty->getContext(),
-            APFloat((float)std::pow((float)Op1V.convertToDouble(),
-                                    (int)Op2C->getZExtValue())));
-      if (IntrinsicID == Intrinsic::powi && Ty->isDoubleTy())
-        return ConstantFP::get(
-            Ty->getContext(),
-            APFloat((double)std::pow(Op1V.convertToDouble(),
-                                     (int)Op2C->getZExtValue())));
     }
     return nullptr;
   }
@@ -3485,15 +3484,15 @@ Constant *llvm::ConstantFoldCall(const CallBase *Call, Function *F,
   StringRef Name = F->getName();
   if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
     return ConstantFoldFixedVectorCall(
-        Name, IID, FVTy, Operands, F->getParent()->getDataLayout(), TLI, Call);
+        Name, IID, FVTy, Operands, F->getDataLayout(), TLI, Call);
 
   if (auto *SVTy = dyn_cast<ScalableVectorType>(Ty))
     return ConstantFoldScalableVectorCall(
-        Name, IID, SVTy, Operands, F->getParent()->getDataLayout(), TLI, Call);
+        Name, IID, SVTy, Operands, F->getDataLayout(), TLI, Call);
 
   if (auto *StTy = dyn_cast<StructType>(Ty))
     return ConstantFoldStructCall(Name, IID, StTy, Operands,
-                                  F->getParent()->getDataLayout(), TLI, Call);
+                                  F->getDataLayout(), TLI, Call);
 
   // TODO: If this is a library function, we already discovered that above,
   //       so we should pass the LibFunc, not the name (and it might be better

@@ -36,6 +36,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -5587,7 +5588,7 @@ MachineInstr *X86InstrInfo::optimizeLoadInstr(MachineInstr &MI,
   DefMI = MRI->getVRegDef(FoldAsLoadDefReg);
   assert(DefMI);
   bool SawStore = false;
-  if (!DefMI->isSafeToMove(nullptr, SawStore))
+  if (!DefMI->isSafeToMove(SawStore))
     return nullptr;
 
   // Collect information about virtual register operands of MI.
@@ -8832,6 +8833,11 @@ bool X86InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
       Opcode == X86::PLDTILECFGV)
     return true;
 
+  // Frame setup and destory can't be scheduled around.
+  if (MI.getFlag(MachineInstr::FrameSetup) ||
+      MI.getFlag(MachineInstr::FrameDestroy))
+    return true;
+
   return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
 }
 
@@ -10462,6 +10468,7 @@ enum MachineOutlinerClass { MachineOutlinerDefault, MachineOutlinerTailCall };
 
 std::optional<outliner::OutlinedFunction>
 X86InstrInfo::getOutliningCandidateInfo(
+    const MachineModuleInfo &MMI,
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
   unsigned SequenceSize = 0;
   for (auto &MI : RepeatedSequenceLocs[0]) {
@@ -10538,7 +10545,8 @@ bool X86InstrInfo::isFunctionSafeToOutlineFrom(
 }
 
 outliner::InstrType
-X86InstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
+X86InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                                   MachineBasicBlock::iterator &MIT,
                                    unsigned Flags) const {
   MachineInstr &MI = *MIT;
 

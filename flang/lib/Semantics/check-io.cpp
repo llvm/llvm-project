@@ -1034,11 +1034,16 @@ void IoChecker::CheckForDefinableVariable(
       if (auto whyNot{WhyNotDefinable(at, context_.FindScope(at),
               DefinabilityFlags{DefinabilityFlag::VectorSubscriptIsOk},
               *expr)}) {
-        const Symbol *base{GetFirstSymbol(*expr)};
-        context_
-            .Say(at, "%s variable '%s' is not definable"_err_en_US, s,
-                (base ? base->name() : at).ToString())
-            .Attach(std::move(*whyNot));
+        if (whyNot->IsFatal()) {
+          const Symbol *base{GetFirstSymbol(*expr)};
+          context_
+              .Say(at, "%s variable '%s' is not definable"_err_en_US, s,
+                  (base ? base->name() : at).ToString())
+              .Attach(
+                  std::move(whyNot->set_severity(parser::Severity::Because)));
+        } else {
+          context_.Say(std::move(*whyNot));
+        }
       }
     }
   }
@@ -1191,7 +1196,7 @@ void IoChecker::CheckNamelist(const Symbol &namelist, common::DefinedIo which,
               .Say(namelistLocation,
                   "NAMELIST input group must not contain undefinable item '%s'"_err_en_US,
                   object.name())
-              .Attach(std::move(*why));
+              .Attach(std::move(why->set_severity(parser::Severity::Because)));
           context_.SetError(namelist);
         }
       }
