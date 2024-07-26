@@ -148,6 +148,20 @@ jobs:
     if: github.repository == 'llvm/llvm-project'
     runs-on: ${{ inputs.runs-on }}
     steps:
+
+    - name: Checkout Actions
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ (github.event_name == 'pull_request' && github.sha) || 'main' }}
+        sparse-checkout: |
+          .github/workflows/
+        sparse-checkout-cone-mode: false
+        path: workflows
+
+    - name: Setup Stage
+      id: setup-stage
+      uses: ./workflows/.github/workflows/release-binaries-setup-stage
+
     - name: Checkout LLVM
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       with:
@@ -160,10 +174,6 @@ jobs:
         max-size: 2G
         key: sccache-${{ runner.os }}-${{ runner.arch }}-release
         variant: sccache
-
-    - name: Setup Stage
-      id: setup-stage
-      uses: ./.github/workflows/release-binaries-setup-stage
 
     - name: Build Stage 1 Clang
       id: build
@@ -184,7 +194,7 @@ jobs:
         ls -ltr ${{ steps.setup-stage.outputs.build-prefix }}/build
     
     - name: Save Stage
-      uses: ./.github/workflows/release-binaries-save-stage
+      uses: ./workflows/.github/workflows/release-binaries-save-stage
       with:
         build-prefix: ${{ steps.setup-stage.outputs.build-prefix }}
 
