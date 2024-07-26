@@ -156,7 +156,7 @@ foreach Index = 0-31 in {
                 DwarfRegNum<[!add(Index, 32), !add(Index, 32)]>;
 }
 
-// The FH and VFH registers have been marked as Artifical becauase there are no
+// The FH and VFH registers have been marked as Artifical because there are no
 // instructions on PowerPC that use those register classes. They only exist
 // in order to ensure that the super registers (V and VSL) are covered by their
 // subregisters and have correct subregister lane masks.
