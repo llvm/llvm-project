@@ -181,13 +181,13 @@ public:
                      std::unique_ptr<MCCodeEmitter> Emitter)
       : MCELFStreamer(Context, std::move(TAB), std::move(OW),
                       std::move(Emitter)),
-        MappingSymbolCounter(0), LastEMS(EMS_None) {}
+        LastEMS(EMS_None) {}
 
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override {
     // We have to keep track of the mapping symbol state of any sections we
     // use. Each one should start off as EMS_None, which is provided as the
     // default constructor by DenseMap::lookup.
-    LastMappingSymbols[getPreviousSection().first] = LastEMS;
+    LastMappingSymbols[getCurrentSection().first] = LastEMS;
     LastEMS = LastMappingSymbols.lookup(Section);
 
     MCELFStreamer::changeSection(Section, Subsection);
@@ -195,7 +195,6 @@ public:
 
   // Reset state between object emissions
   void reset() override {
-    MappingSymbolCounter = 0;
     MCELFStreamer::reset();
     LastMappingSymbols.clear();
     LastEMS = EMS_None;
@@ -271,15 +270,11 @@ private:
   }
 
   void emitMappingSymbol(StringRef Name) {
-    auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
-        Name + "." + Twine(MappingSymbolCounter++)));
+    auto *Symbol = cast<MCSymbolELF>(getContext().createLocalSymbol(Name));
     emitLabel(Symbol);
     Symbol->setType(ELF::STT_NOTYPE);
     Symbol->setBinding(ELF::STB_LOCAL);
-    Symbol->setExternal(false);
   }
-
-  int64_t MappingSymbolCounter;
 
   DenseMap<const MCSection *, ElfMappingSymbol> LastMappingSymbols;
   ElfMappingSymbol LastEMS;
@@ -332,8 +327,7 @@ void AArch64TargetELFStreamer::finish() {
 
 MCTargetStreamer *
 llvm::createAArch64AsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
-                                     MCInstPrinter *InstPrint,
-                                     bool isVerboseAsm) {
+                                     MCInstPrinter *InstPrint) {
   return new AArch64TargetAsmStreamer(S, OS);
 }
 

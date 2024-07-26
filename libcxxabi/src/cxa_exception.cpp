@@ -589,6 +589,11 @@ void __cxa_end_catch() {
     }
 }
 
+void __cxa_call_terminate(void* unwind_arg) throw() {
+  __cxa_begin_catch(unwind_arg);
+  std::terminate();
+}
+
 // Note:  exception_header may be masquerading as a __cxa_dependent_exception
 //        and that's ok.  exceptionType is there too.
 //        However watch out for foreign exceptions.  Return null for them.

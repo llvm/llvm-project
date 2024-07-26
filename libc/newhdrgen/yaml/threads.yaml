@@ -146,3 +146,16 @@ functions:
     return_type: int
     arguments:
       - type: tss_t
+  - name: tss_get
+    standards:
+      - stdc
+    return_type: void *
+    arguments:
+      - type: tss_t
+  - name: tss_set
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: tss_t
+      - type: void *

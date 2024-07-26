@@ -10,7 +10,7 @@ define <2 x bfloat> @struct_ptr_buffer_atomic_add_v2bf16_rtn__vgpr_val__sgpr_rsr
 ; GFX1200-NEXT:    s_wait_samplecnt 0x0
 ; GFX1200-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1200-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-NEXT:    buffer_atomic_pk_add_bf16 v0, v[1:2], s[0:3], s4 idxen offen th:TH_ATOMIC_RETURN
+; GFX1200-NEXT:    buffer_atomic_pk_add_bf16 v0, v[1:2], s[0:3], s6 idxen offen th:TH_ATOMIC_RETURN
 ; GFX1200-NEXT:    s_wait_loadcnt 0x0
 ; GFX1200-NEXT:    s_setpc_b64 s[30:31]
   %ret = call <2 x bfloat> @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.v2bf16(<2 x bfloat> %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
@@ -25,7 +25,7 @@ define void @struct_ptr_buffer_atomic_add_v2bf16_noret__vgpr_val__sgpr_rsrc__vgp
 ; GFX1200-NEXT:    s_wait_samplecnt 0x0
 ; GFX1200-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1200-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-NEXT:    buffer_atomic_pk_add_bf16 v0, v[1:2], s[0:3], s4 idxen offen
+; GFX1200-NEXT:    buffer_atomic_pk_add_bf16 v0, v[1:2], s[0:3], s6 idxen offen
 ; GFX1200-NEXT:    s_setpc_b64 s[30:31]
   %unused = call <2 x bfloat> @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.v2bf16(<2 x bfloat> %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void

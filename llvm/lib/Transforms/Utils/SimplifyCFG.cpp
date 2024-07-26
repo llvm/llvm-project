@@ -3476,7 +3476,8 @@ static bool FoldCondBranchOnValueKnownInPredecessor(BranchInst *BI,
 /// Given a BB that starts with the specified two-entry PHI node,
 /// see if we can eliminate it.
 static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
-                                DomTreeUpdater *DTU, const DataLayout &DL) {
+                                DomTreeUpdater *DTU, const DataLayout &DL,
+                                bool SpeculateUnpredictables) {
   // Ok, this is a two entry PHI node.  Check to see if this is a simple "if
   // statement", which has a very simple dominance structure.  Basically, we
   // are trying to find the condition that is being branched on, which
@@ -3508,7 +3509,8 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // jump to one specific 'then' block (if we have two of them).
   // It isn't beneficial to speculatively execute the code
   // from the block that we know is predictably not entered.
-  if (!DomBI->getMetadata(LLVMContext::MD_unpredictable)) {
+  bool IsUnpredictable = DomBI->getMetadata(LLVMContext::MD_unpredictable);
+  if (!IsUnpredictable) {
     uint64_t TWeight, FWeight;
     if (extractBranchWeights(*DomBI, TWeight, FWeight) &&
         (TWeight + FWeight) != 0) {
@@ -3551,6 +3553,8 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   InstructionCost Cost = 0;
   InstructionCost Budget =
       TwoEntryPHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic;
+  if (SpeculateUnpredictables && IsUnpredictable)
+    Budget += TTI.getBranchMispredictPenalty();
 
   bool Changed = false;
   for (BasicBlock::iterator II = BB->begin(); isa<PHINode>(II);) {
@@ -3620,8 +3624,9 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
              [](BasicBlock *IfBlock) { return IfBlock->hasAddressTaken(); }))
     return Changed;
 
-  LLVM_DEBUG(dbgs() << "FOUND IF CONDITION!  " << *IfCond
-                    << "  T: " << IfTrue->getName()
+  LLVM_DEBUG(dbgs() << "FOUND IF CONDITION!  " << *IfCond;
+             if (IsUnpredictable) dbgs() << " (unpredictable)";
+             dbgs() << "  T: " << IfTrue->getName()
                     << "  F: " << IfFalse->getName() << "\n");
 
   // If we can still promote the PHI nodes after this gauntlet of tests,
@@ -5339,8 +5344,7 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
   std::vector<DominatorTree::UpdateType> Updates;
 
   SmallSetVector<BasicBlock *, 8> Preds(pred_begin(BB), pred_end(BB));
-  for (unsigned i = 0, e = Preds.size(); i != e; ++i) {
-    auto *Predecessor = Preds[i];
+  for (BasicBlock *Predecessor : Preds) {
     Instruction *TI = Predecessor->getTerminator();
     IRBuilder<> Builder(TI);
     if (auto *BI = dyn_cast<BranchInst>(TI)) {
@@ -7361,6 +7365,95 @@ static BasicBlock *allPredecessorsComeFromSameSource(BasicBlock *BB) {
   return PredPred;
 }
 
+/// Fold the following pattern:
+/// bb0:
+///   br i1 %cond1, label %bb1, label %bb2
+/// bb1:
+///   br i1 %cond2, label %bb3, label %bb4
+/// bb2:
+///   br i1 %cond2, label %bb4, label %bb3
+/// bb3:
+///   ...
+/// bb4:
+///   ...
+/// into
+/// bb0:
+///   %cond = xor i1 %cond1, %cond2
+///   br i1 %cond, label %bb4, label %bb3
+/// bb3:
+///   ...
+/// bb4:
+///   ...
+/// NOTE: %cond2 always dominates the terminator of bb0.
+static bool mergeNestedCondBranch(BranchInst *BI, DomTreeUpdater *DTU) {
+  BasicBlock *BB = BI->getParent();
+  BasicBlock *BB1 = BI->getSuccessor(0);
+  BasicBlock *BB2 = BI->getSuccessor(1);
+  auto IsSimpleSuccessor = [BB](BasicBlock *Succ, BranchInst *&SuccBI) {
+    if (Succ == BB)
+      return false;
+    if (&Succ->front() != Succ->getTerminator())
+      return false;
+    SuccBI = dyn_cast<BranchInst>(Succ->getTerminator());
+    if (!SuccBI || !SuccBI->isConditional())
+      return false;
+    BasicBlock *Succ1 = SuccBI->getSuccessor(0);
+    BasicBlock *Succ2 = SuccBI->getSuccessor(1);
+    return Succ1 != Succ && Succ2 != Succ && Succ1 != BB && Succ2 != BB &&
+           !isa<PHINode>(Succ1->front()) && !isa<PHINode>(Succ2->front());
+  };
+  BranchInst *BB1BI, *BB2BI;
+  if (!IsSimpleSuccessor(BB1, BB1BI) || !IsSimpleSuccessor(BB2, BB2BI))
+    return false;
+
+  if (BB1BI->getCondition() != BB2BI->getCondition() ||
+      BB1BI->getSuccessor(0) != BB2BI->getSuccessor(1) ||
+      BB1BI->getSuccessor(1) != BB2BI->getSuccessor(0))
+    return false;
+
+  BasicBlock *BB3 = BB1BI->getSuccessor(0);
+  BasicBlock *BB4 = BB1BI->getSuccessor(1);
+  IRBuilder<> Builder(BI);
+  BI->setCondition(
+      Builder.CreateXor(BI->getCondition(), BB1BI->getCondition()));
+  BB1->removePredecessor(BB);
+  BI->setSuccessor(0, BB4);
+  BB2->removePredecessor(BB);
+  BI->setSuccessor(1, BB3);
+  if (DTU) {
+    SmallVector<DominatorTree::UpdateType, 4> Updates;
+    Updates.push_back({DominatorTree::Delete, BB, BB1});
+    Updates.push_back({DominatorTree::Insert, BB, BB4});
+    Updates.push_back({DominatorTree::Delete, BB, BB2});
+    Updates.push_back({DominatorTree::Insert, BB, BB3});
+
+    DTU->applyUpdates(Updates);
+  }
+  bool HasWeight = false;
+  uint64_t BBTWeight, BBFWeight;
+  if (extractBranchWeights(*BI, BBTWeight, BBFWeight))
+    HasWeight = true;
+  else
+    BBTWeight = BBFWeight = 1;
+  uint64_t BB1TWeight, BB1FWeight;
+  if (extractBranchWeights(*BB1BI, BB1TWeight, BB1FWeight))
+    HasWeight = true;
+  else
+    BB1TWeight = BB1FWeight = 1;
+  uint64_t BB2TWeight, BB2FWeight;
+  if (extractBranchWeights(*BB2BI, BB2TWeight, BB2FWeight))
+    HasWeight = true;
+  else
+    BB2TWeight = BB2FWeight = 1;
+  if (HasWeight) {
+    uint64_t Weights[2] = {BBTWeight * BB1FWeight + BBFWeight * BB2TWeight,
+                           BBTWeight * BB1TWeight + BBFWeight * BB2FWeight};
+    FitWeights(Weights);
+    setBranchWeights(BI, Weights[0], Weights[1], /*IsExpected=*/false);
+  }
+  return true;
+}
+
 bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   assert(
       !isa<ConstantInt>(BI->getCondition()) &&
@@ -7468,6 +7561,10 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
           if (mergeConditionalStores(PBI, BI, DTU, DL, TTI))
             return requestResimplify();
 
+  // Look for nested conditional branches.
+  if (mergeNestedCondBranch(BI, DTU))
+    return requestResimplify();
+
   return false;
 }
 
@@ -7481,11 +7578,31 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
     return false;
 
   if (C->isNullValue() || isa<UndefValue>(C)) {
-    // Only look at the first use, avoid hurting compile time with long uselists
-    auto *Use = cast<Instruction>(*I->user_begin());
+    // Only look at the first use we can handle, avoid hurting compile time with
+    // long uselists
+    auto FindUse = llvm::find_if(I->users(), [](auto *U) {
+      auto *Use = cast<Instruction>(U);
+      // Change this list when we want to add new instructions.
+      switch (Use->getOpcode()) {
+      default:
+        return false;
+      case Instruction::GetElementPtr:
+      case Instruction::Ret:
+      case Instruction::BitCast:
+      case Instruction::Load:
+      case Instruction::Store:
+      case Instruction::Call:
+      case Instruction::CallBr:
+      case Instruction::Invoke:
+        return true;
+      }
+    });
+    if (FindUse == I->user_end())
+      return false;
+    auto *Use = cast<Instruction>(*FindUse);
     // Bail out if Use is not in the same BB as I or Use == I or Use comes
-    // before I in the block. The latter two can be the case if Use is a PHI
-    // node.
+    // before I in the block. The latter two can be the case if Use is a
+    // PHI node.
     if (Use->getParent() != I->getParent() || Use == I || Use->comesBefore(I))
       return false;
 
@@ -7702,7 +7819,8 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
     // eliminate it, do so now.
     if (auto *PN = dyn_cast<PHINode>(BB->begin()))
       if (PN->getNumIncomingValues() == 2)
-        if (FoldTwoEntryPHINode(PN, TTI, DTU, DL))
+        if (FoldTwoEntryPHINode(PN, TTI, DTU, DL,
+                                Options.SpeculateUnpredictables))
           return true;
   }
 

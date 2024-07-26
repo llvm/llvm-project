@@ -1,10 +1,10 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+WavefrontSize32,-WavefrontSize64 %s 2>&1 | FileCheck %s --implicit-check-not=error: --strict-whitespace
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32 %s 2>&1 | FileCheck %s --implicit-check-not=error: --strict-whitespace
 
 //==============================================================================
 // operands are not valid for this GPU or mode
 
 image_atomic_add v252, v2, s[8:15]
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: missing dim operand
 // CHECK-NEXT:{{^}}image_atomic_add v252, v2, s[8:15]
 // CHECK-NEXT:{{^}}^
 

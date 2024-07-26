@@ -192,7 +192,7 @@ public:
     // forward and backward dependences qualify.  Disqualify loads that have
     // other unknown dependences.
 
-    SmallPtrSet<Instruction *, 4> LoadsWithUnknownDepedence;
+    SmallPtrSet<Instruction *, 4> LoadsWithUnknownDependence;
 
     for (const auto &Dep : *Deps) {
       Instruction *Source = Dep.getSource(DepChecker);
@@ -201,9 +201,9 @@ public:
       if (Dep.Type == MemoryDepChecker::Dependence::Unknown ||
           Dep.Type == MemoryDepChecker::Dependence::IndirectUnsafe) {
         if (isa<LoadInst>(Source))
-          LoadsWithUnknownDepedence.insert(Source);
+          LoadsWithUnknownDependence.insert(Source);
         if (isa<LoadInst>(Destination))
-          LoadsWithUnknownDepedence.insert(Destination);
+          LoadsWithUnknownDependence.insert(Destination);
         continue;
       }
 
@@ -231,9 +231,9 @@ public:
       Candidates.emplace_front(Load, Store);
     }
 
-    if (!LoadsWithUnknownDepedence.empty())
+    if (!LoadsWithUnknownDependence.empty())
       Candidates.remove_if([&](const StoreToLoadForwardingCandidate &C) {
-        return LoadsWithUnknownDepedence.count(C.Load);
+        return LoadsWithUnknownDependence.count(C.Load);
       });
 
     return Candidates;

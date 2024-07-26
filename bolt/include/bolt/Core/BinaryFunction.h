@@ -416,6 +416,9 @@ private:
   /// different parameters by every pass.
   mutable uint64_t Hash{0};
 
+  /// Function GUID assigned externally.
+  uint64_t GUID{0};
+
   /// For PLT functions it contains a symbol associated with a function
   /// reference. It is nullptr for non-PLT functions.
   const MCSymbol *PLTSymbol{nullptr};
@@ -834,10 +837,6 @@ public:
   /// Find the loops in the CFG of the function and store information about
   /// them.
   void calculateLoopInfo();
-
-  /// Calculate missed macro-fusion opportunities and update BinaryContext
-  /// stats.
-  void calculateMacroOpFusionStats();
 
   /// Returns if BinaryDominatorTree has been constructed for this function.
   bool hasDomTree() const { return BDT != nullptr; }
@@ -1794,11 +1793,6 @@ public:
     return ParentFragments.contains(&Other);
   }
 
-  /// Returns if this function is a parent of \p Other function.
-  bool isParentOf(const BinaryFunction &Other) const {
-    return Fragments.contains(&Other);
-  }
-
   /// Return the child fragment form parent function
   iterator_range<FragmentsSetTy::const_iterator> getFragments() const {
     return iterator_range<FragmentsSetTy::const_iterator>(Fragments.begin(),
@@ -1807,11 +1801,6 @@ public:
 
   /// Return the parent function for split function fragments.
   FragmentsSetTy *getParentFragments() { return &ParentFragments; }
-
-  /// Returns if this function is a parent or child of \p Other function.
-  bool isParentOrChildOf(const BinaryFunction &Other) const {
-    return isChildOf(Other) || isParentOf(Other);
-  }
 
   /// Set the profile data for the number of times the function was called.
   BinaryFunction &setExecutionCount(uint64_t Count) {
@@ -2259,6 +2248,11 @@ public:
 
   /// Returns the last computed hash value of the function.
   size_t getHash() const { return Hash; }
+
+  /// Returns the function GUID.
+  uint64_t getGUID() const { return GUID; }
+
+  void setGUID(uint64_t Id) { GUID = Id; }
 
   using OperandHashFuncTy =
       function_ref<typename std::string(const MCOperand &)>;

@@ -10,11 +10,12 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/error_or.h"
+#include "src/__support/macros/config.h"
 
 #include <fcntl.h>       // For open flags
 #include <sys/syscall.h> // For syscall numbers
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 ErrorOr<int> platform_opendir(const char *name) {
   int open_flags = O_RDONLY | O_DIRECTORY | O_CLOEXEC;
@@ -56,4 +57,4 @@ int platform_closedir(int fd) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

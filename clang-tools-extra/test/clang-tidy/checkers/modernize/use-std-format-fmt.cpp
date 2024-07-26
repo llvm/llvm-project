@@ -12,9 +12,9 @@
 
 namespace fmt
 {
-// Use const char * for the format since the real type is hard to mock up.
-template <typename... Args>
-std::string sprintf(const char *format, const Args&... args);
+template <typename S, typename... T,
+          typename Char = char>
+std::basic_string<Char> sprintf(const S& fmt, const T&... args);
 } // namespace fmt
 
 std::string fmt_sprintf_simple() {

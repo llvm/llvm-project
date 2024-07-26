@@ -360,23 +360,23 @@ BasicBlock *llvm::splitBBWithSuffix(IRBuilderBase &Builder, bool CreateBranch,
 // This function creates a fake integer value and a fake use for the integer
 // value. It returns the fake value created. This is useful in modeling the
 // extra arguments to the outlined functions.
-Value *createFakeIntVal(IRBuilder<> &Builder,
+Value *createFakeIntVal(IRBuilderBase &Builder,
                         OpenMPIRBuilder::InsertPointTy OuterAllocaIP,
-                        std::stack<Instruction *> &ToBeDeleted,
+                        llvm::SmallVectorImpl<Instruction *> &ToBeDeleted,
                         OpenMPIRBuilder::InsertPointTy InnerAllocaIP,
                         const Twine &Name = "", bool AsPtr = true) {
   Builder.restoreIP(OuterAllocaIP);
   Instruction *FakeVal;
   AllocaInst *FakeValAddr =
       Builder.CreateAlloca(Builder.getInt32Ty(), nullptr, Name + ".addr");
-  ToBeDeleted.push(FakeValAddr);
+  ToBeDeleted.push_back(FakeValAddr);
 
   if (AsPtr) {
     FakeVal = FakeValAddr;
   } else {
     FakeVal =
         Builder.CreateLoad(Builder.getInt32Ty(), FakeValAddr, Name + ".val");
-    ToBeDeleted.push(FakeVal);
+    ToBeDeleted.push_back(FakeVal);
   }
 
   // Generate a fake use of this value
@@ -389,7 +389,7 @@ Value *createFakeIntVal(IRBuilder<> &Builder,
     UseFakeVal =
         cast<BinaryOperator>(Builder.CreateAdd(FakeVal, Builder.getInt32(10)));
   }
-  ToBeDeleted.push(UseFakeVal);
+  ToBeDeleted.push_back(UseFakeVal);
   return FakeVal;
 }
 
@@ -1707,6 +1707,74 @@ void OpenMPIRBuilder::createTaskyield(const LocationDescription &Loc) {
   emitTaskyieldImpl(Loc);
 }
 
+// Processes the dependencies in Dependencies and does the following
+// - Allocates space on the stack of an array of DependInfo objects
+// - Populates each DependInfo object with relevant information of
+//   the corresponding dependence.
+// - All code is inserted in the entry block of the current function.
+static Value *emitTaskDependencies(
+    OpenMPIRBuilder &OMPBuilder,
+    SmallVectorImpl<OpenMPIRBuilder::DependData> &Dependencies) {
+  // Early return if we have no dependencies to process
+  if (Dependencies.empty())
+    return nullptr;
+
+  // Given a vector of DependData objects, in this function we create an
+  // array on the stack that holds kmp_dep_info objects corresponding
+  // to each dependency. This is then passed to the OpenMP runtime.
+  // For example, if there are 'n' dependencies then the following psedo
+  // code is generated. Assume the first dependence is on a variable 'a'
+  //
+  // \code{c}
+  // DepArray = alloc(n x sizeof(kmp_depend_info);
+  // idx = 0;
+  // DepArray[idx].base_addr = ptrtoint(&a);
+  // DepArray[idx].len = 8;
+  // DepArray[idx].flags = Dep.DepKind; /*(See OMPContants.h for DepKind)*/
+  // ++idx;
+  // DepArray[idx].base_addr = ...;
+  // \endcode
+
+  IRBuilderBase &Builder = OMPBuilder.Builder;
+  Type *DependInfo = OMPBuilder.DependInfo;
+  Module &M = OMPBuilder.M;
+
+  Value *DepArray = nullptr;
+  OpenMPIRBuilder::InsertPointTy OldIP = Builder.saveIP();
+  Builder.SetInsertPoint(
+      OldIP.getBlock()->getParent()->getEntryBlock().getTerminator());
+
+  Type *DepArrayTy = ArrayType::get(DependInfo, Dependencies.size());
+  DepArray = Builder.CreateAlloca(DepArrayTy, nullptr, ".dep.arr.addr");
+
+  for (const auto &[DepIdx, Dep] : enumerate(Dependencies)) {
+    Value *Base =
+        Builder.CreateConstInBoundsGEP2_64(DepArrayTy, DepArray, 0, DepIdx);
+    // Store the pointer to the variable
+    Value *Addr = Builder.CreateStructGEP(
+        DependInfo, Base,
+        static_cast<unsigned int>(RTLDependInfoFields::BaseAddr));
+    Value *DepValPtr = Builder.CreatePtrToInt(Dep.DepVal, Builder.getInt64Ty());
+    Builder.CreateStore(DepValPtr, Addr);
+    // Store the size of the variable
+    Value *Size = Builder.CreateStructGEP(
+        DependInfo, Base, static_cast<unsigned int>(RTLDependInfoFields::Len));
+    Builder.CreateStore(
+        Builder.getInt64(M.getDataLayout().getTypeStoreSize(Dep.DepValueType)),
+        Size);
+    // Store the dependency kind
+    Value *Flags = Builder.CreateStructGEP(
+        DependInfo, Base,
+        static_cast<unsigned int>(RTLDependInfoFields::Flags));
+    Builder.CreateStore(
+        ConstantInt::get(Builder.getInt8Ty(),
+                         static_cast<unsigned int>(Dep.DepKind)),
+        Flags);
+  }
+  Builder.restoreIP(OldIP);
+  return DepArray;
+}
+
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createTask(const LocationDescription &Loc,
                             InsertPointTy AllocaIP, BodyGenCallbackTy BodyGenCB,
@@ -1751,7 +1819,7 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
   OI.ExitBB = TaskExitBB;
 
   // Add the thread ID argument.
-  std::stack<Instruction *> ToBeDeleted;
+  SmallVector<Instruction *, 4> ToBeDeleted;
   OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
       Builder, AllocaIP, ToBeDeleted, TaskAllocaIP, "global.tid", false));
 
@@ -1948,10 +2016,8 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
           Shareds, [Shareds](Use &U) { return U.getUser() != Shareds; });
     }
 
-    while (!ToBeDeleted.empty()) {
-      ToBeDeleted.top()->eraseFromParent();
-      ToBeDeleted.pop();
-    }
+    llvm::for_each(llvm::reverse(ToBeDeleted),
+                   [](Instruction *I) { I->eraseFromParent(); });
   };
 
   addOutlineInfo(std::move(OI));
@@ -3360,11 +3426,6 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductionsGPU(
   else
     Config.setGridValue(getGridValue(T, ReductionFunc));
 
-  uint32_t SrcLocStrSize;
-  Constant *SrcLocStr = getOrCreateDefaultSrcLocStr(SrcLocStrSize);
-  Value *RTLoc =
-      getOrCreateIdent(SrcLocStr, SrcLocStrSize, omp::IdentFlag(0), 0);
-
   // Build res = __kmpc_reduce{_nowait}(<gtid>, <n>, sizeof(RedList),
   // RedList, shuffle_reduce_func, interwarp_copy_func);
   // or
@@ -3417,7 +3478,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductionsGPU(
         Builder.CreatePointerBitCastOrAddrSpaceCast(SarFunc, PtrTy);
     Value *WcFuncCast =
         Builder.CreatePointerBitCastOrAddrSpaceCast(WcFunc, PtrTy);
-    Value *Args[] = {RTLoc, ReductionDataSize, RL, SarFuncCast, WcFuncCast};
+    Value *Args[] = {SrcLocInfo, ReductionDataSize, RL, SarFuncCast,
+                     WcFuncCast};
     Function *Pv2Ptr = getOrCreateRuntimeFunctionPtr(
         RuntimeFunction::OMPRTL___kmpc_nvptx_parallel_reduce_nowait_v2);
     Res = Builder.CreateCall(Pv2Ptr, Args);
@@ -3440,7 +3502,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductionsGPU(
     Value *KernelTeamsReductionPtr = Builder.CreateCall(
         RedFixedBuferFn, {}, "_openmp_teams_reductions_buffer_$_$ptr");
 
-    Value *Args3[] = {RTLoc,
+    Value *Args3[] = {SrcLocInfo,
                       KernelTeamsReductionPtr,
                       Builder.getInt32(ReductionBufNum),
                       ReductionDataSize,
@@ -5947,7 +6009,17 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
   Constant *MayUseNestedParallelismVal = ConstantInt::getSigned(Int8, true);
   Constant *DebugIndentionLevelVal = ConstantInt::getSigned(Int16, 0);
 
-  Function *Kernel = Builder.GetInsertBlock()->getParent();
+  Function *DebugKernelWrapper = Builder.GetInsertBlock()->getParent();
+  Function *Kernel = DebugKernelWrapper;
+
+  // We need to strip the debug prefix to get the correct kernel name.
+  StringRef KernelName = Kernel->getName();
+  const std::string DebugPrefix = "_debug__";
+  if (KernelName.ends_with(DebugPrefix)) {
+    KernelName = KernelName.drop_back(DebugPrefix.length());
+    Kernel = M.getFunction(KernelName);
+    assert(Kernel && "Expected the real kernel to exist");
+  }
 
   // Manifest the launch configuration in the metadata matching the kernel
   // environment.
@@ -5968,12 +6040,6 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
   Constant *MaxTeams = ConstantInt::getSigned(Int32, MaxTeamsVal);
   Constant *ReductionDataSize = ConstantInt::getSigned(Int32, 0);
   Constant *ReductionBufferLength = ConstantInt::getSigned(Int32, 0);
-
-  // We need to strip the debug prefix to get the correct kernel name.
-  StringRef KernelName = Kernel->getName();
-  const std::string DebugPrefix = "_debug__";
-  if (KernelName.ends_with(DebugPrefix))
-    KernelName = KernelName.drop_back(DebugPrefix.length());
 
   Function *Fn = getOrCreateRuntimeFunctionPtr(
       omp::RuntimeFunction::OMPRTL___kmpc_target_init);
@@ -6027,7 +6093,7 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
           ? KernelEnvironmentGV
           : ConstantExpr::getAddrSpaceCast(KernelEnvironmentGV,
                                            KernelEnvironmentPtr);
-  Value *KernelLaunchEnvironment = Kernel->getArg(0);
+  Value *KernelLaunchEnvironment = DebugKernelWrapper->getArg(0);
   CallInst *ThreadKind =
       Builder.CreateCall(Fn, {KernelEnvironment, KernelLaunchEnvironment});
 
@@ -6302,8 +6368,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
                          CustomMapperCB);
 
     TargetDataRTArgs RTArgs;
-    emitOffloadingArraysArgument(Builder, RTArgs, Info,
-                                 !MapInfo->Names.empty());
+    emitOffloadingArraysArgument(Builder, RTArgs, Info);
 
     // Emit the number of elements in the offloading arrays.
     Value *PointerNum = Builder.getInt32(Info.NumberOfPtrs);
@@ -6356,8 +6421,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
   // Generate code for the closing of the data region.
   auto EndThenGen = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
     TargetDataRTArgs RTArgs;
-    emitOffloadingArraysArgument(Builder, RTArgs, Info, !MapInfo->Names.empty(),
-                                 /*ForEndCall=*/true);
+    Info.EmitDebug = !MapInfo->Names.empty();
+    emitOffloadingArraysArgument(Builder, RTArgs, Info, /*ForEndCall=*/true);
 
     // Emit the number of elements in the offloading arrays.
     Value *PointerNum = Builder.getInt32(Info.NumberOfPtrs);
@@ -6469,6 +6534,10 @@ FunctionCallee OpenMPIRBuilder::createDispatchFiniFunction(unsigned IVSize,
                                          : omp::OMPRTL___kmpc_dispatch_fini_8u);
 
   return getOrCreateRuntimeFunction(M, Name);
+}
+
+FunctionCallee OpenMPIRBuilder::createDispatchDeinitFunction() {
+  return getOrCreateRuntimeFunction(M, omp::OMPRTL___kmpc_dispatch_deinit);
 }
 
 static Function *createOutlinedFunction(
@@ -6613,6 +6682,91 @@ static Function *createOutlinedFunction(
   return Func;
 }
 
+/// Create an entry point for a target task with the following.
+/// It'll have the following signature
+/// void @.omp_target_task_proxy_func(i32 %thread.id, ptr %task)
+/// This function is called from emitTargetTask once the
+/// code to launch the target kernel has been outlined already.
+static Function *emitTargetTaskProxyFunction(OpenMPIRBuilder &OMPBuilder,
+                                             IRBuilderBase &Builder,
+                                             CallInst *StaleCI) {
+  Module &M = OMPBuilder.M;
+  // KernelLaunchFunction is the target launch function, i.e.
+  // the function that sets up kernel arguments and calls
+  // __tgt_target_kernel to launch the kernel on the device.
+  //
+  Function *KernelLaunchFunction = StaleCI->getCalledFunction();
+
+  // StaleCI is the CallInst which is the call to the outlined
+  // target kernel launch function. If there are values that the
+  // outlined function uses then these are aggregated into a structure
+  // which is passed as the second argument. If not, then there's
+  // only one argument, the threadID. So, StaleCI can be
+  //
+  // %structArg = alloca { ptr, ptr }, align 8
+  // %gep_ = getelementptr { ptr, ptr }, ptr %structArg, i32 0, i32 0
+  // store ptr %20, ptr %gep_, align 8
+  // %gep_8 = getelementptr { ptr, ptr }, ptr %structArg, i32 0, i32 1
+  // store ptr %21, ptr %gep_8, align 8
+  // call void @_QQmain..omp_par.1(i32 %global.tid.val6, ptr %structArg)
+  //
+  // OR
+  //
+  // call void @_QQmain..omp_par.1(i32 %global.tid.val6)
+  OpenMPIRBuilder::InsertPointTy IP(StaleCI->getParent(),
+                                    StaleCI->getIterator());
+  LLVMContext &Ctx = StaleCI->getParent()->getContext();
+  Type *ThreadIDTy = Type::getInt32Ty(Ctx);
+  Type *TaskPtrTy = OMPBuilder.TaskPtr;
+  Type *TaskTy = OMPBuilder.Task;
+  auto ProxyFnTy =
+      FunctionType::get(Builder.getVoidTy(), {ThreadIDTy, TaskPtrTy},
+                        /* isVarArg */ false);
+  auto ProxyFn = Function::Create(ProxyFnTy, GlobalValue::InternalLinkage,
+                                  ".omp_target_task_proxy_func",
+                                  Builder.GetInsertBlock()->getModule());
+  ProxyFn->getArg(0)->setName("thread.id");
+  ProxyFn->getArg(1)->setName("task");
+
+  BasicBlock *EntryBB =
+      BasicBlock::Create(Builder.getContext(), "entry", ProxyFn);
+  Builder.SetInsertPoint(EntryBB);
+
+  bool HasShareds = StaleCI->arg_size() > 1;
+  // TODO: This is a temporary assert to prove to ourselves that
+  // the outlined target launch function is always going to have
+  // atmost two arguments if there is any data shared between
+  // host and device.
+  assert((!HasShareds || (StaleCI->arg_size() == 2)) &&
+         "StaleCI with shareds should have exactly two arguments.");
+  if (HasShareds) {
+    auto *ArgStructAlloca = dyn_cast<AllocaInst>(StaleCI->getArgOperand(1));
+    assert(ArgStructAlloca &&
+           "Unable to find the alloca instruction corresponding to arguments "
+           "for extracted function");
+    auto *ArgStructType =
+        dyn_cast<StructType>(ArgStructAlloca->getAllocatedType());
+
+    AllocaInst *NewArgStructAlloca =
+        Builder.CreateAlloca(ArgStructType, nullptr, "structArg");
+    Value *TaskT = ProxyFn->getArg(1);
+    Value *ThreadId = ProxyFn->getArg(0);
+    Value *SharedsSize =
+        Builder.getInt64(M.getDataLayout().getTypeStoreSize(ArgStructType));
+
+    Value *Shareds = Builder.CreateStructGEP(TaskTy, TaskT, 0);
+    LoadInst *LoadShared =
+        Builder.CreateLoad(PointerType::getUnqual(Ctx), Shareds);
+
+    Builder.CreateMemCpy(
+        NewArgStructAlloca, NewArgStructAlloca->getAlign(), LoadShared,
+        LoadShared->getPointerAlignment(M.getDataLayout()), SharedsSize);
+
+    Builder.CreateCall(KernelLaunchFunction, {ThreadId, NewArgStructAlloca});
+  }
+  Builder.CreateRetVoid();
+  return ProxyFn;
+}
 static void emitTargetOutlinedFunction(
     OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
     TargetRegionEntryInfo &EntryInfo, Function *&OutlinedFn,
@@ -6630,25 +6784,302 @@ static void emitTargetOutlinedFunction(
   OMPBuilder.emitTargetRegionFunction(EntryInfo, GenerateOutlinedFunction, true,
                                       OutlinedFn, OutlinedFnID);
 }
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetTask(
+    Function *OutlinedFn, Value *OutlinedFnID,
+    EmitFallbackCallbackTy EmitTargetCallFallbackCB, TargetKernelArgs &Args,
+    Value *DeviceID, Value *RTLoc, OpenMPIRBuilder::InsertPointTy AllocaIP,
+    SmallVector<llvm::OpenMPIRBuilder::DependData> &Dependencies,
+    bool HasNoWait) {
 
-static void emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
-                           OpenMPIRBuilder::InsertPointTy AllocaIP,
-                           Function *OutlinedFn, Constant *OutlinedFnID,
-                           int32_t NumTeams, int32_t NumThreads,
-                           SmallVectorImpl<Value *> &Args,
-                           OpenMPIRBuilder::GenMapInfoCallbackTy GenMapInfoCB) {
+  // When we arrive at this function, the target region itself has been
+  // outlined into the function OutlinedFn.
+  // So at ths point, for
+  // --------------------------------------------------
+  //   void user_code_that_offloads(...) {
+  //     omp target depend(..) map(from:a) map(to:b, c)
+  //        a = b + c
+  //   }
+  //
+  // --------------------------------------------------
+  //
+  // we have
+  //
+  // --------------------------------------------------
+  //
+  //   void user_code_that_offloads(...) {
+  //     %.offload_baseptrs = alloca [3 x ptr], align 8
+  //     %.offload_ptrs = alloca [3 x ptr], align 8
+  //     %.offload_mappers = alloca [3 x ptr], align 8
+  //     ;; target region has been outlined and now we need to
+  //     ;; offload to it via a target task.
+  //   }
+  //   void outlined_device_function(ptr a, ptr b, ptr c) {
+  //     *a = *b + *c
+  //   }
+  //
+  // We have to now do the following
+  // (i)   Make an offloading call to outlined_device_function using the OpenMP
+  //       RTL. See 'kernel_launch_function' in the pseudo code below. This is
+  //       emitted by emitKernelLaunch
+  // (ii)  Create a task entry point function that calls kernel_launch_function
+  //       and is the entry point for the target task. See
+  //       '@.omp_target_task_proxy_func in the pseudocode below.
+  // (iii) Create a task with the task entry point created in (ii)
+  //
+  // That is we create the following
+  //
+  //   void user_code_that_offloads(...) {
+  //     %.offload_baseptrs = alloca [3 x ptr], align 8
+  //     %.offload_ptrs = alloca [3 x ptr], align 8
+  //     %.offload_mappers = alloca [3 x ptr], align 8
+  //
+  //     %structArg = alloca { ptr, ptr, ptr }, align 8
+  //     %strucArg[0] = %.offload_baseptrs
+  //     %strucArg[1] = %.offload_ptrs
+  //     %strucArg[2] = %.offload_mappers
+  //     proxy_target_task = @__kmpc_omp_task_alloc(...,
+  //                                               @.omp_target_task_proxy_func)
+  //     memcpy(proxy_target_task->shareds, %structArg, sizeof(structArg))
+  //     dependencies_array = ...
+  //     ;; if nowait not present
+  //     call @__kmpc_omp_wait_deps(..., dependencies_array)
+  //     call @__kmpc_omp_task_begin_if0(...)
+  //     call @ @.omp_target_task_proxy_func(i32 thread_id, ptr
+  //     %proxy_target_task) call @__kmpc_omp_task_complete_if0(...)
+  //   }
+  //
+  //   define internal void @.omp_target_task_proxy_func(i32 %thread.id,
+  //                                                     ptr %task) {
+  //       %structArg = alloca {ptr, ptr, ptr}
+  //       %shared_data = load (getelementptr %task, 0, 0)
+  //       mempcy(%structArg, %shared_data, sizeof(structArg))
+  //       kernel_launch_function(%thread.id, %structArg)
+  //   }
+  //
+  //   We need the proxy function because the signature of the task entry point
+  //   expected by kmpc_omp_task is always the same and will be different from
+  //   that of the kernel_launch function.
+  //
+  //   kernel_launch_function is generated by emitKernelLaunch and has the
+  //   always_inline attribute.
+  //   void kernel_launch_function(thread_id,
+  //                               structArg) alwaysinline {
+  //       %kernel_args = alloca %struct.__tgt_kernel_arguments, align 8
+  //       offload_baseptrs = load(getelementptr structArg, 0, 0)
+  //       offload_ptrs = load(getelementptr structArg, 0, 1)
+  //       offload_mappers = load(getelementptr structArg, 0, 2)
+  //       ; setup kernel_args using offload_baseptrs, offload_ptrs and
+  //       ; offload_mappers
+  //       call i32 @__tgt_target_kernel(...,
+  //                                     outlined_device_function,
+  //                                     ptr %kernel_args)
+  //   }
+  //   void outlined_device_function(ptr a, ptr b, ptr c) {
+  //      *a = *b + *c
+  //   }
+  //
+  BasicBlock *TargetTaskBodyBB =
+      splitBB(Builder, /*CreateBranch=*/true, "target.task.body");
+  BasicBlock *TargetTaskAllocaBB =
+      splitBB(Builder, /*CreateBranch=*/true, "target.task.alloca");
+
+  InsertPointTy TargetTaskAllocaIP(TargetTaskAllocaBB,
+                                   TargetTaskAllocaBB->begin());
+  InsertPointTy TargetTaskBodyIP(TargetTaskBodyBB, TargetTaskBodyBB->begin());
+
+  OutlineInfo OI;
+  OI.EntryBB = TargetTaskAllocaBB;
+  OI.OuterAllocaBB = AllocaIP.getBlock();
+
+  // Add the thread ID argument.
+  SmallVector<Instruction *, 4> ToBeDeleted;
+  OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
+      Builder, AllocaIP, ToBeDeleted, TargetTaskAllocaIP, "global.tid", false));
+
+  Builder.restoreIP(TargetTaskBodyIP);
+
+  // emitKernelLaunch makes the necessary runtime call to offload the kernel.
+  // We then outline all that code into a separate function
+  // ('kernel_launch_function' in the pseudo code above). This function is then
+  // called by the target task proxy function (see
+  // '@.omp_target_task_proxy_func' in the pseudo code above)
+  // "@.omp_target_task_proxy_func' is generated by emitTargetTaskProxyFunction
+  Builder.restoreIP(emitKernelLaunch(Builder, OutlinedFn, OutlinedFnID,
+                                     EmitTargetCallFallbackCB, Args, DeviceID,
+                                     RTLoc, TargetTaskAllocaIP));
+
+  OI.ExitBB = Builder.saveIP().getBlock();
+  OI.PostOutlineCB = [this, ToBeDeleted, Dependencies,
+                      HasNoWait](Function &OutlinedFn) mutable {
+    assert(OutlinedFn.getNumUses() == 1 &&
+           "there must be a single user for the outlined function");
+
+    CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
+    bool HasShareds = StaleCI->arg_size() > 1;
+
+    Function *ProxyFn = emitTargetTaskProxyFunction(*this, Builder, StaleCI);
+
+    LLVM_DEBUG(dbgs() << "Proxy task entry function created: " << *ProxyFn
+                      << "\n");
+
+    Builder.SetInsertPoint(StaleCI);
+
+    // Gather the arguments for emitting the runtime call.
+    uint32_t SrcLocStrSize;
+    Constant *SrcLocStr =
+        getOrCreateSrcLocStr(LocationDescription(Builder), SrcLocStrSize);
+    Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+
+    // @__kmpc_omp_task_alloc
+    Function *TaskAllocFn =
+        getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_alloc);
+
+    // Arguments - `loc_ref` (Ident) and `gtid` (ThreadID)
+    // call.
+    Value *ThreadID = getOrCreateThreadID(Ident);
+
+    // Argument - `sizeof_kmp_task_t` (TaskSize)
+    // Tasksize refers to the size in bytes of kmp_task_t data structure
+    // including private vars accessed in task.
+    // TODO: add kmp_task_t_with_privates (privates)
+    Value *TaskSize =
+        Builder.getInt64(M.getDataLayout().getTypeStoreSize(Task));
+
+    // Argument - `sizeof_shareds` (SharedsSize)
+    // SharedsSize refers to the shareds array size in the kmp_task_t data
+    // structure.
+    Value *SharedsSize = Builder.getInt64(0);
+    if (HasShareds) {
+      auto *ArgStructAlloca = dyn_cast<AllocaInst>(StaleCI->getArgOperand(1));
+      assert(ArgStructAlloca &&
+             "Unable to find the alloca instruction corresponding to arguments "
+             "for extracted function");
+      auto *ArgStructType =
+          dyn_cast<StructType>(ArgStructAlloca->getAllocatedType());
+      assert(ArgStructType && "Unable to find struct type corresponding to "
+                              "arguments for extracted function");
+      SharedsSize =
+          Builder.getInt64(M.getDataLayout().getTypeStoreSize(ArgStructType));
+    }
+
+    // Argument - `flags`
+    // Task is tied iff (Flags & 1) == 1.
+    // Task is untied iff (Flags & 1) == 0.
+    // Task is final iff (Flags & 2) == 2.
+    // Task is not final iff (Flags & 2) == 0.
+    // A target task is not final and is untied.
+    Value *Flags = Builder.getInt32(0);
+
+    // Emit the @__kmpc_omp_task_alloc runtime call
+    // The runtime call returns a pointer to an area where the task captured
+    // variables must be copied before the task is run (TaskData)
+    CallInst *TaskData = Builder.CreateCall(
+        TaskAllocFn, {/*loc_ref=*/Ident, /*gtid=*/ThreadID, /*flags=*/Flags,
+                      /*sizeof_task=*/TaskSize, /*sizeof_shared=*/SharedsSize,
+                      /*task_func=*/ProxyFn});
+
+    if (HasShareds) {
+      Value *Shareds = StaleCI->getArgOperand(1);
+      Align Alignment = TaskData->getPointerAlignment(M.getDataLayout());
+      Value *TaskShareds = Builder.CreateLoad(VoidPtr, TaskData);
+      Builder.CreateMemCpy(TaskShareds, Alignment, Shareds, Alignment,
+                           SharedsSize);
+    }
+
+    Value *DepArray = emitTaskDependencies(*this, Dependencies);
+
+    // ---------------------------------------------------------------
+    // V5.2 13.8 target construct
+    // If the nowait clause is present, execution of the target task
+    // may be deferred. If the nowait clause is not present, the target task is
+    // an included task.
+    // ---------------------------------------------------------------
+    // The above means that the lack of a nowait on the target construct
+    // translates to '#pragma omp task if(0)'
+    if (!HasNoWait) {
+      if (DepArray) {
+        Function *TaskWaitFn =
+            getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_wait_deps);
+        Builder.CreateCall(
+            TaskWaitFn,
+            {/*loc_ref=*/Ident, /*gtid=*/ThreadID,
+             /*ndeps=*/Builder.getInt32(Dependencies.size()),
+             /*dep_list=*/DepArray,
+             /*ndeps_noalias=*/ConstantInt::get(Builder.getInt32Ty(), 0),
+             /*noalias_dep_list=*/
+             ConstantPointerNull::get(PointerType::getUnqual(M.getContext()))});
+      }
+      // Included task.
+      Function *TaskBeginFn =
+          getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_begin_if0);
+      Function *TaskCompleteFn =
+          getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_complete_if0);
+      Builder.CreateCall(TaskBeginFn, {Ident, ThreadID, TaskData});
+      CallInst *CI = nullptr;
+      if (HasShareds)
+        CI = Builder.CreateCall(ProxyFn, {ThreadID, TaskData});
+      else
+        CI = Builder.CreateCall(ProxyFn, {ThreadID});
+      CI->setDebugLoc(StaleCI->getDebugLoc());
+      Builder.CreateCall(TaskCompleteFn, {Ident, ThreadID, TaskData});
+    } else if (DepArray) {
+      // HasNoWait - meaning the task may be deferred. Call
+      // __kmpc_omp_task_with_deps if there are dependencies,
+      // else call __kmpc_omp_task
+      Function *TaskFn =
+          getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_with_deps);
+      Builder.CreateCall(
+          TaskFn,
+          {Ident, ThreadID, TaskData, Builder.getInt32(Dependencies.size()),
+           DepArray, ConstantInt::get(Builder.getInt32Ty(), 0),
+           ConstantPointerNull::get(PointerType::getUnqual(M.getContext()))});
+    } else {
+      // Emit the @__kmpc_omp_task runtime call to spawn the task
+      Function *TaskFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task);
+      Builder.CreateCall(TaskFn, {Ident, ThreadID, TaskData});
+    }
+
+    StaleCI->eraseFromParent();
+    llvm::for_each(llvm::reverse(ToBeDeleted),
+                   [](Instruction *I) { I->eraseFromParent(); });
+  };
+  addOutlineInfo(std::move(OI));
+
+  LLVM_DEBUG(dbgs() << "Insert block after emitKernelLaunch = \n"
+                    << *(Builder.GetInsertBlock()) << "\n");
+  LLVM_DEBUG(dbgs() << "Module after emitKernelLaunch = \n"
+                    << *(Builder.GetInsertBlock()->getParent()->getParent())
+                    << "\n");
+  return Builder.saveIP();
+}
+void OpenMPIRBuilder::emitOffloadingArraysAndArgs(
+    InsertPointTy AllocaIP, InsertPointTy CodeGenIP, TargetDataInfo &Info,
+    TargetDataRTArgs &RTArgs, MapInfosTy &CombinedInfo, bool IsNonContiguous,
+    bool ForEndCall, function_ref<void(unsigned int, Value *)> DeviceAddrCB,
+    function_ref<Value *(unsigned int)> CustomMapperCB) {
+  emitOffloadingArrays(AllocaIP, CodeGenIP, CombinedInfo, Info, IsNonContiguous,
+                       DeviceAddrCB, CustomMapperCB);
+  emitOffloadingArraysArgument(Builder, RTArgs, Info, ForEndCall);
+}
+
+static void emitTargetCall(
+    OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
+    OpenMPIRBuilder::InsertPointTy AllocaIP, Function *OutlinedFn,
+    Constant *OutlinedFnID, int32_t NumTeams, int32_t NumThreads,
+    SmallVectorImpl<Value *> &Args,
+    OpenMPIRBuilder::GenMapInfoCallbackTy GenMapInfoCB,
+    SmallVector<llvm::OpenMPIRBuilder::DependData> Dependencies = {}) {
 
   OpenMPIRBuilder::TargetDataInfo Info(
       /*RequiresDevicePointerInfo=*/false,
       /*SeparateBeginEndCalls=*/true);
 
   OpenMPIRBuilder::MapInfosTy &MapInfo = GenMapInfoCB(Builder.saveIP());
-  OMPBuilder.emitOffloadingArrays(AllocaIP, Builder.saveIP(), MapInfo, Info,
-                                  /*IsNonContiguous=*/true);
-
   OpenMPIRBuilder::TargetDataRTArgs RTArgs;
-  OMPBuilder.emitOffloadingArraysArgument(Builder, RTArgs, Info,
-                                          !MapInfo.Names.empty());
+  OMPBuilder.emitOffloadingArraysAndArgs(AllocaIP, Builder.saveIP(), Info,
+                                         RTArgs, MapInfo,
+                                         /*IsNonContiguous=*/true,
+                                         /*ForEndCall=*/false);
 
   //  emitKernelLaunch
   auto &&EmitTargetCallFallbackCB =
@@ -6658,7 +7089,7 @@ static void emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
     return Builder.saveIP();
   };
 
-  unsigned NumTargetItems = MapInfo.BasePointers.size();
+  unsigned NumTargetItems = Info.NumberOfPtrs;
   // TODO: Use correct device ID
   Value *DeviceID = Builder.getInt64(OMP_DEVICEID_UNDEF);
   Value *NumTeamsVal = Builder.getInt32(NumTeams);
@@ -6673,23 +7104,34 @@ static void emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
   Value *DynCGGroupMem = Builder.getInt32(0);
 
   bool HasNoWait = false;
+  bool HasDependencies = Dependencies.size() > 0;
+  bool RequiresOuterTargetTask = HasNoWait || HasDependencies;
 
   OpenMPIRBuilder::TargetKernelArgs KArgs(NumTargetItems, RTArgs, NumIterations,
                                           NumTeamsVal, NumThreadsVal,
                                           DynCGGroupMem, HasNoWait);
 
-  Builder.restoreIP(OMPBuilder.emitKernelLaunch(
-      Builder, OutlinedFn, OutlinedFnID, EmitTargetCallFallbackCB, KArgs,
-      DeviceID, RTLoc, AllocaIP));
+  // The presence of certain clauses on the target directive require the
+  // explicit generation of the target task.
+  if (RequiresOuterTargetTask) {
+    Builder.restoreIP(OMPBuilder.emitTargetTask(
+        OutlinedFn, OutlinedFnID, EmitTargetCallFallbackCB, KArgs, DeviceID,
+        RTLoc, AllocaIP, Dependencies, HasNoWait));
+  } else {
+    Builder.restoreIP(OMPBuilder.emitKernelLaunch(
+        Builder, OutlinedFn, OutlinedFnID, EmitTargetCallFallbackCB, KArgs,
+        DeviceID, RTLoc, AllocaIP));
+  }
 }
-
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTarget(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     InsertPointTy CodeGenIP, TargetRegionEntryInfo &EntryInfo, int32_t NumTeams,
     int32_t NumThreads, SmallVectorImpl<Value *> &Args,
     GenMapInfoCallbackTy GenMapInfoCB,
     OpenMPIRBuilder::TargetBodyGenCallbackTy CBFunc,
-    OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB) {
+    OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
+    SmallVector<DependData> Dependencies) {
+
   if (!updateToLocation(Loc))
     return InsertPointTy();
 
@@ -6697,12 +7139,18 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTarget(
 
   Function *OutlinedFn;
   Constant *OutlinedFnID;
+  // The target region is outlined into its own function. The LLVM IR for
+  // the target region itself is generated using the callbacks CBFunc
+  // and ArgAccessorFuncCB
   emitTargetOutlinedFunction(*this, Builder, EntryInfo, OutlinedFn,
                              OutlinedFnID, Args, CBFunc, ArgAccessorFuncCB);
+
+  // If we are not on the target device, then we need to generate code
+  // to make a remote call (offload) to the previously outlined function
+  // that represents the target region. Do that now.
   if (!Config.isTargetDevice())
     emitTargetCall(*this, Builder, AllocaIP, OutlinedFn, OutlinedFnID, NumTeams,
-                   NumThreads, Args, GenMapInfoCB);
-
+                   NumThreads, Args, GenMapInfoCB, Dependencies);
   return Builder.saveIP();
 }
 
@@ -6835,7 +7283,6 @@ void OpenMPIRBuilder::emitMapperCall(const LocationDescription &Loc,
 void OpenMPIRBuilder::emitOffloadingArraysArgument(IRBuilderBase &Builder,
                                                    TargetDataRTArgs &RTArgs,
                                                    TargetDataInfo &Info,
-                                                   bool EmitDebug,
                                                    bool ForEndCall) {
   assert((!ForEndCall || Info.separateBeginEndCalls()) &&
          "expected region end call to runtime only when end call is separate");
@@ -6875,7 +7322,7 @@ void OpenMPIRBuilder::emitOffloadingArraysArgument(IRBuilderBase &Builder,
 
   // Only emit the mapper information arrays if debug information is
   // requested.
-  if (!EmitDebug)
+  if (!Info.EmitDebug)
     RTArgs.MapNamesArray = ConstantPointerNull::get(VoidPtrPtrTy);
   else
     RTArgs.MapNamesArray = Builder.CreateConstInBoundsGEP2_32(
@@ -7064,9 +7511,11 @@ void OpenMPIRBuilder::emitOffloadingArrays(
     auto *MapNamesArrayGbl =
         createOffloadMapnames(CombinedInfo.Names, MapnamesName);
     Info.RTArgs.MapNamesArray = MapNamesArrayGbl;
+    Info.EmitDebug = true;
   } else {
     Info.RTArgs.MapNamesArray =
         Constant::getNullValue(PointerType::getUnqual(Builder.getContext()));
+    Info.EmitDebug = false;
   }
 
   // If there's a present map type modifier, it must not be applied to the end
@@ -7823,7 +8272,7 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
   OI.OuterAllocaBB = &OuterAllocaBB;
 
   // Insert fake values for global tid and bound tid.
-  std::stack<Instruction *> ToBeDeleted;
+  SmallVector<Instruction *, 8> ToBeDeleted;
   InsertPointTy OuterAllocaIP(&OuterAllocaBB, OuterAllocaBB.begin());
   OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
       Builder, OuterAllocaIP, ToBeDeleted, AllocaIP, "gid", true));
@@ -7838,7 +8287,7 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
     assert(OutlinedFn.getNumUses() == 1 &&
            "there must be a single user for the outlined function");
     CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
-    ToBeDeleted.push(StaleCI);
+    ToBeDeleted.push_back(StaleCI);
 
     assert((OutlinedFn.arg_size() == 2 || OutlinedFn.arg_size() == 3) &&
            "Outlined function must have two or three arguments only");
@@ -7862,10 +8311,9 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
                            omp::RuntimeFunction::OMPRTL___kmpc_fork_teams),
                        Args);
 
-    while (!ToBeDeleted.empty()) {
-      ToBeDeleted.top()->eraseFromParent();
-      ToBeDeleted.pop();
-    }
+    llvm::for_each(llvm::reverse(ToBeDeleted),
+                   [](Instruction *I) { I->eraseFromParent(); });
+
   };
 
   if (!Config.isTargetDevice())

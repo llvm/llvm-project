@@ -20,7 +20,6 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -277,7 +276,7 @@ bool memref::StoreOp::canRewire(const DestructurableMemorySlot &slot,
     return false;
   Attribute index = getAttributeIndexFromIndexOperands(
       getContext(), getIndices(), getMemRefType());
-  if (!index || !slot.elementPtrs.contains(index))
+  if (!index || !slot.subelementTypes.contains(index))
     return false;
   usedIndices.insert(index);
   return true;

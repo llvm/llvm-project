@@ -76,3 +76,39 @@ TEST(AffineExprTest, constantFolding) {
       getAffineBinaryOpExpr(AffineExprKind::FloorDiv, cmin, cn1);
   ASSERT_EQ(cminfloordivcn1.getKind(), AffineExprKind::FloorDiv);
 }
+
+TEST(AffineExprTest, divisionSimplification) {
+  MLIRContext ctx;
+  OpBuilder b(&ctx);
+  auto cn6 = b.getAffineConstantExpr(-6);
+  auto c6 = b.getAffineConstantExpr(6);
+  auto d0 = b.getAffineDimExpr(0);
+  auto d1 = b.getAffineDimExpr(1);
+
+  ASSERT_EQ(c6.floorDiv(-1), cn6);
+  ASSERT_EQ((d0 * 6).floorDiv(2), d0 * 3);
+  ASSERT_EQ((d0 * 6).floorDiv(4).getKind(), AffineExprKind::FloorDiv);
+  ASSERT_EQ((d0 * 6).floorDiv(-2), d0 * -3);
+  ASSERT_EQ((d0 * 6 + d1).floorDiv(2), d0 * 3 + d1.floorDiv(2));
+  ASSERT_EQ((d0 * 6 + d1).floorDiv(-2), d0 * -3 + d1.floorDiv(-2));
+  ASSERT_EQ((d0 * 6 + d1).floorDiv(4).getKind(), AffineExprKind::FloorDiv);
+
+  ASSERT_EQ(c6.ceilDiv(-1), cn6);
+  ASSERT_EQ((d0 * 6).ceilDiv(2), d0 * 3);
+  ASSERT_EQ((d0 * 6).ceilDiv(4).getKind(), AffineExprKind::CeilDiv);
+  ASSERT_EQ((d0 * 6).ceilDiv(-2), d0 * -3);
+}
+
+TEST(AffineExprTest, modSimplificationRegression) {
+  MLIRContext ctx;
+  OpBuilder b(&ctx);
+  auto d0 = b.getAffineDimExpr(0);
+  auto sum = d0 + d0.floorDiv(3).floorDiv(-3);
+  ASSERT_EQ(sum.getKind(), AffineExprKind::Add);
+}
+
+TEST(AffineExprTest, divisorOfNegativeFloorDiv) {
+  MLIRContext ctx;
+  OpBuilder b(&ctx);
+  ASSERT_EQ(b.getAffineDimExpr(0).floorDiv(-1).getLargestKnownDivisor(), 1);
+}

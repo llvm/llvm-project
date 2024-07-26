@@ -196,10 +196,43 @@ static void validateGroupWaitEventsPtr(const SPIRVSubtarget &STI,
   if (!ElemType || ElemType->getOpcode() == SPIRV::OpTypeEvent)
     return;
   // Insert a bitcast before the instruction to keep SPIR-V code valid.
-  LLVMContext &Context = MF->getMMI().getModule()->getContext();
+  LLVMContext &Context = MF->getFunction().getContext();
   SPIRVType *NewPtrType =
       createNewPtrType(GR, I, OpType, false, true, nullptr,
                        TargetExtType::get(Context, "spirv.Event"));
+  doInsertBitcast(STI, MRI, GR, I, OpReg, OpIdx, NewPtrType);
+}
+
+static void validateGroupAsyncCopyPtr(const SPIRVSubtarget &STI,
+                                      MachineRegisterInfo *MRI,
+                                      SPIRVGlobalRegistry &GR, MachineInstr &I,
+                                      unsigned OpIdx) {
+  MachineFunction *MF = I.getParent()->getParent();
+  Register OpReg = I.getOperand(OpIdx).getReg();
+  Register OpTypeReg = getTypeReg(MRI, OpReg);
+  SPIRVType *OpType = GR.getSPIRVTypeForVReg(OpTypeReg, MF);
+  if (!OpType || OpType->getOpcode() != SPIRV::OpTypePointer)
+    return;
+  SPIRVType *ElemType = GR.getSPIRVTypeForVReg(OpType->getOperand(2).getReg());
+  if (!ElemType || ElemType->getOpcode() != SPIRV::OpTypeStruct ||
+      ElemType->getNumOperands() != 2)
+    return;
+  // It's a structure-wrapper around another type with a single member field.
+  SPIRVType *MemberType =
+      GR.getSPIRVTypeForVReg(ElemType->getOperand(1).getReg());
+  if (!MemberType)
+    return;
+  unsigned MemberTypeOp = MemberType->getOpcode();
+  if (MemberTypeOp != SPIRV::OpTypeVector && MemberTypeOp != SPIRV::OpTypeInt &&
+      MemberTypeOp != SPIRV::OpTypeFloat && MemberTypeOp != SPIRV::OpTypeBool)
+    return;
+  // It's a structure-wrapper around a valid type. Insert a bitcast before the
+  // instruction to keep SPIR-V code valid.
+  SPIRV::StorageClass::StorageClass SC =
+      static_cast<SPIRV::StorageClass::StorageClass>(
+          OpType->getOperand(1).getImm());
+  MachineIRBuilder MIB(I);
+  SPIRVType *NewPtrType = GR.getOrCreateSPIRVPointerType(MemberType, MIB, SC);
   doInsertBitcast(STI, MRI, GR, I, OpReg, OpIdx, NewPtrType);
 }
 
@@ -379,6 +412,10 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
         if (GR.isScalarOrVectorOfType(MI.getOperand(1).getReg(),
                                       SPIRV::OpTypeBool))
           MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalNotEqual));
+        break;
+      case SPIRV::OpGroupAsyncCopy:
+        validateGroupAsyncCopyPtr(STI, MRI, GR, MI, 3);
+        validateGroupAsyncCopyPtr(STI, MRI, GR, MI, 4);
         break;
       case SPIRV::OpGroupWaitEvents:
         // OpGroupWaitEvents ..., ..., <pointer to OpTypeEvent>
