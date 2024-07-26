@@ -4110,17 +4110,25 @@ bool AMDGPUDAGToDAGISel::SelectWMMAModsF32NegAbs(SDValue In, SDValue &Src,
 }
 
 bool AMDGPUDAGToDAGISel::SelectWMMAVISrc(SDValue In, SDValue &Src) const {
+  bool OnlyZeroAllowed = Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13;
+
   if (auto *BV = dyn_cast<BuildVectorSDNode>(In)) {
     BitVector UndefElements;
     if (SDValue Splat = BV->getSplatValue(&UndefElements))
       if (isInlineImmediate(Splat.getNode())) {
         if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(Splat)) {
           unsigned Imm = C->getAPIntValue().getSExtValue();
+          if (OnlyZeroAllowed && Imm != 0)
+            return false;
+
           Src = CurDAG->getTargetConstant(Imm, SDLoc(In), MVT::i32);
           return true;
         }
         if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Splat)) {
           unsigned Imm = C->getValueAPF().bitcastToAPInt().getSExtValue();
+          if (OnlyZeroAllowed && Imm != 0)
+            return false;
+
           Src = CurDAG->getTargetConstant(Imm, SDLoc(In), MVT::i32);
           return true;
         }
@@ -4143,21 +4151,23 @@ bool AMDGPUDAGToDAGISel::SelectWMMAVISrc(SDValue In, SDValue &Src) const {
             RawValue = C->getAPIntValue();
 
           if (RawValue.has_value()) {
+            APInt Val = RawValue.value();
+            if (OnlyZeroAllowed && !Val.isZero())
+              return false;
+
             EVT VT = In.getValueType().getScalarType();
             if (VT.getSimpleVT() == MVT::f16 || VT.getSimpleVT() == MVT::bf16) {
               APFloat FloatVal(VT.getSimpleVT() == MVT::f16
                                    ? APFloatBase::IEEEhalf()
                                    : APFloatBase::BFloat(),
-                               RawValue.value());
+                               Val);
               if (TII->isInlineConstant(FloatVal)) {
-                Src = CurDAG->getTargetConstant(RawValue.value(), SDLoc(In),
-                                                MVT::i16);
+                Src = CurDAG->getTargetConstant(Val, SDLoc(In), MVT::i16);
                 return true;
               }
             } else if (VT.getSimpleVT() == MVT::i16) {
-              if (TII->isInlineConstant(RawValue.value())) {
-                Src = CurDAG->getTargetConstant(RawValue.value(), SDLoc(In),
-                                                MVT::i16);
+              if (TII->isInlineConstant(Val)) {
+                Src = CurDAG->getTargetConstant(Val, SDLoc(In), MVT::i16);
                 return true;
               }
             } else
@@ -4184,6 +4194,9 @@ bool AMDGPUDAGToDAGISel::SelectWMMAVISrc(SDValue In, SDValue &Src) const {
       } else if (Imm64I != Imm64)
         return false;
     } // end for
+
+    if (OnlyZeroAllowed && Imm64 != 0)
+      return false;
 
     Src = CurDAG->getTargetConstant(Imm64, SDLoc(In), MVT::i64);
     return true;
