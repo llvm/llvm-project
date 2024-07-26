@@ -146,7 +146,7 @@
 "`3610 <https://wg21.link/LWG3610>`__","``iota_view::size`` sometimes rejects integer-class types","February 2022","","","|ranges|"
 "`3612 <https://wg21.link/LWG3612>`__","Inconsistent pointer alignment in ``std::format`` ","February 2022","|Complete|","14.0","|format|"
 "`3616 <https://wg21.link/LWG3616>`__","LWG 3498 seems to miss the non-member ``swap`` for ``basic_syncbuf`` ","February 2022","",""
-"`3618 <https://wg21.link/LWG3618>`__","Unnecessary ``iter_move`` for ``transform_view::iterator`` ","February 2022","","","|ranges|"
+"`3618 <https://wg21.link/LWG3618>`__","Unnecessary ``iter_move`` for ``transform_view::iterator`` ","February 2022","|Complete|","19.0","|ranges|"
 "`3619 <https://wg21.link/LWG3619>`__","Specification of ``vformat_to`` contains ill-formed ``formatted_size`` calls","February 2022","|Nothing to do|","","|format|"
 "`3621 <https://wg21.link/LWG3621>`__","Remove feature-test macro ``__cpp_lib_monadic_optional`` ","February 2022","|Complete|","15.0"
 "`3632 <https://wg21.link/LWG3632>`__","``unique_ptr`` ""Mandates: This constructor is not selected by class template argument deduction""","February 2022","|Nothing to do|",""
