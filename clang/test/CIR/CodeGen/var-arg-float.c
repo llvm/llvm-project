@@ -77,7 +77,7 @@ double f1(int n, ...) {
 
 // beginning block llvm code
 // LLVM: %struct.__va_list = type { ptr, ptr, ptr, i32, i32 }
-// LLVM: define double @f1(i32 %0, ...)
+// LLVM: define dso_local double @f1(i32 %0, ...)
 // LLVM: [[ARGN:%.*]] = alloca i32, i64 1, align 4,
 // LLVM: [[RETP:%.*]] = alloca double, i64 1, align 8,
 // LLVM: [[RESP:%.*]] = alloca double, i64 1, align 8,

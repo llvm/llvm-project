@@ -12,7 +12,7 @@ void foo(void *a) {
 // CIR:    cir.prefetch([[PTR]] : !cir.ptr<!void>) locality(1) write
 // CIR:    cir.return
 
-// LLVM:  define void @foo(ptr [[ARG0:%.*]])
+// LLVM:  define dso_local void @foo(ptr [[ARG0:%.*]])
 // LLVM:    [[PTR_ALLOC:%.*]] = alloca ptr, i64 1
 // LLVM:    store ptr [[ARG0]], ptr [[PTR_ALLOC]]
 // LLVM:    [[PTR:%.*]] = load ptr, ptr [[PTR_ALLOC]]

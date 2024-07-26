@@ -76,7 +76,7 @@ int s0(int a, int b) {
 
 // LLVM: ModuleID = '{{.*}}sourcelocation.cpp'
 // LLVM: source_filename = "{{.*}}sourcelocation.cpp"
-// LLVM: define i32 @_Z2s0ii(i32 %0, i32 %1) #[[#]] !dbg ![[#SP:]]
+// LLVM: define dso_local i32 @_Z2s0ii(i32 %0, i32 %1) #[[#]] !dbg ![[#SP:]]
 // LLVM:  %3 = alloca i32, i64 1, align 4, !dbg ![[#LOC1:]]
 
 

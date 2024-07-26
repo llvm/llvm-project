@@ -16,7 +16,7 @@ int foo() {
 // CIR:    [[TMP5:%.*]] = cir.load [[TMP0]] : !cir.ptr<!s32i>, !s32i
 // CIR:    cir.return [[TMP5]] : !s32i
 
-// LLVM:define i32 @foo()
+// LLVM:define dso_local i32 @foo()
 // LLVM:  [[TMP1:%.*]] = alloca i32, i64 1
 // LLVM:  [[TMP2:%.*]] = load i32, ptr @a
 // LLVM:  [[TMP3:%.*]] = call i1 @llvm.is.constant.i32(i32 [[TMP2]])

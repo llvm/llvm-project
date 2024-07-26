@@ -28,7 +28,7 @@ int basic_binop_fetch(int *i) {
 // CHECK:  %[[VAL:.*]] = cir.load %[[ONE_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CHECK:  cir.atomic.fetch(add, %[[I]] : !cir.ptr<!s32i>, %[[VAL]] : !s32i, seq_cst) : !s32i
 
-// LLVM: define i32 @_Z17basic_binop_fetchPi
+// LLVM: define dso_local i32 @_Z17basic_binop_fetchPi
 // LLVM: %[[RMW:.*]] = atomicrmw add ptr {{.*}}, i32 %[[VAL:.*]] seq_cst, align 4
 // LLVM: add i32 %[[RMW]], %[[VAL]]
 
@@ -45,7 +45,7 @@ int other_binop_fetch(int *i) {
 // CHECK: cir.atomic.fetch(or, {{.*}}, acquire
 // CHECK: cir.atomic.fetch(xor, {{.*}}, release
 
-// LLVM: define i32 @_Z17other_binop_fetchPi
+// LLVM: define dso_local i32 @_Z17other_binop_fetchPi
 // LLVM: %[[RMW_SUB:.*]] = atomicrmw sub ptr {{.*}} monotonic
 // LLVM: sub i32 %[[RMW_SUB]], {{.*}}
 // LLVM: %[[RMW_AND:.*]] = atomicrmw and ptr {{.*}} acquire
@@ -62,7 +62,7 @@ int nand_binop_fetch(int *i) {
 // CHECK: cir.func @_Z16nand_binop_fetchPi
 // CHECK: cir.atomic.fetch(nand, {{.*}}, acq_rel
 
-// LLVM: define i32 @_Z16nand_binop_fetchPi
+// LLVM: define dso_local i32 @_Z16nand_binop_fetchPi
 // LLVM: %[[RMW_NAND:.*]] = atomicrmw nand ptr {{.*}} acq_rel
 // LLVM: %[[AND:.*]] = and i32 %[[RMW_NAND]]
 // LLVM: = xor i32 %[[AND]], -1
@@ -76,7 +76,7 @@ int fp_binop_fetch(float *i) {
 // CHECK: cir.atomic.fetch(add,
 // CHECK: cir.atomic.fetch(sub,
 
-// LLVM: define i32 @_Z14fp_binop_fetchPf
+// LLVM: define dso_local i32 @_Z14fp_binop_fetchPf
 // LLVM: %[[RMW_FADD:.*]] = atomicrmw fadd ptr
 // LLVM: fadd float %[[RMW_FADD]]
 // LLVM: %[[RMW_FSUB:.*]] = atomicrmw fsub ptr
@@ -99,7 +99,7 @@ int fetch_binop(int *i) {
 // CHECK: cir.atomic.fetch(xor, {{.*}}) fetch_first
 // CHECK: cir.atomic.fetch(nand, {{.*}}) fetch_first
 
-// LLVM: define i32 @_Z11fetch_binopPi
+// LLVM: define dso_local i32 @_Z11fetch_binopPi
 // LLVM: atomicrmw add ptr
 // LLVM-NOT: add {{.*}}
 // LLVM: atomicrmw sub ptr
@@ -126,7 +126,7 @@ void min_max_fetch(int *i) {
 // CHECK: = cir.atomic.fetch(max, {{.*}}) : !s32i
 // CHECK: = cir.atomic.fetch(min, {{.*}}) : !s32i
 
-// LLVM: define void @_Z13min_max_fetchPi
+// LLVM: define dso_local void @_Z13min_max_fetchPi
 // LLVM: atomicrmw max ptr
 // LLVM-NOT: icmp {{.*}}
 // LLVM: atomicrmw min ptr
@@ -343,7 +343,7 @@ void inc_int(int* a, int b) {
   int c = __sync_fetch_and_add(a, b);
 }
 // CHECK-LABEL: @_Z7inc_int
-// CHECK: %[[PTR:.*]] = cir.load {{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i> 
+// CHECK: %[[PTR:.*]] = cir.load {{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CHECK: %[[VAL:.*]] = cir.load {{.*}} : !cir.ptr<!s32i>, !s32i
 // CHECK: %[[RES:.*]] = cir.atomic.fetch(add, %[[PTR]] : !cir.ptr<!s32i>, %[[VAL]] : !s32i, seq_cst) fetch_first : !s32i
 // CHECK: cir.store %[[RES]], {{.*}} : !s32i, !cir.ptr<!s32i>
@@ -442,7 +442,7 @@ void cmp_bool_byte(char* p, char x, char u) {
 // LLVM: %[[TMP:.*]] = extractvalue { i32, i1 } %[[RES]], 0
 // LLVM: store i32 %[[TMP]], ptr {{.*}}
 void cmp_val_int(int* p, int x, int u) {
-  int r = __sync_val_compare_and_swap(p, x, u);  
+  int r = __sync_val_compare_and_swap(p, x, u);
 }
 
 // CHECK-LABEL: @_Z12cmp_val_long
@@ -466,7 +466,7 @@ void cmp_val_short(short* p, short x, short u) {
 // CHECK-LABEL: @_Z12cmp_val_byte
 // CHECK: cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!s8i>, {{.*}} : !s8i, {{.*}} : !s8i, success = seq_cst, failure = seq_cst) : (!s8i, !cir.bool)
 
-// LLVM-LABEL: @_Z12cmp_val_byte 
+// LLVM-LABEL: @_Z12cmp_val_byte
 // LLVM: cmpxchg ptr {{.*}}, i8 {{.*}}, i8 {{.*}} seq_cst seq_cst
 void cmp_val_byte(char* p, char x, char u) {
   char r = __sync_val_compare_and_swap(p, x, u);

@@ -2082,7 +2082,7 @@ def TLSModel : I32EnumAttr<
     [TLS_GeneralDynamic, TLS_LocalDynamic, TLS_InitialExec, TLS_LocalExec]> {
   let cppNamespace = "::mlir::cir";
 }
-
+  
 def GlobalOp : CIR_Op<"global",
                       [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
                        DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
@@ -2123,6 +2123,7 @@ def GlobalOp : CIR_Op<"global",
                        OptionalAttr<TLSModel>:$tls_model,
                        // Note this can also be a FlatSymbolRefAttr
                        OptionalAttr<AnyAttr>:$initial_value,
+                       UnitAttr:$comdat,
                        UnitAttr:$constant,
                        UnitAttr:$dsolocal,
                        OptionalAttr<I64Attr>:$alignment,
@@ -2134,6 +2135,7 @@ def GlobalOp : CIR_Op<"global",
        ($sym_visibility^)?
        (`constant` $constant^)?
        $linkage
+       (`comdat` $comdat^)?
        ($tls_model^)?
        (`dsolocal` $dsolocal^)?
        $sym_name
@@ -2878,6 +2880,7 @@ def FuncOp : CIR_Op<"func", [
                                          "GlobalLinkageKind::ExternalLinkage">:$linkage,
                        ExtraFuncAttr:$extra_attrs,
                        OptionalAttr<StrAttr>:$sym_visibility,
+                       UnitAttr:$comdat,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
                        OptionalAttr<DictArrayAttr>:$res_attrs,
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,

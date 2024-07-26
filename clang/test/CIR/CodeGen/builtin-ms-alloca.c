@@ -16,7 +16,7 @@ void my_win_alloca(size_t n)
 // CIR: }
 
 
-// LLVM:       define void @my_win_alloca(i64 [[ALLOCA_SIZE:%.*]])
+// LLVM:       define dso_local void @my_win_alloca(i64 [[ALLOCA_SIZE:%.*]])
 // LLVM:       store i64 [[ALLOCA_SIZE]], ptr [[LOCAL_VAR_ALLOCA_SIZE:%.*]],
 // LLVM:       [[TMP_ALLOCA_SIZE:%.*]] =  load i64, ptr [[LOCAL_VAR_ALLOCA_SIZE]],
 // LLVM:       [[ALLOCA_RES:%.*]] = alloca i8, i64 [[TMP_ALLOCA_SIZE]], align 16

@@ -23,12 +23,12 @@ void ppp() { B b; }
 // CIR:  cir.global "private" external @_ZTVN10__cxxabiv121__vmi_class_type_infoE
 
 // Type info name for B
-// CIR:  cir.global linkonce_odr @_ZTS1B = #cir.const_array<"1B" : !cir.array<!s8i x 2>> : !cir.array<!s8i x 2>
+// CIR:  cir.global linkonce_odr comdat @_ZTS1B = #cir.const_array<"1B" : !cir.array<!s8i x 2>> : !cir.array<!s8i x 2>
 
 // CIR:  cir.global "private" external @_ZTVN10__cxxabiv117__class_type_infoE : !cir.ptr<!cir.ptr<!u8i>>
 
 // Type info name for A
-// CIR:  cir.global linkonce_odr @_ZTS1A = #cir.const_array<"1A" : !cir.array<!s8i x 2>> : !cir.array<!s8i x 2>
+// CIR:  cir.global linkonce_odr comdat @_ZTS1A = #cir.const_array<"1A" : !cir.array<!s8i x 2>> : !cir.array<!s8i x 2>
 
 // Type info A.
 // CIR:  cir.global constant external @_ZTI1A = #cir.typeinfo<{#cir.global_view<@_ZTVN10__cxxabiv117__class_type_infoE, [2 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTS1A> : !cir.ptr<!u8i>}>
@@ -36,12 +36,14 @@ void ppp() { B b; }
 // Type info B.
 // CIR:  cir.global constant external @_ZTI1B = #cir.typeinfo<{#cir.global_view<@_ZTVN10__cxxabiv121__vmi_class_type_infoE, [2 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTS1B> : !cir.ptr<!u8i>, #cir.int<0> : !u32i, #cir.int<1> : !u32i, #cir.global_view<@_ZTI1A> : !cir.ptr<!u8i>, #cir.int<-6141> : !s64i}>
 
+// LLVM: $_ZTS1B = comdat any
+// LLVM: $_ZTS1A = comdat any
 
 // LLVM: @_ZTV1B = linkonce_odr global { [3 x ptr] } { [3 x ptr] [ptr inttoptr (i64 12 to ptr), ptr null, ptr @_ZTI1B] }
 // LLVM: @_ZTT1B = linkonce_odr global [1 x ptr] [ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 3)]
 // LLVM: @_ZTVN10__cxxabiv121__vmi_class_type_infoE = external global ptr
-// LLVM: @_ZTS1B = linkonce_odr global [2 x i8] c"1B"
+// LLVM: @_ZTS1B = linkonce_odr global [2 x i8] c"1B", comdat
 // LLVM: @_ZTVN10__cxxabiv117__class_type_infoE = external global ptr
-// LLVM: @_ZTS1A = linkonce_odr global [2 x i8] c"1A"
+// LLVM: @_ZTS1A = linkonce_odr global [2 x i8] c"1A", comdat
 // LLVM: @_ZTI1A = constant { ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i32 2), ptr @_ZTS1A }
 // LLVM: @_ZTI1B = constant { ptr, ptr, i32, i32, ptr, i64 } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv121__vmi_class_type_infoE, i32 2), ptr @_ZTS1B, i32 0, i32 1, ptr @_ZTI1A, i64 -6141 }

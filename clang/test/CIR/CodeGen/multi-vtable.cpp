@@ -62,6 +62,10 @@ int main() {
 // CIR:   cir.return
 // CIR: }
 
+// LLVM-DAG: $_ZTS6Mother = comdat any
+// LLVM-DAG: $_ZTS5Child = comdat any
+// LLVM-DAG: $_ZTS6Father = comdat any
+
 // LLVM-DAG: define linkonce_odr void @_ZN5ChildC2Ev(ptr %0)
 // LLVM-DAG:  store ptr getelementptr inbounds ({ [4 x ptr], [3 x ptr] }, ptr @_ZTV5Child, i32 0, i32 0, i32 2), ptr %{{[0-9]+}}, align 8
 // LLVM-DAG:  %{{[0-9]+}} = getelementptr %class.Child, ptr %3, i64 8
@@ -86,8 +90,8 @@ int main() {
 // LLVM-DAG: @_ZTVN10__cxxabiv117__class_type_infoE = external global ptr
 
 //   typeinfo name for Mother
-// CIR: cir.global linkonce_odr @_ZTS6Mother = #cir.const_array<"6Mother" : !cir.array<!s8i x 7>> : !cir.array<!s8i x 7> {alignment = 1 : i64}
-// LLVM-DAG: @_ZTS6Mother = linkonce_odr global [7 x i8] c"6Mother"
+// CIR: cir.global linkonce_odr comdat @_ZTS6Mother = #cir.const_array<"6Mother" : !cir.array<!s8i x 7>> : !cir.array<!s8i x 7> {alignment = 1 : i64}
+// LLVM-DAG: @_ZTS6Mother = linkonce_odr global [7 x i8] c"6Mother", comdat
 
 //   typeinfo for Mother
 // CIR: cir.global constant external @_ZTI6Mother = #cir.typeinfo<{#cir.global_view<@_ZTVN10__cxxabiv117__class_type_infoE, [2 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTS6Mother> : !cir.ptr<!u8i>}> : ![[VTypeInfoA]] {alignment = 8 : i64}
@@ -106,12 +110,12 @@ int main() {
 // LLVM-DAG: @_ZTVN10__cxxabiv121__vmi_class_type_infoE = external global ptr
 
 //   typeinfo name for Child
-// CIR: cir.global linkonce_odr @_ZTS5Child = #cir.const_array<"5Child" : !cir.array<!s8i x 6>> : !cir.array<!s8i x 6> {alignment = 1 : i64}
-// LLVM-DAG: @_ZTS5Child = linkonce_odr global [6 x i8] c"5Child"
+// CIR: cir.global linkonce_odr comdat @_ZTS5Child = #cir.const_array<"5Child" : !cir.array<!s8i x 6>> : !cir.array<!s8i x 6> {alignment = 1 : i64}
+// LLVM-DAG: @_ZTS5Child = linkonce_odr global [6 x i8] c"5Child", comdat
 
 //   typeinfo name for Father
-// CIR: cir.global linkonce_odr @_ZTS6Father = #cir.const_array<"6Father" : !cir.array<!s8i x 7>> : !cir.array<!s8i x 7> {alignment = 1 : i64}
-// LLVM-DAG: @_ZTS6Father = linkonce_odr global [7 x i8] c"6Father"
+// CIR: cir.global linkonce_odr comdat @_ZTS6Father = #cir.const_array<"6Father" : !cir.array<!s8i x 7>> : !cir.array<!s8i x 7> {alignment = 1 : i64}
+// LLVM-DAG: @_ZTS6Father = linkonce_odr global [7 x i8] c"6Father", comdat
 
 //   typeinfo for Father
 // CIR: cir.global constant external @_ZTI6Father = #cir.typeinfo<{#cir.global_view<@_ZTVN10__cxxabiv117__class_type_infoE, [2 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTS6Father> : !cir.ptr<!u8i>}> : !ty_anon_struct {alignment = 8 : i64}

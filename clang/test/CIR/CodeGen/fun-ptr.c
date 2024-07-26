@@ -38,7 +38,7 @@ int extract_a(Data* d) {
 // CIR:   [[TMP7:%.*]] = cir.call [[TMP5]]([[TMP6]]) : (!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_22Data22>)>>, !cir.ptr<!ty_22Data22>) -> !s32i
 // CIR:   cir.store [[TMP7]], [[TMP1]] : !s32i, !cir.ptr<!s32i>
 
-// LLVM: define i32 {{@.*foo.*}}(ptr %0)
+// LLVM: define dso_local i32 {{@.*foo.*}}(ptr %0)
 // LLVM:   [[TMP1:%.*]] = alloca ptr, i64 1
 // LLVM:   [[TMP2:%.*]] = alloca i32, i64 1
 // LLVM:   [[TMP3:%.*]] = alloca ptr, i64 1
@@ -62,7 +62,7 @@ int foo(Data* d) {
 // CIR:    cir.return
 
 // LLVM: declare {{.*}} ptr {{@.*test.*}}()
-// LLVM: define void {{@.*bar.*}}()
+// LLVM: define dso_local void {{@.*bar.*}}()
 // LLVM:   [[RET:%.*]] = call ptr {{@.*test.*}}()
 // LLVM:   call void [[RET]]()
 // LLVM:   ret void

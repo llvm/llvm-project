@@ -33,7 +33,7 @@ int foo(void) {
 // LLVM: IR Dump After cir::direct::ConvertCIRToLLVMPass (cir-flat-to-llvm)
 // LLVM: llvm.func @foo() -> i32
 // LLVM: IR Dump After
-// LLVM: define i32 @foo()
+// LLVM: define dso_local i32 @foo()
 
 // CIRPASS-NOT:  IR Dump After MergeCleanups
 // CIRPASS:      IR Dump After DropAST

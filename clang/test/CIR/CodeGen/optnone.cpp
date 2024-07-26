@@ -22,6 +22,6 @@ int s0(int a, int b) {
 
 // CIR-O2-NOT: #fn_attr ={{.*}} optnone
 
-// LLVM-O0: define i32 @_Z2s0ii(i32 %0, i32 %1) #[[#ATTR:]]
+// LLVM-O0: define dso_local i32 @_Z2s0ii(i32 %0, i32 %1) #[[#ATTR:]]
 // LLVM-O0: attributes #[[#ATTR]] = { noinline nounwind optnone }
 // LLVM-O2-NOT: attributes #[[#]] = { noinline nounwind optnone }

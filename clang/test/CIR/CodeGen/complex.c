@@ -26,7 +26,7 @@ void list_init() {
 // CHECK-NEXT:   %{{.+}} = cir.complex.create %[[#REAL]], %[[#IMAG]] : !s32i -> !cir.complex<!s32i>
 //      CHECK: }
 
-// LLVM: define void @list_init()
+// LLVM: define dso_local void @list_init()
 // LLVM:   store { double, double } { double 1.000000e+00, double 2.000000e+00 }, ptr %{{.+}}, align 8
 // LLVM: }
 
@@ -42,7 +42,7 @@ void list_init_2(double r, double i) {
 // CHECK-NEXT:   cir.store %[[#C]], %{{.+}} : !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>
 //      CHECK: }
 
-//      LLVM: define void @list_init_2(double %{{.+}}, double %{{.+}})
+//      LLVM: define dso_local void @list_init_2(double %{{.+}}, double %{{.+}})
 //      LLVM:   %[[#A:]] = insertvalue { double, double } undef, double %{{.+}}, 0
 // LLVM-NEXT:   %[[#B:]] = insertvalue { double, double } %[[#A]], double %{{.+}}, 1
 // LLVM-NEXT:   store { double, double } %[[#B]], ptr %5, align 8
@@ -57,7 +57,7 @@ void builtin_init(double r, double i) {
 // CHECK:   %{{.+}} = cir.complex.create %{{.+}}, %{{.+}} : !cir.double -> !cir.complex<!cir.double>
 // CHECK: }
 
-//      LLVM: define void @builtin_init
+//      LLVM: define dso_local void @builtin_init
 //      LLVM:   %[[#A:]] = insertvalue { double, double } undef, double %{{.+}}, 0
 // LLVM-NEXT:   %[[#B:]] = insertvalue { double, double } %[[#A]], double %{{.+}}, 1
 // LLVM-NEXT:   store { double, double } %[[#B]], ptr %{{.+}}, align 8
@@ -78,7 +78,7 @@ void imag_literal() {
 // CHECK-NEXT: %{{.+}} = cir.complex.create %[[#REAL]], %[[#IMAG]] : !s32i -> !cir.complex<!s32i>
 //      CHECK: }
 
-// LLVM: define void @imag_literal()
+// LLVM: define dso_local void @imag_literal()
 // LLVM:   store { double, double } { double 0.000000e+00, double 3.000000e+00 }, ptr @c, align 8
 // LLVM:   store { i32, i32 } { i32 0, i32 3 }, ptr @ci, align 4
 // LLVM: }
@@ -100,7 +100,7 @@ void load_store() {
 // CHECK-NEXT:   cir.store %[[#CI2]], %[[#CI_PTR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 //      CHECK: }
 
-//      LLVM: define void @load_store()
+//      LLVM: define dso_local void @load_store()
 //      LLVM:   %[[#A:]] = load { double, double }, ptr @c2, align 8
 // LLVM-NEXT:   store { double, double } %[[#A]], ptr @c, align 8
 // LLVM-NEXT:   %[[#B:]] = load { i32, i32 }, ptr @ci2, align 4
@@ -124,7 +124,7 @@ void load_store_volatile() {
 // CHECK-NEXT:   cir.store volatile %[[#VCI2]], %[[#VCI_PTR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 //      CHECK: }
 
-//      LLVM: define void @load_store_volatile()
+//      LLVM: define dso_local void @load_store_volatile()
 //      LLVM:   %[[#A:]] = load volatile { double, double }, ptr @vc2, align 8
 // LLVM-NEXT:   store volatile { double, double } %[[#A]], ptr @vc, align 8
 // LLVM-NEXT:   %[[#B:]] = load volatile { i32, i32 }, ptr @vci2, align 4
@@ -142,7 +142,7 @@ void real() {
 // CHECK-NEXT:   %{{.+}} = cir.complex.real %[[#B]] : !cir.complex<!cir.double> -> !cir.double
 //      CHECK: }
 
-//      LLVM: define void @real()
+//      LLVM: define dso_local void @real()
 //      LLVM:   %[[#A:]] = extractvalue { double, double } %{{.+}}, 0
 // LLVM-NEXT:   store double %[[#A]], ptr %{{.+}}, align 8
 //      LLVM: }
@@ -158,7 +158,7 @@ void imag() {
 // CHECK-NEXT:   %{{.+}} = cir.complex.imag %[[#B]] : !cir.complex<!cir.double> -> !cir.double
 //      CHECK: }
 
-//      LLVM: define void @imag()
+//      LLVM: define dso_local void @imag()
 //      LLVM:   %[[#A:]] = extractvalue { double, double } %{{.+}}, 1
 // LLVM-NEXT:   store double %[[#A]], ptr %{{.+}}, align 8
 //      LLVM: }
@@ -176,7 +176,7 @@ void real_ptr() {
 // CHECK-NEXT:   %{{.+}} = cir.complex.real_ptr %[[#CI_PTR]] : !cir.ptr<!cir.complex<!s32i>> -> !cir.ptr<!s32i>
 //      CHECK: }
 
-//      LLVM: define void @real_ptr()
+//      LLVM: define dso_local void @real_ptr()
 //      LLVM:   store ptr @c, ptr %{{.+}}, align 8
 // LLVM-NEXT:   store ptr @ci, ptr %{{.+}}, align 8
 //      LLVM: }
@@ -192,7 +192,7 @@ void real_ptr_local() {
 // CHECK:   %{{.+}} = cir.complex.real_ptr %[[#C]] : !cir.ptr<!cir.complex<!cir.double>> -> !cir.ptr<!cir.double>
 // CHECK: }
 
-//      LLVM: define void @real_ptr_local()
+//      LLVM: define dso_local void @real_ptr_local()
 //      LLVM:   store { double, double } { double 1.000000e+00, double 2.000000e+00 }, ptr %{{.+}}, align 8
 // LLVM-NEXT:   %{{.+}} = getelementptr inbounds { double, double }, ptr %{{.+}}, i32 0, i32 0
 //      LLVM: }
@@ -212,7 +212,7 @@ void extract_real() {
 // CHECK-NEXT:   %{{.+}} = cir.load %[[#REAL_PTR]] : !cir.ptr<!s32i>, !s32i
 //      CHECK: }
 
-// LLVM: define void @extract_real()
+// LLVM: define dso_local void @extract_real()
 // LLVM:   %{{.+}} = load double, ptr @c, align 8
 // LLVM:   %{{.+}} = load i32, ptr @ci, align 4
 // LLVM: }
@@ -230,7 +230,7 @@ void imag_ptr() {
 // CHECK-NEXT:   %{{.+}} = cir.complex.imag_ptr %[[#CI_PTR]] : !cir.ptr<!cir.complex<!s32i>> -> !cir.ptr<!s32i>
 //      CHECK: }
 
-// LLVM: define void @imag_ptr()
+// LLVM: define dso_local void @imag_ptr()
 // LLVM:   store ptr getelementptr inbounds ({ double, double }, ptr @c, i32 0, i32 1), ptr %{{.+}}, align 8
 // LLVM:   store ptr getelementptr inbounds ({ i32, i32 }, ptr @ci, i32 0, i32 1), ptr %{{.+}}, align 8
 // LLVM: }
@@ -250,7 +250,7 @@ void extract_imag() {
 // CHECK-NEXT:   %{{.+}} = cir.load %[[#IMAG_PTR]] : !cir.ptr<!s32i>, !s32i
 //      CHECK: }
 
-// LLVM: define void @extract_imag()
+// LLVM: define dso_local void @extract_imag()
 // LLVM:   %{{.+}} = load double, ptr getelementptr inbounds ({ double, double }, ptr @c, i32 0, i32 1), align 8
 // LLVM:   %{{.+}} = load i32, ptr getelementptr inbounds ({ i32, i32 }, ptr @ci, i32 0, i32 1), align 4
 // LLVM: }

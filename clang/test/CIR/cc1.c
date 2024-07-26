@@ -13,7 +13,7 @@ void foo() {}
 // MLIR-NEXT:   return
 // MLIR-NEXT: }
 
-//      LLVM: define void @foo()
+//      LLVM: define dso_local void @foo()
 // LLVM-NEXT:   ret void
 // LLVM-NEXT: }
 

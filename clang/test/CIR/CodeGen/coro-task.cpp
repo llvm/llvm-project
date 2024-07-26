@@ -338,7 +338,7 @@ folly::coro::Task<int> go1_lambda() {
   co_return co_await task;
 }
 
-// CHECK: cir.func coroutine lambda internal private dsolocal @_ZZ10go1_lambdavENK3$_0clEv{{.*}}22 extra{{.*}}{
+// CHECK: cir.func coroutine lambda internal private @_ZZ10go1_lambdavENK3$_0clEv{{.*}}22 extra{{.*}}{
 // CHECK: cir.func coroutine @_Z10go1_lambdav() {{.*}}22 extra{{.*}}{
 
 folly::coro::Task<int> go4() {

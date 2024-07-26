@@ -10,4 +10,4 @@ module {
     }
 }
 
-// CHECK: cir.func dsolocal @foo(%arg0: !s32i) extra(#fn_attr)
+// CHECK: cir.func @foo(%arg0: !s32i) extra(#fn_attr)
