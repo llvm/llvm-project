@@ -620,8 +620,20 @@ private:
     }
     // Handle arrays and functions decay.
     auto NewType = NewDI->getType();
-    if (NewType->isArrayType() || NewType->isFunctionType())
+    if (NewType->isArrayType())
       NewType = SemaRef.Context.getDecayedType(NewType);
+    else if (NewType->isFunctionType()) {
+      // Reject cv- and ref-qualified function
+      if (!NewType.isReferenceable()) {
+        SemaRef.Diag(OldParam->getLocation(),
+                     diag::err_compound_qualified_function_type)
+            << 1 << true << NewType
+            << cast<FunctionProtoType>(NewType)
+                   ->getFunctionQualifiersAsString();
+        return nullptr;
+      }
+      NewType = SemaRef.Context.getDecayedType(NewType);
+    }
 
     ParmVarDecl *NewParam = ParmVarDecl::Create(
         SemaRef.Context, DC, OldParam->getInnerLocStart(),
