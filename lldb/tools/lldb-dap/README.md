@@ -157,6 +157,20 @@ locally on port `2345`.
 }
 ```
 
+You can also use the `gdb-remote-port` parameter to send an attach request
+to a debug server running on the current machine,
+instead of using the custom command `attachCommands`.
+
+```javascript
+{
+  "name": "Local Debug Server",
+  "type": "lldb-dap",
+  "request": "attach",
+  "program": "/tmp/a.out",
+  "gdb-remote-port": 2345,
+}
+```
+
 #### Connect to a Debug Server on Another Machine
 
 This connects to a debug server running on another machine with hostname
@@ -170,6 +184,23 @@ port `5678` of that other machine.
   "request": "attach",
   "program": "/tmp/a.out",
   "attachCommands": ["gdb-remote hostname:5678"],
+}
+```
+
+You can also use the `gdb-remote-hostname` and `gdb-remote-port` parameters
+to send an attach request to a debug server running on a different machine,
+instead of custom command `attachCommands`.
+The default hostname being used `localhost`.
+
+
+```javascript
+{
+  "name": "Local Debug Server",
+  "type": "lldb-dap",
+  "request": "attach",
+  "program": "/tmp/a.out",
+  "gdb-remote-port": 5678,
+  "gdb-remote-hostname": "hostname",
 }
 ```
 

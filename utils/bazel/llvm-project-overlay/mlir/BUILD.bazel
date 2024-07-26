@@ -2142,6 +2142,7 @@ cc_library(
         ":FuncTransforms",
         ":FunctionInterfaces",
         ":IR",
+        ":IndexDialect",
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":MemRefDialect",
@@ -2149,6 +2150,7 @@ cc_library(
         ":SCFDialect",
         ":SCFTransforms",
         ":TransformUtils",
+        ":VectorUtils",
         "//llvm:Support",
     ],
 )
@@ -5744,6 +5746,7 @@ cc_library(
         "lib/Conversion/GPUCommon/OpToFuncCallLowering.h",
     ],
     deps = [
+        ":ArithDialect",
         ":GPUDialect",
         ":IR",
         ":LLVMCommonConversion",
