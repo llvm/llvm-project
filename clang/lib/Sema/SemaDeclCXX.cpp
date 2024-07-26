@@ -10385,7 +10385,7 @@ void Sema::checkIncorrectVTablePointerAuthenticationAttribute(
   while (1) {
     assert(PrimaryBase);
     const CXXRecordDecl *Base = nullptr;
-    for (auto BasePtr : PrimaryBase->bases()) {
+    for (const CXXBaseSpecifier &BasePtr : PrimaryBase->bases()) {
       if (!BasePtr.getType()->getAsCXXRecordDecl()->isDynamicClass())
         continue;
       Base = BasePtr.getType()->getAsCXXRecordDecl();
