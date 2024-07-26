@@ -44,6 +44,45 @@ struct MachineInfo {
   bool IsLittleEndian;
 };
 
+// Flags set by --set-section-flags or --rename-section. Interpretation of these
+// is format-specific and not all flags are meaningful for all object file
+// formats. This is a bitmask; many section flags may be set.
+enum SectionFlag {
+  SecNone = 0,
+  SecAlloc = 1 << 0,
+  SecLoad = 1 << 1,
+  SecNoload = 1 << 2,
+  SecReadonly = 1 << 3,
+  SecDebug = 1 << 4,
+  SecCode = 1 << 5,
+  SecData = 1 << 6,
+  SecRom = 1 << 7,
+  SecMerge = 1 << 8,
+  SecStrings = 1 << 9,
+  SecContents = 1 << 10,
+  SecShare = 1 << 11,
+  SecExclude = 1 << 12,
+  SecLarge = 1 << 13,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/SecLarge)
+};
+
+struct SectionRename {
+  StringRef OriginalName;
+  StringRef NewName;
+  std::optional<SectionFlag> NewFlags;
+};
+
+struct SectionFlagsUpdate {
+  StringRef Name;
+  SectionFlag NewFlags;
+};
+
+enum class DiscardType {
+  None,   // Default
+  All,    // --discard-all (-x)
+  Locals, // --discard-locals (-X)
+};
+
 enum class MatchStyle {
   Literal,  // Default for symbols.
   Wildcard, // Default for sections, or enabled with --wildcard (-w).
@@ -112,39 +151,6 @@ public:
   }
 };
 
-// Flags set by --set-section-flags or --rename-section. Interpretation of these
-// is format-specific and not all flags are meaningful for all object file
-// formats. This is a bitmask; many section flags may be set.
-enum SectionFlag {
-  SecNone = 0,
-  SecAlloc = 1 << 0,
-  SecLoad = 1 << 1,
-  SecNoload = 1 << 2,
-  SecReadonly = 1 << 3,
-  SecDebug = 1 << 4,
-  SecCode = 1 << 5,
-  SecData = 1 << 6,
-  SecRom = 1 << 7,
-  SecMerge = 1 << 8,
-  SecStrings = 1 << 9,
-  SecContents = 1 << 10,
-  SecShare = 1 << 11,
-  SecExclude = 1 << 12,
-  SecLarge = 1 << 13,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/SecLarge)
-};
-
-struct SectionRename {
-  StringRef OriginalName;
-  StringRef NewName;
-  std::optional<SectionFlag> NewFlags;
-};
-
-struct SectionFlagsUpdate {
-  StringRef Name;
-  SectionFlag NewFlags;
-};
-
 enum class AdjustKind { Set, Add, Subtract };
 
 struct AddressUpdate {
@@ -155,12 +161,6 @@ struct AddressUpdate {
 struct SectionPatternAddressUpdate {
   NameMatcher SectionPattern;
   AddressUpdate Update;
-};
-
-enum class DiscardType {
-  None,   // Default
-  All,    // --discard-all (-x)
-  Locals, // --discard-locals (-X)
 };
 
 enum class SymbolFlag {

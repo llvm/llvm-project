@@ -750,6 +750,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
       return createStringError(
           object_error::invalid_file_type,
           "cannot change section address in a non-relocatable file");
+
     StringMap<AddressUpdate> SectionsToUpdateAddress;
     for (const SectionPatternAddressUpdate &PatternUpdate :
          make_range(Config.ChangeSectionAddress.rbegin(),
@@ -777,12 +778,17 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
                     Twine::utohexstr(PatternUpdate.Update.Value) +
                     ". The result would overflow");
           }
-          if (PatternUpdate.Update.Kind == AdjustKind::Set) {
+
+          switch (PatternUpdate.Update.Kind) {
+          case (AdjustKind::Set):
             Sec.Addr = PatternUpdate.Update.Value;
-          } else if (PatternUpdate.Update.Kind == AdjustKind::Subtract) {
+            break;
+          case (AdjustKind::Subtract):
             Sec.Addr -= PatternUpdate.Update.Value;
-          } else {
+            break;
+          case (AdjustKind::Add):
             Sec.Addr += PatternUpdate.Update.Value;
+            break;
           }
         }
       }
