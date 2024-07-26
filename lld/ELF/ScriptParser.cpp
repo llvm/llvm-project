@@ -200,8 +200,9 @@ void ScriptParser::readDynamicList() {
   std::tie(locals, globals) = readSymbols();
   expect(";");
 
-  if (!atEOF()) {
-    setError("EOF expected, but got " + next());
+  StringRef tok = peek();
+  if (tok.size()) {
+    setError("EOF expected, but got " + tok);
     return;
   }
   if (!locals.empty()) {
@@ -215,8 +216,9 @@ void ScriptParser::readDynamicList() {
 
 void ScriptParser::readVersionScript() {
   readVersionScriptCommand();
-  if (!atEOF())
-    setError("EOF expected, but got " + next());
+  StringRef tok = peek();
+  if (tok.size())
+    setError("EOF expected, but got " + tok);
 }
 
 void ScriptParser::readVersionScriptCommand() {
@@ -225,7 +227,9 @@ void ScriptParser::readVersionScriptCommand() {
     return;
   }
 
-  while (!atEOF() && !errorCount() && peek() != "}") {
+  if (atEOF())
+    setError("unexpected EOF");
+  while (peek() != "}" && !atEOF()) {
     StringRef verStr = next();
     if (verStr == "{") {
       setError("anonymous version definition is used in "
@@ -246,6 +250,8 @@ void ScriptParser::readVersion() {
 void ScriptParser::readLinkerScript() {
   while (!atEOF()) {
     StringRef tok = next();
+    if (atEOF())
+      break;
     if (tok == ";")
       continue;
 
@@ -307,8 +313,9 @@ void ScriptParser::readDefsym(StringRef name) {
 void ScriptParser::readNoCrossRefs(bool to) {
   expect("(");
   NoCrossRefCommand cmd{{}, to};
-  while (!errorCount() && !consume(")"))
+  while (peek() != ")" && !atEOF())
     cmd.outputSections.push_back(unquote(next()));
+  expect(")");
   if (cmd.outputSections.size() < 2)
     warn(getCurrentLocation() + ": ignored with fewer than 2 output sections");
   else
@@ -368,9 +375,10 @@ void ScriptParser::readAsNeeded() {
   expect("(");
   bool orig = config->asNeeded;
   config->asNeeded = true;
-  while (!errorCount() && !consume(")"))
+  while (peek() != ")" && !atEOF())
     addFile(unquote(next()));
   config->asNeeded = orig;
+  expect(")");
 }
 
 void ScriptParser::readEntry() {
@@ -384,8 +392,9 @@ void ScriptParser::readEntry() {
 
 void ScriptParser::readExtern() {
   expect("(");
-  while (!errorCount() && !consume(")"))
+  while (peek() != ")" && !atEOF())
     config->undefined.push_back(unquote(next()));
+  expect(")");
 }
 
 void ScriptParser::readGroup() {
@@ -406,8 +415,11 @@ void ScriptParser::readInclude() {
   }
 
   if (std::optional<std::string> path = searchScript(tok)) {
-    if (std::optional<MemoryBufferRef> mb = readFile(*path))
-      tokenize(*mb);
+    if (std::optional<MemoryBufferRef> mb = readFile(*path)) {
+      buffers.push_back(curBuf);
+      curBuf = Buffer(*mb);
+      mbs.push_back(*mb);
+    }
     return;
   }
   setError("cannot find linker script " + tok);
@@ -415,12 +427,13 @@ void ScriptParser::readInclude() {
 
 void ScriptParser::readInput() {
   expect("(");
-  while (!errorCount() && !consume(")")) {
+  while (peek() != ")" && !atEOF()) {
     if (consume("AS_NEEDED"))
       readAsNeeded();
     else
       addFile(unquote(next()));
   }
+  expect(")");
 }
 
 void ScriptParser::readOutput() {
@@ -435,8 +448,8 @@ void ScriptParser::readOutput() {
 void ScriptParser::readOutputArch() {
   // OUTPUT_ARCH is ignored for now.
   expect("(");
-  while (!errorCount() && !consume(")"))
-    skip();
+  while (next() != ")" && !atEOF())
+    ;
 }
 
 static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
@@ -702,8 +715,9 @@ static int precedence(StringRef op) {
 StringMatcher ScriptParser::readFilePatterns() {
   StringMatcher Matcher;
 
-  while (!errorCount() && !consume(")"))
+  while (peek() != ")" && !atEOF())
     Matcher.addPattern(SingleStringMatcher(next()));
+  expect(")");
   return Matcher;
 }
 
@@ -790,7 +804,7 @@ ScriptParser::readInputSectionRules(StringRef filePattern, uint64_t withFlags,
       make<InputSectionDescription>(filePattern, withFlags, withoutFlags);
   expect("(");
 
-  while (!errorCount() && !consume(")")) {
+  while (peek() != ")" && !atEOF()) {
     SortSectionPolicy outer = readSortKind();
     SortSectionPolicy inner = SortSectionPolicy::Default;
     SmallVector<SectionPattern, 0> v;
@@ -816,6 +830,7 @@ ScriptParser::readInputSectionRules(StringRef filePattern, uint64_t withFlags,
 
     std::move(v.begin(), v.end(), std::back_inserter(cmd->sectionPatterns));
   }
+  expect(")");
   return cmd;
 }
 
@@ -1098,12 +1113,23 @@ SymbolAssignment *ScriptParser::readProvideHidden(bool provide, bool hidden) {
   return cmd;
 }
 
+// Replace whitespace sequence (including \n) with one single space. The output
+// is used by -Map.
+static void squeezeSpaces(std::string &str) {
+  char prev = '\0';
+  auto it = str.begin();
+  for (char c : str)
+    if (!isSpace(c) || (c = ' ') != prev)
+      *it++ = prev = c;
+  str.erase(it, str.end());
+}
+
 SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
   // Assert expression returns Dot, so this is equal to ".=."
   if (tok == "ASSERT")
     return make<SymbolAssignment>(".", readAssert(), 0, getCurrentLocation());
 
-  size_t oldPos = pos;
+  const char *oldS = prevTok.data();
   SymbolAssignment *cmd = nullptr;
   bool savedSeenRelroEnd = script->seenRelroEnd;
   const StringRef op = peek();
@@ -1127,9 +1153,8 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
 
   if (cmd) {
     cmd->dataSegmentRelroEnd = !savedSeenRelroEnd && script->seenRelroEnd;
-    cmd->commandString =
-        tok.str() + " " +
-        llvm::join(tokens.begin() + oldPos, tokens.begin() + pos, " ");
+    cmd->commandString = StringRef(oldS, curTok.data() - oldS).str();
+    squeezeSpaces(cmd->commandString);
     expect(";");
   }
   return cmd;
@@ -1333,12 +1358,11 @@ ByteCommand *ScriptParser::readByteCommand(StringRef tok) {
   if (size == -1)
     return nullptr;
 
-  size_t oldPos = pos;
+  const char *oldS = prevTok.data();
   Expr e = readParenExpr();
-  std::string commandString =
-      tok.str() + " " +
-      llvm::join(tokens.begin() + oldPos, tokens.begin() + pos, " ");
-  return make<ByteCommand>(e, size, commandString);
+  std::string commandString = StringRef(oldS, curBuf.s.data() - oldS).str();
+  squeezeSpaces(commandString);
+  return make<ByteCommand>(e, size, std::move(commandString));
 }
 
 static std::optional<uint64_t> parseFlag(StringRef tok) {
