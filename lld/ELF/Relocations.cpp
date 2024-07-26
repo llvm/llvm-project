@@ -1309,7 +1309,8 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
   // LoongArch does not yet implement transition from TLSDESC to LE/IE, so
   // generate TLSDESC dynamic relocation for the dynamic linker to handle.
   if (config->emachine == EM_LOONGARCH &&
-      oneof<R_LOONGARCH_TLSDESC_PAGE_PC, R_TLSDESC, R_TLSDESC_CALL>(expr)) {
+      oneof<R_LOONGARCH_TLSDESC_PAGE_PC, R_TLSDESC, R_TLSDESC_PC,
+            R_TLSDESC_CALL>(expr)) {
     if (expr != R_TLSDESC_CALL) {
       sym.setFlags(NEEDS_TLSDESC);
       c.addReloc({expr, type, offset, addend, &sym});
