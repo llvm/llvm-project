@@ -1057,18 +1057,33 @@ OnDiskGraphDB::load(ObjectID ExternalRef) {
                          ->insert(I.Hash, Object.SK, std::move(*OwnedBuffer))));
 }
 
-bool OnDiskGraphDB::containsObject(ObjectID ExternalRef,
-                                   bool CheckUpstream) const {
+Expected<bool> OnDiskGraphDB::isMaterialized(ObjectID Ref) {
+  switch (getObjectPresence(Ref, /*CheckUpstream=*/true)) {
+  case ObjectPresence::Missing:
+    return false;
+  case ObjectPresence::InPrimaryDB:
+    return true;
+  case ObjectPresence::OnlyInUpstreamDB:
+    if (auto FaultInResult = faultInFromUpstream(Ref); !FaultInResult)
+      return FaultInResult.takeError();
+    return true;
+  }
+}
+
+OnDiskGraphDB::ObjectPresence
+OnDiskGraphDB::getObjectPresence(ObjectID ExternalRef,
+                                 bool CheckUpstream) const {
   InternalRef Ref = getInternalRef(ExternalRef);
   IndexProxy I = getIndexProxyFromRef(Ref);
   TrieRecord::Data Object = I.Ref.load();
   if (Object.SK != TrieRecord::StorageKind::Unknown)
-    return true;
+    return ObjectPresence::InPrimaryDB;
   if (!CheckUpstream || !UpstreamDB)
-    return false;
+    return ObjectPresence::Missing;
   std::optional<ObjectID> UpstreamID =
       UpstreamDB->getExistingReference(getDigest(I));
-  return UpstreamID.has_value();
+  return UpstreamID.has_value() ? ObjectPresence::OnlyInUpstreamDB
+                                : ObjectPresence::Missing;
 }
 
 InternalRef OnDiskGraphDB::makeInternalRef(FileOffset IndexOffset) {

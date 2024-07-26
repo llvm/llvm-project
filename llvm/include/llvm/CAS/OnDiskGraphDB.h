@@ -278,7 +278,12 @@ public:
   /// Returns \p nullopt if the object is not stored in this CAS.
   std::optional<ObjectID> getExistingReference(ArrayRef<uint8_t> Digest);
 
-  /// \returns true if the object associated with \p Ref is stored in the CAS.
+  /// Check whether the object associated with \p Ref is stored in the CAS.
+  /// Note that this function will fault-in according to the policy.
+  Expected<bool> isMaterialized(ObjectID Ref);
+
+  /// Check whether the object associated with \p Ref is stored in the CAS.
+  /// Note that this function does not fault-in.
   bool containsObject(ObjectID Ref) const {
     return containsObject(Ref, /*CheckUpstream=*/true);
   }
@@ -332,7 +337,24 @@ private:
   class TempFile;
   class MappedTempFile;
 
-  bool containsObject(ObjectID Ref, bool CheckUpstream) const;
+  enum class ObjectPresence {
+    Missing,
+    InPrimaryDB,
+    OnlyInUpstreamDB,
+  };
+
+  ObjectPresence getObjectPresence(ObjectID Ref, bool CheckUpstream) const;
+
+  bool containsObject(ObjectID Ref, bool CheckUpstream) const {
+    switch (getObjectPresence(Ref, CheckUpstream)) {
+    case ObjectPresence::Missing:
+      return false;
+    case ObjectPresence::InPrimaryDB:
+      return true;
+    case ObjectPresence::OnlyInUpstreamDB:
+      return true;
+    }
+  }
 
   /// When \p load is called for a node that doesn't exist, this function tries
   /// to load it from the upstream store and copy it to the primary one.
