@@ -190,11 +190,9 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   Recs = R->getValueAsListOfDefs("stages");
 
   if (Recs.empty()) {
-    report_fatal_error(
-        StringRef(std::string("Atleast one specification of valid stage for ")
-                      .append(OpName)
-                      .append(" is required")),
-        /* gen_crash_diag=*/false);
+    report_fatal_error(Twine("Atleast one specification of valid stage for ") +
+                           OpName + " is required",
+                       /* gen_crash_diag=*/false);
   }
 
   // Sort records in ascending order of DXIL version
@@ -218,10 +216,9 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   OpClass = R->getValueAsDef("OpClass")->getName();
 
   if (!OpClass.str().compare("UnknownOpClass")) {
-    report_fatal_error(
-        StringRef(std::string("Unspecified DXIL OpClass for DXIL operation - ")
-                      .append(OpName)),
-        /* gen_crash_diag=*/false);
+    report_fatal_error(Twine("Unspecified DXIL OpClass for DXIL operation - ") +
+                           OpName,
+                       /* gen_crash_diag=*/false);
   }
 
   const RecordVal *RV = R->getValue("LLVMIntrinsic");

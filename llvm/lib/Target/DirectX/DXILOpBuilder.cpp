@@ -322,9 +322,8 @@ static int getPropIndex(const std::vector<T> PropList,
       return I;
     }
   }
-  report_fatal_error(
-      StringRef(DXILVer.getAsString().append(": Unknown DXIL Version")),
-      /*gen_crash_diag*/ false);
+  report_fatal_error(Twine(DXILVer.getAsString()) + ": Unknown DXIL Version",
+                     /*gen_crash_diag*/ false);
 
   return -1;
 }
@@ -360,17 +359,16 @@ CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
   // per the specified types for the operation
   if ((ValidTyMask != OverloadKind::UNDEFINED) &&
       (ValidTyMask & (uint16_t)Kind) == 0) {
-    report_fatal_error(
-        StringRef(std::string("Invalid Overload Type for DXIL operation - ")
-                      .append(getOpCodeName((OpCode)))),
-        /* gen_crash_diag=*/false);
+    report_fatal_error(Twine("Invalid Overload Type for DXIL operation - ") +
+                           getOpCodeName(OpCode),
+                       /* gen_crash_diag=*/false);
   }
 
   // Ensure Environment type is known
   if (ShaderEnv == Triple::UnknownEnvironment) {
     report_fatal_error(
-        StringRef(DXILVer.getAsString().append(
-            ": Unknown Compilation Target Shader Stage specified ")),
+        Twine(DXILVer.getAsString()) +
+            ": Unknown Compilation Target Shader Stage specified ",
         /*gen_crash_diag*/ false);
   }
 
@@ -383,11 +381,9 @@ CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
   // Ensure valid shader stage properties are specified
   if (ValidShaderKindMask == ShaderKind::removed) {
     report_fatal_error(
-        StringRef(
-            DXILVer.getAsString()
-                .append(
-                    ": Unsupported Target Shader Stage for DXIL operation - ")
-                .append(getOpCodeName((OpCode)))),
+        Twine(DXILVer.getAsString()) +
+            ": Unsupported Target Shader Stage for DXIL operation - " +
+            getOpCodeName(OpCode),
         /*gen_crash_diag*/ false);
   }
 
@@ -397,13 +393,11 @@ CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
   // Verify the target shader stage is valid for the DXIL operation
   if (!(ValidShaderKindMask & ModuleStagekind)) {
     auto ShaderEnvStr = Triple(TargetTripleStr).getEnvironmentName();
-    report_fatal_error(
-        StringRef(std::string(ShaderEnvStr)
-                      .append(" : Invalid Shader Stage for DXIL operation - ")
-                      .append(getOpCodeName(OpCode))
-                      .append(" for DXIL Version ")
-                      .append(DXILVer.getAsString())),
-        /*gen_crash_diag*/ false);
+    report_fatal_error(Twine(ShaderEnvStr) +
+                           " : Invalid Shader Stage for DXIL operation - " +
+                           getOpCodeName(OpCode) + " for DXIL Version " +
+                           DXILVer.getAsString(),
+                       /*gen_crash_diag*/ false);
   }
 
   std::string DXILFnName = constructOverloadName(Kind, OverloadTy, *Prop);
