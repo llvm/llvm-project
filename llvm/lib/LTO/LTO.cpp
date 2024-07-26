@@ -1363,7 +1363,7 @@ static const char *libcallRoutineNames[] = {
 #undef HANDLE_LIBCALL
 };
 
-ArrayRef<const char*> LTO::getRuntimeLibcallSymbols() {
+ArrayRef<const char *> LTO::getRuntimeLibcallSymbols() {
   return ArrayRef(libcallRoutineNames);
 }
 
