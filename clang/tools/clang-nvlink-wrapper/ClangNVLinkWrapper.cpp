@@ -598,10 +598,11 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
         Res.Prevailing = !Sym.isUndefined() && ObjSym.File == *BitcodeFile;
 
         // We need LTO to preseve the following global symbols:
-        // 1) Symbols used in regular objects.
-        // 2) Prevailing symbols that are needed visible to the gpu runtime.
+        // 1) All symbols during a relocatable link.
+        // 2) Symbols used in regular objects.
+        // 3) Prevailing symbols that are needed visible to the gpu runtime.
         Res.VisibleToRegularObj =
-            ObjSym.UsedInRegularObj ||
+            Args.hasArg(OPT_relocatable) || ObjSym.UsedInRegularObj ||
             (Res.Prevailing &&
              (Sym.getVisibility() != GlobalValue::HiddenVisibility &&
               !Sym.canBeOmittedFromSymbolTable()));
