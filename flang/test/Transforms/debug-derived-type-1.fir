@@ -54,11 +54,11 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr<272>, d
 // CHECK-DAG: #[[DATE:.*]] = #llvm.di_composite_type<tag = DW_TAG_structure_type, name = "t_date", file = #di_file, line = 17, scope = #[[MOD]], sizeInBits = 96, elements = #[[ELMD1]], #[[ELMD2]], #[[ELMD3]]>
 // CHECK-DAG: #[[ELMP1:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "t_address", baseType = #[[ADDR]], sizeInBits = 32, alignInBits = 32>
 // CHECK-DAG: #[[ELMP2:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "name", baseType = #[[STR_TY]], sizeInBits = 160, alignInBits = 8, offsetInBits = 32>
-// CHECK-DAG: #[[PERS:.*]] = #llvm.di_composite_type<tag = DW_TAG_structure_type, name = "t_person"{{.*}}line = 35, scope = #[[MOD]], baseType = #[[ADDR]], sizeInBits = 192, elements = #[[ELMP1]], #[[ELMP2]]>
+// CHECK-DAG: #[[PERS:.*]] = #llvm.di_composite_type<tag = DW_TAG_structure_type, name = "t_person"{{.*}}line = 35, scope = #[[MOD]], sizeInBits = 192, elements = #[[ELMP1]], #[[ELMP2]]>
 // CHECK-DAG: #[[ELME1:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "t_person", baseType = #[[PERS]], sizeInBits = 192, alignInBits = 32>
 // CHECK-DAG: #[[ELME2:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "hired_date", baseType = #[[DATE]], sizeInBits = 96, alignInBits = 32, offsetInBits = 192>
 // CHECK-DAG: #[[ELME3:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "monthly_salary", baseType = #[[REAL4_TY]], sizeInBits = 32, alignInBits = 32, offsetInBits = 288>
-// CHECK-DAG: #[[EMP:.*]] = #llvm.di_composite_type<tag = DW_TAG_structure_type, name = "t_employee"{{.*}}line = 46, scope = #[[MOD]], baseType = #[[PERS]], sizeInBits = 320, elements = #[[ELME1]], #[[ELME2]], #[[ELME3]]>
+// CHECK-DAG: #[[EMP:.*]] = #llvm.di_composite_type<tag = DW_TAG_structure_type, name = "t_employee"{{.*}}line = 46, scope = #[[MOD]], sizeInBits = 320, elements = #[[ELME1]], #[[ELME2]], #[[ELME3]]>
 
 // CHECK-DAG: #[[ELM1:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "age", baseType = #[[INT_TY]], sizeInBits = 32, alignInBits = 32>
 // CHECK-DAG: #[[ELM2:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "points", baseType = #[[CMX_ARR]], sizeInBits = 192, alignInBits = 32, offsetInBits = 32>

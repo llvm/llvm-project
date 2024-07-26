@@ -15,7 +15,6 @@
 #include "DebugTypeGenerator.h"
 #include "flang/Optimizer/CodeGen/DescriptorModel.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
-#include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -46,16 +45,11 @@ std::uint64_t getComponentOffset<0>(const mlir::DataLayout &dl,
 }
 
 DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m,
-                                       mlir::SymbolTable *symbolTable_)
-    : module(m), symbolTable(symbolTable_), kindMapping(getKindMapping(m)) {
+                                       mlir::SymbolTable *symbolTable_,
+                                       const mlir::DataLayout &dl)
+    : module(m), symbolTable(symbolTable_), dataLayout{&dl},
+      kindMapping(getKindMapping(m)) {
   LLVM_DEBUG(llvm::dbgs() << "DITypeAttr generator\n");
-
-  std::optional<mlir::DataLayout> dl =
-      fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/true);
-  if (!dl) {
-    mlir::emitError(module.getLoc(), "Missing data layout attribute in module");
-    return;
-  }
 
   mlir::MLIRContext *context = module.getContext();
 
@@ -64,10 +58,12 @@ DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m,
   mlir::Type llvmDimsType = getDescFieldTypeModel<kDimsPosInBox>()(context);
   mlir::Type llvmPtrType = getDescFieldTypeModel<kAddrPosInBox>()(context);
   mlir::Type llvmLenType = getDescFieldTypeModel<kElemLenPosInBox>()(context);
-  dimsOffset = getComponentOffset<kDimsPosInBox>(*dl, context, llvmDimsType);
-  dimsSize = dl->getTypeSize(llvmDimsType);
-  ptrSize = dl->getTypeSize(llvmPtrType);
-  lenOffset = getComponentOffset<kElemLenPosInBox>(*dl, context, llvmLenType);
+  dimsOffset =
+      getComponentOffset<kDimsPosInBox>(*dataLayout, context, llvmDimsType);
+  dimsSize = dataLayout->getTypeSize(llvmDimsType);
+  ptrSize = dataLayout->getTypeSize(llvmPtrType);
+  lenOffset =
+      getComponentOffset<kElemLenPosInBox>(*dataLayout, context, llvmLenType);
 }
 
 static mlir::LLVM::DITypeAttr genBasicType(mlir::MLIRContext *context,
@@ -164,26 +160,14 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   if (result.first != fir::NameUniquer::NameKind::DERIVED_TYPE)
     return genPlaceholderType(context);
 
-  std::optional<mlir::DataLayout> dl =
-      fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/true);
-  if (!dl) {
-    mlir::emitError(module.getLoc(), "Missing data layout attribute in module");
-    return genPlaceholderType(context);
-  }
-  unsigned line = 1;
-  mlir::LLVM::DITypeAttr parentTypeAttr = nullptr;
   fir::TypeInfoOp tiOp = symbolTable->lookup<fir::TypeInfoOp>(Ty.getName());
-  if (tiOp) {
-    line = getLineFromLoc(tiOp.getLoc());
-    if (fir::RecordType parentTy = tiOp.getIfParentType())
-      parentTypeAttr =
-          convertRecordType(parentTy, fileAttr, scope, tiOp.getLoc());
-  }
+  unsigned line = (tiOp) ? getLineFromLoc(tiOp.getLoc()) : 1;
 
   llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
   std::uint64_t offset = 0;
   for (auto [fieldName, fieldTy] : Ty.getTypeList()) {
-    auto result = fir::getTypeSizeAndAlignment(loc, fieldTy, *dl, kindMapping);
+    auto result =
+        fir::getTypeSizeAndAlignment(loc, fieldTy, *dataLayout, kindMapping);
     // If we get a type whose size we can't determine, we will break the loop
     // and generate the derived type with whatever components we have
     // assembled thus far.
@@ -204,7 +188,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   return mlir::LLVM::DICompositeTypeAttr::get(
       context, llvm::dwarf::DW_TAG_structure_type, /*recursive_id=*/{},
       mlir::StringAttr::get(context, result.second.name), fileAttr, line, scope,
-      parentTypeAttr, mlir::LLVM::DIFlags::Zero, offset * 8,
+      /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, offset * 8,
       /*alignInBits=*/0, elements, /*dataLocation=*/nullptr, /*rank=*/nullptr,
       /*allocated=*/nullptr, /*associated=*/nullptr);
 }

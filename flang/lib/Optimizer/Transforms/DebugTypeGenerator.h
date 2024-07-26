@@ -17,6 +17,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/Support/DataLayout.h"
 #include "llvm/Support/Debug.h"
 
 namespace fir {
@@ -24,7 +25,8 @@ namespace fir {
 /// This converts FIR/mlir type to DITypeAttr.
 class DebugTypeGenerator {
 public:
-  DebugTypeGenerator(mlir::ModuleOp module, mlir::SymbolTable *symbolTable);
+  DebugTypeGenerator(mlir::ModuleOp module, mlir::SymbolTable *symbolTable,
+                     const mlir::DataLayout &dl);
 
   mlir::LLVM::DITypeAttr convertType(mlir::Type Ty,
                                      mlir::LLVM::DIFileAttr fileAttr,
@@ -64,6 +66,7 @@ private:
 
   mlir::ModuleOp module;
   mlir::SymbolTable *symbolTable;
+  const mlir::DataLayout *dataLayout;
   KindMapping kindMapping;
   std::uint64_t dimsSize;
   std::uint64_t dimsOffset;
