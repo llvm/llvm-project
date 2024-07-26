@@ -405,36 +405,6 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
   LookupParsedName(Found, S, &SS, ObjectType,
                    /*AllowBuiltinCreation=*/false, EnteringContext);
 
-  bool IsDependent = Found.wasNotFoundInCurrentInstantiation();
-
-  bool ObjectTypeSearchedInScope = false;
-
-  // C++ [basic.lookup.qual.general]p2:
-  //   A member-qualified name is the (unique) component name, if any, of
-  //   - an unqualified-id or
-  //   - a nested-name-specifier of the form type-name :: or namespace-name ::
-  //   in the id-expression of a class member access expression.
-  //
-  // C++ [basic.lookup.qual.general]p3:
-  //   [...] If nothing is found by qualified lookup for a member-qualified
-  //   name that is the terminal name of a nested-name-specifier and is not
-  //   dependent, it undergoes unqualified lookup.
-  //
-  // In 'x.A::B::y', 'A' will undergo unqualified lookup if qualified lookup
-  // in the type of 'x' finds nothing. If the lookup context is dependent,
-  // we perform the unqualified lookup in the template definition context
-  // and store the results so we can replicate the lookup during instantiation.
-  if (MayBeNNS && Found.empty() && !ObjectType.isNull() &&
-      (!getLangOpts().CPlusPlus23 || !IsDependent)) {
-    if (S) {
-      LookupName(Found, S);
-    } else if (!SS.getUnqualifiedLookups().empty()) {
-      Found.addAllDecls(SS.getUnqualifiedLookups());
-      Found.resolveKind();
-    }
-    ObjectTypeSearchedInScope = true;
-  }
-
   // C++ [basic.lookup.qual.general]p3:
   //   [...] Unless otherwise specified, a qualified name undergoes qualified
   //   name lookup in its lookup context from the point where it appears unless
@@ -470,6 +440,33 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
   if (Found.wasNotFoundInCurrentInstantiation())
     return false;
 
+  bool ObjectTypeSearchedInScope = false;
+
+  // C++ [basic.lookup.qual.general]p2:
+  //   A member-qualified name is the (unique) component name, if any, of
+  //   - an unqualified-id or
+  //   - a nested-name-specifier of the form type-name :: or namespace-name ::
+  //   in the id-expression of a class member access expression.
+  //
+  // C++ [basic.lookup.qual.general]p3:
+  //   [...] If nothing is found by qualified lookup for a member-qualified
+  //   name that is the terminal name of a nested-name-specifier and is not
+  //   dependent, it undergoes unqualified lookup.
+  //
+  // In 'x.A::B::y', 'A' will undergo unqualified lookup if qualified lookup
+  // in the type of 'x' finds nothing. If the lookup context is dependent,
+  // we perform the unqualified lookup in the template definition context
+  // and store the results so we can replicate the lookup during instantiation.
+  if (MayBeNNS && Found.empty() && !ObjectType.isNull()) {
+    if (S) {
+      LookupName(Found, S);
+    } else if (!SS.getUnqualifiedLookups().empty()) {
+      Found.addAllDecls(SS.getUnqualifiedLookups());
+      Found.resolveKind();
+    }
+    ObjectTypeSearchedInScope = true;
+  }
+
   if (Found.isAmbiguous())
     return false;
 
@@ -499,7 +496,7 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
     }
   }
 
-  if (Found.empty() && AllowTypoCorrection && !IsDependent) {
+  if (Found.empty() && AllowTypoCorrection) {
     // If we did not find any names, and this is not a disambiguation, attempt
     // to correct any typos.
     DeclarationName Name = Found.getLookupName();
@@ -540,12 +537,9 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
 
   NamedDecl *ExampleLookupResult =
       Found.empty() ? nullptr : Found.getRepresentativeDecl();
-  FilterAcceptableTemplateNames(Found, getLangOpts().CPlusPlus23 ||
-                                           !ObjectTypeSearchedInScope);
+  FilterAcceptableTemplateNames(Found);
   if (Found.empty()) {
-    if (IsDependent) {
-      Found.setNotFoundInCurrentInstantiation();
-    } else if (ExampleLookupResult && RequiredTemplate) {
+    if (ExampleLookupResult && RequiredTemplate) {
       // If a 'template' keyword was used, a lookup that finds only non-template
       // names is an error.
       Diag(Found.getNameLoc(), diag::err_template_kw_refers_to_non_template)

@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected,cxx98,cxx98-11,cxx98-14,cxx98-17,cxx98-20 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,cxx98-11,cxx98-14,cxx98-17,cxx98-20,cxx11-14 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,cxx98-14,cxx98-17,cxx98-20,cxx11-14 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17,cxx98-17,cxx98-20 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17,cxx98-20 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17,since-cxx23 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected,cxx98,cxx98-11,cxx98-14,cxx98-17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,cxx98-11,cxx98-14,cxx98-17,cxx11-14 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,cxx98-14,cxx98-17,cxx11-14 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17,cxx98-17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -705,8 +705,6 @@ namespace cwg141 { // cwg141: 3.1
     //   expected-note@#cwg141-S {{'::cwg141::S<int>::n' declared here}}
     b.f<int>();
     // expected-error@-1 {{no member named 'f' in 'cwg141::B'}}
-    // cxx98-20-error@-2 {{expected '(' for function-style cast or type construction}}
-    // cxx98-20-error@-3 {{expected expression}}
     (void)b.S<int>::n;
   }
   template<typename T> struct C {
@@ -717,11 +715,11 @@ namespace cwg141 { // cwg141: 3.1
     }
     void h() {
       (void)t.S<int>::n;
-      // since-cxx23-error@-1 {{use 'template' keyword to treat 'S' as a dependent template name}}
+      // expected-error@-1 {{use 'template' keyword to treat 'S' as a dependent template name}}
     }
     void i() {
       (void)t.S<int>();
-      // since-cxx23-error@-1 {{use 'template' keyword to treat 'S' as a dependent template name}}
+      // expected-error@-1 {{use 'template' keyword to treat 'S' as a dependent template name}}
     }
   };
   void h() { C<B>().h(); } // ok

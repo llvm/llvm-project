@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm-only -std=c++11 -verify=expected,cxx98-20  %s
-// RUN: %clang_cc1 -emit-llvm-only -std=c++23 -verify=expected,since-cxx23 %s
+// RUN: %clang_cc1 -emit-llvm-only -verify -std=c++11 %s
 struct A {};
 
 enum Foo { F };
@@ -149,13 +148,12 @@ namespace TwoPhaseLookup {
   namespace Template {
     template<typename T> struct Y {};
     template<class U> using G = Y<U>;
-    template<typename T> void f(T *p) { p->~G<int>(); } // since-cxx23-error {{no member named 'G'}}
-                                                        // cxx98-20-error@-1 {{no member named '~Y' in 'TwoPhaseLookup::Template::N::G<int>'}}
+    template<typename T> void f(T *p) { p->~G<int>(); } // expected-error {{no member named 'G'}}
     void h1(Y<int> *p) { p->~G<int>(); }
-    void h2(Y<int> *p) { f(p); } // since-cxx23-note {{in instantiation of}}
+    void h2(Y<int> *p) { f(p); } // expected-note {{in instantiation of}}
     namespace N { template<typename T> struct G {}; }
     void h3(N::G<int> *p) { p->~G<int>(); }
-    void h4(N::G<int> *p) { f(p); } // cxx98-20-note {{in instantiation of}}
+    void h4(N::G<int> *p) { f(p); }
   }
 
   namespace TemplateUndeclared {
