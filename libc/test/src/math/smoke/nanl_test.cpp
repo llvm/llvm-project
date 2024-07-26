@@ -70,7 +70,7 @@ TEST_F(LlvmLibcNanlTest, RandomString) {
   run_test("123 ", expected);
 }
 
-#ifndef LIBC_HAVE_ADDRESS_SANITIZER
+#if !defined(LIBC_HAVE_ADDRESS_SANITIZER) && defined(LIBC_TARGET_OS_IS_LINUX)
 TEST_F(LlvmLibcNanlTest, InvalidInput) {
   EXPECT_DEATH([] { LIBC_NAMESPACE::nanl(nullptr); }, WITH_SIGNAL(SIGSEGV));
 }

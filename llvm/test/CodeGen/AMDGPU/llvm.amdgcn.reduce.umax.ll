@@ -808,11 +808,11 @@ define amdgpu_kernel void @divergent_cfg(ptr addrspace(1) %out, i32 %in) {
 ; GFX1032GISEL-NEXT:    s_cbranch_scc1 .LBB4_4
 ; GFX1032GISEL-NEXT:  .LBB4_5: ; %endif
 ; GFX1032GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX1032GISEL-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x24
+; GFX1032GISEL-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x24
 ; GFX1032GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1032GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1032GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032GISEL-NEXT:    global_store_dword v1, v0, s[2:3]
+; GFX1032GISEL-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX1032GISEL-NEXT:    s_endpgm
 ;
 ; GFX1164DAGISEL-LABEL: divergent_cfg:

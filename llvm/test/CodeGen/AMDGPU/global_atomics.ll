@@ -4155,12 +4155,12 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_offset(ptr addrspace(1) %out, i32 
 ;
 ; GFX9-LABEL: atomic_cmpxchg_i32_offset:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    global_atomic_cmpswap v2, v[0:1], s[0:1] offset:16
+; GFX9-NEXT:    v_mov_b32_e32 v0, s6
+; GFX9-NEXT:    v_mov_b32_e32 v1, s7
+; GFX9-NEXT:    global_atomic_cmpswap v2, v[0:1], s[4:5] offset:16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_endpgm
@@ -4406,12 +4406,12 @@ define amdgpu_kernel void @atomic_cmpxchg_i32(ptr addrspace(1) %out, i32 %in, i3
 ;
 ; GFX9-LABEL: atomic_cmpxchg_i32:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    global_atomic_cmpswap v2, v[0:1], s[0:1]
+; GFX9-NEXT:    v_mov_b32_e32 v0, s6
+; GFX9-NEXT:    v_mov_b32_e32 v1, s7
+; GFX9-NEXT:    global_atomic_cmpswap v2, v[0:1], s[4:5]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_endpgm
@@ -5105,13 +5105,13 @@ define amdgpu_kernel void @atomic_load_i32_offset(ptr addrspace(1) %in, ptr addr
 ;
 ; GFX9-LABEL: atomic_load_i32_offset:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v1, v0, s[0:1] offset:16 glc
+; GFX9-NEXT:    global_load_dword v1, v0, s[4:5] offset:16 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
-; GFX9-NEXT:    global_store_dword v0, v1, s[2:3]
+; GFX9-NEXT:    global_store_dword v0, v1, s[6:7]
 ; GFX9-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %in, i64 4
@@ -5159,13 +5159,13 @@ define amdgpu_kernel void @atomic_load_i32_negoffset(ptr addrspace(1) %in, ptr a
 ;
 ; GFX9-LABEL: atomic_load_i32_negoffset:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v1, v0, s[0:1] offset:-512 glc
+; GFX9-NEXT:    global_load_dword v1, v0, s[4:5] offset:-512 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
-; GFX9-NEXT:    global_store_dword v0, v1, s[2:3]
+; GFX9-NEXT:    global_store_dword v0, v1, s[6:7]
 ; GFX9-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %in, i64 -128
@@ -5211,13 +5211,13 @@ define amdgpu_kernel void @atomic_load_f32_offset(ptr addrspace(1) %in, ptr addr
 ;
 ; GFX9-LABEL: atomic_load_f32_offset:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v1, v0, s[0:1] offset:16 glc
+; GFX9-NEXT:    global_load_dword v1, v0, s[4:5] offset:16 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
-; GFX9-NEXT:    global_store_dword v0, v1, s[2:3]
+; GFX9-NEXT:    global_store_dword v0, v1, s[6:7]
 ; GFX9-NEXT:    s_endpgm
 entry:
   %gep = getelementptr float, ptr addrspace(1) %in, i64 4
@@ -5261,13 +5261,13 @@ define amdgpu_kernel void @atomic_load_i32(ptr addrspace(1) %in, ptr addrspace(1
 ;
 ; GFX9-LABEL: atomic_load_i32:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v1, v0, s[0:1] glc
+; GFX9-NEXT:    global_load_dword v1, v0, s[4:5] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
-; GFX9-NEXT:    global_store_dword v0, v1, s[2:3]
+; GFX9-NEXT:    global_store_dword v0, v1, s[6:7]
 ; GFX9-NEXT:    s_endpgm
 entry:
   %val = load atomic i32, ptr addrspace(1) %in syncscope("agent") seq_cst, align 4
@@ -5812,13 +5812,13 @@ define amdgpu_kernel void @atomic_load_i8_offset(ptr addrspace(1) %in, ptr addrs
 ;
 ; GFX9-LABEL: atomic_load_i8_offset:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_ubyte v1, v0, s[0:1] offset:16 glc
+; GFX9-NEXT:    global_load_ubyte v1, v0, s[4:5] offset:16 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
-; GFX9-NEXT:    global_store_byte v0, v1, s[2:3]
+; GFX9-NEXT:    global_store_byte v0, v1, s[6:7]
 ; GFX9-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i8, ptr addrspace(1) %in, i64 16
@@ -5866,13 +5866,13 @@ define amdgpu_kernel void @atomic_load_i8_negoffset(ptr addrspace(1) %in, ptr ad
 ;
 ; GFX9-LABEL: atomic_load_i8_negoffset:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_ubyte v1, v0, s[0:1] offset:-512 glc
+; GFX9-NEXT:    global_load_ubyte v1, v0, s[4:5] offset:-512 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
-; GFX9-NEXT:    global_store_byte v0, v1, s[2:3]
+; GFX9-NEXT:    global_store_byte v0, v1, s[6:7]
 ; GFX9-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i8, ptr addrspace(1) %in, i64 -512
@@ -5993,13 +5993,13 @@ define amdgpu_kernel void @atomic_load_i16_offset(ptr addrspace(1) %in, ptr addr
 ;
 ; GFX9-LABEL: atomic_load_i16_offset:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_ushort v1, v0, s[0:1] offset:16 glc
+; GFX9-NEXT:    global_load_ushort v1, v0, s[4:5] offset:16 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
-; GFX9-NEXT:    global_store_short v0, v1, s[2:3]
+; GFX9-NEXT:    global_store_short v0, v1, s[6:7]
 ; GFX9-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i16, ptr addrspace(1) %in, i64 8
@@ -6047,13 +6047,13 @@ define amdgpu_kernel void @atomic_load_i16_negoffset(ptr addrspace(1) %in, ptr a
 ;
 ; GFX9-LABEL: atomic_load_i16_negoffset:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_ushort v1, v0, s[0:1] offset:-512 glc
+; GFX9-NEXT:    global_load_ushort v1, v0, s[4:5] offset:-512 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
-; GFX9-NEXT:    global_store_short v0, v1, s[2:3]
+; GFX9-NEXT:    global_store_short v0, v1, s[6:7]
 ; GFX9-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i16, ptr addrspace(1) %in, i64 -256
@@ -7074,13 +7074,13 @@ define amdgpu_kernel void @atomic_load_f16_offset(ptr addrspace(1) %in, ptr addr
 ;
 ; GFX9-LABEL: atomic_load_f16_offset:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_ushort v1, v0, s[0:1] offset:16 glc
+; GFX9-NEXT:    global_load_ushort v1, v0, s[4:5] offset:16 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
-; GFX9-NEXT:    global_store_short v0, v1, s[2:3]
+; GFX9-NEXT:    global_store_short v0, v1, s[6:7]
 ; GFX9-NEXT:    s_endpgm
   %gep = getelementptr half, ptr addrspace(1) %in, i64 8
   %val = load atomic half, ptr addrspace(1) %gep  seq_cst, align 2
@@ -7127,13 +7127,13 @@ define amdgpu_kernel void @atomic_load_f16_negoffset(ptr addrspace(1) %in, ptr a
 ;
 ; GFX9-LABEL: atomic_load_f16_negoffset:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_ushort v1, v0, s[0:1] offset:-512 glc
+; GFX9-NEXT:    global_load_ushort v1, v0, s[4:5] offset:-512 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
-; GFX9-NEXT:    global_store_short v0, v1, s[2:3]
+; GFX9-NEXT:    global_store_short v0, v1, s[6:7]
 ; GFX9-NEXT:    s_endpgm
   %gep = getelementptr half, ptr addrspace(1) %in, i64 -256
   %val = load atomic half, ptr addrspace(1) %gep  seq_cst, align 2
@@ -7176,13 +7176,13 @@ define amdgpu_kernel void @atomic_load_bf16_offset(ptr addrspace(1) %in, ptr add
 ;
 ; GFX9-LABEL: atomic_load_bf16_offset:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_ushort v1, v0, s[0:1] offset:16 glc
+; GFX9-NEXT:    global_load_ushort v1, v0, s[4:5] offset:16 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
-; GFX9-NEXT:    global_store_short v0, v1, s[2:3]
+; GFX9-NEXT:    global_store_short v0, v1, s[6:7]
 ; GFX9-NEXT:    s_endpgm
   %gep = getelementptr bfloat, ptr addrspace(1) %in, i64 8
   %val = load atomic bfloat, ptr addrspace(1) %gep  seq_cst, align 2
@@ -7229,13 +7229,13 @@ define amdgpu_kernel void @atomic_load_bf16_negoffset(ptr addrspace(1) %in, ptr 
 ;
 ; GFX9-LABEL: atomic_load_bf16_negoffset:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_ushort v1, v0, s[0:1] offset:-512 glc
+; GFX9-NEXT:    global_load_ushort v1, v0, s[4:5] offset:-512 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
-; GFX9-NEXT:    global_store_short v0, v1, s[2:3]
+; GFX9-NEXT:    global_store_short v0, v1, s[6:7]
 ; GFX9-NEXT:    s_endpgm
   %gep = getelementptr bfloat, ptr addrspace(1) %in, i64 -256
   %val = load atomic bfloat, ptr addrspace(1) %gep  seq_cst, align 2
