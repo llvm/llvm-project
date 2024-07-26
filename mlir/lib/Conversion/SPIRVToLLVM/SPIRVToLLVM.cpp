@@ -1408,11 +1408,13 @@ public:
     // Convert function signature. At the moment LLVMType converter is enough
     // for currently supported types.
     auto funcType = funcOp.getFunctionType();
+    SmallVector<std::optional<NamedAttribute>> byValByRefArgAttrs;
+    filterByValByRefArgAttributes(funcOp, byValByRefArgAttrs);
     TypeConverter::SignatureConversion signatureConverter(
         funcType.getNumInputs());
     auto llvmType = typeConverter.convertFunctionSignature(
         funcType, /*isVariadic=*/false, /*useBarePtrCallConv=*/false,
-        signatureConverter);
+        byValByRefArgAttrs, signatureConverter);
     if (!llvmType)
       return failure();
 

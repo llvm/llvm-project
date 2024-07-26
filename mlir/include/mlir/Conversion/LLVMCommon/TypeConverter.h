@@ -21,6 +21,7 @@
 namespace mlir {
 
 class DataLayoutAnalysis;
+class FunctionOpInterface;
 class LowerToLLVMOptions;
 
 namespace LLVM {
@@ -35,6 +36,7 @@ class LLVMTypeConverter : public TypeConverter {
   /// Give structFuncArgTypeConverter access to memref-specific functions.
   friend LogicalResult
   structFuncArgTypeConverter(const LLVMTypeConverter &converter, Type type,
+                             std::optional<NamedAttribute> byValByRefArgAttr,
                              SmallVectorImpl<Type> &result);
 
 public:
@@ -53,9 +55,10 @@ public:
   /// Convert a function type.  The arguments and results are converted one by
   /// one and results are packed into a wrapped LLVM IR structure type. `result`
   /// is populated with argument mapping.
-  Type convertFunctionSignature(FunctionType funcTy, bool isVariadic,
-                                bool useBarePtrCallConv,
-                                SignatureConversion &result) const;
+  Type convertFunctionSignature(
+      FunctionType funcTy, bool isVariadic, bool useBarePtrCallConv,
+      ArrayRef<std::optional<NamedAttribute>> byValByRefArgAttr,
+      SignatureConversion &result) const;
 
   /// Convert a non-empty list of types to be returned from a function into an
   /// LLVM-compatible type. In particular, if more than one value is returned,
@@ -242,15 +245,23 @@ private:
 /// argument to a list of non-aggregate types containing descriptor
 /// information, and an UnrankedmemRef function argument to a list containing
 /// the rank and a pointer to a descriptor struct.
-LogicalResult structFuncArgTypeConverter(const LLVMTypeConverter &converter,
-                                         Type type,
-                                         SmallVectorImpl<Type> &result);
+LogicalResult
+structFuncArgTypeConverter(const LLVMTypeConverter &converter, Type type,
+                           std::optional<NamedAttribute> byValByRefArgAttr,
+                           SmallVectorImpl<Type> &result);
 
 /// Callback to convert function argument types. It converts MemRef function
 /// arguments to bare pointers to the MemRef element type.
-LogicalResult barePtrFuncArgTypeConverter(const LLVMTypeConverter &converter,
-                                          Type type,
-                                          SmallVectorImpl<Type> &result);
+LogicalResult
+barePtrFuncArgTypeConverter(const LLVMTypeConverter &converter, Type type,
+                            std::optional<NamedAttribute> byValByRefArgAttr,
+                            SmallVectorImpl<Type> &result);
+
+/// Returns in `result` the `llvm.byval` or `llvm.byref` attributes, if
+/// present, or an empty attribute for each function argument.
+void filterByValByRefArgAttributes(
+    FunctionOpInterface funcOp,
+    SmallVectorImpl<std::optional<NamedAttribute>> &result);
 
 } // namespace mlir
 

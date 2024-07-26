@@ -276,6 +276,7 @@ Type LLVMTypeConverter::convertFunctionType(FunctionType type) const {
 // they are into an LLVM StructType in their order of appearance.
 Type LLVMTypeConverter::convertFunctionSignature(
     FunctionType funcTy, bool isVariadic, bool useBarePtrCallConv,
+    ArrayRef<std::optional<NamedAttribute>> byValByRefArgAtts,
     LLVMTypeConverter::SignatureConversion &result) const {
   // Select the argument converter depending on the calling convention.
   useBarePtrCallConv = useBarePtrCallConv || options.useBarePtrCallConv;
@@ -284,7 +285,8 @@ Type LLVMTypeConverter::convertFunctionSignature(
   // Convert argument types one by one and check for errors.
   for (auto [idx, type] : llvm::enumerate(funcTy.getInputs())) {
     SmallVector<Type, 8> converted;
-    if (failed(funcArgConverter(*this, type, converted)))
+    if (failed(
+            funcArgConverter(*this, type, byValByRefArgAtts[idx], converted)))
       return {};
     result.addInputs(idx, converted);
   }
@@ -659,9 +661,10 @@ LLVMTypeConverter::promoteOperands(Location loc, ValueRange opOperands,
 /// argument to a list of non-aggregate types containing descriptor
 /// information, and an UnrankedmemRef function argument to a list containing
 /// the rank and a pointer to a descriptor struct.
-LogicalResult
-mlir::structFuncArgTypeConverter(const LLVMTypeConverter &converter, Type type,
-                                 SmallVectorImpl<Type> &result) {
+LogicalResult mlir::structFuncArgTypeConverter(
+    const LLVMTypeConverter &converter, Type type,
+    std::optional<NamedAttribute> byValByRefArgAttr,
+    SmallVectorImpl<Type> &result) {
   if (auto memref = dyn_cast<MemRefType>(type)) {
     // In signatures, Memref descriptors are expanded into lists of
     // non-aggregate values.
@@ -679,23 +682,63 @@ mlir::structFuncArgTypeConverter(const LLVMTypeConverter &converter, Type type,
     result.append(converted.begin(), converted.end());
     return success();
   }
-  auto converted = converter.convertType(type);
-  if (!converted)
-    return failure();
+
+  /// If the argument has the `llvm.byval` or `llvm.byref` attribute, the
+  /// converted type is an LLVM pointer so that the LLVM argument passing
+  /// is correct.
+  Type converted;
+  if (byValByRefArgAttr.has_value() &&
+      (byValByRefArgAttr->getName() == LLVM::LLVMDialect::getByValAttrName() ||
+       byValByRefArgAttr->getName() == LLVM::LLVMDialect::getByRefAttrName())) {
+    converted = LLVM::LLVMPointerType::get(type.getContext());
+  } else {
+    converted = converter.convertType(type);
+    if (!converted)
+      return failure();
+  }
+
   result.push_back(converted);
   return success();
 }
 
 /// Callback to convert function argument types. It converts MemRef function
 /// arguments to bare pointers to the MemRef element type.
-LogicalResult
-mlir::barePtrFuncArgTypeConverter(const LLVMTypeConverter &converter, Type type,
-                                  SmallVectorImpl<Type> &result) {
-  auto llvmTy = converter.convertCallingConventionType(
-      type, /*useBarePointerCallConv=*/true);
-  if (!llvmTy)
-    return failure();
+LogicalResult mlir::barePtrFuncArgTypeConverter(
+    const LLVMTypeConverter &converter, Type type,
+    std::optional<NamedAttribute> byValByRefArgAttr,
+    SmallVectorImpl<Type> &result) {
+  /// If the argument has the `llvm.byval` or `llvm.byref` attribute, the
+  /// converted type is an LLVM pointer so that the LLVM argument passing
+  /// convention is correct.
+  Type llvmTy;
+  if (byValByRefArgAttr.has_value() &&
+      (byValByRefArgAttr->getName() == LLVM::LLVMDialect::getByValAttrName() ||
+       byValByRefArgAttr->getName() == LLVM::LLVMDialect::getByRefAttrName())) {
+    llvmTy = LLVM::LLVMPointerType::get(type.getContext());
+  } else {
+    llvmTy = converter.convertCallingConventionType(
+        type, /*useBarePointerCallConv=*/true);
+
+    if (!llvmTy)
+      return failure();
+  }
 
   result.push_back(llvmTy);
   return success();
+}
+
+void mlir::filterByValByRefArgAttributes(
+    FunctionOpInterface funcOp,
+    SmallVectorImpl<std::optional<NamedAttribute>> &result) {
+  assert(result.empty() && "Unexpected non-empty output");
+  result.resize(funcOp.getNumArguments(), std::nullopt);
+  for (int argIdx : llvm::seq(funcOp.getNumArguments())) {
+    for (NamedAttribute namedAttr : funcOp.getArgAttrs(argIdx)) {
+      if (namedAttr.getName() == LLVM::LLVMDialect::getByValAttrName() ||
+          namedAttr.getName() == LLVM::LLVMDialect::getByRefAttrName()) {
+        result[argIdx] = namedAttr;
+        break;
+      }
+    }
+  }
 }
