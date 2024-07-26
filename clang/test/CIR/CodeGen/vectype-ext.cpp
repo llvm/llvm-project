@@ -11,7 +11,7 @@ typedef long vl2 __attribute__((ext_vector_type(2)));
 typedef unsigned short vus2 __attribute__((ext_vector_type(2)));
 
 // CIR: cir.func {{@.*vector_int_test.*}}
-// LLVM: define void {{@.*vector_int_test.*}}
+// LLVM: define dso_local void {{@.*vector_int_test.*}}
 void vector_int_test(int x) {
 
   // Vector constant.
@@ -196,7 +196,7 @@ void vector_int_test(int x) {
 }
 
 // CIR: cir.func {{@.*vector_double_test.*}}
-// LLVM: define void {{@.*vector_double_test.*}}
+// LLVM: define dso_local void {{@.*vector_double_test.*}}
 void vector_double_test(int x, double y) {
   // Vector constant.
   vd2 a = { 1.5, 2.5 };
@@ -310,7 +310,7 @@ void vector_double_test(int x, double y) {
 }
 
 // CIR: cir.func {{@.*test_load.*}}
-// LLVM: define void {{@.*test_load.*}}
+// LLVM: define dso_local void {{@.*test_load.*}}
 void test_load() {
   vi4 a = { 1, 2, 3, 4 };
 
@@ -338,7 +338,7 @@ void test_load() {
 }
 
 // CIR: cir.func {{@.*test_store.*}}
-// LLVM: define void {{@.*test_store.*}}
+// LLVM: define dso_local void {{@.*test_store.*}}
 void test_store() {
   vi4 a;
   // CIR: %[[#PVECA:]] = cir.alloca !cir.vector<!s32i x 4>
@@ -423,7 +423,7 @@ void test_store() {
 }
 
 // CIR: cir.func {{@.*test_build_lvalue.*}}
-// LLVM: define void {{@.*test_build_lvalue.*}}
+// LLVM: define dso_local void {{@.*test_build_lvalue.*}}
 void test_build_lvalue() {
   // special cases only
 
@@ -486,7 +486,7 @@ void test_build_lvalue() {
 }
 
 // CIR: cir.func {{@.*test_vec3.*}}
-// LLVM: define void {{@.*test_vec3.*}}
+// LLVM: define dso_local void {{@.*test_vec3.*}}
 void test_vec3() {
   vi3 v = {};
   // CIR-NEXT: %[[#PV:]] = cir.alloca !cir.vector<!s32i x 3>, !cir.ptr<!cir.vector<!s32i x 3>>, ["v"] {alignment = 16 : i64}

@@ -30,7 +30,7 @@ int f2(void) { return 3; }
 // CIR-NEXT: %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: cir.return %2 : !s32i
 
-// LLVM: define i32 @f2()
+// LLVM: define dso_local i32 @f2()
 // LLVM-NEXT:  %1 = alloca i32, i64 1, align 4
 // LLVM-NEXT:  store i32 3, ptr %1, align 4
 // LLVM-NEXT:  %2 = load i32, ptr %1, align 4

@@ -25,11 +25,11 @@ void fn1() { f f1; }
 // CIR: cir.func @_ZN1f1bEv(%arg0: !cir.ptr<!ty_22f22> loc{{.*}}) -> !cir.ptr<!s8i>
 // CIR: [[H_PTR:%.*]] = cir.get_global @h : !cir.ptr<!s32i> loc(#loc18)
 // CIR: [[H_VAL:%.*]] = cir.load [[H_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR: [[RET1_VAL:%.*]] = cir.call @_ZN1a1bEi([[H_VAL]]) : (!s32i) -> !cir.ptr<!s8i> 
+// CIR: [[RET1_VAL:%.*]] = cir.call @_ZN1a1bEi([[H_VAL]]) : (!s32i) -> !cir.ptr<!s8i>
 // CIR: cir.store [[RET1_VAL]], [[RET1_P:%.*]] : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
 // CIR: [[RET1_VAL2:%.*]] = cir.load [[RET1_P]] : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
-//    %7 = cir.load %1 : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i> 
-// CIR: cir.return [[RET1_VAL2]] : !cir.ptr<!s8i> 
+//    %7 = cir.load %1 : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
+// CIR: cir.return [[RET1_VAL2]] : !cir.ptr<!s8i>
 
 // CIR: cir.func @_Z3fn1v()
 // CIR: [[CLS_F:%.*]] = cir.alloca !ty_22f22, !cir.ptr<!ty_22f22>, ["f1"] {alignment = 1 : i64}
@@ -40,7 +40,7 @@ void fn1() { f f1; }
 // LLVM: @h = global i32 0
 // LLVM: declare {{.*}} ptr @_ZN1a1bEi(i32)
 
-// LLVM: define ptr @_ZN1f1bEv(ptr [[ARG0:%.*]])
+// LLVM: define dso_local ptr @_ZN1f1bEv(ptr [[ARG0:%.*]])
 // LLVM: [[ARG0_SAVE:%.*]] = alloca ptr, i64 1, align 8
 // LLVM: [[RET_SAVE:%.*]] = alloca ptr, i64 1, align 8
 // LLVM: store ptr [[ARG0]], ptr [[ARG0_SAVE]], align 8,
@@ -52,6 +52,6 @@ void fn1() { f f1; }
 // LLVM: [[RET_VAL2:%.*]] = load ptr, ptr [[RET_SAVE]], align 8
 // LLVM: ret ptr [[RET_VAL2]]
 
-// LLVM: define void @_Z3fn1v()
+// LLVM: define dso_local void @_Z3fn1v()
 // LLVM: [[FUNC_PTR:%.*]] = alloca %class.f, i64 1, align 1
 // LLVM: ret void

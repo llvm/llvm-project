@@ -364,22 +364,12 @@ bool CIRGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
   return true;
 }
 
-static bool hasDefaultVisibility(CIRGlobalValueInterface GV) {
-  // Since we do not support hidden visibility and private visibility,
-  // we can assume that the default visibility is public or private.
-  // The way we use private visibility now simply is just treating it
-  // as either local or private linkage, or just default for declarations
-  assert(!MissingFeatures::hiddenVisibility());
-  assert(!MissingFeatures::protectedVisibility());
-  return GV.isPublic() || GV.isPrivate();
-}
-
 static bool shouldAssumeDSOLocal(const CIRGenModule &CGM,
                                  CIRGlobalValueInterface GV) {
   if (GV.hasLocalLinkage())
     return true;
 
-  if (!hasDefaultVisibility(GV) && !GV.hasExternalWeakLinkage()) {
+  if (!GV.hasDefaultVisibility() && !GV.hasExternalWeakLinkage()) {
     return true;
   }
 
@@ -1435,8 +1425,11 @@ generateStringLiteral(mlir::Location loc, mlir::TypedAttr C,
   // TODO(cir)
   assert(!cir::MissingFeatures::threadLocal() && "NYI");
   assert(!cir::MissingFeatures::unnamedAddr() && "NYI");
-  assert(!mlir::cir::isWeakForLinker(LT) && "NYI");
-  assert(!cir::MissingFeatures::setDSOLocal() && "NYI");
+  if (GV.isWeakForLinker()) {
+    assert(CGM.supportsCOMDAT() && "Only COFF uses weak string literals");
+    GV.setComdat(true);
+  }
+  CGM.setDSOLocal(static_cast<mlir::Operation *>(GV));
   return GV;
 }
 
@@ -2909,10 +2902,10 @@ mlir::cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
     OldGV->erase();
   }
 
-  assert(!MissingFeatures::setComdat());
   if (supportsCOMDAT() && mlir::cir::isWeakForLinker(Linkage) &&
-      !GV.hasAvailableExternallyLinkage())
-    assert(!MissingFeatures::setComdat());
+      !GV.hasAvailableExternallyLinkage()) {
+    GV.setComdat(true);
+  }
 
   GV.setAlignmentAttr(getSize(Alignment));
   setDSOLocal(static_cast<mlir::Operation *>(GV));

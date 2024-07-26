@@ -20,7 +20,7 @@ void c() {
 // CIR: [[TMP4:%.*]] = cir.objsize([[TMP3]] : <!void>, min) -> !u64i
 // CIR-NEXT: cir.call @e([[TMP3]], [[TMP4]]) : (!cir.ptr<!void>, !u64i) -> ()
 
-// LLVM: define void @c()
+// LLVM: define dso_local void @c()
 // LLVM: [[TMP0:%.*]] = alloca i32, i64 %{{[0-9]+}},
 // LLVM: [[TMP1:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[TMP0]], i1 false, i1 true, i1 false),
 // LLVM-NEXT: call void @b(ptr [[TMP0]], i64 [[TMP1]])

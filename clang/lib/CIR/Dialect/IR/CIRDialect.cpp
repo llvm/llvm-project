@@ -2109,15 +2109,15 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (getNoProto())
     p << "no_proto ";
 
+  if (getComdat())
+    p << "comdat ";
+
   if (getLinkage() != GlobalLinkageKind::ExternalLinkage)
     p << stringifyGlobalLinkageKind(getLinkage()) << ' ';
 
   auto vis = getVisibility();
   if (vis != mlir::SymbolTable::Visibility::Public)
     p << vis << " ";
-
-  if (getDsolocal())
-    p << "dsolocal ";
 
   // Print function name, signature, and control.
   p.printSymbolName(getSymName());
@@ -2148,6 +2148,7 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
           getSymVisibilityAttrName(),
           getArgAttrsAttrName(),
           getResAttrsAttrName(),
+          getComdatAttrName(),
       });
 
   if (auto aliaseeName = getAliasee()) {

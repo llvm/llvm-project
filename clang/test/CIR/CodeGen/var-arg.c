@@ -79,7 +79,7 @@ int f1(int n, ...) {
 // AFTER:   cir.return [[RETV]] : !s32i
 
 // LLVM: %struct.__va_list = type { ptr, ptr, ptr, i32, i32 }
-// LLVM: define i32 @f1(i32 %0, ...)
+// LLVM: define dso_local i32 @f1(i32 %0, ...)
 // LLVM: [[ARGN:%.*]] = alloca i32, i64 1, align 4,
 // LLVM: [[RETP:%.*]] = alloca i32, i64 1, align 4,
 // LLVM: [[RESP:%.*]] = alloca i32, i64 1, align 4,

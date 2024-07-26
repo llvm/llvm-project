@@ -12,12 +12,12 @@ int main() {
   return 0;
 }
 
-// CIR: cir.func dsolocal @foo(%arg0: !s32i
+// CIR: cir.func @foo(%arg0: !s32i
 // CIR-NEXT:   [[TMP0:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
 // CIR-NEXT:   cir.store %arg0, [[TMP0]] : !s32i, !cir.ptr<!s32i>
 // CIR-NEXT:   cir.return
 
-// CIR: cir.func no_proto dsolocal @main() -> !s32i
+// CIR: cir.func no_proto @main() -> !s32i
 // CIR: [[TMP1:%.*]] = cir.const #cir.int<2> : !s32i
 // CIR: cir.call @foo([[TMP1]]) : (!s32i) -> ()
 

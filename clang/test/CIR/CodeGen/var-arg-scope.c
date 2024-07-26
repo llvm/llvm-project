@@ -66,7 +66,7 @@ void f1(__builtin_va_list c) {
 // AFTER-NEXT: cir.return
 
 // LLVM: %struct.__va_list = type { ptr, ptr, ptr, i32, i32 }
-// LLVM: define void @f1(%struct.__va_list %0)
+// LLVM: define dso_local void @f1(%struct.__va_list %0)
 // LLVM: [[VARLIST:%.*]] = alloca %struct.__va_list, i64 1, align 8,
 // LLVM: br label %[[SCOPE_FRONT:.*]],
 

@@ -29,7 +29,7 @@ Derived *ptr_cast(Base1 *ptr) {
   // CHECK-NEXT: }) : (!cir.bool) -> !cir.ptr<!ty_22Derived22>
 }
 
-//      LLVM: define ptr @_Z8ptr_castP5Base1(ptr readonly %[[#SRC:]])
+//      LLVM: define dso_local ptr @_Z8ptr_castP5Base1(ptr readonly %[[#SRC:]])
 // LLVM-NEXT:   %[[#VPTR:]] = load ptr, ptr %[[#SRC]], align 8
 // LLVM-NEXT:   %[[#SUCCESS:]] = icmp eq ptr %[[#VPTR]], getelementptr inbounds (i8, ptr @_ZTV7Derived, i64 16)
 // LLVM-NEXT:   %[[RESULT:.+]] = select i1 %[[#SUCCESS]], ptr %[[#SRC]], ptr null
@@ -51,7 +51,7 @@ Derived &ref_cast(Base1 &ref) {
   // CHECK-NEXT: %{{.+}} = cir.cast(bitcast, %[[#SRC]] : !cir.ptr<!ty_22Base122>), !cir.ptr<!ty_22Derived22>
 }
 
-//      LLVM: define noundef ptr @_Z8ref_castR5Base1(ptr readonly returned %[[#SRC:]])
+//      LLVM: define dso_local noundef ptr @_Z8ref_castR5Base1(ptr readonly returned %[[#SRC:]])
 // LLVM-NEXT:   %[[#VPTR:]] = load ptr, ptr %[[#SRC]], align 8
 // LLVM-NEXT:   %[[OK:.+]] = icmp eq ptr %[[#VPTR]], getelementptr inbounds (i8, ptr @_ZTV7Derived, i64 16)
 // LLVM-NEXT:   br i1 %[[OK]], label %[[#LABEL_OK:]], label %[[#LABEL_FAIL:]]
@@ -69,7 +69,7 @@ Derived *ptr_cast_always_fail(Base2 *ptr) {
   // CHECK-NEXT: cir.store %[[#RESULT]], %{{.+}} : !cir.ptr<!ty_22Derived22>, !cir.ptr<!cir.ptr<!ty_22Derived22>>
 }
 
-//      LLVM: define noalias noundef ptr @_Z20ptr_cast_always_failP5Base2(ptr nocapture readnone %{{.+}})
+//      LLVM: define dso_local noalias noundef ptr @_Z20ptr_cast_always_failP5Base2(ptr nocapture readnone %{{.+}})
 // LLVM-NEXT:   ret ptr null
 // LLVM-NEXT: }
 
@@ -81,7 +81,7 @@ Derived &ref_cast_always_fail(Base2 &ref) {
   // CHECK-NEXT: cir.unreachable
 }
 
-//      LLVM: define noalias noundef nonnull ptr @_Z20ref_cast_always_failR5Base2(ptr nocapture readnone %{{.+}})
+//      LLVM: define dso_local noalias noundef nonnull ptr @_Z20ref_cast_always_failR5Base2(ptr nocapture readnone %{{.+}})
 // LLVM-NEXT:   tail call void @__cxa_bad_cast()
 // LLVM-NEXT:   unreachable
 // LLVM-NEXT: }

@@ -87,7 +87,7 @@ public:
 // RTTI_DISABLED-NOT:   cir.global "private" external @_ZTVN10__cxxabiv120__si_class_type_infoE : !cir.ptr<!cir.ptr<!u8i>>
 
 // typeinfo name for B
-// CHECK:   cir.global linkonce_odr @_ZTS1B = #cir.const_array<"1B" : !cir.array<!s8i x 2>> : !cir.array<!s8i x 2> {alignment = 1 : i64}
+// CHECK:   cir.global linkonce_odr comdat @_ZTS1B = #cir.const_array<"1B" : !cir.array<!s8i x 2>> : !cir.array<!s8i x 2> {alignment = 1 : i64}
 // RTTI_DISABLED-NOT: cir.global linkonce_odr @_ZTS1B
 
 // typeinfo for A

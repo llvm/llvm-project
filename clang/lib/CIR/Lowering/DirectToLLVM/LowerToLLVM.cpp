@@ -46,12 +46,12 @@
 #include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "clang/CIR/LoweringHelpers.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/LoweringHelpers.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/Passes.h"
 #include "llvm/ADT/APInt.h"
@@ -1433,7 +1433,7 @@ public:
         cast<mlir::cir::ExtraFuncAttributesAttr>(extraAttrsEntry.getValue());
     if (!oldExtraAttrs.getElements().contains(attrKey))
       return;
-    
+
     mlir::NamedAttrList newExtraAttrs;
     for (auto entry : oldExtraAttrs.getElements()) {
       if (entry.getName() == attrKey) {
@@ -1815,12 +1815,34 @@ public:
     }
 
     // Rewrite op.
-    rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
+    auto llvmGlobalOp = rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
         op, llvmType, isConst, linkage, symbol, init.value(),
         /*alignment*/ 0, /*addrSpace*/ 0,
         /*dsoLocal*/ false, /*threadLocal*/ (bool)op.getTlsModelAttr(),
         /*comdat*/ mlir::SymbolRefAttr(), attributes);
+    auto mod = op->getParentOfType<mlir::ModuleOp>();
+    if (op.getComdat())
+      addComdat(llvmGlobalOp, comdatOp, rewriter, mod);
     return mlir::success();
+  }
+
+private:
+  mutable mlir::LLVM::ComdatOp comdatOp = nullptr;
+  static void addComdat(mlir::LLVM::GlobalOp &op,
+                        mlir::LLVM::ComdatOp &comdatOp,
+                        mlir::OpBuilder &builder, mlir::ModuleOp &module) {
+    StringRef comdatName("__llvm_comdat_globals");
+    if (!comdatOp) {
+      builder.setInsertionPointToStart(module.getBody());
+      comdatOp =
+          builder.create<mlir::LLVM::ComdatOp>(module.getLoc(), comdatName);
+    }
+    builder.setInsertionPointToStart(&comdatOp.getBody().back());
+    auto selectorOp = builder.create<mlir::LLVM::ComdatSelectorOp>(
+        comdatOp.getLoc(), op.getSymName(), mlir::LLVM::comdat::Comdat::Any);
+    op.setComdatAttr(mlir::SymbolRefAttr::get(
+        builder.getContext(), comdatName,
+        mlir::FlatSymbolRefAttr::get(selectorOp.getSymNameAttr())));
   }
 };
 
@@ -3412,7 +3434,7 @@ class CIRUndefOpLowering
   matchAndRewrite(mlir::cir::UndefOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto typ = getTypeConverter()->convertType(op.getRes().getType());
-    
+
     rewriter.replaceOpWithNewOp<mlir::LLVM::UndefOp>(op, typ);
     return mlir::success();
   }
@@ -3452,7 +3474,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRRintOpLowering, CIRRoundOpLowering, CIRSinOpLowering,
       CIRSqrtOpLowering, CIRTruncOpLowering, CIRCopysignOpLowering,
       CIRFModOpLowering, CIRFMaxOpLowering, CIRFMinOpLowering, CIRPowOpLowering,
-      CIRClearCacheOpLowering, CIRUndefOpLowering>(converter, patterns.getContext());
+      CIRClearCacheOpLowering, CIRUndefOpLowering>(converter,
+                                                   patterns.getContext());
 }
 
 namespace {

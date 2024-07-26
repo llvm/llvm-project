@@ -5,17 +5,17 @@ typedef struct {
   int a : 4;
 } B;
 
-// LLVM: define void @set_signed  
+// LLVM: define dso_local void @set_signed
 // LLVM:   [[TMP0:%.*]] = load ptr
 // LLVM:   [[TMP1:%.*]] = load i8, ptr [[TMP0]]
 // LLVM:   [[TMP2:%.*]] = and i8 [[TMP1]], -16
 // LLVM:   [[TMP3:%.*]] = or i8 [[TMP2]], 14
 // LLVM:   store i8 [[TMP3]], ptr [[TMP0]]
 void set_signed(B* b) {
-  b->a = -2; 
+  b->a = -2;
 }
 
-// LLVM: define i32 @get_signed
+// LLVM: define dso_local i32 @get_signed
 // LLVM:   [[TMP0:%.*]] = alloca i32
 // LLVM:   [[TMP1:%.*]] = load ptr
 // LLVM:   [[TMP2:%.*]] = load i8, ptr [[TMP1]]

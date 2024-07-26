@@ -25,10 +25,10 @@ int s2(int a, int b) {
 // CIR: cir.func @_Z2s1ii(%{{.*}}, %{{.*}}) -> {{.*}} extra(#fn_attr)
 // CIR: cir.call @_Z2s0ii(%{{.*}}, %{{.*}}) : ({{.*}}, {{.*}}) -> {{.*}} extra(#fn_attr1)
 // CIR: cir.func @_Z2s2ii(%{{.*}}, %{{.*}}) -> {{.*}} extra(#fn_attr)
-// CHECK-NOT: cir.call @_Z2s1ii(%{{.*}}, %{{.*}}) : ({{.*}}, {{.*}}) -> {{.*}} extra(#fn_attr{{.*}}) 
+// CHECK-NOT: cir.call @_Z2s1ii(%{{.*}}, %{{.*}}) : ({{.*}}, {{.*}}) -> {{.*}} extra(#fn_attr{{.*}})
 
-// LLVM: define i32 @_Z2s0ii(i32 %0, i32 %1) #[[#ATTR1:]]
-// LLVM: define i32 @_Z2s1ii(i32 %0, i32 %1) #[[#ATTR1:]]
-// LLVM: define i32 @_Z2s2ii(i32 %0, i32 %1) #[[#ATTR1:]]
+// LLVM: define dso_local i32 @_Z2s0ii(i32 %0, i32 %1) #[[#ATTR1:]]
+// LLVM: define dso_local i32 @_Z2s1ii(i32 %0, i32 %1) #[[#ATTR1:]]
+// LLVM: define dso_local i32 @_Z2s2ii(i32 %0, i32 %1) #[[#ATTR1:]]
 
 // LLVM: attributes #[[#ATTR1]] = {{.*}} noinline nounwind optnone

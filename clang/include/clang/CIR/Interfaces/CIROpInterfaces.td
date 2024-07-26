@@ -58,11 +58,23 @@ let cppNamespace = "::mlir::cir" in {
       }]
       >,
       InterfaceMethod<"",
+      "bool", "isExternalLinkage", (ins), [{}],
+      /*defaultImplementation=*/[{ 
+        return mlir::cir::isExternalLinkage($_op.getLinkage()); 
+      }]
+      >,
+      InterfaceMethod<"",
       "bool", "isDeclarationForLinker", (ins), [{}],
       /*defaultImplementation=*/[{
         if ($_op.hasAvailableExternallyLinkage())
           return true;
         return $_op.isDeclaration();
+      }]
+      >,
+      InterfaceMethod<"",
+      "bool", "hasComdat", (ins), [{}],
+      /*defaultImplementation=*/[{
+        return $_op.getComdat();
       }]
       >,
       InterfaceMethod<"",
@@ -73,7 +85,8 @@ let cppNamespace = "::mlir::cir" in {
       >,
     ];
     let extraClassDeclaration = [{ 
-    bool canBenefitFromLocalAlias() const;
+    bool hasDefaultVisibility();  
+    bool canBenefitFromLocalAlias();
   }];
   }
 

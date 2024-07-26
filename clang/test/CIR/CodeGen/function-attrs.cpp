@@ -33,7 +33,7 @@ int s3(int a, int b) {
 // CIR:   cir.func @_Z2s2ii(%arg0:{{.*}}, %arg1:{{.*}} -> {{.*}} extra(#fn_attr2)
 // CIR:   cir.func @_Z2s3ii(%arg0:{{.*}}, %arg1:{{.*}} -> {{.*}} {
 
-// LLVM: define i32 @_Z2s1ii(i32 %0, i32 %1) {{.*}} #[[#ATTR1:]]
-// LLVM: define i32 @_Z2s2ii(i32 %0, i32 %1) {{.*}} #[[#ATTR2:]]
+// LLVM: define dso_local i32 @_Z2s1ii(i32 %0, i32 %1) {{.*}} #[[#ATTR1:]]
+// LLVM: define dso_local i32 @_Z2s2ii(i32 %0, i32 %1) {{.*}} #[[#ATTR2:]]
 // LLVM: attributes #[[#ATTR1]] = {{.*}} noinline
 // LLVM: attributes #[[#ATTR2]] = {{.*}} alwaysinline
