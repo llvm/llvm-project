@@ -2173,6 +2173,9 @@ static const char *RegNumToRegName(int reg) {
     case REG_ESP:
       return "esp";
 #    elif defined(__arm__)
+#      ifdef MAKE_CASE
+#        undef MAKE_CASE
+#      endif
 #      define REG_STR(reg) #reg
 #      define MAKE_CASE(N) \
         case REG_R##N:     \
@@ -2244,13 +2247,16 @@ static const char *RegNumToRegName(int reg) {
   return NULL;
 }
 
-#    if SANITIZER_LINUX && (defined(__arm__) || defined(__aarch64__))
+#  if SANITIZER_LINUX && (defined(__arm__) || defined(__aarch64__))
 static uptr GetArmRegister(ucontext_t *ctx, int RegNum) {
   switch (RegNum) {
-#      if defined(__arm__)
-#        define MAKE_CASE(N) \
-          case REG_R##N:     \
-            return ctx->uc_mcontext.arm_r##N
+#    if defined(__arm__)
+#      ifdef MAKE_CASE
+#        undef MAKE_CASE
+#      endif
+#      define MAKE_CASE(N) \
+        case REG_R##N:     \
+          return ctx->uc_mcontext.arm_r##N
     MAKE_CASE(0);
     MAKE_CASE(1);
     MAKE_CASE(2);
@@ -2272,18 +2278,18 @@ static uptr GetArmRegister(ucontext_t *ctx, int RegNum) {
       return ctx->uc_mcontext.arm_lr;
     case REG_R15:
       return ctx->uc_mcontext.arm_pc;
-#      elif defined(__aarch64__)
+#    elif defined(__aarch64__)
     case 0 ... 30:
       return ctx->uc_mcontext.regs[RegNum];
     case 31:
       return ctx->uc_mcontext.sp;
-#      endif
+#    endif
     default:
       return 0;
   }
   return 0;
 }
-#    endif  // SANITIZER_LINUX && (defined(__arm__) || defined(__aarch64__))
+#  endif  // SANITIZER_LINUX && (defined(__arm__) || defined(__aarch64__))
 
 UNUSED
 static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
@@ -2293,15 +2299,15 @@ static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
          RegName, ctx->uc_mcontext.gregs[RegNum]);
 #    elif defined(__i386__)
   Printf("%s = 0x%08x  ", RegName, ctx->uc_mcontext.gregs[RegNum]);
-#    elif defined(__arm__)
+#  elif defined(__arm__)
   Printf("%s%s = 0x%08zx  ", internal_strlen(RegName) == 2 ? " " : "", RegName,
          GetArmRegister(ctx, RegNum));
-#    elif defined(__aarch64__)
+#  elif defined(__aarch64__)
   Printf("%s%s = 0x%016zx  ", internal_strlen(RegName) == 2 ? " " : "", RegName,
          GetArmRegister(ctx, RegNum));
-#    else
+#  else
   (void)RegName;
-#    endif
+#  endif
 }
 
 void SignalContext::DumpAllRegisters(void *context) {

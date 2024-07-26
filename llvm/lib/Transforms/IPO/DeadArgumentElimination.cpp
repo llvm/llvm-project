@@ -962,8 +962,7 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
       } else if (NewCB->getType()->isVoidTy()) {
         // If the return value is dead, replace any uses of it with poison
         // (any non-debug value uses will get removed later on).
-        if (!CB.getType()->isX86_MMXTy())
-          CB.replaceAllUsesWith(PoisonValue::get(CB.getType()));
+        CB.replaceAllUsesWith(PoisonValue::get(CB.getType()));
       } else {
         assert((RetTy->isStructTy() || RetTy->isArrayTy()) &&
                "Return type changed, but not into a void. The old return type"
@@ -1027,8 +1026,7 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
     } else {
       // If this argument is dead, replace any uses of it with poison
       // (any non-debug value uses will get removed later on).
-      if (!I->getType()->isX86_MMXTy())
-        I->replaceAllUsesWith(PoisonValue::get(I->getType()));
+      I->replaceAllUsesWith(PoisonValue::get(I->getType()));
     }
 
   // If we change the return value of the function we must rewrite any return
