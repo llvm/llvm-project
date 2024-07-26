@@ -6405,7 +6405,8 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
     if (VT.isVector())
       WideVT = EVT::getVectorVT(*DAG.getContext(), WideVT,
                                 VT.getVectorElementCount());
-    if (isOperationLegalOrCustom(ISD::MUL, WideVT)) {
+    if (isOperationLegalOrCustom(ISD::MUL, WideVT) ||
+        forceDivByConstantToMul(VT, WideVT, IsAfterLegalization)) {
       X = DAG.getNode(ISD::SIGN_EXTEND, dl, WideVT, X);
       Y = DAG.getNode(ISD::SIGN_EXTEND, dl, WideVT, Y);
       Y = DAG.getNode(ISD::MUL, dl, WideVT, X, Y);
@@ -6588,7 +6589,8 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     if (VT.isVector())
       WideVT = EVT::getVectorVT(*DAG.getContext(), WideVT,
                                 VT.getVectorElementCount());
-    if (isOperationLegalOrCustom(ISD::MUL, WideVT)) {
+    if (isOperationLegalOrCustom(ISD::MUL, WideVT) ||
+        forceDivByConstantToMul(VT, WideVT, IsAfterLegalization)) {
       X = DAG.getNode(ISD::ZERO_EXTEND, dl, WideVT, X);
       Y = DAG.getNode(ISD::ZERO_EXTEND, dl, WideVT, Y);
       Y = DAG.getNode(ISD::MUL, dl, WideVT, X, Y);
