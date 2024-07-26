@@ -18,22 +18,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "dxil-resource-analysis"
 
-dxil::Resources DXILResourceAnalysis::run(Module &M,
-                                          ModuleAnalysisManager &AM) {
-  dxil::Resources R;
-  R.collect(M);
-  return R;
-}
-
-AnalysisKey DXILResourceAnalysis::Key;
-
-PreservedAnalyses DXILResourcePrinterPass::run(Module &M,
-                                               ModuleAnalysisManager &AM) {
-  dxil::Resources Res = AM.getResult<DXILResourceAnalysis>(M);
-  Res.print(OS);
-  return PreservedAnalyses::all();
-}
-
 char DXILResourceWrapper::ID = 0;
 INITIALIZE_PASS_BEGIN(DXILResourceWrapper, DEBUG_TYPE,
                       "DXIL resource Information", true, true)
