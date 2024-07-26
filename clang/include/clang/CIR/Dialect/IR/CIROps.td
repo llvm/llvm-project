@@ -2948,7 +2948,7 @@ def FuncOp : CIR_Op<"func", [
 }
 
 //===----------------------------------------------------------------------===//
-// CallOp
+// CallOp and TryCallOp
 //===----------------------------------------------------------------------===//
 
 class CIR_CallOp<string mnemonic, list<Trait> extra_traits = []> :
@@ -2991,7 +2991,6 @@ class CIR_CallOp<string mnemonic, list<Trait> extra_traits = []> :
     OptionalAttr<FlatSymbolRefAttr>:$callee,
     Variadic<CIR_AnyType>:$arg_ops,
     ExtraFuncAttr:$extra_attrs,
-    UnitAttr:$exception,
     OptionalAttr<ASTCallExprInterface>:$ast
   );
 }
@@ -3024,8 +3023,10 @@ def CallOp : CIR_CallOp<"call"> {
     ```
   }];
 
-  let arguments = commonArgs;
   let results = (outs Optional<CIR_AnyType>:$result);
+  let arguments = !con((ins
+    UnitAttr:$exception
+  ), commonArgs);
 
   let skipDefaultBuilders = 1;
 
@@ -3036,18 +3037,86 @@ def CallOp : CIR_CallOp<"call"> {
       $_state.addOperands(operands);
       if (callee)
         $_state.addAttribute("callee", callee);
-      if (exception) // $_builder
+      if (exception)
         $_state.addAttribute("exception", exception);
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
     }]>,
     OpBuilder<(ins "Value":$ind_target,
                "FuncType":$fn_type,
-               CArg<"ValueRange", "{}">:$operands), [{
+               CArg<"ValueRange", "{}">:$operands,
+               CArg<"UnitAttr", "{}">:$exception), [{
       $_state.addOperands(ValueRange{ind_target});
       $_state.addOperands(operands);
       if (!fn_type.isVoid())
         $_state.addTypes(fn_type.getReturnType());
+      if (exception)
+        $_state.addAttribute("exception", exception);
+    }]>
+  ];
+}
+
+def TryCallOp : CIR_CallOp<"try_call",
+      [DeclareOpInterfaceMethods<BranchOpInterface>, Terminator,
+       AttrSizedOperandSegments]> {
+  let summary = "try_call operation";
+  let description = [{
+    Mostly similar to cir.call but requires two destination
+    branches, one for handling exceptions in case its thrown and
+    the other one to follow on regular control-flow.
+
+    Example:
+
+    ```mlir
+    // Direct call
+    %2 = cir.try_call @my_add(%0, %1) ^continue, ^landing_pad : (f32, f32) -> f32
+    ```
+  }];
+
+  let arguments = !con((ins
+    Variadic<CIR_AnyType>:$contOperands,
+    Variadic<CIR_AnyType>:$landingPadOperands
+  ), commonArgs);
+
+  let results = (outs Optional<CIR_AnyType>:$result);
+  let successors = (successor AnySuccessor:$cont,
+                              AnySuccessor:$landing_pad);
+
+  let skipDefaultBuilders = 1;
+
+  let builders = [
+    OpBuilder<(ins "SymbolRefAttr":$callee, "mlir::Type":$resType,
+               "Block *":$cont, "Block *":$landing_pad,
+               CArg<"ValueRange", "{}">:$operands,
+               CArg<"ValueRange", "{}">:$contOperands,
+               CArg<"ValueRange", "{}">:$landingPadOperands), [{
+      $_state.addOperands(operands);
+      if (callee)
+        $_state.addAttribute("callee", callee);
+      if (resType && !isa<VoidType>(resType))
+        $_state.addTypes(resType);
+
+      // Handle branches
+      $_state.addSuccessors(cont);
+      $_state.addSuccessors(landing_pad);
+      $_state.addOperands(contOperands);
+      $_state.addOperands(landingPadOperands);
+    }]>,
+    OpBuilder<(ins "Value":$ind_target,
+               "FuncType":$fn_type,
+               "Block *":$cont, "Block *":$landing_pad,
+               CArg<"ValueRange", "{}">:$operands,
+               CArg<"ValueRange", "{}">:$contOperands,
+               CArg<"ValueRange", "{}">:$landingPadOperands), [{
+      $_state.addOperands(ValueRange{ind_target});
+      $_state.addOperands(operands);
+      if (!fn_type.isVoid())
+        $_state.addTypes(fn_type.getReturnType());
+      // Handle branches
+      $_state.addSuccessors(cont);
+      $_state.addSuccessors(landing_pad);
+      $_state.addOperands(contOperands);
+      $_state.addOperands(landingPadOperands);
     }]>
   ];
 }

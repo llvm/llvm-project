@@ -2348,9 +2348,17 @@ verifyCallCommInSymbolUses(Operation *op, SymbolTableCollection &symbolTable) {
   return success();
 }
 
+static ::mlir::ParseResult
+parseTryCallBranches(::mlir::OpAsmParser &parser,
+                     ::mlir::OperationState &result) {
+  parser.emitError(parser.getCurrentLocation(), "NYI");
+  return failure();
+}
+
 static ::mlir::ParseResult parseCallCommon(::mlir::OpAsmParser &parser,
                                            ::mlir::OperationState &result,
-                                           llvm::StringRef extraAttrsAttrName) {
+                                           llvm::StringRef extraAttrsAttrName,
+                                           bool hasDestinationBlocks = false) {
   mlir::FlatSymbolRefAttr calleeAttr;
   llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4> ops;
   llvm::SMLoc opsLoc;
@@ -2379,6 +2387,10 @@ static ::mlir::ParseResult parseCallCommon(::mlir::OpAsmParser &parser,
     return ::mlir::failure();
   if (parser.parseRParen())
     return ::mlir::failure();
+
+  if (hasDestinationBlocks)
+    if (parseTryCallBranches(parser, result).failed())
+      return ::mlir::failure();
 
   auto &builder = parser.getBuilder();
   Attribute extraAttrs;
@@ -2417,7 +2429,9 @@ void printCallCommon(Operation *op, mlir::Value indirectCallee,
                      mlir::FlatSymbolRefAttr flatSym,
                      ::mlir::OpAsmPrinter &state,
                      ::mlir::cir::ExtraFuncAttributesAttr extraAttrs,
-                     ::mlir::UnitAttr exception = {}) {
+                     ::mlir::UnitAttr exception = {},
+                     mlir::Block *cont = nullptr,
+                     mlir::Block *landingPad = nullptr) {
   state << ' ';
 
   auto callLikeOp = mlir::cast<mlir::cir::CIRCallOpInterface>(op);
@@ -2435,6 +2449,32 @@ void printCallCommon(Operation *op, mlir::Value indirectCallee,
   state << "(";
   state << ops;
   state << ")";
+
+  if (cont) {
+    assert(landingPad && "expected two successors");
+    auto tryCall = dyn_cast<mlir::cir::TryCallOp>(op);
+    assert(tryCall && "regular calls do not branch");
+    state << tryCall.getCont();
+    if (!tryCall.getContOperands().empty()) {
+      state << "(";
+      state << tryCall.getContOperands();
+      state << ' ' << ":";
+      state << ' ';
+      state << tryCall.getContOperands().getTypes();
+      state << ")";
+    }
+    state << ",";
+    state << ' ';
+    state << tryCall.getLandingPad();
+    if (!tryCall.getLandingPadOperands().empty()) {
+      state << "(";
+      state << tryCall.getLandingPadOperands();
+      state << ' ' << ":";
+      state << ' ';
+      state << tryCall.getLandingPadOperands().getTypes();
+      state << ")";
+    }
+  }
 
   llvm::SmallVector<::llvm::StringRef, 4> elidedAttrs;
   elidedAttrs.push_back("callee");
@@ -2469,6 +2509,61 @@ void CallOp::print(::mlir::OpAsmPrinter &state) {
   mlir::UnitAttr exception = getExceptionAttr();
   printCallCommon(*this, indirectCallee, getCalleeAttr(), state,
                   getExtraAttrs(), exception);
+}
+
+//===----------------------------------------------------------------------===//
+// TryCallOp
+//===----------------------------------------------------------------------===//
+
+mlir::Value cir::TryCallOp::getIndirectCall() {
+  assert(isIndirect());
+  return getOperand(0);
+}
+
+mlir::Operation::operand_iterator cir::TryCallOp::arg_operand_begin() {
+  auto arg_begin = operand_begin();
+  if (isIndirect())
+    arg_begin++;
+  return arg_begin;
+}
+mlir::Operation::operand_iterator cir::TryCallOp::arg_operand_end() {
+  return operand_end();
+}
+
+/// Return the operand at index 'i', accounts for indirect call.
+Value cir::TryCallOp::getArgOperand(unsigned i) {
+  if (isIndirect())
+    i++;
+  return getOperand(i);
+}
+/// Return the number of operands, accounts for indirect call.
+unsigned cir::TryCallOp::getNumArgOperands() {
+  if (isIndirect())
+    return this->getOperation()->getNumOperands() - 1;
+  return this->getOperation()->getNumOperands();
+}
+
+LogicalResult
+cir::TryCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  return verifyCallCommInSymbolUses(*this, symbolTable);
+}
+
+::mlir::ParseResult TryCallOp::parse(::mlir::OpAsmParser &parser,
+                                     ::mlir::OperationState &result) {
+
+  return parseCallCommon(parser, result, getExtraAttrsAttrName(result.name));
+}
+
+void TryCallOp::print(::mlir::OpAsmPrinter &state) {
+  mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
+  printCallCommon(*this, indirectCallee, getCalleeAttr(), state,
+                  getExtraAttrs(), {}, getCont(), getLandingPad());
+}
+
+mlir::SuccessorOperands TryCallOp::getSuccessorOperands(unsigned index) {
+  assert(index < getNumSuccessors() && "invalid successor index");
+  return SuccessorOperands(index == 0 ? getContOperandsMutable()
+                                      : getLandingPadOperandsMutable());
 }
 
 //===----------------------------------------------------------------------===//
