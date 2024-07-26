@@ -76,7 +76,7 @@ namespace cwg712 { // cwg712: partial
 #endif
 }
 
-namespace cwg713 { // cwg713: yes
+namespace cwg713 { // cwg713: 2.5
 template<typename T>
 struct is_const {
     static const bool value = __is_const(T);
