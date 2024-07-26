@@ -142,6 +142,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fadd_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fadd_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.fadd
+    libc.src.__support.FPUtil.basic_operations
+
+)
+
+add_fp_unittest(
   trunc_test
   SUITE
     libc-math-smoke-tests
@@ -2733,9 +2747,12 @@ add_fp_unittest(
     libc-math-smoke-tests
   SRCS
     hypotf_test.cpp
+  HDRS
+    HypotTest.h
   DEPENDS
     libc.src.math.hypotf
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.architectures    
 )
 
 add_fp_unittest(
@@ -2744,9 +2761,12 @@ add_fp_unittest(
     libc-math-smoke-tests
   SRCS
     hypot_test.cpp
+  HDRS
+    HypotTest.h
   DEPENDS
     libc.src.math.hypot
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.architectures
 )
 
 add_fp_unittest(
@@ -3512,6 +3532,16 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  atan2_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    atan2_test.cpp
+  DEPENDS
+    libc.src.math.atan2
+)
+
+add_fp_unittest(
   scalblnf16_test
   SUITE
     libc-math-smoke-tests
@@ -3624,6 +3654,42 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  totalordermag_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    totalordermag_test.cpp
+  HDRS
+    TotalOrderMagTest.h
+  DEPENDS
+    libc.src.math.totalordermag
+)
+
+add_fp_unittest(
+  totalordermagf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    totalordermagf_test.cpp
+  HDRS
+    TotalOrderMagTest.h
+  DEPENDS
+    libc.src.math.totalordermagf
+)
+
+add_fp_unittest(
+  totalordermagl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    totalordermagl_test.cpp
+  HDRS
+    TotalOrderMagTest.h
+  DEPENDS
+    libc.src.math.totalordermagl
+)
+
+add_fp_unittest(
   totalordermagf16_test
   SUITE
     libc-math-smoke-tests
@@ -3633,6 +3699,18 @@ add_fp_unittest(
     TotalOrderMagTest.h
   DEPENDS
     libc.src.math.totalordermagf16
+)
+
+add_fp_unittest(
+  totalordermagf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    totalordermagf128_test.cpp
+  HDRS
+    TotalOrderMagTest.h
+  DEPENDS
+    libc.src.math.totalordermagf128
 )
 
 add_fp_unittest(
@@ -3937,6 +4015,67 @@ add_fp_unittest(
     SqrtTest.h
   DEPENDS
     libc.src.math.f16sqrtf128
+)
+
+add_fp_unittest(
+  fsqrt_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fsqrt_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.fsqrt
+)
+
+
+add_fp_unittest(
+  fsqrtl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fsqrtl_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.fsqrtl
+)
+
+add_fp_unittest(
+  fsqrtf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fsqrtf128_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.fsqrtf128
+)
+
+add_fp_unittest(
+  dsqrtl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    dsqrtl_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.dsqrtl
+)
+
+add_fp_unittest(
+  dsqrtf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    dsqrtf128_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.dsqrtf128
 )
 
 add_fp_unittest(

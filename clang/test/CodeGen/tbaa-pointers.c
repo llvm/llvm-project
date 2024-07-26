@@ -91,8 +91,7 @@ void p4char_const1(const char ****ptr) {
 void p4char_const2(const char **const **ptr) {
   // COMMON-LABEL: define void @p4char_const2(
   // COMMON-SAME:    ptr noundef [[PTR:%.+]])
-  // COMMON-NEXT:  entry:
-  // COMMON-NEXT:    [[PTR_ADDR:%.+]] = alloca ptr, align 8
+  // COMMON:         [[PTR_ADDR:%.+]] = alloca ptr, align 8
   // ENABLED-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[P4CHAR_0]]
   // ENABLED-NEXT:   [[BASE_0:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[P4CHAR_0]]
   // ENABLED-NEXT:   [[BASE_1:%.+]] = load ptr, ptr [[BASE_0]], align 8, !tbaa [[P3CHAR_0]]

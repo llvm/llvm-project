@@ -8363,6 +8363,12 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                   : TTI.getStridedMemoryOpCost(
                         Instruction::Load, LoadTy, LI->getPointerOperand(),
                         /*VariableMask=*/false, Alignment, CostKind, LI);
+          // Add external uses costs.
+          for (auto [Idx, V] : enumerate(VL.slice(
+                   P.first, std::min<unsigned>(VL.size() - P.first, VF))))
+            if (!R.areAllUsersVectorized(cast<Instruction>(V)))
+              GatherCost += TTI.getVectorInstrCost(Instruction::ExtractElement,
+                                                   LoadTy, CostKind, Idx);
           // Estimate GEP cost.
           SmallVector<Value *> PointerOps(VF);
           for (auto [I, V] : enumerate(VL.slice(P.first, VF)))
@@ -9699,7 +9705,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           CanonicalType = CanonicalType->getWithNewType(IntegerType::get(
               CanonicalType->getContext(),
               DL->getTypeSizeInBits(CanonicalType->getScalarType())));
-        IntrinsicCostAttributes CostAttrs(MinMaxID, VecTy, {VecTy, VecTy});
+        IntrinsicCostAttributes CostAttrs(MinMaxID, CanonicalType,
+                                          {CanonicalType, CanonicalType});
         InstructionCost IntrinsicCost =
             TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
         // If the selects are the only uses of the compares, they will be
@@ -12042,6 +12049,9 @@ public:
   /// Adds 2 input vectors and the mask for their shuffling.
   void add(Value *V1, Value *V2, ArrayRef<int> Mask) {
     assert(V1 && V2 && !Mask.empty() && "Expected non-empty input vectors.");
+    assert(isa<FixedVectorType>(V1->getType()) &&
+           isa<FixedVectorType>(V2->getType()) &&
+           "castToScalarTyElem expects V1 and V2 to be FixedVectorType");
     V1 = castToScalarTyElem(V1);
     V2 = castToScalarTyElem(V2);
     if (InVectors.empty()) {
@@ -12071,13 +12081,10 @@ public:
   }
   /// Adds another one input vector and the mask for the shuffling.
   void add(Value *V1, ArrayRef<int> Mask, bool = false) {
+    assert(isa<FixedVectorType>(V1->getType()) &&
+           "castToScalarTyElem expects V1 to be FixedVectorType");
     V1 = castToScalarTyElem(V1);
     if (InVectors.empty()) {
-      if (!isa<FixedVectorType>(V1->getType())) {
-        V1 = createShuffle(V1, nullptr, CommonMask);
-        CommonMask.assign(Mask.size(), PoisonMaskElem);
-        transformMaskAfterShuffle(CommonMask, Mask);
-      }
       InVectors.push_back(V1);
       CommonMask.assign(Mask.begin(), Mask.end());
       return;
@@ -12085,8 +12092,7 @@ public:
     const auto *It = find(InVectors, V1);
     if (It == InVectors.end()) {
       if (InVectors.size() == 2 ||
-          InVectors.front()->getType() != V1->getType() ||
-          !isa<FixedVectorType>(V1->getType())) {
+          InVectors.front()->getType() != V1->getType()) {
         Value *V = InVectors.front();
         if (InVectors.size() == 2) {
           V = createShuffle(InVectors.front(), InVectors.back(), CommonMask);
@@ -12120,9 +12126,7 @@ public:
           break;
         }
     }
-    int VF = CommonMask.size();
-    if (auto *FTy = dyn_cast<FixedVectorType>(V1->getType()))
-      VF = FTy->getNumElements();
+    int VF = cast<FixedVectorType>(V1->getType())->getNumElements();
     for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
       if (Mask[Idx] != PoisonMaskElem && CommonMask[Idx] == PoisonMaskElem)
         CommonMask[Idx] = Mask[Idx] + (It == InVectors.begin() ? 0 : VF);

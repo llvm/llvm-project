@@ -90,7 +90,7 @@
 ; BOLT-DWP: DW_TAG_compile_unit
 ; BOLT-DWP: DW_AT_dwo_name  ("main.dwo.dwo")
 ; BOLT-DWP: DW_TAG_type_unit
-; BOLT-DW-NOT: DW_AT_dwo_name
+; BOLT-DWP-NOT: DW_AT_dwo_name
 ; BOLT-DWP:       Contribution size = 68, Format = DWARF32, Version = 5
 ; BOLT-DWP-NEXT: "main"
 ; BOLT-DWP-NEXT: "int"

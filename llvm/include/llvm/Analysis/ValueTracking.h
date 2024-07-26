@@ -736,6 +736,10 @@ inline Value *getUnderlyingObject(Value *V, unsigned MaxLookup = 6) {
   return const_cast<Value *>(getUnderlyingObject(VConst, MaxLookup));
 }
 
+/// Like getUnderlyingObject(), but will try harder to find a single underlying
+/// object. In particular, this function also looks through selects and phis.
+const Value *getUnderlyingObjectAggressive(const Value *V);
+
 /// This method is similar to getUnderlyingObject except that it can
 /// look through phi and select instructions and return multiple objects.
 ///
@@ -766,7 +770,7 @@ inline Value *getUnderlyingObject(Value *V, unsigned MaxLookup = 6) {
 /// it shouldn't look through the phi above.
 void getUnderlyingObjects(const Value *V,
                           SmallVectorImpl<const Value *> &Objects,
-                          LoopInfo *LI = nullptr, unsigned MaxLookup = 6);
+                          const LoopInfo *LI = nullptr, unsigned MaxLookup = 6);
 
 /// This is a wrapper around getUnderlyingObjects and adds support for basic
 /// ptrtoint+arithmetic+inttoptr sequences.
@@ -822,15 +826,25 @@ bool isSafeToSpeculativelyExecute(const Instruction *I,
                                   const Instruction *CtxI = nullptr,
                                   AssumptionCache *AC = nullptr,
                                   const DominatorTree *DT = nullptr,
-                                  const TargetLibraryInfo *TLI = nullptr);
+                                  const TargetLibraryInfo *TLI = nullptr,
+                                  bool UseVariableInfo = true);
 
-inline bool
-isSafeToSpeculativelyExecute(const Instruction *I, BasicBlock::iterator CtxI,
-                             AssumptionCache *AC = nullptr,
-                             const DominatorTree *DT = nullptr,
-                             const TargetLibraryInfo *TLI = nullptr) {
+inline bool isSafeToSpeculativelyExecute(const Instruction *I,
+                                         BasicBlock::iterator CtxI,
+                                         AssumptionCache *AC = nullptr,
+                                         const DominatorTree *DT = nullptr,
+                                         const TargetLibraryInfo *TLI = nullptr,
+                                         bool UseVariableInfo = true) {
   // Take an iterator, and unwrap it into an Instruction *.
-  return isSafeToSpeculativelyExecute(I, &*CtxI, AC, DT, TLI);
+  return isSafeToSpeculativelyExecute(I, &*CtxI, AC, DT, TLI, UseVariableInfo);
+}
+
+/// Don't use information from its non-constant operands. This helper is used
+/// when its operands are going to be replaced.
+inline bool
+isSafeToSpeculativelyExecuteWithVariableReplaced(const Instruction *I) {
+  return isSafeToSpeculativelyExecute(I, nullptr, nullptr, nullptr, nullptr,
+                                      /*UseVariableInfo=*/false);
 }
 
 /// This returns the same result as isSafeToSpeculativelyExecute if Opcode is
@@ -853,7 +867,7 @@ isSafeToSpeculativelyExecute(const Instruction *I, BasicBlock::iterator CtxI,
 bool isSafeToSpeculativelyExecuteWithOpcode(
     unsigned Opcode, const Instruction *Inst, const Instruction *CtxI = nullptr,
     AssumptionCache *AC = nullptr, const DominatorTree *DT = nullptr,
-    const TargetLibraryInfo *TLI = nullptr);
+    const TargetLibraryInfo *TLI = nullptr, bool UseVariableInfo = true);
 
 /// Returns true if the result or effects of the given instructions \p I
 /// depend values not reachable through the def use graph.

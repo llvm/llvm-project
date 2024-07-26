@@ -129,27 +129,27 @@ fma(InType x, InType y, InType z) {
         raise_except_if_required(FE_INVALID);
 
       if (x_bits.is_quiet_nan()) {
-        InStorageType x_payload = static_cast<InStorageType>(getpayload(x));
-        if ((x_payload & ~(OutFPBits::FRACTION_MASK >> 1)) == 0)
-          return OutFPBits::quiet_nan(x_bits.sign(),
-                                      static_cast<OutStorageType>(x_payload))
-              .get_val();
+        InStorageType x_payload = x_bits.get_mantissa();
+        x_payload >>= InFPBits::FRACTION_LEN - OutFPBits::FRACTION_LEN;
+        return OutFPBits::quiet_nan(x_bits.sign(),
+                                    static_cast<OutStorageType>(x_payload))
+            .get_val();
       }
 
       if (y_bits.is_quiet_nan()) {
-        InStorageType y_payload = static_cast<InStorageType>(getpayload(y));
-        if ((y_payload & ~(OutFPBits::FRACTION_MASK >> 1)) == 0)
-          return OutFPBits::quiet_nan(y_bits.sign(),
-                                      static_cast<OutStorageType>(y_payload))
-              .get_val();
+        InStorageType y_payload = y_bits.get_mantissa();
+        y_payload >>= InFPBits::FRACTION_LEN - OutFPBits::FRACTION_LEN;
+        return OutFPBits::quiet_nan(y_bits.sign(),
+                                    static_cast<OutStorageType>(y_payload))
+            .get_val();
       }
 
       if (z_bits.is_quiet_nan()) {
-        InStorageType z_payload = static_cast<InStorageType>(getpayload(z));
-        if ((z_payload & ~(OutFPBits::FRACTION_MASK >> 1)) == 0)
-          return OutFPBits::quiet_nan(z_bits.sign(),
-                                      static_cast<OutStorageType>(z_payload))
-              .get_val();
+        InStorageType z_payload = z_bits.get_mantissa();
+        z_payload >>= InFPBits::FRACTION_LEN - OutFPBits::FRACTION_LEN;
+        return OutFPBits::quiet_nan(z_bits.sign(),
+                                    static_cast<OutStorageType>(z_payload))
+            .get_val();
       }
 
       return OutFPBits::quiet_nan().get_val();
@@ -163,18 +163,27 @@ fma(InType x, InType y, InType z) {
   int y_exp = 0;
   int z_exp = 0;
 
+  // Denormal scaling = 2^(fraction length).
+  constexpr InStorageType IMPLICIT_MASK =
+      InFPBits::SIG_MASK - InFPBits::FRACTION_MASK;
+
+  constexpr InType DENORMAL_SCALING =
+      InFPBits::create_value(
+          Sign::POS, InFPBits::FRACTION_LEN + InFPBits::EXP_BIAS, IMPLICIT_MASK)
+          .get_val();
+
   // Normalize denormal inputs.
   if (LIBC_UNLIKELY(InFPBits(x).is_subnormal())) {
     x_exp -= InFPBits::FRACTION_LEN;
-    x *= InType(InStorageType(1) << InFPBits::FRACTION_LEN);
+    x *= DENORMAL_SCALING;
   }
   if (LIBC_UNLIKELY(InFPBits(y).is_subnormal())) {
     y_exp -= InFPBits::FRACTION_LEN;
-    y *= InType(InStorageType(1) << InFPBits::FRACTION_LEN);
+    y *= DENORMAL_SCALING;
   }
   if (LIBC_UNLIKELY(InFPBits(z).is_subnormal())) {
     z_exp -= InFPBits::FRACTION_LEN;
-    z *= InType(InStorageType(1) << InFPBits::FRACTION_LEN);
+    z *= DENORMAL_SCALING;
   }
 
   x_bits = InFPBits(x);

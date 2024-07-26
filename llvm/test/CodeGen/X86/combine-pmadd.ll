@@ -63,6 +63,36 @@ define <8 x i32> @combine_pmaddwd_concat(<8 x i16> %a0, <8 x i16> %a1, <8 x i16>
   ret <8 x i32> %3
 }
 
+define <8 x i32> @combine_pmaddwd_concat_freeze(<8 x i16> %a0, <8 x i16> %a1) {
+; SSE-LABEL: combine_pmaddwd_concat_freeze:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmovsxbw {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1]
+; SSE-NEXT:    pmaddwd %xmm2, %xmm0
+; SSE-NEXT:    pmaddwd %xmm2, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: combine_pmaddwd_concat_freeze:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1]
+; AVX1-NEXT:    vpmaddwd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpmaddwd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_pmaddwd_concat_freeze:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX2-NEXT:    retq
+  %lo = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a0, <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
+  %hi = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a1, <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
+  %flo = freeze <4 x i32> %lo
+  %fhi = freeze <4 x i32> %hi
+  %res = shufflevector <4 x i32> %flo, <4 x i32> %fhi, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i32> %res
+}
+
 define <4 x i32> @combine_pmaddwd_demandedelts(<8 x i16> %a0, <8 x i16> %a1) {
 ; SSE-LABEL: combine_pmaddwd_demandedelts:
 ; SSE:       # %bb.0:
@@ -176,6 +206,36 @@ define <16 x i16> @combine_pmaddubsw_concat(<16 x i8> %a0, <16 x i8> %a1, <16 x 
   %2 = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> %a2, <16 x i8> %a3)
   %3 = shufflevector <8 x i16> %1, <8 x i16> %2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x i16> %3
+}
+
+define <16 x i16> @combine_pmaddubsw_concat_freeze(<16 x i8> %a0, <16 x i8> %a1) {
+; SSE-LABEL: combine_pmaddubsw_concat_freeze:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; SSE-NEXT:    pmaddubsw %xmm2, %xmm0
+; SSE-NEXT:    pmaddubsw %xmm2, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: combine_pmaddubsw_concat_freeze:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX1-NEXT:    vpmaddubsw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_pmaddubsw_concat_freeze:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX2-NEXT:    retq
+  %lo = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> %a0, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
+  %hi = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> %a1, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
+  %flo = freeze <8 x i16> %lo
+  %fhi = freeze <8 x i16> %hi
+  %res = shufflevector <8 x i16> %flo, <8 x i16> %fhi, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i16> %res
 }
 
 define <8 x i16> @combine_pmaddubsw_demandedelts(<16 x i8> %a0, <16 x i8> %a1) {

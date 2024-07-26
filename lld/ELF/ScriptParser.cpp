@@ -92,7 +92,7 @@ private:
   SymbolAssignment *readSymbolAssignment(StringRef name);
   ByteCommand *readByteCommand(StringRef tok);
   std::array<uint8_t, 4> readFill();
-  bool readSectionDirective(OutputSection *cmd, StringRef tok1, StringRef tok2);
+  bool readSectionDirective(OutputSection *cmd, StringRef tok);
   void readSectionAddressType(OutputSection *cmd);
   OutputDesc *readOverlaySectionDescription();
   OutputDesc *readOutputSectionDescription(StringRef outSec);
@@ -200,8 +200,9 @@ void ScriptParser::readDynamicList() {
   std::tie(locals, globals) = readSymbols();
   expect(";");
 
-  if (!atEOF()) {
-    setError("EOF expected, but got " + next());
+  StringRef tok = peek();
+  if (tok.size()) {
+    setError("EOF expected, but got " + tok);
     return;
   }
   if (!locals.empty()) {
@@ -215,8 +216,9 @@ void ScriptParser::readDynamicList() {
 
 void ScriptParser::readVersionScript() {
   readVersionScriptCommand();
-  if (!atEOF())
-    setError("EOF expected, but got " + next());
+  StringRef tok = peek();
+  if (tok.size())
+    setError("EOF expected, but got " + tok);
 }
 
 void ScriptParser::readVersionScriptCommand() {
@@ -225,7 +227,9 @@ void ScriptParser::readVersionScriptCommand() {
     return;
   }
 
-  while (!atEOF() && !errorCount() && peek() != "}") {
+  if (atEOF())
+    setError("unexpected EOF");
+  while (peek() != "}" && !atEOF()) {
     StringRef verStr = next();
     if (verStr == "{") {
       setError("anonymous version definition is used in "
@@ -246,6 +250,8 @@ void ScriptParser::readVersion() {
 void ScriptParser::readLinkerScript() {
   while (!atEOF()) {
     StringRef tok = next();
+    if (atEOF())
+      break;
     if (tok == ";")
       continue;
 
@@ -307,8 +313,9 @@ void ScriptParser::readDefsym(StringRef name) {
 void ScriptParser::readNoCrossRefs(bool to) {
   expect("(");
   NoCrossRefCommand cmd{{}, to};
-  while (!errorCount() && !consume(")"))
+  while (peek() != ")" && !atEOF())
     cmd.outputSections.push_back(unquote(next()));
+  expect(")");
   if (cmd.outputSections.size() < 2)
     warn(getCurrentLocation() + ": ignored with fewer than 2 output sections");
   else
@@ -368,9 +375,10 @@ void ScriptParser::readAsNeeded() {
   expect("(");
   bool orig = config->asNeeded;
   config->asNeeded = true;
-  while (!errorCount() && !consume(")"))
+  while (peek() != ")" && !atEOF())
     addFile(unquote(next()));
   config->asNeeded = orig;
+  expect(")");
 }
 
 void ScriptParser::readEntry() {
@@ -384,8 +392,9 @@ void ScriptParser::readEntry() {
 
 void ScriptParser::readExtern() {
   expect("(");
-  while (!errorCount() && !consume(")"))
+  while (peek() != ")" && !atEOF())
     config->undefined.push_back(unquote(next()));
+  expect(")");
 }
 
 void ScriptParser::readGroup() {
@@ -406,8 +415,11 @@ void ScriptParser::readInclude() {
   }
 
   if (std::optional<std::string> path = searchScript(tok)) {
-    if (std::optional<MemoryBufferRef> mb = readFile(*path))
-      tokenize(*mb);
+    if (std::optional<MemoryBufferRef> mb = readFile(*path)) {
+      buffers.push_back(curBuf);
+      curBuf = Buffer(*mb);
+      mbs.push_back(*mb);
+    }
     return;
   }
   setError("cannot find linker script " + tok);
@@ -415,12 +427,13 @@ void ScriptParser::readInclude() {
 
 void ScriptParser::readInput() {
   expect("(");
-  while (!errorCount() && !consume(")")) {
+  while (peek() != ")" && !atEOF()) {
     if (consume("AS_NEEDED"))
       readAsNeeded();
     else
       addFile(unquote(next()));
   }
+  expect(")");
 }
 
 void ScriptParser::readOutput() {
@@ -435,8 +448,8 @@ void ScriptParser::readOutput() {
 void ScriptParser::readOutputArch() {
   // OUTPUT_ARCH is ignored for now.
   expect("(");
-  while (!errorCount() && !consume(")"))
-    skip();
+  while (next() != ")" && !atEOF())
+    ;
 }
 
 static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
@@ -702,8 +715,9 @@ static int precedence(StringRef op) {
 StringMatcher ScriptParser::readFilePatterns() {
   StringMatcher Matcher;
 
-  while (!errorCount() && !consume(")"))
+  while (peek() != ")" && !atEOF())
     Matcher.addPattern(SingleStringMatcher(next()));
+  expect(")");
   return Matcher;
 }
 
@@ -790,7 +804,7 @@ ScriptParser::readInputSectionRules(StringRef filePattern, uint64_t withFlags,
       make<InputSectionDescription>(filePattern, withFlags, withoutFlags);
   expect("(");
 
-  while (!errorCount() && !consume(")")) {
+  while (peek() != ")" && !atEOF()) {
     SortSectionPolicy outer = readSortKind();
     SortSectionPolicy inner = SortSectionPolicy::Default;
     SmallVector<SectionPattern, 0> v;
@@ -816,6 +830,7 @@ ScriptParser::readInputSectionRules(StringRef filePattern, uint64_t withFlags,
 
     std::move(v.begin(), v.end(), std::back_inserter(cmd->sectionPatterns));
   }
+  expect(")");
   return cmd;
 }
 
@@ -873,16 +888,11 @@ constexpr std::pair<const char *, unsigned> typeMap[] = {
 // Tries to read the special directive for an output section definition which
 // can be one of following: "(NOLOAD)", "(COPY)", "(INFO)", "(OVERLAY)", and
 // "(TYPE=<value>)".
-// Tok1 and Tok2 are next 2 tokens peeked. See comment for
-// readSectionAddressType below.
-bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok1, StringRef tok2) {
-  if (tok1 != "(")
-    return false;
-  if (tok2 != "NOLOAD" && tok2 != "COPY" && tok2 != "INFO" &&
-      tok2 != "OVERLAY" && tok2 != "TYPE")
+bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok) {
+  if (tok != "NOLOAD" && tok != "COPY" && tok != "INFO" && tok != "OVERLAY" &&
+      tok != "TYPE")
     return false;
 
-  expect("(");
   if (consume("NOLOAD")) {
     cmd->type = SHT_NOBITS;
     cmd->typeIsSet = true;
@@ -921,16 +931,23 @@ bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok1, Stri
 // https://sourceware.org/binutils/docs/ld/Output-Section-Address.html
 // https://sourceware.org/binutils/docs/ld/Output-Section-Type.html
 void ScriptParser::readSectionAddressType(OutputSection *cmd) {
-  // Temporarily set inExpr to support TYPE=<value> without spaces.
-  bool saved = std::exchange(inExpr, true);
-  bool isDirective = readSectionDirective(cmd, peek(), peek2());
-  inExpr = saved;
-  if (isDirective)
-    return;
+  if (consume("(")) {
+    // Temporarily set inExpr to support TYPE=<value> without spaces.
+    SaveAndRestore saved(inExpr, true);
+    if (readSectionDirective(cmd, peek()))
+      return;
+    cmd->addrExpr = readExpr();
+    expect(")");
+  } else {
+    cmd->addrExpr = readExpr();
+  }
 
-  cmd->addrExpr = readExpr();
-  if (peek() == "(" && !readSectionDirective(cmd, "(", peek2()))
-    setError("unknown section directive: " + peek2());
+  if (consume("(")) {
+    SaveAndRestore saved(inExpr, true);
+    StringRef tok = peek();
+    if (!readSectionDirective(cmd, tok))
+      setError("unknown section directive: " + tok);
+  }
 }
 
 static Expr checkAlignment(Expr e, std::string &loc) {
@@ -1096,12 +1113,23 @@ SymbolAssignment *ScriptParser::readProvideHidden(bool provide, bool hidden) {
   return cmd;
 }
 
+// Replace whitespace sequence (including \n) with one single space. The output
+// is used by -Map.
+static void squeezeSpaces(std::string &str) {
+  char prev = '\0';
+  auto it = str.begin();
+  for (char c : str)
+    if (!isSpace(c) || (c = ' ') != prev)
+      *it++ = prev = c;
+  str.erase(it, str.end());
+}
+
 SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
   // Assert expression returns Dot, so this is equal to ".=."
   if (tok == "ASSERT")
     return make<SymbolAssignment>(".", readAssert(), 0, getCurrentLocation());
 
-  size_t oldPos = pos;
+  const char *oldS = prevTok.data();
   SymbolAssignment *cmd = nullptr;
   bool savedSeenRelroEnd = script->seenRelroEnd;
   const StringRef op = peek();
@@ -1125,9 +1153,8 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
 
   if (cmd) {
     cmd->dataSegmentRelroEnd = !savedSeenRelroEnd && script->seenRelroEnd;
-    cmd->commandString =
-        tok.str() + " " +
-        llvm::join(tokens.begin() + oldPos, tokens.begin() + pos, " ");
+    cmd->commandString = StringRef(oldS, curTok.data() - oldS).str();
+    squeezeSpaces(cmd->commandString);
     expect(";");
   }
   return cmd;
@@ -1180,10 +1207,8 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
 Expr ScriptParser::readExpr() {
   // Our lexer is context-aware. Set the in-expression bit so that
   // they apply different tokenization rules.
-  bool orig = inExpr;
-  inExpr = true;
+  SaveAndRestore saved(inExpr, true);
   Expr e = readExpr1(readPrimary(), 0);
-  inExpr = orig;
   return e;
 }
 
@@ -1249,9 +1274,9 @@ Expr ScriptParser::readExpr1(Expr lhs, int minPrec) {
     StringRef op1 = peek();
     if (precedence(op1) < minPrec)
       break;
-    if (consume("?"))
-      return readTernary(lhs);
     skip();
+    if (op1 == "?")
+      return readTernary(lhs);
     Expr rhs = readPrimary();
 
     // Evaluate the remaining part of the expression first if the
@@ -1333,12 +1358,11 @@ ByteCommand *ScriptParser::readByteCommand(StringRef tok) {
   if (size == -1)
     return nullptr;
 
-  size_t oldPos = pos;
+  const char *oldS = prevTok.data();
   Expr e = readParenExpr();
-  std::string commandString =
-      tok.str() + " " +
-      llvm::join(tokens.begin() + oldPos, tokens.begin() + pos, " ");
-  return make<ByteCommand>(e, size, commandString);
+  std::string commandString = StringRef(oldS, curBuf.s.data() - oldS).str();
+  squeezeSpaces(commandString);
+  return make<ByteCommand>(e, size, std::move(commandString));
 }
 
 static std::optional<uint64_t> parseFlag(StringRef tok) {
@@ -1719,20 +1743,20 @@ ScriptParser::readSymbols() {
   while (!errorCount()) {
     if (consume("}"))
       break;
-    if (consumeLabel("local")) {
-      v = &locals;
-      continue;
-    }
-    if (consumeLabel("global")) {
-      v = &globals;
-      continue;
-    }
 
     if (consume("extern")) {
       SmallVector<SymbolVersion, 0> ext = readVersionExtern();
       v->insert(v->end(), ext.begin(), ext.end());
     } else {
       StringRef tok = next();
+      if (tok == "local:" || (tok == "local" && consume(":"))) {
+        v = &locals;
+        continue;
+      }
+      if (tok == "global:" || (tok == "global" && consume(":"))) {
+        v = &globals;
+        continue;
+      }
       v->push_back({unquote(tok), false, hasWildcard(tok)});
     }
     expect(";");

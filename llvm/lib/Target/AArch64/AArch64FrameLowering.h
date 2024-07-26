@@ -41,6 +41,8 @@ public:
 
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
+  StackOffset getFrameIndexReferenceFromSP(const MachineFunction &MF,
+                                           int FI) const override;
   StackOffset resolveFrameIndexReference(const MachineFunction &MF, int FI,
                                          Register &FrameReg, bool PreferFP,
                                          bool ForSimm) const;

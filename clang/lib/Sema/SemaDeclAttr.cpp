@@ -1537,6 +1537,16 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                 << Idx.getSourceIndex() << Ex->getSourceRange();
           return;
         }
+      } else if (K == OwnershipAttr::Takes &&
+                 I->getOwnKind() == OwnershipAttr::Takes) {
+        if (I->getModule()->getName() != ModuleName) {
+          S.Diag(I->getLocation(), diag::err_ownership_takes_class_mismatch)
+              << I->getModule()->getName();
+          S.Diag(AL.getLoc(), diag::note_ownership_takes_class_mismatch)
+              << ModuleName << Ex->getSourceRange();
+
+          return;
+        }
       }
     }
     OwnershipArgs.push_back(Idx);
@@ -3024,9 +3034,6 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << CurFeature << TargetVersion;
   }
-  if (IsArmStreamingFunction(cast<FunctionDecl>(D),
-                             /*IncludeLocallyStreaming=*/false))
-    return Diag(LiteralLoc, diag::err_sme_streaming_cannot_be_multiversioned);
   return false;
 }
 
@@ -3123,10 +3130,6 @@ bool Sema::checkTargetClonesAttrString(
           HasNotDefault = true;
         }
       }
-      if (IsArmStreamingFunction(cast<FunctionDecl>(D),
-                                 /*IncludeLocallyStreaming=*/false))
-        return Diag(LiteralLoc,
-                    diag::err_sme_streaming_cannot_be_multiversioned);
     } else {
       // Other targets ( currently X86 )
       if (Cur.starts_with("arch=")) {
@@ -3397,8 +3400,8 @@ static FormatAttrKind getFormatAttrKind(StringRef Format) {
       // Otherwise, check for supported formats.
       .Cases("scanf", "printf", "printf0", "strfmon", SupportedFormat)
       .Cases("cmn_err", "vcmn_err", "zcmn_err", SupportedFormat)
-      .Case("kprintf", SupportedFormat)         // OpenBSD.
-      .Case("freebsd_kprintf", SupportedFormat) // FreeBSD.
+      .Cases("kprintf", "syslog", SupportedFormat) // OpenBSD.
+      .Case("freebsd_kprintf", SupportedFormat)    // FreeBSD.
       .Case("os_trace", SupportedFormat)
       .Case("os_log", SupportedFormat)
 
@@ -5247,6 +5250,10 @@ static void handleXRayLogArgsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handlePatchableFunctionEntryAttr(Sema &S, Decl *D,
                                              const ParsedAttr &AL) {
+  if (S.Context.getTargetInfo().getTriple().isOSAIX()) {
+    S.Diag(AL.getLoc(), diag::err_aix_attr_unsupported) << AL;
+    return;
+  }
   uint32_t Count = 0, Offset = 0;
   if (!S.checkUInt32Argument(AL, AL.getArgAsExpr(0), Count, 0, true))
     return;

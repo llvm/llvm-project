@@ -1190,8 +1190,13 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     // TODO: Should images get their own address space?
     Info.fallbackAddressSpace = AMDGPUAS::BUFFER_RESOURCE;
 
-    if (RsrcIntr->IsImage)
+    const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode = nullptr;
+    if (RsrcIntr->IsImage) {
+      const AMDGPU::ImageDimIntrinsicInfo *Intr =
+          AMDGPU::getImageDimIntrinsicInfo(IntrID);
+      BaseOpcode = AMDGPU::getMIMGBaseOpcodeInfo(Intr->BaseOpcode);
       Info.align.reset();
+    }
 
     Value *RsrcArg = CI.getArgOperand(RsrcIntr->RsrcArg);
     if (auto *RsrcPtrTy = dyn_cast<PointerType>(RsrcArg->getType())) {
@@ -1211,11 +1216,6 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     if (ME.onlyReadsMemory()) {
       if (RsrcIntr->IsImage) {
         unsigned MaxNumLanes = 4;
-
-        const AMDGPU::ImageDimIntrinsicInfo *Intr
-          = AMDGPU::getImageDimIntrinsicInfo(IntrID);
-        const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
-          AMDGPU::getMIMGBaseOpcodeInfo(Intr->BaseOpcode);
 
         if (!BaseOpcode->Gather4) {
           // If this isn't a gather, we may have excess loaded elements in the
@@ -1250,7 +1250,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
       Info.flags |= MachineMemOperand::MOStore;
     } else {
-      // Atomic
+      // Atomic or NoReturn Sampler
       Info.opc = CI.getType()->isVoidTy() ? ISD::INTRINSIC_VOID :
                                             ISD::INTRINSIC_W_CHAIN;
       Info.flags |= MachineMemOperand::MOLoad |
@@ -1259,9 +1259,14 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
       switch (IntrID) {
       default:
-        Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
-        // XXX - Should this be volatile without known ordering?
-        Info.flags |= MachineMemOperand::MOVolatile;
+        if (RsrcIntr->IsImage && BaseOpcode->NoReturn) {
+          // Fake memory access type for no return sampler intrinsics
+          Info.memVT = MVT::i32;
+        } else {
+          // XXX - Should this be volatile without known ordering?
+          Info.flags |= MachineMemOperand::MOVolatile;
+          Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
+        }
         break;
       case Intrinsic::amdgcn_raw_buffer_load_lds:
       case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
@@ -1270,6 +1275,16 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
         unsigned Width = cast<ConstantInt>(CI.getArgOperand(2))->getZExtValue();
         Info.memVT = EVT::getIntegerVT(CI.getContext(), Width * 8);
         Info.ptrVal = CI.getArgOperand(1);
+        return true;
+      }
+      case Intrinsic::amdgcn_raw_atomic_buffer_load:
+      case Intrinsic::amdgcn_raw_ptr_atomic_buffer_load:
+      case Intrinsic::amdgcn_struct_atomic_buffer_load:
+      case Intrinsic::amdgcn_struct_ptr_atomic_buffer_load: {
+        Info.memVT =
+            memVTFromLoadIntrReturn(*this, MF.getDataLayout(), CI.getType(),
+                                    std::numeric_limits<unsigned>::max());
+        Info.flags &= ~MachineMemOperand::MOStore;
         return true;
       }
       }
@@ -7900,7 +7915,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   bool IsG16 = false;
   bool IsA16 = false;
   SDValue VData;
-  int NumVDataDwords;
+  int NumVDataDwords = 0;
   bool AdjustRetType = false;
   bool IsAtomicPacked16Bit = false;
 
@@ -7949,7 +7964,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       }
 
       NumVDataDwords = (VData.getValueType().getSizeInBits() + 31) / 32;
-    } else {
+    } else if (!BaseOpcode->NoReturn) {
       // Work out the num dwords based on the dmask popcount and underlying type
       // and whether packing is supported.
       MVT LoadVT = ResultTypes[0].getSimpleVT();
@@ -8242,7 +8257,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     DAG.ExtractVectorElements(SDValue(NewNode, 0), Elt, 0, 1);
     return DAG.getMergeValues({Elt[0], SDValue(NewNode, 1)}, DL);
   }
-  if (BaseOpcode->Store)
+  if (BaseOpcode->NoReturn)
     return SDValue(NewNode, 0);
   return constructRetValue(DAG, NewNode, OrigResultTypes, IsTexFail,
                            Subtarget->hasUnpackedD16VMem(), IsD16, DMaskLanes,
@@ -8884,6 +8899,8 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   }
   case Intrinsic::amdgcn_raw_buffer_load:
   case Intrinsic::amdgcn_raw_ptr_buffer_load:
+  case Intrinsic::amdgcn_raw_atomic_buffer_load:
+  case Intrinsic::amdgcn_raw_ptr_atomic_buffer_load:
   case Intrinsic::amdgcn_raw_buffer_load_format:
   case Intrinsic::amdgcn_raw_ptr_buffer_load_format: {
     const bool IsFormat =
@@ -8910,7 +8927,9 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_struct_buffer_load:
   case Intrinsic::amdgcn_struct_ptr_buffer_load:
   case Intrinsic::amdgcn_struct_buffer_load_format:
-  case Intrinsic::amdgcn_struct_ptr_buffer_load_format: {
+  case Intrinsic::amdgcn_struct_ptr_buffer_load_format:
+  case Intrinsic::amdgcn_struct_atomic_buffer_load:
+  case Intrinsic::amdgcn_struct_ptr_atomic_buffer_load: {
     const bool IsFormat =
         IntrID == Intrinsic::amdgcn_struct_buffer_load_format ||
         IntrID == Intrinsic::amdgcn_struct_ptr_buffer_load_format;

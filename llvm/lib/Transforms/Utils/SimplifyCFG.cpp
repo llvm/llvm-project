@@ -3246,7 +3246,12 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI,
 }
 
 /// Return true if we can thread a branch across this block.
-static bool BlockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
+static bool BlockIsSimpleEnoughToThreadThrough(BasicBlock *BB,
+                                               const TargetTransformInfo &TTI) {
+  // Skip threading if the branch may be divergent.
+  if (TTI.hasBranchDivergence(BB->getParent()))
+    return false;
+
   int Size = 0;
   EphemeralValueTracker EphTracker;
 
@@ -3301,10 +3306,9 @@ static ConstantInt *getKnownValueOnEdge(Value *V, BasicBlock *From,
 /// If we have a conditional branch on something for which we know the constant
 /// value in predecessors (e.g. a phi node in the current block), thread edges
 /// from the predecessor to their ultimate destination.
-static std::optional<bool>
-FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
-                                            const DataLayout &DL,
-                                            AssumptionCache *AC) {
+static std::optional<bool> FoldCondBranchOnValueKnownInPredecessorImpl(
+    BranchInst *BI, DomTreeUpdater *DTU, const DataLayout &DL,
+    const TargetTransformInfo &TTI, AssumptionCache *AC) {
   SmallMapVector<ConstantInt *, SmallSetVector<BasicBlock *, 2>, 2> KnownValues;
   BasicBlock *BB = BI->getParent();
   Value *Cond = BI->getCondition();
@@ -3332,7 +3336,7 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
   // Now we know that this block has multiple preds and two succs.
   // Check that the block is small enough and values defined in the block are
   // not used outside of it.
-  if (!BlockIsSimpleEnoughToThreadThrough(BB))
+  if (!BlockIsSimpleEnoughToThreadThrough(BB, TTI))
     return false;
 
   for (const auto &Pair : KnownValues) {
@@ -3459,15 +3463,14 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
   return false;
 }
 
-static bool FoldCondBranchOnValueKnownInPredecessor(BranchInst *BI,
-                                                    DomTreeUpdater *DTU,
-                                                    const DataLayout &DL,
-                                                    AssumptionCache *AC) {
+static bool FoldCondBranchOnValueKnownInPredecessor(
+    BranchInst *BI, DomTreeUpdater *DTU, const DataLayout &DL,
+    const TargetTransformInfo &TTI, AssumptionCache *AC) {
   std::optional<bool> Result;
   bool EverChanged = false;
   do {
     // Note that None means "we changed things, but recurse further."
-    Result = FoldCondBranchOnValueKnownInPredecessorImpl(BI, DTU, DL, AC);
+    Result = FoldCondBranchOnValueKnownInPredecessorImpl(BI, DTU, DL, TTI, AC);
     EverChanged |= Result == std::nullopt || *Result;
   } while (Result == std::nullopt);
   return EverChanged;
@@ -3476,7 +3479,8 @@ static bool FoldCondBranchOnValueKnownInPredecessor(BranchInst *BI,
 /// Given a BB that starts with the specified two-entry PHI node,
 /// see if we can eliminate it.
 static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
-                                DomTreeUpdater *DTU, const DataLayout &DL) {
+                                DomTreeUpdater *DTU, const DataLayout &DL,
+                                bool SpeculateUnpredictables) {
   // Ok, this is a two entry PHI node.  Check to see if this is a simple "if
   // statement", which has a very simple dominance structure.  Basically, we
   // are trying to find the condition that is being branched on, which
@@ -3508,7 +3512,8 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // jump to one specific 'then' block (if we have two of them).
   // It isn't beneficial to speculatively execute the code
   // from the block that we know is predictably not entered.
-  if (!DomBI->getMetadata(LLVMContext::MD_unpredictable)) {
+  bool IsUnpredictable = DomBI->getMetadata(LLVMContext::MD_unpredictable);
+  if (!IsUnpredictable) {
     uint64_t TWeight, FWeight;
     if (extractBranchWeights(*DomBI, TWeight, FWeight) &&
         (TWeight + FWeight) != 0) {
@@ -3551,6 +3556,8 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   InstructionCost Cost = 0;
   InstructionCost Budget =
       TwoEntryPHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic;
+  if (SpeculateUnpredictables && IsUnpredictable)
+    Budget += TTI.getBranchMispredictPenalty();
 
   bool Changed = false;
   for (BasicBlock::iterator II = BB->begin(); isa<PHINode>(II);) {
@@ -3620,8 +3627,9 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
              [](BasicBlock *IfBlock) { return IfBlock->hasAddressTaken(); }))
     return Changed;
 
-  LLVM_DEBUG(dbgs() << "FOUND IF CONDITION!  " << *IfCond
-                    << "  T: " << IfTrue->getName()
+  LLVM_DEBUG(dbgs() << "FOUND IF CONDITION!  " << *IfCond;
+             if (IsUnpredictable) dbgs() << " (unpredictable)";
+             dbgs() << "  T: " << IfTrue->getName()
                     << "  F: " << IfFalse->getName() << "\n");
 
   // If we can still promote the PHI nodes after this gauntlet of tests,
@@ -7538,7 +7546,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   // If this is a branch on something for which we know the constant value in
   // predecessors (e.g. a phi node in the current block), thread control
   // through this block.
-  if (FoldCondBranchOnValueKnownInPredecessor(BI, DTU, DL, Options.AC))
+  if (FoldCondBranchOnValueKnownInPredecessor(BI, DTU, DL, TTI, Options.AC))
     return requestResimplify();
 
   // Scan predecessor blocks for conditional branches.
@@ -7814,7 +7822,8 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
     // eliminate it, do so now.
     if (auto *PN = dyn_cast<PHINode>(BB->begin()))
       if (PN->getNumIncomingValues() == 2)
-        if (FoldTwoEntryPHINode(PN, TTI, DTU, DL))
+        if (FoldTwoEntryPHINode(PN, TTI, DTU, DL,
+                                Options.SpeculateUnpredictables))
           return true;
   }
 

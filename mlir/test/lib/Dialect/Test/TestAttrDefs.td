@@ -81,6 +81,15 @@ def AttrWithTrait : Test_Attr<"AttrWithTrait", [TestAttrTrait]> {
   let mnemonic = "attr_with_trait";
 }
 
+// An attribute of a list of decimal formatted integers in similar format to shapes.
+def TestDecimalShapeAttr : Test_Attr<"TestDecimalShape"> {
+  let mnemonic = "decimal_shape";
+
+  let parameters = (ins ArrayRefParameter<"int64_t">:$shape);
+
+  let hasCustomAssemblyFormat = 1;
+}
+
 // Test support for ElementsAttrInterface.
 def TestI64ElementsAttr : Test_Attr<"TestI64Elements", [ElementsAttrInterface]> {
   let mnemonic = "i64_elements";

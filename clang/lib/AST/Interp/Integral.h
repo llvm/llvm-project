@@ -112,7 +112,7 @@ public:
     else
       return APSInt(toAPSInt().zextOrTrunc(NumBits), !Signed);
   }
-  APValue toAPValue() const { return APValue(toAPSInt()); }
+  APValue toAPValue(const ASTContext &) const { return APValue(toAPSInt()); }
 
   Integral<Bits, false> toUnsigned() const {
     return Integral<Bits, false>(*this);
