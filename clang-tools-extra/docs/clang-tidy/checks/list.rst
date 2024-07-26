@@ -123,7 +123,6 @@ Clang-Tidy Checks
    :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"
    :doc:`bugprone-return-const-ref-from-parameter <bugprone/return-const-ref-from-parameter>`,
    :doc:`bugprone-shared-ptr-array-mismatch <bugprone/shared-ptr-array-mismatch>`, "Yes"
-   :doc:`bugprone-shared-pointer-contents-move <bugprone/move-shared-pointer-contents.rst>`,
    :doc:`bugprone-signal-handler <bugprone/signal-handler>`,
    :doc:`bugprone-signed-char-misuse <bugprone/signed-char-misuse>`,
    :doc:`bugprone-sizeof-container <bugprone/sizeof-container>`,
