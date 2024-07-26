@@ -475,7 +475,8 @@ public:
   }
 
   /// Update Str offset in .debug_str in .debug_str_offsets.
-  void updateAddressMap(uint32_t Index, uint32_t Address, const DWARFUnit &Unit);
+  void updateAddressMap(uint32_t Index, uint32_t Address,
+                        const DWARFUnit &Unit);
 
   /// Get offset for given index in original .debug_str_offsets section.
   uint64_t getOffset(uint32_t Index) const { return StrOffsets[Index]; }

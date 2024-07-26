@@ -851,10 +851,10 @@ void DebugStrOffsetsWriter::initialize(DWARFUnit &Unit) {
         StrOffsetsSection.Data.data() + Contr->Base + Offset));
 }
 
-void DebugStrOffsetsWriter::updateAddressMap(uint32_t Index, uint32_t Address, const DWARFUnit &Unit) {
-  assert(DebugStrOffsetFinalized.count(
-               Unit.getOffset()) == 0 &&
-           "debug_str_offsets was already finalized for this CU.");
+void DebugStrOffsetsWriter::updateAddressMap(uint32_t Index, uint32_t Address,
+                                             const DWARFUnit &Unit) {
+  assert(DebugStrOffsetFinalized.count(Unit.getOffset()) == 0 &&
+         "debug_str_offsets was already finalized for this CU.");
   IndexToAddressMap[Index] = Address;
   StrOffsetSectionWasModified = true;
 }
