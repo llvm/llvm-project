@@ -14779,15 +14779,13 @@ static bool TryEvaluateBuiltinNaN(const ASTContext &Context,
 }
 //  Checks that the value x is in the range (-1;-0.5], [0.5; 1)
 static bool isInFrexpResultRange(const llvm::APFloat &x) {
-  llvm::APFloat minusOne(x.getSemantics(), "-1.0");
-  llvm::APFloat minusHalf(x.getSemantics(), "-0.5");
+  llvm::APFloat AbsX = abs(x);
+
   llvm::APFloat half(x.getSemantics(), "0.5");
   llvm::APFloat one(x.getSemantics(), "1.0");
 
-  return ((x.compare(minusOne) == llvm::APFloat::cmpGreaterThan &&
-           x.compare(minusHalf) != llvm::APFloat::cmpGreaterThan) ||
-          (x.compare(half) != llvm::APFloat::cmpLessThan &&
-           x.compare(one) == llvm::APFloat::cmpLessThan));
+  return (AbsX.compare(half) != llvm::APFloat::cmpLessThan &&
+          AbsX.compare(one) == llvm::APFloat::cmpLessThan);
 }
 
 void FloatExprEvaluator::StoreExponent(LValue Pointer, int exp) {
@@ -14821,7 +14819,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     Builtin::Context BTC = Info.Ctx.BuiltinInfo;
     if (BTC.isBuiltinConstant(FDecl->getBuiltinID()) >
         Info.Ctx.getLangOpts().LangStd)
-        return false;
+      return false;
     LValue Pointer;
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluatePointer(E->getArg(1), Pointer, Info))
@@ -14948,7 +14946,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     Builtin::Context BTC = Info.Ctx.BuiltinInfo;
     if (BTC.isBuiltinConstant(FDecl->getBuiltinID()) >
         Info.Ctx.getLangOpts().LangStd)
-        return false;
+      return false;
     APFloat RHS(0.);
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluateFloat(E->getArg(1), RHS, Info))
