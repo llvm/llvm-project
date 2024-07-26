@@ -26975,7 +26975,7 @@ SDValue DAGCombiner::XformToShuffleWithZero(SDNode *N) {
 /// If a vector binop is performed on splat values, it may be profitable to
 /// extract, scalarize, and insert/splat.
 static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
-                                      const SDLoc &DL) {
+                                      const SDLoc &DL, bool LegalTypes) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   unsigned Opcode = N->getOpcode();
@@ -26993,11 +26993,20 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
   // TODO: use DAG.isSplatValue instead?
   bool IsBothSplatVector = N0.getOpcode() == ISD::SPLAT_VECTOR &&
                            N1.getOpcode() == ISD::SPLAT_VECTOR;
+
+  // If binop is legal or custom on EltVT, scalarize should be profitable. The
+  // check is the same as isOperationLegalOrCustom without isTypeLegal. We
+  // can do this only before LegalTypes, because it may generate illegal `op
+  // EltVT` from legal `op VT (splat EltVT)`, where EltVT is not legal type but
+  // the result type of splat is legal.
+  auto EltAction = TLI.getOperationAction(Opcode, EltVT);
   if (!Src0 || !Src1 || Index0 != Index1 ||
       Src0.getValueType().getVectorElementType() != EltVT ||
       Src1.getValueType().getVectorElementType() != EltVT ||
       !(IsBothSplatVector || TLI.isExtractVecEltCheap(VT, Index0)) ||
-      !TLI.isOperationLegalOrCustom(Opcode, EltVT))
+      (LegalTypes && !TLI.isOperationLegalOrCustom(Opcode, EltVT)) ||
+      !(EltAction == TargetLoweringBase::Legal ||
+        EltAction == TargetLoweringBase::Custom))
     return SDValue();
 
   SDValue IndexC = DAG.getVectorIdxConstant(Index0, DL);
@@ -27163,7 +27172,7 @@ SDValue DAGCombiner::SimplifyVBinOp(SDNode *N, const SDLoc &DL) {
     }
   }
 
-  if (SDValue V = scalarizeBinOpOfSplats(N, DAG, DL))
+  if (SDValue V = scalarizeBinOpOfSplats(N, DAG, DL, LegalTypes))
     return V;
 
   return SDValue();
