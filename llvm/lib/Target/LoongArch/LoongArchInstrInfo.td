@@ -397,6 +397,10 @@ def simm20_pcaddu18i : SImm20Operand {
   let ParserMatchClass = SImmAsmOperand<20, "pcaddu18i">;
 }
 
+def simm20_pcaddi : SImm20Operand {
+  let ParserMatchClass = SImmAsmOperand<20, "pcaddi">;
+}
+
 def simm21_lsl2 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<21, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr<2>";
@@ -754,7 +758,7 @@ def SLT  : ALU_3R<0x00120000>;
 def SLTU : ALU_3R<0x00128000>;
 def SLTI  : ALU_2RI12<0x02000000, simm12>;
 def SLTUI : ALU_2RI12<0x02400000, simm12>;
-def PCADDI    : ALU_1RI20<0x18000000, simm20>;
+def PCADDI    : ALU_1RI20<0x18000000, simm20_pcaddi>;
 def PCADDU12I : ALU_1RI20<0x1c000000, simm20>;
 def PCALAU12I : ALU_1RI20<0x1a000000, simm20_pcalau12i>;
 def AND  : ALU_3R<0x00148000>;
@@ -1144,7 +1148,6 @@ def : PatGprGpr<urem, MOD_DU>;
 def : PatGprGpr<loongarch_mod_wu, MOD_WU>;
 def : PatGprGpr<rotr, ROTR_D>;
 def : PatGprGpr<loongarch_rotr_w, ROTR_W>;
-def : PatGprGpr_32<rotr, ROTR_W>;
 def : PatGprImm<rotr, ROTRI_D, uimm6>;
 def : PatGprImm_32<rotr, ROTRI_W, uimm5>;
 def : PatGprImm<loongarch_rotr_w, ROTRI_W, uimm5>;

@@ -1034,6 +1034,11 @@ feature_test_macros = [
             "headers": ["algorithm"],
         },
         {
+            "name": "__cpp_lib_ranges_find_last",
+            "values": {"c++23": 202207},
+            "headers": ["algorithm"],
+        },
+        {
             "name": "__cpp_lib_ranges_iota",
             "values": {"c++23": 202202},
             "headers": ["numeric"],
@@ -1297,8 +1302,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_three_way_comparison",
-            "values": {"c++20": 201711},
-            # {"c++20": 201907} # P1614R2 The Mothership has Landed (see P1902R1 Missing feature-test macros 2017-2019)
+            "values": {"c++20": 201907},
             "headers": ["compare"],
         },
         {

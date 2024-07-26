@@ -233,7 +233,8 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC) {
       assert(false && "Can't get arguments from that expression type");
 
     assert(NumArgs >= CurFunc->getNumWrittenParams());
-    NumVarArgs = NumArgs - CurFunc->getNumWrittenParams();
+    NumVarArgs = NumArgs - (CurFunc->getNumWrittenParams() +
+                            isa<CXXOperatorCallExpr>(CallSite));
     for (unsigned I = 0; I != NumVarArgs; ++I) {
       const Expr *A = Args[NumArgs - 1 - I];
       popArg(S, A);
@@ -333,7 +334,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
 }
 
 static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (Ptr.isIntegralPointer())
+  if (!Ptr.isBlockPointer())
     return true;
   return CheckConstant(S, OpPC, Ptr.getDeclDesc());
 }
@@ -728,8 +729,8 @@ bool CheckDynamicMemoryAllocation(InterpState &S, CodePtr OpPC) {
     return true;
 
   const SourceInfo &E = S.Current->getSource(OpPC);
-  S.FFDiag(E, diag::note_constexpr_new);
-  return false;
+  S.CCEDiag(E, diag::note_constexpr_new);
+  return true;
 }
 
 bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC, bool NewWasArray,

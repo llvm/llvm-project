@@ -827,3 +827,17 @@ namespace CheckingNullPtrForInitialization {
     return x;
   }
 }
+
+namespace VariadicCallOperator {
+  class F {
+  public:
+    constexpr void operator()(int a, int b, ...) {}
+  };
+  constexpr int foo() {
+    F f;
+
+    f(1,2, 3);
+    return 1;
+  }
+  constexpr int A = foo();
+}

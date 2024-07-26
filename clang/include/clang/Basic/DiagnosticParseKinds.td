@@ -1260,6 +1260,9 @@ def warn_pragma_intrinsic_builtin : Warning<
 def warn_pragma_unused_expected_var : Warning<
   "expected '#pragma unused' argument to be a variable name">,
   InGroup<IgnoredPragmas>;
+// - #pragma mc_func
+def err_pragma_mc_func_not_supported :
+   Error<"#pragma mc_func is not supported">;
 // - #pragma init_seg
 def warn_pragma_init_seg_unsupported_target : Warning<
   "'#pragma init_seg' is only supported when targeting a "

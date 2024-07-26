@@ -736,8 +736,9 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
   // | No      | Yes      | Generic,Shared,    | .volatile  | .volatile                    |
   // |         |          | Global [0]         |            |                              |
   // | No      | Yes      | Local,Const,Param  | plain [1]  | .weak [1]                    |
-  // | Relaxed | No       | Generic,Shared,    |            |                              |
-  // |         |          | Global [0]         | .volatile  | <atomic sem>                 |
+  // | Unorder | Yes/No   | All                | == Relaxed | == Relaxed                   |
+  // | Relaxed | No       | Generic,Shared,    | .volatile  | <atomic sem>                 |
+  // |         |          | Global [0]         |            |                              |
   // | Other   | No       | Generic,Shared,    | Error [2]  | <atomic sem>                 |
   // |         |          | Global [0]         |            |                              |
   // | Yes     | No       | Local,Const,Param  | plain [1]  | .weak [1]                    |
@@ -794,9 +795,10 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
     return NVPTX::PTXLdStInstCode::NotAtomic;
   }
 
-  // [2]: Atomics with Ordering different than Relaxed are not supported on
-  //      sm_60 and older; this includes volatile atomics.
+  // [2]: Atomics with Ordering different than Unordered or Relaxed are not
+  //      supported on sm_60 and older; this includes volatile atomics.
   if (!(Ordering == AtomicOrdering::NotAtomic ||
+        Ordering == AtomicOrdering::Unordered ||
         Ordering == AtomicOrdering::Monotonic) &&
       !HasMemoryOrdering) {
     SmallString<256> Msg;
@@ -826,6 +828,9 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
     return N->isVolatile() && AddrGenericOrGlobalOrShared
                ? NVPTX::PTXLdStInstCode::Volatile
                : NVPTX::PTXLdStInstCode::NotAtomic;
+  case AtomicOrdering::Unordered:
+    // We lower unordered in the exact same way as 'monotonic' to respect
+    // LLVM IR atomicity requirements.
   case AtomicOrdering::Monotonic:
     if (N->isVolatile())
       return UseRelaxedMMIO                ? NVPTX::PTXLdStInstCode::RelaxedMMIO
@@ -866,7 +871,6 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
     report_fatal_error(OS.str());
   }
   case AtomicOrdering::SequentiallyConsistent:
-  case AtomicOrdering::Unordered:
     // TODO: support AcquireRelease and SequentiallyConsistent
     SmallString<256> Msg;
     raw_svector_ostream OS(Msg);
@@ -3914,8 +3918,14 @@ bool NVPTXDAGToDAGISel::SelectADDRri_imp(
         Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), mvt);
       else
         Base = Addr.getOperand(0);
-      Offset = CurDAG->getTargetConstant(CN->getZExtValue(), SDLoc(OpNode),
-                                         mvt);
+
+      // Offset must fit in a 32-bit signed int in PTX [register+offset] address
+      // mode
+      if (!CN->getAPIntValue().isSignedIntN(32))
+        return false;
+
+      Offset = CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(OpNode),
+                                         MVT::i32);
       return true;
     }
   }
