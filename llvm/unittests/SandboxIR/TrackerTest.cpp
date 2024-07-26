@@ -69,6 +69,77 @@ define void @foo(ptr %ptr) {
   EXPECT_EQ(Ld->getOperand(0), Gep0);
 }
 
+TEST_F(TrackerTest, SetUse) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %arg) {
+  %ld = load i8, ptr %ptr
+  %add = add i8 %ld, %arg
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(&LLVMF);
+  unsigned ArgIdx = 0;
+  auto *Arg0 = F->getArg(ArgIdx++);
+  auto *BB = &*F->begin();
+  auto &Tracker = Ctx.getTracker();
+  Tracker.save();
+  auto It = BB->begin();
+  auto *Ld = &*It++;
+  auto *Add = &*It++;
+
+  Ctx.save();
+  sandboxir::Use Use = Add->getOperandUse(0);
+  Use.set(Arg0);
+  EXPECT_EQ(Add->getOperand(0), Arg0);
+  Ctx.revert();
+  EXPECT_EQ(Add->getOperand(0), Ld);
+}
+
+TEST_F(TrackerTest, SwapOperands) {
+  parseIR(C, R"IR(
+define void @foo(i1 %cond) {
+ bb0:
+   br i1 %cond, label %bb1, label %bb2
+ bb1:
+   ret void
+ bb2:
+   ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  Ctx.createFunction(&LLVMF);
+  auto *BB0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb0")));
+  auto *BB1 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb1")));
+  auto *BB2 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb2")));
+  auto &Tracker = Ctx.getTracker();
+  Tracker.save();
+  auto It = BB0->begin();
+  auto *Br = cast<sandboxir::BranchInst>(&*It++);
+
+  unsigned SuccIdx = 0;
+  SmallVector<sandboxir::BasicBlock *> ExpectedSuccs({BB2, BB1});
+  for (auto *Succ : Br->successors())
+    EXPECT_EQ(Succ, ExpectedSuccs[SuccIdx++]);
+
+  // This calls User::swapOperandsInternal() internally.
+  Br->swapSuccessors();
+
+  SuccIdx = 0;
+  for (auto *Succ : reverse(Br->successors()))
+    EXPECT_EQ(Succ, ExpectedSuccs[SuccIdx++]);
+
+  Ctx.getTracker().revert();
+  SuccIdx = 0;
+  for (auto *Succ : Br->successors())
+    EXPECT_EQ(Succ, ExpectedSuccs[SuccIdx++]);
+}
+
 TEST_F(TrackerTest, RUWIf_RAUW_RUOW) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr) {
@@ -369,4 +440,51 @@ define i32 @foo(i32 %arg) {
   EXPECT_EQ(&*It++, Add1);
   EXPECT_EQ(&*It++, Ret);
   EXPECT_EQ(It, BB->end());
+}
+
+TEST_F(TrackerTest, CallBaseSetters) {
+  parseIR(C, R"IR(
+declare void @bar1(i8)
+declare void @bar2(i8)
+
+define void @foo(i8 %arg0, i8 %arg1) {
+  call void @bar1(i8 %arg0)
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto *F = Ctx.createFunction(&LLVMF);
+  unsigned ArgIdx = 0;
+  auto *Arg0 = F->getArg(ArgIdx++);
+  auto *Arg1 = F->getArg(ArgIdx++);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Call = cast<sandboxir::CallBase>(&*It++);
+  [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check setArgOperand().
+  Ctx.save();
+  Call->setArgOperand(0, Arg1);
+  EXPECT_EQ(Call->getArgOperand(0), Arg1);
+  Ctx.revert();
+  EXPECT_EQ(Call->getArgOperand(0), Arg0);
+
+  auto *Bar1F = Call->getCalledFunction();
+  auto *Bar2F = Ctx.createFunction(M->getFunction("bar2"));
+
+  // Check setCalledOperand().
+  Ctx.save();
+  Call->setCalledOperand(Bar2F);
+  EXPECT_EQ(Call->getCalledOperand(), Bar2F);
+  Ctx.revert();
+  EXPECT_EQ(Call->getCalledOperand(), Bar1F);
+
+  // Check setCalledFunction().
+  Ctx.save();
+  Call->setCalledFunction(Bar2F);
+  EXPECT_EQ(Call->getCalledFunction(), Bar2F);
+  Ctx.revert();
+  EXPECT_EQ(Call->getCalledFunction(), Bar1F);
 }

@@ -360,34 +360,65 @@ bool LiveRegOptimizer::optimizeLiveType(
         Type *NewType = calculateConvertType(Phi->getType());
         NewPhi->addIncoming(ConstantInt::get(NewType, 0, false),
                             Phi->getIncomingBlock(I));
-      } else if (ValMap.contains(IncVal))
+      } else if (ValMap.contains(IncVal) && ValMap[IncVal])
         NewPhi->addIncoming(ValMap[IncVal], Phi->getIncomingBlock(I));
       else
         MissingIncVal = true;
     }
-    Instruction *DeadInst = Phi;
     if (MissingIncVal) {
-      DeadInst = cast<Instruction>(ValMap[Phi]);
-      // Do not use the dead phi
-      ValMap[Phi] = Phi;
+      Value *DeadVal = ValMap[Phi];
+      // The coercion chain of the PHI is broken. Delete the Phi
+      // from the ValMap and any connected / user Phis.
+      SmallVector<Value *, 4> PHIWorklist;
+      SmallPtrSet<Value *, 4> VisitedPhis;
+      PHIWorklist.push_back(DeadVal);
+      while (!PHIWorklist.empty()) {
+        Value *NextDeadValue = PHIWorklist.pop_back_val();
+        VisitedPhis.insert(NextDeadValue);
+        auto OriginalPhi =
+            std::find_if(PhiNodes.begin(), PhiNodes.end(),
+                         [this, &NextDeadValue](PHINode *CandPhi) {
+                           return ValMap[CandPhi] == NextDeadValue;
+                         });
+        // This PHI may have already been removed from maps when
+        // unwinding a previous Phi
+        if (OriginalPhi != PhiNodes.end())
+          ValMap.erase(*OriginalPhi);
+
+        DeadInsts.emplace_back(cast<Instruction>(NextDeadValue));
+
+        for (User *U : NextDeadValue->users()) {
+          if (!VisitedPhis.contains(cast<PHINode>(U)))
+            PHIWorklist.push_back(U);
+        }
+      }
+    } else {
+      DeadInsts.emplace_back(cast<Instruction>(Phi));
     }
-    DeadInsts.emplace_back(DeadInst);
   }
   // Coerce back to the original type and replace the uses.
   for (Instruction *U : Uses) {
     // Replace all converted operands for a use.
     for (auto [OpIdx, Op] : enumerate(U->operands())) {
-      if (ValMap.contains(Op)) {
+      if (ValMap.contains(Op) && ValMap[Op]) {
         Value *NewVal = nullptr;
         if (BBUseValMap.contains(U->getParent()) &&
             BBUseValMap[U->getParent()].contains(ValMap[Op]))
           NewVal = BBUseValMap[U->getParent()][ValMap[Op]];
         else {
           BasicBlock::iterator InsertPt = U->getParent()->getFirstNonPHIIt();
-          NewVal =
-              convertFromOptType(Op->getType(), cast<Instruction>(ValMap[Op]),
-                                 InsertPt, U->getParent());
-          BBUseValMap[U->getParent()][ValMap[Op]] = NewVal;
+          // We may pick up ops that were previously converted for users in
+          // other blocks. If there is an originally typed definition of the Op
+          // already in this block, simply reuse it.
+          if (isa<Instruction>(Op) && !isa<PHINode>(Op) &&
+              U->getParent() == cast<Instruction>(Op)->getParent()) {
+            NewVal = Op;
+          } else {
+            NewVal =
+                convertFromOptType(Op->getType(), cast<Instruction>(ValMap[Op]),
+                                   InsertPt, U->getParent());
+            BBUseValMap[U->getParent()][ValMap[Op]] = NewVal;
+          }
         }
         assert(NewVal);
         U->setOperand(OpIdx, NewVal);

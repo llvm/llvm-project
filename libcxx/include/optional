@@ -136,12 +136,12 @@ namespace std {
     void swap(optional &) noexcept(see below ); // constexpr in C++20
 
     // [optional.observe], observers
-    constexpr T const *operator->() const;
-    constexpr T *operator->();
-    constexpr T const &operator*() const &;
-    constexpr T &operator*() &;
-    constexpr T &&operator*() &&;
-    constexpr const T &&operator*() const &&;
+    constexpr T const *operator->() const noexcept;
+    constexpr T *operator->() noexcept;
+    constexpr T const &operator*() const & noexcept;
+    constexpr T &operator*() & noexcept;
+    constexpr T &&operator*() && noexcept;
+    constexpr const T &&operator*() const && noexcept;
     constexpr explicit operator bool() const noexcept;
     constexpr bool has_value() const noexcept;
     constexpr T const &value() const &;
@@ -783,12 +783,12 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<value_type const> operator->() const {
+  _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<value_type const> operator->() const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator-> called on a disengaged value");
     return std::addressof(this->__get());
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<value_type> operator->() {
+  _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<value_type> operator->() noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator-> called on a disengaged value");
     return std::addressof(this->__get());
   }

@@ -942,6 +942,9 @@ def warn_ptrauth_auth_null_pointer :
   InGroup<PtrAuthNullPointers>;
 def err_ptrauth_string_not_literal : Error<
   "argument must be a string literal%select{| of char type}0">;
+def err_ptrauth_type_disc_undiscriminated : Error<
+  "cannot pass undiscriminated type %0 to "
+  "'__builtin_ptrauth_type_discriminator'">;
 
 def note_ptrauth_virtual_function_pointer_incomplete_arg_ret :
   Note<"cannot take an address of a virtual member function if its return or "
@@ -949,6 +952,9 @@ def note_ptrauth_virtual_function_pointer_incomplete_arg_ret :
 def note_ptrauth_virtual_function_incomplete_arg_ret_type :
   Note<"%0 is incomplete">;
 
+def err_ptrauth_indirect_goto_addrlabel_arithmetic : Error<
+  "%select{subtraction|addition}0 of address-of-label expressions is not "
+  "supported with ptrauth indirect gotos">;
 
 /// main()
 // static main() is not an error in C, just in C++.
@@ -3328,6 +3334,10 @@ def err_ownership_returns_index_mismatch : Error<
   "'ownership_returns' attribute index does not match; here it is %0">;
 def note_ownership_returns_index_mismatch : Note<
   "declared with index %0 here">;
+def err_ownership_takes_class_mismatch : Error<
+  "'ownership_takes' attribute class does not match; here it is '%0'">;
+def note_ownership_takes_class_mismatch : Note<
+  "declared with class '%0' here">;
 def err_format_strftime_third_parameter : Error<
   "strftime format attribute requires 3rd parameter to be 0">;
 def err_format_attribute_not : Error<"format argument not a string type">;
@@ -3492,7 +3502,7 @@ def err_attr_tlsmodel_arg : Error<"tls_model must be \"global-dynamic\", "
 
 def err_attr_codemodel_arg : Error<"code model '%0' is not supported on this target">;
 
-def err_aix_attr_unsupported_tls_model : Error<"TLS model '%0' is not yet supported on AIX">;
+def err_aix_attr_unsupported : Error<"%0 attribute is not yet supported on AIX">;
 
 def err_tls_var_aligned_over_maximum : Error<
   "alignment (%0) of thread-local variable %1 is greater than the maximum supported "
@@ -3802,8 +3812,6 @@ def warn_sme_locally_streaming_has_vl_args_returns : Warning<
   InGroup<AArch64SMEAttributes>, DefaultIgnore;
 def err_conflicting_attributes_arm_state : Error<
   "conflicting attributes for state '%0'">;
-def err_sme_streaming_cannot_be_multiversioned : Error<
-  "streaming function cannot be multi-versioned">;
 def err_unknown_arm_state : Error<
   "unknown state '%0'">;
 def err_missing_arm_state : Error<
@@ -5165,7 +5173,7 @@ def warn_cxx11_compat_variable_template : Warning<
   InGroup<CXXPre14Compat>, DefaultIgnore;
 def err_template_variable_noparams : Error<
   "extraneous 'template<>' in declaration of variable %0">;
-def err_template_member : Error<"member %0 declared as a template">;
+def err_template_member : Error<"non-static data member %0 cannot be declared as a template">;
 def err_member_with_template_arguments : Error<"member %0 cannot have template arguments">;
 def err_template_member_noparams : Error<
   "extraneous 'template<>' in declaration of member %0">;
@@ -7596,9 +7604,6 @@ def err_nested_non_static_member_use : Error<
 def warn_cxx98_compat_non_static_member_use : Warning<
   "use of non-static data member %0 in an unevaluated context is "
   "incompatible with C++98">, InGroup<CXX98Compat>, DefaultIgnore;
-def err_form_ptr_to_member_from_parenthesized_expr : Error<
-  "cannot form pointer to member from a parenthesized expression; "
-  "did you mean to remove the parentheses?">;
 def err_invalid_incomplete_type_use : Error<
   "invalid use of incomplete type %0">;
 def err_builtin_func_cast_more_than_one_arg : Error<
@@ -10126,7 +10131,7 @@ def warn_dangling_lifetime_pointer : Warning<
   InGroup<DanglingGsl>;
 def warn_dangling_lifetime_pointer_assignment : Warning<"object backing the "
   "pointer %0 will be destroyed at the end of the full-expression">,
-  InGroup<DanglingAssignmentGsl>, DefaultIgnore;
+  InGroup<DanglingAssignmentGsl>;
 def warn_new_dangling_initializer_list : Warning<
   "array backing "
   "%select{initializer list subobject of the allocated object|"

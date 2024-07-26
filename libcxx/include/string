@@ -598,6 +598,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__functional/unary_function.h>
 #include <__fwd/string.h>
 #include <__ios/fpos.h>
+#include <__iterator/bounded_iter.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
@@ -822,9 +823,16 @@ public:
                 "Allocator::value_type must be same type as value_type");
   static_assert(__check_valid_allocator<allocator_type>::value, "");
 
-  // TODO: Implement iterator bounds checking without requiring the global database.
+#ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
+  // Users might provide custom allocators, and prior to C++20 we have no existing way to detect whether the allocator's
+  // pointer type is contiguous (though it has to be by the Standard). Using the wrapper type ensures the iterator is
+  // considered contiguous.
+  typedef __bounded_iter<__wrap_iter<pointer>> iterator;
+  typedef __bounded_iter<__wrap_iter<const_pointer>> const_iterator;
+#else
   typedef __wrap_iter<pointer> iterator;
   typedef __wrap_iter<const_pointer> const_iterator;
+#endif
   typedef std::reverse_iterator<iterator> reverse_iterator;
   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
@@ -940,10 +948,33 @@ private:
     __init_with_sentinel(std::move(__first), std::move(__last));
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator __make_iterator(pointer __p) { return iterator(__p); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator __make_iterator(pointer __p) {
+#ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
+    // Bound the iterator according to the size (and not the capacity, unlike vector).
+    //
+    // By the Standard, string iterators are generally not guaranteed to stay valid when the container is modified,
+    // regardless of whether reallocation occurs. This allows us to check for out-of-bounds accesses using logical size,
+    // a stricter check, since correct code can never rely on being able to access newly-added elements via an existing
+    // iterator.
+    return std::__make_bounded_iter(
+        std::__wrap_iter<pointer>(__p),
+        std::__wrap_iter<pointer>(__get_pointer()),
+        std::__wrap_iter<pointer>(__get_pointer() + size()));
+#else
+    return iterator(__p);
+#endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
+  }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_iterator __make_const_iterator(const_pointer __p) const {
+#ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
+    // Bound the iterator according to the size (and not the capacity, unlike vector).
+    return std::__make_bounded_iter(
+        std::__wrap_iter<const_pointer>(__p),
+        std::__wrap_iter<const_pointer>(__get_pointer()),
+        std::__wrap_iter<const_pointer>(__get_pointer() + size()));
+#else
     return const_iterator(__p);
+#endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
   }
 
 public:
@@ -1983,6 +2014,11 @@ private:
     (void)__old_mid;
     (void)__new_mid;
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
+  #if defined(__APPLE__)
+    // TODO: remove after addressing issue #96099 (https://github.com/llvm/llvm-project/issues/96099)
+    if(!__is_long())
+      return;
+  #endif
     std::__annotate_contiguous_container<_Allocator>(data(), data() + capacity() + 1, __old_mid, __new_mid);
 #endif
   }
@@ -3322,23 +3358,34 @@ basic_string<_CharT, _Traits, _Allocator>::__shrink_or_extend(size_type __target
     __p        = __get_long_pointer();
   } else {
     if (__target_capacity > __cap) {
+      // Extend
+      // - called from reserve should propagate the exception thrown.
       auto __allocation = std::__allocate_at_least(__alloc(), __target_capacity + 1);
       __new_data        = __allocation.ptr;
       __target_capacity = __allocation.count - 1;
     } else {
+      // Shrink
+      // - called from shrink_to_fit should not throw.
+      // - called from reserve may throw but is not required to.
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
       try {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
         auto __allocation = std::__allocate_at_least(__alloc(), __target_capacity + 1);
+
+        // The Standard mandates shrink_to_fit() does not increase the capacity.
+        // With equal capacity keep the existing buffer. This avoids extra work
+        // due to swapping the elements.
+        if (__allocation.count - 1 > __target_capacity) {
+          __alloc_traits::deallocate(__alloc(), __allocation.ptr, __allocation.count);
+          __annotate_new(__sz); // Undoes the __annotate_delete()
+          return;
+        }
         __new_data        = __allocation.ptr;
         __target_capacity = __allocation.count - 1;
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
       } catch (...) {
         return;
       }
-#else  // _LIBCPP_HAS_NO_EXCEPTIONS
-      if (__new_data == nullptr)
-        return;
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
     }
     __begin_lifetime(__new_data, __target_capacity + 1);

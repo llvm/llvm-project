@@ -1076,6 +1076,11 @@ static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
   const CGRecordLayout &Layout = CGF.CGM.getTypes().getCGRecordLayout(RD);
   int64_t FieldNo = -1;
   for (const FieldDecl *FD : RD->fields()) {
+    if (!Layout.containsFieldDecl(FD))
+      // This could happen if the field has a struct type that's empty. I don't
+      // know why either.
+      continue;
+
     FieldNo = Layout.getLLVMFieldNo(FD);
     if (FD == Field) {
       Indices.emplace_back(std::make_pair(RD, CGF.Builder.getInt32(FieldNo)));
@@ -5837,6 +5842,15 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
           CGM.getLLVMContext(), {PrefixSigType, Int32Ty}, /*isPacked=*/true);
 
       llvm::Value *CalleePtr = Callee.getFunctionPointer();
+      if (CGM.getCodeGenOpts().PointerAuth.FunctionPointers) {
+        // Use raw pointer since we are using the callee pointer as data here.
+        Address Addr =
+            Address(CalleePtr, CalleePtr->getType(),
+                    CharUnits::fromQuantity(
+                        CalleePtr->getPointerAlignment(CGM.getDataLayout())),
+                    Callee.getPointerAuthInfo(), nullptr);
+        CalleePtr = Addr.emitRawPointer(*this);
+      }
 
       // On 32-bit Arm, the low bit of a function pointer indicates whether
       // it's using the Arm or Thumb instruction set. The actual first
