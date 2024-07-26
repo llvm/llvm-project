@@ -2568,6 +2568,7 @@ bool checkCandidatePairAccesses(MemoryAccess *LoadMA, MemoryAccess *StoreMA,
                      .intersect_domain(isl::manage(Domain.copy()));
     isl::set RS = R.range();
     isl::set WS = W.range();
+
     isl::set InterAccs =
         isl::manage(RS.copy()).intersect(isl::manage(WS.copy()));
     Valid = !InterAccs.is_empty();
