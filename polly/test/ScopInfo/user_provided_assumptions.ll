@@ -4,12 +4,6 @@
 ; CHECK:      remark: <unknown>:0:0: SCoP begins here.
 ; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N] -> {  : N <= 2147483647 - M }
 ; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N] -> {  : -2147483648 - M <= N <= 2147483647 - M }
-; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N] -> {  : 0 < M <= 100 and -2147483648 - M <= N <= 2147483647 - M }
-; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N] -> {  : 0 < M <= 100 and 0 < N <= 2147483647 - M }
-; CHECK-NEXT: remark: <unknown>:0:0: SCoP ends here but was dismissed.
-; CHECK-NEXT: remark: <unknown>:0:0: SCoP begins here.
-; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N] -> {  : N <= 2147483647 - M }
-; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N] -> {  : -2147483648 - M <= N <= 2147483647 - M }
 ; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N, Debug] -> {  : Debug = 0 and 0 < M <= 100 and -2147483648 - M <= N <= 2147483647 - M }
 ; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N, Debug] -> {  : Debug = 0 and 0 < M <= 100 and 0 < N <= 2147483647 - M }
 ; CHECK-NEXT: remark: <unknown>:0:0: SCoP ends here.

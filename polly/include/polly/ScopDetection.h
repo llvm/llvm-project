@@ -347,11 +347,13 @@ private:
 
   /// Check if an expanded region is profitable to optimize.
   ///
-  /// An expanded region may include basic blocks with memory accesses that
-  /// are not used in loops of the expanded region. These memory accesses add
-  /// complexity for building scop, compute optimization schedule and build
-  /// runtime alias checks. Such expansion is not profitable and should not
-  /// replace original unexpanded region.
+  /// An expanded region may add basic blocks that do not belong to any loop of
+  /// the expanded region. These blocks may contain unrelated memory accesses
+  /// that add complexity for building scop, compute optimization schedule and
+  /// build runtime alias checks. However if there are loops added due to region
+  /// expansion following these unprofitable blocks, we still want the expanded
+  /// region to encourage loop fusion. Otherwise such expansion is not
+  /// profitable and should not replace original unexpanded region.
   ///
   /// @param ExpandedRegion The expanded region to check.
   ///

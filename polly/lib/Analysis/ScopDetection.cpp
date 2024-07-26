@@ -1769,38 +1769,66 @@ bool ScopDetection::isRegionExpansionProfitable(const Region &ExpandedRegion,
                      << ExpandedRegion.getNameStr() << "\n");
 
   // Collect outermost loops from expanded region.
-  SmallPtrSet<const Loop *, 2> Loops;
-  for (auto BB : ExpandedRegion.blocks()) {
+  SmallPtrSet<const Loop *, 2> OutermostLoops;
+  for (BasicBlock *BB : ExpandedRegion.blocks()) {
     Loop *L = ExpandedRegion.outermostLoopInRegion(&LI, BB);
     if (L)
-      Loops.insert(L);
+      OutermostLoops.insert(L);
   }
 
-  if (Loops.size() == 0) {
+  if (OutermostLoops.empty()) {
     POLLY_DEBUG(dbgs() << "Unprofitable expanded region: no loops found.\n");
     return false;
   }
 
   // Return region expansion as unprofitable, if it contains basic blocks with
   // memory accesses not used in outermost loops of the expanded region.
-  for (auto BB : ExpandedRegion.blocks()) {
+  for (BasicBlock *BB : ExpandedRegion.blocks()) {
     if (&BB->front() == BB->getTerminator())
       continue;
     if (BB == ExpandedRegion.getEntry())
       continue;
 
-    // Skip loop preheader block that may contain loop invariant loads.
-    if (llvm::any_of(Loops, [&](const Loop *L) {
+    // Only consider the expansion blocks added in addition to the loops. Also
+    // ignore preheader blocks because they may contain loop invariant loads.
+    if (llvm::any_of(OutermostLoops, [&](const Loop *L) {
           return L->contains(BB) || (BB == L->getLoopPreheader());
         }))
       continue;
 
-    if (llvm::any_of(*BB, [](const Instruction &I) {
-          return isa<LoadInst>(&I) || isa<StoreInst>(&I);
+    // Check if a basic block has instruction that access memory, but not used
+    // in any outermost loops of the expanded region.
+    bool BBContainsUnrelatedMemAccesses =
+        llvm::any_of(*BB, [&](const Instruction &I) {
+          if (!I.mayReadOrWriteMemory())
+            return false;
+          if (I.user_empty())
+            return false;
+
+          for (const User *U : I.users()) {
+            const Instruction *UI = dyn_cast<Instruction>(U);
+            if (!UI)
+              continue;
+
+            if (llvm::none_of(OutermostLoops,
+                              [&](const Loop *L) { return L->contains(UI); }))
+              return true;
+          }
+          return false;
+        });
+
+    if (!BBContainsUnrelatedMemAccesses)
+      continue;
+
+    // A basic block containing unrelated memory accesses is unprofitable.
+    // Check if there are loops following for potential loop fusion. If not,
+    // reject the expanded region.
+    if (llvm::none_of(OutermostLoops, [&](const Loop *L) {
+          return DT.dominates(BB, L->getHeader());
         })) {
       POLLY_DEBUG(dbgs() << "Unprofitable expanded region:\n";
                   dbgs() << "\tBasicBlock: " << BB->getName() << "\n";
-                  dbgs() << "\tcontains memory accesses, but not belong to "
+                  dbgs() << "\tcontains memory accesses, but not used in "
                             "outermost loops of expanded region.\n\n");
       return false;
     }
