@@ -2589,12 +2589,13 @@ bool checkCandidatePairAccesses(MemoryAccess *LoadMA, MemoryAccess *StoreMA,
   return Valid;
 }
 
+void ScopBuilder::checkForReductions(ScopStmt &Stmt) {
 // Perform a data flow analysis on the current scop statement to propagate the
 // uses of loaded values. Then check and mark the memory accesses which are
 // part of reduction like chains.
 //
 // NOTE: This assumes independent scop statements and breaks otherwise.
-void ScopBuilder::checkForReductions(ScopStmt &Stmt) {
+
   // During the data flow analysis we use the State variable to keep track of
   // the used "load-instructions" for each instruction in the scop statement.
   // This includes the LLVM-IR of the load and the "number of uses" (or the
@@ -2669,7 +2670,7 @@ void ScopBuilder::checkForReductions(ScopStmt &Stmt) {
       // Non load and store instructions are either binary operators or they
       // will invalidate all used loads.
       auto *BinOp = dyn_cast<BinaryOperator>(&Inst);
-      auto CurRedType = getReductionType(BinOp);
+      ReductionType CurRedType = getReductionType(BinOp);
       POLLY_DEBUG(dbgs() << "CurInst: " << Inst << " RT: " << CurRedType
                          << "\n");
 
@@ -2718,7 +2719,7 @@ void ScopBuilder::checkForReductions(ScopStmt &Stmt) {
   }
 
   // All used loads are propagated through the whole basic block; now try to
-  // find valid reduction like candidate pairs. These load-store pairs fulfill
+  // find valid reduction-like candidate pairs. These load-store pairs fulfill
   // all reduction like properties with regards to only this load-store chain.
   // We later have to check if the loaded value was invalidated by an
   // instruction not in that chain.
