@@ -2142,6 +2142,7 @@ cc_library(
         ":FuncTransforms",
         ":FunctionInterfaces",
         ":IR",
+        ":IndexDialect",
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":MemRefDialect",
@@ -2149,6 +2150,7 @@ cc_library(
         ":SCFDialect",
         ":SCFTransforms",
         ":TransformUtils",
+        ":VectorUtils",
         "//llvm:Support",
     ],
 )
