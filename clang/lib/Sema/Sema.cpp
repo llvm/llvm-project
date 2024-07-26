@@ -1509,6 +1509,9 @@ void Sema::ActOnEndOfTranslationUnit() {
 
   AnalysisWarnings.IssueWarnings(Context.getTranslationUnitDecl());
 
+  if (Context.hasAnyFunctionEffects())
+    performEffectAnalysis(*this, Context.getTranslationUnitDecl());
+
   // Check we've noticed that we're no longer parsing the initializer for every
   // variable. If we miss cases, then at best we have a performance issue and
   // at worst a rejects-valid bug.
