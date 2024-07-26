@@ -1051,7 +1051,8 @@ IdentifierID ASTIdentifierLookupTrait::ReadIdentifierID(const unsigned char *d) 
   return Reader.getGlobalIdentifierID(F, RawID >> 1);
 }
 
-static void markIdentifierFromAST(ASTReader &Reader, IdentifierInfo &II, bool IsModule) {
+static void markIdentifierFromAST(ASTReader &Reader, IdentifierInfo &II,
+                                  bool IsModule) {
   if (!II.isFromAST()) {
     II.setIsFromAST();
     if (isInterestingIdentifier(Reader, II, IsModule))
