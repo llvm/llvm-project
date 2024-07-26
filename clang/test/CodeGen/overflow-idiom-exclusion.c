@@ -16,12 +16,25 @@
 // unsigned negation, for example:
 // unsigned long A = -1UL;
 
-// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fno-sanitize-overflow-idioms -S -emit-llvm -o - | FileCheck %s
-// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fno-sanitize-overflow-idioms -fwrapv -S -emit-llvm -o - | FileCheck %s
-// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fno-sanitize-overflow-idioms -S -emit-llvm -o - | FileCheck %s --check-prefix=NEGATION
-// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fno-sanitize-overflow-idioms -fsanitize-negation-overflow -S -emit-llvm -o - | FileCheck %s --check-prefix=NEGATIONOV
-// CHECK-NOT: br{{.*}}overflow
+// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=all -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=all -fwrapv -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=add-overflow-test -S -emit-llvm -o - | FileCheck %s --check-prefix=ADD
+// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=negated-unsigned-const -S -emit-llvm -o - | FileCheck %s --check-prefix=NEGATE
+// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=post-decr-while -S -emit-llvm -o - | FileCheck %s --check-prefix=WHILE
 
+// CHECK-NOT: handle{{.*}}overflow
+
+// ADD: usub.with.overflow
+// ADD: negate_overflow
+// ADD-NOT: handler.add_overflow
+
+// NEGATE: handler.add_overflow
+// NEGATE: usub.with.overflow
+// NEGATE-NOT: negate_overflow
+
+// WHILE: handler.add_overflow
+// WHILE: negate_overflow
+// WHILE-NOT: usub.with.overflow
 extern unsigned a, b, c;
 extern unsigned some(void);
 
@@ -110,16 +123,13 @@ void common_while(unsigned i) {
   }
 }
 
-// NEGATION-LABEL,NEGATIONOV-LABEL: define{{.*}}negation_overflow
-// NEGATION-NOT: negate_overflow
-// NEGATIONOV: negate_overflow
 // Normally, these assignments would trip the unsigned overflow sanitizer.
-void negation_overflow(void) {
+void negation(void) {
 #define SOME -1UL
   unsigned long A = -1UL;
   unsigned long B = -2UL;
   unsigned long C = -3UL;
-  unsigned long D = -1337UL;
+  unsigned long D = -SOME;
   (void)A;(void)B;(void)C;(void)D;
 }
 

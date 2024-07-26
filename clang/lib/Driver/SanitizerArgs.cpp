@@ -119,6 +119,10 @@ static SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
 static int parseCoverageFeatures(const Driver &D, const llvm::opt::Arg *A,
                                  bool DiagnoseErrors);
 
+static int parseOverflowPatternExclusionValues(const Driver &D,
+                                               const llvm::opt::Arg *A,
+                                               bool DiagnoseErrors);
+
 /// Parse -f(no-)?sanitize-metadata= flag values, diagnosing any invalid
 /// components. Returns OR of members of \c BinaryMetadataFeature enumeration.
 static int parseBinaryMetadataFeatures(const Driver &D, const llvm::opt::Arg *A,
@@ -788,6 +792,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
           << "fsanitize-trap=cfi";
   }
 
+  for (const auto *Arg :
+       Args.filtered(options::OPT_fsanitize_overflow_pattern_exclusion_EQ)) {
+    Arg->claim();
+    OverflowPatternExclusions |=
+        parseOverflowPatternExclusionValues(D, Arg, DiagnoseErrors);
+  }
+
   // Parse -f(no-)?sanitize-coverage flags if coverage is supported by the
   // enabled sanitizers.
   for (const auto *Arg : Args) {
@@ -1245,6 +1256,10 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   addSpecialCaseListOpt(Args, CmdArgs,
                         "-fsanitize-system-ignorelist=", SystemIgnorelistFiles);
 
+  if (OverflowPatternExclusions)
+    Args.AddAllArgs(CmdArgs,
+                    options::OPT_fsanitize_overflow_pattern_exclusion_EQ);
+
   if (MsanTrackOrigins)
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-memory-track-origins=" +
                                          Twine(MsanTrackOrigins)));
@@ -1431,6 +1446,28 @@ SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
           << A->getSpelling() << Value;
   }
   return Kinds;
+}
+
+static int parseOverflowPatternExclusionValues(const Driver &D,
+                                               const llvm::opt::Arg *A,
+                                               bool DiagnoseErrors) {
+  int Exclusions = 0;
+  for (int i = 0, n = A->getNumValues(); i != n; ++i) {
+    const char *Value = A->getValue(i);
+    int E =
+        llvm::StringSwitch<int>(Value)
+            .Case("none", LangOptionsBase::None)
+            .Case("all", LangOptionsBase::All)
+            .Case("add-overflow-test", LangOptionsBase::AddOverflowTest)
+            .Case("negated-unsigned-const", LangOptionsBase::NegUnsignedConst)
+            .Case("post-decr-while", LangOptionsBase::PostDecrInWhile)
+            .Default(0);
+    if (E == 0)
+      D.Diag(clang::diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << Value;
+    Exclusions |= E;
+  }
+  return Exclusions;
 }
 
 int parseCoverageFeatures(const Driver &D, const llvm::opt::Arg *A,

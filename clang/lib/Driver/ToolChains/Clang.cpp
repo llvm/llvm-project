@@ -6844,10 +6844,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (Args.hasArg(options::OPT_fno_sanitize_overflow_idioms) &&
-      !Args.hasArg(options::OPT_fsanitize_negation_overflow))
-    CmdArgs.push_back("-fno-sanitize-negation-overflow");
-
   if (Args.getLastArg(options::OPT_fapple_kext) ||
       (Args.hasArg(options::OPT_mkernel) && types::isCXX(InputType)))
     CmdArgs.push_back("-fapple-kext");
@@ -6900,9 +6896,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.addOptInFlag(CmdArgs, options::OPT_mspeculative_load_hardening,
                     options::OPT_mno_speculative_load_hardening);
-
-  Args.AddLastArg(CmdArgs, options::OPT_fsanitize_negation_overflow,
-                  options::OPT_fno_sanitize_negation_overflow);
 
   RenderSSPOptions(D, TC, Args, CmdArgs, KernelOrKext);
   RenderSCPOptions(TC, Args, CmdArgs);
@@ -7752,6 +7745,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fcuda-allow-variadic-functions");
     Args.AddLastArg(CmdArgs, options::OPT_fgpu_default_stream_EQ);
   }
+
+  Args.AddAllArgs(CmdArgs,
+                  options::OPT_fsanitize_overflow_pattern_exclusion_EQ);
 
   Args.AddLastArg(CmdArgs, options::OPT_foffload_uniform_block,
                   options::OPT_fno_offload_uniform_block);
