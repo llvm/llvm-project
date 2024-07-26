@@ -54,3 +54,32 @@ t:
 f:
   ret void
 }
+
+define void @test_unreachable1() {
+; CHECK-LABEL: define void @test_unreachable1() {
+; CHECK-NEXT:    [[PC:%.*]] = call i64 @llvm.amdgcn.s.getpc()
+; CHECK-NEXT:    call void @__offload_san_unreachable_info(i64 [[PC]])
+; CHECK-NEXT:    unreachable
+;
+  unreachable
+}
+
+define void @test_unreachable2(i1 %c) {
+; CHECK-LABEL: define void @test_unreachable2(
+; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[C]], label %[[T:.*]], label %[[F:.*]]
+; CHECK:       [[T]]:
+; CHECK-NEXT:    [[PC:%.*]] = call i64 @llvm.amdgcn.s.getpc()
+; CHECK-NEXT:    call void @__offload_san_unreachable_info(i64 [[PC]])
+; CHECK-NEXT:    unreachable
+; CHECK:       [[F]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %t ,label %f
+t:
+  unreachable
+f:
+  ret void
+}

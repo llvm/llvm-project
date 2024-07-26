@@ -281,6 +281,10 @@ public:
       case SanitizerEnvironmentTy::TRAP:
         reportError("execution interrupted by hardware trap instruction");
         break;
+      case SanitizerEnvironmentTy::UNREACHABLE:
+        reportError("execution reached an \"unreachable\" state (likely caused "
+                  "by undefined behavior)");
+	break;
       default:
         reportError(
             "execution stopped, reason is unknown due to invalid error code");

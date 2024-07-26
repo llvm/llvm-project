@@ -42,6 +42,8 @@ private:
   bool shouldInstrumentFunction(Function &Fn);
   bool instrumentFunction(Function &Fn);
   bool instrumentTrapInstructions(SmallVectorImpl<IntrinsicInst *> &TrapCalls);
+  bool instrumentUnreachableInstructions(
+      SmallVectorImpl<UnreachableInst *> &UnreachableInsts);
 
   FunctionCallee getOrCreateFn(FunctionCallee &FC, StringRef Name, Type *RetTy,
                                ArrayRef<Type *> ArgTys) {
@@ -57,6 +59,13 @@ private:
   FunctionCallee getTrapInfoFn() {
     return getOrCreateFn(TrapInfoFn, "__offload_san_trap_info", VoidTy,
                          {/*PC*/ Int64Ty});
+  }
+
+  /// void __offload_san_unreachable_info(Int64Ty);
+  FunctionCallee UnreachableInfoFn;
+  FunctionCallee getUnreachableInfoFn() {
+    return getOrCreateFn(UnreachableInfoFn, "__offload_san_unreachable_info",
+                         VoidTy, {/*PC*/ Int64Ty});
   }
 
   CallInst *createCall(IRBuilder<> &IRB, FunctionCallee Callee,
@@ -107,15 +116,34 @@ bool OffloadSanitizerImpl::instrumentTrapInstructions(
   return Changed;
 }
 
+bool OffloadSanitizerImpl::instrumentUnreachableInstructions(
+    SmallVectorImpl<UnreachableInst *> &UnreachableInsts) {
+  bool Changed = false;
+  for (auto *II : UnreachableInsts) {
+    // Skip unreachables after traps since we instrument those as well.
+    if (&II->getParent()->front() != II)
+      if (auto *CI = dyn_cast<CallInst>(II->getPrevNode()))
+        if (CI->getIntrinsicID() == Intrinsic::trap)
+          continue;
+    IRBuilder<> IRB(II);
+    createCall(IRB, getUnreachableInfoFn(), {getPC(IRB)});
+  }
+  return Changed;
+}
+
 bool OffloadSanitizerImpl::instrumentFunction(Function &Fn) {
   if (!shouldInstrumentFunction(Fn))
     return false;
 
+  SmallVector<UnreachableInst *> UnreachableInsts;
   SmallVector<IntrinsicInst *> TrapCalls;
 
   bool Changed = false;
   for (auto &I : instructions(Fn)) {
     switch (I.getOpcode()) {
+    case Instruction::Unreachable:
+      UnreachableInsts.push_back(cast<UnreachableInst>(&I));
+      break;
     case Instruction::Call: {
       auto &CI = cast<CallInst>(I);
       if (auto *II = dyn_cast<IntrinsicInst>(&CI))
@@ -129,6 +157,7 @@ bool OffloadSanitizerImpl::instrumentFunction(Function &Fn) {
   }
 
   Changed |= instrumentTrapInstructions(TrapCalls);
+  Changed |= instrumentUnreachableInstructions(UnreachableInsts);
 
   return Changed;
 }

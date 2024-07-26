@@ -111,7 +111,8 @@ struct SanitizerEnvironmentTy {
   enum ErrorCodeTy : uint8_t {
     NONE = 0,
     TRAP,
-    LAST = TRAP,
+    UNREACHABLE,
+    LAST = UNREACHABLE,
   } ErrorCode;
 
   /// Flag to indicate the environment has been initialized fully.

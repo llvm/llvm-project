@@ -90,6 +90,10 @@ extern "C" {
 _SAN_ENTRY_ATTRS void __offload_san_trap_info(uint64_t PC) {
   raiseExecutionError(SanitizerEnvironmentTy::TRAP, PC);
 }
+
+_SAN_ENTRY_ATTRS void __offload_san_unreachable_info(uint64_t PC) {
+  raiseExecutionError(SanitizerEnvironmentTy::UNREACHABLE, PC);
+}
 }
 
 #pragma omp end declare target
