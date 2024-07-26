@@ -8773,7 +8773,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
     addUsersInExitBlock(OrigLoop, RecipeBuilder, *Plan,
                         Legal->getInductionVars());
 
-
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
   // bring the VPlan to its final state.
