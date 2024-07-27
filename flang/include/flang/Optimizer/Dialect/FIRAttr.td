@@ -111,4 +111,17 @@ def fir_LowerBoundModifierAttribute : I32EnumAttr<
   let cppNamespace = "::fir";
 }
 
+def fir_LocationKind : I32EnumAttr<"LocationKind", "Flang location kind",
+  [
+    I32EnumAttrCase<"Base", 0, "base">,
+    I32EnumAttrCase<"Inclusion", 1, "inclusion">,
+  ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::fir";
+}
+def fir_LocationKindAttr : EnumAttr<FIROpsDialect, fir_LocationKind, "loc_kind">;
+
+def LocationKindArrayAttr : ArrayOfAttr<FIROpsDialect, "LocationKindArray",
+    "loc_kind_array", "LocationKindAttr">;
+
 #endif // FIR_DIALECT_FIR_ATTRS
