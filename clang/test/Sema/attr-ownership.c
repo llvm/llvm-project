@@ -29,5 +29,5 @@ int f19(void *)
   __attribute__((ownership_takes(foo, 1)))    // expected-error {{'ownership_takes' attribute class does not match; here it is 'foo'}}
   __attribute__((ownership_takes(foo1, 1)));  // expected-note {{declared with class 'foo1' here}}
 
-void f20(void) __attribute__((ownership_returns(foo)));  // expected-error {{'ownership_returns' attribute only applies to functions that return pointers}}
-int f21(void) __attribute__((ownership_returns(foo)));  // expected-error {{'ownership_returns' attribute only applies to functions that return pointers}}
+void f20(void) __attribute__((ownership_returns(foo)));  // expected-error {{'ownership_returns' attribute only applies to functions that return a pointer}}
+int f21(void) __attribute__((ownership_returns(foo)));  // expected-error {{'ownership_returns' attribute only applies to functions that return a pointer}}
