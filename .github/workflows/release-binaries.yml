@@ -160,14 +160,19 @@ jobs:
         # remove it.
         path: ../workflows
 
-    - name: Setup Stage
-      id: setup-stage
-      uses: "${{ github.workspace }}/../workflows/.github/workflows/release-binaries-setup-stage"
-
     - name: Checkout LLVM
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       with:
         ref: ${{ needs.prepare.outputs.ref }}
+
+    - name: Copy main workflows
+      shell: bash
+      run: |
+        mv ../workflows workflows-main
+
+    - name: Setup Stage
+      id: setup-stage
+      uses: ./workflows-main/.github/workflows/release-binaries-setup-stage
 
     - name: Setup sccache
       uses: hendrikmuhs/ccache-action@ca3acd2731eef11f1572ccb126356c2f9298d35e # v1.2.9
@@ -196,7 +201,7 @@ jobs:
         ls -ltr ${{ steps.setup-stage.outputs.build-prefix }}/build
     
     - name: Save Stage
-      uses: "${{ github.workspace }}/../workflows/.github/workflows/release-binaries-save-stage"
+      uses: ./workflows-main/.github/workflows/release-binaries-save-stage
       with:
         build-prefix: ${{ steps.setup-stage.outputs.build-prefix }}
 
