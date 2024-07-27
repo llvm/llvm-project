@@ -616,8 +616,8 @@ LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
   llvm::Instruction *BeforeIR = InsertBefore->getTopmostLLVMInstruction();
   auto &Builder = Ctx.getLLVMIRBuilder();
   Builder.SetInsertPoint(BeforeIR);
-  auto *NewLI = Builder.CreateAlignedLoad(Ty, Ptr->Val, Align,
-                                          isVolatile, Name);
+  auto *NewLI =
+      Builder.CreateAlignedLoad(Ty, Ptr->Val, Align, isVolatile, Name);
   auto *NewSBI = Ctx.createLoadInst(NewLI);
   return NewSBI;
 }
@@ -627,8 +627,8 @@ LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
                            bool isVolatile, const Twine &Name) {
   auto &Builder = Ctx.getLLVMIRBuilder();
   Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
-  auto *NewLI = Builder.CreateAlignedLoad(Ty, Ptr->Val, Align,
-                                          isVolatile, Name);
+  auto *NewLI =
+      Builder.CreateAlignedLoad(Ty, Ptr->Val, Align, isVolatile, Name);
   auto *NewSBI = Ctx.createLoadInst(NewLI);
   return NewSBI;
 }
