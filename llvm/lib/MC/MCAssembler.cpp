@@ -86,8 +86,6 @@ MCAssembler::MCAssembler(MCContext &Context,
     : Context(Context), Backend(std::move(Backend)),
       Emitter(std::move(Emitter)), Writer(std::move(Writer)) {}
 
-MCAssembler::~MCAssembler() = default;
-
 void MCAssembler::reset() {
   RelaxAll = false;
   Sections.clear();
