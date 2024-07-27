@@ -190,7 +190,10 @@ Expected<StringRef> createTempFile(const ArgList &Args, const Twine &Prefix,
   return TempFiles.back();
 }
 
-Expected<std::string> findProgram(StringRef Name, ArrayRef<StringRef> Paths) {
+Expected<std::string> findProgram(const ArgList &Args, StringRef Name,
+                                  ArrayRef<StringRef> Paths) {
+  if (Args.hasArg(OPT_dry_run))
+    return Name.str();
   ErrorOr<std::string> Path = sys::findProgramByName(Name, Paths);
   if (!Path)
     Path = sys::findProgramByName(Name);
@@ -294,10 +297,9 @@ struct Symbol {
 
 Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
   std::string CudaPath = Args.getLastArgValue(OPT_cuda_path_EQ).str();
+  std::string GivenPath = Args.getLastArgValue(OPT_ptxas_path_EQ).str();
   Expected<std::string> PTXAsPath =
-      Args.getLastArgValue(OPT_ptxas_path_EQ).str();
-  if (PTXAsPath->empty())
-    PTXAsPath = findProgram("ptxas", {CudaPath + "/bin"});
+      findProgram(Args, "ptxas", {CudaPath + "/bin", GivenPath});
   if (!PTXAsPath)
     return PTXAsPath.takeError();
 
@@ -686,7 +688,8 @@ Error runNVLink(ArrayRef<StringRef> Files, const ArgList &Args) {
     return Error::success();
 
   std::string CudaPath = Args.getLastArgValue(OPT_cuda_path_EQ).str();
-  Expected<std::string> NVLinkPath = findProgram("nvlink", {CudaPath + "/bin"});
+  Expected<std::string> NVLinkPath =
+      findProgram(Args, "nvlink", {CudaPath + "/bin"});
   if (!NVLinkPath)
     return NVLinkPath.takeError();
 
