@@ -60,6 +60,24 @@ add_integration_test(
 )
 
 add_integration_test(
+  pthread_spinlock_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_spinlock_test.cpp
+  DEPENDS
+    libc.include.pthread
+    libc.include.errno
+    libc.src.pthread.pthread_spin_init
+    libc.src.pthread.pthread_spin_destroy
+    libc.src.pthread.pthread_spin_lock
+    libc.src.pthread.pthread_spin_trylock
+    libc.src.pthread.pthread_spin_unlock
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_join
+)
+
+add_integration_test(
   pthread_test
   SUITE
     libc-pthread-integration-tests
