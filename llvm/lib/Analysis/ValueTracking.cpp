@@ -9687,11 +9687,11 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
                                          unsigned Depth) {
   assert(V->getType()->isIntOrIntVectorTy() && "Expected integer instruction");
 
-  if (Depth == MaxAnalysisRecursionDepth)
-    return ConstantRange::getFull(V->getType()->getScalarSizeInBits());
-
   if (auto *C = dyn_cast<Constant>(V))
     return C->toConstantRange();
+
+  if (Depth == MaxAnalysisRecursionDepth)
+    return ConstantRange::getFull(V->getType()->getScalarSizeInBits());
 
   unsigned BitWidth = V->getType()->getScalarSizeInBits();
   InstrInfoQuery IIQ(UseInstrInfo);
@@ -9728,6 +9728,17 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     if (const auto *CB = dyn_cast<CallBase>(V))
       if (std::optional<ConstantRange> Range = CB->getRange())
         CR = CR.intersectWith(*Range);
+
+    if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
+      Intrinsic::ID IID = II->getIntrinsicID();
+      if (ConstantRange::isIntrinsicSupported(IID)) {
+        SmallVector<ConstantRange, 2> OpRanges;
+        for (Value *Op : II->args())
+          OpRanges.push_back(computeConstantRange(Op, ForSigned, UseInstrInfo,
+                                                  AC, CtxI, DT, Depth + 1));
+        CR = CR.intersectWith(ConstantRange::intrinsic(IID, OpRanges));
+      }
+    }
   }
 
   if (CtxI && AC) {

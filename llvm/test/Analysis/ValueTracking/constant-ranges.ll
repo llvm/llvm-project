@@ -233,14 +233,7 @@ define i1 @srem_negC_fail1(i8 %x) {
 
 define i1 @intrinsic_test1(i64 %x, i32 %y, i64 %z) {
 ; CHECK-LABEL: @intrinsic_test1(
-; CHECK-NEXT:    [[SH_PROM:%.*]] = zext nneg i32 [[Y:%.*]] to i64
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i64 1, [[SH_PROM]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[Z:%.*]], 0
-; CHECK-NEXT:    [[UMIN1:%.*]] = call i64 @llvm.umin.i64(i64 [[SHL]], i64 [[Z]])
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i64 1, i64 [[UMIN1]]
-; CHECK-NEXT:    [[UMIN2:%.*]] = call i64 @llvm.umin.i64(i64 [[X:%.*]], i64 [[SEL]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[UMIN2]], -71777214294589697
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %sh_prom = zext nneg i32 %y to i64
   %shl = shl nuw i64 1, %sh_prom
@@ -256,9 +249,8 @@ define i1 @intrinsic_test2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @intrinsic_test2(
 ; CHECK-NEXT:    [[SH:%.*]] = shl nuw nsw i32 16, [[X:%.*]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SH]], i32 64)
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[UMIN]], i32 1)
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[Y:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ADD]], [[UMAX]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ADD]], [[UMIN]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sh = shl nuw nsw i32 16, %x
@@ -272,10 +264,8 @@ define i1 @intrinsic_test2(i32 %x, i32 %y) {
 define i1 @constant_test(i64 %x, i1 %cond) {
 ; CHECK-LABEL: @constant_test(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i64 2147483647, i64 18446744073709551
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[X:%.*]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i64 [[X]], [[SEL]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[OR_COND]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i64 [[X:%.*]], [[SEL]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %sel = select i1 %cond, i64 2147483647, i64 18446744073709551
   %cmp1 = icmp slt i64 %x, 0

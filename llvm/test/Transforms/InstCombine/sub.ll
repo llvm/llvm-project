@@ -1329,7 +1329,7 @@ define <2 x i32> @test68(<2 x i32> %x) {
 define <2 x i32> @test69(<2 x i32> %x) {
 ; CHECK-LABEL: @test69(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[X:%.*]], <2 x i32> <i32 255, i32 127>)
-; CHECK-NEXT:    [[DOTNEG:%.*]] = add <2 x i32> [[TMP1]], <i32 1, i32 1>
+; CHECK-NEXT:    [[DOTNEG:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 1, i32 1>
 ; CHECK-NEXT:    ret <2 x i32> [[DOTNEG]]
 ;
   %1 = xor <2 x i32> %x, <i32 -1, i32 -1>
