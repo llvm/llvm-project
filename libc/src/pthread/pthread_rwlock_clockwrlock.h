@@ -15,8 +15,9 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-int pthread_rwlock_clockwrlock(pthread_rwlock_t *rwlock, clockid_t clockid,
-                               const struct timespec *abstime);
+int pthread_rwlock_clockwrlock(pthread_rwlock_t *__restrict rwlock,
+                               clockid_t clockid,
+                               const struct timespec *__restrict abstime);
 
 } // namespace LIBC_NAMESPACE_DECL
 
