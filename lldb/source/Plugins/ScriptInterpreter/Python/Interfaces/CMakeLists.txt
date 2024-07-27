@@ -20,7 +20,6 @@ if (LLDB_ENABLE_LIBEDIT)
 endif()
 
 add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces
-  OperatingSystemPythonInterface.cpp
   ScriptedPythonInterface.cpp
   ScriptedProcessPythonInterface.cpp
   ScriptedThreadPythonInterface.cpp
@@ -36,5 +35,8 @@ add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces
   LINK_COMPONENTS
     Support
   )
+
+add_subdirectory(OperatingSystemPythonInterface)
 add_subdirectory(ScriptedPlatformPythonInterface)
 add_subdirectory(ScriptedThreadPlanPythonInterface)
+
