@@ -178,12 +178,6 @@ TEST_F(RtsanFileTest, OpenDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(func);
 }
 
-TEST_F(RtsanFileTest, OpenatDiesWhenRealtime) {
-  auto func = [this]() { openat(0, GetTemporaryFilePath(), O_RDONLY); };
-  ExpectRealtimeDeath(func, "openat");
-  ExpectNonRealtimeSurvival(func);
-}
-
 TEST_F(RtsanFileTest, OpenCreatesFileWithProperMode) {
   const int mode = S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR;
 

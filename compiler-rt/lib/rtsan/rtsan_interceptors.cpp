@@ -69,20 +69,6 @@ INTERCEPTOR(int, open, const char *path, int oflag, ...) {
   return result;
 }
 
-INTERCEPTOR(int, openat, int fd, const char *path, int oflag, ...) {
-  // TODO Establish whether we should intercept here if the flag contains
-  // O_NONBLOCK
-  ExpectNotRealtime("openat");
-
-  va_list args;
-  va_start(args, oflag);
-  mode_t mode = va_arg(args, int);
-  va_end(args);
-
-  const int result = REAL(openat)(fd, path, oflag, mode);
-  return result;
-}
-
 INTERCEPTOR(int, creat, const char *path, mode_t mode) {
   // TODO Establish whether we should intercept here if the flag contains
   // O_NONBLOCK
@@ -385,7 +371,6 @@ void __rtsan::InitializeInterceptors() {
 #endif
 
   INTERCEPT_FUNCTION(open);
-  INTERCEPT_FUNCTION(openat);
   INTERCEPT_FUNCTION(close);
   INTERCEPT_FUNCTION(fopen);
   INTERCEPT_FUNCTION(fread);
