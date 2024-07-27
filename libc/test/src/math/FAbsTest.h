@@ -41,7 +41,7 @@ public:
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x))
+      if (x.is_nan() || x.is_inf())
         continue;
       ASSERT_MPFR_MATCH(mpfr::Operation::Abs, x, func(x), 0.0);
     }

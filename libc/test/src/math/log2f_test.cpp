@@ -50,7 +50,7 @@ TEST_F(LlvmLibcLog2fTest, InFloatRange) {
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = FPBits(v).get_val();
-    if (isnan(x) || isinf(x))
+    if (x.is_nan() || x.is_inf())
       continue;
     LIBC_NAMESPACE::libc_errno = 0;
     float result = LIBC_NAMESPACE::log2f(x);
@@ -58,7 +58,7 @@ TEST_F(LlvmLibcLog2fTest, InFloatRange) {
     // in the single-precision floating point range, then ignore comparing with
     // MPFR result as MPFR can still produce valid results because of its
     // wider precision.
-    if (isnan(result) || isinf(result) || LIBC_NAMESPACE::libc_errno != 0)
+    if (result.is_nan() || result.is_inf() || LIBC_NAMESPACE::libc_errno != 0)
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log2, x,
                                    LIBC_NAMESPACE::log2f(x), 0.5);

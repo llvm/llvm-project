@@ -127,7 +127,7 @@ public:
 
       // In normal range on x86 platforms, the long double implicit 1 bit can be
       // zero making the numbers NaN. Hence we test for them separately.
-      if (isnan(x) || isnan(y)) {
+      if (x.is_nan() || y.is_nan()) {
         ASSERT_FP_EQ(result.f, nan);
         continue;
       }

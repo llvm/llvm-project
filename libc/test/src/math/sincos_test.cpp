@@ -110,7 +110,7 @@ TEST_F(LlvmLibcSincosTest, InDoubleRange) {
 
   for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
     double x = FPBits(v).get_val();
-    if (isnan(x) || isinf(x))
+    if (x.is_nan() || x.is_inf())
       continue;
 
     ASSERT_SINCOS_MATCH_ALL_ROUNDING(x);

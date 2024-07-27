@@ -101,12 +101,12 @@ TEST_F(LlvmLibcLog1pTest, InDoubleRange) {
 
     for (uint64_t i = 0, v = start; i <= COUNT; ++i, v += step) {
       double x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x) || x < 0.0)
+      if (x.is_nan() || x.is_inf() || x < 0.0)
         continue;
       LIBC_NAMESPACE::libc_errno = 0;
       double result = LIBC_NAMESPACE::log1p(x);
       ++cc;
-      if (isnan(result) || isinf(result))
+      if (result.is_nan() || result.is_inf())
         continue;
 
       ++count;

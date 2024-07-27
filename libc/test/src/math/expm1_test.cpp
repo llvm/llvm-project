@@ -62,12 +62,12 @@ TEST_F(LlvmLibcExpm1Test, InDoubleRange) {
 
     for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
       double x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x) || x < 0.0)
+      if (x.is_nan() || x.is_inf() || x < 0.0)
         continue;
       LIBC_NAMESPACE::libc_errno = 0;
       double result = LIBC_NAMESPACE::expm1(x);
       ++cc;
-      if (isnan(result) || isinf(result))
+      if (result.is_nan() || result.is_inf())
         continue;
 
       ++count;
