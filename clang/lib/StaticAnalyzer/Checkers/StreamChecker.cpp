@@ -946,14 +946,18 @@ void StreamChecker::evalFopen(const FnDescription *Desc, const CallEvent &Call,
   std::tie(StateNotNull, StateNull) =
       C.getConstraintManager().assumeDual(State, RetVal);
 
-  StateNotNull =
-      StateNotNull->set<StreamMap>(RetSym, StreamState::getOpened(Desc));
-  StateNull =
-      StateNull->set<StreamMap>(RetSym, StreamState::getOpenFailed(Desc));
+  if (StateNotNull)
+    StateNotNull =
+        StateNotNull->set<StreamMap>(RetSym, StreamState::getOpened(Desc));
+  if (StateNull)
+    StateNull =
+        StateNull->set<StreamMap>(RetSym, StreamState::getOpenFailed(Desc));
 
-  C.addTransition(StateNotNull,
-                  constructLeakNoteTag(C, RetSym, "Stream opened here"));
-  C.addTransition(StateNull);
+  if (StateNotNull)
+    C.addTransition(StateNotNull,
+                    constructLeakNoteTag(C, RetSym, "Stream opened here"));
+  if (StateNull)
+    C.addTransition(StateNull);
 }
 
 void StreamChecker::preFreopen(const FnDescription *Desc, const CallEvent &Call,
