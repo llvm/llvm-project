@@ -36,7 +36,7 @@ unsigned long long tc() {
     // CIR_FLAT: ^[[BB_INT_IDX_CATCH]]:  // pred: ^[[BB_INT_IDX_SEL]]
     // CIR_FLAT:   %[[PARAM_INT_IDX:.*]] = cir.catch_param -> !cir.ptr<!s32i>
     // CIR_FLAT:   cir.const #cir.int<98>
-    // CIR_FLAT:   cir.br ^[[AFTER_TRY]]
+    // CIR_FLAT:   cir.br ^[[AFTER_TRY]] loc
     z = 98;
     idx++;
   } catch (const char* msg) {
@@ -82,6 +82,28 @@ unsigned long long tc2() {
     // CIR_FLAT: ^[[AFTER_TRY]]:  // 4 preds
     // CIR_FLAT:   cir.load
     // CIR_FLAT:   cir.return
+    z = 100;
+  }
+
+  return z;
+}
+
+// CIR_FLAT: cir.func @_Z3tc3v
+unsigned long long tc3() {
+  int x = 50, y = 3;
+  unsigned long long z;
+
+  try {
+    z = division(x, y);
+  } catch (...) {
+    // CIR_FLAT:   cir.eh.selector
+    // CIR_FLAT:   cir.br ^[[CATCH_ALL:.*]] loc
+    // CIR_FLAT: ^[[CATCH_ALL]]:
+    // CIR_FLAT:   cir.catch_param -> !cir.ptr<!void>
+    // CIR_FLAT:   cir.const #cir.int<100> : !s32i
+    // CIR_FLAT:   cir.br ^[[AFTER_TRY:.*]] loc
+    // CIR_FLAT: ^[[AFTER_TRY]]:  // 2 preds
+    // CIR_FLAT:   cir.load
     z = 100;
   }
 
