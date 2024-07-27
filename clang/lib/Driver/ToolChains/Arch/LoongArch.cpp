@@ -267,8 +267,14 @@ std::string loongarch::postProcessTargetCPUString(const std::string &CPU,
 std::string loongarch::getLoongArchTargetCPU(const llvm::opt::ArgList &Args,
                                              const llvm::Triple &Triple) {
   std::string CPU;
+  std::string Arch;
   // If we have -march, use that.
-  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
-    CPU = A->getValue();
+  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
+    Arch = A->getValue();
+    if (Arch == "la64v1.0" || Arch == "la64v1.1")
+      CPU = llvm::LoongArch::getDefaultArch(Triple.isLoongArch64());
+    else
+      CPU = Arch;
+  }
   return postProcessTargetCPUString(CPU, Triple);
 }
