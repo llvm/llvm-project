@@ -795,17 +795,17 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
                                      LValue lvalue, bool capturedByInit) {
   Qualifiers::ObjCLifetime lifetime = lvalue.getObjCLifetime();
   if (!lifetime) {
-    llvm::Value *value;
-    if (auto ptrauth = lvalue.getQuals().getPointerAuth()) {
-      value = EmitPointerAuthQualify(ptrauth, init, lvalue.getAddress());
+    llvm::Value *Value;
+    if (auto PtrAuth = lvalue.getQuals().getPointerAuth()) {
+      Value = EmitPointerAuthQualify(PtrAuth, init, lvalue.getAddress());
       lvalue.getQuals().removePointerAuth();
     } else {
-      value = EmitScalarExpr(init);
+      Value = EmitScalarExpr(init);
     }
     if (capturedByInit)
       drillIntoBlockVariable(*this, lvalue, cast<VarDecl>(D));
-    EmitNullabilityCheck(lvalue, value, init->getExprLoc());
-    EmitStoreThroughLValue(RValue::get(value), lvalue, true);
+    EmitNullabilityCheck(lvalue, Value, init->getExprLoc());
+    EmitStoreThroughLValue(RValue::get(Value), lvalue, true);
     return;
   }
 

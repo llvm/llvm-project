@@ -8229,51 +8229,51 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
 }
 
 /// Handle the __ptrauth qualifier.
-static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &type,
+static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &T,
                                    const ParsedAttr &attr, Sema &S) {
-  auto attributeName = attr.getAttrName()->getName();
+  auto AttributeName = attr.getAttrName()->getName();
   if (attr.getNumArgs() < 1 || attr.getNumArgs() > 3) {
     S.Diag(attr.getLoc(), diag::err_ptrauth_qualifier_bad_arg_count)
-        << attributeName;
+        << AttributeName;
     attr.setInvalid();
     return;
   }
 
-  Expr *keyArg = attr.getArgAsExpr(0);
-  Expr *isAddressDiscriminatedArg =
+  Expr *KeyArg = attr.getArgAsExpr(0);
+  Expr *IsAddressDiscriminatedArg =
       attr.getNumArgs() >= 2 ? attr.getArgAsExpr(1) : nullptr;
-  Expr *extraDiscriminatorArg =
+  Expr *ExtraDiscriminatorArg =
       attr.getNumArgs() >= 3 ? attr.getArgAsExpr(2) : nullptr;
 
-  unsigned key;
-  if (S.checkConstantPointerAuthKey(keyArg, key)) {
+  unsigned Key;
+  if (S.checkConstantPointerAuthKey(KeyArg, Key)) {
     attr.setInvalid();
     return;
   }
-  assert(key <= PointerAuthQualifier::MaxKey && "ptrauth key is out of range");
+  assert(Key <= PointerAuthQualifier::MaxKey && "ptrauth key is out of range");
 
-  bool isInvalid = false;
-  unsigned isAddressDiscriminated, extraDiscriminator;
-  isInvalid |= !S.checkPointerAuthDiscriminatorArg(isAddressDiscriminatedArg,
+  bool IsInvalid = false;
+  unsigned IsAddressDiscriminated, ExtraDiscriminator;
+  IsInvalid |= !S.checkPointerAuthDiscriminatorArg(IsAddressDiscriminatedArg,
                                                    Sema::PADAK_AddrDiscPtrAuth,
-                                                   isAddressDiscriminated);
-  isInvalid |= !S.checkPointerAuthDiscriminatorArg(
-      extraDiscriminatorArg, Sema::PADAK_ExtraDiscPtrAuth, extraDiscriminator);
+                                                   IsAddressDiscriminated);
+  IsInvalid |= !S.checkPointerAuthDiscriminatorArg(
+      ExtraDiscriminatorArg, Sema::PADAK_ExtraDiscPtrAuth, ExtraDiscriminator);
 
-  if (isInvalid) {
+  if (IsInvalid) {
     attr.setInvalid();
     return;
   }
 
-  if (!type->isSignableType() && !type->isDependentType()) {
-    S.Diag(attr.getLoc(), diag::err_ptrauth_qualifier_nonpointer) << type;
+  if (!T->isSignableType() && !T->isDependentType()) {
+    S.Diag(attr.getLoc(), diag::err_ptrauth_qualifier_nonpointer) << T;
     attr.setInvalid();
     return;
   }
 
-  if (type.getPointerAuth()) {
+  if (T.getPointerAuth()) {
     S.Diag(attr.getLoc(), diag::err_ptrauth_qualifier_redundant)
-        << type << attr.getAttrName()->getName();
+        << T << attr.getAttrName()->getName();
     attr.setInvalid();
     return;
   }
@@ -8284,12 +8284,12 @@ static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &type,
     return;
   }
 
-  assert((!isAddressDiscriminatedArg || isAddressDiscriminated <= 1) &&
+  assert((!IsAddressDiscriminatedArg || IsAddressDiscriminated <= 1) &&
          "address discriminator arg should be either 0 or 1");
-  PointerAuthQualifier qual = PointerAuthQualifier::Create(
-      key, isAddressDiscriminated, extraDiscriminator,
+  PointerAuthQualifier Qual = PointerAuthQualifier::Create(
+      Key, IsAddressDiscriminated, ExtraDiscriminator,
       PointerAuthenticationMode::SignAndAuth, false, false);
-  type = S.Context.getPointerAuthType(type, qual);
+  T = S.Context.getPointerAuthType(T, Qual);
 }
 
 /// HandleArmSveVectorBitsTypeAttr - The "arm_sve_vector_bits" attribute is

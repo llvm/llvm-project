@@ -3373,29 +3373,29 @@ void Parser::DistributeCLateParsedAttrs(Decl *Dcl,
 void Parser::ParsePtrauthQualifier(ParsedAttributes &attrs) {
   assert(Tok.is(tok::kw___ptrauth));
 
-  IdentifierInfo *kwName = Tok.getIdentifierInfo();
-  SourceLocation kwLoc = ConsumeToken();
+  IdentifierInfo *KwName = Tok.getIdentifierInfo();
+  SourceLocation KwLoc = ConsumeToken();
 
   BalancedDelimiterTracker T(*this, tok::l_paren);
   if (T.expectAndConsume())
     return;
 
-  ArgsVector argExprs;
+  ArgsVector ArgExprs;
   do {
-    ExprResult expr = ParseAssignmentExpression();
-    if (expr.isInvalid()) {
+    ExprResult ER = ParseAssignmentExpression();
+    if (ER.isInvalid()) {
       T.skipToEnd();
       return;
     }
-    argExprs.push_back(expr.get());
+    ArgExprs.push_back(ER.get());
   } while (TryConsumeToken(tok::comma));
 
   T.consumeClose();
-  SourceLocation endLoc = T.getCloseLocation();
+  SourceLocation EndLoc = T.getCloseLocation();
 
-  attrs.addNew(kwName, SourceRange(kwLoc, endLoc),
-               /*scope*/ nullptr, SourceLocation(), argExprs.data(),
-               argExprs.size(),
+  attrs.addNew(KwName, SourceRange(KwLoc, EndLoc),
+               /*scope*/ nullptr, SourceLocation(), ArgExprs.data(),
+               ArgExprs.size(),
                ParsedAttr::Form::Keyword(/*IsAlignAs=*/false,
                                          /*IsRegularKeywordAttribute=*/false));
 }

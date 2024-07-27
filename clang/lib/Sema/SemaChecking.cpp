@@ -1540,51 +1540,51 @@ bool Sema::checkConstantPointerAuthKey(Expr *Arg, unsigned &Result) {
   return false;
 }
 
-bool Sema::checkPointerAuthDiscriminatorArg(Expr *arg,
-                                            PointerAuthDiscArgKind kind,
-                                            unsigned &intVal) {
-  if (!arg) {
-    intVal = 0;
+bool Sema::checkPointerAuthDiscriminatorArg(Expr *Arg,
+                                            PointerAuthDiscArgKind Kind,
+                                            unsigned &IntVal) {
+  if (!Arg) {
+    IntVal = 0;
     return true;
   }
 
-  std::optional<llvm::APSInt> result = arg->getIntegerConstantExpr(Context);
-  if (!result) {
-    Diag(arg->getExprLoc(), diag::err_ptrauth_arg_not_ice);
+  std::optional<llvm::APSInt> Result = Arg->getIntegerConstantExpr(Context);
+  if (!Result) {
+    Diag(Arg->getExprLoc(), diag::err_ptrauth_arg_not_ice);
     return false;
   }
 
-  unsigned max;
-  bool isAddrDiscArg = false;
+  unsigned Max;
+  bool IsAddrDiscArg = false;
 
-  switch (kind) {
+  switch (Kind) {
   case PADAK_AddrDiscPtrAuth:
-    max = 1;
-    isAddrDiscArg = true;
+    Max = 1;
+    IsAddrDiscArg = true;
     break;
   case PADAK_ExtraDiscPtrAuth:
-    max = PointerAuthQualifier::MaxDiscriminator;
+    Max = PointerAuthQualifier::MaxDiscriminator;
     break;
   };
 
-  if (*result < 0 || *result > max) {
-    llvm::SmallString<32> value;
+  if (*Result < 0 || *Result > Max) {
+    llvm::SmallString<32> Value;
     {
-      llvm::raw_svector_ostream str(value);
-      str << *result;
+      llvm::raw_svector_ostream str(Value);
+      str << *Result;
     }
 
-    if (isAddrDiscArg)
-      Diag(arg->getExprLoc(), diag::err_ptrauth_address_discrimination_invalid)
-          << value;
+    if (IsAddrDiscArg)
+      Diag(Arg->getExprLoc(), diag::err_ptrauth_address_discrimination_invalid)
+          << Value;
     else
-      Diag(arg->getExprLoc(), diag::err_ptrauth_extra_discriminator_invalid)
-          << value << max;
+      Diag(Arg->getExprLoc(), diag::err_ptrauth_extra_discriminator_invalid)
+          << Value << Max;
 
     return false;
   };
 
-  intVal = result->getZExtValue();
+  IntVal = Result->getZExtValue();
   return true;
 }
 
@@ -4217,8 +4217,8 @@ ExprResult Sema::BuiltinAtomicOverloaded(ExprResult TheCallResult) {
         << FirstArg->getType() << 0 << FirstArg->getSourceRange();
     return ExprError();
   }
-  auto pointerAuth = ValType.getPointerAuth();
-  if (pointerAuth && pointerAuth.isAddressDiscriminated()) {
+  auto PointerAuth = ValType.getPointerAuth();
+  if (PointerAuth && PointerAuth.isAddressDiscriminated()) {
     Diag(FirstArg->getBeginLoc(),
          diag::err_atomic_op_needs_non_address_discriminated_pointer)
         << 1 << ValType << FirstArg->getSourceRange();

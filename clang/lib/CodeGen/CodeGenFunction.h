@@ -4457,22 +4457,22 @@ public:
       const CGPointerAuthInfo &Info,
       SmallVectorImpl<llvm::OperandBundleDef> &Bundles);
 
-  CGPointerAuthInfo EmitPointerAuthInfo(PointerAuthQualifier qualifier,
-                                        Address storageAddress);
-  llvm::Value *EmitPointerAuthQualify(PointerAuthQualifier qualifier,
-                                      llvm::Value *pointer, QualType valueType,
-                                      Address storageAddress,
-                                      bool isKnownNonNull);
-  llvm::Value *EmitPointerAuthQualify(PointerAuthQualifier qualifier,
-                                      const Expr *pointerExpr,
-                                      Address storageAddress);
-  llvm::Value *EmitPointerAuthUnqualify(PointerAuthQualifier qualifier,
-                                        llvm::Value *pointer,
-                                        QualType pointerType,
-                                        Address storageAddress,
-                                        bool isKnownNonNull);
-  void EmitPointerAuthCopy(PointerAuthQualifier qualifier, QualType type,
-                           Address destField, Address srcField);
+  CGPointerAuthInfo EmitPointerAuthInfo(PointerAuthQualifier Qualifier,
+                                        Address StorageAddress);
+  llvm::Value *EmitPointerAuthQualify(PointerAuthQualifier Qualifier,
+                                      llvm::Value *Pointer, QualType ValueType,
+                                      Address StorageAddress,
+                                      bool IsKnownNonNull);
+  llvm::Value *EmitPointerAuthQualify(PointerAuthQualifier Qualifier,
+                                      const Expr *PointerExpr,
+                                      Address StorageAddress);
+  llvm::Value *EmitPointerAuthUnqualify(PointerAuthQualifier Qualifier,
+                                        llvm::Value *Pointer,
+                                        QualType PointerType,
+                                        Address StorageAddress,
+                                        bool IsKnownNonNull);
+  void EmitPointerAuthCopy(PointerAuthQualifier Qualifier, QualType Type,
+                           Address DestField, Address SrcField);
 
   std::pair<llvm::Value *, CGPointerAuthInfo>
   EmitOrigPointerRValue(const Expr *E);

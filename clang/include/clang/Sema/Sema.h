@@ -3468,8 +3468,8 @@ public:
     PADAK_ExtraDiscPtrAuth,
   };
 
-  bool checkPointerAuthDiscriminatorArg(Expr *arg, PointerAuthDiscArgKind kind,
-                                        unsigned &intVal);
+  bool checkPointerAuthDiscriminatorArg(Expr *Arg, PointerAuthDiscArgKind Kind,
+                                        unsigned &IntVal);
 
   /// Diagnose function specifiers on a declaration of an identifier that
   /// does not identify a function.

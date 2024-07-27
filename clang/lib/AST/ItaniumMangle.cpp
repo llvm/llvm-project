@@ -2823,7 +2823,7 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
     mangleVendorQualifier("__unaligned");
 
   // __ptrauth.  Note that this is parameterized.
-  if (auto ptrauth = Quals.getPointerAuth()) {
+  if (auto PtrAuth = Quals.getPointerAuth()) {
     mangleVendorQualifier("__ptrauth");
     // For now, since we only allow non-dependent arguments, we can just
     // inline the mangling of those arguments as literals.  We treat the
@@ -2831,13 +2831,13 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
     // address-discriminated argument as 'bool'.
     Out << "I"
            "Lj"
-        << ptrauth.getKey()
+        << PtrAuth.getKey()
         << "E"
            "Lb"
-        << unsigned(ptrauth.isAddressDiscriminated())
+        << unsigned(PtrAuth.isAddressDiscriminated())
         << "E"
            "Lj"
-        << ptrauth.getExtraDiscriminator()
+        << PtrAuth.getExtraDiscriminator()
         << "E"
            "E";
   }

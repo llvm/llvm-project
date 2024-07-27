@@ -2191,10 +2191,10 @@ RValue CodeGenFunction::EmitLoadOfAnyValue(LValue LV, AggValueSlot Slot,
 /// returning the rvalue.
 RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
   // Load from __ptrauth.
-  if (auto ptrauth = LV.getQuals().getPointerAuth()) {
+  if (auto PtrAuth = LV.getQuals().getPointerAuth()) {
     LV.getQuals().removePointerAuth();
     auto value = EmitLoadOfLValue(LV, Loc).getScalarVal();
-    return RValue::get(EmitPointerAuthUnqualify(ptrauth, value, LV.getType(),
+    return RValue::get(EmitPointerAuthUnqualify(PtrAuth, value, LV.getType(),
                                                 LV.getAddress(),
                                                 /*known nonnull*/ false));
   }
@@ -2427,8 +2427,8 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
   }
 
   // Handle __ptrauth qualification by re-signing the value.
-  if (auto pointerAuth = Dst.getQuals().getPointerAuth()) {
-    Src = RValue::get(EmitPointerAuthQualify(pointerAuth, Src.getScalarVal(),
+  if (auto PointerAuth = Dst.getQuals().getPointerAuth()) {
+    Src = RValue::get(EmitPointerAuthQualify(PointerAuth, Src.getScalarVal(),
                                              Dst.getType(), Dst.getAddress(),
                                              /*known nonnull*/ false));
   }
@@ -5574,21 +5574,21 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
     // Try to remember the original __ptrauth qualifier for loads of
     // function pointers.
     if (ICE->getCastKind() == CK_LValueToRValue) {
-      auto subExpr = ICE->getSubExpr();
-      if (auto ptrType = subExpr->getType()->getAs<PointerType>()) {
-        auto result = EmitOrigPointerRValue(E);
+      auto *SubExpr = ICE->getSubExpr();
+      if (auto *PtrType = SubExpr->getType()->getAs<PointerType>()) {
+        auto Result = EmitOrigPointerRValue(E);
 
-        QualType functionType = ptrType->getPointeeType();
-        assert(functionType->isFunctionType());
+        QualType FunctionType = PtrType->getPointeeType();
+        assert(FunctionType->isFunctionType());
 
         GlobalDecl GD;
         if (const auto *VD =
                 dyn_cast_or_null<VarDecl>(E->getReferencedDeclOfCallee())) {
           GD = GlobalDecl(VD);
         }
-        CGCalleeInfo calleeInfo(functionType->getAs<FunctionProtoType>(), GD);
-        CGCallee callee(calleeInfo, result.first, result.second);
-        return callee;
+        CGCalleeInfo CalleeInfo(FunctionType->getAs<FunctionProtoType>(), GD);
+        CGCallee Callee(CalleeInfo, Result.first, Result.second);
+        return Callee;
       }
     }
 
@@ -5654,12 +5654,12 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
 
   switch (getEvaluationKind(E->getType())) {
   case TEK_Scalar: {
-    if (auto ptrauth = E->getLHS()->getType().getPointerAuth()) {
+    if (auto PtrAuth = E->getLHS()->getType().getPointerAuth()) {
       LValue LV = EmitCheckedLValue(E->getLHS(), TCK_Store);
       LValue CopiedLV = LV;
       CopiedLV.getQuals().removePointerAuth();
       llvm::Value *RV =
-          EmitPointerAuthQualify(ptrauth, E->getRHS(), CopiedLV.getAddress());
+          EmitPointerAuthQualify(PtrAuth, E->getRHS(), CopiedLV.getAddress());
       EmitNullabilityCheck(CopiedLV, RV, E->getExprLoc());
       EmitStoreThroughLValue(RValue::get(RV), CopiedLV);
       return LV;
