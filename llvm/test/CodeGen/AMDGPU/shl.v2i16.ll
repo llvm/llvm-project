@@ -8,15 +8,15 @@
 define amdgpu_kernel void @s_shl_v2i16(ptr addrspace(1) %out, <2 x i16> %lhs, <2 x i16> %rhs) #0 {
 ; GFX9-LABEL: s_shl_v2i16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
-; GFX9-NEXT:    s_mov_b32 s7, 0xf000
-; GFX9-NEXT:    s_mov_b32 s6, -1
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
+; GFX9-NEXT:    s_mov_b32 s3, 0xf000
+; GFX9-NEXT:    s_mov_b32 s2, -1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    s_mov_b32 s4, s0
-; GFX9-NEXT:    s_mov_b32 s5, s1
-; GFX9-NEXT:    v_pk_lshlrev_b16 v0, s3, v0
-; GFX9-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s6
+; GFX9-NEXT:    s_mov_b32 s0, s4
+; GFX9-NEXT:    s_mov_b32 s1, s5
+; GFX9-NEXT:    v_pk_lshlrev_b16 v0, s7, v0
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 ;
 ; VI-LABEL: s_shl_v2i16:
@@ -59,14 +59,14 @@ define amdgpu_kernel void @s_shl_v2i16(ptr addrspace(1) %out, <2 x i16> %lhs, <2
 ;
 ; GFX10-LABEL: s_shl_v2i16:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
-; GFX10-NEXT:    s_mov_b32 s7, 0x31016000
-; GFX10-NEXT:    s_mov_b32 s6, -1
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
+; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX10-NEXT:    s_mov_b32 s2, -1
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_pk_lshlrev_b16 v0, s3, s2
-; GFX10-NEXT:    s_mov_b32 s4, s0
-; GFX10-NEXT:    s_mov_b32 s5, s1
-; GFX10-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GFX10-NEXT:    v_pk_lshlrev_b16 v0, s7, s6
+; GFX10-NEXT:    s_mov_b32 s0, s4
+; GFX10-NEXT:    s_mov_b32 s1, s5
+; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: s_shl_v2i16:
