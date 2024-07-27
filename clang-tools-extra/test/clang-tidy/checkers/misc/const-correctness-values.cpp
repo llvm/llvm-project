@@ -56,15 +56,6 @@ void some_function(double np_arg0, wchar_t np_arg1) {
   np_local6--;
 }
 
-int function_try_block() try {
-  int p_local0 = 0;
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared 'const'
-  // CHECK-FIXES: int const p_local0
-  return p_local0;
-} catch (...) {
-  return 0;
-}
-
 void nested_scopes() {
   int p_local0 = 2;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'int' can be declared 'const'
