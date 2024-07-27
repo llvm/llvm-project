@@ -83,6 +83,24 @@ bool DontDumpShadowMemory(uptr addr, uptr length) {
 #endif  // MADV_DONTDUMP
 }
 
+static void *MmapStackOrDie(uptr size, const char *mem_type) {
+#  if SANITIZER_LINUX
+  // MAP_STACK on freebsd has a different meaning, on guard access the mapped
+  // region grows. unimplemented on netbsd still, could be enabled on openbsd if
+  // sanitizer is ever ported there.
+  size = RoundUpTo(size, GetPageSizeCached());
+  uptr res = MmapNamed(nullptr, size, PROT_READ | PROT_WRITE,
+                       MAP_PRIVATE | MAP_ANON | MAP_STACK, mem_type);
+  int reserrno;
+  if (UNLIKELY(internal_iserror(res, &reserrno)))
+    ReportMmapFailureAndDie(size, mem_type, "allocate", reserrno, true);
+  IncreaseTotalMmap(size);
+  return (void *)res;
+#  else
+  return MmapOrDie(size, mem_type, true);
+#  endif
+}
+
 static rlim_t getlim(int res) {
   rlimit rlim;
   CHECK_EQ(0, getrlimit(res, &rlim));
@@ -196,7 +214,7 @@ void SetAlternateSignalStack() {
   // future. It is not required by man 2 sigaltstack now (they're using
   // malloc()).
   altstack.ss_size = GetAltStackSize();
-  altstack.ss_sp = (char *)MmapOrDie(altstack.ss_size, __func__);
+  altstack.ss_sp = (char *)MmapStackOrDie(altstack.ss_size, __func__);
   altstack.ss_flags = 0;
   CHECK_EQ(0, sigaltstack(&altstack, nullptr));
 }
