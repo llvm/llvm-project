@@ -1073,11 +1073,7 @@ void InputSectionBase::relocate(uint8_t *buf, uint8_t *bufEnd) {
   auto *sec = cast<InputSection>(this);
   // For a relocatable link, also call relocateNonAlloc() to rewrite applicable
   // locations with tombstone values.
-  const RelsOrRelas<ELFT> rels = sec->template relsOrRelas<ELFT>();
-  if (rels.areRelocsRel())
-    sec->relocateNonAlloc<ELFT>(buf, rels.rels);
-  else
-    sec->relocateNonAlloc<ELFT>(buf, rels.relas);
+  invokeOnRelocs(*sec, sec->relocateNonAlloc<ELFT>, buf);
 }
 
 // For each function-defining prologue, find any calls to __morestack,
