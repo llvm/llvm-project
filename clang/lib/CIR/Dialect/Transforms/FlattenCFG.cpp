@@ -234,6 +234,7 @@ public:
     rewriter.setInsertionPointToEnd(catchBegin);
     auto exception = rewriter.create<mlir::cir::EhInflightOp>(
         loc, mlir::cir::ExceptionInfoType::get(rewriter.getContext()));
+    auto selector = rewriter.create<mlir::cir::EhSelectorOp>(loc, exception);
 
     // TODO: direct catch all needs no dispatch?
 
@@ -247,7 +248,6 @@ public:
 
     // Fill in dispatcher.
     rewriter.setInsertionPointToEnd(dispatchBlock);
-    auto selector = rewriter.create<mlir::cir::EhSelectorOp>(loc, exception);
 
     // FIXME: we should have an extra block for the dispatcher, just in case
     // there isn't one later.

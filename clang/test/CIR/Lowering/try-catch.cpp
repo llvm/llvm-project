@@ -26,9 +26,9 @@ unsigned long long tc() {
 
     // CIR_FLAT: ^[[LPAD]]:  // pred: ^bb2
     // CIR_FLAT:   %[[EH:.*]] = cir.eh.inflight_exception
+    // CIR_FLAT:   %[[SEL:.*]] = cir.eh.selector %[[EH]]
     // CIR_FLAT:   cir.br ^[[BB_INT_IDX_SEL:.*]] loc
     // CIR_FLAT: ^[[BB_INT_IDX_SEL]]:  // pred: ^[[LPAD]]
-    // CIR_FLAT:   %[[SEL:.*]] = cir.eh.selector %[[EH]]
   } catch (int idx) {
     // CIR_FLAT:   %[[INT_IDX_ID:.*]] = cir.eh.typeid @_ZTIi
     // CIR_FLAT:   %[[MATCH_CASE_INT_IDX:.*]] = cir.cmp(eq, %[[SEL]], %[[INT_IDX_ID]]) : !u32i, !cir.bool
