@@ -76,9 +76,13 @@ C++20 Feature Support
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+- Removed the restriction to literal types in constexpr functions in C++23 mode.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+
+- Add ``__builtin_is_virtual_base_of`` intrinsic, which supports
+  `P2985R0 A type trait for detecting virtual base classes <https://wg21.link/p2985r0>`_
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -107,6 +111,14 @@ Removed Compiler Flags
 Attribute Changes in Clang
 --------------------------
 
+- Clang now disallows more than one ``__attribute__((ownership_returns(class, idx)))`` with
+  different class names attached to one function.
+
+- Introduced a new format attribute ``__attribute__((format(syslog, 1, 2)))`` from OpenBSD.
+
+- The ``hybrid_patchable`` attribute is now supported on ARM64EC targets. It can be used to specify
+  that a function requires an additional x86-64 thunk, which may be patched at runtime.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -120,6 +132,12 @@ Improvements to Clang's diagnostics
       template <typename> int i; // error: non-static data member 'i' cannot be declared as a template
      };
 
+- Clang now diagnoses dangling references to fields of temporary objects. Fixes #GH81589.
+
+- Clang now diagnoses undefined behavior in constant expressions more consistently. This includes invalid shifts, and signed overflow in arithmetic.
+
+- -Wdangling-assignment-gsl is enabled by default.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -128,6 +146,9 @@ Improvements to Coverage Mapping
 
 Bug Fixes in This Version
 -------------------------
+
+- Fixed the definition of ``ATOMIC_FLAG_INIT`` in ``<stdatomic.h>`` so it can
+  be used in C++.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -138,6 +159,9 @@ Bug Fixes to Attribute Support
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fixed a crash when an expression with a dependent ``__typeof__`` type is used as the operand of a unary operator. (#GH97646)
+- Fixed a failed assertion when checking invalid delete operator declaration. (#GH96191)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -146,6 +170,9 @@ Miscellaneous Bug Fixes
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fixed a crash in C due to incorrect lookup that members in nested anonymous struct/union
+  can be found as ordinary identifiers in struct/union definition. (#GH31295)
 
 OpenACC Specific Changes
 ------------------------
@@ -158,6 +185,22 @@ AMDGPU Support
 
 X86 Support
 ^^^^^^^^^^^
+
+- The MMX vector intrinsic functions from ``*mmintrin.h`` which
+  operate on `__m64` vectors, such as ``_mm_add_pi8``, have been
+  reimplemented to use the SSE2 instruction-set and XMM registers
+  unconditionally. These intrinsics are therefore *no longer
+  supported* if MMX is enabled without SSE2 -- either from targeting
+  CPUs from the Pentium-MMX through the Pentium 3, or explicitly via
+  passing arguments such as ``-mmmx -mno-sse2``. MMX assembly code
+  remains supported without requiring SSE2, including inside
+  inline-assembly.
+
+- The compiler builtins such as ``__builtin_ia32_paddb`` which
+  formerly implemented the above MMX intrinsic functions have been
+  removed. Any uses of these removed functions should migrate to the
+  functions defined by the ``*mmintrin.h`` headers. A mapping can be
+  found in the file ``clang/www/builtins.py``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -215,6 +258,11 @@ Static Analyzer
 
 New features
 ^^^^^^^^^^^^
+
+- MallocChecker now checks for ``ownership_returns(class, idx)`` and ``ownership_takes(class, idx)``
+  attributes with class names different from "malloc". Clang static analyzer now reports an error
+  if class of allocation and deallocation function mismatches.
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-mismatcheddeallocator-c-c>`__.
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^

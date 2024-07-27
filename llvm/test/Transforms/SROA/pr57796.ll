@@ -17,9 +17,9 @@ define void @foo() {
 ; CHECK-NEXT:    [[CALL_I:%.*]] = call align 32 ptr @value_set_type(ptr align 32 [[REF_TMP_I]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <32 x i8>, ptr [[CALL_I]], align 32
 ; CHECK-NEXT:    [[REF_TMP_SROA_0_0_VEC_EXTRACT:%.*]] = shufflevector <32 x i8> [[TMP0]], <32 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[REF_TMP_SROA_0_0_VEC_EXTRACT]] to x86_mmx
-; CHECK-NEXT:    [[TMP2:%.*]] = call x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx [[TMP1]], i8 0)
-; CHECK-NEXT:    store x86_mmx [[TMP2]], ptr @A, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[REF_TMP_SROA_0_0_VEC_EXTRACT]] to <1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <1 x i64> @llvm.x86.sse.pshuf.w(<1 x i64> [[TMP1]], i8 0)
+; CHECK-NEXT:    store <1 x i64> [[TMP2]], ptr @A, align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

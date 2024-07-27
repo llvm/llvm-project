@@ -1429,7 +1429,6 @@ std::string NVPTXTargetLowering::getPrototype(
 
   bool first = true;
 
-  const Function *F = CB.getFunction();
   unsigned NumArgs = VAInfo ? VAInfo->first : Args.size();
   for (unsigned i = 0, OIdx = 0; i != NumArgs; ++i, ++OIdx) {
     Type *Ty = Args[i].Ty;
@@ -1471,10 +1470,12 @@ std::string NVPTXTargetLowering::getPrototype(
       continue;
     }
 
+    // Indirect calls need strict ABI alignment so we disable optimizations by
+    // not providing a function to optimize.
     Type *ETy = Args[i].IndirectType;
     Align InitialAlign = Outs[OIdx].Flags.getNonZeroByValAlign();
     Align ParamByValAlign =
-        getFunctionByValParamAlign(F, ETy, InitialAlign, DL);
+        getFunctionByValParamAlign(/*F=*/nullptr, ETy, InitialAlign, DL);
 
     O << ".param .align " << ParamByValAlign.value() << " .b8 ";
     O << "_";

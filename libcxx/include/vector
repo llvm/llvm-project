@@ -170,7 +170,7 @@ public:
 
     vector()
         noexcept(is_nothrow_default_constructible<allocator_type>::value);
-    explicit vector(const allocator_type&);
+    explicit vector(const allocator_type&) noexcept;
     explicit vector(size_type n, const allocator_type& a = allocator_type()); // C++14
     vector(size_type n, const value_type& value, const allocator_type& = allocator_type());
     template <class InputIterator>
@@ -178,8 +178,7 @@ public:
     template<container-compatible-range<bool> R>
       constexpr vector(from_range_t, R&& rg, const Allocator& = Allocator());
     vector(const vector& x);
-    vector(vector&& x)
-        noexcept(is_nothrow_move_constructible<allocator_type>::value);
+    vector(vector&& x) noexcept;
     vector(initializer_list<value_type> il);
     vector(initializer_list<value_type> il, const allocator_type& a);
     ~vector();
@@ -433,7 +432,7 @@ public:
 #if _LIBCPP_STD_VER <= 14
       _NOEXCEPT_(is_nothrow_copy_constructible<allocator_type>::value)
 #else
-      _NOEXCEPT
+      noexcept
 #endif
       : __end_cap_(nullptr, __a) {
   }

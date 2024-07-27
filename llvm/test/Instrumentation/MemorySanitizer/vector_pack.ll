@@ -48,15 +48,14 @@ entry:
 }
 
 ; CHECK-LABEL: @Test_mmx_packuswb(
-; CHECK-DAG: bitcast i64 {{.*}} to <4 x i16>
-; CHECK-DAG: bitcast i64 {{.*}} to <4 x i16>
+; CHECK-DAG: bitcast <1 x i64> {{.*}} to <4 x i16>
+; CHECK-DAG: bitcast <1 x i64> {{.*}} to <4 x i16>
 ; CHECK-DAG: icmp ne <4 x i16> {{.*}}, zeroinitializer
 ; CHECK-DAG: sext <4 x i1> {{.*}} to <4 x i16>
 ; CHECK-DAG: icmp ne <4 x i16> {{.*}}, zeroinitializer
 ; CHECK-DAG: sext <4 x i1> {{.*}} to <4 x i16>
-; CHECK-DAG: bitcast <4 x i16> {{.*}} to x86_mmx
-; CHECK-DAG: bitcast <4 x i16> {{.*}} to x86_mmx
-; CHECK-DAG: call x86_mmx @llvm.x86.mmx.packsswb({{.*}}
-; CHECK-DAG: bitcast x86_mmx {{.*}} to i64
-; CHECK-DAG: call x86_mmx @llvm.x86.mmx.packuswb({{.*}}
-; CHECK: ret x86_mmx
+; CHECK-DAG: bitcast <4 x i16> {{.*}} to <1 x i64>
+; CHECK-DAG: bitcast <4 x i16> {{.*}} to <1 x i64>
+; CHECK-DAG: call <1 x i64> @llvm.x86.mmx.packsswb({{.*}}
+; CHECK-DAG: call <1 x i64> @llvm.x86.mmx.packuswb({{.*}}
+; CHECK: ret <1 x i64>

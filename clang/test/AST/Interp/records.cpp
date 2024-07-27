@@ -1537,3 +1537,26 @@ namespace BitSet {
     Bitset()
   };
 }
+
+namespace ArrayInitChain {
+  struct StringLiteral {
+    const char *S;
+  };
+
+  struct CustomOperandVal {
+    StringLiteral Str;
+    unsigned Width;
+    unsigned Mask = Width + 1;
+  };
+
+  constexpr CustomOperandVal A[] = {
+    {},
+    {{"depctr_hold_cnt"},  12,   13},
+  };
+  static_assert(A[0].Str.S == nullptr, "");
+  static_assert(A[0].Width == 0, "");
+  static_assert(A[0].Mask == 1, "");
+
+  static_assert(A[1].Width == 12, "");
+  static_assert(A[1].Mask == 13, "");
+}

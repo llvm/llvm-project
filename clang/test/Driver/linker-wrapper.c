@@ -128,11 +128,12 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
 // RUN:   -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu \
-// RUN:   --linker-path=/usr/bin/ld --device-linker=a --device-linker=nvptx64-nvidia-cuda=b \
+// RUN:   --linker-path=/usr/bin/ld --device-linker=foo=bar --device-linker=a \
+// RUN:   --device-linker=nvptx64-nvidia-cuda=b \
 // RUN:   %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=LINKER-ARGS
 
-// LINKER-ARGS: clang{{.*}}--target=amdgcn-amd-amdhsa{{.*}}a
-// LINKER-ARGS: clang{{.*}}--target=nvptx64-nvidia-cuda{{.*}}a b
+// LINKER-ARGS: clang{{.*}}--target=amdgcn-amd-amdhsa{{.*}}foo=bar{{.*}}a
+// LINKER-ARGS: clang{{.*}}--target=nvptx64-nvidia-cuda{{.*}}foo=bar{{.*}}a b
 
 // RUN: not clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu -ldummy \
 // RUN:   --linker-path=/usr/bin/ld --device-linker=a --device-linker=nvptx64-nvidia-cuda=b \

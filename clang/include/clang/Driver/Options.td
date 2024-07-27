@@ -1117,8 +1117,7 @@ def cl_single_precision_constant : Flag<["-"], "cl-single-precision-constant">, 
   MarshallingInfoFlag<LangOpts<"SinglePrecisionConstants">>;
 def cl_finite_math_only : Flag<["-"], "cl-finite-math-only">, Group<opencl_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"OpenCL only. Allow floating-point optimizations that assume arguments and results are not NaNs or +-Inf.">,
-  MarshallingInfoFlag<LangOpts<"CLFiniteMathOnly">>;
+  HelpText<"OpenCL only. Allow floating-point optimizations that assume arguments and results are not NaNs or +-Inf.">;
 def cl_kernel_arg_info : Flag<["-"], "cl-kernel-arg-info">, Group<opencl_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"OpenCL only. Generate kernel argument metadata.">,
@@ -1165,19 +1164,19 @@ def client__name : JoinedOrSeparate<["-"], "client_name">;
 def combine : Flag<["-", "--"], "combine">, Flags<[NoXarchOption, Unsupported]>;
 def compatibility__version : JoinedOrSeparate<["-"], "compatibility_version">;
 def config : Joined<["--"], "config=">, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>, MetaVarName<"<file>">,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>, MetaVarName<"<file>">,
   HelpText<"Specify configuration file">;
-def : Separate<["--"], "config">, Alias<config>;
+def : Separate<["--"], "config">, Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>, Alias<config>;
 def no_default_config : Flag<["--"], "no-default-config">,
-  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"Disable loading default configuration files">;
 def config_system_dir_EQ : Joined<["--"], "config-system-dir=">,
   Flags<[NoXarchOption, HelpHidden]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"System directory for configuration files">;
 def config_user_dir_EQ : Joined<["--"], "config-user-dir=">,
   Flags<[NoXarchOption, HelpHidden]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"User directory for configuration files">;
 def coverage : Flag<["-", "--"], "coverage">, Group<Link_Group>,
   Visibility<[ClangOption, CLOption]>;
@@ -2609,13 +2608,12 @@ defm approx_func : BoolFOption<"approx-func", LangOpts<"ApproxFunc">, DefaultFal
            "with an approximately equivalent calculation",
            [funsafe_math_optimizations.KeyPath]>,
    NegFlag<SetFalse, [], [ClangOption, CC1Option, FC1Option, FlangOption]>>;
-defm finite_math_only : BoolFOption<"finite-math-only",
-  LangOpts<"FiniteMathOnly">, DefaultFalse,
+defm finite_math_only : BoolOptionWithoutMarshalling<"f", "finite-math-only",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Allow floating-point optimizations that "
           "assume arguments and results are not NaNs or +-inf. This defines "
           "the \\_\\_FINITE\\_MATH\\_ONLY\\_\\_ preprocessor macro.",
-          [cl_finite_math_only.KeyPath, ffast_math.KeyPath]>,
+          [ffast_math.KeyPath]>,
   NegFlag<SetFalse>>;
 defm signed_zeros : BoolFOption<"signed-zeros",
   LangOpts<"NoSignedZero">, DefaultFalse,
@@ -3232,6 +3230,10 @@ def fimplicit_module_maps : Flag <["-"], "fimplicit-module-maps">, Group<f_Group
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Implicitly search the file system for module map files.">,
   MarshallingInfoFlag<HeaderSearchOpts<"ImplicitModuleMaps">>;
+defm modulemap_allow_subdirectory_search : BoolFOption <"modulemap-allow-subdirectory-search",
+  HeaderSearchOpts<"AllowModuleMapSubdirectorySearch">, DefaultTrue,
+  PosFlag<SetTrue, [], [], "Allow to search for module maps in subdirectories of search paths">,
+  NegFlag<SetFalse>, BothFlags<[NoXarchOption], [ClangOption, CC1Option]>>;
 defm modules : BoolFOption<"modules",
   LangOpts<"Modules">, Default<fcxx_modules.KeyPath>,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -5085,6 +5087,11 @@ def mspe : Flag<["-"], "mspe">, Group<m_ppc_Features_Group>;
 def mno_spe : Flag<["-"], "mno-spe">, Group<m_ppc_Features_Group>;
 def mefpu2 : Flag<["-"], "mefpu2">, Group<m_ppc_Features_Group>;
 } // let Flags = [TargetSpecific]
+def msave_reg_params : Flag<["-"], "msave-reg-params">, Group<m_Group>,
+  Flags<[TargetSpecific]>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Save arguments passed by registers to ABI-defined stack positions">,
+  MarshallingInfoFlag<CodeGenOpts<"SaveRegParams">>;
 def mabi_EQ_quadword_atomics : Flag<["-"], "mabi=quadword-atomics">,
   Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable quadword atomics ABI on AIX (AIX PPC64 only). Uses lqarx/stqcx. instructions.">,
@@ -7525,6 +7532,9 @@ def code_completion_brief_comments : Flag<["-"], "code-completion-brief-comments
 def code_completion_with_fixits : Flag<["-"], "code-completion-with-fixits">,
   HelpText<"Include code completion results which require small fix-its.">,
   MarshallingInfoFlag<FrontendOpts<"CodeCompleteOpts.IncludeFixIts">>;
+def skip_function_bodies : Flag<["-"], "skip-function-bodies">,
+  HelpText<"Skip function bodies when possible">,
+  MarshallingInfoFlag<FrontendOpts<"SkipFunctionBodies">>;
 def disable_free : Flag<["-"], "disable-free">,
   HelpText<"Disable freeing of memory on exit">,
   MarshallingInfoFlag<FrontendOpts<"DisableFree">>;
@@ -7803,10 +7813,10 @@ def mreassociate : Flag<["-"], "mreassociate">,
   MarshallingInfoFlag<LangOpts<"AllowFPReassoc">>, ImpliedByAnyOf<[funsafe_math_optimizations.KeyPath]>;
 def menable_no_nans : Flag<["-"], "menable-no-nans">,
   HelpText<"Allow optimization to assume there are no NaNs.">,
-  MarshallingInfoFlag<LangOpts<"NoHonorNaNs">>, ImpliedByAnyOf<[ffinite_math_only.KeyPath]>;
-def menable_no_infinities : Flag<["-"], "menable-no-infs">,
+  MarshallingInfoFlag<LangOpts<"NoHonorNaNs">>, ImpliedByAnyOf<[ffast_math.KeyPath]>;
+def menable_no_infs : Flag<["-"], "menable-no-infs">,
   HelpText<"Allow optimization to assume there are no infinities.">,
-  MarshallingInfoFlag<LangOpts<"NoHonorInfs">>, ImpliedByAnyOf<[ffinite_math_only.KeyPath]>;
+  MarshallingInfoFlag<LangOpts<"NoHonorInfs">>, ImpliedByAnyOf<[ffast_math.KeyPath]>;
 
 def pic_level : Separate<["-"], "pic-level">,
   HelpText<"Value for __PIC__">,

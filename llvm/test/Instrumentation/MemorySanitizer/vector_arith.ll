@@ -31,12 +31,12 @@ entry:
 }
 
 ; CHECK-LABEL: @Test_ssse3_pmadd_ub_sw(
-; CHECK: or i64
-; CHECK: bitcast i64 {{.*}} to <4 x i16>
+; CHECK: or <1 x i64>
+; CHECK: bitcast <1 x i64> {{.*}} to <4 x i16>
 ; CHECK: icmp ne <4 x i16> {{.*}}, zeroinitializer
 ; CHECK: sext <4 x i1> {{.*}} to <4 x i16>
-; CHECK: bitcast <4 x i16> {{.*}} to i64
-; CHECK: ret x86_mmx
+; CHECK: bitcast <4 x i16> {{.*}} to <1 x i64>
+; CHECK: ret <1 x i64>
 
 
 define <2 x i64> @Test_x86_sse2_psad_bw(<16 x i8> %a, <16 x i8> %b) sanitize_memory {
@@ -60,8 +60,8 @@ entry:
 }
 
 ; CHECK-LABEL: @Test_x86_mmx_psad_bw(
-; CHECK: or i64
+; CHECK: or <1 x i64>
 ; CHECK: icmp ne i64
 ; CHECK: sext i1 {{.*}} to i64
 ; CHECK: lshr i64 {{.*}}, 48
-; CHECK: ret x86_mmx
+; CHECK: ret <1 x i64>

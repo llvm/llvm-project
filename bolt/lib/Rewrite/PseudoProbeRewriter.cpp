@@ -49,6 +49,7 @@ static cl::opt<PrintPseudoProbesOptions> PrintPseudoProbes(
                clEnumValN(PPP_All, "all", "enable all debugging printout")),
     cl::Hidden, cl::cat(BoltCategory));
 
+extern cl::opt<bool> ProfileUsePseudoProbes;
 } // namespace opts
 
 namespace {
@@ -89,12 +90,15 @@ public:
 };
 
 Error PseudoProbeRewriter::preCFGInitializer() {
-  parsePseudoProbe();
+  if (opts::ProfileUsePseudoProbes)
+    parsePseudoProbe();
 
   return Error::success();
 }
 
 Error PseudoProbeRewriter::postEmitFinalizer() {
+  if (!opts::ProfileUsePseudoProbes)
+    parsePseudoProbe();
   updatePseudoProbes();
 
   return Error::success();

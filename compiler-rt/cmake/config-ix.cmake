@@ -267,6 +267,19 @@ function(get_target_link_flags_for_arch arch out_var)
   endif()
 endfunction()
 
+# Returns a list of architecture specific dynamic ldflags in @out_var list.
+function(get_dynamic_link_flags_for_arch arch out_var)
+  list(FIND COMPILER_RT_SUPPORTED_ARCH ${arch} ARCH_INDEX)
+  if(ARCH_INDEX EQUAL -1)
+    message(FATAL_ERROR "Unsupported architecture: ${arch}")
+  else()
+    get_compiler_rt_output_dir(${arch} rtlib_dir)
+    if (NOT WIN32)
+      set(${out_var} "-Wl,-rpath,${rtlib_dir}" PARENT_SCOPE)
+    endif()
+  endif()
+endfunction()
+
 # Returns a compiler and CFLAGS that should be used to run tests for the
 # specific architecture.  When cross-compiling, this is controled via
 # COMPILER_RT_TEST_COMPILER and COMPILER_RT_TEST_COMPILER_CFLAGS.

@@ -24,8 +24,6 @@ add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces
   ScriptedPythonInterface.cpp
   ScriptedProcessPythonInterface.cpp
   ScriptedThreadPythonInterface.cpp
-  ScriptedThreadPlanPythonInterface.cpp
-  ScriptedPlatformPythonInterface.cpp
 
   LINK_LIBS
     lldbCore
@@ -38,3 +36,5 @@ add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces
   LINK_COMPONENTS
     Support
   )
+add_subdirectory(ScriptedPlatformPythonInterface)
+add_subdirectory(ScriptedThreadPlanPythonInterface)

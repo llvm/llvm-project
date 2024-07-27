@@ -2095,6 +2095,7 @@ cc_library(
         "//llvm:BitstreamReader",
         "//llvm:BitstreamWriter",
         "//llvm:FrontendOpenMP",
+        "//llvm:Object",
         "//llvm:Support",
         "//llvm:TargetParser",
     ],
