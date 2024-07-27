@@ -35,11 +35,6 @@ void UseSet::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
-
-void UseSwap::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
 #endif // NDEBUG
 
 Tracker::~Tracker() {
