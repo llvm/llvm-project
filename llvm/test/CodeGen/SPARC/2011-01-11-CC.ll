@@ -530,42 +530,30 @@ define void @test_adde_sube(ptr %a, ptr %b, ptr %sum, ptr %diff) nounwind {
 ; SPARC64-NEXT:    .register %g3, #scratch
 ; SPARC64-NEXT:  ! %bb.0: ! %entry
 ; SPARC64-NEXT:    save %sp, -128, %sp
-; SPARC64-NEXT:    ldx [%i1+8], %i4
-; SPARC64-NEXT:    ldx [%i1], %i1
-; SPARC64-NEXT:    ldx [%i0+8], %i5
-; SPARC64-NEXT:    ldx [%i0], %g2
-; SPARC64-NEXT:    srlx %i4, 32, %g3
-; SPARC64-NEXT:    srlx %i1, 32, %g4
-; SPARC64-NEXT:    srlx %i5, 32, %g5
-; SPARC64-NEXT:    srlx %g2, 32, %l0
-; SPARC64-NEXT:    addcc %i5, %i4, %i4
-; SPARC64-NEXT:    addxcc %g5, %g3, %g3
-; SPARC64-NEXT:    addxcc %g2, %i1, %i1
-; SPARC64-NEXT:    addxcc %l0, %g4, %g4
-; SPARC64-NEXT:    srl %i1, 0, %i1
-; SPARC64-NEXT:    sllx %g4, 32, %g4
-; SPARC64-NEXT:    or %g4, %i1, %i1
-; SPARC64-NEXT:    srl %i4, 0, %i4
-; SPARC64-NEXT:    sllx %g3, 32, %g3
-; SPARC64-NEXT:    or %g3, %i4, %i4
-; SPARC64-NEXT:    stx %i4, [%i2+8]
-; SPARC64-NEXT:    stx %i1, [%i2]
+; SPARC64-NEXT:    ldx [%i0+8], %i4
+; SPARC64-NEXT:    ldx [%i0], %i5
+; SPARC64-NEXT:    ldx [%i1], %g2
+; SPARC64-NEXT:    ldx [%i1+8], %i1
+; SPARC64-NEXT:    mov %g0, %g3
+; SPARC64-NEXT:    add %i5, %g2, %g2
+; SPARC64-NEXT:    add %i4, %i1, %i1
+; SPARC64-NEXT:    cmp %i1, %i4
+; SPARC64-NEXT:    movcs %xcc, 1, %g3
+; SPARC64-NEXT:    srl %g3, 0, %g3
+; SPARC64-NEXT:    add %g2, %g3, %g2
+; SPARC64-NEXT:    stx %i1, [%i2+8]
+; SPARC64-NEXT:    stx %g2, [%i2]
 ; SPARC64-NEXT:    !APP
 ; SPARC64-NEXT:    !NO_APP
 ; SPARC64-NEXT:    ldx [%i0+8], %i1
+; SPARC64-NEXT:    mov %g0, %i2
 ; SPARC64-NEXT:    ldx [%i0], %i0
-; SPARC64-NEXT:    srlx %i1, 32, %i2
-; SPARC64-NEXT:    srlx %i0, 32, %i4
-; SPARC64-NEXT:    subcc %i5, %i1, %i1
-; SPARC64-NEXT:    subxcc %g5, %i2, %i2
-; SPARC64-NEXT:    subxcc %g2, %i0, %i0
-; SPARC64-NEXT:    subxcc %l0, %i4, %i4
-; SPARC64-NEXT:    srl %i0, 0, %i0
-; SPARC64-NEXT:    sllx %i4, 32, %i4
-; SPARC64-NEXT:    or %i4, %i0, %i0
-; SPARC64-NEXT:    srl %i1, 0, %i1
-; SPARC64-NEXT:    sllx %i2, 32, %i2
-; SPARC64-NEXT:    or %i2, %i1, %i1
+; SPARC64-NEXT:    cmp %i4, %i1
+; SPARC64-NEXT:    movcs %xcc, 1, %i2
+; SPARC64-NEXT:    srl %i2, 0, %i2
+; SPARC64-NEXT:    sub %i5, %i0, %i0
+; SPARC64-NEXT:    sub %i0, %i2, %i0
+; SPARC64-NEXT:    sub %i4, %i1, %i1
 ; SPARC64-NEXT:    stx %i1, [%i3+8]
 ; SPARC64-NEXT:    stx %i0, [%i3]
 ; SPARC64-NEXT:    ret

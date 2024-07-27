@@ -1731,16 +1731,12 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SELECT_CC, MVT::f64, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::f128, Custom);
 
-  setOperationAction(ISD::ADDC, MVT::i32, Custom);
-  setOperationAction(ISD::ADDE, MVT::i32, Custom);
-  setOperationAction(ISD::SUBC, MVT::i32, Custom);
-  setOperationAction(ISD::SUBE, MVT::i32, Custom);
+  setOperationAction(ISD::ADDC, MVT::i32, Legal);
+  setOperationAction(ISD::ADDE, MVT::i32, Legal);
+  setOperationAction(ISD::SUBC, MVT::i32, Legal);
+  setOperationAction(ISD::SUBE, MVT::i32, Legal);
 
   if (Subtarget->is64Bit()) {
-    setOperationAction(ISD::ADDC, MVT::i64, Custom);
-    setOperationAction(ISD::ADDE, MVT::i64, Custom);
-    setOperationAction(ISD::SUBC, MVT::i64, Custom);
-    setOperationAction(ISD::SUBE, MVT::i64, Custom);
     setOperationAction(ISD::BITCAST, MVT::f64, Expand);
     setOperationAction(ISD::BITCAST, MVT::i64, Expand);
     setOperationAction(ISD::SELECT, MVT::i64, Expand);
@@ -3105,55 +3101,6 @@ static SDValue LowerFNEGorFABS(SDValue Op, SelectionDAG &DAG, bool isV9) {
   return DstReg128;
 }
 
-static SDValue LowerADDC_ADDE_SUBC_SUBE(SDValue Op, SelectionDAG &DAG) {
-
-  if (Op.getValueType() != MVT::i64)
-    return Op;
-
-  SDLoc dl(Op);
-  SDValue Src1 = Op.getOperand(0);
-  SDValue Src1Lo = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Src1);
-  SDValue Src1Hi = DAG.getNode(ISD::SRL, dl, MVT::i64, Src1,
-                               DAG.getConstant(32, dl, MVT::i64));
-  Src1Hi = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Src1Hi);
-
-  SDValue Src2 = Op.getOperand(1);
-  SDValue Src2Lo = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Src2);
-  SDValue Src2Hi = DAG.getNode(ISD::SRL, dl, MVT::i64, Src2,
-                               DAG.getConstant(32, dl, MVT::i64));
-  Src2Hi = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Src2Hi);
-
-
-  bool hasChain = false;
-  unsigned hiOpc = Op.getOpcode();
-  switch (Op.getOpcode()) {
-  default: llvm_unreachable("Invalid opcode");
-  case ISD::ADDC: hiOpc = ISD::ADDE; break;
-  case ISD::ADDE: hasChain = true; break;
-  case ISD::SUBC: hiOpc = ISD::SUBE; break;
-  case ISD::SUBE: hasChain = true; break;
-  }
-  SDValue Lo;
-  SDVTList VTs = DAG.getVTList(MVT::i32, MVT::Glue);
-  if (hasChain) {
-    Lo = DAG.getNode(Op.getOpcode(), dl, VTs, Src1Lo, Src2Lo,
-                     Op.getOperand(2));
-  } else {
-    Lo = DAG.getNode(Op.getOpcode(), dl, VTs, Src1Lo, Src2Lo);
-  }
-  SDValue Hi = DAG.getNode(hiOpc, dl, VTs, Src1Hi, Src2Hi, Lo.getValue(1));
-  SDValue Carry = Hi.getValue(1);
-
-  Lo = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Lo);
-  Hi = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Hi);
-  Hi = DAG.getNode(ISD::SHL, dl, MVT::i64, Hi,
-                   DAG.getConstant(32, dl, MVT::i64));
-
-  SDValue Dst = DAG.getNode(ISD::OR, dl, MVT::i64, Hi, Lo);
-  SDValue Ops[2] = { Dst, Carry };
-  return DAG.getMergeValues(Ops, dl);
-}
-
 // Custom lower UMULO/SMULO for SPARC. This code is similar to ExpandNode()
 // in LegalizeDAG.cpp except the order of arguments to the library function.
 static SDValue LowerUMULO_SMULO(SDValue Op, SelectionDAG &DAG,
@@ -3283,10 +3230,6 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FNEG:               return LowerFNEGorFABS(Op, DAG, isV9);
   case ISD::FP_EXTEND:          return LowerF128_FPEXTEND(Op, DAG, *this);
   case ISD::FP_ROUND:           return LowerF128_FPROUND(Op, DAG, *this);
-  case ISD::ADDC:
-  case ISD::ADDE:
-  case ISD::SUBC:
-  case ISD::SUBE:               return LowerADDC_ADDE_SUBC_SUBE(Op, DAG);
   case ISD::UMULO:
   case ISD::SMULO:              return LowerUMULO_SMULO(Op, DAG, *this);
   case ISD::ATOMIC_LOAD:
