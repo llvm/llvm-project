@@ -4022,7 +4022,10 @@ CodeCompleteConsumer::OverloadCandidate::CreateSignatureString(
 
     std::string Name;
     llvm::raw_string_ostream OS(Name);
-    FDecl->getDeclName().print(OS, Policy);
+    auto const DeclName = (getKind() == CK_Lambda)
+                              ? getLambdaVarDecl()->getDeclName()
+                              : FDecl->getDeclName();
+    DeclName.print(OS, Policy);
     Result.AddTextChunk(Result.getAllocator().CopyString(Name));
   } else {
     // Function without a declaration. Just give the return type.
@@ -6123,7 +6126,10 @@ static void mergeCandidatesWithResults(
         continue;
     }
     if (Candidate.Viable)
-      Results.push_back(ResultCandidate(Candidate.Function));
+      Results.push_back(
+          Candidate.LambdaName == nullptr
+              ? ResultCandidate(Candidate.Function)
+              : ResultCandidate(Candidate.Function, Candidate.LambdaName));
   }
 }
 
@@ -6292,11 +6298,16 @@ SemaCodeCompletion::ProduceCallSignatureHelp(Expr *Fn, ArrayRef<Expr *> Args,
         SmallVector<Expr *, 12> ArgExprs(1, NakedFn);
         ArgExprs.append(ArgsWithoutDependentTypes.begin(),
                         ArgsWithoutDependentTypes.end());
+        auto *const LambdaName =
+            DC->isLambda() ? cast<VarDecl>(NakedFn->getReferencedDeclOfCallee())
+                           : nullptr;
         SemaRef.AddFunctionCandidates(R.asUnresolvedSet(), ArgExprs,
                                       CandidateSet,
                                       /*ExplicitArgs=*/nullptr,
                                       /*SuppressUserConversions=*/false,
-                                      /*PartialOverloading=*/true);
+                                      /*PartialOverloading=*/true,
+                                      /*FirstArgumentIsBase=*/false,
+                                      /*LambdaName=*/LambdaName);
       }
     } else {
       // Lastly we check whether expression's type is function pointer or

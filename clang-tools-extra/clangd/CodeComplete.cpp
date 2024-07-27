@@ -1139,6 +1139,8 @@ public:
           switch (K) {
           case OC::CK_Aggregate:
             return 0;
+          case OC::CK_Lambda:
+            [[fallthrough]];
           case OC::CK_Function:
             return 1;
           case OC::CK_FunctionType:

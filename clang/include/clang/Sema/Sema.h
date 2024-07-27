@@ -9147,7 +9147,8 @@ public:
   ///
   /// \returns true if lookup succeeded, false if it failed.
   bool LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
-                           bool InUnqualifiedLookup = false);
+                           bool InUnqualifiedLookup = false,
+                           IdentifierInfo const *IdentifierOverride = nullptr);
 
   /// Performs qualified name lookup or special type of lookup for
   /// "__super::" scope specifier.
@@ -10186,7 +10187,7 @@ public:
       OverloadCandidateSet &CandidateSet,
       TemplateArgumentListInfo *ExplicitTemplateArgs = nullptr,
       bool SuppressUserConversions = false, bool PartialOverloading = false,
-      bool FirstArgumentIsBase = false);
+      bool FirstArgumentIsBase = false, VarDecl *LambdaName = nullptr);
 
   /// AddMethodCandidate - Adds a named decl (which is some kind of
   /// method) as a method candidate to the given overload set.
@@ -10204,15 +10205,14 @@ public:
   /// both @c a1 and @c a2. If @p SuppressUserConversions, then don't
   /// allow user-defined conversions via constructors or conversion
   /// operators.
-  void
-  AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
-                     CXXRecordDecl *ActingContext, QualType ObjectType,
-                     Expr::Classification ObjectClassification,
-                     ArrayRef<Expr *> Args, OverloadCandidateSet &CandidateSet,
-                     bool SuppressUserConversions = false,
-                     bool PartialOverloading = false,
-                     ConversionSequenceList EarlyConversions = std::nullopt,
-                     OverloadCandidateParamOrder PO = {});
+  void AddMethodCandidate(
+      CXXMethodDecl *Method, DeclAccessPair FoundDecl,
+      CXXRecordDecl *ActingContext, QualType ObjectType,
+      Expr::Classification ObjectClassification, ArrayRef<Expr *> Args,
+      OverloadCandidateSet &CandidateSet, bool SuppressUserConversions = false,
+      bool PartialOverloading = false,
+      ConversionSequenceList EarlyConversions = std::nullopt,
+      OverloadCandidateParamOrder PO = {}, VarDecl *LambdaName = nullptr);
 
   /// Add a C++ member function template as a candidate to the candidate
   /// set, using template argument deduction to produce an appropriate member

@@ -1437,6 +1437,15 @@ TEST(SignatureHelpTest, Overloads) {
   EXPECT_EQ(0, Results.activeParameter);
 }
 
+TEST(SignatureHelpTest, ShowLambdaNameInsteadOfOperatorParens) {
+  auto const Results = signatures(R"cpp(
+    auto foo = [](int x, int y){};
+    int main() { foo(^); }
+  )cpp");
+  EXPECT_THAT(Results.signatures,
+              UnorderedElementsAre(sig("foo([[int x]], [[int y]]) -> void")));
+}
+
 TEST(SignatureHelpTest, FunctionPointers) {
   llvm::StringLiteral Tests[] = {
       // Variable of function pointer type

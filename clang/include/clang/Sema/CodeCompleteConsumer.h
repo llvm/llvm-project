@@ -1028,6 +1028,9 @@ public:
       /// The candidate is a function declaration.
       CK_Function,
 
+      // The candidate is a lambda operator().
+      CK_Lambda,
+
       /// The candidate is a function template, arguments are being completed.
       CK_FunctionTemplate,
 
@@ -1055,6 +1058,13 @@ public:
       /// Kind == CK_Function.
       FunctionDecl *Function;
 
+      /// The lambda operator() candidate paired with the
+      /// lambda variable, available when Kind == CK_Lambda.
+      struct {
+        FunctionDecl *OperatorParens;
+        VarDecl *Var;
+      } Lambda;
+
       /// The function template overload candidate, available when
       /// Kind == CK_FunctionTemplate.
       FunctionTemplateDecl *FunctionTemplate;
@@ -1080,6 +1090,12 @@ public:
     OverloadCandidate(FunctionDecl *Function)
         : Kind(CK_Function), Function(Function) {
       assert(Function != nullptr);
+    }
+
+    OverloadCandidate(FunctionDecl *LambdaOperatorParens, VarDecl *LambdaVar)
+        : Kind(CK_Lambda), Lambda{LambdaOperatorParens, LambdaVar} {
+      assert(Lambda.OperatorParens != nullptr);
+      assert(Lambda.Var != nullptr);
     }
 
     OverloadCandidate(FunctionTemplateDecl *FunctionTemplateDecl)
@@ -1111,6 +1127,8 @@ public:
     /// Retrieve the function overload candidate or the templated
     /// function declaration for a function template.
     FunctionDecl *getFunction() const;
+
+    VarDecl *getLambdaVarDecl() const;
 
     /// Retrieve the function template overload candidate.
     FunctionTemplateDecl *getFunctionTemplate() const {

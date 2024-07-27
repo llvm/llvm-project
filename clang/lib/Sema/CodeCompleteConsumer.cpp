@@ -504,8 +504,14 @@ FunctionDecl *CodeCompleteConsumer::OverloadCandidate::getFunction() const {
     return Function;
   else if (getKind() == CK_FunctionTemplate)
     return FunctionTemplate->getTemplatedDecl();
-  else
+  else if (getKind() == CK_Lambda) {
+    return Lambda.OperatorParens;
+  } else
     return nullptr;
+}
+
+VarDecl *CodeCompleteConsumer::OverloadCandidate::getLambdaVarDecl() const {
+  return (getKind() == CK_Lambda) ? Lambda.Var : nullptr;
 }
 
 const FunctionType *
@@ -513,6 +519,8 @@ CodeCompleteConsumer::OverloadCandidate::getFunctionType() const {
   switch (Kind) {
   case CK_Function:
     return Function->getType()->getAs<FunctionType>();
+  case CK_Lambda:
+    return Lambda.OperatorParens->getType()->getAs<FunctionType>();
 
   case CK_FunctionTemplate:
     return FunctionTemplate->getTemplatedDecl()
