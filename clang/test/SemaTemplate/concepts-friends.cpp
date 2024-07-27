@@ -517,6 +517,11 @@ struct S {
   friend void f2() requires requires { [](auto){}; } {
     return;
   }
+
+  template <typename U>
+  friend void f3() requires requires { []<int X>(){ return X; }; } {
+    return;
+  }
 };
 
 }
