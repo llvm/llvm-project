@@ -110,10 +110,11 @@ static Value *foldSelectWithBinaryOp(Value *Cond, Value *TrueVal,
   // -->
   // %TV
   Value *X, *Y;
-  if (!match(Cond, m_c_BinOp(m_c_ICmp(Pred1, m_Specific(TrueVal),
-                                      m_Specific(FalseVal)),
-                             m_ICmp(Pred2, m_Value(X), m_Value(Y)))) ||
-      Pred1 != Pred2 || Pred1 != ExpectedPred)
+  if (!match(
+          Cond,
+          m_c_BinOp(m_c_ICmp(Pred1, m_Specific(TrueVal), m_Specific(FalseVal)),
+                    m_SpecificICmp(ExpectedPred, m_Value(X), m_Value(Y)))) ||
+      Pred1 != ExpectedPred)
     return nullptr;
 
   if (X == TrueVal || X == FalseVal || Y == TrueVal || Y == FalseVal)
