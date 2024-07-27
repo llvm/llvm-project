@@ -1,5 +1,4 @@
-//===-- Implementation header for Rwlock's clockwrlock function -------*-
-// C++-*-===//
+//===-- Implementation header for Rwlock's clockwrlock function --*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +16,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 int pthread_rwlock_clockwrlock(pthread_rwlock_t *__restrict rwlock,
                                clockid_t clockid,
-                               const struct timespec *__restrict abstime);
+                               const timespec *__restrict abstime);
 
 } // namespace LIBC_NAMESPACE_DECL
 
