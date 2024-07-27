@@ -12,7 +12,6 @@
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetOptions.h"
-#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Options.h"
 #include "clang/Frontend/CompileJobCacheKey.h"
