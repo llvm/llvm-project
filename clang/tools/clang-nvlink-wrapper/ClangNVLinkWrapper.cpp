@@ -426,7 +426,7 @@ Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer,
     }
   }
   if (Extracted)
-    for (auto &[Name, Symbol] : PendingSymbols)
+    for (const auto &[Name, Symbol] : PendingSymbols)
       SymTab[Name] = Symbol;
   return Extracted;
 }
@@ -456,7 +456,7 @@ Expected<bool> getSymbolsFromObject(ObjectFile &ObjFile,
     OldSym.UsedInRegularObj = true;
   }
   if (Extracted)
-    for (auto &[Name, Symbol] : PendingSymbols)
+    for (const auto &[Name, Symbol] : PendingSymbols)
       SymTab[Name] = Symbol;
   return Extracted;
 }
