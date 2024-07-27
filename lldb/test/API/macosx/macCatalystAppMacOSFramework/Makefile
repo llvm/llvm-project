@@ -5,6 +5,7 @@ override TRIPLE := $(ARCH)-apple-ios13.0-macabi
 CFLAGS_EXTRAS := -target $(TRIPLE)
 
 # FIXME: rdar://problem/54986190
+override CCC=clang
 override CC=xcrun clang
 
 all: libfoo.dylib a.out

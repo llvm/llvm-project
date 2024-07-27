@@ -1,6 +1,6 @@
 C_SOURCES := inlines.c
 
-ifneq (,$(findstring icc,$(CC)))
+ifeq ($(CCC), icc)
     CFLAGS_EXTRAS := -debug inline-debug-info
 endif
 
