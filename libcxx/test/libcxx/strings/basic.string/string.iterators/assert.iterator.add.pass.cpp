@@ -8,10 +8,10 @@
 
 // <string>
 
-// Index iterator out of bounds.
+// Add to iterator out of bounds.
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
+// REQUIRES: has-unix-headers, libcpp-has-abi-bounded-iterators-in-string
+// UNSUPPORTED: libcpp-hardening-mode=none, c++03
 
 #include <string>
 #include <cassert>
@@ -21,11 +21,12 @@
 
 template <class C>
 void test() {
-  using T = decltype(std::uint8_t() - std::uint8_t());
   C c(1, '\0');
-  C::iterator i = c.begin();
-  assert(i[0] == 0);
-  TEST_LIBCPP_ASSERT_FAILURE(i[1], "Attempted to subscript an iterator outside its valid range");
+  typename C::iterator i = c.begin();
+  i += 1;
+  assert(i == c.end());
+  i = c.begin();
+  TEST_LIBCPP_ASSERT_FAILURE(i += 2, "__bounded_iter::operator+=: Attempt to advance an iterator past the end");
 }
 
 int main(int, char**) {
