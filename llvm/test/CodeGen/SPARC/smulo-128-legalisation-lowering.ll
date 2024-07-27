@@ -2,14 +2,10 @@
 ; RUN: llc < %s -mtriple=sparc-unknown-linux-gnu | FileCheck %s --check-prefixes=SPARC
 ; RUN: llc < %s -mtriple=sparc64-unknown-linux-gnu | FileCheck %s --check-prefixes=SPARC64
 
-define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
+define { i128, i8 } @muloti_test(i128 %l, i128 %r) nounwind {
 ; SPARC-LABEL: muloti_test:
-; SPARC:         .cfi_startproc
-; SPARC-NEXT:  ! %bb.0: ! %start
+; SPARC:       ! %bb.0: ! %start
 ; SPARC-NEXT:    save %sp, -96, %sp
-; SPARC-NEXT:    .cfi_def_cfa_register %fp
-; SPARC-NEXT:    .cfi_window_save
-; SPARC-NEXT:    .cfi_register %o7, %i7
 ; SPARC-NEXT:    ld [%fp+96], %l1
 ; SPARC-NEXT:    mov %i3, %g4
 ; SPARC-NEXT:    mov %i2, %g2
@@ -172,14 +168,10 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; SPARC-NEXT:    restore %g0, %g3, %o1
 ;
 ; SPARC64-LABEL: muloti_test:
-; SPARC64:         .cfi_startproc
-; SPARC64-NEXT:    .register %g2, #scratch
+; SPARC64:         .register %g2, #scratch
 ; SPARC64-NEXT:    .register %g3, #scratch
 ; SPARC64-NEXT:  ! %bb.0: ! %start
 ; SPARC64-NEXT:    save %sp, -176, %sp
-; SPARC64-NEXT:    .cfi_def_cfa_register %fp
-; SPARC64-NEXT:    .cfi_window_save
-; SPARC64-NEXT:    .cfi_register %o7, %i7
 ; SPARC64-NEXT:    mov %i3, %i4
 ; SPARC64-NEXT:    mov %i1, %i3
 ; SPARC64-NEXT:    srax %i0, 63, %o2
@@ -270,7 +262,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore
 start:
-  %0 = tail call { i128, i1 } @llvm.smul.with.overflow.i128(i128 %l, i128 %r) #2
+  %0 = tail call { i128, i1 } @llvm.smul.with.overflow.i128(i128 %l, i128 %r)
   %1 = extractvalue { i128, i1 } %0, 0
   %2 = extractvalue { i128, i1 } %0, 1
   %3 = zext i1 %2 to i8
@@ -279,9 +271,4 @@ start:
   ret { i128, i8 } %5
 }
 
-; Function Attrs: nounwind readnone speculatable
-declare { i128, i1 } @llvm.smul.with.overflow.i128(i128, i128) #1
-
-attributes #0 = { nounwind readnone uwtable }
-attributes #1 = { nounwind readnone speculatable }
-attributes #2 = { nounwind }
+declare { i128, i1 } @llvm.smul.with.overflow.i128(i128, i128)
