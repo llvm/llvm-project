@@ -1040,11 +1040,11 @@ OutputDesc *ScriptParser::readOutputSectionDescription(StringRef outSec) {
   }
 
   if (consume(">"))
-    osec->memoryRegionName = std::string(next());
+    osec->memoryRegionName = std::string(readName());
 
   if (consume("AT")) {
     expect(">");
-    osec->lmaRegionName = std::string(next());
+    osec->lmaRegionName = std::string(readName());
   }
 
   if (osec->lmaExpr && !osec->lmaRegionName.empty())
