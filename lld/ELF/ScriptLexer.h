@@ -61,6 +61,7 @@ public:
   bool consume(StringRef tok);
   void expect(StringRef expect);
   Token till(StringRef tok);
+  Token nextTok();
   std::string getCurrentLocation();
   MemoryBufferRef getCurrentMB();
 

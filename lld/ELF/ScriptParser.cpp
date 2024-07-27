@@ -957,13 +957,15 @@ OutputDesc *ScriptParser::readOverlaySectionDescription() {
   OutputDesc *osd = script->createOutputSection(next(), getCurrentLocation());
   osd->osec.inOverlay = true;
   expect("{");
-  while (!errorCount() && !consume("}")) {
+  while (auto tok = till("}")) {
     uint64_t withFlags = 0;
     uint64_t withoutFlags = 0;
-    if (consume("INPUT_SECTION_FLAGS"))
+    if (tok == "INPUT_SECTION_FLAGS") {
       std::tie(withFlags, withoutFlags) = readInputSectionFlags();
+      tok = nextTok();
+    }
     osd->osec.commands.push_back(
-        readInputSectionRules(next(), withFlags, withoutFlags));
+        readInputSectionRules(tok, withFlags, withoutFlags));
   }
   osd->osec.phdrs = readOutputSectionPhdrs();
   return osd;
@@ -1090,7 +1092,7 @@ SymbolAssignment *ScriptParser::readProvideHidden(bool provide, bool hidden) {
   StringRef name = next(), eq = peek();
   if (eq != "=") {
     setError("= expected, but got " + next());
-    while (!atEOF() && next() != ")")
+    while (till(")"))
       ;
     return nullptr;
   }
