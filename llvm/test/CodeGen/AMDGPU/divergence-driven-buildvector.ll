@@ -277,12 +277,12 @@ define amdgpu_kernel void @uniform_vec_i16_LL(ptr addrspace(4) %in0, ptr addrspa
 ;
 ; GFX9-LABEL: uniform_vec_i16_LL:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_load_dword s4, s[0:1], 0x0
-; GFX9-NEXT:    s_load_dword s5, s[2:3], 0x0
+; GFX9-NEXT:    s_load_dword s0, s[4:5], 0x0
+; GFX9-NEXT:    s_load_dword s1, s[6:7], 0x0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_pack_ll_b32_b16 s0, s4, s5
+; GFX9-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use s0
 ; GFX9-NEXT:    ;;#ASMEND
@@ -290,12 +290,12 @@ define amdgpu_kernel void @uniform_vec_i16_LL(ptr addrspace(4) %in0, ptr addrspa
 ;
 ; GFX906-LABEL: uniform_vec_i16_LL:
 ; GFX906:       ; %bb.0:
-; GFX906-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX906-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX906-NEXT:    s_load_dword s4, s[0:1], 0x0
-; GFX906-NEXT:    s_load_dword s5, s[2:3], 0x0
+; GFX906-NEXT:    s_load_dword s0, s[4:5], 0x0
+; GFX906-NEXT:    s_load_dword s1, s[6:7], 0x0
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX906-NEXT:    s_pack_ll_b32_b16 s0, s4, s5
+; GFX906-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
 ; GFX906-NEXT:    ;;#ASMSTART
 ; GFX906-NEXT:    ; use s0
 ; GFX906-NEXT:    ;;#ASMEND
@@ -561,12 +561,12 @@ define amdgpu_kernel void @uniform_vec_f16_LL(ptr addrspace(4) %in0, ptr addrspa
 ;
 ; GFX9-LABEL: uniform_vec_f16_LL:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_load_dword s4, s[0:1], 0x0
-; GFX9-NEXT:    s_load_dword s5, s[2:3], 0x0
+; GFX9-NEXT:    s_load_dword s0, s[4:5], 0x0
+; GFX9-NEXT:    s_load_dword s1, s[6:7], 0x0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_pack_ll_b32_b16 s0, s4, s5
+; GFX9-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use s0
 ; GFX9-NEXT:    ;;#ASMEND
@@ -574,12 +574,12 @@ define amdgpu_kernel void @uniform_vec_f16_LL(ptr addrspace(4) %in0, ptr addrspa
 ;
 ; GFX906-LABEL: uniform_vec_f16_LL:
 ; GFX906:       ; %bb.0:
-; GFX906-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX906-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX906-NEXT:    s_load_dword s4, s[0:1], 0x0
-; GFX906-NEXT:    s_load_dword s5, s[2:3], 0x0
+; GFX906-NEXT:    s_load_dword s0, s[4:5], 0x0
+; GFX906-NEXT:    s_load_dword s1, s[6:7], 0x0
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX906-NEXT:    s_pack_ll_b32_b16 s0, s4, s5
+; GFX906-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
 ; GFX906-NEXT:    ;;#ASMSTART
 ; GFX906-NEXT:    ; use s0
 ; GFX906-NEXT:    ;;#ASMEND
