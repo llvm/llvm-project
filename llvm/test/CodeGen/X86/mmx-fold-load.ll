@@ -653,7 +653,7 @@ entry:
   call void @llvm.lifetime.start(i64 4, ptr nonnull %0)
   store volatile i32 1, ptr %0, align 4
   %1 = load volatile i32, ptr %0, align 4
-  %2 = tail call <1 x i64> @llvm.x86.mmx.psrli.q(<1 x i64> bitcast (<1 x i64> <i64 255> to <1 x i64>), i32 %1)
+  %2 = tail call <1 x i64> @llvm.x86.mmx.psrli.q(<1 x i64> <i64 255>, i32 %1)
   store <1 x i64> %2, ptr %t, align 8
   call void @llvm.lifetime.end(i64 4, ptr nonnull %0)
   ret void

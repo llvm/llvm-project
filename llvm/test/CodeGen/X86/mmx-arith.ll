@@ -372,10 +372,9 @@ entry:
   store <1 x i64> %tmp60, ptr %A
   %tmp64 = load <1 x i64>, ptr %B
   %tmp69 = tail call <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64> %tmp60, <1 x i64> %tmp64)
-  %tmp70 = bitcast <1 x i64> %tmp69 to <1 x i64>
-  store <1 x i64> %tmp70, ptr %A
+  store <1 x i64> %tmp69, ptr %A
   %tmp75 = load <1 x i64>, ptr %B
-  %tmp70a = bitcast <1 x i64> %tmp70 to <4 x i16>
+  %tmp70a = bitcast <1 x i64> %tmp69 to <4 x i16>
   %tmp75a = bitcast <1 x i64> %tmp75 to <4 x i16>
   %tmp76 = and <4 x i16> %tmp70a, %tmp75a
   %tmp76a = bitcast <4 x i16> %tmp76 to <1 x i64>

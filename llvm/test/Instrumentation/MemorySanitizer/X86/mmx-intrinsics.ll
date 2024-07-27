@@ -3576,26 +3576,22 @@ define <1 x i64> @test_mm_insert_pi16(<1 x i64> %a.coerce, i32 %d) nounwind #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[A_COERCE]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <1 x i64> [[TMP3]] to i64
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP7]], 0
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i32 [[TMP6]], 0
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
-; CHECK:       4:
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       5:
-; CHECK-NEXT:    [[TMP9:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pinsr.w(<1 x i64> [[TMP8]], i32 [[D]], i32 2)
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[TMP9]] to <1 x i64>
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP9:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pinsr.w(<1 x i64> [[A_COERCE]], i32 [[D]], i32 2)
 ; CHECK-NEXT:    store <1 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
-; CHECK-NEXT:    ret <1 x i64> [[TMP2]]
+; CHECK-NEXT:    ret <1 x i64> [[TMP9]]
 ;
 entry:
-  %0 = bitcast <1 x i64> %a.coerce to <1 x i64>
-  %1 = tail call <1 x i64> @llvm.x86.mmx.pinsr.w(<1 x i64> %0, i32 %d, i32 2)
-  %2 = bitcast <1 x i64> %1 to <1 x i64>
-  ret <1 x i64> %2
+  %1 = tail call <1 x i64> @llvm.x86.mmx.pinsr.w(<1 x i64> %a.coerce, i32 %d, i32 2)
+  ret <1 x i64> %1
 }
 
 declare <1 x i64> @llvm.x86.mmx.pinsr.w(<1 x i64>, i32, i32 immarg)
@@ -3606,21 +3602,19 @@ define i32 @test_mm_extract_pi16(<1 x i64> %a.coerce) nounwind #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <1 x i64> [[A_COERCE]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[TMP2]] to i64
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP3:%.*]], !prof [[PROF0]]
+; CHECK:       2:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.x86.mmx.pextr.w(<1 x i64> [[TMP6]], i32 2)
+; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.x86.mmx.pextr.w(<1 x i64> [[A_COERCE]], i32 2)
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
-  %0 = bitcast <1 x i64> %a.coerce to <1 x i64>
-  %1 = tail call i32 @llvm.x86.mmx.pextr.w(<1 x i64> %0, i32 2)
+  %1 = tail call i32 @llvm.x86.mmx.pextr.w(<1 x i64> %a.coerce, i32 2)
   ret i32 %1
 }
 

@@ -46,7 +46,6 @@ define void @t2(<1 x i64> %v1) nounwind  {
 ; X86-64-NEXT:    movq _u2@GOTPCREL(%rip), %rax
 ; X86-64-NEXT:    movq %rdi, (%rax)
 ; X86-64-NEXT:    retq
-        %tmp = bitcast <1 x i64> %v1 to <1 x i64>
-	store <1 x i64> %tmp, ptr @u2, align 8
+	store <1 x i64> %v1, ptr @u2, align 8
 	ret void
 }

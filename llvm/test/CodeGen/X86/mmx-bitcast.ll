@@ -66,9 +66,7 @@ define void @t4(<1 x i64> %A, <1 x i64> %B) {
 ; CHECK-NEXT:    emms
 ; CHECK-NEXT:    retq
 entry:
-  %tmp2 = bitcast <1 x i64> %A to <1 x i64>
-  %tmp3 = bitcast <1 x i64> %B to <1 x i64>
-  %tmp7 = tail call <1 x i64> @llvm.x86.mmx.paddus.w(<1 x i64> %tmp2, <1 x i64> %tmp3)
+  %tmp7 = tail call <1 x i64> @llvm.x86.mmx.paddus.w(<1 x i64> %A, <1 x i64> %B)
   store <1 x i64> %tmp7, ptr @R
   tail call void @llvm.x86.mmx.emms()
   ret void
@@ -98,10 +96,8 @@ define <1 x i64> @t6(i64 %t) {
 ; CHECK-NEXT:    movq %mm0, %rax
 ; CHECK-NEXT:    retq
   %t1 = insertelement <1 x i64> undef, i64 %t, i32 0
-  %t0 = bitcast <1 x i64> %t1 to <1 x i64>
-  %t2 = tail call <1 x i64> @llvm.x86.mmx.pslli.q(<1 x i64> %t0, i32 48)
-  %t3 = bitcast <1 x i64> %t2 to <1 x i64>
-  ret <1 x i64> %t3
+  %t2 = tail call <1 x i64> @llvm.x86.mmx.pslli.q(<1 x i64> %t1, i32 48)
+  ret <1 x i64> %t2
 }
 
 declare <1 x i64> @llvm.x86.mmx.paddus.w(<1 x i64>, <1 x i64>)

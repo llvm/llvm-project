@@ -14,9 +14,7 @@ define void @foo(<1 x i64> %A, <1 x i64> %B) nounwind {
 ; CHECK-NEXT:    emms
 ; CHECK-NEXT:    retq
 entry:
-	%tmp4 = bitcast <1 x i64> %B to <1 x i64>		; <<4 x i16>> [#uses=1]
-	%tmp6 = bitcast <1 x i64> %A to <1 x i64>		; <<4 x i16>> [#uses=1]
-	%tmp7 = tail call <1 x i64> @llvm.x86.mmx.paddus.w( <1 x i64> %tmp6, <1 x i64> %tmp4 )		; <<1 x i64>> [#uses=1]
+	%tmp7 = tail call <1 x i64> @llvm.x86.mmx.paddus.w( <1 x i64> %A, <1 x i64> %B )		; <<1 x i64>> [#uses=1]
 	store <1 x i64> %tmp7, ptr @R
 	tail call void @llvm.x86.mmx.emms( )
 	ret void

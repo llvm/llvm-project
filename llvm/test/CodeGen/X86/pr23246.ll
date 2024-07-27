@@ -13,8 +13,7 @@ define <2 x i64> @test(<1 x i64> %a) #0 {
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; CHECK-NEXT:    retq
 entry:
-  %b = bitcast <1 x i64> %a to <1 x i64>
-  %s = shufflevector <1 x i64> %b, <1 x i64> undef, <2 x i32> <i32 undef, i32 0>
+  %s = shufflevector <1 x i64> %a, <1 x i64> undef, <2 x i32> <i32 undef, i32 0>
   ret <2 x i64> %s
 }
 
