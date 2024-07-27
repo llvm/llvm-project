@@ -89,6 +89,7 @@ private:
   void readVersionScriptCommand();
   void readNoCrossRefs(bool to);
 
+  StringRef readName();
   SymbolAssignment *readSymbolAssignment(StringRef name);
   ByteCommand *readByteCommand(StringRef tok);
   std::array<uint8_t, 4> readFill();
@@ -1089,7 +1090,7 @@ std::array<uint8_t, 4> ScriptParser::readFill() {
 
 SymbolAssignment *ScriptParser::readProvideHidden(bool provide, bool hidden) {
   expect("(");
-  StringRef name = next(), eq = peek();
+  StringRef name = readName(), eq = peek();
   if (eq != "=") {
     setError("= expected, but got " + next());
     while (till(")"))
@@ -1130,10 +1131,10 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
     SaveAndRestore saved(inExpr, true);
     if (op.starts_with("=")) {
       // Support = followed by an expression without whitespace.
-      cmd = readSymbolAssignment(tok);
+      cmd = readSymbolAssignment(unquote(tok));
     } else if ((op.size() == 2 && op[1] == '=' && strchr("+-*/&^|", op[0])) ||
                op == "<<=" || op == ">>=") {
-      cmd = readSymbolAssignment(tok);
+      cmd = readSymbolAssignment(unquote(tok));
     } else if (tok == "PROVIDE") {
       cmd = readProvideHidden(true, false);
     } else if (tok == "HIDDEN") {
@@ -1152,8 +1153,9 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
   return cmd;
 }
 
+StringRef ScriptParser::readName() { return unquote(next()); }
+
 SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
-  name = unquote(name);
   StringRef op = next();
   assert(op == "=" || op == "*=" || op == "/=" || op == "+=" || op == "-=" ||
          op == "&=" || op == "^=" || op == "|=" || op == "<<=" || op == ">>=");
