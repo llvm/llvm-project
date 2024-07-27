@@ -1,4 +1,4 @@
-//===-- Implementation of pthread_spin_destroy function ------------------===//
+//===-- Implementation of pthread_spin_destroy function -------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
