@@ -8888,35 +8888,20 @@ emitMappingInformation(CodeGenFunction &CGF, llvm::OpenMPIRBuilder &OMPBuilder,
                                          PLoc.getLine(), PLoc.getColumn(),
                                          SrcLocStrSize);
 }
-
 /// Emit the arrays used to pass the captures and map information to the
 /// offloading runtime library. If there is no map or capture information,
 /// return nullptr by reference.
-static void emitOffloadingArrays(
+static void emitOffloadingArraysAndArgs(
     CodeGenFunction &CGF, MappableExprsHandler::MapCombinedInfoTy &CombinedInfo,
     CGOpenMPRuntime::TargetDataInfo &Info, llvm::OpenMPIRBuilder &OMPBuilder,
-    bool IsNonContiguous = false) {
+    bool IsNonContiguous = false, bool ForEndCall = false) {
   CodeGenModule &CGM = CGF.CGM;
-
-  // Reset the array information.
-  Info.clearArrayInfo();
-  Info.NumberOfPtrs = CombinedInfo.BasePointers.size();
 
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   InsertPointTy AllocaIP(CGF.AllocaInsertPt->getParent(),
                          CGF.AllocaInsertPt->getIterator());
   InsertPointTy CodeGenIP(CGF.Builder.GetInsertBlock(),
                           CGF.Builder.GetInsertPoint());
-
-  auto FillInfoMap = [&](MappableExprsHandler::MappingExprInfo &MapExpr) {
-    return emitMappingInformation(CGF, OMPBuilder, MapExpr);
-  };
-  if (CGM.getCodeGenOpts().getDebugInfo() !=
-      llvm::codegenoptions::NoDebugInfo) {
-    CombinedInfo.Names.resize(CombinedInfo.Exprs.size());
-    llvm::transform(CombinedInfo.Exprs, CombinedInfo.Names.begin(),
-                    FillInfoMap);
-  }
 
   auto DeviceAddrCB = [&](unsigned int I, llvm::Value *NewDecl) {
     if (const ValueDecl *DevVD = CombinedInfo.DevicePtrDecls[I]) {
@@ -8928,14 +8913,14 @@ static void emitOffloadingArrays(
     llvm::Value *MFunc = nullptr;
     if (CombinedInfo.Mappers[I]) {
       Info.HasMapper = true;
-      MFunc = CGF.CGM.getOpenMPRuntime().getOrCreateUserDefinedMapperFunc(
+      MFunc = CGM.getOpenMPRuntime().getOrCreateUserDefinedMapperFunc(
           cast<OMPDeclareMapperDecl>(CombinedInfo.Mappers[I]));
     }
     return MFunc;
   };
-  OMPBuilder.emitOffloadingArrays(AllocaIP, CodeGenIP, CombinedInfo, Info,
-                                  /*IsNonContiguous=*/true, DeviceAddrCB,
-                                  CustomMapperCB);
+  OMPBuilder.emitOffloadingArraysAndArgs(
+      AllocaIP, CodeGenIP, Info, Info.RTArgs, CombinedInfo, IsNonContiguous,
+      ForEndCall, DeviceAddrCB, CustomMapperCB);
 }
 
 /// Check for inner distribute directive.
@@ -9528,32 +9513,39 @@ llvm::Value *emitDynCGGroupMem(const OMPExecutableDirective &D,
   }
   return DynCGroupMem;
 }
+static void genMapInfoForCaptures(
+    MappableExprsHandler &MEHandler, CodeGenFunction &CGF,
+    const CapturedStmt &CS, llvm::SmallVectorImpl<llvm::Value *> &CapturedVars,
+    llvm::OpenMPIRBuilder &OMPBuilder,
+    llvm::DenseSet<CanonicalDeclPtr<const Decl>> &MappedVarSet,
+    uint32_t &CapturedCount,
+    MappableExprsHandler::MapCombinedInfoTy &CombinedInfo) {
 
-static void emitTargetCallKernelLaunch(
-    CGOpenMPRuntime *OMPRuntime, llvm::Function *OutlinedFn,
-    const OMPExecutableDirective &D,
-    llvm::SmallVectorImpl<llvm::Value *> &CapturedVars, bool RequiresOuterTask,
-    const CapturedStmt &CS, bool OffloadingMandatory,
-    llvm::PointerIntPair<const Expr *, 2, OpenMPDeviceClauseModifier> Device,
-    llvm::Value *OutlinedFnID, CodeGenFunction::OMPTargetDataInfo &InputInfo,
-    llvm::Value *&MapTypesArray, llvm::Value *&MapNamesArray,
-    llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
-                                     const OMPLoopDirective &D)>
-        SizeEmitter,
-    CodeGenFunction &CGF, CodeGenModule &CGM) {
-  llvm::OpenMPIRBuilder &OMPBuilder = OMPRuntime->getOMPBuilder();
+// static void emitTargetCallKernelLaunch(
+//     CGOpenMPRuntime *OMPRuntime, llvm::Function *OutlinedFn,
+//     const OMPExecutableDirective &D,
+//     llvm::SmallVectorImpl<llvm::Value *> &CapturedVars, bool RequiresOuterTask,
+//     const CapturedStmt &CS, bool OffloadingMandatory,
+//     llvm::PointerIntPair<const Expr *, 2, OpenMPDeviceClauseModifier> Device,
+//     llvm::Value *OutlinedFnID, CodeGenFunction::OMPTargetDataInfo &InputInfo,
+//     llvm::Value *&MapTypesArray, llvm::Value *&MapNamesArray,
+//     llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
+//                                      const OMPLoopDirective &D)>
+//         SizeEmitter,
+//     CodeGenFunction &CGF, CodeGenModule &CGM) {
+//   llvm::OpenMPIRBuilder &OMPBuilder = OMPRuntime->getOMPBuilder();
 
-  // Fill up the arrays with all the captured variables.
-  MappableExprsHandler::MapCombinedInfoTy CombinedInfo;
+//   // Fill up the arrays with all the captured variables.
+//   MappableExprsHandler::MapCombinedInfoTy CombinedInfo;
 
-  // Get mappable expression information.
-  MappableExprsHandler MEHandler(D, CGF);
+//   // Get mappable expression information.
+//   MappableExprsHandler MEHandler(D, CGF);
   llvm::DenseMap<llvm::Value *, llvm::Value *> LambdaPointers;
-  llvm::DenseSet<CanonicalDeclPtr<const Decl>> MappedVarSet;
+  // llvm::DenseSet<CanonicalDeclPtr<const Decl>> MappedVarSet;
 
   auto RI = CS.getCapturedRecordDecl()->field_begin();
   auto *CV = CapturedVars.begin();
-  uint32_t CapturedCount = 0;
+  CapturedCount = 0;
   for (CapturedStmt::const_capture_iterator CI = CS.capture_begin(),
                                             CE = CS.capture_end();
        CI != CE; ++CI, ++RI, ++CV) {
@@ -9619,15 +9611,68 @@ static void emitTargetCallKernelLaunch(
   MEHandler.adjustMemberOfForLambdaCaptures(
       OMPBuilder, LambdaPointers, CombinedInfo.BasePointers,
       CombinedInfo.Pointers, CombinedInfo.Types);
+}
+static void
+genMapInfo(MappableExprsHandler &MEHandler, CodeGenFunction &CGF,
+           MappableExprsHandler::MapCombinedInfoTy &CombinedInfo,
+           llvm::OpenMPIRBuilder &OMPBuilder,
+           const llvm::DenseSet<CanonicalDeclPtr<const Decl>> &SkippedVarSet =
+               llvm::DenseSet<CanonicalDeclPtr<const Decl>>()) {
+
+  CodeGenModule &CGM = CGF.CGM;
+
   // Map any list items in a map clause that were not captures because they
   // weren't referenced within the construct.
-  MEHandler.generateAllInfo(CombinedInfo, OMPBuilder, MappedVarSet);
+  MEHandler.generateAllInfo(CombinedInfo, OMPBuilder, SkippedVarSet);
+
+  auto FillInfoMap = [&](MappableExprsHandler::MappingExprInfo &MapExpr) {
+    return emitMappingInformation(CGF, OMPBuilder, MapExpr);
+  };
+  if (CGM.getCodeGenOpts().getDebugInfo() !=
+      llvm::codegenoptions::NoDebugInfo) {
+    CombinedInfo.Names.resize(CombinedInfo.Exprs.size());
+    llvm::transform(CombinedInfo.Exprs, CombinedInfo.Names.begin(),
+                    FillInfoMap);
+  }
+}
+
+static void genMapInfo(const OMPExecutableDirective &D, CodeGenFunction &CGF,
+                       const CapturedStmt &CS,
+                       llvm::SmallVectorImpl<llvm::Value *> &CapturedVars,
+                       llvm::OpenMPIRBuilder &OMPBuilder,
+                       uint32_t &CapturedCount,
+                       MappableExprsHandler::MapCombinedInfoTy &CombinedInfo) {
+  // Get mappable expression information.
+  MappableExprsHandler MEHandler(D, CGF);
+  llvm::DenseSet<CanonicalDeclPtr<const Decl>> MappedVarSet;
+
+  genMapInfoForCaptures(MEHandler, CGF, CS, CapturedVars, OMPBuilder,
+                        MappedVarSet, CapturedCount, CombinedInfo);
+  genMapInfo(MEHandler, CGF, CombinedInfo, OMPBuilder, MappedVarSet);
+
+}
+
+static void emitTargetCallKernelLaunch(
+    CGOpenMPRuntime *OMPRuntime, llvm::Function *OutlinedFn,
+    const OMPExecutableDirective &D,
+    llvm::SmallVectorImpl<llvm::Value *> &CapturedVars, bool RequiresOuterTask,
+    const CapturedStmt &CS, bool OffloadingMandatory,
+    llvm::PointerIntPair<const Expr *, 2, OpenMPDeviceClauseModifier> Device,
+    llvm::Value *OutlinedFnID, CodeGenFunction::OMPTargetDataInfo &InputInfo,
+    llvm::Value *&MapTypesArray, llvm::Value *&MapNamesArray,
+    llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
+                                     const OMPLoopDirective &D)>
+        SizeEmitter,
+    CodeGenFunction &CGF, CodeGenModule &CGM) {
+  llvm::OpenMPIRBuilder &OMPBuilder = OMPRuntime->getOMPBuilder();
+
+  // Fill up the arrays with all the captured variables.
+  MappableExprsHandler::MapCombinedInfoTy CombinedInfo;
+  uint32_t CapturedCount;
+  genMapInfo(D, CGF, CS, CapturedVars, OMPBuilder, CapturedCount, CombinedInfo);
 
   // Array to hold to allocated XTeam reduction variables:
   llvm::SmallVector<llvm::Value *, 8> ReductionVars;
-
-  // Builder used for allocating and deallocating reduction variables:
-  auto &OmpBuilder = CGF.CGM.getOpenMPRuntime().getOMPBuilder();
 
   // TODO Use device id from device clause, if any.
   llvm::CallInst *DevIdVal = nullptr;
@@ -9653,7 +9698,7 @@ static void emitTargetCallKernelLaunch(
     if (!IsXteamRedFast) {
       // TODO Use device id from device clause, if any.
       DevIdVal = CGF.EmitRuntimeCall(
-          OmpBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
+          OMPBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
                                                 OMPRTL_omp_get_default_device),
           "default_dev");
 
@@ -9667,7 +9712,7 @@ static void emitTargetCallKernelLaunch(
       if (XteamRedNumTeamsFromClauseVal == nullptr) {
         // team_procs = ompx_get_team_procs(devid)
         TeamProcsInst = CGF.EmitRuntimeCall(
-            OmpBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
+            OMPBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
                                                   OMPRTL_ompx_get_team_procs),
             DevIdVal, "team_procs");
 
@@ -9687,7 +9732,7 @@ static void emitTargetCallKernelLaunch(
 
       // initial_devid = omp_get_initial_device()
       InitialDevInst = CGF.EmitRuntimeCall(
-          OmpBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
+          OMPBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
                                                 OMPRTL_omp_get_initial_device),
           "initial_devid");
     }
@@ -9740,7 +9785,7 @@ static void emitTargetCallKernelLaunch(
             "d_team_vals_sz");
         llvm::Value *TgtAllocArgs[] = {DTeamValsSz, DevIdVal};
         DTeamValsInst = CGF.EmitRuntimeCall(
-            OmpBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
+            OMPBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
                                                   OMPRTL_omp_target_alloc),
             TgtAllocArgs, "d_team_vals");
       }
@@ -9772,7 +9817,7 @@ static void emitTargetCallKernelLaunch(
         llvm::Value *IntTySz = llvm::ConstantInt::get(CGF.Int64Ty, 4);
         llvm::Value *DTeamsDonePtrArgs[] = {IntTySz, DevIdVal};
         DTeamsDonePtrInst = CGF.EmitRuntimeCall(
-            OmpBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
+            OMPBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
                                                   OMPRTL_omp_target_alloc),
             DTeamsDonePtrArgs, "d_teams_done_ptr");
 
@@ -9786,7 +9831,7 @@ static void emitTargetCallKernelLaunch(
             /*src_offset=*/llvm::ConstantInt::get(CGF.Int64Ty, 0),
             DevIdVal,
             InitialDevInst};
-        CGF.EmitRuntimeCall(OmpBuilder.getOrCreateRuntimeFunction(
+        CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                                 CGF.CGM.getModule(), OMPRTL_omp_target_memcpy),
                             DTeamsDoneMemcpyArgs);
       }
@@ -9801,13 +9846,8 @@ static void emitTargetCallKernelLaunch(
   }
 
   CGOpenMPRuntime::TargetDataInfo Info;
-  // Fill up the arrays and create the arguments.
-  emitOffloadingArrays(CGF, CombinedInfo, Info, OMPBuilder);
-  bool EmitDebug = CGF.CGM.getCodeGenOpts().getDebugInfo() !=
-                   llvm::codegenoptions::NoDebugInfo;
-  OMPBuilder.emitOffloadingArraysArgument(CGF.Builder, Info.RTArgs, Info,
-                                          EmitDebug,
-                                          /*ForEndCall=*/false);
+  emitOffloadingArraysAndArgs(CGF, CombinedInfo, Info, OMPBuilder,
+                              /*IsNonContiguous=*/true, /*ForEndCall=*/false);
 
   InputInfo.NumberOfTargetItems = Info.NumberOfPtrs;
   InputInfo.BasePointersArray = Address(Info.RTArgs.BasePointersArray,
@@ -9890,7 +9930,7 @@ static void emitTargetCallKernelLaunch(
       // Deallocate XTeam reduction variables:
       for (uint32_t I = 0; I < ReductionVars.size(); ++I) {
         llvm::Value *FreeArgs[] = {ReductionVars[I], DevIdVal};
-        CGF.EmitRuntimeCall(OmpBuilder.getOrCreateRuntimeFunction(
+        CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                                 CGF.CGM.getModule(), OMPRTL_omp_target_free),
                             FreeArgs);
       }
@@ -10717,22 +10757,15 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
                                           PrePostActionTy &) {
     // Fill up the arrays with all the mapped variables.
     MappableExprsHandler::MapCombinedInfoTy CombinedInfo;
-
-    // Get map clause information.
-    MappableExprsHandler MEHandler(D, CGF);
-    MEHandler.generateAllInfo(CombinedInfo, OMPBuilder);
-
     CGOpenMPRuntime::TargetDataInfo Info;
-    // Fill up the arrays and create the arguments.
-    emitOffloadingArrays(CGF, CombinedInfo, Info, OMPBuilder,
-                         /*IsNonContiguous=*/true);
+    MappableExprsHandler MEHandler(D, CGF);
+    genMapInfo(MEHandler, CGF, CombinedInfo, OMPBuilder);
+    emitOffloadingArraysAndArgs(CGF, CombinedInfo, Info, OMPBuilder,
+                                /*IsNonContiguous=*/true, /*ForEndCall=*/false);
+
     bool RequiresOuterTask = D.hasClausesOfKind<OMPDependClause>() ||
                              D.hasClausesOfKind<OMPNowaitClause>();
-    bool EmitDebug = CGF.CGM.getCodeGenOpts().getDebugInfo() !=
-                     llvm::codegenoptions::NoDebugInfo;
-    OMPBuilder.emitOffloadingArraysArgument(CGF.Builder, Info.RTArgs, Info,
-                                            EmitDebug,
-                                            /*ForEndCall=*/false);
+
     InputInfo.NumberOfTargetItems = Info.NumberOfPtrs;
     InputInfo.BasePointersArray = Address(Info.RTArgs.BasePointersArray,
                                           CGF.VoidPtrTy, CGM.getPointerAlign());

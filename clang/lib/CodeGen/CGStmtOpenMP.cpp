@@ -6629,8 +6629,8 @@ emitOMPAtomicRMW(CodeGenFunction &CGF, LValue X, RValue Update,
       UpdateVal = CGF.Builder.CreateCast(llvm::Instruction::CastOps::UIToFP, IC,
                                          X.getAddress().getElementType());
   }
-  llvm::Value *Res =
-      CGF.Builder.CreateAtomicRMW(RMWOp, X.getAddress(), UpdateVal, AO);
+  llvm::AtomicRMWInst *Res =
+      CGF.emitAtomicRMWInst(RMWOp, X.getAddress(), UpdateVal, AO);
   return std::make_pair(true, RValue::get(Res));
 }
 

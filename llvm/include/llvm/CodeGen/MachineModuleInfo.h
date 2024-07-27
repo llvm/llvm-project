@@ -116,10 +116,6 @@ class MachineModuleInfo {
   /// True if debugging information is available in this module.
   bool DbgInfoAvailable = false;
 
-  /// True if this module is being built for windows/msvc, and uses floating
-  /// point.  This is used to emit an undefined reference to _fltused.
-  bool UsesMSVCFloatingPoint = false;
-
   /// Maps IR Functions to their corresponding MachineFunctions.
   DenseMap<const Function*, std::unique_ptr<MachineFunction>> MachineFunctions;
   /// Next unique number available for a MachineFunction.
@@ -188,10 +184,6 @@ public:
 
   /// Returns true if valid debug info is present.
   bool hasDebugInfo() const { return DbgInfoAvailable; }
-
-  bool usesMSVCFloatingPoint() const { return UsesMSVCFloatingPoint; }
-
-  void setUsesMSVCFloatingPoint(bool b) { UsesMSVCFloatingPoint = b; }
 
   /// \name Exception Handling
   /// \{

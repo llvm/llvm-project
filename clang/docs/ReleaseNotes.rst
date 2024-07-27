@@ -86,6 +86,9 @@ C++2c Feature Support
   The changes to attributes declarations are not part of this release.
 - Implemented `P2741R3: user-generated static_assert messages  <https://wg21.link/P2741R3>`_.
 
+- Add ``__builtin_is_virtual_base_of`` intrinsic, which supports
+  `P2985R0 A type trait for detecting virtual base classes <https://wg21.link/p2985r0>`_
+
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -115,6 +118,8 @@ Attribute Changes in Clang
 
 - Clang now disallows more than one ``__attribute__((ownership_returns(class, idx)))`` with
   different class names attached to one function.
+
+- Introduced a new format attribute ``__attribute__((format(syslog, 1, 2)))`` from OpenBSD.
 
 Improvements to Clang's diagnostics
 -----------------------------------

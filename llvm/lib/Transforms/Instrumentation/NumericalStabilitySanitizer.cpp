@@ -1725,6 +1725,9 @@ Value *NumericalStabilitySanitizer::createShadowValueWithOperandsAvailable(
                                 Map.getShadow(S->getTrueValue()),
                                 Map.getShadow(S->getFalseValue()));
 
+  if (auto *Freeze = dyn_cast<FreezeInst>(&Inst))
+    return Builder.CreateFreeze(Map.getShadow(Freeze->getOperand(0)));
+
   if (auto *Extract = dyn_cast<ExtractElementInst>(&Inst))
     return Builder.CreateExtractElement(
         Map.getShadow(Extract->getVectorOperand()), Extract->getIndexOperand());
