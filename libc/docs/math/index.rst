@@ -77,7 +77,7 @@ Implementation Status
 
   - `linux-aarch32 <https://github.com/llvm/llvm-project/tree/main/libc/config/linux/arm/entrypoints.txt>`_
 
-  - `linux-riscv64 <https://github.com/llvm/llvm-project/tree/main/libc/config/linux/riscv64/entrypoints.txt>`_
+  - `linux-riscv and linux-riscv32 <https://github.com/llvm/llvm-project/tree/main/libc/config/linux/riscv/entrypoints.txt>`_
 
 * To check math functions enabled for Windows:
 
@@ -230,7 +230,7 @@ Basic Operations
 +------------------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+----------------------------+
 | totalorder       |                  |                 |                        | |check|              |                        | F.10.12.1              | N/A                        |
 +------------------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+----------------------------+
-| totalordermag    |                  |                 |                        | |check|              |                        | F.10.12.2              | N/A                        |
+| totalordermag    | |check|          | |check|         | |check|                | |check|              | |check|                | F.10.12.2              | N/A                        |
 +------------------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+----------------------------+
 | trunc            | |check|          | |check|         | |check|                | |check|              | |check|                | 7.12.9.9               | F.10.6.9                   |
 +------------------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+----------------------------+

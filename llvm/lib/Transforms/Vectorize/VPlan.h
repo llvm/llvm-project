@@ -3471,11 +3471,6 @@ public:
 
   void addLiveOut(PHINode *PN, VPValue *V);
 
-  void removeLiveOut(PHINode *PN) {
-    delete LiveOuts[PN];
-    LiveOuts.erase(PN);
-  }
-
   const MapVector<PHINode *, VPLiveOut *> &getLiveOuts() const {
     return LiveOuts;
   }

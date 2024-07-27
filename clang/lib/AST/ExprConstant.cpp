@@ -2843,6 +2843,8 @@ static bool handleIntIntBinOp(EvalInfo &Info, const BinaryOperator *E,
       // During constant-folding, a negative shift is an opposite shift. Such
       // a shift is not a constant expression.
       Info.CCEDiag(E, diag::note_constexpr_negative_shift) << RHS;
+      if (!Info.noteUndefinedBehavior())
+        return false;
       RHS = -RHS;
       goto shift_right;
     }
@@ -2853,19 +2855,23 @@ static bool handleIntIntBinOp(EvalInfo &Info, const BinaryOperator *E,
     if (SA != RHS) {
       Info.CCEDiag(E, diag::note_constexpr_large_shift)
         << RHS << E->getType() << LHS.getBitWidth();
+      if (!Info.noteUndefinedBehavior())
+        return false;
     } else if (LHS.isSigned() && !Info.getLangOpts().CPlusPlus20) {
       // C++11 [expr.shift]p2: A signed left shift must have a non-negative
       // operand, and must not overflow the corresponding unsigned type.
       // C++2a [expr.shift]p2: E1 << E2 is the unique value congruent to
       // E1 x 2^E2 module 2^N.
-      if (LHS.isNegative())
+      if (LHS.isNegative()) {
         Info.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS;
-      else if (LHS.countl_zero() < SA)
+        if (!Info.noteUndefinedBehavior())
+          return false;
+      } else if (LHS.countl_zero() < SA) {
         Info.CCEDiag(E, diag::note_constexpr_lshift_discards);
+        if (!Info.noteUndefinedBehavior())
+          return false;
+      }
     }
-    if (Info.EvalStatus.Diag && !Info.EvalStatus.Diag->empty() &&
-        Info.getLangOpts().CPlusPlus11)
-      return false;
     Result = LHS << SA;
     return true;
   }
@@ -2879,6 +2885,8 @@ static bool handleIntIntBinOp(EvalInfo &Info, const BinaryOperator *E,
       // During constant-folding, a negative shift is an opposite shift. Such a
       // shift is not a constant expression.
       Info.CCEDiag(E, diag::note_constexpr_negative_shift) << RHS;
+      if (!Info.noteUndefinedBehavior())
+        return false;
       RHS = -RHS;
       goto shift_left;
     }
@@ -2886,13 +2894,13 @@ static bool handleIntIntBinOp(EvalInfo &Info, const BinaryOperator *E,
     // C++11 [expr.shift]p1: Shift width must be less than the bit width of the
     // shifted type.
     unsigned SA = (unsigned) RHS.getLimitedValue(LHS.getBitWidth()-1);
-    if (SA != RHS)
+    if (SA != RHS) {
       Info.CCEDiag(E, diag::note_constexpr_large_shift)
         << RHS << E->getType() << LHS.getBitWidth();
+      if (!Info.noteUndefinedBehavior())
+        return false;
+    }
 
-    if (Info.EvalStatus.Diag && !Info.EvalStatus.Diag->empty() &&
-        Info.getLangOpts().CPlusPlus11)
-      return false;
     Result = LHS >> SA;
     return true;
   }

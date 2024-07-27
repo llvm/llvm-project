@@ -2172,15 +2172,125 @@ static const char *RegNumToRegName(int reg) {
       return "ebp";
     case REG_ESP:
       return "esp";
+#    elif defined(__arm__)
+#      ifdef MAKE_CASE
+#        undef MAKE_CASE
+#      endif
+#      define REG_STR(reg) #reg
+#      define MAKE_CASE(N) \
+        case REG_R##N:     \
+          return REG_STR(r##N)
+    MAKE_CASE(0);
+    MAKE_CASE(1);
+    MAKE_CASE(2);
+    MAKE_CASE(3);
+    MAKE_CASE(4);
+    MAKE_CASE(5);
+    MAKE_CASE(6);
+    MAKE_CASE(7);
+    MAKE_CASE(8);
+    MAKE_CASE(9);
+    MAKE_CASE(10);
+    MAKE_CASE(11);
+    MAKE_CASE(12);
+    case REG_R13:
+      return "sp";
+    case REG_R14:
+      return "lr";
+    case REG_R15:
+      return "pc";
+#    elif defined(__aarch64__)
+#      define REG_STR(reg) #reg
+#      define MAKE_CASE(N) \
+        case N:            \
+          return REG_STR(x##N)
+    MAKE_CASE(0);
+    MAKE_CASE(1);
+    MAKE_CASE(2);
+    MAKE_CASE(3);
+    MAKE_CASE(4);
+    MAKE_CASE(5);
+    MAKE_CASE(6);
+    MAKE_CASE(7);
+    MAKE_CASE(8);
+    MAKE_CASE(9);
+    MAKE_CASE(10);
+    MAKE_CASE(11);
+    MAKE_CASE(12);
+    MAKE_CASE(13);
+    MAKE_CASE(14);
+    MAKE_CASE(15);
+    MAKE_CASE(16);
+    MAKE_CASE(17);
+    MAKE_CASE(18);
+    MAKE_CASE(19);
+    MAKE_CASE(20);
+    MAKE_CASE(21);
+    MAKE_CASE(22);
+    MAKE_CASE(23);
+    MAKE_CASE(24);
+    MAKE_CASE(25);
+    MAKE_CASE(26);
+    MAKE_CASE(27);
+    MAKE_CASE(28);
+    case 29:
+      return "fp";
+    case 30:
+      return "lr";
+    case 31:
+      return "sp";
 #    endif
-#  endif
+#  endif  // SANITIZER_LINUX
     default:
       return NULL;
   }
   return NULL;
 }
 
-#  if SANITIZER_LINUX
+#  if SANITIZER_LINUX && (defined(__arm__) || defined(__aarch64__))
+static uptr GetArmRegister(ucontext_t *ctx, int RegNum) {
+  switch (RegNum) {
+#    if defined(__arm__)
+#      ifdef MAKE_CASE
+#        undef MAKE_CASE
+#      endif
+#      define MAKE_CASE(N) \
+        case REG_R##N:     \
+          return ctx->uc_mcontext.arm_r##N
+    MAKE_CASE(0);
+    MAKE_CASE(1);
+    MAKE_CASE(2);
+    MAKE_CASE(3);
+    MAKE_CASE(4);
+    MAKE_CASE(5);
+    MAKE_CASE(6);
+    MAKE_CASE(7);
+    MAKE_CASE(8);
+    MAKE_CASE(9);
+    MAKE_CASE(10);
+    case REG_R11:
+      return ctx->uc_mcontext.arm_fp;
+    case REG_R12:
+      return ctx->uc_mcontext.arm_ip;
+    case REG_R13:
+      return ctx->uc_mcontext.arm_sp;
+    case REG_R14:
+      return ctx->uc_mcontext.arm_lr;
+    case REG_R15:
+      return ctx->uc_mcontext.arm_pc;
+#    elif defined(__aarch64__)
+    case 0 ... 30:
+      return ctx->uc_mcontext.regs[RegNum];
+    case 31:
+      return ctx->uc_mcontext.sp;
+#    endif
+    default:
+      return 0;
+  }
+  return 0;
+}
+#  endif  // SANITIZER_LINUX && (defined(__arm__) || defined(__aarch64__))
+
 UNUSED
 static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
   const char *RegName = RegNumToRegName(RegNum);
@@ -2189,11 +2299,16 @@ static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
          RegName, ctx->uc_mcontext.gregs[RegNum]);
 #    elif defined(__i386__)
   Printf("%s = 0x%08x  ", RegName, ctx->uc_mcontext.gregs[RegNum]);
-#    else
+#  elif defined(__arm__)
+  Printf("%s%s = 0x%08zx  ", internal_strlen(RegName) == 2 ? " " : "", RegName,
+         GetArmRegister(ctx, RegNum));
+#  elif defined(__aarch64__)
+  Printf("%s%s = 0x%016zx  ", internal_strlen(RegName) == 2 ? " " : "", RegName,
+         GetArmRegister(ctx, RegNum));
+#  else
   (void)RegName;
-#    endif
-}
 #  endif
+}
 
 void SignalContext::DumpAllRegisters(void *context) {
   ucontext_t *ucontext = (ucontext_t *)context;
@@ -2236,6 +2351,35 @@ void SignalContext::DumpAllRegisters(void *context) {
   DumpSingleReg(ucontext, REG_EBP);
   DumpSingleReg(ucontext, REG_ESP);
   Printf("\n");
+#    elif defined(__arm__)
+  Report("Register values:\n");
+  DumpSingleReg(ucontext, REG_R0);
+  DumpSingleReg(ucontext, REG_R1);
+  DumpSingleReg(ucontext, REG_R2);
+  DumpSingleReg(ucontext, REG_R3);
+  Printf("\n");
+  DumpSingleReg(ucontext, REG_R4);
+  DumpSingleReg(ucontext, REG_R5);
+  DumpSingleReg(ucontext, REG_R6);
+  DumpSingleReg(ucontext, REG_R7);
+  Printf("\n");
+  DumpSingleReg(ucontext, REG_R8);
+  DumpSingleReg(ucontext, REG_R9);
+  DumpSingleReg(ucontext, REG_R10);
+  DumpSingleReg(ucontext, REG_R11);
+  Printf("\n");
+  DumpSingleReg(ucontext, REG_R12);
+  DumpSingleReg(ucontext, REG_R13);
+  DumpSingleReg(ucontext, REG_R14);
+  DumpSingleReg(ucontext, REG_R15);
+  Printf("\n");
+#    elif defined(__aarch64__)
+  Report("Register values:\n");
+  for (int i = 0; i <= 31; ++i) {
+    DumpSingleReg(ucontext, i);
+    if (i % 4 == 3)
+      Printf("\n");
+  }
 #    else
   (void)ucontext;
 #    endif

@@ -352,6 +352,13 @@ public:
     return getFrameIndexReference(MF, FI, FrameReg);
   }
 
+  /// getFrameIndexReferenceFromSP - This method returns the offset from the
+  /// stack pointer to the slot of the specified index. This function serves to
+  /// provide a comparable offset from a single reference point (the value of
+  /// the stack-pointer at function entry) that can be used for analysis.
+  virtual StackOffset getFrameIndexReferenceFromSP(const MachineFunction &MF,
+                                                   int FI) const;
+
   /// Returns the callee-saved registers as computed by determineCalleeSaves
   /// in the BitVector \p SavedRegs.
   virtual void getCalleeSaves(const MachineFunction &MF,

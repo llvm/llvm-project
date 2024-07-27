@@ -763,6 +763,9 @@ class CastExpressionIdValidator final : public CorrectionCandidateCallback {
 bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
                                    tok::TokenKind *Kind) {
   if (RevertibleTypeTraits.empty()) {
+// Revertible type trait is a feature for backwards compatibility with older
+// standard libraries that declare their own structs with the same name as
+// the builtins listed below. New builtins should NOT be added to this list.
 #define RTT_JOIN(X, Y) X##Y
 #define REVERTIBLE_TYPE_TRAIT(Name)                                            \
   RevertibleTypeTraits[PP.getIdentifierInfo(#Name)] = RTT_JOIN(tok::kw_, Name)
@@ -790,7 +793,6 @@ bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
     REVERTIBLE_TYPE_TRAIT(__is_fundamental);
     REVERTIBLE_TYPE_TRAIT(__is_integral);
     REVERTIBLE_TYPE_TRAIT(__is_interface_class);
-    REVERTIBLE_TYPE_TRAIT(__is_layout_compatible);
     REVERTIBLE_TYPE_TRAIT(__is_literal);
     REVERTIBLE_TYPE_TRAIT(__is_lvalue_expr);
     REVERTIBLE_TYPE_TRAIT(__is_lvalue_reference);

@@ -129,3 +129,7 @@ breaks openmp tests:
 3c8efd79283b [OpenMP] Ensure the actual kernel is annotated with launch bounds (#99927)  
 Ron
 ---
+Revert: breaks devIO for openmp
+dfeb3991fb48 Remove the `x86_mmx` IR type. (#98505)
+Ron
+---

@@ -47,12 +47,6 @@ void AMDGPUInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   printAnnotation(OS, Annot);
 }
 
-void AMDGPUInstPrinter::printU4ImmOperand(const MCInst *MI, unsigned OpNo,
-                                          const MCSubtargetInfo &STI,
-                                          raw_ostream &O) {
-  O << formatHex(MI->getOperand(OpNo).getImm() & 0xf);
-}
-
 void AMDGPUInstPrinter::printU16ImmOperand(const MCInst *MI, unsigned OpNo,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
@@ -74,11 +68,6 @@ void AMDGPUInstPrinter::printU16ImmOperand(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printU4ImmDecOperand(const MCInst *MI, unsigned OpNo,
                                              raw_ostream &O) {
   O << formatDec(MI->getOperand(OpNo).getImm() & 0xf);
-}
-
-void AMDGPUInstPrinter::printU8ImmDecOperand(const MCInst *MI, unsigned OpNo,
-                                             raw_ostream &O) {
-  O << formatDec(MI->getOperand(OpNo).getImm() & 0xff);
 }
 
 void AMDGPUInstPrinter::printU16ImmDecOperand(const MCInst *MI, unsigned OpNo,
@@ -138,19 +127,15 @@ void AMDGPUInstPrinter::printFlatOffset(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printOffset0(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
-  if (MI->getOperand(OpNo).getImm()) {
-    O << " offset0:";
-    printU8ImmDecOperand(MI, OpNo, O);
-  }
+  if (int64_t Offset = MI->getOperand(OpNo).getImm())
+    O << " offset0:" << formatDec(Offset);
 }
 
 void AMDGPUInstPrinter::printOffset1(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
-  if (MI->getOperand(OpNo).getImm()) {
-    O << " offset1:";
-    printU8ImmDecOperand(MI, OpNo, O);
-  }
+  if (int64_t Offset = MI->getOperand(OpNo).getImm())
+    O << " offset1:" << formatDec(Offset);
 }
 
 void AMDGPUInstPrinter::printSMRDOffset8(const MCInst *MI, unsigned OpNo,
@@ -1158,15 +1143,13 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printDppRowMask(const MCInst *MI, unsigned OpNo,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
-  O << " row_mask:";
-  printU4ImmOperand(MI, OpNo, STI, O);
+  O << " row_mask:" << formatHex(MI->getOperand(OpNo).getImm());
 }
 
 void AMDGPUInstPrinter::printDppBankMask(const MCInst *MI, unsigned OpNo,
                                          const MCSubtargetInfo &STI,
                                          raw_ostream &O) {
-  O << " bank_mask:";
-  printU4ImmOperand(MI, OpNo, STI, O);
+  O << " bank_mask:" << formatHex(MI->getOperand(OpNo).getImm());
 }
 
 void AMDGPUInstPrinter::printDppBoundCtrl(const MCInst *MI, unsigned OpNo,

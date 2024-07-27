@@ -3447,11 +3447,6 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductionsGPU(
   else
     Config.setGridValue(getGridValue(T, ReductionFunc));
 
-  uint32_t SrcLocStrSize;
-  Constant *SrcLocStr = getOrCreateDefaultSrcLocStr(SrcLocStrSize);
-  Value *RTLoc =
-      getOrCreateIdent(SrcLocStr, SrcLocStrSize, omp::IdentFlag(0), 0);
-
   // Build res = __kmpc_reduce{_nowait}(<gtid>, <n>, sizeof(RedList),
   // RedList, shuffle_reduce_func, interwarp_copy_func);
   // or
@@ -3504,7 +3499,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductionsGPU(
         Builder.CreatePointerBitCastOrAddrSpaceCast(SarFunc, PtrTy);
     Value *WcFuncCast =
         Builder.CreatePointerBitCastOrAddrSpaceCast(WcFunc, PtrTy);
-    Value *Args[] = {RTLoc, ReductionDataSize, RL, SarFuncCast, WcFuncCast};
+    Value *Args[] = {SrcLocInfo, ReductionDataSize, RL, SarFuncCast,
+                     WcFuncCast};
     Function *Pv2Ptr = getOrCreateRuntimeFunctionPtr(
         RuntimeFunction::OMPRTL___kmpc_nvptx_parallel_reduce_nowait_v2);
     Res = Builder.CreateCall(Pv2Ptr, Args);
@@ -3527,7 +3523,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductionsGPU(
     Value *KernelTeamsReductionPtr = Builder.CreateCall(
         RedFixedBuferFn, {}, "_openmp_teams_reductions_buffer_$_$ptr");
 
-    Value *Args3[] = {RTLoc,
+    Value *Args3[] = {SrcLocInfo,
                       KernelTeamsReductionPtr,
                       Builder.getInt32(ReductionBufNum),
                       ReductionDataSize,

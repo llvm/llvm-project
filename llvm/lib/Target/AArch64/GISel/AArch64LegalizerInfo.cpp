@@ -561,7 +561,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       })
       .widenScalarOrEltToNextPow2(1)
       .clampScalar(0, s32, s32)
-      .clampScalarOrElt(1, MinFPScalar, s64)
+      .minScalarOrElt(1, MinFPScalar)
+      .scalarizeIf(scalarOrEltWiderThan(1, 64), 1)
       .minScalarEltSameAsIf(
           [=](const LegalityQuery &Query) {
             const LLT &Ty = Query.Types[0];
@@ -573,7 +574,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(1, v4s16, v8s16)
       .clampNumElements(1, v2s32, v4s32)
       .clampMaxNumElements(1, s64, 2)
-      .moreElementsToNextPow2(1);
+      .moreElementsToNextPow2(1)
+      .libcallFor({{s32, s128}});
 
   // Extensions
   auto ExtLegalFunc = [=](const LegalityQuery &Query) {

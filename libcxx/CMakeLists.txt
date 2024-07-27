@@ -314,13 +314,6 @@ option(LIBCXX_GENERATE_COVERAGE "Enable generating code coverage." OFF)
 set(LIBCXX_COVERAGE_LIBRARY "" CACHE STRING
     "The Profile-rt library used to build with code coverage")
 
-set(LIBCXX_CONFIGURE_IDE_DEFAULT OFF)
-if (XCODE OR MSVC_IDE)
-  set(LIBCXX_CONFIGURE_IDE_DEFAULT ON)
-endif()
-option(LIBCXX_CONFIGURE_IDE "Configure libcxx for use within an IDE"
-      ${LIBCXX_CONFIGURE_IDE_DEFAULT})
-
 set(LIBCXX_HERMETIC_STATIC_LIBRARY_DEFAULT OFF)
 if (WIN32)
   set(LIBCXX_HERMETIC_STATIC_LIBRARY_DEFAULT ON)

@@ -7647,6 +7647,9 @@ def code_completion_brief_comments : Flag<["-"], "code-completion-brief-comments
 def code_completion_with_fixits : Flag<["-"], "code-completion-with-fixits">,
   HelpText<"Include code completion results which require small fix-its.">,
   MarshallingInfoFlag<FrontendOpts<"CodeCompleteOpts.IncludeFixIts">>;
+def skip_function_bodies : Flag<["-"], "skip-function-bodies">,
+  HelpText<"Skip function bodies when possible">,
+  MarshallingInfoFlag<FrontendOpts<"SkipFunctionBodies">>;
 def disable_free : Flag<["-"], "disable-free">,
   HelpText<"Disable freeing of memory on exit">,
   MarshallingInfoFlag<FrontendOpts<"DisableFree">>;
