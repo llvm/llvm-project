@@ -129,25 +129,69 @@ int v4() { return __builtin_cpu_supports("x86-64-v4"); }
 // CHECK-PPC:       if.else3:
 // CHECK-PPC-NEXT:    [[CPU_IS:%.*]] = call i32 @llvm.ppc.fixed.addr.ld(i32 3)
 // CHECK-PPC-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[CPU_IS]], 39
-// CHECK-PPC-NEXT:    br i1 [[TMP6]], label [[IF_THEN4:%.*]], label [[IF_END:%.*]]
+// CHECK-PPC-NEXT:    br i1 [[TMP6]], label [[IF_THEN4:%.*]], label [[IF_ELSE5:%.*]]
 // CHECK-PPC:       if.then4:
 // CHECK-PPC-NEXT:    [[TMP7:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-PPC-NEXT:    [[TMP8:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-PPC-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP7]], [[TMP8]]
 // CHECK-PPC-NEXT:    store i32 [[ADD]], ptr [[RETVAL]], align 4
 // CHECK-PPC-NEXT:    br label [[RETURN]]
+// CHECK-PPC:       if.else5:
+// CHECK-PPC-NEXT:    [[CPU_IS6:%.*]] = call i32 @llvm.ppc.fixed.addr.ld(i32 3)
+// CHECK-PPC-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[CPU_IS6]], 45
+// CHECK-PPC-NEXT:    br i1 [[TMP9]], label [[IF_THEN7:%.*]], label [[IF_ELSE9:%.*]]
+// CHECK-PPC:       if.then7:
+// CHECK-PPC-NEXT:    [[TMP10:%.*]] = load i32, ptr [[A_ADDR]], align 4
+// CHECK-PPC-NEXT:    [[ADD8:%.*]] = add nsw i32 [[TMP10]], 3
+// CHECK-PPC-NEXT:    store i32 [[ADD8]], ptr [[RETVAL]], align 4
+// CHECK-PPC-NEXT:    br label [[RETURN]]
+// CHECK-PPC:       if.else9:
+// CHECK-PPC-NEXT:    [[CPU_IS10:%.*]] = call i32 @llvm.ppc.fixed.addr.ld(i32 3)
+// CHECK-PPC-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[CPU_IS10]], 46
+// CHECK-PPC-NEXT:    br i1 [[TMP11]], label [[IF_THEN11:%.*]], label [[IF_ELSE13:%.*]]
+// CHECK-PPC:       if.then11:
+// CHECK-PPC-NEXT:    [[TMP12:%.*]] = load i32, ptr [[A_ADDR]], align 4
+// CHECK-PPC-NEXT:    [[SUB12:%.*]] = sub nsw i32 [[TMP12]], 3
+// CHECK-PPC-NEXT:    store i32 [[SUB12]], ptr [[RETVAL]], align 4
+// CHECK-PPC-NEXT:    br label [[RETURN]]
+// CHECK-PPC:       if.else13:
+// CHECK-PPC-NEXT:    [[CPU_IS14:%.*]] = call i32 @llvm.ppc.fixed.addr.ld(i32 3)
+// CHECK-PPC-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[CPU_IS14]], 47
+// CHECK-PPC-NEXT:    br i1 [[TMP13]], label [[IF_THEN15:%.*]], label [[IF_ELSE17:%.*]]
+// CHECK-PPC:       if.then15:
+// CHECK-PPC-NEXT:    [[TMP14:%.*]] = load i32, ptr [[A_ADDR]], align 4
+// CHECK-PPC-NEXT:    [[ADD16:%.*]] = add nsw i32 [[TMP14]], 7
+// CHECK-PPC-NEXT:    store i32 [[ADD16]], ptr [[RETVAL]], align 4
+// CHECK-PPC-NEXT:    br label [[RETURN]]
+// CHECK-PPC:       if.else17:
+// CHECK-PPC-NEXT:    [[CPU_IS18:%.*]] = call i32 @llvm.ppc.fixed.addr.ld(i32 3)
+// CHECK-PPC-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[CPU_IS18]], 48
+// CHECK-PPC-NEXT:    br i1 [[TMP15]], label [[IF_THEN19:%.*]], label [[IF_END:%.*]]
+// CHECK-PPC:       if.then19:
+// CHECK-PPC-NEXT:    [[TMP16:%.*]] = load i32, ptr [[A_ADDR]], align 4
+// CHECK-PPC-NEXT:    [[SUB20:%.*]] = sub nsw i32 [[TMP16]], 7
+// CHECK-PPC-NEXT:    store i32 [[SUB20]], ptr [[RETVAL]], align 4
+// CHECK-PPC-NEXT:    br label [[RETURN]]
 // CHECK-PPC:       if.end:
-// CHECK-PPC-NEXT:    br label [[IF_END5:%.*]]
-// CHECK-PPC:       if.end5:
-// CHECK-PPC-NEXT:    br label [[IF_END6:%.*]]
-// CHECK-PPC:       if.end6:
-// CHECK-PPC-NEXT:    [[TMP9:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK-PPC-NEXT:    [[ADD7:%.*]] = add nsw i32 [[TMP9]], 5
-// CHECK-PPC-NEXT:    store i32 [[ADD7]], ptr [[RETVAL]], align 4
+// CHECK-PPC-NEXT:    br label [[IF_END21:%.*]]
+// CHECK-PPC:       if.end21:
+// CHECK-PPC-NEXT:    br label [[IF_END22:%.*]]
+// CHECK-PPC:       if.end22:
+// CHECK-PPC-NEXT:    br label [[IF_END23:%.*]]
+// CHECK-PPC:       if.end23:
+// CHECK-PPC-NEXT:    br label [[IF_END24:%.*]]
+// CHECK-PPC:       if.end24:
+// CHECK-PPC-NEXT:    br label [[IF_END25:%.*]]
+// CHECK-PPC:       if.end25:
+// CHECK-PPC-NEXT:    br label [[IF_END26:%.*]]
+// CHECK-PPC:       if.end26:
+// CHECK-PPC-NEXT:    [[TMP17:%.*]] = load i32, ptr [[A_ADDR]], align 4
+// CHECK-PPC-NEXT:    [[ADD27:%.*]] = add nsw i32 [[TMP17]], 5
+// CHECK-PPC-NEXT:    store i32 [[ADD27]], ptr [[RETVAL]], align 4
 // CHECK-PPC-NEXT:    br label [[RETURN]]
 // CHECK-PPC:       return:
-// CHECK-PPC-NEXT:    [[TMP10:%.*]] = load i32, ptr [[RETVAL]], align 4
-// CHECK-PPC-NEXT:    ret i32 [[TMP10]]
+// CHECK-PPC-NEXT:    [[TMP18:%.*]] = load i32, ptr [[RETVAL]], align 4
+// CHECK-PPC-NEXT:    ret i32 [[TMP18]]
 //
 int test(int a) {
   if (__builtin_cpu_supports("arch_3_00")) // HWCAP2
@@ -156,6 +200,14 @@ int test(int a) {
     return a - 5;
   else if (__builtin_cpu_is("power7"))     // CPUID
     return a + a;
+  else if (__builtin_cpu_is("power8"))
+    return a + 3;
+  else if (__builtin_cpu_is("power9"))
+    return a - 3;
+  else if (__builtin_cpu_is("power10"))
+    return a + 7;
+  else if (__builtin_cpu_is("power11"))
+    return a - 7;
   return a + 5;
 }
 #endif
