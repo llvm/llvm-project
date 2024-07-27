@@ -63,6 +63,7 @@ void MachObjectWriter::reset() {
   TargetVariantVersionInfo.SDKVersion = VersionTuple();
   PtrAuthABIVersion = std::nullopt;
   PtrAuthKernelABIVersion = false;
+  LinkerOptions.clear();
   MCObjectWriter::reset();
 }
 
@@ -880,7 +881,7 @@ void MachObjectWriter::writeMachOHeader(MCAssembler &Asm) {
   }
 
   // Add the linker option load commands sizes.
-  for (const auto &Option : Asm.getLinkerOptions()) {
+  for (const auto &Option : LinkerOptions) {
     ++NumLoadCommands;
     LoadCommandsSize += ComputeLinkerOptionsLoadCommandSize(Option, is64Bit());
   }
@@ -1050,7 +1051,7 @@ void MachObjectWriter::writeMachOHeader(MCAssembler &Asm) {
   }
 
   // Write the linker options load commands.
-  for (const auto &Option : Asm.getLinkerOptions())
+  for (const auto &Option : LinkerOptions)
     writeLinkerOptionsLoadCommand(Option);
 // BEGIN MCCAS
 }

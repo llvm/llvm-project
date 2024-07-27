@@ -71,9 +71,6 @@ private:
 
   SmallVector<const MCSymbol *, 0> Symbols;
 
-  /// The list of linker options to propagate into the object file.
-  std::vector<std::vector<std::string>> LinkerOptions;
-
   MCDwarfLineTableParams LTParams;
 
   /// The set of function symbols for which a .thumb_func directive has
@@ -234,10 +231,6 @@ public:
       typename SmallVector<const MCSymbol *, 0>::const_iterator>>
   symbols() const {
     return make_pointee_range(Symbols);
-  }
-
-  std::vector<std::vector<std::string>> &getLinkerOptions() {
-    return LinkerOptions;
   }
 
   bool registerSection(MCSection &Section);
