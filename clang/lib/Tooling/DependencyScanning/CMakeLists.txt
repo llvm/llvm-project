@@ -25,7 +25,6 @@ add_clang_library(clangDependencyScanning
   clangAST
   clangBasic
   clangCAS
-  clangCodeGen
   clangDriver
   clangFrontend
   clangLex

@@ -36,7 +36,6 @@ else()
     ${INDEXSTORE_LIB}
     clangAST
     clangBasic
-    clangCodeGen
     clangDependencyScanning
     clangDirectoryWatcher
     clangFrontend
