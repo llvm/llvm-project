@@ -266,7 +266,8 @@ For more general information on pass management, see [Pass Infrastructure](/docs
  - `--emit-bytecode` emits MLIR in the bytecode format.
  - `--mlir-pass-statistics` print statistics about the passes run.
     These are generated via [pass statistics](/docs/PassManagement/#pass-statistics).
- - `--mlir-print-ir-after-all` prints the IR after each pass.
+ - `--mlir-print-ir-after-all` prints the IR after each pass,
+     and ` --mlir-print-ir-tree-dir` dumps it on disk.
     See also `--mlir-print-ir-after-change` and `--mlir-print-ir-after-failure`
  - `--mlir-timing` displays execution times of each pass.
 
