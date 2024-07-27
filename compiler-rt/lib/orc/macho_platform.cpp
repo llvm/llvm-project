@@ -1265,8 +1265,7 @@ Error MachOPlatformRuntimeState::dlopenInitialize(
   return Error::success();
 }
 
-Error MachOPlatformRuntimeState::dlupdateImpl(void *DSOHandle,
-                                                         int Mode) {
+Error MachOPlatformRuntimeState::dlupdateImpl(void *DSOHandle, int Mode) {
   std::unique_lock<std::mutex> Lock(JDStatesMutex);
 
   // Try to find JITDylib state by DSOHandle.
