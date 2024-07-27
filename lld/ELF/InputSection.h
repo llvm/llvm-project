@@ -48,11 +48,11 @@ template <class ELFT> struct RelsOrRelas {
   {                                                                            \
     const RelsOrRelas<ELFT> rs = (sec).template relsOrRelas<ELFT>();           \
     if (rs.areRelocsCrel())                                                    \
-      f<ELFT>(__VA_ARGS__, rs.crels);                                          \
+      f(__VA_ARGS__, rs.crels);                                                \
     else if (rs.areRelocsRel())                                                \
-      f<ELFT>(__VA_ARGS__, rs.rels);                                           \
+      f(__VA_ARGS__, rs.rels);                                                 \
     else                                                                       \
-      f<ELFT>(__VA_ARGS__, rs.relas);                                          \
+      f(__VA_ARGS__, rs.relas);                                                \
   }
 
 // This is the base class of all sections that lld handles. Some are sections in

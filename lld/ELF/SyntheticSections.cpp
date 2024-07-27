@@ -3205,10 +3205,10 @@ template <class ELFT> DebugNamesSection<ELFT>::DebugNamesSection() {
 template <class ELFT>
 template <class RelTy>
 void DebugNamesSection<ELFT>::getNameRelocs(
-    InputSection *sec, Relocs<RelTy> rels,
-    DenseMap<uint32_t, uint32_t> &relocs) {
+    const InputFile &file, DenseMap<uint32_t, uint32_t> &relocs,
+    Relocs<RelTy> rels) {
   for (const RelTy &rel : rels) {
-    Symbol &sym = sec->file->getRelocTargetSym(rel);
+    Symbol &sym = file.getRelocTargetSym(rel);
     relocs[rel.r_offset] = sym.getVA(getAddend<ELFT>(rel));
   }
 }
@@ -3218,13 +3218,7 @@ template <class ELFT> void DebugNamesSection<ELFT>::finalizeContents() {
   auto relocs = std::make_unique<DenseMap<uint32_t, uint32_t>[]>(numChunks);
   parallelFor(0, numChunks, [&](size_t i) {
     InputSection *sec = inputSections[i];
-    auto rels = sec->template relsOrRelas<ELFT>();
-    if (rels.areRelocsCrel())
-      getNameRelocs(sec, rels.crels, relocs.get()[i]);
-    else if (rels.areRelocsRel())
-      getNameRelocs(sec, rels.rels, relocs.get()[i]);
-    else
-      getNameRelocs(sec, rels.relas, relocs.get()[i]);
+    invokeOnRelocs(*sec, getNameRelocs, *sec->file, relocs.get()[i]);
 
     // Relocate CU offsets with .debug_info + X relocations.
     OutputChunk &chunk = chunks.get()[i];

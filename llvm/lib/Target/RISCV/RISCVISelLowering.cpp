@@ -1473,7 +1473,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::SRA);
 
   if (Subtarget.hasStdExtFOrZfinx())
-    setTargetDAGCombine({ISD::FADD, ISD::FMAXNUM, ISD::FMINNUM});
+    setTargetDAGCombine({ISD::FADD, ISD::FMAXNUM, ISD::FMINNUM, ISD::FMUL});
 
   if (Subtarget.hasStdExtZbb())
     setTargetDAGCombine({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN});
@@ -16682,6 +16682,25 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue V = combineBinOpOfZExt(N, DAG))
       return V;
     break;
+  case ISD::FMUL: {
+    // fmul X, (copysign 1.0, Y) -> fsgnjx X, Y
+    SDValue N0 = N->getOperand(0);
+    SDValue N1 = N->getOperand(1);
+    if (N0->getOpcode() != ISD::FCOPYSIGN)
+      std::swap(N0, N1);
+    if (N0->getOpcode() != ISD::FCOPYSIGN)
+      return SDValue();
+    ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N0->getOperand(0));
+    if (!C || !C->getValueAPF().isExactlyValue(+1.0))
+      return SDValue();
+    EVT VT = N->getValueType(0);
+    if (VT.isVector() || !isOperationLegal(ISD::FCOPYSIGN, VT))
+      return SDValue();
+    SDValue Sign = N0->getOperand(1);
+    if (Sign.getValueType() != VT)
+      return SDValue();
+    return DAG.getNode(RISCVISD::FSGNJX, SDLoc(N), VT, N1, N0->getOperand(1));
+  }
   case ISD::FADD:
   case ISD::UMAX:
   case ISD::UMIN:
@@ -20232,6 +20251,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FP_EXTEND_BF16)
   NODE_NAME_CASE(FROUND)
   NODE_NAME_CASE(FCLASS)
+  NODE_NAME_CASE(FSGNJX)
   NODE_NAME_CASE(FMAX)
   NODE_NAME_CASE(FMIN)
   NODE_NAME_CASE(READ_COUNTER_WIDE)

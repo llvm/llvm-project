@@ -1107,7 +1107,7 @@ void InputSectionBase::relocate(uint8_t *buf, uint8_t *bufEnd) {
   auto *sec = cast<InputSection>(this);
   // For a relocatable link, also call relocateNonAlloc() to rewrite applicable
   // locations with tombstone values.
-  invokeOnRelocs(*sec, sec->relocateNonAlloc, buf);
+  invokeOnRelocs(*sec, sec->relocateNonAlloc<ELFT>, buf);
 }
 
 // For each function-defining prologue, find any calls to __morestack,
