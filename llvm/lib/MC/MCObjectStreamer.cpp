@@ -32,8 +32,8 @@ MCObjectStreamer::MCObjectStreamer(MCContext &Context,
       Assembler(std::make_unique<MCAssembler>(
           Context, std::move(TAB), std::move(Emitter), std::move(OW))),
       EmitEHFrame(true), EmitDebugFrame(false) {
-  if (Assembler->getBackendPtr())
-    setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
+  assert(Assembler->getBackendPtr() && Assembler->getEmitterPtr());
+  setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
   if (Context.getTargetOptions() && Context.getTargetOptions()->MCRelaxAll)
     Assembler->setRelaxAll(true);
 }
