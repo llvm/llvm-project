@@ -367,68 +367,64 @@ public:
     u.it_ = U();
   }
 
-    constexpr reference operator*() const { return *it_; }
-    constexpr pointer operator->() const { return it_; }
-    constexpr reference operator[](difference_type n) const { return it_[n]; }
+  constexpr reference operator*() const { return *it_; }
+  constexpr pointer operator->() const { return it_; }
+  constexpr reference operator[](difference_type n) const { return it_[n]; }
 
-    constexpr contiguous_iterator& operator++() {
-      ++it_;
-      return *this;
-    }
-    constexpr contiguous_iterator& operator--() {
-      --it_;
-      return *this;
-    }
-    constexpr contiguous_iterator operator++(int) { return contiguous_iterator(it_++); }
-    constexpr contiguous_iterator operator--(int) { return contiguous_iterator(it_--); }
+  constexpr contiguous_iterator& operator++() {
+    ++it_;
+    return *this;
+  }
+  constexpr contiguous_iterator& operator--() {
+    --it_;
+    return *this;
+  }
+  constexpr contiguous_iterator operator++(int) { return contiguous_iterator(it_++); }
+  constexpr contiguous_iterator operator--(int) { return contiguous_iterator(it_--); }
 
-    constexpr contiguous_iterator& operator+=(difference_type n) {
-      it_ += n;
-      return *this;
-    }
-    constexpr contiguous_iterator& operator-=(difference_type n) {
-      it_ -= n;
-      return *this;
-    }
-    friend constexpr contiguous_iterator operator+(contiguous_iterator x, difference_type n) {
-      x += n;
-      return x;
-    }
-    friend constexpr contiguous_iterator operator+(difference_type n, contiguous_iterator x) {
-      x += n;
-      return x;
-    }
-    friend constexpr contiguous_iterator operator-(contiguous_iterator x, difference_type n) {
-      x -= n;
-      return x;
-    }
-    friend constexpr difference_type operator-(contiguous_iterator x, contiguous_iterator y) { return x.it_ - y.it_; }
+  constexpr contiguous_iterator& operator+=(difference_type n) {
+    it_ += n;
+    return *this;
+  }
+  constexpr contiguous_iterator& operator-=(difference_type n) {
+    it_ -= n;
+    return *this;
+  }
+  friend constexpr contiguous_iterator operator+(contiguous_iterator x, difference_type n) {
+    x += n;
+    return x;
+  }
+  friend constexpr contiguous_iterator operator+(difference_type n, contiguous_iterator x) {
+    x += n;
+    return x;
+  }
+  friend constexpr contiguous_iterator operator-(contiguous_iterator x, difference_type n) {
+    x -= n;
+    return x;
+  }
+  friend constexpr difference_type operator-(contiguous_iterator x, contiguous_iterator y) { return x.it_ - y.it_; }
 
-    friend constexpr bool operator==(const contiguous_iterator& x, const contiguous_iterator& y) {
-      return x.it_ == y.it_;
-    }
-    friend constexpr bool operator!=(const contiguous_iterator& x, const contiguous_iterator& y) {
-      return x.it_ != y.it_;
-    }
-    friend constexpr bool operator<(const contiguous_iterator& x, const contiguous_iterator& y) {
-      return x.it_ < y.it_;
-    }
-    friend constexpr bool operator<=(const contiguous_iterator& x, const contiguous_iterator& y) {
-      return x.it_ <= y.it_;
-    }
-    friend constexpr bool operator>(const contiguous_iterator& x, const contiguous_iterator& y) {
-      return x.it_ > y.it_;
-    }
-    friend constexpr bool operator>=(const contiguous_iterator& x, const contiguous_iterator& y) {
-      return x.it_ >= y.it_;
-    }
+  friend constexpr bool operator==(const contiguous_iterator& x, const contiguous_iterator& y) {
+    return x.it_ == y.it_;
+  }
+  friend constexpr bool operator!=(const contiguous_iterator& x, const contiguous_iterator& y) {
+    return x.it_ != y.it_;
+  }
+  friend constexpr bool operator<(const contiguous_iterator& x, const contiguous_iterator& y) { return x.it_ < y.it_; }
+  friend constexpr bool operator<=(const contiguous_iterator& x, const contiguous_iterator& y) {
+    return x.it_ <= y.it_;
+  }
+  friend constexpr bool operator>(const contiguous_iterator& x, const contiguous_iterator& y) { return x.it_ > y.it_; }
+  friend constexpr bool operator>=(const contiguous_iterator& x, const contiguous_iterator& y) {
+    return x.it_ >= y.it_;
+  }
 
     // Note no operator<=>, use three_way_contiguous_iterator for testing operator<=>
 
-    friend constexpr It base(const contiguous_iterator& i) { return i.it_; }
+  friend constexpr It base(const contiguous_iterator& i) { return i.it_; }
 
-    template <class T>
-    void operator,(T const &) = delete;
+  template <class T>
+  void operator,(T const&) = delete;
 };
 template <class It>
 contiguous_iterator(It) -> contiguous_iterator<It>;
