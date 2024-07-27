@@ -103,7 +103,8 @@ SECTIONS {
    .text : { *(.text) }
 
 # RUN: not ld.lld -T unclosed.lds a.o 2>&1 | FileCheck --check-prefix=UNCLOSED %s
-# UNCLOSED: error: unclosed.lds:1: malformed number:
+#     UNCLOSED:error: unclosed.lds:1: unexpected EOF
+# UNCLOSED-NOT:{{.}}
 
 #--- unclosed-out.lds
 SECTIONS {
