@@ -73,7 +73,7 @@ if(LIBC_BUILD_GPU_LOADER OR (LLVM_LIBC_GPU_BUILD AND NOT LLVM_RUNTIMES_BUILD))
   add_subdirectory(utils/gpu)
 endif()
 
-option(LIBC_USE_NEW_HEADER_GEN "Generate header files using new headergen instead of the old one" OFF)
+option(LIBC_USE_NEW_HEADER_GEN "Generate header files using new headergen instead of the old one" ON)
 
 set(NEED_LIBC_HDRGEN FALSE)
 if(NOT LLVM_RUNTIMES_BUILD)
