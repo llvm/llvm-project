@@ -629,6 +629,9 @@ Attribute Changes in Clang
   The attributes declare constraints about a function's behavior pertaining to blocking and
   heap memory allocation.
 
+- The ``hybrid_patchable`` attribute is now supported on ARM64EC targets. It can be used to specify
+  that a function requires an additional x86-64 thunk, which may be patched at runtime.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Clang now emits an error instead of a warning for ``-Wundefined-internal``
