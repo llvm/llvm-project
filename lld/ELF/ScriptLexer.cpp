@@ -234,6 +234,17 @@ void ScriptLexer::expect(StringRef expect) {
   }
 }
 
+ScriptLexer::Token ScriptLexer::till(StringRef tok) {
+  StringRef str = next();
+  if (str == tok)
+    return {};
+  if (!atEOF())
+    return {str};
+  prevTok = {};
+  setError("unexpected EOF");
+  return {};
+}
+
 // Returns true if S encloses T.
 static bool encloses(StringRef s, StringRef t) {
   return s.bytes_begin() <= t.bytes_begin() && t.bytes_end() <= s.bytes_end();
