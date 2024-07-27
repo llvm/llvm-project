@@ -405,14 +405,13 @@ void ScriptParser::readGroup() {
 }
 
 void ScriptParser::readInclude() {
-  StringRef tok = unquote(next());
-
-  if (!seen.insert(tok).second) {
+  StringRef name = readName();
+  if (!seen.insert(name).second) {
     setError("there is a cycle in linker script INCLUDEs");
     return;
   }
 
-  if (std::optional<std::string> path = searchScript(tok)) {
+  if (std::optional<std::string> path = searchScript(name)) {
     if (std::optional<MemoryBufferRef> mb = readFile(*path)) {
       buffers.push_back(curBuf);
       curBuf = Buffer(*mb);
@@ -420,7 +419,7 @@ void ScriptParser::readInclude() {
     }
     return;
   }
-  setError("cannot find linker script " + tok);
+  setError("cannot find linker script " + name);
 }
 
 void ScriptParser::readInput() {
@@ -488,14 +487,14 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
 void ScriptParser::readOutputFormat() {
   expect("(");
 
-  StringRef s = unquote(next());
+  StringRef s = readName();
   if (!consume(")")) {
     expect(",");
-    StringRef tmp = unquote(next());
+    StringRef tmp = readName();
     if (config->optEB)
       s = tmp;
     expect(",");
-    tmp = unquote(next());
+    tmp = readName();
     if (config->optEL)
       s = tmp;
     consume(")");
@@ -548,7 +547,7 @@ void ScriptParser::readPhdrs() {
 
 void ScriptParser::readRegionAlias() {
   expect("(");
-  StringRef alias = unquote(next());
+  StringRef alias = readName();
   expect(",");
   StringRef name = next();
   expect(")");
@@ -562,9 +561,9 @@ void ScriptParser::readRegionAlias() {
 
 void ScriptParser::readSearchDir() {
   expect("(");
-  StringRef tok = next();
+  StringRef name = readName();
   if (!config->nostdlib)
-    config->searchPaths.push_back(unquote(tok));
+    config->searchPaths.push_back(name);
   expect(")");
 }
 
@@ -680,7 +679,7 @@ void ScriptParser::readTarget() {
   // for --format. We recognize only /^elf/ and "binary" in the linker
   // script as well.
   expect("(");
-  StringRef tok = unquote(next());
+  StringRef tok = readName();
   expect(")");
 
   if (tok.starts_with("elf"))
@@ -766,7 +765,7 @@ SmallVector<SectionPattern, 0> ScriptParser::readInputSectionsList() {
         setError("section pattern is expected");
         break;
       }
-      SectionMatcher.addPattern(unquote(next()));
+      SectionMatcher.addPattern(readName());
     }
 
     if (!SectionMatcher.empty())
@@ -860,7 +859,7 @@ Expr ScriptParser::readAssert() {
   expect("(");
   Expr e = readExpr();
   expect(",");
-  StringRef msg = unquote(next());
+  StringRef msg = readName();
   expect(")");
 
   return [=] {
@@ -1392,11 +1391,11 @@ static std::optional<uint64_t> parseFlag(StringRef tok) {
 // Example: SHF_EXECINSTR & !SHF_WRITE means with flag SHF_EXECINSTR and
 // without flag SHF_WRITE.
 std::pair<uint64_t, uint64_t> ScriptParser::readInputSectionFlags() {
-   uint64_t withFlags = 0;
-   uint64_t withoutFlags = 0;
-   expect("(");
-   while (!errorCount()) {
-    StringRef tok = unquote(next());
+  uint64_t withFlags = 0;
+  uint64_t withoutFlags = 0;
+  expect("(");
+  while (!errorCount()) {
+    StringRef tok = readName();
     bool without = tok.consume_front("!");
     if (std::optional<uint64_t> flag = parseFlag(tok)) {
       if (without)
