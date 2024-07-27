@@ -94,13 +94,6 @@ private:
   /// By default it's 0, which means bundling is disabled.
   unsigned BundleAlignSize = 0;
 
-  /// ELF specific e_header flags
-  // It would be good if there were an MCELFAssembler class to hold this.
-  // ELF header flags are used both by the integrated and standalone assemblers.
-  // Access to the flags is necessary in cases where assembler directives affect
-  // which flags to be set.
-  unsigned ELFHeaderEFlags = 0;
-
   /// Evaluate a fixup to a relocatable expression and the value which should be
   /// placed into the fixup.
   ///
@@ -199,10 +192,6 @@ public:
 
   /// Flag a function symbol as the target of a .thumb_func directive.
   void setIsThumbFunc(const MCSymbol *Func) { ThumbFuncs.insert(Func); }
-
-  /// ELF e_header flags
-  unsigned getELFHeaderEFlags() const { return ELFHeaderEFlags; }
-  void setELFHeaderEFlags(unsigned Flags) { ELFHeaderEFlags = Flags; }
 
   /// Reuse an assembler instance
   ///
