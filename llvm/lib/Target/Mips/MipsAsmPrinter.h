@@ -69,7 +69,7 @@ private:
   void EmitSled(const MachineInstr &MI, SledKind Kind);
 
   // tblgen'erated function.
-  bool lowerMachineInstrToMCInstImpl(const MachineInstr *MI, MCInst &Inst);
+  bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
 
   // Emit PseudoReturn, PseudoReturn64, PseudoIndirectBranch,
   // and PseudoIndirectBranch64 as a JR, JR_MM, JALR, or JALR64 as appropriate

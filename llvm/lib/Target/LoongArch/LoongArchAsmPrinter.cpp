@@ -34,7 +34,7 @@ void LoongArchAsmPrinter::emitInstruction(const MachineInstr *MI) {
       MI->getOpcode(), getSubtargetInfo().getFeatureBits());
 
   // Do any auto-generated pseudo lowerings.
-  if (MCInst OutInst; lowerMachineInstrToMCInstImpl(MI, OutInst)) {
+  if (MCInst OutInst; lowerPseudoInstExpansion(MI, OutInst)) {
     EmitToStreamer(*OutStreamer, OutInst);
     return;
   }

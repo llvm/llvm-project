@@ -254,7 +254,7 @@ void MipsAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   do {
     // Do any auto-generated pseudo lowerings.
-    if (MCInst OutInst; lowerMachineInstrToMCInstImpl(&*I, OutInst)) {
+    if (MCInst OutInst; lowerPseudoInstExpansion(&*I, OutInst)) {
       EmitToStreamer(*OutStreamer, OutInst);
       continue;
     }

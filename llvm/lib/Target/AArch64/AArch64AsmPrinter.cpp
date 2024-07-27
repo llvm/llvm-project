@@ -160,7 +160,7 @@ public:
 
   /// tblgen'erated driver function for lowering simple MI->MC
   /// pseudo instructions.
-  bool lowerMachineInstrToMCInstImpl(const MachineInstr *MI, MCInst &Inst);
+  bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
 
   void emitInstruction(const MachineInstr *MI) override;
 
@@ -2315,7 +2315,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   AArch64_MC::verifyInstructionPredicates(MI->getOpcode(), STI->getFeatureBits());
 
   // Do any auto-generated pseudo lowerings.
-  if (MCInst OutInst; lowerMachineInstrToMCInstImpl(MI, OutInst)) {
+  if (MCInst OutInst; lowerPseudoInstExpansion(MI, OutInst)) {
     EmitToStreamer(*OutStreamer, OutInst);
     return;
   }

@@ -85,7 +85,7 @@ public:
   // Returns whether Inst is compressed.
   bool EmitToStreamer(MCStreamer &S, const MCInst &Inst);
 
-  bool lowerMachineInstrToMCInstImpl(const MachineInstr *MI, MCInst &Inst);
+  bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
 
   typedef std::tuple<unsigned, uint32_t> HwasanMemaccessTuple;
   std::map<HwasanMemaccessTuple, MCSymbol *> HwasanMemaccessSymbols;
@@ -291,7 +291,7 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   emitNTLHint(MI);
 
   // Do any auto-generated pseudo lowerings.
-  if (MCInst OutInst; lowerMachineInstrToMCInstImpl(MI, OutInst)) {
+  if (MCInst OutInst; lowerPseudoInstExpansion(MI, OutInst)) {
     EmitToStreamer(*OutStreamer, OutInst);
     return;
   }

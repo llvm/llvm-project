@@ -118,7 +118,7 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   unsigned Opcode = MI->getOpcode();
   const auto *TII = static_cast<const SIInstrInfo*>(ST.getInstrInfo());
 
-  // FIXME: Should be able to handle this with lowerMachineInstrToMCInstImpl. We
+  // FIXME: Should be able to handle this with lowerPseudoInstExpansion. We
   // need to select it to the subtarget specific version, and there's no way to
   // do that with a single pseudo source operation.
   if (Opcode == AMDGPU::S_SETPC_B64_return)
@@ -187,7 +187,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
   // AMDGPU_MC::verifyInstructionPredicates(MI->getOpcode(),
   //                                        getSubtargetInfo().getFeatureBits());
 
-  if (MCInst OutInst; lowerMachineInstrToMCInstImpl(MI, OutInst)) {
+  if (MCInst OutInst; lowerPseudoInstExpansion(MI, OutInst)) {
     EmitToStreamer(*OutStreamer, OutInst);
     return;
   }

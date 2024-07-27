@@ -227,9 +227,8 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
   // Emit file header.
   emitSourceFileHeader("Pseudo-instruction MC lowering Source Fragment", o);
 
-  o << "bool " << Target.getName() + "AsmPrinter" << "::\n"
-    << "lowerMachineInstrToMCInstImpl(const MachineInstr *MI, MCInst &Inst) "
-       "{\n";
+  o << "bool " << Target.getName() + "AsmPrinter::\n"
+    << "lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst) {\n";
 
   if (!Expansions.empty()) {
     o << "  Inst.clear();\n"
