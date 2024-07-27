@@ -110,7 +110,7 @@ public:
 
   const char *dlerror();
   void *dlopen(std::string_view Name, int Mode);
-  void *dlupdate(void *DSOHandle, int Mode);
+  int dlupdate(void *DSOHandle, int Mode);
   int dlclose(void *Header);
   void *dlsym(void *Header, std::string_view Symbol);
 
@@ -142,7 +142,7 @@ private:
   Error dlopenFull(JITDylibState &JDS);
   Error dlopenInitialize(JITDylibState &JDS, COFFJITDylibDepInfoMap &DepInfo);
 
-  Expected<void *> dlupdateImpl(void *DSOHandle, int Mode);
+  Error dlupdateImpl(void *DSOHandle, int Mode);
   Error dlupdateFull(JITDylibState &JDS);
   Error dlupdateInitialize(JITDylibState &JDS);
 
@@ -270,19 +270,18 @@ void *COFFPlatformRuntimeState::dlopen(std::string_view Path, int Mode) {
   }
 }
 
-void *COFFPlatformRuntimeState::dlupdate(void *DSOHandle, int Mode) {
+int COFFPlatformRuntimeState::dlupdate(void *DSOHandle, int Mode) {
   ORC_RT_DEBUG({
     std::string S;
     printdbg("COFFPlatform::dlupdate(%p) (%s)\n", DSOHandle, S.c_str());
   });
   std::lock_guard<std::recursive_mutex> Lock(JDStatesMutex);
-  if (auto H = dlupdateImpl(DSOHandle, Mode))
-    return *H;
-  else {
+  if (auto Err = dlupdateImpl(DSOHandle, Mode)) {
     // FIXME: Make dlerror thread safe.
-    DLFcnError = toString(H.takeError());
-    return nullptr;
+    DLFcnError = toString(std::move(Err));
+    return -1;
   }
+  return 0;
 }
 
 int COFFPlatformRuntimeState::dlclose(void *DSOHandle) {
@@ -410,8 +409,7 @@ Error COFFPlatformRuntimeState::dlopenInitialize(
   return Error::success();
 }
 
-Expected<void *> COFFPlatformRuntimeState::dlupdateImpl(void *DSOHandle,
-                                                        int Mode) {
+Error COFFPlatformRuntimeState::dlupdateImpl(void *DSOHandle, int Mode) {
   // Try to find JITDylib state by name.
   auto *JDS = getJITDylibStateByHeader(DSOHandle);
 
@@ -425,10 +423,9 @@ Expected<void *> COFFPlatformRuntimeState::dlupdateImpl(void *DSOHandle,
     return make_error<StringError>("dlupdate failed, JITDylib must be open.");
 
   if (auto Err = dlupdateFull(*JDS))
-    return std::move(Err);
+    return Err;
 
-  // Return the header address.
-  return JDS->Header;
+  return Error::success();
 }
 
 Error COFFPlatformRuntimeState::dlupdateFull(JITDylibState &JDS) {
@@ -738,7 +735,7 @@ void *__orc_rt_coff_jit_dlopen(const char *path, int mode) {
   return COFFPlatformRuntimeState::get().dlopen(path, mode);
 }
 
-void *__orc_rt_coff_jit_dlupdate(void *dso_handle, int mode) {
+int __orc_rt_coff_jit_dlupdate(void *dso_handle, int mode) {
   return COFFPlatformRuntimeState::get().dlupdate(dso_handle, mode);
 }
 
