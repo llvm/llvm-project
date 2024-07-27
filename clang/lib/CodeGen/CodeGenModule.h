@@ -979,16 +979,16 @@ public:
                                      QualType FunctionType,
                                      GlobalDecl GD = GlobalDecl());
 
-  CGPointerAuthInfo getFunctionPointerAuthInfo(QualType T);
-
   llvm::Constant *getMemberFunctionPointer(const FunctionDecl *FD,
                                            llvm::Type *Ty = nullptr);
 
-  llvm::Constant *getMemberFunctionPointer(llvm::Constant *pointer,
-                                           QualType functionType,
-                                           const FunctionDecl *FD = nullptr);
+  llvm::Constant *getMemberFunctionPointer(llvm::Constant *Pointer,
+                                           QualType FT,
+                                           const FunctionDecl *FD);
 
-  CGPointerAuthInfo getMemberFunctionPointerAuthInfo(QualType functionType);
+  CGPointerAuthInfo getFunctionPointerAuthInfo(QualType T);
+
+  CGPointerAuthInfo getMemberFunctionPointerAuthInfo(QualType FT);
 
   CGPointerAuthInfo getPointerAuthInfoForPointeeType(QualType type);
 

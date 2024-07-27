@@ -104,24 +104,6 @@ CGPointerAuthInfo CodeGenModule::getFunctionPointerAuthInfo(QualType T) {
 }
 
 CGPointerAuthInfo
-CodeGenModule::getMemberFunctionPointerAuthInfo(QualType functionType) {
-  assert(functionType->getAs<MemberPointerType>() &&
-         "MemberPointerType expected");
-  auto &schema = getCodeGenOpts().PointerAuth.CXXMemberFunctionPointers;
-  if (!schema)
-    return CGPointerAuthInfo();
-
-  assert(!schema.isAddressDiscriminated() &&
-         "function pointers cannot use address-specific discrimination");
-
-  auto discriminator =
-      getPointerAuthOtherDiscriminator(schema, GlobalDecl(), functionType);
-  return CGPointerAuthInfo(schema.getKey(), schema.getAuthenticationMode(),
-                           /* isIsaPointer */ false,
-                           /* authenticatesNullValues */ false, discriminator);
-}
-
-CGPointerAuthInfo
 CodeGenFunction::EmitPointerAuthInfo(PointerAuthQualifier qualifier,
                                      Address storageAddress) {
   assert(qualifier &&
@@ -709,38 +691,52 @@ llvm::Constant *CodeGenModule::getFunctionPointer(GlobalDecl GD,
   return getFunctionPointer(getRawFunctionPointer(GD, Ty), FuncType);
 }
 
-llvm::Constant *
-CodeGenModule::getMemberFunctionPointer(llvm::Constant *pointer,
-                                        QualType functionType,
-                                        const FunctionDecl *FD) {
-  if (auto pointerAuth = getMemberFunctionPointerAuthInfo(functionType)) {
-    llvm::Constant **entry = nullptr;
-    if (FD) {
-      auto &cache =
-          getOrCreateCache<ByDeclCacheTy>(SignedThunkPointers);
-      entry = &cache[FD->getCanonicalDecl()];
-      if (*entry)
-        return llvm::ConstantExpr::getBitCast(*entry, pointer->getType());
-    }
+CGPointerAuthInfo CodeGenModule::getMemberFunctionPointerAuthInfo(QualType FT) {
+  assert(FT->getAs<MemberPointerType>() && "MemberPointerType expected");
+  const auto &Schema = getCodeGenOpts().PointerAuth.CXXMemberFunctionPointers;
+  if (!Schema)
+    return CGPointerAuthInfo();
 
-    pointer = getConstantSignedPointer(
-        pointer, pointerAuth.getKey(), nullptr,
-        cast_or_null<llvm::ConstantInt>(pointerAuth.getDiscriminator()));
+  assert(!Schema.isAddressDiscriminated() &&
+         "function pointers cannot use address-specific discrimination");
 
-    if (entry)
-      *entry = pointer;
-  }
-
-  return pointer;
+  llvm::ConstantInt *Discriminator =
+      getPointerAuthOtherDiscriminator(Schema, GlobalDecl(), FT);
+  return CGPointerAuthInfo(Schema.getKey(), Schema.getAuthenticationMode(),
+                           /* IsIsaPointer */ false,
+                           /* AuthenticatesNullValues */ false, Discriminator);
 }
 
-llvm::Constant *
-CodeGenModule::getMemberFunctionPointer(const FunctionDecl *FD, llvm::Type *Ty) {
-  QualType functionType = FD->getType();
-  functionType = getContext().getMemberPointerType(
-      functionType, cast<CXXMethodDecl>(FD)->getParent()->getTypeForDecl());
-  return getMemberFunctionPointer(getRawFunctionPointer(FD, Ty), functionType,
-                                  FD);
+llvm::Constant *CodeGenModule::getMemberFunctionPointer(llvm::Constant *Pointer,
+                                                        QualType FT,
+                                                        const FunctionDecl *FD) {
+  if (CGPointerAuthInfo PointerAuth = getMemberFunctionPointerAuthInfo(FT)) {
+    llvm::Constant **Entry = nullptr;
+    if (FD) {
+      auto &Cache =
+          getOrCreateCache<ByDeclCacheTy>(SignedThunkPointers);
+      Entry = &Cache[FD->getCanonicalDecl()];
+      if (*Entry)
+        return llvm::ConstantExpr::getBitCast(*Entry, Pointer->getType());
+    }
+
+    Pointer = getConstantSignedPointer(
+        Pointer, PointerAuth.getKey(), nullptr,
+        cast_or_null<llvm::ConstantInt>(PointerAuth.getDiscriminator()));
+
+    if (Entry)
+      *Entry = Pointer;
+  }
+
+  return Pointer;
+}
+
+llvm::Constant *CodeGenModule::getMemberFunctionPointer(const FunctionDecl *FD,
+                                                        llvm::Type *Ty) {
+  QualType FT = FD->getType();
+  FT = getContext().getMemberPointerType(
+      FT, cast<CXXMethodDecl>(FD)->getParent()->getTypeForDecl());
+  return getMemberFunctionPointer(getRawFunctionPointer(FD, Ty), FT, FD);
 }
 
 std::optional<PointerAuthQualifier>
