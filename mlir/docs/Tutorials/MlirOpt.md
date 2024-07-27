@@ -42,9 +42,11 @@ on the following IR:
 
 ```mlir
 // mlir/test/Examples/mlir-opt/ctlz.mlir
-func.func @main(%arg0: i32) -> i32 {
-  %0 = math.ctlz %arg0 : i32
-  func.return %0 : i32
+module {
+  func.func @main(%arg0: i32) -> i32 {
+    %0 = math.ctlz %arg0 : i32
+    func.return %0 : i32
+  }
 }
 ```
 
@@ -76,25 +78,27 @@ Consider the following IR containing loops with poor cache locality.
 
 ```mlir
 // mlir/test/Examples/mlir-opt/loop_fusion.mlir
-func.func @producer_consumer_fusion(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
-  %0 = memref.alloc() : memref<10xf32>
-  %1 = memref.alloc() : memref<10xf32>
-  %cst = arith.constant 0.000000e+00 : f32
-  affine.for %arg2 = 0 to 10 {
-    affine.store %cst, %0[%arg2] : memref<10xf32>
-    affine.store %cst, %1[%arg2] : memref<10xf32>
+module {
+  func.func @producer_consumer_fusion(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
+    %0 = memref.alloc() : memref<10xf32>
+    %1 = memref.alloc() : memref<10xf32>
+    %cst = arith.constant 0.000000e+00 : f32
+    affine.for %arg2 = 0 to 10 {
+      affine.store %cst, %0[%arg2] : memref<10xf32>
+      affine.store %cst, %1[%arg2] : memref<10xf32>
+    }
+    affine.for %arg2 = 0 to 10 {
+      %2 = affine.load %0[%arg2] : memref<10xf32>
+      %3 = arith.addf %2, %2 : f32
+      affine.store %3, %arg0[%arg2] : memref<10xf32>
+    }
+    affine.for %arg2 = 0 to 10 {
+      %2 = affine.load %1[%arg2] : memref<10xf32>
+      %3 = arith.mulf %2, %2 : f32
+      affine.store %3, %arg1[%arg2] : memref<10xf32>
+    }
+    return
   }
-  affine.for %arg2 = 0 to 10 {
-    %2 = affine.load %0[%arg2] : memref<10xf32>
-    %3 = arith.addf %2, %2 : f32
-    affine.store %3, %arg0[%arg2] : memref<10xf32>
-  }
-  affine.for %arg2 = 0 to 10 {
-    %2 = affine.load %1[%arg2] : memref<10xf32>
-    %3 = arith.mulf %2, %2 : f32
-    affine.store %3, %arg1[%arg2] : memref<10xf32>
-  }
-  return
 }
 ```
 
@@ -248,6 +252,16 @@ module {
   }
 }
 ```
+
+Specifying a pass pipeline with nested anchoring
+is also beneficial for performance reasons:
+passes with anchoring can run on IR subsets in parallel,
+which provides better threaded runtime and cache locality
+within threads.
+For example,
+even if a pass is not restricted to anchor on `func.func`,
+running `builtin.module(func.func(cse, canonicalize))`
+is more efficient than `builtin.module(cse, canonicalize)`.
 
 For a spec of the pass-pipeline textual description language,
 see [the docs](/docs/PassManagement/#textual-pass-pipeline-specification).
