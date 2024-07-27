@@ -17,6 +17,18 @@
 #include "rtsan/rtsan_context.h"
 
 #if SANITIZER_APPLE
+
+#if TARGET_OS_MAC
+// On MacOS OSSpinLockLock is deprecated and no longer present in the headers,
+// but the symbol still exists on the system. Forward declare here so we
+// don't get compilation errors.
+#include <stdint.h>
+extern "C" {
+typedef int32_t OSSpinLock;
+void OSSpinLockLock(volatile OSSpinLock *__lock);
+}
+#endif
+
 #include <libkern/OSAtomic.h>
 #include <os/lock.h>
 #endif
