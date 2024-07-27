@@ -60,3 +60,30 @@ unsigned long long tc() {
   return z;
 }
 
+// CIR_FLAT: cir.func @_Z3tc2v
+unsigned long long tc2() {
+  int x = 50, y = 3;
+  unsigned long long z;
+
+  try {
+    int a = 4;
+    z = division(x, y);
+    a++;
+  } catch (int idx) {
+    z = 98;
+    idx++;
+  } catch (const char* msg) {
+    z = 99;
+    (void)msg[0];
+  } catch (...) {
+    // CIR_FLAT:   cir.catch_param
+    // CIR_FLAT:   cir.const #cir.int<100> : !s32i
+    // CIR_FLAT:   cir.br ^[[AFTER_TRY:.*]] loc
+    // CIR_FLAT: ^[[AFTER_TRY]]:  // 4 preds
+    // CIR_FLAT:   cir.load
+    // CIR_FLAT:   cir.return
+    z = 100;
+  }
+
+  return z;
+}
