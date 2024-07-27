@@ -5,8 +5,6 @@
 /// Differences:
 ///   1) The type of the uninitialized base class is printed WITH the namespace,
 ///      i.e. 'baseclass_uninit::DelBase' instead of just 'DelBase'.
-///   2) The location is not the base specifier declaration, but the call site
-///      of the constructor.
 
 
 namespace baseclass_uninit {

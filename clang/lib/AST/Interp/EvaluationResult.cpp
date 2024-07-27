@@ -10,6 +10,7 @@
 #include "InterpState.h"
 #include "Record.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/SetVector.h"
 
 namespace clang {
@@ -122,20 +123,25 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
   }
 
   // Check Fields in all bases
-  unsigned BaseIndex = 0;
-  const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(R->getDecl());
-  for (const CXXBaseSpecifier &BS : CD->bases()) {
-    const Record::Base &B = *R->getBase(BaseIndex);
+  for (unsigned I = 0, E = R->getNumBases(); I != E; ++I) {
+    const auto &B = *R->getBase(I);
     Pointer P = BasePtr.atField(B.Offset);
     if (!P.isInitialized()) {
-      SourceLocation TypeBeginLoc = BS.getBaseTypeLoc();
-      SourceRange Range(TypeBeginLoc, BS.getEndLoc());
-      S.FFDiag(TypeBeginLoc, diag::note_constexpr_uninitialized_base)
-          << B.Desc->getType() << Range;
+      const Descriptor *Desc = BasePtr.getDeclDesc();
+      if (const auto *CD = dyn_cast_or_null<CXXRecordDecl>(R->getDecl())) {
+        const auto &BS = CD->getBase(I);
+        S.FFDiag(BS.getBaseTypeLoc(), diag::note_constexpr_uninitialized_base)
+            << B.Desc->getType() << BS.getSourceRange();
+      } else {
+        SourceLocation Loc =
+            Desc->asDecl() ? BasePtr.getDeclDesc()->asDecl()->getLocation()
+                           : BasePtr.getDeclDesc()->asExpr()->getExprLoc();
+        S.FFDiag(Loc, diag::note_constexpr_uninitialized_base)
+            << B.Desc->getType();
+      }
       return false;
     }
     Result &= CheckFieldsInitialized(S, Loc, P, B.R);
-    BaseIndex++;
   }
 
   // TODO: Virtual bases
