@@ -294,7 +294,8 @@ struct Symbol {
 
 Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
   std::string CudaPath = Args.getLastArgValue(OPT_cuda_path_EQ).str();
-  Expected<std::string> PTXAsPath = Args.getLastArgValue(OPT_ptxas_path);
+  Expected<std::string> PTXAsPath =
+      Args.getLastArgValue(OPT_ptxas_path_EQ).str();
   if (PTXAsPath->empty())
     PTXAsPath = findProgram("ptxas", {CudaPath + "/bin"});
   if (!PTXAsPath)
