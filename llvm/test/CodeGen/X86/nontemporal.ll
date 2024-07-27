@@ -183,14 +183,14 @@ define void @test_mmx(ptr nocapture %a0, ptr nocapture %a1) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movq (%ecx), %mm0
 ; X86-NEXT:    psrlq $3, %mm0
-; X86-NEXT:    movq %mm0, (%eax)
+; X86-NEXT:    movntq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mmx:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    psrlq $3, %mm0
-; X64-NEXT:    movq %mm0, (%rsi)
+; X64-NEXT:    movntq %mm0, (%rsi)
 ; X64-NEXT:    retq
 entry:
   %0 = load x86_mmx, ptr %a0
