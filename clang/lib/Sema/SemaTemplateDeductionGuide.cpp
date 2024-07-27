@@ -241,11 +241,10 @@ NamedDecl *buildDeductionGuide(
 }
 
 // Transform a given template type parameter `TTP`.
-TemplateTypeParmDecl *
-transformTemplateTypeParam(Sema &SemaRef, DeclContext *DC,
-                           TemplateTypeParmDecl *TTP,
-                           MultiLevelTemplateArgumentList &Args,
-                           unsigned NewDepth, unsigned NewIndex) {
+TemplateTypeParmDecl *transformTemplateTypeParam(
+    Sema &SemaRef, DeclContext *DC, TemplateTypeParmDecl *TTP,
+    MultiLevelTemplateArgumentList &Args, unsigned NewDepth, unsigned NewIndex,
+    bool EvaluateConstraint) {
   // TemplateTypeParmDecl's index cannot be changed after creation, so
   // substitute it directly.
   auto *NewTTP = TemplateTypeParmDecl::Create(
@@ -257,7 +256,7 @@ transformTemplateTypeParam(Sema &SemaRef, DeclContext *DC,
           : std::nullopt);
   if (const auto *TC = TTP->getTypeConstraint())
     SemaRef.SubstTypeConstraint(NewTTP, TC, Args,
-                                /*EvaluateConstraint=*/true);
+                                /*EvaluateConstraint=*/EvaluateConstraint);
   if (TTP->hasDefaultArgument()) {
     TemplateArgumentLoc InstantiatedDefaultArg;
     if (!SemaRef.SubstTemplateArgument(
@@ -282,6 +281,42 @@ transformTemplateParam(Sema &SemaRef, DeclContext *DC,
   NewParam->setPosition(NewIndex);
   NewParam->setDepth(NewDepth);
   return NewParam;
+}
+
+NamedDecl *transformTemplateParameter(Sema &SemaRef, DeclContext *DC,
+                                      NamedDecl *TemplateParam,
+                                      MultiLevelTemplateArgumentList &Args,
+                                      unsigned NewIndex, unsigned NewDepth,
+                                      bool EvaluateConstraint = true) {
+  if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(TemplateParam))
+    return transformTemplateTypeParam(
+        SemaRef, DC, TTP, Args, NewDepth, NewIndex,
+        /*EvaluateConstraint=*/EvaluateConstraint);
+  if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TemplateParam))
+    return transformTemplateParam(SemaRef, DC, TTP, Args, NewIndex, NewDepth);
+  if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TemplateParam))
+    return transformTemplateParam(SemaRef, DC, NTTP, Args, NewIndex, NewDepth);
+  llvm_unreachable("Unhandled template parameter types");
+}
+
+unsigned getTemplateParameterDepth(NamedDecl *TemplateParam) {
+  if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(TemplateParam))
+    return TTP->getDepth();
+  if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TemplateParam))
+    return TTP->getDepth();
+  if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TemplateParam))
+    return NTTP->getDepth();
+  llvm_unreachable("Unhandled template parameter types");
+}
+
+unsigned getTemplateParameterIndex(NamedDecl *TemplateParam) {
+  if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(TemplateParam))
+    return TTP->getIndex();
+  if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TemplateParam))
+    return TTP->getIndex();
+  if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TemplateParam))
+    return NTTP->getIndex();
+  llvm_unreachable("Unhandled template parameter types");
 }
 
 /// Transform to convert portions of a constructor declaration into the
@@ -358,21 +393,23 @@ struct ConvertConstructorToDeductionGuideTransform {
         Args.addOuterRetainedLevel();
         if (NestedPattern)
           Args.addOuterRetainedLevels(NestedPattern->getTemplateDepth());
-        NamedDecl *NewParam = transformTemplateParameter(Param, Args);
+        NamedDecl *NewParam = transformTemplateParameter(
+            SemaRef, DC, Param, Args,
+            getTemplateParameterIndex(Param) + Depth1IndexAdjustment,
+            getTemplateParameterDepth(Param) - 1);
         if (!NewParam)
           return nullptr;
         // Constraints require that we substitute depth-1 arguments
         // to match depths when substituted for evaluation later
         Depth1Args.push_back(SemaRef.Context.getInjectedTemplateArg(NewParam));
 
-        if (NestedPattern) {
-          TemplateDeclInstantiator Instantiator(SemaRef, DC,
-                                                OuterInstantiationArgs);
-          Instantiator.setEvaluateConstraints(false);
-          SemaRef.runWithSufficientStackSpace(NewParam->getLocation(), [&] {
-            NewParam = cast<NamedDecl>(Instantiator.Visit(NewParam));
-          });
-        }
+        if (NestedPattern)
+          NewParam = transformTemplateParameter(
+              SemaRef, DC, NewParam, OuterInstantiationArgs,
+              getTemplateParameterIndex(NewParam),
+              getTemplateParameterDepth(NewParam) -
+                  OuterInstantiationArgs.getNumLevels(),
+              /*EvaluateConstraint=*/false);
 
         assert(NewParam->getTemplateDepth() == 0 &&
                "Unexpected template parameter depth");
@@ -479,25 +516,6 @@ struct ConvertConstructorToDeductionGuideTransform {
   }
 
 private:
-  /// Transform a constructor template parameter into a deduction guide template
-  /// parameter, rebuilding any internal references to earlier parameters and
-  /// renumbering as we go.
-  NamedDecl *transformTemplateParameter(NamedDecl *TemplateParam,
-                                        MultiLevelTemplateArgumentList &Args) {
-    if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(TemplateParam))
-      return transformTemplateTypeParam(
-          SemaRef, DC, TTP, Args, TTP->getDepth() - 1,
-          Depth1IndexAdjustment + TTP->getIndex());
-    if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TemplateParam))
-      return transformTemplateParam(SemaRef, DC, TTP, Args,
-                                    Depth1IndexAdjustment + TTP->getIndex(),
-                                    TTP->getDepth() - 1);
-    auto *NTTP = cast<NonTypeTemplateParmDecl>(TemplateParam);
-    return transformTemplateParam(SemaRef, DC, NTTP, Args,
-                                  Depth1IndexAdjustment + NTTP->getIndex(),
-                                  NTTP->getDepth() - 1);
-  }
-
   QualType transformFunctionProtoType(
       TypeLocBuilder &TLB, FunctionProtoTypeLoc TL,
       SmallVectorImpl<ParmVarDecl *> &Params,
@@ -634,26 +652,6 @@ private:
   }
 };
 
-unsigned getTemplateParameterDepth(NamedDecl *TemplateParam) {
-  if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(TemplateParam))
-    return TTP->getDepth();
-  if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TemplateParam))
-    return TTP->getDepth();
-  if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TemplateParam))
-    return NTTP->getDepth();
-  llvm_unreachable("Unhandled template parameter types");
-}
-
-unsigned getTemplateParameterIndex(NamedDecl *TemplateParam) {
-  if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(TemplateParam))
-    return TTP->getIndex();
-  if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TemplateParam))
-    return TTP->getIndex();
-  if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TemplateParam))
-    return NTTP->getIndex();
-  llvm_unreachable("Unhandled template parameter types");
-}
-
 // Find all template parameters that appear in the given DeducedArgs.
 // Return the indices of the template parameters in the TemplateParams.
 SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
@@ -720,20 +718,6 @@ bool hasDeclaredDeductionGuides(DeclarationName Name, DeclContext *DC) {
     if (D->isImplicit())
       return true;
   return false;
-}
-
-NamedDecl *transformTemplateParameter(Sema &SemaRef, DeclContext *DC,
-                                      NamedDecl *TemplateParam,
-                                      MultiLevelTemplateArgumentList &Args,
-                                      unsigned NewIndex, unsigned NewDepth) {
-  if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(TemplateParam))
-    return transformTemplateTypeParam(SemaRef, DC, TTP, Args, NewDepth,
-                                      NewIndex);
-  if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TemplateParam))
-    return transformTemplateParam(SemaRef, DC, TTP, Args, NewIndex, NewDepth);
-  if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TemplateParam))
-    return transformTemplateParam(SemaRef, DC, NTTP, Args, NewIndex, NewDepth);
-  llvm_unreachable("Unhandled template parameter types");
 }
 
 // Build the associated constraints for the alias deduction guides.
