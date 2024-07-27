@@ -236,27 +236,19 @@ public:
         loc, mlir::cir::ExceptionInfoType::get(rewriter.getContext()));
     auto selector = rewriter.create<mlir::cir::EhSelectorOp>(loc, exception);
 
-    // TODO: direct catch all needs no dispatch?
-
     // Handle dispatch. In could in theory use a switch, but let's just
     // mimic LLVM more closely since we have no specific thing to achieve
     // doing that (might not play as well with existing optimizers either).
-    auto *dispatchBlock =
+    auto *nextDispatcher =
         rewriter.splitBlock(catchBegin, rewriter.getInsertionPoint());
     rewriter.setInsertionPointToEnd(catchBegin);
-    rewriter.create<mlir::cir::BrOp>(loc, dispatchBlock);
+    rewriter.create<mlir::cir::BrOp>(loc, nextDispatcher);
 
     // Fill in dispatcher.
-    rewriter.setInsertionPointToEnd(dispatchBlock);
-
-    // FIXME: we should have an extra block for the dispatcher, just in case
-    // there isn't one later.
-
+    rewriter.setInsertionPointToEnd(nextDispatcher);
     llvm::MutableArrayRef<mlir::Region> caseRegions = tryOp.getCatchRegions();
     mlir::ArrayAttr caseAttrList = tryOp.getCatchTypesAttr();
     unsigned caseCnt = 0;
-
-    mlir::Block *nextDispatcher = rewriter.getInsertionBlock();
 
     for (mlir::Attribute caseAttr : caseAttrList) {
       if (auto typeIdGlobal = dyn_cast<mlir::cir::GlobalViewAttr>(caseAttr)) {
@@ -275,7 +267,8 @@ public:
                                              nextDispatcher);
         rewriter.setInsertionPointToEnd(nextDispatcher);
       } else if (auto catchAll = dyn_cast<mlir::cir::CatchAllAttr>(caseAttr)) {
-        assert(nextDispatcher->empty() && "expect empty dispatcher");
+        // In case the catch(...) is all we got, `nextDispatcher` shall be
+        // non-empty.
         buildAllCase(rewriter, caseRegions[caseCnt], afterTry, nextDispatcher);
         nextDispatcher = nullptr; // No more business in try/catch
       } else if (auto catchUnwind =
