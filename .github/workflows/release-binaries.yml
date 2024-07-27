@@ -156,11 +156,13 @@ jobs:
         sparse-checkout: |
           .github/workflows/
         sparse-checkout-cone-mode: false
-        path: workflows
+        # Check out outside of working directory so the source checkout doesn't
+        # remove it.
+        path: ../workflows
 
     - name: Setup Stage
       id: setup-stage
-      uses: ./workflows/.github/workflows/release-binaries-setup-stage
+      uses: ../workflows/.github/workflows/release-binaries-setup-stage
 
     - name: Checkout LLVM
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
@@ -194,7 +196,7 @@ jobs:
         ls -ltr ${{ steps.setup-stage.outputs.build-prefix }}/build
     
     - name: Save Stage
-      uses: ./workflows/.github/workflows/release-binaries-save-stage
+      uses: ../workflows/.github/workflows/release-binaries-save-stage
       with:
         build-prefix: ${{ steps.setup-stage.outputs.build-prefix }}
 
