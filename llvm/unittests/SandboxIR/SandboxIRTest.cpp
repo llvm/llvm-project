@@ -132,7 +132,7 @@ define i32 @foo(i32 %v0, i32 %v1) {
   auto *Arg1 = F.getArg(1);
   auto It = BB.begin();
   auto *I0 = &*It++;
-  auto *Ret = &*It++;
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
   SmallVector<sandboxir::Argument *> Args{Arg0, Arg1};
   unsigned OpIdx = 0;
@@ -245,7 +245,7 @@ define i32 @foo(i32 %arg0, i32 %arg1) {
   auto *I0 = &*It++;
   auto *I1 = &*It++;
   auto *I2 = &*It++;
-  auto *Ret = &*It++;
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
   bool Replaced;
   // Try to replace an operand that doesn't match.
@@ -401,7 +401,7 @@ bb0:
   br label %bb1 ; SB3. (Opaque)
 
 bb1:
-  ret void ; SB5. (Opaque)
+  ret void ; SB5. (Ret)
 }
 )IR");
   }
@@ -488,7 +488,7 @@ define void @foo(i8 %v1) {
   auto It = BB->begin();
   auto *I0 = &*It++;
   auto *I1 = &*It++;
-  auto *Ret = &*It++;
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
   // Check getPrevNode().
   EXPECT_EQ(Ret->getPrevNode(), I1);
@@ -508,7 +508,7 @@ define void @foo(i8 %v1) {
   // Check getOpcode().
   EXPECT_EQ(I0->getOpcode(), sandboxir::Instruction::Opcode::Opaque);
   EXPECT_EQ(I1->getOpcode(), sandboxir::Instruction::Opcode::Opaque);
-  EXPECT_EQ(Ret->getOpcode(), sandboxir::Instruction::Opcode::Opaque);
+  EXPECT_EQ(Ret->getOpcode(), sandboxir::Instruction::Opcode::Ret);
 
   // Check moveBefore(I).
   I1->moveBefore(I0);
@@ -576,7 +576,7 @@ define void @foo(ptr %arg0, ptr %arg1) {
   auto *BB = &*F->begin();
   auto It = BB->begin();
   auto *Ld = cast<sandboxir::LoadInst>(&*It++);
-  auto *Ret = &*It++;
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
   // Check getPointerOperand()
   EXPECT_EQ(Ld->getPointerOperand(), Arg0);
@@ -607,7 +607,7 @@ define void @foo(i8 %val, ptr %ptr) {
   auto *BB = &*F->begin();
   auto It = BB->begin();
   auto *St = cast<sandboxir::StoreInst>(&*It++);
-  auto *Ret = &*It++;
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
   // Check that the StoreInst has been created correctly.
   // Check getPointerOperand()
@@ -623,4 +623,43 @@ define void @foo(i8 %val, ptr %ptr) {
   EXPECT_EQ(NewSt->getValueOperand(), Val);
   EXPECT_EQ(NewSt->getPointerOperand(), Ptr);
   EXPECT_EQ(NewSt->getAlign(), 8);
+}
+
+TEST_F(SandboxIRTest, ReturnInst) {
+  parseIR(C, R"IR(
+define i8 @foo(i8 %val) {
+  %add = add i8 %val, 42
+  ret i8 %val
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *Val = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  It++;
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check that the ReturnInst has been created correctly.
+  // Check getReturnValue().
+  EXPECT_EQ(Ret->getReturnValue(), Val);
+
+  // Check create(InsertBefore) a void ReturnInst.
+  auto *NewRet1 = cast<sandboxir::ReturnInst>(
+      sandboxir::ReturnInst::create(nullptr, /*InsertBefore=*/Ret, Ctx));
+  EXPECT_EQ(NewRet1->getReturnValue(), nullptr);
+  // Check create(InsertBefore) a non-void ReturnInst.
+  auto *NewRet2 = cast<sandboxir::ReturnInst>(
+      sandboxir::ReturnInst::create(Val, /*InsertBefore=*/Ret, Ctx));
+  EXPECT_EQ(NewRet2->getReturnValue(), Val);
+
+  // Check create(InsertAtEnd) a void ReturnInst.
+  auto *NewRet3 = cast<sandboxir::ReturnInst>(
+      sandboxir::ReturnInst::create(nullptr, /*InsertAtEnd=*/BB, Ctx));
+  EXPECT_EQ(NewRet3->getReturnValue(), nullptr);
+  // Check create(InsertAtEnd) a non-void ReturnInst.
+  auto *NewRet4 = cast<sandboxir::ReturnInst>(
+      sandboxir::ReturnInst::create(Val, /*InsertAtEnd=*/BB, Ctx));
+  EXPECT_EQ(NewRet4->getReturnValue(), Val);
 }
