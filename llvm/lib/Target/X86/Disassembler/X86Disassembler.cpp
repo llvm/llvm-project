@@ -1219,6 +1219,9 @@ static int getInstructionID(struct InternalInstruction *insn,
         attrMask |= ATTR_EVEXKZ;
       if (bFromEVEX4of4(insn->vectorExtensionPrefix[3]))
         attrMask |= ATTR_EVEXB;
+      if (x2FromEVEX3of4(insn->vectorExtensionPrefix[2]) &&
+          (insn->opcodeType != MAP4))
+        attrMask |= ATTR_EVEXU;
       if (isNF(insn) && !readModRM(insn) &&
           !isCCMPOrCTEST(insn)) // NF bit is the MSB of aaa.
         attrMask |= ATTR_EVEXNF;
