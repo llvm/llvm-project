@@ -375,10 +375,9 @@ void ScriptParser::readAsNeeded() {
   expect("(");
   bool orig = config->asNeeded;
   config->asNeeded = true;
-  while (peek() != ")" && !atEOF())
-    addFile(unquote(next()));
+  while (auto tok = till(")"))
+    addFile(unquote(tok));
   config->asNeeded = orig;
-  expect(")");
 }
 
 void ScriptParser::readEntry() {
@@ -392,9 +391,8 @@ void ScriptParser::readEntry() {
 
 void ScriptParser::readExtern() {
   expect("(");
-  while (peek() != ")" && !atEOF())
-    config->undefined.push_back(unquote(next()));
-  expect(")");
+  while (auto tok = till(")"))
+    config->undefined.push_back(unquote(tok));
 }
 
 void ScriptParser::readGroup() {
@@ -427,13 +425,12 @@ void ScriptParser::readInclude() {
 
 void ScriptParser::readInput() {
   expect("(");
-  while (peek() != ")" && !atEOF()) {
-    if (consume("AS_NEEDED"))
+  while (auto tok = till(")")) {
+    if (tok == "AS_NEEDED")
       readAsNeeded();
     else
-      addFile(unquote(next()));
+      addFile(unquote(tok));
   }
-  expect(")");
 }
 
 void ScriptParser::readOutput() {
@@ -712,10 +709,8 @@ static int precedence(StringRef op) {
 
 StringMatcher ScriptParser::readFilePatterns() {
   StringMatcher Matcher;
-
-  while (peek() != ")" && !atEOF())
-    Matcher.addPattern(SingleStringMatcher(next()));
-  expect(")");
+  while (auto tok = till(")"))
+    Matcher.addPattern(SingleStringMatcher(tok));
   return Matcher;
 }
 
