@@ -234,15 +234,6 @@ void ScriptLexer::expect(StringRef expect) {
   }
 }
 
-ScriptLexer::Token ScriptLexer::nextTok() {
-  StringRef str = next();
-  if (!atEOF())
-    return {str};
-  prevTok = {};
-  setError("Unexpected EOF");
-  return {};
-}
-
 ScriptLexer::Token ScriptLexer::till(StringRef tok) {
   StringRef str = next();
   if (str == tok)

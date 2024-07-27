@@ -962,7 +962,7 @@ OutputDesc *ScriptParser::readOverlaySectionDescription() {
     uint64_t withoutFlags = 0;
     if (tok == "INPUT_SECTION_FLAGS") {
       std::tie(withFlags, withoutFlags) = readInputSectionFlags();
-      tok = nextTok();
+      tok = till("");
     }
     osd->osec.commands.push_back(
         readInputSectionRules(tok, withFlags, withoutFlags));
