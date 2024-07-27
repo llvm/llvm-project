@@ -143,7 +143,6 @@ public:
               std::unique_ptr<MCObjectWriter> Writer);
   MCAssembler(const MCAssembler &) = delete;
   MCAssembler &operator=(const MCAssembler &) = delete;
-  ~MCAssembler();
 
   /// Compute the effective fragment size.
   uint64_t computeFragmentSize(const MCFragment &F) const;
@@ -193,7 +192,6 @@ public:
   MCObjectWriter &getWriter() const { return *Writer; }
 
   MCDwarfLineTableParams getDWARFLinetableParams() const { return LTParams; }
-  void setDWARFLinetableParams(MCDwarfLineTableParams P) { LTParams = P; }
 
   /// Finish - Do final processing and write the object to the output stream.
   /// \p Writer is used for custom object writer (as the MCJIT does),
