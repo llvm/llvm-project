@@ -444,7 +444,7 @@ void ScriptParser::readOutput() {
 void ScriptParser::readOutputArch() {
   // OUTPUT_ARCH is ignored for now.
   expect("(");
-  while (next() != ")" && !atEOF())
+  while (till(")"))
     ;
 }
 
