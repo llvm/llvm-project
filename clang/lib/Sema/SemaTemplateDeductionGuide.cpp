@@ -408,7 +408,7 @@ struct ConvertConstructorToDeductionGuideTransform {
               SemaRef, DC, NewParam, OuterInstantiationArgs,
               getTemplateParameterIndex(NewParam),
               getTemplateParameterDepth(NewParam) -
-                  OuterInstantiationArgs.getNumLevels(),
+                  OuterInstantiationArgs.getNumSubstitutedLevels(),
               /*EvaluateConstraint=*/false);
 
         assert(NewParam->getTemplateDepth() == 0 &&
