@@ -1143,17 +1143,28 @@ def JumpTableDest8 : Pseudo<(outs GPR64:$dst, GPR64sp:$scratch),
                      Sched<[]>;
 }
 
+// A hardened but more expensive version of jump-table dispatch.
+// This combines the target address computation (otherwise done using the
+// JumpTableDest pseudos above) with the branch itself (otherwise done using
+// a plain BR) in a single non-attackable sequence.
+//
+// We take the final entry index as an operand to allow isel freedom. This does
+// mean that the index can be attacker-controlled.  To address that, we also do
+// limited checking of the offset, mainly ensuring it still points within the
+// jump-table array.  When it doesn't, this branches to the first entry.
+// We might want to trap instead.
+//
+// This is intended for use in conjunction with ptrauth for other code pointers,
+// to avoid signing jump-table entries and turning them into pointers.
+//
+// Entry index is passed in x16.  Clobbers x16/x17/nzcv.
 let isNotDuplicable = 1 in
-def JumpTableAnchor : Pseudo<(outs GPR64:$pc), (ins i32imm:$jti), []>,
-                      Sched<[WriteI]>;
-
-let isNotDuplicable = 1 in
-def BR_JumpTable : Pseudo<(outs), (ins i32imm:$jti), []>,
-                   Sched<[]> {
+def BR_JumpTable : Pseudo<(outs), (ins i32imm:$jti), []>, Sched<[]> {
   let isBranch = 1;
   let isTerminator = 1;
   let isIndirectBranch = 1;
   let isBarrier = 1;
+  let isNotDuplicable = 1;
   let Defs = [X16,X17,NZCV];
   let Uses = [X16];
   let Size = 44; // 28 fixed + 16 variable, for table size materialization
