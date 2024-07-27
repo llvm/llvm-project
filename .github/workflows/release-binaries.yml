@@ -158,7 +158,12 @@ jobs:
         sparse-checkout-cone-mode: false
         # Check out outside of working directory so the source checkout doesn't
         # remove it.
-        path: ../workflows
+        path: workflows
+
+    # Move workflows so they don't get overwritten by checkout.  The checkout job
+    # requires checking out to github.workspace.
+    - shell: bash
+      run: mv workflows  ../workflows-main
 
     - name: Checkout LLVM
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
@@ -168,7 +173,7 @@ jobs:
     - name: Copy main workflows
       shell: bash
       run: |
-        mv ../workflows workflows-main
+        mv ../workflows-main .
 
     - name: Setup Stage
       id: setup-stage
