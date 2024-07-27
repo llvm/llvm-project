@@ -3331,7 +3331,7 @@ def err_attribute_invalid_implicit_this_argument : Error<
 def err_ownership_type : Error<
   "%0 attribute only applies to %select{pointer|integer}1 arguments">;
 def err_ownership_takes_return_type : Error<
-  "'ownership_returns' attribute only applies to functions that return pointers">;
+  "'ownership_returns' attribute only applies to functions that return a pointer">;
 def err_ownership_returns_index_mismatch : Error<
   "'ownership_returns' attribute index does not match; here it is %0">;
 def note_ownership_returns_index_mismatch : Note<
