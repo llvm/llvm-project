@@ -549,7 +549,7 @@ void ScriptParser::readRegionAlias() {
   expect("(");
   StringRef alias = readName();
   expect(",");
-  StringRef name = next();
+  StringRef name = readName();
   expect(")");
 
   if (script->memoryRegions.count(alias))
