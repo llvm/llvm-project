@@ -39,6 +39,13 @@ protected:
   std::vector<const MCSymbol *> AddrsigSyms;
   bool EmitAddrsigSection = false;
 
+  struct CGProfileEntry {
+    const MCSymbolRefExpr *From;
+    const MCSymbolRefExpr *To;
+    uint64_t Count;
+  };
+  SmallVector<CGProfileEntry, 0> CGProfile;
+
   MCObjectWriter() = default;
 
 public:
@@ -105,6 +112,7 @@ public:
   void addAddrsigSymbol(const MCSymbol *Sym) { AddrsigSyms.push_back(Sym); }
 
   std::vector<const MCSymbol *> &getAddrsigSyms() { return AddrsigSyms; }
+  SmallVector<CGProfileEntry, 0> &getCGProfile() { return CGProfile; }
 
   /// Write the object file and returns the number of bytes written.
   ///

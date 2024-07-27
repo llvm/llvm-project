@@ -1084,12 +1084,12 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
   }
 
   // Create the contents of the .llvm.call-graph-profile section.
-  if (Mode != DwoOnly && !Asm.CGProfile.empty()) {
+  if (Mode != DwoOnly && !OWriter.getCGProfile().empty()) {
     auto *Sec = Asm.getContext().getCOFFSection(
         ".llvm.call-graph-profile", COFF::IMAGE_SCN_LNK_REMOVE);
     auto *Frag = cast<MCDataFragment>(Sec->curFragList()->Head);
     raw_svector_ostream OS(Frag->getContents());
-    for (const MCAssembler::CGProfileEntry &CGPE : Asm.CGProfile) {
+    for (const auto &CGPE : OWriter.getCGProfile()) {
       uint32_t FromIndex = CGPE.From->getSymbol().getIndex();
       uint32_t ToIndex = CGPE.To->getSymbol().getIndex();
       support::endian::write(OS, FromIndex, W.Endian);
