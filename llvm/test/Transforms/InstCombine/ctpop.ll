@@ -488,7 +488,7 @@ define i32 @select_ctpop_zero(i32 %x) {
 
 define i32 @ctpop_non_zero(i32 range(i32 1, 255) %x) {
 ; CHECK-LABEL: @ctpop_non_zero(
-; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 0, 9) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 1, 9) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
 ; CHECK-NEXT:    ret i32 [[CTPOP]]
 ;
   %ctpop = call i32 @llvm.ctpop.i32(i32 %x)
@@ -497,7 +497,7 @@ define i32 @ctpop_non_zero(i32 range(i32 1, 255) %x) {
 
 define i32 @ctpop_non_zero_with_existing_range_attr(i32 range(i32 1, 255) %x) {
 ; CHECK-LABEL: @ctpop_non_zero_with_existing_range_attr(
-; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 0, 9) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 1, 9) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
 ; CHECK-NEXT:    ret i32 [[CTPOP]]
 ;
   %ctpop = call range(i32 0, 9) i32 @llvm.ctpop.i32(i32 %x)
