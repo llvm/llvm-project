@@ -201,6 +201,20 @@ public:
     rewriter.mergeBlocks(&r.back(), unwindBlock);
   }
 
+  void buildAllCase(mlir::PatternRewriter &rewriter, mlir::Region &r,
+                    mlir::Block *afterTry, mlir::Block *catchAllBlock) const {
+    YieldOp yieldOp;
+    r.walk([&](YieldOp op) {
+      assert(!yieldOp && "expect to only find one");
+      yieldOp = op;
+    });
+    mlir::Block *catchAllStartBB = &r.front();
+    rewriter.inlineRegionBefore(r, afterTry);
+    rewriter.mergeBlocks(catchAllStartBB, catchAllBlock);
+    rewriter.setInsertionPointToEnd(yieldOp->getBlock());
+    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(yieldOp, afterTry);
+  }
+
   mlir::Block *buildCatchers(mlir::cir::TryOp tryOp,
                              mlir::PatternRewriter &rewriter,
                              mlir::Block *afterBody,
@@ -261,7 +275,9 @@ public:
                                              nextDispatcher);
         rewriter.setInsertionPointToEnd(nextDispatcher);
       } else if (auto catchAll = dyn_cast<mlir::cir::CatchAllAttr>(caseAttr)) {
-        // TBD
+        assert(nextDispatcher->empty() && "expect empty dispatcher");
+        buildAllCase(rewriter, caseRegions[caseCnt], afterTry, nextDispatcher);
+        nextDispatcher = nullptr; // No more business in try/catch
       } else if (auto catchUnwind =
                      dyn_cast<mlir::cir::CatchUnwindAttr>(caseAttr)) {
         assert(nextDispatcher->empty() && "expect empty dispatcher");
