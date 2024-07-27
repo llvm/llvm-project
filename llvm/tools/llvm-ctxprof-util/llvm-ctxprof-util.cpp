@@ -19,8 +19,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/JSON.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -132,7 +132,7 @@ Error convertFromJSON() {
   return Error::success();
 }
 
-int llvm_ctxprof_util_main(int argc, char **argv, const llvm::ToolContext &) {
+int main(int argc, const char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "LLVM Contextual Profile Utils\n");
   ExitOnError ExitOnErr("llvm-ctxprof-util: ");
   if (FromJSON) {
@@ -145,6 +145,6 @@ int llvm_ctxprof_util_main(int argc, char **argv, const llvm::ToolContext &) {
     }
     return 0;
   }
-  llvm_unreachable("Unknown subcommands should have been handled by the "
-                   "command line parser.");
+  cl::PrintHelpMessage();
+  return 1;
 }
