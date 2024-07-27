@@ -230,3 +230,82 @@ define i1 @srem_negC_fail1(i8 %x) {
   %r = icmp sge i8 %val, -33
   ret i1 %r
 }
+
+define i1 @intrinsic_test1(i64 %x, i32 %y, i64 %z) {
+; CHECK-LABEL: @intrinsic_test1(
+; CHECK-NEXT:    [[SH_PROM:%.*]] = zext nneg i32 [[Y:%.*]] to i64
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i64 1, [[SH_PROM]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[Z:%.*]], 0
+; CHECK-NEXT:    [[UMIN1:%.*]] = call i64 @llvm.umin.i64(i64 [[SHL]], i64 [[Z]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i64 1, i64 [[UMIN1]]
+; CHECK-NEXT:    [[UMIN2:%.*]] = call i64 @llvm.umin.i64(i64 [[X:%.*]], i64 [[SEL]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[UMIN2]], -71777214294589697
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sh_prom = zext nneg i32 %y to i64
+  %shl = shl nuw i64 1, %sh_prom
+  %cmp1 = icmp eq i64 %z, 0
+  %umin1 = call i64 @llvm.umin.i64(i64 %shl, i64 %z)
+  %sel = select i1 %cmp1, i64 1, i64 %umin1
+  %umin2 = call i64 @llvm.umin.i64(i64 %x, i64 %sel)
+  %cmp = icmp ugt i64 %umin2, -71777214294589697
+  ret i1 %cmp
+}
+
+define i1 @intrinsic_test2(i32 %x, i32 %y) {
+; CHECK-LABEL: @intrinsic_test2(
+; CHECK-NEXT:    [[SH:%.*]] = shl nuw nsw i32 16, [[X:%.*]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SH]], i32 64)
+; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[UMIN]], i32 1)
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ADD]], [[UMAX]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sh = shl nuw nsw i32 16, %x
+  %umin = call i32 @llvm.umin.i32(i32 %sh, i32 64)
+  %umax = call i32 @llvm.umax.i32(i32 %umin, i32 1)
+  %add = add nuw nsw i32 %y, 1
+  %cmp = icmp eq i32 %add, %umax
+  ret i1 %cmp
+}
+
+define i1 @constant_test(i64 %x, i1 %cond) {
+; CHECK-LABEL: @constant_test(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i64 2147483647, i64 18446744073709551
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[X:%.*]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i64 [[X]], [[SEL]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[OR_COND]]
+;
+  %sel = select i1 %cond, i64 2147483647, i64 18446744073709551
+  %cmp1 = icmp slt i64 %x, 0
+  %cmp2 = icmp ugt i64 %x, %sel
+  %or.cond = or i1 %cmp1, %cmp2
+  ret i1 %or.cond
+}
+
+; Make sure that we don't return a full range for an imm arg.
+define i1 @immarg_test(i32 %x, i32 %y, i1 %c1, i1 %c2, i1 %c3, i1 %c4, i1 %c5, i1 %c6, i1 %c7) {
+; CHECK-LABEL: @immarg_test(
+; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[Y:%.*]], i1 true)
+; CHECK-NEXT:    [[M1:%.*]] = select i1 [[C1:%.*]], i32 [[ABS]], i32 0
+; CHECK-NEXT:    [[M2:%.*]] = select i1 [[C2:%.*]], i32 [[M1]], i32 1
+; CHECK-NEXT:    [[M3:%.*]] = select i1 [[C3:%.*]], i32 [[M2]], i32 2
+; CHECK-NEXT:    [[M4:%.*]] = select i1 [[C4:%.*]], i32 [[M3]], i32 3
+; CHECK-NEXT:    [[M5:%.*]] = select i1 [[C5:%.*]], i32 [[M4]], i32 4
+; CHECK-NEXT:    [[M6:%.*]] = select i1 [[C6:%.*]], i32 [[M5]], i32 5
+; CHECK-NEXT:    [[M7:%.*]] = select i1 [[C7:%.*]], i32 [[M6]], i32 6
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[M7]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %abs = call i32 @llvm.abs.i32(i32 %y, i1 true)
+  %m1 = select i1 %c1, i32 %abs, i32 0
+  %m2 = select i1 %c2, i32 %m1, i32 1
+  %m3 = select i1 %c3, i32 %m2, i32 2
+  %m4 = select i1 %c4, i32 %m3, i32 3
+  %m5 = select i1 %c5, i32 %m4, i32 4
+  %m6 = select i1 %c6, i32 %m5, i32 5
+  %m7 = select i1 %c7, i32 %m6, i32 6
+  %cmp = icmp eq i32 %m7, 1
+  ret i1 %cmp
+}
