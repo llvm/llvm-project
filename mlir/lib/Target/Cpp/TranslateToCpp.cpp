@@ -656,6 +656,30 @@ static LogicalResult printOperation(CppEmitter &emitter,
   return success();
 }
 
+static LogicalResult
+printOperation(CppEmitter &emitter,
+               emitc::InstantiateFunctionTemplateOp instOp) {
+
+  raw_ostream &os = emitter.ostream();
+  Operation &op = *instOp.getOperation();
+
+  if (failed(emitter.emitAssignPrefix(op)))
+    return failure();
+  os << "&" << instOp.getCallee() << "<";
+
+  auto emitArgs = [&](mlir::Value val) -> LogicalResult {
+    os << "decltype(";
+    if (failed(emitter.emitOperand(val)))
+      return failure();
+    os << ")";
+    return success();
+  };
+  if (failed(interleaveCommaWithError(instOp.getArgs(), os, emitArgs)))
+    return failure();
+  os << ">";
+  return success();
+}
+
 static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::ApplyOp applyOp) {
   raw_ostream &os = emitter.ostream();
@@ -1508,6 +1532,8 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           .Case<func::CallOp, func::FuncOp, func::ReturnOp>(
               [&](auto op) { return printOperation(*this, op); })
           .Case<emitc::LiteralOp>([&](auto op) { return success(); })
+          .Case<emitc::InstantiateFunctionTemplateOp>(
+              [&](auto op) { return printOperation(*this, op); })
           .Default([&](Operation *) {
             return op.emitOpError("unable to find printer for op");
           });

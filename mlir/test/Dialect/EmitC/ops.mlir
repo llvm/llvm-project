@@ -224,6 +224,12 @@ func.func @test_subscript(%arg0 : !emitc.array<2x3xf32>, %arg1 : !emitc.ptr<i32>
   return
 }
 
+func.func @test_instantiate_template() {
+  %c1 = "emitc.constant"() <{value = 7 : i32}> : () -> i32
+  %0 = emitc.instantiate_function_template "func_template"<%c1> : (i32) -> !emitc.ptr<!emitc.opaque<"void">>
+  return
+}
+
 emitc.verbatim "#ifdef __cplusplus"
 emitc.verbatim "extern \"C\" {"
 emitc.verbatim "#endif  // __cplusplus"
