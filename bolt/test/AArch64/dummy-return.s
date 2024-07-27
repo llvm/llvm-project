@@ -1,4 +1,6 @@
-# REQUIRES: system-linux,target=aarch64{{.*}}
+# This test checks instrumentation of static binary on AArch64.
+
+# REQUIRES: system-linux,bolt-runtime,target=aarch64{{.*}}
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -static
