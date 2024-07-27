@@ -2997,13 +2997,9 @@ static SDValue lowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
     CvtEltVT = MVT::getIntegerVT(CvtEltVT.getSizeInBits() / 2);
     CvtContainerVT = CvtContainerVT.changeVectorElementType(CvtEltVT);
     // Rounding mode here is arbitrary since we aren't shifting out any bits.
-    unsigned ClipOpc = IsSigned ? RISCVISD::VNCLIP_VL : RISCVISD::VNCLIPU_VL;
-    Res = DAG.getNode(
-        ClipOpc, DL, CvtContainerVT,
-        {Res, DAG.getConstant(0, DL, CvtContainerVT),
-         DAG.getUNDEF(CvtContainerVT), Mask,
-         DAG.getTargetConstant(RISCVVXRndMode::RNU, DL, Subtarget.getXLenVT()),
-         VL});
+    unsigned ClipOpc = IsSigned ? RISCVISD::TRUNCATE_VECTOR_VL_SSAT
+                                : RISCVISD::TRUNCATE_VECTOR_VL_USAT;
+    Res = DAG.getNode(ClipOpc, DL, CvtContainerVT, Res, Mask, VL);
   }
 
   SDValue SplatZero = DAG.getNode(
@@ -16643,9 +16639,9 @@ static SDValue combineTruncToVnclip(SDNode *N, SelectionDAG &DAG,
   SDValue Val;
   unsigned ClipOpc;
   if ((Val = DetectUSatPattern(Src)))
-    ClipOpc = RISCVISD::VNCLIPU_VL;
+    ClipOpc = RISCVISD::TRUNCATE_VECTOR_VL_USAT;
   else if ((Val = DetectSSatPattern(Src)))
-    ClipOpc = RISCVISD::VNCLIP_VL;
+    ClipOpc = RISCVISD::TRUNCATE_VECTOR_VL_SSAT;
   else
     return SDValue();
 
@@ -16654,12 +16650,7 @@ static SDValue combineTruncToVnclip(SDNode *N, SelectionDAG &DAG,
   do {
     MVT ValEltVT = MVT::getIntegerVT(ValVT.getScalarSizeInBits() / 2);
     ValVT = ValVT.changeVectorElementType(ValEltVT);
-    // Rounding mode here is arbitrary since we aren't shifting out any bits.
-    Val = DAG.getNode(
-        ClipOpc, DL, ValVT,
-        {Val, DAG.getConstant(0, DL, ValVT), DAG.getUNDEF(VT), Mask,
-         DAG.getTargetConstant(RISCVVXRndMode::RNU, DL, Subtarget.getXLenVT()),
-         VL});
+    Val = DAG.getNode(ClipOpc, DL, ValVT, Val, Mask, VL);
   } while (ValVT != VT);
 
   return Val;
@@ -20463,6 +20454,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(SPLAT_VECTOR_SPLIT_I64_VL)
   NODE_NAME_CASE(READ_VLENB)
   NODE_NAME_CASE(TRUNCATE_VECTOR_VL)
+  NODE_NAME_CASE(TRUNCATE_VECTOR_VL_SSAT)
+  NODE_NAME_CASE(TRUNCATE_VECTOR_VL_USAT)
   NODE_NAME_CASE(VSLIDEUP_VL)
   NODE_NAME_CASE(VSLIDE1UP_VL)
   NODE_NAME_CASE(VSLIDEDOWN_VL)
@@ -20506,8 +20499,6 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(UADDSAT_VL)
   NODE_NAME_CASE(SSUBSAT_VL)
   NODE_NAME_CASE(USUBSAT_VL)
-  NODE_NAME_CASE(VNCLIP_VL)
-  NODE_NAME_CASE(VNCLIPU_VL)
   NODE_NAME_CASE(FADD_VL)
   NODE_NAME_CASE(FSUB_VL)
   NODE_NAME_CASE(FMUL_VL)
