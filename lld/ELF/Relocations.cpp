@@ -475,8 +475,9 @@ private:
                                 uint64_t relOff) const;
   void processAux(RelExpr expr, RelType type, uint64_t offset, Symbol &sym,
                   int64_t addend) const;
-  template <class ELFT, class RelTy> void scanOne(RelTy *&i);
-  template <class ELFT, class RelTy> void scan(ArrayRef<RelTy> rels);
+  template <class ELFT, class RelTy>
+  void scanOne(typename Relocs<RelTy>::const_iterator &i);
+  template <class ELFT, class RelTy> void scan(Relocs<RelTy> rels);
 };
 } // namespace
 
@@ -1434,7 +1435,8 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
   return 0;
 }
 
-template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
+template <class ELFT, class RelTy>
+void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
   const RelTy &rel = *i;
   uint32_t symIndex = rel.getSymbol(config->isMips64EL);
   Symbol &sym = sec->getFile<ELFT>()->getSymbol(symIndex);
@@ -1575,7 +1577,7 @@ static void checkPPC64TLSRelax(InputSectionBase &sec, ArrayRef<RelTy> rels) {
 }
 
 template <class ELFT, class RelTy>
-void RelocationScanner::scan(ArrayRef<RelTy> rels) {
+void RelocationScanner::scan(Relocs<RelTy> rels) {
   // Not all relocations end up in Sec->Relocations, but a lot do.
   sec->relocations.reserve(rels.size());
 
@@ -1593,7 +1595,7 @@ void RelocationScanner::scan(ArrayRef<RelTy> rels) {
 
   end = static_cast<const void *>(rels.end());
   for (auto i = rels.begin(); i != end;)
-    scanOne<ELFT>(i);
+    scanOne<ELFT, RelTy>(i);
 
   // Sort relocations by offset for more efficient searching for
   // R_RISCV_PCREL_HI20 and R_PPC64_ADDR64.
@@ -2410,11 +2412,7 @@ template <class ELFT> void elf::checkNoCrossRefs() {
         if (!isd)
           continue;
         parallelForEach(isd->sections, [&](InputSection *sec) {
-          const RelsOrRelas<ELFT> rels = sec->template relsOrRelas<ELFT>();
-          if (rels.areRelocsRel())
-            scanCrossRefs<ELFT>(noxref, osec, sec, rels.rels);
-          else
-            scanCrossRefs<ELFT>(noxref, osec, sec, rels.relas);
+          invokeOnRelocs(*sec, scanCrossRefs<ELFT>, noxref, osec, sec);
         });
       }
     }

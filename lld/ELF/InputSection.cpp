@@ -911,7 +911,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
 // So, we handle relocations for non-alloc sections directly in this
 // function as a performance optimization.
 template <class ELFT, class RelTy>
-void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
+void InputSection::relocateNonAlloc(uint8_t *buf, Relocs<RelTy> rels) {
   const unsigned bits = sizeof(typename ELFT::uint) * 8;
   const TargetInfo &target = *elf::target;
   const auto emachine = config->emachine;
