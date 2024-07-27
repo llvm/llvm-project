@@ -22,6 +22,8 @@ MCObjectWriter::~MCObjectWriter() = default;
 void MCObjectWriter::reset() {
   FileNames.clear();
   AddrsigSyms.clear();
+  EmitAddrsigSection = false;
+  SubsectionsViaSymbols = false;
   CGProfile.clear();
 }
 
