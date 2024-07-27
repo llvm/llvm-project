@@ -3100,10 +3100,17 @@ def TryCallOp : CIR_CallOp<"try_call",
         $_state.addTypes(resType);
 
       // Handle branches
-      $_state.addSuccessors(cont);
-      $_state.addSuccessors(landing_pad);
       $_state.addOperands(contOperands);
       $_state.addOperands(landingPadOperands);
+      // The TryCall ODS layout is: cont, landing_pad, operands.
+      llvm::copy(::llvm::ArrayRef<int32_t>({
+        static_cast<int32_t>(contOperands.size()),
+        static_cast<int32_t>(landingPadOperands.size()),
+        static_cast<int32_t>(operands.size())
+        }),
+        odsState.getOrAddProperties<Properties>().operandSegmentSizes.begin());
+      $_state.addSuccessors(cont);
+      $_state.addSuccessors(landing_pad);
     }]>,
     OpBuilder<(ins "Value":$ind_target,
                "FuncType":$fn_type,
@@ -3111,15 +3118,25 @@ def TryCallOp : CIR_CallOp<"try_call",
                CArg<"ValueRange", "{}">:$operands,
                CArg<"ValueRange", "{}">:$contOperands,
                CArg<"ValueRange", "{}">:$landingPadOperands), [{
-      $_state.addOperands(ValueRange{ind_target});
-      $_state.addOperands(operands);
+      ::llvm::SmallVector<mlir::Value, 4> finalCallOperands({ind_target});
+      finalCallOperands.append(operands.begin(), operands.end());
+      $_state.addOperands(finalCallOperands);
+
       if (!fn_type.isVoid())
         $_state.addTypes(fn_type.getReturnType());
+
       // Handle branches
-      $_state.addSuccessors(cont);
-      $_state.addSuccessors(landing_pad);
       $_state.addOperands(contOperands);
       $_state.addOperands(landingPadOperands);
+      // The TryCall ODS layout is: cont, landing_pad, operands.
+      llvm::copy(::llvm::ArrayRef<int32_t>({
+        static_cast<int32_t>(contOperands.size()),
+        static_cast<int32_t>(landingPadOperands.size()),
+        static_cast<int32_t>(finalCallOperands.size())
+        }),
+        odsState.getOrAddProperties<Properties>().operandSegmentSizes.begin());
+      $_state.addSuccessors(cont);
+      $_state.addSuccessors(landing_pad);
     }]>
   ];
 }

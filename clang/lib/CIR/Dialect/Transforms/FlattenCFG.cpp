@@ -201,8 +201,10 @@ public:
     rewriter.mergeBlocks(&r.back(), unwindBlock);
   }
 
-  void buildCatchers(mlir::cir::TryOp tryOp, mlir::PatternRewriter &rewriter,
-                     mlir::Block *afterBody, mlir::Block *afterTry) const {
+  mlir::Block *buildCatchers(mlir::cir::TryOp tryOp,
+                             mlir::PatternRewriter &rewriter,
+                             mlir::Block *afterBody,
+                             mlir::Block *afterTry) const {
     auto loc = tryOp.getLoc();
     // Replace the tryOp return with a branch that jumps out of the body.
     rewriter.setInsertionPointToEnd(afterBody);
@@ -212,11 +214,7 @@ public:
     auto *catchBegin =
         rewriter.splitBlock(beforeCatch, rewriter.getInsertionPoint());
     rewriter.setInsertionPointToEnd(beforeCatch);
-
-    // FIXME: this branch should be to afterTry instead of catchBegin, before we
-    // change this, we need to break calls into their branch version
-    // (invoke-like) first, otherwise these will be unrecheable and eliminated.
-    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(tryBodyYield, catchBegin);
+    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(tryBodyYield, afterTry);
 
     // Start the landing pad by getting the inflight exception information.
     rewriter.setInsertionPointToEnd(catchBegin);
@@ -274,6 +272,7 @@ public:
     }
 
     assert(!nextDispatcher && "no dispatcher available anymore");
+    return catchBegin;
   }
 
   mlir::Block *buildTryBody(mlir::cir::TryOp tryOp,
@@ -307,14 +306,45 @@ public:
       return mlir::success();
     }
 
-    // TODO: keep track of cir.try_call before we flatten.
+    // Grab the collection of `cir.call exception`s to rewrite to
+    // `cir.try_call`.
+    SmallVector<mlir::cir::CallOp, 4> callsToRewrite;
+    tryOp.getTryRegion().walk([&](CallOp op) {
+      // Only grab calls within immediate closest TryOp scope.
+      if (op->getParentOfType<mlir::cir::TryOp>() != tryOp)
+        return;
+      if (!op.getException())
+        return;
+      callsToRewrite.push_back(op);
+    });
 
     // Build try body.
     mlir::Block *afterTry = buildTryBody(tryOp, rewriter);
 
     // Build catchers.
-    buildCatchers(tryOp, rewriter, afterBody, afterTry);
+    mlir::Block *landingPad =
+        buildCatchers(tryOp, rewriter, afterBody, afterTry);
     rewriter.eraseOp(tryOp);
+
+    // Rewrite calls.
+    for (CallOp callOp : callsToRewrite) {
+      mlir::Block *callBlock = callOp->getBlock();
+      mlir::Block *cont =
+          rewriter.splitBlock(callBlock, mlir::Block::iterator(callOp));
+      mlir::cir::ExtraFuncAttributesAttr extraAttrs = callOp.getExtraAttrs();
+      std::optional<mlir::cir::ASTCallExprInterface> ast = callOp.getAst();
+
+      mlir::FlatSymbolRefAttr symbol;
+      if (!callOp.isIndirect())
+        symbol = callOp.getCalleeAttr();
+      rewriter.setInsertionPointToEnd(callBlock);
+      auto tryCall = rewriter.replaceOpWithNewOp<mlir::cir::TryCallOp>(
+          callOp, symbol, callOp.getResult().getType(), cont, landingPad,
+          callOp.getOperands());
+      tryCall.setExtraAttrsAttr(extraAttrs);
+      if (ast)
+        tryCall.setAstAttr(*ast);
+    }
 
     // Quick block cleanup: no indirection to the post try block.
     auto brOp = dyn_cast<mlir::cir::BrOp>(afterTry->getTerminator());
