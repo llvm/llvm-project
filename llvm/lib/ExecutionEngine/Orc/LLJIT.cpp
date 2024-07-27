@@ -602,7 +602,7 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
   using llvm::orc::shared::SPSExecutorAddr;
   using llvm::orc::shared::SPSString;
   using SPSDLOpenSig = SPSExecutorAddr(SPSString, int32_t);
-  using SPSDLUpdateSig = SPSExecutorAddr(SPSExecutorAddr, int32_t);
+  using SPSDLUpdateSig = int32_t(SPSExecutorAddr, int32_t);
   enum dlopen_mode : int32_t {
     ORC_RT_RTLD_LAZY = 0x1,
     ORC_RT_RTLD_NOW = 0x2,
@@ -625,10 +625,16 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
 
   if (auto WrapperAddr =
           ES.lookup(MainSearchOrder, J.mangleAndIntern(WrapperToCall))) {
-    if (dlupdate)
-      return ES.callSPSWrapper<SPSDLUpdateSig>(WrapperAddr->getAddress(),
-                                               DSOHandles[&JD], DSOHandles[&JD],
-                                               int32_t(ORC_RT_RTLD_LAZY));
+    if (dlupdate) {
+      int32_t result;
+      auto E = ES.callSPSWrapper<SPSDLUpdateSig>(WrapperAddr->getAddress(),
+                                                 result, DSOHandles[&JD],
+                                                 int32_t(ORC_RT_RTLD_LAZY));
+      if (result)
+        return make_error<StringError>("dlupdate failed",
+                                       inconvertibleErrorCode());
+      return E;
+    }
     return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
                                            DSOHandles[&JD], JD.getName(),
                                            int32_t(ORC_RT_RTLD_LAZY));

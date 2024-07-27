@@ -331,7 +331,7 @@ public:
 
   const char *dlerror();
   void *dlopen(std::string_view Name, int Mode);
-  void *dlupdate(void *DSOHandle, int Mode);
+  int dlupdate(void *DSOHandle, int Mode);
   int dlclose(void *DSOHandle);
   void *dlsym(void *DSOHandle, const char *Symbol);
 
@@ -381,7 +381,7 @@ private:
   Error dlopenInitialize(std::unique_lock<std::mutex> &JDStatesLock,
                          JITDylibState &JDS, MachOJITDylibDepInfoMap &DepInfo);
 
-  Expected<void *> dlupdateImpl(void *DSOHandle, int Mode);
+  Error dlupdateImpl(void *DSOHandle, int Mode);
   Error dlupdateFull(std::unique_lock<std::mutex> &JDStatesLock,
                      JITDylibState &JDS);
   Error dlupdateInitialize(std::unique_lock<std::mutex> &JDStatesLock,
@@ -796,19 +796,18 @@ void *MachOPlatformRuntimeState::dlopen(std::string_view Path, int Mode) {
   }
 }
 
-void *MachOPlatformRuntimeState::dlupdate(void *DSOHandle, int Mode) {
+int MachOPlatformRuntimeState::dlupdate(void *DSOHandle, int Mode) {
   ORC_RT_DEBUG({
     std::string S;
     printdbg("MachOPlatform::dlupdate(%p) (%s)\n", DSOHandle, S.c_str());
   });
   std::lock_guard<std::recursive_mutex> Lock(DyldAPIMutex);
-  if (auto H = dlupdateImpl(DSOHandle, Mode))
-    return *H;
-  else {
+  if (auto Err = dlupdateImpl(DSOHandle, Mode)) {
     // FIXME: Make dlerror thread safe.
-    DLFcnError = toString(H.takeError());
-    return nullptr;
+    DLFcnError = toString(std::move(Err));
+    return -1;
   }
+  return 0;
 }
 
 int MachOPlatformRuntimeState::dlclose(void *DSOHandle) {
@@ -1266,7 +1265,7 @@ Error MachOPlatformRuntimeState::dlopenInitialize(
   return Error::success();
 }
 
-Expected<void *> MachOPlatformRuntimeState::dlupdateImpl(void *DSOHandle,
+Error MachOPlatformRuntimeState::dlupdateImpl(void *DSOHandle,
                                                          int Mode) {
   std::unique_lock<std::mutex> Lock(JDStatesMutex);
 
@@ -1284,11 +1283,10 @@ Expected<void *> MachOPlatformRuntimeState::dlupdateImpl(void *DSOHandle,
 
   if (!JDS->Sealed) {
     if (auto Err = dlupdateFull(Lock, *JDS))
-      return std::move(Err);
+      return Err;
   }
 
-  // Return the header address.
-  return JDS->Header;
+  return Error::success();
 }
 
 Error MachOPlatformRuntimeState::dlupdateFull(
@@ -1601,7 +1599,7 @@ void *__orc_rt_macho_jit_dlopen(const char *path, int mode) {
   return MachOPlatformRuntimeState::get().dlopen(path, mode);
 }
 
-void *__orc_rt_macho_jit_dlupdate(void *dso_handle, int mode) {
+int __orc_rt_macho_jit_dlupdate(void *dso_handle, int mode) {
   return MachOPlatformRuntimeState::get().dlupdate(dso_handle, mode);
 }
 
