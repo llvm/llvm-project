@@ -170,7 +170,7 @@ i.e., use space-separated `key=value` pairs for each option.
 
 The `--pass-pipeline` flag supports combining multiple passes into a pipeline.
 So far we have used the trivial pipeline with a single pass
-that is "anchored" on the `builtin.module` op.
+that is "anchored" on the top-level `builtin.module` op.
 [Pass anchoring](/docs/PassManagement/#oppassmanager)
 is a way for passes to specify
 that they only run on particular ops.
