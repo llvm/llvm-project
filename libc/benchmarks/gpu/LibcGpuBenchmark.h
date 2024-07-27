@@ -17,12 +17,13 @@ namespace benchmarks {
 
 struct BenchmarkOptions {
   uint32_t initial_iterations = 1;
+  uint32_t min_iterations = 50;
   uint32_t max_iterations = 10000000;
   uint32_t min_samples = 4;
   uint32_t max_samples = 1000;
-  int64_t min_duration = 0;                  // in nanoseconds (ns)
+  int64_t min_duration = 500 * 1000;         // 500 * 1000 nanoseconds = 500 us
   int64_t max_duration = 1000 * 1000 * 1000; // 1e9 nanoseconds = 1 second
-  double epsilon = 0.01;
+  double epsilon = 0.0001;
   double scaling_factor = 1.4;
 };
 
