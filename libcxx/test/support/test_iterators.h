@@ -347,23 +347,25 @@ class contiguous_iterator {
   friend class contiguous_iterator;
 
 public:
-    typedef          std::contiguous_iterator_tag              iterator_category;
-    typedef typename std::iterator_traits<It>::value_type      value_type;
-    typedef typename std::iterator_traits<It>::difference_type difference_type;
-    typedef It                                                 pointer;
-    typedef typename std::iterator_traits<It>::reference       reference;
-    typedef value_type element_type;
+  using iterator_category = std::contiguous_iterator_tag;
+  using value_type        = typename std::iterator_traits<It>::value_type;
+  using difference_type   = typename std::iterator_traits<It>::difference_type;
+  using pointer           = typename std::iterator_traits<It>::pointer;
+  using reference         = typename std::iterator_traits<It>::reference;
+  using element_type      = value_type;
 
-    constexpr It base() const { return it_; }
+  constexpr It base() const { return it_; }
 
-    constexpr contiguous_iterator() : it_() {}
-    constexpr explicit contiguous_iterator(It it) : it_(it) {}
+  constexpr contiguous_iterator() : it_() {}
+  constexpr explicit contiguous_iterator(It it) : it_(it) {}
 
-    template <class U>
-    constexpr contiguous_iterator(const contiguous_iterator<U>& u) : it_(u.it_) {}
+  template <class U>
+  constexpr contiguous_iterator(const contiguous_iterator<U>& u) : it_(u.it_) {}
 
-    template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
-    constexpr contiguous_iterator(contiguous_iterator<U>&& u) : it_(u.it_) { u.it_ = U(); }
+  template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
+  constexpr contiguous_iterator(contiguous_iterator<U>&& u) : it_(u.it_) {
+    u.it_ = U();
+  }
 
     constexpr reference operator*() const { return *it_; }
     constexpr pointer operator->() const { return it_; }
