@@ -83,6 +83,9 @@ public:
 
   ///@}
 
+  /// Debug method to help view the internal state of this class.
+  LLVM_DUMP_METHOD void dump() const;
+
 private:
   class CallBackOnDeletion final : public CallbackVH {
   public:
@@ -111,9 +114,6 @@ private:
 
   /// Returns true if at least one BasicBlock is deleted.
   bool forceFlushDeletedBB();
-
-  /// Debug method to help view the internal state of this class.
-  LLVM_DUMP_METHOD void dump() const;
 };
 
 extern template class GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,

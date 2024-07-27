@@ -105,6 +105,12 @@ public:
     return PendUpdates.size() != PendPDTUpdateIndex;
   }
 
+  bool hasPendingCriticalEdges() const {
+    if (!PDT && !DT)
+      return false;
+    return !CriticalEdgesToSplit.empty();
+  }
+
   ///@{
   /// \name Mutation APIs
   ///
@@ -146,7 +152,24 @@ public:
   /// 2. It is illegal to submit any update that has already been submitted,
   /// i.e., you are supposed not to insert an existent edge or delete a
   /// nonexistent edge.
+  /// 3. This kind updates are incompatible with critical edge splitting
+  /// updates, call this method will apply all critical edge updates in
+  /// lazy mode. It is not recommended to interleave applyUpdates and
+  /// applyUpdatesForCriticalEdgeSplitting.
   void applyUpdates(ArrayRef<typename DomTreeT::UpdateType> Updates);
+
+  /// Apply updates that the critical edge (FromBB, ToBB) has been
+  /// split with NewBB.
+  ///
+  /// \note Do not use this method with regular edges.
+  ///
+  /// \note This kind updates are incompatible with generic updates,
+  /// call this method will submit all generic updates in lazy mode.
+  /// It is not recommended to interleave applyUpdates and
+  /// applyUpdatesForCriticalEdgeSplitting.
+  void applyUpdatesForCriticalEdgeSplitting(BasicBlockT *FromBB,
+                                            BasicBlockT *ToBB,
+                                            BasicBlockT *NewBB);
 
   /// Submit updates to all available trees. It will also
   /// 1. discard duplicated updates,
@@ -197,6 +220,7 @@ public:
     applyDomTreeUpdates();
     applyPostDomTreeUpdates();
     dropOutOfDateUpdates();
+    applySplitCriticalEdges();
   }
 
   ///@}
@@ -243,6 +267,35 @@ protected:
   /// Drop all updates applied by all available trees and delete BasicBlocks if
   /// all available trees are up-to-date.
   void dropOutOfDateUpdates();
+
+private:
+  /// Helper structure used to hold all the basic blocks
+  /// involved in the split of a critical edge.
+  struct CriticalEdge {
+    BasicBlockT *FromBB;
+    BasicBlockT *ToBB;
+    BasicBlockT *NewBB;
+  };
+
+  /// Pile up all the critical edges to be split.
+  /// The splitting of a critical edge is local and thus, it is possible
+  /// to apply several of those changes at the same time.
+  SmallVector<CriticalEdge, 32> CriticalEdgesToSplit;
+
+  /// Remember all the basic blocks that are inserted during
+  /// edge splitting.
+  /// Invariant: NewBBs == all the basic blocks contained in the NewBB
+  /// field of all the elements of CriticalEdgesToSplit.
+  /// I.e., forall elt in CriticalEdgesToSplit, it exists BB in NewBBs
+  /// such as BB == elt.NewBB.
+  SmallSet<BasicBlockT *, 32> NewBBs;
+
+  /// Apply all the recorded critical edges to the DT.
+  /// This updates the underlying DT information in a way that uses
+  /// the fast query path of DT as much as possible.
+  ///
+  /// \post CriticalEdgesToSplit.empty().
+  void applySplitCriticalEdges();
 };
 
 } // namespace llvm

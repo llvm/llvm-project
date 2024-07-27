@@ -2787,7 +2787,7 @@ void InstrRefBasedLDV::BlockPHIPlacement(
   // Apply IDF calculator to the designated set of location defs, storing
   // required PHIs into PHIBlocks. Uses the dominator tree stored in the
   // InstrRefBasedLDV object.
-  IDFCalculatorBase<MachineBasicBlock, false> IDF(DomTree->getBase());
+  IDFCalculatorBase<MachineBasicBlock, false> IDF(*DomTree);
 
   IDF.setLiveInBlocks(AllBlocks);
   IDF.setDefiningBlocks(DefBlocks);

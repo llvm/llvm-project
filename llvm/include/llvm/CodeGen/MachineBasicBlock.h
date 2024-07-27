@@ -32,6 +32,7 @@
 namespace llvm {
 
 class BasicBlock;
+class MachineDomTreeUpdater;
 class MachineFunction;
 class MCSymbol;
 class ModuleSlotTracker;
@@ -970,15 +971,17 @@ public:
   /// MachineLoopInfo, as applicable.
   MachineBasicBlock *
   SplitCriticalEdge(MachineBasicBlock *Succ, Pass &P,
-                    std::vector<SparseBitVector<>> *LiveInSets = nullptr) {
-    return SplitCriticalEdge(Succ, &P, nullptr, LiveInSets);
+                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
+                    MachineDomTreeUpdater *MDTU = nullptr) {
+    return SplitCriticalEdge(Succ, &P, nullptr, LiveInSets, MDTU);
   }
 
   MachineBasicBlock *
   SplitCriticalEdge(MachineBasicBlock *Succ,
                     MachineFunctionAnalysisManager &MFAM,
-                    std::vector<SparseBitVector<>> *LiveInSets = nullptr) {
-    return SplitCriticalEdge(Succ, nullptr, &MFAM, LiveInSets);
+                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
+                    MachineDomTreeUpdater *MDTU = nullptr) {
+    return SplitCriticalEdge(Succ, nullptr, &MFAM, LiveInSets, MDTU);
   }
 
   /// Check if the edge between this block and the given successor \p
@@ -1256,10 +1259,9 @@ private:
   void removePredecessor(MachineBasicBlock *Pred);
 
   // Helper method for new pass manager migration.
-  MachineBasicBlock *
-  SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P,
-                    MachineFunctionAnalysisManager *MFAM,
-                    std::vector<SparseBitVector<>> *LiveInSets);
+  MachineBasicBlock *SplitCriticalEdge(
+      MachineBasicBlock *Succ, Pass *P, MachineFunctionAnalysisManager *MFAM,
+      std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU);
 };
 
 raw_ostream& operator<<(raw_ostream &OS, const MachineBasicBlock &MBB);
@@ -1341,6 +1343,12 @@ inline auto successors(const MachineBasicBlock *BB) { return BB->successors(); }
 inline auto predecessors(const MachineBasicBlock *BB) {
   return BB->predecessors();
 }
+inline auto succ_size(const MachineBasicBlock *BB) { return BB->succ_size(); }
+inline auto pred_size(const MachineBasicBlock *BB) { return BB->pred_size(); }
+inline auto succ_begin(const MachineBasicBlock *BB) { return BB->succ_begin(); }
+inline auto pred_begin(const MachineBasicBlock *BB) { return BB->pred_begin(); }
+inline auto succ_end(const MachineBasicBlock *BB) { return BB->succ_end(); }
+inline auto pred_end(const MachineBasicBlock *BB) { return BB->pred_end(); }
 
 /// MachineInstrSpan provides an interface to get an iteration range
 /// containing the instruction it was initialized with, along with all

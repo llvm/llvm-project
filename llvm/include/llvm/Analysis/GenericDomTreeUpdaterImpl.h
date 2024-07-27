@@ -16,6 +16,7 @@
 #ifndef LLVM_ANALYSIS_GENERICDOMTREEUPDATERIMPL_H
 #define LLVM_ANALYSIS_GENERICDOMTREEUPDATERIMPL_H
 
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/GenericDomTreeUpdater.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -61,6 +62,9 @@ void GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::applyUpdates(
     return;
 
   if (Strategy == UpdateStrategy::Lazy) {
+    if (!CriticalEdgesToSplit.empty())
+      applySplitCriticalEdges();
+
     PendUpdates.reserve(PendUpdates.size() + Updates.size());
     for (const auto &U : Updates)
       if (!isSelfDominance(U))
@@ -136,6 +140,7 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::getDomTree() {
   assert(DT && "Invalid acquisition of a null DomTree");
   applyDomTreeUpdates();
   dropOutOfDateUpdates();
+  applySplitCriticalEdges();
   return *DT;
 }
 
@@ -145,6 +150,7 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::getPostDomTree() {
   assert(PDT && "Invalid acquisition of a null PostDomTree");
   applyPostDomTreeUpdates();
   dropOutOfDateUpdates();
+  applySplitCriticalEdges();
   return *PDT;
 }
 
@@ -201,7 +207,7 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::dump() const {
           if (To) {
             auto S = To->getName();
             if (!To->hasName())
-              S = "(no_name)";
+              S = "(no name)";
             OS << S << "(" << To << ")\n";
           } else {
             OS << "(badref)\n";
@@ -229,6 +235,22 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::dump() const {
     printUpdates(I, PendUpdates.end());
   }
 
+  auto printCriticalEdges = [&](const CriticalEdge &E) {
+    auto FromName = E.FromBB->getName();
+    if (!E.FromBB->hasName())
+      FromName = "(no name)";
+    auto NewName = E.NewBB->getName();
+    if (!E.NewBB->hasName())
+      NewName = "(no name)";
+    auto ToName = E.ToBB->getName();
+    if (!E.ToBB->hasName())
+      ToName = "(no name)";
+    OS << "  " << FromName << ", " << NewName << ", " << ToName << '\n';
+  };
+  OS << "Critical edges to be split:\n";
+  for (const auto &E : CriticalEdgesToSplit)
+    printCriticalEdges(E);
+
   OS << "Pending DeletedBBs:\n";
   Index = 0;
   for (const auto *BB : DeletedBBs) {
@@ -237,7 +259,7 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::dump() const {
     if (BB->hasName())
       OS << BB->getName() << "(";
     else
-      OS << "(no_name)(";
+      OS << "(no name)(";
     OS << BB << ")\n";
   }
 #endif
@@ -346,6 +368,123 @@ void GenericDomTreeUpdater<DerivedT, DomTreeT,
   // Calculate current index.
   PendDTUpdateIndex -= dropIndex;
   PendPDTUpdateIndex -= dropIndex;
+}
+
+template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
+void GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::
+    applyUpdatesForCriticalEdgeSplitting(BasicBlockT *FromBB, BasicBlockT *ToBB,
+                                         BasicBlockT *NewBB) {
+  if (!DT && !PDT)
+    return;
+  CriticalEdgesToSplit.push_back({FromBB, ToBB, NewBB});
+  bool Inserted = NewBBs.insert(NewBB).second;
+  (void)Inserted;
+  assert(Inserted &&
+         "A basic block inserted via edge splitting cannot appear twice");
+  if (Strategy == UpdateStrategy::Lazy) {
+    applyDomTreeUpdates();
+    applyPostDomTreeUpdates();
+  }
+  if (Strategy == UpdateStrategy::Eager)
+    applySplitCriticalEdges();
+}
+
+template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
+void GenericDomTreeUpdater<DerivedT, DomTreeT,
+                           PostDomTreeT>::applySplitCriticalEdges() {
+  // Bail out early if there is nothing to do.
+  if (CriticalEdgesToSplit.empty())
+    return;
+
+  // For each element in CriticalEdgesToSplit, remember whether or not element
+  // is the new immediate domminator of its successor. The mapping is done by
+  // index, i.e., the information for the ith element of CriticalEdgesToSplit is
+  // the ith element of IsNewIDom.
+  SmallBitVector IsNewIDom(CriticalEdgesToSplit.size(), true);
+  SmallBitVector IsNewIPDom(CriticalEdgesToSplit.size(), true);
+  size_t Idx = 0;
+
+  // Collect all the dominance properties info, before invalidating
+  // the underlying DT.
+  for (CriticalEdge &Edge : CriticalEdgesToSplit) {
+    // Update dominator information.
+    if (DT) {
+      BasicBlockT *Succ = Edge.ToBB;
+      auto *SuccDTNode = DT->getNode(Succ);
+
+      for (BasicBlockT *PredBB : predecessors(Succ)) {
+        if (PredBB == Edge.NewBB)
+          continue;
+        // If we are in this situation:
+        // FromBB1        FromBB2
+        //    +              +
+        //   + +            + +
+        //  +   +          +   +
+        // ...  Split1  Split2 ...
+        //           +   +
+        //            + +
+        //             +
+        //            Succ
+        // Instead of checking the domiance property with Split2, we check it
+        // with FromBB2 since Split2 is still unknown of the underlying DT
+        // structure.
+        if (NewBBs.count(PredBB)) {
+          assert(pred_size(PredBB) == 1 && "A basic block resulting from a "
+                                           "critical edge split has more "
+                                           "than one predecessor!");
+          PredBB = *pred_begin(PredBB);
+        }
+        if (!DT->dominates(SuccDTNode, DT->getNode(PredBB))) {
+          IsNewIDom[Idx] = false;
+          break;
+        }
+      }
+    }
+
+    // Same as DT version but from another direction.
+    if (PDT) {
+      BasicBlockT *Pred = Edge.FromBB;
+      auto *PredDTNode = PDT->getNode(Pred);
+      for (BasicBlockT *SuccBB : successors(Pred)) {
+        if (SuccBB == Edge.NewBB)
+          continue;
+        if (NewBBs.count(SuccBB)) {
+          assert(succ_size(SuccBB) == 1 && "A basic block resulting from a "
+                                           "critical edge split has more "
+                                           "than one predecessor!");
+          SuccBB = *succ_begin(SuccBB);
+        }
+        if (!PDT->dominates(PredDTNode, PDT->getNode(SuccBB))) {
+          IsNewIPDom[Idx] = false;
+          break;
+        }
+      }
+    }
+    ++Idx;
+  }
+
+  // Now, update DT with the collected dominance properties info.
+  Idx = 0;
+  for (CriticalEdge &Edge : CriticalEdgesToSplit) {
+    if (DT) {
+      // We know FromBB dominates NewBB.
+      auto *NewDTNode = DT->addNewBlock(Edge.NewBB, Edge.FromBB);
+
+      // If all the other predecessors of "Succ" are dominated by "Succ" itself
+      // then the new block is the new immediate dominator of "Succ". Otherwise,
+      // the new block doesn't dominate anything.
+      if (IsNewIDom[Idx])
+        DT->changeImmediateDominator(DT->getNode(Edge.ToBB), NewDTNode);
+    }
+    if (PDT) {
+      auto *NewPDTNode = PDT->addNewBlock(Edge.NewBB, Edge.ToBB);
+      if (IsNewIPDom[Idx])
+        PDT->changeImmediateDominator(PDT->getNode(Edge.FromBB), NewPDTNode);
+    }
+    ++Idx;
+  }
+  NewBBs.clear();
+  CriticalEdgesToSplit.clear();
 }
 
 } // namespace llvm

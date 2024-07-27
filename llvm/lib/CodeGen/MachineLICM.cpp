@@ -24,6 +24,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineDomTreeUpdater.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -131,7 +132,7 @@ namespace {
     AliasAnalysis *AA = nullptr;               // Alias analysis info.
     MachineBlockFrequencyInfo *MBFI = nullptr; // Machine block frequncy info
     MachineLoopInfo *MLI = nullptr;            // Current MachineLoopInfo
-    MachineDominatorTree *DT = nullptr; // Machine dominator tree for the cur loop
+    MachineDomTreeUpdater *MDTU = nullptr;     // Wraps current dominator tree
 
     // State that is updated as we process loops
     bool Changed = false;           // True if a loop is changed.
@@ -261,8 +262,7 @@ namespace {
         DenseMap<MachineDomTreeNode *, unsigned> &OpenChildren,
         const DenseMap<MachineDomTreeNode *, MachineDomTreeNode *> &ParentMap);
 
-    void HoistOutOfLoop(MachineDomTreeNode *HeaderN, MachineLoop *CurLoop,
-                        MachineBasicBlock *CurPreheader);
+    void HoistOutOfLoop(MachineLoop *CurLoop, MachineBasicBlock *CurPreheader);
 
     void InitRegPressure(MachineBasicBlock *BB);
 
@@ -375,8 +375,11 @@ bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
   if (DisableHoistingToHotterBlocks != UseBFI::None)
     MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  auto *DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  MachineDomTreeUpdater Updater(DT,
+                                MachineDomTreeUpdater::UpdateStrategy::Lazy);
+  MDTU = &Updater;
 
   if (HoistConstLoads)
     InitializeLoadsHoistableLoops();
@@ -391,9 +394,8 @@ bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
     else {
       // CSEMap is initialized for loop header when the first instruction is
       // being hoisted.
-      MachineDomTreeNode *N = DT->getNode(CurLoop->getHeader());
       FirstInLoop = true;
-      HoistOutOfLoop(N, CurLoop, CurPreheader);
+      HoistOutOfLoop(CurLoop, CurPreheader);
       CSEMap.clear();
     }
   }
@@ -734,7 +736,7 @@ bool MachineLICMBase::IsGuaranteedToExecute(MachineBasicBlock *BB,
     SmallVector<MachineBasicBlock*, 8> CurrentLoopExitingBlocks;
     CurLoop->getExitingBlocks(CurrentLoopExitingBlocks);
     for (MachineBasicBlock *CurrentLoopExitingBlock : CurrentLoopExitingBlocks)
-      if (!DT->dominates(BB, CurrentLoopExitingBlock)) {
+      if (!MDTU->getDomTree().dominates(BB, CurrentLoopExitingBlock)) {
         SpeculationState = SpeculateTrue;
         return false;
       }
@@ -796,12 +798,14 @@ void MachineLICMBase::ExitScopeIfDone(MachineDomTreeNode *Node,
 /// specified header block, and that are in the current loop) in depth first
 /// order w.r.t the DominatorTree. This allows us to visit definitions before
 /// uses, allowing us to hoist a loop body in one pass without iteration.
-void MachineLICMBase::HoistOutOfLoop(MachineDomTreeNode *HeaderN,
-                                     MachineLoop *CurLoop,
+void MachineLICMBase::HoistOutOfLoop(MachineLoop *CurLoop,
                                      MachineBasicBlock *CurPreheader) {
   MachineBasicBlock *Preheader = getCurPreheader(CurLoop, CurPreheader);
   if (!Preheader)
     return;
+
+  MachineDomTreeNode *HeaderN =
+      MDTU->getDomTree().getNode(CurLoop->getHeader());
 
   SmallVector<MachineDomTreeNode*, 32> Scopes;
   SmallVector<MachineDomTreeNode*, 8> WorkList;
@@ -1573,7 +1577,7 @@ bool MachineLICMBase::MayCSE(MachineInstr *MI) {
   unsigned Opcode = MI->getOpcode();
   for (auto &Map : CSEMap) {
     // Check this CSEMap's preheader dominates MI's basic block.
-    if (DT->dominates(Map.first, MI->getParent())) {
+    if (MDTU->getDomTree().dominates(Map.first, MI->getParent())) {
       DenseMap<unsigned, std::vector<MachineInstr *>>::iterator CI =
           Map.second.find(Opcode);
       // Do not CSE implicit_def so ProcessImplicitDefs can properly propagate
@@ -1641,7 +1645,7 @@ unsigned MachineLICMBase::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
   bool HasCSEDone = false;
   for (auto &Map : CSEMap) {
     // Check this CSEMap's preheader dominates MI's basic block.
-    if (DT->dominates(Map.first, MI->getParent())) {
+    if (MDTU->getDomTree().dominates(Map.first, MI->getParent())) {
       DenseMap<unsigned, std::vector<MachineInstr *>>::iterator CI =
           Map.second.find(Opcode);
       if (CI != Map.second.end()) {
@@ -1704,7 +1708,8 @@ MachineLICMBase::getCurPreheader(MachineLoop *CurLoop,
         return nullptr;
       }
 
-      CurPreheader = Pred->SplitCriticalEdge(CurLoop->getHeader(), *this);
+      CurPreheader = Pred->SplitCriticalEdge(CurLoop->getHeader(), *this,
+                                             /*LiveInSets=*/nullptr, MDTU);
       if (!CurPreheader) {
         CurPreheader = reinterpret_cast<MachineBasicBlock *>(-1);
         return nullptr;
