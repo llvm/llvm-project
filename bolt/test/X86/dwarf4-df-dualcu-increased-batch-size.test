@@ -1,0 +1,48 @@
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-df-dualcu-main.s \
+; RUN: -split-dwarf-file=main.dwo -o main.o
+; RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-df-dualcu-helper.s \
+; RUN: -split-dwarf-file=helper.dwo -o helper.o
+; RUN: %clang %cflags -gdwarf-5 -gsplit-dwarf=split main.o helper.o -o main.exe -fno-pic -no-pie
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --always-convert-to-ranges --cu-processing-batch-size=2
+; RUN: llvm-dwarfdump --show-form --verbose --debug-ranges main.exe.bolt &> %t/foo.txt
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.exe.bolt >> %t/foo.txt
+; RUN: cat %t/foo.txt | FileCheck -check-prefix=BOLT %s
+
+;; Testing dwarf5 split dwarf for two CUs with an increased batch size. Checks values
+;; in debug_ranges and debug_info.
+
+; BOLT: .debug_ranges
+; BOLT-NEXT: 00000000 <End of list>
+; BOLT-NEXT: 00000010 [[#%.16x,ADDR1:]] [[#%.16x,ADDRB1:]]
+; BOLT-NEXT: 00000010 [[#%.16x,ADDR2:]] [[#%.16x,ADDRB2:]]
+; BOLT-NEXT: 00000010 <End of list>
+; BOLT-NEXT: 00000040 [[#%.16x,ADDR3:]] [[#%.16x,ADDRB3:]]
+; BOLT-NEXT: 00000040 <End of list>
+; BOLT-NEXT: 00000060 [[#%.16x,ADDR1:]] [[#%.16x,ADDRB1:]]
+; BOLT-NEXT: 00000060 <End of list>
+; BOLT-NEXT: 00000080 [[#%.16x,ADDR2:]] [[#%.16x,ADDRB2:]]
+; BOLT-NEXT: 00000080 <End of list>
+; BOLT-NEXT: 000000a0 [[#%.16x,ADDR3:]] [[#%.16x,ADDRB3:]]
+; BOLT-NEXT: 000000a0 <End of list>
+
+; BOLT: DW_TAG_compile_unit
+; BOLT: DW_AT_GNU_dwo_name [DW_FORM_strp] ( .debug_str[0x00000016] = "main.dwo.dwo")
+; BOLT-NEXT: DW_AT_GNU_dwo_id
+; BOLT-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
+; BOLT-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x00000010
+; BOLT-NEXT: [0x[[#ADDR1]], 0x[[#ADDRB1]])
+; BOLT-NEXT: [0x[[#ADDR2]], 0x[[#ADDRB2]]))
+; BOLT-NEXT: DW_AT_GNU_addr_base [DW_FORM_sec_offset]  (0x00000000)
+; BOLT-NEXT: DW_AT_GNU_ranges_base [DW_FORM_sec_offset]  (0x00000060)
+; BOLT-NEXT: Compile
+; BOLT: DW_TAG_compile_unit
+; BOLT: DW_AT_GNU_dwo_name [DW_FORM_strp] ( .debug_str[0x00000023] = "helper.dwo.dwo")
+; BOLT-NEXT: DW_AT_GNU_dwo_id
+; BOLT-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
+; BOLT-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x00000040
+; BOLT-NEXT: [0x[[#ADDR3]], 0x[[#ADDRB3]])
+; BOLT-NEXT: DW_AT_GNU_addr_base [DW_FORM_sec_offset]  (0x00000010)
+; BOLT-NEXT: DW_AT_GNU_ranges_base [DW_FORM_sec_offset]  (0x000000a0)
