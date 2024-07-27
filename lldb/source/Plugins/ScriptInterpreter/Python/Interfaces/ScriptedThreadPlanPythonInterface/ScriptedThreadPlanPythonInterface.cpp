@@ -6,22 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
 
 #if LLDB_ENABLE_PYTHON
 
+// clang-format off
 // LLDB Python header must be included first
-#include "../lldb-python.h"
+#include "../../lldb-python.h"
+//clang-format on
 
-#include "../SWIGPythonBridge.h"
-#include "../ScriptInterpreterPythonImpl.h"
+#include "../../SWIGPythonBridge.h"
+#include "../../ScriptInterpreterPythonImpl.h"
 #include "ScriptedThreadPlanPythonInterface.h"
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::python;
+
+LLDB_PLUGIN_DEFINE_ADV(ScriptedThreadPlanPythonInterface, ScriptInterpreterPythonScriptedThreadPlanPythonInterface)
 
 ScriptedThreadPlanPythonInterface::ScriptedThreadPlanPythonInterface(
     ScriptInterpreterPythonImpl &interpreter)
@@ -100,6 +105,21 @@ ScriptedThreadPlanPythonInterface::GetStopDescription(lldb::StreamSP &stream) {
     return error.ToError();
 
   return llvm::Error::success();
+}
+
+void ScriptedThreadPlanPythonInterface::Initialize() {
+  const std::vector<llvm::StringRef> ci_usages = {
+      "thread step-scripted -C <script-name> [-k key -v value ...]"};
+  const std::vector<llvm::StringRef> api_usages = {
+      "SBThread.StepUsingScriptedThreadPlan"};
+  PluginManager::RegisterPlugin(
+      GetPluginNameStatic(),
+      llvm::StringRef("Alter thread stepping logic and stop reason"),
+      CreateInstance, eScriptLanguagePython, {ci_usages, api_usages});
+}
+
+void ScriptedThreadPlanPythonInterface::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
 }
 
 #endif
