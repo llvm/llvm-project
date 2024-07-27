@@ -1126,22 +1126,21 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
   SymbolAssignment *cmd = nullptr;
   bool savedSeenRelroEnd = script->seenRelroEnd;
   const StringRef op = peek();
-  if (op.starts_with("=")) {
-    // Support = followed by an expression without whitespace.
+  {
     SaveAndRestore saved(inExpr, true);
-    cmd = readSymbolAssignment(tok);
-  } else if ((op.size() == 2 && op[1] == '=' && strchr("*/+-&^|", op[0])) ||
-             op == "<<=" || op == ">>=") {
-    cmd = readSymbolAssignment(tok);
-  } else if (tok == "PROVIDE") {
-    SaveAndRestore saved(inExpr, true);
-    cmd = readProvideHidden(true, false);
-  } else if (tok == "HIDDEN") {
-    SaveAndRestore saved(inExpr, true);
-    cmd = readProvideHidden(false, true);
-  } else if (tok == "PROVIDE_HIDDEN") {
-    SaveAndRestore saved(inExpr, true);
-    cmd = readProvideHidden(true, true);
+    if (op.starts_with("=")) {
+      // Support = followed by an expression without whitespace.
+      cmd = readSymbolAssignment(tok);
+    } else if ((op.size() == 2 && op[1] == '=' && strchr("+-*/&^|", op[0])) ||
+               op == "<<=" || op == ">>=") {
+      cmd = readSymbolAssignment(tok);
+    } else if (tok == "PROVIDE") {
+      cmd = readProvideHidden(true, false);
+    } else if (tok == "HIDDEN") {
+      cmd = readProvideHidden(false, true);
+    } else if (tok == "PROVIDE_HIDDEN") {
+      cmd = readProvideHidden(true, true);
+    }
   }
 
   if (cmd) {
