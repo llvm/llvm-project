@@ -93,7 +93,6 @@ void MCAssembler::reset() {
   SubsectionsViaSymbols = false;
   Sections.clear();
   Symbols.clear();
-  LinkerOptions.clear();
   ThumbFuncs.clear();
   BundleAlignSize = 0;
 
