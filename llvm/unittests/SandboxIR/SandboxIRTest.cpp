@@ -561,6 +561,74 @@ define void @foo(i8 %v1) {
   EXPECT_EQ(I0->getNextNode(), Ret);
 }
 
+TEST_F(SandboxIRTest, SelectInst) {
+  parseIR(C, R"IR(
+define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
+  %sel = select i1 %c0, i8 %v0, i8 %v1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *Cond0 = F->getArg(0);
+  auto *V0 = F->getArg(1);
+  auto *V1 = F->getArg(2);
+  auto *Cond1 = F->getArg(3);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Select = cast<sandboxir::SelectInst>(&*It++);
+  auto *Ret = &*It++;
+
+  // Check getCondition().
+  EXPECT_EQ(Select->getCondition(), Cond0);
+  // Check getTrueValue().
+  EXPECT_EQ(Select->getTrueValue(), V0);
+  // Check getFalseValue().
+  EXPECT_EQ(Select->getFalseValue(), V1);
+  // Check setCondition().
+  Select->setCondition(Cond1);
+  EXPECT_EQ(Select->getCondition(), Cond1);
+  // Check setTrueValue().
+  Select->setTrueValue(V1);
+  EXPECT_EQ(Select->getTrueValue(), V1);
+  // Check setFalseValue().
+  Select->setFalseValue(V0);
+  EXPECT_EQ(Select->getFalseValue(), V0);
+
+  {
+    // Check SelectInst::create() InsertBefore.
+    auto *NewSel = cast<sandboxir::SelectInst>(sandboxir::SelectInst::create(
+        Cond0, V0, V1, /*InsertBefore=*/Ret, Ctx));
+    EXPECT_EQ(NewSel->getCondition(), Cond0);
+    EXPECT_EQ(NewSel->getTrueValue(), V0);
+    EXPECT_EQ(NewSel->getFalseValue(), V1);
+    EXPECT_EQ(NewSel->getNextNode(), Ret);
+  }
+  {
+    // Check SelectInst::create() InsertAtEnd.
+    auto *NewSel = cast<sandboxir::SelectInst>(
+        sandboxir::SelectInst::create(Cond0, V0, V1, /*InsertAtEnd=*/BB, Ctx));
+    EXPECT_EQ(NewSel->getCondition(), Cond0);
+    EXPECT_EQ(NewSel->getTrueValue(), V0);
+    EXPECT_EQ(NewSel->getFalseValue(), V1);
+    EXPECT_EQ(NewSel->getPrevNode(), Ret);
+  }
+  {
+    // Check SelectInst::create() Folded.
+    auto *False =
+        sandboxir::Constant::createInt(llvm::Type::getInt1Ty(C), 0, Ctx,
+                                       /*IsSigned=*/false);
+    auto *FortyTwo =
+        sandboxir::Constant::createInt(llvm::Type::getInt1Ty(C), 42, Ctx,
+                                       /*IsSigned=*/false);
+    auto *NewSel =
+        sandboxir::SelectInst::create(False, FortyTwo, FortyTwo, Ret, Ctx);
+    EXPECT_TRUE(isa<sandboxir::Constant>(NewSel));
+    EXPECT_EQ(NewSel, FortyTwo);
+  }
+}
+
 TEST_F(SandboxIRTest, LoadInst) {
   parseIR(C, R"IR(
 define void @foo(ptr %arg0, ptr %arg1) {
