@@ -36,8 +36,6 @@ set(CLANG_NVLINK_WRAPPER_LIB_DEPS
   clangBasic
   )
 
-target_compile_options(clang-nvlink-wrapper PRIVATE "-g" "-O0")
-
 target_link_libraries(clang-nvlink-wrapper
   PRIVATE
   ${CLANG_NVLINK_WRAPPER_LIB_DEPS}
