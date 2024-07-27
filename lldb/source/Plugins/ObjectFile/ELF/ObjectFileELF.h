@@ -183,7 +183,11 @@ private:
   typedef SectionHeaderColl::iterator SectionHeaderCollIter;
   typedef SectionHeaderColl::const_iterator SectionHeaderCollConstIter;
 
-  typedef std::vector<elf::ELFDynamic> DynamicSymbolColl;
+  struct ELFDynamicWithName {
+    elf::ELFDynamic symbol;
+    std::string name;
+  };
+  typedef std::vector<ELFDynamicWithName> DynamicSymbolColl;
   typedef DynamicSymbolColl::iterator DynamicSymbolCollIter;
   typedef DynamicSymbolColl::const_iterator DynamicSymbolCollConstIter;
 
@@ -213,6 +217,9 @@ private:
   /// Collection of section headers.
   SectionHeaderColl m_section_headers;
 
+  /// The file address of the .dynamic section. This can be found from either
+  /// the .dynamic section address of the p_vaddr of the PT_DYNAMIC segment.
+  lldb::addr_t m_dynamic_base_addr = LLDB_INVALID_ADDRESS;
   /// Collection of symbols from the dynamic table.
   DynamicSymbolColl m_dynamic_symbols;
 
@@ -381,6 +388,9 @@ private:
                                             elf::elf_xword sh_flags);
   //@}
 
+  /// ELF dump the .dynamic section
+  void DumpELFDynamic(lldb_private::Stream *s);
+
   /// ELF dependent module dump routine.
   void DumpDependentModules(lldb_private::Stream *s);
 
@@ -402,6 +412,31 @@ private:
   /// .gnu_debugdata section or \c nullptr if an error occured or if there's no
   /// section with that name.
   std::shared_ptr<ObjectFileELF> GetGnuDebugDataObjectFile();
+
+  /// Get the bytes that represent the string table data from the .dynamic
+  /// section from process memory.
+  ///
+  /// This functon uses the DT_STRTAB and DT_STRSZ values from the .dynamic
+  /// section to read the string table data from process memory.
+  ///
+  /// \return The bytes that represent the string table data from process memory
+  ///         or \c std::nullopt if an error occured.
+  std::optional<lldb_private::DataExtractor> ReadStrtabDataFromMemory();
+
+  /// Get the bytes that represent the dynamic symbol table from the .dynamic
+  /// section from process memory.
+  ///
+  /// This functon uses the DT_SYMTAB value from the .dynamic section to read
+  /// the symbols table data from process memory. The number of symbols in the
+  /// symbol table is calculated by looking at the DT_HASH or DT_GNU_HASH values
+  /// as the symbol count ins't stored in the .dynamic section.
+  ///
+  /// \param num_symbols The calculated number of symbols in the table.
+  ///
+  /// \return The bytes that represent the symbol table data from process memory
+  ///         or \c std::nullopt if an error occured.
+  std::optional<lldb_private::DataExtractor>
+  ReadSymtabDataFromMemory(uint32_t &num_symbols);
 };
 
 #endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_ELF_OBJECTFILEELF_H

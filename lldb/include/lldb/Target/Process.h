@@ -1952,7 +1952,7 @@ public:
 
   lldb::ModuleSP ReadModuleFromMemory(const FileSpec &file_spec,
                                       lldb::addr_t header_addr,
-                                      size_t size_to_read = 512);
+                                      size_t size_to_read = 0);
 
   /// Attempt to get the attributes for a region of memory in the process.
   ///

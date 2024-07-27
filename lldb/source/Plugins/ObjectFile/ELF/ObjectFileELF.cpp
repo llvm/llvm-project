@@ -22,6 +22,7 @@
 #include "lldb/Host/LZMA.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -810,10 +811,28 @@ bool ObjectFileELF::ParseHeader() {
 }
 
 UUID ObjectFileELF::GetUUID() {
+  if (m_uuid)
+    return m_uuid;
+
   // Need to parse the section list to get the UUIDs, so make sure that's been
   // done.
   if (!ParseSectionHeaders() && GetType() != ObjectFile::eTypeCoreFile)
     return UUID();
+
+  // Try loading note info from PT_NOTE if section headers didn't find any.
+  // If we load an ELF file from memory, then we should be able to still
+  // read the note data.
+  for (const ELFProgramHeader &H : ProgramHeaders()) {
+    if (H.p_type == llvm::ELF::PT_NOTE) {
+      DataExtractor note_data = GetSegmentData(H);
+      if (note_data.GetByteSize()) {
+        lldb_private::ArchSpec arch_spec;
+        RefineModuleDetailsFromNote(note_data, arch_spec, m_uuid);
+        if (m_uuid)
+          return m_uuid;
+      }
+    }
+  }
 
   if (!m_uuid) {
     using u32le = llvm::support::ulittle32_t;
@@ -873,33 +892,35 @@ Address ObjectFileELF::GetImageInfoAddress(Target *target) {
   if (!section_list)
     return Address();
 
-  // Find the SHT_DYNAMIC (.dynamic) section.
-  SectionSP dynsym_section_sp(
-      section_list->FindSectionByType(eSectionTypeELFDynamicLinkInfo, true));
-  if (!dynsym_section_sp)
-    return Address();
-  assert(dynsym_section_sp->GetObjectFile() == this);
-
-  user_id_t dynsym_id = dynsym_section_sp->GetID();
-  const ELFSectionHeaderInfo *dynsym_hdr = GetSectionHeaderByIndex(dynsym_id);
-  if (!dynsym_hdr)
-    return Address();
-
   for (size_t i = 0; i < m_dynamic_symbols.size(); ++i) {
-    ELFDynamic &symbol = m_dynamic_symbols[i];
+    const ELFDynamic &symbol = m_dynamic_symbols[i].symbol;
 
     if (symbol.d_tag == DT_DEBUG) {
       // Compute the offset as the number of previous entries plus the size of
       // d_tag.
-      addr_t offset = i * dynsym_hdr->sh_entsize + GetAddressByteSize();
-      return Address(dynsym_section_sp, offset);
+      addr_t offset = (i * 2 + 1) * GetAddressByteSize();
+      addr_t file_addr = m_dynamic_base_addr + offset;
+      SectionList *section_list = GetSectionList();
+      if (section_list) {
+        Address addr;
+        // Resolving the file addresss works in two cases here:
+        // 1 - We have a SHT_DYNAMIC section.
+        // 2 - We don't have section headers but have a PT_DYNAMIC segment.
+        if (addr.ResolveAddressUsingFileSections(file_addr, section_list))
+          return addr;
+      }
     }
     // MIPS executables uses DT_MIPS_RLD_MAP_REL to support PIE. DT_MIPS_RLD_MAP
     // exists in non-PIE.
     else if ((symbol.d_tag == DT_MIPS_RLD_MAP ||
               symbol.d_tag == DT_MIPS_RLD_MAP_REL) &&
              target) {
-      addr_t offset = i * dynsym_hdr->sh_entsize + GetAddressByteSize();
+      SectionSP dynsym_section_sp(section_list->FindSectionByType(
+          eSectionTypeELFDynamicLinkInfo, true));
+      if (!dynsym_section_sp)
+        return Address();
+
+      addr_t offset = (i * 2 + 1) * GetAddressByteSize();
       addr_t dyn_base = dynsym_section_sp->GetLoadBaseAddress(target);
       if (dyn_base == LLDB_INVALID_ADDRESS)
         return Address();
@@ -927,7 +948,6 @@ Address ObjectFileELF::GetImageInfoAddress(Target *target) {
       }
     }
   }
-
   return Address();
 }
 
@@ -970,66 +990,27 @@ Address ObjectFileELF::GetBaseAddress() {
   return LLDB_INVALID_ADDRESS;
 }
 
-// ParseDependentModules
 size_t ObjectFileELF::ParseDependentModules() {
   if (m_filespec_up)
     return m_filespec_up->GetSize();
 
   m_filespec_up = std::make_unique<FileSpecList>();
 
-  if (!ParseSectionHeaders())
+  if (!ParseDynamicSymbols())
     return 0;
 
-  SectionList *section_list = GetSectionList();
-  if (!section_list)
-    return 0;
-
-  // Find the SHT_DYNAMIC section.
-  Section *dynsym =
-      section_list->FindSectionByType(eSectionTypeELFDynamicLinkInfo, true)
-          .get();
-  if (!dynsym)
-    return 0;
-  assert(dynsym->GetObjectFile() == this);
-
-  const ELFSectionHeaderInfo *header = GetSectionHeaderByIndex(dynsym->GetID());
-  if (!header)
-    return 0;
-  // sh_link: section header index of string table used by entries in the
-  // section.
-  Section *dynstr = section_list->FindSectionByID(header->sh_link).get();
-  if (!dynstr)
-    return 0;
-
-  DataExtractor dynsym_data;
-  DataExtractor dynstr_data;
-  if (ReadSectionData(dynsym, dynsym_data) &&
-      ReadSectionData(dynstr, dynstr_data)) {
-    ELFDynamic symbol;
-    const lldb::offset_t section_size = dynsym_data.GetByteSize();
-    lldb::offset_t offset = 0;
-
-    // The only type of entries we are concerned with are tagged DT_NEEDED,
-    // yielding the name of a required library.
-    while (offset < section_size) {
-      if (!symbol.Parse(dynsym_data, &offset))
-        break;
-
-      if (symbol.d_tag != DT_NEEDED)
-        continue;
-
-      uint32_t str_index = static_cast<uint32_t>(symbol.d_val);
-      const char *lib_name = dynstr_data.PeekCStr(str_index);
-      FileSpec file_spec(lib_name);
+  for (const auto &entry : m_dynamic_symbols) {
+    if (entry.symbol.d_tag != DT_NEEDED)
+      continue;
+    if (!entry.name.empty()) {
+      FileSpec file_spec(entry.name);
       FileSystem::Instance().Resolve(file_spec);
       m_filespec_up->Append(file_spec);
     }
   }
-
   return m_filespec_up->GetSize();
 }
 
-// GetProgramHeaderInfo
 size_t ObjectFileELF::GetProgramHeaderInfo(ProgramHeaderColl &program_headers,
                                            DataExtractor &object_data,
                                            const ELFHeader &header) {
@@ -1466,14 +1447,14 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
 
   Log *log = GetLog(LLDBLog::Modules);
 
-  section_headers.resize(header.e_shnum);
-  if (section_headers.size() != header.e_shnum)
-    return 0;
-
   const size_t sh_size = header.e_shnum * header.e_shentsize;
   const elf_off sh_offset = header.e_shoff;
   DataExtractor sh_data;
   if (sh_data.SetData(object_data, sh_offset, sh_size) != sh_size)
+    return 0;
+
+  section_headers.resize(header.e_shnum);
+  if (section_headers.size() != header.e_shnum)
     return 0;
 
   uint32_t idx;
@@ -2472,32 +2453,87 @@ size_t ObjectFileELF::ParseDynamicSymbols() {
   if (m_dynamic_symbols.size())
     return m_dynamic_symbols.size();
 
-  SectionList *section_list = GetSectionList();
-  if (!section_list)
-    return 0;
-
-  // Find the SHT_DYNAMIC section.
-  Section *dynsym =
-      section_list->FindSectionByType(eSectionTypeELFDynamicLinkInfo, true)
-          .get();
-  if (!dynsym)
-    return 0;
-  assert(dynsym->GetObjectFile() == this);
-
-  ELFDynamic symbol;
   DataExtractor dynsym_data;
-  if (ReadSectionData(dynsym, dynsym_data)) {
-    const lldb::offset_t section_size = dynsym_data.GetByteSize();
-    lldb::offset_t cursor = 0;
+  DataExtractor dynstr_data;
 
-    while (cursor < section_size) {
-      if (!symbol.Parse(dynsym_data, &cursor))
-        break;
+  SectionList *section_list = GetSectionList();
+  if (section_list) {
+    // The dynamic symbols can be found in a .dynamic section, or if we loaded
+    // the ELF file from memory we won't have section headers, so we should also
+    // check the program headers for a PT_DYNAMIC segment.
 
-      m_dynamic_symbols.push_back(symbol);
+    // Find the SHT_DYNAMIC section.
+    Section *dynamic =
+        section_list->FindSectionByType(eSectionTypeELFDynamicLinkInfo, true)
+            .get();
+    if (dynamic) {
+      const ELFSectionHeaderInfo *header =
+          GetSectionHeaderByIndex(dynamic->GetID());
+      if (header) {
+        // sh_link: section header index of string table used by entries in the
+        // section.
+        Section *dynstr = section_list->FindSectionByID(header->sh_link).get();
+        if (dynstr)
+          ReadSectionData(dynstr, dynstr_data);
+      }
+      assert(dynamic->GetObjectFile() == this);
+      if (ReadSectionData(dynamic, dynsym_data))
+        m_dynamic_base_addr = dynamic->GetFileAddress();
     }
   }
 
+  // Check for a PT_DYNAMIC if we didn't find a SHT_DYNAMIC section.
+  if (dynsym_data.GetByteSize() == 0) {
+    for (const ELFProgramHeader &H : ProgramHeaders()) {
+      if (H.p_type == llvm::ELF::PT_DYNAMIC) {
+        dynsym_data = GetSegmentData(H);
+        if (dynsym_data.GetByteSize() > 0)
+          m_dynamic_base_addr = H.p_vaddr;
+        break;
+      }
+    }
+  }
+
+  if (dynsym_data.GetByteSize() == 0)
+    return 0;
+
+  ELFDynamicWithName e;
+  const lldb::offset_t dynsym_data_size = dynsym_data.GetByteSize();
+  lldb::offset_t cursor = 0;
+  while (cursor < dynsym_data_size && e.symbol.Parse(dynsym_data, &cursor)) {
+    m_dynamic_symbols.push_back(e);
+    if (e.symbol.d_tag == DT_NULL)
+      break;
+  }
+  // Now try and read the name of the dynamic entries, but we first need to
+  // check if we have the data we need in dynstr_data. If we don't and we have
+  // an ELF file in memory, we can read if from the DT_STRTAB and DT_STRSZ
+  // .dynamic values we just extracted.
+  if (dynstr_data.GetByteSize() == 0) {
+    if (auto strtab_data = ReadStrtabDataFromMemory())
+      dynstr_data = std::move(*strtab_data);
+  }
+  if (dynstr_data.GetByteSize() > 0) {
+    for (ELFDynamicWithName &entry : m_dynamic_symbols) {
+      switch (entry.symbol.d_tag) {
+      case DT_NEEDED:
+      case DT_SONAME:
+      case DT_RPATH:
+      case DT_RUNPATH:
+      case DT_AUXILIARY:
+      case DT_FILTER: {
+        lldb::offset_t cursor = entry.symbol.d_val;
+        const char *name = dynstr_data.GetCStr(&cursor);
+        if (name)
+          entry.name = name;
+        break;
+      }
+      default:
+        break;
+      }
+    }
+  }
+  // Return the number of dynamic symbols we have parsed.
   return m_dynamic_symbols.size();
 }
 
@@ -2505,13 +2541,9 @@ const ELFDynamic *ObjectFileELF::FindDynamicSymbol(unsigned tag) {
   if (!ParseDynamicSymbols())
     return nullptr;
 
-  DynamicSymbolCollIter I = m_dynamic_symbols.begin();
-  DynamicSymbolCollIter E = m_dynamic_symbols.end();
-  for (; I != E; ++I) {
-    ELFDynamic *symbol = &*I;
-
-    if (symbol->d_tag == tag)
-      return symbol;
+  for (const auto &entry : m_dynamic_symbols) {
+    if (entry.symbol.d_tag == tag)
+      return &entry.symbol;
   }
 
   return nullptr;
@@ -3025,6 +3057,21 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
           ParseSymbolTable(&lldb_symtab, symbol_id, dynsym);
       symbol_id += num_symbols;
       m_address_class_map.merge(address_class_map);
+    } else if (IsInMemory()) {
+      // If this is an in memory ELF file, then we won't have the section
+      // headers, but we can still parse the dynamic symbol table from the
+      // .dynamic section and reading it from memory.
+      uint32_t num_symbols = 0;
+      std::optional<DataExtractor> symtab_data =
+          ReadSymtabDataFromMemory(num_symbols);
+      std::optional<DataExtractor> strtab_data = ReadStrtabDataFromMemory();
+      if (symtab_data && strtab_data) {
+        auto [num_symbols_parsed, address_class_map] =
+            ParseSymbols(&lldb_symtab, symbol_id, section_list, num_symbols,
+                         symtab_data.value(), strtab_data.value());
+        symbol_id += num_symbols_parsed;
+        m_address_class_map.merge(address_class_map);
+      }
     }
   }
 
@@ -3230,8 +3277,10 @@ void ObjectFileELF::Dump(Stream *s) {
   ArchSpec header_arch = GetArchitecture();
 
   *s << ", file = '" << m_file
-     << "', arch = " << header_arch.GetArchitectureName() << "\n";
-
+     << "', arch = " << header_arch.GetArchitectureName();
+  if (m_memory_addr != LLDB_INVALID_ADDRESS)
+    s->Printf(", addr = %#16.16" PRIx64, m_memory_addr);
+  s->EOL();
   DumpELFHeader(s, m_header);
   s->EOL();
   DumpELFProgramHeaders(s);
@@ -3247,6 +3296,8 @@ void ObjectFileELF::Dump(Stream *s) {
     symtab->Dump(s, nullptr, eSortOrderNone);
   s->EOL();
   DumpDependentModules(s);
+  s->EOL();
+  DumpELFDynamic(s);
   s->EOL();
 }
 
@@ -3336,10 +3387,10 @@ void ObjectFileELF::DumpELFHeader_e_ident_EI_DATA(Stream *s,
 void ObjectFileELF::DumpELFProgramHeader(Stream *s,
                                          const ELFProgramHeader &ph) {
   DumpELFProgramHeader_p_type(s, ph.p_type);
-  s->Printf(" %8.8" PRIx64 " %8.8" PRIx64 " %8.8" PRIx64, ph.p_offset,
+  s->Printf(" %16.16" PRIx64 " %16.16" PRIx64 " %16.16" PRIx64, ph.p_offset,
             ph.p_vaddr, ph.p_paddr);
-  s->Printf(" %8.8" PRIx64 " %8.8" PRIx64 " %8.8x (", ph.p_filesz, ph.p_memsz,
-            ph.p_flags);
+  s->Printf(" %16.16" PRIx64 " %16.16" PRIx64 " %8.8x (", ph.p_filesz,
+            ph.p_memsz, ph.p_flags);
 
   DumpELFProgramHeader_p_flags(s, ph.p_flags);
   s->Printf(") %8.8" PRIx64, ph.p_align);
@@ -3361,6 +3412,8 @@ void ObjectFileELF::DumpELFProgramHeader_p_type(Stream *s, elf_word p_type) {
     CASE_AND_STREAM(s, PT_PHDR, kStrWidth);
     CASE_AND_STREAM(s, PT_TLS, kStrWidth);
     CASE_AND_STREAM(s, PT_GNU_EH_FRAME, kStrWidth);
+    CASE_AND_STREAM(s, PT_GNU_RELRO, kStrWidth);
+    CASE_AND_STREAM(s, PT_GNU_STACK, kStrWidth);
   default:
     s->Printf("0x%8.8x%*s", p_type, kStrWidth - 10, "");
     break;
@@ -3386,10 +3439,12 @@ void ObjectFileELF::DumpELFProgramHeaders(Stream *s) {
     return;
 
   s->PutCString("Program Headers\n");
-  s->PutCString("IDX  p_type          p_offset p_vaddr  p_paddr  "
-                "p_filesz p_memsz  p_flags                   p_align\n");
-  s->PutCString("==== --------------- -------- -------- -------- "
-                "-------- -------- ------------------------- --------\n");
+  s->PutCString(
+      "IDX  p_type          p_offset         p_vaddr          p_paddr          "
+      "p_filesz         p_memsz          p_flags                   p_align\n");
+  s->PutCString(
+      "==== --------------- ---------------- ---------------- ---------------- "
+      "---------------- ---------------- ------------------------- --------\n");
 
   for (const auto &H : llvm::enumerate(m_program_headers)) {
     s->Format("[{0,2}] ", H.index());
@@ -3492,6 +3547,111 @@ void ObjectFileELF::DumpDependentModules(lldb_private::Stream *s) {
   }
 }
 
+std::string static getDynamicTagAsString(uint16_t Arch, uint64_t Type) {
+#define DYNAMIC_STRINGIFY_ENUM(tag, value)                                     \
+  case value:                                                                  \
+    return #tag;
+
+#define DYNAMIC_TAG(n, v)
+  switch (Arch) {
+  case llvm::ELF::EM_AARCH64:
+    switch (Type) {
+#define AARCH64_DYNAMIC_TAG(name, value) DYNAMIC_STRINGIFY_ENUM(name, value)
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef AARCH64_DYNAMIC_TAG
+    }
+    break;
+
+  case llvm::ELF::EM_HEXAGON:
+    switch (Type) {
+#define HEXAGON_DYNAMIC_TAG(name, value) DYNAMIC_STRINGIFY_ENUM(name, value)
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef HEXAGON_DYNAMIC_TAG
+    }
+    break;
+
+  case llvm::ELF::EM_MIPS:
+    switch (Type) {
+#define MIPS_DYNAMIC_TAG(name, value) DYNAMIC_STRINGIFY_ENUM(name, value)
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef MIPS_DYNAMIC_TAG
+    }
+    break;
+
+  case llvm::ELF::EM_PPC:
+    switch (Type) {
+#define PPC_DYNAMIC_TAG(name, value) DYNAMIC_STRINGIFY_ENUM(name, value)
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef PPC_DYNAMIC_TAG
+    }
+    break;
+
+  case llvm::ELF::EM_PPC64:
+    switch (Type) {
+#define PPC64_DYNAMIC_TAG(name, value) DYNAMIC_STRINGIFY_ENUM(name, value)
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef PPC64_DYNAMIC_TAG
+    }
+    break;
+
+  case llvm::ELF::EM_RISCV:
+    switch (Type) {
+#define RISCV_DYNAMIC_TAG(name, value) DYNAMIC_STRINGIFY_ENUM(name, value)
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef RISCV_DYNAMIC_TAG
+    }
+    break;
+  }
+#undef DYNAMIC_TAG
+  switch (Type) {
+// Now handle all dynamic tags except the architecture specific ones
+#define AARCH64_DYNAMIC_TAG(name, value)
+#define MIPS_DYNAMIC_TAG(name, value)
+#define HEXAGON_DYNAMIC_TAG(name, value)
+#define PPC_DYNAMIC_TAG(name, value)
+#define PPC64_DYNAMIC_TAG(name, value)
+#define RISCV_DYNAMIC_TAG(name, value)
+// Also ignore marker tags such as DT_HIOS (maps to DT_VERNEEDNUM), etc.
+#define DYNAMIC_TAG_MARKER(name, value)
+#define DYNAMIC_TAG(name, value)                                               \
+  case value:                                                                  \
+    return #name;
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef DYNAMIC_TAG
+#undef AARCH64_DYNAMIC_TAG
+#undef MIPS_DYNAMIC_TAG
+#undef HEXAGON_DYNAMIC_TAG
+#undef PPC_DYNAMIC_TAG
+#undef PPC64_DYNAMIC_TAG
+#undef RISCV_DYNAMIC_TAG
+#undef DYNAMIC_TAG_MARKER
+#undef DYNAMIC_STRINGIFY_ENUM
+  default:
+    return "<unknown:>0x" + llvm::utohexstr(Type, true);
+  }
+}
+
+void ObjectFileELF::DumpELFDynamic(lldb_private::Stream *s) {
+  ParseDynamicSymbols();
+  if (m_dynamic_symbols.empty())
+    return;
+
+  s->PutCString(".dynamic:\n");
+  s->PutCString("IDX  d_tag            d_val/d_ptr\n");
+  s->PutCString("==== ---------------- ------------------\n");
+  uint32_t idx = 0;
+  for (const auto &entry : m_dynamic_symbols) {
+    s->Printf("[%2u] ", idx++);
+    s->Printf(
+        "%-16s 0x%16.16" PRIx64,
+        getDynamicTagAsString(m_header.e_machine, entry.symbol.d_tag).c_str(),
+        entry.symbol.d_ptr);
+    if (!entry.name.empty())
+      s->Printf(" \"%s\"", entry.name.c_str());
+    s->EOL();
+  }
+}
+
 ArchSpec ObjectFileELF::GetArchitecture() {
   if (!ParseHeader())
     return ArchSpec();
@@ -3501,17 +3661,17 @@ ArchSpec ObjectFileELF::GetArchitecture() {
     ParseSectionHeaders();
   }
 
-  if (CalculateType() == eTypeCoreFile &&
-      !m_arch_spec.TripleOSWasSpecified()) {
-    // Core files don't have section headers yet they have PT_NOTE program
-    // headers that might shed more light on the architecture
-    for (const elf::ELFProgramHeader &H : ProgramHeaders()) {
-      if (H.p_type != PT_NOTE || H.p_offset == 0 || H.p_filesz == 0)
-        continue;
-      DataExtractor data;
-      if (data.SetData(m_data, H.p_offset, H.p_filesz) == H.p_filesz) {
-        UUID uuid;
-        RefineModuleDetailsFromNote(data, m_arch_spec, uuid);
+  // Check the program headers for more details. Core files and ELF files read
+  // from memory only have program headers.
+  if (!m_arch_spec.TripleOSWasSpecified()) {
+    // Try loading note info from PT_NOTE if section headers didn't find any.
+    for (const ELFProgramHeader &H : ProgramHeaders()) {
+      if (H.p_type == llvm::ELF::PT_NOTE) {
+        DataExtractor note_data = GetSegmentData(H);
+        if (note_data.GetByteSize()) {
+          UUID uuid;
+          RefineModuleDetailsFromNote(note_data, m_arch_spec, uuid);
+        }
       }
     }
   }
@@ -3664,7 +3824,27 @@ llvm::ArrayRef<ELFProgramHeader> ObjectFileELF::ProgramHeaders() {
 }
 
 DataExtractor ObjectFileELF::GetSegmentData(const ELFProgramHeader &H) {
-  return DataExtractor(m_data, H.p_offset, H.p_filesz);
+  // Try and read the program header from our cached m_data which can come from
+  // the file on disk being mmap'ed or from the initial part of the ELF file we
+  // read from memory and cached.
+  DataExtractor data = DataExtractor(m_data, H.p_offset, H.p_filesz);
+  if (data.GetByteSize() == H.p_filesz)
+    return data;
+  if (IsInMemory()) {
+    // We have a ELF file in process memory, read the program header data from
+    // the process.
+    ProcessSP process_sp(m_process_wp.lock());
+    if (process_sp) {
+      const lldb::offset_t base_file_addr = GetBaseAddress().GetFileAddress();
+      // const addr_t data_addr = m_memory_addr + H.p_offset; // Not correct for
+      // some files
+      const addr_t data_addr = H.p_vaddr - base_file_addr + m_memory_addr;
+      DataBufferSP data_sp = ReadMemory(process_sp, data_addr, H.p_memsz);
+      if (data_sp)
+        return DataExtractor(data_sp, GetByteOrder(), GetAddressByteSize());
+    }
+  }
+  return DataExtractor();
 }
 
 bool ObjectFileELF::AnySegmentHasPhysicalAddress() {
@@ -3703,4 +3883,128 @@ ObjectFileELF::MapFileDataWritable(const FileSpec &file, uint64_t Size,
                                    uint64_t Offset) {
   return FileSystem::Instance().CreateWritableDataBuffer(file.GetPath(), Size,
                                                          Offset);
+}
+
+std::optional<DataExtractor> ObjectFileELF::ReadStrtabDataFromMemory() {
+  // Every ELF file which represents an executable or shared library has
+  // mandatory .dynamic entries. Two of these values are DT_STRTAB and DT_STRSZ
+  // and represent the dynamic symbol tables's string table. These are needed
+  // by the dynamic loader and we can read them from a process' address space.
+  //
+  // When loading and ELF file from memory, only the program headers end up
+  // being mapped into memory, and we can find these values in the PT_DYNAMIC
+  // segment.
+  if (!IsInMemory())
+    return std::nullopt;
+  ProcessSP process_sp(m_process_wp.lock());
+  if (!process_sp)
+    return std::nullopt;
+  const ELFDynamic *strtab = FindDynamicSymbol(DT_STRTAB);
+  const ELFDynamic *strsz = FindDynamicSymbol(DT_STRSZ);
+  if (strtab == nullptr || strsz == nullptr)
+    return std::nullopt;
+  DataBufferSP data_sp = ReadMemory(process_sp, strtab->d_ptr, strsz->d_val);
+  if (!data_sp)
+    return std::nullopt;
+  return DataExtractor(data_sp, GetByteOrder(), GetAddressByteSize());
+}
+
+std::optional<DataExtractor>
+ObjectFileELF::ReadSymtabDataFromMemory(uint32_t &num_symbols) {
+  // Every ELF file which represents an executable or shared library has
+  // mandatory .dynamic entries. The DT_SYMTAB value contains a pointer to the
+  // symbol table, and DT_SYMENT contains the size of a symbol table entry.
+  // We then can use either the DT_HASH or DT_GNU_HASH to find the number of
+  // symbols in the symbol table as the symbol count is not stored in the
+  // .dynamic section as a key/value pair.
+  //
+  // When loading and ELF file from memory, only the program headers end up
+  // being mapped into memory, and we can find these values in the PT_DYNAMIC
+  // segment.
+  num_symbols = 0;
+  if (!IsInMemory())
+    return std::nullopt;
+  ProcessSP process_sp(m_process_wp.lock());
+  if (!process_sp)
+    return std::nullopt;
+  const ELFDynamic *symtab = FindDynamicSymbol(DT_SYMTAB);
+  const ELFDynamic *syment = FindDynamicSymbol(DT_SYMENT);
+  const ELFDynamic *hash = FindDynamicSymbol(DT_HASH);
+  const ELFDynamic *gnu_hash = FindDynamicSymbol(DT_GNU_HASH);
+  // DT_SYMTAB and DT_SYMENT are mandatory.
+  if (symtab == nullptr || syment == nullptr)
+    return std::nullopt;
+  // We must have either a DT_HASH or a DT_GNU_HASH.
+  if (hash == nullptr && gnu_hash == nullptr)
+    return std::nullopt;
+  // The number of symbols in the symbol table is the number of entries in the
+  // symbol table divided by the size of each symbol table entry.
+  // We must figure out the number of symbols in the symbol table using the
+  // DT_HASH or the DT_GNU_HASH as the number of symbols isn't stored anywhere
+  // in the .dynamic section.
+  auto ReadU32 = [&process_sp](addr_t addr) -> uint32_t {
+    Status error;
+    return process_sp->ReadUnsignedIntegerFromMemory(addr, 4, 0, error);
+  };
+
+  if (hash) {
+    // The DT_HASH header contains the number of symbols in the "nchain"
+    // member. The header looks like this:
+    // struct DT_HASH_HEADER {
+    //   uint32_t nbucket;
+    //   uint32_t nchain;
+    // };
+    const lldb::addr_t hash_addr = hash->d_ptr;
+    num_symbols = ReadU32(hash_addr + 4);
+  }
+  if (num_symbols == 0 && gnu_hash) {
+    const lldb::addr_t hash_addr = gnu_hash->d_ptr;
+    // The DT_GNU_HASH header looks like this:
+    struct DT_GNU_HASH_HEADER {
+      uint32_t nbuckets = 0;
+      uint32_t symoffset = 0;
+      uint32_t bloom_size = 0;
+      uint32_t bloom_shift = 0;
+    };
+    DT_GNU_HASH_HEADER header;
+    header.nbuckets = ReadU32(hash_addr);
+    header.symoffset = ReadU32(hash_addr + 4);
+    header.bloom_size = ReadU32(hash_addr + 8);
+    header.bloom_shift = ReadU32(hash_addr + 16);
+    const size_t addr_size = process_sp->GetAddressByteSize();
+    const addr_t buckets_address =
+        hash_addr + sizeof(DT_GNU_HASH_HEADER) + addr_size * header.bloom_size;
+    std::vector<uint32_t> buckets;
+    for (uint32_t i = 0; i < header.nbuckets; ++i)
+      buckets.push_back(ReadU32(buckets_address + i * 4));
+    // Locate the chain that handles the largest index bucket.
+    uint32_t last_symbol = 0;
+    for (uint32_t bucket_value : buckets)
+      last_symbol = std::max(bucket_value, last_symbol);
+    if (last_symbol < header.symoffset) {
+      num_symbols = header.symoffset;
+    } else {
+      // Walk the bucket's chain to add the chain length to the total.
+      const addr_t chains_base_addr = buckets_address + header.nbuckets * 4;
+      for (;;) {
+        uint32_t chain_entry =
+            ReadU32(chains_base_addr +
+                    (last_symbol - header.symoffset) * sizeof(chain_entry));
+        ++last_symbol;
+        // If the low bit is set, this entry is the end of the chain.
+        if (chain_entry & 1)
+          break;
+      }
+      num_symbols = last_symbol;
+    }
+    if (num_symbols > 0)
+      ++num_symbols; // First symbol is always all zeros
+  }
+  if (num_symbols == 0)
+    return std::nullopt;
+  DataBufferSP data_sp =
+      ReadMemory(process_sp, symtab->d_ptr, syment->d_val * num_symbols);
+  if (!data_sp)
+    return std::nullopt;
+  return DataExtractor(data_sp, GetByteOrder(), GetAddressByteSize());
 }
