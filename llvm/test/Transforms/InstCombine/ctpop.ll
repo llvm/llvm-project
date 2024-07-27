@@ -169,8 +169,8 @@ define <2 x i32> @_parity_of_not_poison(<2 x i32> %x) {
 
 define <2 x i32> @_parity_of_not_poison2(<2 x i32> %x) {
 ; CHECK-LABEL: @_parity_of_not_poison2(
-; CHECK-NEXT:    [[CNT:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[CNT]], <i32 1, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[TMP1]], <i32 1, i32 poison>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %neg = xor <2 x i32> %x, <i32 -1 ,i32 -1>
@@ -484,4 +484,22 @@ define i32 @select_ctpop_zero(i32 %x) {
   %cmp = icmp eq i32 %x, 0
   %res = select i1 %cmp, i32 0, i32 %ctpop
   ret i32 %res
+}
+
+define i32 @ctpop_non_zero(i32 range(i32 1, 255) %x) {
+; CHECK-LABEL: @ctpop_non_zero(
+; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 0, 9) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[CTPOP]]
+;
+  %ctpop = call i32 @llvm.ctpop.i32(i32 %x)
+  ret i32 %ctpop
+}
+
+define i32 @ctpop_non_zero_with_existing_range_attr(i32 range(i32 1, 255) %x) {
+; CHECK-LABEL: @ctpop_non_zero_with_existing_range_attr(
+; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 0, 9) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[CTPOP]]
+;
+  %ctpop = call range(i32 0, 9) i32 @llvm.ctpop.i32(i32 %x)
+  ret i32 %ctpop
 }
