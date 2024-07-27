@@ -15,9 +15,9 @@
 #include "lldb-python.h"
 
 #include "Interfaces/OperatingSystemPythonInterface.h"
-#include "Interfaces/ScriptedPlatformPythonInterface.h"
+#include "Interfaces/ScriptedPlatformPythonInterface/ScriptedPlatformPythonInterface.h"
 #include "Interfaces/ScriptedProcessPythonInterface.h"
-#include "Interfaces/ScriptedThreadPlanPythonInterface.h"
+#include "Interfaces/ScriptedThreadPlanPythonInterface/ScriptedThreadPlanPythonInterface.h"
 #include "Interfaces/ScriptedThreadPythonInterface.h"
 #include "PythonDataObjects.h"
 #include "PythonReadline.h"
