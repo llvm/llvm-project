@@ -46,93 +46,49 @@ Types:
 
 floating_point abs(floating_point x);
 
-floating_point acos (arithmetic x);
-float          acosf(float x);
-long double    acosl(long double x);
+floating_point acos(arithmetic x);
 
-floating_point asin (arithmetic x);
-float          asinf(float x);
-long double    asinl(long double x);
+floating_point asin(arithmetic x);
 
-floating_point atan (arithmetic x);
-float          atanf(float x);
-long double    atanl(long double x);
+floating_point atan(arithmetic x);
 
-floating_point atan2 (arithmetic y, arithmetic x);
-float          atan2f(float y, float x);
-long double    atan2l(long double y, long double x);
+floating_point atan2(arithmetic y, arithmetic x);
 
-floating_point ceil (arithmetic x);
-float          ceilf(float x);
-long double    ceill(long double x);
+floating_point ceil(arithmetic x);
 
-floating_point cos (arithmetic x);
-float          cosf(float x);
-long double    cosl(long double x);
+floating_point cos(arithmetic x);
 
-floating_point cosh (arithmetic x);
-float          coshf(float x);
-long double    coshl(long double x);
+floating_point cosh(arithmetic x);
 
-floating_point exp (arithmetic x);
-float          expf(float x);
-long double    expl(long double x);
+floating_point exp(arithmetic x);
 
-floating_point fabs (arithmetic x);
-float          fabsf(float x);
-long double    fabsl(long double x);
+floating_point fabs(arithmetic x);
 
-floating_point floor (arithmetic x);
-float          floorf(float x);
-long double    floorl(long double x);
+floating_point floor(arithmetic x);
 
-floating_point fmod (arithmetic x, arithmetic y);
-float          fmodf(float x, float y);
-long double    fmodl(long double x, long double y);
+floating_point fmod(arithmetic x, arithmetic y);
 
-floating_point frexp (arithmetic value, int* exp);
-float          frexpf(float value, int* exp);
-long double    frexpl(long double value, int* exp);
+floating_point frexp(arithmetic value, int* exp);
 
-floating_point ldexp (arithmetic value, int exp);
-float          ldexpf(float value, int exp);
-long double    ldexpl(long double value, int exp);
+floating_point ldexp(arithmetic value, int exp);
 
-floating_point log (arithmetic x);
-float          logf(float x);
-long double    logl(long double x);
+floating_point log(arithmetic x);
 
-floating_point log10 (arithmetic x);
-float          log10f(float x);
-long double    log10l(long double x);
+floating_point modf(floating_point value, floating_point* iptr);
 
-floating_point modf (floating_point value, floating_point* iptr);
-float          modff(float value, float* iptr);
-long double    modfl(long double value, long double* iptr);
+floating_point log10(arithmetic x);
 
-floating_point pow (arithmetic x, arithmetic y);
-float          powf(float x, float y);
-long double    powl(long double x, long double y);
+floating_point pow(arithmetic x, arithmetic y);
 
-floating_point sin (arithmetic x);
-float          sinf(float x);
-long double    sinl(long double x);
+floating_point sin(arithmetic x);
 
-floating_point sinh (arithmetic x);
-float          sinhf(float x);
-long double    sinhl(long double x);
+floating_point sinh(arithmetic x);
 
-floating_point sqrt (arithmetic x);
-float          sqrtf(float x);
-long double    sqrtl(long double x);
+floating_point sqrt(arithmetic x);
 
-floating_point tan (arithmetic x);
-float          tanf(float x);
-long double    tanl(long double x);
+floating_point tan(arithmetic x);
 
-floating_point tanh (arithmetic x);
-float          tanhf(float x);
-long double    tanhl(long double x);
+floating_point tanh(arithmetic x);
 
 //  C99
 
@@ -151,6 +107,72 @@ bool isless(arithmetic x, arithmetic y);
 bool islessequal(arithmetic x, arithmetic y);
 bool islessgreater(arithmetic x, arithmetic y);
 bool isunordered(arithmetic x, arithmetic y);
+
+float          acosf(float x);
+long double    acosl(long double x);
+
+float          asinf(float x);
+long double    asinl(long double x);
+
+float          atanf(float x);
+long double    atanl(long double x);
+
+float          atan2f(float y, float x);
+long double    atan2l(long double y, long double x);
+
+float          ceilf(float x);
+long double    ceill(long double x);
+
+float          cosf(float x);
+long double    cosl(long double x);
+
+float          coshf(float x);
+long double    coshl(long double x);
+
+float          expf(float x);
+long double    expl(long double x);
+
+float          fabsf(float x);
+long double    fabsl(long double x);
+
+float          floorf(float x);
+long double    floorl(long double x);
+
+float          fmodf(float x, float y);
+long double    fmodl(long double x, long double y);
+
+float          frexpf(float value, int* exp);
+long double    frexpl(long double value, int* exp);
+
+float          ldexpf(float value, int exp);
+long double    ldexpl(long double value, int exp);
+
+float          logf(float x);
+long double    logl(long double x);
+
+float          log10f(float x);
+long double    log10l(long double x);
+
+float          modff(float value, float* iptr);
+long double    modfl(long double value, long double* iptr);
+
+float          powf(float x, float y);
+long double    powl(long double x, long double y);
+
+float          sinf(float x);
+long double    sinl(long double x);
+
+float          sinhf(float x);
+long double    sinhl(long double x);
+
+float          sqrtf(float x);
+long double    sqrtl(long double x);
+
+float          tanf(float x);
+long double    tanl(long double x);
+
+float          tanhf(float x);
+long double    tanhl(long double x);
 
 floating_point acosh (arithmetic x);
 float          acoshf(float x);
@@ -204,21 +226,9 @@ floating_point fmin (arithmetic x, arithmetic y);
 float          fminf(float x, float y);
 long double    fminl(long double x, long double y);
 
-double         hermite(unsigned n, double x);                    // C++17
-float          hermite(unsigned n, float x);                     // C++17
-long double    hermite(unsigned n, long double x);               // C++17
-float          hermitef(unsigned n, float x);                    // C++17
-long double    hermitel(unsigned n, long double x);              // C++17
-template <class Integer>
-double         hermite(unsigned n, Integer x);                   // C++17
-
 floating_point hypot (arithmetic x, arithmetic y);
 float          hypotf(float x, float y);
 long double    hypotl(long double x, long double y);
-
-double       hypot(double x, double y, double z);                // C++17
-float        hypot(float x, float y, float z);                   // C++17
-long double  hypot(long double x, long double y, long double z); // C++17
 
 int ilogb (arithmetic x);
 int ilogbf(float x);
@@ -304,9 +314,17 @@ floating_point trunc (arithmetic x);
 float          truncf(float x);
 long double    truncl(long double x);
 
-constexpr float       lerp(float a, float b, float t) noexcept;                   // C++20
-constexpr double      lerp(double a, double b, double t) noexcept;                // C++20
-constexpr long double lerp(long double a, long double b, long double t) noexcept; // C++20
+//  C++17
+
+floating_point hypot(arithmetic x, arithmetic y, arithmetic z);
+
+floating_point hermite (unsigned n, arithmetic x);
+float          hermitef(unsigned n, float x);
+long double    hermitel(unsigned n, long double x);
+
+//  C++20
+
+constexpr floating_point lerp(arithmetic a, arithmetic b, arithmetic t) noexcept;
 
 }  // std
 
