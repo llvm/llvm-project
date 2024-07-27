@@ -159,8 +159,12 @@ class ELFObjectWriter : public MCObjectWriter {
 
 public:
   std::unique_ptr<MCELFObjectTargetWriter> TargetObjectWriter;
+  raw_pwrite_stream &OS;
+  raw_pwrite_stream *DwoOS = nullptr;
+
   DenseMap<const MCSectionELF *, std::vector<ELFRelocationEntry>> Relocations;
   DenseMap<const MCSymbolELF *, const MCSymbolELF *> Renames;
+  bool IsLittleEndian = false;
   bool SeenGnuAbi = false;
   std::optional<uint8_t> OverrideABIVersion;
 
@@ -173,8 +177,11 @@ public:
   };
   SmallVector<Symver, 0> Symvers;
 
-  ELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW)
-      : TargetObjectWriter(std::move(MOTW)) {}
+  ELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
+                  raw_pwrite_stream &OS, bool IsLittleEndian);
+  ELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
+                  raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS,
+                  bool IsLittleEndian);
 
   void reset() override;
   void executePostLayoutBinding(MCAssembler &Asm) override;
@@ -185,6 +192,7 @@ public:
                                               const MCSymbol &SymA,
                                               const MCFragment &FB, bool InSet,
                                               bool IsPCRel) const override;
+  uint64_t writeObject(MCAssembler &Asm) override;
 
   bool hasRelocationAddend() const;
   bool usesRela(const MCTargetOptions *TO, const MCSectionELF &Sec) const;
@@ -193,11 +201,8 @@ public:
                                 const MCSymbolELF *Sym, uint64_t C,
                                 unsigned Type) const;
 
-  virtual bool checkRelocation(MCContext &Ctx, SMLoc Loc,
-                               const MCSectionELF *From,
-                               const MCSectionELF *To) {
-    return true;
-  }
+  bool checkRelocation(MCContext &Ctx, SMLoc Loc, const MCSectionELF *From,
+                       const MCSectionELF *To);
 
   unsigned getELFHeaderEFlags() const { return ELFHeaderEFlags; }
   void setELFHeaderEFlags(unsigned Flags) { ELFHeaderEFlags = Flags; }
@@ -209,21 +214,6 @@ public:
   // Override the default e_ident[EI_ABIVERSION] in the ELF header.
   void setOverrideABIVersion(uint8_t V) { OverrideABIVersion = V; }
 };
-
-/// Construct a new ELF writer instance.
-///
-/// \param MOTW - The target specific ELF writer subclass.
-/// \param OS - The stream to write to.
-/// \returns The constructed object writer.
-std::unique_ptr<MCObjectWriter>
-createELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
-                      raw_pwrite_stream &OS, bool IsLittleEndian);
-
-std::unique_ptr<MCObjectWriter>
-createELFDwoObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
-                         raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS,
-                         bool IsLittleEndian);
-
 } // end namespace llvm
 
 #endif // LLVM_MC_MCELFOBJECTWRITER_H
