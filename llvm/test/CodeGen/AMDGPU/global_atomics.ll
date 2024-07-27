@@ -4155,12 +4155,12 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_offset(ptr addrspace(1) %out, i32 
 ;
 ; GFX9-LABEL: atomic_cmpxchg_i32_offset:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    global_atomic_cmpswap v2, v[0:1], s[0:1] offset:16
+; GFX9-NEXT:    v_mov_b32_e32 v0, s6
+; GFX9-NEXT:    v_mov_b32_e32 v1, s7
+; GFX9-NEXT:    global_atomic_cmpswap v2, v[0:1], s[4:5] offset:16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_endpgm
@@ -4406,12 +4406,12 @@ define amdgpu_kernel void @atomic_cmpxchg_i32(ptr addrspace(1) %out, i32 %in, i3
 ;
 ; GFX9-LABEL: atomic_cmpxchg_i32:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    global_atomic_cmpswap v2, v[0:1], s[0:1]
+; GFX9-NEXT:    v_mov_b32_e32 v0, s6
+; GFX9-NEXT:    v_mov_b32_e32 v1, s7
+; GFX9-NEXT:    global_atomic_cmpswap v2, v[0:1], s[4:5]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_endpgm

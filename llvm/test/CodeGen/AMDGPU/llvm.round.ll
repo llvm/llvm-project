@@ -115,31 +115,57 @@ define amdgpu_kernel void @round_v2f32(ptr addrspace(1) %out, <2 x float> %in) #
 ; GFX6-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX6-NEXT:    s_endpgm
 ;
-; GFX89-LABEL: round_v2f32:
-; GFX89:       ; %bb.0:
-; GFX89-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
-; GFX89-NEXT:    s_brev_b32 s8, -2
-; GFX89-NEXT:    s_mov_b32 s7, 0xf000
-; GFX89-NEXT:    s_mov_b32 s6, -1
-; GFX89-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX89-NEXT:    v_trunc_f32_e32 v0, s3
-; GFX89-NEXT:    v_sub_f32_e32 v1, s3, v0
-; GFX89-NEXT:    s_mov_b32 s4, s0
-; GFX89-NEXT:    s_mov_b32 s5, s1
-; GFX89-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v1|, 0.5
-; GFX89-NEXT:    v_cndmask_b32_e64 v1, 0, 1.0, s[0:1]
-; GFX89-NEXT:    v_mov_b32_e32 v2, s3
-; GFX89-NEXT:    v_bfi_b32 v1, s8, v1, v2
-; GFX89-NEXT:    v_add_f32_e32 v1, v0, v1
-; GFX89-NEXT:    v_trunc_f32_e32 v0, s2
-; GFX89-NEXT:    v_sub_f32_e32 v2, s2, v0
-; GFX89-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v2|, 0.5
-; GFX89-NEXT:    v_cndmask_b32_e64 v2, 0, 1.0, s[0:1]
-; GFX89-NEXT:    v_mov_b32_e32 v3, s2
-; GFX89-NEXT:    v_bfi_b32 v2, s8, v2, v3
-; GFX89-NEXT:    v_add_f32_e32 v0, v0, v2
-; GFX89-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
-; GFX89-NEXT:    s_endpgm
+; GFX8-LABEL: round_v2f32:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX8-NEXT:    s_brev_b32 s8, -2
+; GFX8-NEXT:    s_mov_b32 s7, 0xf000
+; GFX8-NEXT:    s_mov_b32 s6, -1
+; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NEXT:    v_trunc_f32_e32 v0, s3
+; GFX8-NEXT:    v_sub_f32_e32 v1, s3, v0
+; GFX8-NEXT:    s_mov_b32 s4, s0
+; GFX8-NEXT:    s_mov_b32 s5, s1
+; GFX8-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v1|, 0.5
+; GFX8-NEXT:    v_cndmask_b32_e64 v1, 0, 1.0, s[0:1]
+; GFX8-NEXT:    v_mov_b32_e32 v2, s3
+; GFX8-NEXT:    v_bfi_b32 v1, s8, v1, v2
+; GFX8-NEXT:    v_add_f32_e32 v1, v0, v1
+; GFX8-NEXT:    v_trunc_f32_e32 v0, s2
+; GFX8-NEXT:    v_sub_f32_e32 v2, s2, v0
+; GFX8-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v2|, 0.5
+; GFX8-NEXT:    v_cndmask_b32_e64 v2, 0, 1.0, s[0:1]
+; GFX8-NEXT:    v_mov_b32_e32 v3, s2
+; GFX8-NEXT:    v_bfi_b32 v2, s8, v2, v3
+; GFX8-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX8-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
+; GFX8-NEXT:    s_endpgm
+;
+; GFX9-LABEL: round_v2f32:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
+; GFX9-NEXT:    s_brev_b32 s8, -2
+; GFX9-NEXT:    s_mov_b32 s3, 0xf000
+; GFX9-NEXT:    s_mov_b32 s2, -1
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    v_trunc_f32_e32 v0, s7
+; GFX9-NEXT:    v_sub_f32_e32 v1, s7, v0
+; GFX9-NEXT:    s_mov_b32 s0, s4
+; GFX9-NEXT:    s_mov_b32 s1, s5
+; GFX9-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v1|, 0.5
+; GFX9-NEXT:    v_cndmask_b32_e64 v1, 0, 1.0, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v2, s7
+; GFX9-NEXT:    v_bfi_b32 v1, s8, v1, v2
+; GFX9-NEXT:    v_add_f32_e32 v1, v0, v1
+; GFX9-NEXT:    v_trunc_f32_e32 v0, s6
+; GFX9-NEXT:    v_sub_f32_e32 v2, s6, v0
+; GFX9-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v2|, 0.5
+; GFX9-NEXT:    v_cndmask_b32_e64 v2, 0, 1.0, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v3, s6
+; GFX9-NEXT:    v_bfi_b32 v2, s8, v2, v3
+; GFX9-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX9-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GFX9-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: round_v2f32:
 ; GFX11:       ; %bb.0:
