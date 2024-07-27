@@ -15,15 +15,14 @@
 ; Tests whether the min/max reduction pattern is vectorized if SLP starts at the store.
 define i32 @smaxv6() {
 ; GFX9-LABEL: @smaxv6(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @arr, align 16
-; GFX9-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; GFX9-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; GFX9-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP2]], [[TMP3]]
-; GFX9-NEXT:    [[SELECT1:%.*]] = select i1 [[CMP1]], i32 [[TMP2]], i32 [[TMP3]]
-; GFX9-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 2), align 8
-; GFX9-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP4]])
-; GFX9-NEXT:    [[OP_RDX:%.*]] = icmp sgt i32 [[TMP5]], [[SELECT1]]
-; GFX9-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i32 [[TMP5]], i32 [[SELECT1]]
+; GFX9-NEXT:    [[LOAD1:%.*]] = load i32, ptr @arr, align 16
+; GFX9-NEXT:    [[LOAD2:%.*]] = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 1), align 4
+; GFX9-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[LOAD1]], [[LOAD2]]
+; GFX9-NEXT:    [[SELECT1:%.*]] = select i1 [[CMP1]], i32 [[LOAD1]], i32 [[LOAD2]]
+; GFX9-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 2), align 8
+; GFX9-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP1]])
+; GFX9-NEXT:    [[OP_RDX:%.*]] = icmp sgt i32 [[TMP2]], [[SELECT1]]
+; GFX9-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i32 [[TMP2]], i32 [[SELECT1]]
 ; GFX9-NEXT:    [[STORE_SELECT:%.*]] = select i1 [[CMP1]], i32 3, i32 4
 ; GFX9-NEXT:    store i32 [[STORE_SELECT]], ptr @var, align 8
 ; GFX9-NEXT:    ret i32 [[OP_RDX1]]
@@ -56,15 +55,14 @@ define i32 @smaxv6() {
 
 define i64 @sminv6() {
 ; GFX9-LABEL: @sminv6(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @arr64, align 16
-; GFX9-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
-; GFX9-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
-; GFX9-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[TMP2]], [[TMP3]]
-; GFX9-NEXT:    [[SELECT1:%.*]] = select i1 [[CMP1]], i64 [[TMP2]], i64 [[TMP3]]
-; GFX9-NEXT:    [[TMP4:%.*]] = load <4 x i64>, ptr getelementptr inbounds ([32 x i64], ptr @arr64, i64 0, i64 2), align 16
-; GFX9-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vector.reduce.smin.v4i64(<4 x i64> [[TMP4]])
-; GFX9-NEXT:    [[OP_RDX:%.*]] = icmp slt i64 [[TMP5]], [[SELECT1]]
-; GFX9-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i64 [[TMP5]], i64 [[SELECT1]]
+; GFX9-NEXT:    [[LOAD1:%.*]] = load i64, ptr @arr64, align 16
+; GFX9-NEXT:    [[LOAD2:%.*]] = load i64, ptr getelementptr inbounds ([32 x i64], ptr @arr64, i64 0, i64 1), align 8
+; GFX9-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[LOAD1]], [[LOAD2]]
+; GFX9-NEXT:    [[SELECT1:%.*]] = select i1 [[CMP1]], i64 [[LOAD1]], i64 [[LOAD2]]
+; GFX9-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr getelementptr inbounds ([32 x i64], ptr @arr64, i64 0, i64 2), align 16
+; GFX9-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vector.reduce.smin.v4i64(<4 x i64> [[TMP1]])
+; GFX9-NEXT:    [[OP_RDX:%.*]] = icmp slt i64 [[TMP2]], [[SELECT1]]
+; GFX9-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i64 [[TMP2]], i64 [[SELECT1]]
 ; GFX9-NEXT:    [[STORE_SELECT:%.*]] = select i1 [[CMP1]], i64 3, i64 4
 ; GFX9-NEXT:    store i64 [[STORE_SELECT]], ptr @var64, align 8
 ; GFX9-NEXT:    ret i64 [[OP_RDX1]]
@@ -99,11 +97,10 @@ define i64 @sminv6() {
 ; with fastmath on the select.
 define float @fmaxv6() {
 ; GFX9-LABEL: @fmaxv6(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr @farr, align 16
-; GFX9-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP1]], i32 0
-; GFX9-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP1]], i32 1
-; GFX9-NEXT:    [[CMP1:%.*]] = fcmp fast ogt float [[TMP2]], [[TMP3]]
-; GFX9-NEXT:    [[SELECT1:%.*]] = select i1 [[CMP1]], float [[TMP2]], float [[TMP3]]
+; GFX9-NEXT:    [[LOAD1:%.*]] = load float, ptr @farr, align 16
+; GFX9-NEXT:    [[LOAD2:%.*]] = load float, ptr getelementptr inbounds ([32 x float], ptr @farr, i64 0, i64 1), align 4
+; GFX9-NEXT:    [[CMP1:%.*]] = fcmp fast ogt float [[LOAD1]], [[LOAD2]]
+; GFX9-NEXT:    [[SELECT1:%.*]] = select i1 [[CMP1]], float [[LOAD1]], float [[LOAD2]]
 ; GFX9-NEXT:    [[LOAD3:%.*]] = load float, ptr getelementptr inbounds ([32 x float], ptr @farr, i64 0, i64 2), align 8
 ; GFX9-NEXT:    [[CMP2:%.*]] = fcmp fast ogt float [[SELECT1]], [[LOAD3]]
 ; GFX9-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP2]], float [[SELECT1]], float [[LOAD3]]
@@ -150,11 +147,10 @@ define float @fmaxv6() {
 ; with fastmath on the select.
 define double @dminv6() {
 ; GFX9-LABEL: @dminv6(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr @darr, align 16
-; GFX9-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
-; GFX9-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
-; GFX9-NEXT:    [[CMP1:%.*]] = fcmp fast olt double [[TMP2]], [[TMP3]]
-; GFX9-NEXT:    [[SELECT1:%.*]] = select i1 [[CMP1]], double [[TMP2]], double [[TMP3]]
+; GFX9-NEXT:    [[LOAD1:%.*]] = load double, ptr @darr, align 16
+; GFX9-NEXT:    [[LOAD2:%.*]] = load double, ptr getelementptr inbounds ([32 x double], ptr @darr, i64 0, i64 1), align 4
+; GFX9-NEXT:    [[CMP1:%.*]] = fcmp fast olt double [[LOAD1]], [[LOAD2]]
+; GFX9-NEXT:    [[SELECT1:%.*]] = select i1 [[CMP1]], double [[LOAD1]], double [[LOAD2]]
 ; GFX9-NEXT:    [[LOAD3:%.*]] = load double, ptr getelementptr inbounds ([32 x double], ptr @darr, i64 0, i64 2), align 8
 ; GFX9-NEXT:    [[CMP2:%.*]] = fcmp fast olt double [[SELECT1]], [[LOAD3]]
 ; GFX9-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP2]], double [[SELECT1]], double [[LOAD3]]
