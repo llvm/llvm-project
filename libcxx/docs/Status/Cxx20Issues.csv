@@ -117,7 +117,7 @@
 "`LWG3127 <https://wg21.link/LWG3127>`__","``basic_osyncstream::rdbuf``\  needs a ``const_cast``\ ","San Diego","|Complete|","18.0",""
 "`LWG3128 <https://wg21.link/LWG3128>`__","``strstream::rdbuf``\  needs a ``const_cast``\ ","San Diego","|Nothing To Do|","",""
 "`LWG3129 <https://wg21.link/LWG3129>`__","``regex_token_iterator``\  constructor uses wrong pointer arithmetic","San Diego","","",""
-"`LWG3130 <https://wg21.link/LWG3130>`__","|sect|\ [input.output] needs many ``addressof``\ ","San Diego","","",""
+"`LWG3130 <https://wg21.link/LWG3130>`__","|sect|\ [input.output] needs many ``addressof``\ ","San Diego","|Complete|","20.0",""
 "`LWG3131 <https://wg21.link/LWG3131>`__","``addressof``\  all the things","San Diego","","",""
 "`LWG3132 <https://wg21.link/LWG3132>`__","Library needs to ban macros named ``expects``\  or ``ensures``\ ","San Diego","|Nothing To Do|","",""
 "`LWG3134 <https://wg21.link/LWG3134>`__","[fund.ts.v3] LFTSv3 contains extraneous [meta] variable templates that should have been deleted by P09961","San Diego","Resolved by `P1210R0 <https://wg21.link/P1210R0>`__","",""
