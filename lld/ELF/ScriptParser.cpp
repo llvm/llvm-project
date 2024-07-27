@@ -123,7 +123,7 @@ private:
   Expr combine(StringRef op, Expr l, Expr r);
   Expr readExpr();
   Expr readExpr1(Expr lhs, int minPrec);
-  StringRef readParenLiteral();
+  StringRef readParenName();
   Expr readPrimary();
   Expr readTernary(Expr cond);
   Expr readParenExpr();
@@ -383,9 +383,9 @@ void ScriptParser::readAsNeeded() {
 void ScriptParser::readEntry() {
   // -e <symbol> takes predecence over ENTRY(<symbol>).
   expect("(");
-  StringRef tok = next();
+  StringRef name = readName();
   if (config->entry.empty())
-    config->entry = unquote(tok);
+    config->entry = name;
   expect(")");
 }
 
@@ -435,9 +435,9 @@ void ScriptParser::readInput() {
 void ScriptParser::readOutput() {
   // -o <file> takes predecence over OUTPUT(<file>).
   expect("(");
-  StringRef tok = next();
+  StringRef name = readName();
   if (config->outputFile.empty())
-    config->outputFile = unquote(tok);
+    config->outputFile = name;
   expect(")");
 }
 
@@ -1300,7 +1300,7 @@ Expr ScriptParser::getPageSize() {
 }
 
 Expr ScriptParser::readConstant() {
-  StringRef s = readParenLiteral();
+  StringRef s = readParenName();
   if (s == "COMMONPAGESIZE")
     return getPageSize();
   if (s == "MAXPAGESIZE")
@@ -1416,11 +1416,11 @@ std::pair<uint64_t, uint64_t> ScriptParser::readInputSectionFlags() {
   return std::make_pair(withFlags, withoutFlags);
 }
 
-StringRef ScriptParser::readParenLiteral() {
+StringRef ScriptParser::readParenName() {
   expect("(");
   bool orig = inExpr;
   inExpr = false;
-  StringRef tok = next();
+  StringRef tok = readName();
   inExpr = orig;
   expect(")");
   return tok;
@@ -1469,7 +1469,7 @@ Expr ScriptParser::readPrimary() {
     };
   }
   if (tok == "ADDR") {
-    StringRef name = unquote(readParenLiteral());
+    StringRef name = readParenName();
     OutputSection *osec = &script->getOrCreateOutputSection(name)->osec;
     osec->usedInExpression = true;
     return [=]() -> ExprValue {
@@ -1494,7 +1494,7 @@ Expr ScriptParser::readPrimary() {
     };
   }
   if (tok == "ALIGNOF") {
-    StringRef name = unquote(readParenLiteral());
+    StringRef name = readParenName();
     OutputSection *osec = &script->getOrCreateOutputSection(name)->osec;
     return [=] {
       checkIfExists(*osec, location);
@@ -1536,7 +1536,7 @@ Expr ScriptParser::readPrimary() {
     return [=] { return alignToPowerOf2(script->getDot(), config->maxPageSize); };
   }
   if (tok == "DEFINED") {
-    StringRef name = unquote(readParenLiteral());
+    StringRef name = readParenName();
     // Return 1 if s is defined. If the definition is only found in a linker
     // script, it must happen before this DEFINED.
     auto order = ctx.scriptSymOrderCounter++;
@@ -1547,7 +1547,7 @@ Expr ScriptParser::readPrimary() {
     };
   }
   if (tok == "LENGTH") {
-    StringRef name = readParenLiteral();
+    StringRef name = readParenName();
     if (script->memoryRegions.count(name) == 0) {
       setError("memory region not defined: " + name);
       return [] { return 0; };
@@ -1555,7 +1555,7 @@ Expr ScriptParser::readPrimary() {
     return script->memoryRegions[name]->length;
   }
   if (tok == "LOADADDR") {
-    StringRef name = unquote(readParenLiteral());
+    StringRef name = readParenName();
     OutputSection *osec = &script->getOrCreateOutputSection(name)->osec;
     osec->usedInExpression = true;
     return [=] {
@@ -1583,7 +1583,7 @@ Expr ScriptParser::readPrimary() {
     return [=] { return std::max(a().getValue(), b().getValue()); };
   }
   if (tok == "ORIGIN") {
-    StringRef name = readParenLiteral();
+    StringRef name = readParenName();
     if (script->memoryRegions.count(name) == 0) {
       setError("memory region not defined: " + name);
       return [] { return 0; };
@@ -1599,7 +1599,7 @@ Expr ScriptParser::readPrimary() {
     return [=] { return e(); };
   }
   if (tok == "SIZEOF") {
-    StringRef name = unquote(readParenLiteral());
+    StringRef name = readParenName();
     OutputSection *cmd = &script->getOrCreateOutputSection(name)->osec;
     // Linker script does not create an output section if its content is empty.
     // We want to allow SIZEOF(.foo) where .foo is a section which happened to
