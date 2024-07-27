@@ -1733,15 +1733,11 @@ ScriptParser::readSymbols() {
   SmallVector<SymbolVersion, 0> globals;
   SmallVector<SymbolVersion, 0> *v = &globals;
 
-  while (!errorCount()) {
-    if (consume("}"))
-      break;
-
-    if (consume("extern")) {
+  while (auto tok = till("}")) {
+    if (tok == "extern") {
       SmallVector<SymbolVersion, 0> ext = readVersionExtern();
       v->insert(v->end(), ext.begin(), ext.end());
     } else {
-      StringRef tok = next();
       if (tok == "local:" || (tok == "local" && consume(":"))) {
         v = &locals;
         continue;
