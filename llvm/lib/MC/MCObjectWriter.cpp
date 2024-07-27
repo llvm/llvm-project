@@ -19,7 +19,11 @@ using namespace llvm;
 
 MCObjectWriter::~MCObjectWriter() = default;
 
-void MCObjectWriter::reset() { FileNames.clear(); }
+void MCObjectWriter::reset() {
+  FileNames.clear();
+  AddrsigSyms.clear();
+  CGProfile.clear();
+}
 
 bool MCObjectWriter::isSymbolRefDifferenceFullyResolved(
     const MCAssembler &Asm, const MCSymbolRefExpr *A, const MCSymbolRefExpr *B,

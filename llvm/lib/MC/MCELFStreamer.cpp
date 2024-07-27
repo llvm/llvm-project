@@ -347,7 +347,7 @@ void MCELFStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
 void MCELFStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
                                        const MCSymbolRefExpr *To,
                                        uint64_t Count) {
-  getAssembler().CGProfile.push_back({From, To, Count});
+  getWriter().getCGProfile().push_back({From, To, Count});
 }
 
 void MCELFStreamer::emitIdent(StringRef IdentString) {
@@ -476,8 +476,8 @@ void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE,
 }
 
 void MCELFStreamer::finalizeCGProfile() {
-  MCAssembler &Asm = getAssembler();
-  if (Asm.CGProfile.empty())
+  ELFObjectWriter &W = getWriter();
+  if (W.getCGProfile().empty())
     return;
   MCSection *CGProfile = getAssembler().getContext().getELFSection(
       ".llvm.call-graph-profile", ELF::SHT_LLVM_CALL_GRAPH_PROFILE,
@@ -485,7 +485,7 @@ void MCELFStreamer::finalizeCGProfile() {
   pushSection();
   switchSection(CGProfile);
   uint64_t Offset = 0;
-  for (MCAssembler::CGProfileEntry &E : Asm.CGProfile) {
+  for (auto &E : W.getCGProfile()) {
     finalizeCGProfileEntry(E.From, Offset);
     finalizeCGProfileEntry(E.To, Offset);
     emitIntValue(E.Count, sizeof(uint64_t));
