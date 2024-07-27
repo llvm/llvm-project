@@ -983,7 +983,7 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
   llvm::json::OStream J(OS, 2);
   std::function<void(Index)> IndexToJSON = [&](const Index &I) {
     J.object([&] {
-      //J.attribute("USR", toHex(llvm::toStringRef(I.USR)));
+      J.attribute("USR", toHex(llvm::toStringRef(I.USR)));
       J.attribute("Name", I.Name);
       J.attribute("RefType", getRefType(I.RefType));
       J.attribute("Path", I.getRelativeFilePath(""));
