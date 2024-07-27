@@ -313,9 +313,8 @@ void ScriptParser::readDefsym(StringRef name) {
 void ScriptParser::readNoCrossRefs(bool to) {
   expect("(");
   NoCrossRefCommand cmd{{}, to};
-  while (peek() != ")" && !atEOF())
-    cmd.outputSections.push_back(unquote(next()));
-  expect(")");
+  while (auto tok = till(")"))
+    cmd.outputSections.push_back(unquote(tok));
   if (cmd.outputSections.size() < 2)
     warn(getCurrentLocation() + ": ignored with fewer than 2 output sections");
   else
@@ -1769,16 +1768,13 @@ SmallVector<SymbolVersion, 0> ScriptParser::readVersionExtern() {
   expect("{");
 
   SmallVector<SymbolVersion, 0> ret;
-  while (!errorCount() && peek() != "}") {
-    StringRef tok = next();
+  while (auto tok = till("}")) {
     ret.push_back(
-        {unquote(tok), isCXX, !tok.starts_with("\"") && hasWildcard(tok)});
+        {unquote(tok), isCXX, !tok.str.starts_with("\"") && hasWildcard(tok)});
     if (consume("}"))
       return ret;
     expect(";");
   }
-
-  expect("}");
   return ret;
 }
 
