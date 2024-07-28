@@ -102,7 +102,7 @@ amd_comgr_status_t Symbolizer::symbolize(uint64_t Address, bool IsCode,
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   llvm::symbolize::PrinterConfig Config = getDefaultPrinterConfig();
-  llvm::symbolize::Request Request{"", Address};
+  llvm::symbolize::Request Request{"", Address, ""};
   auto Printer = std::make_unique<llvm::symbolize::LLVMPrinter>(OS, symbolize_error_handler(OS), Config);
 
   if (IsCode) {
