@@ -27,7 +27,6 @@ add_benchmark(
   COMPILE_OPTIONS
     ${nvptx_math_found}
     ${nvptx_bitcode_link_flags}
-    -save-temps
   LOADER_ARGS
     --threads 64
 )

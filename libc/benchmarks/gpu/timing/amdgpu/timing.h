@@ -68,8 +68,7 @@ template <typename F, typename T>
   // This inline assembly performs a no-op which forces the result to both
   // be used and prevents us from exiting this region before it's complete.
   asm("v_or_b32 %[v_reg], 0, %[v_reg]\n" ::[v_reg] "v"(
-          static_cast<uint32_t>(result))
-      :);
+      static_cast<uint32_t>(result)));
 
   // Obtain the current timestamp after running the calculation and force
   // ordering.

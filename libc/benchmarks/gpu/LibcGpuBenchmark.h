@@ -7,6 +7,7 @@
 #include "src/__support/CPP/functional.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
 #include "src/stdlib/rand.h"
@@ -113,25 +114,18 @@ private:
 // We want our random values to be approximately
 // |real value| <= 2^(max_exponent) * (1 + (random 52 bits) * 2^-52) <
 // 2^(max_exponent + 1)
-// The largest integer that can be stored in a double is 2^53
-static constexpr int MAX_EXPONENT = 52;
+template <typename T> static T get_rand_input() {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
 
-static double get_rand_double() {
-  using FPBits = LIBC_NAMESPACE::fputil::FPBits<double>;
-  uint64_t bits = LIBC_NAMESPACE::rand();
-  double scale = 0.5 + MAX_EXPONENT / 2048.0;
+  // Required to correctly instantiate FPBits for floats and doubles.
+  using RandType = typename cpp::conditional_t<(cpp::is_same_v<T, double>),
+                                               uint64_t, uint32_t>;
+  RandType bits = LIBC_NAMESPACE::rand();
+  double scale = 0.5 + LIBC_NAMESPACE::fputil::FPBits<T>::FRACTION_LEN / 2048.0;
   FPBits fp(bits);
   fp.set_biased_exponent(
       static_cast<uint32_t>(fp.get_biased_exponent() * scale));
   return fp.get_val();
-}
-
-template <size_t Size>
-static void init_random_double_input(cpp::array<double, Size> &values) {
-  LIBC_NAMESPACE::srand(LIBC_NAMESPACE::gpu::processor_clock());
-  for (int i = 0; i < Size; i++) {
-    values[i] = get_rand_double();
-  }
 }
 
 template <typename T> class MathPerf {
