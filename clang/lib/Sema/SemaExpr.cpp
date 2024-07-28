@@ -4105,17 +4105,6 @@ static bool CheckVecStepTraitOperandType(Sema &S, QualType T,
   return false;
 }
 
-static bool CheckPtrAuthTypeDiscriminatorOperandType(Sema &S, QualType T,
-                                                     SourceLocation Loc,
-                                                     SourceRange ArgRange) {
-  if (T->isVariablyModifiedType()) {
-    S.Diag(Loc, diag::err_ptrauth_type_disc_variably_modified) << T << ArgRange;
-    return true;
-  }
-
-  return false;
-}
-
 static bool CheckVectorElementsTraitOperandType(Sema &S, QualType T,
                                                 SourceLocation Loc,
                                                 SourceRange ArgRange) {
@@ -4124,6 +4113,21 @@ static bool CheckVectorElementsTraitOperandType(Sema &S, QualType T,
     return S.Diag(Loc, diag::err_builtin_non_vector_type)
            << ""
            << "__builtin_vectorelements" << T << ArgRange;
+
+  return false;
+}
+
+static bool checkPtrAuthTypeDiscriminatorOperandType(Sema &S, QualType T,
+                                                     SourceLocation Loc,
+                                                     SourceRange ArgRange) {
+  if (S.checkPointerAuthEnabled(Loc, ArgRange))
+    return true;
+
+  if (!T->isFunctionType() && !T->isFunctionPointerType() &&
+      !T->isFunctionReferenceType() && !T->isMemberFunctionPointerType()) {
+    S.Diag(Loc, diag::err_ptrauth_type_disc_undiscriminated) << T << ArgRange;
+    return true;
+  }
 
   return false;
 }
@@ -4518,12 +4522,13 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
   if (ExprKind == UETT_VecStep)
     return CheckVecStepTraitOperandType(*this, ExprType, OpLoc, ExprRange);
 
-  if (ExprKind == UETT_PtrAuthTypeDiscriminator)
-    return CheckPtrAuthTypeDiscriminatorOperandType(*this, ExprType, OpLoc,
-                                                    ExprRange);
   if (ExprKind == UETT_VectorElements)
     return CheckVectorElementsTraitOperandType(*this, ExprType, OpLoc,
                                                ExprRange);
+
+  if (ExprKind == UETT_PtrAuthTypeDiscriminator)
+    return checkPtrAuthTypeDiscriminatorOperandType(*this, ExprType, OpLoc,
+                                                    ExprRange);
 
   // Explicitly list some types as extensions.
   if (!CheckExtensionTraitOperandType(*this, ExprType, OpLoc, ExprRange,

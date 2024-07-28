@@ -8282,6 +8282,11 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
 /// Handle the __ptrauth qualifier.
 static void HandlePtrAuthQualifier(QualType &type, const ParsedAttr &attr,
                                    Sema &S) {
+  if (S.checkPointerAuthEnabled(attr.getLoc(), attr.getRange())) {
+    attr.setInvalid();
+    return;
+  }
+
   if (attr.getNumArgs() < 1 || attr.getNumArgs() > 3) {
     S.Diag(attr.getLoc(), diag::err_ptrauth_qualifier_bad_arg_count);
     attr.setInvalid();
@@ -8349,12 +8354,6 @@ static void HandlePtrAuthQualifier(QualType &type, const ParsedAttr &attr,
 
   if (type.getPointerAuth()) {
     S.Diag(attr.getLoc(), diag::err_ptrauth_qualifier_redundant) << type;
-    attr.setInvalid();
-    return;
-  }
-
-  if (!S.getLangOpts().PointerAuthIntrinsics) {
-    S.diagnosePointerAuthDisabled(attr.getLoc(), attr.getRange());
     attr.setInvalid();
     return;
   }
