@@ -203,7 +203,6 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < 30; i++)
     compile_threads.push_back(std::thread (compile_min, i));
 
-  for (int i = 0; i < compile_threads.size(); i++)
-    compile_threads[i].join();
-
+  for (auto &thread : compile_threads)
+    thread.join();
 }
