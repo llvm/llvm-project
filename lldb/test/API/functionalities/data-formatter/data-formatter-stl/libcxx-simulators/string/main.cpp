@@ -186,7 +186,7 @@ public:
 
   __long &getLongRep() {
 #if COMPRESSED_PAIR_REV == 0
-    return __r_.first().__l
+    return __r_.first().__l;
 #elif COMPRESSED_PAIR_REV <= 2
     return __rep_.__l;
 #endif
@@ -194,7 +194,7 @@ public:
 
   __short &getShortRep() {
 #if COMPRESSED_PAIR_REV == 0
-    return __r_.first().__s
+    return __r_.first().__s;
 #elif COMPRESSED_PAIR_REV <= 2
     return __rep_.__s;
 #endif
