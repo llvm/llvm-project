@@ -1173,10 +1173,3 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   return NumBytesWritten();
 }
 // END MCCAS
-
-std::unique_ptr<MCObjectWriter>
-llvm::createMachObjectWriter(std::unique_ptr<MCMachObjectTargetWriter> MOTW,
-                             raw_pwrite_stream &OS, bool IsLittleEndian) {
-  return std::make_unique<MachObjectWriter>(std::move(MOTW), OS,
-                                             IsLittleEndian);
-}
