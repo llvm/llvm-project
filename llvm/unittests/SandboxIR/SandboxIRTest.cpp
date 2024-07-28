@@ -767,7 +767,7 @@ define void @foo(ptr %arg0, ptr %arg1) {
                                   /*InsertBefore=*/Ret, Ctx,
                                   /*IsVolatile=*/false, "NewLd");
   // Checking if create() was volatile
-  EXPECT_FALSE(NewLd->isVolatile())
+  EXPECT_FALSE(NewLd->isVolatile());
   EXPECT_EQ(NewLd->getType(), Ld->getType());
   EXPECT_EQ(NewLd->getPointerOperand(), Arg1);
   EXPECT_EQ(NewLd->getAlign(), 8);
