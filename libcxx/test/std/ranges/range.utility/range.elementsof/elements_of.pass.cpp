@@ -16,25 +16,43 @@
 #include <memory>
 #include <vector>
 
-constexpr bool test() {
-  {
-    auto elements_of = std::ranges::elements_of(std::vector<int>());
-    static_assert(
-        std::same_as<decltype(elements_of), std::ranges::elements_of<std::vector<int>&&, std::allocator<std::byte>>>);
-    static_assert(std::same_as<decltype(elements_of.range), std::vector<int>&&>);
-    static_assert(std::same_as<decltype(elements_of.allocator), std::allocator<std::byte>>);
-  }
-  {
-    auto elements_of = std::ranges::elements_of(std::vector<int>(), std::allocator<int>());
-    static_assert(
-        std::same_as<decltype(elements_of), std::ranges::elements_of<std::vector<int>&&, std::allocator<int>>>);
-    static_assert(std::same_as<decltype(elements_of.range), std::vector<int>&&>);
-    static_assert(std::same_as<decltype(elements_of.allocator), std::allocator<int>>);
-  }
+#include "min_allocator.h"
+#include "test_allocator.h"
+#include "test_iterators.h"
+
+template <typename Range>
+constexpr bool test_range() {
+  std::same_as<std::ranges::elements_of<Range&&, std::allocator<std::byte>>> decltype(auto) elements_of =
+      std::ranges::elements_of(Range());
+  [[maybe_unused]] std::same_as<Range&&> decltype(auto) elements_of_range = std::move(elements_of.range);
+  [[maybe_unused]] std::same_as<std::allocator<std::byte>> decltype(auto) elements_of_allocator = elements_of.allocator;
   return true;
 }
 
-int main() {
+template <typename Range, typename Allocator>
+constexpr bool test_range_with_allocator() {
+  std::same_as< std::ranges::elements_of< Range&&, Allocator >> decltype(auto) elements_of =
+      std::ranges::elements_of(Range(), Allocator());
+  [[maybe_unused]] std::same_as<Range&&> decltype(auto) elements_of_range       = std::move(elements_of.range);
+  [[maybe_unused]] std::same_as<Allocator> decltype(auto) elements_of_allocator = elements_of.allocator;
+  return true;
+}
+
+constexpr bool test() {
+  types::for_each(types::type_list<std::allocator<std::byte>, min_allocator<std::byte>, test_allocator<std::byte>>{},
+                  []<class Allocator> {
+                    types::for_each(types::type_list<std::vector<int>>{}, []<class Range> {
+                      test_range<Range>();
+                      test_range_with_allocator<Range, Allocator>();
+                    });
+                  });
+
+  return true;
+}
+
+int main(int, char**) {
   test();
   static_assert(test());
+
+  return 0;
 }
