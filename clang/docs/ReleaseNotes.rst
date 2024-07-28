@@ -108,6 +108,9 @@ Removed Compiler Flags
 Attribute Changes in Clang
 --------------------------
 
+- Clang now disallows more than one ``__attribute__((ownership_returns(class, idx)))`` with
+  different class names attached to one function.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -216,6 +219,11 @@ Static Analyzer
 
 New features
 ^^^^^^^^^^^^
+
+- MallocChecker now checks for ``ownership_returns(class, idx)`` and ``ownership_takes(class, idx)``
+  attributes with class names different from "malloc". Clang static analyzer now reports an error
+  if class of allocation and deallocation function mismatches.
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-mismatcheddeallocator-c-c>`__.
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
