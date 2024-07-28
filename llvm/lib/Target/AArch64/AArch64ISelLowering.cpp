@@ -85,6 +85,7 @@
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SipHash.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -509,6 +510,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SELECT_CC, MVT::f64, Custom);
   setOperationAction(ISD::BR_JT, MVT::Other, Custom);
   setOperationAction(ISD::JumpTable, MVT::i64, Custom);
+  setOperationAction(ISD::BRIND, MVT::Other, Custom);
   setOperationAction(ISD::SETCCCARRY, MVT::i64, Custom);
 
   setOperationAction(ISD::PtrAuthGlobalAddress, MVT::i64, Custom);
@@ -1077,6 +1079,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::OR);
   // Try to create BICs for vector ANDs.
   setTargetDAGCombine(ISD::AND);
+
+  // llvm.init.trampoline and llvm.adjust.trampoline
+  setOperationAction(ISD::INIT_TRAMPOLINE, MVT::Other, Custom);
+  setOperationAction(ISD::ADJUST_TRAMPOLINE, MVT::Other, Custom);
 
   // Vector add and sub nodes may conceal a high-half opportunity.
   // Also, try to fold ADD into CSINC/CSINV..
@@ -4502,11 +4508,19 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   EVT SrcElementVT = SrcVT.getVectorElementType();
 
   // In the absence of FP16 support, promote f16 to f32 and saturate the result.
+  SDLoc DL(Op);
+  SDValue SrcVal2;
   if ((SrcElementVT == MVT::f16 &&
        (!Subtarget->hasFullFP16() || DstElementWidth > 16)) ||
       SrcElementVT == MVT::bf16) {
     MVT F32VT = MVT::getVectorVT(MVT::f32, SrcVT.getVectorNumElements());
-    SrcVal = DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), F32VT, SrcVal);
+    SrcVal = DAG.getNode(ISD::FP_EXTEND, DL, F32VT, SrcVal);
+    // If we are extending to a v8f32, split into two v4f32 to produce legal
+    // types.
+    if (F32VT.getSizeInBits() > 128) {
+      std::tie(SrcVal, SrcVal2) = DAG.SplitVector(SrcVal, DL);
+      F32VT = F32VT.getHalfNumVectorElementsVT();
+    }
     SrcVT = F32VT;
     SrcElementVT = MVT::f32;
     SrcElementWidth = 32;
@@ -4514,9 +4528,8 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
              SrcElementVT != MVT::f16 && SrcElementVT != MVT::bf16)
     return SDValue();
 
-  SDLoc DL(Op);
-  // Expand to f64 if we are saturating to i64, to help produce keep the lanes
-  // the same width and produce a fcvtzu.
+  // Expand to f64 if we are saturating to i64, to help keep the lanes the same
+  // width and produce a fcvtzu.
   if (SatWidth == 64 && SrcElementWidth < 64) {
     MVT F64VT = MVT::getVectorVT(MVT::f64, SrcVT.getVectorNumElements());
     SrcVal = DAG.getNode(ISD::FP_EXTEND, DL, F64VT, SrcVal);
@@ -4525,9 +4538,16 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
     SrcElementWidth = 64;
   }
   // Cases that we can emit directly.
-  if (SrcElementWidth == DstElementWidth && SrcElementWidth == SatWidth)
-    return DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal,
-                       DAG.getValueType(DstVT.getScalarType()));
+  if (SrcElementWidth == DstElementWidth && SrcElementWidth == SatWidth) {
+    SDValue Res = DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal,
+                              DAG.getValueType(DstVT.getScalarType()));
+    if (SrcVal2) {
+      SDValue Res2 = DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal2,
+                                 DAG.getValueType(DstVT.getScalarType()));
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, Res, Res2);
+    }
+    return Res;
+  }
 
   // Otherwise we emit a cvt that saturates to a higher BW, and saturate the
   // result. This is only valid if the legal cvt is larger than the saturate
@@ -4539,19 +4559,31 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   EVT IntVT = SrcVT.changeVectorElementTypeToInteger();
   SDValue NativeCvt = DAG.getNode(Op.getOpcode(), DL, IntVT, SrcVal,
                                   DAG.getValueType(IntVT.getScalarType()));
-  SDValue Sat;
+  SDValue NativeCvt2 =
+      SrcVal2 ? DAG.getNode(Op.getOpcode(), DL, IntVT, SrcVal2,
+                            DAG.getValueType(IntVT.getScalarType()))
+              : SDValue();
+  SDValue Sat, Sat2;
   if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
     SDValue MinC = DAG.getConstant(
         APInt::getSignedMaxValue(SatWidth).sext(SrcElementWidth), DL, IntVT);
     SDValue Min = DAG.getNode(ISD::SMIN, DL, IntVT, NativeCvt, MinC);
+    SDValue Min2 = SrcVal2 ? DAG.getNode(ISD::SMIN, DL, IntVT, NativeCvt2, MinC) : SDValue();
     SDValue MaxC = DAG.getConstant(
         APInt::getSignedMinValue(SatWidth).sext(SrcElementWidth), DL, IntVT);
     Sat = DAG.getNode(ISD::SMAX, DL, IntVT, Min, MaxC);
+    Sat2 = SrcVal2 ? DAG.getNode(ISD::SMAX, DL, IntVT, Min2, MaxC) : SDValue();
   } else {
     SDValue MinC = DAG.getConstant(
         APInt::getAllOnes(SatWidth).zext(SrcElementWidth), DL, IntVT);
     Sat = DAG.getNode(ISD::UMIN, DL, IntVT, NativeCvt, MinC);
+    Sat2 = SrcVal2 ? DAG.getNode(ISD::UMIN, DL, IntVT, NativeCvt2, MinC) : SDValue();
   }
+
+  if (SrcVal2)
+    Sat = DAG.getNode(ISD::CONCAT_VECTORS, DL,
+                      IntVT.getDoubleNumVectorElementsVT(*DAG.getContext()),
+                      Sat, Sat2);
 
   return DAG.getNode(ISD::TRUNCATE, DL, DstVT, Sat);
 }
@@ -6686,6 +6718,56 @@ static SDValue LowerFLDEXP(SDValue Op, SelectionDAG &DAG) {
   return Final;
 }
 
+SDValue AArch64TargetLowering::LowerADJUST_TRAMPOLINE(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+  // Note: x18 cannot be used for the Nest parameter on Windows and macOS.
+  if (Subtarget->isTargetDarwin() || Subtarget->isTargetWindows())
+    report_fatal_error(
+        "ADJUST_TRAMPOLINE operation is only supported on Linux.");
+
+  return Op.getOperand(0);
+}
+
+SDValue AArch64TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+
+  // Note: x18 cannot be used for the Nest parameter on Windows and macOS.
+  if (Subtarget->isTargetDarwin() || Subtarget->isTargetWindows())
+    report_fatal_error("INIT_TRAMPOLINE operation is only supported on Linux.");
+
+  SDValue Chain = Op.getOperand(0);
+  SDValue Trmp = Op.getOperand(1); // trampoline
+  SDValue FPtr = Op.getOperand(2); // nested function
+  SDValue Nest = Op.getOperand(3); // 'nest' parameter value
+  SDLoc dl(Op);
+
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  Type *IntPtrTy = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
+
+  TargetLowering::ArgListTy Args;
+  TargetLowering::ArgListEntry Entry;
+
+  Entry.Ty = IntPtrTy;
+  Entry.Node = Trmp;
+  Args.push_back(Entry);
+  Entry.Node = DAG.getConstant(20, dl, MVT::i64);
+  Args.push_back(Entry);
+
+  Entry.Node = FPtr;
+  Args.push_back(Entry);
+  Entry.Node = Nest;
+  Args.push_back(Entry);
+
+  // Lower to a call to __trampoline_setup(Trmp, TrampSize, FPtr, ctx_reg)
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  CLI.setDebugLoc(dl).setChain(Chain).setLibCallee(
+      CallingConv::C, Type::getVoidTy(*DAG.getContext()),
+      DAG.getExternalSymbol("__trampoline_setup", PtrVT), std::move(Args));
+
+  std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
+  return CallResult.second;
+}
+
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Custom lowering: ");
@@ -6703,6 +6785,10 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerGlobalTLSAddress(Op, DAG);
   case ISD::PtrAuthGlobalAddress:
     return LowerPtrAuthGlobalAddress(Op, DAG);
+  case ISD::ADJUST_TRAMPOLINE:
+    return LowerADJUST_TRAMPOLINE(Op, DAG);
+  case ISD::INIT_TRAMPOLINE:
+    return LowerINIT_TRAMPOLINE(Op, DAG);
   case ISD::SETCC:
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:
@@ -6721,6 +6807,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerJumpTable(Op, DAG);
   case ISD::BR_JT:
     return LowerBR_JT(Op, DAG);
+  case ISD::BRIND:
+    return LowerBRIND(Op, DAG);
   case ISD::ConstantPool:
     return LowerConstantPool(Op, DAG);
   case ISD::BlockAddress:
@@ -10742,11 +10830,62 @@ SDValue AArch64TargetLowering::LowerBR_JT(SDValue Op,
   auto *AFI = DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
   AFI->setJumpTableEntryInfo(JTI, 4, nullptr);
 
+  // With aarch64-jump-table-hardening, we only expand the jump table dispatch
+  // sequence later, to guarantee the integrity of the intermediate values.
+  if (DAG.getMachineFunction().getFunction().hasFnAttribute(
+          "aarch64-jump-table-hardening")) {
+    CodeModel::Model CM = getTargetMachine().getCodeModel();
+    if (Subtarget->isTargetMachO()) {
+      if (CM != CodeModel::Small && CM != CodeModel::Large)
+        report_fatal_error("Unsupported code-model for hardened jump-table");
+    } else {
+      // Note that COFF support would likely also need JUMP_TABLE_DEBUG_INFO.
+      assert(Subtarget->isTargetELF() &&
+             "jump table hardening only supported on MachO/ELF");
+      if (CM != CodeModel::Small)
+        report_fatal_error("Unsupported code-model for hardened jump-table");
+    }
+
+    SDValue X16Copy = DAG.getCopyToReg(DAG.getEntryNode(), DL, AArch64::X16,
+                                       Entry, SDValue());
+    SDNode *B = DAG.getMachineNode(AArch64::BR_JumpTable, DL, MVT::Other,
+                                   DAG.getTargetJumpTable(JTI, MVT::i32),
+                                   X16Copy.getValue(0), X16Copy.getValue(1));
+    return SDValue(B, 0);
+  }
+
   SDNode *Dest =
       DAG.getMachineNode(AArch64::JumpTableDest32, DL, MVT::i64, MVT::i64, JT,
                          Entry, DAG.getTargetJumpTable(JTI, MVT::i32));
   SDValue JTInfo = DAG.getJumpTableDebugInfo(JTI, Op.getOperand(0), DL);
   return DAG.getNode(ISD::BRIND, DL, MVT::Other, JTInfo, SDValue(Dest, 0));
+}
+
+SDValue AArch64TargetLowering::LowerBRIND(SDValue Op, SelectionDAG &DAG) const {
+  SDValue Chain = Op.getOperand(0);
+  SDValue Dest = Op.getOperand(1);
+
+  // BR_JT is lowered to BRIND, but the later lowering is specific to indirectbr
+  // Skip over the jump-table BRINDs, where the destination is JumpTableDest32.
+  if (Dest->isMachineOpcode() &&
+      Dest->getMachineOpcode() == AArch64::JumpTableDest32)
+    return SDValue();
+
+  const MachineFunction &MF = DAG.getMachineFunction();
+  std::optional<uint16_t> BADisc =
+      Subtarget->getPtrAuthBlockAddressDiscriminatorIfEnabled(MF.getFunction());
+  if (!BADisc)
+    return SDValue();
+
+  SDLoc DL(Op);
+
+  SDValue Disc = DAG.getTargetConstant(*BADisc, DL, MVT::i64);
+  SDValue Key = DAG.getTargetConstant(AArch64PACKey::IA, DL, MVT::i32);
+  SDValue AddrDisc = DAG.getRegister(AArch64::XZR, MVT::i64);
+
+  SDNode *BrA = DAG.getMachineNode(AArch64::BRA, DL, MVT::Other,
+                                   {Dest, Key, Disc, AddrDisc, Chain});
+  return SDValue(BrA, 0);
 }
 
 SDValue AArch64TargetLowering::LowerConstantPool(SDValue Op,
@@ -10768,15 +10907,37 @@ SDValue AArch64TargetLowering::LowerConstantPool(SDValue Op,
 
 SDValue AArch64TargetLowering::LowerBlockAddress(SDValue Op,
                                                SelectionDAG &DAG) const {
-  BlockAddressSDNode *BA = cast<BlockAddressSDNode>(Op);
+  BlockAddressSDNode *BAN = cast<BlockAddressSDNode>(Op);
+  const BlockAddress *BA = BAN->getBlockAddress();
+
+  if (std::optional<uint16_t> BADisc =
+          Subtarget->getPtrAuthBlockAddressDiscriminatorIfEnabled(
+              *BA->getFunction())) {
+    SDLoc DL(Op);
+
+    // This isn't cheap, but BRIND is rare.
+    SDValue TargetBA = DAG.getTargetBlockAddress(BA, BAN->getValueType(0));
+
+    SDValue Disc = DAG.getTargetConstant(*BADisc, DL, MVT::i64);
+
+    SDValue Key = DAG.getTargetConstant(AArch64PACKey::IA, DL, MVT::i32);
+    SDValue AddrDisc = DAG.getRegister(AArch64::XZR, MVT::i64);
+
+    SDNode *MOV =
+        DAG.getMachineNode(AArch64::MOVaddrPAC, DL, {MVT::Other, MVT::Glue},
+                           {TargetBA, Key, AddrDisc, Disc});
+    return DAG.getCopyFromReg(SDValue(MOV, 0), DL, AArch64::X16, MVT::i64,
+                              SDValue(MOV, 1));
+  }
+
   CodeModel::Model CM = getTargetMachine().getCodeModel();
   if (CM == CodeModel::Large && !Subtarget->isTargetMachO()) {
     if (!getTargetMachine().isPositionIndependent())
-      return getAddrLarge(BA, DAG);
+      return getAddrLarge(BAN, DAG);
   } else if (CM == CodeModel::Tiny) {
-    return getAddrTiny(BA, DAG);
+    return getAddrTiny(BAN, DAG);
   }
-  return getAddr(BA, DAG);
+  return getAddr(BAN, DAG);
 }
 
 SDValue AArch64TargetLowering::LowerDarwin_VASTART(SDValue Op,
@@ -13215,7 +13376,7 @@ SDValue AArch64TargetLowering::LowerDUPQLane(SDValue Op,
   if (VT.getSizeInBits().getKnownMinValue() != AArch64::SVEBitsPerBlock)
     return SDValue();
 
-  // The DUPQ operation is indepedent of element type so normalise to i64s.
+  // The DUPQ operation is independent of element type so normalise to i64s.
   SDValue Idx128 = Op.getOperand(2);
 
   // DUPQ can be used when idx is in range.
@@ -27580,6 +27741,20 @@ SDValue AArch64TargetLowering::LowerReductionToSVE(unsigned Opcode,
           /*OverrideNEON=*/Subtarget->useSVEForFixedLengthVectors())) {
     EVT ContainerVT = getContainerForFixedLengthVector(DAG, SrcVT);
     VecOp = convertToScalableVector(DAG, ContainerVT, VecOp);
+  }
+
+  // Lower VECREDUCE_ADD of nxv2i1-nxv16i1 to CNTP rather than UADDV.
+  if (ScalarOp.getOpcode() == ISD::VECREDUCE_ADD &&
+      VecOp.getOpcode() == ISD::ZERO_EXTEND) {
+    SDValue BoolVec = VecOp.getOperand(0);
+    if (BoolVec.getValueType().getVectorElementType() == MVT::i1) {
+      // CNTP(BoolVec & BoolVec) <=> CNTP(BoolVec & PTRUE)
+      SDValue CntpOp = DAG.getNode(
+          ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+          DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64),
+          BoolVec, BoolVec);
+      return DAG.getAnyExtOrTrunc(CntpOp, DL, ScalarOp.getValueType());
+    }
   }
 
   // UADDV always returns an i64 result.

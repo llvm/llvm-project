@@ -96,12 +96,13 @@ entry:
 define i32 @test3(x86_mmx %a) nounwind {
 ; X86-LABEL: test3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movd %mm0, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test3:
 ; X64:       # %bb.0:
-; X64-NEXT:    movd %mm0, %eax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %tmp0 = bitcast x86_mmx %a to <2 x i32>
   %tmp1 = extractelement <2 x i32> %tmp0, i32 0
@@ -112,14 +113,12 @@ define i32 @test3(x86_mmx %a) nounwind {
 define i32 @test4(x86_mmx %a) nounwind {
 ; X86-LABEL: test4:
 ; X86:       # %bb.0:
-; X86-NEXT:    movq2dq %mm0, %xmm0
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; X86-NEXT:    movd %xmm0, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test4:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq2dq %mm0, %xmm0
+; X64-NEXT:    movq %rdi, %xmm0
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X64-NEXT:    movd %xmm0, %eax
 ; X64-NEXT:    retq

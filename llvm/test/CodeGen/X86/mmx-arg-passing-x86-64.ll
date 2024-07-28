@@ -10,8 +10,8 @@ define void @t3() nounwind  {
 ; X86-64-LABEL: t3:
 ; X86-64:       ## %bb.0:
 ; X86-64-NEXT:    movq _g_v8qi@GOTPCREL(%rip), %rax
-; X86-64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-64-NEXT:    movb $1, %al
+; X86-64-NEXT:    movq (%rax), %rdi
+; X86-64-NEXT:    xorl %eax, %eax
 ; X86-64-NEXT:    jmp _pass_v8qi ## TAILCALL
   %tmp3 = load <8 x i8>, ptr @g_v8qi, align 8
   %tmp3a = bitcast <8 x i8> %tmp3 to x86_mmx
@@ -22,12 +22,11 @@ define void @t3() nounwind  {
 define void @t4(x86_mmx %v1, x86_mmx %v2) nounwind  {
 ; X86-64-LABEL: t4:
 ; X86-64:       ## %bb.0:
-; X86-64-NEXT:    movdq2q %xmm1, %mm0
-; X86-64-NEXT:    movdq2q %xmm0, %mm1
-; X86-64-NEXT:    movq2dq %mm1, %xmm1
-; X86-64-NEXT:    movq2dq %mm0, %xmm0
-; X86-64-NEXT:    paddb %xmm1, %xmm0
-; X86-64-NEXT:    movb $1, %al
+; X86-64-NEXT:    movq %rdi, %xmm0
+; X86-64-NEXT:    movq %rsi, %xmm1
+; X86-64-NEXT:    paddb %xmm0, %xmm1
+; X86-64-NEXT:    movq %xmm1, %rdi
+; X86-64-NEXT:    xorl %eax, %eax
 ; X86-64-NEXT:    jmp _pass_v8qi ## TAILCALL
   %v1a = bitcast x86_mmx %v1 to <8 x i8>
   %v2b = bitcast x86_mmx %v2 to <8 x i8>

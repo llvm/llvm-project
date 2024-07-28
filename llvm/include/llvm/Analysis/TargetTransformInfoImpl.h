@@ -99,6 +99,8 @@ public:
     return BranchProbability(99, 100);
   }
 
+  InstructionCost getBranchMispredictPenalty() const { return 0; }
+
   bool hasBranchDivergence(const Function *F = nullptr) const { return false; }
 
   bool isSourceOfDivergence(const Value *V) const { return false; }

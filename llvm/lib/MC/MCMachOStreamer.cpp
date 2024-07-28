@@ -123,7 +123,7 @@ public:
   void emitCGProfileEntry(const MCSymbolRefExpr *From,
                           const MCSymbolRefExpr *To, uint64_t Count) override {
     if (!From->getSymbol().isTemporary() && !To->getSymbol().isTemporary())
-      getAssembler().CGProfile.push_back({From, To, Count});
+      getWriter().getCGProfile().push_back({From, To, Count});
   }
 
   void finishImpl() override;
@@ -220,13 +220,13 @@ void MCMachOStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
   case MCAF_Code32: return; // Change parsing mode; no-op here.
   case MCAF_Code64: return; // Change parsing mode; no-op here.
   case MCAF_SubsectionsViaSymbols:
-    getAssembler().setSubsectionsViaSymbols(true);
+    getWriter().setSubsectionsViaSymbols(true);
     return;
   }
 }
 
 void MCMachOStreamer::emitLinkerOptions(ArrayRef<std::string> Options) {
-  getAssembler().getLinkerOptions().push_back(Options);
+  getWriter().getLinkerOptions().push_back(Options);
 }
 
 void MCMachOStreamer::emitDataRegion(MCDataRegionType Kind) {
@@ -506,9 +506,10 @@ void MCMachOStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
 
 void MCMachOStreamer::finalizeCGProfile() {
   MCAssembler &Asm = getAssembler();
-  if (Asm.CGProfile.empty())
+  MCObjectWriter &W = getWriter();
+  if (W.getCGProfile().empty())
     return;
-  for (MCAssembler::CGProfileEntry &E : Asm.CGProfile) {
+  for (auto &E : W.getCGProfile()) {
     finalizeCGProfileEntry(E.From);
     finalizeCGProfileEntry(E.To);
   }
@@ -520,7 +521,7 @@ void MCMachOStreamer::finalizeCGProfile() {
   changeSection(CGProfileSection);
   // For each entry, reserve space for 2 32-bit indices and a 64-bit count.
   size_t SectionBytes =
-      Asm.CGProfile.size() * (2 * sizeof(uint32_t) + sizeof(uint64_t));
+      W.getCGProfile().size() * (2 * sizeof(uint32_t) + sizeof(uint64_t));
   cast<MCDataFragment>(*CGProfileSection->begin())
       .getContents()
       .resize(SectionBytes);

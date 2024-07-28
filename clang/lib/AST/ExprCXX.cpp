@@ -1944,3 +1944,22 @@ CXXParenListInitExpr *CXXParenListInitExpr::CreateEmpty(ASTContext &C,
                          alignof(CXXParenListInitExpr));
   return new (Mem) CXXParenListInitExpr(Empty, NumExprs);
 }
+
+CXXFoldExpr::CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
+                                SourceLocation LParenLoc, Expr *LHS,
+                                BinaryOperatorKind Opcode,
+                                SourceLocation EllipsisLoc, Expr *RHS,
+                                SourceLocation RParenLoc,
+                                std::optional<unsigned> NumExpansions)
+    : Expr(CXXFoldExprClass, T, VK_PRValue, OK_Ordinary), LParenLoc(LParenLoc),
+      EllipsisLoc(EllipsisLoc), RParenLoc(RParenLoc),
+      NumExpansions(NumExpansions ? *NumExpansions + 1 : 0), Opcode(Opcode) {
+  // We rely on asserted invariant to distinguish left and right folds.
+  assert(((LHS && LHS->containsUnexpandedParameterPack()) !=
+          (RHS && RHS->containsUnexpandedParameterPack())) &&
+         "Exactly one of LHS or RHS should contain an unexpanded pack");
+  SubExprs[SubExpr::Callee] = Callee;
+  SubExprs[SubExpr::LHS] = LHS;
+  SubExprs[SubExpr::RHS] = RHS;
+  setDependence(computeDependence(this));
+}
