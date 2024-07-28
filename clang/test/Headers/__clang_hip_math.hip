@@ -16,7 +16,8 @@
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -O1 -ffinite-math-only -o - \
+// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -O1 -menable-no-infs \
+// RUN:   -menable-no-nans -o - \
 // RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefixes=CHECK,FINITEONLY %s
 
 // Check that we end up with -fapprox-func set on intrinsic calls

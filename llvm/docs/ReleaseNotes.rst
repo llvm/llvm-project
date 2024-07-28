@@ -50,6 +50,9 @@ Update on required toolchains to build LLVM
 Changes to the LLVM IR
 ----------------------
 
+* The ``x86_mmx`` IR type has been removed. It will be translated to
+  the standard vector type ``<1 x i64>`` in bitcode upgrade.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -129,6 +132,12 @@ Changes to the X86 Backend
   encoding. To use optimised NOP filling in a code section, leave off the
   "fillval" argument, i.e. `.balign N`, `.p2align N` or `.align N` respectively.
 
+* Due to the removal of the ``x86_mmx`` IR type, functions with
+  ``x86_mmx`` arguments or return values will use a different,
+  incompatible, calling convention ABI. Such functions are not
+  generally seen in the wild (Clang never generates them!), so this is
+  not expected to result in real-world compatibility problems.
+
 Changes to the OCaml bindings
 -----------------------------
 
@@ -137,6 +146,12 @@ Changes to the Python bindings
 
 Changes to the C API
 --------------------
+
+* The following symbols are deleted due to the removal of the ``x86_mmx`` IR type:
+
+  * ``LLVMX86_MMXTypeKind``
+  * ``LLVMX86MMXTypeInContext``
+  * ``LLVMX86MMXType``
 
 Changes to the CodeGen infrastructure
 -------------------------------------

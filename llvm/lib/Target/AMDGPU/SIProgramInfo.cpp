@@ -165,9 +165,14 @@ const MCExpr *SIProgramInfo::getComputePGMRSrc1(const GCNSubtarget &ST,
                                                 MCContext &Ctx) const {
   uint64_t Reg = getComputePGMRSrc1Reg(*this, ST);
   const MCExpr *RegExpr = MCConstantExpr::create(Reg, Ctx);
-  const MCExpr *Res = MCBinaryExpr::createOr(
-      MaskShift(VGPRBlocks, /*Mask=*/0x3F, /*Shift=*/0, Ctx),
-      MaskShift(SGPRBlocks, /*Mask=*/0xF, /*Shift=*/6, Ctx), Ctx);
+  const MCExpr *Res = nullptr;
+  if (AMDGPU::isGFX13Plus(ST)) {
+    Res = VGPRBlocks;
+  } else {
+    Res = MCBinaryExpr::createOr(
+        MaskShift(VGPRBlocks, /*Mask=*/0x3F, /*Shift=*/0, Ctx),
+        MaskShift(SGPRBlocks, /*Mask=*/0xF, /*Shift=*/6, Ctx), Ctx);
+  }
   return MCBinaryExpr::createOr(RegExpr, Res, Ctx);
 }
 
@@ -180,9 +185,14 @@ const MCExpr *SIProgramInfo::getPGMRSrc1(CallingConv::ID CC,
 
   uint64_t Reg = getPGMRSrc1Reg(*this, CC, ST);
   const MCExpr *RegExpr = MCConstantExpr::create(Reg, Ctx);
-  const MCExpr *Res = MCBinaryExpr::createOr(
-      MaskShift(VGPRBlocks, /*Mask=*/0x3F, /*Shift=*/0, Ctx),
-      MaskShift(SGPRBlocks, /*Mask=*/0xF, /*Shift=*/6, Ctx), Ctx);
+  const MCExpr *Res = nullptr;
+  if (AMDGPU::isGFX13Plus(ST)) {
+    Res = VGPRBlocks;
+  } else {
+    Res = MCBinaryExpr::createOr(
+        MaskShift(VGPRBlocks, /*Mask=*/0x3F, /*Shift=*/0, Ctx),
+        MaskShift(SGPRBlocks, /*Mask=*/0xF, /*Shift=*/6, Ctx), Ctx);
+  }
   return MCBinaryExpr::createOr(RegExpr, Res, Ctx);
 }
 

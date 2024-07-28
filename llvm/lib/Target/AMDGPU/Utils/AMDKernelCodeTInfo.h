@@ -88,6 +88,8 @@
 // Define RECORD(name, print, parse) in your code to get field definitions
 // and include this file
 
+// clang-format off
+
 FIELD2(amd_code_version_major,        kernel_code_version_major,  amd_kernel_code_version_major),
 FIELD2(amd_code_version_minor,        kernel_code_version_minor,  amd_kernel_code_version_minor),
 FIELD2(amd_machine_kind,              machine_kind,               amd_machine_kind),
@@ -98,8 +100,9 @@ FIELD2(amd_machine_version_stepping,  machine_version_stepping,   amd_machine_ve
 FIELD(kernel_code_entry_byte_offset),
 FIELD(kernel_code_prefetch_byte_size),
 
-COMPPGM1(granulated_workitem_vgpr_count,  compute_pgm_rsrc1_vgprs,          VGPRS),
-COMPPGM1(granulated_wavefront_sgpr_count, compute_pgm_rsrc1_sgprs,          SGPRS),
+// NOTE: amd_kernel_code_t is a legacy structure, it shouldn't be used on GFX13+
+COMPPGM1(granulated_workitem_vgpr_count,  compute_pgm_rsrc1_vgprs,          VGPRS_GFX6_GFX12),
+COMPPGM1(granulated_wavefront_sgpr_count, compute_pgm_rsrc1_sgprs,          SGPRS_GFX6_GFX12),
 COMPPGM1(priority,                        compute_pgm_rsrc1_priority,       PRIORITY),
 COMPPGM1(float_mode,                      compute_pgm_rsrc1_float_mode,     FLOAT_MODE), // TODO: split float_mode
 COMPPGM1(priv,                            compute_pgm_rsrc1_priv,           PRIV),
@@ -161,6 +164,8 @@ FIELD(wavefront_size),
 FIELD(call_convention),
 FIELD(runtime_loader_kernel_symbol)
 // TODO: control_directive
+
+// clang-format on
 
 // end of the table
 ///////////////////////////////////////////////////////////////////////////////

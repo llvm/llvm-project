@@ -2,12 +2,12 @@
 ; RUN: llc -mtriple=amdgcn -amdgpu-atomic-optimizer-strategy=Iterative -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX6 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -amdgpu-atomic-optimizer-strategy=Iterative -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX8 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -amdgpu-atomic-optimizer-strategy=Iterative -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX9 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -amdgpu-atomic-optimizer-strategy=Iterative -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX10,GFX10W64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -amdgpu-atomic-optimizer-strategy=Iterative -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX10,GFX10W32 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -amdgpu-atomic-optimizer-strategy=Iterative -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11W64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -amdgpu-atomic-optimizer-strategy=Iterative -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11W32 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=-wavefrontsize32,+wavefrontsize64 -amdgpu-atomic-optimizer-strategy=Iterative -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12W64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,-wavefrontsize64 -amdgpu-atomic-optimizer-strategy=Iterative -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12W32 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 -amdgpu-atomic-optimizer-strategy=Iterative -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX10,GFX10W64 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32 -amdgpu-atomic-optimizer-strategy=Iterative -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX10,GFX10W32 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -amdgpu-atomic-optimizer-strategy=Iterative -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11W64 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32 -amdgpu-atomic-optimizer-strategy=Iterative -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11W32 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64 -amdgpu-atomic-optimizer-strategy=Iterative -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12W64 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32 -amdgpu-atomic-optimizer-strategy=Iterative -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12W32 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add(i32, ptr addrspace(8), i32, i32, i32, i32)

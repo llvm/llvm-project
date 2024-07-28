@@ -16,6 +16,7 @@ add_mlir_dialect_library(MLIRArmSMETransforms
   MLIRFuncDialect
   MLIRLLVMCommonConversion
   MLIRVectorDialect
+  MLIRIndexDialect
   MLIRSCFDialect
   MLIRSCFTransforms
   MLIRFuncTransforms

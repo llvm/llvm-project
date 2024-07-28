@@ -1530,9 +1530,6 @@ public:
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
   bool hasPkMinMax3Insts() const { return GFX1210Insts; }
 
-  // \returns true if target has V_CVT_PK_F16_F32 instruction.
-  bool hasCvtPkF16Inst() const { return GFX1210Insts && !GFX13Insts; }
-
   // \returns ture if target has S_GET_SHADER_CYCLES_U64 instruction.
   bool hasSGetShaderCyclesInst() const { return GFX1210Insts; }
 

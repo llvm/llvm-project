@@ -266,6 +266,10 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (UseJMC)
     AddLTOFlag("-enable-jmc-instrument");
 
+  if (Args.hasFlag(options::OPT_fstack_size_section,
+                   options::OPT_fno_stack_size_section, false))
+    AddLTOFlag("-stack-size-section");
+
   if (Arg *A = Args.getLastArg(options::OPT_fcrash_diagnostics_dir))
     AddLTOFlag(Twine("-crash-diagnostics-dir=") + A->getValue());
 
