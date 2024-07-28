@@ -2237,6 +2237,7 @@ static const char *RegNumToRegName(int reg) {
     case 31:
       return "sp";
 #    endif
+#  endif  // SANITIZER_LINUX
     default:
       return NULL;
   }
@@ -2302,7 +2303,6 @@ static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
   (void)RegName;
 #    endif
 }
-#  endif
 
 void SignalContext::DumpAllRegisters(void *context) {
   ucontext_t *ucontext = (ucontext_t *)context;
