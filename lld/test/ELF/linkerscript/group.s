@@ -24,7 +24,8 @@
 # RUN: echo 'GROUP(AS_NEEDED("a.o"))INPUT(/libb.a)' > %t.dir/3a.t
 # RUN: ld.lld 3.t --sysroot=%t.dir
 # RUN: llvm-nm a.out | FileCheck %s
-# RUN: not ld.lld 3i.t --sysroot=%t.dir 2>&1 | FileCheck %s --check-prefix=CANNOT_OPEN -DFILE=/libb.a
+# RUN: ld.lld 3i.t --sysroot=%t.dir
+# RUN: llvm-nm a.out | FileCheck %s
 
 # RUN: echo 'GROUP("%t.dir/4a.t")INPUT(/libb.a)' > 4.t
 # RUN: echo 'GROUP(AS_NEEDED("a.o"))' > %t.dir/4a.t
