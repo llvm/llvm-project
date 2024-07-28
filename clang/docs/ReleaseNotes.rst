@@ -121,6 +121,9 @@ Attribute Changes in Clang
 
 - Introduced a new format attribute ``__attribute__((format(syslog, 1, 2)))`` from OpenBSD.
 
+- The ``hybrid_patchable`` attribute is now supported on ARM64EC targets. It can be used to specify
+  that a function requires an additional x86-64 thunk, which may be patched at runtime.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -137,6 +140,8 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses dangling references to fields of temporary objects. Fixes #GH81589.
 
 - Clang now diagnoses undefined behavior in constant expressions more consistently. This includes invalid shifts, and signed overflow in arithmetic.
+
+- -Wdangling-assignment-gsl is enabled by default.
 
 Improvements to Clang's time-trace
 ----------------------------------

@@ -42,28 +42,6 @@ llvm::Function *GetVprintfDeclaration(llvm::Module &M) {
       VprintfFuncType, llvm::GlobalVariable::ExternalLinkage, "vprintf", &M);
 }
 
-llvm::Function *GetOpenMPVprintfDeclaration(CodeGenModule &CGM) {
-  const char *Name = "__llvm_omp_vprintf";
-  llvm::Module &M = CGM.getModule();
-  llvm::Type *ArgTypes[] = {llvm::PointerType::getUnqual(M.getContext()),
-                            llvm::PointerType::getUnqual(M.getContext()),
-                            llvm::Type::getInt32Ty(M.getContext())};
-  llvm::FunctionType *VprintfFuncType = llvm::FunctionType::get(
-      llvm::Type::getInt32Ty(M.getContext()), ArgTypes, false);
-
-  if (auto *F = M.getFunction(Name)) {
-    if (F->getFunctionType() != VprintfFuncType) {
-      CGM.Error(SourceLocation(),
-                "Invalid type declaration for __llvm_omp_vprintf");
-      return nullptr;
-    }
-    return F;
-  }
-
-  return llvm::Function::Create(
-      VprintfFuncType, llvm::GlobalVariable::ExternalLinkage, Name, &M);
-}
-
 // Transforms a call to printf into a call to the NVPTX vprintf syscall (which
 // isn't particularly special; it's invoked just like a regular function).
 // vprintf takes two args: A format string, and a pointer to a buffer containing
@@ -574,7 +552,7 @@ CodeGenFunction::EmitHostexecAllocAndExecFns(const CallExpr *E,
       hostexecVargsReturnsFnDeclaration(CGM, E->getType(), GPUStubFunctionName),
       {DataStructPtr, BufferLen}));
 }
-
+#if 0
 RValue CodeGenFunction::EmitOpenMPDevicePrintfCallExpr(const CallExpr *E) {
   assert(getTarget().getTriple().isNVPTX() ||
          getTarget().getTriple().isAMDGCN());
@@ -582,3 +560,4 @@ RValue CodeGenFunction::EmitOpenMPDevicePrintfCallExpr(const CallExpr *E) {
   return EmitDevicePrintfCallExpr(E, this, GetOpenMPVprintfDeclaration(CGM),
                                   true);
 }
+#endif

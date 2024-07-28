@@ -3681,6 +3681,9 @@ def err_attribute_weak_static : Error<
   "weak declaration cannot have internal linkage">;
 def err_attribute_selectany_non_extern_data : Error<
   "'selectany' can only be applied to data items with external linkage">;
+def warn_attribute_hybrid_patchable_non_extern : Warning<
+  "'hybrid_patchable' is ignored on functions without external linkage">,
+  InGroup<IgnoredAttributes>;
 def err_declspec_thread_on_thread_variable : Error<
   "'__declspec(thread)' applied to variable that already has a "
   "thread-local storage specifier">;
@@ -10129,7 +10132,7 @@ def warn_dangling_lifetime_pointer : Warning<
   InGroup<DanglingGsl>;
 def warn_dangling_lifetime_pointer_assignment : Warning<"object backing the "
   "pointer %0 will be destroyed at the end of the full-expression">,
-  InGroup<DanglingAssignmentGsl>, DefaultIgnore;
+  InGroup<DanglingAssignmentGsl>;
 def warn_new_dangling_initializer_list : Warning<
   "array backing "
   "%select{initializer list subobject of the allocated object|"

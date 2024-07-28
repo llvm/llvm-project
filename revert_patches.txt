@@ -137,3 +137,7 @@ revert : needs downstream rework on MMI removal
 63e1647827f3 CodeGen: Remove MachineModuleInfo reference from MachineFunction (#100357)
 Ron, Scott
 ---
+breaks hipBlenderClassrom and oclBlenderBarbershop
+revert: ba45453c0a5d [SimplifyCFG] Skip threading if the target may have divergent branches       
+Ron
+---

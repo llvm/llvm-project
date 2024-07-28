@@ -5991,8 +5991,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
            getTarget().getTriple().isSPIRV()) &&
          getLangOpts().HIP)
         return EmitAMDGPUDevicePrintfCallExpr(E, ReturnValue);
-      else if (getLangOpts().OpenMP && !getLangOpts().OpenMPKernelIO)
-        return EmitOpenMPDevicePrintfCallExpr(E);
       else if (getLangOpts().OpenMP)
         return EmitHostexecAllocAndExecFns(E, "printf_allocate",
                                               "printf_execute");

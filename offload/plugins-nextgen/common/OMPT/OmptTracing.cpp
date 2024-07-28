@@ -95,11 +95,12 @@ void llvm::omp::target::ompt::setDeviceId(ompt_device_t *Device,
   auto DeviceIterator = Devices.find(Device);
   if (DeviceIterator != Devices.end()) {
     auto CurrentDeviceId = DeviceIterator->second;
-    if (DeviceId == CurrentDeviceId)
+    if (DeviceId == CurrentDeviceId) {
       REPORT("Tried to duplicate OMPT Device=%p (ID=%d)\n", Device, DeviceId);
-    else
+    } else {
       REPORT("Tried to overwrite OMPT Device=%p (ID=%d with new ID=%d)\n",
              Device, CurrentDeviceId, DeviceId);
+    }
     return;
   }
   Devices.emplace(Device, DeviceId);
