@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Log.h"
@@ -13,17 +14,21 @@
 
 #if LLDB_ENABLE_PYTHON
 
+// clang-format off
 // LLDB Python header must be included first
-#include "../lldb-python.h"
+#include "../../lldb-python.h"
+//clang-format on
 
-#include "../SWIGPythonBridge.h"
-#include "../ScriptInterpreterPythonImpl.h"
+#include "../../SWIGPythonBridge.h"
+#include "../../ScriptInterpreterPythonImpl.h"
 #include "OperatingSystemPythonInterface.h"
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::python;
 using Locker = ScriptInterpreterPythonImpl::Locker;
+
+LLDB_PLUGIN_DEFINE_ADV(OperatingSystemPythonInterface, ScriptInterpreterPythonOperatingSystemPythonInterface)
 
 OperatingSystemPythonInterface::OperatingSystemPythonInterface(
     ScriptInterpreterPythonImpl &interpreter)
@@ -77,6 +82,20 @@ OperatingSystemPythonInterface::GetRegisterContextForTID(lldb::tid_t tid) {
     return {};
 
   return obj->GetAsString()->GetValue().str();
+}
+
+void OperatingSystemPythonInterface::Initialize() {
+  const std::vector<llvm::StringRef> ci_usages = {
+      "settings set target.process.python-os-plugin-path <script-path>",
+      "settings set process.experimental.os-plugin-reports-all-threads [0/1]"};
+  const std::vector<llvm::StringRef> api_usages = {};
+  PluginManager::RegisterPlugin(
+      GetPluginNameStatic(), llvm::StringRef("Mock thread state"),
+      CreateInstance, eScriptLanguagePython, {ci_usages, api_usages});
+}
+
+void OperatingSystemPythonInterface::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
 }
 
 #endif

@@ -1390,14 +1390,32 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   InstructionCost Cost = 0;
   if (Opcode == Instruction::Store && OpInfo.isConstant())
     Cost += getStoreImmCost(Src, OpInfo, CostKind);
-  InstructionCost BaseCost =
-    BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                           CostKind, OpInfo, I);
+
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Src);
+
+  InstructionCost BaseCost = [&]() {
+    InstructionCost Cost = LT.first;
+    if (CostKind != TTI::TCK_RecipThroughput)
+      return Cost;
+
+    // Our actual lowering for the case where a wider legal type is available
+    // uses the a VL predicated load on the wider type.  This is reflected in
+    // the result of getTypeLegalizationCost, but BasicTTI assumes the
+    // widened cases are scalarized.
+    const DataLayout &DL = this->getDataLayout();
+    if (Src->isVectorTy() && LT.second.isVector() &&
+        TypeSize::isKnownLT(DL.getTypeStoreSizeInBits(Src),
+                            LT.second.getSizeInBits()))
+        return Cost;
+
+    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                  CostKind, OpInfo, I);
+  }();
+
   // Assume memory ops cost scale with the number of vector registers
   // possible accessed by the instruction.  Note that BasicTTI already
   // handles the LT.first term for us.
-  if (std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Src);
-      LT.second.isVector() && CostKind != TTI::TCK_CodeSize)
+  if (LT.second.isVector() && CostKind != TTI::TCK_CodeSize)
     BaseCost *= TLI->getLMULCost(LT.second);
   return Cost + BaseCost;
 

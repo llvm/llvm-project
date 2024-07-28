@@ -288,3 +288,23 @@ addi.d $t1, $a2, %le_lo12_r(foo)
 # RELOC: R_LARCH_TLS_LE_LO12_R foo 0x0
 # INSTR: addi.d $t1, $a2, %le_lo12_r(foo)
 # FIXUP: fixup A - offset: 0, value: %le_lo12_r(foo), kind: FK_NONE
+
+pcaddi $t1, %pcrel_20(foo)
+# RELOC: R_LARCH_PCREL20_S2 foo 0x0
+# INSTR: pcaddi $t1, %pcrel_20(foo)
+# FIXUP: fixup A - offset: 0, value: %pcrel_20(foo), kind: FK_NONE
+
+pcaddi $t1, %ld_pcrel_20(foo)
+# RELOC: R_LARCH_TLS_LD_PCREL20_S2 foo 0x0
+# INSTR: pcaddi $t1, %ld_pcrel_20(foo)
+# FIXUP: fixup A - offset: 0, value: %ld_pcrel_20(foo), kind: FK_NONE
+
+pcaddi $t1, %gd_pcrel_20(foo)
+# RELOC: R_LARCH_TLS_GD_PCREL20_S2 foo 0x0
+# INSTR: pcaddi $t1, %gd_pcrel_20(foo)
+# FIXUP: fixup A - offset: 0, value: %gd_pcrel_20(foo), kind: FK_NONE
+
+pcaddi $t1, %desc_pcrel_20(foo)
+# RELOC: R_LARCH_TLS_DESC_PCREL20_S2 foo 0x0
+# INSTR: pcaddi $t1, %desc_pcrel_20(foo)
+# FIXUP: fixup A - offset: 0, value: %desc_pcrel_20(foo), kind: FK_NONE

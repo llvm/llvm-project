@@ -81,6 +81,9 @@ C++23 Feature Support
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Add ``__builtin_is_virtual_base_of`` intrinsic, which supports
+  `P2985R0 A type trait for detecting virtual base classes <https://wg21.link/p2985r0>`_
+
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -113,6 +116,9 @@ Attribute Changes in Clang
 
 - Introduced a new format attribute ``__attribute__((format(syslog, 1, 2)))`` from OpenBSD.
 
+- The ``hybrid_patchable`` attribute is now supported on ARM64EC targets. It can be used to specify
+  that a function requires an additional x86-64 thunk, which may be patched at runtime.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -129,6 +135,8 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses dangling references to fields of temporary objects. Fixes #GH81589.
 
 - Clang now diagnoses undefined behavior in constant expressions more consistently. This includes invalid shifts, and signed overflow in arithmetic.
+
+- -Wdangling-assignment-gsl is enabled by default.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -162,6 +170,9 @@ Miscellaneous Bug Fixes
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fixed a crash in C due to incorrect lookup that members in nested anonymous struct/union
+  can be found as ordinary identifiers in struct/union definition. (#GH31295)
 
 OpenACC Specific Changes
 ------------------------
