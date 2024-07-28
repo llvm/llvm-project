@@ -32,9 +32,11 @@ add_integration_test(
     libc.src.pthread.pthread_rwlock_rdlock
     libc.src.pthread.pthread_rwlock_tryrdlock
     libc.src.pthread.pthread_rwlock_timedrdlock
+    libc.src.pthread.pthread_rwlock_clockrdlock
     libc.src.pthread.pthread_rwlock_wrlock
     libc.src.pthread.pthread_rwlock_trywrlock
     libc.src.pthread.pthread_rwlock_timedwrlock
+    libc.src.pthread.pthread_rwlock_clockwrlock
     libc.src.pthread.pthread_rwlock_unlock
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_join
