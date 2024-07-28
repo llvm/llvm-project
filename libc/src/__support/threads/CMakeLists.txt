@@ -101,7 +101,7 @@ endif()
 
 set(tid_dep)
 if (LLVM_LIBC_FULL_BUILD)
-  list(APPEND tid_dep libc.src.__support.thread)
+  list(APPEND tid_dep libc.src.__support.threads.thread)
 else()
   list(APPEND tid_dep libc.src.__support.OSUtil.osutil)
   list(APPEND tid_dep libc.include.sys_syscall)

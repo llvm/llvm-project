@@ -36,7 +36,9 @@ using namespace llvm;
 using namespace lld;
 using namespace lld::elf;
 
-ScriptLexer::ScriptLexer(MemoryBufferRef mb) : curBuf(mb), mbs(1, mb) {}
+ScriptLexer::ScriptLexer(MemoryBufferRef mb) : curBuf(mb), mbs(1, mb) {
+  activeFilenames.insert(mb.getBufferIdentifier());
+}
 
 // Returns a whole line containing the current token.
 StringRef ScriptLexer::getLine() {
@@ -81,6 +83,7 @@ void ScriptLexer::lex() {
         eof = true;
         return;
       }
+      activeFilenames.erase(curBuf.filename);
       curBuf = buffers.pop_back_val();
       continue;
     }
