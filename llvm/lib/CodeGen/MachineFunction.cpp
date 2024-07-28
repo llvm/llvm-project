@@ -664,6 +664,11 @@ void MachineFunction::print(raw_ostream &OS, const SlotIndexes *Indexes) const {
 
 /// True if this function needs frame moves for debug or exceptions.
 bool MachineFunction::needsFrameMoves() const {
+  // TODO: Ideally, what we'd like is to have a switch that allows emitting
+  // synchronous (precise at call-sites only) CFA into .eh_frame. However, even
+  // under this switch, we'd like .debug_frame to be precise when using -g. At
+  // this moment, there's no way to specify that some CFI directives go into
+  // .eh_frame only, while others go into .debug_frame only.
   return getMMI().hasDebugInfo() ||
          getTarget().Options.ForceDwarfFrameSection ||
          F.needsUnwindTableEntry();

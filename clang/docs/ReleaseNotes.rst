@@ -171,6 +171,9 @@ Miscellaneous Bug Fixes
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fixed a crash in C due to incorrect lookup that members in nested anonymous struct/union
+  can be found as ordinary identifiers in struct/union definition. (#GH31295)
+
 OpenACC Specific Changes
 ------------------------
 

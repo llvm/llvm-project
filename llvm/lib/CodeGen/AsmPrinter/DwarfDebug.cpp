@@ -1150,14 +1150,15 @@ sortGlobalExprs(SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &GVEs) {
 void DwarfDebug::beginModule(Module *M) {
   DebugHandlerBase::beginModule(M);
 
-  if (!Asm || !MMI->hasDebugInfo())
+  if (!Asm)
     return;
 
   unsigned NumDebugCUs = std::distance(M->debug_compile_units_begin(),
                                        M->debug_compile_units_end());
+  if (NumDebugCUs == 0)
+    return;
+
   assert(NumDebugCUs > 0 && "Asm unexpectedly initialized");
-  assert(MMI->hasDebugInfo() &&
-         "DebugInfoAvailabilty unexpectedly not initialized");
   SingleCU = NumDebugCUs == 1;
   DenseMap<DIGlobalVariable *, SmallVector<DwarfCompileUnit::GlobalExpr, 1>>
       GVMap;

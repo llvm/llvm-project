@@ -133,3 +133,7 @@ Revert: breaks devIO for openmp
 dfeb3991fb48 Remove the `x86_mmx` IR type. (#98505)
 Ron
 ---
+revert : needs downstream rework on MMI removal
+63e1647827f3 CodeGen: Remove MachineModuleInfo reference from MachineFunction (#100357)
+Ron, Scott
+---

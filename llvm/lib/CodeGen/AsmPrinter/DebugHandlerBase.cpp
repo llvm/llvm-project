@@ -241,10 +241,7 @@ bool DebugHandlerBase::isUnsignedDIType(const DIType *Ty) {
          Ty->getTag() == dwarf::DW_TAG_unspecified_type;
 }
 
-static bool hasDebugInfo(const MachineModuleInfo *MMI,
-                         const MachineFunction *MF) {
-  if (!MMI->hasDebugInfo())
-    return false;
+static bool hasDebugInfo(const MachineFunction *MF) {
   auto *SP = MF->getFunction().getSubprogram();
   if (!SP)
     return false;
@@ -258,7 +255,7 @@ static bool hasDebugInfo(const MachineModuleInfo *MMI,
 void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
   PrevInstBB = nullptr;
 
-  if (!Asm || !hasDebugInfo(MMI, MF)) {
+  if (!Asm || !hasDebugInfo(MF)) {
     skippedNonDebugFunction();
     return;
   }
@@ -430,7 +427,7 @@ void DebugHandlerBase::endInstruction() {
 }
 
 void DebugHandlerBase::endFunction(const MachineFunction *MF) {
-  if (Asm && hasDebugInfo(MMI, MF))
+  if (Asm && hasDebugInfo(MF))
     endFunctionImpl(MF);
   DbgValues.clear();
   DbgDefKills.clear();

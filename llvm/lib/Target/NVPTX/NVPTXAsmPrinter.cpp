@@ -493,7 +493,7 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
   // Emit initial .loc debug directive for correct relocation symbol data.
   if (const DISubprogram *SP = MF->getFunction().getSubprogram()) {
     assert(SP->getUnit());
-    if (!SP->getUnit()->isDebugDirectivesOnly() && MMI && MMI->hasDebugInfo())
+    if (!SP->getUnit()->isDebugDirectivesOnly())
       emitInitialRawDwarfLocDirective(*MF);
   }
 }
@@ -912,7 +912,7 @@ void NVPTXAsmPrinter::emitHeader(Module &M, raw_ostream &O,
     if (HasFullDebugInfo)
       break;
   }
-  if (MMI && MMI->hasDebugInfo() && HasFullDebugInfo)
+  if (HasFullDebugInfo)
     O << ", debug";
 
   O << "\n";
