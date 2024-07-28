@@ -1270,8 +1270,8 @@ bool AMDGPUDAGToDAGISel::SelectDSReadWrite2(SDValue Addr, SDValue &Base,
     // (add n0, c0)
     if (isDSOffset2Legal(N0, OffsetValue0, OffsetValue1, Size)) {
       Base = N0;
-      Offset0 = CurDAG->getTargetConstant(OffsetValue0 / Size, DL, MVT::i8);
-      Offset1 = CurDAG->getTargetConstant(OffsetValue1 / Size, DL, MVT::i8);
+      Offset0 = CurDAG->getTargetConstant(OffsetValue0 / Size, DL, MVT::i32);
+      Offset1 = CurDAG->getTargetConstant(OffsetValue1 / Size, DL, MVT::i32);
       return true;
     }
   } else if (Addr.getOpcode() == ISD::SUB) {
@@ -1306,8 +1306,10 @@ bool AMDGPUDAGToDAGISel::SelectDSReadWrite2(SDValue Addr, SDValue &Base,
               SubOp, DL, MVT::getIntegerVT(Size * 8), Opnds);
 
           Base = SDValue(MachineSub, 0);
-          Offset0 = CurDAG->getTargetConstant(OffsetValue0 / Size, DL, MVT::i8);
-          Offset1 = CurDAG->getTargetConstant(OffsetValue1 / Size, DL, MVT::i8);
+          Offset0 =
+              CurDAG->getTargetConstant(OffsetValue0 / Size, DL, MVT::i32);
+          Offset1 =
+              CurDAG->getTargetConstant(OffsetValue1 / Size, DL, MVT::i32);
           return true;
         }
       }
@@ -1321,8 +1323,8 @@ bool AMDGPUDAGToDAGISel::SelectDSReadWrite2(SDValue Addr, SDValue &Base,
       MachineSDNode *MovZero =
           CurDAG->getMachineNode(AMDGPU::V_MOV_B32_e32, DL, MVT::i32, Zero);
       Base = SDValue(MovZero, 0);
-      Offset0 = CurDAG->getTargetConstant(OffsetValue0 / Size, DL, MVT::i8);
-      Offset1 = CurDAG->getTargetConstant(OffsetValue1 / Size, DL, MVT::i8);
+      Offset0 = CurDAG->getTargetConstant(OffsetValue0 / Size, DL, MVT::i32);
+      Offset1 = CurDAG->getTargetConstant(OffsetValue1 / Size, DL, MVT::i32);
       return true;
     }
   }
@@ -1330,8 +1332,8 @@ bool AMDGPUDAGToDAGISel::SelectDSReadWrite2(SDValue Addr, SDValue &Base,
   // default case
 
   Base = Addr;
-  Offset0 = CurDAG->getTargetConstant(0, DL, MVT::i8);
-  Offset1 = CurDAG->getTargetConstant(1, DL, MVT::i8);
+  Offset0 = CurDAG->getTargetConstant(0, DL, MVT::i32);
+  Offset1 = CurDAG->getTargetConstant(1, DL, MVT::i32);
   return true;
 }
 

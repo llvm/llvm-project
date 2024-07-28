@@ -1587,7 +1587,18 @@ bool SIFoldOperands::tryFoldClamp(MachineInstr &MI) {
 
   // Clamp is applied after omod, so it is OK if omod is set.
   DefClamp->setImm(1);
-  MRI->replaceRegWith(MI.getOperand(0).getReg(), Def->getOperand(0).getReg());
+
+  Register DefReg = Def->getOperand(0).getReg();
+  Register MIDstReg = MI.getOperand(0).getReg();
+  if (TRI->isSGPRReg(*MRI, DefReg)) {
+    // Pseudo scalar instructions have a SGPR for dst and clamp is a v_max*
+    // instruction with a VGPR dst.
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY),
+            MIDstReg)
+        .addReg(DefReg);
+  } else {
+    MRI->replaceRegWith(MIDstReg, DefReg);
+  }
   MI.eraseFromParent();
 
   // Use of output modifiers forces VOP3 encoding for a VOP2 mac/fmac

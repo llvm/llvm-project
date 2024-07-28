@@ -73,6 +73,7 @@ class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   let IsAtomicNoRet      = ps.IsAtomicNoRet;
   let Uses               = ps.Uses;
   let Defs               = ps.Defs;
+  let isConvergent       = ps.isConvergent;
 
   let Constraints = ps.Constraints;
   let DisableEncoding = ps.DisableEncoding;
@@ -863,24 +864,24 @@ def : DSWritePat <DS_WRITE_B8_D16_HI, i32, truncstorei8_hi16_local>;
 }
 
 class DS64Bit4ByteAlignedReadPat<DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat <
-  (vt:$value (frag (DS64Bit4ByteAligned i32:$ptr, i8:$offset0, i8:$offset1))),
+  (vt:$value (frag (DS64Bit4ByteAligned i32:$ptr, i32:$offset0, i32:$offset1))),
   (inst $ptr, $offset0, $offset1, (i1 0))
 >;
 
 class DS64Bit4ByteAlignedWritePat<DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat<
-  (frag vt:$value, (DS64Bit4ByteAligned i32:$ptr, i8:$offset0, i8:$offset1)),
+  (frag vt:$value, (DS64Bit4ByteAligned i32:$ptr, i32:$offset0, i32:$offset1)),
   (inst $ptr, (i32 (EXTRACT_SUBREG VReg_64:$value, sub0)),
               (i32 (EXTRACT_SUBREG VReg_64:$value, sub1)), $offset0, $offset1,
               (i1 0))
 >;
 
 class DS128Bit8ByteAlignedReadPat<DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat <
-  (vt:$value (frag (DS128Bit8ByteAligned i32:$ptr, i8:$offset0, i8:$offset1))),
+  (vt:$value (frag (DS128Bit8ByteAligned i32:$ptr, i32:$offset0, i32:$offset1))),
   (inst $ptr, $offset0, $offset1, (i1 0))
 >;
 
 class DS128Bit8ByteAlignedWritePat<DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat<
-  (frag vt:$value, (DS128Bit8ByteAligned i32:$ptr, i8:$offset0, i8:$offset1)),
+  (frag vt:$value, (DS128Bit8ByteAligned i32:$ptr, i32:$offset0, i32:$offset1)),
   (inst $ptr, (i64 (EXTRACT_SUBREG VReg_128:$value, sub0_sub1)),
               (i64 (EXTRACT_SUBREG VReg_128:$value, sub2_sub3)), $offset0, $offset1,
               (i1 0))

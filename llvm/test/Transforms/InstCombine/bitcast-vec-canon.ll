@@ -38,37 +38,7 @@ define <1 x i64> @d(i64 %y) {
   ret <1 x i64> %c
 }
 
-define x86_mmx @e(<1 x i64> %y) {
-; CHECK-LABEL: @e(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <1 x i64> [[Y:%.*]], i64 0
-; CHECK-NEXT:    [[C:%.*]] = bitcast i64 [[TMP1]] to x86_mmx
-; CHECK-NEXT:    ret x86_mmx [[C]]
-;
-  %c = bitcast <1 x i64> %y to x86_mmx
-  ret x86_mmx %c
-}
-
-define <1 x i64> @f(x86_mmx %y) {
-; CHECK-LABEL: @f(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast x86_mmx [[Y:%.*]] to i64
-; CHECK-NEXT:    [[C:%.*]] = insertelement <1 x i64> poison, i64 [[TMP1]], i64 0
-; CHECK-NEXT:    ret <1 x i64> [[C]]
-;
-  %c = bitcast x86_mmx %y to <1 x i64>
-  ret <1 x i64> %c
-}
-
-define double @g(x86_mmx %x) {
-; CHECK-LABEL: @g(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast x86_mmx [[X:%.*]] to double
-; CHECK-NEXT:    ret double [[TMP0]]
-;
-entry:
-  %0 = bitcast x86_mmx %x to <1 x i64>
-  %1 = bitcast <1 x i64> %0 to double
-  ret double %1
-}
+; FP source is ok.
 
 define <3 x i64> @bitcast_inselt_undef(double %x, i32 %idx) {
 ; CHECK-LABEL: @bitcast_inselt_undef(
@@ -81,6 +51,8 @@ define <3 x i64> @bitcast_inselt_undef(double %x, i32 %idx) {
   ret <3 x i64> %i
 }
 
+; Integer source is ok; index is anything.
+
 define <3 x float> @bitcast_inselt_undef_fp(i32 %x, i567 %idx) {
 ; CHECK-LABEL: @bitcast_inselt_undef_fp(
 ; CHECK-NEXT:    [[XB:%.*]] = bitcast i32 [[X:%.*]] to float
@@ -92,7 +64,20 @@ define <3 x float> @bitcast_inselt_undef_fp(i32 %x, i567 %idx) {
   ret <3 x float> %i
 }
 
+define <vscale x 3 x float> @bitcast_inselt_undef_vscale(i32 %x, i567 %idx) {
+; CHECK-LABEL: @bitcast_inselt_undef_vscale(
+; CHECK-NEXT:    [[XB:%.*]] = bitcast i32 [[X:%.*]] to float
+; CHECK-NEXT:    [[I:%.*]] = insertelement <vscale x 3 x float> undef, float [[XB]], i567 [[IDX:%.*]]
+; CHECK-NEXT:    ret <vscale x 3 x float> [[I]]
+;
+  %xb = bitcast i32 %x to float
+  %i = insertelement <vscale x 3 x float> undef, float %xb, i567 %idx
+  ret <vscale x 3 x float> %i
+}
+
 declare void @use(i64)
+
+; Negative test - extra use prevents canonicalization
 
 define <3 x i64> @bitcast_inselt_undef_extra_use(double %x, i32 %idx) {
 ; CHECK-LABEL: @bitcast_inselt_undef_extra_use(
@@ -107,6 +92,8 @@ define <3 x i64> @bitcast_inselt_undef_extra_use(double %x, i32 %idx) {
   ret <3 x i64> %i
 }
 
+; Negative test - source type must be scalar
+
 define <3 x i64> @bitcast_inselt_undef_vec_src(<2 x i32> %x, i32 %idx) {
 ; CHECK-LABEL: @bitcast_inselt_undef_vec_src(
 ; CHECK-NEXT:    [[XB:%.*]] = bitcast <2 x i32> [[X:%.*]] to i64
@@ -118,16 +105,7 @@ define <3 x i64> @bitcast_inselt_undef_vec_src(<2 x i32> %x, i32 %idx) {
   ret <3 x i64> %i
 }
 
-define <3 x i64> @bitcast_inselt_undef_from_mmx(x86_mmx %x, i32 %idx) {
-; CHECK-LABEL: @bitcast_inselt_undef_from_mmx(
-; CHECK-NEXT:    [[XB:%.*]] = bitcast x86_mmx [[X:%.*]] to i64
-; CHECK-NEXT:    [[I:%.*]] = insertelement <3 x i64> undef, i64 [[XB]], i32 [[IDX:%.*]]
-; CHECK-NEXT:    ret <3 x i64> [[I]]
-;
-  %xb = bitcast x86_mmx %x to i64
-  %i = insertelement <3 x i64> undef, i64 %xb, i32 %idx
-  ret <3 x i64> %i
-}
+; Reduce number of casts
 
 define <2 x i64> @PR45748(double %x, double %y) {
 ; CHECK-LABEL: @PR45748(

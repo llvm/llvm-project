@@ -1113,7 +1113,7 @@ define void @typesystem() {
   %t6 = alloca ppc_fp128
   ; CHECK: %t6 = alloca ppc_fp128
   %t7 = alloca x86_mmx
-  ; CHECK: %t7 = alloca x86_mmx
+  ; CHECK: %t7 = alloca <1 x i64>
   %t8 = alloca ptr
   ; CHECK: %t8 = alloca ptr
   %t9 = alloca <4 x i32>

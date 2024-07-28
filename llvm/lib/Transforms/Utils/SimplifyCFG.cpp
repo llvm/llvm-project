@@ -3255,7 +3255,12 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI,
 }
 
 /// Return true if we can thread a branch across this block.
-static bool BlockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
+static bool BlockIsSimpleEnoughToThreadThrough(BasicBlock *BB,
+                                               const TargetTransformInfo &TTI) {
+  // Skip threading if the branch may be divergent.
+  if (TTI.hasBranchDivergence(BB->getParent()))
+    return false;
+
   int Size = 0;
   EphemeralValueTracker EphTracker;
 
@@ -3310,10 +3315,9 @@ static ConstantInt *getKnownValueOnEdge(Value *V, BasicBlock *From,
 /// If we have a conditional branch on something for which we know the constant
 /// value in predecessors (e.g. a phi node in the current block), thread edges
 /// from the predecessor to their ultimate destination.
-static std::optional<bool>
-FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
-                                            const DataLayout &DL,
-                                            AssumptionCache *AC) {
+static std::optional<bool> FoldCondBranchOnValueKnownInPredecessorImpl(
+    BranchInst *BI, DomTreeUpdater *DTU, const DataLayout &DL,
+    const TargetTransformInfo &TTI, AssumptionCache *AC) {
   SmallMapVector<ConstantInt *, SmallSetVector<BasicBlock *, 2>, 2> KnownValues;
   BasicBlock *BB = BI->getParent();
   Value *Cond = BI->getCondition();
@@ -3341,7 +3345,7 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
   // Now we know that this block has multiple preds and two succs.
   // Check that the block is small enough and values defined in the block are
   // not used outside of it.
-  if (!BlockIsSimpleEnoughToThreadThrough(BB))
+  if (!BlockIsSimpleEnoughToThreadThrough(BB, TTI))
     return false;
 
   for (const auto &Pair : KnownValues) {
@@ -3468,15 +3472,14 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
   return false;
 }
 
-static bool FoldCondBranchOnValueKnownInPredecessor(BranchInst *BI,
-                                                    DomTreeUpdater *DTU,
-                                                    const DataLayout &DL,
-                                                    AssumptionCache *AC) {
+static bool FoldCondBranchOnValueKnownInPredecessor(
+    BranchInst *BI, DomTreeUpdater *DTU, const DataLayout &DL,
+    const TargetTransformInfo &TTI, AssumptionCache *AC) {
   std::optional<bool> Result;
   bool EverChanged = false;
   do {
     // Note that None means "we changed things, but recurse further."
-    Result = FoldCondBranchOnValueKnownInPredecessorImpl(BI, DTU, DL, AC);
+    Result = FoldCondBranchOnValueKnownInPredecessorImpl(BI, DTU, DL, TTI, AC);
     EverChanged |= Result == std::nullopt || *Result;
   } while (Result == std::nullopt);
   return EverChanged;
@@ -7552,7 +7555,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   // If this is a branch on something for which we know the constant value in
   // predecessors (e.g. a phi node in the current block), thread control
   // through this block.
-  if (FoldCondBranchOnValueKnownInPredecessor(BI, DTU, DL, Options.AC))
+  if (FoldCondBranchOnValueKnownInPredecessor(BI, DTU, DL, TTI, Options.AC))
     return requestResimplify();
 
   // Scan predecessor blocks for conditional branches.

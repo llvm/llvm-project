@@ -2554,7 +2554,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::FP_EXTEND,
                        ISD::STRICT_FP_EXTEND,
                        ISD::FP_ROUND,
-                       ISD::STRICT_FP_ROUND});
+                       ISD::STRICT_FP_ROUND,
+                       ISD::INTRINSIC_VOID,
+                       ISD::INTRINSIC_WO_CHAIN,
+                       ISD::INTRINSIC_W_CHAIN});
 
   computeRegisterProperties(Subtarget.getRegisterInfo());
 
@@ -27269,6 +27272,8 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       llvm_unreachable("Unsupported truncstore intrinsic");
     }
   }
+  case INTR_TYPE_CAST_MMX:
+    return SDValue(); // handled in combineINTRINSIC_*
   }
 }
 
@@ -57761,6 +57766,86 @@ static SDValue combinePDEP(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Fixup the MMX intrinsics' types: in IR they are expressed with <1 x i64>,
+// and so SelectionDAGBuilder creates them with v1i64 types, but they need to
+// use x86mmx instead.
+static SDValue FixupMMXIntrinsicTypes(SDNode *N, SelectionDAG &DAG) {
+  SDLoc dl(N);
+
+  bool MadeChange = false, CastReturnVal = false;
+  SmallVector<SDValue, 8> Args;
+  for (const SDValue &Arg : N->op_values()) {
+    if (Arg.getValueType() == MVT::v1i64) {
+      MadeChange = true;
+      Args.push_back(DAG.getBitcast(MVT::x86mmx, Arg));
+    } else
+      Args.push_back(Arg);
+  }
+  SDVTList VTs = N->getVTList();
+  SDVTList NewVTs = VTs;
+  if (VTs.NumVTs > 0 && VTs.VTs[0] == MVT::v1i64) {
+    SmallVector<EVT> NewVTArr(ArrayRef<EVT>(VTs.VTs, VTs.NumVTs));
+    NewVTArr[0] = MVT::x86mmx;
+    NewVTs = DAG.getVTList(NewVTArr);
+    MadeChange = true;
+    CastReturnVal = true;
+  }
+
+  if (MadeChange) {
+    SDValue Result = DAG.getNode(N->getOpcode(), dl, NewVTs, Args);
+    if (CastReturnVal) {
+      SmallVector<SDValue, 2> Returns;
+      for (unsigned i = 0, e = Result->getNumValues(); i != e; ++i)
+        Returns.push_back(Result.getValue(i));
+      Returns[0] = DAG.getBitcast(MVT::v1i64, Returns[0]);
+      return DAG.getMergeValues(Returns, dl);
+    }
+    return Result;
+  }
+  return SDValue();
+}
+static SDValue combineINTRINSIC_WO_CHAIN(SDNode *N, SelectionDAG &DAG,
+                                         TargetLowering::DAGCombinerInfo &DCI) {
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  unsigned IntNo = N->getConstantOperandVal(0);
+  const IntrinsicData *IntrData = getIntrinsicWithoutChain(IntNo);
+
+  if (IntrData && IntrData->Type == INTR_TYPE_CAST_MMX)
+    return FixupMMXIntrinsicTypes(N, DAG);
+
+  return SDValue();
+}
+
+static SDValue combineINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
+                                        TargetLowering::DAGCombinerInfo &DCI) {
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  unsigned IntNo = N->getConstantOperandVal(1);
+  const IntrinsicData *IntrData = getIntrinsicWithChain(IntNo);
+
+  if (IntrData && IntrData->Type == INTR_TYPE_CAST_MMX)
+    return FixupMMXIntrinsicTypes(N, DAG);
+
+  return SDValue();
+}
+
+static SDValue combineINTRINSIC_VOID(SDNode *N, SelectionDAG &DAG,
+                                     TargetLowering::DAGCombinerInfo &DCI) {
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  unsigned IntNo = N->getConstantOperandVal(1);
+  const IntrinsicData *IntrData = getIntrinsicWithChain(IntNo);
+
+  if (IntrData && IntrData->Type == INTR_TYPE_CAST_MMX)
+    return FixupMMXIntrinsicTypes(N, DAG);
+
+  return SDValue();
+}
+
 SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -57951,7 +58036,10 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::SUBV_BROADCAST_LOAD: return combineBROADCAST_LOAD(N, DAG, DCI);
   case X86ISD::MOVDQ2Q:     return combineMOVDQ2Q(N, DAG);
   case X86ISD::PDEP:        return combinePDEP(N, DAG, DCI);
-  // clang-format on
+  case ISD::INTRINSIC_WO_CHAIN:  return combineINTRINSIC_WO_CHAIN(N, DAG, DCI);
+  case ISD::INTRINSIC_W_CHAIN:  return combineINTRINSIC_W_CHAIN(N, DAG, DCI);
+  case ISD::INTRINSIC_VOID:  return combineINTRINSIC_VOID(N, DAG, DCI);
+    // clang-format on
   }
 
   return SDValue();
