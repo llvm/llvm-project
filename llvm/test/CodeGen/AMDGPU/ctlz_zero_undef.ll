@@ -620,7 +620,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i8_with_select(ptr addrspace(1) noa
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
-; EG-NEXT:    ALU 16, @9, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 15, @9, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT MSKOR T0.XW, T1.X
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -629,11 +629,10 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i8_with_select(ptr addrspace(1) noa
 ; EG-NEXT:    ALU clause starting at 8:
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
 ; EG-NEXT:    ALU clause starting at 9:
-; EG-NEXT:     LSHL * T0.W, T0.X, literal.x,
-; EG-NEXT:    24(3.363116e-44), 0(0.000000e+00)
-; EG-NEXT:     FFBH_UINT T0.W, PV.W,
-; EG-NEXT:     AND_INT * T1.W, KC0[2].Y, literal.x,
-; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
+; EG-NEXT:     FFBH_UINT * T0.W, T0.X,
+; EG-NEXT:     ADD_INT T0.W, PV.W, literal.x,
+; EG-NEXT:     AND_INT * T1.W, KC0[2].Y, literal.y,
+; EG-NEXT:    -24(nan), 3(4.203895e-45)
 ; EG-NEXT:     CNDE_INT * T0.W, T0.X, literal.x, PV.W,
 ; EG-NEXT:    32(4.484155e-44), 0(0.000000e+00)
 ; EG-NEXT:     AND_INT T0.W, PV.W, literal.x,
@@ -724,7 +723,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i16_with_select(ptr addrspace(1) no
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
-; EG-NEXT:    ALU 16, @9, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 15, @9, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT MSKOR T0.XW, T1.X
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -733,11 +732,10 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i16_with_select(ptr addrspace(1) no
 ; EG-NEXT:    ALU clause starting at 8:
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
 ; EG-NEXT:    ALU clause starting at 9:
-; EG-NEXT:     LSHL * T0.W, T0.X, literal.x,
-; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     FFBH_UINT T0.W, PV.W,
-; EG-NEXT:     AND_INT * T1.W, KC0[2].Y, literal.x,
-; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
+; EG-NEXT:     FFBH_UINT * T0.W, T0.X,
+; EG-NEXT:     ADD_INT T0.W, PV.W, literal.x,
+; EG-NEXT:     AND_INT * T1.W, KC0[2].Y, literal.y,
+; EG-NEXT:    -16(nan), 3(4.203895e-45)
 ; EG-NEXT:     CNDE_INT * T0.W, T0.X, literal.x, PV.W,
 ; EG-NEXT:    32(4.484155e-44), 0(0.000000e+00)
 ; EG-NEXT:     AND_INT T0.W, PV.W, literal.x,

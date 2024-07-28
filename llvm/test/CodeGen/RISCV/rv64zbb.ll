@@ -1597,9 +1597,8 @@ define i16 @count_activebits(i16 %x) nounwind {
 ; RV64ZBB-LABEL: count_activebits:
 ; RV64ZBB:       # %bb.0: # %entry
 ; RV64ZBB-NEXT:    andi a0, a0, 255
-; RV64ZBB-NEXT:    slli a0, a0, 48
 ; RV64ZBB-NEXT:    clz a0, a0
-; RV64ZBB-NEXT:    li a1, 16
+; RV64ZBB-NEXT:    li a1, 64
 ; RV64ZBB-NEXT:    sub a0, a1, a0
 ; RV64ZBB-NEXT:    ret
 entry:
