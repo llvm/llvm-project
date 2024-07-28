@@ -17,8 +17,6 @@ uint64_t get_bits(double x) {
   return LIBC_NAMESPACE::cpp::bit_cast<uint64_t>(x);
 }
 
-constexpr int RANDOM_INPUT_SIZE = 256;
-
 // BENCHMARK() expects a function that with no parameters that returns a
 // uint64_t representing the latency. Defining each benchmark using macro that
 // expands to a lambda to allow us to switch the implementation of `sin()` to

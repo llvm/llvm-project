@@ -230,7 +230,7 @@ endfunction()
 function(_get_hermetic_test_compile_options output_var flags)
   _get_compile_options_from_flags(compile_flags ${flags})
   list(APPEND compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags}
-       ${flags} -fpie -ffreestanding -fno-exceptions -fno-rtti)
+       ${flags} -fpie -ffreestanding -fno-exceptions -fno-rtti -save-temps)
 
   # The GPU build requires overriding the default CMake triple and architecture.
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
