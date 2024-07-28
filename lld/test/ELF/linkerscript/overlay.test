@@ -59,13 +59,13 @@ _start:
 SECTIONS {
 ## LMA defaults to VMA
   OVERLAY 0x1000 : {
-    .big1 { *(.big1) }
+    ".big1" { *(".big1") }
     .small1 { *(.small1) }
   }
 ## .big2 starts at ADDR(.small2)
   OVERLAY : AT (0x2008) {
     .small2 { *(.small2) }
-    .big2 { *(.big2) }
+    ".big2" { *(.big2) }
   }
 ## .empty3 is not discarded. .small3 and .big3 share its address.
   OVERLAY . : AT (0x2014) {
