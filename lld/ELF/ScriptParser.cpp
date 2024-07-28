@@ -660,7 +660,7 @@ void ScriptParser::readSections() {
     isAfter = true;
   else if (!consume("BEFORE"))
     setError("expected AFTER/BEFORE, but got '" + next() + "'");
-  StringRef where = next();
+  StringRef where = readName();
   SmallVector<StringRef, 0> names;
   for (SectionCommand *cmd : v)
     if (auto *os = dyn_cast<OutputDesc>(cmd))
