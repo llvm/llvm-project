@@ -9379,26 +9379,6 @@ SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
     }
   }
 
-  // avgflooru(lhs, rhs) -> or(lshr(add(lhs, rhs),1),shl(overflow, typesize-1))
-  if (Opc == ISD::AVGFLOORU && VT.isScalarInteger() && !isTypeLegal(VT)) {
-    SDValue UAddWithOverflow =
-        DAG.getNode(ISD::UADDO, dl, DAG.getVTList(VT, MVT::i1), {RHS, LHS});
-
-    SDValue Sum = UAddWithOverflow.getValue(0);
-    SDValue Overflow = UAddWithOverflow.getValue(1);
-
-    // Right shift the sum by 1
-    SDValue One = DAG.getShiftAmountConstant(1, VT, dl);
-    SDValue LShrVal = DAG.getNode(ISD::SRL, dl, VT, Sum, One);
-
-    SDValue ZeroExtOverflow = DAG.getNode(ISD::ANY_EXTEND, dl, VT, Overflow);
-    SDValue OverflowShl =
-        DAG.getNode(ISD::SHL, dl, VT, ZeroExtOverflow,
-                    DAG.getConstant(VT.getScalarSizeInBits() - 1, dl, VT));
-
-    return DAG.getNode(ISD::OR, dl, VT, LShrVal, OverflowShl);
-  }
-
   // avgceils(lhs, rhs) -> sub(or(lhs,rhs),ashr(xor(lhs,rhs),1))
   // avgceilu(lhs, rhs) -> sub(or(lhs,rhs),lshr(xor(lhs,rhs),1))
   // avgfloors(lhs, rhs) -> add(and(lhs,rhs),ashr(xor(lhs,rhs),1))
