@@ -108,7 +108,7 @@ the Raw and Structured variants.
 
 For TypedBuffer, the element type must be an scalar integer or floating point
 type, or a vector of at most 4 such types. For RawBuffer the type can be an
-integer, floating point, vecvtor, or struct type. HLSL's ByteAddressBuffer is
+integer, floating point, vector, or struct type. HLSL's ByteAddressBuffer is
 represented as a RawBuffer with an `i8` element type.
 
 These types are generally used by BufferLoad and BufferStore operations, as
