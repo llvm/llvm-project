@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_DIL_AST_H_
-#define LLDB_DIL_AST_H_
+#ifndef LLDB_CORE_DILAST_H
+#define LLDB_CORE_DILAST_H
 
 #include <memory>
 #include <optional>
@@ -24,69 +24,48 @@
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/Support/Casting.h"
 
 namespace lldb_private {
 
+namespace DIL {
+
 /// Struct to hold information about member fields. Used by the parser for the
 /// Data Inspection Language (DIL).
-struct DILMemberInfo {
+struct MemberInfo {
   std::optional<std::string> name;
   CompilerType type;
-  bool is_bitfield;
-  uint32_t bitfield_size_in_bits;
+  std::optional<uint32_t> bitfield_size_in_bits;
   bool is_synthetic;
   bool is_dynamic;
   lldb::ValueObjectSP val_obj_sp;
-
-  explicit operator bool() const { return type.IsValid(); }
 };
-
-/// This determines if the type is a shared, unique or weak pointer, either
-/// from stdlibc++ or libc+++.
-bool IsSmartPtrType(CompilerType type);
-
-/// Finds the member field with the given name and type, stores the child index
-/// corresponding to the field in the idx vector and returns a DILMemberInfo
-/// struct with appropriate information about the field.
-DILMemberInfo GetFieldWithNameIndexPath(lldb::ValueObjectSP lhs_val_sp,
-                                        CompilerType type,
-                                        const std::string &name,
-                                        std::vector<uint32_t> *idx,
-                                        CompilerType empty_type,
-                                        bool use_synthetic, bool is_dynamic);
-
-std::tuple<DILMemberInfo, std::vector<uint32_t>>
-GetMemberInfo(lldb::ValueObjectSP lhs_val_sp, CompilerType type,
-              const std::string &name, bool use_synthetic);
 
 /// Get the appropriate ValueObjectSP, consulting the use_dynamic and
 /// use_synthetic options passed, acquiring the process & target locks if
 /// appropriate.
-lldb::ValueObjectSP
-DILGetSPWithLock(lldb::ValueObjectSP valobj_sp,
-                 lldb::DynamicValueType use_dynamic = lldb::eNoDynamicValues,
-                 bool use_synthetic = false);
+lldb::ValueObjectSP GetDynamicOrSyntheticValue(
+    lldb::ValueObjectSP valobj_sp,
+    lldb::DynamicValueType use_dynamic = lldb::eNoDynamicValues,
+    bool use_synthetic = false);
 
 /// The various types DIL AST nodes (used by the DIL parser).
-enum class DILNodeKind {
-  kDILErrorNode,
-  kLiteralNode,
-  kIdentifierNode,
-  kBuiltinFunctionCallNode,
-  kCStyleCastNode,
-  kMemberOfNode,
-  kArraySubscriptNode,
-  kUnaryOpNode,
-  kSmartPtrToPtrDecay
+enum class NodeKind {
+  eErrorNode,
+  eScalarLiteralNode,
+  eStringLiteralNode,
+  eIdentifierNode,
+  eCStyleCastNode,
+  eMemberOfNode,
+  eArraySubscriptNode,
+  eUnaryOpNode,
+  eSmartPtrToPtrDecayNode
 };
 
-/// The C-Style casts allowed by DIL.
-enum class CStyleCastKind {
-  kArithmetic,
-  kEnumeration,
-  kPointer,
-  kNullptr,
-  kReference,
+/// The C-Style casts for type promotion allowed by DIL.
+enum class TypePromotionCastKind {
+  eArithmetic,
+  ePointer,
 };
 
 /// The Unary operators recognized by DIL.
@@ -102,54 +81,44 @@ CompilerType
 ResolveTypeByName(const std::string &name,
                   std::shared_ptr<ExecutionContextScope> ctx_scope);
 
-/// Quick lookup to check if a type name already exists in a
-/// name-to-CompilerType map the DIL parser keeps of previously found
-/// name/type pairs.
-bool IsContextVar(const std::string &name);
-
-/// Checks to see if the CompilerType is a Smart Pointer (shared, unique, weak)
-/// or not. Only applicable for C++, which is why this is here and not part of
-/// the CompilerType class.
-bool IsSmartPtrType(CompilerType type);
-
 /// Class used to store & manipulate information about identifiers.
 class IdentifierInfo {
 private:
   using MemberPath = std::vector<uint32_t>;
-  using IdentifierInfoPtr = std::unique_ptr<IdentifierInfo>;
+  using IdentifierInfoUP = std::unique_ptr<IdentifierInfo>;
 
 public:
   enum class Kind {
-    kValue,
-    kContextArg,
-    kMemberPath,
-    kThisKeyword,
+    eValue,
+    eContextArg,
+    eMemberPath,
+    eThisKeyword,
   };
 
-  static IdentifierInfoPtr FromValue(lldb::ValueObjectSP value_sp) {
+  static IdentifierInfoUP FromValue(lldb::ValueObjectSP value_sp) {
     CompilerType type;
-    lldb::ValueObjectSP value = DILGetSPWithLock(value_sp);
-    if (value)
-      type = value->GetCompilerType();
-    return IdentifierInfoPtr(new IdentifierInfo(Kind::kValue, type, value, {}));
+    if (value_sp)
+      type = value_sp->GetCompilerType();
+    return IdentifierInfoUP(
+        new IdentifierInfo(Kind::eValue, type, value_sp, {}));
   }
 
-  static IdentifierInfoPtr FromContextArg(CompilerType type) {
+  static IdentifierInfoUP FromContextArg(CompilerType type) {
     lldb::ValueObjectSP empty_value;
-    return IdentifierInfoPtr(
-        new IdentifierInfo(Kind::kContextArg, type, empty_value, {}));
+    return IdentifierInfoUP(
+        new IdentifierInfo(Kind::eContextArg, type, empty_value, {}));
   }
 
-  static IdentifierInfoPtr FromMemberPath(CompilerType type, MemberPath path) {
+  static IdentifierInfoUP FromMemberPath(CompilerType type, MemberPath path) {
     lldb::ValueObjectSP empty_value;
-    return IdentifierInfoPtr(new IdentifierInfo(Kind::kMemberPath, type,
-                                                empty_value, std::move(path)));
+    return IdentifierInfoUP(new IdentifierInfo(Kind::eMemberPath, type,
+                                               empty_value, std::move(path)));
   }
 
-  static IdentifierInfoPtr FromThisKeyword(CompilerType type) {
+  static IdentifierInfoUP FromThisKeyword(CompilerType type) {
     lldb::ValueObjectSP empty_value;
-    return IdentifierInfoPtr(
-        new IdentifierInfo(Kind::kThisKeyword, type, empty_value, {}));
+    return IdentifierInfoUP(
+        new IdentifierInfo(Kind::eThisKeyword, type, empty_value, {}));
   }
 
   Kind kind() const { return m_kind; }
@@ -181,9 +150,9 @@ std::unique_ptr<IdentifierInfo> LookupIdentifier(
 
 /// Forward declaration, for use in DIL AST nodes. Definition is at the very
 /// end of this file.
-class DILVisitor;
+class Visitor;
 
-/// The rest of the classes in this file, except for the DILVisitor class at the
+/// The rest of the classes in this file, except for the Visitor class at the
 /// very end, define all the types of AST nodes used by the DIL parser and
 /// expression evaluator. The DIL parser parses the input string and creates the
 /// AST parse tree from the AST nodes. The resulting AST node tree gets passed
@@ -195,12 +164,12 @@ class DILVisitor;
 /// class.
 class DILASTNode {
 public:
-  DILASTNode(clang::SourceLocation location) : location_(location) {}
-  virtual ~DILASTNode() {}
+  DILASTNode(clang::SourceLocation location, NodeKind kind)
+      : m_location(location), m_kind(kind) {}
+  virtual ~DILASTNode() = default;
 
-  virtual void Accept(DILVisitor *v) const = 0;
+  virtual void Accept(Visitor *v) const = 0;
 
-  virtual bool is_error() const { return false; };
   virtual bool is_rvalue() const = 0;
   virtual bool is_bitfield() const { return false; };
   virtual bool is_context_var() const { return false; };
@@ -208,60 +177,84 @@ public:
   virtual uint32_t bitfield_size() const { return 0; }
   virtual CompilerType result_type() const = 0;
 
-  virtual DILNodeKind what_am_i() const = 0;
-
-  clang::SourceLocation location() const { return location_; }
+  clang::SourceLocation GetLocation() const { return m_location; }
+  NodeKind getKind() const { return m_kind; }
 
   // The expression result type, but dereferenced in case it's a reference. This
   // is for convenience, since for the purposes of the semantic analysis only
   // the dereferenced type matters.
-  CompilerType result_type_deref() const;
+  CompilerType GetDereferencedResultType() const;
 
 private:
-  clang::SourceLocation location_;
+  clang::SourceLocation m_location;
+  const NodeKind m_kind;
 };
 
-using ParseResult = std::unique_ptr<DILASTNode>;
+using DILASTNodeUP = std::unique_ptr<DILASTNode>;
 
-class DILErrorNode : public DILASTNode {
+class ErrorNode : public DILASTNode {
 public:
-  DILErrorNode(CompilerType empty_type)
-      : DILASTNode(clang::SourceLocation()), m_empty_type(empty_type) {}
-  void Accept(DILVisitor *v) const override;
-  bool is_error() const override { return true; }
+  ErrorNode(CompilerType empty_type)
+      : DILASTNode(clang::SourceLocation(), NodeKind::eErrorNode),
+        m_empty_type(empty_type) {}
+  void Accept(Visitor *v) const override;
   bool is_rvalue() const override { return false; }
   CompilerType result_type() const override { return m_empty_type; }
   CompilerType result_type_real() const { return m_empty_type; }
-  DILNodeKind what_am_i() const override { return DILNodeKind::kDILErrorNode; }
+
+  static bool classof(const DILASTNode *node) {
+    return node->getKind() == NodeKind::eErrorNode;
+  }
 
 private:
   CompilerType m_empty_type;
 };
 
-class LiteralNode : public DILASTNode {
+class ScalarLiteralNode : public DILASTNode {
 public:
-  template <typename ValueT>
-  LiteralNode(clang::SourceLocation location, CompilerType type, ValueT &&value,
-              bool is_literal_zero)
-      : DILASTNode(location), m_type(type),
-        m_value(std::forward<ValueT>(value)),
-        m_is_literal_zero(is_literal_zero) {}
+  ScalarLiteralNode(clang::SourceLocation location, CompilerType type,
+                    Scalar value, bool is_literal_zero)
+      : DILASTNode(location, NodeKind::eScalarLiteralNode), m_type(type),
+        m_value(value), m_is_literal_zero(is_literal_zero) {}
 
-  void Accept(DILVisitor *v) const override;
+  void Accept(Visitor *v) const override;
   bool is_rvalue() const override { return true; }
   bool is_literal_zero() const override { return m_is_literal_zero; }
   CompilerType result_type() const override { return m_type; }
-  DILNodeKind what_am_i() const override { return DILNodeKind::kLiteralNode; }
-
-  template <typename ValueT> ValueT value() const {
-    return std::get<ValueT>(m_value);
-  }
 
   auto value() const { return m_value; }
 
+  static bool classof(const DILASTNode *node) {
+    return node->getKind() == NodeKind::eScalarLiteralNode;
+  }
+
 private:
   CompilerType m_type;
-  std::variant<llvm::APInt, llvm::APFloat, bool, std::vector<char>> m_value;
+  Scalar m_value;
+  bool m_is_literal_zero;
+};
+
+class StringLiteralNode : public DILASTNode {
+public:
+  StringLiteralNode(clang::SourceLocation location, CompilerType type,
+                    std::vector<char> value, bool is_literal_zero)
+      : DILASTNode(location, NodeKind::eStringLiteralNode), m_type(type),
+        m_value(value), m_is_literal_zero(is_literal_zero) {}
+
+  void Accept(Visitor *v) const override;
+  bool is_rvalue() const override { return true; }
+  bool is_literal_zero() const override { return m_is_literal_zero; }
+  CompilerType result_type() const override { return m_type; }
+
+  auto value() const { return m_value; }
+
+  static bool classof(const DILASTNode *node) {
+    return node->getKind() == NodeKind::eStringLiteralNode;
+  }
+
+private:
+  CompilerType m_type;
+  std::vector<char> m_value;
   bool m_is_literal_zero;
 };
 
@@ -270,20 +263,21 @@ public:
   IdentifierNode(clang::SourceLocation location, std::string name,
                  std::unique_ptr<IdentifierInfo> identifier, bool is_rvalue,
                  bool is_context_var)
-      : DILASTNode(location), m_is_rvalue(is_rvalue),
+      : DILASTNode(location, NodeKind::eIdentifierNode), m_is_rvalue(is_rvalue),
         m_is_context_var(is_context_var), m_name(std::move(name)),
         m_identifier(std::move(identifier)) {}
 
-  void Accept(DILVisitor *v) const override;
+  void Accept(Visitor *v) const override;
   bool is_rvalue() const override { return m_is_rvalue; }
   bool is_context_var() const override { return m_is_context_var; };
   CompilerType result_type() const override { return m_identifier->GetType(); }
-  DILNodeKind what_am_i() const override {
-    return DILNodeKind::kIdentifierNode;
-  }
 
   std::string name() const { return m_name; }
   const IdentifierInfo &info() const { return *m_identifier; }
+
+  static bool classof(const DILASTNode *node) {
+    return node->getKind() == NodeKind::eIdentifierNode;
+  }
 
 private:
   bool m_is_rvalue;
@@ -295,48 +289,54 @@ private:
 class CStyleCastNode : public DILASTNode {
 public:
   CStyleCastNode(clang::SourceLocation location, CompilerType type,
-                 ParseResult rhs, CStyleCastKind kind)
-      : DILASTNode(location), m_type(type), m_rhs(std::move(rhs)),
-        m_kind(kind) {}
+                 DILASTNodeUP rhs, TypePromotionCastKind kind)
+      : DILASTNode(location, NodeKind::eCStyleCastNode), m_type(type),
+        m_rhs(std::move(rhs)), m_promo_kind(kind) {}
 
-  void Accept(DILVisitor *v) const override;
-  bool is_rvalue() const override {
-    return m_kind != CStyleCastKind::kReference;
-  }
+  void Accept(Visitor *v) const override;
+  bool is_rvalue() const override { return false; }
   CompilerType result_type() const override { return m_type; }
-  DILNodeKind what_am_i() const override {
-    return DILNodeKind::kCStyleCastNode;
-  }
 
   CompilerType type() const { return m_type; }
   DILASTNode *rhs() const { return m_rhs.get(); }
-  CStyleCastKind kind() const { return m_kind; }
+  TypePromotionCastKind promo_kind() const { return m_promo_kind; }
+
+  static bool classof(const DILASTNode *node) {
+    return node->getKind() == NodeKind::eCStyleCastNode;
+  }
 
 private:
   CompilerType m_type;
-  ParseResult m_rhs;
-  CStyleCastKind m_kind;
+  DILASTNodeUP m_rhs;
+  TypePromotionCastKind m_promo_kind;
 };
 
 class MemberOfNode : public DILASTNode {
 public:
   MemberOfNode(clang::SourceLocation location, CompilerType result_type,
-               ParseResult lhs, bool is_bitfield, uint32_t bitfield_size,
+               DILASTNodeUP lhs, std::optional<uint32_t> bitfield_size,
                std::vector<uint32_t> member_index, bool is_arrow,
                bool is_synthetic, bool is_dynamic, ConstString name,
                lldb::ValueObjectSP valobj_sp)
-      : DILASTNode(location), m_result_type(result_type), m_lhs(std::move(lhs)),
-        m_is_bitfield(is_bitfield), m_bitfield_size(bitfield_size),
+      : DILASTNode(location, NodeKind::eMemberOfNode),
+        m_result_type(result_type), m_lhs(std::move(lhs)),
         m_member_index(std::move(member_index)), m_is_arrow(is_arrow),
         m_is_synthetic(is_synthetic), m_is_dynamic(is_dynamic),
-        m_field_name(name), m_valobj_sp(valobj_sp) {}
+        m_field_name(name), m_valobj_sp(valobj_sp) {
+    if (bitfield_size) {
+      m_is_bitfield = true;
+      m_bitfield_size = bitfield_size.value();
+    } else {
+      m_is_bitfield = false;
+      m_bitfield_size = 0;
+    }
+  }
 
-  void Accept(DILVisitor *v) const override;
+  void Accept(Visitor *v) const override;
   bool is_rvalue() const override { return false; }
   bool is_bitfield() const override { return m_is_bitfield; }
   uint32_t bitfield_size() const override { return m_bitfield_size; }
   CompilerType result_type() const override { return m_result_type; }
-  DILNodeKind what_am_i() const override { return DILNodeKind::kMemberOfNode; }
 
   DILASTNode *lhs() const { return m_lhs.get(); }
   const std::vector<uint32_t> &member_index() const { return m_member_index; }
@@ -346,9 +346,13 @@ public:
   ConstString field_name() const { return m_field_name; }
   lldb::ValueObjectSP valobj_sp() const { return m_valobj_sp; }
 
+  static bool classof(const DILASTNode *node) {
+    return node->getKind() == NodeKind::eMemberOfNode;
+  }
+
 private:
   CompilerType m_result_type;
-  ParseResult m_lhs;
+  DILASTNodeUP m_lhs;
   bool m_is_bitfield;
   uint32_t m_bitfield_size;
   std::vector<uint32_t> m_member_index;
@@ -362,77 +366,84 @@ private:
 class ArraySubscriptNode : public DILASTNode {
 public:
   ArraySubscriptNode(clang::SourceLocation location, CompilerType result_type,
-                     ParseResult base, ParseResult index)
-      : DILASTNode(location), m_result_type(result_type),
-        m_base(std::move(base)), m_index(std::move(index)) {}
+                     DILASTNodeUP base, DILASTNodeUP index)
+      : DILASTNode(location, NodeKind::eArraySubscriptNode),
+        m_result_type(result_type), m_base(std::move(base)),
+        m_index(std::move(index)) {}
 
-  void Accept(DILVisitor *v) const override;
+  void Accept(Visitor *v) const override;
   bool is_rvalue() const override { return false; }
   CompilerType result_type() const override { return m_result_type; }
-  DILNodeKind what_am_i() const override {
-    return DILNodeKind::kArraySubscriptNode;
-  }
 
   DILASTNode *base() const { return m_base.get(); }
   DILASTNode *index() const { return m_index.get(); }
 
+  static bool classof(const DILASTNode *node) {
+    return node->getKind() == NodeKind::eArraySubscriptNode;
+  }
+
 private:
   CompilerType m_result_type;
-  ParseResult m_base;
-  ParseResult m_index;
+  DILASTNodeUP m_base;
+  DILASTNodeUP m_index;
 };
 
 class UnaryOpNode : public DILASTNode {
 public:
   UnaryOpNode(clang::SourceLocation location, CompilerType result_type,
-              UnaryOpKind kind, ParseResult rhs)
-      : DILASTNode(location), m_result_type(result_type), m_kind(kind),
-        m_rhs(std::move(rhs)) {}
+              UnaryOpKind kind, DILASTNodeUP rhs)
+      : DILASTNode(location, NodeKind::eUnaryOpNode),
+        m_result_type(result_type), m_kind(kind), m_rhs(std::move(rhs)) {}
 
-  void Accept(DILVisitor *v) const override;
+  void Accept(Visitor *v) const override;
   bool is_rvalue() const override { return m_kind != UnaryOpKind::Deref; }
   CompilerType result_type() const override { return m_result_type; }
-  DILNodeKind what_am_i() const override { return DILNodeKind::kUnaryOpNode; }
 
   UnaryOpKind kind() const { return m_kind; }
   DILASTNode *rhs() const { return m_rhs.get(); }
 
+  static bool classof(const DILASTNode *node) {
+    return node->getKind() == NodeKind::eUnaryOpNode;
+  }
+
 private:
   CompilerType m_result_type;
   UnaryOpKind m_kind;
-  ParseResult m_rhs;
+  DILASTNodeUP m_rhs;
 };
 
 class SmartPtrToPtrDecay : public DILASTNode {
 public:
   SmartPtrToPtrDecay(clang::SourceLocation location, CompilerType result_type,
-                     ParseResult ptr)
-      : DILASTNode(location), m_result_type(result_type),
-        m_ptr(std::move(ptr)) {}
+                     DILASTNodeUP ptr)
+      : DILASTNode(location, NodeKind::eSmartPtrToPtrDecayNode),
+        m_result_type(result_type), m_ptr(std::move(ptr)) {}
 
-  void Accept(DILVisitor *v) const override;
+  void Accept(Visitor *v) const override;
   bool is_rvalue() const override { return false; }
   CompilerType result_type() const override { return m_result_type; }
-  DILNodeKind what_am_i() const override {
-    return DILNodeKind::kSmartPtrToPtrDecay;
-  }
 
   DILASTNode *ptr() const { return m_ptr.get(); }
 
+  static bool classof(const DILASTNode *node) {
+    return node->getKind() == NodeKind::eSmartPtrToPtrDecayNode;
+  }
+
 private:
   CompilerType m_result_type;
-  ParseResult m_ptr;
+  DILASTNodeUP m_ptr;
 };
 
 /// This class contains one Visit method for each specialized type of
 /// DIL AST node. The Visit methods are used to dispatch a DIL AST node to
 /// the correct function in the DIL expression evaluator for evaluating that
 /// type of AST node.
-class DILVisitor {
+class Visitor {
 public:
-  virtual ~DILVisitor() {}
-  virtual void Visit(const DILErrorNode *node) = 0;
-  virtual void Visit(const LiteralNode *node) = 0;
+  virtual ~Visitor() = default;
+  virtual void Visit(const ErrorNode *node) = 0;
+  virtual void Visit(const ScalarLiteralNode *node) = 0;
+  virtual void Visit(const StringLiteralNode *node) = 0;
   virtual void Visit(const IdentifierNode *node) = 0;
   virtual void Visit(const CStyleCastNode *node) = 0;
   virtual void Visit(const MemberOfNode *node) = 0;
@@ -441,6 +452,8 @@ public:
   virtual void Visit(const SmartPtrToPtrDecay *node) = 0;
 };
 
+} // namespace DIL
+
 } // namespace lldb_private
 
-#endif // LLDB_DIL_AST_H_
+#endif // LLDB_CORE_DILAST_H

@@ -1198,6 +1198,7 @@ void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error) {
 
   // Verify the proposed new value is the right size.
   lldb::TargetSP target = GetTargetSP();
+  ExecutionContext exe_ctx(target.get(), false);
   uint64_t byte_size = 0;
   if (auto temp = GetCompilerType().GetByteSize(target.get()))
     byte_size = temp.value();
@@ -1207,11 +1208,9 @@ void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error) {
     return;
   }
 
-  lldb::DataExtractorSP data_sp;
-  data_sp->SetData(value.getRawData(), byte_size,
-                   target->GetArchitecture().GetByteOrder());
-  data_sp->SetAddressByteSize(
-      static_cast<uint8_t>(target->GetArchitecture().GetAddressByteSize()));
+  lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
+      value.getRawData(), byte_size, exe_ctx.GetByteOrder(),
+      exe_ctx.GetAddressByteSize());
   SetData(*data_sp, error);
 }
 

@@ -20,11 +20,12 @@
 
 namespace lldb_private {
 
-lldb::ValueObjectSP DILGetSPWithLock(lldb::ValueObjectSP in_valobj_sp,
-                                     lldb::DynamicValueType use_dynamic,
-                                     bool use_synthetic) {
-  Process::StopLocker stop_locker;
-  std::unique_lock<std::recursive_mutex> lock;
+namespace DIL {
+
+lldb::ValueObjectSP
+GetDynamicOrSyntheticValue(lldb::ValueObjectSP in_valobj_sp,
+                           lldb::DynamicValueType use_dynamic,
+                           bool use_synthetic) {
   Status error;
 
   if (!in_valobj_sp) {
@@ -41,17 +42,6 @@ lldb::ValueObjectSP DILGetSPWithLock(lldb::ValueObjectSP in_valobj_sp,
 
   if (!target)
     return lldb::ValueObjectSP();
-
-  lock = std::unique_lock<std::recursive_mutex>(target->GetAPIMutex());
-
-  lldb::ProcessSP process_sp(value_sp->GetProcessSP());
-  if (process_sp && !stop_locker.TryLock(&process_sp->GetRunLock())) {
-    // We don't allow people to play around with ValueObject if the process
-    // is running. If you want to look at values, pause the process, then
-    // look.
-    error.SetErrorString("process must be stopped.");
-    return lldb::ValueObjectSP();
-  }
 
   if (use_dynamic != lldb::eNoDynamicValues) {
     lldb::ValueObjectSP dynamic_sp = value_sp->GetDynamicValue(use_dynamic);
@@ -71,15 +61,144 @@ lldb::ValueObjectSP DILGetSPWithLock(lldb::ValueObjectSP in_valobj_sp,
   return value_sp;
 }
 
-CompilerType DILASTNode::result_type_deref() const {
+CompilerType DILASTNode::GetDereferencedResultType() const {
   auto type = result_type();
   return type.IsReferenceType() ? type.GetNonReferenceType() : type;
 }
 
-static std::unordered_map<std::string, CompilerType> context_args;
+std::optional<MemberInfo>
+GetFieldWithNameIndexPath(lldb::ValueObjectSP lhs_val_sp, CompilerType type,
+                          const std::string &name, std::vector<uint32_t> *idx,
+                          CompilerType empty_type, bool use_synthetic,
+                          bool is_dynamic) {
+  bool is_synthetic = false;
+  // Go through the fields first.
+  uint32_t num_fields = type.GetNumFields();
+  lldb::ValueObjectSP empty_valobj_sp;
+  for (uint32_t i = 0; i < num_fields; ++i) {
+    uint64_t bit_offset = 0;
+    uint32_t bitfield_bit_size = 0;
+    bool is_bitfield = false;
+    std::string name_sstr;
+    CompilerType field_type(type.GetFieldAtIndex(
+        i, name_sstr, &bit_offset, &bitfield_bit_size, &is_bitfield));
+    auto field_name =
+        name_sstr.length() == 0 ? std::optional<std::string>() : name_sstr;
+    if (field_type.IsValid()) {
+      std::optional<uint32_t> size_in_bits;
+      if (is_bitfield)
+        size_in_bits = bitfield_bit_size;
+      struct MemberInfo field = {field_name,   field_type, size_in_bits,
+                                 is_synthetic, is_dynamic, empty_valobj_sp};
 
-bool IsContextVar(const std::string &name) {
-  return context_args.find(name) != context_args.end();
+      // Name can be null if this is a padding field.
+      if (field.name == name) {
+        if (lhs_val_sp) {
+          lldb::ValueObjectSP child_valobj_sp =
+              lhs_val_sp->GetChildMemberWithName(name);
+          if (child_valobj_sp)
+            field.val_obj_sp = child_valobj_sp;
+        }
+
+        if (idx) {
+          assert(idx->empty());
+          // Direct base classes are located before fields, so field members
+          // needs to be offset by the number of base classes.
+          idx->push_back(i + type.GetNumberOfNonEmptyBaseClasses());
+        }
+        return field;
+      } else if (field.type.IsAnonymousType()) {
+        // Every member of an anonymous struct is considered to be a member of
+        // the enclosing struct or union. This applies recursively if the
+        // enclosing struct or union is also anonymous.
+
+        assert(!field.name && "Field should be unnamed.");
+
+        std::optional<MemberInfo> field_in_anon_type =
+            GetFieldWithNameIndexPath(lhs_val_sp, field.type, name, idx,
+                                      empty_type, use_synthetic, is_dynamic);
+        if (field_in_anon_type) {
+          if (idx) {
+            idx->push_back(i + type.GetNumberOfNonEmptyBaseClasses());
+          }
+          return field_in_anon_type.value();
+        }
+      }
+    }
+  }
+
+  // LLDB can't access inherited fields of anonymous struct members.
+  if (type.IsAnonymousType()) {
+    return {};
+  }
+
+  // Go through the base classes and look for the field there.
+  uint32_t num_non_empty_bases = 0;
+  uint32_t num_direct_bases = type.GetNumDirectBaseClasses();
+  for (uint32_t i = 0; i < num_direct_bases; ++i) {
+    uint32_t bit_offset;
+    auto base = type.GetDirectBaseClassAtIndex(i, &bit_offset);
+    auto field = GetFieldWithNameIndexPath(
+        lhs_val_sp, base, name, idx, empty_type, use_synthetic, is_dynamic);
+    if (field) {
+      if (idx) {
+        idx->push_back(num_non_empty_bases);
+      }
+      return field.value();
+    }
+    if (base.GetNumFields() > 0) {
+      num_non_empty_bases += 1;
+    }
+  }
+
+  // Check for synthetic member
+  if (lhs_val_sp && use_synthetic) {
+    lldb::ValueObjectSP child_valobj_sp = lhs_val_sp->GetSyntheticValue();
+    if (child_valobj_sp) {
+      is_synthetic = true;
+      uint32_t child_idx = child_valobj_sp->GetIndexOfChildWithName(name);
+      child_valobj_sp = child_valobj_sp->GetChildMemberWithName(name);
+      if (child_valobj_sp) {
+        CompilerType field_type = child_valobj_sp->GetCompilerType();
+        if (field_type.IsValid()) {
+          struct MemberInfo field = {name,         field_type, {},
+                                     is_synthetic, is_dynamic, child_valobj_sp};
+          if (idx) {
+            assert(idx->empty());
+            idx->push_back(child_idx);
+          }
+          return field;
+        }
+      }
+    }
+  }
+
+  if (lhs_val_sp) {
+    lldb::ValueObjectSP dynamic_val_sp =
+        lhs_val_sp->GetDynamicValue(lldb::eDynamicDontRunTarget);
+    if (dynamic_val_sp) {
+      CompilerType lhs_type = dynamic_val_sp->GetCompilerType();
+      if (lhs_type.IsPointerType())
+        lhs_type = lhs_type.GetPointeeType();
+      is_dynamic = true;
+      return GetFieldWithNameIndexPath(dynamic_val_sp, lhs_type, name, idx,
+                                       empty_type, use_synthetic, is_dynamic);
+    }
+  }
+
+  return {};
+}
+
+std::tuple<std::optional<MemberInfo>, std::vector<uint32_t>>
+GetMemberInfo(lldb::ValueObjectSP lhs_val_sp, CompilerType type,
+              const std::string &name, bool use_synthetic) {
+  std::vector<uint32_t> idx;
+  CompilerType empty_type;
+  bool is_dynamic = false;
+  std::optional<MemberInfo> member = GetFieldWithNameIndexPath(
+      lhs_val_sp, type, name, &idx, empty_type, use_synthetic, is_dynamic);
+  std::reverse(idx.begin(), idx.end());
+  return {member, std::move(idx)};
 }
 
 static lldb::ValueObjectSP
@@ -106,22 +225,12 @@ LookupStaticIdentifier(lldb::TargetSP target_sp,
     }
   }
 
-  // Find the corrent variable by matching the name. lldb::SBValue::GetName()
-  // can return strings like "::globarVar", "ns::i" or "int const ns::foo"
-  // depending on the version and the platform.
+  // Find the corrent variable by matching the name.
   for (uint32_t i = 0; i < values.size(); ++i) {
     lldb::ValueObjectSP val = values[i];
-    llvm::StringRef val_name_sstr = val->GetName().GetStringRef();
-    llvm::StringRef name_sstr = name.GetStringRef();
-
-    if (val->GetVariable() && val->GetVariable()->NameMatches(unqualified_name))
-      return val;
-
-    if (val_name_sstr == name_sstr ||
-        val_name_sstr == llvm::formatv("::{0}", name_sstr).str() ||
-        val_name_sstr.ends_with(llvm::formatv(" {0}", name_sstr).str()) ||
-        val_name_sstr.ends_with(llvm::formatv("*{0}", name_sstr).str()) ||
-        val_name_sstr.ends_with(llvm::formatv("&{0}", name_sstr).str()))
+    if (val->GetVariable() &&
+        (val->GetVariable()->NameMatches(unqualified_name) ||
+         val->GetVariable()->NameMatches(ConstString(name_ref))))
       return val;
   }
   lldb::ValueObjectSP empty_obj_sp;
@@ -184,7 +293,7 @@ ResolveTypeByName(const std::string &name,
       }
     }
 
-    if (result_type_list.size() == 0) {
+    if (result_type_list.empty()) {
       for (auto type_system_sp : target_sp->GetScratchTypeSystems())
         if (auto compiler_type =
                 type_system_sp->GetBuiltinTypeByName(const_type_name))
@@ -207,26 +316,20 @@ ResolveTypeByName(const std::string &name,
       partial_matches.push_back(type);
   }
 
-  if (global_scope) {
-    // Look only for full matches when looking for a globally qualified type.
-    if (full_match.IsValid())
-      return full_match;
-  } else {
+  // Full match is always correct.
+  if (full_match.IsValid())
+    return full_match;
+
+  if (!global_scope) {
     // We're looking for type, but there may be multiple candidates and which
     // one is correct may depend on the currect scope. For now just pick the
-    // most "probable" type.
-
-    // Full match is always correct if we're currently in the global scope.
-    if (full_match.IsValid())
-      return full_match;
-
-    // If we have partial matches, pick a "random" one.
+    // most "probable" type (pick a random one). TODO: Try to find a better way
+    // to do this.
     if (partial_matches.size() > 0)
       return partial_matches.back();
   }
 
-  CompilerType empty_type;
-  return empty_type;
+  return {};
 }
 
 static lldb::VariableSP DILFindVariable(ConstString name,
@@ -241,23 +344,21 @@ static lldb::VariableSP DILFindVariable(ConstString name,
   for (pos = variable_list->begin(); pos != end; ++pos) {
     llvm::StringRef str_ref_name = pos->get()->GetName().GetStringRef();
     // Check for global vars, which might start with '::'.
-    if (str_ref_name.size() > 2 && str_ref_name[0] == ':' &&
-        str_ref_name[1] == ':')
-      str_ref_name = str_ref_name.drop_front(2);
+    str_ref_name.consume_front("::");
 
-    ConstString tmp_name(str_ref_name);
-    if (tmp_name == name)
+    if (str_ref_name == name.GetStringRef())
       possible_matches.push_back(*pos);
     else if (pos->get()->NameMatches(name))
       possible_matches.push_back(*pos);
   }
 
-  // Look for exact matches (favors local vars over global vars)
-  for (auto var_sp : possible_matches)
-    if (var_sp->GetName() == name) {
-      exact_match = var_sp;
-      break;
-    }
+  auto exact_match_it =
+      llvm::find_if(possible_matches, [&](lldb::VariableSP var_sp) {
+        return var_sp->GetName() == name;
+      });
+
+  if (exact_match_it != llvm::adl_end(possible_matches))
+    exact_match = *exact_match_it;
 
   if (!exact_match)
     // Look for a global var exact match.
@@ -284,10 +385,6 @@ std::unique_ptr<IdentifierInfo>
 LookupIdentifier(const std::string &name,
                  std::shared_ptr<ExecutionContextScope> ctx_scope,
                  lldb::DynamicValueType use_dynamic, CompilerType *scope_ptr) {
-  auto context_arg = context_args.find(name);
-  if (context_arg != context_args.end())
-    return IdentifierInfo::FromContextArg(context_arg->second);
-
   ConstString name_str(name);
   llvm::StringRef name_ref = name_str.GetStringRef();
 
@@ -299,17 +396,14 @@ LookupIdentifier(const std::string &name,
     Target *target = ctx_scope->CalculateTarget().get();
     Process *process = ctx_scope->CalculateProcess().get();
     if (target && process) {
-      Process::StopLocker stop_locker;
-      if (stop_locker.TryLock(&process->GetRunLock())) {
-        StackFrame *stack_frame = ctx_scope->CalculateStackFrame().get();
-        if (stack_frame) {
-          lldb::RegisterContextSP reg_ctx(stack_frame->GetRegisterContext());
-          if (reg_ctx) {
-            if (const RegisterInfo *reg_info =
-                    reg_ctx->GetRegisterInfoByName(reg_name))
-              value_sp =
-                  ValueObjectRegister::Create(stack_frame, reg_ctx, reg_info);
-          }
+      StackFrame *stack_frame = ctx_scope->CalculateStackFrame().get();
+      if (stack_frame) {
+        lldb::RegisterContextSP reg_ctx(stack_frame->GetRegisterContext());
+        if (reg_ctx) {
+          if (const RegisterInfo *reg_info =
+                  reg_ctx->GetRegisterInfoByName(reg_name))
+            value_sp =
+                ValueObjectRegister::Create(stack_frame, reg_ctx, reg_info);
         }
       }
     }
@@ -343,22 +437,19 @@ LookupIdentifier(const std::string &name,
       if (!value_sp)
         value_sp = frame->FindVariable(ConstString(name_ref));
 
-      bool use_synthetic = false;
-      lldb::ValueObjectSP value(
-          DILGetSPWithLock(value_sp, use_dynamic, use_synthetic));
-      if (value)
+      if (value_sp)
         // Force static value, otherwise we can end up with the "real" type.
-        return IdentifierInfo::FromValue(value);
+        return IdentifierInfo::FromValue(value_sp);
 
       // Try looking for an instance variable (class member).
       ConstString this_string("this");
-      value = frame->FindVariable(this_string);
-      if (value)
-        value = value->GetChildMemberWithName(name_ref.data());
+      value_sp = frame->FindVariable(this_string);
+      if (value_sp)
+        value_sp = value_sp->GetChildMemberWithName(name_ref.data());
 
-      if (value)
+      if (value_sp)
         // Force static value, otherwise we can end up with the "real" type.
-        return IdentifierInfo::FromValue(value->GetStaticValue());
+        return IdentifierInfo::FromValue(value_sp->GetStaticValue());
 
     } else {
       // In a "value" scope `this` refers to the scope object itself.
@@ -371,7 +462,8 @@ LookupIdentifier(const std::string &name,
       auto [member, path] =
           GetMemberInfo(empty_sp, *scope_ptr, name_ref.data(), use_synthetic);
       if (member)
-        return IdentifierInfo::FromMemberPath(member.type, std::move(path));
+        return IdentifierInfo::FromMemberPath(member.value().type,
+                                              std::move(path));
     }
   }
 
@@ -429,17 +521,13 @@ LookupIdentifier(const std::string &name,
     Target *target = ctx_scope->CalculateTarget().get();
     Process *process = ctx_scope->CalculateProcess().get();
     if (target && process) {
-      Process::StopLocker stop_locker;
-      if (stop_locker.TryLock(&process->GetRunLock())) {
-        StackFrame *stack_frame = ctx_scope->CalculateStackFrame().get();
-        if (stack_frame) {
-          lldb::RegisterContextSP reg_ctx(stack_frame->GetRegisterContext());
-          if (reg_ctx) {
-            if (const RegisterInfo *reg_info =
-                    reg_ctx->GetRegisterInfoByName(name_ref.data()))
-              value =
-                  ValueObjectRegister::Create(stack_frame, reg_ctx, reg_info);
-          }
+      StackFrame *stack_frame = ctx_scope->CalculateStackFrame().get();
+      if (stack_frame) {
+        lldb::RegisterContextSP reg_ctx(stack_frame->GetRegisterContext());
+        if (reg_ctx) {
+          if (const RegisterInfo *reg_info =
+                  reg_ctx->GetRegisterInfoByName(name_ref.data()))
+            value = ValueObjectRegister::Create(stack_frame, reg_ctx, reg_info);
         }
       }
     }
@@ -449,20 +537,24 @@ LookupIdentifier(const std::string &name,
   return IdentifierInfo::FromValue(value);
 }
 
-void DILErrorNode::Accept(DILVisitor *v) const { v->Visit(this); }
+void ErrorNode::Accept(Visitor *v) const { v->Visit(this); }
 
-void LiteralNode::Accept(DILVisitor *v) const { v->Visit(this); }
+void ScalarLiteralNode::Accept(Visitor *v) const { v->Visit(this); }
 
-void IdentifierNode::Accept(DILVisitor *v) const { v->Visit(this); }
+void StringLiteralNode::Accept(Visitor *v) const { v->Visit(this); }
 
-void CStyleCastNode::Accept(DILVisitor *v) const { v->Visit(this); }
+void IdentifierNode::Accept(Visitor *v) const { v->Visit(this); }
 
-void MemberOfNode::Accept(DILVisitor *v) const { v->Visit(this); }
+void CStyleCastNode::Accept(Visitor *v) const { v->Visit(this); }
 
-void ArraySubscriptNode::Accept(DILVisitor *v) const { v->Visit(this); }
+void MemberOfNode::Accept(Visitor *v) const { v->Visit(this); }
 
-void UnaryOpNode::Accept(DILVisitor *v) const { v->Visit(this); }
+void ArraySubscriptNode::Accept(Visitor *v) const { v->Visit(this); }
 
-void SmartPtrToPtrDecay::Accept(DILVisitor *v) const { v->Visit(this); }
+void UnaryOpNode::Accept(Visitor *v) const { v->Visit(this); }
+
+void SmartPtrToPtrDecay::Accept(Visitor *v) const { v->Visit(this); }
+
+} // namespace DIL
 
 } // namespace lldb_private
