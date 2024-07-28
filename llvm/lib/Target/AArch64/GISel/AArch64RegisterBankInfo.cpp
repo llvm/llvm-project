@@ -241,57 +241,12 @@ unsigned AArch64RegisterBankInfo::copyCost(const RegisterBank &A,
 
 const RegisterBank &
 AArch64RegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
-                                                LLT) const {
+                                                LLT Ty) const {
   switch (RC.getID()) {
-  case AArch64::FPR8RegClassID:
-  case AArch64::FPR16RegClassID:
-  case AArch64::FPR16_loRegClassID:
-  case AArch64::FPR32_with_hsub_in_FPR16_loRegClassID:
-  case AArch64::FPR32RegClassID:
-  case AArch64::FPR64RegClassID:
-  case AArch64::FPR128RegClassID:
-  case AArch64::FPR64_loRegClassID:
-  case AArch64::FPR128_loRegClassID:
-  case AArch64::FPR128_0to7RegClassID:
-  case AArch64::DDRegClassID:
-  case AArch64::DDDRegClassID:
-  case AArch64::DDDDRegClassID:
-  case AArch64::QQRegClassID:
-  case AArch64::QQQRegClassID:
-  case AArch64::QQQQRegClassID:
-  case AArch64::ZPRRegClassID:
-  case AArch64::ZPR_3bRegClassID:
-    return getRegBank(AArch64::FPRRegBankID);
-  case AArch64::GPR32commonRegClassID:
-  case AArch64::GPR32RegClassID:
-  case AArch64::GPR32spRegClassID:
-  case AArch64::GPR32sponlyRegClassID:
-  case AArch64::GPR32argRegClassID:
-  case AArch64::GPR32allRegClassID:
-  case AArch64::GPR64commonRegClassID:
-  case AArch64::GPR64RegClassID:
-  case AArch64::GPR64spRegClassID:
   case AArch64::GPR64sponlyRegClassID:
-  case AArch64::GPR64argRegClassID:
-  case AArch64::GPR64allRegClassID:
-  case AArch64::GPR64noipRegClassID:
-  case AArch64::GPR64common_and_GPR64noipRegClassID:
-  case AArch64::GPR64noip_and_tcGPR64RegClassID:
-  case AArch64::tcGPR64RegClassID:
-  case AArch64::tcGPRx16x17RegClassID:
-  case AArch64::tcGPRx17RegClassID:
-  case AArch64::tcGPRnotx16RegClassID:
-  case AArch64::WSeqPairsClassRegClassID:
-  case AArch64::XSeqPairsClassRegClassID:
-  case AArch64::MatrixIndexGPR32_8_11RegClassID:
-  case AArch64::MatrixIndexGPR32_12_15RegClassID:
-  case AArch64::GPR64_with_sub_32_in_MatrixIndexGPR32_8_11RegClassID:
-  case AArch64::GPR64_with_sub_32_in_MatrixIndexGPR32_12_15RegClassID:
     return getRegBank(AArch64::GPRRegBankID);
-  case AArch64::CCRRegClassID:
-    return getRegBank(AArch64::CCRegBankID);
   default:
-    llvm_unreachable("Register class not supported");
+    return AArch64GenRegisterBankInfo::getRegBankFromRegClass(RC, Ty);
   }
 }
 

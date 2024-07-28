@@ -374,7 +374,7 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
 
   // Check if it's safe to move the instruction.
   bool SawStore = true;
-  if (!MI.isSafeToMove(AA, SawStore))
+  if (!MI.isSafeToMove(SawStore))
     return false;
 
   // Convergent operations may not be made control-dependent on additional
@@ -687,7 +687,7 @@ void MachineSinking::FindCycleSinkCandidates(
       continue;
     }
     bool DontMoveAcrossStore = true;
-    if (!MI.isSafeToMove(AA, DontMoveAcrossStore)) {
+    if (!MI.isSafeToMove(DontMoveAcrossStore)) {
       LLVM_DEBUG(dbgs() << "CycleSink: Instruction not safe to move.\n");
       continue;
     }
@@ -1652,7 +1652,7 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
     return false;
 
   // Check if it's safe to move the instruction.
-  if (!MI.isSafeToMove(AA, SawStore))
+  if (!MI.isSafeToMove(SawStore))
     return false;
 
   // Convergent operations may not be made control-dependent on additional
@@ -1703,7 +1703,7 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
     bool TryBreak = false;
     bool Store =
         MI.mayLoad() ? hasStoreBetween(ParentBlock, SuccToSinkTo, MI) : true;
-    if (!MI.isSafeToMove(AA, Store)) {
+    if (!MI.isSafeToMove(Store)) {
       LLVM_DEBUG(dbgs() << " *** NOTE: Won't sink load along critical edge.\n");
       TryBreak = true;
     }

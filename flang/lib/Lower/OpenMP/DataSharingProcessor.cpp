@@ -13,6 +13,7 @@
 #include "DataSharingProcessor.h"
 
 #include "Utils.h"
+#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
@@ -117,6 +118,11 @@ void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
   bool success = converter.createHostAssociateVarClone(*sym);
   (void)success;
   assert(success && "Privatization failed due to existing binding");
+
+  bool isFirstPrivate = sym->test(semantics::Symbol::Flag::OmpFirstPrivate);
+  if (!isFirstPrivate &&
+      Fortran::lower::hasDefaultInitialization(sym->GetUltimate()))
+    Fortran::lower::defaultInitializeAtRuntime(converter, *sym, *symTable);
 }
 
 void DataSharingProcessor::copyFirstPrivateSymbol(

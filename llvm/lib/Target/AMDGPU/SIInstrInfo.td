@@ -1075,8 +1075,8 @@ let ImmTy = "ImmTyOffset" in
 def flat_offset : CustomOperand<i32, 1, "FlatOffset">;
 def Offset : NamedIntOperand<i32, "offset">;
 let Validator = "isUInt<8>" in {
-def Offset0 : NamedIntOperand<i8, "offset0">;
-def Offset1 : NamedIntOperand<i8, "offset1">;
+def Offset0 : NamedIntOperand<i32, "offset0">;
+def Offset1 : NamedIntOperand<i32, "offset1">;
 }
 
 def gds : NamedBitOperand<"gds", "GDS">;

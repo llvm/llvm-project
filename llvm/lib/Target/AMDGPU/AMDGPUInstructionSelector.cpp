@@ -2192,27 +2192,6 @@ bool AMDGPUInstructionSelector::selectG_SELECT(MachineInstr &I) const {
   return Ret;
 }
 
-static int sizeToSubRegIndex(unsigned Size) {
-  switch (Size) {
-  case 32:
-    return AMDGPU::sub0;
-  case 64:
-    return AMDGPU::sub0_sub1;
-  case 96:
-    return AMDGPU::sub0_sub1_sub2;
-  case 128:
-    return AMDGPU::sub0_sub1_sub2_sub3;
-  case 256:
-    return AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7;
-  default:
-    if (Size < 32)
-      return AMDGPU::sub0;
-    if (Size > 256)
-      return -1;
-    return sizeToSubRegIndex(llvm::bit_ceil(Size));
-  }
-}
-
 bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
   Register DstReg = I.getOperand(0).getReg();
   Register SrcReg = I.getOperand(1).getReg();
@@ -2316,8 +2295,9 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
     return false;
 
   if (SrcSize > 32) {
-    int SubRegIdx = sizeToSubRegIndex(DstSize);
-    if (SubRegIdx == -1)
+    unsigned SubRegIdx =
+        DstSize < 32 ? AMDGPU::sub0 : TRI.getSubRegFromChannel(0, DstSize / 32);
+    if (SubRegIdx == AMDGPU::NoSubRegister)
       return false;
 
     // Deal with weird cases where the class only partially supports the subreg
