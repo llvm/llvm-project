@@ -10,6 +10,7 @@
 #define LLD_ELF_SCRIPT_LEXER_H
 
 #include "lld/Common/LLVM.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBufferRef.h"
@@ -32,6 +33,9 @@ protected:
   // The current buffer and parent buffers due to INCLUDE.
   Buffer curBuf;
   SmallVector<Buffer, 0> buffers;
+
+  // Used to detect INCLUDE() cycles.
+  llvm::DenseSet<StringRef> activeFilenames;
 
   struct Token {
     StringRef str;
