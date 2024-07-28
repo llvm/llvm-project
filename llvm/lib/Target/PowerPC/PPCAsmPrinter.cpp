@@ -3137,11 +3137,11 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
       break;
     MCSymbol *TempSym = OutContext.createNamedTempSymbol();
     OutStreamer->emitLabel(TempSym);
-    OutStreamer->emitXCOFFExceptDirective(CurrentFnSym, TempSym,
-                 LangMO.getImm(), ReasonMO.getImm(),
-                 Subtarget->isPPC64() ? MI->getMF()->getInstructionCount() * 8 :
-                 MI->getMF()->getInstructionCount() * 4,
-		 MMI->hasDebugInfo());
+    OutStreamer->emitXCOFFExceptDirective(
+        CurrentFnSym, TempSym, LangMO.getImm(), ReasonMO.getImm(),
+        Subtarget->isPPC64() ? MI->getMF()->getInstructionCount() * 8
+                             : MI->getMF()->getInstructionCount() * 4,
+        hasDebugInfo());
     break;
   }
   case PPC::GETtlsMOD32AIX:
@@ -3199,7 +3199,7 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
 bool PPCAIXAsmPrinter::doFinalization(Module &M) {
   // Do streamer related finalization for DWARF.
-  if (!MAI->usesDwarfFileAndLocDirectives() && MMI->hasDebugInfo())
+  if (!MAI->usesDwarfFileAndLocDirectives() && hasDebugInfo())
     OutStreamer->doFinalizationAtSectionEnd(
         OutStreamer->getContext().getObjectFileInfo()->getTextSection());
 

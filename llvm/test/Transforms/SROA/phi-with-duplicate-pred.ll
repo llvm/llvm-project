@@ -16,8 +16,8 @@ define void @f2(i1 %c1) {
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    [[G_0_SROA_SPECULATE_LOAD_CLEANUP:%.*]] = load i16, ptr @a, align 1
 ; CHECK-NEXT:    switch i32 2, label [[CLEANUP7:%.*]] [
-; CHECK-NEXT:    i32 0, label [[LBL1:%.*]]
-; CHECK-NEXT:    i32 2, label [[LBL1]]
+; CHECK-NEXT:      i32 0, label [[LBL1:%.*]]
+; CHECK-NEXT:      i32 2, label [[LBL1]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[LBL1]]
@@ -61,8 +61,8 @@ define void @f3(i1 %c1) {
 ; CHECK-NEXT:    br label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    switch i32 2, label [[CLEANUP7:%.*]] [
-; CHECK-NEXT:    i32 0, label [[LBL1:%.*]]
-; CHECK-NEXT:    i32 2, label [[LBL1]]
+; CHECK-NEXT:      i32 0, label [[LBL1:%.*]]
+; CHECK-NEXT:      i32 2, label [[LBL1]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[LBL1]]
@@ -112,8 +112,8 @@ define void @f4(i1 %c1) {
 ; CHECK-NEXT:    br label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    switch i32 2, label [[CLEANUP7:%.*]] [
-; CHECK-NEXT:    i32 0, label [[LBL1:%.*]]
-; CHECK-NEXT:    i32 2, label [[LBL1]]
+; CHECK-NEXT:      i32 0, label [[LBL1:%.*]]
+; CHECK-NEXT:      i32 2, label [[LBL1]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[LBL1]]
@@ -165,8 +165,8 @@ define void @f5(i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    br label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    switch i32 2, label [[CLEANUP7:%.*]] [
-; CHECK-NEXT:    i32 0, label [[LBL1:%.*]]
-; CHECK-NEXT:    i32 2, label [[LBL1]]
+; CHECK-NEXT:      i32 0, label [[LBL1:%.*]]
+; CHECK-NEXT:      i32 2, label [[LBL1]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[LBL1]]
@@ -216,8 +216,8 @@ define void @f6(i1 %c1) {
 ; CHECK-NEXT:    br label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    switch i32 2, label [[CLEANUP7:%.*]] [
-; CHECK-NEXT:    i32 0, label [[LBL1:%.*]]
-; CHECK-NEXT:    i32 2, label [[LBL1]]
+; CHECK-NEXT:      i32 0, label [[LBL1:%.*]]
+; CHECK-NEXT:      i32 2, label [[LBL1]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[LBL1]]

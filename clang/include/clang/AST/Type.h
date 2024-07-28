@@ -4698,26 +4698,25 @@ public:
   };
 
 private:
-  LLVM_PREFERRED_TYPE(Kind)
-  unsigned FKind : 3;
+  Kind FKind;
 
   // Expansion: for hypothetical TCB+types, there could be one Kind for TCB,
   // then ~16(?) bits "SubKind" to map to a specific named TCB. SubKind would
   // be considered for uniqueness.
 
 public:
-  FunctionEffect() : FKind(unsigned(Kind::None)) {}
+  FunctionEffect() : FKind(Kind::None) {}
 
-  explicit FunctionEffect(Kind K) : FKind(unsigned(K)) {}
+  explicit FunctionEffect(Kind K) : FKind(K) {}
 
   /// The kind of the effect.
-  Kind kind() const { return Kind(FKind); }
+  Kind kind() const { return FKind; }
 
   /// Return the opposite kind, for effects which have opposites.
   Kind oppositeKind() const;
 
   /// For serialization.
-  uint32_t toOpaqueInt32() const { return FKind; }
+  uint32_t toOpaqueInt32() const { return uint32_t(FKind); }
   static FunctionEffect fromOpaqueInt32(uint32_t Value) {
     return FunctionEffect(Kind(Value));
   }
