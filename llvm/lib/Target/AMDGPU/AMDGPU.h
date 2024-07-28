@@ -287,8 +287,13 @@ class AMDGPUAttributorPass : public PassInfoMixin<AMDGPUAttributorPass> {
 private:
   TargetMachine &TM;
 
+  /// Asserts whether we can assume whole program visibility.
+  bool HasWholeProgramVisibility = false;
+
 public:
-  AMDGPUAttributorPass(TargetMachine &TM) : TM(TM){};
+  AMDGPUAttributorPass(TargetMachine &TM,
+                       bool HasWholeProgramVisibility = false)
+      : TM(TM), HasWholeProgramVisibility(HasWholeProgramVisibility) {};
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
