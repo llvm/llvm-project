@@ -129,7 +129,7 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
   auto localVarAttr = mlir::LLVM::DILocalVariableAttr::get(
       context, scopeAttr, mlir::StringAttr::get(context, result.second.name),
       fileAttr, getLineFromLoc(declOp.getLoc()), argNo, /* alignInBits*/ 0,
-      tyAttr);
+      tyAttr, mlir::LLVM::DIFlags::Zero);
   declOp->setLoc(builder.getFusedLoc({declOp->getLoc()}, localVarAttr));
 }
 
