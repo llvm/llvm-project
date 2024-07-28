@@ -78,7 +78,7 @@ TEST_F(LlvmLibcAtan2fTest, InFloatRange) {
 
       for (uint32_t j = 0, w = Y_START; j <= Y_COUNT; ++j, w += Y_STEP) {
         float y = FPBits(w).get_val();
-        if (y.is_nan() || y.is_inf())
+        if (FPBits(w).is_nan() || FPBits(w).is_inf())
           continue;
 
         LIBC_NAMESPACE::libc_errno = 0;
