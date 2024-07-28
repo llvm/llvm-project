@@ -1294,9 +1294,10 @@ amd_comgr_status_t AMDGPUCompiler::unbundle() {
 
     // Generate random name if none provided
     if (!strcmp(Input->Name, "")) {
-      char *buf = (char *) malloc(sizeof(char) * 30);
-      sprintf(buf,"comgr-bundle-%d.%s", std::rand() % 10000,
-              FileExtension.c_str());
+      const size_t buf_size = sizeof(char) * 30;
+      char *buf = (char *)malloc(buf_size);
+      snprintf(buf, buf_size, "comgr-bundle-%d.%s", std::rand() % 10000,
+               FileExtension.c_str());
       Input->Name = buf;
     }
 
@@ -1419,8 +1420,9 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
       // string to assign. This string is used when the DataObject is written
       // to the file system via SAVE_TEMPS, or if the object is a bundle which
       // also needs a file system write for unpacking
-      char *buf = (char *) malloc(sizeof(char) * 30);
-      sprintf(buf,"comgr-anon-bitcode-%d.bc", std::rand() % 10000);
+      const size_t buf_size = sizeof(char) * 30;
+      char *buf = (char *)malloc(buf_size);
+      snprintf(buf, buf_size, "comgr-anon-bitcode-%d.bc", std::rand() % 10000);
 
       Input->Name = buf;
     }
