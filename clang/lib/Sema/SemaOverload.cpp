@@ -47,6 +47,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <cstdlib>
 #include <optional>
@@ -9977,8 +9978,9 @@ Sema::AddArgumentDependentLookupCandidates(DeclarationName Name,
                                    CandEnd = CandidateSet.end();
        Cand != CandEnd; ++Cand)
     if (Cand->Function) {
-      Fns.erase(Cand->Function);
-      if (FunctionTemplateDecl *FunTmpl = Cand->Function->getPrimaryTemplate())
+      FunctionDecl *Fn = Cand->Function;
+      Fns.erase(Fn);
+      if (FunctionTemplateDecl *FunTmpl = Fn->getPrimaryTemplate())
         Fns.erase(FunTmpl);
     }
 
@@ -11343,8 +11345,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
     }
   }
 
-  if (TakingCandidateAddress &&
-      !checkAddressOfCandidateIsAvailable(S, Cand->Function))
+  if (TakingCandidateAddress && !checkAddressOfCandidateIsAvailable(S, Fn))
     return;
 
   // Emit the generic diagnostic and, optionally, add the hints to it.
@@ -11370,6 +11371,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
 /// over a candidate in any candidate set.
 static bool CheckArityMismatch(Sema &S, OverloadCandidate *Cand,
                                unsigned NumArgs, bool IsAddressOf = false) {
+  assert(Cand->Function && "Candidate is required to be a function.");
   FunctionDecl *Fn = Cand->Function;
   unsigned MinParams = Fn->getMinRequiredExplicitArguments() +
                        ((IsAddressOf && !Fn->isStatic()) ? 1 : 0);
@@ -11460,8 +11462,10 @@ static void DiagnoseArityMismatch(Sema &S, NamedDecl *Found, Decl *D,
 /// Arity mismatch diagnosis specific to a function overload candidate.
 static void DiagnoseArityMismatch(Sema &S, OverloadCandidate *Cand,
                                   unsigned NumFormalArgs) {
+  assert(Cand->Function && "Candidate must be a function");
+  FunctionDecl *Fn = Cand->Function;
   if (!CheckArityMismatch(S, Cand, NumFormalArgs, Cand->TookAddressOfOverload))
-    DiagnoseArityMismatch(S, Cand->FoundDecl, Cand->Function, NumFormalArgs,
+    DiagnoseArityMismatch(S, Cand->FoundDecl, Fn, NumFormalArgs,
                           Cand->TookAddressOfOverload);
 }
 
@@ -11761,19 +11765,22 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
 static void DiagnoseBadDeduction(Sema &S, OverloadCandidate *Cand,
                                  unsigned NumArgs,
                                  bool TakingCandidateAddress) {
+  assert(Cand->Function && "Candidate must be a function");
+  FunctionDecl *Fn = Cand->Function;
   TemplateDeductionResult TDK = Cand->DeductionFailure.getResult();
   if (TDK == TemplateDeductionResult::TooFewArguments ||
       TDK == TemplateDeductionResult::TooManyArguments) {
     if (CheckArityMismatch(S, Cand, NumArgs))
       return;
   }
-  DiagnoseBadDeduction(S, Cand->FoundDecl, Cand->Function, // pattern
+  DiagnoseBadDeduction(S, Cand->FoundDecl, Fn, // pattern
                        Cand->DeductionFailure, NumArgs, TakingCandidateAddress);
 }
 
 /// CUDA: diagnose an invalid call across targets.
 static void DiagnoseBadTarget(Sema &S, OverloadCandidate *Cand) {
   FunctionDecl *Caller = S.getCurFunctionDecl(/*AllowLambda=*/true);
+  assert(Cand->Function && "Candidate must be a Function.");
   FunctionDecl *Callee = Cand->Function;
 
   CUDAFunctionTarget CallerTarget = S.CUDA().IdentifyTarget(Caller),
@@ -11831,6 +11838,7 @@ static void DiagnoseBadTarget(Sema &S, OverloadCandidate *Cand) {
 }
 
 static void DiagnoseFailedEnableIfAttr(Sema &S, OverloadCandidate *Cand) {
+  assert(Cand->Function && "Candidate must be a function");
   FunctionDecl *Callee = Cand->Function;
   EnableIfAttr *Attr = static_cast<EnableIfAttr*>(Cand->DeductionFailure.Data);
 
@@ -11840,11 +11848,13 @@ static void DiagnoseFailedEnableIfAttr(Sema &S, OverloadCandidate *Cand) {
 }
 
 static void DiagnoseFailedExplicitSpec(Sema &S, OverloadCandidate *Cand) {
-  ExplicitSpecifier ES = ExplicitSpecifier::getFromDecl(Cand->Function);
+  assert(Cand->Function && "Candidate must be a function");
+  FunctionDecl *Fn = Cand->Function;
+  ExplicitSpecifier ES = ExplicitSpecifier::getFromDecl(Fn);
   assert(ES.isExplicit() && "not an explicit candidate");
 
   unsigned Kind;
-  switch (Cand->Function->getDeclKind()) {
+  switch (Fn->getDeclKind()) {
   case Decl::Kind::CXXConstructor:
     Kind = 0;
     break;
@@ -11852,7 +11862,7 @@ static void DiagnoseFailedExplicitSpec(Sema &S, OverloadCandidate *Cand) {
     Kind = 1;
     break;
   case Decl::Kind::CXXDeductionGuide:
-    Kind = Cand->Function->isImplicit() ? 0 : 2;
+    Kind = Fn->isImplicit() ? 0 : 2;
     break;
   default:
     llvm_unreachable("invalid Decl");
@@ -11862,7 +11872,7 @@ static void DiagnoseFailedExplicitSpec(Sema &S, OverloadCandidate *Cand) {
   // (particularly an out-of-class definition) will typically lack the
   // 'explicit' specifier.
   // FIXME: This is probably a good thing to do for all 'candidate' notes.
-  FunctionDecl *First = Cand->Function->getFirstDecl();
+  FunctionDecl *First = Fn->getFirstDecl();
   if (FunctionDecl *Pattern = First->getTemplateInstantiationPattern())
     First = Pattern->getFirstDecl();
 
@@ -11931,6 +11941,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
                                   unsigned NumArgs,
                                   bool TakingCandidateAddress,
                                   LangAS CtorDestAS = LangAS::Default) {
+  assert(Cand->Function && "Candidate must be a function");
   FunctionDecl *Fn = Cand->Function;
   if (shouldSkipNotingLambdaConversionDecl(Fn))
     return;
@@ -11945,8 +11956,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
   // Skip implicit member functions when trying to resolve
   // the address of a an overload set for a function pointer.
   if (Cand->TookAddressOfOverload &&
-      !Cand->Function->hasCXXExplicitFunctionObjectParameter() &&
-      !Cand->Function->isStatic())
+      !Fn->hasCXXExplicitFunctionObjectParameter() && !Fn->isStatic())
     return;
 
   // Note deleted candidates, but only if they're viable.
@@ -12044,7 +12054,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
     return;
 
   case ovl_fail_addr_not_available: {
-    bool Available = checkAddressOfCandidateIsAvailable(S, Cand->Function);
+    bool Available = checkAddressOfCandidateIsAvailable(S, Fn);
     (void)Available;
     assert(!Available);
     break;
