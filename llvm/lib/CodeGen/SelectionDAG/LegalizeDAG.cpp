@@ -3662,8 +3662,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   }
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM: {
-    if (SDValue Expanded = TLI.expandFMINIMUMNUM_FMAXIMUMNUM(Node, DAG))
-      Results.push_back(Expanded);
+    Results.push_back(TLI.expandFMINIMUMNUM_FMAXIMUMNUM(Node, DAG));
     break;
   }
   case ISD::FSIN:
