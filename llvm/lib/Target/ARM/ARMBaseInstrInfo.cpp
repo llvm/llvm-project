@@ -6352,8 +6352,7 @@ ARMBaseInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
 
     // We have a function we have information about.  Check if it's something we
     // can safely outline.
-    MachineFunction *MF = MI.getParent()->getParent();
-    MachineFunction *CalleeMF = MF->getMMI().getMachineFunction(*Callee);
+    MachineFunction *CalleeMF = MMI.getMachineFunction(*Callee);
 
     // We don't know what's going on with the callee at all.  Don't touch it.
     if (!CalleeMF)
