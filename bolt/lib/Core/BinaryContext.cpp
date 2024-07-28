@@ -646,7 +646,7 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
     const BinaryFunction *TargetBF = getBinaryFunctionContainingAddress(Value);
     const bool DoesBelongToFunction =
         BF.containsAddress(Value) ||
-        (TargetBF && TargetBF->isParentOrChildOf(BF));
+        (TargetBF && areRelatedFragments(TargetBF, &BF));
     if (!DoesBelongToFunction) {
       LLVM_DEBUG({
         if (!BF.containsAddress(Value)) {
@@ -841,7 +841,7 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
     // Prevent associating a jump table to a specific fragment twice.
     // This simple check arises from the assumption: no more than 2 fragments.
     if (JT->Parents.size() == 1 && JT->Parents[0] != &Function) {
-      assert(JT->Parents[0]->isParentOrChildOf(Function) &&
+      assert(areRelatedFragments(JT->Parents[0], &Function) &&
              "cannot re-use jump table of a different function");
       // Duplicate the entry for the parent function for easy access
       JT->Parents.push_back(&Function);
@@ -1209,12 +1209,13 @@ void BinaryContext::generateSymbolHashes() {
 }
 
 bool BinaryContext::registerFragment(BinaryFunction &TargetFunction,
-                                     BinaryFunction &Function) const {
+                                     BinaryFunction &Function) {
   assert(TargetFunction.isFragment() && "TargetFunction must be a fragment");
   if (TargetFunction.isChildOf(Function))
     return true;
   TargetFunction.addParentFragment(Function);
   Function.addFragment(TargetFunction);
+  FragmentClasses.unionSets(&TargetFunction, &Function);
   if (!HasRelocations) {
     TargetFunction.setSimple(false);
     Function.setSimple(false);
@@ -1336,7 +1337,7 @@ void BinaryContext::processInterproceduralReferences() {
 
     if (TargetFunction) {
       if (TargetFunction->isFragment() &&
-          !TargetFunction->isChildOf(Function)) {
+          !areRelatedFragments(TargetFunction, &Function)) {
         this->errs()
             << "BOLT-WARNING: interprocedural reference between unrelated "
                "fragments: "
