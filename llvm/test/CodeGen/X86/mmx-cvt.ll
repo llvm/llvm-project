@@ -8,20 +8,10 @@
 define void @cvt_v2f64_v2i32(<2 x double>, ptr) nounwind {
 ; X86-LABEL: cvt_v2f64_v2i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cvtpd2pi %xmm0, %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    movl (%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cvt_v2f64_v2i32:
@@ -44,20 +34,10 @@ define void @cvt_v2f64_v2i32(<2 x double>, ptr) nounwind {
 define void @cvtt_v2f64_v2i32(<2 x double>, ptr) nounwind {
 ; X86-LABEL: cvtt_v2f64_v2i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cvttpd2pi %xmm0, %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    movl (%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cvtt_v2f64_v2i32:
@@ -80,20 +60,10 @@ define void @cvtt_v2f64_v2i32(<2 x double>, ptr) nounwind {
 define void @fptosi_v2f64_v2i32(<2 x double>, ptr) nounwind {
 ; X86-LABEL: fptosi_v2f64_v2i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cvttpd2pi %xmm0, %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    movl (%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fptosi_v2f64_v2i32:
@@ -114,20 +84,10 @@ define void @fptosi_v2f64_v2i32(<2 x double>, ptr) nounwind {
 define void @cvt_v2f32_v2i32(<4 x float>, ptr) nounwind {
 ; X86-LABEL: cvt_v2f32_v2i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cvtps2pi %xmm0, %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    movl (%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cvt_v2f32_v2i32:
@@ -150,20 +110,10 @@ define void @cvt_v2f32_v2i32(<4 x float>, ptr) nounwind {
 define void @cvtt_v2f32_v2i32(<4 x float>, ptr) nounwind {
 ; X86-LABEL: cvtt_v2f32_v2i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cvttps2pi %xmm0, %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    movl (%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cvtt_v2f32_v2i32:
@@ -186,20 +136,10 @@ define void @cvtt_v2f32_v2i32(<4 x float>, ptr) nounwind {
 define void @fptosi_v4f32_v4i32(<4 x float>, ptr) nounwind {
 ; X86-LABEL: fptosi_v4f32_v4i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cvttps2pi %xmm0, %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    movl (%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fptosi_v4f32_v4i32:
@@ -221,20 +161,10 @@ define void @fptosi_v4f32_v4i32(<4 x float>, ptr) nounwind {
 define void @fptosi_v2f32_v2i32(<4 x float>, ptr) nounwind {
 ; X86-LABEL: fptosi_v2f32_v2i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cvttps2pi %xmm0, %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    movl (%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fptosi_v2f32_v2i32:
