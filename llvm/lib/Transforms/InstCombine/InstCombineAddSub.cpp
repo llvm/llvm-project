@@ -1709,7 +1709,8 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     // (add X, (sext/zext (icmp eq X, C)))
     //    -> (select (icmp eq X, C), (add C, (sext/zext 1)), X)
     auto CondMatcher = m_CombineAnd(
-        m_Value(Cond), m_SpecificICmp(ICmpInst::ICMP_EQ, m_Deferred(A), m_ImmConstant(C)));
+        m_Value(Cond),
+        m_SpecificICmp(ICmpInst::ICMP_EQ, m_Deferred(A), m_ImmConstant(C)));
 
     if (match(&I,
               m_c_Add(m_Value(A),
