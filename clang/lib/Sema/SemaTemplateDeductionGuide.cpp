@@ -39,6 +39,7 @@
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -299,26 +300,6 @@ NamedDecl *transformTemplateParameter(Sema &SemaRef, DeclContext *DC,
   llvm_unreachable("Unhandled template parameter types");
 }
 
-unsigned getTemplateParameterDepth(NamedDecl *TemplateParam) {
-  if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(TemplateParam))
-    return TTP->getDepth();
-  if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TemplateParam))
-    return TTP->getDepth();
-  if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TemplateParam))
-    return NTTP->getDepth();
-  llvm_unreachable("Unhandled template parameter types");
-}
-
-unsigned getTemplateParameterIndex(NamedDecl *TemplateParam) {
-  if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(TemplateParam))
-    return TTP->getIndex();
-  if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TemplateParam))
-    return TTP->getIndex();
-  if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TemplateParam))
-    return NTTP->getIndex();
-  llvm_unreachable("Unhandled template parameter types");
-}
-
 /// Transform to convert portions of a constructor declaration into the
 /// corresponding deduction guide, per C++1z [over.match.class.deduct]p1.
 struct ConvertConstructorToDeductionGuideTransform {
@@ -393,23 +374,22 @@ struct ConvertConstructorToDeductionGuideTransform {
         Args.addOuterRetainedLevel();
         if (NestedPattern)
           Args.addOuterRetainedLevels(NestedPattern->getTemplateDepth());
+        auto [Depth, Index] = getDepthAndIndex(Param);
         NamedDecl *NewParam = transformTemplateParameter(
-            SemaRef, DC, Param, Args,
-            getTemplateParameterIndex(Param) + Depth1IndexAdjustment,
-            getTemplateParameterDepth(Param) - 1);
+            SemaRef, DC, Param, Args, Index + Depth1IndexAdjustment, Depth - 1);
         if (!NewParam)
           return nullptr;
         // Constraints require that we substitute depth-1 arguments
         // to match depths when substituted for evaluation later
         Depth1Args.push_back(SemaRef.Context.getInjectedTemplateArg(NewParam));
 
-        if (NestedPattern)
+        if (NestedPattern) {
+          auto [Depth, Index] = getDepthAndIndex(NewParam);
           NewParam = transformTemplateParameter(
-              SemaRef, DC, NewParam, OuterInstantiationArgs,
-              getTemplateParameterIndex(NewParam),
-              getTemplateParameterDepth(NewParam) -
-                  OuterInstantiationArgs.getNumSubstitutedLevels(),
+              SemaRef, DC, NewParam, OuterInstantiationArgs, Index,
+              Depth - OuterInstantiationArgs.getNumSubstitutedLevels(),
               /*EvaluateConstraint=*/false);
+        }
 
         assert(NewParam->getTemplateDepth() == 0 &&
                "Unexpected template parameter depth");
@@ -687,8 +667,10 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
 
     void MarkAppeared(NamedDecl *ND) {
       if (llvm::isa<NonTypeTemplateParmDecl, TemplateTypeParmDecl,
-                    TemplateTemplateParmDecl>(ND))
-        Mark(getTemplateParameterDepth(ND), getTemplateParameterIndex(ND));
+                    TemplateTemplateParmDecl>(ND)) {
+        auto [Depth, Index] = getDepthAndIndex(ND);
+        Mark(Depth, Index);
+      }
     }
     void Mark(unsigned Depth, unsigned Index) {
       if (Index < TemplateParamList->size() &&
@@ -775,7 +757,7 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
     NamedDecl *NewParam = transformTemplateParameter(
         SemaRef, AliasTemplate->getDeclContext(), TP, Args,
         /*NewIndex=*/AdjustedAliasTemplateArgs.size(),
-        getTemplateParameterDepth(TP) + AdjustDepth);
+        getDepthAndIndex(TP).first + AdjustDepth);
 
     TemplateArgument NewTemplateArgument =
         Context.getInjectedTemplateArg(NewParam);
@@ -798,10 +780,10 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
       Args.setKind(TemplateSubstitutionKind::Rewrite);
       Args.addOuterTemplateArguments(TemplateArgsForBuildingRC);
       // Rebuild the template parameter with updated depth and index.
-      NamedDecl *NewParam = transformTemplateParameter(
-          SemaRef, F->getDeclContext(), TP, Args,
-          /*NewIndex=*/FirstUndeducedParamIdx,
-          getTemplateParameterDepth(TP) + AdjustDepth);
+      NamedDecl *NewParam =
+          transformTemplateParameter(SemaRef, F->getDeclContext(), TP, Args,
+                                     /*NewIndex=*/FirstUndeducedParamIdx,
+                                     getDepthAndIndex(TP).first + AdjustDepth);
       FirstUndeducedParamIdx += 1;
       assert(TemplateArgsForBuildingRC[Index].isNull());
       TemplateArgsForBuildingRC[Index] =
@@ -903,7 +885,7 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
       NamedDecl *NewParam = transformTemplateParameter(
           SemaRef, AliasTemplate->getDeclContext(), TP, Args,
           /*NewIndex=*/TransformedTemplateArgs.size(),
-          getTemplateParameterDepth(TP) + AdjustDepth);
+          getDepthAndIndex(TP).first + AdjustDepth);
 
       TemplateArgument NewTemplateArgument =
           Context.getInjectedTemplateArg(NewParam);
@@ -1065,8 +1047,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
     Args.addOuterTemplateArguments(TransformedDeducedAliasArgs);
     NamedDecl *NewParam = transformTemplateParameter(
         SemaRef, AliasTemplate->getDeclContext(), TP, Args,
-        /*NewIndex=*/FPrimeTemplateParams.size(),
-        getTemplateParameterDepth(TP));
+        /*NewIndex=*/FPrimeTemplateParams.size(), getDepthAndIndex(TP).first);
     FPrimeTemplateParams.push_back(NewParam);
 
     TemplateArgument NewTemplateArgument =
@@ -1085,7 +1066,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
     Args.addOuterTemplateArguments(TemplateArgsForBuildingFPrime);
     NamedDecl *NewParam = transformTemplateParameter(
         SemaRef, F->getDeclContext(), TP, Args, FPrimeTemplateParams.size(),
-        getTemplateParameterDepth(TP));
+        getDepthAndIndex(TP).first);
     FPrimeTemplateParams.push_back(NewParam);
 
     assert(TemplateArgsForBuildingFPrime[FTemplateParamIdx].isNull() &&
