@@ -49,7 +49,7 @@ TEST_F(LlvmLibcExp2m1fTest, InFloatRange) {
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = FPBits(v).get_val();
-    if (x.is_nan() || x.is_inf())
+    if (FPBits(v).is_nan() || FPBits(v).is_inf())
       continue;
     LIBC_NAMESPACE::libc_errno = 0;
     float result = LIBC_NAMESPACE::exp2m1f(x);
@@ -58,7 +58,8 @@ TEST_F(LlvmLibcExp2m1fTest, InFloatRange) {
     // in the single-precision floating point range, then ignore comparing with
     // MPFR result as MPFR can still produce valid results because of its
     // wider precision.
-    if (result.is_nan() || result.is_inf() || LIBC_NAMESPACE::libc_errno != 0)
+    if (FPBits(result).is_nan() || FPBits(result).is_inf() ||
+        LIBC_NAMESPACE::libc_errno != 0)
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2m1, x,
                                    LIBC_NAMESPACE::exp2m1f(x), 0.5);

@@ -74,7 +74,7 @@ TEST_F(LlvmLibcLog1pfTest, InFloatRange) {
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = FPBits(v).get_val();
-    if (x.is_nan() || x.is_inf())
+    if (FPBits(v).is_nan() || FPBits(v).is_inf())
       continue;
     LIBC_NAMESPACE::libc_errno = 0;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log1p, x,

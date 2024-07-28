@@ -67,12 +67,12 @@ TEST_F(LlvmLibcSinTest, InDoubleRange) {
 
     for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
       double x = FPBits(v).get_val();
-      if (x.is_nan() || x.is_inf())
+      if (FPBits(v).is_nan() || FPBits(v).is_inf())
         continue;
       LIBC_NAMESPACE::libc_errno = 0;
       double result = LIBC_NAMESPACE::sin(x);
       ++cc;
-      if (result.is_nan() || result.is_inf())
+      if (FPBits(result).is_nan() || FPBits(result).is_inf())
         continue;
 
       ++count;

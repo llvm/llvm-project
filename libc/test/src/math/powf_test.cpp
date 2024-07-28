@@ -71,7 +71,7 @@ TEST_F(LlvmLibcPowfTest, InFloatRange) {
 
     for (uint32_t i = 0, v = X_START; i <= X_COUNT; ++i, v += X_STEP) {
       float x = FPBits(v).get_val();
-      if (x.is_nan() || x.is_inf() || x < 0.0)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x < 0.0)
         continue;
 
       for (uint32_t j = 0, w = Y_START; j <= Y_COUNT; ++j, w += Y_STEP) {
@@ -82,7 +82,7 @@ TEST_F(LlvmLibcPowfTest, InFloatRange) {
         LIBC_NAMESPACE::libc_errno = 0;
         float result = LIBC_NAMESPACE::powf(x, y);
         ++cc;
-        if (result.is_nan() || result.is_inf())
+        if (FPBits(result).is_nan() || FPBits(result).is_inf())
           continue;
 
         ++count;
