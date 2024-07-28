@@ -1038,7 +1038,7 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM) {
        &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID,
        &AAAMDWavesPerEU::ID, &AAAMDGPUNoAGPR::ID, &AACallEdges::ID,
        &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
-       &AAUnderlyingObjects::ID});
+       &AAUnderlyingObjects::ID, &AAIndirectCallInfo::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.Allowed = &Allowed;
