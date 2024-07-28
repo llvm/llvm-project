@@ -766,6 +766,8 @@ define void @foo(ptr %arg0, ptr %arg1) {
       sandboxir::LoadInst::create(Ld->getType(), Arg1, Align(8),
                                   /*InsertBefore=*/Ret, Ctx,
                                   /*IsVolatile=*/false, "NewLd");
+  // Checking if create() was volatile
+  EXPECT_FALSE(NewLd->isVolatile())
   EXPECT_EQ(NewLd->getType(), Ld->getType());
   EXPECT_EQ(NewLd->getPointerOperand(), Arg1);
   EXPECT_EQ(NewLd->getAlign(), 8);
