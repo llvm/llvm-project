@@ -6,10 +6,12 @@
 # ERR1: error: 1.lds:1: there is a cycle in linker script INCLUDEs
 
 # RUN: not ld.lld a.o -T 2a.lds 2>&1 | FileCheck %s --check-prefix=ERR2
-# ERR2: error: 2a.lds:1: there is a cycle in linker script INCLUDEs
+# ERR2: error: 2b.lds:1: there is a cycle in linker script INCLUDEs
 
-# RUN: not ld.lld a.o -T 3.lds 2>&1 | FileCheck %s --check-prefix=ERR3
-# ERR3: error: 3.lds:2: there is a cycle in linker script INCLUDEs
+# RUN: ld.lld a.o -T 3.lds -o 3
+# RUN: llvm-objdump -s 3 | FileCheck %s --check-prefix=CHECK3
+# CHECK3:      Contents of section foo:
+# CHECK3-NEXT: 0000 2a2a                    **
 
 #--- 0.lds
 BYTE(42)
