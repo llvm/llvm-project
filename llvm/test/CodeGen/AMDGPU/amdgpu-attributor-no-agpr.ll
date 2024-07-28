@@ -231,19 +231,7 @@ define amdgpu_kernel void @indirect_calls_none_agpr(i1 %cond) {
 ; CHECK-LABEL: define amdgpu_kernel void @indirect_calls_none_agpr(
 ; CHECK-SAME: i1 [[COND:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FPTR:%.*]] = select i1 [[COND]], ptr @empty, ptr @also_empty
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FPTR]], @also_empty
-; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @also_empty()
-; CHECK-NEXT:    br label [[TMP6:%.*]]
-; CHECK:       3:
-; CHECK-NEXT:    br i1 true, label [[TMP4:%.*]], label [[TMP5:%.*]]
-; CHECK:       4:
-; CHECK-NEXT:    call void @empty()
-; CHECK-NEXT:    br label [[TMP6]]
-; CHECK:       5:
-; CHECK-NEXT:    unreachable
-; CHECK:       6:
+; CHECK-NEXT:    call void [[FPTR]](), !callees [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %fptr = select i1 %cond, ptr @empty, ptr @also_empty
@@ -264,4 +252,6 @@ attributes #0 = { "amdgpu-no-agpr" }
 ; CHECK: attributes #[[ATTR7:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR8:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR9]] = { "amdgpu-no-agpr" }
+;.
+; CHECK: [[META0]] = !{ptr @also_empty, ptr @empty}
 ;.

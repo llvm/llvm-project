@@ -14,6 +14,7 @@
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/CycleAnalysis.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
@@ -1041,11 +1042,28 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
        &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
        &AAUnderlyingObjects::ID, &AAIndirectCallInfo::ID});
 
+  /// Helper to decide if we should specialize the indirect \p CB for \p Callee.
+  /// \p IsSingleton indicates whether the \p Callee is the only assumed callee.
+  auto IndirectCalleeSpecializationCallback =
+      [&](Attributor &A, const AbstractAttribute &AA, CallBase &CB,
+          Function &Callee, bool IsSingleton) {
+        if (AMDGPU::isEntryFunctionCC(Callee.getCallingConv()))
+          return false;
+        // Singleton functions should be specialized.
+        if (IsSingleton)
+          return true;
+        // Otherwise specialize uniform values.
+        const auto &TTI = TM.getTargetTransformInfo(*CB.getCaller());
+        return TTI.isAlwaysUniform(CB.getCalledOperand());
+      };
+
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = HasWholeProgramVisibility;
   AC.Allowed = &Allowed;
   AC.IsModulePass = true;
   AC.DefaultInitializeLiveInternals = false;
+  AC.IndirectCalleeSpecializationCallback =
+      IndirectCalleeSpecializationCallback;
   AC.IPOAmendableCB = [](const Function &F) {
     return F.getCallingConv() == CallingConv::AMDGPU_KERNEL;
   };

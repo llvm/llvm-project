@@ -12347,7 +12347,8 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     SmallVector<Function *, 8> SkippedAssumedCallees;
     SmallVector<std::pair<CallInst *, Instruction *>> NewCalls;
     for (Function *NewCallee : AssumedCallees) {
-      if (!A.shouldSpecializeCallSiteForCallee(*this, *CB, *NewCallee)) {
+      if (!A.shouldSpecializeCallSiteForCallee(*this, *CB, *NewCallee,
+                                               AssumedCallees.size() == 1)) {
         SkippedAssumedCallees.push_back(NewCallee);
         SpecializedForAllCallees = false;
         continue;
