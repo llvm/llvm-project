@@ -17,15 +17,15 @@
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
 using LlvmLibcExplogfTest = LIBC_NAMESPACE::testing::FPTest<float>;
+using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>
 
-namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
+    namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 constexpr int def_count = 100003;
 constexpr float def_prec = 0.500001f;
 
 auto f_normal = [](float x) -> bool {
-  return !(LIBC_NAMESPACE::fputil::FPBits<float>(x).is_nan() ||
-           LIBC_NAMESPACE::fputil::FPBits<float>(x).is_inf() ||
+  return !(FPBits(x).is_nan() || FPBits(x).is_inf() ||
            LIBC_NAMESPACE::fabs(x) < 2E-38);
 };
 
