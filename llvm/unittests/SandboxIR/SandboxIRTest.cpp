@@ -771,14 +771,14 @@ define void @foo(ptr %arg0, ptr %arg1) {
   EXPECT_EQ(NewLd->getAlign(), 8);
   EXPECT_EQ(NewLd->getName(), "NewLd");
 
-  sandboxir::LoadInst *NewVld =
+  sandboxir::LoadInst *NewVLd =
       sandboxir::LoadInst::create(Vld->getType(), Arg1, Align(8),
                                   /*InsertBefore=*/Ret, Ctx,
-                                  /*IsVolatile=*/true, "NewVld");
+                                  /*IsVolatile=*/true, "NewVLd");
 
   // Checking if create() was volatile
-  EXPECT_EQ(NewVld->isVolatile(), Vld->isVolatile());
-  EXPECT_EQ(NewVld->getName(), "NewVld");
+  EXPECT_TRUE(NewVLd->isVolatile());
+  EXPECT_EQ(NewVLd->getName(), "NewVLd");
 }
 
 TEST_F(SandboxIRTest, StoreInst) {
