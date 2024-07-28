@@ -47,15 +47,55 @@ bool RISCVTTIImpl::getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
   IRBuilder<> IB(II);
   bool HasMask = false;
 
+  auto getNFields = [](const IntrinsicInst *II, unsigned PtrOperandNo,
+                       bool IsWrite) -> unsigned {
+    if (IsWrite)
+      return PtrOperandNo;
+    if (auto *STy = dyn_cast<StructType>(II->getType()))
+      return STy->getNumElements();
+    return 1;
+  };
+
   switch (IntNo) {
   case Intrinsic::riscv_vle_mask:
   case Intrinsic::riscv_vse_mask:
+  case Intrinsic::riscv_vlseg2_mask:
+  case Intrinsic::riscv_vlseg3_mask:
+  case Intrinsic::riscv_vlseg4_mask:
+  case Intrinsic::riscv_vlseg5_mask:
+  case Intrinsic::riscv_vlseg6_mask:
+  case Intrinsic::riscv_vlseg7_mask:
+  case Intrinsic::riscv_vlseg8_mask:
+  case Intrinsic::riscv_vsseg2_mask:
+  case Intrinsic::riscv_vsseg3_mask:
+  case Intrinsic::riscv_vsseg4_mask:
+  case Intrinsic::riscv_vsseg5_mask:
+  case Intrinsic::riscv_vsseg6_mask:
+  case Intrinsic::riscv_vsseg7_mask:
+  case Intrinsic::riscv_vsseg8_mask:
     HasMask = true;
     [[fallthrough]];
   case Intrinsic::riscv_vle:
-  case Intrinsic::riscv_vse: {
+  case Intrinsic::riscv_vse:
+  case Intrinsic::riscv_vlseg2:
+  case Intrinsic::riscv_vlseg3:
+  case Intrinsic::riscv_vlseg4:
+  case Intrinsic::riscv_vlseg5:
+  case Intrinsic::riscv_vlseg6:
+  case Intrinsic::riscv_vlseg7:
+  case Intrinsic::riscv_vlseg8:
+  case Intrinsic::riscv_vsseg2:
+  case Intrinsic::riscv_vsseg3:
+  case Intrinsic::riscv_vsseg4:
+  case Intrinsic::riscv_vsseg5:
+  case Intrinsic::riscv_vsseg6:
+  case Intrinsic::riscv_vsseg7:
+  case Intrinsic::riscv_vsseg8: {
     bool IsWrite = II->getType()->isVoidTy();
     Type *Ty = IsWrite ? II->getArgOperand(0)->getType() : II->getType();
+    // The results of segment loads are struct type.
+    if (auto *STy = dyn_cast<StructType>(Ty))
+      Ty = STy->getTypeAtIndex(0U);
     const auto *RVVIInfo = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntNo);
     unsigned VLIndex = RVVIInfo->VLOperand;
     unsigned PtrOperandNo = VLIndex - 1 - HasMask;
@@ -66,18 +106,58 @@ bool RISCVTTIImpl::getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
     if (HasMask)
       Mask = II->getArgOperand(VLIndex - 1);
     Value *EVL = II->getArgOperand(VLIndex);
+    unsigned NF = getNFields(II, PtrOperandNo, IsWrite);
+
+    // RVV uses contiguous nf elements as a segment.
+    if (NF > 1) {
+      unsigned ElemSize = Ty->getScalarSizeInBits();
+      auto *SegTy = IntegerType::get(C, ElemSize * NF);
+      Ty = VectorType::get(SegTy, cast<VectorType>(Ty));
+    }
+
     Interesting.emplace_back(II, PtrOperandNo, IsWrite, Ty, Alignment, Mask,
                              EVL);
     return true;
   }
   case Intrinsic::riscv_vlse_mask:
   case Intrinsic::riscv_vsse_mask:
+  case Intrinsic::riscv_vlsseg2_mask:
+  case Intrinsic::riscv_vlsseg3_mask:
+  case Intrinsic::riscv_vlsseg4_mask:
+  case Intrinsic::riscv_vlsseg5_mask:
+  case Intrinsic::riscv_vlsseg6_mask:
+  case Intrinsic::riscv_vlsseg7_mask:
+  case Intrinsic::riscv_vlsseg8_mask:
+  case Intrinsic::riscv_vssseg2_mask:
+  case Intrinsic::riscv_vssseg3_mask:
+  case Intrinsic::riscv_vssseg4_mask:
+  case Intrinsic::riscv_vssseg5_mask:
+  case Intrinsic::riscv_vssseg6_mask:
+  case Intrinsic::riscv_vssseg7_mask:
+  case Intrinsic::riscv_vssseg8_mask:
     HasMask = true;
     [[fallthrough]];
   case Intrinsic::riscv_vlse:
-  case Intrinsic::riscv_vsse: {
+  case Intrinsic::riscv_vsse:
+  case Intrinsic::riscv_vlsseg2:
+  case Intrinsic::riscv_vlsseg3:
+  case Intrinsic::riscv_vlsseg4:
+  case Intrinsic::riscv_vlsseg5:
+  case Intrinsic::riscv_vlsseg6:
+  case Intrinsic::riscv_vlsseg7:
+  case Intrinsic::riscv_vlsseg8:
+  case Intrinsic::riscv_vssseg2:
+  case Intrinsic::riscv_vssseg3:
+  case Intrinsic::riscv_vssseg4:
+  case Intrinsic::riscv_vssseg5:
+  case Intrinsic::riscv_vssseg6:
+  case Intrinsic::riscv_vssseg7:
+  case Intrinsic::riscv_vssseg8: {
     bool IsWrite = II->getType()->isVoidTy();
     Type *Ty = IsWrite ? II->getArgOperand(0)->getType() : II->getType();
+    // The results of segment loads are struct type.
+    if (auto *STy = dyn_cast<StructType>(Ty))
+      Ty = STy->getTypeAtIndex(0U);
     const auto *RVVIInfo = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntNo);
     unsigned VLIndex = RVVIInfo->VLOperand;
     unsigned PtrOperandNo = VLIndex - 2 - HasMask;
@@ -98,6 +178,14 @@ bool RISCVTTIImpl::getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
     if (HasMask)
       Mask = II->getArgOperand(VLIndex - 1);
     Value *EVL = II->getArgOperand(VLIndex);
+    unsigned NF = getNFields(II, PtrOperandNo, IsWrite);
+
+    // RVV uses contiguous nf elements as a segment.
+    if (NF > 1) {
+      unsigned ElemSize = Ty->getScalarSizeInBits();
+      auto *SegTy = IntegerType::get(C, ElemSize * NF);
+      Ty = VectorType::get(SegTy, cast<VectorType>(Ty));
+    }
     Interesting.emplace_back(II, PtrOperandNo, IsWrite, Ty, Alignment, Mask,
                              EVL, Stride);
     return true;
@@ -106,14 +194,73 @@ bool RISCVTTIImpl::getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
   case Intrinsic::riscv_vluxei_mask:
   case Intrinsic::riscv_vsoxei_mask:
   case Intrinsic::riscv_vsuxei_mask:
+  case Intrinsic::riscv_vloxseg2_mask:
+  case Intrinsic::riscv_vloxseg3_mask:
+  case Intrinsic::riscv_vloxseg4_mask:
+  case Intrinsic::riscv_vloxseg5_mask:
+  case Intrinsic::riscv_vloxseg6_mask:
+  case Intrinsic::riscv_vloxseg7_mask:
+  case Intrinsic::riscv_vloxseg8_mask:
+  case Intrinsic::riscv_vluxseg2_mask:
+  case Intrinsic::riscv_vluxseg3_mask:
+  case Intrinsic::riscv_vluxseg4_mask:
+  case Intrinsic::riscv_vluxseg5_mask:
+  case Intrinsic::riscv_vluxseg6_mask:
+  case Intrinsic::riscv_vluxseg7_mask:
+  case Intrinsic::riscv_vluxseg8_mask:
+  case Intrinsic::riscv_vsoxseg2_mask:
+  case Intrinsic::riscv_vsoxseg3_mask:
+  case Intrinsic::riscv_vsoxseg4_mask:
+  case Intrinsic::riscv_vsoxseg5_mask:
+  case Intrinsic::riscv_vsoxseg6_mask:
+  case Intrinsic::riscv_vsoxseg7_mask:
+  case Intrinsic::riscv_vsoxseg8_mask:
+  case Intrinsic::riscv_vsuxseg2_mask:
+  case Intrinsic::riscv_vsuxseg3_mask:
+  case Intrinsic::riscv_vsuxseg4_mask:
+  case Intrinsic::riscv_vsuxseg5_mask:
+  case Intrinsic::riscv_vsuxseg6_mask:
+  case Intrinsic::riscv_vsuxseg7_mask:
+  case Intrinsic::riscv_vsuxseg8_mask:
     HasMask = true;
     [[fallthrough]];
   case Intrinsic::riscv_vloxei:
   case Intrinsic::riscv_vluxei:
   case Intrinsic::riscv_vsoxei:
-  case Intrinsic::riscv_vsuxei: {
+  case Intrinsic::riscv_vsuxei:
+  case Intrinsic::riscv_vloxseg2:
+  case Intrinsic::riscv_vloxseg3:
+  case Intrinsic::riscv_vloxseg4:
+  case Intrinsic::riscv_vloxseg5:
+  case Intrinsic::riscv_vloxseg6:
+  case Intrinsic::riscv_vloxseg7:
+  case Intrinsic::riscv_vloxseg8:
+  case Intrinsic::riscv_vluxseg2:
+  case Intrinsic::riscv_vluxseg3:
+  case Intrinsic::riscv_vluxseg4:
+  case Intrinsic::riscv_vluxseg5:
+  case Intrinsic::riscv_vluxseg6:
+  case Intrinsic::riscv_vluxseg7:
+  case Intrinsic::riscv_vluxseg8:
+  case Intrinsic::riscv_vsoxseg2:
+  case Intrinsic::riscv_vsoxseg3:
+  case Intrinsic::riscv_vsoxseg4:
+  case Intrinsic::riscv_vsoxseg5:
+  case Intrinsic::riscv_vsoxseg6:
+  case Intrinsic::riscv_vsoxseg7:
+  case Intrinsic::riscv_vsoxseg8:
+  case Intrinsic::riscv_vsuxseg2:
+  case Intrinsic::riscv_vsuxseg3:
+  case Intrinsic::riscv_vsuxseg4:
+  case Intrinsic::riscv_vsuxseg5:
+  case Intrinsic::riscv_vsuxseg6:
+  case Intrinsic::riscv_vsuxseg7:
+  case Intrinsic::riscv_vsuxseg8: {
     bool IsWrite = II->getType()->isVoidTy();
     Type *Ty = IsWrite ? II->getArgOperand(0)->getType() : II->getType();
+    // The results of segment loads are struct type.
+    if (auto *STy = dyn_cast<StructType>(Ty))
+      Ty = STy->getTypeAtIndex(0U);
     const auto *RVVIInfo = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntNo);
     unsigned VLIndex = RVVIInfo->VLOperand;
     unsigned PtrOperandNo = VLIndex - 2 - HasMask;
@@ -130,6 +277,14 @@ bool RISCVTTIImpl::getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
     if (HasMask)
       Mask = II->getArgOperand(VLIndex - 1);
     Value *EVL = II->getArgOperand(VLIndex);
+    unsigned NF = getNFields(II, PtrOperandNo, IsWrite);
+
+    // RVV uses contiguous nf elements as a segment.
+    if (NF > 1) {
+      unsigned ElemSize = Ty->getScalarSizeInBits();
+      auto *SegTy = IntegerType::get(C, ElemSize * NF);
+      Ty = VectorType::get(SegTy, cast<VectorType>(Ty));
+    }
     Interesting.emplace_back(II, PtrOperandNo, IsWrite, Ty, Align(1), Mask, EVL,
                              /* Stride */ nullptr, OffsetOp);
   }
