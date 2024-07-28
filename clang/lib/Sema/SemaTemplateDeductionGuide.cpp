@@ -673,9 +673,9 @@ llvm::SmallSet<unsigned, 8> TemplateParamsReferencedInTemplateArgumentList(
       }
     }
     void Mark(unsigned Depth, unsigned Index) {
-      auto [ParamDepth, _] = getDepthAndIndex(TemplateParamList->getParam(Index));
-      if (Index < TemplateParamList->size() &&
-          ParamDepth == Depth)
+      auto [ParamDepth, _] =
+          getDepthAndIndex(TemplateParamList->getParam(Index));
+      if (Index < TemplateParamList->size() && ParamDepth == Depth)
         ReferencedTemplateParams.set(Index);
     }
   };
