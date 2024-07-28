@@ -405,11 +405,18 @@ if (NOT UNIX)
     PRIVATE version)
 endif()
 
+find_package(Threads)
+target_link_libraries(amd_comgr PRIVATE ${CMAKE_THREAD_LIBS_INIT})
+
+find_library(LIBRT rt)
+if(LIBRT)
+  target_link_libraries(amd_comgr PRIVATE ${LIBRT})
+endif()
+
+
 if (NOT WIN32)
   target_link_libraries(amd_comgr
     PRIVATE
-      pthread
-      rt
       c
       ${CMAKE_DL_LIBS})
 endif()
