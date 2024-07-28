@@ -81,6 +81,19 @@
 // RUN:   | FileCheck --check-prefix=WARN13 %s
 // WARN13: warning: overriding '-ffp-model=strict' option with '-fapprox-func' [-Woverriding-option]
 
+// RUN: %clang -### -ffp-model=precise -ffp-contract=off -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=WARN14 %s
+// WARN14: warning: overriding '-ffp-model=precise' option with '-ffp-contract=off' [-Woverriding-option]
+
+// RUN: %clang -### -ffp-model=precise -ffp-contract=fast -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=WARN15 %s
+// WARN15: warning: overriding '-ffp-model=precise' option with '-ffp-contract=fast' [-Woverriding-option]
+
+// RUN: %clang -### -ffp-model=strict -fassociative-math -ffp-contract=on \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefix=WARN16 %s
+// WARN16: warning: overriding '-ffp-model=strict' option with '-fassociative-math' [-Woverriding-option]
+// WARN16: warning: overriding '-ffp-model=strict' option with '-ffp-contract=on' [-Woverriding-option]
+
 // RUN: %clang -### -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOROUND %s
 // CHECK-NOROUND: "-cc1"
@@ -150,7 +163,7 @@
 // CHECK-FEB-IGNORE: "-fno-rounding-math"
 // CHECK-FEB-IGNORE: "-ffp-exception-behavior=ignore"
 
-// RUN: %clang -### -nostdinc -ffast-math -ffp-model=fast -c %s 2>&1 \
+// RUN: %clang -### -nostdinc -Werror -ffast-math -ffp-model=fast -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FASTMATH-FPM-FAST %s
 // CHECK-FASTMATH-FPM-FAST: "-cc1"
 // CHECK-FASTMATH-FPM-FAST: "-menable-no-infs"
@@ -165,7 +178,7 @@
 // CHECK-FASTMATH-FPM-FAST: "-ffast-math"
 // CHECK-FASTMATH-FPM-FAST: "-ffinite-math-only"
 
-// RUN: %clang -### -nostdinc -ffast-math -ffp-model=precise -c %s 2>&1 \
+// RUN: %clang -### -nostdinc -Werror -ffast-math -ffp-model=precise -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FASTMATH-FPM-PRECISE %s
 // CHECK-FASTMATH-FPM-PRECISE:     "-cc1"
 // CHECK-FASTMATH-FPM-PRECISE-NOT: "-menable-no-infs"
@@ -180,7 +193,7 @@
 // CHECK-FASTMATH-FPM-PRECISE-NOT: "-ffast-math"
 // CHECK-FASTMATH-FPM-PRECISE-NOT: "-ffinite-math-only"
 
-// RUN: %clang -### -nostdinc -ffast-math -ffp-model=strict -c %s 2>&1 \
+// RUN: %clang -### -nostdinc -Werror -ffast-math -ffp-model=strict -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FASTMATH-FPM-STRICT %s
 // CHECK-FASTMATH-FPM-STRICT:     "-cc1"
 // CHECK-FASTMATH-FPM-STRICT-NOT: "-menable-no-infs"

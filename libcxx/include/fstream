@@ -188,7 +188,6 @@ typedef basic_fstream<wchar_t> wfstream;
 
 #include <__algorithm/max.h>
 #include <__assert>
-#include <__availability>
 #include <__config>
 #include <__fwd/fstream.h>
 #include <__locale>
@@ -1104,8 +1103,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit basic_ifstream(const string& __s, ios_base::openmode __mode = ios_base::in);
 #  if _LIBCPP_STD_VER >= 17
   template <class _Tp, class = enable_if_t<is_same_v<_Tp, filesystem::path>>>
-  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_HIDE_FROM_ABI explicit basic_ifstream(
-      const _Tp& __p, ios_base::openmode __mode = ios_base::in)
+  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY
+      _LIBCPP_HIDE_FROM_ABI explicit basic_ifstream(const _Tp& __p, ios_base::openmode __mode = ios_base::in)
       : basic_ifstream(__p.c_str(), __mode) {}
 #  endif // _LIBCPP_STD_VER >= 17
   _LIBCPP_HIDE_FROM_ABI basic_ifstream(basic_ifstream&& __rhs);
@@ -1259,8 +1258,8 @@ public:
 
 #  if _LIBCPP_STD_VER >= 17
   template <class _Tp, class = enable_if_t<is_same_v<_Tp, filesystem::path>>>
-  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_HIDE_FROM_ABI explicit basic_ofstream(
-      const _Tp& __p, ios_base::openmode __mode = ios_base::out)
+  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY
+      _LIBCPP_HIDE_FROM_ABI explicit basic_ofstream(const _Tp& __p, ios_base::openmode __mode = ios_base::out)
       : basic_ofstream(__p.c_str(), __mode) {}
 #  endif // _LIBCPP_STD_VER >= 17
 

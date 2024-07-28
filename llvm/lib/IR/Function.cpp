@@ -79,7 +79,7 @@ using ProfileCount = Function::ProfileCount;
 // are not in the public header file...
 template class llvm::SymbolTableListTraits<BasicBlock>;
 
-static cl::opt<unsigned> NonGlobalValueMaxNameSize(
+static cl::opt<int> NonGlobalValueMaxNameSize(
     "non-global-value-max-name-size", cl::Hidden, cl::init(1024),
     cl::desc("Maximum size for the name of non-global values."));
 
@@ -359,6 +359,10 @@ LLVMContext &Function::getContext() const {
   return getType()->getContext();
 }
 
+const DataLayout &Function::getDataLayout() const {
+  return getParent()->getDataLayout();
+}
+
 unsigned Function::getInstructionCount() const {
   unsigned NumInstrs = 0;
   for (const BasicBlock &BB : BasicBlocks)
@@ -385,6 +389,9 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
   case FramePointerKind::None:
     // 0 ("none") is the default.
     break;
+  case FramePointerKind::Reserved:
+    B.addAttribute("frame-pointer", "reserved");
+    break;
   case FramePointerKind::NonLeaf:
     B.addAttribute("frame-pointer", "non-leaf");
     break;
@@ -394,6 +401,41 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
   }
   if (M->getModuleFlag("function_return_thunk_extern"))
     B.addAttribute(Attribute::FnRetThunkExtern);
+  StringRef DefaultCPU = F->getContext().getDefaultTargetCPU();
+  if (!DefaultCPU.empty())
+    B.addAttribute("target-cpu", DefaultCPU);
+  StringRef DefaultFeatures = F->getContext().getDefaultTargetFeatures();
+  if (!DefaultFeatures.empty())
+    B.addAttribute("target-features", DefaultFeatures);
+
+  // Check if the module attribute is present and not zero.
+  auto isModuleAttributeSet = [&](const StringRef &ModAttr) -> bool {
+    const auto *Attr =
+        mdconst::extract_or_null<ConstantInt>(M->getModuleFlag(ModAttr));
+    return Attr && !Attr->isZero();
+  };
+
+  auto AddAttributeIfSet = [&](const StringRef &ModAttr) {
+    if (isModuleAttributeSet(ModAttr))
+      B.addAttribute(ModAttr);
+  };
+
+  StringRef SignType = "none";
+  if (isModuleAttributeSet("sign-return-address"))
+    SignType = "non-leaf";
+  if (isModuleAttributeSet("sign-return-address-all"))
+    SignType = "all";
+  if (SignType != "none") {
+    B.addAttribute("sign-return-address", SignType);
+    B.addAttribute("sign-return-address-key",
+                   isModuleAttributeSet("sign-return-address-with-bkey")
+                       ? "b_key"
+                       : "a_key");
+  }
+  AddAttributeIfSet("branch-target-enforcement");
+  AddAttributeIfSet("branch-protection-pauth-lr");
+  AddAttributeIfSet("guarded-control-stack");
+
   F->addFnAttrs(B);
   return F;
 }
@@ -1010,8 +1052,9 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
     case Type::DoubleTyID:    Result += "f64";      break;
     case Type::X86_FP80TyID:  Result += "f80";      break;
     case Type::FP128TyID:     Result += "f128";     break;
-    case Type::PPC_FP128TyID: Result += "ppcf128";  break;
-    case Type::X86_MMXTyID:   Result += "x86mmx";   break;
+    case Type::PPC_FP128TyID:
+      Result += "ppcf128";
+      break;
     case Type::X86_AMXTyID:   Result += "x86amx";   break;
     case Type::IntegerTyID:
       Result += "i" + utostr(cast<IntegerType>(Ty)->getBitWidth());
@@ -1355,7 +1398,8 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   switch (D.Kind) {
   case IITDescriptor::Void: return Type::getVoidTy(Context);
   case IITDescriptor::VarArg: return Type::getVoidTy(Context);
-  case IITDescriptor::MMX: return Type::getX86_MMXTy(Context);
+  case IITDescriptor::MMX:
+    return llvm::FixedVectorType::get(llvm::IntegerType::get(Context, 64), 1);
   case IITDescriptor::AMX: return Type::getX86_AMXTy(Context);
   case IITDescriptor::Token: return Type::getTokenTy(Context);
   case IITDescriptor::Metadata: return Type::getMetadataTy(Context);
@@ -1538,7 +1582,11 @@ static bool matchIntrinsicType(
   switch (D.Kind) {
     case IITDescriptor::Void: return !Ty->isVoidTy();
     case IITDescriptor::VarArg: return true;
-    case IITDescriptor::MMX:  return !Ty->isX86_MMXTy();
+    case IITDescriptor::MMX: {
+      FixedVectorType *VT = dyn_cast<FixedVectorType>(Ty);
+      return !VT || VT->getNumElements() != 1 ||
+             !VT->getElementType()->isIntegerTy(64);
+    }
     case IITDescriptor::AMX:  return !Ty->isX86_AMXTy();
     case IITDescriptor::Token: return !Ty->isTokenTy();
     case IITDescriptor::Metadata: return !Ty->isMetadataTy();

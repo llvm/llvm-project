@@ -144,8 +144,7 @@ define i1 @length2_eq_const(ptr %X) nounwind {
 ; X86-LABEL: length2_eq_const:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl (%eax), %eax
-; X86-NEXT:    cmpl $12849, %eax # imm = 0x3231
+; X86-NEXT:    cmpw $12849, (%eax) # imm = 0x3231
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
   %m = tail call i32 @memcmp(ptr %X, ptr getelementptr inbounds ([513 x i8], ptr @.str, i32 0, i32 1), i32 2) nounwind

@@ -1,16 +1,16 @@
 ;; When EXPENSIVE_CHECKS are enabled, the machine verifier appears between each
 ;; pass. Ignore it with 'grep -v'.
-; RUN: llc --mtriple=loongarch32 -O1 --debug-pass=Structure %s -o /dev/null 2>&1 | \
+; RUN: llc --mtriple=loongarch32 -mattr=+d -O1 --debug-pass=Structure %s -o /dev/null 2>&1 | \
 ; RUN:   grep -v "Verify generated machine code" | FileCheck %s --check-prefix=LAXX
-; RUN: llc --mtriple=loongarch32 -O2 --debug-pass=Structure %s -o /dev/null 2>&1 | \
+; RUN: llc --mtriple=loongarch32 -mattr=+d -O2 --debug-pass=Structure %s -o /dev/null 2>&1 | \
 ; RUN:   grep -v "Verify generated machine code" | FileCheck %s --check-prefix=LAXX
-; RUN: llc --mtriple=loongarch32 -O3 --debug-pass=Structure %s -o /dev/null 2>&1 | \
+; RUN: llc --mtriple=loongarch32 -mattr=+d -O3 --debug-pass=Structure %s -o /dev/null 2>&1 | \
 ; RUN:   grep -v "Verify generated machine code" | FileCheck %s --check-prefix=LAXX
-; RUN: llc --mtriple=loongarch64 -O1 --debug-pass=Structure %s -o /dev/null 2>&1 | \
+; RUN: llc --mtriple=loongarch64 -mattr=+d -O1 --debug-pass=Structure %s -o /dev/null 2>&1 | \
 ; RUN:   grep -v "Verify generated machine code" | FileCheck %s --check-prefixes=LAXX,LA64
-; RUN: llc --mtriple=loongarch64 -O2 --debug-pass=Structure %s -o /dev/null 2>&1 | \
+; RUN: llc --mtriple=loongarch64 -mattr=+d -O2 --debug-pass=Structure %s -o /dev/null 2>&1 | \
 ; RUN:   grep -v "Verify generated machine code" | FileCheck %s --check-prefixes=LAXX,LA64
-; RUN: llc --mtriple=loongarch64 -O3 --debug-pass=Structure %s -o /dev/null 2>&1 | \
+; RUN: llc --mtriple=loongarch64 -mattr=+d -O3 --debug-pass=Structure %s -o /dev/null 2>&1 | \
 ; RUN:   grep -v "Verify generated machine code" | FileCheck %s --check-prefixes=LAXX,LA64
 
 ; REQUIRES: asserts
@@ -63,10 +63,12 @@
 ; LAXX-NEXT:       Replace intrinsics with calls to vector library
 ; LAXX-NEXT:       Partially inline calls to library functions
 ; LAXX-NEXT:       Expand vector predication intrinsics
+; LAXX-NEXT:       Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; LAXX-NEXT:       Scalarize Masked Memory Intrinsics
 ; LAXX-NEXT:       Expand reduction intrinsics
 ; LAXX-NEXT:       Natural Loop Information
 ; LAXX-NEXT:       TLS Variable Hoist
+; LAXX-NEXT:       Type Promotion
 ; LAXX-NEXT:       CodeGen Prepare
 ; LAXX-NEXT:       Dominator Tree Construction
 ; LAXX-NEXT:       Exception handling preparation
@@ -118,6 +120,7 @@
 ; LAXX-NEXT:       Register Coalescer
 ; LAXX-NEXT:       Rename Disconnected Subregister Components
 ; LAXX-NEXT:       Machine Instruction Scheduler
+; LAXX-NEXT:       LoongArch Dead register definitions
 ; LAXX-NEXT:       Machine Block Frequency Analysis
 ; LAXX-NEXT:       Debug Variable Analysis
 ; LAXX-NEXT:       Live Stack Slot Analysis

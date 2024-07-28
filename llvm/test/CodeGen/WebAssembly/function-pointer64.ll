@@ -1,6 +1,6 @@
-; RUN: llc < %s -asm-verbose=false -O2 | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -mattr=-reference-types -O2 | FileCheck %s
 ; RUN: llc < %s -asm-verbose=false -mattr=+reference-types -O2 | FileCheck --check-prefix=REF %s
-; RUN: llc < %s -asm-verbose=false -O2 --filetype=obj | obj2yaml | FileCheck --check-prefix=YAML %s
+; RUN: llc < %s -asm-verbose=false -mattr=-reference-types -O2 --filetype=obj | obj2yaml | FileCheck --check-prefix=YAML %s
 
 ; This tests pointer features that may codegen differently in wasm64.
 
@@ -34,7 +34,6 @@ entry:
 ; CHECK:      .functype foo (i64) -> ()
 ; CHECK-NEXT: i32.const 1
 ; CHECK-NEXT: local.get 0
-; CHECK-NEXT: i32.wrap_i64
 ; CHECK-NEXT: call_indirect (i32) -> ()
 ; REF:        call_indirect __indirect_function_table, (i32) -> ()
 
@@ -53,10 +52,10 @@ entry:
 ; YAML:      - Type:   CODE
 ; YAML:      - Type:   R_WASM_TABLE_INDEX_SLEB64
 ; YAML-NEXT:   Index:  0
-; YAML-NEXT:   Offset: 0x16
+; YAML-NEXT:   Offset: 0x15
 ; YAML:      - Type:   R_WASM_TABLE_INDEX_SLEB64
 ; YAML-NEXT:   Index:  0
-; YAML-NEXT:   Offset: 0x29
+; YAML-NEXT:   Offset: 0x28
 
 ; YAML:      - Type:   DATA
 ; YAML:      - Type:   R_WASM_TABLE_INDEX_I64

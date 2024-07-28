@@ -265,7 +265,6 @@ define i32 @stack_fold_fpclassph_mask(<32 x half> %a0, ptr %p) {
 }
 
 define i8 @stack_fold_fpclasssh(<8 x half> %a0) {
-  ;CHECK-LABEl: stack_fold_fpclasssh:
 ; CHECK-LABEL: stack_fold_fpclasssh:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill

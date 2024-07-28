@@ -14,7 +14,6 @@
 #ifndef MLIR_INITALLPASSES_H_
 #define MLIR_INITALLPASSES_H_
 
-#include "mlir/Config/mlir-config.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/AMDGPU/Transforms/Passes.h"
 #include "mlir/Dialect/Affine/Passes.h"
@@ -99,9 +98,7 @@ inline void registerAllPasses() {
   bufferization::registerBufferizationPipelines();
   sparse_tensor::registerSparseTensorPipelines();
   tosa::registerTosaToLinalgPipelines();
-#if MLIR_ENABLE_CUDA_CONVERSIONS
   gpu::registerGPUToNVVMPipeline();
-#endif
 }
 
 } // namespace mlir

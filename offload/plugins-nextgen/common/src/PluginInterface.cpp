@@ -13,7 +13,6 @@
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
-#include "Shared/PluginAPI.h"
 
 #include "GlobalHandler.h"
 #include "JIT.h"
@@ -25,6 +24,7 @@
 #include "omp-tools.h"
 #endif
 
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
@@ -39,9 +39,8 @@ using namespace omp;
 using namespace target;
 using namespace plugin;
 
-GenericPluginTy *PluginTy::SpecificPlugin = nullptr;
-
 // TODO: Fix any thread safety issues for multi-threaded kernel recording.
+namespace llvm::omp::target::plugin {
 struct RecordReplayTy {
 
   // Describes the state of the record replay mechanism.
@@ -269,9 +268,9 @@ public:
     OS.close();
   }
 
-  void saveKernelDescr(const char *Name, void **ArgPtrs, int32_t NumArgs,
-                       uint64_t NumTeamsClause, uint32_t ThreadLimitClause,
-                       uint64_t LoopTripCount) {
+  void saveKernelDescr(const char *Name, KernelLaunchParamsTy LaunchParams,
+                       int32_t NumArgs, uint64_t NumTeamsClause,
+                       uint32_t ThreadLimitClause, uint64_t LoopTripCount) {
     json::Object JsonKernelInfo;
     JsonKernelInfo["Name"] = Name;
     JsonKernelInfo["NumArgs"] = NumArgs;
@@ -284,7 +283,7 @@ public:
 
     json::Array JsonArgPtrs;
     for (int I = 0; I < NumArgs; ++I)
-      JsonArgPtrs.push_back((intptr_t)ArgPtrs[I]);
+      JsonArgPtrs.push_back((intptr_t)LaunchParams.Ptrs[I]);
     JsonKernelInfo["ArgPtrs"] = json::Value(std::move(JsonArgPtrs));
 
     json::Array JsonArgOffsets;
@@ -361,8 +360,7 @@ public:
     }
   }
 };
-
-static RecordReplayTy RecordReplay;
+} // namespace llvm::omp::target::plugin
 
 // Extract the mapping of host function pointers to device function pointers
 // from the entry table. Functions marked as 'indirect' in OpenMP will have
@@ -473,7 +471,7 @@ GenericKernelTy::getKernelLaunchEnvironment(
   // Ctor/Dtor have no arguments, replaying uses the original kernel launch
   // environment. Older versions of the compiler do not generate a kernel
   // launch environment.
-  if (isCtorOrDtor() || RecordReplay.isReplaying() ||
+  if (GenericDevice.Plugin.getRecordReplay().isReplaying() ||
       Version < OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR)
     return nullptr;
 
@@ -551,7 +549,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   if (!KernelLaunchEnvOrErr)
     return KernelLaunchEnvOrErr.takeError();
 
-  void *KernelArgsPtr =
+  KernelLaunchParamsTy LaunchParams =
       prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.NumArgs, Args,
                   Ptrs, *KernelLaunchEnvOrErr);
 
@@ -562,10 +560,11 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
 
   // Record the kernel description after we modified the argument count and num
   // blocks/threads.
+  RecordReplayTy &RecordReplay = GenericDevice.Plugin.getRecordReplay();
   if (RecordReplay.isRecording()) {
     RecordReplay.saveImage(getName(), getImage());
     RecordReplay.saveKernelInput(getName(), getImage());
-    RecordReplay.saveKernelDescr(getName(), Ptrs.data(), KernelArgs.NumArgs,
+    RecordReplay.saveKernelDescr(getName(), LaunchParams, KernelArgs.NumArgs,
                                  NumBlocks, NumThreads, KernelArgs.Tripcount);
   }
 
@@ -574,37 +573,34 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
     return Err;
 
   return launchImpl(GenericDevice, NumThreads, NumBlocks, KernelArgs,
-                    KernelArgsPtr, AsyncInfoWrapper);
+                    LaunchParams, AsyncInfoWrapper);
 }
 
-void *GenericKernelTy::prepareArgs(
+KernelLaunchParamsTy GenericKernelTy::prepareArgs(
     GenericDeviceTy &GenericDevice, void **ArgPtrs, ptrdiff_t *ArgOffsets,
     uint32_t &NumArgs, llvm::SmallVectorImpl<void *> &Args,
     llvm::SmallVectorImpl<void *> &Ptrs,
     KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const {
-  if (isCtorOrDtor())
-    return nullptr;
-
   uint32_t KLEOffset = !!KernelLaunchEnvironment;
   NumArgs += KLEOffset;
 
   if (NumArgs == 0)
-    return nullptr;
+    return KernelLaunchParamsTy{};
 
   Args.resize(NumArgs);
   Ptrs.resize(NumArgs);
 
   if (KernelLaunchEnvironment) {
-    Ptrs[0] = KernelLaunchEnvironment;
-    Args[0] = &Ptrs[0];
+    Args[0] = KernelLaunchEnvironment;
+    Ptrs[0] = &Args[0];
   }
 
-  for (int I = KLEOffset; I < NumArgs; ++I) {
-    Ptrs[I] =
+  for (uint32_t I = KLEOffset; I < NumArgs; ++I) {
+    Args[I] =
         (void *)((intptr_t)ArgPtrs[I - KLEOffset] + ArgOffsets[I - KLEOffset]);
-    Args[I] = &Ptrs[I];
+    Ptrs[I] = &Args[I];
   }
-  return &Args[0];
+  return KernelLaunchParamsTy{sizeof(void *) * NumArgs, &Args[0], &Ptrs[0]};
 }
 
 uint32_t GenericKernelTy::getNumThreads(GenericDeviceTy &GenericDevice,
@@ -705,8 +701,11 @@ uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
       TripCountNumBlocks = LoopTripCount;
     }
   }
+
+  uint32_t PreferredNumBlocks = TripCountNumBlocks;
   // If the loops are long running we rather reuse blocks than spawn too many.
-  uint32_t PreferredNumBlocks = std::min(TripCountNumBlocks, DefaultNumBlocks);
+  if (GenericDevice.getReuseBlocksForHighTripCount())
+    PreferredNumBlocks = std::min(TripCountNumBlocks, DefaultNumBlocks);
   return std::min(PreferredNumBlocks, GenericDevice.getBlockLimit());
 }
 
@@ -752,8 +751,7 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   if (ompt::Initialized) {
     bool ExpectedStatus = false;
     if (OmptInitialized.compare_exchange_strong(ExpectedStatus, true))
-      performOmptCallback(device_initialize, /*device_num=*/DeviceId +
-                                                 Plugin.getDeviceIdStartIndex(),
+      performOmptCallback(device_initialize, Plugin.getUserId(DeviceId),
                           /*type=*/getComputeUnitKind().c_str(),
                           /*device=*/reinterpret_cast<ompt_device_t *>(this),
                           /*lookup=*/ompt::lookupCallbackByName,
@@ -839,6 +837,7 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     delete MemoryManager;
   MemoryManager = nullptr;
 
+  RecordReplayTy &RecordReplay = Plugin.getRecordReplay();
   if (RecordReplay.isRecordingOrReplaying())
     RecordReplay.deinit();
 
@@ -850,9 +849,7 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
   if (ompt::Initialized) {
     bool ExpectedStatus = true;
     if (OmptInitialized.compare_exchange_strong(ExpectedStatus, false))
-      performOmptCallback(device_finalize,
-                          /*device_num=*/DeviceId +
-                              Plugin.getDeviceIdStartIndex());
+      performOmptCallback(device_finalize, Plugin.getUserId(DeviceId));
   }
 #endif
 
@@ -892,7 +889,8 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
     return std::move(Err);
 
   // Setup the global device memory pool if needed.
-  if (!RecordReplay.isReplaying() && shouldSetupDeviceMemoryPool()) {
+  if (!Plugin.getRecordReplay().isReplaying() &&
+      shouldSetupDeviceMemoryPool()) {
     uint64_t HeapSize;
     auto SizeOrErr = getDeviceHeapSize(HeapSize);
     if (SizeOrErr) {
@@ -910,7 +908,7 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
     size_t Bytes =
         getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
     performOmptCallback(
-        device_load, /*device_num=*/DeviceId + Plugin.getDeviceIdStartIndex(),
+        device_load, Plugin.getUserId(DeviceId),
         /*FileName=*/nullptr, /*FileOffset=*/0, /*VmaInFile=*/nullptr,
         /*ImgSize=*/Bytes, /*HostAddr=*/InputTgtImage->ImageStart,
         /*DeviceAddr=*/nullptr, /* FIXME: ModuleId */ 0);
@@ -1307,8 +1305,8 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
                                             TargetAllocTy Kind) {
   void *Alloc = nullptr;
 
-  if (RecordReplay.isRecordingOrReplaying())
-    return RecordReplay.alloc(Size);
+  if (Plugin.getRecordReplay().isRecordingOrReplaying())
+    return Plugin.getRecordReplay().alloc(Size);
 
   switch (Kind) {
   case TARGET_ALLOC_DEFAULT:
@@ -1344,17 +1342,31 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
 
 Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
   // Free is a noop when recording or replaying.
-  if (RecordReplay.isRecordingOrReplaying())
+  if (Plugin.getRecordReplay().isRecordingOrReplaying())
     return Plugin::success();
 
   int Res;
-  if (MemoryManager)
-    Res = MemoryManager->free(TgtPtr);
-  else
+  switch (Kind) {
+  case TARGET_ALLOC_DEFAULT:
+  case TARGET_ALLOC_DEVICE_NON_BLOCKING:
+  case TARGET_ALLOC_DEVICE:
+    if (MemoryManager) {
+      Res = MemoryManager->free(TgtPtr);
+      if (Res)
+        return Plugin::error(
+            "Failure to deallocate device pointer %p via memory manager",
+            TgtPtr);
+      break;
+    }
+    [[fallthrough]];
+  case TARGET_ALLOC_HOST:
+  case TARGET_ALLOC_SHARED:
     Res = free(TgtPtr, Kind);
-
-  if (Res)
-    return Plugin::error("Failure to deallocate device pointer %p", TgtPtr);
+    if (Res)
+      return Plugin::error(
+          "Failure to deallocate device pointer %p via device deallocator",
+          TgtPtr);
+  }
 
   // Unregister deallocated pinned memory buffer if the type is host memory.
   if (Kind == TARGET_ALLOC_HOST)
@@ -1397,7 +1409,8 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
                                     KernelArgsTy &KernelArgs,
                                     __tgt_async_info *AsyncInfo) {
   AsyncInfoWrapperTy AsyncInfoWrapper(
-      *this, RecordReplay.isRecordingOrReplaying() ? nullptr : AsyncInfo);
+      *this,
+      Plugin.getRecordReplay().isRecordingOrReplaying() ? nullptr : AsyncInfo);
 
   GenericKernelTy &GenericKernel =
       *reinterpret_cast<GenericKernelTy *>(EntryPtr);
@@ -1408,6 +1421,7 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
   // 'finalize' here to guarantee next record-replay actions are in-sync
   AsyncInfoWrapper.finalize(Err);
 
+  RecordReplayTy &RecordReplay = Plugin.getRecordReplay();
   if (RecordReplay.isRecordingOrReplaying() &&
       RecordReplay.isSaveOutputEnabled())
     RecordReplay.saveKernelOutputInfo(GenericKernel.getName());
@@ -1478,9 +1492,13 @@ Error GenericDeviceTy::syncEvent(void *EventPtr) {
 bool GenericDeviceTy::useAutoZeroCopy() { return useAutoZeroCopyImpl(); }
 
 Error GenericPluginTy::init() {
+  if (Initialized)
+    return Plugin::success();
+
   auto NumDevicesOrErr = initImpl();
   if (!NumDevicesOrErr)
     return NumDevicesOrErr.takeError();
+  Initialized = true;
 
   NumDevices = *NumDevicesOrErr;
   if (NumDevices == 0)
@@ -1495,10 +1513,15 @@ Error GenericPluginTy::init() {
   RPCServer = new RPCServerTy(*this);
   assert(RPCServer && "Invalid RPC server");
 
+  RecordReplay = new RecordReplayTy();
+  assert(RecordReplay && "Invalid RR interface");
+
   return Plugin::success();
 }
 
 Error GenericPluginTy::deinit() {
+  assert(Initialized && "Plugin was not initialized!");
+
   // Deinitialize all active devices.
   for (int32_t DeviceId = 0; DeviceId < NumDevices; ++DeviceId) {
     if (Devices[DeviceId]) {
@@ -1515,8 +1538,15 @@ Error GenericPluginTy::deinit() {
   if (RPCServer)
     delete RPCServer;
 
+  if (RecordReplay)
+    delete RecordReplay;
+
   // Perform last deinitializations on the plugin.
-  return deinitImpl();
+  if (Error Err = deinitImpl())
+    return Err;
+  Initialized = false;
+
+  return Plugin::success();
 }
 
 Error GenericPluginTy::initDevice(int32_t DeviceId) {
@@ -1559,14 +1589,26 @@ Expected<bool> GenericPluginTy::checkELFImage(StringRef Image) const {
   if (!MachineOrErr)
     return MachineOrErr.takeError();
 
-  if (!*MachineOrErr)
-    return false;
-
-  // Perform plugin-dependent checks for the specific architecture if needed.
-  return isELFCompatible(Image);
+  return MachineOrErr;
 }
 
-int32_t GenericPluginTy::is_valid_binary(__tgt_device_image *Image) {
+Expected<bool> GenericPluginTy::checkBitcodeImage(StringRef Image) const {
+  if (identify_magic(Image) != file_magic::bitcode)
+    return false;
+
+  LLVMContext Context;
+  auto ModuleOrErr = getLazyBitcodeModule(MemoryBufferRef(Image, ""), Context,
+                                          /*ShouldLazyLoadMetadata=*/true);
+  if (!ModuleOrErr)
+    return ModuleOrErr.takeError();
+  Module &M = **ModuleOrErr;
+
+  return Triple(M.getTargetTriple()).getArch() == getTripleArch();
+}
+
+int32_t GenericPluginTy::is_initialized() const { return Initialized; }
+
+int32_t GenericPluginTy::is_plugin_compatible(__tgt_device_image *Image) {
   StringRef Buffer(reinterpret_cast<const char *>(Image->ImageStart),
                    target::getPtrDiff(Image->ImageEnd, Image->ImageStart));
 
@@ -1587,7 +1629,7 @@ int32_t GenericPluginTy::is_valid_binary(__tgt_device_image *Image) {
     return *MatchOrErr;
   }
   case file_magic::bitcode: {
-    auto MatchOrErr = getJIT().checkBitcodeImage(Buffer);
+    auto MatchOrErr = checkBitcodeImage(Buffer);
     if (Error Err = MatchOrErr.takeError())
       return HandleError(std::move(Err));
     return *MatchOrErr;
@@ -1595,6 +1637,49 @@ int32_t GenericPluginTy::is_valid_binary(__tgt_device_image *Image) {
   default:
     return false;
   }
+}
+
+int32_t GenericPluginTy::is_device_compatible(int32_t DeviceId,
+                                              __tgt_device_image *Image) {
+  StringRef Buffer(reinterpret_cast<const char *>(Image->ImageStart),
+                   target::getPtrDiff(Image->ImageEnd, Image->ImageStart));
+
+  auto HandleError = [&](Error Err) -> bool {
+    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+    DP("Failure to check validity of image %p: %s", Image, ErrStr.c_str());
+    return false;
+  };
+  switch (identify_magic(Buffer)) {
+  case file_magic::elf:
+  case file_magic::elf_relocatable:
+  case file_magic::elf_executable:
+  case file_magic::elf_shared_object:
+  case file_magic::elf_core: {
+    auto MatchOrErr = checkELFImage(Buffer);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    if (!*MatchOrErr)
+      return false;
+
+    // Perform plugin-dependent checks for the specific architecture if needed.
+    auto CompatibleOrErr = isELFCompatible(DeviceId, Buffer);
+    if (Error Err = CompatibleOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *CompatibleOrErr;
+  }
+  case file_magic::bitcode: {
+    auto MatchOrErr = checkBitcodeImage(Buffer);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *MatchOrErr;
+  }
+  default:
+    return false;
+  }
+}
+
+int32_t GenericPluginTy::is_device_initialized(int32_t DeviceId) const {
+  return isValidDeviceId(DeviceId) && Devices[DeviceId] != nullptr;
 }
 
 int32_t GenericPluginTy::init_device(int32_t DeviceId) {
@@ -1609,11 +1694,6 @@ int32_t GenericPluginTy::init_device(int32_t DeviceId) {
 }
 
 int32_t GenericPluginTy::number_of_devices() { return getNumDevices(); }
-
-int64_t GenericPluginTy::init_requires(int64_t RequiresFlags) {
-  setRequiresFlag(RequiresFlags);
-  return OFFLOAD_SUCCESS;
-}
 
 int32_t GenericPluginTy::is_data_exchangable(int32_t SrcDeviceId,
                                              int32_t DstDeviceId) {
@@ -1630,12 +1710,12 @@ int32_t GenericPluginTy::initialize_record_replay(int32_t DeviceId,
       isRecord ? RecordReplayTy::RRStatusTy::RRRecording
                : RecordReplayTy::RRStatusTy::RRReplaying;
 
-  if (auto Err = RecordReplay.init(&Device, MemorySize, VAddr, Status,
-                                   SaveOutput, ReqPtrArgOffset)) {
+  if (auto Err = RecordReplay->init(&Device, MemorySize, VAddr, Status,
+                                    SaveOutput, ReqPtrArgOffset)) {
     REPORT("WARNING RR did not intialize RR-properly with %lu bytes"
            "(Error: %s)\n",
            MemorySize, toString(std::move(Err)).data());
-    RecordReplay.setStatus(RecordReplayTy::RRStatusTy::RRDeactivated);
+    RecordReplay->setStatus(RecordReplayTy::RRStatusTy::RRDeactivated);
 
     if (!isRecord) {
       return OFFLOAD_FAIL;
@@ -1949,18 +2029,14 @@ int32_t GenericPluginTy::init_device_info(int32_t DeviceId,
   return OFFLOAD_SUCCESS;
 }
 
-int32_t GenericPluginTy::set_device_offset(int32_t DeviceIdOffset) {
-  setDeviceIdStartIndex(DeviceIdOffset);
+int32_t GenericPluginTy::set_device_identifier(int32_t UserId,
+                                               int32_t DeviceId) {
+  UserDeviceIds[DeviceId] = UserId;
 
   return OFFLOAD_SUCCESS;
 }
 
 int32_t GenericPluginTy::use_auto_zero_copy(int32_t DeviceId) {
-  // Automatic zero-copy only applies to programs that did
-  // not request unified_shared_memory and are deployed on an
-  // APU with XNACK enabled.
-  if (getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY)
-    return false;
   return getDevice(DeviceId).useAutoZeroCopy();
 }
 
@@ -1984,6 +2060,7 @@ int32_t GenericPluginTy::get_global(__tgt_device_binary Binary, uint64_t Size,
   assert(DevicePtr && "Invalid device global's address");
 
   // Save the loaded globals if we are recording.
+  RecordReplayTy &RecordReplay = Device.Plugin.getRecordReplay();
   if (RecordReplay.isRecording())
     RecordReplay.addEntry(Name, Size, *DevicePtr);
 
@@ -2021,205 +2098,3 @@ bool llvm::omp::target::plugin::libomptargetSupportsRPC() {
   return false;
 #endif
 }
-
-/// Exposed library API function, basically wrappers around the GenericDeviceTy
-/// functionality with the same name. All non-async functions are redirected
-/// to the async versions right away with a NULL AsyncInfoPtr.
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-int32_t __tgt_rtl_init_plugin() {
-  auto Err = PluginTy::initIfNeeded();
-  if (Err) {
-    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
-    DP("Failed to init plugin: %s", ErrStr.c_str());
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image) {
-  if (!PluginTy::isActive())
-    return false;
-
-  return PluginTy::get().is_valid_binary(Image);
-}
-
-int32_t __tgt_rtl_init_device(int32_t DeviceId) {
-  return PluginTy::get().init_device(DeviceId);
-}
-
-int32_t __tgt_rtl_number_of_devices() {
-  return PluginTy::get().number_of_devices();
-}
-
-int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {
-  return PluginTy::get().init_requires(RequiresFlags);
-}
-
-int32_t __tgt_rtl_is_data_exchangable(int32_t SrcDeviceId,
-                                      int32_t DstDeviceId) {
-  return PluginTy::get().is_data_exchangable(SrcDeviceId, DstDeviceId);
-}
-
-int32_t __tgt_rtl_initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
-                                           void *VAddr, bool isRecord,
-                                           bool SaveOutput,
-                                           uint64_t &ReqPtrArgOffset) {
-  return PluginTy::get().initialize_record_replay(
-      DeviceId, MemorySize, VAddr, isRecord, SaveOutput, ReqPtrArgOffset);
-}
-
-int32_t __tgt_rtl_load_binary(int32_t DeviceId, __tgt_device_image *TgtImage,
-                              __tgt_device_binary *Binary) {
-  return PluginTy::get().load_binary(DeviceId, TgtImage, Binary);
-}
-
-void *__tgt_rtl_data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr,
-                           int32_t Kind) {
-  return PluginTy::get().data_alloc(DeviceId, Size, HostPtr, Kind);
-}
-
-int32_t __tgt_rtl_data_delete(int32_t DeviceId, void *TgtPtr, int32_t Kind) {
-  return PluginTy::get().data_delete(DeviceId, TgtPtr, Kind);
-}
-
-int32_t __tgt_rtl_data_lock(int32_t DeviceId, void *Ptr, int64_t Size,
-                            void **LockedPtr) {
-  return PluginTy::get().data_lock(DeviceId, Ptr, Size, LockedPtr);
-}
-
-int32_t __tgt_rtl_data_unlock(int32_t DeviceId, void *Ptr) {
-  return PluginTy::get().data_unlock(DeviceId, Ptr);
-}
-
-int32_t __tgt_rtl_data_notify_mapped(int32_t DeviceId, void *HstPtr,
-                                     int64_t Size) {
-  return PluginTy::get().data_notify_mapped(DeviceId, HstPtr, Size);
-}
-
-int32_t __tgt_rtl_data_notify_unmapped(int32_t DeviceId, void *HstPtr) {
-  return PluginTy::get().data_notify_unmapped(DeviceId, HstPtr);
-}
-
-int32_t __tgt_rtl_data_submit(int32_t DeviceId, void *TgtPtr, void *HstPtr,
-                              int64_t Size) {
-  return PluginTy::get().data_submit(DeviceId, TgtPtr, HstPtr, Size);
-}
-
-int32_t __tgt_rtl_data_submit_async(int32_t DeviceId, void *TgtPtr,
-                                    void *HstPtr, int64_t Size,
-                                    __tgt_async_info *AsyncInfoPtr) {
-  return PluginTy::get().data_submit_async(DeviceId, TgtPtr, HstPtr, Size,
-                                           AsyncInfoPtr);
-}
-
-int32_t __tgt_rtl_data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
-                                int64_t Size) {
-  return PluginTy::get().data_retrieve(DeviceId, HstPtr, TgtPtr, Size);
-}
-
-int32_t __tgt_rtl_data_retrieve_async(int32_t DeviceId, void *HstPtr,
-                                      void *TgtPtr, int64_t Size,
-                                      __tgt_async_info *AsyncInfoPtr) {
-  return PluginTy::get().data_retrieve_async(DeviceId, HstPtr, TgtPtr, Size,
-                                             AsyncInfoPtr);
-}
-
-int32_t __tgt_rtl_data_exchange(int32_t SrcDeviceId, void *SrcPtr,
-                                int32_t DstDeviceId, void *DstPtr,
-                                int64_t Size) {
-  return PluginTy::get().data_exchange(SrcDeviceId, SrcPtr, DstDeviceId, DstPtr,
-                                       Size);
-}
-
-int32_t __tgt_rtl_data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
-                                      int DstDeviceId, void *DstPtr,
-                                      int64_t Size,
-                                      __tgt_async_info *AsyncInfo) {
-  return PluginTy::get().data_exchange_async(SrcDeviceId, SrcPtr, DstDeviceId,
-                                             DstPtr, Size, AsyncInfo);
-}
-
-int32_t __tgt_rtl_launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
-                                void **TgtArgs, ptrdiff_t *TgtOffsets,
-                                KernelArgsTy *KernelArgs,
-                                __tgt_async_info *AsyncInfoPtr) {
-  return PluginTy::get().launch_kernel(DeviceId, TgtEntryPtr, TgtArgs,
-                                       TgtOffsets, KernelArgs, AsyncInfoPtr);
-}
-
-int32_t __tgt_rtl_synchronize(int32_t DeviceId,
-                              __tgt_async_info *AsyncInfoPtr) {
-  return PluginTy::get().synchronize(DeviceId, AsyncInfoPtr);
-}
-
-int32_t __tgt_rtl_query_async(int32_t DeviceId,
-                              __tgt_async_info *AsyncInfoPtr) {
-  return PluginTy::get().query_async(DeviceId, AsyncInfoPtr);
-}
-
-void __tgt_rtl_print_device_info(int32_t DeviceId) {
-  PluginTy::get().print_device_info(DeviceId);
-}
-
-int32_t __tgt_rtl_create_event(int32_t DeviceId, void **EventPtr) {
-  return PluginTy::get().create_event(DeviceId, EventPtr);
-}
-
-int32_t __tgt_rtl_record_event(int32_t DeviceId, void *EventPtr,
-                               __tgt_async_info *AsyncInfoPtr) {
-  return PluginTy::get().record_event(DeviceId, EventPtr, AsyncInfoPtr);
-}
-
-int32_t __tgt_rtl_wait_event(int32_t DeviceId, void *EventPtr,
-                             __tgt_async_info *AsyncInfoPtr) {
-  return PluginTy::get().wait_event(DeviceId, EventPtr, AsyncInfoPtr);
-}
-
-int32_t __tgt_rtl_sync_event(int32_t DeviceId, void *EventPtr) {
-  return PluginTy::get().sync_event(DeviceId, EventPtr);
-}
-
-int32_t __tgt_rtl_destroy_event(int32_t DeviceId, void *EventPtr) {
-  return PluginTy::get().destroy_event(DeviceId, EventPtr);
-}
-
-void __tgt_rtl_set_info_flag(uint32_t NewInfoLevel) {
-  return PluginTy::get().set_info_flag(NewInfoLevel);
-}
-
-int32_t __tgt_rtl_init_async_info(int32_t DeviceId,
-                                  __tgt_async_info **AsyncInfoPtr) {
-  return PluginTy::get().init_async_info(DeviceId, AsyncInfoPtr);
-}
-
-int32_t __tgt_rtl_init_device_info(int32_t DeviceId,
-                                   __tgt_device_info *DeviceInfo,
-                                   const char **ErrStr) {
-  return PluginTy::get().init_device_info(DeviceId, DeviceInfo, ErrStr);
-}
-
-int32_t __tgt_rtl_set_device_offset(int32_t DeviceIdOffset) {
-  return PluginTy::get().set_device_offset(DeviceIdOffset);
-}
-
-int32_t __tgt_rtl_use_auto_zero_copy(int32_t DeviceId) {
-  return PluginTy::get().use_auto_zero_copy(DeviceId);
-}
-
-int32_t __tgt_rtl_get_global(__tgt_device_binary Binary, uint64_t Size,
-                             const char *Name, void **DevicePtr) {
-  return PluginTy::get().get_global(Binary, Size, Name, DevicePtr);
-}
-
-int32_t __tgt_rtl_get_function(__tgt_device_binary Binary, const char *Name,
-                               void **KernelPtr) {
-  return PluginTy::get().get_function(Binary, Name, KernelPtr);
-}
-
-#ifdef __cplusplus
-}
-#endif

@@ -25,6 +25,7 @@ typedef Empty EmptyArMB[1][2];
 typedef int Int;
 typedef Int IntAr[10];
 typedef Int IntArNB[];
+typedef Int IntArZero[0];
 class Statics { static int priv; static NonPOD np; };
 union EmptyUnion {};
 union IncompleteUnion; // expected-note {{forward declaration of 'IncompleteUnion'}}
@@ -685,6 +686,7 @@ void is_array()
 {
   static_assert(__is_array(IntAr));
   static_assert(__is_array(IntArNB));
+  static_assert(!__is_array(IntArZero));
   static_assert(__is_array(UnionAr));
 
   static_assert(!__is_array(void));
@@ -714,6 +716,7 @@ void is_array()
 void is_bounded_array(int n) {
   static_assert(__is_bounded_array(IntAr));
   static_assert(!__is_bounded_array(IntArNB));
+  static_assert(!__is_bounded_array(IntArZero));
   static_assert(__is_bounded_array(UnionAr));
 
   static_assert(!__is_bounded_array(void));
@@ -746,6 +749,7 @@ void is_bounded_array(int n) {
 void is_unbounded_array(int n) {
   static_assert(!__is_unbounded_array(IntAr));
   static_assert(__is_unbounded_array(IntArNB));
+  static_assert(!__is_unbounded_array(IntArZero));
   static_assert(!__is_unbounded_array(UnionAr));
 
   static_assert(!__is_unbounded_array(void));
@@ -2398,11 +2402,11 @@ template<typename T> struct DerivedB : BaseA<T> { };
 template<typename T> struct CrazyDerived : T { };
 
 
-class class_forward; // expected-note 2 {{forward declaration of 'class_forward'}}
+class class_forward; // expected-note 4 {{forward declaration of 'class_forward'}}
 
 template <class T> class DerivedTemp : Base {};
 template <class T> class NonderivedTemp {};
-template <class T> class UndefinedTemp; // expected-note {{declared here}}
+template <class T> class UndefinedTemp; // expected-note 2 {{declared here}}
 
 void is_base_of() {
   static_assert(__is_base_of(Base, Derived));
@@ -2451,6 +2455,76 @@ void is_base_of() {
 
   static_assert(__is_base_of(BaseA<int>, DerivedB<int>));
   static_assert(!__is_base_of(DerivedB<int>, BaseA<int>));
+}
+
+struct DerivedTransitiveViaNonVirtual : Derived3 {};
+struct DerivedTransitiveViaVirtual : virtual Derived3 {};
+
+template <typename T>
+struct CrazyDerivedVirtual : virtual T {};
+
+struct DerivedPrivate : private virtual Base {};
+struct DerivedProtected : protected virtual Base {};
+struct DerivedPrivatePrivate : private DerivedPrivate {};
+struct DerivedPrivateProtected : private DerivedProtected {};
+struct DerivedProtectedPrivate : protected DerivedProtected {};
+struct DerivedProtectedProtected : protected DerivedProtected {};
+
+void is_virtual_base_of(int n) {
+  static_assert(!__builtin_is_virtual_base_of(Base, Derived));
+  static_assert(!__builtin_is_virtual_base_of(const Base, Derived));
+  static_assert(!__builtin_is_virtual_base_of(Derived, Base));
+  static_assert(!__builtin_is_virtual_base_of(Derived, int));
+  static_assert(!__builtin_is_virtual_base_of(Base, Base));
+  static_assert(!__builtin_is_virtual_base_of(Base, Derived3));
+  static_assert(!__builtin_is_virtual_base_of(Derived, Derived3));
+  static_assert(__builtin_is_virtual_base_of(Derived2b, Derived3));
+  static_assert(__builtin_is_virtual_base_of(Derived2a, Derived3));
+  static_assert(!__builtin_is_virtual_base_of(BaseA<int>, DerivedB<int>));
+  static_assert(!__builtin_is_virtual_base_of(DerivedB<int>, BaseA<int>));
+  static_assert(!__builtin_is_virtual_base_of(Union, Union));
+  static_assert(!__builtin_is_virtual_base_of(Empty, Empty));
+  static_assert(!__builtin_is_virtual_base_of(class_forward, class_forward)); // expected-error {{incomplete type 'class_forward' where a complete type is required}}
+  static_assert(!__builtin_is_virtual_base_of(Empty, class_forward)); // expected-error {{incomplete type 'class_forward' where a complete type is required}}
+  static_assert(!__builtin_is_virtual_base_of(class_forward, Empty));
+  static_assert(!__builtin_is_virtual_base_of(Base&, Derived&));
+  static_assert(!__builtin_is_virtual_base_of(Base[10], Derived[10]));
+  static_assert(!__builtin_is_virtual_base_of(Base[n], Derived[n])); // expected-error 2 {{variable length arrays are not supported in '__builtin_is_virtual_base_of'}}
+  static_assert(!__builtin_is_virtual_base_of(int, int));
+  static_assert(!__builtin_is_virtual_base_of(int[], int[]));
+  static_assert(!__builtin_is_virtual_base_of(long, int));
+  static_assert(!__builtin_is_virtual_base_of(Base, DerivedTemp<int>));
+  static_assert(!__builtin_is_virtual_base_of(Base, NonderivedTemp<int>));
+  static_assert(!__builtin_is_virtual_base_of(Base, UndefinedTemp<int>)); // expected-error {{implicit instantiation of undefined template 'UndefinedTemp<int>'}}
+  static_assert(__builtin_is_virtual_base_of(Base, DerivedPrivate));
+  static_assert(__builtin_is_virtual_base_of(Base, DerivedProtected));
+  static_assert(__builtin_is_virtual_base_of(Base, DerivedPrivatePrivate));
+  static_assert(__builtin_is_virtual_base_of(Base, DerivedPrivateProtected));
+  static_assert(__builtin_is_virtual_base_of(Base, DerivedProtectedPrivate));
+  static_assert(__builtin_is_virtual_base_of(Base, DerivedProtectedProtected));
+  static_assert(__builtin_is_virtual_base_of(Derived2a, DerivedTransitiveViaNonVirtual));
+  static_assert(__builtin_is_virtual_base_of(Derived2b, DerivedTransitiveViaNonVirtual));
+  static_assert(__builtin_is_virtual_base_of(Derived2a, DerivedTransitiveViaVirtual));
+  static_assert(__builtin_is_virtual_base_of(Derived2b, DerivedTransitiveViaVirtual));
+  static_assert(!__builtin_is_virtual_base_of(Base, CrazyDerived<Base>));
+  static_assert(!__builtin_is_virtual_base_of(CrazyDerived<Base>, Base));
+  static_assert(__builtin_is_virtual_base_of(Base, CrazyDerivedVirtual<Base>));
+  static_assert(!__builtin_is_virtual_base_of(CrazyDerivedVirtual<Base>, Base));
+
+  static_assert(!__builtin_is_virtual_base_of(IncompleteUnion, IncompleteUnion));
+  static_assert(!__builtin_is_virtual_base_of(Union, IncompleteUnion));
+  static_assert(!__builtin_is_virtual_base_of(IncompleteUnion, Union));
+  static_assert(!__builtin_is_virtual_base_of(IncompleteStruct, IncompleteUnion));
+  static_assert(!__builtin_is_virtual_base_of(IncompleteUnion, IncompleteStruct));
+  static_assert(!__builtin_is_virtual_base_of(Empty, IncompleteUnion));
+  static_assert(!__builtin_is_virtual_base_of(IncompleteUnion, Empty));
+  static_assert(!__builtin_is_virtual_base_of(int, IncompleteUnion));
+  static_assert(!__builtin_is_virtual_base_of(IncompleteUnion, int));
+  static_assert(!__builtin_is_virtual_base_of(Empty, Union));
+  static_assert(!__builtin_is_virtual_base_of(Union, Empty));
+  static_assert(!__builtin_is_virtual_base_of(int, Empty));
+  static_assert(!__builtin_is_virtual_base_of(Union, int));
+  static_assert(!__builtin_is_virtual_base_of(IncompleteStruct, IncompleteStruct[n])); // expected-error {{variable length arrays are not supported in '__builtin_is_virtual_base_of'}}
 }
 
 template<class T, class U>
@@ -2908,6 +2982,12 @@ struct ConvertsToRef {
   operator RefType() const { return static_cast<RefType>(obj); }
   mutable T obj = 42;
 };
+template <class T, class RefType = T &>
+class ConvertsToRefPrivate {
+  operator RefType() const { return static_cast<RefType>(obj); }
+  mutable T obj = 42;
+};
+
 
 void reference_binds_to_temporary_checks() {
   static_assert(!(__reference_binds_to_temporary(int &, int &)));
@@ -2937,12 +3017,25 @@ void reference_binds_to_temporary_checks() {
 
   static_assert((__is_constructible(int const &, LongRef)));
   static_assert((__reference_binds_to_temporary(int const &, LongRef)));
+  static_assert(!__reference_binds_to_temporary(int const &, ConvertsToRefPrivate<long, long &>));
+
 
   // Test that it doesn't accept non-reference types as input.
   static_assert(!(__reference_binds_to_temporary(int, long)));
 
   static_assert((__reference_binds_to_temporary(const int &, long)));
 }
+
+
+struct ExplicitConversionRvalueRef {
+    operator int();
+    explicit operator int&&();
+};
+
+struct ExplicitConversionRef {
+    operator int();
+    explicit operator int&();
+};
 
 void reference_constructs_from_temporary_checks() {
   static_assert(!__reference_constructs_from_temporary(int &, int &));
@@ -2973,6 +3066,8 @@ void reference_constructs_from_temporary_checks() {
 
   static_assert(__is_constructible(int const &, LongRef));
   static_assert(__reference_constructs_from_temporary(int const &, LongRef));
+  static_assert(!__reference_constructs_from_temporary(int const &, ConvertsToRefPrivate<long, long &>));
+
 
   // Test that it doesn't accept non-reference types as input.
   static_assert(!__reference_constructs_from_temporary(int, long));
@@ -2987,6 +3082,65 @@ void reference_constructs_from_temporary_checks() {
   static_assert(!__reference_constructs_from_temporary(const int&, int&&));
   static_assert(__reference_constructs_from_temporary(int&&, long&&));
   static_assert(__reference_constructs_from_temporary(int&&, long));
+
+
+  static_assert(!__reference_constructs_from_temporary(int&, ExplicitConversionRef));
+  static_assert(!__reference_constructs_from_temporary(const int&, ExplicitConversionRef));
+  static_assert(!__reference_constructs_from_temporary(int&&, ExplicitConversionRvalueRef));
+
+
+}
+
+void reference_converts_from_temporary_checks() {
+  static_assert(!__reference_converts_from_temporary(int &, int &));
+  static_assert(!__reference_converts_from_temporary(int &, int &&));
+
+  static_assert(!__reference_converts_from_temporary(int const &, int &));
+  static_assert(!__reference_converts_from_temporary(int const &, int const &));
+  static_assert(!__reference_converts_from_temporary(int const &, int &&));
+
+  static_assert(!__reference_converts_from_temporary(int &, long &)); // doesn't construct
+
+  static_assert(__reference_converts_from_temporary(int const &, long &));
+  static_assert(__reference_converts_from_temporary(int const &, long &&));
+  static_assert(__reference_converts_from_temporary(int &&, long &));
+
+  using LRef = ConvertsToRef<int, int &>;
+  using RRef = ConvertsToRef<int, int &&>;
+  using CLRef = ConvertsToRef<int, const int &>;
+  using LongRef = ConvertsToRef<long, long &>;
+  static_assert(__is_constructible(int &, LRef));
+  static_assert(!__reference_converts_from_temporary(int &, LRef));
+
+  static_assert(__is_constructible(int &&, RRef));
+  static_assert(!__reference_converts_from_temporary(int &&, RRef));
+
+  static_assert(__is_constructible(int const &, CLRef));
+  static_assert(!__reference_converts_from_temporary(int &&, CLRef));
+
+  static_assert(__is_constructible(int const &, LongRef));
+  static_assert(__reference_converts_from_temporary(int const &, LongRef));
+  static_assert(!__reference_converts_from_temporary(int const &, ConvertsToRefPrivate<long, long &>));
+
+
+  // Test that it doesn't accept non-reference types as input.
+  static_assert(!__reference_converts_from_temporary(int, long));
+
+  static_assert(__reference_converts_from_temporary(const int &, long));
+
+  // Additional checks
+  static_assert(__reference_converts_from_temporary(POD const&, Derives));
+  static_assert(__reference_converts_from_temporary(int&&, int));
+  static_assert(__reference_converts_from_temporary(const int&, int));
+  static_assert(!__reference_converts_from_temporary(int&&, int&&));
+  static_assert(!__reference_converts_from_temporary(const int&, int&&));
+  static_assert(__reference_converts_from_temporary(int&&, long&&));
+  static_assert(__reference_converts_from_temporary(int&&, long));
+
+  static_assert(!__reference_converts_from_temporary(int&, ExplicitConversionRef));
+  static_assert(__reference_converts_from_temporary(const int&, ExplicitConversionRef));
+  static_assert(__reference_converts_from_temporary(int&&, ExplicitConversionRvalueRef));
+
 }
 
 void array_rank() {
@@ -3421,6 +3575,17 @@ static_assert(__has_unique_object_representations(_BitInt(8)), "BitInt:");
 static_assert(!__has_unique_object_representations(_BitInt(127)), "BitInt:");
 static_assert(__has_unique_object_representations(_BitInt(128)), "BitInt:");
 
+namespace GH95311 {
+
+template <int>
+class Foo {
+  int x;
+};
+static_assert(__has_unique_object_representations(Foo<0>[]));
+class Bar; // expected-note {{forward declaration of 'GH95311::Bar'}}
+static_assert(__has_unique_object_representations(Bar[])); // expected-error {{incomplete type}}
+
+}
 
 namespace PR46209 {
   // Foo has both a trivial assignment operator and a non-trivial one.
@@ -3592,6 +3757,12 @@ struct NonTriviallyEqualityComparableNoComparator {
   int j;
 };
 static_assert(!__is_trivially_equality_comparable(NonTriviallyEqualityComparableNoComparator));
+
+struct NonTriviallyEqualityComparableConvertibleToBuiltin {
+  int i;
+  operator unsigned() const;
+};
+static_assert(!__is_trivially_equality_comparable(NonTriviallyEqualityComparableConvertibleToBuiltin));
 
 struct NonTriviallyEqualityComparableNonDefaultedComparator {
   int i;
@@ -3801,7 +3972,50 @@ struct NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2 {
 
   bool operator==(const NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2&) const = default;
 };
+
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2));
+
+template<bool B>
+struct MaybeTriviallyEqualityComparable {
+    int i;
+    bool operator==(const MaybeTriviallyEqualityComparable&) const requires B = default;
+    bool operator==(const MaybeTriviallyEqualityComparable& rhs) const { return (i % 3) == (rhs.i % 3); }
+};
+static_assert(__is_trivially_equality_comparable(MaybeTriviallyEqualityComparable<true>));
+static_assert(!__is_trivially_equality_comparable(MaybeTriviallyEqualityComparable<false>));
+
+struct NotTriviallyEqualityComparableMoreConstrainedExternalOp {
+  int i;
+  bool operator==(const NotTriviallyEqualityComparableMoreConstrainedExternalOp&) const = default;
+};
+
+bool operator==(const NotTriviallyEqualityComparableMoreConstrainedExternalOp&,
+                const NotTriviallyEqualityComparableMoreConstrainedExternalOp&) __attribute__((enable_if(true, ""))) {}
+
+static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableMoreConstrainedExternalOp));
+
+struct TriviallyEqualityComparableExternalDefaultedOp {
+  int i;
+  friend bool operator==(TriviallyEqualityComparableExternalDefaultedOp, TriviallyEqualityComparableExternalDefaultedOp);
+};
+bool operator==(TriviallyEqualityComparableExternalDefaultedOp, TriviallyEqualityComparableExternalDefaultedOp) = default;
+
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableExternalDefaultedOp));
+
+struct EqualityComparableBase {
+  bool operator==(const EqualityComparableBase&) const = default;
+};
+
+struct ComparingBaseOnly : EqualityComparableBase {
+  int j_ = 0;
+};
+static_assert(!__is_trivially_equality_comparable(ComparingBaseOnly));
+
+template <class>
+class Template {};
+
+// Make sure we don't crash when instantiating a type
+static_assert(!__is_trivially_equality_comparable(Template<Template<int>>));
 
 namespace hidden_friend {
 

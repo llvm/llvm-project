@@ -41,6 +41,9 @@ class BaseBoxType : public mlir::Type {
 public:
   using mlir::Type::Type;
 
+  /// Box attributes.
+  enum class Attribute { None, Allocatable, Pointer };
+
   /// Returns the element type of this box type.
   mlir::Type getEleTy() const;
 
@@ -53,6 +56,10 @@ public:
   /// Return the same type, except for the shape, that is taken the shape
   /// of shapeMold.
   BaseBoxType getBoxTypeWithNewShape(mlir::Type shapeMold) const;
+  BaseBoxType getBoxTypeWithNewShape(int rank) const;
+
+  /// Return the same type, except for the attribute (fir.heap/fir.ptr).
+  BaseBoxType getBoxTypeWithNewAttr(Attribute attr) const;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(mlir::Type type);

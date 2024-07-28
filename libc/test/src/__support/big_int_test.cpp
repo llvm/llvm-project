@@ -9,12 +9,13 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/big_int.h"
 #include "src/__support/integer_literals.h"        // parse_unsigned_bigint
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
 #include "hdr/math_macros.h" // HUGE_VALF, HUGE_VALF
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 enum Value { ZERO, ONE, TWO, MIN, MAX };
 
@@ -31,6 +32,7 @@ template <typename T> auto create(Value value) {
   case MAX:
     return T::max();
   }
+  __builtin_unreachable();
 }
 
 using Types = testing::TypeList< //
@@ -205,6 +207,7 @@ TYPED_TEST(LlvmLibcUIntClassTest, CountBits, Types) {
   }
 }
 
+using LL_UInt16 = UInt<16>;
 using LL_UInt64 = UInt<64>;
 // We want to test UInt<128> explicitly. So, for
 // convenience, we use a sugar which does not conflict with the UInt128 type
@@ -257,6 +260,23 @@ TEST(LlvmLibcUIntClassTest, BitCastToFromNativeFloat128) {
   }
 }
 #endif // LIBC_TYPES_HAS_FLOAT128
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+TEST(LlvmLibcUIntClassTest, BitCastToFromNativeFloat16) {
+  static_assert(cpp::is_trivially_copyable<LL_UInt16>::value);
+  static_assert(sizeof(LL_UInt16) == sizeof(float16));
+  const float16 array[] = {
+      static_cast<float16>(0.0),
+      static_cast<float16>(0.1),
+      static_cast<float16>(1.0),
+  };
+  for (float16 value : array) {
+    LL_UInt16 back = cpp::bit_cast<LL_UInt16>(value);
+    float16 forth = cpp::bit_cast<float16>(back);
+    EXPECT_TRUE(value == forth);
+  }
+}
+#endif // LIBC_TYPES_HAS_FLOAT16
 
 TEST(LlvmLibcUIntClassTest, BasicInit) {
   LL_UInt128 half_val(12345);
@@ -907,4 +927,4 @@ TEST(LlvmLibcUIntClassTest, OtherWordTypeTests) {
   ASSERT_EQ(static_cast<int>(a >> 64), 1);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

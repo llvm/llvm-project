@@ -43,37 +43,26 @@ void AMDGPUInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
 void AMDGPUInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                   StringRef Annot, const MCSubtargetInfo &STI,
                                   raw_ostream &OS) {
-  OS.flush();
   printInstruction(MI, Address, STI, OS);
   printAnnotation(OS, Annot);
-}
-
-void AMDGPUInstPrinter::printU4ImmOperand(const MCInst *MI, unsigned OpNo,
-                                          const MCSubtargetInfo &STI,
-                                          raw_ostream &O) {
-  O << formatHex(MI->getOperand(OpNo).getImm() & 0xf);
 }
 
 void AMDGPUInstPrinter::printU16ImmOperand(const MCInst *MI, unsigned OpNo,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  if (Op.isExpr()) {
+    Op.getExpr()->print(O, &MAI);
+    return;
+  }
+
   // It's possible to end up with a 32-bit literal used with a 16-bit operand
   // with ignored high bits. Print as 32-bit anyway in that case.
-  int64_t Imm = MI->getOperand(OpNo).getImm();
+  int64_t Imm = Op.getImm();
   if (isInt<16>(Imm) || isUInt<16>(Imm))
     O << formatHex(static_cast<uint64_t>(Imm & 0xffff));
   else
     printU32ImmOperand(MI, OpNo, STI, O);
-}
-
-void AMDGPUInstPrinter::printU4ImmDecOperand(const MCInst *MI, unsigned OpNo,
-                                             raw_ostream &O) {
-  O << formatDec(MI->getOperand(OpNo).getImm() & 0xf);
-}
-
-void AMDGPUInstPrinter::printU8ImmDecOperand(const MCInst *MI, unsigned OpNo,
-                                             raw_ostream &O) {
-  O << formatDec(MI->getOperand(OpNo).getImm() & 0xff);
 }
 
 void AMDGPUInstPrinter::printU16ImmDecOperand(const MCInst *MI, unsigned OpNo,
@@ -133,19 +122,15 @@ void AMDGPUInstPrinter::printFlatOffset(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printOffset0(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
-  if (MI->getOperand(OpNo).getImm()) {
-    O << " offset0:";
-    printU8ImmDecOperand(MI, OpNo, O);
-  }
+  if (int64_t Offset = MI->getOperand(OpNo).getImm())
+    O << " offset0:" << formatDec(Offset);
 }
 
 void AMDGPUInstPrinter::printOffset1(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
-  if (MI->getOperand(OpNo).getImm()) {
-    O << " offset1:";
-    printU8ImmDecOperand(MI, OpNo, O);
-  }
+  if (int64_t Offset = MI->getOperand(OpNo).getImm())
+    O << " offset1:" << formatDec(Offset);
 }
 
 void AMDGPUInstPrinter::printSMRDOffset8(const MCInst *MI, unsigned OpNo,
@@ -729,29 +714,25 @@ void AMDGPUInstPrinter::printDefaultVccOperand(bool FirstOperand,
 void AMDGPUInstPrinter::printWaitVDST(const MCInst *MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {
-  O << " wait_vdst:";
-  printU4ImmDecOperand(MI, OpNo, O);
+  O << " wait_vdst:" << formatDec(MI->getOperand(OpNo).getImm());
 }
 
 void AMDGPUInstPrinter::printWaitVAVDst(const MCInst *MI, unsigned OpNo,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
-  O << " wait_va_vdst:";
-  printU4ImmDecOperand(MI, OpNo, O);
+  O << " wait_va_vdst:" << formatDec(MI->getOperand(OpNo).getImm());
 }
 
 void AMDGPUInstPrinter::printWaitVMVSrc(const MCInst *MI, unsigned OpNo,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
-  O << " wait_vm_vsrc:";
-  printU4ImmDecOperand(MI, OpNo, O);
+  O << " wait_vm_vsrc:" << formatDec(MI->getOperand(OpNo).getImm());
 }
 
 void AMDGPUInstPrinter::printWaitEXP(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI,
                                     raw_ostream &O) {
-  O << " wait_exp:";
-  printU4ImmDecOperand(MI, OpNo, O);
+  O << " wait_exp:" << formatDec(MI->getOperand(OpNo).getImm());
 }
 
 bool AMDGPUInstPrinter::needsImpliedVcc(const MCInstrDesc &Desc,
@@ -1066,7 +1047,8 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
   if (!AMDGPU::isLegalDPALU_DPPControl(Imm) && AMDGPU::isDPALU_DPP(Desc)) {
     O << " /* DP ALU dpp only supports row_newbcast */";
     return;
-  } else if (Imm <= DppCtrl::QUAD_PERM_LAST) {
+  }
+  if (Imm <= DppCtrl::QUAD_PERM_LAST) {
     O << "quad_perm:[";
     O << formatDec(Imm & 0x3)         << ',';
     O << formatDec((Imm & 0xc)  >> 2) << ',';
@@ -1074,16 +1056,13 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
     O << formatDec((Imm & 0xc0) >> 6) << ']';
   } else if ((Imm >= DppCtrl::ROW_SHL_FIRST) &&
              (Imm <= DppCtrl::ROW_SHL_LAST)) {
-    O << "row_shl:";
-    printU4ImmDecOperand(MI, OpNo, O);
+    O << "row_shl:" << formatDec(Imm - DppCtrl::ROW_SHL0);
   } else if ((Imm >= DppCtrl::ROW_SHR_FIRST) &&
              (Imm <= DppCtrl::ROW_SHR_LAST)) {
-    O << "row_shr:";
-    printU4ImmDecOperand(MI, OpNo, O);
+    O << "row_shr:" << formatDec(Imm - DppCtrl::ROW_SHR0);
   } else if ((Imm >= DppCtrl::ROW_ROR_FIRST) &&
              (Imm <= DppCtrl::ROW_ROR_LAST)) {
-    O << "row_ror:";
-    printU4ImmDecOperand(MI, OpNo, O);
+    O << "row_ror:" << formatDec(Imm - DppCtrl::ROW_ROR0);
   } else if (Imm == DppCtrl::WAVE_SHL1) {
     if (AMDGPU::isGFX10Plus(STI)) {
       O << "/* wave_shl is not supported starting from GFX10 */";
@@ -1135,15 +1114,14 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
            "than GFX90A/GFX10 */";
       return;
     }
-    printU4ImmDecOperand(MI, OpNo, O);
+    O << formatDec(Imm - DppCtrl::ROW_SHARE_FIRST);
   } else if ((Imm >= DppCtrl::ROW_XMASK_FIRST) &&
              (Imm <= DppCtrl::ROW_XMASK_LAST)) {
     if (!AMDGPU::isGFX10Plus(STI)) {
       O << "/* row_xmask is not supported on ASICs earlier than GFX10 */";
       return;
     }
-    O << "row_xmask:";
-    printU4ImmDecOperand(MI, OpNo, O);
+    O << "row_xmask:" << formatDec(Imm - DppCtrl::ROW_XMASK_FIRST);
   } else {
     O << "/* Invalid dpp_ctrl value */";
   }
@@ -1152,15 +1130,13 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printDppRowMask(const MCInst *MI, unsigned OpNo,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
-  O << " row_mask:";
-  printU4ImmOperand(MI, OpNo, STI, O);
+  O << " row_mask:" << formatHex(MI->getOperand(OpNo).getImm());
 }
 
 void AMDGPUInstPrinter::printDppBankMask(const MCInst *MI, unsigned OpNo,
                                          const MCSubtargetInfo &STI,
                                          raw_ostream &O) {
-  O << " bank_mask:";
-  printU4ImmOperand(MI, OpNo, STI, O);
+  O << " bank_mask:" << formatHex(MI->getOperand(OpNo).getImm());
 }
 
 void AMDGPUInstPrinter::printDppBoundCtrl(const MCInst *MI, unsigned OpNo,

@@ -1,4 +1,4 @@
-# RUN: llc --mtriple=loongarch64 --filetype=obj %s -o - | \
+# RUN: llc --mtriple=loongarch64 -mattr=+d --filetype=obj %s -o - | \
 # RUN: llvm-objdump -d - | FileCheck %s
 
 # REQUIRES: asserts

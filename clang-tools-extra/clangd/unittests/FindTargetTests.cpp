@@ -642,10 +642,7 @@ TEST_F(TargetDeclTest, RewrittenBinaryOperator) {
     bool x = (Foo(1) [[!=]] Foo(2));
   )cpp";
   EXPECT_DECLS("CXXRewrittenBinaryOperator",
-               {"std::strong_ordering operator<=>(const Foo &) const = default",
-                Rel::TemplatePattern},
-               {"bool operator==(const Foo &) const noexcept = default",
-                Rel::TemplateInstantiation});
+               {"bool operator==(const Foo &) const noexcept = default"});
 }
 
 TEST_F(TargetDeclTest, FunctionTemplate) {
@@ -839,7 +836,9 @@ TEST_F(TargetDeclTest, OverloadExpr) {
       [[delete]] x;
     }
   )cpp";
-  EXPECT_DECLS("CXXDeleteExpr", "void operator delete(void *) noexcept");
+  // Sized deallocation is enabled by default in C++14 onwards.
+  EXPECT_DECLS("CXXDeleteExpr",
+               "void operator delete(void *, unsigned long) noexcept");
 }
 
 TEST_F(TargetDeclTest, DependentExprs) {

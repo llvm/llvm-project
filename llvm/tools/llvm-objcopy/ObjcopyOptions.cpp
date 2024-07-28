@@ -552,6 +552,38 @@ static Error loadNewSectionData(StringRef ArgValue, StringRef OptionName,
   return Error::success();
 }
 
+static Expected<int64_t> parseChangeSectionLMA(StringRef ArgValue,
+                                               StringRef OptionName) {
+  StringRef StringValue;
+  if (ArgValue.starts_with("*+")) {
+    StringValue = ArgValue.slice(2, StringRef::npos);
+  } else if (ArgValue.starts_with("*-")) {
+    StringValue = ArgValue.slice(1, StringRef::npos);
+  } else if (ArgValue.contains("=")) {
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName +
+                                 ": changing LMA to a specific value is not "
+                                 "supported. Use *+val or *-val instead");
+  } else if (ArgValue.contains("+") || ArgValue.contains("-")) {
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName +
+                                 ": changing a specific section LMA is not "
+                                 "supported. Use *+val or *-val instead");
+  }
+  if (StringValue.empty())
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName +
+                                 ": missing LMA offset");
+
+  auto LMAValue = getAsInteger<int64_t>(StringValue);
+  if (!LMAValue)
+    return createStringError(LMAValue.getError(),
+                             "bad format for " + OptionName + ": value after " +
+                                 ArgValue.slice(0, 2) + " is " + StringValue +
+                                 " when it should be an integer");
+  return *LMAValue;
+}
+
 // parseObjcopyOptions returns the config and sets the input arguments. If a
 // help flag is set then parseObjcopyOptions will print the help messege and
 // exit.
@@ -570,6 +602,12 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   unsigned MissingArgumentIndex, MissingArgumentCount;
   llvm::opt::InputArgList InputArgs =
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
+
+  if (MissingArgumentCount)
+    return createStringError(
+        errc::invalid_argument,
+        "argument to '%s' is missing (expected %d value(s))",
+        InputArgs.getArgString(MissingArgumentIndex), MissingArgumentCount);
 
   if (InputArgs.size() == 0 && DashDash == RawArgsArr.end()) {
     printHelp(T, errs(), ToolType::Objcopy);
@@ -672,12 +710,13 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
             .Case("boot_application",
                   COFF::IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION)
             .Case("console", COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI)
-            .Case("efi_application", COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION)
-            .Case("efi_boot_service_driver",
-                  COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
+            .Cases("efi_application", "efi-app",
+                   COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION)
+            .Cases("efi_boot_service_driver", "efi-bsd",
+                   COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
             .Case("efi_rom", COFF::IMAGE_SUBSYSTEM_EFI_ROM)
-            .Case("efi_runtime_driver",
-                  COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
+            .Cases("efi_runtime_driver", "efi-rtd",
+                   COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
             .Case("native", COFF::IMAGE_SUBSYSTEM_NATIVE)
             .Case("posix", COFF::IMAGE_SUBSYSTEM_POSIX_CUI)
             .Case("windows", COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI)
@@ -827,6 +866,14 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
     Config.PadTo = *Addr;
   }
 
+  if (const auto *Arg = InputArgs.getLastArg(OBJCOPY_change_section_lma)) {
+    Expected<int64_t> LMAValue =
+        parseChangeSectionLMA(Arg->getValue(), Arg->getSpelling());
+    if (!LMAValue)
+      return LMAValue.takeError();
+    Config.ChangeSectionLMAValAll = *LMAValue;
+  }
+
   for (auto *Arg : InputArgs.filtered(OBJCOPY_redefine_symbol)) {
     if (!StringRef(Arg->getValue()).contains('='))
       return createStringError(errc::invalid_argument,
@@ -943,6 +990,10 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
                              ? DiscardType::All
                              : DiscardType::Locals;
   }
+
+  ELFConfig.VerifyNoteSections = InputArgs.hasFlag(
+      OBJCOPY_verify_note_sections, OBJCOPY_no_verify_note_sections, true);
+
   Config.OnlyKeepDebug = InputArgs.hasArg(OBJCOPY_only_keep_debug);
   ELFConfig.KeepFileSymbols = InputArgs.hasArg(OBJCOPY_keep_file_symbols);
   MachOConfig.KeepUndefined = InputArgs.hasArg(OBJCOPY_keep_undefined);

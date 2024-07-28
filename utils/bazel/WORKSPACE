@@ -2,7 +2,6 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository", "new_git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 
@@ -26,6 +25,14 @@ new_local_repository(
 load("@llvm-raw//utils/bazel:configure.bzl", "llvm_configure")
 
 llvm_configure(name = "llvm-project")
+
+maybe(
+    http_archive,
+    name = "rules_python",
+    sha256 = "778aaeab3e6cfd56d681c89f5c10d7ad6bf8d2f1a72de9de55b23081b2d31618",
+    strip_prefix = "rules_python-0.34.0",
+    url = "https://github.com/bazelbuild/rules_python/releases/download/0.34.0/rules_python-0.34.0.tar.gz",
+)
 
 maybe(
     http_archive,
@@ -56,6 +63,19 @@ maybe(
     name = "vulkan_sdk",
 )
 
+http_archive(
+    name = "build_bazel_apple_support",
+    sha256 = "c4bb2b7367c484382300aee75be598b92f847896fb31bbd22f3a2346adf66a80",
+    url = "https://github.com/bazelbuild/apple_support/releases/download/1.15.1/apple_support.1.15.1.tar.gz",
+)
+
+load(
+    "@build_bazel_apple_support//lib:repositories.bzl",
+    "apple_support_dependencies",
+)
+
+apple_support_dependencies()
+
 # llvm libc math tests reply on `mpfr`.
 # The availability of `mpfr` is controlled by a flag and can be either `disable`, `system` or `external`.
 # Continuous integration uses `system` to speed up the build process (see .bazelrc).
@@ -63,10 +83,11 @@ maybe(
 # Note: that building from source requires `m4` to be installed on the host machine.
 # This is a known issue: https://github.com/bazelbuild/rules_foreign_cc/issues/755.
 
-git_repository(
+http_archive(
     name = "rules_foreign_cc",
-    remote = "https://github.com/bazelbuild/rules_foreign_cc.git",
-    tag = "0.9.0",
+    sha256 = "4b33d62cf109bcccf286b30ed7121129cc34cf4f4ed9d8a11f38d9108f40ba74",
+    strip_prefix = "rules_foreign_cc-0.11.1",
+    url = "https://github.com/bazelbuild/rules_foreign_cc/releases/download/0.11.1/rules_foreign_cc-0.11.1.tar.gz",
 )
 
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
@@ -99,11 +120,12 @@ maybe(
 )
 
 maybe(
-    new_git_repository,
+    http_archive,
     name = "pfm",
     build_file = "@llvm-raw//utils/bazel/third_party_build:pfm.BUILD",
-    remote = "https://git.code.sf.net/p/perfmon2/libpfm4",
-    tag = "v4.12.1",
+    sha256 = "d18b97764c755528c1051d376e33545d0eb60c6ebf85680436813fa5b04cc3d1",
+    strip_prefix = "libpfm-4.13.0",
+    urls = ["https://versaweb.dl.sourceforge.net/project/perfmon2/libpfm4/libpfm-4.13.0.tar.gz"],
 )
 
 maybe(
@@ -115,4 +137,22 @@ maybe(
     urls = [
         "https://github.com/facebook/zstd/releases/download/v1.5.2/zstd-1.5.2.tar.gz",
     ],
+)
+
+maybe(
+    http_archive,
+    name = "pybind11",
+    build_file = "@llvm-raw//utils/bazel/third_party_build:pybind.BUILD",
+    sha256 = "201966a61dc826f1b1879a24a3317a1ec9214a918c8eb035be2f30c3e9cfbdcb",
+    strip_prefix = "pybind11-2.10.3",
+    url = "https://github.com/pybind/pybind11/archive/v2.10.3.zip",
+)
+
+load("@rules_python//python:repositories.bzl", "py_repositories", "python_register_toolchains")
+
+py_repositories()
+
+python_register_toolchains(
+    name = "python_3_12",
+    python_version = "3.12",
 )

@@ -11,6 +11,7 @@
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -62,7 +63,7 @@ protected:
         TM->getTargetFeatureString(),
         TM->getTargetTriple().isArch64Bit() ? "lp64" : "ilp32", 0, 0, *TM);
 
-    MF = std::make_unique<MachineFunction>(*F, *TM, *ST, 42, *MMI);
+    MF = std::make_unique<MachineFunction>(*F, *TM, *ST, MMI->getContext(), 42);
   }
 };
 

@@ -1,4 +1,4 @@
-//===--- DialectNvgpu.cpp - Pybind module for Nvgpu dialect API support ---===//
+//===--- DialectNVGPU.cpp - Pybind module for NVGPU dialect API support ---===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ using namespace mlir;
 using namespace mlir::python;
 using namespace mlir::python::adaptors;
 
-static void populateDialectNvgpuSubmodule(const pybind11::module &m) {
+static void populateDialectNVGPUSubmodule(const pybind11::module &m) {
   auto nvgpuTensorMapDescriptorType = mlir_type_subclass(
       m, "TensorMapDescriptorType", mlirTypeIsANVGPUTensorMapDescriptorType);
 
@@ -34,8 +34,8 @@ static void populateDialectNvgpuSubmodule(const pybind11::module &m) {
       py::arg("ctx") = py::none());
 }
 
-PYBIND11_MODULE(_mlirDialectsNvgpu, m) {
+PYBIND11_MODULE(_mlirDialectsNVGPU, m) {
   m.doc() = "MLIR NVGPU dialect.";
 
-  populateDialectNvgpuSubmodule(m);
+  populateDialectNVGPUSubmodule(m);
 }

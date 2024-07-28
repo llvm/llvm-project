@@ -25,7 +25,6 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/MathExtras.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
@@ -324,8 +323,7 @@ SmallVector<OpFoldResult> vector::getMixedSizesXfer(bool hasTensorSemantics,
 }
 
 bool vector::isLinearizableVector(VectorType type) {
-  auto numScalableDims = llvm::count(type.getScalableDims(), true);
-  return (type.getRank() > 1) && (numScalableDims <= 1);
+  return (type.getRank() > 1) && (type.getNumScalableDims() <= 1);
 }
 
 Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,

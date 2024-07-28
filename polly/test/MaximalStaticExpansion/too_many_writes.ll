@@ -1,6 +1,4 @@
-; RUN: opt %loadPolly -polly-mse -polly-print-scops -disable-output < %s | FileCheck %s
 ; RUN: opt %loadNPMPolly "-passes=scop(print<polly-mse>)" -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-mse -polly-print-scops -pass-remarks-analysis="polly-mse" -disable-output < %s 2>&1 | FileCheck %s --check-prefix=MSE
 ; RUN: opt %loadNPMPolly "-passes=scop(print<polly-mse>)" -pass-remarks-analysis="polly-mse" -disable-output < %s 2>&1 | FileCheck %s --check-prefix=MSE
 ;
 ; Verify that Polly detects problems and does not expand the array

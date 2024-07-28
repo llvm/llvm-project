@@ -430,12 +430,6 @@ TEST(HasTypeLoc, MatchesCXXUnresolvedConstructExpr) {
               cxxUnresolvedConstructExpr(hasTypeLoc(loc(asString("T"))))));
 }
 
-TEST(HasTypeLoc, MatchesClassTemplateSpecializationDecl) {
-  EXPECT_TRUE(matches(
-      "template <typename T> class Foo; template <> class Foo<int> {};",
-      classTemplateSpecializationDecl(hasTypeLoc(loc(asString("Foo<int>"))))));
-}
-
 TEST(HasTypeLoc, MatchesCompoundLiteralExpr) {
   EXPECT_TRUE(
       matches("int* x = (int[2]) { 0, 1 };",
@@ -5979,6 +5973,37 @@ TEST(StatementMatcher, ForCallable) {
   EXPECT_TRUE(notMatches(CppString2,
                          returnStmt(forCallable(functionDecl(hasName("F"))))));
 
+  StringRef CodeWithDeepCallExpr = R"cpp(
+void Other();
+void Function() {
+  {
+    (
+      Other()
+    );
+  }
+}
+)cpp";
+  auto ForCallableFirst =
+      callExpr(forCallable(functionDecl(hasName("Function"))),
+               callee(functionDecl(hasName("Other")).bind("callee")))
+          .bind("call");
+  auto ForCallableSecond =
+      callExpr(callee(functionDecl(hasName("Other")).bind("callee")),
+               forCallable(functionDecl(hasName("Function"))))
+          .bind("call");
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      CodeWithDeepCallExpr, ForCallableFirst,
+      std::make_unique<VerifyIdIsBoundTo<CallExpr>>("call")));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      CodeWithDeepCallExpr, ForCallableFirst,
+      std::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("callee")));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      CodeWithDeepCallExpr, ForCallableSecond,
+      std::make_unique<VerifyIdIsBoundTo<CallExpr>>("call")));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      CodeWithDeepCallExpr, ForCallableSecond,
+      std::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("callee")));
+
   // These tests are specific to forCallable().
   StringRef ObjCString1 = "@interface I"
                           "-(void) foo;"
@@ -6018,6 +6043,105 @@ TEST(StatementMatcher, ForCallable) {
     notMatchesObjC(
       ObjCString2,
       binaryOperator(forCallable(blockDecl()))));
+}
+
+namespace {
+class ForCallablePreservesBindingWithMultipleParentsTestCallback
+    : public BoundNodesCallback {
+public:
+  bool run(const BoundNodes *BoundNodes) override {
+    FunctionDecl const *FunDecl =
+        BoundNodes->getNodeAs<FunctionDecl>("funDecl");
+    // Validate test assumptions. This would be expressed as ASSERT_* in
+    // a TEST().
+    if (!FunDecl) {
+      EXPECT_TRUE(false && "Incorrect test setup");
+      return false;
+    }
+    auto const *FunDef = FunDecl->getDefinition();
+    if (!FunDef || !FunDef->getBody() ||
+        FunDef->getNameAsString() != "Function") {
+      EXPECT_TRUE(false && "Incorrect test setup");
+      return false;
+    }
+
+    ExpectCorrectResult(
+        "Baseline",
+        callExpr(callee(cxxMethodDecl().bind("callee"))).bind("call"), //
+        FunDecl);
+
+    ExpectCorrectResult("ForCallable first",
+                        callExpr(forCallable(equalsNode(FunDecl)),
+                                 callee(cxxMethodDecl().bind("callee")))
+                            .bind("call"),
+                        FunDecl);
+
+    ExpectCorrectResult("ForCallable second",
+                        callExpr(callee(cxxMethodDecl().bind("callee")),
+                                 forCallable(equalsNode(FunDecl)))
+                            .bind("call"),
+                        FunDecl);
+
+    // This value does not really matter: the EXPECT_* will set the exit code.
+    return true;
+  }
+
+  bool run(const BoundNodes *BoundNodes, ASTContext *Context) override {
+    return run(BoundNodes);
+  }
+
+private:
+  void ExpectCorrectResult(StringRef LogInfo,
+                           ArrayRef<BoundNodes> Results) const {
+    EXPECT_EQ(Results.size(), 1u) << LogInfo;
+    if (Results.empty())
+      return;
+    auto const &R = Results.front();
+    EXPECT_TRUE(R.getNodeAs<CallExpr>("call")) << LogInfo;
+    EXPECT_TRUE(R.getNodeAs<CXXMethodDecl>("callee")) << LogInfo;
+  }
+
+  template <typename MatcherT>
+  void ExpectCorrectResult(StringRef LogInfo, MatcherT Matcher,
+                           FunctionDecl const *FunDef) const {
+    auto &Context = FunDef->getASTContext();
+    auto const &Results = match(findAll(Matcher), *FunDef->getBody(), Context);
+    ExpectCorrectResult(LogInfo, Results);
+  }
+};
+} // namespace
+
+TEST(StatementMatcher, ForCallablePreservesBindingWithMultipleParents) {
+  // Tests in this file are fairly simple and therefore can rely on matches,
+  // matchAndVerifyResultTrue, etc. This test, however, needs a FunctionDecl* in
+  // order to call equalsNode in order to reproduce the observed issue (bindings
+  // being removed despite forCallable matching the node).
+  //
+  // Because of this and because the machinery to compile the code into an
+  // ASTUnit is not exposed outside matchAndVerifyResultConditionally, it is
+  // cheaper to have a custom BoundNodesCallback for the purpose of this test.
+  StringRef codeWithTemplateFunction = R"cpp(
+struct Klass {
+  void Method();
+  template <typename T>
+  void Function(T t); // Declaration
+};
+
+void Instantiate(Klass k) {
+  k.Function(0);
+}
+
+template <typename T>
+void Klass::Function(T t) { // Definition
+  // Compound statement has two parents: the declaration and the definition.
+  Method();
+}
+)cpp";
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      codeWithTemplateFunction,
+      callExpr(callee(functionDecl(hasName("Function")).bind("funDecl"))),
+      std::make_unique<
+          ForCallablePreservesBindingWithMultipleParentsTestCallback>()));
 }
 
 TEST(Matcher, ForEachOverriden) {
@@ -6384,8 +6508,7 @@ TEST(HasAnyTemplateArgumentLoc, BindsToExplicitSpecializationWithIntArgument) {
       "template<typename T> class A {}; template<> class A<int> {};",
       classTemplateSpecializationDecl(
           hasName("A"),
-          hasTypeLoc(templateSpecializationTypeLoc(
-              hasAnyTemplateArgumentLoc(hasTypeLoc(loc(asString("int")))))))));
+          hasAnyTemplateArgumentLoc(hasTypeLoc(loc(asString("int")))))));
 }
 
 TEST(HasAnyTemplateArgumentLoc,
@@ -6394,8 +6517,7 @@ TEST(HasAnyTemplateArgumentLoc,
       "template<typename T> class A {}; template<> class A<double> {};",
       classTemplateSpecializationDecl(
           hasName("A"),
-          hasTypeLoc(templateSpecializationTypeLoc(hasAnyTemplateArgumentLoc(
-              hasTypeLoc(loc(asString("double")))))))));
+          hasAnyTemplateArgumentLoc(hasTypeLoc(loc(asString("double")))))));
 }
 
 TEST(HasAnyTemplateArgumentLoc, BindsToSpecializationWithMultipleArguments) {
@@ -6405,24 +6527,20 @@ TEST(HasAnyTemplateArgumentLoc, BindsToSpecializationWithMultipleArguments) {
   )";
   EXPECT_TRUE(
       matches(code, classTemplateSpecializationDecl(
-                        hasName("A"), hasTypeLoc(templateSpecializationTypeLoc(
-                                          hasAnyTemplateArgumentLoc(hasTypeLoc(
-                                              loc(asString("double")))))))));
+                        hasName("A"), hasAnyTemplateArgumentLoc(hasTypeLoc(
+                                          loc(asString("double")))))));
+
   EXPECT_TRUE(matches(
-      code,
-      classTemplateSpecializationDecl(
-          hasName("A"),
-          hasTypeLoc(templateSpecializationTypeLoc(
-              hasAnyTemplateArgumentLoc(hasTypeLoc(loc(asString("int")))))))));
+      code, classTemplateSpecializationDecl(
+                hasName("A"),
+                hasAnyTemplateArgumentLoc(hasTypeLoc(loc(asString("int")))))));
 }
 
 TEST(HasAnyTemplateArgumentLoc, DoesNotBindToSpecializationWithIntArgument) {
-  EXPECT_TRUE(notMatches(
-      "template<typename T> class A {}; A<int> a;",
-      classTemplateSpecializationDecl(
-          hasName("A"),
-          hasTypeLoc(templateSpecializationTypeLoc(hasAnyTemplateArgumentLoc(
-              hasTypeLoc(loc(asString("double")))))))));
+  EXPECT_TRUE(notMatches("template<typename T> class A {}; A<int> a;",
+                         classTemplateSpecializationDecl(
+                             hasName("A"), hasAnyTemplateArgumentLoc(hasTypeLoc(
+                                               loc(asString("double")))))));
 }
 
 TEST(HasAnyTemplateArgumentLoc,
@@ -6431,8 +6549,7 @@ TEST(HasAnyTemplateArgumentLoc,
       "template<typename T> class A {}; template<> class A<int> {};",
       classTemplateSpecializationDecl(
           hasName("A"),
-          hasTypeLoc(templateSpecializationTypeLoc(hasAnyTemplateArgumentLoc(
-              hasTypeLoc(loc(asString("double")))))))));
+          hasAnyTemplateArgumentLoc(hasTypeLoc(loc(asString("double")))))));
 }
 
 TEST(HasTemplateArgumentLoc, BindsToSpecializationWithIntArgument) {
@@ -6453,13 +6570,21 @@ TEST(HasTemplateArgumentLoc, BindsToSpecializationWithDoubleArgument) {
                               0, hasTypeLoc(loc(asString("double")))))))))));
 }
 
+TEST(HasTemplateArgumentLoc, DoesNotBindToSpecializationWithIntArgument) {
+  EXPECT_TRUE(notMatches(
+      "template<typename T> class A {}; A<int> a;",
+      varDecl(hasName("a"),
+              hasTypeLoc(elaboratedTypeLoc(hasNamedTypeLoc(
+                  templateSpecializationTypeLoc(hasTemplateArgumentLoc(
+                      0, hasTypeLoc(loc(asString("double")))))))))));
+}
+
 TEST(HasTemplateArgumentLoc, BindsToExplicitSpecializationWithIntArgument) {
   EXPECT_TRUE(matches(
       "template<typename T> class A {}; template<> class A<int> {};",
       classTemplateSpecializationDecl(
           hasName("A"),
-          hasTypeLoc(templateSpecializationTypeLoc(
-              hasTemplateArgumentLoc(0, hasTypeLoc(loc(asString("int")))))))));
+          hasTemplateArgumentLoc(0, hasTypeLoc(loc(asString("int")))))));
 }
 
 TEST(HasTemplateArgumentLoc, BindsToExplicitSpecializationWithDoubleArgument) {
@@ -6467,8 +6592,7 @@ TEST(HasTemplateArgumentLoc, BindsToExplicitSpecializationWithDoubleArgument) {
       "template<typename T> class A {}; template<> class A<double> {};",
       classTemplateSpecializationDecl(
           hasName("A"),
-          hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-              0, hasTypeLoc(loc(asString("double")))))))));
+          hasTemplateArgumentLoc(0, hasTypeLoc(loc(asString("double")))))));
 }
 
 TEST(HasTemplateArgumentLoc, BindsToSpecializationWithMultipleArguments) {
@@ -6478,23 +6602,12 @@ TEST(HasTemplateArgumentLoc, BindsToSpecializationWithMultipleArguments) {
   )";
   EXPECT_TRUE(matches(
       code, classTemplateSpecializationDecl(
-                hasName("A"),
-                hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-                    0, hasTypeLoc(loc(asString("double")))))))));
+                hasName("A"), hasTemplateArgumentLoc(
+                                  0, hasTypeLoc(loc(asString("double")))))));
   EXPECT_TRUE(matches(
       code, classTemplateSpecializationDecl(
                 hasName("A"),
-                hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-                    1, hasTypeLoc(loc(asString("int")))))))));
-}
-
-TEST(HasTemplateArgumentLoc, DoesNotBindToSpecializationWithIntArgument) {
-  EXPECT_TRUE(notMatches(
-      "template<typename T> class A {}; A<int> a;",
-      classTemplateSpecializationDecl(
-          hasName("A"),
-          hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-              0, hasTypeLoc(loc(asString("double")))))))));
+                hasTemplateArgumentLoc(1, hasTypeLoc(loc(asString("int")))))));
 }
 
 TEST(HasTemplateArgumentLoc,
@@ -6503,8 +6616,7 @@ TEST(HasTemplateArgumentLoc,
       "template<typename T> class A {}; template<> class A<int> {};",
       classTemplateSpecializationDecl(
           hasName("A"),
-          hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-              0, hasTypeLoc(loc(asString("double")))))))));
+          hasTemplateArgumentLoc(0, hasTypeLoc(loc(asString("double")))))));
 }
 
 TEST(HasTemplateArgumentLoc,
@@ -6515,14 +6627,12 @@ TEST(HasTemplateArgumentLoc,
   )";
   EXPECT_TRUE(notMatches(
       code, classTemplateSpecializationDecl(
-                hasName("A"),
-                hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-                    1, hasTypeLoc(loc(asString("double")))))))));
+                hasName("A"), hasTemplateArgumentLoc(
+                                  1, hasTypeLoc(loc(asString("double")))))));
   EXPECT_TRUE(notMatches(
       code, classTemplateSpecializationDecl(
                 hasName("A"),
-                hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-                    0, hasTypeLoc(loc(asString("int")))))))));
+                hasTemplateArgumentLoc(0, hasTypeLoc(loc(asString("int")))))));
 }
 
 TEST(HasTemplateArgumentLoc, DoesNotBindWithBadIndex) {
@@ -6532,14 +6642,12 @@ TEST(HasTemplateArgumentLoc, DoesNotBindWithBadIndex) {
   )";
   EXPECT_TRUE(notMatches(
       code, classTemplateSpecializationDecl(
-                hasName("A"),
-                hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-                    -1, hasTypeLoc(loc(asString("double")))))))));
+                hasName("A"), hasTemplateArgumentLoc(
+                                  -1, hasTypeLoc(loc(asString("double")))))));
   EXPECT_TRUE(notMatches(
       code, classTemplateSpecializationDecl(
-                hasName("A"),
-                hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-                    100, hasTypeLoc(loc(asString("int")))))))));
+                hasName("A"), hasTemplateArgumentLoc(
+                                  100, hasTypeLoc(loc(asString("int")))))));
 }
 
 TEST(HasTemplateArgumentLoc, BindsToDeclRefExprWithIntArgument) {

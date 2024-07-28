@@ -24,7 +24,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.assertTrue(output is None or len(output) == 0)
 
     @skipIfWindows
-    @skipIfRemote
     def test_launch(self):
         """
         This test launches a process that would creates a file, but we disconnect
@@ -46,7 +45,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.assertFalse(os.path.exists(program + ".side_effect"))
 
     @skipIfWindows
-    @skipIfRemote
     @expectedFailureNetBSD
     def test_attach(self):
         """

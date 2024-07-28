@@ -11,17 +11,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "Boolean.h"
+#include "Context.h"
+#include "EvaluationResult.h"
 #include "Floating.h"
 #include "Function.h"
 #include "FunctionPointer.h"
 #include "Integral.h"
 #include "IntegralAP.h"
 #include "InterpFrame.h"
+#include "MemberPointer.h"
 #include "Opcode.h"
 #include "PrimType.h"
 #include "Program.h"
 #include "clang/AST/ASTDumperUtils.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Format.h"
 
@@ -120,6 +124,8 @@ static const char *primTypeToString(PrimType T) {
     return "Ptr";
   case PT_FnPtr:
     return "FnPtr";
+  case PT_MemberPtr:
+    return "MemberPtr";
   }
   llvm_unreachable("Unhandled PrimType");
 }
@@ -149,8 +155,34 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
       OS << (GP.isInitialized() ? "initialized " : "uninitialized ");
     }
     Desc->dump(OS);
+
+    if (GP.isInitialized() && Desc->IsTemporary) {
+      if (const auto *MTE =
+              dyn_cast_if_present<MaterializeTemporaryExpr>(Desc->asExpr());
+          MTE && MTE->getLifetimeExtendedTemporaryDecl()) {
+        if (const APValue *V =
+                MTE->getLifetimeExtendedTemporaryDecl()->getValue()) {
+          OS << " (global temporary value: ";
+          {
+            ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_MAGENTA, true});
+            std::string VStr;
+            llvm::raw_string_ostream SS(VStr);
+            V->dump(SS, Ctx.getASTContext());
+
+            for (unsigned I = 0; I != VStr.size(); ++I) {
+              if (VStr[I] == '\n')
+                VStr[I] = ' ';
+            }
+            VStr.pop_back(); // Remove the newline (or now space) at the end.
+            OS << VStr;
+          }
+          OS << ')';
+        }
+      }
+    }
+
     OS << "\n";
-    if (Desc->isPrimitive() && !Desc->isDummy()) {
+    if (GP.isInitialized() && Desc->isPrimitive() && !Desc->isDummy()) {
       OS << "   ";
       {
         ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_CYAN, false});
@@ -186,7 +218,7 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
     if (const auto *ND = dyn_cast_if_present<NamedDecl>(asDecl()))
       ND->printQualifiedName(OS);
     else if (asExpr())
-      OS << "expr (TODO)";
+      OS << "Expr " << (const void *)asExpr();
   }
 
   // Print a few interesting bits about the descriptor.
@@ -246,10 +278,15 @@ LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
   OS << "\n";
   OS.indent(Spaces) << "This: " << getThis() << "\n";
   OS.indent(Spaces) << "RVO: " << getRVOPtr() << "\n";
+  OS.indent(Spaces) << "Depth: " << Depth << "\n";
+  OS.indent(Spaces) << "ArgSize: " << ArgSize << "\n";
+  OS.indent(Spaces) << "Args: " << (void *)Args << "\n";
+  OS.indent(Spaces) << "FrameOffset: " << FrameOffset << "\n";
+  OS.indent(Spaces) << "FrameSize: " << (Func ? Func->getFrameSize() : 0)
+                    << "\n";
 
-  while (const InterpFrame *F = this->Caller) {
+  for (const InterpFrame *F = this->Caller; F; F = F->Caller) {
     F->dump(OS, Indent + 1);
-    F = F->Caller;
   }
 }
 
@@ -293,8 +330,11 @@ LLVM_DUMP_METHOD void Record::dump(llvm::raw_ostream &OS, unsigned Indentation,
 LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   {
     ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_BLUE, true});
-    OS << "Block " << (const void *)this << "\n";
+    OS << "Block " << (const void *)this;
   }
+  OS << " (";
+  Desc->dump(OS);
+  OS << ")\n";
   unsigned NPointers = 0;
   for (const Pointer *P = Pointers; P; P = P->Next) {
     ++NPointers;
@@ -304,4 +344,44 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   OS << "  Static: " << IsStatic << "\n";
   OS << "  Extern: " << IsExtern << "\n";
   OS << "  Initialized: " << IsInitialized << "\n";
+}
+
+LLVM_DUMP_METHOD void EvaluationResult::dump() const {
+  assert(Ctx);
+  auto &OS = llvm::errs();
+  const ASTContext &ASTCtx = Ctx->getASTContext();
+
+  switch (Kind) {
+  case Empty:
+    OS << "Empty\n";
+    break;
+  case RValue:
+    OS << "RValue: ";
+    std::get<APValue>(Value).dump(OS, ASTCtx);
+    break;
+  case LValue: {
+    assert(Source);
+    QualType SourceType;
+    if (const auto *D = Source.dyn_cast<const Decl *>()) {
+      if (const auto *VD = dyn_cast<ValueDecl>(D))
+        SourceType = VD->getType();
+    } else if (const auto *E = Source.dyn_cast<const Expr *>()) {
+      SourceType = E->getType();
+    }
+
+    OS << "LValue: ";
+    if (const auto *P = std::get_if<Pointer>(&Value))
+      P->toAPValue(ASTCtx).printPretty(OS, ASTCtx, SourceType);
+    else if (const auto *FP = std::get_if<FunctionPointer>(&Value)) // Nope
+      FP->toAPValue(ASTCtx).printPretty(OS, ASTCtx, SourceType);
+    OS << "\n";
+    break;
+  }
+  case Invalid:
+    OS << "Invalid\n";
+    break;
+  case Valid:
+    OS << "Valid\n";
+    break;
+  }
 }

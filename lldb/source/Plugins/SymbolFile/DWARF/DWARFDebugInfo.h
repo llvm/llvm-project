@@ -38,16 +38,10 @@ public:
                              uint32_t *idx_ptr = nullptr);
   DWARFUnit *GetUnitContainingDIEOffset(DIERef::Section section,
                                         dw_offset_t die_offset);
-  DWARFUnit *GetUnit(const DIERef &die_ref);
   DWARFUnit *GetSkeletonUnit(DWARFUnit *dwo_unit);
   DWARFTypeUnit *GetTypeUnitForHash(uint64_t hash);
   bool ContainsTypeUnits();
-  DWARFDIE GetDIE(const DIERef &die_ref);
-
-  /// Returns the AT_Name of this DIE, if it exists, without parsing the entire
-  /// compile unit. An empty is string is returned upon error or if the
-  /// attribute is not present.
-  llvm::StringRef PeekDIEName(const DIERef &die_ref);
+  DWARFDIE GetDIE(DIERef::Section section, dw_offset_t die_offset);
 
   enum {
     eDumpFlag_Verbose = (1 << 0),  // Verbose dumping
@@ -57,6 +51,8 @@ public:
   };
 
   const DWARFDebugAranges &GetCompileUnitAranges();
+
+  const std::shared_ptr<SymbolFileDWARFDwo> &GetDwpSymbolFile();
 
 protected:
   typedef std::vector<DWARFUnitSP> UnitColl;

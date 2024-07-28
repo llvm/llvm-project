@@ -1,6 +1,6 @@
-# Test the correctness of section names and function symbol names post cdsplit.
-# Warm section should have name .text.warm and warm function fragments should
-# have symbol names ending in warm.
+## Test the correctness of section names and function symbol names post cdsplit.
+## Warm section should have name .text.warm and warm function fragments should
+## have symbol names ending in warm.
 
 # RUN: llvm-mc --filetype=obj --triple x86_64-unknown-unknown %s -o %t.o
 # RUN: link_fdata %s %t.o %t.fdata

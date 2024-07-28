@@ -692,3 +692,30 @@ define float @load_f16_f32_with_folded_gep_offset(ptr %p) {
   %t = call float @llvm.wasm.loadf16.f32(ptr %s)
   ret float %t
 }
+
+;===----------------------------------------------------------------------------
+; Stores: Half Precision
+;===----------------------------------------------------------------------------
+
+; Basic store.
+
+; CHECK-LABEL: store_f16_f32_no_offset:
+; CHECK-NEXT: .functype store_f16_f32_no_offset (i32, f32) -> (){{$}}
+; CHECK-NEXT: f32.store_f16 0($0), $1{{$}}
+; CHECK-NEXT: return{{$}}
+define void @store_f16_f32_no_offset(ptr %p, float %v) {
+  call void @llvm.wasm.storef16.f32(float %v, ptr %p)
+  ret void
+}
+
+; Storing to a fixed address.
+
+; CHECK-LABEL: store_f16_f32_to_numeric_address:
+; CHECK:      i32.const $push1=, 0{{$}}
+; CHECK-NEXT: f32.const $push0=, 0x0p0{{$}}
+; CHECK-NEXT: f32.store_f16 42($pop1), $pop0{{$}}
+define void @store_f16_f32_to_numeric_address() {
+  %s = inttoptr i32 42 to ptr
+  call void @llvm.wasm.storef16.f32(float 0.0, ptr %s)
+  ret void
+}

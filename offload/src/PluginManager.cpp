@@ -13,6 +13,7 @@
 #include "PluginManager.h"
 #include "Shared/Debug.h"
 #include "Shared/Profile.h"
+#include "device.h"
 
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -23,177 +24,97 @@ using namespace llvm::sys;
 
 PluginManager *PM = nullptr;
 
-Expected<std::unique_ptr<PluginAdaptorTy>>
-PluginAdaptorTy::create(const std::string &Name) {
-  DP("Attempting to load library '%s'...\n", Name.c_str());
-  TIMESCOPE_WITH_NAME_AND_IDENT(Name, (const ident_t *)nullptr);
-
-  std::string ErrMsg;
-  auto LibraryHandler = std::make_unique<DynamicLibrary>(
-      DynamicLibrary::getPermanentLibrary(Name.c_str(), &ErrMsg));
-
-  if (!LibraryHandler->isValid()) {
-    // Library does not exist or cannot be found.
-    return createStringError(inconvertibleErrorCode(),
-                             "Unable to load library '%s': %s!\n", Name.c_str(),
-                             ErrMsg.c_str());
-  }
-
-  DP("Successfully loaded library '%s'!\n", Name.c_str());
-  auto PluginAdaptor = std::unique_ptr<PluginAdaptorTy>(
-      new PluginAdaptorTy(Name, std::move(LibraryHandler)));
-  if (auto Err = PluginAdaptor->init())
-    return Err;
-  return std::move(PluginAdaptor);
-}
-
-PluginAdaptorTy::PluginAdaptorTy(const std::string &Name,
-                                 std::unique_ptr<llvm::sys::DynamicLibrary> DL)
-    : Name(Name), LibraryHandler(std::move(DL)) {}
-
-Error PluginAdaptorTy::init() {
-
-#define PLUGIN_API_HANDLE(NAME)                                                \
-  NAME = reinterpret_cast<decltype(NAME)>(                                     \
-      LibraryHandler->getAddressOfSymbol(GETNAME(__tgt_rtl_##NAME)));          \
-  if (!NAME) {                                                                 \
-    return createStringError(inconvertibleErrorCode(),                         \
-                             "Invalid plugin as necessary interface function " \
-                             "(%s) was not found.\n",                          \
-                             std::string(#NAME).c_str());                      \
-  }
-
-#include "Shared/PluginAPI.inc"
-#undef PLUGIN_API_HANDLE
-
-  // Remove plugin on failure to call optional init_plugin
-  int32_t Rc = init_plugin();
-  if (Rc != OFFLOAD_SUCCESS) {
-    return createStringError(inconvertibleErrorCode(),
-                             "Unable to initialize library '%s': %u!\n",
-                             Name.c_str(), Rc);
-  }
-
-  // No devices are supported by this RTL?
-  int32_t NumberOfPluginDevices = number_of_devices();
-  if (!NumberOfPluginDevices) {
-    return createStringError(inconvertibleErrorCode(),
-                             "No devices supported in this RTL\n");
-  }
-
-  DP("Registered '%s' with %d plugin visible devices!\n", Name.c_str(),
-     NumberOfPluginDevices);
-  return Error::success();
-}
+// Every plugin exports this method to create an instance of the plugin type.
+#define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
+#include "Shared/Targets.def"
 
 void PluginManager::init() {
   TIMESCOPE();
   DP("Loading RTLs...\n");
 
-  // Attempt to open all the plugins and, if they exist, check if the interface
-  // is correct and if they are supporting any devices.
+  // Attempt to create an instance of each supported plugin.
 #define PLUGIN_TARGET(Name)                                                    \
   do {                                                                         \
-    auto PluginAdaptorOrErr =                                                  \
-        PluginAdaptorTy::create("libomptarget.rtl." #Name ".so");              \
-    if (!PluginAdaptorOrErr) {                                                 \
-      [[maybe_unused]] std::string InfoMsg =                                   \
-          toString(PluginAdaptorOrErr.takeError());                            \
-      DP("%s", InfoMsg.c_str());                                               \
-    } else {                                                                   \
-      PluginAdaptors.push_back(std::move(*PluginAdaptorOrErr));                \
-    }                                                                          \
+    Plugins.emplace_back(                                                      \
+        std::unique_ptr<GenericPluginTy>(createPlugin_##Name()));              \
   } while (false);
 #include "Shared/Targets.def"
 
   DP("RTLs loaded!\n");
 }
 
-void PluginManager::initDevices(PluginAdaptorTy &RTL) {
-  // If this RTL has already been initialized.
-  if (PM->DeviceOffsets.contains(&RTL))
-    return;
+void PluginManager::deinit() {
   TIMESCOPE();
+  DP("Unloading RTLs...\n");
 
-  // If this RTL is not already in use, initialize it.
-  assert(RTL.number_of_devices() > 0 &&
-         "Tried to initialize useless plugin adaptor");
+  for (auto &Plugin : Plugins) {
+    if (!Plugin->is_initialized())
+      continue;
+
+    if (auto Err = Plugin->deinit()) {
+      [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
+      DP("Failed to deinit plugin: %s\n", InfoMsg.c_str());
+    }
+    Plugin.release();
+  }
+
+  DP("RTLs unloaded!\n");
+}
+
+bool PluginManager::initializePlugin(GenericPluginTy &Plugin) {
+  if (Plugin.is_initialized())
+    return true;
+
+  if (auto Err = Plugin.init()) {
+    [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
+    DP("Failed to init plugin: %s\n", InfoMsg.c_str());
+    return false;
+  }
+
+  DP("Registered plugin %s with %d visible device(s)\n", Plugin.getName(),
+     Plugin.number_of_devices());
+  return true;
+}
+
+bool PluginManager::initializeDevice(GenericPluginTy &Plugin,
+                                     int32_t DeviceId) {
+  if (Plugin.is_device_initialized(DeviceId))
+    return true;
 
   // Initialize the device information for the RTL we are about to use.
   auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
 
-  // Initialize the index of this RTL and save it in the used RTLs.
-  int32_t DeviceOffset = ExclusiveDevicesAccessor->size();
+  int32_t UserId = ExclusiveDevicesAccessor->size();
 
   // Set the device identifier offset in the plugin.
-  RTL.set_device_offset(DeviceOffset);
+#ifdef OMPT_SUPPORT
+  Plugin.set_device_identifier(UserId, DeviceId);
+#endif
 
-  int32_t NumberOfUserDevices = 0;
-  int32_t NumPD = RTL.number_of_devices();
-  ExclusiveDevicesAccessor->reserve(DeviceOffset + NumPD);
-  // Auto zero-copy is a per-device property. We need to ensure
-  // that all devices are suggesting to use it.
-  bool UseAutoZeroCopy = !(NumPD == 0);
-  for (int32_t PDevI = 0, UserDevId = DeviceOffset; PDevI < NumPD; PDevI++) {
-    auto Device = std::make_unique<DeviceTy>(&RTL, UserDevId, PDevI);
-    if (auto Err = Device->init()) {
-      DP("Skip plugin known device %d: %s\n", PDevI,
-         toString(std::move(Err)).c_str());
+  auto Device = std::make_unique<DeviceTy>(&Plugin, UserId, DeviceId);
+  if (auto Err = Device->init()) {
+    [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
+    DP("Failed to init device %d: %s\n", DeviceId, InfoMsg.c_str());
+    return false;
+  }
+
+  ExclusiveDevicesAccessor->push_back(std::move(Device));
+
+  // We need to map between the plugin's device identifier and the one
+  // that OpenMP will use.
+  PM->DeviceIds[std::make_pair(&Plugin, DeviceId)] = UserId;
+
+  return true;
+}
+
+void PluginManager::initializeAllDevices() {
+  for (auto &Plugin : plugins()) {
+    if (!initializePlugin(Plugin))
       continue;
-    }
-    UseAutoZeroCopy = UseAutoZeroCopy && Device->useAutoZeroCopy();
 
-    ExclusiveDevicesAccessor->push_back(std::move(Device));
-    ++NumberOfUserDevices;
-    ++UserDevId;
-  }
-
-  // Auto Zero-Copy can only be currently triggered when the system is an
-  // homogeneous APU architecture without attached discrete GPUs.
-  // If all devices suggest to use it, change requirment flags to trigger
-  // zero-copy behavior when mapping memory.
-  if (UseAutoZeroCopy)
-    addRequirements(OMPX_REQ_AUTO_ZERO_COPY);
-
-  DeviceOffsets[&RTL] = DeviceOffset;
-  DeviceUsed[&RTL] = NumberOfUserDevices;
-  DP("Plugin adaptor " DPxMOD " has index %d, exposes %d out of %d devices!\n",
-     DPxPTR(RTL.LibraryHandler.get()), DeviceOffset, NumberOfUserDevices,
-     RTL.number_of_devices());
-}
-
-void PluginManager::initAllPlugins() {
-  for (auto &R : PluginAdaptors)
-    initDevices(*R);
-}
-
-static void registerImageIntoTranslationTable(TranslationTable &TT,
-                                              int32_t DeviceOffset,
-                                              int32_t NumberOfUserDevices,
-                                              __tgt_device_image *Image) {
-
-  // same size, as when we increase one, we also increase the other.
-  assert(TT.TargetsTable.size() == TT.TargetsImages.size() &&
-         "We should have as many images as we have tables!");
-
-  // Resize the Targets Table and Images to accommodate the new targets if
-  // required
-  unsigned TargetsTableMinimumSize = DeviceOffset + NumberOfUserDevices;
-
-  if (TT.TargetsTable.size() < TargetsTableMinimumSize) {
-    TT.DeviceTables.resize(TargetsTableMinimumSize, {});
-    TT.TargetsImages.resize(TargetsTableMinimumSize, 0);
-    TT.TargetsEntries.resize(TargetsTableMinimumSize, {});
-    TT.TargetsTable.resize(TargetsTableMinimumSize, 0);
-  }
-
-  // Register the image in all devices for this target type.
-  for (int32_t I = 0; I < NumberOfUserDevices; ++I) {
-    // If we are changing the image we are also invalidating the target table.
-    if (TT.TargetsImages[DeviceOffset + I] != Image) {
-      TT.TargetsImages[DeviceOffset + I] = Image;
-      TT.TargetsTable[DeviceOffset + I] =
-          0; // lazy initialization of target table.
+    for (int32_t DeviceId = 0; DeviceId < Plugin.number_of_devices();
+         ++DeviceId) {
+      initializeDevice(Plugin, DeviceId);
     }
   }
 }
@@ -216,55 +137,85 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
     // Obtain the image and information that was previously extracted.
     __tgt_device_image *Img = &DI.getExecutableImage();
 
-    PluginAdaptorTy *FoundRTL = nullptr;
+    GenericPluginTy *FoundRTL = nullptr;
 
     // Scan the RTLs that have associated images until we find one that supports
     // the current image.
-    for (auto &R : PM->pluginAdaptors()) {
-      if (!R.is_valid_binary(Img)) {
-        DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
-           DPxPTR(Img->ImageStart), R.Name.c_str());
+    for (auto &R : plugins()) {
+      if (!R.is_plugin_compatible(Img))
+        continue;
+
+      if (!initializePlugin(R))
+        continue;
+
+      if (!R.number_of_devices()) {
+        DP("Skipping plugin %s with no visible devices\n", R.getName());
         continue;
       }
 
-      DP("Image " DPxMOD " is compatible with RTL %s!\n",
-         DPxPTR(Img->ImageStart), R.Name.c_str());
+      for (int32_t DeviceId = 0; DeviceId < R.number_of_devices(); ++DeviceId) {
+        if (!R.is_device_compatible(DeviceId, Img))
+          continue;
 
-      PM->initDevices(R);
+        DP("Image " DPxMOD " is compatible with RTL %s device %d!\n",
+           DPxPTR(Img->ImageStart), R.getName(), DeviceId);
 
-      // Initialize (if necessary) translation table for this library.
-      PM->TrlTblMtx.lock();
-      if (!PM->HostEntriesBeginToTransTable.count(Desc->HostEntriesBegin)) {
-        PM->HostEntriesBeginRegistrationOrder.push_back(Desc->HostEntriesBegin);
-        TranslationTable &TransTable =
+        if (!initializeDevice(R, DeviceId))
+          continue;
+
+        // Initialize (if necessary) translation table for this library.
+        PM->TrlTblMtx.lock();
+        if (!PM->HostEntriesBeginToTransTable.count(Desc->HostEntriesBegin)) {
+          PM->HostEntriesBeginRegistrationOrder.push_back(
+              Desc->HostEntriesBegin);
+          TranslationTable &TT =
+              (PM->HostEntriesBeginToTransTable)[Desc->HostEntriesBegin];
+          TT.HostTable.EntriesBegin = Desc->HostEntriesBegin;
+          TT.HostTable.EntriesEnd = Desc->HostEntriesEnd;
+        }
+
+        // Retrieve translation table for this library.
+        TranslationTable &TT =
             (PM->HostEntriesBeginToTransTable)[Desc->HostEntriesBegin];
-        TransTable.HostTable.EntriesBegin = Desc->HostEntriesBegin;
-        TransTable.HostTable.EntriesEnd = Desc->HostEntriesEnd;
+
+        DP("Registering image " DPxMOD " with RTL %s!\n",
+           DPxPTR(Img->ImageStart), R.getName());
+
+        auto UserId = PM->DeviceIds[std::make_pair(&R, DeviceId)];
+        if (TT.TargetsTable.size() < static_cast<size_t>(UserId + 1)) {
+          TT.DeviceTables.resize(UserId + 1, {});
+          TT.TargetsImages.resize(UserId + 1, nullptr);
+          TT.TargetsEntries.resize(UserId + 1, {});
+          TT.TargetsTable.resize(UserId + 1, nullptr);
+        }
+
+        // Register the image for this target type and invalidate the table.
+        TT.TargetsImages[UserId] = Img;
+        TT.TargetsTable[UserId] = nullptr;
+
+        PM->UsedImages.insert(Img);
+        FoundRTL = &R;
+
+        PM->TrlTblMtx.unlock();
       }
-
-      // Retrieve translation table for this library.
-      TranslationTable &TransTable =
-          (PM->HostEntriesBeginToTransTable)[Desc->HostEntriesBegin];
-
-      DP("Registering image " DPxMOD " with RTL %s!\n", DPxPTR(Img->ImageStart),
-         R.Name.c_str());
-
-      registerImageIntoTranslationTable(TransTable, PM->DeviceOffsets[&R],
-                                        PM->DeviceUsed[&R], Img);
-      PM->UsedImages.insert(Img);
-
-      PM->TrlTblMtx.unlock();
-      FoundRTL = &R;
-
-      // if an RTL was found we are done - proceed to register the next image
-      break;
     }
-
-    if (!FoundRTL) {
+    if (!FoundRTL)
       DP("No RTL found for image " DPxMOD "!\n", DPxPTR(Img->ImageStart));
-    }
   }
   PM->RTLsMtx.unlock();
+
+  bool UseAutoZeroCopy = Plugins.size() > 0;
+
+  auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
+  for (const auto &Device : *ExclusiveDevicesAccessor)
+    UseAutoZeroCopy &= Device->useAutoZeroCopy();
+
+  // Auto Zero-Copy can only be currently triggered when the system is an
+  // homogeneous APU architecture without attached discrete GPUs.
+  // If all devices suggest to use it, change requirment flags to trigger
+  // zero-copy behavior when mapping memory.
+  if (UseAutoZeroCopy)
+    addRequirements(OMPX_REQ_AUTO_ZERO_COPY);
 
   DP("Done registering entries!\n");
 }
@@ -282,12 +233,12 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
     // Obtain the image and information that was previously extracted.
     __tgt_device_image *Img = &DI.getExecutableImage();
 
-    PluginAdaptorTy *FoundRTL = NULL;
+    GenericPluginTy *FoundRTL = NULL;
 
     // Scan the RTLs that have associated images until we find one that supports
     // the current image. We only need to scan RTLs that are already being used.
-    for (auto &R : PM->pluginAdaptors()) {
-      if (!DeviceOffsets.contains(&R))
+    for (auto &R : plugins()) {
+      if (R.is_initialized())
         continue;
 
       // Ensure that we do not use any unused images associated with this RTL.
@@ -296,8 +247,7 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
 
       FoundRTL = &R;
 
-      DP("Unregistered image " DPxMOD " from RTL " DPxMOD "!\n",
-         DPxPTR(Img->ImageStart), DPxPTR(R.LibraryHandler.get()));
+      DP("Unregistered image " DPxMOD " from RTL\n", DPxPTR(Img->ImageStart));
 
       break;
     }

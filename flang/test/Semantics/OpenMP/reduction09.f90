@@ -73,14 +73,4 @@ program omp_reduction
     k = k+1
   end do
   !$omp end do
-
-
-  !$omp do reduction(.and.:k) reduction(.or.:j) reduction(.eqv.:l)
-  !DEF: /omp_reduction/OtherConstruct8/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
-  do i=1,10
-    !DEF: /omp_reduction/OtherConstruct8/k (OmpReduction) HostAssoc INTEGER(4)
-    k = k+1
-  end do
-  !$omp end do
-
 end program omp_reduction

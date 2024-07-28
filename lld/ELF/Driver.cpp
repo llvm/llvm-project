@@ -151,7 +151,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
                                  "--error-limit=0 to see all errors)";
 
   config = ConfigWrapper();
-  script = std::make_unique<LinkerScript>();
+  script = ScriptWrapper();
 
   symAux.emplace_back();
 
@@ -202,6 +202,7 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef emul) {
           .Case("elf64_amdgpu", {ELF64LEKind, EM_AMDGPU})
           .Case("elf64loongarch", {ELF64LEKind, EM_LOONGARCH})
           .Case("elf64_s390", {ELF64BEKind, EM_S390})
+          .Case("hexagonelf", {ELF32LEKind, EM_HEXAGON})
           .Default({ELFNoneKind, EM_NONE});
 
   if (ret.first == ELFNoneKind)
@@ -324,7 +325,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     return;
   }
   case file_magic::elf_shared_object: {
-    if (config->isStatic || config->relocatable) {
+    if (config->isStatic) {
       error("attempted static link of dynamic object " + path);
       return;
     }
@@ -466,6 +467,10 @@ static void checkOptions() {
       error("-z bti-report only supported on AArch64");
     if (config->zPauthReport != "none")
       error("-z pauth-report only supported on AArch64");
+    if (config->zGcsReport != "none")
+      error("-z gcs-report only supported on AArch64");
+    if (config->zGcs != GcsPolicy::Implicit)
+      error("-z gcs only supported on AArch64");
   }
 
   if (config->emachine != EM_386 && config->emachine != EM_X86_64 &&
@@ -555,6 +560,25 @@ static uint8_t getZStartStopVisibility(opt::InputArgList &args) {
       else
         error("unknown -z start-stop-visibility= value: " +
               StringRef(kv.second));
+    }
+  }
+  return ret;
+}
+
+static GcsPolicy getZGcs(opt::InputArgList &args) {
+  GcsPolicy ret = GcsPolicy::Implicit;
+  for (auto *arg : args.filtered(OPT_z)) {
+    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
+    if (kv.first == "gcs") {
+      arg->claim();
+      if (kv.second == "implicit")
+        ret = GcsPolicy::Implicit;
+      else if (kv.second == "never")
+        ret = GcsPolicy::Never;
+      else if (kv.second == "always")
+        ret = GcsPolicy::Always;
+      else
+        error("unknown -z gcs= value: " + kv.second);
     }
   }
   return ret;
@@ -1246,10 +1270,12 @@ static void readConfigs(opt::InputArgList &args) {
   config->dynamicLinker = getDynamicLinker(args);
   config->ehFrameHdr =
       args.hasFlag(OPT_eh_frame_hdr, OPT_no_eh_frame_hdr, false);
-  config->emitLLVM = args.hasArg(OPT_plugin_opt_emit_llvm, false);
+  config->emitLLVM = args.hasArg(OPT_lto_emit_llvm);
   config->emitRelocs = args.hasArg(OPT_emit_relocs);
   config->enableNewDtags =
       args.hasFlag(OPT_enable_new_dtags, OPT_disable_new_dtags, true);
+  config->enableNonContiguousRegions =
+      args.hasArg(OPT_enable_non_contiguous_regions);
   config->entry = args.getLastArgValue(OPT_entry);
 
   errorHandler().errorHandlingScript =
@@ -1359,6 +1385,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->relaxGP = args.hasFlag(OPT_relax_gp, OPT_no_relax_gp, false);
   config->rpath = getRpath(args);
   config->relocatable = args.hasArg(OPT_relocatable);
+  config->resolveGroups =
+      !args.hasArg(OPT_relocatable) || args.hasArg(OPT_force_group_allocation);
 
   if (args.hasArg(OPT_save_temps)) {
     // --save-temps implies saving all temps.
@@ -1436,6 +1464,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->zCopyreloc = getZFlag(args, "copyreloc", "nocopyreloc", true);
   config->zForceBti = hasZOption(args, "force-bti");
   config->zForceIbt = hasZOption(args, "force-ibt");
+  config->zGcs = getZGcs(args);
   config->zGlobal = hasZOption(args, "global");
   config->zGnustack = getZGnuStack(args);
   config->zHazardplt = hasZOption(args, "hazardplt");
@@ -1508,6 +1537,7 @@ static void readConfigs(opt::InputArgList &args) {
 
   auto reports = {std::make_pair("bti-report", &config->zBtiReport),
                   std::make_pair("cet-report", &config->zCetReport),
+                  std::make_pair("gcs-report", &config->zGcsReport),
                   std::make_pair("pauth-report", &config->zPauthReport)};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
@@ -1863,6 +1893,9 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
   // For --{push,pop}-state.
   std::vector<std::tuple<bool, bool, bool>> stack;
 
+  // -r implies -Bstatic and has precedence over -Bdynamic.
+  config->isStatic = config->relocatable;
+
   // Iterate over argv to process input files and positional arguments.
   std::optional<MemoryBufferRef> defaultScript;
   InputFile::isInGroup = false;
@@ -1917,7 +1950,8 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       config->isStatic = true;
       break;
     case OPT_Bdynamic:
-      config->isStatic = false;
+      if (!config->relocatable)
+        config->isStatic = false;
       break;
     case OPT_whole_archive:
       inWholeArchive = true;
@@ -1988,16 +2022,22 @@ void LinkerDriver::inferMachineType() {
   if (config->ekind != ELFNoneKind)
     return;
 
+  bool inferred = false;
   for (InputFile *f : files) {
     if (f->ekind == ELFNoneKind)
       continue;
-    config->ekind = f->ekind;
-    config->emachine = f->emachine;
+    if (!inferred) {
+      inferred = true;
+      config->ekind = f->ekind;
+      config->emachine = f->emachine;
+      config->mipsN32Abi = config->emachine == EM_MIPS && isMipsN32Abi(f);
+    }
     config->osabi = f->osabi;
-    config->mipsN32Abi = config->emachine == EM_MIPS && isMipsN32Abi(f);
-    return;
+    if (f->osabi != ELFOSABI_NONE)
+      return;
   }
-  error("target emulation unknown: -m or at least one .o file required");
+  if (!inferred)
+    error("target emulation unknown: -m or at least one .o file required");
 }
 
 // Parse -z max-page-size=<value>. The default value is defined by
@@ -2512,8 +2552,12 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
     // If __real_ is referenced, pull in the symbol if it is lazy. Do this after
     // processing __wrap_ as that may have referenced __real_.
     StringRef realName = saver().save("__real_" + name);
-    if (symtab.find(realName))
+    if (Symbol *real = symtab.find(realName)) {
       symtab.addUnusedUndefined(name, sym->binding);
+      // Update sym's binding, which will replace real's later in
+      // SymbolTable::wrap.
+      sym->binding = real->binding;
+    }
 
     Symbol *real = symtab.addUnusedUndefined(realName);
     v.push_back({sym, real, wrap});
@@ -2676,6 +2720,11 @@ static void readSecurityNotes() {
                       "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property");
 
     checkAndReportMissingFeature(
+        config->zGcsReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_GCS,
+        toString(f) + ": -z gcs-report: file does not have "
+                      "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property");
+
+    checkAndReportMissingFeature(
         config->zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_IBT,
         toString(f) + ": -z cet-report: file does not have "
                       "GNU_PROPERTY_X86_FEATURE_1_IBT property");
@@ -2727,6 +2776,12 @@ static void readSecurityNotes() {
   // Force enable Shadow Stack.
   if (config->zShstk)
     config->andFeatures |= GNU_PROPERTY_X86_FEATURE_1_SHSTK;
+
+  // Force enable/disable GCS
+  if (config->zGcs == GcsPolicy::Always)
+    config->andFeatures |= GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+  else if (config->zGcs == GcsPolicy::Never)
+    config->andFeatures &= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
 }
 
 static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
@@ -2829,9 +2884,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // to, i.e. if the symbol's definition is in bitcode. Any other required
   // libcall symbols will be added to the link after LTO when we add the LTO
   // object file to the link.
-  if (!ctx.bitcodeFiles.empty())
-    for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
+  if (!ctx.bitcodeFiles.empty()) {
+    llvm::Triple TT(ctx.bitcodeFiles.front()->obj->getTargetTriple());
+    for (auto *s : lto::LTO::getRuntimeLibcallSymbols(TT))
       handleLibcall(s);
+  }
 
   // Archive members defining __wrap symbols may be extracted.
   std::vector<WrappedSymbol> wrapped = addWrappedSymbols(args);
@@ -2912,6 +2969,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // With this the symbol table should be complete. After this, no new names
   // except a few linker-synthesized ones will be added to the symbol table.
   const size_t numObjsBeforeLTO = ctx.objectFiles.size();
+  const size_t numInputFilesBeforeLTO = ctx.driver.files.size();
   compileBitcodeFiles<ELFT>(skipLinkedOutput);
 
   // Symbol resolution finished. Report backward reference problems,
@@ -2935,6 +2993,20 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   parallelForEach(newObjectFiles, postParseObjectFile);
   for (const DuplicateSymbol &d : ctx.duplicates)
     reportDuplicate(*d.sym, d.file, d.section, d.value);
+
+  // ELF dependent libraries may have introduced new input files after LTO has
+  // completed. This is an error if the files haven't already been parsed, since
+  // changing the symbol table could break the semantic assumptions of LTO.
+  auto newInputFiles = ArrayRef(ctx.driver.files).slice(numInputFilesBeforeLTO);
+  if (!newInputFiles.empty()) {
+    DenseSet<StringRef> oldFilenames;
+    for (InputFile *f :
+         ArrayRef(ctx.driver.files).slice(0, numInputFilesBeforeLTO))
+      oldFilenames.insert(f->getName());
+    for (InputFile *newFile : newInputFiles)
+      if (!oldFilenames.contains(newFile->getName()))
+        errorOrWarn("input file '" + newFile->getName() + "' added after LTO");
+  }
 
   // Handle --exclude-libs again because lto.tmp may reference additional
   // libcalls symbols defined in an excluded archive. This may override
@@ -3085,7 +3157,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     // sectionBases.
     for (SectionCommand *cmd : script->sectionCommands)
       if (auto *osd = dyn_cast<OutputDesc>(cmd))
-        osd->osec.finalizeInputSections();
+        osd->osec.finalizeInputSections(&script.s);
   }
 
   // Two input sections with different output sections should not be folded.

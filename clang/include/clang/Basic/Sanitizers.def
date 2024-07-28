@@ -76,6 +76,9 @@ SANITIZER("fuzzer-no-link", FuzzerNoLink)
 // ThreadSanitizer
 SANITIZER("thread", Thread)
 
+// Numerical stability sanitizer.
+SANITIZER("numerical", NumericalStability)
+
 // LeakSanitizer
 SANITIZER("leak", Leak)
 

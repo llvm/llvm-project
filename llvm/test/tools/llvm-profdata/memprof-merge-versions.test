@@ -1,0 +1,34 @@
+REQUIRES: x86_64-linux
+
+RUN: echo ":ir" > %t.proftext
+RUN: echo "main" >> %t.proftext
+RUN: echo "742261418966908927" >> %t.proftext
+RUN: echo "1" >> %t.proftext
+RUN: echo "1" >> %t.proftext
+
+To update the inputs used below run Inputs/update_memprof_inputs.sh /path/to/updated/clang
+RUN: llvm-profdata merge %t.proftext %p/Inputs/basic.memprofraw --memprof-version=0 --profiled-binary %p/Inputs/basic.memprofexe -o %t.prof.v0
+RUN: llvm-profdata show %t.prof.v0 | FileCheck %s
+
+RUN: llvm-profdata merge %t.proftext %p/Inputs/basic.memprofraw --memprof-version=1 --profiled-binary %p/Inputs/basic.memprofexe -o %t.prof.v1
+RUN: llvm-profdata show %t.prof.v1 | FileCheck %s
+
+RUN: llvm-profdata merge %t.proftext %p/Inputs/basic.memprofraw --memprof-version=2 --profiled-binary %p/Inputs/basic.memprofexe -o %t.prof.v2
+RUN: llvm-profdata show %t.prof.v2 | FileCheck %s
+
+RUN: llvm-profdata merge %t.proftext %p/Inputs/basic.memprofraw --memprof-version=2 --memprof-full-schema --profiled-binary %p/Inputs/basic.memprofexe -o %t.prof.v2
+RUN: llvm-profdata show %t.prof.v2 | FileCheck %s
+
+RUN: llvm-profdata merge %t.proftext %p/Inputs/basic.memprofraw --memprof-version=3 --profiled-binary %p/Inputs/basic.memprofexe -o %t.prof.v3
+RUN: llvm-profdata show %t.prof.v3 | FileCheck %s
+
+RUN: llvm-profdata merge %t.proftext %p/Inputs/basic.memprofraw --memprof-version=3 --memprof-full-schema --profiled-binary %p/Inputs/basic.memprofexe -o %t.prof.v3
+RUN: llvm-profdata show %t.prof.v3 | FileCheck %s
+
+For now we only check the validity of the instrumented profile since we don't
+have a way to display the contents of the memprof indexed format yet.
+
+CHECK: Instrumentation level: IR  entry_first = 0
+CHECK: Total functions: 1
+CHECK: Maximum function count: 1
+CHECK: Maximum internal block count: 0

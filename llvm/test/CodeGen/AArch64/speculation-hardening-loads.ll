@@ -22,7 +22,7 @@ define double @ld_double(ptr %p) speculative_load_hardening {
 entry:
   %0 = load double, ptr %p, align 8
   ret double %0
-; Checking that the address laoded from is masked for a floating point load.
+; Checking that the address loaded from is masked for a floating point load.
 ; CHECK-LABEL: ld_double
 ; CHECK:      cmp sp, #0
 ; CHECK-NEXT: csetm x16, ne
@@ -43,7 +43,7 @@ entry:
   %iszero = icmp eq i64 %X, 0
   %ret = select i1 %iszero, i32 %b, i32 %add
   ret i32 %ret
-; Checking that the address laoded from is masked for a floating point load.
+; Checking that the address loaded from is masked for a floating point load.
 ; CHECK-LABEL: csdb_emitted_for_subreg_use
 ; CHECK:      cmp sp, #0
 ; CHECK-NEXT: ldr x8, [x0]
@@ -68,7 +68,7 @@ entry:
   %iszero = icmp eq i32 %X, 0
   %ret = select i1 %iszero, i64 %b, i64 %add
   ret i64 %ret
-; Checking that the address laoded from is masked for a floating point load.
+; Checking that the address loaded from is masked for a floating point load.
 ; CHECK-LABEL: csdb_emitted_for_superreg_use
 ; CHECK:      cmp sp, #0
 ; CHECK-NEXT: ldr w8, [x0]

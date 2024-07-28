@@ -9,6 +9,8 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "TestingSupport.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
@@ -19,6 +21,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
+#include <string>
 
 namespace {
 
@@ -401,6 +404,150 @@ TEST_F(EnvironmentTest,
   Env.initialize();
   EXPECT_THAT(DAContext.getModeledFields(QualType(Struct->getTypeForDecl(), 0)),
               Contains(Member));
+}
+
+// This is a repro of a failure case seen in the wild.
+TEST_F(EnvironmentTest, CXXDefaultInitExprResultObjIsWrappedExprResultObj) {
+  using namespace ast_matchers;
+
+  std::string Code = R"cc(
+      struct Inner {};
+
+      struct S {
+        S() {}
+
+        Inner i = {};
+      };
+  )cc";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++11"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto Results =
+      match(cxxConstructorDecl(
+                hasAnyConstructorInitializer(cxxCtorInitializer(
+                    withInitializer(expr().bind("default_init_expr")))))
+                .bind("ctor"),
+            Context);
+  const auto *Constructor = selectFirst<CXXConstructorDecl>("ctor", Results);
+  const auto *DefaultInit =
+      selectFirst<CXXDefaultInitExpr>("default_init_expr", Results);
+
+  Environment Env(DAContext, *Constructor);
+  Env.initialize();
+  EXPECT_EQ(&Env.getResultObjectLocation(*DefaultInit),
+            &Env.getResultObjectLocation(*DefaultInit->getExpr()));
+}
+
+// This test verifies the behavior of `getResultObjectLocation()` in
+// scenarios involving inherited constructors.
+// Since the specific AST node of interest `CXXConstructorDecl` is implicitly
+// generated, we cannot annotate any statements inside of it as we do in tests
+// within TransferTest. Thus, the only way to get the right `Environment` is by
+// explicitly initializing it as we do in tests within EnvironmentTest.
+// This is why this test is not inside TransferTest, where most of the tests for
+// `getResultObjectLocation()` are located.
+TEST_F(EnvironmentTest, ResultObjectLocationForInheritedCtorInitExpr) {
+  using namespace ast_matchers;
+
+  std::string Code = R"(
+    struct Base {
+      Base(int b) {}
+    };
+    struct Derived : Base {
+      using Base::Base;
+    };
+
+    Derived d = Derived(0);
+  )";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++20"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto Results =
+      match(cxxConstructorDecl(
+                hasAnyConstructorInitializer(cxxCtorInitializer(
+                    withInitializer(expr().bind("inherited_ctor_init_expr")))))
+                .bind("ctor"),
+            Context);
+  const auto *Constructor = selectFirst<CXXConstructorDecl>("ctor", Results);
+  const auto *InheritedCtorInit = selectFirst<CXXInheritedCtorInitExpr>(
+      "inherited_ctor_init_expr", Results);
+
+  EXPECT_EQ(InheritedCtorInit->child_begin(), InheritedCtorInit->child_end());
+
+  Environment Env(DAContext, *Constructor);
+  Env.initialize();
+
+  RecordStorageLocation &Loc = Env.getResultObjectLocation(*InheritedCtorInit);
+  EXPECT_NE(&Loc, nullptr);
+
+  EXPECT_EQ(&Loc, Env.getThisPointeeStorageLocation());
+}
+
+TEST_F(EnvironmentTest, Stmt) {
+  using namespace ast_matchers;
+
+  std::string Code = R"cc(
+      struct S { int i; };
+      void foo() {
+        S AnS = S{1};
+      }
+    )cc";
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++11"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto *DeclStatement = const_cast<DeclStmt *>(selectFirst<DeclStmt>(
+      "d", match(declStmt(hasSingleDecl(varDecl(hasName("AnS")))).bind("d"),
+                 Context)));
+  ASSERT_THAT(DeclStatement, NotNull());
+  auto *Init = (cast<VarDecl>(*DeclStatement->decl_begin()))->getInit();
+  ASSERT_THAT(Init, NotNull());
+
+  // Verify that we can retrieve the result object location for the initializer
+  // expression when we analyze the DeclStmt for `AnS`.
+  Environment Env(DAContext, *DeclStatement);
+  // Don't crash when initializing.
+  Env.initialize();
+  // And don't crash when retrieving the result object location.
+  Env.getResultObjectLocation(*Init);
+}
+
+// This is a crash repro.
+TEST_F(EnvironmentTest, LambdaCapturingThisInFieldInitializer) {
+  using namespace ast_matchers;
+  std::string Code = R"cc(
+      struct S {
+        int f{[this]() { return 1; }()};
+      };
+    )cc";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++11"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto *LambdaCallOperator = selectFirst<CXXMethodDecl>(
+      "method", match(cxxMethodDecl(hasName("operator()"),
+                                    ofClass(cxxRecordDecl(isLambda())))
+                          .bind("method"),
+                      Context));
+
+  Environment Env(DAContext, *LambdaCallOperator);
+  // Don't crash when initializing.
+  Env.initialize();
+  // And initialize the captured `this` pointee.
+  ASSERT_NE(nullptr, Env.getThisPointeeStorageLocation());
 }
 
 } // namespace

@@ -100,15 +100,12 @@ private:
                                const CoverageMapping &Coverage);
 
   /// Create source views for the branches of the view.
-  void attachBranchSubViews(SourceCoverageView &View, StringRef SourceName,
-                            ArrayRef<CountedRegion> Branches,
-                            const MemoryBuffer &File,
-                            CoverageData &CoverageInfo);
+  void attachBranchSubViews(SourceCoverageView &View,
+                            ArrayRef<CountedRegion> Branches);
 
   /// Create source views for the MCDC records.
-  void attachMCDCSubViews(SourceCoverageView &View, StringRef SourceName,
-                          ArrayRef<MCDCRecord> MCDCRecords,
-                          const MemoryBuffer &File, CoverageData &CoverageInfo);
+  void attachMCDCSubViews(SourceCoverageView &View,
+                          ArrayRef<MCDCRecord> MCDCRecords);
 
   /// Create the source view of a particular function.
   std::unique_ptr<SourceCoverageView>
@@ -324,17 +321,13 @@ void CodeCoverageTool::attachExpansionSubViews(
         SourceCoverageView::create(Expansion.Function.Name, SourceBuffer.get(),
                                    ViewOpts, std::move(ExpansionCoverage));
     attachExpansionSubViews(*SubView, SubViewExpansions, Coverage);
-    attachBranchSubViews(*SubView, Expansion.Function.Name, SubViewBranches,
-                         SourceBuffer.get(), ExpansionCoverage);
+    attachBranchSubViews(*SubView, SubViewBranches);
     View.addExpansion(Expansion.Region, std::move(SubView));
   }
 }
 
 void CodeCoverageTool::attachBranchSubViews(SourceCoverageView &View,
-                                            StringRef SourceName,
-                                            ArrayRef<CountedRegion> Branches,
-                                            const MemoryBuffer &File,
-                                            CoverageData &CoverageInfo) {
+                                            ArrayRef<CountedRegion> Branches) {
   if (!ViewOpts.ShowBranchCounts && !ViewOpts.ShowBranchPercents)
     return;
 
@@ -348,17 +341,12 @@ void CodeCoverageTool::attachBranchSubViews(SourceCoverageView &View,
     while (NextBranch != EndBranch && CurrentLine == NextBranch->LineStart)
       ViewBranches.push_back(*NextBranch++);
 
-    View.addBranch(CurrentLine, std::move(ViewBranches),
-                   SourceCoverageView::create(SourceName, File, ViewOpts,
-                                              std::move(CoverageInfo)));
+    View.addBranch(CurrentLine, std::move(ViewBranches));
   }
 }
 
 void CodeCoverageTool::attachMCDCSubViews(SourceCoverageView &View,
-                                          StringRef SourceName,
-                                          ArrayRef<MCDCRecord> MCDCRecords,
-                                          const MemoryBuffer &File,
-                                          CoverageData &CoverageInfo) {
+                                          ArrayRef<MCDCRecord> MCDCRecords) {
   if (!ViewOpts.ShowMCDC)
     return;
 
@@ -374,9 +362,7 @@ void CodeCoverageTool::attachMCDCSubViews(SourceCoverageView &View,
            CurrentLine == NextRecord->getDecisionRegion().LineEnd)
       ViewMCDCRecords.push_back(*NextRecord++);
 
-    View.addMCDCRecord(CurrentLine, std::move(ViewMCDCRecords),
-                       SourceCoverageView::create(SourceName, File, ViewOpts,
-                                                  std::move(CoverageInfo)));
+    View.addMCDCRecord(CurrentLine, std::move(ViewMCDCRecords));
   }
 }
 
@@ -397,10 +383,8 @@ CodeCoverageTool::createFunctionView(const FunctionRecord &Function,
                                          SourceBuffer.get(), ViewOpts,
                                          std::move(FunctionCoverage));
   attachExpansionSubViews(*View, Expansions, Coverage);
-  attachBranchSubViews(*View, DC.demangle(Function.Name), Branches,
-                       SourceBuffer.get(), FunctionCoverage);
-  attachMCDCSubViews(*View, DC.demangle(Function.Name), MCDCRecords,
-                     SourceBuffer.get(), FunctionCoverage);
+  attachBranchSubViews(*View, Branches);
+  attachMCDCSubViews(*View, MCDCRecords);
 
   return View;
 }
@@ -421,10 +405,8 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
   auto View = SourceCoverageView::create(SourceFile, SourceBuffer.get(),
                                          ViewOpts, std::move(FileCoverage));
   attachExpansionSubViews(*View, Expansions, Coverage);
-  attachBranchSubViews(*View, SourceFile, Branches, SourceBuffer.get(),
-                       FileCoverage);
-  attachMCDCSubViews(*View, SourceFile, MCDCRecords, SourceBuffer.get(),
-                     FileCoverage);
+  attachBranchSubViews(*View, Branches);
+  attachMCDCSubViews(*View, MCDCRecords);
   if (!ViewOpts.ShowFunctionInstantiations)
     return View;
 
@@ -446,10 +428,8 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
         SubView = SourceCoverageView::create(
             Funcname, SourceBuffer.get(), ViewOpts, std::move(SubViewCoverage));
         attachExpansionSubViews(*SubView, SubViewExpansions, Coverage);
-        attachBranchSubViews(*SubView, SourceFile, SubViewBranches,
-                             SourceBuffer.get(), SubViewCoverage);
-        attachMCDCSubViews(*SubView, SourceFile, SubViewMCDCRecords,
-                           SourceBuffer.get(), SubViewCoverage);
+        attachBranchSubViews(*SubView, SubViewBranches);
+        attachMCDCSubViews(*SubView, SubViewMCDCRecords);
       }
 
       unsigned FileID = Function->CountedRegions.front().FileID;
@@ -515,7 +495,7 @@ void CodeCoverageTool::remapPathNames(const CoverageMapping &Coverage) {
   if (!PathRemappings)
     return;
 
-  // Convert remapping paths to native paths with trailing seperators.
+  // Convert remapping paths to native paths with trailing separators.
   auto nativeWithTrailing = [](StringRef Path) -> std::string {
     if (Path.empty())
       return "";

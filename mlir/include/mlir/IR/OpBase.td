@@ -670,16 +670,4 @@ class TCopVTEtAreSameAt<list<int> indices> : CPred<
       "[this](unsigned i) { return getElementTypeOrSelf(this->getOperand(i)); "
       "}))">;
 
-class AnyScalarTypeMatch<list<string> names> :
-    AnyMatchOperatorTrait<names, "$_self.getType().isSignlessInteger(1)",
-                          "scalar type">;
-
-class ScalarConditionOrMatchingShape<list<string> names> :
-    PredOpTrait<
-        !head(names) # " is scalar or has matching shape",
-        Or<[AnyScalarTypeMatch<[!head(names)]>.predicate,
-            AllShapesMatch<names>.predicate]>> {
-  list<string> values = names;
-}
-
 #endif // OP_BASE

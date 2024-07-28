@@ -15,6 +15,18 @@ using namespace mlir;
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(GPU, gpu, gpu::GPUDialect)
 
+//===-------------------------------------------------------------------===//
+// AsyncTokenType
+//===-------------------------------------------------------------------===//
+
+bool mlirTypeIsAGPUAsyncTokenType(MlirType type) {
+  return isa<gpu::AsyncTokenType>(unwrap(type));
+}
+
+MlirType mlirGPUAsyncTokenTypeGet(MlirContext ctx) {
+  return wrap(gpu::AsyncTokenType::get(unwrap(ctx)));
+}
+
 //===---------------------------------------------------------------------===//
 // ObjectAttr
 //===---------------------------------------------------------------------===//

@@ -1,0 +1,19 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Test lowering of program local variable that are global
+
+program test
+  integer, device :: a(10)
+  integer :: b(10)
+  integer :: i
+  print*,i
+end
+
+! CHECK-LABEL: func.func @_QQmain()
+! CHECK: fir.address_of(@_QFEa) : !fir.ref<!fir.array<10xi32>>
+! CHECK: fir.address_of(@_QFEb) : !fir.ref<!fir.array<10xi32>>
+! CHECK: %[[ALLOCA:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
+! CHECK: hlfir.declare %[[ALLOCA]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
+! CHECK: fir.global internal @_QFEa {data_attr = #cuf.cuda<device>} : !fir.array<10xi32> {{{$}}
+! CHECK: fir.global internal @_QFEb : !fir.array<10xi32> {{{$}}

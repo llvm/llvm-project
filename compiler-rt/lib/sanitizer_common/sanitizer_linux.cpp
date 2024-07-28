@@ -155,6 +155,7 @@ void SetSigProcMask(__sanitizer_sigset_t *set, __sanitizer_sigset_t *oldset) {
   CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, set, oldset));
 }
 
+// Block asynchronous signals
 void BlockSignals(__sanitizer_sigset_t *oldset) {
   __sanitizer_sigset_t set;
   internal_sigfillset(&set);
@@ -169,7 +170,17 @@ void BlockSignals(__sanitizer_sigset_t *oldset) {
   // If this signal is blocked, such calls cannot be handled and the process may
   // hang.
   internal_sigdelset(&set, 31);
+
+  // Don't block synchronous signals
+  internal_sigdelset(&set, SIGSEGV);
+  internal_sigdelset(&set, SIGBUS);
+  internal_sigdelset(&set, SIGILL);
+  internal_sigdelset(&set, SIGTRAP);
+  internal_sigdelset(&set, SIGABRT);
+  internal_sigdelset(&set, SIGFPE);
+  internal_sigdelset(&set, SIGPIPE);
 #  endif
+
   SetSigProcMask(&set, oldset);
 }
 
@@ -563,7 +574,9 @@ int TgKill(pid_t pid, tid_t tid, int sig) {
   return internal_syscall(SYSCALL(thr_kill2), pid, tid, sig);
 #    elif SANITIZER_SOLARIS
   (void)pid;
-  return thr_kill(tid, sig);
+  errno = thr_kill(tid, sig);
+  // TgKill is expected to return -1 on error, not an errno.
+  return errno != 0 ? -1 : 0;
 #    endif
 }
 #  endif
@@ -1096,7 +1109,8 @@ uptr GetMaxVirtualAddress() {
 #  if SANITIZER_NETBSD && defined(__x86_64__)
   return 0x7f7ffffff000ULL;  // (0x00007f8000000000 - PAGE_SIZE)
 #  elif SANITIZER_WORDSIZE == 64
-#    if defined(__powerpc64__) || defined(__aarch64__) || defined(__loongarch__)
+#    if defined(__powerpc64__) || defined(__aarch64__) || \
+        defined(__loongarch__) || SANITIZER_RISCV64
   // On PowerPC64 we have two different address space layouts: 44- and 46-bit.
   // We somehow need to figure out which one we are using now and choose
   // one of 0x00000fffffffffffUL and 0x00003fffffffffffUL.
@@ -1105,9 +1119,8 @@ uptr GetMaxVirtualAddress() {
   // This should (does) work for both PowerPC64 Endian modes.
   // Similarly, aarch64 has multiple address space layouts: 39, 42 and 47-bit.
   // loongarch64 also has multiple address space layouts: default is 47-bit.
+  // RISC-V 64 also has multiple address space layouts: 39, 48 and 57-bit.
   return (1ULL << (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1)) - 1;
-#    elif SANITIZER_RISCV64
-  return (1ULL << 38) - 1;
 #    elif SANITIZER_MIPS64
   return (1ULL << 40) - 1;  // 0x000000ffffffffffUL;
 #    elif defined(__s390x__)
@@ -1136,7 +1149,7 @@ uptr GetMaxUserVirtualAddress() {
   return addr;
 }
 
-#  if !SANITIZER_ANDROID
+#  if !SANITIZER_ANDROID || defined(__aarch64__)
 uptr GetPageSize() {
 #    if SANITIZER_LINUX && (defined(__x86_64__) || defined(__i386__)) && \
         defined(EXEC_PAGESIZE)
@@ -1155,7 +1168,7 @@ uptr GetPageSize() {
   return sysconf(_SC_PAGESIZE);  // EXEC_PAGESIZE may not be trustworthy.
 #    endif
 }
-#  endif  // !SANITIZER_ANDROID
+#  endif
 
 uptr ReadBinaryName(/*out*/ char *buf, uptr buf_len) {
 #  if SANITIZER_SOLARIS
@@ -1180,7 +1193,7 @@ uptr ReadBinaryName(/*out*/ char *buf, uptr buf_len) {
   uptr module_name_len = internal_readlink(default_module_name, buf, buf_len);
   int readlink_error;
   bool IsErr = internal_iserror(module_name_len, &readlink_error);
-#    endif  // SANITIZER_SOLARIS
+#    endif
   if (IsErr) {
     // We can't read binary name for some reason, assume it's unknown.
     Report(
@@ -1845,18 +1858,18 @@ HandleSignalMode GetHandleSignalMode(int signum) {
 
 #  if !SANITIZER_GO
 void *internal_start_thread(void *(*func)(void *arg), void *arg) {
-  if (&real_pthread_create == 0)
+  if (&internal_pthread_create == 0)
     return nullptr;
   // Start the thread with signals blocked, otherwise it can steal user signals.
   ScopedBlockSignals block(nullptr);
   void *th;
-  real_pthread_create(&th, nullptr, func, arg);
+  internal_pthread_create(&th, nullptr, func, arg);
   return th;
 }
 
 void internal_join_thread(void *th) {
-  if (&real_pthread_join)
-    real_pthread_join(th, nullptr);
+  if (&internal_pthread_join)
+    internal_pthread_join(th, nullptr);
 }
 #  else
 void *internal_start_thread(void *(*func)(void *), void *arg) { return 0; }
@@ -2105,8 +2118,311 @@ bool SignalContext::IsTrueFaultingAddress() const {
   return si->si_signo == SIGSEGV && si->si_code != 128;
 }
 
+UNUSED
+static const char *RegNumToRegName(int reg) {
+  switch (reg) {
+#  if SANITIZER_LINUX
+#    if defined(__x86_64__)
+    case REG_RAX:
+      return "rax";
+    case REG_RBX:
+      return "rbx";
+    case REG_RCX:
+      return "rcx";
+    case REG_RDX:
+      return "rdx";
+    case REG_RDI:
+      return "rdi";
+    case REG_RSI:
+      return "rsi";
+    case REG_RBP:
+      return "rbp";
+    case REG_RSP:
+      return "rsp";
+    case REG_R8:
+      return "r8";
+    case REG_R9:
+      return "r9";
+    case REG_R10:
+      return "r10";
+    case REG_R11:
+      return "r11";
+    case REG_R12:
+      return "r12";
+    case REG_R13:
+      return "r13";
+    case REG_R14:
+      return "r14";
+    case REG_R15:
+      return "r15";
+#    elif defined(__i386__)
+    case REG_EAX:
+      return "eax";
+    case REG_EBX:
+      return "ebx";
+    case REG_ECX:
+      return "ecx";
+    case REG_EDX:
+      return "edx";
+    case REG_EDI:
+      return "edi";
+    case REG_ESI:
+      return "esi";
+    case REG_EBP:
+      return "ebp";
+    case REG_ESP:
+      return "esp";
+#    elif defined(__arm__)
+#      ifdef MAKE_CASE
+#        undef MAKE_CASE
+#      endif
+#      define REG_STR(reg) #reg
+#      define MAKE_CASE(N) \
+        case REG_R##N:     \
+          return REG_STR(r##N)
+    MAKE_CASE(0);
+    MAKE_CASE(1);
+    MAKE_CASE(2);
+    MAKE_CASE(3);
+    MAKE_CASE(4);
+    MAKE_CASE(5);
+    MAKE_CASE(6);
+    MAKE_CASE(7);
+    MAKE_CASE(8);
+    MAKE_CASE(9);
+    MAKE_CASE(10);
+    MAKE_CASE(11);
+    MAKE_CASE(12);
+    case REG_R13:
+      return "sp";
+    case REG_R14:
+      return "lr";
+    case REG_R15:
+      return "pc";
+#    elif defined(__aarch64__)
+#      define REG_STR(reg) #reg
+#      define MAKE_CASE(N) \
+        case N:            \
+          return REG_STR(x##N)
+    MAKE_CASE(0);
+    MAKE_CASE(1);
+    MAKE_CASE(2);
+    MAKE_CASE(3);
+    MAKE_CASE(4);
+    MAKE_CASE(5);
+    MAKE_CASE(6);
+    MAKE_CASE(7);
+    MAKE_CASE(8);
+    MAKE_CASE(9);
+    MAKE_CASE(10);
+    MAKE_CASE(11);
+    MAKE_CASE(12);
+    MAKE_CASE(13);
+    MAKE_CASE(14);
+    MAKE_CASE(15);
+    MAKE_CASE(16);
+    MAKE_CASE(17);
+    MAKE_CASE(18);
+    MAKE_CASE(19);
+    MAKE_CASE(20);
+    MAKE_CASE(21);
+    MAKE_CASE(22);
+    MAKE_CASE(23);
+    MAKE_CASE(24);
+    MAKE_CASE(25);
+    MAKE_CASE(26);
+    MAKE_CASE(27);
+    MAKE_CASE(28);
+    case 29:
+      return "fp";
+    case 30:
+      return "lr";
+    case 31:
+      return "sp";
+#    endif
+#  endif  // SANITIZER_LINUX
+    default:
+      return NULL;
+  }
+  return NULL;
+}
+
+#  if SANITIZER_LINUX && (defined(__arm__) || defined(__aarch64__))
+static uptr GetArmRegister(ucontext_t *ctx, int RegNum) {
+  switch (RegNum) {
+#    if defined(__arm__)
+#      ifdef MAKE_CASE
+#        undef MAKE_CASE
+#      endif
+#      define MAKE_CASE(N) \
+        case REG_R##N:     \
+          return ctx->uc_mcontext.arm_r##N
+    MAKE_CASE(0);
+    MAKE_CASE(1);
+    MAKE_CASE(2);
+    MAKE_CASE(3);
+    MAKE_CASE(4);
+    MAKE_CASE(5);
+    MAKE_CASE(6);
+    MAKE_CASE(7);
+    MAKE_CASE(8);
+    MAKE_CASE(9);
+    MAKE_CASE(10);
+    case REG_R11:
+      return ctx->uc_mcontext.arm_fp;
+    case REG_R12:
+      return ctx->uc_mcontext.arm_ip;
+    case REG_R13:
+      return ctx->uc_mcontext.arm_sp;
+    case REG_R14:
+      return ctx->uc_mcontext.arm_lr;
+    case REG_R15:
+      return ctx->uc_mcontext.arm_pc;
+#    elif defined(__aarch64__)
+    case 0 ... 30:
+      return ctx->uc_mcontext.regs[RegNum];
+    case 31:
+      return ctx->uc_mcontext.sp;
+#    endif
+    default:
+      return 0;
+  }
+  return 0;
+}
+#  endif  // SANITIZER_LINUX && (defined(__arm__) || defined(__aarch64__))
+
+UNUSED
+static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
+  const char *RegName = RegNumToRegName(RegNum);
+#    if defined(__x86_64__)
+  Printf("%s%s = 0x%016llx  ", internal_strlen(RegName) == 2 ? " " : "",
+         RegName, ctx->uc_mcontext.gregs[RegNum]);
+#    elif defined(__i386__)
+  Printf("%s = 0x%08x  ", RegName, ctx->uc_mcontext.gregs[RegNum]);
+#  elif defined(__arm__)
+  Printf("%s%s = 0x%08zx  ", internal_strlen(RegName) == 2 ? " " : "", RegName,
+         GetArmRegister(ctx, RegNum));
+#  elif defined(__aarch64__)
+  Printf("%s%s = 0x%016zx  ", internal_strlen(RegName) == 2 ? " " : "", RegName,
+         GetArmRegister(ctx, RegNum));
+#  else
+  (void)RegName;
+#  endif
+}
+
 void SignalContext::DumpAllRegisters(void *context) {
-  // FIXME: Implement this.
+  ucontext_t *ucontext = (ucontext_t *)context;
+#  if SANITIZER_LINUX
+#    if defined(__x86_64__)
+  Report("Register values:\n");
+  DumpSingleReg(ucontext, REG_RAX);
+  DumpSingleReg(ucontext, REG_RBX);
+  DumpSingleReg(ucontext, REG_RCX);
+  DumpSingleReg(ucontext, REG_RDX);
+  Printf("\n");
+  DumpSingleReg(ucontext, REG_RDI);
+  DumpSingleReg(ucontext, REG_RSI);
+  DumpSingleReg(ucontext, REG_RBP);
+  DumpSingleReg(ucontext, REG_RSP);
+  Printf("\n");
+  DumpSingleReg(ucontext, REG_R8);
+  DumpSingleReg(ucontext, REG_R9);
+  DumpSingleReg(ucontext, REG_R10);
+  DumpSingleReg(ucontext, REG_R11);
+  Printf("\n");
+  DumpSingleReg(ucontext, REG_R12);
+  DumpSingleReg(ucontext, REG_R13);
+  DumpSingleReg(ucontext, REG_R14);
+  DumpSingleReg(ucontext, REG_R15);
+  Printf("\n");
+#    elif defined(__i386__)
+  // Duplication of this report print is caused by partial support
+  // of register values dumping. In case of unsupported yet architecture let's
+  // avoid printing 'Register values:' without actual values in the following
+  // output.
+  Report("Register values:\n");
+  DumpSingleReg(ucontext, REG_EAX);
+  DumpSingleReg(ucontext, REG_EBX);
+  DumpSingleReg(ucontext, REG_ECX);
+  DumpSingleReg(ucontext, REG_EDX);
+  Printf("\n");
+  DumpSingleReg(ucontext, REG_EDI);
+  DumpSingleReg(ucontext, REG_ESI);
+  DumpSingleReg(ucontext, REG_EBP);
+  DumpSingleReg(ucontext, REG_ESP);
+  Printf("\n");
+#    elif defined(__arm__)
+  Report("Register values:\n");
+  DumpSingleReg(ucontext, REG_R0);
+  DumpSingleReg(ucontext, REG_R1);
+  DumpSingleReg(ucontext, REG_R2);
+  DumpSingleReg(ucontext, REG_R3);
+  Printf("\n");
+  DumpSingleReg(ucontext, REG_R4);
+  DumpSingleReg(ucontext, REG_R5);
+  DumpSingleReg(ucontext, REG_R6);
+  DumpSingleReg(ucontext, REG_R7);
+  Printf("\n");
+  DumpSingleReg(ucontext, REG_R8);
+  DumpSingleReg(ucontext, REG_R9);
+  DumpSingleReg(ucontext, REG_R10);
+  DumpSingleReg(ucontext, REG_R11);
+  Printf("\n");
+  DumpSingleReg(ucontext, REG_R12);
+  DumpSingleReg(ucontext, REG_R13);
+  DumpSingleReg(ucontext, REG_R14);
+  DumpSingleReg(ucontext, REG_R15);
+  Printf("\n");
+#    elif defined(__aarch64__)
+  Report("Register values:\n");
+  for (int i = 0; i <= 31; ++i) {
+    DumpSingleReg(ucontext, i);
+    if (i % 4 == 3)
+      Printf("\n");
+  }
+#    else
+  (void)ucontext;
+#    endif
+#  elif SANITIZER_FREEBSD
+#    if defined(__x86_64__)
+  Report("Register values:\n");
+  Printf("rax = 0x%016llx  ", ucontext->uc_mcontext.mc_rax);
+  Printf("rbx = 0x%016llx  ", ucontext->uc_mcontext.mc_rbx);
+  Printf("rcx = 0x%016llx  ", ucontext->uc_mcontext.mc_rcx);
+  Printf("rdx = 0x%016llx  ", ucontext->uc_mcontext.mc_rdx);
+  Printf("\n");
+  Printf("rdi = 0x%016llx  ", ucontext->uc_mcontext.mc_rdi);
+  Printf("rsi = 0x%016llx  ", ucontext->uc_mcontext.mc_rsi);
+  Printf("rbp = 0x%016llx  ", ucontext->uc_mcontext.mc_rbp);
+  Printf("rsp = 0x%016llx  ", ucontext->uc_mcontext.mc_rsp);
+  Printf("\n");
+  Printf(" r8 = 0x%016llx  ", ucontext->uc_mcontext.mc_r8);
+  Printf(" r9 = 0x%016llx  ", ucontext->uc_mcontext.mc_r9);
+  Printf("r10 = 0x%016llx  ", ucontext->uc_mcontext.mc_r10);
+  Printf("r11 = 0x%016llx  ", ucontext->uc_mcontext.mc_r11);
+  Printf("\n");
+  Printf("r12 = 0x%016llx  ", ucontext->uc_mcontext.mc_r12);
+  Printf("r13 = 0x%016llx  ", ucontext->uc_mcontext.mc_r13);
+  Printf("r14 = 0x%016llx  ", ucontext->uc_mcontext.mc_r14);
+  Printf("r15 = 0x%016llx  ", ucontext->uc_mcontext.mc_r15);
+  Printf("\n");
+#    elif defined(__i386__)
+  Report("Register values:\n");
+  Printf("eax = 0x%08x  ", ucontext->uc_mcontext.mc_eax);
+  Printf("ebx = 0x%08x  ", ucontext->uc_mcontext.mc_ebx);
+  Printf("ecx = 0x%08x  ", ucontext->uc_mcontext.mc_ecx);
+  Printf("edx = 0x%08x  ", ucontext->uc_mcontext.mc_edx);
+  Printf("\n");
+  Printf("edi = 0x%08x  ", ucontext->uc_mcontext.mc_edi);
+  Printf("esi = 0x%08x  ", ucontext->uc_mcontext.mc_esi);
+  Printf("ebp = 0x%08x  ", ucontext->uc_mcontext.mc_ebp);
+  Printf("esp = 0x%08x  ", ucontext->uc_mcontext.mc_esp);
+  Printf("\n");
+#    else
+  (void)ucontext;
+#    endif
+#  endif
+  // FIXME: Implement this for other OSes and architectures.
 }
 
 static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {

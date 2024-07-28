@@ -116,25 +116,37 @@ def EnableArmStreaming
                             "not be used for input and/or output and the "
                             "function must return with ZA unchanged")
            )}]>,
-    Option<"onlyIfRequiredByOps", "only-if-required-by-ops", "bool",
+    Option<"ifRequiredByOps", "if-required-by-ops", "bool",
            /*default=*/"false",
-           "Only apply the selected streaming/ZA modes if the function "
-           " contains ops that require them.">
+           "Only apply the selected streaming/ZA modes if the function contains"
+           " ops that implement the ArmSMETileOpInterface.">,
+    Option<"ifScalableAndSupported", "if-scalable-and-supported",
+           "bool", /*default=*/"false",
+           "Only apply the selected streaming/ZA modes if the function contains"
+           " supported scalable vector operations.">
   ];
   let dependentDialects = ["func::FuncDialect"];
 }
 
-def TileAllocation
-    : Pass<"allocate-arm-sme-tiles", "mlir::func::FuncOp"> {
-  let summary = "Allocate SME tiles";
+def TestTileAllocation
+    : Pass<"test-arm-sme-tile-allocation", "mlir::func::FuncOp"> {
+  let summary = "Tests SME 'virtual tile' allocation";
   let description = [{
     This pass does tile allocation for SME "virtual tiles". It is run at the
     'func.func' op level, and assigns tile IDs (via an attribute) to all ops
-    that implement the `ArmSMETileOpInterface`. An error will be emitted when
-    there's no tiles left.
+    that implement the `ArmSMETileOpInterface`. Note: This pass is only intended
+    to be used for testing, tile allocation is done as part of the ArmSME to
+    LLVM conversion (`convert-arm-sme-to-llvm`).
   }];
-  let constructor = "mlir::arm_sme::createTileAllocationPass()";
-  let dependentDialects = ["func::FuncDialect"];
+  let options = [
+    Option<"dumpTileLiveRanges", "dump-tile-live-ranges",
+           "bool", /*default=*/"false",
+           "Dump the live ranges of SME tiles (for debugging)">,
+    Option<"preprocessOnly", "preprocess-only", "bool", /*default=*/"false",
+           "Only preprocess IR so it is ready for tile allocation "
+           "(but do not allocate any tiles)">
+  ];
+  let dependentDialects = ["func::FuncDialect", "arm_sme::ArmSMEDialect"];
 }
 
 def OuterProductFusion
@@ -190,7 +202,8 @@ def VectorLegalization
     "func::FuncDialect",
     "arm_sme::ArmSMEDialect",
     "vector::VectorDialect",
-    "arith::ArithDialect"
+    "arith::ArithDialect",
+    "index::IndexDialect"
   ];
 }
 

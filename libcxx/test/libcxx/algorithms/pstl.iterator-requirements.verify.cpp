@@ -26,6 +26,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <execution>
 #include <numeric>
 
 #include "test_iterators.h"

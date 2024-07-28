@@ -3,12 +3,12 @@
 #CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
 
 // CHECK-LABEL:   func.func @sparse_metadata_init() -> !llvm.struct<(array<2 x i64>, array<3 x i64>)> {
-// CHECK:           %[[VAL_0:.*]] = arith.constant 0 : i64
-// CHECK:           %[[VAL_1:.*]] = llvm.mlir.undef : !llvm.struct<(array<2 x i64>, array<3 x i64>)>
-// CHECK:           %[[VAL_2:.*]] = llvm.insertvalue %[[VAL_0]], %[[VAL_1]][1, 0] : !llvm.struct<(array<2 x i64>, array<3 x i64>)>
-// CHECK:           %[[VAL_3:.*]] = llvm.insertvalue %[[VAL_0]], %[[VAL_2]][1, 1] : !llvm.struct<(array<2 x i64>, array<3 x i64>)>
-// CHECK:           %[[VAL_4:.*]] = llvm.insertvalue %[[VAL_0]], %[[VAL_3]][1, 2] : !llvm.struct<(array<2 x i64>, array<3 x i64>)>
-// CHECK:           return %[[VAL_4]] : !llvm.struct<(array<2 x i64>, array<3 x i64>)>
+// CHECK-DAG:       %[[STRUCT:.*]] = llvm.mlir.undef : !llvm.struct<(array<2 x i64>, array<3 x i64>)>
+// CHECK-DAG:       %[[CST0:.*]] = arith.constant 0 : i64
+// CHECK:           %[[VAL_1:.*]] = llvm.insertvalue %[[CST0]], %[[STRUCT]][1, 0] : !llvm.struct<(array<2 x i64>, array<3 x i64>)>
+// CHECK:           %[[VAL_2:.*]] = llvm.insertvalue %[[CST0]], %[[VAL_1]][1, 1] : !llvm.struct<(array<2 x i64>, array<3 x i64>)>
+// CHECK:           %[[VAL_3:.*]] = llvm.insertvalue %[[CST0]], %[[VAL_2]][1, 2] : !llvm.struct<(array<2 x i64>, array<3 x i64>)>
+// CHECK:           return %[[VAL_3]] : !llvm.struct<(array<2 x i64>, array<3 x i64>)>
 // CHECK:         }
 func.func @sparse_metadata_init() -> !sparse_tensor.storage_specifier<#CSR> {
   %0 = sparse_tensor.storage_specifier.init : !sparse_tensor.storage_specifier<#CSR>

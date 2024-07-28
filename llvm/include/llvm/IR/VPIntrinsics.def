@@ -174,10 +174,10 @@ HELPER_REGISTER_BINARY_INT_VP(vp_add, VP_ADD, Add, ADD)
 HELPER_REGISTER_BINARY_INT_VP(vp_and, VP_AND, And, AND)
 
 // llvm.vp.ashr(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_INT_VP(vp_ashr, VP_ASHR, AShr, SRA)
+HELPER_REGISTER_BINARY_INT_VP(vp_ashr, VP_SRA, AShr, SRA)
 
 // llvm.vp.lshr(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_INT_VP(vp_lshr, VP_LSHR, LShr, SRL)
+HELPER_REGISTER_BINARY_INT_VP(vp_lshr, VP_SRL, LShr, SRL)
 
 // llvm.vp.mul(x,y,mask,vlen)
 HELPER_REGISTER_BINARY_INT_VP(vp_mul, VP_MUL, Mul, MUL)
@@ -701,6 +701,14 @@ HELPER_REGISTER_REDUCTION_VP(vp_reduce_fmax, VP_REDUCE_FMAX,
 HELPER_REGISTER_REDUCTION_VP(vp_reduce_fmin, VP_REDUCE_FMIN,
                              vector_reduce_fmin)
 
+// llvm.vp.reduce.fmaximum(start,x,mask,vlen)
+HELPER_REGISTER_REDUCTION_VP(vp_reduce_fmaximum, VP_REDUCE_FMAXIMUM,
+                             vector_reduce_fmaximum)
+
+// llvm.vp.reduce.fminimum(start,x,mask,vlen)
+HELPER_REGISTER_REDUCTION_VP(vp_reduce_fminimum, VP_REDUCE_FMINIMUM,
+                             vector_reduce_fminimum)
+
 #undef HELPER_REGISTER_REDUCTION_VP
 
 // Specialized helper macro for VP reductions as above but with two forms:
@@ -768,6 +776,13 @@ VP_PROPERTY_NO_FUNCTIONAL
 END_REGISTER_VP(experimental_vp_reverse, EXPERIMENTAL_VP_REVERSE)
 
 ///// } Shuffles
+
+// llvm.vp.splat(val,mask,vlen)
+BEGIN_REGISTER_VP_INTRINSIC(experimental_vp_splat, 1, 2)
+BEGIN_REGISTER_VP_SDNODE(EXPERIMENTAL_VP_SPLAT, -1, experimental_vp_splat, 1, 2)
+VP_PROPERTY_NO_FUNCTIONAL
+HELPER_MAP_VPID_TO_VPSD(experimental_vp_splat, EXPERIMENTAL_VP_SPLAT)
+END_REGISTER_VP(experimental_vp_splat, EXPERIMENTAL_VP_SPLAT)
 
 #undef BEGIN_REGISTER_VP
 #undef BEGIN_REGISTER_VP_INTRINSIC

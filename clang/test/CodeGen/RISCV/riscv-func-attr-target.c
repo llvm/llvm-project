@@ -66,16 +66,16 @@ void test_rvv_f64_type_w_zve64d() {
 }
 
 //.
-// CHECK: attributes #0 = { {{.*}}"target-features"="+64bit,+a,+m,+save-restore,+zifencei,-relax,-zbb,-zfa" }
-// CHECK: attributes #1 = { {{.*}}"target-cpu"="rocket-rv64" "target-features"="+64bit,+a,+d,+f,+m,+save-restore,+v,+zicsr,+zifencei,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b,-relax,-zbb,-zfa" "tune-cpu"="generic-rv64" }
-// CHECK: attributes #2 = { {{.*}}"target-features"="+64bit,+a,+m,+save-restore,+zbb,+zifencei,-relax,-zfa" }
-// CHECK: attributes #3 = { {{.*}}"target-features"="+64bit,+a,+d,+f,+m,+save-restore,+v,+zbb,+zicond,+zicsr,+zifencei,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b,-relax,-zfa" }
+// CHECK: attributes #0 = { {{.*}}"target-features"="+64bit,+a,+m,+save-restore,+zifencei,+zmmul,-relax,-zbb,-zfa" }
+// CHECK: attributes #1 = { {{.*}}"target-cpu"="rocket-rv64" "target-features"="+64bit,+a,+d,+f,+m,+save-restore,+v,+zicsr,+zifencei,+zmmul,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b,-relax,-zbb,-zfa" "tune-cpu"="generic-rv64" }
+// CHECK: attributes #2 = { {{.*}}"target-features"="+64bit,+a,+m,+save-restore,+zbb,+zifencei,+zmmul,-relax,-zfa" }
+// CHECK: attributes #3 = { {{.*}}"target-features"="+64bit,+a,+d,+f,+m,+save-restore,+v,+zbb,+zicond,+zicsr,+zifencei,+zmmul,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b,-relax,-zfa" }
 // Make sure we append negative features if we override the arch
-// CHECK: attributes #4 = { {{.*}}"target-features"="+64bit,+a,+c,+d,+f,+m,+save-restore,+zbb,+zicsr,+zifencei,{{(-[[:alnum:]-]+)(,-[[:alnum:]-]+)*}}" }
-// CHECK: attributes #5 = { {{.*}}"target-features"="+64bit,+m,+save-restore,{{(-[[:alnum:]-]+)(,-[[:alnum:]-]+)*}}" }
-// CHECK: attributes #6 = { {{.*}}"target-cpu"="sifive-u54" "target-features"="+64bit,+a,+m,+save-restore,+zbb,+zifencei,-relax,-zfa" }
-// CHECK: attributes #7 = { {{.*}}"target-cpu"="sifive-u54" "target-features"="+64bit,+m,+save-restore,{{(-[[:alnum:]-]+)(,-[[:alnum:]-]+)*}}" }
-// CHECK: attributes #8 = { {{.*}}"target-cpu"="sifive-u54" "target-features"="+64bit,+a,+c,+d,+f,+m,+save-restore,+zicsr,+zifencei,{{(-[[:alnum:]-]+)(,-[[:alnum:]-]+)*}}" }
-// CHECK: attributes #9 = { {{.*}}"target-features"="+64bit,+a,+m,+save-restore,+zicsr,+zifencei,+zve32x,+zvl32b,-relax,-zbb,-zfa" }
-// CHECK: attributes #11 = { {{.*}}"target-features"="+64bit,+a,+f,+m,+save-restore,+zicsr,+zifencei,+zve32f,+zve32x,+zvl32b,-relax,-zbb,-zfa" }
-// CHECK: attributes #12 = { {{.*}}"target-features"="+64bit,+a,+d,+f,+m,+save-restore,+zicsr,+zifencei,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl32b,+zvl64b,-relax,-zbb,-zfa" }
+// CHECK: attributes #4 = { {{.*}}"target-features"="+64bit,+a,+c,+d,+f,+m,+save-restore,+zbb,+zicsr,+zifencei,+zmmul,{{(-[[:alnum:]-]+)(,-[[:alnum:]-]+)*}}" }
+// CHECK: attributes #5 = { {{.*}}"target-features"="+64bit,+m,+save-restore,+zmmul,{{(-[[:alnum:]-]+)(,-[[:alnum:]-]+)*}}" }
+// CHECK: attributes #6 = { {{.*}}"target-cpu"="sifive-u54" "target-features"="+64bit,+a,+m,+save-restore,+zbb,+zifencei,+zmmul,-relax,-zfa" }
+// CHECK: attributes #7 = { {{.*}}"target-cpu"="sifive-u54" "target-features"="+64bit,+m,+save-restore,+zmmul,{{(-[[:alnum:]-]+)(,-[[:alnum:]-]+)*}}" }
+// CHECK: attributes #8 = { {{.*}}"target-cpu"="sifive-u54" "target-features"="+64bit,+a,+c,+d,+f,+m,+save-restore,+zicsr,+zifencei,+zmmul,{{(-[[:alnum:]-]+)(,-[[:alnum:]-]+)*}}" }
+// CHECK: attributes #9 = { {{.*}}"target-features"="+64bit,+a,+m,+save-restore,+zicsr,+zifencei,+zmmul,+zve32x,+zvl32b,-relax,-zbb,-zfa" }
+// CHECK: attributes #11 = { {{.*}}"target-features"="+64bit,+a,+f,+m,+save-restore,+zicsr,+zifencei,+zmmul,+zve32f,+zve32x,+zvl32b,-relax,-zbb,-zfa" }
+// CHECK: attributes #12 = { {{.*}}"target-features"="+64bit,+a,+d,+f,+m,+save-restore,+zicsr,+zifencei,+zmmul,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl32b,+zvl64b,-relax,-zbb,-zfa" }

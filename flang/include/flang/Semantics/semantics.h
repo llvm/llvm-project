@@ -110,6 +110,9 @@ public:
   evaluate::FoldingContext &foldingContext() { return foldingContext_; }
   parser::AllCookedSources &allCookedSources() { return allCookedSources_; }
   ModuleDependences &moduleDependences() { return moduleDependences_; }
+  std::map<const Symbol *, SourceName> &moduleFileOutputRenamings() {
+    return moduleFileOutputRenamings_;
+  }
 
   SemanticsContext &set_location(
       const std::optional<parser::CharBlock> &location) {
@@ -215,8 +218,10 @@ public:
   void UseFortranBuiltinsModule();
   const Scope *GetBuiltinsScope() const { return builtinsScope_; }
 
-  void UsePPCBuiltinTypesModule();
   const Scope &GetCUDABuiltinsScope();
+  const Scope &GetCUDADeviceScope();
+
+  void UsePPCBuiltinTypesModule();
   void UsePPCBuiltinsModule();
   Scope *GetPPCBuiltinTypesScope() { return ppcBuiltinTypesScope_; }
   const Scope *GetPPCBuiltinsScope() const { return ppcBuiltinsScope_; }
@@ -292,18 +297,21 @@ private:
   const Scope *builtinsScope_{nullptr}; // module __Fortran_builtins
   Scope *ppcBuiltinTypesScope_{nullptr}; // module __Fortran_PPC_types
   std::optional<const Scope *> cudaBuiltinsScope_; // module __CUDA_builtins
+  std::optional<const Scope *> cudaDeviceScope_; // module cudadevice
   const Scope *ppcBuiltinsScope_{nullptr}; // module __ppc_intrinsics
   std::list<parser::Program> modFileParseTrees_;
   std::unique_ptr<CommonBlockMap> commonBlockMap_;
   ModuleDependences moduleDependences_;
+  std::map<const Symbol *, SourceName> moduleFileOutputRenamings_;
 };
 
 class Semantics {
 public:
-  explicit Semantics(SemanticsContext &context, parser::Program &program,
-      bool debugModuleWriter = false)
-      : context_{context}, program_{program} {
-    context.set_debugModuleWriter(debugModuleWriter);
+  explicit Semantics(SemanticsContext &context, parser::Program &program)
+      : context_{context}, program_{program} {}
+  Semantics &set_hermeticModuleFileOutput(bool yes = true) {
+    hermeticModuleFileOutput_ = yes;
+    return *this;
   }
 
   SemanticsContext &context() const { return context_; }
@@ -319,6 +327,7 @@ public:
 private:
   SemanticsContext &context_;
   parser::Program &program_;
+  bool hermeticModuleFileOutput_{false};
 };
 
 // Base class for semantics checkers.

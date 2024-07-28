@@ -143,3 +143,37 @@ void instantiate(const int &param, const float &paramf, int &mut_param, float &m
 }
 
 } // namespace valid
+
+namespace overload {
+
+int const &overload_base(int const &a) { return a; }
+int const &overload_base(int &&a);
+
+int const &overload_ret_type(int const &a) { return a; }
+void overload_ret_type(int &&a);
+
+int const &overload_params1(int p1, int const &a) { return a; }
+int const & overload_params1(int p1, int &&a);
+
+int const &overload_params2(int p1, int const &a, int p2) { return a; }
+int const &overload_params2(int p1, int &&a, int p2);
+
+int const &overload_params3(T p1, int const &a, int p2) { return a; }
+int const &overload_params3(int p1, int &&a, T p2);
+
+int const &overload_params_const(int p1, int const &a, int const p2) { return a; }
+int const &overload_params_const(int const p1, int &&a, int p2);
+
+int const &overload_params_difference1(int p1, int const &a, int p2) { return a; }
+// CHECK-MESSAGES: :[[@LINE-1]]:79: warning: returning a constant reference parameter
+int const &overload_params_difference1(long p1, int &&a, int p2);
+
+int const &overload_params_difference2(int p1, int const &a, int p2) { return a; }
+// CHECK-MESSAGES: :[[@LINE-1]]:79: warning: returning a constant reference parameter
+int const &overload_params_difference2(int p1, int &&a, long p2);
+
+int const &overload_params_difference3(int p1, int const &a, int p2) { return a; }
+// CHECK-MESSAGES: :[[@LINE-1]]:79: warning: returning a constant reference parameter
+int const &overload_params_difference3(int p1, long &&a, int p2);
+
+} // namespace overload

@@ -707,12 +707,8 @@ define <2 x i50> @test_unsigned_v2f32_v2i50(<2 x float> %f) {
 define <2 x i64> @test_unsigned_v2f32_v2i64(<2 x float> %f) {
 ; CHECK-LABEL: test_unsigned_v2f32_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    fcvtzu x8, s0
-; CHECK-NEXT:    fcvtzu x9, s1
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    mov v0.d[1], x9
+; CHECK-NEXT:    fcvtl v0.2d, v0.2s
+; CHECK-NEXT:    fcvtzu v0.2d, v0.2d
 ; CHECK-NEXT:    ret
     %x = call <2 x i64> @llvm.fptoui.sat.v2f32.v2i64(<2 x float> %f)
     ret <2 x i64> %x
@@ -733,37 +729,33 @@ define <2 x i100> @test_unsigned_v2f32_v2i100(<2 x float> %f) {
 ; CHECK-NEXT:    .cfi_offset b8, -40
 ; CHECK-NEXT:    .cfi_offset b9, -48
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov s8, v0.s[1]
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    fmov s0, s8
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl __fixunssfti
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov w8, #1904214015 // =0x717fffff
-; CHECK-NEXT:    fcmp s8, #0.0
 ; CHECK-NEXT:    mov x21, #68719476735 // =0xfffffffff
 ; CHECK-NEXT:    fmov s9, w8
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-NEXT:    csel x8, xzr, x0, lt
-; CHECK-NEXT:    csel x9, xzr, x1, lt
-; CHECK-NEXT:    fcmp s8, s9
-; CHECK-NEXT:    csel x19, x21, x9, gt
-; CHECK-NEXT:    csinv x20, x8, xzr, le
-; CHECK-NEXT:    bl __fixunssfti
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    mov x2, x20
-; CHECK-NEXT:    mov x3, x19
-; CHECK-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    mov s8, v0.s[1]
 ; CHECK-NEXT:    fcmp s0, #0.0
 ; CHECK-NEXT:    csel x8, xzr, x0, lt
 ; CHECK-NEXT:    csel x9, xzr, x1, lt
 ; CHECK-NEXT:    fcmp s0, s9
-; CHECK-NEXT:    ldp d9, d8, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    csinv x8, x8, xzr, le
-; CHECK-NEXT:    csel x1, x21, x9, gt
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    fmov s0, s8
+; CHECK-NEXT:    csel x19, x21, x9, gt
+; CHECK-NEXT:    csinv x20, x8, xzr, le
+; CHECK-NEXT:    bl __fixunssfti
+; CHECK-NEXT:    fcmp s8, #0.0
+; CHECK-NEXT:    csel x8, xzr, x0, lt
+; CHECK-NEXT:    csel x9, xzr, x1, lt
+; CHECK-NEXT:    fcmp s8, s9
+; CHECK-NEXT:    mov x0, x20
+; CHECK-NEXT:    mov x1, x19
+; CHECK-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    csel x3, x21, x9, gt
 ; CHECK-NEXT:    ldp x30, x21, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    mov v0.d[1], x1
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    ldp d9, d8, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    csinv x2, x8, xzr, le
 ; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
     %x = call <2 x i100> @llvm.fptoui.sat.v2f32.v2i100(<2 x float> %f)
@@ -784,36 +776,32 @@ define <2 x i128> @test_unsigned_v2f32_v2i128(<2 x float> %f) {
 ; CHECK-NEXT:    .cfi_offset b8, -40
 ; CHECK-NEXT:    .cfi_offset b9, -48
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov s8, v0.s[1]
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    fmov s0, s8
-; CHECK-NEXT:    bl __fixunssfti
-; CHECK-NEXT:    mov w8, #2139095039 // =0x7f7fffff
-; CHECK-NEXT:    fcmp s8, #0.0
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    fmov s9, w8
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-NEXT:    bl __fixunssfti
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    mov w8, #2139095039 // =0x7f7fffff
+; CHECK-NEXT:    fmov s9, w8
+; CHECK-NEXT:    mov s8, v0.s[1]
+; CHECK-NEXT:    fcmp s0, #0.0
 ; CHECK-NEXT:    csel x8, xzr, x1, lt
 ; CHECK-NEXT:    csel x9, xzr, x0, lt
-; CHECK-NEXT:    fcmp s8, s9
+; CHECK-NEXT:    fcmp s0, s9
+; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    csinv x19, x9, xzr, le
 ; CHECK-NEXT:    csinv x20, x8, xzr, le
 ; CHECK-NEXT:    bl __fixunssfti
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    mov x2, x19
-; CHECK-NEXT:    mov x3, x20
-; CHECK-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp s8, #0.0
 ; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    csel x8, xzr, x0, lt
-; CHECK-NEXT:    csel x9, xzr, x1, lt
-; CHECK-NEXT:    fcmp s0, s9
+; CHECK-NEXT:    csel x8, xzr, x1, lt
+; CHECK-NEXT:    csel x9, xzr, x0, lt
+; CHECK-NEXT:    fcmp s8, s9
+; CHECK-NEXT:    mov x0, x19
+; CHECK-NEXT:    mov x1, x20
+; CHECK-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    csinv x8, x8, xzr, le
-; CHECK-NEXT:    csinv x1, x9, xzr, le
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    mov v0.d[1], x1
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    csinv x2, x9, xzr, le
+; CHECK-NEXT:    csinv x3, x8, xzr, le
 ; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
     %x = call <2 x i128> @llvm.fptoui.sat.v2f32.v2i128(<2 x float> %f)
@@ -927,17 +915,10 @@ define <4 x i50> @test_unsigned_v4f32_v4i50(<4 x float> %f) {
 define <4 x i64> @test_unsigned_v4f32_v4i64(<4 x float> %f) {
 ; CHECK-LABEL: test_unsigned_v4f32_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    mov s3, v0.s[1]
-; CHECK-NEXT:    fcvtzu x9, s0
-; CHECK-NEXT:    mov s2, v1.s[1]
-; CHECK-NEXT:    fcvtzu x8, s1
-; CHECK-NEXT:    fcvtzu x11, s3
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    fcvtzu x10, s2
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    mov v0.d[1], x11
-; CHECK-NEXT:    mov v1.d[1], x10
+; CHECK-NEXT:    fcvtl2 v1.2d, v0.4s
+; CHECK-NEXT:    fcvtl v0.2d, v0.2s
+; CHECK-NEXT:    fcvtzu v1.2d, v1.2d
+; CHECK-NEXT:    fcvtzu v0.2d, v0.2d
 ; CHECK-NEXT:    ret
     %x = call <4 x i64> @llvm.fptoui.sat.v4f32.v4i64(<4 x float> %f)
     ret <4 x i64> %x
@@ -946,13 +927,13 @@ define <4 x i64> @test_unsigned_v4f32_v4i64(<4 x float> %f) {
 define <4 x i100> @test_unsigned_v4f32_v4i100(<4 x float> %f) {
 ; CHECK-LABEL: test_unsigned_v4f32_v4i100:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    stp d9, d8, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x25, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x24, x23, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 112
+; CHECK-NEXT:    sub sp, sp, #96
+; CHECK-NEXT:    stp d9, d8, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x30, x25, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
@@ -963,23 +944,32 @@ define <4 x i100> @test_unsigned_v4f32_v4i100(<4 x float> %f) {
 ; CHECK-NEXT:    .cfi_offset w30, -64
 ; CHECK-NEXT:    .cfi_offset b8, -72
 ; CHECK-NEXT:    .cfi_offset b9, -80
-; CHECK-NEXT:    mov s8, v0.s[1]
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    fmov s0, s8
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl __fixunssfti
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov w8, #1904214015 // =0x717fffff
-; CHECK-NEXT:    fcmp s8, #0.0
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    fmov s9, w8
 ; CHECK-NEXT:    mov x25, #68719476735 // =0xfffffffff
+; CHECK-NEXT:    fmov s9, w8
+; CHECK-NEXT:    mov s8, v0.s[1]
+; CHECK-NEXT:    fcmp s0, #0.0
+; CHECK-NEXT:    csel x8, xzr, x0, lt
+; CHECK-NEXT:    csel x9, xzr, x1, lt
+; CHECK-NEXT:    fcmp s0, s9
+; CHECK-NEXT:    fmov s0, s8
+; CHECK-NEXT:    csel x19, x25, x9, gt
+; CHECK-NEXT:    csinv x20, x8, xzr, le
+; CHECK-NEXT:    bl __fixunssfti
+; CHECK-NEXT:    fcmp s8, #0.0
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    csel x8, xzr, x0, lt
 ; CHECK-NEXT:    csel x9, xzr, x1, lt
 ; CHECK-NEXT:    fcmp s8, s9
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    csel x21, x25, x9, gt
+; CHECK-NEXT:    csinv x22, x8, xzr, le
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-NEXT:    csel x19, x25, x9, gt
-; CHECK-NEXT:    csinv x20, x8, xzr, le
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov s8, v0.s[1]
@@ -988,40 +978,27 @@ define <4 x i100> @test_unsigned_v4f32_v4i100(<4 x float> %f) {
 ; CHECK-NEXT:    csel x9, xzr, x1, lt
 ; CHECK-NEXT:    fcmp s0, s9
 ; CHECK-NEXT:    fmov s0, s8
-; CHECK-NEXT:    csel x21, x25, x9, gt
-; CHECK-NEXT:    csinv x22, x8, xzr, le
-; CHECK-NEXT:    bl __fixunssfti
-; CHECK-NEXT:    fcmp s8, #0.0
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-NEXT:    csel x8, xzr, x0, lt
-; CHECK-NEXT:    csel x9, xzr, x1, lt
-; CHECK-NEXT:    fcmp s8, s9
 ; CHECK-NEXT:    csel x23, x25, x9, gt
 ; CHECK-NEXT:    csinv x24, x8, xzr, le
 ; CHECK-NEXT:    bl __fixunssfti
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    mov x2, x20
-; CHECK-NEXT:    mov x3, x19
-; CHECK-NEXT:    mov x4, x22
-; CHECK-NEXT:    mov x5, x21
-; CHECK-NEXT:    mov x6, x24
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    mov x7, x23
-; CHECK-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp s8, #0.0
+; CHECK-NEXT:    mov x2, x22
+; CHECK-NEXT:    mov x3, x21
+; CHECK-NEXT:    mov x4, x24
+; CHECK-NEXT:    mov x5, x23
+; CHECK-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    csel x8, xzr, x0, lt
 ; CHECK-NEXT:    csel x9, xzr, x1, lt
-; CHECK-NEXT:    fcmp s0, s9
-; CHECK-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    csinv x8, x8, xzr, le
-; CHECK-NEXT:    csel x1, x25, x9, gt
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    ldp x30, x25, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    mov v0.d[1], x1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    add sp, sp, #112
+; CHECK-NEXT:    fcmp s8, s9
+; CHECK-NEXT:    mov x0, x20
+; CHECK-NEXT:    mov x1, x19
+; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    csel x7, x25, x9, gt
+; CHECK-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x25, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    csinv x6, x8, xzr, le
+; CHECK-NEXT:    ldp d9, d8, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #96
 ; CHECK-NEXT:    ret
     %x = call <4 x i100> @llvm.fptoui.sat.v4f32.v4i100(<4 x float> %f)
     ret <4 x i100> %x
@@ -1030,13 +1007,13 @@ define <4 x i100> @test_unsigned_v4f32_v4i100(<4 x float> %f) {
 define <4 x i128> @test_unsigned_v4f32_v4i128(<4 x float> %f) {
 ; CHECK-LABEL: test_unsigned_v4f32_v4i128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    stp d9, d8, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
-; CHECK-NEXT:    stp x24, x23, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 112
+; CHECK-NEXT:    sub sp, sp, #96
+; CHECK-NEXT:    stp d9, d8, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
@@ -1046,22 +1023,31 @@ define <4 x i128> @test_unsigned_v4f32_v4i128(<4 x float> %f) {
 ; CHECK-NEXT:    .cfi_offset w30, -64
 ; CHECK-NEXT:    .cfi_offset b8, -72
 ; CHECK-NEXT:    .cfi_offset b9, -80
-; CHECK-NEXT:    mov s8, v0.s[1]
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    fmov s0, s8
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl __fixunssfti
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov w8, #2139095039 // =0x7f7fffff
-; CHECK-NEXT:    fcmp s8, #0.0
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    fmov s9, w8
+; CHECK-NEXT:    mov s8, v0.s[1]
+; CHECK-NEXT:    fcmp s0, #0.0
+; CHECK-NEXT:    csel x8, xzr, x1, lt
+; CHECK-NEXT:    csel x9, xzr, x0, lt
+; CHECK-NEXT:    fcmp s0, s9
+; CHECK-NEXT:    fmov s0, s8
+; CHECK-NEXT:    csinv x19, x9, xzr, le
+; CHECK-NEXT:    csinv x20, x8, xzr, le
+; CHECK-NEXT:    bl __fixunssfti
+; CHECK-NEXT:    fcmp s8, #0.0
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    csel x8, xzr, x1, lt
 ; CHECK-NEXT:    csel x9, xzr, x0, lt
 ; CHECK-NEXT:    fcmp s8, s9
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    csinv x21, x9, xzr, le
+; CHECK-NEXT:    csinv x22, x8, xzr, le
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-NEXT:    csinv x19, x9, xzr, le
-; CHECK-NEXT:    csinv x20, x8, xzr, le
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov s8, v0.s[1]
@@ -1070,40 +1056,27 @@ define <4 x i128> @test_unsigned_v4f32_v4i128(<4 x float> %f) {
 ; CHECK-NEXT:    csel x9, xzr, x0, lt
 ; CHECK-NEXT:    fcmp s0, s9
 ; CHECK-NEXT:    fmov s0, s8
-; CHECK-NEXT:    csinv x21, x9, xzr, le
-; CHECK-NEXT:    csinv x22, x8, xzr, le
-; CHECK-NEXT:    bl __fixunssfti
-; CHECK-NEXT:    fcmp s8, #0.0
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-NEXT:    csel x8, xzr, x1, lt
-; CHECK-NEXT:    csel x9, xzr, x0, lt
-; CHECK-NEXT:    fcmp s8, s9
 ; CHECK-NEXT:    csinv x23, x9, xzr, le
 ; CHECK-NEXT:    csinv x24, x8, xzr, le
 ; CHECK-NEXT:    bl __fixunssfti
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    mov x2, x19
-; CHECK-NEXT:    mov x3, x20
-; CHECK-NEXT:    mov x4, x21
-; CHECK-NEXT:    mov x5, x22
-; CHECK-NEXT:    mov x6, x23
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    mov x7, x24
-; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
-; CHECK-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    csel x8, xzr, x0, lt
-; CHECK-NEXT:    csel x9, xzr, x1, lt
-; CHECK-NEXT:    fcmp s0, s9
-; CHECK-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    csinv x8, x8, xzr, le
-; CHECK-NEXT:    csinv x1, x9, xzr, le
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    mov v0.d[1], x1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    add sp, sp, #112
+; CHECK-NEXT:    fcmp s8, #0.0
+; CHECK-NEXT:    mov x2, x21
+; CHECK-NEXT:    mov x3, x22
+; CHECK-NEXT:    mov x4, x23
+; CHECK-NEXT:    mov x5, x24
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    csel x8, xzr, x1, lt
+; CHECK-NEXT:    csel x9, xzr, x0, lt
+; CHECK-NEXT:    fcmp s8, s9
+; CHECK-NEXT:    mov x0, x19
+; CHECK-NEXT:    mov x1, x20
+; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    csinv x6, x9, xzr, le
+; CHECK-NEXT:    ldp d9, d8, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    csinv x7, x8, xzr, le
+; CHECK-NEXT:    add sp, sp, #96
 ; CHECK-NEXT:    ret
     %x = call <4 x i128> @llvm.fptoui.sat.v4f32.v4i128(<4 x float> %f)
     ret <4 x i128> %x
@@ -1272,37 +1245,33 @@ define <2 x i100> @test_unsigned_v2f64_v2i100(<2 x double> %f) {
 ; CHECK-NEXT:    .cfi_offset w30, -32
 ; CHECK-NEXT:    .cfi_offset b8, -40
 ; CHECK-NEXT:    .cfi_offset b9, -48
-; CHECK-NEXT:    mov d8, v0.d[1]
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    fmov d0, d8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    bl __fixunsdfti
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov x8, #5057542381537067007 // =0x462fffffffffffff
-; CHECK-NEXT:    fcmp d8, #0.0
 ; CHECK-NEXT:    mov x21, #68719476735 // =0xfffffffff
 ; CHECK-NEXT:    fmov d9, x8
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    csel x8, xzr, x0, lt
-; CHECK-NEXT:    csel x9, xzr, x1, lt
-; CHECK-NEXT:    fcmp d8, d9
-; CHECK-NEXT:    csel x19, x21, x9, gt
-; CHECK-NEXT:    csinv x20, x8, xzr, le
-; CHECK-NEXT:    bl __fixunsdfti
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    mov x2, x20
-; CHECK-NEXT:    mov x3, x19
-; CHECK-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    mov d8, v0.d[1]
 ; CHECK-NEXT:    fcmp d0, #0.0
 ; CHECK-NEXT:    csel x8, xzr, x0, lt
 ; CHECK-NEXT:    csel x9, xzr, x1, lt
 ; CHECK-NEXT:    fcmp d0, d9
-; CHECK-NEXT:    ldp d9, d8, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    csinv x8, x8, xzr, le
-; CHECK-NEXT:    csel x1, x21, x9, gt
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    fmov d0, d8
+; CHECK-NEXT:    csel x19, x21, x9, gt
+; CHECK-NEXT:    csinv x20, x8, xzr, le
+; CHECK-NEXT:    bl __fixunsdfti
+; CHECK-NEXT:    fcmp d8, #0.0
+; CHECK-NEXT:    csel x8, xzr, x0, lt
+; CHECK-NEXT:    csel x9, xzr, x1, lt
+; CHECK-NEXT:    fcmp d8, d9
+; CHECK-NEXT:    mov x0, x20
+; CHECK-NEXT:    mov x1, x19
+; CHECK-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    csel x3, x21, x9, gt
 ; CHECK-NEXT:    ldp x30, x21, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    mov v0.d[1], x1
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    ldp d9, d8, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    csinv x2, x8, xzr, le
 ; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
     %x = call <2 x i100> @llvm.fptoui.sat.v2f64.v2i100(<2 x double> %f)
@@ -1322,36 +1291,32 @@ define <2 x i128> @test_unsigned_v2f64_v2i128(<2 x double> %f) {
 ; CHECK-NEXT:    .cfi_offset w30, -32
 ; CHECK-NEXT:    .cfi_offset b8, -40
 ; CHECK-NEXT:    .cfi_offset b9, -48
-; CHECK-NEXT:    mov d8, v0.d[1]
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    fmov d0, d8
-; CHECK-NEXT:    bl __fixunsdfti
-; CHECK-NEXT:    mov x8, #5183643171103440895 // =0x47efffffffffffff
-; CHECK-NEXT:    fcmp d8, #0.0
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    fmov d9, x8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    bl __fixunsdfti
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    mov x8, #5183643171103440895 // =0x47efffffffffffff
+; CHECK-NEXT:    fmov d9, x8
+; CHECK-NEXT:    mov d8, v0.d[1]
+; CHECK-NEXT:    fcmp d0, #0.0
 ; CHECK-NEXT:    csel x8, xzr, x1, lt
 ; CHECK-NEXT:    csel x9, xzr, x0, lt
-; CHECK-NEXT:    fcmp d8, d9
+; CHECK-NEXT:    fcmp d0, d9
+; CHECK-NEXT:    fmov d0, d8
 ; CHECK-NEXT:    csinv x19, x9, xzr, le
 ; CHECK-NEXT:    csinv x20, x8, xzr, le
 ; CHECK-NEXT:    bl __fixunsdfti
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    mov x2, x19
-; CHECK-NEXT:    mov x3, x20
-; CHECK-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp d8, #0.0
 ; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    csel x8, xzr, x0, lt
-; CHECK-NEXT:    csel x9, xzr, x1, lt
-; CHECK-NEXT:    fcmp d0, d9
+; CHECK-NEXT:    csel x8, xzr, x1, lt
+; CHECK-NEXT:    csel x9, xzr, x0, lt
+; CHECK-NEXT:    fcmp d8, d9
+; CHECK-NEXT:    mov x0, x19
+; CHECK-NEXT:    mov x1, x20
+; CHECK-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    csinv x8, x8, xzr, le
-; CHECK-NEXT:    csinv x1, x9, xzr, le
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    mov v0.d[1], x1
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    csinv x2, x9, xzr, le
+; CHECK-NEXT:    csinv x3, x8, xzr, le
 ; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
     %x = call <2 x i128> @llvm.fptoui.sat.v2f64.v2i128(<2 x double> %f)
@@ -1581,7 +1546,7 @@ define <4 x i100> @test_unsigned_v4f16_v4i100(<4 x half> %f) {
 ; CHECK-NEXT:    .cfi_offset b8, -72
 ; CHECK-NEXT:    .cfi_offset b9, -80
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov h1, v0.h[2]
+; CHECK-NEXT:    mov h1, v0.h[1]
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    fcvt s8, h1
 ; CHECK-NEXT:    fmov s0, s8
@@ -1591,13 +1556,23 @@ define <4 x i100> @test_unsigned_v4f16_v4i100(<4 x half> %f) {
 ; CHECK-NEXT:    fcmp s8, #0.0
 ; CHECK-NEXT:    fmov s9, w8
 ; CHECK-NEXT:    mov x25, #68719476735 // =0xfffffffff
-; CHECK-NEXT:    mov h0, v0.h[1]
+; CHECK-NEXT:    mov h0, v0.h[2]
 ; CHECK-NEXT:    csel x9, xzr, x0, lt
 ; CHECK-NEXT:    csel x8, xzr, x1, lt
 ; CHECK-NEXT:    fcmp s8, s9
 ; CHECK-NEXT:    fcvt s8, h0
 ; CHECK-NEXT:    csel x19, x25, x8, gt
 ; CHECK-NEXT:    csinv x20, x9, xzr, le
+; CHECK-NEXT:    fmov s0, s8
+; CHECK-NEXT:    bl __fixunssfti
+; CHECK-NEXT:    fcmp s8, #0.0
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    csel x8, xzr, x0, lt
+; CHECK-NEXT:    csel x9, xzr, x1, lt
+; CHECK-NEXT:    fcmp s8, s9
+; CHECK-NEXT:    fcvt s8, h0
+; CHECK-NEXT:    csel x21, x25, x9, gt
+; CHECK-NEXT:    csinv x22, x8, xzr, le
 ; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
@@ -1607,40 +1582,27 @@ define <4 x i100> @test_unsigned_v4f16_v4i100(<4 x half> %f) {
 ; CHECK-NEXT:    csel x9, xzr, x1, lt
 ; CHECK-NEXT:    fcmp s8, s9
 ; CHECK-NEXT:    fcvt s8, h0
-; CHECK-NEXT:    csel x21, x25, x9, gt
-; CHECK-NEXT:    csinv x22, x8, xzr, le
-; CHECK-NEXT:    fmov s0, s8
-; CHECK-NEXT:    bl __fixunssfti
-; CHECK-NEXT:    fcmp s8, #0.0
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    csel x8, xzr, x0, lt
-; CHECK-NEXT:    csel x9, xzr, x1, lt
-; CHECK-NEXT:    fcmp s8, s9
-; CHECK-NEXT:    fcvt s8, h0
 ; CHECK-NEXT:    csel x23, x25, x9, gt
 ; CHECK-NEXT:    csinv x24, x8, xzr, le
 ; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    fcmp s8, #0.0
-; CHECK-NEXT:    mov x2, x22
-; CHECK-NEXT:    mov x3, x21
-; CHECK-NEXT:    mov x4, x20
-; CHECK-NEXT:    mov x5, x19
-; CHECK-NEXT:    mov x6, x24
-; CHECK-NEXT:    mov x7, x23
+; CHECK-NEXT:    mov x2, x20
+; CHECK-NEXT:    mov x3, x19
+; CHECK-NEXT:    mov x4, x22
+; CHECK-NEXT:    mov x5, x21
 ; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
 ; CHECK-NEXT:    csel x8, xzr, x0, lt
 ; CHECK-NEXT:    csel x9, xzr, x1, lt
 ; CHECK-NEXT:    fcmp s8, s9
+; CHECK-NEXT:    mov x0, x24
+; CHECK-NEXT:    mov x1, x23
 ; CHECK-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    csel x7, x25, x9, gt
 ; CHECK-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    csinv x8, x8, xzr, le
-; CHECK-NEXT:    csel x1, x25, x9, gt
-; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ldp x30, x25, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    csinv x6, x8, xzr, le
 ; CHECK-NEXT:    ldp d9, d8, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    mov v0.d[1], x1
-; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    add sp, sp, #96
 ; CHECK-NEXT:    ret
     %x = call <4 x i100> @llvm.fptoui.sat.v4f16.v4i100(<4 x half> %f)
@@ -1667,16 +1629,15 @@ define <4 x i128> @test_unsigned_v4f16_v4i128(<4 x half> %f) {
 ; CHECK-NEXT:    .cfi_offset b8, -72
 ; CHECK-NEXT:    .cfi_offset b9, -80
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov h1, v0.h[1]
+; CHECK-NEXT:    fcvt s8, h0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    fcvt s8, h1
 ; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov w8, #2139095039 // =0x7f7fffff
 ; CHECK-NEXT:    fcmp s8, #0.0
 ; CHECK-NEXT:    fmov s9, w8
-; CHECK-NEXT:    mov h0, v0.h[2]
+; CHECK-NEXT:    mov h0, v0.h[1]
 ; CHECK-NEXT:    csel x9, xzr, x1, lt
 ; CHECK-NEXT:    csel x8, xzr, x0, lt
 ; CHECK-NEXT:    fcmp s8, s9
@@ -1687,7 +1648,7 @@ define <4 x i128> @test_unsigned_v4f16_v4i128(<4 x half> %f) {
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    fcmp s8, #0.0
-; CHECK-NEXT:    mov h0, v0.h[3]
+; CHECK-NEXT:    mov h0, v0.h[2]
 ; CHECK-NEXT:    csel x8, xzr, x1, lt
 ; CHECK-NEXT:    csel x9, xzr, x0, lt
 ; CHECK-NEXT:    fcmp s8, s9
@@ -1696,8 +1657,9 @@ define <4 x i128> @test_unsigned_v4f16_v4i128(<4 x half> %f) {
 ; CHECK-NEXT:    csinv x22, x8, xzr, le
 ; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    bl __fixunssfti
-; CHECK-NEXT:    fcmp s8, #0.0
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp s8, #0.0
+; CHECK-NEXT:    mov h0, v0.h[3]
 ; CHECK-NEXT:    csel x8, xzr, x1, lt
 ; CHECK-NEXT:    csel x9, xzr, x0, lt
 ; CHECK-NEXT:    fcmp s8, s9
@@ -1707,25 +1669,22 @@ define <4 x i128> @test_unsigned_v4f16_v4i128(<4 x half> %f) {
 ; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    fcmp s8, #0.0
-; CHECK-NEXT:    mov x2, x19
-; CHECK-NEXT:    mov x3, x20
-; CHECK-NEXT:    mov x4, x21
-; CHECK-NEXT:    mov x5, x22
-; CHECK-NEXT:    mov x6, x23
-; CHECK-NEXT:    mov x7, x24
-; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    csel x8, xzr, x0, lt
-; CHECK-NEXT:    csel x9, xzr, x1, lt
-; CHECK-NEXT:    fcmp s8, s9
-; CHECK-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    mov x2, x21
+; CHECK-NEXT:    mov x3, x22
+; CHECK-NEXT:    mov x4, x23
+; CHECK-NEXT:    mov x5, x24
 ; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    csel x8, xzr, x1, lt
+; CHECK-NEXT:    csel x9, xzr, x0, lt
+; CHECK-NEXT:    fcmp s8, s9
+; CHECK-NEXT:    mov x0, x19
+; CHECK-NEXT:    mov x1, x20
+; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    csinv x8, x8, xzr, le
-; CHECK-NEXT:    csinv x1, x9, xzr, le
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    csinv x6, x9, xzr, le
 ; CHECK-NEXT:    ldp d9, d8, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    mov v0.d[1], x1
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    csinv x7, x8, xzr, le
 ; CHECK-NEXT:    add sp, sp, #96
 ; CHECK-NEXT:    ret
     %x = call <4 x i128> @llvm.fptoui.sat.v4f16.v4i128(<4 x half> %f)
@@ -2520,12 +2479,10 @@ define <16 x i8> @test_unsigned_v16f32_v16i8(<16 x float> %f) {
 define <8 x i16> @test_unsigned_v8f32_v8i16(<8 x float> %f) {
 ; CHECK-LABEL: test_unsigned_v8f32_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    fcvtzu v1.4s, v1.4s
 ; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-NEXT:    umin v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    umin v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    fcvtzu v1.4s, v1.4s
+; CHECK-NEXT:    uqxtn v0.4h, v0.4s
+; CHECK-NEXT:    uqxtn2 v0.8h, v1.4s
 ; CHECK-NEXT:    ret
     %x = call <8 x i16> @llvm.fptoui.sat.v8f32.v8i16(<8 x float> %f)
     ret <8 x i16> %x
@@ -2534,17 +2491,14 @@ define <8 x i16> @test_unsigned_v8f32_v8i16(<8 x float> %f) {
 define <16 x i16> @test_unsigned_v16f32_v16i16(<16 x float> %f) {
 ; CHECK-LABEL: test_unsigned_v16f32_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v4.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    fcvtzu v1.4s, v1.4s
 ; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-NEXT:    fcvtzu v3.4s, v3.4s
 ; CHECK-NEXT:    fcvtzu v2.4s, v2.4s
-; CHECK-NEXT:    umin v1.4s, v1.4s, v4.4s
-; CHECK-NEXT:    umin v0.4s, v0.4s, v4.4s
-; CHECK-NEXT:    umin v3.4s, v3.4s, v4.4s
-; CHECK-NEXT:    umin v2.4s, v2.4s, v4.4s
-; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    uzp1 v1.8h, v2.8h, v3.8h
+; CHECK-NEXT:    fcvtzu v4.4s, v1.4s
+; CHECK-NEXT:    uqxtn v0.4h, v0.4s
+; CHECK-NEXT:    uqxtn v1.4h, v2.4s
+; CHECK-NEXT:    fcvtzu v2.4s, v3.4s
+; CHECK-NEXT:    uqxtn2 v0.8h, v4.4s
+; CHECK-NEXT:    uqxtn2 v1.8h, v2.4s
 ; CHECK-NEXT:    ret
     %x = call <16 x i16> @llvm.fptoui.sat.v16f32.v16i16(<16 x float> %f)
     ret <16 x i16> %x
@@ -2643,12 +2597,10 @@ define <16 x i8> @test_unsigned_v16f16_v16i8(<16 x half> %f) {
 ;
 ; CHECK-FP16-LABEL: test_unsigned_v16f16_v16i8:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    movi v2.2d, #0xff00ff00ff00ff
-; CHECK-FP16-NEXT:    fcvtzu v1.8h, v1.8h
 ; CHECK-FP16-NEXT:    fcvtzu v0.8h, v0.8h
-; CHECK-FP16-NEXT:    umin v1.8h, v1.8h, v2.8h
-; CHECK-FP16-NEXT:    umin v0.8h, v0.8h, v2.8h
-; CHECK-FP16-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
+; CHECK-FP16-NEXT:    fcvtzu v1.8h, v1.8h
+; CHECK-FP16-NEXT:    uqxtn v0.8b, v0.8h
+; CHECK-FP16-NEXT:    uqxtn2 v0.16b, v1.8h
 ; CHECK-FP16-NEXT:    ret
     %x = call <16 x i8> @llvm.fptoui.sat.v16f16.v16i8(<16 x half> %f)
     ret <16 x i8> %x

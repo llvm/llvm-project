@@ -57,10 +57,10 @@ public:
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineLoopInfo>();
-    AU.addPreserved<MachineLoopInfo>();
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -92,8 +92,8 @@ char MVETPAndVPTOptimisations::ID = 0;
 INITIALIZE_PASS_BEGIN(MVETPAndVPTOptimisations, DEBUG_TYPE,
                       "ARM MVE TailPred and VPT Optimisations pass", false,
                       false)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(MVETPAndVPTOptimisations, DEBUG_TYPE,
                     "ARM MVE TailPred and VPT Optimisations pass", false, false)
 
@@ -1064,14 +1064,15 @@ bool MVETPAndVPTOptimisations::runOnMachineFunction(MachineFunction &Fn) {
 
   TII = static_cast<const Thumb2InstrInfo *>(STI.getInstrInfo());
   MRI = &Fn.getRegInfo();
-  MachineLoopInfo *MLI = &getAnalysis<MachineLoopInfo>();
-  MachineDominatorTree *DT = &getAnalysis<MachineDominatorTree>();
+  MachineLoopInfo *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  MachineDominatorTree *DT =
+      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   LLVM_DEBUG(dbgs() << "********** ARM MVE VPT Optimisations **********\n"
                     << "********** Function: " << Fn.getName() << '\n');
 
   bool Modified = false;
-  for (MachineLoop *ML : MLI->getBase().getLoopsInPreorder()) {
+  for (MachineLoop *ML : MLI->getLoopsInPreorder()) {
     Modified |= LowerWhileLoopStart(ML);
     Modified |= MergeLoopEnd(ML);
     Modified |= ConvertTailPredLoop(ML, DT);

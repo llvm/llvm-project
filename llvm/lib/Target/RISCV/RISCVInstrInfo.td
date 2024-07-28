@@ -69,6 +69,8 @@ def riscv_brcc      : SDNode<"RISCVISD::BR_CC", SDT_RISCVBrCC,
 def riscv_tail      : SDNode<"RISCVISD::TAIL", SDT_RISCVCall,
                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                               SDNPVariadic]>;
+def riscv_sw_guarded_brind : SDNode<"RISCVISD::SW_GUARDED_BRIND",
+                                    SDTBrind, [SDNPHasChain]>;
 def riscv_sllw      : SDNode<"RISCVISD::SLLW", SDT_RISCVIntBinOpW>;
 def riscv_sraw      : SDNode<"RISCVISD::SRAW", SDT_RISCVIntBinOpW>;
 def riscv_srlw      : SDNode<"RISCVISD::SRLW", SDT_RISCVIntBinOpW>;
@@ -231,6 +233,8 @@ def uimm7_opcode : RISCVUImmOp<7> {
 }
 def uimm7 : RISCVUImmOp<7>;
 def uimm8 : RISCVUImmOp<8>;
+def uimm16 : RISCVUImmOp<16>;
+def uimm32 : RISCVUImmOp<32>;
 def simm12 : RISCVSImmLeafOp<12> {
   let MCOperandPredicate = [{
     int64_t Imm;
@@ -941,6 +945,9 @@ def : InstAlias<"ret",                   (JALR      X0,      X1, 0), 4>;
 def : InstAlias<"jr $rs, $offset",        (JALR      X0, GPR:$rs, simm12:$offset), 0>;
 def : InstAlias<"jalr $rs, $offset",      (JALR      X1, GPR:$rs, simm12:$offset), 0>;
 def : InstAlias<"jalr $rd, $rs, $offset", (JALR GPR:$rd, GPR:$rs, simm12:$offset), 0>;
+def : InstAlias<"jr (${rs})",             (JALR      X0, GPR:$rs, 0), 0>;
+def : InstAlias<"jalr (${rs})",           (JALR      X1, GPR:$rs, 0), 0>;
+def : InstAlias<"jalr $rd, (${rs})",      (JALR GPR:$rd, GPR:$rs, 0), 0>;
 
 def : InstAlias<"fence", (FENCE 0xF, 0xF)>; // 0xF == iorw
 
@@ -1115,6 +1122,12 @@ def InsnS : DirectiveInsnS<(outs), (ins uimm7_opcode:$opcode, uimm3:$funct3,
                                         AnyReg:$rs2, AnyReg:$rs1,
                                         simm12:$imm12),
                            "$opcode, $funct3, $rs2, ${imm12}(${rs1})">;
+def Insn32 : RVInst<(outs), (ins uimm32:$value), "", "", [], InstFormatOther> {
+  bits<32> value;
+
+  let Inst{31-0} = value;
+  let AsmString = ".insn 0x4, $value";
+}
 }
 
 // Use InstAliases to match these so that we can combine the insn and format
@@ -1138,6 +1151,9 @@ def : InstAlias<".insn_i $opcode, $funct3, $rd, $rs1, $imm12",
 def : InstAlias<".insn_i $opcode, $funct3, $rd, ${imm12}(${rs1})",
                 (InsnI_Mem AnyReg:$rd, uimm7_opcode:$opcode, uimm3:$funct3,
                            AnyReg:$rs1, simm12:$imm12)>;
+def : InstAlias<".insn_i $opcode, $funct3, $rd, (${rs1})",
+                (InsnI_Mem AnyReg:$rd, uimm7_opcode:$opcode, uimm3:$funct3,
+                           AnyReg:$rs1, 0)>;
 def : InstAlias<".insn_b $opcode, $funct3, $rs1, $rs2, $imm12",
                 (InsnB uimm7_opcode:$opcode, uimm3:$funct3, AnyReg:$rs1,
                        AnyReg:$rs2, simm13_lsb0:$imm12)>;
@@ -1155,6 +1171,9 @@ def : InstAlias<".insn_uj $opcode, $rd, $imm20",
 def : InstAlias<".insn_s $opcode, $funct3, $rs2, ${imm12}(${rs1})",
                 (InsnS uimm7_opcode:$opcode, uimm3:$funct3, AnyReg:$rs2,
                        AnyReg:$rs1, simm12:$imm12)>;
+def : InstAlias<".insn_s $opcode, $funct3, $rs2, (${rs1})",
+                (InsnS uimm7_opcode:$opcode, uimm3:$funct3, AnyReg:$rs2,
+                       AnyReg:$rs1, 0)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1309,6 +1328,26 @@ def : Pat<(FrameAddrRegImm (iPTR GPR:$rs1), simm12:$imm12),
 
 /// HI and ADD_LO address nodes.
 
+// Pseudo for a rematerializable LUI+ADDI sequence for loading an address.
+// It will be expanded after register allocation.
+// FIXME: The scheduling information does not reflect the multiple instructions.
+let Size = 8, isReMaterializable = 1 in
+def PseudoMovAddr : Pseudo<(outs GPR:$dst), (ins uimm20_lui:$hi, simm12:$lo), []>,
+                    Sched<[WriteIALU]>;
+
+def riscv_hi_oneuse : unop_oneuse<riscv_hi>;
+def addr_hi_lo : PatFrag<(ops node:$hi, node:$lo),
+                         (riscv_add_lo (riscv_hi_oneuse node:$hi), node:$lo)>;
+
+def : Pat<(addr_hi_lo tglobaladdr:$hi, tglobaladdr:$lo),
+          (PseudoMovAddr tglobaladdr:$hi, tglobaladdr:$lo)>;
+def : Pat<(addr_hi_lo tblockaddress:$hi, tblockaddress:$lo),
+          (PseudoMovAddr tblockaddress:$hi, tblockaddress:$lo)>;
+def : Pat<(addr_hi_lo tjumptable:$hi, tjumptable:$lo),
+          (PseudoMovAddr tjumptable:$hi, tjumptable:$lo)>;
+def : Pat<(addr_hi_lo tconstpool:$hi, tconstpool:$lo),
+          (PseudoMovAddr tconstpool:$hi, tconstpool:$lo)>;
+
 def : Pat<(riscv_hi tglobaladdr:$in), (LUI tglobaladdr:$in)>;
 def : Pat<(riscv_hi tblockaddress:$in), (LUI tblockaddress:$in)>;
 def : Pat<(riscv_hi tjumptable:$in), (LUI tjumptable:$in)>;
@@ -1454,9 +1493,12 @@ def PseudoBRIND : Pseudo<(outs), (ins GPRJALR:$rs1, simm12:$imm12), []>,
                   PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12:$imm12)>;
 
 let Predicates = [HasStdExtZicfilp],
-    isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in
+    isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in {
 def PseudoBRINDNonX7 : Pseudo<(outs), (ins GPRJALRNonX7:$rs1, simm12:$imm12), []>,
                        PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12:$imm12)>;
+def PseudoBRINDX7 : Pseudo<(outs), (ins GPRX7:$rs1, simm12:$imm12), []>,
+                    PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12:$imm12)>;
+}
 
 // For Zicfilp, need to avoid using X7/T2 for indirect branches which need
 // landing pad.
@@ -1464,6 +1506,10 @@ let Predicates = [HasStdExtZicfilp] in {
 def : Pat<(brind GPRJALRNonX7:$rs1), (PseudoBRINDNonX7 GPRJALRNonX7:$rs1, 0)>;
 def : Pat<(brind (add GPRJALRNonX7:$rs1, simm12:$imm12)),
           (PseudoBRINDNonX7 GPRJALRNonX7:$rs1, simm12:$imm12)>;
+
+def : Pat<(riscv_sw_guarded_brind GPRX7:$rs1), (PseudoBRINDX7 GPRX7:$rs1, 0)>;
+def : Pat<(riscv_sw_guarded_brind (add GPRX7:$rs1, simm12:$imm12)),
+          (PseudoBRINDX7 GPRX7:$rs1, simm12:$imm12)>;
 }
 
 let Predicates = [NoStdExtZicfilp] in {
@@ -1551,8 +1597,8 @@ def PseudoJump : Pseudo<(outs GPR:$rd), (ins pseudo_jump_symbol:$target), [],
 // -riscv-use-rematerializable-movimm in RISCVISelDAGToDAG.cpp
 // It will be expanded after register allocation.
 // FIXME: The scheduling information does not reflect the multiple instructions.
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 1,
-    isPseudo = 1, isReMaterializable = 1, IsSignExtendingOpW = 1 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
+    isReMaterializable = 1 in
 def PseudoMovImm : Pseudo<(outs GPR:$dst), (ins i32imm:$imm), []>,
                    Sched<[WriteIALU]>;
 
@@ -2034,6 +2080,7 @@ include "RISCVInstrInfoXTHead.td"
 include "RISCVInstrInfoXSf.td"
 include "RISCVInstrInfoSFB.td"
 include "RISCVInstrInfoXCV.td"
+include "RISCVInstrInfoXwch.td"
 
 //===----------------------------------------------------------------------===//
 // Global ISel

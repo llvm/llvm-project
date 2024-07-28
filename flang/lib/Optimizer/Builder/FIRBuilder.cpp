@@ -19,6 +19,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -247,16 +248,20 @@ mlir::Value fir::FirOpBuilder::allocateLocal(
 
 /// Get the block for adding Allocas.
 mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
+  if (auto accComputeRegionIface =
+          getRegion().getParentOfType<mlir::acc::ComputeRegionOpInterface>()) {
+    return accComputeRegionIface.getAllocaBlock();
+  }
+
   if (auto ompOutlineableIface =
           getRegion()
               .getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>()) {
     return ompOutlineableIface.getAllocaBlock();
   }
-  if (getRegion().getParentOfType<mlir::omp::DeclareReductionOp>())
-    return &getRegion().front();
-  if (auto accRecipeIface =
-          getRegion().getParentOfType<mlir::acc::RecipeInterface>()) {
-    return accRecipeIface.getAllocaBlock(getRegion());
+
+  if (auto recipeIface =
+          getRegion().getParentOfType<mlir::accomp::RecipeInterface>()) {
+    return recipeIface.getAllocaBlock(getRegion());
   }
 
   return getEntryBlock();
@@ -322,18 +327,18 @@ mlir::Value fir::FirOpBuilder::createHeapTemporary(
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::StringAttr linkage, mlir::Attribute value, bool isConst,
-    bool isTarget, fir::CUDADataAttributeAttr cudaAttr) {
+    bool isTarget, cuf::DataAttributeAttr dataAttr) {
   if (auto global = getNamedGlobal(name))
     return global;
   auto module = getModule();
   auto insertPt = saveInsertionPoint();
   setInsertionPoint(module.getBody(), module.getBody()->end());
   llvm::SmallVector<mlir::NamedAttribute> attrs;
-  if (cudaAttr) {
+  if (dataAttr) {
     auto globalOpName = mlir::OperationName(fir::GlobalOp::getOperationName(),
                                             module.getContext());
     attrs.push_back(mlir::NamedAttribute(
-        fir::GlobalOp::getCudaAttrAttrName(globalOpName), cudaAttr));
+        fir::GlobalOp::getDataAttrAttrName(globalOpName), dataAttr));
   }
   auto glob = create<fir::GlobalOp>(loc, name, isConst, isTarget, type, value,
                                     linkage, attrs);
@@ -346,7 +351,7 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name, bool isConst,
     bool isTarget, std::function<void(FirOpBuilder &)> bodyBuilder,
-    mlir::StringAttr linkage, fir::CUDADataAttributeAttr cudaAttr) {
+    mlir::StringAttr linkage, cuf::DataAttributeAttr dataAttr) {
   if (auto global = getNamedGlobal(name))
     return global;
   auto module = getModule();
@@ -363,6 +368,22 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   if (symbolTable)
     symbolTable->insert(glob);
   return glob;
+}
+
+std::pair<fir::TypeInfoOp, mlir::OpBuilder::InsertPoint>
+fir::FirOpBuilder::createTypeInfoOp(mlir::Location loc,
+                                    fir::RecordType recordType,
+                                    fir::RecordType parentType) {
+  mlir::ModuleOp module = getModule();
+  if (fir::TypeInfoOp typeInfo =
+          fir::lookupTypeInfoOp(recordType.getName(), module, symbolTable))
+    return {typeInfo, InsertPoint{}};
+  InsertPoint insertPoint = saveInsertionPoint();
+  setInsertionPoint(module.getBody(), module.getBody()->end());
+  auto typeInfo = create<fir::TypeInfoOp>(loc, recordType, parentType);
+  if (symbolTable)
+    symbolTable->insert(typeInfo);
+  return {typeInfo, insertPoint};
 }
 
 mlir::Value fir::FirOpBuilder::convertWithSemantics(
@@ -439,13 +460,19 @@ mlir::Value fir::FirOpBuilder::convertWithSemantics(
   return createConvert(loc, toTy, val);
 }
 
-mlir::Value fir::FirOpBuilder::createConvert(mlir::Location loc,
-                                             mlir::Type toTy, mlir::Value val) {
+mlir::Value fir::factory::createConvert(mlir::OpBuilder &builder,
+                                        mlir::Location loc, mlir::Type toTy,
+                                        mlir::Value val) {
   if (val.getType() != toTy) {
     assert(!fir::isa_derived(toTy));
-    return create<fir::ConvertOp>(loc, toTy, val);
+    return builder.create<fir::ConvertOp>(loc, toTy, val);
   }
   return val;
+}
+
+mlir::Value fir::FirOpBuilder::createConvert(mlir::Location loc,
+                                             mlir::Type toTy, mlir::Value val) {
+  return fir::factory::createConvert(*this, loc, toTy, val);
 }
 
 void fir::FirOpBuilder::createStoreWithConvert(mlir::Location loc,
@@ -1519,21 +1546,44 @@ mlir::Value fir::factory::genMaxWithZero(fir::FirOpBuilder &builder,
                                                zero);
 }
 
+static std::pair<mlir::Value, mlir::Type>
+genCPtrOrCFunptrFieldIndex(fir::FirOpBuilder &builder, mlir::Location loc,
+                           mlir::Type cptrTy) {
+  auto recTy = mlir::cast<fir::RecordType>(cptrTy);
+  assert(recTy.getTypeList().size() == 1);
+  auto addrFieldName = recTy.getTypeList()[0].first;
+  mlir::Type addrFieldTy = recTy.getTypeList()[0].second;
+  auto fieldIndexType = fir::FieldType::get(cptrTy.getContext());
+  mlir::Value addrFieldIndex = builder.create<fir::FieldIndexOp>(
+      loc, fieldIndexType, addrFieldName, recTy,
+      /*typeParams=*/mlir::ValueRange{});
+  return {addrFieldIndex, addrFieldTy};
+}
+
 mlir::Value fir::factory::genCPtrOrCFunptrAddr(fir::FirOpBuilder &builder,
                                                mlir::Location loc,
                                                mlir::Value cPtr,
                                                mlir::Type ty) {
-  assert(mlir::isa<fir::RecordType>(ty));
-  auto recTy = mlir::dyn_cast<fir::RecordType>(ty);
-  assert(recTy.getTypeList().size() == 1);
-  auto fieldName = recTy.getTypeList()[0].first;
-  mlir::Type fieldTy = recTy.getTypeList()[0].second;
-  auto fieldIndexType = fir::FieldType::get(ty.getContext());
-  mlir::Value field =
-      builder.create<fir::FieldIndexOp>(loc, fieldIndexType, fieldName, recTy,
-                                        /*typeParams=*/mlir::ValueRange{});
-  return builder.create<fir::CoordinateOp>(loc, builder.getRefType(fieldTy),
-                                           cPtr, field);
+  auto [addrFieldIndex, addrFieldTy] =
+      genCPtrOrCFunptrFieldIndex(builder, loc, ty);
+  return builder.create<fir::CoordinateOp>(loc, builder.getRefType(addrFieldTy),
+                                           cPtr, addrFieldIndex);
+}
+
+mlir::Value fir::factory::genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
+                                                mlir::Location loc,
+                                                mlir::Value cPtr) {
+  mlir::Type cPtrTy = fir::unwrapRefType(cPtr.getType());
+  if (fir::isa_ref_type(cPtr.getType())) {
+    mlir::Value cPtrAddr =
+        fir::factory::genCPtrOrCFunptrAddr(builder, loc, cPtr, cPtrTy);
+    return builder.create<fir::LoadOp>(loc, cPtrAddr);
+  }
+  auto [addrFieldIndex, addrFieldTy] =
+      genCPtrOrCFunptrFieldIndex(builder, loc, cPtrTy);
+  auto arrayAttr =
+      builder.getArrayAttr({builder.getIntegerAttr(builder.getIndexType(), 0)});
+  return builder.create<fir::ExtractValueOp>(loc, addrFieldTy, cPtr, arrayAttr);
 }
 
 fir::BoxValue fir::factory::createBoxValue(fir::FirOpBuilder &builder,
@@ -1572,15 +1622,6 @@ fir::BoxValue fir::factory::createBoxValue(fir::FirOpBuilder &builder,
       },
       [](const auto &) {});
   return fir::BoxValue(box, lbounds, explicitTypeParams);
-}
-
-mlir::Value fir::factory::genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
-                                                mlir::Location loc,
-                                                mlir::Value cPtr) {
-  mlir::Type cPtrTy = fir::unwrapRefType(cPtr.getType());
-  mlir::Value cPtrAddr =
-      fir::factory::genCPtrOrCFunptrAddr(builder, loc, cPtr, cPtrTy);
-  return builder.create<fir::LoadOp>(loc, cPtrAddr);
 }
 
 mlir::Value fir::factory::createNullBoxProc(fir::FirOpBuilder &builder,

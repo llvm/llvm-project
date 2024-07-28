@@ -102,10 +102,8 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
   // assigned to by emitc::assign ops within the loop body.
   SmallVector<Value> resultVariables =
       createVariablesForResults(forOp, rewriter);
-  SmallVector<Value> iterArgsVariables =
-      createVariablesForResults(forOp, rewriter);
 
-  assignValues(forOp.getInits(), iterArgsVariables, rewriter, loc);
+  assignValues(forOp.getInits(), resultVariables, rewriter, loc);
 
   emitc::ForOp loweredFor = rewriter.create<emitc::ForOp>(
       loc, forOp.getLowerBound(), forOp.getUpperBound(), forOp.getStep());
@@ -117,14 +115,11 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
 
   SmallVector<Value> replacingValues;
   replacingValues.push_back(loweredFor.getInductionVar());
-  replacingValues.append(iterArgsVariables.begin(), iterArgsVariables.end());
+  replacingValues.append(resultVariables.begin(), resultVariables.end());
 
   rewriter.mergeBlocks(forOp.getBody(), loweredBody, replacingValues);
-  lowerYield(iterArgsVariables, rewriter,
+  lowerYield(resultVariables, rewriter,
              cast<scf::YieldOp>(loweredBody->getTerminator()));
-
-  // Copy iterArgs into results after the for loop.
-  assignValues(iterArgsVariables, resultVariables, rewriter, loc);
 
   rewriter.replaceOp(forOp, resultVariables);
   return success();

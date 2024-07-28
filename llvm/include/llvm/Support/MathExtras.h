@@ -23,6 +23,22 @@
 #include <type_traits>
 
 namespace llvm {
+/// Some template parameter helpers to optimize for bitwidth, for functions that
+/// take multiple arguments.
+
+// We can't verify signedness, since callers rely on implicit coercions to
+// signed/unsigned.
+template <typename T, typename U>
+using enableif_int =
+    std::enable_if_t<std::is_integral_v<T> && std::is_integral_v<U>>;
+
+// Use std::common_type_t to widen only up to the widest argument.
+template <typename T, typename U, typename = enableif_int<T, U>>
+using common_uint =
+    std::common_type_t<std::make_unsigned_t<T>, std::make_unsigned_t<U>>;
+template <typename T, typename U, typename = enableif_int<T, U>>
+using common_sint =
+    std::common_type_t<std::make_signed_t<T>, std::make_signed_t<U>>;
 
 /// Mathematical constants.
 namespace numbers {
@@ -135,22 +151,22 @@ template <typename T> T reverseBits(T Val) {
 // ambiguity.
 
 /// Return the high 32 bits of a 64 bit value.
-constexpr inline uint32_t Hi_32(uint64_t Value) {
+constexpr uint32_t Hi_32(uint64_t Value) {
   return static_cast<uint32_t>(Value >> 32);
 }
 
 /// Return the low 32 bits of a 64 bit value.
-constexpr inline uint32_t Lo_32(uint64_t Value) {
+constexpr uint32_t Lo_32(uint64_t Value) {
   return static_cast<uint32_t>(Value);
 }
 
 /// Make a 64-bit integer from a high / low pair of 32-bit integers.
-constexpr inline uint64_t Make_64(uint32_t High, uint32_t Low) {
+constexpr uint64_t Make_64(uint32_t High, uint32_t Low) {
   return ((uint64_t)High << 32) | (uint64_t)Low;
 }
 
 /// Checks if an integer fits into the given bit width.
-template <unsigned N> constexpr inline bool isInt(int64_t x) {
+template <unsigned N> constexpr bool isInt(int64_t x) {
   if constexpr (N == 0)
     return 0 == x;
   if constexpr (N == 8)
@@ -167,14 +183,14 @@ template <unsigned N> constexpr inline bool isInt(int64_t x) {
 
 /// Checks if a signed integer is an N bit number shifted left by S.
 template <unsigned N, unsigned S>
-constexpr inline bool isShiftedInt(int64_t x) {
+constexpr bool isShiftedInt(int64_t x) {
   static_assert(S < 64, "isShiftedInt<N, S> with S >= 64 is too much.");
   static_assert(N + S <= 64, "isShiftedInt<N, S> with N + S > 64 is too wide.");
   return isInt<N + S>(x) && (x % (UINT64_C(1) << S) == 0);
 }
 
 /// Checks if an unsigned integer fits into the given bit width.
-template <unsigned N> constexpr inline bool isUInt(uint64_t x) {
+template <unsigned N> constexpr bool isUInt(uint64_t x) {
   if constexpr (N == 0)
     return 0 == x;
   if constexpr (N == 8)
@@ -191,7 +207,7 @@ template <unsigned N> constexpr inline bool isUInt(uint64_t x) {
 
 /// Checks if a unsigned integer is an N bit number shifted left by S.
 template <unsigned N, unsigned S>
-constexpr inline bool isShiftedUInt(uint64_t x) {
+constexpr bool isShiftedUInt(uint64_t x) {
   static_assert(S < 64, "isShiftedUInt<N, S> with S >= 64 is too much.");
   static_assert(N + S <= 64,
                 "isShiftedUInt<N, S> with N + S > 64 is too wide.");
@@ -248,36 +264,36 @@ inline bool isIntN(unsigned N, int64_t x) {
 /// Return true if the argument is a non-empty sequence of ones starting at the
 /// least significant bit with the remainder zero (32 bit version).
 /// Ex. isMask_32(0x0000FFFFU) == true.
-constexpr inline bool isMask_32(uint32_t Value) {
+constexpr bool isMask_32(uint32_t Value) {
   return Value && ((Value + 1) & Value) == 0;
 }
 
 /// Return true if the argument is a non-empty sequence of ones starting at the
 /// least significant bit with the remainder zero (64 bit version).
-constexpr inline bool isMask_64(uint64_t Value) {
+constexpr bool isMask_64(uint64_t Value) {
   return Value && ((Value + 1) & Value) == 0;
 }
 
 /// Return true if the argument contains a non-empty sequence of ones with the
 /// remainder zero (32 bit version.) Ex. isShiftedMask_32(0x0000FF00U) == true.
-constexpr inline bool isShiftedMask_32(uint32_t Value) {
+constexpr bool isShiftedMask_32(uint32_t Value) {
   return Value && isMask_32((Value - 1) | Value);
 }
 
 /// Return true if the argument contains a non-empty sequence of ones with the
 /// remainder zero (64 bit version.)
-constexpr inline bool isShiftedMask_64(uint64_t Value) {
+constexpr bool isShiftedMask_64(uint64_t Value) {
   return Value && isMask_64((Value - 1) | Value);
 }
 
 /// Return true if the argument is a power of two > 0.
 /// Ex. isPowerOf2_32(0x00100000U) == true (32 bit edition.)
-constexpr inline bool isPowerOf2_32(uint32_t Value) {
+constexpr bool isPowerOf2_32(uint32_t Value) {
   return llvm::has_single_bit(Value);
 }
 
 /// Return true if the argument is a power of two > 0 (64 bit edition.)
-constexpr inline bool isPowerOf2_64(uint64_t Value) {
+constexpr bool isPowerOf2_64(uint64_t Value) {
   return llvm::has_single_bit(Value);
 }
 
@@ -310,13 +326,13 @@ inline bool isShiftedMask_64(uint64_t Value, unsigned &MaskIdx,
 
 /// Compile time Log2.
 /// Valid only for positive powers of two.
-template <size_t kValue> constexpr inline size_t CTLog2() {
+template <size_t kValue> constexpr size_t CTLog2() {
   static_assert(kValue > 0 && llvm::isPowerOf2_64(kValue),
                 "Value is not a valid power of 2");
   return 1 + CTLog2<kValue / 2>();
 }
 
-template <> constexpr inline size_t CTLog2<1>() { return 0; }
+template <> constexpr size_t CTLog2<1>() { return 0; }
 
 /// Return the floor log base 2 of the specified value, -1 if the value is zero.
 /// (32 bit edition.)
@@ -346,7 +362,8 @@ inline unsigned Log2_64_Ceil(uint64_t Value) {
 
 /// A and B are either alignments or offsets. Return the minimum alignment that
 /// may be assumed after adding the two together.
-constexpr inline uint64_t MinAlign(uint64_t A, uint64_t B) {
+template <typename U, typename V, typename T = common_uint<U, V>>
+constexpr T MinAlign(U A, V B) {
   // The largest power of 2 that divides both A and B.
   //
   // Replace "-Value" by "1+~Value" in the following commented code to avoid
@@ -355,9 +372,14 @@ constexpr inline uint64_t MinAlign(uint64_t A, uint64_t B) {
   return (A | B) & (1 + ~(A | B));
 }
 
+/// Fallback when arguments aren't integral.
+constexpr uint64_t MinAlign(uint64_t A, uint64_t B) {
+  return (A | B) & (1 + ~(A | B));
+}
+
 /// Returns the next power of two (in 64-bits) that is strictly greater than A.
 /// Returns zero on overflow.
-constexpr inline uint64_t NextPowerOf2(uint64_t A) {
+constexpr uint64_t NextPowerOf2(uint64_t A) {
   A |= (A >> 1);
   A |= (A >> 2);
   A |= (A >> 4);
@@ -375,7 +397,81 @@ inline uint64_t PowerOf2Ceil(uint64_t A) {
   return UINT64_C(1) << Log2_64_Ceil(A);
 }
 
-/// Returns the next integer (mod 2**64) that is greater than or equal to
+/// Returns the integer ceil(Numerator / Denominator). Unsigned version.
+/// Guaranteed to never overflow.
+template <typename U, typename V, typename T = common_uint<U, V>>
+constexpr T divideCeil(U Numerator, V Denominator) {
+  assert(Denominator && "Division by zero");
+  T Bias = (Numerator != 0);
+  return (Numerator - Bias) / Denominator + Bias;
+}
+
+/// Fallback when arguments aren't integral.
+constexpr uint64_t divideCeil(uint64_t Numerator, uint64_t Denominator) {
+  assert(Denominator && "Division by zero");
+  uint64_t Bias = (Numerator != 0);
+  return (Numerator - Bias) / Denominator + Bias;
+}
+
+// Check whether divideCeilSigned or divideFloorSigned would overflow. This
+// happens only when Numerator = INT_MIN and Denominator = -1.
+template <typename U, typename V>
+constexpr bool divideSignedWouldOverflow(U Numerator, V Denominator) {
+  return Numerator == std::numeric_limits<U>::min() && Denominator == -1;
+}
+
+/// Returns the integer ceil(Numerator / Denominator). Signed version.
+/// Overflow is explicitly forbidden with an assert.
+template <typename U, typename V, typename T = common_sint<U, V>>
+constexpr T divideCeilSigned(U Numerator, V Denominator) {
+  assert(Denominator && "Division by zero");
+  assert(!divideSignedWouldOverflow(Numerator, Denominator) &&
+         "Divide would overflow");
+  if (!Numerator)
+    return 0;
+  // C's integer division rounds towards 0.
+  T Bias = Denominator >= 0 ? 1 : -1;
+  bool SameSign = (Numerator >= 0) == (Denominator >= 0);
+  return SameSign ? (Numerator - Bias) / Denominator + 1
+                  : Numerator / Denominator;
+}
+
+/// Returns the integer floor(Numerator / Denominator). Signed version.
+/// Overflow is explicitly forbidden with an assert.
+template <typename U, typename V, typename T = common_sint<U, V>>
+constexpr T divideFloorSigned(U Numerator, V Denominator) {
+  assert(Denominator && "Division by zero");
+  assert(!divideSignedWouldOverflow(Numerator, Denominator) &&
+         "Divide would overflow");
+  if (!Numerator)
+    return 0;
+  // C's integer division rounds towards 0.
+  T Bias = Denominator >= 0 ? -1 : 1;
+  bool SameSign = (Numerator >= 0) == (Denominator >= 0);
+  return SameSign ? Numerator / Denominator
+                  : (Numerator - Bias) / Denominator - 1;
+}
+
+/// Returns the remainder of the Euclidean division of LHS by RHS. Result is
+/// always non-negative.
+template <typename U, typename V, typename T = common_sint<U, V>>
+constexpr T mod(U Numerator, V Denominator) {
+  assert(Denominator >= 1 && "Mod by non-positive number");
+  T Mod = Numerator % Denominator;
+  return Mod < 0 ? Mod + Denominator : Mod;
+}
+
+/// Returns (Numerator / Denominator) rounded by round-half-up. Guaranteed to
+/// never overflow.
+template <typename U, typename V, typename T = common_uint<U, V>>
+constexpr T divideNearest(U Numerator, V Denominator) {
+  assert(Denominator && "Division by zero");
+  T Mod = Numerator % Denominator;
+  return (Numerator / Denominator) +
+         (Mod > (static_cast<T>(Denominator) - 1) / 2);
+}
+
+/// Returns the next integer (mod 2**nbits) that is greater than or equal to
 /// \p Value and is a multiple of \p Align. \p Align must be non-zero.
 ///
 /// Examples:
@@ -385,18 +481,29 @@ inline uint64_t PowerOf2Ceil(uint64_t A) {
 ///   alignTo(~0LL, 8) = 0
 ///   alignTo(321, 255) = 510
 /// \endcode
-inline uint64_t alignTo(uint64_t Value, uint64_t Align) {
+///
+/// Will overflow only if result is not representable in T.
+template <typename U, typename V, typename T = common_uint<U, V>>
+constexpr T alignTo(U Value, V Align) {
   assert(Align != 0u && "Align can't be 0.");
-  return (Value + Align - 1) / Align * Align;
+  T CeilDiv = divideCeil(Value, Align);
+  return CeilDiv * Align;
 }
 
-inline uint64_t alignToPowerOf2(uint64_t Value, uint64_t Align) {
+/// Fallback when arguments aren't integral.
+constexpr uint64_t alignTo(uint64_t Value, uint64_t Align) {
+  assert(Align != 0u && "Align can't be 0.");
+  uint64_t CeilDiv = divideCeil(Value, Align);
+  return CeilDiv * Align;
+}
+
+constexpr uint64_t alignToPowerOf2(uint64_t Value, uint64_t Align) {
   assert(Align != 0 && (Align & (Align - 1)) == 0 &&
          "Align must be a power of 2");
   // Replace unary minus to avoid compilation error on Windows:
   // "unary minus operator applied to unsigned type, result still unsigned"
-  uint64_t negAlign = (~Align) + 1;
-  return (Value + Align - 1) & negAlign;
+  uint64_t NegAlign = (~Align) + 1;
+  return (Value + Align - 1) & NegAlign;
 }
 
 /// If non-zero \p Skew is specified, the return value will be a minimal integer
@@ -411,32 +518,33 @@ inline uint64_t alignToPowerOf2(uint64_t Value, uint64_t Align) {
 ///   alignTo(~0LL, 8, 3) = 3
 ///   alignTo(321, 255, 42) = 552
 /// \endcode
-inline uint64_t alignTo(uint64_t Value, uint64_t Align, uint64_t Skew) {
+///
+/// May overflow.
+template <typename U, typename V, typename W,
+          typename T = common_uint<common_uint<U, V>, W>>
+constexpr T alignTo(U Value, V Align, W Skew) {
   assert(Align != 0u && "Align can't be 0.");
   Skew %= Align;
   return alignTo(Value - Skew, Align) + Skew;
 }
 
-/// Returns the next integer (mod 2**64) that is greater than or equal to
+/// Returns the next integer (mod 2**nbits) that is greater than or equal to
 /// \p Value and is a multiple of \c Align. \c Align must be non-zero.
-template <uint64_t Align> constexpr inline uint64_t alignTo(uint64_t Value) {
+///
+/// Will overflow only if result is not representable in T.
+template <auto Align, typename V, typename T = common_uint<decltype(Align), V>>
+constexpr T alignTo(V Value) {
   static_assert(Align != 0u, "Align must be non-zero");
-  return (Value + Align - 1) / Align * Align;
+  T CeilDiv = divideCeil(Value, Align);
+  return CeilDiv * Align;
 }
 
-/// Returns the integer ceil(Numerator / Denominator).
-inline uint64_t divideCeil(uint64_t Numerator, uint64_t Denominator) {
-  return alignTo(Numerator, Denominator) / Denominator;
-}
-
-/// Returns the integer nearest(Numerator / Denominator).
-inline uint64_t divideNearest(uint64_t Numerator, uint64_t Denominator) {
-  return (Numerator + (Denominator / 2)) / Denominator;
-}
-
-/// Returns the largest uint64_t less than or equal to \p Value and is
-/// \p Skew mod \p Align. \p Align must be non-zero
-inline uint64_t alignDown(uint64_t Value, uint64_t Align, uint64_t Skew = 0) {
+/// Returns the largest unsigned integer less than or equal to \p Value and is
+/// \p Skew mod \p Align. \p Align must be non-zero. Guaranteed to never
+/// overflow.
+template <typename U, typename V, typename W = uint8_t,
+          typename T = common_uint<common_uint<U, V>, W>>
+constexpr T alignDown(U Value, V Align, W Skew = 0) {
   assert(Align != 0u && "Align can't be 0.");
   Skew %= Align;
   return (Value - Skew) / Align * Align + Skew;
@@ -444,7 +552,7 @@ inline uint64_t alignDown(uint64_t Value, uint64_t Align, uint64_t Skew = 0) {
 
 /// Sign-extend the number in the bottom B bits of X to a 32-bit integer.
 /// Requires B <= 32.
-template <unsigned B> constexpr inline int32_t SignExtend32(uint32_t X) {
+template <unsigned B> constexpr int32_t SignExtend32(uint32_t X) {
   static_assert(B <= 32, "Bit width out of range.");
   if constexpr (B == 0)
     return 0;
@@ -462,7 +570,7 @@ inline int32_t SignExtend32(uint32_t X, unsigned B) {
 
 /// Sign-extend the number in the bottom B bits of X to a 64-bit integer.
 /// Requires B <= 64.
-template <unsigned B> constexpr inline int64_t SignExtend64(uint64_t x) {
+template <unsigned B> constexpr int64_t SignExtend64(uint64_t x) {
   static_assert(B <= 64, "Bit width out of range.");
   if constexpr (B == 0)
     return 0;
@@ -480,8 +588,8 @@ inline int64_t SignExtend64(uint64_t X, unsigned B) {
 
 /// Subtract two unsigned integers, X and Y, of type T and return the absolute
 /// value of the result.
-template <typename T>
-std::enable_if_t<std::is_unsigned_v<T>, T> AbsoluteDifference(T X, T Y) {
+template <typename U, typename V, typename T = common_uint<U, V>>
+constexpr T AbsoluteDifference(U X, V Y) {
   return X > Y ? (X - Y) : (Y - X);
 }
 
@@ -635,6 +743,9 @@ std::enable_if_t<std::is_signed_v<T>, T> SubOverflow(T X, T Y, T &Result) {
 /// result, returning true if an overflow ocurred.
 template <typename T>
 std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
+#if __has_builtin(__builtin_mul_overflow)
+  return __builtin_mul_overflow(X, Y, &Result);
+#else
   // Perform the unsigned multiplication on absolute values.
   using U = std::make_unsigned_t<T>;
   const U UX = X < 0 ? (0 - static_cast<U>(X)) : static_cast<U>(X);
@@ -656,7 +767,16 @@ std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
     return UX > (static_cast<U>(std::numeric_limits<T>::max()) + U(1)) / UY;
   else
     return UX > (static_cast<U>(std::numeric_limits<T>::max())) / UY;
+#endif
 }
+
+/// Type to force float point values onto the stack, so that x86 doesn't add
+/// hidden precision, avoiding rounding differences on various platforms.
+#if defined(__i386__) || defined(_M_IX86)
+using stack_float_t = volatile float;
+#else
+using stack_float_t = float;
+#endif
 
 } // namespace llvm
 

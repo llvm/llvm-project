@@ -10,7 +10,6 @@
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticSerialization.h"
-#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Job.h"
@@ -21,6 +20,7 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Tooling/Tooling.h"
@@ -259,9 +259,7 @@ static void canonicalizeDefines(PreprocessorOptions &PPOpts) {
     ++Index;
   }
 
-  llvm::stable_sort(SimpleNames, [](const MacroOpt &A, const MacroOpt &B) {
-    return A.first < B.first;
-  });
+  llvm::stable_sort(SimpleNames, llvm::less_first());
   // Keep the last instance of each macro name by going in reverse
   auto NewEnd = std::unique(
       SimpleNames.rbegin(), SimpleNames.rend(),

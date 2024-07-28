@@ -361,7 +361,7 @@ public:
   /// by construction, this method can be used to turn it into a proper set.
   void removeDuplicates() {
     sortByAddress();
-    auto LastI = std::unique(Symbols.begin(), Symbols.end());
+    auto LastI = llvm::unique(Symbols);
     Symbols.erase(LastI, Symbols.end());
   }
 
@@ -1297,7 +1297,7 @@ private:
   JITDylib(ExecutionSession &ES, std::string Name);
 
   std::pair<AsynchronousSymbolQuerySet, std::shared_ptr<SymbolDependenceMap>>
-  removeTracker(ResourceTracker &RT);
+  IL_removeTracker(ResourceTracker &RT);
 
   void transferTracker(ResourceTracker &DstRT, ResourceTracker &SrcRT);
 
@@ -1438,7 +1438,7 @@ class ExecutionSession {
 
 public:
   /// For reporting errors.
-  using ErrorReporter = std::function<void(Error)>;
+  using ErrorReporter = unique_function<void(Error)>;
 
   /// Send a result to the remote.
   using SendResultFunction = unique_function<void(shared::WrapperFunctionResult)>;

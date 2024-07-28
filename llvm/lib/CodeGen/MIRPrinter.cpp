@@ -101,13 +101,15 @@ namespace llvm {
 /// format.
 class MIRPrinter {
   raw_ostream &OS;
+  const MachineModuleInfo &MMI;
   DenseMap<const uint32_t *, unsigned> RegisterMaskIds;
   /// Maps from stack object indices to operand indices which will be used when
   /// printing frame index machine operands.
   DenseMap<int, FrameIndexOperand> StackObjectOperandMapping;
 
 public:
-  MIRPrinter(raw_ostream &OS) : OS(OS) {}
+  MIRPrinter(raw_ostream &OS, const MachineModuleInfo &MMI)
+      : OS(OS), MMI(MMI) {}
 
   void print(const MachineFunction &MF);
 
@@ -222,7 +224,7 @@ void MIRPrinter::print(const MachineFunction &MF) {
       MachineFunctionProperties::Property::TracksDebugUserValues);
 
   convert(YamlMF, MF.getRegInfo(), MF.getSubtarget().getRegisterInfo());
-  MachineModuleSlotTracker MST(&MF);
+  MachineModuleSlotTracker MST(MMI, &MF);
   MST.incorporateFunction(MF.getFunction());
   convert(MST, YamlMF.FrameInfo, MF.getFrameInfo());
   convertStackObjects(YamlMF, MF, MST);
@@ -570,7 +572,7 @@ void MIRPrinter::convertMachineMetadataNodes(yaml::MachineFunction &YMF,
     std::string NS;
     raw_string_ostream StrOS(NS);
     MD.second->print(StrOS, MST, MF.getFunction().getParent());
-    YMF.MachineMetadataNodes.push_back(StrOS.str());
+    YMF.MachineMetadataNodes.push_back(NS);
   }
 }
 
@@ -588,7 +590,7 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
 
     yaml::MachineConstantPoolValue YamlConstant;
     YamlConstant.ID = ID++;
-    YamlConstant.Value = StrOS.str();
+    YamlConstant.Value = Str;
     YamlConstant.Alignment = Constant.getAlign();
     YamlConstant.IsTargetSpecific = Constant.isMachineConstantPoolEntry();
 
@@ -608,7 +610,7 @@ void MIRPrinter::convert(ModuleSlotTracker &MST,
     for (const auto *MBB : Table.MBBs) {
       raw_string_ostream StrOS(Str);
       StrOS << printMBBReference(*MBB);
-      Entry.Blocks.push_back(StrOS.str());
+      Entry.Blocks.push_back(Str);
       Str.clear();
     }
     YamlJTI.Entries.push_back(Entry);
@@ -813,6 +815,8 @@ void MIPrinter::print(const MachineInstr &MI) {
     OS << "nneg ";
   if (MI.getFlag(MachineInstr::Disjoint))
     OS << "disjoint ";
+  if (MI.getFlag(MachineInstr::NoUSWrap))
+    OS << "nusw ";
 
   OS << TII->getName(MI.getOpcode());
   if (I < E)
@@ -1003,12 +1007,13 @@ void llvm::printMIR(raw_ostream &OS, const Module &M) {
   Out << const_cast<Module &>(M);
 }
 
-void llvm::printMIR(raw_ostream &OS, const MachineFunction &MF) {
+void llvm::printMIR(raw_ostream &OS, const MachineModuleInfo &MMI,
+                    const MachineFunction &MF) {
   // RemoveDIs: as there's no textual form for DbgRecords yet, print debug-info
   // in dbg.value format.
   ScopedDbgInfoFormatSetter FormatSetter(
       const_cast<Function &>(MF.getFunction()), WriteNewDbgInfoFormat);
 
-  MIRPrinter Printer(OS);
+  MIRPrinter Printer(OS, MMI);
   Printer.print(MF);
 }

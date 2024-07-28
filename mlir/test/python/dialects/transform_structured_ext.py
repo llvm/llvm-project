@@ -361,8 +361,8 @@ def testScalarize(target):
 @run
 @create_sequence
 def testSplit(target):
-    split = structured.SplitOp(target, dimension=1, split_point=42)
-    structured.SplitOp(split.results[0], dimension=3, split_point=split.results[1])
+    split = structured.SplitOp(target, dimension=1, chunk_sizes=42)
+    structured.SplitOp(split.results[0], dimension=3, chunk_sizes=split.results[1])
     # CHECK-LABEL: TEST: testSplit
     # CHECK: %[[F:.+]], %[[S:.+]] = transform.structured.split %{{.*}} after 42 {dimension = 1
     # CHECK: transform.structured.split %[[F]] after %[[S]] {dimension = 3
@@ -443,7 +443,7 @@ def testTileExplicitLoopTypeAll(target):
     structured.TileUsingForOp(types, target, sizes=[2, 3, 4])
     # CHECK-LABEL: TEST: testTileExplicitLoopTypeAll
     # CHECK: = transform.structured.tile
-    # CHECK-SAME : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">,
+    # CHECK-SAME: (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">,
     # CHECK-SAME: !transform.op<"scf.parallel">, !transform.op<"scf.forall">
 
 
@@ -501,7 +501,7 @@ def testTileToForallMixedDynamic(target):
     structured.TileUsingForallOp(target, num_threads=[n, 3, 4])
     # CHECK-LABEL: TEST: testTileToForallMixedDynamic
     # CHECK: = transform.structured.tile_using_forall
-    # CHECK-SAME: num_threads [%{{.*}} : !transform.any_op, 3, 4]
+    # CHECK-SAME: num_threads [%{{.*}}, 3, 4] : (!transform.any_op, !transform.any_op)
 
 
 @run
@@ -511,7 +511,7 @@ def testTileToForallPackedDynamic(target):
     structured.TileUsingForallOp(target, num_threads=n)
     # CHECK-LABEL: TEST: testTileToForallPackedDynamic
     # CHECK: = transform.structured.tile_using_forall
-    # CHECK-SAME: num_threads *(%0 : !transform.any_op)
+    # CHECK-SAME: num_threads *(%0) : (!transform.any_op, !transform.any_op)
 
 
 @run

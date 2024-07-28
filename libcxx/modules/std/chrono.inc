@@ -37,7 +37,6 @@ export namespace std {
 
     // [time.duration.comparisons], duration comparisons
     using std::chrono::operator==;
-    using std::chrono::operator!=;
     using std::chrono::operator<;
     using std::chrono::operator>;
     using std::chrono::operator<=;
@@ -190,10 +189,11 @@ export namespace std {
     using std::chrono::make12;
     using std::chrono::make24;
 
-#if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&                              \
-    !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#ifdef _LIBCPP_ENABLE_EXPERIMENTAL
 
-#  ifdef _LIBCPP_ENABLE_EXPERIMENTAL
+#  if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&                            \
+      !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+
     // [time.zone.db], time zone database
     using std::chrono::tzdb;
     using std::chrono::tzdb_list;
@@ -208,24 +208,23 @@ export namespace std {
     using std::chrono::reload_tzdb;
     using std::chrono::remote_version;
 
-#    if 0
+#  endif //  !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&
+         //  !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+
     // [time.zone.exception], exception classes
     using std::chrono::ambiguous_local_time;
     using std::chrono::nonexistent_local_time;
-#    endif // if 0
 
     // [time.zone.info], information classes
     using std::chrono::local_info;
     using std::chrono::sys_info;
 
-#    if 0
+#  if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&                            \
+      !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+
     // [time.zone.timezone], class time_zone
     using std::chrono::choose;
-#    endif // if 0
-
     using std::chrono::time_zone;
-
-#    if 0
 
     // [time.zone.zonedtraits], class template zoned_traits
     using std::chrono::zoned_traits;
@@ -234,7 +233,6 @@ export namespace std {
     using std::chrono::zoned_time;
 
     using std::chrono::zoned_seconds;
-#    endif // if 0
 
     // [time.zone.leap], leap second support
     using std::chrono::leap_second;
@@ -246,9 +244,9 @@ export namespace std {
     // [time.format], formatting
     using std::chrono::local_time_format;
 #    endif
-#  endif // _LIBCPP_ENABLE_EXPERIMENTAL
-#endif   //  !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&
-         //    !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  endif //  !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&
+         //  !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#endif   // _LIBCPP_ENABLE_EXPERIMENTAL
 
   } // namespace chrono
 

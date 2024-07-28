@@ -18,14 +18,14 @@ define void @bound_check_partially_known_1(i32 %N) {
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr @global, i64 [[TMP2]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr @global, [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
-; CHECK-NEXT:    [[BOUND13:%.*]] = icmp ult ptr getelementptr inbounds ([[STRUCT_FOO:%.*]], ptr @global, i64 0, i32 1, i64 0), [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND13:%.*]] = icmp ult ptr getelementptr inbounds (i8, ptr @global, i64 256000), [[SCEVGEP1]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND13]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[LOOP_PH_LVER_ORIG:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph.lver.orig:
 ; CHECK-NEXT:    br label [[LOOP_LVER_ORIG:%.*]]
 ; CHECK:       loop.lver.orig:
 ; CHECK-NEXT:    [[IV_LVER_ORIG:%.*]] = phi i64 [ 0, [[LOOP_PH_LVER_ORIG]] ], [ [[IV_NEXT_LVER_ORIG:%.*]], [[LOOP_LVER_ORIG]] ]
-; CHECK-NEXT:    [[GEP_0_IV_LVER_ORIG:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr @global, i64 0, i32 0, i64 [[IV_LVER_ORIG]]
+; CHECK-NEXT:    [[GEP_0_IV_LVER_ORIG:%.*]] = getelementptr inbounds [[STRUCT_FOO:%.*]], ptr @global, i64 0, i32 0, i64 [[IV_LVER_ORIG]]
 ; CHECK-NEXT:    [[L_0_LVER_ORIG:%.*]] = load double, ptr [[GEP_0_IV_LVER_ORIG]], align 8
 ; CHECK-NEXT:    [[GEP_1_IV_LVER_ORIG:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr @global, i64 0, i32 1, i64 [[IV_LVER_ORIG]]
 ; CHECK-NEXT:    [[L_1_LVER_ORIG:%.*]] = load double, ptr [[GEP_1_IV_LVER_ORIG]], align 8
@@ -41,13 +41,13 @@ define void @bound_check_partially_known_1(i32 %N) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[LOOP_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_0_IV:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr @global, i64 0, i32 0, i64 [[IV]]
-; CHECK-NEXT:    [[L_0:%.*]] = load double, ptr [[GEP_0_IV]], align 8, !alias.scope !0
+; CHECK-NEXT:    [[L_0:%.*]] = load double, ptr [[GEP_0_IV]], align 8, !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[GEP_1_IV:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr @global, i64 0, i32 1, i64 [[IV]]
-; CHECK-NEXT:    [[L_1:%.*]] = load double, ptr [[GEP_1_IV]], align 8, !alias.scope !3
+; CHECK-NEXT:    [[L_1:%.*]] = load double, ptr [[GEP_1_IV]], align 8, !alias.scope [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[L_0]], [[L_1]]
 ; CHECK-NEXT:    [[IV_N:%.*]] = add nuw nsw i64 [[IV]], [[N_EXT]]
 ; CHECK-NEXT:    [[GEP_0_IV_N:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr @global, i64 0, i32 0, i64 [[IV_N]]
-; CHECK-NEXT:    store double [[ADD]], ptr [[GEP_0_IV_N]], align 8, !alias.scope !5, !noalias !7
+; CHECK-NEXT:    store double [[ADD]], ptr [[GEP_0_IV_N]], align 8, !alias.scope [[META5:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_EXT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT_LOOPEXIT4:%.*]], label [[LOOP]]

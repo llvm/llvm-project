@@ -211,8 +211,7 @@ private:
 class BoxedProcedurePass
     : public fir::impl::BoxedProcedurePassBase<BoxedProcedurePass> {
 public:
-  BoxedProcedurePass() { options = {true}; }
-  BoxedProcedurePass(bool useThunks) { options = {useThunks}; }
+  using BoxedProcedurePassBase<BoxedProcedurePass>::BoxedProcedurePassBase;
 
   inline mlir::ModuleOp getModule() { return getOperation(); }
 
@@ -397,11 +396,3 @@ private:
   BoxedProcedureOptions options;
 };
 } // namespace
-
-std::unique_ptr<mlir::Pass> fir::createBoxedProcedurePass() {
-  return std::make_unique<BoxedProcedurePass>();
-}
-
-std::unique_ptr<mlir::Pass> fir::createBoxedProcedurePass(bool useThunks) {
-  return std::make_unique<BoxedProcedurePass>(useThunks);
-}

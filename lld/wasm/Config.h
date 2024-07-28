@@ -69,10 +69,13 @@ struct Configuration {
   bool relocatable;
   bool saveTemps;
   bool shared;
+  bool shlibSigCheck;
   bool stripAll;
   bool stripDebug;
   bool stackFirst;
-  bool isStatic = false;
+  // Because dyamanic linking under Wasm is still experimental we default to
+  // static linking
+  bool isStatic = true;
   bool trace;
   uint64_t globalBase;
   uint64_t initialHeap;

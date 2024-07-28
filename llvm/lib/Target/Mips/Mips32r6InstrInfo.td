@@ -1119,17 +1119,23 @@ def : MipsPat<(select i32:$cond, immz, i32:$f),
 
 // llvm.fmin/fmax operations.
 let AdditionalPredicates = [NotInMicroMips] in {
-  def : MipsPat<(fmaxnum f32:$lhs, f32:$rhs),
+  def : MipsPat<(fmaxnum_ieee f32:$lhs, f32:$rhs),
                 (MAX_S   f32:$lhs, f32:$rhs)>,
                 ISA_MIPS32R6;
-  def : MipsPat<(fmaxnum f64:$lhs, f64:$rhs),
+  def : MipsPat<(fmaxnum_ieee f64:$lhs, f64:$rhs),
                 (MAX_D   f64:$lhs, f64:$rhs)>,
                 ISA_MIPS32R6;
-  def : MipsPat<(fminnum f32:$lhs, f32:$rhs),
+  def : MipsPat<(fminnum_ieee f32:$lhs, f32:$rhs),
                 (MIN_S   f32:$lhs, f32:$rhs)>,
                 ISA_MIPS32R6;
-  def : MipsPat<(fminnum f64:$lhs, f64:$rhs),
+  def : MipsPat<(fminnum_ieee f64:$lhs, f64:$rhs),
                 (MIN_D   f64:$lhs, f64:$rhs)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(f32 (fcanonicalize f32:$src)),
+                (MIN_S   f32:$src, f32:$src)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(f64 (fcanonicalize f64:$src)),
+                (MIN_D   f64:$src, f64:$src)>,
                 ISA_MIPS32R6;
 }
 

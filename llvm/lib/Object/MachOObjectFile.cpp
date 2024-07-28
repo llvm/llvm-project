@@ -399,7 +399,7 @@ static Error parseSegmentLoadCommand(
       return malformedError("load command " + Twine(LoadCommandIndex) +
                             " filesize field in " + CmdName +
                             " greater than vmsize field");
-    IsPageZeroSegment |= StringRef("__PAGEZERO").equals(S.segname);
+    IsPageZeroSegment |= StringRef("__PAGEZERO") == S.segname;
   } else
     return SegOrErr.takeError();
 
@@ -3104,7 +3104,7 @@ void ExportEntry::pushNode(uint64_t offset) {
         }
       }
     }
-    if(ExportStart + ExportInfoSize != State.Current) {
+    if (ExportStart + ExportInfoSize < State.Current) {
       *E = malformedError(
           "inconsistent export info size: 0x" +
           Twine::utohexstr(ExportInfoSize) + " where actual size was: 0x" +
@@ -3256,13 +3256,13 @@ MachOAbstractFixupEntry::MachOAbstractFixupEntry(Error *E,
   for (const auto &Command : O->load_commands()) {
     if (Command.C.cmd == MachO::LC_SEGMENT) {
       MachO::segment_command SLC = O->getSegmentLoadCommand(Command);
-      if (StringRef(SLC.segname) == StringRef("__TEXT")) {
+      if (StringRef(SLC.segname) == "__TEXT") {
         TextAddress = SLC.vmaddr;
         break;
       }
     } else if (Command.C.cmd == MachO::LC_SEGMENT_64) {
       MachO::segment_command_64 SLC_64 = O->getSegment64LoadCommand(Command);
-      if (StringRef(SLC_64.segname) == StringRef("__TEXT")) {
+      if (StringRef(SLC_64.segname) == "__TEXT") {
         TextAddress = SLC_64.vmaddr;
         break;
       }
@@ -3501,21 +3501,23 @@ void MachORebaseEntry::moveNext() {
     --RemainingLoopCount;
     return;
   }
-  // REBASE_OPCODE_DONE is only used for padding if we are not aligned to
-  // pointer size. Therefore it is possible to reach the end without ever having
-  // seen REBASE_OPCODE_DONE.
-  if (Ptr == Opcodes.end()) {
-    Done = true;
-    return;
-  }
+
   bool More = true;
   while (More) {
+    // REBASE_OPCODE_DONE is only used for padding if we are not aligned to
+    // pointer size. Therefore it is possible to reach the end without ever
+    // having seen REBASE_OPCODE_DONE.
+    if (Ptr == Opcodes.end()) {
+      Done = true;
+      return;
+    }
+
     // Parse next opcode and set up next loop.
     const uint8_t *OpcodeStart = Ptr;
     uint8_t Byte = *Ptr++;
     uint8_t ImmValue = Byte & MachO::REBASE_IMMEDIATE_MASK;
     uint8_t Opcode = Byte & MachO::REBASE_OPCODE_MASK;
-    uint32_t Count, Skip;
+    uint64_t Count, Skip;
     const char *error = nullptr;
     switch (Opcode) {
     case MachO::REBASE_OPCODE_DONE:
@@ -3838,15 +3840,17 @@ void MachOBindEntry::moveNext() {
     --RemainingLoopCount;
     return;
   }
-  // BIND_OPCODE_DONE is only used for padding if we are not aligned to
-  // pointer size. Therefore it is possible to reach the end without ever having
-  // seen BIND_OPCODE_DONE.
-  if (Ptr == Opcodes.end()) {
-    Done = true;
-    return;
-  }
+
   bool More = true;
   while (More) {
+    // BIND_OPCODE_DONE is only used for padding if we are not aligned to
+    // pointer size. Therefore it is possible to reach the end without ever
+    // having seen BIND_OPCODE_DONE.
+    if (Ptr == Opcodes.end()) {
+      Done = true;
+      return;
+    }
+
     // Parse next opcode and set up next loop.
     const uint8_t *OpcodeStart = Ptr;
     uint8_t Byte = *Ptr++;
@@ -3854,7 +3858,7 @@ void MachOBindEntry::moveNext() {
     uint8_t Opcode = Byte & MachO::BIND_OPCODE_MASK;
     int8_t SignExtended;
     const uint8_t *SymStart;
-    uint32_t Count, Skip;
+    uint64_t Count, Skip;
     const char *error = nullptr;
     switch (Opcode) {
     case MachO::BIND_OPCODE_DONE:
@@ -4364,7 +4368,7 @@ BindRebaseSegInfo::BindRebaseSegInfo(const object::MachOObjectFile *Obj) {
     Info.Size = Section.getSize();
     Info.SegmentName =
         Obj->getSectionFinalSegmentName(Section.getRawDataRefImpl());
-    if (!Info.SegmentName.equals(CurSegName)) {
+    if (Info.SegmentName != CurSegName) {
       ++CurSegIndex;
       CurSegName = Info.SegmentName;
       CurSegAddress = Info.Address;
@@ -4384,18 +4388,18 @@ BindRebaseSegInfo::BindRebaseSegInfo(const object::MachOObjectFile *Obj) {
 // that fully contains a pointer at that location. Multiple fixups in a bind
 // (such as with the BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB opcode) can
 // be tested via the Count and Skip parameters.
-const char * BindRebaseSegInfo::checkSegAndOffsets(int32_t SegIndex,
-                                                   uint64_t SegOffset,
-                                                   uint8_t PointerSize,
-                                                   uint32_t Count,
-                                                   uint32_t Skip) {
+const char *BindRebaseSegInfo::checkSegAndOffsets(int32_t SegIndex,
+                                                  uint64_t SegOffset,
+                                                  uint8_t PointerSize,
+                                                  uint64_t Count,
+                                                  uint64_t Skip) {
   if (SegIndex == -1)
     return "missing preceding *_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB";
   if (SegIndex >= MaxSegIndex)
     return "bad segIndex (too large)";
-  for (uint32_t i = 0; i < Count; ++i) {
-    uint32_t Start = SegOffset + i * (PointerSize + Skip);
-    uint32_t End = Start + PointerSize;
+  for (uint64_t i = 0; i < Count; ++i) {
+    uint64_t Start = SegOffset + i * (PointerSize + Skip);
+    uint64_t End = Start + PointerSize;
     bool Found = false;
     for (const SectionInfo &SI : Sections) {
       if (SI.SegmentIndex != SegIndex)

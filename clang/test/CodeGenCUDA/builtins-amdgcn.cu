@@ -98,7 +98,7 @@ __global__
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X]] to ptr
 // CHECK-NEXT:    store float [[SRC:%.*]], ptr [[SRC_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[SRC_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call contract float @llvm.amdgcn.ds.fmax.f32(ptr addrspace(3) @_ZZ12test_ds_fmaxfE6shared, float [[TMP0]], i32 0, i32 0, i1 false)
+// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw fmax ptr addrspace(3) @_ZZ12test_ds_fmaxfE6shared, float [[TMP0]] monotonic, align 4
 // CHECK-NEXT:    store volatile float [[TMP1]], ptr [[X_ASCAST]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -115,7 +115,7 @@ __global__
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X]] to ptr
 // CHECK-NEXT:    store float [[SRC:%.*]], ptr [[SRC_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[SRC_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call contract float @llvm.amdgcn.ds.fadd.f32(ptr addrspace(3) @_ZZ12test_ds_faddfE6shared, float [[TMP0]], i32 0, i32 0, i1 false)
+// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspace(3) @_ZZ12test_ds_faddfE6shared, float [[TMP0]] monotonic, align 4
 // CHECK-NEXT:    store volatile float [[TMP1]], ptr [[X_ASCAST]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -142,7 +142,7 @@ __global__ void test_ds_fadd(float src) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[SHARED_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[TMP1]] to ptr addrspace(3)
 // CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[SRC_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = call contract float @llvm.amdgcn.ds.fmin.f32(ptr addrspace(3) [[TMP2]], float [[TMP3]], i32 0, i32 0, i1 false)
+// CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw fmin ptr addrspace(3) [[TMP2]], float [[TMP3]] monotonic, align 4
 // CHECK-NEXT:    store volatile float [[TMP4]], ptr [[X_ASCAST]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -245,10 +245,10 @@ __device__ void func(float *x);
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[SHARED_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[TMP1]] to ptr addrspace(3)
 // CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[SRC_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = call contract float @llvm.amdgcn.ds.fmin.f32(ptr addrspace(3) [[TMP2]], float [[TMP3]], i32 0, i32 0, i1 false)
+// CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw fmin ptr addrspace(3) [[TMP2]], float [[TMP3]] monotonic, align 4
 // CHECK-NEXT:    store volatile float [[TMP4]], ptr [[X_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SHARED_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    call void @_Z4funcPf(ptr noundef [[TMP5]]) #[[ATTR8:[0-9]+]]
+// CHECK-NEXT:    call void @_Z4funcPf(ptr noundef [[TMP5]]) #[[ATTR7:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 __global__ void test_ds_fmin_func(float src, float *__restrict shared) {

@@ -1257,29 +1257,23 @@ unsigned DarwinClang::GetDefaultDwarfVersion() const {
   if ((isTargetMacOSBased() && isMacosxVersionLT(10, 11)) ||
       (isTargetIOSBased() && isIPhoneOSVersionLT(9)))
     return 2;
-  return 4;
+  // Default to use DWARF 4 on OS X 10.11 - macOS 14 / iOS 9 - iOS 17.
+  if ((isTargetMacOSBased() && isMacosxVersionLT(15)) ||
+      (isTargetIOSBased() && isIPhoneOSVersionLT(18)) ||
+      (isTargetWatchOSBased() && TargetVersion < llvm::VersionTuple(11)) ||
+      (isTargetXROS() && TargetVersion < llvm::VersionTuple(2)) ||
+      (isTargetDriverKit() && TargetVersion < llvm::VersionTuple(24)) ||
+      (isTargetMacOSBased() &&
+       TargetVersion.empty())) // apple-darwin, no version.
+    return 4;
+  return 5;
 }
 
 void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
                               StringRef Component, RuntimeLinkOptions Opts,
                               bool IsShared) const {
-  SmallString<64> DarwinLibName = StringRef("libclang_rt.");
-  // an Darwin the builtins compomnent is not in the library name
-  if (Component != "builtins") {
-    DarwinLibName += Component;
-    if (!(Opts & RLO_IsEmbedded))
-      DarwinLibName += "_";
-  }
-
-  DarwinLibName += getOSLibraryNameSuffix();
-  DarwinLibName += IsShared ? "_dynamic.dylib" : ".a";
-  SmallString<128> Dir(getDriver().ResourceDir);
-  llvm::sys::path::append(Dir, "lib", "darwin");
-  if (Opts & RLO_IsEmbedded)
-    llvm::sys::path::append(Dir, "macho_embedded");
-
-  SmallString<128> P(Dir);
-  llvm::sys::path::append(P, DarwinLibName);
+  std::string P = getCompilerRT(
+      Args, Component, IsShared ? ToolChain::FT_Shared : ToolChain::FT_Static);
 
   // For now, allow missing resource libraries to support developers who may
   // not have compiler-rt checked out or integrated into their build (unless
@@ -1294,18 +1288,56 @@ void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
   // rpaths. This is currently true from this place, but we need to be
   // careful if this function is ever called before user's rpaths are emitted.
   if (Opts & RLO_AddRPath) {
-    assert(DarwinLibName.ends_with(".dylib") && "must be a dynamic library");
+    assert(StringRef(P).ends_with(".dylib") && "must be a dynamic library");
 
     // Add @executable_path to rpath to support having the dylib copied with
     // the executable.
     CmdArgs.push_back("-rpath");
     CmdArgs.push_back("@executable_path");
 
-    // Add the path to the resource dir to rpath to support using the dylib
-    // from the default location without copying.
+    // Add the compiler-rt library's directory to rpath to support using the
+    // dylib from the default location without copying.
     CmdArgs.push_back("-rpath");
-    CmdArgs.push_back(Args.MakeArgString(Dir));
+    CmdArgs.push_back(Args.MakeArgString(llvm::sys::path::parent_path(P)));
   }
+}
+
+std::string MachO::getCompilerRT(const ArgList &, StringRef Component,
+                                 FileType Type) const {
+  assert(Type != ToolChain::FT_Object &&
+         "it doesn't make sense to ask for the compiler-rt library name as an "
+         "object file");
+  SmallString<64> MachOLibName = StringRef("libclang_rt");
+  // On MachO, the builtins component is not in the library name
+  if (Component != "builtins") {
+    MachOLibName += '.';
+    MachOLibName += Component;
+  }
+  MachOLibName += Type == ToolChain::FT_Shared ? "_dynamic.dylib" : ".a";
+
+  SmallString<128> FullPath(getDriver().ResourceDir);
+  llvm::sys::path::append(FullPath, "lib", "darwin", "macho_embedded",
+                          MachOLibName);
+  return std::string(FullPath);
+}
+
+std::string Darwin::getCompilerRT(const ArgList &, StringRef Component,
+                                  FileType Type) const {
+  assert(Type != ToolChain::FT_Object &&
+         "it doesn't make sense to ask for the compiler-rt library name as an "
+         "object file");
+  SmallString<64> DarwinLibName = StringRef("libclang_rt.");
+  // On Darwin, the builtins component is not in the library name
+  if (Component != "builtins") {
+    DarwinLibName += Component;
+    DarwinLibName += '_';
+  }
+  DarwinLibName += getOSLibraryNameSuffix();
+  DarwinLibName += Type == ToolChain::FT_Shared ? "_dynamic.dylib" : ".a";
+
+  SmallString<128> FullPath(getDriver().ResourceDir);
+  llvm::sys::path::append(FullPath, "lib", "darwin", DarwinLibName);
+  return std::string(FullPath);
 }
 
 StringRef Darwin::getPlatformFamily() const {
@@ -2912,15 +2944,67 @@ static bool sdkSupportsBuiltinModules(const Darwin::DarwinPlatformKind &TargetPl
   }
 }
 
-void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                                   llvm::opt::ArgStringList &CC1Args,
-                                   Action::OffloadKind DeviceOffloadKind) const {
+static inline llvm::VersionTuple
+sizedDeallocMinVersion(llvm::Triple::OSType OS) {
+  switch (OS) {
+  default:
+    break;
+  case llvm::Triple::Darwin:
+  case llvm::Triple::MacOSX: // Earliest supporting version is 10.12.
+    return llvm::VersionTuple(10U, 12U);
+  case llvm::Triple::IOS:
+  case llvm::Triple::TvOS: // Earliest supporting version is 10.0.0.
+    return llvm::VersionTuple(10U);
+  case llvm::Triple::WatchOS: // Earliest supporting version is 3.0.0.
+    return llvm::VersionTuple(3U);
+  }
+
+  llvm_unreachable("Unexpected OS");
+}
+
+bool Darwin::isSizedDeallocationUnavailable() const {
+  llvm::Triple::OSType OS;
+
+  if (isTargetMacCatalyst())
+    return TargetVersion < sizedDeallocMinVersion(llvm::Triple::MacOSX);
+  switch (TargetPlatform) {
+  case MacOS: // Earlier than 10.12.
+    OS = llvm::Triple::MacOSX;
+    break;
+  case IPhoneOS:
+    OS = llvm::Triple::IOS;
+    break;
+  case TvOS: // Earlier than 10.0.
+    OS = llvm::Triple::TvOS;
+    break;
+  case WatchOS: // Earlier than 3.0.
+    OS = llvm::Triple::WatchOS;
+    break;
+  case DriverKit:
+  case XROS:
+    // Always available.
+    return false;
+  }
+
+  return TargetVersion < sizedDeallocMinVersion(OS);
+}
+
+void Darwin::addClangTargetOptions(
+    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+    Action::OffloadKind DeviceOffloadKind) const {
   // Pass "-faligned-alloc-unavailable" only when the user hasn't manually
   // enabled or disabled aligned allocations.
   if (!DriverArgs.hasArgNoClaim(options::OPT_faligned_allocation,
                                 options::OPT_fno_aligned_allocation) &&
       isAlignedAllocationUnavailable())
     CC1Args.push_back("-faligned-alloc-unavailable");
+
+  // Pass "-fno-sized-deallocation" only when the user hasn't manually enabled
+  // or disabled sized deallocations.
+  if (!DriverArgs.hasArgNoClaim(options::OPT_fsized_deallocation,
+                                options::OPT_fno_sized_deallocation) &&
+      isSizedDeallocationUnavailable())
+    CC1Args.push_back("-fno-sized-deallocation");
 
   addClangCC1ASTargetOptions(DriverArgs, CC1Args);
 
@@ -2952,6 +3036,35 @@ void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
   if (!DriverArgs.hasArgNoClaim(options::OPT_fdefine_target_os_macros,
                                 options::OPT_fno_define_target_os_macros))
     CC1Args.push_back("-fdefine-target-os-macros");
+
+  // Disable subdirectory modulemap search on sufficiently recent SDKs.
+  if (SDKInfo &&
+      !DriverArgs.hasFlag(options::OPT_fmodulemap_allow_subdirectory_search,
+                          options::OPT_fno_modulemap_allow_subdirectory_search,
+                          false)) {
+    bool RequiresSubdirectorySearch;
+    VersionTuple SDKVersion = SDKInfo->getVersion();
+    switch (TargetPlatform) {
+    default:
+      RequiresSubdirectorySearch = true;
+      break;
+    case MacOS:
+      RequiresSubdirectorySearch = SDKVersion < VersionTuple(15, 0);
+      break;
+    case IPhoneOS:
+    case TvOS:
+      RequiresSubdirectorySearch = SDKVersion < VersionTuple(18, 0);
+      break;
+    case WatchOS:
+      RequiresSubdirectorySearch = SDKVersion < VersionTuple(11, 0);
+      break;
+    case XROS:
+      RequiresSubdirectorySearch = SDKVersion < VersionTuple(2, 0);
+      break;
+    }
+    if (!RequiresSubdirectorySearch)
+      CC1Args.push_back("-fno-modulemap-allow-subdirectory-search");
+  }
 }
 
 void Darwin::addClangCC1ASTargetOptions(
@@ -2968,7 +3081,7 @@ void Darwin::addClangCC1ASTargetOptions(
       std::string Arg;
       llvm::raw_string_ostream OS(Arg);
       OS << "-target-sdk-version=" << V;
-      CC1ASArgs.push_back(Args.MakeArgString(OS.str()));
+      CC1ASArgs.push_back(Args.MakeArgString(Arg));
     };
 
     if (isTargetMacCatalyst()) {
@@ -2991,7 +3104,7 @@ void Darwin::addClangCC1ASTargetOptions(
         std::string Arg;
         llvm::raw_string_ostream OS(Arg);
         OS << "-darwin-target-variant-sdk-version=" << SDKInfo->getVersion();
-        CC1ASArgs.push_back(Args.MakeArgString(OS.str()));
+        CC1ASArgs.push_back(Args.MakeArgString(Arg));
       } else if (const auto *MacOStoMacCatalystMapping =
                      SDKInfo->getVersionMapping(
                          DarwinSDKInfo::OSEnvPair::macOStoMacCatalystPair())) {
@@ -3002,7 +3115,7 @@ void Darwin::addClangCC1ASTargetOptions(
           std::string Arg;
           llvm::raw_string_ostream OS(Arg);
           OS << "-darwin-target-variant-sdk-version=" << *SDKVersion;
-          CC1ASArgs.push_back(Args.MakeArgString(OS.str()));
+          CC1ASArgs.push_back(Args.MakeArgString(Arg));
         }
       }
     }
@@ -3412,6 +3525,10 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
        isTargetTvOSSimulator() || isTargetWatchOSSimulator())) {
     Res |= SanitizerKind::Thread;
   }
+
+  if (IsX86_64)
+    Res |= SanitizerKind::NumericalStability;
+
   return Res;
 }
 

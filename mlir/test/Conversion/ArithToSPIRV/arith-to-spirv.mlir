@@ -60,8 +60,8 @@ func.func @index_scalar(%lhs: index, %rhs: index) {
 // CHECK-LABEL: @index_scalar_srem
 // CHECK-SAME: (%[[A:.+]]: index, %[[B:.+]]: index)
 func.func @index_scalar_srem(%lhs: index, %rhs: index) {
-  // CHECK: %[[LHS:.+]] = builtin.unrealized_conversion_cast %[[A]] : index to i32
-  // CHECK: %[[RHS:.+]] = builtin.unrealized_conversion_cast %[[B]] : index to i32
+  // CHECK-DAG: %[[LHS:.+]] = builtin.unrealized_conversion_cast %[[A]] : index to i32
+  // CHECK-DAG: %[[RHS:.+]] = builtin.unrealized_conversion_cast %[[B]] : index to i32
   // CHECK: %[[LABS:.+]] = spirv.GL.SAbs %[[LHS]] : i32
   // CHECK: %[[RABS:.+]] = spirv.GL.SAbs %[[RHS]] : i32
   // CHECK:  %[[ABS:.+]] = spirv.UMod %[[LABS]], %[[RABS]] : i32

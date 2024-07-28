@@ -188,9 +188,6 @@ condition_variable type_traits
 condition_variable typeinfo
 condition_variable version
 coroutine compare
-coroutine cstddef
-coroutine cstdint
-coroutine cstring
 coroutine iosfwd
 coroutine limits
 coroutine type_traits
@@ -575,6 +572,7 @@ numeric cstddef
 numeric cstdint
 numeric execution
 numeric functional
+numeric initializer_list
 numeric iterator
 numeric limits
 numeric new
@@ -864,7 +862,6 @@ string_view version
 strstream istream
 strstream ostream
 strstream version
-syncstream cstddef
 syncstream ios
 syncstream iosfwd
 syncstream map
@@ -912,6 +909,7 @@ thread type_traits
 thread version
 tuple compare
 tuple cstddef
+tuple cstdint
 tuple exception
 tuple iosfwd
 tuple new
@@ -969,6 +967,7 @@ unordered_set type_traits
 unordered_set version
 utility compare
 utility cstddef
+utility cstdint
 utility cstdlib
 utility initializer_list
 utility iosfwd

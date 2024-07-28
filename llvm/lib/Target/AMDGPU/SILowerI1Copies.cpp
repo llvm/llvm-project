@@ -51,8 +51,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTree>();
-    AU.addRequired<MachinePostDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachinePostDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -399,8 +399,8 @@ private:
 
 INITIALIZE_PASS_BEGIN(SILowerI1Copies, DEBUG_TYPE, "SI Lower i1 Copies", false,
                       false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(SILowerI1Copies, DEBUG_TYPE, "SI Lower i1 Copies", false,
                     false)
 
@@ -445,8 +445,9 @@ bool SILowerI1Copies::runOnMachineFunction(MachineFunction &TheMF) {
           MachineFunctionProperties::Property::Selected))
     return false;
 
-  Vreg1LoweringHelper Helper(&TheMF, &getAnalysis<MachineDominatorTree>(),
-                             &getAnalysis<MachinePostDominatorTree>());
+  Vreg1LoweringHelper Helper(
+      &TheMF, &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree(),
+      &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree());
 
   bool Changed = false;
   Changed |= Helper.lowerCopiesFromI1();

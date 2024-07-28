@@ -258,7 +258,7 @@ def epilogue(D: WGMMAMatrix, d_dev):
 #   d -> memref<MxNxf32>
 @NVDSL.mlir_func
 def gemm_multistage(a, b, d, num_stages):
-    token_ty = ir.Type.parse("!gpu.async.token")
+    token_ty = gpu.AsyncTokenType.get()
     t1 = gpu.wait(token_ty, [])
     a_dev, t2 = gpu.alloc(a.type, token_ty, [t1], [], [])
     b_dev, t3 = gpu.alloc(b.type, token_ty, [t2], [], [])

@@ -32,10 +32,16 @@ EvalEmitter::~EvalEmitter() {
   }
 }
 
+/// Clean up all our resources. This needs to done in failed evaluations before
+/// we call InterpStack::clear(), because there might be a Pointer on the stack
+/// pointing into a Block in the EvalEmitter.
+void EvalEmitter::cleanup() { S.cleanup(); }
+
 EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
                                             bool ConvertResultToRValue) {
   S.setEvalLocation(E->getExprLoc());
-  this->ConvertResultToRValue = ConvertResultToRValue;
+  this->ConvertResultToRValue = ConvertResultToRValue && !isa<ConstantExpr>(E);
+  this->CheckFullyInitialized = isa<ConstantExpr>(E);
   EvalResult.setSource(E);
 
   if (!this->visitExpr(E)) {
@@ -50,15 +56,23 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
 EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
                                             bool CheckFullyInitialized) {
   this->CheckFullyInitialized = CheckFullyInitialized;
-  this->ConvertResultToRValue =
-      VD->getAnyInitializer() &&
-      (VD->getAnyInitializer()->getType()->isAnyComplexType() ||
-       VD->getAnyInitializer()->getType()->isVectorType());
+  S.EvaluatingDecl = VD;
   EvalResult.setSource(VD);
 
-  if (!this->visitDecl(VD) && EvalResult.empty())
+  if (const Expr *Init = VD->getAnyInitializer()) {
+    QualType T = VD->getType();
+    this->ConvertResultToRValue = !Init->isGLValue() && !T->isPointerType() &&
+                                  !T->isObjCObjectPointerType();
+  } else
+    this->ConvertResultToRValue = false;
+
+  EvalResult.setSource(VD);
+
+  if (!this->visitDeclAndReturn(VD, S.inConstantContext()))
     EvalResult.setInvalid();
 
+  S.EvaluatingDecl = nullptr;
+  updateGlobalTemporaries();
   return std::move(this->EvalResult);
 }
 
@@ -71,7 +85,7 @@ EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
 Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   // Allocate memory for a local.
   auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize());
-  auto *B = new (Memory.get()) Block(D, /*isStatic=*/false);
+  auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, /*isStatic=*/false);
   B->invokeCtor();
 
   // Initialize local variable inline descriptor.
@@ -119,11 +133,19 @@ bool EvalEmitter::fallthrough(const LabelTy &Label) {
   return true;
 }
 
+static bool checkReturnState(InterpState &S) {
+  return S.maybeDiagnoseDanglingAllocations();
+}
+
 template <PrimType OpType> bool EvalEmitter::emitRet(const SourceInfo &Info) {
   if (!isActive())
     return true;
+
+  if (!checkReturnState(S))
+    return false;
+
   using T = typename PrimConv<OpType>::T;
-  EvalResult.setValue(S.Stk.pop<T>().toAPValue());
+  EvalResult.setValue(S.Stk.pop<T>().toAPValue(Ctx.getASTContext()));
   return true;
 }
 
@@ -132,25 +154,34 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
     return true;
 
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (!EvalResult.checkReturnValue(S, Ctx, Ptr, Info))
+    return false;
+  if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
+    return false;
+
+  if (!checkReturnState(S))
+    return false;
+
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
-    if (std::optional<APValue> V = Ptr.toRValue(Ctx)) {
+    if (!Ptr.isZero() && !Ptr.isDereferencable())
+      return false;
+    // Never allow reading from a non-const pointer, unless the memory
+    // has been created in this evaluation.
+    if (!Ptr.isZero() && Ptr.isBlockPointer() &&
+        Ptr.block()->getEvalID() != Ctx.getEvalID() &&
+        (!CheckLoad(S, OpPC, Ptr, AK_Read) || !Ptr.isConst()))
+      return false;
+
+    if (std::optional<APValue> V =
+            Ptr.toRValue(Ctx, EvalResult.getSourceType())) {
       EvalResult.setValue(*V);
     } else {
       return false;
     }
   } else {
-    if (CheckFullyInitialized) {
-      if (!EvalResult.checkFullyInitialized(S, Ptr))
-        return false;
-
-      std::optional<APValue> RValueResult = Ptr.toRValue(Ctx);
-      if (!RValueResult)
-        return false;
-      EvalResult.setValue(*RValueResult);
-    } else {
-      EvalResult.setValue(Ptr.toAPValue());
-    }
+    EvalResult.setValue(Ptr.toAPValue(Ctx.getASTContext()));
   }
 
   return true;
@@ -158,19 +189,34 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
 template <> bool EvalEmitter::emitRet<PT_FnPtr>(const SourceInfo &Info) {
   if (!isActive())
     return true;
+
+  if (!checkReturnState(S))
+    return false;
   // Function pointers cannot be converted to rvalues.
   EvalResult.setFunctionPointer(S.Stk.pop<FunctionPointer>());
   return true;
 }
 
 bool EvalEmitter::emitRetVoid(const SourceInfo &Info) {
+  if (!checkReturnState(S))
+    return false;
   EvalResult.setValid();
   return true;
 }
 
 bool EvalEmitter::emitRetValue(const SourceInfo &Info) {
   const auto &Ptr = S.Stk.pop<Pointer>();
-  if (std::optional<APValue> APV = Ptr.toRValue(S.getCtx())) {
+
+  if (!EvalResult.checkReturnValue(S, Ctx, Ptr, Info))
+    return false;
+  if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
+    return false;
+
+  if (!checkReturnState(S))
+    return false;
+
+  if (std::optional<APValue> APV =
+          Ptr.toRValue(S.getCtx(), EvalResult.getSourceType())) {
     EvalResult.setValue(*APV);
     return true;
   }
@@ -225,6 +271,30 @@ bool EvalEmitter::emitDestroy(uint32_t I, const SourceInfo &Info) {
   }
 
   return true;
+}
+
+/// Global temporaries (LifetimeExtendedTemporary) carry their value
+/// around as an APValue, which codegen accesses.
+/// We set their value once when creating them, but we don't update it
+/// afterwards when code changes it later.
+/// This is what we do here.
+void EvalEmitter::updateGlobalTemporaries() {
+  for (const auto &[E, Temp] : S.SeenGlobalTemporaries) {
+    if (std::optional<unsigned> GlobalIndex = P.getGlobal(E)) {
+      const Pointer &Ptr = P.getPtrGlobal(*GlobalIndex);
+      APValue *Cached = Temp->getOrCreateValue(true);
+
+      if (std::optional<PrimType> T = Ctx.classify(E->getType())) {
+        TYPE_SWITCH(
+            *T, { *Cached = Ptr.deref<T>().toAPValue(Ctx.getASTContext()); });
+      } else {
+        if (std::optional<APValue> APV =
+                Ptr.toRValue(Ctx, Temp->getTemporaryExpr()->getType()))
+          *Cached = *APV;
+      }
+    }
+  }
+  S.SeenGlobalTemporaries.clear();
 }
 
 //===----------------------------------------------------------------------===//

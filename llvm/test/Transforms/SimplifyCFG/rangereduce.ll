@@ -40,10 +40,10 @@ three:
 define i128 @test2(i128 %a) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    switch i128 [[A:%.*]], label [[COMMON_RET:%.*]] [
-; CHECK-NEXT:    i128 97, label [[ONE:%.*]]
-; CHECK-NEXT:    i128 101, label [[TWO:%.*]]
-; CHECK-NEXT:    i128 105, label [[THREE:%.*]]
-; CHECK-NEXT:    i128 109, label [[THREE]]
+; CHECK-NEXT:      i128 97, label [[ONE:%.*]]
+; CHECK-NEXT:      i128 101, label [[TWO:%.*]]
+; CHECK-NEXT:      i128 105, label [[THREE:%.*]]
+; CHECK-NEXT:      i128 109, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i128 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
@@ -108,10 +108,10 @@ three:
 define i32 @test4(i32 %a) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    switch i32 [[A:%.*]], label [[COMMON_RET:%.*]] [
-; CHECK-NEXT:    i32 97, label [[ONE:%.*]]
-; CHECK-NEXT:    i32 102, label [[TWO:%.*]]
-; CHECK-NEXT:    i32 105, label [[THREE:%.*]]
-; CHECK-NEXT:    i32 109, label [[THREE]]
+; CHECK-NEXT:      i32 97, label [[ONE:%.*]]
+; CHECK-NEXT:      i32 102, label [[TWO:%.*]]
+; CHECK-NEXT:      i32 105, label [[THREE:%.*]]
+; CHECK-NEXT:      i32 109, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
@@ -145,10 +145,10 @@ three:
 define i32 @test5(i32 %a) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    switch i32 [[A:%.*]], label [[COMMON_RET:%.*]] [
-; CHECK-NEXT:    i32 97, label [[ONE:%.*]]
-; CHECK-NEXT:    i32 102, label [[TWO:%.*]]
-; CHECK-NEXT:    i32 107, label [[THREE:%.*]]
-; CHECK-NEXT:    i32 112, label [[THREE]]
+; CHECK-NEXT:      i32 97, label [[ONE:%.*]]
+; CHECK-NEXT:      i32 102, label [[TWO:%.*]]
+; CHECK-NEXT:      i32 107, label [[THREE:%.*]]
+; CHECK-NEXT:      i32 112, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]

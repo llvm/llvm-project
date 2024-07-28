@@ -720,8 +720,8 @@ declare <vscale x 1 x i64> @llvm.riscv.vaadd.nxv1i64.nxv1i64(<vscale x 1 x i64>,
 define <vscale x 1 x i64> @commutable_vaadd_vv(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: commutable_vaadd_vv:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vaadd.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
@@ -737,8 +737,8 @@ declare <vscale x 1 x i64> @llvm.riscv.vaadd.mask.nxv1i64.nxv1i64(<vscale x 1 x 
 define <vscale x 1 x i64> @commutable_vaadd_vv_masked(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2) {
 ; CHECK-LABEL: commutable_vaadd_vv_masked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vaadd.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vaadd.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
@@ -755,8 +755,8 @@ declare <vscale x 1 x i64> @llvm.riscv.vaaddu.nxv1i64.nxv1i64(<vscale x 1 x i64>
 define <vscale x 1 x i64> @commutable_vaaddu_vv(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: commutable_vaaddu_vv:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
@@ -772,8 +772,8 @@ declare <vscale x 1 x i64> @llvm.riscv.vaaddu.mask.nxv1i64.nxv1i64(<vscale x 1 x
 define <vscale x 1 x i64> @commutable_vaaddu_vv_masked(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2) {
 ; CHECK-LABEL: commutable_vaaddu_vv_masked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
@@ -790,8 +790,8 @@ declare <vscale x 1 x i64> @llvm.riscv.vsmul.nxv1i64.nxv1i64(<vscale x 1 x i64>,
 define <vscale x 1 x i64> @commutable_vsmul_vv(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: commutable_vsmul_vv:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vsmul.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
@@ -807,8 +807,8 @@ declare <vscale x 1 x i64> @llvm.riscv.vsmul.mask.nxv1i64.nxv1i64(<vscale x 1 x 
 define <vscale x 1 x i64> @commutable_vsmul_vv_masked(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2) {
 ; CHECK-LABEL: commutable_vsmul_vv_masked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vsmul.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vsmul.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma

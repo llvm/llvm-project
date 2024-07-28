@@ -225,3 +225,29 @@ void foo() {
   }(x);
 }
 } // namespace GH73418
+
+namespace GH93821 {
+
+template <class>
+concept C = true;
+
+template <class...>
+concept D = []<C T = int>() { return true; }();
+
+D auto x = 0;
+
+} // namespace GH93821
+
+namespace dependent_param_concept {
+template <typename... Ts> void sink(Ts...) {}
+void dependent_param() {
+  auto L = [](auto... x) {
+    return [](decltype(x)... y) {
+      return [](int z)
+        requires requires { sink(y..., z); }
+      {};
+    };
+  };
+  L(0, 1)(1, 2)(1);
+}
+} // namespace dependent_param_concept

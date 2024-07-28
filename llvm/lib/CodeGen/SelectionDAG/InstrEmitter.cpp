@@ -1182,8 +1182,8 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
       append_range(UsedRegs, MCID.implicit_uses());
       // In addition to declared implicit uses, we must also check for
       // direct RegisterSDNode operands.
-      for (unsigned i = 0, e = F->getNumOperands(); i != e; ++i)
-        if (RegisterSDNode *R = dyn_cast<RegisterSDNode>(F->getOperand(i))) {
+      for (const SDValue &Op : F->op_values())
+        if (RegisterSDNode *R = dyn_cast<RegisterSDNode>(Op)) {
           Register Reg = R->getReg();
           if (Reg.isPhysical())
             UsedRegs.push_back(Reg);
@@ -1410,6 +1410,13 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
           }
         }
       }
+    }
+
+    // Add rounding control registers as implicit def for inline asm.
+    if (MF->getFunction().hasFnAttribute(Attribute::StrictFP)) {
+      ArrayRef<MCPhysReg> RCRegs = TLI->getRoundingControlRegisters();
+      for (MCPhysReg Reg : RCRegs)
+        MIB.addReg(Reg, RegState::ImplicitDefine);
     }
 
     // GCC inline assembly allows input operands to also be early-clobber

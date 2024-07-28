@@ -14,7 +14,7 @@ func.func @indexed_vector(%arg0: memref<50xindex>) {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loop = transform.structured.tile_using_for %0 [10] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+      %1, %loop = transform.structured.tile_using_for %0 tile_sizes [10] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
       transform.yield
   }
 }
@@ -46,7 +46,7 @@ func.func @indexed_matrix(%arg0: memref<50x50xindex>) {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loop:2 = transform.structured.tile_using_for %0 [10, 25] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+      %1, %loop:2 = transform.structured.tile_using_for %0 tile_sizes [10, 25] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
 }

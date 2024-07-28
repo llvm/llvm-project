@@ -43,7 +43,7 @@ define void @test_alloca() sanitize_hwaddress !dbg !15 {
 ; DYNAMIC-SHADOW-NEXT:    [[HWASAN_STACK_BASE_TAG:%.*]] = xor i64 [[TMP1]], [[TMP2]]
 ; DYNAMIC-SHADOW-NEXT:    [[HWASAN_UAR_TAG:%.*]] = lshr i64 [[TMP1]], 56
 ; DYNAMIC-SHADOW-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
-; DYNAMIC-SHADOW-NEXT:    tail call void @llvm.dbg.value(metadata !DIArgList(ptr [[X]], ptr [[X]]), metadata [[META10:![0-9]+]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_tag_offset, 0, DW_OP_LLVM_arg, 1, DW_OP_LLVM_tag_offset, 0, DW_OP_plus, DW_OP_deref)), !dbg [[DBG12:![0-9]+]]
+; DYNAMIC-SHADOW-NEXT:      #dbg_value(!DIArgList(ptr [[X]], ptr [[X]]), [[META10:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_tag_offset, 0, DW_OP_LLVM_arg, 1, DW_OP_LLVM_tag_offset, 0, DW_OP_plus, DW_OP_deref), [[META12:![0-9]+]])
 ; DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = xor i64 [[HWASAN_STACK_BASE_TAG]], 0, !dbg [[DBG13:![0-9]+]]
 ; DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG13]]
 ; DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 72057594037927935, !dbg [[DBG13]]
@@ -78,7 +78,7 @@ define void @test_alloca() sanitize_hwaddress !dbg !15 {
 ; ZERO-BASED-SHADOW-NEXT:    [[HWASAN_STACK_BASE_TAG:%.*]] = xor i64 [[TMP1]], [[TMP2]]
 ; ZERO-BASED-SHADOW-NEXT:    [[HWASAN_UAR_TAG:%.*]] = lshr i64 [[TMP1]], 56
 ; ZERO-BASED-SHADOW-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
-; ZERO-BASED-SHADOW-NEXT:    tail call void @llvm.dbg.value(metadata !DIArgList(ptr [[X]], ptr [[X]]), metadata [[META10:![0-9]+]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_tag_offset, 0, DW_OP_LLVM_arg, 1, DW_OP_LLVM_tag_offset, 0, DW_OP_plus, DW_OP_deref)), !dbg [[DBG12:![0-9]+]]
+; ZERO-BASED-SHADOW-NEXT:      #dbg_value(!DIArgList(ptr [[X]], ptr [[X]]), [[META10:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_tag_offset, 0, DW_OP_LLVM_arg, 1, DW_OP_LLVM_tag_offset, 0, DW_OP_plus, DW_OP_deref), [[META12:![0-9]+]])
 ; ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = xor i64 [[HWASAN_STACK_BASE_TAG]], 0, !dbg [[DBG13:![0-9]+]]
 ; ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG13]]
 ; ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 72057594037927935, !dbg [[DBG13]]
@@ -151,16 +151,14 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !24 = !DILocation(line: 8, column: 1, scope: !15)
 ;.
 ; DYNAMIC-SHADOW: attributes #[[ATTR0]] = { sanitize_hwaddress }
-; DYNAMIC-SHADOW: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; DYNAMIC-SHADOW: attributes #[[ATTR2:[0-9]+]] = { nounwind }
-; DYNAMIC-SHADOW: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
-; DYNAMIC-SHADOW: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; DYNAMIC-SHADOW: attributes #[[ATTR1:[0-9]+]] = { nounwind }
+; DYNAMIC-SHADOW: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; DYNAMIC-SHADOW: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
 ;.
 ; ZERO-BASED-SHADOW: attributes #[[ATTR0]] = { sanitize_hwaddress }
-; ZERO-BASED-SHADOW: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; ZERO-BASED-SHADOW: attributes #[[ATTR2:[0-9]+]] = { nounwind }
-; ZERO-BASED-SHADOW: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
-; ZERO-BASED-SHADOW: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; ZERO-BASED-SHADOW: attributes #[[ATTR1:[0-9]+]] = { nounwind }
+; ZERO-BASED-SHADOW: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; ZERO-BASED-SHADOW: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
 ;.
 ; DYNAMIC-SHADOW: [[META0]] = !{ptr @hwasan.note}
 ; DYNAMIC-SHADOW: [[META1:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META2:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META3:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
@@ -174,7 +172,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ; DYNAMIC-SHADOW: [[META9]] = !{null}
 ; DYNAMIC-SHADOW: [[META10]] = !DILocalVariable(name: "x", scope: [[DBG7]], file: [[META2]], line: 5, type: [[META11:![0-9]+]])
 ; DYNAMIC-SHADOW: [[META11]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-; DYNAMIC-SHADOW: [[DBG12]] = !DILocation(line: 0, scope: [[DBG7]])
+; DYNAMIC-SHADOW: [[META12]] = !DILocation(line: 0, scope: [[DBG7]])
 ; DYNAMIC-SHADOW: [[DBG13]] = !DILocation(line: 7, column: 5, scope: [[DBG7]])
 ; DYNAMIC-SHADOW: [[DBG14]] = !DILocation(line: 8, column: 1, scope: [[DBG7]])
 ;.
@@ -190,7 +188,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ; ZERO-BASED-SHADOW: [[META9]] = !{null}
 ; ZERO-BASED-SHADOW: [[META10]] = !DILocalVariable(name: "x", scope: [[DBG7]], file: [[META2]], line: 5, type: [[META11:![0-9]+]])
 ; ZERO-BASED-SHADOW: [[META11]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-; ZERO-BASED-SHADOW: [[DBG12]] = !DILocation(line: 0, scope: [[DBG7]])
+; ZERO-BASED-SHADOW: [[META12]] = !DILocation(line: 0, scope: [[DBG7]])
 ; ZERO-BASED-SHADOW: [[DBG13]] = !DILocation(line: 7, column: 5, scope: [[DBG7]])
 ; ZERO-BASED-SHADOW: [[DBG14]] = !DILocation(line: 8, column: 1, scope: [[DBG7]])
 ;.

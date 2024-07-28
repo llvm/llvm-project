@@ -112,6 +112,8 @@ cc_test(
         "//llvm:BitstreamReader",
         "//llvm:BitstreamWriter",
         "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
@@ -172,6 +174,7 @@ cc_test(
     deps = [
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
+        "//llvm:AsmParser",
         "//llvm:CodeGen",
         "//llvm:CodeGenTypes",
         "//llvm:Core",
@@ -617,6 +620,7 @@ cc_test(
         allow_empty = False,
     ),
     deps = [
+        "//llvm:BitReader",
         "//llvm:Core",
         "//llvm:Coverage",
         "//llvm:DebugInfo",

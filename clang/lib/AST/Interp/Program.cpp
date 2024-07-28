@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Program.h"
-#include "ByteCodeStmtGen.h"
 #include "Context.h"
 #include "Function.h"
 #include "Integral.h"
@@ -54,17 +53,17 @@ unsigned Program::createGlobalString(const StringLiteral *S) {
   }
 
   // Create a descriptor for the string.
-  Descriptor *Desc = allocateDescriptor(S, CharType, Descriptor::InlineDescMD,
-                                        S->getLength() + 1,
-                                        /*isConst=*/true,
-                                        /*isTemporary=*/false,
-                                        /*isMutable=*/false);
+  Descriptor *Desc =
+      allocateDescriptor(S, CharType, Descriptor::GlobalMD, S->getLength() + 1,
+                         /*isConst=*/true,
+                         /*isTemporary=*/false,
+                         /*isMutable=*/false);
 
   // Allocate storage for the string.
   // The byte length does not include the null terminator.
   unsigned I = Globals.size();
   unsigned Sz = Desc->getAllocSize();
-  auto *G = new (Allocator, Sz) Global(Desc, /*isStatic=*/true,
+  auto *G = new (Allocator, Sz) Global(Ctx.getEvalID(), Desc, /*isStatic=*/true,
                                        /*isExtern=*/false);
   G->block()->invokeCtor();
 
@@ -127,6 +126,12 @@ std::optional<unsigned> Program::getGlobal(const ValueDecl *VD) {
   return std::nullopt;
 }
 
+std::optional<unsigned> Program::getGlobal(const Expr *E) {
+  if (auto It = GlobalIndices.find(E); It != GlobalIndices.end())
+    return It->second;
+  return std::nullopt;
+}
+
 std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD,
                                                    const Expr *Init) {
   if (auto Idx = getGlobal(VD))
@@ -144,22 +149,29 @@ std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
   if (auto It = DummyVariables.find(VD); It != DummyVariables.end())
     return It->second;
 
-  // Create dummy descriptor.
-  // We create desriptors of 'array of unknown size' if the type is an array
-  // type _and_ the size isn't known (it's not a ConstantArrayType). If the size
-  // is known however, we create a regular dummy pointer.
+  QualType QT = VD->getType();
+  if (const auto *RT = QT->getAs<ReferenceType>())
+    QT = RT->getPointeeType();
+
   Descriptor *Desc;
-  if (const auto *AT = VD->getType()->getAsArrayTypeUnsafe();
-      AT && !isa<ConstantArrayType>(AT))
-    Desc = allocateDescriptor(VD, Descriptor::UnknownSize{});
+  if (std::optional<PrimType> T = Ctx.classify(QT))
+    Desc = createDescriptor(VD, *T, std::nullopt, true, false);
   else
+    Desc = createDescriptor(VD, QT.getTypePtr(), std::nullopt, true, false);
+  if (!Desc)
     Desc = allocateDescriptor(VD);
+
+  assert(Desc);
+  Desc->makeDummy();
+
+  assert(Desc->isDummy());
 
   // Allocate a block for storage.
   unsigned I = Globals.size();
 
   auto *G = new (Allocator, Desc->getAllocSize())
-      Global(getCurrentDecl(), Desc, /*IsStatic=*/true, /*IsExtern=*/false);
+      Global(Ctx.getEvalID(), getCurrentDecl(), Desc, /*IsStatic=*/true,
+             /*IsExtern=*/false);
   G->block()->invokeCtor();
 
   Globals.push_back(G);
@@ -190,7 +202,14 @@ std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
 }
 
 std::optional<unsigned> Program::createGlobal(const Expr *E) {
-  return createGlobal(E, E->getType(), /*isStatic=*/true, /*isExtern=*/false);
+  if (auto Idx = getGlobal(E))
+    return Idx;
+  if (auto Idx = createGlobal(E, E->getType(), /*isStatic=*/true,
+                              /*isExtern=*/false)) {
+    GlobalIndices[E] = *Idx;
+    return *Idx;
+  }
+  return std::nullopt;
 }
 
 std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
@@ -201,11 +220,10 @@ std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
   const bool IsConst = Ty.isConstQualified();
   const bool IsTemporary = D.dyn_cast<const Expr *>();
   if (std::optional<PrimType> T = Ctx.classify(Ty))
-    Desc =
-        createDescriptor(D, *T, Descriptor::InlineDescMD, IsConst, IsTemporary);
+    Desc = createDescriptor(D, *T, Descriptor::GlobalMD, IsConst, IsTemporary);
   else
-    Desc = createDescriptor(D, Ty.getTypePtr(), Descriptor::InlineDescMD,
-                            IsConst, IsTemporary);
+    Desc = createDescriptor(D, Ty.getTypePtr(), Descriptor::GlobalMD, IsConst,
+                            IsTemporary);
 
   if (!Desc)
     return std::nullopt;
@@ -214,11 +232,13 @@ std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
   unsigned I = Globals.size();
 
   auto *G = new (Allocator, Desc->getAllocSize())
-      Global(getCurrentDecl(), Desc, IsStatic, IsExtern);
+      Global(Ctx.getEvalID(), getCurrentDecl(), Desc, IsStatic, IsExtern);
   G->block()->invokeCtor();
 
   // Initialize InlineDescriptor fields.
-  new (G->block()->rawData()) InlineDescriptor(Desc);
+  auto *GD = new (G->block()->rawData()) GlobalInlineDescriptor();
+  if (!Init)
+    GD->InitState = GlobalInitState::NoInitializer;
   Globals.push_back(G);
 
   return I;
@@ -268,40 +288,41 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   Record::BaseList Bases;
   Record::VirtualBaseList VirtBases;
   if (const auto *CD = dyn_cast<CXXRecordDecl>(RD)) {
-
     for (const CXXBaseSpecifier &Spec : CD->bases()) {
       if (Spec.isVirtual())
         continue;
 
       // In error cases, the base might not be a RecordType.
-      if (const auto *RT = Spec.getType()->getAs<RecordType>()) {
-        const RecordDecl *BD = RT->getDecl();
-        const Record *BR = getOrCreateRecord(BD);
+      const auto *RT = Spec.getType()->getAs<RecordType>();
+      if (!RT)
+        return nullptr;
+      const RecordDecl *BD = RT->getDecl();
+      const Record *BR = getOrCreateRecord(BD);
 
-        if (const Descriptor *Desc = GetBaseDesc(BD, BR)) {
-          BaseSize += align(sizeof(InlineDescriptor));
-          Bases.push_back({BD, BaseSize, Desc, BR});
-          BaseSize += align(BR->getSize());
-          continue;
-        }
-      }
-      return nullptr;
+      const Descriptor *Desc = GetBaseDesc(BD, BR);
+      if (!Desc)
+        return nullptr;
+
+      BaseSize += align(sizeof(InlineDescriptor));
+      Bases.push_back({BD, BaseSize, Desc, BR});
+      BaseSize += align(BR->getSize());
     }
 
     for (const CXXBaseSpecifier &Spec : CD->vbases()) {
+      const auto *RT = Spec.getType()->getAs<RecordType>();
+      if (!RT)
+        return nullptr;
 
-      if (const auto *RT = Spec.getType()->getAs<RecordType>()) {
-        const RecordDecl *BD = RT->getDecl();
-        const Record *BR = getOrCreateRecord(BD);
+      const RecordDecl *BD = RT->getDecl();
+      const Record *BR = getOrCreateRecord(BD);
 
-        if (const Descriptor *Desc = GetBaseDesc(BD, BR)) {
-          VirtSize += align(sizeof(InlineDescriptor));
-          VirtBases.push_back({BD, VirtSize, Desc, BR});
-          VirtSize += align(BR->getSize());
-          continue;
-        }
-      }
-      return nullptr;
+      const Descriptor *Desc = GetBaseDesc(BD, BR);
+      if (!Desc)
+        return nullptr;
+
+      VirtSize += align(sizeof(InlineDescriptor));
+      VirtBases.push_back({BD, VirtSize, Desc, BR});
+      VirtSize += align(BR->getSize());
     }
   }
 
@@ -310,8 +331,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   for (const FieldDecl *FD : RD->fields()) {
     // Note that we DO create fields and descriptors
     // for unnamed bitfields here, even though we later ignore
-    // them everywhere. That's because so the FieldDecl's
-    // getFieldIndex() matches.
+    // them everywhere. That's so the FieldDecl's getFieldIndex() matches.
 
     // Reserve space for the field's descriptor and the offset.
     BaseSize += align(sizeof(InlineDescriptor));
@@ -344,6 +364,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
                                       Descriptor::MetadataSize MDSize,
                                       bool IsConst, bool IsTemporary,
                                       bool IsMutable, const Expr *Init) {
+
   // Classes and structures.
   if (const auto *RT = Ty->getAs<RecordType>()) {
     if (const auto *Record = getOrCreateRecord(RT->getDecl()))
@@ -369,7 +390,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
         // Arrays of composites. In this case, the array is a list of pointers,
         // followed by the actual elements.
         const Descriptor *ElemDesc = createDescriptor(
-            D, ElemTy.getTypePtr(), MDSize, IsConst, IsTemporary);
+            D, ElemTy.getTypePtr(), std::nullopt, IsConst, IsTemporary);
         if (!ElemDesc)
           return nullptr;
         unsigned ElemSize =
@@ -383,7 +404,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
 
     // Array of unknown bounds - cannot be accessed and pointer arithmetic
     // is forbidden on pointers to such objects.
-    if (isa<IncompleteArrayType>(ArrayType)) {
+    if (isa<IncompleteArrayType>(ArrayType) ||
+        isa<VariableArrayType>(ArrayType)) {
       if (std::optional<PrimType> T = Ctx.classify(ElemTy)) {
         return allocateDescriptor(D, *T, MDSize, IsTemporary,
                                   Descriptor::UnknownSize{});

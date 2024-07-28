@@ -83,6 +83,12 @@ enum NodeType {
   ExternalSymbol,
   BlockAddress,
 
+  /// A ptrauth constant.
+  /// ptr, key, addr-disc, disc
+  /// Note that the addr-disc can be a non-constant value, to allow representing
+  /// a constant global address signed using address-diversification, in code.
+  PtrAuthGlobalAddress,
+
   /// The address of the GOT
   GLOBAL_OFFSET_TABLE,
 
@@ -211,9 +217,9 @@ enum NodeType {
   /// UNDEF - An undefined node.
   UNDEF,
 
-  // FREEZE - FREEZE(VAL) returns an arbitrary value if VAL is UNDEF (or
-  // is evaluated to UNDEF), or returns VAL otherwise. Note that each
-  // read of UNDEF can yield different value, but FREEZE(UNDEF) cannot.
+  /// FREEZE - FREEZE(VAL) returns an arbitrary value if VAL is UNDEF (or
+  /// is evaluated to UNDEF), or returns VAL otherwise. Note that each
+  /// read of UNDEF can yield different value, but FREEZE(UNDEF) cannot.
   FREEZE,
 
   /// EXTRACT_ELEMENT - This is used to get the lower or upper (determined by
@@ -294,7 +300,7 @@ enum NodeType {
   /// it to the add/sub hardware instruction, and then inverting the outgoing
   /// carry/borrow.
   ///
-  /// The use of these opcodes is preferable to adde/sube if the target supports
+  /// The use of these opcodes is preferable to ADDE/SUBE if the target supports
   /// it, as the carry is a regular value rather than a glue, which allows
   /// further optimisation.
   ///
@@ -415,6 +421,13 @@ enum NodeType {
   STRICT_FLDEXP,
   STRICT_FSIN,
   STRICT_FCOS,
+  STRICT_FTAN,
+  STRICT_FASIN,
+  STRICT_FACOS,
+  STRICT_FATAN,
+  STRICT_FSINH,
+  STRICT_FCOSH,
+  STRICT_FTANH,
   STRICT_FEXP,
   STRICT_FEXP2,
   STRICT_FLOG,
@@ -477,7 +490,7 @@ enum NodeType {
   STRICT_FSETCC,
   STRICT_FSETCCS,
 
-  // FPTRUNC_ROUND - This corresponds to the fptrunc_round intrinsic.
+  /// FPTRUNC_ROUND - This corresponds to the fptrunc_round intrinsic.
   FPTRUNC_ROUND,
 
   /// FMA - Perform a * b + c with no intermediate rounding step.
@@ -646,6 +659,14 @@ enum NodeType {
   /// non-constant operands.
   STEP_VECTOR,
 
+  /// VECTOR_COMPRESS(Vec, Mask, Passthru)
+  /// consecutively place vector elements based on mask
+  /// e.g., vec = {A, B, C, D} and mask = {1, 0, 1, 0}
+  ///         --> {A, C, ?, ?} where ? is undefined
+  /// If passthru is defined, ?s are replaced with elements from passthru.
+  /// If passthru is undef, ?s remain undefined.
+  VECTOR_COMPRESS,
+
   /// MULHU/MULHS - Multiply high - Multiply two integers of type iN,
   /// producing an unsigned/signed value of type i[2*N], then return the top
   /// part.
@@ -663,10 +684,10 @@ enum NodeType {
   AVGCEILS,
   AVGCEILU,
 
-  // ABDS/ABDU - Absolute difference - Return the absolute difference between
-  // two numbers interpreted as signed/unsigned.
-  // i.e trunc(abs(sext(Op0) - sext(Op1))) becomes abds(Op0, Op1)
-  //  or trunc(abs(zext(Op0) - zext(Op1))) becomes abdu(Op0, Op1)
+  /// ABDS/ABDU - Absolute difference - Return the absolute difference between
+  /// two numbers interpreted as signed/unsigned.
+  /// i.e trunc(abs(sext(Op0) - sext(Op1))) becomes abds(Op0, Op1)
+  ///  or trunc(abs(zext(Op0) - zext(Op1))) becomes abdu(Op0, Op1)
   ABDS,
   ABDU,
 
@@ -676,6 +697,12 @@ enum NodeType {
   SMAX,
   UMIN,
   UMAX,
+
+  /// [US]CMP - 3-way comparison of signed or unsigned integers. Returns -1, 0,
+  /// or 1 depending on whether Op0 <, ==, or > Op1. The operands can have type
+  /// different to the result.
+  SCMP,
+  UCMP,
 
   /// Bitwise operators - logical and, logical or, logical xor.
   AND,
@@ -701,8 +728,9 @@ enum NodeType {
   /// amount modulo the element size of the first operand.
   ///
   /// Funnel 'double' shifts take 3 operands, 2 inputs and the shift amount.
-  /// fshl(X,Y,Z): (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
-  /// fshr(X,Y,Z): (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+  ///
+  ///     fshl(X,Y,Z): (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
+  ///     fshr(X,Y,Z): (X << (BW - (Z % BW))) | (Y >> (Z % BW))
   SHL,
   SRA,
   SRL,
@@ -760,7 +788,8 @@ enum NodeType {
 
   /// SHL_PARTS/SRA_PARTS/SRL_PARTS - These operators are used for expanded
   /// integer shift operations.  The operation ordering is:
-  ///       [Lo,Hi] = op [LoLHS,HiLHS], Amt
+  ///
+  ///     [Lo,Hi] = op [LoLHS,HiLHS], Amt
   SHL_PARTS,
   SRA_PARTS,
   SRL_PARTS,
@@ -934,6 +963,13 @@ enum NodeType {
   FCBRT,
   FSIN,
   FCOS,
+  FTAN,
+  FASIN,
+  FACOS,
+  FATAN,
+  FSINH,
+  FCOSH,
+  FTANH,
   FPOW,
   FPOWI,
   /// FLDEXP - ldexp, inspired by libm (op0 * 2**op1).
@@ -964,7 +1000,7 @@ enum NodeType {
 
   /// FMINNUM/FMAXNUM - Perform floating-point minimum or maximum on two
   /// values.
-  //
+  ///
   /// In the case where a single input is a NaN (either signaling or quiet),
   /// the non-NaN input is returned.
   ///
@@ -1162,11 +1198,11 @@ enum NodeType {
   VAEND,
   VASTART,
 
-  // PREALLOCATED_SETUP - This has 2 operands: an input chain and a SRCVALUE
-  // with the preallocated call Value.
+  /// PREALLOCATED_SETUP - This has 2 operands: an input chain and a SRCVALUE
+  /// with the preallocated call Value.
   PREALLOCATED_SETUP,
-  // PREALLOCATED_ARG - This has 3 operands: an input chain, a SRCVALUE
-  // with the preallocated call Value, and a constant int.
+  /// PREALLOCATED_ARG - This has 3 operands: an input chain, a SRCVALUE
+  /// with the preallocated call Value, and a constant int.
   PREALLOCATED_ARG,
 
   /// SRCVALUE - This is a node type that holds a Value* that is used to
@@ -1285,24 +1321,24 @@ enum NodeType {
   ATOMIC_LOAD_UINC_WRAP,
   ATOMIC_LOAD_UDEC_WRAP,
 
-  // Masked load and store - consecutive vector load and store operations
-  // with additional mask operand that prevents memory accesses to the
-  // masked-off lanes.
-  //
-  // Val, OutChain = MLOAD(BasePtr, Mask, PassThru)
-  // OutChain = MSTORE(Value, BasePtr, Mask)
+  /// Masked load and store - consecutive vector load and store operations
+  /// with additional mask operand that prevents memory accesses to the
+  /// masked-off lanes.
+  ///
+  ///     Val, OutChain = MLOAD(BasePtr, Mask, PassThru)
+  ///     OutChain = MSTORE(Value, BasePtr, Mask)
   MLOAD,
   MSTORE,
 
-  // Masked gather and scatter - load and store operations for a vector of
-  // random addresses with additional mask operand that prevents memory
-  // accesses to the masked-off lanes.
-  //
-  // Val, OutChain = GATHER(InChain, PassThru, Mask, BasePtr, Index, Scale)
-  // OutChain = SCATTER(InChain, Value, Mask, BasePtr, Index, Scale)
-  //
-  // The Index operand can have more vector elements than the other operands
-  // due to type legalization. The extra elements are ignored.
+  /// Masked gather and scatter - load and store operations for a vector of
+  /// random addresses with additional mask operand that prevents memory
+  /// accesses to the masked-off lanes.
+  ///
+  ///     Val, OutChain = GATHER(InChain, PassThru, Mask, BasePtr, Index, Scale)
+  ///     OutChain = SCATTER(InChain, Value, Mask, BasePtr, Index, Scale)
+  ///
+  /// The Index operand can have more vector elements than the other operands
+  /// due to type legalization. The extra elements are ignored.
   MGATHER,
   MSCATTER,
 
@@ -1351,9 +1387,11 @@ enum NodeType {
   /// pow-of-2 vectors, one valid legalizer expansion is to use a tree
   /// reduction, i.e.:
   /// For RES = VECREDUCE_FADD <8 x f16> SRC_VEC
-  ///   PART_RDX = FADD SRC_VEC[0:3], SRC_VEC[4:7]
-  ///   PART_RDX2 = FADD PART_RDX[0:1], PART_RDX[2:3]
-  ///   RES = FADD PART_RDX2[0], PART_RDX2[1]
+  ///
+  ///     PART_RDX = FADD SRC_VEC[0:3], SRC_VEC[4:7]
+  ///     PART_RDX2 = FADD PART_RDX[0:1], PART_RDX[2:3]
+  ///     RES = FADD PART_RDX2[0], PART_RDX2[1]
+  ///
   /// For non-pow-2 vectors, this can be computed by extracting each element
   /// and performing the operation as if it were scalarized.
   VECREDUCE_FADD,
@@ -1401,6 +1439,16 @@ enum NodeType {
   // to glue a convergence control token to a convergent operation in the DAG,
   // which is later translated to an implicit use in the MIR.
   CONVERGENCECTRL_GLUE,
+
+  // Experimental vector histogram intrinsic
+  // Operands: Input Chain, Inc, Mask, Base, Index, Scale, ID
+  // Output: Output Chain
+  EXPERIMENTAL_VECTOR_HISTOGRAM,
+
+  // llvm.clear_cache intrinsic
+  // Operands: Input Chain, Start Addres, End Address
+  // Outputs: Output Chain
+  CLEAR_CACHE,
 
   /// BUILTIN_OP_END - This must be the last enum value in this list.
   /// The target-specific pre-isel opcode values start here.

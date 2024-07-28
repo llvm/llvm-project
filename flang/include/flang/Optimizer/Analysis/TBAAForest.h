@@ -92,6 +92,20 @@ public:
     }
     return getFuncTree(func.getSymNameAttr());
   }
+  // Returns the TBAA tree associated with the scope enclosed
+  // within the given function. With MLIR inlining, there may
+  // be multiple scopes within a single function. It is the caller's
+  // responsibility to provide unique name for the scope.
+  // If the scope string is empty, returns the TBAA tree for the
+  // "root" scope of the given function.
+  inline const TBAATree &getFuncTreeWithScope(mlir::func::FuncOp func,
+                                              llvm::StringRef scope) {
+    mlir::StringAttr name = func.getSymNameAttr();
+    if (!scope.empty())
+      name = mlir::StringAttr::get(name.getContext(),
+                                   llvm::Twine(name) + " - " + scope);
+    return getFuncTree(name);
+  }
 
 private:
   const TBAATree &getFuncTree(mlir::StringAttr symName) {

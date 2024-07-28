@@ -9,10 +9,12 @@ static_library("InstallAPI") {
   ]
   sources = [
     "DiagnosticBuilderWrappers.cpp",
+    "DirectoryScanner.cpp",
     "DylibVerifier.cpp",
     "FileList.cpp",
     "Frontend.cpp",
     "HeaderFile.cpp",
+    "Library.cpp",
     "Visitor.cpp",
   ]
 }

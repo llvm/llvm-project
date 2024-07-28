@@ -101,6 +101,7 @@ macro(enable_omp_offload_compilation files)
         "gfx908;gfx90a;gfx90c;gfx940;gfx1010;gfx1030"
         "gfx1031;gfx1032;gfx1033;gfx1034;gfx1035;gfx1036"
         "gfx1100;gfx1101;gfx1102;gfx1103;gfx1150;gfx1151"
+        "gfx1152"
         )
       set(all_nvptx_architectures
         "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"

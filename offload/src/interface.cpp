@@ -57,7 +57,7 @@ EXTERN void __tgt_register_lib(__tgt_bin_desc *Desc) {
 /// Initialize all available devices without registering any image
 EXTERN void __tgt_init_all_rtls() {
   assert(PM && "Runtime not initialized");
-  PM->initAllPlugins();
+  PM->initializeAllDevices();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -456,8 +456,6 @@ EXTERN void __tgt_set_info_flag(uint32_t NewInfoLevel) {
   assert(PM && "Runtime not initialized");
   std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
   InfoLevel.store(NewInfoLevel);
-  for (auto &R : PM->pluginAdaptors())
-    R.set_info_flag(NewInfoLevel);
 }
 
 EXTERN int __tgt_print_device_info(int64_t DeviceId) {

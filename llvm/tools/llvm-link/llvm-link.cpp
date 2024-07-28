@@ -231,7 +231,7 @@ static std::unique_ptr<Module> loadArFile(const char *Argv0,
       M = getLazyIRModule(MemoryBuffer::getMemBuffer(MemBuf.get(), false),
                           ParseErr, Context);
 
-    if (!M.get()) {
+    if (!M) {
       errs() << Argv0 << ": ";
       WithColor::error() << " parsing member '" << ChildName
                          << "' of archive library failed'" << ArchiveName
@@ -377,9 +377,13 @@ static bool importFunctions(const char *argv0, Module &DestModule) {
     if (Verbose)
       errs() << "Importing " << FunctionName << " from " << FileName << "\n";
 
+    // `-import` specifies the `<filename,function-name>` pairs to import as
+    // definition, so make the import type definition directly.
+    // FIXME: A follow-up patch should add test coverage for import declaration
+    // in `llvm-link` CLI (e.g., by introducing a new command line option).
     auto &Entry =
         ImportList[FileNameStringCache.insert(FileName).first->getKey()];
-    Entry.insert(F->getGUID());
+    Entry[F->getGUID()] = GlobalValueSummary::Definition;
   }
   auto CachedModuleLoader = [&](StringRef Identifier) {
     return ModuleLoaderCache.takeModule(std::string(Identifier));
@@ -413,7 +417,7 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
         identify_magic(Buffer->getBuffer()) == file_magic::archive
             ? loadArFile(argv0, std::move(Buffer), Context)
             : loadFile(argv0, std::move(Buffer), Context);
-    if (!M.get()) {
+    if (!M) {
       errs() << argv0 << ": ";
       WithColor::error() << " loading file '" << File << "'\n";
       return false;

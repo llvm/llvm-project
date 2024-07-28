@@ -1,4 +1,10 @@
 {
+  "errno": {
+    "LIBC_CONF_ERRNO_MODE": {
+      "value": "LIBC_ERRNO_MODE_DEFAULT",
+      "doc": "The implementation used for errno, acceptable values are LIBC_ERRNO_MODE_DEFAULT, LIBC_ERRNO_MODE_UNDEFINED, LIBC_ERRNO_MODE_THREAD_LOCAL, LIBC_ERRNO_MODE_SHARED, LIBC_ERRNO_MODE_EXTERNAL, and LIBC_ERRNO_MODE_SYSTEM."
+    }
+  },
   "printf": {
     "LIBC_CONF_PRINTF_DISABLE_FLOAT": {
       "value": false,
@@ -21,6 +27,16 @@
       "doc": "Disable printing fixed point values in printf and friends."
     }
   },
+  "scanf": {
+    "LIBC_CONF_SCANF_DISABLE_FLOAT": {
+      "value": false,
+      "doc": "Disable parsing floating point values in scanf and friends."
+    },
+    "LIBC_CONF_SCANF_DISABLE_INDEX_MODE": {
+      "value": false,
+      "doc": "Disable index mode in the scanf format string."
+    }
+  },
   "string": {
     "LIBC_CONF_STRING_UNSAFE_WIDE_READ": {
       "value": false,
@@ -39,6 +55,32 @@
     "LIBC_CONF_ENABLE_STRONG_STACK_PROTECTOR": {
       "value": true,
       "doc": "Enable -fstack-protector-strong to defend against stack smashing attack."
+    }
+  },
+  "pthread": {
+    "LIBC_CONF_TIMEOUT_ENSURE_MONOTONICITY": {
+      "value": true,
+      "doc": "Automatically adjust timeout to CLOCK_MONOTONIC (default to true). POSIX API may require CLOCK_REALTIME, which can be unstable and leading to unexpected behavior. This option will convert the real-time timestamp to monotonic timestamp relative to the time of call."
+    },
+    "LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT": {
+      "value": 100,
+      "doc": "Default number of spins before blocking if a mutex is in contention (default to 100)."
+    },
+    "LIBC_CONF_RWLOCK_DEFAULT_SPIN_COUNT": {
+      "value": 100,
+      "doc": "Default number of spins before blocking if a rwlock is in contention (default to 100)."
+    }
+  },
+  "math": {
+    "LIBC_CONF_MATH_OPTIMIZATIONS": {
+      "value": 0,
+      "doc": "Configures optimizations for math functions. Values accepted are LIBC_MATH_SKIP_ACCURATE_PASS, LIBC_MATH_SMALL_TABLES, LIBC_MATH_NO_ERRNO, LIBC_MATH_NO_EXCEPT, and LIBC_MATH_FAST."
+    }
+  },
+  "qsort": {
+    "LIBC_CONF_QSORT_IMPL": {
+      "value": "LIBC_QSORT_QUICK_SORT",
+      "doc": "Configures sorting algorithm for qsort and qsort_r. Values accepted are LIBC_QSORT_QUICK_SORT, LIBC_QSORT_HEAP_SORT."
     }
   }
 }

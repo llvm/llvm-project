@@ -468,19 +468,12 @@ namespace ConditionalInit {
   static_assert(getS(true).a == 12, "");
   static_assert(getS(false).a == 13, "");
 };
-/// FIXME: The following tests are broken.
-///   They are using CXXDefaultInitExprs which contain a CXXThisExpr. The This pointer
-///   in those refers to the declaration we are currently initializing, *not* the
-///   This pointer of the current stack frame. This is something we haven't
-///   implemented in the new interpreter yet.
 namespace DeclRefs {
-  struct A{ int m; const int &f = m; }; // expected-note {{implicit use of 'this'}}
+  struct A{ int m; const int &f = m; };
 
-  constexpr A a{10}; // expected-error {{must be initialized by a constant expression}} \
-                     // expected-note {{declared here}}
+  constexpr A a{10};
   static_assert(a.m == 10, "");
-  static_assert(a.f == 10, ""); // expected-error {{not an integral constant expression}} \
-                                // expected-note {{initializer of 'a' is not a constant expression}}
+  static_assert(a.f == 10, "");
 
   class Foo {
   public:
@@ -499,12 +492,14 @@ namespace DeclRefs {
     A a = A{100};
   };
   constexpr B b;
-  /// FIXME: The following two lines don't work because we don't get the
-  ///   pointers on the LHS correct. They make us run into an assertion
-  ///   in CheckEvaluationResult. However, this may just be caused by the
-  ///   problems in the previous examples.
-  //static_assert(b.a.m == 100, "");
-  //static_assert(b.a.f == 100, "");
+  static_assert(b.a.m == 100, "");
+  static_assert(b.a.f == 100, "");
+
+  constexpr B b2{};
+  static_assert(b2.a.m == 100, "");
+  static_assert(b2.a.f == 100, "");
+  static_assert(b2.a.f == 101, ""); // both-error {{failed}} \
+                                    // both-note {{evaluates to '100 == 101'}}
 }
 
 namespace PointerArith {
@@ -1335,8 +1330,6 @@ namespace UnnamedBitFields {
   static_assert(a.c == 'a', "");
 }
 
-/// FIXME: This still doesn't work in the new interpreter because
-/// we lack type information for dummy pointers.
 namespace VirtualBases {
   /// This used to crash.
   namespace One {
@@ -1346,7 +1339,7 @@ namespace VirtualBases {
     };
     class B : public virtual A {
     public:
-      int getX() { return x; } // ref-note {{declared here}}
+      int getX() { return x; } // both-note {{declared here}}
     };
 
     class DV : virtual public B{};
@@ -1354,7 +1347,7 @@ namespace VirtualBases {
     void foo() {
       DV b;
       int a[b.getX()]; // both-warning {{variable length arrays}} \
-                       // ref-note {{non-constexpr function 'getX' cannot be used}}
+                       // both-note {{non-constexpr function 'getX' cannot be used}}
     }
   }
 
@@ -1458,4 +1451,112 @@ namespace TemporaryWithInvalidDestructor {
   static_assert(A().a, ""); // both-error {{not an integral constant expression}} \
                         // both-note {{in call to}}
 #endif
+}
+
+namespace IgnoredCtorWithZeroInit {
+  struct S {
+    int a;
+  };
+
+  bool get_status() {
+    return (S(), true);
+  }
+}
+
+#if __cplusplus >= 202002L
+namespace VirtOperator {
+  /// This used to crash because it's a virtual CXXOperatorCallExpr.
+  struct B {
+    virtual constexpr bool operator==(const B&) const { return true; }
+  };
+  struct D : B {
+    constexpr bool operator==(const B&) const override{ return false; } // both-note {{operator}}
+  };
+  constexpr bool cmp_base_derived = D() == D(); // both-warning {{ambiguous}}
+}
+
+namespace FloatAPValue {
+  struct ClassTemplateArg {
+    int a;
+    float f;
+  };
+  template<ClassTemplateArg A> struct ClassTemplateArgTemplate {
+    static constexpr const ClassTemplateArg &Arg = A;
+  };
+  ClassTemplateArgTemplate<ClassTemplateArg{1, 2.0f}> ClassTemplateArgObj;
+  template<const ClassTemplateArg&> struct ClassTemplateArgRefTemplate {};
+  ClassTemplateArgRefTemplate<ClassTemplateArgObj.Arg> ClassTemplateArgRefObj;
+}
+#endif
+
+namespace LocalWithThisPtrInit {
+  struct S {
+    int i;
+    int *p = &i;
+  };
+  constexpr int foo() {
+    S s{2};
+    return *s.p;
+  }
+  static_assert(foo() == 2, "");
+}
+
+namespace OnePastEndAndBack {
+  struct Base {
+    constexpr Base() {}
+    int n = 0;
+  };
+
+  constexpr Base a;
+  constexpr const Base *c = &a + 1;
+  constexpr const Base *d = c - 1;
+  static_assert(d == &a, "");
+}
+
+namespace BitSet {
+  class Bitset {
+    unsigned Bit = 0;
+
+  public:
+    constexpr Bitset() {
+      int Init[2] = {1,2};
+      for (auto I : Init)
+        set(I);
+    }
+    constexpr void set(unsigned I) {
+      this->Bit++;
+      this->Bit = 1u << 1;
+    }
+  };
+
+  struct ArchInfo {
+    Bitset DefaultExts;
+  };
+
+  constexpr ArchInfo ARMV8A = {
+    Bitset()
+  };
+}
+
+namespace ArrayInitChain {
+  struct StringLiteral {
+    const char *S;
+  };
+
+  struct CustomOperandVal {
+    StringLiteral Str;
+    unsigned Width;
+    unsigned Mask = Width + 1;
+  };
+
+  constexpr CustomOperandVal A[] = {
+    {},
+    {{"depctr_hold_cnt"},  12,   13},
+  };
+  static_assert(A[0].Str.S == nullptr, "");
+  static_assert(A[0].Width == 0, "");
+  static_assert(A[0].Mask == 1, "");
+
+  static_assert(A[1].Width == 12, "");
+  static_assert(A[1].Mask == 13, "");
 }

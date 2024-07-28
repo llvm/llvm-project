@@ -180,6 +180,7 @@ class VOPC_Real <VOPC_Pseudo ps, int EncodingFamily, string asm_name = ps.Pseudo
   let SchedRW              = ps.SchedRW;
   let mayLoad              = ps.mayLoad;
   let mayStore             = ps.mayStore;
+  let isConvergent         = ps.isConvergent;
 }
 
 class VOPC_SDWA_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
@@ -435,8 +436,10 @@ multiclass VOPC_I16 <string opName, SDPatternOperator cond = COND_NULL,
 multiclass VOPC_I32 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
   VOPC_Pseudos <opName, VOPC_I1_I32_I32, cond, revOp, 0>;
 
-multiclass VOPC_I64 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
-  VOPC_Pseudos <opName, VOPC_I1_I64_I64, cond, revOp, 0>;
+let IsInvalidSingleUseConsumer = 1 in {
+  multiclass VOPC_I64 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
+    VOPC_Pseudos <opName, VOPC_I1_I64_I64, cond, revOp, 0>;
+}
 
 multiclass VOPCX_F16<string opName, string revOp = opName> {
   let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
@@ -465,8 +468,10 @@ multiclass VOPCX_I16<string opName, string revOp = opName> {
 multiclass VOPCX_I32 <string opName, string revOp = opName> :
   VOPCX_Pseudos <opName, VOPC_I1_I32_I32, VOPC_I32_I32, COND_NULL, revOp>;
 
-multiclass VOPCX_I64 <string opName, string revOp = opName> :
-  VOPCX_Pseudos <opName, VOPC_I1_I64_I64, VOPC_I64_I64, COND_NULL, revOp>;
+let IsInvalidSingleUseConsumer = 1 in {
+  multiclass VOPCX_I64 <string opName, string revOp = opName> :
+    VOPCX_Pseudos <opName, VOPC_I1_I64_I64, VOPC_I64_I64, COND_NULL, revOp>;
+}
 
 
 //===----------------------------------------------------------------------===//
@@ -779,7 +784,7 @@ class VOPC_Class_Profile<list<SchedReadWrite> sched, ValueType src0VT, ValueType
 
   let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
                      Src1ModSDWA:$src1_modifiers, Src1SDWA:$src1,
-                     clampmod:$clamp, src0_sel:$src0_sel, src1_sel:$src1_sel);
+                     Clamp:$clamp, src0_sel:$src0_sel, src1_sel:$src1_sel);
 
   let AsmSDWA = " vcc, $src0_modifiers, $src1_modifiers$clamp $src0_sel $src1_sel";
   let HasSrc1Mods = 0;
@@ -1389,17 +1394,12 @@ multiclass VOPC_Real_with_name<GFXGen Gen, bits<9> op, string OpName,
   defvar ps32 = !cast<VOPC_Pseudo>(OpName#"_e32");
   defvar ps64 = !cast<VOP3_Pseudo>(OpName#"_e64");
   let AssemblerPredicate = Gen.AssemblerPredicate in {
-    // MnemonicAlias and GCNPredicateControl both define the field Predicates,
-    // so GCNPredicateControl must come after MnemonicAlias because it contains
-    // the predicates we actually want.
-    def : MnemonicAlias<!if(!empty(pseudo_mnemonic), ps32.Mnemonic,
+    def : AMDGPUMnemonicAlias<!if(!empty(pseudo_mnemonic), ps32.Mnemonic,
                                                      pseudo_mnemonic),
-                        asm_name, ps32.AsmVariantName>,
-          GCNPredicateControl;
-    def : MnemonicAlias<!if(!empty(pseudo_mnemonic), ps64.Mnemonic,
+                              asm_name, ps32.AsmVariantName>;
+    def : AMDGPUMnemonicAlias<!if(!empty(pseudo_mnemonic), ps64.Mnemonic,
                                                      pseudo_mnemonic),
-                        asm_name, ps64.AsmVariantName>,
-          GCNPredicateControl;
+                              asm_name, ps64.AsmVariantName>;
 
     let DecoderNamespace = Gen.DecoderNamespace in {
       def _e32#Gen.Suffix :
@@ -1523,17 +1523,12 @@ multiclass VOPCX_Real_with_name<GFXGen Gen, bits<9> op, string OpName,
   defvar ps32 = !cast<VOPC_Pseudo>(OpName#"_nosdst_e32");
   defvar ps64 = !cast<VOP3_Pseudo>(OpName#"_nosdst_e64");
   let AssemblerPredicate = Gen.AssemblerPredicate in {
-    // MnemonicAlias and GCNPredicateControl both define the field Predicates,
-    // so GCNPredicateControl must come after MnemonicAlias because it contains
-    // the predicates we actually want.
-    def : MnemonicAlias<!if(!empty(pseudo_mnemonic), !subst("_nosdst", "", ps32.Mnemonic),
+    def : AMDGPUMnemonicAlias<!if(!empty(pseudo_mnemonic), !subst("_nosdst", "", ps32.Mnemonic),
                                                      pseudo_mnemonic),
-                        asm_name, ps32.AsmVariantName>,
-          GCNPredicateControl;
-    def : MnemonicAlias<!if(!empty(pseudo_mnemonic), !subst("_nosdst", "", ps64.Mnemonic),
+                              asm_name, ps32.AsmVariantName>;
+    def : AMDGPUMnemonicAlias<!if(!empty(pseudo_mnemonic), !subst("_nosdst", "", ps64.Mnemonic),
                                                      pseudo_mnemonic),
-                        asm_name, ps64.AsmVariantName>,
-          GCNPredicateControl;
+                              asm_name, ps64.AsmVariantName>;
 
     let DecoderNamespace = Gen.DecoderNamespace in {
       def _e32#Gen.Suffix

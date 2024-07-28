@@ -134,10 +134,12 @@ if.end:
 
 define void @test_assume() {
 ; CHECK-LABEL: define {{[^@]+}}@test_assume() {
-; CHECK-NEXT:    call void @llvm.assume(i1 icmp ne (ptr addrspacecast (ptr addrspace(4) @str to ptr), ptr null))
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr addrspacecast (ptr addrspace(4) @str to ptr), null
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.assume(i1 icmp ne (ptr addrspacecast (ptr addrspace(4) @str to ptr), ptr null))
+  %cmp = icmp ne ptr addrspacecast (ptr addrspace(4) @str to ptr), null
+  call void @llvm.assume(i1 %cmp)
   ret void
 }
 

@@ -43,6 +43,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -565,11 +566,14 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
       }
       break;
     }
-    case 'w':
-      // Print MSA registers for the 'f' constraint
-      // In LLVM, the 'w' modifier doesn't need to do anything.
-      // We can just call printOperand as normal.
+    case 'w': {
+      MCRegister w = getMSARegFromFReg(MO.getReg());
+      if (w != Mips::NoRegister) {
+        O << '$' << MipsInstPrinter::getRegisterName(w);
+        return false;
+      }
       break;
+    }
     }
   }
 
@@ -1011,7 +1015,7 @@ void MipsAsmPrinter::EmitFPCallStub(
   MCSectionELF *M = OutContext.getELFSection(
       ".mips16.call.fp." + std::string(Symbol), ELF::SHT_PROGBITS,
       ELF::SHF_ALLOC | ELF::SHF_EXECINSTR);
-  OutStreamer->switchSection(M, nullptr);
+  OutStreamer->switchSection(M);
   //
   // .align 2
   //

@@ -82,6 +82,22 @@ getDirectoryFromFile(FileManager &FileMgr, StringRef Filename,
   return FileMgr.getDirectoryRef(DirName, CacheFailure);
 }
 
+DirectoryEntry *&FileManager::getRealDirEntry(const llvm::vfs::Status &Status) {
+  assert(Status.isDirectory() && "The directory should exist!");
+  // See if we have already opened a directory with the
+  // same inode (this occurs on Unix-like systems when one dir is
+  // symlinked to another, for example) or the same path (on
+  // Windows).
+  DirectoryEntry *&UDE = UniqueRealDirs[Status.getUniqueID()];
+
+  if (!UDE) {
+    // We don't have this directory yet, add it.  We use the string
+    // key from the SeenDirEntries map as the string.
+    UDE = new (DirsAlloc.Allocate()) DirectoryEntry();
+  }
+  return UDE;
+}
+
 /// Add all ancestors of the given path (pointing to either a file or
 /// a directory) as virtual directories.
 void FileManager::addAncestorsAsVirtualDirs(StringRef Path) {
@@ -99,10 +115,21 @@ void FileManager::addAncestorsAsVirtualDirs(StringRef Path) {
   if (NamedDirEnt.second)
     return;
 
-  // Add the virtual directory to the cache.
-  auto *UDE = new (DirsAlloc.Allocate()) DirectoryEntry();
-  NamedDirEnt.second = *UDE;
-  VirtualDirectoryEntries.push_back(UDE);
+  // Check to see if the directory exists.
+  llvm::vfs::Status Status;
+  auto statError =
+      getStatValue(DirName, Status, false, nullptr /*directory lookup*/);
+  if (statError) {
+    // There's no real directory at the given path.
+    // Add the virtual directory to the cache.
+    auto *UDE = new (DirsAlloc.Allocate()) DirectoryEntry();
+    NamedDirEnt.second = *UDE;
+    VirtualDirectoryEntries.push_back(UDE);
+  } else {
+    // There is the real directory
+    DirectoryEntry *&UDE = getRealDirEntry(Status);
+    NamedDirEnt.second = *UDE;
+  }
 
   // Recursively add the other ancestors.
   addAncestorsAsVirtualDirs(DirName);
@@ -162,17 +189,8 @@ FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
     return llvm::errorCodeToError(statError);
   }
 
-  // It exists.  See if we have already opened a directory with the
-  // same inode (this occurs on Unix-like systems when one dir is
-  // symlinked to another, for example) or the same path (on
-  // Windows).
-  DirectoryEntry *&UDE = UniqueRealDirs[Status.getUniqueID()];
-
-  if (!UDE) {
-    // We don't have this directory yet, add it.  We use the string
-    // key from the SeenDirEntries map as the string.
-    UDE = new (DirsAlloc.Allocate()) DirectoryEntry();
-  }
+  // It exists.
+  DirectoryEntry *&UDE = getRealDirEntry(Status);
   NamedDirEnt.second = *UDE;
 
   return DirectoryEntryRef(NamedDirEnt);
@@ -512,13 +530,18 @@ void FileManager::fillRealPathName(FileEntry *UFE, llvm::StringRef FileName) {
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 FileManager::getBufferForFile(FileEntryRef FE, bool isVolatile,
-                              bool RequiresNullTerminator) {
+                              bool RequiresNullTerminator,
+                              std::optional<int64_t> MaybeLimit) {
   const FileEntry *Entry = &FE.getFileEntry();
   // If the content is living on the file entry, return a reference to it.
   if (Entry->Content)
     return llvm::MemoryBuffer::getMemBuffer(Entry->Content->getMemBufferRef());
 
   uint64_t FileSize = Entry->getSize();
+
+  if (MaybeLimit)
+    FileSize = *MaybeLimit;
+
   // If there's a high enough chance that the file have changed since we
   // got its size, force a stat before opening it.
   if (isVolatile || Entry->isNamedPipe())

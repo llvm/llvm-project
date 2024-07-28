@@ -32,6 +32,8 @@
 namespace llvm::MachO {
 
 using PathSeq = std::vector<std::string>;
+using PathToPlatform = std::pair<std::string, std::optional<PlatformType>>;
+using PathToPlatformSeq = std::vector<PathToPlatform>;
 
 // Defines simple struct for storing symbolic links.
 struct SymLink {
@@ -86,6 +88,13 @@ using AliasMap = std::map<AliasEntry, AliasEntry>;
 /// \param Buffer Data contents of file for the alias list.
 /// \return Lookup table of alias to their base symbol.
 Expected<AliasMap> parseAliasList(std::unique_ptr<llvm::MemoryBuffer> &Buffer);
+
+/// Pickup active paths for a given platform.
+///
+/// \param Paths File or search paths to pick up.
+/// \param Platform Platform to collect paths for.
+PathSeq getPathsForPlatform(const PathToPlatformSeq &Paths,
+                            PlatformType Platform);
 
 } // namespace llvm::MachO
 #endif // LLVM_TEXTAPI_UTILS_H

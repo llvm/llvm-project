@@ -5,7 +5,7 @@
 
 ; CHECK-LABEL: define internal fastcc void @f.resume({{.*}})
 ; CHECK:       entry.resume:
-; CHECK:        call void @llvm.dbg.declare(metadata ptr %begin, metadata ![[PROMISEVAR_RESUME:[0-9]+]], metadata !DIExpression(
+; CHECK:        #dbg_declare(ptr %begin, ![[PROMISEVAR_RESUME:[0-9]+]], !DIExpression(
 ;
 ; CHECK: ![[PROMISEVAR_RESUME]] = !DILocalVariable(name: "__promise"
 %promise_type = type { i32, i32, double }
