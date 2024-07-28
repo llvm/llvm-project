@@ -133,14 +133,12 @@ entry:
 define i16 @and16ri8(i16 noundef %a) {
 ; CHECK-LABEL: and16ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xe7,0x7b]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    andw $123, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0xe7,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: and16ri8:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} andl $123, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x83,0xe7,0x7b]
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} andw $123, %di, %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x83,0xe7,0x7b]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %and = and i16 %a, 123
@@ -195,16 +193,14 @@ entry:
 define i16 @and16ri(i16 noundef %a) {
 ; CHECK-LABEL: and16ri:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andl $1234, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0xe7,0xd2,0x04,0x00,0x00]
+; CHECK-NEXT:    andw $1234, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x81,0xe7,0xd2,0x04]
 ; CHECK-NEXT:    # imm = 0x4D2
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: and16ri:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} andl $1234, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x81,0xe7,0xd2,0x04,0x00,0x00]
+; NF-NEXT:    {nf} andw $1234, %di, %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x81,0xe7,0xd2,0x04]
 ; NF-NEXT:    # imm = 0x4D2
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %and = and i16 %a, 1234
@@ -248,12 +244,12 @@ entry:
 define i8 @and8mr(ptr %a, i8 noundef %b) {
 ; CHECK-LABEL: and8mr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andb %sil, (%rdi), %al # encoding: [0x62,0xf4,0x7c,0x18,0x20,0x37]
+; CHECK-NEXT:    andb (%rdi), %sil, %al # encoding: [0x62,0xf4,0x7c,0x18,0x22,0x37]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: and8mr:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} andb %sil, (%rdi), %al # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x20,0x37]
+; NF-NEXT:    {nf} andb (%rdi), %sil, %al # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x22,0x37]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i8, ptr %a
@@ -264,12 +260,12 @@ entry:
 define i16 @and16mr(ptr %a, i16 noundef %b) {
 ; CHECK-LABEL: and16mr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andw %si, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0x21,0x37]
+; CHECK-NEXT:    andw (%rdi), %si, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x23,0x37]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: and16mr:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} andw %si, (%rdi), %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x21,0x37]
+; NF-NEXT:    {nf} andw (%rdi), %si, %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x23,0x37]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i16, ptr %a
@@ -280,12 +276,12 @@ entry:
 define i32 @and32mr(ptr %a, i32 noundef %b) {
 ; CHECK-LABEL: and32mr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andl %esi, (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0x21,0x37]
+; CHECK-NEXT:    andl (%rdi), %esi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x23,0x37]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: and32mr:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} andl %esi, (%rdi), %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x21,0x37]
+; NF-NEXT:    {nf} andl (%rdi), %esi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x23,0x37]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i32, ptr %a
@@ -296,12 +292,12 @@ entry:
 define i64 @and64mr(ptr %a, i64 noundef %b) {
 ; CHECK-LABEL: and64mr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andq %rsi, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0x21,0x37]
+; CHECK-NEXT:    andq (%rdi), %rsi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x23,0x37]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: and64mr:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} andq %rsi, (%rdi), %rax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0xfc,0x1c,0x21,0x37]
+; NF-NEXT:    {nf} andq (%rdi), %rsi, %rax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0xfc,0x1c,0x23,0x37]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i64, ptr %a
@@ -312,16 +308,12 @@ entry:
 define i16 @and16mi8(ptr %a) {
 ; CHECK-LABEL: and16mi8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; CHECK-NEXT:    andl $123, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xe0,0x7b]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    andw $123, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0x27,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: and16mi8:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; NF-NEXT:    andl $123, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xe0,0x7b]
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} andw $123, (%rdi), %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x83,0x27,0x7b]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i16, ptr %a
@@ -382,18 +374,14 @@ entry:
 define i16 @and16mi(ptr %a) {
 ; CHECK-LABEL: and16mi:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; CHECK-NEXT:    andl $1234, %eax # EVEX TO LEGACY Compression encoding: [0x25,0xd2,0x04,0x00,0x00]
+; CHECK-NEXT:    andw $1234, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0x81,0x27,0xd2,0x04]
 ; CHECK-NEXT:    # imm = 0x4D2
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: and16mi:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; NF-NEXT:    andl $1234, %eax # EVEX TO LEGACY Compression encoding: [0x25,0xd2,0x04,0x00,0x00]
+; NF-NEXT:    {nf} andw $1234, (%rdi), %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x81,0x27,0xd2,0x04]
 ; NF-NEXT:    # imm = 0x4D2
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i16, ptr %a
@@ -469,7 +457,7 @@ define i1 @andflag8rr(i8 %a, i8 %b) {
 define i1 @andflag16rr(i16 %a, i16 %b) {
 ; CHECK-LABEL: andflag16rr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    notl %esi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xf7,0xd6]
+; CHECK-NEXT:    notw %si, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xf7,0xd6]
 ; CHECK-NEXT:    andw %ax, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x21,0xc7]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
@@ -478,7 +466,7 @@ define i1 @andflag16rr(i16 %a, i16 %b) {
 ;
 ; NF-LABEL: andflag16rr:
 ; NF:       # %bb.0:
-; NF-NEXT:    notl %esi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xf7,0xd6]
+; NF-NEXT:    notw %si, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xf7,0xd6]
 ; NF-NEXT:    andw %ax, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x21,0xc7]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
@@ -564,7 +552,7 @@ define i1 @andflag8rm(ptr %ptr, i8 %b) {
 define i1 @andflag16rm(ptr %ptr, i16 %b) {
 ; CHECK-LABEL: andflag16rm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    notl %esi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xf7,0xd6]
+; CHECK-NEXT:    notw %si, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xf7,0xd6]
 ; CHECK-NEXT:    andw (%rdi), %ax, %cx # encoding: [0x62,0xf4,0x75,0x18,0x23,0x07]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
@@ -573,7 +561,7 @@ define i1 @andflag16rm(ptr %ptr, i16 %b) {
 ;
 ; NF-LABEL: andflag16rm:
 ; NF:       # %bb.0:
-; NF-NEXT:    notl %esi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xf7,0xd6]
+; NF-NEXT:    notw %si, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xf7,0xd6]
 ; NF-NEXT:    andw (%rdi), %ax, %cx # encoding: [0x62,0xf4,0x75,0x18,0x23,0x07]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]

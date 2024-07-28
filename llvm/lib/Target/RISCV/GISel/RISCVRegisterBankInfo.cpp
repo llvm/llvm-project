@@ -29,6 +29,7 @@ const RegisterBankInfo::PartialMapping PartMappings[] = {
     // clang-format off
     {0, 32, GPRBRegBank},
     {0, 64, GPRBRegBank},
+    {0, 16, FPRBRegBank},
     {0, 32, FPRBRegBank},
     {0, 64, FPRBRegBank},
     {0, 64, VRBRegBank},
@@ -41,12 +42,13 @@ const RegisterBankInfo::PartialMapping PartMappings[] = {
 enum PartialMappingIdx {
   PMI_GPRB32 = 0,
   PMI_GPRB64 = 1,
-  PMI_FPRB32 = 2,
-  PMI_FPRB64 = 3,
-  PMI_VRB64 = 4,
-  PMI_VRB128 = 5,
-  PMI_VRB256 = 6,
-  PMI_VRB512 = 7,
+  PMI_FPRB16 = 2,
+  PMI_FPRB32 = 3,
+  PMI_FPRB64 = 4,
+  PMI_VRB64 = 5,
+  PMI_VRB128 = 6,
+  PMI_VRB256 = 7,
+  PMI_VRB512 = 8,
 };
 
 const RegisterBankInfo::ValueMapping ValueMappings[] = {
@@ -60,6 +62,10 @@ const RegisterBankInfo::ValueMapping ValueMappings[] = {
     {&PartMappings[PMI_GPRB64], 1},
     {&PartMappings[PMI_GPRB64], 1},
     {&PartMappings[PMI_GPRB64], 1},
+    // Maximum 3 FPR operands; 16 bit.
+    {&PartMappings[PMI_FPRB16], 1},
+    {&PartMappings[PMI_FPRB16], 1},
+    {&PartMappings[PMI_FPRB16], 1},
     // Maximum 3 FPR operands; 32 bit.
     {&PartMappings[PMI_FPRB32], 1},
     {&PartMappings[PMI_FPRB32], 1},
@@ -90,12 +96,13 @@ enum ValueMappingIdx {
   InvalidIdx = 0,
   GPRB32Idx = 1,
   GPRB64Idx = 4,
-  FPRB32Idx = 7,
-  FPRB64Idx = 10,
-  VRB64Idx = 13,
-  VRB128Idx = 16,
-  VRB256Idx = 19,
-  VRB512Idx = 22,
+  FPRB16Idx = 7,
+  FPRB32Idx = 10,
+  FPRB64Idx = 13,
+  VRB64Idx = 16,
+  VRB128Idx = 19,
+  VRB256Idx = 22,
+  VRB512Idx = 25,
 };
 } // namespace RISCV
 } // namespace llvm
@@ -105,54 +112,21 @@ using namespace llvm;
 RISCVRegisterBankInfo::RISCVRegisterBankInfo(unsigned HwMode)
     : RISCVGenRegisterBankInfo(HwMode) {}
 
-const RegisterBank &
-RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
-                                              LLT Ty) const {
-  switch (RC.getID()) {
-  default:
-    llvm_unreachable("Register class not supported");
-  case RISCV::GPRRegClassID:
-  case RISCV::GPRF16RegClassID:
-  case RISCV::GPRF32RegClassID:
-  case RISCV::GPRNoX0RegClassID:
-  case RISCV::GPRNoX0X2RegClassID:
-  case RISCV::GPRJALRRegClassID:
-  case RISCV::GPRJALRNonX7RegClassID:
-  case RISCV::GPRTCRegClassID:
-  case RISCV::GPRTCNonX7RegClassID:
-  case RISCV::GPRC_and_GPRTCRegClassID:
-  case RISCV::GPRCRegClassID:
-  case RISCV::GPRC_and_SR07RegClassID:
-  case RISCV::SR07RegClassID:
-  case RISCV::SPRegClassID:
-  case RISCV::GPRX0RegClassID:
-    return getRegBank(RISCV::GPRBRegBankID);
-  case RISCV::FPR64RegClassID:
-  case RISCV::FPR16RegClassID:
-  case RISCV::FPR32RegClassID:
-  case RISCV::FPR64CRegClassID:
-  case RISCV::FPR32CRegClassID:
-    return getRegBank(RISCV::FPRBRegBankID);
-  case RISCV::VMRegClassID:
-  case RISCV::VRRegClassID:
-  case RISCV::VRNoV0RegClassID:
-  case RISCV::VRM2RegClassID:
-  case RISCV::VRM2NoV0RegClassID:
-  case RISCV::VRM4RegClassID:
-  case RISCV::VRM4NoV0RegClassID:
-  case RISCV::VMV0RegClassID:
-  case RISCV::VRM2_with_sub_vrm1_0_in_VMV0RegClassID:
-  case RISCV::VRM4_with_sub_vrm1_0_in_VMV0RegClassID:
-  case RISCV::VRM8RegClassID:
-  case RISCV::VRM8NoV0RegClassID:
-  case RISCV::VRM8_with_sub_vrm1_0_in_VMV0RegClassID:
-    return getRegBank(RISCV::VRBRegBankID);
-  }
-}
-
 static const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
-  assert(Size == 32 || Size == 64);
-  unsigned Idx = Size == 64 ? RISCV::FPRB64Idx : RISCV::FPRB32Idx;
+  unsigned Idx;
+  switch (Size) {
+  default:
+    llvm_unreachable("Unexpected size");
+  case 16:
+    Idx = RISCV::FPRB16Idx;
+    break;
+  case 32:
+    Idx = RISCV::FPRB32Idx;
+    break;
+  case 64:
+    Idx = RISCV::FPRB64Idx;
+    break;
+  }
   return &RISCV::ValueMappings[Idx];
 }
 
@@ -459,7 +433,6 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     LLT Ty = MRI.getType(MI.getOperand(2).getReg());
 
     unsigned Size = Ty.getSizeInBits();
-    assert((Size == 32 || Size == 64) && "Unsupported size for G_FCMP");
 
     OpdsMapping[0] = GPRValueMapping;
     OpdsMapping[2] = OpdsMapping[3] = getFPValueMapping(Size);

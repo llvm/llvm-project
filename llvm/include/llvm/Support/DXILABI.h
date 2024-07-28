@@ -39,6 +39,13 @@ enum class ParameterKind : uint8_t {
   DXILHandle,
 };
 
+enum class ResourceClass : uint8_t {
+  SRV = 0,
+  UAV,
+  CBuffer,
+  Sampler,
+};
+
 /// The kind of resource for an SRV or UAV resource. Sometimes referred to as
 /// "Shape" in the DXIL docs.
 enum class ResourceKind : uint32_t {
@@ -85,6 +92,25 @@ enum class ElementType : uint32_t {
   UNormF64,
   PackedS8x32,
   PackedU8x32,
+};
+
+/// Metadata tags for extra resource properties.
+enum class ExtPropTags : uint32_t {
+  ElementType = 0,
+  StructuredBufferStride = 1,
+  SamplerFeedbackKind = 2,
+  Atomic64Use = 3,
+};
+
+enum class SamplerType : uint32_t {
+  Default = 0,
+  Comparison = 1,
+  Mono = 2, // Note: Seems to be unused.
+};
+
+enum class SamplerFeedbackType : uint32_t {
+  MinMip = 0,
+  MipRegionUsed = 1,
 };
 
 } // namespace dxil

@@ -303,7 +303,7 @@ def OMPC_NumThreads : Clause<"num_threads"> {
 def OMPC_OMPX_Attribute : Clause<"ompx_attribute"> {
   let clangClass = "OMPXAttributeClause";
 }
-def OMPC_OMX_Bare : Clause<"ompx_bare"> {
+def OMPC_OMPX_Bare : Clause<"ompx_bare"> {
   let clangClass = "OMPXBareClause";
 }
 def OMPC_OMPX_DynCGroupMem : Clause<"ompx_dyn_cgroup_mem"> {
@@ -665,6 +665,7 @@ def OMP_Distribute : Directive<"distribute"> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_Collapse>,
     VersionedClause<OMPC_DistSchedule>,
+    VersionedClause<OMPC_Order, 50>,
   ];
   let association = AS_Loop;
   let category = CA_Executable;
@@ -731,6 +732,10 @@ def OMP_For : Directive<"for"> {
     VersionedClause<OMPC_Reduction>,
     VersionedClause<OMPC_Schedule>,
   ];
+  let association = AS_Loop;
+  let category = CA_Executable;
+}
+def OMP_Interchange : Directive<"interchange"> {
   let association = AS_Loop;
   let category = CA_Executable;
 }
@@ -835,6 +840,10 @@ def OMP_Requires : Directive<"requires"> {
   ];
   let association = AS_None;
   let category = CA_Informational;
+}
+def OMP_Reverse : Directive<"reverse"> {
+  let association = AS_Loop;
+  let category = CA_Executable;
 }
 def OMP_Scan : Directive<"scan"> {
   let allowedClauses = [
@@ -1313,6 +1322,36 @@ def OMP_ForSimd : Directive<"for simd"> {
     VersionedClause<OMPC_SimdLen>,
   ];
   let leafConstructs = [OMP_For, OMP_Simd];
+  let category = CA_Executable;
+}
+def OMP_target_loop : Directive<"target loop"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Allocate>,
+    VersionedClause<OMPC_Depend>,
+    VersionedClause<OMPC_FirstPrivate>,
+    VersionedClause<OMPC_IsDevicePtr>,
+    VersionedClause<OMPC_HasDeviceAddr, 51>,
+    VersionedClause<OMPC_LastPrivate>,
+    VersionedClause<OMPC_Map>,
+    VersionedClause<OMPC_Private>,
+    VersionedClause<OMPC_Reduction>,
+    VersionedClause<OMPC_UsesAllocators, 50>,
+    VersionedClause<OMPC_OMPX_Attribute>,
+    VersionedClause<OMPC_InReduction, 50>,
+
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Bind, 50>,
+    VersionedClause<OMPC_Collapse>,
+    VersionedClause<OMPC_Order>,
+    VersionedClause<OMPC_ThreadLimit>,
+    VersionedClause<OMPC_OMPX_DynCGroupMem>,
+    VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_Device>,
+    VersionedClause<OMPC_DefaultMap>,
+    VersionedClause<OMPC_NoWait>,
+  ];
+  let leafConstructs = [OMP_Target, OMP_loop];
   let category = CA_Executable;
 }
 def OMP_MaskedTaskloop : Directive<"masked taskloop"> {
@@ -1996,7 +2035,7 @@ def OMP_TargetTeams : Directive<"target teams"> {
     VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
-    VersionedClause<OMPC_OMX_Bare>,
+    VersionedClause<OMPC_OMPX_Bare>,
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Target, OMP_Teams];
@@ -2027,6 +2066,7 @@ def OMP_TargetTeamsDistribute : Directive<"target teams distribute"> {
     VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
+    VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Target, OMP_Teams, OMP_Distribute];
@@ -2300,6 +2340,7 @@ def OMP_TeamsDistribute : Directive<"teams distribute"> {
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_Order, 50>,
   ];
   let leafConstructs = [OMP_Teams, OMP_Distribute];
   let category = CA_Executable;

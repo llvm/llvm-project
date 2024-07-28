@@ -10,6 +10,7 @@
 #include "InterpState.h"
 #include "Record.h"
 #include "clang/AST/ExprCXX.h"
+#include "llvm/ADT/SetVector.h"
 
 namespace clang {
 namespace interp {
@@ -20,9 +21,9 @@ APValue EvaluationResult::toAPValue() const {
   case LValue:
     // Either a pointer or a function pointer.
     if (const auto *P = std::get_if<Pointer>(&Value))
-      return P->toAPValue();
+      return P->toAPValue(Ctx->getASTContext());
     else if (const auto *FP = std::get_if<FunctionPointer>(&Value))
-      return FP->toAPValue();
+      return FP->toAPValue(Ctx->getASTContext());
     else
       llvm_unreachable("Unhandled LValue type");
     break;
@@ -43,9 +44,9 @@ std::optional<APValue> EvaluationResult::toRValue() const {
 
   // We have a pointer and want an RValue.
   if (const auto *P = std::get_if<Pointer>(&Value))
-    return P->toRValue(*Ctx);
+    return P->toRValue(*Ctx, getSourceType());
   else if (const auto *FP = std::get_if<FunctionPointer>(&Value)) // Nope
-    return FP->toAPValue();
+    return FP->toAPValue(Ctx->getASTContext());
   llvm_unreachable("Unhandled lvalue kind");
 }
 
@@ -124,9 +125,16 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
   for (const Record::Base &B : R->bases()) {
     Pointer P = BasePtr.atField(B.Offset);
     if (!P.isInitialized()) {
-      S.FFDiag(BasePtr.getDeclDesc()->asDecl()->getLocation(),
-               diag::note_constexpr_uninitialized_base)
-          << B.Desc->getType();
+      const Descriptor *Desc = BasePtr.getDeclDesc();
+      if (Desc->asDecl())
+        S.FFDiag(BasePtr.getDeclDesc()->asDecl()->getLocation(),
+                 diag::note_constexpr_uninitialized_base)
+            << B.Desc->getType();
+      else
+        S.FFDiag(BasePtr.getDeclDesc()->asExpr()->getExprLoc(),
+                 diag::note_constexpr_uninitialized_base)
+            << B.Desc->getType();
+
       return false;
     }
     Result &= CheckFieldsInitialized(S, Loc, P, B.R);
@@ -141,7 +149,14 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S,
                                              const Pointer &Ptr) const {
   assert(Source);
   assert(empty());
-  assert(!Ptr.isZero());
+
+  if (Ptr.isZero())
+    return true;
+
+  // We can't inspect dead pointers at all. Return true here so we can
+  // diagnose them later.
+  if (!Ptr.isLive())
+    return true;
 
   SourceLocation InitLoc;
   if (const auto *D = Source.dyn_cast<const Decl *>())
@@ -155,6 +170,72 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S,
   if (const auto *CAT = dyn_cast_if_present<ConstantArrayType>(
           Ptr.getType()->getAsArrayTypeUnsafe()))
     return CheckArrayInitialized(S, InitLoc, Ptr, CAT);
+
+  return true;
+}
+
+static void collectBlocks(const Pointer &Ptr,
+                          llvm::SetVector<const Block *> &Blocks) {
+  auto isUsefulPtr = [](const Pointer &P) -> bool {
+    return P.isLive() && !P.isZero() && !P.isDummy() &&
+           !P.isUnknownSizeArray() && !P.isOnePastEnd() && P.isBlockPointer();
+  };
+
+  if (!isUsefulPtr(Ptr))
+    return;
+
+  Blocks.insert(Ptr.block());
+
+  const Descriptor *Desc = Ptr.getFieldDesc();
+  if (!Desc)
+    return;
+
+  if (const Record *R = Desc->ElemRecord) {
+    for (const Record::Field &F : R->fields()) {
+      const Pointer &FieldPtr = Ptr.atField(F.Offset);
+      assert(FieldPtr.block() == Ptr.block());
+      collectBlocks(FieldPtr, Blocks);
+    }
+  } else if (Desc->isPrimitive() && Desc->getPrimType() == PT_Ptr) {
+    const Pointer &Pointee = Ptr.deref<Pointer>();
+    if (isUsefulPtr(Pointee) && !Blocks.contains(Pointee.block()))
+      collectBlocks(Pointee, Blocks);
+
+  } else if (Desc->isPrimitiveArray() && Desc->getPrimType() == PT_Ptr) {
+    for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
+      const Pointer &ElemPointee = Ptr.atIndex(I).deref<Pointer>();
+      if (isUsefulPtr(ElemPointee) && !Blocks.contains(ElemPointee.block()))
+        collectBlocks(ElemPointee, Blocks);
+    }
+  } else if (Desc->isCompositeArray()) {
+    for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
+      const Pointer &ElemPtr = Ptr.atIndex(I).narrow();
+      collectBlocks(ElemPtr, Blocks);
+    }
+  }
+}
+
+bool EvaluationResult::checkReturnValue(InterpState &S, const Context &Ctx,
+                                        const Pointer &Ptr,
+                                        const SourceInfo &Info) {
+  // Collect all blocks that this pointer (transitively) points to and
+  // return false if any of them is a dynamic block.
+  llvm::SetVector<const Block *> Blocks;
+
+  collectBlocks(Ptr, Blocks);
+
+  for (const Block *B : Blocks) {
+    if (B->isDynamic()) {
+      assert(B->getDescriptor());
+      assert(B->getDescriptor()->asExpr());
+
+      S.FFDiag(Info, diag::note_constexpr_dynamic_alloc)
+          << Ptr.getType()->isReferenceType() << !Ptr.isRoot();
+      S.Note(B->getDescriptor()->asExpr()->getExprLoc(),
+             diag::note_constexpr_dynamic_alloc_here);
+      return false;
+    }
+  }
 
   return true;
 }

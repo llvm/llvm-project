@@ -218,6 +218,20 @@ parseNextArg(StringRef options) {
   auto extractArgAndUpdateOptions = [&](size_t argSize) {
     StringRef str = options.take_front(argSize).trim();
     options = options.drop_front(argSize).ltrim();
+    // Handle escape sequences
+    if (str.size() > 2) {
+      const auto escapePairs = {std::make_pair('\'', '\''),
+                                std::make_pair('"', '"'),
+                                std::make_pair('{', '}')};
+      for (const auto &escape : escapePairs) {
+        if (str.front() == escape.first && str.back() == escape.second) {
+          // Drop the escape characters and trim.
+          str = str.drop_front().drop_back().trim();
+          // Don't process additional escape sequences.
+          break;
+        }
+      }
+    }
     return str;
   };
   // Try to process the given punctuation, properly escaping any contained

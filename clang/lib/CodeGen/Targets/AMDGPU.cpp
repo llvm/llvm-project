@@ -49,8 +49,8 @@ public:
                                   unsigned &NumRegsLeft) const;
 
   void computeInfo(CGFunctionInfo &FI) const override;
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 };
 
 bool AMDGPUABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
@@ -118,13 +118,13 @@ void AMDGPUABIInfo::computeInfo(CGFunctionInfo &FI) const {
   }
 }
 
-Address AMDGPUABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                 QualType Ty) const {
+RValue AMDGPUABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                QualType Ty, AggValueSlot Slot) const {
   const bool IsIndirect = false;
   const bool AllowHigherAlign = false;
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
                           getContext().getTypeInfoInChars(Ty),
-                          CharUnits::fromQuantity(4), AllowHigherAlign);
+                          CharUnits::fromQuantity(4), AllowHigherAlign, Slot);
 }
 
 ABIArgInfo AMDGPUABIInfo::classifyReturnType(QualType RetTy) const {
@@ -311,6 +311,8 @@ public:
                                          SyncScope Scope,
                                          llvm::AtomicOrdering Ordering,
                                          llvm::LLVMContext &Ctx) const override;
+  void setTargetAtomicMetadata(CodeGenFunction &CGF,
+                               llvm::AtomicRMWInst &RMW) const override;
   llvm::Value *createEnqueuedBlockKernel(CodeGenFunction &CGF,
                                          llvm::Function *BlockInvokeFunc,
                                          llvm::Type *BlockTy) const override;
@@ -544,6 +546,23 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
   }
 
   return Ctx.getOrInsertSyncScopeID(Name);
+}
+
+void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
+    CodeGenFunction &CGF, llvm::AtomicRMWInst &RMW) const {
+  if (!CGF.getTarget().allowAMDGPUUnsafeFPAtomics())
+    return;
+
+  // TODO: Introduce new, more controlled options that also work for integers,
+  // and deprecate allowAMDGPUUnsafeFPAtomics.
+  llvm::AtomicRMWInst::BinOp RMWOp = RMW.getOperation();
+  if (llvm::AtomicRMWInst::isFPOperation(RMWOp)) {
+    llvm::MDNode *Empty = llvm::MDNode::get(CGF.getLLVMContext(), {});
+    RMW.setMetadata("amdgpu.no.fine.grained.memory", Empty);
+
+    if (RMWOp == llvm::AtomicRMWInst::FAdd && RMW.getType()->isFloatTy())
+      RMW.setMetadata("amdgpu.ignore.denormal.mode", Empty);
+  }
 }
 
 bool AMDGPUTargetCodeGenInfo::shouldEmitStaticExternCAliases() const {

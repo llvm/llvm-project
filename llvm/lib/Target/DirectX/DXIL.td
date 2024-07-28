@@ -269,6 +269,25 @@ def Sin  : DXILOpMapping<13, unary, int_sin,
 def Tan  : DXILOpMapping<14, unary, int_tan,
                          "Returns tangent(theta) for theta in radians.",
                          [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def ACos  : DXILOpMapping<15, unary, int_acos,
+                         "Returns the arccosine of each component of input.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def ASin  : DXILOpMapping<16, unary, int_asin,
+                         "Returns the arcsine of each component of input.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def ATan  : DXILOpMapping<17, unary, int_atan,
+                         "Returns the arctangent of each component of input.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def HCos  : DXILOpMapping<18, unary, int_cosh,
+                         "Returns the hyperbolic cosine of the specified value.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def HSin  : DXILOpMapping<19, unary, int_sinh,
+                         "Returns the hyperbolic sine of the specified value.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def HTan  : DXILOpMapping<20, unary, int_tanh,
+                         "Returns the hyperbolic tan of the specified value.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+
 def Exp2 : DXILOpMapping<21, unary, int_exp2,
                          "Returns the base 2 exponential, or 2**x, of the specified value."
                          "exp2(x) = 2**x.",

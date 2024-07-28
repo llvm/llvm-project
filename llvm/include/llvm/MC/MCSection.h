@@ -26,6 +26,7 @@ class MCAsmInfo;
 class MCAssembler;
 class MCContext;
 class MCExpr;
+class MCObjectStreamer;
 class MCSymbol;
 class raw_ostream;
 class Triple;
@@ -35,6 +36,7 @@ class Triple;
 class MCSection {
 public:
   friend MCAssembler;
+  friend MCObjectStreamer;
   static constexpr unsigned NonUniqueID = ~0U;
 
   enum SectionVariant {
@@ -66,7 +68,6 @@ public:
       F = F->Next;
       return *this;
     }
-    iterator operator++(int) { return iterator(F->Next); }
   };
 
   struct FragList {
@@ -84,8 +85,6 @@ private:
   Align Alignment;
   /// The section index in the assemblers section list.
   unsigned Ordinal = 0;
-  /// The index of this section in the layout order.
-  unsigned LayoutOrder = 0;
 
   /// Keeping track of bundle-locked state.
   BundleLockStateType BundleLockState = NotBundleLocked;
@@ -100,9 +99,11 @@ private:
   /// Whether this section has had instructions emitted into it.
   bool HasInstructions : 1;
 
-  bool HasLayout : 1;
-
   bool IsRegistered : 1;
+
+  bool IsText : 1;
+
+  bool IsVirtual : 1;
 
   MCDummyFragment DummyFragment;
 
@@ -111,22 +112,13 @@ private:
   // subsections.
   SmallVector<std::pair<unsigned, FragList>, 1> Subsections;
 
-  /// State for tracking labels that don't yet have Fragments
-  struct PendingLabel {
-    MCSymbol* Sym;
-    unsigned Subsection;
-    PendingLabel(MCSymbol* Sym, unsigned Subsection = 0)
-      : Sym(Sym), Subsection(Subsection) {}
-  };
-  SmallVector<PendingLabel, 2> PendingLabels;
-
 protected:
   // TODO Make Name private when possible.
   StringRef Name;
   SectionVariant Variant;
-  SectionKind Kind;
 
-  MCSection(SectionVariant V, StringRef Name, SectionKind K, MCSymbol *Begin);
+  MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsVirtual,
+            MCSymbol *Begin);
   ~MCSection();
 
 public:
@@ -134,7 +126,7 @@ public:
   MCSection &operator=(const MCSection &) = delete;
 
   StringRef getName() const { return Name; }
-  SectionKind getKind() const { return Kind; }
+  bool isText() const { return IsText; }
 
   SectionVariant getVariant() const { return Variant; }
 
@@ -161,9 +153,6 @@ public:
   unsigned getOrdinal() const { return Ordinal; }
   void setOrdinal(unsigned Value) { Ordinal = Value; }
 
-  unsigned getLayoutOrder() const { return LayoutOrder; }
-  void setLayoutOrder(unsigned Value) { LayoutOrder = Value; }
-
   BundleLockStateType getBundleLockState() const { return BundleLockState; }
   void setBundleLockState(BundleLockStateType NewState);
   bool isBundleLocked() const { return BundleLockState != NotBundleLocked; }
@@ -178,9 +167,6 @@ public:
   bool hasInstructions() const { return HasInstructions; }
   void setHasInstructions(bool Value) { HasInstructions = Value; }
 
-  bool hasLayout() const { return HasLayout; }
-  void setHasLayout(bool Value) { HasLayout = Value; }
-
   bool isRegistered() const { return IsRegistered; }
   void setIsRegistered(bool Value) { IsRegistered = Value; }
 
@@ -192,25 +178,11 @@ public:
   iterator end() const { return {}; }
   bool empty() const { return !CurFragList->Head; }
 
-  void addFragment(MCFragment &F) {
-    // The formal layout order will be finalized in MCAssembler::layout.
-    if (CurFragList->Tail) {
-      CurFragList->Tail->Next = &F;
-      F.setLayoutOrder(CurFragList->Tail->getLayoutOrder() + 1);
-    } else {
-      CurFragList->Head = &F;
-      assert(F.getLayoutOrder() == 0);
-    }
-    CurFragList->Tail = &F;
-  }
-
-  void switchSubsection(unsigned Subsection);
-
   void dump() const;
 
   virtual void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                     raw_ostream &OS,
-                                    const MCExpr *Subsection) const = 0;
+                                    uint32_t Subsection) const = 0;
 
   /// Return true if a .align directive should use "optimized nops" to fill
   /// instead of 0s.
@@ -218,20 +190,9 @@ public:
 
   /// Check whether this section is "virtual", that is has no actual object
   /// file contents.
-  virtual bool isVirtualSection() const = 0;
+  bool isVirtualSection() const { return IsVirtual; }
 
   virtual StringRef getVirtualSectionKind() const;
-
-  /// Add a pending label for the requested subsection. This label will be
-  /// associated with a fragment in flushPendingLabels()
-  void addPendingLabel(MCSymbol* label, unsigned Subsection = 0);
-
-  /// Associate all pending labels in a subsection with a fragment.
-  void flushPendingLabels(MCFragment *F, unsigned Subsection);
-
-  /// Associate all pending labels with empty data fragments. One fragment
-  /// will be created for each subsection as necessary.
-  void flushPendingLabels();
 };
 
 } // end namespace llvm

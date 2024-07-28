@@ -14,12 +14,12 @@
 #define LLVM_CLANG_AST_INTERP_POINTER_H
 
 #include "Descriptor.h"
+#include "FunctionPointer.h"
 #include "InterpBlock.h"
 #include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
@@ -46,7 +46,7 @@ struct IntPointer {
   uint64_t Value;
 };
 
-enum class Storage { Block, Int };
+enum class Storage { Block, Int, Fn };
 
 /// A pointer to a memory block, live or dead.
 ///
@@ -97,6 +97,10 @@ public:
     PointeeStorage.Int.Value = Address;
     PointeeStorage.Int.Desc = Desc;
   }
+  Pointer(const Function *F, uint64_t Offset = 0)
+      : Offset(Offset), StorageKind(Storage::Fn) {
+    PointeeStorage.Fn = FunctionPointer(F);
+  }
   ~Pointer();
 
   void operator=(const Pointer &P);
@@ -119,7 +123,7 @@ public:
   bool operator!=(const Pointer &P) const { return !(P == *this); }
 
   /// Converts the pointer to an APValue.
-  APValue toAPValue() const;
+  APValue toAPValue(const ASTContext &ASTCtx) const;
 
   /// Converts the pointer to a string usable in diagnostics.
   std::string toDiagnosticString(const ASTContext &Ctx) const;
@@ -127,16 +131,21 @@ public:
   uint64_t getIntegerRepresentation() const {
     if (isIntegralPointer())
       return asIntPointer().Value + (Offset * elemSize());
+    if (isFunctionPointer())
+      return asFunctionPointer().getIntegerRepresentation();
     return reinterpret_cast<uint64_t>(asBlockPointer().Pointee) + Offset;
   }
 
   /// Converts the pointer to an APValue that is an rvalue.
-  std::optional<APValue> toRValue(const Context &Ctx) const;
+  std::optional<APValue> toRValue(const Context &Ctx,
+                                  QualType ResultType) const;
 
   /// Offsets a pointer inside an array.
   [[nodiscard]] Pointer atIndex(uint64_t Idx) const {
     if (isIntegralPointer())
       return Pointer(asIntPointer().Value, asIntPointer().Desc, Idx);
+    if (isFunctionPointer())
+      return Pointer(asFunctionPointer().getFunction(), Idx);
 
     if (asBlockPointer().Base == RootPtrMark)
       return Pointer(asBlockPointer().Pointee, RootPtrMark,
@@ -210,6 +219,9 @@ public:
 
   /// Expands a pointer to the containing array, undoing narrowing.
   [[nodiscard]] Pointer expand() const {
+    assert(isBlockPointer());
+    Block *Pointee = asBlockPointer().Pointee;
+
     if (isElementPastEnd()) {
       // Revert to an outer one-past-end pointer.
       unsigned Adjust;
@@ -217,7 +229,7 @@ public:
         Adjust = sizeof(InitMapPtr);
       else
         Adjust = sizeof(InlineDescriptor);
-      return Pointer(asBlockPointer().Pointee, asBlockPointer().Base,
+      return Pointer(Pointee, asBlockPointer().Base,
                      asBlockPointer().Base + getSize() + Adjust);
     }
 
@@ -227,44 +239,48 @@ public:
 
     // If at base, point to an array of base types.
     if (isRoot())
-      return Pointer(asBlockPointer().Pointee, RootPtrMark, 0);
+      return Pointer(Pointee, RootPtrMark, 0);
 
     // Step into the containing array, if inside one.
     unsigned Next = asBlockPointer().Base - getInlineDesc()->Offset;
     const Descriptor *Desc =
-        Next == 0 ? getDeclDesc() : getDescriptor(Next)->Desc;
+        (Next == Pointee->getDescriptor()->getMetadataSize())
+            ? getDeclDesc()
+            : getDescriptor(Next)->Desc;
     if (!Desc->IsArray)
       return *this;
-    return Pointer(asBlockPointer().Pointee, Next, Offset);
+    return Pointer(Pointee, Next, Offset);
   }
 
   /// Checks if the pointer is null.
   bool isZero() const {
     if (isBlockPointer())
       return asBlockPointer().Pointee == nullptr;
+    if (isFunctionPointer())
+      return asFunctionPointer().isZero();
     assert(isIntegralPointer());
     return asIntPointer().Value == 0 && Offset == 0;
   }
   /// Checks if the pointer is live.
   bool isLive() const {
-    if (isIntegralPointer())
+    if (!isBlockPointer())
       return true;
     return asBlockPointer().Pointee && !asBlockPointer().Pointee->IsDead;
   }
   /// Checks if the item is a field in an object.
   bool isField() const {
-    if (isIntegralPointer())
+    if (!isBlockPointer())
       return false;
 
-    unsigned Base = asBlockPointer().Base;
-    return Base != 0 && Base != sizeof(InlineDescriptor) &&
-           Base != RootPtrMark && getFieldDesc()->asDecl();
+    return !isRoot() && getFieldDesc()->asDecl();
   }
 
   /// Accessor for information about the declaration site.
   const Descriptor *getDeclDesc() const {
     if (isIntegralPointer())
       return asIntPointer().Desc;
+    if (isFunctionPointer())
+      return nullptr;
 
     assert(isBlockPointer());
     assert(asBlockPointer().Pointee);
@@ -276,7 +292,10 @@ public:
   DeclTy getSource() const {
     if (isBlockPointer())
       return getDeclDesc()->getSource();
-
+    if (isFunctionPointer()) {
+      const Function *F = asFunctionPointer().getFunction();
+      return F ? F->getDecl() : DeclTy();
+    }
     assert(isIntegralPointer());
     return asIntPointer().Desc ? asIntPointer().Desc->getSource() : DeclTy();
   }
@@ -351,6 +370,7 @@ public:
   /// Returns the offset into an array.
   unsigned getOffset() const {
     assert(Offset != PastEndMark && "invalid offset");
+    assert(isBlockPointer());
     if (asBlockPointer().Base == RootPtrMark)
       return Offset;
 
@@ -418,8 +438,14 @@ public:
     assert(isIntegralPointer());
     return PointeeStorage.Int;
   }
+  [[nodiscard]] const FunctionPointer &asFunctionPointer() const {
+    assert(isFunctionPointer());
+    return PointeeStorage.Fn;
+  }
+
   bool isBlockPointer() const { return StorageKind == Storage::Block; }
   bool isIntegralPointer() const { return StorageKind == Storage::Int; }
+  bool isFunctionPointer() const { return StorageKind == Storage::Fn; }
 
   /// Returns the record descriptor of a class.
   const Record *getRecord() const { return getFieldDesc()->ElemRecord; }
@@ -442,7 +468,7 @@ public:
   }
   /// Checks if the storage is static.
   bool isStatic() const {
-    if (isIntegralPointer())
+    if (!isBlockPointer())
       return true;
     assert(asBlockPointer().Pointee);
     return asBlockPointer().Pointee->isStatic();
@@ -462,13 +488,11 @@ public:
   bool isMutable() const {
     if (!isBlockPointer())
       return false;
-    return asBlockPointer().Base != 0 &&
-           asBlockPointer().Base != sizeof(InlineDescriptor) &&
-           getInlineDesc()->IsFieldMutable;
+    return !isRoot() && getInlineDesc()->IsFieldMutable;
   }
 
   bool isWeak() const {
-    if (isIntegralPointer())
+    if (!isBlockPointer())
       return false;
 
     assert(isBlockPointer());
@@ -486,6 +510,9 @@ public:
   }
   /// Checks if a structure is a base class.
   bool isBaseClass() const { return isField() && getInlineDesc()->IsBase; }
+  bool isVirtualBaseClass() const {
+    return isField() && getInlineDesc()->IsVirtualBase;
+  }
   /// Checks if the pointer points to a dummy value.
   bool isDummy() const {
     if (!isBlockPointer())
@@ -517,13 +544,15 @@ public:
   unsigned getByteOffset() const {
     if (isIntegralPointer())
       return asIntPointer().Value + Offset;
+    if (isOnePastEnd())
+      return PastEndMark;
     return Offset;
   }
 
   /// Returns the number of elements.
   unsigned getNumElems() const {
-    if (isIntegralPointer())
-      return ~unsigned(0);
+    if (!isBlockPointer())
+      return ~0u;
     return getSize() / elemSize();
   }
 
@@ -549,14 +578,25 @@ public:
 
   /// Checks if the index is one past end.
   bool isOnePastEnd() const {
-    if (isIntegralPointer())
+    if (isIntegralPointer() || isFunctionPointer())
       return false;
 
     if (!asBlockPointer().Pointee)
       return false;
 
-    return isElementPastEnd() ||
+    if (isUnknownSizeArray())
+      return false;
+
+    return isElementPastEnd() || isPastEnd() ||
            (getSize() == getOffset() && !isZeroSizeArray());
+  }
+
+  /// Checks if the pointer points past the end of the object.
+  bool isPastEnd() const {
+    if (isIntegralPointer())
+      return false;
+
+    return !isZero() && Offset > PointeeStorage.BS.Pointee->getSize();
   }
 
   /// Checks if the pointer is an out-of-bounds element pointer.
@@ -570,6 +610,7 @@ public:
     assert(isLive() && "Invalid pointer");
     assert(isBlockPointer());
     assert(asBlockPointer().Pointee);
+    assert(isDereferencable());
     assert(Offset + sizeof(T) <=
            asBlockPointer().Pointee->getDescriptor()->getAllocSize());
 
@@ -587,6 +628,17 @@ public:
     assert(asBlockPointer().Pointee);
     return reinterpret_cast<T *>(asBlockPointer().Pointee->data() +
                                  sizeof(InitMapPtr))[I];
+  }
+
+  /// Whether this block can be read from at all. This is only true for
+  /// block pointers that point to a valid location inside that block.
+  bool isDereferencable() const {
+    if (!isBlockPointer())
+      return false;
+    if (isPastEnd())
+      return false;
+
+    return true;
   }
 
   /// Initializes a field.
@@ -621,12 +673,16 @@ private:
   friend class Block;
   friend class DeadBlock;
   friend class MemberPointer;
+  friend class InterpState;
   friend struct InitMap;
+  friend class DynamicAllocator;
 
   Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
 
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {
+    assert(asBlockPointer().Base != sizeof(GlobalInlineDescriptor));
+    assert(asBlockPointer().Base <= asBlockPointer().Pointee->getSize());
     return getDescriptor(asBlockPointer().Base);
   }
 
@@ -659,6 +715,7 @@ private:
   union {
     BlockPointer BS;
     IntPointer Int;
+    FunctionPointer Fn;
   } PointeeStorage;
   Storage StorageKind = Storage::Int;
 };

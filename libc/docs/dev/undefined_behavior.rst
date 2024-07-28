@@ -89,3 +89,30 @@ The C23 standard states that if the value of the ``rnd`` argument of the
 the value of a math rounding direction macro, the direction of rounding is
 unspecified. LLVM's libc chooses to use the ``FP_INT_TONEAREST`` rounding
 direction in this case.
+
+Non-const Constant Return Values
+--------------------------------
+Some libc functions, like ``dlerror()``, return ``char *`` instead of ``const char *`` and then tell the caller they promise not to to modify this value. Any modification of this value is undefined behavior.
+
+Cached ``getpid/gettid``
+------------------------
+Since version ``2.25``, glibc removes its cache mechanism for ``getpid/gettid`` 
+(See the history section in https://man7.org/linux/man-pages/man2/getpid.2.html).
+LLVM's libc still implements the cache as it is useful for fast deadlock detection.
+The cache mechanism is also implemented in MUSL and bionic. The tid/pid cache can 
+be disabled by setting ``LIBC_CONF_ENABLE_TID_CACHE`` and ``LIBC_CONF_ENABLE_PID_CACHE``
+to ``false`` respectively.
+
+Unwrapped ``SYS_clone/SYS_fork/SYS_vfork``
+------------------------------------------
+It is highly discouraged to use unwrapped ``SYS_clone/SYS_fork/SYS_vfork``. 
+First, calling such syscalls without provided libc wrappers ignores 
+all the ``pthread_atfork`` entries as libc can no longer detect the ``fork``. 
+Second, libc relies on the ``fork/clone`` wrappers to correctly maintain cache for
+process id and thread id, and other important process-specific states such as the list 
+of robust mutexes. Third, even if the user is to call ``exec*`` functions immediately, 
+there can still be other unexpected issues. For instance, there can be signal handlers 
+inherited from parent process triggered inside the instruction window between ``fork`` 
+and ``exec*``. As libc failed to maintain its internal states correctly, even though the
+functions used inside the signal handlers are marked as ``async-signal-safe`` (such as
+``getpid``), they will still return wrong values or lead to other even worse situations.

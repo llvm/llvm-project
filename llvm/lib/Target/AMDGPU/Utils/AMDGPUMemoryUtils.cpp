@@ -25,9 +25,7 @@
 
 using namespace llvm;
 
-namespace llvm {
-
-namespace AMDGPU {
+namespace llvm::AMDGPU {
 
 Align getAlign(const DataLayout &DL, const GlobalVariable *GV) {
   return DL.getValueOrABITypeAlignment(GV->getPointerAlignment(DL),
@@ -207,7 +205,9 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   }
 
   // Verify that we fall into one of 2 cases:
-  //    - All variables are absolute: this is a re-run of the pass
+  //    - All variables are either absolute 
+  //      or direct mapped dynamic LDS that is not lowered.
+  //      this is a re-run of the pass
   //      so we don't have anything to do.
   //    - No variables are absolute.
   std::optional<bool> HasAbsoluteGVs;
@@ -215,6 +215,9 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
     for (auto &[Fn, GVs] : Map) {
       for (auto *GV : GVs) {
         bool IsAbsolute = GV->isAbsoluteSymbolRef();
+        bool IsDirectMapDynLDSGV = AMDGPU::isDynamicLDS(*GV) && DirectMapKernel.contains(Fn);
+        if (IsDirectMapDynLDSGV)
+          continue;
         if (HasAbsoluteGVs.has_value()) {
           if (*HasAbsoluteGVs != IsAbsolute) {
             report_fatal_error(
@@ -366,6 +369,4 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
   return false;
 }
 
-} // end namespace AMDGPU
-
-} // end namespace llvm
+} // end namespace llvm::AMDGPU

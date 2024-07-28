@@ -23,11 +23,10 @@ private:
   bool Valid;
 
 public:
-  FunctionPointer(const Function *Func) : Func(Func), Valid(true) {
-    assert(Func);
-  }
+  FunctionPointer() = default;
+  FunctionPointer(const Function *Func) : Func(Func), Valid(true) {}
 
-  FunctionPointer(uintptr_t IntVal = 0, const Descriptor *Desc = nullptr)
+  FunctionPointer(uintptr_t IntVal, const Descriptor *Desc = nullptr)
       : Func(reinterpret_cast<const Function *>(IntVal)), Valid(false) {}
 
   const Function *getFunction() const { return Func; }
@@ -40,7 +39,7 @@ public:
     return Func->getDecl()->isWeak();
   }
 
-  APValue toAPValue() const {
+  APValue toAPValue(const ASTContext &) const {
     if (!Func)
       return APValue(static_cast<Expr *>(nullptr), CharUnits::Zero(), {},
                      /*OnePastTheEnd=*/false, /*IsNull=*/true);
@@ -69,7 +68,7 @@ public:
     if (!Func)
       return "nullptr";
 
-    return toAPValue().getAsString(Ctx, Func->getDecl()->getType());
+    return toAPValue(Ctx).getAsString(Ctx, Func->getDecl()->getType());
   }
 
   uint64_t getIntegerRepresentation() const {

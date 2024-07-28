@@ -541,6 +541,58 @@ join:
   ret ptr %phi
 }
 
+define ptr @phi_of_gep_flags_1(i1 %c, ptr %p) {
+; CHECK-LABEL: @phi_of_gep_flags_1(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = getelementptr nusw nuw i8, ptr [[P:%.*]], i64 4
+; CHECK-NEXT:    ret ptr [[PHI]]
+;
+  br i1 %c, label %if, label %else
+
+if:
+  %gep1 = getelementptr inbounds i32, ptr %p, i64 1
+  br label %join
+
+else:
+  %gep2 = getelementptr nusw nuw i32, ptr %p, i64 1
+  br label %join
+
+join:
+  %phi = phi ptr [ %gep1, %if ], [ %gep2, %else ]
+  ret ptr %phi
+}
+
+define ptr @phi_of_gep_flags_2(i1 %c, ptr %p) {
+; CHECK-LABEL: @phi_of_gep_flags_2(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 4
+; CHECK-NEXT:    ret ptr [[PHI]]
+;
+  br i1 %c, label %if, label %else
+
+if:
+  %gep1 = getelementptr nusw nuw i32, ptr %p, i64 1
+  br label %join
+
+else:
+  %gep2 = getelementptr nuw i32, ptr %p, i64 1
+  br label %join
+
+join:
+  %phi = phi ptr [ %gep1, %if ], [ %gep2, %else ]
+  ret ptr %phi
+}
+
 define ptr @phi_of_gep_different_type(i1 %c, ptr %p) {
 ; CHECK-LABEL: @phi_of_gep_different_type(
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
@@ -635,6 +687,30 @@ define ptr @select_of_gep(i1 %c, ptr %p) {
 ;
   %gep1 = getelementptr i32, ptr %p, i64 1
   %gep2 = getelementptr i32, ptr %p, i64 2
+  %s = select i1 %c, ptr %gep1, ptr %gep2
+  ret ptr %s
+}
+
+define ptr @select_of_gep_flags_1(i1 %c, ptr %p) {
+; CHECK-LABEL: @select_of_gep_flags_1(
+; CHECK-NEXT:    [[S_V:%.*]] = select i1 [[C:%.*]], i64 4, i64 8
+; CHECK-NEXT:    [[S:%.*]] = getelementptr nusw i8, ptr [[P:%.*]], i64 [[S_V]]
+; CHECK-NEXT:    ret ptr [[S]]
+;
+  %gep1 = getelementptr inbounds i32, ptr %p, i64 1
+  %gep2 = getelementptr nusw nuw i32, ptr %p, i64 2
+  %s = select i1 %c, ptr %gep1, ptr %gep2
+  ret ptr %s
+}
+
+define ptr @select_of_gep_flags_2(i1 %c, ptr %p) {
+; CHECK-LABEL: @select_of_gep_flags_2(
+; CHECK-NEXT:    [[S_V:%.*]] = select i1 [[C:%.*]], i64 4, i64 8
+; CHECK-NEXT:    [[S:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 [[S_V]]
+; CHECK-NEXT:    ret ptr [[S]]
+;
+  %gep1 = getelementptr nuw i32, ptr %p, i64 1
+  %gep2 = getelementptr nusw nuw i32, ptr %p, i64 2
   %s = select i1 %c, ptr %gep1, ptr %gep2
   ret ptr %s
 }

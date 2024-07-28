@@ -272,33 +272,6 @@ exit:                                     ; preds = %for.body
 }
 
 
-; We don't support select/cmp reduction patterns where there is more than one
-; use of the icmp/fcmp.
-define i32 @select_const_i32_from_icmp_mul_use(ptr nocapture readonly %v1, ptr %v2, i64 %n) {
-; CHECK-LABEL: @select_const_i32_from_icmp_mul_use
-; CHECK-NOT: vector.body
-entry:
-  br label %for.body
-
-for.body:                                      ; preds = %entry, %for.body
-  %0 = phi i64 [ 0, %entry ], [ %8, %for.body ]
-  %1 = phi i32 [ 3, %entry ], [ %6, %for.body ]
-  %2 = phi i32 [ 0, %entry ], [ %7, %for.body ]
-  %3 = getelementptr inbounds i32, ptr %v1, i64 %0
-  %4 = load i32, ptr %3, align 4
-  %5 = icmp eq i32 %4, 3
-  %6 = select i1 %5, i32 %1, i32 7
-  %7 = zext i1 %5 to i32
-  %8 = add nuw nsw i64 %0, 1
-  %9 = icmp eq i64 %8, %n
-  br i1 %9, label %exit, label %for.body
-
-exit:                                     ; preds = %for.body
-  store i32 %7, ptr %v2, align 4
-  ret i32 %6
-}
-
-
 ; We don't support selecting loop-variant values.
 define i32 @select_variant_i32_from_icmp(ptr nocapture readonly %v1, ptr nocapture readonly %v2, i64 %n) {
 ; CHECK-LABEL: @select_variant_i32_from_icmp

@@ -13,7 +13,9 @@
 #ifndef LLVM_CLANG_AST_INTERP_INTERP_H
 #define LLVM_CLANG_AST_INTERP_INTERP_H
 
+#include "../ExprConstShared.h"
 #include "Boolean.h"
+#include "DynamicAllocator.h"
 #include "Floating.h"
 #include "Function.h"
 #include "FunctionPointer.h"
@@ -26,13 +28,9 @@
 #include "Program.h"
 #include "State.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTDiagnostic.h"
-#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Expr.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/Support/Endian.h"
-#include <limits>
 #include <type_traits>
 
 namespace clang {
@@ -41,8 +39,9 @@ namespace interp {
 using APSInt = llvm::APSInt;
 
 /// Convert a value to an APValue.
-template <typename T> bool ReturnValue(const T &V, APValue &R) {
-  R = V.toAPValue();
+template <typename T>
+bool ReturnValue(const InterpState &S, const T &V, APValue &R) {
+  R = V.toAPValue(S.getCtx());
   return true;
 }
 
@@ -91,7 +90,8 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc);
 bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 /// Checks if a value can be loaded from a block.
-bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
+bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+               AccessKinds AK = AK_Read);
 
 bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                       AccessKinds AK);
@@ -124,6 +124,20 @@ bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD);
 bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *CE, unsigned ArgSize);
 
+/// Checks if dynamic memory allocation is available in the current
+/// language mode.
+bool CheckDynamicMemoryAllocation(InterpState &S, CodePtr OpPC);
+
+/// Diagnose mismatched new[]/delete or new/delete[] pairs.
+bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC, bool NewWasArray,
+                         bool DeleteIsArray, const Descriptor *D,
+                         const Expr *NewExpr);
+
+/// Check the source of the pointer passed to delete/delete[] has actually
+/// been heap allocated by us.
+bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
+                       const Pointer &Ptr);
+
 /// Sets the given integral value to the pointer, which is of
 /// a std::{weak,partial,strong}_ordering type.
 bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
@@ -139,7 +153,8 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
   if (RHS.isNegative()) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS.toAPSInt();
-    return false;
+    if (!S.noteUndefinedBehavior())
+      return false;
   }
 
   // C++11 [expr.shift]p1: Shift width must be less than the bit width of
@@ -149,17 +164,24 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
     const APSInt Val = RHS.toAPSInt();
     QualType Ty = E->getType();
     S.CCEDiag(E, diag::note_constexpr_large_shift) << Val << Ty << Bits;
-    return true; // We will do the shift anyway but fix up the shift amount.
+    if (!S.noteUndefinedBehavior())
+      return false;
   }
 
   if (LHS.isSigned() && !S.getLangOpts().CPlusPlus20) {
     const Expr *E = S.Current->getExpr(OpPC);
     // C++11 [expr.shift]p2: A signed left shift must have a non-negative
     // operand, and must not overflow the corresponding unsigned type.
-    if (LHS.isNegative())
+    if (LHS.isNegative()) {
       S.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
-    else if (LHS.toUnsigned().countLeadingZeros() < static_cast<unsigned>(RHS))
+      if (!S.noteUndefinedBehavior())
+        return false;
+    } else if (LHS.toUnsigned().countLeadingZeros() <
+               static_cast<unsigned>(RHS)) {
       S.CCEDiag(E, diag::note_constexpr_lshift_discards);
+      if (!S.noteUndefinedBehavior())
+        return false;
+    }
   }
 
   // C++2a [expr.shift]p2: [P0907R4]:
@@ -173,10 +195,15 @@ template <typename T>
 bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
   if (RHS.isZero()) {
     const auto *Op = cast<BinaryOperator>(S.Current->getExpr(OpPC));
+    if constexpr (std::is_same_v<T, Floating>) {
+      S.CCEDiag(Op, diag::note_expr_divide_by_zero)
+          << Op->getRHS()->getSourceRange();
+      return true;
+    }
+
     S.FFDiag(Op, diag::note_expr_divide_by_zero)
         << Op->getRHS()->getSourceRange();
-    if constexpr (!std::is_same_v<T, Floating>)
-      return false;
+    return false;
   }
 
   if (LHS.isSigned() && LHS.isMin() && RHS.isNegative() && RHS.isMinusOne()) {
@@ -186,6 +213,30 @@ bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     const Expr *E = S.Current->getExpr(OpPC);
     S.CCEDiag(Loc, diag::note_constexpr_overflow) << Trunc << E->getType();
+    return false;
+  }
+  return true;
+}
+
+template <typename SizeT>
+bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT *NumElements,
+                    unsigned ElemSize, bool IsNoThrow) {
+  // FIXME: Both the SizeT::from() as well as the
+  // NumElements.toAPSInt() in this function are rather expensive.
+
+  // FIXME: GH63562
+  // APValue stores array extents as unsigned,
+  // so anything that is greater that unsigned would overflow when
+  // constructing the array, we catch this here.
+  SizeT MaxElements = SizeT::from(Descriptor::MaxArrayElemBytes / ElemSize);
+  if (NumElements->toAPSInt().getActiveBits() >
+          ConstantArrayType::getMaxSizeBits(S.getCtx()) ||
+      *NumElements > MaxElements) {
+    if (!IsNoThrow) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_new_too_large)
+          << NumElements->toDiagnosticString(S.getCtx());
+    }
     return false;
   }
   return true;
@@ -249,7 +300,7 @@ bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
   } else {
     delete S.Current;
     S.Current = nullptr;
-    if (!ReturnValue<T>(Ret, Result))
+    if (!ReturnValue<T>(S, Ret, Result))
       return false;
   }
   return true;
@@ -304,15 +355,16 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
     auto Loc = E->getExprLoc();
     S.report(Loc, diag::warn_integer_constant_overflow)
         << Trunc << Type << E->getSourceRange();
-    return true;
-  } else {
-    S.CCEDiag(E, diag::note_constexpr_overflow) << Value << Type;
-    if (!S.noteUndefinedBehavior()) {
-      S.Stk.pop<T>();
-      return false;
-    }
-    return true;
   }
+
+  S.CCEDiag(E, diag::note_constexpr_overflow) << Value << Type;
+
+  if (!S.noteUndefinedBehavior()) {
+    S.Stk.pop<T>();
+    return false;
+  }
+
+  return true;
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -368,6 +420,134 @@ inline bool Mulf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   S.Stk.push<Floating>(Result);
   return CheckFloatResult(S, OpPC, Result, Status);
 }
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool Mulc(InterpState &S, CodePtr OpPC) {
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Result = S.Stk.peek<Pointer>();
+
+  if constexpr (std::is_same_v<T, Floating>) {
+    APFloat A = LHS.atIndex(0).deref<Floating>().getAPFloat();
+    APFloat B = LHS.atIndex(1).deref<Floating>().getAPFloat();
+    APFloat C = RHS.atIndex(0).deref<Floating>().getAPFloat();
+    APFloat D = RHS.atIndex(1).deref<Floating>().getAPFloat();
+
+    APFloat ResR(A.getSemantics());
+    APFloat ResI(A.getSemantics());
+    HandleComplexComplexMul(A, B, C, D, ResR, ResI);
+
+    // Copy into the result.
+    Result.atIndex(0).deref<Floating>() = Floating(ResR);
+    Result.atIndex(0).initialize();
+    Result.atIndex(1).deref<Floating>() = Floating(ResI);
+    Result.atIndex(1).initialize();
+    Result.initialize();
+  } else {
+    // Integer element type.
+    const T &LHSR = LHS.atIndex(0).deref<T>();
+    const T &LHSI = LHS.atIndex(1).deref<T>();
+    const T &RHSR = RHS.atIndex(0).deref<T>();
+    const T &RHSI = RHS.atIndex(1).deref<T>();
+    unsigned Bits = LHSR.bitWidth();
+
+    // real(Result) = (real(LHS) * real(RHS)) - (imag(LHS) * imag(RHS))
+    T A;
+    if (T::mul(LHSR, RHSR, Bits, &A))
+      return false;
+    T B;
+    if (T::mul(LHSI, RHSI, Bits, &B))
+      return false;
+    if (T::sub(A, B, Bits, &Result.atIndex(0).deref<T>()))
+      return false;
+    Result.atIndex(0).initialize();
+
+    // imag(Result) = (real(LHS) * imag(RHS)) + (imag(LHS) * real(RHS))
+    if (T::mul(LHSR, RHSI, Bits, &A))
+      return false;
+    if (T::mul(LHSI, RHSR, Bits, &B))
+      return false;
+    if (T::add(A, B, Bits, &Result.atIndex(1).deref<T>()))
+      return false;
+    Result.atIndex(1).initialize();
+    Result.initialize();
+  }
+
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool Divc(InterpState &S, CodePtr OpPC) {
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Result = S.Stk.peek<Pointer>();
+
+  if constexpr (std::is_same_v<T, Floating>) {
+    APFloat A = LHS.atIndex(0).deref<Floating>().getAPFloat();
+    APFloat B = LHS.atIndex(1).deref<Floating>().getAPFloat();
+    APFloat C = RHS.atIndex(0).deref<Floating>().getAPFloat();
+    APFloat D = RHS.atIndex(1).deref<Floating>().getAPFloat();
+
+    APFloat ResR(A.getSemantics());
+    APFloat ResI(A.getSemantics());
+    HandleComplexComplexDiv(A, B, C, D, ResR, ResI);
+
+    // Copy into the result.
+    Result.atIndex(0).deref<Floating>() = Floating(ResR);
+    Result.atIndex(0).initialize();
+    Result.atIndex(1).deref<Floating>() = Floating(ResI);
+    Result.atIndex(1).initialize();
+    Result.initialize();
+  } else {
+    // Integer element type.
+    const T &LHSR = LHS.atIndex(0).deref<T>();
+    const T &LHSI = LHS.atIndex(1).deref<T>();
+    const T &RHSR = RHS.atIndex(0).deref<T>();
+    const T &RHSI = RHS.atIndex(1).deref<T>();
+    unsigned Bits = LHSR.bitWidth();
+    const T Zero = T::from(0, Bits);
+
+    if (Compare(RHSR, Zero) == ComparisonCategoryResult::Equal &&
+        Compare(RHSI, Zero) == ComparisonCategoryResult::Equal) {
+      const SourceInfo &E = S.Current->getSource(OpPC);
+      S.FFDiag(E, diag::note_expr_divide_by_zero);
+      return false;
+    }
+
+    // Den = real(RHS)² + imag(RHS)²
+    T A, B;
+    if (T::mul(RHSR, RHSR, Bits, &A) || T::mul(RHSI, RHSI, Bits, &B))
+      return false;
+    T Den;
+    if (T::add(A, B, Bits, &Den))
+      return false;
+
+    // real(Result) = ((real(LHS) * real(RHS)) + (imag(LHS) * imag(RHS))) / Den
+    T &ResultR = Result.atIndex(0).deref<T>();
+    T &ResultI = Result.atIndex(1).deref<T>();
+
+    if (T::mul(LHSR, RHSR, Bits, &A) || T::mul(LHSI, RHSI, Bits, &B))
+      return false;
+    if (T::add(A, B, Bits, &ResultR))
+      return false;
+    if (T::div(ResultR, Den, Bits, &ResultR))
+      return false;
+    Result.atIndex(0).initialize();
+
+    // imag(Result) = ((imag(LHS) * real(RHS)) - (real(LHS) * imag(RHS))) / Den
+    if (T::mul(LHSI, RHSR, Bits, &A) || T::mul(LHSR, RHSI, Bits, &B))
+      return false;
+    if (T::sub(A, B, Bits, &ResultI))
+      return false;
+    if (T::div(ResultI, Den, Bits, &ResultI))
+      return false;
+    Result.atIndex(1).initialize();
+    Result.initialize();
+  }
+
+  return true;
+}
+
 /// 1) Pops the RHS from the stack.
 /// 2) Pops the LHS from the stack.
 /// 3) Pushes 'LHS & RHS' on the stack
@@ -595,9 +775,7 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Inc(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr, AK_Increment))
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr);
@@ -609,9 +787,7 @@ bool Inc(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool IncPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr, AK_Increment))
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr);
@@ -624,9 +800,7 @@ bool IncPop(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Dec(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr, AK_Decrement))
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
   return IncDecHelper<T, IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr);
@@ -638,9 +812,7 @@ bool Dec(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool DecPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr, AK_Decrement))
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
   return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr);
@@ -668,9 +840,7 @@ bool IncDecFloatHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 inline bool Incf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.isDummy())
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
   return IncDecFloatHelper<IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr, RM);
@@ -678,9 +848,7 @@ inline bool Incf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 
 inline bool IncfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.isDummy())
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
   return IncDecFloatHelper<IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, RM);
@@ -688,11 +856,7 @@ inline bool IncfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 
 inline bool Decf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (Ptr.isDummy())
-    return false;
-
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
   return IncDecFloatHelper<IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr, RM);
@@ -700,10 +864,7 @@ inline bool Decf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 
 inline bool DecfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (Ptr.isDummy())
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
   return IncDecFloatHelper<IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, RM);
@@ -811,6 +972,7 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     return true;
   }
 
+  // Reject comparisons to weak pointers.
   for (const auto &P : {LHS, RHS}) {
     if (P.isZero())
       continue;
@@ -823,6 +985,20 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   }
 
   if (!Pointer::hasSameBase(LHS, RHS)) {
+    if (LHS.isOnePastEnd() && !RHS.isOnePastEnd() && !RHS.isZero() &&
+        RHS.getOffset() == 0) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
+          << LHS.toDiagnosticString(S.getCtx());
+      return false;
+    } else if (RHS.isOnePastEnd() && !LHS.isOnePastEnd() && !LHS.isZero() &&
+               LHS.getOffset() == 0) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
+          << RHS.toDiagnosticString(S.getCtx());
+      return false;
+    }
+
     S.Stk.push<BoolT>(BoolT::from(Fn(ComparisonCategoryResult::Unordered)));
     return true;
   } else {
@@ -1126,8 +1302,10 @@ bool GetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 /// Same as GetGlobal, but without the checks.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetGlobalUnchecked(InterpState &S, CodePtr OpPC, uint32_t I) {
-  auto *B = S.P.getGlobal(I);
-  S.Stk.push<T>(B->deref<T>());
+  const Pointer &Ptr = S.P.getPtrGlobal(I);
+  if (!Ptr.isInitialized())
+    return false;
+  S.Stk.push<T>(Ptr.deref<T>());
   return true;
 }
 
@@ -1151,16 +1329,20 @@ bool InitGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
                     const LifetimeExtendedTemporaryDecl *Temp) {
-  assert(Temp);
+  const Pointer &Ptr = S.P.getGlobal(I);
+
   const T Value = S.Stk.peek<T>();
-  APValue APV = Value.toAPValue();
+  APValue APV = Value.toAPValue(S.getCtx());
   APValue *Cached = Temp->getOrCreateValue(true);
   *Cached = APV;
 
-  const Pointer &P = S.P.getGlobal(I);
-  P.deref<T>() = S.Stk.pop<T>();
-  P.initialize();
+  assert(Ptr.getDeclDesc()->asExpr());
 
+  S.SeenGlobalTemporaries.push_back(
+      std::make_pair(Ptr.getDeclDesc()->asExpr(), Temp));
+
+  Ptr.deref<T>() = S.Stk.pop<T>();
+  Ptr.initialize();
   return true;
 }
 
@@ -1173,7 +1355,11 @@ inline bool InitGlobalTempComp(InterpState &S, CodePtr OpPC,
   const Pointer &P = S.Stk.peek<Pointer>();
   APValue *Cached = Temp->getOrCreateValue(true);
 
-  if (std::optional<APValue> APV = P.toRValue(S.getCtx())) {
+  S.SeenGlobalTemporaries.push_back(
+      std::make_pair(P.getDeclDesc()->asExpr(), Temp));
+
+  if (std::optional<APValue> APV =
+          P.toRValue(S.getCtx(), Temp->getTemporaryExpr()->getType())) {
     *Cached = *APV;
     return true;
   }
@@ -1303,7 +1489,6 @@ inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
   if (Ptr.isBlockPointer() && Off > Ptr.block()->getSize())
     return false;
-
   S.Stk.push<Pointer>(Ptr.atField(Off));
   return true;
 }
@@ -1386,7 +1571,10 @@ inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
     return false;
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
     return false;
-  S.Stk.push<Pointer>(Ptr.atField(Off));
+  const Pointer &Result = Ptr.atField(Off);
+  if (Result.isPastEnd())
+    return false;
+  S.Stk.push<Pointer>(Result);
   return true;
 }
 
@@ -1396,7 +1584,10 @@ inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off) {
     return false;
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
     return false;
-  S.Stk.push<Pointer>(Ptr.atField(Off));
+  const Pointer &Result = Ptr.atField(Off);
+  if (Result.isPastEnd())
+    return false;
+  S.Stk.push<Pointer>(Result);
   return true;
 }
 
@@ -1711,6 +1902,15 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
     Result = WideIndex + WideOffset;
   else
     Result = WideIndex - WideOffset;
+
+  // When the pointer is one-past-end, going back to index 0 is the only
+  // useful thing we can do. Any other index has been diagnosed before and
+  // we don't get here.
+  if (Result == 0 && Ptr.isOnePastEnd()) {
+    S.Stk.push<Pointer>(Ptr.asBlockPointer().Pointee,
+                        Ptr.asBlockPointer().Base);
+    return true;
+  }
 
   S.Stk.push<Pointer>(Ptr.atIndex(static_cast<uint64_t>(Result)));
   return true;
@@ -2067,19 +2267,42 @@ inline bool RVOPtr(InterpState &S, CodePtr OpPC) {
 //===----------------------------------------------------------------------===//
 // Shr, Shl
 //===----------------------------------------------------------------------===//
+enum class ShiftDir { Left, Right };
 
-template <PrimType NameL, PrimType NameR>
-inline bool Shr(InterpState &S, CodePtr OpPC) {
-  using LT = typename PrimConv<NameL>::T;
-  using RT = typename PrimConv<NameR>::T;
-  auto RHS = S.Stk.pop<RT>();
-  const auto &LHS = S.Stk.pop<LT>();
+template <class LT, class RT, ShiftDir Dir>
+inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS) {
   const unsigned Bits = LHS.bitWidth();
 
   // OpenCL 6.3j: shift values are effectively % word size of LHS.
   if (S.getLangOpts().OpenCL)
     RT::bitAnd(RHS, RT::from(LHS.bitWidth() - 1, RHS.bitWidth()),
                RHS.bitWidth(), &RHS);
+
+  if (RHS.isNegative()) {
+    // During constant-folding, a negative shift is an opposite shift. Such a
+    // shift is not a constant expression.
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS.toAPSInt();
+    if (!S.noteUndefinedBehavior())
+      return false;
+    RHS = -RHS;
+    return DoShift < LT, RT,
+           Dir == ShiftDir::Left ? ShiftDir::Right
+                                 : ShiftDir::Left > (S, OpPC, LHS, RHS);
+  }
+
+  if constexpr (Dir == ShiftDir::Left) {
+    if (LHS.isNegative() && !S.getLangOpts().CPlusPlus20) {
+      // C++11 [expr.shift]p2: A signed left shift must have a non-negative
+      // operand, and must not overflow the corresponding unsigned type.
+      // C++2a [expr.shift]p2: E1 << E2 is the unique value congruent to
+      // E1 x 2^E2 module 2^N.
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.CCEDiag(Loc, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
+      if (!S.noteUndefinedBehavior())
+        return false;
+    }
+  }
 
   if (!CheckShift(S, OpPC, LHS, RHS, Bits))
     return false;
@@ -2088,14 +2311,34 @@ inline bool Shr(InterpState &S, CodePtr OpPC) {
   // it has already been diagnosed by CheckShift() above,
   // but we still need to handle it.
   typename LT::AsUnsigned R;
-  if (RHS > RT::from(Bits - 1, RHS.bitWidth()))
-    LT::AsUnsigned::shiftRight(LT::AsUnsigned::from(LHS),
-                               LT::AsUnsigned::from(Bits - 1), Bits, &R);
-  else
-    LT::AsUnsigned::shiftRight(LT::AsUnsigned::from(LHS),
-                               LT::AsUnsigned::from(RHS, Bits), Bits, &R);
+  if constexpr (Dir == ShiftDir::Left) {
+    if (RHS > RT::from(Bits - 1, RHS.bitWidth()))
+      LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
+                                LT::AsUnsigned::from(Bits - 1), Bits, &R);
+    else
+      LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
+                                LT::AsUnsigned::from(RHS, Bits), Bits, &R);
+  } else {
+    if (RHS > RT::from(Bits - 1, RHS.bitWidth()))
+      LT::AsUnsigned::shiftRight(LT::AsUnsigned::from(LHS),
+                                 LT::AsUnsigned::from(Bits - 1), Bits, &R);
+    else
+      LT::AsUnsigned::shiftRight(LT::AsUnsigned::from(LHS),
+                                 LT::AsUnsigned::from(RHS, Bits), Bits, &R);
+  }
+
   S.Stk.push<LT>(LT::from(R));
   return true;
+}
+
+template <PrimType NameL, PrimType NameR>
+inline bool Shr(InterpState &S, CodePtr OpPC) {
+  using LT = typename PrimConv<NameL>::T;
+  using RT = typename PrimConv<NameR>::T;
+  auto RHS = S.Stk.pop<RT>();
+  auto LHS = S.Stk.pop<LT>();
+
+  return DoShift<LT, RT, ShiftDir::Right>(S, OpPC, LHS, RHS);
 }
 
 template <PrimType NameL, PrimType NameR>
@@ -2103,30 +2346,9 @@ inline bool Shl(InterpState &S, CodePtr OpPC) {
   using LT = typename PrimConv<NameL>::T;
   using RT = typename PrimConv<NameR>::T;
   auto RHS = S.Stk.pop<RT>();
-  const auto &LHS = S.Stk.pop<LT>();
-  const unsigned Bits = LHS.bitWidth();
+  auto LHS = S.Stk.pop<LT>();
 
-  // OpenCL 6.3j: shift values are effectively % word size of LHS.
-  if (S.getLangOpts().OpenCL)
-    RT::bitAnd(RHS, RT::from(LHS.bitWidth() - 1, RHS.bitWidth()),
-               RHS.bitWidth(), &RHS);
-
-  if (!CheckShift(S, OpPC, LHS, RHS, Bits))
-    return false;
-
-  // Limit the shift amount to Bits - 1. If this happened,
-  // it has already been diagnosed by CheckShift() above,
-  // but we still need to handle it.
-  typename LT::AsUnsigned R;
-  if (RHS > RT::from(Bits - 1, RHS.bitWidth()))
-    LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
-                              LT::AsUnsigned::from(Bits - 1), Bits, &R);
-  else
-    LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
-                              LT::AsUnsigned::from(RHS, Bits), Bits, &R);
-
-  S.Stk.push<LT>(LT::from(R));
-  return true;
+  return DoShift<LT, RT, ShiftDir::Left>(S, OpPC, LHS, RHS);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2327,12 +2549,12 @@ inline bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
       if (!CheckInvoke(S, OpPC, ThisPtr))
         return false;
     }
-
-    if (S.checkingPotentialConstantExpression())
-      return false;
   }
 
   if (!CheckCallable(S, OpPC, Func))
+    return false;
+
+  if (Func->hasThisPointer() && S.checkingPotentialConstantExpression())
     return false;
 
   if (!CheckCallDepth(S, OpPC))
@@ -2433,6 +2655,12 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
 
   assert(F);
 
+  // This happens when the call expression has been cast to
+  // something else, but we don't support that.
+  if (S.Ctx.classify(F->getDecl()->getReturnType()) !=
+      S.Ctx.classify(CE->getType()))
+    return false;
+
   // Check argument nullability state.
   if (F->hasNonNullAttr()) {
     if (!CheckNonNullArgs(S, OpPC, F, CE, ArgSize))
@@ -2441,6 +2669,11 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
 
   assert(ArgSize >= F->getWrittenArgSize());
   uint32_t VarArgSize = ArgSize - F->getWrittenArgSize();
+
+  // We need to do this explicitly here since we don't have the necessary
+  // information to do it automatically.
+  if (F->isThisPointerExplicit())
+    VarArgSize -= align(primSize(PT_Ptr));
 
   if (F->isVirtual())
     return CallVirt(S, OpPC, F, VarArgSize);
@@ -2493,6 +2726,13 @@ inline bool Invalid(InterpState &S, CodePtr OpPC) {
   return false;
 }
 
+inline bool Unsupported(InterpState &S, CodePtr OpPC) {
+  const SourceLocation &Loc = S.Current->getLocation(OpPC);
+  S.FFDiag(Loc, diag::note_constexpr_stmt_expr_unsupported)
+      << S.Current->getRange(OpPC);
+  return false;
+}
+
 /// Do nothing and just abort execution.
 inline bool Error(InterpState &S, CodePtr OpPC) { return false; }
 
@@ -2511,6 +2751,15 @@ inline bool InvalidDeclRef(InterpState &S, CodePtr OpPC,
                            const DeclRefExpr *DR) {
   assert(DR);
   return CheckDeclRef(S, OpPC, DR);
+}
+
+inline bool SizelessVectorElementSize(InterpState &S, CodePtr OpPC) {
+  if (S.inConstantContext()) {
+    const SourceRange &ArgRange = S.Current->getRange(OpPC);
+    const Expr *E = S.Current->getExpr(OpPC);
+    S.CCEDiag(E, diag::note_constexpr_non_const_vectorelements) << ArgRange;
+  }
+  return false;
 }
 
 inline bool Assume(InterpState &S, CodePtr OpPC) {
@@ -2552,6 +2801,20 @@ inline bool CheckNonNullArg(InterpState &S, CodePtr OpPC) {
   return false;
 }
 
+void diagnoseEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED,
+                       const APSInt &Value);
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool CheckEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED) {
+  assert(ED);
+  assert(!ED->isFixed());
+  const APSInt Val = S.Stk.peek<T>().toAPSInt();
+
+  if (S.inConstantContext())
+    diagnoseEnumValue(S, OpPC, ED, Val);
+  return true;
+}
+
 /// OldPtr -> Integer -> NewPtr.
 template <PrimType TIn, PrimType TOut>
 inline bool DecayPtr(InterpState &S, CodePtr OpPC) {
@@ -2560,8 +2823,184 @@ inline bool DecayPtr(InterpState &S, CodePtr OpPC) {
   using ToT = typename PrimConv<TOut>::T;
 
   const FromT &OldPtr = S.Stk.pop<FromT>();
+
+  if constexpr (std::is_same_v<FromT, FunctionPointer> &&
+                std::is_same_v<ToT, Pointer>) {
+    S.Stk.push<Pointer>(OldPtr.getFunction());
+    return true;
+  }
+
   S.Stk.push<ToT>(ToT(OldPtr.getIntegerRepresentation(), nullptr));
   return true;
+}
+
+inline bool CheckDecl(InterpState &S, CodePtr OpPC, const VarDecl *VD) {
+  // An expression E is a core constant expression unless the evaluation of E
+  // would evaluate one of the following: [C++23] - a control flow that passes
+  // through a declaration of a variable with static or thread storage duration
+  // unless that variable is usable in constant expressions.
+  assert(VD->isLocalVarDecl() &&
+         VD->isStaticLocal()); // Checked before emitting this.
+
+  if (VD == S.EvaluatingDecl)
+    return true;
+
+  if (!VD->isUsableInConstantExpressions(S.getCtx())) {
+    S.CCEDiag(VD->getLocation(), diag::note_constexpr_static_local)
+        << (VD->getTSCSpec() == TSCS_unspecified ? 0 : 1) << VD;
+    return false;
+  }
+  return true;
+}
+
+inline bool Alloc(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
+  assert(Desc);
+
+  if (!CheckDynamicMemoryAllocation(S, OpPC))
+    return false;
+
+  DynamicAllocator &Allocator = S.getAllocator();
+  Block *B = Allocator.allocate(Desc, S.Ctx.getEvalID());
+  assert(B);
+
+  S.Stk.push<Pointer>(B, sizeof(InlineDescriptor));
+
+  return true;
+}
+
+template <PrimType Name, class SizeT = typename PrimConv<Name>::T>
+inline bool AllocN(InterpState &S, CodePtr OpPC, PrimType T, const Expr *Source,
+                   bool IsNoThrow) {
+  if (!CheckDynamicMemoryAllocation(S, OpPC))
+    return false;
+
+  SizeT NumElements = S.Stk.pop<SizeT>();
+  if (!CheckArraySize(S, OpPC, &NumElements, primSize(T), IsNoThrow)) {
+    if (!IsNoThrow)
+      return false;
+
+    // If this failed and is nothrow, just return a null ptr.
+    S.Stk.push<Pointer>(0, nullptr);
+    return true;
+  }
+
+  DynamicAllocator &Allocator = S.getAllocator();
+  Block *B = Allocator.allocate(Source, T, static_cast<size_t>(NumElements),
+                                S.Ctx.getEvalID());
+  assert(B);
+  S.Stk.push<Pointer>(B, sizeof(InlineDescriptor));
+
+  return true;
+}
+
+template <PrimType Name, class SizeT = typename PrimConv<Name>::T>
+inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
+                    bool IsNoThrow) {
+  if (!CheckDynamicMemoryAllocation(S, OpPC))
+    return false;
+
+  SizeT NumElements = S.Stk.pop<SizeT>();
+  if (!CheckArraySize(S, OpPC, &NumElements, ElementDesc->getSize(),
+                      IsNoThrow)) {
+    if (!IsNoThrow)
+      return false;
+
+    // If this failed and is nothrow, just return a null ptr.
+    S.Stk.push<Pointer>(0, ElementDesc);
+    return true;
+  }
+
+  DynamicAllocator &Allocator = S.getAllocator();
+  Block *B = Allocator.allocate(ElementDesc, static_cast<size_t>(NumElements),
+                                S.Ctx.getEvalID());
+  assert(B);
+
+  S.Stk.push<Pointer>(B, sizeof(InlineDescriptor));
+
+  return true;
+}
+
+bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B);
+static inline bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm) {
+  if (!CheckDynamicMemoryAllocation(S, OpPC))
+    return false;
+
+  const Expr *Source = nullptr;
+  const Block *BlockToDelete = nullptr;
+  {
+    // Extra scope for this so the block doesn't have this pointer
+    // pointing to it when we destroy it.
+    const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+    // Deleteing nullptr is always fine.
+    if (Ptr.isZero())
+      return true;
+
+    if (!Ptr.isRoot() || Ptr.isOnePastEnd() || Ptr.isArrayElement()) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_delete_subobject)
+          << Ptr.toDiagnosticString(S.getCtx()) << Ptr.isOnePastEnd();
+      return false;
+    }
+
+    Source = Ptr.getDeclDesc()->asExpr();
+    BlockToDelete = Ptr.block();
+
+    if (!CheckDeleteSource(S, OpPC, Source, Ptr))
+      return false;
+  }
+  assert(Source);
+  assert(BlockToDelete);
+
+  // Invoke destructors before deallocating the memory.
+  if (!RunDestructors(S, OpPC, BlockToDelete))
+    return false;
+
+  DynamicAllocator &Allocator = S.getAllocator();
+  bool WasArrayAlloc = Allocator.isArrayAllocation(Source);
+  const Descriptor *BlockDesc = BlockToDelete->getDescriptor();
+
+  if (!Allocator.deallocate(Source, BlockToDelete, S)) {
+    // Nothing has been deallocated, this must be a double-delete.
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_double_delete);
+    return false;
+  }
+  return CheckNewDeleteForms(S, OpPC, WasArrayAlloc, DeleteIsArrayForm,
+                             BlockDesc, Source);
+}
+
+inline bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T) {
+  assert(T);
+  assert(!S.getLangOpts().CPlusPlus23);
+
+  // C++1y: A constant initializer for an object o [...] may also invoke
+  // constexpr constructors for o and its subobjects even if those objects
+  // are of non-literal class types.
+  //
+  // C++11 missed this detail for aggregates, so classes like this:
+  //   struct foo_t { union { int i; volatile int j; } u; };
+  // are not (obviously) initializable like so:
+  //   __attribute__((__require_constant_initialization__))
+  //   static const foo_t x = {{0}};
+  // because "i" is a subobject with non-literal initialization (due to the
+  // volatile member of the union). See:
+  //   http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_active.html#1677
+  // Therefore, we use the C++1y behavior.
+
+  if (S.EvaluatingDecl)
+    return true;
+
+  if (S.Current->getFunction() && S.Current->getFunction()->isConstructor() &&
+      S.Current->getThis().getDeclDesc()->asDecl() == S.EvaluatingDecl)
+    return true;
+
+  const Expr *E = S.Current->getExpr(OpPC);
+  if (S.getLangOpts().CPlusPlus11)
+    S.FFDiag(E, diag::note_constexpr_nonliteral) << E->getType();
+  else
+    S.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
+  return false;
 }
 
 //===----------------------------------------------------------------------===//

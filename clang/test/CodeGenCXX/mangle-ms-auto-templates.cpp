@@ -18,6 +18,12 @@ auto AutoFunc() {
   return a;
 }
 
+int Func();
+int Func2();
+
+int i;
+int j;
+
 void template_mangling() {
   AutoFunc<1>();
   // AFTER: call {{.*}} @"??$AutoFunc@$MH00@@YA?A?<auto>@@XZ"
@@ -44,4 +50,29 @@ void template_mangling() {
   AutoParmsTemplate<(unsigned long)1, 9223372036854775807LL> c2;
   // AFTER: call {{.*}} @"??0?$AutoParmsTemplate@$MK00$M_J0HPPPPPPPPPPPPPPP@@@QEAA@XZ"
   // BEFORE: call {{.*}} @"??0?$AutoParmsTemplate@$00$0HPPPPPPPPPPPPPPP@@@QEAA@XZ"
+
+  AutoFunc<&i>();
+  // AFTER: call {{.*}} @"??$AutoFunc@$MPEAH1?i@@3HA@@YA?A?<auto>@@XZ"
+  // BEFORE: call {{.*}} @"??$AutoFunc@$1?i@@3HA@@YA?A?<auto>@@XZ"
+
+  AutoParmTemplate<&i> auto_int_ptr;
+  // AFTER: call {{.*}} @"??0?$AutoParmTemplate@$MPEAH1?i@@3HA@@QEAA@XZ"
+  // BEFORE: call {{.*}} @"??0?$AutoParmTemplate@$1?i@@3HA@@QEAA@XZ"
+
+  AutoParmsTemplate<&i, &j> auto_int_ptrs;
+  // AFTER: call {{.*}} @"??0?$AutoParmsTemplate@$MPEAH1?i@@3HA$MPEAH1?j@@3HA@@QEAA@XZ"
+  // BEFORE: call {{.*}} @"??0?$AutoParmsTemplate@$1?i@@3HA$1?j@@3HA@@QEAA@XZ"
+
+  AutoFunc<&Func>();
+  // AFTER: call {{.*}} @"??$AutoFunc@$MP6AHXZ1?Func@@YAHXZ@@YA?A?<auto>@@XZ"
+  // BEFORE: call {{.*}} @"??$AutoFunc@$1?Func@@YAHXZ@@YA?A?<auto>@@XZ"
+
+  AutoParmTemplate<&Func> auto_func_ptr;
+  // AFTER: call {{.*}} @"??0?$AutoParmTemplate@$MP6AHXZ1?Func@@YAHXZ@@QEAA@XZ"
+  // BEFORE: call {{.*}} @"??0?$AutoParmTemplate@$1?Func@@YAHXZ@@QEAA@XZ"
+
+  AutoParmsTemplate<&Func, &Func2> auto_func_ptrs;
+  // AFTER: call {{.*}} @"??0?$AutoParmsTemplate@$MP6AHXZ1?Func@@YAHXZ$MP6AHXZ1?Func2@@YAHXZ@@QEAA@XZ"
+  // BEFORE: call {{.*}} @"??0?$AutoParmsTemplate@$1?Func@@YAHXZ$1?Func2@@YAHXZ@@QEAA@XZ"
+
 }

@@ -132,10 +132,10 @@ end subroutine
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.box<!fir.array<?xnone>> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFtest4Ex"} : (!fir.box<!fir.array<?xnone>>, !fir.dscope) -> (!fir.box<!fir.array<?xnone>>, !fir.box<!fir.array<?xnone>>)
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.copy_in %[[VAL_1]]#0 : (!fir.box<!fir.array<?xnone>>) -> (!fir.box<!fir.array<?xnone>>, i1)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.copy_in %[[VAL_1]]#0 to %[[TMP_BOX:.*]] : (!fir.box<!fir.array<?xnone>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xnone>>>>) -> (!fir.box<!fir.array<?xnone>>, i1)
 ! CHECK:           %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]]#0 : (!fir.box<!fir.array<?xnone>>) -> !fir.ref<!fir.array<?xnone>>
 ! CHECK:           fir.call @_QPs4(%[[VAL_3]]) fastmath<contract> : (!fir.ref<!fir.array<?xnone>>) -> ()
-! CHECK:           hlfir.copy_out %[[VAL_2]]#0, %[[VAL_2]]#1 to %[[VAL_1]]#0 : (!fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>) -> ()
+! CHECK:           hlfir.copy_out %[[TMP_BOX]], %[[VAL_2]]#1 to %[[VAL_1]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xnone>>>>, i1, !fir.box<!fir.array<?xnone>>) -> ()
 ! CHECK:           return
 ! CHECK:         }
 
@@ -144,18 +144,17 @@ end subroutine
 ! CHECK:           %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtest3bEx"} : (!fir.box<!fir.array<?xnone>>, !fir.dscope) -> (!fir.box<!fir.array<?xnone>>, !fir.box<!fir.array<?xnone>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.is_present %[[VAL_1]]#0 : (!fir.box<!fir.array<?xnone>>) -> i1
-! CHECK:           %[[VAL_3:.*]]:4 = fir.if %[[VAL_2]] -> (!fir.box<!fir.array<?xnone>>, !fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>) {
-! CHECK:             %[[VAL_4:.*]]:2 = hlfir.copy_in %[[VAL_1]]#0 : (!fir.box<!fir.array<?xnone>>) -> (!fir.box<!fir.array<?xnone>>, i1)
-! CHECK:             fir.result %[[VAL_4]]#0, %[[VAL_4]]#0, %[[VAL_4]]#1, %[[VAL_1]]#0 : !fir.box<!fir.array<?xnone>>, !fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>
+! CHECK:           %[[VAL_3:.*]]:3 = fir.if %[[VAL_2]] -> (!fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>) {
+! CHECK:             %[[VAL_4:.*]]:2 = hlfir.copy_in %[[VAL_1]]#0 to %[[TMP_BOX:.*]] : (!fir.box<!fir.array<?xnone>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xnone>>>>) -> (!fir.box<!fir.array<?xnone>>, i1)
+! CHECK:             fir.result %[[VAL_4]]#0, %[[VAL_4]]#1, %[[VAL_1]]#0 : !fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>
 ! CHECK:           } else {
-! CHECK:             %[[VAL_5:.*]] = fir.absent !fir.box<!fir.array<?xnone>>
 ! CHECK:             %[[VAL_6:.*]] = fir.absent !fir.box<!fir.array<?xnone>>
 ! CHECK:             %[[VAL_7:.*]] = arith.constant false
 ! CHECK:             %[[VAL_8:.*]] = fir.absent !fir.box<!fir.array<?xnone>>
-! CHECK:             fir.result %[[VAL_5]], %[[VAL_6]], %[[VAL_7]], %[[VAL_8]] : !fir.box<!fir.array<?xnone>>, !fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>
+! CHECK:             fir.result %[[VAL_6]], %[[VAL_7]], %[[VAL_8]] : !fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>
 ! CHECK:           }
 ! CHECK:           fir.call @_QPs3b(%[[VAL_9:.*]]#0) fastmath<contract> : (!fir.box<!fir.array<?xnone>>) -> ()
-! CHECK:           hlfir.copy_out %[[VAL_9]]#1, %[[VAL_9]]#2 to %[[VAL_9]]#3 : (!fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>) -> ()
+! CHECK:           hlfir.copy_out %[[TMP_BOX]], %[[VAL_9]]#1 to %[[VAL_9]]#2 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xnone>>>>, i1, !fir.box<!fir.array<?xnone>>) -> ()
 ! CHECK:           return
 ! CHECK:         }
 
@@ -164,19 +163,18 @@ end subroutine
 ! CHECK:           %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtest4bEx"} : (!fir.box<!fir.array<?xnone>>, !fir.dscope) -> (!fir.box<!fir.array<?xnone>>, !fir.box<!fir.array<?xnone>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.is_present %[[VAL_1]]#0 : (!fir.box<!fir.array<?xnone>>) -> i1
-! CHECK:           %[[VAL_3:.*]]:4 = fir.if %[[VAL_2]] -> (!fir.ref<!fir.array<?xnone>>, !fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>) {
-! CHECK:             %[[VAL_4:.*]]:2 = hlfir.copy_in %[[VAL_1]]#0 : (!fir.box<!fir.array<?xnone>>) -> (!fir.box<!fir.array<?xnone>>, i1)
+! CHECK:           %[[VAL_3:.*]]:3 = fir.if %[[VAL_2]] -> (!fir.ref<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>) {
+! CHECK:             %[[VAL_4:.*]]:2 = hlfir.copy_in %[[VAL_1]]#0 to %[[TMP_BOX:.*]] : (!fir.box<!fir.array<?xnone>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xnone>>>>) -> (!fir.box<!fir.array<?xnone>>, i1)
 ! CHECK:             %[[VAL_5:.*]] = fir.box_addr %[[VAL_4]]#0 : (!fir.box<!fir.array<?xnone>>) -> !fir.ref<!fir.array<?xnone>>
-! CHECK:             fir.result %[[VAL_5]], %[[VAL_4]]#0, %[[VAL_4]]#1, %[[VAL_1]]#0 : !fir.ref<!fir.array<?xnone>>, !fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>
+! CHECK:             fir.result %[[VAL_5]], %[[VAL_4]]#1, %[[VAL_1]]#0 : !fir.ref<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>
 ! CHECK:           } else {
-! CHECK:             %[[VAL_6:.*]] = fir.absent !fir.ref<!fir.array<?xnone>>
-! CHECK:             %[[VAL_7:.*]] = fir.absent !fir.box<!fir.array<?xnone>>
+! CHECK:             %[[VAL_7:.*]] = fir.absent !fir.ref<!fir.array<?xnone>>
 ! CHECK:             %[[VAL_8:.*]] = arith.constant false
 ! CHECK:             %[[VAL_9:.*]] = fir.absent !fir.box<!fir.array<?xnone>>
-! CHECK:             fir.result %[[VAL_6]], %[[VAL_7]], %[[VAL_8]], %[[VAL_9]] : !fir.ref<!fir.array<?xnone>>, !fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>
+! CHECK:             fir.result %[[VAL_7]], %[[VAL_8]], %[[VAL_9]] : !fir.ref<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>
 ! CHECK:           }
 ! CHECK:           fir.call @_QPs4b(%[[VAL_10:.*]]#0) fastmath<contract> : (!fir.ref<!fir.array<?xnone>>) -> ()
-! CHECK:           hlfir.copy_out %[[VAL_10]]#1, %[[VAL_10]]#2 to %[[VAL_10]]#3 : (!fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>) -> ()
+! CHECK:           hlfir.copy_out %[[TMP_BOX]], %[[VAL_10]]#1 to %[[VAL_10]]#2 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xnone>>>>, i1, !fir.box<!fir.array<?xnone>>) -> ()
 ! CHECK:           return
 ! CHECK:         }
 
@@ -219,18 +217,17 @@ end subroutine
 ! CHECK:           %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtest5bEx"} : (!fir.box<!fir.array<?xnone>>, !fir.dscope) -> (!fir.box<!fir.array<?xnone>>, !fir.box<!fir.array<?xnone>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.is_present %[[VAL_1]]#0 : (!fir.box<!fir.array<?xnone>>) -> i1
-! CHECK:           %[[VAL_3:.*]]:4 = fir.if %[[VAL_2]] -> (!fir.box<!fir.array<?xnone>>, !fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>) {
-! CHECK:             %[[VAL_4:.*]]:2 = hlfir.copy_in %[[VAL_1]]#0 : (!fir.box<!fir.array<?xnone>>) -> (!fir.box<!fir.array<?xnone>>, i1)
-! CHECK:             fir.result %[[VAL_4]]#0, %[[VAL_4]]#0, %[[VAL_4]]#1, %[[VAL_1]]#0 : !fir.box<!fir.array<?xnone>>, !fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>
+! CHECK:           %[[VAL_3:.*]]:3 = fir.if %[[VAL_2]] -> (!fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>) {
+! CHECK:             %[[VAL_4:.*]]:2 = hlfir.copy_in %[[VAL_1]]#0 to %[[TMP_BOX:.*]] : (!fir.box<!fir.array<?xnone>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xnone>>>>) -> (!fir.box<!fir.array<?xnone>>, i1)
+! CHECK:             fir.result %[[VAL_4]]#0, %[[VAL_4]]#1, %[[VAL_1]]#0 : !fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>
 ! CHECK:           } else {
-! CHECK:             %[[VAL_5:.*]] = fir.absent !fir.box<!fir.array<?xnone>>
 ! CHECK:             %[[VAL_6:.*]] = fir.absent !fir.box<!fir.array<?xnone>>
 ! CHECK:             %[[VAL_7:.*]] = arith.constant false
 ! CHECK:             %[[VAL_8:.*]] = fir.absent !fir.box<!fir.array<?xnone>>
-! CHECK:             fir.result %[[VAL_5]], %[[VAL_6]], %[[VAL_7]], %[[VAL_8]] : !fir.box<!fir.array<?xnone>>, !fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>
+! CHECK:             fir.result %[[VAL_6]], %[[VAL_7]], %[[VAL_8]] : !fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>
 ! CHECK:           }
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_10:.*]]#0 : (!fir.box<!fir.array<?xnone>>) -> !fir.box<!fir.array<*:none>>
 ! CHECK:           fir.call @_QPs5b(%[[VAL_9]]) fastmath<contract> : (!fir.box<!fir.array<*:none>>) -> ()
-! CHECK:           hlfir.copy_out %[[VAL_10]]#1, %[[VAL_10]]#2 to %[[VAL_10]]#3 : (!fir.box<!fir.array<?xnone>>, i1, !fir.box<!fir.array<?xnone>>) -> ()
+! CHECK:           hlfir.copy_out %[[TMP_BOX]], %[[VAL_10]]#1 to %[[VAL_10]]#2 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xnone>>>>, i1, !fir.box<!fir.array<?xnone>>) -> ()
 ! CHECK:           return
 ! CHECK:         }

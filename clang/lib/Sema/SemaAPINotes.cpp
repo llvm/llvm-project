@@ -18,6 +18,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaSwift.h"
+#include <stack>
 
 using namespace clang;
 
@@ -545,6 +546,13 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
                   Metadata);
 }
 
+/// Process API notes for a C++ method.
+static void ProcessAPINotes(Sema &S, CXXMethodDecl *Method,
+                            const api_notes::CXXMethodInfo &Info,
+                            VersionedInfoMetadata Metadata) {
+  ProcessAPINotes(S, (FunctionOrMethod)Method, Info, Metadata);
+}
+
 /// Process API notes for a global function.
 static void ProcessAPINotes(Sema &S, FunctionDecl *D,
                             const api_notes::GlobalFunctionInfo &Info,
@@ -673,7 +681,7 @@ static void ProcessAPINotes(Sema &S, TypedefNameDecl *D,
 
 /// Process API notes for an Objective-C class or protocol.
 static void ProcessAPINotes(Sema &S, ObjCContainerDecl *D,
-                            const api_notes::ObjCContextInfo &Info,
+                            const api_notes::ContextInfo &Info,
                             VersionedInfoMetadata Metadata) {
   // Handle common type information.
   ProcessAPINotes(S, D, static_cast<const api_notes::CommonTypeInfo &>(Info),
@@ -682,7 +690,7 @@ static void ProcessAPINotes(Sema &S, ObjCContainerDecl *D,
 
 /// Process API notes for an Objective-C class.
 static void ProcessAPINotes(Sema &S, ObjCInterfaceDecl *D,
-                            const api_notes::ObjCContextInfo &Info,
+                            const api_notes::ContextInfo &Info,
                             VersionedInfoMetadata Metadata) {
   if (auto AsNonGeneric = Info.getSwiftImportAsNonGeneric()) {
     handleAPINotedAttribute<SwiftImportAsNonGenericAttr>(
@@ -775,6 +783,64 @@ static void ProcessVersionedAPINotes(
   }
 }
 
+static std::optional<api_notes::Context>
+UnwindNamespaceContext(DeclContext *DC, api_notes::APINotesManager &APINotes) {
+  if (auto NamespaceContext = dyn_cast<NamespaceDecl>(DC)) {
+    for (auto Reader : APINotes.findAPINotes(NamespaceContext->getLocation())) {
+      // Retrieve the context ID for the parent namespace of the decl.
+      std::stack<NamespaceDecl *> NamespaceStack;
+      {
+        for (auto CurrentNamespace = NamespaceContext; CurrentNamespace;
+             CurrentNamespace =
+                 dyn_cast<NamespaceDecl>(CurrentNamespace->getParent())) {
+          if (!CurrentNamespace->isInlineNamespace())
+            NamespaceStack.push(CurrentNamespace);
+        }
+      }
+      std::optional<api_notes::ContextID> NamespaceID;
+      while (!NamespaceStack.empty()) {
+        auto CurrentNamespace = NamespaceStack.top();
+        NamespaceStack.pop();
+        NamespaceID =
+            Reader->lookupNamespaceID(CurrentNamespace->getName(), NamespaceID);
+        if (!NamespaceID)
+          return std::nullopt;
+      }
+      if (NamespaceID)
+        return api_notes::Context(*NamespaceID,
+                                  api_notes::ContextKind::Namespace);
+    }
+  }
+  return std::nullopt;
+}
+
+static std::optional<api_notes::Context>
+UnwindTagContext(TagDecl *DC, api_notes::APINotesManager &APINotes) {
+  assert(DC && "tag context must not be null");
+  for (auto Reader : APINotes.findAPINotes(DC->getLocation())) {
+    // Retrieve the context ID for the parent tag of the decl.
+    std::stack<TagDecl *> TagStack;
+    {
+      for (auto CurrentTag = DC; CurrentTag;
+           CurrentTag = dyn_cast<TagDecl>(CurrentTag->getParent()))
+        TagStack.push(CurrentTag);
+    }
+    assert(!TagStack.empty());
+    std::optional<api_notes::Context> Ctx =
+        UnwindNamespaceContext(TagStack.top()->getDeclContext(), APINotes);
+    while (!TagStack.empty()) {
+      auto CurrentTag = TagStack.top();
+      TagStack.pop();
+      auto CtxID = Reader->lookupTagID(CurrentTag->getName(), Ctx);
+      if (!CtxID)
+        return std::nullopt;
+      Ctx = api_notes::Context(*CtxID, api_notes::ContextKind::Tag);
+    }
+    return Ctx;
+  }
+  return std::nullopt;
+}
+
 /// Process API notes that are associated with this declaration, mapping them
 /// to attributes as appropriate.
 void Sema::ProcessAPINotes(Decl *D) {
@@ -786,35 +852,8 @@ void Sema::ProcessAPINotes(Decl *D) {
       D->getDeclContext()->isNamespace() ||
       D->getDeclContext()->isExternCContext() ||
       D->getDeclContext()->isExternCXXContext()) {
-    std::optional<api_notes::Context> APINotesContext;
-    if (auto NamespaceContext = dyn_cast<NamespaceDecl>(D->getDeclContext())) {
-      for (auto Reader :
-           APINotes.findAPINotes(NamespaceContext->getLocation())) {
-        // Retrieve the context ID for the parent namespace of the decl.
-        std::stack<NamespaceDecl *> NamespaceStack;
-        {
-          for (auto CurrentNamespace = NamespaceContext; CurrentNamespace;
-               CurrentNamespace =
-                   dyn_cast<NamespaceDecl>(CurrentNamespace->getParent())) {
-            if (!CurrentNamespace->isInlineNamespace())
-              NamespaceStack.push(CurrentNamespace);
-          }
-        }
-        std::optional<api_notes::ContextID> NamespaceID;
-        while (!NamespaceStack.empty()) {
-          auto CurrentNamespace = NamespaceStack.top();
-          NamespaceStack.pop();
-          NamespaceID = Reader->lookupNamespaceID(CurrentNamespace->getName(),
-                                                  NamespaceID);
-          if (!NamespaceID)
-            break;
-        }
-        if (NamespaceID)
-          APINotesContext = api_notes::Context(
-              *NamespaceID, api_notes::ContextKind::Namespace);
-      }
-    }
-
+    std::optional<api_notes::Context> APINotesContext =
+        UnwindNamespaceContext(D->getDeclContext(), APINotes);
     // Global variables.
     if (auto VD = dyn_cast<VarDecl>(D)) {
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
@@ -886,6 +925,8 @@ void Sema::ProcessAPINotes(Decl *D) {
       }
 
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+        if (auto ParentTag = dyn_cast<TagDecl>(Tag->getDeclContext()))
+          APINotesContext = UnwindTagContext(ParentTag, APINotes);
         auto Info = Reader->lookupTag(LookupName, APINotesContext);
         ProcessVersionedAPINotes(*this, Tag, Info);
       }
@@ -998,6 +1039,27 @@ void Sema::ProcessAPINotes(Decl *D) {
       }
 
       return;
+    }
+  }
+
+  if (auto TagContext = dyn_cast<TagDecl>(D->getDeclContext())) {
+    if (auto CXXMethod = dyn_cast<CXXMethodDecl>(D)) {
+      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+        if (auto Context = UnwindTagContext(TagContext, APINotes)) {
+          auto Info =
+              Reader->lookupCXXMethod(Context->id, CXXMethod->getName());
+          ProcessVersionedAPINotes(*this, CXXMethod, Info);
+        }
+      }
+    }
+
+    if (auto Tag = dyn_cast<TagDecl>(D)) {
+      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+        if (auto Context = UnwindTagContext(TagContext, APINotes)) {
+          auto Info = Reader->lookupTag(Tag->getName(), Context);
+          ProcessVersionedAPINotes(*this, Tag, Info);
+        }
+      }
     }
   }
 }

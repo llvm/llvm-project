@@ -314,8 +314,10 @@ bool X86_64::relaxOnce(int pass) const {
     minVA = std::min(minVA, osec->addr);
     maxVA = std::max(maxVA, osec->addr + osec->size);
   }
-  // If the max VA difference is under 2^31, GOT-generating relocations with a 32-bit range cannot overflow.
-  if (isUInt<31>(maxVA - minVA))
+  // If the max VA is under 2^31, GOTPCRELX relocations cannot overfow. In
+  // -pie/-shared, the condition can be relaxed to test the max VA difference as
+  // there is no R_RELAX_GOT_PC_NOPIC.
+  if (isUInt<31>(maxVA) || (isUInt<31>(maxVA - minVA) && config->isPic))
     return false;
 
   SmallVector<InputSection *, 0> storage;
@@ -325,13 +327,14 @@ bool X86_64::relaxOnce(int pass) const {
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {
       for (Relocation &rel : sec->relocs()) {
-        if (rel.expr != R_RELAX_GOT_PC)
+        if (rel.expr != R_RELAX_GOT_PC && rel.expr != R_RELAX_GOT_PC_NOPIC)
           continue;
+        assert(rel.addend == -4);
 
-        uint64_t v = sec->getRelocTargetVA(sec->file, rel.type, rel.addend,
-                                           sec->getOutputSection()->addr +
-                                               sec->outSecOff + rel.offset,
-                                           *rel.sym, rel.expr);
+        uint64_t v = sec->getRelocTargetVA(
+            sec->file, rel.type, rel.expr == R_RELAX_GOT_PC_NOPIC ? 0 : -4,
+            sec->getOutputSection()->addr + sec->outSecOff + rel.offset,
+            *rel.sym, rel.expr);
         if (isInt<32>(v))
           continue;
         if (rel.sym->auxIdx == 0) {

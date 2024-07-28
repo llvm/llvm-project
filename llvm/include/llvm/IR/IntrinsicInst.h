@@ -569,6 +569,10 @@ public:
   /// The llvm.vp.* intrinsics for this instruction Opcode
   static Intrinsic::ID getForOpcode(unsigned OC);
 
+  /// The llvm.vp.* intrinsics for this intrinsic ID \p Id. Return \p Id if it
+  /// is already a VP intrinsic.
+  static Intrinsic::ID getForIntrinsic(Intrinsic::ID Id);
+
   // Whether \p ID is a VP intrinsic ID.
   static bool isVPIntrinsic(Intrinsic::ID);
 
@@ -831,6 +835,43 @@ public:
   /// their value can no longer change. Return said threshold.
   Constant *getSaturationPoint(Type *Ty) const {
     return getSaturationPoint(getIntrinsicID(), Ty);
+  }
+};
+
+/// This class represents a ucmp/scmp intrinsic
+class CmpIntrinsic : public IntrinsicInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    switch (I->getIntrinsicID()) {
+    case Intrinsic::scmp:
+    case Intrinsic::ucmp:
+      return true;
+    default:
+      return false;
+    }
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+
+  Value *getLHS() const { return const_cast<Value *>(getArgOperand(0)); }
+  Value *getRHS() const { return const_cast<Value *>(getArgOperand(1)); }
+
+  static bool isSigned(Intrinsic::ID ID) { return ID == Intrinsic::scmp; }
+  bool isSigned() const { return isSigned(getIntrinsicID()); }
+
+  static CmpInst::Predicate getGTPredicate(Intrinsic::ID ID) {
+    return isSigned(ID) ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
+  }
+  CmpInst::Predicate getGTPredicate() const {
+    return getGTPredicate(getIntrinsicID());
+  }
+
+  static CmpInst::Predicate getLTPredicate(Intrinsic::ID ID) {
+    return isSigned(ID) ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
+  }
+  CmpInst::Predicate getLTPredicate() const {
+    return getLTPredicate(getIntrinsicID());
   }
 };
 
@@ -1203,9 +1244,6 @@ public:
 /// This class wraps the llvm.memset.inline intrinsic.
 class MemSetInlineInst : public MemSetInst {
 public:
-  ConstantInt *getLength() const {
-    return cast<ConstantInt>(MemSetInst::getLength());
-  }
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::memset_inline;
@@ -1262,9 +1300,6 @@ public:
 /// This class wraps the llvm.memcpy.inline intrinsic.
 class MemCpyInlineInst : public MemCpyInst {
 public:
-  ConstantInt *getLength() const {
-    return cast<ConstantInt>(MemCpyInst::getLength());
-  }
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::memcpy_inline;
@@ -1455,9 +1490,7 @@ protected:
 public:
   static bool classof(const Value *V) {
     if (const auto *Instr = dyn_cast<IntrinsicInst>(V))
-      return isCounterBase(*Instr) || isMCDCBitmapBase(*Instr) ||
-             Instr->getIntrinsicID() ==
-                 Intrinsic::instrprof_mcdc_condbitmap_update;
+      return isCounterBase(*Instr) || isMCDCBitmapBase(*Instr);
     return false;
   }
   // The name of the instrumented function.
@@ -1618,42 +1651,13 @@ public:
   /// \return The index of the TestVector Bitmap upon which this intrinsic
   /// acts.
   ConstantInt *getBitmapIndex() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(3)));
+    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
   }
 
   /// \return The address of the corresponding condition bitmap containing
   /// the index of the TestVector to update within the TestVector Bitmap.
   Value *getMCDCCondBitmapAddr() const {
-    return cast<Value>(const_cast<Value *>(getArgOperand(4)));
-  }
-};
-
-/// This represents the llvm.instrprof.mcdc.condbitmap.update intrinsic.
-/// It does not pertain to global bitmap updates or parameters and so doesn't
-/// inherit from InstrProfMCDCBitmapInstBase.
-class InstrProfMCDCCondBitmapUpdate : public InstrProfInstBase {
-public:
-  static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::instrprof_mcdc_condbitmap_update;
-  }
-  static bool classof(const Value *V) {
-    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-  }
-
-  /// \return The ID of the condition to update.
-  ConstantInt *getCondID() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
-  }
-
-  /// \return The address of the corresponding condition bitmap.
-  Value *getMCDCCondBitmapAddr() const {
     return cast<Value>(const_cast<Value *>(getArgOperand(3)));
-  }
-
-  /// \return The boolean value to set in the condition bitmap for the
-  /// corresponding condition ID. This represents how the condition evaluated.
-  Value *getCondBool() const {
-    return cast<Value>(const_cast<Value *>(getArgOperand(4)));
   }
 };
 

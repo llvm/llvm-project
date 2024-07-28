@@ -36,6 +36,11 @@ struct AArch64FunctionInfo;
 class AArch64Subtarget;
 class MachineInstr;
 
+struct TPIDR2Object {
+  int FrameIndex = std::numeric_limits<int>::max();
+  unsigned Uses = 0;
+};
+
 /// AArch64FunctionInfo - This class is derived from MachineFunctionInfo and
 /// contains private AArch64-specific information for each MachineFunction.
 class AArch64FunctionInfo final : public MachineFunctionInfo {
@@ -103,6 +108,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// Size of the varargs area for arguments passed in floating-point
   /// registers.
   unsigned VarArgsFPRSize = 0;
+
+  /// The stack slots used to add space between FPR and GPR accesses when using
+  /// hazard padding. StackHazardCSRSlotIndex is added between GPR and FPR CSRs.
+  /// StackHazardSlotIndex is added between (sorted) stack objects.
+  int StackHazardSlotIndex = std::numeric_limits<int>::max();
+  int StackHazardCSRSlotIndex = std::numeric_limits<int>::max();
 
   /// True if this function has a subset of CSRs that is handled explicitly via
   /// copies.
@@ -196,7 +207,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   bool IsSVECC = false;
 
   /// The frame-index for the TPIDR2 object used for lazy saves.
-  Register LazySaveTPIDR2Obj = 0;
+  TPIDR2Object TPIDR2;
 
   /// Whether this function changes streaming mode within the function.
   bool HasStreamingModeChanges = false;
@@ -248,8 +259,7 @@ public:
   bool isSVECC() const { return IsSVECC; };
   void setIsSVECC(bool s) { IsSVECC = s; };
 
-  unsigned getLazySaveTPIDR2Obj() const { return LazySaveTPIDR2Obj; }
-  void setLazySaveTPIDR2Obj(unsigned Reg) { LazySaveTPIDR2Obj = Reg; }
+  TPIDR2Object &getTPIDR2Obj() { return TPIDR2; }
 
   void initializeBaseYamlFields(const yaml::AArch64FunctionInfo &YamlMFI);
 
@@ -342,6 +352,13 @@ public:
         MaxOffset = std::max<int64_t>(Offset + ObjSize, MaxOffset);
       }
 
+      if (StackHazardCSRSlotIndex != std::numeric_limits<int>::max()) {
+        int64_t Offset = MFI.getObjectOffset(StackHazardCSRSlotIndex);
+        int64_t ObjSize = MFI.getObjectSize(StackHazardCSRSlotIndex);
+        MinOffset = std::min<int64_t>(Offset, MinOffset);
+        MaxOffset = std::max<int64_t>(Offset + ObjSize, MaxOffset);
+      }
+
       unsigned Size = alignTo(MaxOffset - MinOffset, 16);
       assert((!HasCalleeSavedStackSize || getCalleeSavedStackSize() == Size) &&
              "Invalid size calculated for callee saves");
@@ -398,6 +415,20 @@ public:
 
   unsigned getVarArgsFPRSize() const { return VarArgsFPRSize; }
   void setVarArgsFPRSize(unsigned Size) { VarArgsFPRSize = Size; }
+
+  bool hasStackHazardSlotIndex() const {
+    return StackHazardSlotIndex != std::numeric_limits<int>::max();
+  }
+  int getStackHazardSlotIndex() const { return StackHazardSlotIndex; }
+  void setStackHazardSlotIndex(int Index) {
+    assert(StackHazardSlotIndex == std::numeric_limits<int>::max());
+    StackHazardSlotIndex = Index;
+  }
+  int getStackHazardCSRSlotIndex() const { return StackHazardCSRSlotIndex; }
+  void setStackHazardCSRSlotIndex(int Index) {
+    assert(StackHazardCSRSlotIndex == std::numeric_limits<int>::max());
+    StackHazardCSRSlotIndex = Index;
+  }
 
   unsigned getSRetReturnReg() const { return SRetReturnReg; }
   void setSRetReturnReg(unsigned Reg) { SRetReturnReg = Reg; }

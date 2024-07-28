@@ -36,6 +36,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -3224,18 +3225,18 @@ int X86::getCCMPCondFlagsFromCondCode(X86::CondCode CC) {
 #define GET_X86_NF_TRANSFORM_TABLE
 #define GET_X86_ND2NONND_TABLE
 #include "X86GenInstrMapping.inc"
-unsigned X86::getNFVariant(unsigned Opc) {
-  ArrayRef<X86TableEntry> Table = ArrayRef(X86NFTransformTable);
+
+static unsigned getNewOpcFromTable(ArrayRef<X86TableEntry> Table,
+                                   unsigned Opc) {
   const auto I = llvm::lower_bound(Table, Opc);
   return (I == Table.end() || I->OldOpc != Opc) ? 0U : I->NewOpc;
 }
+unsigned X86::getNFVariant(unsigned Opc) {
+  return getNewOpcFromTable(X86NFTransformTable, Opc);
+}
 
-static unsigned getNonNDVariant(unsigned Opc, const X86Subtarget &STI) {
-  if (!STI.hasNDD())
-    return 0U;
-  ArrayRef<X86TableEntry> Table = ArrayRef(X86ND2NonNDTable);
-  const auto I = llvm::lower_bound(Table, Opc);
-  return (I == Table.end() || I->OldOpc != Opc) ? 0U : I->NewOpc;
+unsigned X86::getNonNDVariant(unsigned Opc) {
+  return getNewOpcFromTable(X86ND2NonNDTable, Opc);
 }
 
 /// Return the inverse of the specified condition,
@@ -5587,7 +5588,7 @@ MachineInstr *X86InstrInfo::optimizeLoadInstr(MachineInstr &MI,
   DefMI = MRI->getVRegDef(FoldAsLoadDefReg);
   assert(DefMI);
   bool SawStore = false;
-  if (!DefMI->isSafeToMove(nullptr, SawStore))
+  if (!DefMI->isSafeToMove(SawStore))
     return nullptr;
 
   // Collect information about virtual register operands of MI.
@@ -7393,7 +7394,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   // replacing the *two* registers with the memory location.
   //
   // Utilize the mapping NonNDD -> RMW for the NDD variant.
-  unsigned NonNDOpc = getNonNDVariant(Opc, Subtarget);
+  unsigned NonNDOpc = Subtarget.hasNDD() ? X86::getNonNDVariant(Opc) : 0U;
   const X86FoldTableEntry *I =
       IsTwoAddr ? lookupTwoAddrFoldTable(NonNDOpc ? NonNDOpc : Opc)
                 : lookupFoldTable(Opc, OpNum);
@@ -7514,7 +7515,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     switch (Opc) {
     default:
       // NDD can be folded into RMW though its Op0 and Op1 are not tied.
-      return getNonNDVariant(Opc, Subtarget) ? Impl() : nullptr;
+      return (Subtarget.hasNDD() ? X86::getNonNDVariant(Opc) : 0U) ? Impl()
+                                                                   : nullptr;
     case X86::TEST8rr:
       NewOpc = X86::CMP8ri;
       RCSize = 1;
@@ -8829,6 +8831,11 @@ bool X86InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   unsigned Opcode = MI.getOpcode();
   if (Opcode == X86::ENDBR64 || Opcode == X86::ENDBR32 ||
       Opcode == X86::PLDTILECFGV)
+    return true;
+
+  // Frame setup and destory can't be scheduled around.
+  if (MI.getFlag(MachineInstr::FrameSetup) ||
+      MI.getFlag(MachineInstr::FrameDestroy))
     return true;
 
   return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
@@ -10461,6 +10468,7 @@ enum MachineOutlinerClass { MachineOutlinerDefault, MachineOutlinerTailCall };
 
 std::optional<outliner::OutlinedFunction>
 X86InstrInfo::getOutliningCandidateInfo(
+    const MachineModuleInfo &MMI,
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
   unsigned SequenceSize = 0;
   for (auto &MI : RepeatedSequenceLocs[0]) {
@@ -10537,7 +10545,8 @@ bool X86InstrInfo::isFunctionSafeToOutlineFrom(
 }
 
 outliner::InstrType
-X86InstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
+X86InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                                   MachineBasicBlock::iterator &MIT,
                                    unsigned Flags) const {
   MachineInstr &MI = *MIT;
 

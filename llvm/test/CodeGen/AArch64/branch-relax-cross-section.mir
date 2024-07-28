@@ -473,8 +473,8 @@ body:             |
   ; INDIRECT-NEXT:    successors: %bb.1
   ; INDIRECT-NEXT:    liveins: $x16
   ; INDIRECT-NEXT:    {{ $}}
-  ; INDIRECT-NEXT:    $[[SCAVENGED_REGISTER:x[0-9]+]] = ADRP target-flags(aarch64-page) <mcsymbol .LBB5_1>
-  ; INDIRECT-NEXT:    $[[SCAVENGED_REGISTER]] = ADDXri $[[SCAVENGED_REGISTER]], target-flags(aarch64-pageoff, aarch64-nc) <mcsymbol .LBB5_1>, 0
+  ; INDIRECT-NEXT:    $[[SCAVENGED_REGISTER:x[0-9]+]] = ADRP target-flags(aarch64-page) <mcsymbol >
+  ; INDIRECT-NEXT:    $[[SCAVENGED_REGISTER]] = ADDXri $[[SCAVENGED_REGISTER]], target-flags(aarch64-pageoff, aarch64-nc) <mcsymbol >, 0
   ; INDIRECT-NEXT:    BR $[[SCAVENGED_REGISTER]]
 
   bb.0.entry:

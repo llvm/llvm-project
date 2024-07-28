@@ -37,8 +37,8 @@ public:
                         .getCurrentWorkingDirectory())
         WorkingDir = *WD;
       std::string FinalSpelling = Input.HS.suggestPathToFileForDiagnostics(
-          Input.H.resolvedPath(), WorkingDir, Input.Main->tryGetRealPathName(),
-          &IsAngled);
+          Input.H.physical().getName(), WorkingDir,
+          Input.Main->tryGetRealPathName(), &IsAngled);
       return IsAngled ? "<" + FinalSpelling + ">" : "\"" + FinalSpelling + "\"";
     }
     llvm_unreachable("Unknown clang::include_cleaner::Header::Kind enum");

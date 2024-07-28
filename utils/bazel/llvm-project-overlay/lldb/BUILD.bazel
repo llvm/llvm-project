@@ -108,6 +108,9 @@ expand_template(
         # TODO: lua support
         "#cmakedefine01 LLDB_ENABLE_LUA": "#define LLDB_ENABLE_LUA 0",
 
+        # TODO: curl support
+        "#cmakedefine01 LLVM_ENABLE_CURL": "#define LLVM_ENABLE_CURL 0",
+
         # TODO: python support
         "#cmakedefine01 LLDB_ENABLE_PYTHON": "#define LLDB_ENABLE_PYTHON 0",
         # Only enabled by default on Windows
@@ -429,6 +432,7 @@ cc_library(
         ":Version",
         "//clang:codegen",
         "//clang:frontend",
+        "//clang:serialization",
         "//llvm:Support",
     ],
 )
@@ -694,6 +698,7 @@ cc_library(
         ":TargetHeaders",
         ":TargetProperties",
         ":Utility",
+        "//clang:codegen",
         "//lldb/source/Plugins:PluginProcessUtility",
         "//llvm:BinaryFormat",
         "//llvm:MC",
@@ -703,7 +708,9 @@ cc_library(
 
 cc_library(
     name = "Headers",
-    hdrs = glob(["include/lldb/lldb-*.h"]),
+    hdrs = glob(["include/lldb/lldb-*.h"]) + [
+        "include/lldb/Symbol/SaveCoreOptions.h",
+    ],
     strip_include_prefix = "include",
 )
 
@@ -869,7 +876,7 @@ cc_library(
     ],
 )
 
-genrule(
+apple_genrule(
     name = "mach_gen",
     srcs = ["tools/debugserver/source/MacOSX/dbgnub-mig.defs"],
     outs = [
@@ -878,7 +885,10 @@ genrule(
         "mach_excUser.c",
     ],
     cmd = "mig -header $(location :mach_exc.h) -server $(location :mach_excServer.c) -user $(location :mach_excUser.c) $(SRCS)",
-    tags = ["nobuildkite"],
+    tags = [
+        "manual",
+        "nobuildkite",
+    ],
     target_compatible_with = select({
         "@platforms//os:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],

@@ -42,9 +42,9 @@ public:
     StorageType v = 0;
     for (int i = 0; i <= COUNT; ++i, v += STEP) {
       FPBits x_bits = FPBits(v);
-      T x = T(v);
       if (x_bits.is_nan() || x_bits.is_inf())
         continue;
+      T x = x_bits.get_val();
 
       T res1 = func(x, -x);
       ASSERT_FP_EQ(res1, -x);

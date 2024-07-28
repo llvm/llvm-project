@@ -33,7 +33,8 @@ uptr PremapShadowSize() {
 // PremapShadowSize() bytes on the right of it are mapped r/o.
 uptr PremapShadow() {
   return MapDynamicShadow(PremapShadowSize(), /*mmap_alignment_scale*/ 3,
-                          /*min_shadow_base_alignment*/ 0, kHighMemEnd);
+                          /*min_shadow_base_alignment*/ 0, kHighMemEnd,
+                          GetMmapGranularity());
 }
 
 bool PremapShadowFailed() {

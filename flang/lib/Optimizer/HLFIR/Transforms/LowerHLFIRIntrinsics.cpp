@@ -22,7 +22,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include <optional>
 
@@ -235,7 +234,7 @@ protected:
   };
 
 public:
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(OP operation,
                   mlir::PatternRewriter &rewriter) const override {
     std::string opName;
@@ -311,7 +310,7 @@ using AllOpConversion = HlfirReductionIntrinsicConversion<hlfir::AllOp>;
 struct CountOpConversion : public HlfirIntrinsicConversion<hlfir::CountOp> {
   using HlfirIntrinsicConversion<hlfir::CountOp>::HlfirIntrinsicConversion;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::CountOp count,
                   mlir::PatternRewriter &rewriter) const override {
     fir::FirOpBuilder builder{rewriter, count.getOperation()};
@@ -345,7 +344,7 @@ struct CountOpConversion : public HlfirIntrinsicConversion<hlfir::CountOp> {
 struct MatmulOpConversion : public HlfirIntrinsicConversion<hlfir::MatmulOp> {
   using HlfirIntrinsicConversion<hlfir::MatmulOp>::HlfirIntrinsicConversion;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::MatmulOp matmul,
                   mlir::PatternRewriter &rewriter) const override {
     fir::FirOpBuilder builder{rewriter, matmul.getOperation()};
@@ -376,7 +375,7 @@ struct DotProductOpConversion
     : public HlfirIntrinsicConversion<hlfir::DotProductOp> {
   using HlfirIntrinsicConversion<hlfir::DotProductOp>::HlfirIntrinsicConversion;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::DotProductOp dotProduct,
                   mlir::PatternRewriter &rewriter) const override {
     fir::FirOpBuilder builder{rewriter, dotProduct.getOperation()};
@@ -407,7 +406,7 @@ class TransposeOpConversion
     : public HlfirIntrinsicConversion<hlfir::TransposeOp> {
   using HlfirIntrinsicConversion<hlfir::TransposeOp>::HlfirIntrinsicConversion;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::TransposeOp transpose,
                   mlir::PatternRewriter &rewriter) const override {
     fir::FirOpBuilder builder{rewriter, transpose.getOperation()};
@@ -437,7 +436,7 @@ struct MatmulTransposeOpConversion
   using HlfirIntrinsicConversion<
       hlfir::MatmulTransposeOp>::HlfirIntrinsicConversion;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::MatmulTransposeOp multranspose,
                   mlir::PatternRewriter &rewriter) const override {
     fir::FirOpBuilder builder{rewriter, multranspose.getOperation()};
@@ -486,7 +485,8 @@ public:
     // Pattern rewriting only requires that the resulting IR is still valid
     mlir::GreedyRewriteConfig config;
     // Prevent the pattern driver from merging blocks
-    config.enableRegionSimplification = false;
+    config.enableRegionSimplification =
+        mlir::GreedySimplifyRegionLevel::Disabled;
 
     if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
             module, std::move(patterns), config))) {

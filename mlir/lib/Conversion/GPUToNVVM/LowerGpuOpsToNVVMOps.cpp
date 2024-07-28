@@ -309,10 +309,11 @@ void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
   target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
   target.addLegalDialect<::mlir::NVVM::NVVMDialect>();
   target.addIllegalDialect<gpu::GPUDialect>();
-  target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op, LLVM::FAbsOp,
-                      LLVM::FCeilOp, LLVM::FFloorOp, LLVM::FRemOp, LLVM::LogOp,
-                      LLVM::Log10Op, LLVM::Log2Op, LLVM::PowOp, LLVM::SinOp,
-                      LLVM::SqrtOp>();
+  target.addIllegalOp<LLVM::CopySignOp, LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op,
+                      LLVM::FAbsOp, LLVM::FCeilOp, LLVM::FFloorOp, LLVM::FMAOp,
+                      LLVM::FRemOp, LLVM::LogOp, LLVM::Log10Op, LLVM::Log2Op,
+                      LLVM::PowOp, LLVM::RoundEvenOp, LLVM::RoundOp,
+                      LLVM::SinOp, LLVM::SqrtOp>();
 
   // TODO: Remove once we support replacing non-root ops.
   target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
@@ -321,9 +322,11 @@ void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
 template <typename OpTy>
 static void populateOpPatterns(LLVMTypeConverter &converter,
                                RewritePatternSet &patterns, StringRef f32Func,
-                               StringRef f64Func) {
+                               StringRef f64Func,
+                               StringRef f32ApproxFunc = "") {
   patterns.add<ScalarizeVectorOpLowering<OpTy>>(converter);
-  patterns.add<OpToFuncCallLowering<OpTy>>(converter, f32Func, f64Func);
+  patterns.add<OpToFuncCallLowering<OpTy>>(converter, f32Func, f64Func,
+                                           f32ApproxFunc);
 }
 
 void mlir::populateGpuSubgroupReduceOpLoweringPattern(
@@ -336,24 +339,23 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
   populateWithGenerated(patterns);
   patterns.add<GPUPrintfOpToVPrintfLowering>(converter);
   patterns.add<
-      GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, NVVM::ThreadIdXOp,
-                                  NVVM::ThreadIdYOp, NVVM::ThreadIdZOp>,
-      GPUIndexIntrinsicOpLowering<gpu::BlockDimOp, NVVM::BlockDimXOp,
-                                  NVVM::BlockDimYOp, NVVM::BlockDimZOp>,
-      GPUIndexIntrinsicOpLowering<gpu::ClusterIdOp, NVVM::ClusterIdXOp,
-                                  NVVM::ClusterIdYOp, NVVM::ClusterIdZOp>,
-      GPUIndexIntrinsicOpLowering<
+      gpu::index_lowering::OpLowering<gpu::ThreadIdOp, NVVM::ThreadIdXOp,
+                                      NVVM::ThreadIdYOp, NVVM::ThreadIdZOp>,
+      gpu::index_lowering::OpLowering<gpu::BlockDimOp, NVVM::BlockDimXOp,
+                                      NVVM::BlockDimYOp, NVVM::BlockDimZOp>,
+      gpu::index_lowering::OpLowering<gpu::ClusterIdOp, NVVM::ClusterIdXOp,
+                                      NVVM::ClusterIdYOp, NVVM::ClusterIdZOp>,
+      gpu::index_lowering::OpLowering<gpu::ClusterDimOp, NVVM::ClusterDimXOp,
+                                      NVVM::ClusterDimYOp, NVVM::ClusterDimZOp>,
+      gpu::index_lowering::OpLowering<
           gpu::ClusterBlockIdOp, NVVM::BlockInClusterIdXOp,
           NVVM::BlockInClusterIdYOp, NVVM::BlockInClusterIdZOp>,
-      GPUIndexIntrinsicOpLowering<gpu::ClusterDimOp, NVVM::ClusterDimXOp,
-                                  NVVM::ClusterDimYOp, NVVM::ClusterDimZOp>,
-      GPUIndexIntrinsicOpLowering<
-          gpu::ClusterDimBlocksOp, NVVM::ClusterDimBlocksXOp,
-          NVVM::ClusterDimBlocksYOp, NVVM::ClusterDimBlocksZOp>,
-      GPUIndexIntrinsicOpLowering<gpu::BlockIdOp, NVVM::BlockIdXOp,
-                                  NVVM::BlockIdYOp, NVVM::BlockIdZOp>,
-      GPUIndexIntrinsicOpLowering<gpu::GridDimOp, NVVM::GridDimXOp,
-                                  NVVM::GridDimYOp, NVVM::GridDimZOp>,
+      gpu::index_lowering::OpLowering<gpu::ClusterDimOp, NVVM::ClusterDimXOp,
+                                      NVVM::ClusterDimYOp, NVVM::ClusterDimZOp>,
+      gpu::index_lowering::OpLowering<gpu::BlockIdOp, NVVM::BlockIdXOp,
+                                      NVVM::BlockIdYOp, NVVM::BlockIdZOp>,
+      gpu::index_lowering::OpLowering<gpu::GridDimOp, NVVM::GridDimXOp,
+                                      NVVM::GridDimYOp, NVVM::GridDimZOp>,
       GPULaneIdOpToNVVM, GPUShuffleOpLowering, GPUReturnOpLowering>(converter);
 
   patterns.add<GPUDynamicSharedMemoryOpLowering>(
@@ -371,42 +373,68 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
       StringAttr::get(&converter.getContext(),
                       NVVM::NVVMDialect::getMaxntidAttrName()));
 
+  populateOpPatterns<arith::RemFOp>(converter, patterns, "__nv_fmodf",
+                                    "__nv_fmod");
   populateOpPatterns<math::AbsFOp>(converter, patterns, "__nv_fabsf",
                                    "__nv_fabs");
+  populateOpPatterns<math::AcosOp>(converter, patterns, "__nv_acosf",
+                                   "__nv_acos");
+  populateOpPatterns<math::AcoshOp>(converter, patterns, "__nv_acoshf",
+                                    "__nv_acosh");
+  populateOpPatterns<math::AsinOp>(converter, patterns, "__nv_asinf",
+                                   "__nv_asin");
+  populateOpPatterns<math::AsinhOp>(converter, patterns, "__nv_asinhf",
+                                    "__nv_asinh");
   populateOpPatterns<math::AtanOp>(converter, patterns, "__nv_atanf",
                                    "__nv_atan");
   populateOpPatterns<math::Atan2Op>(converter, patterns, "__nv_atan2f",
                                     "__nv_atan2");
+  populateOpPatterns<math::AtanhOp>(converter, patterns, "__nv_atanhf",
+                                    "__nv_atanh");
   populateOpPatterns<math::CbrtOp>(converter, patterns, "__nv_cbrtf",
                                    "__nv_cbrt");
   populateOpPatterns<math::CeilOp>(converter, patterns, "__nv_ceilf",
                                    "__nv_ceil");
-  populateOpPatterns<math::CosOp>(converter, patterns, "__nv_cosf", "__nv_cos");
+  populateOpPatterns<math::CopySignOp>(converter, patterns, "__nv_copysignf",
+                                       "__nv_copysign");
+  populateOpPatterns<math::CosOp>(converter, patterns, "__nv_cosf", "__nv_cos",
+                                  "__nv_fast_cosf");
+  populateOpPatterns<math::CoshOp>(converter, patterns, "__nv_coshf",
+                                   "__nv_cosh");
   populateOpPatterns<math::ErfOp>(converter, patterns, "__nv_erff", "__nv_erf");
-  populateOpPatterns<math::ExpOp>(converter, patterns, "__nv_expf", "__nv_exp");
+  populateOpPatterns<math::ExpOp>(converter, patterns, "__nv_expf", "__nv_exp",
+                                  "__nv_fast_expf");
   populateOpPatterns<math::Exp2Op>(converter, patterns, "__nv_exp2f",
                                    "__nv_exp2");
   populateOpPatterns<math::ExpM1Op>(converter, patterns, "__nv_expm1f",
                                     "__nv_expm1");
   populateOpPatterns<math::FloorOp>(converter, patterns, "__nv_floorf",
                                     "__nv_floor");
-  populateOpPatterns<arith::RemFOp>(converter, patterns, "__nv_fmodf",
-                                    "__nv_fmod");
-  populateOpPatterns<math::LogOp>(converter, patterns, "__nv_logf", "__nv_log");
+  populateOpPatterns<math::FmaOp>(converter, patterns, "__nv_fmaf", "__nv_fma");
+  populateOpPatterns<math::LogOp>(converter, patterns, "__nv_logf", "__nv_log",
+                                  "__nv_fast_logf");
+  populateOpPatterns<math::Log10Op>(converter, patterns, "__nv_log10f",
+                                    "__nv_log10", "__nv_fast_log10f");
   populateOpPatterns<math::Log1pOp>(converter, patterns, "__nv_log1pf",
                                     "__nv_log1p");
-  populateOpPatterns<math::Log10Op>(converter, patterns, "__nv_log10f",
-                                    "__nv_log10");
   populateOpPatterns<math::Log2Op>(converter, patterns, "__nv_log2f",
-                                   "__nv_log2");
-  populateOpPatterns<math::PowFOp>(converter, patterns, "__nv_powf",
-                                   "__nv_pow");
+                                   "__nv_log2", "__nv_fast_log2f");
+  populateOpPatterns<math::PowFOp>(converter, patterns, "__nv_powf", "__nv_pow",
+                                   "__nv_fast_powf");
+  populateOpPatterns<math::RoundOp>(converter, patterns, "__nv_roundf",
+                                    "__nv_round");
+  populateOpPatterns<math::RoundEvenOp>(converter, patterns, "__nv_rintf",
+                                        "__nv_rint");
   populateOpPatterns<math::RsqrtOp>(converter, patterns, "__nv_rsqrtf",
                                     "__nv_rsqrt");
-  populateOpPatterns<math::SinOp>(converter, patterns, "__nv_sinf", "__nv_sin");
+  populateOpPatterns<math::SinOp>(converter, patterns, "__nv_sinf", "__nv_sin",
+                                  "__nv_fast_sinf");
+  populateOpPatterns<math::SinhOp>(converter, patterns, "__nv_sinhf",
+                                   "__nv_sinh");
   populateOpPatterns<math::SqrtOp>(converter, patterns, "__nv_sqrtf",
                                    "__nv_sqrt");
+  populateOpPatterns<math::TanOp>(converter, patterns, "__nv_tanf", "__nv_tan",
+                                  "__nv_fast_tanf");
   populateOpPatterns<math::TanhOp>(converter, patterns, "__nv_tanhf",
                                    "__nv_tanh");
-  populateOpPatterns<math::TanOp>(converter, patterns, "__nv_tanf", "__nv_tan");
 }

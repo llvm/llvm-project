@@ -32,6 +32,7 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
@@ -347,6 +348,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (auto *a = args.getLastArg(clang::driver::options::OPT_save_temps_EQ))
     opts.SaveTempsDir = a->getValue();
 
+  // -mlink-builtin-bitcode
+  for (auto *a :
+       args.filtered(clang::driver::options::OPT_mlink_builtin_bitcode))
+    opts.BuiltinBCLibs.push_back(a->getValue());
+
   // -mrelocation-model option.
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_mrelocation_model)) {
@@ -381,6 +387,29 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
       opts.IsPIE = 1;
   }
 
+  // -mcmodel option.
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_mcmodel_EQ)) {
+    llvm::StringRef modelName = a->getValue();
+    std::optional<llvm::CodeModel::Model> codeModel = getCodeModel(modelName);
+
+    if (codeModel.has_value())
+      opts.CodeModel = modelName;
+    else
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << a->getAsString(args) << modelName;
+  }
+
+  if (const llvm::opt::Arg *arg = args.getLastArg(
+          clang::driver::options::OPT_mlarge_data_threshold_EQ)) {
+    uint64_t LDT;
+    if (llvm::StringRef(arg->getValue()).getAsInteger(/*Radix=*/10, LDT)) {
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << arg->getSpelling() << arg->getValue();
+    }
+    opts.LargeDataThreshold = LDT;
+  }
+
   // This option is compatible with -f[no-]underscoring in gfortran.
   if (args.hasFlag(clang::driver::options::OPT_fno_underscoring,
                    clang::driver::options::OPT_funderscoring, false)) {
@@ -401,6 +430,10 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_target_cpu))
     opts.cpu = a->getValue();
+
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_tune_cpu))
+    opts.cpuToTuneFor = a->getValue();
 
   for (const llvm::opt::Arg *currentArg :
        args.filtered(clang::driver::options::OPT_target_feature))
@@ -804,6 +837,11 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     res.setDebugModuleDir(true);
   }
 
+  // -fhermetic-module-files option
+  if (args.hasArg(clang::driver::options::OPT_fhermetic_module_files)) {
+    res.setHermeticModuleFileOutput(true);
+  }
+
   // -module-suffix
   if (const auto *moduleSuffix =
           args.getLastArg(clang::driver::options::OPT_module_suffix)) {
@@ -1034,7 +1072,7 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     opts.setFPContractMode(fpContractMode);
   }
 
-  if (args.getLastArg(clang::driver::options::OPT_menable_no_infinities)) {
+  if (args.getLastArg(clang::driver::options::OPT_menable_no_infs)) {
     opts.NoHonorInfs = true;
   }
 

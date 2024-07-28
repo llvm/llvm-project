@@ -841,14 +841,10 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitAttachClause(
 
   // ActOnVar ensured that everything is a valid variable reference, but we
   // still have to make sure it is a pointer type.
-  llvm::SmallVector<Expr *> VarList{Clause.getVarList().begin(),
-                                    Clause.getVarList().end()};
-  VarList.erase(std::remove_if(VarList.begin(), VarList.end(),
-                               [&](Expr *E) {
-                                 return SemaRef.CheckVarIsPointerType(
-                                     OpenACCClauseKind::Attach, E);
-                               }),
-                VarList.end());
+  llvm::SmallVector<Expr *> VarList{Clause.getVarList()};
+  llvm::erase_if(VarList, [&](Expr *E) {
+    return SemaRef.CheckVarIsPointerType(OpenACCClauseKind::Attach, E);
+  });
   Clause.setVarListDetails(VarList,
                            /*IsReadOnly=*/false, /*IsZero=*/false);
   return OpenACCAttachClause::Create(Ctx, Clause.getBeginLoc(),
@@ -866,14 +862,10 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDevicePtrClause(
 
   // ActOnVar ensured that everything is a valid variable reference, but we
   // still have to make sure it is a pointer type.
-  llvm::SmallVector<Expr *> VarList{Clause.getVarList().begin(),
-                                    Clause.getVarList().end()};
-  VarList.erase(std::remove_if(VarList.begin(), VarList.end(),
-                               [&](Expr *E) {
-                                 return SemaRef.CheckVarIsPointerType(
-                                     OpenACCClauseKind::DevicePtr, E);
-                               }),
-                VarList.end());
+  llvm::SmallVector<Expr *> VarList{Clause.getVarList()};
+  llvm::erase_if(VarList, [&](Expr *E) {
+    return SemaRef.CheckVarIsPointerType(OpenACCClauseKind::DevicePtr, E);
+  });
   Clause.setVarListDetails(VarList,
                            /*IsReadOnly=*/false, /*IsZero=*/false);
 

@@ -1070,6 +1070,24 @@ TEST_F(ConstantRangeTest, MultiplyWithNoWrap) {
                 .multiplyWithNoWrap(ConstantRange(APInt(8, 100), APInt(8, 121)),
                                     OBO::NoSignedWrap),
             ConstantRange::getEmpty(8));
+  EXPECT_TRUE(ConstantRange::getFull(8)
+                  .multiplyWithNoWrap(ConstantRange(APInt(8, 2), APInt(8, 128)),
+                                      OBO::NoUnsignedWrap | OBO::NoSignedWrap)
+                  .isAllNonNegative());
+  EXPECT_TRUE(ConstantRange(APInt(8, 2), APInt(8, 128))
+                  .multiplyWithNoWrap(ConstantRange::getFull(8),
+                                      OBO::NoUnsignedWrap | OBO::NoSignedWrap)
+                  .isAllNonNegative());
+  EXPECT_FALSE(
+      ConstantRange::getFull(8)
+          .multiplyWithNoWrap(ConstantRange(APInt(8, 1), APInt(8, 128)),
+                              OBO::NoUnsignedWrap | OBO::NoSignedWrap)
+          .isAllNonNegative());
+  EXPECT_FALSE(
+      ConstantRange::getFull(8)
+          .multiplyWithNoWrap(ConstantRange(APInt(8, 2), APInt(8, 128)),
+                              OBO::NoSignedWrap)
+          .isAllNonNegative());
 
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
@@ -2398,23 +2416,31 @@ TEST_F(ConstantRangeTest, Negative) {
   // they are also covered by the exhaustive test below.
   EXPECT_TRUE(Empty.isAllNegative());
   EXPECT_TRUE(Empty.isAllNonNegative());
+  EXPECT_TRUE(Empty.isAllPositive());
   EXPECT_FALSE(Full.isAllNegative());
   EXPECT_FALSE(Full.isAllNonNegative());
+  EXPECT_FALSE(Full.isAllPositive());
 
   EnumerateInterestingConstantRanges([](const ConstantRange &CR) {
     bool AllNegative = true;
     bool AllNonNegative = true;
+    bool AllPositive = true;
     ForeachNumInConstantRange(CR, [&](const APInt &N) {
       if (!N.isNegative())
         AllNegative = false;
       if (!N.isNonNegative())
         AllNonNegative = false;
+      if (!N.isStrictlyPositive())
+        AllPositive = false;
     });
-    assert((CR.isEmptySet() || !AllNegative || !AllNonNegative) &&
-           "Only empty set can be both all negative and all non-negative");
+    assert(
+        (CR.isEmptySet() || !AllNegative || !AllNonNegative || !AllPositive) &&
+        "Only empty set can be all negative, all non-negative, and all "
+        "positive");
 
     EXPECT_EQ(AllNegative, CR.isAllNegative());
     EXPECT_EQ(AllNonNegative, CR.isAllNonNegative());
+    EXPECT_EQ(AllPositive, CR.isAllPositive());
   });
 }
 
@@ -2786,6 +2812,54 @@ TEST_F(ConstantRangeTest, isSizeLargerThan) {
 
   EXPECT_TRUE(One.isSizeLargerThan(0));
   EXPECT_FALSE(One.isSizeLargerThan(1));
+}
+
+TEST_F(ConstantRangeTest, MakeMaskNotEqualRange) {
+  // Mask: 0b0001, C: 0b0001. MMNE() = [2, 1)
+  ConstantRange CR(APInt(4, 2), APInt(4, 1));
+  EXPECT_EQ(CR, ConstantRange::makeMaskNotEqualRange(APInt(4, 1), APInt(4, 1)));
+  EXPECT_NE(CR, ConstantRange::makeMaskNotEqualRange(APInt(4, 0),
+                                                     APInt(4, -1, true)));
+  EXPECT_TRUE(CR.contains(APInt(4, 7)));
+  EXPECT_TRUE(CR.contains(APInt(4, 15)));
+
+  // Mask: 0b0100, C: 0b0100. MMNE() = [-8, 4)
+  ConstantRange CR2(APInt(4, -8, true), APInt(4, 4));
+  auto MMNE = ConstantRange::makeMaskNotEqualRange(APInt(4, 4), APInt(4, 4));
+  EXPECT_EQ(CR2, MMNE);
+  EXPECT_NE(ConstantRange::getNonEmpty(APInt(4, 0), APInt(4, -4, true)), MMNE);
+
+  // CR: [-16, -8). MMNE() = [-8, -16)
+  ConstantRange CR3(APInt(8, 240), APInt(8, 248));
+  EXPECT_EQ(CR3.inverse(),
+            ConstantRange::makeMaskNotEqualRange(APInt(8, 248), APInt(8, 240)));
+
+  // Mask: 0, C: 0b1111: unsatisfiable.
+  EXPECT_EQ(ConstantRange::getFull(4),
+            ConstantRange::makeMaskNotEqualRange(APInt(4, 0), APInt(4, 15)));
+}
+
+TEST_F(ConstantRangeTest, MakeMaskNotEqualRangeExhaustive) {
+  unsigned Bits = 4;
+  unsigned Max = 1 << Bits;
+
+  EnumerateAPInts(Bits, [&](const APInt &Mask) {
+    EnumerateAPInts(Bits, [&](const APInt &C) {
+      SmallBitVector Elems(Max);
+      for (unsigned N = 0; N < Max; ++N) {
+        APInt Num(Bits, N);
+        if ((Num & Mask) == C)
+          continue;
+        Elems.set(Num.getZExtValue());
+      }
+
+      // Only test optimality with PreferSmallest. E.g., given Mask = 0b0001, C
+      // = 0b0001, a possible better range would be [0, 15) when preferring the
+      // smallest unsigned, however we conservatively return [2, 1).
+      TestRange(ConstantRange::makeMaskNotEqualRange(Mask, C), Elems,
+                PreferSmallest, {});
+    });
+  });
 }
 
 } // anonymous namespace

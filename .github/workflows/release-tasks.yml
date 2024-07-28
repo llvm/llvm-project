@@ -81,7 +81,28 @@ jobs:
     needs:
       - validate-tag
       - release-create
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on:
+          - ubuntu-22.04
+          - windows-2022
+          - macos-13
+          - macos-14
+
     uses: ./.github/workflows/release-binaries.yml
     with:
       release-version: ${{ needs.validate-tag.outputs.release-version }}
       upload: true
+      runs-on: ${{ matrix.runs-on }}
+
+  release-sources:
+    name: Package Release Sources
+    permissions:
+      id-token: write
+      attestations: write
+    needs:
+      - validate-tag
+    uses: ./.github/workflows/release-sources.yml
+    with:
+      release-version: ${{ needs.validate-tag.outputs.release-version }}

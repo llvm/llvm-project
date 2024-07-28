@@ -215,6 +215,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ReplaceConstant.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -579,18 +580,14 @@ bool StoreFatPtrsAsIntsVisitor::visitStoreInst(StoreInst &SI) {
 /// buffer fat pointer constant.
 static std::pair<Constant *, Constant *>
 splitLoweredFatBufferConst(Constant *C) {
-  if (auto *AZ = dyn_cast<ConstantAggregateZero>(C))
-    return std::make_pair(AZ->getStructElement(0), AZ->getStructElement(1));
-  if (auto *SC = dyn_cast<ConstantStruct>(C))
-    return std::make_pair(SC->getOperand(0), SC->getOperand(1));
-  llvm_unreachable("Conversion should've created a {p8, i32} struct");
+  assert(isSplitFatPtr(C->getType()) && "Not a split fat buffer pointer");
+  return std::make_pair(C->getAggregateElement(0u), C->getAggregateElement(1u));
 }
 
 namespace {
 /// Handle the remapping of ptr addrspace(7) constants.
 class FatPtrConstMaterializer final : public ValueMaterializer {
   BufferFatPtrToStructTypeMap *TypeMap;
-  BufferFatPtrToIntTypeMap *IntTypeMap;
   // An internal mapper that is used to recurse into the arguments of constants.
   // While the documentation for `ValueMapper` specifies not to use it
   // recursively, examination of the logic in mapValue() shows that it can
@@ -600,16 +597,12 @@ class FatPtrConstMaterializer final : public ValueMaterializer {
 
   Constant *materializeBufferFatPtrConst(Constant *C);
 
-  const DataLayout &DL;
-
 public:
   // UnderlyingMap is the value map this materializer will be filling.
   FatPtrConstMaterializer(BufferFatPtrToStructTypeMap *TypeMap,
-                          ValueToValueMapTy &UnderlyingMap,
-                          BufferFatPtrToIntTypeMap *IntTypeMap,
-                          const DataLayout &DL)
-      : TypeMap(TypeMap), IntTypeMap(IntTypeMap),
-        InternalMapper(UnderlyingMap, RF_None, TypeMap, this), DL(DL) {}
+                          ValueToValueMapTy &UnderlyingMap)
+      : TypeMap(TypeMap),
+        InternalMapper(UnderlyingMap, RF_None, TypeMap, this) {}
   virtual ~FatPtrConstMaterializer() = default;
 
   Value *materialize(Value *V) override;
@@ -631,10 +624,6 @@ Constant *FatPtrConstMaterializer::materializeBufferFatPtrConst(Constant *C) {
                                {UndefValue::get(NewTy->getElementType(0)),
                                 UndefValue::get(NewTy->getElementType(1))});
   }
-
-  if (isa<GlobalValue>(C))
-    report_fatal_error("Global values containing ptr addrspace(7) (buffer "
-                       "fat pointer) values are not supported");
 
   if (auto *VC = dyn_cast<ConstantVector>(C)) {
     if (Constant *S = VC->getSplatValue()) {
@@ -661,120 +650,14 @@ Constant *FatPtrConstMaterializer::materializeBufferFatPtrConst(Constant *C) {
     return ConstantStruct::get(NewTy, {RsrcVec, OffVec});
   }
 
-  // Constant expressions. This code mirrors how we fix up the equivalent
-  // instructions later.
-  auto *CE = dyn_cast<ConstantExpr>(C);
-  if (!CE)
-    return nullptr;
-  if (auto *GEPO = dyn_cast<GEPOperator>(C)) {
-    Constant *RemappedPtr =
-        InternalMapper.mapConstant(*cast<Constant>(GEPO->getPointerOperand()));
-    auto [Rsrc, Off] = splitLoweredFatBufferConst(RemappedPtr);
-    Type *OffTy = Off->getType();
-    bool InBounds = GEPO->isInBounds();
+  if (isa<GlobalValue>(C))
+    report_fatal_error("Global values containing ptr addrspace(7) (buffer "
+                       "fat pointer) values are not supported");
 
-    MapVector<Value *, APInt> VariableOffs;
-    APInt NewConstOffVal = APInt::getZero(BufferOffsetWidth);
-    if (!GEPO->collectOffset(DL, BufferOffsetWidth, VariableOffs,
-                             NewConstOffVal))
-      report_fatal_error(
-          "Scalable vector or unsized struct in fat pointer GEP");
-    Constant *OffAccum = nullptr;
-    for (auto [Arg, Multiple] : VariableOffs) {
-      Constant *NewArg = InternalMapper.mapConstant(*cast<Constant>(Arg));
-      NewArg = ConstantFoldIntegerCast(NewArg, OffTy, /*IsSigned=*/true, DL);
-      if (!Multiple.isOne()) {
-        if (Multiple.isPowerOf2()) {
-          NewArg = ConstantExpr::getShl(
-              NewArg, CE->getIntegerValue(OffTy, APInt(BufferOffsetWidth,
-                                                       Multiple.logBase2())));
-        } else {
-          NewArg = ConstantExpr::getMul(NewArg,
-                                        CE->getIntegerValue(OffTy, Multiple));
-        }
-      }
-      if (OffAccum) {
-        OffAccum = ConstantExpr::getAdd(OffAccum, NewArg);
-      } else {
-        OffAccum = NewArg;
-      }
-    }
-    Constant *NewConstOff = CE->getIntegerValue(OffTy, NewConstOffVal);
-    if (OffAccum)
-      OffAccum = ConstantExpr::getAdd(OffAccum, NewConstOff);
-    else
-      OffAccum = NewConstOff;
-    bool HasNonNegativeOff = false;
-    if (auto *CI = dyn_cast<ConstantInt>(OffAccum)) {
-      HasNonNegativeOff = !CI->isNegative();
-    }
-    Constant *NewOff = ConstantExpr::getAdd(
-        Off, OffAccum, /*hasNUW=*/InBounds && HasNonNegativeOff,
-        /*hasNSW=*/false);
-    return ConstantStruct::get(NewTy, {Rsrc, NewOff});
-  }
+  if (isa<ConstantExpr>(C))
+    report_fatal_error("Constant exprs containing ptr addrspace(7) (buffer "
+                       "fat pointer) values should have been expanded earlier");
 
-  if (auto *PI = dyn_cast<PtrToIntOperator>(CE)) {
-    Constant *Parts =
-        InternalMapper.mapConstant(*cast<Constant>(PI->getPointerOperand()));
-    auto [Rsrc, Off] = splitLoweredFatBufferConst(Parts);
-    // Here, we take advantage of the fact that ptrtoint has a built-in
-    // zero-extension behavior.
-    unsigned FatPtrWidth =
-        DL.getPointerSizeInBits(AMDGPUAS::BUFFER_FAT_POINTER);
-    Constant *RsrcInt = CE->getPtrToInt(Rsrc, SrcTy);
-    unsigned Width = SrcTy->getScalarSizeInBits();
-    Constant *Shift =
-        CE->getIntegerValue(SrcTy, APInt(Width, BufferOffsetWidth));
-    Constant *OffCast =
-        ConstantFoldIntegerCast(Off, SrcTy, /*IsSigned=*/false, DL);
-    Constant *RsrcHi = ConstantExpr::getShl(
-        RsrcInt, Shift, Width >= FatPtrWidth, Width > FatPtrWidth);
-    // This should be an or, but those got recently removed.
-    Constant *Result = ConstantExpr::getAdd(RsrcHi, OffCast, true, true);
-    return Result;
-  }
-
-  if (CE->getOpcode() == Instruction::IntToPtr) {
-    auto *Arg = cast<Constant>(CE->getOperand(0));
-    unsigned FatPtrWidth =
-        DL.getPointerSizeInBits(AMDGPUAS::BUFFER_FAT_POINTER);
-    unsigned RsrcPtrWidth = DL.getPointerSizeInBits(AMDGPUAS::BUFFER_RESOURCE);
-    auto *WantedTy = Arg->getType()->getWithNewBitWidth(FatPtrWidth);
-    Arg = ConstantFoldIntegerCast(Arg, WantedTy, /*IsSigned=*/false, DL);
-
-    Constant *Shift =
-        CE->getIntegerValue(WantedTy, APInt(FatPtrWidth, BufferOffsetWidth));
-    Type *RsrcIntType = WantedTy->getWithNewBitWidth(RsrcPtrWidth);
-    Type *RsrcTy = NewTy->getElementType(0);
-    Type *OffTy = WantedTy->getWithNewBitWidth(BufferOffsetWidth);
-    Constant *RsrcInt = CE->getTrunc(
-        ConstantFoldBinaryOpOperands(Instruction::LShr, Arg, Shift, DL),
-        RsrcIntType);
-    Constant *Rsrc = CE->getIntToPtr(RsrcInt, RsrcTy);
-    Constant *Off = ConstantFoldIntegerCast(Arg, OffTy, /*isSigned=*/false, DL);
-
-    return ConstantStruct::get(NewTy, {Rsrc, Off});
-  }
-
-  if (auto *AC = dyn_cast<AddrSpaceCastOperator>(CE)) {
-    unsigned SrcAS = AC->getSrcAddressSpace();
-    unsigned DstAS = AC->getDestAddressSpace();
-    auto *Arg = cast<Constant>(AC->getPointerOperand());
-    auto *NewArg = InternalMapper.mapConstant(*Arg);
-    if (!NewArg)
-      return nullptr;
-    if (SrcAS == AMDGPUAS::BUFFER_FAT_POINTER &&
-        DstAS == AMDGPUAS::BUFFER_FAT_POINTER)
-      return NewArg;
-    if (SrcAS == AMDGPUAS::BUFFER_RESOURCE &&
-        DstAS == AMDGPUAS::BUFFER_FAT_POINTER) {
-      auto *NullOff = CE->getNullValue(NewTy->getElementType(1));
-      return ConstantStruct::get(NewTy, {NewArg, NullOff});
-    }
-    report_fatal_error(
-        "Unsupported address space cast for a buffer fat pointer");
-  }
   return nullptr;
 }
 
@@ -782,26 +665,6 @@ Value *FatPtrConstMaterializer::materialize(Value *V) {
   Constant *C = dyn_cast<Constant>(V);
   if (!C)
     return nullptr;
-  if (auto *GEPO = dyn_cast<GEPOperator>(C)) {
-    // As a special case, adjust GEP constants that have a ptr addrspace(7) in
-    // their source types here, since the earlier local changes didn't handle
-    // htis.
-    Type *SrcTy = GEPO->getSourceElementType();
-    Type *NewSrcTy = IntTypeMap->remapType(SrcTy);
-    if (SrcTy != NewSrcTy) {
-      SmallVector<Constant *> Ops;
-      Ops.reserve(GEPO->getNumOperands());
-      for (const Use &U : GEPO->operands())
-        Ops.push_back(cast<Constant>(U.get()));
-      auto *NewGEP = ConstantExpr::getGetElementPtr(
-          NewSrcTy, Ops[0], ArrayRef<Constant *>(Ops).slice(1),
-          GEPO->getNoWrapFlags(), GEPO->getInRange());
-      LLVM_DEBUG(dbgs() << "p7-getting GEP: " << *GEPO << " becomes " << *NewGEP
-                        << "\n");
-      Value *FurtherMap = materialize(NewGEP);
-      return FurtherMap ? FurtherMap : NewGEP;
-    }
-  }
   // Structs and other types that happen to contain fat pointers get remapped
   // by the mapValue() logic.
   if (!isBufferFatPtrConst(C))
@@ -837,7 +700,7 @@ class SplitPtrStructs : public InstVisitor<SplitPtrStructs, PtrParts> {
 
   // Subtarget info, needed for determining what cache control bits to set.
   const TargetMachine *TM;
-  const GCNSubtarget *ST;
+  const GCNSubtarget *ST = nullptr;
 
   IRBuilder<> IRB;
 
@@ -877,7 +740,7 @@ class SplitPtrStructs : public InstVisitor<SplitPtrStructs, PtrParts> {
 
 public:
   SplitPtrStructs(LLVMContext &Ctx, const TargetMachine *TM)
-      : TM(TM), ST(nullptr), IRB(Ctx) {}
+      : TM(TM), IRB(Ctx) {}
 
   void processFunction(Function &F);
 
@@ -1106,7 +969,7 @@ void SplitPtrStructs::killAndReplaceSplitInstructions(
     findDbgValues(Dbgs, I);
     for (auto *Dbg : Dbgs) {
       IRB.SetInsertPoint(Dbg);
-      auto &DL = I->getModule()->getDataLayout();
+      auto &DL = I->getDataLayout();
       assert(isSplitFatPtr(I->getType()) &&
              "We should've RAUW'd away loads, stores, etc. at this point");
       auto *OffDbg = cast<DbgValueInst>(Dbg->clone());
@@ -1229,8 +1092,9 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
 
   Intrinsic::ID IID = Intrinsic::not_intrinsic;
   if (isa<LoadInst>(I))
-    // TODO: Do we need to do something about atomic loads?
-    IID = Intrinsic::amdgcn_raw_ptr_buffer_load;
+    IID = Order == AtomicOrdering::NotAtomic
+              ? Intrinsic::amdgcn_raw_ptr_buffer_load
+              : Intrinsic::amdgcn_raw_ptr_atomic_buffer_load;
   else if (isa<StoreInst>(I))
     IID = Intrinsic::amdgcn_raw_ptr_buffer_store;
   else if (auto *RMW = dyn_cast<AtomicRMWInst>(I)) {
@@ -1388,7 +1252,7 @@ PtrParts SplitPtrStructs::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   IRB.SetInsertPoint(&GEP);
 
   auto [Rsrc, Off] = getPtrParts(Ptr);
-  const DataLayout &DL = GEP.getModule()->getDataLayout();
+  const DataLayout &DL = GEP.getDataLayout();
   bool InBounds = GEP.isInBounds();
 
   // In order to call emitGEPOffset() and thus not have to reimplement it,
@@ -1432,7 +1296,7 @@ PtrParts SplitPtrStructs::visitPtrToIntInst(PtrToIntInst &PI) {
   unsigned Width = ResTy->getScalarSizeInBits();
 
   auto [Rsrc, Off] = getPtrParts(Ptr);
-  const DataLayout &DL = PI.getModule()->getDataLayout();
+  const DataLayout &DL = PI.getDataLayout();
   unsigned FatPtrWidth = DL.getPointerSizeInBits(AMDGPUAS::BUFFER_FAT_POINTER);
 
   Value *Res;
@@ -1461,7 +1325,7 @@ PtrParts SplitPtrStructs::visitIntToPtrInst(IntToPtrInst &IP) {
   if (!isSplitFatPtr(IP.getType()))
     return {nullptr, nullptr};
   IRB.SetInsertPoint(&IP);
-  const DataLayout &DL = IP.getModule()->getDataLayout();
+  const DataLayout &DL = IP.getDataLayout();
   unsigned RsrcPtrWidth = DL.getPointerSizeInBits(AMDGPUAS::BUFFER_RESOURCE);
   Value *Int = IP.getOperand(0);
   Type *IntTy = Int->getType();
@@ -1782,14 +1646,9 @@ public:
 static bool containsBufferFatPointers(const Function &F,
                                       BufferFatPtrToStructTypeMap *TypeMap) {
   bool HasFatPointers = false;
-  for (const BasicBlock &BB : F) {
-    for (const Instruction &I : BB) {
+  for (const BasicBlock &BB : F)
+    for (const Instruction &I : BB)
       HasFatPointers |= (I.getType() != TypeMap->remapType(I.getType()));
-      for (const Use &U : I.operands())
-        if (auto *C = dyn_cast<Constant>(U.get()))
-          HasFatPointers |= isBufferFatPtrConst(C);
-    }
-  }
   return HasFatPointers;
 }
 
@@ -1888,6 +1747,36 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
                          "buffer resource pointers (address space 8) instead.");
   }
 
+  {
+    // Collect all constant exprs and aggregates referenced by any function.
+    SmallVector<Constant *, 8> Worklist;
+    for (Function &F : M.functions())
+      for (Instruction &I : instructions(F))
+        for (Value *Op : I.operands())
+          if (isa<ConstantExpr>(Op) || isa<ConstantAggregate>(Op))
+            Worklist.push_back(cast<Constant>(Op));
+
+    // Recursively look for any referenced buffer pointer constants.
+    SmallPtrSet<Constant *, 8> Visited;
+    SetVector<Constant *> BufferFatPtrConsts;
+    while (!Worklist.empty()) {
+      Constant *C = Worklist.pop_back_val();
+      if (!Visited.insert(C).second)
+        continue;
+      if (isBufferFatPtrOrVector(C->getType()))
+        BufferFatPtrConsts.insert(C);
+      for (Value *Op : C->operands())
+        if (isa<ConstantExpr>(Op) || isa<ConstantAggregate>(Op))
+          Worklist.push_back(cast<Constant>(Op));
+    }
+
+    // Expand all constant expressions using fat buffer pointers to
+    // instructions.
+    Changed |= convertUsersOfConstantsToInstructions(
+        BufferFatPtrConsts.getArrayRef(), /*RestrictToFunc=*/nullptr,
+        /*RemoveDeadConstants=*/false, /*IncludeSelf=*/true);
+  }
+
   StoreFatPtrsAsIntsVisitor MemOpsRewrite(&IntTM, M.getContext());
   for (Function &F : M.functions()) {
     bool InterfaceChange = hasFatPointerInterface(F, &StructTM);
@@ -1903,7 +1792,7 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
   SmallVector<Function *> Intrinsics;
   // Keep one big map so as to memoize constants across functions.
   ValueToValueMapTy CloneMap;
-  FatPtrConstMaterializer Materializer(&StructTM, CloneMap, &IntTM, DL);
+  FatPtrConstMaterializer Materializer(&StructTM, CloneMap);
 
   ValueMapper LowerInFuncs(CloneMap, RF_None, &StructTM, &Materializer);
   for (auto [F, InterfaceChange] : NeedsRemap) {

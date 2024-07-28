@@ -76,7 +76,7 @@ public:
   }
   template <typename VISITOR>
   constexpr auto visit(VISITOR &&visitor) const {
-    return std::visit(
+    return Fortran::common::visit(
         common::visitors{[&visitor](auto ref) { return visitor(ref.get()); }},
         u);
   }
@@ -494,7 +494,8 @@ struct Variable {
 
   /// Is this variable a global?
   bool isGlobal() const {
-    return std::visit([](const auto &x) { return x.isGlobal(); }, var);
+    return Fortran::common::visit([](const auto &x) { return x.isGlobal(); },
+                                  var);
   }
 
   /// Is this a module or submodule variable?
@@ -504,7 +505,7 @@ struct Variable {
   }
 
   const Fortran::semantics::Scope *getOwningScope() const {
-    return std::visit(
+    return Fortran::common::visit(
         common::visitors{
             [](const Nominal &x) { return &x.symbol->GetUltimate().owner(); },
             [](const AggregateStore &agg) { return &agg.getOwningScope(); }},

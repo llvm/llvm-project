@@ -37,7 +37,7 @@ struct __ct_abs;
 
 template <typename _Result, typename _Source>
 struct __ct_abs<_Result, _Source, true> {
-  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI _Result operator()(_Source __t) const noexcept {
+  constexpr _LIBCPP_HIDE_FROM_ABI _Result operator()(_Source __t) const noexcept {
     if (__t >= 0)
       return __t;
     if (__t == numeric_limits<_Source>::min())
@@ -48,12 +48,12 @@ struct __ct_abs<_Result, _Source, true> {
 
 template <typename _Result, typename _Source>
 struct __ct_abs<_Result, _Source, false> {
-  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI _Result operator()(_Source __t) const noexcept { return __t; }
+  constexpr _LIBCPP_HIDE_FROM_ABI _Result operator()(_Source __t) const noexcept { return __t; }
 };
 
 template <class _Tp>
-_LIBCPP_CONSTEXPR _LIBCPP_HIDDEN _Tp __gcd(_Tp __a, _Tp __b) {
-  static_assert((!is_signed<_Tp>::value), "");
+constexpr _LIBCPP_HIDDEN _Tp __gcd(_Tp __a, _Tp __b) {
+  static_assert(!is_signed<_Tp>::value, "");
 
   // From: https://lemire.me/blog/2013/12/26/fastest-way-to-compute-the-greatest-common-divisor
   //
@@ -96,10 +96,10 @@ _LIBCPP_CONSTEXPR _LIBCPP_HIDDEN _Tp __gcd(_Tp __a, _Tp __b) {
 }
 
 template <class _Tp, class _Up>
-_LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> gcd(_Tp __m, _Up __n) {
-  static_assert((is_integral<_Tp>::value && is_integral<_Up>::value), "Arguments to gcd must be integer types");
-  static_assert((!is_same<__remove_cv_t<_Tp>, bool>::value), "First argument to gcd cannot be bool");
-  static_assert((!is_same<__remove_cv_t<_Up>, bool>::value), "Second argument to gcd cannot be bool");
+constexpr _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> gcd(_Tp __m, _Up __n) {
+  static_assert(is_integral<_Tp>::value && is_integral<_Up>::value, "Arguments to gcd must be integer types");
+  static_assert(!is_same<__remove_cv_t<_Tp>, bool>::value, "First argument to gcd cannot be bool");
+  static_assert(!is_same<__remove_cv_t<_Up>, bool>::value, "Second argument to gcd cannot be bool");
   using _Rp = common_type_t<_Tp, _Up>;
   using _Wp = make_unsigned_t<_Rp>;
   return static_cast<_Rp>(
@@ -107,21 +107,23 @@ _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> gcd(_Tp __m, _Up
 }
 
 template <class _Tp, class _Up>
-_LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> lcm(_Tp __m, _Up __n) {
-  static_assert((is_integral<_Tp>::value && is_integral<_Up>::value), "Arguments to lcm must be integer types");
-  static_assert((!is_same<__remove_cv_t<_Tp>, bool>::value), "First argument to lcm cannot be bool");
-  static_assert((!is_same<__remove_cv_t<_Up>, bool>::value), "Second argument to lcm cannot be bool");
+constexpr _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> lcm(_Tp __m, _Up __n) {
+  static_assert(is_integral<_Tp>::value && is_integral<_Up>::value, "Arguments to lcm must be integer types");
+  static_assert(!is_same<__remove_cv_t<_Tp>, bool>::value, "First argument to lcm cannot be bool");
+  static_assert(!is_same<__remove_cv_t<_Up>, bool>::value, "Second argument to lcm cannot be bool");
   if (__m == 0 || __n == 0)
     return 0;
 
   using _Rp  = common_type_t<_Tp, _Up>;
   _Rp __val1 = __ct_abs<_Rp, _Tp>()(__m) / std::gcd(__m, __n);
   _Rp __val2 = __ct_abs<_Rp, _Up>()(__n);
-  _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN((numeric_limits<_Rp>::max() / __val1 > __val2), "Overflow in lcm");
-  return __val1 * __val2;
+  _Rp __res;
+  [[maybe_unused]] bool __overflow = __builtin_mul_overflow(__val1, __val2, &__res);
+  _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(!__overflow, "Overflow in lcm");
+  return __res;
 }
 
-#endif // _LIBCPP_STD_VER
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

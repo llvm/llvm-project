@@ -9,6 +9,7 @@
 #include "Options.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Driver/Driver.h"
+#include "clang/InstallAPI/DirectoryScanner.h"
 #include "clang/InstallAPI/FileList.h"
 #include "clang/InstallAPI/HeaderFile.h"
 #include "clang/InstallAPI/InstallAPIDiagnostic.h"
@@ -126,8 +127,14 @@ getArgListFromJSON(const StringRef Input, llvm::opt::OptTable *Table,
 
 bool Options::processDriverOptions(InputArgList &Args) {
   // Handle inputs.
-  llvm::append_range(DriverOpts.FileLists,
-                     Args.getAllArgValues(drv::OPT_INPUT));
+  for (const StringRef Path : Args.getAllArgValues(drv::OPT_INPUT)) {
+    // Assume any input that is not a directory is a filelist.
+    // InstallAPI does not accept multiple directories, so retain the last one.
+    if (FM->getOptionalDirectoryRef(Path))
+      DriverOpts.InputDirectory = Path.str();
+    else
+      DriverOpts.FileLists.emplace_back(Path.str());
+  }
 
   // Handle output.
   SmallString<PATH_MAX> OutputPath;
@@ -760,15 +767,6 @@ Options::Options(DiagnosticsEngine &Diag, FileManager *FM,
   }
 }
 
-static const Regex Rule("(.+)/(.+)\\.framework/");
-static StringRef getFrameworkNameFromInstallName(StringRef InstallName) {
-  SmallVector<StringRef, 3> Match;
-  Rule.match(InstallName, &Match);
-  if (Match.empty())
-    return "";
-  return Match.back();
-}
-
 static Expected<std::unique_ptr<InterfaceFile>>
 getInterfaceFile(const StringRef Filename) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
@@ -897,9 +895,36 @@ InstallAPIContext Options::createContext() {
   // Attempt to find umbrella headers by capturing framework name.
   StringRef FrameworkName;
   if (!LinkerOpts.IsDylib)
-    FrameworkName = getFrameworkNameFromInstallName(LinkerOpts.InstallName);
+    FrameworkName =
+        Library::getFrameworkNameFromInstallName(LinkerOpts.InstallName);
 
-  // Process inputs.
+  /// Process inputs headers.
+  // 1. For headers discovered by directory scanning, sort them.
+  // 2. For headers discovered by filelist, respect ordering.
+  // 3. Append extra headers and mark any excluded headers.
+  // 4. Finally, surface up umbrella headers to top of the list.
+  if (!DriverOpts.InputDirectory.empty()) {
+    DirectoryScanner Scanner(*FM, LinkerOpts.IsDylib
+                                      ? ScanMode::ScanDylibs
+                                      : ScanMode::ScanFrameworks);
+    SmallString<PATH_MAX> NormalizedPath(DriverOpts.InputDirectory);
+    FM->getVirtualFileSystem().makeAbsolute(NormalizedPath);
+    sys::path::remove_dots(NormalizedPath, /*remove_dot_dot=*/true);
+    if (llvm::Error Err = Scanner.scan(NormalizedPath)) {
+      Diags->Report(diag::err_directory_scanning)
+          << DriverOpts.InputDirectory << std::move(Err);
+      return Ctx;
+    }
+    std::vector<Library> InputLibraries = Scanner.takeLibraries();
+    if (InputLibraries.size() > 1) {
+      Diags->Report(diag::err_more_than_one_library);
+      return Ctx;
+    }
+    llvm::append_range(Ctx.InputHeaders,
+                       DirectoryScanner::getHeaders(InputLibraries));
+    llvm::stable_sort(Ctx.InputHeaders);
+  }
+
   for (const StringRef ListPath : DriverOpts.FileLists) {
     auto Buffer = FM->getBufferForFile(ListPath);
     if (auto Err = Buffer.getError()) {

@@ -332,8 +332,6 @@ define <2 x i64> @uabd_2d(<2 x i64> %a, <2 x i64> %b) #0 {
 ; CHECK-NEXT:    ngc x9, xzr
 ; CHECK-NEXT:    subs x10, x10, x11
 ; CHECK-NEXT:    ngc x11, xzr
-; CHECK-NEXT:    asr x9, x9, #63
-; CHECK-NEXT:    asr x11, x11, #63
 ; CHECK-NEXT:    eor x8, x8, x9
 ; CHECK-NEXT:    eor x10, x10, x11
 ; CHECK-NEXT:    sub x8, x8, x9

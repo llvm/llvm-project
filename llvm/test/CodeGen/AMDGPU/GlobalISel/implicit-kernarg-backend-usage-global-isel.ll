@@ -10,8 +10,8 @@
 define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addrspace(3) %ptr.local) {
 ; GFX8V4-LABEL: addrspacecast:
 ; GFX8V4:       ; %bb.0:
-; GFX8V4-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
-; GFX8V4-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x40
+; GFX8V4-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; GFX8V4-NEXT:    s_load_dwordx2 s[2:3], s[6:7], 0x40
 ; GFX8V4-NEXT:    v_mov_b32_e32 v2, 1
 ; GFX8V4-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8V4-NEXT:    s_mov_b32 s4, s0
@@ -35,8 +35,8 @@ define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addr
 ;
 ; GFX8V5-LABEL: addrspacecast:
 ; GFX8V5:       ; %bb.0:
-; GFX8V5-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX8V5-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0xc8
+; GFX8V5-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX8V5-NEXT:    s_load_dwordx2 s[2:3], s[6:7], 0xc8
 ; GFX8V5-NEXT:    v_mov_b32_e32 v2, 1
 ; GFX8V5-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8V5-NEXT:    s_mov_b32 s4, s0
@@ -59,7 +59,7 @@ define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addr
 ;
 ; GFX9V4-LABEL: addrspacecast:
 ; GFX9V4:       ; %bb.0:
-; GFX9V4-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX9V4-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9V4-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX9V4-NEXT:    s_mov_b64 s[4:5], src_shared_base
 ; GFX9V4-NEXT:    v_mov_b32_e32 v2, 1
@@ -83,7 +83,7 @@ define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addr
 ;
 ; GFX9V5-LABEL: addrspacecast:
 ; GFX9V5:       ; %bb.0:
-; GFX9V5-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX9V5-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; GFX9V5-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX9V5-NEXT:    s_mov_b64 s[4:5], src_shared_base
 ; GFX9V5-NEXT:    v_mov_b32_e32 v2, 1
@@ -114,9 +114,9 @@ define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addr
 define amdgpu_kernel void @llvm_amdgcn_is_shared(ptr %ptr) {
 ; GFX8V4-LABEL: llvm_amdgcn_is_shared:
 ; GFX8V4:       ; %bb.0:
-; GFX8V4-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX8V4-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX8V4-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8V4-NEXT:    s_load_dword s0, s[4:5], 0x40
+; GFX8V4-NEXT:    s_load_dword s0, s[6:7], 0x40
 ; GFX8V4-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8V4-NEXT:    s_cmp_eq_u32 s1, s0
 ; GFX8V4-NEXT:    s_cselect_b32 s0, 1, 0
@@ -127,9 +127,9 @@ define amdgpu_kernel void @llvm_amdgcn_is_shared(ptr %ptr) {
 ;
 ; GFX8V5-LABEL: llvm_amdgcn_is_shared:
 ; GFX8V5:       ; %bb.0:
-; GFX8V5-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX8V5-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; GFX8V5-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8V5-NEXT:    s_load_dword s0, s[4:5], 0xcc
+; GFX8V5-NEXT:    s_load_dword s0, s[6:7], 0xcc
 ; GFX8V5-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8V5-NEXT:    s_cmp_eq_u32 s1, s0
 ; GFX8V5-NEXT:    s_cselect_b32 s0, 1, 0
@@ -140,7 +140,7 @@ define amdgpu_kernel void @llvm_amdgcn_is_shared(ptr %ptr) {
 ;
 ; GFX9V4-LABEL: llvm_amdgcn_is_shared:
 ; GFX9V4:       ; %bb.0:
-; GFX9V4-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX9V4-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9V4-NEXT:    s_mov_b64 s[2:3], src_shared_base
 ; GFX9V4-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9V4-NEXT:    s_cmp_eq_u32 s1, s3
@@ -152,7 +152,7 @@ define amdgpu_kernel void @llvm_amdgcn_is_shared(ptr %ptr) {
 ;
 ; GFX9V5-LABEL: llvm_amdgcn_is_shared:
 ; GFX9V5:       ; %bb.0:
-; GFX9V5-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX9V5-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; GFX9V5-NEXT:    s_mov_b64 s[2:3], src_shared_base
 ; GFX9V5-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9V5-NEXT:    s_cmp_eq_u32 s1, s3
@@ -170,9 +170,9 @@ define amdgpu_kernel void @llvm_amdgcn_is_shared(ptr %ptr) {
 define amdgpu_kernel void @llvm_amdgcn_is_private(ptr %ptr) {
 ; GFX8V4-LABEL: llvm_amdgcn_is_private:
 ; GFX8V4:       ; %bb.0:
-; GFX8V4-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX8V4-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX8V4-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8V4-NEXT:    s_load_dword s0, s[4:5], 0x44
+; GFX8V4-NEXT:    s_load_dword s0, s[6:7], 0x44
 ; GFX8V4-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8V4-NEXT:    s_cmp_eq_u32 s1, s0
 ; GFX8V4-NEXT:    s_cselect_b32 s0, 1, 0
@@ -183,9 +183,9 @@ define amdgpu_kernel void @llvm_amdgcn_is_private(ptr %ptr) {
 ;
 ; GFX8V5-LABEL: llvm_amdgcn_is_private:
 ; GFX8V5:       ; %bb.0:
-; GFX8V5-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX8V5-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; GFX8V5-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8V5-NEXT:    s_load_dword s0, s[4:5], 0xc8
+; GFX8V5-NEXT:    s_load_dword s0, s[6:7], 0xc8
 ; GFX8V5-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8V5-NEXT:    s_cmp_eq_u32 s1, s0
 ; GFX8V5-NEXT:    s_cselect_b32 s0, 1, 0
@@ -196,7 +196,7 @@ define amdgpu_kernel void @llvm_amdgcn_is_private(ptr %ptr) {
 ;
 ; GFX9V4-LABEL: llvm_amdgcn_is_private:
 ; GFX9V4:       ; %bb.0:
-; GFX9V4-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX9V4-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9V4-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX9V4-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9V4-NEXT:    s_cmp_eq_u32 s1, s3
@@ -208,7 +208,7 @@ define amdgpu_kernel void @llvm_amdgcn_is_private(ptr %ptr) {
 ;
 ; GFX9V5-LABEL: llvm_amdgcn_is_private:
 ; GFX9V5:       ; %bb.0:
-; GFX9V5-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX9V5-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; GFX9V5-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX9V5-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9V5-NEXT:    s_cmp_eq_u32 s1, s3
@@ -226,12 +226,12 @@ define amdgpu_kernel void @llvm_amdgcn_is_private(ptr %ptr) {
 define amdgpu_kernel void @llvm_trap() {
 ; GFX8V4-LABEL: llvm_trap:
 ; GFX8V4:       ; %bb.0:
-; GFX8V4-NEXT:    s_mov_b64 s[0:1], s[4:5]
+; GFX8V4-NEXT:    s_mov_b64 s[0:1], s[6:7]
 ; GFX8V4-NEXT:    s_trap 2
 ;
 ; GFX8V5-LABEL: llvm_trap:
 ; GFX8V5:       ; %bb.0:
-; GFX8V5-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xc8
+; GFX8V5-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0xc8
 ; GFX8V5-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8V5-NEXT:    s_trap 2
 ;

@@ -48,7 +48,6 @@ public:
 #endif
     T *Ptr = &peekInternal<T>();
     T Value = std::move(*Ptr);
-    Ptr->~T();
     shrink(aligned_size<T>());
     return Value;
   }

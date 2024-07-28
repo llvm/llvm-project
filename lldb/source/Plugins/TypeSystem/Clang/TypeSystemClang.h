@@ -1172,6 +1172,9 @@ private:
   /// on creation of a new instance.
   void LogCreation() const;
 
+  std::optional<uint64_t> GetObjCBitSize(clang::QualType qual_type,
+                                         ExecutionContextScope *exe_scope);
+
   // Classes that inherit from TypeSystemClang can see and modify these
   std::string m_target_triple;
   std::unique_ptr<clang::ASTContext> m_ast_up;
