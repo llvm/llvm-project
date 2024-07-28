@@ -2246,12 +2246,12 @@ public:
 /// The Operands are {ChainOp, VecOp, EVL, [Condition]}.
 class VPReductionEVLRecipe : public VPReductionRecipe {
 public:
-  VPReductionEVLRecipe(VPReductionRecipe *R, VPValue *EVL, VPValue *CondOp)
+  VPReductionEVLRecipe(VPReductionRecipe &R, VPValue &EVL, VPValue *CondOp)
       : VPReductionRecipe(
-            VPDef::VPReductionEVLSC, R->getRecurrenceDescriptor(),
-            cast_or_null<Instruction>(R->getUnderlyingValue()),
-            ArrayRef<VPValue *>({R->getChainOp(), R->getVecOp(), EVL}), CondOp,
-            R->isOrdered()) {}
+            VPDef::VPReductionEVLSC, R.getRecurrenceDescriptor(),
+            cast_or_null<Instruction>(R.getUnderlyingValue()),
+            ArrayRef<VPValue *>({R.getChainOp(), R.getVecOp(), &EVL}), CondOp,
+            R.isOrdered()) {}
 
   ~VPReductionEVLRecipe() override = default;
 
@@ -2558,10 +2558,10 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
 /// using the address to load from, the explicit vector length and an optional
 /// mask.
 struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
-  VPWidenLoadEVLRecipe(VPWidenLoadRecipe *L, VPValue *EVL, VPValue *Mask)
-      : VPWidenMemoryRecipe(VPDef::VPWidenLoadEVLSC, L->getIngredient(),
-                            {L->getAddr(), EVL}, L->isConsecutive(),
-                            L->isReverse(), L->getDebugLoc()),
+  VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue &EVL, VPValue *Mask)
+      : VPWidenMemoryRecipe(VPDef::VPWidenLoadEVLSC, L.getIngredient(),
+                            {L.getAddr(), &EVL}, L.isConsecutive(),
+                            L.isReverse(), L.getDebugLoc()),
         VPValue(this, &getIngredient()) {
     setMask(Mask);
   }
@@ -2634,11 +2634,10 @@ struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
 /// using the value to store, the address to store to, the explicit vector
 /// length and an optional mask.
 struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
-  VPWidenStoreEVLRecipe(VPWidenStoreRecipe *S, VPValue *EVL, VPValue *Mask)
-      : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S->getIngredient(),
-                            {S->getAddr(), S->getStoredValue(), EVL},
-                            S->isConsecutive(), S->isReverse(),
-                            S->getDebugLoc()) {
+  VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue &EVL, VPValue *Mask)
+      : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S.getIngredient(),
+                            {S.getAddr(), S.getStoredValue(), &EVL},
+                            S.isConsecutive(), S.isReverse(), S.getDebugLoc()) {
     setMask(Mask);
   }
 

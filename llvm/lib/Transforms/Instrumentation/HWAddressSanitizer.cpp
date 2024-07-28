@@ -1528,11 +1528,7 @@ static void emitRemark(const Function &F, OptimizationRemarkEmitter &ORE,
 
 bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
     Function &F, FunctionAnalysisManager &FAM) const {
-  bool Skip = [&]() {
-    if (ClRandomSkipRate.getNumOccurrences()) {
-      std::bernoulli_distribution D(ClRandomSkipRate);
-      return !D(*Rng);
-    }
+  auto SkipHot = [&]() {
     if (!ClHotPercentileCutoff.getNumOccurrences())
       return false;
     auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
@@ -1544,7 +1540,16 @@ bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
     }
     return PSI->isFunctionHotInCallGraphNthPercentile(
         ClHotPercentileCutoff, &F, FAM.getResult<BlockFrequencyAnalysis>(F));
-  }();
+  };
+
+  auto SkipRandom = [&]() {
+    if (!ClRandomSkipRate.getNumOccurrences())
+      return false;
+    std::bernoulli_distribution D(ClRandomSkipRate);
+    return !D(*Rng);
+  };
+
+  bool Skip = SkipRandom() || SkipHot();
   emitRemark(F, FAM.getResult<OptimizationRemarkEmitterAnalysis>(F), Skip);
   return Skip;
 }

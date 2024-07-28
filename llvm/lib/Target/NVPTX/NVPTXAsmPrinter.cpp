@@ -493,7 +493,7 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
   // Emit initial .loc debug directive for correct relocation symbol data.
   if (const DISubprogram *SP = MF->getFunction().getSubprogram()) {
     assert(SP->getUnit());
-    if (!SP->getUnit()->isDebugDirectivesOnly() && MMI && MMI->hasDebugInfo())
+    if (!SP->getUnit()->isDebugDirectivesOnly())
       emitInitialRawDwarfLocDirective(*MF);
   }
 }
@@ -912,7 +912,7 @@ void NVPTXAsmPrinter::emitHeader(Module &M, raw_ostream &O,
     if (HasFullDebugInfo)
       break;
   }
-  if (MMI && MMI->hasDebugInfo() && HasFullDebugInfo)
+  if (HasFullDebugInfo)
     O << ", debug";
 
   O << "\n";
@@ -928,8 +928,6 @@ void NVPTXAsmPrinter::emitHeader(Module &M, raw_ostream &O,
 }
 
 bool NVPTXAsmPrinter::doFinalization(Module &M) {
-  bool HasDebugInfo = MMI && MMI->hasDebugInfo();
-
   // If we did not emit any functions, then the global declarations have not
   // yet been emitted.
   if (!GlobalsEmitted) {
@@ -945,7 +943,7 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
   auto *TS =
       static_cast<NVPTXTargetStreamer *>(OutStreamer->getTargetStreamer());
   // Close the last emitted section
-  if (HasDebugInfo) {
+  if (hasDebugInfo()) {
     TS->closeLastSection();
     // Emit empty .debug_loc section for better support of the empty files.
     OutStreamer->emitRawText("\t.section\t.debug_loc\t{\t}");

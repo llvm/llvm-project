@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c99 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c11 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c23 -ffreestanding %s
-// RUN: %clang_cc1 -fsyntax-only -verify=finite -std=c23 -ffreestanding -ffinite-math-only %s
+// RUN: %clang_cc1 -fsyntax-only -verify=finite -std=c23 -ffreestanding -menable-no-nans -menable-no-infs %s
 // RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++11 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++14 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++17 -ffreestanding %s

@@ -4,6 +4,9 @@
 ; RUN: opt -S -passes='simplifycfg<hoist-common-insts;sink-common-insts>' < %s | FileCheck -check-prefixes=CHECK,SINK %s
 
 declare void @foo() convergent
+declare void @bar1()
+declare void @bar2()
+declare void @bar3()
 declare i32 @tid()
 declare i32 @mbcnt(i32 %a, i32 %b) convergent
 declare i32 @bpermute(i32 %a, i32 %b) convergent
@@ -39,6 +42,42 @@ merge:
 
 if.false.2:
   call void @foo()
+  br label %exit
+
+exit:
+  ret i32 %a
+}
+
+define i32 @test_01a(i32 %a) {
+; CHECK-LABEL: @test_01a(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[EXIT_CRITEDGE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    call void @bar1()
+; CHECK-NEXT:    call void @bar2()
+; CHECK-NEXT:    call void @bar3()
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit.critedge:
+; CHECK-NEXT:    call void @bar2()
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[A]]
+;
+entry:
+  %cond = icmp eq i32 %a, 0
+  br i1 %cond, label %merge, label %if.false
+
+if.false:
+  call void @bar1()
+  br label %merge
+
+merge:
+  call void @bar2()
+  br i1 %cond, label %exit, label %if.false.2
+
+if.false.2:
+  call void @bar3()
   br label %exit
 
 exit:

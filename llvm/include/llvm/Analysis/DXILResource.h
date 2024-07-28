@@ -137,9 +137,7 @@ public:
     assert(isCBuffer() && "Not a CBuffer");
     CBufferSize = Size;
   }
-  void setSampler(dxil::SamplerType Ty) {
-    SamplerTy = Ty;
-  }
+  void setSampler(dxil::SamplerType Ty) { SamplerTy = Ty; }
   void setStruct(uint32_t Stride, MaybeAlign Alignment) {
     assert(isStruct() && "Not a Struct");
     Struct.Stride = Stride;

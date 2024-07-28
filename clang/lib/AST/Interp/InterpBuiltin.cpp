@@ -1170,27 +1170,30 @@ static bool interp__builtin_constant_p(InterpState &S, CodePtr OpPC,
       Stk.clear();
     }
 
-    const APValue &LV = Res.toAPValue();
-    if (!Res.isInvalid() && LV.isLValue()) {
-      APValue::LValueBase Base = LV.getLValueBase();
-      if (Base.isNull()) {
-        // A null base is acceptable.
-        return returnInt(true);
-      } else if (const auto *E = Base.dyn_cast<const Expr *>()) {
-        if (!isa<StringLiteral>(E))
+    if (!Res.isInvalid() && !Res.empty()) {
+      const APValue &LV = Res.toAPValue();
+      if (LV.isLValue()) {
+        APValue::LValueBase Base = LV.getLValueBase();
+        if (Base.isNull()) {
+          // A null base is acceptable.
+          return returnInt(true);
+        } else if (const auto *E = Base.dyn_cast<const Expr *>()) {
+          if (!isa<StringLiteral>(E))
+            return returnInt(false);
+          return returnInt(LV.getLValueOffset().isZero());
+        } else if (Base.is<TypeInfoLValue>()) {
+          // Surprisingly, GCC considers __builtin_constant_p(&typeid(int)) to
+          // evaluate to true.
+          return returnInt(true);
+        } else {
+          // Any other base is not constant enough for GCC.
           return returnInt(false);
-        return returnInt(LV.getLValueOffset().isZero());
-      } else if (Base.is<TypeInfoLValue>()) {
-        // Surprisingly, GCC considers __builtin_constant_p(&typeid(int)) to
-        // evaluate to true.
-        return returnInt(true);
-      } else {
-        // Any other base is not constant enough for GCC.
-        return returnInt(false);
+        }
       }
     }
 
-    return returnInt(!Res.isInvalid() && !Res.empty());
+    // Otherwise, any constant value is good enough.
+    return returnInt(true);
   }
 
   return returnInt(false);
