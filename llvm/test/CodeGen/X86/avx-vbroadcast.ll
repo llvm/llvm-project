@@ -1011,7 +1011,7 @@ define float @broadcast_lifetime() nounwind {
   ret float %7
 }
 
-define <8 x i16> @broadcast_x86_mmx(x86_mmx %tmp) nounwind {
+define <8 x i16> @broadcast_x86_mmx(<1 x i64> %tmp) nounwind {
 ; X86-LABEL: broadcast_x86_mmx:
 ; X86:       ## %bb.0: ## %bb
 ; X86-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
@@ -1023,7 +1023,7 @@ define <8 x i16> @broadcast_x86_mmx(x86_mmx %tmp) nounwind {
 ; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X64-NEXT:    retq
 bb:
-  %tmp1 = bitcast x86_mmx %tmp to i64
+  %tmp1 = bitcast <1 x i64> %tmp to i64
   %tmp2 = insertelement <2 x i64> undef, i64 %tmp1, i32 0
   %tmp3 = bitcast <2 x i64> %tmp2 to <8 x i16>
   %tmp4 = shufflevector <8 x i16> %tmp3, <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
