@@ -524,17 +524,17 @@ void ScriptParser::readPhdrs() {
     cmd.name = tok;
     cmd.type = readPhdrType();
 
-    while (!errorCount() && !consume(";")) {
-      if (consume("FILEHDR"))
+    while (auto tok2 = till(";")) {
+      if (tok2 == "FILEHDR")
         cmd.hasFilehdr = true;
-      else if (consume("PHDRS"))
+      else if (tok2 == "PHDRS")
         cmd.hasPhdrs = true;
-      else if (consume("AT"))
+      else if (tok2 == "AT")
         cmd.lmaExpr = readParenExpr();
-      else if (consume("FLAGS"))
+      else if (tok2 == "FLAGS")
         cmd.flags = readParenExpr()().getValue();
       else
-        setError("unexpected header attribute: " + next());
+        setError("unexpected header attribute: " + tok2);
     }
 
     script->phdrsCommands.push_back(cmd);

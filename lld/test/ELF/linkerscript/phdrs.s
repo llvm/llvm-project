@@ -108,7 +108,7 @@ PHDRS { text PT_LOAD ;
 PHDRS { text PT_LOAD
 
 # RUN: not ld.lld -T unclosed2.lds a.o 2>&1 | FileCheck --check-prefix=UNCLOSED2 %s
-# UNCLOSED2: error: unclosed2.lds:1: unexpected header attribute:
+# UNCLOSED2: error: unclosed2.lds:1: unexpected EOF
 
 #--- a.s
 .global _start
