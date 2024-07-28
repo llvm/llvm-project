@@ -99,7 +99,7 @@ public:
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = FPBits(v).get_val();
-      if (x.is_nan() || x.is_inf() || x == 0.0l)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x == 0.0l)
         continue;
 
       mpfr::BinaryOutput<T> result;

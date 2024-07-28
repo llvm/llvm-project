@@ -82,7 +82,7 @@ public:
     constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
     for (StorageType v = MIN_SUBNORMAL; v <= MAX_SUBNORMAL; v += STEP) {
       T x = FPBits(v).get_val();
-      if (x.is_nan() || x.is_inf() || x == 0.0)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x == 0.0)
         continue;
 
       int exponent;
@@ -101,7 +101,7 @@ public:
     constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
     for (StorageType v = MIN_NORMAL; v <= MAX_NORMAL; v += STEP) {
       T x = FPBits(v).get_val();
-      if (x.is_nan() || x.is_inf() || x == 0.0)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x == 0.0)
         continue;
 
       int exponent;
