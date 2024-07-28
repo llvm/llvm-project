@@ -932,13 +932,17 @@ Error JITDylib::resolve(MaterializationResponsibility &MR,
           if (SymI->second.getFlags().hasError())
             SymbolsInErrorState.insert(KV.first);
           else {
-            auto Flags = KV.second.getFlags();
-            Flags &= ~JITSymbolFlags::Common;
-            assert(Flags ==
-                       (SymI->second.getFlags() & ~JITSymbolFlags::Common) &&
+            auto ExpectedFlags = SymI->second.getFlags();
+            if (ExpectedFlags & JITSymbolFlags::Common) {
+              ExpectedFlags &= ~JITSymbolFlags::Common;
+              ExpectedFlags |= JITSymbolFlags::Weak;
+            }
+
+            assert(KV.second.getFlags() == ExpectedFlags &&
                    "Resolved flags should match the declared flags");
 
-            Worklist.push_back({SymI, {KV.second.getAddress(), Flags}});
+            Worklist.push_back(
+                {SymI, {KV.second.getAddress(), SymI->second.getFlags()}});
           }
         }
 
@@ -2899,8 +2903,12 @@ Error ExecutionSession::OL_notifyResolved(MaterializationResponsibility &MR,
            "Resolving symbol outside this responsibility set");
     assert(!I->second.hasMaterializationSideEffectsOnly() &&
            "Can't resolve materialization-side-effects-only symbol");
-    assert((KV.second.getFlags() & ~JITSymbolFlags::Common) ==
-               (I->second & ~JITSymbolFlags::Common) &&
+    auto ExpectedFlags = I->second;
+    if (ExpectedFlags & JITSymbolFlags::Common) {
+      ExpectedFlags &= ~JITSymbolFlags::Common;
+      ExpectedFlags |= JITSymbolFlags::Weak;
+    }
+    assert(KV.second.getFlags() == ExpectedFlags &&
            "Resolving symbol with incorrect flags");
   }
 #endif
