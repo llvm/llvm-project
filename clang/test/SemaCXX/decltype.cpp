@@ -139,6 +139,14 @@ namespace GH58674 {
   }
 }
 
+namespace GH97646 {
+  template<bool B>
+  void f() {
+    decltype(B) x = false;
+    !x;
+  }
+}
+
 template<typename>
 class conditional {
 };
