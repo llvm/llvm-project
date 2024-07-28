@@ -106,10 +106,14 @@ used for DXIL's RawBuffers and StructuredBuffers. We call the latter
 "RawBuffer" to match the naming of the operations, but it can represent both
 the Raw and Structured variants.
 
-For TypedBuffer, the element type must be an scalar integer or floating point
-type, or a vector of at most 4 such types. For RawBuffer the type can be an
-integer, floating point, vector, or struct type. HLSL's ByteAddressBuffer is
-represented as a RawBuffer with an `i8` element type.
+HLSL's Buffer and RWBuffer are represented as a TypedBuffer with an element
+type that is a scalar integer or floating point type, or a vector of at most 4
+such types. HLSL's ByteAddressBuffer is a RawBuffer with an `i8` element type.
+HLSL's StructuredBuffers are RawBuffer with a struct, vector, or scalar type.
+
+One unfortunate necessity here is that TypedBuffer needs an extra parameter to
+differentiate signed vs unsigned ints. The is because in LLVM IR int types
+don't have a sign, so to keep this information we need a side channel.
 
 These types are generally used by BufferLoad and BufferStore operations, as
 well as atomics.
@@ -130,7 +134,7 @@ There are a few fields to describe variants of all of these types:
    * - IsROV
      - Whether the UAV is a rasterizer ordered view. Always ``0`` for SRVs.
    * - IsSigned
-     - Whether the element type is signed ("dx.TypedBuffer" only)
+     - Whether an int element type is signed ("dx.TypedBuffer" only)
 
 .. _bufferLoad: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#bufferload
 .. _bufferStore: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#bufferstore
