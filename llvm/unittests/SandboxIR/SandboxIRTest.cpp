@@ -764,11 +764,23 @@ define void @foo(ptr %arg0, ptr %arg1) {
   // Check create(InsertBefore)
   sandboxir::LoadInst *NewLd =
       sandboxir::LoadInst::create(Ld->getType(), Arg1, Align(8),
-                                  /*InsertBefore=*/Ret, Ctx, "NewLd");
+                                  /*InsertBefore=*/Ret, Ctx,
+                                  /*IsVolatile=*/false, "NewLd");
+  // Checking if create() was volatile
+  EXPECT_FALSE(NewLd->isVolatile());
   EXPECT_EQ(NewLd->getType(), Ld->getType());
   EXPECT_EQ(NewLd->getPointerOperand(), Arg1);
   EXPECT_EQ(NewLd->getAlign(), 8);
   EXPECT_EQ(NewLd->getName(), "NewLd");
+
+  sandboxir::LoadInst *NewVLd =
+      sandboxir::LoadInst::create(Vld->getType(), Arg1, Align(8),
+                                  /*InsertBefore=*/Ret, Ctx,
+                                  /*IsVolatile=*/true, "NewVLd");
+
+  // Checking if create() was volatile
+  EXPECT_TRUE(NewVLd->isVolatile());
+  EXPECT_EQ(NewVLd->getName(), "NewVLd");
 }
 
 TEST_F(SandboxIRTest, StoreInst) {
