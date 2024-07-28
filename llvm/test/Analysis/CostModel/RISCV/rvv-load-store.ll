@@ -493,3 +493,102 @@ define void @store_of_constant(ptr %p) {
 
   ret void
 }
+
+
+define void @load_oddsize_vectors(ptr %p) {
+; CHECK-LABEL: 'load_oddsize_vectors'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load <1 x i32>, ptr %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <2 x i32>, ptr %p, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %3 = load <3 x i32>, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = load <4 x i32>, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = load <5 x i32>, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %6 = load <6 x i32>, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %7 = load <7 x i32>, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %8 = load <8 x i32>, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %9 = load <9 x i32>, ptr %p, align 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %10 = load <15 x i32>, ptr %p, align 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %11 = load <16 x i32>, ptr %p, align 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %12 = load <31 x i32>, ptr %p, align 128
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %13 = load <32 x i32>, ptr %p, align 128
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CODESIZE-LABEL: 'load_oddsize_vectors'
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load <1 x i32>, ptr %p, align 4
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <2 x i32>, ptr %p, align 8
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = load <3 x i32>, ptr %p, align 16
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = load <4 x i32>, ptr %p, align 16
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = load <5 x i32>, ptr %p, align 32
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %6 = load <6 x i32>, ptr %p, align 32
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %7 = load <7 x i32>, ptr %p, align 32
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %8 = load <8 x i32>, ptr %p, align 32
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %9 = load <9 x i32>, ptr %p, align 64
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %10 = load <15 x i32>, ptr %p, align 64
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %11 = load <16 x i32>, ptr %p, align 64
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %12 = load <31 x i32>, ptr %p, align 128
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %13 = load <32 x i32>, ptr %p, align 128
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+
+  load <1 x i32>, ptr %p
+  load <2 x i32>, ptr %p
+  load <3 x i32>, ptr %p
+  load <4 x i32>, ptr %p
+  load <5 x i32>, ptr %p
+  load <6 x i32>, ptr %p
+  load <7 x i32>, ptr %p
+  load <8 x i32>, ptr %p
+  load <9 x i32>, ptr %p
+  load <15 x i32>, ptr %p
+  load <16 x i32>, ptr %p
+  load <31 x i32>, ptr %p
+  load <32 x i32>, ptr %p
+
+  ret void
+}
+
+define void @store_oddsize_vectors(ptr %p) {
+; CHECK-LABEL: 'store_oddsize_vectors'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i32> undef, ptr %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i32> undef, ptr %p, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <3 x i32> undef, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i32> undef, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <5 x i32> undef, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <6 x i32> undef, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i32> undef, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i32> undef, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <15 x i32> undef, ptr %p, align 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <16 x i32> undef, ptr %p, align 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <31 x i32> undef, ptr %p, align 128
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <32 x i32> undef, ptr %p, align 128
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CODESIZE-LABEL: 'store_oddsize_vectors'
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i32> undef, ptr %p, align 4
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i32> undef, ptr %p, align 8
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <3 x i32> undef, ptr %p, align 16
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i32> undef, ptr %p, align 16
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <5 x i32> undef, ptr %p, align 32
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <6 x i32> undef, ptr %p, align 32
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i32> undef, ptr %p, align 32
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i32> undef, ptr %p, align 32
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <15 x i32> undef, ptr %p, align 64
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <16 x i32> undef, ptr %p, align 64
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <31 x i32> undef, ptr %p, align 128
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <32 x i32> undef, ptr %p, align 128
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  store <1 x i32> undef, ptr %p
+  store <2 x i32> undef, ptr %p
+  store <3 x i32> undef, ptr %p
+  store <4 x i32> undef, ptr %p
+  store <5 x i32> undef, ptr %p
+  store <6 x i32> undef, ptr %p
+  store <7 x i32> undef, ptr %p
+  store <8 x i32> undef, ptr %p
+  store <15 x i32> undef, ptr %p
+  store <16 x i32> undef, ptr %p
+  store <31 x i32> undef, ptr %p
+  store <32 x i32> undef, ptr %p
+
+  ret void
+}
