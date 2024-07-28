@@ -412,10 +412,6 @@ define void @acos_f32(ptr nocapture %varray) {
 ; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_acosf(<4 x float> [[TMP4:%.*]])
 ; CHECK:    ret void
 ;
-; CHECK-AVX512-VF16-LABEL: @acos_f32(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_acosf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
-;
 entry:
   br label %for.body
 
@@ -438,10 +434,6 @@ define void @acos_f32_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @acos_f32_intrinsic(
 ; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_acosf(<4 x float> [[TMP4:%.*]])
 ; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @acos_f32_intrinsic(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_acosf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
 ;
 entry:
   br label %for.body
@@ -677,29 +669,6 @@ for.end:
   ret void
 }
 
-define void @cosh_f64(ptr nocapture %varray) {
-; CHECK-AVX-VF2-LABEL: @cosh_f64(
-; CHECK-AVX-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_cosh(<2 x double> [[TMP4:%.*]])
-; CHECK-AVX-VF2:    ret void
-;
-entry:
-  br label %for.body
-
-for.body:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %tmp = trunc i64 %iv to i32
-  %conv = sitofp i32 %tmp to double
-  %call = tail call double @cosh(double %conv)
-  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
-  store double %call, ptr %arrayidx, align 4
-  %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond = icmp eq i64 %iv.next, 1000
-  br i1 %exitcond, label %for.end, label %for.body
-
-for.end:
-  ret void
-}
-
 define void @cosh_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @cosh_f32(
 ; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_coshf(<4 x float> [[TMP4:%.*]])
@@ -715,29 +684,6 @@ for.body:
   %call = tail call float @coshf(float %conv)
   %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
   store float %call, ptr %arrayidx, align 4
-  %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond = icmp eq i64 %iv.next, 1000
-  br i1 %exitcond, label %for.end, label %for.body
-
-for.end:
-  ret void
-}
-
-define void @cosh_f64_intrinsic(ptr nocapture %varray) {
-; CHECK-AVX-VF2-LABEL: @cosh_f64_intrinsic(
-; CHECK-AVX-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_cosh(<2 x double> [[TMP4:%.*]])
-; CHECK-AVX-VF2:    ret void
-;
-entry:
-  br label %for.body
-
-for.body:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %tmp = trunc i64 %iv to i32
-  %conv = sitofp i32 %tmp to double
-  %call = tail call double @llvm.cosh.f64(double %conv)
-  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
-  store double %call, ptr %arrayidx, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, 1000
   br i1 %exitcond, label %for.end, label %for.body
@@ -774,10 +720,6 @@ define void @tanh_f32(ptr nocapture %varray) {
 ; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_tanhf(<4 x float> [[TMP4:%.*]])
 ; CHECK:    ret void
 ;
-; CHECK-AVX512-VF16-LABEL: @tanh_f32(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_tanhf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
-;
 entry:
   br label %for.body
 
@@ -800,10 +742,6 @@ define void @tanh_f32_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @tanh_f32_intrinsic(
 ; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_tanhf(<4 x float> [[TMP4:%.*]])
 ; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @tanh_f32_intrinsic(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_tanhf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
 ;
 entry:
   br label %for.body
