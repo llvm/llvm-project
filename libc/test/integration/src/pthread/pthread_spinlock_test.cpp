@@ -20,7 +20,8 @@
 namespace {
 void smoke_test() {
   pthread_spinlock_t lock;
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_init(&lock, 0), /*pshared=*/0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_init(&lock, PTHREAD_PROCESS_PRIVATE),
+            0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_lock(&lock), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_unlock(&lock), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_destroy(&lock), 0);
@@ -28,7 +29,8 @@ void smoke_test() {
 
 void trylock_test() {
   pthread_spinlock_t lock;
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_init(&lock, 0), /*pshared=*/0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_init(&lock, PTHREAD_PROCESS_PRIVATE),
+            0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_trylock(&lock), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_trylock(&lock), EBUSY);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_unlock(&lock), 0);
@@ -39,7 +41,8 @@ void trylock_test() {
 
 void destroy_held_lock_test() {
   pthread_spinlock_t lock;
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_init(&lock, 0), /*pshared=*/0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_init(&lock, PTHREAD_PROCESS_PRIVATE),
+            0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_lock(&lock), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_destroy(&lock), EBUSY);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_unlock(&lock), 0);
@@ -48,7 +51,8 @@ void destroy_held_lock_test() {
 
 void use_after_destroy_test() {
   pthread_spinlock_t lock;
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_init(&lock, 0), /*pshared=*/0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_init(&lock, PTHREAD_PROCESS_PRIVATE),
+            0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_destroy(&lock), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_unlock(&lock), EINVAL);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_lock(&lock), EINVAL);
@@ -58,18 +62,41 @@ void use_after_destroy_test() {
 
 void unlock_without_holding_test() {
   pthread_spinlock_t lock;
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_init(&lock, 0), /*pshared=*/0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_init(&lock, PTHREAD_PROCESS_PRIVATE),
+            0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_unlock(&lock), EPERM);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_destroy(&lock), 0);
 }
 
 void deadlock_test() {
   pthread_spinlock_t lock;
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_init(&lock, 0), /*pshared=*/0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_init(&lock, PTHREAD_PROCESS_PRIVATE),
+            0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_lock(&lock), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_lock(&lock), EDEADLK);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_unlock(&lock), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_destroy(&lock), 0);
+}
+
+void null_lock_test() {
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_init(nullptr, 0), EINVAL);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_lock(nullptr), EINVAL);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_trylock(nullptr), EINVAL);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_unlock(nullptr), EINVAL);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_destroy(nullptr), EINVAL);
+}
+
+void pshared_attribute_test() {
+  pthread_spinlock_t lock;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_init(&lock, PTHREAD_PROCESS_SHARED),
+            0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_destroy(&lock), 0);
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_init(&lock, PTHREAD_PROCESS_PRIVATE),
+            0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_destroy(&lock), 0);
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_init(&lock, -1), EINVAL);
 }
 
 void multi_thread_test() {
@@ -78,7 +105,7 @@ void multi_thread_test() {
     int count = 0;
   } shared;
   pthread_t thread[10];
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_init(&shared.lock, 0), /*pshared=*/0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_spin_init(&shared.lock, 0), 0);
   for (int i = 0; i < 10; ++i) {
     ASSERT_EQ(
         LIBC_NAMESPACE::pthread_create(
@@ -112,5 +139,7 @@ TEST_MAIN() {
   unlock_without_holding_test();
   deadlock_test();
   multi_thread_test();
+  null_lock_test();
+  pshared_attribute_test();
   return 0;
 }

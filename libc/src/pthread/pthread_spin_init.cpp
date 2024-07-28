@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/pthread/pthread_spin_init.h"
+#include "hdr/errno_macros.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/common.h"
 #include "src/__support/threads/spin_lock.h"
+#include <pthread.h> // for PTHREAD_PROCESS_SHARED, PTHREAD_PROCESS_PRIVATE
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -21,12 +23,14 @@ static_assert(sizeof(pthread_spinlock_t::__lockword) == sizeof(SpinLock) &&
 
 LLVM_LIBC_FUNCTION(int, pthread_spin_init,
                    (pthread_spinlock_t * lock, [[maybe_unused]] int pshared)) {
+  if (!lock)
+    return EINVAL;
+  if (pshared != PTHREAD_PROCESS_SHARED && pshared != PTHREAD_PROCESS_PRIVATE)
+    return EINVAL;
   // The spin lock here is a simple atomic flag, so we don't need to do any
   // special handling for pshared.
   ::new (&lock->__lockword) SpinLock();
   lock->__owner = 0;
-  // No memory allocation needed, hence always succeeds. POSIX.1-2024 does not
-  // specify checking on invalid lock or pshared values.
   return 0;
 }
 

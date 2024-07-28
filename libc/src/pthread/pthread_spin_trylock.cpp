@@ -21,11 +21,13 @@ static_assert(sizeof(pthread_spinlock_t::__lockword) == sizeof(SpinLock) &&
               "size and alignment");
 
 LLVM_LIBC_FUNCTION(int, pthread_spin_trylock, (pthread_spinlock_t * lock)) {
-  auto spin_lock = reinterpret_cast<SpinLock *>(&lock->__lockword);
   // If an implementation detects that the value specified by the lock argument
   // to pthread_spin_lock() or pthread_spin_trylock() does not refer to an
   // initialized spin lock object, it is recommended that the function should
   // fail and report an [EINVAL] error.
+  if (!lock)
+    return EINVAL;
+  auto spin_lock = reinterpret_cast<SpinLock *>(&lock->__lockword);
   if (!spin_lock || spin_lock->is_invalid())
     return EINVAL;
   // Try to acquire the lock without blocking.
