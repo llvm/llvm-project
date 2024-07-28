@@ -7,8 +7,8 @@ PHDRS {all PT_LOAD FILEHDR PHDRS ;}
 SECTIONS {
   . = 0x10000200;
   .text : {*(.text*)} :all
-  .foo : {*(.foo.*)} :all
-  .data : {*(.data.*)} :all}
+  .foo : {*(.foo.*)} :"all"
+  .data : {*(.data.*)} : "all"}
 
 # RUN: ld.lld -o 1 -T 1.lds a.o
 # RUN: llvm-readelf -Sl 1 | FileCheck %s
