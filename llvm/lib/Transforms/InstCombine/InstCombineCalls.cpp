@@ -1500,7 +1500,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   // Don't try to simplify calls without uses. It will not do anything useful,
   // but will result in the following folds being skipped.
   if (!CI.use_empty()) {
-    SmallVector<Value *, 4> Args;
+    SmallVector<Value *, 8> Args;
     Args.reserve(CI.arg_size());
     for (Value *Op : CI.args())
       Args.push_back(Op);
