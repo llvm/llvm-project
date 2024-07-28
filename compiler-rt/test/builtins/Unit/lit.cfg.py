@@ -203,3 +203,5 @@ if len(builtins_source_feature_duplicates) > 0:
         )
     )
 config.available_features.update(builtins_source_features)
+
+config.excludes = ["cpu_model"]
