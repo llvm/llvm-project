@@ -135,10 +135,7 @@ __stable_partition_impl(_ForwardIterator __first, _ForwardIterator __last, _Pred
   pair<value_type*, ptrdiff_t> __p(0, 0);
   unique_ptr<value_type, __return_temporary_buffer> __h;
   if (__len >= __alloc_limit) {
-    // TODO: Remove the use of std::get_temporary_buffer
-    _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-    __p = std::get_temporary_buffer<value_type>(__len);
-    _LIBCPP_SUPPRESS_DEPRECATED_POP
+    __p = std::__get_temporary_buffer<value_type>(__len);
     __h.reset(__p.first);
   }
   return std::__stable_partition_impl<_AlgPolicy, _Predicate&>(
@@ -275,10 +272,7 @@ _LIBCPP_HIDE_FROM_ABI _BidirectionalIterator __stable_partition_impl(
   pair<value_type*, ptrdiff_t> __p(0, 0);
   unique_ptr<value_type, __return_temporary_buffer> __h;
   if (__len >= __alloc_limit) {
-    // TODO: Remove the use of std::get_temporary_buffer
-    _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-    __p = std::get_temporary_buffer<value_type>(__len);
-    _LIBCPP_SUPPRESS_DEPRECATED_POP
+    __p = std::__get_temporary_buffer<value_type>(__len);
     __h.reset(__p.first);
   }
   return std::__stable_partition_impl<_AlgPolicy, _Predicate&>(

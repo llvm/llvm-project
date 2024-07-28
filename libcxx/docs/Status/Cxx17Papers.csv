@@ -4,7 +4,7 @@
 "`N4169 <https://wg21.link/n4169>`__","LWG","A proposal to add invoke function template","Urbana","|Complete|","3.7"
 "`N4190 <https://wg21.link/n4190>`__","LWG","Removing auto_ptr, random_shuffle(), And Old <functional> Stuff.","Urbana","|Complete|","15.0"
 "`N4258 <https://wg21.link/n4258>`__","LWG","Cleaning-up noexcept in the Library.","Urbana","|In Progress|","3.7"
-"`N4259 <https://wg21.link/n4259>`__","CWG","Wording for std::uncaught_exceptions","Urbana","|Complete|","3.7"
+"`N4259 <https://wg21.link/n4259>`__","CWG","Wording for std::uncaught_exceptions","Urbana","|Complete| [#note-N4259]_","3.7"
 "`N4277 <https://wg21.link/n4277>`__","LWG","TriviallyCopyable ``reference_wrapper``\ .","Urbana","|Complete|","3.2"
 "`N4279 <https://wg21.link/n4279>`__","LWG","Improved insertion interface for unique-key maps.","Urbana","|Complete|","3.7"
 "`N4280 <https://wg21.link/n4280>`__","LWG","Non-member size() and more","Urbana","|Complete|","3.6"

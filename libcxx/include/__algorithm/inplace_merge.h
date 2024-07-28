@@ -211,10 +211,7 @@ _LIBCPP_HIDE_FROM_ABI void __inplace_merge(
   difference_type __len1     = _IterOps<_AlgPolicy>::distance(__first, __middle);
   difference_type __len2     = _IterOps<_AlgPolicy>::distance(__middle, __last);
   difference_type __buf_size = std::min(__len1, __len2);
-  // TODO: Remove the use of std::get_temporary_buffer
-  _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-  pair<value_type*, ptrdiff_t> __buf = std::get_temporary_buffer<value_type>(__buf_size);
-  _LIBCPP_SUPPRESS_DEPRECATED_POP
+  pair<value_type*, ptrdiff_t> __buf = std::__get_temporary_buffer<value_type>(__buf_size);
   unique_ptr<value_type, __return_temporary_buffer> __h(__buf.first);
   return std::__inplace_merge<_AlgPolicy>(
       std::move(__first), std::move(__middle), std::move(__last), __comp, __len1, __len2, __buf.first, __buf.second);

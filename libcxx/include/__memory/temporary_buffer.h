@@ -22,8 +22,8 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI _LIBCPP_DEPRECATED_IN_CXX17 pair<_Tp*, ptrdiff_t>
-get_temporary_buffer(ptrdiff_t __n) _NOEXCEPT {
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI pair<_Tp*, ptrdiff_t>
+__get_temporary_buffer(ptrdiff_t __n) _NOEXCEPT {
   pair<_Tp*, ptrdiff_t> __r(0, 0);
   const ptrdiff_t __m =
       (~ptrdiff_t(0) ^ ptrdiff_t(ptrdiff_t(1) << (sizeof(ptrdiff_t) * __CHAR_BIT__ - 1))) / sizeof(_Tp);
@@ -56,19 +56,27 @@ get_temporary_buffer(ptrdiff_t __n) _NOEXCEPT {
   return __r;
 }
 
+struct __return_temporary_buffer {
+  template <class _Tp>
+  _LIBCPP_HIDE_FROM_ABI void operator()(_Tp* __p) const {
+    std::__libcpp_deallocate_unsized((void*)__p, _LIBCPP_ALIGNOF(_Tp));
+  }
+};
+
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER)
+
+template <class _Tp>
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI _LIBCPP_DEPRECATED_IN_CXX17 pair<_Tp*, ptrdiff_t>
+get_temporary_buffer(ptrdiff_t __n) _NOEXCEPT {
+  return std::__get_temporary_buffer<_Tp>(__n);
+}
+
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX17 void return_temporary_buffer(_Tp* __p) _NOEXCEPT {
   std::__libcpp_deallocate_unsized((void*)__p, _LIBCPP_ALIGNOF(_Tp));
 }
 
-struct __return_temporary_buffer {
-  _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-  template <class _Tp>
-  _LIBCPP_HIDE_FROM_ABI void operator()(_Tp* __p) const {
-    std::return_temporary_buffer(__p);
-  }
-  _LIBCPP_SUPPRESS_DEPRECATED_POP
-};
+#endif // _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER)
 
 _LIBCPP_END_NAMESPACE_STD
 

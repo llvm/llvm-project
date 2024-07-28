@@ -244,10 +244,7 @@ __stable_sort_impl(_RandomAccessIterator __first, _RandomAccessIterator __last, 
   pair<value_type*, ptrdiff_t> __buf(0, 0);
   unique_ptr<value_type, __return_temporary_buffer> __h;
   if (__len > static_cast<difference_type>(__stable_sort_switch<value_type>::value)) {
-    // TODO: Remove the use of std::get_temporary_buffer
-    _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-    __buf = std::get_temporary_buffer<value_type>(__len);
-    _LIBCPP_SUPPRESS_DEPRECATED_POP
+    __buf = std::__get_temporary_buffer<value_type>(__len);
     __h.reset(__buf.first);
   }
 

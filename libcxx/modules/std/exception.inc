@@ -21,6 +21,5 @@ export namespace std {
   using std::terminate;
   using std::terminate_handler;
   using std::throw_with_nested;
-  using std::uncaught_exception;
   using std::uncaught_exceptions;
 } // namespace std
