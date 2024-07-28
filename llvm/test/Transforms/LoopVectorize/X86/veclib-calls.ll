@@ -431,7 +431,6 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
-
 ;CHECK-LABEL: @asin_f32(
 ;CHECK: vasinf{{.*}}<4 x float>
 ;CHECK: ret void

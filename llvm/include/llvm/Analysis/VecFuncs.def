@@ -1369,13 +1369,11 @@ TLI_DEFINE_VECFUNC("llvm.asin.f32", "amd_vrs4_asinf", FIXED(4), NOMASK, "_ZGV_LL
 TLI_DEFINE_VECFUNC("llvm.asin.f32", "amd_vrs8_asinf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
 TLI_DEFINE_VECFUNC("llvm.asin.f32", "amd_vrs16_asinf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
 
-
 TLI_DEFINE_VECFUNC("acosf", "amd_vrs4_acosf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("acosf", "amd_vrs8_acosf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
 
 TLI_DEFINE_VECFUNC("llvm.acos.f32", "amd_vrs8_acosf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
 TLI_DEFINE_VECFUNC("llvm.acos.f32", "amd_vrs4_acosf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
-
 
 TLI_DEFINE_VECFUNC("atan", "amd_vrd2_atan", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
 TLI_DEFINE_VECFUNC("atan", "amd_vrd4_atan", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
