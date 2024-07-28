@@ -1851,9 +1851,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::MULHU,     MVT::i64, Expand);
     setOperationAction(ISD::MULHS,     MVT::i64, Expand);
 
-    setOperationAction(ISD::UMULO,     MVT::i64, Custom);
-    setOperationAction(ISD::SMULO,     MVT::i64, Custom);
-
     setOperationAction(ISD::SHL_PARTS, MVT::i64, Expand);
     setOperationAction(ISD::SRA_PARTS, MVT::i64, Expand);
     setOperationAction(ISD::SRL_PARTS, MVT::i64, Expand);
@@ -3101,61 +3098,6 @@ static SDValue LowerFNEGorFABS(SDValue Op, SelectionDAG &DAG, bool isV9) {
   return DstReg128;
 }
 
-// Custom lower UMULO/SMULO for SPARC. This code is similar to ExpandNode()
-// in LegalizeDAG.cpp except the order of arguments to the library function.
-static SDValue LowerUMULO_SMULO(SDValue Op, SelectionDAG &DAG,
-                                const SparcTargetLowering &TLI)
-{
-  unsigned opcode = Op.getOpcode();
-  assert((opcode == ISD::UMULO || opcode == ISD::SMULO) && "Invalid Opcode.");
-
-  bool isSigned = (opcode == ISD::SMULO);
-  EVT VT = MVT::i64;
-  EVT WideVT = MVT::i128;
-  SDLoc dl(Op);
-  SDValue LHS = Op.getOperand(0);
-
-  if (LHS.getValueType() != VT)
-    return Op;
-
-  SDValue ShiftAmt = DAG.getConstant(63, dl, VT);
-
-  SDValue RHS = Op.getOperand(1);
-  SDValue HiLHS, HiRHS;
-  if (isSigned) {
-    HiLHS = DAG.getNode(ISD::SRA, dl, VT, LHS, ShiftAmt);
-    HiRHS = DAG.getNode(ISD::SRA, dl, MVT::i64, RHS, ShiftAmt);
-  } else {
-    HiLHS = DAG.getConstant(0, dl, VT);
-    HiRHS = DAG.getConstant(0, dl, MVT::i64);
-  }
-
-  SDValue Args[] = { HiLHS, LHS, HiRHS, RHS };
-
-  TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setSExt(isSigned);
-  SDValue MulResult = TLI.makeLibCall(DAG,
-                                      RTLIB::MUL_I128, WideVT,
-                                      Args, CallOptions, dl).first;
-  SDValue BottomHalf, TopHalf;
-  std::tie(BottomHalf, TopHalf) = DAG.SplitScalar(MulResult, dl, VT, VT);
-  if (isSigned) {
-    SDValue Tmp1 = DAG.getNode(ISD::SRA, dl, VT, BottomHalf, ShiftAmt);
-    TopHalf = DAG.getSetCC(dl, MVT::i32, TopHalf, Tmp1, ISD::SETNE);
-  } else {
-    TopHalf = DAG.getSetCC(dl, MVT::i32, TopHalf, DAG.getConstant(0, dl, VT),
-                           ISD::SETNE);
-  }
-  // MulResult is a node with an illegal type. Because such things are not
-  // generally permitted during this phase of legalization, ensure that
-  // nothing is left using the node. The above EXTRACT_ELEMENT nodes should have
-  // been folded.
-  assert(MulResult->use_empty() && "Illegally typed node still in use!");
-
-  SDValue Ops[2] = { BottomHalf, TopHalf } ;
-  return DAG.getMergeValues(Ops, dl);
-}
-
 static SDValue LowerATOMIC_LOAD_STORE(SDValue Op, SelectionDAG &DAG) {
   if (isStrongerThanMonotonic(cast<AtomicSDNode>(Op)->getSuccessOrdering())) {
     // Expand with a fence.
@@ -3230,8 +3172,6 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FNEG:               return LowerFNEGorFABS(Op, DAG, isV9);
   case ISD::FP_EXTEND:          return LowerF128_FPEXTEND(Op, DAG, *this);
   case ISD::FP_ROUND:           return LowerF128_FPROUND(Op, DAG, *this);
-  case ISD::UMULO:
-  case ISD::SMULO:              return LowerUMULO_SMULO(Op, DAG, *this);
   case ISD::ATOMIC_LOAD:
   case ISD::ATOMIC_STORE:       return LowerATOMIC_LOAD_STORE(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN: return LowerINTRINSIC_WO_CHAIN(Op, DAG);

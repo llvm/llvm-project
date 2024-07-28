@@ -36,7 +36,9 @@ using namespace llvm;
 using namespace lld;
 using namespace lld::elf;
 
-ScriptLexer::ScriptLexer(MemoryBufferRef mb) : curBuf(mb), mbs(1, mb) {}
+ScriptLexer::ScriptLexer(MemoryBufferRef mb) : curBuf(mb), mbs(1, mb) {
+  activeFilenames.insert(mb.getBufferIdentifier());
+}
 
 // Returns a whole line containing the current token.
 StringRef ScriptLexer::getLine() {
@@ -48,32 +50,6 @@ StringRef ScriptLexer::getLine() {
   return s.substr(0, s.find_first_of("\r\n"));
 }
 
-// Returns 1-based line number of the current token.
-size_t ScriptLexer::getLineNumber() {
-  if (prevTok.empty())
-    return 1;
-  StringRef s = getCurrentMB().getBuffer();
-  const size_t tokOffset = prevTok.data() - s.data();
-
-  // For the first token, or when going backwards, start from the beginning of
-  // the buffer. If this token is after the previous token, start from the
-  // previous token.
-  size_t line = 1;
-  size_t start = 0;
-  if (lastLineNumberOffset > 0 && tokOffset >= lastLineNumberOffset) {
-    start = lastLineNumberOffset;
-    line = lastLineNumber;
-  }
-
-  line += s.substr(start, tokOffset - start).count('\n');
-
-  // Store the line number of this token for reuse.
-  lastLineNumberOffset = tokOffset;
-  lastLineNumber = line;
-
-  return line;
-}
-
 // Returns 0-based column number of the current token.
 size_t ScriptLexer::getColumnNumber() {
   return prevTok.data() - getLine().data();
@@ -81,7 +57,7 @@ size_t ScriptLexer::getColumnNumber() {
 
 std::string ScriptLexer::getCurrentLocation() {
   std::string filename = std::string(getCurrentMB().getBufferIdentifier());
-  return (filename + ":" + Twine(getLineNumber())).str();
+  return (filename + ":" + Twine(prevTokLine)).str();
 }
 
 // We don't want to record cascading errors. Keep only the first one.
@@ -107,6 +83,7 @@ void ScriptLexer::lex() {
         eof = true;
         return;
       }
+      activeFilenames.erase(curBuf.filename);
       curBuf = buffers.pop_back_val();
       continue;
     }
@@ -177,6 +154,7 @@ StringRef ScriptLexer::skipSpace(StringRef s) {
         setError("unclosed comment in a linker script");
         return "";
       }
+      curBuf.lineNumber += s.substr(0, e).count('\n');
       s = s.substr(e + 2);
       continue;
     }
@@ -184,13 +162,17 @@ StringRef ScriptLexer::skipSpace(StringRef s) {
       size_t e = s.find('\n', 1);
       if (e == StringRef::npos)
         e = s.size() - 1;
+      else
+        ++curBuf.lineNumber;
       s = s.substr(e + 1);
       continue;
     }
-    size_t size = s.size();
+    StringRef saved = s;
     s = s.ltrim();
-    if (s.size() == size)
+    auto len = saved.size() - s.size();
+    if (len == 0)
       return s;
+    curBuf.lineNumber += saved.substr(0, len).count('\n');
   }
 }
 
@@ -199,6 +181,10 @@ bool ScriptLexer::atEOF() { return eof || errorCount(); }
 
 StringRef ScriptLexer::next() {
   prevTok = peek();
+  // `prevTokLine` is not updated for EOF so that the line number in `setError`
+  // will be more useful.
+  if (prevTok.size())
+    prevTokLine = curBuf.lineNumber;
   return std::exchange(curTok, StringRef(curBuf.s.data(), 0));
 }
 
