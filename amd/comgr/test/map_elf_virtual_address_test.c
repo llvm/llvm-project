@@ -111,9 +111,10 @@ int main(int argc, char *argv[]) {
   checkError(Status, "amd_comgr_map_elf_virtual_address_to_code_object_offset");
 
   if (codeObjectOffset != 0x60 || nobits != 0 || sliceSize != 0x860) {
-    printf("elf virtual address map failed for address %#6lx\n"
+    printf("elf virtual address map failed for address %#6" PRIx64 "\n"
            "  Expected: codeObjectOffset = 0x60, nobits = 0, slice = 0x\n"
-           "  Actual:   codeObjectOffset = %#6lx, nobits = %d, slice = %#6lx\n",
+           "  Actual:   codeObjectOffset = %#6" PRIx64
+           ", nobits = %d, slice = %#6" PRIx64 "\n",
            elfVirtualAddress, codeObjectOffset, nobits, sliceSize);
     exit(1);
   }
@@ -136,9 +137,10 @@ int main(int argc, char *argv[]) {
   checkError(Status, "amd_comgr_map_elf_virtual_address_to_code_object_offset");
 
   if (codeObjectOffset != 0x1400 || nobits != 0 || sliceSize != 0x180) {
-    printf("elf virtual address map failed for address %#6lx\n"
+    printf("elf virtual address map failed for address %#6" PRIx64 "\n"
            "  Expected: codeObjectOffset = 0x1400, nobits = 0, slice = 0x180\n"
-           "  Actual:   codeObjectOffset = %#6lx, nobits = %d, slice = %#6lx\n",
+           "  Actual:   codeObjectOffset = %#6" PRIx64
+           ", nobits = %d, slice = %#6" PRIx64 "\n",
            elfVirtualAddress, codeObjectOffset, nobits, sliceSize);
     exit(1);
   }
@@ -161,9 +163,10 @@ int main(int argc, char *argv[]) {
   checkError(Status, "amd_comgr_map_elf_virtual_address_to_code_object_offset");
 
   if (codeObjectOffset != 0x2035 || nobits != 0 || sliceSize != 0x3b) {
-    printf("elf virtual address map failed for address %#6lx\n"
+    printf("elf virtual address map failed for address %#6" PRIx64 "\n"
            "  Expected: codeObjectOffset = 0x2035, nobits = 0, slice = 0x3b\n"
-           "  Actual:   codeObjectOffset = %#6lx, nobits = %d, slice = %#6lx\n",
+           "  Actual:   codeObjectOffset = %#6" PRIx64
+           ", nobits = %d, slice = %#6" PRIx64 "\n",
            elfVirtualAddress, codeObjectOffset, nobits, sliceSize);
     exit(1);
   }
@@ -178,8 +181,8 @@ int main(int argc, char *argv[]) {
                                                               &nobits);
   if (Status != AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT) {
     printf("elf virtual address map succeded on invalid address:\n"
-           "  Address = %#6lx\n"
-           "  codeObjectOffset = %#6lx\n",
+           "  Address = %#6" PRIx64 "\n"
+           "  codeObjectOffset = %#6" PRIx64 "\n",
            elfVirtualAddress, codeObjectOffset);
     exit(1);
   }
@@ -206,9 +209,10 @@ int main(int argc, char *argv[]) {
   checkError(Status, "amd_comgr_map_elf_virtual_address_to_code_object_offset");
 
   if (codeObjectOffset != 0x60 || nobits != 0 || sliceSize != 0x860) {
-    printf("elf virtual address map failed for address %#6lx\n"
+    printf("elf virtual address map failed for address %#6" PRIx64 "\n"
            "  Expected: codeObjectOffset = 0x60, nobits = 0, slice = 0x860\n"
-           "  Actual:   codeObjectOffset = %#6lx, nobits = %d, slice = %#6lx\n",
+           "  Actual:   codeObjectOffset = %#6" PRIx64
+           ", nobits = %d, slice = %#6" PRIx64 "\n",
            elfVirtualAddress, codeObjectOffset, nobits, sliceSize);
     exit(1);
   }
@@ -231,9 +235,10 @@ int main(int argc, char *argv[]) {
   checkError(Status, "amd_comgr_map_elf_virtual_address_to_code_object_offset");
 
   if (codeObjectOffset != 0xa00 || nobits != 0 || sliceSize != 0x480) {
-    printf("elf virtual address map failed for address %#6lx\n"
+    printf("elf virtual address map failed for address %#6" PRIx64 "\n"
            "  Expected: codeObjectOffset = 0xa00, nobits = 0, slice = 0x480\n"
-           "  Actual:   codeObjectOffset = %#6lx, nobits = %d, slice = %#6lx\n",
+           "  Actual:   codeObjectOffset = %#6" PRIx64
+           ", nobits = %d, slice = %#6" PRIx64 "\n",
            elfVirtualAddress, codeObjectOffset, nobits, sliceSize);
     exit(1);
   }
@@ -256,9 +261,10 @@ int main(int argc, char *argv[]) {
   checkError(Status, "amd_comgr_map_elf_virtual_address_to_code_object_offset");
 
   if (codeObjectOffset != 0xe90 || nobits != 0 || sliceSize != 0x60) {
-    printf("elf virtual address map failed for address %#6lx\n"
+    printf("elf virtual address map failed for address %#6" PRIx64 "\n"
            "  Expected: codeObjectOffset = 0x2035, nobits = 0, slice = 0x60\n"
-           "  Actual:   codeObjectOffset = %#6lx, nobits = %d, slice = %#6lx\n",
+           "  Actual:   codeObjectOffset = %#6" PRIx64
+           ", nobits = %d, slice = %#6" PRIx64 "\n",
            elfVirtualAddress, codeObjectOffset, nobits, sliceSize);
     exit(1);
   }
@@ -273,8 +279,8 @@ int main(int argc, char *argv[]) {
                                                               &nobits);
   if (Status != AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT) {
     printf("elf virtual address map succeded on invalid address:\n"
-           "  Address = %#6lx\n"
-           "  codeObjectOffset = %#6lx\n",
+           "  Address = %#6" PRIx64 "\n"
+           "  codeObjectOffset = %#6" PRIx64 "\n",
            elfVirtualAddress, codeObjectOffset);
     exit(1);
   }
