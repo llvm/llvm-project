@@ -830,6 +830,7 @@ define void @foo(i8 %val, ptr %ptr, ptr %vptr) {
   EXPECT_EQ(NewVSt->getValueOperand(), Val);
   EXPECT_EQ(NewVSt->getPointerOperand(), Ptr);
   EXPECT_EQ(NewVSt->getAlign(), 8);
+  EXPECT_EQ(NewVSt->getNextNode(), Ret);
   // Check create(InsertAtEnd)
   sandboxir::StoreInst *NewStEnd =
       sandboxir::StoreInst::create(Val, Ptr, Align(8),
