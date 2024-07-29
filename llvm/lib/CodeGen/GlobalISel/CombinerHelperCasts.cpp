@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "gi-combiner"
 
@@ -251,6 +252,8 @@ bool CombinerHelper::matchCastOfInteger(const MachineInstr &CastMI,
     return true;
   }
   default:
-    return false;
+    llvm_unreachable("unexpected instruction");
   }
+
+  return false;
 }
