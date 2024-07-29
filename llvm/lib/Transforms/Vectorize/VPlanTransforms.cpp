@@ -1319,10 +1319,6 @@ void VPlanTransforms::addActiveLaneMask(
 
 /// Replace recipes with their EVL variants.
 static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
-  VPDominatorTree VPDT;
-  VPDT.recalculate(Plan);
-  SmallVector<VPRecipeBase *> ToRemove;
-
   SmallVector<VPValue *> HeaderMasks = collectAllHeaderMasks(Plan);
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
@@ -1338,11 +1334,11 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
           TypeSwitch<VPRecipeBase *, VPRecipeBase *>(CurRecipe)
               .Case<VPWidenLoadRecipe>([&](VPWidenLoadRecipe *L) {
                 VPValue *NewMask = GetNewMask(L->getMask());
-                return new VPWidenLoadEVLRecipe(L, &EVL, NewMask);
+                return new VPWidenLoadEVLRecipe(*L, NewMask, EVL);
               })
               .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) {
                 VPValue *NewMask = GetNewMask(S->getMask());
-                return new VPWidenStoreEVLRecipe(S, &EVL, NewMask);
+                return new VPWidenStoreEVLRecipe(*S, NewMask, EVL);
               })
               .Case<VPWidenRecipe>([&](VPWidenRecipe *W) -> VPRecipeBase * {
                 unsigned Opcode = W->getOpcode();

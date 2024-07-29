@@ -2635,7 +2635,7 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
 /// using the address to load from, the explicit vector length and an optional
 /// mask.
 struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
-  VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue &EVL, VPValue *Mask)
+  VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue *Mask, VPValue &EVL)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadEVLSC, L.getIngredient(),
                             {L.getAddr(), &EVL}, L.isConsecutive(),
                             L.isReverse(), L.getDebugLoc()),
@@ -2716,7 +2716,7 @@ struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
 /// using the value to store, the address to store to, the explicit vector
 /// length and an optional mask.
 struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
-  VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue &EVL, VPValue *Mask)
+  VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue *Mask, VPValue &EVL)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S.getIngredient(),
                             {S.getAddr(), S.getStoredValue(), &EVL},
                             S.isConsecutive(), S.isReverse(), S.getDebugLoc()) {
