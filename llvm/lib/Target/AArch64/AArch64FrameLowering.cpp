@@ -240,6 +240,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -275,6 +276,10 @@ cl::opt<bool> EnableHomogeneousPrologEpilog(
 // Stack hazard padding size. 0 = disabled.
 static cl::opt<unsigned> StackHazardSize("aarch64-stack-hazard-size",
                                          cl::init(0), cl::Hidden);
+// Stack hazard size for analysis remarks. StackHazardSize takes precedence.
+static cl::opt<unsigned>
+    StackHazardRemarkSize("aarch64-stack-hazard-remark-size", cl::init(0),
+                          cl::Hidden);
 // Whether to insert padding into non-streaming functions (for testing).
 static cl::opt<bool>
     StackHazardInNonStreaming("aarch64-stack-hazard-in-non-streaming",
@@ -2615,9 +2620,16 @@ AArch64FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
   const auto &MFI = MF.getFrameInfo();
 
   int64_t ObjectOffset = MFI.getObjectOffset(FI);
+  StackOffset SVEStackSize = getSVEStackSize(MF);
+
+  // For VLA-area objects, just emit an offset at the end of the stack frame.
+  // Whilst not quite correct, these objects do live at the end of the frame and
+  // so it is more useful for analysis for the offset to reflect this.
+  if (MFI.isVariableSizedObjectIndex(FI)) {
+    return StackOffset::getFixed(-((int64_t)MFI.getStackSize())) - SVEStackSize;
+  }
 
   // This is correct in the absence of any SVE stack objects.
-  StackOffset SVEStackSize = getSVEStackSize(MF);
   if (!SVEStackSize)
     return StackOffset::getFixed(ObjectOffset - getOffsetOfLocalArea());
 
@@ -3528,13 +3540,9 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
   return true;
 }
 
-// Return the FrameID for a Load/Store instruction by looking at the MMO.
-static std::optional<int> getLdStFrameID(const MachineInstr &MI,
-                                         const MachineFrameInfo &MFI) {
-  if (!MI.mayLoadOrStore() || MI.getNumMemOperands() < 1)
-    return std::nullopt;
-
-  MachineMemOperand *MMO = *MI.memoperands_begin();
+// Return the FrameID for a MMO.
+static std::optional<int> getMMOFrameID(MachineMemOperand *MMO,
+                                        const MachineFrameInfo &MFI) {
   auto *PSV =
       dyn_cast_or_null<FixedStackPseudoSourceValue>(MMO->getPseudoValue());
   if (PSV)
@@ -3550,6 +3558,15 @@ static std::optional<int> getLdStFrameID(const MachineInstr &MI,
   }
 
   return std::nullopt;
+}
+
+// Return the FrameID for a Load/Store instruction by looking at the first MMO.
+static std::optional<int> getLdStFrameID(const MachineInstr &MI,
+                                         const MachineFrameInfo &MFI) {
+  if (!MI.mayLoadOrStore() || MI.getNumMemOperands() < 1)
+    return std::nullopt;
+
+  return getMMOFrameID(*MI.memoperands_begin(), MFI);
 }
 
 // Check if a Hazard slot is needed for the current function, and if so create
@@ -4626,6 +4643,10 @@ void AArch64FrameLowering::processFunctionBeforeFrameIndicesReplaced(
       if (StackTaggingMergeSetTag)
         II = tryMergeAdjacentSTG(II, this, RS);
     }
+
+  // Run remarks pass.
+  MachineOptimizationRemarkEmitter ORE(MF, nullptr);
+  emitRemarks(MF, ORE);
 }
 
 /// For Win64 AArch64 EH, the offset to the Unwind object is from the SP
@@ -5028,4 +5049,172 @@ void AArch64FrameLowering::inlineStackProbe(MachineFunction &MF,
     }
     MI->eraseFromParent();
   }
+}
+
+struct StackAccess {
+  enum AccessType {
+    NotAccessed = 0, // Stack object not accessed by load/store instructions.
+    GPR = 1 << 0,    // A general purpose register.
+    PPR = 1 << 1,    // A predicate register.
+    FPR = 1 << 2,    // A floating point/Neon/SVE register.
+  };
+
+  int Idx;
+  StackOffset Offset;
+  int64_t Size;
+  unsigned AccessTypes;
+
+  StackAccess() : Idx(0), Offset(), Size(0), AccessTypes(NotAccessed) {}
+
+  bool operator<(const StackAccess &Rhs) const {
+    return std::make_tuple(start(), Idx) <
+           std::make_tuple(Rhs.start(), Rhs.Idx);
+  }
+
+  bool isCPU() const {
+    // Predicate register load and store instructions execute on the CPU.
+    return AccessTypes & (AccessType::GPR | AccessType::PPR);
+  }
+  bool isSME() const { return AccessTypes & AccessType::FPR; }
+  bool isMixed() const { return ((AccessTypes & (AccessTypes - 1)) != 0); }
+
+  int64_t start() const { return Offset.getFixed() + Offset.getScalable(); }
+  int64_t end() const { return start() + Size; }
+
+  std::string getTypeString() const {
+    switch (AccessTypes) {
+    case AccessType::FPR:
+      return "FPR";
+    case AccessType::PPR:
+      return "PPR";
+    case AccessType::GPR:
+      return "GPR";
+    case AccessType::NotAccessed:
+      return "NA";
+    default:
+      return "Mixed";
+    }
+  }
+
+  void print(raw_ostream &OS) const {
+    OS << getTypeString() << " stack object at [SP"
+       << (Offset.getFixed() < 0 ? "" : "+") << Offset.getFixed();
+    if (Offset.getScalable())
+      OS << (Offset.getScalable() < 0 ? "" : "+") << Offset.getScalable()
+         << " * vscale";
+    OS << "]";
+  }
+};
+
+static inline raw_ostream &operator<<(raw_ostream &OS, const StackAccess &SA) {
+  SA.print(OS);
+  return OS;
+}
+
+void AArch64FrameLowering::emitRemarks(
+    const MachineFunction &MF, MachineOptimizationRemarkEmitter &ORE) const {
+
+  SMEAttrs Attrs(MF.getFunction());
+  if (Attrs.hasNonStreamingInterfaceAndBody())
+    return;
+
+  const uint64_t HazardSize =
+      (StackHazardSize) ? StackHazardSize : StackHazardRemarkSize;
+
+  if (HazardSize == 0)
+    return;
+
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  std::vector<StackAccess> StackAccesses(MFI.getNumObjects());
+
+  size_t NumFPLdSt = 0;
+  size_t NumNonFPLdSt = 0;
+
+  // Collect stack accesses via Load/Store instructions.
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB) {
+      if (!MI.mayLoadOrStore() || MI.getNumMemOperands() < 1)
+        continue;
+      for (MachineMemOperand *MMO : MI.memoperands()) {
+        std::optional<int> FI = getMMOFrameID(MMO, MFI);
+        if (FI && !MFI.isDeadObjectIndex(*FI)) {
+          int FrameIdx = *FI;
+
+          size_t ArrIdx = FrameIdx + MFI.getNumFixedObjects();
+          if (StackAccesses[ArrIdx].AccessTypes == StackAccess::NotAccessed) {
+            StackAccesses[ArrIdx].Idx = FrameIdx;
+            StackAccesses[ArrIdx].Offset =
+                getFrameIndexReferenceFromSP(MF, FrameIdx);
+            StackAccesses[ArrIdx].Size = MFI.getObjectSize(FrameIdx);
+          }
+
+          unsigned RegTy = StackAccess::AccessType::GPR;
+          if (MFI.getStackID(FrameIdx) == TargetStackID::ScalableVector) {
+            if (AArch64::PPRRegClass.contains(MI.getOperand(0).getReg()))
+              RegTy = StackAccess::PPR;
+            else
+              RegTy = StackAccess::FPR;
+          } else if (AArch64InstrInfo::isFpOrNEON(MI)) {
+            RegTy = StackAccess::FPR;
+          }
+
+          StackAccesses[ArrIdx].AccessTypes |= RegTy;
+
+          if (RegTy == StackAccess::FPR)
+            ++NumFPLdSt;
+          else
+            ++NumNonFPLdSt;
+        }
+      }
+    }
+  }
+
+  if (NumFPLdSt == 0 || NumNonFPLdSt == 0)
+    return;
+
+  llvm::sort(StackAccesses);
+  StackAccesses.erase(llvm::remove_if(StackAccesses,
+                                      [](const StackAccess &S) {
+                                        return S.AccessTypes ==
+                                               StackAccess::NotAccessed;
+                                      }),
+                      StackAccesses.end());
+
+  SmallVector<const StackAccess *> MixedObjects;
+  SmallVector<std::pair<const StackAccess *, const StackAccess *>> HazardPairs;
+
+  if (StackAccesses.front().isMixed())
+    MixedObjects.push_back(&StackAccesses.front());
+
+  for (auto It = StackAccesses.begin(), End = StackAccesses.end();
+       It != (End - 1); ++It) {
+    const auto &First = *It;
+    const auto &Second = *(It + 1);
+
+    if (Second.isMixed())
+      MixedObjects.push_back(&Second);
+
+    if ((First.isSME() && Second.isCPU()) ||
+        (First.isCPU() && Second.isSME())) {
+      uint64_t Distance = static_cast<uint64_t>(Second.start() - First.end());
+      if (Distance < HazardSize)
+        HazardPairs.emplace_back(&First, &Second);
+    }
+  }
+
+  auto EmitRemark = [&](llvm::StringRef Str) {
+    ORE.emit([&]() {
+      auto R = MachineOptimizationRemarkAnalysis(
+          "sme", "StackHazard", MF.getFunction().getSubprogram(), &MF.front());
+      return R << formatv("stack hazard in '{0}': ", MF.getName()).str() << Str;
+    });
+  };
+
+  for (const auto &P : HazardPairs)
+    EmitRemark(formatv("{0} is too close to {1}", *P.first, *P.second).str());
+
+  for (const auto *Obj : MixedObjects)
+    EmitRemark(
+        formatv("{0} accessed by both GP and FP instructions", *Obj).str());
 }
