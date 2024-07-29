@@ -1876,6 +1876,27 @@ DeclResult Sema::CheckClassTemplate(
   if (Previous.isAmbiguous())
     return true;
 
+  // Let the template parameter scope enter the lookup chain of the current
+  // class template. For example, given
+  //
+  //  namespace ns {
+  //    template <class> bool Param = false;
+  //    template <class T> struct N;
+  //  }
+  //
+  //  template <class Param> struct ns::N { void foo(Param); };
+  //
+  // When we reference Param inside the function parameter list, our name lookup
+  // chain for it should be like:
+  //  FunctionScope foo
+  //  -> RecordScope N
+  //  -> TemplateParamScope (where we will find Param)
+  //  -> NamespaceScope ns
+  //
+  // See also CppLookupName().
+  if (S->isTemplateParamScope())
+    EnterTemplatedContext(S, SemanticContext);
+
   NamedDecl *PrevDecl = nullptr;
   if (Previous.begin() != Previous.end())
     PrevDecl = (*Previous.begin())->getUnderlyingDecl();
@@ -8084,6 +8105,9 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
           isa<TemplateTemplateParmDecl>(Name.getAsTemplateDecl()));
     return true;
   }
+
+  if (S->isTemplateParamScope())
+    EnterTemplatedContext(S, ClassTemplate->getTemplatedDecl());
 
   bool isMemberSpecialization = false;
   bool isPartialSpecialization = false;
