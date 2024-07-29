@@ -938,7 +938,6 @@ void StreamChecker::evalFopen(const FnDescription *Desc, const CallEvent &Call,
   assert(RetSym && "RetVal must be a symbol here.");
 
   State = State->BindExpr(CE, C.getLocationContext(), RetVal);
-  State = assumeNoAliasingWithStdStreams(State, RetVal, C);
 
   // Bifurcate the state into two: one with a valid FILE* pointer, the other
   // with a NULL.
@@ -950,6 +949,8 @@ void StreamChecker::evalFopen(const FnDescription *Desc, const CallEvent &Call,
       StateNotNull->set<StreamMap>(RetSym, StreamState::getOpened(Desc));
   StateNull =
       StateNull->set<StreamMap>(RetSym, StreamState::getOpenFailed(Desc));
+
+  StateNotNull = assumeNoAliasingWithStdStreams(StateNotNull, RetVal, C);
 
   C.addTransition(StateNotNull,
                   constructLeakNoteTag(C, RetSym, "Stream opened here"));

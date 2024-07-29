@@ -502,11 +502,19 @@ void gh_93408_regression_ZeroSized(struct ZeroSized *buffer) {
 extern FILE *stdout_like_ptr;
 void no_aliasing(void) {
   FILE *f = fopen("file", "r");
+  if (!f) return;
   clang_analyzer_eval(f == stdin);           // expected-warning {{FALSE}} no-TRUE
   clang_analyzer_eval(f == stdout);          // expected-warning {{FALSE}} no-TRUE
   clang_analyzer_eval(f == stderr);          // expected-warning {{FALSE}} no-TRUE
   clang_analyzer_eval(f == stdout_like_ptr); // expected-warning {{FALSE}} expected-warning {{TRUE}}
-  if (f && f != stdout) {
+  if (f != stdout) {
     fclose(f);
   }
 } // no-leak: 'fclose()' is always called because 'f' cannot be 'stdout'.
+
+void only_success_path_does_not_alias_with_stdout(void) {
+  if (stdout) return;
+  FILE *f = fopen("/tmp/foof", "r"); // no-crash
+  if (!f) return;
+  fclose(f);
+}
