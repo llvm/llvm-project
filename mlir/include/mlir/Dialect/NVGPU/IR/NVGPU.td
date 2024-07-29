@@ -20,7 +20,6 @@
 #ifndef NVGPU
 #define NVGPU
 
-include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
@@ -110,10 +109,24 @@ def TensorMapInterleaveKind : I32EnumAttr<"TensorMapInterleaveKind",
   let cppNamespace = "::mlir::nvgpu";
 }
 
+def RcpApprox : I32EnumAttrCase<"APPROX", 0, "approx">;
+def RcpRN     : I32EnumAttrCase<"RN", 1, "rn">;
+def RcpRZ     : I32EnumAttrCase<"RZ", 2, "rz">;
+def RcpRM     : I32EnumAttrCase<"RM", 3, "rm">;
+def RcpRP     : I32EnumAttrCase<"RP", 4, "rp">;
+def RcpRoundingMode   : I32EnumAttr<"RcpRoundingMode", "Rounding mode of rcp",
+  [RcpApprox, RcpRN, RcpRZ, RcpRM, RcpRP]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::nvgpu";
+}
+
 def TensorMapSwizzleAttr : EnumAttr<NVGPU_Dialect, TensorMapSwizzleKind, "swizzle">;
 def TensorMapL2PromoAttr : EnumAttr<NVGPU_Dialect, TensorMapL2PromoKind, "l2promo">;
 def TensorMapOOBAttr : EnumAttr<NVGPU_Dialect, TensorMapOOBKind, "oob">;
 def TensorMapInterleaveAttr : EnumAttr<NVGPU_Dialect, TensorMapInterleaveKind, "interleave">;
+def RcpRoundingModeAttr : EnumAttr<NVGPU_Dialect, RcpRoundingMode, "rcp_rounding_mode">;
+
+// rcp mode attribute
 
 //===----------------------------------------------------------------------===//
 // NVGPU Type Definitions
@@ -803,16 +816,24 @@ def NVGPU_WarpgroupMmaInitAccumulatorOp : NVGPU_Op<"warpgroup.mma.init.accumulat
   let hasVerifier = 1;
 }
 
-def NVGPU_RcpApproxOp : NVGPU_Op<"rcp_approx", [
-  Pure, SameOperandsAndResultType
-]> {
-  let summary = "A wrapper of nvvm rcp.approx.ftz.f";
+def NVGPU_RcpOp : NVGPU_Op<"rcp", [Pure,
+                                   SameOperandsAndResultShape,
+                                   PredOpTrait<"in and out have same element type",
+                                            TCresVTEtIsSameAsOp<0, 0>>]> {
+  let summary = "F32 rcp calculation for vector types using nvvm.rcp.* OP";
   let description = [{
-    F32 vector reciprocal calculation using `nvvm.rcp.approx.ftz.f`.
+    F32 vector reciprocal calculation using `nvvm.rcp.*`. Currently only
+    `nvvm.approx.ftz.f` is supported.
     The input and output are both F32 vector with same shape.
   }];
-  let arguments = (ins VectorOf<[F32]>:$in);
+  let arguments = (ins VectorOf<[F32]>:$in,
+                       DefaultValuedAttr<RcpRoundingModeAttr, "RcpRoundingMode::APPROX">:$rounding,
+                       UnitAttr:$ftz);
   let results = (outs VectorOf<[F32]>:$out);
-  let assemblyFormat = "$in attr-dict `:` type($out)";
+  let assemblyFormat = [{
+    $in `{` `rounding` `=` $rounding (`,` `ftz` $ftz^)? `}` 
+    attr-dict `:` type($in) `->` type($out)
+  }];
+  let hasVerifier = 1;
 }
 #endif // NVGPU

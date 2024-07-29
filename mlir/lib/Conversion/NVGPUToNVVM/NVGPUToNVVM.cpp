@@ -1667,11 +1667,10 @@ struct NVGPUTmaPrefetchOpLowering
   }
 };
 
-struct NVGPURcpApproxOpLowering
-    : public ConvertOpToLLVMPattern<nvgpu::RcpApproxOp> {
-  using ConvertOpToLLVMPattern<nvgpu::RcpApproxOp>::ConvertOpToLLVMPattern;
+struct NVGPURcpOpLowering : public ConvertOpToLLVMPattern<nvgpu::RcpOp> {
+  using ConvertOpToLLVMPattern<nvgpu::RcpOp>::ConvertOpToLLVMPattern;
   LogicalResult
-  matchAndRewrite(nvgpu::RcpApproxOp op, OpAdaptor adaptor,
+  matchAndRewrite(nvgpu::RcpOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     ImplicitLocOpBuilder b(op->getLoc(), rewriter);
     auto i64Ty = b.getI64Type();
@@ -1724,5 +1723,5 @@ void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
       NVGPUWarpgroupMmaInitAccumulatorOpLowering, // nvgpu.warpgroup.mma.init.accumulator
       MmaSyncOptoNVVM, MmaLdMatrixOpToNVVM, NVGPUAsyncCopyLowering,
       NVGPUAsyncCreateGroupLowering, NVGPUAsyncWaitLowering,
-      NVGPUMmaSparseSyncLowering, NVGPURcpApproxOpLowering>(converter);
+      NVGPUMmaSparseSyncLowering, NVGPURcpOpLowering>(converter);
 }

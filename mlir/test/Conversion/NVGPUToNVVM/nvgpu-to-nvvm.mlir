@@ -1352,6 +1352,6 @@ func.func @rcp_approx_ftz_f32(
   // CHECK: %[[ELEM_RCP0:.*]] = nvvm.rcp.approx.ftz.f %[[ELEM_0]] : f32
   // CHECK: llvm.insertelement %[[ELEM_RCP0]], %[[OUT1DVEC]][%[[IDX_0]] : i64] : vector<16xf32>
   // CHECK-COUNT-511: nvvm.rcp.approx.ftz.f
-  %out = nvgpu.rcp_approx %in : vector<32x16xf32>
+  %out = nvgpu.rcp %in {rounding = approx, ftz} : vector<32x16xf32> -> vector<32x16xf32>
   return
 }

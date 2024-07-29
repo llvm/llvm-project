@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -640,6 +640,21 @@ LogicalResult WarpgroupMmaInitAccumulatorOp::verify() {
                          << ". It does not fit into warp-group "
                             "level (wgmma) matrix multiplication instruction "
                             "(or not supported yet)";
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// RcpOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult RcpOp::verify() {
+  RcpRoundingModeAttr rounding = getRoundingAttr();
+  bool ftz = getFtz();
+  // Currently, only `rcp_approx` and `ftz` is supported.
+  if (rounding.getValue() != RcpRoundingMode::APPROX || !ftz) {
+    return emitOpError() << "has a limitation. " << rounding
+                         << " or non-ftz is not supported yet.";
   }
   return success();
 }
