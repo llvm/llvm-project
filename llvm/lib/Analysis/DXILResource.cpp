@@ -79,7 +79,8 @@ ResourceInfo ResourceInfo::RawBuffer(Value *Symbol, StringRef Name) {
 }
 
 ResourceInfo ResourceInfo::StructuredBuffer(Value *Symbol, StringRef Name,
-                                            uint32_t Stride, Align Alignment) {
+                                            uint32_t Stride,
+                                            MaybeAlign Alignment) {
   ResourceInfo RI(ResourceClass::SRV, ResourceKind::StructuredBuffer, Symbol,
                   Name);
   RI.setStruct(Stride, Alignment);
@@ -127,7 +128,8 @@ ResourceInfo ResourceInfo::RWRawBuffer(Value *Symbol, StringRef Name,
 }
 
 ResourceInfo ResourceInfo::RWStructuredBuffer(Value *Symbol, StringRef Name,
-                                              uint32_t Stride, Align Alignment,
+                                              uint32_t Stride,
+                                              MaybeAlign Alignment,
                                               bool GloballyCoherent, bool IsROV,
                                               bool HasCounter) {
   ResourceInfo RI(ResourceClass::UAV, ResourceKind::StructuredBuffer, Symbol,
@@ -284,7 +286,8 @@ MDTuple *ResourceInfo::getAsMetadata(LLVMContext &Ctx) const {
 
 std::pair<uint32_t, uint32_t> ResourceInfo::getAnnotateProps() const {
   uint32_t ResourceKind = llvm::to_underlying(Kind);
-  uint32_t AlignLog2 = isStruct() ? Log2(Struct.Alignment) : 0;
+  uint32_t AlignLog2 =
+      (isStruct() && Struct.Alignment) ? Log2(*Struct.Alignment) : 0;
   bool IsUAV = isUAV();
   bool IsROV = IsUAV && UAVFlags.IsROV;
   bool IsGloballyCoherent = IsUAV && UAVFlags.GloballyCoherent;
