@@ -2551,13 +2551,13 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             } else {
               TmpResultReg = RS->scavengeRegisterBackwards(
                   AMDGPU::VGPR_32RegClass, MI, false, 0, /*AllowSpill=*/true);
-              BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_LSHR_B32_e64),
-                      TmpResultReg)
-                  .addImm(ST.getWavefrontSizeLog2())
-                  .addReg(FrameReg);
 
               MachineInstrBuilder Add;
               if (Add = TII->getAddNoCarry(*MBB, MI, DL, TmpResultReg, *RS)) {
+                BuildMI(*MBB, *Add, DL, TII->get(AMDGPU::V_LSHR_B32_e64),
+                        TmpResultReg)
+                    .addImm(ST.getWavefrontSizeLog2())
+                    .addReg(FrameReg);
                 if (Add->getOpcode() == AMDGPU::V_ADD_CO_U32_e64) {
                   BuildMI(*MBB, *Add, DL, TII->get(AMDGPU::S_MOV_B32),
                           ResultReg)
@@ -2568,17 +2568,20 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                 } else
                   Add.addImm(Offset).addReg(TmpResultReg, RegState::Kill);
               } else {
-                // We have to produce a carry out, and there isn't a free SGPR
-                // pair for it. This a way around to avoid carry.
-                BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), ResultReg)
+                BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32),
+                        TmpResultReg)
                     .addImm(Offset);
                 assert(Offset > 0 && "Offset is positive");
                 Add = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MAD_U32_U24_e64),
                               TmpResultReg)
+                          .addReg(FrameReg)
+                          .addImm(ST.getWavefrontSize())
                           .addReg(TmpResultReg, RegState::Kill)
-                          .addImm(1)
-                          .addReg(ResultReg, RegState::Kill)
                           .addImm(0);
+                BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_LSHR_B32_e64),
+                        TmpResultReg)
+                    .addImm(ST.getWavefrontSizeLog2())
+                    .addReg(FrameReg);
               }
 
               Register NewDest = IsCopy ? ResultReg
