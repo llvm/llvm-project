@@ -12,8 +12,25 @@
 #include "terminator.h"
 #include <cfenv>
 
+// Some system don't define those exceptions, although they are mandated by
+// c++11 standard (e.g. musl, emscripten).
+#ifndef FE_INVALID
+#define FE_INVALID 0
+#endif
 #ifndef __FE_DENORM
 #define __FE_DENORM 0 // denorm is nonstandard
+#endif
+#ifndef FE_DIVBYZERO
+#define FE_DIVBYZERO 0
+#endif
+#ifndef FE_OVERFLOW
+#define FE_OVERFLOW 0
+#endif
+#ifndef FE_UNDERFLOW
+#define FE_UNDERFLOW 0
+#endif
+#ifndef FE_INEXACT
+#define FE_INEXACT 0
 #endif
 
 namespace Fortran::runtime {
