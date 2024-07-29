@@ -61,6 +61,7 @@ public:
   static FloatType getF80(MLIRContext *ctx);
   static FloatType getF128(MLIRContext *ctx);
   static FloatType getFloat8E5M2(MLIRContext *ctx);
+  static FloatType getFloat8E4M3(MLIRContext *ctx);
   static FloatType getFloat8E4M3FN(MLIRContext *ctx);
   static FloatType getFloat8E5M2FNUZ(MLIRContext *ctx);
   static FloatType getFloat8E4M3FNUZ(MLIRContext *ctx);
@@ -410,14 +411,18 @@ inline bool BaseMemRefType::isValidElementType(Type type) {
 }
 
 inline bool FloatType::classof(Type type) {
-  return llvm::isa<Float8E5M2Type, Float8E4M3FNType, Float8E5M2FNUZType,
-                   Float8E4M3FNUZType, Float8E4M3B11FNUZType, BFloat16Type,
-                   Float16Type, FloatTF32Type, Float32Type, Float64Type,
-                   Float80Type, Float128Type>(type);
+  return llvm::isa<
+      Float8E5M2Type, Float8E4M3Type, Float8E4M3FNType, Float8E5M2FNUZType,
+      Float8E4M3FNUZType, Float8E4M3B11FNUZType, BFloat16Type, Float16Type,
+      FloatTF32Type, Float32Type, Float64Type, Float80Type, Float128Type>(type);
 }
 
 inline FloatType FloatType::getFloat8E5M2(MLIRContext *ctx) {
   return Float8E5M2Type::get(ctx);
+}
+
+inline FloatType FloatType::getFloat8E4M3(MLIRContext *ctx) {
+  return Float8E4M3Type::get(ctx);
 }
 
 inline FloatType FloatType::getFloat8E4M3FN(MLIRContext *ctx) {

@@ -9338,6 +9338,31 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
       "    aaaaaaaaaaaaaaaa\n"
       ");",
       Style);
+  verifyFormat("bool aaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
+               "    const bool &aaaaaaaaa, const void *aaaaaaaaaa\n"
+               ") const {\n"
+               "  return true;\n"
+               "}",
+               Style);
+  verifyFormat("bool aaaaaaaaaaaaaaaaaaaaaaaa(\n"
+               "    const bool &aaaaaaaaaa, const void *aaaaaaaaaa\n"
+               ") const;",
+               Style);
+  verifyFormat("void aaaaaaaaa(\n"
+               "    int aaaaaa, int bbbbbb, int cccccc, int dddddddddd\n"
+               ") const noexcept -> std::vector<of_very_long_type>;",
+               Style);
+  verifyFormat(
+      "x = aaaaaaaaaaaaaaa(\n"
+      "    \"a aaaaaaa aaaaaaaaaaaaaaaaa aaaaaaaaaaaaaaa aaaaaaaaaaaaa\"\n"
+      ");",
+      Style);
+  Style.ColumnLimit = 60;
+  verifyFormat("auto lambda =\n"
+               "    [&b](\n"
+               "        auto aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "    ) {};",
+               Style);
 }
 
 TEST_F(FormatTest, ParenthesesAndOperandAlignment) {

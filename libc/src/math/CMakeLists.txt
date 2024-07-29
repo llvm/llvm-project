@@ -439,7 +439,11 @@ add_math_entrypoint_object(tgammaf)
 
 add_math_entrypoint_object(totalorderf16)
 
+add_math_entrypoint_object(totalordermag)
+add_math_entrypoint_object(totalordermagf)
+add_math_entrypoint_object(totalordermagl)
 add_math_entrypoint_object(totalordermagf16)
+add_math_entrypoint_object(totalordermagf128)
 
 add_math_entrypoint_object(trunc)
 add_math_entrypoint_object(truncf)

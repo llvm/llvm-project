@@ -330,12 +330,12 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::SQRT(Rounding rounding) const {
 template <typename W, int P>
 ValueWithRealFlags<Real<W, P>> Real<W, P>::NEAREST(bool upward) const {
   ValueWithRealFlags<Real> result;
+  bool isNegative{IsNegative()};
   if (IsFinite()) {
     Fraction fraction{GetFraction()};
     int expo{Exponent()};
     Fraction one{1};
     Fraction nearest;
-    bool isNegative{IsNegative()};
     if (upward != isNegative) { // upward in magnitude
       auto next{fraction.AddUnsigned(one)};
       if (next.carry) {
@@ -359,6 +359,8 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::NEAREST(bool upward) const {
       }
     }
     result.flags = result.value.Normalize(isNegative, expo, nearest);
+  } else if (IsInfinite() && upward == isNegative) {
+    result.value = isNegative ? HUGE().Negate() : HUGE(); // largest mag finite
   } else {
     result.flags.set(RealFlag::InvalidArgument);
     result.value = *this;

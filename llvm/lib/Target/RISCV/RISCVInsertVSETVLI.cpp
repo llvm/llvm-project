@@ -458,7 +458,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     }
   }
 
-  // vmv.x.s, and vmv.f.s are unconditional and ignore everything except SEW.
+  // vmv.x.s, and vfmv.f.s are unconditional and ignore everything except SEW.
   if (isScalarExtractInstr(MI)) {
     assert(!RISCVII::hasVLOp(TSFlags));
     Res.LMUL = DemandedFields::LMULNone;
@@ -1645,24 +1645,23 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
   Used.demandVTYPE();
   SmallVector<MachineInstr*> ToDelete;
 
-  // Update LIS and cleanup dead AVLs given a value which has
-  // has had one use (as an AVL) removed.
-  auto afterDroppedAVLUse = [&](Register OldVLReg) {
+  auto dropAVLUse = [&](MachineOperand &MO) {
+    if (!MO.isReg() || !MO.getReg().isVirtual())
+      return;
+    Register OldVLReg = MO.getReg();
+    MO.setReg(RISCV::NoRegister);
+
     if (LIS)
       LIS->shrinkToUses(&LIS->getInterval(OldVLReg));
 
     MachineInstr *VLOpDef = MRI->getUniqueVRegDef(OldVLReg);
     if (VLOpDef && TII->isAddImmediate(*VLOpDef, OldVLReg) &&
-        MRI->use_nodbg_empty(OldVLReg)) {
-      if (LIS) {
-        LIS->removeInterval(OldVLReg);
-        LIS->RemoveMachineInstrFromMaps(*VLOpDef);
-      }
-      VLOpDef->eraseFromParent();
-    }
+        MRI->use_nodbg_empty(OldVLReg))
+      ToDelete.push_back(VLOpDef);
   };
 
-  for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
+  for (MachineInstr &MI :
+       make_early_inc_range(make_range(MBB.rbegin(), MBB.rend()))) {
 
     if (!isVectorConfigInstr(MI)) {
       Used.doUnion(getDemanded(MI, ST));
@@ -1678,7 +1677,11 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
 
     if (NextMI) {
       if (!Used.usedVL() && !Used.usedVTYPE()) {
-        ToDelete.push_back(&MI);
+        dropAVLUse(MI.getOperand(1));
+        if (LIS)
+          LIS->RemoveMachineInstrFromMaps(MI);
+        MI.eraseFromParent();
+        NumCoalescedVSETVL++;
         // Leave NextMI unchanged
         continue;
       }
@@ -1707,20 +1710,22 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
             LIS->shrinkToUses(&DefLI);
           }
 
-          Register OldVLReg;
-          if (MI.getOperand(1).isReg())
-            OldVLReg = MI.getOperand(1).getReg();
+          dropAVLUse(MI.getOperand(1));
           if (NextMI->getOperand(1).isImm())
             MI.getOperand(1).ChangeToImmediate(NextMI->getOperand(1).getImm());
           else
-            MI.getOperand(1).ChangeToRegister(NextMI->getOperand(1).getReg(), false);
-          if (OldVLReg && OldVLReg.isVirtual())
-            afterDroppedAVLUse(OldVLReg);
+            MI.getOperand(1).ChangeToRegister(NextMI->getOperand(1).getReg(),
+                                              false);
 
           MI.setDesc(NextMI->getDesc());
         }
         MI.getOperand(2).setImm(NextMI->getOperand(2).getImm());
-        ToDelete.push_back(NextMI);
+
+        dropAVLUse(NextMI->getOperand(1));
+        if (LIS)
+          LIS->RemoveMachineInstrFromMaps(*NextMI);
+        NextMI->eraseFromParent();
+        NumCoalescedVSETVL++;
         // fallthrough
       }
     }
@@ -1728,16 +1733,14 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
     Used = getDemanded(MI, ST);
   }
 
-  NumCoalescedVSETVL += ToDelete.size();
+  // Loop over the dead AVL values, and delete them now.  This has
+  // to be outside the above loop to avoid invalidating iterators.
   for (auto *MI : ToDelete) {
-    if (LIS)
+    if (LIS) {
+      LIS->removeInterval(MI->getOperand(0).getReg());
       LIS->RemoveMachineInstrFromMaps(*MI);
-    Register OldAVLReg;
-    if (MI->getOperand(1).isReg())
-      OldAVLReg = MI->getOperand(1).getReg();
+    }
     MI->eraseFromParent();
-    if (OldAVLReg && OldAVLReg.isVirtual())
-      afterDroppedAVLUse(OldAVLReg);
   }
 }
 

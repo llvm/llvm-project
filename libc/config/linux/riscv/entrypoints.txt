@@ -228,7 +228,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.epoll.epoll_ctl
     libc.src.sys.epoll.epoll_pwait
     libc.src.sys.epoll.epoll_wait
-    libc.src.sys.epoll.epoll_pwait2
+    # TODO: Need to check if pwait2 is available before providing.
+    # https://github.com/llvm/llvm-project/issues/80060
+    # libc.src.sys.epoll.epoll_pwait2
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
@@ -313,7 +315,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.geteuid
     libc.src.unistd.getpid
     libc.src.unistd.getppid
-    libc.src.unistd.gettid
     libc.src.unistd.getuid
     libc.src.unistd.isatty
     libc.src.unistd.link
@@ -363,6 +364,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acoshf
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.atan2
     libc.src.math.atan2f
     libc.src.math.atanf
     libc.src.math.atanhf
@@ -542,6 +544,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
+    libc.src.math.totalordermag
+    libc.src.math.totalordermagf
+    libc.src.math.totalordermagl
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl
@@ -600,6 +605,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.roundf128
     libc.src.math.scalbnf128
     libc.src.math.sqrtf128
+    libc.src.math.totalordermagf128
     libc.src.math.truncf128
     libc.src.math.ufromfpf128
     libc.src.math.ufromfpxf128
@@ -699,6 +705,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_mutexattr_setrobust
     libc.src.pthread.pthread_mutexattr_settype
     libc.src.pthread.pthread_once
+    libc.src.pthread.pthread_rwlock_clockrdlock
+    libc.src.pthread.pthread_rwlock_clockwrlock
     libc.src.pthread.pthread_rwlock_destroy
     libc.src.pthread.pthread_rwlock_init
     libc.src.pthread.pthread_rwlock_rdlock
@@ -856,6 +864,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.select.select
 
     # sys/socket.h entrypoints
+    libc.src.sys.socket.bind
     libc.src.sys.socket.socket
   )
 endif()

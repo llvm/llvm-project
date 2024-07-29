@@ -675,6 +675,9 @@ bool CXXRecordDecl::hasSubobjectAtOffsetZeroOfEmptyBaseType(
       if (!IsFirstField && !FD->isZeroSize(Ctx))
         continue;
 
+      if (FD->isInvalidDecl())
+        continue;
+
       //   -- If X is n array type, [visit the element type]
       QualType T = Ctx.getBaseElementType(FD->getType());
       if (auto *RD = T->getAsCXXRecordDecl())

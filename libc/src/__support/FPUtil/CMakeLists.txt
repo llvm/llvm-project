@@ -192,6 +192,8 @@ add_header_library(
     libc.src.__support.uint128
     libc.src.__support.common
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.architectures
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(
