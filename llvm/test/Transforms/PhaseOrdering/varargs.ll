@@ -2,6 +2,8 @@
 ; RUN: opt -mtriple=amdgcn-- -S -passes='lto<O2>' < %s | FileCheck %s
 target triple = "amdgcn-amd-amdhsa"
 
+; REQUIRES: amdgpu-registered-target
+
 ; We use the ExpandVariadics pass to lower variadic functions so they can be
 ; inlined.
 
