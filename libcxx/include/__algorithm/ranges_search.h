@@ -98,11 +98,11 @@ struct __fn {
       _Range1&& __range1, _Range2&& __range2, _Pred __pred = {}, _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) const {
     auto __first1 = ranges::begin(__range1);
     if constexpr (sized_range<_Range2>) {
-      auto __size2 = ranges::size(__range2);
+      auto __size2 = ranges::distance(__range2);
       if (__size2 == 0)
         return {__first1, __first1};
       if constexpr (sized_range<_Range1>) {
-        auto __size1 = ranges::size(__range1);
+        auto __size1 = ranges::distance(__range1);
         if (__size1 < __size2) {
           ranges::advance(__first1, ranges::end(__range1));
           return {__first1, __first1};
