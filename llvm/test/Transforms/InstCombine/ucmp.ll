@@ -212,10 +212,7 @@ define i8 @ucmp_negated_multiuse(i32 %x, i32 %y) {
 define i8 @ucmp_from_select(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i8 @ucmp_from_select(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[NE_BOOL:%.*]] = icmp ne i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[NE:%.*]] = zext i1 [[NE_BOOL]] to i8
-; CHECK-NEXT:    [[LT:%.*]] = icmp ult i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[LT]], i8 -1, i8 [[NE]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %ne_bool = icmp ne i32 %x, %y
