@@ -173,6 +173,9 @@ typedef struct CFI_cdesc_t {
   RT_API_ATTRS inline int GetAllocIdx() const {
     return ((int)extra >> _CFI_ADDENDUM_BITS);
   }
+  RT_API_ATTRS inline void SetAllocIdx(int pos) {
+    extra = extra | (pos << _CFI_ADDENDUM_BITS);
+  }
 #endif
 } CFI_cdesc_t;
 
