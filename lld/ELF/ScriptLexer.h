@@ -32,6 +32,12 @@ protected:
   Buffer curBuf;
   SmallVector<Buffer, 0> buffers;
 
+  struct Token {
+    StringRef str;
+    explicit operator bool() const { return !str.empty(); }
+    operator StringRef() const { return str; }
+  };
+
   // The token before the last next().
   StringRef prevTok;
   // Rules for what is a token are different when we are in an expression.
@@ -54,6 +60,7 @@ public:
   void skip();
   bool consume(StringRef tok);
   void expect(StringRef expect);
+  Token till(StringRef tok);
   std::string getCurrentLocation();
   MemoryBufferRef getCurrentMB();
 
