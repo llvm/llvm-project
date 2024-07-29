@@ -90,11 +90,7 @@ template <class NodeT> class DomTreeNodeBase {
   DomTreeNodeBase *getIDom() const { return IDom; }
   unsigned getLevel() const { return Level; }
 
-  std::unique_ptr<DomTreeNodeBase> addChild(
-      std::unique_ptr<DomTreeNodeBase> C) {
-    Children.push_back(C.get());
-    return C;
-  }
+  void addChild(DomTreeNodeBase *C) { Children.push_back(C); }
 
   bool isLeaf() const { return Children.empty(); }
   size_t getNumChildren() const { return Children.size(); }
@@ -655,8 +651,8 @@ protected:
     } else {
       assert(Roots.size() == 1);
       NodeT *OldRoot = Roots.front();
-      auto &OldNode = DomTreeNodes[OldRoot];
-      OldNode = NewNode->addChild(std::move(DomTreeNodes[OldRoot]));
+      DomTreeNodeBase<NodeT> *OldNode = getNode(OldRoot);
+      NewNode->addChild(OldNode);
       OldNode->IDom = NewNode;
       OldNode->UpdateLevel();
       Roots[0] = BB;
@@ -831,9 +827,10 @@ protected:
   void addRoot(NodeT *BB) { this->Roots.push_back(BB); }
 
   DomTreeNodeBase<NodeT> *createChild(NodeT *BB, DomTreeNodeBase<NodeT> *IDom) {
-    return (DomTreeNodes[BB] = IDom->addChild(
-                std::make_unique<DomTreeNodeBase<NodeT>>(BB, IDom)))
-        .get();
+    auto Node = std::make_unique<DomTreeNodeBase<NodeT>>(BB, IDom);
+    auto *NodePtr = (DomTreeNodes[BB] = std::move(Node)).get();
+    IDom->addChild(NodePtr);
+    return NodePtr;
   }
 
   DomTreeNodeBase<NodeT> *createNode(NodeT *BB) {
