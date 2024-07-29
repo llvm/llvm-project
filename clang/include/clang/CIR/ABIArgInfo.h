@@ -185,7 +185,8 @@ public:
   }
   static ABIArgInfo getExtend(mlir::Type Ty, mlir::Type T = nullptr) {
     // NOTE(cir): The original can apply this method on both integers and
-    // enumerations, but in CIR, these two types are one and the same.
+    // enumerations, but in CIR, these two types are one and the same. Booleans
+    // will also fall into this category, but they have their own type.
     if (mlir::isa<mlir::cir::IntType>(Ty) &&
         mlir::cast<mlir::cir::IntType>(Ty).isSigned())
       return getSignExtend(mlir::cast<mlir::cir::IntType>(Ty), T);

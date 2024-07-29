@@ -50,7 +50,7 @@ clang::TypeInfo CIRLowerContext::getTypeInfoImpl(const Type T) const {
   // TODO(cir): We should implement a better way to identify type kinds and use
   // builting data layout interface for this.
   auto typeKind = clang::Type::Builtin;
-  if (isa<IntType, SingleType, DoubleType>(T)) {
+  if (isa<IntType, SingleType, DoubleType, BoolType>(T)) {
     typeKind = clang::Type::Builtin;
   } else {
     llvm_unreachable("Unhandled type class");
@@ -72,6 +72,11 @@ clang::TypeInfo CIRLowerContext::getTypeInfoImpl(const Type T) const {
       Width = intTy.getWidth();
       // FIXME(cir): Use the proper getABIAlignment method here.
       Align = std::ceil((float)Width / 8) * 8;
+      break;
+    }
+    if (auto boolTy = dyn_cast<BoolType>(T)) {
+      Width = Target->getFloatWidth();
+      Align = Target->getFloatAlign();
       break;
     }
     if (auto floatTy = dyn_cast<SingleType>(T)) {
@@ -151,6 +156,11 @@ bool CIRLowerContext::isPromotableIntegerType(Type T) const {
   // example, Char32 is promotable. Improve CIR or add an AST query here.
   if (auto intTy = dyn_cast<IntType>(T)) {
     return cast<IntType>(T).getWidth() < 32;
+  }
+
+  // Bool are also handled here for codegen parity.
+  if (auto boolTy = dyn_cast<BoolType>(T)) {
+    return true;
   }
 
   // Enumerated types are promotable to their compatible integer types

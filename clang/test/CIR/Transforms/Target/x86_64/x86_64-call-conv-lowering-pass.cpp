@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -fclangir-call-conv-lowering -emit-cir -mmlir --mlir-print-ir-after=cir-call-conv-lowering %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
 
+// Test call conv lowering for trivial cases. //
+
 // CHECK: @_Z4Voidv()
 void Void(void) {
 // CHECK:   cir.call @_Z4Voidv() : () -> ()
@@ -8,6 +10,16 @@ void Void(void) {
 }
 
 // Test call conv lowering for trivial zeroext cases.
+
+// Bools are a bit of an odd case in CIR's x86_64 representation: they are considered i8
+// everywhere except in the function return/arguments, where they are considered i1. To
+// match LLVM's behavior, we need to zero-extend them when passing them as arguments.
+
+// CHECK: @_Z4Boolb(%arg0: !cir.bool {cir.zeroext} loc({{.+}})) -> (!cir.bool {cir.zeroext})
+bool Bool(bool a) {
+// CHECK:   cir.call @_Z4Boolb({{.+}}) : (!cir.bool) -> !cir.bool
+  return Bool(a);
+}
 
 // CHECK: cir.func @_Z5UCharh(%arg0: !u8i {cir.zeroext} loc({{.+}})) -> (!u8i {cir.zeroext})
 unsigned char UChar(unsigned char c) {
