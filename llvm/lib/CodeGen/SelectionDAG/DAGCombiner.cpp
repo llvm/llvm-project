@@ -27004,7 +27004,7 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
       Src0.getValueType().getVectorElementType() != EltVT ||
       Src1.getValueType().getVectorElementType() != EltVT ||
       !(IsBothSplatVector || TLI.isExtractVecEltCheap(VT, Index0)) ||
-      (LegalTypes && !TLI.isOperationLegalOrCustom(Opcode, EltVT)) ||
+      (LegalTypes && !TLI.isTypeLegal(EltVT)) ||
       !(EltAction == TargetLoweringBase::Legal ||
         EltAction == TargetLoweringBase::Custom))
     return SDValue();
