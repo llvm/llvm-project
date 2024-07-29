@@ -213,3 +213,40 @@ exit:
   %res = insertvalue { ptr, i64 } %tmp, i64 %val2, 1
   ret {ptr, i64} %res
 }
+
+; Negative test, %.elt2 is defined in bb %5, it can't be accessed from %3,
+; so we can't add insertvalue to %3.
+define { ptr, i64 } @test5({ ptr, i64 } %0, ptr %1, i1 %.not) {
+; CHECK-LABEL: define { ptr, i64 } @test5(
+; CHECK-SAME: { ptr, i64 } [[TMP0:%.*]], ptr [[TMP1:%.*]], i1 [[DOTNOT:%.*]]) {
+; CHECK-NEXT:    br i1 [[DOTNOT]], label %[[BB3:.*]], label %[[BB4:.*]]
+; CHECK:       [[BB3]]:
+; CHECK-NEXT:    store ptr null, ptr [[TMP1]], align 8
+; CHECK-NEXT:    br label %[[BB5:.*]]
+; CHECK:       [[BB4]]:
+; CHECK-NEXT:    [[DOTELT1:%.*]] = extractvalue { ptr, i64 } [[TMP0]], 0
+; CHECK-NEXT:    br label %[[BB5]]
+; CHECK:       [[BB5]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = phi ptr [ [[DOTELT1]], %[[BB4]] ], [ null, %[[BB3]] ]
+; CHECK-NEXT:    [[DOTELT2:%.*]] = extractvalue { ptr, i64 } [[TMP0]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { ptr, i64 } zeroinitializer, ptr [[TMP6]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertvalue { ptr, i64 } [[TMP7]], i64 [[DOTELT2]], 1
+; CHECK-NEXT:    ret { ptr, i64 } [[TMP8]]
+;
+  br i1 %.not, label %3, label %4
+
+3:                                                ; preds = %2
+  store ptr null, ptr %1, align 8
+  br label %5
+
+4:                                                ; preds = %2
+  %.elt1 = extractvalue { ptr, i64 } %0, 0
+  br label %5
+
+5:                                                ; preds = %4, %3
+  %6 = phi ptr [ %.elt1, %4 ], [ null, %3 ]
+  %.elt2 = extractvalue { ptr, i64 } %0, 1
+  %7 = insertvalue { ptr, i64 } zeroinitializer, ptr %6, 0
+  %8 = insertvalue { ptr, i64 } %7, i64 %.elt2, 1
+  ret { ptr, i64 } %8
+}

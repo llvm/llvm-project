@@ -963,6 +963,9 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     return AggregateDescription::Found;
   };
 
+  // If an aggregate element is defined in UseBB, we can't use it in PredBB.
+  bool EltDefinedInUseBB = false;
+
   // Given the value \p Elt that was being inserted into element \p EltIdx of an
   // aggregate AggTy, see if \p Elt was originally defined by an
   // appropriate extractvalue (same element index, same aggregate type).
@@ -972,8 +975,11 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
       [&](Instruction *Elt, unsigned EltIdx, std::optional<BasicBlock *> UseBB,
           std::optional<BasicBlock *> PredBB) -> std::optional<Value *> {
     // For now(?), only deal with, at most, a single level of PHI indirection.
-    if (UseBB && PredBB)
+    if (UseBB && PredBB) {
       Elt = dyn_cast<Instruction>(Elt->DoPHITranslation(*UseBB, *PredBB));
+      if (Elt && Elt->getParent() == *UseBB)
+        EltDefinedInUseBB = true;
+    }
     // FIXME: deal with multiple levels of PHI indirection?
 
     // Did we find an extraction?
@@ -1137,6 +1143,9 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   for (auto &It : SourceAggregates) {
     if (Describe(It.second) == AggregateDescription::Found)
       continue;
+
+    if (EltDefinedInUseBB)
+      return nullptr;
 
     BasicBlock *Pred = It.first;
     Builder.SetInsertPoint(Pred, Pred->getTerminator()->getIterator());
