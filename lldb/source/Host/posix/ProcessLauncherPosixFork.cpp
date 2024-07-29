@@ -201,7 +201,7 @@ struct ForkLaunchInfo {
   execve(info.argv[0], const_cast<char *const *>(info.argv), info.envp);
 
 #if defined(__linux__)
-  if (errno == ETXTBSY) {
+  for (int i = 0; i < 50; ++i) {
     // On android M and earlier we can get this error because the adb daemon
     // can hold a write handle on the executable even after it has finished
     // uploading it. This state lasts only a short time and happens only when
@@ -210,7 +210,13 @@ struct ForkLaunchInfo {
     // shell" command in the fork() child before it has had a chance to exec.)
     // Since this state should clear up quickly, wait a while and then give it
     // one more go.
-    usleep(50000);
+    // If `lldb-server platform` copies the executable in one thread and
+    // launches gdbserver in another thread (fork+execve), the FD may stay
+    // opened in the forked child process until execve() even if the first
+    // thread closed the file. Let's wait a while.
+    if (errno != ETXTBSY)
+      break;
+    usleep(100000);
     execve(info.argv[0], const_cast<char *const *>(info.argv), info.envp);
   }
 #endif
