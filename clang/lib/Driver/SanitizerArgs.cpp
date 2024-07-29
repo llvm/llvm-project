@@ -1080,10 +1080,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                                 options::OPT_fmemory_profile_EQ,
                                 options::OPT_fno_memory_profile, false);
 
-  SanitizeOverflowIdioms =
-      Args.hasFlag(options::OPT_fsanitize_overflow_idioms,
-                   options::OPT_fno_sanitize_overflow_idioms, true);
-
   // Finally, initialize the set of available and recoverable sanitizers.
   Sanitizers.Mask |= Kinds;
   RecoverableSanitizers.Mask |= RecoverableKinds;
@@ -1374,9 +1370,6 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     CmdArgs.push_back("-target-feature");
     CmdArgs.push_back("+tagged-globals");
   }
-
-  if (!SanitizeOverflowIdioms)
-    CmdArgs.push_back("-fno-sanitize-overflow-idioms");
 
   // MSan: Workaround for PR16386.
   // ASan: This is mainly to help LSan with cases such as

@@ -198,9 +198,7 @@ static bool CanElideOverflowCheck(const ASTContext &Ctx, const BinOpInfo &Op) {
 
   const UnaryOperator *UO = dyn_cast<UnaryOperator>(Op.E);
 
-  // TODO: rename or rework NegUnsignedConst because it doesn't only work on
-  // constants.
-  if (UO && UO->getOpcode() == UO_Minus &&
+  if (UO && UO->getOpcode() == UO_Minus && UO->isIntegerConstantExpr(Ctx) &&
       Ctx.getLangOpts().isOverflowPatternExcluded(
           LangOptions::OverflowPatternExclusionKind::NegUnsignedConst))
     return true;
