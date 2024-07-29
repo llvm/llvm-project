@@ -761,7 +761,7 @@ define void @foo(ptr %arg0, ptr %arg1) {
   EXPECT_EQ(Ld->getPointerOperand(), Arg0);
   // Check getAlign()
   EXPECT_EQ(Ld->getAlign(), 64);
-  // Check create(InsertBefore, IsVolatile=false)
+  // Check create(InsertBefore)
   sandboxir::LoadInst *NewLd =
       sandboxir::LoadInst::create(Ld->getType(), Arg1, Align(8),
                                   /*InsertBefore=*/Ret, Ctx, "NewLd");
@@ -780,7 +780,7 @@ define void @foo(ptr %arg0, ptr %arg1) {
   // Checking if create() was volatile
   EXPECT_TRUE(NewVLd->isVolatile());
   EXPECT_EQ(NewVLd->getName(), "NewVLd");
-  // Check create(InsertAtEnd, IsVolatile=false)
+  // Check create(InsertAtEnd)
   sandboxir::LoadInst *NewLdEnd =
       sandboxir::LoadInst::create(Ld->getType(), Arg1, Align(8),
                                   /*InsertAtEnd=*/BB, Ctx, "NewLdEnd");
