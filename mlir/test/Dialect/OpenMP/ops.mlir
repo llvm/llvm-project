@@ -184,7 +184,7 @@ func.func @omp_loop_nest(%lb : index, %ub : index, %step : index) -> () {
     "omp.loop_nest" (%lb, %ub, %step) ({
     ^bb0(%iv: index):
       omp.yield
-    }) {inclusive} : (index, index, index) -> ()
+    }) {loop_inclusive} : (index, index, index) -> ()
     omp.terminator
   }
 
