@@ -427,21 +427,6 @@ entry:
   ret i8 %load
 }
 
-define i8 @select_diff_addrspace_remove_alloca_asan(i1 %cond, ptr %p) sanitize_address {
-; CHECK-LABEL: @select_diff_addrspace_remove_alloca_asan(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i8 0
-;
-entry:
-  %alloca = alloca [32 x i8]
-  call void @llvm.memcpy.p0.p1.i64(ptr %alloca, ptr addrspace(1) @g2, i64 32, i1 false)
-  %gep = getelementptr inbounds [32 x i8], ptr %alloca, i32 0, i32 2
-  %sel = select i1 %cond, ptr %alloca, ptr %gep
-  %gep2 = getelementptr inbounds i8, ptr %sel, i64 4
-  %load = load i8, ptr %gep2
-  ret i8 %load
-}
-
 declare i8 @readonly_callee(ptr readonly nocapture)
 
 ; FIXME: This should be able to fold to call i8 @readonly_callee(ptr nonnull @g1)

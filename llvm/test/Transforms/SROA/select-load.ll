@@ -36,30 +36,8 @@ entry:
 %st.args = type { i32, ptr }
 
 ; A bitcasted load and a direct load of select.
-define void @test_multiple_loads_select(i1 %cmp) {
+define void @test_multiple_loads_select(i1 %cmp){
 ; CHECK-LABEL: @test_multiple_loads_select(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADDR_I8_SROA_SPECULATED:%.*]] = select i1 [[CMP:%.*]], ptr undef, ptr undef
-; CHECK-NEXT:    call void @foo_i8(ptr [[ADDR_I8_SROA_SPECULATED]])
-; CHECK-NEXT:    [[ADDR_I32_SROA_SPECULATED:%.*]] = select i1 [[CMP]], ptr undef, ptr undef
-; CHECK-NEXT:    call void @foo_i32(ptr [[ADDR_I32_SROA_SPECULATED]])
-; CHECK-NEXT:    ret void
-;
-entry:
-  %args = alloca [2 x %st.args], align 16
-  %arr1 = getelementptr inbounds [2 x %st.args], ptr %args, i64 0, i64 1
-  %sel = select i1 %cmp, ptr %arr1, ptr %args
-  %addr = getelementptr inbounds %st.args, ptr %sel, i64 0, i32 1
-  %addr.i8 = load ptr, ptr %addr, align 8
-  call void @foo_i8(ptr %addr.i8)
-  %addr.i32 = load ptr, ptr %addr, align 8
-  call void @foo_i32 (ptr %addr.i32)
-  ret void
-}
-
-; Sanitizer will break optimization.
-define void @test_multiple_loads_select_asan(i1 %cmp) sanitize_address {
-; CHECK-LABEL: @test_multiple_loads_select_asan(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADDR_I8_SROA_SPECULATED:%.*]] = select i1 [[CMP:%.*]], ptr undef, ptr undef
 ; CHECK-NEXT:    call void @foo_i8(ptr [[ADDR_I8_SROA_SPECULATED]])
