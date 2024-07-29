@@ -2987,8 +2987,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// Caller guarantees that this intrinsic does not access memory.
   bool maybeHandleSimpleNomemIntrinsic(IntrinsicInst &I) {
     Type *RetTy = I.getType();
-    if (!(RetTy->isIntOrIntVectorTy() || RetTy->isFPOrFPVectorTy() ||
-          RetTy->isX86_MMXTy()))
+    if (!(RetTy->isIntOrIntVectorTy() || RetTy->isFPOrFPVectorTy()))
       return false;
 
     unsigned NumArgOperands = I.arg_size();
@@ -3218,7 +3217,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  // Get an X86_MMX-sized vector type.
+  // Get an MMX-sized vector type.
   Type *getMMXVectorTy(unsigned EltSizeInBits) {
     const unsigned X86_MMXSizeInBits = 64;
     assert(EltSizeInBits != 0 && (X86_MMXSizeInBits % EltSizeInBits) == 0 &&
@@ -3264,20 +3263,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // packs elements of 2 input vectors into half as many bits with saturation.
   // Shadow is propagated with the signed variant of the same intrinsic applied
   // to sext(Sa != zeroinitializer), sext(Sb != zeroinitializer).
-  // EltSizeInBits is used only for x86mmx arguments.
-  void handleVectorPackIntrinsic(IntrinsicInst &I, unsigned EltSizeInBits = 0) {
+  // MMXEltSizeInBits is used only for x86mmx arguments.
+  void handleVectorPackIntrinsic(IntrinsicInst &I,
+                                 unsigned MMXEltSizeInBits = 0) {
     assert(I.arg_size() == 2);
-    bool isX86_MMX = I.getOperand(0)->getType()->isX86_MMXTy();
     IRBuilder<> IRB(&I);
     Value *S1 = getShadow(&I, 0);
     Value *S2 = getShadow(&I, 1);
-    assert(isX86_MMX || S1->getType()->isVectorTy());
+    assert(S1->getType()->isVectorTy());
 
     // SExt and ICmpNE below must apply to individual elements of input vectors.
     // In case of x86mmx arguments, cast them to appropriate vector types and
     // back.
-    Type *T = isX86_MMX ? getMMXVectorTy(EltSizeInBits) : S1->getType();
-    if (isX86_MMX) {
+    Type *T =
+        MMXEltSizeInBits ? getMMXVectorTy(MMXEltSizeInBits) : S1->getType();
+    if (MMXEltSizeInBits) {
       S1 = IRB.CreateBitCast(S1, T);
       S2 = IRB.CreateBitCast(S2, T);
     }
@@ -3285,10 +3285,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         IRB.CreateSExt(IRB.CreateICmpNE(S1, Constant::getNullValue(T)), T);
     Value *S2_ext =
         IRB.CreateSExt(IRB.CreateICmpNE(S2, Constant::getNullValue(T)), T);
-    if (isX86_MMX) {
-      Type *X86_MMXTy = Type::getX86_MMXTy(*MS.C);
-      S1_ext = IRB.CreateBitCast(S1_ext, X86_MMXTy);
-      S2_ext = IRB.CreateBitCast(S2_ext, X86_MMXTy);
+    if (MMXEltSizeInBits) {
+      S1_ext = IRB.CreateBitCast(S1_ext, getMMXVectorTy(64));
+      S2_ext = IRB.CreateBitCast(S2_ext, getMMXVectorTy(64));
     }
 
     Function *ShadowFn = Intrinsic::getDeclaration(
@@ -3296,7 +3295,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     Value *S =
         IRB.CreateCall(ShadowFn, {S1_ext, S2_ext}, "_msprop_vector_pack");
-    if (isX86_MMX)
+    if (MMXEltSizeInBits)
       S = IRB.CreateBitCast(S, getShadowTy(&I));
     setShadow(&I, S);
     setOriginForNaryOp(I);
@@ -3403,10 +3402,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   // Instrument sum-of-absolute-differences intrinsic.
-  void handleVectorSadIntrinsic(IntrinsicInst &I) {
+  void handleVectorSadIntrinsic(IntrinsicInst &I, bool IsMMX = false) {
     const unsigned SignificantBitsPerResultElement = 16;
-    bool isX86_MMX = I.getOperand(0)->getType()->isX86_MMXTy();
-    Type *ResTy = isX86_MMX ? IntegerType::get(*MS.C, 64) : I.getType();
+    Type *ResTy = IsMMX ? IntegerType::get(*MS.C, 64) : I.getType();
     unsigned ZeroBitsPerResultElement =
         ResTy->getScalarSizeInBits() - SignificantBitsPerResultElement;
 
@@ -3425,9 +3423,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // Instrument multiply-add intrinsic.
   void handleVectorPmaddIntrinsic(IntrinsicInst &I,
-                                  unsigned EltSizeInBits = 0) {
-    bool isX86_MMX = I.getOperand(0)->getType()->isX86_MMXTy();
-    Type *ResTy = isX86_MMX ? getMMXVectorTy(EltSizeInBits * 2) : I.getType();
+                                  unsigned MMXEltSizeInBits = 0) {
+    Type *ResTy =
+        MMXEltSizeInBits ? getMMXVectorTy(MMXEltSizeInBits * 2) : I.getType();
     IRBuilder<> IRB(&I);
     auto *Shadow0 = getShadow(&I, 0);
     auto *Shadow1 = getShadow(&I, 1);
@@ -4161,6 +4159,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
 
     case Intrinsic::x86_mmx_psad_bw:
+      handleVectorSadIntrinsic(I, true);
+      break;
     case Intrinsic::x86_sse2_psad_bw:
     case Intrinsic::x86_avx2_psad_bw:
       handleVectorSadIntrinsic(I);
@@ -5048,7 +5048,7 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
     Type *T = arg->getType();
     if (T->isX86_FP80Ty())
       return AK_Memory;
-    if (T->isFPOrFPVectorTy() || T->isX86_MMXTy())
+    if (T->isFPOrFPVectorTy())
       return AK_FloatingPoint;
     if (T->isIntegerTy() && T->getPrimitiveSizeInBits() <= 64)
       return AK_GeneralPurpose;
