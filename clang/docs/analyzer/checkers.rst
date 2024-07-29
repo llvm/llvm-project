@@ -1770,6 +1770,11 @@ are assumed to succeed.)
    fclose(p);
  }
 
+**Limitations**
+
+The checker does not track the correspondence between integer file descriptors
+and ``FILE *`` pointers.
+
 .. _osx-checkers:
 
 osx
