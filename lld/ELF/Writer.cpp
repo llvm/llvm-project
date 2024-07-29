@@ -26,6 +26,7 @@
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/RandomNumberGenerator.h"
@@ -2044,8 +2045,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Fill other section headers. The dynamic table is finalized
   // at the end because some tags like RELSZ depend on result
   // of finalizing other sections.
-  for (OutputSection *sec : outputSections)
+  for (OutputSection *sec : outputSections) {
     sec->finalize();
+    if (sec->flags & SHF_X86_64_LARGE)
+      ctx.hasLargeSection = true;
+  }
 
   script->checkFinalScriptConditions();
 

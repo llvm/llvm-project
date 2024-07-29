@@ -114,6 +114,7 @@ void Ctx::reset() {
   scriptSymOrderCounter = 1;
   scriptSymOrder.clear();
   ltoAllVtablesHaveTypeInfos = false;
+  hasLargeSection = false;
 }
 
 llvm::raw_fd_ostream Ctx::openAuxiliaryFile(llvm::StringRef filename,
@@ -1460,6 +1461,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->warnCommon = args.hasFlag(OPT_warn_common, OPT_no_warn_common, false);
   config->warnSymbolOrdering =
       args.hasFlag(OPT_warn_symbol_ordering, OPT_no_warn_symbol_ordering, true);
+  config->warnLarge = args.hasFlag(OPT_warn_large, OPT_no_warn_large, false);
   config->whyExtract = args.getLastArgValue(OPT_why_extract);
   config->zCombreloc = getZFlag(args, "combreloc", "nocombreloc", true);
   config->zCopyreloc = getZFlag(args, "copyreloc", "nocopyreloc", true);

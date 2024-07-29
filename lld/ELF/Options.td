@@ -543,6 +543,10 @@ defm warn_symbol_ordering: BB<"warn-symbol-ordering",
     "Warn about problems with the symbol ordering file (default)",
     "Do not warn about problems with the symbol ordering file">;
 
+defm warn_large: BB<"warn-32-bit-reloc-to-large-section",
+    "Warn about PC32 relocations to a large section",
+    "Do not warn about PC32 relocations to a large section">;
+
 def warn_unresolved_symbols: F<"warn-unresolved-symbols">,
   HelpText<"Report unresolved symbols as warnings">;
 
