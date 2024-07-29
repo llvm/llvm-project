@@ -24,8 +24,6 @@ static int int_compare(const void *l, const void *r) {
   return -1;
 }
 
-namespace LIBC_NAMESPACE_DECL {
-
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
   const size_t array_size = size / sizeof(int);
@@ -37,10 +35,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   for (size_t i = 0; i < array_size; ++i)
     array[i] = data_as_int[i];
 
-  auto arr = internal::Array(reinterpret_cast<uint8_t *>(array), array_size, 
-                                            sizeof(int), int_compare);
+  auto arr = LIBC_NAMESPACE::internal::Array(
+      reinterpret_cast<uint8_t *>(array), array_size, sizeof(int), int_compare);
 
-  internal::heap_sort(arr);
+  LIBC_NAMESPACE::internal::heap_sort(arr);
 
   for (size_t i = 0; i < array_size - 1; ++i)
     if (arr.get(i) > arr.get(i + 1))
@@ -49,5 +47,3 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   delete[] array;
   return 0;
 }
-
-} // namespace LIBC_NAMESPACE_DECL
