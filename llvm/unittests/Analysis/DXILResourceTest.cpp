@@ -113,9 +113,8 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   // ByteAddressBuffer Buffer0;
   Value *Symbol = UndefValue::get(
       StructType::create(Context, {Int32Ty}, "struct.ByteAddressBuffer"));
-  ResourceInfo Resource =
-      ResourceInfo::RawBuffer(Symbol, "Buffer0", ResourceBinding{0, 0, 1},
-                              /*UniqueID=*/0);
+  ResourceInfo Resource = ResourceInfo::RawBuffer(Symbol, "Buffer0");
+  Resource.bind(0, 0, 0, 1);
   std::pair<uint32_t, uint32_t> Props = Resource.getAnnotateProps();
   EXPECT_EQ(Props.first, 0x0000000bU);
   EXPECT_EQ(Props.second, 0U);
@@ -125,9 +124,10 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   // RWByteAddressBuffer BufferOut : register(u3, space2);
   Symbol = UndefValue::get(
       StructType::create(Context, {Int32Ty}, "struct.RWByteAddressBuffer"));
-  Resource = ResourceInfo::RWRawBuffer(
-      Symbol, "BufferOut", ResourceBinding{2, 3, 1}, /*UniqueID=*/1,
-      /*GloballyCoherent=*/false, /*IsROV=*/false);
+  Resource =
+      ResourceInfo::RWRawBuffer(Symbol, "BufferOut",
+                                /*GloballyCoherent=*/false, /*IsROV=*/false);
+  Resource.bind(1, 2, 3, 1);
   Props = Resource.getAnnotateProps();
   EXPECT_EQ(Props.first, 0x0000100bU);
   EXPECT_EQ(Props.second, 0U);
@@ -141,9 +141,9 @@ TEST(DXILResource, AnnotationsAndMetadata) {
       StructType::create(Context, {Int32Ty, FloatTy, DoubleTy}, "BufType0");
   Symbol = UndefValue::get(StructType::create(
       Context, {BufType0}, "class.StructuredBuffer<BufType>"));
-  Resource = ResourceInfo::StructuredBuffer(
-      Symbol, "Buffer0", ResourceBinding{0, 0, 1}, /*UniqueID=*/0,
-      /*Stride=*/16, Align(8));
+  Resource = ResourceInfo::StructuredBuffer(Symbol, "Buffer0",
+                                            /*Stride=*/16, Align(8));
+  Resource.bind(0, 0, 0, 1);
   Props = Resource.getAnnotateProps();
   EXPECT_EQ(Props.first, 0x0000030cU);
   EXPECT_EQ(Props.second, 0x00000010U);
@@ -155,9 +155,9 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   Symbol = UndefValue::get(StructType::create(
       Context, {Floatx4Ty}, "class.Texture2D<vector<float, 4> >"));
   Resource =
-      ResourceInfo::SRV(Symbol, "ColorMapTexture", ResourceBinding{0, 2, 1},
-                        /*UniqueID=*/2, dxil::ElementType::F32,
+      ResourceInfo::SRV(Symbol, "ColorMapTexture", dxil::ElementType::F32,
                         /*ElementCount=*/4, dxil::ResourceKind::Texture2D);
+  Resource.bind(2, 0, 2, 1);
   Props = Resource.getAnnotateProps();
   EXPECT_EQ(Props.first, 0x00000002U);
   EXPECT_EQ(Props.second, 0x00000409U);
@@ -169,9 +169,9 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   Symbol = UndefValue::get(
       StructType::create(Context, {FloatTy}, "class.Texture2DMS<float, 8>"));
   Resource =
-      ResourceInfo::Texture2DMS(Symbol, "DepthBuffer", ResourceBinding{0, 0, 1},
-                                /*UniqueID=*/0, dxil::ElementType::F32,
+      ResourceInfo::Texture2DMS(Symbol, "DepthBuffer", dxil::ElementType::F32,
                                 /*ElementCount=*/1, /*SampleCount=*/8);
+  Resource.bind(0, 0, 0, 1);
   Props = Resource.getAnnotateProps();
   EXPECT_EQ(Props.first, 0x00000003U);
   EXPECT_EQ(Props.second, 0x00080109U);
@@ -182,9 +182,9 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   // FeedbackTexture2D<SAMPLER_FEEDBACK_MIN_MIP> feedbackMinMip;
   Symbol = UndefValue::get(
       StructType::create(Context, {Int32Ty}, "class.FeedbackTexture2D<0>"));
-  Resource = ResourceInfo::FeedbackTexture2D(
-      Symbol, "feedbackMinMip", ResourceBinding{0, 0, 1},
-      /*UniqueID=*/0, SamplerFeedbackType::MinMip);
+  Resource = ResourceInfo::FeedbackTexture2D(Symbol, "feedbackMinMip",
+                                             SamplerFeedbackType::MinMip);
+  Resource.bind(0, 0, 0, 1);
   Props = Resource.getAnnotateProps();
   EXPECT_EQ(Props.first, 0x00001011U);
   EXPECT_EQ(Props.second, 0U);
@@ -196,8 +196,8 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   Symbol = UndefValue::get(StructType::create(
       Context, {Int32Ty}, "class.FeedbackTexture2DArray<1>"));
   Resource = ResourceInfo::FeedbackTexture2DArray(
-      Symbol, "feedbackMipRegion", ResourceBinding{0, 0, 1},
-      /*UniqueID=*/0, SamplerFeedbackType::MipRegionUsed);
+      Symbol, "feedbackMipRegion", SamplerFeedbackType::MipRegionUsed);
+  Resource.bind(0, 0, 0, 1);
   Props = Resource.getAnnotateProps();
   EXPECT_EQ(Props.first, 0x00001012U);
   EXPECT_EQ(Props.second, 0x00000001U);
@@ -208,11 +208,10 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   // globallycoherent RWTexture2D<int2> OutputTexture : register(u0, space2);
   Symbol = UndefValue::get(StructType::create(
       Context, {Int32x2Ty}, "class.RWTexture2D<vector<int, 2> >"));
-  Resource =
-      ResourceInfo::UAV(Symbol, "OutputTexture", ResourceBinding{2, 0, 1},
-                        /*UniqueID=*/0, dxil::ElementType::I32,
-                        /*ElementCount=*/2, /*GloballyCoherent=*/1, /*IsROV=*/0,
-                        dxil::ResourceKind::Texture2D);
+  Resource = ResourceInfo::UAV(Symbol, "OutputTexture", dxil::ElementType::I32,
+                               /*ElementCount=*/2, /*GloballyCoherent=*/1,
+                               /*IsROV=*/0, dxil::ResourceKind::Texture2D);
+  Resource.bind(0, 2, 0, 1);
   Props = Resource.getAnnotateProps();
   EXPECT_EQ(Props.first, 0x00005002U);
   EXPECT_EQ(Props.second, 0x00000204U);
@@ -224,10 +223,10 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   Symbol = UndefValue::get(
       StructType::create(Context, {Floatx4Ty},
                          "class.RasterizerOrderedBuffer<vector<float, 4> >"));
-  Resource = ResourceInfo::UAV(Symbol, "ROB", ResourceBinding{0, 0, 1},
-                               /*UniqueID=*/0, dxil::ElementType::F32,
+  Resource = ResourceInfo::UAV(Symbol, "ROB", dxil::ElementType::F32,
                                /*ElementCount=*/4, /*GloballyCoherent=*/0,
                                /*IsROV=*/1, dxil::ResourceKind::TypedBuffer);
+  Resource.bind(0, 0, 0, 1);
   Props = Resource.getAnnotateProps();
   EXPECT_EQ(Props.first, 0x0000300aU);
   EXPECT_EQ(Props.second, 0x00000409U);
@@ -240,10 +239,11 @@ TEST(DXILResource, AnnotationsAndMetadata) {
       Context, {Floatx3Ty, FloatTy, Int32Ty}, "ParticleMotion");
   Symbol = UndefValue::get(StructType::create(
       Context, {BufType1}, "class.StructuredBuffer<ParticleMotion>"));
-  Resource = ResourceInfo::RWStructuredBuffer(
-      Symbol, "g_OutputBuffer", ResourceBinding{0, 2, 1},
-      /*UniqueID=*/0, /*Stride=*/20, Align(4), /*GloballyCoherent=*/false,
-      /*IsROV=*/false, /*HasCounter=*/true);
+  Resource =
+      ResourceInfo::RWStructuredBuffer(Symbol, "g_OutputBuffer", /*Stride=*/20,
+                                       Align(4), /*GloballyCoherent=*/false,
+                                       /*IsROV=*/false, /*HasCounter=*/true);
+  Resource.bind(0, 0, 2, 1);
   Props = Resource.getAnnotateProps();
   EXPECT_EQ(Props.first, 0x0000920cU);
   EXPECT_EQ(Props.second, 0x00000014U);
@@ -255,9 +255,9 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   Symbol = UndefValue::get(StructType::create(
       Context, {Int32Ty}, "class.RWTexture2DMSArray<unsigned int, 8>"));
   Resource = ResourceInfo::RWTexture2DMSArray(
-      Symbol, "g_rw_t2dmsa", ResourceBinding{0, 0, 1},
-      /*UniqueID=*/0, dxil::ElementType::U32, /*ElementCount=*/1,
+      Symbol, "g_rw_t2dmsa", dxil::ElementType::U32, /*ElementCount=*/1,
       /*SampleCount=*/8, /*GloballyCoherent=*/false);
+  Resource.bind(0, 0, 0, 1);
   Props = Resource.getAnnotateProps();
   EXPECT_EQ(Props.first, 0x00001008U);
   EXPECT_EQ(Props.second, 0x00080105U);
@@ -268,8 +268,8 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   // cbuffer cb0 { float4 g_X; float4 g_Y; }
   Symbol = UndefValue::get(
       StructType::create(Context, {Floatx4Ty, Floatx4Ty}, "cb0"));
-  Resource = ResourceInfo::CBuffer(Symbol, "cb0", ResourceBinding{0, 0, 1},
-                                   /*UniqueID=*/0, /*Size=*/32);
+  Resource = ResourceInfo::CBuffer(Symbol, "cb0", /*Size=*/32);
+  Resource.bind(0, 0, 0, 1);
   Props = Resource.getAnnotateProps();
   EXPECT_EQ(Props.first, 0x0000000dU);
   EXPECT_EQ(Props.second, 0x00000020U);
@@ -279,9 +279,9 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   // SamplerState ColorMapSampler : register(s0);
   Symbol = UndefValue::get(
       StructType::create(Context, {Int32Ty}, "struct.SamplerState"));
-  Resource =
-      ResourceInfo::Sampler(Symbol, "ColorMapSampler", ResourceBinding{0, 0, 1},
-                            /*UniqueID=*/0, dxil::SamplerType::Default);
+  Resource = ResourceInfo::Sampler(Symbol, "ColorMapSampler",
+                                   dxil::SamplerType::Default);
+  Resource.bind(0, 0, 0, 1);
   Props = Resource.getAnnotateProps();
   EXPECT_EQ(Props.first, 0x0000000eU);
   EXPECT_EQ(Props.second, 0U);
@@ -290,9 +290,9 @@ TEST(DXILResource, AnnotationsAndMetadata) {
               TestMD.get(0, Symbol, "ColorMapSampler", 0, 0, 1, 0, nullptr));
 
   // SamplerComparisonState ShadowSampler {...};
-  Resource =
-      ResourceInfo::Sampler(Symbol, "CmpSampler", ResourceBinding{0, 0, 1},
-                            /*UniqueID=*/0, dxil::SamplerType::Comparison);
+  Resource = ResourceInfo::Sampler(Symbol, "CmpSampler",
+                                   dxil::SamplerType::Comparison);
+  Resource.bind(0, 0, 0, 1);
   Props = Resource.getAnnotateProps();
   EXPECT_EQ(Props.first, 0x0000800eU);
   EXPECT_EQ(Props.second, 0U);
