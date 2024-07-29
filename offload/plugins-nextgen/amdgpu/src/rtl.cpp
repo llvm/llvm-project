@@ -1660,6 +1660,11 @@ private:
       } else if (ActionFunction == releaseSignalAction) {
         if (auto Err = releaseSignalAction(&ActionArgs))
           return Err;
+      } else if (ActionFunction == nullptr) {
+        // For example a Device-to-Device transfer will not require a buffer
+        // release and the ActionFunction will be a nullptr. Hence, we should
+        // generally pass in this scenario (but still log the info).
+        DP("performAction: ActionFunction was nullptr\n");
       } else {
         return Plugin::error("Unknown action function!");
       }
@@ -2203,7 +2208,7 @@ public:
 
 #ifdef OMPT_SUPPORT
     if (OmptInfo) {
-      DP("OMPT-Async: Registering data timing in pushMemoryCopyH2DAsync\n");
+      DP("OMPT-Async: Registering data timing in pushMemoryCopyD2DAsync\n");
       // Capture the time the data transfer required for the d2h transfer.
       if (auto Err = Slots[Curr].schedOmptAsyncD2HTransferTiming(
               Agent, OutputSignal, TicksToTime, std::move(OmptInfo)))
