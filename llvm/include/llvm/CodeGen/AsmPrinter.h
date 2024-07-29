@@ -227,6 +227,9 @@ private:
   /// split stack prologue.
   bool HasNoSplitStack = false;
 
+  /// True if debugging information is available in this module.
+  bool DbgInfoAvailable = false;
+
 protected:
   explicit AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
 
@@ -431,6 +434,9 @@ public:
 
   /// Get the CFISection type for the module.
   CFISection getModuleCFISectionType() const { return ModuleCFISection; }
+
+  /// Returns true if valid debug info is present.
+  bool hasDebugInfo() const { return DbgInfoAvailable; }
 
   bool needsSEHMoves();
 
