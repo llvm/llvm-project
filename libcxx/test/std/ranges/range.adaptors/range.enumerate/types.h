@@ -68,8 +68,7 @@ private:
   decltype(base(std::declval<Sentinel>())) sent_;
 };
 
-static_assert(
-    std::ranges::view< MinimalView<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>);
+static_assert(std::ranges::view<MinimalView<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>);
 
 struct NotInvocable {};
 

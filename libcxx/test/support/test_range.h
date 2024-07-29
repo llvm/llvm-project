@@ -41,7 +41,7 @@ struct test_sized_range {
   I<T const*> begin() const;
   sentinel end();
   sentinel end() const;
-  std::size_t size();
+  std::size_t size() const;
 };
 
 template <template <class...> class I, class T = int>
@@ -74,6 +74,17 @@ struct test_view : std::ranges::view_base {
   I<T const*> begin() const;
   sentinel end();
   sentinel end() const;
+};
+
+template <template <class...> class I, class T = int>
+  requires std::input_or_output_iterator<I<T*> >
+struct test_sized_view : std::ranges::view_base {
+  I<T*> begin();
+  I<T const*> begin() const;
+  sentinel end();
+  sentinel end() const;
+  std::size_t size() const;
+  T& operator[](std::size_t __n) const;
 };
 
 template <class T = int>
