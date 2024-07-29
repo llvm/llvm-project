@@ -899,7 +899,6 @@ static Instruction *foldSelectZeroOrMul(SelectInst &SI, InstCombinerImpl &IC) {
 
 /// Transform patterns such as (a > b) ? a - b : 0 into usub.sat(a, b).
 /// There are 8 commuted/swapped variants of this pattern.
-/// TODO: Also support a - UMIN(a,b) patterns.
 static Value *canonicalizeSaturatedSubtract(const ICmpInst *ICI,
                                             const Value *TrueVal,
                                             const Value *FalseVal,
