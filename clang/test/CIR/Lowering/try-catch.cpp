@@ -25,8 +25,7 @@ unsigned long long tc() {
     // CIR_FLAT: cir.br ^[[AFTER_TRY:.*]] loc
 
     // CIR_FLAT: ^[[LPAD]]:  // pred: ^bb2
-    // CIR_FLAT:   %[[EH:.*]] = cir.eh.inflight_exception
-    // CIR_FLAT:   %[[SEL:.*]] = cir.eh.selector %[[EH]]
+    // CIR_FLAT:   %exception_ptr, %[[SEL:.*]] = cir.eh.inflight_exception
     // CIR_FLAT:   cir.br ^[[BB_INT_IDX_SEL:.*]](%[[SEL]] : {{.*}}) loc
   } catch (int idx) {
     // CIR_FLAT: ^[[BB_INT_IDX_SEL]](%[[INT_IDX_SEL:.*]]: !u32i
@@ -96,7 +95,7 @@ unsigned long long tc3() {
   try {
     z = division(x, y);
   } catch (...) {
-    // CIR_FLAT:   cir.eh.selector
+    // CIR_FLAT:   cir.eh.inflight_exception
     // CIR_FLAT:   cir.br ^[[CATCH_ALL:.*]]({{.*}} : {{.*}}) loc
     // CIR_FLAT: ^[[CATCH_ALL]](%[[CATCH_ALL_SEL:.*]]: !u32i loc
     // CIR_FLAT:   cir.catch_param -> !cir.ptr<!void>

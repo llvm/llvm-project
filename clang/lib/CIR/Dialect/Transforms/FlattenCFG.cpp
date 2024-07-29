@@ -233,10 +233,11 @@ public:
     // Start the landing pad by getting the inflight exception information.
     rewriter.setInsertionPointToEnd(catchBegin);
     auto exceptionPtrType = mlir::cir::PointerType::get(
-        mlir::cir::ExceptionInfoType::get(rewriter.getContext()));
-    auto exception =
-        rewriter.create<mlir::cir::EhInflightOp>(loc, exceptionPtrType);
-    auto selector = rewriter.create<mlir::cir::EhSelectorOp>(loc, exception);
+        mlir::cir::VoidType::get(rewriter.getContext()));
+    auto typeIdType = mlir::cir::IntType::get(getContext(), 32, false);
+    auto inflightEh = rewriter.create<mlir::cir::EhInflightOp>(
+        loc, exceptionPtrType, typeIdType);
+    auto selector = inflightEh.getTypeId();
 
     // Handle dispatch. In could in theory use a switch, but let's just
     // mimic LLVM more closely since we have no specific thing to achieve
