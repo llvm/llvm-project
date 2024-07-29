@@ -40,13 +40,6 @@ public:
     uint64_t TypeHash;
     uint64_t TypeDIERelativeOffset;
   };
-  /// Contains information for CU or TU so we can output correct {cu, tu}-index.
-  struct UnitMeta {
-    uint64_t Offset;
-    uint64_t Length;
-    uint64_t TUHash;
-  };
-  using UnitMetaVectorType = std::vector<UnitMeta>;
 
 private:
   BinaryContext &BC;

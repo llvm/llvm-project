@@ -464,15 +464,9 @@ createDIEStreamer(const Triple &TheTriple, raw_pwrite_stream &OutFile,
   return Streamer;
 }
 
-static DWARFRewriter::UnitMeta
-emitUnit(DIEBuilder &DIEBldr, DIEStreamer &Streamer, DWARFUnit &Unit) {
+void emitUnit(DIEBuilder &DIEBldr, DIEStreamer &Streamer, DWARFUnit &Unit) {
   DIE *UnitDIE = DIEBldr.getUnitDIEbyUnit(Unit);
-  const DIEBuilder::DWARFUnitInfo &U = DIEBldr.getUnitInfoByDwarfUnit(Unit);
   Streamer.emitUnit(Unit, *UnitDIE);
-  uint64_t TypeHash = 0;
-  if (DWARFTypeUnit *DTU = dyn_cast_or_null<DWARFTypeUnit>(&Unit))
-    TypeHash = DTU->getTypeHash();
-  return {U.UnitOffset, U.UnitLength, TypeHash};
 }
 
 static void emitDWOBuilder(const std::string &DWOName,
