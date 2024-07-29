@@ -1,4 +1,18 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -fms-reference-binding %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-microsoft-reference-binding -verify -fms-reference-binding %s
+// RUN: %clang_cc1 -DEXTWARN -fsyntax-only -verify -fms-reference-binding %s
+
+#ifdef EXTWARN
+
+struct A {};
+void fARef(A&) {}
+
+void test() {
+  A& a1 = A(); // expected-warning{{binding a user-defined type temporary to a non-const lvalue is a Microsoft extension}}
+
+  fARef(A()); // expected-warning{{binding a user-defined type temporary to a non-const lvalue is a Microsoft extension}}
+}
+
+#else
 
 struct A {};
 struct B : A {};
@@ -100,3 +114,5 @@ void test4() {
   fIntConstArray({ 1 });
   NS::fIntConstArray({ 1 });
 }
+
+#endif

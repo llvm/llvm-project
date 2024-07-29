@@ -5331,10 +5331,13 @@ static void TryReferenceInitializationCore(Sema &S,
                                   ConvOvlResult);
     else if (!InitCategory.isLValue()) {
       if (T1Quals.isAddressSpaceSupersetOf(T2Quals, S.getASTContext())) {
-        if (!S.getLangOpts().MSVCReferenceBinding ||
-            !S.AllowMSLValueReferenceBinding(T1Quals, T1))
+        if (S.AllowMSLValueReferenceBinding(T1Quals, T1)) {
+          S.Diag(DeclLoc, diag::ext_ms_lvalue_reference_binding)
+              << Initializer->getSourceRange();
+        } else {
           Sequence.SetFailed(InitializationSequence::
                                  FK_NonConstLValueReferenceBindingToTemporary);
+        }
       } else {
         Sequence.SetFailed(
             InitializationSequence::FK_ReferenceInitDropsQualifiers);
