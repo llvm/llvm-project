@@ -1120,7 +1120,7 @@ void Sema::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body) {
 
   // [stmt.return.coroutine]p1:
   //   A coroutine shall not enclose a return statement ([stmt.return]).
-  if (Fn->FirstReturnLoc.isValid()) {
+  if (Fn->FirstReturnLoc.isValid() && Fn->FirstReturnLoc < Fn->FirstCoroutineStmtLoc) {
     assert(Fn->FirstCoroutineStmtLoc.isValid() &&
                    "first coroutine location not set");
     Diag(Fn->FirstReturnLoc, diag::err_return_in_coroutine);

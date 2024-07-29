@@ -154,12 +154,15 @@ namespace std {
 template <class PromiseType = void>
 struct coroutine_handle {
   static coroutine_handle from_address(void *) noexcept;
+  static coroutine_handle from_promise(PromiseType &promise);
 };
 template <>
 struct coroutine_handle<void> {
   template <class PromiseType>
   coroutine_handle(coroutine_handle<PromiseType>) noexcept;
   static coroutine_handle from_address(void *) noexcept;
+  template <class PromiseType>
+  static coroutine_handle from_promise(PromiseType &promise);
 };
 } // namespace std
 
@@ -289,6 +292,38 @@ void mixed_coreturn_template2(bool b, T) {
     // expected-error@-1 {{use of undeclared identifier 'v'}}
   else
     return; // expected-error {{not allowed in coroutine}}
+}
+
+struct promise_handle;
+
+struct Handle : std::coroutine_handle<promise_handle> { // expected-note 2{{candidate constructor (the implicit copy constructor) not viable}}
+    // expected-note@-1 2{{candidate constructor (the implicit move constructor) not viable}}
+    using promise_type = promise_handle;
+};
+
+struct promise_handle {
+    Handle get_return_object() noexcept {
+      { return Handle(std::coroutine_handle<Handle::promise_type>::from_promise(*this)); }
+    }
+    suspend_never initial_suspend() const noexcept { return {}; }
+    suspend_never final_suspend() const noexcept { return {}; }
+    void return_void() const noexcept {}
+    void unhandled_exception() const noexcept {}
+};
+
+Handle mixed_return_value() {
+  co_await a; // expected-note {{function is a coroutine due to use of 'co_await' here}}
+  return 0; // expected-error {{return statement not allowed in coroutine}}
+  // expected-error@-1 {{no viable conversion from returned value of type}}
+}
+
+Handle mixed_return_value_return_first(bool b) {
+   if (b) {
+        return 0; // expected-error {{no viable conversion from returned value of type}}
+        // expected-error@-1 {{return statement not allowed in coroutine}}
+    }
+    co_await a; // expected-note {{function is a coroutine due to use of 'co_await' here}}
+    co_return 0; // expected-error {{no member named 'return_value' in 'promise_handle'}}
 }
 
 struct CtorDtor {
