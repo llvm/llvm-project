@@ -11,6 +11,8 @@ REQUIRES: system-linux
 
 RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
 RUN: perf2bolt %t.exe -o %t --pa -p %p/Inputs/pre-aggregated.txt -w %t.new \
+RUN:   --show-density --profile-density-threshold=9 \
+RUN:   --profile-density-cutoff-hot=970000 \
 RUN:   --profile-use-dfs | FileCheck %s
 
 RUN: llvm-bolt %t.exe -data %t -o %t.null | FileCheck %s
@@ -18,6 +20,7 @@ RUN: llvm-bolt %t.exe -data %t.new -o %t.null | FileCheck %s
 RUN: llvm-bolt %t.exe -p %p/Inputs/pre-aggregated.txt --pa -o %t.null | FileCheck %s
 
 CHECK: BOLT-INFO: 4 out of 7 functions in the binary (57.1%) have non-empty execution profile
+CHECK: BOLT-INFO: Functions with density >= 9.4 account for 97.00% total sample counts.
 
 RUN: cat %t | sort | FileCheck %s -check-prefix=PERF2BOLT
 RUN: cat %t.new | FileCheck %s -check-prefix=NEWFORMAT
