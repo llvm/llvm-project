@@ -478,12 +478,12 @@ Obtaining Commit Access
 We grant commit access to contributors with a track record of submitting high
 quality patches.  If you would like commit access, please use this `link
 <https://github.com/llvm/llvm-project/issues/new?title=Request%20Commit%20Access%20For%20<user>&body=%23%23%23%20Why%20Are%20you%20requesting%20commit%20access%20?>`_ to file
-and issue and request commit access.  Replace the <user> string in the title
+an issue and request commit access.  Replace the <user> string in the title
 with your github username, and explain why you are requesting commit access in
 the issue description.  If approved, a GitHub invitation will be sent to your
 GitHub account. In case you don't get notification from GitHub, go to
 `Invitation Link <https://github.com/orgs/llvm/invitation>`_ directly. Once
-accept the invitation, you'll get commit access.
+you accept the invitation, you'll get commit access.
 
 Prior to obtaining commit access, it is common practice to request that
 someone with commit access commits on your behalf. When doing so, please

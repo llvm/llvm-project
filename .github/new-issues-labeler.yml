@@ -28,5 +28,5 @@
 'bolt':
   - '/\bbolt(?!\-)\b/i'
 
-'infrastructure:commit-access-request':
+'infra:commit-access-request':
   - '/Request Commit Access/'
