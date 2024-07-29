@@ -56,8 +56,6 @@ STATISTIC(EmittedRelaxableFragments,
           "Number of emitted assembler fragments - relaxable");
 STATISTIC(EmittedDataFragments,
           "Number of emitted assembler fragments - data");
-STATISTIC(EmittedCompactEncodedInstFragments,
-          "Number of emitted assembler fragments - compact encoded inst");
 STATISTIC(EmittedAlignFragments,
           "Number of emitted assembler fragments - align");
 STATISTIC(EmittedFillFragments,
@@ -253,8 +251,6 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
     return cast<MCDataFragment>(F).getContents().size();
   case MCFragment::FT_Relaxable:
     return cast<MCRelaxableFragment>(F).getContents().size();
-  case MCFragment::FT_CompactEncodedInst:
-    return cast<MCCompactEncodedInstFragment>(F).getContents().size();
   case MCFragment::FT_Fill: {
     auto &FF = cast<MCFillFragment>(F);
     int64_t NumValues = 0;
@@ -660,11 +656,6 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
   case MCFragment::FT_Relaxable:
     ++stats::EmittedRelaxableFragments;
     OS << cast<MCRelaxableFragment>(F).getContents();
-    break;
-
-  case MCFragment::FT_CompactEncodedInst:
-    ++stats::EmittedCompactEncodedInstFragments;
-    OS << cast<MCCompactEncodedInstFragment>(F).getContents();
     break;
 
   case MCFragment::FT_Fill: {

@@ -980,15 +980,15 @@ def Wsystem_headers_in_module_EQ : Joined<["-"], "Wsystem-headers-in-module=">,
   HelpText<"Enable -Wsystem-headers when building <module>">,
   MarshallingInfoStringVector<DiagnosticOpts<"SystemHeaderWarningsModules">>;
 def Wdeprecated : Flag<["-"], "Wdeprecated">, Group<W_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+  Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable warnings for deprecated constructs and define __DEPRECATED">;
 def Wno_deprecated : Flag<["-"], "Wno-deprecated">, Group<W_Group>,
   Visibility<[ClangOption, CC1Option]>;
 defm invalid_constexpr : BoolWOption<"invalid-constexpr",
   LangOpts<"CheckConstexprFunctionBodies">,
   Default<!strconcat("!", cpp23.KeyPath)>,
-  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Disable">,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
+  NegFlag<SetFalse, [HelpHidden], [ClangOption, CC1Option], "Disable">,
+  PosFlag<SetTrue, [HelpHidden], [ClangOption, CC1Option], "Enable">,
   BothFlags<[], [ClangOption, CC1Option], " checking of constexpr function bodies for validity within a constant expression context">>;
 def Wl_COMMA : CommaJoined<["-"], "Wl,">, Visibility<[ClangOption, FlangOption]>,
   Flags<[LinkerInput, RenderAsInput]>,

@@ -370,6 +370,20 @@ functions:
     arguments:
       - type: pthread_rwlock_t *__restrict
       - type: const struct timespec *__restrict
+  - name: pthread_rwlock_clockrdlock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *__restrict
+      - type: clockid_t
+      - type: const struct timespec *__restrict
+  - name: pthread_rwlock_clockwrlock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *__restrict
+      - type: clockid_t
+      - type: const struct timespec *__restrict
   - name: pthread_rwlock_rdlock
     standards: POSIX
     return_type: int
