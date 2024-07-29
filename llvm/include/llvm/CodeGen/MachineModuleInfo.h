@@ -99,20 +99,6 @@ class MachineModuleInfo {
   /// want.
   MachineModuleInfoImpl *ObjFileMMI;
 
-  /// \name Exception Handling
-  /// \{
-
-  /// The current call site index being processed, if any. 0 if none.
-  unsigned CurCallSite = 0;
-
-  /// \}
-
-  // TODO: Ideally, what we'd like is to have a switch that allows emitting
-  // synchronous (precise at call-sites only) CFA into .eh_frame. However,
-  // even under this switch, we'd like .debug_frame to be precise when using
-  // -g. At this moment, there's no way to specify that some CFI directives
-  // go into .eh_frame only, while others go into .debug_frame only.
-
   /// True if debugging information is available in this module.
   bool DbgInfoAvailable = false;
 
@@ -184,16 +170,6 @@ public:
 
   /// Returns true if valid debug info is present.
   bool hasDebugInfo() const { return DbgInfoAvailable; }
-
-  /// \name Exception Handling
-  /// \{
-
-  /// Set the call site currently being processed.
-  void setCurrentCallSite(unsigned Site) { CurCallSite = Site; }
-
-  /// Get the call site currently being processed, if any.  return zero if
-  /// none.
-  unsigned getCurrentCallSite() { return CurCallSite; }
 
   /// \}
 }; // End class MachineModuleInfo
